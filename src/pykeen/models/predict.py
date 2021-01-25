@@ -62,7 +62,7 @@ def get_head_prediction_df(
     """
     tail_id = model.triples_factory.entity_to_id[tail_label]
     relation_id = model.triples_factory.relation_to_id[relation_label]
-    rt_batch = torch.tensor([[relation_id, tail_id]], dtype=torch.long, device=model.device)
+    rt_batch = torch.as_tensor([[relation_id, tail_id]], dtype=torch.long, device=model.device)
     scores = model.predict_h(rt_batch)
     scores = scores[0, :].tolist()
     rv = pd.DataFrame(
@@ -124,7 +124,7 @@ def get_tail_prediction_df(
     """
     head_id = model.triples_factory.entity_to_id[head_label]
     relation_id = model.triples_factory.relation_to_id[relation_label]
-    batch = torch.tensor([[head_id, relation_id]], dtype=torch.long, device=model.device)
+    batch = torch.as_tensor([[head_id, relation_id]], dtype=torch.long, device=model.device)
     scores = model.predict_t(batch)
     scores = scores[0, :].tolist()
     rv = pd.DataFrame(
@@ -185,7 +185,7 @@ def get_relation_prediction_df(
     """
     head_id = model.triples_factory.entity_to_id[head_label]
     tail_id = model.triples_factory.entity_to_id[tail_label]
-    batch = torch.tensor([[head_id, tail_id]], dtype=torch.long, device=model.device)
+    batch = torch.as_tensor([[head_id, tail_id]], dtype=torch.long, device=model.device)
     scores = model.predict_r(batch)
     scores = scores[0, :].tolist()
     rv = pd.DataFrame(
@@ -470,7 +470,7 @@ def get_novelty_mask(
         A boolean mask indicating whether the ID does not correspond to a known triple.
     """
     other_cols = sorted(set(range(mapped_triples.shape[1])).difference({col}))
-    other_col_ids = torch.tensor(data=other_col_ids, dtype=torch.long, device=mapped_triples.device)
+    other_col_ids = torch.as_tensor(data=other_col_ids, dtype=torch.long, device=mapped_triples.device)
     filter_mask = (mapped_triples[:, other_cols] == other_col_ids[None, :]).all(dim=-1)  # type: ignore
     known_ids = mapped_triples[filter_mask, col].unique().cpu().numpy()
     return np.isin(element=query_ids, test_elements=known_ids, assume_unique=True, invert=True)
