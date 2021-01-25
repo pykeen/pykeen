@@ -79,7 +79,7 @@ class TestPipeline(unittest.TestCase):
             {
                 'weightedunvote', 'relexports', 'intergovorgs', 'timesinceally', 'exports3', 'booktranslations',
                 'relbooktranslations', 'reldiplomacy', 'ngoorgs3', 'ngo', 'relngo', 'reltreaties', 'independence',
-                'intergovorgs3', 'unweightedunvote', 'commonbloc2', 'relintergovorgs'
+                'intergovorgs3', 'unweightedunvote', 'commonbloc2', 'relintergovorgs',
             },
             training_rels,
         )
