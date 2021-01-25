@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 import functools
-import inspect
 import logging
 import warnings
 from abc import ABC, abstractmethod
@@ -20,7 +19,7 @@ from ..nn import Embedding
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import TriplesFactory
 from ..typing import Constrainer, DeviceHint, Initializer, MappedTriples, Normalizer, ScorePack
-from ..utils import NoRandomSeedNecessary, get_batchnorm_modules, resolve_device, set_random_seed
+from ..utils import NoRandomSeedNecessary, _can_slice, get_batchnorm_modules, resolve_device, set_random_seed
 
 __all__ = [
     'Model',
@@ -909,7 +908,3 @@ def _extend_batch(
     hrt_batch = torch.stack(columns, dim=-1)
 
     return hrt_batch
-
-
-def _can_slice(fn) -> bool:
-    return 'slice_size' in inspect.getfullargspec(fn).args
