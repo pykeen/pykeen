@@ -488,7 +488,7 @@ class TranslationalInteractionTests(InteractionTestCase, ABC):
         assert (scores <= 0).all()
 
 
-class ResultTrackerTests(GenericTestCase[ResultTracker], unittest.TestCase, ABC):
+class ResultTrackerTests(GenericTestCase[ResultTracker], unittest.TestCase):
     """Common tests for result trackers."""
 
     def test_start_run(self):
