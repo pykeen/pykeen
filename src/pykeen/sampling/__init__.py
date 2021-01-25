@@ -27,7 +27,7 @@ from typing import Mapping, Set, Type, Union
 from .basic_negative_sampler import BasicNegativeSampler
 from .bernoulli_negative_sampler import BernoulliNegativeSampler
 from .negative_sampler import NegativeSampler
-from ..utils import get_cls, normalize_string
+from ..utils import get_cls, get_subclasses, normalize_string
 
 __all__ = [
     'NegativeSampler',
@@ -38,10 +38,7 @@ __all__ = [
 ]
 
 _NEGATIVE_SAMPLER_SUFFIX = 'NegativeSampler'
-_NEGATIVE_SAMPLERS: Set[Type[NegativeSampler]] = {
-    BasicNegativeSampler,
-    BernoulliNegativeSampler,
-}
+_NEGATIVE_SAMPLERS: Set[Type[NegativeSampler]] = set(get_subclasses(NegativeSampler))
 
 #: A mapping of negative samplers' names to their implementations
 negative_samplers: Mapping[str, Type[NegativeSampler]] = {
