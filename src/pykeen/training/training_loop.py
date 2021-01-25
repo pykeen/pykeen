@@ -636,10 +636,8 @@ class TrainingLoop(ABC):
         loss.backward()
         current_epoch_loss = loss.item()
 
-        if hasattr(self.model, 'regularizer'):
-            # reset the regularizer to free the computational graph
-            self.model.regularizer.reset()
-            # TODO why not call torch.cuda.empty_cache()? or call self._free_graph_and_cache()?
+        self.model.post_forward_pass()
+        # TODO why not call torch.cuda.empty_cache()? or call self._free_graph_and_cache()?
 
         return current_epoch_loss
 
@@ -858,9 +856,7 @@ class TrainingLoop(ABC):
         raise NotImplementedError
 
     def _free_graph_and_cache(self):
-        if hasattr(self.model, 'regularizer'):
-            # The regularizer has to be reset to free the computational graph
-            self.model.regularizer.reset()
+        self.model._free_graph_and_cache()
         # The cache of the previous run has to be freed to allow accurate memory availability estimates
         torch.cuda.empty_cache()
 

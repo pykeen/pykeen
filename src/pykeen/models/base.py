@@ -624,6 +624,13 @@ class Model(nn.Module, ABC):
         scores = expanded_scores.view(ht_batch.shape[0], -1)
         return scores
 
+    def post_forward_pass(self):
+        """Run after calculating the forward loss."""
+        self.regularizer.reset()
+
+    def _free_graph_and_cache(self):
+        self.regularizer.reset()
+
     def get_grad_params(self) -> Iterable[nn.Parameter]:
         """Get the parameters that require gradients."""
         # TODO: Why do we need that? The optimizer takes care of filtering the parameters.
