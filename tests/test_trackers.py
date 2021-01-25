@@ -1,4 +1,7 @@
+# -*- coding: utf-8 -*-
+
 """Tests for result trackers."""
+
 import pathlib
 import tempfile
 from typing import Any, MutableMapping
