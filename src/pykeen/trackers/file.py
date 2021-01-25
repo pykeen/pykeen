@@ -7,7 +7,7 @@ import datetime
 import json
 import logging
 import pathlib
-from typing import Any, Mapping, Optional, TextIO, Union
+from typing import Any, ClassVar, Mapping, Optional, TextIO, Union
 
 from .base import ResultTracker
 from ..constants import PYKEEN_LOGS
@@ -39,6 +39,9 @@ class FileResultTracker(ResultTracker):
         tail -f results.txt | grep "hits_at_10"
     """
 
+    #: The file extension for this writer (do not include dot)
+    extension: ClassVar[str]
+
     #: The file where the results are written to.
     file: TextIO
 
@@ -60,7 +63,7 @@ class FileResultTracker(ResultTracker):
         if path is None:
             if name is None:
                 name = datetime.datetime.now().isoformat()
-            path = PYKEEN_LOGS / f"{name}.csv"
+            path = PYKEEN_LOGS / f"{name}.{self.extension}"
         elif isinstance(path, str):
             path = pathlib.Path(path)
         logger.info(f"Logging to {path.as_uri()}.")
@@ -80,6 +83,8 @@ class CSVResultTracker(FileResultTracker):
 
         tail -f results.txt | grep "hits_at_10"
     """
+
+    extension = 'csv'
 
     #: The column names
     HEADER = "type", "step", "key", "value"
@@ -137,6 +142,8 @@ class JSONResultTracker(FileResultTracker):
 
         tail -f results.txt | grep "hits_at_10"
     """
+
+    extension = 'jsonl'
 
     def log_params(
         self,
