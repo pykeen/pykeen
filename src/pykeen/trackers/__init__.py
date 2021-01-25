@@ -9,7 +9,7 @@ from .file import CSVResultTracker, FileResultTracker, JSONResultTracker
 from .mlflow import MLFlowResultTracker
 from .neptune import NeptuneResultTracker
 from .wandb import WANDBResultTracker
-from ..utils import get_cls, normalize_string, get_subclasses
+from ..utils import get_cls, get_subclasses, normalize_string
 
 __all__ = [
     # Base classes
