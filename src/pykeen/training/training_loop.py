@@ -117,7 +117,7 @@ class TrainingLoop(ABC):
 
         if has_mr_loss(self.model):
             self._loss_helper = self._mr_loss_helper
-        elif has_nssa_loss(model):
+        elif has_nssa_loss(self.model):
             self._loss_helper = self._self_adversarial_negative_sampling_loss_helper
         else:
             self._loss_helper = self._label_loss_helper
