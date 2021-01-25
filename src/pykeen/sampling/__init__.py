@@ -38,7 +38,7 @@ __all__ = [
 ]
 
 _NEGATIVE_SAMPLER_SUFFIX = 'NegativeSampler'
-_NEGATIVE_SAMPLERS: Set[Type[NegativeSampler]] = set(get_subclasses(NegativeSampler))
+_NEGATIVE_SAMPLERS: Set[Type[NegativeSampler]] = set(get_subclasses(NegativeSampler))  # type: ignore
 
 #: A mapping of negative samplers' names to their implementations
 negative_samplers: Mapping[str, Type[NegativeSampler]] = {
