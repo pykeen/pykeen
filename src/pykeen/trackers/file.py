@@ -34,7 +34,8 @@ class FileResultTracker(ResultTracker):
 
     Also allows monitoring experiments, e.g. by
 
-    .. code ::
+    .. code-block::
+
         tail -f results.txt | grep "hits_at_10"
     """
 
@@ -71,7 +72,8 @@ class CSVResultTracker(FileResultTracker):
 
     Also allows monitoring experiments, e.g. by
 
-    .. code ::
+    .. code-block::
+
         tail -f results.txt | grep "hits_at_10"
     """
 
@@ -127,7 +129,8 @@ class JSONResultTracker(FileResultTracker):
 
     Also allows monitoring experiments, e.g. by
 
-    .. code ::
+    .. code-block::
+
         tail -f results.txt | grep "hits_at_10"
     """
 
