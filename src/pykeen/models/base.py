@@ -8,18 +8,18 @@ import functools
 import logging
 import warnings
 from abc import ABC, abstractmethod
-from typing import Any, ClassVar, Collection, Iterable, List, Mapping, Optional, Type, Union
+from typing import Any, ClassVar, Iterable, List, Mapping, Optional, Type, Union
 
 import pandas as pd
 import torch
 from torch import nn
 
-from ..losses import Loss, MarginRankingLoss, NSSALoss
+from ..losses import Loss, MarginRankingLoss, has_mr_loss, has_nssa_loss
 from ..nn import Embedding
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import TriplesFactory
 from ..typing import Constrainer, DeviceHint, Initializer, MappedTriples, Normalizer, ScorePack
-from ..utils import NoRandomSeedNecessary, _can_slice, get_batchnorm_modules, resolve_device, set_random_seed
+from ..utils import NoRandomSeedNecessary, _can_slice, resolve_device, set_random_seed
 
 __all__ = [
     'Model',
@@ -100,8 +100,8 @@ class Model(nn.Module, ABC):
             self.loss = loss
 
         # TODO: Check loss functions that require 1 and -1 as label but only
-        self.is_mr_loss: bool = isinstance(self.loss, MarginRankingLoss)
-        self.is_nssa_loss: bool = isinstance(self.loss, NSSALoss)
+        self.is_mr_loss: bool = has_mr_loss(self)
+        self.is_nssa_loss: bool = has_nssa_loss(self)
 
         # Regularizer
         if regularizer is None:
@@ -139,11 +139,6 @@ class Model(nn.Module, ABC):
     def can_slice_t(self) -> bool:
         """Whether score_t supports slicing."""
         return _can_slice(self.score_t)
-
-    @property
-    def modules_not_supporting_sub_batching(self) -> Collection[nn.Module]:
-        """Return all modules not supporting sub-batching."""
-        return get_batchnorm_modules(module=self)
 
     @abstractmethod
     def _reset_parameters_(self):  # noqa: D401
@@ -628,6 +623,13 @@ class Model(nn.Module, ABC):
         # Reshape the scores to match the pre-defined output shape of the score_r function.
         scores = expanded_scores.view(ht_batch.shape[0], -1)
         return scores
+
+    def post_forward_pass(self):
+        """Run after calculating the forward loss."""
+        self.regularizer.reset()
+
+    def _free_graph_and_cache(self):
+        self.regularizer.reset()
 
     def get_grad_params(self) -> Iterable[nn.Parameter]:
         """Get the parameters that require gradients."""
