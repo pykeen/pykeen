@@ -46,8 +46,7 @@ class FileResultTracker(ResultTracker):
         path: Union[None, str, pathlib.Path] = None,
         **kwargs,
     ):
-        """
-        Initialize the tracker.
+        """Initialize the tracker.
 
         :param path:
             The path of the log file.
