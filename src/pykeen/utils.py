@@ -4,6 +4,7 @@
 
 import ftplib
 import functools
+import inspect
 import itertools as itt
 import json
 import logging
@@ -827,3 +828,8 @@ def get_subclasses(cls: Type[X]) -> Iterable[Type[X]]:
     for subclass in cls.__subclasses__():
         yield from get_subclasses(subclass)
         yield subclass
+
+
+def _can_slice(fn) -> bool:
+    """Check if a model's score_X function can slice."""
+    return 'slice_size' in inspect.getfullargspec(fn).args
