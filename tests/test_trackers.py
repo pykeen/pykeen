@@ -15,11 +15,14 @@ class CSVResultTrackerTests(ResultTrackerTests):
 
     cls = CSVResultTracker
 
+    def setUp(self) -> None:
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.path = pathlib.Path(self.temp_dir.name).joinpath("test.log")
+        super().setUp()
+
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         # prepare a temporary test directory
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
-        self.temp_dir = tempfile.TemporaryDirectory()
-        self.path = pathlib.Path(self.temp_dir.name).joinpath("test.log")
         kwargs["path"] = self.path
         return kwargs
 
