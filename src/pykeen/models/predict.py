@@ -24,7 +24,7 @@ def get_head_prediction_df(
     remove_known: bool = False,
     testing: Optional[torch.LongTensor] = None,
 ) -> pd.DataFrame:
-    """Predict tails for the given head and relation (given by label).
+    """Predict heads for the given relation and tail (given by label).
 
     :param model: A PyKEEN model
     :param relation_label: The string label for the relation
