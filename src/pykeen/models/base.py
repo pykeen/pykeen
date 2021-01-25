@@ -839,15 +839,6 @@ def _add_post_reset_parameters(cls: Type[Model]) -> None:
     cls.__init__ = _new_init  # type: ignore
 
 
-def _track_hyperparameters(cls: Type[Model]) -> None:
-    """Initialize the subclass while keeping track of hyper-parameters."""
-    # Keep track of the hyper-parameters that are used across all
-    # subclasses of BaseModule
-    for k in cls.__init__.__annotations__.keys():
-        if k not in Model.__init__.__annotations__:
-            Model._hyperparameter_usage[k].add(cls.__name__)
-
-
 def _extend_batch(
     batch: MappedTriples,
     all_ids: List[int],
