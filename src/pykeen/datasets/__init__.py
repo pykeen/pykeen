@@ -20,6 +20,7 @@ from .base import (  # noqa:F401
 from .ckg import CKG
 from .codex import CoDExLarge, CoDExMedium, CoDExSmall
 from .conceptnet import ConceptNet
+from .cskg import CSKG
 from .drkg import DRKG
 from .freebase import FB15k, FB15k237
 from .hetionet import Hetionet
@@ -55,6 +56,7 @@ __all__ = [
     'DRKG',
     'ConceptNet',
     'CKG',
+    'CSKG',
     'get_dataset',
     'has_dataset',
 ]
