@@ -22,6 +22,7 @@ __all__ = [
     'RelationRepresentation',
     'TailRepresentation',
     'GaussianDistribution',
+    'ScorePack',
 ]
 
 LabeledTriples = np.ndarray
@@ -49,3 +50,10 @@ class GaussianDistribution(NamedTuple):
 
     mean: torch.FloatTensor
     diagonal_covariance: torch.FloatTensor
+
+
+class ScorePack(NamedTuple):
+    """A pair of result triples and scores."""
+
+    result: torch.LongTensor
+    scores: torch.FloatTensor
