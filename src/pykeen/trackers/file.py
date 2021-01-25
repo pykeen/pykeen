@@ -45,17 +45,22 @@ class FileResultTracker(ResultTracker):
     def __init__(
         self,
         path: Union[None, str, pathlib.Path] = None,
+        name: Optional[str] = None,
         **kwargs,
     ):
         """Initialize the tracker.
 
         :param path:
             The path of the log file.
+        :param name: The default file name for a file if no path is given. If no default is given,
+            the current time is used.
         :param kwargs:
             Additional keyword based arguments forwarded to csv.writer.
         """
         if path is None:
-            path = PYKEEN_LOGS / f"{datetime.datetime.now().isoformat()}.csv"
+            if name is None:
+                name = datetime.datetime.now().isoformat()
+            path = PYKEEN_LOGS / f"{name}.csv"
         elif isinstance(path, str):
             path = pathlib.Path(path)
         logger.info(f"Logging to {path.as_uri()}.")
