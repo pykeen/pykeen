@@ -9,7 +9,7 @@ import pandas as pd
 
 import pykeen.regularizers
 from pykeen.datasets import EagerDataset, Nations
-from pykeen.models.base import Model
+from pykeen.models import Model
 from pykeen.pipeline import PipelineResult, pipeline
 from pykeen.regularizers import NoRegularizer
 from pykeen.triples.generation import generate_triples_factory

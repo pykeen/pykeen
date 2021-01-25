@@ -9,7 +9,7 @@ from typing import Any, Callable, List, Mapping, Optional, Union
 
 from .stopper import Stopper
 from ..evaluation import Evaluator
-from ..models.base import Model
+from ..models import Model
 from ..trackers import ResultTracker
 from ..triples import TriplesFactory
 from ..utils import fix_dataclass_init_docs

@@ -184,8 +184,7 @@ from .datasets import get_dataset
 from .datasets.base import Dataset
 from .evaluation import Evaluator, MetricResults, get_evaluator_cls
 from .losses import Loss, _LOSS_SUFFIX, get_loss_cls
-from .models import get_model_cls
-from .models.base import Model
+from .models import Model, get_model_cls
 from .nn import Embedding
 from .optimizers import get_optimizer_cls
 from .regularizers import Regularizer, get_regularizer_cls

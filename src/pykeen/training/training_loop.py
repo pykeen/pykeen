@@ -20,7 +20,7 @@ from tqdm.autonotebook import tqdm, trange
 
 from ..constants import PYKEEN_CHECKPOINTS, PYKEEN_DEFAULT_CHECKPOINT
 from ..losses import Loss
-from ..models.base import Model
+from ..models import Model
 from ..stoppers import Stopper
 from ..trackers import ResultTracker
 from ..training.schlichtkrull_sampler import GraphSampler
