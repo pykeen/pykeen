@@ -14,8 +14,16 @@ logger = logging.getLogger(__name__)
 
 
 class CSVResultTracker(ResultTracker):
-    """Tracking results to a CSV file."""
+    """
+    Tracking results to a CSV file.
 
+    Also allows monitoring experiments, e.g. by
+
+    .. code ::
+        tail -f results.txt | grep "hits_at_10"
+    """
+
+    #: The file where the results are written to.
     file: TextIO
 
     def __init__(self, path: Union[None, str, pathlib.Path] = None):
