@@ -9,10 +9,11 @@ from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from dataclasses import dataclass
 from math import ceil
-from typing import Any, Collection, List, Mapping, Optional, Tuple, Union
+from typing import Any, Collection, Iterable, List, Mapping, Optional, Tuple, Union, cast
 
+import numpy as np
 import torch
-from dataclasses_json import dataclass_json
+from dataclasses_json import DataClassJsonMixin
 from tqdm.autonotebook import tqdm
 
 from ..models import Model
@@ -39,9 +40,8 @@ def optional_context_manager(condition, context_manager):
         yield
 
 
-@dataclass_json
 @dataclass
-class MetricResults:
+class MetricResults(DataClassJsonMixin):
     """Results from computing metrics."""
 
     def get_metric(self, name: str) -> float:
@@ -161,7 +161,7 @@ class Evaluator(ABC):
                 # Clear the ranks from the current evaluator
                 self.finalize()
 
-        return evaluate(
+        rv = evaluate(
             model=model,
             mapped_triples=mapped_triples,
             evaluators=self,
@@ -174,6 +174,8 @@ class Evaluator(ABC):
             restrict_entities_to=restrict_entities_to,
             do_time_consuming_checks=do_time_consuming_checks,
         )
+        # Since squeeze is true, we can expect that evaluate returns a MetricResult, but we need to tell MyPy that
+        return cast(MetricResults, rv)
 
     def batch_and_slice(
         self,
@@ -249,7 +251,7 @@ class Evaluator(ABC):
     def _param_size_search(
         self,
         key: str,
-        start_value: int,
+        start_value: Optional[int],
         model: Model,
         mapped_triples: MappedTriples,
         device: Optional[torch.device] = None,
@@ -267,11 +269,14 @@ class Evaluator(ABC):
             values_dict[key] = start_value
             values_dict['slice_size'] = None
         elif key == 'slice_size':
+            if start_value is None:
+                raise ValueError('must specify a start value with key="slice_size"')  # TODO @lvermue check
             self._check_slicing_availability(model, batch_size=1)
             values_dict[key] = start_value
             values_dict['batch_size'] = 1
         else:
             raise AttributeError(f'The parameter {key} is unknown.')
+
         reached_max = False
         evaluated_once = False
         logger.info(f'Starting {key} search for evaluation now...')
@@ -282,7 +287,6 @@ class Evaluator(ABC):
                 gc.collect()
                 torch.cuda.empty_cache()
                 evaluate(
-                    **values_dict,
                     model=model,
                     mapped_triples=mapped_triples,
                     evaluators=self,
@@ -292,6 +296,8 @@ class Evaluator(ABC):
                     use_tqdm=use_tqdm,
                     restrict_entities_to=restrict_entities_to,
                     do_time_consuming_checks=do_time_consuming_checks,
+                    batch_size=values_dict.get('batch_size'),
+                    slice_size=values_dict.get('slice_size'),
                 )
                 evaluated_once = True
             except RuntimeError as runtime_error:
@@ -310,7 +316,8 @@ class Evaluator(ABC):
                     )
                     break
 
-                values_dict[key] //= 2
+                #  values_dict[key] will always be an int at this point
+                values_dict[key] //= 2  # type: ignore
                 reached_max = True
                 if evaluated_once:
                     logger.info(f'Concluded {key} search with batch_size={values_dict[key]}.')
@@ -322,12 +329,12 @@ class Evaluator(ABC):
                 gc.collect()
                 torch.cuda.empty_cache()
                 if not reached_max and values_dict['batch_size'] < maximum_triples:
-                    values_dict[key] *= 2
+                    values_dict[key] *= 2  # type: ignore
                 else:
                     logger.info(f'Concluded {key} search with batch_size={values_dict[key]}.')
                     break
 
-        return values_dict[key], evaluated_once
+        return cast(Tuple[int, bool], (values_dict[key], evaluated_once))
 
     @staticmethod
     def _check_slicing_availability(model: Model, batch_size: int) -> None:
@@ -541,7 +548,7 @@ def evaluate(
         # This should be a reasonable default size that works on most setups while being faster than batch_size=1
         batch_size = 32
         logger.info(f"No evaluation batch_size provided. Setting batch_size to '{batch_size}'.")
-    batches = split_list_in_batches_iter(input_list=mapped_triples, batch_size=batch_size)
+    batches = cast(Iterable[np.ndarray], split_list_in_batches_iter(input_list=mapped_triples, batch_size=batch_size))
 
     # Show progressbar
     num_triples = mapped_triples.shape[0]
