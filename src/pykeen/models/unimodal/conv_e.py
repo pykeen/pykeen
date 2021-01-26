@@ -3,9 +3,8 @@
 """Implementation of ConvE."""
 
 import logging
-import math
 import sys
-from typing import Any, ClassVar, Mapping, Optional, Tuple, Type
+from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
 from torch import nn
@@ -16,6 +15,7 @@ from ...constants import DEFAULT_DROPOUT_HPO_RANGE
 from ...losses import BCEAfterSigmoidLoss, Loss
 from ...nn import Embedding
 from ...nn.init import xavier_normal_
+from ...nn.modules import _calculate_missing_shape_information
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -26,55 +26,6 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
-
-
-def _calculate_missing_shape_information(
-    embedding_dim: int,
-    input_channels: Optional[int] = None,
-    width: Optional[int] = None,
-    height: Optional[int] = None,
-) -> Tuple[int, int, int]:
-    """
-    Automatically calculates missing dimensions for ConvE.
-
-    :param embedding_dim:
-    :param input_channels:
-    :param width:
-    :param height:
-
-    :return: (input_channels, width, height), such that
-            `embedding_dim = input_channels * width * height`
-    :raises:
-        If no factorization could be found.
-    """
-    # Store initial input for error message
-    original = (input_channels, width, height)
-
-    # All are None
-    if all(factor is None for factor in [input_channels, width, height]):
-        input_channels = 1
-        result_sqrt = math.floor(math.sqrt(embedding_dim))
-        height = max(factor for factor in range(1, result_sqrt + 1) if embedding_dim % factor == 0)
-        width = embedding_dim // height
-
-    # input_channels is None, and any of height or width is None -> set input_channels=1
-    if input_channels is None and any(remaining is None for remaining in [width, height]):
-        input_channels = 1
-
-    # input channels is not None, and one of height or width is None
-    assert len([factor for factor in [input_channels, width, height] if factor is None]) <= 1
-    if width is None:
-        width = embedding_dim // (height * input_channels)
-    if height is None:
-        height = embedding_dim // (width * input_channels)
-    if input_channels is None:
-        input_channels = embedding_dim // (width * height)
-    assert not any(factor is None for factor in [input_channels, width, height])
-
-    if input_channels * width * height != embedding_dim:
-        raise ValueError(f'Could not resolve {original} to a valid factorization of {embedding_dim}.')
-
-    return input_channels, width, height
 
 
 class ConvE(EntityRelationEmbeddingModel):
@@ -163,7 +114,7 @@ class ConvE(EntityRelationEmbeddingModel):
     bn0: Optional[torch.nn.BatchNorm2d]
     #: If batch normalization is enabled, this is: num_features – C from an expected input of size (N,C,H,W)
     bn1: Optional[torch.nn.BatchNorm2d]
-    bn2: Optional[torch.nn.BatchNorm2d]
+    bn2: Optional[torch.nn.BatchNorm1d]
 
     def __init__(
         self,
@@ -291,7 +242,7 @@ class ConvE(EntityRelationEmbeddingModel):
 
         try:
             # batch_size, num_input_channels, 2*height, width
-            if self.apply_batch_normalization:
+            if self.bn0 is not None:
                 x = self.bn0(x)
 
             # batch_size, num_input_channels, 2*height, width
@@ -299,7 +250,7 @@ class ConvE(EntityRelationEmbeddingModel):
             # (N,C_out,H_out,W_out)
             x = self.conv1(x)
 
-            if self.apply_batch_normalization:
+            if self.bn1 is not None:
                 x = self.bn1(x)
             x = F.relu(x)
             x = self.feature_map_drop(x)
@@ -308,7 +259,7 @@ class ConvE(EntityRelationEmbeddingModel):
             x = self.fc(x)
             x = self.hidden_drop(x)
 
-            if self.apply_batch_normalization:
+            if self.bn2 is not None:
                 x = self.bn2(x)
             x = F.relu(x)
         except RuntimeError as e:

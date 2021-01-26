@@ -48,7 +48,7 @@ class Model(nn.Module, ABC):
     loss: Loss
 
     #: The default regularizer class
-    regularizer_default: ClassVar[Type[Regularizer]] = NoRegularizer
+    regularizer_default: ClassVar[Type[Regularizer]] = NoRegularizer  # type: ignore
     #: The default parameters for the default regularizer class
     regularizer_default_kwargs: ClassVar[Optional[Mapping[str, Any]]] = None
     #: The instance of the regularizer
@@ -233,7 +233,7 @@ class Model(nn.Module, ABC):
         elif slice_size is None:
             scores = self.score_h(rt_batch)
         else:
-            scores = self.score_h(rt_batch, slice_size=slice_size)
+            scores = self.score_h(rt_batch, slice_size=slice_size)  # type: ignore
         if self.predict_with_sigmoid:
             scores = torch.sigmoid(scores)
         return scores
@@ -270,7 +270,7 @@ class Model(nn.Module, ABC):
         if slice_size is None:
             scores = self.score_t(hr_batch)
         else:
-            scores = self.score_t(hr_batch, slice_size=slice_size)
+            scores = self.score_t(hr_batch, slice_size=slice_size)  # type: ignore
         if self.predict_with_sigmoid:
             scores = torch.sigmoid(scores)
         return scores
@@ -298,7 +298,7 @@ class Model(nn.Module, ABC):
         if slice_size is None:
             scores = self.score_r(ht_batch)
         else:
-            scores = self.score_r(ht_batch, slice_size=slice_size)
+            scores = self.score_r(ht_batch, slice_size=slice_size)  # type: ignore
         if self.predict_with_sigmoid:
             scores = torch.sigmoid(scores)
         return scores
@@ -567,7 +567,7 @@ class Model(nn.Module, ABC):
         if slice_size is None:
             return self.score_h(rt_batch=r_inv_h)
         else:
-            return self.score_h(rt_batch=r_inv_h, slice_size=slice_size)
+            return self.score_h(rt_batch=r_inv_h, slice_size=slice_size)  # type: ignore
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:
         """Forward pass using left side (head) prediction.
@@ -599,7 +599,7 @@ class Model(nn.Module, ABC):
         if slice_size is None:
             return self.score_t(hr_batch=t_r_inv)
         else:
-            return self.score_t(hr_batch=t_r_inv, slice_size=slice_size)
+            return self.score_t(hr_batch=t_r_inv, slice_size=slice_size)  # type: ignore
 
     def score_r(self, ht_batch: torch.LongTensor) -> torch.FloatTensor:
         """Forward pass using middle (relation) prediction.
