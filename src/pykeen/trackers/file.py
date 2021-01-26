@@ -66,6 +66,8 @@ class FileResultTracker(ResultTracker):
             path = PYKEEN_LOGS / f"{name}.{self.extension}"
         elif isinstance(path, str):
             path = pathlib.Path(path)
+        # as_uri() requires the path to be absolute. resolve additionally also normalizes the path
+        path = path.resolve()
         logger.info(f"Logging to {path.as_uri()}.")
         path.parent.mkdir(exist_ok=True, parents=True)
         self.file = path.open(mode="w", newline="", encoding="utf8")
