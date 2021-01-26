@@ -812,7 +812,7 @@ class EntityRelationEmbeddingModel(Model, autoreset=False):
 
 
 class MultimodalModel(Model, autoreset=False):
-    """A multimodal KGE model."""
+    """A base module for multimodal KGE models."""
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         return self(h_indices=hrt_batch[:, 0], r_indices=hrt_batch[:, 1], t_indices=hrt_batch[:, 2]).view(-1, 1)

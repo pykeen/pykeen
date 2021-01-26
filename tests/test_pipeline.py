@@ -9,7 +9,7 @@ import pandas as pd
 
 import pykeen.regularizers
 from pykeen.datasets import EagerDataset, Nations
-from pykeen.models.base import Model
+from pykeen.models import Model
 from pykeen.models.predict import (
     get_all_prediction_df, get_head_prediction_df, get_relation_prediction_df,
     get_tail_prediction_df,

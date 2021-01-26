@@ -11,8 +11,7 @@ from torch import optim
 
 from pykeen.datasets import Nations
 from pykeen.losses import CrossEntropyLoss
-from pykeen.models import ConvE, TransE
-from pykeen.models.base import Model
+from pykeen.models import ConvE, Model, TransE
 from pykeen.optimizers import get_optimizer_cls
 from pykeen.training import SLCWATrainingLoop, get_training_loop_cls
 from pykeen.training.training_loop import NonFiniteLossError, TrainingApproachLossMismatchError
