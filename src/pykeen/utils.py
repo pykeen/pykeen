@@ -150,7 +150,7 @@ def get_until_first_blank(s: str) -> str:
 
 
 def flatten_dictionary(
-    dictionary: Dict[str, Any],
+    dictionary: Mapping[str, Any],
     prefix: Optional[str] = None,
     sep: str = '.',
 ) -> Dict[str, Any]:
@@ -161,7 +161,7 @@ def flatten_dictionary(
 
 
 def _flatten_dictionary(
-    dictionary: Dict[str, Any],
+    dictionary: Mapping[str, Any],
     prefix: Tuple[str, ...],
 ) -> Dict[Tuple[str, ...], Any]:
     """Help flatten a nested dictionary."""
