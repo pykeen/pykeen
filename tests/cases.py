@@ -24,6 +24,30 @@ T = TypeVar("T")
 logger = logging.getLogger(__name__)
 
 
+class GenericTestCase(Generic[T], unittest.TestCase):
+    """Generic tests."""
+
+    cls: Type[T]
+    kwargs: Optional[Mapping[str, Any]] = None
+    instance: T
+
+    def setUp(self) -> None:
+        """Set up the generic testing method."""
+        # fix seeds for reproducibility
+        set_random_seed(seed=42)
+        kwargs = self.kwargs or {}
+        kwargs = self._pre_instantiation_hook(kwargs=dict(kwargs))
+        self.instance = self.cls(**kwargs)
+        self.post_instantiation_hook()
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        """Perform actions before instantiation, potentially modyfing kwargs."""
+        return kwargs
+
+    def post_instantiation_hook(self) -> None:
+        """Perform actions after instantiation."""
+
+
 class DatasetTestCase(unittest.TestCase):
     """A test case for quickly defining common tests for datasets."""
 
@@ -123,6 +147,7 @@ class CachedDatasetCase(DatasetTestCase):
         self.directory.cleanup()
 
 
+# TODO update
 class LossTestCase(unittest.TestCase):
     """Base unittest for loss functions."""
 
@@ -154,6 +179,7 @@ class LossTestCase(unittest.TestCase):
         loss_value.backward()
 
 
+# TODO update
 class PointwiseLossTestCase(LossTestCase):
     """Base unit test for label-based losses."""
 
@@ -175,6 +201,7 @@ class PointwiseLossTestCase(LossTestCase):
         self._check_loss_value(loss_value)
 
 
+# TODO update
 class PairwiseLossTestCase(LossTestCase):
     """Base unit test for pair-wise losses."""
 
@@ -196,6 +223,7 @@ class PairwiseLossTestCase(LossTestCase):
         self._check_loss_value(loss_value)
 
 
+# TODO update
 class SetwiseLossTestCase(LossTestCase):
     """Unit tests for setwise losses."""
 
@@ -215,30 +243,6 @@ class SetwiseLossTestCase(LossTestCase):
             labels,
         )
         self._check_loss_value(loss_value=loss_value)
-
-
-class GenericTestCase(Generic[T], unittest.TestCase):
-    """Generic tests."""
-
-    cls: Type[T]
-    kwargs: Optional[Mapping[str, Any]] = None
-    instance: T
-
-    def setUp(self) -> None:
-        """Set up the generic testing method."""
-        # fix seeds for reproducibility
-        set_random_seed(seed=42)
-        kwargs = self.kwargs or {}
-        kwargs = self._pre_instantiation_hook(kwargs=dict(kwargs))
-        self.instance = self.cls(**kwargs)
-        self.post_instantiation_hook()
-
-    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
-        """Perform actions before instantiation, potentially modyfing kwargs."""
-        return kwargs
-
-    def post_instantiation_hook(self) -> None:
-        """Perform actions after instantiation."""
 
 
 class InteractionTestCase(
