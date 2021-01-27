@@ -91,7 +91,7 @@ class Model(nn.Module, ABC):
         super().__init__()
 
         # Initialize the device
-        self._set_device(preferred_device)
+        self.device = resolve_device(device=preferred_device)
 
         # Random seeds have to set before the embeddings are initialized
         if random_seed is None:
@@ -285,20 +285,6 @@ class Model(nn.Module, ABC):
         self.to(self.device)
         torch.cuda.empty_cache()
         return self
-
-    def _set_device(self, device: DeviceHint = None) -> None:
-        """Set the Torch device to use."""
-        self.device = resolve_device(device=device)
-
-    def to_cpu_(self) -> Model:
-        """Transfer the entire model to CPU."""
-        self._set_device('cpu')
-        return self.to_device_()
-
-    def to_gpu_(self) -> Model:
-        """Transfer the entire model to GPU."""
-        self._set_device('cuda')
-        return self.to_device_()
 
     def reset_parameters_(self):  # noqa: D401
         """Reset all parameters of the model and enforce model constraints."""
