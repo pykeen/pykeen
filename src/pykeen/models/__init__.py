@@ -8,7 +8,7 @@ score value is model-dependent, and usually it cannot be directly interpreted as
 
 from typing import Mapping, Set, Type, Union
 
-from .base import EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, MultimodalModel  # noqa:F401
+from .base import EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, MultimodalModel, OModel
 from .multimodal import ComplExLiteral, DistMultLiteral
 from .unimodal import (
     ComplEx,
@@ -38,6 +38,7 @@ from ..utils import get_cls, get_subclasses, normalize_string
 __all__ = [
     # Base Models
     'Model',
+    'OModel',
     'EntityEmbeddingModel',
     'EntityRelationEmbeddingModel',
     'MultimodalModel',

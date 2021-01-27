@@ -23,6 +23,7 @@ from ..utils import NoRandomSeedNecessary, _can_slice, resolve_device, set_rando
 
 __all__ = [
     'Model',
+    'OModel',
     'EntityEmbeddingModel',
     'EntityRelationEmbeddingModel',
     'MultimodalModel',
@@ -32,13 +33,27 @@ logger = logging.getLogger(__name__)
 
 
 class Model(nn.Module, ABC):
-    """A base module for all of the KGE models."""
+    """A base module for KGE models.
+
+    Subclasses of :class:`Model` can decide however they want on how to store entities' and
+    relations' representations, how they want to be looked up, and how they should
+    be scored. The :class:`OModel` provides a commonly used interface for models storing entity
+    and relation representations in the form of :class:`pykeen.nn.Embedding`.
+    """
 
     #: Keep track of if this is a base model
     _is_base_model: ClassVar[bool]
 
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]]
+
+    #: A triples factory with the training triples
+    triples_factory: TriplesFactory
+
+    #: The device on which this model and its submodules are stored
+    device: torch.device
+
+    _random_seed: Optional[int]
 
     #: The default loss function class
     loss_default: ClassVar[Type[Loss]] = MarginRankingLoss
@@ -47,12 +62,224 @@ class Model(nn.Module, ABC):
     #: The instance of the loss
     loss: Loss
 
+    def __init_subclass__(cls, autoreset: bool = True, **kwargs):  # noqa:D105
+        cls._is_base_model = not autoreset
+        if not cls._is_base_model:
+            _add_post_reset_parameters(cls)
+
+    """Properties"""
+
+    @property
+    def can_slice_h(self) -> bool:
+        """Whether score_h supports slicing."""
+        return _can_slice(self.score_h)
+
+    @property
+    def can_slice_r(self) -> bool:
+        """Whether score_r supports slicing."""
+        return _can_slice(self.score_r)
+
+    @property
+    def can_slice_t(self) -> bool:
+        """Whether score_t supports slicing."""
+        return _can_slice(self.score_t)
+
+    @property
+    def num_entities(self) -> int:  # noqa: D401
+        """The number of entities in the knowledge graph."""
+        return self.triples_factory.num_entities
+
+    @property
+    def num_relations(self) -> int:  # noqa: D401
+        """The number of unique relation types in the knowledge graph."""
+        return self.triples_factory.num_relations
+
+    """Base methods"""
+
+    def post_forward_pass(self):
+        """Run after calculating the forward loss."""
+
+    def _free_graph_and_cache(self):
+        """Run to free the graph and cache."""
+
+    """Abstract methods"""
+
+    @abstractmethod
+    def _reset_parameters_(self):  # noqa: D401
+        """Reset all parameters of the model in-place."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def to_device_(self) -> Model:
+        """Transfer model to device."""
+        raise NotImplementedError
+
+    """Abstract methods - Scoring"""
+
+    @abstractmethod
+    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:
+        """Forward pass.
+
+        This method takes head, relation and tail of each triple and calculates the corresponding score.
+
+        :param hrt_batch: shape: (batch_size, 3), dtype: long
+            The indices of (head, relation, tail) triples.
+        :raises NotImplementedError:
+            If the method was not implemented for this class.
+        :return: shape: (batch_size, 1), dtype: float
+            The score for each triple.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:
+        """Forward pass using right side (tail) prediction.
+
+        This method calculates the score for all possible tails for each (head, relation) pair.
+
+        :param hr_batch: shape: (batch_size, 2), dtype: long
+            The indices of (head, relation) pairs.
+
+        :return: shape: (batch_size, num_entities), dtype: float
+            For each h-r pair, the scores for all possible tails.
+        """
+
+    @abstractmethod
+    def score_r(self, ht_batch: torch.LongTensor) -> torch.FloatTensor:
+        """Forward pass using middle (relation) prediction.
+
+        This method calculates the score for all possible relations for each (head, tail) pair.
+
+        :param ht_batch: shape: (batch_size, 2), dtype: long
+            The indices of (head, tail) pairs.
+
+        :return: shape: (batch_size, num_relations), dtype: float
+            For each h-t pair, the scores for all possible relations.
+        """
+
+    @abstractmethod
+    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:
+        """Forward pass using left side (head) prediction.
+
+        This method calculates the score for all possible heads for each (relation, tail) pair.
+
+        :param rt_batch: shape: (batch_size, 2), dtype: long
+            The indices of (relation, tail) pairs.
+
+        :return: shape: (batch_size, num_entities), dtype: float
+            For each r-t pair, the scores for all possible heads.
+        """
+
+    """Abstract methods - loss computation"""
+
+    @abstractmethod
+    def compute_mr_loss(
+        self,
+        positive_scores: torch.FloatTensor,
+        negative_scores: torch.FloatTensor,
+    ) -> torch.FloatTensor:
+        """Compute the mean ranking loss for the positive and negative scores.
+
+        :param positive_scores:  shape: s, dtype: float
+            The scores for positive triples.
+        :param negative_scores: shape: s, dtype: float
+            The scores for negative triples.
+        :raises RuntimeError:
+            If the chosen loss function does not allow the calculation of margin ranking
+        :return: dtype: float, scalar
+            The margin ranking loss value.
+        """
+
+    @abstractmethod
+    def compute_label_loss(
+        self,
+        predictions: torch.FloatTensor,
+        labels: torch.FloatTensor,
+    ) -> torch.FloatTensor:
+        """Compute the classification loss.
+
+        :param predictions: shape: s
+            The tensor containing predictions.
+        :param labels: shape: s
+            The tensor containing labels.
+
+        :return: dtype: float, scalar
+            The label loss value.
+        """
+
+    @abstractmethod
+    def compute_self_adversarial_negative_sampling_loss(
+        self,
+        positive_scores: torch.FloatTensor,
+        negative_scores: torch.FloatTensor,
+    ) -> torch.FloatTensor:
+        """Compute self adversarial negative sampling loss.
+
+        :param positive_scores: shape: s
+            The tensor containing the positive scores.
+        :param negative_scores: shape: s
+            Tensor containing the negative scores.
+        :raises RuntimeError:
+            If the chosen loss does not allow the calculation of self adversarial negative sampling losses.
+        :return: dtype: float, scalar
+            The loss value.
+        """
+
+    """Concrete methods"""
+
+    def _set_device(self, device: DeviceHint = None) -> None:
+        """Set the Torch device to use."""
+        self.device = resolve_device(device=device)
+
+    def to_cpu_(self) -> Model:
+        """Transfer the entire model to CPU."""
+        self._set_device('cpu')
+        return self.to_device_()
+
+    def to_gpu_(self) -> Model:
+        """Transfer the entire model to GPU."""
+        self._set_device('cuda')
+        return self.to_device_()
+
+    def get_grad_params(self) -> Iterable[nn.Parameter]:
+        """Get the parameters that require gradients."""
+        # TODO: Why do we need that? The optimizer takes care of filtering the parameters.
+        return filter(lambda p: p.requires_grad, self.parameters())
+
+    @property
+    def num_parameter_bytes(self) -> int:
+        """Calculate the number of bytes used for all parameters of the model."""
+        return sum(
+            param.numel() * param.element_size()
+            for param in self.parameters(recurse=True)
+        )
+
+    def save_state(self, path: str) -> None:
+        """Save the state of the model.
+
+        :param path:
+            Path of the file where to store the state in.
+        """
+        torch.save(self.state_dict(), path)
+
+    def load_state(self, path: str) -> None:
+        """Load the state of the model.
+
+        :param path:
+            Path of the file where to load the state from.
+        """
+        self.load_state_dict(torch.load(path, map_location=self.device))
+
+
+class OModel(Model, ABC, autoreset=False):
+    """A base module for PyKEEN 1.0-style KGE models."""
+
     #: The default regularizer class
     regularizer_default: ClassVar[Type[Regularizer]] = NoRegularizer  # type: ignore
     #: The default parameters for the default regularizer class
     regularizer_default_kwargs: ClassVar[Optional[Mapping[str, Any]]] = None
     #: The instance of the regularizer
-    regularizer: Regularizer
+    regularizer: Regularizer  # type: ignore
 
     def __init__(
         self,
@@ -120,68 +347,19 @@ class Model(nn.Module, ABC):
         '''
         self.predict_with_sigmoid = predict_with_sigmoid
 
-    def __init_subclass__(cls, autoreset: bool = True, **kwargs):  # noqa:D105
-        cls._is_base_model = not autoreset
-        if not cls._is_base_model:
-            _add_post_reset_parameters(cls)
-
-    @property
-    def can_slice_h(self) -> bool:
-        """Whether score_h supports slicing."""
-        return _can_slice(self.score_h)
-
-    @property
-    def can_slice_r(self) -> bool:
-        """Whether score_r supports slicing."""
-        return _can_slice(self.score_r)
-
-    @property
-    def can_slice_t(self) -> bool:
-        """Whether score_t supports slicing."""
-        return _can_slice(self.score_t)
-
-    @abstractmethod
-    def _reset_parameters_(self):  # noqa: D401
-        """Reset all parameters of the model in-place."""
-        raise NotImplementedError
-
-    def reset_parameters_(self) -> 'Model':  # noqa: D401
+    def reset_parameters_(self):  # noqa: D401
         """Reset all parameters of the model and enforce model constraints."""
         self._reset_parameters_()
         self.to_device_()
         self.post_parameter_update()
         return self
 
-    @property
-    def num_entities(self) -> int:  # noqa: D401
-        """The number of entities in the knowledge graph."""
-        return self.triples_factory.num_entities
-
-    @property
-    def num_relations(self) -> int:  # noqa: D401
-        """The number of unique relation types in the knowledge graph."""
-        return self.triples_factory.num_relations
-
-    def _set_device(self, device: DeviceHint = None) -> None:
-        """Set the Torch device to use."""
-        self.device = resolve_device(device=device)
-
-    def to_device_(self) -> 'Model':
+    def to_device_(self):
         """Transfer model to device."""
         self.to(self.device)
         self.regularizer.to(self.device)
         torch.cuda.empty_cache()
         return self
-
-    def to_cpu_(self) -> 'Model':
-        """Transfer the entire model to CPU."""
-        self._set_device('cpu')
-        return self.to_device_()
-
-    def to_gpu_(self) -> 'Model':
-        """Transfer the entire model to GPU."""
-        self._set_device('cuda')
-        return self.to_device_()
 
     def predict_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:
         """Calculate the scores for triples.
@@ -509,21 +687,6 @@ class Model(nn.Module, ABC):
 
         return batch_cloned.flip(1)
 
-    @abstractmethod
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:
-        """Forward pass.
-
-        This method takes head, relation and tail of each triple and calculates the corresponding score.
-
-        :param hrt_batch: shape: (batch_size, 3), dtype: long
-            The indices of (head, relation, tail) triples.
-        :raises NotImplementedError:
-            If the method was not implemented for this class.
-        :return: shape: (batch_size, 1), dtype: float
-            The score for each triple.
-        """
-        raise NotImplementedError
-
     def score_hrt_inverse(
         self,
         hrt_batch: torch.LongTensor,
@@ -631,34 +794,8 @@ class Model(nn.Module, ABC):
     def _free_graph_and_cache(self):
         self.regularizer.reset()
 
-    def get_grad_params(self) -> Iterable[nn.Parameter]:
-        """Get the parameters that require gradients."""
-        # TODO: Why do we need that? The optimizer takes care of filtering the parameters.
-        return filter(lambda p: p.requires_grad, self.parameters())
 
-    @property
-    def num_parameter_bytes(self) -> int:
-        """Calculate the number of bytes used for all parameters of the model."""
-        return sum(p.numel() * p.element_size() for p in self.parameters(recurse=True))
-
-    def save_state(self, path: str) -> None:
-        """Save the state of the model.
-
-        :param path:
-            Path of the file where to store the state in.
-        """
-        torch.save(self.state_dict(), path)
-
-    def load_state(self, path: str) -> None:
-        """Load the state of the model.
-
-        :param path:
-            Path of the file where to load the state from.
-        """
-        self.load_state_dict(torch.load(path, map_location=self.device))
-
-
-class EntityEmbeddingModel(Model, autoreset=False):
+class EntityEmbeddingModel(OModel, ABC, autoreset=False):
     """A base module for most KGE models that have one embedding for entities."""
 
     def __init__(
@@ -676,7 +813,6 @@ class EntityEmbeddingModel(Model, autoreset=False):
         entity_normalizer_kwargs: Optional[Mapping[str, Any]] = None,
         entity_constrainer: Optional[Constrainer] = None,
         entity_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
-
     ) -> None:
         """Initialize the entity embedding model.
 
@@ -719,7 +855,7 @@ class EntityEmbeddingModel(Model, autoreset=False):
         self.entity_embeddings.post_parameter_update()
 
 
-class EntityRelationEmbeddingModel(Model, autoreset=False):
+class EntityRelationEmbeddingModel(OModel, ABC, autoreset=False):
     """A base module for KGE models that have different embeddings for entities and relations."""
 
     def __init__(
@@ -811,7 +947,7 @@ class EntityRelationEmbeddingModel(Model, autoreset=False):
         self.relation_embeddings.post_parameter_update()
 
 
-class MultimodalModel(Model, autoreset=False):
+class MultimodalModel(OModel, ABC, autoreset=False):
     """A base module for multimodal KGE models."""
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102

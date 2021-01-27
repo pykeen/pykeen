@@ -28,6 +28,7 @@ from pykeen.models.base import (
     EntityRelationEmbeddingModel,
     Model,
     MultimodalModel,
+    OModel,
     _extend_batch,
 )
 from pykeen.models.cli import build_cli_from_cls
@@ -45,6 +46,7 @@ from pykeen.utils import all_in_bounds, clamp_norm, set_random_seed
 
 SKIP_MODULES = {
     Model.__name__,
+    OModel.__name__,
     'DummyModel',
     MultimodalModel.__name__,
     EntityEmbeddingModel.__name__,
