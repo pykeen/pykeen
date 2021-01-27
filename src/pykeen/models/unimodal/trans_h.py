@@ -109,8 +109,10 @@ class TransH(EntityRelationEmbeddingModel):
         self.normal_vector_embeddings.reset_parameters()
         # TODO: Add initialization
 
-    def regularize_if_necessary(self) -> None:
+    def regularize_if_necessary(self, *tensors: torch.FloatTensor) -> None:
         """Update the regularizer's term given some tensors, if regularization is requested."""
+        if tensors:
+            raise ValueError('no tensors should be passed to TransH.regularize_if_necessary')
         # As described in [wang2014], all entities and relations are used to compute the regularization term
         # which enforces the defined soft constraints.
         super().regularize_if_necessary(

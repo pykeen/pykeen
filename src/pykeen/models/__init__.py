@@ -71,7 +71,7 @@ __all__ = [
 
 _MODELS: Set[Type[Model]] = {
     subcls
-    for subcls in get_subclasses(Model)
+    for subcls in get_subclasses(Model)  # type: ignore
     if not subcls._is_base_model
 }
 

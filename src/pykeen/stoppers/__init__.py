@@ -40,7 +40,7 @@ __all__ = [
 ]
 
 _STOPPER_SUFFIX = 'Stopper'
-_STOPPERS: Collection[Type[Stopper]] = set(get_subclasses(Stopper))
+_STOPPERS: Collection[Type[Stopper]] = set(get_subclasses(Stopper))  # type: ignore
 
 #: A mapping of stoppers' names to their implementations
 stoppers: Mapping[str, Type[Stopper]] = {
@@ -57,7 +57,7 @@ def get_stopper_cls(query: Union[None, str, Type[Stopper]]) -> Type[Stopper]:
     """
     return get_cls(
         query,
-        base=Stopper,
+        base=Stopper,  # type: ignore
         lookup_dict=stoppers,
         default=NopStopper,
         suffix=_STOPPER_SUFFIX,

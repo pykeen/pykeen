@@ -14,7 +14,7 @@ from ...losses import Loss
 from ...nn import Embedding
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
-from ...typing import DeviceHint
+from ...typing import DeviceHint, cast_constrainer
 from ...utils import clamp_norm
 
 __all__ = [
@@ -84,9 +84,9 @@ class KG2E(EntityRelationEmbeddingModel):
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
-            entity_constrainer=clamp_norm,
+            entity_constrainer=cast_constrainer(clamp_norm),
             entity_constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
-            relation_constrainer=clamp_norm,
+            relation_constrainer=cast_constrainer(clamp_norm),
             relation_constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
         )
 

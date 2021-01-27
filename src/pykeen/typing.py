@@ -2,7 +2,7 @@
 
 """Type hints for PyKEEN."""
 
-from typing import Callable, Mapping, NamedTuple, Sequence, TypeVar, Union
+from typing import Callable, Mapping, NamedTuple, Sequence, TypeVar, Union, cast
 
 import numpy as np
 import torch
@@ -15,6 +15,7 @@ __all__ = [
     'Initializer',
     'Normalizer',
     'Constrainer',
+    'cast_constrainer',
     'InteractionFunction',
     'DeviceHint',
     'TorchRandomHint',
@@ -36,6 +37,12 @@ InteractionFunction = Callable[[TensorType, TensorType, TensorType], TensorType]
 Initializer = Callable[[TensorType], TensorType]
 Normalizer = Callable[[TensorType], TensorType]
 Constrainer = Callable[[TensorType], TensorType]
+
+
+def cast_constrainer(f) -> Constrainer:
+    """Cast a constrainer function with :func:`typing.cast`."""
+    return cast(Constrainer, f)
+
 
 DeviceHint = Union[None, str, torch.device]
 TorchRandomHint = Union[None, int, torch.Generator]
