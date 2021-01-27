@@ -2,10 +2,9 @@
 
 """Loss functions integrated in PyKEEN."""
 
-from typing import Any, ClassVar, Mapping, Optional, Set, Type, Union
+from typing import Any, Callable, ClassVar, Mapping, Optional, Set, Type, Union
 
 import torch
-from torch import nn
 from torch.nn import functional
 from torch.nn.modules.loss import _Loss
 
@@ -53,6 +52,11 @@ class Loss(_Loss):
 class PointwiseLoss(Loss):
     """Pointwise loss functions compute an independent loss term for each triple-label pair."""
 
+    @staticmethod
+    def validate_labels(labels: torch.FloatTensor) -> bool:
+        """Check whether labels are in [0, 1]."""
+        return labels.min() >= 0 and labels.max() <= 1
+
 
 class PairwiseLoss(Loss):
     """Pairwise loss functions compare the scores of a positive triple and a negative triple."""
@@ -62,7 +66,7 @@ class SetwiseLoss(Loss):
     """Setwise loss functions compare the scores of several triples."""
 
 
-class BCEWithLogitsLoss(PointwiseLoss, nn.BCEWithLogitsLoss):
+class BCEWithLogitsLoss(PointwiseLoss):
     r"""A wrapper around the numeric stable version of the PyTorch binary cross entropy loss.
 
     For label function :math:`l:\mathcal{E} \times \mathcal{R} \times \mathcal{E} \rightarrow \{0,1\}` and interaction
@@ -90,14 +94,29 @@ class BCEWithLogitsLoss(PointwiseLoss, nn.BCEWithLogitsLoss):
 
     synonyms = {'Negative Log Likelihood Loss'}
 
+    def forward(
+        self,
+        scores: torch.FloatTensor,
+        labels: torch.FloatTensor,
+    ) -> torch.FloatTensor:  # noqa: D102
+        return functional.binary_cross_entropy_with_logits(scores, labels, reduction=self.reduction)
 
-class MSELoss(PointwiseLoss, nn.MSELoss):
+
+class MSELoss(PointwiseLoss):
     """A wrapper around the PyTorch mean square error loss."""
 
     synonyms = {'Mean Square Error Loss', 'Mean Squared Error Loss'}
 
+    def forward(
+        self,
+        scores: torch.FloatTensor,
+        labels: torch.FloatTensor,
+    ) -> torch.FloatTensor:  # noqa: D102
+        assert self.validate_labels(labels=labels)
+        return functional.mse_loss(scores, labels, reduction=self.reduction)
 
-class MarginRankingLoss(nn.MarginRankingLoss, PairwiseLoss):
+
+class MarginRankingLoss(PairwiseLoss):
     """A wrapper around the PyTorch margin ranking loss."""
 
     synonyms = {"Pairwise Hinge Loss"}
@@ -105,6 +124,36 @@ class MarginRankingLoss(nn.MarginRankingLoss, PairwiseLoss):
     hpo_default: ClassVar[Mapping[str, Any]] = dict(
         margin=dict(type=int, low=0, high=3, q=1),
     )
+
+    def __init__(
+        self,
+        margin: float = 1.0,
+        margin_activation: Callable[[torch.FloatTensor], torch.FloatTensor] = functional.relu,
+        reduction: str = 'mean',
+    ):
+        """Initialize the margin loss instance.
+
+        :param margin:
+            The margin by which positive and negative scores should be apart.
+        :param margin_activation:
+            A margin activation. Defaults to relu, i.e. f(x) = max(0, x), which is the default "margin loss". Using e.g.
+            softplus leads to a "soft-margin" formulation, as e.g. discussed here https://arxiv.org/abs/1703.07737
+        :param reduction:
+            The name of the reduction operation to aggregate the individual loss values from a batch to a scalar loss
+            value. From {'mean', 'sum'}.
+        """
+        super().__init__(reduction=reduction)
+        self.margin = margin
+        self.margin_activation = margin_activation
+
+    def forward(
+        self,
+        pos_scores: torch.FloatTensor,
+        neg_scores: torch.FloatTensor,
+    ) -> torch.FloatTensor:  # noqa: D102
+        return self.reduction_operation(self.margin_activation(
+            neg_scores[:, :, None] - pos_scores[:, None, :] + self.margin
+        ))
 
 
 class SoftplusLoss(PointwiseLoss):
@@ -174,6 +223,9 @@ class NSSALoss(SetwiseLoss):
 
         :param margin: The loss's margin (also written as gamma in the reference paper)
         :param adversarial_temperature: The negative sampling temperature (also written as alpha in the reference paper)
+        :param reduction:
+            The name of the reduction operation to aggregate the individual loss values from a batch to a scalar loss
+            value. From {'mean', 'sum'}.
 
         .. note:: The default hyperparameters are based the experiments for FB15K-237 in [sun2019]_.
         """
