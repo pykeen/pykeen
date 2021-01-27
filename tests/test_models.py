@@ -22,7 +22,10 @@ import pykeen.experiments
 import pykeen.models
 from pykeen.datasets.kinships import KINSHIPS_TRAIN_PATH
 from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH, Nations
-from pykeen.models import EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, MultimodalModel, OModel, _MODELS
+from pykeen.models import (
+    EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, MultimodalModel, _MODELS,
+    _OldAbstractModel,
+)
 from pykeen.models.cli import build_cli_from_cls
 from pykeen.models.predict import get_novelty_mask, predict
 from pykeen.models.unimodal.rgcn import (
@@ -38,7 +41,7 @@ from pykeen.utils import all_in_bounds, clamp_norm, extend_batch, set_random_see
 
 SKIP_MODULES = {
     Model.__name__,
-    OModel.__name__,
+    _OldAbstractModel.__name__,
     'DummyModel',
     MultimodalModel.__name__,
     EntityEmbeddingModel.__name__,

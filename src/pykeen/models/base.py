@@ -23,7 +23,7 @@ from ..utils import NoRandomSeedNecessary, _can_slice, extend_batch, resolve_dev
 
 __all__ = [
     'Model',
-    'OModel',
+    '_OldAbstractModel',
     'EntityEmbeddingModel',
     'EntityRelationEmbeddingModel',
     'MultimodalModel',
@@ -585,7 +585,7 @@ class Model(nn.Module, ABC):
             return self.score_t(hr_batch=t_r_inv, slice_size=slice_size)  # type: ignore
 
 
-class OModel(Model, ABC, autoreset=False):
+class _OldAbstractModel(Model, ABC, autoreset=False):
     """A base module for PyKEEN 1.0-style KGE models."""
 
     #: The default regularizer class
@@ -812,7 +812,7 @@ class OModel(Model, ABC, autoreset=False):
         self.regularizer.reset()
 
 
-class EntityEmbeddingModel(OModel, ABC, autoreset=False):
+class EntityEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
     """A base module for most KGE models that have one embedding for entities."""
 
     def __init__(
@@ -872,7 +872,7 @@ class EntityEmbeddingModel(OModel, ABC, autoreset=False):
         self.entity_embeddings.post_parameter_update()
 
 
-class EntityRelationEmbeddingModel(OModel, ABC, autoreset=False):
+class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
     """A base module for KGE models that have different embeddings for entities and relations."""
 
     def __init__(
@@ -964,7 +964,7 @@ class EntityRelationEmbeddingModel(OModel, ABC, autoreset=False):
         self.relation_embeddings.post_parameter_update()
 
 
-class MultimodalModel(OModel, ABC, autoreset=False):
+class MultimodalModel(_OldAbstractModel, ABC, autoreset=False):
     """A base module for multimodal KGE models."""
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
