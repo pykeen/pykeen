@@ -2,19 +2,6 @@
 
 r"""Loss functions integrated in PyKEEN.
 
-TODO: explanation for why we have re-implemented loss modules in PyKEEN rather than using
-PyTorch built-in ones
-
-1. Add a hierarchy that includes extra utilities
-2. ...
-
-TODO: tutorial for bringing PyTorch loss functions
-
-- What is the functional form?
-- Should the user have to specify whether something is a pointwise, pairwise, or setwise?
-- ...
-
-
 Rather than re-using the built-in loss functions in PyTorch, we have elected to re-implement
 some of the code from :mod:`pytorch.nn.modules.loss` in order to encode the three different
 links of loss functions accepted by PyKEEN in a class hierarchy. This allows for PyKEEN to more
@@ -72,6 +59,14 @@ is defined as the average of the setwise losses for each set of
 triples $\mathcal{b}$ in the subset $\mathcal{B} \in 2^{2^{\mathcal{T}}}$.
 
 $\mathcal{L}_L(\mathcal{B}) = \frac{1}{|\mathcal{B}|} \sum \limits_{\mathcal{b} \in \mathcal{B}} L(\mathcal{b})$
+
+Bring Your Own Loss Function
+----------------------------
+TODO: tutorial for bringing PyTorch loss functions
+
+- What is the functional form?
+- Should the user have to specify whether something is a pointwise, pairwise, or setwise?
+- ...
 """
 
 from typing import Any, Callable, ClassVar, Mapping, Optional, Set, Type, Union
