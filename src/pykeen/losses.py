@@ -57,6 +57,21 @@ The pairwise loss for a set of pairs of positive/negative triples $\mathcal{L}: 
 positive and negative triples in the subset $\mathcal{B} \in 2^{\mathcal{K} \times \mathcal{\bar{K}}}$.
 
 $\mathcal{L}(\mathcal{B}) = \frac{1}{|\mathcal{B}|} \sum \limits_{(k, \bar{k}) \in \mathcal{B}} L(k, \bar{k})$
+
+Setwise Loss Functions
+----------------------
+A setwise loss is applied to a set of triples which can be either positive or negative. It is defined as
+$L: 2^{\mathcal{T}} \rightarrow \mathbb{R}$. The two setwise loss functions implemented in PyKEEN,
+:class:`pykeen.losses.NSSALoss` and :class:`pykeen.losses.CrossEntropyLoss` are both widely different
+in their paradigms, but both share the notion that triples are not strictly positive or negative.
+
+TODO is this the right way to aggregate a setwise loss function over a batch? Does that even make sense?
+
+The pairwise loss for a set of sets of triples triples $\mathcal{L}: 2^{2^{\mathcal{T}}} \rightarrow \mathbb{R}$
+is defined as the average of the setwise losses for each set of
+triples in the subset $\mathcal{B} \in 2^{2^{\mathcal{T}}}$.
+
+$\mathcal{L}(\mathcal{B}) = \frac{1}{|\mathcal{B}|} \sum \limits_{\mathcal{b} \in \mathcal{B}} L(\mathcal{b})$
 """
 
 from typing import Any, Callable, ClassVar, Mapping, Optional, Set, Type, Union
