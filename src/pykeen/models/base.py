@@ -142,6 +142,13 @@ class Model(nn.Module, ABC):
         """Whether score_t supports slicing."""
         return _can_slice(self.score_t)
 
+    def reset_parameters_(self):  # noqa: D401
+        """Reset all parameters of the model and enforce model constraints."""
+        self._reset_parameters_()
+        self.to_device_()
+        self.post_parameter_update()
+        return self
+
     @property
     def num_entities(self) -> int:  # noqa: D401
         """The number of entities in the knowledge graph."""
@@ -284,13 +291,6 @@ class Model(nn.Module, ABC):
         """Transfer model to device."""
         self.to(self.device)
         torch.cuda.empty_cache()
-        return self
-
-    def reset_parameters_(self):  # noqa: D401
-        """Reset all parameters of the model and enforce model constraints."""
-        self._reset_parameters_()
-        self.to_device_()
-        self.post_parameter_update()
         return self
 
     def get_grad_params(self) -> Iterable[nn.Parameter]:
