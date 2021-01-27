@@ -17,7 +17,7 @@ triples $\mathcal{\bar{K}}$.
 .. note::
 
     In most realistic use cases of knowledge graph embedding models, you will have observed a subset of positive
-    triples $\mathcal{T_{obs}} \in \mathcal{K}$ and no observations over negative triples. Depending on the training
+    triples $\mathcal{T_{obs}} \subset \mathcal{K}$ and no observations over negative triples. Depending on the training
     assumption (sLCWA or LCWA), this will mean negative triples are generated in a variety of patterns.
 
 Pointwise Loss Functions
