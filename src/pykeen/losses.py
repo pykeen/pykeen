@@ -52,11 +52,11 @@ A pairwise loss is applied to a pair of triples - a positive and a negative one.
 the pairwise loss is computed as the difference in a scoring function $f: \mathcal{T} \rightarrow \mathbb{R}$ such that
 $L(k, \bar{k}) = f(k) - f(\bar{k})$.
 
-The pairwise loss for a set of pairs of positive/negative triples $\mathcal{L}: 2^{\mathcal{K} \times
+The pairwise loss for a set of pairs of positive/negative triples $\mathcal{L}_L: 2^{\mathcal{K} \times
 \mathcal{\bar{K}}} \rightarrow \mathbb{R}$ is defined as the average of the pairwise losses for each pair of
 positive and negative triples in the subset $\mathcal{B} \in 2^{\mathcal{K} \times \mathcal{\bar{K}}}$.
 
-$\mathcal{L}(\mathcal{B}) = \frac{1}{|\mathcal{B}|} \sum \limits_{(k, \bar{k}) \in \mathcal{B}} L(k, \bar{k})$
+$\mathcal{L}_L(\mathcal{B}) = \frac{1}{|\mathcal{B}|} \sum \limits_{(k, \bar{k}) \in \mathcal{B}} L(k, \bar{k})$
 
 Setwise Loss Functions
 ----------------------
@@ -65,13 +65,13 @@ $L: 2^{\mathcal{T}} \rightarrow \mathbb{R}$. The two setwise loss functions impl
 :class:`pykeen.losses.NSSALoss` and :class:`pykeen.losses.CrossEntropyLoss` are both widely different
 in their paradigms, but both share the notion that triples are not strictly positive or negative.
 
-TODO is this the right way to aggregate a setwise loss function over a batch? Does that even make sense?
+.. todo:: is this the right way to aggregate a setwise loss function over a batch? Does that even make sense?
 
-The pairwise loss for a set of sets of triples triples $\mathcal{L}: 2^{2^{\mathcal{T}}} \rightarrow \mathbb{R}$
+The pairwise loss for a set of sets of triples triples $\mathcal{L}_L: 2^{2^{\mathcal{T}}} \rightarrow \mathbb{R}$
 is defined as the average of the setwise losses for each set of
-triples in the subset $\mathcal{B} \in 2^{2^{\mathcal{T}}}$.
+triples $\mathcal{b}$ in the subset $\mathcal{B} \in 2^{2^{\mathcal{T}}}$.
 
-$\mathcal{L}(\mathcal{B}) = \frac{1}{|\mathcal{B}|} \sum \limits_{\mathcal{b} \in \mathcal{B}} L(\mathcal{b})$
+$\mathcal{L}_L(\mathcal{B}) = \frac{1}{|\mathcal{B}|} \sum \limits_{\mathcal{b} \in \mathcal{B}} L(\mathcal{b})$
 """
 
 from typing import Any, Callable, ClassVar, Mapping, Optional, Set, Type, Union
