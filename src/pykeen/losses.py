@@ -1,6 +1,63 @@
 # -*- coding: utf-8 -*-
 
-"""Loss functions integrated in PyKEEN."""
+r"""Loss functions integrated in PyKEEN.
+
+TODO: explanation for why we have re-implemented loss modules in PyKEEN rather than using
+PyTorch built-in ones
+
+1. Add a hierarchy that includes extra utilities
+2. ...
+
+TODO: tutorial for bringing PyTorch loss functions
+
+- What is the functional form?
+- Should the user have to specify whether something is a pointwise, pairwise, or setwise?
+- ...
+
+
+Rather than re-using the built-in loss functions in PyTorch, we have elected to re-implement
+some of the code from :mod:`pytorch.nn.modules.loss` in order to encode the three different
+links of loss functions accepted by PyKEEN in a class hierarchy. This allows for PyKEEN to more
+dynamically handle different kinds of loss functions as well as share code. Further, it gives
+more insight to potential users.
+
+Throughout the following explanations of pointwise loss functions, pairwise loss functions, and setwise
+loss functions, we will assume the set of entities $\mathcal{E}$, set of relations $\mathcal{R}$, set of possible
+triples $\mathcal{T} = \mathcal{E} \times \mathcal{R} \times \mathcal{E}$, set of possible subsets of possible triples
+$2^{\mathcal{T}}$ (i.e., the power set of $\mathcal{T}$), set of positive triples $\mathcal{K}$, and set of negative
+triples $\mathcal{\bar{K}}$.
+
+.. note::
+
+    In most realistic use cases of knowledge graph embedding models, you will have observed a subset of positive
+    triples $\mathcal{T_{obs}} \in \mathcal{K}$ and no observations over negative triples. Depending on the training
+    assumption (sLCWA or LCWA), this will mean negative triples are generated in a variety of patterns.
+
+Pointwise Loss Functions
+------------------------
+A pointwise loss is applied to a single triple. It is defined as $L_l: \mathcal{T} \rightarrow \mathbb{R}$ and
+computes a real-value for the triple given its labeling from $l:\mathcal{T} \rightarrow \{0,1\}$ where a value of 1
+denotes the triple is positive (i.e., $(h,r,t) \in \mathcal{K}$) and a value of 0 denotes the triple is negative
+(i.e., $(h,r,t) \notin \mathcal{K}$).
+
+The pointwise loss of a set of triples (i.e., a batch) $\mathcal{L}_{L_l}: 2^{\mathcal{T}} \rightarrow \mathbb{R}$ is
+defined as the average of the pointwise losses over each triple in the subset $\mathcal{B} \in 2^{\mathcal{T}}$:
+
+$\mathcal{L}_{L_l}(\mathcal{B}) = \frac{1}{|\mathcal{B}|} \sum \limits_{(h,r,t) \in \mathcal{B}} L_l(h, r, t)$
+
+Pairwise Loss Functions
+-----------------------
+A pairwise loss is applied to a pair of triples - a positive and a negative one. It is defined as $L: \mathcal{K}
+\times \mathcal{\bar{K}} \rightarrow \mathbb{R}$ and computes a real value for the pair. Typically,
+the pairwise loss is computed as the difference in a scoring function $f: \mathcal{T} \rightarrow \mathbb{R}$ such that
+$L(k, \bar{k}) = f(k) - f(\bar{k})$.
+
+The pairwise loss for a set of pairs of positive/negative triples $\mathcal{L}: 2^{\mathcal{K} \times
+\mathcal{\bar{K}}} \rightarrow \mathbb{R}$ is defined as the average of the pairwise losses for each pair of
+positive and negative triples in the subset $\mathcal{B} \in 2^{\mathcal{K} \times \mathcal{\bar{K}}}$.
+
+$\mathcal{L}(\mathcal{B}) = \frac{1}{|\mathcal{B}|} \sum \limits_{(k, \bar{k}) \in \mathcal{B}} L(k, \bar{k})$
+"""
 
 from typing import Any, Callable, ClassVar, Mapping, Optional, Set, Type, Union
 
@@ -90,6 +147,8 @@ class BCEWithLogitsLoss(PointwiseLoss):
 
         This loss is not well-suited for translational distance models because these models produce
         a negative distance as score and cannot produce positive model outputs.
+
+    .. seealso:: :class:`torch.nn.BCEWithLogitsLoss`
     """
 
     synonyms = {'Negative Log Likelihood Loss'}
@@ -103,7 +162,10 @@ class BCEWithLogitsLoss(PointwiseLoss):
 
 
 class MSELoss(PointwiseLoss):
-    """A wrapper around the PyTorch mean square error loss."""
+    """A wrapper around the PyTorch mean square error loss.
+
+    .. seealso:: :class:`torch.nn.MSELoss`
+    """
 
     synonyms = {'Mean Square Error Loss', 'Mean Squared Error Loss'}
 
@@ -117,7 +179,10 @@ class MSELoss(PointwiseLoss):
 
 
 class MarginRankingLoss(PairwiseLoss):
-    """A wrapper around the PyTorch margin ranking loss."""
+    """A wrapper around the PyTorch margin ranking loss.
+
+    .. seealso:: :class:`torch.nn.MarginRankingLoss`
+    """
 
     synonyms = {"Pairwise Hinge Loss"}
 
@@ -178,7 +243,10 @@ class SoftplusLoss(PointwiseLoss):
 
 
 class BCEAfterSigmoidLoss(PointwiseLoss):
-    """A loss function which uses the numerically unstable version of explicit Sigmoid + BCE."""
+    """A loss function which uses the numerically unstable version of explicit Sigmoid + BCE.
+
+    .. seealso:: :class:`torch.nn.BCELoss`
+    """
 
     def forward(
         self,
@@ -191,7 +259,10 @@ class BCEAfterSigmoidLoss(PointwiseLoss):
 
 
 class CrossEntropyLoss(SetwiseLoss):
-    """Evaluate cross entropy after softmax output."""
+    """Evaluate cross entropy after softmax output.
+
+    .. seealso:: :class:`torch.nn.CrossEntropyLoss`
+    """
 
     def forward(
         self,
