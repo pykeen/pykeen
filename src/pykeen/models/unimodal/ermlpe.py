@@ -75,11 +75,10 @@ class ERMLPE(EntityRelationEmbeddingModel):
             regularizer=regularizer,
         )
         self.hidden_dim = hidden_dim
-        self.input_dropout = input_dropout
 
         self.linear1 = nn.Linear(2 * self.embedding_dim, self.hidden_dim)
         self.linear2 = nn.Linear(self.hidden_dim, self.embedding_dim)
-        self.input_dropout = nn.Dropout(self.input_dropout)
+        self.input_dropout = nn.Dropout(input_dropout)
         self.bn1 = nn.BatchNorm1d(self.hidden_dim)
         self.bn2 = nn.BatchNorm1d(self.embedding_dim)
         self.mlp = nn.Sequential(

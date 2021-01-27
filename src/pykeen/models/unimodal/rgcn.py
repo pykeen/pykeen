@@ -341,7 +341,7 @@ class RGCNRepresentations(RepresentationModule):
 
                 # Normalize messages by relation-specific in-degree
                 if self.edge_weighting is not None:
-                    m_r *= self.edge_weighting(source=sources_r, target=targets_r).unsqueeze(dim=-1)
+                    m_r *= self.edge_weighting(sources_r, targets_r).unsqueeze(dim=-1)
 
                 # Aggregate messages in target
                 new_x.index_add_(dim=0, index=targets_r, source=m_r)

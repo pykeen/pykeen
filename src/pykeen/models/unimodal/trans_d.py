@@ -14,7 +14,7 @@ from ...nn import Embedding
 from ...nn.init import xavier_normal_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
-from ...typing import DeviceHint
+from ...typing import DeviceHint, cast_constrainer
 from ...utils import clamp_norm
 
 __all__ = [
@@ -127,9 +127,9 @@ class TransD(EntityRelationEmbeddingModel):
             regularizer=regularizer,
             entity_initializer=xavier_normal_,
             relation_initializer=xavier_normal_,
-            entity_constrainer=clamp_norm,
+            entity_constrainer=cast_constrainer(clamp_norm),
             entity_constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
-            relation_constrainer=clamp_norm,
+            relation_constrainer=cast_constrainer(clamp_norm),
             relation_constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
         )
 

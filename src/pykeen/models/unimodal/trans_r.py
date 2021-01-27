@@ -17,7 +17,7 @@ from ...nn import Embedding
 from ...nn.init import xavier_uniform_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
-from ...typing import DeviceHint
+from ...typing import DeviceHint, cast_constrainer
 from ...utils import clamp_norm, compose
 
 __all__ = [
@@ -94,13 +94,13 @@ class TransR(EntityRelationEmbeddingModel):
             random_seed=random_seed,
             regularizer=regularizer,
             entity_initializer=xavier_uniform_,
-            entity_constrainer=clamp_norm,
+            entity_constrainer=cast_constrainer(clamp_norm),
             entity_constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
             relation_initializer=compose(
                 xavier_uniform_,
                 functional.normalize,
             ),
-            relation_constrainer=clamp_norm,
+            relation_constrainer=cast_constrainer(clamp_norm),
             relation_constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
         )
         self.scoring_fct_norm = scoring_fct_norm

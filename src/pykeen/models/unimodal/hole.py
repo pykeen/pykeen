@@ -13,7 +13,7 @@ from ...losses import Loss
 from ...nn.init import xavier_uniform_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
-from ...typing import DeviceHint
+from ...typing import DeviceHint, cast_constrainer
 from ...utils import clamp_norm
 
 __all__ = [
@@ -74,7 +74,7 @@ class HolE(EntityRelationEmbeddingModel):
             # Initialisation, cf. https://github.com/mnick/scikit-kge/blob/master/skge/param.py#L18-L27
             entity_initializer=xavier_uniform_,
             relation_initializer=xavier_uniform_,
-            entity_constrainer=clamp_norm,
+            entity_constrainer=cast_constrainer(clamp_norm),
             entity_constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
         )
 

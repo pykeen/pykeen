@@ -48,7 +48,7 @@ class LCWATrainingLoop(TrainingLoop):
         if slice_size is None:
             predictions = self.model.score_t(hr_batch=batch_pairs)
         else:
-            predictions = self.model.score_t(hr_batch=batch_pairs, slice_size=slice_size)
+            predictions = self.model.score_t(hr_batch=batch_pairs, slice_size=slice_size)  # type: ignore
 
         loss = self._loss_helper(
             predictions,
