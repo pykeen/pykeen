@@ -299,6 +299,13 @@ class Model(nn.Module, ABC):
         self._set_device('cuda')
         return self.to_device_()
 
+    def reset_parameters_(self):  # noqa: D401
+        """Reset all parameters of the model and enforce model constraints."""
+        self._reset_parameters_()
+        self.to_device_()
+        self.post_parameter_update()
+        return self
+
     def get_grad_params(self) -> Iterable[nn.Parameter]:
         """Get the parameters that require gradients."""
         # TODO: Why do we need that? The optimizer takes care of filtering the parameters.
@@ -328,71 +335,7 @@ class Model(nn.Module, ABC):
         """
         self.load_state_dict(torch.load(path, map_location=self.device))
 
-
-class OModel(Model, ABC, autoreset=False):
-    """A base module for PyKEEN 1.0-style KGE models."""
-
-    #: The default regularizer class
-    regularizer_default: ClassVar[Type[Regularizer]] = NoRegularizer  # type: ignore
-    #: The default parameters for the default regularizer class
-    regularizer_default_kwargs: ClassVar[Optional[Mapping[str, Any]]] = None
-    #: The instance of the regularizer
-    regularizer: Regularizer  # type: ignore
-
-    def __init__(
-        self,
-        triples_factory: TriplesFactory,
-        loss: Optional[Loss] = None,
-        predict_with_sigmoid: bool = False,
-        preferred_device: DeviceHint = None,
-        random_seed: Optional[int] = None,
-        regularizer: Optional[Regularizer] = None,
-    ) -> None:
-        """Initialize the module.
-
-        :param triples_factory:
-            The triples factory facilitates access to the dataset.
-        :param loss:
-            The loss to use. If None is given, use the loss default specific to the model subclass.
-        :param predict_with_sigmoid:
-            Whether to apply sigmoid onto the scores when predicting scores. Applying sigmoid at prediction time may
-            lead to exactly equal scores for certain triples with very high, or very low score. When not trained with
-            applying sigmoid (or using BCEWithLogitsLoss), the scores are not calibrated to perform well with sigmoid.
-        :param preferred_device:
-            The preferred device for model training and inference.
-        :param random_seed:
-            A random seed to use for initialising the model's weights. **Should** be set when aiming at reproducibility.
-        :param regularizer:
-            A regularizer to use for training.
-        """
-        super().__init__(
-            triples_factory=triples_factory,
-            loss=loss,
-            predict_with_sigmoid=predict_with_sigmoid,
-            preferred_device=preferred_device,
-            random_seed=random_seed,
-        )
-        # Regularizer
-        if regularizer is None:
-            regularizer = self.regularizer_default(
-                device=self.device,
-                **(self.regularizer_default_kwargs or {}),
-            )
-        self.regularizer = regularizer
-
-    def reset_parameters_(self):  # noqa: D401
-        """Reset all parameters of the model and enforce model constraints."""
-        self._reset_parameters_()
-        self.to_device_()
-        self.post_parameter_update()
-        return self
-
-    def to_device_(self):
-        """Transfer model to device."""
-        self.to(self.device)
-        self.regularizer.to(self.device)
-        torch.cuda.empty_cache()
-        return self
+    """Prediction methods"""
 
     def predict_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:
         """Calculate the scores for triples.
@@ -606,6 +549,113 @@ class OModel(Model, ABC, autoreset=False):
         warnings.warn('Use pykeen.models.predict.get_tail_prediction_df', DeprecationWarning)
         return get_tail_prediction_df(self, head_label=head_label, relation_label=relation_label, **kwargs)
 
+    """Inverse scoring"""
+
+    def _prepare_inverse_batch(self, batch: torch.LongTensor, index_relation: int) -> torch.LongTensor:
+        if not self.triples_factory.create_inverse_triples:
+            raise ValueError(
+                "Your model is not configured to predict with inverse relations."
+                " Set ``create_inverse_triples=True`` when creating the dataset/triples factory"
+                " or using the pipeline().",
+            )
+        batch_cloned = batch.clone()
+
+        # The number of relations stored in the triples factory includes the number of inverse relations
+        # Id of inverse relation: relation + 1
+        batch_cloned[:, index_relation] = batch_cloned[:, index_relation] + 1
+
+        return batch_cloned.flip(1)
+
+    def score_hrt_inverse(
+        self,
+        hrt_batch: torch.LongTensor,
+    ) -> torch.FloatTensor:
+        r"""Score triples based on inverse triples, i.e., compute $f(h,r,t)$ based on $f(t,r_{inv},h)$.
+
+        When training with inverse relations, the model produces two (different) scores for a triple $(h,r,t) \in K$.
+        The forward score is calculated from $f(h,r,t)$ and the inverse score is calculated from $f(t,r_{inv},h)$.
+        This function enables users to inspect the scores obtained by using the corresponding inverse triples.
+        """
+        t_r_inv_h = self._prepare_inverse_batch(batch=hrt_batch, index_relation=1)
+        return self.score_hrt(hrt_batch=t_r_inv_h)
+
+    def score_t_inverse(self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None):
+        """Score all tails for a batch of (h,r)-pairs using the head predictions for the inverses $(*,r_{inv},h)$."""
+        r_inv_h = self._prepare_inverse_batch(batch=hr_batch, index_relation=1)
+
+        if slice_size is None:
+            return self.score_h(rt_batch=r_inv_h)
+        else:
+            return self.score_h(rt_batch=r_inv_h, slice_size=slice_size)  # type: ignore
+
+    def score_h_inverse(self, rt_batch: torch.LongTensor, slice_size: Optional[int] = None):
+        """Score all heads for a batch of (r,t)-pairs using the tail predictions for the inverses $(t,r_{inv},*)$."""
+        t_r_inv = self._prepare_inverse_batch(batch=rt_batch, index_relation=0)
+
+        if slice_size is None:
+            return self.score_t(hr_batch=t_r_inv)
+        else:
+            return self.score_t(hr_batch=t_r_inv, slice_size=slice_size)  # type: ignore
+
+
+class OModel(Model, ABC, autoreset=False):
+    """A base module for PyKEEN 1.0-style KGE models."""
+
+    #: The default regularizer class
+    regularizer_default: ClassVar[Type[Regularizer]] = NoRegularizer  # type: ignore
+    #: The default parameters for the default regularizer class
+    regularizer_default_kwargs: ClassVar[Optional[Mapping[str, Any]]] = None
+    #: The instance of the regularizer
+    regularizer: Regularizer  # type: ignore
+
+    def __init__(
+        self,
+        triples_factory: TriplesFactory,
+        loss: Optional[Loss] = None,
+        predict_with_sigmoid: bool = False,
+        preferred_device: DeviceHint = None,
+        random_seed: Optional[int] = None,
+        regularizer: Optional[Regularizer] = None,
+    ) -> None:
+        """Initialize the module.
+
+        :param triples_factory:
+            The triples factory facilitates access to the dataset.
+        :param loss:
+            The loss to use. If None is given, use the loss default specific to the model subclass.
+        :param predict_with_sigmoid:
+            Whether to apply sigmoid onto the scores when predicting scores. Applying sigmoid at prediction time may
+            lead to exactly equal scores for certain triples with very high, or very low score. When not trained with
+            applying sigmoid (or using BCEWithLogitsLoss), the scores are not calibrated to perform well with sigmoid.
+        :param preferred_device:
+            The preferred device for model training and inference.
+        :param random_seed:
+            A random seed to use for initialising the model's weights. **Should** be set when aiming at reproducibility.
+        :param regularizer:
+            A regularizer to use for training.
+        """
+        super().__init__(
+            triples_factory=triples_factory,
+            loss=loss,
+            predict_with_sigmoid=predict_with_sigmoid,
+            preferred_device=preferred_device,
+            random_seed=random_seed,
+        )
+        # Regularizer
+        if regularizer is None:
+            regularizer = self.regularizer_default(
+                device=self.device,
+                **(self.regularizer_default_kwargs or {}),
+            )
+        self.regularizer = regularizer
+
+    def to_device_(self):
+        """Transfer model to device."""
+        self.to(self.device)
+        self.regularizer.to(self.device)  # TODO is this not automatic? it would be great if we could remove this line
+        torch.cuda.empty_cache()
+        return self
+
     def post_parameter_update(self) -> None:
         """Has to be called after each parameter update."""
         self.regularizer.reset()
@@ -705,34 +755,6 @@ class OModel(Model, ABC, autoreset=False):
             )
         return self.loss(tensor_1, tensor_2) + self.regularizer.term
 
-    def _prepare_inverse_batch(self, batch: torch.LongTensor, index_relation: int) -> torch.LongTensor:
-        if not self.triples_factory.create_inverse_triples:
-            raise ValueError(
-                "Your model is not configured to predict with inverse relations."
-                " Set ``create_inverse_triples=True`` when creating the dataset/triples factory"
-                " or using the pipeline().",
-            )
-        batch_cloned = batch.clone()
-
-        # The number of relations stored in the triples factory includes the number of inverse relations
-        # Id of inverse relation: relation + 1
-        batch_cloned[:, index_relation] = batch_cloned[:, index_relation] + 1
-
-        return batch_cloned.flip(1)
-
-    def score_hrt_inverse(
-        self,
-        hrt_batch: torch.LongTensor,
-    ) -> torch.FloatTensor:
-        r"""Score triples based on inverse triples, i.e., compute $f(h,r,t)$ based on $f(t,r_{inv},h)$.
-
-        When training with inverse relations, the model produces two (different) scores for a triple $(h,r,t) \in K$.
-        The forward score is calculated from $f(h,r,t)$ and the inverse score is calculated from $f(t,r_{inv},h)$.
-        This function enables users to inspect the scores obtained by using the corresponding inverse triples.
-        """
-        t_r_inv_h = self._prepare_inverse_batch(batch=hrt_batch, index_relation=1)
-        return self.score_hrt(hrt_batch=t_r_inv_h)
-
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:
         """Forward pass using right side (tail) prediction.
 
@@ -756,15 +778,6 @@ class OModel(Model, ABC, autoreset=False):
         scores = expanded_scores.view(hr_batch.shape[0], -1)
         return scores
 
-    def score_t_inverse(self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None):
-        """Score all tails for a batch of (h,r)-pairs using the head predictions for the inverses $(*,r_{inv},h)$."""
-        r_inv_h = self._prepare_inverse_batch(batch=hr_batch, index_relation=1)
-
-        if slice_size is None:
-            return self.score_h(rt_batch=r_inv_h)
-        else:
-            return self.score_h(rt_batch=r_inv_h, slice_size=slice_size)  # type: ignore
-
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:
         """Forward pass using left side (head) prediction.
 
@@ -787,15 +800,6 @@ class OModel(Model, ABC, autoreset=False):
         # Reshape the scores to match the pre-defined output shape of the score_h function.
         scores = expanded_scores.view(rt_batch.shape[0], -1)
         return scores
-
-    def score_h_inverse(self, rt_batch: torch.LongTensor, slice_size: Optional[int] = None):
-        """Score all heads for a batch of (r,t)-pairs using the tail predictions for the inverses $(t,r_{inv},*)$."""
-        t_r_inv = self._prepare_inverse_batch(batch=rt_batch, index_relation=0)
-
-        if slice_size is None:
-            return self.score_t(hr_batch=t_r_inv)
-        else:
-            return self.score_t(hr_batch=t_r_inv, slice_size=slice_size)  # type: ignore
 
     def score_r(self, ht_batch: torch.LongTensor) -> torch.FloatTensor:
         """Forward pass using middle (relation) prediction.
