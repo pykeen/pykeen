@@ -62,6 +62,64 @@ class Model(nn.Module, ABC):
     #: The instance of the loss
     loss: Loss
 
+    def __init__(
+        self,
+        triples_factory: TriplesFactory,
+        loss: Optional[Loss] = None,
+        predict_with_sigmoid: bool = False,
+        preferred_device: DeviceHint = None,
+        random_seed: Optional[int] = None,
+        regularizer: Optional[Regularizer] = None,
+    ) -> None:
+        """Initialize the module.
+
+        :param triples_factory:
+            The triples factory facilitates access to the dataset.
+        :param loss:
+            The loss to use. If None is given, use the loss default specific to the model subclass.
+        :param predict_with_sigmoid:
+            Whether to apply sigmoid onto the scores when predicting scores. Applying sigmoid at prediction time may
+            lead to exactly equal scores for certain triples with very high, or very low score. When not trained with
+            applying sigmoid (or using BCEWithLogitsLoss), the scores are not calibrated to perform well with sigmoid.
+        :param preferred_device:
+            The preferred device for model training and inference.
+        :param random_seed:
+            A random seed to use for initialising the model's weights. **Should** be set when aiming at reproducibility.
+        :param regularizer:
+            A regularizer to use for training.
+        """
+        super().__init__()
+
+        # Initialize the device
+        self._set_device(preferred_device)
+
+        # Random seeds have to set before the embeddings are initialized
+        if random_seed is None:
+            logger.warning('No random seed is specified. This may lead to non-reproducible results.')
+            self._random_seed = None
+        elif random_seed is not NoRandomSeedNecessary:
+            set_random_seed(random_seed)
+            self._random_seed = random_seed
+
+        # Loss
+        if loss is None:
+            self.loss = self.loss_default(**(self.loss_default_kwargs or {}))
+        else:
+            self.loss = loss
+
+        # TODO: Check loss functions that require 1 and -1 as label but only
+        self.is_mr_loss: bool = has_mr_loss(self)
+        self.is_nssa_loss: bool = has_nssa_loss(self)
+
+        # The triples factory facilitates access to the dataset.
+        self.triples_factory = triples_factory
+
+        '''
+        When predict_with_sigmoid is set to True, the sigmoid function is applied to the logits during evaluation and
+        also for predictions after training, but has no effect on the training.
+        '''
+        self.predict_with_sigmoid = predict_with_sigmoid
+
     def __init_subclass__(cls, autoreset: bool = True, **kwargs):  # noqa:D105
         cls._is_base_model = not autoreset
         if not cls._is_base_model:
@@ -307,29 +365,13 @@ class OModel(Model, ABC, autoreset=False):
         :param regularizer:
             A regularizer to use for training.
         """
-        super().__init__()
-
-        # Initialize the device
-        self._set_device(preferred_device)
-
-        # Random seeds have to set before the embeddings are initialized
-        if random_seed is None:
-            logger.warning('No random seed is specified. This may lead to non-reproducible results.')
-            self._random_seed = None
-        elif random_seed is not NoRandomSeedNecessary:
-            set_random_seed(random_seed)
-            self._random_seed = random_seed
-
-        # Loss
-        if loss is None:
-            self.loss = self.loss_default(**(self.loss_default_kwargs or {}))
-        else:
-            self.loss = loss
-
-        # TODO: Check loss functions that require 1 and -1 as label but only
-        self.is_mr_loss: bool = has_mr_loss(self)
-        self.is_nssa_loss: bool = has_nssa_loss(self)
-
+        super().__init__(
+            triples_factory=triples_factory,
+            loss=loss,
+            predict_with_sigmoid=predict_with_sigmoid,
+            preferred_device=preferred_device,
+            random_seed=random_seed,
+        )
         # Regularizer
         if regularizer is None:
             regularizer = self.regularizer_default(
@@ -337,15 +379,6 @@ class OModel(Model, ABC, autoreset=False):
                 **(self.regularizer_default_kwargs or {}),
             )
         self.regularizer = regularizer
-
-        # The triples factory facilitates access to the dataset.
-        self.triples_factory = triples_factory
-
-        '''
-        When predict_with_sigmoid is set to True, the sigmoid function is applied to the logits during evaluation and
-        also for predictions after training, but has no effect on the training.
-        '''
-        self.predict_with_sigmoid = predict_with_sigmoid
 
     def reset_parameters_(self):  # noqa: D401
         """Reset all parameters of the model and enforce model constraints."""
