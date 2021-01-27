@@ -25,7 +25,7 @@ import torch.nn
 import torch.nn.modules.batchnorm
 
 from .constants import PYKEEN_BENCHMARKS
-from .typing import DeviceHint, TorchRandomHint
+from .typing import DeviceHint, MappedTriples, TorchRandomHint
 from .version import get_git_hash
 
 __all__ = [
@@ -59,6 +59,7 @@ __all__ = [
     'ensure_tuple',
     'unpack_singletons',
     'get_subclasses',
+    'extend_batch',
 ]
 
 logger = logging.getLogger(__name__)
@@ -833,3 +834,37 @@ def get_subclasses(cls: Type[X]) -> Iterable[Type[X]]:
 def _can_slice(fn) -> bool:
     """Check if a model's score_X function can slice."""
     return 'slice_size' in inspect.getfullargspec(fn).args
+
+
+def extend_batch(
+    batch: MappedTriples,
+    all_ids: List[int],
+    dim: int,
+) -> MappedTriples:
+    """Extend batch for 1-to-all scoring by explicit enumeration.
+
+    :param batch: shape: (batch_size, 2)
+        The batch.
+    :param all_ids: len: num_choices
+        The IDs to enumerate.
+    :param dim: in {0,1,2}
+        The column along which to insert the enumerated IDs.
+
+    :return: shape: (batch_size * num_choices, 3)
+        A large batch, where every pair from the original batch is combined with every ID.
+    """
+    # Extend the batch to the number of IDs such that each pair can be combined with all possible IDs
+    extended_batch = batch.repeat_interleave(repeats=len(all_ids), dim=0)
+
+    # Create a tensor of all IDs
+    ids = torch.tensor(all_ids, dtype=torch.long, device=batch.device)
+
+    # Extend all IDs to the number of pairs such that each ID can be combined with every pair
+    extended_ids = ids.repeat(batch.shape[0])
+
+    # Fuse the extended pairs with all IDs to a new (h, r, t) triple tensor.
+    columns = [extended_batch[:, i] for i in (0, 1)]
+    columns.insert(dim, extended_ids)
+    hrt_batch = torch.stack(columns, dim=-1)
+
+    return hrt_batch

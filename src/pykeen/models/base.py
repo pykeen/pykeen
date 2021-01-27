@@ -8,7 +8,7 @@ import functools
 import logging
 import warnings
 from abc import ABC, abstractmethod
-from typing import Any, ClassVar, Iterable, List, Mapping, Optional, Type, Union
+from typing import Any, ClassVar, Iterable, Mapping, Optional, Type, Union
 
 import pandas as pd
 import torch
@@ -18,8 +18,8 @@ from ..losses import Loss, MarginRankingLoss, has_mr_loss, has_nssa_loss
 from ..nn import Embedding
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import TriplesFactory
-from ..typing import Constrainer, DeviceHint, Initializer, MappedTriples, Normalizer, ScorePack
-from ..utils import NoRandomSeedNecessary, _can_slice, resolve_device, set_random_seed
+from ..typing import Constrainer, DeviceHint, Initializer, Normalizer, ScorePack
+from ..utils import NoRandomSeedNecessary, _can_slice, extend_batch, resolve_device, set_random_seed
 
 __all__ = [
     'Model',
@@ -716,7 +716,7 @@ class OModel(Model, ABC, autoreset=False):
             'score_t function. This might cause the calculations to take longer than necessary.',
         )
         # Extend the hr_batch such that each (h, r) pair is combined with all possible tails
-        hrt_batch = _extend_batch(batch=hr_batch, all_ids=list(self.triples_factory.get_entity_ids()), dim=2)
+        hrt_batch = extend_batch(batch=hr_batch, all_ids=list(self.triples_factory.get_entity_ids()), dim=2)
         # Calculate the scores for each (h, r, t) triple using the generic interaction function
         expanded_scores = self.score_hrt(hrt_batch=hrt_batch)
         # Reshape the scores to match the pre-defined output shape of the score_t function.
@@ -748,7 +748,7 @@ class OModel(Model, ABC, autoreset=False):
             'score_h function. This might cause the calculations to take longer than necessary.',
         )
         # Extend the rt_batch such that each (r, t) pair is combined with all possible heads
-        hrt_batch = _extend_batch(batch=rt_batch, all_ids=list(self.triples_factory.get_entity_ids()), dim=0)
+        hrt_batch = extend_batch(batch=rt_batch, all_ids=list(self.triples_factory.get_entity_ids()), dim=0)
         # Calculate the scores for each (h, r, t) triple using the generic interaction function
         expanded_scores = self.score_hrt(hrt_batch=hrt_batch)
         # Reshape the scores to match the pre-defined output shape of the score_h function.
@@ -780,7 +780,7 @@ class OModel(Model, ABC, autoreset=False):
             'score_r function. This might cause the calculations to take longer than necessary.',
         )
         # Extend the ht_batch such that each (h, t) pair is combined with all possible relations
-        hrt_batch = _extend_batch(batch=ht_batch, all_ids=list(self.triples_factory.get_relation_ids()), dim=1)
+        hrt_batch = extend_batch(batch=ht_batch, all_ids=list(self.triples_factory.get_relation_ids()), dim=1)
         # Calculate the scores for each (h, r, t) triple using the generic interaction function
         expanded_scores = self.score_hrt(hrt_batch=hrt_batch)
         # Reshape the scores to match the pre-defined output shape of the score_r function.
@@ -975,37 +975,3 @@ def _add_post_reset_parameters(cls: Type[Model]) -> None:
 
     # sorry mypy, but this kind of evil must be permitted.
     cls.__init__ = _new_init  # type: ignore
-
-
-def _extend_batch(
-    batch: MappedTriples,
-    all_ids: List[int],
-    dim: int,
-) -> MappedTriples:
-    """Extend batch for 1-to-all scoring by explicit enumeration.
-
-    :param batch: shape: (batch_size, 2)
-        The batch.
-    :param all_ids: len: num_choices
-        The IDs to enumerate.
-    :param dim: in {0,1,2}
-        The column along which to insert the enumerated IDs.
-
-    :return: shape: (batch_size * num_choices, 3)
-        A large batch, where every pair from the original batch is combined with every ID.
-    """
-    # Extend the batch to the number of IDs such that each pair can be combined with all possible IDs
-    extended_batch = batch.repeat_interleave(repeats=len(all_ids), dim=0)
-
-    # Create a tensor of all IDs
-    ids = torch.tensor(all_ids, dtype=torch.long, device=batch.device)
-
-    # Extend all IDs to the number of pairs such that each ID can be combined with every pair
-    extended_ids = ids.repeat(batch.shape[0])
-
-    # Fuse the extended pairs with all IDs to a new (h, r, t) triple tensor.
-    columns = [extended_batch[:, i] for i in (0, 1)]
-    columns.insert(dim, extended_ids)
-    hrt_batch = torch.stack(columns, dim=-1)
-
-    return hrt_batch
