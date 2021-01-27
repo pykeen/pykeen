@@ -550,6 +550,8 @@ class FileResultTrackerTests(ResultTrackerTests):
     def tearDown(self) -> None:  # noqa: D102
         # check that file was created
         assert self.path.is_file()
+        # make sure to close file before trying to delete it
+        self.instance.end_run()
         # delete intermediate files
         self.path.unlink()
         self.temporary_directory.cleanup()
