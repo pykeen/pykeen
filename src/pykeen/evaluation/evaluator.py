@@ -270,7 +270,7 @@ class Evaluator(ABC):
             values_dict['slice_size'] = None
         elif key == 'slice_size':
             if start_value is None:
-                raise ValueError('must specify a start value with key="slice_size"')  # TODO @lvermue check
+                start_value = ceil(model.num_entities / 2)
             self._check_slicing_availability(model, batch_size=1)
             values_dict[key] = start_value
             values_dict['batch_size'] = 1
