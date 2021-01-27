@@ -167,11 +167,6 @@ class Model(nn.Module, ABC):
         """Reset all parameters of the model in-place."""
         raise NotImplementedError
 
-    @abstractmethod
-    def to_device_(self) -> Model:
-        """Transfer model to device."""
-        raise NotImplementedError
-
     """Abstract methods - Scoring"""
 
     @abstractmethod
@@ -284,6 +279,12 @@ class Model(nn.Module, ABC):
         """
 
     """Concrete methods"""
+
+    def to_device_(self):
+        """Transfer model to device."""
+        self.to(self.device)
+        torch.cuda.empty_cache()
+        return self
 
     def _set_device(self, device: DeviceHint = None) -> None:
         """Set the Torch device to use."""
@@ -648,13 +649,6 @@ class OModel(Model, ABC, autoreset=False):
                 **(self.regularizer_default_kwargs or {}),
             )
         self.regularizer = regularizer
-
-    def to_device_(self):
-        """Transfer model to device."""
-        self.to(self.device)
-        self.regularizer.to(self.device)  # TODO is this not automatic? it would be great if we could remove this line
-        torch.cuda.empty_cache()
-        return self
 
     def post_parameter_update(self) -> None:
         """Has to be called after each parameter update."""
