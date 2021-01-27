@@ -3,6 +3,7 @@
 """Test cases for PyKEEN."""
 
 import logging
+import pathlib
 import tempfile
 import timeit
 import unittest
@@ -15,6 +16,7 @@ from torch.nn import functional
 from pykeen.datasets.base import LazyDataset
 from pykeen.losses import Loss, PairwiseLoss, PointwiseLoss, SetwiseLoss
 from pykeen.nn.modules import Interaction
+from pykeen.trackers import ResultTracker
 from pykeen.triples import TriplesFactory
 from pykeen.typing import HeadRepresentation, RelationRepresentation, TailRepresentation
 from pykeen.utils import get_subclasses, set_random_seed, unpack_singletons
@@ -488,6 +490,75 @@ class TranslationalInteractionTests(InteractionTestCase, ABC):
 
     def _additional_score_checks(self, scores):
         assert (scores <= 0).all()
+
+
+class ResultTrackerTests(GenericTestCase[ResultTracker], unittest.TestCase):
+    """Common tests for result trackers."""
+
+    def test_start_run(self):
+        """Test start_run."""
+        self.instance.start_run(run_name="my_test.run")
+
+    def test_end_run(self):
+        """Test end_run."""
+        self.instance.end_run()
+
+    def test_log_metrics(self):
+        """Test log_metrics."""
+        for metrics, step, prefix in (
+            (
+                # simple
+                {"a": 1.0},
+                0,
+                None,
+            ),
+            (
+                # nested
+                {"a": {"b": 5.0}, "c": -1.0},
+                2,
+                "test",
+            ),
+        ):
+            self.instance.log_metrics(metrics=metrics, step=step, prefix=prefix)
+
+    def test_log_params(self):
+        """Test log_params."""
+        # nested
+        params = {
+            "num_epochs": 12,
+            "loss": {
+                "margin": 2.0,  # a number
+                "normalize": True,  # a bool
+                "activation": "relu",  # a string
+            },
+        }
+        prefix = None
+        self.instance.log_params(params=params, prefix=prefix)
+
+
+class FileResultTrackerTests(ResultTrackerTests):
+    """Tests for FileResultTracker."""
+
+    def setUp(self) -> None:
+        """Set up the file result tracker test."""
+        self.temporary_directory = tempfile.TemporaryDirectory()
+        self.path = pathlib.Path(self.temporary_directory.name).joinpath("test.log")
+        super().setUp()
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        # prepare a temporary test directory
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        kwargs["path"] = self.path
+        return kwargs
+
+    def tearDown(self) -> None:  # noqa: D102
+        # check that file was created
+        assert self.path.is_file()
+        # make sure to close file before trying to delete it
+        self.instance.end_run()
+        # delete intermediate files
+        self.path.unlink()
+        self.temporary_directory.cleanup()
 
 
 class TestsTestCase(Generic[T], unittest.TestCase):
