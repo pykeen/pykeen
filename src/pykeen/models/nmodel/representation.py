@@ -229,27 +229,6 @@ class NewEmbedding(NewRepresentationModule):
             embedding_dim=embedding_dim,
         )
 
-    @classmethod
-    def from_specification(
-        cls,
-        num_embeddings: int,
-        specification: Optional[EmbeddingSpecification] = None,
-    ) -> NewEmbedding:
-        """Create an embedding based on a specification.
-
-        :param num_embeddings: >0
-            The number of embeddings.
-        :param specification:
-            The specification.
-        :return:
-            An embedding object.
-        """
-        if specification is None:
-            specification = EmbeddingSpecification()
-        return specification.make(
-            num_embeddings=num_embeddings,
-        )
-
     @property
     def num_embeddings(self) -> int:  # noqa: D401
         """The total number of representations (i.e. the maximum ID)."""
