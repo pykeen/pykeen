@@ -161,6 +161,9 @@ class LossTestCase(GenericTestCase[Loss]):
         # test reduction
         self.assertEqual(0, loss_value.ndim)
 
+        # test finite loss value
+        self.assertTrue(torch.isfinite(loss_value))
+
         # Test backward
         loss_value.backward()
 
