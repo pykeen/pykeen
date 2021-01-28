@@ -13,7 +13,7 @@ from typing import Any, ClassVar, Generic, Iterable, List, Mapping, Optional, Se
 import torch
 from torch import nn
 
-from .representation import EmbeddingSpecification, NewRepresentationModule
+from .representation import EmbeddingSpecification, EmbeddingSpecificationHint, NewRepresentationModule
 from ..base import Model
 from ...losses import Loss
 from ...nn.modules import Interaction
@@ -28,13 +28,6 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
-
-EmbeddingSpecificationHint = Union[
-    None,
-    EmbeddingSpecification,
-    NewRepresentationModule,
-    Sequence[Union[EmbeddingSpecification, NewRepresentationModule]],
-]
 
 
 class _NewAbstractModel(Model, ABC, autoreset=False):

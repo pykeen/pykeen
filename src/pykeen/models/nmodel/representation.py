@@ -23,6 +23,7 @@ __all__ = [
     'NewRepresentationModule',
     'NewEmbedding',
     'EmbeddingSpecification',
+    'EmbeddingSpecificationHint',
 ]
 
 logger = logging.getLogger(__name__)
@@ -264,3 +265,11 @@ class NewEmbedding(NewRepresentationModule):
         if self.regularizer is not None:
             self.regularizer.update(x)
         return x
+
+
+EmbeddingSpecificationHint = Union[
+    None,
+    EmbeddingSpecification,
+    NewRepresentationModule,
+    Sequence[Union[EmbeddingSpecification, NewRepresentationModule]],
+]
