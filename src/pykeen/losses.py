@@ -12,7 +12,9 @@ Throughout the following explanations of pointwise loss functions, pairwise loss
 loss functions, we will assume the set of entities $\mathcal{E}$, set of relations $\mathcal{R}$, set of possible
 triples $\mathcal{T} = \mathcal{E} \times \mathcal{R} \times \mathcal{E}$, set of possible subsets of possible triples
 $2^{\mathcal{T}}$ (i.e., the power set of $\mathcal{T}$), set of positive triples $\mathcal{K}$, set of negative
-triples $\mathcal{\bar{K}}$, and scoring function (e.g., TransE) $f: \mathcal{T} \rightarrow \mathbb{R}$.
+triples $\mathcal{\bar{K}}$, scoring function (e.g., TransE) $f: \mathcal{T} \rightarrow \mathbb{R}$ and labeling
+function $l:\mathcal{T} \rightarrow \{0,1\}$ where a value of 1 denotes the triple is positive (i.e., $(h,r,t) \in
+\mathcal{K}$) and a value of 0 denotes the triple is negative (i.e., $(h,r,t) \notin \mathcal{K}$).
 
 .. note::
 
@@ -22,25 +24,40 @@ triples $\mathcal{\bar{K}}$, and scoring function (e.g., TransE) $f: \mathcal{T}
 
 Pointwise Loss Functions
 ------------------------
-A pointwise loss is applied to a single triple. It is defined as $L_l: \mathcal{T} \rightarrow \mathbb{R}$ and
-computes a real-value for the triple given its labeling from $l:\mathcal{T} \rightarrow \{0,1\}$ where a value of 1
-denotes the triple is positive (i.e., $(h,r,t) \in \mathcal{K}$) and a value of 0 denotes the triple is negative
-(i.e., $(h,r,t) \notin \mathcal{K}$).
+A pointwise loss is applied to a single triple. It takes the form of $L: \mathcal{T} \rightarrow \mathbb{R}$ and
+computes a real-value for the triple given its labeling. Typically, a pointwise loss function takes the form of
+$g: \mathbb{R} \times \{0,1\} \rightarrow \mathbb{R}$ based on the scoring function and labeling function.
 
-The pointwise loss of a set of triples (i.e., a batch) $\mathcal{L}_{L_l}: 2^{\mathcal{T}} \rightarrow \mathbb{R}$ is
+.. math::
+
+    L(k) = g(f(k), l(k))
+
+The pointwise loss of a set of triples (i.e., a batch) $\mathcal{L}_L: 2^{\mathcal{T}} \rightarrow \mathbb{R}$ is
 defined as the average of the pointwise losses over each triple in the subset $\mathcal{B} \in 2^{\mathcal{T}}$:
 
 .. math::
 
-    \mathcal{L}_{L_l}(\mathcal{B}) = \frac{1}{|\mathcal{B}|} \sum \limits_{(h,r,t) \in \mathcal{B}} L_l(h, r, t)
+    \mathcal{L}_L(\mathcal{B}) = \frac{1}{|\mathcal{B}|} \sum \limits_{k \in \mathcal{B}} L(k)
 
 Pairwise Loss Functions
 -----------------------
 A pairwise loss is applied to a pair of triples - a positive and a negative one. It is defined as $L: \mathcal{K}
 \times \mathcal{\bar{K}} \rightarrow \mathbb{R}$ and computes a real value for the pair. Typically,
-the pairwise loss is computed as a function $g$ of the difference between the scores of the positive and negative
-triples that takes the form $L(k, \bar{k}) = g(f(k) - f(\bar{k}))$ where $g: \mathbb{R} \rightarrow \mathbb{R}$. For
-example, the pairwise hinge loss (i.e., margin ranking loss) has $g(\Delta) = max(0, \lambda + \Delta)$.
+a pairwise loss is computed as a function $g$ of the difference between the scores of the positive and negative
+triples that takes the form $g: \mathbb{R} \times \mathbb{R} \rightarrow \mathbb{R}$.
+
+.. math::
+
+    L(k, \bar{k}) = g(f(k), f(\bar{k}))
+
+
+Typically, $g$ takes the following form in which a function $h: \mathbb{R} \rightarrow \mathbb{R}$
+is used on the differences in the scores of the positive an the negative triples. For
+example, the pairwise hinge loss (i.e., margin ranking loss) has $h(\Delta) = max(0, \lambda + \Delta)$.
+
+.. math::
+
+    g(f(k), f(\bar{k})) = h(f(k) - f(\bar{k}))
 
 The pairwise loss for a set of pairs of positive/negative triples $\mathcal{L}_L: 2^{\mathcal{K} \times
 \mathcal{\bar{K}}} \rightarrow \mathbb{R}$ is defined as the average of the pairwise losses for each pair of
@@ -57,6 +74,10 @@ $L: 2^{\mathcal{T}} \rightarrow \mathbb{R}$. The two setwise loss functions impl
 :class:`pykeen.losses.NSSALoss` and :class:`pykeen.losses.CrossEntropyLoss` are both widely different
 in their paradigms, but both share the notion that triples are not strictly positive or negative.
 
+.. math::
+
+    L(k_1, ... k_n) = g(f(k_1), ..., f(k_n))
+
 The pairwise loss for a set of sets of triples triples $\mathcal{L}_L: 2^{2^{\mathcal{T}}} \rightarrow \mathbb{R}$
 is defined as the average of the setwise losses for each set of
 triples $\mathcal{b}$ in the subset $\mathcal{B} \in 2^{2^{\mathcal{T}}}$.
@@ -64,14 +85,6 @@ triples $\mathcal{b}$ in the subset $\mathcal{B} \in 2^{2^{\mathcal{T}}}$.
 .. math::
 
     \mathcal{L}_L(\mathcal{B}) = \frac{1}{|\mathcal{B}|} \sum \limits_{\mathcal{b} \in \mathcal{B}} L(\mathcal{b})
-
-Bring Your Own Loss Function
-----------------------------
-TODO: tutorial for bringing PyTorch loss functions
-
-- What is the functional form?
-- Should the user have to specify whether something is a pointwise, pairwise, or setwise?
-- ...
 """
 
 from typing import Any, Callable, ClassVar, Mapping, Optional, Set, Type, Union
