@@ -12,7 +12,7 @@ from torch.nn import functional
 
 from . import ComplEx, DistMult, ERMLP
 from .. import EntityEmbeddingModel
-from ..base import Model
+from ..base import _OldAbstractModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE
 from ...losses import Loss
 from ...nn import Embedding, RepresentationModule
@@ -425,7 +425,7 @@ class Decoder(nn.Module):
         return (h * r * t).sum(dim=-1)
 
 
-class RGCN(Model):
+class RGCN(_OldAbstractModel):
     """An implementation of R-GCN from [schlichtkrull2018]_.
 
     This model uses graph convolutions with relation-specific weights.
