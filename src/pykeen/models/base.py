@@ -8,7 +8,7 @@ import functools
 import logging
 import warnings
 from abc import ABC, abstractmethod
-from typing import Any, ClassVar, Iterable, List, Mapping, Optional, Type, Union
+from typing import Any, ClassVar, Iterable, Mapping, Optional, Type, Union
 
 import pandas as pd
 import torch
@@ -18,11 +18,12 @@ from ..losses import Loss, MarginRankingLoss, has_mr_loss, has_nssa_loss
 from ..nn import Embedding
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import TriplesFactory
-from ..typing import Constrainer, DeviceHint, Initializer, MappedTriples, Normalizer, ScorePack
-from ..utils import NoRandomSeedNecessary, _can_slice, resolve_device, set_random_seed
+from ..typing import Constrainer, DeviceHint, Initializer, Normalizer, ScorePack
+from ..utils import NoRandomSeedNecessary, _can_slice, extend_batch, resolve_device, set_random_seed
 
 __all__ = [
     'Model',
+    '_OldAbstractModel',
     'EntityEmbeddingModel',
     'EntityRelationEmbeddingModel',
     'MultimodalModel',
@@ -32,7 +33,13 @@ logger = logging.getLogger(__name__)
 
 
 class Model(nn.Module, ABC):
-    """A base module for all of the KGE models."""
+    """A base module for KGE models.
+
+    Subclasses of :class:`Model` can decide however they want on how to store entities' and
+    relations' representations, how they want to be looked up, and how they should
+    be scored. The :class:`OModel` provides a commonly used interface for models storing entity
+    and relation representations in the form of :class:`pykeen.nn.Embedding`.
+    """
 
     #: Keep track of if this is a base model
     _is_base_model: ClassVar[bool]
@@ -40,19 +47,20 @@ class Model(nn.Module, ABC):
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]]
 
+    #: A triples factory with the training triples
+    triples_factory: TriplesFactory
+
+    #: The device on which this model and its submodules are stored
+    device: torch.device
+
+    _random_seed: Optional[int]
+
     #: The default loss function class
     loss_default: ClassVar[Type[Loss]] = MarginRankingLoss
     #: The default parameters for the default loss function class
     loss_default_kwargs: ClassVar[Optional[Mapping[str, Any]]] = dict(margin=1.0, reduction='mean')
     #: The instance of the loss
     loss: Loss
-
-    #: The default regularizer class
-    regularizer_default: ClassVar[Type[Regularizer]] = NoRegularizer  # type: ignore
-    #: The default parameters for the default regularizer class
-    regularizer_default_kwargs: ClassVar[Optional[Mapping[str, Any]]] = None
-    #: The instance of the regularizer
-    regularizer: Regularizer
 
     def __init__(
         self,
@@ -83,7 +91,7 @@ class Model(nn.Module, ABC):
         super().__init__()
 
         # Initialize the device
-        self._set_device(preferred_device)
+        self.device = resolve_device(device=preferred_device)
 
         # Random seeds have to set before the embeddings are initialized
         if random_seed is None:
@@ -103,14 +111,6 @@ class Model(nn.Module, ABC):
         self.is_mr_loss: bool = has_mr_loss(self)
         self.is_nssa_loss: bool = has_nssa_loss(self)
 
-        # Regularizer
-        if regularizer is None:
-            regularizer = self.regularizer_default(
-                device=self.device,
-                **(self.regularizer_default_kwargs or {}),
-            )
-        self.regularizer = regularizer
-
         # The triples factory facilitates access to the dataset.
         self.triples_factory = triples_factory
 
@@ -124,6 +124,8 @@ class Model(nn.Module, ABC):
         cls._is_base_model = not autoreset
         if not cls._is_base_model:
             _add_post_reset_parameters(cls)
+
+    """Properties"""
 
     @property
     def can_slice_h(self) -> bool:
@@ -140,12 +142,7 @@ class Model(nn.Module, ABC):
         """Whether score_t supports slicing."""
         return _can_slice(self.score_t)
 
-    @abstractmethod
-    def _reset_parameters_(self):  # noqa: D401
-        """Reset all parameters of the model in-place."""
-        raise NotImplementedError
-
-    def reset_parameters_(self) -> 'Model':  # noqa: D401
+    def reset_parameters_(self):  # noqa: D401
         """Reset all parameters of the model and enforce model constraints."""
         self._reset_parameters_()
         self.to_device_()
@@ -162,26 +159,170 @@ class Model(nn.Module, ABC):
         """The number of unique relation types in the knowledge graph."""
         return self.triples_factory.num_relations
 
-    def _set_device(self, device: DeviceHint = None) -> None:
-        """Set the Torch device to use."""
-        self.device = resolve_device(device=device)
+    """Base methods"""
 
-    def to_device_(self) -> 'Model':
+    def post_forward_pass(self):
+        """Run after calculating the forward loss."""
+
+    def _free_graph_and_cache(self):
+        """Run to free the graph and cache."""
+
+    """Abstract methods"""
+
+    @abstractmethod
+    def _reset_parameters_(self):  # noqa: D401
+        """Reset all parameters of the model in-place."""
+        raise NotImplementedError
+
+    """Abstract methods - Scoring"""
+
+    @abstractmethod
+    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:
+        """Forward pass.
+
+        This method takes head, relation and tail of each triple and calculates the corresponding score.
+
+        :param hrt_batch: shape: (batch_size, 3), dtype: long
+            The indices of (head, relation, tail) triples.
+        :raises NotImplementedError:
+            If the method was not implemented for this class.
+        :return: shape: (batch_size, 1), dtype: float
+            The score for each triple.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:
+        """Forward pass using right side (tail) prediction.
+
+        This method calculates the score for all possible tails for each (head, relation) pair.
+
+        :param hr_batch: shape: (batch_size, 2), dtype: long
+            The indices of (head, relation) pairs.
+
+        :return: shape: (batch_size, num_entities), dtype: float
+            For each h-r pair, the scores for all possible tails.
+        """
+
+    @abstractmethod
+    def score_r(self, ht_batch: torch.LongTensor) -> torch.FloatTensor:
+        """Forward pass using middle (relation) prediction.
+
+        This method calculates the score for all possible relations for each (head, tail) pair.
+
+        :param ht_batch: shape: (batch_size, 2), dtype: long
+            The indices of (head, tail) pairs.
+
+        :return: shape: (batch_size, num_relations), dtype: float
+            For each h-t pair, the scores for all possible relations.
+        """
+
+    @abstractmethod
+    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:
+        """Forward pass using left side (head) prediction.
+
+        This method calculates the score for all possible heads for each (relation, tail) pair.
+
+        :param rt_batch: shape: (batch_size, 2), dtype: long
+            The indices of (relation, tail) pairs.
+
+        :return: shape: (batch_size, num_entities), dtype: float
+            For each r-t pair, the scores for all possible heads.
+        """
+
+    """Abstract methods - loss computation"""
+
+    @abstractmethod
+    def compute_mr_loss(
+        self,
+        positive_scores: torch.FloatTensor,
+        negative_scores: torch.FloatTensor,
+    ) -> torch.FloatTensor:
+        """Compute the mean ranking loss for the positive and negative scores.
+
+        :param positive_scores:  shape: s, dtype: float
+            The scores for positive triples.
+        :param negative_scores: shape: s, dtype: float
+            The scores for negative triples.
+        :raises RuntimeError:
+            If the chosen loss function does not allow the calculation of margin ranking
+        :return: dtype: float, scalar
+            The margin ranking loss value.
+        """
+
+    @abstractmethod
+    def compute_label_loss(
+        self,
+        predictions: torch.FloatTensor,
+        labels: torch.FloatTensor,
+    ) -> torch.FloatTensor:
+        """Compute the classification loss.
+
+        :param predictions: shape: s
+            The tensor containing predictions.
+        :param labels: shape: s
+            The tensor containing labels.
+
+        :return: dtype: float, scalar
+            The label loss value.
+        """
+
+    @abstractmethod
+    def compute_self_adversarial_negative_sampling_loss(
+        self,
+        positive_scores: torch.FloatTensor,
+        negative_scores: torch.FloatTensor,
+    ) -> torch.FloatTensor:
+        """Compute self adversarial negative sampling loss.
+
+        :param positive_scores: shape: s
+            The tensor containing the positive scores.
+        :param negative_scores: shape: s
+            Tensor containing the negative scores.
+        :raises RuntimeError:
+            If the chosen loss does not allow the calculation of self adversarial negative sampling losses.
+        :return: dtype: float, scalar
+            The loss value.
+        """
+
+    """Concrete methods"""
+
+    def to_device_(self):
         """Transfer model to device."""
         self.to(self.device)
-        self.regularizer.to(self.device)
         torch.cuda.empty_cache()
         return self
 
-    def to_cpu_(self) -> 'Model':
-        """Transfer the entire model to CPU."""
-        self._set_device('cpu')
-        return self.to_device_()
+    def get_grad_params(self) -> Iterable[nn.Parameter]:
+        """Get the parameters that require gradients."""
+        # TODO: Why do we need that? The optimizer takes care of filtering the parameters.
+        return filter(lambda p: p.requires_grad, self.parameters())
 
-    def to_gpu_(self) -> 'Model':
-        """Transfer the entire model to GPU."""
-        self._set_device('cuda')
-        return self.to_device_()
+    @property
+    def num_parameter_bytes(self) -> int:
+        """Calculate the number of bytes used for all parameters of the model."""
+        return sum(
+            param.numel() * param.element_size()
+            for param in self.parameters(recurse=True)
+        )
+
+    def save_state(self, path: str) -> None:
+        """Save the state of the model.
+
+        :param path:
+            Path of the file where to store the state in.
+        """
+        torch.save(self.state_dict(), path)
+
+    def load_state(self, path: str) -> None:
+        """Load the state of the model.
+
+        :param path:
+            Path of the file where to load the state from.
+        """
+        self.load_state_dict(torch.load(path, map_location=self.device))
+
+    """Prediction methods"""
 
     def predict_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:
         """Calculate the scores for triples.
@@ -395,6 +536,106 @@ class Model(nn.Module, ABC):
         warnings.warn('Use pykeen.models.predict.get_tail_prediction_df', DeprecationWarning)
         return get_tail_prediction_df(self, head_label=head_label, relation_label=relation_label, **kwargs)
 
+    """Inverse scoring"""
+
+    def _prepare_inverse_batch(self, batch: torch.LongTensor, index_relation: int) -> torch.LongTensor:
+        if not self.triples_factory.create_inverse_triples:
+            raise ValueError(
+                "Your model is not configured to predict with inverse relations."
+                " Set ``create_inverse_triples=True`` when creating the dataset/triples factory"
+                " or using the pipeline().",
+            )
+        batch_cloned = batch.clone()
+
+        # The number of relations stored in the triples factory includes the number of inverse relations
+        # Id of inverse relation: relation + 1
+        batch_cloned[:, index_relation] = batch_cloned[:, index_relation] + 1
+
+        return batch_cloned.flip(1)
+
+    def score_hrt_inverse(
+        self,
+        hrt_batch: torch.LongTensor,
+    ) -> torch.FloatTensor:
+        r"""Score triples based on inverse triples, i.e., compute $f(h,r,t)$ based on $f(t,r_{inv},h)$.
+
+        When training with inverse relations, the model produces two (different) scores for a triple $(h,r,t) \in K$.
+        The forward score is calculated from $f(h,r,t)$ and the inverse score is calculated from $f(t,r_{inv},h)$.
+        This function enables users to inspect the scores obtained by using the corresponding inverse triples.
+        """
+        t_r_inv_h = self._prepare_inverse_batch(batch=hrt_batch, index_relation=1)
+        return self.score_hrt(hrt_batch=t_r_inv_h)
+
+    def score_t_inverse(self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None):
+        """Score all tails for a batch of (h,r)-pairs using the head predictions for the inverses $(*,r_{inv},h)$."""
+        r_inv_h = self._prepare_inverse_batch(batch=hr_batch, index_relation=1)
+
+        if slice_size is None:
+            return self.score_h(rt_batch=r_inv_h)
+        else:
+            return self.score_h(rt_batch=r_inv_h, slice_size=slice_size)  # type: ignore
+
+    def score_h_inverse(self, rt_batch: torch.LongTensor, slice_size: Optional[int] = None):
+        """Score all heads for a batch of (r,t)-pairs using the tail predictions for the inverses $(t,r_{inv},*)$."""
+        t_r_inv = self._prepare_inverse_batch(batch=rt_batch, index_relation=0)
+
+        if slice_size is None:
+            return self.score_t(hr_batch=t_r_inv)
+        else:
+            return self.score_t(hr_batch=t_r_inv, slice_size=slice_size)  # type: ignore
+
+
+class _OldAbstractModel(Model, ABC, autoreset=False):
+    """A base module for PyKEEN 1.0-style KGE models."""
+
+    #: The default regularizer class
+    regularizer_default: ClassVar[Type[Regularizer]] = NoRegularizer  # type: ignore
+    #: The default parameters for the default regularizer class
+    regularizer_default_kwargs: ClassVar[Optional[Mapping[str, Any]]] = None
+    #: The instance of the regularizer
+    regularizer: Regularizer  # type: ignore
+
+    def __init__(
+        self,
+        triples_factory: TriplesFactory,
+        loss: Optional[Loss] = None,
+        predict_with_sigmoid: bool = False,
+        preferred_device: DeviceHint = None,
+        random_seed: Optional[int] = None,
+        regularizer: Optional[Regularizer] = None,
+    ) -> None:
+        """Initialize the module.
+
+        :param triples_factory:
+            The triples factory facilitates access to the dataset.
+        :param loss:
+            The loss to use. If None is given, use the loss default specific to the model subclass.
+        :param predict_with_sigmoid:
+            Whether to apply sigmoid onto the scores when predicting scores. Applying sigmoid at prediction time may
+            lead to exactly equal scores for certain triples with very high, or very low score. When not trained with
+            applying sigmoid (or using BCEWithLogitsLoss), the scores are not calibrated to perform well with sigmoid.
+        :param preferred_device:
+            The preferred device for model training and inference.
+        :param random_seed:
+            A random seed to use for initialising the model's weights. **Should** be set when aiming at reproducibility.
+        :param regularizer:
+            A regularizer to use for training.
+        """
+        super().__init__(
+            triples_factory=triples_factory,
+            loss=loss,
+            predict_with_sigmoid=predict_with_sigmoid,
+            preferred_device=preferred_device,
+            random_seed=random_seed,
+        )
+        # Regularizer
+        if regularizer is None:
+            regularizer = self.regularizer_default(
+                device=self.device,
+                **(self.regularizer_default_kwargs or {}),
+            )
+        self.regularizer = regularizer
+
     def post_parameter_update(self) -> None:
         """Has to be called after each parameter update."""
         self.regularizer.reset()
@@ -494,49 +735,6 @@ class Model(nn.Module, ABC):
             )
         return self.loss(tensor_1, tensor_2) + self.regularizer.term
 
-    def _prepare_inverse_batch(self, batch: torch.LongTensor, index_relation: int) -> torch.LongTensor:
-        if not self.triples_factory.create_inverse_triples:
-            raise ValueError(
-                "Your model is not configured to predict with inverse relations."
-                " Set ``create_inverse_triples=True`` when creating the dataset/triples factory"
-                " or using the pipeline().",
-            )
-        batch_cloned = batch.clone()
-
-        # The number of relations stored in the triples factory includes the number of inverse relations
-        # Id of inverse relation: relation + 1
-        batch_cloned[:, index_relation] = batch_cloned[:, index_relation] + 1
-
-        return batch_cloned.flip(1)
-
-    @abstractmethod
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:
-        """Forward pass.
-
-        This method takes head, relation and tail of each triple and calculates the corresponding score.
-
-        :param hrt_batch: shape: (batch_size, 3), dtype: long
-            The indices of (head, relation, tail) triples.
-        :raises NotImplementedError:
-            If the method was not implemented for this class.
-        :return: shape: (batch_size, 1), dtype: float
-            The score for each triple.
-        """
-        raise NotImplementedError
-
-    def score_hrt_inverse(
-        self,
-        hrt_batch: torch.LongTensor,
-    ) -> torch.FloatTensor:
-        r"""Score triples based on inverse triples, i.e., compute $f(h,r,t)$ based on $f(t,r_{inv},h)$.
-
-        When training with inverse relations, the model produces two (different) scores for a triple $(h,r,t) \in K$.
-        The forward score is calculated from $f(h,r,t)$ and the inverse score is calculated from $f(t,r_{inv},h)$.
-        This function enables users to inspect the scores obtained by using the corresponding inverse triples.
-        """
-        t_r_inv_h = self._prepare_inverse_batch(batch=hrt_batch, index_relation=1)
-        return self.score_hrt(hrt_batch=t_r_inv_h)
-
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:
         """Forward pass using right side (tail) prediction.
 
@@ -553,21 +751,12 @@ class Model(nn.Module, ABC):
             'score_t function. This might cause the calculations to take longer than necessary.',
         )
         # Extend the hr_batch such that each (h, r) pair is combined with all possible tails
-        hrt_batch = _extend_batch(batch=hr_batch, all_ids=list(self.triples_factory.get_entity_ids()), dim=2)
+        hrt_batch = extend_batch(batch=hr_batch, all_ids=list(self.triples_factory.get_entity_ids()), dim=2)
         # Calculate the scores for each (h, r, t) triple using the generic interaction function
         expanded_scores = self.score_hrt(hrt_batch=hrt_batch)
         # Reshape the scores to match the pre-defined output shape of the score_t function.
         scores = expanded_scores.view(hr_batch.shape[0], -1)
         return scores
-
-    def score_t_inverse(self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None):
-        """Score all tails for a batch of (h,r)-pairs using the head predictions for the inverses $(*,r_{inv},h)$."""
-        r_inv_h = self._prepare_inverse_batch(batch=hr_batch, index_relation=1)
-
-        if slice_size is None:
-            return self.score_h(rt_batch=r_inv_h)
-        else:
-            return self.score_h(rt_batch=r_inv_h, slice_size=slice_size)  # type: ignore
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:
         """Forward pass using left side (head) prediction.
@@ -585,21 +774,12 @@ class Model(nn.Module, ABC):
             'score_h function. This might cause the calculations to take longer than necessary.',
         )
         # Extend the rt_batch such that each (r, t) pair is combined with all possible heads
-        hrt_batch = _extend_batch(batch=rt_batch, all_ids=list(self.triples_factory.get_entity_ids()), dim=0)
+        hrt_batch = extend_batch(batch=rt_batch, all_ids=list(self.triples_factory.get_entity_ids()), dim=0)
         # Calculate the scores for each (h, r, t) triple using the generic interaction function
         expanded_scores = self.score_hrt(hrt_batch=hrt_batch)
         # Reshape the scores to match the pre-defined output shape of the score_h function.
         scores = expanded_scores.view(rt_batch.shape[0], -1)
         return scores
-
-    def score_h_inverse(self, rt_batch: torch.LongTensor, slice_size: Optional[int] = None):
-        """Score all heads for a batch of (r,t)-pairs using the tail predictions for the inverses $(t,r_{inv},*)$."""
-        t_r_inv = self._prepare_inverse_batch(batch=rt_batch, index_relation=0)
-
-        if slice_size is None:
-            return self.score_t(hr_batch=t_r_inv)
-        else:
-            return self.score_t(hr_batch=t_r_inv, slice_size=slice_size)  # type: ignore
 
     def score_r(self, ht_batch: torch.LongTensor) -> torch.FloatTensor:
         """Forward pass using middle (relation) prediction.
@@ -617,7 +797,7 @@ class Model(nn.Module, ABC):
             'score_r function. This might cause the calculations to take longer than necessary.',
         )
         # Extend the ht_batch such that each (h, t) pair is combined with all possible relations
-        hrt_batch = _extend_batch(batch=ht_batch, all_ids=list(self.triples_factory.get_relation_ids()), dim=1)
+        hrt_batch = extend_batch(batch=ht_batch, all_ids=list(self.triples_factory.get_relation_ids()), dim=1)
         # Calculate the scores for each (h, r, t) triple using the generic interaction function
         expanded_scores = self.score_hrt(hrt_batch=hrt_batch)
         # Reshape the scores to match the pre-defined output shape of the score_r function.
@@ -631,34 +811,8 @@ class Model(nn.Module, ABC):
     def _free_graph_and_cache(self):
         self.regularizer.reset()
 
-    def get_grad_params(self) -> Iterable[nn.Parameter]:
-        """Get the parameters that require gradients."""
-        # TODO: Why do we need that? The optimizer takes care of filtering the parameters.
-        return filter(lambda p: p.requires_grad, self.parameters())
 
-    @property
-    def num_parameter_bytes(self) -> int:
-        """Calculate the number of bytes used for all parameters of the model."""
-        return sum(p.numel() * p.element_size() for p in self.parameters(recurse=True))
-
-    def save_state(self, path: str) -> None:
-        """Save the state of the model.
-
-        :param path:
-            Path of the file where to store the state in.
-        """
-        torch.save(self.state_dict(), path)
-
-    def load_state(self, path: str) -> None:
-        """Load the state of the model.
-
-        :param path:
-            Path of the file where to load the state from.
-        """
-        self.load_state_dict(torch.load(path, map_location=self.device))
-
-
-class EntityEmbeddingModel(Model, autoreset=False):
+class EntityEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
     """A base module for most KGE models that have one embedding for entities."""
 
     def __init__(
@@ -676,7 +830,6 @@ class EntityEmbeddingModel(Model, autoreset=False):
         entity_normalizer_kwargs: Optional[Mapping[str, Any]] = None,
         entity_constrainer: Optional[Constrainer] = None,
         entity_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
-
     ) -> None:
         """Initialize the entity embedding model.
 
@@ -719,7 +872,7 @@ class EntityEmbeddingModel(Model, autoreset=False):
         self.entity_embeddings.post_parameter_update()
 
 
-class EntityRelationEmbeddingModel(Model, autoreset=False):
+class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
     """A base module for KGE models that have different embeddings for entities and relations."""
 
     def __init__(
@@ -811,7 +964,7 @@ class EntityRelationEmbeddingModel(Model, autoreset=False):
         self.relation_embeddings.post_parameter_update()
 
 
-class MultimodalModel(Model, autoreset=False):
+class MultimodalModel(_OldAbstractModel, ABC, autoreset=False):
     """A base module for multimodal KGE models."""
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
@@ -839,37 +992,3 @@ def _add_post_reset_parameters(cls: Type[Model]) -> None:
 
     # sorry mypy, but this kind of evil must be permitted.
     cls.__init__ = _new_init  # type: ignore
-
-
-def _extend_batch(
-    batch: MappedTriples,
-    all_ids: List[int],
-    dim: int,
-) -> MappedTriples:
-    """Extend batch for 1-to-all scoring by explicit enumeration.
-
-    :param batch: shape: (batch_size, 2)
-        The batch.
-    :param all_ids: len: num_choices
-        The IDs to enumerate.
-    :param dim: in {0,1,2}
-        The column along which to insert the enumerated IDs.
-
-    :return: shape: (batch_size * num_choices, 3)
-        A large batch, where every pair from the original batch is combined with every ID.
-    """
-    # Extend the batch to the number of IDs such that each pair can be combined with all possible IDs
-    extended_batch = batch.repeat_interleave(repeats=len(all_ids), dim=0)
-
-    # Create a tensor of all IDs
-    ids = torch.tensor(all_ids, dtype=torch.long, device=batch.device)
-
-    # Extend all IDs to the number of pairs such that each ID can be combined with every pair
-    extended_ids = ids.repeat(batch.shape[0])
-
-    # Fuse the extended pairs with all IDs to a new (h, r, t) triple tensor.
-    columns = [extended_batch[:, i] for i in (0, 1)]
-    columns.insert(dim, extended_ids)
-    hrt_batch = torch.stack(columns, dim=-1)
-
-    return hrt_batch

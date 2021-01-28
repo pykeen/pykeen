@@ -9,8 +9,7 @@ import numpy as np
 import torch
 
 from pykeen.losses import MarginRankingLoss
-from pykeen.models import TransE
-from pykeen.models.base import Model
+from pykeen.models import Model, TransE
 from pykeen.training.lcwa import LCWATrainingLoop
 from pykeen.training.utils import apply_label_smoothing, lazy_compile_random_batches
 from pykeen.triples import TriplesFactory
