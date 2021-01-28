@@ -150,27 +150,11 @@ class CachedDatasetCase(DatasetTestCase):
 
 
 # TODO update
-class LossTestCase(unittest.TestCase):
+class LossTestCase(GenericTestCase[Loss]):
     """Base unittest for loss functions."""
-
-    #: The class
-    cls: ClassVar[Type[Loss]]
-
-    #: Constructor keyword arguments
-    kwargs: ClassVar[Optional[Mapping[str, Any]]] = None
-
-    #: The loss instance
-    loss: Loss
 
     #: The batch size
     batch_size: ClassVar[int] = 3
-
-    def setUp(self) -> None:
-        """Initialize the instance."""
-        kwargs = self.kwargs
-        if kwargs is None:
-            kwargs = {}
-        self.loss = self.cls(**kwargs)
 
     def _check_loss_value(self, loss_value: torch.FloatTensor) -> None:
         """Check loss value dimensionality, and ability for backward."""
@@ -190,13 +174,13 @@ class PointwiseLossTestCase(LossTestCase):
 
     def test_type(self):
         """Test the loss is the right type."""
-        self.assertIsInstance(self.loss, PointwiseLoss)
+        self.assertIsInstance(self.instance, PointwiseLoss)
 
     def test_label_loss(self):
         """Test ``forward(logits, labels)``."""
         logits = torch.rand(self.batch_size, self.num_entities, requires_grad=True)
         labels = functional.normalize(torch.rand(self.batch_size, self.num_entities, requires_grad=False), p=1, dim=-1)
-        loss_value = self.loss(
+        loss_value = self.instance(
             logits,
             labels,
         )
@@ -212,13 +196,13 @@ class PairwiseLossTestCase(LossTestCase):
 
     def test_type(self):
         """Test the loss is the right type."""
-        self.assertIsInstance(self.loss, PairwiseLoss)
+        self.assertIsInstance(self.instance, PairwiseLoss)
 
     def test_pair_loss(self):
         """Test ``forward(pos_scores, neg_scores)``."""
         pos_scores = torch.rand(self.batch_size, 1, requires_grad=True)
         neg_scores = torch.rand(self.batch_size, self.num_negatives, requires_grad=True)
-        loss_value = self.loss(
+        loss_value = self.instance(
             pos_scores,
             neg_scores,
         )
@@ -234,13 +218,13 @@ class SetwiseLossTestCase(LossTestCase):
 
     def test_type(self):
         """Test the loss is the right type."""
-        self.assertIsInstance(self.loss, SetwiseLoss)
+        self.assertIsInstance(self.instance, SetwiseLoss)
 
     def test_forward(self):
         """Test forward(scores, labels)."""
         scores = torch.rand(self.batch_size, self.num_entities, requires_grad=True)
         labels = torch.rand(self.batch_size, self.num_entities, requires_grad=False)
-        loss_value = self.loss(
+        loss_value = self.instance(
             scores,
             labels,
         )
