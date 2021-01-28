@@ -23,7 +23,7 @@ from ...typing import DeviceHint, HeadRepresentation, RelationRepresentation, Ta
 from ...utils import check_shapes
 
 __all__ = [
-    'NModel',
+    '_NewAbstractModel',
     'ERModel',
 ]
 
@@ -37,7 +37,7 @@ EmbeddingSpecificationHint = Union[
 ]
 
 
-class NModel(Model, ABC, autoreset=False):
+class _NewAbstractModel(Model, ABC, autoreset=False):
     """An abstract class for knowledge graph embedding models (KGEMs).
 
     The only function that needs to be implemented for a given subclass is
@@ -376,7 +376,11 @@ def _prepare_representation_module_list(
     return nn.ModuleList(modules)
 
 
-class ERModel(Generic[HeadRepresentation, RelationRepresentation, TailRepresentation], NModel, autoreset=False):
+class ERModel(
+    Generic[HeadRepresentation, RelationRepresentation, TailRepresentation],
+    _NewAbstractModel,
+    autoreset=False,
+):
     """A commonly useful base for KGEMs using embeddings and interaction modules."""
 
     #: The entity representations

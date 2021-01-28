@@ -10,6 +10,7 @@ from typing import Mapping, Set, Type, Union
 
 from .base import EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, MultimodalModel, _OldAbstractModel
 from .multimodal import ComplExLiteral, DistMultLiteral
+from .nmodel import ERModel, _NewAbstractModel
 from .unimodal import (
     ComplEx,
     ConvE,
@@ -41,6 +42,8 @@ __all__ = [
     '_OldAbstractModel',
     'EntityEmbeddingModel',
     'EntityRelationEmbeddingModel',
+    '_NewAbstractModel',
+    'ERModel',
     'MultimodalModel',
     # Concrete Models
     'ComplEx',
