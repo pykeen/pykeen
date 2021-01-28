@@ -14,8 +14,8 @@ import numpy
 import torch
 from torch import nn
 
+from .regularizers import NewRegularizer
 from ...nn import emb
-from ...regularizers import Regularizer
 from ...typing import Constrainer, Initializer, Normalizer
 from ...utils import convert_to_canonical_shape
 
@@ -104,7 +104,7 @@ class EmbeddingSpecification:
     constrainer: Optional[Constrainer] = None
     constrainer_kwargs: Optional[Mapping[str, Any]] = None
 
-    regularizer: Optional[Regularizer] = None
+    regularizer: Optional[NewRegularizer] = None
 
     def make(
         self,
@@ -135,7 +135,7 @@ class NewEmbedding(NewRepresentationModule):
 
     normalizer: Optional[Normalizer]
     constrainer: Optional[Constrainer]
-    regularizer: Optional[Regularizer]
+    regularizer: Optional[NewRegularizer]
 
     def __init__(
         self,
@@ -148,7 +148,7 @@ class NewEmbedding(NewRepresentationModule):
         normalizer_kwargs: Optional[Mapping[str, Any]] = None,
         constrainer: Optional[Constrainer] = None,
         constrainer_kwargs: Optional[Mapping[str, Any]] = None,
-        regularizer: Optional[Regularizer] = None,
+        regularizer: Optional[NewRegularizer] = None,
         dtype: Optional[torch.dtype] = None,
     ):
         """Instantiate an embedding with extended functionality.
