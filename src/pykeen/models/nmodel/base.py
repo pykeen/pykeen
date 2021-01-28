@@ -8,12 +8,12 @@ import logging
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from operator import itemgetter
-from typing import Any, ClassVar, Generic, Iterable, List, Mapping, Optional, Sequence, Tuple, Type, Union
+from typing import Any, ClassVar, Generic, Iterable, List, Mapping, Optional, Sequence, Tuple, Type, Union, cast
 
 import torch
 from torch import nn
 
-from .representation import EmbeddingSpecification, RepresentationModule
+from .representation import EmbeddingSpecification, NewRepresentationModule
 from ..base import Model
 from ...losses import Loss
 from ...nn.modules import Interaction
@@ -32,8 +32,8 @@ logger = logging.getLogger(__name__)
 EmbeddingSpecificationHint = Union[
     None,
     EmbeddingSpecification,
-    RepresentationModule,
-    Sequence[Union[EmbeddingSpecification, RepresentationModule]],
+    NewRepresentationModule,
+    Sequence[Union[EmbeddingSpecification, NewRepresentationModule]],
 ]
 
 
@@ -340,7 +340,7 @@ def _prepare_representation_module_list(
     shapes: Sequence[str],
     label: str,
     skip_checks: bool = False,
-) -> Sequence[RepresentationModule]:
+) -> Sequence[NewRepresentationModule]:
     """Normalize list of representations and wrap into nn.ModuleList."""
     # Important: use ModuleList to ensure that Pytorch correctly handles their devices and parameters
     if representations is None:
@@ -354,7 +354,7 @@ def _prepare_representation_module_list(
         )
     modules = []
     for r in representations:
-        if not isinstance(r, RepresentationModule):
+        if not isinstance(r, NewRepresentationModule):
             assert isinstance(r, EmbeddingSpecification)
             r = r.make(num_embeddings=num_embeddings)
         if r.max_id < num_embeddings:
@@ -380,10 +380,10 @@ class ERModel(Generic[HeadRepresentation, RelationRepresentation, TailRepresenta
     """A commonly useful base for KGEMs using embeddings and interaction modules."""
 
     #: The entity representations
-    entity_representations: Sequence[RepresentationModule]
+    entity_representations: Sequence[NewRepresentationModule]
 
     #: The relation representations
-    relation_representations: Sequence[RepresentationModule]
+    relation_representations: Sequence[NewRepresentationModule]
 
     #: The weight regularizers
     weight_regularizers: List[Regularizer]
@@ -531,11 +531,7 @@ class ERModel(Generic[HeadRepresentation, RelationRepresentation, TailRepresenta
         h_indices: Optional[torch.LongTensor],
         r_indices: Optional[torch.LongTensor],
         t_indices: Optional[torch.LongTensor],
-    ) -> Tuple[
-        Union[torch.FloatTensor, Sequence[torch.FloatTensor]],
-        Union[torch.FloatTensor, Sequence[torch.FloatTensor]],
-        Union[torch.FloatTensor, Sequence[torch.FloatTensor]],
-    ]:
+    ) -> Tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]:
         h, r, t = [
             [
                 representation.get_in_canonical_shape(dim=dim, indices=indices)
@@ -548,6 +544,7 @@ class ERModel(Generic[HeadRepresentation, RelationRepresentation, TailRepresenta
             )
         ]
         # normalization
-        # TODO this function is implemented somewhere
-        h, r, t = [x[0] if len(x) == 1 else x for x in (h, r, t)]
-        return h, r, t
+        return cast(
+            Tuple[HeadRepresentation, RelationRepresentation, TailRepresentation],
+            tuple(x[0] if len(x) == 1 else x for x in (h, r, t)),
+        )

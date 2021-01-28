@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import functools
 import logging
-from abc import ABC, abstractmethod
+from abc import ABC
 from dataclasses import dataclass
 from typing import Any, Iterable, Mapping, Optional, Sequence, Tuple, Union
 
@@ -14,20 +14,21 @@ import numpy
 import torch
 from torch import nn
 
+from ...nn import emb
 from ...regularizers import Regularizer
 from ...typing import Constrainer, Initializer, Normalizer
 from ...utils import convert_to_canonical_shape
 
 __all__ = [
-    'RepresentationModule',
-    'Embedding',
+    'NewRepresentationModule',
+    'NewEmbedding',
     'EmbeddingSpecification',
 ]
 
 logger = logging.getLogger(__name__)
 
 
-class RepresentationModule(nn.Module, ABC):
+class NewRepresentationModule(emb.RepresentationModule, ABC):
     """A base class for obtaining representations for entities/relations."""
 
     #: The shape of a single representation
@@ -40,18 +41,6 @@ class RepresentationModule(nn.Module, ABC):
         super().__init__()
         self.shape = tuple(shape)
         self.max_id = max_id
-
-    @abstractmethod
-    def forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:
-        """Get representations for indices.
-
-        :param indices: shape: (m,)
-            The indices, or None. If None, return all representations.
-
-        :return: shape: (m, d)
-            The representations.
-        """
-        raise NotImplementedError
 
     def get_in_canonical_shape(
         self,
@@ -95,12 +84,6 @@ class RepresentationModule(nn.Module, ABC):
                 r_shape = r_shape + (1,)
         return convert_to_canonical_shape(x=x, dim=dim, num=r_shape[1], batch_size=r_shape[0], suffix_shape=self.shape)
 
-    def reset_parameters(self) -> None:
-        """Reset the module's parameters."""
-
-    def post_parameter_update(self):
-        """Apply constraints which should not be included in gradients."""
-
 
 @dataclass
 class EmbeddingSpecification:
@@ -125,9 +108,9 @@ class EmbeddingSpecification:
     def make(
         self,
         num_embeddings: int,
-    ) -> Embedding:
+    ) -> NewEmbedding:
         """Create an embedding with this specification."""
-        return Embedding(
+        return NewEmbedding(
             num_embeddings=num_embeddings,
             embedding_dim=self.embedding_dim,
             shape=self.shape,
@@ -142,7 +125,7 @@ class EmbeddingSpecification:
         )
 
 
-class Embedding(RepresentationModule):
+class NewEmbedding(NewRepresentationModule):
     """Trainable embeddings.
 
     This class provides the same interface as :class:`torch.nn.Embedding` and
@@ -251,7 +234,7 @@ class Embedding(RepresentationModule):
         cls,
         num_embeddings: int,
         specification: Optional[EmbeddingSpecification] = None,
-    ) -> Embedding:
+    ) -> NewEmbedding:
         """Create an embedding based on a specification.
 
         :param num_embeddings: >0
