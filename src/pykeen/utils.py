@@ -54,12 +54,14 @@ __all__ = [
     'fix_dataclass_init_docs',
     'get_benchmark',
     'extended_einsum',
+    'convert_to_canonical_shape',
     'strip_dim',
     'upgrade_to_sequence',
     'ensure_tuple',
     'unpack_singletons',
     'get_subclasses',
     'extend_batch',
+    'check_shapes',
 ]
 
 logger = logging.getLogger(__name__)
@@ -868,3 +870,40 @@ def extend_batch(
     hrt_batch = torch.stack(columns, dim=-1)
 
     return hrt_batch
+
+
+def check_shapes(
+    *x: Tuple[Union[torch.Tensor, Tuple[int, ...]], str],
+    raise_on_errors: bool = True,
+) -> bool:
+    """Verify that a sequence of tensors are of matching shapes.
+
+    :param x:
+        A tuple (tensor, shape), where tensor is a tensor, and shape is a string, where each character corresponds to
+        a (named) dimension. If the shapes of different tensors share a character, the corresponding dimensions are
+        expected to be of equal size.
+    :param raise_on_errors:
+        Whether to raise an exception in case of a mismatch.
+
+    :return:
+        Whether the shapes matched.
+
+    :raises ValueError:
+        If the shapes mismatch and raise_on_error is True.
+    """
+    dims: Dict[str, Tuple[int, ...]] = dict()
+    errors = []
+    for actual_shape, shape in x:
+        if isinstance(actual_shape, torch.Tensor):
+            actual_shape = actual_shape.shape
+        if len(actual_shape) != len(shape):
+            errors.append(f"Invalid number of dimensions: {actual_shape} vs. {shape}")
+            continue
+        for dim, name in zip(actual_shape, shape):
+            exp_dim = dims.get(name)
+            if exp_dim is not None and exp_dim != dim:
+                errors.append(f"{name}: {dim} vs. {exp_dim}")
+            dims[name] = dim
+    if raise_on_errors and errors:
+        raise ValueError("Shape verification failed:\n" + '\n'.join(errors))
+    return len(errors) == 0

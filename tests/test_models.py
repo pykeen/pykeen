@@ -399,6 +399,9 @@ Traceback
 
     def test_post_parameter_update_regularizer(self):
         """Test whether post_parameter_update resets the regularization term."""
+        if not hasattr(self.model, 'regularizer'):
+            self.skipTest('no regularizer')
+
         # set regularizer term
         self.model.regularizer.regularization_term = None
 
