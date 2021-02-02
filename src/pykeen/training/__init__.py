@@ -49,7 +49,7 @@ def get_training_loop_cls(query: Union[None, str, Type[TrainingLoop]]) -> Type[T
     """
     return get_cls(
         query,
-        base=TrainingLoop,
+        base=TrainingLoop,  # type: ignore
         lookup_dict=training_loops,
         default=SLCWATrainingLoop,
         suffix=_TRAINING_LOOP_SUFFIX,

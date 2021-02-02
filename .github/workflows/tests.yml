@@ -29,6 +29,9 @@ jobs:
       - name: Check code quality with flake8
         run: tox -e flake8
 
+      - name: Check code quality with flake8/darglint (limited)
+        run: tox -e darglint
+
       - name: Check package metadata with Pyroma
         run: tox -e pyroma
 
@@ -55,6 +58,9 @@ jobs:
 
       - name: Check README.rst
         run: tox -e readme
+
+      - name: Check docstring coverage
+        run: tox -e docstr-coverage
 
       - name: Check documentation build with Sphinx
         run: |

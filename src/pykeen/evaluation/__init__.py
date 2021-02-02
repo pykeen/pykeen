@@ -66,7 +66,7 @@ def get_evaluator_cls(query: Union[None, str, Type[Evaluator]]) -> Type[Evaluato
     """Get the evaluator class."""
     return get_cls(
         query,
-        base=Evaluator,
+        base=Evaluator,  # type: ignore
         lookup_dict=evaluators,
         default=RankBasedEvaluator,
         suffix=_EVALUATOR_SUFFIX,

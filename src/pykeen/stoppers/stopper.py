@@ -5,7 +5,7 @@
 import logging
 import pathlib
 from abc import ABC, abstractmethod
-from typing import Any, Mapping, Union
+from typing import Any, List, Mapping, Union
 
 import torch
 
@@ -37,7 +37,18 @@ class Stopper(ABC):
         """Get a summary dict."""
         raise NotImplementedError
 
-    def _write_from_summary_dict(self, **kwargs):
+    def _write_from_summary_dict(
+        self,
+        frequency: int,
+        patience: int,
+        relative_delta: float,
+        metric: str,
+        larger_is_better: bool,
+        results: List[float],
+        stopped: bool,
+        best_epoch: int,
+        best_metric: float,
+    ):
         pass
 
     @staticmethod

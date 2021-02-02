@@ -2,7 +2,7 @@
 
 """Load the OGB datasets.
 
-Run with python -m pykeen.datasets.ogb
+Run with ``python -m pykeen.datasets.ogb``
 """
 
 from typing import ClassVar, Optional
@@ -26,6 +26,12 @@ class OGBLoader(LazyDataset):
     name: ClassVar[str]
 
     def __init__(self, cache_root: Optional[str] = None, create_inverse_triples: bool = False):
+        """Initialize the OGB loader.
+
+        :param cache_root: An optional override for where data should be cached.
+            If not specified, uses default PyKEEN location with :mod:`pystow`.
+        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
+        """
         self.cache_root = self._help_cache(cache_root)
         self.create_inverse_triples = create_inverse_triples
 
@@ -40,6 +46,7 @@ class OGBLoader(LazyDataset):
         dataset = LinkPropPredDataset(name=self.name, root=self.cache_root)
         edge_split = dataset.get_edge_split()
         self._training = self._make_tf(edge_split["train"])
+        assert self._training is not None  # makes mypy hapy
         self._testing = self._make_tf(
             edge_split["test"],
             entity_to_id=self._training.entity_to_id,

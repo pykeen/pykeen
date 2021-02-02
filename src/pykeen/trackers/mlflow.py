@@ -2,7 +2,7 @@
 
 """An adapter for MLflow."""
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Mapping, Optional
 
 from .base import ResultTracker
 from ..utils import flatten_dictionary
@@ -54,14 +54,14 @@ class MLFlowResultTracker(ResultTracker):
 
     def log_metrics(
         self,
-        metrics: Dict[str, float],
+        metrics: Mapping[str, float],
         step: Optional[int] = None,
         prefix: Optional[str] = None,
     ) -> None:  # noqa: D102
         metrics = flatten_dictionary(dictionary=metrics, prefix=prefix)
         self.mlflow.log_metrics(metrics=metrics, step=step)
 
-    def log_params(self, params: Dict[str, Any], prefix: Optional[str] = None) -> None:  # noqa: D102
+    def log_params(self, params: Mapping[str, Any], prefix: Optional[str] = None) -> None:  # noqa: D102
         params = flatten_dictionary(dictionary=params, prefix=prefix)
         self.mlflow.log_params(params=params)
 

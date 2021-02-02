@@ -179,13 +179,12 @@ import pandas as pd
 import torch
 from torch.optim.optimizer import Optimizer
 
-from .constants import PYKEEN_CHECKPOINTS
+from .constants import PYKEEN_CHECKPOINTS, USER_DEFINED_CODE
 from .datasets import get_dataset
 from .datasets.base import Dataset
 from .evaluation import Evaluator, MetricResults, get_evaluator_cls
 from .losses import Loss, _LOSS_SUFFIX, get_loss_cls
-from .models import get_model_cls
-from .models.base import Model
+from .models import Model, get_model_cls
 from .nn import Embedding
 from .optimizers import get_optimizer_cls
 from .regularizers import Regularizer, get_regularizer_cls
@@ -628,7 +627,8 @@ def replicate_pipeline_from_config(
 
 def _iterate_moved(pipeline_results: Iterable[PipelineResult]):
     for pipeline_result in pipeline_results:
-        pipeline_result.model.to_cpu_()
+        pipeline_result.model.device = resolve_device('cpu')
+        pipeline_result.model.to_device_()
         yield pipeline_result
 
 
@@ -878,7 +878,12 @@ def pipeline(  # noqa: C901
     if dataset is not None:
         result_tracker.log_params(dict(dataset=dataset_instance.get_normalized_name()))
     else:  # means that dataset was defined by triples factories
-        result_tracker.log_params(dict(dataset='<user defined>'))
+        result_tracker.log_params(dict(
+            dataset=USER_DEFINED_CODE,
+            training=training if isinstance(training, str) else USER_DEFINED_CODE,
+            testing=testing if isinstance(training, str) else USER_DEFINED_CODE,
+            validation=validation if isinstance(training, str) else USER_DEFINED_CODE,
+        ))
 
     training, testing, validation = dataset_instance.training, dataset_instance.testing, dataset_instance.validation
     # evaluation restriction to a subset of entities/relations

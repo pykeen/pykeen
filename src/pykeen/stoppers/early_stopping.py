@@ -9,7 +9,7 @@ from typing import Any, Callable, List, Mapping, Optional, Union
 
 from .stopper import Stopper
 from ..evaluation import Evaluator
-from ..models.base import Model
+from ..models import Model
 from ..trackers import ResultTracker
 from ..triples import TriplesFactory
 from ..utils import fix_dataclass_init_docs
@@ -63,7 +63,7 @@ class EarlyStopper(Stopper):
     #: The evaluator
     evaluator: Evaluator
     #: The triples to use for evaluation
-    evaluation_triples_factory: Optional[TriplesFactory]
+    evaluation_triples_factory: TriplesFactory
     #: Size of the evaluation batches
     evaluation_batch_size: Optional[int] = None
     #: Slice size of the evaluation batches
@@ -103,14 +103,8 @@ class EarlyStopper(Stopper):
         # TODO: Fix this
         # if all(f.name != self.metric for f in dataclasses.fields(self.evaluator.__class__)):
         #     raise ValueError(f'Invalid metric name: {self.metric}')
-        if self.evaluation_triples_factory is None:
-            raise ValueError('Must specify a validation_triples_factory or a dataset for using early stopping.')
 
         self.remaining_patience = self.patience
-
-        # Dummy result tracker
-        if self.result_tracker is None:
-            self.result_tracker = ResultTracker()
 
     def should_evaluate(self, epoch: int) -> bool:
         """Decide if evaluation should be done based on the current epoch and the internal frequency."""
@@ -137,11 +131,12 @@ class EarlyStopper(Stopper):
         self.evaluation_batch_size = self.evaluator.batch_size
         self.evaluation_slice_size = self.evaluator.slice_size
 
-        self.result_tracker.log_metrics(
-            metrics=metric_results.to_flat_dict(),
-            step=epoch,
-            prefix='validation',
-        )
+        if self.result_tracker is not None:
+            self.result_tracker.log_metrics(
+                metrics=metric_results.to_flat_dict(),
+                step=epoch,
+                prefix='validation',
+            )
         result = metric_results.get_metric(self.metric)
 
         # Append to history

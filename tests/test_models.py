@@ -22,16 +22,12 @@ import pykeen.experiments
 import pykeen.models
 from pykeen.datasets.kinships import KINSHIPS_TRAIN_PATH
 from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH, Nations
-from pykeen.models import _MODELS
-from pykeen.models.base import (
-    EntityEmbeddingModel,
-    EntityRelationEmbeddingModel,
-    Model,
-    MultimodalModel,
-    _extend_batch,
-    get_novelty_mask,
+from pykeen.models import (
+    EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, MultimodalModel, _MODELS,
+    _OldAbstractModel,
 )
 from pykeen.models.cli import build_cli_from_cls
+from pykeen.models.predict import get_novelty_mask, predict
 from pykeen.models.unimodal.rgcn import (
     inverse_indegree_edge_weights,
     inverse_outdegree_edge_weights,
@@ -41,10 +37,11 @@ from pykeen.models.unimodal.trans_d import _project_entity
 from pykeen.nn import Embedding, RepresentationModule
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
 from pykeen.triples import TriplesFactory
-from pykeen.utils import all_in_bounds, clamp_norm, set_random_seed
+from pykeen.utils import all_in_bounds, clamp_norm, extend_batch, set_random_seed
 
 SKIP_MODULES = {
     Model.__name__,
+    _OldAbstractModel.__name__,
     'DummyModel',
     MultimodalModel.__name__,
     EntityEmbeddingModel.__name__,
@@ -599,7 +596,7 @@ class TestDistMult(_ModelTestCase, unittest.TestCase):
         :param k: The number of triples to return. Set to None, to keep all.
         :param batch_size: The batch size to use for calculating scores.
         """
-        top_triples, top_scores = self.model.score_all_triples(k=k, batch_size=batch_size, return_tensors=True)
+        top_triples, top_scores = predict(model=self.model, batch_size=batch_size, k=k)
 
         # check type
         assert torch.is_tensor(top_triples)
@@ -1274,7 +1271,7 @@ class TestModelUtilities(unittest.TestCase):
         num_choices = len(all_ids)
 
         for dim in range(3):
-            h_ext_batch = _extend_batch(batch=batch, all_ids=all_ids, dim=dim)
+            h_ext_batch = extend_batch(batch=batch, all_ids=all_ids, dim=dim)
 
             # check shape
             assert h_ext_batch.shape == (batch_size * num_choices, 3)

@@ -2,7 +2,7 @@
 
 """Type hints for PyKEEN."""
 
-from typing import Callable, Mapping, TypeVar, Union
+from typing import Callable, Mapping, NamedTuple, Sequence, TypeVar, Union, cast
 
 import numpy as np
 import torch
@@ -15,9 +15,15 @@ __all__ = [
     'Initializer',
     'Normalizer',
     'Constrainer',
+    'cast_constrainer',
     'InteractionFunction',
     'DeviceHint',
     'TorchRandomHint',
+    'HeadRepresentation',
+    'RelationRepresentation',
+    'TailRepresentation',
+    'GaussianDistribution',
+    'ScorePack',
 ]
 
 LabeledTriples = np.ndarray
@@ -32,5 +38,29 @@ Initializer = Callable[[TensorType], TensorType]
 Normalizer = Callable[[TensorType], TensorType]
 Constrainer = Callable[[TensorType], TensorType]
 
+
+def cast_constrainer(f) -> Constrainer:
+    """Cast a constrainer function with :func:`typing.cast`."""
+    return cast(Constrainer, f)
+
+
 DeviceHint = Union[None, str, torch.device]
 TorchRandomHint = Union[None, int, torch.Generator]
+
+HeadRepresentation = TypeVar("HeadRepresentation", bound=Union[torch.FloatTensor, Sequence[torch.FloatTensor]])
+RelationRepresentation = TypeVar("RelationRepresentation", bound=Union[torch.FloatTensor, Sequence[torch.FloatTensor]])
+TailRepresentation = TypeVar("TailRepresentation", bound=Union[torch.FloatTensor, Sequence[torch.FloatTensor]])
+
+
+class GaussianDistribution(NamedTuple):
+    """A gaussian distribution with diagonal covariance matrix."""
+
+    mean: torch.FloatTensor
+    diagonal_covariance: torch.FloatTensor
+
+
+class ScorePack(NamedTuple):
+    """A pair of result triples and scores."""
+
+    result: torch.LongTensor
+    scores: torch.FloatTensor

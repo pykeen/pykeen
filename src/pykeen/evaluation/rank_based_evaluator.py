@@ -5,7 +5,7 @@
 import logging
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Dict, Iterable, List, Optional, Tuple, Union
+from typing import DefaultDict, Dict, Iterable, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -124,7 +124,7 @@ class RankBasedMetricResults(MetricResults):
 
     #: The hits at k for different values of k, i.e. the relative frequency of ranks not larger than k.
     #: Higher is better.
-    hits_at_k: Dict[str, Dict[str, Dict[int, float]]] = field(metadata=dict(
+    hits_at_k: Dict[str, Dict[str, Dict[Union[int, float], float]]] = field(metadata=dict(
         doc='The hits at k for different values of k, i.e. the relative frequency of ranks not larger than k.'
             ' Higher is better.',
     ))
@@ -170,8 +170,8 @@ class RankBasedMetricResults(MetricResults):
             if not metric.startswith(prefix):
                 continue
             k = metric[len(prefix):]
-            k = 10 if k == 'k' else int(k)
-            return rank_type_hits_at_k[k]
+            k_int = 10 if k == 'k' else int(k)
+            return rank_type_hits_at_k[k_int]
 
         raise ValueError(f'Invalid metric name: {name}')
 
@@ -213,6 +213,8 @@ class RankBasedEvaluator(Evaluator):
     - Adjusted Mean Rank (AMR; [berrendorf2020]_)
     - Hits @ K
     """
+
+    ks: Sequence[Union[int, float]]
 
     def __init__(
         self,
@@ -278,16 +280,19 @@ class RankBasedEvaluator(Evaluator):
 
     def _get_ranks(self, side, rank_type) -> np.ndarray:
         if side == 'both':
-            values = sum((self.ranks.get((_side, rank_type), []) for _side in ('head', 'tail')), [])
+            values: List[float] = sum((self.ranks.get((_side, rank_type), []) for _side in ('head', 'tail')), [])
         else:
             values = self.ranks.get((side, rank_type), [])
         return np.asarray(values, dtype=np.float64)
 
     def finalize(self) -> RankBasedMetricResults:  # noqa: D102
-        mean_rank = defaultdict(dict)
-        mean_reciprocal_rank = defaultdict(dict)
-        hits_at_k = defaultdict(dict)
-        adjusted_mean_rank = {}
+        mean_rank: DefaultDict[str, Dict[str, float]] = defaultdict(dict)
+        mean_reciprocal_rank: DefaultDict[str, Dict[str, float]] = defaultdict(dict)
+        hits_at_k: DefaultDict[str, Dict[str, Dict[Union[int, float], float]]] = defaultdict(dict)
+        adjusted_mean_rank: Dict[str, float] = {}
+
+        if self.num_entities is None:
+            raise ValueError
 
         for side in SIDES:
             for rank_type in RANK_TYPES:
@@ -295,7 +300,7 @@ class RankBasedEvaluator(Evaluator):
                 if len(ranks) < 1:
                     continue
                 hits_at_k[side][rank_type] = {
-                    k: np.mean(ranks <= k) if isinstance(k, int) else np.mean(ranks <= int(self.num_entities * k))
+                    k: np.mean(ranks <= (k if isinstance(k, int) else int(self.num_entities * k)))
                     for k in self.ks
                 }
                 mean_rank[side][rank_type] = np.mean(ranks)

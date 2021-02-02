@@ -3,7 +3,7 @@
 """Sample datasets for use with PyKEEN, borrowed from https://github.com/ZhenfengLei/KGDatasets.
 
 New datasets (inheriting from :class:`pykeen.datasets.base.Dataset`) can be registered with PyKEEN using the
-`pykeen.datasets` group in Python entrypoints in your own `setup.py` or `setup.cfg` package configuration.
+:mod:`pykeen.datasets` group in Python entrypoints in your own `setup.py` or `setup.cfg` package configuration.
 They are loaded automatically with :func:`pkg_resources.iter_entry_points`.
 """
 
@@ -20,6 +20,7 @@ from .base import (  # noqa:F401
 from .ckg import CKG
 from .codex import CoDExLarge, CoDExMedium, CoDExSmall
 from .conceptnet import ConceptNet
+from .cskg import CSKG
 from .drkg import DRKG
 from .freebase import FB15k, FB15k237
 from .hetionet import Hetionet
@@ -30,7 +31,7 @@ from .openbiolink import OpenBioLink, OpenBioLinkF1, OpenBioLinkF2, OpenBioLinkL
 from .umls import UMLS
 from .wordnet import WN18, WN18RR
 from .yago import YAGO310
-from ..triples import TriplesFactory
+from ..triples import CoreTriplesFactory, TriplesFactory
 from ..utils import normalize_string, normalized_lookup
 
 __all__ = [
@@ -55,6 +56,7 @@ __all__ = [
     'DRKG',
     'ConceptNet',
     'CKG',
+    'CSKG',
     'get_dataset',
     'has_dataset',
 ]
@@ -98,30 +100,31 @@ def get_dataset(
 
     if isinstance(dataset, str):
         if has_dataset(dataset):
-            dataset: Type[Dataset] = datasets[normalize_string(dataset)]
+            dataset: Type[Dataset] = datasets[normalize_string(dataset)]  # type: ignore
         elif not os.path.exists(dataset):
             raise ValueError(f'dataset is neither a pre-defined dataset string nor a filepath: {dataset}')
         else:
             return Dataset.from_path(dataset)
 
     if isinstance(dataset, type) and issubclass(dataset, Dataset):
-        return dataset(**(dataset_kwargs or {}))
+        return dataset(**(dataset_kwargs or {}))  # type: ignore
 
     if dataset is not None:
         raise TypeError(f'Dataset is invalid type: {type(dataset)}')
 
     if isinstance(training, str) and isinstance(testing, str):
-        if validation is not None and not isinstance(validation, str):
+        if isinstance(validation, str):
+            return PathDataset(
+                training_path=training,
+                testing_path=testing,
+                validation_path=validation,
+                **(dataset_kwargs or {}),
+            )
+        elif validation is not None:
             raise TypeError(f'Validation is invalid type: {type(validation)}')
-        return PathDataset(
-            training_path=training,
-            testing_path=testing,
-            validation_path=validation,
-            **(dataset_kwargs or {}),
-        )
 
-    if isinstance(training, TriplesFactory) and isinstance(testing, TriplesFactory):
-        if validation is not None and not isinstance(validation, TriplesFactory):
+    if isinstance(training, CoreTriplesFactory) and isinstance(testing, CoreTriplesFactory):
+        if validation is not None and not isinstance(validation, CoreTriplesFactory):
             raise TypeError(f'Validation is invalid type: {type(validation)}')
         if dataset_kwargs:
             logger.warning('dataset_kwargs are disregarded when passing pre-instantiated triples factories')

@@ -8,7 +8,7 @@ score value is model-dependent, and usually it cannot be directly interpreted as
 
 from typing import Mapping, Set, Type, Union
 
-from .base import EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, MultimodalModel  # noqa:F401
+from .base import EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, MultimodalModel, _OldAbstractModel
 from .multimodal import ComplExLiteral, DistMultLiteral
 from .unimodal import (
     ComplEx,
@@ -33,9 +33,16 @@ from .unimodal import (
     TuckER,
     UnstructuredModel,
 )
-from ..utils import get_cls, normalize_string
+from ..utils import get_cls, get_subclasses, normalize_string
 
 __all__ = [
+    # Base Models
+    'Model',
+    '_OldAbstractModel',
+    'EntityEmbeddingModel',
+    'EntityRelationEmbeddingModel',
+    'MultimodalModel',
+    # Concrete Models
     'ComplEx',
     'ComplExLiteral',
     'ConvE',
@@ -63,15 +70,11 @@ __all__ = [
     'get_model_cls',
 ]
 
-
-def _concrete_subclasses(cls: Type[Model]):
-    for subcls in cls.__subclasses__():
-        if not subcls._is_base_model:
-            yield subcls
-        yield from _concrete_subclasses(subcls)
-
-
-_MODELS: Set[Type[Model]] = set(_concrete_subclasses(Model))  # type: ignore
+_MODELS: Set[Type[Model]] = {
+    subcls
+    for subcls in get_subclasses(Model)  # type: ignore
+    if not subcls._is_base_model
+}
 
 #: A mapping of models' names to their implementations
 models: Mapping[str, Type[Model]] = {

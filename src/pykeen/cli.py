@@ -15,8 +15,8 @@ later, but that will cause problems - the code will get executed twice:
 
 import inspect
 import os
+import platform
 import sys
-from itertools import chain
 from typing import Optional
 
 import click
@@ -30,7 +30,6 @@ from .hpo.cli import optimize
 from .hpo.samplers import samplers as hpo_samplers_dict
 from .losses import losses as losses_dict
 from .models import models as models_dict
-from .models.base import EntityEmbeddingModel, EntityRelationEmbeddingModel, Model
 from .models.cli import build_cli_from_cls
 from .optimizers import optimizers as optimizers_dict
 from .regularizers import regularizers as regularizers_dict
@@ -40,6 +39,7 @@ from .trackers import trackers as trackers_dict
 from .training import training_loops as training_dict
 from .triples.utils import EXTENSION_IMPORTERS, PREFIX_IMPORTERS
 from .utils import get_until_first_blank
+from .version import get_version
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 
@@ -47,6 +47,24 @@ HERE = os.path.abspath(os.path.dirname(__file__))
 @click.group()
 def main():
     """PyKEEN."""
+
+
+@main.command()
+def version():
+    """Print version information for debugging."""
+    import torch
+    t1 = [
+        ('`os.name`', os.name),
+        ('`platform.system()`', platform.system()),
+        ('`platform.release()`', platform.release()),
+        ('python', f'{sys.version_info[0]}.{sys.version_info[1]}.{sys.version_info[2]}'),
+        ('pykeen', get_version(with_git_hash=True)),
+        ('torch', torch.__version__),
+        ('cuda available', str(torch.cuda.is_available()).lower()),
+        ('cuda', torch.version.cuda),
+        ('cudnn', torch.backends.cudnn.version()),
+    ]
+    click.echo(tabulate(t1, tablefmt='github', headers=['Key', 'Value']))
 
 
 tablefmt_option = click.option('-f', '--tablefmt', default='plain', show_default=True)
@@ -91,27 +109,6 @@ def _get_model_lines(tablefmt: str, link_fmt: Optional[str] = None):
         else:
             author, year = line[1 + l: r - 4], line[r - 4: r]
             yield model.__name__, f'{author.capitalize()}, {year}'
-
-
-@ls.command()
-def parameters():
-    """List hyper-parameter usage."""
-    click.echo('Names of __init__() parameters in all classes:')
-
-    base_parameters = set(chain(
-        Model.__init__.__annotations__,
-        EntityEmbeddingModel.__init__.__annotations__,
-        EntityRelationEmbeddingModel.__init__.__annotations__,
-    ))
-    _hyperparameter_usage = sorted(
-        (k, v)
-        for k, v in Model._hyperparameter_usage.items()
-        if k not in base_parameters
-    )
-    for i, (name, values) in enumerate(_hyperparameter_usage, start=1):
-        click.echo(f'{i:>2}. {name}')
-        for value in sorted(values):
-            click.echo(f'    - {value}')
 
 
 @ls.command()

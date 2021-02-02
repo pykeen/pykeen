@@ -30,7 +30,7 @@ from typing import Collection, Mapping, Type, Union
 
 from .early_stopping import EarlyStopper, StopperCallback  # noqa: F401
 from .stopper import NopStopper, Stopper
-from ..utils import get_cls, normalize_string
+from ..utils import get_cls, get_subclasses, normalize_string
 
 __all__ = [
     'Stopper',
@@ -40,10 +40,7 @@ __all__ = [
 ]
 
 _STOPPER_SUFFIX = 'Stopper'
-_STOPPERS: Collection[Type[Stopper]] = {
-    NopStopper,
-    EarlyStopper,
-}
+_STOPPERS: Collection[Type[Stopper]] = set(get_subclasses(Stopper))  # type: ignore
 
 #: A mapping of stoppers' names to their implementations
 stoppers: Mapping[str, Type[Stopper]] = {
@@ -60,7 +57,7 @@ def get_stopper_cls(query: Union[None, str, Type[Stopper]]) -> Type[Stopper]:
     """
     return get_cls(
         query,
-        base=Stopper,
+        base=Stopper,  # type: ignore
         lookup_dict=stoppers,
         default=NopStopper,
         suffix=_STOPPER_SUFFIX,
