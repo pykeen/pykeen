@@ -14,7 +14,7 @@ import pandas as pd
 import torch
 from torch import nn
 
-from ..losses import Loss, MarginRankingLoss, has_mr_loss, has_nssa_loss
+from ..losses import Loss, MarginRankingLoss
 from ..nn import Embedding
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import TriplesFactory
@@ -69,7 +69,6 @@ class Model(nn.Module, ABC):
         predict_with_sigmoid: bool = False,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
-        regularizer: Optional[Regularizer] = None,
     ) -> None:
         """Initialize the module.
 
@@ -106,10 +105,6 @@ class Model(nn.Module, ABC):
             self.loss = self.loss_default(**(self.loss_default_kwargs or {}))
         else:
             self.loss = loss
-
-        # TODO: Check loss functions that require 1 and -1 as label but only
-        self.is_mr_loss: bool = has_mr_loss(self)
-        self.is_nssa_loss: bool = has_nssa_loss(self)
 
         # The triples factory facilitates access to the dataset.
         self.triples_factory = triples_factory
@@ -230,59 +225,22 @@ class Model(nn.Module, ABC):
             For each r-t pair, the scores for all possible heads.
         """
 
-    """Abstract methods - loss computation"""
-
     @abstractmethod
-    def compute_mr_loss(
+    def compute_loss(
         self,
-        positive_scores: torch.FloatTensor,
-        negative_scores: torch.FloatTensor,
+        tensor_1: torch.FloatTensor,
+        tensor_2: torch.FloatTensor,
     ) -> torch.FloatTensor:
-        """Compute the mean ranking loss for the positive and negative scores.
+        """Compute the loss for functions requiring two separate tensors as input.
 
-        :param positive_scores:  shape: s, dtype: float
-            The scores for positive triples.
-        :param negative_scores: shape: s, dtype: float
-            The scores for negative triples.
-        :raises RuntimeError:
-            If the chosen loss function does not allow the calculation of margin ranking
-        :return: dtype: float, scalar
-            The margin ranking loss value.
-        """
-
-    @abstractmethod
-    def compute_label_loss(
-        self,
-        predictions: torch.FloatTensor,
-        labels: torch.FloatTensor,
-    ) -> torch.FloatTensor:
-        """Compute the classification loss.
-
-        :param predictions: shape: s
-            The tensor containing predictions.
-        :param labels: shape: s
-            The tensor containing labels.
-
+        :param tensor_1: shape: s
+            The tensor containing predictions or positive scores.
+        :param tensor_2: shape: s
+            The tensor containing target values or the negative scores.
         :return: dtype: float, scalar
             The label loss value.
-        """
 
-    @abstractmethod
-    def compute_self_adversarial_negative_sampling_loss(
-        self,
-        positive_scores: torch.FloatTensor,
-        negative_scores: torch.FloatTensor,
-    ) -> torch.FloatTensor:
-        """Compute self adversarial negative sampling loss.
-
-        :param positive_scores: shape: s
-            The tensor containing the positive scores.
-        :param negative_scores: shape: s
-            Tensor containing the negative scores.
-        :raises RuntimeError:
-            If the chosen loss does not allow the calculation of self adversarial negative sampling losses.
-        :return: dtype: float, scalar
-            The loss value.
+        .. note:: generally the two tensors do not need to have the same shape, but only one which is broadcastable.
         """
 
     """Concrete methods"""
@@ -648,92 +606,6 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
         if self.training:
             self.regularizer.update(*tensors)
 
-    def compute_mr_loss(
-        self,
-        positive_scores: torch.FloatTensor,
-        negative_scores: torch.FloatTensor,
-    ) -> torch.FloatTensor:
-        """Compute the mean ranking loss for the positive and negative scores.
-
-        :param positive_scores:  shape: s, dtype: float
-            The scores for positive triples.
-        :param negative_scores: shape: s, dtype: float
-            The scores for negative triples.
-        :raises RuntimeError:
-            If the chosen loss function does not allow the calculation of margin ranking
-        :return: dtype: float, scalar
-            The margin ranking loss value.
-        """
-        if not self.is_mr_loss:
-            raise RuntimeError(
-                'The chosen loss does not allow the calculation of margin ranking'
-                ' losses. Please use the compute_loss method instead.',
-            )
-        return self.loss(positive_scores, negative_scores) + self.regularizer.term
-
-    def compute_label_loss(
-        self,
-        predictions: torch.FloatTensor,
-        labels: torch.FloatTensor,
-    ) -> torch.FloatTensor:
-        """Compute the classification loss.
-
-        :param predictions: shape: s
-            The tensor containing predictions.
-        :param labels: shape: s
-            The tensor containing labels.
-
-        :return: dtype: float, scalar
-            The label loss value.
-        """
-        return self._compute_loss(tensor_1=predictions, tensor_2=labels)
-
-    def compute_self_adversarial_negative_sampling_loss(
-        self,
-        positive_scores: torch.FloatTensor,
-        negative_scores: torch.FloatTensor,
-    ) -> torch.FloatTensor:
-        """Compute self adversarial negative sampling loss.
-
-        :param positive_scores: shape: s
-            The tensor containing the positive scores.
-        :param negative_scores: shape: s
-            Tensor containing the negative scores.
-        :raises RuntimeError:
-            If the chosen loss does not allow the calculation of self adversarial negative sampling losses.
-        :return: dtype: float, scalar
-            The loss value.
-        """
-        if not self.is_nssa_loss:
-            raise RuntimeError(
-                'The chosen loss does not allow the calculation of self adversarial negative sampling'
-                ' losses. Please use the compute_self_adversarial_negative_sampling_loss method instead.',
-            )
-        return self._compute_loss(tensor_1=positive_scores, tensor_2=negative_scores)
-
-    def _compute_loss(
-        self,
-        tensor_1: torch.FloatTensor,
-        tensor_2: torch.FloatTensor,
-    ) -> torch.FloatTensor:
-        """Compute the loss for functions requiring two separate tensors as input.
-
-        :param tensor_1: shape: s
-            The tensor containing predictions or positive scores.
-        :param tensor_2: shape: s
-            The tensor containing target values or the negative scores.
-        :raises RuntimeError:
-            If the chosen loss does not allow the calculation of margin label losses.
-        :return: dtype: float, scalar
-            The label loss value.
-        """
-        if self.is_mr_loss:
-            raise RuntimeError(
-                'The chosen loss does not allow the calculation of margin label'
-                ' losses. Please use the compute_mr_loss method instead.',
-            )
-        return self.loss(tensor_1, tensor_2) + self.regularizer.term
-
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:
         """Forward pass using right side (tail) prediction.
 
@@ -802,6 +674,24 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
         # Reshape the scores to match the pre-defined output shape of the score_r function.
         scores = expanded_scores.view(ht_batch.shape[0], -1)
         return scores
+
+    def compute_loss(
+        self,
+        tensor_1: torch.FloatTensor,
+        tensor_2: torch.FloatTensor,
+    ) -> torch.FloatTensor:
+        """Compute the loss for functions requiring two separate tensors as input.
+
+        :param tensor_1: shape: s
+            The tensor containing predictions or positive scores.
+        :param tensor_2: shape: s
+            The tensor containing target values or the negative scores.
+        :return: dtype: float, scalar
+            The label loss value.
+
+        .. note:: generally the two tensors do not need to have the same shape, but only one which is broadcastable.
+        """
+        return self.loss(tensor_1, tensor_2) + self.regularizer.term
 
     def post_forward_pass(self):
         """Run after calculating the forward loss."""

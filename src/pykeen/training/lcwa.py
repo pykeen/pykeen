@@ -71,7 +71,7 @@ class LCWATrainingLoop(TrainingLoop):
                 num_classes=self.model.num_entities,
             )
 
-        return self.model.compute_label_loss(predictions, labels)
+        return self.model.compute_loss(predictions, labels)
 
     def _mr_loss_helper(
         self,
@@ -91,7 +91,7 @@ class LCWATrainingLoop(TrainingLoop):
         # First filter the predictions for true labels and then repeat them based on the repeat vector
         positive_scores = predictions[labels == 1][repeat_true_labels]
 
-        return self.model.compute_mr_loss(positive_scores, negative_scores)
+        return self.model.compute_loss(positive_scores, negative_scores)
 
     def _self_adversarial_negative_sampling_loss_helper(
         self,
@@ -104,7 +104,7 @@ class LCWATrainingLoop(TrainingLoop):
         positive_scores = predictions[labels == 1]
         negative_scores = predictions[labels == 0]
 
-        return self.model.compute_self_adversarial_negative_sampling_loss(positive_scores, negative_scores)
+        return self.model.compute_loss(positive_scores, negative_scores)
 
     def _slice_size_search(
         self,
