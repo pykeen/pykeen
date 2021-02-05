@@ -206,6 +206,12 @@ class MSELoss(PointwiseLoss):
         return functional.mse_loss(scores, labels, reduction=self.reduction)
 
 
+MARGIN_ACTIVATIONS: Mapping[str, Callable[[torch.FloatTensor], torch.FloatTensor]] = {
+    'relu': functional.relu,
+    'softplus': functional.softplus,
+}
+
+
 class MarginRankingLoss(PairwiseLoss):
     """A wrapper around the PyTorch margin ranking loss.
 
@@ -221,7 +227,7 @@ class MarginRankingLoss(PairwiseLoss):
     def __init__(
         self,
         margin: float = 1.0,
-        margin_activation: Callable[[torch.FloatTensor], torch.FloatTensor] = functional.relu,
+        margin_activation: Union[str, Callable[[torch.FloatTensor], torch.FloatTensor]] = 'relu',
         reduction: str = 'mean',
     ):
         """Initialize the margin loss instance.
@@ -237,7 +243,11 @@ class MarginRankingLoss(PairwiseLoss):
         """
         super().__init__(reduction=reduction)
         self.margin = margin
-        self.margin_activation = margin_activation
+
+        if isinstance(margin_activation, str):
+            self.margin_activation = MARGIN_ACTIVATIONS[margin_activation]
+        else:
+            self.margin_activation = margin_activation
 
     def forward(
         self,
