@@ -155,13 +155,13 @@ in ``pykeen``.
 
 | Name            | Reference                                                                                                                 | Description                                                                                       |
 |-----------------|---------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------|
-| bceaftersigmoid | [`pykeen.losses.BCEAfterSigmoidLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.BCEAfterSigmoidLoss.html) | A loss function which uses the numerically unstable version of explicit Sigmoid + BCE.            |
-| bcewithlogits   | [`pykeen.losses.BCEWithLogitsLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.BCEWithLogitsLoss.html)     | A wrapper around the numeric stable version of the PyTorch binary cross entropy loss.             |
-| crossentropy    | [`pykeen.losses.CrossEntropyLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.CrossEntropyLoss.html)       | Evaluate cross entropy after softmax output.                                                      |
-| marginranking   | [`pykeen.losses.MarginRankingLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.MarginRankingLoss.html)     | A wrapper around the PyTorch margin ranking loss.                                                 |
-| mse             | [`pykeen.losses.MSELoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.MSELoss.html)                         | A wrapper around the PyTorch mean square error loss.                                              |
+| bceaftersigmoid | [`pykeen.losses.BCEAfterSigmoidLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.BCEAfterSigmoidLoss.html) | A module for the numerically unstable version of explicit Sigmoid + BCE loss.                     |
+| bcewithlogits   | [`pykeen.losses.BCEWithLogitsLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.BCEWithLogitsLoss.html)     | A module for the binary cross entropy loss.                                                       |
+| crossentropy    | [`pykeen.losses.CrossEntropyLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.CrossEntropyLoss.html)       | A module for the cross entopy loss that evaluates the cross entropy after softmax output.         |
+| marginranking   | [`pykeen.losses.MarginRankingLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.MarginRankingLoss.html)     | A module for the margin ranking loss.                                                             |
+| mse             | [`pykeen.losses.MSELoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.MSELoss.html)                         | A module for the mean square error loss.                                                          |
 | nssa            | [`pykeen.losses.NSSALoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.NSSALoss.html)                       | An implementation of the self-adversarial negative sampling loss function proposed by [sun2019]_. |
-| softplus        | [`pykeen.losses.SoftplusLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.SoftplusLoss.html)               | A loss function for the softplus.                                                                 |
+| softplus        | [`pykeen.losses.SoftplusLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.SoftplusLoss.html)               | A module for the softplus loss.                                                                   |
 
 ### Regularizers (5)
 

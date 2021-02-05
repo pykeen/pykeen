@@ -22,6 +22,12 @@ function $l:\mathcal{T} \rightarrow \{0,1\}$ where a value of 1 denotes the trip
     triples $\mathcal{T_{obs}} \subset \mathcal{K}$ and no observations over negative triples. Depending on the training
     assumption (sLCWA or LCWA), this will mean negative triples are generated in a variety of patterns.
 
+.. note::
+
+    Following the open world assumption (OWA), triples $\mathcal{\bar{K}}$ are better named "not positive" rather
+    than negative. This is most relevant for pointwise loss functions. For pairwise and setwise loss functions,
+    triples are compared as being more/less positive and the binary classification is not relevant.
+
 Pointwise Loss Functions
 ------------------------
 A pointwise loss is applied to a single triple. It takes the form of $L: \mathcal{T} \rightarrow \mathbb{R}$ and
@@ -32,8 +38,29 @@ $g: \mathbb{R} \times \{0,1\} \rightarrow \mathbb{R}$ based on the scoring funct
 
     L(k) = g(f(k), l(k))
 
+
+Examples
+~~~~~~~~
+.. table::
+    :align: center
+    :widths: auto
+
+    =============================  ============================================================
+    Pointwise Loss                 Formulation
+    =============================  ============================================================
+    Square Error                   $g(s, l) = \frac{1}{2}(s - l)^2$
+    Binary Cross Entropy           $g(s, l) = -(l*\log (\sigma(s))+(1-l)*(\log (1-\sigma(s))))$
+    Pointwise Hinge                $g(s, l) = \max(0, \lambda -\hat{l}*s)$
+    Pointwise Logistic (softplus)  $g(s, l) = \log(1+\exp(-\hat{l}*s))$
+    =============================  ============================================================
+
+For the pointwise logistic and pointwise hinge losses, $\hat{l}$ has been rescaled from $\{0,1\}$ to $\{-1,1\}$.
+The sigmoid logistic loss function is defined as $\sigma(z) = \frac{1}{1 + e^{-z}}$.
+
+Batching
+~~~~~~~~
 The pointwise loss of a set of triples (i.e., a batch) $\mathcal{L}_L: 2^{\mathcal{T}} \rightarrow \mathbb{R}$ is
-defined as the average of the pointwise losses over each triple in the subset $\mathcal{B} \in 2^{\mathcal{T}}$:
+defined as the arithmetic mean of the pointwise losses over each triple in the subset $\mathcal{B} \in 2^{\mathcal{T}}$:
 
 .. math::
 
@@ -50,17 +77,34 @@ triples that takes the form $g: \mathbb{R} \times \mathbb{R} \rightarrow \mathbb
 
     L(k, \bar{k}) = g(f(k), f(\bar{k}))
 
-
+Examples
+~~~~~~~~
 Typically, $g$ takes the following form in which a function $h: \mathbb{R} \rightarrow \mathbb{R}$
-is used on the differences in the scores of the positive an the negative triples. For
-example, the pairwise hinge loss (i.e., margin ranking loss) has $h(\Delta) = max(0, \lambda + \Delta)$.
+is used on the differences in the scores of the positive an the negative triples.
 
 .. math::
 
     g(f(k), f(\bar{k})) = h(f(k) - f(\bar{k}))
 
+In the following examples of pairwise loss functions, the shorthand is used: $\Delta := f(k) - f(\bar{k})$. The
+pairwise logistic loss can be considered as a special case of the soft margin ranking loss where $\lambda = 0$.
+
+.. table::
+    :align: center
+    :widths: auto
+
+    ===============================  ==============================================
+    Pairwise Loss                    Formulation
+    ===============================  ==============================================
+    Pairwise Hinge (margin ranking)  $h(\Delta) = \max(0, \Delta + \lambda)$
+    Soft Margin Ranking              $h(\Delta) = \log(1 + \exp(\Delta + \lambda))$
+    Pairwise Logistic                $h(\Delta) = \log(1 + \exp(\Delta))$
+    ===============================  ==============================================
+
+Batching
+~~~~~~~~
 The pairwise loss for a set of pairs of positive/negative triples $\mathcal{L}_L: 2^{\mathcal{K} \times
-\mathcal{\bar{K}}} \rightarrow \mathbb{R}$ is defined as the average of the pairwise losses for each pair of
+\mathcal{\bar{K}}} \rightarrow \mathbb{R}$ is defined as the arithmetic mean of the pairwise losses for each pair of
 positive and negative triples in the subset $\mathcal{B} \in 2^{\mathcal{K} \times \mathcal{\bar{K}}}$.
 
 .. math::
@@ -78,8 +122,10 @@ in their paradigms, but both share the notion that triples are not strictly posi
 
     L(k_1, ... k_n) = g(f(k_1), ..., f(k_n))
 
+Batching
+~~~~~~~~
 The pairwise loss for a set of sets of triples triples $\mathcal{L}_L: 2^{2^{\mathcal{T}}} \rightarrow \mathbb{R}$
-is defined as the average of the setwise losses for each set of
+is defined as the arithmetic mean of the setwise losses for each set of
 triples $\mathcal{b}$ in the subset $\mathcal{B} \in 2^{2^{\mathcal{T}}}$.
 
 .. math::
@@ -152,7 +198,7 @@ class SetwiseLoss(Loss):
 
 
 class BCEWithLogitsLoss(PointwiseLoss):
-    r"""A wrapper around the numeric stable version of the PyTorch binary cross entropy loss.
+    r"""A module for the binary cross entropy loss.
 
     For label function :math:`l:\mathcal{E} \times \mathcal{R} \times \mathcal{E} \rightarrow \{0,1\}` and interaction
     function :math:`f:\mathcal{E} \times \mathcal{R} \times \mathcal{E} \rightarrow \mathbb{R}`,
@@ -190,7 +236,7 @@ class BCEWithLogitsLoss(PointwiseLoss):
 
 
 class MSELoss(PointwiseLoss):
-    """A wrapper around the PyTorch mean square error loss.
+    """A module for the mean square error loss.
 
     .. seealso:: :class:`torch.nn.MSELoss`
     """
@@ -213,7 +259,7 @@ MARGIN_ACTIVATIONS: Mapping[str, Callable[[torch.FloatTensor], torch.FloatTensor
 
 
 class MarginRankingLoss(PairwiseLoss):
-    """A wrapper around the PyTorch margin ranking loss.
+    """A module for the margin ranking loss.
 
     .. seealso:: :class:`torch.nn.MarginRankingLoss`
     """
@@ -230,13 +276,14 @@ class MarginRankingLoss(PairwiseLoss):
         margin_activation: Union[str, Callable[[torch.FloatTensor], torch.FloatTensor]] = 'relu',
         reduction: str = 'mean',
     ):
-        """Initialize the margin loss instance.
+        r"""Initialize the margin loss instance.
 
         :param margin:
             The margin by which positive and negative scores should be apart.
         :param margin_activation:
-            A margin activation. Defaults to relu, i.e. f(x) = max(0, x), which is the default "margin loss". Using e.g.
-            softplus leads to a "soft-margin" formulation, as e.g. discussed here https://arxiv.org/abs/1703.07737
+            A margin activation. Defaults to ``'relu'``, i.e. $h(\Delta) = max(0, \Delta + \lambda)$, which is the
+            default "margin loss". Using ``'softplus'`` leads to a "soft-margin" formulation as discussed in
+            https://arxiv.org/abs/1703.07737.
         :param reduction:
             The name of the reduction operation to aggregate the individual loss values from a batch to a scalar loss
             value. From {'mean', 'sum'}.
@@ -260,7 +307,7 @@ class MarginRankingLoss(PairwiseLoss):
 
 
 class SoftplusLoss(PointwiseLoss):
-    """A loss function for the softplus."""
+    """A module for the softplus loss."""
 
     def __init__(self, reduction: str = 'mean') -> None:
         super().__init__(reduction=reduction)
@@ -281,7 +328,7 @@ class SoftplusLoss(PointwiseLoss):
 
 
 class BCEAfterSigmoidLoss(PointwiseLoss):
-    """A loss function which uses the numerically unstable version of explicit Sigmoid + BCE.
+    """A module for the numerically unstable version of explicit Sigmoid + BCE loss.
 
     .. seealso:: :class:`torch.nn.BCELoss`
     """
@@ -297,7 +344,7 @@ class BCEAfterSigmoidLoss(PointwiseLoss):
 
 
 class CrossEntropyLoss(SetwiseLoss):
-    """Evaluate cross entropy after softmax output.
+    """A module for the cross entopy loss that evaluates the cross entropy after softmax output.
 
     .. seealso:: :class:`torch.nn.CrossEntropyLoss`
     """
