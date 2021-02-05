@@ -3,7 +3,6 @@
 """Test that regularizers can be executed."""
 
 import unittest
-from typing import Dict
 
 import pytest
 import torch
