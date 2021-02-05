@@ -239,6 +239,8 @@ class Model(nn.Module, ABC):
             The tensor containing target values or the negative scores.
         :return: dtype: float, scalar
             The label loss value.
+
+        .. note:: generally the two tensors do not need to have the same shape, but only one which is broadcastable.
         """
 
     """Concrete methods"""
@@ -686,6 +688,8 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
             The tensor containing target values or the negative scores.
         :return: dtype: float, scalar
             The label loss value.
+
+        .. note:: generally the two tensors do not need to have the same shape, but only one which is broadcastable.
         """
         return self.loss(tensor_1, tensor_2) + self.regularizer.term
 
