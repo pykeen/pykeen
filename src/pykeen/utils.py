@@ -8,6 +8,7 @@ import inspect
 import itertools as itt
 import json
 import logging
+import math
 import operator
 import random
 from abc import ABC, abstractmethod
@@ -60,6 +61,7 @@ __all__ = [
     'unpack_singletons',
     'get_subclasses',
     'extend_batch',
+    'get_expected_norm',
 ]
 
 logger = logging.getLogger(__name__)
@@ -868,3 +870,46 @@ def extend_batch(
     hrt_batch = torch.stack(columns, dim=-1)
 
     return hrt_batch
+
+
+@functools.lru_cache(maxsize=1)
+def get_expected_norm(
+    p: Union[int, float, str],
+    d: int,
+) -> float:
+    r"""Compute the expected value of the L_p norm.
+
+    .. math ::
+        E[\|x\|_p] = d^{1/p} E[|x_1|^p]^{1/p}
+
+    under the assumption that :math:`x_i \sim N(0, 1)`, i.e.
+
+    .. math ::
+        E[|x_1|^p] = 2^{p/2} \cdot \Gamma(\frac{p+1}{2} \cdot \pi^{-1/2}
+
+    :param p:
+        The parameter p of the norm.
+    :param d:
+        The dimension of the vector.
+
+    :return:
+        The expected value.
+
+    .. seealso ::
+        https://math.stackexchange.com/questions/229033/lp-norm-of-multivariate-standard-normal-random-variable
+        https://www.wolframalpha.com/input/?i=expected+value+of+%7Cx%7C%5Ep
+    """
+    if isinstance(p, str):
+        p = float(p)
+    if math.isinf(p) and p > 0:  # max norm
+        # TODO: this only works for x ~ N(0, 1), but not for |x|
+        raise NotImplementedError("Normalization for inf norm is not implemented")
+        # cf. https://en.wikipedia.org/wiki/Generalized_extreme_value_distribution
+        # mean = scipy.stats.norm.ppf(1 - 1/d)
+        # scale = scipy.stats.norm.ppf(1 - 1/d * 1/math.e) - mean
+        # return scipy.stats.gumbel_r.mean(loc=mean, scale=scale)
+    elif math.isfinite(p):
+        exp_abs_norm_p = math.pow(2, p / 2) * math.gamma((p + 1) / 2) / math.sqrt(math.pi)
+        return math.pow(exp_abs_norm_p * d, 1 / p)
+    else:
+        raise NotImplementedError(f"{p} norm not implemented")

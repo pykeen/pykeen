@@ -8,18 +8,21 @@ import tempfile
 import timeit
 import unittest
 from abc import ABC, abstractmethod
-from typing import Any, ClassVar, Collection, Generic, Mapping, MutableMapping, Optional, Tuple, Type, TypeVar
+from typing import Any, ClassVar, Collection, Dict, Generic, Mapping, MutableMapping, Optional, Tuple, Type, TypeVar
 
 import torch
 from torch.nn import functional
 
+from pykeen.datasets import Nations
 from pykeen.datasets.base import LazyDataset
 from pykeen.losses import Loss, PairwiseLoss, PointwiseLoss, SetwiseLoss
+from pykeen.models import RESCAL
 from pykeen.nn.modules import Interaction
+from pykeen.regularizers import LpRegularizer, Regularizer
 from pykeen.trackers import ResultTracker
 from pykeen.triples import TriplesFactory
-from pykeen.typing import HeadRepresentation, RelationRepresentation, TailRepresentation
-from pykeen.utils import get_subclasses, set_random_seed, unpack_singletons
+from pykeen.typing import HeadRepresentation, MappedTriples, RelationRepresentation, TailRepresentation
+from pykeen.utils import get_subclasses, resolve_device, set_random_seed, unpack_singletons
 
 T = TypeVar("T")
 
@@ -29,14 +32,15 @@ logger = logging.getLogger(__name__)
 class GenericTestCase(Generic[T], unittest.TestCase):
     """Generic tests."""
 
-    cls: Type[T]
-    kwargs: Optional[Mapping[str, Any]] = None
+    cls: ClassVar[Type[T]]
+    kwargs: ClassVar[Optional[Mapping[str, Any]]] = None
     instance: T
+    generator: torch.Generator
 
     def setUp(self) -> None:
         """Set up the generic testing method."""
         # fix seeds for reproducibility
-        set_random_seed(seed=42)
+        _, self.generator, _ = set_random_seed(seed=42)
         kwargs = self.kwargs or {}
         kwargs = self._pre_instantiation_hook(kwargs=dict(kwargs))
         self.instance = self.cls(**kwargs)
@@ -561,3 +565,125 @@ class TestsTestCase(Generic[T], unittest.TestCase):
         tested = (test_cls.cls for test_cls in get_subclasses(self.base_test) if hasattr(test_cls, "cls"))
         not_tested = to_test.difference(tested)
         assert not not_tested, not_tested
+
+
+class RegularizerTestCase(GenericTestCase[Regularizer]):
+    """A test case for quickly defining common tests for regularizers."""
+
+    #: The batch size
+    batch_size: int
+    #: The triples factory
+    triples_factory: TriplesFactory
+    #: Class of regularizer to test
+    cls: ClassVar[Type[Regularizer]]
+    #: The constructor parameters to pass to the regularizer
+    kwargs: ClassVar[Optional[Dict[str, Any]]] = None
+    #: The regularizer instance, initialized in setUp
+    instance: Regularizer
+    #: A positive batch
+    positive_batch: MappedTriples
+    #: The device
+    device: torch.device
+
+    def setUp(self) -> None:
+        """Set up the test case with a triples factory and model."""
+        self.device = resolve_device()
+        self.triples_factory = Nations().training
+        self.batch_size = 16
+        self.positive_batch = self.triples_factory.mapped_triples[:self.batch_size, :].to(device=self.device)
+        super().setUp()
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        kwargs['device'] = self.device
+        return kwargs
+
+    def test_model(self) -> None:
+        """Test whether the regularizer can be passed to a model."""
+        # Use RESCAL as it regularizes multiple tensors of different shape.
+        model = RESCAL(
+            triples_factory=self.triples_factory,
+            regularizer=self.instance,
+        ).to(self.device)
+
+        # Check if regularizer is stored correctly.
+        self.assertEqual(model.regularizer, self.instance)
+
+        # Forward pass (should update regularizer)
+        model.score_hrt(hrt_batch=self.positive_batch)
+
+        # Call post_parameter_update (should reset regularizer)
+        model.post_parameter_update()
+
+        # Check if regularization term is reset
+        self.assertEqual(0., model.regularizer.term)
+
+    def test_reset(self) -> None:
+        """Test method `reset`."""
+        # Call method
+        self.instance.reset()
+
+        self.assertEqual(0., self.instance.regularization_term)
+
+    def test_update(self) -> None:
+        """Test method `update`."""
+        # Generate random tensors
+        a = torch.rand(self.batch_size, 10, device=self.device, generator=self.generator)
+        b = torch.rand(self.batch_size, 20, device=self.device, generator=self.generator)
+
+        # Call update
+        self.instance.update(a, b)
+
+        # check shape
+        self.assertEqual((1,), self.instance.term.shape)
+
+        # compute expected term
+        exp_penalties = torch.stack([self._expected_penalty(x) for x in (a, b)])
+        expected_term = torch.sum(exp_penalties).view(1) * self.instance.weight
+        assert expected_term.shape == (1,)
+
+        self.assertAlmostEqual(self.instance.term.item(), expected_term.item())
+
+    def test_forward(self) -> None:
+        """Test the regularizer's `forward` method."""
+        # Generate random tensor
+        x = torch.rand(self.batch_size, 10, generator=self.generator)
+
+        # calculate penalty
+        penalty = self.instance.forward(x=x)
+
+        # check shape
+        assert penalty.numel() == 1
+
+        # check value
+        expected_penalty = self._expected_penalty(x=x)
+        if expected_penalty is None:
+            logging.warning(f'{self.__class__.__name__} did not override `_expected_penalty`.')
+        else:
+            assert (expected_penalty == penalty).all()
+
+    def _expected_penalty(self, x: torch.FloatTensor) -> torch.FloatTensor:
+        """Compute expected penalty for given tensor."""
+        return None
+
+
+class LpRegularizerTest(RegularizerTestCase):
+    """Common test for L_p regularizers."""
+
+    cls = LpRegularizer
+
+    def _expected_penalty(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
+        kwargs = self.kwargs
+        if kwargs is None:
+            kwargs = {}
+        p = kwargs.get('p', self.instance.p)
+        value = x.norm(p=p, dim=-1).mean()
+        if kwargs.get('normalize', False):
+            dim = torch.as_tensor(x.shape[-1], dtype=torch.float, device=x.device)
+            # FIXME isn't any finite number allowed now?
+            if p == 2:
+                value = value / dim.sqrt()
+            elif p == 1:
+                value = value / dim
+            else:
+                raise NotImplementedError
+        return value
