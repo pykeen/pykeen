@@ -26,6 +26,30 @@ T = TypeVar("T")
 logger = logging.getLogger(__name__)
 
 
+class GenericTestCase(Generic[T], unittest.TestCase):
+    """Generic tests."""
+
+    cls: Type[T]
+    kwargs: Optional[Mapping[str, Any]] = None
+    instance: T
+
+    def setUp(self) -> None:
+        """Set up the generic testing method."""
+        # fix seeds for reproducibility
+        set_random_seed(seed=42)
+        kwargs = self.kwargs or {}
+        kwargs = self._pre_instantiation_hook(kwargs=dict(kwargs))
+        self.instance = self.cls(**kwargs)
+        self.post_instantiation_hook()
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        """Perform actions before instantiation, potentially modyfing kwargs."""
+        return kwargs
+
+    def post_instantiation_hook(self) -> None:
+        """Perform actions after instantiation."""
+
+
 class DatasetTestCase(unittest.TestCase):
     """A test case for quickly defining common tests for datasets."""
 
@@ -125,37 +149,26 @@ class CachedDatasetCase(DatasetTestCase):
         self.directory.cleanup()
 
 
-class LossTestCase(unittest.TestCase):
+# TODO update
+class LossTestCase(GenericTestCase[Loss]):
     """Base unittest for loss functions."""
-
-    #: The class
-    cls: ClassVar[Type[Loss]]
-
-    #: Constructor keyword arguments
-    kwargs: ClassVar[Optional[Mapping[str, Any]]] = None
-
-    #: The loss instance
-    loss: Loss
 
     #: The batch size
     batch_size: ClassVar[int] = 3
-
-    def setUp(self) -> None:
-        """Initialize the instance."""
-        kwargs = self.kwargs
-        if kwargs is None:
-            kwargs = {}
-        self.loss = self.cls(**kwargs)
 
     def _check_loss_value(self, loss_value: torch.FloatTensor) -> None:
         """Check loss value dimensionality, and ability for backward."""
         # test reduction
         self.assertEqual(0, loss_value.ndim)
 
+        # test finite loss value
+        self.assertTrue(torch.isfinite(loss_value))
+
         # Test backward
         loss_value.backward()
 
 
+# TODO update
 class PointwiseLossTestCase(LossTestCase):
     """Base unit test for label-based losses."""
 
@@ -164,19 +177,20 @@ class PointwiseLossTestCase(LossTestCase):
 
     def test_type(self):
         """Test the loss is the right type."""
-        self.assertIsInstance(self.loss, PointwiseLoss)
+        self.assertIsInstance(self.instance, PointwiseLoss)
 
     def test_label_loss(self):
         """Test ``forward(logits, labels)``."""
         logits = torch.rand(self.batch_size, self.num_entities, requires_grad=True)
         labels = functional.normalize(torch.rand(self.batch_size, self.num_entities, requires_grad=False), p=1, dim=-1)
-        loss_value = self.loss(
+        loss_value = self.instance(
             logits,
             labels,
         )
         self._check_loss_value(loss_value)
 
 
+# TODO update
 class PairwiseLossTestCase(LossTestCase):
     """Base unit test for pair-wise losses."""
 
@@ -185,19 +199,20 @@ class PairwiseLossTestCase(LossTestCase):
 
     def test_type(self):
         """Test the loss is the right type."""
-        self.assertIsInstance(self.loss, PairwiseLoss)
+        self.assertIsInstance(self.instance, PairwiseLoss)
 
     def test_pair_loss(self):
         """Test ``forward(pos_scores, neg_scores)``."""
         pos_scores = torch.rand(self.batch_size, 1, requires_grad=True)
         neg_scores = torch.rand(self.batch_size, self.num_negatives, requires_grad=True)
-        loss_value = self.loss(
+        loss_value = self.instance(
             pos_scores,
             neg_scores,
         )
         self._check_loss_value(loss_value)
 
 
+# TODO update
 class SetwiseLossTestCase(LossTestCase):
     """Unit tests for setwise losses."""
 
@@ -206,41 +221,17 @@ class SetwiseLossTestCase(LossTestCase):
 
     def test_type(self):
         """Test the loss is the right type."""
-        self.assertIsInstance(self.loss, SetwiseLoss)
+        self.assertIsInstance(self.instance, SetwiseLoss)
 
     def test_forward(self):
         """Test forward(scores, labels)."""
         scores = torch.rand(self.batch_size, self.num_entities, requires_grad=True)
         labels = torch.rand(self.batch_size, self.num_entities, requires_grad=False)
-        loss_value = self.loss(
+        loss_value = self.instance(
             scores,
             labels,
         )
         self._check_loss_value(loss_value=loss_value)
-
-
-class GenericTestCase(Generic[T], unittest.TestCase):
-    """Generic tests."""
-
-    cls: Type[T]
-    kwargs: Optional[Mapping[str, Any]] = None
-    instance: T
-
-    def setUp(self) -> None:
-        """Set up the generic testing method."""
-        # fix seeds for reproducibility
-        set_random_seed(seed=42)
-        kwargs = self.kwargs or {}
-        kwargs = self._pre_instantiation_hook(kwargs=dict(kwargs))
-        self.instance = self.cls(**kwargs)
-        self.post_instantiation_hook()
-
-    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
-        """Perform actions before instantiation, potentially modyfing kwargs."""
-        return kwargs
-
-    def post_instantiation_hook(self) -> None:
-        """Perform actions after instantiation."""
 
 
 class InteractionTestCase(

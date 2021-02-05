@@ -94,6 +94,9 @@ extensions = [
     'texext',
 ]
 
+# show todo's
+todo_include_todos = True
+
 # generate autosummary pages
 autosummary_generate = True
 
