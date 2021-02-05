@@ -128,10 +128,7 @@ class SLCWATrainingLoop(TrainingLoop):
         if _batch_filter is not None:
             positive_scores = positive_scores[_batch_filter]
 
-        return self.model.compute_mr_loss(
-            positive_scores=positive_scores,
-            negative_scores=negative_scores,
-        )
+        return self.model.compute_loss(positive_scores, negative_scores)
 
     def _self_adversarial_negative_sampling_loss_helper(
         self,
@@ -141,10 +138,7 @@ class SLCWATrainingLoop(TrainingLoop):
         _batch_filter=None,
     ) -> torch.FloatTensor:
         """Compute self adversarial negative sampling loss."""
-        return self.model.compute_self_adversarial_negative_sampling_loss(
-            positive_scores=positive_scores,
-            negative_scores=negative_scores,
-        )
+        return self.model.compute_loss(positive_scores, negative_scores)
 
     def _label_loss_helper(
         self,
@@ -169,10 +163,7 @@ class SLCWATrainingLoop(TrainingLoop):
 
         # Normalize the loss to have the average loss per positive triple
         # This allows comparability of sLCWA and LCWA losses
-        return self.model.compute_label_loss(
-            predictions=predictions,
-            labels=labels,
-        )
+        return self.model.compute_loss(predictions, labels)
 
     def _slice_size_search(
         self,
