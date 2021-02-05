@@ -5,8 +5,9 @@
 import inspect
 import json
 import os
-from typing import Iterable, Optional, Set, Type
+from typing import Callable, Iterable, Optional, Set, Type, Union
 
+import torch
 from torch import nn
 
 from .cli import HERE
@@ -27,6 +28,7 @@ _SKIP_ANNOTATIONS = {
     nn.Embedding, Optional[nn.Embedding], Type[nn.Embedding], Optional[Type[nn.Embedding]],
     nn.Module, Optional[nn.Module], Type[nn.Module], Optional[Type[nn.Module]],
     Model, Optional[Model], Type[Model], Optional[Type[Model]],
+    Union[str, Callable[[torch.FloatTensor], torch.FloatTensor]],
 }
 
 
