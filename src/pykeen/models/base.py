@@ -14,7 +14,7 @@ import pandas as pd
 import torch
 from torch import nn
 
-from ..losses import Loss, MarginRankingLoss, has_mr_loss, has_nssa_loss
+from ..losses import Loss, MarginRankingLoss
 from ..nn import Embedding
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import TriplesFactory
