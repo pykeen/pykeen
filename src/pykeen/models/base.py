@@ -669,8 +669,7 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
                 'The chosen loss does not allow the calculation of margin ranking'
                 ' losses. Please use the compute_loss method instead.',
             )
-        y = torch.ones_like(negative_scores, device=self.device)
-        return self.loss(positive_scores, negative_scores, y) + self.regularizer.term
+        return self.loss(positive_scores, negative_scores) + self.regularizer.term
 
     def compute_label_loss(
         self,

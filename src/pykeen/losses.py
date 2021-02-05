@@ -244,7 +244,7 @@ class MarginRankingLoss(PairwiseLoss):
         pos_scores: torch.FloatTensor,
         neg_scores: torch.FloatTensor,
     ) -> torch.FloatTensor:  # noqa: D102
-        return self.reduction_operation(self.margin_activation(
+        return self._reduction_method(self.margin_activation(
             neg_scores[:, :, None] - pos_scores[:, None, :] + self.margin,
         ))
 
