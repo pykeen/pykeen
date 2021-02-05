@@ -36,7 +36,8 @@ from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
 from pykeen.triples import TriplesFactory
 from pykeen.typing import HeadRepresentation, MappedTriples, RelationRepresentation, TailRepresentation
 from pykeen.utils import all_in_bounds, get_subclasses, resolve_device, set_random_seed, unpack_singletons
-from tests.test_models import _CustomRepresentations, _EPSILON
+from tests.constants import EPSILON
+from tests.mocks import CustomRepresentations
 
 T = TypeVar("T")
 
@@ -1131,7 +1132,7 @@ Traceback
         """Tests whether we can provide custom representations."""
         if isinstance(self.model, EntityEmbeddingModel):
             old_embeddings = self.model.entity_embeddings
-            self.model.entity_embeddings = _CustomRepresentations(
+            self.model.entity_embeddings = CustomRepresentations(
                 num_entities=self.factory.num_entities,
                 embedding_dim=old_embeddings.embedding_dim,
             )
@@ -1143,7 +1144,7 @@ Traceback
             self.model.entity_embeddings = old_embeddings
         elif isinstance(self.model, EntityRelationEmbeddingModel):
             old_embeddings = self.model.relation_embeddings
-            self.model.relation_embeddings = _CustomRepresentations(
+            self.model.relation_embeddings = CustomRepresentations(
                 num_entities=self.factory.num_relations,
                 embedding_dim=old_embeddings.embedding_dim,
             )
@@ -1178,7 +1179,7 @@ class BaseKG2ETest(ModelTestCase):
         * Covariances have to have values between c_min and c_max
         """
         for embedding in (self.model.entity_embeddings, self.model.relation_embeddings):
-            assert all_in_bounds(embedding(indices=None).norm(p=2, dim=-1), high=1., a_tol=_EPSILON)
+            assert all_in_bounds(embedding(indices=None).norm(p=2, dim=-1), high=1., a_tol=EPSILON)
         for cov in (self.model.entity_covariances, self.model.relation_covariances):
             assert all_in_bounds(cov(indices=None), low=self.model.c_min, high=self.model.c_max)
 

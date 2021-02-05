@@ -9,7 +9,6 @@ from typing import Optional
 
 import numpy
 import torch
-from torch import nn
 
 import pykeen.experiments
 import pykeen.models
@@ -24,9 +23,10 @@ from pykeen.models.unimodal.rgcn import (
     symmetric_edge_weights,
 )
 from pykeen.models.unimodal.trans_d import _project_entity
-from pykeen.nn import Embedding, RepresentationModule
+from pykeen.nn import Embedding
 from pykeen.utils import all_in_bounds, clamp_norm, extend_batch
 from tests import cases
+from tests.constants import EPSILON
 
 SKIP_MODULES = {
     Model.__name__,
@@ -42,31 +42,6 @@ SKIP_MODULES = {
 }
 for cls in MultimodalModel.__subclasses__():
     SKIP_MODULES.add(cls.__name__)
-
-_EPSILON = 1.0e-07
-
-
-class _CustomRepresentations(RepresentationModule):
-    """A custom representation module with minimal implementation."""
-
-    def __init__(self, num_entities: int, embedding_dim: int = 2):
-        super().__init__()
-        self.num_embeddings = num_entities
-        self.embedding_dim = embedding_dim
-        self.x = nn.Parameter(torch.rand(embedding_dim))
-
-    def forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:
-        n = self.num_embeddings if indices is None else indices.shape[0]
-        return self.x.unsqueeze(dim=0).repeat(n, 1)
-
-    def get_in_canonical_shape(
-        self,
-        indices: Optional[torch.LongTensor] = None,
-    ) -> torch.FloatTensor:
-        x = self(indices=indices)
-        if indices is None:
-            return x.unsqueeze(dim=0)
-        return x.unsqueeze(dim=1)
 
 
 class TestComplex(cases.ModelTestCase):
@@ -196,7 +171,7 @@ class TestHolE(cases.ModelTestCase):
 
         Entity embeddings have to have at most unit L2 norm.
         """
-        assert all_in_bounds(self.model.entity_embeddings(indices=None).norm(p=2, dim=-1), high=1., a_tol=_EPSILON)
+        assert all_in_bounds(self.model.entity_embeddings(indices=None).norm(p=2, dim=-1), high=1., a_tol=EPSILON)
 
 
 class TestKG2EWithKL(cases.BaseKG2ETest):
@@ -344,7 +319,7 @@ class TestTransD(cases.DistanceModelTestCase):
         Entity and relation embeddings have to have at most unit L2 norm.
         """
         for emb in (self.model.entity_embeddings, self.model.relation_embeddings):
-            assert all_in_bounds(emb(indices=None).norm(p=2, dim=-1), high=1., a_tol=_EPSILON)
+            assert all_in_bounds(emb(indices=None).norm(p=2, dim=-1), high=1., a_tol=EPSILON)
 
     def test_score_hrt_manual(self):
         """Manually test interaction function of TransD."""
