@@ -228,7 +228,10 @@ class compose(Generic[X]):  # noqa:N801
     """A class representing the composition of several functions."""
 
     def __init__(self, *operations: Callable[[X], X]):
-        """Initialize the composition with a sequence of operations."""
+        """Initialize the composition with a sequence of operations.
+
+        :param operations: unary operations that will be applied in succession
+        """
         self.operations = operations
 
     def __call__(self, x: X) -> X:
@@ -239,7 +242,12 @@ class compose(Generic[X]):  # noqa:N801
 
 
 def set_random_seed(seed: int) -> Tuple[None, torch.Generator, None]:
-    """Set the random seed on numpy, torch, and python."""
+    """Set the random seed on numpy, torch, and python.
+
+    :param seed: The seed that will be used in :func:`np.random.seed`, :func:`torch.manual_seed`,
+        and :func:`random.seed`.
+    :returns: A three tuple with None, the torch generator, and None.
+    """
     np.random.seed(seed=seed)
     generator = torch.manual_seed(seed=seed)
     random.seed(seed)
@@ -932,6 +940,9 @@ def get_expected_norm(
     :return:
         The expected value.
 
+    :raises NotImplementedError: If infinity or negative infinity are given as p
+    :raises TypeError: If an invalid type was given
+
     .. seealso ::
         https://math.stackexchange.com/questions/229033/lp-norm-of-multivariate-standard-normal-random-variable
         https://www.wolframalpha.com/input/?i=expected+value+of+%7Cx%7C%5Ep
@@ -949,7 +960,7 @@ def get_expected_norm(
         exp_abs_norm_p = math.pow(2, p / 2) * math.gamma((p + 1) / 2) / math.sqrt(math.pi)
         return math.pow(exp_abs_norm_p * d, 1 / p)
     else:
-        raise NotImplementedError(f"{p} norm not implemented")
+        raise TypeError(f"norm not implemented for {type(p)}: {p}")
 
 
 if __name__ == '__main__':
