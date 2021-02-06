@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import functools
 import logging
+import pickle
 import warnings
 from abc import ABC, abstractmethod
 from typing import Any, ClassVar, Iterable, Mapping, Optional, Type, Union
@@ -270,7 +271,7 @@ class Model(nn.Module, ABC):
         :param path:
             Path of the file where to store the state in.
         """
-        torch.save(self.state_dict(), path)
+        torch.save(self.state_dict(), path, pickle_protocol=pickle.HIGHEST_PROTOCOL)
 
     def load_state(self, path: str) -> None:
         """Load the state of the model.
