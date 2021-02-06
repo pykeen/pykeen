@@ -61,8 +61,8 @@ class CombinedRegularizerTest(cases.RegularizerTestCase):
     cls = CombinedRegularizer
     kwargs = {
         'regularizers': [
-            LpRegularizer(weight=0.1, p=1, device=resolve_device()),
-            LpRegularizer(weight=0.7, p=2, device=resolve_device()),
+            LpRegularizer(weight=0.1, p=1),
+            LpRegularizer(weight=0.7, p=2),
         ],
     }
 
@@ -107,7 +107,6 @@ class TransHRegularizerTest(unittest.TestCase):
         self.device = resolve_device()
         self.kwargs = {'weight': .5, 'epsilon': 1e-5}
         self.instance = self.cls(
-            device=self.device,
             **(self.kwargs or {}),
         )
         self.num_entities = 10
@@ -170,7 +169,6 @@ class TestOnlyUpdateOnce(unittest.TestCase):
         self.assertIn('apply_only_once', ConvKB.regularizer_default_kwargs)
         self.assertTrue(ConvKB.regularizer_default_kwargs['apply_only_once'])
         regularizer = LpRegularizer(
-            device=self.device,
             **ConvKB.regularizer_default_kwargs,
         )
         self._help_test_regularizer(regularizer)
@@ -179,7 +177,6 @@ class TestOnlyUpdateOnce(unittest.TestCase):
         """Test the TransH regularizer only updates once."""
         self.assertNotIn('apply_only_once', TransH.regularizer_default_kwargs)
         regularizer = TransHRegularizer(
-            device=self.device,
             **TransH.regularizer_default_kwargs,
         )
         self._help_test_regularizer(regularizer)

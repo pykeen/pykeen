@@ -910,7 +910,6 @@ def pipeline(  # noqa: C901
             del model_kwargs['regularizer']
         regularizer_cls: Type[Regularizer] = get_regularizer_cls(regularizer)
         model_kwargs['regularizer'] = regularizer_cls(
-            device=device,
             **(regularizer_kwargs or {}),
         )
 
