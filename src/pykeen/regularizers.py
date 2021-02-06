@@ -11,7 +11,8 @@ import torch
 from torch import nn
 from torch.nn import functional
 
-from .utils import get_cls, get_expected_norm, normalize_string
+from .nn.norm import lp_norm, powersum_norm
+from .utils import get_cls, normalize_string
 
 __all__ = [
     'Regularizer',
@@ -131,10 +132,7 @@ class LpRegularizer(Regularizer):
         self.p = p
 
     def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
-        value = x.norm(p=self.p, dim=self.dim).mean()
-        if not self.normalize:
-            return value
-        return value / get_expected_norm(p=self.p, d=x.shape[-1])
+        return lp_norm(x=x, p=self.p, dim=self.dim, normalize=self.normalize)
 
 
 class PowerSumRegularizer(Regularizer):
@@ -162,11 +160,7 @@ class PowerSumRegularizer(Regularizer):
         self.p = p
 
     def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
-        value = x.abs().pow(self.p).sum(dim=self.dim).mean()
-        if not self.normalize:
-            return value
-        dim = torch.as_tensor(x.shape[-1], dtype=torch.float, device=x.device)
-        return value / dim
+        return powersum_norm(x, p=self.p, dim=self.dim, normalize=self.normalize)
 
 
 class TransHRegularizer(Regularizer):
