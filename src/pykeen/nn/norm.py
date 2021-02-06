@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Normalization."""
+"""Functional forms of normalization."""
 
 from typing import Optional
 
