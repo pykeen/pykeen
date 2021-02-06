@@ -672,7 +672,7 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
         else:
             assert (expected_penalty == penalty).all()
 
-    def _expected_penalty(self, x: torch.FloatTensor) -> torch.FloatTensor:
+    def _expected_penalty(self, x: torch.FloatTensor) -> Optional[torch.FloatTensor]:
         """Compute expected penalty for given tensor."""
         return None
 
