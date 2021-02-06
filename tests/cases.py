@@ -608,6 +608,10 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
         self.positive_batch = self.triples_factory.mapped_triples[:self.batch_size, :].to(device=self.device)
         super().setUp()
 
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        kwargs['device'] = self.device
+        return kwargs
+
     def test_model(self) -> None:
         """Test whether the regularizer can be passed to a model."""
         # Use RESCAL as it regularizes multiple tensors of different shape.
