@@ -107,12 +107,12 @@ class TransHRegularizerTest(unittest.TestCase):
         self.kwargs = {'weight': .5, 'epsilon': 1e-5}
         self.instance = self.cls(
             **(self.kwargs or {}),
-        )
+        ).to(self.device)
         self.num_entities = 10
         self.num_relations = 5
-        self.entities_weight = torch.rand(self.num_entities, 10, device=self.device, generator=self.generator)
-        self.relations_weight = torch.rand(self.num_relations, 20, device=self.device, generator=self.generator)
-        self.normal_vector_weight = torch.rand(self.num_relations, 20, device=self.device, generator=self.generator)
+        self.entities_weight = torch.rand(self.num_entities, 10, generator=self.generator).to(device=self.device)
+        self.relations_weight = torch.rand(self.num_relations, 20, generator=self.generator).to(device=self.device)
+        self.normal_vector_weight = torch.rand(self.num_relations, 20, generator=self.generator).to(device=self.device)
 
     def test_update(self):
         """Test update function of TransHRegularizer."""
@@ -122,7 +122,7 @@ class TransHRegularizerTest(unittest.TestCase):
                 self.entities_weight,
                 self.normal_vector_weight,
                 self.relations_weight,
-                torch.rand(self.num_entities, 10, device=self.device, generator=self.generator),
+                torch.rand(self.num_entities, 10, generator=self.generator).to(device=self.device),
             )
             self.assertTrue('Expects exactly three tensors' in context.exception)
 
@@ -186,7 +186,7 @@ class TestOnlyUpdateOnce(unittest.TestCase):
 
         # After first update, should change the term
         first_tensors = [
-            torch.rand(10, 10, device=self.device, generator=self.generator)
+            torch.rand(10, 10, generator=self.generator).to(device=self.device)
             for _ in range(n_tensors)
         ]
         regularizer.update(*first_tensors)
