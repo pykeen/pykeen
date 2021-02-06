@@ -15,7 +15,7 @@ __all__ = [
 
 
 def lp_norm(x: torch.FloatTensor, p: float, dim: Optional[int], normalize: bool) -> torch.FloatTensor:
-    """A functional form of the $L_p$ norm."""
+    """Return the $L_p$ norm."""
     value = x.norm(p=p, dim=dim).mean()
     if not normalize:
         return value
@@ -23,7 +23,7 @@ def lp_norm(x: torch.FloatTensor, p: float, dim: Optional[int], normalize: bool)
 
 
 def powersum_norm(x: torch.FloatTensor, p: float, dim: Optional[int], normalize: bool) -> torch.FloatTensor:
-    """A functional form of the power sum norm."""
+    """Return the power sum norm."""
     value = x.abs().pow(p).sum(dim=dim).mean()
     if not normalize:
         return value
