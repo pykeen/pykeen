@@ -55,7 +55,7 @@ class GenericTestCase(Generic[T], unittest.TestCase):
     def setUp(self) -> None:
         """Set up the generic testing method."""
         # fix seeds for reproducibility
-        _, self.generator, _ = set_random_seed(seed=42)
+        self.generator = set_random_seed(seed=42)[1]
         kwargs = self.kwargs or {}
         kwargs = self._pre_instantiation_hook(kwargs=dict(kwargs))
         self.instance = self.cls(**kwargs)
