@@ -55,6 +55,7 @@ __all__ = [
     'get_benchmark',
     'extended_einsum',
     'convert_to_canonical_shape',
+    'pop_only',
     'strip_dim',
     'upgrade_to_sequence',
     'ensure_tuple',
@@ -798,6 +799,16 @@ def convert_to_canonical_shape(
     dim = _normalize_dim(dim=dim)
     shape[dim] = num
     return x.view(*shape, *suffix_shape)
+
+
+def pop_only(elements: Iterable[X]) -> X:
+    """Unpack a one element list, or raise an error."""
+    elements = tuple(elements)
+    if len(elements) == 0:
+        raise ValueError('Empty sequence given')
+    if len(elements) > 1:
+        raise ValueError(f'More than one element: {elements}')
+    return elements[0]
 
 
 def strip_dim(*x, num: int = 4):
