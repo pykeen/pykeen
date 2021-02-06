@@ -63,7 +63,7 @@ class Regularizer(nn.Module, ABC):
 
     def reset(self) -> None:
         """Reset the regularization term to zero."""
-        self.regularization_term = torch.zeros(1, dtype=torch.float)
+        self.regularization_term.detach_().zero_()
         self.updated = False
 
     @abstractmethod
