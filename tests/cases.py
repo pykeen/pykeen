@@ -607,6 +607,8 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
         self.batch_size = 16
         self.positive_batch = self.triples_factory.mapped_triples[:self.batch_size, :].to(device=self.device)
         super().setUp()
+        # move test instance to device
+        self.instance = self.instance.to(self.device)
 
     def test_model(self) -> None:
         """Test whether the regularizer can be passed to a model."""
