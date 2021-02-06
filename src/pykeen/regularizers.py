@@ -58,7 +58,7 @@ class Regularizer(nn.Module, ABC):
         super().__init__()
         self.register_buffer(name='weight', tensor=torch.as_tensor(weight))
         self.apply_only_once = apply_only_once
-        self.regularization_term = torch.zeros(1, dtype=torch.float)
+        self.register_buffer(name="regularization_term", tensor=torch.zeros(1, dtype=torch.float))
         self.updated = False
         self.reset()
 
