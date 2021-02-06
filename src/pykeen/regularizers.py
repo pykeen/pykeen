@@ -50,6 +50,11 @@ class Regularizer(nn.Module, ABC):
         weight: float = 1.0,
         apply_only_once: bool = False,
     ):
+        """Instantiate the regularizer.
+
+        :param weight: The relative weight of the regularization
+        :param apply_only_once: Should the regularization be applied more than once after reset?
+        """
         super().__init__()
         self.register_buffer(name='weight', tensor=torch.as_tensor(weight))
         self.apply_only_once = apply_only_once
