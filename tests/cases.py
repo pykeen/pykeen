@@ -640,8 +640,8 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
     def test_update(self) -> None:
         """Test method `update`."""
         # Generate random tensors
-        a = torch.rand(self.batch_size, 10, device=self.device, generator=self.generator)
-        b = torch.rand(self.batch_size, 20, device=self.device, generator=self.generator)
+        a = torch.rand(self.batch_size, 10, generator=self.generator).to(device=self.device)
+        b = torch.rand(self.batch_size, 20, generator=self.generator).to(device=self.device)
 
         # Call update
         self.instance.update(a, b)
@@ -659,7 +659,7 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
     def test_forward(self) -> None:
         """Test the regularizer's `forward` method."""
         # Generate random tensor
-        x = torch.rand(self.batch_size, 10, generator=self.generator)
+        x = torch.rand(self.batch_size, 10, generator=self.generator).to(device=self.device)
 
         # calculate penalty
         penalty = self.instance.forward(x=x)
