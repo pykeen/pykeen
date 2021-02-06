@@ -7,11 +7,11 @@ from typing import Any, ClassVar, Mapping, Optional, Type
 from torch.nn import functional
 
 from ..nmodel.base import ERModel
+from ..nmodel.regularizers import NewRegularizer, TransHRegularizer
+from ..nmodel.representation import EmbeddingSpecification
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
-from ..nmodel.representation import EmbeddingSpecification
 from ...nn.modules import TransHInteraction
-from ...regularizers import Regularizer, TransHRegularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
 from ...utils import pop_only
@@ -57,7 +57,7 @@ class TransH(ERModel):
         scoring_fct_norm=dict(type=int, low=1, high=2),
     )
     #: The custom regularizer used by [wang2014]_ for TransH
-    regularizer_default: ClassVar[Type[Regularizer]] = TransHRegularizer
+    regularizer_default: ClassVar[Type[NewRegularizer]] = TransHRegularizer
     #: The settings used by [wang2014]_ for TransH
     regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = dict(
         weight=0.05,
@@ -70,7 +70,7 @@ class TransH(ERModel):
         embedding_dim: int = 50,
         scoring_fct_norm: int = 2,
         loss: Optional[Loss] = None,
-        regularizer: Optional[Regularizer] = None,
+        regularizer: Optional[NewRegularizer] = None,
         predict_with_sigmoid: bool = False,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
