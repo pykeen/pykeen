@@ -181,6 +181,9 @@ class TestOnlyUpdateOnce(unittest.TestCase):
         self._help_test_regularizer(regularizer)
 
     def _help_test_regularizer(self, regularizer: Regularizer, n_tensors: int = 3):
+        # ensure regularizer is on correct device
+        regularizer = regularizer.to(self.device)
+
         self.assertFalse(regularizer.updated)
         self.assertEqual(0.0, regularizer.regularization_term.item())
 
@@ -196,7 +199,7 @@ class TestOnlyUpdateOnce(unittest.TestCase):
 
         # After second update, no change should happen
         second_tensors = [
-            torch.rand(10, 10, device=self.device, generator=self.generator)
+            torch.rand(10, 10, generator=self.generator).to(device=self.device)
             for _ in range(n_tensors)
         ]
         regularizer.update(*second_tensors)
