@@ -1020,8 +1020,8 @@ Traceback
 
     def test_post_parameter_update_regularizer(self):
         """Test whether post_parameter_update resets the regularization term."""
-        # set regularizer term
-        self.model.regularizer.regularization_term = None
+        # set regularizer term to something that isn't zero
+        self.model.regularizer.regularization_term = torch.ones(1, dtype=torch.float, device=self.model.device)
 
         # call post_parameter_update
         self.model.post_parameter_update()
