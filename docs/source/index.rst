@@ -43,6 +43,7 @@ PyKEEN
    reference/sealant
    reference/constants
    reference/nn/index
+   reference/utils
 
 .. toctree::
    :caption: Appendix
