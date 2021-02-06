@@ -10,8 +10,7 @@ from torch.nn import functional
 
 from pykeen.models import ConvKB, TransH
 from pykeen.regularizers import (
-    CombinedRegularizer, LpRegularizer, NoRegularizer, PowerSumRegularizer, Regularizer,
-    TransHRegularizer,
+    CombinedRegularizer, LpRegularizer, NoRegularizer, PowerSumRegularizer, Regularizer, TransHRegularizer,
 )
 from pykeen.utils import get_expected_norm, resolve_device
 from tests import cases
