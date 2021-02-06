@@ -55,11 +55,6 @@ class Regularizer(nn.Module, ABC):
         self.updated = False
         self.reset()
 
-    def to(self, *args, **kwargs) -> Regularizer:  # noqa: D102
-        super().to(*args, **kwargs)
-        self.reset()
-        return self
-
     @classmethod
     def get_normalized_name(cls) -> str:
         """Get the normalized name of the regularizer class."""
