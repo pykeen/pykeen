@@ -266,7 +266,7 @@ class InteractionTestCase(
                 [self.cls.entity_shape, self.cls.relation_shape, self.cls.entity_shape],
             )
         )
-        return tuple(unpack_singletons(*result))
+        return unpack_singletons(*result)
 
     def _check_scores(self, scores: torch.FloatTensor, exp_shape: Tuple[int, ...]):
         """Check shape, dtype and gradients of scores."""

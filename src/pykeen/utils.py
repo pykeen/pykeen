@@ -34,11 +34,9 @@ __all__ = [
     'compact_mapping',
     'ensure_torch_random_state',
     'format_relative_comparison',
-    'imag_part',
     'invert_mapping',
     'is_cuda_oom_error',
     'random_non_negative_int',
-    'real_part',
     'resolve_device',
     'split_complex',
     'split_list_in_batches_iter',
@@ -60,6 +58,26 @@ __all__ = [
     'unpack_singletons',
     'get_subclasses',
     'extend_batch',
+    'all_in_bounds',
+    'is_cudnn_error',
+    'view_complex',
+    'combine_complex',
+    'get_model_io',
+    'get_json_bytes_io',
+    'get_df_io',
+    'ensure_ftp_directory',
+    'broadcast_cat',
+    'get_batchnorm_modules',
+    'calculate_broadcasted_elementwise_result_shape',
+    'estimate_cost_of_sequence',
+    'get_optimal_sequence',
+    'tensor_sum',
+    'tensor_product',
+    'negative_norm_of_sum',
+    'negative_norm',
+    'project_entity',
+    'CANONICAL_DIMENSIONS',
+    'convert_to_canonical_shape',
 ]
 
 logger = logging.getLogger(__name__)
@@ -197,7 +215,7 @@ def clamp_norm(
         A small value to avoid division by zero.
 
     :return:
-        A vector with |x| <= max_norm.
+        A vector with $|x| <= maxnorm$.
     """
     norm = x.norm(p=p, dim=dim, keepdim=True)
     mask = (norm < maxnorm).type_as(x)
@@ -247,6 +265,7 @@ def all_in_bounds(
     :param a_tol:
         Absolute tolerance.
 
+    :returns: If all values are within the given bounds
     """
     # lower bound
     if low is not None and (x < low - a_tol).any():
@@ -334,22 +353,6 @@ def combine_complex(
     return torch.cat([x_re, x_im], dim=-1)
 
 
-def real_part(
-    x: torch.FloatTensor,
-) -> torch.FloatTensor:
-    """Get the real part from a complex tensor."""
-    dim = x.shape[-1] // 2
-    return x[..., :dim]
-
-
-def imag_part(
-    x: torch.FloatTensor,
-) -> torch.FloatTensor:
-    """Get the imaginary part from a complex tensor."""
-    dim = x.shape[-1] // 2
-    return x[..., dim:]
-
-
 def fix_dataclass_init_docs(cls: Type) -> Type:
     """Fix the ``__init__`` documentation for a :class:`dataclasses.dataclass`.
 
@@ -413,6 +416,8 @@ def invert_mapping(mapping: Mapping[K, V]) -> Mapping[V, K]:
 
     :return:
         The inverse mapping, value -> key.
+
+    :raises ValueError: if the mapping is not bijective
     """
     num_unique_values = len(set(mapping.values()))
     num_keys = len(mapping)
@@ -449,9 +454,9 @@ def torch_is_in_1d(
     invert: bool = False,
 ) -> torch.BoolTensor:
     """
-    Return a boolean mask with Q[i] in T.
+    Return a boolean mask with ``Q[i]`` in T.
 
-    The method guarantees memory complexity of max(size(Q), size(T)) and is thus, memory-wise, superior to naive
+    The method guarantees memory complexity of ``max(size(Q), size(T))`` and is thus, memory-wise, superior to naive
     broadcasting.
 
     :param query_tensor: shape: S
@@ -500,7 +505,10 @@ def broadcast_cat(
     :param dim:
         The concat dimension.
 
-    :return:
+    :return: A concatenated, broadcasted
+
+    :raises ValueError: if the x and y dimensions are not the same
+    :raises ValueError: if broadcasting is not possible
     """
     if x.ndimension() != y.ndimension():
         raise ValueError
@@ -620,14 +628,14 @@ def _reorder(
     return tuple(tensors[i] for i in order)
 
 
-def tensor_sum(*x: torch.FloatTensor) -> torch.FloatTensor:
-    """Compute elementwise sum of tensors in broadcastable shape."""
-    return sum(_reorder(tensors=x))
+def tensor_sum(*tensors: torch.FloatTensor) -> torch.FloatTensor:
+    """Compute element-wise sum of tensors in broadcastable shape."""
+    return sum(_reorder(tensors=tensors))
 
 
-def tensor_product(*x: torch.FloatTensor) -> torch.FloatTensor:
-    """Compute elementwise product of tensors in broadcastable shape."""
-    head, *rest = _reorder(tensors=x)
+def tensor_product(*tensors: torch.FloatTensor) -> torch.FloatTensor:
+    """Compute element-wise product of tensors in broadcastable shape."""
+    head, *rest = _reorder(tensors=tensors)
     return functools.reduce(operator.mul, rest, head)
 
 
@@ -798,33 +806,62 @@ def convert_to_canonical_shape(
     return x.view(*shape, *suffix_shape)
 
 
-def strip_dim(*x, num: int = 4):
-    """Strip the first dimensions."""
-    return [xx.view(xx.shape[num:]) for xx in x]
+def strip_dim(*tensors: torch.FloatTensor, n: int = 4) -> Sequence[torch.FloatTensor]:
+    """Strip the first dimensions.
+
+    :param tensors: The tensors whose first ``n`` dimensions should be independently stripped
+    :param n: The number of initial dimensions to strip
+    :return: A tuple of the reduced tensors
+    """
+    return tuple(tensor.view(tensor.shape[n:]) for tensor in tensors)
 
 
 def upgrade_to_sequence(x: Union[X, Sequence[X]]) -> Sequence[X]:
-    """Ensure that the input is a sequence."""
+    """Ensure that the input is a sequence.
+
+    :param x: A literal or sequence of literals
+    :return: If a literal was given, a one element tuple with it in it. Otherwise, return the given value.
+
+    >>> upgrade_to_sequence(1)
+    (1,)
+    >>> upgrade_to_sequence((1, 2, 3))
+    (1, 2, 3)
+    """
     return x if isinstance(x, Sequence) else (x,)
 
 
 def ensure_tuple(*x: Union[X, Sequence[X]]) -> Sequence[Sequence[X]]:
-    """Ensure that all elements in the sequence are upgraded to sequences."""
+    """Ensure that all elements in the sequence are upgraded to sequences.
+
+    :param x: A sequence of sequences or literals
+    :return: An upgraded sequence of sequences
+
+    >>> ensure_tuple(1, (1,), (1, 2))
+    ((1,), (1,), (1, 2))
+    """
     return tuple(upgrade_to_sequence(xx) for xx in x)
 
 
 def unpack_singletons(*xs: Tuple[X]) -> Sequence[Union[X, Tuple[X]]]:
-    """Unpack sequences of length one."""
-    return [
+    """Unpack sequences of length one.
+
+    :param xs: A sequence of tuples of length 1 or more
+    :return: An unpacked sequence of sequences
+
+    >>> unpack_singletons((1,), (1, 2), (1, 2, 3))
+    (1, (1, 2), (1, 2, 3))
+    """
+    return tuple(
         x[0] if len(x) == 1 else x
         for x in xs
-    ]
+    )
 
 
 def get_subclasses(cls: Type[X]) -> Iterable[Type[X]]:
     """Get all subclasses.
 
-    Credit to: https://stackoverflow.com/a/33607093.
+    :param cls: The ancestor class
+    :yields: Descendant classes of the ancestor class
     """
     for subclass in cls.__subclasses__():
         yield from get_subclasses(subclass)
@@ -868,3 +905,9 @@ def extend_batch(
     hrt_batch = torch.stack(columns, dim=-1)
 
     return hrt_batch
+
+
+if __name__ == '__main__':
+    import doctest
+
+    doctest.testmod()
