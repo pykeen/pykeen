@@ -14,6 +14,7 @@ from pykeen.regularizers import (
 )
 from pykeen.utils import get_expected_norm, resolve_device
 from tests import cases
+from tests.utils import rand
 
 
 class NoRegularizerTest(cases.RegularizerTestCase):
@@ -110,9 +111,9 @@ class TransHRegularizerTest(unittest.TestCase):
         ).to(self.device)
         self.num_entities = 10
         self.num_relations = 5
-        self.entities_weight = torch.rand(self.num_entities, 10, generator=self.generator).to(device=self.device)
-        self.relations_weight = torch.rand(self.num_relations, 20, generator=self.generator).to(device=self.device)
-        self.normal_vector_weight = torch.rand(self.num_relations, 20, generator=self.generator).to(device=self.device)
+        self.entities_weight = rand(self.num_entities, 10, generator=self.generator, device=self.device)
+        self.relations_weight = rand(self.num_relations, 20, generator=self.generator, device=self.device)
+        self.normal_vector_weight = rand(self.num_relations, 20, generator=self.generator, device=self.device)
 
     def test_update(self):
         """Test update function of TransHRegularizer."""
@@ -122,7 +123,7 @@ class TransHRegularizerTest(unittest.TestCase):
                 self.entities_weight,
                 self.normal_vector_weight,
                 self.relations_weight,
-                torch.rand(self.num_entities, 10, generator=self.generator).to(device=self.device),
+                rand(self.num_entities, 10, generator=self.generator, device=self.device),
             )
             self.assertTrue('Expects exactly three tensors' in context.exception)
 
@@ -189,7 +190,7 @@ class TestOnlyUpdateOnce(unittest.TestCase):
 
         # After first update, should change the term
         first_tensors = [
-            torch.rand(10, 10, generator=self.generator).to(device=self.device)
+            rand(10, 10, generator=self.generator, device=self.device)
             for _ in range(n_tensors)
         ]
         regularizer.update(*first_tensors)
@@ -199,7 +200,7 @@ class TestOnlyUpdateOnce(unittest.TestCase):
 
         # After second update, no change should happen
         second_tensors = [
-            torch.rand(10, 10, generator=self.generator).to(device=self.device)
+            rand(10, 10, generator=self.generator, device=self.device)
             for _ in range(n_tensors)
         ]
         regularizer.update(*second_tensors)

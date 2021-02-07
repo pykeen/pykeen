@@ -38,6 +38,7 @@ from pykeen.typing import HeadRepresentation, MappedTriples, RelationRepresentat
 from pykeen.utils import all_in_bounds, get_subclasses, resolve_device, set_random_seed, unpack_singletons
 from tests.constants import EPSILON
 from tests.mocks import CustomRepresentations
+from tests.utils import rand
 
 T = TypeVar("T")
 
@@ -640,8 +641,8 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
     def test_update(self) -> None:
         """Test method `update`."""
         # Generate random tensors
-        a = torch.rand(self.batch_size, 10, generator=self.generator).to(device=self.device)
-        b = torch.rand(self.batch_size, 20, generator=self.generator).to(device=self.device)
+        a = rand(self.batch_size, 10, generator=self.generator, device=self.device)
+        b = rand(self.batch_size, 20, generator=self.generator, device=self.device)
 
         # Call update
         self.instance.update(a, b)
@@ -659,7 +660,7 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
     def test_forward(self) -> None:
         """Test the regularizer's `forward` method."""
         # Generate random tensor
-        x = torch.rand(self.batch_size, 10, generator=self.generator).to(device=self.device)
+        x = rand(self.batch_size, 10, generator=self.generator, device=self.device)
 
         # calculate penalty
         penalty = self.instance.forward(x=x)
