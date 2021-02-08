@@ -13,11 +13,11 @@ from typing import Any, ClassVar, Generic, Iterable, List, Mapping, Optional, Se
 import torch
 from torch import nn
 
-from .regularizers import NewRegularizer
 from .representation import EmbeddingSpecification, EmbeddingSpecificationHint, NewRepresentationModule
 from ..base import Model
 from ...losses import Loss
 from ...nn.modules import Interaction
+from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint, HeadRepresentation, RelationRepresentation, TailRepresentation
 from ...utils import check_shapes
@@ -48,7 +48,7 @@ class _NewAbstractModel(Model, ABC, autoreset=False):
     """
 
     #: The default regularizer class
-    regularizer_default: ClassVar[Optional[Type[NewRegularizer]]] = None
+    regularizer_default: ClassVar[Optional[Type[Regularizer]]] = None
     #: The default parameters for the default regularizer class
     regularizer_default_kwargs: ClassVar[Optional[Mapping[str, Any]]] = None
 
@@ -92,7 +92,7 @@ class _NewAbstractModel(Model, ABC, autoreset=False):
             for i, p_id in enumerate(uninitialized_parameters, start=1):
                 logger.debug('[%3d] Parents to blame: %s', i, parents.get(p_id))
 
-    def _instantiate_default_regularizer(self, **kwargs) -> Optional[NewRegularizer]:
+    def _instantiate_default_regularizer(self, **kwargs) -> Optional[Regularizer]:
         """Instantiate the regularizer from this class's default settings.
 
         If the default regularizer is None, None is returned.
@@ -136,7 +136,7 @@ class _NewAbstractModel(Model, ABC, autoreset=False):
         return sum(
             regularizer.pop_regularization_term()
             for regularizer in self.modules()
-            if isinstance(regularizer, NewRegularizer)
+            if isinstance(regularizer, Regularizer)
         )
 
     @abstractmethod
@@ -311,7 +311,7 @@ class ERModel(
     relation_representations: Sequence[NewRepresentationModule]
 
     #: The weight regularizers
-    weight_regularizers: List[NewRegularizer]
+    weight_regularizers: List[Regularizer]
 
     def __init__(
         self,
@@ -367,7 +367,7 @@ class ERModel(
     def append_weight_regularizer(
         self,
         parameter: Union[str, nn.Parameter, Iterable[Union[str, nn.Parameter]]],
-        regularizer: NewRegularizer,
+        regularizer: Regularizer,
     ) -> None:
         """Add a model weight to a regularizer's weight list, and register the regularizer with the model.
 
