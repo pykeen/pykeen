@@ -98,6 +98,16 @@ class Regularizer(nn.Module, ABC):
         """Return the weighted regularization term."""
         return self.regularization_term * self.weight
 
+    def pop_regularization_term(self) -> torch.FloatTensor:
+        """Return the weighted regularization term, and reset the regularize afterwards."""
+        # If there are tracked parameters, update based on them
+        if len(self.tracked_parameters) > 0:
+            self.update(*self.tracked_parameters)
+
+        term = self.regularization_term
+        self.reset()
+        return self.weight * term
+
 
 class NoRegularizer(Regularizer):
     """A regularizer which does not perform any regularization.
