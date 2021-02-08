@@ -6,8 +6,8 @@ from typing import Any, ClassVar, Mapping, Optional, Type
 
 from torch.nn import functional
 
-from ..nmodel.base import ERModel
-from ..nmodel.representation import EmbeddingSpecification
+from ..nbase import ERModel
+from ..nemb import EmbeddingSpecification
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
 from ...nn.modules import TransHInteraction

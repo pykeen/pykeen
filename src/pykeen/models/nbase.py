@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Base module for all KGE models."""
+"""New-style base module for all KGE models."""
 
 from __future__ import annotations
 
@@ -13,14 +13,14 @@ from typing import Any, ClassVar, Generic, Iterable, List, Mapping, Optional, Se
 import torch
 from torch import nn
 
-from .representation import EmbeddingSpecification, EmbeddingSpecificationHint, NewRepresentationModule
-from ..base import Model
-from ...losses import Loss
-from ...nn.modules import Interaction
-from ...regularizers import Regularizer
-from ...triples import TriplesFactory
-from ...typing import DeviceHint, HeadRepresentation, RelationRepresentation, TailRepresentation
-from ...utils import check_shapes
+from .base import Model
+from .nemb import EmbeddingSpecification, EmbeddingSpecificationHint, NewRepresentationModule
+from ..losses import Loss
+from ..nn.modules import Interaction
+from ..regularizers import Regularizer
+from ..triples import TriplesFactory
+from ..typing import DeviceHint, HeadRepresentation, RelationRepresentation, TailRepresentation
+from ..utils import check_shapes
 
 __all__ = [
     '_NewAbstractModel',

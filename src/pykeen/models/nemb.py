@@ -14,10 +14,10 @@ import numpy
 import torch
 from torch import nn
 
-from ...nn import emb
-from ...regularizers import Regularizer
-from ...typing import Constrainer, Initializer, Normalizer
-from ...utils import convert_to_canonical_shape
+from ..nn import emb
+from ..regularizers import Regularizer
+from ..typing import Constrainer, Initializer, Normalizer
+from ..utils import convert_to_canonical_shape
 
 __all__ = [
     'NewRepresentationModule',
