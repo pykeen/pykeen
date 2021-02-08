@@ -7,12 +7,11 @@ from typing import Any, ClassVar, Mapping, Optional, Type
 from torch.nn import functional
 
 from ..nmodel.base import ERModel
-from ..nmodel.regularizers import TransHRegularizer
 from ..nmodel.representation import EmbeddingSpecification
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
 from ...nn.modules import TransHInteraction
-from ...regularizers import Regularizer
+from ...regularizers import Regularizer, TransHRegularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
 from ...utils import pop_only
