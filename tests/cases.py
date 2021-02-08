@@ -38,6 +38,7 @@ from pykeen.typing import HeadRepresentation, MappedTriples, RelationRepresentat
 from pykeen.utils import all_in_bounds, get_subclasses, resolve_device, set_random_seed, unpack_singletons
 from tests.constants import EPSILON
 from tests.mocks import CustomRepresentations
+from tests.utils import rand
 
 T = TypeVar("T")
 
@@ -55,7 +56,7 @@ class GenericTestCase(Generic[T], unittest.TestCase):
     def setUp(self) -> None:
         """Set up the generic testing method."""
         # fix seeds for reproducibility
-        _, self.generator, _ = set_random_seed(seed=42)
+        self.generator = set_random_seed(seed=42)[1]
         kwargs = self.kwargs or {}
         kwargs = self._pre_instantiation_hook(kwargs=dict(kwargs))
         self.instance = self.cls(**kwargs)
@@ -607,10 +608,8 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
         self.batch_size = 16
         self.positive_batch = self.triples_factory.mapped_triples[:self.batch_size, :].to(device=self.device)
         super().setUp()
-
-    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
-        kwargs['device'] = self.device
-        return kwargs
+        # move test instance to device
+        self.instance = self.instance.to(self.device)
 
     def test_model(self) -> None:
         """Test whether the regularizer can be passed to a model."""
@@ -642,8 +641,8 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
     def test_update(self) -> None:
         """Test method `update`."""
         # Generate random tensors
-        a = torch.rand(self.batch_size, 10, device=self.device, generator=self.generator)
-        b = torch.rand(self.batch_size, 20, device=self.device, generator=self.generator)
+        a = rand(self.batch_size, 10, generator=self.generator, device=self.device)
+        b = rand(self.batch_size, 20, generator=self.generator, device=self.device)
 
         # Call update
         self.instance.update(a, b)
@@ -661,7 +660,7 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
     def test_forward(self) -> None:
         """Test the regularizer's `forward` method."""
         # Generate random tensor
-        x = torch.rand(self.batch_size, 10, generator=self.generator)
+        x = rand(self.batch_size, 10, generator=self.generator, device=self.device)
 
         # calculate penalty
         penalty = self.instance.forward(x=x)
@@ -676,7 +675,7 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
         else:
             assert (expected_penalty == penalty).all()
 
-    def _expected_penalty(self, x: torch.FloatTensor) -> torch.FloatTensor:
+    def _expected_penalty(self, x: torch.FloatTensor) -> Optional[torch.FloatTensor]:
         """Compute expected penalty for given tensor."""
         return None
 
@@ -1024,8 +1023,8 @@ Traceback
 
     def test_post_parameter_update_regularizer(self):
         """Test whether post_parameter_update resets the regularization term."""
-        # set regularizer term
-        self.model.regularizer.regularization_term = None
+        # set regularizer term to something that isn't zero
+        self.model.regularizer.regularization_term = torch.ones(1, dtype=torch.float, device=self.model.device)
 
         # call post_parameter_update
         self.model.post_parameter_update()
