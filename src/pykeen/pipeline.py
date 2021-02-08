@@ -171,6 +171,7 @@ import json
 import logging
 import os
 import pathlib
+import pickle
 import time
 from dataclasses import dataclass, field
 from typing import Any, Collection, Dict, Iterable, List, Mapping, Optional, Set, Type, Union
@@ -407,7 +408,7 @@ class PipelineResult(Result):
 
         The model contains within it the triples factory that was used for training.
         """
-        torch.save(self.model, path)
+        torch.save(self.model, path, pickle_protocol=pickle.HIGHEST_PROTOCOL)
 
     def _get_results(self) -> Mapping[str, Any]:
         results = dict(
@@ -910,7 +911,6 @@ def pipeline(  # noqa: C901
             del model_kwargs['regularizer']
         regularizer_cls: Type[Regularizer] = get_regularizer_cls(regularizer)
         model_kwargs['regularizer'] = regularizer_cls(
-            device=device,
             **(regularizer_kwargs or {}),
         )
 

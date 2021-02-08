@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 
 """Regularization in PyKEEN."""
-import functools
-import math
+
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from typing import Any, ClassVar, Collection, Iterable, Mapping, Optional, Type, Union
 
@@ -10,6 +11,7 @@ import torch
 from torch import nn
 from torch.nn import functional
 
+from .nn.norm import lp_norm, powersum_norm
 from .utils import get_cls, normalize_string
 
 __all__ = [
@@ -37,26 +39,28 @@ class Regularizer(nn.Module, ABC):
     #: Should the regularization only be applied once? This was used for ConvKB and defaults to False.
     apply_only_once: bool
 
+    #: Has this regularizer been updated since last being reset?
+    updated: bool
+
     #: The default strategy for optimizing the regularizer's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]]
 
     def __init__(
         self,
-        device: torch.device,
         weight: float = 1.0,
         apply_only_once: bool = False,
     ):
-        super().__init__()
-        self.device = device
-        self.register_buffer(name='weight', tensor=torch.as_tensor(weight, device=self.device))
-        self.apply_only_once = apply_only_once
-        self.reset()
+        """Instantiate the regularizer.
 
-    def to(self, *args, **kwargs) -> 'Regularizer':  # noqa: D102
-        super().to(*args, **kwargs)
-        self.device = torch._C._nn._parse_to(*args, **kwargs)[0]
+        :param weight: The relative weight of the regularization
+        :param apply_only_once: Should the regularization be applied more than once after reset?
+        """
+        super().__init__()
+        self.register_buffer(name='weight', tensor=torch.as_tensor(weight))
+        self.apply_only_once = apply_only_once
+        self.register_buffer(name="regularization_term", tensor=torch.zeros(1, dtype=torch.float))
+        self.updated = False
         self.reset()
-        return self
 
     @classmethod
     def get_normalized_name(cls) -> str:
@@ -65,7 +69,7 @@ class Regularizer(nn.Module, ABC):
 
     def reset(self) -> None:
         """Reset the regularization term to zero."""
-        self.regularization_term = torch.zeros(1, dtype=torch.float, device=self.device)
+        self.regularization_term.detach_().zero_()
         self.updated = False
 
     @abstractmethod
@@ -104,50 +108,6 @@ class NoRegularizer(Regularizer):
         return torch.zeros(1, dtype=x.dtype, device=x.device)
 
 
-@functools.lru_cache(maxsize=1)
-def _get_expected_norm(
-    p: Union[int, float, str],
-    d: int,
-) -> float:
-    r"""
-    Compute the expected value of the L_p norm.
-
-    .. math ::
-        E[\|x\|_p] = d^{1/p} E[|x_1|^p]^{1/p}
-
-    under the assumption that :math:`x_i \sim N(0, 1)`, i.e.
-
-    .. math ::
-        E[|x_1|^p] = 2^{p/2} \cdot \Gamma(\frac{p+1}{2} \cdot \pi^{-1/2}
-
-    :param p:
-        The parameter p of the norm.
-    :param d:
-        The dimension of the vector.
-
-    :return:
-        The expected value.
-
-    .. seealso ::
-        https://math.stackexchange.com/questions/229033/lp-norm-of-multivariate-standard-normal-random-variable
-        https://www.wolframalpha.com/input/?i=expected+value+of+%7Cx%7C%5Ep
-    """
-    if isinstance(p, str):
-        p = float(p)
-    if math.isinf(p) and p > 0:  # max norm
-        # TODO: this only works for x ~ N(0, 1), but not for |x|
-        raise NotImplementedError("Normalization for inf norm is not implemented")
-        # cf. https://en.wikipedia.org/wiki/Generalized_extreme_value_distribution
-        # mean = scipy.stats.norm.ppf(1 - 1/d)
-        # scale = scipy.stats.norm.ppf(1 - 1/d * 1/math.e) - mean
-        # return scipy.stats.gumbel_r.mean(loc=mean, scale=scale)
-    elif math.isfinite(p):
-        exp_abs_norm_p = math.pow(2, p / 2) * math.gamma((p + 1) / 2) / math.sqrt(math.pi)
-        return math.pow(exp_abs_norm_p * d, 1 / p)
-    else:
-        raise NotImplementedError(f"{p} norm not implemented")
-
-
 class LpRegularizer(Regularizer):
     """A simple L_p norm based regularizer."""
 
@@ -165,23 +125,19 @@ class LpRegularizer(Regularizer):
 
     def __init__(
         self,
-        device: torch.device,
         weight: float = 1.0,
         dim: Optional[int] = -1,
         normalize: bool = False,
         p: float = 2.,
         apply_only_once: bool = False,
     ):
-        super().__init__(device=device, weight=weight, apply_only_once=apply_only_once)
+        super().__init__(weight=weight, apply_only_once=apply_only_once)
         self.dim = dim
         self.normalize = normalize
         self.p = p
 
     def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
-        value = x.norm(p=self.p, dim=self.dim).mean()
-        if not self.normalize:
-            return value
-        return value / _get_expected_norm(p=self.p, d=x.shape[-1])
+        return lp_norm(x=x, p=self.p, dim=self.dim, normalize=self.normalize)
 
 
 class PowerSumRegularizer(Regularizer):
@@ -197,24 +153,19 @@ class PowerSumRegularizer(Regularizer):
 
     def __init__(
         self,
-        device: torch.device,
         weight: float = 1.0,
         dim: Optional[int] = -1,
         normalize: bool = False,
         p: float = 2.,
         apply_only_once: bool = False,
     ):
-        super().__init__(device=device, weight=weight, apply_only_once=apply_only_once)
+        super().__init__(weight=weight, apply_only_once=apply_only_once)
         self.dim = dim
         self.normalize = normalize
         self.p = p
 
     def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
-        value = x.abs().pow(self.p).sum(dim=self.dim).mean()
-        if not self.normalize:
-            return value
-        dim = torch.as_tensor(x.shape[-1], dtype=torch.float, device=x.device)
-        return value / dim
+        return powersum_norm(x, p=self.p, dim=self.dim, normalize=self.normalize)
 
 
 class TransHRegularizer(Regularizer):
@@ -227,13 +178,12 @@ class TransHRegularizer(Regularizer):
 
     def __init__(
         self,
-        device: torch.device,
         weight: float = 0.05,
         epsilon: float = 1e-5,
     ):
         # The regularization in TransH enforces the defined soft constraints that should computed only for every batch.
         # Therefore, apply_only_once is always set to True.
-        super().__init__(device=device, weight=weight, apply_only_once=True)
+        super().__init__(weight=weight, apply_only_once=True)
         self.epsilon = epsilon
 
     def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
@@ -266,17 +216,16 @@ class CombinedRegularizer(Regularizer):
     def __init__(
         self,
         regularizers: Iterable[Regularizer],
-        device: torch.device,
         total_weight: float = 1.0,
         apply_only_once: bool = False,
     ):
-        super().__init__(weight=total_weight, device=device, apply_only_once=apply_only_once)
+        super().__init__(weight=total_weight, apply_only_once=apply_only_once)
         self.regularizers = nn.ModuleList(regularizers)
         for r in self.regularizers:
             if isinstance(r, NoRegularizer):
                 raise TypeError('Can not combine a no-op regularizer')
         self.register_buffer(name='normalization_factor', tensor=torch.as_tensor(
-            sum(r.weight for r in self.regularizers), device=device,
+            sum(r.weight for r in self.regularizers),
         ).reciprocal())
 
     @property

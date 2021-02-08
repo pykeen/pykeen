@@ -5,6 +5,7 @@
 import gc
 import logging
 import pathlib
+import pickle
 import random
 import time
 from abc import ABC, abstractmethod
@@ -909,6 +910,7 @@ class TrainingLoop(ABC):
                 'torch_cuda_random_state': torch_cuda_random_state,
             },
             path,
+            pickle_protocol=pickle.HIGHEST_PROTOCOL,
         )
         logger.info(f"=> Saved checkpoint after having finished epoch {self._epoch}.")
 
