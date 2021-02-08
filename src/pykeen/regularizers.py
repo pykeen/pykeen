@@ -77,13 +77,13 @@ class Regularizer(nn.Module, ABC):
         """Compute the regularization term for one tensor."""
         raise NotImplementedError
 
-    def update(self, *tensors: torch.FloatTensor) -> None:
+    def update(self, *tensors: torch.FloatTensor) -> bool:
         """Update the regularization term based on passed tensors."""
         if not self.training or not torch.is_grad_enabled() or (self.apply_only_once and self.updated):
-            return
+            return False
         self.regularization_term = self.regularization_term + sum(self.forward(x=x) for x in tensors)
         self.updated = True
-        return
+        return True
 
     @property
     def term(self) -> torch.FloatTensor:
@@ -100,7 +100,7 @@ class NoRegularizer(Regularizer):
     #: The default strategy for optimizing the no-op regularizer's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]] = {}
 
-    def update(self, *tensors: torch.FloatTensor) -> None:  # noqa: D102
+    def update(self, *tensors: torch.FloatTensor):  # noqa: D102
         # no need to compute anything
         pass
 
@@ -190,11 +190,11 @@ class TransHRegularizer(Regularizer):
     def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
         raise NotImplementedError('TransH regularizer is order-sensitive!')
 
-    def update(self, *tensors: torch.FloatTensor) -> None:  # noqa: D102
+    def update(self, *tensors: torch.FloatTensor) -> bool:  # noqa: D102
         if len(tensors) != 3:
             raise KeyError('Expects exactly three tensors')
         if self.apply_only_once and self.updated:
-            return
+            return False
         entity_embeddings, normal_vector_embeddings, relation_embeddings = tensors
         # Entity soft constraint
         self.regularization_term += torch.sum(functional.relu(torch.norm(entity_embeddings, dim=-1) ** 2 - 1.0))
@@ -206,6 +206,7 @@ class TransHRegularizer(Regularizer):
         )
 
         self.updated = True
+        return True
 
 
 class CombinedRegularizer(Regularizer):
