@@ -114,71 +114,7 @@ class _NewAbstractModel(Model, ABC, autoreset=False):
             if hasattr(module, "post_parameter_update"):
                 module.post_parameter_update()
 
-    def compute_mr_loss(
-        self,
-        positive_scores: torch.FloatTensor,
-        negative_scores: torch.FloatTensor,
-    ) -> torch.FloatTensor:
-        """Compute the mean ranking loss for the positive and negative scores.
-
-        :param positive_scores:  shape: s, dtype: float
-            The scores for positive triples.
-        :param negative_scores: shape: s, dtype: float
-            The scores for negative triples.
-        :raises RuntimeError:
-            If the chosen loss function does not allow the calculation of margin ranking
-        :return: dtype: float, scalar
-            The margin ranking loss value.
-        """
-        if not self.is_mr_loss:
-            raise RuntimeError(
-                'The chosen loss does not allow the calculation of margin ranking'
-                ' losses. Please use the compute_loss method instead.',
-            )
-        y = torch.ones_like(negative_scores, device=self.device)
-        return self.loss(positive_scores, negative_scores, y) + NewRegularizer.collect_regularization_terms(self)
-
-    def compute_label_loss(
-        self,
-        predictions: torch.FloatTensor,
-        labels: torch.FloatTensor,
-    ) -> torch.FloatTensor:
-        """Compute the classification loss.
-
-        :param predictions: shape: s
-            The tensor containing predictions.
-        :param labels: shape: s
-            The tensor containing labels.
-
-        :return: dtype: float, scalar
-            The label loss value.
-        """
-        return self._compute_loss(tensor_1=predictions, tensor_2=labels)
-
-    def compute_self_adversarial_negative_sampling_loss(
-        self,
-        positive_scores: torch.FloatTensor,
-        negative_scores: torch.FloatTensor,
-    ) -> torch.FloatTensor:
-        """Compute self adversarial negative sampling loss.
-
-        :param positive_scores: shape: s
-            The tensor containing the positive scores.
-        :param negative_scores: shape: s
-            Tensor containing the negative scores.
-        :raises RuntimeError:
-            If the chosen loss does not allow the calculation of self adversarial negative sampling losses.
-        :return: dtype: float, scalar
-            The loss value.
-        """
-        if not self.is_nssa_loss:
-            raise RuntimeError(
-                'The chosen loss does not allow the calculation of self adversarial negative sampling'
-                ' losses. Please use the compute_self_adversarial_negative_sampling_loss method instead.',
-            )
-        return self._compute_loss(tensor_1=positive_scores, tensor_2=negative_scores)
-
-    def _compute_loss(
+    def compute_loss(
         self,
         tensor_1: torch.FloatTensor,
         tensor_2: torch.FloatTensor,
@@ -194,12 +130,14 @@ class _NewAbstractModel(Model, ABC, autoreset=False):
         :return: dtype: float, scalar
             The label loss value.
         """
-        if self.is_mr_loss:
-            raise RuntimeError(
-                'The chosen loss does not allow the calculation of margin label'
-                ' losses. Please use the compute_mr_loss method instead.',
-            )
-        return self.loss(tensor_1, tensor_2) + NewRegularizer.collect_regularization_terms(self)
+        return self.loss(tensor_1, tensor_2) + self._collect_regularization_term()
+
+    def _collect_regularization_term(self):
+        return sum(
+            regularizer.pop_regularization_term()
+            for regularizer in self.modules()
+            if isinstance(regularizer, NewRegularizer)
+        )
 
     @abstractmethod
     def forward(
