@@ -9,12 +9,13 @@ import torch
 import torch.nn
 from torch import nn
 
+from ..regularizers import Regularizer
+from ..typing import Constrainer, Initializer, Normalizer
+
 __all__ = [
     'RepresentationModule',
     'Embedding',
 ]
-
-from pykeen.typing import Constrainer, Initializer, Normalizer
 
 
 class RepresentationModule(nn.Module):
@@ -48,6 +49,10 @@ class Embedding(RepresentationModule):
     can be used throughout PyKEEN as a more fully featured drop-in replacement.
     """
 
+    normalizer: Optional[Normalizer]
+    constrainer: Optional[Constrainer]
+    regularizer: Optional[Regularizer]
+
     def __init__(
         self,
         num_embeddings: int,
@@ -58,6 +63,7 @@ class Embedding(RepresentationModule):
         normalizer_kwargs: Optional[Mapping[str, Any]] = None,
         constrainer: Optional[Constrainer] = None,
         constrainer_kwargs: Optional[Mapping[str, Any]] = None,
+        regularizer: Optional[Regularizer] = None,
         trainable: bool = True,
     ):
         """Instantiate an embedding with extended functionality.
@@ -101,6 +107,8 @@ class Embedding(RepresentationModule):
             self.normalizer = functools.partial(normalizer, **normalizer_kwargs)
         else:
             self.normalizer = normalizer  # type: ignore
+
+        self.regularizer = regularizer
 
         self._embeddings = torch.nn.Embedding(
             num_embeddings=num_embeddings,
@@ -174,6 +182,8 @@ class Embedding(RepresentationModule):
             x = self._embeddings(indices)
         if self.normalizer is not None:
             x = self.normalizer(x)
+        if self.regularizer is not None:
+            self.regularizer.update(x)
         return x
 
     def get_in_canonical_shape(
