@@ -2,15 +2,15 @@
 
 """Regularization in PyKEEN."""
 
-from abc import ABC, abstractmethod
 from typing import Any, ClassVar, Collection, Iterable, List, Mapping, Optional, Sequence, Type, Union
 
 import torch
 from torch import nn
 from torch.nn import functional
 
-from ...utils import get_cls, normalize_string
+from ...nn.norm import lp_norm, powersum_norm
 from ...regularizers import Regularizer
+from ...utils import get_cls
 
 __all__ = [
     'NewRegularizer',
@@ -19,7 +19,6 @@ __all__ = [
     'CombinedRegularizer',
     'PowerSumRegularizer',
     'TransHRegularizer',
-    'collect_regularization_terms',
     'get_regularizer_cls',
 ]
 
@@ -106,18 +105,7 @@ class LpRegularizer(NewRegularizer):
         self.p = p
 
     def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
-        value = x.norm(p=self.p, dim=self.dim).mean()
-        if not self.normalize:
-            return value
-        dim = torch.as_tensor(x.shape[-1], dtype=torch.float, device=x.device)
-        if self.p == 1:
-            # expected value of |x|_1 = d*E[x_i] for x_i i.i.d.
-            return value / dim
-        if self.p == 2:
-            # expected value of |x|_2 when x_i are normally distributed
-            # cf. https://arxiv.org/pdf/1012.0621.pdf chapter 3.1
-            return value / dim.sqrt()
-        raise NotImplementedError(f'Lp regularization not implemented for p={self.p}')
+        return lp_norm(x, p=self.p, normalize=self.normalize, dim=self.dim)
 
 
 class PowerSumRegularizer(NewRegularizer):
@@ -146,11 +134,7 @@ class PowerSumRegularizer(NewRegularizer):
         self.p = p
 
     def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
-        value = x.abs().pow(self.p).sum(dim=self.dim).mean()
-        if not self.normalize:
-            return value
-        dim = torch.as_tensor(x.shape[-1], dtype=torch.float, device=x.device)
-        return value / dim
+        return powersum_norm(x, p=self.p, normalize=self.normalize, dim=self.dim)
 
 
 class TransHRegularizer(NewRegularizer):
@@ -244,13 +228,4 @@ def get_regularizer_cls(query: Union[None, str, Type[NewRegularizer]]) -> Type[N
         lookup_dict=regularizers,
         default=NoRegularizer,
         suffix=_REGULARIZER_SUFFIX,
-    )
-
-
-def collect_regularization_terms(main_module: nn.Module) -> Union[float, torch.FloatTensor]:
-    """Recursively collect regularization terms from attached regularizers, and clear their accumulator."""
-    return sum(
-        module.pop_regularization_term()
-        for module in main_module.modules()
-        if isinstance(module, NewRegularizer)
     )
