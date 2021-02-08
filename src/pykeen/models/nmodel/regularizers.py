@@ -10,6 +10,7 @@ from torch import nn
 from torch.nn import functional
 
 from ...utils import get_cls, normalize_string
+from ...regularizers import Regularizer
 
 __all__ = [
     'NewRegularizer',
@@ -25,23 +26,8 @@ __all__ = [
 _REGULARIZER_SUFFIX = 'Regularizer'
 
 
-class NewRegularizer(nn.Module, ABC):
+class NewRegularizer(Regularizer):
     """A base class for all regularizers."""
-
-    #: The overall regularization weight
-    weight: torch.FloatTensor
-
-    #: The current regularization term (a scalar)
-    regularization_term: Union[torch.FloatTensor, float]
-
-    #: Has this regularizer been updated?
-    updated: bool
-
-    #: Should the regularization only be applied once? This was used for ConvKB and defaults to False.
-    apply_only_once: bool
-
-    #: The default strategy for optimizing the regularizer's hyper-parameters
-    hpo_default: ClassVar[Mapping[str, Any]]
 
     #: weights which should be regularized
     tracked_parameters: List[nn.Parameter]
@@ -52,29 +38,12 @@ class NewRegularizer(nn.Module, ABC):
         apply_only_once: bool = False,
         parameters: Optional[Iterable[nn.Parameter]] = None,
     ):
-        super().__init__()
-        self.register_buffer(name='weight', tensor=torch.as_tensor(weight))
-        self.apply_only_once = apply_only_once
         self.tracked_parameters = list(parameters) if parameters else []
-        self._clear()
-
-    def _clear(self):
-        self.regularization_term = 0.
-        self.updated = False
+        super().__init__(weight=weight, apply_only_once=apply_only_once)
 
     def add_parameter(self, parameter: nn.Parameter) -> None:
         """Add a parameter for regularization."""
         self.tracked_parameters.append(parameter)
-
-    @classmethod
-    def get_normalized_name(cls) -> str:
-        """Get the normalized name of the regularizer class."""
-        return normalize_string(cls.__name__, suffix=_REGULARIZER_SUFFIX)
-
-    @abstractmethod
-    def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:
-        """Compute the regularization term for one tensor."""
-        raise NotImplementedError
 
     def update(self, *tensors: torch.FloatTensor) -> bool:
         """Update the regularization term based on passed tensors."""
@@ -88,18 +57,7 @@ class NewRegularizer(nn.Module, ABC):
         """Return the weighted regularization term, and clear it afterwards."""
         if len(self.tracked_parameters) > 0:
             self.update(*self.tracked_parameters)
-        term = self.regularization_term
-        self._clear()
-        return self.weight * term
-
-    @staticmethod
-    def collect_regularization_terms(module: nn.Module) -> Union[float, torch.FloatTensor]:
-        """Recursively collect regularization terms from attached regularizers, and clear their accumulator."""
-        return sum(
-            regularizer.pop_regularization_term()
-            for regularizer in module.modules()
-            if isinstance(regularizer, NewRegularizer)
-        )
+        return super().pop_regularization_term()
 
 
 class NoRegularizer(NewRegularizer):

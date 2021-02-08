@@ -77,17 +77,25 @@ class Regularizer(nn.Module, ABC):
         """Compute the regularization term for one tensor."""
         raise NotImplementedError
 
-    def update(self, *tensors: torch.FloatTensor) -> None:
+    def update(self, *tensors: torch.FloatTensor) -> bool:
         """Update the regularization term based on passed tensors."""
+        # TODO if not self.training or not torch.is_grad_enabled() or (self.apply_only_once and self.updated):
         if self.apply_only_once and self.updated:
-            return
+            return False
         self.regularization_term = self.regularization_term + sum(self.forward(x=x) for x in tensors)
         self.updated = True
+        return True
 
     @property
     def term(self) -> torch.FloatTensor:
         """Return the weighted regularization term."""
         return self.regularization_term * self.weight
+
+    def pop_regularization_term(self) -> torch.FloatTensor:
+        """Return the weighted regularization term, and clear it afterwards."""
+        term = self.regularization_term
+        self.reset()
+        return self.weight * term
 
 
 class NoRegularizer(Regularizer):
