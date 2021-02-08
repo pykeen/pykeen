@@ -13,7 +13,7 @@ import torch
 import pykeen.experiments
 import pykeen.models
 from pykeen.models import (
-    EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, MultimodalModel, _MODELS,
+    ERModel, EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, MultimodalModel, _MODELS,
     _OldAbstractModel,
 )
 from pykeen.models.predict import get_novelty_mask, predict
@@ -488,7 +488,8 @@ class TestTransH(cases.DistanceModelTestCase):
 
         Entity embeddings have to have unit L2 norm.
         """
-        entity_norms = self.model.normal_vector_embeddings(indices=None).norm(p=2, dim=-1)
+        self.assertIsInstance(self.model, ERModel)
+        entity_norms = self.model.relation_representations[1](indices=None).norm(p=2, dim=-1)
         assert torch.allclose(entity_norms, torch.ones_like(entity_norms))
 
 

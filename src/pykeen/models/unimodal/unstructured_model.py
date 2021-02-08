@@ -4,7 +4,7 @@
 
 from typing import Any, ClassVar, Mapping, Optional
 
-from ..nmodel import ERModel, EmbeddingSpecification
+from ..nbase import ERModel, EmbeddingSpecification
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
 from ...nn.init import xavier_normal_
