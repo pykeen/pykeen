@@ -10,11 +10,11 @@ from torch.nn import functional
 
 from pykeen.models import ConvKB, TransH
 from pykeen.regularizers import (
-    CombinedRegularizer, LpRegularizer, NoRegularizer, PowerSumRegularizer, Regularizer,
-    TransHRegularizer,
+    CombinedRegularizer, LpRegularizer, NoRegularizer, PowerSumRegularizer, Regularizer, TransHRegularizer,
 )
 from pykeen.utils import get_expected_norm, resolve_device
 from tests import cases
+from tests.utils import rand
 
 
 class NoRegularizerTest(cases.RegularizerTestCase):
@@ -61,8 +61,8 @@ class CombinedRegularizerTest(cases.RegularizerTestCase):
     cls = CombinedRegularizer
     kwargs = {
         'regularizers': [
-            LpRegularizer(weight=0.1, p=1, device=resolve_device()),
-            LpRegularizer(weight=0.7, p=2, device=resolve_device()),
+            LpRegularizer(weight=0.1, p=1),
+            LpRegularizer(weight=0.7, p=2),
         ],
     }
 
@@ -107,14 +107,13 @@ class TransHRegularizerTest(unittest.TestCase):
         self.device = resolve_device()
         self.kwargs = {'weight': .5, 'epsilon': 1e-5}
         self.instance = self.cls(
-            device=self.device,
             **(self.kwargs or {}),
-        )
+        ).to(self.device)
         self.num_entities = 10
         self.num_relations = 5
-        self.entities_weight = torch.rand(self.num_entities, 10, device=self.device, generator=self.generator)
-        self.relations_weight = torch.rand(self.num_relations, 20, device=self.device, generator=self.generator)
-        self.normal_vector_weight = torch.rand(self.num_relations, 20, device=self.device, generator=self.generator)
+        self.entities_weight = rand(self.num_entities, 10, generator=self.generator, device=self.device)
+        self.relations_weight = rand(self.num_relations, 20, generator=self.generator, device=self.device)
+        self.normal_vector_weight = rand(self.num_relations, 20, generator=self.generator, device=self.device)
 
     def test_update(self):
         """Test update function of TransHRegularizer."""
@@ -124,7 +123,7 @@ class TransHRegularizerTest(unittest.TestCase):
                 self.entities_weight,
                 self.normal_vector_weight,
                 self.relations_weight,
-                torch.rand(self.num_entities, 10, device=self.device, generator=self.generator),
+                rand(self.num_entities, 10, generator=self.generator, device=self.device),
             )
             self.assertTrue('Expects exactly three tensors' in context.exception)
 
@@ -170,7 +169,6 @@ class TestOnlyUpdateOnce(unittest.TestCase):
         self.assertIn('apply_only_once', ConvKB.regularizer_default_kwargs)
         self.assertTrue(ConvKB.regularizer_default_kwargs['apply_only_once'])
         regularizer = LpRegularizer(
-            device=self.device,
             **ConvKB.regularizer_default_kwargs,
         )
         self._help_test_regularizer(regularizer)
@@ -179,18 +177,20 @@ class TestOnlyUpdateOnce(unittest.TestCase):
         """Test the TransH regularizer only updates once."""
         self.assertNotIn('apply_only_once', TransH.regularizer_default_kwargs)
         regularizer = TransHRegularizer(
-            device=self.device,
             **TransH.regularizer_default_kwargs,
         )
         self._help_test_regularizer(regularizer)
 
     def _help_test_regularizer(self, regularizer: Regularizer, n_tensors: int = 3):
+        # ensure regularizer is on correct device
+        regularizer = regularizer.to(self.device)
+
         self.assertFalse(regularizer.updated)
         self.assertEqual(0.0, regularizer.regularization_term.item())
 
         # After first update, should change the term
         first_tensors = [
-            torch.rand(10, 10, device=self.device, generator=self.generator)
+            rand(10, 10, generator=self.generator, device=self.device)
             for _ in range(n_tensors)
         ]
         regularizer.update(*first_tensors)
@@ -200,7 +200,7 @@ class TestOnlyUpdateOnce(unittest.TestCase):
 
         # After second update, no change should happen
         second_tensors = [
-            torch.rand(10, 10, device=self.device, generator=self.generator)
+            rand(10, 10, generator=self.generator, device=self.device)
             for _ in range(n_tensors)
         ]
         regularizer.update(*second_tensors)

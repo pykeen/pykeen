@@ -590,7 +590,6 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
         # Regularizer
         if regularizer is None:
             regularizer = self.regularizer_default(
-                device=self.device,
                 **(self.regularizer_default_kwargs or {}),
             )
         self.regularizer = regularizer
