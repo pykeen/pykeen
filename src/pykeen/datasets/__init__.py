@@ -21,6 +21,7 @@ from .ckg import CKG
 from .codex import CoDExLarge, CoDExMedium, CoDExSmall
 from .conceptnet import ConceptNet
 from .cskg import CSKG
+from .dbpedia import DBpedia50
 from .drkg import DRKG
 from .freebase import FB15k, FB15k237
 from .hetionet import Hetionet
@@ -57,6 +58,7 @@ __all__ = [
     'ConceptNet',
     'CKG',
     'CSKG',
+    'DBpedia50',
     'get_dataset',
     'has_dataset',
 ]
@@ -84,8 +86,18 @@ def get_dataset(
 ) -> Dataset:
     """Get the dataset.
 
-    :raises ValueError:
-    :raises TypeError:
+    :param dataset: The name of a dataset, an instance of a dataset, or the class for a dataset.
+    :param dataset_kwargs: The keyword arguments, only to be used when a class for a dataset is used for
+        the ``dataset`` keyword argument.
+    :param training: A triples factory for training triples or a path to a training triples file if ``dataset=None``
+    :param testing: A triples factory for testing triples or a path to a testing triples file  if ``dataset=None``
+    :param validation: A triples factory for validation triples or a path to a validation triples file
+        if ``dataset=None``
+    :returns: An instantiated dataset
+
+    :raises ValueError: for incorrect usage of the input of the function
+    :raises TypeError: If a type is given for ``dataset`` but it's not a subclass of
+        :class:`pykeen.datasets.base.Dataset`
     """
     if dataset is None and (training is None or testing is None):
         raise ValueError('Must specify either dataset or both training/testing triples factories')

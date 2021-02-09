@@ -71,7 +71,7 @@ class _AbstractEvaluatorTests:
         # Compute mask only if required
         if self.evaluator.requires_positive_mask:
             # TODO: Re-use filtering code
-            triples = self.factory.mapped_triples
+            triples = self.factory.mapped_triples.to(self.model.device)
             if inverse:
                 sel_col, start_col = 0, 1
             else:
@@ -193,12 +193,12 @@ class SklearnEvaluatorTest(_AbstractEvaluatorTests, unittest.TestCase):
         assert isinstance(result, SklearnMetricResults)
 
         # check value
-        scores = data['scores'].detach().numpy()
-        mask = data['mask'].detach().float().numpy()
+        scores = data['scores'].detach().cpu().numpy()
+        mask = data['mask'].detach().cpu().float().numpy()
 
         # filtering
         uniq = dict()
-        batch = data['batch'].detach().numpy()
+        batch = data['batch'].detach().cpu().numpy()
         for i, (h, r) in enumerate(batch[:, :2]):
             uniq[int(h), int(r)] = i
         indices = sorted(uniq.values())
