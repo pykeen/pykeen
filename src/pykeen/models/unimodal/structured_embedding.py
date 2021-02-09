@@ -14,7 +14,7 @@ from torch.nn import functional
 from ..base import EntityEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
-from ...nn import Embedding
+from ...nn import Embedding, EmbeddingSpecification
 from ...nn.init import xavier_uniform_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
@@ -65,13 +65,15 @@ class StructuredEmbedding(EntityEmbeddingModel):
         """
         super().__init__(
             triples_factory=triples_factory,
-            embedding_dim=embedding_dim,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
-            entity_initializer=xavier_uniform_,
-            entity_constrainer=functional.normalize,
+            entity_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=xavier_uniform_,
+                constrainer=functional.normalize,
+            ),
         )
 
         self.scoring_fct_norm = scoring_fct_norm
