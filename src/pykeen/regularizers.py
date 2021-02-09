@@ -49,13 +49,17 @@ class Regularizer(nn.Module, ABC):
         self,
         weight: float = 1.0,
         apply_only_once: bool = False,
+        parameters: Optional[Iterable[nn.Parameter]] = None,
     ):
         """Instantiate the regularizer.
 
         :param weight: The relative weight of the regularization
         :param apply_only_once: Should the regularization be applied more than once after reset?
+        :param parameters: Specific parameters to track. if none given, it's expected that your
+            model automatically delegates to the :func:`update` function.
         """
         super().__init__()
+        self.tracked_parameters = list(parameters) if parameters else []
         self.register_buffer(name='weight', tensor=torch.as_tensor(weight))
         self.apply_only_once = apply_only_once
         self.register_buffer(name="regularization_term", tensor=torch.zeros(1, dtype=torch.float))
@@ -66,6 +70,10 @@ class Regularizer(nn.Module, ABC):
     def get_normalized_name(cls) -> str:
         """Get the normalized name of the regularizer class."""
         return normalize_string(cls.__name__, suffix=_REGULARIZER_SUFFIX)
+
+    def add_parameter(self, parameter: nn.Parameter) -> None:
+        """Add a parameter for regularization."""
+        self.tracked_parameters.append(parameter)
 
     def reset(self) -> None:
         """Reset the regularization term to zero."""
@@ -79,7 +87,7 @@ class Regularizer(nn.Module, ABC):
 
     def update(self, *tensors: torch.FloatTensor) -> None:
         """Update the regularization term based on passed tensors."""
-        if self.apply_only_once and self.updated:
+        if not self.training or not torch.is_grad_enabled() or (self.apply_only_once and self.updated):
             return
         self.regularization_term = self.regularization_term + sum(self.forward(x=x) for x in tensors)
         self.updated = True
@@ -88,6 +96,16 @@ class Regularizer(nn.Module, ABC):
     def term(self) -> torch.FloatTensor:
         """Return the weighted regularization term."""
         return self.regularization_term * self.weight
+
+    def pop_regularization_term(self) -> torch.FloatTensor:
+        """Return the weighted regularization term, and reset the regularize afterwards."""
+        # If there are tracked parameters, update based on them
+        if self.tracked_parameters:
+            self.update(*self.tracked_parameters)
+
+        term = self.regularization_term
+        self.reset()
+        return self.weight * term
 
 
 class NoRegularizer(Regularizer):
@@ -130,8 +148,9 @@ class LpRegularizer(Regularizer):
         normalize: bool = False,
         p: float = 2.,
         apply_only_once: bool = False,
+        parameters: Optional[Iterable[nn.Parameter]] = None,
     ):
-        super().__init__(weight=weight, apply_only_once=apply_only_once)
+        super().__init__(weight=weight, apply_only_once=apply_only_once, parameters=parameters)
         self.dim = dim
         self.normalize = normalize
         self.p = p
@@ -158,8 +177,9 @@ class PowerSumRegularizer(Regularizer):
         normalize: bool = False,
         p: float = 2.,
         apply_only_once: bool = False,
+        parameters: Optional[Iterable[nn.Parameter]] = None,
     ):
-        super().__init__(weight=weight, apply_only_once=apply_only_once)
+        super().__init__(weight=weight, apply_only_once=apply_only_once, parameters=parameters)
         self.dim = dim
         self.normalize = normalize
         self.p = p
@@ -180,10 +200,11 @@ class TransHRegularizer(Regularizer):
         self,
         weight: float = 0.05,
         epsilon: float = 1e-5,
+        parameters: Optional[Iterable[nn.Parameter]] = None,
     ):
         # The regularization in TransH enforces the defined soft constraints that should computed only for every batch.
         # Therefore, apply_only_once is always set to True.
-        super().__init__(weight=weight, apply_only_once=True)
+        super().__init__(weight=weight, apply_only_once=True, parameters=parameters)
         self.epsilon = epsilon
 
     def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102

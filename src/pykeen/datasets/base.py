@@ -200,6 +200,7 @@ class LazyDataset(Dataset):
             PyKEEN home directory defined in :data:`pykeen.constants.PYKEEN_HOME`.
             The subfolder is named based on the class inheriting from
             :class:`pykeen.datasets.base.Dataset`.
+        :returns: A path object for the calculated cache root directory
         """
         if cache_root is None:
             cache_root = PYKEEN_DATASETS
@@ -276,6 +277,11 @@ def _urlretrieve(url: str, path: str, clean_on_failure: bool = True, stream: boo
     :param url: URL to download
     :param path: Path to download the file to
     :param clean_on_failure: If true, will delete the file on any exception raised during download
+    :param stream: If true, use :func:`requests.get`. By default, use ``urlretrieve``.
+
+    :raises Exception: If there's a problem wih downloading via :func:`requests.get` or copying
+        the data with :func:`shutil.copyfileobj`
+    :raises KeyboardInterrupt: If the user quits during download
     """
     if not stream:
         logger.info('downloading from %s to %s', url, path)
@@ -317,8 +323,8 @@ class UnpackedRemoteDataset(PathDataset):
             This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.pykeen``.
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
-        :param stream:
-        :param force:
+        :param stream: Use :mod:`requests` be used for download if true otherwise use :mod:`urllib`
+        :param force: If true, redownload any cached files
         """
         self.cache_root = self._help_cache(cache_root)
 
@@ -365,6 +371,9 @@ class RemoteDataset(PathDataset):
 
         :param url:
             The url where to download the dataset from.
+        :param relative_training_path: The path inside the cache root where the training path gets extracted
+        :param relative_testing_path: The path inside the cache root where the testing path gets extracted
+        :param relative_validation_path: The path inside the cache root where the validation path gets extracted
         :param cache_root:
             An optional directory to store the extracted files. Is none is given, the default PyKEEN directory is used.
             This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.pykeen``.
@@ -459,6 +468,9 @@ class PackedZipRemoteDataset(LazyDataset):
     ):
         """Initialize dataset.
 
+        :param relative_training_path: The path inside the zip file for the training data
+        :param relative_testing_path: The path inside the zip file for the testing data
+        :param relative_validation_path: The path inside the zip file for the validation data
         :param url:
             The url where to download the dataset from
         :param name:
@@ -468,6 +480,8 @@ class PackedZipRemoteDataset(LazyDataset):
             This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.pykeen``.
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
+
+        :raises ValueError: if there's no URL specified and there is no data already at the calculated path
         """
         self.cache_root = self._help_cache(cache_root)
 
@@ -533,21 +547,21 @@ class TarFileSingleDataset(LazyDataset):
         create_inverse_triples: bool = False,
         delimiter: Optional[str] = None,
         random_state: TorchRandomHint = None,
-        randomize_cleanup: bool = False,
     ):
         """Initialize dataset.
 
         :param url:
             The url where to download the dataset from
+        :param relative_path:
+            The path inside the archive to the contained dataset.
         :param name:
             The name of the file. If not given, tries to get the name from the end of the URL
         :param cache_root:
             An optional directory to store the extracted files. Is none is given, the default PyKEEN directory is used.
             This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.pykeen``.
-        :param relative_path:
-            The path inside the archive to the contained dataset.
-        :param random_state:
-            An optional random state to make the training/testing/validation split reproducible.
+        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
+        :param eager: Should the data be loaded eagerly? Defaults to false.
+        :param random_state: An optional random state to make the training/testing/validation split reproducible.
         :param delimiter:
             The delimiter for the contained dataset.
         """
@@ -556,7 +570,6 @@ class TarFileSingleDataset(LazyDataset):
         self.name = name or name_from_url(url)
         self.random_state = random_state
         self.delimiter = delimiter or '\t'
-        self.randomize_cleanup = randomize_cleanup
         self.url = url
         self.create_inverse_triples = create_inverse_triples
         self._relative_path = relative_path
@@ -595,7 +608,6 @@ class TarFileSingleDataset(LazyDataset):
             tf.split(
                 ratios=self.ratios,
                 random_state=self.random_state,
-                randomize_cleanup=self.randomize_cleanup,
             ),
         )
         logger.info('[%s] done splitting data from %s', self.__class__.__name__, tf_path)
@@ -624,6 +636,7 @@ class TabbedDataset(LazyDataset):
             This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.pykeen``.
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
+        :param random_state: An optional random state to make the training/testing/validation split reproducible.
         """
         self.cache_root = self._help_cache(cache_root)
 
@@ -690,6 +703,10 @@ class SingleTabbedDataset(TabbedDataset):
             This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.pykeen``.
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
+        :param random_state: An optional random state to make the training/testing/validation split reproducible.
+        :param read_csv_kwargs: Keyword arguments to pass through to :func:`pandas.read_csv`.
+
+        :raises ValueError: if there's no URL specified and there is no data already at the calculated path
         """
         super().__init__(
             cache_root=cache_root,

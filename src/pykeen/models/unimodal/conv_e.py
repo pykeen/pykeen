@@ -13,7 +13,7 @@ from torch.nn import functional as F  # noqa: N812
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE
 from ...losses import BCEAfterSigmoidLoss, Loss
-from ...nn import Embedding
+from ...nn import Embedding, EmbeddingSpecification
 from ...nn.init import xavier_normal_
 from ...nn.modules import _calculate_missing_shape_information
 from ...regularizers import Regularizer
@@ -146,13 +146,18 @@ class ConvE(EntityRelationEmbeddingModel):
 
         super().__init__(
             triples_factory=triples_factory,
-            embedding_dim=embedding_dim,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
-            entity_initializer=xavier_normal_,
-            relation_initializer=xavier_normal_,
+            entity_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=xavier_normal_,
+            ),
+            relation_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=xavier_normal_,
+            ),
         )
 
         # ConvE uses one bias for each entity

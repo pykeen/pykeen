@@ -10,6 +10,7 @@ import torch.nn as nn
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss, SoftplusLoss
+from ...nn import EmbeddingSpecification
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -95,15 +96,20 @@ class ComplEx(EntityRelationEmbeddingModel):
         """
         super().__init__(
             triples_factory=triples_factory,
-            embedding_dim=2 * embedding_dim,  # complex embeddings
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
             # initialize with entity and relation embeddings with standard normal distribution, cf.
             # https://github.com/ttrouill/complex/blob/dc4eb93408d9a5288c986695b58488ac80b1cc17/efe/models.py#L481-L487
-            entity_initializer=entity_initializer,
-            relation_initializer=relation_initializer,
+            entity_representations=EmbeddingSpecification(
+                embedding_dim=2 * embedding_dim,  # complex embeddings
+                initializer=entity_initializer,
+            ),
+            relation_representations=EmbeddingSpecification(
+                embedding_dim=2 * embedding_dim,  # complex embeddings
+                initializer=relation_initializer,
+            ),
         )
 
     @staticmethod
