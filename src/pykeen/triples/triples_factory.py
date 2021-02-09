@@ -462,14 +462,18 @@ class CoreTriplesFactory:
         """
         # Make new triples factories for each group
         return [
-            self.clone_and_exchange_triples(mapped_triples=triples)
-            for triples in split(
+            self.clone_and_exchange_triples(
+                mapped_triples=triples,
+                # do not create inverse triples in evaluation factories
+                create_inverse_triples=None if i == 0 else False,
+            )
+            for i, triples in enumerate(split(
                 mapped_triples=self.mapped_triples,
                 ratios=ratios,
                 random_state=random_state,
                 randomize_cleanup=randomize_cleanup,
                 method=method,
-            )
+            ))
         ]
 
     def get_mask_for_entities(
