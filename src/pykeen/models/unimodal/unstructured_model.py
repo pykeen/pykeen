@@ -7,6 +7,7 @@ from typing import Any, ClassVar, Mapping, Optional
 from ..nbase import ERModel, EmbeddingSpecification
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
+from ...nn import EmbeddingSpecification
 from ...nn.init import xavier_normal_
 from ...nn.modules import UnstructuredModelInteraction
 from ...triples import TriplesFactory

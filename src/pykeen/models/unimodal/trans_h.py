@@ -10,6 +10,7 @@ from ..nbase import ERModel
 from ..nemb import EmbeddingSpecification
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
+from ...nn import EmbeddingSpecification
 from ...nn.modules import TransHInteraction
 from ...regularizers import Regularizer, TransHRegularizer
 from ...triples import TriplesFactory
