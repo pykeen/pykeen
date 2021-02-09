@@ -73,7 +73,7 @@ class KG2E(EntityRelationEmbeddingModel):
         r"""Initialize KG2E.
 
         :param embedding_dim: The entity embedding dimension $d$. Is usually $d \in [50, 350]$.
-        :param dist_similarity: Either 'KL' for Kullback-Liebler or 'EL' for expected likelihood. Defaults to KL.
+        :param dist_similarity: Either 'KL' for Kullback-Leibler or 'EL' for expected likelihood. Defaults to KL.
         :param c_min:
         :param c_max:
         """

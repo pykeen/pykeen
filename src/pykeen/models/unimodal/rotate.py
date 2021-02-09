@@ -91,11 +91,11 @@ class RotatE(EntityRelationEmbeddingModel):
             random_seed=random_seed,
             regularizer=regularizer,
             entity_representations=EmbeddingSpecification(
-                embedding_dim=2 * embedding_dim,
+                embedding_dim=2 * embedding_dim,  # complex embeddings
                 initializer=xavier_uniform_,
             ),
             relation_representations=EmbeddingSpecification(
-                embedding_dim=2 * embedding_dim,
+                embedding_dim=2 * embedding_dim,  # complex embeddings
                 initializer=init_phases,
                 constrainer=complex_normalize,
             ),
