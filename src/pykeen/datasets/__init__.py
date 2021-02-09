@@ -21,6 +21,7 @@ from .ckg import CKG
 from .codex import CoDExLarge, CoDExMedium, CoDExSmall
 from .conceptnet import ConceptNet
 from .cskg import CSKG
+from .dbpedia import DBpedia50
 from .drkg import DRKG
 from .freebase import FB15k, FB15k237
 from .hetionet import Hetionet
@@ -57,6 +58,7 @@ __all__ = [
     'ConceptNet',
     'CKG',
     'CSKG',
+    'DBpedia50',
     'get_dataset',
     'has_dataset',
 ]
