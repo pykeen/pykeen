@@ -13,8 +13,10 @@ __all__ = [
     'EntityMapping',
     'RelationMapping',
     'Initializer',
+    'InitializerHint',
     'Normalizer',
     'Constrainer',
+    'ConstrainerHint',
     'cast_constrainer',
     'InteractionFunction',
     'DeviceHint',
@@ -35,8 +37,10 @@ RelationMapping = Mapping[str, int]
 TensorType = TypeVar("TensorType", torch.Tensor, torch.FloatTensor)
 InteractionFunction = Callable[[TensorType, TensorType, TensorType], TensorType]
 Initializer = Callable[[TensorType], TensorType]
+InitializerHint = Union[None, str, Initializer]
 Normalizer = Callable[[TensorType], TensorType]
 Constrainer = Callable[[TensorType], TensorType]
+ConstrainerHint = Union[None, str, Constrainer]
 
 
 def cast_constrainer(f) -> Constrainer:

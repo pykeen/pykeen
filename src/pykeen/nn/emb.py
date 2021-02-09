@@ -9,9 +9,13 @@ from typing import Any, Mapping, Optional
 import torch
 import torch.nn
 from torch import nn
+from torch.nn import functional
 
+from .init import init_phases, xavier_normal_, xavier_uniform_
+from .norm import complex_normalize
 from ..regularizers import Regularizer
-from ..typing import Constrainer, Initializer, Normalizer
+from ..typing import Constrainer, ConstrainerHint, Initializer, InitializerHint, Normalizer
+from ..utils import clamp_norm, compose
 
 __all__ = [
     'RepresentationModule',
@@ -59,7 +63,7 @@ class Embedding(RepresentationModule):
         self,
         num_embeddings: int,
         embedding_dim: int,
-        initializer: Optional[Initializer] = None,
+        initializer: InitializerHint = None,
         initializer_kwargs: Optional[Mapping[str, Any]] = None,
         normalizer: Optional[Normalizer] = None,
         normalizer_kwargs: Optional[Mapping[str, Any]] = None,
@@ -95,11 +99,15 @@ class Embedding(RepresentationModule):
 
         if initializer is None:
             initializer = nn.init.normal_
+        elif isinstance(initializer, str):
+            initializer = initializers[initializer]
         if initializer_kwargs:
             self.initializer = functools.partial(initializer, **initializer_kwargs)
         else:
             self.initializer = initializer  # type: ignore
 
+        if isinstance(constrainer, str):
+            constrainer = constrainers[constrainer]
         if constrainer is not None and constrainer_kwargs:
             self.constrainer = functools.partial(constrainer, **constrainer_kwargs)
         else:
@@ -210,13 +218,13 @@ class EmbeddingSpecification:
 
     embedding_dim: int
 
-    initializer: Optional[Initializer] = None
+    initializer: InitializerHint = None
     initializer_kwargs: Optional[Mapping[str, Any]] = None
 
     normalizer: Optional[Normalizer] = None
     normalizer_kwargs: Optional[Mapping[str, Any]] = None
 
-    constrainer: Optional[Constrainer] = None
+    constrainer: ConstrainerHint = None
     constrainer_kwargs: Optional[Mapping[str, Any]] = None
 
     regularizer: Optional[Regularizer] = None
@@ -237,3 +245,23 @@ class EmbeddingSpecification:
         if device is not None:
             rv = rv.to(device)
         return rv
+
+
+initializers = {
+    'xavier_uniform': xavier_normal_,
+    'xavier_normal': xavier_uniform_,
+    'xavier_normal_norm': compose(
+        nn.init.xavier_uniform_,
+        functional.normalize,
+    ),
+    'normal': torch.nn.init.normal_,
+    'uniform': torch.nn.init.uniform_,
+    'phases': init_phases,
+}
+
+constrainers = {
+    'normalize': functional.normalize,
+    'complex_normalize': complex_normalize,
+    'clamp': torch.clamp,
+    'clamp_normalize': clamp_norm,
+}
