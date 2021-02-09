@@ -18,7 +18,7 @@ https://github.com/ZhenfengLei/KGDatasets/tree/master/DBpedia50. There's a base 
 
 .. code-block:: python
 
-    from pykeen.datasets import UnpackedRemoteDataset
+    from pykeen.datasets.base import UnpackedRemoteDataset
 
     TEST_URL =  'https://raw.githubusercontent.com/ZhenfengLei/KGDatasets/master/DBpedia50/test.txt'
     TRAIN_URL = 'https://raw.githubusercontent.com/ZhenfengLei/KGDatasets/master/DBpedia50/train.txt'
@@ -35,7 +35,29 @@ https://github.com/ZhenfengLei/KGDatasets/tree/master/DBpedia50. There's a base 
 
 Unsplit Datasets
 ----------------
-.. todo:: Add more tutorials
+Use this tutorial if you have a single URL for a TSV dataset that needs to be automatically split into
+training, testing, and validation. A good example can be found at
+https://github.com/hetio/hetionet/raw/master/hetnet/tsv. There's a base class called
+:class:`pykeen.datasets.base.SingleTabbedDataset` that can be used to wrap it like the following:
+
+.. code-block:: python
+
+
+    from pykeen.datasets.base import SingleTabbedDataset
+
+    URL = 'https://github.com/hetio/hetionet/raw/master/hetnet/tsv/hetionet-v1.0-edges.sif.gz'
+
+    class Hetionet(SingleTabbedDataset):
+        def __init__(self, **kwargs):
+            super().__init__(url=URL, **kwargs)
+
+
+The value for `URL` can be anything that can be read by :func:`pandas.read_csv`. Additional options
+can be passed through to the reading function, such as ``sep=','``, with the keyword argument
+``read_csv_kwargs=dict(sep=',')``. Note that the default separator for Pandas is a comma, but PyKEEN
+overrides it to be a tab, so you'll have to explicitly set it if you want a comma. Since there's a random
+aspect to this process, you can also set the seed used for splitting with the ``random_state`` keyword
+argument.
 
 Updating the ``setup.cfg``
 --------------------------
@@ -60,3 +82,6 @@ is constructed by the path to the module, the colon ``:``, then the name of the 
         conceptnet       = pykeen.datasets.conceptnet:ConceptNet
         drkg             = pykeen.datasets.drkg:DRKG
         ...
+
+If you're working on a development version of PyKEEN, you also need to run ``pykeen readme`` in the shell
+to update the README.md file.
