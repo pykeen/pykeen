@@ -8,3 +8,6 @@ References
 
 .. [safavi2020] Safavi, T. & Koutra, D. (2020). `CoDEx: A Comprehensive Knowledge Graph
    Completion Benchmark <http://arxiv.org/abs/2009.07810>`_.  *arXiv*, 2009.07810.
+
+.. [shi2017b] Shi, B., & Weninger, T. (2017). `Open-World Knowledge Graph Completion
+   <https://arxiv.org/abs/1711.03438>`_. *arXiv*, 1957–1964.
