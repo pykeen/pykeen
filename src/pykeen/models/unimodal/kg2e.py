@@ -11,7 +11,7 @@ import torch.autograd
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
-from ...nn import Embedding
+from ...nn import Embedding, EmbeddingSpecification
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint, cast_constrainer
@@ -73,21 +73,26 @@ class KG2E(EntityRelationEmbeddingModel):
         r"""Initialize KG2E.
 
         :param embedding_dim: The entity embedding dimension $d$. Is usually $d \in [50, 350]$.
-        :param dist_similarity: Either 'KL' for kullback-liebler or 'EL' for expected liklihood. Defaults to KL.
+        :param dist_similarity: Either 'KL' for Kullback-Liebler or 'EL' for expected likelihood. Defaults to KL.
         :param c_min:
         :param c_max:
         """
         super().__init__(
             triples_factory=triples_factory,
-            embedding_dim=embedding_dim,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
-            entity_constrainer=cast_constrainer(clamp_norm),
-            entity_constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
-            relation_constrainer=cast_constrainer(clamp_norm),
-            relation_constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
+            entity_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                constrainer=cast_constrainer(clamp_norm),
+                constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
+            ),
+            relation_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                constrainer=cast_constrainer(clamp_norm),
+                constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
+            ),
         )
 
         # Similarity function used for distributions

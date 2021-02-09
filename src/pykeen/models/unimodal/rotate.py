@@ -10,6 +10,7 @@ from torch.nn import functional
 
 from ..base import EntityRelationEmbeddingModel
 from ...losses import Loss
+from ...nn import EmbeddingSpecification
 from ...nn.init import init_phases, xavier_uniform_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
@@ -85,14 +86,19 @@ class RotatE(EntityRelationEmbeddingModel):
     ) -> None:
         super().__init__(
             triples_factory=triples_factory,
-            embedding_dim=2 * embedding_dim,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
-            entity_initializer=xavier_uniform_,
-            relation_initializer=init_phases,
-            relation_constrainer=complex_normalize,
+            entity_representations=EmbeddingSpecification(
+                embedding_dim=2 * embedding_dim,
+                initializer=xavier_uniform_,
+            ),
+            relation_representations=EmbeddingSpecification(
+                embedding_dim=2 * embedding_dim,
+                initializer=init_phases,
+                constrainer=complex_normalize,
+            ),
         )
         self.real_embedding_dim = embedding_dim
 

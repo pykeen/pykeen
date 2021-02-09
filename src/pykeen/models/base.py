@@ -16,10 +16,10 @@ import torch
 from torch import nn
 
 from ..losses import Loss, MarginRankingLoss
-from ..nn import Embedding
+from ..nn import Embedding, EmbeddingSpecification
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import TriplesFactory
-from ..typing import Constrainer, DeviceHint, Initializer, Normalizer, ScorePack
+from ..typing import DeviceHint, ScorePack
 from ..utils import NoRandomSeedNecessary, _can_slice, extend_batch, resolve_device, set_random_seed
 
 __all__ = [
@@ -707,23 +707,14 @@ class EntityEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
     def __init__(
         self,
         triples_factory: TriplesFactory,
-        embedding_dim: int = 50,
+        entity_representations: EmbeddingSpecification,
         loss: Optional[Loss] = None,
         predict_with_sigmoid: bool = False,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
-        entity_initializer: Optional[Initializer] = None,
-        entity_initializer_kwargs: Optional[Mapping[str, Any]] = None,
-        entity_normalizer: Optional[Normalizer] = None,
-        entity_normalizer_kwargs: Optional[Mapping[str, Any]] = None,
-        entity_constrainer: Optional[Constrainer] = None,
-        entity_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
     ) -> None:
         """Initialize the entity embedding model.
-
-        :param embedding_dim:
-            The embedding dimensionality. Exact usages depends on the specific model subclass.
 
         .. seealso:: Constructor of the base class :class:`pykeen.models.Model`
         """
@@ -735,16 +726,9 @@ class EntityEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
             regularizer=regularizer,
             predict_with_sigmoid=predict_with_sigmoid,
         )
-        self.entity_embeddings = Embedding.init_with_device(
+        self.entity_embeddings = entity_representations.make(
             num_embeddings=triples_factory.num_entities,
-            embedding_dim=embedding_dim,
             device=self.device,
-            initializer=entity_initializer,
-            initializer_kwargs=entity_initializer_kwargs,
-            normalizer=entity_normalizer,
-            normalizer_kwargs=entity_normalizer_kwargs,
-            constrainer=entity_constrainer,
-            constrainer_kwargs=entity_constrainer_kwargs,
         )
 
     @property
@@ -764,37 +748,23 @@ class EntityEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
 class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
     """A base module for KGE models that have different embeddings for entities and relations."""
 
+    entity_embedding: Embedding
+    relation_embedding: Embedding
+
     def __init__(
         self,
         triples_factory: TriplesFactory,
-        embedding_dim: int = 50,
-        relation_dim: Optional[int] = None,
+        entity_representations: EmbeddingSpecification,
+        relation_representations: EmbeddingSpecification,
         loss: Optional[Loss] = None,
         predict_with_sigmoid: bool = False,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
-        entity_initializer: Optional[Initializer] = None,
-        entity_initializer_kwargs: Optional[Mapping[str, Any]] = None,
-        entity_normalizer: Optional[Normalizer] = None,
-        entity_normalizer_kwargs: Optional[Mapping[str, Any]] = None,
-        entity_constrainer: Optional[Constrainer] = None,
-        entity_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
-        relation_initializer: Optional[Initializer] = None,
-        relation_initializer_kwargs: Optional[Mapping[str, Any]] = None,
-        relation_normalizer: Optional[Normalizer] = None,
-        relation_normalizer_kwargs: Optional[Mapping[str, Any]] = None,
-        relation_constrainer: Optional[Constrainer] = None,
-        relation_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
     ) -> None:
         """Initialize the entity embedding model.
 
-        :param relation_dim:
-            The relation embedding dimensionality. If not given, defaults to same size as entity embedding
-            dimension.
-
         .. seealso:: Constructor of the base class :class:`pykeen.models.Model`
-        .. seealso:: Constructor of the base class :class:`pykeen.models.EntityEmbeddingModel`
         """
         super().__init__(
             triples_factory=triples_factory,
@@ -804,32 +774,13 @@ class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
             regularizer=regularizer,
             predict_with_sigmoid=predict_with_sigmoid,
         )
-        self.entity_embeddings = Embedding.init_with_device(
+        self.entity_embeddings = entity_representations.make(
             num_embeddings=triples_factory.num_entities,
-            embedding_dim=embedding_dim,
             device=self.device,
-            initializer=entity_initializer,
-            initializer_kwargs=entity_initializer_kwargs,
-            normalizer=entity_normalizer,
-            normalizer_kwargs=entity_normalizer_kwargs,
-            constrainer=entity_constrainer,
-            constrainer_kwargs=entity_constrainer_kwargs,
         )
-
-        # Default for relation dimensionality
-        if relation_dim is None:
-            relation_dim = embedding_dim
-
-        self.relation_embeddings = Embedding.init_with_device(
+        self.relation_embeddings = relation_representations.make(
             num_embeddings=triples_factory.num_relations,
-            embedding_dim=relation_dim,
             device=self.device,
-            initializer=relation_initializer,
-            initializer_kwargs=relation_initializer_kwargs,
-            normalizer=relation_normalizer,
-            normalizer_kwargs=relation_normalizer_kwargs,
-            constrainer=relation_constrainer,
-            constrainer_kwargs=relation_constrainer_kwargs,
         )
 
     @property

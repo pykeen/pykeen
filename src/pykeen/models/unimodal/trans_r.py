@@ -13,7 +13,7 @@ from torch.nn import functional
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
-from ...nn import Embedding
+from ...nn import Embedding, EmbeddingSpecification
 from ...nn.init import xavier_uniform_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
@@ -87,21 +87,25 @@ class TransR(EntityRelationEmbeddingModel):
         """Initialize the model."""
         super().__init__(
             triples_factory=triples_factory,
-            embedding_dim=embedding_dim,
-            relation_dim=relation_dim,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
-            entity_initializer=xavier_uniform_,
-            entity_constrainer=cast_constrainer(clamp_norm),
-            entity_constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
-            relation_initializer=compose(
-                xavier_uniform_,
-                functional.normalize,
+            entity_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=xavier_uniform_,
+                constrainer=cast_constrainer(clamp_norm),
+                constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
             ),
-            relation_constrainer=cast_constrainer(clamp_norm),
-            relation_constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
+            relation_representations=EmbeddingSpecification(
+                embedding_dim=relation_dim,
+                initializer=compose(
+                    xavier_uniform_,
+                    functional.normalize,
+                ),
+                constrainer=cast_constrainer(clamp_norm),
+                constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
+            ),
         )
         self.scoring_fct_norm = scoring_fct_norm
 
