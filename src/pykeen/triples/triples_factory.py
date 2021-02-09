@@ -464,7 +464,7 @@ class CoreTriplesFactory:
         return [
             self.clone_and_exchange_triples(
                 mapped_triples=triples,
-                # do not create inverse triples in evaluation factories
+                # do not explicitly create inverse triples for testing; this is handled by the evaluation code
                 create_inverse_triples=None if i == 0 else False,
             )
             for i, triples in enumerate(split(
