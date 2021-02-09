@@ -301,11 +301,13 @@ def is_cudnn_error(runtime_error: RuntimeError) -> bool:
 
 
 def is_nonzero_larger_than_maxint_error(runtime_error: RuntimeError) -> bool:
-    """
-    Check whether the runtime error was caused by nonzero being applied to a GPU tensor with more than MAX_INT elements.
+    """Check if the runtime error was caused by applying nonzero to a GPU tensor with more than ``MAX_INT`` elements.
 
-    .. seealso ::
-        https://github.com/pytorch/pytorch/issues/51871
+    :param runtime_error: The exception to check
+    :returns: if the exception is a runtime error caused by func:`torch.nonzero` being applied to a GPU tensor with
+        more than ``MAX_INT`` elements
+
+    .. seealso:: https://github.com/pytorch/pytorch/issues/51871
     """
     return _CUDA_NONZERO_ERROR in runtime_error.args[0]
 
