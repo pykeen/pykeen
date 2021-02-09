@@ -3,6 +3,7 @@
 """Embedding modules."""
 
 import functools
+from dataclasses import dataclass
 from typing import Any, Mapping, Optional
 
 import torch
@@ -15,6 +16,7 @@ from ..typing import Constrainer, Initializer, Normalizer
 __all__ = [
     'RepresentationModule',
     'Embedding',
+    'EmbeddingSpecification',
 ]
 
 
@@ -200,3 +202,38 @@ class Embedding(RepresentationModule):
         if indices is None:
             return x.unsqueeze(dim=0)
         return x.unsqueeze(dim=1)
+
+
+@dataclass
+class EmbeddingSpecification:
+    """An embedding specification."""
+
+    embedding_dim: int
+
+    initializer: Optional[Initializer] = None
+    initializer_kwargs: Optional[Mapping[str, Any]] = None
+
+    normalizer: Optional[Normalizer] = None
+    normalizer_kwargs: Optional[Mapping[str, Any]] = None
+
+    constrainer: Optional[Constrainer] = None
+    constrainer_kwargs: Optional[Mapping[str, Any]] = None
+
+    regularizer: Optional[Regularizer] = None
+
+    def make(self, *, num_embeddings: int, device: Optional[torch.device] = None) -> Embedding:
+        """Create an embedding with this specification."""
+        rv = Embedding(
+            num_embeddings=num_embeddings,
+            embedding_dim=self.embedding_dim,
+            initializer=self.initializer,
+            initializer_kwargs=self.initializer_kwargs,
+            normalizer=self.normalizer,
+            normalizer_kwargs=self.normalizer_kwargs,
+            constrainer=self.constrainer,
+            constrainer_kwargs=self.constrainer_kwargs,
+            regularizer=self.regularizer,
+        )
+        if device is not None:
+            rv = rv.to(device)
+        return rv

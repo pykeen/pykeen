@@ -12,6 +12,7 @@ from torch.nn import functional
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
+from ...nn import EmbeddingSpecification
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint
@@ -83,20 +84,25 @@ class DistMult(EntityRelationEmbeddingModel):
         """
         super().__init__(
             triples_factory=triples_factory,
-            embedding_dim=embedding_dim,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
-            # xavier uniform, cf.
-            # https://github.com/thunlp/OpenKE/blob/adeed2c0d2bef939807ed4f69c1ea4db35fd149b/models/DistMult.py#L16-L17
-            entity_initializer=nn.init.xavier_uniform_,
-            # Constrain entity embeddings to unit length
-            entity_constrainer=functional.normalize,
-            # relations are initialized to unit length (but not constraint)
-            relation_initializer=compose(
-                nn.init.xavier_uniform_,
-                functional.normalize,
+            entity_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                # xavier uniform, cf.
+                # https://github.com/thunlp/OpenKE/blob/adeed2c0d2bef939807ed4f69c1ea4db35fd149b/models/DistMult.py#L16-L17
+                initializer=nn.init.xavier_uniform_,
+                # Constrain entity embeddings to unit length
+                constrainer=functional.normalize,
+            ),
+            relation_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                # relations are initialized to unit length (but not constraint)
+                initializer=compose(
+                    nn.init.xavier_uniform_,
+                    functional.normalize,
+                ),
             ),
         )
 

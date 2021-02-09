@@ -11,6 +11,7 @@ from torch import nn
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import BCEAfterSigmoidLoss, Loss
+from ...nn import EmbeddingSpecification
 from ...nn.init import xavier_normal_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
@@ -102,14 +103,18 @@ class TuckER(EntityRelationEmbeddingModel):
         """
         super().__init__(
             triples_factory=triples_factory,
-            embedding_dim=embedding_dim,
-            relation_dim=relation_dim,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
-            entity_initializer=xavier_normal_,
-            relation_initializer=xavier_normal_,
+            entity_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=xavier_normal_,
+            ),
+            relation_representations=EmbeddingSpecification(
+                embedding_dim=relation_dim or embedding_dim,
+                initializer=xavier_normal_,
+            ),
         )
 
         # Core tensor
