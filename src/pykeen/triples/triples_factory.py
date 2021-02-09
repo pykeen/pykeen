@@ -383,6 +383,7 @@ class CoreTriplesFactory:
         mapped_triples: MappedTriples,
         extra_metadata: Optional[Dict[str, Any]] = None,
         keep_metadata: bool = True,
+        create_inverse_triples: Optional[bool] = None,
     ) -> "CoreTriplesFactory":
         """
         Create a new triples factory sharing everything except the triples.
@@ -397,15 +398,19 @@ class CoreTriplesFactory:
             the dictionaries will be unioned with precedence taken on keys from ``extra_metadata``.
         :param keep_metadata:
             Pass the current factory's metadata to the new triples factory
+        :param create_inverse_triples:
+            Change inverse triple creation flag. If None, use flag from this factory.
 
         :return:
             The new factory.
         """
+        if create_inverse_triples is None:
+            create_inverse_triples = self.create_inverse_triples
         return CoreTriplesFactory(
             mapped_triples=mapped_triples,
             num_entities=self.num_entities,
             num_relations=self.real_num_relations,
-            create_inverse_triples=self.create_inverse_triples,
+            create_inverse_triples=create_inverse_triples,
             metadata={
                 **(extra_metadata or {}),
                 **(self.metadata if keep_metadata else {}),  # type: ignore
