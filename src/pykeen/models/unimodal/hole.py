@@ -75,12 +75,12 @@ class HolE(EntityRelationEmbeddingModel):
                 embedding_dim=embedding_dim,
                 # Initialisation, cf. https://github.com/mnick/scikit-kge/blob/master/skge/param.py#L18-L27
                 initializer=xavier_uniform_,
+                constrainer=cast_constrainer(clamp_norm),
+                constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
             ),
             relation_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
                 initializer=xavier_uniform_,
-                constrainer=cast_constrainer(clamp_norm),
-                constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
             ),
         )
 

@@ -704,6 +704,8 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
 class EntityEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
     """A base module for most KGE models that have one embedding for entities."""
 
+    entity_embedding: Embedding
+
     def __init__(
         self,
         triples_factory: TriplesFactory,
