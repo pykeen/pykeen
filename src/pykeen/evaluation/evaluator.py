@@ -482,7 +482,7 @@ def evaluate(
         The model to evaluate.
     :param mapped_triples:
         The triples on which to evaluate. The mapped triples should never contain inverse triples - these are created by
-         the model class on the fly.
+        the model class on the fly.
     :param evaluators:
         An evaluator or a list of evaluators working on batches of triples and corresponding scores.
     :param only_size_probing:
