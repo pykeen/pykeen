@@ -89,6 +89,8 @@ _CUDNN_ERROR = 'cuDNN error: CUDNN_STATUS_NOT_SUPPORTED. This error may appear i
 
 _CUDA_OOM_ERROR = 'CUDA out of memory.'
 
+_CUDA_NONZERO_ERROR = "nonzero is not supported for tensors with more than INT_MAX elements"
+
 
 def resolve_device(device: DeviceHint = None) -> torch.device:
     """Resolve a torch.device given a desired device (string)."""
@@ -296,6 +298,16 @@ def is_cuda_oom_error(runtime_error: RuntimeError) -> bool:
 def is_cudnn_error(runtime_error: RuntimeError) -> bool:
     """Check whether the caught RuntimeError was due to a CUDNN error."""
     return _CUDNN_ERROR in runtime_error.args[0]
+
+
+def is_nonzero_larger_than_maxint_error(runtime_error: RuntimeError) -> bool:
+    """
+    Check whether the runtime error was caused by nonzero being applied to a GPU tensor with more than MAX_INT elements.
+
+    .. seealso ::
+        https://github.com/pytorch/pytorch/issues/51871
+    """
+    return _CUDA_NONZERO_ERROR in runtime_error.args[0]
 
 
 def compact_mapping(
