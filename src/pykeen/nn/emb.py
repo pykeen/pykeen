@@ -97,7 +97,9 @@ class Embedding(RepresentationModule):
         """
         super().__init__()
 
-        self.initializer = _handle(initializer, initializers, initializer_kwargs, default=nn.init.normal_)
+        self.initializer = cast(Initializer, _handle(
+            initializer, initializers, initializer_kwargs, default=nn.init.normal_,
+        ))
         self.normalizer = _handle(normalizer, normalizers, normalizer_kwargs)
         self.constrainer = _handle(constrainer, constrainers, constrainer_kwargs)
         self.regularizer = regularizer
@@ -254,10 +256,8 @@ normalizers: Mapping[str, Normalizer] = {}
 X = TypeVar('X', bound=Callable)
 
 
-def _handle(value: Hint[X], lookup: Mapping[str, X], kwargs, default: Optional[X] = None) -> X:
+def _handle(value: Hint[X], lookup: Mapping[str, X], kwargs, default: Optional[X] = None) -> Optional[X]:
     if value is None:
-        if default is None:
-            raise ValueError('no value given and no default given')
         return default
     elif isinstance(value, str):
         value = lookup[value]
