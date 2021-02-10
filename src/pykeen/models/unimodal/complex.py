@@ -78,7 +78,7 @@ class ComplEx(EntityRelationEmbeddingModel):
         # initialize with entity and relation embeddings with standard normal distribution, cf.
         # https://github.com/ttrouill/complex/blob/dc4eb93408d9a5288c986695b58488ac80b1cc17/efe/models.py#L481-L487
         entity_initializer: InitializerHint = 'normal',
-        relation_initializer: InitializerHint = 'normal',
+        relation_initializer: InitializerHint = None,
     ) -> None:
         """Initialize ComplEx.
 
@@ -107,7 +107,7 @@ class ComplEx(EntityRelationEmbeddingModel):
             ),
             relation_representations=EmbeddingSpecification(
                 embedding_dim=2 * embedding_dim,  # complex embeddings
-                initializer=relation_initializer,
+                initializer=relation_initializer or entity_initializer,
             ),
         )
 
