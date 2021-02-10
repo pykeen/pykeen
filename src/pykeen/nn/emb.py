@@ -247,7 +247,7 @@ constrainers = {
     'normalize': functional.normalize,
     'complex_normalize': complex_normalize,
     'clamp': torch.clamp,
-    'clamp_normalize': clamp_norm,
+    'clamp_norm': clamp_norm,
 }
 
 # TODO add normalization functions
