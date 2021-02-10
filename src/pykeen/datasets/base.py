@@ -10,7 +10,7 @@ import tarfile
 import zipfile
 from abc import abstractmethod
 from io import BytesIO
-from typing import Any, Dict, List, Optional, TextIO, Tuple, Union, cast
+from typing import Any, Dict, List, Mapping, Optional, TextIO, Tuple, Union, cast
 from urllib.request import urlretrieve
 
 import pandas as pd
@@ -220,6 +220,7 @@ class PathDataset(LazyDataset):
         validation_path: Union[str, TextIO],
         eager: bool = False,
         create_inverse_triples: bool = False,
+        load_triples_kwargs: Optional[Mapping[str, Any]] = None,
     ) -> None:
         """Initialize the dataset.
 
@@ -228,12 +229,15 @@ class PathDataset(LazyDataset):
         :param validation_path: Path to the validation triples file or validation triples file.
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
+        :param load_triples_kwargs: Arguments to pass through to :func:`TriplesFactory.from_path`
+            and ultimately through to :func:`pykeen.triples.utils.load_triples`.
         """
         self.training_path = training_path
         self.testing_path = testing_path
         self.validation_path = validation_path
 
         self.create_inverse_triples = create_inverse_triples
+        self.load_triples_kwargs = load_triples_kwargs
 
         if eager:
             self._load()
@@ -243,6 +247,7 @@ class PathDataset(LazyDataset):
         self._training = TriplesFactory.from_path(
             path=self.training_path,
             create_inverse_triples=self.create_inverse_triples,
+            load_triples_kwargs=self.load_triples_kwargs,
         )
         self._testing = TriplesFactory.from_path(
             path=self.testing_path,
@@ -250,6 +255,7 @@ class PathDataset(LazyDataset):
             relation_to_id=self._training.relation_to_id,  # share relation index with training
             # do not explicitly create inverse triples for testing; this is handled by the evaluation code
             create_inverse_triples=False,
+            load_triples_kwargs=self.load_triples_kwargs,
         )
 
     def _load_validation(self) -> None:
@@ -262,6 +268,7 @@ class PathDataset(LazyDataset):
             relation_to_id=self._training.relation_to_id,  # share relation index with training
             # do not explicitly create inverse triples for testing; this is handled by the evaluation code
             create_inverse_triples=False,
+            load_triples_kwargs=self.load_triples_kwargs,
         )
 
     def __repr__(self) -> str:  # noqa: D105
@@ -308,10 +315,11 @@ class UnpackedRemoteDataset(PathDataset):
         testing_url: str,
         validation_url: str,
         cache_root: Optional[str] = None,
-        eager: bool = False,
-        create_inverse_triples: bool = False,
         stream: bool = True,
         force: bool = False,
+        eager: bool = False,
+        create_inverse_triples: bool = False,
+        load_triples_kwargs: Optional[Mapping[str, Any]] = None,
     ):
         """Initialize dataset.
 
@@ -321,10 +329,12 @@ class UnpackedRemoteDataset(PathDataset):
         :param cache_root:
             An optional directory to store the extracted files. Is none is given, the default PyKEEN directory is used.
             This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.pykeen``.
-        :param eager: Should the data be loaded eagerly? Defaults to false.
-        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param stream: Use :mod:`requests` be used for download if true otherwise use :mod:`urllib`
         :param force: If true, redownload any cached files
+        :param eager: Should the data be loaded eagerly? Defaults to false.
+        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
+        :param load_triples_kwargs: Arguments to pass through to :func:`TriplesFactory.from_path`
+            and ultimately through to :func:`pykeen.triples.utils.load_triples`.
         """
         self.cache_root = self._help_cache(cache_root)
 
@@ -351,6 +361,7 @@ class UnpackedRemoteDataset(PathDataset):
             validation_path=validation_path,
             eager=eager,
             create_inverse_triples=create_inverse_triples,
+            load_triples_kwargs=load_triples_kwargs,
         )
 
 

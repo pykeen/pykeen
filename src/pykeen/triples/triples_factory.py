@@ -722,6 +722,7 @@ class TriplesFactory(CoreTriplesFactory):
         relation_to_id: Optional[RelationMapping] = None,
         compact_id: bool = True,
         metadata: Optional[Dict[str, Any]] = None,
+        load_triples_kwargs: Optional[Mapping[str, Any]] = None,
     ) -> 'TriplesFactory':
         """
         Create a new triples factory from triples stored in a file.
@@ -740,6 +741,8 @@ class TriplesFactory(CoreTriplesFactory):
             Arbitrary key/value pairs to store as metadata with the triples factory. Do not
             include ``path`` as a key because it is automatically taken from the ``path``
             kwarg to this function.
+        :param load_triples_kwargs: Optional keyword arguments to pass to :func:`load_triples`.
+            Could include the ``delimiter`` or a ``column_remapping``.
 
         :return:
             A new triples factory.
@@ -752,7 +755,7 @@ class TriplesFactory(CoreTriplesFactory):
             raise TypeError(f'path is invalid type: {type(path)}')
 
         # TODO: Check if lazy evaluation would make sense
-        triples = load_triples(path)
+        triples = load_triples(path, **(load_triples_kwargs or {}))
 
         return cls.from_labeled_triples(
             triples=triples,

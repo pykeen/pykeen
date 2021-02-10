@@ -2,7 +2,7 @@
 
 """Instance creation utilities."""
 
-from typing import Callable, Mapping, Optional, Set, TextIO, Union
+from typing import Callable, Mapping, Optional, Sequence, Set, TextIO, Union
 
 import numpy as np
 import torch
@@ -30,8 +30,24 @@ PREFIX_IMPORTERS: Mapping[str, Callable[[str], LabeledTriples]] = _load_importer
 EXTENSION_IMPORTERS: Mapping[str, Callable[[str], LabeledTriples]] = _load_importers('extension_importer')
 
 
-def load_triples(path: Union[str, TextIO], delimiter: str = '\t', encoding: Optional[str] = None) -> LabeledTriples:
+def load_triples(
+    path: Union[str, TextIO],
+    delimiter: str = '\t',
+    encoding: Optional[str] = None,
+    column_remapping: Optional[Sequence[int]] = None,
+) -> LabeledTriples:
     """Load triples saved as tab separated values.
+
+    :param path: The key for the data to be loaded. Typically, this will be a file path ending in ``.tsv``
+        that points to a file with three columns - the head, relation, and tail. This can also be used to
+        invoke PyKEEN data importer entrypoints (see below).
+    :param delimiter: The delimiter between the columns in the file
+    :param encoding: The encoding for the file. Defaults to utf-8.
+    :param column_remapping: A remapping if the three columns do not follow the order head-relation-tail.
+        For example, if the order is head-tail-relation, pass ``(0, 2, 1)``
+    :returns: A numpy array representing "labeled" triples.
+
+    :raises ValueError: if a column remapping was passed but it was not a length 3 sequence
 
     Besides TSV handling, PyKEEN does not come with any importers pre-installed. A few can be found at:
 
@@ -50,13 +66,18 @@ def load_triples(path: Union[str, TextIO], delimiter: str = '\t', encoding: Opti
     if encoding is None:
         encoding = 'utf-8'
 
-    return np.loadtxt(
+    rv = np.loadtxt(
         fname=path,
         dtype=str,
         comments='@Comment@ Head Relation Tail',
         delimiter=delimiter,
         encoding=encoding,
     )
+    if column_remapping is not None:
+        if len(column_remapping) != 3:
+            raise ValueError('remapping must have length of three')
+        rv = rv[:, column_remapping]
+    return rv
 
 
 def get_entities(triples: torch.LongTensor) -> Set[int]:
