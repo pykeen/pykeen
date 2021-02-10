@@ -13,7 +13,7 @@ from ...losses import Loss
 from ...nn import EmbeddingSpecification
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
-from ...typing import ConstrainerHint, DeviceHint, InitializerHint
+from ...typing import Constrainer, DeviceHint, Hint, Initializer
 
 __all__ = [
     'DistMult',
@@ -74,9 +74,9 @@ class DistMult(EntityRelationEmbeddingModel):
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
-        entity_initializer: InitializerHint = 'xavier_uniform',
-        entity_constrainer: ConstrainerHint = 'normalize',
-        relation_initializer: InitializerHint = 'xavier_normal_norm',
+        entity_initializer: Hint[Initializer] = 'xavier_uniform',
+        entity_constrainer: Hint[Constrainer] = 'normalize',
+        relation_initializer: Hint[Initializer] = 'xavier_normal_norm',
     ) -> None:
         r"""Initialize DistMult.
 

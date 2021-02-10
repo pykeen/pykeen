@@ -12,7 +12,7 @@ from ...losses import Loss, SoftplusLoss
 from ...nn import EmbeddingSpecification
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
-from ...typing import DeviceHint, InitializerHint
+from ...typing import DeviceHint, Hint, Initializer
 from ...utils import split_complex
 
 __all__ = [
@@ -77,8 +77,8 @@ class ComplEx(EntityRelationEmbeddingModel):
         random_seed: Optional[int] = None,
         # initialize with entity and relation embeddings with standard normal distribution, cf.
         # https://github.com/ttrouill/complex/blob/dc4eb93408d9a5288c986695b58488ac80b1cc17/efe/models.py#L481-L487
-        entity_initializer: InitializerHint = 'normal',
-        relation_initializer: InitializerHint = None,
+        entity_initializer: Hint[Initializer] = 'normal',
+        relation_initializer: Hint[Initializer] = None,
     ) -> None:
         """Initialize ComplEx.
 

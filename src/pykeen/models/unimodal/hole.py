@@ -13,7 +13,7 @@ from ...losses import Loss
 from ...nn import EmbeddingSpecification
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
-from ...typing import ConstrainerHint, DeviceHint, InitializerHint
+from ...typing import Constrainer, DeviceHint, Hint, Initializer
 
 __all__ = [
     'HolE',
@@ -64,10 +64,10 @@ class HolE(EntityRelationEmbeddingModel):
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
-        entity_initializer: InitializerHint = 'xavier_uniform',
-        entity_constrainer: ConstrainerHint = 'clamp_norm',
+        entity_initializer: Hint[Initializer] = 'xavier_uniform',
+        entity_constrainer: Hint[Constrainer] = 'clamp_norm',
         entity_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
-        relation_initializer: ConstrainerHint = None,
+        relation_initializer: Hint[Constrainer] = None,
     ) -> None:
         """Initialize the model."""
         super().__init__(

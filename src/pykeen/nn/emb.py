@@ -14,7 +14,7 @@ from torch.nn import functional
 from .init import init_phases, xavier_normal_, xavier_uniform_
 from .norm import complex_normalize
 from ..regularizers import Regularizer
-from ..typing import Constrainer, ConstrainerHint, Hint, Initializer, InitializerHint, Normalizer, NormalizerHint
+from ..typing import Constrainer, Hint, Initializer, Normalizer
 from ..utils import clamp_norm, compose
 
 __all__ = [
@@ -63,11 +63,11 @@ class Embedding(RepresentationModule):
         self,
         num_embeddings: int,
         embedding_dim: int,
-        initializer: InitializerHint = None,
+        initializer: Hint[Initializer] = None,
         initializer_kwargs: Optional[Mapping[str, Any]] = None,
-        normalizer: NormalizerHint = None,
+        normalizer: Hint[Normalizer] = None,
         normalizer_kwargs: Optional[Mapping[str, Any]] = None,
-        constrainer: ConstrainerHint = None,
+        constrainer: Hint[Constrainer] = None,
         constrainer_kwargs: Optional[Mapping[str, Any]] = None,
         regularizer: Optional[Regularizer] = None,
         trainable: bool = True,
@@ -200,13 +200,13 @@ class EmbeddingSpecification:
 
     embedding_dim: int
 
-    initializer: InitializerHint = None
+    initializer: Hint[Initializer] = None
     initializer_kwargs: Optional[Mapping[str, Any]] = None
 
-    normalizer: NormalizerHint = None
+    normalizer: Hint[Normalizer] = None
     normalizer_kwargs: Optional[Mapping[str, Any]] = None
 
-    constrainer: ConstrainerHint = None
+    constrainer: Hint[Constrainer] = None
     constrainer_kwargs: Optional[Mapping[str, Any]] = None
 
     regularizer: Optional[Regularizer] = None

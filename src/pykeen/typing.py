@@ -18,11 +18,8 @@ __all__ = [
     'EntityMapping',
     'RelationMapping',
     'Initializer',
-    'InitializerHint',
     'Normalizer',
-    'NormalizerHint',
     'Constrainer',
-    'ConstrainerHint',
     'cast_constrainer',
     'InteractionFunction',
     'DeviceHint',
@@ -52,10 +49,6 @@ InteractionFunction = Callable[[TensorType, TensorType, TensorType], TensorType]
 Initializer = Mutation[TensorType]
 Normalizer = Mutation[TensorType]
 Constrainer = Mutation[TensorType]
-
-InitializerHint = Hint[Initializer]
-NormalizerHint = Hint[Normalizer]
-ConstrainerHint = Hint[Constrainer]
 
 
 def cast_constrainer(f) -> Constrainer:
