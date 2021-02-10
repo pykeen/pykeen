@@ -10,11 +10,9 @@ import torch.autograd
 from ..base import EntityRelationEmbeddingModel
 from ...losses import Loss
 from ...nn import EmbeddingSpecification
-from ...nn.init import init_phases, xavier_uniform_
-from ...nn.norm import complex_normalize
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
-from ...typing import DeviceHint
+from ...typing import Constrainer, DeviceHint, Hint, Initializer
 
 __all__ = [
     'RotatE',
@@ -59,6 +57,9 @@ class RotatE(EntityRelationEmbeddingModel):
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
+        entity_initializer: Hint[Initializer] = 'xavier_uniform',
+        relation_initializer: Hint[Initializer] = 'phases',
+        relation_constrainer: Hint[Constrainer] = 'complex_normalize',
     ) -> None:
         super().__init__(
             triples_factory=triples_factory,
@@ -68,12 +69,12 @@ class RotatE(EntityRelationEmbeddingModel):
             regularizer=regularizer,
             entity_representations=EmbeddingSpecification(
                 embedding_dim=2 * embedding_dim,  # complex embeddings
-                initializer=xavier_uniform_,
+                initializer=entity_initializer,
             ),
             relation_representations=EmbeddingSpecification(
                 embedding_dim=2 * embedding_dim,  # complex embeddings
-                initializer=init_phases,
-                constrainer=complex_normalize,
+                initializer=relation_initializer,
+                constrainer=relation_constrainer,
             ),
         )
         self.real_embedding_dim = embedding_dim
