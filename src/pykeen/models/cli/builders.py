@@ -6,7 +6,7 @@ import inspect
 import json
 import logging
 import sys
-from typing import Optional, Type
+from typing import Any, Mapping, Optional, Type
 
 import click
 from torch import nn
@@ -14,6 +14,7 @@ from torch import nn
 from . import options
 from .options import CLI_OPTIONS
 from ..base import Model
+from ...typing import Constrainer, Hint, Initializer, Normalizer
 
 __all__ = [
     'build_cli_from_cls',
@@ -36,6 +37,7 @@ _SKIP_ANNOTATIONS = {
     Optional[nn.Embedding],
     Optional[nn.Parameter],
     Optional[nn.Module],
+    Optional[Mapping[str, Any]],
 }
 
 
@@ -60,6 +62,9 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
 
             else:
                 parameter = signature.parameters[name]
+                if annotation in {Hint[Initializer], Hint[Constrainer], Hint[Normalizer]}:
+                    logger.debug('Unhandled hint: %s', annotation)
+                    continue
                 if parameter.default is None:
                     logger.warning(
                         f'Missing handler in {model.__name__} for {name}: '
