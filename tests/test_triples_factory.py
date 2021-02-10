@@ -208,6 +208,17 @@ class TestTriplesFactory(unittest.TestCase):
             assert y.shape == (batch_size, factory.num_entities)
             assert y.dtype == torch.get_default_dtype()
 
+    def test_split_inverse_triples(self):
+        """Test whether inverse triples are only created in the training factory."""
+        # set create inverse triple to true
+        self.factory.create_inverse_triples = True
+        # split factory
+        train, *others = self.factory.split()
+        # check that in *training* inverse triple are to be created
+        assert train.create_inverse_triples
+        # check that in all other splits no inverse triples are to be created
+        assert not any(f.create_inverse_triples for f in others)
+
 
 class TestSplit(unittest.TestCase):
     """Test splitting."""
