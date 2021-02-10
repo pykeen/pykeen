@@ -4,7 +4,7 @@
 
 import functools
 from dataclasses import dataclass
-from typing import Any, Mapping, Optional
+from typing import Any, Callable, Mapping, Optional, TypeVar, cast
 
 import torch
 import torch.nn
@@ -14,7 +14,7 @@ from torch.nn import functional
 from .init import init_phases, xavier_normal_, xavier_uniform_
 from .norm import complex_normalize
 from ..regularizers import Regularizer
-from ..typing import Constrainer, ConstrainerHint, Initializer, InitializerHint, Normalizer
+from ..typing import Constrainer, ConstrainerHint, Hint, Initializer, InitializerHint, Normalizer, NormalizerHint
 from ..utils import clamp_norm, compose
 
 __all__ = [
@@ -65,9 +65,9 @@ class Embedding(RepresentationModule):
         embedding_dim: int,
         initializer: InitializerHint = None,
         initializer_kwargs: Optional[Mapping[str, Any]] = None,
-        normalizer: Optional[Normalizer] = None,
+        normalizer: NormalizerHint = None,
         normalizer_kwargs: Optional[Mapping[str, Any]] = None,
-        constrainer: Optional[Constrainer] = None,
+        constrainer: ConstrainerHint = None,
         constrainer_kwargs: Optional[Mapping[str, Any]] = None,
         regularizer: Optional[Regularizer] = None,
         trainable: bool = True,
@@ -97,27 +97,9 @@ class Embedding(RepresentationModule):
         """
         super().__init__()
 
-        if initializer is None:
-            initializer = nn.init.normal_
-        elif isinstance(initializer, str):
-            initializer = initializers[initializer]
-        if initializer_kwargs:
-            self.initializer = functools.partial(initializer, **initializer_kwargs)
-        else:
-            self.initializer = initializer  # type: ignore
-
-        if isinstance(constrainer, str):
-            constrainer = constrainers[constrainer]
-        if constrainer is not None and constrainer_kwargs:
-            self.constrainer = functools.partial(constrainer, **constrainer_kwargs)
-        else:
-            self.constrainer = constrainer  # type: ignore
-
-        if normalizer is not None and normalizer_kwargs:
-            self.normalizer = functools.partial(normalizer, **normalizer_kwargs)
-        else:
-            self.normalizer = normalizer  # type: ignore
-
+        self.initializer = _handle(initializer, initializers, initializer_kwargs, default=nn.init.normal_)
+        self.normalizer = _handle(normalizer, normalizers, normalizer_kwargs)
+        self.constrainer = _handle(constrainer, constrainers, constrainer_kwargs)
         self.regularizer = regularizer
 
         self._embeddings = torch.nn.Embedding(
@@ -221,7 +203,7 @@ class EmbeddingSpecification:
     initializer: InitializerHint = None
     initializer_kwargs: Optional[Mapping[str, Any]] = None
 
-    normalizer: Optional[Normalizer] = None
+    normalizer: NormalizerHint = None
     normalizer_kwargs: Optional[Mapping[str, Any]] = None
 
     constrainer: ConstrainerHint = None
@@ -265,3 +247,21 @@ constrainers = {
     'clamp': torch.clamp,
     'clamp_normalize': clamp_norm,
 }
+
+# TODO add normalization functions
+normalizers: Mapping[str, Normalizer] = {}
+
+X = TypeVar('X', bound=Callable)
+
+
+def _handle(value: Hint[X], lookup: Mapping[str, X], kwargs, default: Optional[X] = None) -> X:
+    if value is None:
+        if default is None:
+            raise ValueError('no value given and no default given')
+        return default
+    elif isinstance(value, str):
+        value = lookup[value]
+    if kwargs:
+        rv = functools.partial(value, **kwargs)  # type: ignore
+        return cast(X, rv)
+    return value
