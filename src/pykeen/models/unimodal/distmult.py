@@ -84,7 +84,7 @@ class DistMult(EntityRelationEmbeddingModel):
         :param entity_initializer: Default: xavier uniform, c.f.
             https://github.com/thunlp/OpenKE/blob/adeed2c0d2bef939807ed4f69c1ea4db35fd149b/models/DistMult.py#L16-L17
         :param entity_constrainer: Default: constrain entity embeddings to unit length
-        :param relation_initializer: Default: relations are initialized to unit length (but not constraint)
+        :param relation_initializer: Default: relations are initialized to unit length (but not constrained)
         """
         super().__init__(
             triples_factory=triples_factory,
