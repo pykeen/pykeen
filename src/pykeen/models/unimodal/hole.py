@@ -11,11 +11,9 @@ from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
 from ...nn import EmbeddingSpecification
-from ...nn.init import xavier_uniform_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
-from ...typing import DeviceHint, cast_constrainer
-from ...utils import clamp_norm
+from ...typing import ConstrainerHint, DeviceHint, InitializerHint
 
 __all__ = [
     'HolE',
@@ -55,6 +53,9 @@ class HolE(EntityRelationEmbeddingModel):
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
     )
 
+    #: The default settings for the entity constrainer
+    entity_constrainer_default_kwargs = dict(maxnorm=1., p=2, dim=-1)
+
     def __init__(
         self,
         triples_factory: TriplesFactory,
@@ -63,6 +64,10 @@ class HolE(EntityRelationEmbeddingModel):
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
+        entity_initializer: InitializerHint = 'xavier_uniform',
+        entity_constrainer: ConstrainerHint = 'clamp_norm',
+        entity_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
+        relation_initializer: ConstrainerHint = None,
     ) -> None:
         """Initialize the model."""
         super().__init__(
@@ -74,13 +79,13 @@ class HolE(EntityRelationEmbeddingModel):
             entity_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
                 # Initialisation, cf. https://github.com/mnick/scikit-kge/blob/master/skge/param.py#L18-L27
-                initializer=xavier_uniform_,
-                constrainer=cast_constrainer(clamp_norm),
-                constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
+                initializer=entity_initializer,
+                constrainer=entity_constrainer,
+                constrainer_kwargs=entity_constrainer_kwargs or self.entity_constrainer_default_kwargs,
             ),
             relation_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
-                initializer=xavier_uniform_,
+                initializer=relation_initializer or entity_initializer,
             ),
         )
 
