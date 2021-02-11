@@ -113,6 +113,12 @@ class RepresentationModule(nn.Module):
                 )
         return x
 
+    @property
+    def embedding_dim(self) -> int:
+        """Return the "embedding dimension". Kept for backward compatibility."""
+        # TODO: Remove this property and update code to use shape instead
+        return int(np.prod(self.shape))
+
 
 class Embedding(RepresentationModule):
     """Trainable embeddings.
