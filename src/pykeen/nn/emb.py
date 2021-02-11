@@ -53,10 +53,9 @@ class RepresentationModule(nn.Module, ABC):
     def __init__(
         self,
         max_id: int,
-        shape: Sequence[int]
+        shape: Sequence[int],
     ):
-        """
-        Initialize the representation module.
+        """Initialize the representation module.
 
         :param max_id:
             The maximum ID (exclusively). Valid Ids reach from 0, ..., max_id-1
@@ -105,13 +104,12 @@ class RepresentationModule(nn.Module, ABC):
         x = self(indices=indices)
         if indices is None:
             x = x.unsqueeze(dim=0)
+        elif indices.ndimension() > 2:
+            raise ValueError(
+                f"Undefined canonical shape for more than 2-dimensional index tensors: {indices.shape}",
+            )
         else:
-            if indices.ndimension() == 1:
-                x = x.unsqueeze(dim=1)
-            elif indices.ndimension() > 2:
-                raise ValueError(
-                    f"Undefined canonical shape for more than 2-dimensional index tensors: {indices.shape}"
-                )
+            x = x.unsqueeze(dim=1)
         return x
 
     @property
