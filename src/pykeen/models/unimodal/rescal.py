@@ -79,18 +79,18 @@ class RESCAL(EntityRelationEmbeddingModel):
                 embedding_dim=embedding_dim,
             ),
             relation_representations=EmbeddingSpecification(
-                embedding_dim=embedding_dim ** 2,  # d x d matrices
+                shape=(embedding_dim, embedding_dim),  # d x d matrices
             ),
         )
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         # shape: (b, d)
-        h = self.entity_embeddings(indices=hrt_batch[:, 0]).view(-1, 1, self.embedding_dim)
+        h = self.entity_embeddings(indices=hrt_batch[:, 0]).unsqueeze(dim=1)
         # shape: (b, d, d)
-        r = self.relation_embeddings(indices=hrt_batch[:, 1]).view(-1, self.embedding_dim, self.embedding_dim)
+        r = self.relation_embeddings(indices=hrt_batch[:, 1])
         # shape: (b, d)
-        t = self.entity_embeddings(indices=hrt_batch[:, 2]).view(-1, self.embedding_dim, 1)
+        t = self.entity_embeddings(indices=hrt_batch[:, 2]).unsqueeze(dim=-1)
 
         # Compute scores
         scores = h @ r @ t
