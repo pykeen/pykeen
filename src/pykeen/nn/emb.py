@@ -95,9 +95,7 @@ class Embedding(RepresentationModule):
         :param constrainer_kwargs:
             Additional keyword arguments passed to the constrainer
         """
-        super().__init__()
-
-        self._embedding_dim, self._shape = process_shape(embedding_dim, shape)
+        _embedding_dim, self.shape = process_shape(embedding_dim, shape)
 
         if initializer is None:
             initializer = nn.init.normal_
@@ -120,13 +118,9 @@ class Embedding(RepresentationModule):
 
         self._embeddings = torch.nn.Embedding(
             num_embeddings=num_embeddings,
-            embedding_dim=self._embedding_dim,
+            embedding_dim=_embedding_dim,
         )
         self._embeddings.requires_grad_(trainable)
-
-    def shape(self) -> Sequence[int]:
-        """Return the shape of this embedding."""
-        return self._shape
 
     @classmethod
     def init_with_device(
@@ -177,7 +171,9 @@ class Embedding(RepresentationModule):
 
     def reset_parameters(self) -> None:  # noqa: D102
         # initialize weights in-place
-        self._embeddings.weight.data = self.initializer(self._embeddings.weight.data)
+        self._embeddings.weight.data = self.initializer(
+            self._embeddings.weight.data.view(self.num_embeddings, *self.shape),
+        ).view(self.num_embeddings, self.embedding_dim)
 
     def post_parameter_update(self):  # noqa: D102
         # apply constraints in-place
@@ -192,6 +188,7 @@ class Embedding(RepresentationModule):
             x = self._embeddings.weight
         else:
             x = self._embeddings(indices)
+        x = x.view(x.shape[0], *self.shape)
         if self.normalizer is not None:
             x = self.normalizer(x)
         if self.regularizer is not None:
@@ -210,8 +207,10 @@ class Embedding(RepresentationModule):
         """
         x = self(indices=indices)
         if indices is None:
-            return x.unsqueeze(dim=0)
-        return x.unsqueeze(dim=1)
+            x = x.unsqueeze(dim=0)
+        else:
+            x = x.unsqueeze(dim=1)
+        return x
 
 
 @dataclass
