@@ -92,6 +92,10 @@ class Dataset:
         """Print a summary of the dataset."""
         print(self.summary_str(title=title), file=file)
 
+    def training_head(self, n: int = 5) -> None:
+        """Print the first n training triples (as a sanity check)."""
+        print(self.training.label_triples(self.training.mapped_triples[:n]))
+
     def __str__(self) -> str:  # noqa: D105
         return f'{self.__class__.__name__}(num_entities={self.num_entities}, num_relations={self.num_relations})'
 

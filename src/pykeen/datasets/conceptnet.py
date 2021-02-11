@@ -6,6 +6,7 @@ Get a summary with ``python -m pykeen.datasets.conceptnet``
 """
 
 import click
+import click_spinner
 from more_click import verbose_option
 
 from .base import SingleTabbedDataset
@@ -42,7 +43,7 @@ class ConceptNet(SingleTabbedDataset):
             create_inverse_triples=create_inverse_triples,
             random_state=random_state,
             read_csv_kwargs=dict(
-                usecols=[1, 2, 3],
+                usecols=[2, 1, 3],
                 header=None,
             ),
             **kwargs,
@@ -52,8 +53,10 @@ class ConceptNet(SingleTabbedDataset):
 @click.command()
 @verbose_option
 def _main():
-    ds = ConceptNet()
+    with click_spinner.spinner():
+        ds = ConceptNet()
     ds.summarize()
+    ds.training_head()
 
 
 if __name__ == '__main__':
