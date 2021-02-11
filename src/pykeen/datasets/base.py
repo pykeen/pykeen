@@ -80,7 +80,7 @@ class Dataset:
             zip(('Training', 'Testing', 'Validation'), (self.training, self.testing, self.validation))
         ]
 
-    def summary_str(self, title: Optional[str] = None, show_examples: bool = True, end='\n') -> str:
+    def summary_str(self, title: Optional[str] = None, show_examples: Optional[int] = 5, end='\n') -> str:
         """Make a summary string of all of the factories."""
         rows = self._summary_rows()
         n_triples = sum(count for *_, count in rows)
@@ -89,7 +89,7 @@ class Dataset:
         rv = f'{title or self.__class__.__name__} (create_inverse_triples={self.create_inverse_triples})\n{t}'
         if show_examples:
             examples = tabulate(
-                self.training.label_triples(self.training.mapped_triples[:n]),
+                self.training.label_triples(self.training.mapped_triples[:show_examples]),
                 headers=['Head', 'Relation', 'tail'],
             )
             rv += '\n' + examples
