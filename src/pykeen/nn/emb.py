@@ -24,7 +24,24 @@ __all__ = [
 
 
 class RepresentationModule(nn.Module):
-    """A base class for obtaining representations for entities/relations."""
+    """
+    A base class for obtaining representations for entities/relations.
+
+    A representation module maps integer IDs to representations, which are tensors of floats.
+
+    `max_id` defines the upper bound of indices we are allowed to request (exclusively). For simple embeddings this is
+    equivalent to num_embeddings, but more a more appropriate word for general non-embedding representations, where the
+    representations could come from somewhere else, e.g. a GNN encoder.
+
+    `shape` describes the shape of a single representation. In case of a vector embedding, this is just a single
+    dimension. For others, e.g. RESCAL, we have 2-d representations, and in general it can be any fixed shape.
+
+    We can look at all representations as a tensor of shape `(max_id, *shape)`, and this is exactly the result of
+    passing `indices=None` to the forward method.
+
+    We can also pass multi-dimensional `indices` to the forward method, in which case the indices' shape becomes the
+    prefix of the result shape: `(*indices.shape, *self.shape)`.
+    """
 
     #: the maximum ID (exclusively)
     max_id: int
