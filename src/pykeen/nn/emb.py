@@ -26,40 +26,16 @@ __all__ = [
 class RepresentationModule(nn.Module):
     """A base class for obtaining representations for entities/relations."""
 
-    #: the maximum ID (exclusively)
-    max_id: int
-
-    #: the shape of an individual representation
-    shape: Tuple[int, ...]
-
-    def __init__(
-        self,
-        max_id: int,
-        shape: Tuple[int, ...],
-    ):
-        """
-        Initialize the representation module.
-
-        :param max_id:
-            The maximum ID (exclusively). Valid Ids reach from 0, ..., max_id-1
-        :param shape:
-            The shape of an individual representation.
-        """
-        super().__init__()
-        self.max_id = max_id
-        self.shape = shape
-
     def forward(
         self,
         indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:
         """Get representations for indices.
 
-        :param indices: shape: s
-            The indices, or None. If None, this is interpreted as `torch.arange(self.max_id)` (although implemented
-            more efficiently).
+        :param indices: shape: (m,)
+            The indices, or None. If None, return all representations.
 
-        :return: shape: (*s, *self.shape)
+        :return: shape: (m, d)
             The representations.
         """
         raise NotImplementedError
