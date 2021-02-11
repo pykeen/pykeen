@@ -1207,3 +1207,37 @@ class BaseRGCNTest(ModelTestCase):
         Enriched embeddings have to be reset.
         """
         assert self.model.entity_representations.enriched_embeddings is None
+
+
+class RepresentationTestCase(GenericTestCase[RepresentationModule]):
+    """Common tests for representation modules."""
+
+    batch_size: int = 2
+    num_negatives: int = 3
+
+    def _test_forward(self, indices: Optional[torch.LongTensor]):
+        """Test forward method."""
+        representations = self.instance.forward(indices=indices)
+
+        # check type
+        assert torch.is_tensor(representations)
+        assert representations.dtype == torch.get_default_dtype()
+
+        # check shape
+        prefix_shape = (self.instance.max_id,) if indices is None else tuple(indices.shape)
+        expected_shape = prefix_shape + self.instance.shape
+        assert representations.shape == expected_shape
+
+    def test_forward_no_indices(self):
+        """Test forward without indices."""
+        self._test_forward(indices=None)
+
+    def test_forward_1d_indices(self):
+        """Test forward with 1-dimensional indices."""
+        indices = torch.randint(self.instance.max_id, size=(self.batch_size,))
+        self._test_forward(indices=indices)
+
+    def test_forward_2d_indices(self):
+        """Test forward with 1-dimensional indices."""
+        indices = torch.randint(self.instance.max_id, size=(self.batch_size, self.num_negatives,))
+        self._test_forward(indices=indices)
