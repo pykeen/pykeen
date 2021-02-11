@@ -15,10 +15,9 @@ from ..base import EntityEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
 from ...nn import Embedding, EmbeddingSpecification
-from ...nn.init import xavier_uniform_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
-from ...typing import DeviceHint
+from ...typing import Constrainer, DeviceHint, Hint, Initializer
 from ...utils import compose
 
 __all__ = [
@@ -57,6 +56,8 @@ class StructuredEmbedding(EntityEmbeddingModel):
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
+        entity_initializer: Hint[Initializer] = 'xavier_uniform',
+        entity_constrainer: Hint[Constrainer] = 'normalize',
     ) -> None:
         r"""Initialize SE.
 
@@ -71,8 +72,8 @@ class StructuredEmbedding(EntityEmbeddingModel):
             regularizer=regularizer,
             entity_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
-                initializer=xavier_uniform_,
-                constrainer=functional.normalize,
+                initializer=entity_initializer,
+                constrainer=entity_constrainer,
             ),
         )
 

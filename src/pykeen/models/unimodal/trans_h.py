@@ -13,7 +13,7 @@ from ...losses import Loss
 from ...nn import Embedding, EmbeddingSpecification
 from ...regularizers import Regularizer, TransHRegularizer
 from ...triples import TriplesFactory
-from ...typing import DeviceHint
+from ...typing import DeviceHint, Hint, Initializer
 
 __all__ = [
     'TransH',
@@ -73,6 +73,8 @@ class TransH(EntityRelationEmbeddingModel):
         predict_with_sigmoid: bool = False,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
+        entity_initializer: Hint[Initializer] = None,
+        relation_initializer: Hint[Initializer] = None,
     ) -> None:
         r"""Initialize TransH.
 
@@ -88,9 +90,11 @@ class TransH(EntityRelationEmbeddingModel):
             predict_with_sigmoid=predict_with_sigmoid,
             entity_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
+                initializer=entity_initializer,
             ),
             relation_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
+                initializer=relation_initializer or entity_initializer,
             ),
         )
 

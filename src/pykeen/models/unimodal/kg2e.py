@@ -14,8 +14,7 @@ from ...losses import Loss
 from ...nn import Embedding, EmbeddingSpecification
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
-from ...typing import DeviceHint, cast_constrainer
-from ...utils import clamp_norm
+from ...typing import Constrainer, DeviceHint, Hint, Initializer
 
 __all__ = [
     'KG2E',
@@ -58,6 +57,9 @@ class KG2E(EntityRelationEmbeddingModel):
         c_max=dict(type=float, low=1.0, high=10.0),
     )
 
+    #: The default settings for the entity constrainer
+    constrainer_default_kwargs = dict(maxnorm=1., p=2, dim=-1)
+
     def __init__(
         self,
         triples_factory: TriplesFactory,
@@ -69,6 +71,12 @@ class KG2E(EntityRelationEmbeddingModel):
         c_min: float = 0.05,
         c_max: float = 5.,
         regularizer: Optional[Regularizer] = None,
+        entity_initializer: Hint[Initializer] = None,
+        entity_constrainer: Hint[Constrainer] = 'clamp_norm',
+        entity_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
+        relation_initializer: Hint[Initializer] = None,
+        relation_constrainer: Hint[Constrainer] = 'clamp_norm',
+        relation_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
     ) -> None:
         r"""Initialize KG2E.
 
@@ -85,13 +93,15 @@ class KG2E(EntityRelationEmbeddingModel):
             regularizer=regularizer,
             entity_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
-                constrainer=cast_constrainer(clamp_norm),
-                constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
+                initializer=entity_initializer,
+                constrainer=entity_constrainer,
+                constrainer_kwargs=entity_constrainer_kwargs or self.constrainer_default_kwargs,
             ),
             relation_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
-                constrainer=cast_constrainer(clamp_norm),
-                constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
+                initializer=relation_initializer or entity_initializer,
+                constrainer=relation_constrainer,
+                constrainer_kwargs=relation_constrainer_kwargs or self.constrainer_default_kwargs,
             ),
         )
 

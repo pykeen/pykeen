@@ -13,7 +13,7 @@ from ...losses import Loss
 from ...nn import EmbeddingSpecification
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
-from ...typing import DeviceHint
+from ...typing import DeviceHint, Hint, Initializer
 
 __all__ = [
     'NTN',
@@ -63,6 +63,7 @@ class NTN(EntityEmbeddingModel):
         random_seed: Optional[int] = None,
         non_linearity: Optional[nn.Module] = None,
         regularizer: Optional[Regularizer] = None,
+        entity_initializer: Hint[Initializer] = None,
     ) -> None:
         r"""Initialize NTN.
 
@@ -79,6 +80,7 @@ class NTN(EntityEmbeddingModel):
             regularizer=regularizer,
             entity_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
+                initializer=entity_initializer,
             ),
         )
         self.num_slices = num_slices
