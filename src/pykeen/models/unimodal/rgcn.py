@@ -132,7 +132,10 @@ class RGCNRepresentations(RepresentationModule):
         buffer_messages: bool = True,
         base_representations: Optional[RepresentationModule] = None,
     ):
-        super().__init__()
+        super().__init__(
+            max_id=triples_factory.num_entities,
+            shape=(self.embedding_dim,),
+        )
 
         self.triples_factory = triples_factory
 
