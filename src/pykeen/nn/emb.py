@@ -52,7 +52,7 @@ class RepresentationModule(nn.Module):
     def __init__(
         self,
         max_id: int,
-        shape: Sequence[int, ...],
+        shape: Sequence[int]
     ):
         """
         Initialize the representation module.
