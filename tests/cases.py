@@ -1223,7 +1223,7 @@ class RepresentationTestCase(GenericTestCase[RepresentationModule]):
 
         # check shape
         expected_shape = prefix_shape + self.instance.shape
-        assert x.shape == expected_shape
+        self.assertEqual(x.shape, expected_shape)
 
     def _test_forward(self, indices: Optional[torch.LongTensor]):
         """Test forward method."""
@@ -1259,7 +1259,7 @@ class RepresentationTestCase(GenericTestCase[RepresentationModule]):
 
     def test_2d_indices(self):
         """Test with 1-dimensional indices."""
-        self._test_indices(indices=(torch.randint(self.instance.max_id, size=(self.batch_size, self.num_negatives,))))
+        self._test_indices(indices=(torch.randint(self.instance.max_id, size=(self.batch_size, self.num_negatives))))
 
     def test_all_indices(self):
         """Test with all indices."""
