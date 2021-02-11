@@ -2,10 +2,13 @@
 
 """Embedding modules."""
 
+from __future__ import annotations
+
 import functools
 from dataclasses import dataclass
-from typing import Any, Mapping, Optional
+from typing import Any, Mapping, Optional, Sequence, Tuple, Union
 
+import numpy as np
 import torch
 import torch.nn
 from torch import nn
@@ -58,7 +61,8 @@ class Embedding(RepresentationModule):
     def __init__(
         self,
         num_embeddings: int,
-        embedding_dim: int,
+        embedding_dim: Optional[int] = None,
+        shape: Union[None, int, Sequence[int]] = None,
         initializer: Optional[Initializer] = None,
         initializer_kwargs: Optional[Mapping[str, Any]] = None,
         normalizer: Optional[Normalizer] = None,
@@ -93,6 +97,8 @@ class Embedding(RepresentationModule):
         """
         super().__init__()
 
+        self._embedding_dim, self._shape = process_shape(embedding_dim, shape)
+
         if initializer is None:
             initializer = nn.init.normal_
         if initializer_kwargs:
@@ -114,9 +120,13 @@ class Embedding(RepresentationModule):
 
         self._embeddings = torch.nn.Embedding(
             num_embeddings=num_embeddings,
-            embedding_dim=embedding_dim,
+            embedding_dim=self._embedding_dim,
         )
         self._embeddings.requires_grad_(trainable)
+
+    def shape(self) -> Sequence[int]:
+        """Return the shape of this embedding."""
+        return self._shape
 
     @classmethod
     def init_with_device(
@@ -208,7 +218,8 @@ class Embedding(RepresentationModule):
 class EmbeddingSpecification:
     """An embedding specification."""
 
-    embedding_dim: int
+    embedding_dim: Optional[int] = None
+    shape: Union[None, int, Sequence[int]] = None
 
     initializer: Optional[Initializer] = None
     initializer_kwargs: Optional[Mapping[str, Any]] = None
@@ -226,6 +237,7 @@ class EmbeddingSpecification:
         rv = Embedding(
             num_embeddings=num_embeddings,
             embedding_dim=self.embedding_dim,
+            shape=self.shape,
             initializer=self.initializer,
             initializer_kwargs=self.initializer_kwargs,
             normalizer=self.normalizer,
@@ -237,3 +249,25 @@ class EmbeddingSpecification:
         if device is not None:
             rv = rv.to(device)
         return rv
+
+
+def process_shape(
+    dim: Optional[int],
+    shape: Union[None, int, Sequence[int]],
+) -> Tuple[int, Sequence[int]]:
+    """Make a shape pack."""
+    if shape is None and dim is None:
+        raise ValueError('Missing both, shape and embedding_dim')
+    elif shape is not None and dim is not None:
+        raise ValueError('Provided both, shape and embedding_dim')
+    elif shape is None and dim is not None:
+        shape = (dim,)
+    elif isinstance(shape, int) and dim is None:
+        dim = shape
+        shape = (shape,)
+    elif isinstance(shape, Sequence) and dim is None:
+        shape = tuple(shape)
+        dim = int(np.prod(shape))
+    else:
+        raise TypeError(f'Invalid type for shape: ({type(shape)}) {shape}')
+    return dim, shape
