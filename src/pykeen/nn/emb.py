@@ -93,10 +93,13 @@ class RepresentationModule(nn.Module):
     ) -> torch.FloatTensor:
         """Get representations in canonical shape.
 
-        :param indices: None, shape: (n,) or (b, n)
+        :param indices: None, shape: (b,) or (b, n)
             The indices. If None, return all representations.
 
         :return: shape: (b?, n?, d)
+            If indices is None, b=1, n=max_id.
+            If indices is 1-dimensional, b=indices.shape[0] and n=1.
+            If indices is 2-dimensional, b, n = indices.shape
         """
         x = self(indices=indices)
         if indices is None:
