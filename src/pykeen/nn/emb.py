@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import functools
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any, Mapping, Optional, Sequence, Tuple, Union
 
@@ -23,7 +24,7 @@ __all__ = [
 ]
 
 
-class RepresentationModule(nn.Module):
+class RepresentationModule(nn.Module, ABC):
     """
     A base class for obtaining representations for entities/relations.
 
@@ -66,6 +67,7 @@ class RepresentationModule(nn.Module):
         self.max_id = max_id
         self.shape = tuple(shape)
 
+    @abstractmethod
     def forward(
         self,
         indices: Optional[torch.LongTensor] = None,
@@ -79,7 +81,6 @@ class RepresentationModule(nn.Module):
         :return: shape: (*s, *self.shape)
             The representations.
         """
-        raise NotImplementedError
 
     def reset_parameters(self) -> None:
         """Reset the module's parameters."""
