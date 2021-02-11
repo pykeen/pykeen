@@ -166,7 +166,7 @@ class EmbeddingsInCanonicalShapeTests(unittest.TestCase):
         assert emb.shape == (num_ind, 1, self.embedding_dim)
 
         # check values
-        exp = torch.stack([self.embedding(i) for i in indices], dim=0).view(num_ind, 1, self.embedding_dim)
+        exp = torch.stack([self.embedding(i.view(1)) for i in indices], dim=0).view(num_ind, 1, self.embedding_dim)
         assert torch.allclose(emb, exp)
 
     def test_with_consecutive_indices(self):
