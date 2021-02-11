@@ -1133,7 +1133,7 @@ Traceback
             old_embeddings = self.model.entity_embeddings
             self.model.entity_embeddings = CustomRepresentations(
                 num_entities=self.factory.num_entities,
-                embedding_dim=old_embeddings.embedding_dim,
+                shape=old_embeddings.shape,
             )
             # call some functions
             self.model.reset_parameters_()
@@ -1145,7 +1145,7 @@ Traceback
             old_embeddings = self.model.relation_embeddings
             self.model.relation_embeddings = CustomRepresentations(
                 num_entities=self.factory.num_relations,
-                embedding_dim=old_embeddings.embedding_dim,
+                shape=old_embeddings.shape,
             )
             # call some functions
             self.model.reset_parameters_()
