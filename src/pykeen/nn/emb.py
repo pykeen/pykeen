@@ -87,6 +87,27 @@ class RepresentationModule(nn.Module):
     def post_parameter_update(self):
         """Apply constraints which should not be included in gradients."""
 
+    def get_in_canonical_shape(
+        self,
+        indices: Optional[torch.LongTensor] = None,
+    ) -> torch.FloatTensor:
+        """Get representations in canonical shape.
+
+        :param indices: None, shape: (n,) or (b, n)
+            The indices. If None, return all representations.
+
+        :return: shape: (b?, n?, d)
+        """
+        x = self(indices=indices)
+        if indices is None:
+            x = x.unsqueeze(dim=0)
+        else:
+            if indices.ndimension() == 1:
+                x = x.unsqueeze(dim=1)
+            elif indices.ndimension() > 2:
+                raise ValueError("Canonical shape is not implemented for more than 2-dimensional index tensors")
+        return x
+
 
 class Embedding(RepresentationModule):
     """Trainable embeddings.
@@ -245,26 +266,6 @@ class Embedding(RepresentationModule):
             x = self.normalizer(x)
         if self.regularizer is not None:
             self.regularizer.update(x)
-        return x
-
-    def get_in_canonical_shape(
-        self,
-        indices: Optional[torch.LongTensor] = None,
-    ) -> torch.FloatTensor:
-        """Get embedding in canonical shape.
-
-        :param indices: The indices. If None, return all embeddings.
-
-        :return: shape: (batch_size, num_embeddings, d)
-        """
-        x = self(indices=indices)
-        if indices is None:
-            x = x.unsqueeze(dim=0)
-        else:
-            if indices.ndimension() == 1:
-                x = x.unsqueeze(dim=1)
-            elif indices.ndimension() > 2:
-                raise ValueError("Canonical shape is not implemented for more than 2-dimensional index tensors")
         return x
 
 

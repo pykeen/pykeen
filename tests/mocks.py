@@ -28,15 +28,6 @@ class CustomRepresentations(RepresentationModule):
         n = self.max_id if indices is None else indices.shape[0]
         return self.x.unsqueeze(dim=0).repeat(n, 1)
 
-    def get_in_canonical_shape(
-        self,
-        indices: Optional[torch.LongTensor] = None,
-    ) -> torch.FloatTensor:  # noqa:D102
-        x = self(indices=indices)
-        if indices is None:
-            return x.unsqueeze(dim=0)
-        return x.unsqueeze(dim=1)
-
 
 class MockModel(EntityRelationEmbeddingModel):
     """A mock model returning fake scores."""
