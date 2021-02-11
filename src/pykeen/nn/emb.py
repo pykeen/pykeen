@@ -105,7 +105,9 @@ class RepresentationModule(nn.Module):
             if indices.ndimension() == 1:
                 x = x.unsqueeze(dim=1)
             elif indices.ndimension() > 2:
-                raise ValueError("Canonical shape is not implemented for more than 2-dimensional index tensors")
+                raise ValueError(
+                    f"Undefined canonical shape for more than 2-dimensional index tensors: {indices.shape}"
+                )
         return x
 
 
