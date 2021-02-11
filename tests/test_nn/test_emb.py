@@ -1,4 +1,7 @@
+# -*- coding: utf-8 -*-
+
 """Test embeddings."""
+
 from pykeen.nn import Embedding
 from tests import cases
 
