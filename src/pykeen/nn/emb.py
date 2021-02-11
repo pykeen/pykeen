@@ -267,6 +267,7 @@ class Embedding(RepresentationModule):
         x = x.view(*prefix_shape, *self.shape)
         # verify that contiguity is preserved
         assert x.is_contiguous()
+        # TODO: move normalizer / regularizer to base class?
         if self.normalizer is not None:
             x = self.normalizer(x)
         if self.regularizer is not None:
