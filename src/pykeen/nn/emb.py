@@ -95,6 +95,8 @@ class Embedding(RepresentationModule):
         :param constrainer_kwargs:
             Additional keyword arguments passed to the constrainer
         """
+        super().__init__()
+
         _embedding_dim, self.shape = process_shape(embedding_dim, shape)
 
         if initializer is None:
