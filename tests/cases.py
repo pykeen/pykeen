@@ -1228,16 +1228,27 @@ class RepresentationTestCase(GenericTestCase[RepresentationModule]):
         expected_shape = prefix_shape + self.instance.shape
         assert representations.shape == expected_shape
 
-    def test_forward_no_indices(self):
-        """Test forward without indices."""
-        self._test_forward(indices=None)
+    def _test_canonical_shape(self, indices: Optional[torch.LongTensor]):
+        """Test canonical shape."""
+        x = self.instance.get_in_canonical_shape(indices=indices)
 
-    def test_forward_1d_indices(self):
-        """Test forward with 1-dimensional indices."""
-        indices = torch.randint(self.instance.max_id, size=(self.batch_size,))
+    def _test_indices(self, indices: Optional[torch.LongTensor]):
+        """Test forward and canonical shape for indices."""
         self._test_forward(indices=indices)
+        self._test_canonical_shape(indices=indices)
 
-    def test_forward_2d_indices(self):
-        """Test forward with 1-dimensional indices."""
-        indices = torch.randint(self.instance.max_id, size=(self.batch_size, self.num_negatives,))
-        self._test_forward(indices=indices)
+    def test_no_indices(self):
+        """Test without indices."""
+        self._test_indices(indices=None)
+
+    def test_1d_indices(self):
+        """Test with 1-dimensional indices."""
+        self._test_indices(indices=torch.randint(self.instance.max_id, size=(self.batch_size,)))
+
+    def test_2d_indices(self):
+        """Test with 1-dimensional indices."""
+        self._test_indices(indices=(torch.randint(self.instance.max_id, size=(self.batch_size, self.num_negatives,))))
+
+    def test_all_indices(self):
+        """Test with all indices."""
+        self._test_indices(indices=torch.arange(self.instance.max_id))
