@@ -52,7 +52,7 @@ class RepresentationModule(nn.Module):
     def __init__(
         self,
         max_id: int,
-        shape: Tuple[int, ...],
+        shape: Sequence[int, ...],
     ):
         """
         Initialize the representation module.
@@ -64,7 +64,7 @@ class RepresentationModule(nn.Module):
         """
         super().__init__()
         self.max_id = max_id
-        self.shape = shape
+        self.shape = tuple(shape)
 
     def forward(
         self,
@@ -136,9 +136,13 @@ class Embedding(RepresentationModule):
         :param constrainer_kwargs:
             Additional keyword arguments passed to the constrainer
         """
-        super().__init__()
+        # normalize embedding_dim vs. shape
+        _embedding_dim, shape = process_shape(embedding_dim, shape)
 
-        _embedding_dim, self.shape = process_shape(embedding_dim, shape)
+        super().__init__(
+            max_id=num_embeddings,
+            shape=shape,
+        )
 
         if initializer is None:
             initializer = nn.init.normal_
@@ -205,7 +209,8 @@ class Embedding(RepresentationModule):
     @property
     def num_embeddings(self) -> int:  # noqa: D401
         """The total number of representations (i.e. the maximum ID)."""
-        return self._embeddings.num_embeddings
+        # wrapper around max_id, for backward compatibility
+        return self.max_id
 
     @property
     def embedding_dim(self) -> int:  # noqa: D401
@@ -228,11 +233,14 @@ class Embedding(RepresentationModule):
         indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         if indices is None:
+            prefix_shape = (self.max_id,)
             x = self._embeddings.weight
         else:
-            assert indices.ndimension() == 1
+            prefix_shape = indices.shape
             x = self._embeddings(indices)
-        x = x.view(x.shape[0], *self.shape)
+        x = x.view(*prefix_shape, *self.shape)
+        # verify that contiguity is preserved
+        assert x.is_contiguous()
         if self.normalizer is not None:
             x = self.normalizer(x)
         if self.regularizer is not None:
@@ -253,7 +261,10 @@ class Embedding(RepresentationModule):
         if indices is None:
             x = x.unsqueeze(dim=0)
         else:
-            x = x.unsqueeze(dim=1)
+            if indices.ndimension() == 1:
+                x = x.unsqueeze(dim=1)
+            elif indices.ndimension() > 2:
+                raise ValueError("Canonical shape is not implemented for more than 2-dimensional index tensors")
         return x
 
 
