@@ -5,11 +5,11 @@
 from typing import Any, ClassVar, Mapping, Optional
 
 import torch
-import torch.autograd
 
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
+from ...moves import irfft, rfft
 from ...nn import EmbeddingSpecification
 from ...nn.init import xavier_uniform_
 from ...regularizers import Regularizer
@@ -105,8 +105,8 @@ class HolE(EntityRelationEmbeddingModel):
             The scores.
         """
         # Circular correlation of entity embeddings
-        a_fft = torch.rfft(h, signal_ndim=1, onesided=True)
-        b_fft = torch.rfft(t, signal_ndim=1, onesided=True)
+        a_fft = rfft(h, signal_ndim=1, onesided=True)
+        b_fft = rfft(t, signal_ndim=1, onesided=True)
 
         # complex conjugate, a_fft.shape = (batch_size, num_entities, d', 2)
         a_fft[:, :, :, 1] *= -1
@@ -115,7 +115,7 @@ class HolE(EntityRelationEmbeddingModel):
         p_fft = a_fft * b_fft
 
         # inverse real FFT, shape: (batch_size, num_entities, d)
-        composite = torch.irfft(p_fft, signal_ndim=1, onesided=True, signal_sizes=(h.shape[-1],))
+        composite = irfft(p_fft, signal_ndim=1, onesided=True, signal_sizes=(h.shape[-1],))
 
         # inner product with relation embedding
         scores = torch.sum(r * composite, dim=-1, keepdim=False)
