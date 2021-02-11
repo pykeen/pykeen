@@ -1,9 +1,9 @@
 """Test embeddings."""
 from pykeen.nn import Embedding
-from tests.cases import RepresentationTestCase
+from tests import cases
 
 
-class EmbeddingTests(RepresentationTestCase):
+class EmbeddingTests(cases.RepresentationTestCase):
     """Tests for embeddings."""
 
     cls = Embedding
