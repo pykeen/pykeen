@@ -233,9 +233,13 @@ class EmbeddingSpecification:
 
 initializers = {
     'xavier_uniform': xavier_normal_,
+    'xavier_uniform_norm': compose(
+        nn.init.xavier_uniform_,
+        functional.normalize,
+    ),
     'xavier_normal': xavier_uniform_,
     'xavier_normal_norm': compose(
-        nn.init.xavier_uniform_,
+        nn.init.xavier_normal_,
         functional.normalize,
     ),
     'normal': torch.nn.init.normal_,
