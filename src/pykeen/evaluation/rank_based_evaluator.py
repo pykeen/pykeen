@@ -5,9 +5,10 @@
 import logging
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import DefaultDict, Dict, Iterable, List, Optional, Sequence, Tuple, Union
+from typing import DefaultDict, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Union
 
 import numpy as np
+import pandas
 import pandas as pd
 import torch
 from dataclasses_json import dataclass_json
@@ -320,3 +321,52 @@ class RankBasedEvaluator(Evaluator):
             hits_at_k=dict(hits_at_k),
             adjusted_mean_rank=adjusted_mean_rank,
         )
+
+
+def prepare_triple_rank_df(
+    mapped_triples: MappedTriples,
+    ranks: Mapping[Tuple[str, str], Sequence[float]],
+) -> Tuple[pandas.DataFrame, pandas.DataFrame]:
+    """
+    Prepare a pair of dataframes for extended evaluation of ranks.
+
+    :param mapped_triples: shape: (num_triples, 3)
+        The ID-based triples.
+    :param ranks:
+        The ranks, a mapping from (side, rank_type) to a sequence of ranks. Each sequence has the same length:
+        `num_triples`.
+
+    .. warning ::
+        Important: The mapped triples and the values of the ranks have to be in a consistent order.
+
+
+    Usage example: Compute mean rank individually for each relation type:
+
+    >>> tdf, rdf = prepare_triple_rank_df(mapped_triples, ranks)
+    >>> rdf = rdf[(rdf["side"] == "both") & (rdf["rank_type"] == "avg")]
+    >>> df = pandas.merge(tdf, rdf, on="triple_id")
+    >>> df.groupby(by="relation_id").agg(dict(rank="mean"))
+
+    :return:
+        A pair of dataframes, triples_df and rank_df, where
+
+        triples_df: columns: {"triple_id", "head_id", "relation_id", "tail_id"}
+            A dataframe with the triple information and an additional triple_id column.
+        rank_df: columns: {"triple_id", "side", "rank_type", "rank"}
+            A long-format dataframe with the rank data.
+    """
+    # prepare triples data frame
+    triples_df = pandas.DataFrame(data=mapped_triples.cpu().numpy(), columns=["head_id", "relation_id", "tail_id"])
+    triples_df.index.name = "triple_id"
+    triples_df = triples_df.reset_index()
+
+    # prepare rank dataframe
+    data = []
+    for (side, rank_type), this_ranks in ranks.items():
+        data.extend(
+            (tid, side, rank_type, this_rank)
+            for tid, this_rank in enumerate(this_ranks)
+        )
+    rank_df = pandas.DataFrame(data=data, columns=["triple_id", "side", "rank_type", "rank"])
+
+    return triples_df, rank_df
