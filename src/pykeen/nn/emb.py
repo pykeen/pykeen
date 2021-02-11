@@ -189,6 +189,7 @@ class Embedding(RepresentationModule):
         if indices is None:
             x = self._embeddings.weight
         else:
+            assert indices.ndimension() == 1
             x = self._embeddings(indices)
         x = x.view(x.shape[0], *self.shape)
         if self.normalizer is not None:
