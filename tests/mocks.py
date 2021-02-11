@@ -21,13 +21,11 @@ class CustomRepresentations(RepresentationModule):
     """A custom representation module with minimal implementation."""
 
     def __init__(self, num_entities: int, embedding_dim: int = 2):
-        super().__init__()
-        self.num_embeddings = num_entities
-        self.embedding_dim = embedding_dim
+        super().__init__(max_id=num_entities, shape=(embedding_dim,))
         self.x = nn.Parameter(torch.rand(embedding_dim))
 
     def forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:  # noqa:D102
-        n = self.num_embeddings if indices is None else indices.shape[0]
+        n = self.max_id if indices is None else indices.shape[0]
         return self.x.unsqueeze(dim=0).repeat(n, 1)
 
     def get_in_canonical_shape(
