@@ -34,7 +34,7 @@ def powersum_norm(x: torch.FloatTensor, p: float, dim: Optional[int], normalize:
 
 
 def complex_normalize(x: torch.Tensor) -> torch.Tensor:
-    r"""Normalize the length of relation vectors, if the forward constraint has not been applied yet.
+    r"""Normalize a vector of complex numbers such that each element is of unit-length.
 
     The `modulus of complex number <https://en.wikipedia.org/wiki/Absolute_value#Complex_numbers>`_ is given as:
 
@@ -51,7 +51,6 @@ def complex_normalize(x: torch.Tensor) -> torch.Tensor:
                  = \|\operatorname{Re}(x)\|^2 + \|\operatorname{Im}(x)\|^2
                  = \| [\operatorname{Re}(x); \operatorname{Im}(x)] \|^2
     """
-    y = x.data.view(x.shape[0], -1, 2)
+    y = x.view(*x.shape[:-1], x.shape[-1] // 2, 2)
     y = functional.normalize(y, p=2, dim=-1)
-    x.data = y.view(*x.shape)
-    return x
+    return y.view(*x.shape)
