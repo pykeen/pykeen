@@ -42,7 +42,7 @@ class ConceptNet(SingleTabbedDataset):
             create_inverse_triples=create_inverse_triples,
             random_state=random_state,
             read_csv_kwargs=dict(
-                usecols=[1, 2, 3],
+                usecols=[2, 1, 3],
                 header=None,
             ),
             **kwargs,

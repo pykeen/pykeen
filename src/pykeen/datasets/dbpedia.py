@@ -35,5 +35,18 @@ class DBpedia50(UnpackedRemoteDataset):
             testing_url=TEST_URL,
             validation_url=VALID_URL,
             create_inverse_triples=create_inverse_triples,
+            load_triples_kwargs={
+                # as pointed out in https://github.com/pykeen/pykeen/issues/275#issuecomment-776412294,
+                # the columns are not ordered properly.
+                'column_remapping': [0, 2, 1],
+            },
             **kwargs,
         )
+
+
+if __name__ == '__main__':
+    _d = DBpedia50()
+    _d.summarize()
+    print(_d.training.triples[:5])
+    print(_d.testing.triples[:5])
+    print(_d.validation.triples[:5])

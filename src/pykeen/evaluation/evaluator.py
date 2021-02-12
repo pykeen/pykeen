@@ -19,7 +19,10 @@ from tqdm.autonotebook import tqdm
 from ..models import Model
 from ..triples.utils import get_entities
 from ..typing import MappedTriples
-from ..utils import is_cuda_oom_error, is_cudnn_error, normalize_string, split_list_in_batches_iter
+from ..utils import (
+    is_cuda_oom_error, is_cudnn_error, is_nonzero_larger_than_maxint_error, normalize_string,
+    split_list_in_batches_iter,
+)
 
 __all__ = [
     'Evaluator',
@@ -308,7 +311,11 @@ class Evaluator(ABC):
                 # The cache of the previous run has to be freed to allow accurate memory availability estimates
                 gc.collect()
                 torch.cuda.empty_cache()
-                if not is_cudnn_error(runtime_error) and not is_cuda_oom_error(runtime_error):
+                if (
+                    not is_cudnn_error(runtime_error)
+                    and not is_cuda_oom_error(runtime_error)
+                    and not is_nonzero_larger_than_maxint_error(runtime_error)
+                ):
                     raise runtime_error
                 if values_dict[key] == 1:
                     logger.debug(
@@ -474,7 +481,8 @@ def evaluate(
     :param model:
         The model to evaluate.
     :param mapped_triples:
-        The triples on which to evaluate.
+        The triples on which to evaluate. The mapped triples should never contain inverse triples - these are created by
+        the model class on the fly.
     :param evaluators:
         An evaluator or a list of evaluators working on batches of triples and corresponding scores.
     :param only_size_probing:

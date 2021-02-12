@@ -383,6 +383,7 @@ class CoreTriplesFactory:
         mapped_triples: MappedTriples,
         extra_metadata: Optional[Dict[str, Any]] = None,
         keep_metadata: bool = True,
+        create_inverse_triples: Optional[bool] = None,
     ) -> "CoreTriplesFactory":
         """
         Create a new triples factory sharing everything except the triples.
@@ -397,15 +398,19 @@ class CoreTriplesFactory:
             the dictionaries will be unioned with precedence taken on keys from ``extra_metadata``.
         :param keep_metadata:
             Pass the current factory's metadata to the new triples factory
+        :param create_inverse_triples:
+            Change inverse triple creation flag. If None, use flag from this factory.
 
         :return:
             The new factory.
         """
+        if create_inverse_triples is None:
+            create_inverse_triples = self.create_inverse_triples
         return CoreTriplesFactory(
             mapped_triples=mapped_triples,
             num_entities=self.num_entities,
             num_relations=self.real_num_relations,
-            create_inverse_triples=self.create_inverse_triples,
+            create_inverse_triples=create_inverse_triples,
             metadata={
                 **(extra_metadata or {}),
                 **(self.metadata if keep_metadata else {}),  # type: ignore
@@ -457,14 +462,18 @@ class CoreTriplesFactory:
         """
         # Make new triples factories for each group
         return [
-            self.clone_and_exchange_triples(mapped_triples=triples)
-            for triples in split(
+            self.clone_and_exchange_triples(
+                mapped_triples=triples,
+                # do not explicitly create inverse triples for testing; this is handled by the evaluation code
+                create_inverse_triples=None if i == 0 else False,
+            )
+            for i, triples in enumerate(split(
                 mapped_triples=self.mapped_triples,
                 ratios=ratios,
                 random_state=random_state,
                 randomize_cleanup=randomize_cleanup,
                 method=method,
-            )
+            ))
         ]
 
     def get_mask_for_entities(
@@ -713,6 +722,7 @@ class TriplesFactory(CoreTriplesFactory):
         relation_to_id: Optional[RelationMapping] = None,
         compact_id: bool = True,
         metadata: Optional[Dict[str, Any]] = None,
+        load_triples_kwargs: Optional[Mapping[str, Any]] = None,
     ) -> 'TriplesFactory':
         """
         Create a new triples factory from triples stored in a file.
@@ -731,6 +741,8 @@ class TriplesFactory(CoreTriplesFactory):
             Arbitrary key/value pairs to store as metadata with the triples factory. Do not
             include ``path`` as a key because it is automatically taken from the ``path``
             kwarg to this function.
+        :param load_triples_kwargs: Optional keyword arguments to pass to :func:`load_triples`.
+            Could include the ``delimiter`` or a ``column_remapping``.
 
         :return:
             A new triples factory.
@@ -743,7 +755,7 @@ class TriplesFactory(CoreTriplesFactory):
             raise TypeError(f'path is invalid type: {type(path)}')
 
         # TODO: Check if lazy evaluation would make sense
-        triples = load_triples(path)
+        triples = load_triples(path, **(load_triples_kwargs or {}))
 
         return cls.from_labeled_triples(
             triples=triples,
@@ -762,12 +774,15 @@ class TriplesFactory(CoreTriplesFactory):
         mapped_triples: MappedTriples,
         extra_metadata: Optional[Dict[str, Any]] = None,
         keep_metadata: bool = True,
+        create_inverse_triples: Optional[bool] = None,
     ) -> "TriplesFactory":  # noqa: D102
+        if create_inverse_triples is None:
+            create_inverse_triples = self.create_inverse_triples
         return TriplesFactory(
             entity_to_id=self.entity_to_id,
             relation_to_id=self.relation_to_id,
             mapped_triples=mapped_triples,
-            create_inverse_triples=self.create_inverse_triples,
+            create_inverse_triples=create_inverse_triples,
             metadata={
                 **(extra_metadata or {}),
                 **(self.metadata if keep_metadata else {}),  # type: ignore
