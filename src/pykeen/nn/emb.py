@@ -36,7 +36,8 @@ class RepresentationModule(nn.Module, ABC):
     representations could come from somewhere else, e.g. a GNN encoder.
 
     `shape` describes the shape of a single representation. In case of a vector embedding, this is just a single
-    dimension. For others, e.g. RESCAL, we have 2-d representations, and in general it can be any fixed shape.
+    dimension. For others, e.g. :class:`pykeen.models.RESCAL`, we have 2-d representations, and in general it can be
+    any fixed shape.
 
     We can look at all representations as a tensor of shape `(max_id, *shape)`, and this is exactly the result of
     passing `indices=None` to the forward method.
@@ -75,10 +76,10 @@ class RepresentationModule(nn.Module, ABC):
         """Get representations for indices.
 
         :param indices: shape: s
-            The indices, or None. If None, this is interpreted as `torch.arange(self.max_id)` (although implemented
+            The indices, or None. If None, this is interpreted as ``torch.arange(self.max_id)`` (although implemented
             more efficiently).
 
-        :return: shape: (*s, *self.shape)
+        :return: shape: (``*s``, ``*self.shape``)
             The representations.
         """
 
