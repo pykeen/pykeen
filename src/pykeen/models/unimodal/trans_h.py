@@ -113,3 +113,8 @@ class TransH(ERModel):
             )
         else:
             self.regularizer = regularizer
+
+    @property
+    def normal_vector_embeddings(self):
+        """Return the normal vector embeddings."""
+        return self.relation_representations[1]
