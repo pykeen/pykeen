@@ -14,9 +14,8 @@ import torch
 from torch import nn
 
 from .base import Model
-from .nemb import NewEmbeddingSpecification
 from ..losses import Loss
-from ..nn import RepresentationModule
+from ..nn import EmbeddingSpecification, RepresentationModule
 from ..nn.modules import Interaction
 from ..regularizers import Regularizer
 from ..triples import TriplesFactory
@@ -32,9 +31,9 @@ logger = logging.getLogger(__name__)
 
 EmbeddingSpecificationHint = Union[
     None,
-    NewEmbeddingSpecification,
+    EmbeddingSpecification,
     RepresentationModule,
-    Sequence[Union[NewEmbeddingSpecification, RepresentationModule]],
+    Sequence[Union[EmbeddingSpecification, RepresentationModule]],
 ]
 
 
@@ -284,7 +283,7 @@ def _prepare_representation_module_list(
     modules = []
     for r in representations:
         if not isinstance(r, RepresentationModule):
-            assert isinstance(r, NewEmbeddingSpecification)
+            assert isinstance(r, EmbeddingSpecification)
             r = r.make(num_embeddings=num_embeddings)
         if r.max_id < num_embeddings:
             raise ValueError(
