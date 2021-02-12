@@ -84,7 +84,9 @@ jobs:
       - name: Run fast tests
         run: tox -e py
       - name: Run slow tests
-        run: tox -e integration,doctests
+        run: tox -e integration
+      - name: Run doctests
+        run: tox -e doctests
   windows:
     if: "contains(github.event.head_commit.message, 'Trigger CI')"
     name: Windows
