@@ -7,6 +7,7 @@ from typing import Any, ClassVar, Mapping, Optional
 import torch
 import torch.autograd
 from torch import nn
+from torch.nn.init import uniform_
 
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
@@ -14,7 +15,7 @@ from ...losses import Loss
 from ...nn import EmbeddingSpecification
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
-from ...typing import DeviceHint
+from ...typing import DeviceHint, Hint, Initializer
 
 __all__ = [
     'ERMLP',
@@ -52,6 +53,8 @@ class ERMLP(EntityRelationEmbeddingModel):
         random_seed: Optional[int] = None,
         hidden_dim: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
+        entity_initializer: Hint[Initializer] = uniform_,
+        relation_initializer: Hint[Initializer] = uniform_,
     ) -> None:
         """Initialize the model."""
         super().__init__(
@@ -62,9 +65,11 @@ class ERMLP(EntityRelationEmbeddingModel):
             regularizer=regularizer,
             entity_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
+                initializer=entity_initializer,
             ),
             relation_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
+                initializer=relation_initializer,
             ),
         )
 

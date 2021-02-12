@@ -8,7 +8,11 @@
     "model_kwargs": {
       "embedding_dim": 50,
       "relation_dim": 50,
-      "scoring_fct_norm": 1
+      "scoring_fct_norm": 1,
+      "entity_initializer": "xavier_uniform",
+      "entity_constrainer": "clamp_norm",
+      "relation_initializer": "xavier_uniform_norm",
+      "relation_constrainer": "clamp_norm"
     },
     "optimizer": "SGD",
     "optimizer_kwargs": {
