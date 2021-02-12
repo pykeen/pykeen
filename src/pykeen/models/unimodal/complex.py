@@ -103,12 +103,12 @@ class ComplEx(EntityRelationEmbeddingModel):
             # initialize with entity and relation embeddings with standard normal distribution, cf.
             # https://github.com/ttrouill/complex/blob/dc4eb93408d9a5288c986695b58488ac80b1cc17/efe/models.py#L481-L487
             entity_representations=EmbeddingSpecification(
-                embedding_dim=2 * embedding_dim,  # complex embeddings
+                embedding_dim=embedding_dim,
                 initializer=entity_initializer,
                 dtype=torch.complex64,
             ),
             relation_representations=EmbeddingSpecification(
-                embedding_dim=2 * embedding_dim,  # complex embeddings
+                embedding_dim=embedding_dim,
                 initializer=relation_initializer,
                 dtype=torch.complex64,
             ),
