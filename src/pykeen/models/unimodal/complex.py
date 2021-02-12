@@ -105,10 +105,12 @@ class ComplEx(EntityRelationEmbeddingModel):
             entity_representations=EmbeddingSpecification(
                 embedding_dim=2 * embedding_dim,  # complex embeddings
                 initializer=entity_initializer,
+                dtype=torch.complex64,
             ),
             relation_representations=EmbeddingSpecification(
                 embedding_dim=2 * embedding_dim,  # complex embeddings
                 initializer=relation_initializer,
+                dtype=torch.complex64,
             ),
         )
 

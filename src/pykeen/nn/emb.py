@@ -146,6 +146,7 @@ class Embedding(RepresentationModule):
         constrainer_kwargs: Optional[Mapping[str, Any]] = None,
         regularizer: Optional[Regularizer] = None,
         trainable: bool = True,
+        dtype: Optional[torch.dtype] = None,
     ):
         """Instantiate an embedding with extended functionality.
 
@@ -172,6 +173,15 @@ class Embedding(RepresentationModule):
         """
         # normalize embedding_dim vs. shape
         _embedding_dim, shape = process_shape(embedding_dim, shape)
+
+        if dtype is None:
+            dtype = torch.get_default_dtype()
+
+        # work-around until full complex support
+        # TODO: verify that this is our understanding of complex!
+        if dtype.is_complex:
+            shape = tuple(shape[:-1]) + (2 * shape[-1],)
+            _embedding_dim = _embedding_dim * 2
 
         super().__init__(
             max_id=num_embeddings,
@@ -301,6 +311,8 @@ class EmbeddingSpecification:
 
     regularizer: Optional[Regularizer] = None
 
+    dtype: Optional[torch.dtype] = None
+
     def make(self, *, num_embeddings: int, device: Optional[torch.device] = None) -> Embedding:
         """Create an embedding with this specification."""
         rv = Embedding(
@@ -314,6 +326,7 @@ class EmbeddingSpecification:
             constrainer=self.constrainer,
             constrainer_kwargs=self.constrainer_kwargs,
             regularizer=self.regularizer,
+            dtype=self.dtype,
         )
         if device is not None:
             rv = rv.to(device)
