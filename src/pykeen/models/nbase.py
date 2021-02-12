@@ -102,9 +102,10 @@ class _NewAbstractModel(Model, ABC, autoreset=False):
     def _instantiate_default_regularizer(self, **kwargs) -> Optional[Regularizer]:
         """Instantiate the regularizer from this class's default settings.
 
-        If the default regularizer is None, None is returned.
-        Handles the corner case when the default regularizer's keyword arguments are None
-        Additional keyword arguments can be passed through to the `__init__()` function
+        :param kwargs: Additional keyword arguments to be passed through to the ``__init__()`` function of the
+            default regularizer, if one is set.
+
+        :returns: If the default regularizer is None, None is returned.
         """
         if self.regularizer_default is None:
             return None
@@ -132,8 +133,6 @@ class _NewAbstractModel(Model, ABC, autoreset=False):
             The tensor containing predictions or positive scores.
         :param tensor_2: shape: s
             The tensor containing target values or the negative scores.
-        :raises RuntimeError:
-            If the chosen loss does not allow the calculation of margin label losses.
         :return: dtype: float, scalar
             The label loss value.
         """
@@ -178,8 +177,7 @@ class _NewAbstractModel(Model, ABC, autoreset=False):
 
         :return: shape: (batch_size, num_heads, num_relations, num_tails)
             The score for each triple.
-        """
-        raise NotImplementedError
+        """  # noqa: DAR202
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:
         """Forward pass.
@@ -335,6 +333,9 @@ class ERModel(
 
         :param triples_factory:
             The triples factory facilitates access to the dataset.
+        :param interaction: The interaction module (e.g., TransE)
+        :param entity_representations: The entity representation or sequence of representations
+        :param relation_representations: The relation representation or sequence of representations
         :param loss:
             The loss to use. If None is given, use the loss default specific to the model subclass.
         :param predict_with_sigmoid:
@@ -383,6 +384,8 @@ class ERModel(
              `sorted(dict(self.named_parameters()).keys())`.
         :param regularizer:
             The regularizer instance which will regularize the weights.
+
+        :raises KeyError: If an invalid parameter name was given
         """
         # normalize input
         if isinstance(parameter, (str, nn.Parameter)):
@@ -424,9 +427,11 @@ class ERModel(
         :return: shape: (batch_size, num_heads, num_relations, num_tails)
             The score for each triple.
         """
-        h, r, t = self._get_representations(h_indices, r_indices, t_indices)
+        h, r, t = self._get_representations(h_indices=h_indices, r_indices=r_indices, t_indices=t_indices)
         scores = self.interaction.score(h=h, r=r, t=t, slice_size=slice_size, slice_dim=slice_dim)
-        return self._repeat_scores_if_necessary(scores, h_indices, r_indices, t_indices)
+        return self._repeat_scores_if_necessary(
+            scores=scores, h_indices=h_indices, r_indices=r_indices, t_indices=t_indices,
+        )
 
     def _repeat_scores_if_necessary(
         self,
