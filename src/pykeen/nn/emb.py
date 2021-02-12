@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import functools
+import warnings
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any, Mapping, Optional, Sequence, Tuple, Union
@@ -116,6 +117,7 @@ class RepresentationModule(nn.Module, ABC):
     def embedding_dim(self) -> int:
         """Return the "embedding dimension". Kept for backward compatibility."""
         # TODO: Remove this property and update code to use shape instead
+        warnings.warn("The embedding_dim property is deprecated. Use .shape instead.", DeprecationWarning)
         return int(np.prod(self.shape))
 
 
