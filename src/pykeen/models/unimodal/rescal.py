@@ -79,18 +79,18 @@ class RESCAL(EntityRelationEmbeddingModel):
                 embedding_dim=embedding_dim,
             ),
             relation_representations=EmbeddingSpecification(
-                embedding_dim=embedding_dim ** 2,  # d x d matrices
+                shape=(embedding_dim, embedding_dim),  # d x d matrices
             ),
         )
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         # shape: (b, d)
-        h = self.entity_embeddings(indices=hrt_batch[:, 0]).view(-1, 1, self.embedding_dim)
+        h = self.entity_embeddings(indices=hrt_batch[:, 0]).unsqueeze(dim=1)
         # shape: (b, d, d)
-        r = self.relation_embeddings(indices=hrt_batch[:, 1]).view(-1, self.embedding_dim, self.embedding_dim)
+        r = self.relation_embeddings(indices=hrt_batch[:, 1])
         # shape: (b, d)
-        t = self.entity_embeddings(indices=hrt_batch[:, 2]).view(-1, self.embedding_dim, 1)
+        t = self.entity_embeddings(indices=hrt_batch[:, 2]).unsqueeze(dim=-1)
 
         # Compute scores
         scores = h @ r @ t
@@ -101,9 +101,9 @@ class RESCAL(EntityRelationEmbeddingModel):
         return scores[:, :, 0]
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(indices=hr_batch[:, 0]).view(-1, 1, self.embedding_dim)
-        r = self.relation_embeddings(indices=hr_batch[:, 1]).view(-1, self.embedding_dim, self.embedding_dim)
-        t = self.entity_embeddings(indices=None).transpose(0, 1).view(1, self.embedding_dim, self.num_entities)
+        h = self.entity_embeddings(indices=hr_batch[:, 0]).unsqueeze(dim=1)
+        r = self.relation_embeddings(indices=hr_batch[:, 1])
+        t = self.entity_embeddings(indices=None).unsqueeze(dim=0).transpose(-1, -2)
 
         # Compute scores
         scores = h @ r @ t
@@ -116,9 +116,9 @@ class RESCAL(EntityRelationEmbeddingModel):
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         """Forward pass using left side (head) prediction."""
         # Get embeddings
-        h = self.entity_embeddings(indices=None).view(1, self.num_entities, self.embedding_dim)
-        r = self.relation_embeddings(indices=rt_batch[:, 0]).view(-1, self.embedding_dim, self.embedding_dim)
-        t = self.entity_embeddings(indices=rt_batch[:, 1]).view(-1, self.embedding_dim, 1)
+        h = self.entity_embeddings(indices=None).unsqueeze(dim=0)
+        r = self.relation_embeddings(indices=rt_batch[:, 0])
+        t = self.entity_embeddings(indices=rt_batch[:, 1]).unsqueeze(dim=-1)
 
         # Compute scores
         scores = h @ r @ t
