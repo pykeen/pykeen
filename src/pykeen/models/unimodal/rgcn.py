@@ -16,6 +16,7 @@ from ..base import _OldAbstractModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE
 from ...losses import Loss
 from ...nn import Embedding, RepresentationModule
+from ...nn.init import xavier_uniform_
 from ...triples import TriplesFactory
 from ...typing import DeviceHint, Hint, Initializer
 
@@ -131,7 +132,7 @@ class RGCNRepresentations(RepresentationModule):
         decomposition: str = 'basis',
         buffer_messages: bool = True,
         base_representations: Optional[RepresentationModule] = None,
-        initializer: Hint[Initializer] = 'xavier_uniform',
+        initializer: Hint[Initializer] = xavier_uniform_,
     ):
         super().__init__(
             max_id=triples_factory.num_entities,

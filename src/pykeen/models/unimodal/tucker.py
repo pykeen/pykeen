@@ -12,6 +12,7 @@ from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import BCEAfterSigmoidLoss, Loss
 from ...nn import EmbeddingSpecification
+from ...nn.init import xavier_normal_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint, Hint, Initializer
@@ -90,8 +91,8 @@ class TuckER(EntityRelationEmbeddingModel):
         dropout_2: float = 0.5,
         regularizer: Optional[Regularizer] = None,
         apply_batch_normalization: bool = True,
-        entity_initializer: Hint[Initializer] = 'xavier_normal',
-        relation_initializer: Hint[Initializer] = 'xavier_normal',
+        entity_initializer: Hint[Initializer] = xavier_normal_,
+        relation_initializer: Hint[Initializer] = xavier_normal_,
     ) -> None:
         """Initialize the model.
 

@@ -5,6 +5,7 @@
 from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
+from torch.nn.init import normal_
 
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
@@ -77,8 +78,8 @@ class ComplEx(EntityRelationEmbeddingModel):
         random_seed: Optional[int] = None,
         # initialize with entity and relation embeddings with standard normal distribution, cf.
         # https://github.com/ttrouill/complex/blob/dc4eb93408d9a5288c986695b58488ac80b1cc17/efe/models.py#L481-L487
-        entity_initializer: Hint[Initializer] = 'normal',
-        relation_initializer: Hint[Initializer] = 'normal',
+        entity_initializer: Hint[Initializer] = normal_,
+        relation_initializer: Hint[Initializer] = normal_,
     ) -> None:
         """Initialize ComplEx.
 

@@ -16,11 +16,11 @@ import torch.nn
 from torch import nn
 from torch.nn import functional
 
-from .init import init_phases, xavier_normal_, xavier_uniform_
+from .init import init_phases, xavier_normal_, xavier_normal_norm_, xavier_uniform_, xavier_uniform_norm_
 from .norm import complex_normalize
 from ..regularizers import Regularizer
 from ..typing import Constrainer, Hint, Initializer, Normalizer
-from ..utils import clamp_norm, compose
+from ..utils import clamp_norm
 
 __all__ = [
     'RepresentationModule',
@@ -336,15 +336,9 @@ def process_shape(
 
 initializers = {
     'xavier_uniform': xavier_normal_,
-    'xavier_uniform_norm': compose(
-        nn.init.xavier_uniform_,
-        functional.normalize,
-    ),
+    'xavier_uniform_norm': xavier_uniform_norm_,
     'xavier_normal': xavier_uniform_,
-    'xavier_normal_norm': compose(
-        nn.init.xavier_normal_,
-        functional.normalize,
-    ),
+    'xavier_normal_norm': xavier_normal_norm_,
     'normal': torch.nn.init.normal_,
     'uniform': torch.nn.init.uniform_,
     'phases': init_phases,
