@@ -2,7 +2,7 @@
 
 """Mocks for tests."""
 
-from typing import Optional
+from typing import Optional, Tuple
 
 import torch
 from torch import nn
@@ -20,24 +20,13 @@ __all__ = [
 class CustomRepresentations(RepresentationModule):
     """A custom representation module with minimal implementation."""
 
-    def __init__(self, num_entities: int, embedding_dim: int = 2):
-        super().__init__()
-        self.num_embeddings = num_entities
-        self.embedding_dim = embedding_dim
-        self.x = nn.Parameter(torch.rand(embedding_dim))
+    def __init__(self, num_entities: int, shape: Tuple[int, ...] = (2,)):
+        super().__init__(max_id=num_entities, shape=shape)
+        self.x = nn.Parameter(torch.rand(*shape))
 
     def forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:  # noqa:D102
-        n = self.num_embeddings if indices is None else indices.shape[0]
-        return self.x.unsqueeze(dim=0).repeat(n, 1)
-
-    def get_in_canonical_shape(
-        self,
-        indices: Optional[torch.LongTensor] = None,
-    ) -> torch.FloatTensor:  # noqa:D102
-        x = self(indices=indices)
-        if indices is None:
-            return x.unsqueeze(dim=0)
-        return x.unsqueeze(dim=1)
+        n = self.max_id if indices is None else indices.shape[0]
+        return self.x.unsqueeze(dim=0).repeat(n, *(1 for _ in self.shape))
 
 
 class MockModel(EntityRelationEmbeddingModel):

@@ -1133,7 +1133,7 @@ Traceback
             old_embeddings = self.model.entity_embeddings
             self.model.entity_embeddings = CustomRepresentations(
                 num_entities=self.factory.num_entities,
-                embedding_dim=old_embeddings.embedding_dim,
+                shape=old_embeddings.shape,
             )
             # call some functions
             self.model.reset_parameters_()
@@ -1145,7 +1145,7 @@ Traceback
             old_embeddings = self.model.relation_embeddings
             self.model.relation_embeddings = CustomRepresentations(
                 num_entities=self.factory.num_relations,
-                embedding_dim=old_embeddings.embedding_dim,
+                shape=old_embeddings.shape,
             )
             # call some functions
             self.model.reset_parameters_()
@@ -1207,3 +1207,60 @@ class BaseRGCNTest(ModelTestCase):
         Enriched embeddings have to be reset.
         """
         assert self.model.entity_representations.enriched_embeddings is None
+
+
+class RepresentationTestCase(GenericTestCase[RepresentationModule]):
+    """Common tests for representation modules."""
+
+    batch_size: int = 2
+    num_negatives: int = 3
+
+    def _check_result(self, x: torch.FloatTensor, prefix_shape: Tuple[int, ...]):
+        """Check the result."""
+        # check type
+        assert torch.is_tensor(x)
+        assert x.dtype == torch.get_default_dtype()
+
+        # check shape
+        expected_shape = prefix_shape + self.instance.shape
+        self.assertEqual(x.shape, expected_shape)
+
+    def _test_forward(self, indices: Optional[torch.LongTensor]):
+        """Test forward method."""
+        representations = self.instance.forward(indices=indices)
+        prefix_shape = (self.instance.max_id,) if indices is None else tuple(indices.shape)
+        self._check_result(x=representations, prefix_shape=prefix_shape)
+
+    def _test_canonical_shape(self, indices: Optional[torch.LongTensor]):
+        """Test canonical shape."""
+        x = self.instance.get_in_canonical_shape(indices=indices)
+        if indices is None:
+            prefix_shape = (1, self.instance.max_id)
+        elif indices.ndimension() == 1:
+            prefix_shape = (indices.shape[0], 1)
+        elif indices.ndimension() == 2:
+            prefix_shape = tuple(indices.shape)
+        else:
+            raise AssertionError(indices.shape)
+        self._check_result(x=x, prefix_shape=prefix_shape)
+
+    def _test_indices(self, indices: Optional[torch.LongTensor]):
+        """Test forward and canonical shape for indices."""
+        self._test_forward(indices=indices)
+        self._test_canonical_shape(indices=indices)
+
+    def test_no_indices(self):
+        """Test without indices."""
+        self._test_indices(indices=None)
+
+    def test_1d_indices(self):
+        """Test with 1-dimensional indices."""
+        self._test_indices(indices=torch.randint(self.instance.max_id, size=(self.batch_size,)))
+
+    def test_2d_indices(self):
+        """Test with 1-dimensional indices."""
+        self._test_indices(indices=(torch.randint(self.instance.max_id, size=(self.batch_size, self.num_negatives))))
+
+    def test_all_indices(self):
+        """Test with all indices."""
+        self._test_indices(indices=torch.arange(self.instance.max_id))
