@@ -12,11 +12,10 @@ from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
 from ...nn import EmbeddingSpecification
-from ...nn.init import xavier_uniform_
+from ...nn.init import xavier_uniform_, xavier_uniform_norm_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
-from ...typing import DeviceHint
-from ...utils import compose
+from ...typing import Constrainer, DeviceHint, Hint, Initializer
 
 __all__ = [
     'TransE',
@@ -60,6 +59,9 @@ class TransE(EntityRelationEmbeddingModel):
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
+        entity_initializer: Hint[Initializer] = xavier_uniform_,
+        entity_constrainer: Hint[Constrainer] = functional.normalize,
+        relation_initializer: Hint[Initializer] = xavier_uniform_norm_,
     ) -> None:
         r"""Initialize TransE.
 
@@ -78,15 +80,12 @@ class TransE(EntityRelationEmbeddingModel):
             regularizer=regularizer,
             entity_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
-                initializer=xavier_uniform_,
-                constrainer=functional.normalize,
+                initializer=entity_initializer,
+                constrainer=entity_constrainer,
             ),
             relation_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
-                initializer=compose(
-                    xavier_uniform_,
-                    functional.normalize,
-                ),
+                initializer=relation_initializer,
             ),
         )
         self.scoring_fct_norm = scoring_fct_norm

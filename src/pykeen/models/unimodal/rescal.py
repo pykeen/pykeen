@@ -5,6 +5,7 @@
 from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
+from torch.nn.init import uniform_
 
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
@@ -12,7 +13,7 @@ from ...losses import Loss
 from ...nn import EmbeddingSpecification
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
-from ...typing import DeviceHint
+from ...typing import DeviceHint, Hint, Initializer
 
 __all__ = [
     'RESCAL',
@@ -60,6 +61,8 @@ class RESCAL(EntityRelationEmbeddingModel):
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
+        entity_initializer: Hint[Initializer] = uniform_,
+        relation_initializer: Hint[Initializer] = uniform_,
     ) -> None:
         r"""Initialize RESCAL.
 
@@ -77,9 +80,11 @@ class RESCAL(EntityRelationEmbeddingModel):
             regularizer=regularizer,
             entity_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
+                initializer=entity_initializer,
             ),
             relation_representations=EmbeddingSpecification(
                 shape=(embedding_dim, embedding_dim),  # d x d matrices
+                initializer=relation_initializer,
             ),
         )
 

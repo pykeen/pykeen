@@ -6,6 +6,7 @@ from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
 from torch import nn
+from torch.nn.init import uniform_
 
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
@@ -13,7 +14,7 @@ from ...losses import BCEAfterSigmoidLoss, Loss
 from ...nn import EmbeddingSpecification
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
-from ...typing import DeviceHint
+from ...typing import DeviceHint, Hint, Initializer
 
 __all__ = [
     'ERMLPE',
@@ -66,6 +67,8 @@ class ERMLPE(EntityRelationEmbeddingModel):
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
+        entity_initializer: Hint[Initializer] = uniform_,
+        relation_initializer: Hint[Initializer] = uniform_,
     ) -> None:
         super().__init__(
             triples_factory=triples_factory,
@@ -75,9 +78,11 @@ class ERMLPE(EntityRelationEmbeddingModel):
             regularizer=regularizer,
             entity_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
+                initializer=entity_initializer,
             ),
             relation_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
+                initializer=relation_initializer,
             ),
         )
         self.hidden_dim = hidden_dim

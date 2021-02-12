@@ -16,8 +16,9 @@ from ..base import _OldAbstractModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE
 from ...losses import Loss
 from ...nn import Embedding, RepresentationModule
+from ...nn.init import xavier_uniform_
 from ...triples import TriplesFactory
-from ...typing import DeviceHint
+from ...typing import DeviceHint, Hint, Initializer
 
 __all__ = [
     'RGCN',
@@ -131,6 +132,7 @@ class RGCNRepresentations(RepresentationModule):
         decomposition: str = 'basis',
         buffer_messages: bool = True,
         base_representations: Optional[RepresentationModule] = None,
+        initializer: Hint[Initializer] = xavier_uniform_,
     ):
         super().__init__(
             max_id=triples_factory.num_entities,
@@ -145,7 +147,7 @@ class RGCNRepresentations(RepresentationModule):
                 num_embeddings=triples_factory.num_entities,
                 embedding_dim=embedding_dim,
                 # https://github.com/MichSchli/RelationPrediction/blob/c77b094fe5c17685ed138dae9ae49b304e0d8d89/code/encoders/affine_transform.py#L24-L28
-                initializer=nn.init.xavier_uniform_,
+                initializer=initializer,
             )
         self.base_embeddings = base_representations
 
@@ -508,6 +510,8 @@ class RGCN(_OldAbstractModel):
         ] = inverse_indegree_edge_weights,
         decomposition: str = 'basis',
         buffer_messages: bool = True,
+        entity_initializer: Hint[Initializer] = 'xavier_uniform',
+        relation_initializer: Hint[Initializer] = 'uniform',
     ):
         if triples_factory.create_inverse_triples:
             raise ValueError('R-GCN handles edges in an undirected manner.')
@@ -534,10 +538,12 @@ class RGCN(_OldAbstractModel):
             decomposition=decomposition,
             buffer_messages=buffer_messages,
             base_representations=None,
+            initializer=entity_initializer,
         )
         self.relation_embeddings = Embedding(
             num_embeddings=triples_factory.num_relations,
             embedding_dim=embedding_dim,
+            initializer=relation_initializer,
         )
         # TODO: Dummy
         self.decoder = Decoder()

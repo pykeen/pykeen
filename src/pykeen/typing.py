@@ -8,6 +8,11 @@ import numpy as np
 import torch
 
 __all__ = [
+    # General types
+    'Hint',
+    'Mutation',
+    'OneOrSequence',
+    # Others
     'LabeledTriples',
     'MappedTriples',
     'EntityMapping',
@@ -22,9 +27,15 @@ __all__ = [
     'HeadRepresentation',
     'RelationRepresentation',
     'TailRepresentation',
+    # Dataclasses
     'GaussianDistribution',
     'ScorePack',
 ]
+
+X = TypeVar('X')
+Hint = Union[None, str, X]
+Mutation = Callable[[X], X]
+OneOrSequence = Union[X, Sequence[X]]
 
 LabeledTriples = np.ndarray
 MappedTriples = torch.LongTensor
@@ -34,9 +45,10 @@ RelationMapping = Mapping[str, int]
 # comment: TypeVar expects none, or at least two super-classes
 TensorType = TypeVar("TensorType", torch.Tensor, torch.FloatTensor)
 InteractionFunction = Callable[[TensorType, TensorType, TensorType], TensorType]
-Initializer = Callable[[TensorType], TensorType]
-Normalizer = Callable[[TensorType], TensorType]
-Constrainer = Callable[[TensorType], TensorType]
+
+Initializer = Mutation[TensorType]
+Normalizer = Mutation[TensorType]
+Constrainer = Mutation[TensorType]
 
 
 def cast_constrainer(f) -> Constrainer:
@@ -44,12 +56,12 @@ def cast_constrainer(f) -> Constrainer:
     return cast(Constrainer, f)
 
 
-DeviceHint = Union[None, str, torch.device]
-TorchRandomHint = Union[None, int, torch.Generator]
+DeviceHint = Hint[torch.device]
+TorchRandomHint = Hint[torch.Generator]
 
-HeadRepresentation = TypeVar("HeadRepresentation", bound=Union[torch.FloatTensor, Sequence[torch.FloatTensor]])
-RelationRepresentation = TypeVar("RelationRepresentation", bound=Union[torch.FloatTensor, Sequence[torch.FloatTensor]])
-TailRepresentation = TypeVar("TailRepresentation", bound=Union[torch.FloatTensor, Sequence[torch.FloatTensor]])
+HeadRepresentation = TypeVar("HeadRepresentation", bound=OneOrSequence[torch.FloatTensor])
+RelationRepresentation = TypeVar("RelationRepresentation", bound=OneOrSequence[torch.FloatTensor])
+TailRepresentation = TypeVar("TailRepresentation", bound=OneOrSequence[torch.FloatTensor])
 
 
 class GaussianDistribution(NamedTuple):
