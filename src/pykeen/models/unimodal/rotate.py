@@ -93,13 +93,13 @@ class RotatE(EntityRelationEmbeddingModel):
             entity_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
                 initializer=xavier_uniform_,
-                dtype=torch.complex64,
+                dtype=torch.cfloat,
             ),
             relation_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
                 initializer=init_phases,
                 constrainer=complex_normalize,
-                dtype=torch.complex64,
+                dtype=torch.cfloat,
             ),
         )
         self.real_embedding_dim = embedding_dim
