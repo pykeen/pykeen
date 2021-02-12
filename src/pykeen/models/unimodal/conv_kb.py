@@ -83,8 +83,8 @@ class ConvKB(EntityRelationEmbeddingModel):
         num_filters: int = 400,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
-        entity_initializer: Hint[Initializer] = None,
-        relation_initializer: Hint[Initializer] = None,
+        entity_initializer: Hint[Initializer] = 'uniform',
+        relation_initializer: Hint[Initializer] = 'uniform',
     ) -> None:
         """Initialize the model.
 
@@ -102,7 +102,7 @@ class ConvKB(EntityRelationEmbeddingModel):
             ),
             relation_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
-                initializer=relation_initializer or entity_initializer,
+                initializer=relation_initializer,
             ),
         )
 

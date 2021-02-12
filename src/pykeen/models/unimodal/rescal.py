@@ -60,8 +60,8 @@ class RESCAL(EntityRelationEmbeddingModel):
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
-        entity_initializer: Hint[Initializer] = None,
-        relation_initializer: Hint[Initializer] = None,
+        entity_initializer: Hint[Initializer] = 'uniform',
+        relation_initializer: Hint[Initializer] = 'uniform',
     ) -> None:
         r"""Initialize RESCAL.
 
@@ -83,7 +83,7 @@ class RESCAL(EntityRelationEmbeddingModel):
             ),
             relation_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim ** 2,  # d x d matrices
-                initializer=relation_initializer or entity_initializer,
+                initializer=relation_initializer,
             ),
         )
 

@@ -114,7 +114,7 @@ class TuckER(EntityRelationEmbeddingModel):
             ),
             relation_representations=EmbeddingSpecification(
                 embedding_dim=relation_dim or embedding_dim,
-                initializer=relation_initializer or entity_initializer,
+                initializer=relation_initializer,
             ),
         )
 

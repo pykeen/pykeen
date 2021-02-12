@@ -71,10 +71,10 @@ class KG2E(EntityRelationEmbeddingModel):
         c_min: float = 0.05,
         c_max: float = 5.,
         regularizer: Optional[Regularizer] = None,
-        entity_initializer: Hint[Initializer] = None,
+        entity_initializer: Hint[Initializer] = 'uniform',
         entity_constrainer: Hint[Constrainer] = 'clamp_norm',
         entity_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
-        relation_initializer: Hint[Initializer] = None,
+        relation_initializer: Hint[Initializer] = 'uniform',
         relation_constrainer: Hint[Constrainer] = 'clamp_norm',
         relation_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
     ) -> None:
@@ -99,7 +99,7 @@ class KG2E(EntityRelationEmbeddingModel):
             ),
             relation_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
-                initializer=relation_initializer or entity_initializer,
+                initializer=relation_initializer,
                 constrainer=relation_constrainer,
                 constrainer_kwargs=relation_constrainer_kwargs or self.constrainer_default_kwargs,
             ),

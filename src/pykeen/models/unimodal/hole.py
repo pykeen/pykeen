@@ -67,7 +67,7 @@ class HolE(EntityRelationEmbeddingModel):
         entity_initializer: Hint[Initializer] = 'xavier_uniform',
         entity_constrainer: Hint[Constrainer] = 'clamp_norm',
         entity_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
-        relation_initializer: Hint[Constrainer] = None,
+        relation_initializer: Hint[Constrainer] = 'xavier_uniform',
     ) -> None:
         """Initialize the model."""
         super().__init__(
@@ -85,7 +85,7 @@ class HolE(EntityRelationEmbeddingModel):
             ),
             relation_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
-                initializer=relation_initializer or entity_initializer,
+                initializer=relation_initializer,
             ),
         )
 

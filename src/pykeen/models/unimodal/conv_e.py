@@ -134,7 +134,7 @@ class ConvE(EntityRelationEmbeddingModel):
         regularizer: Optional[Regularizer] = None,
         apply_batch_normalization: bool = True,
         entity_initializer: Hint[Initializer] = 'xavier_normal',
-        relation_initializer: Hint[Initializer] = None,
+        relation_initializer: Hint[Initializer] = 'xavier_normal',
     ) -> None:
         """Initialize the model."""
         # ConvE should be trained with inverse triples
@@ -157,7 +157,7 @@ class ConvE(EntityRelationEmbeddingModel):
             ),
             relation_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
-                initializer=relation_initializer or entity_initializer,
+                initializer=relation_initializer,
             ),
         )
 

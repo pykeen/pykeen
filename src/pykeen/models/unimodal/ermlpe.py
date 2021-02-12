@@ -66,8 +66,8 @@ class ERMLPE(EntityRelationEmbeddingModel):
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
-        entity_initializer: Hint[Initializer] = None,
-        relation_initializer: Hint[Initializer] = None,
+        entity_initializer: Hint[Initializer] = 'uniform',
+        relation_initializer: Hint[Initializer] = 'uniform',
     ) -> None:
         super().__init__(
             triples_factory=triples_factory,
@@ -81,7 +81,7 @@ class ERMLPE(EntityRelationEmbeddingModel):
             ),
             relation_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
-                initializer=relation_initializer or entity_initializer,
+                initializer=relation_initializer,
             ),
         )
         self.hidden_dim = hidden_dim
