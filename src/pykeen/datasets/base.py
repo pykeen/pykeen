@@ -80,13 +80,20 @@ class Dataset:
             zip(('Training', 'Testing', 'Validation'), (self.training, self.testing, self.validation))
         ]
 
-    def summary_str(self, title: Optional[str] = None, end='\n') -> str:
+    def summary_str(self, title: Optional[str] = None, show_examples: Optional[int] = 5, end='\n') -> str:
         """Make a summary string of all of the factories."""
         rows = self._summary_rows()
         n_triples = sum(count for *_, count in rows)
         rows.append(('Total', '-', '-', n_triples))
         t = tabulate(rows, headers=['Name', 'Entities', 'Relations', 'Triples'])
-        return f'{title or self.__class__.__name__} (create_inverse_triples={self.create_inverse_triples})\n{t}{end}'
+        rv = f'{title or self.__class__.__name__} (create_inverse_triples={self.create_inverse_triples})\n{t}'
+        if show_examples:
+            examples = tabulate(
+                self.training.label_triples(self.training.mapped_triples[:show_examples]),
+                headers=['Head', 'Relation', 'tail'],
+            )
+            rv += '\n' + examples
+        return rv + end
 
     def summarize(self, title: Optional[str] = None, file=None) -> None:
         """Print a summary of the dataset."""
@@ -746,4 +753,10 @@ class SingleTabbedDataset(TabbedDataset):
             logger.info('downloading data from %s to %s', self.url, self._get_path())
             _urlretrieve(self.url, self._get_path())  # noqa:S310
         df = pd.read_csv(self._get_path(), **self.read_csv_kwargs)
+
+        usecols = self.read_csv_kwargs.get('usecols')
+        if usecols is not None:
+            logger.info('reordering columns: %s', usecols)
+            df = df[usecols]
+
         return df
