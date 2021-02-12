@@ -133,7 +133,10 @@ class RGCNRepresentations(RepresentationModule):
         base_representations: Optional[RepresentationModule] = None,
         initializer: Hint[Initializer] = 'xavier_uniform',
     ):
-        super().__init__()
+        super().__init__(
+            max_id=triples_factory.num_entities,
+            shape=(embedding_dim,),
+        )
 
         self.triples_factory = triples_factory
 
@@ -146,7 +149,6 @@ class RGCNRepresentations(RepresentationModule):
                 initializer=initializer,
             )
         self.base_embeddings = base_representations
-        self.embedding_dim = embedding_dim
 
         # check decomposition
         self.decomposition = decomposition
@@ -205,8 +207,8 @@ class RGCNRepresentations(RepresentationModule):
                 self.bases.append(nn.Parameter(
                     data=torch.empty(
                         self.num_bases,
-                        self.embedding_dim,
-                        self.embedding_dim,
+                        embedding_dim,
+                        embedding_dim,
                     ),
                     requires_grad=True,
                 ))
@@ -218,7 +220,7 @@ class RGCNRepresentations(RepresentationModule):
                     requires_grad=True,
                 ))
         elif self.decomposition == 'block':
-            block_size = self.embedding_dim // self.num_bases
+            block_size = embedding_dim // self.num_bases
             for _ in range(self.num_layers):
                 self.bases.append(nn.Parameter(
                     data=torch.empty(
@@ -235,14 +237,14 @@ class RGCNRepresentations(RepresentationModule):
             raise NotImplementedError
         if self.use_bias:
             self.biases = nn.ParameterList([
-                nn.Parameter(torch.empty(self.embedding_dim), requires_grad=True)
+                nn.Parameter(torch.empty(embedding_dim), requires_grad=True)
                 for _ in range(self.num_layers)
             ])
         else:
             self.biases = None
         if self.use_batch_norm:
             self.batch_norms = nn.ModuleList([
-                nn.BatchNorm1d(num_features=self.embedding_dim)
+                nn.BatchNorm1d(num_features=embedding_dim)
                 for _ in range(self.num_layers)
             ])
         else:

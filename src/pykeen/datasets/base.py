@@ -10,7 +10,7 @@ import tarfile
 import zipfile
 from abc import abstractmethod
 from io import BytesIO
-from typing import Any, Dict, List, Optional, TextIO, Tuple, Union, cast
+from typing import Any, Dict, List, Mapping, Optional, TextIO, Tuple, Union, cast
 from urllib.request import urlretrieve
 
 import pandas as pd
@@ -80,13 +80,20 @@ class Dataset:
             zip(('Training', 'Testing', 'Validation'), (self.training, self.testing, self.validation))
         ]
 
-    def summary_str(self, title: Optional[str] = None, end='\n') -> str:
+    def summary_str(self, title: Optional[str] = None, show_examples: Optional[int] = 5, end='\n') -> str:
         """Make a summary string of all of the factories."""
         rows = self._summary_rows()
         n_triples = sum(count for *_, count in rows)
         rows.append(('Total', '-', '-', n_triples))
         t = tabulate(rows, headers=['Name', 'Entities', 'Relations', 'Triples'])
-        return f'{title or self.__class__.__name__} (create_inverse_triples={self.create_inverse_triples})\n{t}{end}'
+        rv = f'{title or self.__class__.__name__} (create_inverse_triples={self.create_inverse_triples})\n{t}'
+        if show_examples:
+            examples = tabulate(
+                self.training.label_triples(self.training.mapped_triples[:show_examples]),
+                headers=['Head', 'Relation', 'tail'],
+            )
+            rv += '\n' + examples
+        return rv + end
 
     def summarize(self, title: Optional[str] = None, file=None) -> None:
         """Print a summary of the dataset."""
@@ -220,6 +227,7 @@ class PathDataset(LazyDataset):
         validation_path: Union[str, TextIO],
         eager: bool = False,
         create_inverse_triples: bool = False,
+        load_triples_kwargs: Optional[Mapping[str, Any]] = None,
     ) -> None:
         """Initialize the dataset.
 
@@ -228,12 +236,15 @@ class PathDataset(LazyDataset):
         :param validation_path: Path to the validation triples file or validation triples file.
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
+        :param load_triples_kwargs: Arguments to pass through to :func:`TriplesFactory.from_path`
+            and ultimately through to :func:`pykeen.triples.utils.load_triples`.
         """
         self.training_path = training_path
         self.testing_path = testing_path
         self.validation_path = validation_path
 
         self.create_inverse_triples = create_inverse_triples
+        self.load_triples_kwargs = load_triples_kwargs
 
         if eager:
             self._load()
@@ -243,12 +254,15 @@ class PathDataset(LazyDataset):
         self._training = TriplesFactory.from_path(
             path=self.training_path,
             create_inverse_triples=self.create_inverse_triples,
+            load_triples_kwargs=self.load_triples_kwargs,
         )
         self._testing = TriplesFactory.from_path(
             path=self.testing_path,
             entity_to_id=self._training.entity_to_id,  # share entity index with training
             relation_to_id=self._training.relation_to_id,  # share relation index with training
-            create_inverse_triples=self.create_inverse_triples,
+            # do not explicitly create inverse triples for testing; this is handled by the evaluation code
+            create_inverse_triples=False,
+            load_triples_kwargs=self.load_triples_kwargs,
         )
 
     def _load_validation(self) -> None:
@@ -259,7 +273,9 @@ class PathDataset(LazyDataset):
             path=self.validation_path,
             entity_to_id=self._training.entity_to_id,  # share entity index with training
             relation_to_id=self._training.relation_to_id,  # share relation index with training
-            create_inverse_triples=self.create_inverse_triples,
+            # do not explicitly create inverse triples for testing; this is handled by the evaluation code
+            create_inverse_triples=False,
+            load_triples_kwargs=self.load_triples_kwargs,
         )
 
     def __repr__(self) -> str:  # noqa: D105
@@ -306,10 +322,11 @@ class UnpackedRemoteDataset(PathDataset):
         testing_url: str,
         validation_url: str,
         cache_root: Optional[str] = None,
-        eager: bool = False,
-        create_inverse_triples: bool = False,
         stream: bool = True,
         force: bool = False,
+        eager: bool = False,
+        create_inverse_triples: bool = False,
+        load_triples_kwargs: Optional[Mapping[str, Any]] = None,
     ):
         """Initialize dataset.
 
@@ -319,10 +336,12 @@ class UnpackedRemoteDataset(PathDataset):
         :param cache_root:
             An optional directory to store the extracted files. Is none is given, the default PyKEEN directory is used.
             This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.pykeen``.
-        :param eager: Should the data be loaded eagerly? Defaults to false.
-        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param stream: Use :mod:`requests` be used for download if true otherwise use :mod:`urllib`
         :param force: If true, redownload any cached files
+        :param eager: Should the data be loaded eagerly? Defaults to false.
+        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
+        :param load_triples_kwargs: Arguments to pass through to :func:`TriplesFactory.from_path`
+            and ultimately through to :func:`pykeen.triples.utils.load_triples`.
         """
         self.cache_root = self._help_cache(cache_root)
 
@@ -349,6 +368,7 @@ class UnpackedRemoteDataset(PathDataset):
             validation_path=validation_path,
             eager=eager,
             create_inverse_triples=create_inverse_triples,
+            load_triples_kwargs=load_triples_kwargs,
         )
 
 
@@ -733,4 +753,10 @@ class SingleTabbedDataset(TabbedDataset):
             logger.info('downloading data from %s to %s', self.url, self._get_path())
             _urlretrieve(self.url, self._get_path())  # noqa:S310
         df = pd.read_csv(self._get_path(), **self.read_csv_kwargs)
+
+        usecols = self.read_csv_kwargs.get('usecols')
+        if usecols is not None:
+            logger.info('reordering columns: %s', usecols)
+            df = df[usecols]
+
         return df
