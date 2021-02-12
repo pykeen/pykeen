@@ -176,8 +176,6 @@ the same compared to running uninterrupted without checkpoints, also for the eva
 
 To show how to use the checkpoint functionality without the pipeline, we define a KGEM first:
 
-.. code-block:: python
-
 >>> from pykeen.models import TransE
 >>> from pykeen.training import SLCWATrainingLoop
 >>> from pykeen.triples import TriplesFactory
