@@ -71,13 +71,13 @@ class RotatE(EntityRelationEmbeddingModel):
             regularizer=regularizer,
             entity_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
-                initializer=xavier_uniform_,
+                initializer=entity_initializer,
                 dtype=torch.cfloat,
             ),
             relation_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
-                initializer=init_phases,
-                constrainer=complex_normalize,
+                initializer=relation_initializer,
+                constrainer=relation_constrainer,
                 dtype=torch.cfloat,
             ),
         )
