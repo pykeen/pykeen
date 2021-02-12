@@ -12,7 +12,7 @@ from ...losses import Loss, SoftplusLoss
 from ...nn import Embedding, EmbeddingSpecification
 from ...regularizers import PowerSumRegularizer, Regularizer
 from ...triples import TriplesFactory
-from ...typing import DeviceHint
+from ...typing import DeviceHint, Hint, Initializer
 
 __all__ = [
     'SimplE',
@@ -72,6 +72,8 @@ class SimplE(EntityRelationEmbeddingModel):
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
         clamp_score: Optional[Union[float, Tuple[float, float]]] = None,
+        entity_initializer: Hint[Initializer] = None,
+        relation_initializer: Hint[Initializer] = None,
     ) -> None:
         super().__init__(
             triples_factory=triples_factory,
@@ -81,9 +83,11 @@ class SimplE(EntityRelationEmbeddingModel):
             regularizer=regularizer,
             entity_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
+                initializer=entity_initializer,
             ),
             relation_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
+                initializer=relation_initializer,
             ),
         )
 

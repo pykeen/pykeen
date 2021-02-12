@@ -16,7 +16,7 @@ from ...nn import EmbeddingSpecification
 from ...nn.init import xavier_uniform_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
-from ...typing import DeviceHint
+from ...typing import DeviceHint, Hint, Initializer
 
 __all__ = [
     'ProjE',
@@ -66,6 +66,8 @@ class ProjE(EntityRelationEmbeddingModel):
         random_seed: Optional[int] = None,
         inner_non_linearity: Optional[nn.Module] = None,
         regularizer: Optional[Regularizer] = None,
+        entity_initializer: Hint[Initializer] = xavier_uniform_,
+        relation_initializer: Hint[Initializer] = xavier_uniform_,
     ) -> None:
         super().__init__(
             triples_factory=triples_factory,
@@ -75,11 +77,11 @@ class ProjE(EntityRelationEmbeddingModel):
             regularizer=regularizer,
             entity_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
-                initializer=xavier_uniform_,
+                initializer=entity_initializer,
             ),
             relation_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
-                initializer=xavier_uniform_,
+                initializer=relation_initializer,
             ),
         )
 

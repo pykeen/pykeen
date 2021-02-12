@@ -14,7 +14,7 @@ from ...nn import EmbeddingSpecification
 from ...nn.init import xavier_uniform_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
-from ...typing import DeviceHint, cast_constrainer
+from ...typing import Constrainer, DeviceHint, Hint, Initializer
 from ...utils import clamp_norm
 
 __all__ = [
@@ -55,6 +55,9 @@ class HolE(EntityRelationEmbeddingModel):
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
     )
 
+    #: The default settings for the entity constrainer
+    entity_constrainer_default_kwargs = dict(maxnorm=1., p=2, dim=-1)
+
     def __init__(
         self,
         triples_factory: TriplesFactory,
@@ -63,6 +66,10 @@ class HolE(EntityRelationEmbeddingModel):
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
+        entity_initializer: Hint[Initializer] = xavier_uniform_,
+        entity_constrainer: Hint[Constrainer] = clamp_norm,  # type: ignore
+        entity_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
+        relation_initializer: Hint[Constrainer] = xavier_uniform_,
     ) -> None:
         """Initialize the model."""
         super().__init__(
@@ -74,13 +81,13 @@ class HolE(EntityRelationEmbeddingModel):
             entity_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
                 # Initialisation, cf. https://github.com/mnick/scikit-kge/blob/master/skge/param.py#L18-L27
-                initializer=xavier_uniform_,
-                constrainer=cast_constrainer(clamp_norm),
-                constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
+                initializer=entity_initializer,
+                constrainer=entity_constrainer,
+                constrainer_kwargs=entity_constrainer_kwargs or self.entity_constrainer_default_kwargs,
             ),
             relation_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
-                initializer=xavier_uniform_,
+                initializer=relation_initializer,
             ),
         )
 
