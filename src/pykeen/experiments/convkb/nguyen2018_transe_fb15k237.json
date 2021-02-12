@@ -8,7 +8,9 @@
     "model": "TransE",
     "model_kwargs": {
       "embedding_dim": 100,
-      "scoring_fct_norm": 1
+      "scoring_fct_norm": 1,
+      "entity_initializer": "xavier_uniform",
+      "relation_initializer": "xavier_uniform"
     },
     "optimizer": "SGD",
     "optimizer_kwargs": {

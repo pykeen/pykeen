@@ -7,7 +7,9 @@
     "dataset": "wn18",
     "model": "DistMult",
     "model_kwargs": {
-      "embedding_dim": 100
+      "embedding_dim": 100,
+      "entity_initializer": "xavier_uniform",
+      "relation_initializer": "xavier_uniform"
     },
     "regularizer": "Lp",
     "regularizer_kwargs": {

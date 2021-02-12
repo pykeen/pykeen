@@ -8,7 +8,9 @@
     "model": "TransD",
     "model_kwargs": {
       "embedding_dim": 50,
-      "relation_dim": 50
+      "relation_dim": 50,
+      "entity_initializer": "xavier_uniform",
+      "relation_initializer": "xavier_uniform"
     },
     "optimizer": "Adadelta",
     "optimizer_kwargs": {

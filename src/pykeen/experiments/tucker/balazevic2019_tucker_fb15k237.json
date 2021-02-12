@@ -15,7 +15,9 @@
       "dropout_0": 0.3,
       "dropout_1": 0.4,
       "dropout_2": 0.5,
-      "apply_batch_normalization": true
+      "apply_batch_normalization": true,
+      "entity_initializer": "xavier_normal",
+      "relation_initializer": "xavier_normal"
     },
     "optimizer": "Adam",
     "optimizer_kwargs": {

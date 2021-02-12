@@ -8,7 +8,9 @@
     "model_kwargs": {
       "embedding_dim": 50,
       "c_min": 0.05,
-      "c_max": 5.0
+      "c_max": 5.0,
+      "entity_initializer": "uniform",
+      "relation_initializer": "uniform"
     },
     "optimizer": "SGD",
     "optimizer_kwargs": {
