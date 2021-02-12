@@ -466,7 +466,7 @@ class ERModel(
     ) -> Tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]:
         h, r, t = [
             [
-                representation.get_in_canonical_shape(dim=dim, indices=indices)
+                representation.get_in_more_canonical_shape(dim=dim, indices=indices)
                 for representation in representations
             ]
             for dim, indices, representations in (
