@@ -177,7 +177,7 @@ class LazyDataset(Dataset):
         return self._testing
 
     @property
-    def validation(self) -> TriplesFactory:  # type:ignore # noqa: D401
+    def validation(self) -> Optional[TriplesFactory]:  # type:ignore # noqa: D401
         """The validation triples factory that shares indices with the training triples factory."""
         if not self._loaded:
             self._load()
@@ -223,7 +223,7 @@ class PathDataset(LazyDataset):
         self,
         training_path: Union[str, TextIO],
         testing_path: Union[str, TextIO],
-        validation_path: Union[str, TextIO],
+        validation_path: Union[None, str, TextIO],
         eager: bool = False,
         create_inverse_triples: bool = False,
         load_triples_kwargs: Optional[Mapping[str, Any]] = None,
