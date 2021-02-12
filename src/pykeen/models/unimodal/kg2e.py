@@ -7,6 +7,7 @@ from typing import Any, ClassVar, Mapping, Optional
 
 import torch
 import torch.autograd
+from torch.nn.init import uniform_
 
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
@@ -15,6 +16,7 @@ from ...nn import Embedding, EmbeddingSpecification
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import Constrainer, DeviceHint, Hint, Initializer
+from ...utils import clamp_norm
 
 __all__ = [
     'KG2E',
@@ -71,11 +73,11 @@ class KG2E(EntityRelationEmbeddingModel):
         c_min: float = 0.05,
         c_max: float = 5.,
         regularizer: Optional[Regularizer] = None,
-        entity_initializer: Hint[Initializer] = 'uniform',
-        entity_constrainer: Hint[Constrainer] = 'clamp_norm',
+        entity_initializer: Hint[Initializer] = uniform_,
+        entity_constrainer: Hint[Constrainer] = clamp_norm,  # type: ignore
         entity_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
-        relation_initializer: Hint[Initializer] = 'uniform',
-        relation_constrainer: Hint[Constrainer] = 'clamp_norm',
+        relation_initializer: Hint[Initializer] = uniform_,
+        relation_constrainer: Hint[Constrainer] = clamp_norm,  # type: ignore
         relation_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
     ) -> None:
         r"""Initialize KG2E.

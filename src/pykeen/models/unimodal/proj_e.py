@@ -13,6 +13,7 @@ from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import BCEWithLogitsLoss, Loss
 from ...nn import EmbeddingSpecification
+from ...nn.init import xavier_uniform_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint, Hint, Initializer
@@ -65,8 +66,8 @@ class ProjE(EntityRelationEmbeddingModel):
         random_seed: Optional[int] = None,
         inner_non_linearity: Optional[nn.Module] = None,
         regularizer: Optional[Regularizer] = None,
-        entity_initializer: Hint[Initializer] = 'xavier_uniform',
-        relation_initializer: Hint[Initializer] = 'xavier_uniform',
+        entity_initializer: Hint[Initializer] = xavier_uniform_,
+        relation_initializer: Hint[Initializer] = xavier_uniform_,
     ) -> None:
         super().__init__(
             triples_factory=triples_factory,

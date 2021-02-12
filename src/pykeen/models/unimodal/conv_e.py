@@ -14,6 +14,7 @@ from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE
 from ...losses import BCEAfterSigmoidLoss, Loss
 from ...nn import Embedding, EmbeddingSpecification
+from ...nn.init import xavier_normal_
 from ...nn.modules import _calculate_missing_shape_information
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
@@ -133,8 +134,8 @@ class ConvE(EntityRelationEmbeddingModel):
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
         apply_batch_normalization: bool = True,
-        entity_initializer: Hint[Initializer] = 'xavier_normal',
-        relation_initializer: Hint[Initializer] = 'xavier_normal',
+        entity_initializer: Hint[Initializer] = xavier_normal_,
+        relation_initializer: Hint[Initializer] = xavier_normal_,
     ) -> None:
         """Initialize the model."""
         # ConvE should be trained with inverse triples

@@ -7,10 +7,15 @@ import math
 import numpy as np
 import torch.nn
 import torch.nn.init
+from torch.nn import functional
+
+from ..utils import compose
 
 __all__ = [
     'xavier_uniform_',
+    'xavier_uniform_norm_',
     'xavier_normal_',
+    'xavier_normal_norm_',
     'init_phases',
 ]
 
@@ -59,3 +64,13 @@ def init_phases(x: torch.Tensor) -> torch.Tensor:
     r"""Generate random phases between 0 and :math:`2\pi`."""
     phases = 2 * np.pi * torch.rand_like(x[..., :x.shape[-1] // 2])
     return torch.cat([torch.cos(phases), torch.sin(phases)], dim=-1).detach()
+
+
+xavier_uniform_norm_ = compose(
+    torch.nn.init.xavier_uniform_,
+    functional.normalize,
+)
+xavier_normal_norm_ = compose(
+    torch.nn.init.xavier_normal_,
+    functional.normalize,
+)

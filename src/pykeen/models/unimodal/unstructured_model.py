@@ -11,6 +11,7 @@ from ..base import EntityEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
 from ...nn import EmbeddingSpecification
+from ...nn.init import xavier_normal_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint, Hint, Initializer
@@ -53,7 +54,7 @@ class UnstructuredModel(EntityEmbeddingModel):
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
-        entity_initializer: Hint[Initializer] = 'xavier_normal',
+        entity_initializer: Hint[Initializer] = xavier_normal_,
     ) -> None:
         r"""Initialize UM.
 

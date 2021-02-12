@@ -6,6 +6,7 @@ from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
 from torch.nn import functional
+from torch.nn.init import uniform_
 
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
@@ -73,8 +74,8 @@ class TransH(EntityRelationEmbeddingModel):
         predict_with_sigmoid: bool = False,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
-        entity_initializer: Hint[Initializer] = 'uniform',
-        relation_initializer: Hint[Initializer] = 'uniform',
+        entity_initializer: Hint[Initializer] = uniform_,
+        relation_initializer: Hint[Initializer] = uniform_,
     ) -> None:
         r"""Initialize TransH.
 

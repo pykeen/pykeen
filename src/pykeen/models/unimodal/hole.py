@@ -11,9 +11,11 @@ from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
 from ...nn import EmbeddingSpecification
+from ...nn.init import xavier_uniform_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import Constrainer, DeviceHint, Hint, Initializer
+from ...utils import clamp_norm
 
 __all__ = [
     'HolE',
@@ -64,10 +66,10 @@ class HolE(EntityRelationEmbeddingModel):
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
-        entity_initializer: Hint[Initializer] = 'xavier_uniform',
-        entity_constrainer: Hint[Constrainer] = 'clamp_norm',
+        entity_initializer: Hint[Initializer] = xavier_uniform_,
+        entity_constrainer: Hint[Constrainer] = clamp_norm,  # type: ignore
         entity_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
-        relation_initializer: Hint[Constrainer] = 'xavier_uniform',
+        relation_initializer: Hint[Constrainer] = xavier_uniform_,
     ) -> None:
         """Initialize the model."""
         super().__init__(

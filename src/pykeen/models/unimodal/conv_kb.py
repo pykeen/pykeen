@@ -8,6 +8,7 @@ from typing import Any, ClassVar, Mapping, Optional, Type
 import torch
 import torch.autograd
 from torch import nn
+from torch.nn.init import uniform_
 
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
@@ -83,8 +84,8 @@ class ConvKB(EntityRelationEmbeddingModel):
         num_filters: int = 400,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
-        entity_initializer: Hint[Initializer] = 'uniform',
-        relation_initializer: Hint[Initializer] = 'uniform',
+        entity_initializer: Hint[Initializer] = uniform_,
+        relation_initializer: Hint[Initializer] = uniform_,
     ) -> None:
         """Initialize the model.
 
