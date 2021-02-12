@@ -9,7 +9,7 @@
     "model_kwargs": {
       "embedding_dim": 500,
       "entity_initializer": "uniform",
-      "relation_initializer": "uniform",
+      "relation_initializer": "init_phases",
       "relation_constrainer": "complex_normalize"
     },
     "optimizer": "Adam",
