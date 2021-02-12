@@ -10,7 +10,8 @@
       "embedding_dim": 50,
       "scoring_fct_norm": 1,
       "entity_initializer": "xavier_uniform",
-      "relation_initializer": "xavier_uniform"
+      "relation_initializer": "xavier_uniform",
+      "entity_constrainer": "normalize"
     },
     "optimizer": "SGD",
     "optimizer_kwargs": {

@@ -9,7 +9,8 @@
     "model_kwargs": {
       "embedding_dim": 100,
       "entity_initializer": "xavier_uniform",
-      "relation_initializer": "xavier_uniform"
+      "relation_initializer": "xavier_uniform",
+      "entity_constrainer": "normalize"
     },
     "regularizer": "Lp",
     "regularizer_kwargs": {

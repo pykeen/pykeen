@@ -9,7 +9,8 @@
     "model_kwargs": {
       "embedding_dim": 150,
       "entity_initializer": "xavier_uniform",
-      "relation_initializer": "xavier_uniform"
+      "relation_initializer": "xavier_uniform",
+      "entity_constrainer": "clamp_norm"
     },
     "optimizer": "AdaGrad",
     "optimizer_kwargs": {

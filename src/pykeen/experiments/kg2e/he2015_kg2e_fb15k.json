@@ -10,7 +10,9 @@
       "c_min": 0.05,
       "c_max": 5.0,
       "entity_initializer": "uniform",
-      "relation_initializer": "uniform"
+      "relation_initializer": "uniform",
+      "entity_constrainer": "clamp_norm",
+      "relation_constrainer": "clamp_norm"
     },
     "optimizer": "SGD",
     "optimizer_kwargs": {
