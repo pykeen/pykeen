@@ -9,20 +9,16 @@ You've got a training and testing file as 3-column TSV files, all ready to go. Y
 any entities or relations appearing in the testing set that don't appear in the training set. Load them in the
 pipeline like this:
 
-.. code-block:: python
-
-    from pykeen.triples import TriplesFactory
-    from pykeen.pipeline import pipeline
-
-    training_path: str = ...
-    testing_path: str = ...
-
-    result = pipeline(
-        training_triples_factory=training_path,
-        testing_triples_factory=testing_path,
-        model='TransE',
-    )
-    result.save_to_directory('test_pre_stratified_transe')
+>>> import pystow
+>>> from pykeen.triples import TriplesFactory
+>>> from pykeen.pipeline import pipeline
+>>> from pykeen.datasets.nations import NATIONS_TRAIN_PATH, NATIONS_TEST_PATH
+>>> result = pipeline(
+...     training=NATIONS_TRAIN_PATH,
+...     testing=NATIONS_TEST_PATH,
+...     model='TransE',
+... )
+>>> result.save_to_directory(pystow.get('pykeen', 'docs', 'test_pre_stratified_transe'))
 
 PyKEEN will take care of making sure that the entities are mapped from their labels to appropriate integer
 (technically, 0-dimensional :class:`torch.LongTensor`) indexes and that the different sets of triples
@@ -35,14 +31,12 @@ the :func:`pykeen.pipeline.pipeline` as in:
 
     from pykeen.triples import TriplesFactory
     from pykeen.hpo import hpo_pipeline
-
-    training_path: str = ...
-    testing_path: str = ...
+    from pykeen.datasets.nations import NATIONS_TRAIN_PATH, NATIONS_TEST_PATH
 
     result = hpo_pipeline(
         n_trials=30,
-        training_triples_factory=training_path,
-        testing_triples_factory=testing_path,
+        training=NATIONS_TRAIN_PATH,
+        testing=NATIONS_TEST_PATH,
         model='TransE',
     )
     result.save_to_directory('test_hpo_pre_stratified_transe')
@@ -57,13 +51,11 @@ to the :class:`pykeen.pipeline.pipeline` to enable options like ``create_inverse
 
     from pykeen.triples import TriplesFactory
     from pykeen.pipeline import pipeline
-
-    training_path: str = ...
-    testing_path: str = ...
+    from pykeen.datasets.nations import NATIONS_TRAIN_PATH, NATIONS_TEST_PATH
 
     result = pipeline(
-        training_triples_factory=training_path,
-        testing_triples_factory=testing_path,
+        training=NATIONS_TRAIN_PATH,
+        testing=NATIONS_TEST_PATH,
         dataset_kwargs={'create_inverse_triples': True},
         model='TransE',
     )
@@ -76,13 +68,11 @@ TSV files, you can use the :class:`pykeen.triples.TriplesFactory` interface.
 
     from pykeen.triples import TriplesFactory
     from pykeen.pipeline import pipeline
+    from pykeen.datasets.nations import NATIONS_TRAIN_PATH, NATIONS_TEST_PATH
 
-    training_path: str = ...
-    testing_path: str = ...
-
-    training = TriplesFactory(path=training_path)
+    training = TriplesFactory(path=NATIONS_TRAIN_PATH)
     testing = TriplesFactory(
-        path=testing_path,
+        path=NATIONS_TEST_PATH,
         entity_to_id=training.entity_to_id,
         relation_to_id=training.relation_to_id,
     )
@@ -110,16 +100,14 @@ desired behavior as in:
 
     from pykeen.triples import TriplesFactory
     from pykeen.pipeline import pipeline
-
-    training_path: str = ...
-    testing_path: str = ...
+    from pykeen.datasets.nations import NATIONS_TRAIN_PATH, NATIONS_TEST_PATH
 
     training = TriplesFactory(
-        path=training_path,
+        path=NATIONS_TRAIN_PATH,
         create_inverse_triples=True,
     )
     testing = TriplesFactory(
-        path=testing_path,
+        path=NATIONS_TEST_PATH,
         entity_to_id=training.entity_to_id,
         relation_to_id=training.relation_to_id,
         create_inverse_triples=True,
@@ -145,8 +133,9 @@ a stratified dataset.
 
     from pykeen.triples import TriplesFactory
     from pykeen.pipeline import pipeline
+    from pykeen.datasets.nations import NATIONS_TRAIN_PATH
 
-    tf = TriplesFactory(path=...)
+    tf = TriplesFactory(path=NATIONS_TRAIN_PATH)
     training, testing = tf.split()
 
     result = pipeline(

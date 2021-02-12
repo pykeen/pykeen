@@ -44,9 +44,13 @@ def cast_constrainer(f) -> Constrainer:
     return cast(Constrainer, f)
 
 
+#: A hint for a :class:`torch.device`
 DeviceHint = Union[None, str, torch.device]
+#: A hint for a :class:`torch.Generator`
 TorchRandomHint = Union[None, int, torch.Generator]
 
+#: A type variable for head representations used in :class:`pykeen.models.Model`,
+#: :class:`pykeen.nn.modules.Interaction`, etc.
 HeadRepresentation = TypeVar("HeadRepresentation", bound=Union[torch.FloatTensor, Sequence[torch.FloatTensor]])
 RelationRepresentation = TypeVar("RelationRepresentation", bound=Union[torch.FloatTensor, Sequence[torch.FloatTensor]])
 TailRepresentation = TypeVar("TailRepresentation", bound=Union[torch.FloatTensor, Sequence[torch.FloatTensor]])

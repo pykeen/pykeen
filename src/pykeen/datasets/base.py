@@ -183,7 +183,6 @@ class LazyDataset(Dataset):
             self._load()
         if not self._loaded_validation:
             self._load_validation()
-        assert self._validation is not None
         return self._validation
 
     @property
@@ -269,14 +268,17 @@ class PathDataset(LazyDataset):
         # don't call this function by itself. assumes called through the `validation`
         # property and the _training factory has already been loaded
         assert self._training is not None
-        self._validation = TriplesFactory.from_path(
-            path=self.validation_path,
-            entity_to_id=self._training.entity_to_id,  # share entity index with training
-            relation_to_id=self._training.relation_to_id,  # share relation index with training
-            # do not explicitly create inverse triples for testing; this is handled by the evaluation code
-            create_inverse_triples=False,
-            load_triples_kwargs=self.load_triples_kwargs,
-        )
+        if self.validation_path is None:
+            self._validation = None
+        else:
+            self._validation = TriplesFactory.from_path(
+                path=self.validation_path,
+                entity_to_id=self._training.entity_to_id,  # share entity index with training
+                relation_to_id=self._training.relation_to_id,  # share relation index with training
+                # do not explicitly create inverse triples for testing; this is handled by the evaluation code
+                create_inverse_triples=False,
+                load_triples_kwargs=self.load_triples_kwargs,
+            )
 
     def __repr__(self) -> str:  # noqa: D105
         return (
