@@ -4,7 +4,7 @@
 
 from typing import Any, ClassVar, Mapping, Optional
 
-from ..nbase import ERModel, EmbeddingSpecification
+from ..nbase import ERModel, NewEmbeddingSpecification
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
 from ...nn import EmbeddingSpecification
@@ -65,7 +65,7 @@ class UnstructuredModel(ERModel):
             preferred_device=preferred_device,
             random_seed=random_seed,
             interaction=UnstructuredModelInteraction(p=scoring_fct_norm),
-            entity_representations=EmbeddingSpecification(
+            entity_representations=NewEmbeddingSpecification(
                 embedding_dim=embedding_dim,
                 initializer=xavier_normal_,
             ),

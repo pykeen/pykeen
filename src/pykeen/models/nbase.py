@@ -14,8 +14,9 @@ import torch
 from torch import nn
 
 from .base import Model
-from .nemb import EmbeddingSpecification, EmbeddingSpecificationHint, NewRepresentationModule
+from .nemb import NewEmbeddingSpecification
 from ..losses import Loss
+from ..nn import RepresentationModule
 from ..nn.modules import Interaction
 from ..regularizers import Regularizer
 from ..triples import TriplesFactory
@@ -28,6 +29,13 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
+
+EmbeddingSpecificationHint = Union[
+    None,
+    NewEmbeddingSpecification,
+    RepresentationModule,
+    Sequence[Union[NewEmbeddingSpecification, RepresentationModule]],
+]
 
 
 class _NewAbstractModel(Model, ABC, autoreset=False):
@@ -261,7 +269,7 @@ def _prepare_representation_module_list(
     shapes: Sequence[str],
     label: str,
     skip_checks: bool = False,
-) -> Sequence[NewRepresentationModule]:
+) -> Sequence[RepresentationModule]:
     """Normalize list of representations and wrap into nn.ModuleList."""
     # Important: use ModuleList to ensure that Pytorch correctly handles their devices and parameters
     if representations is None:
@@ -275,8 +283,8 @@ def _prepare_representation_module_list(
         )
     modules = []
     for r in representations:
-        if not isinstance(r, NewRepresentationModule):
-            assert isinstance(r, EmbeddingSpecification)
+        if not isinstance(r, RepresentationModule):
+            assert isinstance(r, NewEmbeddingSpecification)
             r = r.make(num_embeddings=num_embeddings)
         if r.max_id < num_embeddings:
             raise ValueError(
@@ -305,10 +313,10 @@ class ERModel(
     """A commonly useful base for KGEMs using embeddings and interaction modules."""
 
     #: The entity representations
-    entity_representations: Sequence[NewRepresentationModule]
+    entity_representations: Sequence[RepresentationModule]
 
     #: The relation representations
-    relation_representations: Sequence[NewRepresentationModule]
+    relation_representations: Sequence[RepresentationModule]
 
     #: The weight regularizers
     weight_regularizers: List[Regularizer]

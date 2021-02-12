@@ -7,7 +7,7 @@ from typing import Any, ClassVar, Mapping, Optional, Type
 from torch.nn import functional
 
 from ..nbase import ERModel
-from ..nemb import EmbeddingSpecification
+from ..nemb import NewEmbeddingSpecification
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
 from ...nn import EmbeddingSpecification
@@ -87,14 +87,14 @@ class TransH(ERModel):
                 p=scoring_fct_norm,
                 power_norm=False,
             ),
-            entity_representations=EmbeddingSpecification(
+            entity_representations=NewEmbeddingSpecification(
                 embedding_dim=embedding_dim,
             ),
             relation_representations=[
-                EmbeddingSpecification(
+                NewEmbeddingSpecification(
                     embedding_dim=embedding_dim,
                 ),
-                EmbeddingSpecification(
+                NewEmbeddingSpecification(
                     embedding_dim=embedding_dim,
                     # Normalise the normal vectors by their l2 norms
                     constrainer=functional.normalize,
