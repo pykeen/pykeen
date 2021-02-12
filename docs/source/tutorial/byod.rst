@@ -1,7 +1,9 @@
 Bring Your Own Data
 ===================
 As an alternative to using a pre-packaged dataset, the training and testing can be set explicitly
-by file path or with instances of :class:`pykeen.triples.TriplesFactory`.
+by file path or with instances of :class:`pykeen.triples.TriplesFactory`. Throughout this
+tutorial, the paths to the training, testing, and validation sets for built-in
+:class:`pykeen.datasets.Nations` will be used as examples.
 
 Pre-stratified Dataset
 ----------------------
@@ -27,19 +29,16 @@ share the same mapping.
 This is equally applicable for the :func:`pykeen.hpo.hpo_pipeline`, which has a similar interface to
 the :func:`pykeen.pipeline.pipeline` as in:
 
-.. code-block:: python
-
-    from pykeen.triples import TriplesFactory
-    from pykeen.hpo import hpo_pipeline
-    from pykeen.datasets.nations import NATIONS_TRAIN_PATH, NATIONS_TEST_PATH
-
-    result = hpo_pipeline(
-        n_trials=30,
-        training=NATIONS_TRAIN_PATH,
-        testing=NATIONS_TEST_PATH,
-        model='TransE',
-    )
-    result.save_to_directory('test_hpo_pre_stratified_transe')
+>>> import pystow
+>>> from pykeen.hpo import hpo_pipeline
+>>> from pykeen.datasets.nations import NATIONS_TRAIN_PATH, NATIONS_TEST_PATH
+>>> result = hpo_pipeline(
+...     n_trials=3,  # you probably want more than this
+...     training=NATIONS_TRAIN_PATH,
+...     testing=NATIONS_TEST_PATH,
+...     model='TransE',
+... )
+>>> result.save_to_directory(pystow.get('pykeen', 'docs', 'test_hpo_pre_stratified_transe'))
 
 The remainder of the examples will be for :func:`pykeen.pipeline.pipeline`, but all work exactly the same
 for :func:`pykeen.hpo.hpo_pipeline`.
@@ -49,7 +48,6 @@ to the :class:`pykeen.pipeline.pipeline` to enable options like ``create_inverse
 
 .. code-block:: python
 
-    from pykeen.triples import TriplesFactory
     from pykeen.pipeline import pipeline
     from pykeen.datasets.nations import NATIONS_TRAIN_PATH, NATIONS_TEST_PATH
 
