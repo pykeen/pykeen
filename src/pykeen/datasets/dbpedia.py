@@ -45,8 +45,4 @@ class DBpedia50(UnpackedRemoteDataset):
 
 
 if __name__ == '__main__':
-    _d = DBpedia50()
-    _d.summarize()
-    print(_d.training.triples[:5])
-    print(_d.testing.triples[:5])
-    print(_d.validation.triples[:5])
+    DBpedia50().summarize()

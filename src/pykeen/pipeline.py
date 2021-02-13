@@ -174,6 +174,7 @@ import pathlib
 import pickle
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Collection, Dict, Iterable, List, Mapping, Optional, Set, Type, Union
 
 import pandas as pd
@@ -423,7 +424,12 @@ class PipelineResult(Result):
             results['stopper'] = self.stopper.get_summary_dict()
         return results
 
-    def save_to_directory(self, directory: str, save_metadata: bool = True, save_replicates: bool = True) -> None:
+    def save_to_directory(
+        self,
+        directory: Union[str, Path],
+        save_metadata: bool = True,
+        save_replicates: bool = True,
+    ) -> None:
         """Save all artifacts in the given directory."""
         os.makedirs(directory, exist_ok=True)
 

@@ -125,7 +125,7 @@ def get_dataset(
         raise TypeError(f'Dataset is invalid type: {type(dataset)}')
 
     if isinstance(training, str) and isinstance(testing, str):
-        if isinstance(validation, str):
+        if validation is None or isinstance(validation, str):
             return PathDataset(
                 training_path=training,
                 testing_path=testing,
@@ -146,7 +146,12 @@ def get_dataset(
             validation=validation,
         )
 
-    raise TypeError('Training and testing must both be given as strings or Triples Factories')
+    raise TypeError(
+        f'''Training and testing must both be given as strings or Triples Factories.
+        - Training: {type(training)}: {training}
+        - Testing: {type(testing)}: {testing}
+        ''',
+    )
 
 
 def has_dataset(key: str) -> bool:
