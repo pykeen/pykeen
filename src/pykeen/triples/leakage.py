@@ -272,19 +272,6 @@ class Sealant:
         return triples_factory.new_with_restriction(relations=self.relations_to_delete, invert_relation_selection=True)
 
 
-def unleak_dataset(
-    dataset,
-    n: Union[None, int, float] = None,
-    minimum_frequency: Optional[float] = None,
-    use_tqdm: bool = True,
-):
-    from ..datasets.base import EagerDataset
-    return EagerDataset(*unleak(
-        dataset.training, dataset.testing, dataset.validation,
-        n=n, minimum_frequency=minimum_frequency, use_tqdm=use_tqdm,
-    ))
-
-
 def unleak(
     train: TriplesFactory,
     *triples_factories: TriplesFactory,

@@ -122,6 +122,19 @@ class Dataset:
         """Get the normalized name of the dataset."""
         return normalize_string(cls.__name__)
 
+    def unleak(
+        self,
+        n: Union[None, int, float] = None,
+        minimum_frequency: Optional[float] = None,
+        use_tqdm: bool = True,
+    ):
+        """Unleak the dataset with :func:`pykeen.triples.leakage.unleak`."""
+        from ..triples.leakage import unleak
+        return EagerDataset(*unleak(
+            self.training, self.testing, self.validation,
+            n=n, minimum_frequency=minimum_frequency, use_tqdm=use_tqdm,
+        ))
+
 
 class EagerDataset(Dataset):
     """A dataset that has already been loaded."""
