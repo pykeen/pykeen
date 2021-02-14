@@ -14,7 +14,7 @@ relationship between datasets' splits' distances and their maximum performance.
 from typing import List, Sequence
 
 from pykeen.triples.splitting import normalize_ratios, split
-from pykeen.triples.triples_factory import TriplesFactory, cat_triples, splits_distance
+from pykeen.triples.triples_factory import TriplesFactory, cat_triples
 
 __all__ = [
     'remix',
@@ -61,14 +61,14 @@ def _main():
         n.remix(random_state=random_state)
         for random_state in range(trials)
     ]
-    distances = [
-        a.distance(b)
+    similarities = [
+        a.similarity(b)
         for a, b in itt.combinations(splits, r=2)
     ]
 
-    print(f'Distances number (1/2) * {trials} * ({trials}-1) = {len(distances)}')
-    print('Distances Mean', np.mean(distances))
-    print('Distances Std.', np.std(distances))
+    print(f'Number of combinations: {trials} n Choose 2 = {len(similarities)}')
+    print('Similarities Mean', np.mean(similarities))
+    print('Similarities Std.', np.std(similarities))
 
 
 if __name__ == '__main__':

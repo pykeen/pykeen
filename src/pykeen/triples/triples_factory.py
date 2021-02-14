@@ -26,7 +26,7 @@ __all__ = [
     'create_relation_mapping',
     'INVERSE_SUFFIX',
     'cat_triples',
-    'splits_distance',
+    'splits_similarity',
 ]
 
 logger = logging.getLogger(__name__)
@@ -996,29 +996,39 @@ class TriplesFactory(CoreTriplesFactory):
 
 
 def cat_triples(*triples_factories: TriplesFactory) -> MappedTriples:
-    """Concatenate several triples factories"""
+    """Concatenate several triples factories."""
     return torch.cat([
         factory.mapped_triples
         for factory in triples_factories
     ], dim=0)
 
 
-def splits_distance(a: Sequence[TriplesFactory], b: Sequence[TriplesFactory]) -> float:
-    """Compute the distance between two datasets' splits.
+def splits_steps(a: Sequence[CoreTriplesFactory], b: Sequence[CoreTriplesFactory]) -> int:
+    """Compute the number of moves to go from the first sequence of triples factories to the second.
 
     :return: The number of triples present in the training sets in both
     """
     if len(a) != len(b):
         raise ValueError('Must have same number of triples factories')
 
-    # concatenate test and valid
     train_1 = _smt(a[0].mapped_triples)
     train_2 = _smt(b[0].mapped_triples)
-    non_train_1 = _smt(cat_triples(*a[1:]))
-    # non_train_2 = smt(concatenate_triples_factories(test_2, valid_2))
-    # TODO more interesting way to discuss splits w/ valid
-    return 1 - len(train_1.intersection(train_2)) / len(train_1.union(non_train_1))
+
+    # FIXME currently the implementation does not consider the non-training (i.e., second-last entries)
+    #  for the number of steps. Consider more interesting way to discuss splits w/ valid
+
+    return len(train_1.symmetric_difference(train_2))
+
+
+def splits_similarity(a: Sequence[CoreTriplesFactory], b: Sequence[CoreTriplesFactory]) -> float:
+    """Compute the similarity between two datasets' splits.
+
+    :return: The number of triples present in the training sets in both
+    """
+    steps = splits_steps(a, b)
+    n = sum(tf.num_triples for tf in a)
+    return 1 - steps / n
 
 
 def _smt(x):
-    return set(tuple(xx) for xx in x)
+    return set(tuple(xx.detach().numpy().tolist()) for xx in x)

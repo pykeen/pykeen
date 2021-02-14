@@ -190,6 +190,8 @@ class EarlyStopper(Stopper):
     @property
     def improvement(self) -> float:
         """Get the total improvement."""
+        if self.best_metric is None:
+            raise ValueError
         if self.larger_is_better:
             return self.best_metric - self.results[0]
         else:
