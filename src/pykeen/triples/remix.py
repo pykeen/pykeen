@@ -49,26 +49,34 @@ def _get_ratios(*triples_factories: TriplesFactory) -> Sequence[float]:
     return ratios
 
 
-def _main():
-    from pykeen.datasets import Nations
+def _main(trials: int = 15):
+    from pykeen.datasets import get_dataset
     import numpy as np
     import itertools as itt
-    n = Nations()
-    n.summarize()
+    from tqdm import tqdm
 
-    trials = 35
-    splits = [
-        n.remix(random_state=random_state)
-        for random_state in range(trials)
-    ]
-    similarities = [
-        a.similarity(b)
-        for a, b in itt.combinations(splits, r=2)
-    ]
+    n_comb = trials * (trials - 1) // 2
+    print(f'Number of combinations: {trials} n Choose 2 = {n_comb}')
 
-    print(f'Number of combinations: {trials} n Choose 2 = {len(similarities)}')
-    print('Similarities Mean', np.mean(similarities))
-    print('Similarities Std.', np.std(similarities))
+    for dataset_name in [
+        'nations', 'umls', 'kinships', 'codexsmall', 'wn18',
+    ]:
+        reference_dataset = get_dataset(dataset=dataset_name)
+        remixed_datasets = [
+            reference_dataset.remix(random_state=random_state)
+            for random_state in range(trials)
+        ]
+        similarities = [
+            a.similarity(b)
+            for a, b in tqdm(
+                itt.combinations(remixed_datasets, r=2),
+                total=n_comb,
+                desc=dataset_name,
+            )
+        ]
+        print(f'[{dataset_name}] Similarities Mean: {np.mean(similarities):.3f}')
+        print(f'[{dataset_name}] Similarities Std.: {np.std(similarities):.3f}')
+        print(f'[{dataset_name}] Relative Std.: {np.std(similarities) / np.mean(similarities):.3%}')
 
 
 if __name__ == '__main__':
