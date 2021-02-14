@@ -25,6 +25,8 @@ __all__ = [
     'create_entity_mapping',
     'create_relation_mapping',
     'INVERSE_SUFFIX',
+    'cat_triples',
+    'splits_distance',
 ]
 
 logger = logging.getLogger(__name__)
@@ -991,3 +993,32 @@ class TriplesFactory(CoreTriplesFactory):
             invert_entity_selection=invert_entity_selection,
             invert_relation_selection=invert_relation_selection,
         ).with_labels(entity_to_id=self.entity_to_id, relation_to_id=self.relation_to_id)
+
+
+def cat_triples(*triples_factories: TriplesFactory) -> MappedTriples:
+    """Concatenate several triples factories"""
+    return torch.cat([
+        factory.mapped_triples
+        for factory in triples_factories
+    ], dim=0)
+
+
+def splits_distance(a: Sequence[TriplesFactory], b: Sequence[TriplesFactory]) -> float:
+    """Compute the distance between two datasets' splits.
+
+    :return: The number of triples present in the training sets in both
+    """
+    if len(a) != len(b):
+        raise ValueError('Must have same number')
+
+    # concatenate test and valid
+    train_1 = _smt(a[0].triples)
+    train_2 = _smt(b[0].triples)
+    non_train_1 = _smt(cat_triples(*a[1:]))
+    # non_train_2 = smt(concatenate_triples_factories(test_2, valid_2))
+    # TODO more interesting way to discuss splits w/ valid
+    return 1 - len(train_1.intersection(train_2)) / len(train_1.union(non_train_1))
+
+
+def _smt(x):
+    return set(tuple(xx) for xx in x)

@@ -128,19 +128,44 @@ class Dataset:
         self,
         n: Union[None, int, float] = None,
         minimum_frequency: Optional[float] = None,
-        use_tqdm: bool = True,
     ) -> Dataset:
         """Unleak the dataset with :func:`pykeen.triples.leakage.unleak`."""
         from ..triples.leakage import unleak
         return EagerDataset(*unleak(
             self.training, self.testing, self.validation,
-            n=n, minimum_frequency=minimum_frequency, use_tqdm=use_tqdm,
+            n=n, minimum_frequency=minimum_frequency,
         ))
 
     def remix(self, **kwargs) -> Dataset:
         """Remix a dataset using :func:`pykeen.triples.remix.remix`."""
         from ..triples.remix import remix
-        return EagerDataset(*remix(self.training, self.testing, self.validation, **kwargs))
+        return EagerDataset(*remix(
+            self.training, self.testing, self.validation,
+            **kwargs,
+        ))
+
+    def deteriorate(self: Dataset, *, n: Union[int, float], **kwargs) -> Dataset:
+        """Remove n triples from the training set and distribute them equally among the testing and validation sets.
+
+        :param self: The dataset to deteriorate
+        :param n: The number of triples to remove from the training set or ratio if a float is given
+        :return: A "deteriorated" dataset
+
+        .. seealso:: :func:`deteriorate`
+        """
+        from ..triples.deteriorate import deteriorate
+        return EagerDataset(*deteriorate(
+            self.training, self.testing, self.validation,
+            n=n, **kwargs,
+        ))
+
+    def distance(self, other: Dataset) -> float:
+        """Compute the distance between two datasets that are remixes of each other via :func:`splits_distance`."""
+        from ..triples.triples_factory import splits_distance
+        return splits_distance(
+            (self.training, self.testing, self.validation),
+            (other.training, other.testing, other.validation),
+        )
 
 
 class EagerDataset(Dataset):
