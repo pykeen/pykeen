@@ -2,6 +2,8 @@
 
 """Utility classes for constructing datasets."""
 
+from __future__ import annotations
+
 import logging
 import os
 import pathlib
@@ -127,13 +129,18 @@ class Dataset:
         n: Union[None, int, float] = None,
         minimum_frequency: Optional[float] = None,
         use_tqdm: bool = True,
-    ):
+    ) -> Dataset:
         """Unleak the dataset with :func:`pykeen.triples.leakage.unleak`."""
         from ..triples.leakage import unleak
         return EagerDataset(*unleak(
             self.training, self.testing, self.validation,
             n=n, minimum_frequency=minimum_frequency, use_tqdm=use_tqdm,
         ))
+
+    def remix(self, **kwargs) -> Dataset:
+        """Remix a dataset using :func:`pykeen.triples.remix.remix`."""
+        from ..triples.remix import remix
+        return EagerDataset(*remix(self.training, self.testing, self.validation, **kwargs))
 
 
 class EagerDataset(Dataset):

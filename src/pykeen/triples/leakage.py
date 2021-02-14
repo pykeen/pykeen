@@ -25,7 +25,6 @@ from pykeen.utils import compact_mapping
 __all__ = [
     'Sealant',
     'unleak',
-    'unleak_dataset',
     'reindex',
 ]
 

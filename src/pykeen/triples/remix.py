@@ -53,9 +53,6 @@ def cleanup_dataset(dataset: DataSet, random_state: RandomHint, randomize_cleanu
     ])
 
 
-def remix_dataset(dataset: DataSet, **kwargs) -> DataSet:
-    """Remix a dataset."""
-    return EagerDataset(*remix(dataset.training, dataset.testing, dataset.validation, **kwargs))
 
 
 def remix(*triples_factories: TriplesFactory, **kwargs) -> List[TriplesFactory]:
