@@ -136,27 +136,12 @@ class Dataset:
             n=n, minimum_frequency=minimum_frequency,
         ))
 
-    def remix(self, **kwargs) -> Dataset:
+    def remix(self, random_state: TorchRandomHint = None, **kwargs) -> Dataset:
         """Remix a dataset using :func:`pykeen.triples.remix.remix`."""
         from ..triples.remix import remix
         return EagerDataset(*remix(
             self.training, self.testing, self.validation,
-            **kwargs,
-        ))
-
-    def deteriorate(self: Dataset, *, n: Union[int, float], **kwargs) -> Dataset:
-        """Remove n triples from the training set and distribute them equally among the testing and validation sets.
-
-        :param self: The dataset to deteriorate
-        :param n: The number of triples to remove from the training set or ratio if a float is given
-        :return: A "deteriorated" dataset
-
-        .. seealso:: :func:`deteriorate`
-        """
-        from ..triples.deteriorate import deteriorate
-        return EagerDataset(*deteriorate(
-            self.training, self.testing, self.validation,
-            n=n, **kwargs,
+            random_state=random_state, **kwargs,
         ))
 
     def distance(self, other: Dataset) -> float:

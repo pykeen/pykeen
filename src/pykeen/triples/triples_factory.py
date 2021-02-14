@@ -1009,11 +1009,11 @@ def splits_distance(a: Sequence[TriplesFactory], b: Sequence[TriplesFactory]) ->
     :return: The number of triples present in the training sets in both
     """
     if len(a) != len(b):
-        raise ValueError('Must have same number')
+        raise ValueError('Must have same number of triples factories')
 
     # concatenate test and valid
-    train_1 = _smt(a[0].triples)
-    train_2 = _smt(b[0].triples)
+    train_1 = _smt(a[0].mapped_triples)
+    train_2 = _smt(b[0].mapped_triples)
     non_train_1 = _smt(cat_triples(*a[1:]))
     # non_train_2 = smt(concatenate_triples_factories(test_2, valid_2))
     # TODO more interesting way to discuss splits w/ valid

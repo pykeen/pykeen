@@ -58,14 +58,11 @@ def _main():
 
     trials = 35
     splits = [
-        remix(
-            n.training, n.testing, n.validation,
-            random_state=i,
-        )
-        for i in range(trials)
+        n.remix(random_state=random_state)
+        for random_state in range(trials)
     ]
     distances = [
-        splits_distance(a, b)
+        a.distance(b)
         for a, b in itt.combinations(splits, r=2)
     ]
 
