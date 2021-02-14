@@ -3,7 +3,7 @@
 """An adapter for Weights and Biases."""
 
 import os
-from typing import Any, Dict, Optional, TYPE_CHECKING
+from typing import Any, Mapping, Optional, TYPE_CHECKING
 
 from .base import ResultTracker
 from ..utils import flatten_dictionary
@@ -52,13 +52,13 @@ class WANDBResultTracker(ResultTracker):
 
     def log_metrics(
         self,
-        metrics: Dict[str, float],
+        metrics: Mapping[str, float],
         step: Optional[int] = None,
         prefix: Optional[str] = None,
     ) -> None:  # noqa: D102
         metrics = flatten_dictionary(dictionary=metrics, prefix=prefix)
         self.wandb.log(metrics, step=step)
 
-    def log_params(self, params: Dict[str, Any], prefix: Optional[str] = None) -> None:  # noqa: D102
+    def log_params(self, params: Mapping[str, Any], prefix: Optional[str] = None) -> None:  # noqa: D102
         params = flatten_dictionary(dictionary=params, prefix=prefix)
         self.wandb.config.update(params)

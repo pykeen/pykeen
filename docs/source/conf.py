@@ -52,7 +52,7 @@ copyright = f'2019-{date.today().year}, PyKEEN Project Team'
 author = 'PyKEEN Project Team'
 
 # The full version, including alpha/beta/rc tags.
-release = '1.0.6-dev'
+release = '1.3.0-dev'
 
 # The short X.Y version.
 parsed_version = re.match(
@@ -93,6 +93,9 @@ extensions = [
     'sphinx_automodapi.automodapi',
     'texext',
 ]
+
+# show todo's
+todo_include_todos = True
 
 # generate autosummary pages
 autosummary_generate = True

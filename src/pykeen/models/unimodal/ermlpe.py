@@ -2,17 +2,19 @@
 
 """An implementation of the extension to ERMLP."""
 
-from typing import Optional, Type
+from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
 from torch import nn
+from torch.nn.init import uniform_
 
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import BCEAfterSigmoidLoss, Loss
+from ...nn import EmbeddingSpecification
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
-from ...typing import DeviceHint
+from ...typing import DeviceHint, Hint, Initializer
 
 __all__ = [
     'ERMLPE',
@@ -43,16 +45,16 @@ class ERMLPE(EntityRelationEmbeddingModel):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default = dict(
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
         hidden_dim=dict(type=int, low=5, high=9, scale='power_two'),
         input_dropout=DEFAULT_DROPOUT_HPO_RANGE,
         hidden_dropout=DEFAULT_DROPOUT_HPO_RANGE,
     )
     #: The default loss function class
-    loss_default: Type[Loss] = BCEAfterSigmoidLoss
+    loss_default: ClassVar[Type[Loss]] = BCEAfterSigmoidLoss
     #: The default parameters for the default loss function class
-    loss_default_kwargs = {}
+    loss_default_kwargs: ClassVar[Mapping[str, Any]] = {}
 
     def __init__(
         self,
@@ -65,21 +67,29 @@ class ERMLPE(EntityRelationEmbeddingModel):
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
+        entity_initializer: Hint[Initializer] = uniform_,
+        relation_initializer: Hint[Initializer] = uniform_,
     ) -> None:
         super().__init__(
             triples_factory=triples_factory,
-            embedding_dim=embedding_dim,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
+            entity_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=entity_initializer,
+            ),
+            relation_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=relation_initializer,
+            ),
         )
         self.hidden_dim = hidden_dim
-        self.input_dropout = input_dropout
 
         self.linear1 = nn.Linear(2 * self.embedding_dim, self.hidden_dim)
         self.linear2 = nn.Linear(self.hidden_dim, self.embedding_dim)
-        self.input_dropout = nn.Dropout(self.input_dropout)
+        self.input_dropout = nn.Dropout(input_dropout)
         self.bn1 = nn.BatchNorm1d(self.hidden_dim)
         self.bn2 = nn.BatchNorm1d(self.embedding_dim)
         self.mlp = nn.Sequential(

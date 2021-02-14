@@ -3,7 +3,7 @@
 """Implementation of structured model (SE)."""
 
 import functools
-from typing import Optional
+from typing import Any, ClassVar, Mapping, Optional
 
 import numpy as np
 import torch
@@ -14,11 +14,11 @@ from torch.nn import functional
 from ..base import EntityEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
-from ...nn import Embedding
+from ...nn import Embedding, EmbeddingSpecification
 from ...nn.init import xavier_uniform_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
-from ...typing import DeviceHint
+from ...typing import Constrainer, DeviceHint, Hint, Initializer
 from ...utils import compose
 
 __all__ = [
@@ -43,7 +43,7 @@ class StructuredEmbedding(EntityEmbeddingModel):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default = dict(
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
         scoring_fct_norm=dict(type=int, low=1, high=2),
     )
@@ -57,6 +57,8 @@ class StructuredEmbedding(EntityEmbeddingModel):
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
+        entity_initializer: Hint[Initializer] = xavier_uniform_,
+        entity_constrainer: Hint[Constrainer] = functional.normalize,
     ) -> None:
         r"""Initialize SE.
 
@@ -65,13 +67,15 @@ class StructuredEmbedding(EntityEmbeddingModel):
         """
         super().__init__(
             triples_factory=triples_factory,
-            embedding_dim=embedding_dim,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
-            entity_initializer=xavier_uniform_,
-            entity_constrainer=functional.normalize,
+            entity_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=entity_initializer,
+                constrainer=entity_constrainer,
+            ),
         )
 
         self.scoring_fct_norm = scoring_fct_norm

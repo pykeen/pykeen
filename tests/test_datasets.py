@@ -95,6 +95,13 @@ class TestNations(cases.LocalDatasetTestCase):
     exp_num_triples = 1992
     dataset_cls = Nations
 
+    def test_create_inverse_triples(self):
+        """Verify that inverse triples are only created in the training factory."""
+        dataset = Nations(create_inverse_triples=True)
+        assert dataset.training.create_inverse_triples
+        assert not dataset.testing.create_inverse_triples
+        assert not dataset.validation.create_inverse_triples
+
 
 class TestKinships(cases.LocalDatasetTestCase):
     """Test the Nations dataset."""

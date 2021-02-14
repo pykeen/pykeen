@@ -2,17 +2,17 @@
 
 """Implementation of SimplE."""
 
-from typing import Optional, Tuple, Union
+from typing import Any, ClassVar, Mapping, Optional, Tuple, Type, Union
 
 import torch.autograd
 
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss, SoftplusLoss
-from ...nn import Embedding
+from ...nn import Embedding, EmbeddingSpecification
 from ...regularizers import PowerSumRegularizer, Regularizer
 from ...triples import TriplesFactory
-from ...typing import DeviceHint
+from ...typing import DeviceHint, Hint, Initializer
 
 __all__ = [
     'SimplE',
@@ -45,19 +45,19 @@ class SimplE(EntityRelationEmbeddingModel):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default = dict(
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
     )
     #: The default loss function class
-    loss_default = SoftplusLoss
+    loss_default: ClassVar[Type[Loss]] = SoftplusLoss
     #: The default parameters for the default loss function class
-    loss_default_kwargs = {}
+    loss_default_kwargs: ClassVar[Mapping[str, Any]] = {}
     #: The regularizer used by [trouillon2016]_ for SimplE
     #: In the paper, they use weight of 0.1, and do not normalize the
     #: regularization term by the number of elements, which is 200.
-    regularizer_default = PowerSumRegularizer
+    regularizer_default: ClassVar[Type[Regularizer]] = PowerSumRegularizer
     #: The power sum settings used by [trouillon2016]_ for SimplE
-    regularizer_default_kwargs = dict(
+    regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = dict(
         weight=20,
         p=2.0,
         normalize=True,
@@ -72,14 +72,23 @@ class SimplE(EntityRelationEmbeddingModel):
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
         clamp_score: Optional[Union[float, Tuple[float, float]]] = None,
+        entity_initializer: Hint[Initializer] = None,
+        relation_initializer: Hint[Initializer] = None,
     ) -> None:
         super().__init__(
             triples_factory=triples_factory,
-            embedding_dim=embedding_dim,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
+            entity_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=entity_initializer,
+            ),
+            relation_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=relation_initializer,
+            ),
         )
 
         # extra embeddings

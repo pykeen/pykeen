@@ -85,6 +85,7 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         elif path_to_numeric_triples is not None:
             numeric_triples = load_triples(path_to_numeric_triples)
 
+        assert self.entity_to_id is not None
         self.numeric_literals, self.literals_to_id = create_matrix_of_literals(
             numeric_triples=numeric_triples,
             entity_to_id=self.entity_to_id,

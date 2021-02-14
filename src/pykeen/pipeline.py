@@ -171,21 +171,22 @@ import json
 import logging
 import os
 import pathlib
+import pickle
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Collection, Dict, Iterable, List, Mapping, Optional, Set, Type, Union
 
 import pandas as pd
 import torch
 from torch.optim.optimizer import Optimizer
 
-from .constants import PYKEEN_CHECKPOINTS
+from .constants import PYKEEN_CHECKPOINTS, USER_DEFINED_CODE
 from .datasets import get_dataset
 from .datasets.base import Dataset
 from .evaluation import Evaluator, MetricResults, get_evaluator_cls
 from .losses import Loss, _LOSS_SUFFIX, get_loss_cls
-from .models import get_model_cls
-from .models.base import Model
+from .models import Model, get_model_cls
 from .nn import Embedding
 from .optimizers import get_optimizer_cls
 from .regularizers import Regularizer, get_regularizer_cls
@@ -427,7 +428,7 @@ class PipelineResult(Result):
 
         The model contains within it the triples factory that was used for training.
         """
-        torch.save(self.model, path)
+        torch.save(self.model, path, pickle_protocol=pickle.HIGHEST_PROTOCOL)
 
     def _get_results(self) -> Mapping[str, Any]:
         results = dict(
@@ -442,7 +443,12 @@ class PipelineResult(Result):
             results['stopper'] = self.stopper.get_summary_dict()
         return results
 
-    def save_to_directory(self, directory: str, save_metadata: bool = True, save_replicates: bool = True) -> None:
+    def save_to_directory(
+        self,
+        directory: Union[str, Path],
+        save_metadata: bool = True,
+        save_replicates: bool = True,
+    ) -> None:
         """Save all artifacts in the given directory."""
         os.makedirs(directory, exist_ok=True)
 
@@ -654,7 +660,8 @@ def replicate_pipeline_from_config(
 
 def _iterate_moved(pipeline_results: Iterable[PipelineResult]):
     for pipeline_result in pipeline_results:
-        pipeline_result.model.to_cpu_()
+        pipeline_result.model.device = resolve_device('cpu')
+        pipeline_result.model.to_device_()
         yield pipeline_result
 
 
@@ -904,7 +911,12 @@ def pipeline(  # noqa: C901
     if dataset is not None:
         result_tracker.log_params(dict(dataset=dataset_instance.get_normalized_name()))
     else:  # means that dataset was defined by triples factories
-        result_tracker.log_params(dict(dataset='<user defined>'))
+        result_tracker.log_params(dict(
+            dataset=USER_DEFINED_CODE,
+            training=training if isinstance(training, str) else USER_DEFINED_CODE,
+            testing=testing if isinstance(training, str) else USER_DEFINED_CODE,
+            validation=validation if isinstance(training, str) else USER_DEFINED_CODE,
+        ))
 
     training, testing, validation = dataset_instance.training, dataset_instance.testing, dataset_instance.validation
     # evaluation restriction to a subset of entities/relations
@@ -931,7 +943,6 @@ def pipeline(  # noqa: C901
             del model_kwargs['regularizer']
         regularizer_cls: Type[Regularizer] = get_regularizer_cls(regularizer)
         model_kwargs['regularizer'] = regularizer_cls(
-            device=device,
             **(regularizer_kwargs or {}),
         )
 
@@ -988,10 +999,7 @@ def pipeline(  # noqa: C901
         )
 
     evaluator = get_evaluator_cls(evaluator)
-    # TODO @mehdi is setting the automatic memory optimization as an attribute
-    #  of the class appropriate, since it doesn't cause any state to be stored?
-    #  I think it might be better to have this as an argument to the
-    #  Evaluator.evaluate() function instead
+
     if evaluator_kwargs is None:
         evaluator_kwargs = {}
     evaluator_kwargs.setdefault('automatic_memory_optimization', automatic_memory_optimization)

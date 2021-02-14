@@ -5,6 +5,7 @@
 import gc
 import logging
 import pathlib
+import pickle
 import random
 import time
 from abc import ABC, abstractmethod
@@ -19,14 +20,17 @@ from torch.utils.data import DataLoader
 from tqdm.autonotebook import tqdm, trange
 
 from ..constants import PYKEEN_CHECKPOINTS, PYKEEN_DEFAULT_CHECKPOINT
-from ..losses import Loss
-from ..models.base import Model
+from ..losses import Loss, has_mr_loss, has_nssa_loss
+from ..models import Model
 from ..stoppers import Stopper
 from ..trackers import ResultTracker
 from ..training.schlichtkrull_sampler import GraphSampler
 from ..triples import Instances, TriplesFactory
 from ..typing import MappedTriples
-from ..utils import is_cuda_oom_error, is_cudnn_error, normalize_string
+from ..utils import (
+    format_relative_comparison, get_batchnorm_modules, is_cuda_oom_error, is_cudnn_error,
+    normalize_string,
+)
 
 __all__ = [
     'TrainingLoop',
@@ -60,7 +64,7 @@ class SubBatchingNotSupportedError(NotImplementedError):
     def __str__(self):  # noqa: D105
         return (
             f'No sub-batching support for {self.model.__class__.__name__} due to modules '
-            f'{self.model.modules_not_supporting_sub_batching}.'
+            f'{get_batchnorm_modules(self.model)}.'
         )
 
 
@@ -112,12 +116,12 @@ class TrainingLoop(ABC):
                 f' with training approach {self.__class__.__name__}',
             )
 
-        if self.model.is_mr_loss:
+        if has_mr_loss(self.model):
             self._loss_helper = self._mr_loss_helper
-        elif self.model.is_nssa_loss:
+        elif has_nssa_loss(self.model):
             self._loss_helper = self._self_adversarial_negative_sampling_loss_helper
         else:
-            self._loss_helper = self._label_loss_helper
+            self._loss_helper = self._label_loss_helper  # type: ignore
 
         # The internal epoch state tracks the last finished epoch of the training loop to allow for
         # seamless loading and saving of training checkpoints
@@ -167,7 +171,8 @@ class TrainingLoop(ABC):
         checkpoint_name: Optional[str] = None,
         checkpoint_frequency: Optional[int] = None,
         checkpoint_on_failure: bool = False,
-    ) -> List[float]:
+        drop_last: Optional[bool] = None,
+    ) -> Optional[List[float]]:
         """Train the KGE model.
 
         :param num_epochs:
@@ -218,6 +223,9 @@ class TrainingLoop(ABC):
             which might cause problems with regards to the reproducibility of that specific training loop. Therefore,
             these checkpoints are saved with a distinct checkpoint name, which will be
             ``PyKEEN_just_saved_my_day_{datetime}.pt`` in the given checkpoint_root.
+        :param drop_last:
+            Whether to drop the last batch in each epoch to prevent smaller batches. Defaults to False, except if the
+            model contains batch normalization layers. Can be provided explicitly to override.
 
         :return:
             The losses per epoch.
@@ -276,7 +284,7 @@ class TrainingLoop(ABC):
 
         # If the stopper loaded from the training loop checkpoint stopped the training, we return those results
         if getattr(stopper, 'stopped', False):
-            result = self.losses_per_epochs
+            result: Optional[List[float]] = self.losses_per_epochs
         else:
             result = self._train(
                 num_epochs=num_epochs,
@@ -297,6 +305,7 @@ class TrainingLoop(ABC):
                 checkpoint_path=checkpoint_path,
                 checkpoint_frequency=checkpoint_frequency,
                 checkpoint_on_failure_file_path=checkpoint_on_failure_file_path,
+                drop_last=drop_last,
             )
 
         # Ensure the release of memory
@@ -327,8 +336,9 @@ class TrainingLoop(ABC):
         save_checkpoints: bool = False,
         checkpoint_path: Union[None, str, pathlib.Path] = None,
         checkpoint_frequency: Optional[int] = None,
-        checkpoint_on_failure_file_path: Optional[str] = None,
-    ) -> List[float]:
+        checkpoint_on_failure_file_path: Union[None, str, pathlib.Path] = None,
+        drop_last: Optional[bool] = None,
+    ) -> Optional[List[float]]:
         """Train the KGE model.
 
         :param num_epochs:
@@ -370,17 +380,35 @@ class TrainingLoop(ABC):
             The frequency of saving checkpoints in minutes. Setting it to 0 will save a checkpoint after every epoch.
         :param checkpoint_on_failure_file_path:
             The full filepath for saving checkpoints on failure.
+        :param drop_last:
+            Whether to drop the last batch in each epoch to prevent smaller batches. Defaults to False, except if the
+            model contains batch normalization layers. Can be provided explicitly to override.
 
         :return:
             The losses per epoch.
         """
+        if self.training_instances is None:
+            raise ValueError('must set training instances before running _train()')
+        if self.optimizer is None:
+            raise ValueError('optimizer must be set before running _train()')
+
         # Take the biggest possible training batch_size, if batch_size not set
         batch_size_sufficient = False
         if batch_size is None:
             if self.automatic_memory_optimization:
-                batch_size, batch_size_sufficient = self.batch_size_search()
+                # Using automatic memory optimization on CPU may result in undocumented crashes due to OS' OOM killer.
+                if self.model.device.type == 'cpu':
+                    batch_size = 256
+                    batch_size_sufficient = True
+                    logger.info(
+                        "Currently automatic memory optimization only supports GPUs, but you're using a CPU. "
+                        "Therefore, the batch_size will be set to the default value '{batch_size}'",
+                    )
+                else:
+                    batch_size, batch_size_sufficient = self.batch_size_search()
             else:
                 batch_size = 256
+                logger.info(f"No batch_size provided. Setting batch_size to '{batch_size}'.")
 
         # This will find necessary parameters to optimize the use of the hardware at hand
         if (
@@ -398,11 +426,22 @@ class TrainingLoop(ABC):
 
         if sub_batch_size is None or sub_batch_size == batch_size:  # by default do not split batches in sub-batches
             sub_batch_size = batch_size
-        elif not self.model.supports_subbatching:
+        elif get_batchnorm_modules(self.model):  # if there are any, this is truthy
             raise SubBatchingNotSupportedError(self.model)
 
+        model_contains_batch_norm = bool(get_batchnorm_modules(self.model))
+        if batch_size == 1 and model_contains_batch_norm:
+            raise ValueError("Cannot train a model with batch_size=1 containing BatchNorm layers.")
+        if drop_last is None:
+            drop_last = model_contains_batch_norm
+            if drop_last and not only_size_probing:
+                logger.info(
+                    "Dropping last (incomplete) batch each epoch (%s batches).",
+                    format_relative_comparison(part=1, total=len(self.training_instances)),
+                )
+
         # Sanity check
-        if self.model.is_mr_loss and label_smoothing > 0.:
+        if has_mr_loss(self.model) and label_smoothing > 0.:
             raise RuntimeError('Label smoothing can not be used with margin ranking loss.')
 
         # Force weight initialization if training continuation is not explicitly requested.
@@ -420,7 +459,7 @@ class TrainingLoop(ABC):
             raise ValueError('Cannot continue_training without being trained once.')
 
         # Ensure the model is on the correct device
-        self.model: Model = self.model.to(self.device)
+        self.model = self.model.to(self.device)
 
         # Create Sampler
         if sampler == 'schlichtkrull':
@@ -459,6 +498,7 @@ class TrainingLoop(ABC):
             batch_size=batch_size,
             shuffle=shuffle,
             num_workers=num_workers,
+            drop_last=drop_last,
         )
 
         # Save the time to track when the saved point was available
@@ -570,8 +610,13 @@ class TrainingLoop(ABC):
             # If a checkpoint file is given, we check whether it is time to save a checkpoint
             if save_checkpoints:
                 minutes_since_last_checkpoint = (time.time() - last_checkpoint) // 60
-                if minutes_since_last_checkpoint >= checkpoint_frequency or should_stop or epoch == num_epochs:
-                    self._save_state(path=checkpoint_path, stopper=stopper)
+                # MyPy overrides are because you should
+                if (
+                    minutes_since_last_checkpoint >= checkpoint_frequency  # type: ignore
+                    or should_stop
+                    or epoch == num_epochs
+                ):
+                    self._save_state(path=checkpoint_path, stopper=stopper)  # type: ignore
                     last_checkpoint = time.time()
 
             if should_stop:
@@ -602,8 +647,8 @@ class TrainingLoop(ABC):
         loss.backward()
         current_epoch_loss = loss.item()
 
-        # reset the regularizer to free the computational graph
-        self.model.regularizer.reset()
+        self.model.post_forward_pass()
+        # TODO why not call torch.cuda.empty_cache()? or call self._free_graph_and_cache()?
 
         return current_epoch_loss
 
@@ -689,19 +734,18 @@ class TrainingLoop(ABC):
 
         return batch_size, evaluated_once
 
-    def sub_batch_and_slice(self, batch_size: int) -> Tuple[int, int]:
+    def sub_batch_and_slice(self, batch_size: int) -> Tuple[int, Optional[int]]:
         """Check if sub-batching and/or slicing is necessary to train the model on the hardware at hand."""
         sub_batch_size, finished_search, supports_sub_batching = self._sub_batch_size_search(batch_size=batch_size)
         # If the sub_batch_size did not finish search with a possibility that fits the hardware, we have to try slicing
-        if not finished_search:
-            slice_size = self._slice_size_search(
-                batch_size=batch_size,
-                sub_batch_size=sub_batch_size,
-                supports_sub_batching=supports_sub_batching,
-            )
-        else:
-            slice_size = None
+        if finished_search:
+            return sub_batch_size, None
 
+        slice_size = self._slice_size_search(
+            batch_size=batch_size,
+            sub_batch_size=sub_batch_size,
+            supports_sub_batching=supports_sub_batching,
+        )
         return sub_batch_size, slice_size
 
     @abstractmethod
@@ -762,7 +806,7 @@ class TrainingLoop(ABC):
 
         if not finished_search:
             logger.info('Starting sub_batch_size search for training now...')
-            if not self.model.supports_subbatching:
+            if get_batchnorm_modules(self.model):  # if there are any, this is truthy
                 logger.info('This model does not support sub-batching.')
                 supports_sub_batching = False
                 sub_batch_size = batch_size
@@ -821,18 +865,8 @@ class TrainingLoop(ABC):
     ) -> torch.FloatTensor:
         raise NotImplementedError
 
-    def to_embeddingdb(self, session=None, use_tqdm: bool = False):
-        """Upload to the embedding database.
-
-        :param session: Optional SQLAlchemy session
-        :param use_tqdm: Use :mod:`tqdm` progress bar?
-        :rtype: embeddingdb.sql.models.Collection
-        """
-        return self.model.to_embeddingdb(session=session, use_tqdm=use_tqdm)
-
     def _free_graph_and_cache(self):
-        # The regularizer has to be reset to free the computational graph
-        self.model.regularizer.reset()
+        self.model._free_graph_and_cache()
         # The cache of the previous run has to be freed to allow accurate memory availability estimates
         torch.cuda.empty_cache()
 
@@ -845,10 +879,13 @@ class TrainingLoop(ABC):
             An instance of :class:`pykeen.stopper.EarlyStopper` with settings for checking
             if training should stop early
         """
+        if self.optimizer is None:
+            raise ValueError
+
         logger.debug("=> Saving checkpoint.")
 
         if stopper is None:
-            stopper_dict = dict()
+            stopper_dict: Mapping[str, Any] = dict()
         else:
             stopper_dict = stopper.get_summary_dict()
 
@@ -873,6 +910,7 @@ class TrainingLoop(ABC):
                 'torch_cuda_random_state': torch_cuda_random_state,
             },
             path,
+            pickle_protocol=pickle.HIGHEST_PROTOCOL,
         )
         logger.info(f"=> Saved checkpoint after having finished epoch {self._epoch}.")
 
@@ -885,6 +923,9 @@ class TrainingLoop(ABC):
         :raises CheckpointMismatchError:
             If the given checkpoint file has a non-matching checksum, i.e. it was saved with a different configuration.
         """
+        if self.optimizer is None:
+            raise ValueError
+
         logger.info(f"=> loading checkpoint '{path}'")
         checkpoint = torch.load(path)
         if checkpoint['checksum'] != self.checksum:

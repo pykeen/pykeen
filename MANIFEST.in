@@ -4,6 +4,7 @@ graft tests
 prune docs/source/api
 prune notebooks
 prune benchmarking
+prune tests/mlruns
 
 recursive-include docs/source *.py
 recursive-include docs/source *.rst

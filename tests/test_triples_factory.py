@@ -3,6 +3,7 @@
 """Unit tests for triples factories."""
 
 import itertools as itt
+import os
 import unittest
 from unittest.mock import patch
 
@@ -11,6 +12,7 @@ import pytest
 import torch
 
 from pykeen.datasets import Nations
+from pykeen.datasets.nations import NATIONS_TRAIN_PATH
 from pykeen.triples import LCWAInstances, TriplesFactory, TriplesNumericLiteralsFactory
 from pykeen.triples.generation import generate_triples
 from pykeen.triples.splitting import (
@@ -19,7 +21,8 @@ from pykeen.triples.splitting import (
     get_absolute_split_sizes, normalize_ratios,
 )
 from pykeen.triples.triples_factory import INVERSE_SUFFIX, TRIPLES_DF_COLUMNS, _map_triples_elements_to_ids
-from pykeen.triples.utils import get_entities, get_relations
+from pykeen.triples.utils import get_entities, get_relations, load_triples
+from tests.constants import RESOURCES
 
 triples = np.array(
     [
@@ -206,6 +209,17 @@ class TestTriplesFactory(unittest.TestCase):
             assert x.dtype == torch.long
             assert y.shape == (batch_size, factory.num_entities)
             assert y.dtype == torch.get_default_dtype()
+
+    def test_split_inverse_triples(self):
+        """Test whether inverse triples are only created in the training factory."""
+        # set create inverse triple to true
+        self.factory.create_inverse_triples = True
+        # split factory
+        train, *others = self.factory.split()
+        # check that in *training* inverse triple are to be created
+        assert train.create_inverse_triples
+        # check that in all other splits no inverse triples are to be created
+        assert not any(f.create_inverse_triples for f in others)
 
 
 class TestSplit(unittest.TestCase):
@@ -430,6 +444,74 @@ class TestLiterals(unittest.TestCase):
             2 * len(relations),
             triples_factory.num_relations,
             msg='Wrong number of relations in factory',
+        )
+
+    def test_metadata(self):
+        """Test metadata passing for triples factories."""
+        t = Nations().training
+        self.assertEqual(NATIONS_TRAIN_PATH, t.metadata['path'])
+        self.assertEqual(
+            (
+                f'TriplesFactory(num_entities=14, num_relations=55, num_triples=1592,'
+                f' inverse_triples=False, path="{NATIONS_TRAIN_PATH}")'
+            ),
+            repr(t),
+        )
+
+        entities = ['poland', 'ussr']
+        x = t.new_with_restriction(entities=entities)
+        entities_ids = t.entities_to_ids(entities=entities)
+        self.assertEqual(NATIONS_TRAIN_PATH, x.metadata['path'])
+        self.assertEqual(
+            (
+                f'TriplesFactory(num_entities=14, num_relations=55, num_triples=37,'
+                f' inverse_triples=False, entity_restriction={repr(entities_ids)}, path="{NATIONS_TRAIN_PATH}")'
+            ),
+            repr(x),
+        )
+
+        relations = ['negativebehavior']
+        v = t.new_with_restriction(relations=relations)
+        relations_ids = t.relations_to_ids(relations=relations)
+        self.assertEqual(NATIONS_TRAIN_PATH, x.metadata['path'])
+        self.assertEqual(
+            (
+                f'TriplesFactory(num_entities=14, num_relations=55, num_triples=29,'
+                f' inverse_triples=False, path="{NATIONS_TRAIN_PATH}", relation_restriction={repr(relations_ids)})'
+            ),
+            repr(v),
+        )
+
+        w = t.clone_and_exchange_triples(t.triples[0:5], keep_metadata=False)
+        self.assertIsInstance(w, TriplesFactory)
+        self.assertNotIn('path', w.metadata)
+        self.assertEqual(
+            'TriplesFactory(num_entities=14, num_relations=55, num_triples=5, inverse_triples=False)',
+            repr(w),
+        )
+
+        y, z = t.split()
+        self.assertEqual(NATIONS_TRAIN_PATH, y.metadata['path'])
+        self.assertEqual(NATIONS_TRAIN_PATH, z.metadata['path'])
+
+
+class TestUtils(unittest.TestCase):
+    """Test triples utilities."""
+
+    def test_load_triples_remapped(self):
+        """Test loading a triples file where the columns must be remapped."""
+        path = os.path.join(RESOURCES, 'test_remap.tsv')
+
+        with self.assertRaises(ValueError):
+            load_triples(path, column_remapping=[1, 2])
+
+        _triples = load_triples(path, column_remapping=[0, 2, 1])
+        self.assertEqual(
+            [
+                ['a', 'r1', 'b'],
+                ['b', 'r2', 'c'],
+            ],
+            _triples.tolist(),
         )
 
 

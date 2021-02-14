@@ -3,18 +3,20 @@
 """Implementation of the ConvKB model."""
 
 import logging
-from typing import Optional
+from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
 import torch.autograd
 from torch import nn
+from torch.nn.init import uniform_
 
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
+from ...nn import EmbeddingSpecification
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
-from ...typing import DeviceHint
+from ...typing import DeviceHint, Hint, Initializer
 
 __all__ = [
     'ConvKB',
@@ -57,15 +59,15 @@ class ConvKB(EntityRelationEmbeddingModel):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default = dict(
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
         hidden_dropout_rate=DEFAULT_DROPOUT_HPO_RANGE,
         num_filters=dict(type=int, low=7, high=9, scale='power_two'),
     )
     #: The regularizer used by [nguyen2018]_ for ConvKB.
-    regularizer_default = LpRegularizer
+    regularizer_default: ClassVar[Type[Regularizer]] = LpRegularizer
     #: The LP settings used by [nguyen2018]_ for ConvKB.
-    regularizer_default_kwargs = dict(
+    regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = dict(
         weight=0.001 / 2,
         p=2.0,
         normalize=True,
@@ -82,6 +84,8 @@ class ConvKB(EntityRelationEmbeddingModel):
         num_filters: int = 400,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
+        entity_initializer: Hint[Initializer] = uniform_,
+        relation_initializer: Hint[Initializer] = uniform_,
     ) -> None:
         """Initialize the model.
 
@@ -89,11 +93,18 @@ class ConvKB(EntityRelationEmbeddingModel):
         """
         super().__init__(
             triples_factory=triples_factory,
-            embedding_dim=embedding_dim,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
+            entity_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=entity_initializer,
+            ),
+            relation_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=relation_initializer,
+            ),
         )
 
         self.num_filters = num_filters

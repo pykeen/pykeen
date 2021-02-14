@@ -6,7 +6,7 @@ import inspect
 import json
 import logging
 import sys
-from typing import Optional, Type, Union
+from typing import Any, Mapping, Optional, Type
 
 import click
 from torch import nn
@@ -14,8 +14,7 @@ from torch import nn
 from . import options
 from .options import CLI_OPTIONS
 from ..base import Model
-from ...regularizers import Regularizer, _REGULARIZER_SUFFIX, regularizers
-from ...utils import normalize_string
+from ...typing import Constrainer, Hint, Initializer, Normalizer
 
 __all__ = [
     'build_cli_from_cls',
@@ -29,11 +28,16 @@ _SKIP_ARGS = {
     'triples_factory',
     'preferred_device',
     'regularizer',
+    # TODO rethink after RGCN update
+    'activation_cls',
+    'activation_kwargs',
+    'edge_weighting',
 }
 _SKIP_ANNOTATIONS = {
     Optional[nn.Embedding],
     Optional[nn.Parameter],
     Optional[nn.Module],
+    Optional[Mapping[str, Any]],
 }
 
 
@@ -50,16 +54,6 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
             if name in _SKIP_ARGS or annotation in _SKIP_ANNOTATIONS:
                 continue
 
-            if annotation == Union[None, str, Regularizer]:  # a model that has preset regularization
-                parameter = signature.parameters[name]
-                option = click.option(
-                    '--regularizer',
-                    type=str,
-                    default=parameter.default,
-                    show_default=True,
-                    help=f'The name of the regularizer preset for {model.__name__}',
-                )
-
             elif name in CLI_OPTIONS:
                 option = CLI_OPTIONS[name]
 
@@ -68,6 +62,9 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
 
             else:
                 parameter = signature.parameters[name]
+                if annotation in {Hint[Initializer], Hint[Constrainer], Hint[Normalizer]}:
+                    logger.debug('Unhandled hint: %s', annotation)
+                    continue
                 if parameter.default is None:
                     logger.warning(
                         f'Missing handler in {model.__name__} for {name}: '
@@ -85,13 +82,6 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
 
         return command
 
-    regularizer_option = click.option(
-        '--regularizer',
-        type=click.Choice(regularizers),
-        help=f'The name of the regularizer. Defaults to'
-             f' {normalize_string(model.regularizer_default.__name__, suffix=_REGULARIZER_SUFFIX)}',
-    )
-
     @click.command(help=f'CLI for {model.__name__}', name=model.__name__.lower())
     @options.device_option
     @options.dataset_option
@@ -99,7 +89,6 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
     @options.testing_option
     @options.valiadation_option
     @options.optimizer_option
-    @regularizer_option
     @options.training_loop_option
     @options.automatic_memory_optimization_option
     @options.number_epochs_option
@@ -119,7 +108,6 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
         device,
         training_loop,
         optimizer,
-        regularizer,
         number_epochs,
         batch_size,
         learning_rate,
@@ -159,7 +147,6 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
             device=device,
             model=model,
             model_kwargs=model_kwargs,
-            regularizer=regularizer,
             dataset=dataset,
             training=training_triples_factory,
             testing=testing_triples_factory or training_triples_factory,

@@ -6,39 +6,49 @@ import unittest
 from typing import Iterable, List, Optional
 
 import numpy
+import pytest
 import torch
 from torch.optim import Adam
 
 from pykeen.datasets import Nations
 from pykeen.evaluation import Evaluator, MetricResults, RankBasedEvaluator, RankBasedMetricResults
 from pykeen.evaluation.rank_based_evaluator import RANK_TYPES, SIDES
-from pykeen.models import TransE
-from pykeen.models.base import EntityRelationEmbeddingModel, Model
+from pykeen.models import Model, TransE
 from pykeen.stoppers.early_stopping import EarlyStopper, is_improvement
 from pykeen.trackers import MLFlowResultTracker
 from pykeen.training import SLCWATrainingLoop
-from pykeen.triples import TriplesFactory
 from pykeen.typing import MappedTriples
+from tests.mocks import MockModel
 
 
-def test_is_improvement():
-    """Test is_improvement()."""
-    for best_value, current_value, larger_is_better, relative_delta, is_better in [
-        # equal value; larger is better
-        (1.0, 1.0, True, 0.0, False),
-        # equal value; smaller is better
-        (1.0, 1.0, False, 0.0, False),
-        # larger is better; improvement
-        (1.0, 1.1, True, 0.0, True),
-        # larger is better; improvement; but not significant
-        (1.0, 1.1, True, 0.1, False),
-    ]:
-        assert is_better == is_improvement(
-            best_value=best_value,
-            current_value=current_value,
-            larger_is_better=larger_is_better,
-            relative_delta=relative_delta,
-        )
+class TestRandom(unittest.TestCase):
+    """Random tests for early stopper."""
+
+    def test_is_improvement(self):
+        """Test is_improvement()."""
+        for best_value, current_value, larger_is_better, relative_delta, is_better in [
+            # equal value; larger is better
+            (1.0, 1.0, True, 0.0, False),
+            # equal value; smaller is better
+            (1.0, 1.0, False, 0.0, False),
+            # larger is better; improvement
+            (1.0, 1.1, True, 0.0, True),
+            # larger is better; improvement; but not significant
+            (1.0, 1.1, True, 0.1, False),
+        ]:
+            with self.subTest(
+                best_value=best_value,
+                current_value=current_value,
+                larger_is_better=larger_is_better,
+                relative_delta=relative_delta,
+                is_better=is_better,
+            ):
+                self.assertEqual(is_better, is_improvement(
+                    best_value=best_value,
+                    current_value=current_value,
+                    larger_is_better=larger_is_better,
+                    relative_delta=relative_delta,
+                ))
 
 
 class MockEvaluator(Evaluator):
@@ -100,34 +110,6 @@ class MockEvaluator(Evaluator):
 
     def __repr__(self):  # noqa: D105
         return f'{self.__class__.__name__}(losses={self.losses})'
-
-
-class MockModel(EntityRelationEmbeddingModel):
-    """A mock model returning fake scores."""
-
-    def __init__(self, triples_factory: TriplesFactory):
-        super().__init__(triples_factory=triples_factory)
-        num_entities = self.num_entities
-        self.scores = torch.arange(num_entities, dtype=torch.float)
-
-    def _generate_fake_scores(self, batch: torch.LongTensor) -> torch.FloatTensor:
-        """Generate fake scores s[b, i] = i of size (batch_size, num_entities)."""
-        batch_size = batch.shape[0]
-        batch_scores = self.scores.view(1, -1).repeat(batch_size, 1)
-        assert batch_scores.shape == (batch_size, self.num_entities)
-        return batch_scores
-
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._generate_fake_scores(batch=hrt_batch)
-
-    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._generate_fake_scores(batch=hr_batch)
-
-    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._generate_fake_scores(batch=rt_batch)
-
-    def reset_parameters_(self) -> Model:  # noqa: D102
-        pass  # Not needed for unittest
 
 
 class LogCallWrapper:
@@ -249,6 +231,7 @@ class TestEarlyStoppingRealWorld(unittest.TestCase):
         torch.manual_seed(seed=self.seed)
         numpy.random.seed(seed=self.seed)
 
+    @pytest.mark.slow
     def test_early_stopping(self):
         """Tests early stopping."""
         # Set automatic_memory_optimization to false during testing
@@ -272,6 +255,7 @@ class TestEarlyStoppingRealWorld(unittest.TestCase):
             num_epochs=self.max_num_epochs,
             batch_size=self.batch_size,
             stopper=stopper,
+            use_tqdm=False,
         )
         self.assertEqual(stopper.number_results, len(losses) // stopper.frequency)
         self.assertEqual(self.stop_epoch, len(losses), msg='Did not stop early like it should have')

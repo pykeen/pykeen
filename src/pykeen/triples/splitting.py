@@ -3,6 +3,7 @@
 """Implementation of triples splitting functions."""
 
 import logging
+import typing
 from typing import Optional, Sequence, Tuple, Union
 
 import numpy
@@ -244,10 +245,10 @@ def _prepare_cleanup(
     columns = [[0, 2], [1]]
     to_move_mask = torch.zeros(1, dtype=torch.bool)
     if max_ids is None:
-        max_ids = [
+        max_ids = typing.cast(Tuple[int, int], tuple(
             max(training[:, col].max().item(), testing[:, col].max().item()) + 1
             for col in columns
-        ]
+        ))
     for col, max_id in zip(columns, max_ids):
         # IDs not in training
         not_in_training_mask = torch.ones(max_id, dtype=torch.bool)

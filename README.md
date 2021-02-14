@@ -33,7 +33,7 @@
 <p align="center">
   <a href="#installation">Installation</a> •
   <a href="#quickstart">Quickstart</a> •
-  <a href="#datasets-19">Datasets</a> •
+  <a href="#datasets-23">Datasets</a> •
   <a href="#models-23">Models</a> •
   <a href="#supporters">Support</a> •
   <a href="#citation">Citation</a>
@@ -96,13 +96,17 @@ The full documentation can be found at https://pykeen.readthedocs.io.
 Below are the models, datasets, training modes, evaluators, and metrics implemented
 in ``pykeen``.
 
-### Datasets (19)
+### Datasets (23)
 
 | Name          | Reference                                                                                                         | Description                                                                                       |
 |---------------|-------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------|
+| ckg           | [`pykeen.datasets.CKG`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.CKG.html)                     | The Clinical Knowledge Graph (CKG) dataset from [santos2020]_.                                    |
 | codexlarge    | [`pykeen.datasets.CoDExLarge`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.CoDExLarge.html)       | The CoDEx large dataset.                                                                          |
 | codexmedium   | [`pykeen.datasets.CoDExMedium`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.CoDExMedium.html)     | The CoDEx medium dataset.                                                                         |
 | codexsmall    | [`pykeen.datasets.CoDExSmall`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.CoDExSmall.html)       | The CoDEx small dataset.                                                                          |
+| conceptnet    | [`pykeen.datasets.ConceptNet`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.ConceptNet.html)       | The ConceptNet dataset from [speer2017]_.                                                         |
+| cskg          | [`pykeen.datasets.CSKG`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.CSKG.html)                   | The CSKG dataset.                                                                                 |
+| dbpedia50     | [`pykeen.datasets.DBpedia50`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.DBpedia50.html)         | The DBpedia50 dataset.                                                                            |
 | drkg          | [`pykeen.datasets.DRKG`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.DRKG.html)                   | The DRKG dataset.                                                                                 |
 | fb15k         | [`pykeen.datasets.FB15k`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.FB15k.html)                 | The FB15k dataset.                                                                                |
 | fb15k237      | [`pykeen.datasets.FB15k237`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.FB15k237.html)           | The FB15k-237 dataset.                                                                            |
@@ -152,13 +156,13 @@ in ``pykeen``.
 
 | Name            | Reference                                                                                                                 | Description                                                                                       |
 |-----------------|---------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------|
-| bceaftersigmoid | [`pykeen.losses.BCEAfterSigmoidLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.BCEAfterSigmoidLoss.html) | A loss function which uses the numerically unstable version of explicit Sigmoid + BCE.            |
-| bcewithlogits   | [`pykeen.losses.BCEWithLogitsLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.BCEWithLogitsLoss.html)     | A wrapper around the numeric stable version of the PyTorch binary cross entropy loss.             |
-| crossentropy    | [`pykeen.losses.CrossEntropyLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.CrossEntropyLoss.html)       | Evaluate cross entropy after softmax output.                                                      |
-| marginranking   | [`pykeen.losses.MarginRankingLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.MarginRankingLoss.html)     | A wrapper around the PyTorch margin ranking loss.                                                 |
-| mse             | [`pykeen.losses.MSELoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.MSELoss.html)                         | A wrapper around the PyTorch mean square error loss.                                              |
+| bceaftersigmoid | [`pykeen.losses.BCEAfterSigmoidLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.BCEAfterSigmoidLoss.html) | A module for the numerically unstable version of explicit Sigmoid + BCE loss.                     |
+| bcewithlogits   | [`pykeen.losses.BCEWithLogitsLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.BCEWithLogitsLoss.html)     | A module for the binary cross entropy loss.                                                       |
+| crossentropy    | [`pykeen.losses.CrossEntropyLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.CrossEntropyLoss.html)       | A module for the cross entopy loss that evaluates the cross entropy after softmax output.         |
+| marginranking   | [`pykeen.losses.MarginRankingLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.MarginRankingLoss.html)     | A module for the margin ranking loss.                                                             |
+| mse             | [`pykeen.losses.MSELoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.MSELoss.html)                         | A module for the mean square error loss.                                                          |
 | nssa            | [`pykeen.losses.NSSALoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.NSSALoss.html)                       | An implementation of the self-adversarial negative sampling loss function proposed by [sun2019]_. |
-| softplus        | [`pykeen.losses.SoftplusLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.SoftplusLoss.html)               | A loss function for the softplus.                                                                 |
+| softplus        | [`pykeen.losses.SoftplusLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.SoftplusLoss.html)               | A module for the softplus loss.                                                                   |
 
 ### Regularizers (5)
 
@@ -220,13 +224,15 @@ in ``pykeen``.
 | Mean Reciprocal Rank    | The mean over all reciprocal ranks: mean_i (1/r_i). Higher is better.                                              | rankbased   | `pykeen.evaluation.RankBasedMetricResults` |
 | Roc Auc Score           | The area under the ROC curve between [0.0, 1.0]. Higher is better.                                                 | sklearn     | `pykeen.evaluation.SklearnMetricResults`   |
 
-### Trackers (3)
+### Trackers (5)
 
-| Name    | Reference                                                                                                                       | Description                       |
-|---------|---------------------------------------------------------------------------------------------------------------------------------|-----------------------------------|
-| mlflow  | [`pykeen.trackers.MLFlowResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.MLFlowResultTracker.html)   | A tracker for MLflow.             |
-| neptune | [`pykeen.trackers.NeptuneResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.NeptuneResultTracker.html) | A tracker for Neptune.ai.         |
-| wandb   | [`pykeen.trackers.WANDBResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.WANDBResultTracker.html)     | A tracker for Weights and Biases. |
+| Name    | Reference                                                                                                                       | Description                            |
+|---------|---------------------------------------------------------------------------------------------------------------------------------|----------------------------------------|
+| csv     | [`pykeen.trackers.CSVResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.CSVResultTracker.html)         | Tracking results to a CSV file.        |
+| json    | [`pykeen.trackers.JSONResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.JSONResultTracker.html)       | Tracking results to a JSON lines file. |
+| mlflow  | [`pykeen.trackers.MLFlowResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.MLFlowResultTracker.html)   | A tracker for MLflow.                  |
+| neptune | [`pykeen.trackers.NeptuneResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.NeptuneResultTracker.html) | A tracker for Neptune.ai.              |
+| wandb   | [`pykeen.trackers.WANDBResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.WANDBResultTracker.html)     | A tracker for Weights and Biases.      |
 
 ## Hyper-parameter Optimization
 
@@ -294,7 +300,7 @@ See [CONTRIBUTING.md](/CONTRIBUTING.md) for more information on getting involved
 This project has been supported by several organizations (in alphabetical order):
 
 - [Bayer](https://www.bayer.com/)
-- [Enveda Therapeutics](https://envedatherapeutics.com/)
+- [Enveda Biosciences](https://www.envedabio.com/)
 - [Fraunhofer Institute for Algorithms and Scientific Computing](https://www.scai.fraunhofer.de)
 - [Fraunhofer Institute for Intelligent Analysis and Information Systems](https://www.iais.fraunhofer.de)
 - [Fraunhofer Center for Machine Learning](https://www.cit.fraunhofer.de/de/zentren/maschinelles-lernen.html)

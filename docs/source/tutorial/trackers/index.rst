@@ -7,3 +7,4 @@ Trackers
    using_mlflow
    using_neptune
    using_wandb
+   using_file

@@ -2,7 +2,7 @@
 
 """Implementation of the HolE model."""
 
-from typing import Optional
+from typing import Any, ClassVar, Mapping, Optional
 
 import torch
 import torch.autograd
@@ -10,10 +10,11 @@ import torch.autograd
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
+from ...nn import EmbeddingSpecification
 from ...nn.init import xavier_uniform_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
-from ...typing import DeviceHint
+from ...typing import Constrainer, DeviceHint, Hint, Initializer
 from ...utils import clamp_norm
 
 __all__ = [
@@ -50,9 +51,12 @@ class HolE(EntityRelationEmbeddingModel):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default = dict(
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
     )
+
+    #: The default settings for the entity constrainer
+    entity_constrainer_default_kwargs = dict(maxnorm=1., p=2, dim=-1)
 
     def __init__(
         self,
@@ -62,20 +66,29 @@ class HolE(EntityRelationEmbeddingModel):
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
+        entity_initializer: Hint[Initializer] = xavier_uniform_,
+        entity_constrainer: Hint[Constrainer] = clamp_norm,  # type: ignore
+        entity_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
+        relation_initializer: Hint[Constrainer] = xavier_uniform_,
     ) -> None:
         """Initialize the model."""
         super().__init__(
             triples_factory=triples_factory,
-            embedding_dim=embedding_dim,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
-            # Initialisation, cf. https://github.com/mnick/scikit-kge/blob/master/skge/param.py#L18-L27
-            entity_initializer=xavier_uniform_,
-            relation_initializer=xavier_uniform_,
-            entity_constrainer=clamp_norm,
-            entity_constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
+            entity_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                # Initialisation, cf. https://github.com/mnick/scikit-kge/blob/master/skge/param.py#L18-L27
+                initializer=entity_initializer,
+                constrainer=entity_constrainer,
+                constrainer_kwargs=entity_constrainer_kwargs or self.entity_constrainer_default_kwargs,
+            ),
+            relation_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=relation_initializer,
+            ),
         )
 
     @staticmethod

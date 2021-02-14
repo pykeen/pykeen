@@ -5,15 +5,15 @@
 import inspect
 import json
 import os
-from typing import Iterable, Optional, Set, Type
+from typing import Callable, Iterable, Optional, Set, Type, Union
 
+import torch
 from torch import nn
 
 from .cli import HERE
 from ..datasets import datasets as datasets_dict
 from ..losses import _LOSS_SUFFIX, losses as losses_dict
-from ..models import models as models_dict
-from ..models.base import Model
+from ..models import Model, models as models_dict
 from ..optimizers import optimizers as optimizers_dict
 from ..regularizers import _REGULARIZER_SUFFIX, regularizers as regularizers_dict
 from ..sampling import _NEGATIVE_SAMPLER_SUFFIX, negative_samplers as negative_samplers_dict
@@ -28,6 +28,7 @@ _SKIP_ANNOTATIONS = {
     nn.Embedding, Optional[nn.Embedding], Type[nn.Embedding], Optional[Type[nn.Embedding]],
     nn.Module, Optional[nn.Module], Type[nn.Module], Optional[Type[nn.Module]],
     Model, Optional[Model], Type[Model], Optional[Type[Model]],
+    Union[str, Callable[[torch.FloatTensor], torch.FloatTensor]],
 }
 
 
