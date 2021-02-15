@@ -25,6 +25,8 @@ __all__ = [
     'create_entity_mapping',
     'create_relation_mapping',
     'INVERSE_SUFFIX',
+    'splits_steps',
+    'splits_similarity',
 ]
 
 logger = logging.getLogger(__name__)
