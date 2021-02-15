@@ -2,6 +2,8 @@
 
 """Utility classes for constructing datasets."""
 
+from __future__ import annotations
+
 import logging
 import os
 import pathlib
@@ -121,6 +123,21 @@ class Dataset:
     def get_normalized_name(cls) -> str:
         """Get the normalized name of the dataset."""
         return normalize_string(cls.__name__)
+
+    def similarity(self, other: Dataset) -> float:
+        """Compute the similarity between two shuffles of the same dataset.
+
+        :param other: The other shuffling of the dataset
+        :return: A float of the similarity
+
+        .. seealso:: :func:`pykeen.triples.triples_factory.splits_similarity`."""
+        from ..triples.triples_factory import splits_similarity
+        return splits_similarity(self._tup(), other._tup())
+
+    def _tup(self):
+        if self.validation is None:
+            return self.training, self.testing
+        return self.training, self.testing, self.validation
 
 
 class EagerDataset(Dataset):
