@@ -27,7 +27,7 @@ SPLIT_METHODS = (
 def _split_triples(
     mapped_triples: MappedTriples,
     sizes: Sequence[int],
-    random_state: TorchRandomHint = None,
+    generator: torch.Generator,
 ) -> Sequence[MappedTriples]:
     """
     Randomly split triples into groups of given sizes.
@@ -36,7 +36,7 @@ def _split_triples(
         The triples.
     :param sizes:
         The sizes.
-    :param random_state:
+    :param generator:
         The random state for reproducible splits.
 
     :return:
@@ -47,7 +47,7 @@ def _split_triples(
         raise ValueError(f"Received {num_triples} triples, but the sizes sum up to {sum(sizes)}")
 
     # Split indices
-    idx = torch.randperm(num_triples, generator=random_state)
+    idx = torch.randperm(num_triples, generator=generator)
     idx_groups = idx.split(split_size=sizes, dim=0)
 
     # Split triples
@@ -166,14 +166,14 @@ def get_absolute_split_sizes(
 def _tf_cleanup_all(
     triples_groups: Sequence[MappedTriples],
     *,
-    random_state: TorchRandomHint = None,
+    generator: TorchRandomHint,
 ) -> Sequence[MappedTriples]:
     """Cleanup a list of triples array with respect to the first array."""
     reference, *others = triples_groups
     rv = []
     for other in others:
-        if random_state is not None:
-            reference, other = _tf_cleanup_randomized(reference, other, random_state)
+        if generator is not None:
+            reference, other = _tf_cleanup_randomized(reference, other, generator=generator)
         else:
             reference, other = _tf_cleanup_deterministic(reference, other)
         rv.append(other)
@@ -192,7 +192,7 @@ def _tf_cleanup_deterministic(training: MappedTriples, testing: MappedTriples) -
 def _tf_cleanup_randomized(
     training: MappedTriples,
     testing: MappedTriples,
-    random_state: TorchRandomHint = None,
+    generator: torch.Generator,
 ) -> Tuple[MappedTriples, MappedTriples]:
     """Cleanup a triples array, but randomly select testing triples and recalculate to minimize moves.
 
@@ -200,7 +200,6 @@ def _tf_cleanup_randomized(
     2. Choose a triple to move, recalculate move_id_mask
     3. Continue until move_id_mask has no true bits
     """
-    generator = ensure_torch_random_state(random_state)
     move_id_mask = _prepare_cleanup(training, testing)
 
     # While there are still triples that should be moved to the training set
@@ -307,7 +306,7 @@ def split(
     if method not in SPLIT_METHODS:
         raise ValueError(f"Invalid split method: \"{method}\". Allowed are {SPLIT_METHODS}")
 
-    random_state = ensure_torch_random_state(random_state)
+    generator = ensure_torch_random_state(random_state)
     ratios = normalize_ratios(ratios=ratios)
     sizes = get_absolute_split_sizes(n_total=mapped_triples.shape[0], ratios=ratios)
 
@@ -315,11 +314,11 @@ def split(
         triples_groups = _split_triples(
             mapped_triples,
             sizes=sizes,
-            random_state=random_state,
+            generator=generator,
         )
         # Make sure that the first element has all the right stuff in it
         logger.debug('cleaning up groups')
-        triples_groups = _tf_cleanup_all(triples_groups, random_state=random_state if randomize_cleanup else None)
+        triples_groups = _tf_cleanup_all(triples_groups, generator=generator if randomize_cleanup else None)
         logger.debug('done cleaning up groups')
     elif method == 'coverage' or method is None:
         seed_mask = _get_cover_deterministic(triples=mapped_triples)
@@ -331,7 +330,7 @@ def split(
         train, *rest = _split_triples(
             mapped_triples=remaining_triples,
             sizes=remaining_sizes,
-            random_state=random_state,
+            generator=generator,
         )
         triples_groups = [torch.cat([train_seed, train], dim=0), *rest]
     else:

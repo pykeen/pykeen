@@ -131,42 +131,39 @@ class Dataset:
     ) -> Dataset:
         """Unleak the dataset with :func:`pykeen.triples.leakage.unleak`."""
         from ..triples.leakage import unleak
-        if self.validation is None:
-            return EagerDataset(*unleak(
-                self.training, self.testing,
-                n=n, minimum_frequency=minimum_frequency,
-            ))
         return EagerDataset(*unleak(
-            self.training, self.testing, self.validation,
-            n=n, minimum_frequency=minimum_frequency,
+            *self._tup(),
+            n=n,
+            minimum_frequency=minimum_frequency,
         ))
 
     def remix(self, random_state: TorchRandomHint = None, **kwargs) -> Dataset:
         """Remix a dataset using :func:`pykeen.triples.remix.remix`."""
         from ..triples.remix import remix
-        if self.validation is None:
-            return EagerDataset(*remix(
-                self.training, self.testing,
-                random_state=random_state, **kwargs,
-            ))
         return EagerDataset(*remix(
-            self.training, self.testing, self.validation,
-            random_state=random_state, **kwargs,
+            *self._tup(),
+            random_state=random_state,
+            **kwargs,
+        ))
+
+    def deteriorate(self, n: Union[int, float], random_state: TorchRandomHint = None) -> Dataset:
+        """Deteriorate n triples from the dataset's training with :func:`pykeen.triples.deteriorate.deteriorate`."""
+        from ..triples.deteriorate import deteriorate
+        return EagerDataset(*deteriorate(
+            *self._tup(),
+            n=n,
+            random_state=random_state,
         ))
 
     def similarity(self, other: Dataset) -> float:
         """Compute the distance between two datasets that are remixes of each other via :func:`splits_distance`."""
         from ..triples.triples_factory import splits_similarity
-        if self.validation is None:
-            return splits_similarity(
-                (self.training, self.testing),
-                (other.training, other.testing),
-            )
-        return splits_similarity(
-            (self.training, self.testing, self.validation),
-            (other.training, other.testing, other.validation),  # type: ignore
-        )
+        return splits_similarity(self._tup(), other._tup())
 
+    def _tup(self):
+        if self.validation is None:
+            return self.training, self.testing
+        return self.training, self.testing, self.validation
 
 
 class EagerDataset(Dataset):

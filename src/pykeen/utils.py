@@ -459,7 +459,7 @@ def random_non_negative_int() -> int:
     return int(sq.generate_state(1)[0])
 
 
-def ensure_torch_random_state(random_state: TorchRandomHint) -> torch.Generator:
+def ensure_torch_random_state(random_state: TorchRandomHint = None) -> torch.Generator:
     """Prepare a random state for PyTorch."""
     if random_state is None:
         random_state = random_non_negative_int()

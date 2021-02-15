@@ -22,6 +22,7 @@ from pykeen.triples.splitting import (
 )
 from pykeen.triples.triples_factory import INVERSE_SUFFIX, TRIPLES_DF_COLUMNS, _map_triples_elements_to_ids
 from pykeen.triples.utils import get_entities, get_relations, load_triples
+from pykeen.utils import ensure_torch_random_state
 from tests.constants import RESOURCES
 
 triples = np.array(
@@ -292,11 +293,13 @@ class TestSplit(unittest.TestCase):
             [2, 1001, 3],
         ], dtype=torch.long)
 
+        generator = ensure_torch_random_state()
+
         new_training, new_testing = _tf_cleanup_deterministic(training, testing)
         assert (expected_training == new_training).all()
         assert (expected_testing == new_testing).all()
 
-        new_testing, new_testing = _tf_cleanup_all([training, testing])
+        new_testing, new_testing = _tf_cleanup_all([training, testing], generator=generator)
         assert (expected_training == new_training).all()
         assert (expected_testing == new_testing).all()
 
@@ -334,9 +337,10 @@ class TestSplit(unittest.TestCase):
             (1, 1000, 4),
         }
 
+        generator = ensure_torch_random_state()
         new_training, new_testing = [
             set(tuple(row) for row in arr.tolist())
-            for arr in _tf_cleanup_randomized(training, testing)
+            for arr in _tf_cleanup_randomized(training, testing, generator=generator)
         ]
 
         if expected_training_1 == new_training:
