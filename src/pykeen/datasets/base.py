@@ -130,7 +130,8 @@ class Dataset:
         :param other: The other shuffling of the dataset
         :return: A float of the similarity
 
-        .. seealso:: :func:`pykeen.triples.triples_factory.splits_similarity`."""
+        .. seealso:: :func:`pykeen.triples.triples_factory.splits_similarity`.
+        """
         from ..triples.triples_factory import splits_similarity
         return splits_similarity(self._tup(), other._tup())
 
