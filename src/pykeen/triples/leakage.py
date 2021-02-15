@@ -18,7 +18,7 @@ import scipy.sparse
 import torch
 
 from pykeen.datasets.base import EagerDataset
-from pykeen.triples.triples_factory import TriplesFactory
+from pykeen.triples.triples_factory import TriplesFactory, cat_triples
 from pykeen.typing import MappedTriples
 from pykeen.utils import compact_mapping
 
@@ -381,10 +381,7 @@ def _translate_triples(
 def reindex(*triples_factories: TriplesFactory) -> List[TriplesFactory]:
     """Reindex a set of triples factories."""
     # get entities and relations occurring in triples
-    all_triples = torch.cat([
-        factory.mapped_triples
-        for factory in triples_factories
-    ], dim=0)
+    all_triples = cat_triples(*triples_factories)
 
     # generate ID translation and new label to Id mappings
     one_factory = triples_factories[0]
