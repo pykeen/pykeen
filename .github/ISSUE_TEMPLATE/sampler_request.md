@@ -2,7 +2,7 @@
 name: Sampler request
 about: Suggest a new sampler that should be implemented in this package
 title: ''
-labels: ''
+labels: New Sampler
 assignees: ''
 
 ---
