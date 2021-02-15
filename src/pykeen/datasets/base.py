@@ -2,6 +2,8 @@
 
 """Utility classes for constructing datasets."""
 
+from __future__ import annotations
+
 import logging
 import os
 import pathlib
@@ -121,6 +123,15 @@ class Dataset:
     def get_normalized_name(cls) -> str:
         """Get the normalized name of the dataset."""
         return normalize_string(cls.__name__)
+
+    def deteriorate(self, n: Union[int, float], random_state: TorchRandomHint = None) -> Dataset:
+        """Deteriorate n triples from the dataset's training with :func:`pykeen.triples.deteriorate.deteriorate`."""
+        from ..triples.deteriorate import deteriorate
+        return EagerDataset(*deteriorate(
+            *self._tup(),
+            n=n,
+            random_state=random_state,
+        ))
 
 
 class EagerDataset(Dataset):
