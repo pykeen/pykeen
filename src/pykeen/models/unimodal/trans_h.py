@@ -77,7 +77,8 @@ class TransH(ERModel):
         random_seed: Optional[int] = None,
         entity_initializer: Hint[Initializer] = uniform_,
         relation_initializer: Hint[Initializer] = uniform_,
-        relation_constrainer: Hint[Constrainer] = functional.normalize,
+        normal_vector_initializer: Hint[Initializer] = uniform_,
+        normal_vector_constrainer: Hint[Constrainer] = functional.normalize,
     ) -> None:
         r"""Initialize TransH.
 
@@ -101,8 +102,8 @@ class TransH(ERModel):
                 ),
                 EmbeddingSpecification(
                     embedding_dim=embedding_dim,
-                    constrainer=relation_constrainer,
-                    initializer=relation_initializer,
+                    constrainer=normal_vector_constrainer,
+                    initializer=normal_vector_initializer,
                 ),
             ],
             loss=loss,
