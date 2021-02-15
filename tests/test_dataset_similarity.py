@@ -13,8 +13,8 @@ from pykeen.triples.triples_factory import splits_similarity, splits_steps
 class TestRemix(unittest.TestCase):
     """Tests for remix functions."""
 
-    def test_splits_distance(self):
-        """Test the distance calculation."""
+    def test_splits_similarity(self):
+        """Test the similarity calculation."""
         a_train = torch.as_tensor([
             [1, 1, 2],
             [2, 1, 3],

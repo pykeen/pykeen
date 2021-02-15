@@ -22,6 +22,7 @@ from tabulate import tabulate
 
 from ..constants import PYKEEN_DATASETS
 from ..triples import TriplesFactory
+from ..triples.triples_factory import splits_similarity
 from ..typing import TorchRandomHint
 from ..utils import normalize_string
 
@@ -38,9 +39,28 @@ __all__ = [
     'TarFileSingleDataset',
     'TabbedDataset',
     'SingleTabbedDataset',
+    'dataset_similarity',
 ]
 
 logger = logging.getLogger(__name__)
+
+
+def dataset_similarity(a: Dataset, b: Dataset, metric: Optional[str] = None) -> float:
+    """Calculate the similarity between two datasets.
+
+    :param a: The reference dataset
+    :param b: The target dataset
+    :param metric: The similarity metric to use. Defaults to `tanimoto`. Could either be a symmetric
+        or asymmetric metric.
+    :returns: A scalar value between 0 and 1 where closer to 1 means the datasets are more
+        similar based on the metric.
+
+    :raises ValueError: if an invalid metric type is passed. Right now, there's only `tanimoto`,
+        but this could change in later.
+    """
+    if metric == 'tanimoto' or metric is None:
+        return splits_similarity(a._tup(), b._tup())
+    raise ValueError(f'invalid metric: {metric}')
 
 
 class Dataset:
@@ -124,16 +144,16 @@ class Dataset:
         """Get the normalized name of the dataset."""
         return normalize_string(cls.__name__)
 
-    def similarity(self, other: Dataset) -> float:
+    def similarity(self, other: Dataset, metric: Optional[str] = None) -> float:
         """Compute the similarity between two shuffles of the same dataset.
 
         :param other: The other shuffling of the dataset
+        :param metric: The metric to use. Defaults to `tanimoto`.
         :return: A float of the similarity
 
         .. seealso:: :func:`pykeen.triples.triples_factory.splits_similarity`.
         """
-        from ..triples.triples_factory import splits_similarity
-        return splits_similarity(self._tup(), other._tup())
+        return dataset_similarity(self, other, metric=metric)
 
     def _tup(self):
         if self.validation is None:
