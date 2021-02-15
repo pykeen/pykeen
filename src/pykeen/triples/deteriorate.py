@@ -4,6 +4,7 @@
 
 import logging
 import math
+from itertools import zip_longest
 from typing import List, Union
 
 import click
@@ -54,9 +55,13 @@ def deteriorate(
     didxs = deteriorated_idx.split(math.ceil(n / len(others)), dim=0)
     rest = [
         tf.clone_and_exchange_triples(
-            mapped_triples=torch.cat([tf.mapped_triples, reference.mapped_triples[didx]], dim=0),
+            mapped_triples=(
+                torch.cat([tf.mapped_triples, reference.mapped_triples[didx]], dim=0)
+                if didx is not None else
+                tf.mapped_triples  # maybe just give same tf? should it be copied?
+            ),
         )
-        for didx, tf in zip(didxs, others)
+        for didx, tf in zip_longest(didxs, others)
     ]
 
     return [first, *rest]
