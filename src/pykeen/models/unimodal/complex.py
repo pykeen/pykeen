@@ -103,12 +103,14 @@ class ComplEx(EntityRelationEmbeddingModel):
             random_seed=random_seed,
             regularizer=regularizer,
             entity_representations=EmbeddingSpecification(
-                embedding_dim=2 * embedding_dim,  # complex embeddings
+                embedding_dim=embedding_dim,
                 initializer=entity_initializer,
+                dtype=torch.cfloat,
             ),
             relation_representations=EmbeddingSpecification(
-                embedding_dim=2 * embedding_dim,  # complex embeddings
+                embedding_dim=embedding_dim,
                 initializer=relation_initializer,
+                dtype=torch.cfloat,
             ),
         )
 
