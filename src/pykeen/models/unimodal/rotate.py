@@ -70,13 +70,15 @@ class RotatE(EntityRelationEmbeddingModel):
             random_seed=random_seed,
             regularizer=regularizer,
             entity_representations=EmbeddingSpecification(
-                embedding_dim=2 * embedding_dim,  # complex embeddings
+                embedding_dim=embedding_dim,
                 initializer=entity_initializer,
+                dtype=torch.cfloat,
             ),
             relation_representations=EmbeddingSpecification(
-                embedding_dim=2 * embedding_dim,  # complex embeddings
+                embedding_dim=embedding_dim,
                 initializer=relation_initializer,
                 constrainer=relation_constrainer,
+                dtype=torch.cfloat,
             ),
         )
         self.real_embedding_dim = embedding_dim
