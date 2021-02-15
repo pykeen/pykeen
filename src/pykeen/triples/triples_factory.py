@@ -25,6 +25,8 @@ __all__ = [
     'create_entity_mapping',
     'create_relation_mapping',
     'INVERSE_SUFFIX',
+    'splits_steps',
+    'splits_similarity',
 ]
 
 logger = logging.getLogger(__name__)
@@ -991,3 +993,34 @@ class TriplesFactory(CoreTriplesFactory):
             invert_entity_selection=invert_entity_selection,
             invert_relation_selection=invert_relation_selection,
         ).with_labels(entity_to_id=self.entity_to_id, relation_to_id=self.relation_to_id)
+
+
+def splits_steps(a: Sequence[CoreTriplesFactory], b: Sequence[CoreTriplesFactory]) -> int:
+    """Compute the number of moves to go from the first sequence of triples factories to the second.
+
+    :return: The number of triples present in the training sets in both
+    """
+    if len(a) != len(b):
+        raise ValueError('Must have same number of triples factories')
+
+    train_1 = _smt(a[0].mapped_triples)
+    train_2 = _smt(b[0].mapped_triples)
+
+    # FIXME currently the implementation does not consider the non-training (i.e., second-last entries)
+    #  for the number of steps. Consider more interesting way to discuss splits w/ valid
+
+    return len(train_1.symmetric_difference(train_2))
+
+
+def splits_similarity(a: Sequence[CoreTriplesFactory], b: Sequence[CoreTriplesFactory]) -> float:
+    """Compute the similarity between two datasets' splits.
+
+    :return: The number of triples present in the training sets in both
+    """
+    steps = splits_steps(a, b)
+    n = sum(tf.num_triples for tf in a)
+    return 1 - steps / n
+
+
+def _smt(x):
+    return set(tuple(xx.detach().numpy().tolist()) for xx in x)
