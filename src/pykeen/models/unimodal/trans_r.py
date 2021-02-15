@@ -1,181 +1,189 @@
 # -*- coding: utf-8 -*-
 
-"""An implementation of TransH."""
+"""Implementation of TransR."""
 
-from typing import Any, ClassVar, Mapping, Optional, Type
+from functools import partial
+from typing import Any, ClassVar, Mapping, Optional
 
 import torch
-from torch.nn import functional
-from torch.nn.init import uniform_
+import torch.autograd
+import torch.nn.init
 
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
 from ...nn import Embedding, EmbeddingSpecification
-from ...regularizers import Regularizer, TransHRegularizer
+from ...nn.init import xavier_uniform_, xavier_uniform_norm_
+from ...regularizers import Regularizer
 from ...triples import TriplesFactory
-from ...typing import DeviceHint, Hint, Initializer
+from ...typing import Constrainer, DeviceHint, Hint, Initializer
+from ...utils import clamp_norm
 
 __all__ = [
-    'TransH',
+    'TransR',
 ]
 
 
-class TransH(EntityRelationEmbeddingModel):
-    r"""An implementation of TransH [wang2014]_.
+def _projection_initializer(
+    x: torch.FloatTensor,
+    num_relations: int,
+    embedding_dim: int,
+    relation_dim: int,
+) -> torch.FloatTensor:
+    """Initialize by Glorot."""
+    return torch.nn.init.xavier_uniform_(x.view(num_relations, embedding_dim, relation_dim)).view(x.shape)
 
-    This model extends :class:`pykeen.models.TransE` by applying the translation from head to tail entity in a
-    relational-specific hyperplane in order to address its inability to model one-to-many, many-to-one, and
-    many-to-many relations.
 
-    In TransH, each relation is represented by a hyperplane, or more specifically a normal vector of this hyperplane
-    $\textbf{w}_{r} \in \mathbb{R}^d$ and a vector $\textbf{d}_{r} \in \mathbb{R}^d$ that lies in the hyperplane.
-    To compute the plausibility of a triple $(h,r,t)\in \mathbb{K}$, the head embedding $\textbf{e}_h \in \mathbb{R}^d$
-    and the tail embedding $\textbf{e}_t \in \mathbb{R}^d$ are first projected onto the relation-specific hyperplane:
+class TransR(EntityRelationEmbeddingModel):
+    r"""An implementation of TransR from [lin2015]_.
+
+    TransR is an extension of :class:`pykeen.models.TransH` that explicitly considers entities and relations as
+    different objects and therefore represents them in different vector spaces.
+
+    For a triple $(h,r,t) \in \mathbb{K}$, the entity embeddings, $\textbf{e}_h, \textbf{e}_t \in \mathbb{R}^d$,
+    are first projected into the relation space by means of a relation-specific projection matrix
+    $\textbf{M}_{r} \in \mathbb{R}^{k \times d}$. With relation embedding $\textbf{r}_r \in \mathbb{R}^k$, the
+    interaction model is defined similarly to TransE with:
 
     .. math::
 
-        \textbf{e'}_{h,r} = \textbf{e}_h - \textbf{w}_{r}^\top \textbf{e}_h \textbf{w}_r
+        f(h,r,t) = -\|\textbf{M}_{r}\textbf{e}_h + \textbf{r}_r - \textbf{M}_{r}\textbf{e}_t\|_{p}^2
 
-        \textbf{e'}_{t,r} = \textbf{e}_t - \textbf{w}_{r}^\top \textbf{e}_t \textbf{w}_r
+    The following constraints are applied:
 
-    where $\textbf{h}, \textbf{t} \in \mathbb{R}^d$. Then, the projected embeddings are used to compute the score
-    for the triple $(h,r,t)$:
-
-    .. math::
-
-        f(h, r, t) = -\|\textbf{e'}_{h,r} + \textbf{d}_r - \textbf{e'}_{t,r}\|_{p}^2
+     * $\|\textbf{e}_h\|_2 \leq 1$
+     * $\|\textbf{r}_r\|_2 \leq 1$
+     * $\|\textbf{e}_t\|_2 \leq 1$
+     * $\|\textbf{M}_{r}\textbf{e}_h\|_2 \leq 1$
+     * $\|\textbf{M}_{r}\textbf{e}_t\|_2 \leq 1$
 
     .. seealso::
 
-       - OpenKE `implementation of TransH <https://github.com/thunlp/OpenKE/blob/master/models/TransH.py>`_
+       - OpenKE `TensorFlow implementation of TransR
+         <https://github.com/thunlp/OpenKE/blob/master/models/TransR.py>`_
+       - OpenKE `PyTorch implementation of TransR
+         <https://github.com/thunlp/OpenKE/blob/OpenKE-PyTorch/models/TransR.py>`_
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]] = dict(
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+        relation_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
         scoring_fct_norm=dict(type=int, low=1, high=2),
-    )
-    #: The custom regularizer used by [wang2014]_ for TransH
-    regularizer_default: ClassVar[Type[Regularizer]] = TransHRegularizer
-    #: The settings used by [wang2014]_ for TransH
-    regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = dict(
-        weight=0.05,
-        epsilon=1e-5,
     )
 
     def __init__(
         self,
         triples_factory: TriplesFactory,
         embedding_dim: int = 50,
-        scoring_fct_norm: int = 2,
+        relation_dim: int = 30,
+        scoring_fct_norm: int = 1,
         loss: Optional[Loss] = None,
-        regularizer: Optional[Regularizer] = None,
-        predict_with_sigmoid: bool = False,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
-        entity_initializer: Hint[Initializer] = uniform_,
-        relation_initializer: Hint[Initializer] = uniform_,
+        regularizer: Optional[Regularizer] = None,
+        entity_initializer: Hint[Initializer] = xavier_uniform_,
+        entity_constrainer: Hint[Constrainer] = clamp_norm,  # type: ignore
+        relation_initializer: Hint[Initializer] = xavier_uniform_norm_,
+        relation_constrainer: Hint[Constrainer] = clamp_norm,  # type: ignore
     ) -> None:
-        r"""Initialize TransH.
-
-        :param embedding_dim: The entity embedding dimension $d$. Is usually $d \in [50, 300]$.
-        :param scoring_fct_norm: The :math:`l_p` norm applied in the interaction function. Is usually ``1`` or ``2.``.
-        """
+        """Initialize the model."""
         super().__init__(
             triples_factory=triples_factory,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
-            predict_with_sigmoid=predict_with_sigmoid,
             entity_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
                 initializer=entity_initializer,
+                constrainer=entity_constrainer,
+                constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
             ),
             relation_representations=EmbeddingSpecification(
-                embedding_dim=embedding_dim,
+                embedding_dim=relation_dim,
                 initializer=relation_initializer,
+                constrainer=relation_constrainer,
+                constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
             ),
         )
-
         self.scoring_fct_norm = scoring_fct_norm
 
-        # embeddings
-        self.normal_vector_embeddings = Embedding.init_with_device(
-            num_embeddings=triples_factory.num_relations,
-            embedding_dim=embedding_dim,
-            device=self.device,
-            # Normalise the normal vectors by their l2 norms
-            constrainer=functional.normalize,
-        )
+        # TODO: Initialize from TransE
 
-    def post_parameter_update(self) -> None:  # noqa: D102
-        super().post_parameter_update()
-        self.normal_vector_embeddings.post_parameter_update()
+        # embeddings
+        self.relation_projections = Embedding.init_with_device(
+            num_embeddings=triples_factory.num_relations,
+            embedding_dim=relation_dim * embedding_dim,
+            device=self.device,
+            initializer=partial(
+                _projection_initializer,
+                num_relations=self.num_relations,
+                embedding_dim=self.embedding_dim,
+                relation_dim=self.relation_dim,
+            ),
+        )
 
     def _reset_parameters_(self):  # noqa: D102
         super()._reset_parameters_()
-        self.normal_vector_embeddings.reset_parameters()
-        # TODO: Add initialization
+        self.relation_projections.reset_parameters()
 
-    def regularize_if_necessary(self, *tensors: torch.FloatTensor) -> None:
-        """Update the regularizer's term given some tensors, if regularization is requested."""
-        if tensors:
-            raise ValueError('no tensors should be passed to TransH.regularize_if_necessary')
-        # As described in [wang2014], all entities and relations are used to compute the regularization term
-        # which enforces the defined soft constraints.
-        super().regularize_if_necessary(
-            self.entity_embeddings(indices=None),
-            self.normal_vector_embeddings(indices=None),  # FIXME
-            self.relation_embeddings(indices=None),
-        )
+    @staticmethod
+    def interaction_function(
+        h: torch.FloatTensor,
+        r: torch.FloatTensor,
+        t: torch.FloatTensor,
+        m_r: torch.FloatTensor,
+    ) -> torch.FloatTensor:
+        """Evaluate the interaction function for given embeddings.
+
+        The embeddings have to be in a broadcastable shape.
+
+        :param h: shape: (batch_size, num_entities, d_e)
+            Head embeddings.
+        :param r: shape: (batch_size, num_entities, d_r)
+            Relation embeddings.
+        :param t: shape: (batch_size, num_entities, d_e)
+            Tail embeddings.
+        :param m_r: shape: (batch_size, num_entities, d_e, d_r)
+            The relation specific linear transformations.
+
+        :return: shape: (batch_size, num_entities)
+            The scores.
+        """
+        # project to relation specific subspace, shape: (b, e, d_r)
+        h_bot = h @ m_r
+        t_bot = t @ m_r
+        # ensure constraints
+        h_bot = clamp_norm(h_bot, p=2, dim=-1, maxnorm=1.)
+        t_bot = clamp_norm(t_bot, p=2, dim=-1, maxnorm=1.)
+
+        # evaluate score function, shape: (b, e)
+        return -torch.norm(h_bot + r - t_bot, dim=-1) ** 2
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(indices=hrt_batch[:, 0])
-        d_r = self.relation_embeddings(indices=hrt_batch[:, 1])
-        w_r = self.normal_vector_embeddings(indices=hrt_batch[:, 1])
-        t = self.entity_embeddings(indices=hrt_batch[:, 2])
+        h = self.entity_embeddings(indices=hrt_batch[:, 0]).unsqueeze(dim=1)
+        r = self.relation_embeddings(indices=hrt_batch[:, 1]).unsqueeze(dim=1)
+        t = self.entity_embeddings(indices=hrt_batch[:, 2]).unsqueeze(dim=1)
+        m_r = self.relation_projections(indices=hrt_batch[:, 1]).view(-1, self.embedding_dim, self.relation_dim)
 
-        # Project to hyperplane
-        ph = h - torch.sum(w_r * h, dim=-1, keepdim=True) * w_r
-        pt = t - torch.sum(w_r * t, dim=-1, keepdim=True) * w_r
-
-        # Regularization term
-        self.regularize_if_necessary()
-
-        return -torch.norm(ph + d_r - pt, p=2, dim=-1, keepdim=True)
+        return self.interaction_function(h=h, r=r, t=t, m_r=m_r).view(-1, 1)
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(indices=hr_batch[:, 0])
-        d_r = self.relation_embeddings(indices=hr_batch[:, 1])
-        w_r = self.normal_vector_embeddings(indices=hr_batch[:, 1])
-        t = self.entity_embeddings(indices=None)
+        h = self.entity_embeddings(indices=hr_batch[:, 0]).unsqueeze(dim=1)
+        r = self.relation_embeddings(indices=hr_batch[:, 1]).unsqueeze(dim=1)
+        t = self.entity_embeddings(indices=None).unsqueeze(dim=0)
+        m_r = self.relation_projections(indices=hr_batch[:, 1]).view(-1, self.embedding_dim, self.relation_dim)
 
-        # Project to hyperplane
-        ph = h - torch.sum(w_r * h, dim=-1, keepdim=True) * w_r
-        pt = t[None, :, :] - torch.sum(w_r[:, None, :] * t[None, :, :], dim=-1, keepdim=True) * w_r[:, None, :]
-
-        # Regularization term
-        self.regularize_if_necessary()
-
-        return -torch.norm(ph[:, None, :] + d_r[:, None, :] - pt, p=2, dim=-1)
+        return self.interaction_function(h=h, r=r, t=t, m_r=m_r)
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(indices=None)
-        rel_id = rt_batch[:, 0]
-        d_r = self.relation_embeddings(indices=rel_id)
-        w_r = self.normal_vector_embeddings(indices=rel_id)
-        t = self.entity_embeddings(indices=rt_batch[:, 1])
+        h = self.entity_embeddings(indices=None).unsqueeze(dim=0)
+        r = self.relation_embeddings(indices=rt_batch[:, 0]).unsqueeze(dim=1)
+        t = self.entity_embeddings(indices=rt_batch[:, 1]).unsqueeze(dim=1)
+        m_r = self.relation_projections(indices=rt_batch[:, 0]).view(-1, self.embedding_dim, self.relation_dim)
 
-        # Project to hyperplane
-        ph = h[None, :, :] - torch.sum(w_r[:, None, :] * h[None, :, :], dim=-1, keepdim=True) * w_r[:, None, :]
-        pt = t - torch.sum(w_r * t, dim=-1, keepdim=True) * w_r
-
-        # Regularization term
-        self.regularize_if_necessary()
-
-        return -torch.norm(ph + d_r[:, None, :] - pt[:, None, :], p=2, dim=-1)
+        return self.interaction_function(h=h, r=r, t=t, m_r=m_r)
