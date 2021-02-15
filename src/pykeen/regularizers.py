@@ -156,7 +156,7 @@ class LpRegularizer(Regularizer):
         self.p = p
 
     def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
-        return lp_norm(x=x, p=self.p, dim=self.dim, normalize=self.normalize)
+        return lp_norm(x=x, p=self.p, dim=self.dim, normalize=self.normalize).mean()
 
 
 class PowerSumRegularizer(Regularizer):
@@ -185,7 +185,7 @@ class PowerSumRegularizer(Regularizer):
         self.p = p
 
     def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
-        return powersum_norm(x, p=self.p, dim=self.dim, normalize=self.normalize)
+        return powersum_norm(x, p=self.p, dim=self.dim, normalize=self.normalize).mean()
 
 
 class TransHRegularizer(Regularizer):

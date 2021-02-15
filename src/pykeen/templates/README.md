@@ -202,7 +202,7 @@ See [CONTRIBUTING.md](/CONTRIBUTING.md) for more information on getting involved
 This project has been supported by several organizations (in alphabetical order):
 
 - [Bayer](https://www.bayer.com/)
-- [Enveda Therapeutics](https://envedatherapeutics.com/)
+- [Enveda Biosciences](https://www.envedabio.com/)
 - [Fraunhofer Institute for Algorithms and Scientific Computing](https://www.scai.fraunhofer.de)
 - [Fraunhofer Institute for Intelligent Analysis and Information Systems](https://www.iais.fraunhofer.de)
 - [Fraunhofer Center for Machine Learning](https://www.cit.fraunhofer.de/de/zentren/maschinelles-lernen.html)

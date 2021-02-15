@@ -5,6 +5,7 @@
 from typing import Any, ClassVar, Mapping, Optional, Type
 
 from torch.nn import functional
+from torch.nn.init import uniform_
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
@@ -13,7 +14,7 @@ from ...nn import EmbeddingSpecification
 from ...nn.modules import TransHInteraction
 from ...regularizers import Regularizer, TransHRegularizer
 from ...triples import TriplesFactory
-from ...typing import DeviceHint
+from ...typing import Constrainer, DeviceHint, Hint, Initializer
 from ...utils import pop_only
 
 __all__ = [
@@ -74,6 +75,9 @@ class TransH(ERModel):
         predict_with_sigmoid: bool = False,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
+        entity_initializer: Hint[Initializer] = uniform_,
+        relation_initializer: Hint[Initializer] = uniform_,
+        relation_constrainer: Hint[Constrainer] = functional.normalize,
     ) -> None:
         r"""Initialize TransH.
 
@@ -88,15 +92,17 @@ class TransH(ERModel):
             ),
             entity_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
+                initializer=entity_initializer,
             ),
             relation_representations=[
                 EmbeddingSpecification(
                     embedding_dim=embedding_dim,
+                    initializer=relation_initializer,
                 ),
                 EmbeddingSpecification(
                     embedding_dim=embedding_dim,
-                    # Normalise the normal vectors by their l2 norms
-                    constrainer=functional.normalize,
+                    constrainer=relation_constrainer,
+                    initializer=relation_initializer,
                 ),
             ],
             loss=loss,

@@ -11,7 +11,7 @@ from ...nn import EmbeddingSpecification
 from ...nn.init import xavier_normal_
 from ...nn.modules import UnstructuredModelInteraction
 from ...triples import TriplesFactory
-from ...typing import DeviceHint
+from ...typing import DeviceHint, Hint, Initializer
 
 __all__ = [
     'UnstructuredModel',
@@ -51,6 +51,7 @@ class UnstructuredModel(ERModel):
         predict_with_sigmoid: bool = False,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
+        entity_initializer: Hint[Initializer] = xavier_normal_,
     ) -> None:
         r"""Initialize UM.
 
@@ -67,6 +68,6 @@ class UnstructuredModel(ERModel):
             interaction=UnstructuredModelInteraction(p=scoring_fct_norm),
             entity_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
-                initializer=xavier_normal_,
+                initializer=entity_initializer,
             ),
         )

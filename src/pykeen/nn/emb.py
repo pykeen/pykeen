@@ -8,16 +8,19 @@ import functools
 import warnings
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Mapping, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Mapping, Optional, Sequence, Tuple, TypeVar, Union, cast
 
 import numpy as np
 import torch
 import torch.nn
 from torch import nn
+from torch.nn import functional
 
+from .init import init_phases, xavier_normal_, xavier_normal_norm_, xavier_uniform_, xavier_uniform_norm_
+from .norm import complex_normalize
 from ..regularizers import Regularizer
-from ..typing import Constrainer, Initializer, Normalizer
-from ..utils import convert_to_canonical_shape
+from ..typing import Constrainer, Hint, Initializer, Normalizer
+from ..utils import clamp_norm, convert_to_canonical_shape
 
 __all__ = [
     'RepresentationModule',
@@ -180,11 +183,11 @@ class Embedding(RepresentationModule):
         num_embeddings: int,
         embedding_dim: Optional[int] = None,
         shape: Union[None, int, Sequence[int]] = None,
-        initializer: Optional[Initializer] = None,
+        initializer: Hint[Initializer] = None,
         initializer_kwargs: Optional[Mapping[str, Any]] = None,
-        normalizer: Optional[Normalizer] = None,
+        normalizer: Hint[Normalizer] = None,
         normalizer_kwargs: Optional[Mapping[str, Any]] = None,
-        constrainer: Optional[Constrainer] = None,
+        constrainer: Hint[Constrainer] = None,
         constrainer_kwargs: Optional[Mapping[str, Any]] = None,
         regularizer: Optional[Regularizer] = None,
         trainable: bool = True,
@@ -230,23 +233,11 @@ class Embedding(RepresentationModule):
             shape=shape,
         )
 
-        if initializer is None:
-            initializer = nn.init.normal_
-        if initializer_kwargs:
-            self.initializer = functools.partial(initializer, **initializer_kwargs)
-        else:
-            self.initializer = initializer  # type: ignore
-
-        if constrainer is not None and constrainer_kwargs:
-            self.constrainer = functools.partial(constrainer, **constrainer_kwargs)
-        else:
-            self.constrainer = constrainer  # type: ignore
-
-        if normalizer is not None and normalizer_kwargs:
-            self.normalizer = functools.partial(normalizer, **normalizer_kwargs)
-        else:
-            self.normalizer = normalizer  # type: ignore
-
+        self.initializer = cast(Initializer, _handle(
+            initializer, initializers, initializer_kwargs, default=nn.init.normal_,
+        ))
+        self.normalizer = _handle(normalizer, normalizers, normalizer_kwargs)
+        self.constrainer = _handle(constrainer, constrainers, constrainer_kwargs)
         self.regularizer = regularizer
 
         self._embeddings = torch.nn.Embedding(
@@ -342,13 +333,13 @@ class EmbeddingSpecification:
     embedding_dim: Optional[int] = None
     shape: Union[None, int, Sequence[int]] = None
 
-    initializer: Optional[Initializer] = None
+    initializer: Hint[Initializer] = None
     initializer_kwargs: Optional[Mapping[str, Any]] = None
 
-    normalizer: Optional[Normalizer] = None
+    normalizer: Hint[Normalizer] = None
     normalizer_kwargs: Optional[Mapping[str, Any]] = None
 
-    constrainer: Optional[Constrainer] = None
+    constrainer: Hint[Constrainer] = None
     constrainer_kwargs: Optional[Mapping[str, Any]] = None
 
     regularizer: Optional[Regularizer] = None
@@ -395,3 +386,37 @@ def process_shape(
     else:
         raise TypeError(f'Invalid type for shape: ({type(shape)}) {shape}')
     return dim, shape
+
+
+initializers = {
+    'xavier_uniform': xavier_normal_,
+    'xavier_uniform_norm': xavier_uniform_norm_,
+    'xavier_normal': xavier_uniform_,
+    'xavier_normal_norm': xavier_normal_norm_,
+    'normal': torch.nn.init.normal_,
+    'uniform': torch.nn.init.uniform_,
+    'phases': init_phases,
+}
+
+constrainers = {
+    'normalize': functional.normalize,
+    'complex_normalize': complex_normalize,
+    'clamp': torch.clamp,
+    'clamp_norm': clamp_norm,
+}
+
+# TODO add normalization functions
+normalizers: Mapping[str, Normalizer] = {}
+
+X = TypeVar('X', bound=Callable)
+
+
+def _handle(value: Hint[X], lookup: Mapping[str, X], kwargs, default: Optional[X] = None) -> Optional[X]:
+    if value is None:
+        return default
+    elif isinstance(value, str):
+        value = lookup[value]
+    if kwargs:
+        rv = functools.partial(value, **kwargs)  # type: ignore
+        return cast(X, rv)
+    return value
