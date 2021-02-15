@@ -13,8 +13,8 @@ import torch
 import pykeen.experiments
 import pykeen.models
 from pykeen.models import (
-    EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, MultimodalModel, _MODELS,
-    _OldAbstractModel, _NewAbstractModel, ERModel
+    ERModel, EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, MultimodalModel, _MODELS, _NewAbstractModel,
+    _OldAbstractModel,
 )
 from pykeen.models.predict import get_novelty_mask, predict
 from pykeen.models.unimodal.rgcn import (
