@@ -66,7 +66,7 @@ class Evaluator(ABC):
 
     def __init__(
         self,
-        filtered: bool = False,
+        filtered: bool = True,
         requires_positive_mask: bool = False,
         batch_size: Optional[int] = None,
         slice_size: Optional[int] = None,
