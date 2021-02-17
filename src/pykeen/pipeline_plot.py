@@ -213,7 +213,7 @@ def _get_reducer_cls(model: str, **kwargs):
     :param kwargs: Keyword arguments that will get passed through and modified based on the chosen model.
     :return: A pair of a reducer class from :mod:`sklearn` and the modified kwargs.
 
-    :raises ValueError if invalid model name is passed
+    :raises ValueError: if invalid model name is passed
     """
     if model.upper() == 'PCA':
         from sklearn.decomposition import PCA as Reducer  # noqa:N811
