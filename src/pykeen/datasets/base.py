@@ -124,47 +124,6 @@ class Dataset:
         """Get the normalized name of the dataset."""
         return normalize_string(cls.__name__)
 
-    def unleak(
-        self,
-        n: Union[None, int, float] = None,
-        minimum_frequency: Optional[float] = None,
-    ) -> Dataset:
-        """Unleak the dataset with :func:`pykeen.triples.leakage.unleak`."""
-        from ..triples.leakage import unleak
-        return EagerDataset(*unleak(
-            *self._tup(),
-            n=n,
-            minimum_frequency=minimum_frequency,
-        ))
-
-    def remix(self, random_state: TorchRandomHint = None, **kwargs) -> Dataset:
-        """Remix a dataset using :func:`pykeen.triples.remix.remix`."""
-        from ..triples.remix import remix
-        return EagerDataset(*remix(
-            *self._tup(),
-            random_state=random_state,
-            **kwargs,
-        ))
-
-    def deteriorate(self, n: Union[int, float], random_state: TorchRandomHint = None) -> Dataset:
-        """Deteriorate n triples from the dataset's training with :func:`pykeen.triples.deteriorate.deteriorate`."""
-        from ..triples.deteriorate import deteriorate
-        return EagerDataset(*deteriorate(
-            *self._tup(),
-            n=n,
-            random_state=random_state,
-        ))
-
-    def similarity(self, other: Dataset) -> float:
-        """Compute the distance between two datasets that are remixes of each other via :func:`splits_distance`."""
-        from ..triples.triples_factory import splits_similarity
-        return splits_similarity(self._tup(), other._tup())
-
-    def _tup(self):
-        if self.validation is None:
-            return self.training, self.testing
-        return self.training, self.testing, self.validation
-
 
 class EagerDataset(Dataset):
     """A dataset that has already been loaded."""
