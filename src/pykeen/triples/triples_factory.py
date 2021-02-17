@@ -25,6 +25,7 @@ __all__ = [
     'create_entity_mapping',
     'create_relation_mapping',
     'INVERSE_SUFFIX',
+    'cat_triples',
     'splits_steps',
     'splits_similarity',
 ]
@@ -993,6 +994,14 @@ class TriplesFactory(CoreTriplesFactory):
             invert_entity_selection=invert_entity_selection,
             invert_relation_selection=invert_relation_selection,
         ).with_labels(entity_to_id=self.entity_to_id, relation_to_id=self.relation_to_id)
+
+
+def cat_triples(*triples_factories: TriplesFactory) -> MappedTriples:
+    """Concatenate several triples factories."""
+    return torch.cat([
+        factory.mapped_triples
+        for factory in triples_factories
+    ], dim=0)
 
 
 def splits_steps(a: Sequence[CoreTriplesFactory], b: Sequence[CoreTriplesFactory]) -> int:
