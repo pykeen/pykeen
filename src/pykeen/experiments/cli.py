@@ -12,6 +12,7 @@ from typing import Optional
 from uuid import uuid4
 
 import click
+from pykeen.ablation import prepare_ablation_from_path
 
 __all__ = [
     'experiments',
@@ -196,20 +197,30 @@ def ablation(
 
     A sample file can be run with ``pykeen experiment ablation tests/resources/hpo_complex_nations.json``.
     """
-    from pykeen.ablation import ablation_pipeline
 
-    with open(path) as file:
-        config = json.load(file)
+    directories = prepare_ablation_from_path(path=path, directory=directory, save_artifacts=save_artifacts)
 
-    ablation_pipeline(
-        config=config,
-        directory=directory,
-        dry_run=dry_run,
-        best_replicates=best_replicates,
-        save_artifacts=save_artifacts,
-        move_to_cpu=move_to_cpu,
-        discard_replicates=discard_replicates,
-    )
+    if dry_run:
+        return
+
+    from pykeen.hpo import hpo_pipeline_from_path
+
+    for output_directory, rv_config_path in directories:
+        hpo_pipeline_result = hpo_pipeline_from_path(rv_config_path)
+        hpo_pipeline_result.save_to_directory(output_directory)
+
+        if not best_replicates:
+            continue
+
+        best_pipeline_dir = os.path.join(output_directory, 'best_pipeline')
+        os.makedirs(best_pipeline_dir, exist_ok=True)
+        logger.info('Re-training best pipeline and saving artifacts in %s', best_pipeline_dir)
+        hpo_pipeline_result.replicate_best_pipeline(
+            replicates=best_replicates,
+            move_to_cpu=move_to_cpu,
+            save_replicates=not discard_replicates,
+            directory=best_pipeline_dir,
+        )
 
 
 if __name__ == '__main__':
