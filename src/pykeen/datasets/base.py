@@ -22,6 +22,7 @@ from tabulate import tabulate
 
 from ..constants import PYKEEN_DATASETS
 from ..triples import TriplesFactory
+from ..triples.deteriorate import deteriorate
 from ..triples.triples_factory import splits_similarity
 from ..typing import TorchRandomHint
 from ..utils import normalize_string
@@ -143,6 +144,14 @@ class Dataset:
     def get_normalized_name(cls) -> str:
         """Get the normalized name of the dataset."""
         return normalize_string(cls.__name__)
+
+    def deteriorate(self, n: Union[int, float], random_state: TorchRandomHint = None) -> Dataset:
+        """Deteriorate n triples from the dataset's training with :func:`pykeen.triples.deteriorate.deteriorate`."""
+        return EagerDataset(*deteriorate(
+            *self._tup(),
+            n=n,
+            random_state=random_state,
+        ))
 
     def similarity(self, other: Dataset, metric: Optional[str] = None) -> float:
         """Compute the similarity between two shuffles of the same dataset.
