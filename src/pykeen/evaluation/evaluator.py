@@ -555,7 +555,7 @@ def evaluate(
     if batch_size is None:
         # This should be a reasonable default size that works on most setups while being faster than batch_size=1
         batch_size = 32
-        logger.debug(f"No evaluation batch_size provided. Setting batch_size to '{batch_size}'.")
+        logger.info(f"No evaluation batch_size provided. Setting batch_size to '{batch_size}'.")
     batches = cast(Iterable[np.ndarray], split_list_in_batches_iter(input_list=mapped_triples, batch_size=batch_size))
 
     # Show progressbar
@@ -608,7 +608,10 @@ def evaluate(
         results = [evaluator.finalize() for evaluator in evaluators]
 
     stop = timeit.default_timer()
-    logger.debug("Evaluation took %.2fs seconds", stop - start)
+    if only_size_probing:
+        logger.debug("Evaluation took %.2fs seconds", stop - start)
+    else:
+        logger.info("Evaluation took %.2fs seconds", stop - start)
 
     if squeeze and len(results) == 1:
         return results[0]
