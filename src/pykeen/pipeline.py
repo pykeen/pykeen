@@ -260,9 +260,7 @@ class PipelineResult(Result):
 
     def plot_losses(self, ax=None):
         """Plot the losses per epoch."""
-        if ax is None:
-            import matplotlib.pyplot as plt
-            ax = plt.gca()
+        ax = _ensure_ax(ax)
 
         import seaborn as sns
         sns.set_style('darkgrid')
@@ -274,6 +272,29 @@ class PipelineResult(Result):
         ax.set_xlabel('Epoch')
         ax.set_title(self.title if self.title is not None else 'Losses Plot')
         return rv
+
+    def plot_early_stopping(self, ax=None, lineplot_kwargs=None):
+        """Plot the evaluations during early stopping."""
+        if not self._has_early_stopper:
+            raise ValueError
+
+        ax = _ensure_ax(ax)
+
+        import seaborn as sns
+        x = [
+            (1 + e) * self.stopper.frequency
+            for e in range(len(self.stopper.results))
+        ]
+        rv = sns.lineplot(x=x, y=self.stopper.results, ax=ax, marker='o', **(lineplot_kwargs or {}))
+
+        ax.set_ylabel(self.stopper.metric)
+        ax.set_xlabel('Epoch')
+        ax.set_title(self.title if self.title is not None else 'Early Stopper Evaluation Plot')
+        return rv
+
+    @property
+    def _has_early_stopper(self) -> bool:
+        return isinstance(self.stopper, EarlyStopper) and self.stopper.results
 
     def plot_er(  # noqa: C901
         self,
@@ -316,9 +337,7 @@ class PipelineResult(Result):
             raise ValueError(f'Can not use reducer {reducer_cls} when projecting relations. Will result in nonsense')
         reducer = reducer_cls(n_components=2, **reducer_kwargs)
 
-        if ax is None:
-            import matplotlib.pyplot as plt
-            ax = plt.gca()
+        ax = _ensure_ax(ax)
 
         import seaborn as sns
         sns.set_style('whitegrid')
@@ -530,6 +549,12 @@ class PipelineResult(Result):
         model_path = os.path.join(directory, 'trained_model.pkl')
         s3.upload_fileobj(get_model_io(self.model), bucket, model_path)
 
+
+def _ensure_ax(ax):
+    if ax is not None:
+        return ax
+    import matplotlib.pyplot as plt
+    return plt.gca()
 
 def _reduce_embeddings(embedding: Embedding, reducer, fit: bool = False):
     embeddings_numpy = embedding(indices=None).detach().cpu().numpy()
