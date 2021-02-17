@@ -22,6 +22,7 @@ from tabulate import tabulate
 
 from ..constants import PYKEEN_DATASETS
 from ..triples import TriplesFactory
+from ..triples.deteriorate import deteriorate
 from ..triples.triples_factory import splits_similarity
 from ..typing import TorchRandomHint
 from ..utils import normalize_string
@@ -146,7 +147,6 @@ class Dataset:
 
     def deteriorate(self, n: Union[int, float], random_state: TorchRandomHint = None) -> Dataset:
         """Deteriorate n triples from the dataset's training with :func:`pykeen.triples.deteriorate.deteriorate`."""
-        from ..triples.deteriorate import deteriorate
         return EagerDataset(*deteriorate(
             *self._tup(),
             n=n,
