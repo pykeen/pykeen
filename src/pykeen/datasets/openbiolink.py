@@ -39,6 +39,7 @@ class OpenBioLink(PackedZipRemoteDataset):
         author: Breit
         year: 2020
         link: https://doi.org/10.1093/bioinformatics/btaa274
+        github: openbiolink/openbiolink
     statistics:
         entities: 180992
         relations: 28
@@ -72,6 +73,8 @@ class OpenBioLinkF1(PackedZipRemoteDataset):
     ---
     name: OpenBioLink (F1)
     citation:
+        author: Mubeen
+        year: 2020
         github: PyKEEN/pykeen-openbiolink-benchmark
     statistics:
         entities: 116425
@@ -106,6 +109,8 @@ class OpenBioLinkF2(PackedZipRemoteDataset):
     ---
     name: OpenBioLink (F2)
     citation:
+        author: Mubeen
+        year: 2020
         github: PyKEEN/pykeen-openbiolink-benchmark
     statistics:
         entities: 110628
@@ -143,6 +148,7 @@ class OpenBioLinkLQ(PackedZipRemoteDataset):
         author: Breit
         year: 2020
         link: https://doi.org/10.1093/bioinformatics/btaa274
+        github: openbiolink/openbiolink
     statistics:
         entities: 480876
         relations: 32

@@ -131,7 +131,7 @@ def _help_datasets(tablefmt: str, link_fmt: Optional[str] = None):
     lines = _get_dataset_lines(tablefmt=tablefmt, link_fmt=link_fmt)
     return tabulate(
         lines,
-        headers=['Name', 'Class', 'Citation', 'Entities', 'Relations', 'Triples'],
+        headers=['Name', 'Documentation', 'Citation', 'Entities', 'Relations', 'Triples'],
         tablefmt=tablefmt,
     )
 
@@ -370,7 +370,7 @@ def _get_dataset_lines(tablefmt, link_fmt: Optional[str] = None):
         reference = f'pykeen.datasets.{value.__name__}'
         if tablefmt == 'rst':
             reference = f':class:`{reference}`'
-        if link_fmt:
+        elif link_fmt is not None:
             reference = f'[`{reference}`]({link_fmt.format(reference)})'
         else:
             reference = f'`{reference}`'
@@ -395,10 +395,19 @@ def _get_dataset_lines(tablefmt, link_fmt: Optional[str] = None):
             link = citation and citation.get('link')
             github = citation and citation.get('github')
             if author and year and link:
-                citation_str = f'[{author.capitalize()} *et al*., {year}]({link})'
+                _citation_txt = f'{author.capitalize()} *et al*., {year}'
+                citation_str = _link(_citation_txt, link, tablefmt)
             elif github:
-                citation_str = f'[`{github}`](https://github.com/{github})'
+                link = f'https://github.com/{github}'
+                citation_str = _link(github, link, tablefmt)
         yield name, reference, citation_str, entities, relations, triples
+
+
+def _link(text: str, link: str, fmt: str) -> str:
+    if fmt == 'rst':
+        return f'`{text} <{link}>`_'
+    else:
+        return f'[{text}]({link})'
 
 
 @main.command()

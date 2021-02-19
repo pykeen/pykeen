@@ -35,6 +35,8 @@ class Kinships(PathDataset):
         validation: 1068
         triples: 10686
     citation:
+        author: Zhenfeng Lei
+        year: 2017
         github: ZhenfengLei/KGDatasets
     """
 

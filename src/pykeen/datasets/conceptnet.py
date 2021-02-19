@@ -28,6 +28,7 @@ class ConceptNet(SingleTabbedDataset):
         author: Speer
         year: 2017
         link: https://arxiv.org/abs/1612.03975
+        github: commonsense/conceptnet5
     single: true
     statistics:
         entities: 28370083

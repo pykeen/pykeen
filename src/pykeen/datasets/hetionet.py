@@ -33,6 +33,7 @@ class Hetionet(SingleTabbedDataset):
         author: Himmelstein
         year: 2017
         link: https://doi.org/10.7554/eLife.26726
+        github: hetio/hetionet
     single: true
     statistics:
         entities: 45158

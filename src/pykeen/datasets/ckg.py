@@ -33,6 +33,7 @@ class CKG(TabbedDataset):
         author: Santos
         year: 2020
         link: https://doi.org/10.1101/2020.05.09.084897
+        github: MannLabs/CKG
     single: true
     statistics:
         entities: 7617419

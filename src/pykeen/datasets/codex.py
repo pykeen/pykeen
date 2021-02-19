@@ -36,6 +36,7 @@ class CoDExSmall(UnpackedRemoteDataset):
         author: Safavi
         year: 2020
         link: https://arxiv.org/pdf/2009.07810.pdf
+        github: tsafavi/codex
     statistics:
         entities: 2034
         relations: 42
@@ -73,6 +74,7 @@ class CoDExMedium(UnpackedRemoteDataset):
         author: Safavi
         year: 2020
         link: https://arxiv.org/pdf/2009.07810.pdf
+        github: tsafavi/codex
     statistics:
         entities: 17050
         relations: 51
@@ -108,6 +110,7 @@ class CoDExLarge(UnpackedRemoteDataset):
         author: Safavi
         year: 2020
         link: https://arxiv.org/pdf/2009.07810.pdf
+        github: tsafavi/codex
     statistics:
         entities: 77951
         relations: 69

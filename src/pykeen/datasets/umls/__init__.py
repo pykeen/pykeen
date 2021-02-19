@@ -35,6 +35,8 @@ class UMLS(PathDataset):
         validation: 652
         triples: 6529
     citation:
+        author: Zhenfeng Lei
+        year: 2017
         github: ZhenfengLei/KGDatasets
     """
 

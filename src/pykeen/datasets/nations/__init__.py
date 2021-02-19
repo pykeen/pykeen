@@ -39,6 +39,8 @@ class Nations(PathDataset):
         validation: 199
         triples: 1992
     citation:
+        author: Zhenfeng Lei
+        year: 2017
         github: ZhenfengLei/KGDatasets
     """
 

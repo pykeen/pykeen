@@ -117,6 +117,7 @@ class OGBWikiKG(OGBLoader):
         author: Hu
         year: 2020
         link: https://arxiv.org/abs/2005.00687
+        github: snap-stanford/ogb
     statistics:
         entities: 2500604
         relations: 535
