@@ -378,7 +378,7 @@ def _get_dataset_lines(tablefmt, link_fmt: Optional[str] = None):
         try:
             docdata = value.__docdata__
         except AttributeError:
-            yield name, reference, value.__doc__.splitlines()[0]
+            yield name, reference, '', '', '', ''
             continue
 
         name = docdata['name']
