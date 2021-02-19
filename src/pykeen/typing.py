@@ -61,7 +61,7 @@ def cast_constrainer(f) -> Constrainer:
 #: A hint for a :class:`torch.device`
 DeviceHint = Hint[torch.device]
 #: A hint for a :class:`torch.Generator`
-TorchRandomHint = Hint[torch.Generator]
+TorchRandomHint = Union[None, int, torch.Generator]
 
 #: A type variable for head representations used in :class:`pykeen.models.Model`,
 #: :class:`pykeen.nn.modules.Interaction`, etc.
