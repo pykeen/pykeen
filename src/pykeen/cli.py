@@ -128,7 +128,7 @@ def datasets(tablefmt: str):
 
 
 def _help_datasets(tablefmt: str, link_fmt: Optional[str] = None):
-    lines = _get_dataset_lines(link_fmt)
+    lines = _get_dataset_lines(tablefmt=tablefmt, link_fmt=link_fmt)
     return tabulate(
         lines,
         headers=['Name', 'Class', 'Citation', 'Entities', 'Relations', 'Triples'],
@@ -365,9 +365,11 @@ def _get_lines(d, tablefmt, submodule, link_fmt: Optional[str] = None):
             yield name, value.__doc__.splitlines()[0]
 
 
-def _get_dataset_lines(link_fmt: Optional[str] = None):
+def _get_dataset_lines(tablefmt, link_fmt: Optional[str] = None):
     for name, value in sorted(datasets_dict.items()):
-        reference = f':class:`pykeen.datasets.{value.__name__}`'
+        reference = f'pykeen.datasets.{value.__name__}'
+        if tablefmt == 'rst':
+            reference = f':class:`{reference}`'
         if link_fmt:
             reference = f'[`{reference}`]({link_fmt.format(reference)})'
         else:
