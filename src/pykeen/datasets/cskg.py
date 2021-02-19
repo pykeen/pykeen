@@ -31,6 +31,7 @@ class CSKG(SingleTabbedDataset):
         author: Ilievski
         year: 2020
         link: http://arxiv.org/abs/2012.11490
+    single: true
     statistics:
         entities: 2087833
         relations: 58

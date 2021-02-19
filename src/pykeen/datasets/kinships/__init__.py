@@ -30,6 +30,9 @@ class Kinships(PathDataset):
     statistics:
         entities: 104
         relations: 25
+        training: 8544
+        testing: 1074
+        validation: 1068
         triples: 10686
     citation:
         github: ZhenfengLei/KGDatasets
@@ -48,3 +51,7 @@ class Kinships(PathDataset):
             create_inverse_triples=create_inverse_triples,
             **kwargs,
         )
+
+
+if __name__ == '__main__':
+    Kinships().summarize()

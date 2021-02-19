@@ -31,10 +31,16 @@ class TestAnnotated(unittest.TestCase):
                 for k in ('entities', 'relations', 'triples'):
                     self.assertIn(k, docdata['statistics'], msg=f'statistics are missing {k}')
                     self.assertIsInstance(docdata['statistics'][k], int)
+                if not docdata.get('single'):
+                    for k in ('training', 'testing', 'validation'):
+                        self.assertIn(k, docdata['statistics'])
+                        self.assertIsInstance(docdata['statistics'][k], int)
                 citation = docdata.get('citation')
                 if citation is not None:
-                    self.assertIn('author', citation)
-                    self.assertIn('link', citation)
+                    self.assertTrue(
+                        ('author' in citation and 'link' in citation and 'year' in citation)
+                        or 'github' in citation,
+                    )
 
 
 class MockSingleTabbedDataset(SingleTabbedDataset):

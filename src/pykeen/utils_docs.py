@@ -31,6 +31,8 @@ def with_structured_docstr(obj: X, delimiter: str = '---') -> X:
         docstr = obj.__doc__
     except AttributeError:
         raise AttributeError(f'no __doc__ available in {obj}')
+    if docstr is None:  # no docstr to modify
+        return obj
 
     lines = docstr.splitlines()
     try:
@@ -49,25 +51,5 @@ def with_structured_docstr(obj: X, delimiter: str = '---') -> X:
     # The YAML structured data is on all lines following the line with the delimiter.
     # The text must be dedented before YAML parsing.
     yaml_str = textwrap.dedent('\n'.join(lines[index + 1:]))
-    obj.__docdata__ = yaml.safe_load(yaml_str)
+    obj.__docdata__ = yaml.safe_load(yaml_str)  # type: ignore
     return obj
-
-
-@with_structured_docstr
-class Test:
-    """Hello world.
-
-    ---
-    author: hello
-    maybe: not
-    hi:
-    - nope
-    - noper
-    """
-
-
-if __name__ == '__main__':
-    print('DOCSTR')
-    print(Test.__doc__)
-    print('DOCDATA')
-    print(Test.__docdata__)

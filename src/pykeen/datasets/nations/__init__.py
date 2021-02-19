@@ -34,6 +34,9 @@ class Nations(PathDataset):
     statistics:
         entities: 14
         relations: 55
+        training: 1592
+        testing: 201
+        validation: 199
         triples: 1992
     citation:
         github: ZhenfengLei/KGDatasets
@@ -71,3 +74,7 @@ class NationsLiteral(NumericPathDataset):
             create_inverse_triples=create_inverse_triples,
             **kwargs,
         )
+
+
+if __name__ == '__main__':
+    Nations().summarize()

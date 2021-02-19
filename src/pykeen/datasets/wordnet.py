@@ -22,6 +22,9 @@ class WN18(TarFileRemoteDataset):
     statistics:
         entities: 40943
         relations: 18
+        training: 141442
+        testing: 5000
+        validation: 5000
         triples: 151442
     """
 
@@ -52,6 +55,9 @@ class WN18RR(TarFileRemoteDataset):
     statistics:
         entities: 40559
         relations: 11
+        training: 86835
+        testing: 2924
+        validation: 2824
         triples: 92583
     citation:
         author: Toutanova
@@ -73,3 +79,12 @@ class WN18RR(TarFileRemoteDataset):
             create_inverse_triples=create_inverse_triples,
             **kwargs,
         )
+
+
+def _main():
+    for cls in [WN18, WN18RR]:
+        cls().summarize()
+
+
+if __name__ == '__main__':
+    _main()

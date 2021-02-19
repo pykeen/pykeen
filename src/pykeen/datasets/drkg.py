@@ -27,6 +27,7 @@ class DRKG(TarFileSingleDataset):
     name: Drug Repositioning Knowledge Graph
     citation:
         github: gnn4dr/DRKG
+    single: true
     statistics:
         entities: 97238
         types: 13

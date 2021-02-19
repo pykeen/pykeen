@@ -19,6 +19,9 @@ class YAGO310(TarFileRemoteDataset):
     statistics:
         entities: 123143
         relations: 37
+        training: 1079040
+        testing: 4982
+        validation: 4978
         triples: 1089000
     citation:
         author: Mahdisoltani
@@ -40,3 +43,7 @@ class YAGO310(TarFileRemoteDataset):
             create_inverse_triples=create_inverse_triples,
             **kwargs,
         )
+
+
+if __name__ == '__main__':
+    YAGO310().summarize()

@@ -8,6 +8,9 @@
 
 import os
 
+import click
+from more_click import verbose_option
+
 from .base import TarFileRemoteDataset, ZipFileRemoteDataset
 from ..utils_docs import with_structured_docstr
 
@@ -26,6 +29,9 @@ class FB15k(TarFileRemoteDataset):
     statistics:
         entities: 14951
         relations: 1345
+        training: 483142
+        testing: 59071
+        validation: 50000
         triples: 592213
     """
 
@@ -56,6 +62,9 @@ class FB15k237(ZipFileRemoteDataset):
     statistics:
         entities: 14505
         relations: 237
+        training: 272115
+        testing: 20438
+        validation: 17526
         triples: 310079
     citation:
         author: Toutanova
@@ -77,3 +86,14 @@ class FB15k237(ZipFileRemoteDataset):
             create_inverse_triples=create_inverse_triples,
             **kwargs,
         )
+
+
+@click.command()
+@verbose_option
+def _main():
+    for cls in [FB15k, FB15k237]:
+        cls().summarize()
+
+
+if __name__ == '__main__':
+    _main()

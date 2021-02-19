@@ -30,6 +30,9 @@ class UMLS(PathDataset):
     statistics:
         entities: 135
         relations: 46
+        training: 5216
+        testing: 661
+        validation: 652
         triples: 6529
     citation:
         github: ZhenfengLei/KGDatasets
@@ -48,3 +51,7 @@ class UMLS(PathDataset):
             create_inverse_triples=create_inverse_triples,
             **kwargs,
         )
+
+
+if __name__ == '__main__':
+    UMLS().summarize()
