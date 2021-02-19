@@ -386,14 +386,18 @@ def _get_dataset_lines(tablefmt, link_fmt: Optional[str] = None):
         entities = statistics['entities']
         relations = statistics['relations']
         triples = statistics['triples']
+
+        citation_str = ''
         citation = docdata.get('citation')
-        author = citation and citation['author']
-        year = citation and citation['year']
-        link = citation and citation['link']
-        if author and year and link:
-            citation_str = f'[{author.capitalize()} *et al*., {year}]({link})'
-        else:
-            citation_str = ''
+        if citation is not None:
+            author = citation and citation.get('author')
+            year = citation and citation.get('year')
+            link = citation and citation.get('link')
+            github = citation and citation.get('github')
+            if author and year and link:
+                citation_str = f'[{author.capitalize()} *et al*., {year}]({link})'
+            elif github:
+                citation_str = f'[{github}](https://github.com/{github})'
         yield name, reference, citation_str, entities, relations, triples
 
 

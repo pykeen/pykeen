@@ -23,10 +23,15 @@ URL = 'https://dgl-data.s3-us-west-2.amazonaws.com/dataset/DRKG/drkg.tar.gz'
 class DRKG(TarFileSingleDataset):
     """The DRKG dataset.
 
-    This is a medium-sized biological knowledge graph including 97,238 entities, 13 entity types,
-    107 relations, and 5,874,261 triples.
-
-    .. seealso:: https://github.com/gnn4dr/DRKG
+    ---
+    name: Drug Repositioning Knowledge Graph
+    citation:
+        github: gnn4dr/DRKG
+    statistics:
+        entities: 97238
+        types: 13
+        relations: 107
+        triples: 5874257
     """
 
     def __init__(

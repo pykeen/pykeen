@@ -31,6 +31,8 @@ class UMLS(PathDataset):
         entities: 135
         relations: 46
         triples: 6529
+    citation:
+        github: ZhenfengLei/KGDatasets
     """
 
     def __init__(self, create_inverse_triples: bool = False, **kwargs):

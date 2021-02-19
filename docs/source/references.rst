@@ -21,3 +21,12 @@ References
 
 .. [breit2020] Breit, A. (2020) `OpenBioLink: A benchmarking framework for large-scale biomedical link
    prediction <https://doi.org/10.1093/bioinformatics/btaa274>`_, *Bioinformatics*
+
+.. [ilievski2020] Ilievski, F., Szekely, P., & Zhang, B. (2020). `CSKG: The CommonSense Knowledge
+   Graph <http://arxiv.org/abs/2012.11490>`_. *arxiv*, 2012.11490.
+
+.. [himmelstein2017] Himmelstein, D. S., *et al* (2017). `Systematic integration of biomedical knowledge
+   prioritizes drugs for repurposing <https://doi.org/10.7554/eLife.26726>`_. ELife, 6.
+
+.. [xu2019] Xu, L (2019) `A Comparison of Learned and Engineered Features in Network-Based Drug Repositioning
+   <https://github.com/lingling93/master_thesis_drugrelink>`_. Master's Thesis.

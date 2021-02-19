@@ -31,6 +31,8 @@ class Kinships(PathDataset):
         entities: 104
         relations: 25
         triples: 10686
+    citation:
+        github: ZhenfengLei/KGDatasets
     """
 
     def __init__(self, create_inverse_triples: bool = False, **kwargs):

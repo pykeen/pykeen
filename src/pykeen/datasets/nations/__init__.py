@@ -35,6 +35,8 @@ class Nations(PathDataset):
         entities: 14
         relations: 55
         triples: 1992
+    citation:
+        github: ZhenfengLei/KGDatasets
     """
 
     def __init__(self, create_inverse_triples: bool = False, **kwargs):

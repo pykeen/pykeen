@@ -27,14 +27,16 @@ class Hetionet(SingleTabbedDataset):
     and made publicly available through its `GitHub repository <https://github.com/hetio/hetionet>`_ in several formats.
     The link prediction algorithm showcased does not rely on embeddings, which leaves room for interesting comparison.
     One such comparison was made during the master's thesis of Lingling Xu [xu2019]_.
-
-    For reproducibility, the random_state argument is set by default to 0. For permutation studies, you can change
-    this.
-
-    .. [himmelstein2017] Himmelstein, D. S., *et al* (2017). `Systematic integration of biomedical knowledge
-       prioritizes drugs for repurposing <https://doi.org/10.7554/eLife.26726>`_. ELife, 6.
-    .. [xu2019] Xu, L (2019) `A Comparison of Learned and Engineered Features in Network-Based Drug Repositioning
-       <https://github.com/lingling93/master_thesis_drugrelink>`_. Master's Thesis.
+    ---
+    name: Hetionet
+    citation:
+        author: Himmelstein
+        year: 2017
+        link: https://doi.org/10.7554/eLife.26726
+    statistics:
+        entities: 45158
+        relations: 24
+        triples: 2250197
     """
 
     def __init__(

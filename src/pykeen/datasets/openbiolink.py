@@ -72,9 +72,7 @@ class OpenBioLinkF1(PackedZipRemoteDataset):
     ---
     name: OpenBioLink (F1)
     citation:
-        author: Mubeen
-        year: 2020
-        link: https://github.com/PyKEEN/pykeen-openbiolink-benchmark
+        github: PyKEEN/pykeen-openbiolink-benchmark
     statistics:
         entities: 116425
         relations: 19
@@ -108,9 +106,7 @@ class OpenBioLinkF2(PackedZipRemoteDataset):
     ---
     name: OpenBioLink (F2)
     citation:
-        author: Mubeen
-        year: 2020
-        link: https://github.com/PyKEEN/pykeen-openbiolink-benchmark
+        github: PyKEEN/pykeen-openbiolink-benchmark
     statistics:
         entities: 110628
         relations: 17

@@ -24,11 +24,17 @@ URL = 'https://zenodo.org/record/4331372/files/cskg.tsv.gz'
 class CSKG(SingleTabbedDataset):
     """The CSKG dataset.
 
-    The CSKG combines several knowledge graphs with "common sense" knowledge. It contains
-    2,087,833 entities, 58 relations, and 5,748,411 triples.
-
-    .. [ilievski2020] Ilievski, F., Szekely, P., & Zhang, B. (2020). `CSKG: The CommonSense Knowledge
-       Graph <http://arxiv.org/abs/2012.11490>`_. *arxiv*, 2012.11490.
+    The CSKG combines several knowledge graphs with "common sense" knowledge.
+    ---
+    name: Commonsense Knowledge Graph
+    citation:
+        author: Ilievski
+        year: 2020
+        link: http://arxiv.org/abs/2012.11490
+    statistics:
+        entities: 2087833
+        relations: 58
+        triples: 4598728
     """
 
     def __init__(self, create_inverse_triples: bool = False, random_state: TorchRandomHint = 0, **kwargs):
