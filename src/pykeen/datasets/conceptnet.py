@@ -22,9 +22,16 @@ class ConceptNet(SingleTabbedDataset):
     The dataset is structured into 5 columns (see https://github.com/commonsense/conceptnet5/wiki/Downloads#assertions):
     edge URL, relation, head, tail, metadata.
 
-    .. [speer2017] Robyn Speer, Joshua Chin, and Catherine Havasi. (2017)
-       `ConceptNet 5.5: An Open Multilingual Graph of General Knowledge <https://arxiv.org/abs/1612.03975>`_.
-       *In proceedings of AAAI 31*.
+    ---
+    name: ConceptNet
+    citation:
+        author: Speer
+        year: 2017
+        link: https://arxiv.org/abs/1612.03975
+    statistics:
+        entities: 28370083
+        relations: 50
+        triples: 34074917
     """
 
     def __init__(

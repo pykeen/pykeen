@@ -33,8 +33,19 @@ class OpenBioLink(PackedZipRemoteDataset):
     at https://github.com/openbiolink/openbiolink and published in [breit2020]_. There are four
     available datasets - this class represents the high quality, directed set.
 
-    .. [breit2020] Breit, A. (2020) `OpenBioLink: A benchmarking framework for large-scale biomedical link
-       prediction <https://doi.org/10.1093/bioinformatics/btaa274>`_, *Bioinformatics*
+    ---
+    name: OpenBioLink
+    citation:
+        author: Breit
+        year: 2020
+        link: https://doi.org/10.1093/bioinformatics/btaa274
+    statistics:
+        entities: 180992
+        relations: 28
+        training: 4192002
+        testing: 183011
+        validation: 188394
+        triples: 4563407
     """
 
     def __init__(self, create_inverse_triples: bool = False, **kwargs):
@@ -56,7 +67,22 @@ class OpenBioLink(PackedZipRemoteDataset):
 
 @with_structured_docstr
 class OpenBioLinkF1(PackedZipRemoteDataset):
-    """The PyKEEN First Filtered OpenBioLink 2020 Dataset."""
+    """The PyKEEN First Filtered OpenBioLink 2020 Dataset.
+
+    ---
+    name: OpenBioLink (F1)
+    citation:
+        author: Mubeen
+        year: 2020
+        link: https://github.com/PyKEEN/pykeen-openbiolink-benchmark
+    statistics:
+        entities: 116425
+        relations: 19
+        training: 1616040
+        testing: 45026
+        validation: 55637
+        triples: 1716703
+    """
 
     def __init__(self, create_inverse_triples: bool = False, **kwargs):
         """Initialize the OpenBioLink (Filter-1) dataset.
@@ -77,7 +103,22 @@ class OpenBioLinkF1(PackedZipRemoteDataset):
 
 @with_structured_docstr
 class OpenBioLinkF2(PackedZipRemoteDataset):
-    """The PyKEEN Second Filtered OpenBioLink 2020 Dataset."""
+    """The PyKEEN Second Filtered OpenBioLink 2020 Dataset.
+
+    ---
+    name: OpenBioLink (F2)
+    citation:
+        author: Mubeen
+        year: 2020
+        link: https://github.com/PyKEEN/pykeen-openbiolink-benchmark
+    statistics:
+        entities: 110628
+        relations: 17
+        training: 676156
+        testing: 30075
+        validation: 28694
+        triples: 734925
+    """
 
     def __init__(self, create_inverse_triples: bool = False, **kwargs):
         """Initialize the OpenBioLink (Filter-2) dataset.
@@ -98,7 +139,22 @@ class OpenBioLinkF2(PackedZipRemoteDataset):
 
 @with_structured_docstr
 class OpenBioLinkLQ(PackedZipRemoteDataset):
-    """The low-quality variant of the OpenBioLink dataset."""
+    """The low-quality variant of the OpenBioLink dataset.
+
+    ---
+    name: OpenBioLink
+    citation:
+        author: Breit
+        year: 2020
+        link: https://doi.org/10.1093/bioinformatics/btaa274
+    statistics:
+        entities: 480876
+        relations: 32
+        training: 25508954
+        testing: 679934
+        validation: 1132001
+        triples: 27320889
+    """
 
     def __init__(self, create_inverse_triples: bool = False, **kwargs):
         """Initialize the OpenBioLink (low quality) dataset.

@@ -14,3 +14,10 @@ References
 
 .. [santos2020] Santos, A., *et al* (2020). `Clinical Knowledge Graph Integrates Proteomics Data into Clinical
    Decision-Making <https://doi.org/10.1101/2020.05.09.084897>`_. *bioRxiv*, 2020.05.09.084897.
+
+.. [speer2017] Robyn Speer, Joshua Chin, and Catherine Havasi. (2017)
+   `ConceptNet 5.5: An Open Multilingual Graph of General Knowledge <https://arxiv.org/abs/1612.03975>`_.
+   *In proceedings of AAAI 31*.
+
+.. [breit2020] Breit, A. (2020) `OpenBioLink: A benchmarking framework for large-scale biomedical link
+   prediction <https://doi.org/10.1093/bioinformatics/btaa274>`_, *Bioinformatics*
