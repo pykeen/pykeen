@@ -128,10 +128,10 @@ def datasets(tablefmt: str):
 
 
 def _help_datasets(tablefmt: str, link_fmt: Optional[str] = None):
-    lines = _get_lines(datasets_dict, tablefmt, 'datasets', link_fmt)
+    lines = _get_dataset_lines(link_fmt)
     return tabulate(
         lines,
-        headers=['Name', 'Description'] if tablefmt == 'plain' else ['Name', 'Reference', 'Description'],
+        headers=['Name', 'Class', 'Citation', 'Entities', 'Relations', 'Triples'],
         tablefmt=tablefmt,
     )
 
@@ -363,6 +363,36 @@ def _get_lines(d, tablefmt, submodule, link_fmt: Optional[str] = None):
             yield name, reference, doc
         else:
             yield name, value.__doc__.splitlines()[0]
+
+
+def _get_dataset_lines(link_fmt: Optional[str] = None):
+    for name, value in sorted(datasets_dict.items()):
+        reference = f':class:`pykeen.datasets.{value.__name__}`'
+        if link_fmt:
+            reference = f'[`{reference}`]({link_fmt.format(reference)})'
+        else:
+            reference = f'`{reference}`'
+
+        try:
+            docdata = value.__docdata__
+        except AttributeError:
+            yield name, reference, value.__doc__.splitlines()[0]
+            continue
+
+        name = docdata['name']
+        statistics = docdata['statistics']
+        entities = statistics['entities']
+        relations = statistics['relations']
+        triples = statistics['triples']
+        citation = docdata.get('citation')
+        author = citation and citation['author']
+        year = citation and citation['year']
+        link = citation and citation['link']
+        if author and year and link:
+            citation_str = f'[{author.capitalize()} *et al*., {year}]({link})'
+        else:
+            citation_str = ''
+        yield name, reference, citation_str, entities, relations, triples
 
 
 @main.command()

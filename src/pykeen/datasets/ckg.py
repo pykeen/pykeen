@@ -30,6 +30,7 @@ class CKG(TabbedDataset):
     name: Clinical Knowledge Graph
     citation:
         author: Santos
+        year: 2020
         link: https://doi.org/10.1101/2020.05.09.084897
     statistics:
         entities: 7600000
