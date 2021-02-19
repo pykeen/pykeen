@@ -58,7 +58,6 @@ class UnstructuredModel(ERModel):
         :param embedding_dim: The entity embedding dimension $d$. Is usually $d \in [50, 300]$.
         :param scoring_fct_norm: The $l_p$ norm. Usually 1 for UM.
         """
-        self.embedding_dim = embedding_dim
         super().__init__(
             triples_factory=triples_factory,
             loss=loss,
