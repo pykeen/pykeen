@@ -9,6 +9,7 @@ from urllib.request import urlretrieve
 
 import click
 import pandas as pd
+from more_click import verbose_option
 
 from .base import TabbedDataset
 from ..typing import TorchRandomHint
@@ -33,9 +34,9 @@ class CKG(TabbedDataset):
         year: 2020
         link: https://doi.org/10.1101/2020.05.09.084897
     statistics:
-        entities: 7600000
+        entities: 7617419
         relations: 11
-        triples: 26000000
+        triples: 26691525
     """
 
     def __init__(
@@ -91,6 +92,7 @@ class CKG(TabbedDataset):
 
 
 @click.command()
+@verbose_option
 def _main():
     d = CKG()
     d.summarize()

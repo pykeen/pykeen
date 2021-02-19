@@ -397,7 +397,7 @@ def _get_dataset_lines(tablefmt, link_fmt: Optional[str] = None):
             if author and year and link:
                 citation_str = f'[{author.capitalize()} *et al*., {year}]({link})'
             elif github:
-                citation_str = f'[{github}](https://github.com/{github})'
+                citation_str = f'[`{github}`](https://github.com/{github})'
         yield name, reference, citation_str, entities, relations, triples
 
 

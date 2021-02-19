@@ -20,6 +20,10 @@ class YAGO310(TarFileRemoteDataset):
         entities: 123143
         relations: 37
         triples: 1089000
+    citation:
+        author: Mahdisoltani
+        year: 2015
+        link: http://service.tsi.telecom-paristech.fr/cgi-bin//valipub_download.cgi?dId=284
     """
 
     def __init__(self, create_inverse_triples: bool = False, **kwargs):

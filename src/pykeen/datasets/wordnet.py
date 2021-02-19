@@ -53,6 +53,10 @@ class WN18RR(TarFileRemoteDataset):
         entities: 40559
         relations: 11
         triples: 92583
+    citation:
+        author: Toutanova
+        year: 2015
+        link: https://www.aclweb.org/anthology/W15-4007/
     """
 
     def __init__(self, create_inverse_triples: bool = False, **kwargs):

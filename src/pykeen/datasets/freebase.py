@@ -57,6 +57,10 @@ class FB15k237(ZipFileRemoteDataset):
         entities: 14505
         relations: 237
         triples: 310079
+    citation:
+        author: Toutanova
+        year: 2015
+        link: https://www.aclweb.org/anthology/W15-4007/
     """
 
     def __init__(self, create_inverse_triples: bool = False, **kwargs):
