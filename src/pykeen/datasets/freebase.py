@@ -9,6 +9,7 @@
 import os
 
 from .base import TarFileRemoteDataset, ZipFileRemoteDataset
+from ..utils_docs import with_structured_docstr
 
 __all__ = [
     'FB15k',
@@ -16,8 +17,17 @@ __all__ = [
 ]
 
 
+@with_structured_docstr
 class FB15k(TarFileRemoteDataset):
-    """The FB15k dataset."""
+    """The FB15k dataset.
+
+    ---
+    name: FB15k
+    statistics:
+        entities: 14951
+        relations: 1345
+        triples: 592213
+    """
 
     def __init__(self, create_inverse_triples: bool = False, **kwargs):
         """Initialize the FreeBase 15K dataset.
@@ -37,8 +47,17 @@ class FB15k(TarFileRemoteDataset):
         )
 
 
+@with_structured_docstr
 class FB15k237(ZipFileRemoteDataset):
-    """The FB15k-237 dataset."""
+    """The FB15k-237 dataset.
+
+    ---
+    name: FB15k-237
+    statistics:
+        entities: 14505
+        relations: 237
+        triples: 310079
+    """
 
     def __init__(self, create_inverse_triples: bool = False, **kwargs):
         """Initialize the FreeBase 15K (237) dataset.

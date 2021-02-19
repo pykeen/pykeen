@@ -12,6 +12,7 @@ import pandas as pd
 
 from .base import TabbedDataset
 from ..typing import TorchRandomHint
+from ..utils_docs import with_structured_docstr
 
 __all__ = [
     'CKG',
@@ -21,13 +22,19 @@ URL = 'https://md-datasets-public-files-prod.s3.eu-west-1.amazonaws.com/d1e8d3df
 COLUMNS = ['START_ID', 'TYPE', 'END_ID']
 
 
+@with_structured_docstr
 class CKG(TabbedDataset):
     """The Clinical Knowledge Graph (CKG) dataset from [santos2020]_.
 
-    This dataset contains ~7.6 million nodes, 11 relations, and ~26 million triples.
-
-    .. [santos2020] Santos, A., *et al* (2020). `Clinical Knowledge Graph Integrates Proteomics Data into Clinical
-       Decision-Making <https://doi.org/10.1101/2020.05.09.084897>`_. *bioRxiv*, 2020.05.09.084897.
+    ---
+    name: Clinical Knowledge Graph
+    citation:
+        author: Santos
+        link: https://doi.org/10.1101/2020.05.09.084897
+    statistics:
+        entities: 7600000
+        relations: 11
+        triples: 26000000
     """
 
     def __init__(

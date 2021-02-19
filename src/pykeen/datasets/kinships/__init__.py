@@ -5,6 +5,7 @@
 import os
 
 from ..base import PathDataset
+from ...utils_docs import with_structured_docstr
 
 __all__ = [
     'KINSHIPS_TRAIN_PATH',
@@ -20,8 +21,17 @@ KINSHIPS_TEST_PATH = os.path.join(HERE, 'test.txt')
 KINSHIPS_VALIDATE_PATH = os.path.join(HERE, 'valid.txt')
 
 
+@with_structured_docstr
 class Kinships(PathDataset):
-    """The Kinships dataset."""
+    """The Kinships dataset.
+
+    ---
+    name: Kinships
+    statistics:
+        entities: 104
+        relations: 25
+        triples: 10686
+    """
 
     def __init__(self, create_inverse_triples: bool = False, **kwargs):
         """Initialize the Kinships dataset.

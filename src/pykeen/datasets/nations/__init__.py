@@ -6,6 +6,7 @@ import os
 
 from ..base import PathDataset
 from ..literal_base import NumericPathDataset
+from ...utils_docs import with_structured_docstr
 
 __all__ = [
     'NATIONS_TRAIN_PATH',
@@ -24,8 +25,17 @@ NATIONS_VALIDATE_PATH = os.path.join(HERE, 'valid.txt')
 NATIONS_LITERALS_PATH = os.path.join(HERE, 'literals.txt')
 
 
+@with_structured_docstr
 class Nations(PathDataset):
-    """The Nations dataset."""
+    """The Nations dataset.
+
+    ---
+    name: Nations
+    statistics:
+        entities: 14
+        relations: 55
+        triples: 1992
+    """
 
     def __init__(self, create_inverse_triples: bool = False, **kwargs):
         """Initialize the Nations dataset.

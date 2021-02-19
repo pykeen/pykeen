@@ -3,14 +3,38 @@
 """Test that datasets can be loaded."""
 
 import os
+import unittest
 from io import BytesIO
 
 import pytest
 
-from pykeen.datasets import FB15k, FB15k237, Kinships, Nations, UMLS, WN18, WN18RR, YAGO310
+from pykeen.datasets import FB15k237, Kinships, Nations, datasets
 from pykeen.datasets.base import SingleTabbedDataset, TarFileRemoteDataset, TarFileSingleDataset
 from pykeen.datasets.nations import NATIONS_TRAIN_PATH
 from tests import cases, constants
+
+
+class TestAnnotated(unittest.TestCase):
+    """Test all datasets are annotated."""
+
+    def test_annotated(self):
+        """Check :func:`pykeen.utils_docs.with_structured_docstr`` was properly applied ot all datasets."""
+        for name, cls in sorted(datasets.items()):
+            with self.subTest(name=name):
+                try:
+                    docdata = cls.__docdata__
+                except AttributeError:
+                    self.fail('missing __docdata__')
+                self.assertIn('name', docdata)
+                self.assertIsInstance(docdata['name'], str)
+                self.assertIn('statistics', docdata)
+                for k in ('entities', 'relations', 'triples'):
+                    self.assertIn(k, docdata['statistics'], msg=f'statistics are missing {k}')
+                    self.assertIsInstance(docdata['statistics'][k], int)
+                citation = docdata.get('citation')
+                if citation is not None:
+                    self.assertIn('author', citation)
+                    self.assertIn('link', citation)
 
 
 class MockSingleTabbedDataset(SingleTabbedDataset):
@@ -87,8 +111,8 @@ class TestTarRemote(cases.CachedDatasetCase):
     dataset_cls = MockTarFileRemoteDataset
 
 
-class TestNations(cases.LocalDatasetTestCase):
-    """Test the Nations dataset."""
+class TestPathDatasetTriples(cases.LocalDatasetTestCase):
+    """Test the :class:`pykeen.datasets.PathDataset` with inverse triples."""
 
     exp_num_entities = 14
     exp_num_relations = 55
@@ -103,8 +127,8 @@ class TestNations(cases.LocalDatasetTestCase):
         assert not dataset.validation.create_inverse_triples
 
 
-class TestKinships(cases.LocalDatasetTestCase):
-    """Test the Nations dataset."""
+class TestPathDataset(cases.LocalDatasetTestCase):
+    """Test the :class:`pykeen.datasets.PathDataset` without inverse triples."""
 
     exp_num_entities = 104
     exp_num_relations = 25
@@ -112,24 +136,7 @@ class TestKinships(cases.LocalDatasetTestCase):
     dataset_cls = Kinships
 
 
-class TestUMLS(cases.LocalDatasetTestCase):
-    """Test the Nations dataset."""
-
-    exp_num_entities = 135
-    exp_num_relations = 46
-    exp_num_triples = 6529
-    dataset_cls = UMLS
-
-
-@pytest.mark.slow
-class TestFB15K(cases.CachedDatasetCase):
-    """Test the FB15k dataset."""
-
-    exp_num_entities = 14951
-    exp_num_relations = 1345
-    exp_num_triples = 592_213
-    dataset_cls = FB15k
-
+# TestFB15K237 is a stand-in to test the ZipFileRemoteDataset
 
 @pytest.mark.slow
 class TestFB15K237(cases.CachedDatasetCase):
@@ -139,33 +146,3 @@ class TestFB15K237(cases.CachedDatasetCase):
     exp_num_relations = 237
     exp_num_triples = 310_079
     dataset_cls = FB15k237
-
-
-@pytest.mark.slow
-class TestWN18(cases.CachedDatasetCase):
-    """Test the WN18 dataset."""
-
-    exp_num_entities = 40943
-    exp_num_relations = 18
-    exp_num_triples = 151_442
-    dataset_cls = WN18
-
-
-@pytest.mark.slow
-class TestWN18RR(cases.CachedDatasetCase):
-    """Test the WN18RR dataset."""
-
-    exp_num_entities = 40559
-    exp_num_relations = 11
-    exp_num_triples = 92583
-    dataset_cls = WN18RR
-
-
-@pytest.mark.slow
-class TestYAGO310(cases.CachedDatasetCase):
-    """Test the YAGO3-10 dataset."""
-
-    exp_num_entities = 123_143
-    exp_num_relations = 37
-    exp_num_triples = 1_089_000
-    dataset_cls = YAGO310

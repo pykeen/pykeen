@@ -11,3 +11,6 @@ References
 
 .. [shi2017b] Shi, B., & Weninger, T. (2017). `Open-World Knowledge Graph Completion
    <https://arxiv.org/abs/1711.03438>`_. *arXiv*, 1957–1964.
+
+.. [santos2020] Santos, A., *et al* (2020). `Clinical Knowledge Graph Integrates Proteomics Data into Clinical
+   Decision-Making <https://doi.org/10.1101/2020.05.09.084897>`_. *bioRxiv*, 2020.05.09.084897.

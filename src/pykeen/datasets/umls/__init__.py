@@ -5,6 +5,7 @@
 import os
 
 from ..base import PathDataset
+from ...utils_docs import with_structured_docstr
 
 __all__ = [
     'UMLS_TRAIN_PATH',
@@ -20,8 +21,17 @@ UMLS_TEST_PATH = os.path.join(HERE, 'test.txt')
 UMLS_VALIDATE_PATH = os.path.join(HERE, 'valid.txt')
 
 
+@with_structured_docstr
 class UMLS(PathDataset):
-    """The UMLS dataset."""
+    """The UMLS dataset.
+
+    ---
+    name: Unified Medical Language System
+    statistics:
+        entities: 135
+        relations: 46
+        triples: 6529
+    """
 
     def __init__(self, create_inverse_triples: bool = False, **kwargs):
         """Initialize the UMLS dataset.

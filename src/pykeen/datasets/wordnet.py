@@ -5,6 +5,7 @@
 import os
 
 from .base import TarFileRemoteDataset
+from ..utils_docs import with_structured_docstr
 
 __all__ = [
     'WN18',
@@ -12,8 +13,17 @@ __all__ = [
 ]
 
 
+@with_structured_docstr
 class WN18(TarFileRemoteDataset):
-    """The WN18 dataset."""
+    """The WN18 dataset.
+
+    ---
+    name: WordNet-18
+    statistics:
+        entities: 40943
+        relations: 18
+        triples: 151442
+    """
 
     def __init__(self, create_inverse_triples: bool = False, **kwargs):
         """Initialize the WordNet-18 dataset.
@@ -33,8 +43,17 @@ class WN18(TarFileRemoteDataset):
         )
 
 
+@with_structured_docstr
 class WN18RR(TarFileRemoteDataset):
-    """The WN18-RR dataset."""
+    """The WN18-RR dataset.
+
+    ---
+    name: WordNet-18 (RR)
+    statistics:
+        entities: 40559
+        relations: 11
+        triples: 92583
+    """
 
     def __init__(self, create_inverse_triples: bool = False, **kwargs):
         """Initialize the WordNet-18 (RR) dataset.

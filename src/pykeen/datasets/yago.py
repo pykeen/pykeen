@@ -3,14 +3,24 @@
 """YAGO3 datasets."""
 
 from .base import TarFileRemoteDataset
+from ..utils_docs import with_structured_docstr
 
 __all__ = [
     'YAGO310',
 ]
 
 
+@with_structured_docstr
 class YAGO310(TarFileRemoteDataset):
-    """The YAGO3-10 dataset is a subset of YAGO3 that only contains entities with at least 10 relations."""
+    """The YAGO3-10 dataset is a subset of YAGO3 that only contains entities with at least 10 relations.
+
+    ---
+    name: YAGO3-10
+    statistics:
+        entities: 123143
+        relations: 37
+        triples: 1089000
+    """
 
     def __init__(self, create_inverse_triples: bool = False, **kwargs):
         """Initialize the YAGO3-10 dataset.
