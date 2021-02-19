@@ -4,3 +4,6 @@ Pipeline
 
 .. autoclass:: pykeen.pipeline.PipelineResult
     :members:
+
+.. automodule:: pykeen.pipeline_plot
+    :members:
