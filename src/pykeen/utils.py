@@ -940,9 +940,9 @@ def check_shapes(
     """Verify that a sequence of tensors are of matching shapes.
 
     :param x:
-        A tuple (tensor, shape), where tensor is a tensor, and shape is a string, where each character corresponds to
-        a (named) dimension. If the shapes of different tensors share a character, the corresponding dimensions are
-        expected to be of equal size.
+        A tuple (t, s), where `t` is a tensor, or an actual shape of a tensor (a tuple of integers), and `s` is a
+        string, where each character corresponds to a (named) dimension. If the shapes of different tensors share a
+        character, the corresponding dimensions are expected to be of equal size.
     :param raise_on_errors:
         Whether to raise an exception in case of a mismatch.
 
