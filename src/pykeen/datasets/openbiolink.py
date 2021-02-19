@@ -5,11 +5,11 @@
 Get a summary with ``python -m pykeen.datasets.openbiolink``
 """
 
-import logging
-
 import click
+from more_click import verbose_option
 
 from .base import PackedZipRemoteDataset
+from ..utils_docs import with_structured_docstr
 
 __all__ = [
     'OpenBioLink',
@@ -24,6 +24,7 @@ F2_URL = 'https://github.com/PyKEEN/pykeen-openbiolink-benchmark/raw/master/filt
 LQ_URL = 'https://samwald.info/res/OpenBioLink_2020_final/ALL_DIR.zip'
 
 
+@with_structured_docstr
 class OpenBioLink(PackedZipRemoteDataset):
     """The OpenBioLink dataset.
 
@@ -53,6 +54,7 @@ class OpenBioLink(PackedZipRemoteDataset):
         )
 
 
+@with_structured_docstr
 class OpenBioLinkF1(PackedZipRemoteDataset):
     """The PyKEEN First Filtered OpenBioLink 2020 Dataset."""
 
@@ -73,6 +75,7 @@ class OpenBioLinkF1(PackedZipRemoteDataset):
         )
 
 
+@with_structured_docstr
 class OpenBioLinkF2(PackedZipRemoteDataset):
     """The PyKEEN Second Filtered OpenBioLink 2020 Dataset."""
 
@@ -93,6 +96,7 @@ class OpenBioLinkF2(PackedZipRemoteDataset):
         )
 
 
+@with_structured_docstr
 class OpenBioLinkLQ(PackedZipRemoteDataset):
     """The low-quality variant of the OpenBioLink dataset."""
 
@@ -114,11 +118,11 @@ class OpenBioLinkLQ(PackedZipRemoteDataset):
 
 
 @click.command()
+@verbose_option
 def _main():
-    ds = OpenBioLink()
-    click.echo(ds.summary_str())
+    for cls in [OpenBioLink, OpenBioLinkF1, OpenBioLinkF2, OpenBioLinkLQ]:
+        cls().summarize()
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO)
     _main()

@@ -98,6 +98,10 @@ in ``pykeen``.
 
 ### Datasets ({{ n_datasets }})
 
+The citation for each dataset corresponds to either the paper published describing the dataset,
+the first paper published using the dataset with knowledge graph embedding models, or the
+location where it was downloaded if neither of the first two aren't available.
+
 {{ datasets }}
 
 ### Models ({{ n_models }})

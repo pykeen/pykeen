@@ -10,10 +10,12 @@ from more_click import verbose_option
 
 from .base import SingleTabbedDataset
 from ..typing import TorchRandomHint
+from ..utils_docs import with_structured_docstr
 
 URL = 'https://s3.amazonaws.com/conceptnet/downloads/2019/edges/conceptnet-assertions-5.7.0.csv.gz'
 
 
+@with_structured_docstr
 class ConceptNet(SingleTabbedDataset):
     """The ConceptNet dataset from [speer2017]_.
 

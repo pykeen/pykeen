@@ -7,6 +7,7 @@
 """
 
 from .base import UnpackedRemoteDataset
+from ..utils_docs import with_structured_docstr
 
 BASE_URL = 'https://raw.githubusercontent.com/tsafavi/codex/master/data/triples/'
 SMALL_VALID_URL = f'{BASE_URL}/codex-s/valid.txt'
@@ -25,9 +26,24 @@ LARGE_TRAIN_URL = f'{BASE_URL}/codex-l/train.txt'
 # If GitHub ever gets upset from too many downloads, we can switch to
 # the data posted at https://github.com/pykeen/pykeen/pull/154#issuecomment-730462039
 
-
+@with_structured_docstr
 class CoDExSmall(UnpackedRemoteDataset):
-    """The CoDEx small dataset."""
+    """The CoDEx small dataset.
+
+    ---
+    name: CoDEx (small)
+    citation:
+        author: Safavi
+        year: 2020
+        link: https://arxiv.org/pdf/2009.07810.pdf
+    statistics:
+        entities: 2034
+        relations: 42
+        training: 32888
+        testing: 1828
+        validation: 1827
+        triples: 36543
+    """
 
     def __init__(self, create_inverse_triples: bool = False, **kwargs):
         """Initialize the `CoDEx <https://github.com/tsafavi/codex>`_ small dataset from [safavi2020]_.
@@ -47,8 +63,24 @@ class CoDExSmall(UnpackedRemoteDataset):
         )
 
 
+@with_structured_docstr
 class CoDExMedium(UnpackedRemoteDataset):
-    """The CoDEx medium dataset."""
+    """The CoDEx medium dataset.
+
+    ---
+    name: CoDEx (medium)
+    citation:
+        author: Safavi
+        year: 2020
+        link: https://arxiv.org/pdf/2009.07810.pdf
+    statistics:
+        entities: 17050
+        relations: 51
+        training: 185584
+        testing: 10311
+        validation: 10310
+        triples: 206205
+    """
 
     def __init__(self, create_inverse_triples: bool = False, **kwargs):
         """Initialize the `CoDEx <https://github.com/tsafavi/codex>`_ medium dataset from [safavi2020]_.
@@ -66,8 +98,24 @@ class CoDExMedium(UnpackedRemoteDataset):
         )
 
 
+@with_structured_docstr
 class CoDExLarge(UnpackedRemoteDataset):
-    """The CoDEx large dataset."""
+    """The CoDEx large dataset.
+
+    ---
+    name: CoDEx (large)
+    citation:
+        author: Safavi
+        year: 2020
+        link: https://arxiv.org/pdf/2009.07810.pdf
+    statistics:
+        entities: 77951
+        relations: 69
+        training: 551193
+        testing: 30622
+        validation: 30622
+        triples: 612437
+    """
 
     def __init__(self, create_inverse_triples: bool = False, **kwargs):
         """Initialize the `CoDEx <https://github.com/tsafavi/codex>`_ large dataset from [safavi2020]_.

@@ -98,12 +98,16 @@ in ``pykeen``.
 
 ### Datasets (23)
 
+The citation for each dataset corresponds to either the paper published describing the dataset,
+the first paper published using the dataset with knowledge graph embedding models, or the
+location where it was downloaded if neither of the first two aren't available.
+
 | Name                            | Class                                                                                                             | Citation                                                           | Entities   | Relations   | Triples   |
 |---------------------------------|-------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------|------------|-------------|-----------|
 | Clinical Knowledge Graph        | [`pykeen.datasets.CKG`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.CKG.html)                     | [Santos *et al*., 2020](https://doi.org/10.1101/2020.05.09.084897) | 7600000    | 11          | 26000000  |
-| codexlarge                      | [`pykeen.datasets.CoDExLarge`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.CoDExLarge.html)       |                                                                    |            |             |           |
-| codexmedium                     | [`pykeen.datasets.CoDExMedium`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.CoDExMedium.html)     |                                                                    |            |             |           |
-| codexsmall                      | [`pykeen.datasets.CoDExSmall`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.CoDExSmall.html)       |                                                                    |            |             |           |
+| CoDEx (large)                   | [`pykeen.datasets.CoDExLarge`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.CoDExLarge.html)       | [Safavi *et al*., 2020](https://arxiv.org/pdf/2009.07810.pdf)      | 77951      | 69          | 612437    |
+| CoDEx (medium)                  | [`pykeen.datasets.CoDExMedium`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.CoDExMedium.html)     | [Safavi *et al*., 2020](https://arxiv.org/pdf/2009.07810.pdf)      | 17050      | 51          | 206205    |
+| CoDEx (small)                   | [`pykeen.datasets.CoDExSmall`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.CoDExSmall.html)       | [Safavi *et al*., 2020](https://arxiv.org/pdf/2009.07810.pdf)      | 2034       | 42          | 36543     |
 | conceptnet                      | [`pykeen.datasets.ConceptNet`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.ConceptNet.html)       |                                                                    |            |             |           |
 | cskg                            | [`pykeen.datasets.CSKG`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.CSKG.html)                   |                                                                    |            |             |           |
 | dbpedia50                       | [`pykeen.datasets.DBpedia50`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.DBpedia50.html)         |                                                                    |            |             |           |

@@ -7,6 +7,7 @@
 """
 
 from .base import UnpackedRemoteDataset
+from ..utils_docs import with_structured_docstr
 
 __all__ = [
     'DBpedia50',
@@ -18,6 +19,7 @@ TRAIN_URL = f'{BASE}/train.txt'
 VALID_URL = f'{BASE}/valid.txt'
 
 
+@with_structured_docstr
 class DBpedia50(UnpackedRemoteDataset):
     """The DBpedia50 dataset."""
 

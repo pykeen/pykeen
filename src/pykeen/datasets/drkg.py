@@ -5,10 +5,12 @@
 Get a summary with ``python -m pykeen.datasets.drkg``
 """
 
-import logging
+import click
+from more_click import verbose_option
 
 from .base import TarFileSingleDataset
 from ..typing import TorchRandomHint
+from ..utils_docs import with_structured_docstr
 
 __all__ = [
     'DRKG',
@@ -17,6 +19,7 @@ __all__ = [
 URL = 'https://dgl-data.s3-us-west-2.amazonaws.com/dataset/DRKG/drkg.tar.gz'
 
 
+@with_structured_docstr
 class DRKG(TarFileSingleDataset):
     """The DRKG dataset.
 
@@ -47,11 +50,12 @@ class DRKG(TarFileSingleDataset):
         )
 
 
+@click.command()
+@verbose_option
 def _main():
-    ds = DRKG(eager=True)
+    ds = DRKG()
     ds.summarize()
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO)
     _main()

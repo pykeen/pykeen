@@ -5,12 +5,12 @@
 Get a summary with ``python -m pykeen.datasets.hetionet``
 """
 
-import logging
-
 import click
+from more_click import verbose_option
 
 from .base import SingleTabbedDataset
 from ..typing import TorchRandomHint
+from ..utils_docs import with_structured_docstr
 
 __all__ = [
     'Hetionet',
@@ -19,6 +19,7 @@ __all__ = [
 URL = 'https://github.com/hetio/hetionet/raw/master/hetnet/tsv/hetionet-v1.0-edges.sif.gz'
 
 
+@with_structured_docstr
 class Hetionet(SingleTabbedDataset):
     """The Hetionet dataset is a large biological network.
 
@@ -57,11 +58,11 @@ class Hetionet(SingleTabbedDataset):
 
 
 @click.command()
+@verbose_option
 def _main():
     ds = Hetionet()
-    click.echo(ds.summary_str())
+    ds.summarize()
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO)
     _main()
