@@ -159,8 +159,8 @@ class _NewAbstractModel(Model, ABC, autoreset=False):
         This method takes head, relation and tail indices and calculates the corresponding score.
 
         .. note ::
-            All indices which are not None, have to be either 1-element, be of shape `(batch_size,)` or 
-            `(batch_size, n)`, where `batch_size` has to be the same for all tensors, but `n` may be different. 
+            All indices which are not None, have to be either 1-element, be of shape `(batch_size,)` or
+            `(batch_size, n)`, where `batch_size` has to be the same for all tensors, but `n` may be different.
 
         .. note ::
             If slicing is requested, the corresponding indices have to be None.
