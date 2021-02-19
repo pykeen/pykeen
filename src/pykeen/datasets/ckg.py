@@ -62,7 +62,7 @@ class CKG(TabbedDataset):
 
     def _get_df(self) -> pd.DataFrame:
         if self.preloaded_path.exists():
-            return pd.read_csv(self.preloaded_path, sep='\t')
+            return pd.read_csv(self.preloaded_path, sep='\t', dtype=str)
         df = pd.concat(self._iterate_dataframes())
         df.to_csv(self.preloaded_path, sep='\t', index=False)
         return df
