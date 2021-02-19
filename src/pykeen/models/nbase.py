@@ -441,6 +441,7 @@ class ERModel(
         r_indices: Optional[torch.LongTensor],
         t_indices: Optional[torch.LongTensor],
     ) -> torch.FloatTensor:
+        """Repeat scores for entities/relations if the model does not have representations for one of them."""
         repeat_relations = len(self.relation_representations) == 0
         repeat_entities = len(self.entity_representations) == 0
 
@@ -470,6 +471,7 @@ class ERModel(
         r_indices: Optional[torch.LongTensor],
         t_indices: Optional[torch.LongTensor],
     ) -> Tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]:
+        """Get representations for head, relation and tails, in canonical shape."""
         h, r, t = [
             [
                 representation.get_in_more_canonical_shape(dim=dim, indices=indices)
