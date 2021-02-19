@@ -170,7 +170,6 @@ class Model(nn.Module, ABC):
         """Reset all parameters of the model in-place."""
         raise NotImplementedError
 
-    @abstractmethod
     def post_parameter_update(self) -> None:
         """Has to be called after each parameter update."""
 
