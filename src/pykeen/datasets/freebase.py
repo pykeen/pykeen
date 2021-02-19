@@ -33,6 +33,10 @@ class FB15k(TarFileRemoteDataset):
         testing: 59071
         validation: 50000
         triples: 592213
+    citation:
+        author: Bordes
+        year: 2013
+        link: http://papers.nips.cc/paper/5071-translating-embeddings-for-modeling-multi-relational-data.pdf
     """
 
     def __init__(self, create_inverse_triples: bool = False, **kwargs):

@@ -28,19 +28,25 @@ class TestAnnotated(unittest.TestCase):
                 self.assertIn('name', docdata)
                 self.assertIsInstance(docdata['name'], str)
                 self.assertIn('statistics', docdata)
+                self.assertIn('citation', docdata)
+
+                # Check minimal statistics
                 for k in ('entities', 'relations', 'triples'):
                     self.assertIn(k, docdata['statistics'], msg=f'statistics are missing {k}')
                     self.assertIsInstance(docdata['statistics'][k], int)
+
+                # Check statistics for pre-stratified datasets
                 if not docdata.get('single'):
                     for k in ('training', 'testing', 'validation'):
                         self.assertIn(k, docdata['statistics'])
                         self.assertIsInstance(docdata['statistics'][k], int)
-                citation = docdata.get('citation')
-                if citation is not None:
-                    self.assertTrue(
-                        ('author' in citation and 'link' in citation and 'year' in citation)
-                        or 'github' in citation,
-                    )
+
+                # Check either a github link or author/publication information is given
+                citation = docdata['citation']
+                self.assertTrue(
+                    ('author' in citation and 'link' in citation and 'year' in citation)
+                    or 'github' in citation,
+                )
 
 
 class MockSingleTabbedDataset(SingleTabbedDataset):

@@ -26,6 +26,10 @@ class WN18(TarFileRemoteDataset):
         testing: 5000
         validation: 5000
         triples: 151442
+    citation:
+        author: Bordes
+        year: 2014
+        link: https://arxiv.org/abs/1301.3485
     """
 
     def __init__(self, create_inverse_triples: bool = False, **kwargs):
