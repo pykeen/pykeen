@@ -399,7 +399,7 @@ def _get_dataset_lines(tablefmt, link_fmt: Optional[str] = None):
                 citation_str = _link(_citation_txt, link, tablefmt)
             elif github:
                 link = f'https://github.com/{github}'
-                citation_str = _link(github, link, tablefmt)
+                citation_str = _link(github if tablefmt == 'rst' else f'`{github}`', link, tablefmt)
         yield name, reference, citation_str, entities, relations, triples
 
 
