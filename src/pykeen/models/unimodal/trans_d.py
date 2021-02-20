@@ -16,6 +16,7 @@ from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import Constrainer, DeviceHint, Hint, Initializer
 from ...utils import clamp_norm
+from ...utils_docs import with_structured_docstr
 
 __all__ = [
     'TransD',
@@ -69,6 +70,7 @@ def _project_entity(
     return e_bot
 
 
+@with_structured_docstr
 class TransD(EntityRelationEmbeddingModel):
     r"""An implementation of TransD from [ji2015]_.
 
@@ -99,6 +101,11 @@ class TransD(EntityRelationEmbeddingModel):
     .. seealso::
 
        - OpenKE `implementation of TransD <https://github.com/thunlp/OpenKE/blob/master/models/TransD.py>`_
+    ---
+    citation:
+        author: Ji
+        year: 2015
+        link: http://www.aclweb.org/anthology/P15-1067
     """
 
     #: The default strategy for optimizing the model's hyper-parameters

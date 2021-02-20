@@ -17,6 +17,7 @@ from ...nn import EmbeddingSpecification
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint, Hint, Initializer
+from ...utils_docs import with_structured_docstr
 
 __all__ = [
     'ConvKB',
@@ -25,6 +26,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
+@with_structured_docstr
 class ConvKB(EntityRelationEmbeddingModel):
     r"""An implementation of ConvKB from [nguyen2018]_.
 
@@ -55,7 +57,13 @@ class ConvKB(EntityRelationEmbeddingModel):
 
     .. seealso::
 
-       - Authors' `implementation of ConvKB <https://github.com/daiquocnguyen/ConvKBsE.py>`_
+       - Authors' `implementation of ConvKB <https://github.com/daiquocnguyen/ConvKB>`_
+    ---
+    citation:
+        author: Nguyen
+        year: 2018
+        link: https://www.aclweb.org/anthology/N18-2053
+        github: daiquocnguyen/ConvKB
     """
 
     #: The default strategy for optimizing the model's hyper-parameters

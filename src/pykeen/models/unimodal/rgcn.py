@@ -19,6 +19,7 @@ from ...nn import Embedding, RepresentationModule
 from ...nn.init import xavier_uniform_
 from ...triples import TriplesFactory
 from ...typing import DeviceHint, Hint, Initializer
+from ...utils_docs import with_structured_docstr
 
 __all__ = [
     'RGCN',
@@ -429,6 +430,7 @@ class Decoder(nn.Module):
         return (h * r * t).sum(dim=-1)
 
 
+@with_structured_docstr
 class RGCN(_OldAbstractModel):
     """An implementation of R-GCN from [schlichtkrull2018]_.
 
@@ -440,6 +442,11 @@ class RGCN(_OldAbstractModel):
          <https://github.com/rusty1s/pytorch_geometric/blob/1.3.2/examples/rgcn.py>`_
        - `DGL's implementation of R-GCN
          <https://github.com/dmlc/dgl/tree/v0.4.0/examples/pytorch/rgcn>`_
+    ---
+    citation:
+        author: Schlichtkrull
+        year: 2018
+        link: https://arxiv.org/pdf/1703.06103
     """
 
     #: Interaction model used as decoder

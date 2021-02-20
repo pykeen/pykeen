@@ -15,12 +15,14 @@ from ...nn import Embedding, EmbeddingSpecification
 from ...regularizers import Regularizer, TransHRegularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint, Hint, Initializer
+from ...utils_docs import with_structured_docstr
 
 __all__ = [
     'TransH',
 ]
 
 
+@with_structured_docstr
 class TransH(EntityRelationEmbeddingModel):
     r"""An implementation of TransH [wang2014]_.
 
@@ -49,6 +51,11 @@ class TransH(EntityRelationEmbeddingModel):
     .. seealso::
 
        - OpenKE `implementation of TransH <https://github.com/thunlp/OpenKE/blob/master/models/TransH.py>`_
+    ---
+    citation:
+        author: Wang
+        year: 2014
+        link: https://www.aaai.org/ocs/index.php/AAAI/AAAI14/paper/viewFile/8531/8546
     """
 
     #: The default strategy for optimizing the model's hyper-parameters

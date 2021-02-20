@@ -27,7 +27,7 @@ class ComplExLiteral(ComplEx, MultimodalModel):
     citation:
         author: Kristiadi
         year: 2018
-        link: https://arxiv.org/pdf/1802.00934.pdf
+        link: https://arxiv.org/abs/1802.00934
     """
 
     #: The default strategy for optimizing the model's hyper-parameters

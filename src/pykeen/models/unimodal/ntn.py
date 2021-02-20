@@ -14,12 +14,14 @@ from ...nn import EmbeddingSpecification
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint, Hint, Initializer
+from ...utils_docs import with_structured_docstr
 
 __all__ = [
     'NTN',
 ]
 
 
+@with_structured_docstr
 class NTN(EntityEmbeddingModel):
     r"""An implementation of NTN from [socher2013]_.
 
@@ -45,6 +47,12 @@ class NTN(EntityEmbeddingModel):
        - Original Implementation (Matlab): `<https://github.com/khurram18/NeuralTensorNetworks>`_
        - TensorFlow: `<https://github.com/dddoss/tensorflow-socher-ntn>`_
        - Keras: `<https://github.com/dapurv5/keras-neural-tensor-layer (Keras)>`_
+    ---
+    citation:
+        author: Socher
+        year: 2013
+        link: https://papers.nips.cc/paper/5028-reasoning-with-neural-tensor-networks-for-knowledge-base-completion
+        github: khurram18/NeuralTensorNetworks
     """
 
     #: The default strategy for optimizing the model's hyper-parameters

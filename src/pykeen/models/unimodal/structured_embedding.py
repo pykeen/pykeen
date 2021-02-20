@@ -20,12 +20,14 @@ from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import Constrainer, DeviceHint, Hint, Initializer
 from ...utils import compose
+from ...utils_docs import with_structured_docstr
 
 __all__ = [
     'StructuredEmbedding',
 ]
 
 
+@with_structured_docstr
 class StructuredEmbedding(EntityEmbeddingModel):
     r"""An implementation of the Structured Embedding (SE) published by [bordes2011]_.
 
@@ -40,6 +42,11 @@ class StructuredEmbedding(EntityEmbeddingModel):
 
     By employing different projections for the embeddings of the head and tail entities, SE explicitly differentiates
     the role of an entity as either the subject or object.
+    ---
+    citation:
+        author: Bordes
+        year: 2011
+        link: http://www.aaai.org/ocs/index.php/AAAI/AAAI11/paper/download/3659/3898
     """
 
     #: The default strategy for optimizing the model's hyper-parameters

@@ -16,12 +16,14 @@ from ...nn.init import xavier_normal_norm_, xavier_uniform_
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
 from ...typing import Constrainer, DeviceHint, Hint, Initializer
+from ...utils_docs import with_structured_docstr
 
 __all__ = [
     'DistMult',
 ]
 
 
+@with_structured_docstr
 class DistMult(EntityRelationEmbeddingModel):
     r"""An implementation of DistMult from [yang2014]_.
 
@@ -50,6 +52,11 @@ class DistMult(EntityRelationEmbeddingModel):
     .. seealso::
 
        - OpenKE `implementation of DistMult <https://github.com/thunlp/OpenKE/blob/master/models/DistMult.py>`_
+    ---
+    citation:
+        author: Yang
+        year: 2014
+        link: https://arxiv.org/abs/1412.6575
     """
 
     #: The default strategy for optimizing the model's hyper-parameters

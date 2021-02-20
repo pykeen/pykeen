@@ -17,6 +17,7 @@ from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import Constrainer, DeviceHint, Hint, Initializer
 from ...utils import clamp_norm
+from ...utils_docs import with_structured_docstr
 
 __all__ = [
     'KG2E',
@@ -25,6 +26,7 @@ __all__ = [
 _LOG_2_PI = math.log(2. * math.pi)
 
 
+@with_structured_docstr
 class KG2E(EntityRelationEmbeddingModel):
     r"""An implementation of KG2E from [he2015]_.
 
@@ -50,6 +52,11 @@ class KG2E(EntityRelationEmbeddingModel):
 
     .. math::
             f(h,r,t) = \mathcal{D_{EL}}(\mathcal{P}_e, \mathcal{P}_r)
+    ---
+    citation:
+        author: He
+        year: 2015
+        link: http://ir.ia.ac.cn/bitstream/173211/20634/1/Learning%20to%20Represent%20Knowledge%20Graphs%20with%20Gaussian%20Embedding.pdf
     """
 
     #: The default strategy for optimizing the model's hyper-parameters

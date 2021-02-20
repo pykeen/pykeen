@@ -15,12 +15,14 @@ from ...nn.norm import complex_normalize
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import Constrainer, DeviceHint, Hint, Initializer
+from ...utils_docs import with_structured_docstr
 
 __all__ = [
     'RotatE',
 ]
 
 
+@with_structured_docstr
 class RotatE(EntityRelationEmbeddingModel):
     r"""An implementation of RotatE from [sun2019]_.
 
@@ -44,6 +46,12 @@ class RotatE(EntityRelationEmbeddingModel):
 
        - Authors' `implementation of RotatE
          <https://github.com/DeepGraphLearning/KnowledgeGraphEmbedding/blob/master/codes/model.py#L200-L228>`_
+    ---
+    citation:
+        author: Sun
+        year: 2019
+        link: https://arxiv.org/abs/1902.10197v1
+        github: DeepGraphLearning/KnowledgeGraphEmbedding
     """
 
     #: The default strategy for optimizing the model's hyper-parameters

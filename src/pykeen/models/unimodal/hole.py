@@ -16,12 +16,14 @@ from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import Constrainer, DeviceHint, Hint, Initializer
 from ...utils import clamp_norm
+from ...utils_docs import with_structured_docstr
 
 __all__ = [
     'HolE',
 ]
 
 
+@with_structured_docstr
 class HolE(EntityRelationEmbeddingModel):
     r"""An implementation of HolE [nickel2016]_.
 
@@ -48,6 +50,12 @@ class HolE(EntityRelationEmbeddingModel):
        - `author's implementation of HolE <https://github.com/mnick/holographic-embeddings>`_
        - `scikit-kge implementation of HolE <https://github.com/mnick/scikit-kge>`_
        - OpenKE `implementation of HolE <https://github.com/thunlp/OpenKE/blob/OpenKE-PyTorch/models/TransE.py>`_
+    ---
+    citation:
+        author: Nickel
+        year: 2016
+        link: https://www.aaai.org/ocs/index.php/AAAI/AAAI16/paper/viewFile/12484/11828
+        github: mnick/holographic-embeddings
     """
 
     #: The default strategy for optimizing the model's hyper-parameters

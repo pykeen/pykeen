@@ -3,7 +3,7 @@
 """The **Co**mpletion **D**atasets **Ex**tracted from Wikidata and Wikipedia (CoDEx) datasets from [safavi2020]_.
 
 - GitHub Repository: https://github.com/tsafavi/codex
-- Paper: https://arxiv.org/pdf/2009.07810.pdf
+- Paper: https://arxiv.org/abs/2009.07810
 """
 
 from .base import UnpackedRemoteDataset
@@ -35,7 +35,7 @@ class CoDExSmall(UnpackedRemoteDataset):
     citation:
         author: Safavi
         year: 2020
-        link: https://arxiv.org/pdf/2009.07810.pdf
+        link: https://arxiv.org/abs/2009.07810
         github: tsafavi/codex
     statistics:
         entities: 2034
@@ -73,7 +73,7 @@ class CoDExMedium(UnpackedRemoteDataset):
     citation:
         author: Safavi
         year: 2020
-        link: https://arxiv.org/pdf/2009.07810.pdf
+        link: https://arxiv.org/abs/2009.07810
         github: tsafavi/codex
     statistics:
         entities: 17050
@@ -109,7 +109,7 @@ class CoDExLarge(UnpackedRemoteDataset):
     citation:
         author: Safavi
         year: 2020
-        link: https://arxiv.org/pdf/2009.07810.pdf
+        link: https://arxiv.org/abs/2009.07810
         github: tsafavi/codex
     statistics:
         entities: 77951

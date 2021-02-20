@@ -13,12 +13,14 @@ from ...nn import Embedding, EmbeddingSpecification
 from ...regularizers import PowerSumRegularizer, Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint, Hint, Initializer
+from ...utils_docs import with_structured_docstr
 
 __all__ = [
     'SimplE',
 ]
 
 
+@with_structured_docstr
 class SimplE(EntityRelationEmbeddingModel):
     r"""An implementation of SimplE [kazemi2018]_.
 
@@ -42,6 +44,12 @@ class SimplE(EntityRelationEmbeddingModel):
 
        - Official implementation: https://github.com/Mehran-k/SimplE
        - Improved implementation in pytorch: https://github.com/baharefatemi/SimplE
+    ---
+    citation:
+        author: Kazemi
+        year: 2018
+        link: https://papers.nips.cc/paper/7682-simple-embedding-for-link-prediction-in-knowledge-graphs
+        github: Mehran-k/SimplE
     """
 
     #: The default strategy for optimizing the model's hyper-parameters

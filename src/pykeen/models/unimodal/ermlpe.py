@@ -15,12 +15,14 @@ from ...nn import EmbeddingSpecification
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint, Hint, Initializer
+from ...utils_docs import with_structured_docstr
 
 __all__ = [
     'ERMLPE',
 ]
 
 
+@with_structured_docstr
 class ERMLPE(EntityRelationEmbeddingModel):
     r"""An extension of ERMLP proposed by [sharifzadeh2019]_.
 
@@ -41,7 +43,12 @@ class ERMLPE(EntityRelationEmbeddingModel):
     ConvE can be seen as a special case of ERMLPE that contains the unnecessary inductive bias of convolutional
     filters. The aim of this model is to show that lifting this bias from ConvE (which simply leaves us with a
     modified ERMLP model), not only reduces the number of parameters but also improves performance.
-
+    ---
+    citation:
+        author: Sharifzadeh
+        year: 2019
+        link: https://github.com/pykeen/pykeen
+        github: pykeen/pykeen
     """
 
     #: The default strategy for optimizing the model's hyper-parameters

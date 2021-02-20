@@ -3,7 +3,7 @@
 """Unimodal KGE Models.
 
 .. [balazevic2019] Balažević, *et al.* (2019) `TuckER: Tensor Factorization for Knowledge Graph Completion
-                   <https://arxiv.org/pdf/1901.09590.pdf>`_. EMNLP'19
+                   <https://arxiv.org/abs/1901.09590>`_. EMNLP'19
 .. [bordes2011] Bordes, A., *et al.* (2011). `Learning Structured Embeddings of Knowledge Bases
                 <http://www.aaai.org/ocs/index.php/AAAI/AAAI11/paper/download/3659/3898>`_. AAAI. Vol. 6. No. 1.
 .. [bordes2013] Bordes, A., *et al.* (2013). `Translating embeddings for modeling multi-relational data
@@ -39,13 +39,13 @@
 .. [shi2017] Shi, B., and Weninger, T. `ProjE: Embedding Projection for Knowledge Graph Completion
              <https://www.aaai.org/ocs/index.php/AAAI/AAAI17/paper/view/14279>`_, AAAI 2017
 .. [sun2019] Sun, Z., *et al.* (2019) `RotatE: Knowledge Graph Embeddings by relational rotation in complex space
-             <https://arxiv.org/pdf/1902.10197v1.pdf>`_. ICLR 2019.
+             <https://arxiv.org/abs/1902.10197v1>`_. ICLR 2019.
 .. [trouillon2016] Trouillon, T., *et al.* (2016) Complex embeddings for simple link prediction.
                    International Conference on Machine Learning. 2016.
 .. [wang2014] Wang, Z., *et al.* (2014). `Knowledge Graph Embedding by Translating on Hyperplanes
               <https://www.aaai.org/ocs/index.php/AAAI/AAAI14/paper/viewFile/8531/8546>`_. AAAI. Vol. 14.
 .. [yang2014] Yang, B., *et al.* (2014). `Embedding Entities and Relations for Learning
-              and Inference in Knowledge Bases <https://arxiv.org/pdf/1412.6575.pdf>`_. CoRR, abs/1412.6575.
+              and Inference in Knowledge Bases <https://arxiv.org/abs/1412.6575>`_. CoRR, abs/1412.6575.
 .. [socher2013] Socher, R., *et al.* (2013) `Reasoning with neural tensor networks for knowledge base completion.
                 <https://papers.nips.cc/paper/5028-reasoning-with-neural-tensor-networks-for-knowledge-base-completion>`_.
                 NIPS. 2013.

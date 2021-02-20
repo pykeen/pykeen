@@ -16,6 +16,7 @@ from ...nn.init import xavier_normal_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint, Hint, Initializer
+from ...utils_docs import with_structured_docstr
 
 __all__ = [
     'TuckER',
@@ -33,6 +34,7 @@ def _apply_bn_to_tensor(
     return tensor
 
 
+@with_structured_docstr
 class TuckER(EntityRelationEmbeddingModel):
     r"""An implementation of TuckEr from [balazevic2019]_.
 
@@ -63,6 +65,12 @@ class TuckER(EntityRelationEmbeddingModel):
 
        - Official implementation: https://github.com/ibalazevic/TuckER
        - pykg2vec implementation of TuckEr https://github.com/Sujit-O/pykg2vec/blob/master/pykg2vec/core/TuckER.py
+    ---
+    citation:
+        author: Balažević
+        year: 2019
+        link: https://arxiv.org/abs/1901.09590
+        github: ibalazevic/TuckER
     """
 
     #: The default strategy for optimizing the model's hyper-parameters

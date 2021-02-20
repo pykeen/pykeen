@@ -17,12 +17,14 @@ from ...nn.init import xavier_uniform_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint, Hint, Initializer
+from ...utils_docs import with_structured_docstr
 
 __all__ = [
     'ProjE',
 ]
 
 
+@with_structured_docstr
 class ProjE(EntityRelationEmbeddingModel):
     r"""An implementation of ProjE from [shi2017]_.
 
@@ -46,6 +48,12 @@ class ProjE(EntityRelationEmbeddingModel):
     .. seealso::
 
        - Official Implementation: https://github.com/nddsg/ProjE
+    ---
+    citation:
+        author: Shi
+        year: 2017
+        link: https://www.aaai.org/ocs/index.php/AAAI/AAAI17/paper/view/14279
+        github: nddsg/ProjE
     """
 
     #: The default strategy for optimizing the model's hyper-parameters

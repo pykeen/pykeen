@@ -15,12 +15,14 @@ from ...nn.init import xavier_normal_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint, Hint, Initializer
+from ...utils_docs import with_structured_docstr
 
 __all__ = [
     'UnstructuredModel',
 ]
 
 
+@with_structured_docstr
 class UnstructuredModel(EntityEmbeddingModel):
     r"""An implementation of the Unstructured Model (UM) published by [bordes2014]_.
 
@@ -37,6 +39,11 @@ class UnstructuredModel(EntityEmbeddingModel):
 
         In UM, neither the relations nor the directionality are considered, so it can't distinguish between them.
         However, it may serve as a baseline for comparison against relation-aware models.
+    ---
+    citation:
+        author: Bordes
+        year: 2014
+        link: https://link.springer.com/content/pdf/10.1007%2Fs10994-013-5363-6.pdf
     """
 
     #: The default strategy for optimizing the model's hyper-parameters

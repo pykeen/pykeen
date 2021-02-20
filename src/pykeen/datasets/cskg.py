@@ -3,7 +3,7 @@
 """The `Common Sense Knowledge Graph <https://github.com/usc-isi-i2/cskg>`_ dataset.
 
 - GitHub Repository: https://github.com/usc-isi-i2/cskg
-- Paper: https://arxiv.org/pdf/2012.11490.pdf
+- Paper: https://arxiv.org/abs/2012.11490
 - Data download: https://zenodo.org/record/4331372/files/cskg.tsv.gz
 """
 

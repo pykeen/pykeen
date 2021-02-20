@@ -16,12 +16,14 @@ from ...nn import EmbeddingSpecification
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint, Hint, Initializer
+from ...utils_docs import with_structured_docstr
 
 __all__ = [
     'ERMLP',
 ]
 
 
+@with_structured_docstr
 class ERMLP(EntityRelationEmbeddingModel):
     r"""An implementation of ERMLP from [dong2014]_.
 
@@ -37,6 +39,11 @@ class ERMLP(EntityRelationEmbeddingModel):
     where $\textbf{W} \in \mathbb{R}^{k \times 3d}$ represents the weight matrix of the hidden layer,
     $\textbf{w} \in \mathbb{R}^{k}$, the weights of the output layer, and $g$ denotes an activation function such
     as the hyperbolic tangent.
+    ---
+    citation:
+        author: Dong
+        year: 2014
+        link: https://dl.acm.org/citation.cfm?id=2623623
     """
 
     #: The default strategy for optimizing the model's hyper-parameters

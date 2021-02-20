@@ -16,12 +16,14 @@ from ...nn.init import xavier_uniform_, xavier_uniform_norm_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import Constrainer, DeviceHint, Hint, Initializer
+from ...utils_docs import with_structured_docstr
 
 __all__ = [
     'TransE',
 ]
 
 
+@with_structured_docstr
 class TransE(EntityRelationEmbeddingModel):
     r"""An implementation of TransE [bordes2013]_.
 
@@ -42,6 +44,11 @@ class TransE(EntityRelationEmbeddingModel):
     the model adapts the embeddings in order to ensure :math:`\textbf{e}_h + \textbf{e}_r \approx \textbf{e}_{t_1}`
     and :math:`\textbf{e}_h + \textbf{e}_r \approx \textbf{e}_{t_2}` which results in
     :math:`\textbf{e}_{t_1} \approx \textbf{e}_{t_2}`.
+    ---
+    citation:
+        author: Bordes
+        year: 2013
+        link: http://papers.nips.cc/paper/5071-translating-embeddings-for-modeling-multi-relational-data.pdf
     """
 
     #: The default strategy for optimizing the model's hyper-parameters

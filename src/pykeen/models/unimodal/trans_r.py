@@ -18,6 +18,7 @@ from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import Constrainer, DeviceHint, Hint, Initializer
 from ...utils import clamp_norm
+from ...utils_docs import with_structured_docstr
 
 __all__ = [
     'TransR',
@@ -34,6 +35,7 @@ def _projection_initializer(
     return torch.nn.init.xavier_uniform_(x.view(num_relations, embedding_dim, relation_dim)).view(x.shape)
 
 
+@with_structured_docstr
 class TransR(EntityRelationEmbeddingModel):
     r"""An implementation of TransR from [lin2015]_.
 
@@ -63,6 +65,11 @@ class TransR(EntityRelationEmbeddingModel):
          <https://github.com/thunlp/OpenKE/blob/master/models/TransR.py>`_
        - OpenKE `PyTorch implementation of TransR
          <https://github.com/thunlp/OpenKE/blob/OpenKE-PyTorch/models/TransR.py>`_
+    ---
+    citation:
+        author: Lin
+        year: 2015
+        link: http://www.aaai.org/ocs/index.php/AAAI/AAAI15/paper/download/9571/9523/
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
