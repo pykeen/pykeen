@@ -49,6 +49,12 @@ class ComplEx(EntityRelationEmbeddingModel):
     .. seealso ::
 
         Official implementation: https://github.com/ttrouill/complex/
+    ---
+    citation:
+        author: Trouillon
+        year: 2016
+        link: https://arxiv.org/abs/1606.06357
+        github: ttrouill/complex
     """
 
     #: The default strategy for optimizing the model's hyper-parameters

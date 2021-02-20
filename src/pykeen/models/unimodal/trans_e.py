@@ -42,6 +42,11 @@ class TransE(EntityRelationEmbeddingModel):
     the model adapts the embeddings in order to ensure :math:`\textbf{e}_h + \textbf{e}_r \approx \textbf{e}_{t_1}`
     and :math:`\textbf{e}_h + \textbf{e}_r \approx \textbf{e}_{t_2}` which results in
     :math:`\textbf{e}_{t_1} \approx \textbf{e}_{t_2}`.
+    ---
+    citation:
+        author: Bordes
+        year: 2013
+        link: http://papers.nips.cc/paper/5071-translating-embeddings-for-modeling-multi-relational-data.pdf
     """
 
     #: The default strategy for optimizing the model's hyper-parameters

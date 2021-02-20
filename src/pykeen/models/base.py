@@ -13,6 +13,7 @@ from typing import Any, ClassVar, Iterable, Mapping, Optional, Type, Union
 
 import pandas as pd
 import torch
+from docdata import parse_docdata
 from torch import nn
 
 from ..losses import Loss, MarginRankingLoss
@@ -120,6 +121,7 @@ class Model(nn.Module, ABC):
         cls._is_base_model = not autoreset
         if not cls._is_base_model:
             _add_post_reset_parameters(cls)
+            parse_docdata(cls)
 
     """Properties"""
 

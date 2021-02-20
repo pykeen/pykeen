@@ -48,6 +48,12 @@ class HolE(EntityRelationEmbeddingModel):
        - `author's implementation of HolE <https://github.com/mnick/holographic-embeddings>`_
        - `scikit-kge implementation of HolE <https://github.com/mnick/scikit-kge>`_
        - OpenKE `implementation of HolE <https://github.com/thunlp/OpenKE/blob/OpenKE-PyTorch/models/TransE.py>`_
+    ---
+    citation:
+        author: Nickel
+        year: 2016
+        link: https://www.aaai.org/ocs/index.php/AAAI/AAAI16/paper/viewFile/12484/11828
+        github: mnick/holographic-embeddings
     """
 
     #: The default strategy for optimizing the model's hyper-parameters

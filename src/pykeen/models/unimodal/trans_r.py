@@ -63,6 +63,11 @@ class TransR(EntityRelationEmbeddingModel):
          <https://github.com/thunlp/OpenKE/blob/master/models/TransR.py>`_
        - OpenKE `PyTorch implementation of TransR
          <https://github.com/thunlp/OpenKE/blob/OpenKE-PyTorch/models/TransR.py>`_
+    ---
+    citation:
+        author: Lin
+        year: 2015
+        link: http://www.aaai.org/ocs/index.php/AAAI/AAAI15/paper/download/9571/9523/
     """
 
     #: The default strategy for optimizing the model's hyper-parameters

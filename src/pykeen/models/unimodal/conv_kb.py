@@ -55,7 +55,13 @@ class ConvKB(EntityRelationEmbeddingModel):
 
     .. seealso::
 
-       - Authors' `implementation of ConvKB <https://github.com/daiquocnguyen/ConvKBsE.py>`_
+       - Authors' `implementation of ConvKB <https://github.com/daiquocnguyen/ConvKB>`_
+    ---
+    citation:
+        author: Nguyen
+        year: 2018
+        link: https://www.aclweb.org/anthology/N18-2053
+        github: daiquocnguyen/ConvKB
     """
 
     #: The default strategy for optimizing the model's hyper-parameters

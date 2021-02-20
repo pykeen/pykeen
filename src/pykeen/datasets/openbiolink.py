@@ -5,9 +5,9 @@
 Get a summary with ``python -m pykeen.datasets.openbiolink``
 """
 
-import logging
-
 import click
+from docdata import parse_docdata
+from more_click import verbose_option
 
 from .base import PackedZipRemoteDataset
 
@@ -24,6 +24,7 @@ F2_URL = 'https://github.com/PyKEEN/pykeen-openbiolink-benchmark/raw/master/filt
 LQ_URL = 'https://samwald.info/res/OpenBioLink_2020_final/ALL_DIR.zip'
 
 
+@parse_docdata
 class OpenBioLink(PackedZipRemoteDataset):
     """The OpenBioLink dataset.
 
@@ -32,8 +33,20 @@ class OpenBioLink(PackedZipRemoteDataset):
     at https://github.com/openbiolink/openbiolink and published in [breit2020]_. There are four
     available datasets - this class represents the high quality, directed set.
 
-    .. [breit2020] Breit, A. (2020) `OpenBioLink: A benchmarking framework for large-scale biomedical link
-       prediction <https://doi.org/10.1093/bioinformatics/btaa274>`_, *Bioinformatics*
+    ---
+    name: OpenBioLink
+    citation:
+        author: Breit
+        year: 2020
+        link: https://doi.org/10.1093/bioinformatics/btaa274
+        github: openbiolink/openbiolink
+    statistics:
+        entities: 180992
+        relations: 28
+        training: 4192002
+        testing: 183011
+        validation: 188394
+        triples: 4563407
     """
 
     def __init__(self, create_inverse_triples: bool = False, **kwargs):
@@ -53,8 +66,24 @@ class OpenBioLink(PackedZipRemoteDataset):
         )
 
 
+@parse_docdata
 class OpenBioLinkF1(PackedZipRemoteDataset):
-    """The PyKEEN First Filtered OpenBioLink 2020 Dataset."""
+    """The PyKEEN First Filtered OpenBioLink 2020 Dataset.
+
+    ---
+    name: OpenBioLink (F1)
+    citation:
+        author: Mubeen
+        year: 2020
+        github: PyKEEN/pykeen-openbiolink-benchmark
+    statistics:
+        entities: 116425
+        relations: 19
+        training: 1616040
+        testing: 45026
+        validation: 55637
+        triples: 1716703
+    """
 
     def __init__(self, create_inverse_triples: bool = False, **kwargs):
         """Initialize the OpenBioLink (Filter-1) dataset.
@@ -73,8 +102,24 @@ class OpenBioLinkF1(PackedZipRemoteDataset):
         )
 
 
+@parse_docdata
 class OpenBioLinkF2(PackedZipRemoteDataset):
-    """The PyKEEN Second Filtered OpenBioLink 2020 Dataset."""
+    """The PyKEEN Second Filtered OpenBioLink 2020 Dataset.
+
+    ---
+    name: OpenBioLink (F2)
+    citation:
+        author: Mubeen
+        year: 2020
+        github: PyKEEN/pykeen-openbiolink-benchmark
+    statistics:
+        entities: 110628
+        relations: 17
+        training: 676156
+        testing: 30075
+        validation: 28694
+        triples: 734925
+    """
 
     def __init__(self, create_inverse_triples: bool = False, **kwargs):
         """Initialize the OpenBioLink (Filter-2) dataset.
@@ -93,8 +138,25 @@ class OpenBioLinkF2(PackedZipRemoteDataset):
         )
 
 
+@parse_docdata
 class OpenBioLinkLQ(PackedZipRemoteDataset):
-    """The low-quality variant of the OpenBioLink dataset."""
+    """The low-quality variant of the OpenBioLink dataset.
+
+    ---
+    name: OpenBioLink
+    citation:
+        author: Breit
+        year: 2020
+        link: https://doi.org/10.1093/bioinformatics/btaa274
+        github: openbiolink/openbiolink
+    statistics:
+        entities: 480876
+        relations: 32
+        training: 25508954
+        testing: 679934
+        validation: 1132001
+        triples: 27320889
+    """
 
     def __init__(self, create_inverse_triples: bool = False, **kwargs):
         """Initialize the OpenBioLink (low quality) dataset.
@@ -114,11 +176,11 @@ class OpenBioLinkLQ(PackedZipRemoteDataset):
 
 
 @click.command()
+@verbose_option
 def _main():
-    ds = OpenBioLink()
-    click.echo(ds.summary_str())
+    for cls in [OpenBioLink, OpenBioLinkF1, OpenBioLinkF2, OpenBioLinkLQ]:
+        cls().summarize()
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO)
     _main()

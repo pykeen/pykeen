@@ -566,6 +566,19 @@ class TestUM(cases.DistanceModelTestCase):
 class TestTesting(unittest.TestCase):
     """Yo dawg, I heard you like testing, so I wrote a test to test the tests so you can test while you're testing."""
 
+    def test_documentation(self):
+        """Test all models have appropriate structured documentation."""
+        for name, model_cls in sorted(pykeen.models.models.items()):
+            with self.subTest(name=name):
+                try:
+                    docdata = model_cls.__docdata__
+                except AttributeError:
+                    self.fail('missing __docdata__')
+                self.assertIn('citation', docdata)
+                self.assertIn('author', docdata['citation'])
+                self.assertIn('link', docdata['citation'])
+                self.assertIn('year', docdata['citation'])
+
     def test_testing(self):
         """Check that there's a test for all models.
 
