@@ -7,7 +7,6 @@ import json
 import logging
 import os
 import time
-from copy import deepcopy
 from typing import Any, List, Mapping, Optional, Tuple, Union
 from uuid import uuid4
 
@@ -214,19 +213,50 @@ def prepare_ablation_from_config(
 
     datasets = ablation_config['datasets']
     create_inverse_triples = ablation_config['create_inverse_triples']
+
     models = ablation_config['models']
+    model_to_model_kwargs = ablation_config.get('model_kwargs')
+    model_to_model_kwargs_ranges = ablation_config.get('model_kwargs_ranges')
+
     losses = ablation_config['loss_functions'] if 'loss_functions' in ablation_config else ablation_config['losses']
-    regularizers = ablation_config['regularizers']
+    model_to_loss_to_loss_kwargs = ablation_config.get('loss_kwargs')
+    model_to_loss_to_loss_kwargs_ranges = ablation_config.get('loss_kwargs_ranges')
+
+    regularizers = ablation_config.get('regularizers')
+    model_to_regularizer_to_regularizer_kwargs = ablation_config.get('regularizer_kwargs')
+    model_to_regularizer_to_regularizer_kwargs_ranges = ablation_config.get('regularizer_kwargs_ranges')
+
     optimizers = ablation_config['optimizers']
+    model_to_optimizer_to_optimizer_kwargs = ablation_config.get('optimizer_kwargs')
+    model_to_optimizer_to_optimizer_kwargs_ranges = ablation_config.get('optimizer_kwargs_ranges')
+
     training_loops = ablation_config['training_loops']
+    model_to_trainer_to_training_kwargs = ablation_config.get('training_kwargs')
+    model_to_trainer_to_training_kwargs_ranges = ablation_config.get('training_kwargs_ranges')
+
+    stopper = ablation_config.get('stopper')
+    stopper_kwargs = ablation_config.get('stopper_kwargs')
+
     return prepare_ablation(
         datasets=datasets,
         create_inverse_triples=create_inverse_triples,
         models=models,
+        model_to_model_kwargs=model_to_model_kwargs,
+        model_to_model_kwargs_ranges=model_to_model_kwargs_ranges,
         losses=losses,
         regularizers=regularizers,
         optimizers=optimizers,
         training_loops=training_loops,
+        model_to_trainer_to_training_kwargs=model_to_trainer_to_training_kwargs,
+        model_to_trainer_to_training_kwargs_ranges=model_to_trainer_to_training_kwargs_ranges,
+        model_to_loss_to_loss_kwargs=model_to_loss_to_loss_kwargs,
+        model_to_loss_to_loss_kwargs_ranges=model_to_loss_to_loss_kwargs_ranges,
+        model_to_optimizer_to_optimizer_kwargs=model_to_optimizer_to_optimizer_kwargs,
+        model_to_optimizer_to_optimizer_kwargs_ranges=model_to_optimizer_to_optimizer_kwargs_ranges,
+        model_to_regularizer_to_regularizer_kwargs=model_to_regularizer_to_regularizer_kwargs,
+        model_to_regularizer_to_regularizer_kwargs_ranges=model_to_regularizer_to_regularizer_kwargs_ranges,
+        stopper=stopper,
+        stopper_kwargs=stopper_kwargs,
         evaluator=evaluator,
         optuna_config=optuna_config,
         ablation_config=ablation_config,
@@ -245,17 +275,27 @@ def prepare_ablation(  # noqa:C901
     optimizers: Union[str, List[str]],
     training_loops: Union[str, List[str]],
     *,
-    ablation_config: Optional[Mapping3D] = None,
     create_inverse_triples: Union[bool, List[bool]] = False,
     regularizers: Union[None, str, List[str]] = None,
     model_to_model_kwargs: Optional[Mapping2D] = None,
     model_to_model_kwargs_ranges: Optional[Mapping2D] = None,
+    model_to_loss_to_loss_kwargs: Optional[Mapping3D] = None,
+    model_to_loss_to_loss_kwargs_ranges: Optional[Mapping3D] = None,
+    model_to_optimizer_to_optimizer_kwargs: Optional[Mapping3D] = None,
+    model_to_optimizer_to_optimizer_kwargs_ranges: Optional[Mapping3D] = None,
+    negative_sampler: Optional[str] = None,
+    model_to_negative_sampler_to_negative_sampler_kwargs_ranges: Optional[Mapping3D] = None,
+    model_to_negative_sampler_to_negative_sampler_kwargs: Optional[Mapping3D] = None,
     model_to_trainer_to_training_kwargs: Optional[Mapping3D] = None,
     model_to_trainer_to_training_kwargs_ranges: Optional[Mapping3D] = None,
+    model_to_regularizer_to_regularizer_kwargs: Optional[Mapping3D] = None,
+    model_to_regularizer_to_regularizer_kwargs_ranges: Optional[Mapping3D] = None,
     evaluator: Optional[str] = None,
     optuna_config: Optional[Mapping[str, Any]] = None,
     evaluator_kwargs: Optional[Mapping[str, Any]] = None,
     evaluation_kwargs: Optional[Mapping[str, Any]] = None,
+    stopper: Optional[str] = 'NopStopper',
+    stopper_kwargs: Optional[Mapping[str, Any]] = None,
     metadata=None,
     directory: Optional[str] = None,
     save_artifacts: bool = True,
@@ -297,8 +337,6 @@ def prepare_ablation(  # noqa:C901
         model_to_trainer_to_training_kwargs = {}
     if not model_to_trainer_to_training_kwargs_ranges:
         model_to_trainer_to_training_kwargs_ranges = {}
-    if not ablation_config:
-        ablation_config = {}
 
     directories = []
     for counter, (
@@ -324,31 +362,19 @@ def prepare_ablation(  # noqa:C901
             _experiment_optuna_config['save_model_directory'] = save_model_directory
 
         hpo_config = dict()
-        for retain_key in ('stopper', 'stopper_kwargs'):
-            if retain_key in ablation_config:
-                logger.info(f'Retaining {retain_key} configuration in HPO')
-                hpo_config[retain_key] = deepcopy(ablation_config[retain_key])
+        hpo_config['stopper'] = stopper
 
-        for error_key in ('early_stopping', 'early_stopping_kwargs'):
-            if error_key in ablation_config:
-                raise ValueError(f'Outdated key: {error_key}. Please update')
+        if stopper_kwargs is not None:
+            hpo_config['stopper_kwargs'] = stopper_kwargs
 
         # TODO incorporate setting of random seed
         # pipeline_kwargs=dict(
         #    random_seed=random_non_negative_int(),
         # ),
 
-        def _set_arguments(key: str, value: str) -> None:
+        def _set_arguments(config: Optional[Mapping3D], value: str) -> None:
             """Set argument and its values."""
-            d = {key: value}
-            kwargs = ablation_config.get(f'{key}_kwargs', {}).get(model, {}).get(value, {})
-            if kwargs:
-                d[f'{key}_kwargs'] = kwargs
-            kwargs_ranges = ablation_config.get(f'{key}_kwargs_ranges', {}).get(model, {}).get(value, {})
-            if kwargs_ranges:
-                d[f'{key}_kwargs_ranges'] = kwargs_ranges
-
-            hpo_config.update(d)
+            hpo_config.update(config.get(model, {}).get(value, {}))
 
         # Add dataset to current_pipeline
         if isinstance(dataset, str):
@@ -371,30 +397,31 @@ def prepare_ablation(  # noqa:C901
         logger.info(f"Model: {model}")
 
         # Add loss function to current_pipeline
-        _set_arguments(key='loss', value=loss)
-        logger.info(f"Loss function: {loss}")
+        _set_arguments(config=model_to_loss_to_loss_kwargs, value=loss)
+        _set_arguments(config=model_to_loss_to_loss_kwargs_ranges, value=loss)
+        logger.info(f"Loss functions: {loss}")
 
         # Add regularizer to current_pipeline
-        _set_arguments(key='regularizer', value=regularizer)
+        _set_arguments(config=model_to_regularizer_to_regularizer_kwargs, value=regularizer)
+        _set_arguments(config=model_to_regularizer_to_regularizer_kwargs_ranges, value=regularizer)
         logger.info(f"Regularizer: {regularizer}")
 
         # Add optimizer to current_pipeline
-        _set_arguments(key='optimizer', value=optimizer)
+        _set_arguments(config=model_to_optimizer_to_optimizer_kwargs, value=optimizer)
+        _set_arguments(config=model_to_optimizer_to_optimizer_kwargs_ranges, value=optimizer)
         logger.info(f"Optimizer: {optimizer}")
 
         # Add training approach to current_pipeline
         hpo_config['training_loop'] = training_loop
+        _set_arguments(config=model_to_trainer_to_training_kwargs, value=training_loop)
+        _set_arguments(config=model_to_trainer_to_training_kwargs_ranges, value=training_loop)
         logger.info(f"Training loop: {training_loop}")
 
         if normalize_string(training_loop, suffix=_TRAINING_LOOP_SUFFIX) == 'slcwa':
-            negative_sampler = ablation_config.get('negative_sampler', 'basic')  # default to basic
-            _set_arguments(key='negative_sampler', value=negative_sampler)
+            negative_sampler = negative_sampler or 'basic'  # default to basic
+            _set_arguments(config=model_to_negative_sampler_to_negative_sampler_kwargs, value=negative_sampler)
+            _set_arguments(config=model_to_negative_sampler_to_negative_sampler_kwargs_ranges, value=negative_sampler)
             logger.info(f"Negative sampler: {negative_sampler}")
-
-        # Add training kwargs and kwargs_ranges
-        hpo_config['training_kwargs'] = model_to_trainer_to_training_kwargs.get(model, {}).get(training_loop, {})
-        hpo_config['training_kwargs_ranges'] = model_to_trainer_to_training_kwargs_ranges.get(model, {}).get(
-            training_loop, {})
 
         # Add evaluation
         hpo_config['evaluator'] = evaluator
