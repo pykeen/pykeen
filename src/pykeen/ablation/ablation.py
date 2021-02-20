@@ -237,6 +237,7 @@ def prepare_ablation_from_config(
     stopper = ablation_config.get('stopper')
     stopper_kwargs = ablation_config.get('stopper_kwargs')
 
+    # TODO: Pass **ablation_config and **optuna_config
     return prepare_ablation(
         datasets=datasets,
         create_inverse_triples=create_inverse_triples,
