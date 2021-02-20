@@ -5,6 +5,7 @@
 from typing import Any, ClassVar, Mapping, Optional
 
 import torch
+from docdata import parse_docdata
 from torch import nn
 
 from ..base import EntityEmbeddingModel
@@ -14,14 +15,13 @@ from ...nn import EmbeddingSpecification
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint, Hint, Initializer
-from ...utils_docs import with_structured_docstr
 
 __all__ = [
     'NTN',
 ]
 
 
-@with_structured_docstr
+@parse_docdata
 class NTN(EntityEmbeddingModel):
     r"""An implementation of NTN from [socher2013]_.
 

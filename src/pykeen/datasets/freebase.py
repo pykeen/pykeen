@@ -9,10 +9,10 @@
 import os
 
 import click
+from docdata import parse_docdata
 from more_click import verbose_option
 
 from .base import TarFileRemoteDataset, ZipFileRemoteDataset
-from ..utils_docs import with_structured_docstr
 
 __all__ = [
     'FB15k',
@@ -20,7 +20,7 @@ __all__ = [
 ]
 
 
-@with_structured_docstr
+@parse_docdata
 class FB15k(TarFileRemoteDataset):
     """The FB15k dataset.
 
@@ -57,7 +57,7 @@ class FB15k(TarFileRemoteDataset):
         )
 
 
-@with_structured_docstr
+@parse_docdata
 class FB15k237(ZipFileRemoteDataset):
     """The FB15k-237 dataset.
 

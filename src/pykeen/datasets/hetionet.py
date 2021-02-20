@@ -6,11 +6,11 @@ Get a summary with ``python -m pykeen.datasets.hetionet``
 """
 
 import click
+from docdata import parse_docdata
 from more_click import verbose_option
 
 from .base import SingleTabbedDataset
 from ..typing import TorchRandomHint
-from ..utils_docs import with_structured_docstr
 
 __all__ = [
     'Hetionet',
@@ -19,7 +19,7 @@ __all__ = [
 URL = 'https://github.com/hetio/hetionet/raw/master/hetnet/tsv/hetionet-v1.0-edges.sif.gz'
 
 
-@with_structured_docstr
+@parse_docdata
 class Hetionet(SingleTabbedDataset):
     """The Hetionet dataset is a large biological network.
 

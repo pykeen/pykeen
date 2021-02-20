@@ -9,11 +9,11 @@ from urllib.request import urlretrieve
 
 import click
 import pandas as pd
+from docdata import parse_docdata
 from more_click import verbose_option
 
 from .base import TabbedDataset
 from ..typing import TorchRandomHint
-from ..utils_docs import with_structured_docstr
 
 __all__ = [
     'CKG',
@@ -23,7 +23,7 @@ URL = 'https://md-datasets-public-files-prod.s3.eu-west-1.amazonaws.com/d1e8d3df
 COLUMNS = ['START_ID', 'TYPE', 'END_ID']
 
 
-@with_structured_docstr
+@parse_docdata
 class CKG(TabbedDataset):
     """The Clinical Knowledge Graph (CKG) dataset from [santos2020]_.
 

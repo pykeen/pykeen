@@ -6,6 +6,7 @@ from typing import Any, ClassVar, Mapping, Optional
 
 import torch
 import torch.autograd
+from docdata import parse_docdata
 
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
@@ -16,14 +17,13 @@ from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import Constrainer, DeviceHint, Hint, Initializer
 from ...utils import clamp_norm
-from ...utils_docs import with_structured_docstr
 
 __all__ = [
     'HolE',
 ]
 
 
-@with_structured_docstr
+@parse_docdata
 class HolE(EntityRelationEmbeddingModel):
     r"""An implementation of HolE [nickel2016]_.
 

@@ -2,15 +2,16 @@
 
 """YAGO3 datasets."""
 
+from docdata import parse_docdata
+
 from .base import TarFileRemoteDataset
-from ..utils_docs import with_structured_docstr
 
 __all__ = [
     'YAGO310',
 ]
 
 
-@with_structured_docstr
+@parse_docdata
 class YAGO310(TarFileRemoteDataset):
     """The YAGO3-10 dataset is a subset of YAGO3 that only contains entities with at least 10 relations.
 

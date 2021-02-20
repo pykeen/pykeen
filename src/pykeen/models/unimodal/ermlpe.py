@@ -5,6 +5,7 @@
 from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
+from docdata import parse_docdata
 from torch import nn
 from torch.nn.init import uniform_
 
@@ -15,14 +16,13 @@ from ...nn import EmbeddingSpecification
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint, Hint, Initializer
-from ...utils_docs import with_structured_docstr
 
 __all__ = [
     'ERMLPE',
 ]
 
 
-@with_structured_docstr
+@parse_docdata
 class ERMLPE(EntityRelationEmbeddingModel):
     r"""An extension of ERMLP proposed by [sharifzadeh2019]_.
 

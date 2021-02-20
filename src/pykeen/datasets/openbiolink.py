@@ -6,10 +6,10 @@ Get a summary with ``python -m pykeen.datasets.openbiolink``
 """
 
 import click
+from docdata import parse_docdata
 from more_click import verbose_option
 
 from .base import PackedZipRemoteDataset
-from ..utils_docs import with_structured_docstr
 
 __all__ = [
     'OpenBioLink',
@@ -24,7 +24,7 @@ F2_URL = 'https://github.com/PyKEEN/pykeen-openbiolink-benchmark/raw/master/filt
 LQ_URL = 'https://samwald.info/res/OpenBioLink_2020_final/ALL_DIR.zip'
 
 
-@with_structured_docstr
+@parse_docdata
 class OpenBioLink(PackedZipRemoteDataset):
     """The OpenBioLink dataset.
 
@@ -66,7 +66,7 @@ class OpenBioLink(PackedZipRemoteDataset):
         )
 
 
-@with_structured_docstr
+@parse_docdata
 class OpenBioLinkF1(PackedZipRemoteDataset):
     """The PyKEEN First Filtered OpenBioLink 2020 Dataset.
 
@@ -102,7 +102,7 @@ class OpenBioLinkF1(PackedZipRemoteDataset):
         )
 
 
-@with_structured_docstr
+@parse_docdata
 class OpenBioLinkF2(PackedZipRemoteDataset):
     """The PyKEEN Second Filtered OpenBioLink 2020 Dataset.
 
@@ -138,7 +138,7 @@ class OpenBioLinkF2(PackedZipRemoteDataset):
         )
 
 
-@with_structured_docstr
+@parse_docdata
 class OpenBioLinkLQ(PackedZipRemoteDataset):
     """The low-quality variant of the OpenBioLink dataset.
 

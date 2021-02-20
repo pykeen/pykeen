@@ -6,6 +6,7 @@ from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
 import torch.nn as nn
+from docdata import parse_docdata
 from torch.nn.init import xavier_normal_
 
 from ..base import MultimodalModel
@@ -16,10 +17,9 @@ from ...nn import Embedding
 from ...triples import TriplesNumericLiteralsFactory
 from ...typing import DeviceHint
 from ...utils import split_complex
-from ...utils_docs import with_structured_docstr
 
 
-@with_structured_docstr
+@parse_docdata
 class ComplExLiteral(ComplEx, MultimodalModel):
     """An implementation of Complex Literal variant of LiteralE from [kristiadi2018]_.
 

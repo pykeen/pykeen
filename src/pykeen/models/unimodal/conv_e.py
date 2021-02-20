@@ -7,6 +7,7 @@ import sys
 from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
+from docdata import parse_docdata
 from torch import nn
 from torch.nn import functional as F  # noqa: N812
 
@@ -20,7 +21,6 @@ from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint, Hint, Initializer
 from ...utils import is_cudnn_error
-from ...utils_docs import with_structured_docstr
 
 __all__ = [
     'ConvE',
@@ -29,7 +29,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-@with_structured_docstr
+@parse_docdata
 class ConvE(EntityRelationEmbeddingModel):
     r"""An implementation of ConvE from [dettmers2018]_.
 

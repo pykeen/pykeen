@@ -4,8 +4,9 @@
 
 import os
 
+from docdata import parse_docdata
+
 from ..base import PathDataset
-from ...utils_docs import with_structured_docstr
 
 __all__ = [
     'KINSHIPS_TRAIN_PATH',
@@ -21,7 +22,7 @@ KINSHIPS_TEST_PATH = os.path.join(HERE, 'test.txt')
 KINSHIPS_VALIDATE_PATH = os.path.join(HERE, 'valid.txt')
 
 
-@with_structured_docstr
+@parse_docdata
 class Kinships(PathDataset):
     """The Kinships dataset.
 

@@ -6,6 +6,7 @@ from typing import Any, ClassVar, Mapping, Optional
 
 import torch
 import torch.autograd
+from docdata import parse_docdata
 
 from ..base import EntityRelationEmbeddingModel
 from ...losses import Loss
@@ -15,14 +16,13 @@ from ...nn.norm import complex_normalize
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import Constrainer, DeviceHint, Hint, Initializer
-from ...utils_docs import with_structured_docstr
 
 __all__ = [
     'RotatE',
 ]
 
 
-@with_structured_docstr
+@parse_docdata
 class RotatE(EntityRelationEmbeddingModel):
     r"""An implementation of RotatE from [sun2019]_.
 

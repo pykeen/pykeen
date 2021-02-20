@@ -4,8 +4,9 @@
 
 import os
 
+from docdata import parse_docdata
+
 from ..base import PathDataset
-from ...utils_docs import with_structured_docstr
 
 __all__ = [
     'UMLS_TRAIN_PATH',
@@ -21,7 +22,7 @@ UMLS_TEST_PATH = os.path.join(HERE, 'test.txt')
 UMLS_VALIDATE_PATH = os.path.join(HERE, 'valid.txt')
 
 
-@with_structured_docstr
+@parse_docdata
 class UMLS(PathDataset):
     """The UMLS dataset.
 

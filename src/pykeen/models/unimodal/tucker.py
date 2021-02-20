@@ -6,6 +6,7 @@ from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
 import torch.autograd
+from docdata import parse_docdata
 from torch import nn
 
 from ..base import EntityRelationEmbeddingModel
@@ -16,7 +17,6 @@ from ...nn.init import xavier_normal_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint, Hint, Initializer
-from ...utils_docs import with_structured_docstr
 
 __all__ = [
     'TuckER',
@@ -34,7 +34,7 @@ def _apply_bn_to_tensor(
     return tensor
 
 
-@with_structured_docstr
+@parse_docdata
 class TuckER(EntityRelationEmbeddingModel):
     r"""An implementation of TuckEr from [balazevic2019]_.
 

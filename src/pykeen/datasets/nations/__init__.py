@@ -4,9 +4,10 @@
 
 import os
 
+from docdata import parse_docdata
+
 from ..base import PathDataset
 from ..literal_base import NumericPathDataset
-from ...utils_docs import with_structured_docstr
 
 __all__ = [
     'NATIONS_TRAIN_PATH',
@@ -25,7 +26,7 @@ NATIONS_VALIDATE_PATH = os.path.join(HERE, 'valid.txt')
 NATIONS_LITERALS_PATH = os.path.join(HERE, 'literals.txt')
 
 
-@with_structured_docstr
+@parse_docdata
 class Nations(PathDataset):
     """The Nations dataset.
 

@@ -5,6 +5,7 @@
 from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
+from docdata import parse_docdata
 from torch.nn.init import normal_
 
 from ..base import EntityRelationEmbeddingModel
@@ -15,14 +16,13 @@ from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint, Hint, Initializer
 from ...utils import split_complex
-from ...utils_docs import with_structured_docstr
 
 __all__ = [
     'ComplEx',
 ]
 
 
-@with_structured_docstr
+@parse_docdata
 class ComplEx(EntityRelationEmbeddingModel):
     r"""An implementation of ComplEx [trouillon2016]_.
 

@@ -5,6 +5,7 @@
 from typing import Any, ClassVar, Mapping, Optional, Tuple, Type, Union
 
 import torch.autograd
+from docdata import parse_docdata
 
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
@@ -13,14 +14,13 @@ from ...nn import Embedding, EmbeddingSpecification
 from ...regularizers import PowerSumRegularizer, Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint, Hint, Initializer
-from ...utils_docs import with_structured_docstr
 
 __all__ = [
     'SimplE',
 ]
 
 
-@with_structured_docstr
+@parse_docdata
 class SimplE(EntityRelationEmbeddingModel):
     r"""An implementation of SimplE [kazemi2018]_.
 

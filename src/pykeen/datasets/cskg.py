@@ -9,9 +9,10 @@
 
 import logging
 
+from docdata import parse_docdata
+
 from .base import SingleTabbedDataset
 from ..typing import TorchRandomHint
-from ..utils_docs import with_structured_docstr
 
 __all__ = [
     'CSKG',
@@ -20,7 +21,7 @@ __all__ = [
 URL = 'https://zenodo.org/record/4331372/files/cskg.tsv.gz'
 
 
-@with_structured_docstr
+@parse_docdata
 class CSKG(SingleTabbedDataset):
     """The CSKG dataset.
 

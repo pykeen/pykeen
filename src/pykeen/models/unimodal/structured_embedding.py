@@ -8,6 +8,7 @@ from typing import Any, ClassVar, Mapping, Optional
 import numpy as np
 import torch
 import torch.autograd
+from docdata import parse_docdata
 from torch import nn
 from torch.nn import functional
 
@@ -20,14 +21,13 @@ from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import Constrainer, DeviceHint, Hint, Initializer
 from ...utils import compose
-from ...utils_docs import with_structured_docstr
 
 __all__ = [
     'StructuredEmbedding',
 ]
 
 
-@with_structured_docstr
+@parse_docdata
 class StructuredEmbedding(EntityEmbeddingModel):
     r"""An implementation of the Structured Embedding (SE) published by [bordes2011]_.
 

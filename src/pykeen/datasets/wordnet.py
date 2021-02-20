@@ -4,8 +4,9 @@
 
 import os
 
+from docdata import parse_docdata
+
 from .base import TarFileRemoteDataset
-from ..utils_docs import with_structured_docstr
 
 __all__ = [
     'WN18',
@@ -13,7 +14,7 @@ __all__ = [
 ]
 
 
-@with_structured_docstr
+@parse_docdata
 class WN18(TarFileRemoteDataset):
     """The WN18 dataset.
 
@@ -50,7 +51,7 @@ class WN18(TarFileRemoteDataset):
         )
 
 
-@with_structured_docstr
+@parse_docdata
 class WN18RR(TarFileRemoteDataset):
     """The WN18-RR dataset.
 

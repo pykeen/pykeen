@@ -6,6 +6,7 @@ from typing import Any, ClassVar, Mapping, Optional
 
 import torch
 import torch.autograd
+from docdata import parse_docdata
 from torch import nn
 from torch.nn.init import uniform_
 
@@ -16,14 +17,13 @@ from ...nn import EmbeddingSpecification
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint, Hint, Initializer
-from ...utils_docs import with_structured_docstr
 
 __all__ = [
     'ERMLP',
 ]
 
 
-@with_structured_docstr
+@parse_docdata
 class ERMLP(EntityRelationEmbeddingModel):
     r"""An implementation of ERMLP from [dong2014]_.
 

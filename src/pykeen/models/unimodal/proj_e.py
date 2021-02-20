@@ -7,6 +7,7 @@ from typing import Any, ClassVar, Mapping, Optional, Type
 import numpy
 import torch
 import torch.autograd
+from docdata import parse_docdata
 from torch import nn
 
 from ..base import EntityRelationEmbeddingModel
@@ -17,14 +18,13 @@ from ...nn.init import xavier_uniform_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint, Hint, Initializer
-from ...utils_docs import with_structured_docstr
 
 __all__ = [
     'ProjE',
 ]
 
 
-@with_structured_docstr
+@parse_docdata
 class ProjE(EntityRelationEmbeddingModel):
     r"""An implementation of ProjE from [shi2017]_.
 

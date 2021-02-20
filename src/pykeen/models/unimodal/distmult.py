@@ -6,6 +6,7 @@ from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
 import torch.autograd
+from docdata import parse_docdata
 from torch.nn import functional
 
 from ..base import EntityRelationEmbeddingModel
@@ -16,14 +17,13 @@ from ...nn.init import xavier_normal_norm_, xavier_uniform_
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
 from ...typing import Constrainer, DeviceHint, Hint, Initializer
-from ...utils_docs import with_structured_docstr
 
 __all__ = [
     'DistMult',
 ]
 
 
-@with_structured_docstr
+@parse_docdata
 class DistMult(EntityRelationEmbeddingModel):
     r"""An implementation of DistMult from [yang2014]_.
 

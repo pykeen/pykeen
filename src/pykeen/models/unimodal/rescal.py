@@ -5,6 +5,7 @@
 from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
+from docdata import parse_docdata
 from torch.nn.init import uniform_
 
 from ..base import EntityRelationEmbeddingModel
@@ -14,14 +15,13 @@ from ...nn import EmbeddingSpecification
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint, Hint, Initializer
-from ...utils_docs import with_structured_docstr
 
 __all__ = [
     'RESCAL',
 ]
 
 
-@with_structured_docstr
+@parse_docdata
 class RESCAL(EntityRelationEmbeddingModel):
     r"""An implementation of RESCAL from [nickel2011]_.
 

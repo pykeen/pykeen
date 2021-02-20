@@ -5,6 +5,7 @@
 from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
+from docdata import parse_docdata
 from torch.nn import functional
 from torch.nn.init import uniform_
 
@@ -15,14 +16,13 @@ from ...nn import Embedding, EmbeddingSpecification
 from ...regularizers import Regularizer, TransHRegularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint, Hint, Initializer
-from ...utils_docs import with_structured_docstr
 
 __all__ = [
     'TransH',
 ]
 
 
-@with_structured_docstr
+@parse_docdata
 class TransH(EntityRelationEmbeddingModel):
     r"""An implementation of TransH [wang2014]_.
 

@@ -7,6 +7,7 @@ from os import path
 from typing import Any, Callable, ClassVar, Mapping, Optional, Type
 
 import torch
+from docdata import parse_docdata
 from torch import nn
 from torch.nn import functional
 
@@ -19,7 +20,6 @@ from ...nn import Embedding, RepresentationModule
 from ...nn.init import xavier_uniform_
 from ...triples import TriplesFactory
 from ...typing import DeviceHint, Hint, Initializer
-from ...utils_docs import with_structured_docstr
 
 __all__ = [
     'RGCN',
@@ -430,7 +430,7 @@ class Decoder(nn.Module):
         return (h * r * t).sum(dim=-1)
 
 
-@with_structured_docstr
+@parse_docdata
 class RGCN(_OldAbstractModel):
     """An implementation of R-GCN from [schlichtkrull2018]_.
 

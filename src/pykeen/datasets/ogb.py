@@ -9,11 +9,11 @@ from typing import ClassVar, Optional
 
 import click
 import numpy as np
+from docdata import parse_docdata
 from more_click import verbose_option
 
 from .base import LazyDataset
 from ..triples import TriplesFactory
-from ..utils_docs import with_structured_docstr
 
 __all__ = [
     'OGBLoader',
@@ -81,7 +81,7 @@ class OGBLoader(LazyDataset):
         )
 
 
-@with_structured_docstr
+@parse_docdata
 class OGBBioKG(OGBLoader):
     """The OGB BioKG dataset.
 
@@ -105,7 +105,7 @@ class OGBBioKG(OGBLoader):
     name = 'ogbl-biokg'
 
 
-@with_structured_docstr
+@parse_docdata
 class OGBWikiKG(OGBLoader):
     """The OGB WikiKG dataset.
 

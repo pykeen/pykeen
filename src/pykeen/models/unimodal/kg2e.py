@@ -7,6 +7,7 @@ from typing import Any, ClassVar, Mapping, Optional
 
 import torch
 import torch.autograd
+from docdata import parse_docdata
 from torch.nn.init import uniform_
 
 from ..base import EntityRelationEmbeddingModel
@@ -17,7 +18,6 @@ from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import Constrainer, DeviceHint, Hint, Initializer
 from ...utils import clamp_norm
-from ...utils_docs import with_structured_docstr
 
 __all__ = [
     'KG2E',
@@ -26,7 +26,7 @@ __all__ = [
 _LOG_2_PI = math.log(2. * math.pi)
 
 
-@with_structured_docstr
+@parse_docdata
 class KG2E(EntityRelationEmbeddingModel):
     r"""An implementation of KG2E from [he2015]_.
 

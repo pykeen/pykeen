@@ -6,8 +6,9 @@
 - Paper: https://arxiv.org/abs/2009.07810
 """
 
+from docdata import parse_docdata
+
 from .base import UnpackedRemoteDataset
-from ..utils_docs import with_structured_docstr
 
 BASE_URL = 'https://raw.githubusercontent.com/tsafavi/codex/master/data/triples/'
 SMALL_VALID_URL = f'{BASE_URL}/codex-s/valid.txt'
@@ -26,7 +27,7 @@ LARGE_TRAIN_URL = f'{BASE_URL}/codex-l/train.txt'
 # If GitHub ever gets upset from too many downloads, we can switch to
 # the data posted at https://github.com/pykeen/pykeen/pull/154#issuecomment-730462039
 
-@with_structured_docstr
+@parse_docdata
 class CoDExSmall(UnpackedRemoteDataset):
     """The CoDEx small dataset.
 
@@ -64,7 +65,7 @@ class CoDExSmall(UnpackedRemoteDataset):
         )
 
 
-@with_structured_docstr
+@parse_docdata
 class CoDExMedium(UnpackedRemoteDataset):
     """The CoDEx medium dataset.
 
@@ -100,7 +101,7 @@ class CoDExMedium(UnpackedRemoteDataset):
         )
 
 
-@with_structured_docstr
+@parse_docdata
 class CoDExLarge(UnpackedRemoteDataset):
     """The CoDEx large dataset.
 

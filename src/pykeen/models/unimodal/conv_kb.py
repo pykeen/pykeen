@@ -7,6 +7,7 @@ from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
 import torch.autograd
+from docdata import parse_docdata
 from torch import nn
 from torch.nn.init import uniform_
 
@@ -17,7 +18,6 @@ from ...nn import EmbeddingSpecification
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint, Hint, Initializer
-from ...utils_docs import with_structured_docstr
 
 __all__ = [
     'ConvKB',
@@ -26,7 +26,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-@with_structured_docstr
+@parse_docdata
 class ConvKB(EntityRelationEmbeddingModel):
     r"""An implementation of ConvKB from [nguyen2018]_.
 

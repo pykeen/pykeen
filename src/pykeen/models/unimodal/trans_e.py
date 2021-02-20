@@ -6,6 +6,7 @@ from typing import Any, ClassVar, Mapping, Optional
 
 import torch
 import torch.autograd
+from docdata import parse_docdata
 from torch.nn import functional
 
 from ..base import EntityRelationEmbeddingModel
@@ -16,14 +17,13 @@ from ...nn.init import xavier_uniform_, xavier_uniform_norm_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import Constrainer, DeviceHint, Hint, Initializer
-from ...utils_docs import with_structured_docstr
 
 __all__ = [
     'TransE',
 ]
 
 
-@with_structured_docstr
+@parse_docdata
 class TransE(EntityRelationEmbeddingModel):
     r"""An implementation of TransE [bordes2013]_.
 
