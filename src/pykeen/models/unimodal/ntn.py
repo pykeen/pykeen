@@ -51,7 +51,7 @@ class NTN(EntityEmbeddingModel):
     citation:
         author: Socher
         year: 2013
-        link: https://papers.nips.cc/paper/5028-reasoning-with-neural-tensor-networks-for-knowledge-base-completion
+        link: https://dl.acm.org/doi/10.5555/2999611.2999715
         github: khurram18/NeuralTensorNetworks
     """
 
