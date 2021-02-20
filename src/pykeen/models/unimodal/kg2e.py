@@ -56,7 +56,7 @@ class KG2E(EntityRelationEmbeddingModel):
     citation:
         author: He
         year: 2015
-        link: http://ir.ia.ac.cn/bitstream/173211/20634/1/Learning%20to%20Represent%20Knowledge%20Graphs%20with%20Gaussian%20Embedding.pdf
+        link: https://dl.acm.org/doi/10.1145/2806416.2806502
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
