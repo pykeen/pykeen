@@ -7,7 +7,6 @@ from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
 import torch.autograd
-from docdata import parse_docdata
 from torch import nn
 from torch.nn.init import uniform_
 
@@ -26,7 +25,6 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-@parse_docdata
 class ConvKB(EntityRelationEmbeddingModel):
     r"""An implementation of ConvKB from [nguyen2018]_.
 

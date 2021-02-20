@@ -6,7 +6,6 @@ from typing import Any, ClassVar, Mapping, Optional
 
 import torch
 import torch.autograd
-from docdata import parse_docdata
 
 from ..base import EntityEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
@@ -22,7 +21,6 @@ __all__ = [
 ]
 
 
-@parse_docdata
 class UnstructuredModel(EntityEmbeddingModel):
     r"""An implementation of the Unstructured Model (UM) published by [bordes2014]_.
 

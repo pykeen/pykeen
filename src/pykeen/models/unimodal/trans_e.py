@@ -6,7 +6,6 @@ from typing import Any, ClassVar, Mapping, Optional
 
 import torch
 import torch.autograd
-from docdata import parse_docdata
 from torch.nn import functional
 
 from ..base import EntityRelationEmbeddingModel
@@ -23,7 +22,6 @@ __all__ = [
 ]
 
 
-@parse_docdata
 class TransE(EntityRelationEmbeddingModel):
     r"""An implementation of TransE [bordes2013]_.
 

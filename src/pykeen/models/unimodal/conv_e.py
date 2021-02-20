@@ -7,7 +7,6 @@ import sys
 from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
-from docdata import parse_docdata
 from torch import nn
 from torch.nn import functional as F  # noqa: N812
 
@@ -29,7 +28,6 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-@parse_docdata
 class ConvE(EntityRelationEmbeddingModel):
     r"""An implementation of ConvE from [dettmers2018]_.
 

@@ -5,7 +5,6 @@
 from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
-from docdata import parse_docdata
 from torch.nn.init import normal_
 
 from ..base import EntityRelationEmbeddingModel
@@ -22,7 +21,6 @@ __all__ = [
 ]
 
 
-@parse_docdata
 class ComplEx(EntityRelationEmbeddingModel):
     r"""An implementation of ComplEx [trouillon2016]_.
 

@@ -6,7 +6,6 @@ from typing import Any, ClassVar, Mapping, Optional
 
 import torch
 import torch.autograd
-from docdata import parse_docdata
 from torch import nn
 from torch.nn.init import uniform_
 
@@ -23,7 +22,6 @@ __all__ = [
 ]
 
 
-@parse_docdata
 class ERMLP(EntityRelationEmbeddingModel):
     r"""An implementation of ERMLP from [dong2014]_.
 

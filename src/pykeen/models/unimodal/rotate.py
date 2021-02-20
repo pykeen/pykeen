@@ -6,7 +6,6 @@ from typing import Any, ClassVar, Mapping, Optional
 
 import torch
 import torch.autograd
-from docdata import parse_docdata
 
 from ..base import EntityRelationEmbeddingModel
 from ...losses import Loss
@@ -22,7 +21,6 @@ __all__ = [
 ]
 
 
-@parse_docdata
 class RotatE(EntityRelationEmbeddingModel):
     r"""An implementation of RotatE from [sun2019]_.
 

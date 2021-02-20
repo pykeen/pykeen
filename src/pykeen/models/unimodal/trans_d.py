@@ -6,7 +6,6 @@ from typing import Any, ClassVar, Mapping, Optional
 
 import torch
 import torch.autograd
-from docdata import parse_docdata
 
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
@@ -70,7 +69,6 @@ def _project_entity(
     return e_bot
 
 
-@parse_docdata
 class TransD(EntityRelationEmbeddingModel):
     r"""An implementation of TransD from [ji2015]_.
 

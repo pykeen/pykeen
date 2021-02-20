@@ -8,7 +8,6 @@ from typing import Any, ClassVar, Mapping, Optional
 import numpy as np
 import torch
 import torch.autograd
-from docdata import parse_docdata
 from torch import nn
 from torch.nn import functional
 
@@ -27,7 +26,6 @@ __all__ = [
 ]
 
 
-@parse_docdata
 class StructuredEmbedding(EntityEmbeddingModel):
     r"""An implementation of the Structured Embedding (SE) published by [bordes2011]_.
 

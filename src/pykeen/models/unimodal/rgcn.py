@@ -7,7 +7,6 @@ from os import path
 from typing import Any, Callable, ClassVar, Mapping, Optional, Type
 
 import torch
-from docdata import parse_docdata
 from torch import nn
 from torch.nn import functional
 
@@ -430,7 +429,6 @@ class Decoder(nn.Module):
         return (h * r * t).sum(dim=-1)
 
 
-@parse_docdata
 class RGCN(_OldAbstractModel):
     """An implementation of R-GCN from [schlichtkrull2018]_.
 

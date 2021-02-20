@@ -5,7 +5,6 @@
 from typing import Any, ClassVar, Mapping, Optional
 
 import torch
-from docdata import parse_docdata
 from torch import nn
 
 from ..base import EntityEmbeddingModel
@@ -21,7 +20,6 @@ __all__ = [
 ]
 
 
-@parse_docdata
 class NTN(EntityEmbeddingModel):
     r"""An implementation of NTN from [socher2013]_.
 

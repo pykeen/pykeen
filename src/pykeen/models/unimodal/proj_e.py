@@ -7,7 +7,6 @@ from typing import Any, ClassVar, Mapping, Optional, Type
 import numpy
 import torch
 import torch.autograd
-from docdata import parse_docdata
 from torch import nn
 
 from ..base import EntityRelationEmbeddingModel
@@ -24,7 +23,6 @@ __all__ = [
 ]
 
 
-@parse_docdata
 class ProjE(EntityRelationEmbeddingModel):
     r"""An implementation of ProjE from [shi2017]_.
 

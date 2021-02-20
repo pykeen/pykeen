@@ -8,7 +8,6 @@ from typing import Any, ClassVar, Mapping, Optional
 import torch
 import torch.autograd
 import torch.nn.init
-from docdata import parse_docdata
 
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
@@ -35,7 +34,6 @@ def _projection_initializer(
     return torch.nn.init.xavier_uniform_(x.view(num_relations, embedding_dim, relation_dim)).view(x.shape)
 
 
-@parse_docdata
 class TransR(EntityRelationEmbeddingModel):
     r"""An implementation of TransR from [lin2015]_.
 

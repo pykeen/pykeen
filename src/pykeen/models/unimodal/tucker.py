@@ -6,7 +6,6 @@ from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
 import torch.autograd
-from docdata import parse_docdata
 from torch import nn
 
 from ..base import EntityRelationEmbeddingModel
@@ -34,7 +33,6 @@ def _apply_bn_to_tensor(
     return tensor
 
 
-@parse_docdata
 class TuckER(EntityRelationEmbeddingModel):
     r"""An implementation of TuckEr from [balazevic2019]_.
 

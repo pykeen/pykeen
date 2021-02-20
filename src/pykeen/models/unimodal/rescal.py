@@ -5,7 +5,6 @@
 from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
-from docdata import parse_docdata
 from torch.nn.init import uniform_
 
 from ..base import EntityRelationEmbeddingModel
@@ -21,7 +20,6 @@ __all__ = [
 ]
 
 
-@parse_docdata
 class RESCAL(EntityRelationEmbeddingModel):
     r"""An implementation of RESCAL from [nickel2011]_.
 

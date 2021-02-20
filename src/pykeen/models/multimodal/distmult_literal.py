@@ -6,7 +6,6 @@ from typing import Any, ClassVar, Mapping, Optional
 
 import torch
 import torch.nn as nn
-from docdata import parse_docdata
 
 from ..base import MultimodalModel
 from ..unimodal.distmult import DistMult
@@ -17,7 +16,6 @@ from ...triples import TriplesNumericLiteralsFactory
 from ...typing import DeviceHint
 
 
-@parse_docdata
 class DistMultLiteral(DistMult, MultimodalModel):
     """An implementation of DistMultLiteral from [kristiadi2018]_.
 

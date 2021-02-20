@@ -5,7 +5,6 @@
 from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
-from docdata import parse_docdata
 from torch.nn import functional
 from torch.nn.init import uniform_
 
@@ -22,7 +21,6 @@ __all__ = [
 ]
 
 
-@parse_docdata
 class TransH(EntityRelationEmbeddingModel):
     r"""An implementation of TransH [wang2014]_.
 
