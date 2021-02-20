@@ -14,10 +14,19 @@ from ...losses import Loss
 from ...nn import Embedding
 from ...triples import TriplesNumericLiteralsFactory
 from ...typing import DeviceHint
+from ...utils_docs import with_structured_docstr
 
 
+@with_structured_docstr
 class DistMultLiteral(DistMult, MultimodalModel):
-    """An implementation of DistMultLiteral from [agustinus2018]_."""
+    """An implementation of DistMultLiteral from [kristiadi2018]_.
+
+    ---
+    citation:
+        author: Kristiadi
+        year: 2018
+        link: https://arxiv.org/pdf/1802.00934.pdf
+    """
 
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]] = dict(

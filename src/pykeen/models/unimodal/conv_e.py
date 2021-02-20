@@ -20,6 +20,7 @@ from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint, Hint, Initializer
 from ...utils import is_cudnn_error
+from ...utils_docs import with_structured_docstr
 
 __all__ = [
     'ConvE',
@@ -28,6 +29,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
+@with_structured_docstr
 class ConvE(EntityRelationEmbeddingModel):
     r"""An implementation of ConvE from [dettmers2018]_.
 
@@ -59,11 +61,9 @@ class ConvE(EntityRelationEmbeddingModel):
 
     The default setting uses batch normalization. Batch normalization normalizes the output of the activation functions,
     in order to ensure that the weights of the NN don't become imbalanced and to speed up training.
-    However, batch normalization is not the only way to achieve more robust and effective training [1]. Therefore,
-    we added the flag 'apply_batch_normalization' to turn batch normalization on/off (it's turned on as default).
-
-    [1]: Santurkar, Shibani, et al. "How does batch normalization help optimization?."
-    Advances in Neural Information Processing Systems. 2018.
+    However, batch normalization is not the only way to achieve more robust and effective training [santurkar2018]_.
+    Therefore, we added the flag 'apply_batch_normalization' to turn batch normalization on/off (it's turned on as
+    default).
 
     Example usage:
 
@@ -96,6 +96,12 @@ class ConvE(EntityRelationEmbeddingModel):
     >>> from pykeen.evaluation import RankBasedEvaluator
     >>> evaluator = RankBasedEvaluator()
     >>> metric_result = evaluator.evaluate(model=model, mapped_triples=dataset.testing.mapped_triples, batch_size=8192)
+    ---
+    citation:
+        author: Dettmers
+        year: 2018
+        link: https://www.aaai.org/ocs/index.php/AAAI/AAAI18/paper/view/17366
+        github: TimDettmers/ConvE
     """
 
     #: The default strategy for optimizing the model's hyper-parameters

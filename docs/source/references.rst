@@ -19,7 +19,7 @@ References
    `ConceptNet 5.5: An Open Multilingual Graph of General Knowledge <https://arxiv.org/abs/1612.03975>`_.
    *In proceedings of AAAI 31*.
 
-.. [breit2020] Breit, A. (2020) `OpenBioLink: A benchmarking framework for large-scale biomedical link
+.. [breit2020] Breit, A., *et al* (2020). `OpenBioLink: A benchmarking framework for large-scale biomedical link
    prediction <https://doi.org/10.1093/bioinformatics/btaa274>`_, *Bioinformatics*
 
 .. [ilievski2020] Ilievski, F., Szekely, P., & Zhang, B. (2020). `CSKG: The CommonSense Knowledge
@@ -30,3 +30,6 @@ References
 
 .. [xu2019] Xu, L (2019) `A Comparison of Learned and Engineered Features in Network-Based Drug Repositioning
    <https://github.com/lingling93/master_thesis_drugrelink>`_. Master's Thesis.
+
+.. [santurkar2018] Santurkar, S., *et al*. (2018). `How does batch normalization help optimization?
+   <https://arxiv.org/abs/1805.11604>`_. Advances in Neural Information Processing Systems.

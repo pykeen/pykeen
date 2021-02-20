@@ -15,12 +15,14 @@ from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint, Hint, Initializer
 from ...utils import split_complex
+from ...utils_docs import with_structured_docstr
 
 __all__ = [
     'ComplEx',
 ]
 
 
+@with_structured_docstr
 class ComplEx(EntityRelationEmbeddingModel):
     r"""An implementation of ComplEx [trouillon2016]_.
 
@@ -49,6 +51,12 @@ class ComplEx(EntityRelationEmbeddingModel):
     .. seealso ::
 
         Official implementation: https://github.com/ttrouill/complex/
+    ---
+    citation:
+        author: Trouillon
+        year: 2016
+        link: https://arxiv.org/abs/1606.06357
+        github: ttrouill/complex
     """
 
     #: The default strategy for optimizing the model's hyper-parameters

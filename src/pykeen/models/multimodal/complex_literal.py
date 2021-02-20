@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Implementation of the ComplexLiteral model based on the local closed world assumption (LCWA) training approach."""
+"""Implementation of the ComplexLiteral model."""
 
 from typing import Any, ClassVar, Mapping, Optional, Type
 
@@ -16,10 +16,19 @@ from ...nn import Embedding
 from ...triples import TriplesNumericLiteralsFactory
 from ...typing import DeviceHint
 from ...utils import split_complex
+from ...utils_docs import with_structured_docstr
 
 
+@with_structured_docstr
 class ComplExLiteral(ComplEx, MultimodalModel):
-    """An implementation of ComplexLiteral from [agustinus2018]_ based on the LCWA training approach."""
+    """An implementation of Complex Literal variant of LiteralE from [kristiadi2018]_.
+
+    ---
+    citation:
+        author: Kristiadi
+        year: 2018
+        link: https://arxiv.org/pdf/1802.00934.pdf
+    """
 
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]] = dict(

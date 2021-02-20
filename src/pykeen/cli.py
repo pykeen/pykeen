@@ -94,21 +94,31 @@ def _help_models(tablefmt: str, link_fmt: Optional[str] = None):
 
 def _get_model_lines(tablefmt: str, link_fmt: Optional[str] = None):
     for _, model in sorted(models_dict.items()):
-        line = str(model.__doc__.splitlines()[0])
-        l, r = line.find('['), line.find(']')
-        if tablefmt == 'rst':
-            yield model.__name__, f':class:`pykeen.models.{model.__name__}`', line[l: r + 2]
-        elif tablefmt == 'github':
-            author, year = line[1 + l: r - 4], line[r - 4: r]
-            reference = f'pykeen.models.{model.__name__}'
+        reference = f'pykeen.models.{model.__name__}'
+        docdata = getattr(model, '__docdata__', None)
+        if docdata is not None:
             if link_fmt:
                 reference = f'[`{reference}`]({link_fmt.format(reference)})'
             else:
                 reference = f'`{reference}`'
-            yield model.__name__, reference, f'{author.capitalize()} *et al.*, {year}'
+            citation = docdata['citation']
+            citation_str = f"[{citation['author']} *et al.*, {citation['year']}]({citation['link']})"
+            yield model.__name__, reference, citation_str
         else:
-            author, year = line[1 + l: r - 4], line[r - 4: r]
-            yield model.__name__, f'{author.capitalize()}, {year}'
+            line = str(model.__doc__.splitlines()[0])
+            l, r = line.find('['), line.find(']')
+            if tablefmt == 'rst':
+                yield model.__name__, f':class:`{reference}`', line[l: r + 2]
+            elif tablefmt == 'github':
+                author, year = line[1 + l: r - 4], line[r - 4: r]
+                if link_fmt:
+                    reference = f'[`{reference}`]({link_fmt.format(reference)})'
+                else:
+                    reference = f'`{reference}`'
+                yield model.__name__, reference, f'{author.capitalize()} *et al.*, {year}'
+            else:
+                author, year = line[1 + l: r - 4], line[r - 4: r]
+                yield model.__name__, f'{author.capitalize()}, {year}'
 
 
 @ls.command()
