@@ -13,7 +13,7 @@ import torch
 import pykeen.experiments
 import pykeen.models
 from pykeen.models import (
-    EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, MultimodalModel, _MODELS,
+    ERModel, EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, MultimodalModel, _MODELS, _NewAbstractModel,
     _OldAbstractModel,
 )
 from pykeen.models.predict import get_novelty_mask, predict
@@ -31,10 +31,12 @@ from tests.constants import EPSILON
 SKIP_MODULES = {
     Model.__name__,
     _OldAbstractModel.__name__,
+    _NewAbstractModel.__name__,
     'DummyModel',
     MultimodalModel.__name__,
     EntityEmbeddingModel.__name__,
     EntityRelationEmbeddingModel.__name__,
+    ERModel.__name__,
     'MockModel',
     'models',
     'get_model_cls',

@@ -4,15 +4,12 @@
 
 from typing import Any, ClassVar, Mapping, Optional
 
-import torch
-import torch.autograd
-
-from ..base import EntityEmbeddingModel
+from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
 from ...nn import EmbeddingSpecification
 from ...nn.init import xavier_normal_
-from ...regularizers import Regularizer
+from ...nn.modules import UnstructuredModelInteraction
 from ...triples import TriplesFactory
 from ...typing import DeviceHint, Hint, Initializer
 
@@ -21,7 +18,7 @@ __all__ = [
 ]
 
 
-class UnstructuredModel(EntityEmbeddingModel):
+class UnstructuredModel(ERModel):
     r"""An implementation of the Unstructured Model (UM) published by [bordes2014]_.
 
     UM computes the distance between head and tail entities then applies the $l_p$ norm.
@@ -56,9 +53,9 @@ class UnstructuredModel(EntityEmbeddingModel):
         embedding_dim: int = 50,
         scoring_fct_norm: int = 1,
         loss: Optional[Loss] = None,
+        predict_with_sigmoid: bool = False,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
-        regularizer: Optional[Regularizer] = None,
         entity_initializer: Hint[Initializer] = xavier_normal_,
     ) -> None:
         r"""Initialize UM.
@@ -69,27 +66,12 @@ class UnstructuredModel(EntityEmbeddingModel):
         super().__init__(
             triples_factory=triples_factory,
             loss=loss,
+            predict_with_sigmoid=predict_with_sigmoid,
             preferred_device=preferred_device,
             random_seed=random_seed,
-            regularizer=regularizer,
+            interaction=UnstructuredModelInteraction(p=scoring_fct_norm),
             entity_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
                 initializer=entity_initializer,
             ),
         )
-        self.scoring_fct_norm = scoring_fct_norm
-
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(indices=hrt_batch[:, 0])
-        t = self.entity_embeddings(indices=hrt_batch[:, 2])
-        return -torch.norm(h - t, dim=-1, p=self.scoring_fct_norm, keepdim=True) ** 2
-
-    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(indices=hr_batch[:, 0]).view(-1, 1, self.embedding_dim)
-        t = self.entity_embeddings(indices=None).view(1, -1, self.embedding_dim)
-        return -torch.norm(h - t, dim=-1, p=self.scoring_fct_norm) ** 2
-
-    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(indices=None).view(1, -1, self.embedding_dim)
-        t = self.entity_embeddings(indices=rt_batch[:, 1]).view(-1, 1, self.embedding_dim)
-        return -torch.norm(h - t, dim=-1, p=self.scoring_fct_norm) ** 2

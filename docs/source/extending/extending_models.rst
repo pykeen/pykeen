@@ -1,5 +1,5 @@
-Extending the Interaction Models
-================================
+Extending the Interaction Models (Old-Style)
+============================================
 Let's assume you have invented a new interaction model,
 e.g. this variant of :class:`pykeen.models.DistMult`
 
