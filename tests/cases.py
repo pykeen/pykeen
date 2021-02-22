@@ -1247,10 +1247,27 @@ class RepresentationTestCase(GenericTestCase[RepresentationModule]):
             raise AssertionError(indices.shape)
         self._check_result(x=x, prefix_shape=prefix_shape)
 
+    def _test_more_canonical_shape(self, indices: Optional[torch.LongTensor]):
+        """Test more canonical shape."""
+        for i, dim in enumerate(("h", "r", "t"), start=1):
+            x = self.instance.get_in_more_canonical_shape(dim=dim, indices=indices)
+            prefix_shape = [1, 1, 1, 1]
+            if indices is None:
+                prefix_shape[i] = self.instance.max_id
+            elif indices.ndimension() == 1:
+                prefix_shape[0] = indices.shape[0]
+            elif indices.ndimension() == 2:
+                prefix_shape[0] = indices.shape[0]
+                prefix_shape[i] = indices.shape[1]
+            else:
+                raise AssertionError(indices.shape)
+            self._check_result(x=x, prefix_shape=tuple(prefix_shape))
+
     def _test_indices(self, indices: Optional[torch.LongTensor]):
         """Test forward and canonical shape for indices."""
         self._test_forward(indices=indices)
         self._test_canonical_shape(indices=indices)
+        self._test_more_canonical_shape(indices=indices)
 
     def test_no_indices(self):
         """Test without indices."""
