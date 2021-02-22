@@ -939,6 +939,14 @@ def check_shapes(
 ) -> bool:
     """Verify that a sequence of tensors are of matching shapes.
 
+    Examples:
+
+    >>> check_shapes(((10, 20), "bd"), ((10, 20, 20), "bdd"))
+    True
+    >>> check_shapes(((10, 20), "bd"), ((10, 30, 20), "bdd"), raise_on_errors=False)
+    False
+
+
     :param x:
         A tuple (t, s), where `t` is a tensor, or an actual shape of a tensor (a tuple of integers), and `s` is a
         string, where each character corresponds to a (named) dimension. If the shapes of different tensors share a
