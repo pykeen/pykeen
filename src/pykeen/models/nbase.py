@@ -131,8 +131,12 @@ class _NewAbstractModel(Model, ABC, autoreset=False):
 
         :param tensor_1: shape: s
             The tensor containing predictions or positive scores.
-        :param tensor_2: shape: s
+        :param tensor_2: shape: s'
             The tensor containing target values or the negative scores.
+
+        .. note ::
+            `s` and `s'` need to be broadcastable.
+
         :return: dtype: float, scalar
             The label loss value.
         """
