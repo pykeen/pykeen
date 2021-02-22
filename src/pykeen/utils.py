@@ -952,8 +952,7 @@ def check_shapes(
     :raises ValueError:
         If the shapes mismatch and raise_on_error is True.
 
-    Examples::
-
+    Examples:
     >>> check_shapes(((10, 20), "bd"), ((10, 20, 20), "bdd"))
     True
     >>> check_shapes(((10, 20), "bd"), ((10, 30, 20), "bdd"), raise_on_errors=False)
