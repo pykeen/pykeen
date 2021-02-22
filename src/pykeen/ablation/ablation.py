@@ -292,12 +292,17 @@ def prepare_ablation(  # noqa:C901
     model_to_regularizer_to_regularizer_kwargs: Optional[Mapping3D] = None,
     model_to_regularizer_to_regularizer_kwargs_ranges: Optional[Mapping3D] = None,
     evaluator: Optional[str] = None,
-    optuna_config: Optional[Mapping[str, Any]] = None,
+    n_trials: Optional[int] = 5,
+    timeout: Optional[int] = 3600,
+    metric_to_optimize: Optional[str] = 'hits@10',
+    direction: Optional[str] = 'maximize',
+    hpo_sampler: Optional[str] = 'random',
+    hpo_pruner: Optional[str] = 'nop',
     evaluator_kwargs: Optional[Mapping[str, Any]] = None,
     evaluation_kwargs: Optional[Mapping[str, Any]] = None,
     stopper: Optional[str] = 'NopStopper',
     stopper_kwargs: Optional[Mapping[str, Any]] = None,
-    metadata=None,
+    metadata: Optional[Mapping] = None,
     directory: Optional[str] = None,
     save_artifacts: bool = True,
 ) -> List[Tuple[str, str]]:
@@ -355,7 +360,14 @@ def prepare_ablation(  # noqa:C901
         os.makedirs(output_directory, exist_ok=True)
         # TODO what happens if already exists?
 
-        _experiment_optuna_config = optuna_config.copy() if optuna_config else {}
+        _experiment_optuna_config = {
+            'n_trials': n_trials,
+            'timeout': timeout,
+            'metric': metric_to_optimize,
+            'direction': direction,
+            'sampler': hpo_sampler,
+            'pruner': hpo_pruner,
+        }
         _experiment_optuna_config['storage'] = f'sqlite:///{output_directory}/optuna_results.db'
         if save_artifacts:
             save_model_directory = os.path.join(output_directory, 'artifacts')
