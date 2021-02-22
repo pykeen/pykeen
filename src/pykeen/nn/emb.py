@@ -138,6 +138,18 @@ class RepresentationModule(nn.Module, ABC):
         The canonical shape is given by (batch_size, 1, ``*``) if indices is not None, where batch_size=len(indices),
         or (1, num, ``*``) if indices is None with num equal to the total number of embeddings.
 
+        Examples:
+        >>> emb = EmbeddingSpecification(shape=(20,)).make(num_embeddings=10)
+        >>> # Get head representations for given batch indices
+        >>> emb.get_in_more_canonical_shape(dim="h", indices=torch.arange(5)).shape
+        (5, 1, 1, 1, 20)
+        >>> # Get head representations for given 2D batch indices, as e.g. used by fast slcwa scoring
+        >>> emb.get_in_more_canonical_shape(dim="h", indices=torch.arange(6).view(2, 3)).shape
+        (2, 3, 1, 1, 20)
+        >>> # Get head representations for 1:n scoring
+        >>> emb.get_in_more_canonical_shape(dim="h", indices=None).shape
+        (1, 10, 1, 1, 20)
+
         :param dim:
             The dimension along which to expand for ``indices=None``, or ``indices.ndimension() == 2``.
         :param indices:
