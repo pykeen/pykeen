@@ -10,7 +10,7 @@ e.g. :class:`pykeen.models.DistMult`
 
     f(h, r, t) = <h, r, t>
 
-where :math:`h,r,t \in \mathbb{R}^d` and $<h,r,t>$ is the bilinear product.
+where :math:`h,r,t \in \mathbb{R}^d` and $<h,r,t>$ is the tensor product.
 
 .. [ali2020b] Ali, M., *et al.* (2020) `PyKEEN 1.0: A Python Library for Training and
    Evaluating Knowledge Graph Embeddings <https://arxiv.org/abs/2007.14175>`_ *arXiv*, 2007.14175.
