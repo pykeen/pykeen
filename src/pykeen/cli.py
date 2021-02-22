@@ -94,21 +94,31 @@ def _help_models(tablefmt: str, link_fmt: Optional[str] = None):
 
 def _get_model_lines(tablefmt: str, link_fmt: Optional[str] = None):
     for _, model in sorted(models_dict.items()):
-        line = str(model.__doc__.splitlines()[0])
-        l, r = line.find('['), line.find(']')
-        if tablefmt == 'rst':
-            yield model.__name__, f':class:`pykeen.models.{model.__name__}`', line[l: r + 2]
-        elif tablefmt == 'github':
-            author, year = line[1 + l: r - 4], line[r - 4: r]
-            reference = f'pykeen.models.{model.__name__}'
+        reference = f'pykeen.models.{model.__name__}'
+        docdata = getattr(model, '__docdata__', None)
+        if docdata is not None:
             if link_fmt:
                 reference = f'[`{reference}`]({link_fmt.format(reference)})'
             else:
                 reference = f'`{reference}`'
-            yield model.__name__, reference, f'{author.capitalize()} *et al.*, {year}'
+            citation = docdata['citation']
+            citation_str = f"[{citation['author']} *et al.*, {citation['year']}]({citation['link']})"
+            yield model.__name__, reference, citation_str
         else:
-            author, year = line[1 + l: r - 4], line[r - 4: r]
-            yield model.__name__, f'{author.capitalize()}, {year}'
+            line = str(model.__doc__.splitlines()[0])
+            l, r = line.find('['), line.find(']')
+            if tablefmt == 'rst':
+                yield model.__name__, f':class:`{reference}`', line[l: r + 2]
+            elif tablefmt == 'github':
+                author, year = line[1 + l: r - 4], line[r - 4: r]
+                if link_fmt:
+                    reference = f'[`{reference}`]({link_fmt.format(reference)})'
+                else:
+                    reference = f'`{reference}`'
+                yield model.__name__, reference, f'{author.capitalize()} *et al.*, {year}'
+            else:
+                author, year = line[1 + l: r - 4], line[r - 4: r]
+                yield model.__name__, f'{author.capitalize()}, {year}'
 
 
 @ls.command()
@@ -128,10 +138,10 @@ def datasets(tablefmt: str):
 
 
 def _help_datasets(tablefmt: str, link_fmt: Optional[str] = None):
-    lines = _get_lines(datasets_dict, tablefmt, 'datasets', link_fmt)
+    lines = _get_dataset_lines(tablefmt=tablefmt, link_fmt=link_fmt)
     return tabulate(
         lines,
-        headers=['Name', 'Description'] if tablefmt == 'plain' else ['Name', 'Reference', 'Description'],
+        headers=['Name', 'Documentation', 'Citation', 'Entities', 'Relations', 'Triples'],
         tablefmt=tablefmt,
     )
 
@@ -363,6 +373,51 @@ def _get_lines(d, tablefmt, submodule, link_fmt: Optional[str] = None):
             yield name, reference, doc
         else:
             yield name, value.__doc__.splitlines()[0]
+
+
+def _get_dataset_lines(tablefmt, link_fmt: Optional[str] = None):
+    for name, value in sorted(datasets_dict.items()):
+        reference = f'pykeen.datasets.{value.__name__}'
+        if tablefmt == 'rst':
+            reference = f':class:`{reference}`'
+        elif link_fmt is not None:
+            reference = f'[`{reference}`]({link_fmt.format(reference)})'
+        else:
+            reference = f'`{reference}`'
+
+        try:
+            docdata = value.__docdata__
+        except AttributeError:
+            yield name, reference, '', '', '', ''
+            continue
+
+        name = docdata['name']
+        statistics = docdata['statistics']
+        entities = statistics['entities']
+        relations = statistics['relations']
+        triples = statistics['triples']
+
+        citation_str = ''
+        citation = docdata.get('citation')
+        if citation is not None:
+            author = citation and citation.get('author')
+            year = citation and citation.get('year')
+            link = citation and citation.get('link')
+            github = citation and citation.get('github')
+            if author and year and link:
+                _citation_txt = f'{author.capitalize()} *et al*., {year}'
+                citation_str = _link(_citation_txt, link, tablefmt)
+            elif github:
+                link = f'https://github.com/{github}'
+                citation_str = _link(github if tablefmt == 'rst' else f'`{github}`', link, tablefmt)
+        yield name, reference, citation_str, entities, relations, triples
+
+
+def _link(text: str, link: str, fmt: str) -> str:
+    if fmt == 'rst':
+        return f'`{text} <{link}>`_'
+    else:
+        return f'[{text}]({link})'
 
 
 @main.command()

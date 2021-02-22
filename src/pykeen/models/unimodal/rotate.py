@@ -44,6 +44,12 @@ class RotatE(EntityRelationEmbeddingModel):
 
        - Authors' `implementation of RotatE
          <https://github.com/DeepGraphLearning/KnowledgeGraphEmbedding/blob/master/codes/model.py#L200-L228>`_
+    ---
+    citation:
+        author: Sun
+        year: 2019
+        link: https://arxiv.org/abs/1902.10197v1
+        github: DeepGraphLearning/KnowledgeGraphEmbedding
     """
 
     #: The default strategy for optimizing the model's hyper-parameters

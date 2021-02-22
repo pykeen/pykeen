@@ -42,6 +42,12 @@ class SimplE(EntityRelationEmbeddingModel):
 
        - Official implementation: https://github.com/Mehran-k/SimplE
        - Improved implementation in pytorch: https://github.com/baharefatemi/SimplE
+    ---
+    citation:
+        author: Kazemi
+        year: 2018
+        link: https://papers.nips.cc/paper/7682-simple-embedding-for-link-prediction-in-knowledge-graphs
+        github: Mehran-k/SimplE
     """
 
     #: The default strategy for optimizing the model's hyper-parameters

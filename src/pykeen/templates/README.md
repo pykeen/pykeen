@@ -98,6 +98,10 @@ in ``pykeen``.
 
 ### Datasets ({{ n_datasets }})
 
+The citation for each dataset corresponds to either the paper describing the dataset,
+the first paper published using the dataset with knowledge graph embedding models,
+or the URL for the dataset if neither of the first two are available.
+
 {{ datasets }}
 
 ### Models ({{ n_models }})
@@ -202,6 +206,7 @@ See [CONTRIBUTING.md](/CONTRIBUTING.md) for more information on getting involved
 This project has been supported by several organizations (in alphabetical order):
 
 - [Bayer](https://www.bayer.com/)
+- [CoronaWhy](https://www.coronawhy.org/)
 - [Enveda Biosciences](https://www.envedabio.com/)
 - [Fraunhofer Institute for Algorithms and Scientific Computing](https://www.scai.fraunhofer.de)
 - [Fraunhofer Institute for Intelligent Analysis and Information Systems](https://www.iais.fraunhofer.de)

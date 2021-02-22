@@ -7,7 +7,10 @@ Run with ``python -m pykeen.datasets.ogb``
 
 from typing import ClassVar, Optional
 
+import click
 import numpy as np
+from docdata import parse_docdata
+from more_click import verbose_option
 
 from .base import LazyDataset
 from ..triples import TriplesFactory
@@ -78,24 +81,61 @@ class OGBLoader(LazyDataset):
         )
 
 
+@parse_docdata
 class OGBBioKG(OGBLoader):
     """The OGB BioKG dataset.
 
     .. seealso:: https://ogb.stanford.edu/docs/linkprop/#ogbl-biokg
+
+    ---
+    name: OGB BioKG
+    citation:
+        author: Hu
+        year: 2020
+        link: https://arxiv.org/abs/2005.00687
+    statistics:
+        entities: 45085
+        relations: 51
+        training: 4762677
+        testing: 162870
+        validation: 162886
+        triples: 5088433
     """
 
     name = 'ogbl-biokg'
 
 
+@parse_docdata
 class OGBWikiKG(OGBLoader):
     """The OGB WikiKG dataset.
 
     .. seealso:: https://ogb.stanford.edu/docs/linkprop/#ogbl-wikikg
+
+    ---
+    name: OGB WikiKG
+    citation:
+        author: Hu
+        year: 2020
+        link: https://arxiv.org/abs/2005.00687
+        github: snap-stanford/ogb
+    statistics:
+        entities: 2500604
+        relations: 535
+        training: 16109182
+        testing: 598543
+        validation: 429456
+        triples: 17137181
     """
 
     name = 'ogbl-wikikg'
 
 
-if __name__ == '__main__':
+@click.command()
+@verbose_option
+def _main():
     for _cls in [OGBBioKG, OGBWikiKG]:
         _cls().summarize()
+
+
+if __name__ == '__main__':
+    _main()

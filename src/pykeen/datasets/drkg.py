@@ -5,7 +5,9 @@
 Get a summary with ``python -m pykeen.datasets.drkg``
 """
 
-import logging
+import click
+from docdata import parse_docdata
+from more_click import verbose_option
 
 from .base import TarFileSingleDataset
 from ..typing import TorchRandomHint
@@ -17,13 +19,20 @@ __all__ = [
 URL = 'https://dgl-data.s3-us-west-2.amazonaws.com/dataset/DRKG/drkg.tar.gz'
 
 
+@parse_docdata
 class DRKG(TarFileSingleDataset):
     """The DRKG dataset.
 
-    This is a medium-sized biological knowledge graph including 97,238 entities, 13 entity types,
-    107 relations, and 5,874,261 triples.
-
-    .. seealso:: https://github.com/gnn4dr/DRKG
+    ---
+    name: Drug Repositioning Knowledge Graph
+    citation:
+        github: gnn4dr/DRKG
+    single: true
+    statistics:
+        entities: 97238
+        types: 13
+        relations: 107
+        triples: 5874257
     """
 
     def __init__(
@@ -47,11 +56,12 @@ class DRKG(TarFileSingleDataset):
         )
 
 
+@click.command()
+@verbose_option
 def _main():
-    ds = DRKG(eager=True)
+    ds = DRKG()
     ds.summarize()
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO)
     _main()

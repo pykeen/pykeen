@@ -40,6 +40,11 @@ class StructuredEmbedding(EntityEmbeddingModel):
 
     By employing different projections for the embeddings of the head and tail entities, SE explicitly differentiates
     the role of an entity as either the subject or object.
+    ---
+    citation:
+        author: Bordes
+        year: 2011
+        link: http://www.aaai.org/ocs/index.php/AAAI/AAAI11/paper/download/3659/3898
     """
 
     #: The default strategy for optimizing the model's hyper-parameters

@@ -440,6 +440,11 @@ class RGCN(_OldAbstractModel):
          <https://github.com/rusty1s/pytorch_geometric/blob/1.3.2/examples/rgcn.py>`_
        - `DGL's implementation of R-GCN
          <https://github.com/dmlc/dgl/tree/v0.4.0/examples/pytorch/rgcn>`_
+    ---
+    citation:
+        author: Schlichtkrull
+        year: 2018
+        link: https://arxiv.org/pdf/1703.06103
     """
 
     #: Interaction model used as decoder

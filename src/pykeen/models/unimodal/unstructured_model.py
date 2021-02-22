@@ -34,6 +34,11 @@ class UnstructuredModel(ERModel):
 
         In UM, neither the relations nor the directionality are considered, so it can't distinguish between them.
         However, it may serve as a baseline for comparison against relation-aware models.
+    ---
+    citation:
+        author: Bordes
+        year: 2014
+        link: https://link.springer.com/content/pdf/10.1007%2Fs10994-013-5363-6.pdf
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
