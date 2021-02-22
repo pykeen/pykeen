@@ -259,8 +259,6 @@ def prepare_ablation_from_config(
         stopper=stopper,
         stopper_kwargs=stopper_kwargs,
         evaluator=evaluator,
-        optuna_config=optuna_config,
-        ablation_config=ablation_config,
         evaluator_kwargs=evaluator_kwargs,
         evaluation_kwargs=evaluation_kwargs,
         metadata=metadata,
@@ -339,6 +337,18 @@ def prepare_ablation(  # noqa:C901
         model_to_model_kwargs = {}
     if not model_to_model_kwargs_ranges:
         model_to_model_kwargs_ranges = {}
+    if not model_to_loss_to_loss_kwargs:
+        model_to_loss_to_loss_kwargs = {}
+    if not model_to_loss_to_loss_kwargs_ranges:
+        model_to_loss_to_loss_kwargs_ranges = {}
+    if not model_to_optimizer_to_optimizer_kwargs:
+        model_to_optimizer_to_optimizer_kwargs = {}
+    if not model_to_optimizer_to_optimizer_kwargs_ranges:
+        model_to_optimizer_to_optimizer_kwargs_ranges = {}
+    if not model_to_regularizer_to_regularizer_kwargs:
+        model_to_regularizer_to_regularizer_kwargs = {}
+    if not model_to_regularizer_to_regularizer_kwargs_ranges:
+        model_to_regularizer_to_regularizer_kwargs_ranges = {}
     if not model_to_trainer_to_training_kwargs:
         model_to_trainer_to_training_kwargs = {}
     if not model_to_trainer_to_training_kwargs_ranges:
@@ -385,9 +395,12 @@ def prepare_ablation(  # noqa:C901
         #    random_seed=random_non_negative_int(),
         # ),
 
-        def _set_arguments(config: Optional[Mapping3D], value: str) -> None:
+        def _set_arguments(config: Optional[Mapping3D], key: str, value: str) -> None:
             """Set argument and its values."""
-            hpo_config.update(config.get(model, {}).get(value, {}))
+            d = {}
+            d[key] = config.get(model, {}).get(value, {})
+            if d[key]:
+                hpo_config.update(d)
 
         # Add dataset to current_pipeline
         if isinstance(dataset, str):
@@ -410,30 +423,53 @@ def prepare_ablation(  # noqa:C901
         logger.info(f"Model: {model}")
 
         # Add loss function to current_pipeline
-        _set_arguments(config=model_to_loss_to_loss_kwargs, value=loss)
-        _set_arguments(config=model_to_loss_to_loss_kwargs_ranges, value=loss)
+        hpo_config['loss'] = loss
+        _set_arguments(config=model_to_loss_to_loss_kwargs, key='loss_kwargs', value=loss)
+        _set_arguments(config=model_to_loss_to_loss_kwargs_ranges, key='loss_kwargs_ranges', value=loss)
         logger.info(f"Loss functions: {loss}")
 
         # Add regularizer to current_pipeline
-        _set_arguments(config=model_to_regularizer_to_regularizer_kwargs, value=regularizer)
-        _set_arguments(config=model_to_regularizer_to_regularizer_kwargs_ranges, value=regularizer)
+        hpo_config['regularizer'] = regularizer
+        _set_arguments(config=model_to_regularizer_to_regularizer_kwargs, key='regularizer_kwargs', value=regularizer)
+        _set_arguments(
+            config=model_to_regularizer_to_regularizer_kwargs_ranges,
+            key='regularizer_kwargs_ranges',
+            value=regularizer,
+        )
         logger.info(f"Regularizer: {regularizer}")
 
         # Add optimizer to current_pipeline
-        _set_arguments(config=model_to_optimizer_to_optimizer_kwargs, value=optimizer)
-        _set_arguments(config=model_to_optimizer_to_optimizer_kwargs_ranges, value=optimizer)
+        hpo_config['optimizer'] = optimizer
+        _set_arguments(config=model_to_optimizer_to_optimizer_kwargs, key='optimizer_kwargs', value=optimizer)
+        _set_arguments(
+            config=model_to_optimizer_to_optimizer_kwargs_ranges,
+            key='optimizer_kwargs_ranges',
+            value=optimizer,
+        )
         logger.info(f"Optimizer: {optimizer}")
 
         # Add training approach to current_pipeline
         hpo_config['training_loop'] = training_loop
-        _set_arguments(config=model_to_trainer_to_training_kwargs, value=training_loop)
-        _set_arguments(config=model_to_trainer_to_training_kwargs_ranges, value=training_loop)
+        _set_arguments(config=model_to_trainer_to_training_kwargs, key='training_kwargs', value=training_loop)
+        _set_arguments(
+            config=model_to_trainer_to_training_kwargs_ranges,
+            key='training_kwargs_ranges',
+            value=training_loop,
+        )
         logger.info(f"Training loop: {training_loop}")
 
         if normalize_string(training_loop, suffix=_TRAINING_LOOP_SUFFIX) == 'slcwa':
             negative_sampler = negative_sampler or 'basic'  # default to basic
-            _set_arguments(config=model_to_negative_sampler_to_negative_sampler_kwargs, value=negative_sampler)
-            _set_arguments(config=model_to_negative_sampler_to_negative_sampler_kwargs_ranges, value=negative_sampler)
+            _set_arguments(
+                config=model_to_negative_sampler_to_negative_sampler_kwargs,
+                key='negative_sampler_kwargs',
+                value=negative_sampler,
+            )
+            _set_arguments(
+                config=model_to_negative_sampler_to_negative_sampler_kwargs_ranges,
+                key='negative_sampler_kwargs_ranges',
+                value=negative_sampler,
+            )
             logger.info(f"Negative sampler: {negative_sampler}")
 
         # Add evaluation
