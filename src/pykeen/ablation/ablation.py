@@ -207,60 +207,9 @@ def prepare_ablation_from_config(
     optuna_config = config['optuna']
     ablation_config = config['ablation']
 
-    evaluator = ablation_config['evaluator']
-    evaluator_kwargs = ablation_config['evaluator_kwargs']
-    evaluation_kwargs = ablation_config['evaluation_kwargs']
-
-    datasets = ablation_config['datasets']
-    create_inverse_triples = ablation_config['create_inverse_triples']
-
-    models = ablation_config['models']
-    model_to_model_kwargs = ablation_config.get('model_kwargs')
-    model_to_model_kwargs_ranges = ablation_config.get('model_kwargs_ranges')
-
-    losses = ablation_config['loss_functions'] if 'loss_functions' in ablation_config else ablation_config['losses']
-    model_to_loss_to_loss_kwargs = ablation_config.get('loss_kwargs')
-    model_to_loss_to_loss_kwargs_ranges = ablation_config.get('loss_kwargs_ranges')
-
-    regularizers = ablation_config.get('regularizers')
-    model_to_regularizer_to_regularizer_kwargs = ablation_config.get('regularizer_kwargs')
-    model_to_regularizer_to_regularizer_kwargs_ranges = ablation_config.get('regularizer_kwargs_ranges')
-
-    optimizers = ablation_config['optimizers']
-    model_to_optimizer_to_optimizer_kwargs = ablation_config.get('optimizer_kwargs')
-    model_to_optimizer_to_optimizer_kwargs_ranges = ablation_config.get('optimizer_kwargs_ranges')
-
-    training_loops = ablation_config['training_loops']
-    model_to_trainer_to_training_kwargs = ablation_config.get('training_kwargs')
-    model_to_trainer_to_training_kwargs_ranges = ablation_config.get('training_kwargs_ranges')
-
-    stopper = ablation_config.get('stopper')
-    stopper_kwargs = ablation_config.get('stopper_kwargs')
-
-    # TODO: Pass **ablation_config and **optuna_config
     return prepare_ablation(
-        datasets=datasets,
-        create_inverse_triples=create_inverse_triples,
-        models=models,
-        model_to_model_kwargs=model_to_model_kwargs,
-        model_to_model_kwargs_ranges=model_to_model_kwargs_ranges,
-        losses=losses,
-        regularizers=regularizers,
-        optimizers=optimizers,
-        training_loops=training_loops,
-        model_to_trainer_to_training_kwargs=model_to_trainer_to_training_kwargs,
-        model_to_trainer_to_training_kwargs_ranges=model_to_trainer_to_training_kwargs_ranges,
-        model_to_loss_to_loss_kwargs=model_to_loss_to_loss_kwargs,
-        model_to_loss_to_loss_kwargs_ranges=model_to_loss_to_loss_kwargs_ranges,
-        model_to_optimizer_to_optimizer_kwargs=model_to_optimizer_to_optimizer_kwargs,
-        model_to_optimizer_to_optimizer_kwargs_ranges=model_to_optimizer_to_optimizer_kwargs_ranges,
-        model_to_regularizer_to_regularizer_kwargs=model_to_regularizer_to_regularizer_kwargs,
-        model_to_regularizer_to_regularizer_kwargs_ranges=model_to_regularizer_to_regularizer_kwargs_ranges,
-        stopper=stopper,
-        stopper_kwargs=stopper_kwargs,
-        evaluator=evaluator,
-        evaluator_kwargs=evaluator_kwargs,
-        evaluation_kwargs=evaluation_kwargs,
+        **ablation_config,
+        **optuna_config,
         metadata=metadata,
         directory=directory,
         save_artifacts=save_artifacts,
@@ -292,10 +241,10 @@ def prepare_ablation(  # noqa:C901
     evaluator: Optional[str] = None,
     n_trials: Optional[int] = 5,
     timeout: Optional[int] = 3600,
-    metric_to_optimize: Optional[str] = 'hits@10',
+    metric: Optional[str] = 'hits@10',
     direction: Optional[str] = 'maximize',
-    hpo_sampler: Optional[str] = 'random',
-    hpo_pruner: Optional[str] = 'nop',
+    sampler: Optional[str] = 'random',
+    pruner: Optional[str] = 'nop',
     evaluator_kwargs: Optional[Mapping[str, Any]] = None,
     evaluation_kwargs: Optional[Mapping[str, Any]] = None,
     stopper: Optional[str] = 'NopStopper',
@@ -373,10 +322,10 @@ def prepare_ablation(  # noqa:C901
         _experiment_optuna_config = {
             'n_trials': n_trials,
             'timeout': timeout,
-            'metric': metric_to_optimize,
+            'metric': metric,
             'direction': direction,
-            'sampler': hpo_sampler,
-            'pruner': hpo_pruner,
+            'sampler': sampler,
+            'pruner': pruner,
         }
         _experiment_optuna_config['storage'] = f'sqlite:///{output_directory}/optuna_results.db'
         if save_artifacts:
