@@ -116,7 +116,8 @@
     "stopper_kwargs": {
       "frequency": 3,
       "patience": 2,
-      "relative_delta": 0.002
+      "relative_delta": 0.002,
+      "metric": "hits@10"
     }
   },
   "optuna": {
