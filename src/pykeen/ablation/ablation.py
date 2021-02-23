@@ -27,32 +27,48 @@ Mapping2D = Mapping[str, Mapping[str, Any]]
 Mapping3D = Mapping[str, Mapping[str, Mapping[str, Any]]]
 
 
+# TODO: Fix docstring
 def ablation_pipeline(
     datasets: Union[str, List[str]],
     models: Union[str, List[str]],
     losses: Union[str, List[str]],
     optimizers: Union[str, List[str]],
     training_loops: Union[str, List[str]],
-    *,
     create_inverse_triples: Union[bool, List[bool]] = False,
     regularizers: Union[None, str, List[str]] = None,
     model_to_model_kwargs: Optional[Mapping2D] = None,
     model_to_model_kwargs_ranges: Optional[Mapping2D] = None,
+    model_to_loss_to_loss_kwargs: Optional[Mapping3D] = None,
+    model_to_loss_to_loss_kwargs_ranges: Optional[Mapping3D] = None,
+    model_to_optimizer_to_optimizer_kwargs: Optional[Mapping3D] = None,
+    model_to_optimizer_to_optimizer_kwargs_ranges: Optional[Mapping3D] = None,
+    negative_sampler: Optional[str] = None,
+    model_to_negative_sampler_to_negative_sampler_kwargs_ranges: Optional[Mapping3D] = None,
+    model_to_negative_sampler_to_negative_sampler_kwargs: Optional[Mapping3D] = None,
     model_to_trainer_to_training_kwargs: Optional[Mapping3D] = None,
     model_to_trainer_to_training_kwargs_ranges: Optional[Mapping3D] = None,
-    ablation_config: Optional[Mapping3D] = None,
+    model_to_regularizer_to_regularizer_kwargs: Optional[Mapping3D] = None,
+    model_to_regularizer_to_regularizer_kwargs_ranges: Optional[Mapping3D] = None,
     evaluator: Optional[str] = None,
-    optuna_config: Optional[Mapping[str, Any]] = None,
+    n_trials: Optional[int] = 5,
+    timeout: Optional[int] = 3600,
+    metric: Optional[str] = 'hits@10',
+    direction: Optional[str] = 'maximize',
+    sampler: Optional[str] = 'random',
+    pruner: Optional[str] = 'nop',
     evaluator_kwargs: Optional[Mapping[str, Any]] = None,
     evaluation_kwargs: Optional[Mapping[str, Any]] = None,
+    stopper: Optional[str] = 'NopStopper',
+    stopper_kwargs: Optional[Mapping[str, Any]] = None,
+    metadata: Optional[Mapping] = None,
     directory: Optional[str] = None,
-    dry_run: bool = False,
-    best_replicates: Optional[int] = None,
     save_artifacts: bool = True,
     move_to_cpu: bool = True,
+    dry_run: bool = False,
+    best_replicates: Optional[int] = None,
     discard_replicates: bool = False,
 ) -> None:
-    """Generate a set of HPO configurations.
+    """Runs ablation study.
 
     A sample file can be run with``pykeen experiment ablation tests/resources/hpo_complex_nations.json``.
 
@@ -92,29 +108,60 @@ def ablation_pipeline(
      We recommend to set this flag to 'True' to avoid unnecessary GPU usage.
     :param discard_replicates: Defines, whether the best model should be discarded after training and evaluation.
     """
-    datetime = time.strftime('%Y-%m-%d-%H-%M')
-    directory = os.path.join(directory, f'{datetime}_{uuid4()}')
+    directory = _create_path_with_id(directory=directory)
 
     directories = prepare_ablation(
         datasets=datasets,
-        create_inverse_triples=create_inverse_triples,
         models=models,
-        model_to_model_kwargs=model_to_model_kwargs,
-        model_to_model_kwargs_ranges=model_to_model_kwargs_ranges,
-        model_to_trainer_to_training_kwargs=model_to_trainer_to_training_kwargs,
-        model_to_trainer_to_training_kwargs_ranges=model_to_trainer_to_training_kwargs_ranges,
         losses=losses,
-        regularizers=regularizers,
         optimizers=optimizers,
         training_loops=training_loops,
+        create_inverse_triples=create_inverse_triples,
+        regularizers=regularizers,
+        model_to_model_kwargs=model_to_model_kwargs,
+        model_to_model_kwargs_ranges=model_to_model_kwargs_ranges,
+        model_to_loss_to_loss_kwargs=model_to_loss_to_loss_kwargs,
+        model_to_loss_to_loss_kwargs_ranges=model_to_loss_to_loss_kwargs_ranges,
+        model_to_optimizer_to_optimizer_kwargs=model_to_optimizer_to_optimizer_kwargs,
+        model_to_optimizer_to_optimizer_kwargs_ranges=model_to_optimizer_to_optimizer_kwargs_ranges,
+        negative_sampler=negative_sampler,
+        model_to_negative_sampler_to_negative_sampler_kwargs=model_to_negative_sampler_to_negative_sampler_kwargs,
+        model_to_negative_sampler_to_negative_sampler_kwargs_ranges=model_to_negative_sampler_to_negative_sampler_kwargs_ranges,
+        model_to_trainer_to_training_kwargs=model_to_trainer_to_training_kwargs,
+        model_to_trainer_to_training_kwargs_ranges=model_to_trainer_to_training_kwargs_ranges,
+        model_to_regularizer_to_regularizer_kwargs=model_to_regularizer_to_regularizer_kwargs,
+        model_to_regularizer_to_regularizer_kwargs_ranges=model_to_regularizer_to_regularizer_kwargs_ranges,
         evaluator=evaluator,
-        optuna_config=optuna_config,
-        ablation_config=ablation_config,
+        n_trials=n_trials,
+        timeout=timeout,
+        metric=metric,
+        direction=direction,
+        sampler=sampler,
+        pruner=pruner,
         evaluator_kwargs=evaluator_kwargs,
         evaluation_kwargs=evaluation_kwargs,
+        stopper=stopper,
+        stopper_kwargs=stopper_kwargs,
+        metadata=metadata,
         directory=directory,
         save_artifacts=save_artifacts,
     )
+
+    _run_ablation_experiments(
+        directories=directories,
+        best_replicates=best_replicates,
+        dry_run=dry_run,
+        move_to_cpu=move_to_cpu,
+        discard_replicates=discard_replicates
+    )
+
+def _run_ablation_experiments(
+    directories: List[Tuple[str, str]],
+    best_replicates: Optional[int] = None,
+    dry_run: bool = False,
+    move_to_cpu: bool = True,
+    discard_replicates: bool = False,
+) -> None:
     if dry_run:
         return
 
@@ -137,6 +184,9 @@ def ablation_pipeline(
             directory=best_pipeline_dir,
         )
 
+def _create_path_with_id(directory: Optional[str] = None):
+    datetime = time.strftime('%Y-%m-%d-%H-%M')
+    return os.path.join(directory, f'{datetime}_{uuid4()}')
 
 def ablation_pipeline_from_config(
     config: Mapping[str, Any],
@@ -222,7 +272,6 @@ def prepare_ablation(  # noqa:C901
     losses: Union[str, List[str]],
     optimizers: Union[str, List[str]],
     training_loops: Union[str, List[str]],
-    *,
     create_inverse_triples: Union[bool, List[bool]] = False,
     regularizers: Union[None, str, List[str]] = None,
     model_to_model_kwargs: Optional[Mapping2D] = None,
@@ -232,8 +281,8 @@ def prepare_ablation(  # noqa:C901
     model_to_optimizer_to_optimizer_kwargs: Optional[Mapping3D] = None,
     model_to_optimizer_to_optimizer_kwargs_ranges: Optional[Mapping3D] = None,
     negative_sampler: Optional[str] = None,
-    model_to_negative_sampler_to_negative_sampler_kwargs_ranges: Optional[Mapping3D] = None,
     model_to_negative_sampler_to_negative_sampler_kwargs: Optional[Mapping3D] = None,
+    model_to_negative_sampler_to_negative_sampler_kwargs_ranges: Optional[Mapping3D] = None,
     model_to_trainer_to_training_kwargs: Optional[Mapping3D] = None,
     model_to_trainer_to_training_kwargs_ranges: Optional[Mapping3D] = None,
     model_to_regularizer_to_regularizer_kwargs: Optional[Mapping3D] = None,
