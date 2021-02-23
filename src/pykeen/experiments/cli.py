@@ -2,7 +2,6 @@
 
 """Run landmark experiments."""
 
-import json
 import logging
 import os
 import shutil
@@ -197,7 +196,8 @@ def ablation(
 
     A sample file can be run with ``pykeen experiment ablation tests/resources/hpo_complex_nations.json``.
     """
-
+    datetime = time.strftime('%Y-%m-%d-%H-%M')
+    directory = os.path.join(directory, f'{datetime}_{uuid4()}')
     directories = prepare_ablation_from_path(path=path, directory=directory, save_artifacts=save_artifacts)
 
     if dry_run:
