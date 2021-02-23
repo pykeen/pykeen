@@ -27,7 +27,6 @@ Mapping2D = Mapping[str, Mapping[str, Any]]
 Mapping3D = Mapping[str, Mapping[str, Mapping[str, Any]]]
 
 
-# TODO: Fix docstring
 def ablation_pipeline(
     datasets: Union[str, List[str]],
     models: Union[str, List[str]],
@@ -36,30 +35,30 @@ def ablation_pipeline(
     training_loops: Union[str, List[str]],
     create_inverse_triples: Union[bool, List[bool]] = False,
     regularizers: Union[None, str, List[str]] = None,
+    negative_sampler: Union[str, None] = None,
+    evaluator: Optional[str] = None,
+    stopper: Optional[str] = 'NopStopper',
     model_to_model_kwargs: Optional[Mapping2D] = None,
     model_to_model_kwargs_ranges: Optional[Mapping2D] = None,
     model_to_loss_to_loss_kwargs: Optional[Mapping3D] = None,
     model_to_loss_to_loss_kwargs_ranges: Optional[Mapping3D] = None,
     model_to_optimizer_to_optimizer_kwargs: Optional[Mapping3D] = None,
     model_to_optimizer_to_optimizer_kwargs_ranges: Optional[Mapping3D] = None,
-    negative_sampler: Optional[str] = None,
-    model_to_negative_sampler_to_negative_sampler_kwargs_ranges: Optional[Mapping3D] = None,
     model_to_negative_sampler_to_negative_sampler_kwargs: Optional[Mapping3D] = None,
+    model_to_negative_sampler_to_negative_sampler_kwargs_ranges: Optional[Mapping3D] = None,
     model_to_trainer_to_training_kwargs: Optional[Mapping3D] = None,
     model_to_trainer_to_training_kwargs_ranges: Optional[Mapping3D] = None,
     model_to_regularizer_to_regularizer_kwargs: Optional[Mapping3D] = None,
     model_to_regularizer_to_regularizer_kwargs_ranges: Optional[Mapping3D] = None,
-    evaluator: Optional[str] = None,
+    evaluator_kwargs: Optional[Mapping[str, Any]] = None,
+    evaluation_kwargs: Optional[Mapping[str, Any]] = None,
+    stopper_kwargs: Optional[Mapping[str, Any]] = None,
     n_trials: Optional[int] = 5,
     timeout: Optional[int] = 3600,
     metric: Optional[str] = 'hits@10',
     direction: Optional[str] = 'maximize',
     sampler: Optional[str] = 'random',
     pruner: Optional[str] = 'nop',
-    evaluator_kwargs: Optional[Mapping[str, Any]] = None,
-    evaluation_kwargs: Optional[Mapping[str, Any]] = None,
-    stopper: Optional[str] = 'NopStopper',
-    stopper_kwargs: Optional[Mapping[str, Any]] = None,
     metadata: Optional[Mapping] = None,
     directory: Optional[str] = None,
     save_artifacts: bool = True,
@@ -68,45 +67,68 @@ def ablation_pipeline(
     best_replicates: Optional[int] = None,
     discard_replicates: bool = False,
 ) -> None:
-    """Runs ablation study.
-
-    A sample file can be run with``pykeen experiment ablation tests/resources/hpo_complex_nations.json``.
-
-    :param datasets: A dataset name or list of dataset names
-    :param models: A model name or list of model names
-    :param losses: A loss function name or list of loss function names
-    :param optimizers: An optimizer name or list of optimizer names
-    :param training_loops: A training loop name or list of training loop names
-    :param create_inverse_triples: Either a boolean for a single entry or a list of booleans
+    """
+    Run ablation study.
+    :param datasets: A dataset name or list of dataset names.
+    :param models: A model name or list of model names.
+    :param losses: A loss function name or list of loss function names.
+    :param optimizers: An optimizer name or list of optimizer names.
+    :param training_loops: A training loop name or list of training loop names.
+    :param create_inverse_triples: Either a boolean for a single entry or a list of booleans.
     :param regularizers: A regularizer name, list of regularizer names, or None if no regularizer is desired.
-        Defaults to None.
-
+    :param negative_sampler: A negative sampler name, list of regularizer names, or None if no negative sampler
+    is desired. Negative sampling is used only in combination with the pykeen.training.sclwa training loop.
     :param evaluator: The name of the evaluator to be used. Defaults to rank-based evaluator.
-    :param evaluator_kwargs: The keyword arguments passed to the evaluator (in the pipeline)
-    :param evaluation_kwargs: The keyword arguments passed during evaluation (in the pipeline)
-
+    :param stopper: The name of the stopper to be used. Defaults to NopStopper which doesn't define a stopping criterion.
     :param model_to_model_kwargs: A mapping from model name to dictionaries of default keyword arguments for
-        the instantiation of that model
+    the instantiation of that model.
     :param model_to_model_kwargs_ranges: A mapping from model name to dictionaries of keyword argument
-        ranges for that model to be used in HPO.
+    ranges for that model to be used in HPO.
+    :param model_to_loss_to_loss_kwargs: A mapping from model name to a mapping of loss name to a mapping
+    of default keyword arguments for the instantiation of that loss function. This is useful because for some losses,
+    have hyper-parameters such as pykeen.losses.MarginRankingLoss
+    :param model_to_loss_to_loss_kwargs_ranges: A mapping from model name to a mapping of loss name
+    to a mapping of keyword argument ranges for that loss to be used in HPO.
+    :param model_to_optimizer_to_optimizer_kwargs: A mapping from model name to a mapping of optimizer name to a mapping
+    of default keyword arguments for the instantiation of that optimizer. This is useful because the optimizers,
+    have hyper-parameters such as the learning rate.
+    :param model_to_optimizer_to_optimizer_kwargs_ranges: A mapping from model name to a mapping of optimizer name
+    to a mapping of keyword argument ranges for that optimizer to be used in HPO.
+    :param model_to_regularizer_to_regularizer_kwargs: A mapping from model name to a mapping of regularizer name to a
+    mapping of default keyword arguments for the instantiation of that regularizer. This is useful because the
+    optimizers, have hyper-parameters such as the regularization weight.
+    :param model_to_regularizer_to_regularizer_kwargs_ranges: A mapping from model name to a mapping of regularizer name
+    to a mapping of keyword argument ranges for that regularizer to be used in HPO.
+    :param model_to_negative_sampler_to_negative_sampler_kwargs: A mapping from model name to a mapping of
+    negative sampler name to a mapping of default keyword arguments for the instantiation of that negative sampler.
+    This is useful because the negative samplers, have hyper-parameters such as the number of negatives that should
+    get generated for each positive training example.
+    :param model_to_negative_sampler_to_negative_sampler_kwargs_ranges: A mapping from model name to a mapping of
+    negative sampler name to a mapping of keyword argument ranges for that negative sampler to be used in HPO.
     :param model_to_trainer_to_training_kwargs: A mapping from model name to a mapping of trainer name to a mapping
-        of default keyword arguments for the instantiation of that trainer. This is useful becuase for some models,
-        you might want to set the number of epochs differently.
-    :param model_to_trainer_to_training_kwargs_ranges: A mapping from model name to a mapping of trainer name
-        to a mapping of keyword arguments for that trainer to be used in HPO.
-    :param ablation_config: Additional third-order and fourth-order ablation configuration for all other ablation
-        keys to models to either kwargs or kwarg ranges
-
-    :param optuna_config: Configuration passed to optuna for HPO over all ablation studies
+    of default keyword arguments for the training procedure. This is useful because you can set the hyper-parameters
+    such as the number of training epochs and the batch size.
+    :param model_to_trainer_to_training_kwargs_ranges:  A mapping from model name to a mapping of
+    trainer name to a mapping of keyword argument ranges for that trainer to be used in HPO.
+    :param evaluator_kwargs: The keyword arguments passed to the evaluator.
+    :param evaluation_kwargs: The keyword arguments passed during evaluation.
+    :param stopper_kwargs: The keyword arguments passed to the stopper.
+    :param n_trials: Number of HPO trials.
+    :param timeout: The time (seconds) after which the ablation study will be terminated.
+    :param metric: The metric to optimize during HPO.
+    :param direction: Defines, whether to 'maximize' or 'minimize' the metric during HPO.
+    :param sampler: The HPO sampler, it defaults to random search.
+    :param pruner: Defines approach for pruning trials. Per default no pruning is used, i.e., pruner is set to 'Nopruner'
+    :param metadata: A mapping of meta data arguments such as name of the ablation study.
     :param directory: The directory in which the experimental artifacts will be saved.
-    :param dry_run: Defines whether only the configurations for the single experiments should be created without
-     running them.
-    :param best_replicates: Defines how often the final model should be re-trained and evaluated based on the best
-     hyper-parameters enabling to measure the variance in performance.
     :param save_artifacts: Defines, whether each trained model sampled during HPO should be saved.
     :param move_to_cpu: Defines, whether a replicate of the best model should be moved to CPU.
-     We recommend to set this flag to 'True' to avoid unnecessary GPU usage.
+    :param dry_run: Defines whether only the configurations for the single experiments should be created without
+    running them.
+    :param best_replicates: Defines how often the final model should be re-trained and evaluated based on the best
+    hyper-parameters enabling to measure the variance in performance.
     :param discard_replicates: Defines, whether the best model should be discarded after training and evaluation.
+    :return:
     """
     directory = _create_path_with_id(directory=directory)
 
@@ -155,6 +177,7 @@ def ablation_pipeline(
         discard_replicates=discard_replicates
     )
 
+
 def _run_ablation_experiments(
     directories: List[Tuple[str, str]],
     best_replicates: Optional[int] = None,
@@ -184,9 +207,11 @@ def _run_ablation_experiments(
             directory=best_pipeline_dir,
         )
 
+
 def _create_path_with_id(directory: Optional[str] = None):
     datetime = time.strftime('%Y-%m-%d-%H-%M')
     return os.path.join(directory, f'{datetime}_{uuid4()}')
+
 
 def ablation_pipeline_from_config(
     config: Mapping[str, Any],
