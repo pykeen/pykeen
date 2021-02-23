@@ -67,8 +67,8 @@ def ablation_pipeline(
     best_replicates: Optional[int] = None,
     discard_replicates: bool = False,
 ) -> None:
-    """
-    Run ablation study.
+    """Run ablation study.
+
     :param datasets: A dataset name or list of dataset names.
     :param models: A model name or list of model names.
     :param losses: A loss function name or list of loss function names.
@@ -79,7 +79,8 @@ def ablation_pipeline(
     :param negative_sampler: A negative sampler name, list of regularizer names, or None if no negative sampler
     is desired. Negative sampling is used only in combination with the pykeen.training.sclwa training loop.
     :param evaluator: The name of the evaluator to be used. Defaults to rank-based evaluator.
-    :param stopper: The name of the stopper to be used. Defaults to NopStopper which doesn't define a stopping criterion.
+    :param stopper: The name of the stopper to be used. Defaults to NopStopper which doesn't define a
+    stopping criterion.
     :param model_to_model_kwargs: A mapping from model name to dictionaries of default keyword arguments for
     the instantiation of that model.
     :param model_to_model_kwargs_ranges: A mapping from model name to dictionaries of keyword argument
@@ -118,7 +119,8 @@ def ablation_pipeline(
     :param metric: The metric to optimize during HPO.
     :param direction: Defines, whether to 'maximize' or 'minimize' the metric during HPO.
     :param sampler: The HPO sampler, it defaults to random search.
-    :param pruner: Defines approach for pruning trials. Per default no pruning is used, i.e., pruner is set to 'Nopruner'
+    :param pruner: Defines approach for pruning trials. Per default no pruning is used, i.e., pruner is
+    set to 'Nopruner'.
     :param metadata: A mapping of meta data arguments such as name of the ablation study.
     :param directory: The directory in which the experimental artifacts will be saved.
     :param save_artifacts: Defines, whether each trained model sampled during HPO should be saved.
@@ -148,7 +150,7 @@ def ablation_pipeline(
         model_to_optimizer_to_optimizer_kwargs_ranges=model_to_optimizer_to_optimizer_kwargs_ranges,
         negative_sampler=negative_sampler,
         model_to_negative_sampler_to_negative_sampler_kwargs=model_to_negative_sampler_to_negative_sampler_kwargs,
-        model_to_negative_sampler_to_negative_sampler_kwargs_ranges=model_to_negative_sampler_to_negative_sampler_kwargs_ranges,
+        model_to_neg_sampler_to_neg_sampler_kwargs_ranges=model_to_negative_sampler_to_negative_sampler_kwargs_ranges,
         model_to_trainer_to_training_kwargs=model_to_trainer_to_training_kwargs,
         model_to_trainer_to_training_kwargs_ranges=model_to_trainer_to_training_kwargs_ranges,
         model_to_regularizer_to_regularizer_kwargs=model_to_regularizer_to_regularizer_kwargs,
@@ -174,7 +176,7 @@ def ablation_pipeline(
         best_replicates=best_replicates,
         dry_run=dry_run,
         move_to_cpu=move_to_cpu,
-        discard_replicates=discard_replicates
+        discard_replicates=discard_replicates,
     )
 
 
@@ -185,6 +187,7 @@ def _run_ablation_experiments(
     move_to_cpu: bool = True,
     discard_replicates: bool = False,
 ) -> None:
+    """Run ablation experiments."""
     if dry_run:
         return
 
@@ -209,6 +212,7 @@ def _run_ablation_experiments(
 
 
 def _create_path_with_id(directory: Optional[str] = None):
+    """Add unique id to path."""
     datetime = time.strftime('%Y-%m-%d-%H-%M')
     return os.path.join(directory, f'{datetime}_{uuid4()}')
 
@@ -307,7 +311,7 @@ def prepare_ablation(  # noqa:C901
     model_to_optimizer_to_optimizer_kwargs_ranges: Optional[Mapping3D] = None,
     negative_sampler: Optional[str] = None,
     model_to_negative_sampler_to_negative_sampler_kwargs: Optional[Mapping3D] = None,
-    model_to_negative_sampler_to_negative_sampler_kwargs_ranges: Optional[Mapping3D] = None,
+    model_to_neg_sampler_to_neg_sampler_kwargs_ranges: Optional[Mapping3D] = None,
     model_to_trainer_to_training_kwargs: Optional[Mapping3D] = None,
     model_to_trainer_to_training_kwargs_ranges: Optional[Mapping3D] = None,
     model_to_regularizer_to_regularizer_kwargs: Optional[Mapping3D] = None,
@@ -489,7 +493,7 @@ def prepare_ablation(  # noqa:C901
                 value=negative_sampler,
             )
             _set_arguments(
-                config=model_to_negative_sampler_to_negative_sampler_kwargs_ranges,
+                config=model_to_neg_sampler_to_neg_sampler_kwargs_ranges,
                 key='negative_sampler_kwargs_ranges',
                 value=negative_sampler,
             )

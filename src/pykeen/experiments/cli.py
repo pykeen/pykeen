@@ -11,8 +11,9 @@ from typing import Optional
 from uuid import uuid4
 
 import click
+
 from pykeen.ablation import prepare_ablation_from_path
-from pykeen.ablation.ablation import _run_ablation_experiments, _create_path_with_id
+from pykeen.ablation.ablation import _create_path_with_id, _run_ablation_experiments
 
 __all__ = [
     'experiments',
@@ -205,7 +206,7 @@ def ablation(
         best_replicates=best_replicates,
         dry_run=dry_run,
         move_to_cpu=move_to_cpu,
-        discard_replicates=discard_replicates
+        discard_replicates=discard_replicates,
     )
 
 
