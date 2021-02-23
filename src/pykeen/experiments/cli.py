@@ -196,7 +196,7 @@ def ablation(
 ) -> None:
     """Generate a set of HPO configurations.
 
-    A sample file can be run with ``pykeen experiment ablation tests/resources/hpo_complex_nations.json``.
+    A sample file can be run with ``pykeen experiments ablation tests/resources/hpo_complex_nations.json``.
     """
     directory = _create_path_with_id(directory=directory)
     directories = prepare_ablation_from_path(path=path, directory=directory, save_artifacts=save_artifacts)
