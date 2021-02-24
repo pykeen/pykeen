@@ -20,6 +20,7 @@ from .base import (  # noqa:F401
 from .ckg import CKG
 from .codex import CoDExLarge, CoDExMedium, CoDExSmall
 from .conceptnet import ConceptNet
+from .countries import Countries
 from .cskg import CSKG
 from .dbpedia import DBpedia50
 from .drkg import DRKG
@@ -59,6 +60,7 @@ __all__ = [
     'CKG',
     'CSKG',
     'DBpedia50',
+    'Countries',
     'get_dataset',
     'has_dataset',
 ]
