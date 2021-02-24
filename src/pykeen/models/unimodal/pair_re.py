@@ -37,9 +37,9 @@ class PairRE(ERModel):
     def __init__(
         self,
         triples_factory: TriplesFactory,
-        embedding_dim: int = 50,
-        p: int = 1,
-        power_norm: bool = False,
+        embedding_dim: int = 200,
+        p: int = 2,
+        power_norm: bool = True,
         loss: Optional[Loss] = None,
         predict_with_sigmoid: bool = False,
         preferred_device: DeviceHint = None,
@@ -47,11 +47,14 @@ class PairRE(ERModel):
         entity_initializer: Hint[Initializer] = xavier_normal_,
         relation_initializer: Hint[Initializer] = xavier_normal_,
     ) -> None:
-        r"""Initialize UM.
+        r"""Initialize PairRE.
 
         :param embedding_dim: The entity embedding dimension $d$. Is usually $d \in [50, 300]$.
         :param p: The $l_p$ norm
         :param power_norm: Should the power norm be used?
+        
+        .. warning ::
+            Due to the lack of an official implementations, not all details are known.
         """
         super().__init__(
             triples_factory=triples_factory,
