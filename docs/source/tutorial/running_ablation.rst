@@ -1,6 +1,5 @@
 Running an Ablation Study
 =========================
-
 In PyKEEN, we can define an ablation study in a configuration file ('file_name.json') or within our own program.
 
 First, we show how to define an ablation study within a configuration file. In the following example, we define an
@@ -10,7 +9,7 @@ and the margin ranking loss, functions, and the effect of explicitly modeling in
 
 We start by adding metadata to our configuration file. This is helpful for a later retrospection.
 
-.. code-block:: python
+.. code-block:: javascript
 
     {
         "metadata": {
@@ -18,12 +17,10 @@ We start by adding metadata to our configuration file. This is helpful for a lat
         }
     }
 
-
-
 Now, we start with the actual definition of the ablation study, and define the minimal requirements, i.e.,
 the dataset(s), interaction model(s), the loss function(s), training approach(es), and the optimizer(s):
 
-.. code-block:: python
+.. code-block:: javascript
 
     {
         "metadata": {
@@ -37,12 +34,10 @@ the dataset(s), interaction model(s), the loss function(s), training approach(es
         }
     }
 
-
-
 However, we also want to measure the influence of explicitly modeling inverse relations. Therefore,
 we extend the ablation study accordingly:
 
-.. code-block:: python
+.. code-block:: javascript
 
     {
         "metadata": {
@@ -65,7 +60,7 @@ do this.
 To finalize, the ablation study, we recommend to define early stopping for you ablation study which can be done as
 follows:
 
-.. code-block:: python
+.. code-block:: javascript
 
     {
         "metadata": {
@@ -86,6 +81,7 @@ follows:
             }
         }
     }
+
 We define the early stopper using the key 'stopper', and through 'stopper_kwargs', we provide arguments to the
 early stopper. We define that the early stopper should evaluate every 5 epochs with a patience of 20 epochs on the
 validation set. In order to continue training, we expect the model to obtain an improvement > 0.2% in Hits@10.
