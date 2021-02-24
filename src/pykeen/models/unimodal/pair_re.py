@@ -2,16 +2,14 @@
 
 """Implementation of PairRE."""
 
-from typing import Any, ClassVar, Mapping, Optional
+from typing import Any, ClassVar, Mapping
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...losses import Loss
 from ...nn import EmbeddingSpecification
 from ...nn.init import xavier_normal_
 from ...nn.modules import PairREInteraction
-from ...triples import TriplesFactory
-from ...typing import DeviceHint, Hint, Initializer
+from ...typing import Hint, Initializer
 
 __all__ = [
     'PairRE',
@@ -36,32 +34,22 @@ class PairRE(ERModel):
 
     def __init__(
         self,
-        triples_factory: TriplesFactory,
         embedding_dim: int = 200,
         p: int = 2,
         power_norm: bool = True,
-        loss: Optional[Loss] = None,
-        predict_with_sigmoid: bool = False,
-        preferred_device: DeviceHint = None,
-        random_seed: Optional[int] = None,
         entity_initializer: Hint[Initializer] = xavier_normal_,
         relation_initializer: Hint[Initializer] = xavier_normal_,
+        **kwargs,
     ) -> None:
-        r"""Initialize PairRE.
+        r"""Initialize PairRE via the :class:`pykeen.nn.modules.PairREInteraction` interaction.
 
-        :param embedding_dim: The entity embedding dimension $d$. Is usually $d \in [50, 300]$.
-        :param p: The $l_p$ norm
-        :param power_norm: Should the power norm be used?
-        
-        .. warning ::
-            Due to the lack of an official implementations, not all details are known.
+        :param embedding_dim: The entity embedding dimension $d$. Defaults to 200. Is usually $d \in [50, 300]$.
+        :param p: The $l_p$ norm. Defaults to 2.
+        :param power_norm: Should the power norm be used? Defaults to true.
+
+        .. warning:: Due to the lack of an official implementations, not all details are known.
         """
         super().__init__(
-            triples_factory=triples_factory,
-            loss=loss,
-            predict_with_sigmoid=predict_with_sigmoid,
-            preferred_device=preferred_device,
-            random_seed=random_seed,
             interaction=PairREInteraction(p=p, power_norm=power_norm),
             entity_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
@@ -76,5 +64,6 @@ class PairRE(ERModel):
                     embedding_dim=embedding_dim,
                     initializer=relation_initializer,
                 ),
-            ]
+            ],
+            **kwargs,
         )
