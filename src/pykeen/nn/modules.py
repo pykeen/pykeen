@@ -1065,9 +1065,9 @@ class MuREInteraction(
         Tuple[FloatTensor, FloatTensor],
         Tuple[FloatTensor, FloatTensor],
         Tuple[FloatTensor, FloatTensor],
-    ]
+    ],
 ):
-    """A stateful module for the MuRE interaction function.
+    """A stateful module for the MuRE interaction function from [balazevic2019b]_.
 
     .. seealso:: :func:`pykeen.nn.functional.mure_interaction`
     """
