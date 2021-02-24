@@ -348,6 +348,17 @@ class UMTests(cases.TranslationalInteractionTests):
         return -(h - t).pow(p).sum()
 
 
+class SimplEInteractionTests(cases.InteractionTestCase):
+    """Tests for SimplE interaction function."""
+
+    cls = pykeen.nn.modules.SimplEInteraction
+
+    def _exp_score(self, h, r, t, h_inv, r_inv, t_inv, clamp) -> torch.FloatTensor:
+        h, r, t, h_inv, r_inv, t_inv = strip_dim(h, r, t, h_inv, r_inv, t_inv)
+        assert clamp is None
+        return 0.5 * distmult_interaction(h, r, t) + 0.5 * distmult_interaction(h_inv, r_inv, t_inv)
+
+
 class MuRETests(cases.TranslationalInteractionTests):
     """Tests for MuRE interaction function."""
 
@@ -365,17 +376,6 @@ class MuRETests(cases.TranslationalInteractionTests):
     def _additional_score_checks(self, scores):
         # Since MuRE has offsets, the scores do not need to negative
         pass
-
-
-class SimplEInteractionTests(cases.InteractionTestCase):
-    """Tests for SimplE interaction function."""
-
-    cls = pykeen.nn.modules.SimplEInteraction
-
-    def _exp_score(self, h, r, t, h_inv, r_inv, t_inv, clamp) -> torch.FloatTensor:
-        h, r, t, h_inv, r_inv, t_inv = strip_dim(h, r, t, h_inv, r_inv, t_inv)
-        assert clamp is None
-        return 0.5 * distmult_interaction(h, r, t) + 0.5 * distmult_interaction(h_inv, r_inv, t_inv)
 
 
 class InteractionTestsTestCase(cases.TestsTestCase[Interaction]):

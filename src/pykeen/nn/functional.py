@@ -909,29 +909,6 @@ def tucker_interaction(
     )
 
 
-def unstructured_model_interaction(
-    h: torch.FloatTensor,
-    t: torch.FloatTensor,
-    p: int,
-    power_norm: bool = True,
-) -> torch.FloatTensor:
-    """Evaluate the SimplE interaction function.
-
-    :param h: shape: (batch_size, num_heads, 1, 1, dim)
-        The head representations.
-    :param t: shape: (batch_size, 1, 1, num_tails, dim)
-        The tail representations.
-    :param p:
-        The parameter p for selecting the norm.
-    :param power_norm:
-        Whether to return the powered norm instead.
-
-    :return: shape: (batch_size, num_heads, num_relations, num_tails)
-        The scores.
-    """
-    return negative_norm(h - t, p=p, power_norm=power_norm)
-
-
 def mure_interaction(
     h: torch.FloatTensor,
     b_h: torch.FloatTensor,
@@ -974,3 +951,26 @@ def mure_interaction(
         p=p,
         power_norm=power_norm,
     ) + b_h + b_t
+
+
+def unstructured_model_interaction(
+    h: torch.FloatTensor,
+    t: torch.FloatTensor,
+    p: int,
+    power_norm: bool = True,
+) -> torch.FloatTensor:
+    """Evaluate the SimplE interaction function.
+
+    :param h: shape: (batch_size, num_heads, 1, 1, dim)
+        The head representations.
+    :param t: shape: (batch_size, 1, 1, num_tails, dim)
+        The tail representations.
+    :param p:
+        The parameter p for selecting the norm.
+    :param power_norm:
+        Whether to return the powered norm instead.
+
+    :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        The scores.
+    """
+    return negative_norm(h - t, p=p, power_norm=power_norm)
