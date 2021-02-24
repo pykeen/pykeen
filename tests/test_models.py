@@ -589,6 +589,7 @@ class TestTesting(unittest.TestCase):
         model_names = {
             cls.__name__
             for cls in pykeen.models.models.values()
+            if not issubclass(cls, ERModel)
         }
         model_names -= SKIP_MODULES
 
@@ -599,7 +600,7 @@ class TestTesting(unittest.TestCase):
                 isinstance(value, type)
                 and issubclass(value, cases.ModelTestCase)
                 and not name.startswith('_')
-                and not issubclass(value.model_cls, MultimodalModel)
+                and not issubclass(value.model_cls, (ERModel, MultimodalModel))
             )
         }
         tested_model_names -= SKIP_MODULES
