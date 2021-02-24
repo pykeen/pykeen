@@ -60,6 +60,7 @@ from .ermlpe import ERMLPE
 from .hole import HolE
 from .kg2e import KG2E
 from .ntn import NTN
+from .pair_re import PairRE
 from .proj_e import ProjE
 from .rescal import RESCAL
 from .rgcn import RGCN
@@ -83,6 +84,7 @@ __all__ = [
     'HolE',
     'KG2E',
     'NTN',
+    'PairRE',
     'ProjE',
     'RESCAL',
     'RGCN',
