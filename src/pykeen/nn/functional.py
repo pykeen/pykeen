@@ -36,6 +36,7 @@ __all__ = [
     'ermlpe_interaction',
     'hole_interaction',
     'kg2e_interaction',
+    'mure_interaction',
     'ntn_interaction',
     'proje_interaction',
     'rescal_interaction',
