@@ -968,7 +968,7 @@ def mure_interaction(
         The scores.
     """
     return negative_norm_of_sum(
-        r_mat.squeeze(dim=-2) @ h,
+        h @ r_mat.squeeze(dim=-3),
         r_vec,
         -t,
         p=p,
