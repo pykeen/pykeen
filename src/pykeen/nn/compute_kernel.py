@@ -144,7 +144,7 @@ def _complex_to_stacked(h, r, t):
     (r_re, r_im), (t_re, t_im) = [split_complex(x=x) for x in (r, t)]
     h = torch.cat([h, h], dim=-1)  # re im re im
     r = torch.cat([r_re, r_re, r_im, r_im], dim=-1)  # re re im im
-    t = torch.cat([t_re, t_im, t_im, t_re], dim=-1)  # re im im re
+    t = torch.cat([t_re, -t_im, -t_im, t_re], dim=-1)  # re im im re
     return h, r, t
 
 
