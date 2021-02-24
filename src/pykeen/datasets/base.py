@@ -15,8 +15,10 @@ from io import BytesIO
 from typing import Any, ClassVar, Dict, List, Mapping, Optional, Sequence, TextIO, Tuple, Union, cast
 from urllib.request import urlretrieve
 
+import click
 import pandas as pd
 import requests
+from more_click import verbose_option
 from pystow.utils import name_from_url
 from tabulate import tabulate
 
@@ -140,6 +142,18 @@ class Dataset:
             tf.split(ratios or [0.8, 0.1, 0.1]),
         )
         return EagerDataset(training=training, testing=testing, validation=validation)
+
+    @classmethod
+    def cli(cls) -> None:
+        """Run the CLI."""
+
+        @click.command(help=f'{cls.__name__} Dataset CLI.')
+        @verbose_option
+        def main():
+            """Run the dataset CLI."""
+            click.echo(cls().summary_str())
+
+        main()
 
     @classmethod
     def get_normalized_name(cls) -> str:
