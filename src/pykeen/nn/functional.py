@@ -37,6 +37,7 @@ __all__ = [
     'hole_interaction',
     'kg2e_interaction',
     'ntn_interaction',
+    'pair_re_interaction',
     'proje_interaction',
     'rescal_interaction',
     'rotate_interaction',
@@ -929,3 +930,40 @@ def unstructured_model_interaction(
         The scores.
     """
     return negative_norm(h - t, p=p, power_norm=power_norm)
+
+
+def pair_re_interaction(
+    h: torch.FloatTensor,
+    t: torch.FloatTensor,
+    r_h: torch.FloatTensor,
+    r_t: torch.FloatTensor,
+    p: Union[int, str] = 2,
+    power_norm: bool = True,
+) -> torch.FloatTensor:
+    r"""Evaluate the PairRE interaction function.
+
+    .. math ::
+        -\|h \odot r_h - t \odot r_t \|
+
+    :param h: shape: (batch_size, num_heads, 1, 1, dim)
+        The head representations.
+    :param t: shape: (batch_size, 1, 1, num_tails, dim)
+        The tail representations.
+    :param r_h: shape: (batch_size, 1, num_relations, 1, dim)
+        The head part of the relation representations.
+    :param r_t: shape: (batch_size, 1, num_relations, 1, dim)
+        The tail part of the relation representations.
+    :param p:
+        The parameter p for selecting the norm.
+    :param power_norm:
+        Whether to return the powered norm instead.
+
+    :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        The scores.
+    """
+    return negative_norm_of_sum(
+        h * r_h,
+        -t * r_t,
+        p=p,
+        power_norm=power_norm,
+    )

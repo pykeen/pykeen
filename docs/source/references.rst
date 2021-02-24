@@ -33,3 +33,6 @@ References
 
 .. [santurkar2018] Santurkar, S., *et al*. (2018). `How does batch normalization help optimization?
    <https://arxiv.org/abs/1805.11604>`_. Advances in Neural Information Processing Systems.
+
+.. [chao2020] Chao, L., He, J., Wang, T., & Chu, W. (2020). `PairRE: Knowledge Graph Embeddings
+   via Paired Relation Vectors <http://arxiv.org/abs/2011.03798>`_.
