@@ -348,6 +348,25 @@ class UMTests(cases.TranslationalInteractionTests):
         return -(h - t).pow(p).sum()
 
 
+class MuRETests(cases.TranslationalInteractionTests):
+    """Tests for MuRE interaction function."""
+
+    cls = pykeen.nn.modules.MuREInteraction
+
+    def _exp_score(self, h, b_h, r_vec, r_mat, t, b_t, p, power_norm) -> torch.FloatTensor:
+        s = (h @ r_mat) + r_vec - t
+        s = s.norm(p=p)
+        if power_norm:
+            s = s.pow(p)
+        s = -s
+        s = s + b_h + b_t
+        return s
+
+    def _additional_score_checks(self, scores):
+        # Since MuRE has offsets, the scores do not need to negative
+        pass
+
+
 class SimplEInteractionTests(cases.InteractionTestCase):
     """Tests for SimplE interaction function."""
 
