@@ -64,8 +64,14 @@ class PairRE(ERModel):
                 embedding_dim=embedding_dim,
                 initializer=entity_initializer,
             ),
-            relation_representations=EmbeddingSpecification(
-                embedding_dim=embedding_dim,
-                initializer=relation_initializer,
-            ),
+            relation_representations=[
+                EmbeddingSpecification(
+                    embedding_dim=embedding_dim,
+                    initializer=relation_initializer,
+                ),
+                EmbeddingSpecification(
+                    embedding_dim=embedding_dim,
+                    initializer=relation_initializer,
+                ),
+            ]
         )
