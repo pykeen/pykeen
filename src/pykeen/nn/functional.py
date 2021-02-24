@@ -949,7 +949,7 @@ def mure_interaction(
 
     :param h: shape: (batch_size, num_heads, 1, 1, dim)
         The head representations.
-    :param b_h: shape: (batch_size, num_heads, 1, 1, 1)
+    :param b_h: shape: (batch_size, num_heads, 1, 1)
         The head entity bias.
     :param r_vec: shape: (batch_size, 1, num_relations, 1, dim)
         The relation vector.
@@ -957,7 +957,7 @@ def mure_interaction(
         The relation matrix.
     :param t: shape: (batch_size, 1, 1, num_tails, dim)
         The tail representations.
-    :param b_t: shape: (batch_size, 1, 1, num_tails, 1)
+    :param b_t: shape: (batch_size, 1, 1, num_tails)
         The tail entity bias.
     :param p:
         The parameter p for selecting the norm, cf. torch.norm.
@@ -973,4 +973,4 @@ def mure_interaction(
         -t,
         p=p,
         power_norm=power_norm,
-    ) + b_h.squeeze(dim=-1) + b_t.squeeze(dim=-1)
+    ) + b_h + b_t
