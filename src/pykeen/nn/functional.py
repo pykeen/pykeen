@@ -941,7 +941,7 @@ def mure_interaction(
     p: Union[int, float, str] = 2,
     power_norm: bool = False,
 ) -> torch.FloatTensor:
-    r"""Evaluate the MurE interaction function.
+    r"""Evaluate the MuRE interaction function.
 
     .. math ::
         -\|Rh + r - t\| + b_h + b_t
