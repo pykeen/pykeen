@@ -55,7 +55,7 @@ class MuRE(ERModel):
                     initializer=entity_initializer,
                 ),
                 EmbeddingSpecification(
-                    embedding_dim=embedding_dim,
+                    embedding_dim=1,
                     initializer=entity_initializer,
                 ),
             ],
@@ -65,7 +65,7 @@ class MuRE(ERModel):
                     initializer=relation_initializer,
                 ),
                 EmbeddingSpecification(
-                    embedding_dim=embedding_dim,
+                    shape=(embedding_dim, embedding_dim),
                     initializer=relation_initializer,
                 ),
             ],
