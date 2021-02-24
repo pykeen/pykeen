@@ -34,6 +34,7 @@ __all__ = [
     'HolEInteraction',
     'KG2EInteraction',
     'NTNInteraction',
+    'PairREInteraction',
     'ProjEInteraction',
     'RESCALInteraction',
     'RotatEInteraction',
