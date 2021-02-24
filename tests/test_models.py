@@ -589,6 +589,7 @@ class TestTesting(unittest.TestCase):
         model_names = {
             cls.__name__
             for cls in pykeen.models.models.values()
+            if not issubclass(cls, ERModel)
         }
         model_names -= SKIP_MODULES
 
@@ -599,7 +600,7 @@ class TestTesting(unittest.TestCase):
                 isinstance(value, type)
                 and issubclass(value, cases.ModelTestCase)
                 and not name.startswith('_')
-                and not issubclass(value.model_cls, MultimodalModel)
+                and not issubclass(value.model_cls, (ERModel, MultimodalModel))
             )
         }
         tested_model_names -= SKIP_MODULES
@@ -650,16 +651,15 @@ class TestTesting(unittest.TestCase):
             'ERMLP',
             'ProjE',  # FIXME
             'ERMLPE',  # FIXME
+            'PairRE',
         }
         model_names = set(pykeen.models.__all__) - SKIP_MODULES - experiment_blacklist
-        missing = {
-            model
-            for model in model_names
-            if not os.path.exists(os.path.join(experiments_path, model.lower()))
-        }
-        if missing:
-            _s = '\n'.join(f'- [ ] {model.lower()}' for model in sorted(missing))
-            self.fail(f'Missing experimental configuration directories for the following models:\n{_s}')
+        for model in model_names:
+            with self.subTest(model=model):
+                self.assertTrue(
+                    os.path.exists(os.path.join(experiments_path, model.lower())),
+                    msg=f'Missing experimental configuration for {model}',
+                )
 
 
 class MessageWeightingTests(unittest.TestCase):
