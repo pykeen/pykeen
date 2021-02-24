@@ -929,3 +929,47 @@ def unstructured_model_interaction(
         The scores.
     """
     return negative_norm(h - t, p=p, power_norm=power_norm)
+
+
+def mure_interaction(
+    h: torch.FloatTensor,
+    b_h: torch.FloatTensor,
+    r_vec: torch.FloatTensor,
+    r_mat: torch.FloatTensor,
+    t: torch.FloatTensor,
+    b_t: torch.FloatTensor,
+    p: Union[int, float, str] = 2,
+    power_norm: bool = False,
+) -> torch.FloatTensor:
+    r"""Evaluate the MurE interaction function.
+
+    .. math ::
+        -\|Rh + r - t\| + b_h + b_t
+
+    :param h: shape: (batch_size, num_heads, 1, 1, dim)
+        The head representations.
+    :param b_h: shape: (batch_size, num_heads, 1, 1, 1)
+        The head entity bias.
+    :param r_vec: shape: (batch_size, 1, num_relations, 1, dim)
+        The relation vector.
+    :param r_mat: shape: (batch_size, 1, num_relations, 1, dim, dim)
+        The relation matrix.
+    :param t: shape: (batch_size, 1, 1, num_tails, dim)
+        The tail representations.
+    :param b_t: shape: (batch_size, 1, 1, num_tails, 1)
+        The tail entity bias.
+    :param p:
+        The parameter p for selecting the norm, cf. torch.norm.
+    :param power_norm:
+        Whether to return the powered norm instead.
+
+    :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        The scores.
+    """
+    return negative_norm_of_sum(
+        r_mat.squeeze(dim=-2) @ h,
+        r_vec,
+        -t,
+        p=p,
+        power_norm=power_norm,
+    ) + b_h.squeeze(dim=-1) + b_t.squeeze(dim=-1)
