@@ -348,6 +348,18 @@ class UMTests(cases.TranslationalInteractionTests):
         return -(h - t).pow(p).sum()
 
 
+class PairRETests(cases.TranslationalInteractionTests):
+    """Tests for PairRE interaction function."""
+
+    cls = pykeen.nn.modules.PairREInteraction
+
+    def _exp_score(self, h, r_h, r_t, t, p: float, power_norm: bool) -> torch.FloatTensor:
+        s = (h * r_h - t * r_t).norm(p)
+        if power_norm:
+            s = s.pow(p)
+        return -s
+
+
 class SimplEInteractionTests(cases.InteractionTestCase):
     """Tests for SimplE interaction function."""
 

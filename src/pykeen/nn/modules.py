@@ -35,6 +35,7 @@ __all__ = [
     'KG2EInteraction',
     'MuREInteraction',
     'NTNInteraction',
+    'PairREInteraction',
     'ProjEInteraction',
     'RESCALInteraction',
     'RotatEInteraction',
@@ -1119,3 +1120,21 @@ class SimplEInteraction(
         t: TailRepresentation,
     ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
         return dict(h=h[0], h_inv=h[1], r=r[0], r_inv=r[1], t=t[0], t_inv=t[1])
+
+
+class PairREInteraction(TranslationalInteraction[FloatTensor, Tuple[FloatTensor, FloatTensor], FloatTensor]):
+    """A stateful module for the PairRE interaction function.
+
+    .. seealso:: :func:`pykeen.nn.functional.pair_re_interaction`
+    """
+
+    relation_shape = ("d", "d")
+    func = pkf.pair_re_interaction
+
+    @staticmethod
+    def _prepare_hrt_for_functional(
+        h: HeadRepresentation,
+        r: RelationRepresentation,
+        t: TailRepresentation,
+    ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
+        return dict(h=h, r_h=r[0], r_t=r[1], t=t)

@@ -151,7 +151,7 @@ class ComplEx(EntityRelationEmbeddingModel):
                 (h_re, r_re, t_re),
                 (h_re, r_im, t_im),
                 (h_im, r_re, t_im),
-                (h_im, r_im, t_re),
+                (-h_im, r_im, t_re),
             ]
         )
 
