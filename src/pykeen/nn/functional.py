@@ -37,6 +37,7 @@ __all__ = [
     'hole_interaction',
     'kg2e_interaction',
     'ntn_interaction',
+    'pair_re_interaction',
     'proje_interaction',
     'rescal_interaction',
     'rotate_interaction',
@@ -931,7 +932,7 @@ def unstructured_model_interaction(
     return negative_norm(h - t, p=p, power_norm=power_norm)
 
 
-def pair_re_interacation(
+def pair_re_interaction(
     h: torch.FloatTensor,
     t: torch.FloatTensor,
     r_h: torch.FloatTensor,
