@@ -963,7 +963,7 @@ def pair_re_interaction(
     """
     return negative_norm_of_sum(
         h * r_h,
-        t * r_t,
+        -t * r_t,
         p=p,
         power_norm=power_norm,
     )
