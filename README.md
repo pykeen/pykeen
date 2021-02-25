@@ -33,7 +33,7 @@
 <p align="center">
   <a href="#installation">Installation</a> •
   <a href="#quickstart">Quickstart</a> •
-  <a href="#datasets-24">Datasets</a> •
+  <a href="#datasets-25">Datasets</a> •
   <a href="#models-25">Models</a> •
   <a href="#supporters">Support</a> •
   <a href="#citation">Citation</a>
@@ -96,7 +96,7 @@ The full documentation can be found at https://pykeen.readthedocs.io.
 Below are the models, datasets, training modes, evaluators, and metrics implemented
 in ``pykeen``.
 
-### Datasets (24)
+### Datasets (25)
 
 The citation for each dataset corresponds to either the paper describing the dataset,
 the first paper published using the dataset with knowledge graph embedding models,
@@ -111,6 +111,7 @@ or the URL for the dataset if neither of the first two are available.
 | ConceptNet                         | [`pykeen.datasets.ConceptNet`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.ConceptNet.html)       | [Speer *et al*., 2017](https://arxiv.org/abs/1612.03975)                                                                |   28370083 |          50 |  34074917 |
 | Countries                          | [`pykeen.datasets.Countries`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.Countries.html)         | [`ZhenfengLei/KGDatasets`](https://github.com/ZhenfengLei/KGDatasets)                                                   |        271 |           2 |      1158 |
 | Commonsense Knowledge Graph        | [`pykeen.datasets.CSKG`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.CSKG.html)                   | [Ilievski *et al*., 2020](http://arxiv.org/abs/2012.11490)                                                              |    2087833 |          58 |   4598728 |
+| DB100K                             | [`pykeen.datasets.DB100K`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.DB100K.html)               | [Ding *et al*., 2018](https://arxiv.org/abs/1805.02408)                                                                 |      99604 |         470 |    697479 |
 | DBpedia50                          | [`pykeen.datasets.DBpedia50`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.DBpedia50.html)         | [Shi *et al*., 2017](https://arxiv.org/abs/1711.03438)                                                                  |      24624 |         351 |     34421 |
 | Drug Repositioning Knowledge Graph | [`pykeen.datasets.DRKG`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.DRKG.html)                   | [`gnn4dr/DRKG`](https://github.com/gnn4dr/DRKG)                                                                         |      97238 |         107 |   5874257 |
 | FB15k                              | [`pykeen.datasets.FB15k`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.FB15k.html)                 | [Bordes *et al*., 2013](http://papers.nips.cc/paper/5071-translating-embeddings-for-modeling-multi-relational-data.pdf) |      14951 |        1345 |    592213 |

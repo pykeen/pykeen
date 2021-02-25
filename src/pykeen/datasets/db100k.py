@@ -1,39 +1,40 @@
 # -*- coding: utf-8 -*-
 
-"""The Countries dataset."""
+"""The DB100K dataset."""
 
 from docdata import parse_docdata
 
 from .base import UnpackedRemoteDataset
 
-BASE_URL = 'https://raw.githubusercontent.com/ZhenfengLei/KGDatasets/master/Countries/Countries_S1'
+BASE_URL = 'https://raw.githubusercontent.com/iieir-km/ComplEx-NNE_AER/master/datasets/DB100K'
 
 __all__ = [
-    'Countries',
+    'DB100K',
 ]
 
 
 @parse_docdata
-class Countries(UnpackedRemoteDataset):
-    """The Countries dataset.
+class DB100K(UnpackedRemoteDataset):
+    """The DB100K dataset from [ding2018]_.
 
     ---
-    name: Countries
+    name: DB100K
     citation:
-        author: Zhenfeng Lei
-        year: 2017
-        github: ZhenfengLei/KGDatasets
+        author: Ding
+        year: 2018
+        link: https://arxiv.org/abs/1805.02408
+        github: iieir-km/ComplEx-NNE_AER
     statistics:
-        entities: 271
-        relations: 2
-        training: 1110
-        testing: 24
-        validation: 24
-        triples: 1158
+        entities: 99604
+        relations: 470
+        training: 597482
+        testing: 50000
+        validation: 49997
+        triples: 697479
     """
 
     def __init__(self, create_inverse_triples: bool = False, **kwargs):
-        """Initialize the Countries small dataset.
+        """Initialize the DB100K small dataset.
 
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.UnpackedRemoteDataset`.
@@ -42,13 +43,13 @@ class Countries(UnpackedRemoteDataset):
         # normally the default for all of PyKEEN's remote datasets, so just switch the default here.
         kwargs.setdefault('stream', False)
         super().__init__(
-            training_url=f'{BASE_URL}/train.txt',
-            testing_url=f'{BASE_URL}/test.txt',
-            validation_url=f'{BASE_URL}/valid.txt',
+            training_url=f'{BASE_URL}/_train.txt',
+            testing_url=f'{BASE_URL}/_test.txt',
+            validation_url=f'{BASE_URL}/_valid.txt',
             create_inverse_triples=create_inverse_triples,
             **kwargs,
         )
 
 
 if __name__ == '__main__':
-    Countries.cli()
+    DB100K.cli()

@@ -22,6 +22,7 @@ from .codex import CoDExLarge, CoDExMedium, CoDExSmall
 from .conceptnet import ConceptNet
 from .countries import Countries
 from .cskg import CSKG
+from .db100k import DB100K
 from .dbpedia import DBpedia50
 from .drkg import DRKG
 from .freebase import FB15k, FB15k237
@@ -60,6 +61,7 @@ __all__ = [
     'CKG',
     'CSKG',
     'DBpedia50',
+    'DB100K',
     'Countries',
     'get_dataset',
     'has_dataset',
