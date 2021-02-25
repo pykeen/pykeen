@@ -66,12 +66,12 @@ class MuRE(ERModel):
                 ),
                 # entity bias for head
                 EmbeddingSpecification(
-                    embedding_dim=1,
+                    shape=tuple(),  # scalar
                     initializer=torch.nn.init.zeros_,
                 ),
                 # entity bias for tail
                 EmbeddingSpecification(
-                    embedding_dim=1,
+                    shape=tuple(),  # scalar
                     initializer=torch.nn.init.zeros_,
                 ),
             ],
