@@ -188,6 +188,7 @@ class TestMuRE(cases.ModelTestCase):
     """Test the MuRE model."""
 
     model_cls = pykeen.models.MuRE
+    num_constant_init = 2  # biases
 
 
 class TestKG2EWithEL(cases.BaseKG2ETest):
