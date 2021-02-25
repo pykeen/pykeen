@@ -104,32 +104,9 @@ class OGBBioKG(OGBLoader):
 
     name = 'ogbl-biokg'
 
-    def _load(self) -> None:
-        try:
-            from ogb.linkproppred import LinkPropPredDataset
-        except ImportError as e:
-            raise ModuleNotFoundError(
-                f'Need to `pip install ogb` to use pykeen.datasets.{self.__class__.__name__}.',
-            ) from e
-
-        dataset = LinkPropPredDataset(name=self.name, root=self.cache_root)
-        edge_split = dataset.get_edge_split()
-        self._training = self._make_tf(edge_split["train"])
-        assert self._training is not None  # makes mypy hapy
-        self._testing = self._make_tf(
-            edge_split["test"],
-            entity_to_id=self._training.entity_to_id,
-            relation_to_id=self._training.relation_to_id,
-        )
-        self._validation = self._make_tf(
-            edge_split["valid"],
-            entity_to_id=self._training.entity_to_id,
-            relation_to_id=self._training.relation_to_id,
-        )
-
     def _make_tf(self, x, entity_to_id=None, relation_to_id=None):
-        head_triples = np.array(list(map(lambda t,e: t+':'+str(e), x['head_type'], x['head'])), dtype=np.str)
-        tail_triples = np.array(list(map(lambda t,e: t+':'+str(e), x['tail_type'], x['tail'])), dtype=np.str)
+        head_triples = np.array([f'{head_type}:{head}' for head_type, head in zip(x['head_type'], x['head'])], dtype=np.str)
+        tail_triples = np.array([f'{tail_type}:{tail}' for tail_type, tail in zip(x['tail_type'], x['tail'])], dtype=np.str)
         triples = np.stack([head_triples, x['relation'], tail_triples], axis=1).astype(np.str)
 
         return TriplesFactory.from_labeled_triples(
