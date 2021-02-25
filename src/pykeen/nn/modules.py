@@ -1062,9 +1062,9 @@ class TransHInteraction(TranslationalInteraction[FloatTensor, Tuple[FloatTensor,
 
 class MuREInteraction(
     TranslationalInteraction[
+        Tuple[FloatTensor, FloatTensor, FloatTensor],
         Tuple[FloatTensor, FloatTensor],
-        Tuple[FloatTensor, FloatTensor],
-        Tuple[FloatTensor, FloatTensor],
+        Tuple[FloatTensor, FloatTensor, FloatTensor],
     ],
 ):
     """A stateful module for the MuRE interaction function from [balazevic2019b]_.
@@ -1072,7 +1072,8 @@ class MuREInteraction(
     .. seealso:: :func:`pykeen.nn.functional.mure_interaction`
     """
 
-    entity_shape = ("d", "")
+    # there are separate biases for entities in head and tail position
+    entity_shape = ("d", "", "")
     relation_shape = ("d", "dd")
     func = pkf.mure_interaction
 
@@ -1082,8 +1083,8 @@ class MuREInteraction(
         r: RelationRepresentation,
         t: TailRepresentation,
     ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
-        h, b_h = h
-        t, b_t = t
+        h, b_h, _ = h
+        t, _, b_t = t
         r_vec, r_mat = r
         return dict(h=h, b_h=b_h, r_vec=r_vec, r_mat=r_mat, t=t, b_t=b_t)
 
