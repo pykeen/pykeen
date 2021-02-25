@@ -753,7 +753,7 @@ class ModelTestCase(unittest.TestCase):
         dataset = Nations(create_inverse_triples=self.create_inverse_triples)
         self.factory = dataset.training
         self.model = self.model_cls(
-            self.factory,
+            triples_factory=self.factory,
             embedding_dim=self.embedding_dim,
             **(self.model_kwargs or {}),
         ).to_device_()
@@ -907,14 +907,14 @@ class ModelTestCase(unittest.TestCase):
     def test_save_load_model_state(self):
         """Test whether a saved model state can be re-loaded."""
         original_model = self.model_cls(
-            self.factory,
+            triples_factory=self.factory,
             embedding_dim=self.embedding_dim,
             random_seed=42,
             **(self.model_kwargs or {}),
         ).to_device_()
 
         loaded_model = self.model_cls(
-            self.factory,
+            triples_factory=self.factory,
             embedding_dim=self.embedding_dim,
             random_seed=21,
             **(self.model_kwargs or {}),

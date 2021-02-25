@@ -37,6 +37,7 @@ class MuRE(ERModel):
 
     def __init__(
         self,
+        *,
         embedding_dim: int = 200,
         p: int = 2,
         power_norm: bool = True,
