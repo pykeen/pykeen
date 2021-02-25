@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 """Implementation of MuRE."""
-import functools
 from typing import Any, ClassVar, Mapping
 
 import torch
@@ -12,7 +11,6 @@ from ...nn import EmbeddingSpecification
 from ...nn.init import xavier_normal_
 from ...nn.modules import MuREInteraction
 from ...typing import Hint, Initializer
-from ...utils import compose
 
 __all__ = [
     'MuRE',
@@ -59,9 +57,9 @@ class MuRE(ERModel):
             entity_representations=[
                 EmbeddingSpecification(
                     embedding_dim=embedding_dim,
-                    initializer=compose(
-                        torch.nn.init.normal_,
-                        lambda x: 1.0e-03 * x,
+                    initializer=torch.nn.init.normal_,
+                    initializer_kwargs=dict(
+                        std=1.0e-03,
                     ),
                 ),
                 # entity bias for head
@@ -78,14 +76,18 @@ class MuRE(ERModel):
             relation_representations=[
                 EmbeddingSpecification(
                     embedding_dim=embedding_dim,
-                    initializer=compose(
-                        torch.nn.init.normal_,
-                        lambda x: 1.0e-03 * x,
+                    initializer=torch.nn.init.normal_,
+                    initializer_kwargs=dict(
+                        std=1.0e-03,
                     ),
                 ),
                 EmbeddingSpecification(
                     shape=(embedding_dim, embedding_dim),
-                    initializer=functools.partial(torch.nn.init.uniform_, a=-1, b=1),
+                    initializer=torch.nn.init.uniform_,
+                    initializer_kwargs=dict(
+                        a=-1,
+                        b=1,
+                    ),
                 ),
             ],
             **kwargs,
