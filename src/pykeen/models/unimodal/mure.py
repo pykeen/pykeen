@@ -1,14 +1,13 @@
 # -*- coding: utf-8 -*-
 
 """Implementation of MuRE."""
-from typing import Any, ClassVar, Mapping
+from typing import Any, ClassVar, Mapping, Optional
 
-import torch
+from torch.nn.init import normal_, uniform_, zeros_
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn import EmbeddingSpecification
-from ...nn.init import xavier_normal_
 from ...nn.modules import MuREInteraction
 from ...typing import Hint, Initializer
 
@@ -39,8 +38,13 @@ class MuRE(ERModel):
         embedding_dim: int = 200,
         p: int = 2,
         power_norm: bool = True,
-        entity_initializer: Hint[Initializer] = xavier_normal_,
-        relation_initializer: Hint[Initializer] = xavier_normal_,
+        entity_initializer: Hint[Initializer] = normal_,
+        entity_initializer_kwargs: Optional[Mapping[str, Any]] = None,
+        entity_bias_initializer: Hint[Initializer] = zeros_,
+        relation_initializer: Hint[Initializer] = normal_,
+        relation_initializer_kwargs: Optional[Mapping[str, Any]] = None,
+        relation_matrix_initializer: Hint[Initializer] = uniform_,
+        relation_matrix_initializer_kwargs: Optional[Mapping[str, Any]] = None,
         **kwargs,
     ) -> None:
         r"""Initialize MuRE via the :class:`pykeen.nn.modules.MuREInteraction` interaction.
@@ -57,34 +61,34 @@ class MuRE(ERModel):
             entity_representations=[
                 EmbeddingSpecification(
                     embedding_dim=embedding_dim,
-                    initializer=torch.nn.init.normal_,
-                    initializer_kwargs=dict(
+                    initializer=entity_initializer,
+                    initializer_kwargs=entity_initializer_kwargs or dict(
                         std=1.0e-03,
                     ),
                 ),
                 # entity bias for head
                 EmbeddingSpecification(
                     shape=tuple(),  # scalar
-                    initializer=torch.nn.init.zeros_,
+                    initializer=entity_bias_initializer,
                 ),
                 # entity bias for tail
                 EmbeddingSpecification(
                     shape=tuple(),  # scalar
-                    initializer=torch.nn.init.zeros_,
+                    initializer=entity_bias_initializer,
                 ),
             ],
             relation_representations=[
                 EmbeddingSpecification(
                     embedding_dim=embedding_dim,
-                    initializer=torch.nn.init.normal_,
-                    initializer_kwargs=dict(
+                    initializer=relation_initializer,
+                    initializer_kwargs=relation_initializer_kwargs or dict(
                         std=1.0e-03,
                     ),
                 ),
                 EmbeddingSpecification(
                     shape=(embedding_dim, embedding_dim),
-                    initializer=torch.nn.init.uniform_,
-                    initializer_kwargs=dict(
+                    initializer=relation_matrix_initializer,
+                    initializer_kwargs=relation_matrix_initializer_kwargs or dict(
                         a=-1,
                         b=1,
                     ),
