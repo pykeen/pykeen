@@ -8,6 +8,8 @@
     "model": "MuRE",
     "model_kwargs": {
       "embedding_dim": 200,
+      "p": 2,
+      "power_norm": true,
       "entity_initializer": "normal_",
       "entity_initializer_kwargs": {
         "std": 1.0e-03
@@ -28,6 +30,9 @@
       "lr": 10.0
     },
     "loss": "BCEWithLogitsLoss",
+    "loss_kwargs": {
+      "reduction": "mean"
+    },
     "training_loop": "SLCWA",
     "negative_sampler": "basic",
     "negative_sampler_kwargs": {
