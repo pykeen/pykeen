@@ -45,6 +45,7 @@ __all__ = [
     'normalize_string',
     'normalized_lookup',
     'get_cls',
+    'Resolver',
     'get_until_first_blank',
     'flatten_dictionary',
     'set_random_seed',
@@ -161,6 +162,8 @@ def get_cls(
 
 
 class Resolver(Generic[X]):
+    """Resolve from a list of classes."""
+
     def __init__(
         self,
         classes: Iterable[Type[X]],
@@ -180,6 +183,7 @@ class Resolver(Generic[X]):
         }
 
     def lookup(self, query: HintType[X]) -> Type[X]:
+        """Lookup a class."""
         return get_cls(
             query,
             base=self.base,
@@ -190,10 +194,12 @@ class Resolver(Generic[X]):
         )
 
     def make(self, query: HintType[X], kwargs: Optional[Mapping[str, Any]] = None) -> X:
+        """Instantiate a class with optional kwargs."""
         cls: Type[X] = self.lookup(query)
         return cls(**(kwargs or {}))  # type: ignore
 
     def make_splat(self, query: HintType[X], **kwargs) -> X:
+        """Instantiate a class with splatted kwargs."""
         cls: Type[X] = self.lookup(query)
         return cls(**kwargs)  # type: ignore
 

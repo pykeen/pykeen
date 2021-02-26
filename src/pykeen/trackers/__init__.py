@@ -9,7 +9,7 @@ from .file import CSVResultTracker, FileResultTracker, JSONResultTracker
 from .mlflow import MLFlowResultTracker
 from .neptune import NeptuneResultTracker
 from .wandb import WANDBResultTracker
-from ..utils import get_cls, get_subclasses, normalize_string, Resolver
+from ..utils import Resolver, get_cls, get_subclasses, normalize_string
 
 __all__ = [
     # Base classes
@@ -32,7 +32,6 @@ _TRACKERS = [
     if tracker not in {FileResultTracker}
 ]
 
-
 #: A mapping of trackers' names to their implementations
 trackers: Mapping[str, Type[ResultTracker]] = {
     normalize_string(tracker.__name__, suffix=_RESULT_TRACKER_SUFFIX): tracker
@@ -40,6 +39,7 @@ trackers: Mapping[str, Type[ResultTracker]] = {
 }
 
 tracker_resolver = Resolver(_TRACKERS, base=ResultTracker, default=ResultTracker, suffix=_RESULT_TRACKER_SUFFIX)
+
 
 def get_result_tracker_cls(query: Union[None, str, Type[ResultTracker]]) -> Type[ResultTracker]:
     """Get the tracker class."""

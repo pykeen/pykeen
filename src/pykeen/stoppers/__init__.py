@@ -48,5 +48,5 @@ stoppers: Mapping[str, Type[Stopper]] = {
     for cls in _STOPPERS
 }
 
-stopper_resolver = Resolver(_STOPPERS, default=NopStopper, suffix=_STOPPER_SUFFIX, base=Stopper) # type: ignore
+stopper_resolver = Resolver(_STOPPERS, default=NopStopper, suffix=_STOPPER_SUFFIX, base=Stopper)  # type: ignore
 get_stopper_cls = stopper_resolver.lookup

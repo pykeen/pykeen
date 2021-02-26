@@ -712,14 +712,14 @@ def pipeline(  # noqa: C901
         logger.warning(f'No random seed is specified. Setting to {random_seed}.')
     set_random_seed(random_seed)
 
-    rlogger = tracker_resolver.make(result_tracker, result_tracker_kwargs)
+    _result_tracker = tracker_resolver.make(result_tracker, result_tracker_kwargs)
 
     if not metadata:
         metadata = {}
     title = metadata.get('title')
 
     # Start tracking
-    rlogger.start_run(run_name=title)
+    _result_tracker.start_run(run_name=title)
 
     device: torch.device = resolve_device(device)
 
@@ -731,9 +731,9 @@ def pipeline(  # noqa: C901
         validation=validation,
     )
     if dataset is not None:
-        rlogger.log_params(dict(dataset=dataset_instance.get_normalized_name()))
+        _result_tracker.log_params(dict(dataset=dataset_instance.get_normalized_name()))
     else:  # means that dataset was defined by triples factories
-        rlogger.log_params(dict(
+        _result_tracker.log_params(dict(
             dataset=USER_DEFINED_CODE,
             training=training if isinstance(training, str) else USER_DEFINED_CODE,
             testing=testing if isinstance(training, str) else USER_DEFINED_CODE,
@@ -782,7 +782,7 @@ def pipeline(  # noqa: C901
         **model_kwargs,
     )
     # Log model parameters
-    rlogger.log_params(
+    _result_tracker.log_params(
         params=dict(cls=model_instance.__class__.__name__, kwargs=model_kwargs),
         prefix='model',
     )
@@ -792,7 +792,7 @@ def pipeline(  # noqa: C901
         params=model_instance.get_grad_params(),
         **optimizer_kwargs,
     )
-    rlogger.log_params(
+    _result_tracker.log_params(
         params=dict(cls=optimizer_instance.__class__.__name__, kwargs=optimizer_kwargs),
         prefix='optimizer',
     )
@@ -809,7 +809,7 @@ def pipeline(  # noqa: C901
         raise ValueError('Can not specify negative sampler with LCWA')
     else:
         negative_sampler_cls = get_negative_sampler_cls(negative_sampler)
-        rlogger.log_params(
+        _result_tracker.log_params(
             params=dict(cls=negative_sampler_cls.__name__, kwargs=negative_sampler_kwargs),
             prefix='negative_sampler',
         )
@@ -820,7 +820,7 @@ def pipeline(  # noqa: C901
             negative_sampler_cls=negative_sampler_cls,
             negative_sampler_kwargs=negative_sampler_kwargs,
         )
-    rlogger.log_params(
+    _result_tracker.log_params(
         params=dict(cls=training_loop_instance.__class__.__name__),
         prefix='training_loop',
     )
@@ -851,13 +851,13 @@ def pipeline(  # noqa: C901
         model=model_instance,
         evaluator=evaluator_instance,
         evaluation_triples_factory=validation,
-        result_tracker=rlogger,
+        result_tracker=_result_tracker,
         **stopper_kwargs,
     )
 
     training_kwargs.setdefault('num_epochs', 5)
     training_kwargs.setdefault('batch_size', 256)
-    rlogger.log_params(params=training_kwargs, prefix='training')
+    _result_tracker.log_params(params=training_kwargs, prefix='training')
 
     # Add logging for debugging
     logging.debug("Run Pipeline based on following config:")
@@ -891,7 +891,7 @@ def pipeline(  # noqa: C901
     training_start_time = time.time()
     losses = training_loop_instance.train(
         stopper=stopper_instance,
-        result_tracker=rlogger,
+        result_tracker=_result_tracker,
         clear_optimizer=clear_optimizer,
         **training_kwargs,
     )
@@ -917,11 +917,11 @@ def pipeline(  # noqa: C901
         **evaluation_kwargs,
     )
     evaluate_end_time = time.time() - evaluate_start_time
-    rlogger.log_metrics(
+    _result_tracker.log_metrics(
         metrics=metric_results.to_dict(),
         step=training_kwargs.get('num_epochs'),
     )
-    rlogger.end_run()
+    _result_tracker.end_run()
 
     return PipelineResult(
         random_seed=random_seed,
