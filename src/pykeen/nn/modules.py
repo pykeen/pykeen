@@ -33,6 +33,7 @@ __all__ = [
     'ERMLPEInteraction',
     'HolEInteraction',
     'KG2EInteraction',
+    'MuREInteraction',
     'NTNInteraction',
     'PairREInteraction',
     'ProjEInteraction',
@@ -1057,6 +1058,35 @@ class TransHInteraction(TranslationalInteraction[FloatTensor, Tuple[FloatTensor,
         t: TailRepresentation,
     ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
         return dict(h=h, w_r=r[0], d_r=r[1], t=t)
+
+
+class MuREInteraction(
+    TranslationalInteraction[
+        Tuple[FloatTensor, FloatTensor, FloatTensor],
+        Tuple[FloatTensor, FloatTensor],
+        Tuple[FloatTensor, FloatTensor, FloatTensor],
+    ],
+):
+    """A stateful module for the MuRE interaction function from [balazevic2019b]_.
+
+    .. seealso:: :func:`pykeen.nn.functional.mure_interaction`
+    """
+
+    # there are separate biases for entities in head and tail position
+    entity_shape = ("d", "", "")
+    relation_shape = ("d", "dd")
+    func = pkf.mure_interaction
+
+    @staticmethod
+    def _prepare_hrt_for_functional(
+        h: Tuple[FloatTensor, FloatTensor, FloatTensor],
+        r: Tuple[FloatTensor, FloatTensor],
+        t: Tuple[FloatTensor, FloatTensor, FloatTensor],
+    ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
+        h, b_h, _ = h
+        t, _, b_t = t
+        r_vec, r_mat = r
+        return dict(h=h, b_h=b_h, r_vec=r_vec, r_mat=r_mat, t=t, b_t=b_t)
 
 
 class SimplEInteraction(

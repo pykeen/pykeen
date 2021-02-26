@@ -39,3 +39,6 @@ References
 
 .. [ding2018] Ding, B., Wang, Q., Wang, B., & Guo, L. (2018). `Improving Knowledge Graph Embedding Using Simple
    Constraints <http://arxiv.org/abs/1805.02408>`_.
+
+.. [balazevic2019b] Balažević, I., Allen, C., & Hospedales, T. (2019). `Multi-relational Poincaré Graph
+   Embeddings <http://arxiv.org/abs/1905.09791>`_.

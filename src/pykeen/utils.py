@@ -667,7 +667,7 @@ def tensor_product(*tensors: torch.FloatTensor) -> torch.FloatTensor:
 
 def negative_norm_of_sum(
     *x: torch.FloatTensor,
-    p: Union[str, int] = 2,
+    p: Union[str, int, float] = 2,
     power_norm: bool = False,
 ) -> torch.FloatTensor:
     """Evaluate negative norm of a sum of vectors on already broadcasted representations.
@@ -687,7 +687,7 @@ def negative_norm_of_sum(
 
 def negative_norm(
     x: torch.FloatTensor,
-    p: Union[str, int] = 2,
+    p: Union[str, int, float] = 2,
     power_norm: bool = False,
 ) -> torch.FloatTensor:
     """Evaluate negative norm of a vector.
