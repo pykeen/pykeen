@@ -254,6 +254,8 @@ class PipelineResult(Result):
     @property
     def title(self) -> Optional[str]:  # noqa:D401
         """The title of the experiment."""
+        if self.metadata is None:
+            return None
         return self.metadata.get('title')
 
     def plot_losses(self, **kwargs):
@@ -698,19 +700,23 @@ def pipeline(  # noqa: C901
         checkpoint_path = checkpoint_directory / checkpoint_name
         if checkpoint_path.is_file():
             checkpoint_dict = torch.load(checkpoint_path)
-            random_seed = checkpoint_dict['random_seed']
-            logger.info('loaded random seed %s from checkpoint.', random_seed)
+            _random_seed = checkpoint_dict['random_seed']
+            logger.info('loaded random seed %s from checkpoint.', _random_seed)
             # We have to set clear optimizer to False since training should be continued
             clear_optimizer = False
         else:
             logger.info(f"=> no training loop checkpoint file found at '{checkpoint_path}'. Creating a new file.")
             if random_seed is None:
-                random_seed = random_non_negative_int()
-                logger.warning(f'No random seed is specified. Setting to {random_seed}.')
+                _random_seed = random_non_negative_int()
+                logger.warning(f'No random seed is specified. Setting to {_random_seed}.')
+            else:
+                _random_seed = random_seed
     elif random_seed is None:
-        random_seed = random_non_negative_int()
-        logger.warning(f'No random seed is specified. Setting to {random_seed}.')
-    set_random_seed(random_seed)
+        _random_seed = random_non_negative_int()
+        logger.warning(f'No random seed is specified. Setting to {_random_seed}.')
+    else:
+        _random_seed = random_seed  # random seed given successfully
+    set_random_seed(_random_seed)
 
     _result_tracker = tracker_resolver.make(result_tracker, result_tracker_kwargs)
 
@@ -721,7 +727,7 @@ def pipeline(  # noqa: C901
     # Start tracking
     _result_tracker.start_run(run_name=title)
 
-    device: torch.device = resolve_device(device)
+    _device: torch.device = resolve_device(device)
 
     dataset_instance: Dataset = get_dataset(
         dataset=dataset,
@@ -756,8 +762,8 @@ def pipeline(  # noqa: C901
     if model_kwargs is None:
         model_kwargs = {}
     model_kwargs = dict(model_kwargs)
-    model_kwargs.update(preferred_device=device)
-    model_kwargs.setdefault('random_seed', random_seed)
+    model_kwargs.update(preferred_device=_device)
+    model_kwargs.setdefault('random_seed', _random_seed)
 
     if regularizer is not None:
         # FIXME this should never happen.
@@ -776,7 +782,7 @@ def pipeline(  # noqa: C901
         loss_instance = loss_resolver.make(loss, loss_kwargs)
         model_kwargs.setdefault('loss', loss_instance)
 
-    model_instance: Model = model_resolver.make_splat(
+    model_instance: Model = model_resolver.make(
         model,
         triples_factory=training,
         **model_kwargs,
@@ -787,10 +793,10 @@ def pipeline(  # noqa: C901
         prefix='model',
     )
 
-    optimizer_instance = optimizer_resolver.make_splat(
+    optimizer_instance = optimizer_resolver.make(
         optimizer,
+        optimizer_kwargs,
         params=model_instance.get_grad_params(),
-        **optimizer_kwargs,
     )
     _result_tracker.log_params(
         params=dict(cls=optimizer_instance.__class__.__name__, kwargs=optimizer_kwargs),
@@ -798,9 +804,10 @@ def pipeline(  # noqa: C901
     )
 
     training_loop_cls = get_training_loop_cls(training_loop)
+    training_loop_instance: TrainingLoop
     if negative_sampler is None:
         negative_sampler_cls = None
-        training_loop_instance: TrainingLoop = training_loop_cls(
+        training_loop_instance = training_loop_cls(
             model=model_instance,
             optimizer=optimizer_instance,
             automatic_memory_optimization=automatic_memory_optimization,
@@ -813,7 +820,7 @@ def pipeline(  # noqa: C901
             params=dict(cls=negative_sampler_cls.__name__, kwargs=negative_sampler_kwargs),
             prefix='negative_sampler',
         )
-        training_loop_instance: TrainingLoop = SLCWATrainingLoop(
+        training_loop_instance = SLCWATrainingLoop(
             model=model_instance,
             optimizer=optimizer_instance,
             automatic_memory_optimization=automatic_memory_optimization,
@@ -846,7 +853,7 @@ def pipeline(  # noqa: C901
     if _evaluation_batch_size is not None:
         stopper_kwargs.setdefault('evaluation_batch_size', _evaluation_batch_size)
 
-    stopper_instance: Stopper = stopper_resolver.make_splat(
+    stopper_instance: Stopper = stopper_resolver.make(
         stopper,
         model=model_instance,
         evaluator=evaluator_instance,
@@ -924,7 +931,7 @@ def pipeline(  # noqa: C901
     _result_tracker.end_run()
 
     return PipelineResult(
-        random_seed=random_seed,
+        random_seed=_random_seed,
         model=model_instance,
         training_loop=training_loop_instance,
         losses=losses,

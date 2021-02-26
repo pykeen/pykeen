@@ -193,15 +193,10 @@ class Resolver(Generic[X]):
             suffix=self.suffix,
         )
 
-    def make(self, query: HintType[X], kwargs: Optional[Mapping[str, Any]] = None) -> X:
+    def make(self, query: HintType[X], pos_kwargs: Optional[Mapping[str, Any]] = None, **kwargs) -> X:
         """Instantiate a class with optional kwargs."""
         cls: Type[X] = self.lookup(query)
-        return cls(**(kwargs or {}))  # type: ignore
-
-    def make_splat(self, query: HintType[X], **kwargs) -> X:
-        """Instantiate a class with splatted kwargs."""
-        cls: Type[X] = self.lookup(query)
-        return cls(**kwargs)  # type: ignore
+        return cls(**(pos_kwargs or {}), **kwargs)  # type: ignore
 
 
 def get_until_first_blank(s: str) -> str:
