@@ -1079,9 +1079,9 @@ class MuREInteraction(
 
     @staticmethod
     def _prepare_hrt_for_functional(
-        h: HeadRepresentation,
-        r: RelationRepresentation,
-        t: TailRepresentation,
+        h: Tuple[FloatTensor, FloatTensor, FloatTensor],
+        r: Tuple[FloatTensor, FloatTensor],
+        t: Tuple[FloatTensor, FloatTensor, FloatTensor],
     ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
         h, b_h, _ = h
         t, _, b_t = t
