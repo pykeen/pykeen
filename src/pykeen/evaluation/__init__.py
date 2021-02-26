@@ -28,12 +28,12 @@ References
 """
 
 import dataclasses
-from typing import Mapping, Set, Type, Union
+from typing import Mapping, Set, Type
 
 from .evaluator import Evaluator, MetricResults, evaluate
 from .rank_based_evaluator import RankBasedEvaluator, RankBasedMetricResults
 from .sklearn import SklearnEvaluator, SklearnMetricResults
-from ..utils import get_cls, normalize_string
+from ..utils import Resolver, normalize_string
 
 __all__ = [
     'evaluate',
@@ -61,17 +61,13 @@ evaluators: Mapping[str, Type[Evaluator]] = {
     for cls in _EVALUATORS
 }
 
-
-def get_evaluator_cls(query: Union[None, str, Type[Evaluator]]) -> Type[Evaluator]:
-    """Get the evaluator class."""
-    return get_cls(
-        query,
-        base=Evaluator,  # type: ignore
-        lookup_dict=evaluators,
-        default=RankBasedEvaluator,
-        suffix=_EVALUATOR_SUFFIX,
-    )
-
+evaluator_resolver = Resolver(
+    _EVALUATORS,
+    base=Evaluator,  # type: ignore
+    suffix=_EVALUATOR_SUFFIX,
+    default=RankBasedEvaluator,
+)
+get_evaluator_cls = evaluator_resolver.lookup
 
 _METRICS_SUFFIX = 'MetricResults'
 _METRICS: Set[Type[MetricResults]] = {

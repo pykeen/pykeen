@@ -26,7 +26,7 @@ import torch.nn
 import torch.nn.modules.batchnorm
 
 from .constants import PYKEEN_BENCHMARKS
-from .typing import DeviceHint, MappedTriples, TorchRandomHint
+from .typing import DeviceHint, HintType, MappedTriples, TorchRandomHint
 from .version import get_git_hash
 
 __all__ = [
@@ -158,6 +158,44 @@ def get_cls(
     elif issubclass(query, base):
         return query
     raise TypeError(f'Not subclass of {base.__name__}: {query}')
+
+
+class Resolver(Generic[X]):
+    def __init__(
+        self,
+        classes: Iterable[Type[X]],
+        *,
+        base: Type[X],
+        default: Optional[Type[X]] = None,
+        suffix: Optional[str] = None,
+        synonyms: Optional[Mapping[str, Type[X]]] = None,
+    ):
+        self.base = base
+        self.default = default
+        self.suffix = suffix
+        self.synonyms = synonyms
+        self._lookup_dict = {
+            normalize_string(cls.__name__, suffix=suffix): cls
+            for cls in classes
+        }
+
+    def lookup(self, query: HintType[X]) -> Type[X]:
+        return get_cls(
+            query,
+            base=self.base,
+            lookup_dict=self._lookup_dict,
+            lookup_dict_synonyms=self.synonyms,
+            default=self.default,
+            suffix=self.suffix,
+        )
+
+    def make(self, query: HintType[X], kwargs: Optional[Mapping[str, Any]] = None) -> X:
+        cls: Type[X] = self.lookup(query)
+        return cls(**(kwargs or {}))  # type: ignore
+
+    def make_splat(self, query: HintType[X], **kwargs) -> X:
+        cls: Type[X] = self.lookup(query)
+        return cls(**kwargs)  # type: ignore
 
 
 def get_until_first_blank(s: str) -> str:

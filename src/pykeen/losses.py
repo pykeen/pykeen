@@ -139,7 +139,7 @@ import torch
 from torch.nn import functional
 from torch.nn.modules.loss import _Loss
 
-from .utils import get_cls, normalize_string
+from .utils import Resolver, normalize_string
 
 __all__ = [
     # Helpers
@@ -435,17 +435,14 @@ losses_synonyms: Mapping[str, Type[Loss]] = {
     for synonym in cls.synonyms
 }
 
-
-def get_loss_cls(query: Union[None, str, Type[Loss]]) -> Type[Loss]:
-    """Get the loss class."""
-    return get_cls(
-        query,
-        base=Loss,
-        lookup_dict=losses,
-        lookup_dict_synonyms=losses_synonyms,
-        default=MarginRankingLoss,
-        suffix=_LOSS_SUFFIX,
-    )
+loss_resolver = Resolver(
+    _LOSSES,
+    base=Loss,
+    default=MarginRankingLoss,
+    suffix=_LOSS_SUFFIX,
+    synonyms=losses_synonyms,
+)
+get_loss_cls = loss_resolver.lookup
 
 
 def has_mr_loss(model) -> bool:
