@@ -22,7 +22,7 @@ from ..constants import USER_DEFINED_CODE
 from ..datasets import get_dataset, has_dataset
 from ..datasets.base import Dataset
 from ..evaluation import Evaluator, evaluator_resolver
-from ..losses import Loss, _LOSS_SUFFIX, loss_resolver
+from ..losses import Loss, loss_resolver
 from ..models import Model, model_resolver
 from ..optimizers import Optimizer, optimizer_resolver, optimizers_hpo_defaults
 from ..pipeline import pipeline, replicate_pipeline_from_config
@@ -32,6 +32,7 @@ from ..stoppers import EarlyStopper, Stopper, stopper_resolver
 from ..trackers import ResultTracker, tracker_resolver
 from ..training import SLCWATrainingLoop, TrainingLoop, training_loop_resolver
 from ..triples import TriplesFactory
+from ..typing import Hint
 from ..utils import (
     Result, ensure_ftp_directory, fix_dataclass_init_docs, get_df_io, get_json_bytes_io,
     normalize_string,
@@ -54,20 +55,22 @@ STOPPED_EPOCH_KEY = 'stopped_epoch'
 class Objective:
     """A dataclass containing all of the information to make an objective function."""
 
-    dataset: Union[None, str, Type[Dataset]]  # 1.
+    dataset: Union[None, str, Dataset, Type[Dataset]]  # 1.
     model: Type[Model]  # 2.
     loss: Type[Loss]  # 3.
     regularizer: Type[Regularizer]  # 4.
     optimizer: Type[Optimizer]  # 5.
     training_loop: Type[TrainingLoop]  # 6.
+    stopper: Type[Stopper]  # 7.
     evaluator: Type[Evaluator]  # 8.
     result_tracker: Type[ResultTracker]  # 9.
+    metric: str
 
     # 1. Dataset
     dataset_kwargs: Optional[Mapping[str, Any]] = None
-    training: Union[None, TriplesFactory, str] = None
-    testing: Union[None, TriplesFactory, str] = None
-    validation: Union[None, TriplesFactory, str] = None
+    training: Hint[TriplesFactory] = None
+    testing: Hint[TriplesFactory] = None
+    validation: Hint[TriplesFactory] = None
     evaluation_entity_whitelist: Optional[Collection[str]] = None
     evaluation_relation_whitelist: Optional[Collection[str]] = None
     # 2. Model
@@ -89,7 +92,6 @@ class Objective:
     # 7. Training
     training_kwargs: Optional[Mapping[str, Any]] = None
     training_kwargs_ranges: Optional[Mapping[str, Any]] = None
-    stopper: Type[Stopper] = None
     stopper_kwargs: Optional[Mapping[str, Any]] = None
     # 8. Evaluation
     evaluator_kwargs: Optional[Mapping[str, Any]] = None
@@ -97,7 +99,6 @@ class Objective:
     # 9. Trackers
     result_tracker_kwargs: Optional[Mapping[str, Any]] = None
     # Misc.
-    metric: str = None
     device: Union[None, str, torch.device] = None
     save_model_directory: Optional[str] = None
 
@@ -165,13 +166,14 @@ class Objective:
             kwargs_ranges=self.optimizer_kwargs_ranges,
         )
 
+        _negative_sampler_kwargs: Mapping[str, Any]
         if self.training_loop is not SLCWATrainingLoop:
             _negative_sampler_kwargs = {}
         else:
             _negative_sampler_kwargs = _get_kwargs(
                 trial=trial,
                 prefix='negative_sampler',
-                default_kwargs_ranges=self.negative_sampler.hpo_default,
+                default_kwargs_ranges={} if self.negative_sampler is None else self.negative_sampler.hpo_default,
                 kwargs=self.negative_sampler_kwargs,
                 kwargs_ranges=self.negative_sampler_kwargs_ranges,
             )
@@ -438,7 +440,7 @@ def hpo_pipeline(
     optimizer_kwargs_ranges: Optional[Mapping[str, Any]] = None,
     # 6. Training Loop
     training_loop: Union[None, str, Type[TrainingLoop]] = None,
-    negative_sampler: Union[None, str, Type[NegativeSampler]] = None,
+    _negative_sampler: Union[None, str, Type[NegativeSampler]] = None,
     negative_sampler_kwargs: Optional[Mapping[str, Any]] = None,
     negative_sampler_kwargs_ranges: Optional[Mapping[str, Any]] = None,
     # 7. Training
@@ -601,52 +603,52 @@ def hpo_pipeline(
     )
 
     # 2. Model
-    model: Type[Model] = model_resolver.lookup(model)
-    study.set_user_attr('model', normalize_string(model.__name__))
-    logger.info(f'Using model: {model}')
+    model_cls: Type[Model] = model_resolver.lookup(model)
+    study.set_user_attr('model', normalize_string(model_cls.__name__))
+    logger.info(f'Using model: {model_cls}')
     # 3. Loss
-    loss: Type[Loss] = model.loss_default if loss is None else loss_resolver.lookup(loss)
-    study.set_user_attr('loss', normalize_string(loss.__name__, suffix=_LOSS_SUFFIX))
-    logger.info(f'Using loss: {loss}')
+    loss_cls: Type[Loss] = model_cls.loss_default if loss is None else loss_resolver.lookup(loss)
+    study.set_user_attr('loss', normalize_string(loss_cls.__name__, suffix=loss_resolver.suffix))
+    logger.info(f'Using loss: {loss_cls}')
     # 4. Regularizer
-    regularizer: Type[Regularizer] = (
-        model.regularizer_default
+    regularizer_cls: Type[Regularizer] = (
+        model_cls.regularizer_default
         if regularizer is None else
         regularizer_resolver.lookup(regularizer)
     )
-    study.set_user_attr('regularizer', regularizer.get_normalized_name())
-    logger.info(f'Using regularizer: {regularizer}')
+    study.set_user_attr('regularizer', regularizer_cls.get_normalized_name())
+    logger.info(f'Using regularizer: {regularizer_cls}')
     # 5. Optimizer
-    optimizer: Type[Optimizer] = optimizer_resolver.lookup(optimizer)
-    study.set_user_attr('optimizer', normalize_string(optimizer.__name__))
-    logger.info(f'Using optimizer: {optimizer}')
+    optimizer_cls: Type[Optimizer] = optimizer_resolver.lookup(optimizer)
+    study.set_user_attr('optimizer', normalize_string(optimizer_cls.__name__))
+    logger.info(f'Using optimizer: {optimizer_cls}')
     # 6. Training Loop
-    training_loop: Type[TrainingLoop] = training_loop_resolver.lookup(training_loop)
-    study.set_user_attr('training_loop', training_loop.get_normalized_name())
-    logger.info(f'Using training loop: {training_loop}')
-    if training_loop is SLCWATrainingLoop:
-        negative_sampler: Optional[Type[NegativeSampler]] = negative_sampler_resolver.lookup(negative_sampler)
-        study.set_user_attr('negative_sampler', negative_sampler.get_normalized_name())
-        logger.info(f'Using negative sampler: {negative_sampler}')
+    training_loop_cls: Type[TrainingLoop] = training_loop_resolver.lookup(training_loop)
+    study.set_user_attr('training_loop', training_loop_cls.get_normalized_name())
+    logger.info(f'Using training loop: {training_loop_cls}')
+    negative_sampler_cls: Optional[Type[NegativeSampler]]
+    if training_loop_cls is SLCWATrainingLoop:
+        negative_sampler_cls = negative_sampler_resolver.lookup(_negative_sampler)
+        study.set_user_attr('negative_sampler', negative_sampler_cls.get_normalized_name())
+        logger.info(f'Using negative sampler: {negative_sampler_cls}')
     else:
-        negative_sampler: Optional[Type[NegativeSampler]] = None
+        negative_sampler_cls = None
     # 7. Training
-    stopper: Type[Stopper] = stopper_resolver.lookup(stopper)
-
-    if stopper is EarlyStopper and training_kwargs_ranges and 'epochs' in training_kwargs_ranges:
+    stopper_cls: Type[Stopper] = stopper_resolver.lookup(stopper)
+    if stopper_cls is EarlyStopper and training_kwargs_ranges and 'epochs' in training_kwargs_ranges:
         raise ValueError('can not use early stopping while optimizing epochs')
 
     # 8. Evaluation
-    evaluator: Type[Evaluator] = evaluator_resolver.lookup(evaluator)
-    study.set_user_attr('evaluator', evaluator.get_normalized_name())
-    logger.info(f'Using evaluator: {evaluator}')
+    evaluator_cls: Type[Evaluator] = evaluator_resolver.lookup(evaluator)
+    study.set_user_attr('evaluator', evaluator_cls.get_normalized_name())
+    logger.info(f'Using evaluator: {evaluator_cls}')
     if metric is None:
         metric = 'adjusted_mean_rank'
     study.set_user_attr('metric', metric)
     logger.info(f'Attempting to {direction} {metric}')
 
     # 9. Tracking
-    result_tracker: Type[ResultTracker] = tracker_resolver.lookup(result_tracker)
+    result_tracker_cls: Type[ResultTracker] = tracker_resolver.lookup(result_tracker)
 
     objective = Objective(
         # 1. Dataset
@@ -658,37 +660,37 @@ def hpo_pipeline(
         evaluation_entity_whitelist=evaluation_entity_whitelist,
         evaluation_relation_whitelist=evaluation_relation_whitelist,
         # 2. Model
-        model=model,
+        model=model_cls,
         model_kwargs=model_kwargs,
         model_kwargs_ranges=model_kwargs_ranges,
         # 3. Loss
-        loss=loss,
+        loss=loss_cls,
         loss_kwargs=loss_kwargs,
         loss_kwargs_ranges=loss_kwargs_ranges,
         # 4. Regularizer
-        regularizer=regularizer,
+        regularizer=regularizer_cls,
         regularizer_kwargs=regularizer_kwargs,
         regularizer_kwargs_ranges=regularizer_kwargs_ranges,
         # 5. Optimizer
-        optimizer=optimizer,
+        optimizer=optimizer_cls,
         optimizer_kwargs=optimizer_kwargs,
         optimizer_kwargs_ranges=optimizer_kwargs_ranges,
         # 6. Training Loop
-        training_loop=training_loop,
-        negative_sampler=negative_sampler,
+        training_loop=training_loop_cls,
+        negative_sampler=negative_sampler_cls,
         negative_sampler_kwargs=negative_sampler_kwargs,
         negative_sampler_kwargs_ranges=negative_sampler_kwargs_ranges,
         # 7. Training
         training_kwargs=training_kwargs,
         training_kwargs_ranges=training_kwargs_ranges,
-        stopper=stopper,
+        stopper=stopper_cls,
         stopper_kwargs=stopper_kwargs,
         # 8. Evaluation
-        evaluator=evaluator,
+        evaluator=evaluator_cls,
         evaluator_kwargs=evaluator_kwargs,
         evaluation_kwargs=evaluation_kwargs,
         # 9. Tracker
-        result_tracker=result_tracker,
+        result_tracker=result_tracker_cls,
         result_tracker_kwargs=result_tracker_kwargs,
         # Optuna Misc.
         metric=metric,
@@ -716,9 +718,9 @@ def _get_kwargs(
     prefix: str,
     *,
     default_kwargs_ranges: Mapping[str, Any],
-    kwargs: Mapping[str, Any],
+    kwargs: Optional[Mapping[str, Any]] = None,
     kwargs_ranges: Optional[Mapping[str, Any]] = None,
-):
+) -> Mapping[str, Any]:
     _kwargs_ranges = dict(default_kwargs_ranges)
     if kwargs_ranges is not None:
         _kwargs_ranges.update(kwargs_ranges)
@@ -735,8 +737,8 @@ def suggest_kwargs(
     prefix: str,
     kwargs_ranges: Mapping[str, Any],
     kwargs: Optional[Mapping[str, Any]] = None,
-):
-    _kwargs = {}
+) -> Mapping[str, Any]:
+    _kwargs: Dict[str, Any] = {}
     if kwargs:
         _kwargs.update(kwargs)
 
