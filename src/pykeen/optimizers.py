@@ -26,13 +26,12 @@ from torch.optim.adamw import AdamW
 from torch.optim.optimizer import Optimizer
 from torch.optim.sgd import SGD
 
-from .utils import Resolver, normalize_string
+from .utils import Resolver
 
 __all__ = [
     'Optimizer',
-    'optimizers',
     'optimizers_hpo_defaults',
-    'get_optimizer_cls',
+    'optimizer_resolver',
 ]
 
 _OPTIMIZER_LIST: Set[Type[Optimizer]] = {
@@ -42,12 +41,6 @@ _OPTIMIZER_LIST: Set[Type[Optimizer]] = {
     Adamax,
     AdamW,
     SGD,
-}
-
-#: A mapping of optimizers' names to their implementations
-optimizers: Mapping[str, Type[Optimizer]] = {
-    normalize_string(optimizer.__name__): optimizer
-    for optimizer in _OPTIMIZER_LIST
 }
 
 #: The default strategy for optimizing the optimizers' hyper-parameters (yo dawg)
@@ -70,4 +63,3 @@ optimizers_hpo_defaults: Mapping[Type[Optimizer], Mapping[str, Any]] = {
 }
 
 optimizer_resolver = Resolver(_OPTIMIZER_LIST, base=Optimizer, default=Adagrad)
-get_optimizer_cls = optimizer_resolver.lookup

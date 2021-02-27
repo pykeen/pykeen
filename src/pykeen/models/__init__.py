@@ -6,7 +6,7 @@ entities and relations. In general, a larger score indicates a higher plausibili
 score value is model-dependent, and usually it cannot be directly interpreted as a probability.
 """  # noqa: D205, D400
 
-from typing import Mapping, Set, Type
+from typing import Set, Type
 
 from .base import EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, MultimodalModel, _OldAbstractModel
 from .multimodal import ComplExLiteral, DistMultLiteral
@@ -36,7 +36,7 @@ from .unimodal import (
     TuckER,
     UnstructuredModel,
 )
-from ..utils import Resolver, get_subclasses, normalize_string
+from ..utils import Resolver, get_subclasses
 
 __all__ = [
     # Base Models
@@ -73,8 +73,8 @@ __all__ = [
     'TransR',
     'TuckER',
     'UnstructuredModel',
-    'models',
-    'get_model_cls',
+    # Utils
+    'model_resolver',
 ]
 
 _MODELS: Set[Type[Model]] = {
@@ -82,12 +82,4 @@ _MODELS: Set[Type[Model]] = {
     for subcls in get_subclasses(Model)  # type: ignore
     if not subcls._is_base_model
 }
-
-#: A mapping of models' names to their implementations
-models: Mapping[str, Type[Model]] = {
-    normalize_string(cls.__name__): cls
-    for cls in _MODELS
-}
-
 model_resolver = Resolver(classes=_MODELS, base=Model)  # type: ignore
-get_model_cls = model_resolver.lookup

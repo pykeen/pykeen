@@ -19,6 +19,7 @@ from typing import (
     Union,
 )
 
+import click
 import numpy as np
 import pandas as pd
 import torch
@@ -54,7 +55,6 @@ __all__ = [
     'fix_dataclass_init_docs',
     'get_benchmark',
     'extended_einsum',
-    'convert_to_canonical_shape',
     'strip_dim',
     'upgrade_to_sequence',
     'ensure_tuple',
@@ -126,10 +126,10 @@ def normalize_string(s: str, *, suffix: Optional[str] = None) -> str:
     return s
 
 
-def normalized_lookup(classes: Iterable[Type[X]]) -> Mapping[str, Type[X]]:
+def normalized_lookup(classes: Iterable[Type[X]], suffix: Optional[str] = None) -> Mapping[str, Type[X]]:
     """Make a normalized lookup dict."""
     return {
-        normalize_string(cls.__name__): cls
+        normalize_string(cls.__name__, suffix=suffix): cls
         for cls in classes
     }
 
@@ -166,7 +166,7 @@ class Resolver(Generic[X]):
 
     def __init__(
         self,
-        classes: Iterable[Type[X]],
+        classes: Collection[Type[X]],
         *,
         base: Type[X],
         default: Optional[Type[X]] = None,
@@ -177,9 +177,10 @@ class Resolver(Generic[X]):
         self.default = default
         self.suffix = suffix
         self.synonyms = synonyms
-        self._lookup_dict = {
+        self._classes = classes
+        self.lookup_dict = {
             normalize_string(cls.__name__, suffix=suffix): cls
-            for cls in classes
+            for cls in self._classes
         }
 
     def lookup(self, query: HintType[X]) -> Type[X]:
@@ -187,7 +188,7 @@ class Resolver(Generic[X]):
         return get_cls(
             query,
             base=self.base,
-            lookup_dict=self._lookup_dict,
+            lookup_dict=self.lookup_dict,
             lookup_dict_synonyms=self.synonyms,
             default=self.default,
             suffix=self.suffix,
@@ -197,6 +198,29 @@ class Resolver(Generic[X]):
         """Instantiate a class with optional kwargs."""
         cls: Type[X] = self.lookup(query)
         return cls(**(pos_kwargs or {}), **kwargs)  # type: ignore
+
+    def get_option(self, *flags: str, default: Optional[str] = None, **kwargs):
+        """Get a click option for this resolver."""
+        if default is None:
+            if self.default is None:
+                raise ValueError
+            default = normalize_string(self.default.__name__, suffix=self.suffix)
+
+        return click.option(
+            *flags,
+            type=click.Choice(list(self.lookup_dict)),
+            default=default,
+            show_default=True,
+            callback=_make_callback(self.lookup),
+            **kwargs,
+        )
+
+
+def _make_callback(f):
+    def _callback(_, __, value):
+        return f(value)
+
+    return _callback
 
 
 def get_until_first_blank(s: str) -> str:

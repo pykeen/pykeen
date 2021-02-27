@@ -26,27 +26,25 @@ The following code will create a scenario in which training will stop
 ... )
 """
 
-from typing import Collection, Mapping, Type
+from typing import Collection, Type
 
 from .early_stopping import EarlyStopper, StopperCallback  # noqa: F401
 from .stopper import NopStopper, Stopper
-from ..utils import Resolver, get_subclasses, normalize_string
+from ..utils import Resolver, get_subclasses
 
 __all__ = [
     'Stopper',
     'NopStopper',
     'EarlyStopper',
-    'get_stopper_cls',
+    # Utils
+    'stopper_resolver',
 ]
 
 _STOPPER_SUFFIX = 'Stopper'
 _STOPPERS: Collection[Type[Stopper]] = set(get_subclasses(Stopper))  # type: ignore
-
-#: A mapping of stoppers' names to their implementations
-stoppers: Mapping[str, Type[Stopper]] = {
-    normalize_string(cls.__name__, suffix=_STOPPER_SUFFIX): cls
-    for cls in _STOPPERS
-}
-
-stopper_resolver = Resolver(_STOPPERS, default=NopStopper, suffix=_STOPPER_SUFFIX, base=Stopper)  # type: ignore
-get_stopper_cls = stopper_resolver.lookup
+stopper_resolver = Resolver(
+    _STOPPERS,
+    default=NopStopper,
+    suffix=_STOPPER_SUFFIX,
+    base=Stopper,  # type: ignore
+)

@@ -16,21 +16,21 @@ from optuna.pruners import BasePruner
 from optuna.samplers import BaseSampler
 from optuna.storages import BaseStorage
 
-from .pruners import get_pruner_cls
-from .samplers import get_sampler_cls
+from .pruners import pruner_resolver
+from .samplers import sampler_resolver
 from ..constants import USER_DEFINED_CODE
 from ..datasets import get_dataset, has_dataset
 from ..datasets.base import Dataset
-from ..evaluation import Evaluator, get_evaluator_cls
-from ..losses import Loss, _LOSS_SUFFIX, get_loss_cls
-from ..models import Model, get_model_cls
-from ..optimizers import Optimizer, get_optimizer_cls, optimizers_hpo_defaults
+from ..evaluation import Evaluator, evaluator_resolver
+from ..losses import Loss, _LOSS_SUFFIX, loss_resolver
+from ..models import Model, model_resolver
+from ..optimizers import Optimizer, optimizer_resolver, optimizers_hpo_defaults
 from ..pipeline import pipeline, replicate_pipeline_from_config
-from ..regularizers import Regularizer, get_regularizer_cls
-from ..sampling import NegativeSampler, get_negative_sampler_cls
-from ..stoppers import EarlyStopper, Stopper, get_stopper_cls
-from ..trackers import ResultTracker, get_result_tracker_cls
-from ..training import SLCWATrainingLoop, TrainingLoop, get_training_loop_cls
+from ..regularizers import Regularizer, regularizer_resolver
+from ..sampling import NegativeSampler, negative_sampler_resolver
+from ..stoppers import EarlyStopper, Stopper, stopper_resolver
+from ..trackers import ResultTracker, tracker_resolver
+from ..training import SLCWATrainingLoop, TrainingLoop, training_loop_resolver
 from ..triples import TriplesFactory
 from ..utils import (
     Result, ensure_ftp_directory, fix_dataclass_init_docs, get_df_io, get_json_bytes_io,
@@ -575,16 +575,13 @@ def hpo_pipeline(
         The remaining parameters are passed to :func:`optuna.study.create_study`
         or :meth:`optuna.study.Study.optimize`.
     """
-    sampler_cls = get_sampler_cls(sampler)
-    pruner_cls = get_pruner_cls(pruner)
-
     if direction is None:
         direction = 'minimize'
 
     study = create_study(
         storage=storage,
-        sampler=sampler_cls(**(sampler_kwargs or {})),
-        pruner=pruner_cls(**(pruner_kwargs or {})),
+        sampler=sampler_resolver.make(sampler, sampler_kwargs),
+        pruner=pruner_resolver.make(pruner, pruner_kwargs),
         study_name=study_name,
         direction=direction,
         load_if_exists=load_if_exists,
@@ -604,43 +601,43 @@ def hpo_pipeline(
     )
 
     # 2. Model
-    model: Type[Model] = get_model_cls(model)
+    model: Type[Model] = model_resolver.lookup(model)
     study.set_user_attr('model', normalize_string(model.__name__))
     logger.info(f'Using model: {model}')
     # 3. Loss
-    loss: Type[Loss] = model.loss_default if loss is None else get_loss_cls(loss)
+    loss: Type[Loss] = model.loss_default if loss is None else loss_resolver.lookup(loss)
     study.set_user_attr('loss', normalize_string(loss.__name__, suffix=_LOSS_SUFFIX))
     logger.info(f'Using loss: {loss}')
     # 4. Regularizer
     regularizer: Type[Regularizer] = (
         model.regularizer_default
         if regularizer is None else
-        get_regularizer_cls(regularizer)
+        regularizer_resolver.lookup(regularizer)
     )
     study.set_user_attr('regularizer', regularizer.get_normalized_name())
     logger.info(f'Using regularizer: {regularizer}')
     # 5. Optimizer
-    optimizer: Type[Optimizer] = get_optimizer_cls(optimizer)
+    optimizer: Type[Optimizer] = optimizer_resolver.lookup(optimizer)
     study.set_user_attr('optimizer', normalize_string(optimizer.__name__))
     logger.info(f'Using optimizer: {optimizer}')
     # 6. Training Loop
-    training_loop: Type[TrainingLoop] = get_training_loop_cls(training_loop)
+    training_loop: Type[TrainingLoop] = training_loop_resolver.lookup(training_loop)
     study.set_user_attr('training_loop', training_loop.get_normalized_name())
     logger.info(f'Using training loop: {training_loop}')
     if training_loop is SLCWATrainingLoop:
-        negative_sampler: Optional[Type[NegativeSampler]] = get_negative_sampler_cls(negative_sampler)
+        negative_sampler: Optional[Type[NegativeSampler]] = negative_sampler_resolver.lookup(negative_sampler)
         study.set_user_attr('negative_sampler', negative_sampler.get_normalized_name())
         logger.info(f'Using negative sampler: {negative_sampler}')
     else:
         negative_sampler: Optional[Type[NegativeSampler]] = None
     # 7. Training
-    stopper: Type[Stopper] = get_stopper_cls(stopper)
+    stopper: Type[Stopper] = stopper_resolver.lookup(stopper)
 
     if stopper is EarlyStopper and training_kwargs_ranges and 'epochs' in training_kwargs_ranges:
         raise ValueError('can not use early stopping while optimizing epochs')
 
     # 8. Evaluation
-    evaluator: Type[Evaluator] = get_evaluator_cls(evaluator)
+    evaluator: Type[Evaluator] = evaluator_resolver.lookup(evaluator)
     study.set_user_attr('evaluator', evaluator.get_normalized_name())
     logger.info(f'Using evaluator: {evaluator}')
     if metric is None:
@@ -649,7 +646,7 @@ def hpo_pipeline(
     logger.info(f'Attempting to {direction} {metric}')
 
     # 9. Tracking
-    result_tracker: Type[ResultTracker] = get_result_tracker_cls(result_tracker)
+    result_tracker: Type[ResultTracker] = tracker_resolver.lookup(result_tracker)
 
     objective = Objective(
         # 1. Dataset

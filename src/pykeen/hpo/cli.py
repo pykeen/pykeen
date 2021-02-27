@@ -8,17 +8,15 @@ from typing import Optional
 import click
 
 from .hpo import hpo_pipeline
-from .samplers import samplers
+from .samplers import sampler_resolver
+from ..losses import loss_resolver
 
 
 @click.command()
 @click.argument('model')
 @click.argument('dataset')
-@click.option('-l', '--loss')
-@click.option(
-    '--sampler', help="Which sampler should be used?", type=click.Choice(list(samplers)), default='tpe',
-    show_default=True,
-)
+@loss_resolver.get_option('-l', '--loss')
+@sampler_resolver.get_option('--sampler', help="Which sampler should be used?")
 @click.option('--storage', help="Where to output trials dataframe")
 @click.option('--n-trials', type=int, help="Number of trials to run")
 @click.option('--timeout', type=int, help="Number of trials to run")
@@ -35,7 +33,7 @@ def optimize(
 ):
     """Optimize hyper-parameters for a KGE model.
 
-    For example, use python -m pykeen.hpo TransE MarginRankingLoss -d Nations
+    For example, use pykeen optimize TransE Nations --loss MarginRankingLoss
     """
     if n_trials is None and timeout is None:
         click.secho('Must specify either --n-trials or --timeout', fg='red')

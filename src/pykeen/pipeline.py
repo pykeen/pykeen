@@ -188,11 +188,11 @@ from .evaluation import Evaluator, MetricResults, evaluator_resolver
 from .losses import Loss, loss_resolver
 from .models import Model, model_resolver
 from .optimizers import optimizer_resolver
-from .regularizers import Regularizer, get_regularizer_cls
-from .sampling import NegativeSampler, get_negative_sampler_cls
+from .regularizers import Regularizer, regularizer_resolver
+from .sampling import NegativeSampler, negative_sampler_resolver
 from .stoppers import EarlyStopper, Stopper, stopper_resolver
 from .trackers import ResultTracker, tracker_resolver
-from .training import SLCWATrainingLoop, TrainingLoop, get_training_loop_cls
+from .training import SLCWATrainingLoop, TrainingLoop, training_loop_resolver
 from .triples import TriplesFactory
 from .typing import Hint, HintType
 from .utils import (
@@ -243,7 +243,7 @@ class PipelineResult(Result):
     stopper: Optional[Stopper] = None
 
     #: Any additional metadata as a dictionary
-    metadata: Optional[Mapping[str, Any]] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
     #: The version of PyKEEN used to create these results
     version: str = field(default_factory=get_version)
@@ -321,8 +321,10 @@ class PipelineResult(Result):
     def save_to_directory(
         self,
         directory: Union[str, Path],
+        *,
         save_metadata: bool = True,
         save_replicates: bool = True,
+        **_kwargs,
     ) -> None:
         """Save all artifacts in the given directory."""
         os.makedirs(directory, exist_ok=True)
@@ -690,6 +692,7 @@ def pipeline(  # noqa: C901
     """
     if training_kwargs is None:
         training_kwargs = {}
+    training_kwargs = dict(training_kwargs)
 
     # To allow resuming training from a checkpoint when using a pipeline, the pipeline needs to obtain the
     # used random_seed to ensure reproducible results
@@ -770,10 +773,7 @@ def pipeline(  # noqa: C901
         if 'regularizer' in model_kwargs:
             logger.warning('Can not specify regularizer in kwargs and model_kwargs. removing from model_kwargs')
             del model_kwargs['regularizer']
-        regularizer_cls: Type[Regularizer] = get_regularizer_cls(regularizer)
-        model_kwargs['regularizer'] = regularizer_cls(
-            **(regularizer_kwargs or {}),
-        )
+        model_kwargs['regularizer'] = regularizer_resolver.make(regularizer, regularizer_kwargs)
 
     if loss is not None:
         if 'loss' in model_kwargs:  # FIXME
@@ -803,7 +803,7 @@ def pipeline(  # noqa: C901
         prefix='optimizer',
     )
 
-    training_loop_cls = get_training_loop_cls(training_loop)
+    training_loop_cls = training_loop_resolver.lookup(training_loop)
     training_loop_instance: TrainingLoop
     if negative_sampler is None:
         negative_sampler_cls = None
@@ -815,7 +815,7 @@ def pipeline(  # noqa: C901
     elif training_loop is not SLCWATrainingLoop:
         raise ValueError('Can not specify negative sampler with LCWA')
     else:
-        negative_sampler_cls = get_negative_sampler_cls(negative_sampler)
+        negative_sampler_cls = negative_sampler_resolver.lookup(negative_sampler)
         _result_tracker.log_params(
             params=dict(cls=negative_sampler_cls.__name__, kwargs=negative_sampler_kwargs),
             prefix='negative_sampler',
@@ -834,11 +834,13 @@ def pipeline(  # noqa: C901
 
     if evaluator_kwargs is None:
         evaluator_kwargs = {}
+    evaluator_kwargs = dict(evaluator_kwargs)
     evaluator_kwargs.setdefault('automatic_memory_optimization', automatic_memory_optimization)
     evaluator_instance: Evaluator = evaluator_resolver.make(evaluator, evaluator_kwargs)
 
     if evaluation_kwargs is None:
         evaluation_kwargs = {}
+    evaluation_kwargs = dict(evaluation_kwargs)
 
     # Stopping
     if 'stopper' in training_kwargs and stopper is not None:
@@ -847,6 +849,7 @@ def pipeline(  # noqa: C901
         stopper = training_kwargs.pop('stopper')
     if stopper_kwargs is None:
         stopper_kwargs = {}
+    stopper_kwargs = dict(stopper_kwargs)
 
     # Load the evaluation batch size for the stopper, if it has been set
     _evaluation_batch_size = evaluation_kwargs.get('batch_size')
@@ -902,10 +905,13 @@ def pipeline(  # noqa: C901
         clear_optimizer=clear_optimizer,
         **training_kwargs,
     )
+    assert losses is not None  # losses is only none if it's doing search mode
     training_end_time = time.time() - training_start_time
 
     if use_testing_data:
         mapped_triples = testing.mapped_triples
+    elif validation is None:
+        raise ValueError('no validation triples available')
     else:
         mapped_triples = validation.mapped_triples
 

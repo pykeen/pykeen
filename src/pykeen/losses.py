@@ -142,8 +142,6 @@ from torch.nn.modules.loss import _Loss
 from .utils import Resolver, normalize_string
 
 __all__ = [
-    # Helpers
-    'get_loss_cls',
     # Base Classes
     'Loss',
     'PointwiseLoss',
@@ -159,6 +157,8 @@ __all__ = [
     'SoftplusLoss',
     'has_mr_loss',
     'has_nssa_loss',
+    # Utils
+    'loss_resolver',
 ]
 
 _REDUCTION_METHODS = dict(
@@ -422,19 +422,12 @@ _LOSSES: Set[Type[Loss]] = {
     MSELoss,
     NSSALoss,
 }
-
-#: A mapping of losses' names to their implementations
-losses: Mapping[str, Type[Loss]] = {
-    normalize_string(cls.__name__, suffix=_LOSS_SUFFIX): cls
-    for cls in _LOSSES
-}
 losses_synonyms: Mapping[str, Type[Loss]] = {
     normalize_string(synonym, suffix=_LOSS_SUFFIX): cls
     for cls in _LOSSES
     if cls.synonyms is not None
     for synonym in cls.synonyms
 }
-
 loss_resolver = Resolver(
     _LOSSES,
     base=Loss,
@@ -442,7 +435,6 @@ loss_resolver = Resolver(
     suffix=_LOSS_SUFFIX,
     synonyms=losses_synonyms,
 )
-get_loss_cls = loss_resolver.lookup
 
 
 def has_mr_loss(model) -> bool:
