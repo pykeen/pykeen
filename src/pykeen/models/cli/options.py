@@ -36,7 +36,9 @@ def _get_default(f, suffix=None):
 
 def triples_factory_callback(_, __, path: Optional[str]) -> Optional[TriplesFactory]:
     """Generate a triples factory using the given path."""
-    return path and TriplesFactory.from_path(path=path)
+    if path is None:
+        return None
+    return TriplesFactory.from_path(path=path)
 
 
 CLI_OPTIONS = {

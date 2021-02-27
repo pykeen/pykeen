@@ -39,7 +39,7 @@ SKIP_MODULES = {
     ERModel.__name__,
     'MockModel',
     'models',
-    'get_model_cls',
+    'model_resolver',
     'SimpleInteractionModel',
 }
 for cls in MultimodalModel.__subclasses__():

@@ -24,8 +24,8 @@ from ..losses import loss_resolver
 def optimize(
     model: str,
     dataset: str,
-    loss: Optional[str],
-    sampler: Optional[str],
+    loss: str,
+    sampler: str,
     storage: Optional[str],
     n_trials: Optional[int],
     timeout: Optional[int],

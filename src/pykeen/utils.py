@@ -173,6 +173,14 @@ class Resolver(Generic[X]):
         suffix: Optional[str] = None,
         synonyms: Optional[Mapping[str, Type[X]]] = None,
     ):
+        """Initialize the resolver.
+
+        :param classes: A list of classes
+        :param base: The base class
+        :param default: The default class
+        :param suffix: The optional shared suffix of all classes
+        :param synonyms: The optional synonym dictionary
+        """
         self.base = base
         self.default = default
         self.suffix = suffix
