@@ -775,16 +775,18 @@ def pipeline(  # noqa: C901
             del model_kwargs['regularizer']
         model_kwargs['regularizer'] = regularizer_resolver.make(regularizer, regularizer_kwargs)
 
-    if loss is not None:
-        if 'loss' in model_kwargs:  # FIXME
+    if 'loss' in model_kwargs:
+        if loss is None:
+            loss = model_kwargs.pop('loss')
+        else:
             logger.warning('duplicate loss in kwargs and model_kwargs. removing from model_kwargs')
             del model_kwargs['loss']
-        loss_instance = loss_resolver.make(loss, loss_kwargs)
-        model_kwargs.setdefault('loss', loss_instance)
+    loss_instance = loss_resolver.make(loss, loss_kwargs)
 
     model_instance: Model = model_resolver.make(
         model,
         triples_factory=training,
+        loss=loss_instance,
         **model_kwargs,
     )
     # Log model parameters
@@ -881,7 +883,7 @@ def pipeline(  # noqa: C901
             logging.debug('validation: %s', validation)
     logging.debug(f"model: {model_instance.__class__.__name__}")
     logging.debug(f"model_kwargs: {model_kwargs}")
-    logging.debug(f"loss: {loss}")
+    logging.debug(f"loss: {loss_instance.__class__.__name__}")
     logging.debug(f"loss_kwargs: {loss_kwargs}")
     logging.debug(f"regularizer: {regularizer}")
     logging.debug(f"regularizer_kwargs: {regularizer_kwargs}")
