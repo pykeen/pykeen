@@ -62,4 +62,4 @@ optimizers_hpo_defaults: Mapping[Type[Optimizer], Mapping[str, Any]] = {
     ),
 }
 
-optimizer_resolver = Resolver(_OPTIMIZER_LIST, base=Optimizer, default=Adagrad)
+optimizer_resolver = Resolver(_OPTIMIZER_LIST, base=Optimizer, default=Adam)
