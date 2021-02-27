@@ -32,7 +32,7 @@ from ..stoppers import EarlyStopper, Stopper, stopper_resolver
 from ..trackers import ResultTracker, tracker_resolver
 from ..training import SLCWATrainingLoop, TrainingLoop, training_loop_resolver
 from ..triples import TriplesFactory
-from ..typing import Hint
+from ..typing import Hint, HintType
 from ..utils import (
     Result, ensure_ftp_directory, fix_dataclass_init_docs, get_df_io, get_json_bytes_io,
     normalize_string,
@@ -417,9 +417,9 @@ def hpo_pipeline(
     # 1. Dataset
     dataset: Union[None, str, Dataset, Type[Dataset]] = None,
     dataset_kwargs: Optional[Mapping[str, Any]] = None,
-    training: Union[None, str, TriplesFactory] = None,
-    testing: Union[None, str, TriplesFactory] = None,
-    validation: Union[None, str, TriplesFactory] = None,
+    training: Hint[TriplesFactory] = None,
+    testing: Hint[TriplesFactory] = None,
+    validation: Hint[TriplesFactory] = None,
     evaluation_entity_whitelist: Optional[Collection[str]] = None,
     evaluation_relation_whitelist: Optional[Collection[str]] = None,
     # 2. Model
@@ -427,42 +427,42 @@ def hpo_pipeline(
     model_kwargs: Optional[Mapping[str, Any]] = None,
     model_kwargs_ranges: Optional[Mapping[str, Any]] = None,
     # 3. Loss
-    loss: Union[None, str, Type[Loss]] = None,
+    loss: HintType[Loss] = None,
     loss_kwargs: Optional[Mapping[str, Any]] = None,
     loss_kwargs_ranges: Optional[Mapping[str, Any]] = None,
     # 4. Regularizer
-    regularizer: Union[None, str, Type[Regularizer]] = None,
+    regularizer: HintType[Regularizer] = None,
     regularizer_kwargs: Optional[Mapping[str, Any]] = None,
     regularizer_kwargs_ranges: Optional[Mapping[str, Any]] = None,
     # 5. Optimizer
-    optimizer: Union[None, str, Type[Optimizer]] = None,
+    optimizer: HintType[Optimizer] = None,
     optimizer_kwargs: Optional[Mapping[str, Any]] = None,
     optimizer_kwargs_ranges: Optional[Mapping[str, Any]] = None,
     # 6. Training Loop
-    training_loop: Union[None, str, Type[TrainingLoop]] = None,
-    _negative_sampler: Union[None, str, Type[NegativeSampler]] = None,
+    training_loop: HintType[TrainingLoop] = None,
+    negative_sampler: HintType[NegativeSampler] = None,
     negative_sampler_kwargs: Optional[Mapping[str, Any]] = None,
     negative_sampler_kwargs_ranges: Optional[Mapping[str, Any]] = None,
     # 7. Training
     training_kwargs: Optional[Mapping[str, Any]] = None,
     training_kwargs_ranges: Optional[Mapping[str, Any]] = None,
-    stopper: Union[None, str, Type[Stopper]] = None,
+    stopper: HintType[Stopper] = None,
     stopper_kwargs: Optional[Mapping[str, Any]] = None,
     # 8. Evaluation
-    evaluator: Union[None, str, Type[Evaluator]] = None,
+    evaluator: HintType[Evaluator] = None,
     evaluator_kwargs: Optional[Mapping[str, Any]] = None,
     evaluation_kwargs: Optional[Mapping[str, Any]] = None,
     metric: Optional[str] = None,
     # 9. Tracking
-    result_tracker: Union[None, str, Type[ResultTracker]] = None,
+    result_tracker: HintType[ResultTracker] = None,
     result_tracker_kwargs: Optional[Mapping[str, Any]] = None,
     # 6. Misc
-    device: Union[None, str, torch.device] = None,
+    device: Hint[torch.device] = None,
     #  Optuna Study Settings
-    storage: Union[None, str, BaseStorage] = None,
-    sampler: Union[None, str, Type[BaseSampler]] = None,
+    storage: Hint[BaseStorage] = None,
+    sampler: HintType[BaseSampler] = None,
     sampler_kwargs: Optional[Mapping[str, Any]] = None,
-    pruner: Union[None, str, Type[BasePruner]] = None,
+    pruner: HintType[BasePruner] = None,
     pruner_kwargs: Optional[Mapping[str, Any]] = None,
     study_name: Optional[str] = None,
     direction: Optional[str] = None,
@@ -628,7 +628,7 @@ def hpo_pipeline(
     logger.info(f'Using training loop: {training_loop_cls}')
     negative_sampler_cls: Optional[Type[NegativeSampler]]
     if training_loop_cls is SLCWATrainingLoop:
-        negative_sampler_cls = negative_sampler_resolver.lookup(_negative_sampler)
+        negative_sampler_cls = negative_sampler_resolver.lookup(negative_sampler)
         study.set_user_attr('negative_sampler', negative_sampler_cls.get_normalized_name())
         logger.info(f'Using negative sampler: {negative_sampler_cls}')
     else:
