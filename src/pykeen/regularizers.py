@@ -5,23 +5,26 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, ClassVar, Collection, Iterable, Mapping, Optional, Type, Union
+from typing import Any, ClassVar, Collection, Iterable, Mapping, Optional, Type
 
 import torch
 from torch import nn
 from torch.nn import functional
 
 from .nn.norm import lp_norm, powersum_norm
-from .utils import get_cls, normalize_string
+from .utils import Resolver, normalize_string
 
 __all__ = [
+    # Base Class
     'Regularizer',
+    # Child classes
     'LpRegularizer',
     'NoRegularizer',
     'CombinedRegularizer',
     'PowerSumRegularizer',
     'TransHRegularizer',
-    'get_regularizer_cls',
+    # Utils
+    'regularizer_resolver',
 ]
 
 _REGULARIZER_SUFFIX = 'Regularizer'
@@ -264,20 +267,9 @@ _REGULARIZERS: Collection[Type[Regularizer]] = {
     CombinedRegularizer,
     TransHRegularizer,
 }
-
-#: A mapping of regularizers' names to their implementations
-regularizers: Mapping[str, Type[Regularizer]] = {
-    cls.get_normalized_name(): cls
-    for cls in _REGULARIZERS
-}
-
-
-def get_regularizer_cls(query: Union[None, str, Type[Regularizer]]) -> Type[Regularizer]:
-    """Get the regularizer class."""
-    return get_cls(
-        query,
-        base=Regularizer,  # type: ignore
-        lookup_dict=regularizers,
-        default=NoRegularizer,
-        suffix=_REGULARIZER_SUFFIX,
-    )
+regularizer_resolver = Resolver(
+    _REGULARIZERS,
+    base=Regularizer,  # type: ignore
+    default=NoRegularizer,
+    suffix=_REGULARIZER_SUFFIX,
+)

@@ -5,10 +5,9 @@
 import logging
 from typing import Mapping, Optional, Set
 
-from .losses import _LOSS_SUFFIX
+from .losses import loss_resolver
 from .nn import Embedding
 from .stoppers import EarlyStopper
-from .utils import normalize_string
 
 __all__ = [
     'plot_losses',
@@ -29,7 +28,7 @@ def plot_losses(pipeline_result, *, ax=None):
 
     rv = sns.lineplot(x=range(len(pipeline_result.losses)), y=pipeline_result.losses, ax=ax)
 
-    loss_name = normalize_string(pipeline_result.model.loss.__class__.__name__, suffix=_LOSS_SUFFIX)
+    loss_name = loss_resolver.normalize_inst(pipeline_result.model.loss)
     ax.set_ylabel(f'{loss_name} Loss')
     ax.set_xlabel('Epoch')
     ax.set_title(pipeline_result.title if pipeline_result.title is not None else 'Losses Plot')

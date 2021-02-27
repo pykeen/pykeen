@@ -175,7 +175,7 @@ import pickle
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Collection, Dict, Iterable, List, Mapping, Optional, Type, Union
+from typing import Any, Collection, Dict, Iterable, List, Mapping, MutableMapping, Optional, Type, Union
 
 import pandas as pd
 import torch
@@ -184,16 +184,17 @@ from torch.optim.optimizer import Optimizer
 from .constants import PYKEEN_CHECKPOINTS, USER_DEFINED_CODE
 from .datasets import get_dataset
 from .datasets.base import Dataset
-from .evaluation import Evaluator, MetricResults, get_evaluator_cls
-from .losses import Loss, get_loss_cls
-from .models import Model, get_model_cls
-from .optimizers import get_optimizer_cls
-from .regularizers import Regularizer, get_regularizer_cls
-from .sampling import NegativeSampler, get_negative_sampler_cls
-from .stoppers import EarlyStopper, Stopper, get_stopper_cls
-from .trackers import ResultTracker, get_result_tracker_cls
-from .training import SLCWATrainingLoop, TrainingLoop, get_training_loop_cls
+from .evaluation import Evaluator, MetricResults, evaluator_resolver
+from .losses import Loss, loss_resolver
+from .models import Model, model_resolver
+from .optimizers import optimizer_resolver
+from .regularizers import Regularizer, regularizer_resolver
+from .sampling import NegativeSampler, negative_sampler_resolver
+from .stoppers import EarlyStopper, Stopper, stopper_resolver
+from .trackers import ResultTracker, tracker_resolver
+from .training import SLCWATrainingLoop, TrainingLoop, training_loop_resolver
 from .triples import TriplesFactory
+from .typing import Hint, HintType
 from .utils import (
     Result, ensure_ftp_directory, fix_dataclass_init_docs, get_json_bytes_io, get_model_io, random_non_negative_int,
     resolve_device, set_random_seed,
@@ -242,7 +243,7 @@ class PipelineResult(Result):
     stopper: Optional[Stopper] = None
 
     #: Any additional metadata as a dictionary
-    metadata: Optional[Mapping[str, Any]] = field(default_factory=dict)
+    metadata: MutableMapping[str, Any] = field(default_factory=dict)
 
     #: The version of PyKEEN used to create these results
     version: str = field(default_factory=get_version)
@@ -253,6 +254,8 @@ class PipelineResult(Result):
     @property
     def title(self) -> Optional[str]:  # noqa:D401
         """The title of the experiment."""
+        if self.metadata is None:
+            return None
         return self.metadata.get('title')
 
     def plot_losses(self, **kwargs):
@@ -318,8 +321,10 @@ class PipelineResult(Result):
     def save_to_directory(
         self,
         directory: Union[str, Path],
+        *,
         save_metadata: bool = True,
         save_replicates: bool = True,
+        **_kwargs,
     ) -> None:
         """Save all artifacts in the given directory."""
         os.makedirs(directory, exist_ok=True)
@@ -564,43 +569,43 @@ def pipeline(  # noqa: C901
     # 1. Dataset
     dataset: Union[None, str, Dataset, Type[Dataset]] = None,
     dataset_kwargs: Optional[Mapping[str, Any]] = None,
-    training: Union[None, TriplesFactory, str] = None,
-    testing: Union[None, TriplesFactory, str] = None,
-    validation: Union[None, TriplesFactory, str] = None,
+    training: Hint[TriplesFactory] = None,
+    testing: Hint[TriplesFactory] = None,
+    validation: Hint[TriplesFactory] = None,
     evaluation_entity_whitelist: Optional[Collection[str]] = None,
     evaluation_relation_whitelist: Optional[Collection[str]] = None,
     # 2. Model
     model: Union[str, Type[Model]],
     model_kwargs: Optional[Mapping[str, Any]] = None,
     # 3. Loss
-    loss: Union[None, str, Type[Loss]] = None,
+    loss: HintType[Loss] = None,
     loss_kwargs: Optional[Mapping[str, Any]] = None,
     # 4. Regularizer
-    regularizer: Union[None, str, Type[Regularizer]] = None,
+    regularizer: HintType[Regularizer] = None,
     regularizer_kwargs: Optional[Mapping[str, Any]] = None,
     # 5. Optimizer
-    optimizer: Union[None, str, Type[Optimizer]] = None,
+    optimizer: HintType[Optimizer] = None,
     optimizer_kwargs: Optional[Mapping[str, Any]] = None,
     clear_optimizer: bool = True,
     # 6. Training Loop
-    training_loop: Union[None, str, Type[TrainingLoop]] = None,
-    negative_sampler: Union[None, str, Type[NegativeSampler]] = None,
+    training_loop: HintType[TrainingLoop] = None,
+    negative_sampler: HintType[NegativeSampler] = None,
     negative_sampler_kwargs: Optional[Mapping[str, Any]] = None,
     # 7. Training (ronaldo style)
     training_kwargs: Optional[Mapping[str, Any]] = None,
-    stopper: Union[None, str, Type[Stopper]] = None,
+    stopper: HintType[Stopper] = None,
     stopper_kwargs: Optional[Mapping[str, Any]] = None,
     # 8. Evaluation
-    evaluator: Union[None, str, Type[Evaluator]] = None,
+    evaluator: HintType[Evaluator] = None,
     evaluator_kwargs: Optional[Mapping[str, Any]] = None,
     evaluation_kwargs: Optional[Mapping[str, Any]] = None,
     # 9. Tracking
-    result_tracker: Union[None, str, Type[ResultTracker]] = None,
+    result_tracker: HintType[ResultTracker] = None,
     result_tracker_kwargs: Optional[Mapping[str, Any]] = None,
     # Misc
     automatic_memory_optimization: bool = True,
     metadata: Optional[Dict[str, Any]] = None,
-    device: Union[None, str, torch.device] = None,
+    device: Hint[torch.device] = None,
     random_seed: Optional[int] = None,
     use_testing_data: bool = True,
 ) -> PipelineResult:
@@ -687,6 +692,7 @@ def pipeline(  # noqa: C901
     """
     if training_kwargs is None:
         training_kwargs = {}
+    training_kwargs = dict(training_kwargs)
 
     # To allow resuming training from a checkpoint when using a pipeline, the pipeline needs to obtain the
     # used random_seed to ensure reproducible results
@@ -697,31 +703,34 @@ def pipeline(  # noqa: C901
         checkpoint_path = checkpoint_directory / checkpoint_name
         if checkpoint_path.is_file():
             checkpoint_dict = torch.load(checkpoint_path)
-            random_seed = checkpoint_dict['random_seed']
-            logger.info('loaded random seed %s from checkpoint.', random_seed)
+            _random_seed = checkpoint_dict['random_seed']
+            logger.info('loaded random seed %s from checkpoint.', _random_seed)
             # We have to set clear optimizer to False since training should be continued
             clear_optimizer = False
         else:
             logger.info(f"=> no training loop checkpoint file found at '{checkpoint_path}'. Creating a new file.")
             if random_seed is None:
-                random_seed = random_non_negative_int()
-                logger.warning(f'No random seed is specified. Setting to {random_seed}.')
+                _random_seed = random_non_negative_int()
+                logger.warning(f'No random seed is specified. Setting to {_random_seed}.')
+            else:
+                _random_seed = random_seed
     elif random_seed is None:
-        random_seed = random_non_negative_int()
-        logger.warning(f'No random seed is specified. Setting to {random_seed}.')
-    set_random_seed(random_seed)
+        _random_seed = random_non_negative_int()
+        logger.warning(f'No random seed is specified. Setting to {_random_seed}.')
+    else:
+        _random_seed = random_seed  # random seed given successfully
+    set_random_seed(_random_seed)
 
-    result_tracker_cls: Type[ResultTracker] = get_result_tracker_cls(result_tracker)
-    result_tracker = result_tracker_cls(**(result_tracker_kwargs or {}))
+    _result_tracker = tracker_resolver.make(result_tracker, result_tracker_kwargs)
 
     if not metadata:
         metadata = {}
     title = metadata.get('title')
 
     # Start tracking
-    result_tracker.start_run(run_name=title)
+    _result_tracker.start_run(run_name=title)
 
-    device = resolve_device(device)
+    _device: torch.device = resolve_device(device)
 
     dataset_instance: Dataset = get_dataset(
         dataset=dataset,
@@ -731,9 +740,9 @@ def pipeline(  # noqa: C901
         validation=validation,
     )
     if dataset is not None:
-        result_tracker.log_params(dict(dataset=dataset_instance.get_normalized_name()))
+        _result_tracker.log_params(dict(dataset=dataset_instance.get_normalized_name()))
     else:  # means that dataset was defined by triples factories
-        result_tracker.log_params(dict(
+        _result_tracker.log_params(dict(
             dataset=USER_DEFINED_CODE,
             training=training if isinstance(training, str) else USER_DEFINED_CODE,
             testing=testing if isinstance(training, str) else USER_DEFINED_CODE,
@@ -755,51 +764,52 @@ def pipeline(  # noqa: C901
 
     if model_kwargs is None:
         model_kwargs = {}
-    model_kwargs.update(preferred_device=device)
-    model_kwargs.setdefault('random_seed', random_seed)
+    model_kwargs = dict(model_kwargs)
+    model_kwargs.update(preferred_device=_device)
+    model_kwargs.setdefault('random_seed', _random_seed)
 
     if regularizer is not None:
         # FIXME this should never happen.
         if 'regularizer' in model_kwargs:
             logger.warning('Can not specify regularizer in kwargs and model_kwargs. removing from model_kwargs')
             del model_kwargs['regularizer']
-        regularizer_cls: Type[Regularizer] = get_regularizer_cls(regularizer)
-        model_kwargs['regularizer'] = regularizer_cls(
-            **(regularizer_kwargs or {}),
-        )
+        model_kwargs['regularizer'] = regularizer_resolver.make(regularizer, regularizer_kwargs)
 
-    if loss is not None:
-        if 'loss' in model_kwargs:  # FIXME
+    if 'loss' in model_kwargs:
+        if loss is None:
+            loss = model_kwargs.pop('loss')
+        else:
             logger.warning('duplicate loss in kwargs and model_kwargs. removing from model_kwargs')
             del model_kwargs['loss']
-        loss_cls = get_loss_cls(loss)
-        _loss = loss_cls(**(loss_kwargs or {}))
-        model_kwargs.setdefault('loss', _loss)
+    loss_instance = loss_resolver.make(loss, loss_kwargs)
 
-    model = get_model_cls(model)
-    model_instance: Model = model(
+    model_instance: Model = model_resolver.make(
+        model,
         triples_factory=training,
+        loss=loss_instance,
         **model_kwargs,
     )
     # Log model parameters
-    result_tracker.log_params(params=dict(cls=model.__name__, kwargs=model_kwargs), prefix='model')
-
-    optimizer = get_optimizer_cls(optimizer)
-    training_loop = get_training_loop_cls(training_loop)
-
-    if optimizer_kwargs is None:
-        optimizer_kwargs = {}
-
-    # Log optimizer parameters
-    result_tracker.log_params(params=dict(cls=optimizer.__name__, kwargs=optimizer_kwargs), prefix='optimizer')
-    optimizer_instance = optimizer(
-        params=model_instance.get_grad_params(),
-        **optimizer_kwargs,
+    _result_tracker.log_params(
+        params=dict(cls=model_instance.__class__.__name__, kwargs=model_kwargs),
+        prefix='model',
     )
 
-    result_tracker.log_params(params=dict(cls=training_loop.__name__), prefix='training_loop')
+    optimizer_instance = optimizer_resolver.make(
+        optimizer,
+        optimizer_kwargs,
+        params=model_instance.get_grad_params(),
+    )
+    _result_tracker.log_params(
+        params=dict(cls=optimizer_instance.__class__.__name__, kwargs=optimizer_kwargs),
+        prefix='optimizer',
+    )
+
+    training_loop_cls = training_loop_resolver.lookup(training_loop)
+    training_loop_instance: TrainingLoop
     if negative_sampler is None:
-        training_loop_instance: TrainingLoop = training_loop(
+        negative_sampler_cls = None
+        training_loop_instance = training_loop_cls(
             model=model_instance,
             optimizer=optimizer_instance,
             automatic_memory_optimization=automatic_memory_optimization,
@@ -807,28 +817,32 @@ def pipeline(  # noqa: C901
     elif training_loop is not SLCWATrainingLoop:
         raise ValueError('Can not specify negative sampler with LCWA')
     else:
-        negative_sampler = get_negative_sampler_cls(negative_sampler)
-        result_tracker.log_params(
-            params=dict(cls=negative_sampler.__name__, kwargs=negative_sampler_kwargs),
+        negative_sampler_cls = negative_sampler_resolver.lookup(negative_sampler)
+        _result_tracker.log_params(
+            params=dict(cls=negative_sampler_cls.__name__, kwargs=negative_sampler_kwargs),
             prefix='negative_sampler',
         )
-        training_loop_instance: TrainingLoop = SLCWATrainingLoop(
+        training_loop_instance = SLCWATrainingLoop(
             model=model_instance,
             optimizer=optimizer_instance,
             automatic_memory_optimization=automatic_memory_optimization,
-            negative_sampler_cls=negative_sampler,
+            negative_sampler_cls=negative_sampler_cls,
             negative_sampler_kwargs=negative_sampler_kwargs,
         )
-
-    evaluator = get_evaluator_cls(evaluator)
+    _result_tracker.log_params(
+        params=dict(cls=training_loop_instance.__class__.__name__),
+        prefix='training_loop',
+    )
 
     if evaluator_kwargs is None:
         evaluator_kwargs = {}
+    evaluator_kwargs = dict(evaluator_kwargs)
     evaluator_kwargs.setdefault('automatic_memory_optimization', automatic_memory_optimization)
-    evaluator_instance: Evaluator = evaluator(**evaluator_kwargs)
+    evaluator_instance: Evaluator = evaluator_resolver.make(evaluator, evaluator_kwargs)
 
     if evaluation_kwargs is None:
         evaluation_kwargs = {}
+    evaluation_kwargs = dict(evaluation_kwargs)
 
     # Stopping
     if 'stopper' in training_kwargs and stopper is not None:
@@ -837,25 +851,25 @@ def pipeline(  # noqa: C901
         stopper = training_kwargs.pop('stopper')
     if stopper_kwargs is None:
         stopper_kwargs = {}
+    stopper_kwargs = dict(stopper_kwargs)
 
     # Load the evaluation batch size for the stopper, if it has been set
     _evaluation_batch_size = evaluation_kwargs.get('batch_size')
     if _evaluation_batch_size is not None:
         stopper_kwargs.setdefault('evaluation_batch_size', _evaluation_batch_size)
 
-    # By default there's a stopper that does nothing interesting
-    stopper_cls: Type[Stopper] = get_stopper_cls(stopper)
-    stopper: Stopper = stopper_cls(
+    stopper_instance: Stopper = stopper_resolver.make(
+        stopper,
         model=model_instance,
         evaluator=evaluator_instance,
         evaluation_triples_factory=validation,
-        result_tracker=result_tracker,
+        result_tracker=_result_tracker,
         **stopper_kwargs,
     )
 
     training_kwargs.setdefault('num_epochs', 5)
     training_kwargs.setdefault('batch_size', 256)
-    result_tracker.log_params(params=training_kwargs, prefix='training')
+    _result_tracker.log_params(params=training_kwargs, prefix='training')
 
     # Add logging for debugging
     logging.debug("Run Pipeline based on following config:")
@@ -867,19 +881,20 @@ def pipeline(  # noqa: C901
         logging.debug('testing: %s', testing)
         if validation:
             logging.debug('validation: %s', validation)
-    logging.debug(f"model: {model}")
+    logging.debug(f"model: {model_instance}")
     logging.debug(f"model_kwargs: {model_kwargs}")
-    logging.debug(f"loss: {loss}")
+    logging.debug(f"loss: {loss_instance}")
     logging.debug(f"loss_kwargs: {loss_kwargs}")
     logging.debug(f"regularizer: {regularizer}")
     logging.debug(f"regularizer_kwargs: {regularizer_kwargs}")
     logging.debug(f"optimizer: {optimizer}")
     logging.debug(f"optimizer_kwargs: {optimizer_kwargs}")
     logging.debug(f"training_loop: {training_loop}")
-    logging.debug(f"negative_sampler: {negative_sampler}")
-    logging.debug(f"_negative_sampler_kwargs: {negative_sampler_kwargs}")
+    if negative_sampler_cls is not None:
+        logging.debug(f"negative_sampler: {negative_sampler_cls}")
+        logging.debug(f"_negative_sampler_kwargs: {negative_sampler_kwargs}")
     logging.debug(f"_training_kwargs: {training_kwargs}")
-    logging.debug(f"stopper: {stopper}")
+    logging.debug(f"stopper: {stopper_instance}")
     logging.debug(f"stopper_kwargs: {stopper_kwargs}")
     logging.debug(f"evaluator: {evaluator}")
     logging.debug(f"evaluator_kwargs: {evaluator_kwargs}")
@@ -887,15 +902,18 @@ def pipeline(  # noqa: C901
     # Train like Cristiano Ronaldo
     training_start_time = time.time()
     losses = training_loop_instance.train(
-        stopper=stopper,
-        result_tracker=result_tracker,
+        stopper=stopper_instance,
+        result_tracker=_result_tracker,
         clear_optimizer=clear_optimizer,
         **training_kwargs,
     )
+    assert losses is not None  # losses is only none if it's doing search mode
     training_end_time = time.time() - training_start_time
 
     if use_testing_data:
         mapped_triples = testing.mapped_triples
+    elif validation is None:
+        raise ValueError('no validation triples available')
     else:
         mapped_triples = validation.mapped_triples
 
@@ -914,18 +932,18 @@ def pipeline(  # noqa: C901
         **evaluation_kwargs,
     )
     evaluate_end_time = time.time() - evaluate_start_time
-    result_tracker.log_metrics(
+    _result_tracker.log_metrics(
         metrics=metric_results.to_dict(),
         step=training_kwargs.get('num_epochs'),
     )
-    result_tracker.end_run()
+    _result_tracker.end_run()
 
     return PipelineResult(
-        random_seed=random_seed,
+        random_seed=_random_seed,
         model=model_instance,
         training_loop=training_loop_instance,
         losses=losses,
-        stopper=stopper,
+        stopper=stopper_instance,
         metric_results=metric_results,
         metadata=metadata,
         train_seconds=training_end_time,

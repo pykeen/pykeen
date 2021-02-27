@@ -19,6 +19,7 @@ from typing import (
     Union,
 )
 
+import click
 import numpy as np
 import pandas as pd
 import torch
@@ -26,7 +27,7 @@ import torch.nn
 import torch.nn.modules.batchnorm
 
 from .constants import PYKEEN_BENCHMARKS
-from .typing import DeviceHint, MappedTriples, TorchRandomHint
+from .typing import DeviceHint, HintType, MappedTriples, TorchRandomHint
 from .version import get_git_hash
 
 __all__ = [
@@ -45,6 +46,7 @@ __all__ = [
     'normalize_string',
     'normalized_lookup',
     'get_cls',
+    'Resolver',
     'get_until_first_blank',
     'flatten_dictionary',
     'set_random_seed',
@@ -53,7 +55,6 @@ __all__ = [
     'fix_dataclass_init_docs',
     'get_benchmark',
     'extended_einsum',
-    'convert_to_canonical_shape',
     'strip_dim',
     'upgrade_to_sequence',
     'ensure_tuple',
@@ -125,10 +126,10 @@ def normalize_string(s: str, *, suffix: Optional[str] = None) -> str:
     return s
 
 
-def normalized_lookup(classes: Iterable[Type[X]]) -> Mapping[str, Type[X]]:
+def normalized_lookup(classes: Iterable[Type[X]], suffix: Optional[str] = None) -> Mapping[str, Type[X]]:
     """Make a normalized lookup dict."""
     return {
-        normalize_string(cls.__name__): cls
+        normalize_string(cls.__name__, suffix=suffix): cls
         for cls in classes
     }
 
@@ -158,6 +159,87 @@ def get_cls(
     elif issubclass(query, base):
         return query
     raise TypeError(f'Not subclass of {base.__name__}: {query}')
+
+
+class Resolver(Generic[X]):
+    """Resolve from a list of classes."""
+
+    def __init__(
+        self,
+        classes: Collection[Type[X]],
+        *,
+        base: Type[X],
+        default: Optional[Type[X]] = None,
+        suffix: Optional[str] = None,
+        synonyms: Optional[Mapping[str, Type[X]]] = None,
+    ):
+        """Initialize the resolver.
+
+        :param classes: A list of classes
+        :param base: The base class
+        :param default: The default class
+        :param suffix: The optional shared suffix of all classes
+        :param synonyms: The optional synonym dictionary
+        """
+        self.base = base
+        self.default = default
+        self.suffix = suffix
+        self.synonyms = synonyms
+        self.lookup_dict = {
+            self.normalize_cls(cls): cls
+            for cls in classes
+        }
+
+    def normalize_inst(self, x: X) -> str:
+        """Normalize the class name of the instance."""
+        return self.normalize_cls(x.__class__)
+
+    def normalize_cls(self, cls: Type[X]) -> str:
+        """Normalize the class name."""
+        return self.normalize(cls.__name__)
+
+    def normalize(self, s: str) -> str:
+        """Normalize the string with this resolve's suffix."""
+        return normalize_string(s, suffix=self.suffix)
+
+    def lookup(self, query: HintType[X]) -> Type[X]:
+        """Lookup a class."""
+        return get_cls(
+            query,
+            base=self.base,
+            lookup_dict=self.lookup_dict,
+            lookup_dict_synonyms=self.synonyms,
+            default=self.default,
+            suffix=self.suffix,
+        )
+
+    def make(self, query: HintType[X], pos_kwargs: Optional[Mapping[str, Any]] = None, **kwargs) -> X:
+        """Instantiate a class with optional kwargs."""
+        cls: Type[X] = self.lookup(query)
+        return cls(**(pos_kwargs or {}), **kwargs)  # type: ignore
+
+    def get_option(self, *flags: str, default: Optional[str] = None, **kwargs):
+        """Get a click option for this resolver."""
+        if default is None:
+            if self.default is None:
+                raise ValueError
+            default = self.normalize_cls(self.default)
+
+        return click.option(
+            *flags,
+            type=click.Choice(list(self.lookup_dict)),
+            default=default,
+            show_default=True,
+            callback=_make_callback(self.lookup),
+            **kwargs,
+        )
+
+
+def _make_callback(f):
+    def _callback(_, __, value):
+        return f(value)
+
+    return _callback
 
 
 def get_until_first_blank(s: str) -> str:

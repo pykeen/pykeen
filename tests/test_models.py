@@ -13,8 +13,8 @@ import torch
 import pykeen.experiments
 import pykeen.models
 from pykeen.models import (
-    ERModel, EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, MultimodalModel, _MODELS, _NewAbstractModel,
-    _OldAbstractModel,
+    ERModel, EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, MultimodalModel, _MODELS,
+    _NewAbstractModel, _OldAbstractModel, model_resolver,
 )
 from pykeen.models.predict import get_novelty_mask, predict
 from pykeen.models.unimodal.rgcn import (
@@ -39,7 +39,7 @@ SKIP_MODULES = {
     ERModel.__name__,
     'MockModel',
     'models',
-    'get_model_cls',
+    'model_resolver',
     'SimpleInteractionModel',
 }
 for cls in MultimodalModel.__subclasses__():
@@ -577,7 +577,7 @@ class TestTesting(unittest.TestCase):
 
     def test_documentation(self):
         """Test all models have appropriate structured documentation."""
-        for name, model_cls in sorted(pykeen.models.models.items()):
+        for name, model_cls in sorted(model_resolver.lookup_dict.items()):
             with self.subTest(name=name):
                 try:
                     docdata = model_cls.__docdata__
@@ -595,7 +595,7 @@ class TestTesting(unittest.TestCase):
         """
         model_names = {
             cls.__name__
-            for cls in pykeen.models.models.values()
+            for cls in model_resolver.lookup_dict.values()
             if not issubclass(cls, ERModel)
         }
         model_names -= SKIP_MODULES
