@@ -13,7 +13,7 @@ from ...optimizers import optimizer_resolver
 from ...stoppers import stopper_resolver
 from ...training import training_loop_resolver
 from ...triples import TriplesFactory
-from ...utils import normalize_string, random_non_negative_int, resolve_device
+from ...utils import random_non_negative_int, resolve_device
 
 
 def _make_callback(f):
@@ -28,10 +28,6 @@ def _make_instantiation_callback(f):
         return f(value)()
 
     return _callback
-
-
-def _get_default(f, suffix=None):
-    return normalize_string(f(None).__name__, suffix=suffix)
 
 
 def triples_factory_callback(_, __, path: Optional[str]) -> Optional[TriplesFactory]:

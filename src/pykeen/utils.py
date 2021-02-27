@@ -185,11 +185,22 @@ class Resolver(Generic[X]):
         self.default = default
         self.suffix = suffix
         self.synonyms = synonyms
-        self._classes = classes
         self.lookup_dict = {
-            normalize_string(cls.__name__, suffix=suffix): cls
-            for cls in self._classes
+            self.normalize_cls(cls): cls
+            for cls in classes
         }
+
+    def normalize_inst(self, x: X) -> str:
+        """Normalize the class name of the instance."""
+        return self.normalize_cls(x.__class__)
+
+    def normalize_cls(self, cls: Type[X]) -> str:
+        """Normalize the class name."""
+        return self.normalize(cls.__name__)
+
+    def normalize(self, s: str) -> str:
+        """Normalize the string with this resolve's suffix."""
+        return normalize_string(s, suffix=self.suffix)
 
     def lookup(self, query: HintType[X]) -> Type[X]:
         """Lookup a class."""
@@ -212,7 +223,7 @@ class Resolver(Generic[X]):
         if default is None:
             if self.default is None:
                 raise ValueError
-            default = normalize_string(self.default.__name__, suffix=self.suffix)
+            default = self.normalize_cls(self.default)
 
         return click.option(
             *flags,

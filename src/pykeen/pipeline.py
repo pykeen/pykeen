@@ -175,7 +175,7 @@ import pickle
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Collection, Dict, Iterable, List, Mapping, Optional, Type, Union
+from typing import Any, Collection, Dict, Iterable, List, Mapping, MutableMapping, Optional, Type, Union
 
 import pandas as pd
 import torch
@@ -243,7 +243,7 @@ class PipelineResult(Result):
     stopper: Optional[Stopper] = None
 
     #: Any additional metadata as a dictionary
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: MutableMapping[str, Any] = field(default_factory=dict)
 
     #: The version of PyKEEN used to create these results
     version: str = field(default_factory=get_version)
@@ -881,9 +881,9 @@ def pipeline(  # noqa: C901
         logging.debug('testing: %s', testing)
         if validation:
             logging.debug('validation: %s', validation)
-    logging.debug(f"model: {model_instance.__class__.__name__}")
+    logging.debug(f"model: {model_instance}")
     logging.debug(f"model_kwargs: {model_kwargs}")
-    logging.debug(f"loss: {loss_instance.__class__.__name__}")
+    logging.debug(f"loss: {loss_instance}")
     logging.debug(f"loss_kwargs: {loss_kwargs}")
     logging.debug(f"regularizer: {regularizer}")
     logging.debug(f"regularizer_kwargs: {regularizer_kwargs}")
@@ -891,10 +891,10 @@ def pipeline(  # noqa: C901
     logging.debug(f"optimizer_kwargs: {optimizer_kwargs}")
     logging.debug(f"training_loop: {training_loop}")
     if negative_sampler_cls is not None:
-        logging.debug(f"negative_sampler: {negative_sampler_cls.__name__}")
+        logging.debug(f"negative_sampler: {negative_sampler_cls}")
         logging.debug(f"_negative_sampler_kwargs: {negative_sampler_kwargs}")
     logging.debug(f"_training_kwargs: {training_kwargs}")
-    logging.debug(f"stopper: {stopper_instance.__class__.__name__}")
+    logging.debug(f"stopper: {stopper_instance}")
     logging.debug(f"stopper_kwargs: {stopper_kwargs}")
     logging.debug(f"evaluator: {evaluator}")
     logging.debug(f"evaluator_kwargs: {evaluator_kwargs}")

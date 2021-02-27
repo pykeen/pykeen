@@ -33,10 +33,7 @@ from ..trackers import ResultTracker, tracker_resolver
 from ..training import SLCWATrainingLoop, TrainingLoop, training_loop_resolver
 from ..triples import TriplesFactory
 from ..typing import Hint, HintType
-from ..utils import (
-    Result, ensure_ftp_directory, fix_dataclass_init_docs, get_df_io, get_json_bytes_io,
-    normalize_string,
-)
+from ..utils import Result, ensure_ftp_directory, fix_dataclass_init_docs, get_df_io, get_json_bytes_io
 from ..version import get_git_hash, get_version
 
 __all__ = [
@@ -604,11 +601,11 @@ def hpo_pipeline(
 
     # 2. Model
     model_cls: Type[Model] = model_resolver.lookup(model)
-    study.set_user_attr('model', normalize_string(model_cls.__name__))
+    study.set_user_attr('model', model_resolver.normalize_cls(model_cls))
     logger.info(f'Using model: {model_cls}')
     # 3. Loss
     loss_cls: Type[Loss] = model_cls.loss_default if loss is None else loss_resolver.lookup(loss)
-    study.set_user_attr('loss', normalize_string(loss_cls.__name__, suffix=loss_resolver.suffix))
+    study.set_user_attr('loss', loss_resolver.normalize_cls(loss_cls))
     logger.info(f'Using loss: {loss_cls}')
     # 4. Regularizer
     regularizer_cls: Type[Regularizer] = (
@@ -620,7 +617,7 @@ def hpo_pipeline(
     logger.info(f'Using regularizer: {regularizer_cls}')
     # 5. Optimizer
     optimizer_cls: Type[Optimizer] = optimizer_resolver.lookup(optimizer)
-    study.set_user_attr('optimizer', normalize_string(optimizer_cls.__name__))
+    study.set_user_attr('optimizer', optimizer_resolver.normalize_cls(optimizer_cls))
     logger.info(f'Using optimizer: {optimizer_cls}')
     # 6. Training Loop
     training_loop_cls: Type[TrainingLoop] = training_loop_resolver.lookup(training_loop)
