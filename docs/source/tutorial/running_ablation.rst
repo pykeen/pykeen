@@ -2,6 +2,7 @@ Running an Ablation Study
 =========================
 You want to find out which loss function and training approach is best-suited for your interaction model
 (model architecture)? Then performing an ablation study is the way to go!
+
 In general, an ablation study is a set of experiments in which components of a machine learning system are removed/replaced in order
 to measure the impact of these components on the system's performance. In the context of knowledge graph embedding
 models, typical ablation studies involve investigating different loss functions, training approaches, negative
@@ -144,13 +145,13 @@ as HPO algorithm using the key ``sampler``, and finally define that we do not us
 Now that our configuration is complete, we can start the ablation study using the CLI-function
 :func:`pykeen.experiments.cli.ablation`:
 
->>>pykeen experiments ablation path/to/complex_nation.json -d path/to/output/directory
+>>> pykeen experiments ablation path/to/complex_nation.json -d path/to/output/directory
 
 
 To measure the variance in performance, we can additionally define how often we want to re-train and re-evaluate
 the best model of each ablation-experiment using the option `-r`/`--best-replicates`:
 
->>>pykeen experiments ablation path/to/complex_nation.json -d path/to/output/directory -r 5
+>>> pykeen experiments ablation path/to/complex_nation.json -d path/to/output/directory -r 5
 
 Eager to check out the results? Then check out the output directory ``path/to/output/directory`` in which you will find
 a directory whose name contains a timestamp and a unique id. Within this directory, you will find subdirectories,
