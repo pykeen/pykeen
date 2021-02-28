@@ -1,5 +1,15 @@
 Running an Ablation Study
 =========================
+An ablation study is a set of experiments in which components of a machine learning system are removed/replaced in order
+to measure the impact of these components on the system's performance. In the context of knowledge graph embedding
+models, typical ablation studies involve investigating different loss functions, training approaches, negative
+samplers, and the explicit modeling of inverse relations. For a specific model composition based on these components,
+the best set of hyper-parameter values, e.g., embedding dimension, learning rate, batch size, loss function-specific
+hyper-parameters such as the margin value in the margin ranking loss need to be determined. This is accomplished by
+a process called hyper-parameter optimization. Different approaches are have been proposed, of which random search and
+grid search are very popular.
+
+
 In PyKEEN, we can define an ablation study in a configuration file (``file_name.json``) or within our own program.
 
 First, we show how to define an ablation study within a configuration file. In the following example, we define an
@@ -139,3 +149,5 @@ To measure the variance in performance, we can additionally define how often we 
 the best model of each ablation-experiment using the option `-r`/`--best-replicates`:
 
 >>>pykeen experiments ablation path/to/complex_nation.json -d path/to/output/directory -r 5
+
+
