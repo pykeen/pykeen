@@ -736,6 +736,7 @@ def pipeline(  # noqa: C901
     clear_optimizer: bool = True,
     # 6. Training Loop
     training_loop: Union[None, str, Type[TrainingLoop]] = None,
+    training_loop_kwargs: Optional[Mapping[str, Any]] = None,
     negative_sampler: Union[None, str, Type[NegativeSampler]] = None,
     negative_sampler_kwargs: Optional[Mapping[str, Any]] = None,
     # 7. Training (ronaldo style)
@@ -750,7 +751,6 @@ def pipeline(  # noqa: C901
     result_tracker: Union[None, str, Type[ResultTracker]] = None,
     result_tracker_kwargs: Optional[Mapping[str, Any]] = None,
     # Misc
-    automatic_memory_optimization: bool = True,
     metadata: Optional[Dict[str, Any]] = None,
     device: Union[None, str, torch.device] = None,
     random_seed: Optional[int] = None,
@@ -938,6 +938,8 @@ def pipeline(  # noqa: C901
 
     optimizer = get_optimizer_cls(optimizer)
     training_loop = get_training_loop_cls(training_loop)
+    if training_loop_kwargs is None:
+        training_loop_kwargs = {}
 
     if optimizer_kwargs is None:
         optimizer_kwargs = {}
@@ -954,7 +956,7 @@ def pipeline(  # noqa: C901
         training_loop_instance: TrainingLoop = training_loop(
             model=model_instance,
             optimizer=optimizer_instance,
-            automatic_memory_optimization=automatic_memory_optimization,
+            **training_loop_kwargs,
         )
     elif training_loop is not SLCWATrainingLoop:
         raise ValueError('Can not specify negative sampler with LCWA')
@@ -967,16 +969,15 @@ def pipeline(  # noqa: C901
         training_loop_instance: TrainingLoop = SLCWATrainingLoop(
             model=model_instance,
             optimizer=optimizer_instance,
-            automatic_memory_optimization=automatic_memory_optimization,
             negative_sampler_cls=negative_sampler,
             negative_sampler_kwargs=negative_sampler_kwargs,
+            **training_loop_kwargs,
         )
 
     evaluator = get_evaluator_cls(evaluator)
 
     if evaluator_kwargs is None:
         evaluator_kwargs = {}
-    evaluator_kwargs.setdefault('automatic_memory_optimization', automatic_memory_optimization)
     evaluator_instance: Evaluator = evaluator(**evaluator_kwargs)
 
     if evaluation_kwargs is None:
