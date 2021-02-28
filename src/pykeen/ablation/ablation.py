@@ -309,6 +309,7 @@ def prepare_ablation(  # noqa:C901
     model_to_loss_to_loss_kwargs_ranges: Optional[Mapping3D] = None,
     model_to_optimizer_to_optimizer_kwargs: Optional[Mapping3D] = None,
     model_to_optimizer_to_optimizer_kwargs_ranges: Optional[Mapping3D] = None,
+    model_to_training_loop_to_training_loop_kwargs: Optional[Mapping3D] = None,
     negative_sampler: Optional[str] = None,
     model_to_negative_sampler_to_negative_sampler_kwargs: Optional[Mapping3D] = None,
     model_to_neg_sampler_to_neg_sampler_kwargs_ranges: Optional[Mapping3D] = None,
@@ -376,6 +377,8 @@ def prepare_ablation(  # noqa:C901
         model_to_regularizer_to_regularizer_kwargs = {}
     if not model_to_regularizer_to_regularizer_kwargs_ranges:
         model_to_regularizer_to_regularizer_kwargs_ranges = {}
+    if not model_to_training_loop_to_training_loop_kwargs:
+        model_to_training_loop_to_training_loop_kwargs = {}
     if not model_to_trainer_to_training_kwargs:
         model_to_trainer_to_training_kwargs = {}
     if not model_to_trainer_to_training_kwargs_ranges:
@@ -477,6 +480,11 @@ def prepare_ablation(  # noqa:C901
 
         # Add training approach to current_pipeline
         hpo_config['training_loop'] = training_loop
+        _set_arguments(
+            config=model_to_training_loop_to_training_loop_kwargs,
+            key='training_loop_kwargs',
+            value=training_loop,
+        )
         _set_arguments(config=model_to_trainer_to_training_kwargs, key='training_kwargs', value=training_loop)
         _set_arguments(
             config=model_to_trainer_to_training_kwargs_ranges,

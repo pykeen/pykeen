@@ -87,6 +87,13 @@
     "evaluation_kwargs": {
       "batch_size": null
     },
+    "model_to_training_loop_to_training_loop_kwargs": {
+      "ComplEx": {
+        "lcwa": {
+          "automatic_memory_optimization": true
+        }
+      }
+    },
     "model_to_trainer_to_training_kwargs": {
       "ComplEx": {
         "lcwa": {

@@ -83,6 +83,7 @@ class Objective:
     optimizer_kwargs: Optional[Mapping[str, Any]] = None
     optimizer_kwargs_ranges: Optional[Mapping[str, Any]] = None
     # 6. Training Loop
+    training_loop_kwargs: Optional[Mapping[str, Any]] = None
     negative_sampler: Optional[Type[NegativeSampler]] = None
     negative_sampler_kwargs: Optional[Mapping[str, Any]] = None
     negative_sampler_kwargs_ranges: Optional[Mapping[str, Any]] = None
@@ -216,6 +217,7 @@ class Objective:
                 negative_sampler=self.negative_sampler,
                 negative_sampler_kwargs=_negative_sampler_kwargs,
                 # 7. Training
+                training_loop_kwargs=self.training_loop_kwargs,
                 training_kwargs=_training_kwargs,
                 stopper=self.stopper,
                 stopper_kwargs=_stopper_kwargs,
@@ -281,6 +283,7 @@ class HpoPipelineResult(Result):
                 logger.debug(f'saving pre-specified field in pipeline config: {field.name}={field_value}')
                 pipeline_config[field.name] = field_value
             elif field.name in {'training', 'testing', 'validation'}:
+                # TODO: Remove USER_DEFINED_CODE since it clashes with condition in Dataset
                 pipeline_config[field.name] = field_value if isinstance(field_value, str) else USER_DEFINED_CODE
 
         for k, v in self.study.best_params.items():
@@ -438,6 +441,7 @@ def hpo_pipeline(
     optimizer_kwargs_ranges: Optional[Mapping[str, Any]] = None,
     # 6. Training Loop
     training_loop: Union[None, str, Type[TrainingLoop]] = None,
+    training_loop_kwargs: Optional[Mapping[str, Any]] = None,
     negative_sampler: Union[None, str, Type[NegativeSampler]] = None,
     negative_sampler_kwargs: Optional[Mapping[str, Any]] = None,
     negative_sampler_kwargs_ranges: Optional[Mapping[str, Any]] = None,
@@ -678,6 +682,7 @@ def hpo_pipeline(
         optimizer_kwargs_ranges=optimizer_kwargs_ranges,
         # 6. Training Loop
         training_loop=training_loop,
+        training_loop_kwargs=training_loop_kwargs,
         negative_sampler=negative_sampler,
         negative_sampler_kwargs=negative_sampler_kwargs,
         negative_sampler_kwargs_ranges=negative_sampler_kwargs_ranges,
