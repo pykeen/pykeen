@@ -1,6 +1,8 @@
 Running an Ablation Study
 =========================
-An ablation study is a set of experiments in which components of a machine learning system are removed/replaced in order
+You want to find out which loss function and training approach is best-suited for your interaction model
+(model architecture)? Then performing an ablation study is the way to go!
+In general, an ablation study is a set of experiments in which components of a machine learning system are removed/replaced in order
 to measure the impact of these components on the system's performance. In the context of knowledge graph embedding
 models, typical ablation studies involve investigating different loss functions, training approaches, negative
 samplers, and the explicit modeling of inverse relations. For a specific model composition based on these components,
@@ -149,5 +151,19 @@ To measure the variance in performance, we can additionally define how often we 
 the best model of each ablation-experiment using the option `-r`/`--best-replicates`:
 
 >>>pykeen experiments ablation path/to/complex_nation.json -d path/to/output/directory -r 5
+
+Eager to check out the results? Then check out the output directory ``path/to/output/directory`` in which you will find
+a directory whose name contains a timestamp and a unique id. Within this directory, you will find subdirectories,
+e.g., ``0000_nations_complex`` which contains all experimental artifacts of one specific ablation experiment of the
+defined ablation study. The most relevant subdirectory is ``best_pipeline`` which comprises the artifacts of the best
+performing experiment, including it's definition in ``pipeline_config.json``,  the obtained results, and the trained
+model(s) in the sub-directory ``replicates``. The number of replicates in ``replicates` corresponds to the number
+provided with the argument ``-r``.
+Additionally, you are provided with further information about the ablation study in the root directory: ``study.json``
+describes the ablation experiment, ``hpo_config.json`` describes the HPO of the ablation experiment, ``trials.tsv``
+provides an overview of each HPO-experiment.
+
+
+
 
 
