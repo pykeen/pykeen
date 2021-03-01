@@ -1145,7 +1145,7 @@ class MonotonicAffineTransformationInteraction(
     Interaction[
         HeadRepresentation,
         RelationRepresentation,
-        TailRepresentation
+        TailRepresentation,
     ],
 ):
     r"""
