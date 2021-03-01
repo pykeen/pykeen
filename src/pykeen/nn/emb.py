@@ -8,7 +8,7 @@ import functools
 import warnings
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Callable, Mapping, Optional, Sequence, Tuple, TypeVar, Union, cast
+from typing import Any, Callable, Mapping, Optional, Sequence, TYPE_CHECKING, Tuple, TypeVar, Union, cast
 
 import numpy as np
 import torch
@@ -18,9 +18,11 @@ from torch.nn import functional
 
 from .init import init_phases, xavier_normal_, xavier_normal_norm_, xavier_uniform_, xavier_uniform_norm_
 from .norm import complex_normalize
-from ..regularizers import Regularizer
 from ..typing import Constrainer, Hint, Initializer, Normalizer
 from ..utils import clamp_norm, convert_to_canonical_shape
+
+if TYPE_CHECKING:
+    from ..regularizers import Regularizer
 
 __all__ = [
     'RepresentationModule',
@@ -188,7 +190,7 @@ class Embedding(RepresentationModule):
 
     normalizer: Optional[Normalizer]
     constrainer: Optional[Constrainer]
-    regularizer: Optional[Regularizer]
+    regularizer: Optional['Regularizer']
 
     def __init__(
         self,
@@ -201,7 +203,7 @@ class Embedding(RepresentationModule):
         normalizer_kwargs: Optional[Mapping[str, Any]] = None,
         constrainer: Hint[Constrainer] = None,
         constrainer_kwargs: Optional[Mapping[str, Any]] = None,
-        regularizer: Optional[Regularizer] = None,
+        regularizer: Optional['Regularizer'] = None,
         trainable: bool = True,
         dtype: Optional[torch.dtype] = None,
     ):
@@ -354,7 +356,7 @@ class EmbeddingSpecification:
     constrainer: Hint[Constrainer] = None
     constrainer_kwargs: Optional[Mapping[str, Any]] = None
 
-    regularizer: Optional[Regularizer] = None
+    regularizer: Optional['Regularizer'] = None
 
     dtype: Optional[torch.dtype] = None
 
