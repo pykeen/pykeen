@@ -81,11 +81,12 @@ def model_builder(
     interaction_instance = interaction_resolver.make(interaction, interaction_kwargs)
     entity_representations, relation_representations = _normalize_entity_representations(
         dimensions=dimensions,
-        interaction=interaction,
+        interaction=interaction_instance.__class__,
         entity_representations=entity_representations,
         relation_representations=relation_representations,
     )
     return model_from_interaction(
+        dimensions=dimensions,
         interaction=interaction_instance,
         entity_representations=entity_representations,
         relation_representations=relation_representations,
@@ -93,11 +94,18 @@ def model_builder(
 
 
 def model_from_interaction(
+    dimensions: Mapping[str, Any],
     interaction: Interaction,
     entity_representations: EmbeddingSpecificationHint = None,
     relation_representations: EmbeddingSpecificationHint = None,
 ) -> Type[ERModel]:
     """Build a model class from an interaction class instance."""
+    entity_representations, relation_representations = _normalize_entity_representations(
+        dimensions=dimensions,
+        interaction=interaction.__class__,
+        entity_representations=entity_representations,
+        relation_representations=relation_representations,
+    )
 
     class ChildERModel(ERModel):
         def __init__(self, **kwargs) -> None:

@@ -179,9 +179,7 @@ class TestPipelineTriples(unittest.TestCase):
     def test_interaction_instance_builder(self):
         """Test resolving an interaction model instance."""
         model = model_instance_builder(
-            dimensions=dict(
-                d=3,
-            ),
+            dimensions={"d": 3},
             interaction=TransEInteraction,
             interaction_kwargs=dict(p=2),
             triples_factory=self.training,
@@ -201,7 +199,7 @@ class TestPipelineTriples(unittest.TestCase):
 
     def test_interaction_builder(self):
         """Test resolving an interaction model."""
-        model_cls = model_from_interaction(TransEInteraction(p=2))
+        model_cls = model_from_interaction({"d": 3}, TransEInteraction(p=2))
         self._help_test_interaction_resolver(model_cls)
 
     def test_interaction_resolver_cls(self):
