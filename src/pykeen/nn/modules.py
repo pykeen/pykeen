@@ -17,9 +17,10 @@ from torch import FloatTensor, nn
 
 from . import functional as pkf
 from ..typing import HeadRepresentation, RelationRepresentation, TailRepresentation
-from ..utils import CANONICAL_DIMENSIONS, convert_to_canonical_shape, ensure_tuple, upgrade_to_sequence
+from ..utils import CANONICAL_DIMENSIONS, Resolver, convert_to_canonical_shape, ensure_tuple, upgrade_to_sequence
 
 __all__ = [
+    'interaction_resolver',
     # Base Classes
     'Interaction',
     'FunctionalInteraction',
@@ -1139,3 +1140,10 @@ class PairREInteraction(TranslationalInteraction[FloatTensor, Tuple[FloatTensor,
         t: TailRepresentation,
     ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
         return dict(h=h, r_h=r[0], r_t=r[1], t=t)
+
+
+interaction_resolver = Resolver.from_subclasses(
+    Interaction,  # type: ignore
+    skip={TranslationalInteraction, FunctionalInteraction},
+    suffix=Interaction.__name__,
+)

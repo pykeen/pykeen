@@ -190,6 +190,26 @@ class Resolver(Generic[X]):
             for cls in classes
         }
 
+    @classmethod
+    def from_subclasses(cls, base: Type[X], skip: Collection[Type[X]], **kwargs) -> 'Resolver':
+        """Make a resolver from the subclasses of a given class.
+
+        :param base: The base class whose subclasses will be indexed
+        :param skip: Any subclasses to skip (usually good to hardcode intermediate base classes)
+        :param kwargs: remaining keyword arguments to pass to :func:`Resolver.__init__`
+        :return: A resolver instance
+        """
+        skip = set(skip)
+        return Resolver(
+            {
+                subcls
+                for subcls in get_subclasses(base)
+                if subcls not in skip
+            },
+            base=base,
+            **kwargs,
+        )
+
     def normalize_inst(self, x: X) -> str:
         """Normalize the class name of the instance."""
         return self.normalize_cls(x.__class__)

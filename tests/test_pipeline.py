@@ -9,11 +9,13 @@ import pandas as pd
 
 import pykeen.regularizers
 from pykeen.datasets import EagerDataset, Nations
-from pykeen.models import Model
+from pykeen.models import ERModel, Model
 from pykeen.models.predict import (
     get_all_prediction_df, get_head_prediction_df, get_relation_prediction_df,
     get_tail_prediction_df,
 )
+from pykeen.models.resolve import model_builder, model_from_interaction
+from pykeen.nn.modules import TransEInteraction
 from pykeen.pipeline import PipelineResult, pipeline
 from pykeen.regularizers import NoRegularizer
 from pykeen.triples.generation import generate_triples_factory
@@ -172,6 +174,35 @@ class TestPipelineTriples(unittest.TestCase):
             model='TransE',
             training_kwargs=dict(num_epochs=1, use_tqdm=False),
             evaluation_kwargs=dict(use_tqdm=False),
+        )
+
+    def test_interaction_builder(self):
+        """Test resolving an interaction model."""
+        model_cls = model_from_interaction(TransEInteraction(p=2))
+        self._help_test_interaction_resolver(model_cls)
+
+    def test_interaction_resolver_cls(self):
+        """Test resolving the interaction function."""
+        model_cls = model_builder(TransEInteraction, {'p': 2})
+        self._help_test_interaction_resolver(model_cls)
+
+    def test_interaction_resolver_lookup(self):
+        """Test resolving the interaction function."""
+        model_cls = model_builder('TransE', {'p': 2})
+        self._help_test_interaction_resolver(model_cls)
+
+    def _help_test_interaction_resolver(self, model_cls):
+        self.assertTrue(issubclass(model_cls, ERModel))
+        self.assertIsInstance(model_cls._interaction, TransEInteraction)
+        self.assertEqual(2, model_cls._interaction.p)
+        _ = pipeline(
+            training=self.training,
+            testing=self.testing,
+            validation=self.validation,
+            model=model_cls,
+            training_kwargs=dict(num_epochs=1, use_tqdm=False),
+            evaluation_kwargs=dict(use_tqdm=False),
+            random_seed=0,
         )
 
 
