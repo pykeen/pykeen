@@ -37,8 +37,8 @@ class PairRE(ERModel):
     def __init__(
         self,
         embedding_dim: int = 200,
-        p: int = 2,
-        power_norm: bool = True,
+        p: int = 1,
+        power_norm: bool = False,
         entity_initializer: Hint[Initializer] = xavier_normal_,
         entity_normalizer: Hint[Normalizer] = functional.normalize,
         entity_normalizer_kwargs: Optional[Mapping[str, Any]] = None,
@@ -50,8 +50,6 @@ class PairRE(ERModel):
         :param embedding_dim: The entity embedding dimension $d$. Defaults to 200. Is usually $d \in [50, 300]$.
         :param p: The $l_p$ norm. Defaults to 2.
         :param power_norm: Should the power norm be used? Defaults to true.
-
-        .. warning:: Due to the lack of an official implementations, not all details are known.
         """
         # The entity representations are normalized to L2 unit length
         # cf. https://github.com/alipay/KnowledgeGraphEmbeddingsViaPairedRelationVectors_PairRE/blob/main/biokg/model.py#L232-L240
