@@ -55,19 +55,14 @@ def model_instance_builder(
     **kwargs,
 ) -> ERModel:
     """Build a model from an interaction class hint (name or class)."""
-    interaction_instance = interaction_resolver.make(interaction, interaction_kwargs)
-    entity_representations, relation_representations = _normalize_entity_representations(
+    model_cls = model_builder(
         dimensions=dimensions,
         interaction=interaction,
+        interaction_kwargs=interaction_kwargs,
         entity_representations=entity_representations,
         relation_representations=relation_representations,
     )
-    return ERModel(
-        interaction=interaction_instance,
-        entity_representations=entity_representations,
-        relation_representations=relation_representations,
-        **kwargs,
-    )
+    return model_cls(**kwargs)
 
 
 def model_builder(
