@@ -60,7 +60,7 @@ def model_from_interaction(
 def _resolve_representations(
     num_representations: int,
     shape: Sequence[str],
-    representations: OneOrSequence[Union[None, RepresentationModule, EmbeddingSpecification]],
+    representations: Sequence[Union[None, RepresentationModule, EmbeddingSpecification]],
     dimensions: Mapping[str, int],
 ) -> Sequence[RepresentationModule]:
     """
@@ -85,11 +85,14 @@ def _resolve_representations(
         if isinstance(representations, RepresentationModule):
             # FIXME: Error message; also, why is this a problem.
             raise ValueError
+        # share same embedding specification for all representations
+        # TODO: why? they should usually have different ones
         representations = [representations] * len(shape)
 
     # shallow copy to avoid side-effects
     dimensions = dict(**dimensions)
 
+    # TODO: Start with instantiated representations, then embedding specification and then None
     result = []
     for symbolic_shape, representation in zip(shape, representations):
         if representation is None:
