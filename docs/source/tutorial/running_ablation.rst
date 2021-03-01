@@ -388,4 +388,32 @@ Now that we defined our own hyper-parameter values and ranges, let's have a look
 We are expected to provide the configuration for the keys ``datasets``, ``models``, ``losses``, ``optimizers``, and
 ``training_loops``. For all other components and hype-parameters, PyKEEN will provide default values/ranges.
 However, for achieving optimal performance, we should carefully define the hyper-parameters ourselves, as explained
-above.
+above. Note that there many more ranges to configure such hyper-parameters for the loss functions, or the negative
+samplers. Check out the examples provided in `tests/resources/hpo_complex_nations.json`` how to define the
+ranges for other components.
+
+Run an Ablation Study With Your Own Data
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+We showed to run an ablation study with PyKEEN integrated dataset. Now you are asking yourself, whether you can
+run ablations studies with your own data? Yes, you can!
+It requires a minimal change compared to the previous configuration:
+
+.. code-block:: javascript
+
+    {   ...
+        "ablation": {
+            "datasets": [
+                {
+                    "training": "/path/to/your/train.txt",
+                    "validation": "/path/to/your/validation.txt",
+                    "testing": "/path/to/your/test.txt"
+                }
+            ],
+        }
+        ...
+    }
+
+In the dataset field, you don't provide a list of dataset names but dictionaries containing the paths
+to your train-validation-test splits. Check out ``tests/resources/hpo_complex_your_own_data.json`` for a
+concrete example. Yes, that's all.
