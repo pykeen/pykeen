@@ -18,6 +18,13 @@ __all__ = [
 ]
 
 
+def _resolve_kwargs(kwargs: Optional[Mapping[str, Any]], default_kwargs: Mapping[str, Any]) -> Mapping[str, Any]:
+    kwargs = kwargs or dict()
+    for k, v in default_kwargs:
+        kwargs.setdefault(k, v)
+    return kwargs
+
+
 class PairRE(ERModel):
     r"""An implementation of PairRE from [chao2020]_.
 
@@ -33,6 +40,14 @@ class PairRE(ERModel):
     hpo_default: ClassVar[Mapping[str, Any]] = dict(
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
         p=dict(type=int, low=1, high=2),
+    )
+
+    #: The default entity normalizer parameters
+    # The entity representations are normalized to L2 unit length
+    # cf. https://github.com/alipay/KnowledgeGraphEmbeddingsViaPairedRelationVectors_PairRE/blob/0a95bcd54759207984c670af92ceefa19dd248ad/biokg/model.py#L232-L240
+    default_entity_normalizer_kwargs: ClassVar[Mapping[str, Any]] = dict(
+        p=2,
+        dim=-1,
     )
 
     def __init__(
@@ -54,11 +69,10 @@ class PairRE(ERModel):
         :param p: The $l_p$ norm.
         :param power_norm: Should the power norm be used?
         """
-        # The entity representations are normalized to L2 unit length
-        # cf. https://github.com/alipay/KnowledgeGraphEmbeddingsViaPairedRelationVectors_PairRE/blob/0a95bcd54759207984c670af92ceefa19dd248ad/biokg/model.py#L232-L240
-        entity_normalizer_kwargs = entity_normalizer_kwargs or dict()
-        entity_normalizer_kwargs.setdefault("p", 2)
-        entity_normalizer_kwargs.setdefault("dim", -1)
+        entity_normalizer_kwargs = _resolve_kwargs(
+            kwargs=entity_normalizer_kwargs,
+            default_kwargs=self.default_entity_normalizer_kwargs,
+        )
         # update initializer settings, cf.
         # https://github.com/alipay/KnowledgeGraphEmbeddingsViaPairedRelationVectors_PairRE/blob/0a95bcd54759207984c670af92ceefa19dd248ad/biokg/model.py#L45-L49
         # https://github.com/alipay/KnowledgeGraphEmbeddingsViaPairedRelationVectors_PairRE/blob/0a95bcd54759207984c670af92ceefa19dd248ad/biokg/model.py#L29
