@@ -1175,6 +1175,10 @@ class MonotoneAffineTransformationInteraction(Interaction[HeadRepresentation, Re
 
         # the base interaction
         self.base = base
+        # forward entity/relation shapes
+        self.entity_shape = base.entity_shape
+        self.relation_shape = base.relation_shape
+        self.tail_entity_shape = base.tail_entity_shape
 
         # store initial values for reset_parameters
         self.initial_bias = initial_bias
