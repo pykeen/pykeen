@@ -1155,6 +1155,14 @@ class MonotonicAffineTransformationInteraction(Interaction[HeadRepresentation, R
 
     Monotonicity is required to preserve the ordering of the original scoring function, and thus ensures that more
     plausible triples are still more plausible after the transformation.
+
+    For example, we can add a bias to a distance-based interaction function to enable positive values:
+
+    >>> base = TransEInteraction(p=2)
+    >>> interaction = MonotonicAffineTransformationInteraction(base=base, trainable_bias=True, trainable_scale=False)
+
+    When combined with BCE loss, we can geometrically think about predicting a (soft) sphere at :math:`h + r` with
+    radius equal to the bias of the transformation.
     """
 
     def __init__(
