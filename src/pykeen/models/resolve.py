@@ -63,18 +63,40 @@ def _resolve_representations(
     representations: OneOrSequence[Union[None, RepresentationModule, EmbeddingSpecification]],
     dimensions: Mapping[str, int],
 ) -> Sequence[RepresentationModule]:
+    """
+    Resolve representations.
+
+    :param num_representations:
+        The number of representations, e.g., number of entities.
+    :param shape: length: num_representations
+        The symbolic shapes for each individual representation. Each shape is a sequence of characters. Each character
+         is resolved to an integer dimension, either by looking it up in the dimensions dictionary, or by sharing the
+         symbolic shape with any of the other representations with given shape.
+    :param representations:
+        The representation specifications. These are either `EmbeddingSpecification`'s, or instantiated representations.
+        Values of `None` correspond to default `EmbeddingSpecification`s.
+    :param dimensions:
+        A mapping from symbolic shapes to actual dimensions.
+
+    :return:
+        A sequence of representation instances of size `num_representations`.
+    """
     if not isinstance(representations, Sequence):
         if isinstance(representations, RepresentationModule):
+            # FIXME: Error message; also, why is this a problem.
             raise ValueError
         representations = [representations] * len(shape)
 
+    # shallow copy to avoid side-effects
     dimensions = dict(**dimensions)
+
     result = []
     for symbolic_shape, representation in zip(shape, representations):
         if representation is None:
             representation = EmbeddingSpecification()
         if isinstance(representation, RepresentationModule):
             if representation.max_id < num_representations:
+                # FIXME: Error message
                 raise ValueError
             elif representation.max_id > num_representations:
                 logger.warning(
@@ -84,15 +106,16 @@ def _resolve_representations(
             for name, size in zip(symbolic_shape, representation.shape):
                 expected_dimension = dimensions.get(name)
                 if expected_dimension is not None and expected_dimension != size:
+                    # FIXME: Error message
                     raise ValueError
                 dimensions[name] = size
         elif isinstance(representation, EmbeddingSpecification):
+            # set actual shape
             actual_shape = tuple([dimensions[name] for name in symbolic_shape])
-            representation = representation.make(
-                num_embeddings=num_representations,
-                embedding_dim=None,
-                shape=actual_shape,
-            )
+            representation.shape = actual_shape
+
+            # create embedding
+            representation = representation.make(num_embeddings=num_representations)
         else:
             raise AssertionError
         result.append(representation)
