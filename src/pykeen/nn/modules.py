@@ -1162,7 +1162,8 @@ class MonotonicAffineTransformationInteraction(Interaction[HeadRepresentation, R
     >>> interaction = MonotonicAffineTransformationInteraction(base=base, trainable_bias=True, trainable_scale=False)
 
     When combined with BCE loss, we can geometrically think about predicting a (soft) sphere at :math:`h + r` with
-    radius equal to the bias of the transformation.
+    radius equal to the bias of the transformation. When we add a trainable scale, the model can control the "softness"
+    of the decision boundary itself.
     """
 
     def __init__(
