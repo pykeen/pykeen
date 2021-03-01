@@ -822,8 +822,3 @@ def _set_study_dataset(
     ):
         dataset_name = get_dataset(dataset=dataset).get_normalized_name()
         study.set_user_attr('dataset', dataset_name)
-    else:
-        study.set_user_attr('dataset', USER_DEFINED_CODE)
-        study.set_user_attr('training', training if isinstance(training, str) else USER_DEFINED_CODE)
-        study.set_user_attr('testing', testing if isinstance(testing, str) else USER_DEFINED_CODE)
-        study.set_user_attr('validation', validation if isinstance(validation, str) else USER_DEFINED_CODE)
