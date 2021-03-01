@@ -3,7 +3,7 @@
 """Generation of ad-hoc model classes."""
 
 import logging
-from typing import Any, Mapping, Optional, Sequence, Type, Union
+from typing import Any, Mapping, Optional, Sequence, Tuple, Type, Union
 
 from .nbase import ERModel, EmbeddingSpecificationHint
 from ..nn import EmbeddingSpecification, RepresentationModule
@@ -18,16 +18,12 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-def model_instance_builder(
-    dimensions: Mapping[str, Any],
-    interaction: Hint[Interaction] = None,
-    interaction_kwargs: Optional[Mapping[str, Any]] = None,
-    entity_representations: EmbeddingSpecificationHint = None,
-    relation_representations: EmbeddingSpecificationHint = None,
-    **kwargs,
-) -> ERModel:
-    """Build a model from an interaction class hint (name or class)."""
-    interaction_instance = interaction_resolver.make(interaction, interaction_kwargs)
+def _normalize_entity_representations(
+    dimensions: Mapping[str, int],
+    interaction: Type[Interaction],
+    entity_representations: EmbeddingSpecificationHint,
+    relation_representations: EmbeddingSpecificationHint,
+) -> Tuple[Sequence, Sequence]:
     if entity_representations is None:
         # TODO: Does not work for interactions with separate tail_entity_shape (i.e., ConvE)
         if interaction.tail_entity_shape is not None:
@@ -47,6 +43,25 @@ def model_instance_builder(
             ))
             for shape in interaction.relation_shape
         ]
+    return entity_representations, relation_representations
+
+
+def model_instance_builder(
+    dimensions: Mapping[str, Any],
+    interaction: Hint[Interaction] = None,
+    interaction_kwargs: Optional[Mapping[str, Any]] = None,
+    entity_representations: EmbeddingSpecificationHint = None,
+    relation_representations: EmbeddingSpecificationHint = None,
+    **kwargs,
+) -> ERModel:
+    """Build a model from an interaction class hint (name or class)."""
+    interaction_instance = interaction_resolver.make(interaction, interaction_kwargs)
+    entity_representations, relation_representations = _normalize_entity_representations(
+        dimensions=dimensions,
+        interaction=interaction,
+        entity_representations=entity_representations,
+        relation_representations=relation_representations,
+    )
     return ERModel(
         interaction=interaction_instance,
         entity_representations=entity_representations,
