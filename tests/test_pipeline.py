@@ -206,12 +206,12 @@ class TestPipelineTriples(unittest.TestCase):
 
     def test_interaction_resolver_cls(self):
         """Test resolving the interaction function."""
-        model_cls = model_builder(TransEInteraction, {'p': 2})
+        model_cls = model_builder({"d": 3}, TransEInteraction, {'p': 2})
         self._help_test_interaction_resolver(model_cls)
 
     def test_interaction_resolver_lookup(self):
         """Test resolving the interaction function."""
-        model_cls = model_builder('TransE', {'p': 2})
+        model_cls = model_builder({"d": 3}, 'TransE', {'p': 2})
         self._help_test_interaction_resolver(model_cls)
 
     def _help_test_interaction_resolver(self, model_cls):

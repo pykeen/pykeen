@@ -71,6 +71,7 @@ def model_instance_builder(
 
 
 def model_builder(
+    dimensions: Mapping[str, Any],
     interaction: Hint[Interaction] = None,
     interaction_kwargs: Optional[Mapping[str, Any]] = None,
     entity_representations: EmbeddingSpecificationHint = None,
@@ -78,6 +79,12 @@ def model_builder(
 ) -> Type[ERModel]:
     """Build a model class from an interaction class hint (name or class)."""
     interaction_instance = interaction_resolver.make(interaction, interaction_kwargs)
+    entity_representations, relation_representations = _normalize_entity_representations(
+        dimensions=dimensions,
+        interaction=interaction,
+        entity_representations=entity_representations,
+        relation_representations=relation_representations,
+    )
     return model_from_interaction(
         interaction=interaction_instance,
         entity_representations=entity_representations,
