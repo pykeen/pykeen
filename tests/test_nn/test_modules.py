@@ -4,6 +4,7 @@
 
 import logging
 from typing import Tuple
+from unittest import SkipTest
 
 import numpy
 import torch
@@ -388,6 +389,35 @@ class MuRETests(cases.TranslationalInteractionTests):
     def _additional_score_checks(self, scores):
         # Since MuRE has offsets, the scores do not need to negative
         pass
+
+
+class MonotoneAffineTransformationInteraction(cases.InteractionTestCase):
+    """Tests for monotone affine transformation interaction adapter."""
+
+    cls = pykeen.nn.modules.MonotoneAffineTransformationInteraction
+    kwargs = dict(
+        base=pykeen.nn.modules.TransEInteraction(p=2),
+    )
+
+    def test_forward_consistency_with_functional(self):  # noqa: D102
+        raise SkipTest("Not a functional interaction.")
+
+    def test_scores(self):  # noqa: D102
+        raise SkipTest("Not a functional interaction.")
+
+    def _exp_score(self, **kwargs) -> torch.FloatTensor:
+        raise NotImplementedError
+
+    def test_monotonicity(self):
+        """Verify monotonicity."""
+        for hs, rs, ts in self._get_test_shapes():
+            h, r, t = self._get_hrt(hs, rs, ts)
+            s_t = self.instance(h=h, r=r, t=t).view(-1)
+            s_o = self.instance.base(h=h, r=r, t=t).view(-1)
+            # intra-interaction comparison
+            c_t = (s_t.unsqueeze(dim=0) > s_t.unsqueeze(dim=1))
+            c_o = (s_o.unsqueeze(dim=0) > s_o.unsqueeze(dim=1))
+            assert (c_t == c_o).all()
 
 
 class InteractionTestsTestCase(cases.TestsTestCase[Interaction]):
