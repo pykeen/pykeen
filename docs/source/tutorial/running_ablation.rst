@@ -153,18 +153,239 @@ the best model of each ablation-experiment using the option `-r`/`--best-replica
 
 >>> pykeen experiments ablation path/to/complex_nation.json -d path/to/output/directory -r 5
 
-Eager to check out the results? Then check out the output directory ``path/to/output/directory`` in which you will find
-a directory whose name contains a timestamp and a unique id. Within this directory, you will find subdirectories,
+Eager to check out the results? Then navigate to the output directory ``path/to/output/directory`` in which you will
+find a directory whose name contains a timestamp and a unique id. Within this directory, you will find subdirectories,
 e.g., ``0000_nations_complex`` which contains all experimental artifacts of one specific ablation experiment of the
 defined ablation study. The most relevant subdirectory is ``best_pipeline`` which comprises the artifacts of the best
 performing experiment, including it's definition in ``pipeline_config.json``,  the obtained results, and the trained
-model(s) in the sub-directory ``replicates``. The number of replicates in ``replicates` corresponds to the number
+model(s) in the sub-directory ``replicates``. The number of replicates in ``replicates`` corresponds to the number
 provided with the argument ``-r``.
 Additionally, you are provided with further information about the ablation study in the root directory: ``study.json``
 describes the ablation experiment, ``hpo_config.json`` describes the HPO of the ablation experiment, ``trials.tsv``
 provides an overview of each HPO-experiment.
 
+Define Your Own HPO Ranges
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+As mentioned above, we provide default hyper-parameters/hyper-parameter ranges for each
+hyper-parameter.
+However, these default values/ranges don't ensure to optimally solve your problem. Therefore,
+it is time that you define your own ranges, and we show you how to do it!
+To accomplish this, two dictionaries are essential, ``kwargs`` that is used to assign the hyper-parameters fixed
+values, and ``kwargs_ranges`` to define ranges of values from which to sample from.
 
+Let's start with assigning HPO ranges to hyper-parameters belonging to the interaction model. This can be achieved
+by using the dictionary ``model_to_model_kwargs_ranges``:
 
+.. code-block:: javascript
+    {
+        ...
 
+        "ablation":{
+            ...
+            "model_to_model_kwargs_ranges":{
+                "ComplEx": {
+                    "embedding_dim": {
+                        "type": "int",
+                        "low": 4,
+                        "high": 6,
+                        "scale": "power_two"
+                    }
+                }
+            }
+        }
+    }
+
+We defined an HPO range for the embedding dimension. Since the ``scale`` is ``power_two``, the lower bound (``low``) 4,
+the upper bound ``high`` 6, the embedding dimension is sampled from the set :math:`\{2^4,2^5, 2^6\}`.
+
+Next, we fix the number of training epochs to 500 using the key ``model_to_trainer_to_training_kwargs`` and define
+a range for the batch size using ``model_to_trainer_to_training_kwargs_ranges`` since these are hyper-parameters of the
+training function:
+
+.. code-block:: javascript
+    {
+        ...
+
+        "ablation":{
+            ...
+            "model_to_model_kwargs_ranges":{
+                "ComplEx": {
+                    "embedding_dim": {
+                        "type": "int",
+                        "low": 4,
+                        "high": 6,
+                        "scale": "power_two"
+                    }
+                }
+            },
+            "model_to_trainer_to_training_kwargs": {
+                "ComplEx": {
+                    "lcwa": {
+                        "num_epochs": 500
+                    }
+                }
+            },
+            "model_to_trainer_to_training_kwargs_ranges": {
+                "ComplEx": {
+                    "lcwa": {
+                        "label_smoothing": {
+                            "type": "float",
+                            "low": 0.001,
+                            "high": 1.0,
+                            "scale": "log"
+                        },
+                        "batch_size": {
+                            "type": "int",
+                            "low": 7,
+                            "high": 9,
+                            "scale": "power_two"
+                        }
+                    }
+                }
+            }
+        }
+    }
+Finally, we define a range for the learning rate which is a hyper-parameter of the optimizer:
+
+.. code-block:: javascript
+    {
+        ...
+
+        "ablation":{
+            ...
+            "model_to_model_kwargs_ranges":{
+                "ComplEx": {
+                    "embedding_dim": {
+                        "type": "int",
+                        "low": 4,
+                        "high": 6,
+                        "scale": "power_two"
+                    }
+                }
+            },
+            "model_to_trainer_to_training_kwargs": {
+                "ComplEx": {
+                    "lcwa": {
+                        "num_epochs": 500
+                    }
+                }
+            },
+            "model_to_trainer_to_training_kwargs_ranges": {
+                "ComplEx": {
+                    "lcwa": {
+                        "label_smoothing": {
+                            "type": "float",
+                            "low": 0.001,
+                            "high": 1.0,
+                            "scale": "log"
+                        },
+                        "batch_size": {
+                            "type": "int",
+                            "low": 7,
+                            "high": 9,
+                            "scale": "power_two"
+                        }
+                    }
+                }
+            },
+            "model_to_optimizer_to_optimizer_kwargs_ranges": {
+                "ComplEx": {
+                    "adam": {
+                        "lr": {
+                            "type": "float",
+                            "low": 0.001,
+                            "high": 0.1,
+                            "scale": "log"
+                        }
+                    }
+                }
+            }
+        }
+    }
+We decided to use Adam as an optimizer, and we defined a ``log`` ``scale`` for the learning rate, i.e., the learning
+rate is sampled from the interval :math:`[0.001, 0.1)`.
+
+Now that we defined our own hyper-parameter values and ranges, let's have a look at the overall configuration:
+
+.. code-block:: javascript
+
+    {
+        "metadata": {
+            "title": "Ablation Study Over Nations for ComplEx."
+        },
+        "ablation": {
+            "datasets": ["nations"],
+            "models":   ["ComplEx"],
+            "losses": ["BCEAfterSigmoidLoss", "CrossEntropyLoss"]
+            "training_loops": ["lcwa"],
+            "create_inverse_triples": [true,false],
+            "stopper": "early",
+            "stopper_kwargs": {
+                "frequency": 5,
+                "patience": 20,
+                "relative_delta": 0.002,
+                "metric": "hits@10"
+            },
+            "model_to_model_kwargs_ranges":{
+                "ComplEx": {
+                    "embedding_dim": {
+                        "type": "int",
+                        "low": 4,
+                        "high": 6,
+                        "scale": "power_two"
+                    }
+                }
+            },
+            "model_to_trainer_to_training_kwargs": {
+                "ComplEx": {
+                    "lcwa": {
+                        "num_epochs": 500
+                    }
+                }
+            },
+            "model_to_trainer_to_training_kwargs_ranges": {
+                "ComplEx": {
+                    "lcwa": {
+                        "label_smoothing": {
+                            "type": "float",
+                            "low": 0.001,
+                            "high": 1.0,
+                            "scale": "log"
+                        },
+                        "batch_size": {
+                            "type": "int",
+                            "low": 7,
+                            "high": 9,
+                            "scale": "power_two"
+                        }
+                    }
+                }
+            },
+            "model_to_optimizer_to_optimizer_kwargs_ranges": {
+                "ComplEx": {
+                    "adam": {
+                        "lr": {
+                            "type": "float",
+                            "low": 0.001,
+                            "high": 0.1,
+                            "scale": "log"
+                        }
+                    }
+                }
+            }
+        "optuna": {
+            "n_trials": 2,
+            "timeout": 300,
+            "metric": "hits@10",
+            "direction": "maximize",
+            "sampler": "random",
+            "pruner": "nop"
+            }
+        }
+    }
+
+We are expected to provide the configuration for the keys ``datasets``, ``models``, ``losses``, ``optimizers``, and
+``training_loops``. For all other components and hype-parameters, PyKEEN will provide default values/ranges.
+However, for achieving optimal performance, we should carefully define the hyper-parameters ourselves, as explained
+above.
