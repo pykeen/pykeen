@@ -1139,3 +1139,59 @@ class PairREInteraction(TranslationalInteraction[FloatTensor, Tuple[FloatTensor,
         t: TailRepresentation,
     ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
         return dict(h=h, r_h=r[0], r_t=r[1], t=t)
+
+
+class MonotoneAffineTransformationInteraction(Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]):
+    r"""
+    An adapter of interaction functions which adds a scalar (trainable) monotonous affine transformation of the score.
+
+    .. math ::
+        score(h, r, t) = \alpha \cdot score'(h, r, t) + \beta
+    """
+
+    def __init__(
+        self,
+        base: Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation],
+        initial_bias: float = 0.0,
+        trainable_bias: bool = True,
+        initial_scale: float = 1.0,
+        trainable_scale: bool = True,
+    ):
+        """
+        Initialize the interaction.
+
+        :param base:
+            The base interaction.
+        :param initial_bias:
+            The initial value for the bias.
+        :param trainable_bias:
+            Whether the bias should be trainable.
+        :param initial_scale: >0
+            The initial value for the scale. Must be positive.
+        :param trainable_scale:
+            Whether the scale should be trainable.
+        """
+        super().__init__()
+
+        # the base interaction
+        self.base = base
+
+        # store initial values for reset_parameters
+        self.initial_bias = initial_bias
+        self.initial_log_scale = math.log(initial_scale)
+
+        # The parameters of the affine transformation
+        self.bias = nn.Parameter(torch.empty(size=tuple()), requires_grad=trainable_bias)
+        self.log_scale = nn.Parameter(torch.empty(size=tuple()), requires_grad=trainable_scale)
+
+    def reset_parameters(self):  # noqa: D102
+        self.bias.data = self.initial_bias
+        self.log_scale.data = self.initial_log_scale
+
+    def forward(
+        self,
+        h: HeadRepresentation,
+        r: RelationRepresentation,
+        t: TailRepresentation,
+    ) -> torch.FloatTensor:  # noqa: D102
+        return self.log_scale.exp() * self.base(h=h, r=r, t=t) + self.bias
