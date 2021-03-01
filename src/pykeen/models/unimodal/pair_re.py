@@ -26,6 +26,7 @@ class PairRE(ERModel):
         author: Chao
         year: 2020
         link: http://arxiv.org/abs/2011.03798
+        github: alipay/KnowledgeGraphEmbeddingsViaPairedRelationVectors_PairRE
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
