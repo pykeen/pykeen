@@ -1181,16 +1181,16 @@ class MonotoneAffineTransformationInteraction(Interaction[HeadRepresentation, Re
         self.tail_entity_shape = base.tail_entity_shape
 
         # store initial values for reset_parameters
-        self.initial_bias = initial_bias
-        self.initial_log_scale = math.log(initial_scale)
+        self.initial_bias = torch.as_tensor(data=[initial_bias], dtype=torch.get_default_dtype())
+        self.initial_log_scale = torch.as_tensor(data=[math.log(initial_scale)], dtype=torch.get_default_dtype())
 
         # The parameters of the affine transformation
         self.bias = nn.Parameter(torch.empty(size=tuple()), requires_grad=trainable_bias)
         self.log_scale = nn.Parameter(torch.empty(size=tuple()), requires_grad=trainable_scale)
 
     def reset_parameters(self):  # noqa: D102
-        self.bias.data = self.initial_bias
-        self.log_scale.data = self.initial_log_scale
+        self.bias.data = self.initial_bias.to(device=self.bias.device)
+        self.log_scale.data = self.initial_log_scale.to(device=self.bias.device)
 
     def forward(
         self,
