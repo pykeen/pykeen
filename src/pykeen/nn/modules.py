@@ -1147,6 +1147,11 @@ class MonotoneAffineTransformationInteraction(Interaction[HeadRepresentation, Re
 
     .. math ::
         score(h, r, t) = \alpha \cdot score'(h, r, t) + \beta
+
+    This adapter is useful for losses such as BCE, where there is a fixed decision threshold, or margin-based losses,
+    where the margin is not be treated as hyper-parameter, but rather a trainable parameter. This is particulary useful,
+    if the value range of the score function is not known in advance, and thus choosing an appropriate margin becomes
+    difficult.
     """
 
     def __init__(
