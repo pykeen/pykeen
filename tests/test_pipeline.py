@@ -14,7 +14,7 @@ from pykeen.models.predict import (
     get_all_prediction_df, get_head_prediction_df, get_relation_prediction_df,
     get_tail_prediction_df,
 )
-from pykeen.models.resolve import model_builder, model_from_interaction
+from pykeen.models.resolve import model_builder, model_from_interaction, model_instance_builder
 from pykeen.nn.modules import TransEInteraction
 from pykeen.pipeline import PipelineResult, pipeline
 from pykeen.regularizers import NoRegularizer
@@ -174,6 +174,29 @@ class TestPipelineTriples(unittest.TestCase):
             model='TransE',
             training_kwargs=dict(num_epochs=1, use_tqdm=False),
             evaluation_kwargs=dict(use_tqdm=False),
+        )
+
+    def test_interaction_instance_builder(self):
+        """Test resolving an interaction model instance."""
+        model = model_instance_builder(
+            dimensions=dict(
+                d=3,
+            ),
+            interaction=TransEInteraction,
+            interaction_kwargs=dict(p=2),
+            triples_factory=self.training,
+        )
+        self.assertIsInstance(model, ERModel)
+        self.assertIsInstance(model.interaction, TransEInteraction)
+        self.assertEqual(2, model.interaction.p)
+        _ = pipeline(
+            training=self.training,
+            testing=self.testing,
+            validation=self.validation,
+            model=model,
+            training_kwargs=dict(num_epochs=1, use_tqdm=False),
+            evaluation_kwargs=dict(use_tqdm=False),
+            random_seed=0,
         )
 
     def test_interaction_builder(self):
