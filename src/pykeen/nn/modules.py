@@ -1141,17 +1141,20 @@ class PairREInteraction(TranslationalInteraction[FloatTensor, Tuple[FloatTensor,
         return dict(h=h, r_h=r[0], r_t=r[1], t=t)
 
 
-class MonotoneAffineTransformationInteraction(Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]):
+class MonotonicAffineTransformationInteraction(Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]):
     r"""
-    An adapter of interaction functions which adds a scalar (trainable) monotonous affine transformation of the score.
+    An adapter of interaction functions which adds a scalar (trainable) monotonic affine transformation of the score.
 
     .. math ::
         score(h, r, t) = \alpha \cdot score'(h, r, t) + \beta
 
     This adapter is useful for losses such as BCE, where there is a fixed decision threshold, or margin-based losses,
-    where the margin is not be treated as hyper-parameter, but rather a trainable parameter. This is particulary useful,
-    if the value range of the score function is not known in advance, and thus choosing an appropriate margin becomes
-    difficult.
+    where the margin is not be treated as hyper-parameter, but rather a trainable parameter. This is particularly
+    useful, if the value range of the score function is not known in advance, and thus choosing an appropriate margin
+    becomes difficult.
+
+    Monotonicity is required to preserve the ordering of the original scoring function, and thus ensures that more
+    plausible triples are still more plausible after the transformation.
     """
 
     def __init__(
@@ -1172,7 +1175,7 @@ class MonotoneAffineTransformationInteraction(Interaction[HeadRepresentation, Re
         :param trainable_bias:
             Whether the bias should be trainable.
         :param initial_scale: >0
-            The initial value for the scale. Must be positive.
+            The initial value for the scale. Must be strictly positive.
         :param trainable_scale:
             Whether the scale should be trainable.
         """
@@ -1185,13 +1188,13 @@ class MonotoneAffineTransformationInteraction(Interaction[HeadRepresentation, Re
         self.relation_shape = base.relation_shape
         self.tail_entity_shape = base.tail_entity_shape
 
-        # store initial values for reset_parameters
-        self.initial_bias = torch.as_tensor(data=[initial_bias], dtype=torch.get_default_dtype())
-        self.initial_log_scale = torch.as_tensor(data=[math.log(initial_scale)], dtype=torch.get_default_dtype())
-
-        # The parameters of the affine transformation
+        # The parameters of the affine transformation: bias
         self.bias = nn.Parameter(torch.empty(size=tuple()), requires_grad=trainable_bias)
+        self.initial_bias = torch.as_tensor(data=[initial_bias], dtype=torch.get_default_dtype())
+
+        # scale. We model this as log(scale) to ensure scale > 0, and thus monotonicity
         self.log_scale = nn.Parameter(torch.empty(size=tuple()), requires_grad=trainable_scale)
+        self.initial_log_scale = torch.as_tensor(data=[math.log(initial_scale)], dtype=torch.get_default_dtype())
 
     def reset_parameters(self):  # noqa: D102
         self.bias.data = self.initial_bias.to(device=self.bias.device)
