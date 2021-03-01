@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 def model_instance_builder(
+    dimensions: Mapping[str, Any],
     interaction: Hint[Interaction] = None,
     interaction_kwargs: Optional[Mapping[str, Any]] = None,
     entity_representations: EmbeddingSpecificationHint = None,
@@ -32,12 +33,18 @@ def model_instance_builder(
         if interaction.tail_entity_shape is not None:
             raise NotImplementedError
         entity_representations = [
-            EmbeddingSpecification(shape=shape)
+            EmbeddingSpecification(shape=tuple(
+                dimensions[d]
+                for d in shape
+            ))
             for shape in interaction.entity_shape
         ]
-    if relation_representations:
+    if relation_representations is None:
         relation_representations = [
-            EmbeddingSpecification(shape=shape)
+            EmbeddingSpecification(shape=tuple(
+                dimensions[d]
+                for d in shape
+            ))
             for shape in interaction.relation_shape
         ]
     return ERModel(
