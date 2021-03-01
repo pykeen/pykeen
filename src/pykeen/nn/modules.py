@@ -24,6 +24,8 @@ __all__ = [
     'Interaction',
     'FunctionalInteraction',
     'TranslationalInteraction',
+    # Adapter classes
+    'MonotonicAffineTransformationInteraction',
     # Concrete Classes
     'ComplExInteraction',
     'ConvEInteraction',
