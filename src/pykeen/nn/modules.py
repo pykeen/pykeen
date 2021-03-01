@@ -25,6 +25,8 @@ __all__ = [
     'Interaction',
     'FunctionalInteraction',
     'TranslationalInteraction',
+    # Adapter classes
+    'MonotonicAffineTransformationInteraction',
     # Concrete Classes
     'ComplExInteraction',
     'ConvEInteraction',
@@ -1142,8 +1144,91 @@ class PairREInteraction(TranslationalInteraction[FloatTensor, Tuple[FloatTensor,
         return dict(h=h, r_h=r[0], r_t=r[1], t=t)
 
 
+class MonotonicAffineTransformationInteraction(
+    Interaction[
+        HeadRepresentation,
+        RelationRepresentation,
+        TailRepresentation,
+    ],
+):
+    r"""
+    An adapter of interaction functions which adds a scalar (trainable) monotonic affine transformation of the score.
+
+    .. math ::
+        score(h, r, t) = \alpha \cdot score'(h, r, t) + \beta
+
+    This adapter is useful for losses such as BCE, where there is a fixed decision threshold, or margin-based losses,
+    where the margin is not be treated as hyper-parameter, but rather a trainable parameter. This is particularly
+    useful, if the value range of the score function is not known in advance, and thus choosing an appropriate margin
+    becomes difficult.
+
+    Monotonicity is required to preserve the ordering of the original scoring function, and thus ensures that more
+    plausible triples are still more plausible after the transformation.
+
+    For example, we can add a bias to a distance-based interaction function to enable positive values:
+
+    >>> base = TransEInteraction(p=2)
+    >>> interaction = MonotonicAffineTransformationInteraction(base=base, trainable_bias=True, trainable_scale=False)
+
+    When combined with BCE loss, we can geometrically think about predicting a (soft) sphere at :math:`h + r` with
+    radius equal to the bias of the transformation. When we add a trainable scale, the model can control the "softness"
+    of the decision boundary itself.
+    """
+
+    def __init__(
+        self,
+        base: Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation],
+        initial_bias: float = 0.0,
+        trainable_bias: bool = True,
+        initial_scale: float = 1.0,
+        trainable_scale: bool = True,
+    ):
+        """
+        Initialize the interaction.
+
+        :param base:
+            The base interaction.
+        :param initial_bias:
+            The initial value for the bias.
+        :param trainable_bias:
+            Whether the bias should be trainable.
+        :param initial_scale: >0
+            The initial value for the scale. Must be strictly positive.
+        :param trainable_scale:
+            Whether the scale should be trainable.
+        """
+        super().__init__()
+
+        # the base interaction
+        self.base = base
+        # forward entity/relation shapes
+        self.entity_shape = base.entity_shape
+        self.relation_shape = base.relation_shape
+        self.tail_entity_shape = base.tail_entity_shape
+
+        # The parameters of the affine transformation: bias
+        self.bias = nn.Parameter(torch.empty(size=tuple()), requires_grad=trainable_bias)
+        self.initial_bias = torch.as_tensor(data=[initial_bias], dtype=torch.get_default_dtype())
+
+        # scale. We model this as log(scale) to ensure scale > 0, and thus monotonicity
+        self.log_scale = nn.Parameter(torch.empty(size=tuple()), requires_grad=trainable_scale)
+        self.initial_log_scale = torch.as_tensor(data=[math.log(initial_scale)], dtype=torch.get_default_dtype())
+
+    def reset_parameters(self):  # noqa: D102
+        self.bias.data = self.initial_bias.to(device=self.bias.device)
+        self.log_scale.data = self.initial_log_scale.to(device=self.bias.device)
+
+    def forward(
+        self,
+        h: HeadRepresentation,
+        r: RelationRepresentation,
+        t: TailRepresentation,
+    ) -> torch.FloatTensor:  # noqa: D102
+        return self.log_scale.exp() * self.base(h=h, r=r, t=t) + self.bias
+
+
 interaction_resolver = Resolver.from_subclasses(
     Interaction,  # type: ignore
-    skip={TranslationalInteraction, FunctionalInteraction},
+    skip={TranslationalInteraction, FunctionalInteraction, MonotonicAffineTransformationInteraction},
     suffix=Interaction.__name__,
 )
