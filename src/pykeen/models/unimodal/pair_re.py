@@ -5,11 +5,11 @@
 from typing import Any, ClassVar, Mapping, Optional
 
 from torch.nn import functional
+from torch.nn.init import uniform_
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn import EmbeddingSpecification
-from ...nn.init import xavier_normal_
 from ...nn.modules import PairREInteraction
 from ...typing import Hint, Initializer, Normalizer
 
@@ -40,10 +40,12 @@ class PairRE(ERModel):
         embedding_dim: int = 200,
         p: int = 1,
         power_norm: bool = False,
-        entity_initializer: Hint[Initializer] = xavier_normal_,
+        entity_initializer: Hint[Initializer] = uniform_,
+        entity_initializer_kwargs: Optional[Mapping[str, Any]] = None,
         entity_normalizer: Hint[Normalizer] = functional.normalize,
         entity_normalizer_kwargs: Optional[Mapping[str, Any]] = None,
-        relation_initializer: Hint[Initializer] = xavier_normal_,
+        relation_initializer: Hint[Initializer] = uniform_,
+        relation_initializer_kwargs: Optional[Mapping[str, Any]] = None,
         **kwargs,
     ) -> None:
         r"""Initialize PairRE via the :class:`pykeen.nn.modules.PairREInteraction` interaction.
@@ -53,10 +55,21 @@ class PairRE(ERModel):
         :param power_norm: Should the power norm be used? Defaults to true.
         """
         # The entity representations are normalized to L2 unit length
-        # cf. https://github.com/alipay/KnowledgeGraphEmbeddingsViaPairedRelationVectors_PairRE/blob/main/biokg/model.py#L232-L240
+        # cf. https://github.com/alipay/KnowledgeGraphEmbeddingsViaPairedRelationVectors_PairRE/blob/0a95bcd54759207984c670af92ceefa19dd248ad/biokg/model.py#L232-L240
         entity_normalizer_kwargs = entity_normalizer_kwargs or dict()
         entity_normalizer_kwargs.setdefault("p", 2)
         entity_normalizer_kwargs.setdefault("dim", -1)
+        # update initializer settings, cf.
+        # https://github.com/alipay/KnowledgeGraphEmbeddingsViaPairedRelationVectors_PairRE/blob/0a95bcd54759207984c670af92ceefa19dd248ad/biokg/model.py#L45-L49
+        # https://github.com/alipay/KnowledgeGraphEmbeddingsViaPairedRelationVectors_PairRE/blob/0a95bcd54759207984c670af92ceefa19dd248ad/biokg/model.py#L29
+        # https://github.com/alipay/KnowledgeGraphEmbeddingsViaPairedRelationVectors_PairRE/blob/0a95bcd54759207984c670af92ceefa19dd248ad/biokg/run.py#L50
+        entity_initializer_kwargs = entity_initializer_kwargs or dict()
+        embedding_range = 14 / embedding_dim
+        entity_initializer_kwargs.setdefault("a", -embedding_range)
+        entity_initializer_kwargs.setdefault("b", embedding_range)
+        relation_initializer_kwargs = relation_initializer_kwargs or dict()
+        relation_initializer_kwargs.setdefault("a", -embedding_range / 2)
+        relation_initializer_kwargs.setdefault("b", embedding_range / 2)
         super().__init__(
             interaction=PairREInteraction(p=p, power_norm=power_norm),
             entity_representations=EmbeddingSpecification(
@@ -69,10 +82,12 @@ class PairRE(ERModel):
                 EmbeddingSpecification(
                     embedding_dim=embedding_dim,
                     initializer=relation_initializer,
+                    initializer_kwargs=relation_initializer_kwargs,
                 ),
                 EmbeddingSpecification(
                     embedding_dim=embedding_dim,
                     initializer=relation_initializer,
+                    initializer_kwargs=relation_initializer_kwargs,
                 ),
             ],
             **kwargs,
