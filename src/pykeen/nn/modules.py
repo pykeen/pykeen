@@ -1141,7 +1141,13 @@ class PairREInteraction(TranslationalInteraction[FloatTensor, Tuple[FloatTensor,
         return dict(h=h, r_h=r[0], r_t=r[1], t=t)
 
 
-class MonotonicAffineTransformationInteraction(Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]):
+class MonotonicAffineTransformationInteraction(
+    Interaction[
+        HeadRepresentation,
+        RelationRepresentation,
+        TailRepresentation
+    ],
+):
     r"""
     An adapter of interaction functions which adds a scalar (trainable) monotonic affine transformation of the score.
 
