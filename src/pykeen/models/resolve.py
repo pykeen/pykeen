@@ -8,7 +8,7 @@ from typing import Any, Mapping, Optional, Sequence, Type, Union
 from .nbase import ERModel, EmbeddingSpecificationHint
 from ..nn import EmbeddingSpecification, RepresentationModule
 from ..nn.modules import Interaction, interaction_resolver
-from ..typing import Hint, OneOrSequence
+from ..typing import Hint
 
 __all__ = [
     'model_builder',
@@ -16,6 +16,36 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
+
+
+def model_instance_builder(
+    interaction: Hint[Interaction] = None,
+    interaction_kwargs: Optional[Mapping[str, Any]] = None,
+    entity_representations: EmbeddingSpecificationHint = None,
+    relation_representations: EmbeddingSpecificationHint = None,
+    **kwargs,
+) -> ERModel:
+    """Build a model from an interaction class hint (name or class)."""
+    interaction_instance = interaction_resolver.make(interaction, interaction_kwargs)
+    if entity_representations is None:
+        # TODO: Does not work for interactions with separate tail_entity_shape (i.e., ConvE)
+        if interaction.tail_entity_shape is not None:
+            raise NotImplementedError
+        entity_representations = [
+            EmbeddingSpecification(shape=shape)
+            for shape in interaction.entity_shape
+        ]
+    if relation_representations:
+        relation_representations = [
+            EmbeddingSpecification(shape=shape)
+            for shape in interaction.relation_shape
+        ]
+    return ERModel(
+        interaction=interaction_instance,
+        entity_representations=entity_representations,
+        relation_representations=relation_representations,
+        **kwargs,
+    )
 
 
 def model_builder(
