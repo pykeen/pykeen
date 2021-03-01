@@ -2,14 +2,16 @@
 
 """Implementation of PairRE."""
 
-from typing import Any, ClassVar, Mapping
+from typing import Any, ClassVar, Mapping, Optional
+
+from torch.nn import functional
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn import EmbeddingSpecification
 from ...nn.init import xavier_normal_
 from ...nn.modules import PairREInteraction
-from ...typing import Hint, Initializer
+from ...typing import Hint, Initializer, Normalizer
 
 __all__ = [
     'PairRE',
@@ -38,6 +40,8 @@ class PairRE(ERModel):
         p: int = 2,
         power_norm: bool = True,
         entity_initializer: Hint[Initializer] = xavier_normal_,
+        entity_normalizer: Hint[Normalizer] = functional.normalize,
+        entity_normalizer_kwargs: Optional[Mapping[str, Any]] = None,
         relation_initializer: Hint[Initializer] = xavier_normal_,
         **kwargs,
     ) -> None:
@@ -49,11 +53,18 @@ class PairRE(ERModel):
 
         .. warning:: Due to the lack of an official implementations, not all details are known.
         """
+        # The entity representations are normalized to L2 unit length
+        # cf. https://github.com/alipay/KnowledgeGraphEmbeddingsViaPairedRelationVectors_PairRE/blob/main/biokg/model.py#L232-L240
+        entity_normalizer_kwargs = entity_normalizer_kwargs or dict()
+        entity_normalizer_kwargs.setdefault("p", 2)
+        entity_normalizer_kwargs.setdefault("dim", -1)
         super().__init__(
             interaction=PairREInteraction(p=p, power_norm=power_norm),
             entity_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
                 initializer=entity_initializer,
+                normalizer=entity_normalizer,
+                normalizer_kwargs=entity_normalizer_kwargs,
             ),
             relation_representations=[
                 EmbeddingSpecification(
