@@ -50,9 +50,9 @@ class PairRE(ERModel):
     ) -> None:
         r"""Initialize PairRE via the :class:`pykeen.nn.modules.PairREInteraction` interaction.
 
-        :param embedding_dim: The entity embedding dimension $d$. Defaults to 200. Is usually $d \in [50, 300]$.
-        :param p: The $l_p$ norm. Defaults to 2.
-        :param power_norm: Should the power norm be used? Defaults to true.
+        :param embedding_dim: The entity embedding dimension $d$.
+        :param p: The $l_p$ norm.
+        :param power_norm: Should the power norm be used?
         """
         # The entity representations are normalized to L2 unit length
         # cf. https://github.com/alipay/KnowledgeGraphEmbeddingsViaPairedRelationVectors_PairRE/blob/0a95bcd54759207984c670af92ceefa19dd248ad/biokg/model.py#L232-L240
