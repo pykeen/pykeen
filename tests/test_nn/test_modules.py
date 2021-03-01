@@ -391,10 +391,10 @@ class MuRETests(cases.TranslationalInteractionTests):
         pass
 
 
-class MonotoneAffineTransformationInteraction(cases.InteractionTestCase):
-    """Tests for monotone affine transformation interaction adapter."""
+class MonotonicAffineTransformationInteractionTests(cases.InteractionTestCase):
+    """Tests for monotonic affine transformation interaction adapter."""
 
-    cls = pykeen.nn.modules.MonotoneAffineTransformationInteraction
+    cls = pykeen.nn.modules.MonotonicAffineTransformationInteraction
     kwargs = dict(
         base=pykeen.nn.modules.TransEInteraction(p=2),
     )
@@ -405,7 +405,8 @@ class MonotoneAffineTransformationInteraction(cases.InteractionTestCase):
     def test_scores(self):  # noqa: D102
         raise SkipTest("Not a functional interaction.")
 
-    def _exp_score(self, **kwargs) -> torch.FloatTensor:
+    def _exp_score(self, **kwargs) -> torch.FloatTensor:  # noqa: D102
+        # We do not need this, since we do not check for functional consistency anyway
         raise NotImplementedError
 
     def test_monotonicity(self):
