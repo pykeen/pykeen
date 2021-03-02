@@ -11,11 +11,12 @@ from abc import ABC, abstractmethod
 from typing import Any, Callable, Generic, Mapping, MutableMapping, Optional, Sequence, Set, Tuple, Union, cast
 
 import torch
+from class_resolver import Resolver
 from torch import FloatTensor, nn
 
 from . import functional as pkf
 from ..typing import HeadRepresentation, RelationRepresentation, TailRepresentation
-from ..utils import CANONICAL_DIMENSIONS, Resolver, convert_to_canonical_shape, ensure_tuple, upgrade_to_sequence
+from ..utils import CANONICAL_DIMENSIONS, convert_to_canonical_shape, ensure_tuple, upgrade_to_sequence
 
 __all__ = [
     'interaction_resolver',
