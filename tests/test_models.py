@@ -38,8 +38,6 @@ SKIP_MODULES = {
     EntityRelationEmbeddingModel.__name__,
     ERModel.__name__,
     'MockModel',
-    'models',
-    'model_resolver',
     'SimpleInteractionModel',
 }
 for cls in MultimodalModel.__subclasses__():
@@ -594,9 +592,9 @@ class TestTesting(unittest.TestCase):
         For now, this is excluding multimodel models. Not sure how to test those yet.
         """
         model_names = {
-            cls.__name__
-            for cls in model_resolver.lookup_dict.values()
-            if not issubclass(cls, ERModel)
+            model_cls.__name__
+            for model_cls in model_resolver.lookup_dict.values()
+            if not issubclass(model_cls, ERModel)
         }
         model_names -= SKIP_MODULES
 
@@ -640,8 +638,8 @@ class TestTesting(unittest.TestCase):
                     ):
                         model_names.add(value.__name__)
 
-        star_model_names = set(pykeen.models.__all__) - SKIP_MODULES
-        model_names -= SKIP_MODULES
+        star_model_names = _remove_non_models(set(pykeen.models.__all__) - SKIP_MODULES)
+        model_names = _remove_non_models(model_names - SKIP_MODULES)
 
         self.assertEqual(model_names, star_model_names, msg='Forgot to add some imports')
 
@@ -660,13 +658,25 @@ class TestTesting(unittest.TestCase):
             'ERMLPE',  # FIXME
             'PairRE',
         }
-        model_names = set(pykeen.models.__all__) - SKIP_MODULES - experiment_blacklist
-        for model in model_names:
+        model_names = _remove_non_models(set(pykeen.models.__all__) - SKIP_MODULES - experiment_blacklist)
+        for model in _remove_non_models(model_names):
             with self.subTest(model=model):
                 self.assertTrue(
                     os.path.exists(os.path.join(experiments_path, model.lower())),
                     msg=f'Missing experimental configuration for {model}',
                 )
+
+
+def _remove_non_models(elements):
+    rv = set()
+    for element in elements:
+        try:
+            model_resolver.lookup(element)
+        except ValueError:  # invalid model name - aka not actually a model
+            continue
+        else:
+            rv.add(element)
+    return rv
 
 
 class MessageWeightingTests(unittest.TestCase):
