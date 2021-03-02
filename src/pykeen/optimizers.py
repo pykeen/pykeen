@@ -18,6 +18,7 @@ sgd       :class:`torch.optim.SGD`
 
 from typing import Any, Mapping, Set, Type
 
+from class_resolver import Resolver
 from torch.optim.adadelta import Adadelta
 from torch.optim.adagrad import Adagrad
 from torch.optim.adam import Adam
@@ -25,8 +26,6 @@ from torch.optim.adamax import Adamax
 from torch.optim.adamw import AdamW
 from torch.optim.optimizer import Optimizer
 from torch.optim.sgd import SGD
-
-from .utils import Resolver
 
 __all__ = [
     'Optimizer',

@@ -24,10 +24,11 @@ into account that a corrupted triple that is *not part* of the knowledge graph c
 
 from typing import Set, Type
 
+from class_resolver import Resolver, get_subclasses
+
 from .basic_negative_sampler import BasicNegativeSampler
 from .bernoulli_negative_sampler import BernoulliNegativeSampler
 from .negative_sampler import NegativeSampler
-from ..utils import Resolver, get_subclasses
 
 __all__ = [
     'NegativeSampler',

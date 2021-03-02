@@ -35,7 +35,7 @@ from .umls import UMLS
 from .wordnet import WN18, WN18RR
 from .yago import YAGO310
 from ..triples import CoreTriplesFactory, TriplesFactory
-from ..utils import normalize_string, normalized_lookup
+from ..utils import normalize_string
 
 __all__ = [
     'Hetionet',
@@ -77,7 +77,10 @@ if not _DATASETS:
     raise RuntimeError('Datasets have been loaded with entrypoints since PyKEEN v1.0.5. Please reinstall.')
 
 #: A mapping of datasets' names to their classes
-datasets: Mapping[str, Type[Dataset]] = normalized_lookup(_DATASETS)
+datasets: Mapping[str, Type[Dataset]] = {
+    normalize_string(cls.__name__): cls
+    for cls in _DATASETS
+}
 
 
 def get_dataset(

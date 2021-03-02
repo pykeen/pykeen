@@ -8,6 +8,8 @@ score value is model-dependent, and usually it cannot be directly interpreted as
 
 from typing import Set, Type
 
+from class_resolver import Resolver, get_subclasses
+
 from .base import EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, MultimodalModel, _OldAbstractModel
 from .multimodal import ComplExLiteral, DistMultLiteral
 from .nbase import ERModel, _NewAbstractModel
@@ -37,7 +39,6 @@ from .unimodal import (
     TuckER,
     UnstructuredModel,
 )
-from ..utils import Resolver, get_subclasses
 
 __all__ = [
     # Base Models

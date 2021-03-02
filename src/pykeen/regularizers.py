@@ -8,11 +8,11 @@ from abc import ABC, abstractmethod
 from typing import Any, ClassVar, Collection, Iterable, Mapping, Optional, Type
 
 import torch
+from class_resolver import Resolver, normalize_string
 from torch import nn
 from torch.nn import functional
 
 from .nn.norm import lp_norm, powersum_norm
-from .utils import Resolver, normalize_string
 
 __all__ = [
     # Base Class
