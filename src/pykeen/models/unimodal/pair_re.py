@@ -18,13 +18,6 @@ __all__ = [
 ]
 
 
-def _resolve_kwargs(kwargs: Optional[Mapping[str, Any]], default_kwargs: Mapping[str, Any]) -> Mapping[str, Any]:
-    kwargs = kwargs or dict()
-    for k, v in default_kwargs:
-        kwargs.setdefault(k, v)
-    return kwargs
-
-
 class PairRE(ERModel):
     r"""An implementation of PairRE from [chao2020]_.
 
@@ -43,8 +36,9 @@ class PairRE(ERModel):
     )
 
     #: The default entity normalizer parameters
-    # The entity representations are normalized to L2 unit length
-    # cf. https://github.com/alipay/KnowledgeGraphEmbeddingsViaPairedRelationVectors_PairRE/blob/0a95bcd54759207984c670af92ceefa19dd248ad/biokg/model.py#L232-L240
+    #: The entity representations are normalized to L2 unit length
+    #: cf. https://github.com/alipay/KnowledgeGraphEmbeddingsViaPairedRelationVectors_PairRE/
+    #:  blob/0a95bcd54759207984c670af92ceefa19dd248ad/biokg/model.py#L232-L240
     default_entity_normalizer_kwargs: ClassVar[Mapping[str, Any]] = dict(
         p=2,
         dim=-1,
@@ -77,11 +71,11 @@ class PairRE(ERModel):
         # https://github.com/alipay/KnowledgeGraphEmbeddingsViaPairedRelationVectors_PairRE/blob/0a95bcd54759207984c670af92ceefa19dd248ad/biokg/model.py#L45-L49
         # https://github.com/alipay/KnowledgeGraphEmbeddingsViaPairedRelationVectors_PairRE/blob/0a95bcd54759207984c670af92ceefa19dd248ad/biokg/model.py#L29
         # https://github.com/alipay/KnowledgeGraphEmbeddingsViaPairedRelationVectors_PairRE/blob/0a95bcd54759207984c670af92ceefa19dd248ad/biokg/run.py#L50
-        entity_initializer_kwargs = entity_initializer_kwargs or dict()
+        entity_initializer_kwargs = dict(entity_initializer_kwargs or {})
         embedding_range = 14 / embedding_dim
         entity_initializer_kwargs.setdefault("a", -embedding_range)
         entity_initializer_kwargs.setdefault("b", embedding_range)
-        relation_initializer_kwargs = relation_initializer_kwargs or dict()
+        relation_initializer_kwargs = dict(relation_initializer_kwargs or {})
         relation_initializer_kwargs.setdefault("a", -embedding_range / 2)
         relation_initializer_kwargs.setdefault("b", embedding_range / 2)
         super().__init__(
@@ -106,3 +100,10 @@ class PairRE(ERModel):
             ],
             **kwargs,
         )
+
+
+def _resolve_kwargs(kwargs: Optional[Mapping[str, Any]], default_kwargs: Mapping[str, Any]) -> Mapping[str, Any]:
+    kwargs = dict(kwargs or {})
+    for k, v in default_kwargs.items():
+        kwargs.setdefault(k, v)
+    return kwargs
