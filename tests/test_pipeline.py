@@ -14,7 +14,7 @@ from pykeen.models.predict import (
     get_all_prediction_df, get_head_prediction_df, get_relation_prediction_df,
     get_tail_prediction_df,
 )
-from pykeen.models.resolve import make_model, make_model_cls
+from pykeen.models.resolve import DimensionError, make_model, make_model_cls
 from pykeen.nn.modules import TransEInteraction
 from pykeen.pipeline import PipelineResult, pipeline
 from pykeen.regularizers import NoRegularizer
@@ -175,6 +175,18 @@ class TestPipelineTriples(unittest.TestCase):
             training_kwargs=dict(num_epochs=1, use_tqdm=False),
             evaluation_kwargs=dict(use_tqdm=False),
         )
+
+    def test_interaction_instance_missing_dimensions(self):
+        """Test when a dimension is missing."""
+        with self.assertRaises(DimensionError) as exc:
+            make_model_cls(
+                dimensions={},  # missing "d"
+                interaction=TransEInteraction(p=2),
+            )
+        self.assertIsInstance(exc.exception, DimensionError)
+        self.assertEqual({'d'}, exc.exception.expected)
+        self.assertEqual(set(), exc.exception.given)
+        self.assertEqual("Expected dimensions dictionary with keys {'d'} but got keys set()", str(exc.exception))
 
     def test_interaction_instance_builder(self):
         """Test resolving an interaction model instance."""

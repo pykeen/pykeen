@@ -79,6 +79,17 @@ def make_model(
     return model_cls(**kwargs)
 
 
+class DimensionError(ValueError):
+    """Raised when the wrong dimensions were supplied."""
+
+    def __init__(self, given, expected):
+        self.given = given
+        self.expected = expected
+
+    def __str__(self):
+        return f'Expected dimensions dictionary with keys {self.expected} but got keys {self.given}'
+
+
 def make_model_cls(
     dimensions: Union[int, Mapping[str, int]],
     interaction: Union[str, Interaction, Type[Interaction]],
@@ -126,6 +137,8 @@ def _normalize_entity_representations(
     if isinstance(dimensions, int):
         dimensions = {'d': dimensions}
     assert isinstance(dimensions, dict)
+    if set(dimensions) < interaction.get_dimensions():
+        raise DimensionError(set(dimensions), interaction.get_dimensions())
     if entity_representations is None:
         # TODO: Does not work for interactions with separate tail_entity_shape (i.e., ConvE)
         if interaction.tail_entity_shape is not None:

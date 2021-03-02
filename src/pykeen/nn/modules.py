@@ -4,13 +4,11 @@
 
 from __future__ import annotations
 
+import itertools as itt
 import logging
 import math
 from abc import ABC, abstractmethod
-from typing import (
-    Any, Callable, Generic, Mapping, MutableMapping, Optional, Sequence, Tuple, Union,
-    cast,
-)
+from typing import Any, Callable, Generic, Mapping, MutableMapping, Optional, Sequence, Set, Tuple, Union, cast
 
 import torch
 from torch import FloatTensor, nn
@@ -73,6 +71,17 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
 
     #: The symbolic shapes for relation representations
     relation_shape: Sequence[str] = ("d",)
+
+    @classmethod
+    def get_dimensions(cls) -> Set[str]:
+        """Get all of the relevant dimension keys.
+
+        This draws from :data:`Interaction.entity_shape`, :data:`Interaction.relation_shape`, and in the case of
+        :class:`ConvEInteraction`, the :data:`Interaction.tail_entity_shape`.
+
+        :returns: a set of strings representting the dimension keys.
+        """
+        return set(itt.chain(cls.entity_shape, cls.tail_entity_shape or set(), cls.relation_shape))
 
     @abstractmethod
     def forward(
