@@ -564,6 +564,40 @@ def pipeline_from_config(
     )
 
 
+def _build_model_helper(
+    *,
+    model, model_kwargs, loss, loss_kwargs, _device, _random_seed, regularizer, regularizer_kwargs,
+    training,
+) -> Model:
+    if model_kwargs is None:
+        model_kwargs = {}
+    model_kwargs = dict(model_kwargs)
+    model_kwargs.update(preferred_device=_device)
+    model_kwargs.setdefault('random_seed', _random_seed)
+
+    if regularizer is not None:
+        # FIXME this should never happen.
+        if 'regularizer' in model_kwargs:
+            logger.warning('Can not specify regularizer in kwargs and model_kwargs. removing from model_kwargs')
+            del model_kwargs['regularizer']
+        model_kwargs['regularizer'] = regularizer_resolver.make(regularizer, regularizer_kwargs)
+
+    if 'loss' in model_kwargs:
+        if loss is None:
+            loss = model_kwargs.pop('loss')
+        else:
+            logger.warning('duplicate loss in kwargs and model_kwargs. removing from model_kwargs')
+            del model_kwargs['loss']
+    loss_instance = loss_resolver.make(loss, loss_kwargs)
+
+    return model_resolver.make(
+        model,
+        triples_factory=training,
+        loss=loss_instance,
+        **model_kwargs,
+    )
+
+
 def pipeline(  # noqa: C901
     *,
     # 1. Dataset
@@ -575,7 +609,7 @@ def pipeline(  # noqa: C901
     evaluation_entity_whitelist: Optional[Collection[str]] = None,
     evaluation_relation_whitelist: Optional[Collection[str]] = None,
     # 2. Model
-    model: Union[str, Type[Model]],
+    model: Union[str, Model, Type[Model]],
     model_kwargs: Optional[Mapping[str, Any]] = None,
     # 3. Loss
     loss: HintType[Loss] = None,
@@ -762,33 +796,25 @@ def pipeline(  # noqa: C901
                 relations=evaluation_relation_whitelist,
             )
 
-    if model_kwargs is None:
-        model_kwargs = {}
-    model_kwargs = dict(model_kwargs)
-    model_kwargs.update(preferred_device=_device)
-    model_kwargs.setdefault('random_seed', _random_seed)
+    model_instance: Model
+    if isinstance(model, Model):
+        model_instance = model
+        # TODO should training be reset?
+        # TODO should kwargs for loss and regularizer be checked and raised for?
+        model_instance.triples_factory = training
+    else:
+        model_instance = _build_model_helper(
+            model=model,
+            model_kwargs=model_kwargs,
+            loss=loss,
+            loss_kwargs=loss_kwargs,
+            regularizer=regularizer,
+            regularizer_kwargs=regularizer_kwargs,
+            _device=_device,
+            _random_seed=_random_seed,
+            training=training,
+        )
 
-    if regularizer is not None:
-        # FIXME this should never happen.
-        if 'regularizer' in model_kwargs:
-            logger.warning('Can not specify regularizer in kwargs and model_kwargs. removing from model_kwargs')
-            del model_kwargs['regularizer']
-        model_kwargs['regularizer'] = regularizer_resolver.make(regularizer, regularizer_kwargs)
-
-    if 'loss' in model_kwargs:
-        if loss is None:
-            loss = model_kwargs.pop('loss')
-        else:
-            logger.warning('duplicate loss in kwargs and model_kwargs. removing from model_kwargs')
-            del model_kwargs['loss']
-    loss_instance = loss_resolver.make(loss, loss_kwargs)
-
-    model_instance: Model = model_resolver.make(
-        model,
-        triples_factory=training,
-        loss=loss_instance,
-        **model_kwargs,
-    )
     # Log model parameters
     _result_tracker.log_params(
         params=dict(cls=model_instance.__class__.__name__, kwargs=model_kwargs),
@@ -883,7 +909,7 @@ def pipeline(  # noqa: C901
             logging.debug('validation: %s', validation)
     logging.debug(f"model: {model_instance}")
     logging.debug(f"model_kwargs: {model_kwargs}")
-    logging.debug(f"loss: {loss_instance}")
+    logging.debug(f"loss: {model_instance.loss}")
     logging.debug(f"loss_kwargs: {loss_kwargs}")
     logging.debug(f"regularizer: {regularizer}")
     logging.debug(f"regularizer_kwargs: {regularizer_kwargs}")

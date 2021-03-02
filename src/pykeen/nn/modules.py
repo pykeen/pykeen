@@ -4,15 +4,14 @@
 
 from __future__ import annotations
 
+import itertools as itt
 import logging
 import math
 from abc import ABC, abstractmethod
-from typing import (
-    Any, Callable, Generic, Mapping, MutableMapping, Optional, Sequence, Tuple, Union,
-    cast,
-)
+from typing import Any, Callable, Generic, Mapping, MutableMapping, Optional, Sequence, Set, Tuple, Union, cast
 
 import torch
+from class_resolver import Resolver
 from torch import FloatTensor, nn
 
 from . import functional as pkf
@@ -20,6 +19,7 @@ from ..typing import HeadRepresentation, RelationRepresentation, TailRepresentat
 from ..utils import CANONICAL_DIMENSIONS, convert_to_canonical_shape, ensure_tuple, upgrade_to_sequence
 
 __all__ = [
+    'interaction_resolver',
     # Base Classes
     'Interaction',
     'FunctionalInteraction',
@@ -72,6 +72,17 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
 
     #: The symbolic shapes for relation representations
     relation_shape: Sequence[str] = ("d",)
+
+    @classmethod
+    def get_dimensions(cls) -> Set[str]:
+        """Get all of the relevant dimension keys.
+
+        This draws from :data:`Interaction.entity_shape`, :data:`Interaction.relation_shape`, and in the case of
+        :class:`ConvEInteraction`, the :data:`Interaction.tail_entity_shape`.
+
+        :returns: a set of strings representting the dimension keys.
+        """
+        return set(itt.chain(cls.entity_shape, cls.tail_entity_shape or set(), cls.relation_shape))
 
     @abstractmethod
     def forward(
@@ -1224,3 +1235,10 @@ class MonotonicAffineTransformationInteraction(
         t: TailRepresentation,
     ) -> torch.FloatTensor:  # noqa: D102
         return self.log_scale.exp() * self.base(h=h, r=r, t=t) + self.bias
+
+
+interaction_resolver = Resolver.from_subclasses(
+    Interaction,  # type: ignore
+    skip={TranslationalInteraction, FunctionalInteraction, MonotonicAffineTransformationInteraction},
+    suffix=Interaction.__name__,
+)
