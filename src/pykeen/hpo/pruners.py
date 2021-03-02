@@ -4,9 +4,8 @@
 
 from typing import Set, Type
 
+from class_resolver import Resolver
 from optuna.pruners import BasePruner, MedianPruner, NopPruner, PercentilePruner, SuccessiveHalvingPruner
-
-from ..utils import Resolver
 
 __all__ = [
     'pruner_resolver',

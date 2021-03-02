@@ -30,10 +30,11 @@ References
 import dataclasses
 from typing import Set, Type
 
+from class_resolver import Resolver
+
 from .evaluator import Evaluator, MetricResults, evaluate
 from .rank_based_evaluator import RankBasedEvaluator, RankBasedMetricResults
 from .sklearn import SklearnEvaluator, SklearnMetricResults
-from ..utils import Resolver
 
 __all__ = [
     'evaluate',
