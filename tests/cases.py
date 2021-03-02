@@ -15,6 +15,7 @@ from unittest.mock import patch
 
 import pytest
 import torch
+from class_resolver import get_subclasses
 from click.testing import CliRunner, Result
 from torch import optim
 from torch.nn import functional
@@ -35,7 +36,7 @@ from pykeen.trackers import ResultTracker
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
 from pykeen.triples import TriplesFactory
 from pykeen.typing import HeadRepresentation, MappedTriples, RelationRepresentation, TailRepresentation
-from pykeen.utils import all_in_bounds, get_subclasses, resolve_device, set_random_seed, unpack_singletons
+from pykeen.utils import all_in_bounds, resolve_device, set_random_seed, unpack_singletons
 from tests.constants import EPSILON
 from tests.mocks import CustomRepresentations
 from tests.utils import rand
