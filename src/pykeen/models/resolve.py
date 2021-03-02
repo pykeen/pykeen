@@ -18,34 +18,6 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-def _normalize_entity_representations(
-    dimensions: Mapping[str, int],
-    interaction: Type[Interaction],
-    entity_representations: EmbeddingSpecificationHint,
-    relation_representations: EmbeddingSpecificationHint,
-) -> Tuple[Sequence, Sequence]:
-    if entity_representations is None:
-        # TODO: Does not work for interactions with separate tail_entity_shape (i.e., ConvE)
-        if interaction.tail_entity_shape is not None:
-            raise NotImplementedError
-        entity_representations = [
-            EmbeddingSpecification(shape=tuple(
-                dimensions[d]
-                for d in shape
-            ))
-            for shape in interaction.entity_shape
-        ]
-    if relation_representations is None:
-        relation_representations = [
-            EmbeddingSpecification(shape=tuple(
-                dimensions[d]
-                for d in shape
-            ))
-            for shape in interaction.relation_shape
-        ]
-    return entity_representations, relation_representations
-
-
 def model_instance_builder(
     dimensions: Mapping[str, Any],
     interaction: Hint[Interaction] = None,
@@ -115,6 +87,41 @@ def model_from_interaction(
     ChildERModel._interaction = interaction
 
     return ChildERModel
+
+
+def _normalize_entity_representations(
+    dimensions: Mapping[str, int],
+    interaction: Type[Interaction],
+    entity_representations: EmbeddingSpecificationHint,
+    relation_representations: EmbeddingSpecificationHint,
+) -> Tuple[
+    Sequence[Union[EmbeddingSpecification, RepresentationModule]],
+    Sequence[Union[EmbeddingSpecification, RepresentationModule]],
+]:
+    if entity_representations is None:
+        # TODO: Does not work for interactions with separate tail_entity_shape (i.e., ConvE)
+        if interaction.tail_entity_shape is not None:
+            raise NotImplementedError
+        entity_representations = [
+            EmbeddingSpecification(shape=tuple(
+                dimensions[d]
+                for d in shape
+            ))
+            for shape in interaction.entity_shape
+        ]
+    elif not isinstance(entity_representations, Sequence):
+        entity_representations = [entity_representations]
+    if relation_representations is None:
+        relation_representations = [
+            EmbeddingSpecification(shape=tuple(
+                dimensions[d]
+                for d in shape
+            ))
+            for shape in interaction.relation_shape
+        ]
+    elif not isinstance(relation_representations, Sequence):
+        relation_representations = [relation_representations]
+    return entity_representations, relation_representations
 
 
 # FIXME this function is borrowed from PR #107 and originally implemented by @mberr.
