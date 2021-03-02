@@ -19,6 +19,7 @@ PyKEEN
    tutorial/making_predictions
    tutorial/performance
    extending/index
+   tutorial/model_from_interaction
 
 .. toctree::
    :caption: Reference

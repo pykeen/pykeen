@@ -14,7 +14,7 @@ from pykeen.models.predict import (
     get_all_prediction_df, get_head_prediction_df, get_relation_prediction_df,
     get_tail_prediction_df,
 )
-from pykeen.models.resolve import model_builder, model_from_interaction, model_instance_builder
+from pykeen.models.resolve import make_model, make_model_cls
 from pykeen.nn.modules import TransEInteraction
 from pykeen.pipeline import PipelineResult, pipeline
 from pykeen.regularizers import NoRegularizer
@@ -178,7 +178,7 @@ class TestPipelineTriples(unittest.TestCase):
 
     def test_interaction_instance_builder(self):
         """Test resolving an interaction model instance."""
-        model = model_instance_builder(
+        model = make_model(
             dimensions={"d": 3},
             interaction=TransEInteraction,
             interaction_kwargs=dict(p=2),
@@ -199,17 +199,17 @@ class TestPipelineTriples(unittest.TestCase):
 
     def test_interaction_builder(self):
         """Test resolving an interaction model."""
-        model_cls = model_from_interaction({"d": 3}, TransEInteraction(p=2))
+        model_cls = make_model_cls({"d": 3}, TransEInteraction(p=2))
         self._help_test_interaction_resolver(model_cls)
 
     def test_interaction_resolver_cls(self):
         """Test resolving the interaction function."""
-        model_cls = model_builder({"d": 3}, TransEInteraction, {'p': 2})
+        model_cls = make_model_cls({"d": 3}, TransEInteraction, {'p': 2})
         self._help_test_interaction_resolver(model_cls)
 
     def test_interaction_resolver_lookup(self):
         """Test resolving the interaction function."""
-        model_cls = model_builder({"d": 3}, 'TransE', {'p': 2})
+        model_cls = make_model_cls({"d": 3}, 'TransE', {'p': 2})
         self._help_test_interaction_resolver(model_cls)
 
     def _help_test_interaction_resolver(self, model_cls):

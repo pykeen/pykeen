@@ -11,6 +11,7 @@ from typing import Set, Type
 from .base import EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, MultimodalModel, _OldAbstractModel
 from .multimodal import ComplExLiteral, DistMultLiteral
 from .nbase import ERModel, _NewAbstractModel
+from .resolve import make_model, make_model_cls
 from .unimodal import (
     ComplEx,
     ConvE,
@@ -75,6 +76,8 @@ __all__ = [
     'UnstructuredModel',
     # Utils
     'model_resolver',
+    'make_model',
+    'make_model_cls',
 ]
 
 _MODELS: Set[Type[Model]] = {

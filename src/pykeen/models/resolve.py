@@ -1,6 +1,49 @@
 # -*- coding: utf-8 -*-
 
-"""Generation of ad-hoc model classes."""
+"""Creation of :class:`pykeen.models.ERModel` from :class:`pykeen.nn.modules.Interaction`.
+
+The new style-class, :class:`pykeen.models.ERModel` abstracts the interaction away from the representations
+such that different interactions can be used interchangably. A new model can be constructed directly from the
+interaction module, given a ``dimensions`` mapping. In each :class:`pykeen.nn.modules.Interaction`, there
+is a field called ``entity_shape`` and ``relation_shape`` that allows for using eigen-notation for defining
+the different dimensions of the model. Most models share the ``d`` dimensionality for both the entity and relation
+vectors. Some (but not all) exceptions are:
+
+- :class:`pykeen.nn.modules.RESCALInteraction`, which uses a square matrix for relations written as ``dd``
+- :class:`pykeen.nn.modules.TransDInteraction`, which uses ``d`` for entity shape and ``e`` for a different
+  relation shape.
+
+With this in mind, you'll have to investigate the dimensions of the vectors through the PyKEEN documentation.
+If you're implementing your own, you have control over this and will know which dimensions to specify (though
+the ``d`` for both entities and relations is standard). As a shorthand for ``{'d': value}``, you can directly
+pass ``value`` for the dimension and it will be automatically interpreted as the ``{'d': value}``.
+
+Make a model class from lookup of an interaction module class:
+
+>>> from pykeen.nn.modules import TransEInteraction
+>>> from pykeen.models import make_model_cls
+>>> embedding_dim = 3
+>>> model_cls = make_model_cls({"d": embedding_dim}, 'TransE', {'p': 2})
+>>> # Implicitly can also be written as:
+>>> model_cls_alt = make_model_cls(embedding_dim, 'TransE', {'p': 2})
+
+Make a model class from an interaction module class:
+
+>>> from pykeen.nn.modules import TransEInteraction
+>>> from pykeen.models import make_model_cls
+>>> embedding_dim = 3
+>>> model_cls = make_model_cls({"d": embedding_dim}, TransEInteraction, {'p': 2})
+
+Make a model class from an instantiated interaction module:
+
+>>> from pykeen.nn.modules import TransEInteraction
+>>> from pykeen.models import make_model_cls
+>>> embedding_dim = 3
+>>> model_cls = make_model_cls({"d": embedding_dim}, TransEInteraction(p=2))
+
+All of these model classes can be passed directly into the ``model``
+argument of :func:`pykeen.pipeline.pipeline`.
+"""
 
 import logging
 from typing import Any, Mapping, Optional, Sequence, Tuple, Type, Union
@@ -8,27 +51,25 @@ from typing import Any, Mapping, Optional, Sequence, Tuple, Type, Union
 from .nbase import ERModel, EmbeddingSpecificationHint
 from ..nn import EmbeddingSpecification, RepresentationModule
 from ..nn.modules import Interaction, interaction_resolver
-from ..typing import Hint
 
 __all__ = [
-    'model_instance_builder',
-    'model_builder',
-    'model_from_interaction',
+    'make_model',
+    'make_model_cls',
 ]
 
 logger = logging.getLogger(__name__)
 
 
-def model_instance_builder(
-    dimensions: Mapping[str, Any],
-    interaction: Hint[Interaction] = None,
+def make_model(
+    dimensions: Union[int, Mapping[str, int]],
+    interaction: Union[str, Interaction, Type[Interaction]],
     interaction_kwargs: Optional[Mapping[str, Any]] = None,
     entity_representations: EmbeddingSpecificationHint = None,
     relation_representations: EmbeddingSpecificationHint = None,
     **kwargs,
 ) -> ERModel:
     """Build a model from an interaction class hint (name or class)."""
-    model_cls = model_builder(
+    model_cls = make_model_cls(
         dimensions=dimensions,
         interaction=interaction,
         interaction_kwargs=interaction_kwargs,
@@ -38,33 +79,22 @@ def model_instance_builder(
     return model_cls(**kwargs)
 
 
-def model_builder(
-    dimensions: Mapping[str, Any],
-    interaction: Hint[Interaction] = None,
+def make_model_cls(
+    dimensions: Union[int, Mapping[str, int]],
+    interaction: Union[str, Interaction, Type[Interaction]],
     interaction_kwargs: Optional[Mapping[str, Any]] = None,
     entity_representations: EmbeddingSpecificationHint = None,
     relation_representations: EmbeddingSpecificationHint = None,
 ) -> Type[ERModel]:
     """Build a model class from an interaction class hint (name or class)."""
-    interaction_instance = interaction_resolver.make(interaction, interaction_kwargs)
-    return model_from_interaction(
-        dimensions=dimensions,
-        interaction=interaction_instance,
-        entity_representations=entity_representations,
-        relation_representations=relation_representations,
-    )
+    if isinstance(interaction, Interaction):
+        interaction_instance = interaction
+    else:
+        interaction_instance = interaction_resolver.make(interaction, interaction_kwargs)
 
-
-def model_from_interaction(
-    dimensions: Mapping[str, Any],
-    interaction: Interaction,
-    entity_representations: EmbeddingSpecificationHint = None,
-    relation_representations: EmbeddingSpecificationHint = None,
-) -> Type[ERModel]:
-    """Build a model class from an interaction class instance."""
     entity_representations, relation_representations = _normalize_entity_representations(
         dimensions=dimensions,
-        interaction=interaction.__class__,
+        interaction=interaction_instance.__class__,
         entity_representations=entity_representations,
         relation_representations=relation_representations,
     )
@@ -73,19 +103,19 @@ def model_from_interaction(
         def __init__(self, **kwargs) -> None:
             """Initialize the model."""
             super().__init__(
-                interaction=interaction,
+                interaction=interaction_instance,
                 entity_representations=entity_representations,
                 relation_representations=relation_representations,
                 **kwargs,
             )
 
-    ChildERModel._interaction = interaction
+    ChildERModel._interaction = interaction_instance
 
     return ChildERModel
 
 
 def _normalize_entity_representations(
-    dimensions: Mapping[str, int],
+    dimensions: Union[int, Mapping[str, int]],
     interaction: Type[Interaction],
     entity_representations: EmbeddingSpecificationHint,
     relation_representations: EmbeddingSpecificationHint,
@@ -93,6 +123,9 @@ def _normalize_entity_representations(
     Sequence[Union[EmbeddingSpecification, RepresentationModule]],
     Sequence[Union[EmbeddingSpecification, RepresentationModule]],
 ]:
+    if isinstance(dimensions, int):
+        dimensions = {'d': dimensions}
+    assert isinstance(dimensions, dict)
     if entity_representations is None:
         # TODO: Does not work for interactions with separate tail_entity_shape (i.e., ConvE)
         if interaction.tail_entity_shape is not None:
