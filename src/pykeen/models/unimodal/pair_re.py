@@ -70,18 +70,21 @@ class PairRE(ERModel):
         # https://github.com/alipay/KnowledgeGraphEmbeddingsViaPairedRelationVectors_PairRE/blob/0a95bcd54759207984c670af92ceefa19dd248ad/biokg/model.py#L45-L49
         # https://github.com/alipay/KnowledgeGraphEmbeddingsViaPairedRelationVectors_PairRE/blob/0a95bcd54759207984c670af92ceefa19dd248ad/biokg/model.py#L29
         # https://github.com/alipay/KnowledgeGraphEmbeddingsViaPairedRelationVectors_PairRE/blob/0a95bcd54759207984c670af92ceefa19dd248ad/biokg/run.py#L50
-        entity_initializer_kwargs = dict(entity_initializer_kwargs or {})
-        embedding_range = 14 / embedding_dim
-        entity_initializer_kwargs.setdefault("a", -embedding_range)
-        entity_initializer_kwargs.setdefault("b", embedding_range)
-        relation_initializer_kwargs = dict(relation_initializer_kwargs or {})
-        relation_initializer_kwargs.setdefault("a", -embedding_range / 2)
-        relation_initializer_kwargs.setdefault("b", embedding_range / 2)
+        entity_initializer_kwargs = self._update_embedding_init_with_default(
+            entity_initializer_kwargs,
+            embedding_dim=embedding_dim,
+        )
+        relation_initializer_kwargs = self._update_embedding_init_with_default(
+            relation_initializer_kwargs,
+            # in the original implementation the embeddings are initialized in one parameter
+            embedding_dim=2 * embedding_dim,
+        )
         super().__init__(
             interaction=PairREInteraction(p=p, power_norm=power_norm),
             entity_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
                 initializer=entity_initializer,
+                initializer_kwargs=entity_initializer_kwargs,
                 normalizer=entity_normalizer,
                 normalizer_kwargs=entity_normalizer_kwargs,
             ),
@@ -99,6 +102,18 @@ class PairRE(ERModel):
             ],
             **kwargs,
         )
+
+    @staticmethod
+    def _update_embedding_init_with_default(
+        init_kwargs: Optional[Mapping[str, Any]],
+        embedding_dim: int,
+    ) -> Mapping[str, float]:
+        """Update kwargs by dimension-based default init range."""
+        init_kwargs = dict(init_kwargs or {})
+        embedding_range = 14 / embedding_dim
+        init_kwargs.setdefault("a", -embedding_range)
+        init_kwargs.setdefault("b", embedding_range)
+        return init_kwargs
 
 
 def _resolve_kwargs(kwargs: Optional[Mapping[str, Any]], default_kwargs: Mapping[str, Any]) -> Mapping[str, Any]:
