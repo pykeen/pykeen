@@ -840,7 +840,7 @@ def pipeline(  # noqa: C901
             optimizer=optimizer_instance,
             automatic_memory_optimization=automatic_memory_optimization,
         )
-    elif training_loop is not SLCWATrainingLoop:
+    elif training_loop_cls is not SLCWATrainingLoop:
         raise ValueError('Can not specify negative sampler with LCWA')
     else:
         negative_sampler_cls = negative_sampler_resolver.lookup(negative_sampler)
@@ -915,7 +915,7 @@ def pipeline(  # noqa: C901
     logging.debug(f"regularizer_kwargs: {regularizer_kwargs}")
     logging.debug(f"optimizer: {optimizer}")
     logging.debug(f"optimizer_kwargs: {optimizer_kwargs}")
-    logging.debug(f"training_loop: {training_loop}")
+    logging.debug(f"training_loop: {training_loop_instance}")
     if negative_sampler_cls is not None:
         logging.debug(f"negative_sampler: {negative_sampler_cls}")
         logging.debug(f"_negative_sampler_kwargs: {negative_sampler_kwargs}")
