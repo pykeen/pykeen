@@ -36,6 +36,7 @@ __all__ = [
     'ermlpe_interaction',
     'hole_interaction',
     'kg2e_interaction',
+    'mure_interaction',
     'ntn_interaction',
     'pair_re_interaction',
     'proje_interaction',
@@ -907,6 +908,50 @@ def tucker_interaction(
         ),
         t,
     )
+
+
+def mure_interaction(
+    h: torch.FloatTensor,
+    b_h: torch.FloatTensor,
+    r_vec: torch.FloatTensor,
+    r_mat: torch.FloatTensor,
+    t: torch.FloatTensor,
+    b_t: torch.FloatTensor,
+    p: Union[int, float, str] = 2,
+    power_norm: bool = False,
+) -> torch.FloatTensor:
+    r"""Evaluate the MuRE interaction function from [balazevic2019b]_.
+
+    .. math ::
+        -\|Rh + r - t\| + b_h + b_t
+
+    :param h: shape: (batch_size, num_heads, 1, 1, dim)
+        The head representations.
+    :param b_h: shape: (batch_size, num_heads, 1, 1)
+        The head entity bias.
+    :param r_vec: shape: (batch_size, 1, num_relations, 1, dim)
+        The relation vector.
+    :param r_mat: shape: (batch_size, 1, num_relations, 1, dim, dim)
+        The relation matrix.
+    :param t: shape: (batch_size, 1, 1, num_tails, dim)
+        The tail representations.
+    :param b_t: shape: (batch_size, 1, 1, num_tails)
+        The tail entity bias.
+    :param p:
+        The parameter p for selecting the norm, cf. torch.norm.
+    :param power_norm:
+        Whether to return the powered norm instead.
+
+    :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        The scores.
+    """
+    return negative_norm_of_sum(
+        h @ r_mat.squeeze(dim=-3),
+        r_vec,
+        -t,
+        p=p,
+        power_norm=power_norm,
+    ) + b_h + b_t
 
 
 def unstructured_model_interaction(

@@ -18,7 +18,7 @@ import seaborn as sns
 import pykeen.evaluation.evaluator
 from pykeen.constants import PYKEEN_EXPERIMENTS
 from pykeen.datasets import Dataset, get_dataset
-from pykeen.models import Model, get_model_cls
+from pykeen.models import Model, model_resolver
 from pykeen.pipeline import pipeline
 
 INVERSE_STABILITY = PYKEEN_EXPERIMENTS / 'inverse_stability'
@@ -64,7 +64,7 @@ def run_inverse_stability_workflow(dataset: str, model: str, training_loop: str,
         ),
     )
     dataset_name = dataset.get_normalized_name()
-    model_cls: Type[Model] = get_model_cls(model)
+    model_cls: Type[Model] = model_resolver.lookup(model)
     model_name = model_cls.__name__.lower()
 
     dataset_dir = INVERSE_STABILITY / dataset_name

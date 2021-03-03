@@ -325,6 +325,7 @@ class ERModel(
 
     def __init__(
         self,
+        *,
         triples_factory: TriplesFactory,
         interaction: Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation],
         entity_representations: EmbeddingSpecificationHint = None,

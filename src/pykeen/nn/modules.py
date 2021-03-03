@@ -4,15 +4,14 @@
 
 from __future__ import annotations
 
+import itertools as itt
 import logging
 import math
 from abc import ABC, abstractmethod
-from typing import (
-    Any, Callable, Generic, Mapping, MutableMapping, Optional, Sequence, Tuple, Union,
-    cast,
-)
+from typing import Any, Callable, Generic, Mapping, MutableMapping, Optional, Sequence, Set, Tuple, Union, cast
 
 import torch
+from class_resolver import Resolver
 from torch import FloatTensor, nn
 
 from . import functional as pkf
@@ -20,10 +19,13 @@ from ..typing import HeadRepresentation, RelationRepresentation, TailRepresentat
 from ..utils import CANONICAL_DIMENSIONS, convert_to_canonical_shape, ensure_tuple, upgrade_to_sequence
 
 __all__ = [
+    'interaction_resolver',
     # Base Classes
     'Interaction',
     'FunctionalInteraction',
     'TranslationalInteraction',
+    # Adapter classes
+    'MonotonicAffineTransformationInteraction',
     # Concrete Classes
     'ComplExInteraction',
     'ConvEInteraction',
@@ -33,6 +35,7 @@ __all__ = [
     'ERMLPEInteraction',
     'HolEInteraction',
     'KG2EInteraction',
+    'MuREInteraction',
     'NTNInteraction',
     'PairREInteraction',
     'ProjEInteraction',
@@ -69,6 +72,17 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
 
     #: The symbolic shapes for relation representations
     relation_shape: Sequence[str] = ("d",)
+
+    @classmethod
+    def get_dimensions(cls) -> Set[str]:
+        """Get all of the relevant dimension keys.
+
+        This draws from :data:`Interaction.entity_shape`, :data:`Interaction.relation_shape`, and in the case of
+        :class:`ConvEInteraction`, the :data:`Interaction.tail_entity_shape`.
+
+        :returns: a set of strings representting the dimension keys.
+        """
+        return set(itt.chain(cls.entity_shape, cls.tail_entity_shape or set(), cls.relation_shape))
 
     @abstractmethod
     def forward(
@@ -1059,6 +1073,35 @@ class TransHInteraction(TranslationalInteraction[FloatTensor, Tuple[FloatTensor,
         return dict(h=h, w_r=r[0], d_r=r[1], t=t)
 
 
+class MuREInteraction(
+    TranslationalInteraction[
+        Tuple[FloatTensor, FloatTensor, FloatTensor],
+        Tuple[FloatTensor, FloatTensor],
+        Tuple[FloatTensor, FloatTensor, FloatTensor],
+    ],
+):
+    """A stateful module for the MuRE interaction function from [balazevic2019b]_.
+
+    .. seealso:: :func:`pykeen.nn.functional.mure_interaction`
+    """
+
+    # there are separate biases for entities in head and tail position
+    entity_shape = ("d", "", "")
+    relation_shape = ("d", "dd")
+    func = pkf.mure_interaction
+
+    @staticmethod
+    def _prepare_hrt_for_functional(
+        h: Tuple[FloatTensor, FloatTensor, FloatTensor],
+        r: Tuple[FloatTensor, FloatTensor],
+        t: Tuple[FloatTensor, FloatTensor, FloatTensor],
+    ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
+        h, b_h, _ = h
+        t, _, b_t = t
+        r_vec, r_mat = r
+        return dict(h=h, b_h=b_h, r_vec=r_vec, r_mat=r_mat, t=t, b_t=b_t)
+
+
 class SimplEInteraction(
     FunctionalInteraction[
         Tuple[torch.FloatTensor, torch.FloatTensor],
@@ -1109,3 +1152,93 @@ class PairREInteraction(TranslationalInteraction[FloatTensor, Tuple[FloatTensor,
         t: TailRepresentation,
     ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
         return dict(h=h, r_h=r[0], r_t=r[1], t=t)
+
+
+class MonotonicAffineTransformationInteraction(
+    Interaction[
+        HeadRepresentation,
+        RelationRepresentation,
+        TailRepresentation,
+    ],
+):
+    r"""
+    An adapter of interaction functions which adds a scalar (trainable) monotonic affine transformation of the score.
+
+    .. math ::
+        score(h, r, t) = \alpha \cdot score'(h, r, t) + \beta
+
+    This adapter is useful for losses such as BCE, where there is a fixed decision threshold, or margin-based losses,
+    where the margin is not be treated as hyper-parameter, but rather a trainable parameter. This is particularly
+    useful, if the value range of the score function is not known in advance, and thus choosing an appropriate margin
+    becomes difficult.
+
+    Monotonicity is required to preserve the ordering of the original scoring function, and thus ensures that more
+    plausible triples are still more plausible after the transformation.
+
+    For example, we can add a bias to a distance-based interaction function to enable positive values:
+
+    >>> base = TransEInteraction(p=2)
+    >>> interaction = MonotonicAffineTransformationInteraction(base=base, trainable_bias=True, trainable_scale=False)
+
+    When combined with BCE loss, we can geometrically think about predicting a (soft) sphere at :math:`h + r` with
+    radius equal to the bias of the transformation. When we add a trainable scale, the model can control the "softness"
+    of the decision boundary itself.
+    """
+
+    def __init__(
+        self,
+        base: Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation],
+        initial_bias: float = 0.0,
+        trainable_bias: bool = True,
+        initial_scale: float = 1.0,
+        trainable_scale: bool = True,
+    ):
+        """
+        Initialize the interaction.
+
+        :param base:
+            The base interaction.
+        :param initial_bias:
+            The initial value for the bias.
+        :param trainable_bias:
+            Whether the bias should be trainable.
+        :param initial_scale: >0
+            The initial value for the scale. Must be strictly positive.
+        :param trainable_scale:
+            Whether the scale should be trainable.
+        """
+        super().__init__()
+
+        # the base interaction
+        self.base = base
+        # forward entity/relation shapes
+        self.entity_shape = base.entity_shape
+        self.relation_shape = base.relation_shape
+        self.tail_entity_shape = base.tail_entity_shape
+
+        # The parameters of the affine transformation: bias
+        self.bias = nn.Parameter(torch.empty(size=tuple()), requires_grad=trainable_bias)
+        self.initial_bias = torch.as_tensor(data=[initial_bias], dtype=torch.get_default_dtype())
+
+        # scale. We model this as log(scale) to ensure scale > 0, and thus monotonicity
+        self.log_scale = nn.Parameter(torch.empty(size=tuple()), requires_grad=trainable_scale)
+        self.initial_log_scale = torch.as_tensor(data=[math.log(initial_scale)], dtype=torch.get_default_dtype())
+
+    def reset_parameters(self):  # noqa: D102
+        self.bias.data = self.initial_bias.to(device=self.bias.device)
+        self.log_scale.data = self.initial_log_scale.to(device=self.bias.device)
+
+    def forward(
+        self,
+        h: HeadRepresentation,
+        r: RelationRepresentation,
+        t: TailRepresentation,
+    ) -> torch.FloatTensor:  # noqa: D102
+        return self.log_scale.exp() * self.base(h=h, r=r, t=t) + self.bias
+
+
+interaction_resolver = Resolver.from_subclasses(
+    Interaction,  # type: ignore
+    skip={TranslationalInteraction, FunctionalInteraction, MonotonicAffineTransformationInteraction},
+    suffix=Interaction.__name__,
+)

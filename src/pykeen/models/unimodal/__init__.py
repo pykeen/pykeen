@@ -59,6 +59,7 @@ from .ermlp import ERMLP
 from .ermlpe import ERMLPE
 from .hole import HolE
 from .kg2e import KG2E
+from .mure import MuRE
 from .ntn import NTN
 from .pair_re import PairRE
 from .proj_e import ProjE
@@ -83,6 +84,7 @@ __all__ = [
     'ERMLPE',
     'HolE',
     'KG2E',
+    'MuRE',
     'NTN',
     'PairRE',
     'ProjE',

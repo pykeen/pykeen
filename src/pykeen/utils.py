@@ -24,6 +24,7 @@ import pandas as pd
 import torch
 import torch.nn
 import torch.nn.modules.batchnorm
+from class_resolver import normalize_string
 
 from .constants import PYKEEN_BENCHMARKS
 from .typing import DeviceHint, MappedTriples, TorchRandomHint
@@ -43,8 +44,6 @@ __all__ = [
     'split_list_in_batches_iter',
     'torch_is_in_1d',
     'normalize_string',
-    'normalized_lookup',
-    'get_cls',
     'get_until_first_blank',
     'flatten_dictionary',
     'set_random_seed',
@@ -53,12 +52,10 @@ __all__ = [
     'fix_dataclass_init_docs',
     'get_benchmark',
     'extended_einsum',
-    'convert_to_canonical_shape',
     'strip_dim',
     'upgrade_to_sequence',
     'ensure_tuple',
     'unpack_singletons',
-    'get_subclasses',
     'extend_batch',
     'check_shapes',
     'all_in_bounds',
@@ -115,49 +112,6 @@ def split_list_in_batches_iter(input_list: List[X], batch_size: int) -> Iterable
         input_list[i:i + batch_size]
         for i in range(0, len(input_list), batch_size)
     )
-
-
-def normalize_string(s: str, *, suffix: Optional[str] = None) -> str:
-    """Normalize a string for lookup."""
-    s = s.lower().replace('-', '').replace('_', '').replace(' ', '')
-    if suffix is not None and s.endswith(suffix.lower()):
-        return s[:-len(suffix)]
-    return s
-
-
-def normalized_lookup(classes: Iterable[Type[X]]) -> Mapping[str, Type[X]]:
-    """Make a normalized lookup dict."""
-    return {
-        normalize_string(cls.__name__): cls
-        for cls in classes
-    }
-
-
-def get_cls(
-    query: Union[None, str, Type[X]],
-    base: Type[X],
-    lookup_dict: Mapping[str, Type[X]],
-    lookup_dict_synonyms: Optional[Mapping[str, Type[X]]] = None,
-    default: Optional[Type[X]] = None,
-    suffix: Optional[str] = None,
-) -> Type[X]:
-    """Get a class by string, default, or implementation."""
-    if query is None:
-        if default is None:
-            raise ValueError(f'No default {base.__name__} set')
-        return default
-    elif not isinstance(query, (str, type)):
-        raise TypeError(f'Invalid {base.__name__} type: {type(query)} - {query}')
-    elif isinstance(query, str):
-        key = normalize_string(query, suffix=suffix)
-        if key in lookup_dict:
-            return lookup_dict[key]
-        if lookup_dict_synonyms is not None and key in lookup_dict_synonyms:
-            return lookup_dict_synonyms[key]
-        raise ValueError(f'Invalid {base.__name__} name: {query}')
-    elif issubclass(query, base):
-        return query
-    raise TypeError(f'Not subclass of {base.__name__}: {query}')
 
 
 def get_until_first_blank(s: str) -> str:
@@ -667,7 +621,7 @@ def tensor_product(*tensors: torch.FloatTensor) -> torch.FloatTensor:
 
 def negative_norm_of_sum(
     *x: torch.FloatTensor,
-    p: Union[str, int] = 2,
+    p: Union[str, int, float] = 2,
     power_norm: bool = False,
 ) -> torch.FloatTensor:
     """Evaluate negative norm of a sum of vectors on already broadcasted representations.
@@ -687,7 +641,7 @@ def negative_norm_of_sum(
 
 def negative_norm(
     x: torch.FloatTensor,
-    p: Union[str, int] = 2,
+    p: Union[str, int, float] = 2,
     power_norm: bool = False,
 ) -> torch.FloatTensor:
     """Evaluate negative norm of a vector.
@@ -881,17 +835,6 @@ def unpack_singletons(*xs: Tuple[X]) -> Sequence[Union[X, Tuple[X]]]:
         x[0] if len(x) == 1 else x
         for x in xs
     )
-
-
-def get_subclasses(cls: Type[X]) -> Iterable[Type[X]]:
-    """Get all subclasses.
-
-    :param cls: The ancestor class
-    :yields: Descendant classes of the ancestor class
-    """
-    for subclass in cls.__subclasses__():
-        yield from get_subclasses(subclass)
-        yield subclass
 
 
 def _can_slice(fn) -> bool:
