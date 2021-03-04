@@ -104,6 +104,18 @@ class OGBBioKG(OGBLoader):
 
     name = 'ogbl-biokg'
 
+    def _make_tf(self, x, entity_to_id=None, relation_to_id=None):
+        head_triples = np.array([f'{head_type}:{head}' for head_type, head in zip(x['head_type'], x['head'])], dtype=np.str)
+        tail_triples = np.array([f'{tail_type}:{tail}' for tail_type, tail in zip(x['tail_type'], x['tail'])], dtype=np.str)
+        triples = np.stack([head_triples, x['relation'], tail_triples], axis=1).astype(np.str)
+
+        return TriplesFactory.from_labeled_triples(
+            triples=triples,
+            create_inverse_triples=self.create_inverse_triples,
+            entity_to_id=entity_to_id,
+            relation_to_id=relation_to_id,
+        )
+
 
 @parse_docdata
 class OGBWikiKG(OGBLoader):
