@@ -122,6 +122,9 @@ def make_model_cls(
         relation_representations=relation_representations,
     )
 
+    # TODO pack/unpack dimensions as default kwargs such that they don't actually need to be used
+    #  to create the class
+
     class ChildERModel(ERModel):
         def __init__(self, **kwargs) -> None:
             """Initialize the model."""

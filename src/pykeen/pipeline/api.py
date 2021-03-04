@@ -187,7 +187,8 @@ from ..datasets import get_dataset
 from ..datasets.base import Dataset
 from ..evaluation import Evaluator, MetricResults, evaluator_resolver
 from ..losses import Loss, loss_resolver
-from ..models import Model, model_resolver
+from ..models import Model, make_model_cls, model_resolver
+from ..nn.modules import Interaction
 from ..optimizers import optimizer_resolver
 from ..regularizers import Regularizer, regularizer_resolver
 from ..sampling import NegativeSampler, negative_sampler_resolver
@@ -620,8 +621,11 @@ def pipeline(  # noqa: C901
     evaluation_entity_whitelist: Optional[Collection[str]] = None,
     evaluation_relation_whitelist: Optional[Collection[str]] = None,
     # 2. Model
-    model: Union[str, Model, Type[Model]],
+    model: Union[None, str, Model, Type[Model]] = None,
     model_kwargs: Optional[Mapping[str, Any]] = None,
+    interaction: Union[None, str, Interaction, Type[Interaction]] = None,
+    interaction_kwargs: Optional[Mapping[str, Any]] = None,
+    dimensions: Union[None, int, Mapping[str, int]] = None,
     # 3. Loss
     loss: HintType[Loss] = None,
     loss_kwargs: Optional[Mapping[str, Any]] = None,
@@ -820,6 +824,17 @@ def pipeline(  # noqa: C901
             )
 
     model_instance: Model
+    if model is not None and interaction is not None:
+        raise ValueError('can not pass both a model and interaction')
+    elif model is None and interaction is None:
+        raise ValueError('must pass one of model or interaction')
+    elif interaction is not None:
+        model = make_model_cls(
+            interaction=interaction,
+            dimensions=dimensions,
+            interaction_kwargs=interaction_kwargs,
+        )
+
     if isinstance(model, Model):
         model_instance = model
         # TODO should training be reset?

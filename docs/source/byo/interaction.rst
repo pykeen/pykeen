@@ -225,4 +225,39 @@ making it generally reusable, check the "Extending the Models" tutorial.
 
 Interaction Pipeline
 --------------------
-.. automodule:: pykeen.pipeline.interaction_api
+The :func:`pykeen.pipeline.pipeline` also allows passing of an interaction such
+that the following code block can be compressed:
+
+.. code-block:: python
+
+    from pykeen.pipeline import pipeline
+    from pykeen.nn.modules import TransEInteraction
+
+    model = make_model_cls(
+        interaction=TransEInteraction,
+        interaction_kwargs={'p': 2},
+        dimensions={'d': 100},
+    )
+    results = pipeline(
+        dataset='Nations',
+        model=model,
+        ...
+    )
+
+into:
+
+.. code-block:: python
+
+    from pykeen.pipeline import pipeline
+    from pykeen.nn.modules import TransEInteraction
+
+    results = pipeline(
+        dataset='Nations',
+        interaction=TransEInteraction,
+        interaction_kwargs={'p': 2},
+        dimensions={'d': 100},
+        ...
+    )
+
+This can be used with any subclass of the :class:`pykeen.nn.modules.Interaction`, not only
+ones that are implemented in the PyKEEN package.
