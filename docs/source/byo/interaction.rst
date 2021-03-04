@@ -41,11 +41,10 @@ As another example, let's try DistMult, defined as:
 
 .. math::
 
-    f(h, r, t) = <\mathbf{e}_h, \mathbf{r}_r, \mathbf{e}_t>
+    f(h, r, t) = $\mathbf{e}_h$^T diag($\mathbf{r}_r$) $\mathbf{e}_t$
 
 where $\mathbf{e}_i$ is the $d$-dimensional representation for entity $i$,
-$\mathbf{r}_j$ is the $d$-dimensional representation for relation $j$, and
-$<x,y,z>$ is the tensor product for $x,y,z \in \mathcal{R}^d$.
+$\mathbf{r}_j$ is the $d$-dimensional representation for relation $j$.
 
 .. code-block:: python
 
