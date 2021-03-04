@@ -214,7 +214,8 @@ hyper-parameter optimization strategies, and more complex applications of regula
 
 As a researcher, the :class:`pykeen.nn.modules.Interaction` is a way to quickly translate
 ideas into new models that can be used without all of the overhead of defining a
-:class:`pykeen.models.Model`.
+:class:`pykeen.models.Model`. These components are also completely reusable throughout PyKEEN
+(e.g., in self-rolled training loops) and can be used as standalone components outside of PyKEEN.
 
 If you are happy with your interaction module and would like to go the next step to
 making it generally reusable, check the "Extending the Models" tutorial.
