@@ -682,9 +682,16 @@ def pipeline(  # noqa: C901
         embedding quality.
 
     :param model:
-        The name of the model or the model class
+        The name of the model, subclass of :class:`pykeen.models.Model`, or an instance of
+        :class:`pykeen.models.Model`. Can be given as None if the ``interaction`` keyword is used.
     :param model_kwargs:
         Keyword arguments to pass to the model class on instantiation
+    :param interaction: The name of the interaction class, a subclass of :class:`pykeen.nn.modules.Interaction`,
+        or an instance of :class:`pykeen.nn.modules.Interaction`. Can not be given when there is also a model.
+    :param interaction_kwargs:
+        Keyword arguments to pass during instantiation of the interaction class. Only use with ``interaction``.
+    :param dimensions:
+        Dimensions to assign to the embeddings of the interaction. Only use with ``interaction``.
 
     :param loss:
         The name of the loss or the loss class.
