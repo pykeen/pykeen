@@ -76,9 +76,50 @@ storing the value for $p$ in the instance, then accessing it in ``forward()``.
 
 In general, you can put whatever you want in ``__init__()`` to support the calculation of scores.
 
-Interactions with Non-Vector Embeddings
----------------------------------------
-Structured Embedding [bordes2011]_
+Interactions with Different Shaped Vectors
+------------------------------------------
+The Structured Embedding [bordes2011]_ uses a 2-tensor for representing each relation,
+with an interaction defined as:
+
+.. math::
+
+    f(h, r, t) = - \|\textbf{M}_{r}^{head} \textbf{e}_h  - \textbf{M}_{r}^{tail} \textbf{e}_t\|_p
+
+where $\mathbf{e}_i$ is the $d$-dimensional embedding for entity $i$,
+$\mathbf{M}^{head}_j$ is the $d \times d$-dimensional embedding for relation $j$ for head entities,
+$\mathbf{M}^{tail}_j$ is the $d \times d$-dimensional embedding for relation $j$ for tail entities, and
+$\|...\|_2$ is the $L_p$ norm.
+
+For the purposes of this tutorial, we will propose a simplification to Strucuterd Embedding (also similar to TransR)
+where the same relation 2-tensor is used to project both the head and tail entities as in:
+
+.. math::
+
+    f(h, r, t) = - \|\textbf{M}_{r} \textbf{e}_h  - \textbf{M}_{r} \textbf{e}_t\|_2
+
+where $\mathbf{e}_i$ is the $d$-dimensional embedding for entity $i$,
+$\mathbf{M}_j$ is the $d \times d$-dimensional embedding for relation $j$, and
+$\|...\|_2$ is the $L_2$ norm.
+
+.. code-block:: python
+
+    from pykeen.nn.modules import Interaction
+
+    class SimplifiedStructuredEmbeddingInteraction(Interaction):
+        relation_shape = ('dd',)
+
+        def forward(self, h, r, t):
+            h_proj = r @ h.unsqueeze(dim=-1)
+            t_proj = r @ t.unsqueeze(dim=-1)
+            return (h_proj - t_proj).squeeze(dim=-1).norm(p=2, dim=-1)
+
+Note the definition of the ``relation_shape``. By default, the ``entity_shape`` and
+``relation_shape`` are both equal to ``('d', )``, which uses eigen-notation to show
+that they both are 1-tensors with the same shape. In this simplified structured embedding,
+we need to denote that the shape of the relation is $d \times d$, so it's written as ``dd``.
+
+Interactions with Different Dimension Vectors
+---------------------------------------------
 
 Interactions with Multiple Embeddings
 -------------------------------------
