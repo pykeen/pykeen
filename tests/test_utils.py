@@ -283,7 +283,7 @@ class TestUtils(unittest.TestCase):
                 exp_shape = c.shape
                 assert shape == exp_shape
 
-    @pytest.mark.slow
+    @unittest.skip('This is often failing non-deterministically')
     def test_estimate_cost_of_add_sequence(self):
         """Test ``estimate_cost_of_add_sequence()``."""
         _, generator, _ = set_random_seed(seed=42)
