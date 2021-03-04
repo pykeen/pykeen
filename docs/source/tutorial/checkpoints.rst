@@ -1,5 +1,5 @@
-Using Checkpoints
-=================
+Saving Checkpoints during Training
+==================================
 Training may take days to weeks in extreme cases when using models with many parameters or big datasets. This introduces
 a large array of possible errors, e.g. session timeouts, server restarts etc., which would lead to a complete loss of
 all progress made so far. To avoid this PyKEEN supports built-in check-points that allow a straight-forward saving of
