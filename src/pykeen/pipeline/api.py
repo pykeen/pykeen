@@ -836,6 +836,8 @@ def pipeline(  # noqa: C901
     elif model is None and interaction is None:
         raise ValueError('must pass one of model or interaction')
     elif interaction is not None:
+        if dimensions is None:
+            raise ValueError('missing dimensions')
         model = make_model_cls(
             interaction=interaction,
             dimensions=dimensions,
