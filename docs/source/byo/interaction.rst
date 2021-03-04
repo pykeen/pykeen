@@ -64,7 +64,7 @@ a different value for $p$:
 
 .. math::
 
-    f(h, r, t) = -\| \mathbf{e}_h + \mathbf{r}_r - \mathbf{e}_t \|_p^2
+    f(h, r, t) = -\| \mathbf{e}_h + \mathbf{r}_r - \mathbf{e}_t \|_p
 
 This could be incorporated into the interaction definition by using the ``__init__()``,
 storing the value for $p$ in the instance, then accessing it in ``forward()``.
