@@ -1,44 +1,13 @@
-Extending the Interaction Models
-================================
-In [ali2020b]_, we argued that a knowledge graph embedding model (KGEM) consists of
-several components: an interaction function, a loss function, a training approach, etc.
-
-Let's assume you have invented a new interaction model,
-e.g. :class:`pykeen.models.DistMult`
-
-.. math::
-
-    f(h, r, t) = <h, r, t>
-
-where :math:`h,r,t \in \mathbb{R}^d` and $<h,r,t>$ is the tensor product.
-
-.. [ali2020b] Ali, M., *et al.* (2020) `PyKEEN 1.0: A Python Library for Training and
-   Evaluating Knowledge Graph Embeddings <https://arxiv.org/abs/2007.14175>`_ *arXiv*, 2007.14175.
-
-Implement a simple :class:`pykeen.nn.modules.Interaction`
----------------------------------------------------------
-The interesting research in KGEMs is in the definition of the interaction function.
-Interaction functions take a batch of embeddings for the head entities, relations, and tail
-entities, and return the scores. Luckily, most operations are vectorized which means that
-new interactions can be written idiomatically with PyKEEN.
-
-.. code-block:: python
-
-    from pykeen.nn.modules import Interaction
-
-    class DistMultInteraction(Interaction):
-        def forward(self, h, r, t):
-            return h * r.sigmoid() * t
-
-The actual implementation of DistMult's interaction function can be found at
-:class:`pykeen.nn.modules.DistMultInteraction`.
+Extending the Models
+====================
+You should first read the tutorial on bringing your own interaction module.
+This tutorial is about how to wrap a custom interaction module with a model
+module for general reuse and application.
 
 Implement a simple :class:`pykeen.models.ERModel`
 -------------------------------------------------
 The following code block demonstrates how an interaction model can be used to define a full
 KGEM using the :class:`pykeen.models.ERModel` base class.
-
-
 
 .. code-block:: python
 

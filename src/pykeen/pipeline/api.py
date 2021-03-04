@@ -3,12 +3,13 @@
 """The easiest way to train and evaluate a model is with the :func:`pykeen.pipeline.pipeline` function.
 
 It provides a high-level entry point into the extensible functionality of
-this package.
+this package. Full reference documentation for the pipeline and related functions
+can be found at :mod:`pykeen.pipeline`.
 
 Training a Model
 ~~~~~~~~~~~~~~~~
 The following example shows how to train and evaluate the :class:`pykeen.models.TransE` model
-on the :class:`pykeen.dataset.Nations` dataset. Throughout the documentation, you'll notice
+on the :class:`pykeen.datasets.Nations` dataset. Throughout the documentation, you'll notice
 that each asset has a corresponding class in PyKEEN. You can follow the links to learn more
 about each and see the reference on how to use them specifically. Don't worry, in this part of
 the tutorial, the :func:`pykeen.pipeline.pipeline` function will take care of everything for you.
@@ -163,7 +164,7 @@ there are several other parameters to :func:`pykeen.pipeline.pipeline` that
 can be used to specify the parameters during their respective instantiations.
 
 Arguments can be given to the dataset with ``dataset_kwargs``. These are passed on to
-the :class:`pykeen.dataset.Nations`
+the :class:`pykeen.datasets.Nations`
 """
 
 import ftplib
@@ -181,25 +182,25 @@ import pandas as pd
 import torch
 from torch.optim.optimizer import Optimizer
 
-from .constants import PYKEEN_CHECKPOINTS, USER_DEFINED_CODE
-from .datasets import get_dataset
-from .datasets.base import Dataset
-from .evaluation import Evaluator, MetricResults, evaluator_resolver
-from .losses import Loss, loss_resolver
-from .models import Model, model_resolver
-from .optimizers import optimizer_resolver
-from .regularizers import Regularizer, regularizer_resolver
-from .sampling import NegativeSampler, negative_sampler_resolver
-from .stoppers import EarlyStopper, Stopper, stopper_resolver
-from .trackers import ResultTracker, tracker_resolver
-from .training import SLCWATrainingLoop, TrainingLoop, training_loop_resolver
-from .triples import TriplesFactory
-from .typing import Hint, HintType
-from .utils import (
+from ..constants import PYKEEN_CHECKPOINTS, USER_DEFINED_CODE
+from ..datasets import get_dataset
+from ..datasets.base import Dataset
+from ..evaluation import Evaluator, MetricResults, evaluator_resolver
+from ..losses import Loss, loss_resolver
+from ..models import Model, model_resolver
+from ..optimizers import optimizer_resolver
+from ..regularizers import Regularizer, regularizer_resolver
+from ..sampling import NegativeSampler, negative_sampler_resolver
+from ..stoppers import EarlyStopper, Stopper, stopper_resolver
+from ..trackers import ResultTracker, tracker_resolver
+from ..training import SLCWATrainingLoop, TrainingLoop, training_loop_resolver
+from ..triples import TriplesFactory
+from ..typing import Hint, HintType
+from ..utils import (
     Result, ensure_ftp_directory, fix_dataclass_init_docs, get_json_bytes_io, get_model_io, random_non_negative_int,
     resolve_device, set_random_seed,
 )
-from .version import get_git_hash, get_version
+from ..version import get_git_hash, get_version
 
 __all__ = [
     'PipelineResult',
@@ -262,44 +263,48 @@ class PipelineResult(Result):
         """Plot the losses per epoch.
 
         :param kwargs: The keyword arguments passed to :func:`pykeen.pipeline_plot.plot_losses`.
+        :returns: The axis
         """
-        from . import pipeline_plot
-        return pipeline_plot.plot_losses(self, **kwargs)
+        from .plot_utils import plot_losses
+        return plot_losses(self, **kwargs)
 
     def plot_early_stopping(self, **kwargs):
         """Plot the evaluations during early stopping.
 
         :param kwargs: The keyword arguments passed to :func:`pykeen.pipeline_plot.plot_early_stopping`
+        :returns: The axis
         """
-        from . import pipeline_plot
-        return pipeline_plot.plot_early_stopping(self, **kwargs)
+        from .plot_utils import plot_early_stopping
+        return plot_early_stopping(self, **kwargs)
 
     def plot_er(self, **kwargs):
         """Plot the reduced entities and relation vectors in 2D.
 
         :param kwargs: The keyword arguments passed to :func:`pykeen.pipeline_plot.plot_er`
+        :returns: The axis
 
         .. warning::
 
             Plotting relations and entities on the same plot is only
             meaningful for translational distance models like TransE.
         """
-        from . import pipeline_plot
-        return pipeline_plot.plot_er(self, **kwargs)
+        from .plot_utils import plot_er
+        return plot_er(self, **kwargs)
 
     def plot(self, **kwargs):
         """Plot all plots.
 
         :param kwargs: The keyword arguments passed to :func:`pykeen.pipeline_plot.plot`
+        :returns: The axis
         """
-        from . import pipeline_plot
-        return pipeline_plot.plot(self, **kwargs)
+        from .plot_utils import plot
+        return plot(self, **kwargs)
 
     def save_model(self, path: str) -> None:
         """Save the trained model to the given path using :func:`torch.save`.
 
         :param path: The path to which the model is saved. Should have an extension appropriate for a pickle,
-         like `*.pkl` or `*.pickle`.
+            like `*.pkl` or `*.pickle`.
 
         The model contains within it the triples factory that was used for training.
         """
@@ -507,7 +512,7 @@ def save_pipeline_results_to_directory(
     :param pipeline_results: An iterable over results from training and evaluation
     :param move_to_cpu: Should the model be moved back to the CPU? Only relevant if training on GPU.
     :param save_metadata: Should the metadata be saved? Might be redundant in a scenario when you're
-     using this function, so defaults to false.
+        using this function, so defaults to false.
     :param save_replicates: Should the artifacts of the replicates be saved?
     :param width: How many leading zeros should be put in the replicate names?
     """
@@ -534,7 +539,9 @@ def pipeline_from_path(
 ) -> PipelineResult:
     """Run the pipeline with configuration in a JSON file at the given path.
 
-    :param path: The path to an experiment JSON file
+    :param path: The path to an experiment JSON file. The loaded JSON is passed to :func:`pipeline_from_config`.
+    :param kwargs: Additional kwargs to forward to :func:`pipeline`.
+    :return: The results of running the pipeline on the given configuration.
     """
     with open(path) as file:
         config = json.load(file)
@@ -550,7 +557,11 @@ def pipeline_from_config(
 ) -> PipelineResult:
     """Run the pipeline with a configuration dictionary.
 
-    :param config: The experiment configuration dictionary
+    :param config: The experiment configuration dictionary. Should have a 'metadata' and 'pipeline'
+        key. The metadata entry is passed to the metadata argument of :func:`pipeline`. The 'pipeline'
+        entry is passed via splat to :func:`pipeline`.
+    :param kwargs: Additional kwargs to forward to :func:`pipeline`.
+    :return: The results of running the pipeline on the given configuration.
     """
     metadata, pipeline_kwargs = config['metadata'], config['pipeline']
     title = metadata.get('title')
@@ -723,6 +734,18 @@ def pipeline(  # noqa: C901
         A JSON dictionary to store with the experiment
     :param use_testing_data:
         If true, use the testing triples. Otherwise, use the validation triples. Defaults to true - use testing triples.
+    :param automatic_memory_optimization: Should automatic memory optimization be performed during training and
+        evaluation? See arguments to :class:`pykeen.training_loop.TrainingLoop`
+        and :class:`pykeen.evaluation.Evaluator`.
+    :param device: The device or device name to run on. If none is given, the device will be looked up with
+        :func:`pykeen.utils.resolve_device`.
+    :param random_seed: The random seed to use. If none is specified, one will be assigned before any code
+        is run for reproducibility purposes. In the returned :class:`PipelineResult` instance, it can be accessed
+        through :data:`PipelineResult.random_seed`.
+
+    :returns: A pipeline result package.
+
+    :raises ValueError: if a negative sampler is specified with LCWA
     """
     if training_kwargs is None:
         training_kwargs = {}
