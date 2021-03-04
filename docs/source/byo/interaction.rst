@@ -37,7 +37,9 @@ an entire batch of head, relation, and tail representations.
 
 .. seealso:: A reference implementation is provided in :class:`pykeen.nn.modules.TransEInteraction`
 
-As another example, let's try DistMult, defined as:
+As a researcher who just invented TransE, you might wonder what would happen if you replaced
+the addition ``+`` with multiplication ``*``. You might then end up with a new interaction like this
+(which just happens to be DistMult, which was published just a year after TransE):
 
 .. math::
 
