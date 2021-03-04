@@ -11,7 +11,7 @@ invented TransE, defined as:
 
 .. math::
 
-    f(h, r, t) = -\| \mathbf{e}_h + \mathbf{r}_r - \mathbf{e}_t \|_2^2
+    f(h, r, t) = -\| \mathbf{e}_h + \mathbf{r}_r - \mathbf{e}_t \|_2
 
 where $\mathbf{e}_i$ is the $d$-dimensional representation for entity $i$,
 $\mathbf{r}_j$ is the $d$-dimensional representation for relation $j$, and
