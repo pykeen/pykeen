@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Creation of :class:`pykeen.models.ERModel` from :class:`pykeen.nn.modules.Interaction`.
+"""A :class:`pykeen.models.ERModel` can be constructed from :class:`pykeen.nn.modules.Interaction`.
 
 The new style-class, :class:`pykeen.models.ERModel` abstracts the interaction away from the representations
 such that different interactions can be used interchangably. A new model can be constructed directly from the
@@ -23,9 +23,21 @@ Make a model class from lookup of an interaction module class:
 >>> from pykeen.nn.modules import TransEInteraction
 >>> from pykeen.models import make_model_cls
 >>> embedding_dim = 3
->>> model_cls = make_model_cls({"d": embedding_dim}, 'TransE', {'p': 2})
+>>> model_cls = make_model_cls(
+...     dimensions={"d": embedding_dim},
+...     interaction='TransE',
+...     interaction_kwargs={'p': 2},
+... )
+
+If there's only one dimension in the ``entity_shapes`` and ``relation_shapes``, it can
+be directly given as an integer as a shortcut.
+
 >>> # Implicitly can also be written as:
->>> model_cls_alt = make_model_cls(embedding_dim, 'TransE', {'p': 2})
+>>> model_cls_alt = make_model_cls(
+...     dimensions=embedding_dim,
+...     interaciton='TransE',
+...     interaction_kwargs={'p': 2},
+... )
 
 Make a model class from an interaction module class:
 

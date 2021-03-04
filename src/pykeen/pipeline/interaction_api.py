@@ -1,6 +1,43 @@
 # -*- coding: utf-8 -*-
 
-"""The interaction API is a pipeline cenetered around interaction modules instead of models."""
+"""The :func:`interaction_pipeline` wraps the :func:`pipeline` and :func:`make_model_cls`.
+
+This allows you to turn the messy few lines
+
+.. code-block:: python
+
+    from pykeen.pipeline import pipeline
+    from pykeen.nn.modules import TransEInteraction
+
+    model = make_model_cls(
+        interaction=TransEInteraction,
+        interaction_kwargs={'p': 2},
+        dimensions={'d': 100},
+    )
+    results = pipeline(
+        dataset='Nations',
+        model=model,
+        ...
+    )
+
+into:
+
+.. code-block:: python
+
+    from pykeen.pipeline import interaction_pipeline
+    from pykeen.nn.modules import TransEInteraction
+
+    results = interaction_pipeline(
+        dataset='Nations',
+        interaction=TransEInteraction,
+        interaction_kwargs={'p': 2},
+        dimensions={'d': 100},
+        ...
+    )
+
+This can be used with any subclass of the :class:`pykeen.nn.modules.Interaction`, not only
+ones that are implemented in the PyKEEN package.
+"""
 
 from typing import Any, Mapping, Optional, Type, Union
 

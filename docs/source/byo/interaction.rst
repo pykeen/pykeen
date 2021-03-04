@@ -1,24 +1,27 @@
 Bring Your Own Interaction
 ==========================
-This is a tutorial about how to implement your own interactions
+This is a tutorial about how to implement your own interaction modules
 (also known as scoring functions) as subclasses of
 :class:`pykeen.nn.modules.Interaction` for use in PyKEEN.
+
+Implementing your first Interaction Module
+------------------------------------------
 Imagine you've taken a time machine back to 2013 and you have just
-invented TransE [bordes2013]_, defined as:
+invented TransE, defined as:
 
 .. math::
 
     f(h, r, t) = -\| \mathbf{e}_h + \mathbf{r}_r - \mathbf{e}_t \|_2^2
 
-where $\mathbf{e}_i$ is the $d$-dimensional embedding for entity $i$,
-$\mathbf{r}_j$ is the $d$-dimensional embedding for relation $j$, and
+where $\mathbf{e}_i$ is the $d$-dimensional representation for entity $i$,
+$\mathbf{r}_j$ is the $d$-dimensional representation for relation $j$, and
 $\|...\|_2$ is the $L_2$ norm.
 
 To implement TransE in PyKEEN, you need to subclass the
 :class:`pykeen.nn.modules.Interaction`. This class it itself
 a subclass of :class:`torch.nn.Module`, which means that you need to provide
 an implementation of :meth:`torch.nn.Module.forward`. However, the arguments
-are predefined as ``h``, ``r``, and ``t``, which correspond to the embeddings
+are predefined as ``h``, ``r``, and ``t``, which correspond to the representations
 of the head, relation, and tail, respectively.
 
 .. code-block:: python
@@ -30,16 +33,18 @@ of the head, relation, and tail, respectively.
             return -(h + r - t).norm(p=2, dim=-1)
 
 Note the ``dim=-1`` because this operation is actually defined over
-an entire batch of head, relation, and tail embeddings.
+an entire batch of head, relation, and tail representations.
 
-As another example, let's try DistMult [yang2014]_, defined as:
+.. seealso:: A reference implementation is provided in :class:`pykeen.nn.modules.TransEInteraction`
+
+As another example, let's try DistMult, defined as:
 
 .. math::
 
     f(h, r, t) = <\mathbf{e}_h, \mathbf{r}_r, \mathbf{e}_t>
 
-where $\mathbf{e}_i$ is the $d$-dimensional embedding for entity $i$,
-$\mathbf{r}_j$ is the $d$-dimensional embedding for relation $j$, and
+where $\mathbf{e}_i$ is the $d$-dimensional representation for entity $i$,
+$\mathbf{r}_j$ is the $d$-dimensional representation for relation $j$, and
 $<x,y,z>$ is the tensor product for $x,y,z \in \mathcal{R}^d$.
 
 .. code-block:: python
@@ -49,6 +54,8 @@ $<x,y,z>$ is the tensor product for $x,y,z \in \mathcal{R}^d$.
     class DistMultInteraction(Interaction):
         def forward(self, h, r, t):
             return (h * r * t).sum(dim=-1)
+
+.. seealso:: A reference implementation is provided in :class:`pykeen.nn.modules.DistMultInteraction`
 
 Interactions with Hyper-Parameters
 ----------------------------------
@@ -78,16 +85,16 @@ In general, you can put whatever you want in ``__init__()`` to support the calcu
 
 Interactions with Different Shaped Vectors
 ------------------------------------------
-The Structured Embedding [bordes2011]_ uses a 2-tensor for representing each relation,
+The Structured Embedding uses a 2-tensor for representing each relation,
 with an interaction defined as:
 
 .. math::
 
     f(h, r, t) = - \|\textbf{M}_{r}^{head} \textbf{e}_h  - \textbf{M}_{r}^{tail} \textbf{e}_t\|_p
 
-where $\mathbf{e}_i$ is the $d$-dimensional embedding for entity $i$,
-$\mathbf{M}^{head}_j$ is the $d \times d$-dimensional embedding for relation $j$ for head entities,
-$\mathbf{M}^{tail}_j$ is the $d \times d$-dimensional embedding for relation $j$ for tail entities, and
+where $\mathbf{e}_i$ is the $d$-dimensional representation for entity $i$,
+$\mathbf{M}^{head}_j$ is the $d \times d$-dimensional representation for relation $j$ for head entities,
+$\mathbf{M}^{tail}_j$ is the $d \times d$-dimensional representation for relation $j$ for tail entities, and
 $\|...\|_2$ is the $L_p$ norm.
 
 For the purposes of this tutorial, we will propose a simplification to Strucuterd Embedding (also similar to TransR)
@@ -97,8 +104,8 @@ where the same relation 2-tensor is used to project both the head and tail entit
 
     f(h, r, t) = - \|\textbf{M}_{r} \textbf{e}_h  - \textbf{M}_{r} \textbf{e}_t\|_2
 
-where $\mathbf{e}_i$ is the $d$-dimensional embedding for entity $i$,
-$\mathbf{M}_j$ is the $d \times d$-dimensional embedding for relation $j$, and
+where $\mathbf{e}_i$ is the $d$-dimensional representation for entity $i$,
+$\mathbf{M}_j$ is the $d \times d$-dimensional representation for relation $j$, and
 $\|...\|_2$ is the $L_2$ norm.
 
 .. code-block:: python
@@ -111,21 +118,89 @@ $\|...\|_2$ is the $L_2$ norm.
         def forward(self, h, r, t):
             h_proj = r @ h.unsqueeze(dim=-1)
             t_proj = r @ t.unsqueeze(dim=-1)
-            return (h_proj - t_proj).squeeze(dim=-1).norm(p=2, dim=-1)
+            return -(h_proj - t_proj).squeeze(dim=-1).norm(p=2, dim=-1)
 
 Note the definition of the ``relation_shape``. By default, the ``entity_shape`` and
 ``relation_shape`` are both equal to ``('d', )``, which uses eigen-notation to show
-that they both are 1-tensors with the same shape. In this simplified structured embedding,
-we need to denote that the shape of the relation is $d \times d$, so it's written as ``dd``.
+that they both are 1-tensors with the same shape. In this simplified version of
+Structured Embedding, we need to denote that the shape of the relation is $d \times d$,
+so it's written as ``dd``.
+
+.. seealso::
+
+    Reference implementations are provided in :class:`pykeen.nn.modules.StructuredEmbeddingInteraction`
+    and in :class:`pykeen.nn.modules.TransRInteraction`.
+
+Interactions with Multiple Representations
+------------------------------------------
+Sometimes, like in the canonical version of Structured Embedding, you need more than
+one representation for entities and/or relations. To specify this, you just need to
+extend the tuple for ``relation_shape`` with more entries, each corresponding to the
+sequence of representations.
+
+.. code-block:: python
+
+    from pykeen.nn.modules import Interaction
+
+    class StructuredEmbeddingInteraction(Interaction):
+        relation_shape = (
+            'dd',  # Corresponds to $\mathbf{M}^{head}_j$
+            'dd',  # Corresponds to $\mathbf{M}^{tail}_j$
+        )
+
+        def forward(self, h, r, t):
+            # Since the relation_shape is more than length 1, the r value is given as a sequence
+            # of the representations defined there. You can use tuple unpacking to get them out
+            r_h, r_t = r
+            h_proj = r_h @ h.unsqueeze(dim=-1)
+            t_proj = r_t @ t.unsqueeze(dim=-1)
+            return -(h_proj - t_proj).squeeze(dim=-1).norm(p=2, dim=-1)
 
 Interactions with Different Dimension Vectors
 ---------------------------------------------
+TransD is an example of an interaction module that not only uses two different
+representations for each entity and two representations for each relation, but they are
+of different dimensions.
 
-Interactions with Multiple Embeddings
--------------------------------------
-Some interactions have multiple embeddings for either the head/tail or relation, such
-as PairRE, defined as:
+It can be implemented by choosing a different letter for use in the ``entity_shape`` and/or
+``relation_shape`` dictionary. Ultimately, the letters used are arbitrary, but you need to
+remember what they are when using the :func:`pykeen.models.make_model`,
+:func:`pykeen.models.make_model_cls`, or :func:`pykeen.pipeline.interaction_pipeline` functions
+to instantiate a model, make a model class, or run the pipeline using your custom interaction
+module (respectively).
 
+.. code-block:: python
+
+    from pykeen.nn.modules import Interaction
+    from pykeen.utils import project_entity
+
+    class TransDInteraction(Interaction):
+        entity_shape = ("d", "d")
+        relation_shape = ("e", "e")
+
+        def forward(self, h, r, t):
+            h, h_proj = h
+            r, r_proj = r
+            t, t_proj = t
+            h_bot = project_entity(
+                e=h,
+                e_p=h_p,
+                r_p=r_p,
+            )
+            t_bot = project_entity(
+                e=t,
+                e_p=t_p,
+                r_p=r_p,
+            )
+            return -(h_bot + r - t_bot).norm(p=2, dim=-1)
+
+.. note::
+
+    The :func:`pykeen.utils.project_entity` function was used in this implementation to
+    reduce the complexity. So far, it's the case that all of the models using multiple different representation
+    dimensions are quite complicated and don't fall into the paradigm of presenting simple examples.
+
+.. seealso:: A reference implementation is provided in :class:`pykeen.nn.modules.TransDInteraction`
 
 Differences between :class:`pykeen.nn.modules.Interaction` and :class:`pykeen.models.Model`
 -------------------------------------------------------------------------------------------
@@ -143,3 +218,11 @@ ideas into new models that can be used without all of the overhead of defining a
 
 If you are happy with your interaction module and would like to go the next step to
 making it generally reusable, check the "Extending the Models" tutorial.
+
+*Ad hoc* Models from Interactions
+---------------------------------
+.. automodule:: pykeen.models.resolve
+
+Interaction Pipeline
+--------------------
+.. automodule:: pykeen.pipeline.interaction_api

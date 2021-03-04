@@ -25,7 +25,6 @@ PyKEEN
 
    byo/data
    byo/interaction
-   byo/model_from_interaction
 
 .. toctree::
    :caption: Extending PyKEEN
