@@ -92,8 +92,10 @@ Interactions with Trainable Parameters
     f(h, r, t) = W_2 ReLU(W_1 cat(h, r, t) + b_1) + b_2
 
 In ER-MLP, the multi-layer perceptron consists of an input layer with $3 \times d$ neurons, a hidden layer
-with $d$ neurons and output layer with one neuron. The input is represented by the concatenation embeddings
-of the heads, relations and tail embeddings.
+with $d$ neurons and output layer with one neuron. The input is represented by the concatenation embeddings 
+of the heads, relations and tail embeddings. Note that the MLP's parameters are *global* parameters, which 
+are neither attached to entities nor relations. In addition, they are not hyperparameters, but trained 
+jointly with the entity and relation representations. 
 
 .. code-block:: python
 
