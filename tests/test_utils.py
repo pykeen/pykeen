@@ -16,9 +16,9 @@ import pytest
 import torch
 
 from pykeen.utils import (
-    broadcast_cat, calculate_broadcasted_elementwise_result_shape, clamp_norm, combine_complex, compact_mapping, compose,
-    estimate_cost_of_sequence, flatten_dictionary, get_optimal_sequence, get_until_first_blank, project_entity,
-    set_random_seed, split_complex, tensor_product, tensor_sum, torch_is_in_1d,
+    broadcast_cat, calculate_broadcasted_elementwise_result_shape, clamp_norm, combine_complex, compact_mapping,
+    compose, estimate_cost_of_sequence, flatten_dictionary, get_optimal_sequence, get_until_first_blank,
+    project_entity, set_random_seed, split_complex, tensor_product, tensor_sum, torch_is_in_1d,
 )
 
 
