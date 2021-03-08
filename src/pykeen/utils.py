@@ -24,6 +24,7 @@ import pandas as pd
 import torch
 import torch.nn
 import torch.nn.modules.batchnorm
+from class_resolver import normalize_string
 
 from .constants import PYKEEN_BENCHMARKS
 from .typing import DeviceHint, MappedTriples, TorchRandomHint
