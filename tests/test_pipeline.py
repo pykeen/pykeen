@@ -18,6 +18,7 @@ from pykeen.models.resolve import DimensionError, make_model, make_model_cls
 from pykeen.nn.modules import TransEInteraction
 from pykeen.pipeline import PipelineResult, pipeline
 from pykeen.regularizers import NoRegularizer
+from pykeen.training import SLCWATrainingLoop
 from pykeen.triples.generation import generate_triples_factory
 from pykeen.utils import resolve_device
 
@@ -237,6 +238,32 @@ class TestPipelineTriples(unittest.TestCase):
             evaluation_kwargs=dict(use_tqdm=False),
             random_seed=0,
         )
+
+    def test_custom_training_loop(self):
+        """Test providing a custom training loop."""
+        losses = []
+
+        class ModifiedTrainingLoop(SLCWATrainingLoop):
+            """A wrapper around SLCWA training loop which remembers batch losses."""
+
+            def _forward_pass(self, *args, **kwargs):  # noqa: D102
+                loss = super()._forward_pass(*args, **kwargs)
+                losses.append(loss)
+                return loss
+
+        _ = pipeline(
+            training=self.training,
+            testing=self.testing,
+            validation=self.validation,
+            training_loop=ModifiedTrainingLoop,
+            model='TransE',
+            training_kwargs=dict(num_epochs=1, use_tqdm=False),
+            evaluation_kwargs=dict(use_tqdm=False),
+            random_seed=0,
+        )
+
+        # empty lists are falsy
+        self.assertTrue(losses)
 
 
 class TestPipelineCheckpoints(unittest.TestCase):
