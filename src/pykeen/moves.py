@@ -8,7 +8,7 @@ import torch
 try:
     from torch.fft import rfft, irfft  # works on pytorch >= 1.7
 
-except ModuleNotFoundError:
+except ImportError:
     from torch import rfft as old_rfft, irfft as old_irfft  # works on pytorch < 1.7
 
     def _resolve_normalized_option(norm: Optional[str]) -> bool:
@@ -51,7 +51,7 @@ except ModuleNotFoundError:
         if dim != -1:
             raise ValueError("In PyTorch < 1.7, there is no dim argument.")
         normalized = _resolve_normalized_option(norm)
-        return old_irfft(input, signal_ndim=1, normalized=normalized, onesided=True, signal_sizes=n)
+        return old_irfft(input, signal_ndim=1, normalized=normalized, onesided=True, signal_sizes=(n,))
 
 __all__ = [
     'rfft',
