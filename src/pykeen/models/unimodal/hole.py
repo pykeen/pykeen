@@ -115,7 +115,7 @@ class HolE(EntityRelationEmbeddingModel):
         p_fft = a_fft * b_fft
 
         # inverse real FFT, shape: (batch_size, num_entities, d)
-        composite = irfft(p_fft, signal_ndim=1, onesided=True, signal_sizes=(h.shape[-1],))
+        composite = irfft(p_fft, dim=-1, n=h.shape[-1])
 
         # inner product with relation embedding
         scores = torch.sum(r * composite, dim=-1, keepdim=False)
