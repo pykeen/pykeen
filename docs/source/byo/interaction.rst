@@ -123,7 +123,7 @@ class. They are trained jointly with the entity and relation embeddings during t
             x = broadcast_cat([h, r, t], dim=-1)
             return self.mlp(x)
 
-Note that :func:`pykeen.utils.multi_broadcast_cat` was used instead of the standard
+Note that :func:`pykeen.utils.broadcast_cat` was used instead of the standard
 :func:`torch.cat` because of the standardization of shapes of head, relation, and tail vectors.
 
 .. seealso:: A reference implementation is provided in :class:`pykeen.nn.modules.ERMLPInteraction`
