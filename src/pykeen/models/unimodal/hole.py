@@ -122,7 +122,11 @@ class HolE(EntityRelationEmbeddingModel):
         b_fft = rfft(t, dim=-1)
 
         # complex conjugate, a_fft.shape = (batch_size, num_entities, d', 2)
-        a_fft[:, :, :, 1] *= -1
+        # compatibility: new style fft returns complex tensor
+        if a_fft.ndimension() > 3:
+            a_fft[:, :, :, 1] *= -1
+        else:
+            a_fft = torch.conj(a_fft)
 
         # Hadamard product in frequency domain
         p_fft = a_fft * b_fft
