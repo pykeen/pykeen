@@ -16,11 +16,11 @@ from typing import Optional, Tuple, Union
 
 import numpy
 import torch
-import torch.fft
 from torch import nn
 
 from .compute_kernel import _complex_native_complex
 from .sim import KG2E_SIMILARITIES
+from ..moves import irfft, rfft
 from ..typing import GaussianDistribution
 from ..utils import (
     broadcast_cat, clamp_norm, estimate_cost_of_sequence, extended_einsum, is_cudnn_error, negative_norm,
@@ -414,8 +414,8 @@ def hole_interaction(
         The scores.
     """
     # Circular correlation of entity embeddings
-    a_fft = torch.fft.rfft(h, dim=-1)
-    b_fft = torch.fft.rfft(t, dim=-1)
+    a_fft = rfft(h, dim=-1)
+    b_fft = rfft(t, dim=-1)
 
     # complex conjugate
     a_fft = torch.conj(a_fft)
@@ -424,7 +424,7 @@ def hole_interaction(
     p_fft = a_fft * b_fft
 
     # inverse real FFT, shape: (b, h, 1, t, d)
-    composite = torch.fft.irfft(p_fft, n=h.shape[-1], dim=-1)
+    composite = irfft(p_fft, n=h.shape[-1], dim=-1)
 
     # transpose composite: (b, h, 1, d, t)
     composite = composite.transpose(-2, -1)
