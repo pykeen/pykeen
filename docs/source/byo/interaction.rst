@@ -99,23 +99,26 @@ jointly with the entity and relation representations.
 
 .. code-block:: python
 
-    import torch
     import torch.nn
     from pykeen.nn.modules import Interaction
+    from pykeen.utils import multi_broadcast_cat
 
     class ERMLPInteraction(Interaction):
         def __init__(self, embedding_dim: int, hidden_dim: int):
             super().__init__()
             # The weights of this MLP will be learned.
-            self.mlp = nn.Sequential(
+            self.mlp = torch.nn.Sequential(
                 torch.nn.Linear(in_features=3 * embedding_dim, out_features=hidden_dim, bias=True),
                 torch.nn.ReLU(),
                 torch.nn.Linear(in_features=hidden_dim, out_features=1, bias=True),
             )
 
         def forward(self, h, r, t):
-            x = torch.cat([h, r, t], dim=-1)
+            x = multi_broadcast_cat([h, r, t], dim=-1)
             return self.mlp(x)
+
+Note that :func:`pykeen.utils.multi_broadcast_cat` was used instead of the standard
+:func:`torch.cat` because of the standardization of shapes of head, relation, and tail vectors.
 
 .. seealso:: A reference implementation is provided in :class:`pykeen.nn.modules.ERMLPInteraction`
 

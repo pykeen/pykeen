@@ -67,6 +67,7 @@ __all__ = [
     'get_df_io',
     'ensure_ftp_directory',
     'broadcast_cat',
+    'multi_broadcast_cat',
     'get_batchnorm_modules',
     'calculate_broadcasted_elementwise_result_shape',
     'estimate_cost_of_sequence',
@@ -485,7 +486,7 @@ def broadcast_cat(
     :param dim:
         The concat dimension.
 
-    :return: A concatenated, broadcasted
+    :return: A concatenated, broadcasted tensor.
 
     :raises ValueError: if the x and y dimensions are not the same
     :raises ValueError: if broadcasting is not possible
@@ -507,6 +508,24 @@ def broadcast_cat(
         x_rep.append(xr)
         y_rep.append(yr)
     return torch.cat([x.repeat(*x_rep), y.repeat(*y_rep)], dim=dim)
+
+
+def multi_broadcast_cat(tensors: Iterable[torch.FloatTensor], dim: int) -> torch.FloatTensor:
+    """Apply :func:`broadcast_cat` to an arbitrary number of tensors.
+
+    :param tensors: A list of tensors to concatenate from left to right, using the same
+        semantics as :func:`torch.cat`
+    :param dim:
+        The concat dimension.
+
+    :return: A concatenated, broadcasted tensor.
+    """
+    tensors = iter(tensors)
+    first, second = next(tensors), next(tensors)
+    rv = broadcast_cat(first, second, dim=dim)
+    for tensor in tensors:
+        rv = broadcast_cat(rv, tensor, dim=dim)
+    return rv
 
 
 def get_batchnorm_modules(module: torch.nn.Module) -> List[torch.nn.Module]:
