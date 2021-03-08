@@ -494,7 +494,7 @@ def broadcast_cat(
         raise ValueError("Must pass at least one tensor.")
     if len({x.ndimension() for x in tensors}) != 1:
         raise ValueError(
-            f"The number of dimensions has to be the same for all tensors, but is {set(t.shape for t in tensors)}"
+            f"The number of dimensions has to be the same for all tensors, but is {set(t.shape for t in tensors)}",
         )
 
     # base case
