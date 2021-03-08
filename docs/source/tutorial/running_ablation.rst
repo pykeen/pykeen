@@ -43,7 +43,8 @@ the dataset(s), interaction model(s), the loss function(s), training approach(es
             "datasets": ["nations"],
             "models":   ["ComplEx"],
             "losses": ["BCEAfterSigmoidLoss", "CrossEntropyLoss"]
-            "training_loops": ["lcwa"]
+            "training_loops": ["lcwa"],
+            "optimizers": ["adam"],
         }
     }
 
@@ -61,6 +62,7 @@ we extend the ablation study accordingly:
             "models":   ["ComplEx"],
             "losses": ["BCEAfterSigmoidLoss", "CrossEntropyLoss"]
             "training_loops": ["lcwa"],
+            "optimizers": ["adam"],
             "create_inverse_triples": [true,false]
         }
     }
@@ -84,6 +86,7 @@ follows:
             "models":   ["ComplEx"],
             "losses": ["BCEAfterSigmoidLoss", "CrossEntropyLoss"]
             "training_loops": ["lcwa"],
+            "optimizers": ["adam"],
             "create_inverse_triples": [true,false],
             "stopper": "early",
             "stopper_kwargs": {
@@ -116,6 +119,7 @@ the arguments required by Optuna in our configuration:
             "models":   ["ComplEx"],
             "losses": ["BCEAfterSigmoidLoss", "CrossEntropyLoss"]
             "training_loops": ["lcwa"],
+            "optimizers": ["adam"],
             "create_inverse_triples": [true,false],
             "stopper": "early",
             "stopper_kwargs": {
@@ -319,6 +323,7 @@ Now that we defined our own hyper-parameter values and ranges, let's have a look
             "models":   ["ComplEx"],
             "losses": ["BCEAfterSigmoidLoss", "CrossEntropyLoss"]
             "training_loops": ["lcwa"],
+            "optimizers": ["adam"],
             "create_inverse_triples": [true,false],
             "stopper": "early",
             "stopper_kwargs": {
@@ -395,7 +400,7 @@ ranges for other components.
 Run an Ablation Study With Your Own Data
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-We showed to run an ablation study with PyKEEN integrated dataset. Now you are asking yourself, whether you can
+We showed how to run an ablation study with a PyKEEN integrated dataset. Now you are asking yourself, whether you can
 run ablations studies with your own data? Yes, you can!
 It requires a minimal change compared to the previous configuration:
 
@@ -417,3 +422,76 @@ It requires a minimal change compared to the previous configuration:
 In the dataset field, you don't provide a list of dataset names but dictionaries containing the paths
 to your train-validation-test splits. Check out ``tests/resources/hpo_complex_your_own_data.json`` for a
 concrete example. Yes, that's all.
+
+Run an Ablation Study From Your Code
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If you want to start an ablation study from you own program, we provide the function
+:func:`pykeen.ablation.ablation_pipeline` which expects as arguments the entries that we previously defined within a
+configuration file (See above):
+
+
+.. code-block:: python
+
+    from ablation.ablation import ablation_pipeline
+
+    # Define ablation study
+    models = ['ComplEx]
+    datasets = ['Nations']
+    losses = ["BCEAfterSigmoidLoss"]
+    training_loops = ["lcwa"]
+    optimizers = ["adam"]
+    out = '/path/to/output/directory'
+
+    # Define hyper-parameter ranges/values. Remaining hyper-parameter ranges/values can be defined accordingly
+    # (see above)
+    model_to_model_kwargs_ranges = {
+        "ComplEx": {
+            "embedding_dim": {
+                "type": "int",
+                "low": 4,
+                "high": 6,
+                "scale": "power_two"
+            }
+        }
+    }
+
+    model_to_trainer_to_training_kwargs= {
+        "ComplEx": {
+            "lcwa": {
+                "num_epochs": 10
+            }
+        }
+    }
+
+    #  Optuna related setting
+    n_hpo_trials = 2
+    timeout = 300 # seconds
+    metric_to_optimize = 'hits@10'
+    direction = 'maximize'
+    sampler = 'random' # use random search
+
+    # Run ablation experiment
+    ablation_pipeline(
+        models=models,
+        datasets=datasets,
+        losses=losses,
+        training_loops=training_loops,
+        optimizers=optimizers,
+        model_to_model_kwargs_ranges=model_to_model_kwargs_ranges,
+        model_to_trainer_to_training_kwargs=model_to_trainer_to_training_kwargs,
+        directory=out,
+        # Remember, we can define how often to re-train/evaluate the best model in order to compute the variance
+        best_replicates=2,
+        n_trials=n_hpo_trials,
+        metric=metric_to_optimize,
+        direction=direction,
+        sampler=sampler,
+
+    )
+
+
+
+In this tutorial, we showed how define an ablation study, how to execute it from the command line interface, and finally
+how to execute an ablation study from your own program. Furthermore, we showed how you can define your ablation study
+using your own data.
