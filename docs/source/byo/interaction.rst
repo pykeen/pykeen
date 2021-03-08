@@ -86,16 +86,22 @@ In general, you can put whatever you want in ``__init__()`` to support the calcu
 
 Interactions with Trainable Parameters
 --------------------------------------
+In ER-MLP, the multi-layer perceptron consists of an input layer with $3 \times d$ neurons, a hidden layer
+with $d$ neurons and output layer with one neuron. The input is represented by the concatenation embeddings
+of the heads, relations and tail embeddings. It is defined as:
 
 .. math ::
 
     f(h, r, t) = W_2 ReLU(W_1 cat(h, r, t) + b_1) + b_2
 
-In ER-MLP, the multi-layer perceptron consists of an input layer with $3 \times d$ neurons, a hidden layer
-with $d$ neurons and output layer with one neuron. The input is represented by the concatenation embeddings 
-of the heads, relations and tail embeddings. Note that the MLP's parameters are *global* parameters, which 
-are neither attached to entities nor relations. In addition, they are not hyperparameters, but trained 
-jointly with the entity and relation representations. 
+with hidden dimension $y$, $W_1 \in \mathcal{R}^{3d \times y}, $W_2\ \in \mathcal{R}^y$, and
+biases $b_1 \in \mathcal{R}^y$ and $b_2 \in \mathcal{R}$.
+
+$W_1$, $W_1, $b_1$, and $b_2$ are *global* parameters, meaning that they are trainable,
+but are neither attached to the entities nor relations. Unlike the $p$ in TransE, these global
+trainable parameters are not considered hyper-parameters. However, like hyper-parameters,
+they can also be defined in the `__init__` function of your :class:`pykeen.nn.modules.Interaction`
+class. They are trained jointly with the entity and relation embeddings during training.
 
 .. code-block:: python
 
