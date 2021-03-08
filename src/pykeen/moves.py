@@ -11,7 +11,6 @@ try:
 except ModuleNotFoundError:
     from torch import rfft as old_rfft, irfft as old_irfft  # works on pytorch < 1.7
 
-
     def _resolve_normalized_option(norm: Optional[str]) -> bool:
         """Convert PyTorch >= 1.7 "norm" option to <1.7 "normalized" option."""
         if norm is None or norm == "backward":
@@ -21,7 +20,6 @@ except ModuleNotFoundError:
         else:
             raise NotImplementedError("In PyTorch < 1.7, there is no \"forward\" option.")
         return normalized
-
 
     def rfft(
         input: torch.Tensor,
@@ -42,7 +40,6 @@ except ModuleNotFoundError:
                 # trim
                 input = input[..., :n]
         return old_rfft(input, signal_ndim=1, normalized=normalized, onesided=True)
-
 
     def irfft(
         input: torch.Tensor,
