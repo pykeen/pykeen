@@ -887,7 +887,7 @@ def pipeline(  # noqa: C901
             optimizer=optimizer_instance,
             automatic_memory_optimization=automatic_memory_optimization,
         )
-    elif training_loop_cls is not SLCWATrainingLoop:
+    elif not issubclass(training_loop_cls, SLCWATrainingLoop):
         raise ValueError('Can not specify negative sampler with LCWA')
     else:
         negative_sampler_cls = negative_sampler_resolver.lookup(negative_sampler)
