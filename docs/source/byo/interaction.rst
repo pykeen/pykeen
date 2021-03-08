@@ -107,7 +107,7 @@ class. They are trained jointly with the entity and relation embeddings during t
 
     import torch.nn
     from pykeen.nn.modules import Interaction
-    from pykeen.utils import multi_broadcast_cat
+    from pykeen.utils import broadcast_cat
 
     class ERMLPInteraction(Interaction):
         def __init__(self, embedding_dim: int, hidden_dim: int):
@@ -120,7 +120,7 @@ class. They are trained jointly with the entity and relation embeddings during t
             )
 
         def forward(self, h, r, t):
-            x = multi_broadcast_cat([h, r, t], dim=-1)
+            x = broadcast_cat([h, r, t], dim=-1)
             return self.mlp(x)
 
 Note that :func:`pykeen.utils.multi_broadcast_cat` was used instead of the standard
