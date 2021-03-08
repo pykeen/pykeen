@@ -99,6 +99,8 @@ jointly with the entity and relation representations.
 
 .. code-block:: python
 
+    import torch
+    import torch.nn
     from pykeen.nn.modules import Interaction
 
     class ERMLPInteraction(Interaction):
@@ -106,9 +108,9 @@ jointly with the entity and relation representations.
             super().__init__()
             # The weights of this MLP will be learned.
             self.mlp = nn.Sequential(
-                nn.Linear(in_features=3 * embedding_dim, out_features=hidden_dim, bias=True),
-                nn.ReLU(),
-                nn.Linear(in_features=hidden_dim, out_features=1, bias=True),
+                torch.nn.Linear(in_features=3 * embedding_dim, out_features=hidden_dim, bias=True),
+                torch.nn.ReLU(),
+                torch.nn.Linear(in_features=hidden_dim, out_features=1, bias=True),
             )
 
         def forward(self, h, r, t):
