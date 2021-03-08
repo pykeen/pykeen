@@ -13,8 +13,8 @@ import torch
 import pykeen.experiments
 import pykeen.models
 from pykeen.models import (
-    EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, MultimodalModel, _MODELS,
-    _OldAbstractModel,
+    ERModel, EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, MultimodalModel, _MODELS,
+    _NewAbstractModel, _OldAbstractModel, model_resolver,
 )
 from pykeen.models.predict import get_novelty_mask, predict
 from pykeen.models.unimodal.rgcn import (
@@ -31,13 +31,13 @@ from tests.constants import EPSILON
 SKIP_MODULES = {
     Model.__name__,
     _OldAbstractModel.__name__,
+    _NewAbstractModel.__name__,
     'DummyModel',
     MultimodalModel.__name__,
     EntityEmbeddingModel.__name__,
     EntityRelationEmbeddingModel.__name__,
+    ERModel.__name__,
     'MockModel',
-    'models',
-    'get_model_cls',
     'SimpleInteractionModel',
 }
 for cls in MultimodalModel.__subclasses__():
@@ -180,6 +180,13 @@ class TestKG2EWithKL(cases.BaseKG2ETest):
     model_kwargs = {
         'dist_similarity': 'KL',
     }
+
+
+class TestMuRE(cases.ModelTestCase):
+    """Test the MuRE model."""
+
+    model_cls = pykeen.models.MuRE
+    num_constant_init = 2  # biases
 
 
 class TestKG2EWithEL(cases.BaseKG2ETest):
@@ -566,14 +573,28 @@ class TestUM(cases.DistanceModelTestCase):
 class TestTesting(unittest.TestCase):
     """Yo dawg, I heard you like testing, so I wrote a test to test the tests so you can test while you're testing."""
 
+    def test_documentation(self):
+        """Test all models have appropriate structured documentation."""
+        for name, model_cls in sorted(model_resolver.lookup_dict.items()):
+            with self.subTest(name=name):
+                try:
+                    docdata = model_cls.__docdata__
+                except AttributeError:
+                    self.fail('missing __docdata__')
+                self.assertIn('citation', docdata)
+                self.assertIn('author', docdata['citation'])
+                self.assertIn('link', docdata['citation'])
+                self.assertIn('year', docdata['citation'])
+
     def test_testing(self):
         """Check that there's a test for all models.
 
         For now, this is excluding multimodel models. Not sure how to test those yet.
         """
         model_names = {
-            cls.__name__
-            for cls in pykeen.models.models.values()
+            model_cls.__name__
+            for model_cls in model_resolver.lookup_dict.values()
+            if not issubclass(model_cls, ERModel)
         }
         model_names -= SKIP_MODULES
 
@@ -584,7 +605,7 @@ class TestTesting(unittest.TestCase):
                 isinstance(value, type)
                 and issubclass(value, cases.ModelTestCase)
                 and not name.startswith('_')
-                and not issubclass(value.model_cls, MultimodalModel)
+                and not issubclass(value.model_cls, (ERModel, MultimodalModel))
             )
         }
         tested_model_names -= SKIP_MODULES
@@ -617,8 +638,8 @@ class TestTesting(unittest.TestCase):
                     ):
                         model_names.add(value.__name__)
 
-        star_model_names = set(pykeen.models.__all__) - SKIP_MODULES
-        model_names -= SKIP_MODULES
+        star_model_names = _remove_non_models(set(pykeen.models.__all__) - SKIP_MODULES)
+        model_names = _remove_non_models(model_names - SKIP_MODULES)
 
         self.assertEqual(model_names, star_model_names, msg='Forgot to add some imports')
 
@@ -635,16 +656,27 @@ class TestTesting(unittest.TestCase):
             'ERMLP',
             'ProjE',  # FIXME
             'ERMLPE',  # FIXME
+            'PairRE',
         }
-        model_names = set(pykeen.models.__all__) - SKIP_MODULES - experiment_blacklist
-        missing = {
-            model
-            for model in model_names
-            if not os.path.exists(os.path.join(experiments_path, model.lower()))
-        }
-        if missing:
-            _s = '\n'.join(f'- [ ] {model.lower()}' for model in sorted(missing))
-            self.fail(f'Missing experimental configuration directories for the following models:\n{_s}')
+        model_names = _remove_non_models(set(pykeen.models.__all__) - SKIP_MODULES - experiment_blacklist)
+        for model in _remove_non_models(model_names):
+            with self.subTest(model=model):
+                self.assertTrue(
+                    os.path.exists(os.path.join(experiments_path, model.lower())),
+                    msg=f'Missing experimental configuration for {model}',
+                )
+
+
+def _remove_non_models(elements):
+    rv = set()
+    for element in elements:
+        try:
+            model_resolver.lookup(element)
+        except ValueError:  # invalid model name - aka not actually a model
+            continue
+        else:
+            rv.add(element)
+    return rv
 
 
 class MessageWeightingTests(unittest.TestCase):

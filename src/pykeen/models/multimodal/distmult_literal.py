@@ -17,7 +17,14 @@ from ...typing import DeviceHint
 
 
 class DistMultLiteral(DistMult, MultimodalModel):
-    """An implementation of DistMultLiteral from [agustinus2018]_."""
+    """An implementation of DistMultLiteral from [kristiadi2018]_.
+
+    ---
+    citation:
+        author: Kristiadi
+        year: 2018
+        link: https://arxiv.org/abs/1802.00934
+    """
 
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]] = dict(

@@ -2,6 +2,8 @@
 
 """Utility classes for constructing datasets."""
 
+from __future__ import annotations
+
 import logging
 import os
 import pathlib
@@ -10,16 +12,21 @@ import tarfile
 import zipfile
 from abc import abstractmethod
 from io import BytesIO
-from typing import Any, Dict, List, Mapping, Optional, TextIO, Tuple, Union, cast
+from typing import Any, ClassVar, Dict, List, Mapping, Optional, Sequence, TextIO, Tuple, Union, cast
 from urllib.request import urlretrieve
 
+import click
 import pandas as pd
 import requests
+from more_click import verbose_option
 from pystow.utils import name_from_url
 from tabulate import tabulate
 
 from ..constants import PYKEEN_DATASETS
 from ..triples import TriplesFactory
+from ..triples.deteriorate import deteriorate
+from ..triples.remix import remix
+from ..triples.triples_factory import splits_similarity
 from ..typing import TorchRandomHint
 from ..utils import normalize_string
 
@@ -36,9 +43,28 @@ __all__ = [
     'TarFileSingleDataset',
     'TabbedDataset',
     'SingleTabbedDataset',
+    'dataset_similarity',
 ]
 
 logger = logging.getLogger(__name__)
+
+
+def dataset_similarity(a: Dataset, b: Dataset, metric: Optional[str] = None) -> float:
+    """Calculate the similarity between two datasets.
+
+    :param a: The reference dataset
+    :param b: The target dataset
+    :param metric: The similarity metric to use. Defaults to `tanimoto`. Could either be a symmetric
+        or asymmetric metric.
+    :returns: A scalar value between 0 and 1 where closer to 1 means the datasets are more
+        similar based on the metric.
+
+    :raises ValueError: if an invalid metric type is passed. Right now, there's only `tanimoto`,
+        but this could change in later.
+    """
+    if metric == 'tanimoto' or metric is None:
+        return splits_similarity(a._tup(), b._tup())
+    raise ValueError(f'invalid metric: {metric}')
 
 
 class Dataset:
@@ -80,13 +106,20 @@ class Dataset:
             zip(('Training', 'Testing', 'Validation'), (self.training, self.testing, self.validation))
         ]
 
-    def summary_str(self, title: Optional[str] = None, end='\n') -> str:
+    def summary_str(self, title: Optional[str] = None, show_examples: Optional[int] = 5, end='\n') -> str:
         """Make a summary string of all of the factories."""
         rows = self._summary_rows()
         n_triples = sum(count for *_, count in rows)
         rows.append(('Total', '-', '-', n_triples))
         t = tabulate(rows, headers=['Name', 'Entities', 'Relations', 'Triples'])
-        return f'{title or self.__class__.__name__} (create_inverse_triples={self.create_inverse_triples})\n{t}{end}'
+        rv = f'{title or self.__class__.__name__} (create_inverse_triples={self.create_inverse_triples})\n{t}'
+        if show_examples:
+            examples = tabulate(
+                self.training.label_triples(self.training.mapped_triples[:show_examples]),
+                headers=['Head', 'Relation', 'tail'],
+            )
+            rv += '\n' + examples
+        return rv + end
 
     def summarize(self, title: Optional[str] = None, file=None) -> None:
         """Print a summary of the dataset."""
@@ -111,9 +144,53 @@ class Dataset:
         return EagerDataset(training=training, testing=testing, validation=validation)
 
     @classmethod
+    def cli(cls) -> None:
+        """Run the CLI."""
+
+        @click.command(help=f'{cls.__name__} Dataset CLI.')
+        @verbose_option
+        def main():
+            """Run the dataset CLI."""
+            click.echo(cls().summary_str())
+
+        main()
+
+    @classmethod
     def get_normalized_name(cls) -> str:
         """Get the normalized name of the dataset."""
         return normalize_string(cls.__name__)
+
+    def remix(self, random_state: TorchRandomHint = None, **kwargs) -> Dataset:
+        """Remix a dataset using :func:`pykeen.triples.remix.remix`."""
+        return EagerDataset(*remix(
+            *self._tup(),
+            random_state=random_state,
+            **kwargs,
+        ))
+
+    def deteriorate(self, n: Union[int, float], random_state: TorchRandomHint = None) -> Dataset:
+        """Deteriorate n triples from the dataset's training with :func:`pykeen.triples.deteriorate.deteriorate`."""
+        return EagerDataset(*deteriorate(
+            *self._tup(),
+            n=n,
+            random_state=random_state,
+        ))
+
+    def similarity(self, other: Dataset, metric: Optional[str] = None) -> float:
+        """Compute the similarity between two shuffles of the same dataset.
+
+        :param other: The other shuffling of the dataset
+        :param metric: The metric to use. Defaults to `tanimoto`.
+        :return: A float of the similarity
+
+        .. seealso:: :func:`pykeen.triples.triples_factory.splits_similarity`.
+        """
+        return dataset_similarity(self, other, metric=metric)
+
+    def _tup(self):
+        if self.validation is None:
+            return self.training, self.testing
+        return self.training, self.testing, self.validation
 
 
 class EagerDataset(Dataset):
@@ -170,13 +247,12 @@ class LazyDataset(Dataset):
         return self._testing
 
     @property
-    def validation(self) -> TriplesFactory:  # type:ignore # noqa: D401
+    def validation(self) -> Optional[TriplesFactory]:  # type:ignore # noqa: D401
         """The validation triples factory that shares indices with the training triples factory."""
         if not self._loaded:
             self._load()
         if not self._loaded_validation:
             self._load_validation()
-        assert self._validation is not None
         return self._validation
 
     @property
@@ -217,7 +293,7 @@ class PathDataset(LazyDataset):
         self,
         training_path: Union[str, TextIO],
         testing_path: Union[str, TextIO],
-        validation_path: Union[str, TextIO],
+        validation_path: Union[None, str, TextIO],
         eager: bool = False,
         create_inverse_triples: bool = False,
         load_triples_kwargs: Optional[Mapping[str, Any]] = None,
@@ -262,14 +338,17 @@ class PathDataset(LazyDataset):
         # don't call this function by itself. assumes called through the `validation`
         # property and the _training factory has already been loaded
         assert self._training is not None
-        self._validation = TriplesFactory.from_path(
-            path=self.validation_path,
-            entity_to_id=self._training.entity_to_id,  # share entity index with training
-            relation_to_id=self._training.relation_to_id,  # share relation index with training
-            # do not explicitly create inverse triples for testing; this is handled by the evaluation code
-            create_inverse_triples=False,
-            load_triples_kwargs=self.load_triples_kwargs,
-        )
+        if self.validation_path is None:
+            self._validation = None
+        else:
+            self._validation = TriplesFactory.from_path(
+                path=self.validation_path,
+                entity_to_id=self._training.entity_to_id,  # share entity index with training
+                relation_to_id=self._training.relation_to_id,  # share relation index with training
+                # do not explicitly create inverse triples for testing; this is handled by the evaluation code
+                create_inverse_triples=False,
+                load_triples_kwargs=self.load_triples_kwargs,
+            )
 
     def __repr__(self) -> str:  # noqa: D105
         return (
@@ -630,7 +709,7 @@ class TarFileSingleDataset(LazyDataset):
 class TabbedDataset(LazyDataset):
     """This class is for when you've got a single TSV of edges and want them to get auto-split."""
 
-    ratios = (0.8, 0.1, 0.1)
+    ratios: ClassVar[Sequence[float]] = (0.8, 0.1, 0.1)
     _triples_factory: Optional[TriplesFactory]
 
     def __init__(
@@ -690,8 +769,11 @@ class TabbedDataset(LazyDataset):
 class SingleTabbedDataset(TabbedDataset):
     """This class is for when you've got a single TSV of edges and want them to get auto-split."""
 
-    ratios = (0.8, 0.1, 0.1)
+    ratios: ClassVar[Sequence[float]] = (0.8, 0.1, 0.1)
     _triples_factory: Optional[TriplesFactory]
+
+    #: URL to the data to download
+    url: str
 
     def __init__(
         self,
@@ -746,4 +828,10 @@ class SingleTabbedDataset(TabbedDataset):
             logger.info('downloading data from %s to %s', self.url, self._get_path())
             _urlretrieve(self.url, self._get_path())  # noqa:S310
         df = pd.read_csv(self._get_path(), **self.read_csv_kwargs)
+
+        usecols = self.read_csv_kwargs.get('usecols')
+        if usecols is not None:
+            logger.info('reordering columns: %s', usecols)
+            df = df[usecols]
+
         return df

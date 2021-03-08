@@ -8,6 +8,10 @@
 
 import os
 
+import click
+from docdata import parse_docdata
+from more_click import verbose_option
+
 from .base import TarFileRemoteDataset, ZipFileRemoteDataset
 
 __all__ = [
@@ -16,8 +20,24 @@ __all__ = [
 ]
 
 
+@parse_docdata
 class FB15k(TarFileRemoteDataset):
-    """The FB15k dataset."""
+    """The FB15k dataset.
+
+    ---
+    name: FB15k
+    statistics:
+        entities: 14951
+        relations: 1345
+        training: 483142
+        testing: 59071
+        validation: 50000
+        triples: 592213
+    citation:
+        author: Bordes
+        year: 2013
+        link: http://papers.nips.cc/paper/5071-translating-embeddings-for-modeling-multi-relational-data.pdf
+    """
 
     def __init__(self, create_inverse_triples: bool = False, **kwargs):
         """Initialize the FreeBase 15K dataset.
@@ -37,8 +57,24 @@ class FB15k(TarFileRemoteDataset):
         )
 
 
+@parse_docdata
 class FB15k237(ZipFileRemoteDataset):
-    """The FB15k-237 dataset."""
+    """The FB15k-237 dataset.
+
+    ---
+    name: FB15k-237
+    statistics:
+        entities: 14505
+        relations: 237
+        training: 272115
+        testing: 20438
+        validation: 17526
+        triples: 310079
+    citation:
+        author: Toutanova
+        year: 2015
+        link: https://www.aclweb.org/anthology/W15-4007/
+    """
 
     def __init__(self, create_inverse_triples: bool = False, **kwargs):
         """Initialize the FreeBase 15K (237) dataset.
@@ -54,3 +90,14 @@ class FB15k237(ZipFileRemoteDataset):
             create_inverse_triples=create_inverse_triples,
             **kwargs,
         )
+
+
+@click.command()
+@verbose_option
+def _main():
+    for cls in [FB15k, FB15k237]:
+        cls().summarize()
+
+
+if __name__ == '__main__':
+    _main()

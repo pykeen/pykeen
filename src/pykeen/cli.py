@@ -24,19 +24,19 @@ from click_default_group import DefaultGroup
 from tabulate import tabulate
 
 from .datasets import datasets as datasets_dict
-from .evaluation import evaluators as evaluators_dict, get_metric_list, metrics as metrics_dict
+from .evaluation import evaluator_resolver, get_metric_list, metric_resolver
 from .experiments.cli import experiments
 from .hpo.cli import optimize
-from .hpo.samplers import samplers as hpo_samplers_dict
-from .losses import losses as losses_dict
-from .models import models as models_dict
+from .hpo.samplers import sampler_resolver
+from .losses import loss_resolver
+from .models import model_resolver
 from .models.cli import build_cli_from_cls
-from .optimizers import optimizers as optimizers_dict
-from .regularizers import regularizers as regularizers_dict
-from .sampling import negative_samplers as negative_samplers_dict
-from .stoppers import stoppers as stoppers_dict
-from .trackers import trackers as trackers_dict
-from .training import training_loops as training_dict
+from .optimizers import optimizer_resolver
+from .regularizers import regularizer_resolver
+from .sampling import negative_sampler_resolver
+from .stoppers import stopper_resolver
+from .trackers import tracker_resolver
+from .training import training_loop_resolver
 from .triples.utils import EXTENSION_IMPORTERS, PREFIX_IMPORTERS
 from .utils import get_until_first_blank
 from .version import get_version
@@ -93,22 +93,32 @@ def _help_models(tablefmt: str, link_fmt: Optional[str] = None):
 
 
 def _get_model_lines(tablefmt: str, link_fmt: Optional[str] = None):
-    for _, model in sorted(models_dict.items()):
-        line = str(model.__doc__.splitlines()[0])
-        l, r = line.find('['), line.find(']')
-        if tablefmt == 'rst':
-            yield model.__name__, f':class:`pykeen.models.{model.__name__}`', line[l: r + 2]
-        elif tablefmt == 'github':
-            author, year = line[1 + l: r - 4], line[r - 4: r]
-            reference = f'pykeen.models.{model.__name__}'
+    for _, model in sorted(model_resolver.lookup_dict.items()):
+        reference = f'pykeen.models.{model.__name__}'
+        docdata = getattr(model, '__docdata__', None)
+        if docdata is not None:
             if link_fmt:
                 reference = f'[`{reference}`]({link_fmt.format(reference)})'
             else:
                 reference = f'`{reference}`'
-            yield model.__name__, reference, f'{author.capitalize()} *et al.*, {year}'
+            citation = docdata['citation']
+            citation_str = f"[{citation['author']} *et al.*, {citation['year']}]({citation['link']})"
+            yield model.__name__, reference, citation_str
         else:
-            author, year = line[1 + l: r - 4], line[r - 4: r]
-            yield model.__name__, f'{author.capitalize()}, {year}'
+            line = str(model.__doc__.splitlines()[0])
+            l, r = line.find('['), line.find(']')
+            if tablefmt == 'rst':
+                yield model.__name__, f':class:`{reference}`', line[l: r + 2]
+            elif tablefmt == 'github':
+                author, year = line[1 + l: r - 4], line[r - 4: r]
+                if link_fmt:
+                    reference = f'[`{reference}`]({link_fmt.format(reference)})'
+                else:
+                    reference = f'`{reference}`'
+                yield model.__name__, reference, f'{author.capitalize()} *et al.*, {year}'
+            else:
+                author, year = line[1 + l: r - 4], line[r - 4: r]
+                yield model.__name__, f'{author.capitalize()}, {year}'
 
 
 @ls.command()
@@ -128,10 +138,10 @@ def datasets(tablefmt: str):
 
 
 def _help_datasets(tablefmt: str, link_fmt: Optional[str] = None):
-    lines = _get_lines(datasets_dict, tablefmt, 'datasets', link_fmt)
+    lines = _get_dataset_lines(tablefmt=tablefmt, link_fmt=link_fmt)
     return tabulate(
         lines,
-        headers=['Name', 'Description'] if tablefmt == 'plain' else ['Name', 'Reference', 'Description'],
+        headers=['Name', 'Documentation', 'Citation', 'Entities', 'Relations', 'Triples'],
         tablefmt=tablefmt,
     )
 
@@ -144,7 +154,7 @@ def training_loops(tablefmt: str):
 
 
 def _help_training(tablefmt: str, link_fmt: Optional[str] = None):
-    lines = _get_lines(training_dict, tablefmt, 'training', link_fmt=link_fmt)
+    lines = _get_lines(training_loop_resolver.lookup_dict, tablefmt, 'training', link_fmt=link_fmt)
     return tabulate(
         lines,
         headers=['Name', 'Description'] if tablefmt == 'plain' else ['Name', 'Reference', 'Description'],
@@ -160,7 +170,7 @@ def negative_samplers(tablefmt: str):
 
 
 def _help_negative_samplers(tablefmt: str, link_fmt: Optional[str] = None):
-    lines = _get_lines(negative_samplers_dict, tablefmt, 'sampling', link_fmt=link_fmt)
+    lines = _get_lines(negative_sampler_resolver.lookup_dict, tablefmt, 'sampling', link_fmt=link_fmt)
     return tabulate(
         lines,
         headers=['Name', 'Description'] if tablefmt == 'plain' else ['Name', 'Reference', 'Description'],
@@ -176,7 +186,7 @@ def stoppers(tablefmt: str):
 
 
 def _help_stoppers(tablefmt: str, link_fmt: Optional[str] = None):
-    lines = _get_lines(stoppers_dict, tablefmt, 'stoppers', link_fmt=link_fmt)
+    lines = _get_lines(stopper_resolver.lookup_dict, tablefmt, 'stoppers', link_fmt=link_fmt)
     return tabulate(
         lines,
         headers=['Name', 'Description'] if tablefmt == 'plain' else ['Name', 'Reference', 'Description'],
@@ -192,7 +202,7 @@ def evaluators(tablefmt: str):
 
 
 def _help_evaluators(tablefmt):
-    lines = sorted(_get_lines(evaluators_dict, tablefmt, 'evaluation'))
+    lines = sorted(_get_lines(evaluator_resolver.lookup_dict, tablefmt, 'evaluation'))
     return tabulate(
         lines,
         headers=['Name', 'Description'] if tablefmt == 'plain' else ['Name', 'Reference', 'Description'],
@@ -208,7 +218,7 @@ def losses(tablefmt: str):
 
 
 def _help_losses(tablefmt: str, link_fmt: Optional[str] = None):
-    lines = _get_lines_alternative(tablefmt, losses_dict, 'torch.nn', 'pykeen.losses', link_fmt)
+    lines = _get_lines_alternative(tablefmt, loss_resolver.lookup_dict, 'torch.nn', 'pykeen.losses', link_fmt)
     return tabulate(
         lines,
         headers=['Name', 'Reference', 'Description'],
@@ -224,7 +234,10 @@ def optimizers(tablefmt: str):
 
 
 def _help_optimizers(tablefmt: str, link_fmt: Optional[str] = None):
-    lines = _get_lines_alternative(tablefmt, optimizers_dict, 'torch.optim', 'pykeen.optimizers', link_fmt=link_fmt)
+    lines = _get_lines_alternative(
+        tablefmt, optimizer_resolver.lookup_dict, 'torch.optim', 'pykeen.optimizers',
+        link_fmt=link_fmt,
+    )
     return tabulate(
         lines,
         headers=['Name', 'Reference', 'Description'],
@@ -240,7 +253,7 @@ def regularizers(tablefmt: str):
 
 
 def _help_regularizers(tablefmt, link_fmt: Optional[str] = None):
-    lines = _get_lines(regularizers_dict, tablefmt, 'regularizers', link_fmt=link_fmt)
+    lines = _get_lines(regularizer_resolver.lookup_dict, tablefmt, 'regularizers', link_fmt=link_fmt)
     return tabulate(
         lines,
         headers=['Name', 'Reference', 'Description'],
@@ -296,7 +309,7 @@ def trackers(tablefmt: str):
 
 
 def _help_trackers(tablefmt: str, link_fmt: Optional[str] = None):
-    lines = _get_lines(trackers_dict, tablefmt, 'trackers', link_fmt=link_fmt)
+    lines = _get_lines(tracker_resolver.lookup_dict, tablefmt, 'trackers', link_fmt=link_fmt)
     return tabulate(
         lines,
         headers=['Name', 'Reference', 'Description'],
@@ -313,7 +326,7 @@ def hpo_samplers(tablefmt: str):
 
 def _help_hpo_samplers(tablefmt: str, link_fmt: Optional[str] = None):
     lines = _get_lines_alternative(
-        tablefmt, hpo_samplers_dict, 'optuna.samplers', 'pykeen.hpo.samplers', link_fmt=link_fmt,
+        tablefmt, sampler_resolver.lookup_dict, 'optuna.samplers', 'pykeen.hpo.samplers', link_fmt=link_fmt,
     )
     return tabulate(
         lines,
@@ -324,7 +337,7 @@ def _help_hpo_samplers(tablefmt: str, link_fmt: Optional[str] = None):
 
 def _get_metrics_lines(tablefmt: str):
     if tablefmt == 'rst':
-        for name, value in metrics_dict.items():
+        for name, value in metric_resolver.lookup_dict.items():
             yield name, f':class:`pykeen.evaluation.{value.__name__}`'
     else:
         for field, name, value in get_metric_list():
@@ -363,6 +376,51 @@ def _get_lines(d, tablefmt, submodule, link_fmt: Optional[str] = None):
             yield name, reference, doc
         else:
             yield name, value.__doc__.splitlines()[0]
+
+
+def _get_dataset_lines(tablefmt, link_fmt: Optional[str] = None):
+    for name, value in sorted(datasets_dict.items()):
+        reference = f'pykeen.datasets.{value.__name__}'
+        if tablefmt == 'rst':
+            reference = f':class:`{reference}`'
+        elif link_fmt is not None:
+            reference = f'[`{reference}`]({link_fmt.format(reference)})'
+        else:
+            reference = f'`{reference}`'
+
+        try:
+            docdata = value.__docdata__
+        except AttributeError:
+            yield name, reference, '', '', '', ''
+            continue
+
+        name = docdata['name']
+        statistics = docdata['statistics']
+        entities = statistics['entities']
+        relations = statistics['relations']
+        triples = statistics['triples']
+
+        citation_str = ''
+        citation = docdata.get('citation')
+        if citation is not None:
+            author = citation and citation.get('author')
+            year = citation and citation.get('year')
+            link = citation and citation.get('link')
+            github = citation and citation.get('github')
+            if author and year and link:
+                _citation_txt = f'{author.capitalize()} *et al*., {year}'
+                citation_str = _link(_citation_txt, link, tablefmt)
+            elif github:
+                link = f'https://github.com/{github}'
+                citation_str = _link(github if tablefmt == 'rst' else f'`{github}`', link, tablefmt)
+        yield name, reference, citation_str, entities, relations, triples
+
+
+def _link(text: str, link: str, fmt: str) -> str:
+    if fmt == 'rst':
+        return f'`{text} <{link}>`_'
+    else:
+        return f'[{text}]({link})'
 
 
 @main.command()
@@ -404,37 +462,37 @@ def get_readme() -> str:
     tablefmt = 'github'
     return readme_template.render(
         models=_help_models(tablefmt, link_fmt='https://pykeen.readthedocs.io/en/latest/api/{}.html'),
-        n_models=len(models_dict),
+        n_models=len(model_resolver.lookup_dict),
         regularizers=_help_regularizers(tablefmt, link_fmt='https://pykeen.readthedocs.io/en/latest/api/{}.html'),
-        n_regularizers=len(regularizers_dict),
+        n_regularizers=len(regularizer_resolver.lookup_dict),
         losses=_help_losses(tablefmt, link_fmt='https://pykeen.readthedocs.io/en/latest/api/{}.html'),
-        n_losses=len(losses_dict),
+        n_losses=len(loss_resolver.lookup_dict),
         datasets=_help_datasets(tablefmt, link_fmt='https://pykeen.readthedocs.io/en/latest/api/{}.html'),
         n_datasets=len(datasets_dict),
         training_loops=_help_training(
             tablefmt, link_fmt='https://pykeen.readthedocs.io/en/latest/reference/training.html#{}',
         ),
-        n_training_loops=len(training_dict),
+        n_training_loops=len(training_loop_resolver.lookup_dict),
         negative_samplers=_help_negative_samplers(
             tablefmt, link_fmt='https://pykeen.readthedocs.io/en/latest/api/{}.html',
         ),
-        n_negative_samplers=len(negative_samplers_dict),
+        n_negative_samplers=len(negative_sampler_resolver.lookup_dict),
         optimizers=_help_optimizers(tablefmt, link_fmt='https://pytorch.org/docs/stable/optim.html#{}'),
-        n_optimizers=len(optimizers_dict),
+        n_optimizers=len(optimizer_resolver.lookup_dict),
         stoppers=_help_stoppers(
             tablefmt, link_fmt='https://pykeen.readthedocs.io/en/latest/reference/stoppers.html#{}',
         ),
-        n_stoppers=len(stoppers_dict),
+        n_stoppers=len(stopper_resolver.lookup_dict),
         evaluators=_help_evaluators(tablefmt),
-        n_evaluators=len(evaluators_dict),
+        n_evaluators=len(evaluator_resolver.lookup_dict),
         metrics=_help_metrics(tablefmt),
         n_metrics=len(get_metric_list()),
         trackers=_help_trackers(tablefmt, link_fmt='https://pykeen.readthedocs.io/en/latest/api/{}.html'),
-        n_trackers=len(trackers_dict),
+        n_trackers=len(tracker_resolver.lookup_dict),
         hpo_samplers=_help_hpo_samplers(
             tablefmt, link_fmt='https://optuna.readthedocs.io/en/stable/reference/generated/{}.html',
         ),
-        n_hpo_samplers=len(hpo_samplers_dict),
+        n_hpo_samplers=len(sampler_resolver.lookup_dict),
     )
 
 
@@ -444,7 +502,7 @@ def train(ctx):
     """Train a KGE model."""
 
 
-for cls in models_dict.values():
+for cls in model_resolver.lookup_dict.values():
     train.add_command(build_cli_from_cls(cls))
 
 # Add HPO command

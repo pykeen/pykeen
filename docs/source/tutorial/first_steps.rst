@@ -2,7 +2,7 @@
 
 First Steps
 ===========
-.. automodule:: pykeen.pipeline
+.. automodule:: pykeen.pipeline.api
 
 Loading a pre-trained Model
 ---------------------------

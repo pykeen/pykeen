@@ -15,7 +15,7 @@ from ...nn import EmbeddingSpecification
 from ...nn.init import xavier_normal_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
-from ...typing import DeviceHint
+from ...typing import DeviceHint, Hint, Initializer
 
 __all__ = [
     'TuckER',
@@ -63,6 +63,12 @@ class TuckER(EntityRelationEmbeddingModel):
 
        - Official implementation: https://github.com/ibalazevic/TuckER
        - pykg2vec implementation of TuckEr https://github.com/Sujit-O/pykg2vec/blob/master/pykg2vec/core/TuckER.py
+    ---
+    citation:
+        author: Balažević
+        year: 2019
+        link: https://arxiv.org/abs/1901.09590
+        github: ibalazevic/TuckER
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
@@ -91,6 +97,8 @@ class TuckER(EntityRelationEmbeddingModel):
         dropout_2: float = 0.5,
         regularizer: Optional[Regularizer] = None,
         apply_batch_normalization: bool = True,
+        entity_initializer: Hint[Initializer] = xavier_normal_,
+        relation_initializer: Hint[Initializer] = xavier_normal_,
     ) -> None:
         """Initialize the model.
 
@@ -109,11 +117,11 @@ class TuckER(EntityRelationEmbeddingModel):
             regularizer=regularizer,
             entity_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
-                initializer=xavier_normal_,
+                initializer=entity_initializer,
             ),
             relation_representations=EmbeddingSpecification(
                 embedding_dim=relation_dim or embedding_dim,
-                initializer=xavier_normal_,
+                initializer=relation_initializer,
             ),
         )
 

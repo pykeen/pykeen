@@ -136,14 +136,11 @@ triples $\mathcal{b}$ in the subset $\mathcal{B} \in 2^{2^{\mathcal{T}}}$.
 from typing import Any, Callable, ClassVar, Mapping, Optional, Set, Type, Union
 
 import torch
+from class_resolver import Resolver, normalize_string
 from torch.nn import functional
 from torch.nn.modules.loss import _Loss
 
-from .utils import get_cls, normalize_string
-
 __all__ = [
-    # Helpers
-    'get_loss_cls',
     # Base Classes
     'Loss',
     'PointwiseLoss',
@@ -159,6 +156,8 @@ __all__ = [
     'SoftplusLoss',
     'has_mr_loss',
     'has_nssa_loss',
+    # Utils
+    'loss_resolver',
 ]
 
 _REDUCTION_METHODS = dict(
@@ -422,30 +421,19 @@ _LOSSES: Set[Type[Loss]] = {
     MSELoss,
     NSSALoss,
 }
-
-#: A mapping of losses' names to their implementations
-losses: Mapping[str, Type[Loss]] = {
-    normalize_string(cls.__name__, suffix=_LOSS_SUFFIX): cls
-    for cls in _LOSSES
-}
 losses_synonyms: Mapping[str, Type[Loss]] = {
     normalize_string(synonym, suffix=_LOSS_SUFFIX): cls
     for cls in _LOSSES
     if cls.synonyms is not None
     for synonym in cls.synonyms
 }
-
-
-def get_loss_cls(query: Union[None, str, Type[Loss]]) -> Type[Loss]:
-    """Get the loss class."""
-    return get_cls(
-        query,
-        base=Loss,
-        lookup_dict=losses,
-        lookup_dict_synonyms=losses_synonyms,
-        default=MarginRankingLoss,
-        suffix=_LOSS_SUFFIX,
-    )
+loss_resolver = Resolver(
+    _LOSSES,
+    base=Loss,
+    default=MarginRankingLoss,
+    suffix=_LOSS_SUFFIX,
+    synonyms=losses_synonyms,
+)
 
 
 def has_mr_loss(model) -> bool:

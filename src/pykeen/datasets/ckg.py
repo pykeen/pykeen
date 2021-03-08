@@ -9,6 +9,8 @@ from urllib.request import urlretrieve
 
 import click
 import pandas as pd
+from docdata import parse_docdata
+from more_click import verbose_option
 
 from .base import TabbedDataset
 from ..typing import TorchRandomHint
@@ -21,13 +23,22 @@ URL = 'https://md-datasets-public-files-prod.s3.eu-west-1.amazonaws.com/d1e8d3df
 COLUMNS = ['START_ID', 'TYPE', 'END_ID']
 
 
+@parse_docdata
 class CKG(TabbedDataset):
     """The Clinical Knowledge Graph (CKG) dataset from [santos2020]_.
 
-    This dataset contains ~7.6 million nodes, 11 relations, and ~26 million triples.
-
-    .. [santos2020] Santos, A., *et al* (2020). `Clinical Knowledge Graph Integrates Proteomics Data into Clinical
-       Decision-Making <https://doi.org/10.1101/2020.05.09.084897>`_. *bioRxiv*, 2020.05.09.084897.
+    ---
+    name: Clinical Knowledge Graph
+    citation:
+        author: Santos
+        year: 2020
+        link: https://doi.org/10.1101/2020.05.09.084897
+        github: MannLabs/CKG
+    single: true
+    statistics:
+        entities: 7617419
+        relations: 11
+        triples: 26691525
     """
 
     def __init__(
@@ -54,7 +65,7 @@ class CKG(TabbedDataset):
 
     def _get_df(self) -> pd.DataFrame:
         if self.preloaded_path.exists():
-            return pd.read_csv(self.preloaded_path, sep='\t')
+            return pd.read_csv(self.preloaded_path, sep='\t', dtype=str)
         df = pd.concat(self._iterate_dataframes())
         df.to_csv(self.preloaded_path, sep='\t', index=False)
         return df
@@ -83,6 +94,7 @@ class CKG(TabbedDataset):
 
 
 @click.command()
+@verbose_option
 def _main():
     d = CKG()
     d.summarize()

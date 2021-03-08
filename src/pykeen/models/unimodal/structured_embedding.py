@@ -18,7 +18,7 @@ from ...nn import Embedding, EmbeddingSpecification
 from ...nn.init import xavier_uniform_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
-from ...typing import DeviceHint
+from ...typing import Constrainer, DeviceHint, Hint, Initializer
 from ...utils import compose
 
 __all__ = [
@@ -40,6 +40,11 @@ class StructuredEmbedding(EntityEmbeddingModel):
 
     By employing different projections for the embeddings of the head and tail entities, SE explicitly differentiates
     the role of an entity as either the subject or object.
+    ---
+    citation:
+        author: Bordes
+        year: 2011
+        link: http://www.aaai.org/ocs/index.php/AAAI/AAAI11/paper/download/3659/3898
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
@@ -57,6 +62,8 @@ class StructuredEmbedding(EntityEmbeddingModel):
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
+        entity_initializer: Hint[Initializer] = xavier_uniform_,
+        entity_constrainer: Hint[Constrainer] = functional.normalize,
     ) -> None:
         r"""Initialize SE.
 
@@ -71,8 +78,8 @@ class StructuredEmbedding(EntityEmbeddingModel):
             regularizer=regularizer,
             entity_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
-                initializer=xavier_uniform_,
-                constrainer=functional.normalize,
+                initializer=entity_initializer,
+                constrainer=entity_constrainer,
             ),
         )
 

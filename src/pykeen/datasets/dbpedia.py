@@ -6,6 +6,8 @@
 - Paper: https://arxiv.org/abs/1711.03438
 """
 
+from docdata import parse_docdata
+
 from .base import UnpackedRemoteDataset
 
 __all__ = [
@@ -18,8 +20,24 @@ TRAIN_URL = f'{BASE}/train.txt'
 VALID_URL = f'{BASE}/valid.txt'
 
 
+@parse_docdata
 class DBpedia50(UnpackedRemoteDataset):
-    """The DBpedia50 dataset."""
+    """The DBpedia50 dataset.
+
+    ---
+    name: DBpedia50
+    citation:
+        author: Shi
+        year: 2017
+        link: https://arxiv.org/abs/1711.03438
+    statistics:
+        entities: 24624
+        relations: 351
+        training: 32203
+        testing: 2095
+        validation: 123
+        triples: 34421
+    """
 
     def __init__(self, create_inverse_triples: bool = False, **kwargs):
         """Initialize the DBpedia50 small dataset from [shi2017b]_.
@@ -45,8 +63,4 @@ class DBpedia50(UnpackedRemoteDataset):
 
 
 if __name__ == '__main__':
-    _d = DBpedia50()
-    _d.summarize()
-    print(_d.training.triples[:5])
-    print(_d.testing.triples[:5])
-    print(_d.validation.triples[:5])
+    DBpedia50().summarize()

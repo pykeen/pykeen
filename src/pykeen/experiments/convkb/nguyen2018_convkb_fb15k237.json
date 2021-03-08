@@ -9,7 +9,9 @@
     "model_kwargs": {
       "embedding_dim": 100,
       "num_filters": 50,
-      "hidden_dropout_rate": 0.0
+      "hidden_dropout_rate": 0.0,
+      "entity_initializer": "xavier_uniform",
+      "relation_initializer": "xavier_uniform"
     },
     "regularizer": "PowerSum",
     "regularizer_kwargs": {

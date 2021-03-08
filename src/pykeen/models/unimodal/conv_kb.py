@@ -8,6 +8,7 @@ from typing import Any, ClassVar, Mapping, Optional, Type
 import torch
 import torch.autograd
 from torch import nn
+from torch.nn.init import uniform_
 
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
@@ -15,7 +16,7 @@ from ...losses import Loss
 from ...nn import EmbeddingSpecification
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
-from ...typing import DeviceHint
+from ...typing import DeviceHint, Hint, Initializer
 
 __all__ = [
     'ConvKB',
@@ -54,7 +55,13 @@ class ConvKB(EntityRelationEmbeddingModel):
 
     .. seealso::
 
-       - Authors' `implementation of ConvKB <https://github.com/daiquocnguyen/ConvKBsE.py>`_
+       - Authors' `implementation of ConvKB <https://github.com/daiquocnguyen/ConvKB>`_
+    ---
+    citation:
+        author: Nguyen
+        year: 2018
+        link: https://www.aclweb.org/anthology/N18-2053
+        github: daiquocnguyen/ConvKB
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
@@ -83,6 +90,8 @@ class ConvKB(EntityRelationEmbeddingModel):
         num_filters: int = 400,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
+        entity_initializer: Hint[Initializer] = uniform_,
+        relation_initializer: Hint[Initializer] = uniform_,
     ) -> None:
         """Initialize the model.
 
@@ -96,9 +105,11 @@ class ConvKB(EntityRelationEmbeddingModel):
             regularizer=regularizer,
             entity_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
+                initializer=entity_initializer,
             ),
             relation_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
+                initializer=relation_initializer,
             ),
         )
 

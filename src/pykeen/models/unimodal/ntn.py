@@ -13,7 +13,7 @@ from ...losses import Loss
 from ...nn import EmbeddingSpecification
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
-from ...typing import DeviceHint
+from ...typing import DeviceHint, Hint, Initializer
 
 __all__ = [
     'NTN',
@@ -45,6 +45,12 @@ class NTN(EntityEmbeddingModel):
        - Original Implementation (Matlab): `<https://github.com/khurram18/NeuralTensorNetworks>`_
        - TensorFlow: `<https://github.com/dddoss/tensorflow-socher-ntn>`_
        - Keras: `<https://github.com/dapurv5/keras-neural-tensor-layer (Keras)>`_
+    ---
+    citation:
+        author: Socher
+        year: 2013
+        link: https://dl.acm.org/doi/10.5555/2999611.2999715
+        github: khurram18/NeuralTensorNetworks
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
@@ -63,6 +69,7 @@ class NTN(EntityEmbeddingModel):
         random_seed: Optional[int] = None,
         non_linearity: Optional[nn.Module] = None,
         regularizer: Optional[Regularizer] = None,
+        entity_initializer: Hint[Initializer] = None,
     ) -> None:
         r"""Initialize NTN.
 
@@ -79,6 +86,7 @@ class NTN(EntityEmbeddingModel):
             regularizer=regularizer,
             entity_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
+                initializer=entity_initializer,
             ),
         )
         self.num_slices = num_slices

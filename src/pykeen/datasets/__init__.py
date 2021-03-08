@@ -20,7 +20,9 @@ from .base import (  # noqa:F401
 from .ckg import CKG
 from .codex import CoDExLarge, CoDExMedium, CoDExSmall
 from .conceptnet import ConceptNet
+from .countries import Countries
 from .cskg import CSKG
+from .db100k import DB100K
 from .dbpedia import DBpedia50
 from .drkg import DRKG
 from .freebase import FB15k, FB15k237
@@ -33,7 +35,7 @@ from .umls import UMLS
 from .wordnet import WN18, WN18RR
 from .yago import YAGO310
 from ..triples import CoreTriplesFactory, TriplesFactory
-from ..utils import normalize_string, normalized_lookup
+from ..utils import normalize_string
 
 __all__ = [
     'Hetionet',
@@ -59,6 +61,8 @@ __all__ = [
     'CKG',
     'CSKG',
     'DBpedia50',
+    'DB100K',
+    'Countries',
     'get_dataset',
     'has_dataset',
 ]
@@ -73,7 +77,10 @@ if not _DATASETS:
     raise RuntimeError('Datasets have been loaded with entrypoints since PyKEEN v1.0.5. Please reinstall.')
 
 #: A mapping of datasets' names to their classes
-datasets: Mapping[str, Type[Dataset]] = normalized_lookup(_DATASETS)
+datasets: Mapping[str, Type[Dataset]] = {
+    normalize_string(cls.__name__): cls
+    for cls in _DATASETS
+}
 
 
 def get_dataset(
@@ -125,7 +132,7 @@ def get_dataset(
         raise TypeError(f'Dataset is invalid type: {type(dataset)}')
 
     if isinstance(training, str) and isinstance(testing, str):
-        if isinstance(validation, str):
+        if validation is None or isinstance(validation, str):
             return PathDataset(
                 training_path=training,
                 testing_path=testing,
@@ -146,7 +153,12 @@ def get_dataset(
             validation=validation,
         )
 
-    raise TypeError('Training and testing must both be given as strings or Triples Factories')
+    raise TypeError(
+        f'''Training and testing must both be given as strings or Triples Factories.
+        - Training: {type(training)}: {training}
+        - Testing: {type(testing)}: {testing}
+        ''',
+    )
 
 
 def has_dataset(key: str) -> bool:

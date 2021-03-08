@@ -18,7 +18,7 @@ from ...nn.init import xavier_normal_
 from ...nn.modules import _calculate_missing_shape_information
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
-from ...typing import DeviceHint
+from ...typing import DeviceHint, Hint, Initializer
 from ...utils import is_cudnn_error
 
 __all__ = [
@@ -59,11 +59,9 @@ class ConvE(EntityRelationEmbeddingModel):
 
     The default setting uses batch normalization. Batch normalization normalizes the output of the activation functions,
     in order to ensure that the weights of the NN don't become imbalanced and to speed up training.
-    However, batch normalization is not the only way to achieve more robust and effective training [1]. Therefore,
-    we added the flag 'apply_batch_normalization' to turn batch normalization on/off (it's turned on as default).
-
-    [1]: Santurkar, Shibani, et al. "How does batch normalization help optimization?."
-    Advances in Neural Information Processing Systems. 2018.
+    However, batch normalization is not the only way to achieve more robust and effective training [santurkar2018]_.
+    Therefore, we added the flag 'apply_batch_normalization' to turn batch normalization on/off (it's turned on as
+    default).
 
     Example usage:
 
@@ -96,6 +94,12 @@ class ConvE(EntityRelationEmbeddingModel):
     >>> from pykeen.evaluation import RankBasedEvaluator
     >>> evaluator = RankBasedEvaluator()
     >>> metric_result = evaluator.evaluate(model=model, mapped_triples=dataset.testing.mapped_triples, batch_size=8192)
+    ---
+    citation:
+        author: Dettmers
+        year: 2018
+        link: https://www.aaai.org/ocs/index.php/AAAI/AAAI18/paper/view/17366
+        github: TimDettmers/ConvE
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
@@ -134,6 +138,8 @@ class ConvE(EntityRelationEmbeddingModel):
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
         apply_batch_normalization: bool = True,
+        entity_initializer: Hint[Initializer] = xavier_normal_,
+        relation_initializer: Hint[Initializer] = xavier_normal_,
     ) -> None:
         """Initialize the model."""
         # ConvE should be trained with inverse triples
@@ -152,11 +158,11 @@ class ConvE(EntityRelationEmbeddingModel):
             regularizer=regularizer,
             entity_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
-                initializer=xavier_normal_,
+                initializer=entity_initializer,
             ),
             relation_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
-                initializer=xavier_normal_,
+                initializer=relation_initializer,
             ),
         )
 

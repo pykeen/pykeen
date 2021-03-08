@@ -6,17 +6,16 @@ from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
 import torch.autograd
-from torch import nn
 from torch.nn import functional
 
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
 from ...nn import EmbeddingSpecification
+from ...nn.init import xavier_normal_norm_, xavier_uniform_
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
-from ...typing import DeviceHint
-from ...utils import compose
+from ...typing import Constrainer, DeviceHint, Hint, Initializer
 
 __all__ = [
     'DistMult',
@@ -51,6 +50,11 @@ class DistMult(EntityRelationEmbeddingModel):
     .. seealso::
 
        - OpenKE `implementation of DistMult <https://github.com/thunlp/OpenKE/blob/master/models/DistMult.py>`_
+    ---
+    citation:
+        author: Yang
+        year: 2014
+        link: https://arxiv.org/abs/1412.6575
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
@@ -77,10 +81,17 @@ class DistMult(EntityRelationEmbeddingModel):
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
+        entity_initializer: Hint[Initializer] = xavier_uniform_,
+        entity_constrainer: Hint[Constrainer] = functional.normalize,
+        relation_initializer: Hint[Initializer] = xavier_normal_norm_,
     ) -> None:
         r"""Initialize DistMult.
 
         :param embedding_dim: The entity embedding dimension $d$. Is usually $d \in [50, 300]$.
+        :param entity_initializer: Default: xavier uniform, c.f.
+            https://github.com/thunlp/OpenKE/blob/adeed2c0d2bef939807ed4f69c1ea4db35fd149b/models/DistMult.py#L16-L17
+        :param entity_constrainer: Default: constrain entity embeddings to unit length
+        :param relation_initializer: Default: relations are initialized to unit length (but not constrained)
         """
         super().__init__(
             triples_factory=triples_factory,
@@ -90,19 +101,12 @@ class DistMult(EntityRelationEmbeddingModel):
             regularizer=regularizer,
             entity_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
-                # xavier uniform, cf.
-                # https://github.com/thunlp/OpenKE/blob/adeed2c0d2bef939807ed4f69c1ea4db35fd149b/models/DistMult.py#L16-L17
-                initializer=nn.init.xavier_uniform_,
-                # Constrain entity embeddings to unit length
-                constrainer=functional.normalize,
+                initializer=entity_initializer,
+                constrainer=entity_constrainer,
             ),
             relation_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
-                # relations are initialized to unit length (but not constraint)
-                initializer=compose(
-                    nn.init.xavier_uniform_,
-                    functional.normalize,
-                ),
+                initializer=relation_initializer,
             ),
         )
 
