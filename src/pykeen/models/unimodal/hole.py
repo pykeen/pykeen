@@ -105,8 +105,8 @@ class HolE(EntityRelationEmbeddingModel):
             The scores.
         """
         # Circular correlation of entity embeddings
-        a_fft = rfft(h, signal_ndim=1, onesided=True)
-        b_fft = rfft(t, signal_ndim=1, onesided=True)
+        a_fft = rfft(h, dim=-1)
+        b_fft = rfft(t, dim=-1)
 
         # complex conjugate, a_fft.shape = (batch_size, num_entities, d', 2)
         a_fft[:, :, :, 1] *= -1
