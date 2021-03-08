@@ -262,6 +262,9 @@ class TestPipelineTriples(unittest.TestCase):
             random_seed=0,
         )
 
+        # empty lists are falsy
+        self.assertTrue(losses)
+
 
 class TestPipelineCheckpoints(unittest.TestCase):
     """Test the pipeline with checkpoints."""
