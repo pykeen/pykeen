@@ -12,6 +12,17 @@ except ModuleNotFoundError:
     from torch import rfft as old_rfft, irfft as old_irfft  # works on pytorch < 1.7
 
 
+    def _resolve_normalized_option(norm: Optional[str]) -> bool:
+        """Convert PyTorch >= 1.7 "norm" option to <1.7 "normalized" option."""
+        if norm is None or norm == "backward":
+            normalized = False
+        elif norm == "ortho":
+            normalized = True
+        else:
+            raise NotImplementedError("In PyTorch < 1.7, there is no \"forward\" option.")
+        return normalized
+
+
     def rfft(
         input: torch.Tensor,
         n: Optional[int] = None,
@@ -21,12 +32,7 @@ except ModuleNotFoundError:
         """Compute 1D real-to-complex FFT."""
         if dim != -1:
             raise ValueError("In PyTorch < 1.7, there is no dim argument.")
-        if norm is None or norm == "backward":
-            normalized = False
-        elif norm == "ortho":
-            normalized = True
-        else:
-            raise NotImplementedError("In PyTorch < 1.7, there is no \"forward\" option.")
+        normalized = _resolve_normalized_option(norm)
         if n is not None:
             m = input.shape[-1]
             if m < n:
@@ -38,13 +44,17 @@ except ModuleNotFoundError:
         return old_rfft(input, signal_ndim=1, normalized=normalized, onesided=True)
 
 
-    def irfft(x: torch.Tensor, n: int, **kwargs) -> torch.Tensor:
+    def irfft(
+        input: torch.Tensor,
+        n: Optional[int] = None,
+        dim: int = -1,
+        norm: Optional[str] = None,
+    ) -> torch.Tensor:
         """Compute inverse FFT."""
-        # new parameters
-        assert kwargs.pop("dim", -1) == -1
-        norm = kwargs.pop("norm", None) or "backward"
-        assert norm == "backward"
-        return old_irfft(x, signal_ndim=1, onesided=True, signal_sizes=n)
+        if dim != -1:
+            raise ValueError("In PyTorch < 1.7, there is no dim argument.")
+        normalized = _resolve_normalized_option(norm)
+        return old_irfft(input, signal_ndim=1, normalized=normalized, onesided=True, signal_sizes=n)
 
 __all__ = [
     'rfft',
