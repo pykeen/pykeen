@@ -516,7 +516,7 @@ def broadcast_cat(
 
         # get desired extent along dimension
         d_max = max(dims)
-        if set(dims) != {1, d_max}:
+        if not {1, d_max}.issuperset(dims):
             raise ValueError(f"Tensors have invalid shape along {i} dimension: {set(dims)}")
 
         for j, td in enumerate(dims):
