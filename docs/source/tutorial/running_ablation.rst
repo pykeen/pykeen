@@ -492,6 +492,6 @@ configuration file (See above):
 
 
 
-In this tutorial, we showed how define an ablation study, how to execute it from the command line interface, and finally
+In this tutorial, we showed how to define an ablation study, how to execute it from the command line interface, and finally
 how to execute an ablation study from your own program. Furthermore, we showed how you can define your ablation study
 using your own data.
