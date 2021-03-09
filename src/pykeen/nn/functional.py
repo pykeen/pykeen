@@ -205,8 +205,10 @@ def conve_interaction(
     # repeat if necessary, and concat head and relation, batch_size', num_input_channels, 2*height, width
     # with batch_size' = batch_size * num_heads * num_relations
     x = broadcast_cat(
-        h.view(*h.shape[:-1], input_channels, embedding_height, embedding_width),
-        r.view(*r.shape[:-1], input_channels, embedding_height, embedding_width),
+        [
+            h.view(*h.shape[:-1], input_channels, embedding_height, embedding_width),
+            r.view(*r.shape[:-1], input_channels, embedding_height, embedding_width),
+        ],
         dim=-2,
     ).view(-1, input_channels, 2 * embedding_height, embedding_width)
 
@@ -383,7 +385,7 @@ def ermlpe_interaction(
         The scores.
     """
     # repeat if necessary, and concat head and relation, (batch_size, num_heads, num_relations, 1, 2 * embedding_dim)
-    x = broadcast_cat(h, r, dim=-1)
+    x = broadcast_cat([h, r], dim=-1)
 
     # Predict t embedding, shape: (b, h, r, 1, d)
     shape = x.shape

@@ -84,6 +84,50 @@ storing the value for $p$ in the instance, then accessing it in ``forward()``.
 
 In general, you can put whatever you want in ``__init__()`` to support the calculation of scores.
 
+Interactions with Trainable Parameters
+--------------------------------------
+In ER-MLP, the multi-layer perceptron consists of an input layer with $3 \times d$ neurons, a hidden layer
+with $d$ neurons and output layer with one neuron. The input is represented by the concatenation embeddings
+of the heads, relations and tail embeddings. It is defined as:
+
+.. math ::
+
+    f(h, r, t) = W_2 ReLU(W_1 cat(h, r, t) + b_1) + b_2
+
+with hidden dimension $y$, $W_1 \in \mathcal{R}^{3d \times y}, $W_2\ \in \mathcal{R}^y$, and
+biases $b_1 \in \mathcal{R}^y$ and $b_2 \in \mathcal{R}$.
+
+$W_1$, $W_1, $b_1$, and $b_2$ are *global* parameters, meaning that they are trainable,
+but are neither attached to the entities nor relations. Unlike the $p$ in TransE, these global
+trainable parameters are not considered hyper-parameters. However, like hyper-parameters,
+they can also be defined in the `__init__` function of your :class:`pykeen.nn.modules.Interaction`
+class. They are trained jointly with the entity and relation embeddings during training.
+
+.. code-block:: python
+
+    import torch.nn
+    from pykeen.nn.modules import Interaction
+    from pykeen.utils import broadcast_cat
+
+    class ERMLPInteraction(Interaction):
+        def __init__(self, embedding_dim: int, hidden_dim: int):
+            super().__init__()
+            # The weights of this MLP will be learned.
+            self.mlp = torch.nn.Sequential(
+                torch.nn.Linear(in_features=3 * embedding_dim, out_features=hidden_dim, bias=True),
+                torch.nn.ReLU(),
+                torch.nn.Linear(in_features=hidden_dim, out_features=1, bias=True),
+            )
+
+        def forward(self, h, r, t):
+            x = broadcast_cat([h, r, t], dim=-1)
+            return self.mlp(x)
+
+Note that :func:`pykeen.utils.broadcast_cat` was used instead of the standard
+:func:`torch.cat` because of the standardization of shapes of head, relation, and tail vectors.
+
+.. seealso:: A reference implementation is provided in :class:`pykeen.nn.modules.ERMLPInteraction`
+
 Interactions with Different Shaped Vectors
 ------------------------------------------
 The Structured Embedding uses a 2-tensor for representing each relation,

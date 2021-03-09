@@ -472,41 +472,66 @@ def format_relative_comparison(
 
 
 def broadcast_cat(
-    x: torch.FloatTensor,
-    y: torch.FloatTensor,
+    tensors: Sequence[torch.FloatTensor],
     dim: int,
 ) -> torch.FloatTensor:
-    """Concatenate with broadcasting.
+    """Concatenate tensors with broadcasting support.
 
-    :param x:
-        The first tensor.
-    :param y:
-        The second tensor.
+    :param tensors:
+        The tensors. Each of the tensors is require to have the same number of dimensions.
+        For each dimension not equal to dim, the extent has to match the other tensors', or be one.
+        If it is one, the tensor is repeated to match the extent of the othe tensors.
     :param dim:
         The concat dimension.
 
-    :return: A concatenated, broadcasted
+    :return: A concatenated, broadcasted tensor.
 
     :raises ValueError: if the x and y dimensions are not the same
     :raises ValueError: if broadcasting is not possible
     """
-    if x.ndimension() != y.ndimension():
-        raise ValueError
+    # input validation
+    if len(tensors) == 0:
+        raise ValueError("Must pass at least one tensor.")
+    if len({x.ndimension() for x in tensors}) != 1:
+        raise ValueError(
+            f"The number of dimensions has to be the same for all tensors, but is {set(t.shape for t in tensors)}",
+        )
+
+    # base case
+    if len(tensors) == 1:
+        return tensors[0]
+
+    # normalize dim
     if dim < 0:
-        dim = x.ndimension() + dim
-    x_rep, y_rep = [], []
-    for d, (xd, yd) in enumerate(zip(x.shape, y.shape)):
-        xr = yr = 1
-        if d != dim and xd != yd:
-            if xd == 1:
-                xr = yd
-            elif yd == 1:
-                yr = xd
-            else:
-                raise ValueError
-        x_rep.append(xr)
-        y_rep.append(yr)
-    return torch.cat([x.repeat(*x_rep), y.repeat(*y_rep)], dim=dim)
+        dim = tensors[0].ndimension() + dim
+
+    # calculate repeats for each tensor
+    repeats = [
+        [1 for _ in t.shape]
+        for t in tensors
+    ]
+    for i, dims in enumerate(zip(*(t.shape for t in tensors))):
+        # dimensions along concatenation axis do not need to match
+        if i == dim:
+            continue
+
+        # get desired extent along dimension
+        d_max = max(dims)
+        if not {1, d_max}.issuperset(dims):
+            raise ValueError(f"Tensors have invalid shape along {i} dimension: {set(dims)}")
+
+        for j, td in enumerate(dims):
+            if td != d_max:
+                repeats[j][i] = d_max
+
+    # repeat tensors along axes if necessary
+    tensors = [
+        t.repeat(*r)
+        for t, r in zip(tensors, repeats)
+    ]
+
+    # concatenate
+    return torch.cat(tensors, dim=dim)
 
 
 def get_batchnorm_modules(module: torch.nn.Module) -> List[torch.nn.Module]:
