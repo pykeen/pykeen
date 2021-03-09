@@ -60,7 +60,7 @@ def ablation_pipeline(
     sampler: Optional[str] = 'random',
     pruner: Optional[str] = 'nop',
     metadata: Optional[Mapping] = None,
-    directory: Optional[str] = None,
+    directory: str = None,
     save_artifacts: bool = True,
     move_to_cpu: bool = True,
     dry_run: bool = False,
