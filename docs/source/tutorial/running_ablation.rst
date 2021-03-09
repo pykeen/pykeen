@@ -9,7 +9,7 @@ knowledge graph embedding models, typical ablation studies involve investigating
 approaches, negative samplers, and the explicit modeling of inverse relations. For a specific model composition based on
 these components, the best set of hyper-parameter values, e.g., embedding dimension, learning rate, batch size,
 loss function-specific hyper-parameters such as the margin value in the margin ranking loss need to be determined.
-This is accomplished by a process called hyper-parameter optimization. Different approaches are have been proposed, of
+This is accomplished by a process called hyper-parameter optimization. Different approaches have been proposed, of
 which random search and grid search are very popular.
 
 
@@ -69,10 +69,10 @@ we extend the ablation study accordingly:
 
 For each of the components of a knowledge graph embedding model (KGEM) that requires hyper-parameters, i.e.,
 interaction model, loss function and the training approach, we provide default hyper-parameter optimization (HPO)
-ranges within PyKEEN. Therefore, the definition of oour ablation study would be complete at this stage. Because,
-hyper-parameter ranges are dataset dependent, user can/should define their own HPO ranges. We will show later how to
-do this.
-To finalize, the ablation study, we recommend to define early stopping for you ablation study which can be done as
+ranges within PyKEEN. Therefore, the definition of our ablation study would be complete at this stage. Because,
+hyper-parameter ranges are dataset dependent, users can/should define their own HPO ranges. We will show later how to
+accomplish this.
+To finalize the ablation study, we recommend to define early stopping for you ablation study which is be done as
 follows:
 
 .. code-block:: javascript
@@ -144,8 +144,8 @@ The dictionary ``optuna`` contains all Optuna related arguments. Within this dic
 of HPO iterations for each experiment to 2 using the argument ``n_trials``, set a ``timeout`` of 300 seconds
 (the HPO will be terminated after ``n_trials`` or ``timeout`` seconds depending on what occurs first), the ``metric`` to
 optimize, define whether the metric should be maximized or minimized using the key ``direction``, define random search
-as HPO algorithm using the key ``sampler``, and finally define that we do not use a pruner for pruning unpromising trials
-(note that we use early stopping instead).
+as HPO algorithm using the key ``sampler``, and finally define that we do not use a pruner for pruning unpromising
+trials (note that we use early stopping instead).
 Now that our configuration is complete, we can start the ablation study using the CLI-function
 :func:`pykeen.experiments.cli.ablation`:
 
@@ -161,19 +161,18 @@ Eager to check out the results? Then navigate to the output directory ``path/to/
 find a directory whose name contains a timestamp and a unique id. Within this directory, you will find subdirectories,
 e.g., ``0000_nations_complex`` which contains all experimental artifacts of one specific ablation experiment of the
 defined ablation study. The most relevant subdirectory is ``best_pipeline`` which comprises the artifacts of the best
-performing experiment, including it's definition in ``pipeline_config.json``,  the obtained results, and the trained
+performing experiment, including its definition in ``pipeline_config.json``,  the obtained results, and the trained
 model(s) in the sub-directory ``replicates``. The number of replicates in ``replicates`` corresponds to the number
-provided with the argument ``-r``.
+provided through the argument ``-r``.
 Additionally, you are provided with further information about the ablation study in the root directory: ``study.json``
-describes the ablation experiment, ``hpo_config.json`` describes the HPO of the ablation experiment, ``trials.tsv``
-provides an overview of each HPO-experiment.
+describes the ablation experiment, ``hpo_config.json`` describes the HPO setting of the ablation experiment,
+``trials.tsv`` provides an overview of each HPO-experiment.
 
 Define Your Own HPO Ranges
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-As mentioned above, we provide default hyper-parameters/hyper-parameter ranges for each
-hyper-parameter.
-However, these default values/ranges don't ensure to optimally solve your problem. Therefore,
+As mentioned above, we provide default hyper-parameters/hyper-parameter ranges for each hyper-parameter.
+However, these default values/ranges don't ensure to obtain good performance. Therefore,
 it is time that you define your own ranges, and we show you how to do it!
 To accomplish this, two dictionaries are essential, ``kwargs`` that is used to assign the hyper-parameters fixed
 values, and ``kwargs_ranges`` to define ranges of values from which to sample from.
@@ -201,12 +200,13 @@ by using the dictionary ``model_to_model_kwargs_ranges``:
         }
     }
 
-We defined an HPO range for the embedding dimension. Since the ``scale`` is ``power_two``, the lower bound (``low``) 4,
-the upper bound ``high`` 6, the embedding dimension is sampled from the set :math:`\{2^4,2^5, 2^6\}`.
+We defined an HPO range for the embedding dimension. Since the ``scale`` is ``power_two``, the lower bound (``low``)
+equals to 4, the upper bound ``high``to 6, the embedding dimension is sampled from the set :math:`\{2^4,2^5, 2^6\}`.
 
 Next, we fix the number of training epochs to 500 using the key ``model_to_trainer_to_training_kwargs`` and define
-a range for the batch size using ``model_to_trainer_to_training_kwargs_ranges`` since these are hyper-parameters of the
-training function:
+a range for the batch size using ``model_to_trainer_to_training_kwargs_ranges``. We use the dictionaries
+``model_to_trainer_to_training_kwargs``  and ``model_to_trainer_to_training_kwargs_ranges`` because the defined
+hyper-parameters are hyper-parameters of the training function:
 
 .. code-block:: javascript
 
@@ -315,7 +315,7 @@ Finally, we define a range for the learning rate which is a hyper-parameter of t
 We decided to use Adam as an optimizer, and we defined a ``log`` ``scale`` for the learning rate, i.e., the learning
 rate is sampled from the interval :math:`[0.001, 0.1)`.
 
-Now that we defined our own hyper-parameter values and ranges, let's have a look at the overall configuration:
+Now that we defined our own hyper-parameter values/ranges, let's have a look at the overall configuration:
 
 .. code-block:: javascript
 
@@ -397,9 +397,9 @@ Now that we defined our own hyper-parameter values and ranges, let's have a look
 
 We are expected to provide the configuration for the keys ``datasets``, ``models``, ``losses``, ``optimizers``, and
 ``training_loops``. For all other components and hype-parameters, PyKEEN will provide default values/ranges.
-However, for achieving optimal performance, we should carefully define the hyper-parameters ourselves, as explained
-above. Note that there many more ranges to configure such hyper-parameters for the loss functions, or the negative
-samplers. Check out the examples provided in `tests/resources/hpo_complex_nations.json`` how to define the
+However, for achieving optimal performance, we should carefully define the hyper-parameter values/ranges ourselves,
+as explained above. Note that there many more ranges to configure such hyper-parameters for the loss functions, or the
+negative samplers. Check out the examples provided in `tests/resources/hpo_complex_nations.json`` how to define the
 ranges for other components.
 
 Run an Ablation Study With Your Own Data
@@ -431,7 +431,7 @@ concrete example. Yes, that's all.
 Run an Ablation Study From Your Code
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-If you want to start an ablation study from you own program, we provide the function
+If you want to start an ablation study from your own program, we provide the function
 :func:`pykeen.ablation.ablation_pipeline` which expects as arguments the entries that we previously defined within a
 configuration file (See above):
 
@@ -498,5 +498,5 @@ configuration file (See above):
 
 
 In this tutorial, we showed how to define an ablation study, how to execute it from the command line interface, and
-finally how to execute an ablation study from your own program. Furthermore, we showed how you can define your ablation
+finally, how to execute an ablation study from your own program. Furthermore, we showed how you can define your ablation
 study using your own data.
