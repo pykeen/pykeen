@@ -234,12 +234,12 @@ def ablation_pipeline_from_config(
     :param config: Dictionary defining the ablation studies.
     :param directory: The directory in which the experimental artifacts will be saved.
     :param dry_run: Defines whether only the configurations for the single experiments should be created without
-     running them.
+        running them.
     :param best_replicates: Defines how often the final model should be re-trained and evaluated based on the best
-     hyper-parameters enabling to measure the variance in performance.
+        hyper-parameters enabling to measure the variance in performance.
     :param save_artifacts: Defines, whether each trained model sampled during HPO should be saved.
     :param move_to_cpu: Defines, whether a replicate of the best model should be moved to CPU.
-     We recommend to set this flag to 'True' to avoid unnecessary GPU usage.
+        We recommend to set this flag to 'True' to avoid unnecessary GPU usage.
     :param discard_replicates: Defines, whether the best model should be discarded after training and evaluation.
     """
     return ablation_pipeline(
@@ -258,9 +258,9 @@ def prepare_ablation_from_path(path: str, directory: str, save_artifacts: bool) 
 
     :param path: Path to configuration file defining the ablation studies.
     :param directory: The directory in which the experimental artifacts (including the ablation configurations)
-     will be saved.
+        will be saved.
     :param save_artifacts: Defines, whether the output directories for the trained models sampled during HPO should be
-     created.
+        created.
     """
     with open(path) as file:
         config = json.load(file)
@@ -276,9 +276,9 @@ def prepare_ablation_from_config(
 
     :param config: Dictionary defining the ablation studies.
     :param directory: The directory in which the experimental artifacts (including the ablation configurations)
-     will be saved.
+        will be saved.
     :param save_artifacts: Defines, whether the output directories for the trained models sampled during HPO should be
-     created.
+        created.
 
     :return: pairs of output directories and HPO config paths inside those directories
     """
