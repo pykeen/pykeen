@@ -178,9 +178,9 @@ purposes. Therefore, we define the arguments required by Optuna by ourselves:
 
 We set the number of HPO iterations for each experiment to 2 using the argument ``n_trials``, set a ``timeout`` of 300
 seconds (the HPO will be terminated after ``n_trials`` or ``timeout`` seconds depending on what occurs first), the
-``metric`` to optimize, define whether the metric should be maximized or minimized using the key ``direction``, define
-random search as HPO algorithm using the key ``sampler``, and finally define that we do not use a pruner for pruning
-unpromising trials (note that we use early stopping instead).
+``metric`` to optimize, define whether the metric should be maximized or minimized using the argument ``direction``,
+define random search as HPO algorithm using the argument ``sampler``, and finally define that we do not use a pruner
+for pruning unpromising trials (note that we use early stopping instead).
 
 To measure the variance in performance, we can additionally define how often we want to re-train and re-evaluate
 the best model of each ablation-experiment using the arguments ``best_replicates``:
@@ -271,7 +271,7 @@ by using the dictionary ``model_to_model_kwargs_ranges``:
 We defined an HPO range for the embedding dimension. Since the ``scale`` is ``power_two``, the lower bound (``low``)
 equals to 4, the upper bound ``high`` to 6, the embedding dimension is sampled from the set :math:`\{2^4,2^5, 2^6\}`.
 
-Next, we fix the number of training epochs to 500 using the key ``model_to_trainer_to_training_kwargs`` and define
+Next, we fix the number of training epochs to 500 using the argument ``model_to_trainer_to_training_kwargs`` and define
 a range for the batch size using ``model_to_trainer_to_training_kwargs_ranges``. We use the dictionaries
 ``model_to_trainer_to_training_kwargs``  and ``model_to_trainer_to_training_kwargs_ranges`` because the defined
 hyper-parameters are hyper-parameters of the training function:
@@ -476,7 +476,7 @@ Now that we defined our own hyper-parameter values/ranges, let's have a look at 
         pruner =  "nop"
     )
 
-We are expected to provide the configuration for the keys ``datasets``, ``models``, ``losses``, ``optimizers``, and
+We are expected to provide the configuration for the arguments ``datasets``, ``models``, ``losses``, ``optimizers``, and
 ``training_loops``. For all other components and hype-parameters, PyKEEN will provide default values/ranges.
 However, for achieving optimal performance, we should carefully define the hyper-parameter values/ranges ourselves,
 as explained above. Note that there many more ranges to configure such hyper-parameters for the loss functions, or the
