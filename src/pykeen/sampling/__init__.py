@@ -22,37 +22,27 @@ Therefore, the additional filter step is often omitted to lower computational co
 into account that a corrupted triple that is *not part* of the knowledge graph can represent a true fact.
 """  # noqa
 
-from typing import Mapping, Set, Type, Union
+from typing import Set, Type
+
+from class_resolver import Resolver, get_subclasses
 
 from .basic_negative_sampler import BasicNegativeSampler
 from .bernoulli_negative_sampler import BernoulliNegativeSampler
 from .negative_sampler import NegativeSampler
-from ..utils import get_cls, get_subclasses, normalize_string
 
 __all__ = [
     'NegativeSampler',
     'BasicNegativeSampler',
     'BernoulliNegativeSampler',
-    'negative_samplers',
-    'get_negative_sampler_cls',
+    # Utils
+    'negative_sampler_resolver',
 ]
 
 _NEGATIVE_SAMPLER_SUFFIX = 'NegativeSampler'
 _NEGATIVE_SAMPLERS: Set[Type[NegativeSampler]] = set(get_subclasses(NegativeSampler))  # type: ignore
-
-#: A mapping of negative samplers' names to their implementations
-negative_samplers: Mapping[str, Type[NegativeSampler]] = {
-    normalize_string(cls.__name__, suffix=_NEGATIVE_SAMPLER_SUFFIX): cls
-    for cls in _NEGATIVE_SAMPLERS
-}
-
-
-def get_negative_sampler_cls(query: Union[None, str, Type[NegativeSampler]]) -> Type[NegativeSampler]:
-    """Get the negative sampler class."""
-    return get_cls(
-        query,
-        base=NegativeSampler,  # type: ignore
-        lookup_dict=negative_samplers,
-        default=BasicNegativeSampler,
-        suffix=_NEGATIVE_SAMPLER_SUFFIX,
-    )
+negative_sampler_resolver = Resolver(
+    _NEGATIVE_SAMPLERS,
+    base=NegativeSampler,  # type: ignore
+    default=BasicNegativeSampler,
+    suffix=_NEGATIVE_SAMPLER_SUFFIX,
+)

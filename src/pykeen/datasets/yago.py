@@ -2,6 +2,8 @@
 
 """YAGO3 datasets."""
 
+from docdata import parse_docdata
+
 from .base import TarFileRemoteDataset
 
 __all__ = [
@@ -9,8 +11,24 @@ __all__ = [
 ]
 
 
+@parse_docdata
 class YAGO310(TarFileRemoteDataset):
-    """The YAGO3-10 dataset is a subset of YAGO3 that only contains entities with at least 10 relations."""
+    """The YAGO3-10 dataset is a subset of YAGO3 that only contains entities with at least 10 relations.
+
+    ---
+    name: YAGO3-10
+    statistics:
+        entities: 123143
+        relations: 37
+        training: 1079040
+        testing: 4982
+        validation: 4978
+        triples: 1089000
+    citation:
+        author: Mahdisoltani
+        year: 2015
+        link: http://service.tsi.telecom-paristech.fr/cgi-bin//valipub_download.cgi?dId=284
+    """
 
     def __init__(self, create_inverse_triples: bool = False, **kwargs):
         """Initialize the YAGO3-10 dataset.
@@ -26,3 +44,7 @@ class YAGO310(TarFileRemoteDataset):
             create_inverse_triples=create_inverse_triples,
             **kwargs,
         )
+
+
+if __name__ == '__main__':
+    YAGO310().summarize()

@@ -36,6 +36,11 @@ class RESCAL(EntityRelationEmbeddingModel):
 
         f(h,r,t) = \textbf{e}_h^{T} \textbf{W}_{r} \textbf{e}_t = \sum_{i=1}^{d}\sum_{j=1}^{d} w_{ij}^{(r)}
         (\textbf{e}_h)_{i} (\textbf{e}_t)_{j}
+    ---
+    citation:
+        author: Nickel
+        year: 2011
+        link: http://www.cip.ifi.lmu.de/~nickel/data/paper-icml2011.pdf
     """
 
     #: The default strategy for optimizing the model's hyper-parameters

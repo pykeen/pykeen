@@ -45,6 +45,12 @@ class NTN(EntityEmbeddingModel):
        - Original Implementation (Matlab): `<https://github.com/khurram18/NeuralTensorNetworks>`_
        - TensorFlow: `<https://github.com/dddoss/tensorflow-socher-ntn>`_
        - Keras: `<https://github.com/dapurv5/keras-neural-tensor-layer (Keras)>`_
+    ---
+    citation:
+        author: Socher
+        year: 2013
+        link: https://dl.acm.org/doi/10.5555/2999611.2999715
+        github: khurram18/NeuralTensorNetworks
     """
 
     #: The default strategy for optimizing the model's hyper-parameters

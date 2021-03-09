@@ -12,8 +12,8 @@ from torch import optim
 from pykeen.datasets import Nations
 from pykeen.losses import CrossEntropyLoss
 from pykeen.models import ConvE, Model, TransE
-from pykeen.optimizers import get_optimizer_cls
-from pykeen.training import SLCWATrainingLoop, get_training_loop_cls
+from pykeen.optimizers import optimizer_resolver
+from pykeen.training import SLCWATrainingLoop, training_loop_resolver
 from pykeen.training.training_loop import NonFiniteLossError, TrainingApproachLossMismatchError
 from pykeen.typing import MappedTriples
 
@@ -156,14 +156,14 @@ class TrainingLoopTests(unittest.TestCase):
 
     def _test_checkpoints(self, training_loop_type: str):
         """Test whether interrupting the given training loop type can be resumed using checkpoints."""
-        training_loop_class = get_training_loop_cls(training_loop_type)
+        training_loop_class = training_loop_resolver.lookup(training_loop_type)
 
         # Train a model in one shot
         model = TransE(
             triples_factory=self.triples_factory,
             random_seed=self.random_seed,
         )
-        optimizer_cls = get_optimizer_cls(None)
+        optimizer_cls = optimizer_resolver.lookup(None)
         optimizer = optimizer_cls(params=model.get_grad_params())
         training_loop = training_loop_class(model=model, optimizer=optimizer, automatic_memory_optimization=False)
         losses = training_loop.train(
@@ -178,7 +178,7 @@ class TrainingLoopTests(unittest.TestCase):
             triples_factory=self.triples_factory,
             random_seed=self.random_seed,
         )
-        optimizer_cls = get_optimizer_cls(None)
+        optimizer_cls = optimizer_resolver.lookup(None)
         optimizer = optimizer_cls(params=model.get_grad_params())
         training_loop = training_loop_class(model=model, optimizer=optimizer, automatic_memory_optimization=False)
         training_loop.train(
@@ -194,7 +194,7 @@ class TrainingLoopTests(unittest.TestCase):
             triples_factory=self.triples_factory,
             random_seed=123,
         )
-        optimizer_cls = get_optimizer_cls(None)
+        optimizer_cls = optimizer_resolver.lookup(None)
         optimizer = optimizer_cls(params=model.get_grad_params())
         training_loop = training_loop_class(model=model, optimizer=optimizer, automatic_memory_optimization=False)
         losses_2 = training_loop.train(

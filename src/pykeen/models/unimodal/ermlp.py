@@ -37,6 +37,11 @@ class ERMLP(EntityRelationEmbeddingModel):
     where $\textbf{W} \in \mathbb{R}^{k \times 3d}$ represents the weight matrix of the hidden layer,
     $\textbf{w} \in \mathbb{R}^{k}$, the weights of the output layer, and $g$ denotes an activation function such
     as the hyperbolic tangent.
+    ---
+    citation:
+        author: Dong
+        year: 2014
+        link: https://dl.acm.org/citation.cfm?id=2623623
     """
 
     #: The default strategy for optimizing the model's hyper-parameters

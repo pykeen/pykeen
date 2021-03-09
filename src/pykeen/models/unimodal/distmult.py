@@ -50,6 +50,11 @@ class DistMult(EntityRelationEmbeddingModel):
     .. seealso::
 
        - OpenKE `implementation of DistMult <https://github.com/thunlp/OpenKE/blob/master/models/DistMult.py>`_
+    ---
+    citation:
+        author: Yang
+        year: 2014
+        link: https://arxiv.org/abs/1412.6575
     """
 
     #: The default strategy for optimizing the model's hyper-parameters

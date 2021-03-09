@@ -6,10 +6,14 @@ entities and relations. In general, a larger score indicates a higher plausibili
 score value is model-dependent, and usually it cannot be directly interpreted as a probability.
 """  # noqa: D205, D400
 
-from typing import Mapping, Set, Type, Union
+from typing import Set, Type
+
+from class_resolver import Resolver, get_subclasses
 
 from .base import EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, MultimodalModel, _OldAbstractModel
 from .multimodal import ComplExLiteral, DistMultLiteral
+from .nbase import ERModel, _NewAbstractModel
+from .resolve import make_model, make_model_cls
 from .unimodal import (
     ComplEx,
     ConvE,
@@ -19,7 +23,9 @@ from .unimodal import (
     ERMLPE,
     HolE,
     KG2E,
+    MuRE,
     NTN,
+    PairRE,
     ProjE,
     RESCAL,
     RGCN,
@@ -33,7 +39,6 @@ from .unimodal import (
     TuckER,
     UnstructuredModel,
 )
-from ..utils import get_cls, get_subclasses, normalize_string
 
 __all__ = [
     # Base Models
@@ -41,6 +46,8 @@ __all__ = [
     '_OldAbstractModel',
     'EntityEmbeddingModel',
     'EntityRelationEmbeddingModel',
+    '_NewAbstractModel',
+    'ERModel',
     'MultimodalModel',
     # Concrete Models
     'ComplEx',
@@ -53,7 +60,9 @@ __all__ = [
     'ERMLPE',
     'HolE',
     'KG2E',
+    'MuRE',
     'NTN',
+    'PairRE',
     'ProjE',
     'RESCAL',
     'RGCN',
@@ -66,8 +75,10 @@ __all__ = [
     'TransR',
     'TuckER',
     'UnstructuredModel',
-    'models',
-    'get_model_cls',
+    # Utils
+    'model_resolver',
+    'make_model',
+    'make_model_cls',
 ]
 
 _MODELS: Set[Type[Model]] = {
@@ -75,22 +86,4 @@ _MODELS: Set[Type[Model]] = {
     for subcls in get_subclasses(Model)  # type: ignore
     if not subcls._is_base_model
 }
-
-#: A mapping of models' names to their implementations
-models: Mapping[str, Type[Model]] = {
-    normalize_string(cls.__name__): cls
-    for cls in _MODELS
-}
-
-
-def get_model_cls(query: Union[str, Type[Model]]) -> Type[Model]:
-    """Look up a model class by name (case/punctuation insensitive) in :data:`pykeen.models.models`.
-
-    :param query: The name of the model (case insensitive, punctuation insensitive).
-    :return: The model class
-    """
-    return get_cls(
-        query,
-        base=Model,  # type: ignore
-        lookup_dict=models,
-    )
+model_resolver = Resolver(classes=_MODELS, base=Model)  # type: ignore

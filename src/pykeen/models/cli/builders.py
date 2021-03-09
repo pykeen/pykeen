@@ -62,7 +62,7 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
 
             else:
                 parameter = signature.parameters[name]
-                if annotation in {Hint[Initializer], Hint[Constrainer], Hint[Normalizer]}:
+                if annotation in {Hint[Initializer], Hint[Constrainer], Hint[Normalizer]}:  # type: ignore
                     logger.debug('Unhandled hint: %s', annotation)
                     continue
                 if parameter.default is None:
@@ -82,7 +82,7 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
 
         return command
 
-    @click.command(help=f'CLI for {model.__name__}', name=model.__name__.lower())
+    @click.command(help=f'CLI for {model.__name__}', name=model.__name__.lower())  # type: ignore
     @options.device_option
     @options.dataset_option
     @options.training_option
@@ -134,6 +134,8 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
         )
         from ...pipeline import pipeline
 
+        result_tracker: Optional[str]
+        result_tracker_kwargs: Optional[Mapping[str, Any]]
         if mlflow_tracking_uri:
             result_tracker = 'mlflow'
             result_tracker_kwargs = {

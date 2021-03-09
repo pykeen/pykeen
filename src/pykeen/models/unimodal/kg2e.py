@@ -50,6 +50,11 @@ class KG2E(EntityRelationEmbeddingModel):
 
     .. math::
             f(h,r,t) = \mathcal{D_{EL}}(\mathcal{P}_e, \mathcal{P}_r)
+    ---
+    citation:
+        author: He
+        year: 2015
+        link: https://dl.acm.org/doi/10.1145/2806416.2806502
     """
 
     #: The default strategy for optimizing the model's hyper-parameters

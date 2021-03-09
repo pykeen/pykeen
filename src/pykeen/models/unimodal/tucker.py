@@ -63,6 +63,12 @@ class TuckER(EntityRelationEmbeddingModel):
 
        - Official implementation: https://github.com/ibalazevic/TuckER
        - pykg2vec implementation of TuckEr https://github.com/Sujit-O/pykg2vec/blob/master/pykg2vec/core/TuckER.py
+    ---
+    citation:
+        author: Balažević
+        year: 2019
+        link: https://arxiv.org/abs/1901.09590
+        github: ibalazevic/TuckER
     """
 
     #: The default strategy for optimizing the model's hyper-parameters

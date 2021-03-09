@@ -1,7 +1,6 @@
-Trackers
-========
+Tracking Results during Training
+================================
 .. toctree::
-   :caption: Trackers
    :name: trackers
 
    using_mlflow

@@ -99,6 +99,11 @@ class TransD(EntityRelationEmbeddingModel):
     .. seealso::
 
        - OpenKE `implementation of TransD <https://github.com/thunlp/OpenKE/blob/master/models/TransD.py>`_
+    ---
+    citation:
+        author: Ji
+        year: 2015
+        link: http://www.aclweb.org/anthology/P15-1067
     """
 
     #: The default strategy for optimizing the model's hyper-parameters

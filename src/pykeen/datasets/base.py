@@ -12,16 +12,20 @@ import tarfile
 import zipfile
 from abc import abstractmethod
 from io import BytesIO
-from typing import Any, Dict, List, Mapping, Optional, TextIO, Tuple, Union, cast
+from typing import Any, ClassVar, Dict, List, Mapping, Optional, Sequence, TextIO, Tuple, Union, cast
 from urllib.request import urlretrieve
 
+import click
 import pandas as pd
 import requests
+from more_click import verbose_option
 from pystow.utils import name_from_url
 from tabulate import tabulate
 
 from ..constants import PYKEEN_DATASETS
 from ..triples import TriplesFactory
+from ..triples.deteriorate import deteriorate
+from ..triples.remix import remix
 from ..triples.triples_factory import splits_similarity
 from ..typing import TorchRandomHint
 from ..utils import normalize_string
@@ -140,9 +144,37 @@ class Dataset:
         return EagerDataset(training=training, testing=testing, validation=validation)
 
     @classmethod
+    def cli(cls) -> None:
+        """Run the CLI."""
+
+        @click.command(help=f'{cls.__name__} Dataset CLI.')
+        @verbose_option
+        def main():
+            """Run the dataset CLI."""
+            click.echo(cls().summary_str())
+
+        main()
+
+    @classmethod
     def get_normalized_name(cls) -> str:
         """Get the normalized name of the dataset."""
         return normalize_string(cls.__name__)
+
+    def remix(self, random_state: TorchRandomHint = None, **kwargs) -> Dataset:
+        """Remix a dataset using :func:`pykeen.triples.remix.remix`."""
+        return EagerDataset(*remix(
+            *self._tup(),
+            random_state=random_state,
+            **kwargs,
+        ))
+
+    def deteriorate(self, n: Union[int, float], random_state: TorchRandomHint = None) -> Dataset:
+        """Deteriorate n triples from the dataset's training with :func:`pykeen.triples.deteriorate.deteriorate`."""
+        return EagerDataset(*deteriorate(
+            *self._tup(),
+            n=n,
+            random_state=random_state,
+        ))
 
     def similarity(self, other: Dataset, metric: Optional[str] = None) -> float:
         """Compute the similarity between two shuffles of the same dataset.
@@ -677,7 +709,7 @@ class TarFileSingleDataset(LazyDataset):
 class TabbedDataset(LazyDataset):
     """This class is for when you've got a single TSV of edges and want them to get auto-split."""
 
-    ratios = (0.8, 0.1, 0.1)
+    ratios: ClassVar[Sequence[float]] = (0.8, 0.1, 0.1)
     _triples_factory: Optional[TriplesFactory]
 
     def __init__(
@@ -737,8 +769,11 @@ class TabbedDataset(LazyDataset):
 class SingleTabbedDataset(TabbedDataset):
     """This class is for when you've got a single TSV of edges and want them to get auto-split."""
 
-    ratios = (0.8, 0.1, 0.1)
+    ratios: ClassVar[Sequence[float]] = (0.8, 0.1, 0.1)
     _triples_factory: Optional[TriplesFactory]
+
+    #: URL to the data to download
+    url: str
 
     def __init__(
         self,

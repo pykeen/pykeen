@@ -8,7 +8,7 @@ import functools
 import warnings
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Callable, Mapping, Optional, Sequence, Tuple, TypeVar, Union, cast
+from typing import Any, Callable, Mapping, Optional, Sequence, TYPE_CHECKING, Tuple, TypeVar, Union, cast
 
 import numpy as np
 import torch
@@ -18,9 +18,11 @@ from torch.nn import functional
 
 from .init import init_phases, xavier_normal_, xavier_normal_norm_, xavier_uniform_, xavier_uniform_norm_
 from .norm import complex_normalize
-from ..regularizers import Regularizer
 from ..typing import Constrainer, Hint, Initializer, Normalizer
-from ..utils import clamp_norm
+from ..utils import clamp_norm, convert_to_canonical_shape
+
+if TYPE_CHECKING:
+    from ..regularizers import Regularizer
 
 __all__ = [
     'RepresentationModule',
@@ -118,6 +120,59 @@ class RepresentationModule(nn.Module, ABC):
             x = x.unsqueeze(dim=1)
         return x
 
+    def get_in_more_canonical_shape(
+        self,
+        dim: Union[int, str],
+        indices: Optional[torch.LongTensor] = None,
+    ) -> torch.FloatTensor:
+        """Get representations in canonical shape.
+
+        The canonical shape is given as
+
+        (batch_size, d_1, d_2, d_3, ``*``)
+
+        fulfilling the following properties:
+
+        Let i = dim. If indices is None, the return shape is (1, d_1, d_2, d_3) with d_i = num_representations,
+        d_i = 1 else. If indices is not None, then batch_size = indices.shape[0], and d_i = 1 if
+        indices.ndimension() = 1 else d_i = indices.shape[1]
+
+        The canonical shape is given by (batch_size, 1, ``*``) if indices is not None, where batch_size=len(indices),
+        or (1, num, ``*``) if indices is None with num equal to the total number of embeddings.
+
+        Examples:
+        >>> emb = EmbeddingSpecification(shape=(20,)).make(num_embeddings=10)
+        >>> # Get head representations for given batch indices
+        >>> emb.get_in_more_canonical_shape(dim="h", indices=torch.arange(5)).shape
+        (5, 1, 1, 1, 20)
+        >>> # Get head representations for given 2D batch indices, as e.g. used by fast slcwa scoring
+        >>> emb.get_in_more_canonical_shape(dim="h", indices=torch.arange(6).view(2, 3)).shape
+        (2, 3, 1, 1, 20)
+        >>> # Get head representations for 1:n scoring
+        >>> emb.get_in_more_canonical_shape(dim="h", indices=None).shape
+        (1, 10, 1, 1, 20)
+
+        :param dim:
+            The dimension along which to expand for ``indices=None``, or ``indices.ndimension() == 2``.
+        :param indices:
+            The indices. Either None, in which care all embeddings are returned, or a 1 or 2 dimensional index tensor.
+
+        :return: shape: (batch_size, d1, d2, d3, ``*self.shape``)
+        """
+        r_shape: Tuple[int, ...]
+        if indices is None:
+            x = self(indices=indices)
+            r_shape = (1, self.max_id)
+        else:
+            flat_indices = indices.view(-1)
+            x = self(indices=flat_indices)
+            if indices.ndimension() > 1:
+                x = x.view(*indices.shape, -1)
+            r_shape = tuple(indices.shape)
+            if len(r_shape) < 2:
+                r_shape = r_shape + (1,)
+        return convert_to_canonical_shape(x=x, dim=dim, num=r_shape[1], batch_size=r_shape[0], suffix_shape=self.shape)
+
     @property
     def embedding_dim(self) -> int:
         """Return the "embedding dimension". Kept for backward compatibility."""
@@ -135,7 +190,7 @@ class Embedding(RepresentationModule):
 
     normalizer: Optional[Normalizer]
     constrainer: Optional[Constrainer]
-    regularizer: Optional[Regularizer]
+    regularizer: Optional['Regularizer']
 
     def __init__(
         self,
@@ -148,7 +203,7 @@ class Embedding(RepresentationModule):
         normalizer_kwargs: Optional[Mapping[str, Any]] = None,
         constrainer: Hint[Constrainer] = None,
         constrainer_kwargs: Optional[Mapping[str, Any]] = None,
-        regularizer: Optional[Regularizer] = None,
+        regularizer: Optional['Regularizer'] = None,
         trainable: bool = True,
         dtype: Optional[torch.dtype] = None,
     ):
@@ -301,7 +356,7 @@ class EmbeddingSpecification:
     constrainer: Hint[Constrainer] = None
     constrainer_kwargs: Optional[Mapping[str, Any]] = None
 
-    regularizer: Optional[Regularizer] = None
+    regularizer: Optional['Regularizer'] = None
 
     dtype: Optional[torch.dtype] = None
 

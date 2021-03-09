@@ -15,6 +15,7 @@ from unittest.mock import patch
 
 import pytest
 import torch
+from class_resolver import get_subclasses
 from click.testing import CliRunner, Result
 from torch import optim
 from torch.nn import functional
@@ -35,7 +36,7 @@ from pykeen.trackers import ResultTracker
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
 from pykeen.triples import TriplesFactory
 from pykeen.typing import HeadRepresentation, MappedTriples, RelationRepresentation, TailRepresentation
-from pykeen.utils import all_in_bounds, get_subclasses, resolve_device, set_random_seed, unpack_singletons
+from pykeen.utils import all_in_bounds, resolve_device, set_random_seed, unpack_singletons
 from tests.constants import EPSILON
 from tests.mocks import CustomRepresentations
 from tests.utils import rand
@@ -753,7 +754,7 @@ class ModelTestCase(unittest.TestCase):
         dataset = Nations(create_inverse_triples=self.create_inverse_triples)
         self.factory = dataset.training
         self.model = self.model_cls(
-            self.factory,
+            triples_factory=self.factory,
             embedding_dim=self.embedding_dim,
             **(self.model_kwargs or {}),
         ).to_device_()
@@ -907,14 +908,14 @@ class ModelTestCase(unittest.TestCase):
     def test_save_load_model_state(self):
         """Test whether a saved model state can be re-loaded."""
         original_model = self.model_cls(
-            self.factory,
+            triples_factory=self.factory,
             embedding_dim=self.embedding_dim,
             random_seed=42,
             **(self.model_kwargs or {}),
         ).to_device_()
 
         loaded_model = self.model_cls(
-            self.factory,
+            triples_factory=self.factory,
             embedding_dim=self.embedding_dim,
             random_seed=21,
             **(self.model_kwargs or {}),
@@ -1023,6 +1024,9 @@ Traceback
 
     def test_post_parameter_update_regularizer(self):
         """Test whether post_parameter_update resets the regularization term."""
+        if not hasattr(self.model, 'regularizer'):
+            self.skipTest('no regularizer')
+
         # set regularizer term to something that isn't zero
         self.model.regularizer.regularization_term = torch.ones(1, dtype=torch.float, device=self.model.device)
 
@@ -1244,10 +1248,27 @@ class RepresentationTestCase(GenericTestCase[RepresentationModule]):
             raise AssertionError(indices.shape)
         self._check_result(x=x, prefix_shape=prefix_shape)
 
+    def _test_more_canonical_shape(self, indices: Optional[torch.LongTensor]):
+        """Test more canonical shape."""
+        for i, dim in enumerate(("h", "r", "t"), start=1):
+            x = self.instance.get_in_more_canonical_shape(dim=dim, indices=indices)
+            prefix_shape = [1, 1, 1, 1]
+            if indices is None:
+                prefix_shape[i] = self.instance.max_id
+            elif indices.ndimension() == 1:
+                prefix_shape[0] = indices.shape[0]
+            elif indices.ndimension() == 2:
+                prefix_shape[0] = indices.shape[0]
+                prefix_shape[i] = indices.shape[1]
+            else:
+                raise AssertionError(indices.shape)
+            self._check_result(x=x, prefix_shape=tuple(prefix_shape))
+
     def _test_indices(self, indices: Optional[torch.LongTensor]):
         """Test forward and canonical shape for indices."""
         self._test_forward(indices=indices)
         self._test_canonical_shape(indices=indices)
+        self._test_more_canonical_shape(indices=indices)
 
     def test_no_indices(self):
         """Test without indices."""

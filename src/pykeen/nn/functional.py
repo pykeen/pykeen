@@ -16,11 +16,11 @@ from typing import Optional, Tuple, Union
 
 import numpy
 import torch
-import torch.fft
 from torch import nn
 
 from .compute_kernel import _complex_native_complex
 from .sim import KG2E_SIMILARITIES
+from ..moves import irfft, rfft
 from ..typing import GaussianDistribution
 from ..utils import (
     broadcast_cat, clamp_norm, estimate_cost_of_sequence, extended_einsum, is_cudnn_error, negative_norm,
@@ -36,7 +36,9 @@ __all__ = [
     'ermlpe_interaction',
     'hole_interaction',
     'kg2e_interaction',
+    'mure_interaction',
     'ntn_interaction',
+    'pair_re_interaction',
     'proje_interaction',
     'rescal_interaction',
     'rotate_interaction',
@@ -412,8 +414,8 @@ def hole_interaction(
         The scores.
     """
     # Circular correlation of entity embeddings
-    a_fft = torch.fft.rfft(h, dim=-1)
-    b_fft = torch.fft.rfft(t, dim=-1)
+    a_fft = rfft(h, dim=-1)
+    b_fft = rfft(t, dim=-1)
 
     # complex conjugate
     a_fft = torch.conj(a_fft)
@@ -422,7 +424,7 @@ def hole_interaction(
     p_fft = a_fft * b_fft
 
     # inverse real FFT, shape: (b, h, 1, t, d)
-    composite = torch.fft.irfft(p_fft, n=h.shape[-1], dim=-1)
+    composite = irfft(p_fft, n=h.shape[-1], dim=-1)
 
     # transpose composite: (b, h, 1, d, t)
     composite = composite.transpose(-2, -1)
@@ -908,6 +910,50 @@ def tucker_interaction(
     )
 
 
+def mure_interaction(
+    h: torch.FloatTensor,
+    b_h: torch.FloatTensor,
+    r_vec: torch.FloatTensor,
+    r_mat: torch.FloatTensor,
+    t: torch.FloatTensor,
+    b_t: torch.FloatTensor,
+    p: Union[int, float, str] = 2,
+    power_norm: bool = False,
+) -> torch.FloatTensor:
+    r"""Evaluate the MuRE interaction function from [balazevic2019b]_.
+
+    .. math ::
+        -\|Rh + r - t\| + b_h + b_t
+
+    :param h: shape: (batch_size, num_heads, 1, 1, dim)
+        The head representations.
+    :param b_h: shape: (batch_size, num_heads, 1, 1)
+        The head entity bias.
+    :param r_vec: shape: (batch_size, 1, num_relations, 1, dim)
+        The relation vector.
+    :param r_mat: shape: (batch_size, 1, num_relations, 1, dim, dim)
+        The relation matrix.
+    :param t: shape: (batch_size, 1, 1, num_tails, dim)
+        The tail representations.
+    :param b_t: shape: (batch_size, 1, 1, num_tails)
+        The tail entity bias.
+    :param p:
+        The parameter p for selecting the norm, cf. torch.norm.
+    :param power_norm:
+        Whether to return the powered norm instead.
+
+    :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        The scores.
+    """
+    return negative_norm_of_sum(
+        h @ r_mat.squeeze(dim=-3),
+        r_vec,
+        -t,
+        p=p,
+        power_norm=power_norm,
+    ) + b_h + b_t
+
+
 def unstructured_model_interaction(
     h: torch.FloatTensor,
     t: torch.FloatTensor,
@@ -929,3 +975,40 @@ def unstructured_model_interaction(
         The scores.
     """
     return negative_norm(h - t, p=p, power_norm=power_norm)
+
+
+def pair_re_interaction(
+    h: torch.FloatTensor,
+    t: torch.FloatTensor,
+    r_h: torch.FloatTensor,
+    r_t: torch.FloatTensor,
+    p: Union[int, str] = 2,
+    power_norm: bool = True,
+) -> torch.FloatTensor:
+    r"""Evaluate the PairRE interaction function.
+
+    .. math ::
+        -\|h \odot r_h - t \odot r_t \|
+
+    :param h: shape: (batch_size, num_heads, 1, 1, dim)
+        The head representations.
+    :param t: shape: (batch_size, 1, 1, num_tails, dim)
+        The tail representations.
+    :param r_h: shape: (batch_size, 1, num_relations, 1, dim)
+        The head part of the relation representations.
+    :param r_t: shape: (batch_size, 1, num_relations, 1, dim)
+        The tail part of the relation representations.
+    :param p:
+        The parameter p for selecting the norm.
+    :param power_norm:
+        Whether to return the powered norm instead.
+
+    :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        The scores.
+    """
+    return negative_norm_of_sum(
+        h * r_h,
+        -t * r_t,
+        p=p,
+        power_norm=power_norm,
+    )

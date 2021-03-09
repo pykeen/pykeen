@@ -13,6 +13,7 @@ from typing import Any, ClassVar, Iterable, Mapping, Optional, Type, Union
 
 import pandas as pd
 import torch
+from docdata import parse_docdata
 from torch import nn
 
 from ..losses import Loss, MarginRankingLoss
@@ -120,6 +121,7 @@ class Model(nn.Module, ABC):
         cls._is_base_model = not autoreset
         if not cls._is_base_model:
             _add_post_reset_parameters(cls)
+            parse_docdata(cls)
 
     """Properties"""
 
@@ -169,6 +171,9 @@ class Model(nn.Module, ABC):
     def _reset_parameters_(self):  # noqa: D401
         """Reset all parameters of the model in-place."""
         raise NotImplementedError
+
+    def post_parameter_update(self) -> None:
+        """Has to be called after each parameter update."""
 
     """Abstract methods - Scoring"""
 
