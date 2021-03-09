@@ -82,7 +82,8 @@
     ],
     "evaluator": "RankBasedEvaluator",
     "evaluator_kwargs": {
-      "filtered": true
+      "filtered": true,
+      "automatic_memory_optimization": true
     },
     "evaluation_kwargs": {
       "batch_size": null
