@@ -77,40 +77,40 @@ def ablation_pipeline(
     :param create_inverse_triples: Either a boolean for a single entry or a list of booleans.
     :param regularizers: A regularizer name, list of regularizer names, or None if no regularizer is desired.
     :param negative_sampler: A negative sampler name, list of regularizer names, or None if no negative sampler
-    is desired. Negative sampling is used only in combination with the pykeen.training.sclwa training loop.
+        is desired. Negative sampling is used only in combination with the pykeen.training.sclwa training loop.
     :param evaluator: The name of the evaluator to be used. Defaults to rank-based evaluator.
     :param stopper: The name of the stopper to be used. Defaults to NopStopper which doesn't define a
-    stopping criterion.
+        stopping criterion.
     :param model_to_model_kwargs: A mapping from model name to dictionaries of default keyword arguments for
-    the instantiation of that model.
+        the instantiation of that model.
     :param model_to_model_kwargs_ranges: A mapping from model name to dictionaries of keyword argument
-    ranges for that model to be used in HPO.
+        ranges for that model to be used in HPO.
     :param model_to_loss_to_loss_kwargs: A mapping from model name to a mapping of loss name to a mapping
-    of default keyword arguments for the instantiation of that loss function. This is useful because for some losses,
-    have hyper-parameters such as pykeen.losses.MarginRankingLoss
+        of default keyword arguments for the instantiation of that loss function. This is useful because for some
+        losses, have hyper-parameters such as pykeen.losses.MarginRankingLoss
     :param model_to_loss_to_loss_kwargs_ranges: A mapping from model name to a mapping of loss name
-    to a mapping of keyword argument ranges for that loss to be used in HPO.
+        to a mapping of keyword argument ranges for that loss to be used in HPO.
     :param model_to_optimizer_to_optimizer_kwargs: A mapping from model name to a mapping of optimizer name to a mapping
-    of default keyword arguments for the instantiation of that optimizer. This is useful because the optimizers,
-    have hyper-parameters such as the learning rate.
+        of default keyword arguments for the instantiation of that optimizer. This is useful because the optimizers,
+        have hyper-parameters such as the learning rate.
     :param model_to_optimizer_to_optimizer_kwargs_ranges: A mapping from model name to a mapping of optimizer name
-    to a mapping of keyword argument ranges for that optimizer to be used in HPO.
+        to a mapping of keyword argument ranges for that optimizer to be used in HPO.
     :param model_to_regularizer_to_regularizer_kwargs: A mapping from model name to a mapping of regularizer name to a
-    mapping of default keyword arguments for the instantiation of that regularizer. This is useful because the
-    optimizers, have hyper-parameters such as the regularization weight.
+        mapping of default keyword arguments for the instantiation of that regularizer. This is useful because the
+        optimizers, have hyper-parameters such as the regularization weight.
     :param model_to_regularizer_to_regularizer_kwargs_ranges: A mapping from model name to a mapping of regularizer name
-    to a mapping of keyword argument ranges for that regularizer to be used in HPO.
+        to a mapping of keyword argument ranges for that regularizer to be used in HPO.
     :param model_to_negative_sampler_to_negative_sampler_kwargs: A mapping from model name to a mapping of
-    negative sampler name to a mapping of default keyword arguments for the instantiation of that negative sampler.
-    This is useful because the negative samplers, have hyper-parameters such as the number of negatives that should
-    get generated for each positive training example.
+        negative sampler name to a mapping of default keyword arguments for the instantiation of that negative sampler.
+        This is useful because the negative samplers, have hyper-parameters such as the number of negatives that should
+        get generated for each positive training example.
     :param model_to_negative_sampler_to_negative_sampler_kwargs_ranges: A mapping from model name to a mapping of
-    negative sampler name to a mapping of keyword argument ranges for that negative sampler to be used in HPO.
+        negative sampler name to a mapping of keyword argument ranges for that negative sampler to be used in HPO.
     :param model_to_trainer_to_training_kwargs: A mapping from model name to a mapping of trainer name to a mapping
-    of default keyword arguments for the training procedure. This is useful because you can set the hyper-parameters
-    such as the number of training epochs and the batch size.
+        of default keyword arguments for the training procedure. This is useful because you can set the hyper-parameters
+        such as the number of training epochs and the batch size.
     :param model_to_trainer_to_training_kwargs_ranges:  A mapping from model name to a mapping of
-    trainer name to a mapping of keyword argument ranges for that trainer to be used in HPO.
+        trainer name to a mapping of keyword argument ranges for that trainer to be used in HPO.
     :param evaluator_kwargs: The keyword arguments passed to the evaluator.
     :param evaluation_kwargs: The keyword arguments passed during evaluation.
     :param stopper_kwargs: The keyword arguments passed to the stopper.
@@ -120,15 +120,15 @@ def ablation_pipeline(
     :param direction: Defines, whether to 'maximize' or 'minimize' the metric during HPO.
     :param sampler: The HPO sampler, it defaults to random search.
     :param pruner: Defines approach for pruning trials. Per default no pruning is used, i.e., pruner is
-    set to 'Nopruner'.
+        set to 'Nopruner'.
     :param metadata: A mapping of meta data arguments such as name of the ablation study.
     :param directory: The directory in which the experimental artifacts will be saved.
     :param save_artifacts: Defines, whether each trained model sampled during HPO should be saved.
     :param move_to_cpu: Defines, whether a replicate of the best model should be moved to CPU.
     :param dry_run: Defines whether only the configurations for the single experiments should be created without
-    running them.
+        running them.
     :param best_replicates: Defines how often the final model should be re-trained and evaluated based on the best
-    hyper-parameters enabling to measure the variance in performance.
+        hyper-parameters enabling to measure the variance in performance.
     :param discard_replicates: Defines, whether the best model should be discarded after training and evaluation.
     :return:
     """
