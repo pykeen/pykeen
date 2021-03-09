@@ -816,8 +816,6 @@ def _set_study_dataset(
         dataset_name = get_dataset(dataset=dataset).get_normalized_name()
         study.set_user_attr('dataset', dataset_name)
     else:
-        if dataset is not None:
-            raise ValueError("Cannot specify dataset and training, testing and validation")
         if isinstance(training, str):
             study.set_user_attr('training', training)
         if isinstance(testing, str):
