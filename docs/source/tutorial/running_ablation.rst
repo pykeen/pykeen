@@ -13,149 +13,219 @@ This is accomplished by a process called hyper-parameter optimization. Different
 which random search and grid search are very popular.
 
 
-In PyKEEN, we can define an ablation study in a configuration file (``file_name.json``) or within our own program.
+In PyKEEN, we can define an ablation study within our own program or in a configuration file (``file_name.json``).
 
-First, we show how to define an ablation study within a configuration file. In the following example, we define an
-ablation study for ComplEx over the Nations dataset, and name the file ``complex_nation.json``.
-In particular, we want to asses the effect of different loss functions, i.e., the binary cross entropy loss
-and the margin ranking loss, and the effect of explicitly modeling inverse relations.
+First, we show how to run an ablation study within your program. For this purpose, we provide the function
+:func:`pykeen.ablation.ablation_pipeline` that requires at least following arguments: ``datasets``, ``models``,
+``losses``, ``optimizers``, ``training_loops``, and ``directory`` to define the datasets, models, loss functions,
+optimizers (e.g., Adam), training approaches for our ablation study, and the output directory in which the experimental
+artifacts are saved. In the following, we define an ablation study for ComplEx over the Nations dataset in order to
+assess the effect of different loss functions (in our example, the binary cross entropy loss and the margin ranking
+loss) and the effect of explicitly modeling inverse relations.
 
-We start by adding metadata to our configuration file. This is helpful for a later retrospection.
+Before we define the actual ablation study, we will define ``metadata`` about our study, which is helpful for a later
+retrospection.
 
-.. code-block:: javascript
+.. code-block:: python
 
-    {
-        "metadata": {
-            "title": "Ablation Study Over Nations for ComplEx."
-        }
-    }
+    metadata = dict(title= "Ablation Study Over Nations for ComplEx.")
 
-Now, we start with the actual definition of the ablation study, and define the minimal requirements, i.e.,
-the dataset(s), interaction model(s), the loss function(s), training approach(es), and the optimizer(s):
+Now, let's start with the minimal requirements, i.e., the dataset(s), interaction model(s), the loss function(s),
+training approach(es), and the optimizer(s) for our ablation stud:
 
-.. code-block:: javascript
+.. code-block:: python
 
-    {
-        "metadata": {
-            "title": "Ablation Study Over Nations for ComplEx."
-        },
-        "ablation": {
-            "datasets": ["nations"],
-            "models":   ["ComplEx"],
-            "losses": ["BCEAfterSigmoidLoss", "CrossEntropyLoss"]
-            "training_loops": ["lcwa"],
-            "optimizers": ["adam"],
-        }
-    }
+    metadata = dict(title = "Ablation Study Over Nations for ComplEx.")
+    output_dir = "/path/to/output/dir"
 
-However, we also want to measure the influence of explicitly modeling inverse relations. Therefore,
-we extend the ablation study accordingly:
+    # Define ablation study
+    models = ['ComplEx]
+    datasets = ['Nations']
+    losses = ["BCEAfterSigmoidLoss", "MarginRankingLoss"]
+    training_loops = ["lcwa"]
+    optimizers = ["adam"]
 
-.. code-block:: javascript
+    # Run ablation experiment
+    ablation_pipeline(
+        metadata=metadata, #Optional
+        models=models,
+        datasets=datasets,
+        losses=losses,
+        training_loops=training_loops,
+        optimizers=optimizers,
+        directory=output_dir,
+    )
 
-    {
-        "metadata": {
-            "title": "Ablation Study Over Nations for ComplEx."
-        },
-        "ablation": {
-            "datasets": ["nations"],
-            "models":   ["ComplEx"],
-            "losses": ["BCEAfterSigmoidLoss", "CrossEntropyLoss"]
-            "training_loops": ["lcwa"],
-            "optimizers": ["adam"],
-            "create_inverse_triples": [true,false]
-        }
-    }
+
+As mentioned above, we also want to measure the effect of explicitly modeling inverse relations on the model's
+performance. Therefore, we extend the ablation study accordingly:
+
+.. code-block:: python
+
+    metadata = dict(title= "Ablation Study Over Nations for ComplEx.")
+    output_dir = "/path/to/output/dir"
+
+    models = ['ComplEx]
+    datasets = ['Nations']
+    losses = ["BCEAfterSigmoidLoss"]
+    training_loops = ["lcwa"]
+    optimizers = ["adam"]
+    create_inverse_triples = [True, False]
+
+    # Run ablation experiment
+    ablation_pipeline(
+        metadata=metadata, #Optional
+        models=models,
+        datasets=datasets,
+        losses=losses,
+        training_loops=training_loops,
+        optimizers=optimizers,
+        create_inverse_triples=create_inverse_triples,
+        directory=output_dir,
+    )
 
 For each of the components of a knowledge graph embedding model (KGEM) that requires hyper-parameters, i.e.,
 interaction model, loss function and the training approach, we provide default hyper-parameter optimization (HPO)
 ranges within PyKEEN. Therefore, the definition of our ablation study would be complete at this stage. Because,
 hyper-parameter ranges are dataset dependent, users can/should define their own HPO ranges. We will show later how to
 accomplish this.
-To finalize the ablation study, we recommend to define early stopping for you ablation study which is be done as
+To finalize the ablation study, we recommend to define early stopping for your ablation study which is done as
 follows:
 
-.. code-block:: javascript
+.. code-block:: python
 
-    {
-        "metadata": {
-            "title": "Ablation Study Over Nations for ComplEx."
-        },
-        "ablation": {
-            "datasets": ["nations"],
-            "models":   ["ComplEx"],
-            "losses": ["BCEAfterSigmoidLoss", "CrossEntropyLoss"]
-            "training_loops": ["lcwa"],
-            "optimizers": ["adam"],
-            "create_inverse_triples": [true,false],
-            "stopper": "early",
-            "stopper_kwargs": {
-                "frequency": 5,
-                "patience": 20,
-                "relative_delta": 0.002,
-                "metric": "hits@10"
-            }
-        }
+    metadata = dict(title= "Ablation Study Over Nations for ComplEx.")
+    output_dir = "/path/to/output/dir"
+
+    models = ['ComplEx]
+    datasets = ['Nations']
+    losses = ["BCEAfterSigmoidLoss"]
+    training_loops = ["lcwa"]
+    optimizers = ["adam"]
+    create_inverse_triples= [true,false]
+    stopper = "early",
+    stopper_kwargs = {
+        "frequency": 5,
+        "patience": 20,
+        "relative_delta": 0.002,
+        "metric": "hits@10",
     }
 
-We define the early stopper using the key ``stopper``, and through ``stopper_kwargs``, we provide arguments to the
+    # Run ablation experiment
+    ablation_pipeline(
+        metadata=metadata, #Optional
+        models=models,
+        datasets=datasets,
+        losses=losses,
+        training_loops=training_loops,
+        optimizers=optimizers,
+        create_inverse_triples=create_inverse_triples,
+        directory=output_dir,
+        stopper=stopper,
+        stopper_kwargs=stopper_kwargs,
+    )
+
+We define the early stopper using the argument ``stopper``, and through ``stopper_kwargs``, we provide arguments to the
 early stopper. We define that the early stopper should evaluate every 5 epochs with a patience of 20 epochs on the
 validation set. In order to continue training, we expect the model to obtain an improvement > 0.2% in Hits@10.
 
 After defining the ablation study, we need to define the HPO settings for each experiment within our ablation
 study. Remember that for each ablation-experiment we perform an HPO in order to determine the best hyper-parameters
 for the currently investigated model. In PyKEEN, we use
-`Optuna <https://github.com/optuna/optunahttps://github.com/optuna/optuna>`_  as HPO framework. Therefore, we define
-the arguments required by Optuna in our configuration:
+`Optuna <https://github.com/optuna/optunahttps://github.com/optuna/optuna>`_  as HPO framework. Again, we provide
+default values for the Optuna related arguments. However, they define a very limited HPO which is meant more for testing
+purposes. Therefore, we define the arguments required by Optuna by ourselves:
 
-.. code-block:: javascript
+.. code-block:: python
 
-    {
-        "metadata": {
-            "title": "Ablation Study Over Nations for ComplEx."
-        },
-        "ablation": {
-            "datasets": ["nations"],
-            "models":   ["ComplEx"],
-            "losses": ["BCEAfterSigmoidLoss", "CrossEntropyLoss"]
-            "training_loops": ["lcwa"],
-            "optimizers": ["adam"],
-            "create_inverse_triples": [true,false],
-            "stopper": "early",
-            "stopper_kwargs": {
-                "frequency": 5,
-                "patience": 20,
-                "relative_delta": 0.002,
-                "metric": "hits@10"
-            },
-        "optuna": {
-            "n_trials": 2,
-            "timeout": 300,
-            "metric": "hits@10",
-            "direction": "maximize",
-            "sampler": "random",
-            "pruner": "nop"
-            }
-        }
+    metadata = dict(title= "Ablation Study Over Nations for ComplEx.")
+    output_dir = "/path/to/output/dir"
+
+    models = ['ComplEx]
+    datasets = ['Nations']
+    losses = ["BCEAfterSigmoidLoss"]
+    training_loops = ["lcwa"]
+    optimizers = ["adam"]
+    create_inverse_triples= [True,False]
+    stopper = "early",
+    stopper_kwargs = {
+        "frequency": 5,
+        "patience": 20,
+        "relative_delta": 0.002,
+        "metric": "hits@10",
     }
 
+    # Run ablation experiment
+    ablation_pipeline(
+        metadata=metadata, #Optional
+        models=models,
+        datasets=datasets,
+        losses=losses,
+        training_loops=training_loops,
+        optimizers=optimizers,
+        create_inverse_triples=create_inverse_triples,
+        directory=output_dir,
+        stopper=stopper,
+        stopper_kwargs=stopper_kwargs,
+        # Optuna related arguments
+        n_trials = 2
+        timeout = 300
+        metric = "hits@10"
+        direction = "maximize"
+        sampler = "random"
+        pruner =  "nop"
+    )
 
-The dictionary ``optuna`` contains all Optuna related arguments. Within this dictionary, we set the number
-of HPO iterations for each experiment to 2 using the argument ``n_trials``, set a ``timeout`` of 300 seconds
-(the HPO will be terminated after ``n_trials`` or ``timeout`` seconds depending on what occurs first), the ``metric`` to
-optimize, define whether the metric should be maximized or minimized using the key ``direction``, define random search
-as HPO algorithm using the key ``sampler``, and finally define that we do not use a pruner for pruning unpromising
-trials (note that we use early stopping instead).
-Now that our configuration is complete, we can start the ablation study using the CLI-function
-:func:`pykeen.experiments.cli.ablation`:
-
->>> pykeen experiments ablation path/to/complex_nation.json -d path/to/output/directory
-
+We set the number of HPO iterations for each experiment to 2 using the argument ``n_trials``, set a ``timeout`` of 300
+seconds (the HPO will be terminated after ``n_trials`` or ``timeout`` seconds depending on what occurs first), the
+``metric`` to optimize, define whether the metric should be maximized or minimized using the key ``direction``, define
+random search as HPO algorithm using the key ``sampler``, and finally define that we do not use a pruner for pruning
+unpromising trials (note that we use early stopping instead).
 
 To measure the variance in performance, we can additionally define how often we want to re-train and re-evaluate
-the best model of each ablation-experiment using the option `-r`/`--best-replicates`:
+the best model of each ablation-experiment using the arguments ``best_replicates``:
 
->>> pykeen experiments ablation path/to/complex_nation.json -d path/to/output/directory -r 5
+.. code-block:: python
+
+    metadata = dict(title= "Ablation Study Over Nations for ComplEx.")
+    output_dir = "/path/to/output/dir"
+
+    models = ['ComplEx]
+    datasets = ['Nations']
+    losses = ["BCEAfterSigmoidLoss"]
+    training_loops = ["lcwa"]
+    optimizers = ["adam"]
+    create_inverse_triples= [True,False]
+    stopper = "early",
+    stopper_kwargs = {
+        "frequency": 5,
+        "patience": 20,
+        "relative_delta": 0.002,
+        "metric": "hits@10",
+    }
+
+    # Optuna related arguments
+    n_trials = 2
+    timeout = 300
+    metric = "hits@10"
+    direction = "maximize"
+    sampler = "random"
+    pruner =  "nop"
+
+    # Run ablation experiment
+    ablation_pipeline(
+        metadata=metadata, #Optional
+        models=models,
+        datasets=datasets,
+        losses=losses,
+        training_loops=training_loops,
+        optimizers=optimizers,
+        create_inverse_triples=create_inverse_triples,
+        directory=output_dir,
+        stopper=stopper,
+        stopper_kwargs=stopper_kwargs,
+        best_replicates=5,
+    )
 
 Eager to check out the results? Then navigate to the output directory ``path/to/output/directory`` in which you will
 find a directory whose name contains a timestamp and a unique id. Within this directory, you will find subdirectories,
@@ -180,25 +250,23 @@ values, and ``kwargs_ranges`` to define ranges of values from which to sample fr
 Let's start with assigning HPO ranges to hyper-parameters belonging to the interaction model. This can be achieved
 by using the dictionary ``model_to_model_kwargs_ranges``:
 
-.. code-block:: javascript
+.. code-block:: python
 
-    {
-        ...
+    ...
 
-        "ablation":{
-            ...
-            "model_to_model_kwargs_ranges":{
-                "ComplEx": {
-                    "embedding_dim": {
-                        "type": "int",
-                        "low": 4,
-                        "high": 6,
-                        "scale": "power_two"
-                    }
-                }
+    # Define HPO ranges
+    model_to_model_kwargs_ranges = {
+        "ComplEx": {
+            "embedding_dim": {
+                "type": "int",
+                "low": 4,
+                "high": 6,
+                "scale": "power_two"
             }
         }
     }
+
+    ...
 
 We defined an HPO range for the embedding dimension. Since the ``scale`` is ``power_two``, the lower bound (``low``)
 equals to 4, the upper bound ``high`` to 6, the embedding dimension is sampled from the set :math:`\{2^4,2^5, 2^6\}`.
@@ -208,114 +276,244 @@ a range for the batch size using ``model_to_trainer_to_training_kwargs_ranges``.
 ``model_to_trainer_to_training_kwargs``  and ``model_to_trainer_to_training_kwargs_ranges`` because the defined
 hyper-parameters are hyper-parameters of the training function:
 
-.. code-block:: javascript
+.. code-block:: python
 
-    {
-        ...
+    ...
 
-        "ablation":{
-            ...
-            "model_to_model_kwargs_ranges":{
-                "ComplEx": {
-                    "embedding_dim": {
-                        "type": "int",
-                        "low": 4,
-                        "high": 6,
-                        "scale": "power_two"
-                    }
-                }
-            },
-            "model_to_trainer_to_training_kwargs": {
-                "ComplEx": {
-                    "lcwa": {
-                        "num_epochs": 500
-                    }
-                }
-            },
-            "model_to_trainer_to_training_kwargs_ranges": {
-                "ComplEx": {
-                    "lcwa": {
-                        "label_smoothing": {
-                            "type": "float",
-                            "low": 0.001,
-                            "high": 1.0,
-                            "scale": "log"
-                        },
-                        "batch_size": {
-                            "type": "int",
-                            "low": 7,
-                            "high": 9,
-                            "scale": "power_two"
-                        }
-                    }
+    model_to_model_kwargs_ranges = {
+        "ComplEx": {
+            "embedding_dim": {
+                "type": "int",
+                "low": 4,
+                "high": 6,
+                "scale": "power_two"
+            }
+        }
+    }
+
+    model_to_trainer_to_training_kwargs = {
+        "ComplEx": {
+            "lcwa": {
+                "num_epochs": 500
+            }
+        }
+    }
+
+    model_to_trainer_to_training_kwargs_ranges= {
+        "ComplEx": {
+            "lcwa": {
+                "label_smoothing": {
+                    "type": "float",
+                    "low": 0.001,
+                    "high": 1.0,
+                    "scale": "log"
+                },
+                "batch_size": {
+                    "type": "int",
+                    "low": 7,
+                    "high": 9,
+                    "scale": "power_two"
                 }
             }
         }
     }
+
+    ...
 
 Finally, we define a range for the learning rate which is a hyper-parameter of the optimizer:
 
-.. code-block:: javascript
+.. code-block:: python
 
-    {
-        ...
+    ...
 
-        "ablation":{
-            ...
-            "model_to_model_kwargs_ranges":{
-                "ComplEx": {
-                    "embedding_dim": {
-                        "type": "int",
-                        "low": 4,
-                        "high": 6,
-                        "scale": "power_two"
-                    }
-                }
-            },
-            "model_to_trainer_to_training_kwargs": {
-                "ComplEx": {
-                    "lcwa": {
-                        "num_epochs": 500
-                    }
-                }
-            },
-            "model_to_trainer_to_training_kwargs_ranges": {
-                "ComplEx": {
-                    "lcwa": {
-                        "label_smoothing": {
-                            "type": "float",
-                            "low": 0.001,
-                            "high": 1.0,
-                            "scale": "log"
-                        },
-                        "batch_size": {
-                            "type": "int",
-                            "low": 7,
-                            "high": 9,
-                            "scale": "power_two"
-                        }
-                    }
-                }
-            },
-            "model_to_optimizer_to_optimizer_kwargs_ranges": {
-                "ComplEx": {
-                    "adam": {
-                        "lr": {
-                            "type": "float",
-                            "low": 0.001,
-                            "high": 0.1,
-                            "scale": "log"
-                        }
-                    }
+    model_to_model_kwargs_ranges = {
+        "ComplEx": {
+            "embedding_dim": {
+                "type": "int",
+                "low": 4,
+                "high": 6,
+                "scale": "power_two"
+            }
+        }
+    }
+
+    model_to_trainer_to_training_kwargs = {
+        "ComplEx": {
+            "lcwa": {
+                "num_epochs": 500
+            }
+        }
+    }
+
+    model_to_trainer_to_training_kwargs_ranges= {
+        "ComplEx": {
+            "lcwa": {
+                "label_smoothing": {
+                    "type": "float",
+                    "low": 0.001,
+                    "high": 1.0,
+                    "scale": "log"
+                },
+                "batch_size": {
+                    "type": "int",
+                    "low": 7,
+                    "high": 9,
+                    "scale": "power_two"
                 }
             }
         }
     }
+
+    model_to_optimizer_to_optimizer_kwargs_ranges= {
+        "ComplEx": {
+            "adam": {
+                "lr": {
+                    "type": "float",
+                    "low": 0.001,
+                    "high": 0.1,
+                    "scale": "log"
+                }
+            }
+        }
+    }
+
+    ...
 
 We decided to use Adam as an optimizer, and we defined a ``log`` ``scale`` for the learning rate, i.e., the learning
 rate is sampled from the interval :math:`[0.001, 0.1)`.
 
 Now that we defined our own hyper-parameter values/ranges, let's have a look at the overall configuration:
+
+.. code-block:: python
+
+    from ablation.ablation import ablation_pipeline
+
+    metadata = dict(title= "Ablation Study Over Nations for ComplEx.")
+
+    models = ['ComplEx]
+    datasets = ['Nations']
+    losses = ["BCEAfterSigmoidLoss"]
+    training_loops = ["lcwa"]
+    optimizers = ["adam"]
+    create_inverse_triples= [true,false]
+    stopper = "early",
+    stopper_kwargs = {
+        "frequency": 5,
+        "patience": 20,
+        "relative_delta": 0.002,
+        "metric": "hits@10",
+    }
+
+    # Define HPO ranges
+    model_to_model_kwargs_ranges = {
+        "ComplEx": {
+            "embedding_dim": {
+                "type": "int",
+                "low": 4,
+                "high": 6,
+                "scale": "power_two"
+            }
+        }
+    }
+
+    model_to_trainer_to_training_kwargs = {
+        "ComplEx": {
+            "lcwa": {
+                "num_epochs": 500
+            }
+        }
+    }
+
+    model_to_trainer_to_training_kwargs_ranges= {
+        "ComplEx": {
+            "lcwa": {
+                "label_smoothing": {
+                    "type": "float",
+                    "low": 0.001,
+                    "high": 1.0,
+                    "scale": "log"
+                },
+                "batch_size": {
+                    "type": "int",
+                    "low": 7,
+                    "high": 9,
+                    "scale": "power_two"
+                }
+            }
+        }
+    }
+
+    model_to_optimizer_to_optimizer_kwargs_ranges= {
+        "ComplEx": {
+            "adam": {
+                "lr": {
+                    "type": "float",
+                    "low": 0.001,
+                    "high": 0.1,
+                    "scale": "log"
+                }
+            }
+        }
+    }
+
+    # Run ablation experiment
+    ablation_pipeline(
+        models=models,
+        datasets=datasets,
+        losses=losses,
+        training_loops=training_loops,
+        optimizers=optimizers,
+        model_to_model_kwargs_ranges=model_to_model_kwargs_ranges,
+        model_to_trainer_to_training_kwargs=model_to_trainer_to_training_kwargs,
+        model_to_optimizer_to_optimizer_kwargs_ranges=model_to_optimizer_to_optimizer_kwargs_ranges,
+        directory=out,
+        best_replicates=5,
+        n_trials = 2
+        timeout = 300
+        metric = "hits@10"
+        direction = "maximize"
+        sampler = "random"
+        pruner =  "nop"
+    )
+
+We are expected to provide the configuration for the keys ``datasets``, ``models``, ``losses``, ``optimizers``, and
+``training_loops``. For all other components and hype-parameters, PyKEEN will provide default values/ranges.
+However, for achieving optimal performance, we should carefully define the hyper-parameter values/ranges ourselves,
+as explained above. Note that there many more ranges to configure such hyper-parameters for the loss functions, or the
+negative samplers. Check out the examples provided in `tests/resources/hpo_complex_nations.json`` how to define the
+ranges for other components.
+
+Run an Ablation Study With Your Own Data
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+We showed how to run an ablation study with a PyKEEN integrated dataset. Now you are asking yourself, whether you can
+run ablations studies with your own data? Yes, you can!
+It requires a minimal change compared to the previous configuration:
+
+.. code-block:: python
+
+    datasets = [
+        {
+            "training": "/path/to/your/train.txt",
+            "validation": "/path/to/your/validation.txt",
+            "testing": "/path/to/your/test.txt"
+        }
+    ]
+
+In the dataset field, you don't provide a list of dataset names but dictionaries containing the paths
+to your train-validation-test splits. Check out ``tests/resources/hpo_complex_your_own_data.json`` for a
+concrete example. Yes, that's all.
+
+Run an Ablation Study From The Command Line Interface
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If you want to start an ablation study from the command line interface, we provide the function
+:func:`pykeen.experiments.cli.ablation`, which expects as an argument the path to a JSON configuration file.
+The configuration file consists of a dictionary with the sub-dictionaries ``ablation`` and ``optuna`` in which the
+ablation study and the Optuna related configuration are defined. In addition, similar to the programmatic interface, the
+``metadata`` dictionary can be provided. The configuration file corresponding to the  ablation study that we previously
+defined within our program would look as follows:
+
 
 .. code-block:: javascript
 
@@ -395,108 +593,13 @@ Now that we defined our own hyper-parameter values/ranges, let's have a look at 
         }
     }
 
-We are expected to provide the configuration for the keys ``datasets``, ``models``, ``losses``, ``optimizers``, and
-``training_loops``. For all other components and hype-parameters, PyKEEN will provide default values/ranges.
-However, for achieving optimal performance, we should carefully define the hyper-parameter values/ranges ourselves,
-as explained above. Note that there many more ranges to configure such hyper-parameters for the loss functions, or the
-negative samplers. Check out the examples provided in `tests/resources/hpo_complex_nations.json`` how to define the
-ranges for other components.
+The ablation study can be started as follows:
 
-Run an Ablation Study With Your Own Data
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+>>> pykeen experiments ablation path/to/complex_nation.json -d path/to/output/directory
 
-We showed how to run an ablation study with a PyKEEN integrated dataset. Now you are asking yourself, whether you can
-run ablations studies with your own data? Yes, you can!
-It requires a minimal change compared to the previous configuration:
+To measure the variance in performance, the option `-r`/`--best-replicates` should be provided to the function:
 
-.. code-block:: javascript
+>>> pykeen experiments ablation path/to/complex_nation.json -d path/to/output/directory -r 5
 
-    {   ...
-        "ablation": {
-            "datasets": [
-                {
-                    "training": "/path/to/your/train.txt",
-                    "validation": "/path/to/your/validation.txt",
-                    "testing": "/path/to/your/test.txt"
-                }
-            ],
-        }
-        ...
-    }
-
-In the dataset field, you don't provide a list of dataset names but dictionaries containing the paths
-to your train-validation-test splits. Check out ``tests/resources/hpo_complex_your_own_data.json`` for a
-concrete example. Yes, that's all.
-
-Run an Ablation Study From Your Code
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-If you want to start an ablation study from your own program, we provide the function
-:func:`pykeen.ablation.ablation_pipeline` which expects as arguments the entries that we previously defined within a
-configuration file (See above):
-
-
-.. code-block:: python
-
-    from ablation.ablation import ablation_pipeline
-
-    # Define ablation study
-    models = ['ComplEx]
-    datasets = ['Nations']
-    losses = ["BCEAfterSigmoidLoss"]
-    training_loops = ["lcwa"]
-    optimizers = ["adam"]
-    out = '/path/to/output/directory'
-
-    # Define hyper-parameter ranges/values. Remaining hyper-parameter ranges/values can be defined accordingly
-    # (see above)
-    model_to_model_kwargs_ranges = {
-        "ComplEx": {
-            "embedding_dim": {
-                "type": "int",
-                "low": 4,
-                "high": 6,
-                "scale": "power_two"
-            }
-        }
-    }
-
-    model_to_trainer_to_training_kwargs= {
-        "ComplEx": {
-            "lcwa": {
-                "num_epochs": 10
-            }
-        }
-    }
-
-    #  Optuna related setting
-    n_hpo_trials = 2
-    timeout = 300 # seconds
-    metric_to_optimize = 'hits@10'
-    direction = 'maximize'
-    sampler = 'random' # use random search
-
-    # Run ablation experiment
-    ablation_pipeline(
-        models=models,
-        datasets=datasets,
-        losses=losses,
-        training_loops=training_loops,
-        optimizers=optimizers,
-        model_to_model_kwargs_ranges=model_to_model_kwargs_ranges,
-        model_to_trainer_to_training_kwargs=model_to_trainer_to_training_kwargs,
-        directory=out,
-        # Remember, we can define how often to re-train/evaluate the best model in order to compute the variance
-        best_replicates=2,
-        n_trials=n_hpo_trials,
-        metric=metric_to_optimize,
-        direction=direction,
-        sampler=sampler,
-
-    )
-
-
-
-In this tutorial, we showed how to define an ablation study, how to execute it from the command line interface, and
-finally, how to execute an ablation study from your own program. Furthermore, we showed how you can define your ablation
-study using your own data.
+In this tutorial, we showed how to define and start an ablation study within yur program, how to execute it from the
+command line interface. Furthermore, we showed how you can define your ablation study using your own data.
