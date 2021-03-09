@@ -5,9 +5,9 @@
   "ablation": {
     "datasets": [
       {
-        "training": "../../src/pykeen/datasets/nations/train.txt",
-        "validation": "../../src/pykeen/datasets/nations/valid.txt",
-        "testing": "../../src/pykeen/datasets/nations/test.txt"
+        "training": "../../pykeen/datasets/nations/train.txt",
+        "validation": "../../pykeen/datasets/nations/valid.txt",
+        "testing": "../../pykeen/datasets/nations/test.txt"
       }
     ],
     "models": [
