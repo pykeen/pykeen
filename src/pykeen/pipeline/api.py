@@ -880,7 +880,7 @@ def pipeline(  # noqa: C901
     training_loop_cls = training_loop_resolver.lookup(training_loop)
     if training_loop_kwargs is None:
         training_loop_kwargs = {}
-    training_loop_instance: TrainingLoop
+
     if negative_sampler is None:
         negative_sampler_cls = None
         training_loop_instance = training_loop_cls(
