@@ -715,6 +715,8 @@ def pipeline(  # noqa: C901
     :param training_loop:
         The name of the training loop's training approach (``'slcwa'`` or ``'lcwa'``) or the training loop class.
         Defaults to :class:`pykeen.training.SLCWATrainingLoop`.
+    :param training_loop_kwargs:
+        Keyword arguments to pass to the training loop on instantiation
     :param negative_sampler:
         The name of the negative sampler (``'basic'`` or ``'bernoulli'``) or the negative sampler class.
         Only allowed when training with sLCWA.
