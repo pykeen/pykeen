@@ -3,14 +3,14 @@ Running an Ablation Study
 You want to find out which loss function and training approach is best-suited for your interaction model
 (model architecture)? Then performing an ablation study is the way to go!
 
-In general, an ablation study is a set of experiments in which components of a machine learning system are removed/replaced in order
-to measure the impact of these components on the system's performance. In the context of knowledge graph embedding
-models, typical ablation studies involve investigating different loss functions, training approaches, negative
-samplers, and the explicit modeling of inverse relations. For a specific model composition based on these components,
-the best set of hyper-parameter values, e.g., embedding dimension, learning rate, batch size, loss function-specific
-hyper-parameters such as the margin value in the margin ranking loss need to be determined. This is accomplished by
-a process called hyper-parameter optimization. Different approaches are have been proposed, of which random search and
-grid search are very popular.
+In general, an ablation study is a set of experiments in which components of a machine learning system are
+removed/replaced in order to measure the impact of these components on the system's performance. In the context of
+knowledge graph embedding models, typical ablation studies involve investigating different loss functions, training
+approaches, negative samplers, and the explicit modeling of inverse relations. For a specific model composition based on
+these components, the best set of hyper-parameter values, e.g., embedding dimension, learning rate, batch size,
+loss function-specific hyper-parameters such as the margin value in the margin ranking loss need to be determined.
+This is accomplished by a process called hyper-parameter optimization. Different approaches are have been proposed, of
+which random search and grid search are very popular.
 
 
 In PyKEEN, we can define an ablation study in a configuration file (``file_name.json``) or within our own program.
@@ -182,6 +182,7 @@ Let's start with assigning HPO ranges to hyper-parameters belonging to the inter
 by using the dictionary ``model_to_model_kwargs_ranges``:
 
 .. code-block:: javascript
+
     {
         ...
 
@@ -208,6 +209,7 @@ a range for the batch size using ``model_to_trainer_to_training_kwargs_ranges`` 
 training function:
 
 .. code-block:: javascript
+
     {
         ...
 
@@ -250,9 +252,11 @@ training function:
             }
         }
     }
+
 Finally, we define a range for the learning rate which is a hyper-parameter of the optimizer:
 
 .. code-block:: javascript
+
     {
         ...
 
@@ -307,6 +311,7 @@ Finally, we define a range for the learning rate which is a hyper-parameter of t
             }
         }
     }
+
 We decided to use Adam as an optimizer, and we defined a ``log`` ``scale`` for the learning rate, i.e., the learning
 rate is sampled from the interval :math:`[0.001, 0.1)`.
 
@@ -492,6 +497,6 @@ configuration file (See above):
 
 
 
-In this tutorial, we showed how to define an ablation study, how to execute it from the command line interface, and finally
-how to execute an ablation study from your own program. Furthermore, we showed how you can define your ablation study
-using your own data.
+In this tutorial, we showed how to define an ablation study, how to execute it from the command line interface, and
+finally how to execute an ablation study from your own program. Furthermore, we showed how you can define your ablation
+study using your own data.
