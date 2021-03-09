@@ -806,10 +806,6 @@ def _set_study_dataset(
     study: Study,
     *,
     dataset: Union[None, str, Dataset, Type[Dataset]] = None,
-    dataset_kwargs: Optional[Mapping[str, Any]] = None,
-    training: Union[None, str, TriplesFactory] = None,
-    testing: Union[None, str, TriplesFactory] = None,
-    validation: Union[None, str, TriplesFactory] = None,
 ):
     if (
         (isinstance(dataset, str) and has_dataset(dataset))
