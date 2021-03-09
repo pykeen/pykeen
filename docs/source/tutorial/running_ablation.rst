@@ -201,7 +201,7 @@ by using the dictionary ``model_to_model_kwargs_ranges``:
     }
 
 We defined an HPO range for the embedding dimension. Since the ``scale`` is ``power_two``, the lower bound (``low``)
-equals to 4, the upper bound ``high``to 6, the embedding dimension is sampled from the set :math:`\{2^4,2^5, 2^6\}`.
+equals to 4, the upper bound ``high`` to 6, the embedding dimension is sampled from the set :math:`\{2^4,2^5, 2^6\}`.
 
 Next, we fix the number of training epochs to 500 using the key ``model_to_trainer_to_training_kwargs`` and define
 a range for the batch size using ``model_to_trainer_to_training_kwargs_ranges``. We use the dictionaries
