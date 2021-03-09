@@ -596,10 +596,6 @@ def hpo_pipeline(
     _set_study_dataset(
         study=study,
         dataset=dataset,
-        dataset_kwargs=dataset_kwargs,
-        training=training,
-        testing=testing,
-        validation=validation,
     )
 
     # 2. Model
@@ -806,11 +802,25 @@ def _set_study_dataset(
     study: Study,
     *,
     dataset: Union[None, str, Dataset, Type[Dataset]] = None,
+    training: Union[None, str, TriplesFactory] = None,
+    testing: Union[None, str, TriplesFactory] = None,
+    validation: Union[None, str, TriplesFactory] = None,
 ):
     if (
         (isinstance(dataset, str) and has_dataset(dataset))
         or isinstance(dataset, Dataset)
         or (isinstance(dataset, type) and issubclass(dataset, Dataset))
     ):
+        if not(training is None and testing is None and validation is None):
+            raise ValueError("Cannot specify dataset and training, testing and validation")
         dataset_name = get_dataset(dataset=dataset).get_normalized_name()
         study.set_user_attr('dataset', dataset_name)
+    else:
+        if dataset is not None:
+            raise ValueError("Cannot specify dataset and training, testing and validation")
+        if isinstance(training, str):
+            study.set_user_attr('training', training)
+        if isinstance(testing, str):
+            study.set_user_attr('testing', testing)
+        if isinstance(validation, str):
+            study.set_user_attr('validation', validation)
