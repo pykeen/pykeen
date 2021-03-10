@@ -22,6 +22,54 @@ that you can use :func:`torch.load` to load a model like:
 More information on PyTorch's model persistence can be found at:
 https://pytorch.org/tutorials/beginner/saving_loading_models.html.
 
+Using Learned Embeddings
+------------------------
+The embeddings learned for entities and relations are useful for link
+prediction in PyKEEN, but also generally useful for other downstream
+machine learning tasks like clustering, regression, and classification.
+
+The embeddings themselves are typically stored in a :class:`pykeen.nn.Embedding`,
+which wraps the :class:`torch.nn.Embedding` with several key values. They
+can be accessed like this:
+
+.. code-block:: python
+
+    from pykeen.pipeline import pipeline
+    result = pipeline(model='TransE', dataset='UMLS')
+    model = result.model
+    entity_embeddings = model.entity_embeddings._embeddings.weight.data
+    relation_embeddings = model.relation_embeddings._embeddings.weight.data
+
+However, the :class:`pykeen.nn.Embedding` inherits from the more generalizable
+:class:`pykeen.nn.RepresentationModule`, which can be used for alternative
+implementations. The new-style way to access the embeddings is now like this:
+
+.. code-block::
+
+    entity_embeddings = model.entity_embeddings()
+
+More explicitly:
+
+.. code-block::
+
+    entity_embeddings = model.entity_embeddings(indices=None)
+
+If you'd like to only look up certain embeddings, you can use the ``indices`` parameter
+and pass a :class:`torch.LongTensor` with their corresponding indices.
+
+New-style models (e.g., ones inheriting from :class:`pykeen.models.ERModel`) are
+generalized to allow for multiple entity representations and
+relation representations. This means that for some models, you should access them with:
+
+.. code-block::
+
+    entity_embeddings = model.entity_representations[0]()
+
+Where ``[0]`` corresponds to the ordering of representations defined in
+the interaction function. Some models may provide Pythonic properties that
+provide a vanity attribute to the instance of the class for a specific
+entity or relation representation.
+
 Beyond the Pipeline
 -------------------
 While the pipeline provides a high-level interface, each aspect of the
