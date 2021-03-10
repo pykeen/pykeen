@@ -36,27 +36,26 @@ function(s), training approach(es), and the optimizer(s) in order to run the abl
 
 .. code-block:: python
 
-    metadata = dict(title = "Ablation Study Over Nations for ComplEx.")
-    output_dir = "/path/to/output/dir"
-
-    # Define ablation study
-    models = ['ComplEx]
-    datasets = ['Nations']
-    losses = ["BCEAfterSigmoidLoss", "MarginRankingLoss"]
-    training_loops = ["lcwa"]
-    optimizers = ["adam"]
-
-    # Run ablation experiment
-    ablation_pipeline(
-        metadata=metadata, #Optional
-        models=models,
-        datasets=datasets,
-        losses=losses,
-        training_loops=training_loops,
-        optimizers=optimizers,
-        directory=output_dir,
-    )
-
+    >>> import pystow
+    >>> from pykeen.ablation import ablation_pipeline
+    >>> metadata = dict(title="Ablation Study Over Nations for ComplEx.")
+    >>> output_dir = "doctests/ablation/ex1"
+    >>> # Define ablation study
+    >>> models = ['ComplEx']
+    >>> datasets = ['Nations']
+    >>> losses = ["BCEAfterSigmoidLoss", "MarginRankingLoss"]
+    >>> training_loops = ["LCWA"]
+    >>> optimizers = ["Adam"]
+    >>> # Run ablation experiment
+    >>> result = ablation_pipeline(
+    ...     metadata=metadata,  # Optional
+    ...     models=models,
+    ...     datasets=datasets,
+    ...     losses=losses,
+    ...     training_loops=training_loops,
+    ...     optimizers=optimizers,
+    ...     directory=output_dir,
+    ... )
 
 As mentioned above, we also want to measure the effect of explicitly modeling inverse relations on the model's
 performance. Therefore, we extend the ablation study accordingly:
