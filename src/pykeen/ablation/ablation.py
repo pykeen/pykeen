@@ -429,24 +429,6 @@ def prepare_ablation(  # noqa:C901
         model_to_model_kwargs = {}
     if not model_to_model_kwargs_ranges:
         model_to_model_kwargs_ranges = {}
-    if not model_to_loss_to_loss_kwargs:
-        model_to_loss_to_loss_kwargs = {}
-    if not model_to_loss_to_loss_kwargs_ranges:
-        model_to_loss_to_loss_kwargs_ranges = {}
-    if not model_to_optimizer_to_optimizer_kwargs:
-        model_to_optimizer_to_optimizer_kwargs = {}
-    if not model_to_optimizer_to_optimizer_kwargs_ranges:
-        model_to_optimizer_to_optimizer_kwargs_ranges = {}
-    if not model_to_regularizer_to_regularizer_kwargs:
-        model_to_regularizer_to_regularizer_kwargs = {}
-    if not model_to_regularizer_to_regularizer_kwargs_ranges:
-        model_to_regularizer_to_regularizer_kwargs_ranges = {}
-    if not model_to_training_loop_to_training_loop_kwargs:
-        model_to_training_loop_to_training_loop_kwargs = {}
-    if not model_to_training_loop_to_training_kwargs:
-        model_to_training_loop_to_training_kwargs = {}
-    if not model_to_training_loop_to_training_kwargs_ranges:
-        model_to_training_loop_to_training_kwargs_ranges = {}
 
     directories = []
     for counter, (
