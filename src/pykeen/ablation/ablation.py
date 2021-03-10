@@ -489,10 +489,10 @@ def prepare_ablation(  # noqa:C901
         #    random_seed=random_non_negative_int(),
         # ),
 
-        def _set_arguments(config: Mapping3D, key: str, value: str) -> None:
+        def _set_arguments(config: Optional[Mapping3D], key: str, value: str) -> None:
             """Set argument and its values."""
             d = {}
-            d[key] = config.get(model, {}).get(value, {})
+            d[key] = {} if config is None else config.get(model, {}).get(value, {})
             if d[key]:
                 hpo_config.update(d)
 
