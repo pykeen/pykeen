@@ -47,8 +47,8 @@ def ablation_pipeline(
     model_to_negative_sampler_to_negative_sampler_kwargs: Optional[Mapping3D] = None,
     model_to_negative_sampler_to_negative_sampler_kwargs_ranges: Optional[Mapping3D] = None,
     model_to_training_loop_to_training_loop_kwargs: Optional[Mapping3D] = None,
-    model_to_trainer_to_training_kwargs: Optional[Mapping3D] = None,
-    model_to_trainer_to_training_kwargs_ranges: Optional[Mapping3D] = None,
+    model_to_training_loop_to_training_kwargs: Optional[Mapping3D] = None,
+    model_to_training_loop_to_training_kwargs_ranges: Optional[Mapping3D] = None,
     model_to_regularizer_to_regularizer_kwargs: Optional[Mapping3D] = None,
     model_to_regularizer_to_regularizer_kwargs_ranges: Optional[Mapping3D] = None,
     evaluator_kwargs: Optional[Mapping[str, Any]] = None,
@@ -109,10 +109,10 @@ def ablation_pipeline(
         negative sampler name to a mapping of keyword argument ranges for that negative sampler to be used in HPO.
     :param model_to_training_loop_to_training_loop_kwargs: A mapping from model name to a mapping of training loop name
         to a mapping of default keyword arguments for the training loop.
-    :param model_to_trainer_to_training_kwargs: A mapping from model name to a mapping of trainer name to a mapping
-        of default keyword arguments for the training procedure. This is useful because you can set the hyper-parameters
-        such as the number of training epochs and the batch size.
-    :param model_to_trainer_to_training_kwargs_ranges:  A mapping from model name to a mapping of
+    :param model_to_training_loop_to_training_kwargs: A mapping from model name to a mapping of trainer name to a
+        mapping of default keyword arguments for the training procedure. This is useful because you can set the
+        hyper-parameters such as the number of training epochs and the batch size.
+    :param model_to_training_loop_to_training_kwargs_ranges:  A mapping from model name to a mapping of
         trainer name to a mapping of keyword argument ranges for that trainer to be used in HPO.
     :param evaluator_kwargs: The keyword arguments passed to the evaluator.
     :param evaluation_kwargs: The keyword arguments passed during evaluation.
@@ -154,8 +154,8 @@ def ablation_pipeline(
         model_to_neg_sampler_to_neg_sampler_kwargs=model_to_negative_sampler_to_negative_sampler_kwargs,
         model_to_neg_sampler_to_neg_sampler_kwargs_ranges=model_to_negative_sampler_to_negative_sampler_kwargs_ranges,
         model_to_training_loop_to_training_loop_kwargs=model_to_training_loop_to_training_loop_kwargs,
-        model_to_trainer_to_training_kwargs=model_to_trainer_to_training_kwargs,
-        model_to_trainer_to_training_kwargs_ranges=model_to_trainer_to_training_kwargs_ranges,
+        model_to_training_loop_to_training_kwargs=model_to_training_loop_to_training_kwargs,
+        model_to_training_loop_to_training_kwargs_ranges=model_to_training_loop_to_training_kwargs_ranges,
         model_to_regularizer_to_regularizer_kwargs=model_to_regularizer_to_regularizer_kwargs,
         model_to_regularizer_to_regularizer_kwargs_ranges=model_to_regularizer_to_regularizer_kwargs_ranges,
         evaluator=evaluator,
@@ -319,8 +319,8 @@ def prepare_ablation(  # noqa:C901
     model_to_training_loop_to_training_loop_kwargs: Optional[Mapping3D] = None,
     model_to_neg_sampler_to_neg_sampler_kwargs: Optional[Mapping3D] = None,
     model_to_neg_sampler_to_neg_sampler_kwargs_ranges: Optional[Mapping3D] = None,
-    model_to_trainer_to_training_kwargs: Optional[Mapping3D] = None,
-    model_to_trainer_to_training_kwargs_ranges: Optional[Mapping3D] = None,
+    model_to_training_loop_to_training_kwargs: Optional[Mapping3D] = None,
+    model_to_training_loop_to_training_kwargs_ranges: Optional[Mapping3D] = None,
     model_to_regularizer_to_regularizer_kwargs: Optional[Mapping3D] = None,
     model_to_regularizer_to_regularizer_kwargs_ranges: Optional[Mapping3D] = None,
     n_trials: Optional[int] = 5,
@@ -378,10 +378,10 @@ def prepare_ablation(  # noqa:C901
         negative sampler name to a mapping of keyword argument ranges for that negative sampler to be used in HPO.
     :param model_to_training_loop_to_training_loop_kwargs: A mapping from model name to a mapping of training loop name
         to a mapping of default keyword arguments for the training loop.
-    :param model_to_trainer_to_training_kwargs: A mapping from model name to a mapping of trainer name to a mapping
-        of default keyword arguments for the training procedure. This is useful because you can set the hyper-parameters
-        such as the number of training epochs and the batch size.
-    :param model_to_trainer_to_training_kwargs_ranges:  A mapping from model name to a mapping of
+    :param model_to_training_loop_to_training_kwargs: A mapping from model name to a mapping of trainer name to a
+        mapping of default keyword arguments for the training procedure. This is useful because you can set the
+        hyper-parameters such as the number of training epochs and the batch size.
+    :param model_to_training_loop_to_training_kwargs_ranges:  A mapping from model name to a mapping of
         trainer name to a mapping of keyword argument ranges for that trainer to be used in HPO.
     :param evaluator_kwargs: The keyword arguments passed to the evaluator.
     :param evaluation_kwargs: The keyword arguments passed during evaluation.
@@ -442,10 +442,10 @@ def prepare_ablation(  # noqa:C901
         model_to_regularizer_to_regularizer_kwargs_ranges = {}
     if not model_to_training_loop_to_training_loop_kwargs:
         model_to_training_loop_to_training_loop_kwargs = {}
-    if not model_to_trainer_to_training_kwargs:
-        model_to_trainer_to_training_kwargs = {}
-    if not model_to_trainer_to_training_kwargs_ranges:
-        model_to_trainer_to_training_kwargs_ranges = {}
+    if not model_to_training_loop_to_training_kwargs:
+        model_to_training_loop_to_training_kwargs = {}
+    if not model_to_training_loop_to_training_kwargs_ranges:
+        model_to_training_loop_to_training_kwargs_ranges = {}
 
     directories = []
     for counter, (
@@ -548,9 +548,9 @@ def prepare_ablation(  # noqa:C901
             key='training_loop_kwargs',
             value=training_loop,
         )
-        _set_arguments(config=model_to_trainer_to_training_kwargs, key='training_kwargs', value=training_loop)
+        _set_arguments(config=model_to_training_loop_to_training_kwargs, key='training_kwargs', value=training_loop)
         _set_arguments(
-            config=model_to_trainer_to_training_kwargs_ranges,
+            config=model_to_training_loop_to_training_kwargs_ranges,
             key='training_kwargs_ranges',
             value=training_loop,
         )
