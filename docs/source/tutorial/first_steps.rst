@@ -30,26 +30,18 @@ useful for other downstream machine learning tasks like clustering,
 regression, and classification.
 
 The embeddings themselves are typically stored in a :class:`pykeen.nn.emb.Embedding`,
-which wraps the :class:`torch.nn.Embedding` with several key values. They
-can be accessed like this:
+which wraps the :class:`torch.nn.Embedding` and implements the more general
+:class:`pykeen.nn.emb.RepresentationModule`. To obtain all entity representations
+you can run
 
 .. code-block:: python
 
     from pykeen.pipeline import pipeline
     result = pipeline(model='TransE', dataset='UMLS')
     model = result.model
-    entity_embeddings = model.entity_embeddings._embeddings.weight.data
-    relation_embeddings = model.relation_embeddings._embeddings.weight.data
-
-However, the :class:`pykeen.nn.emb.Embedding` inherits from the more generalizable
-:class:`pykeen.nn.emb.RepresentationModule`, which can be used for alternative
-implementations. The new-style way to access the embeddings is now like this:
-
-.. code-block:: python
-
     entity_embeddings = model.entity_embeddings()
 
-More explicitly:
+or more explicitly:
 
 .. code-block:: python
 
@@ -59,17 +51,25 @@ If you'd like to only look up certain embeddings, you can use the ``indices`` pa
 and pass a :class:`torch.LongTensor` with their corresponding indices.
 
 New-style models (e.g., ones inheriting from :class:`pykeen.models.ERModel`) are
-generalized to allow for multiple entity representations and
-relation representations. This means that for some models, you should access them with:
+generalized to easier allow for multiple entity representations and
+relation representations. These models have two lists of entity and relation
+representations respectively. You can access them via
 
 .. code-block:: python
 
-    entity_embeddings = model.entity_representations[0]()
+    entity_representations = model.entity_representations
+    relation_representations = model.relation_representations
 
-Where ``[0]`` corresponds to the ordering of representations defined in
-the interaction function. Some models may provide Pythonic properties that
-provide a vanity attribute to the instance of the class for a specific
-entity or relation representation.
+If you want to obtain a single representation, you can index this list, e.g.
+
+.. code-block:: python
+
+    first_entity_representations = model.entity_representations[0]
+
+and treat them as before. The ordering in this list corresponds to the
+ordering of representations defined in the interaction function. Some 
+models may provide Pythonic properties that provide a vanity attribute 
+to the instance of the class for a specific entity or relation representation.
 
 Beyond the Pipeline
 -------------------
