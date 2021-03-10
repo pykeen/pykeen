@@ -43,7 +43,7 @@ the addition ``+`` with multiplication ``*``. You might then end up with a new i
 
 .. math::
 
-    f(h, r, t) = $\mathbf{e}_h$^T diag($\mathbf{r}_r$) $\mathbf{e}_t$
+    f(h, r, t) = \mathbf{e}_h^T diag(\mathbf{r}_r) \mathbf{e}_t
 
 where $\mathbf{e}_i$ is the $d$-dimensional representation for entity $i$,
 $\mathbf{r}_j$ is the $d$-dimensional representation for relation $j$.
@@ -94,10 +94,10 @@ of the heads, relations and tail embeddings. It is defined as:
 
     f(h, r, t) = W_2 ReLU(W_1 cat(h, r, t) + b_1) + b_2
 
-with hidden dimension $y$, $W_1 \in \mathcal{R}^{3d \times y}, $W_2\ \in \mathcal{R}^y$, and
+with hidden dimension $y$, $W_1 \in \mathcal{R}^{3d \times y}$, $W_2\ \in \mathcal{R}^y$, and
 biases $b_1 \in \mathcal{R}^y$ and $b_2 \in \mathcal{R}$.
 
-$W_1$, $W_1, $b_1$, and $b_2$ are *global* parameters, meaning that they are trainable,
+$W_1$, $W_1$, $b_1$, and $b_2$ are *global* parameters, meaning that they are trainable,
 but are neither attached to the entities nor relations. Unlike the $p$ in TransE, these global
 trainable parameters are not considered hyper-parameters. However, like hyper-parameters,
 they can also be defined in the `__init__` function of your :class:`pykeen.nn.modules.Interaction`
