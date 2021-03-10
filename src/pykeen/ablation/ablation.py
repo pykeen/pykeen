@@ -61,7 +61,7 @@ def ablation_pipeline(
     sampler: Optional[str] = 'random',
     pruner: Optional[str] = 'nop',
     metadata: Optional[Mapping] = None,
-    directory: str = None,
+    directory: str = None,  # FIXME type annotation
     save_artifacts: bool = True,
     move_to_cpu: bool = True,
     dry_run: bool = False,
@@ -134,6 +134,7 @@ def ablation_pipeline(
         hyper-parameters enabling to measure the variance in performance.
     :param discard_replicates: Defines, whether the best model should be discarded after training and evaluation.
     """
+    # FIXME deal with when directory is None
     directory = _create_path_with_id(directory=directory)
 
     directories = prepare_ablation(
