@@ -44,13 +44,13 @@ However, the :class:`pykeen.nn.Embedding` inherits from the more generalizable
 :class:`pykeen.nn.RepresentationModule`, which can be used for alternative
 implementations. The new-style way to access the embeddings is now like this:
 
-.. code-block::
+.. code-block:: python
 
     entity_embeddings = model.entity_embeddings()
 
 More explicitly:
 
-.. code-block::
+.. code-block:: python
 
     entity_embeddings = model.entity_embeddings(indices=None)
 
@@ -61,7 +61,7 @@ New-style models (e.g., ones inheriting from :class:`pykeen.models.ERModel`) are
 generalized to allow for multiple entity representations and
 relation representations. This means that for some models, you should access them with:
 
-.. code-block::
+.. code-block:: python
 
     entity_embeddings = model.entity_representations[0]()
 
