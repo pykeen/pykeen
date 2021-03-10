@@ -29,6 +29,7 @@ Mapping3D = Mapping[str, Mapping[str, Mapping[str, Any]]]
 
 def ablation_pipeline(
     datasets: Union[str, List[str]],
+    directory: str,
     models: Union[str, List[str]],
     losses: Union[str, List[str]],
     optimizers: Union[str, List[str]],
@@ -61,7 +62,6 @@ def ablation_pipeline(
     sampler: Optional[str] = 'random',
     pruner: Optional[str] = 'nop',
     metadata: Optional[Mapping] = None,
-    directory: str = None,  # FIXME type annotation
     save_artifacts: bool = True,
     move_to_cpu: bool = True,
     dry_run: bool = False,
@@ -71,6 +71,7 @@ def ablation_pipeline(
     """Run ablation study.
 
     :param datasets: A dataset name or list of dataset names.
+    :param directory: The directory in which the experimental artifacts will be saved.
     :param models: A model name or list of model names.
     :param losses: A loss function name or list of loss function names.
     :param optimizers: An optimizer name or list of optimizer names.
@@ -125,7 +126,6 @@ def ablation_pipeline(
     :param pruner: Defines approach for pruning trials. Per default no pruning is used, i.e., pruner is
         set to 'Nopruner'.
     :param metadata: A mapping of meta data arguments such as name of the ablation study.
-    :param directory: The directory in which the experimental artifacts will be saved.
     :param save_artifacts: Defines, whether each trained model sampled during HPO should be saved.
     :param move_to_cpu: Defines, whether a replicate of the best model should be moved to CPU.
     :param dry_run: Defines whether only the configurations for the single experiments should be created without
