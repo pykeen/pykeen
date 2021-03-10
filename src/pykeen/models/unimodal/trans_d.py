@@ -112,6 +112,11 @@ class TransD(EntityRelationEmbeddingModel):
         relation_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
     )
 
+    #: Secondary embeddings for entities
+    entity_projections: Embedding
+    #: Secondary embeddings for relations
+    relation_projections: Embedding
+
     def __init__(
         self,
         triples_factory: TriplesFactory,
