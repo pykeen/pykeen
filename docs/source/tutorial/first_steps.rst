@@ -25,10 +25,11 @@ https://pytorch.org/tutorials/beginner/saving_loading_models.html.
 Using Learned Embeddings
 ------------------------
 The embeddings learned for entities and relations are useful for link
-prediction in PyKEEN, but also generally useful for other downstream
-machine learning tasks like clustering, regression, and classification.
+prediction in PyKEEN (see :ref:`making_predictions`), but also generally
+useful for other downstream machine learning tasks like clustering,
+regression, and classification.
 
-The embeddings themselves are typically stored in a :class:`pykeen.nn.Embedding`,
+The embeddings themselves are typically stored in a :class:`pykeen.nn.emb.Embedding`,
 which wraps the :class:`torch.nn.Embedding` with several key values. They
 can be accessed like this:
 
@@ -40,8 +41,8 @@ can be accessed like this:
     entity_embeddings = model.entity_embeddings._embeddings.weight.data
     relation_embeddings = model.relation_embeddings._embeddings.weight.data
 
-However, the :class:`pykeen.nn.Embedding` inherits from the more generalizable
-:class:`pykeen.nn.RepresentationModule`, which can be used for alternative
+However, the :class:`pykeen.nn.emb.Embedding` inherits from the more generalizable
+:class:`pykeen.nn.emb.RepresentationModule`, which can be used for alternative
 implementations. The new-style way to access the embeddings is now like this:
 
 .. code-block:: python

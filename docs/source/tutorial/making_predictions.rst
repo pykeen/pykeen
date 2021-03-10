@@ -1,3 +1,5 @@
+.. _making_predictions:
+
 Novel Link Prediction
 =====================
 After training, the interaction model (e.g., TransE, ConvE, RotatE) can assign a score to an arbitrary triple,
