@@ -597,12 +597,16 @@ defined within our program would look as follows:
 
 The ablation study can be started as follows:
 
->>> pykeen experiments ablation path/to/complex_nation.json -d path/to/output/directory
+.. code-block:: shell
+
+    pykeen experiments ablation path/to/complex_nation.json -d path/to/output/directory
 
 To re-train and re-evaluate the best model of each ablation-experiment `n` times in order to measure the variance in
 performance the option `-r`/`--best-replicates` should be used:
 
->>> pykeen experiments ablation path/to/complex_nation.json -d path/to/output/directory -r 5
+.. code-block:: shell
+
+    pykeen experiments ablation path/to/complex_nation.json -d path/to/output/directory -r 5
 
 In this tutorial, we showed how to define and start an ablation study within your program, how to execute it from the
 command line interface. Furthermore, we showed how you can define your ablation study using your own data.
