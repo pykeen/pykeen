@@ -12,9 +12,6 @@ from uuid import uuid4
 
 import click
 
-from pykeen.ablation import prepare_ablation_from_path
-from pykeen.ablation.ablation import _create_path_with_id, _run_ablation_experiments
-
 __all__ = [
     'experiments',
 ]
@@ -198,6 +195,7 @@ def ablation(
 
     A sample file can be run with ``pykeen experiments ablation tests/resources/hpo_complex_nations.json``.
     """
+    from ..ablation.ablation import prepare_ablation_from_path, _create_path_with_id, _run_ablation_experiments
     directory = _create_path_with_id(directory=directory)
     directories = prepare_ablation_from_path(path=path, directory=directory, save_artifacts=save_artifacts)
 
