@@ -55,7 +55,6 @@ class Objective:
     dataset: Union[None, str, Dataset, Type[Dataset]]  # 1.
     model: Type[Model]  # 2.
     loss: Type[Loss]  # 3.
-    regularizer: Type[Regularizer]  # 4.
     optimizer: Type[Optimizer]  # 5.
     training_loop: Type[TrainingLoop]  # 6.
     stopper: Type[Stopper]  # 7.
@@ -77,6 +76,7 @@ class Objective:
     loss_kwargs: Optional[Mapping[str, Any]] = None
     loss_kwargs_ranges: Optional[Mapping[str, Any]] = None
     # 4. Regularizer
+    regularizer: Optional[Type[Regularizer]] = None
     regularizer_kwargs: Optional[Mapping[str, Any]] = None
     regularizer_kwargs_ranges: Optional[Mapping[str, Any]] = None
     # 5. Optimizer
@@ -147,13 +147,17 @@ class Objective:
             kwargs_ranges=self.loss_kwargs_ranges,
         )
         # 4. Regularizer
-        _regularizer_kwargs = _get_kwargs(
-            trial=trial,
-            prefix='regularizer',
-            default_kwargs_ranges=self.regularizer.hpo_default,
-            kwargs=self.regularizer_kwargs,
-            kwargs_ranges=self.regularizer_kwargs_ranges,
-        )
+        _regularizer_kwargs: Optional[Mapping[str, Any]]
+        if self.regularizer is None:
+            _regularizer_kwargs = {}
+        else:
+            _regularizer_kwargs = _get_kwargs(
+                trial=trial,
+                prefix='regularizer',
+                default_kwargs_ranges=self.regularizer.hpo_default,
+                kwargs=self.regularizer_kwargs,
+                kwargs_ranges=self.regularizer_kwargs_ranges,
+            )
         # 5. Optimizer
         _optimizer_kwargs = _get_kwargs(
             trial=trial,
@@ -608,13 +612,16 @@ def hpo_pipeline(
     study.set_user_attr('loss', loss_resolver.normalize_cls(loss_cls))
     logger.info(f'Using loss: {loss_cls}')
     # 4. Regularizer
-    regularizer_cls: Type[Regularizer] = (
-        model_cls.regularizer_default
-        if regularizer is None else
-        regularizer_resolver.lookup(regularizer)
-    )
-    study.set_user_attr('regularizer', regularizer_cls.get_normalized_name())
-    logger.info(f'Using regularizer: {regularizer_cls}')
+    regularizer_cls: Optional[Type[Regularizer]]
+    if regularizer is not None:
+        regularizer_cls = regularizer_resolver.lookup(regularizer)
+    elif hasattr(model_cls, 'regularizer_default'):
+        regularizer_cls = model_cls.regularizer_default
+    else:
+        regularizer_cls = None
+    if regularizer_cls:
+        study.set_user_attr('regularizer', regularizer_cls.get_normalized_name())
+        logger.info(f'Using regularizer: {regularizer_cls}')
     # 5. Optimizer
     optimizer_cls: Type[Optimizer] = optimizer_resolver.lookup(optimizer)
     study.set_user_attr('optimizer', optimizer_resolver.normalize_cls(optimizer_cls))
