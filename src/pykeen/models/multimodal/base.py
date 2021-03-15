@@ -26,7 +26,7 @@ class LiteralModel(ERModel[HeadRepresentation, RelationRepresentation, TailRepre
         self,
         triples_factory: TriplesNumericLiteralsFactory,
         interaction: LiteralInteraction,
-        entity_representations: Sequence[Union[EmbeddingSpecification, RepresentationModule]] = None,
+        entity_representations: Sequence[Union[EmbeddingSpecification, RepresentationModule]],
         relation_representations: EmbeddingSpecificationHint = None,
         loss: Optional[Loss] = None,
         predict_with_sigmoid: bool = False,
