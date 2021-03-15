@@ -9,8 +9,10 @@ from unittest.mock import Mock
 import numpy
 import torch
 
+from pykeen.datasets.nations import NationsLiteral
 from pykeen.models.unimodal.rgcn import RGCNRepresentations
 from pykeen.nn import Embedding, EmbeddingSpecification, RepresentationModule
+from pykeen.nn.emb import LiteralRepresentations
 from pykeen.triples import TriplesFactory
 from tests import cases, mocks
 
@@ -28,6 +30,15 @@ class EmbeddingTests(cases.RepresentationTestCase):
         """Test shape and num_embeddings."""
         assert self.instance.max_id == self.instance.num_embeddings
         assert self.instance.shape == (self.instance.embedding_dim,)
+
+
+class LiteralEmbeddingTests(cases.RepresentationTestCase):
+    """Tests for literal embeddings."""
+
+    cls = LiteralRepresentations
+    kwargs = dict(
+        numeric_literals=NationsLiteral().training.numeric_literals,
+    )
 
 
 class TensorEmbeddingTests(cases.RepresentationTestCase):
