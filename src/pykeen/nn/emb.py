@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 __all__ = [
     'RepresentationModule',
     'Embedding',
-    'LiteralRepresentations',
+    'LiteralRepresentation',
     'EmbeddingSpecification',
 ]
 
@@ -341,7 +341,7 @@ class Embedding(RepresentationModule):
         return x
 
 
-class LiteralRepresentations(Embedding):
+class LiteralRepresentation(Embedding):
     """Literal representations."""
 
     def __init__(

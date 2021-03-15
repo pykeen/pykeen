@@ -58,14 +58,18 @@ class DistMultLiteral(LiteralModel):
                     input_dropout=input_dropout,
                 ),
             ),
-            entity_specification=EmbeddingSpecification(
-                embedding_dim=embedding_dim,
-                initializer=nn.init.xavier_normal_,
-            ),
-            relation_specification=EmbeddingSpecification(
-                embedding_dim=embedding_dim,
-                initializer=nn.init.xavier_normal_,
-            ),
+            entity_representations=[
+                EmbeddingSpecification(
+                    embedding_dim=embedding_dim,
+                    initializer=nn.init.xavier_normal_,
+                ),
+            ],
+            relation_representations=[
+                EmbeddingSpecification(
+                    embedding_dim=embedding_dim,
+                    initializer=nn.init.xavier_normal_,
+                ),
+            ],
             loss=loss,
             predict_with_sigmoid=predict_with_sigmoid,
             preferred_device=preferred_device,

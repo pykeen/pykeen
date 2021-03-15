@@ -12,7 +12,7 @@ import torch
 from pykeen.datasets.nations import NationsLiteral
 from pykeen.models.unimodal.rgcn import RGCNRepresentations
 from pykeen.nn import Embedding, EmbeddingSpecification, RepresentationModule
-from pykeen.nn.emb import LiteralRepresentations
+from pykeen.nn.emb import LiteralRepresentation
 from pykeen.triples import TriplesFactory
 from tests import cases, mocks
 
@@ -35,7 +35,7 @@ class EmbeddingTests(cases.RepresentationTestCase):
 class LiteralEmbeddingTests(cases.RepresentationTestCase):
     """Tests for literal embeddings."""
 
-    cls = LiteralRepresentations
+    cls = LiteralRepresentation
     kwargs = dict(
         numeric_literals=NationsLiteral().training.numeric_literals,
     )

@@ -2,13 +2,14 @@
 
 """Base classes for multi-modal models."""
 
-from typing import Optional
+from typing import Optional, Sequence, Union
 
 import torch
+import torch.nn
 
-from ..nbase import ERModel
+from ..nbase import ERModel, EmbeddingSpecificationHint
 from ...losses import Loss
-from ...nn.emb import Embedding, EmbeddingSpecification, LiteralRepresentations
+from ...nn.emb import EmbeddingSpecification, LiteralRepresentation, RepresentationModule
 from ...nn.modules import LiteralInteraction
 from ...triples import TriplesNumericLiteralsFactory
 from ...typing import DeviceHint, HeadRepresentation, RelationRepresentation, TailRepresentation
@@ -25,13 +26,17 @@ class LiteralModel(ERModel[HeadRepresentation, RelationRepresentation, TailRepre
         self,
         triples_factory: TriplesNumericLiteralsFactory,
         interaction: LiteralInteraction,
-        entity_specification: Optional[EmbeddingSpecification] = None,
-        relation_specification: Optional[EmbeddingSpecification] = None,
+        entity_representations: Sequence[Union[EmbeddingSpecification, RepresentationModule]] = None,
+        relation_representations: EmbeddingSpecificationHint = None,
         loss: Optional[Loss] = None,
         predict_with_sigmoid: bool = False,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
     ):
+        literal_representation = LiteralRepresentation(
+            numeric_literals=torch.as_tensor(triples_factory.numeric_literals, dtype=torch.float32),
+        )
+
         super().__init__(
             triples_factory=triples_factory,
             interaction=interaction,
@@ -39,19 +44,6 @@ class LiteralModel(ERModel[HeadRepresentation, RelationRepresentation, TailRepre
             predict_with_sigmoid=predict_with_sigmoid,
             preferred_device=preferred_device,
             random_seed=random_seed,
-            entity_representations=[
-                # entity embeddings
-                Embedding.from_specification(
-                    num_embeddings=triples_factory.num_entities,
-                    specification=entity_specification,
-                ),
-                # Entity literals
-                LiteralRepresentations(
-                    numeric_literals=torch.as_tensor(triples_factory.numeric_literals, dtype=torch.float32),
-                ),
-            ],
-            relation_representations=Embedding.from_specification(
-                num_embeddings=triples_factory.num_relations,
-                specification=relation_specification,
-            ),
+            entity_representations=[*entity_representations, literal_representation],
+            relation_representations=relation_representations,
         )
