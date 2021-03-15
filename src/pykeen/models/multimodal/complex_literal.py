@@ -13,6 +13,7 @@ from ..unimodal.complex import ComplEx
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import BCEWithLogitsLoss, Loss
 from ...nn import Embedding
+from ...regularizers import Regularizer
 from ...triples import TriplesNumericLiteralsFactory
 from ...typing import DeviceHint
 from ...utils import split_complex
@@ -46,6 +47,7 @@ class ComplExLiteral(ComplEx, MultimodalModel):
         loss: Optional[Loss] = None,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
+        regularizer: Optional[Regularizer] = None,
     ) -> None:
         """Initialize the model."""
         super().__init__(
@@ -54,6 +56,7 @@ class ComplExLiteral(ComplEx, MultimodalModel):
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
+            regularizer=regularizer,
             entity_initializer=xavier_normal_,
             relation_initializer=xavier_normal_,
         )
