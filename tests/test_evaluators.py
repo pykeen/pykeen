@@ -14,10 +14,10 @@ from pykeen.evaluation import Evaluator, MetricResults, RankBasedEvaluator, Rank
 from pykeen.evaluation.evaluator import create_dense_positive_mask_, create_sparse_positive_filter_, filter_scores_
 from pykeen.evaluation.rank_based_evaluator import RANK_TYPES, SIDES, compute_rank_from_scores
 from pykeen.evaluation.sklearn import SklearnEvaluator, SklearnMetricResults
-from pykeen.models import TransE
-from pykeen.models.base import EntityRelationEmbeddingModel, Model
+from pykeen.models import Model, TransE
 from pykeen.triples import TriplesFactory
 from pykeen.typing import MappedTriples
+from tests.mocks import MockModel
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +71,7 @@ class _AbstractEvaluatorTests:
         # Compute mask only if required
         if self.evaluator.requires_positive_mask:
             # TODO: Re-use filtering code
-            triples = self.factory.mapped_triples
+            triples = self.factory.mapped_triples.to(self.model.device)
             if inverse:
                 sel_col, start_col = 0, 1
             else:
@@ -193,12 +193,12 @@ class SklearnEvaluatorTest(_AbstractEvaluatorTests, unittest.TestCase):
         assert isinstance(result, SklearnMetricResults)
 
         # check value
-        scores = data['scores'].detach().numpy()
-        mask = data['mask'].detach().float().numpy()
+        scores = data['scores'].detach().cpu().numpy()
+        mask = data['mask'].detach().cpu().float().numpy()
 
         # filtering
         uniq = dict()
-        batch = data['batch'].detach().numpy()
+        batch = data['batch'].detach().cpu().numpy()
         for i, (h, r) in enumerate(batch[:, :2]):
             uniq[int(h), int(r)] = i
         indices = sorted(uniq.values())
@@ -426,34 +426,6 @@ class DummyEvaluator(Evaluator):
 
     def __repr__(self):  # noqa: D105
         return f'{self.__class__.__name__}(losses={self.losses})'
-
-
-class MockModel(EntityRelationEmbeddingModel):
-    """A dummy model returning fake scores."""
-
-    def __init__(self, triples_factory: TriplesFactory):
-        super().__init__(triples_factory=triples_factory)
-        num_entities = self.num_entities
-        self.scores = torch.arange(num_entities, dtype=torch.float)
-
-    def _generate_fake_scores(self, batch: torch.LongTensor) -> torch.FloatTensor:
-        """Generate fake scores s[b, i] = i of size (batch_size, num_entities)."""
-        batch_size = batch.shape[0]
-        batch_scores = self.scores.view(1, -1).repeat(batch_size, 1)
-        assert batch_scores.shape == (batch_size, self.num_entities)
-        return batch_scores
-
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._generate_fake_scores(batch=hrt_batch)
-
-    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._generate_fake_scores(batch=hr_batch)
-
-    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._generate_fake_scores(batch=rt_batch)
-
-    def reset_parameters_(self) -> Model:  # noqa: D102
-        pass  # Not needed for unittest
 
 
 class TestEvaluationStructure(unittest.TestCase):

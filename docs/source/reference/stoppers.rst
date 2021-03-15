@@ -12,7 +12,3 @@ Base Classes
 ------------
 .. autoclass:: pykeen.stoppers.Stopper
    :members:
-
-Lookup
-------
-.. autofunction:: pykeen.stoppers.get_stopper_cls

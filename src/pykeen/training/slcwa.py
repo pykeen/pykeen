@@ -11,7 +11,7 @@ from torch.optim.optimizer import Optimizer
 from .training_loop import TrainingLoop
 from .utils import apply_label_smoothing
 from ..losses import CrossEntropyLoss
-from ..models.base import Model
+from ..models import Model
 from ..sampling import BasicNegativeSampler, NegativeSampler
 from ..triples import Instances
 from ..typing import MappedTriples
@@ -106,7 +106,7 @@ class SLCWATrainingLoop(TrainingLoop):
         positive_scores = self.model.score_hrt(positive_batch)
         negative_scores = self.model.score_hrt(negative_batch)
 
-        loss = self._loss_helper(
+        loss = self._loss_helper(  # type: ignore
             positive_scores,
             negative_scores,
             label_smoothing,
@@ -128,10 +128,7 @@ class SLCWATrainingLoop(TrainingLoop):
         if _batch_filter is not None:
             positive_scores = positive_scores[_batch_filter]
 
-        return self.model.compute_mr_loss(
-            positive_scores=positive_scores,
-            negative_scores=negative_scores,
-        )
+        return self.model.compute_loss(positive_scores, negative_scores)
 
     def _self_adversarial_negative_sampling_loss_helper(
         self,
@@ -141,10 +138,7 @@ class SLCWATrainingLoop(TrainingLoop):
         _batch_filter=None,
     ) -> torch.FloatTensor:
         """Compute self adversarial negative sampling loss."""
-        return self.model.compute_self_adversarial_negative_sampling_loss(
-            positive_scores=positive_scores,
-            negative_scores=negative_scores,
-        )
+        return self.model.compute_loss(positive_scores, negative_scores)
 
     def _label_loss_helper(
         self,
@@ -169,17 +163,14 @@ class SLCWATrainingLoop(TrainingLoop):
 
         # Normalize the loss to have the average loss per positive triple
         # This allows comparability of sLCWA and LCWA losses
-        return self.model.compute_label_loss(
-            predictions=predictions,
-            labels=labels,
-        )
+        return self.model.compute_loss(predictions, labels)
 
     def _slice_size_search(
         self,
         batch_size: int,
         sub_batch_size: int,
         supports_sub_batching: bool,
-    ) -> None:  # noqa: D102
+    ):  # noqa: D102
         # Slicing is not possible for sLCWA
         if supports_sub_batching:
             report = "This model supports sub-batching, but it also requires slicing, which is not possible for sLCWA"

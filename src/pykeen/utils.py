@@ -4,9 +4,11 @@
 
 import ftplib
 import functools
+import inspect
 import itertools as itt
 import json
 import logging
+import math
 import operator
 import random
 from abc import ABC, abstractmethod
@@ -22,9 +24,10 @@ import pandas as pd
 import torch
 import torch.nn
 import torch.nn.modules.batchnorm
+from class_resolver import normalize_string
 
 from .constants import PYKEEN_BENCHMARKS
-from .typing import DeviceHint, TorchRandomHint
+from .typing import DeviceHint, MappedTriples, TorchRandomHint
 from .version import get_git_hash
 
 __all__ = [
@@ -33,18 +36,14 @@ __all__ = [
     'compact_mapping',
     'ensure_torch_random_state',
     'format_relative_comparison',
-    'imag_part',
     'invert_mapping',
     'is_cuda_oom_error',
     'random_non_negative_int',
-    'real_part',
     'resolve_device',
     'split_complex',
     'split_list_in_batches_iter',
     'torch_is_in_1d',
     'normalize_string',
-    'normalized_lookup',
-    'get_cls',
     'get_until_first_blank',
     'flatten_dictionary',
     'set_random_seed',
@@ -57,7 +56,29 @@ __all__ = [
     'upgrade_to_sequence',
     'ensure_tuple',
     'unpack_singletons',
-    'get_subclasses',
+    'extend_batch',
+    'check_shapes',
+    'all_in_bounds',
+    'is_cudnn_error',
+    'view_complex',
+    'combine_complex',
+    'get_model_io',
+    'get_json_bytes_io',
+    'get_df_io',
+    'ensure_ftp_directory',
+    'broadcast_cat',
+    'get_batchnorm_modules',
+    'calculate_broadcasted_elementwise_result_shape',
+    'estimate_cost_of_sequence',
+    'get_optimal_sequence',
+    'tensor_sum',
+    'tensor_product',
+    'negative_norm_of_sum',
+    'negative_norm',
+    'project_entity',
+    'CANONICAL_DIMENSIONS',
+    'convert_to_canonical_shape',
+    'get_expected_norm',
 ]
 
 logger = logging.getLogger(__name__)
@@ -66,6 +87,8 @@ logger = logging.getLogger(__name__)
 _CUDNN_ERROR = 'cuDNN error: CUDNN_STATUS_NOT_SUPPORTED. This error may appear if you passed in a non-contiguous input.'
 
 _CUDA_OOM_ERROR = 'CUDA out of memory.'
+
+_CUDA_NONZERO_ERROR = "nonzero is not supported for tensors with more than INT_MAX elements"
 
 
 def resolve_device(device: DeviceHint = None) -> torch.device:
@@ -91,49 +114,6 @@ def split_list_in_batches_iter(input_list: List[X], batch_size: int) -> Iterable
     )
 
 
-def normalize_string(s: str, *, suffix: Optional[str] = None) -> str:
-    """Normalize a string for lookup."""
-    s = s.lower().replace('-', '').replace('_', '').replace(' ', '')
-    if suffix is not None and s.endswith(suffix.lower()):
-        return s[:-len(suffix)]
-    return s
-
-
-def normalized_lookup(classes: Iterable[Type[X]]) -> Mapping[str, Type[X]]:
-    """Make a normalized lookup dict."""
-    return {
-        normalize_string(cls.__name__): cls
-        for cls in classes
-    }
-
-
-def get_cls(
-    query: Union[None, str, Type[X]],
-    base: Type[X],
-    lookup_dict: Mapping[str, Type[X]],
-    lookup_dict_synonyms: Optional[Mapping[str, Type[X]]] = None,
-    default: Optional[Type[X]] = None,
-    suffix: Optional[str] = None,
-) -> Type[X]:
-    """Get a class by string, default, or implementation."""
-    if query is None:
-        if default is None:
-            raise ValueError(f'No default {base.__name__} set')
-        return default
-    elif not isinstance(query, (str, type)):
-        raise TypeError(f'Invalid {base.__name__} type: {type(query)} - {query}')
-    elif isinstance(query, str):
-        key = normalize_string(query, suffix=suffix)
-        if key in lookup_dict:
-            return lookup_dict[key]
-        if lookup_dict_synonyms is not None and key in lookup_dict_synonyms:
-            return lookup_dict_synonyms[key]
-        raise ValueError(f'Invalid {base.__name__} name: {query}')
-    elif issubclass(query, base):
-        return query
-    raise TypeError(f'Not subclass of {base.__name__}: {query}')
-
-
 def get_until_first_blank(s: str) -> str:
     """Recapitulate all lines in the string until the first blank line."""
     lines = list(s.splitlines())
@@ -149,7 +129,7 @@ def get_until_first_blank(s: str) -> str:
 
 
 def flatten_dictionary(
-    dictionary: Dict[str, Any],
+    dictionary: Mapping[str, Any],
     prefix: Optional[str] = None,
     sep: str = '.',
 ) -> Dict[str, Any]:
@@ -160,7 +140,7 @@ def flatten_dictionary(
 
 
 def _flatten_dictionary(
-    dictionary: Dict[str, Any],
+    dictionary: Mapping[str, Any],
     prefix: Tuple[str, ...],
 ) -> Dict[Tuple[str, ...], Any]:
     """Help flatten a nested dictionary."""
@@ -195,7 +175,7 @@ def clamp_norm(
         A small value to avoid division by zero.
 
     :return:
-        A vector with |x| <= max_norm.
+        A vector with $|x| <= maxnorm$.
     """
     norm = x.norm(p=p, dim=dim, keepdim=True)
     mask = (norm < maxnorm).type_as(x)
@@ -206,7 +186,10 @@ class compose(Generic[X]):  # noqa:N801
     """A class representing the composition of several functions."""
 
     def __init__(self, *operations: Callable[[X], X]):
-        """Initialize the composition with a sequence of operations."""
+        """Initialize the composition with a sequence of operations.
+
+        :param operations: unary operations that will be applied in succession
+        """
         self.operations = operations
 
     def __call__(self, x: X) -> X:
@@ -217,7 +200,12 @@ class compose(Generic[X]):  # noqa:N801
 
 
 def set_random_seed(seed: int) -> Tuple[None, torch.Generator, None]:
-    """Set the random seed on numpy, torch, and python."""
+    """Set the random seed on numpy, torch, and python.
+
+    :param seed: The seed that will be used in :func:`np.random.seed`, :func:`torch.manual_seed`,
+        and :func:`random.seed`.
+    :returns: A three tuple with None, the torch generator, and None.
+    """
     np.random.seed(seed=seed)
     generator = torch.manual_seed(seed=seed)
     random.seed(seed)
@@ -245,6 +233,7 @@ def all_in_bounds(
     :param a_tol:
         Absolute tolerance.
 
+    :returns: If all values are within the given bounds
     """
     # lower bound
     if low is not None and (x < low - a_tol).any():
@@ -265,6 +254,18 @@ def is_cuda_oom_error(runtime_error: RuntimeError) -> bool:
 def is_cudnn_error(runtime_error: RuntimeError) -> bool:
     """Check whether the caught RuntimeError was due to a CUDNN error."""
     return _CUDNN_ERROR in runtime_error.args[0]
+
+
+def is_nonzero_larger_than_maxint_error(runtime_error: RuntimeError) -> bool:
+    """Check if the runtime error was caused by applying nonzero to a GPU tensor with more than ``MAX_INT`` elements.
+
+    :param runtime_error: The exception to check
+    :returns: if the exception is a runtime error caused by func:`torch.nonzero` being applied to a GPU tensor with
+        more than ``MAX_INT`` elements
+
+    .. seealso:: https://github.com/pytorch/pytorch/issues/51871
+    """
+    return _CUDA_NONZERO_ERROR in runtime_error.args[0]
 
 
 def compact_mapping(
@@ -332,22 +333,6 @@ def combine_complex(
     return torch.cat([x_re, x_im], dim=-1)
 
 
-def real_part(
-    x: torch.FloatTensor,
-) -> torch.FloatTensor:
-    """Get the real part from a complex tensor."""
-    dim = x.shape[-1] // 2
-    return x[..., :dim]
-
-
-def imag_part(
-    x: torch.FloatTensor,
-) -> torch.FloatTensor:
-    """Get the imaginary part from a complex tensor."""
-    dim = x.shape[-1] // 2
-    return x[..., dim:]
-
-
 def fix_dataclass_init_docs(cls: Type) -> Type:
     """Fix the ``__init__`` documentation for a :class:`dataclasses.dataclass`.
 
@@ -411,6 +396,8 @@ def invert_mapping(mapping: Mapping[K, V]) -> Mapping[V, K]:
 
     :return:
         The inverse mapping, value -> key.
+
+    :raises ValueError: if the mapping is not bijective
     """
     num_unique_values = len(set(mapping.values()))
     num_keys = len(mapping)
@@ -447,9 +434,9 @@ def torch_is_in_1d(
     invert: bool = False,
 ) -> torch.BoolTensor:
     """
-    Return a boolean mask with Q[i] in T.
+    Return a boolean mask with ``Q[i]`` in T.
 
-    The method guarantees memory complexity of max(size(Q), size(T)) and is thus, memory-wise, superior to naive
+    The method guarantees memory complexity of ``max(size(Q), size(T))`` and is thus, memory-wise, superior to naive
     broadcasting.
 
     :param query_tensor: shape: S
@@ -485,38 +472,66 @@ def format_relative_comparison(
 
 
 def broadcast_cat(
-    x: torch.FloatTensor,
-    y: torch.FloatTensor,
+    tensors: Sequence[torch.FloatTensor],
     dim: int,
 ) -> torch.FloatTensor:
-    """Concatenate with broadcasting.
+    """Concatenate tensors with broadcasting support.
 
-    :param x:
-        The first tensor.
-    :param y:
-        The second tensor.
+    :param tensors:
+        The tensors. Each of the tensors is require to have the same number of dimensions.
+        For each dimension not equal to dim, the extent has to match the other tensors', or be one.
+        If it is one, the tensor is repeated to match the extent of the othe tensors.
     :param dim:
         The concat dimension.
 
-    :return:
+    :return: A concatenated, broadcasted tensor.
+
+    :raises ValueError: if the x and y dimensions are not the same
+    :raises ValueError: if broadcasting is not possible
     """
-    if x.ndimension() != y.ndimension():
-        raise ValueError
+    # input validation
+    if len(tensors) == 0:
+        raise ValueError("Must pass at least one tensor.")
+    if len({x.ndimension() for x in tensors}) != 1:
+        raise ValueError(
+            f"The number of dimensions has to be the same for all tensors, but is {set(t.shape for t in tensors)}",
+        )
+
+    # base case
+    if len(tensors) == 1:
+        return tensors[0]
+
+    # normalize dim
     if dim < 0:
-        dim = x.ndimension() + dim
-    x_rep, y_rep = [], []
-    for d, (xd, yd) in enumerate(zip(x.shape, y.shape)):
-        xr = yr = 1
-        if d != dim and xd != yd:
-            if xd == 1:
-                xr = yd
-            elif yd == 1:
-                yr = xd
-            else:
-                raise ValueError
-        x_rep.append(xr)
-        y_rep.append(yr)
-    return torch.cat([x.repeat(*x_rep), y.repeat(*y_rep)], dim=dim)
+        dim = tensors[0].ndimension() + dim
+
+    # calculate repeats for each tensor
+    repeats = [
+        [1 for _ in t.shape]
+        for t in tensors
+    ]
+    for i, dims in enumerate(zip(*(t.shape for t in tensors))):
+        # dimensions along concatenation axis do not need to match
+        if i == dim:
+            continue
+
+        # get desired extent along dimension
+        d_max = max(dims)
+        if not {1, d_max}.issuperset(dims):
+            raise ValueError(f"Tensors have invalid shape along {i} dimension: {set(dims)}")
+
+        for j, td in enumerate(dims):
+            if td != d_max:
+                repeats[j][i] = d_max
+
+    # repeat tensors along axes if necessary
+    tensors = [
+        t.repeat(*r)
+        for t, r in zip(tensors, repeats)
+    ]
+
+    # concatenate
+    return torch.cat(tensors, dim=dim)
 
 
 def get_batchnorm_modules(module: torch.nn.Module) -> List[torch.nn.Module]:
@@ -618,20 +633,20 @@ def _reorder(
     return tuple(tensors[i] for i in order)
 
 
-def tensor_sum(*x: torch.FloatTensor) -> torch.FloatTensor:
-    """Compute elementwise sum of tensors in broadcastable shape."""
-    return sum(_reorder(tensors=x))
+def tensor_sum(*tensors: torch.FloatTensor) -> torch.FloatTensor:
+    """Compute element-wise sum of tensors in broadcastable shape."""
+    return sum(_reorder(tensors=tensors))
 
 
-def tensor_product(*x: torch.FloatTensor) -> torch.FloatTensor:
-    """Compute elementwise product of tensors in broadcastable shape."""
-    head, *rest = _reorder(tensors=x)
+def tensor_product(*tensors: torch.FloatTensor) -> torch.FloatTensor:
+    """Compute element-wise product of tensors in broadcastable shape."""
+    head, *rest = _reorder(tensors=tensors)
     return functools.reduce(operator.mul, rest, head)
 
 
 def negative_norm_of_sum(
     *x: torch.FloatTensor,
-    p: Union[str, int] = 2,
+    p: Union[str, int, float] = 2,
     power_norm: bool = False,
 ) -> torch.FloatTensor:
     """Evaluate negative norm of a sum of vectors on already broadcasted representations.
@@ -651,7 +666,7 @@ def negative_norm_of_sum(
 
 def negative_norm(
     x: torch.FloatTensor,
-    p: Union[str, int] = 2,
+    p: Union[str, int, float] = 2,
     power_norm: bool = False,
 ) -> torch.FloatTensor:
     """Evaluate negative norm of a vector.
@@ -796,34 +811,186 @@ def convert_to_canonical_shape(
     return x.view(*shape, *suffix_shape)
 
 
-def strip_dim(*x, num: int = 4):
-    """Strip the first dimensions."""
-    return [xx.view(xx.shape[num:]) for xx in x]
+def strip_dim(*tensors: torch.FloatTensor, n: int = 4) -> Sequence[torch.FloatTensor]:
+    """Strip the first dimensions.
+
+    :param tensors: The tensors whose first ``n`` dimensions should be independently stripped
+    :param n: The number of initial dimensions to strip
+    :return: A tuple of the reduced tensors
+    """
+    return tuple(tensor.view(tensor.shape[n:]) for tensor in tensors)
 
 
 def upgrade_to_sequence(x: Union[X, Sequence[X]]) -> Sequence[X]:
-    """Ensure that the input is a sequence."""
+    """Ensure that the input is a sequence.
+
+    :param x: A literal or sequence of literals
+    :return: If a literal was given, a one element tuple with it in it. Otherwise, return the given value.
+
+    >>> upgrade_to_sequence(1)
+    (1,)
+    >>> upgrade_to_sequence((1, 2, 3))
+    (1, 2, 3)
+    """
     return x if isinstance(x, Sequence) else (x,)
 
 
 def ensure_tuple(*x: Union[X, Sequence[X]]) -> Sequence[Sequence[X]]:
-    """Ensure that all elements in the sequence are upgraded to sequences."""
+    """Ensure that all elements in the sequence are upgraded to sequences.
+
+    :param x: A sequence of sequences or literals
+    :return: An upgraded sequence of sequences
+
+    >>> ensure_tuple(1, (1,), (1, 2))
+    ((1,), (1,), (1, 2))
+    """
     return tuple(upgrade_to_sequence(xx) for xx in x)
 
 
 def unpack_singletons(*xs: Tuple[X]) -> Sequence[Union[X, Tuple[X]]]:
-    """Unpack sequences of length one."""
-    return [
+    """Unpack sequences of length one.
+
+    :param xs: A sequence of tuples of length 1 or more
+    :return: An unpacked sequence of sequences
+
+    >>> unpack_singletons((1,), (1, 2), (1, 2, 3))
+    (1, (1, 2), (1, 2, 3))
+    """
+    return tuple(
         x[0] if len(x) == 1 else x
         for x in xs
-    ]
+    )
 
 
-def get_subclasses(cls: Type[X]) -> Iterable[Type[X]]:
-    """Get all subclasses.
+def _can_slice(fn) -> bool:
+    """Check if a model's score_X function can slice."""
+    return 'slice_size' in inspect.getfullargspec(fn).args
 
-    Credit to: https://stackoverflow.com/a/33607093.
+
+def extend_batch(
+    batch: MappedTriples,
+    all_ids: List[int],
+    dim: int,
+) -> MappedTriples:
+    """Extend batch for 1-to-all scoring by explicit enumeration.
+
+    :param batch: shape: (batch_size, 2)
+        The batch.
+    :param all_ids: len: num_choices
+        The IDs to enumerate.
+    :param dim: in {0,1,2}
+        The column along which to insert the enumerated IDs.
+
+    :return: shape: (batch_size * num_choices, 3)
+        A large batch, where every pair from the original batch is combined with every ID.
     """
-    for subclass in cls.__subclasses__():
-        yield from get_subclasses(subclass)
-        yield subclass
+    # Extend the batch to the number of IDs such that each pair can be combined with all possible IDs
+    extended_batch = batch.repeat_interleave(repeats=len(all_ids), dim=0)
+
+    # Create a tensor of all IDs
+    ids = torch.tensor(all_ids, dtype=torch.long, device=batch.device)
+
+    # Extend all IDs to the number of pairs such that each ID can be combined with every pair
+    extended_ids = ids.repeat(batch.shape[0])
+
+    # Fuse the extended pairs with all IDs to a new (h, r, t) triple tensor.
+    columns = [extended_batch[:, i] for i in (0, 1)]
+    columns.insert(dim, extended_ids)
+    hrt_batch = torch.stack(columns, dim=-1)
+
+    return hrt_batch
+
+
+def check_shapes(
+    *x: Tuple[Union[torch.Tensor, Tuple[int, ...]], str],
+    raise_on_errors: bool = True,
+) -> bool:
+    """Verify that a sequence of tensors are of matching shapes.
+
+    :param x:
+        A tuple (t, s), where `t` is a tensor, or an actual shape of a tensor (a tuple of integers), and `s` is a
+        string, where each character corresponds to a (named) dimension. If the shapes of different tensors share a
+        character, the corresponding dimensions are expected to be of equal size.
+    :param raise_on_errors:
+        Whether to raise an exception in case of a mismatch.
+
+    :return:
+        Whether the shapes matched.
+
+    :raises ValueError:
+        If the shapes mismatch and raise_on_error is True.
+
+    Examples:
+    >>> check_shapes(((10, 20), "bd"), ((10, 20, 20), "bdd"))
+    True
+    >>> check_shapes(((10, 20), "bd"), ((10, 30, 20), "bdd"), raise_on_errors=False)
+    False
+    """
+    dims: Dict[str, Tuple[int, ...]] = dict()
+    errors = []
+    for actual_shape, shape in x:
+        if isinstance(actual_shape, torch.Tensor):
+            actual_shape = actual_shape.shape
+        if len(actual_shape) != len(shape):
+            errors.append(f"Invalid number of dimensions: {actual_shape} vs. {shape}")
+            continue
+        for dim, name in zip(actual_shape, shape):
+            exp_dim = dims.get(name)
+            if exp_dim is not None and exp_dim != dim:
+                errors.append(f"{name}: {dim} vs. {exp_dim}")
+            dims[name] = dim
+    if raise_on_errors and errors:
+        raise ValueError("Shape verification failed:\n" + '\n'.join(errors))
+    return len(errors) == 0
+
+
+@functools.lru_cache(maxsize=1)
+def get_expected_norm(
+    p: Union[int, float, str],
+    d: int,
+) -> float:
+    r"""Compute the expected value of the L_p norm.
+
+    .. math ::
+        E[\|x\|_p] = d^{1/p} E[|x_1|^p]^{1/p}
+
+    under the assumption that :math:`x_i \sim N(0, 1)`, i.e.
+
+    .. math ::
+        E[|x_1|^p] = 2^{p/2} \cdot \Gamma(\frac{p+1}{2} \cdot \pi^{-1/2}
+
+    :param p:
+        The parameter p of the norm.
+    :param d:
+        The dimension of the vector.
+
+    :return:
+        The expected value.
+
+    :raises NotImplementedError: If infinity or negative infinity are given as p
+    :raises TypeError: If an invalid type was given
+
+    .. seealso ::
+        https://math.stackexchange.com/questions/229033/lp-norm-of-multivariate-standard-normal-random-variable
+        https://www.wolframalpha.com/input/?i=expected+value+of+%7Cx%7C%5Ep
+    """
+    if isinstance(p, str):
+        p = float(p)
+    if math.isinf(p) and p > 0:  # max norm
+        # TODO: this only works for x ~ N(0, 1), but not for |x|
+        raise NotImplementedError("Normalization for inf norm is not implemented")
+        # cf. https://en.wikipedia.org/wiki/Generalized_extreme_value_distribution
+        # mean = scipy.stats.norm.ppf(1 - 1/d)
+        # scale = scipy.stats.norm.ppf(1 - 1/d * 1/math.e) - mean
+        # return scipy.stats.gumbel_r.mean(loc=mean, scale=scale)
+    elif math.isfinite(p):
+        exp_abs_norm_p = math.pow(2, p / 2) * math.gamma((p + 1) / 2) / math.sqrt(math.pi)
+        return math.pow(exp_abs_norm_p * d, 1 / p)
+    else:
+        raise TypeError(f"norm not implemented for {type(p)}: {p}")
+
+
+if __name__ == '__main__':
+    import doctest
+
+    doctest.testmod()

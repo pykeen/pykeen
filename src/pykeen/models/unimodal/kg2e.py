@@ -7,14 +7,15 @@ from typing import Any, ClassVar, Mapping, Optional
 
 import torch
 import torch.autograd
+from torch.nn.init import uniform_
 
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
-from ...nn import Embedding
+from ...nn import Embedding, EmbeddingSpecification
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
-from ...typing import DeviceHint
+from ...typing import Constrainer, DeviceHint, Hint, Initializer
 from ...utils import clamp_norm
 
 __all__ = [
@@ -49,6 +50,11 @@ class KG2E(EntityRelationEmbeddingModel):
 
     .. math::
             f(h,r,t) = \mathcal{D_{EL}}(\mathcal{P}_e, \mathcal{P}_r)
+    ---
+    citation:
+        author: He
+        year: 2015
+        link: https://dl.acm.org/doi/10.1145/2806416.2806502
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
@@ -57,6 +63,9 @@ class KG2E(EntityRelationEmbeddingModel):
         c_min=dict(type=float, low=0.01, high=0.1, scale='log'),
         c_max=dict(type=float, low=1.0, high=10.0),
     )
+
+    #: The default settings for the entity constrainer
+    constrainer_default_kwargs = dict(maxnorm=1., p=2, dim=-1)
 
     def __init__(
         self,
@@ -69,25 +78,38 @@ class KG2E(EntityRelationEmbeddingModel):
         c_min: float = 0.05,
         c_max: float = 5.,
         regularizer: Optional[Regularizer] = None,
+        entity_initializer: Hint[Initializer] = uniform_,
+        entity_constrainer: Hint[Constrainer] = clamp_norm,  # type: ignore
+        entity_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
+        relation_initializer: Hint[Initializer] = uniform_,
+        relation_constrainer: Hint[Constrainer] = clamp_norm,  # type: ignore
+        relation_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
     ) -> None:
         r"""Initialize KG2E.
 
         :param embedding_dim: The entity embedding dimension $d$. Is usually $d \in [50, 350]$.
-        :param dist_similarity: Either 'KL' for kullback-liebler or 'EL' for expected liklihood. Defaults to KL.
+        :param dist_similarity: Either 'KL' for Kullback-Leibler or 'EL' for expected likelihood. Defaults to KL.
         :param c_min:
         :param c_max:
         """
         super().__init__(
             triples_factory=triples_factory,
-            embedding_dim=embedding_dim,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
-            entity_constrainer=clamp_norm,
-            entity_constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
-            relation_constrainer=clamp_norm,
-            relation_constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
+            entity_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=entity_initializer,
+                constrainer=entity_constrainer,
+                constrainer_kwargs=entity_constrainer_kwargs or self.constrainer_default_kwargs,
+            ),
+            relation_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=relation_initializer,
+                constrainer=relation_constrainer,
+                constrainer_kwargs=relation_constrainer_kwargs or self.constrainer_default_kwargs,
+            ),
         )
 
         # Similarity function used for distributions

@@ -9,10 +9,18 @@ import pandas as pd
 
 import pykeen.regularizers
 from pykeen.datasets import EagerDataset, Nations
-from pykeen.models.base import Model
+from pykeen.models import ERModel, Model
+from pykeen.models.predict import (
+    get_all_prediction_df, get_head_prediction_df, get_relation_prediction_df,
+    get_tail_prediction_df,
+)
+from pykeen.models.resolve import DimensionError, make_model, make_model_cls
+from pykeen.nn.modules import TransEInteraction
 from pykeen.pipeline import PipelineResult, pipeline
 from pykeen.regularizers import NoRegularizer
+from pykeen.training import SLCWATrainingLoop
 from pykeen.triples.generation import generate_triples_factory
+from pykeen.utils import resolve_device
 
 
 class TestPipeline(unittest.TestCase):
@@ -21,11 +29,14 @@ class TestPipeline(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         """Set up a shared result."""
+        cls.device = resolve_device('cuda')
         cls.result = pipeline(
             model='TransE',
             dataset='nations',
             training_kwargs=dict(num_epochs=5, use_tqdm=False),
             evaluation_kwargs=dict(use_tqdm=False),
+            device=cls.device,
+            random_seed=42,
         )
         cls.model = cls.result.model
         nations = Nations()
@@ -33,7 +44,8 @@ class TestPipeline(unittest.TestCase):
 
     def test_predict_tails_no_novelties(self):
         """Test scoring tails without labeling as novel w.r.t. training and testing."""
-        tails_df = self.model.predict_tails(
+        tails_df = get_tail_prediction_df(
+            self.model,
             'brazil', 'intergovorgs', testing=self.testing_mapped_triples,
             add_novelties=False,
         )
@@ -42,7 +54,8 @@ class TestPipeline(unittest.TestCase):
 
     def test_predict_tails_remove_known(self):
         """Test scoring tails while removing non-novel triples w.r.t. training and testing."""
-        tails_df = self.model.predict_tails(
+        tails_df = get_tail_prediction_df(
+            self.model,
             'brazil', 'intergovorgs', testing=self.testing_mapped_triples,
             remove_known=True,
         )
@@ -51,19 +64,36 @@ class TestPipeline(unittest.TestCase):
 
     def test_predict_tails_with_novelties(self):
         """Test scoring tails with labeling as novel w.r.t. training and testing."""
-        tails_df = self.model.predict_tails('brazil', 'intergovorgs', testing=self.testing_mapped_triples)
+        tails_df = get_tail_prediction_df(self.model, 'brazil', 'intergovorgs', testing=self.testing_mapped_triples)
         self.assertEqual(['tail_id', 'tail_label', 'score', 'in_training', 'in_testing'], list(tails_df.columns))
-        self.assertEqual(len(self.model.triples_factory.entity_to_id), len(tails_df.index))
+        self.assertEqual(self.model.num_entities, len(tails_df.index))
         training_tails = set(tails_df.loc[tails_df['in_training'], 'tail_label'])
         self.assertEqual({'usa', 'uk', 'netherlands', 'egypt', 'india', 'israel', 'indonesia'}, training_tails)
         testing_tails = set(tails_df.loc[tails_df['in_testing'], 'tail_label'])
         self.assertEqual({'poland', 'cuba'}, testing_tails)
 
+    def test_predict_relations_with_novelties(self):
+        """Test scoring relations with labeling as novel w.r.t. training and testing."""
+        rel_df = get_relation_prediction_df(self.model, 'brazil', 'uk', testing=self.testing_mapped_triples)
+        self.assertEqual(['relation_id', 'relation_label', 'score', 'in_training', 'in_testing'], list(rel_df.columns))
+        self.assertEqual(self.model.num_relations, len(rel_df.index))
+        training_rels = set(rel_df.loc[rel_df['in_training'], 'relation_label'])
+        self.assertEqual(
+            {
+                'weightedunvote', 'relexports', 'intergovorgs', 'timesinceally', 'exports3', 'booktranslations',
+                'relbooktranslations', 'reldiplomacy', 'ngoorgs3', 'ngo', 'relngo', 'reltreaties', 'independence',
+                'intergovorgs3', 'unweightedunvote', 'commonbloc2', 'relintergovorgs',
+            },
+            training_rels,
+        )
+        testing_heads = set(rel_df.loc[rel_df['in_testing'], 'relation_label'])
+        self.assertEqual({'embassy'}, testing_heads)
+
     def test_predict_heads_with_novelties(self):
         """Test scoring heads with labeling as novel w.r.t. training and testing."""
-        heads_df = self.model.predict_heads('conferences', 'brazil', testing=self.testing_mapped_triples)
+        heads_df = get_head_prediction_df(self.model, 'conferences', 'brazil', testing=self.testing_mapped_triples)
         self.assertEqual(['head_id', 'head_label', 'score', 'in_training', 'in_testing'], list(heads_df.columns))
-        self.assertEqual(len(self.model.triples_factory.entity_to_id), len(heads_df.index))
+        self.assertEqual(self.model.num_entities, len(heads_df.index))
         training_heads = set(heads_df.loc[heads_df['in_training'], 'head_label'])
         self.assertEqual({'usa', 'india', 'ussr', 'poland', 'cuba'}, training_heads)
         testing_heads = set(heads_df.loc[heads_df['in_testing'], 'head_label'])
@@ -71,7 +101,7 @@ class TestPipeline(unittest.TestCase):
 
     def test_predict_all_no_novelties(self):
         """Test scoring all triples without labeling as novel w.r.t. training and testing."""
-        all_df = self.model.score_all_triples(testing=self.testing_mapped_triples, add_novelties=False)
+        all_df = get_all_prediction_df(model=self.model, testing=self.testing_mapped_triples, add_novelties=False)
         self.assertIsInstance(all_df, pd.DataFrame)
         self.assertEqual(
             ['head_id', 'head_label', 'relation_id', 'relation_label', 'tail_id', 'tail_label', 'score'],
@@ -82,7 +112,7 @@ class TestPipeline(unittest.TestCase):
 
     def test_predict_all_remove_known(self):
         """Test scoring all triples while removing non-novel triples w.r.t. training and testing."""
-        all_df = self.model.score_all_triples(testing=self.testing_mapped_triples, remove_known=True)
+        all_df = get_all_prediction_df(model=self.model, testing=self.testing_mapped_triples, remove_known=True)
         self.assertIsInstance(all_df, pd.DataFrame)
         self.assertEqual(
             ['head_id', 'head_label', 'relation_id', 'relation_label', 'tail_id', 'tail_label', 'score'],
@@ -95,7 +125,7 @@ class TestPipeline(unittest.TestCase):
 
     def test_predict_all_with_novelties(self):
         """Test scoring all triples with labeling as novel w.r.t. training and testing."""
-        all_df = self.model.score_all_triples(testing=self.testing_mapped_triples)
+        all_df = get_all_prediction_df(model=self.model, testing=self.testing_mapped_triples)
         self.assertIsInstance(all_df, pd.DataFrame)
         self.assertEqual(
             [
@@ -146,6 +176,94 @@ class TestPipelineTriples(unittest.TestCase):
             training_kwargs=dict(num_epochs=1, use_tqdm=False),
             evaluation_kwargs=dict(use_tqdm=False),
         )
+
+    def test_interaction_instance_missing_dimensions(self):
+        """Test when a dimension is missing."""
+        with self.assertRaises(DimensionError) as exc:
+            make_model_cls(
+                dimensions={},  # missing "d"
+                interaction=TransEInteraction(p=2),
+            )
+        self.assertIsInstance(exc.exception, DimensionError)
+        self.assertEqual({'d'}, exc.exception.expected)
+        self.assertEqual(set(), exc.exception.given)
+        self.assertEqual("Expected dimensions dictionary with keys {'d'} but got keys set()", str(exc.exception))
+
+    def test_interaction_instance_builder(self):
+        """Test resolving an interaction model instance."""
+        model = make_model(
+            dimensions={"d": 3},
+            interaction=TransEInteraction,
+            interaction_kwargs=dict(p=2),
+            triples_factory=self.training,
+        )
+        self.assertIsInstance(model, ERModel)
+        self.assertIsInstance(model.interaction, TransEInteraction)
+        self.assertEqual(2, model.interaction.p)
+        _ = pipeline(
+            training=self.training,
+            testing=self.testing,
+            validation=self.validation,
+            model=model,
+            training_kwargs=dict(num_epochs=1, use_tqdm=False),
+            evaluation_kwargs=dict(use_tqdm=False),
+            random_seed=0,
+        )
+
+    def test_interaction_builder(self):
+        """Test resolving an interaction model."""
+        model_cls = make_model_cls({"d": 3}, TransEInteraction(p=2))
+        self._help_test_interaction_resolver(model_cls)
+
+    def test_interaction_resolver_cls(self):
+        """Test resolving the interaction function."""
+        model_cls = make_model_cls({"d": 3}, TransEInteraction, {'p': 2})
+        self._help_test_interaction_resolver(model_cls)
+
+    def test_interaction_resolver_lookup(self):
+        """Test resolving the interaction function."""
+        model_cls = make_model_cls({"d": 3}, 'TransE', {'p': 2})
+        self._help_test_interaction_resolver(model_cls)
+
+    def _help_test_interaction_resolver(self, model_cls):
+        self.assertTrue(issubclass(model_cls, ERModel))
+        self.assertIsInstance(model_cls._interaction, TransEInteraction)
+        self.assertEqual(2, model_cls._interaction.p)
+        _ = pipeline(
+            training=self.training,
+            testing=self.testing,
+            validation=self.validation,
+            model=model_cls,
+            training_kwargs=dict(num_epochs=1, use_tqdm=False),
+            evaluation_kwargs=dict(use_tqdm=False),
+            random_seed=0,
+        )
+
+    def test_custom_training_loop(self):
+        """Test providing a custom training loop."""
+        losses = []
+
+        class ModifiedTrainingLoop(SLCWATrainingLoop):
+            """A wrapper around SLCWA training loop which remembers batch losses."""
+
+            def _forward_pass(self, *args, **kwargs):  # noqa: D102
+                loss = super()._forward_pass(*args, **kwargs)
+                losses.append(loss)
+                return loss
+
+        _ = pipeline(
+            training=self.training,
+            testing=self.testing,
+            validation=self.validation,
+            training_loop=ModifiedTrainingLoop,
+            model='TransE',
+            training_kwargs=dict(num_epochs=1, use_tqdm=False),
+            evaluation_kwargs=dict(use_tqdm=False),
+            random_seed=0,
+        )
+
+        # empty lists are falsy
+        self.assertTrue(losses)
 
 
 class TestPipelineCheckpoints(unittest.TestCase):

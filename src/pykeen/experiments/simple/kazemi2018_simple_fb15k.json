@@ -8,7 +8,9 @@
     "model": "SimplE",
     "model_kwargs": {
       "embedding_dim": 200,
-      "clamp_score": 20.0
+      "clamp_score": 20.0,
+      "entity_initializer": "uniform",
+      "relation_initializer": "uniform"
     },
     "regularizer": "PowerSum",
     "regularizer_kwargs": {

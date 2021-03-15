@@ -6,14 +6,14 @@ from typing import Optional
 
 import click
 
-from .. import get_model_cls
-from ...evaluation import _EVALUATOR_SUFFIX, evaluators, get_evaluator_cls
-from ...losses import _LOSS_SUFFIX, get_loss_cls, losses
-from ...optimizers import get_optimizer_cls, optimizers
-from ...stoppers import _STOPPER_SUFFIX, get_stopper_cls, stoppers
-from ...training import _TRAINING_LOOP_SUFFIX, get_training_loop_cls, training_loops
+from .. import model_resolver
+from ...evaluation import evaluator_resolver
+from ...losses import loss_resolver
+from ...optimizers import optimizer_resolver
+from ...stoppers import stopper_resolver
+from ...training import training_loop_resolver
 from ...triples import TriplesFactory
-from ...utils import normalize_string, random_non_negative_int, resolve_device
+from ...utils import random_non_negative_int, resolve_device
 
 
 def _make_callback(f):
@@ -30,13 +30,11 @@ def _make_instantiation_callback(f):
     return _callback
 
 
-def _get_default(f, suffix=None):
-    return normalize_string(f(None).__name__, suffix=suffix)
-
-
 def triples_factory_callback(_, __, path: Optional[str]) -> Optional[TriplesFactory]:
     """Generate a triples factory using the given path."""
-    return path and TriplesFactory.from_path(path=path)
+    if path is None:
+        return None
+    return TriplesFactory.from_path(path=path)
 
 
 CLI_OPTIONS = {
@@ -53,13 +51,7 @@ CLI_OPTIONS = {
         default=0.005,
         show_default=True,
     ),
-    'loss': click.option(
-        '--loss',
-        type=click.Choice(losses),
-        callback=_make_instantiation_callback(get_loss_cls),
-        default=_get_default(get_loss_cls, suffix=_LOSS_SUFFIX),
-        show_default=True,
-    ),
+    'loss': loss_resolver.get_option('--loss'),
     'regularization_factor': click.option(  # ComplEx
         '--regularization-factor',
         type=float,
@@ -97,11 +89,10 @@ CLI_OPTIONS = {
         default=0.2,
         show_default=True,
     ),
-    'inner_model': click.option(
-        '--inner-model',
-        callback=_make_callback(get_model_cls),
-        default='distmult',
-        show_default=True,
+    'inner_model': model_resolver.get_option('--inner-model', default='distmult'),
+    'clamp_score': click.option(
+        '--clamp-score',
+        type=float,
     ),
 }
 
@@ -110,37 +101,14 @@ device_option = click.option(
     callback=_make_callback(resolve_device),
     help='Can either be gpu/cuda or cuda:<ID>. Defaults to cuda, if available.',
 )
-optimizer_option = click.option(
-    '-o', '--optimizer',
-    type=click.Choice(list(optimizers)),
-    default=_get_default(get_optimizer_cls),
-    show_default=True,
-    callback=_make_callback(get_optimizer_cls),
-)
-evaluator_option = click.option(
-    '--evaluator',
-    type=click.Choice(list(evaluators)),
-    show_default=True,
-    default=_get_default(get_evaluator_cls, suffix=_EVALUATOR_SUFFIX),
-    callback=_make_callback(get_evaluator_cls),
-)
-training_loop_option = click.option(
-    '--training-loop',
-    type=click.Choice(list(training_loops)),
-    callback=_make_callback(get_training_loop_cls),
-    default=_get_default(get_training_loop_cls, suffix=_TRAINING_LOOP_SUFFIX),
-    show_default=True,
-)
+optimizer_option = optimizer_resolver.get_option('-o', '--optimizer')
+evaluator_option = evaluator_resolver.get_option('--evaluator')
+training_loop_option = training_loop_resolver.get_option('--training-loop')
+stopper_option = stopper_resolver.get_option('--stopper')
+
 automatic_memory_optimization_option = click.option(
     '--automatic-memory-optimization/--no-automatic-memory-optimization',
     default=True,
-    show_default=True,
-)
-stopper_option = click.option(
-    '--stopper',
-    type=click.Choice(list(stoppers)),
-    callback=_make_callback(get_stopper_cls),
-    default=_get_default(get_stopper_cls, suffix=_STOPPER_SUFFIX),
     show_default=True,
 )
 

@@ -12,12 +12,13 @@ from torch.nn import functional
 
 from . import ComplEx, DistMult, ERMLP
 from .. import EntityEmbeddingModel
-from ..base import Model
+from ..base import _OldAbstractModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE
 from ...losses import Loss
 from ...nn import Embedding, RepresentationModule
+from ...nn.init import xavier_uniform_
 from ...triples import TriplesFactory
-from ...typing import DeviceHint
+from ...typing import DeviceHint, Hint, Initializer
 
 __all__ = [
     'RGCN',
@@ -131,8 +132,12 @@ class RGCNRepresentations(RepresentationModule):
         decomposition: str = 'basis',
         buffer_messages: bool = True,
         base_representations: Optional[RepresentationModule] = None,
+        initializer: Hint[Initializer] = xavier_uniform_,
     ):
-        super().__init__()
+        super().__init__(
+            max_id=triples_factory.num_entities,
+            shape=(embedding_dim,),
+        )
 
         self.triples_factory = triples_factory
 
@@ -142,10 +147,9 @@ class RGCNRepresentations(RepresentationModule):
                 num_embeddings=triples_factory.num_entities,
                 embedding_dim=embedding_dim,
                 # https://github.com/MichSchli/RelationPrediction/blob/c77b094fe5c17685ed138dae9ae49b304e0d8d89/code/encoders/affine_transform.py#L24-L28
-                initializer=nn.init.xavier_uniform_,
+                initializer=initializer,
             )
         self.base_embeddings = base_representations
-        self.embedding_dim = embedding_dim
 
         # check decomposition
         self.decomposition = decomposition
@@ -204,8 +208,8 @@ class RGCNRepresentations(RepresentationModule):
                 self.bases.append(nn.Parameter(
                     data=torch.empty(
                         self.num_bases,
-                        self.embedding_dim,
-                        self.embedding_dim,
+                        embedding_dim,
+                        embedding_dim,
                     ),
                     requires_grad=True,
                 ))
@@ -217,7 +221,7 @@ class RGCNRepresentations(RepresentationModule):
                     requires_grad=True,
                 ))
         elif self.decomposition == 'block':
-            block_size = self.embedding_dim // self.num_bases
+            block_size = embedding_dim // self.num_bases
             for _ in range(self.num_layers):
                 self.bases.append(nn.Parameter(
                     data=torch.empty(
@@ -234,14 +238,14 @@ class RGCNRepresentations(RepresentationModule):
             raise NotImplementedError
         if self.use_bias:
             self.biases = nn.ParameterList([
-                nn.Parameter(torch.empty(self.embedding_dim), requires_grad=True)
+                nn.Parameter(torch.empty(embedding_dim), requires_grad=True)
                 for _ in range(self.num_layers)
             ])
         else:
             self.biases = None
         if self.use_batch_norm:
             self.batch_norms = nn.ModuleList([
-                nn.BatchNorm1d(num_features=self.embedding_dim)
+                nn.BatchNorm1d(num_features=embedding_dim)
                 for _ in range(self.num_layers)
             ])
         else:
@@ -341,7 +345,7 @@ class RGCNRepresentations(RepresentationModule):
 
                 # Normalize messages by relation-specific in-degree
                 if self.edge_weighting is not None:
-                    m_r *= self.edge_weighting(source=sources_r, target=targets_r).unsqueeze(dim=-1)
+                    m_r *= self.edge_weighting(sources_r, targets_r).unsqueeze(dim=-1)
 
                 # Aggregate messages in target
                 new_x.index_add_(dim=0, index=targets_r, source=m_r)
@@ -425,7 +429,7 @@ class Decoder(nn.Module):
         return (h * r * t).sum(dim=-1)
 
 
-class RGCN(Model):
+class RGCN(_OldAbstractModel):
     """An implementation of R-GCN from [schlichtkrull2018]_.
 
     This model uses graph convolutions with relation-specific weights.
@@ -436,6 +440,11 @@ class RGCN(Model):
          <https://github.com/rusty1s/pytorch_geometric/blob/1.3.2/examples/rgcn.py>`_
        - `DGL's implementation of R-GCN
          <https://github.com/dmlc/dgl/tree/v0.4.0/examples/pytorch/rgcn>`_
+    ---
+    citation:
+        author: Schlichtkrull
+        year: 2018
+        link: https://arxiv.org/pdf/1703.06103
     """
 
     #: Interaction model used as decoder
@@ -506,6 +515,8 @@ class RGCN(Model):
         ] = inverse_indegree_edge_weights,
         decomposition: str = 'basis',
         buffer_messages: bool = True,
+        entity_initializer: Hint[Initializer] = 'xavier_uniform',
+        relation_initializer: Hint[Initializer] = 'uniform',
     ):
         if triples_factory.create_inverse_triples:
             raise ValueError('R-GCN handles edges in an undirected manner.')
@@ -532,10 +543,12 @@ class RGCN(Model):
             decomposition=decomposition,
             buffer_messages=buffer_messages,
             base_representations=None,
+            initializer=entity_initializer,
         )
         self.relation_embeddings = Embedding(
             num_embeddings=triples_factory.num_relations,
             embedding_dim=embedding_dim,
+            initializer=relation_initializer,
         )
         # TODO: Dummy
         self.decoder = Decoder()

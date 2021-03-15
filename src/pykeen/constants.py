@@ -12,6 +12,7 @@ __all__ = [
     'PYKEEN_BENCHMARKS',
     'PYKEEN_EXPERIMENTS',
     'PYKEEN_CHECKPOINTS',
+    'PYKEEN_LOGS',
 ]
 
 #: A manager around the PyKEEN data folder. It defaults to ``~/.data/pykeen``.
@@ -28,6 +29,8 @@ PYKEEN_BENCHMARKS: Path = PYKEEN_MODULE.get('benchmarks')
 PYKEEN_EXPERIMENTS: Path = PYKEEN_MODULE.get('experiments')
 #: A subdirectory of the PyKEEN data folder for checkpoints, defaults to ``~/.data/pykeen/checkpoints``
 PYKEEN_CHECKPOINTS: Path = PYKEEN_MODULE.get('checkpoints')
+#: A subdirectory for PyKEEN logs
+PYKEEN_LOGS: Path = PYKEEN_MODULE.get('logs')
 
 PYKEEN_DEFAULT_CHECKPOINT = "PyKEEN_just_saved_my_day.pt"
 

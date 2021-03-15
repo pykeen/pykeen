@@ -11,14 +11,14 @@ novel triples.
 
 import logging
 from collections import defaultdict
-from typing import Collection, Iterable, List, Mapping, Optional, Set, Tuple, TypeVar, Union
+from typing import Collection, Dict, Iterable, List, Mapping, Optional, Set, Tuple, TypeVar, Union
 
 import numpy
 import scipy.sparse
 import torch
 
 from pykeen.datasets.base import EagerDataset
-from pykeen.triples.triples_factory import TriplesFactory
+from pykeen.triples.triples_factory import TriplesFactory, cat_triples
 from pykeen.typing import MappedTriples
 from pykeen.utils import compact_mapping
 
@@ -39,13 +39,13 @@ def find(x: X, parent: Mapping[X, X]) -> X:
         raise ValueError(f'Unknown element: {x}.')
     # path compression
     while parent[x] != x:
-        x, parent[x] = parent[x], parent[parent[x]]
+        x, parent[x] = parent[x], parent[parent[x]]  # type: ignore
     return x
 
 
 def _get_connected_components(pairs: Iterable[Tuple[X, X]]) -> Collection[Collection[X]]:
     # collect connected components using union find with path compression
-    parent = dict()
+    parent: Dict[X, X] = dict()
     for x, y in pairs:
         parent.setdefault(x, x)
         parent.setdefault(y, y)
@@ -56,7 +56,7 @@ def _get_connected_components(pairs: Iterable[Tuple[X, X]]) -> Collection[Collec
         if x == y:
             continue
         # make x the smaller one
-        if y < x:
+        if y < x:  # type: ignore
             x, y = y, x
         # merge
         parent[y] = x
@@ -72,7 +72,7 @@ def _select_by_most_pairs(
     size: Mapping[int, int],
 ) -> Collection[int]:
     """Select relations to keep with the most associated pairs."""
-    result = set()
+    result: Set[int] = set()
     for component in components:
         keep = max(component, key=size.__getitem__)
         result.update(r for r in component if r != keep)
@@ -257,8 +257,12 @@ class Sealant:
         self.candidates = set(self.candidate_duplicate_relations).union(self.candidate_inverse_relations)
         sizes = dict(zip(*triples_factory.mapped_triples[:, 1].unique(return_counts=True)))
         self.relations_to_delete = _select_by_most_pairs(
-            components=_get_connected_components(pairs=((a, b) for (s, a, b) in self.candidates if (a != b))),
             size=sizes,
+            components=_get_connected_components(
+                (a, b)
+                for a, b in self.candidates
+                if a != b
+            ),
         )
         logger.info(f'identified {len(self.candidates)} from {self.triples_factory} to delete')
 
@@ -288,10 +292,10 @@ def unleak(
         frequent_relations = train.get_most_frequent_relations(n=n)
         logger.info(f'keeping most frequent relations from {train}')
         train = train.new_with_restriction(relations=frequent_relations)
-        triples_factories = [
+        triples_factories = tuple(
             triples_factory.new_with_restriction(relations=frequent_relations)
             for triples_factory in triples_factories
-        ]
+        )
 
     # Calculate which relations are the inverse ones
     sealant = Sealant(train, minimum_frequency=minimum_frequency)
@@ -300,10 +304,10 @@ def unleak(
         logger.info(f'no relations to delete identified from {train}')
     else:
         train = sealant.apply(train)
-        triples_factories = [
+        triples_factories = tuple(
             sealant.apply(triples_factory)
             for triples_factory in triples_factories
-        ]
+        )
 
     return reindex(train, *triples_factories)
 
@@ -377,10 +381,7 @@ def _translate_triples(
 def reindex(*triples_factories: TriplesFactory) -> List[TriplesFactory]:
     """Reindex a set of triples factories."""
     # get entities and relations occurring in triples
-    all_triples = torch.cat([
-        factory.mapped_triples
-        for factory in triples_factories
-    ], dim=0)
+    all_triples = cat_triples(*triples_factories)
 
     # generate ID translation and new label to Id mappings
     one_factory = triples_factories[0]
