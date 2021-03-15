@@ -2,8 +2,9 @@
 
 """Base classes for multi-modal models."""
 
-import torch
 from typing import Optional
+
+import torch
 
 from ..nbase import ERModel
 from ...losses import Loss
