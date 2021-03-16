@@ -12,6 +12,7 @@ from ..unimodal.distmult import DistMult
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
 from ...nn import Embedding
+from ...regularizers import Regularizer
 from ...triples import TriplesNumericLiteralsFactory
 from ...typing import DeviceHint
 
@@ -42,6 +43,7 @@ class DistMultLiteral(DistMult, MultimodalModel):
         loss: Optional[Loss] = None,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
+        regularizer: Optional[Regularizer] = None,
     ) -> None:
         super().__init__(
             triples_factory=triples_factory,
@@ -49,6 +51,7 @@ class DistMultLiteral(DistMult, MultimodalModel):
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
+            regularizer=regularizer,
         )
 
         # Literal
