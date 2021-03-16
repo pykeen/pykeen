@@ -44,7 +44,7 @@ def _compute_compressed_adjacency_list(
     return degrees, offset, compressed_adj_lists
 
 
-class GraphSampler(Sampler):
+class PyTorchGraphSampler(Sampler):
     r"""Samples edges based on the proposed method in Schlichtkrull et al.
 
     .. seealso::
@@ -140,3 +140,6 @@ class GraphSampler(Sampler):
 
     def __len__(self):  # noqa: D105
         return self.num_batches_per_epoch
+
+
+GraphSampler = PyTorchGraphSampler
