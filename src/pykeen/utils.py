@@ -990,14 +990,14 @@ def get_expected_norm(
         raise TypeError(f"norm not implemented for {type(p)}: {p}")
 
 
-def p_exp_map(v):
-    normv = torch.clamp(torch.norm(v, 2, dim=-1, keepdim=True), min=1e-10)
-    return torch.tanh(normv) * v / normv
+def p_exp_map(v: torch.FloatTensor, eps: float = 1.0e-10) -> torch.FloatTensor:
+    v_norm = v.norm(p=2, dim=-1, keepdim=True)
+    return v_norm.tanh() * v / v_norm.clamp_min(eps)
 
 
-def p_log_map(v):
-    normv = torch.clamp(torch.norm(v, 2, dim=-1, keepdim=True), 1e-10, 1 - 1e-5)
-    return torch.atanh(normv) * v / normv
+def p_log_map(v: torch.FloatTensor, eps: float = 1.0e-10) -> torch.FloatTensor:
+    v_norm = v.norm(p=2, dim=-1, keepdim=True).clamp(min=eps, max=1 - 1.0e-05)
+    return v_norm.atanh() * v / v_norm
 
 
 def full_p_exp_map(x, v):
