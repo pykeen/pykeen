@@ -59,8 +59,10 @@ class DistMultLiteral(DistMult, MultimodalModel):
         self.numeric_literals = Embedding(
             num_embeddings=triples_factory.num_entities,
             embedding_dim=triples_factory.numeric_literals.shape[-1],
-            initializer=lambda x: triples_factory.numeric_literals,
+            initializer=triples_factory.literal_initializer,
         )
+        # explicitly reset to load the triples in
+        self.numeric_literals.reset_parameters()
         # Number of columns corresponds to number of literals
         self.num_of_literals = self.numeric_literals.embedding_dim
         self.linear_transformation = nn.Linear(self.embedding_dim + self.num_of_literals, self.embedding_dim)
