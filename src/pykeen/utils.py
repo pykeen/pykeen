@@ -1000,24 +1000,24 @@ def p_log_map(v: torch.FloatTensor, eps: float = 1.0e-10) -> torch.FloatTensor:
     return v_norm.atanh() * v / v_norm
 
 
-def full_p_exp_map(x, v):
-    normv = torch.clamp(torch.norm(v, 2, dim=-1, keepdim=True), min=1e-10)
-    sqxnorm = _sqnorm(x)
-    y = torch.tanh(normv / (1 - sqxnorm)) * v / normv
-    return p_sum(x, y)
+def _sqnorm(x: torch.FloatTensor) -> torch.FloatTensor:
+    return x.pow(2).sum(dim=-1, keepdim=True).clamp_max(1 - 1.0e-05)
 
 
-def p_sum(x, y):
-    sqxnorm = _sqnorm(x)
-    sqynorm = _sqnorm(y)
-    dotxy = torch.sum(x * y, dim=-1, keepdim=True)
-    numerator = (1 + 2 * dotxy + sqynorm) * x + (1 - sqxnorm) * y
-    denominator = 1 + 2 * dotxy + sqxnorm * sqynorm
+def p_sum(x: torch.FloatTensor, y: torch.FloatTensor) -> torch.FloatTensor:
+    sq_x_norm = _sqnorm(x)
+    sq_y_norm = _sqnorm(y)
+    dot_xy = (x * y).sum(dim=-1, keepdim=True)
+    numerator = (1 + 2 * dot_xy + sq_y_norm) * x + (1 - sq_x_norm) * y
+    denominator = 1 + 2 * dot_xy + sq_x_norm * sq_y_norm
     return numerator / denominator
 
 
-def _sqnorm(x: torch.FloatTensor) -> torch.FloatTensor:
-    return x.pow(2).sum(dim=-1, keepdim=True).clamp_max(1 - 1e-5)
+def full_p_exp_map(x: torch.FloatTensor, v: torch.FloatTensor, eps: float = 1.0e-10) -> torch.FloatTensor:
+    v_norm = v.norm(p=2, dim=-1, keepdim=True)
+    sq_x_norm = _sqnorm(x)
+    y = (v_norm / (1 - sq_x_norm)).tanh() * v / v_norm.clamp_min(eps)
+    return p_sum(x, y)
 
 
 if __name__ == '__main__':
