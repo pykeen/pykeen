@@ -23,8 +23,8 @@ from .sim import KG2E_SIMILARITIES
 from ..moves import irfft, rfft
 from ..typing import GaussianDistribution
 from ..utils import (
-    broadcast_cat, clamp_norm, estimate_cost_of_sequence, extended_einsum, is_cudnn_error, negative_norm,
-    negative_norm_of_sum, project_entity, tensor_product, tensor_sum, view_complex,
+    artanh, broadcast_cat, clamp_norm, estimate_cost_of_sequence, extended_einsum, is_cudnn_error, negative_norm,
+    negative_norm_of_sum, p_exp_map, p_log_map, p_sum, project_entity, tensor_product, tensor_sum, view_complex,
 )
 
 __all__ = [
@@ -954,6 +954,34 @@ def mure_interaction(
         p=p,
         power_norm=power_norm,
     ) + b_h + b_t
+
+
+def murp_interaction(
+    h: torch.FloatTensor,
+    b_h: torch.FloatTensor,
+    r_vec: torch.FloatTensor,
+    r_mat: torch.FloatTensor,
+    t: torch.FloatTensor,
+    b_t: torch.FloatTensor,
+) -> torch.FloatTensor:
+    """"""
+    h = _norm(h)
+    t = _norm(t)
+    r_mat = _norm(r_mat)
+    u_e = p_log_map(h)
+    u_W = u_e * r_vec
+    u_m = p_exp_map(u_W)
+    v_m = p_sum(t, r_mat)
+    u_m = _norm(u_m)
+    v_m = _norm(v_m)
+    sqdist = (2. * artanh(torch.clamp(torch.norm(p_sum(-u_m, v_m), 2, dim=-1), 1e-10, 1 - 1e-5))) ** 2
+
+    return -sqdist + b_h + b_t
+
+
+def _norm(h):
+    h_norm = torch.norm(h, 2, dim=-1, keepdim=True)
+    return torch.where(h_norm >= 1, h / (h_norm - 1e-5), h)
 
 
 def unstructured_model_interaction(
