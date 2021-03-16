@@ -284,7 +284,7 @@ class InteractionTestCase(
             )
             for prefix_shape, weight_shapes in zip(
                 shapes,
-                [self.cls.entity_shape, self.cls.relation_shape, self.cls.entity_shape],
+                [self.instance.entity_shape, self.instance.relation_shape, self.instance.entity_shape],
             )
         )
         return unpack_singletons(*result)
