@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Riemannian SGD optimizer
+"""Riemannian SGD optimizer.
 
 Code originally written by Ivana Balažević
 https://github.com/ibalazevic/multirelational-poincare/blob/master/rsgd.py
@@ -18,12 +18,14 @@ __all__ = [
 
 
 class RiemannianSGD(Optimizer):
+    """A variant of :class:`torch.optim.SGD` generalized for riemannian manifolds."""
+
     def __init__(self, params, lr=required, param_names=None):
         defaults = dict(lr=lr)
         super().__init__(params, defaults)
         self.param_names = [] if param_names is None else param_names
 
-    def step(self, lr=None):
+    def step(self, lr=None):  # noqa:D102
         loss = None
         for group in self.param_groups:
             for i, p in enumerate(group["params"]):
