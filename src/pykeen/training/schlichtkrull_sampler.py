@@ -44,6 +44,20 @@ def _compute_compressed_adjacency_list(
     return degrees, offset, compressed_adj_lists
 
 
+def _normalize_num_samples(num_samples, triples_factory):
+    if num_samples is None:
+        num_samples = triples_factory.num_triples // 10
+        logging.info(f'Did not specify number of samples. Using {num_samples}.')
+    elif num_samples > triples_factory.num_triples:
+        raise ValueError(
+            'num_samples cannot be larger than the number of triples, but '
+            f'{num_samples} > {triples_factory.num_triples}.',
+        )
+    if not isinstance(num_samples, int) or num_samples <= 0:
+        raise ValueError(f"num_samples should be a positive integer value, but got num_samples={num_samples}")
+    return num_samples
+
+
 class PyTorchGraphSampler(Sampler):
     r"""Samples edges based on the proposed method in Schlichtkrull et al.
 
@@ -60,19 +74,7 @@ class PyTorchGraphSampler(Sampler):
         mapped_triples = triples_factory.mapped_triples
         super().__init__(data_source=mapped_triples)
         self.triples_factory = triples_factory
-
-        if num_samples is None:
-            num_samples = triples_factory.num_triples // 10
-            logging.info(f'Did not specify number of samples. Using {num_samples}.')
-        elif num_samples > triples_factory.num_triples:
-            raise ValueError(
-                'num_samples cannot be larger than the number of triples, but '
-                f'{num_samples} > {triples_factory.num_triples}.',
-            )
-        if not isinstance(num_samples, int) or num_samples <= 0:
-            raise ValueError(f"num_samples should be a positive integer value, but got num_samples={num_samples}")
-
-        self.num_samples = num_samples
+        self.num_samples = _normalize_num_samples(num_samples=num_samples, triples_factory=triples_factory)
         self.num_batches_per_epoch = triples_factory.num_triples // self.num_samples
 
         # preprocessing
