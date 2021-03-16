@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 
 """Schlichtkrull Sampler Class."""
-
+import copy
 import logging
-from typing import List, Optional, Tuple
+import random
+from collections import defaultdict
+from typing import List, MutableMapping, Optional, Set, Tuple
 
 import torch
 from torch.utils.data.sampler import Sampler
@@ -136,6 +138,61 @@ class PyTorchGraphSampler(Sampler):
 
             # return chosen edges
             yield chosen_edges
+
+    def __iter__(self):  # noqa: D105
+        return self._iterator()
+
+    def __len__(self):  # noqa: D105
+        return self.num_batches_per_epoch
+
+
+class PythonGraphSampler(Sampler):
+    """Same functionality as PyTorchGraphSampler, but not using torch."""
+    def __init__(
+        self,
+        triples_factory: TriplesFactory,
+        num_samples: Optional[int] = None,
+    ):
+        mapped_triples = triples_factory.mapped_triples
+        super().__init__(data_source=mapped_triples)
+        self.triples_factory = triples_factory
+        self.num_samples = _normalize_num_samples(num_samples=num_samples, triples_factory=triples_factory)
+        self.num_batches_per_epoch = triples_factory.num_triples // self.num_samples
+
+        # preprocessing
+        adjacency = defaultdict(set)
+        for i, (h, t) in enumerate(mapped_triples[:, [0, 2]].tolist()):
+            # undirected
+            adjacency[h].add((i, t))
+            adjacency[t].add((i, h))
+        self.adjacency = {
+            k: set(v)
+            for k, v in adjacency.items()
+        }
+
+    @torch.no_grad()
+    def _iterator(self):
+        for _ in range(self.num_batches_per_epoch):
+            adjacency: MutableMapping[int, Set[Tuple[int, int]]] = copy.deepcopy(self.adjacency)
+            choices = set()
+            batch = torch.empty(self.num_samples, dtype=torch.long)
+            for i in range(self.num_samples):
+                if len(choices) == 0:
+                    # select random unseen node
+                    start = random.choice(list(adjacency.keys()))
+                    # select random neighbor
+                    choices.update((start, j, end) for (j, end) in adjacency[start])
+                # uniformly random select from choices
+                start, j, end = random.choice(list(choices))
+                choices.difference_update(((start, j, end), (end, j, start)))
+                adjacency[start].discard((j, end))
+                adjacency[end].discard((j, start))
+                # add edge to batch
+                batch[i] = j
+                # update choices
+                for j2, end2 in adjacency.get(end, []):
+                    choices.add((end, j2, end2))
+            yield batch
 
     def __iter__(self):  # noqa: D105
         return self._iterator()
