@@ -26,6 +26,7 @@ from torch.optim.adamax import Adamax
 from torch.optim.adamw import AdamW
 from torch.optim.optimizer import Optimizer
 from torch.optim.sgd import SGD
+
 from .rsgd import RiemannianSGD
 
 __all__ = [
