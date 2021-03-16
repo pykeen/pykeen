@@ -987,11 +987,11 @@ def murp_interaction(
     """
     h = clamp_norm(h, maxnorm=1)
     t = clamp_norm(t, maxnorm=1)
-    r_mat = clamp_norm(r_mat, maxnorm=1)
+    r_vec = clamp_norm(r_vec, maxnorm=1)
     u_e = p_log_map(h)
-    u_w = u_e * r_vec
+    u_w = u_e * r_mat
     u_m = p_exp_map(u_w)
-    v_m = p_sum(t, r_mat)
+    v_m = p_sum(t, r_vec)
     u_m = clamp_norm(u_m, maxnorm=1)
     v_m = clamp_norm(v_m, maxnorm=1)
     sqdist = (2. * torch.atanh(torch.clamp(torch.norm(p_sum(-u_m, v_m), 2, dim=-1), 1e-10, 1 - 1e-5))) ** 2
