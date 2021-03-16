@@ -77,6 +77,7 @@ class MuRP(ERModel):
                 ),
             ],
             relation_representations=[
+                # relation translation vector
                 EmbeddingSpecification(
                     embedding_dim=embedding_dim,
                     initializer=relation_initializer,
@@ -84,8 +85,9 @@ class MuRP(ERModel):
                         std=1.0e-03,
                     ),
                 ),
+                # diagonal relation transformation matrix
                 EmbeddingSpecification(
-                    shape=(embedding_dim, embedding_dim),
+                    shape=(embedding_dim,),
                     initializer=relation_matrix_initializer,
                     initializer_kwargs=relation_matrix_initializer_kwargs or dict(
                         a=-1,
