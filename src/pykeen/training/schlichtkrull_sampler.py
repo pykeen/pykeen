@@ -146,8 +146,67 @@ class PyTorchGraphSampler(Sampler):
         return self.num_batches_per_epoch
 
 
+class VectorizedPyTorchGraphSampler(Sampler):
+    """An vectorized version."""
+
+    def __init__(
+        self,
+        triples_factory: TriplesFactory,
+        num_samples: Optional[int] = None,
+    ):
+        mapped_triples = triples_factory.mapped_triples
+        super().__init__(data_source=mapped_triples)
+        self.triples_factory = triples_factory
+        self.num_samples = _normalize_num_samples(num_samples=num_samples, triples_factory=triples_factory)
+        self.num_batches_per_epoch = triples_factory.num_triples // self.num_samples
+        self.edges = triples_factory.mapped_triples[:, [0, 2]]
+
+    @torch.no_grad()
+    def _iterator(self):
+        num_triples = self.edges.shape[0]
+        num_nodes = self.edges.max().item() + 1
+
+        for _ in range(self.num_batches_per_epoch):
+            # initialize
+            seen_node = torch.zeros(num_nodes, dtype=torch.bool)
+            available = torch.zeros(num_triples, dtype=torch.bool)
+            batch = torch.empty(self.num_samples, dtype=torch.long)
+
+            for i in range(self.num_samples):
+                # if no available edge, make all edges from/to unseen nodes available.
+                if not available.any():
+                    available = (~seen_node)[self.edges].all(dim=-1)
+
+                # chose from available edge pool
+                edge_pool = available.nonzero()
+                edge = edge_pool[torch.randint(edge_pool.shape[0], size=(1,))].squeeze()
+
+                # add to batch
+                batch[i] = edge
+
+                # make nodes available
+                start, end = self.edges[edge]
+                seen_node[start] = True
+                seen_node[end] = True
+
+                # available if connected to seen node ...
+                available |= seen_node[self.edges].any(dim=-1)
+                # ... but not chosen yet
+                available[batch[:i]] = False
+
+            # return chosen edges
+            yield batch
+
+    def __iter__(self):  # noqa: D105
+        return self._iterator()
+
+    def __len__(self):  # noqa: D105
+        return self.num_batches_per_epoch
+
+
 class PythonGraphSampler(Sampler):
     """Same functionality as PyTorchGraphSampler, but not using torch."""
+
     def __init__(
         self,
         triples_factory: TriplesFactory,
@@ -183,6 +242,7 @@ class PythonGraphSampler(Sampler):
                     # select random neighbor
                     choices.update((start, j, end) for (j, end) in adjacency[start])
                 # uniformly random select from choices
+                # start, j, end = next(iter(choices))
                 start, j, end = random.choice(list(choices))
                 choices.difference_update(((start, j, end), (end, j, start)))
                 adjacency[start].discard((j, end))
