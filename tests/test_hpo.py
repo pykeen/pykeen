@@ -8,7 +8,7 @@ import unittest
 import optuna
 import pytest
 
-from pykeen.datasets.nations import NATIONS_TRAIN_PATH
+from pykeen.datasets.nations import NATIONS_TRAIN_PATH, NationsLiteral
 from pykeen.hpo import hpo_pipeline
 from pykeen.hpo.hpo import suggest_kwargs
 from pykeen.triples import TriplesFactory
@@ -163,3 +163,23 @@ class TestHyperparameterOptimization(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as directory:
             hpo_pipeline_result.save_to_directory(directory)
+
+
+@pytest.mark.slow
+class TestHyperparameterOptimizationLiterals(unittest.TestCase):
+    """Test hyper-parameter optimization."""
+
+    def test_run(self):
+        """Test simply making a study."""
+        hpo_pipeline_result = hpo_pipeline(
+            dataset=NationsLiteral,
+            model='DistMultLiteral',
+            training_kwargs=dict(num_epochs=5, use_tqdm=False),
+            n_trials=2,
+        )
+        df = hpo_pipeline_result.study.trials_dataframe(multi_index=True)
+        # Check a model param is optimized
+        self.assertIn(('params', 'model.embedding_dim'), df.columns)
+        # Check a loss param is optimized
+        self.assertIn(('params', 'loss.margin'), df.columns)
+        self.assertNotIn(('params', 'training.num_epochs'), df.columns)

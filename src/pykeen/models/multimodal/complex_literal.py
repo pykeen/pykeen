@@ -11,6 +11,8 @@ from .base import LiteralModel
 from .combinations import ComplExLiteralCombination
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import BCEWithLogitsLoss, Loss
+from ...nn import Embedding
+from ...regularizers import Regularizer
 from ...nn import EmbeddingSpecification
 from ...nn.modules import ComplExInteraction, LiteralInteraction
 from ...triples import TriplesNumericLiteralsFactory
@@ -50,6 +52,7 @@ class ComplExLiteral(LiteralModel):
         predict_with_sigmoid: bool = False,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
+        regularizer: Optional[Regularizer] = None,
     ) -> None:
         """Initialize the model."""
         super().__init__(
@@ -67,6 +70,8 @@ class ComplExLiteral(LiteralModel):
                     embedding_dim=embedding_dim,
                     initializer=nn.init.xavier_normal_,
                     dtype=torch.complex64,
+                    # TODO: verify
+                    regularizer=regularizer,
                 ),
             ],
             relation_representations=[
@@ -74,6 +79,8 @@ class ComplExLiteral(LiteralModel):
                     embedding_dim=embedding_dim,
                     initializer=nn.init.xavier_normal_,
                     dtype=torch.complex64,
+                    # TODO: verify
+                    regularizer=regularizer,
                 ),
             ],
             loss=loss,

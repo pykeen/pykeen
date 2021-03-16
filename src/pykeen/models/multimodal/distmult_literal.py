@@ -10,6 +10,8 @@ from .base import LiteralModel
 from .combinations import DistMultCombination
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
+from ...nn import Embedding
+from ...regularizers import Regularizer
 from ...nn import EmbeddingSpecification
 from ...nn.modules import DistMultInteraction, LiteralInteraction
 from ...triples import TriplesNumericLiteralsFactory
@@ -46,6 +48,7 @@ class DistMultLiteral(LiteralModel):
         loss: Optional[Loss] = None,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
+        regularizer: Optional[Regularizer] = None,
         predict_with_sigmoid: bool = False,
     ) -> None:
         super().__init__(
@@ -62,12 +65,16 @@ class DistMultLiteral(LiteralModel):
                 EmbeddingSpecification(
                     embedding_dim=embedding_dim,
                     initializer=nn.init.xavier_normal_,
+                    # TODO: Verify
+                    regularizer=regularizer,
                 ),
             ],
             relation_representations=[
                 EmbeddingSpecification(
                     embedding_dim=embedding_dim,
                     initializer=nn.init.xavier_normal_,
+                    # TODO: Verify
+                    regularizer=regularizer,
                 ),
             ],
             loss=loss,
