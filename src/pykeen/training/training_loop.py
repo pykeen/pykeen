@@ -462,12 +462,17 @@ class TrainingLoop(ABC):
         self.model = self.model.to(self.device)
 
         # Create Sampler
+        # TODO: proper class resolution?
         if sampler == 'schlichtkrull':
-            sampler = GraphSampler(self.triples_factory, num_samples=sub_batch_size)
-            shuffle = False
+            data_loader_kwargs = dict(
+                batch_sampler=GraphSampler(self.triples_factory, num_samples=sub_batch_size),
+            )
         else:
-            sampler = None
-            shuffle = True
+            data_loader_kwargs = dict(
+                batch_size=batch_size,
+                shuffle=True,
+                drop_last=drop_last,
+            )
 
         if num_workers is None:
             num_workers = 0
@@ -493,12 +498,9 @@ class TrainingLoop(ABC):
         logger.debug(f'using stopper: {stopper}')
 
         train_data_loader = DataLoader(
-            sampler=sampler,
             dataset=self.training_instances,
-            batch_size=batch_size,
-            shuffle=shuffle,
             num_workers=num_workers,
-            drop_last=drop_last,
+            **data_loader_kwargs,
         )
 
         # Save the time to track when the saved point was available

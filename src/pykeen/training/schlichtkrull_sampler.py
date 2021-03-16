@@ -78,60 +78,65 @@ class GraphSampler(Sampler):
         # preprocessing
         self.degrees, self.offset, self.neighbors = _compute_compressed_adjacency_list(triples_factory=triples_factory)
 
-    def __iter__(self):  # noqa: D105
-        # initialize
-        chosen_edges = torch.empty(self.num_samples, dtype=torch.long)
-        node_weights = self.degrees.detach().clone()
-        edge_picked = torch.zeros(self.triples_factory.num_triples, dtype=torch.bool)
-        node_picked = torch.zeros(self.triples_factory.num_entities, dtype=torch.bool)
+    @torch.no_grad()
+    def _iterator(self):
+        for _ in range(self.num_batches_per_epoch):
+            # initialize
+            chosen_edges = torch.empty(self.num_samples, dtype=torch.long)
+            node_weights = self.degrees.detach().clone()
+            edge_picked = torch.zeros(self.triples_factory.num_triples, dtype=torch.bool)
+            node_picked = torch.zeros(self.triples_factory.num_entities, dtype=torch.bool)
 
-        # sample iteratively
-        for i in range(0, self.num_samples):
-            # determine weights
-            weights = node_weights * node_picked
+            # sample iteratively
+            for i in range(0, self.num_samples):
+                # determine weights
+                weights = node_weights * node_picked
 
-            # only happens at first iteration
-            if torch.sum(weights) == 0:
-                weights = torch.ones_like(weights)
-                weights[node_weights == 0] = 0
-                assert i == 0
-            else:
-                assert i > 0
+                # only happens at first iteration
+                if torch.sum(weights) == 0:
+                    weights = torch.ones_like(weights)
+                    weights[node_weights == 0] = 0
+                    assert i == 0
+                else:
+                    assert i > 0
 
-            # normalize to probabilities
-            probabilities = weights.float() / weights.sum().float()
+                # normalize to probabilities
+                probabilities = weights.float() / weights.sum().float()
 
-            # sample a start node
-            chosen_vertex = torch.multinomial(probabilities, num_samples=1)[0]
-            node_picked[chosen_vertex] = True
+                # sample a start node
+                chosen_vertex = torch.multinomial(probabilities, num_samples=1)[0]
+                node_picked[chosen_vertex] = True
 
-            # get list of neighbors
-            start = self.offset[chosen_vertex]
-            chosen_node_degree = self.degrees[chosen_vertex]
-            stop = start + chosen_node_degree
-            adj_list = self.neighbors[start:stop, :]
+                # get list of neighbors
+                start = self.offset[chosen_vertex]
+                chosen_node_degree = self.degrees[chosen_vertex]
+                stop = start + chosen_node_degree
+                adj_list = self.neighbors[start:stop, :]
 
-            # sample an outgoing edge at random which has not been chosen yet using rejection sampling
-            chosen_edge_index = torch.randint(chosen_node_degree, size=(1,))[0]
-            chosen_edge = adj_list[chosen_edge_index]
-            edge_number = chosen_edge[0]
-            while edge_picked[edge_number]:
+                # sample an outgoing edge at random which has not been chosen yet using rejection sampling
                 chosen_edge_index = torch.randint(chosen_node_degree, size=(1,))[0]
                 chosen_edge = adj_list[chosen_edge_index]
                 edge_number = chosen_edge[0]
-            chosen_edges[i] = edge_number
-            edge_picked[edge_number] = True
+                while edge_picked[edge_number]:
+                    chosen_edge_index = torch.randint(chosen_node_degree, size=(1,))[0]
+                    chosen_edge = adj_list[chosen_edge_index]
+                    edge_number = chosen_edge[0]
+                chosen_edges[i] = edge_number
+                edge_picked[edge_number] = True
 
-            # visit target node
-            other_vertex = chosen_edge[1]
-            node_picked[other_vertex] = True
+                # visit target node
+                other_vertex = chosen_edge[1]
+                node_picked[other_vertex] = True
 
-            # decrease sample counts
-            node_weights[chosen_vertex] -= 1
-            node_weights[other_vertex] -= 1
+                # decrease sample counts
+                node_weights[chosen_vertex] -= 1
+                node_weights[other_vertex] -= 1
 
-        # return chosen edges
-        return iter(chosen_edges)
+            # return chosen edges
+            yield chosen_edges
+
+    def __iter__(self):  # noqa: D105
+        return self._iterator()
 
     def __len__(self):  # noqa: D105
         return self.num_batches_per_epoch
