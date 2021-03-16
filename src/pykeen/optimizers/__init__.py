@@ -26,6 +26,7 @@ from torch.optim.adamax import Adamax
 from torch.optim.adamw import AdamW
 from torch.optim.optimizer import Optimizer
 from torch.optim.sgd import SGD
+from .rsgd import RiemannianSGD
 
 __all__ = [
     'Optimizer',
@@ -40,6 +41,7 @@ _OPTIMIZER_LIST: Set[Type[Optimizer]] = {
     Adamax,
     AdamW,
     SGD,
+    RiemannianSGD,
 }
 
 #: The default strategy for optimizing the optimizers' hyper-parameters (yo dawg)
