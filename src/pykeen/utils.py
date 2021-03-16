@@ -990,10 +990,6 @@ def get_expected_norm(
         raise TypeError(f"norm not implemented for {type(p)}: {p}")
 
 
-def artanh(x):
-    return 0.5 * torch.log((1 + x) / (1 - x))
-
-
 def p_exp_map(v):
     normv = torch.clamp(torch.norm(v, 2, dim=-1, keepdim=True), min=1e-10)
     return torch.tanh(normv) * v / normv
@@ -1001,7 +997,7 @@ def p_exp_map(v):
 
 def p_log_map(v):
     normv = torch.clamp(torch.norm(v, 2, dim=-1, keepdim=True), 1e-10, 1 - 1e-5)
-    return artanh(normv) * v / normv
+    return torch.atanh(normv) * v / normv
 
 
 def full_p_exp_map(x, v):

@@ -23,7 +23,7 @@ from .sim import KG2E_SIMILARITIES
 from ..moves import irfft, rfft
 from ..typing import GaussianDistribution
 from ..utils import (
-    artanh, broadcast_cat, clamp_norm, estimate_cost_of_sequence, extended_einsum, is_cudnn_error, negative_norm,
+    broadcast_cat, clamp_norm, estimate_cost_of_sequence, extended_einsum, is_cudnn_error, negative_norm,
     negative_norm_of_sum, p_exp_map, p_log_map, p_sum, project_entity, tensor_product, tensor_sum, view_complex,
 )
 
@@ -994,7 +994,7 @@ def murp_interaction(
     v_m = p_sum(t, r_mat)
     u_m = clamp_norm(u_m, maxnorm=1)
     v_m = clamp_norm(v_m, maxnorm=1)
-    sqdist = (2. * artanh(torch.clamp(torch.norm(p_sum(-u_m, v_m), 2, dim=-1), 1e-10, 1 - 1e-5))) ** 2
+    sqdist = (2. * torch.atanh(torch.clamp(torch.norm(p_sum(-u_m, v_m), 2, dim=-1), 1e-10, 1 - 1e-5))) ** 2
 
     return -sqdist + b_h + b_t
 
