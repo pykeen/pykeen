@@ -964,24 +964,39 @@ def murp_interaction(
     t: torch.FloatTensor,
     b_t: torch.FloatTensor,
 ) -> torch.FloatTensor:
-    """"""
-    h = _norm(h)
-    t = _norm(t)
-    r_mat = _norm(r_mat)
+    """Evaluate the MuRP interaction function from [balazevic2019b]_.
+
+    :param h:
+    :param b_h:
+    :param r_vec:
+    :param r_mat:
+    :param t:
+    :param b_t:
+    :return:
+
+    The original code used the following idiom multiple times for many vectors (not only ``u``):
+
+    .. code-block:: python
+
+        u = torch.where(torch.norm(u, 2, dim=-1, keepdim=True) >= 1,
+                        u/(torch.norm(u, 2, dim=-1, keepdim=True)-1e-5), u)
+
+    The PyKEEN implementation already has :func:`pykeen.utils.clamp_norm`, which when given
+    ``maxnorm=1`` and ``eps=1e-5``, is effectively the same. This greatly allows for the
+    reduction of code verbosity in the following implementation.
+    """
+    h = clamp_norm(h, maxnorm=1)
+    t = clamp_norm(t, maxnorm=1)
+    r_mat = clamp_norm(r_mat, maxnorm=1)
     u_e = p_log_map(h)
-    u_W = u_e * r_vec
-    u_m = p_exp_map(u_W)
+    u_w = u_e * r_vec
+    u_m = p_exp_map(u_w)
     v_m = p_sum(t, r_mat)
-    u_m = _norm(u_m)
-    v_m = _norm(v_m)
+    u_m = clamp_norm(u_m, maxnorm=1)
+    v_m = clamp_norm(v_m, maxnorm=1)
     sqdist = (2. * artanh(torch.clamp(torch.norm(p_sum(-u_m, v_m), 2, dim=-1), 1e-10, 1 - 1e-5))) ** 2
 
     return -sqdist + b_h + b_t
-
-
-def _norm(h):
-    h_norm = torch.norm(h, 2, dim=-1, keepdim=True)
-    return torch.where(h_norm >= 1, h / (h_norm - 1e-5), h)
 
 
 def unstructured_model_interaction(
