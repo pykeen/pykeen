@@ -6,6 +6,7 @@ import logging
 from typing import Dict, Optional, TextIO, Tuple, Union
 
 import numpy as np
+import torch
 
 from .instances import MultimodalLCWAInstances, MultimodalSLCWAInstances
 from .triples_factory import TriplesFactory
@@ -115,5 +116,6 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
             literals_to_id=self.literals_to_id,
         )
 
-    def _get_numeric_literals(self):
-        return self.numeric_literals
+    def initializer(self, _) -> torch.FloatTensor:
+        """Initialize an embedding, for use as the ``initializer`` kwarg for :class:`pykeen.nn.Embedding`."""
+        return torch.as_tensor(self.numeric_literals, dtype=torch.float)
