@@ -114,3 +114,6 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
             numeric_literals=self.numeric_literals,
             literals_to_id=self.literals_to_id,
         )
+
+    def _get_numeric_literals(self):
+        return self.numeric_literals

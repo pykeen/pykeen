@@ -66,7 +66,7 @@ class ComplExLiteral(ComplEx, MultimodalModel):
         self.numeric_literals = Embedding(
             num_embeddings=triples_factory.num_entities,
             embedding_dim=triples_factory.numeric_literals.shape[-1],
-            initializer=lambda x: triples_factory.numeric_literals,
+            initializer=triples_factory._get_numeric_literals,
         )
         # Number of columns corresponds to number of literals
         self.num_of_literals = self.numeric_literals.embedding_dim
