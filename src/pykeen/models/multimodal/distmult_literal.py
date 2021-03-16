@@ -59,7 +59,7 @@ class DistMultLiteral(DistMult, MultimodalModel):
         self.numeric_literals = Embedding(
             num_embeddings=triples_factory.num_entities,
             embedding_dim=triples_factory.numeric_literals.shape[-1],
-            initializer=triples_factory.initializer,
+            initializer=triples_factory.literal_initializer,
         )
         # explicitly reset to load the triples in
         self.numeric_literals.reset_parameters()

@@ -116,6 +116,6 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
             literals_to_id=self.literals_to_id,
         )
 
-    def initializer(self, _) -> torch.FloatTensor:
+    def literal_initializer(self, _) -> torch.FloatTensor:
         """Initialize an embedding, for use as the ``initializer`` kwarg for :class:`pykeen.nn.Embedding`."""
         return torch.as_tensor(self.numeric_literals, dtype=torch.float)
