@@ -33,6 +33,11 @@ class MuRP(ERModel):
         p=dict(type=int, low=1, high=2),
     )
 
+    poincare = [
+        'entity_representations.0._embeddings.weight',
+        'relation_representations.0._embeddings.weight',
+    ]
+
     def __init__(
         self,
         *,

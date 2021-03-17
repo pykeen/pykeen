@@ -189,7 +189,7 @@ from ..evaluation import Evaluator, MetricResults, evaluator_resolver
 from ..losses import Loss, loss_resolver
 from ..models import Model, make_model_cls, model_resolver
 from ..nn.modules import Interaction
-from ..optimizers import optimizer_resolver
+from ..optimizers import RiemannianSGD, optimizer_resolver
 from ..regularizers import Regularizer, regularizer_resolver
 from ..sampling import NegativeSampler, negative_sampler_resolver
 from ..stoppers import EarlyStopper, Stopper, stopper_resolver
@@ -868,11 +868,27 @@ def pipeline(  # noqa: C901
         prefix='model',
     )
 
-    optimizer_instance = optimizer_resolver.make(
-        optimizer,
-        optimizer_kwargs,
-        params=model_instance.get_grad_params(),
-    )
+    optimizer_cls = optimizer_resolver.lookup(optimizer)
+    if optimizer_cls is RiemannianSGD:
+        param_names, params = zip(*(
+            (param_name, param)
+            for param_name, param in model_instance.named_parameters()
+            if param.requires_grad
+        ))
+        optimizer_instance = optimizer_resolver.make(
+            optimizer,
+            optimizer_kwargs,
+            param_names=dict(zip(map(id, params), param_names)),
+            poincare=model_instance.poincare,
+            params=params,
+        )
+    else:
+        optimizer_instance = optimizer_resolver.make(
+            optimizer,
+            optimizer_kwargs,
+            params=model_instance.get_grad_params(),
+        )
+
     _result_tracker.log_params(
         params=dict(cls=optimizer_instance.__class__.__name__, kwargs=optimizer_kwargs),
         prefix='optimizer',

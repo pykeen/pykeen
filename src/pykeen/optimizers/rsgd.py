@@ -6,8 +6,10 @@ Code originally written by Ivana Balažević
 https://github.com/ibalazevic/multirelational-poincare/blob/master/rsgd.py
 and used under the MIT License.
 """
+from typing import Sequence, Set
 
 import torch
+from torch.nn import Parameter
 from torch.optim.optimizer import Optimizer, required
 
 from ..utils import full_p_exp_map
@@ -20,10 +22,17 @@ __all__ = [
 class RiemannianSGD(Optimizer):
     """A variant of :class:`torch.optim.SGD` generalized for riemannian manifolds."""
 
-    def __init__(self, params, lr=required, param_names=None):
+    def __init__(self, params: Sequence[Parameter], param_names: Sequence[str], poincare: Set[str], lr=required):
         defaults = dict(lr=lr)
         super().__init__(params, defaults)
-        self.param_names = [] if param_names is None else param_names
+        self._pykeen_extras = {
+            'param_names': param_names,
+            'poincare': poincare,
+        }
+
+    def is_poincare(self, param) -> bool:
+        """Check if the param is a poincare param."""
+        return self._pykeen_extras['param_names'][id(param)] in self._pykeen_extras['poincare']
 
     def step(self, lr=None):  # noqa:D102
         loss = None
@@ -34,7 +43,8 @@ class RiemannianSGD(Optimizer):
                 d_p = p.grad.data
                 if lr is None:
                     lr = group["lr"]
-                if self.param_names[i] in ["Eh.weight", "rvh.weight"]:
+
+                if self.is_poincare(p):
                     d_p = poincare_grad(p, d_p)
                     p.data = poincare_update(p, d_p, lr)
                 else:
