@@ -150,8 +150,6 @@ class EarlyStopper(Stopper):
     best_metric: Optional[float] = None
     #: The epoch at which the best result occurred
     best_epoch: Optional[int] = None
-    #: The remaining patience
-    remaining_patience: int = dataclasses.field(init=False)
     #: The metric results from all evaluations
     results: List[float] = dataclasses.field(default_factory=list, repr=False)
     #: Whether a larger value is better, or a smaller
@@ -172,13 +170,16 @@ class EarlyStopper(Stopper):
         # TODO: Fix this
         # if all(f.name != self.metric for f in dataclasses.fields(self.evaluator.__class__)):
         #     raise ValueError(f'Invalid metric name: {self.metric}')
-
-        self.remaining_patience = self.patience
         self._stopper = _EarlyStopper(
             patience=self.patience,
             relative_delta=self.relative_delta,
             larger_is_better=self.larger_is_better,
         )
+
+    @property
+    def remaining_patience(self):
+        """The remaining patience."""
+        return self._stopper.remaining_patience
 
     def should_evaluate(self, epoch: int) -> bool:
         """Decide if evaluation should be done based on the current epoch and the internal frequency."""
