@@ -78,6 +78,7 @@ class MuRE(ERModel):
                 ),
             ],
             relation_representations=[
+                # relation offset
                 EmbeddingSpecification(
                     embedding_dim=embedding_dim,
                     initializer=relation_initializer,
@@ -85,8 +86,9 @@ class MuRE(ERModel):
                         std=1.0e-03,
                     ),
                 ),
+                # diagonal relation transformation matrix
                 EmbeddingSpecification(
-                    shape=(embedding_dim, embedding_dim),
+                    shape=(embedding_dim,),
                     initializer=relation_matrix_initializer,
                     initializer_kwargs=relation_matrix_initializer_kwargs or dict(
                         a=-1,
