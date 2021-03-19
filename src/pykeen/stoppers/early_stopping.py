@@ -53,6 +53,75 @@ def is_improvement(
     return current_value < (1.0 - relative_delta) * best_value
 
 
+class _EarlyStopper:
+    """The early stopping logic."""
+
+    #: The best result so far
+    best_metric: float
+
+    #: The epoch at which the best result occurred
+    best_epoch: int
+
+    #: The remaining patience
+    remaining_patience: int
+
+    def __init__(
+        self,
+        patience: int = 2,
+        relative_delta: float = 0.0,
+        larger_is_better: bool = True,
+    ):
+        """
+        Initialize the stopper.
+
+        :param patience:
+            The number of reported results with no improvement after which training will be stopped.
+        :param relative_delta:
+            The minimum relative improvement necessary to consider it an improved result
+        :param larger_is_better:
+            Whether a larger value is better, or a smaller.
+        """
+        self.patience = self.remaining_patience = patience
+        self.relative_delta = relative_delta
+        self.larger_is_better = larger_is_better
+        self.best_epoch = -1
+        self.best_metric = float("-inf") if larger_is_better else float("+inf")
+
+    def report_result(self, metric: float, epoch: int) -> bool:
+        """
+        Report a result at the given epoch.
+
+        :param metric:
+            The result metric.
+        :param epoch:
+            The epoch.
+
+        :return:
+            Whether to stop the training.
+        """
+        # check for improvement
+        if self.best_metric is None or is_improvement(
+            best_value=self.best_metric,
+            current_value=metric,
+            larger_is_better=self.larger_is_better,
+            relative_delta=self.relative_delta,
+        ):
+            self.best_epoch = epoch
+            self.best_metric = metric
+            self.remaining_patience = self.patience
+        else:
+            self.remaining_patience -= 1
+
+        # Stop if the result did not improve more than delta for patience evaluations
+        if self.remaining_patience <= 0:
+            logger.info(
+                f'Stopping early at epoch {epoch}. The best result {self.best_metric} occurred at epoch {self.best_epoch}.',
+            )
+            return True
+
+        return False
+
+
 @fix_dataclass_init_docs
 @dataclass
 class EarlyStopper(Stopper):
@@ -105,6 +174,11 @@ class EarlyStopper(Stopper):
         #     raise ValueError(f'Invalid metric name: {self.metric}')
 
         self.remaining_patience = self.patience
+        self._stopper = _EarlyStopper(
+            patience=self.patience,
+            relative_delta=self.relative_delta,
+            larger_is_better=self.larger_is_better,
+        )
 
     def should_evaluate(self, epoch: int) -> bool:
         """Decide if evaluation should be done based on the current epoch and the internal frequency."""
@@ -145,28 +219,10 @@ class EarlyStopper(Stopper):
         for result_callback in self.result_callbacks:
             result_callback(self, result, epoch)
 
-        # check for improvement
-        if self.best_metric is None or is_improvement(
-            best_value=self.best_metric,
-            current_value=result,
-            larger_is_better=self.larger_is_better,
-            relative_delta=self.relative_delta,
-        ):
-            self.best_epoch = epoch
-            self.best_metric = result
-            self.remaining_patience = self.patience
-        else:
-            self.remaining_patience -= 1
-
-        # Stop if the result did not improve more than delta for patience evaluations
-        if self.remaining_patience <= 0:
-            logger.info(
-                f'Stopping early after {self.number_results} evaluations at epoch {epoch}. The best result '
-                f'{self.metric}={self.best_metric} occurred at epoch {self.best_epoch}.',
-            )
+        self.stopped = self._stopper.report_result(metric=result, epoch=epoch)
+        if self.stopped:
             for stopped_callback in self.stopped_callbacks:
                 stopped_callback(self, result, epoch)
-            self.stopped = True
             return True
 
         for continue_callback in self.continue_callbacks:
