@@ -265,6 +265,21 @@ class TestPipelineTriples(unittest.TestCase):
         # empty lists are falsy
         self.assertTrue(losses)
 
+    def test_custom_optimizer(self):
+        _ = pipeline(
+            training=self.training,
+            testing=self.testing,
+            validation=self.validation,
+            model='MuRP',
+            model_kwargs=dict(embedding_dim=5),
+            optimizer='RiemannianSGD',
+            optimizer_kwargs=dict(lr=1e-5),
+            training_kwargs=dict(num_epochs=1, use_tqdm=False, batch_size=32),
+            evaluation_kwargs=dict(use_tqdm=False, batch_size=32),
+            random_seed=0,
+            device='cpu',
+        )
+
 
 class TestPipelineCheckpoints(unittest.TestCase):
     """Test the pipeline with checkpoints."""

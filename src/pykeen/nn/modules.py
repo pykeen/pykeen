@@ -36,6 +36,7 @@ __all__ = [
     'HolEInteraction',
     'KG2EInteraction',
     'MuREInteraction',
+    'MuRPInteraction',
     'NTNInteraction',
     'PairREInteraction',
     'ProjEInteraction',
@@ -1089,6 +1090,35 @@ class MuREInteraction(
     entity_shape = ("d", "", "")
     relation_shape = ("d", "d")
     func = pkf.mure_interaction
+
+    @staticmethod
+    def _prepare_hrt_for_functional(
+        h: Tuple[FloatTensor, FloatTensor, FloatTensor],
+        r: Tuple[FloatTensor, FloatTensor],
+        t: Tuple[FloatTensor, FloatTensor, FloatTensor],
+    ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
+        h, b_h, _ = h
+        t, _, b_t = t
+        r_vec, r_mat = r
+        return dict(h=h, b_h=b_h, r_vec=r_vec, r_mat=r_mat, t=t, b_t=b_t)
+
+
+class MuRPInteraction(
+    FunctionalInteraction[
+        Tuple[FloatTensor, FloatTensor, FloatTensor],
+        Tuple[FloatTensor, FloatTensor],
+        Tuple[FloatTensor, FloatTensor, FloatTensor],
+    ],
+):
+    """A stateful module for the MuRP interaction function from [balazevic2019b]_.
+
+    .. seealso:: :func:`pykeen.nn.functional.murp_interaction`
+    """
+
+    # there are separate biases for entities in head and tail position
+    entity_shape = ("d", "", "")
+    relation_shape = ("d", "d")
+    func = pkf.murp_interaction
 
     @staticmethod
     def _prepare_hrt_for_functional(

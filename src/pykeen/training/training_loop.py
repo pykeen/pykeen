@@ -75,6 +75,9 @@ def _get_optimizer_kwargs(optimizer: Optimizer) -> Mapping[str, Any]:
         for key, value in optimizer_kwargs['param_groups'][0].items()
         if key != 'params'
     }
+    extras = getattr(optimizer, '_pykeen_extras', None)
+    if extras is not None:
+        optimizer_kwargs.update(extras)
     return optimizer_kwargs
 
 

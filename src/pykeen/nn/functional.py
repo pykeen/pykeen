@@ -24,7 +24,7 @@ from ..moves import irfft, rfft
 from ..typing import GaussianDistribution
 from ..utils import (
     broadcast_cat, clamp_norm, estimate_cost_of_sequence, extended_einsum, is_cudnn_error, negative_norm,
-    negative_norm_of_sum, project_entity, tensor_product, tensor_sum, view_complex,
+    negative_norm_of_sum, p_exp_map, p_log_map, p_sum, project_entity, tensor_product, tensor_sum, view_complex,
 )
 
 __all__ = [
@@ -954,6 +954,49 @@ def mure_interaction(
         p=p,
         power_norm=power_norm,
     ) + b_h + b_t
+
+
+def murp_interaction(
+    h: torch.FloatTensor,
+    b_h: torch.FloatTensor,
+    r_vec: torch.FloatTensor,
+    r_mat: torch.FloatTensor,
+    t: torch.FloatTensor,
+    b_t: torch.FloatTensor,
+) -> torch.FloatTensor:
+    """Evaluate the MuRP interaction function from [balazevic2019b]_.
+
+    :param h:
+    :param b_h:
+    :param r_vec:
+    :param r_mat:
+    :param t:
+    :param b_t:
+    :return:
+
+    The original code used the following idiom multiple times for many vectors (not only ``u``):
+
+    .. code-block:: python
+
+        u = torch.where(torch.norm(u, 2, dim=-1, keepdim=True) >= 1,
+                        u/(torch.norm(u, 2, dim=-1, keepdim=True)-1e-5), u)
+
+    The PyKEEN implementation already has :func:`pykeen.utils.clamp_norm`, which when given
+    ``maxnorm=1`` and ``eps=1e-5``, is effectively the same. This greatly allows for the
+    reduction of code verbosity in the following implementation.
+    """
+    h = clamp_norm(h, maxnorm=1)
+    t = clamp_norm(t, maxnorm=1)
+    r_vec = clamp_norm(r_vec, maxnorm=1)
+    u_e = p_log_map(h)
+    u_w = u_e * r_mat
+    u_m = p_exp_map(u_w)
+    v_m = p_sum(t, r_vec)
+    u_m = clamp_norm(u_m, maxnorm=1)
+    v_m = clamp_norm(v_m, maxnorm=1)
+    sqdist = (2. * torch.atanh(torch.clamp(torch.norm(p_sum(-u_m, v_m), 2, dim=-1), 1e-10, 1 - 1e-5))) ** 2
+
+    return -sqdist + b_h + b_t
 
 
 def unstructured_model_interaction(

@@ -990,6 +990,36 @@ def get_expected_norm(
         raise TypeError(f"norm not implemented for {type(p)}: {p}")
 
 
+def p_exp_map(v: torch.FloatTensor, eps: float = 1.0e-10) -> torch.FloatTensor:
+    v_norm = v.norm(p=2, dim=-1, keepdim=True)
+    return v_norm.tanh() * v / v_norm.clamp_min(eps)
+
+
+def p_log_map(v: torch.FloatTensor, eps: float = 1.0e-10) -> torch.FloatTensor:
+    v_norm = v.norm(p=2, dim=-1, keepdim=True).clamp(min=eps, max=1 - 1.0e-05)
+    return v_norm.atanh() * v / v_norm
+
+
+def _sqnorm(x: torch.FloatTensor) -> torch.FloatTensor:
+    return x.pow(2).sum(dim=-1, keepdim=True).clamp_max(1 - 1.0e-05)
+
+
+def p_sum(x: torch.FloatTensor, y: torch.FloatTensor) -> torch.FloatTensor:
+    sq_x_norm = _sqnorm(x)
+    sq_y_norm = _sqnorm(y)
+    dot_xy = (x * y).sum(dim=-1, keepdim=True)
+    numerator = (1 + 2 * dot_xy + sq_y_norm) * x + (1 - sq_x_norm) * y
+    denominator = 1 + 2 * dot_xy + sq_x_norm * sq_y_norm
+    return numerator / denominator
+
+
+def full_p_exp_map(x: torch.FloatTensor, v: torch.FloatTensor, eps: float = 1.0e-10) -> torch.FloatTensor:
+    v_norm = v.norm(p=2, dim=-1, keepdim=True)
+    sq_x_norm = _sqnorm(x)
+    y = (v_norm / (1 - sq_x_norm)).tanh() * v / v_norm.clamp_min(eps)
+    return p_sum(x, y)
+
+
 if __name__ == '__main__':
     import doctest
 
