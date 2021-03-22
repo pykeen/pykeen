@@ -1020,7 +1020,7 @@ class Bias(nn.Module):
         self.reset_parameters()
 
     def reset_parameters(self):
-        """Reset the layer"s parameters."""
+        """Reset the layer's parameters."""
         nn.init.zeros_(self.bias)
 
     # pylint: disable=arguments-differ
