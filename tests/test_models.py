@@ -17,18 +17,11 @@ from pykeen.models import (
     _NewAbstractModel, _OldAbstractModel, model_resolver,
 )
 from pykeen.models.predict import get_novelty_mask, predict
-from pykeen.models.unimodal.rgcn.decompositions import (
-    BasesDecomposition, BlockDecomposition,
-    RelationSpecificMessagePassing,
-)
-from pykeen.models.unimodal.rgcn.weightings import (
-    inverse_indegree_edge_weights, inverse_outdegree_edge_weights,
-    symmetric_edge_weights,
-)
 from pykeen.models.unimodal.trans_d import _project_entity
 from pykeen.nn import Embedding
 from pykeen.utils import all_in_bounds, clamp_norm, extend_batch
 from tests import cases
+from tests.cases import DecompositionTests, EdgeWeightingTests
 from tests.constants import EPSILON
 
 SKIP_MODULES = {
@@ -240,8 +233,12 @@ class TestRGCNBasis(cases.BaseRGCNTest):
     """Test the R-GCN model."""
 
     model_kwargs = {
-        '_decomposition': BasesDecomposition,
-        'num_bases': 3,
+        'interaction': "transe",
+        'interaction_kwargs': dict(p=1),
+        'decomposition': "bases",
+        "decomposition_kwargs": dict(
+            num_bases=3,
+        ),
     }
     #: one bias per layer
     num_constant_init = 2
@@ -252,9 +249,12 @@ class TestRGCNBlock(cases.BaseRGCNTest):
 
     embedding_dim = 6
     model_kwargs = {
-        '_decomposition': BlockDecomposition,
-        'num_blocks': 3,
-        'edge_weighting': symmetric_edge_weights,
+        'interaction': "distmult",
+        'decomposition': "block",
+        "decomposition_kwargs": dict(
+            num_blocks=3,
+        ),
+        'edge_weighting': "symmetric",
         'use_batch_norm': True,
     }
     #: (scale & bias for BN) * layers
@@ -683,46 +683,22 @@ def _remove_non_models(elements):
     return rv
 
 
-class MessageWeightingTests(unittest.TestCase):
-    """unittests for message weighting."""
+class InverseInDegreeEdgeWeightingTests(EdgeWeightingTests):
+    """Tests for inverse in-degree weighting."""
 
-    #: The number of entities
-    num_entities: int = 16
+    cls = pykeen.models.unimodal.rgcn.weightings.InverseInDegreeEdgeWeighting
 
-    #: The number of triples
-    num_triples: int = 101
 
-    def setUp(self) -> None:
-        """Initialize data for unittest."""
-        self.source, self.target = torch.randint(self.num_entities, size=(2, self.num_triples))
+class InverseOutDegreeEdgeWeightingTests(EdgeWeightingTests):
+    """Tests for inverse out-degree weighting."""
 
-    def _test_message_weighting(self, weight_func):
-        """Perform common tests for message weighting."""
-        weights = weight_func(source=self.source, target=self.target)
+    cls = pykeen.models.unimodal.rgcn.weightings.InverseOutDegreeEdgeWeighting
 
-        # check shape
-        assert weights.shape == self.source.shape
 
-        # check dtype
-        assert weights.dtype == torch.float32
+class SymmetricEdgeWeightingTests(EdgeWeightingTests):
+    """Tests for symmetric weighting."""
 
-        # check finite values (e.g. due to division by zero)
-        assert torch.isfinite(weights).all()
-
-        # check non-negativity
-        assert (weights >= 0.).all()
-
-    def test_inverse_indegree_edge_weights(self):
-        """Test inverse_indegree_edge_weights."""
-        self._test_message_weighting(weight_func=inverse_indegree_edge_weights)
-
-    def test_inverse_outdegree_edge_weights(self):
-        """Test inverse_outdegree_edge_weights."""
-        self._test_message_weighting(weight_func=inverse_outdegree_edge_weights)
-
-    def test_symmetric_edge_weights(self):
-        """Test symmetric_edge_weights."""
-        self._test_message_weighting(weight_func=symmetric_edge_weights)
+    cls = pykeen.models.unimodal.rgcn.weightings.SymmetricEdgeWeighting
 
 
 class TestModelUtilities(unittest.TestCase):
@@ -783,45 +759,16 @@ class TestModelUtilities(unittest.TestCase):
             assert actual_content == exp_content
 
 
-class _MessagePassingTests:
-    cls: Type[RelationSpecificMessagePassing]
-    kwargs: Optional[Mapping[str, Any]] = None
-    input_dim: int = 3
-    instance: RelationSpecificMessagePassing
+class BlockDecompositionTests(DecompositionTests, unittest.TestCase):
+    """Tests for block Decomposition."""
 
-    def setUp(self) -> None:
-        self.output_dim = self.input_dim
-        self.factory = Nations().training
-        self.x = torch.rand(self.factory.num_entities, self.input_dim)
-        self.source, self.edge_type, self.target = self.factory.mapped_triples.t()
-        kwargs = self.kwargs or {}
-        self.instance = self.cls(input_dim=self.input_dim, num_relations=self.factory.num_relations, **kwargs)
-
-    def test_forward(self):
-        """Test the :meth:`RelationSpecificMessagePassing.forward` function."""
-        for node_keep_mask in [None, torch.rand(size=(self.factory.num_entities,)) < 0.5]:
-            for edge_weights in [None, inverse_indegree_edge_weights(source=self.source, target=self.target)]:
-                y = self.instance(
-                    x=self.x,
-                    node_keep_mask=node_keep_mask,
-                    source=self.source,
-                    target=self.target,
-                    edge_type=self.edge_type,
-                    edge_weights=edge_weights,
-                )
-                assert y.shape == (self.x.shape[0], self.output_dim)
+    cls = pykeen.models.unimodal.rgcn.decompositions.BlockDecomposition
 
 
-class BlockDecompositionTests(_MessagePassingTests, unittest.TestCase):
-    """Tests for Block Decomposition."""
+class _BasesDecompositionTests(DecompositionTests):
+    """Tests for bases Decomposition."""
 
-    cls = BlockDecomposition
-
-
-class _BasesDecompositionTests(_MessagePassingTests):
-    """Tests for Bases Decomposition."""
-
-    cls = BasesDecomposition
+    cls = pykeen.models.unimodal.rgcn.decompositions.BasesDecomposition
 
 
 class LowMemoryBasesDecompositionTests(_BasesDecompositionTests, unittest.TestCase):

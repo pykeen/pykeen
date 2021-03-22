@@ -29,6 +29,8 @@ from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH
 from pykeen.losses import Loss, PairwiseLoss, PointwiseLoss, SetwiseLoss
 from pykeen.models import EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, RESCAL
 from pykeen.models.cli import build_cli_from_cls
+from pykeen.models.unimodal.rgcn.decompositions import Decomposition
+from pykeen.models.unimodal.rgcn.weightings import EdgeWeighting
 from pykeen.nn import RepresentationModule
 from pykeen.nn.modules import Interaction
 from pykeen.regularizers import LpRegularizer, Regularizer
@@ -985,7 +987,7 @@ class ModelTestCase(unittest.TestCase):
     def _help_test_cli(self, args):
         """Test running the pipeline on all models."""
         if issubclass(self.model_cls, pykeen.models.RGCN):
-            self.skipTest('There is a problem with non-reproducible unittest for R-GCN.')
+            self.skipTest(f"Cannot choose interaction via CLI for {self.model_cls}.")
         runner = CliRunner()
         cli = build_cli_from_cls(self.model_cls)
         # TODO: Catch HolE MKL error?
@@ -1210,7 +1212,7 @@ class BaseRGCNTest(ModelTestCase):
 
         Enriched embeddings have to be reset.
         """
-        assert self.model.entity_representations.enriched_embeddings is None
+        assert self.model.entity_representations[0].enriched_embeddings is None
 
 
 class RepresentationTestCase(GenericTestCase[RepresentationModule]):
@@ -1285,3 +1287,63 @@ class RepresentationTestCase(GenericTestCase[RepresentationModule]):
     def test_all_indices(self):
         """Test with all indices."""
         self._test_indices(indices=torch.arange(self.instance.max_id))
+
+
+class EdgeWeightingTests(GenericTestCase[EdgeWeighting]):
+    """Tests for message weighting."""
+
+    #: The number of entities
+    num_entities: int = 16
+
+    #: The number of triples
+    num_triples: int = 101
+
+    def post_instantiation_hook(self):  # noqa: D102
+        self.source, self.target = torch.randint(self.num_entities, size=(2, self.num_triples))
+
+    def test_message_weighting(self):
+        """Perform common tests for message weighting."""
+        weights = self.instance(source=self.source, target=self.target)
+
+        # check shape
+        assert weights.shape == self.source.shape
+
+        # check dtype
+        assert weights.dtype == torch.float32
+
+        # check finite values (e.g. due to division by zero)
+        assert torch.isfinite(weights).all()
+
+        # check non-negativity
+        assert (weights >= 0.).all()
+
+
+class DecompositionTests(GenericTestCase[Decomposition]):
+    """Tests for relation-specific weight decomposition message passing classes."""
+
+    #: The input dimension
+    input_dim: int = 3
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        self.output_dim = self.input_dim
+        self.factory = Nations().training
+        self.source, self.edge_type, self.target = self.factory.mapped_triples.t()
+        self.x = torch.rand(self.factory.num_entities, self.input_dim)
+        kwargs["input_dim"] = self.input_dim
+        kwargs["num_relations"] = self.factory.num_relations
+        return kwargs
+
+    def test_forward(self):
+        """Test the :meth:`Decomposition.forward` function."""
+        for node_keep_mask in [None, torch.rand(size=(self.factory.num_entities,)) < 0.5]:
+            for edge_weights in [None, torch.rand_like(self.source, dtype=torch.get_default_dtype())]:
+                y = self.instance(
+                    x=self.x,
+                    node_keep_mask=node_keep_mask,
+                    source=self.source,
+                    target=self.target,
+                    edge_type=self.edge_type,
+                    edge_weights=edge_weights,
+                )
+                assert y.shape == (self.x.shape[0], self.output_dim)

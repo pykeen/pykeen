@@ -10,8 +10,8 @@ from class_resolver import Resolver
 from torch import nn
 from torch.nn import functional
 
-
 __all__ = [
+    "Decomposition",
     "decomposition_resolver",
 ]
 
@@ -57,7 +57,7 @@ def _reduce_relation_specific(
     return source_r, target_r, edge_weights
 
 
-class RelationSpecificMessagePassing(nn.Module):
+class Decomposition(nn.Module):
     """Base module for relation-specific message passing."""
 
     def __init__(
@@ -116,14 +116,14 @@ class RelationSpecificMessagePassing(nn.Module):
         raise NotImplementedError
 
 
-class BasesDecomposition(RelationSpecificMessagePassing):
+class BasesDecomposition(Decomposition):
     """Represent relation-weights as a linear combination of base transformation matrices."""
 
     def __init__(
         self,
         input_dim: int,
         num_relations: int,
-        num_bases: Optional[int],
+        num_bases: Optional[int] = None,
         output_dim: Optional[int] = None,
         memory_intense: bool = False,
     ):
@@ -292,7 +292,7 @@ class BasesDecomposition(RelationSpecificMessagePassing):
         )
 
 
-class BlockDecomposition(RelationSpecificMessagePassing):
+class BlockDecomposition(Decomposition):
     """Represent relation-specific weight matrices via block-diagonal matrices."""
 
     def __init__(
@@ -395,4 +395,4 @@ class BlockDecomposition(RelationSpecificMessagePassing):
         return out.reshape(-1, self.output_dim)
 
 
-decomposition_resolver = Resolver.from_subclasses(base=RelationSpecificMessagePassing, default=BasesDecomposition)
+decomposition_resolver = Resolver.from_subclasses(base=Decomposition, default=BasesDecomposition)
