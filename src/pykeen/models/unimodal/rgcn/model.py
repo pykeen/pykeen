@@ -65,7 +65,7 @@ class RGCNRepresentations(RepresentationModule):
     def __init__(
         self,
         triples_factory: TriplesFactory,
-        embedding_specification: EmbeddingSpecificationHint,
+        embedding_specification: EmbeddingSpecification,
         num_layers: int = 2,
         use_bias: bool = True,
         use_batch_norm: bool = False,
