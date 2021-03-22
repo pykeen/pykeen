@@ -98,6 +98,9 @@ class TrainingCallback:
     def on_evaluation_batch(self, batch) -> None:
         """Callback for evaluation (validation/test) batches."""
 
+    def on_training_batch(self, batch) -> None:
+        """Callback for training batches."""
+
 
 class TrainingLoop(ABC):
     """A training loop."""
@@ -593,6 +596,10 @@ class TrainingLoop(ABC):
                     # For testing purposes we're only interested in processing one batch
                     if only_size_probing and evaluated_once:
                         break
+
+                    # Callbacks for evaluation batches
+                    for callback in callbacks:
+                        callback.on_training_batch(batch)
 
                     evaluated_once = True
 
