@@ -1347,3 +1347,9 @@ class DecompositionTestCase(GenericTestCase[pykeen.nn.message_passing.Decomposit
                     edge_weights=edge_weights,
                 )
                 assert y.shape == (self.x.shape[0], self.output_dim)
+
+
+class BasesDecompositionTestCase(DecompositionTestCase):
+    """Tests for bases Decomposition."""
+
+    cls = pykeen.nn.message_passing.BasesDecomposition
