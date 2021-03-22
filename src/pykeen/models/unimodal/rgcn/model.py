@@ -17,44 +17,13 @@ from ....nn import EmbeddingSpecification, RepresentationModule
 from ....nn.modules import Interaction, interaction_resolver
 from ....triples import TriplesFactory
 from ....typing import Initializer, RelationRepresentation
+from ....utils import Bias, activation_resolver
 
 __all__ = [
     "RGCN",
 ]
 
-from ....utils import activation_resolver
-
 logger = logging.getLogger(name=path.basename(__file__))
-
-
-class Bias(nn.Module):
-    """A module wrapper for adding a bias."""
-
-    def __init__(self, dim: int):
-        """Initialize the module.
-
-        :param dim: >0
-            The dimension of the input.
-        """
-        super().__init__()
-        self.bias = nn.Parameter(torch.empty(dim), requires_grad=True)
-        self.reset_parameters()
-
-    def reset_parameters(self):
-        """Reset the layer"s parameters."""
-        nn.init.zeros_(self.bias)
-
-    # pylint: disable=arguments-differ
-    def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:
-        """Add the learned bias to the input.
-
-        :param x: shape: (n, d)
-            The input.
-
-        :return:
-            x + b[None, :]
-        """
-        return x + self.bias.unsqueeze(dim=0)
 
 
 class RGCNRepresentations(RepresentationModule):
