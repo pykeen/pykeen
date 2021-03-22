@@ -52,7 +52,7 @@ copyright = f'2019-{date.today().year}, PyKEEN Project Team'
 author = 'PyKEEN Project Team'
 
 # The full version, including alpha/beta/rc tags.
-release = '1.0.6-dev'
+release = '1.4.1-dev'
 
 # The short X.Y version.
 parsed_version = re.match(
@@ -93,6 +93,9 @@ extensions = [
     'sphinx_automodapi.automodapi',
     'texext',
 ]
+
+# show todo's
+todo_include_todos = True
 
 # generate autosummary pages
 autosummary_generate = True
@@ -251,7 +254,7 @@ texinfo_documents = [
 intersphinx_mapping = {
     'https://docs.python.org/3/': None,
     'torch': ('https://pytorch.org/docs/stable', None),
-    'numpy': ('https://docs.scipy.org/doc/numpy', None),
+    'numpy': ('https://numpy.org/doc/stable', None),
     'optuna': ('https://optuna.readthedocs.io/en/latest', None),
     'pybel': ('https://pybel.readthedocs.io/en/latest/', None),
     'bio2bel': ('https://bio2bel.readthedocs.io/en/latest/', None),

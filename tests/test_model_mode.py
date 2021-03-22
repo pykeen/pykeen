@@ -9,8 +9,8 @@ import torch
 from torch import nn
 
 from pykeen.datasets import Nations
-from pykeen.models import TransE
-from pykeen.models.base import EntityRelationEmbeddingModel, Model
+from pykeen.models import EntityRelationEmbeddingModel, Model, TransE
+from pykeen.nn import EmbeddingSpecification
 from pykeen.triples import TriplesFactory
 from pykeen.utils import resolve_device
 
@@ -21,7 +21,7 @@ class TestBaseModel(unittest.TestCase):
     batch_size: int
     embedding_dim: int
     factory: TriplesFactory
-    model: EntityRelationEmbeddingModel
+    model: Model
 
     def setUp(self) -> None:
         """Set up the test case with a triples factory and TransE as an example model."""
@@ -42,7 +42,7 @@ class TestBaseModel(unittest.TestCase):
         # Set into training mode to check if it is correctly set to evaluation mode.
         self.model.train()
 
-        scores = self.model.predict_scores_all_heads(batch)
+        scores = self.model.predict_h(batch)
         assert scores.shape == (self.batch_size, self.model.num_entities)
         self._check_scores(scores)
 
@@ -55,7 +55,7 @@ class TestBaseModel(unittest.TestCase):
         # Set into training mode to check if it is correctly set to evaluation mode.
         self.model.train()
 
-        scores = self.model.predict_scores_all_tails(batch)
+        scores = self.model.predict_t(batch)
         assert scores.shape == (self.batch_size, self.model.num_entities)
         self._check_scores(scores)
 
@@ -68,7 +68,7 @@ class TestBaseModel(unittest.TestCase):
         # Set into training mode to check if it is correctly set to evaluation mode.
         self.model.train()
 
-        scores = self.model.predict_scores(batch)
+        scores = self.model.predict_hrt(batch)
         assert scores.shape == (self.batch_size, 1)
         self._check_scores(scores)
 
@@ -162,7 +162,11 @@ class SimpleInteractionModel(EntityRelationEmbeddingModel):
     """A model with a simple interaction function for testing the base model."""
 
     def __init__(self, triples_factory: TriplesFactory):
-        super().__init__(triples_factory=triples_factory)
+        super().__init__(
+            triples_factory=triples_factory,
+            entity_representations=EmbeddingSpecification(embedding_dim=50),
+            relation_representations=EmbeddingSpecification(embedding_dim=50),
+        )
         self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
         self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
 
@@ -192,3 +196,11 @@ class MinimalTriplesFactory:
     }
     num_entities = 2
     num_relations = 2
+
+    @classmethod
+    def get_entity_ids(cls):  # noqa:D102
+        return cls.entity_to_id.values()
+
+    @classmethod
+    def get_relation_ids(cls):  # noqa:D102
+        return cls.relation_to_id.values()

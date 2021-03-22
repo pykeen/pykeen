@@ -2,18 +2,20 @@
 
 """TransE."""
 
-from typing import Optional
+from typing import Any, ClassVar, Mapping, Optional
 
 import torch
 import torch.autograd
 from torch.nn import functional
 
 from ..base import EntityRelationEmbeddingModel
+from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
-from ...nn.init import xavier_uniform_
+from ...nn import EmbeddingSpecification
+from ...nn.init import xavier_uniform_, xavier_uniform_norm_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
-from ...utils import compose
+from ...typing import Constrainer, DeviceHint, Hint, Initializer
 
 __all__ = [
     'TransE',
@@ -21,7 +23,9 @@ __all__ = [
 
 
 class TransE(EntityRelationEmbeddingModel):
-    r"""TransE models relations as a translation from head to tail entities in :math:`\textbf{e}` [bordes2013]_.
+    r"""An implementation of TransE [bordes2013]_.
+
+    TransE models relations as a translation from head to tail entities in :math:`\textbf{e}`:
 
     .. math::
 
@@ -38,11 +42,16 @@ class TransE(EntityRelationEmbeddingModel):
     the model adapts the embeddings in order to ensure :math:`\textbf{e}_h + \textbf{e}_r \approx \textbf{e}_{t_1}`
     and :math:`\textbf{e}_h + \textbf{e}_r \approx \textbf{e}_{t_2}` which results in
     :math:`\textbf{e}_{t_1} \approx \textbf{e}_{t_2}`.
+    ---
+    citation:
+        author: Bordes
+        year: 2013
+        link: http://papers.nips.cc/paper/5071-translating-embeddings-for-modeling-multi-relational-data.pdf
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default = dict(
-        embedding_dim=dict(type=int, low=50, high=300, q=50),
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
+        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
         scoring_fct_norm=dict(type=int, low=1, high=2),
     )
 
@@ -50,12 +59,14 @@ class TransE(EntityRelationEmbeddingModel):
         self,
         triples_factory: TriplesFactory,
         embedding_dim: int = 50,
-        automatic_memory_optimization: Optional[bool] = None,
         scoring_fct_norm: int = 1,
         loss: Optional[Loss] = None,
-        preferred_device: Optional[str] = None,
+        preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
+        entity_initializer: Hint[Initializer] = xavier_uniform_,
+        entity_constrainer: Hint[Constrainer] = functional.normalize,
+        relation_initializer: Hint[Initializer] = xavier_uniform_norm_,
     ) -> None:
         r"""Initialize TransE.
 
@@ -68,18 +79,19 @@ class TransE(EntityRelationEmbeddingModel):
         """
         super().__init__(
             triples_factory=triples_factory,
-            embedding_dim=embedding_dim,
-            automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
-            entity_initializer=xavier_uniform_,
-            relation_initializer=compose(
-                xavier_uniform_,
-                functional.normalize,
+            entity_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=entity_initializer,
+                constrainer=entity_constrainer,
             ),
-            entity_constrainer=functional.normalize,
+            relation_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=relation_initializer,
+            ),
         )
         self.scoring_fct_norm = scoring_fct_norm
 

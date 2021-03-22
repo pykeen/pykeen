@@ -7,14 +7,9 @@
 </h1>
 
 <p align="center">
-  <a href="https://travis-ci.com/pykeen/pykeen">
-    <img src="https://travis-ci.com/pykeen/pykeen.svg?token=2tyMYiCcZbjqYscNWXwZ&branch=master"
-         alt="Travis CI">
-  </a>
-
-  <a href="https://ci.appveyor.com/project/pykeen/pykeen/branch/master">
-    <img src="https://ci.appveyor.com/api/projects/status/lwp9cfnsa8d5yx62/branch/master?svg=true"
-         alt="AppVeyor">
+  <a href="https://github.com/pykeen/pykeen/actions">
+    <img src="https://github.com/pykeen/pykeen/workflows/Tests%20master/badge.svg"
+         alt="GitHub Actions">
   </a>
 
   <a href='https://opensource.org/licenses/MIT'>
@@ -65,7 +60,7 @@ can be found in the [installation documentation](https://pykeen.readthedocs.io/e
 
 ## Quickstart [![Documentation Status](https://readthedocs.org/projects/pykeen/badge/?version=latest)](https://pykeen.readthedocs.io/en/latest/?badge=latest)
 
-This example shows how to train a model on a data set and test on another data set.
+This example shows how to train a model on a dataset and test on another dataset.
 
 The fastest way to get up and running is to use the pipeline function. It
 provides a high-level entry into the extensible functionality of this package.
@@ -98,10 +93,14 @@ The full documentation can be found at https://pykeen.readthedocs.io.
 
 ## Implementation
 
-Below are the models, data sets, training modes, evaluators, and metrics implemented
+Below are the models, datasets, training modes, evaluators, and metrics implemented
 in ``pykeen``.
 
 ### Datasets ({{ n_datasets }})
+
+The citation for each dataset corresponds to either the paper describing the dataset,
+the first paper published using the dataset with knowledge graph embedding models,
+or the URL for the dataset if neither of the first two are available.
 
 {{ datasets }}
 
@@ -151,6 +150,10 @@ in ``pykeen``.
 
 {{ hpo_samplers }}
 
+Any sampler class extending the [optuna.samplers.BaseSampler](https://optuna.readthedocs.io/en/stable/reference/generated/optuna.samplers.BaseSampler.html#optuna.samplers.BaseSampler),
+such as their sampler implementing the [CMA-ES](https://optuna.readthedocs.io/en/stable/reference/generated/optuna.samplers.CmaEsSampler.html#optuna.samplers.CmaEsSampler)
+algorithm, can also be used.
+
 ## Experimentation
 
 ### Reproduction
@@ -162,7 +165,7 @@ experiments. They can be accessed and run like:
 pykeen experiments reproduce tucker balazevic2019 fb15k
 ```
 
-Where the three arguments are the model name, the reference, and the data set.
+Where the three arguments are the model name, the reference, and the dataset.
 The output directory can be optionally set with `-d`.
 
 ### Ablation
@@ -173,6 +176,23 @@ hyper-parameter optimization module. They can be run like:
 ```bash
 pykeen experiments ablation ~/path/to/config.json
 ```
+
+### Large-scale Reproducibility and Benchmarking Study
+
+We used PyKEEN to perform a large-scale reproducibility and benchmarking study which are described in
+[our article](https://arxiv.org/abs/2006.13365):
+
+```bibtex
+@article{ali2020benchmarking,
+  title={Bringing Light Into the Dark: A Large-scale Evaluation of Knowledge Graph Embedding Models Under a Unified Framework},
+  author={Ali, Mehdi and Berrendorf, Max and Hoyt, Charles Tapley and Vermue, Laurent and Galkin, Mikhail and Sharifzadeh, Sahand and Fischer, Asja and Tresp, Volker and Lehmann, Jens},
+  journal={arXiv preprint arXiv:2006.13365},
+  year={2020}
+}
+```
+
+We have made all code, experimental configurations, results, and analyses that lead to our interpretations available
+at https://github.com/pykeen/benchmarking.
 
 ## Contributing
 
@@ -186,7 +206,8 @@ See [CONTRIBUTING.md](/CONTRIBUTING.md) for more information on getting involved
 This project has been supported by several organizations (in alphabetical order):
 
 - [Bayer](https://www.bayer.com/)
-- [Enveda Therapeutics](https://envedatherapeutics.com/)
+- [CoronaWhy](https://www.coronawhy.org/)
+- [Enveda Biosciences](https://www.envedabio.com/)
 - [Fraunhofer Institute for Algorithms and Scientific Computing](https://www.scai.fraunhofer.de)
 - [Fraunhofer Institute for Intelligent Analysis and Information Systems](https://www.iais.fraunhofer.de)
 - [Fraunhofer Center for Machine Learning](https://www.cit.fraunhofer.de/de/zentren/maschinelles-lernen.html)

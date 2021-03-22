@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "title": "Learn WN18 Data Set with R-GCN as described by Schlichtkrull et al., 2018",
+    "title": "Learn WN18 Dataset with R-GCN as described by Schlichtkrull et al., 2018",
     "comments": ""
   },
   "pipeline": {
@@ -9,7 +9,9 @@
     "model_kwargs": {
       "embedding_dim": 500,
       "num_blocks": 100,
-      "decomposition": "block"
+      "decomposition": "block",
+      "entity_initializer": "xavier_uniform",
+      "relation_initializer": "xavier_uniform"
     },
     "optimizer": "Adagrad",
     "optimizer_kwargs": {

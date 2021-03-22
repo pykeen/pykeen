@@ -6,7 +6,7 @@ import logging
 import random
 import timeit
 from collections import defaultdict
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
 import numpy
 import torch
@@ -31,10 +31,13 @@ def _compute_compressed_adjacency_list(
         with
             adj_list[i] = compressed_adj_list[offsets[i]:offsets[i+1]]
     """
-    adj_lists = [[] for _ in range(triples_factory.num_entities)]
+    adj_lists: List[List[Tuple[int, float]]] = [
+        []
+        for _ in range(triples_factory.num_entities)
+    ]
     for i, (s, _, o) in enumerate(triples_factory.mapped_triples):
-        adj_lists[s].append([i, o.item()])
-        adj_lists[o].append([i, s.item()])
+        adj_lists[s].append((i, o.item()))
+        adj_lists[o].append((i, s.item()))
     degrees = torch.tensor([len(a) for a in adj_lists], dtype=torch.long)
     assert torch.sum(degrees) == 2 * triples_factory.num_triples
 
