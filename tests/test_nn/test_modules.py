@@ -378,7 +378,7 @@ class MuRETests(cases.TranslationalInteractionTests):
     cls = pykeen.nn.modules.MuREInteraction
 
     def _exp_score(self, h, b_h, r_vec, r_mat, t, b_t, p, power_norm) -> torch.FloatTensor:
-        s = (h @ r_mat) + r_vec - t
+        s = (h * r_mat) + r_vec - t
         s = s.norm(p=p)
         if power_norm:
             s = s.pow(p)

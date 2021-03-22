@@ -1087,7 +1087,7 @@ class MuREInteraction(
 
     # there are separate biases for entities in head and tail position
     entity_shape = ("d", "", "")
-    relation_shape = ("d", "dd")
+    relation_shape = ("d", "d")
     func = pkf.mure_interaction
 
     @staticmethod
