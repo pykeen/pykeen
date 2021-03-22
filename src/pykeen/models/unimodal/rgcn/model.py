@@ -110,7 +110,7 @@ class RGCNRepresentations(RepresentationModule):
                     pos_kwargs=decomposition_kwargs,
                     input_dim=base_embeddings.embedding_dim,
                     num_relations=triples_factory.num_relations,
-                )
+                ),
             )
             if use_bias:
                 layers.append(Bias(dim=base_embeddings.embedding_dim))
