@@ -29,8 +29,6 @@ from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH
 from pykeen.losses import Loss, PairwiseLoss, PointwiseLoss, SetwiseLoss
 from pykeen.models import EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, RESCAL
 from pykeen.models.cli import build_cli_from_cls
-from pykeen.models.unimodal.rgcn.decompositions import Decomposition
-from pykeen.models.unimodal.rgcn.weightings import EdgeWeighting
 from pykeen.nn import RepresentationModule
 from pykeen.nn.modules import Interaction
 from pykeen.regularizers import LpRegularizer, Regularizer
@@ -1289,7 +1287,7 @@ class RepresentationTestCase(GenericTestCase[RepresentationModule]):
         self._test_indices(indices=torch.arange(self.instance.max_id))
 
 
-class EdgeWeightingTests(GenericTestCase[EdgeWeighting]):
+class EdgeWeightingTests(GenericTestCase[pykeen.models.unimodal.rgcn.weightings.EdgeWeighting]):
     """Tests for message weighting."""
 
     #: The number of entities
@@ -1318,7 +1316,7 @@ class EdgeWeightingTests(GenericTestCase[EdgeWeighting]):
         assert (weights >= 0.).all()
 
 
-class DecompositionTests(GenericTestCase[Decomposition]):
+class DecompositionTests(GenericTestCase[pykeen.models.unimodal.rgcn.decompositions.Decomposition]):
     """Tests for relation-specific weight decomposition message passing classes."""
 
     #: The input dimension
