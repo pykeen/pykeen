@@ -1023,7 +1023,6 @@ class Bias(nn.Module):
         """Reset the layer's parameters."""
         nn.init.zeros_(self.bias)
 
-    # pylint: disable=arguments-differ
     def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:
         """Add the learned bias to the input.
 
