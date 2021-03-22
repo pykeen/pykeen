@@ -3,75 +3,29 @@
 """Implementation of ConvE."""
 
 import logging
-import math
 import sys
-from typing import Optional, Tuple, Type
+from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
 from torch import nn
 from torch.nn import functional as F  # noqa: N812
 
 from ..base import EntityRelationEmbeddingModel
-from ..init import embedding_xavier_normal_
+from ...constants import DEFAULT_DROPOUT_HPO_RANGE
 from ...losses import BCEAfterSigmoidLoss, Loss
+from ...nn import Embedding, EmbeddingSpecification
+from ...nn.init import xavier_normal_
+from ...nn.modules import _calculate_missing_shape_information
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
-from ...utils import get_embedding, is_cudnn_error
+from ...typing import DeviceHint, Hint, Initializer
+from ...utils import is_cudnn_error
 
 __all__ = [
     'ConvE',
 ]
 
 logger = logging.getLogger(__name__)
-
-
-def _calculate_missing_shape_information(
-    embedding_dim: int,
-    input_channels: Optional[int] = None,
-    width: Optional[int] = None,
-    height: Optional[int] = None,
-) -> Tuple[int, int, int]:
-    """
-    Automatically calculates missing dimensions for ConvE.
-
-    :param embedding_dim:
-    :param input_channels:
-    :param width:
-    :param height:
-
-    :return: (input_channels, width, height), such that
-            `embedding_dim = input_channels * width * height`
-    :raises:
-        If no factorization could be found.
-    """
-    # Store initial input for error message
-    original = (input_channels, width, height)
-
-    # All are None
-    if all(factor is None for factor in [input_channels, width, height]):
-        input_channels = 1
-        result_sqrt = math.floor(math.sqrt(embedding_dim))
-        height = max(factor for factor in range(1, result_sqrt + 1) if embedding_dim % factor == 0)
-        width = embedding_dim // height
-
-    # input_channels is None, and any of height or width is None -> set input_channels=1
-    if input_channels is None and any(remaining is None for remaining in [width, height]):
-        input_channels = 1
-
-    # input channels is not None, and one of height or width is None
-    assert len([factor for factor in [input_channels, width, height] if factor is None]) <= 1
-    if width is None:
-        width = embedding_dim // (height * input_channels)
-    if height is None:
-        height = embedding_dim // (width * input_channels)
-    if input_channels is None:
-        input_channels = embedding_dim // (width * height)
-    assert not any(factor is None for factor in [input_channels, width, height])
-
-    if input_channels * width * height != embedding_dim:
-        raise ValueError(f'Could not resolve {original} to a valid factorization of {embedding_dim}.')
-
-    return input_channels, width, height
 
 
 class ConvE(EntityRelationEmbeddingModel):
@@ -105,11 +59,9 @@ class ConvE(EntityRelationEmbeddingModel):
 
     The default setting uses batch normalization. Batch normalization normalizes the output of the activation functions,
     in order to ensure that the weights of the NN don't become imbalanced and to speed up training.
-    However, batch normalization is not the only way to achieve more robust and effective training [1]. Therefore,
-    we added the flag 'apply_batch_normalization' to turn batch normalization on/off (it's turned on as default).
-
-    [1]: Santurkar, Shibani, et al. "How does batch normalization help optimization?."
-    Advances in Neural Information Processing Systems. 2018.
+    However, batch normalization is not the only way to achieve more robust and effective training [santurkar2018]_.
+    Therefore, we added the flag 'apply_batch_normalization' to turn batch normalization on/off (it's turned on as
+    default).
 
     Example usage:
 
@@ -142,25 +94,31 @@ class ConvE(EntityRelationEmbeddingModel):
     >>> from pykeen.evaluation import RankBasedEvaluator
     >>> evaluator = RankBasedEvaluator()
     >>> metric_result = evaluator.evaluate(model=model, mapped_triples=dataset.testing.mapped_triples, batch_size=8192)
+    ---
+    citation:
+        author: Dettmers
+        year: 2018
+        link: https://www.aaai.org/ocs/index.php/AAAI/AAAI18/paper/view/17366
+        github: TimDettmers/ConvE
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default = dict(
-        output_channels=dict(type=int, low=16, high=64),
-        input_dropout=dict(type=float, low=0.0, high=1.0),
-        output_dropout=dict(type=float, low=0.0, high=1.0),
-        feature_map_dropout=dict(type=float, low=0.0, high=1.0),
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
+        output_channels=dict(type=int, low=4, high=6, scale='power_two'),
+        input_dropout=DEFAULT_DROPOUT_HPO_RANGE,
+        output_dropout=DEFAULT_DROPOUT_HPO_RANGE,
+        feature_map_dropout=DEFAULT_DROPOUT_HPO_RANGE,
     )
     #: The default loss function class
-    loss_default: Type[Loss] = BCEAfterSigmoidLoss
+    loss_default: ClassVar[Type[Loss]] = BCEAfterSigmoidLoss
     #: The default parameters for the default loss function class
-    loss_default_kwargs = {}
+    loss_default_kwargs: ClassVar[Mapping[str, Any]] = {}
 
     #: If batch normalization is enabled, this is: num_features – C from an expected input of size (N,C,L)
     bn0: Optional[torch.nn.BatchNorm2d]
     #: If batch normalization is enabled, this is: num_features – C from an expected input of size (N,C,H,W)
     bn1: Optional[torch.nn.BatchNorm2d]
-    bn2: Optional[torch.nn.BatchNorm2d]
+    bn2: Optional[torch.nn.BatchNorm1d]
 
     def __init__(
         self,
@@ -175,12 +133,13 @@ class ConvE(EntityRelationEmbeddingModel):
         output_dropout: float = 0.3,
         feature_map_dropout: float = 0.2,
         embedding_dim: int = 200,
-        automatic_memory_optimization: Optional[bool] = None,
         loss: Optional[Loss] = None,
-        preferred_device: Optional[str] = None,
+        preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
         apply_batch_normalization: bool = True,
+        entity_initializer: Hint[Initializer] = xavier_normal_,
+        relation_initializer: Hint[Initializer] = xavier_normal_,
     ) -> None:
         """Initialize the model."""
         # ConvE should be trained with inverse triples
@@ -193,19 +152,26 @@ class ConvE(EntityRelationEmbeddingModel):
 
         super().__init__(
             triples_factory=triples_factory,
-            embedding_dim=embedding_dim,
-            automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
+            entity_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=entity_initializer,
+            ),
+            relation_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=relation_initializer,
+            ),
         )
 
         # ConvE uses one bias for each entity
-        self.bias_term = get_embedding(
+        self.bias_term = Embedding.init_with_device(
             num_embeddings=triples_factory.num_entities,
             embedding_dim=1,
             device=self.device,
+            initializer=nn.init.zeros_,
         )
 
         # Automatic calculation of remaining dimensions
@@ -261,14 +227,10 @@ class ConvE(EntityRelationEmbeddingModel):
         )
         self.fc = nn.Linear(num_in_features, self.embedding_dim)
 
-        # Finalize initialization
-        self.reset_parameters_()
-
     def _reset_parameters_(self):  # noqa: D102
-        # embeddings
-        embedding_xavier_normal_(self.entity_embeddings)
-        embedding_xavier_normal_(self.relation_embeddings)
-        nn.init.zeros_(self.bias_term.weight)
+        super()._reset_parameters_()
+
+        self.bias_term.reset_parameters()
 
         # weights
         for module in [
@@ -291,7 +253,7 @@ class ConvE(EntityRelationEmbeddingModel):
 
         try:
             # batch_size, num_input_channels, 2*height, width
-            if self.apply_batch_normalization:
+            if self.bn0 is not None:
                 x = self.bn0(x)
 
             # batch_size, num_input_channels, 2*height, width
@@ -299,7 +261,7 @@ class ConvE(EntityRelationEmbeddingModel):
             # (N,C_out,H_out,W_out)
             x = self.conv1(x)
 
-            if self.apply_batch_normalization:
+            if self.bn1 is not None:
                 x = self.bn1(x)
             x = F.relu(x)
             x = self.feature_map_drop(x)
@@ -308,7 +270,7 @@ class ConvE(EntityRelationEmbeddingModel):
             x = self.fc(x)
             x = self.hidden_drop(x)
 
-            if self.apply_batch_normalization:
+            if self.bn2 is not None:
                 x = self.bn2(x)
             x = F.relu(x)
         except RuntimeError as e:
@@ -326,19 +288,19 @@ class ConvE(EntityRelationEmbeddingModel):
         return x
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(hrt_batch[:, 0]).view(
+        h = self.entity_embeddings(indices=hrt_batch[:, 0]).view(
             -1,
             self.input_channels,
             self.embedding_height,
             self.embedding_width,
         )
-        r = self.relation_embeddings(hrt_batch[:, 1]).view(
+        r = self.relation_embeddings(indices=hrt_batch[:, 1]).view(
             -1,
             self.input_channels,
             self.embedding_height,
             self.embedding_width,
         )
-        t = self.entity_embeddings(hrt_batch[:, 2])
+        t = self.entity_embeddings(indices=hrt_batch[:, 2])
 
         # Embedding Regularization
         self.regularize_if_necessary(h, r, t)
@@ -353,25 +315,25 @@ class ConvE(EntityRelationEmbeddingModel):
         one tail item for each head and relation. Accordingly the relevant bias for each tail item and triple has to be
         looked up.
         """
-        x = x + self.bias_term(hrt_batch[:, 2])
+        x = x + self.bias_term(indices=hrt_batch[:, 2])
         # The application of the sigmoid during training is automatically handled by the default loss.
 
         return x
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(hr_batch[:, 0]).view(
+        h = self.entity_embeddings(indices=hr_batch[:, 0]).view(
             -1,
             self.input_channels,
             self.embedding_height,
             self.embedding_width,
         )
-        r = self.relation_embeddings(hr_batch[:, 1]).view(
+        r = self.relation_embeddings(indices=hr_batch[:, 1]).view(
             -1,
             self.input_channels,
             self.embedding_height,
             self.embedding_width,
         )
-        t = self.entity_embeddings.weight.transpose(1, 0)
+        t = self.entity_embeddings(indices=None).transpose(1, 0)
 
         # Embedding Regularization
         self.regularize_if_necessary(h, r, t)
@@ -379,21 +341,21 @@ class ConvE(EntityRelationEmbeddingModel):
         x = self._convolve_entity_relation(h, r)
 
         x = x @ t
-        x = x + self.bias_term.weight.t()
+        x = x + self.bias_term(indices=None).t()
         # The application of the sigmoid during training is automatically handled by the default loss.
 
         return x
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         rt_batch_size = rt_batch.shape[0]
-        h = self.entity_embeddings.weight
-        r = self.relation_embeddings(rt_batch[:, 0]).view(
+        h = self.entity_embeddings(indices=None)
+        r = self.relation_embeddings(indices=rt_batch[:, 0]).view(
             -1,
             self.input_channels,
             self.embedding_height,
             self.embedding_width,
         )
-        t = self.entity_embeddings(rt_batch[:, 1])
+        t = self.entity_embeddings(indices=rt_batch[:, 1])
 
         # Embedding Regularization
         self.regularize_if_necessary(h, r, t)
@@ -424,7 +386,7 @@ class ConvE(EntityRelationEmbeddingModel):
         the same tail for many different heads, meaning that these items have to be looked up for each tail of each row
         and only then can be added correctly.
         """
-        x = x + self.bias_term(rt_batch[:, 1])
+        x = x + self.bias_term(indices=rt_batch[:, 1])
         # The application of the sigmoid during training is automatically handled by the default loss.
 
         return x

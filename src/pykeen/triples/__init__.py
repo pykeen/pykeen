@@ -5,7 +5,7 @@
 from .instances import (
     Instances, LCWAInstances, MultimodalInstances, MultimodalLCWAInstances, MultimodalSLCWAInstances, SLCWAInstances,
 )
-from .triples_factory import TriplesFactory
+from .triples_factory import CoreTriplesFactory, TriplesFactory
 from .triples_numeric_literals_factory import TriplesNumericLiteralsFactory
 
 __all__ = [
@@ -15,6 +15,7 @@ __all__ = [
     'MultimodalSLCWAInstances',
     'MultimodalLCWAInstances',
     'SLCWAInstances',
+    'CoreTriplesFactory',
     'TriplesFactory',
     'TriplesNumericLiteralsFactory',
 ]

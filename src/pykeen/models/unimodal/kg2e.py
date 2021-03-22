@@ -3,16 +3,20 @@
 """Implementation of KG2E."""
 
 import math
-from typing import Optional
+from typing import Any, ClassVar, Mapping, Optional
 
 import torch
 import torch.autograd
+from torch.nn.init import uniform_
 
 from ..base import EntityRelationEmbeddingModel
+from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
+from ...nn import Embedding, EmbeddingSpecification
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
-from ...utils import clamp_norm, get_embedding, get_embedding_in_canonical_shape
+from ...typing import Constrainer, DeviceHint, Hint, Initializer
+from ...utils import clamp_norm
 
 __all__ = [
     'KG2E',
@@ -46,43 +50,66 @@ class KG2E(EntityRelationEmbeddingModel):
 
     .. math::
             f(h,r,t) = \mathcal{D_{EL}}(\mathcal{P}_e, \mathcal{P}_r)
+    ---
+    citation:
+        author: He
+        year: 2015
+        link: https://dl.acm.org/doi/10.1145/2806416.2806502
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default = dict(
-        embedding_dim=dict(type=int, low=50, high=350, q=25),
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
+        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
         c_min=dict(type=float, low=0.01, high=0.1, scale='log'),
         c_max=dict(type=float, low=1.0, high=10.0),
     )
+
+    #: The default settings for the entity constrainer
+    constrainer_default_kwargs = dict(maxnorm=1., p=2, dim=-1)
 
     def __init__(
         self,
         triples_factory: TriplesFactory,
         embedding_dim: int = 50,
-        automatic_memory_optimization: Optional[bool] = None,
         loss: Optional[Loss] = None,
-        preferred_device: Optional[str] = None,
+        preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         dist_similarity: Optional[str] = None,
         c_min: float = 0.05,
         c_max: float = 5.,
         regularizer: Optional[Regularizer] = None,
+        entity_initializer: Hint[Initializer] = uniform_,
+        entity_constrainer: Hint[Constrainer] = clamp_norm,  # type: ignore
+        entity_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
+        relation_initializer: Hint[Initializer] = uniform_,
+        relation_constrainer: Hint[Constrainer] = clamp_norm,  # type: ignore
+        relation_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
     ) -> None:
         r"""Initialize KG2E.
 
         :param embedding_dim: The entity embedding dimension $d$. Is usually $d \in [50, 350]$.
-        :param dist_similarity: Either 'KL' for kullback-liebler or 'EL' for expected liklihood. Defaults to KL.
+        :param dist_similarity: Either 'KL' for Kullback-Leibler or 'EL' for expected likelihood. Defaults to KL.
         :param c_min:
         :param c_max:
         """
         super().__init__(
             triples_factory=triples_factory,
-            embedding_dim=embedding_dim,
-            automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
+            entity_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=entity_initializer,
+                constrainer=entity_constrainer,
+                constrainer_kwargs=entity_constrainer_kwargs or self.constrainer_default_kwargs,
+            ),
+            relation_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=relation_initializer,
+                constrainer=relation_constrainer,
+                constrainer_kwargs=relation_constrainer_kwargs or self.constrainer_default_kwargs,
+            ),
         )
 
         # Similarity function used for distributions
@@ -98,74 +125,63 @@ class KG2E(EntityRelationEmbeddingModel):
         self.c_max = c_max
 
         # Additional covariance embeddings
-        self.entity_covariances = get_embedding(
+        self.entity_covariances = Embedding.init_with_device(
             num_embeddings=triples_factory.num_entities,
             embedding_dim=embedding_dim,
             device=self.device,
+            # Ensure positive definite covariances matrices and appropriate size by clamping
+            constrainer=torch.clamp,
+            constrainer_kwargs=dict(min=self.c_min, max=self.c_max),
         )
-        self.relation_covariances = get_embedding(
+        self.relation_covariances = Embedding.init_with_device(
             num_embeddings=triples_factory.num_relations,
             embedding_dim=embedding_dim,
             device=self.device,
+            # Ensure positive definite covariances matrices and appropriate size by clamping
+            constrainer=torch.clamp,
+            constrainer_kwargs=dict(min=self.c_min, max=self.c_max),
         )
-
-        # Finalize initialization
-        self.reset_parameters_()
 
     def _reset_parameters_(self):  # noqa: D102
         # Constraints are applied through post_parameter_update
+        super()._reset_parameters_()
         for emb in [
-            self.entity_embeddings,
             self.entity_covariances,
-            self.relation_embeddings,
             self.relation_covariances,
         ]:
             emb.reset_parameters()
 
     def post_parameter_update(self) -> None:  # noqa: D102
-        # Make sure to call super first
         super().post_parameter_update()
-
-        # Normalize entity embeddings
-        self.entity_embeddings.weight.data = clamp_norm(x=self.entity_embeddings.weight.data, maxnorm=1., p=2, dim=-1)
-        self.relation_embeddings.weight.data = clamp_norm(
-            x=self.relation_embeddings.weight.data,
-            maxnorm=1.,
-            p=2,
-            dim=-1,
-        )
-
-        # Ensure positive definite covariances matrices and appropriate size by clamping
         for cov in (
             self.entity_covariances,
             self.relation_covariances,
         ):
-            cov_data = cov.weight.data
-            torch.clamp(cov_data, min=self.c_min, max=self.c_max, out=cov_data)
+            cov.post_parameter_update()
 
     def _score(
         self,
-        h_ind: Optional[torch.LongTensor] = None,
-        r_ind: Optional[torch.LongTensor] = None,
-        t_ind: Optional[torch.LongTensor] = None,
+        h_indices: Optional[torch.LongTensor] = None,
+        r_indices: Optional[torch.LongTensor] = None,
+        t_indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:
         """
         Compute scores for NTN.
 
-        :param h_ind: shape: (batch_size,)
-        :param r_ind: shape: (batch_size,)
-        :param t_ind: shape: (batch_size,)
+        :param h_indices: shape: (batch_size,)
+        :param r_indices: shape: (batch_size,)
+        :param t_indices: shape: (batch_size,)
 
         :return: shape: (batch_size, num_entities)
         """
         # Get embeddings
-        mu_h = get_embedding_in_canonical_shape(embedding=self.entity_embeddings, ind=h_ind)
-        mu_r = get_embedding_in_canonical_shape(embedding=self.relation_embeddings, ind=r_ind)
-        mu_t = get_embedding_in_canonical_shape(embedding=self.entity_embeddings, ind=t_ind)
+        mu_h = self.entity_embeddings.get_in_canonical_shape(indices=h_indices)
+        mu_r = self.relation_embeddings.get_in_canonical_shape(indices=r_indices)
+        mu_t = self.entity_embeddings.get_in_canonical_shape(indices=t_indices)
 
-        sigma_h = get_embedding_in_canonical_shape(embedding=self.entity_covariances, ind=h_ind)
-        sigma_r = get_embedding_in_canonical_shape(embedding=self.relation_covariances, ind=r_ind)
-        sigma_t = get_embedding_in_canonical_shape(embedding=self.entity_covariances, ind=t_ind)
+        sigma_h = self.entity_covariances.get_in_canonical_shape(indices=h_indices)
+        sigma_r = self.relation_covariances.get_in_canonical_shape(indices=r_indices)
+        sigma_t = self.entity_covariances.get_in_canonical_shape(indices=t_indices)
 
         # Compute entity distribution
         mu_e = mu_h - mu_t
@@ -173,13 +189,13 @@ class KG2E(EntityRelationEmbeddingModel):
         return self.similarity(mu_e=mu_e, mu_r=mu_r, sigma_e=sigma_e, sigma_r=sigma_r)
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._score(h_ind=hrt_batch[:, 0], r_ind=hrt_batch[:, 1], t_ind=hrt_batch[:, 2]).view(-1, 1)
+        return self._score(h_indices=hrt_batch[:, 0], r_indices=hrt_batch[:, 1], t_indices=hrt_batch[:, 2]).view(-1, 1)
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._score(h_ind=hr_batch[:, 0], r_ind=hr_batch[:, 1])
+        return self._score(h_indices=hr_batch[:, 0], r_indices=hr_batch[:, 1])
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._score(r_ind=rt_batch[:, 0], t_ind=rt_batch[:, 1])
+        return self._score(r_indices=rt_batch[:, 0], t_indices=rt_batch[:, 1])
 
     @staticmethod
     def expected_likelihood(

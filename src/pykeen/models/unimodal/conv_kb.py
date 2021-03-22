@@ -3,16 +3,20 @@
 """Implementation of the ConvKB model."""
 
 import logging
-from typing import Optional
+from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
 import torch.autograd
 from torch import nn
+from torch.nn.init import uniform_
 
 from ..base import EntityRelationEmbeddingModel
+from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
+from ...nn import EmbeddingSpecification
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
+from ...typing import DeviceHint, Hint, Initializer
 
 __all__ = [
     'ConvKB',
@@ -51,19 +55,25 @@ class ConvKB(EntityRelationEmbeddingModel):
 
     .. seealso::
 
-       - Authors' `implementation of ConvKB <https://github.com/daiquocnguyen/ConvKBsE.py>`_
+       - Authors' `implementation of ConvKB <https://github.com/daiquocnguyen/ConvKB>`_
+    ---
+    citation:
+        author: Nguyen
+        year: 2018
+        link: https://www.aclweb.org/anthology/N18-2053
+        github: daiquocnguyen/ConvKB
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default = dict(
-        embedding_dim=dict(type=int, low=50, high=300, q=50),
-        hidden_dropout_rate=dict(type=float, low=0.1, high=0.9),
-        num_filters=dict(type=int, low=300, high=500, q=50),
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
+        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+        hidden_dropout_rate=DEFAULT_DROPOUT_HPO_RANGE,
+        num_filters=dict(type=int, low=7, high=9, scale='power_two'),
     )
     #: The regularizer used by [nguyen2018]_ for ConvKB.
-    regularizer_default = LpRegularizer
+    regularizer_default: ClassVar[Type[Regularizer]] = LpRegularizer
     #: The LP settings used by [nguyen2018]_ for ConvKB.
-    regularizer_default_kwargs = dict(
+    regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = dict(
         weight=0.001 / 2,
         p=2.0,
         normalize=True,
@@ -75,12 +85,13 @@ class ConvKB(EntityRelationEmbeddingModel):
         triples_factory: TriplesFactory,
         hidden_dropout_rate: float = 0.,
         embedding_dim: int = 200,
-        automatic_memory_optimization: Optional[bool] = None,
         loss: Optional[Loss] = None,
-        preferred_device: Optional[str] = None,
+        preferred_device: DeviceHint = None,
         num_filters: int = 400,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
+        entity_initializer: Hint[Initializer] = uniform_,
+        relation_initializer: Hint[Initializer] = uniform_,
     ) -> None:
         """Initialize the model.
 
@@ -88,12 +99,18 @@ class ConvKB(EntityRelationEmbeddingModel):
         """
         super().__init__(
             triples_factory=triples_factory,
-            embedding_dim=embedding_dim,
             loss=loss,
-            automatic_memory_optimization=automatic_memory_optimization,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
+            entity_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=entity_initializer,
+            ),
+            relation_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=relation_initializer,
+            ),
         )
 
         self.num_filters = num_filters
@@ -104,14 +121,10 @@ class ConvKB(EntityRelationEmbeddingModel):
         self.hidden_dropout = nn.Dropout(p=hidden_dropout_rate)
         self.linear = nn.Linear(embedding_dim * num_filters, 1, bias=True)
 
-        # Finalize initialization
-        self.reset_parameters_()
-
     def _reset_parameters_(self):  # noqa: D102
         # embeddings
         logger.warning('To be consistent with the paper, initialize entity and relation embeddings from TransE.')
-        self.entity_embeddings.reset_parameters()
-        self.relation_embeddings.reset_parameters()
+        super()._reset_parameters_()
 
         # Use Xavier initialization for weight; bias to zero
         nn.init.xavier_uniform_(self.linear.weight, gain=nn.init.calculate_gain('relu'))
@@ -124,9 +137,9 @@ class ConvKB(EntityRelationEmbeddingModel):
         nn.init.zeros_(self.conv.bias)
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(hrt_batch[:, 0])
-        r = self.relation_embeddings(hrt_batch[:, 1])
-        t = self.entity_embeddings(hrt_batch[:, 2])
+        h = self.entity_embeddings(indices=hrt_batch[:, 0])
+        r = self.relation_embeddings(indices=hrt_batch[:, 1])
+        t = self.entity_embeddings(indices=hrt_batch[:, 2])
 
         # Output layer regularization
         # In the code base only the weights of the output layer are used for regularization

@@ -4,7 +4,3 @@ Loss Functions
     :no-heading:
     :headings: --
     :skip: Loss
-
-HPO Defaults
-------------
-.. autodata:: losses_hpo_defaults
