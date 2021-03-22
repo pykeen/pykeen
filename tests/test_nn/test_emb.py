@@ -10,6 +10,7 @@ import numpy
 import torch
 
 import pykeen.models
+import pykeen.nn.emb
 from pykeen.nn import Embedding, EmbeddingSpecification, RepresentationModule
 from pykeen.triples import CoreTriplesFactory
 from tests import cases, mocks
@@ -44,7 +45,7 @@ class TensorEmbeddingTests(cases.RepresentationTestCase):
 class RGCNRepresentationTests(cases.RepresentationTestCase):
     """Test RGCN representations."""
 
-    cls = pykeen.models.unimodal.rgcn.model.RGCNRepresentations
+    cls = pykeen.nn.emb.RGCNRepresentations
     num = 8
     kwargs = dict(
         embedding_specification=EmbeddingSpecification(embedding_dim=num),

@@ -21,7 +21,6 @@ from pykeen.models.unimodal.trans_d import _project_entity
 from pykeen.nn import Embedding
 from pykeen.utils import all_in_bounds, clamp_norm, extend_batch
 from tests import cases
-from tests.cases import DecompositionTests, EdgeWeightingTests
 from tests.constants import EPSILON
 
 SKIP_MODULES = {
@@ -683,24 +682,6 @@ def _remove_non_models(elements):
     return rv
 
 
-class InverseInDegreeEdgeWeightingTests(EdgeWeightingTests):
-    """Tests for inverse in-degree weighting."""
-
-    cls = pykeen.models.unimodal.rgcn.weightings.InverseInDegreeEdgeWeighting
-
-
-class InverseOutDegreeEdgeWeightingTests(EdgeWeightingTests):
-    """Tests for inverse out-degree weighting."""
-
-    cls = pykeen.models.unimodal.rgcn.weightings.InverseOutDegreeEdgeWeighting
-
-
-class SymmetricEdgeWeightingTests(EdgeWeightingTests):
-    """Tests for symmetric weighting."""
-
-    cls = pykeen.models.unimodal.rgcn.weightings.SymmetricEdgeWeighting
-
-
 class TestModelUtilities(unittest.TestCase):
     """Extra tests for utility functions."""
 
@@ -757,33 +738,3 @@ class TestModelUtilities(unittest.TestCase):
                     exp_content.add(tuple(c))
 
             assert actual_content == exp_content
-
-
-class BlockDecompositionTests(DecompositionTests, unittest.TestCase):
-    """Tests for block Decomposition."""
-
-    cls = pykeen.models.unimodal.rgcn.decompositions.BlockDecomposition
-
-
-class _BasesDecompositionTests(DecompositionTests):
-    """Tests for bases Decomposition."""
-
-    cls = pykeen.models.unimodal.rgcn.decompositions.BasesDecomposition
-
-
-class LowMemoryBasesDecompositionTests(_BasesDecompositionTests, unittest.TestCase):
-    """Tests for BasesDecomposition with low memory requirement."""
-
-    kwargs = dict(
-        num_bases=4,
-        memory_intense=False,
-    )
-
-
-class HighMemoryBasesDecompositionTests(_BasesDecompositionTests, unittest.TestCase):
-    """Tests for BasesDecomposition with high memory requirement."""
-
-    kwargs = dict(
-        num_bases=4,
-        memory_intense=True,
-    )

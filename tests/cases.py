@@ -22,6 +22,8 @@ from torch.nn import functional
 from torch.optim import Adagrad, SGD
 
 import pykeen.models
+import pykeen.nn.message_passing
+import pykeen.nn.weighting
 from pykeen.datasets import Nations
 from pykeen.datasets.base import LazyDataset
 from pykeen.datasets.kinships import KINSHIPS_TRAIN_PATH
@@ -1287,7 +1289,7 @@ class RepresentationTestCase(GenericTestCase[RepresentationModule]):
         self._test_indices(indices=torch.arange(self.instance.max_id))
 
 
-class EdgeWeightingTests(GenericTestCase[pykeen.models.unimodal.rgcn.weightings.EdgeWeighting]):
+class EdgeWeightingTestCase(GenericTestCase[pykeen.nn.weighting.EdgeWeighting]):
     """Tests for message weighting."""
 
     #: The number of entities
@@ -1316,7 +1318,7 @@ class EdgeWeightingTests(GenericTestCase[pykeen.models.unimodal.rgcn.weightings.
         assert (weights >= 0.).all()
 
 
-class DecompositionTests(GenericTestCase[pykeen.models.unimodal.rgcn.decompositions.Decomposition]):
+class DecompositionTestCase(GenericTestCase[pykeen.nn.message_passing.Decomposition]):
     """Tests for relation-specific weight decomposition message passing classes."""
 
     #: The input dimension
