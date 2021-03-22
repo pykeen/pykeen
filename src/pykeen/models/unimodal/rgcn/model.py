@@ -10,7 +10,7 @@ import torch
 from class_resolver import Hint
 from torch import nn
 
-from .decompositions import Decomposition, decomposition_resolver
+from .decomposition import Decomposition, decomposition_resolver
 from .weightings import EdgeWeighting, edge_weight_resolver
 from ...nbase import ERModel, EmbeddingSpecificationHint
 from ....nn import EmbeddingSpecification, RepresentationModule

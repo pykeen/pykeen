@@ -3,6 +3,7 @@
 """Various decompositions for R-GCN."""
 
 import logging
+from abc import ABC, abstractmethod
 from typing import Optional, Tuple, Union
 
 import torch
@@ -57,7 +58,7 @@ def _reduce_relation_specific(
     return source_r, target_r, edge_weights
 
 
-class Decomposition(nn.Module):
+class Decomposition(nn.Module, ABC):
     """Base module for relation-specific message passing."""
 
     def __init__(
@@ -82,6 +83,7 @@ class Decomposition(nn.Module):
             output_dim = input_dim
         self.output_dim = output_dim
 
+    @abstractmethod
     def forward(
         self,
         x: torch.FloatTensor,
@@ -111,6 +113,7 @@ class Decomposition(nn.Module):
         """
         raise NotImplementedError
 
+    @abstractmethod
     def reset_parameters(self):
         """Reset the parameters of this layer."""
         raise NotImplementedError
