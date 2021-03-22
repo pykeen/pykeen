@@ -14,7 +14,6 @@ from typing import Any, Callable, Mapping, Optional, Sequence, TYPE_CHECKING, Tu
 import numpy as np
 import torch
 import torch.nn
-from class_resolver import Hint
 from torch import nn
 from torch.nn import functional
 

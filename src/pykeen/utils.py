@@ -81,6 +81,7 @@ __all__ = [
     'convert_to_canonical_shape',
     'get_expected_norm',
     'Bias',
+    'activation_resolver',
 ]
 
 logger = logging.getLogger(__name__)
