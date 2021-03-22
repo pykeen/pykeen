@@ -25,6 +25,7 @@ class HAKE(EntityRelationEmbeddingModel):
 
         Official implementation: https://github.com/MIRALab-USTC/KGE-HAKE
     ---
+    name: Hierarchy-Aware Knowledge Graph Embeddings
     citation:
         author: Zhang
         year: 2020
