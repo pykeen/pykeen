@@ -1,4 +1,5 @@
-# coding=utf-8
+# -*- coding: utf-8 -*-
+
 """Implementation of the HAKE model."""
 
 from typing import Optional
@@ -6,19 +7,28 @@ from typing import Optional
 import torch
 from torch import nn
 
-from pykeen.losses import Loss
-from pykeen.models import EntityRelationEmbeddingModel
-from pykeen.regularizers import Regularizer
-from pykeen.triples import TriplesFactory
-from pykeen.utils import get_embedding, get_embedding_in_long_canonical_shape
+from ..base import EntityRelationEmbeddingModel
+from ...losses import Loss
+from ...nn import Embedding, EmbeddingSpecification
+from ...regularizers import Regularizer
+from ...triples import TriplesFactory
+
+__all__ = [
+    'HAKE',
+]
 
 
 class HAKE(EntityRelationEmbeddingModel):
     """An implementation of HAKE [zhang2020]_.
 
     .. seealso ::
-        Official implementation: https://github.com/MIRALab-USTC/KGE-HAKE
 
+        Official implementation: https://github.com/MIRALab-USTC/KGE-HAKE
+    ---
+    citation:
+        author: Zhang
+        year: 2020
+        link: https://arxiv.org/abs/1911.09419
     """
 
     # There are no value ranges for HPO given in the paper
@@ -41,18 +51,20 @@ class HAKE(EntityRelationEmbeddingModel):
         phase_weight: float = 0.5,
         loss: Optional[Loss] = None,
         predict_with_sigmoid: bool = False,
-        automatic_memory_optimization: Optional[bool] = None,
         preferred_device: Optional[str] = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
     ):
         super().__init__(
             triples_factory=triples_factory,
-            embedding_dim=embedding_dim,
-            relation_dim=embedding_dim,
+            entity_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+            ),
+            relation_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+            ),
             loss=loss,
             predict_with_sigmoid=predict_with_sigmoid,
-            automatic_memory_optimization=automatic_memory_optimization,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
@@ -60,7 +72,7 @@ class HAKE(EntityRelationEmbeddingModel):
 
         # entity / relation modulus
         self.entity_modulus, self.relation_modulus = [
-            get_embedding(
+            Embedding.init_with_device(
                 num_embeddings=num_embeddings,
                 embedding_dim=embedding_dim,
                 device=self.device,
@@ -69,7 +81,7 @@ class HAKE(EntityRelationEmbeddingModel):
         ]
 
         # relation bias
-        self.relation_bias = get_embedding(
+        self.relation_bias = Embedding.init_with_device(
             num_embeddings=self.num_relations,
             embedding_dim=embedding_dim,
             device=self.device,
@@ -122,7 +134,9 @@ class HAKE(EntityRelationEmbeddingModel):
     ) -> torch.FloatTensor:
         # Lookup embeddings
         phase_h, mod_h, phase_r, mod_r, bias_r, phase_t, mod_t = [
-            get_embedding_in_long_canonical_shape(embedding=embedding, ind=ind, col=col)
+            # FIXME check that this replacement is correct
+            # get_embedding_in_long_canonical_shape(embedding=embedding, ind=ind, col=col)
+            embedding.get_in_more_canonical_shape(indices=ind, dim=col)
             for ind, col, embedding in (
                 (h_ind, 1, self.entity_embeddings),
                 (h_ind, 1, self.entity_modulus),
