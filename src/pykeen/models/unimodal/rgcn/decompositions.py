@@ -11,6 +11,11 @@ from torch import nn
 from torch.nn import functional
 
 
+__all__ = [
+    "decomposition_resolver",
+]
+
+
 def _reduce_relation_specific(
     relation: int,
     source: torch.LongTensor,
