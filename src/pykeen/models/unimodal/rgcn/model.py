@@ -76,7 +76,6 @@ class RGCNRepresentations(RepresentationModule):
         edge_weighting: Hint[EdgeWeighting] = None,
         decomposition: Hint[Decomposition] = None,
         decomposition_kwargs: Optional[Mapping[str, Any]] = None,
-        buffer_messages: bool = True,
     ):
         base_embeddings = embedding_specification.make(num_embeddings=triples_factory.num_entities)
         super().__init__(max_id=triples_factory.num_entities, shape=base_embeddings.shape)
@@ -119,8 +118,7 @@ class RGCNRepresentations(RepresentationModule):
             layers.append(activation_resolver.make(query=activation, pos_kwargs=activation_kwargs))
         self.layers = nn.ModuleList(layers)
 
-        # buffering of messages
-        self.buffer_messages = buffer_messages
+        # buffering of enriched representations
         self.enriched_embeddings = None
 
     def post_parameter_update(self) -> None:  # noqa: D102
@@ -260,7 +258,6 @@ class RGCN(
         edge_weighting: Hint[EdgeWeighting] = None,
         decomposition: Hint[Decomposition] = None,
         decomposition_kwargs: Optional[Mapping[str, Any]] = None,
-        buffer_messages: bool = True,
         **kwargs,
     ):
         # create enriched entity representations
@@ -281,7 +278,6 @@ class RGCN(
             edge_weighting=edge_weighting,
             decomposition=decomposition,
             decomposition_kwargs=decomposition_kwargs,
-            buffer_messages=buffer_messages,
         )
 
         # Resolve interaction function
