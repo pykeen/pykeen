@@ -9,9 +9,9 @@ from unittest.mock import Mock
 import numpy
 import torch
 
-from pykeen.models.unimodal.rgcn import RGCNRepresentations
+import pykeen.models
 from pykeen.nn import Embedding, EmbeddingSpecification, RepresentationModule
-from pykeen.triples import TriplesFactory
+from pykeen.triples import CoreTriplesFactory
 from tests import cases, mocks
 
 
@@ -44,11 +44,10 @@ class TensorEmbeddingTests(cases.RepresentationTestCase):
 class RGCNRepresentationTests(cases.RepresentationTestCase):
     """Test RGCN representations."""
 
-    cls = RGCNRepresentations
+    cls = pykeen.models.unimodal.rgcn.model.RGCNRepresentations
     num = 8
     kwargs = dict(
-        num_bases_or_blocks=2,
-        embedding_dim=num,
+        embedding_specification=EmbeddingSpecification(embedding_dim=num),
     )
     num_relations: int = 7
     num_triples: int = 31
@@ -58,20 +57,15 @@ class RGCNRepresentationTests(cases.RepresentationTestCase):
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         # TODO: use triple generation
         # generate random triples
-        mapped_triples = numpy.stack([
-            numpy.random.randint(max_id, size=(self.num_triples,))
+        mapped_triples = torch.stack([
+            torch.randint(max_id, size=(self.num_triples,))
             for max_id in (self.num, self.num_relations, self.num)
-        ], axis=-1)
-        entity_names = [f"e_{i}" for i in range(self.num)]
-        relation_names = [f"r_{i}" for i in range(self.num_relations)]
-        triples = numpy.stack([
-            [names[i] for i in col.tolist()]
-            for col, names in zip(
-                mapped_triples.T,
-                (entity_names, relation_names, entity_names),
-            )
-        ])
-        kwargs["triples_factory"] = TriplesFactory.from_labeled_triples(triples=triples)
+        ], dim=-1)
+        kwargs["triples_factory"] = CoreTriplesFactory.create(
+            mapped_triples=mapped_triples,
+            num_entities=self.num,
+            num_relations=self.num_relations,
+        )
         return kwargs
 
 
