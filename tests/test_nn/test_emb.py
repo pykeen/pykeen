@@ -9,10 +9,9 @@ from unittest.mock import Mock
 import numpy
 import torch
 
-import pykeen.models
 import pykeen.nn.emb
 from pykeen.nn import Embedding, EmbeddingSpecification, RepresentationModule
-from pykeen.triples import CoreTriplesFactory
+from pykeen.triples.generation import generate_triples_factory
 from tests import cases, mocks
 
 
@@ -56,16 +55,10 @@ class RGCNRepresentationTests(cases.RepresentationTestCase):
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
-        # TODO: use triple generation
-        # generate random triples
-        mapped_triples = torch.stack([
-            torch.randint(max_id, size=(self.num_triples,))
-            for max_id in (self.num, self.num_relations, self.num)
-        ], dim=-1)
-        kwargs["triples_factory"] = CoreTriplesFactory.create(
-            mapped_triples=mapped_triples,
+        kwargs["triples_factory"] = generate_triples_factory(
             num_entities=self.num,
             num_relations=self.num_relations,
+            num_triples=self.num_triples,
         )
         return kwargs
 
