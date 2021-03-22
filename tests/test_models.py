@@ -17,11 +17,6 @@ from pykeen.models import (
     _NewAbstractModel, _OldAbstractModel, model_resolver,
 )
 from pykeen.models.predict import get_novelty_mask, predict
-from pykeen.models.unimodal.rgcn import (
-    inverse_indegree_edge_weights,
-    inverse_outdegree_edge_weights,
-    symmetric_edge_weights,
-)
 from pykeen.models.unimodal.trans_d import _project_entity
 from pykeen.nn import Embedding
 from pykeen.utils import all_in_bounds, clamp_norm, extend_batch
@@ -237,7 +232,12 @@ class TestRGCNBasis(cases.BaseRGCNTest):
     """Test the R-GCN model."""
 
     model_kwargs = {
-        'decomposition': 'basis',
+        'interaction': "transe",
+        'interaction_kwargs': dict(p=1),
+        'decomposition': "bases",
+        "decomposition_kwargs": dict(
+            num_bases=3,
+        ),
     }
     #: one bias per layer
     num_constant_init = 2
@@ -248,9 +248,12 @@ class TestRGCNBlock(cases.BaseRGCNTest):
 
     embedding_dim = 6
     model_kwargs = {
-        'decomposition': 'block',
-        'num_bases_or_blocks': 3,
-        'edge_weighting': symmetric_edge_weights,
+        'interaction': "distmult",
+        'decomposition': "block",
+        "decomposition_kwargs": dict(
+            num_blocks=3,
+        ),
+        'edge_weighting': "symmetric",
         'use_batch_norm': True,
     }
     #: (scale & bias for BN) * layers
@@ -677,48 +680,6 @@ def _remove_non_models(elements):
         else:
             rv.add(element)
     return rv
-
-
-class MessageWeightingTests(unittest.TestCase):
-    """unittests for message weighting."""
-
-    #: The number of entities
-    num_entities: int = 16
-
-    #: The number of triples
-    num_triples: int = 101
-
-    def setUp(self) -> None:
-        """Initialize data for unittest."""
-        self.source, self.target = torch.randint(self.num_entities, size=(2, self.num_triples))
-
-    def _test_message_weighting(self, weight_func):
-        """Perform common tests for message weighting."""
-        weights = weight_func(source=self.source, target=self.target)
-
-        # check shape
-        assert weights.shape == self.source.shape
-
-        # check dtype
-        assert weights.dtype == torch.float32
-
-        # check finite values (e.g. due to division by zero)
-        assert torch.isfinite(weights).all()
-
-        # check non-negativity
-        assert (weights >= 0.).all()
-
-    def test_inverse_indegree_edge_weights(self):
-        """Test inverse_indegree_edge_weights."""
-        self._test_message_weighting(weight_func=inverse_indegree_edge_weights)
-
-    def test_inverse_outdegree_edge_weights(self):
-        """Test inverse_outdegree_edge_weights."""
-        self._test_message_weighting(weight_func=inverse_outdegree_edge_weights)
-
-    def test_symmetric_edge_weights(self):
-        """Test symmetric_edge_weights."""
-        self._test_message_weighting(weight_func=symmetric_edge_weights)
 
 
 class TestModelUtilities(unittest.TestCase):
