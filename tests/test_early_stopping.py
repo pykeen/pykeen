@@ -14,10 +14,11 @@ from pykeen.datasets import Nations
 from pykeen.evaluation import Evaluator, MetricResults, RankBasedEvaluator, RankBasedMetricResults
 from pykeen.evaluation.rank_based_evaluator import RANK_TYPES, SIDES
 from pykeen.models import Model, TransE
-from pykeen.stoppers.early_stopping import EarlyStopper, is_improvement
+from pykeen.stoppers.early_stopping import EarlyStopper, _EarlyStopper, is_improvement
 from pykeen.trackers import MLFlowResultTracker
 from pykeen.training import SLCWATrainingLoop
 from pykeen.typing import MappedTriples
+from tests.cases import GenericTestCase
 from tests.mocks import MockModel
 
 
@@ -196,6 +197,30 @@ class TestEarlyStopping(unittest.TestCase):
         self.stopper.result_tracker.mlflow.log_metrics = wrapper.wrap(real_log_metrics)
         self.stopper.should_stop(epoch=0)
         assert wrapper.was_called(real_log_metrics)
+
+
+class EarlyStoppingTests(GenericTestCase[_EarlyStopper]):
+    """Tests for early stopping logic."""
+
+    cls = _EarlyStopper
+    kwargs = dict(
+        patience=2,
+        relative_delta=0.1,
+        larger_is_better=False,
+    )
+
+    def test_report_result(self):
+        """Test report_result API."""
+        metric = 1.0e-03
+        epoch = 3
+        stop = self.instance.report_result(metric=metric, epoch=epoch)
+        assert isinstance(stop, bool)
+
+    def test_early_stopping(self):
+        """Test early stopping."""
+        for epoch, value in enumerate([10.0, 9.0, 8.0, 7.99, 7.98, 7.97]):
+            stop = self.instance.report_result(metric=value, epoch=epoch)
+            self.assertEqual(stop, epoch >= 4)
 
 
 class TestDeltaEarlyStopping(TestEarlyStopping):
