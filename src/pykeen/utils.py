@@ -24,7 +24,8 @@ import pandas as pd
 import torch
 import torch.nn
 import torch.nn.modules.batchnorm
-from class_resolver import normalize_string
+from class_resolver import Resolver, normalize_string
+from torch import nn
 
 from .constants import PYKEEN_BENCHMARKS
 from .typing import DeviceHint, MappedTriples, TorchRandomHint
@@ -989,6 +990,19 @@ def get_expected_norm(
     else:
         raise TypeError(f"norm not implemented for {type(p)}: {p}")
 
+
+activation_resolver = Resolver(
+    classes=(
+        nn.LeakyReLU,
+        nn.PReLU,
+        nn.ReLU,
+        nn.Softplus,
+        nn.Sigmoid,
+        nn.Tanh,
+    ),
+    base=nn.Module,  # type: ignore
+    default=nn.ReLU,
+)
 
 if __name__ == '__main__':
     import doctest

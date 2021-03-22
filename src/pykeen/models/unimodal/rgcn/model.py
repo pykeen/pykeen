@@ -7,7 +7,7 @@ from os import path
 from typing import Any, Mapping, Optional
 
 import torch
-from class_resolver import Hint, Resolver
+from class_resolver import Hint
 from torch import nn
 
 from .decompositions import Decomposition, decomposition_resolver
@@ -21,6 +21,8 @@ from ....typing import Initializer, RelationRepresentation
 __all__ = [
     "RGCN",
 ]
+
+from ....utils import activation_resolver
 
 logger = logging.getLogger(name=path.basename(__file__))
 
@@ -53,10 +55,6 @@ class Bias(nn.Module):
             x + b[None, :]
         """
         return x + self.bias.unsqueeze(dim=0)
-
-
-# TODO: Move to utils
-activation_resolver = Resolver.from_subclasses(base=nn.Module, default=nn.ReLU)
 
 
 class RGCNRepresentations(RepresentationModule):
