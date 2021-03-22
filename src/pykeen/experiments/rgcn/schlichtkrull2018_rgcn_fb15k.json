@@ -12,8 +12,9 @@
       "decomposition_kwargs": {
         "num_blocks": 100
       },
-      "entity_initializer": "xavier_uniform",
-      "relation_initializer": "xavier_uniform"
+      "base_entity_initializer": "xavier_uniform",
+      "relation_initializer": "xavier_uniform",
+      "interaction": "distmult"
     },
     "optimizer": "Adagrad",
     "optimizer_kwargs": {

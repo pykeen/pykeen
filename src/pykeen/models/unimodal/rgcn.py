@@ -63,6 +63,8 @@ class RGCN(
         # https://github.com/MichSchli/RelationPrediction/blob/c77b094fe5c17685ed138dae9ae49b304e0d8d89/code/encoders/affine_transform.py#L24-L28
         base_entity_initializer: Hint[Initializer] = nn.init.xavier_uniform_,
         base_entity_initializer_kwargs: Optional[Mapping[str, Any]] = None,
+        relation_initializer: Hint[Initializer] = nn.init.xavier_uniform_,
+        relation_initializer_kwargs: Optional[Mapping[str, Any]] = None,
         relation_representations: EmbeddingSpecificationHint = None,
         interaction: Interaction[torch.FloatTensor, RelationRepresentation, torch.FloatTensor],
         interaction_kwargs: Optional[Mapping[str, Any]] = None,
@@ -104,7 +106,8 @@ class RGCN(
         if relation_representations is None:
             relation_representations = EmbeddingSpecification(
                 shape=entity_representations.shape,
-                initializer=nn.init.xavier_uniform_,
+                initializer=relation_initializer,
+                initializer_kwargs=relation_initializer_kwargs,
             )
         super().__init__(
             entity_representations=entity_representations,
