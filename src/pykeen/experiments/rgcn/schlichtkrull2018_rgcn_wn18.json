@@ -8,8 +8,10 @@
     "model": "R-GCN",
     "model_kwargs": {
       "embedding_dim": 500,
-      "num_blocks": 100,
       "decomposition": "block",
+      "decomposition_kwargs": {
+        "num_blocks": 100
+      },
       "entity_initializer": "xavier_uniform",
       "relation_initializer": "xavier_uniform"
     },
