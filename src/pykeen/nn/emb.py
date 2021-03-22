@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import functools
+import logging
 import warnings
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -17,9 +18,12 @@ from torch import nn
 from torch.nn import functional
 
 from .init import init_phases, xavier_normal_, xavier_normal_norm_, xavier_uniform_, xavier_uniform_norm_
+from .message_passing import Decomposition, decomposition_resolver
 from .norm import complex_normalize
+from .weighting import EdgeWeighting, edge_weight_resolver
+from ..triples import TriplesFactory
 from ..typing import Constrainer, Hint, Initializer, Normalizer
-from ..utils import clamp_norm, convert_to_canonical_shape
+from ..utils import Bias, activation_resolver, clamp_norm, convert_to_canonical_shape
 
 if TYPE_CHECKING:
     from ..regularizers import Regularizer
@@ -29,6 +33,8 @@ __all__ = [
     'Embedding',
     'EmbeddingSpecification',
 ]
+
+logger = logging.getLogger(__name__)
 
 
 class RepresentationModule(nn.Module, ABC):
@@ -434,3 +440,146 @@ def _handle(value: Hint[X], lookup: Mapping[str, X], kwargs, default: Optional[X
         rv = functools.partial(value, **kwargs)  # type: ignore
         return cast(X, rv)
     return value
+
+
+class RGCNRepresentations(RepresentationModule):
+    """Entity representations enriched by R-GCN."""
+
+    def __init__(
+        self,
+        triples_factory: TriplesFactory,
+        embedding_specification: EmbeddingSpecification,
+        num_layers: int = 2,
+        use_bias: bool = True,
+        use_batch_norm: bool = False,
+        activation: Hint[nn.Module] = None,
+        activation_kwargs: Optional[Mapping[str, Any]] = None,
+        edge_dropout: float = 0.4,
+        self_loop_dropout: float = 0.2,
+        edge_weighting: Hint[EdgeWeighting] = None,
+        decomposition: Hint[Decomposition] = None,
+        decomposition_kwargs: Optional[Mapping[str, Any]] = None,
+    ):
+        base_embeddings = embedding_specification.make(num_embeddings=triples_factory.num_entities)
+        super().__init__(max_id=triples_factory.num_entities, shape=base_embeddings.shape)
+        self.entity_embeddings = base_embeddings
+
+        # Resolve edge weighting
+        self.edge_weighting = edge_weight_resolver.make(query=edge_weighting)
+
+        # dropout
+        self.edge_dropout = edge_dropout
+        self.self_loop_dropout = self_loop_dropout or edge_dropout
+
+        # batch norm and bias
+        use_batch_norm = use_batch_norm
+        if use_batch_norm:
+            if use_bias:
+                logger.warning("Disabling bias because batch normalization is used.")
+            use_bias = False
+
+        # Save graph using buffers, such that the tensors are moved together with the model
+        h, r, t = triples_factory.mapped_triples.t()
+        self.register_buffer("sources", h)
+        self.register_buffer("targets", t)
+        self.register_buffer("edge_types", r)
+
+        layers = []
+        for _ in range(num_layers):
+            layers.append(
+                decomposition_resolver.make(
+                    query=decomposition,
+                    pos_kwargs=decomposition_kwargs,
+                    input_dim=base_embeddings.embedding_dim,
+                    num_relations=triples_factory.num_relations,
+                ),
+            )
+            if use_bias:
+                layers.append(Bias(dim=base_embeddings.embedding_dim))
+            if use_batch_norm:
+                layers.append(nn.BatchNorm1d(num_features=base_embeddings.embedding_dim))
+            layers.append(activation_resolver.make(query=activation, pos_kwargs=activation_kwargs))
+        self.layers = nn.ModuleList(layers)
+
+        # buffering of enriched representations
+        self.enriched_embeddings = None
+
+    def post_parameter_update(self) -> None:  # noqa: D102
+        super().post_parameter_update()
+
+        # invalidate enriched embeddings
+        self.enriched_embeddings = None
+
+    def reset_parameters(self):  # noqa: D102
+        self.entity_embeddings.reset_parameters()
+
+        for m in self.layers:
+            if hasattr(m, "reset_parameters"):
+                m.reset_parameters()
+            elif any(p.requires_grad for p in m.parameters()):
+                logger.warning("Layers %s has parameters, but no reset_parameters.", m)
+
+    def _real_forward(self) -> torch.FloatTensor:
+        if self.enriched_embeddings is not None:
+            return self.enriched_embeddings
+
+        # Bind fields
+        # shape: (num_entities, embedding_dim)
+        x = self.entity_embeddings(indices=None)
+        sources = self.sources
+        targets = self.targets
+        edge_types = self.edge_types
+
+        # Edge dropout: drop the same edges on all layers (only in training mode)
+        if self.training and self.edge_dropout is not None:
+            # Get random dropout mask
+            edge_keep_mask = torch.rand(self.sources.shape[0], device=x.device) > self.edge_dropout
+
+            # Apply to edges
+            sources = sources[edge_keep_mask]
+            targets = targets[edge_keep_mask]
+            edge_types = edge_types[edge_keep_mask]
+
+        # Different dropout for self-loops (only in training mode)
+        if self.training and self.self_loop_dropout is not None:
+            node_keep_mask = torch.rand(x.shape[0], device=x.device) > self.self_loop_dropout
+        else:
+            node_keep_mask = None
+
+        # fixed edges -> pre-compute weights
+        if self.edge_weighting is not None and sources.numel() > 0:
+            edge_weights = torch.empty_like(sources, dtype=torch.float32)
+            for r in range(edge_types.max().item() + 1):
+                mask = edge_types == r
+                if mask.any():
+                    edge_weights[mask] = self.edge_weighting(sources[mask], targets[mask])
+        else:
+            edge_weights = None
+
+        for layer in self.layers:
+            if isinstance(layer, Decomposition):
+                kwargs = dict(
+                    node_keep_mask=node_keep_mask,
+                    source=sources,
+                    target=targets,
+                    edge_type=edge_types,
+                    edge_weights=edge_weights,
+                )
+            else:
+                kwargs = dict()
+            x = layer(x, **kwargs)
+
+        # Cache enriched representations
+        self.enriched_embeddings = x
+
+        return x
+
+    def forward(
+        self,
+        indices: Optional[torch.LongTensor] = None,
+    ) -> torch.FloatTensor:
+        """Enrich the entity embeddings of the decoder using R-GCN message propagation."""
+        x = self._real_forward()
+        if indices is not None:
+            x = x[indices]
+        return x

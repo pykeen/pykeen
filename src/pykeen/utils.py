@@ -24,7 +24,8 @@ import pandas as pd
 import torch
 import torch.nn
 import torch.nn.modules.batchnorm
-from class_resolver import normalize_string
+from class_resolver import Resolver, normalize_string
+from torch import nn
 
 from .constants import PYKEEN_BENCHMARKS
 from .typing import DeviceHint, MappedTriples, TorchRandomHint
@@ -79,6 +80,8 @@ __all__ = [
     'CANONICAL_DIMENSIONS',
     'convert_to_canonical_shape',
     'get_expected_norm',
+    'Bias',
+    'activation_resolver',
 ]
 
 logger = logging.getLogger(__name__)
@@ -988,6 +991,49 @@ def get_expected_norm(
         return math.pow(exp_abs_norm_p * d, 1 / p)
     else:
         raise TypeError(f"norm not implemented for {type(p)}: {p}")
+
+
+activation_resolver = Resolver(
+    classes=(
+        nn.LeakyReLU,
+        nn.PReLU,
+        nn.ReLU,
+        nn.Softplus,
+        nn.Sigmoid,
+        nn.Tanh,
+    ),
+    base=nn.Module,  # type: ignore
+    default=nn.ReLU,
+)
+
+
+class Bias(nn.Module):
+    """A module wrapper for adding a bias."""
+
+    def __init__(self, dim: int):
+        """Initialize the module.
+
+        :param dim: >0
+            The dimension of the input.
+        """
+        super().__init__()
+        self.bias = nn.Parameter(torch.empty(dim), requires_grad=True)
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        """Reset the layer's parameters."""
+        nn.init.zeros_(self.bias)
+
+    def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:
+        """Add the learned bias to the input.
+
+        :param x: shape: (n, d)
+            The input.
+
+        :return:
+            x + b[None, :]
+        """
+        return x + self.bias.unsqueeze(dim=0)
 
 
 if __name__ == '__main__':
