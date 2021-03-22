@@ -136,19 +136,9 @@ class RGCNRepresentations(RepresentationModule):
             elif any(p.requires_grad for p in m.parameters()):
                 logger.warning("Layers %s has parameters, but no reset_parameters.", m)
 
-    def forward(
-        self,
-        indices: Optional[torch.LongTensor] = None,
-    ) -> torch.FloatTensor:
-        """Enrich the entity embeddings of the decoder using R-GCN message propagation."""
+    def _real_forward(self) -> torch.FloatTensor:
         if self.enriched_embeddings is not None:
-            x = self.enriched_embeddings
-            if indices is not None:
-                x = x[indices]
-            return x
-
-        # clear cached embeddings as soon as possible to avoid unnecessary memory consumption
-        self.enriched_embeddings = None
+            return self.enriched_embeddings
 
         # Bind fields
         # shape: (num_entities, embedding_dim)
@@ -174,7 +164,7 @@ class RGCNRepresentations(RepresentationModule):
             node_keep_mask = None
 
         # fixed edges -> pre-compute weights
-        if self.edge_weighting is not None:
+        if self.edge_weighting is not None and sources.numel() > 0:
             edge_weights = torch.empty_like(sources, dtype=torch.float32)
             for r in range(edge_types.max().item() + 1):
                 mask = edge_types == r
@@ -199,9 +189,16 @@ class RGCNRepresentations(RepresentationModule):
         # Cache enriched representations
         self.enriched_embeddings = x
 
+        return x
+
+    def forward(
+        self,
+        indices: Optional[torch.LongTensor] = None,
+    ) -> torch.FloatTensor:
+        """Enrich the entity embeddings of the decoder using R-GCN message propagation."""
+        x = self._real_forward()
         if indices is not None:
             x = x[indices]
-
         return x
 
 
