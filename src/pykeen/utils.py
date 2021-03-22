@@ -6,7 +6,6 @@ import ftplib
 import functools
 import inspect
 import itertools as itt
-import inspect
 import json
 import logging
 import math
