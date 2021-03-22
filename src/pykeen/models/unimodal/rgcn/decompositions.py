@@ -3,13 +3,12 @@
 """Various decompositions for R-GCN."""
 
 import logging
-from typing import Collection, Mapping, Optional, Tuple, Type, Union
+from typing import Optional, Tuple, Union
 
 import torch
+from class_resolver import Resolver
 from torch import nn
 from torch.nn import functional
-
-from ....utils import get_cls, normalize_string
 
 
 def _reduce_relation_specific(
@@ -391,25 +390,4 @@ class BlockDecomposition(RelationSpecificMessagePassing):
         return out.reshape(-1, self.output_dim)
 
 
-_DECOMPOSITION_SUFFIX = "Decomposition"
-_DECOMPOSITIONS: Collection[Type[RelationSpecificMessagePassing]] = {
-    BasesDecomposition,
-    BlockDecomposition,
-}
-decompositions: Mapping[str, Type[RelationSpecificMessagePassing]] = {
-    normalize_string(cls.__name__, suffix=_DECOMPOSITION_SUFFIX): cls
-    for cls in _DECOMPOSITIONS
-}
-
-
-def get_decomposition_cls(
-    query: Union[None, str, Type[RelationSpecificMessagePassing]],
-) -> Type[RelationSpecificMessagePassing]:
-    """Get the decomposition class."""
-    return get_cls(
-        query,
-        base=RelationSpecificMessagePassing,
-        lookup_dict=decompositions,
-        default=BasesDecomposition,
-        suffix=_DECOMPOSITION_SUFFIX,
-    )
+decomposition_resolver = Resolver.from_subclasses(base=RelationSpecificMessagePassing, default=BasesDecomposition)
