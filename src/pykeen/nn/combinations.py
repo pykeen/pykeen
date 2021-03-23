@@ -5,15 +5,21 @@
 import torch
 from torch import nn as nn
 
-from ...utils import combine_complex, split_complex
+from ..utils import combine_complex, split_complex
 
 __all__ = [
+    'Combination',
     'DistMultCombination',
+    'ComplexCombination',
     'ComplExLiteralCombination',
 ]
 
 
-class DistMultCombination(nn.Sequential):
+class Combination(nn.Module):
+    """Base class for combinations"""
+
+
+class DistMultCombination(Combination):
     """Transform the embeddings and the literals together."""
 
     def __init__(
@@ -22,12 +28,16 @@ class DistMultCombination(nn.Sequential):
         num_of_literals: int,
         input_dropout: float = 0.0,
     ):
+        super().__init__()
         linear = nn.Linear(embedding_dim + num_of_literals, embedding_dim)
         dropout = nn.Dropout(input_dropout)
-        super().__init__(linear, dropout)
+        self.sequential = nn.Sequential(linear, dropout)
+
+    def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:
+        return self.sequential(x)
 
 
-class ComplexCombination(nn.Module):
+class ComplexCombination(Combination):
     """A generalized combination for models using complex tensors."""
 
     def __init__(

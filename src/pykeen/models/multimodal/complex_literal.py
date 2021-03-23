@@ -8,10 +8,10 @@ import torch
 import torch.nn as nn
 
 from .base import LiteralModel
-from .combinations import ComplExLiteralCombination
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import BCEWithLogitsLoss, Loss
 from ...nn import EmbeddingSpecification
+from ...nn.combinations import ComplExLiteralCombination
 from ...nn.modules import ComplExInteraction, LiteralInteraction
 from ...regularizers import Regularizer
 from ...triples import TriplesNumericLiteralsFactory
