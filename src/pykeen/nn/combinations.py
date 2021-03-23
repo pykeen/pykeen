@@ -3,7 +3,7 @@
 """Implementation of combinations for the LiteralE model."""
 
 import torch
-from torch import nn as nn
+from torch import nn
 
 from ..utils import combine_complex, split_complex
 
