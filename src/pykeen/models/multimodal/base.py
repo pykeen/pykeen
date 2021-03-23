@@ -34,7 +34,7 @@ class LiteralModel(ERModel[HeadRepresentation, RelationRepresentation, TailRepre
         random_seed: Optional[int] = None,
     ):
         literal_representation = LiteralRepresentation(
-            numeric_literals=torch.as_tensor(triples_factory.numeric_literals, dtype=torch.float32),
+            numeric_literals=triples_factory.get_numeric_literals_tensor(),
         )
 
         super().__init__(
