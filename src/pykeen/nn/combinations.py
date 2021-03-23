@@ -16,7 +16,7 @@ __all__ = [
 
 
 class Combination(nn.Module):
-    """Base class for combinations"""
+    """Base class for combinations."""
 
 
 class DistMultCombination(Combination):
