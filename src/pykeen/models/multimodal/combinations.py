@@ -34,13 +34,10 @@ class ComplexCombination(nn.Module):
         self,
         real: nn.Module,
         imag: nn.Module,
-        embedding_dim: int,
     ):
         super().__init__()
         self.real = real
         self.imag = imag
-        # TODO: Determine this automatically
-        self.embedding_dim = 2 * embedding_dim
 
     def forward(
         self,
@@ -73,4 +70,4 @@ class ComplExLiteralCombination(ComplexCombination):
             nn.Linear(embedding_dim + num_of_literals, embedding_dim),
             torch.nn.Tanh(),
         )
-        super().__init__(real=real, imag=imag, embedding_dim=embedding_dim)
+        super().__init__(real=real, imag=imag)
