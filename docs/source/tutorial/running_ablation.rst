@@ -29,7 +29,7 @@ retrospection.
 
 .. code-block:: python
 
-    metadata = dict(title= "Ablation Study Over Nations for ComplEx.")
+    >>> metadata = dict(title= "Ablation Study Over Nations for ComplEx.")
 
 Now, let's start with defining the minimal requirements, i.e., the dataset(s), interaction model(s), the loss
 function(s), training approach(es), and the optimizer(s) in order to run the ablation study:
@@ -47,7 +47,7 @@ function(s), training approach(es), and the optimizer(s) in order to run the abl
     >>> training_loops = ["LCWA"]
     >>> optimizers = ["Adam"]
     >>> # Run ablation experiment
-    >>> result = ablation_pipeline(
+    >>> ablation_pipeline(
     ...     metadata=metadata,  # Optional
     ...     models=models,
     ...     datasets=datasets,
@@ -62,27 +62,28 @@ performance. Therefore, we extend the ablation study accordingly:
 
 .. code-block:: python
 
-    metadata = dict(title= "Ablation Study Over Nations for ComplEx.")
-    output_dir = "/path/to/output/dir"
+    >>> from pykeen.ablation import ablation_pipeline
+    >>> metadata = dict(title= "Ablation Study Over Nations for ComplEx.")
+    >>> output_dir = "/path/to/output/dir"
 
-    models = ['ComplEx]
-    datasets = ['Nations']
-    losses = ["BCEAfterSigmoidLoss"]
-    training_loops = ["lcwa"]
-    optimizers = ["adam"]
-    create_inverse_triples = [True, False]
+    >>> models = ['ComplEx]
+    >>> datasets = ['Nations']
+    >>> losses = ["BCEAfterSigmoidLoss"]
+    >>> training_loops = ["lcwa"]
+    >>> optimizers = ["adam"]
+    >>> create_inverse_triples = [True, False]
 
     # Run ablation experiment
-    ablation_pipeline(
-        metadata=metadata, #Optional
-        models=models,
-        datasets=datasets,
-        losses=losses,
-        training_loops=training_loops,
-        optimizers=optimizers,
-        create_inverse_triples=create_inverse_triples,
-        directory=output_dir,
-    )
+    >>> ablation_pipeline(
+    ...    metadata=metadata, #Optional
+    ...    models=models,
+    ...    datasets=datasets,
+    ...    losses=losses,
+    ...    training_loops=training_loops,
+    ...    optimizers=optimizers,
+    ...    create_inverse_triples=create_inverse_triples,
+    ...    directory=output_dir,
+    ... )
 
 For each of the components of a knowledge graph embedding model (KGEM) that requires hyper-parameters, i.e.,
 interaction model, loss function, and the training approach, we provide default hyper-parameter optimization (HPO)
@@ -94,36 +95,37 @@ follows:
 
 .. code-block:: python
 
-    metadata = dict(title= "Ablation Study Over Nations for ComplEx.")
-    output_dir = "/path/to/output/dir"
+    >>> from pykeen.ablation import ablation_pipeline
+    >>> metadata = dict(title= "Ablation Study Over Nations for ComplEx.")
+    >>> output_dir = "/path/to/output/dir"
 
-    models = ['ComplEx]
-    datasets = ['Nations']
-    losses = ["BCEAfterSigmoidLoss"]
-    training_loops = ["lcwa"]
-    optimizers = ["adam"]
-    create_inverse_triples= [true,false]
-    stopper = "early",
-    stopper_kwargs = {
-        "frequency": 5,
-        "patience": 20,
-        "relative_delta": 0.002,
-        "metric": "hits@10",
-    }
+    >>> models = ['ComplEx]
+    >>> datasets = ['Nations']
+    >>> losses = ["BCEAfterSigmoidLoss"]
+    >>> training_loops = ["lcwa"]
+    >>> optimizers = ["adam"]
+    >>> create_inverse_triples= [true,false]
+    >>> stopper = "early",
+    >>> stopper_kwargs = {
+    ...    "frequency": 5,
+    ...    "patience": 20,
+    ...   "relative_delta": 0.002,
+    ...    "metric": "hits@10",
+    ... }
 
     # Run ablation experiment
-    ablation_pipeline(
-        metadata=metadata, #Optional
-        models=models,
-        datasets=datasets,
-        losses=losses,
-        training_loops=training_loops,
-        optimizers=optimizers,
-        create_inverse_triples=create_inverse_triples,
-        directory=output_dir,
-        stopper=stopper,
-        stopper_kwargs=stopper_kwargs,
-    )
+    >>> ablation_pipeline(
+    ...    metadata=metadata, #Optional
+    ...    models=models,
+    ...    datasets=datasets,
+    ...    losses=losses,
+    ...    training_loops=training_loops,
+    ...    optimizers=optimizers,
+    ...    create_inverse_triples=create_inverse_triples,
+    ...    directory=output_dir,
+    ...    stopper=stopper,
+    ...    stopper_kwargs=stopper_kwargs,
+    ... )
 
 We define the early stopper using the argument ``stopper``, and through ``stopper_kwargs``, we provide instantiation
 arguments to the early stopper. We define that the early stopper should evaluate every 5 epochs with a patience of 20
@@ -139,43 +141,44 @@ testing purposes. Therefore, we define the arguments required by Optuna by ourse
 
 .. code-block:: python
 
-    metadata = dict(title= "Ablation Study Over Nations for ComplEx.")
-    output_dir = "/path/to/output/dir"
+    >>> from pykeen.ablation import ablation_pipeline
+    >>> metadata = dict(title= "Ablation Study Over Nations for ComplEx.")
+    >>> output_dir = "/path/to/output/dir"
 
-    models = ['ComplEx]
-    datasets = ['Nations']
-    losses = ["BCEAfterSigmoidLoss"]
-    training_loops = ["lcwa"]
-    optimizers = ["adam"]
-    create_inverse_triples= [True,False]
-    stopper = "early",
-    stopper_kwargs = {
-        "frequency": 5,
-        "patience": 20,
-        "relative_delta": 0.002,
-        "metric": "hits@10",
-    }
+    >>> models = ['ComplEx]
+    >>> datasets = ['Nations']
+    >>> losses = ["BCEAfterSigmoidLoss"]
+    >>> training_loops = ["lcwa"]
+    >>> optimizers = ["adam"]
+    >>> create_inverse_triples= [True,False]
+    >>> stopper = "early",
+    >>> stopper_kwargs = {
+    ...    "frequency": 5,
+    ...    "patience": 20,
+    ...    "relative_delta": 0.002,
+    ...    "metric": "hits@10",
+    ... }
 
     # Run ablation experiment
-    ablation_pipeline(
-        metadata=metadata, #Optional
-        models=models,
-        datasets=datasets,
-        losses=losses,
-        training_loops=training_loops,
-        optimizers=optimizers,
-        create_inverse_triples=create_inverse_triples,
-        directory=output_dir,
-        stopper=stopper,
-        stopper_kwargs=stopper_kwargs,
-        # Optuna related arguments
-        n_trials = 2
-        timeout = 300
-        metric = "hits@10"
-        direction = "maximize"
-        sampler = "random"
-        pruner =  "nop"
-    )
+    >>> ablation_pipeline(
+    ...    metadata=metadata, #Optional
+    ...    models=models,
+    ...    datasets=datasets,
+    ...    losses=losses,
+    ...    training_loops=training_loops,
+    ...    optimizers=optimizers,
+    ...    create_inverse_triples=create_inverse_triples,
+    ...    directory=output_dir,
+    ...    stopper=stopper,
+    ...    stopper_kwargs=stopper_kwargs,
+    ...    # Optuna related arguments
+    ...    n_trials = 2
+    ...    timeout = 300
+    ...    metric = "hits@10"
+    ...    direction = "maximize"
+    ...    sampler = "random"
+    ...    pruner =  "nop"
+    ... )
 
 We set the number of HPO iterations for each experiment to 2 using the argument ``n_trials``, set a ``timeout`` of 300
 seconds (the HPO will be terminated after ``n_trials`` or ``timeout`` seconds depending on what occurs first), the
@@ -188,45 +191,46 @@ the best model of each ablation-experiment using the argument ``best_replicates`
 
 .. code-block:: python
 
-    metadata = dict(title= "Ablation Study Over Nations for ComplEx.")
-    output_dir = "/path/to/output/dir"
+    >>> from pykeen.ablation import ablation_pipeline
+    >>> metadata = dict(title= "Ablation Study Over Nations for ComplEx.")
+    >>> output_dir = "/path/to/output/dir"
 
-    models = ['ComplEx]
-    datasets = ['Nations']
-    losses = ["BCEAfterSigmoidLoss"]
-    training_loops = ["lcwa"]
-    optimizers = ["adam"]
-    create_inverse_triples= [True,False]
-    stopper = "early",
-    stopper_kwargs = {
-        "frequency": 5,
-        "patience": 20,
-        "relative_delta": 0.002,
-        "metric": "hits@10",
-    }
+    >>> models = ['ComplEx]
+    >>> datasets = ['Nations']
+    >>> losses = ["BCEAfterSigmoidLoss"]
+    >>> training_loops = ["lcwa"]
+    >>> optimizers = ["adam"]
+    >>> create_inverse_triples= [True,False]
+    >>> stopper = "early",
+    >>> stopper_kwargs = {
+    ...    "frequency": 5,
+    ...    "patience": 20,
+    ...    "relative_delta": 0.002,
+    ...    "metric": "hits@10",
+    ... }
 
-    # Optuna related arguments
-    n_trials = 2
-    timeout = 300
-    metric = "hits@10"
-    direction = "maximize"
-    sampler = "random"
-    pruner =  "nop"
 
     # Run ablation experiment
-    ablation_pipeline(
-        metadata=metadata, #Optional
-        models=models,
-        datasets=datasets,
-        losses=losses,
-        training_loops=training_loops,
-        optimizers=optimizers,
-        create_inverse_triples=create_inverse_triples,
-        directory=output_dir,
-        stopper=stopper,
-        stopper_kwargs=stopper_kwargs,
-        best_replicates=5,
-    )
+    >>> ablation_pipeline(
+    ...    metadata=metadata, #Optional
+    ...    models=models,
+    ...    datasets=datasets,
+    ...    losses=losses,
+    ...    training_loops=training_loops,
+    ...    optimizers=optimizers,
+    ...    create_inverse_triples=create_inverse_triples,
+    ...    directory=output_dir,
+    ...    stopper=stopper,
+    ...    stopper_kwargs=stopper_kwargs,
+    ...    # Optuna related arguments
+    ...    n_trials = 2
+    ...    timeout = 300
+    ...    metric = "hits@10"
+    ...    direction = "maximize"
+    ...    sampler = "random"
+    ...    pruner =  "nop"
+    ...    best_replicates=5,
+    ... )
 
 Eager to check out the results? Then navigate to the output directory ``path/to/output/directory`` in which you will
 find a directory whose name contains a timestamp and a unique id. Within this directory, you will find subdirectories,
@@ -256,16 +260,16 @@ by using the dictionary ``model_to_model_kwargs_ranges``:
     ...
 
     # Define HPO ranges
-    model_to_model_kwargs_ranges = {
-        "ComplEx": {
-            "embedding_dim": {
-                "type": "int",
-                "low": 4,
-                "high": 6,
-                "scale": "power_two"
-            }
-        }
-    }
+    >>> model_to_model_kwargs_ranges = {
+    ...    "ComplEx": {
+    ...        "embedding_dim": {
+    ...            "type": "int",
+    ...            "low": 4,
+    ...            "high": 6,
+    ...            "scale": "power_two"
+    ...        }
+    ...    }
+    ... }
 
     ...
 
@@ -281,43 +285,43 @@ of the ``training_loop``):
 
     ...
 
-    model_to_model_kwargs_ranges = {
-        "ComplEx": {
-            "embedding_dim": {
-                "type": "int",
-                "low": 4,
-                "high": 6,
-                "scale": "power_two"
-            }
-        }
-    }
+    >>> model_to_model_kwargs_ranges = {
+    ...    "ComplEx": {
+    ...        "embedding_dim": {
+    ...            "type": "int",
+    ...            "low": 4,
+    ...            "high": 6,
+    ...            "scale": "power_two"
+    ...        }
+    ...    }
+    ... }
 
-    model_to_training_loop_to_training_kwargs = {
-        "ComplEx": {
-            "lcwa": {
-                "num_epochs": 500
-            }
-        }
-    }
+    >>> model_to_training_loop_to_training_kwargs = {
+    ...    "ComplEx": {
+    ...        "lcwa": {
+    ...            "num_epochs": 500
+    ...        }
+    ...    }
+    ... }
 
-    model_to_training_loop_to_training_kwargs_ranges= {
-        "ComplEx": {
-            "lcwa": {
-                "label_smoothing": {
-                    "type": "float",
-                    "low": 0.001,
-                    "high": 1.0,
-                    "scale": "log"
-                },
-                "batch_size": {
-                    "type": "int",
-                    "low": 7,
-                    "high": 9,
-                    "scale": "power_two"
-                }
-            }
-        }
-    }
+    >>> model_to_training_loop_to_training_kwargs_ranges= {
+    ...    "ComplEx": {
+    ...        "lcwa": {
+    ...            "label_smoothing": {
+    ...                "type": "float",
+    ...                "low": 0.001,
+    ...               "high": 1.0,
+    ...                "scale": "log"
+    ...            },
+    ...            "batch_size": {
+    ...                "type": "int",
+    ...                "low": 7,
+    ...                "high": 9,
+    ...                "scale": "power_two"
+    ...            }
+    ...        }
+    ...    }
+    ... }
 
     ...
 
@@ -327,56 +331,55 @@ Finally, we define a range for the learning rate which is a hyper-parameter of t
 
     ...
 
-    model_to_model_kwargs_ranges = {
-        "ComplEx": {
-            "embedding_dim": {
-                "type": "int",
-                "low": 4,
-                "high": 6,
-                "scale": "power_two"
-            }
-        }
-    }
+    >>> model_to_model_kwargs_ranges = {
+    ...    "ComplEx": {
+    ...        "embedding_dim": {
+    ...            "type": "int",
+    ...            "low": 4,
+    ...            "high": 6,
+    ...            "scale": "power_two"
+    ...        }
+    ...    }
+    ... }
 
-    model_to_training_loop_to_training_kwargs = {
-        "ComplEx": {
-            "lcwa": {
-                "num_epochs": 500
-            }
-        }
-    }
+    >>> model_to_training_loop_to_training_kwargs = {
+    ...    "ComplEx": {
+    ...        "lcwa": {
+    ...            "num_epochs": 500
+    ...        }
+    ...    }
+    ... }
 
-    model_to_training_loop_to_training_kwargs_ranges= {
-        "ComplEx": {
-            "lcwa": {
-                "label_smoothing": {
-                    "type": "float",
-                    "low": 0.001,
-                    "high": 1.0,
-                    "scale": "log"
-                },
-                "batch_size": {
-                    "type": "int",
-                    "low": 7,
-                    "high": 9,
-                    "scale": "power_two"
-                }
-            }
-        }
-    }
+    >>> model_to_training_loop_to_training_kwargs_ranges= {
+    ...    "ComplEx": {
+    ...        "lcwa": {
+    ...            "label_smoothing": {
+    ...                "type": "float",
+    ...                "low": 0.001,
+    ...               "high": 1.0,
+    ...                "scale": "log"
+    ...            },
+    ...            "batch_size": {
+    ...                "type": "int",
+    ...                "low": 7,
+    ...                "high": 9,
+    ...                "scale": "power_two"
+    ...            }
+    ...        }
+    ...
 
-    model_to_optimizer_to_optimizer_kwargs_ranges= {
-        "ComplEx": {
-            "adam": {
-                "lr": {
-                    "type": "float",
-                    "low": 0.001,
-                    "high": 0.1,
-                    "scale": "log"
-                }
-            }
-        }
-    }
+    >>> model_to_optimizer_to_optimizer_kwargs_ranges= {
+    ...    "ComplEx": {
+    ...        "adam": {
+    ...            "lr": {
+    ...                "type": "float",
+    ...                "low": 0.001,
+    ...                "high": 0.1,
+    ...                "scale": "log"
+    ...            }
+    ...        }
+    ...    }
+    ... }
 
     ...
 
@@ -387,95 +390,95 @@ Now that we defined our own hyper-parameter values/ranges, let's have a look at 
 
 .. code-block:: python
 
-    from ablation.ablation import ablation_pipeline
+    >>> from ablation.ablation import ablation_pipeline
 
-    metadata = dict(title= "Ablation Study Over Nations for ComplEx.")
+    >>> metadata = dict(title= "Ablation Study Over Nations for ComplEx.")
 
-    models = ['ComplEx]
-    datasets = ['Nations']
-    losses = ["BCEAfterSigmoidLoss"]
-    training_loops = ["lcwa"]
-    optimizers = ["adam"]
-    create_inverse_triples= [true,false]
-    stopper = "early",
-    stopper_kwargs = {
-        "frequency": 5,
-        "patience": 20,
-        "relative_delta": 0.002,
-        "metric": "hits@10",
-    }
+    >>> models = ['ComplEx]
+    >>> datasets = ['Nations']
+    >>> losses = ["BCEAfterSigmoidLoss"]
+    >>> training_loops = ["lcwa"]
+    >>> optimizers = ["adam"]
+    >>> create_inverse_triples= [true,false]
+    >>> stopper = "early",
+    >>> stopper_kwargs = {
+    ...    "frequency": 5,
+    ...    "patience": 20,
+    ...    "relative_delta": 0.002,
+    ...    "metric": "hits@10",
+    ... }
 
     # Define HPO ranges
-    model_to_model_kwargs_ranges = {
-        "ComplEx": {
-            "embedding_dim": {
-                "type": "int",
-                "low": 4,
-                "high": 6,
-                "scale": "power_two"
-            }
-        }
-    }
+    >>> model_to_model_kwargs_ranges = {
+    ...    "ComplEx": {
+    ...        "embedding_dim": {
+    ...            "type": "int",
+    ...            "low": 4,
+    ...            "high": 6,
+    ...            "scale": "power_two"
+    ...        }
+    ...    }
+    ... }
 
-    model_to_training_loop_to_training_kwargs = {
-        "ComplEx": {
-            "lcwa": {
-                "num_epochs": 500
-            }
-        }
-    }
+    >>> model_to_training_loop_to_training_kwargs = {
+    ...    "ComplEx": {
+    ...        "lcwa": {
+    ...            "num_epochs": 500
+    ...        }
+    ...    }
+    ... }
 
-    model_to_training_loop_to_training_kwargs_ranges= {
-        "ComplEx": {
-            "lcwa": {
-                "label_smoothing": {
-                    "type": "float",
-                    "low": 0.001,
-                    "high": 1.0,
-                    "scale": "log"
-                },
-                "batch_size": {
-                    "type": "int",
-                    "low": 7,
-                    "high": 9,
-                    "scale": "power_two"
-                }
-            }
-        }
-    }
+    >>> model_to_training_loop_to_training_kwargs_ranges= {
+    ...    "ComplEx": {
+    ...        "lcwa": {
+    ...            "label_smoothing": {
+    ...                "type": "float",
+    ...                "low": 0.001,
+    ...               "high": 1.0,
+    ...                "scale": "log"
+    ...            },
+    ...            "batch_size": {
+    ...                "type": "int",
+    ...                "low": 7,
+    ...                "high": 9,
+    ...                "scale": "power_two"
+    ...            }
+    ...        }
+    ...
 
-    model_to_optimizer_to_optimizer_kwargs_ranges= {
-        "ComplEx": {
-            "adam": {
-                "lr": {
-                    "type": "float",
-                    "low": 0.001,
-                    "high": 0.1,
-                    "scale": "log"
-                }
-            }
-        }
-    }
+    >>> model_to_optimizer_to_optimizer_kwargs_ranges= {
+    ...    "ComplEx": {
+    ...        "adam": {
+    ...            "lr": {
+    ...                "type": "float",
+    ...                "low": 0.001,
+    ...                "high": 0.1,
+    ...                "scale": "log"
+    ...            }
+    ...        }
+    ...    }
+    ... }
 
     # Run ablation experiment
-    ablation_pipeline(
-        models=models,
-        datasets=datasets,
-        losses=losses,
-        training_loops=training_loops,
-        optimizers=optimizers,
-        model_to_model_kwargs_ranges=model_to_model_kwargs_ranges,
-        model_to_training_loop_to_training_kwargs=model_to_training_loop_to_training_kwargs,
-        model_to_optimizer_to_optimizer_kwargs_ranges=model_to_optimizer_to_optimizer_kwargs_ranges,
-        directory=out,
-        best_replicates=5,
-        n_trials = 2
-        timeout = 300
-        metric = "hits@10"
-        direction = "maximize"
-        sampler = "random"
-        pruner =  "nop"
-    )
+    >>> ablation_pipeline(
+    ...    models=models,
+    ...    datasets=datasets,
+    ...    losses=losses,
+    ...    training_loops=training_loops,
+    ...    optimizers=optimizers,
+    ...    model_to_model_kwargs_ranges=model_to_model_kwargs_ranges,
+    ...    model_to_training_loop_to_training_kwargs=model_to_training_loop_to_training_kwargs,
+    ...    model_to_optimizer_to_optimizer_kwargs_ranges=model_to_optimizer_to_optimizer_kwargs_ranges,
+    ...    directory=out,
+    ...    best_replicates=5,
+    ...    n_trials = 2
+    ...    timeout = 300
+    ...    metric = "hits@10"
+    ...    direction = "maximize"
+    ...    sampler = "random"
+    ...    pruner =  "nop",
+    ...    best_replicates=5,
+    ... )
 
 We are expected to provide the arguments ``datasets``, ``models``, ``losses``, ``optimizers``, and
 ``training_loops`` to :func:`pykeen.ablation.ablation_pipeline`. For all other components and hype-parameters, PyKEEN
@@ -493,13 +496,13 @@ It requires a minimal change compared to the previous configuration:
 
 .. code-block:: python
 
-    datasets = [
-        {
-            "training": "/path/to/your/train.txt",
-            "validation": "/path/to/your/validation.txt",
-            "testing": "/path/to/your/test.txt"
-        }
-    ]
+    >>> datasets = [
+    ...    {
+    ...        "training": "/path/to/your/train.txt",
+    ...        "validation": "/path/to/your/validation.txt",
+    ...        "testing": "/path/to/your/test.txt"
+    ...    }
+    ... ]
 
 In the dataset field, you don't provide a list of dataset names but dictionaries containing the paths
 to your train-validation-test splits. Check out ``tests/resources/hpo_complex_your_own_data.json`` for a
