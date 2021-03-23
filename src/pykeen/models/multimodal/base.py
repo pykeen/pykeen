@@ -4,9 +4,6 @@
 
 from typing import Optional, Sequence, Union
 
-import torch
-import torch.nn
-
 from ..nbase import ERModel, EmbeddingSpecificationHint
 from ...losses import Loss
 from ...nn.emb import EmbeddingSpecification, LiteralRepresentation, RepresentationModule

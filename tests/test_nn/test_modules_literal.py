@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Tests for literal interaction functions."""
+
 from typing import Any, MutableMapping
 
 import torch

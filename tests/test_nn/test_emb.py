@@ -11,7 +11,7 @@ import torch
 
 import pykeen.nn.emb
 from pykeen.datasets.nations import NationsLiteral
-from pykeen.nn import Embedding, Embedding, EmbeddingSpecification, RepresentationModule
+from pykeen.nn import Embedding, EmbeddingSpecification, RepresentationModule
 from pykeen.nn.emb import LiteralRepresentation
 from pykeen.triples.generation import generate_triples_factory
 from tests import cases, mocks
