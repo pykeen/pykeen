@@ -268,6 +268,7 @@ def prepare_ablation_from_path(path: str, directory: str, save_artifacts: bool) 
         created.
     :return: pairs of output directories and HPO config paths inside those directories
     """
+    directory = _create_path_with_id(directory=directory)
     with open(path) as file:
         config = json.load(file)
     return prepare_ablation_from_config(config=config, directory=directory, save_artifacts=save_artifacts)
