@@ -2,6 +2,8 @@
 
 """Implementation of combinations for the LiteralE model."""
 
+from abc import ABC, abstractmethod
+
 import torch
 from torch import nn
 
@@ -15,8 +17,12 @@ __all__ = [
 ]
 
 
-class Combination(nn.Module):
+class Combination(nn.Module, ABC):
     """Base class for combinations."""
+
+    @abstractmethod
+    def forward(self, x: torch.FloatTensor, literal: torch.FloatTensor) -> torch.FloatTensor:
+        """Combine the embedding and literal then score."""
 
 
 class DistMultCombination(Combination):
