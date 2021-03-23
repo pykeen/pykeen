@@ -32,7 +32,7 @@ from pykeen.losses import Loss, PairwiseLoss, PointwiseLoss, SetwiseLoss
 from pykeen.models import EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, RESCAL
 from pykeen.models.cli import build_cli_from_cls
 from pykeen.nn import RepresentationModule
-from pykeen.nn.modules import Interaction
+from pykeen.nn.modules import FunctionalInteraction, Interaction
 from pykeen.regularizers import LpRegularizer, Regularizer
 from pykeen.trackers import ResultTracker
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
@@ -459,6 +459,9 @@ class InteractionTestCase(
 
     def test_forward_consistency_with_functional(self):
         """Test forward's consistency with functional."""
+        if not isinstance(self.instance, FunctionalInteraction):
+            self.skipTest('Not a functional interaction')
+
         # set in eval mode (otherwise there are non-deterministic factors like Dropout
         self.instance.eval()
         for hs, rs, ts in self._get_test_shapes():
@@ -476,10 +479,14 @@ class InteractionTestCase(
             # test multiple different initializations
             self.instance.reset_parameters()
             h, r, t = self._get_hrt((1, 1, 1, 1), (1, 1, 1, 1), (1, 1, 1, 1))
-            kwargs = self.instance._prepare_for_functional(h=h, r=r, t=t)
 
-            # calculate by functional
-            scores_f = self.cls.func(**kwargs).view(-1)
+            if isinstance(self.instance, FunctionalInteraction):
+                kwargs = self.instance._prepare_for_functional(h=h, r=r, t=t)
+                # calculate by functional
+                scores_f = self.cls.func(**kwargs).view(-1)
+            else:
+                kwargs = dict(h=h, r=r, t=t)
+                scores_f = self.instance(h=h, r=r, t=t)
 
             # calculate manually
             scores_f_manual = self._exp_score(**kwargs).view(-1)

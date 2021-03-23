@@ -399,9 +399,6 @@ class MonotonicAffineTransformationInteractionTests(cases.InteractionTestCase):
         base=pykeen.nn.modules.TransEInteraction(p=2),
     )
 
-    def test_forward_consistency_with_functional(self):  # noqa: D102
-        raise SkipTest("Not a functional interaction.")
-
     def test_scores(self):  # noqa: D102
         raise SkipTest("Not a functional interaction.")
 
