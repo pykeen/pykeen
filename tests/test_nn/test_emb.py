@@ -8,6 +8,7 @@ from unittest.mock import Mock
 
 import numpy
 import torch
+from unittest_templates import TestsTestCase
 
 import pykeen.nn.emb
 from pykeen.nn import Embedding, EmbeddingSpecification, RepresentationModule
@@ -63,7 +64,7 @@ class RGCNRepresentationTests(cases.RepresentationTestCase):
         return kwargs
 
 
-class RepresentationModuleTestsTestCase(cases.TestsTestCase[RepresentationModule]):
+class RepresentationModuleTestsTestCase(TestsTestCase[RepresentationModule]):
     """Test that there are tests for all representation modules."""
 
     base_cls = RepresentationModule

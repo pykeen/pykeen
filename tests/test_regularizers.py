@@ -7,6 +7,7 @@ import unittest
 import pytest
 import torch
 from torch.nn import functional
+from unittest_templates import TestsTestCase
 
 from pykeen.models import ConvKB, TransH
 from pykeen.regularizers import (
@@ -212,7 +213,7 @@ class TestOnlyUpdateOnce(unittest.TestCase):
         self.assertEqual(0.0, regularizer.regularization_term.item())
 
 
-class TestRegularizerTests(cases.TestsTestCase):
+class TestRegularizerTests(TestsTestCase):
     """Test all regularizers are tested."""
 
     base_cls = Regularizer

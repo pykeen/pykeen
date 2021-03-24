@@ -10,12 +10,12 @@ import timeit
 import traceback
 import unittest
 from abc import ABC, abstractmethod
-from typing import Any, ClassVar, Collection, Dict, Generic, Mapping, MutableMapping, Optional, Tuple, Type, TypeVar
+from typing import Any, ClassVar, Collection, Dict, Mapping, MutableMapping, Optional, Tuple, Type, TypeVar
 from unittest.mock import patch
 
 import pytest
 import torch
-from class_resolver import get_subclasses
+import unittest_templates
 from click.testing import CliRunner, Result
 from torch import optim
 from torch.nn import functional
@@ -48,29 +48,14 @@ T = TypeVar("T")
 logger = logging.getLogger(__name__)
 
 
-class GenericTestCase(Generic[T], unittest.TestCase):
+class GenericTestCase(unittest_templates.GenericTestCase):
     """Generic tests."""
 
-    cls: ClassVar[Type[T]]
-    kwargs: ClassVar[Optional[Mapping[str, Any]]] = None
-    instance: T
     generator: torch.Generator
 
-    def setUp(self) -> None:
-        """Set up the generic testing method."""
-        # fix seeds for reproducibility
+    def pre_setup_hook(self) -> None:
+        """Instantiate a generator for usage in the test case."""
         self.generator = set_random_seed(seed=42)[1]
-        kwargs = self.kwargs or {}
-        kwargs = self._pre_instantiation_hook(kwargs=dict(kwargs))
-        self.instance = self.cls(**kwargs)
-        self.post_instantiation_hook()
-
-    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
-        """Perform actions before instantiation, potentially modyfing kwargs."""
-        return kwargs
-
-    def post_instantiation_hook(self) -> None:
-        """Perform actions after instantiation."""
 
 
 class DatasetTestCase(unittest.TestCase):
@@ -569,21 +554,6 @@ class FileResultTrackerTests(ResultTrackerTests):
         # delete intermediate files
         self.path.unlink()
         self.temporary_directory.cleanup()
-
-
-class TestsTestCase(Generic[T], unittest.TestCase):
-    """A generic test for tests."""
-
-    base_cls: Type[T]
-    base_test: Type[GenericTestCase[T]]
-    skip_cls: Collection[T] = tuple()
-
-    def test_testing(self):
-        """Check that there is a test for all subclasses."""
-        to_test = set(get_subclasses(self.base_cls)).difference(self.skip_cls)
-        tested = (test_cls.cls for test_cls in get_subclasses(self.base_test) if hasattr(test_cls, "cls"))
-        not_tested = to_test.difference(tested)
-        assert not not_tested, not_tested
 
 
 class RegularizerTestCase(GenericTestCase[Regularizer]):
