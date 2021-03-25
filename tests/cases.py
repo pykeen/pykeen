@@ -48,7 +48,7 @@ T = TypeVar("T")
 logger = logging.getLogger(__name__)
 
 
-class GenericTestCase(unittest_templates.GenericTestCase):
+class GenericTestCase(unittest_templates.GenericTestCase[T]):
     """Generic tests."""
 
     generator: torch.Generator

@@ -8,7 +8,7 @@ from unittest import SkipTest
 
 import numpy
 import torch
-from unittest_templates import TestsTestCase
+import unittest_templates
 
 import pykeen.nn.modules
 import pykeen.utils
@@ -422,7 +422,7 @@ class MonotonicAffineTransformationInteractionTests(cases.InteractionTestCase):
             assert (c_t == c_o).all()
 
 
-class InteractionTestsTestCase(TestsTestCase[Interaction]):
+class InteractionTestsTestCase(unittest_templates.TestsTestCase[Interaction]):
     """Test for tests for all interaction functions."""
 
     base_cls = Interaction
