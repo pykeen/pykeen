@@ -116,7 +116,8 @@ class EarlyStoppingLogic:
         # Stop if the result did not improve more than delta for patience evaluations
         if self.remaining_patience <= 0:
             logger.info(
-                f'Stopping early at epoch {epoch}. The best result {self.best_metric} occurred at epoch {self.best_epoch}.',
+                f'Stopping early at epoch {epoch}. The best result {self.best_metric} occurred at '
+                f'epoch {self.best_epoch}.',
             )
             return True
 
@@ -179,7 +180,7 @@ class EarlyStopper(Stopper):
 
     @property
     def remaining_patience(self):
-        """The remaining patience."""
+        """Return the remaining patience."""
         return self._stopper.remaining_patience
 
     def should_evaluate(self, epoch: int) -> bool:
