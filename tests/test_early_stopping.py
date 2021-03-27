@@ -14,7 +14,7 @@ from pykeen.datasets import Nations
 from pykeen.evaluation import Evaluator, MetricResults, RankBasedEvaluator, RankBasedMetricResults
 from pykeen.evaluation.rank_based_evaluator import RANK_TYPES, SIDES
 from pykeen.models import Model, TransE
-from pykeen.stoppers.early_stopping import EarlyStopper, _EarlyStopper, is_improvement
+from pykeen.stoppers.early_stopping import EarlyStopper, EarlyStoppingLogic, is_improvement
 from pykeen.trackers import MLFlowResultTracker
 from pykeen.training import SLCWATrainingLoop
 from pykeen.typing import MappedTriples
@@ -199,10 +199,10 @@ class TestEarlyStopping(unittest.TestCase):
         assert wrapper.was_called(real_log_metrics)
 
 
-class EarlyStoppingTests(GenericTestCase[_EarlyStopper]):
+class EarlyStoppingTests(GenericTestCase[EarlyStoppingLogic]):
     """Tests for early stopping logic."""
 
-    cls = _EarlyStopper
+    cls = EarlyStoppingLogic
     kwargs = dict(
         patience=2,
         relative_delta=0.1,

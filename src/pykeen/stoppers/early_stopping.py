@@ -17,6 +17,7 @@ from ..utils import fix_dataclass_init_docs
 __all__ = [
     'is_improvement',
     'EarlyStopper',
+    'EarlyStoppingLogic',
     'StopperCallback',
 ]
 
@@ -53,7 +54,7 @@ def is_improvement(
     return current_value < (1.0 - relative_delta) * best_value
 
 
-class _EarlyStopper:
+class EarlyStoppingLogic:
     """The early stopping logic."""
 
     #: The best result so far
@@ -170,7 +171,7 @@ class EarlyStopper(Stopper):
         # TODO: Fix this
         # if all(f.name != self.metric for f in dataclasses.fields(self.evaluator.__class__)):
         #     raise ValueError(f'Invalid metric name: {self.metric}')
-        self._stopper = _EarlyStopper(
+        self._stopper = EarlyStoppingLogic(
             patience=self.patience,
             relative_delta=self.relative_delta,
             larger_is_better=self.larger_is_better,
