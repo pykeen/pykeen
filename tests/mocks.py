@@ -8,7 +8,7 @@ import torch
 from torch import nn
 
 from pykeen.models import EntityRelationEmbeddingModel, Model
-from pykeen.nn import EmbeddingSpecification, RepresentationModule
+from pykeen.nn.emb import EmbeddingSpecification, RepresentationModule
 from pykeen.triples import TriplesFactory
 
 __all__ = [

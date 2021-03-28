@@ -22,15 +22,15 @@ PYKEEN_MODULE: pystow.Module = pystow.module('pykeen')
 #: A path representing the PyKEEN data folder
 PYKEEN_HOME: Path = PYKEEN_MODULE.base
 #: A subdirectory of the PyKEEN data folder for datasets, defaults to ``~/.data/pykeen/datasets``
-PYKEEN_DATASETS: Path = PYKEEN_MODULE.get('datasets')
+PYKEEN_DATASETS: Path = PYKEEN_MODULE.join('datasets')
 #: A subdirectory of the PyKEEN data folder for benchmarks, defaults to ``~/.data/pykeen/benchmarks``
-PYKEEN_BENCHMARKS: Path = PYKEEN_MODULE.get('benchmarks')
+PYKEEN_BENCHMARKS: Path = PYKEEN_MODULE.join('benchmarks')
 #: A subdirectory of the PyKEEN data folder for experiments, defaults to ``~/.data/pykeen/experiments``
-PYKEEN_EXPERIMENTS: Path = PYKEEN_MODULE.get('experiments')
+PYKEEN_EXPERIMENTS: Path = PYKEEN_MODULE.join('experiments')
 #: A subdirectory of the PyKEEN data folder for checkpoints, defaults to ``~/.data/pykeen/checkpoints``
-PYKEEN_CHECKPOINTS: Path = PYKEEN_MODULE.get('checkpoints')
+PYKEEN_CHECKPOINTS: Path = PYKEEN_MODULE.join('checkpoints')
 #: A subdirectory for PyKEEN logs
-PYKEEN_LOGS: Path = PYKEEN_MODULE.get('logs')
+PYKEEN_LOGS: Path = PYKEEN_MODULE.join('logs')
 
 PYKEEN_DEFAULT_CHECKPOINT = "PyKEEN_just_saved_my_day.pt"
 
