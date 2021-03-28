@@ -18,7 +18,7 @@ from pykeen.stoppers.early_stopping import EarlyStopper, EarlyStoppingLogic, is_
 from pykeen.trackers import MLFlowResultTracker
 from pykeen.training import SLCWATrainingLoop
 from pykeen.typing import MappedTriples
-from tests.cases import GenericTestCase
+from tests import cases
 from tests.mocks import MockModel
 
 
@@ -199,7 +199,7 @@ class TestEarlyStopping(unittest.TestCase):
         assert wrapper.was_called(real_log_metrics)
 
 
-class EarlyStoppingTests(GenericTestCase[EarlyStoppingLogic]):
+class EarlyStoppingTests(cases.GenericTestCase[EarlyStoppingLogic]):
     """Tests for early stopping logic."""
 
     cls = EarlyStoppingLogic
