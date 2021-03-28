@@ -18,7 +18,7 @@ from pykeen.models import (
 )
 from pykeen.models.predict import get_novelty_mask, predict
 from pykeen.models.unimodal.trans_d import _project_entity
-from pykeen.nn import Embedding
+from pykeen.nn.emb import Embedding
 from pykeen.utils import all_in_bounds, clamp_norm, extend_batch
 from tests import cases
 from tests.constants import EPSILON

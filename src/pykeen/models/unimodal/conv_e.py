@@ -13,7 +13,7 @@ from torch.nn import functional as F  # noqa: N812
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE
 from ...losses import BCEAfterSigmoidLoss, Loss
-from ...nn import Embedding, EmbeddingSpecification
+from ...nn.emb import Embedding, EmbeddingSpecification
 from ...nn.init import xavier_normal_
 from ...nn.modules import _calculate_missing_shape_information
 from ...regularizers import Regularizer

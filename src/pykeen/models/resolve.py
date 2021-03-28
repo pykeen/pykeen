@@ -61,7 +61,7 @@ import logging
 from typing import Any, Mapping, Optional, Sequence, Tuple, Type, Union
 
 from .nbase import ERModel, EmbeddingSpecificationHint
-from ..nn import EmbeddingSpecification, RepresentationModule
+from ..nn.emb import EmbeddingSpecification, RepresentationModule
 from ..nn.modules import Interaction, interaction_resolver
 
 __all__ = [
