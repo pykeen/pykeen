@@ -12,7 +12,7 @@ from ..base import MultimodalModel
 from ..unimodal.complex import ComplEx
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import BCEWithLogitsLoss, Loss
-from ...nn import Embedding
+from ...nn.emb import Embedding
 from ...regularizers import Regularizer
 from ...triples import TriplesNumericLiteralsFactory
 from ...typing import DeviceHint

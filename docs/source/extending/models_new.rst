@@ -12,7 +12,7 @@ KGEM using the :class:`pykeen.models.ERModel` base class.
 .. code-block:: python
 
     from pykeen.models import ERModel
-    from pykeen.nn import EmbeddingSpecification
+    from pykeen.nn.emb import EmbeddingSpecification
     from pykeen.nn.modules import DistMultInteraction  # effectively the same as the example above
 
     class DistMult(ERModel):

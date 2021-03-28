@@ -11,7 +11,7 @@ import torch
 import unittest_templates
 
 import pykeen.nn.emb
-from pykeen.nn import Embedding, EmbeddingSpecification, RepresentationModule
+from pykeen.nn.emb import Embedding, EmbeddingSpecification, RepresentationModule
 from pykeen.triples.generation import generate_triples_factory
 from tests import cases, mocks
 
