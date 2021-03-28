@@ -11,10 +11,10 @@ from ..base import EntityRelationEmbeddingModel
 from ...losses import Loss
 from ...nn.emb import EmbeddingSpecification
 from ...nn.init import init_phases, xavier_uniform_
-from ...nn.norm import complex_normalize
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import Constrainer, DeviceHint, Hint, Initializer
+from ...utils import complex_normalize
 
 __all__ = [
     'RotatE',

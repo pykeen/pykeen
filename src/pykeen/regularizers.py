@@ -12,7 +12,7 @@ from class_resolver import Resolver, normalize_string
 from torch import nn
 from torch.nn import functional
 
-from .nn.norm import lp_norm, powersum_norm
+from .utils import lp_norm, powersum_norm
 
 __all__ = [
     # Base Class

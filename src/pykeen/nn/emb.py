@@ -19,12 +19,11 @@ from torch.nn import functional
 
 from .init import init_phases, xavier_normal_, xavier_normal_norm_, xavier_uniform_, xavier_uniform_norm_
 from .message_passing import Decomposition, decomposition_resolver
-from .norm import complex_normalize
 from .weighting import EdgeWeighting, edge_weight_resolver
 from ..regularizers import Regularizer
 from ..triples import TriplesFactory
 from ..typing import Constrainer, Hint, Initializer, Normalizer
-from ..utils import Bias, activation_resolver, clamp_norm, convert_to_canonical_shape
+from ..utils import Bias, activation_resolver, clamp_norm, complex_normalize, convert_to_canonical_shape
 
 __all__ = [
     'RepresentationModule',

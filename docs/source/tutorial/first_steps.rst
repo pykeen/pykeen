@@ -63,15 +63,15 @@ representations respectively. You can access them via
 
 .. code-block:: python
 
-    entity_representation_modules:   List['pykeen.nn.emb.Embedding'] = model.entity_representations
-    relation_representation_modules: List['pykeen.nn.emb.Embedding'] = model.relation_representations
+    entity_representation_modules:   List['pykeen.nn.Embedding'] = model.entity_representations
+    relation_representation_modules: List['pykeen.nn.Embedding'] = model.relation_representations
 
 If you want to obtain a single representation, you can index this list then call the function
 to unwrap the embeddings, e.g.
 
 .. code-block:: python
 
-    first_entity_representation_module: 'pykeen.nn.emb.Embedding' = entity_representations[0]
+    first_entity_representation_module: 'pykeen.nn.Embedding' = entity_representations[0]
     first_entity_representations: torch.FloatTensor = first_entity_representations_module()
 
 and treat them as before. The ordering in this list corresponds to the
