@@ -65,7 +65,7 @@ class RGCNRepresentationTests(cases.RepresentationTestCase):
         return kwargs
 
 
-class RepresentationModuleTestsTestCase(unittest_templates.TestsTestCase[RepresentationModule]):
+class RepresentationModuleTestsTestCase(unittest_templates.MetaTestCase[RepresentationModule]):
     """Test that there are tests for all representation modules."""
 
     base_cls = RepresentationModule

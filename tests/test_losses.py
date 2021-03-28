@@ -113,7 +113,7 @@ class MarginRankingLossTestCase(cases.PairwiseLossTestCase):
     cls = MarginRankingLoss
 
 
-class TestLosses(unittest_templates.TestsTestCase[Loss]):
+class TestLosses(unittest_templates.MetaTestCase[Loss]):
     """Test that the loss functions all have tests."""
 
     base_cls = Loss

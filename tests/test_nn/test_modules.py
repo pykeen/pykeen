@@ -422,7 +422,7 @@ class MonotonicAffineTransformationInteractionTests(cases.InteractionTestCase):
             assert (c_t == c_o).all()
 
 
-class InteractionTestsTestCase(unittest_templates.TestsTestCase[Interaction]):
+class InteractionTestsTestCase(unittest_templates.MetaTestCase[Interaction]):
     """Test for tests for all interaction functions."""
 
     base_cls = Interaction

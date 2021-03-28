@@ -213,7 +213,7 @@ class TestOnlyUpdateOnce(unittest.TestCase):
         self.assertEqual(0.0, regularizer.regularization_term.item())
 
 
-class TestRegularizerTests(unittest_templates.TestsTestCase[Regularizer]):
+class TestRegularizerTests(unittest_templates.MetaTestCase[Regularizer]):
     """Test all regularizers are tested."""
 
     base_cls = Regularizer
