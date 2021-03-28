@@ -21,7 +21,7 @@ class Combination(nn.Module, ABC):
     """Base class for combinations."""
 
     @abstractmethod
-    def forward(self, x: torch.FloatTensor, literal: torch.FloatTensor) -> torch.FloatTensor:
+    def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:
         """Combine the embedding and literal then score."""
 
 
