@@ -11,7 +11,7 @@ from ..base import MultimodalModel
 from ..unimodal.distmult import DistMult
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
-from ...nn import Embedding
+from ...nn.emb import Embedding
 from ...regularizers import Regularizer
 from ...triples import TriplesNumericLiteralsFactory
 from ...typing import DeviceHint

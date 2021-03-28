@@ -11,7 +11,7 @@ from torch.nn.init import uniform_
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
-from ...nn import Embedding, EmbeddingSpecification
+from ...nn.emb import Embedding, EmbeddingSpecification
 from ...regularizers import Regularizer, TransHRegularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint, Hint, Initializer

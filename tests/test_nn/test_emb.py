@@ -8,9 +8,10 @@ from unittest.mock import Mock
 
 import numpy
 import torch
+import unittest_templates
 
 import pykeen.nn.emb
-from pykeen.nn import Embedding, EmbeddingSpecification, RepresentationModule
+from pykeen.nn.emb import Embedding, EmbeddingSpecification, RepresentationModule
 from pykeen.triples.generation import generate_triples_factory
 from tests import cases, mocks
 
@@ -27,7 +28,8 @@ class EmbeddingTests(cases.RepresentationTestCase):
     def test_backwards_compatibility(self):
         """Test shape and num_embeddings."""
         assert self.instance.max_id == self.instance.num_embeddings
-        assert self.instance.shape == (self.instance.embedding_dim,)
+        embedding_dim = int(numpy.prod(self.instance.shape))
+        assert self.instance.shape == (embedding_dim,)
 
 
 class TensorEmbeddingTests(cases.RepresentationTestCase):
@@ -63,7 +65,7 @@ class RGCNRepresentationTests(cases.RepresentationTestCase):
         return kwargs
 
 
-class RepresentationModuleTestsTestCase(cases.TestsTestCase[RepresentationModule]):
+class RepresentationModuleTestsTestCase(unittest_templates.MetaTestCase[RepresentationModule]):
     """Test that there are tests for all representation modules."""
 
     base_cls = RepresentationModule

@@ -13,6 +13,8 @@ from torch.nn import functional
 
 __all__ = [
     "Decomposition",
+    'BasesDecomposition',
+    'BlockDecomposition',
     "decomposition_resolver",
 ]
 

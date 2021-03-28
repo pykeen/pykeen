@@ -17,7 +17,7 @@ from docdata import parse_docdata
 from torch import nn
 
 from ..losses import Loss, MarginRankingLoss
-from ..nn import Embedding, EmbeddingSpecification
+from ..nn.emb import Embedding, EmbeddingSpecification
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import TriplesFactory
 from ..typing import DeviceHint, ScorePack

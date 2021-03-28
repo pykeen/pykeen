@@ -5,6 +5,7 @@
 import unittest
 
 import torch
+import unittest_templates
 
 from pykeen.losses import (
     BCEAfterSigmoidLoss, BCEWithLogitsLoss, CrossEntropyLoss, Loss, MSELoss, MarginRankingLoss, NSSALoss, PairwiseLoss,
@@ -112,7 +113,7 @@ class MarginRankingLossTestCase(cases.PairwiseLossTestCase):
     cls = MarginRankingLoss
 
 
-class TestLosses(cases.TestsTestCase):
+class TestLosses(unittest_templates.MetaTestCase[Loss]):
     """Test that the loss functions all have tests."""
 
     base_cls = Loss
