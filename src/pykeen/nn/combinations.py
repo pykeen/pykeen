@@ -40,6 +40,7 @@ class DistMultCombination(Combination):
         self.sequential = nn.Sequential(linear, dropout)
 
     def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:
+        """Apply the linear and dropout sequentially."""
         return self.sequential(x)
 
 
@@ -50,8 +51,10 @@ class ComplexCombination(Combination):
         self,
         real: nn.Module,
         imag: nn.Module,
+        embedding_dim: int,
     ):
         super().__init__()
+        self.embedding_dim = embedding_dim
         self.real = real
         self.imag = imag
 
@@ -86,4 +89,4 @@ class ComplExLiteralCombination(ComplexCombination):
             nn.Linear(embedding_dim + num_of_literals, embedding_dim),
             torch.nn.Tanh(),
         )
-        super().__init__(real=real, imag=imag)
+        super().__init__(real=real, imag=imag, embedding_dim=embedding_dim)

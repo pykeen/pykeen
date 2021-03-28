@@ -15,6 +15,7 @@ from unittest.mock import patch
 
 import pytest
 import torch
+import unittest_templates
 from click.testing import CliRunner, Result
 from torch import optim
 from torch.nn import functional
@@ -23,7 +24,6 @@ from torch.optim import Adagrad, SGD
 import pykeen.models
 import pykeen.nn.message_passing
 import pykeen.nn.weighting
-import unittest_templates
 from pykeen.datasets import Nations
 from pykeen.datasets.base import LazyDataset
 from pykeen.datasets.kinships import KINSHIPS_TRAIN_PATH

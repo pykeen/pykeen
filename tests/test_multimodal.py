@@ -6,6 +6,7 @@ import tempfile
 import unittest
 
 from pykeen.datasets.nations import NationsLiteral
+from pykeen.models import ComplExLiteral, DistMultLiteral
 from pykeen.pipeline import pipeline
 
 
@@ -26,8 +27,8 @@ class TestLiteralModel(unittest.TestCase):
 
     def test_complex(self):
         """Test running on ComplEx."""
-        self._help('ComplExLiteral')
+        self._help(ComplExLiteral)
 
     def test_distmult(self):
         """Test running on DistMult."""
-        self._help('DistMultLiteral')
+        self._help(DistMultLiteral)
