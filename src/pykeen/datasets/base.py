@@ -7,19 +7,17 @@ from __future__ import annotations
 import logging
 import os
 import pathlib
-import shutil
 import tarfile
 import zipfile
 from abc import abstractmethod
 from io import BytesIO
 from typing import Any, ClassVar, Dict, List, Mapping, Optional, Sequence, TextIO, Tuple, Union, cast
-from urllib.request import urlretrieve
 
 import click
 import pandas as pd
 import requests
 from more_click import verbose_option
-from pystow.utils import name_from_url
+from pystow.utils import download, name_from_url
 from tabulate import tabulate
 
 from ..constants import PYKEEN_DATASETS
@@ -357,34 +355,6 @@ class PathDataset(LazyDataset):
         )
 
 
-def _urlretrieve(url: str, path: str, clean_on_failure: bool = True, stream: bool = True) -> None:
-    """Download a file from a given URL.
-
-    :param url: URL to download
-    :param path: Path to download the file to
-    :param clean_on_failure: If true, will delete the file on any exception raised during download
-    :param stream: If true, use :func:`requests.get`. By default, use ``urlretrieve``.
-
-    :raises Exception: If there's a problem wih downloading via :func:`requests.get` or copying
-        the data with :func:`shutil.copyfileobj`
-    :raises KeyboardInterrupt: If the user quits during download
-    """
-    if not stream:
-        logger.info('downloading from %s to %s', url, path)
-        urlretrieve(url, path)  # noqa:S310
-    else:
-        # see https://requests.readthedocs.io/en/master/user/quickstart/#raw-response-content
-        # pattern from https://stackoverflow.com/a/39217788/5775947
-        try:
-            with requests.get(url, stream=True) as response, open(path, 'wb') as file:
-                logger.info('downloading (streaming) from %s to %s', url, path)
-                shutil.copyfileobj(response.raw, file)
-        except (Exception, KeyboardInterrupt):
-            if clean_on_failure:
-                os.remove(path)
-            raise
-
-
 class UnpackedRemoteDataset(PathDataset):
     """A dataset with all three of train, test, and validation sets as URLs."""
 
@@ -432,7 +402,7 @@ class UnpackedRemoteDataset(PathDataset):
         ]:
             if os.path.exists(path) and not force:
                 continue
-            _urlretrieve(url, path, stream=stream)
+            download(url, path, stream=stream, backend='requests')
 
         super().__init__(
             training_path=training_path,
@@ -603,7 +573,7 @@ class PackedZipRemoteDataset(LazyDataset):
             if self.url is None:
                 raise ValueError('url should be set')
             logger.info('downloading data from %s to %s', self.url, self.path)
-            _urlretrieve(self.url, self.path)  # noqa:S310
+            download(url=self.url, path=self.path)
 
         with zipfile.ZipFile(file=self.path) as zf:
             with zf.open(relative_path) as file:
@@ -672,7 +642,7 @@ class TarFileSingleDataset(LazyDataset):
 
     def _load(self) -> None:
         if not os.path.exists(self._get_path()):
-            _urlretrieve(self.url, self._get_path())  # noqa:S310
+            download(self.url, self._get_path())  # noqa:S310
 
         _actual_path = os.path.join(self.cache_root, self._relative_path)
         if not os.path.exists(_actual_path):
@@ -826,7 +796,7 @@ class SingleTabbedDataset(TabbedDataset):
     def _get_df(self) -> pd.DataFrame:
         if not os.path.exists(self._get_path()):
             logger.info('downloading data from %s to %s', self.url, self._get_path())
-            _urlretrieve(self.url, self._get_path())  # noqa:S310
+            download(url=self.url, path=self._get_path())  # noqa:S310
         df = pd.read_csv(self._get_path(), **self.read_csv_kwargs)
 
         usecols = self.read_csv_kwargs.get('usecols')

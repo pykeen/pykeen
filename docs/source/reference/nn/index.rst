@@ -11,3 +11,5 @@
    similarity
    representation
    init
+   message_passing
+   weighting

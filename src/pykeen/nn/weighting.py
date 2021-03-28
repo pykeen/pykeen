@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Various edge weighting implementations for R-GCN."""
+
 from abc import abstractmethod
 
 import torch
@@ -9,6 +10,9 @@ from torch import nn
 
 __all__ = [
     "EdgeWeighting",
+    'InverseInDegreeEdgeWeighting',
+    'InverseOutDegreeEdgeWeighting',
+    'SymmetricEdgeWeighting',
     "edge_weight_resolver",
 ]
 
