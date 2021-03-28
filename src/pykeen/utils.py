@@ -1040,12 +1040,6 @@ class Bias(nn.Module):
         return x + self.bias.unsqueeze(dim=0)
 
 
-if __name__ == '__main__':
-    import doctest
-
-    doctest.testmod()
-
-
 def lp_norm(x: torch.FloatTensor, p: float, dim: Optional[int], normalize: bool) -> torch.FloatTensor:
     """Return the $L_p$ norm."""
     value = x.norm(p=p, dim=dim)
@@ -1066,6 +1060,9 @@ def powersum_norm(x: torch.FloatTensor, p: float, dim: Optional[int], normalize:
 def complex_normalize(x: torch.Tensor) -> torch.Tensor:
     r"""Normalize a vector of complex numbers such that each element is of unit-length.
 
+    :param x: A tensor formulating complex numbers
+    :returns: A normalized version accoring to the following definition.
+
     The `modulus of complex number <https://en.wikipedia.org/wiki/Absolute_value#Complex_numbers>`_ is given as:
 
     .. math::
@@ -1084,3 +1081,9 @@ def complex_normalize(x: torch.Tensor) -> torch.Tensor:
     y = x.view(*x.shape[:-1], x.shape[-1] // 2, 2)
     y = functional.normalize(y, p=2, dim=-1)
     return y.view(*x.shape)
+
+
+if __name__ == '__main__':
+    import doctest
+
+    doctest.testmod()
