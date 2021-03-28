@@ -59,8 +59,8 @@ class ComplExLiteral(LiteralModel):
             interaction=LiteralInteraction(
                 base=ComplExInteraction(),
                 combination=ComplExLiteralCombination(
-                    embedding_dim=embedding_dim,
-                    num_of_literals=triples_factory.numeric_literals.shape[-1],
+                    entity_embedding_dim=embedding_dim,
+                    literal_embedding_dim=triples_factory.numeric_literals.shape[-1],
                     input_dropout=input_dropout,
                 ),
             ),

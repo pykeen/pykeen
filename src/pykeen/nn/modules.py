@@ -363,14 +363,14 @@ class LiteralInteraction(
         :return: shape: (batch_size, num_heads, num_relations, num_tails)
             The scores.
         """
-        # combine entity embeddings + literals
-        # TODO what if tail representation is not a single torch.FloatTensor?
-        h = torch.cat(h, dim=-1)
-        h = self.combination(h.view(-1, h.shape[-1])).view(*h.shape[:-1], -1)  # type: ignore
-        t = torch.cat(t, dim=-1)
-        # TODO what if tail representation is not a single torch.FloatTensor?
-        t = self.combination(t.view(-1, t.shape[-1])).view(*t.shape[:-1], -1)  # type: ignore
-        return self.base(h=h, r=r, t=t)
+        # alternate way of combining entity embeddings + literals
+        # h = torch.cat(h, dim=-1)
+        # h = self.combination(h.view(-1, h.shape[-1])).view(*h.shape[:-1], -1)  # type: ignore
+        # t = torch.cat(t, dim=-1)
+        # t = self.combination(t.view(-1, t.shape[-1])).view(*t.shape[:-1], -1)  # type: ignore
+        h_proj = self.combination(*h)
+        t_proj = self.combination(*t)
+        return self.base(h=h_proj, r=r, t=t_proj)
 
 
 class FunctionalInteraction(Interaction, Generic[HeadRepresentation, RelationRepresentation, TailRepresentation]):

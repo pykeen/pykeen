@@ -34,8 +34,6 @@ class LiteralTests(cases.InteractionTestCase):
         return kwargs
 
     def _exp_score(self, h, r, t) -> torch.FloatTensor:  # noqa: D102
-        return self.instance.base(
-            self.instance.combination(torch.cat(h, dim=-1)),
-            r,
-            self.instance.combination(torch.cat(t, dim=-1)),
-        )
+        h_proj = self.instance.combination(*h)
+        t_proj = self.instance.combination(*t)
+        return self.instance.base(h_proj, r, t_proj)
