@@ -11,7 +11,7 @@ from torch.nn import functional
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
-from ...nn import EmbeddingSpecification
+from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_normal_norm_, xavier_uniform_
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory

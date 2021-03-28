@@ -10,7 +10,7 @@ from torch import nn
 
 from pykeen.datasets import Nations
 from pykeen.models import EntityRelationEmbeddingModel, Model, TransE
-from pykeen.nn import EmbeddingSpecification
+from pykeen.nn.emb import EmbeddingSpecification
 from pykeen.triples import TriplesFactory
 from pykeen.utils import resolve_device
 

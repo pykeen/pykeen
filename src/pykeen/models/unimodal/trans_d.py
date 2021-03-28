@@ -10,7 +10,7 @@ import torch.autograd
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
-from ...nn import Embedding, EmbeddingSpecification
+from ...nn.emb import Embedding, EmbeddingSpecification
 from ...nn.init import xavier_normal_, xavier_uniform_, xavier_uniform_norm_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory

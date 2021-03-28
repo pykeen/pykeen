@@ -9,7 +9,7 @@ import torch.autograd
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss, SoftplusLoss
-from ...nn import Embedding, EmbeddingSpecification
+from ...nn.emb import Embedding, EmbeddingSpecification
 from ...regularizers import PowerSumRegularizer, Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint, Hint, Initializer
