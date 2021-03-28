@@ -6,7 +6,7 @@ import inspect
 import json
 import logging
 import sys
-from typing import Optional, Type
+from typing import Any, Mapping, Optional, Type, Union
 
 import click
 from torch import nn
@@ -14,6 +14,8 @@ from torch import nn
 from . import options
 from .options import CLI_OPTIONS
 from ..base import Model
+from ...nn.message_passing import Decomposition
+from ...typing import Constrainer, Hint, Initializer, Normalizer
 
 __all__ = [
     'build_cli_from_cls',
@@ -28,14 +30,19 @@ _SKIP_ARGS = {
     'preferred_device',
     'regularizer',
     # TODO rethink after RGCN update
+    'interaction',
     'activation_cls',
     'activation_kwargs',
     'edge_weighting',
+    'relation_representations',
 }
 _SKIP_ANNOTATIONS = {
     Optional[nn.Embedding],
     Optional[nn.Parameter],
     Optional[nn.Module],
+    Optional[Mapping[str, Any]],
+    Union[None, str, nn.Module],
+    Union[None, str, Decomposition],
 }
 
 
@@ -60,6 +67,9 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
 
             else:
                 parameter = signature.parameters[name]
+                if annotation in {Hint[Initializer], Hint[Constrainer], Hint[Normalizer]}:  # type: ignore
+                    logger.debug('Unhandled hint: %s', annotation)
+                    continue
                 if parameter.default is None:
                     logger.warning(
                         f'Missing handler in {model.__name__} for {name}: '
@@ -77,7 +87,7 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
 
         return command
 
-    @click.command(help=f'CLI for {model.__name__}', name=model.__name__.lower())
+    @click.command(help=f'CLI for {model.__name__}', name=model.__name__.lower())  # type: ignore
     @options.device_option
     @options.dataset_option
     @options.training_option
@@ -129,6 +139,8 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
         )
         from ...pipeline import pipeline
 
+        result_tracker: Optional[str]
+        result_tracker_kwargs: Optional[Mapping[str, Any]]
         if mlflow_tracking_uri:
             result_tracker = 'mlflow'
             result_tracker_kwargs = {

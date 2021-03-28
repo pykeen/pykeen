@@ -4,6 +4,8 @@
 
 import os
 
+from docdata import parse_docdata
+
 from .base import TarFileRemoteDataset
 
 __all__ = [
@@ -12,8 +14,24 @@ __all__ = [
 ]
 
 
+@parse_docdata
 class WN18(TarFileRemoteDataset):
-    """The WN18 dataset."""
+    """The WN18 dataset.
+
+    ---
+    name: WordNet-18
+    statistics:
+        entities: 40943
+        relations: 18
+        training: 141442
+        testing: 5000
+        validation: 5000
+        triples: 151442
+    citation:
+        author: Bordes
+        year: 2014
+        link: https://arxiv.org/abs/1301.3485
+    """
 
     def __init__(self, create_inverse_triples: bool = False, **kwargs):
         """Initialize the WordNet-18 dataset.
@@ -33,8 +51,24 @@ class WN18(TarFileRemoteDataset):
         )
 
 
+@parse_docdata
 class WN18RR(TarFileRemoteDataset):
-    """The WN18-RR dataset."""
+    """The WN18-RR dataset.
+
+    ---
+    name: WordNet-18 (RR)
+    statistics:
+        entities: 40559
+        relations: 11
+        training: 86835
+        testing: 2924
+        validation: 2824
+        triples: 92583
+    citation:
+        author: Toutanova
+        year: 2015
+        link: https://www.aclweb.org/anthology/W15-4007/
+    """
 
     def __init__(self, create_inverse_triples: bool = False, **kwargs):
         """Initialize the WordNet-18 (RR) dataset.
@@ -50,3 +84,12 @@ class WN18RR(TarFileRemoteDataset):
             create_inverse_triples=create_inverse_triples,
             **kwargs,
         )
+
+
+def _main():
+    for cls in [WN18, WN18RR]:
+        cls().summarize()
+
+
+if __name__ == '__main__':
+    _main()

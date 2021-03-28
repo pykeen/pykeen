@@ -4,6 +4,8 @@
 
 import os
 
+from docdata import parse_docdata
+
 from ..base import PathDataset
 from ..literal_base import NumericPathDataset
 
@@ -24,8 +26,24 @@ NATIONS_VALIDATE_PATH = os.path.join(HERE, 'valid.txt')
 NATIONS_LITERALS_PATH = os.path.join(HERE, 'literals.txt')
 
 
+@parse_docdata
 class Nations(PathDataset):
-    """The Nations dataset."""
+    """The Nations dataset.
+
+    ---
+    name: Nations
+    statistics:
+        entities: 14
+        relations: 55
+        training: 1592
+        testing: 201
+        validation: 199
+        triples: 1992
+    citation:
+        author: Zhenfeng Lei
+        year: 2017
+        github: ZhenfengLei/KGDatasets
+    """
 
     def __init__(self, create_inverse_triples: bool = False, **kwargs):
         """Initialize the Nations dataset.
@@ -59,3 +77,7 @@ class NationsLiteral(NumericPathDataset):
             create_inverse_triples=create_inverse_triples,
             **kwargs,
         )
+
+
+if __name__ == '__main__':
+    Nations().summarize()

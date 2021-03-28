@@ -6,19 +6,21 @@ from __future__ import annotations
 
 import functools
 import logging
+import pickle
 import warnings
 from abc import ABC, abstractmethod
 from typing import Any, ClassVar, Iterable, Mapping, Optional, Type, Union
 
 import pandas as pd
 import torch
+from docdata import parse_docdata
 from torch import nn
 
-from ..losses import Loss, MarginRankingLoss, has_mr_loss, has_nssa_loss
-from ..nn import Embedding
+from ..losses import Loss, MarginRankingLoss
+from ..nn import Embedding, EmbeddingSpecification
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import TriplesFactory
-from ..typing import Constrainer, DeviceHint, Initializer, Normalizer, ScorePack
+from ..typing import DeviceHint, ScorePack
 from ..utils import NoRandomSeedNecessary, _can_slice, extend_batch, resolve_device, set_random_seed
 
 __all__ = [
@@ -69,7 +71,6 @@ class Model(nn.Module, ABC):
         predict_with_sigmoid: bool = False,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
-        regularizer: Optional[Regularizer] = None,
     ) -> None:
         """Initialize the module.
 
@@ -107,10 +108,6 @@ class Model(nn.Module, ABC):
         else:
             self.loss = loss
 
-        # TODO: Check loss functions that require 1 and -1 as label but only
-        self.is_mr_loss: bool = has_mr_loss(self)
-        self.is_nssa_loss: bool = has_nssa_loss(self)
-
         # The triples factory facilitates access to the dataset.
         self.triples_factory = triples_factory
 
@@ -124,6 +121,7 @@ class Model(nn.Module, ABC):
         cls._is_base_model = not autoreset
         if not cls._is_base_model:
             _add_post_reset_parameters(cls)
+            parse_docdata(cls)
 
     """Properties"""
 
@@ -173,6 +171,9 @@ class Model(nn.Module, ABC):
     def _reset_parameters_(self):  # noqa: D401
         """Reset all parameters of the model in-place."""
         raise NotImplementedError
+
+    def post_parameter_update(self) -> None:
+        """Has to be called after each parameter update."""
 
     """Abstract methods - Scoring"""
 
@@ -230,59 +231,22 @@ class Model(nn.Module, ABC):
             For each r-t pair, the scores for all possible heads.
         """
 
-    """Abstract methods - loss computation"""
-
     @abstractmethod
-    def compute_mr_loss(
+    def compute_loss(
         self,
-        positive_scores: torch.FloatTensor,
-        negative_scores: torch.FloatTensor,
+        tensor_1: torch.FloatTensor,
+        tensor_2: torch.FloatTensor,
     ) -> torch.FloatTensor:
-        """Compute the mean ranking loss for the positive and negative scores.
+        """Compute the loss for functions requiring two separate tensors as input.
 
-        :param positive_scores:  shape: s, dtype: float
-            The scores for positive triples.
-        :param negative_scores: shape: s, dtype: float
-            The scores for negative triples.
-        :raises RuntimeError:
-            If the chosen loss function does not allow the calculation of margin ranking
-        :return: dtype: float, scalar
-            The margin ranking loss value.
-        """
-
-    @abstractmethod
-    def compute_label_loss(
-        self,
-        predictions: torch.FloatTensor,
-        labels: torch.FloatTensor,
-    ) -> torch.FloatTensor:
-        """Compute the classification loss.
-
-        :param predictions: shape: s
-            The tensor containing predictions.
-        :param labels: shape: s
-            The tensor containing labels.
-
+        :param tensor_1: shape: s
+            The tensor containing predictions or positive scores.
+        :param tensor_2: shape: s
+            The tensor containing target values or the negative scores.
         :return: dtype: float, scalar
             The label loss value.
-        """
 
-    @abstractmethod
-    def compute_self_adversarial_negative_sampling_loss(
-        self,
-        positive_scores: torch.FloatTensor,
-        negative_scores: torch.FloatTensor,
-    ) -> torch.FloatTensor:
-        """Compute self adversarial negative sampling loss.
-
-        :param positive_scores: shape: s
-            The tensor containing the positive scores.
-        :param negative_scores: shape: s
-            Tensor containing the negative scores.
-        :raises RuntimeError:
-            If the chosen loss does not allow the calculation of self adversarial negative sampling losses.
-        :return: dtype: float, scalar
-            The loss value.
+        .. note:: generally the two tensors do not need to have the same shape, but only one which is broadcastable.
         """
 
     """Concrete methods"""
@@ -312,7 +276,7 @@ class Model(nn.Module, ABC):
         :param path:
             Path of the file where to store the state in.
         """
-        torch.save(self.state_dict(), path)
+        torch.save(self.state_dict(), path, pickle_protocol=pickle.HIGHEST_PROTOCOL)
 
     def load_state(self, path: str) -> None:
         """Load the state of the model.
@@ -589,7 +553,7 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
     """A base module for PyKEEN 1.0-style KGE models."""
 
     #: The default regularizer class
-    regularizer_default: ClassVar[Type[Regularizer]] = NoRegularizer  # type: ignore
+    regularizer_default: ClassVar[Optional[Type[Regularizer]]] = None
     #: The default parameters for the default regularizer class
     regularizer_default_kwargs: ClassVar[Optional[Mapping[str, Any]]] = None
     #: The instance of the regularizer
@@ -629,12 +593,14 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
             random_seed=random_seed,
         )
         # Regularizer
-        if regularizer is None:
-            regularizer = self.regularizer_default(
-                device=self.device,
+        if regularizer is not None:
+            self.regularizer = regularizer
+        elif self.regularizer_default is not None:
+            self.regularizer = self.regularizer_default(
                 **(self.regularizer_default_kwargs or {}),
             )
-        self.regularizer = regularizer
+        else:
+            self.regularizer = NoRegularizer()
 
     def post_parameter_update(self) -> None:
         """Has to be called after each parameter update."""
@@ -647,93 +613,6 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
         """
         if self.training:
             self.regularizer.update(*tensors)
-
-    def compute_mr_loss(
-        self,
-        positive_scores: torch.FloatTensor,
-        negative_scores: torch.FloatTensor,
-    ) -> torch.FloatTensor:
-        """Compute the mean ranking loss for the positive and negative scores.
-
-        :param positive_scores:  shape: s, dtype: float
-            The scores for positive triples.
-        :param negative_scores: shape: s, dtype: float
-            The scores for negative triples.
-        :raises RuntimeError:
-            If the chosen loss function does not allow the calculation of margin ranking
-        :return: dtype: float, scalar
-            The margin ranking loss value.
-        """
-        if not self.is_mr_loss:
-            raise RuntimeError(
-                'The chosen loss does not allow the calculation of margin ranking'
-                ' losses. Please use the compute_loss method instead.',
-            )
-        y = torch.ones_like(negative_scores, device=self.device)
-        return self.loss(positive_scores, negative_scores, y) + self.regularizer.term
-
-    def compute_label_loss(
-        self,
-        predictions: torch.FloatTensor,
-        labels: torch.FloatTensor,
-    ) -> torch.FloatTensor:
-        """Compute the classification loss.
-
-        :param predictions: shape: s
-            The tensor containing predictions.
-        :param labels: shape: s
-            The tensor containing labels.
-
-        :return: dtype: float, scalar
-            The label loss value.
-        """
-        return self._compute_loss(tensor_1=predictions, tensor_2=labels)
-
-    def compute_self_adversarial_negative_sampling_loss(
-        self,
-        positive_scores: torch.FloatTensor,
-        negative_scores: torch.FloatTensor,
-    ) -> torch.FloatTensor:
-        """Compute self adversarial negative sampling loss.
-
-        :param positive_scores: shape: s
-            The tensor containing the positive scores.
-        :param negative_scores: shape: s
-            Tensor containing the negative scores.
-        :raises RuntimeError:
-            If the chosen loss does not allow the calculation of self adversarial negative sampling losses.
-        :return: dtype: float, scalar
-            The loss value.
-        """
-        if not self.is_nssa_loss:
-            raise RuntimeError(
-                'The chosen loss does not allow the calculation of self adversarial negative sampling'
-                ' losses. Please use the compute_self_adversarial_negative_sampling_loss method instead.',
-            )
-        return self._compute_loss(tensor_1=positive_scores, tensor_2=negative_scores)
-
-    def _compute_loss(
-        self,
-        tensor_1: torch.FloatTensor,
-        tensor_2: torch.FloatTensor,
-    ) -> torch.FloatTensor:
-        """Compute the loss for functions requiring two separate tensors as input.
-
-        :param tensor_1: shape: s
-            The tensor containing predictions or positive scores.
-        :param tensor_2: shape: s
-            The tensor containing target values or the negative scores.
-        :raises RuntimeError:
-            If the chosen loss does not allow the calculation of margin label losses.
-        :return: dtype: float, scalar
-            The label loss value.
-        """
-        if self.is_mr_loss:
-            raise RuntimeError(
-                'The chosen loss does not allow the calculation of margin label'
-                ' losses. Please use the compute_mr_loss method instead.',
-            )
-        return self.loss(tensor_1, tensor_2) + self.regularizer.term
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:
         """Forward pass using right side (tail) prediction.
@@ -804,6 +683,24 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
         scores = expanded_scores.view(ht_batch.shape[0], -1)
         return scores
 
+    def compute_loss(
+        self,
+        tensor_1: torch.FloatTensor,
+        tensor_2: torch.FloatTensor,
+    ) -> torch.FloatTensor:
+        """Compute the loss for functions requiring two separate tensors as input.
+
+        :param tensor_1: shape: s
+            The tensor containing predictions or positive scores.
+        :param tensor_2: shape: s
+            The tensor containing target values or the negative scores.
+        :return: dtype: float, scalar
+            The label loss value.
+
+        .. note:: generally the two tensors do not need to have the same shape, but only one which is broadcastable.
+        """
+        return self.loss(tensor_1, tensor_2) + self.regularizer.term
+
     def post_forward_pass(self):
         """Run after calculating the forward loss."""
         self.regularizer.reset()
@@ -815,26 +712,19 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
 class EntityEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
     """A base module for most KGE models that have one embedding for entities."""
 
+    entity_embedding: Embedding
+
     def __init__(
         self,
         triples_factory: TriplesFactory,
-        embedding_dim: int = 50,
+        entity_representations: EmbeddingSpecification,
         loss: Optional[Loss] = None,
         predict_with_sigmoid: bool = False,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
-        entity_initializer: Optional[Initializer] = None,
-        entity_initializer_kwargs: Optional[Mapping[str, Any]] = None,
-        entity_normalizer: Optional[Normalizer] = None,
-        entity_normalizer_kwargs: Optional[Mapping[str, Any]] = None,
-        entity_constrainer: Optional[Constrainer] = None,
-        entity_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
     ) -> None:
         """Initialize the entity embedding model.
-
-        :param embedding_dim:
-            The embedding dimensionality. Exact usages depends on the specific model subclass.
 
         .. seealso:: Constructor of the base class :class:`pykeen.models.Model`
         """
@@ -846,16 +736,9 @@ class EntityEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
             regularizer=regularizer,
             predict_with_sigmoid=predict_with_sigmoid,
         )
-        self.entity_embeddings = Embedding.init_with_device(
+        self.entity_embeddings = entity_representations.make(
             num_embeddings=triples_factory.num_entities,
-            embedding_dim=embedding_dim,
             device=self.device,
-            initializer=entity_initializer,
-            initializer_kwargs=entity_initializer_kwargs,
-            normalizer=entity_normalizer,
-            normalizer_kwargs=entity_normalizer_kwargs,
-            constrainer=entity_constrainer,
-            constrainer_kwargs=entity_constrainer_kwargs,
         )
 
     @property
@@ -875,37 +758,25 @@ class EntityEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
 class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
     """A base module for KGE models that have different embeddings for entities and relations."""
 
+    #: Primary embeddings for entities
+    entity_embedding: Embedding
+    #: Primary embeddings for relations
+    relation_embedding: Embedding
+
     def __init__(
         self,
         triples_factory: TriplesFactory,
-        embedding_dim: int = 50,
-        relation_dim: Optional[int] = None,
+        entity_representations: EmbeddingSpecification,
+        relation_representations: EmbeddingSpecification,
         loss: Optional[Loss] = None,
         predict_with_sigmoid: bool = False,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
-        entity_initializer: Optional[Initializer] = None,
-        entity_initializer_kwargs: Optional[Mapping[str, Any]] = None,
-        entity_normalizer: Optional[Normalizer] = None,
-        entity_normalizer_kwargs: Optional[Mapping[str, Any]] = None,
-        entity_constrainer: Optional[Constrainer] = None,
-        entity_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
-        relation_initializer: Optional[Initializer] = None,
-        relation_initializer_kwargs: Optional[Mapping[str, Any]] = None,
-        relation_normalizer: Optional[Normalizer] = None,
-        relation_normalizer_kwargs: Optional[Mapping[str, Any]] = None,
-        relation_constrainer: Optional[Constrainer] = None,
-        relation_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
     ) -> None:
         """Initialize the entity embedding model.
 
-        :param relation_dim:
-            The relation embedding dimensionality. If not given, defaults to same size as entity embedding
-            dimension.
-
         .. seealso:: Constructor of the base class :class:`pykeen.models.Model`
-        .. seealso:: Constructor of the base class :class:`pykeen.models.EntityEmbeddingModel`
         """
         super().__init__(
             triples_factory=triples_factory,
@@ -915,32 +786,13 @@ class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
             regularizer=regularizer,
             predict_with_sigmoid=predict_with_sigmoid,
         )
-        self.entity_embeddings = Embedding.init_with_device(
+        self.entity_embeddings = entity_representations.make(
             num_embeddings=triples_factory.num_entities,
-            embedding_dim=embedding_dim,
             device=self.device,
-            initializer=entity_initializer,
-            initializer_kwargs=entity_initializer_kwargs,
-            normalizer=entity_normalizer,
-            normalizer_kwargs=entity_normalizer_kwargs,
-            constrainer=entity_constrainer,
-            constrainer_kwargs=entity_constrainer_kwargs,
         )
-
-        # Default for relation dimensionality
-        if relation_dim is None:
-            relation_dim = embedding_dim
-
-        self.relation_embeddings = Embedding.init_with_device(
+        self.relation_embeddings = relation_representations.make(
             num_embeddings=triples_factory.num_relations,
-            embedding_dim=relation_dim,
             device=self.device,
-            initializer=relation_initializer,
-            initializer_kwargs=relation_initializer_kwargs,
-            normalizer=relation_normalizer,
-            normalizer_kwargs=relation_normalizer_kwargs,
-            constrainer=relation_constrainer,
-            constrainer_kwargs=relation_constrainer_kwargs,
         )
 
     @property

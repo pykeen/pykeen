@@ -4,6 +4,7 @@
 
 import logging
 from typing import Tuple
+from unittest import SkipTest
 
 import numpy
 import torch
@@ -348,6 +349,18 @@ class UMTests(cases.TranslationalInteractionTests):
         return -(h - t).pow(p).sum()
 
 
+class PairRETests(cases.TranslationalInteractionTests):
+    """Tests for PairRE interaction function."""
+
+    cls = pykeen.nn.modules.PairREInteraction
+
+    def _exp_score(self, h, r_h, r_t, t, p: float, power_norm: bool) -> torch.FloatTensor:
+        s = (h * r_h - t * r_t).norm(p)
+        if power_norm:
+            s = s.pow(p)
+        return -s
+
+
 class SimplEInteractionTests(cases.InteractionTestCase):
     """Tests for SimplE interaction function."""
 
@@ -357,6 +370,55 @@ class SimplEInteractionTests(cases.InteractionTestCase):
         h, r, t, h_inv, r_inv, t_inv = strip_dim(h, r, t, h_inv, r_inv, t_inv)
         assert clamp is None
         return 0.5 * distmult_interaction(h, r, t) + 0.5 * distmult_interaction(h_inv, r_inv, t_inv)
+
+
+class MuRETests(cases.TranslationalInteractionTests):
+    """Tests for MuRE interaction function."""
+
+    cls = pykeen.nn.modules.MuREInteraction
+
+    def _exp_score(self, h, b_h, r_vec, r_mat, t, b_t, p, power_norm) -> torch.FloatTensor:
+        s = (h * r_mat) + r_vec - t
+        s = s.norm(p=p)
+        if power_norm:
+            s = s.pow(p)
+        s = -s
+        s = s + b_h + b_t
+        return s
+
+    def _additional_score_checks(self, scores):
+        # Since MuRE has offsets, the scores do not need to negative
+        pass
+
+
+class MonotonicAffineTransformationInteractionTests(cases.InteractionTestCase):
+    """Tests for monotonic affine transformation interaction adapter."""
+
+    cls = pykeen.nn.modules.MonotonicAffineTransformationInteraction
+    kwargs = dict(
+        base=pykeen.nn.modules.TransEInteraction(p=2),
+    )
+
+    def test_forward_consistency_with_functional(self):  # noqa: D102
+        raise SkipTest("Not a functional interaction.")
+
+    def test_scores(self):  # noqa: D102
+        raise SkipTest("Not a functional interaction.")
+
+    def _exp_score(self, **kwargs) -> torch.FloatTensor:  # noqa: D102
+        # We do not need this, since we do not check for functional consistency anyway
+        raise NotImplementedError
+
+    def test_monotonicity(self):
+        """Verify monotonicity."""
+        for hs, rs, ts in self._get_test_shapes():
+            h, r, t = self._get_hrt(hs, rs, ts)
+            s_t = self.instance(h=h, r=r, t=t).view(-1)
+            s_o = self.instance.base(h=h, r=r, t=t).view(-1)
+            # intra-interaction comparison
+            c_t = (s_t.unsqueeze(dim=0) > s_t.unsqueeze(dim=1))
+            c_o = (s_o.unsqueeze(dim=0) > s_o.unsqueeze(dim=1))
+            assert (c_t == c_o).all()
 
 
 class InteractionTestsTestCase(cases.TestsTestCase[Interaction]):

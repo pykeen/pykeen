@@ -4,6 +4,8 @@
 
 import os
 
+from docdata import parse_docdata
+
 from ..base import PathDataset
 
 __all__ = [
@@ -20,8 +22,24 @@ UMLS_TEST_PATH = os.path.join(HERE, 'test.txt')
 UMLS_VALIDATE_PATH = os.path.join(HERE, 'valid.txt')
 
 
+@parse_docdata
 class UMLS(PathDataset):
-    """The UMLS dataset."""
+    """The UMLS dataset.
+
+    ---
+    name: Unified Medical Language System
+    statistics:
+        entities: 135
+        relations: 46
+        training: 5216
+        testing: 661
+        validation: 652
+        triples: 6529
+    citation:
+        author: Zhenfeng Lei
+        year: 2017
+        github: ZhenfengLei/KGDatasets
+    """
 
     def __init__(self, create_inverse_triples: bool = False, **kwargs):
         """Initialize the UMLS dataset.
@@ -36,3 +54,7 @@ class UMLS(PathDataset):
             create_inverse_triples=create_inverse_triples,
             **kwargs,
         )
+
+
+if __name__ == '__main__':
+    UMLS().summarize()

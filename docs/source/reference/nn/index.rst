@@ -9,4 +9,5 @@
    functional
    modules
    similarity
+   representation
    init

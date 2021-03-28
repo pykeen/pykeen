@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Implementation of the ComplexLiteral model based on the local closed world assumption (LCWA) training approach."""
+"""Implementation of the ComplexLiteral model."""
 
 from typing import Any, ClassVar, Mapping, Optional, Type
 
@@ -13,13 +13,21 @@ from ..unimodal.complex import ComplEx
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import BCEWithLogitsLoss, Loss
 from ...nn import Embedding
+from ...regularizers import Regularizer
 from ...triples import TriplesNumericLiteralsFactory
 from ...typing import DeviceHint
 from ...utils import split_complex
 
 
 class ComplExLiteral(ComplEx, MultimodalModel):
-    """An implementation of ComplexLiteral from [agustinus2018]_ based on the LCWA training approach."""
+    """An implementation of Complex Literal variant of LiteralE from [kristiadi2018]_.
+
+    ---
+    citation:
+        author: Kristiadi
+        year: 2018
+        link: https://arxiv.org/abs/1802.00934
+    """
 
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]] = dict(
@@ -39,6 +47,7 @@ class ComplExLiteral(ComplEx, MultimodalModel):
         loss: Optional[Loss] = None,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
+        regularizer: Optional[Regularizer] = None,
     ) -> None:
         """Initialize the model."""
         super().__init__(
@@ -47,6 +56,7 @@ class ComplExLiteral(ComplEx, MultimodalModel):
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
+            regularizer=regularizer,
             entity_initializer=xavier_normal_,
             relation_initializer=xavier_normal_,
         )
@@ -56,8 +66,10 @@ class ComplExLiteral(ComplEx, MultimodalModel):
         self.numeric_literals = Embedding(
             num_embeddings=triples_factory.num_entities,
             embedding_dim=triples_factory.numeric_literals.shape[-1],
-            initializer=lambda x: triples_factory.numeric_literals,
+            initializer=triples_factory.literal_initializer,
         )
+        # explicitly reset to load the triples in
+        self.numeric_literals.reset_parameters()
         # Number of columns corresponds to number of literals
         self.num_of_literals = self.numeric_literals.embedding_dim
 

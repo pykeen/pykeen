@@ -12,12 +12,20 @@ from ..unimodal.distmult import DistMult
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
 from ...nn import Embedding
+from ...regularizers import Regularizer
 from ...triples import TriplesNumericLiteralsFactory
 from ...typing import DeviceHint
 
 
 class DistMultLiteral(DistMult, MultimodalModel):
-    """An implementation of DistMultLiteral from [agustinus2018]_."""
+    """An implementation of DistMultLiteral from [kristiadi2018]_.
+
+    ---
+    citation:
+        author: Kristiadi
+        year: 2018
+        link: https://arxiv.org/abs/1802.00934
+    """
 
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]] = dict(
@@ -35,6 +43,7 @@ class DistMultLiteral(DistMult, MultimodalModel):
         loss: Optional[Loss] = None,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
+        regularizer: Optional[Regularizer] = None,
     ) -> None:
         super().__init__(
             triples_factory=triples_factory,
@@ -42,6 +51,7 @@ class DistMultLiteral(DistMult, MultimodalModel):
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
+            regularizer=regularizer,
         )
 
         # Literal
@@ -49,8 +59,10 @@ class DistMultLiteral(DistMult, MultimodalModel):
         self.numeric_literals = Embedding(
             num_embeddings=triples_factory.num_entities,
             embedding_dim=triples_factory.numeric_literals.shape[-1],
-            initializer=lambda x: triples_factory.numeric_literals,
+            initializer=triples_factory.literal_initializer,
         )
+        # explicitly reset to load the triples in
+        self.numeric_literals.reset_parameters()
         # Number of columns corresponds to number of literals
         self.num_of_literals = self.numeric_literals.embedding_dim
         self.linear_transformation = nn.Linear(self.embedding_dim + self.num_of_literals, self.embedding_dim)

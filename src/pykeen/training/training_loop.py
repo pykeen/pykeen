@@ -5,6 +5,7 @@
 import gc
 import logging
 import pathlib
+import pickle
 import random
 import time
 from abc import ABC, abstractmethod
@@ -20,7 +21,7 @@ from tqdm.autonotebook import tqdm, trange
 
 from ..constants import PYKEEN_CHECKPOINTS, PYKEEN_DEFAULT_CHECKPOINT
 from ..losses import Loss, has_mr_loss, has_nssa_loss
-from ..models import Model
+from ..models import Model, RGCN
 from ..stoppers import Stopper
 from ..trackers import ResultTracker
 from ..training.schlichtkrull_sampler import GraphSampler
@@ -391,6 +392,12 @@ class TrainingLoop(ABC):
         if self.optimizer is None:
             raise ValueError('optimizer must be set before running _train()')
 
+        if isinstance(self.model, RGCN) and sampler != 'schlichtkrull':
+            logger.warning(
+                'Using RGCN without graph-based sampling! Please select sampler="schlichtkrull" instead of %s.',
+                sampler,
+            )
+
         # Take the biggest possible training batch_size, if batch_size not set
         batch_size_sufficient = False
         if batch_size is None:
@@ -417,7 +424,7 @@ class TrainingLoop(ABC):
             and not continue_training
         ):
             # return the relevant parameters slice_size and batch_size
-            sub_batch_size, slice_size = self.sub_batch_and_slice(batch_size)
+            sub_batch_size, slice_size = self.sub_batch_and_slice(batch_size=batch_size, sampler=sampler)
 
         # Create dummy result tracker
         if result_tracker is None:
@@ -733,9 +740,12 @@ class TrainingLoop(ABC):
 
         return batch_size, evaluated_once
 
-    def sub_batch_and_slice(self, batch_size: int) -> Tuple[int, Optional[int]]:
+    def sub_batch_and_slice(self, batch_size: int, sampler: Optional[str]) -> Tuple[int, Optional[int]]:
         """Check if sub-batching and/or slicing is necessary to train the model on the hardware at hand."""
-        sub_batch_size, finished_search, supports_sub_batching = self._sub_batch_size_search(batch_size=batch_size)
+        sub_batch_size, finished_search, supports_sub_batching = self._sub_batch_size_search(
+            batch_size=batch_size,
+            sampler=sampler,
+        )
         # If the sub_batch_size did not finish search with a possibility that fits the hardware, we have to try slicing
         if finished_search:
             return sub_batch_size, None
@@ -770,7 +780,7 @@ class TrainingLoop(ABC):
         """
         raise NotImplementedError
 
-    def _sub_batch_size_search(self, batch_size: int) -> Tuple[int, bool, bool]:
+    def _sub_batch_size_search(self, batch_size: int, sampler: Optional[str]) -> Tuple[int, bool, bool]:
         """Find the allowable sub batch size for training with the current setting.
 
         This method checks if it is possible to train the model with the given training data and the desired batch size
@@ -792,7 +802,13 @@ class TrainingLoop(ABC):
             # The cache of the previous run has to be freed to allow accurate memory availability estimates
             self._free_graph_and_cache()
             logger.debug(f'Trying batch_size {batch_size} for training now.')
-            self._train(num_epochs=1, batch_size=batch_size, sub_batch_size=sub_batch_size, only_size_probing=True)
+            self._train(
+                num_epochs=1,
+                batch_size=batch_size,
+                sub_batch_size=sub_batch_size,
+                sampler=sampler,
+                only_size_probing=True,
+            )
         except RuntimeError as runtime_error:
             self._free_graph_and_cache()
             if not is_cudnn_error(runtime_error) and not is_cuda_oom_error(runtime_error):
@@ -818,6 +834,7 @@ class TrainingLoop(ABC):
                             num_epochs=1,
                             batch_size=batch_size,
                             sub_batch_size=sub_batch_size,
+                            sampler=sampler,
                             only_size_probing=True,
                         )
                     except RuntimeError as runtime_error:
@@ -909,6 +926,7 @@ class TrainingLoop(ABC):
                 'torch_cuda_random_state': torch_cuda_random_state,
             },
             path,
+            pickle_protocol=pickle.HIGHEST_PROTOCOL,
         )
         logger.info(f"=> Saved checkpoint after having finished epoch {self._epoch}.")
 
