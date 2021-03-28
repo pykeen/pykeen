@@ -11,6 +11,5 @@
    similarity
    representation
    init
-   norm
    message_passing
    weighting
