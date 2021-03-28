@@ -9,7 +9,7 @@ import logging
 import warnings
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Callable, Mapping, Optional, Sequence, TYPE_CHECKING, Tuple, TypeVar, Union, cast
+from typing import Any, Callable, Mapping, Optional, Sequence, Tuple, TypeVar, Union, cast
 
 import numpy as np
 import torch
@@ -21,12 +21,10 @@ from .init import init_phases, xavier_normal_, xavier_normal_norm_, xavier_unifo
 from .message_passing import Decomposition, decomposition_resolver
 from .norm import complex_normalize
 from .weighting import EdgeWeighting, edge_weight_resolver
+from ..regularizers import Regularizer
 from ..triples import TriplesFactory
 from ..typing import Constrainer, Hint, Initializer, Normalizer
 from ..utils import Bias, activation_resolver, clamp_norm, convert_to_canonical_shape
-
-if TYPE_CHECKING:
-    from ..regularizers import Regularizer
 
 __all__ = [
     'RepresentationModule',
