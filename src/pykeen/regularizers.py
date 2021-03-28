@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, ClassVar, Collection, Iterable, Mapping, Optional, Type
+from typing import Any, ClassVar, Iterable, Mapping, Optional
 
 import torch
 from class_resolver import Resolver, normalize_string
@@ -260,16 +260,7 @@ class CombinedRegularizer(Regularizer):
         return self.normalization_factor * sum(r.weight * r.forward(x) for r in self.regularizers)
 
 
-_REGULARIZERS: Collection[Type[Regularizer]] = {
-    NoRegularizer,  # type: ignore
-    LpRegularizer,
-    PowerSumRegularizer,
-    CombinedRegularizer,
-    TransHRegularizer,
-}
-regularizer_resolver = Resolver(
-    _REGULARIZERS,
-    base=Regularizer,  # type: ignore
+regularizer_resolver = Resolver.from_subclasses(
+    base=Regularizer,
     default=NoRegularizer,
-    suffix=_REGULARIZER_SUFFIX,
 )
