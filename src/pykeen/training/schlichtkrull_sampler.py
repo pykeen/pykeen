@@ -5,7 +5,7 @@ import copy
 import logging
 import random
 from collections import defaultdict
-from typing import List, MutableMapping, Optional, Set, Tuple
+from typing import Iterable, List, MutableMapping, Optional, Set, Tuple
 
 import torch
 from torch.utils.data.sampler import Sampler
@@ -262,3 +262,47 @@ class PythonGraphSampler(Sampler):
 
 
 GraphSampler = PyTorchGraphSampler
+
+
+class NeighborhoodGraphSampler(Sampler):
+    """A simple neighborhood graph sampler."""
+
+    def __init__(
+        self,
+        triples_factory: TriplesFactory,
+        num_samples: Optional[int] = None,
+    ):
+        mapped_triples = triples_factory.mapped_triples
+        super().__init__(data_source=mapped_triples)
+        self.triples_factory = triples_factory
+        self.num_samples = _normalize_num_samples(num_samples=num_samples, triples_factory=triples_factory)
+        self.num_batches_per_epoch = triples_factory.num_triples // self.num_samples
+
+    def _iterator(self) -> Iterable[torch.LongTensor]:
+        triples = self.triples_factory.mapped_triples
+        for _ in range(self.num_batches_per_epoch):
+            # create node mask
+            seen = torch.zeros(self.triples_factory.num_entities, dtype=torch.bool)
+            # create triple mask
+            triple_mask = torch.zeros(triples.shape[0], dtype=torch.bool)
+            old_triple_sum = 0
+            while True:
+                seen_pairs = triples[triple_mask][:, [0, 2]]
+                seen[seen_pairs.view(-1)] = True
+                triple_mask = seen[triples[:, [0, 2]]].any(dim=-1)
+                triple_sum = triple_mask.sum()
+                if triple_sum >= self.num_samples:
+                    break
+                elif triple_sum == old_triple_sum:
+                    # randomly select seed
+                    triple_mask[random.randrange(triples.shape[0])] = True
+                old_triple_sum = triple_sum
+            idx, = triple_mask.nonzero(as_tuple=True)
+            idx = idx[torch.randperm(idx.shape[0])[:self.num_samples]]
+            yield triples[idx]
+
+    def __iter__(self):  # noqa: D105
+        return self._iterator()
+
+    def __len__(self):  # noqa: D105
+        return self.num_batches_per_epoch
