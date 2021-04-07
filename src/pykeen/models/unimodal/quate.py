@@ -7,11 +7,10 @@ from typing import Any, ClassVar, Mapping, Optional, Type
 import torch
 from torch import nn
 from torch.nn import functional
-from torch.nn.init import normal_
 
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...losses import Loss, SoftplusLoss
+from ...losses import BCEWithLogitsLoss, Loss
 from ...nn.emb import EmbeddingSpecification
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
@@ -62,29 +61,27 @@ class QuatE(EntityRelationEmbeddingModel):
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
     )
     #: The default loss function class
-    loss_default: ClassVar[Type[Loss]] = SoftplusLoss
+    loss_default: ClassVar[Type[Loss]] = BCEWithLogitsLoss
     #: The default parameters for the default loss function class
     loss_default_kwargs: ClassVar[Mapping[str, Any]] = dict(reduction='mean')
     #: The regularizer used by [zhang2019]_ for QuatE.
     regularizer_default: ClassVar[Type[Regularizer]] = LpRegularizer
     #: The LP settings used by [zhang2019]_ for QuatE.
     regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = dict(
-        weight=0.01,
-        p=2.0,
+        weight=0.0025,
+        p=3.0,
         normalize=True,
     )
 
     def __init__(
         self,
         triples_factory: TriplesFactory,
-        embedding_dim: int = 200,
+        embedding_dim: int = 100,
         normalize_relations: bool = True,
         loss: Optional[Loss] = None,
         regularizer: Optional[Regularizer] = None,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
-        # initialize with entity and relation embeddings with standard normal distribution, cf.
-        # https://github.com/ttrouill/complex/blob/dc4eb93408d9a5288c986695b58488ac80b1cc17/efe/models.py#L481-L487
         entity_initializer: Hint[Initializer] = init_quaternions,
         relation_initializer: Hint[Initializer] = init_quaternions,
     ) -> None:
