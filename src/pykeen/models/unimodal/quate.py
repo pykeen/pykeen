@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 
 """Implementation of the QuatE model."""
-
+import math
 from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
+from torch import nn
+from torch.nn import functional
 from torch.nn.init import normal_
 
 from ..base import EntityRelationEmbeddingModel
@@ -18,6 +20,22 @@ from ...typing import DeviceHint, Hint, Initializer
 __all__ = [
     'QuatE',
 ]
+
+def init_quaternions(num_elements: int, dim: int) -> torch.FloatTensor:
+    # scaling factor
+    s = 1. / math.sqrt(2 * num_elements)
+    # modulus ~ Uniform[-s, s]
+    modulus = 2 * s * torch.rand(num_elements, dim) - s
+    # phase ~ Uniform[0, 2*pi]
+    phase = 2 * math.pi * torch.rand(num_elements, dim)
+    # real part
+    real = (modulus * phase.cos()).unsqueeze(dim=-1)
+    # purely imaginary quaternions unitary
+    imag = torch.rand(num_elements, dim, 3)
+    imag = functional.normalize(imag, p=2, dim=-1)
+    imag = imag * (modulus * phase.sin()).unsqueeze(dim=-1)
+    x = torch.cat([real, imag], dim=-1)
+    return x.view(num_elements, 4 * dim)
 
 
 class QuatE(EntityRelationEmbeddingModel):
@@ -47,9 +65,9 @@ class QuatE(EntityRelationEmbeddingModel):
     loss_default: ClassVar[Type[Loss]] = SoftplusLoss
     #: The default parameters for the default loss function class
     loss_default_kwargs: ClassVar[Mapping[str, Any]] = dict(reduction='mean')
-    #: The regularizer used by [trouillon2016]_ for QuatE.
+    #: The regularizer used by [zhang2019]_ for QuatE.
     regularizer_default: ClassVar[Type[Regularizer]] = LpRegularizer
-    #: The LP settings used by [trouillon2016]_ for QuatE.
+    #: The LP settings used by [zhang2019]_ for QuatE.
     regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = dict(
         weight=0.01,
         p=2.0,
@@ -67,8 +85,8 @@ class QuatE(EntityRelationEmbeddingModel):
         random_seed: Optional[int] = None,
         # initialize with entity and relation embeddings with standard normal distribution, cf.
         # https://github.com/ttrouill/complex/blob/dc4eb93408d9a5288c986695b58488ac80b1cc17/efe/models.py#L481-L487
-        entity_initializer: Hint[Initializer] = normal_,
-        relation_initializer: Hint[Initializer] = normal_,
+        entity_initializer: Hint[Initializer] = init_quaternions,
+        relation_initializer: Hint[Initializer] = init_quaternions,
     ) -> None:
         """Initialize QuatE.
 
@@ -102,7 +120,55 @@ class QuatE(EntityRelationEmbeddingModel):
                 dtype=torch.float,
             ),
         )
+        self.normalize_relations = normalize_relations
         self.real_embedding_dim = embedding_dim
+
+
+    def init_empty_weights_(self):  # noqa: D102
+
+        self.entity_embeddings = nn.Embedding(
+            self.num_entities,
+            self.embedding_dim,
+            _weight=init_quaternions(
+                num_elements=self.num_entities,
+                dim=self.real_embedding_dim,
+            ),
+        )
+
+        self.relation_embeddings = nn.Embedding(
+            self.num_relations,
+            self.embedding_dim,
+            _weight=init_quaternions(
+                num_elements=self.num_relations,
+                dim=self.real_embedding_dim,
+            ),
+        )
+
+        return self
+
+    def post_parameter_update(self) -> None:  # noqa: D102
+        r"""Normalize the length of relation vectors, if the forward constraint has not been applied yet.
+
+        Absolute value of complex number
+
+        .. math::
+
+            |a + bi + cj dk| = \sqrt{a^2 + b^2 + c^2 + d^2}
+
+        L2 norm of quaternion vector:
+
+        .. math::
+            \|x\|^2 = \sum_{i=1}^d |x_i|^2
+                     = \sum_{i=1}^d (x_i.re^2 + x_i.im_1^2 + x_i.im_2^2 + x_i.im_3^2)
+        """
+        # Make sure to call super first
+        super().post_parameter_update()
+
+        if self.normalize_relations:
+            # Normalize relation embeddings
+            rel = self.relation_embeddings.weight.data.view(self.num_relations, self.real_embedding_dim, 4)
+            rel = functional.normalize(rel, p=2, dim=-1)
+            self.relation_embeddings.weight.data = rel.view(self.num_relations, self.embedding_dim)
 
     @staticmethod
     def interaction_function(
