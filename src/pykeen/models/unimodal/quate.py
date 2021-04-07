@@ -5,7 +5,6 @@ import math
 from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
-from torch import nn
 from torch.nn import functional
 
 from ..base import EntityRelationEmbeddingModel
@@ -19,6 +18,7 @@ from ...typing import DeviceHint, Hint, Initializer
 __all__ = [
     'QuatE',
 ]
+
 
 def init_quaternions(num_elements: int, dim: int) -> torch.FloatTensor:
     # scaling factor
@@ -109,17 +109,18 @@ class QuatE(EntityRelationEmbeddingModel):
             entity_representations=EmbeddingSpecification(
                 embedding_dim=4 * embedding_dim,
                 initializer=entity_initializer,
+                initializer_kwargs=dict(num_elements=self.num_entities, dim=embedding_dim),
                 dtype=torch.float,
             ),
             relation_representations=EmbeddingSpecification(
                 embedding_dim=4 * embedding_dim,
                 initializer=relation_initializer,
+                initializer_kwargs=dict(num_elements=self.num_relations, dim=embedding_dim),
                 dtype=torch.float,
             ),
         )
         self.normalize_relations = normalize_relations
         self.real_embedding_dim = embedding_dim
-
 
     def post_parameter_update(self) -> None:  # noqa: D102
         r"""Normalize the length of relation vectors, if the forward constraint has not been applied yet.
