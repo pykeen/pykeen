@@ -33,7 +33,7 @@ class QuatE(EntityRelationEmbeddingModel):
         Official implementation: https://github.com/cheungdaven/QuatE/blob/master/models/QuatE.py
     ---
     citation:
-        author: Trouillon
+        author: Zhang
         year: 2019
         link: https://arxiv.org/abs/1904.10281qua
         github: cheungdaven/quate
