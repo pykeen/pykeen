@@ -92,7 +92,7 @@ class QuatE(EntityRelationEmbeddingModel):
         :param embedding_dim:
             The embedding dimensionality of the entity embeddings.
         :param loss:
-            The loss to use. Defaults to SoftplusLoss.
+            The loss to use. Defaults to BCEWithLogitsLoss.
         :param regularizer:
             The regularizer to use.
         :param preferred_device:
@@ -120,28 +120,6 @@ class QuatE(EntityRelationEmbeddingModel):
         self.normalize_relations = normalize_relations
         self.real_embedding_dim = embedding_dim
 
-
-    def init_empty_weights_(self):  # noqa: D102
-
-        self.entity_embeddings = nn.Embedding(
-            self.num_entities,
-            self.embedding_dim,
-            _weight=init_quaternions(
-                num_elements=self.num_entities,
-                dim=self.real_embedding_dim,
-            ),
-        )
-
-        self.relation_embeddings = nn.Embedding(
-            self.num_relations,
-            self.embedding_dim,
-            _weight=init_quaternions(
-                num_elements=self.num_relations,
-                dim=self.real_embedding_dim,
-            ),
-        )
-
-        return self
 
     def post_parameter_update(self) -> None:  # noqa: D102
         r"""Normalize the length of relation vectors, if the forward constraint has not been applied yet.
