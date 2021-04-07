@@ -104,8 +104,8 @@ follows:
     >>> losses = ["BCEAfterSigmoidLoss"]
     >>> training_loops = ["lcwa"]
     >>> optimizers = ["adam"]
-    >>> create_inverse_triples= [true,false]
-    >>> stopper = "early",
+    >>> create_inverse_triples= [True,False]
+    >>> stopper = "early"
     >>> stopper_kwargs = {
     ...    "frequency": 5,
     ...    "patience": 20,
@@ -151,7 +151,7 @@ testing purposes. Therefore, we define the arguments required by Optuna by ourse
     >>> training_loops = ["lcwa"]
     >>> optimizers = ["adam"]
     >>> create_inverse_triples= [True,False]
-    >>> stopper = "early",
+    >>> stopper = "early"
     >>> stopper_kwargs = {
     ...    "frequency": 5,
     ...    "patience": 20,
@@ -172,12 +172,12 @@ testing purposes. Therefore, we define the arguments required by Optuna by ourse
     ...    stopper=stopper,
     ...    stopper_kwargs=stopper_kwargs,
     ...    # Optuna related arguments
-    ...    n_trials = 2
-    ...    timeout = 300
-    ...    metric = "hits@10"
-    ...    direction = "maximize"
-    ...    sampler = "random"
-    ...    pruner =  "nop"
+    ...    n_trials = 2,
+    ...    timeout = 300,
+    ...    metric = "hits@10",
+    ...    direction = "maximize",
+    ...    sampler = "random",
+    ...    pruner =  "nop",
     ... )
 
 We set the number of HPO iterations for each experiment to 2 using the argument ``n_trials``, set a ``timeout`` of 300
@@ -201,7 +201,7 @@ the best model of each ablation-experiment using the argument ``best_replicates`
     >>> training_loops = ["lcwa"]
     >>> optimizers = ["adam"]
     >>> create_inverse_triples= [True,False]
-    >>> stopper = "early",
+    >>> stopper = "early"
     >>> stopper_kwargs = {
     ...    "frequency": 5,
     ...    "patience": 20,
@@ -223,12 +223,12 @@ the best model of each ablation-experiment using the argument ``best_replicates`
     ...    stopper=stopper,
     ...    stopper_kwargs=stopper_kwargs,
     ...    # Optuna related arguments
-    ...    n_trials = 2
-    ...    timeout = 300
-    ...    metric = "hits@10"
-    ...    direction = "maximize"
-    ...    sampler = "random"
-    ...    pruner =  "nop"
+    ...    n_trials = 2,
+    ...    timeout = 300,
+    ...    metric = "hits@10",
+    ...    direction = "maximize",
+    ...    sampler = "random",
+    ...    pruner =  "nop",
     ...    best_replicates=5,
     ... )
 
@@ -366,7 +366,8 @@ Finally, we define a range for the learning rate which is a hyper-parameter of t
     ...                "scale": "power_two"
     ...            }
     ...        }
-    ...
+    ...     }
+    ... }
 
     >>> model_to_optimizer_to_optimizer_kwargs_ranges= {
     ...    "ComplEx": {
@@ -390,7 +391,7 @@ Now that we defined our own hyper-parameter values/ranges, let's have a look at 
 
 .. code-block:: python
 
-    >>> from ablation.ablation import ablation_pipeline
+    >>> from pykeen.ablation import ablation_pipeline
 
     >>> metadata = dict(title= "Ablation Study Over Nations for ComplEx.")
 
@@ -399,8 +400,8 @@ Now that we defined our own hyper-parameter values/ranges, let's have a look at 
     >>> losses = ["BCEAfterSigmoidLoss"]
     >>> training_loops = ["lcwa"]
     >>> optimizers = ["adam"]
-    >>> create_inverse_triples= [true,false]
-    >>> stopper = "early",
+    >>> create_inverse_triples= [True,False]
+    >>> stopper = 'early'
     >>> stopper_kwargs = {
     ...    "frequency": 5,
     ...    "patience": 20,
@@ -444,7 +445,9 @@ Now that we defined our own hyper-parameter values/ranges, let's have a look at 
     ...                "scale": "power_two"
     ...            }
     ...        }
-    ...
+    ...    }
+    ... }
+
 
     >>> model_to_optimizer_to_optimizer_kwargs_ranges= {
     ...    "ComplEx": {
@@ -531,7 +534,7 @@ defined within our program would look as follows:
             "training_loops": ["lcwa"],
             "optimizers": ["adam"],
             "create_inverse_triples": [true,false],
-            "stopper": "early",
+            "stopper": "early
             "stopper_kwargs": {
                 "frequency": 5,
                 "patience": 20,
