@@ -6,7 +6,7 @@ import inspect
 import json
 import logging
 import sys
-from typing import Any, Mapping, Optional, Type
+from typing import Any, Mapping, Optional, Type, Union
 
 import click
 from torch import nn
@@ -14,6 +14,7 @@ from torch import nn
 from . import options
 from .options import CLI_OPTIONS
 from ..base import Model
+from ...nn.message_passing import Decomposition
 from ...typing import Constrainer, Hint, Initializer, Normalizer
 
 __all__ = [
@@ -29,15 +30,19 @@ _SKIP_ARGS = {
     'preferred_device',
     'regularizer',
     # TODO rethink after RGCN update
+    'interaction',
     'activation_cls',
     'activation_kwargs',
     'edge_weighting',
+    'relation_representations',
 }
 _SKIP_ANNOTATIONS = {
     Optional[nn.Embedding],
     Optional[nn.Parameter],
     Optional[nn.Module],
     Optional[Mapping[str, Any]],
+    Union[None, str, nn.Module],
+    Union[None, str, Decomposition],
 }
 
 

@@ -10,18 +10,20 @@ import timeit
 import traceback
 import unittest
 from abc import ABC, abstractmethod
-from typing import Any, ClassVar, Collection, Dict, Generic, Mapping, MutableMapping, Optional, Tuple, Type, TypeVar
+from typing import Any, ClassVar, Collection, Dict, Mapping, MutableMapping, Optional, Tuple, Type, TypeVar
 from unittest.mock import patch
 
 import pytest
 import torch
-from class_resolver import get_subclasses
+import unittest_templates
 from click.testing import CliRunner, Result
 from torch import optim
 from torch.nn import functional
 from torch.optim import Adagrad, SGD
 
 import pykeen.models
+import pykeen.nn.message_passing
+import pykeen.nn.weighting
 from pykeen.datasets import Nations
 from pykeen.datasets.base import LazyDataset
 from pykeen.datasets.kinships import KINSHIPS_TRAIN_PATH
@@ -29,7 +31,7 @@ from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH
 from pykeen.losses import Loss, PairwiseLoss, PointwiseLoss, SetwiseLoss
 from pykeen.models import EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, RESCAL
 from pykeen.models.cli import build_cli_from_cls
-from pykeen.nn import RepresentationModule
+from pykeen.nn.emb import RepresentationModule
 from pykeen.nn.modules import Interaction
 from pykeen.regularizers import LpRegularizer, Regularizer
 from pykeen.trackers import ResultTracker
@@ -46,29 +48,14 @@ T = TypeVar("T")
 logger = logging.getLogger(__name__)
 
 
-class GenericTestCase(Generic[T], unittest.TestCase):
+class GenericTestCase(unittest_templates.GenericTestCase[T]):
     """Generic tests."""
 
-    cls: ClassVar[Type[T]]
-    kwargs: ClassVar[Optional[Mapping[str, Any]]] = None
-    instance: T
     generator: torch.Generator
 
-    def setUp(self) -> None:
-        """Set up the generic testing method."""
-        # fix seeds for reproducibility
+    def pre_setup_hook(self) -> None:
+        """Instantiate a generator for usage in the test case."""
         self.generator = set_random_seed(seed=42)[1]
-        kwargs = self.kwargs or {}
-        kwargs = self._pre_instantiation_hook(kwargs=dict(kwargs))
-        self.instance = self.cls(**kwargs)
-        self.post_instantiation_hook()
-
-    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
-        """Perform actions before instantiation, potentially modyfing kwargs."""
-        return kwargs
-
-    def post_instantiation_hook(self) -> None:
-        """Perform actions after instantiation."""
 
 
 class DatasetTestCase(unittest.TestCase):
@@ -569,21 +556,6 @@ class FileResultTrackerTests(ResultTrackerTests):
         self.temporary_directory.cleanup()
 
 
-class TestsTestCase(Generic[T], unittest.TestCase):
-    """A generic test for tests."""
-
-    base_cls: Type[T]
-    base_test: Type[GenericTestCase[T]]
-    skip_cls: Collection[T] = tuple()
-
-    def test_testing(self):
-        """Check that there is a test for all subclasses."""
-        to_test = set(get_subclasses(self.base_cls)).difference(self.skip_cls)
-        tested = (test_cls.cls for test_cls in get_subclasses(self.base_test) if hasattr(test_cls, "cls"))
-        not_tested = to_test.difference(tested)
-        assert not not_tested, not_tested
-
-
 class RegularizerTestCase(GenericTestCase[Regularizer]):
     """A test case for quickly defining common tests for regularizers."""
 
@@ -985,7 +957,7 @@ class ModelTestCase(unittest.TestCase):
     def _help_test_cli(self, args):
         """Test running the pipeline on all models."""
         if issubclass(self.model_cls, pykeen.models.RGCN):
-            self.skipTest('There is a problem with non-reproducible unittest for R-GCN.')
+            self.skipTest(f"Cannot choose interaction via CLI for {self.model_cls}.")
         runner = CliRunner()
         cli = build_cli_from_cls(self.model_cls)
         # TODO: Catch HolE MKL error?
@@ -1210,7 +1182,7 @@ class BaseRGCNTest(ModelTestCase):
 
         Enriched embeddings have to be reset.
         """
-        assert self.model.entity_representations.enriched_embeddings is None
+        assert self.model.entity_representations[0].enriched_embeddings is None
 
 
 class RepresentationTestCase(GenericTestCase[RepresentationModule]):
@@ -1285,3 +1257,69 @@ class RepresentationTestCase(GenericTestCase[RepresentationModule]):
     def test_all_indices(self):
         """Test with all indices."""
         self._test_indices(indices=torch.arange(self.instance.max_id))
+
+
+class EdgeWeightingTestCase(GenericTestCase[pykeen.nn.weighting.EdgeWeighting]):
+    """Tests for message weighting."""
+
+    #: The number of entities
+    num_entities: int = 16
+
+    #: The number of triples
+    num_triples: int = 101
+
+    def post_instantiation_hook(self):  # noqa: D102
+        self.source, self.target = torch.randint(self.num_entities, size=(2, self.num_triples))
+
+    def test_message_weighting(self):
+        """Perform common tests for message weighting."""
+        weights = self.instance(source=self.source, target=self.target)
+
+        # check shape
+        assert weights.shape == self.source.shape
+
+        # check dtype
+        assert weights.dtype == torch.float32
+
+        # check finite values (e.g. due to division by zero)
+        assert torch.isfinite(weights).all()
+
+        # check non-negativity
+        assert (weights >= 0.).all()
+
+
+class DecompositionTestCase(GenericTestCase[pykeen.nn.message_passing.Decomposition]):
+    """Tests for relation-specific weight decomposition message passing classes."""
+
+    #: The input dimension
+    input_dim: int = 3
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        self.output_dim = self.input_dim
+        self.factory = Nations().training
+        self.source, self.edge_type, self.target = self.factory.mapped_triples.t()
+        self.x = torch.rand(self.factory.num_entities, self.input_dim)
+        kwargs["input_dim"] = self.input_dim
+        kwargs["num_relations"] = self.factory.num_relations
+        return kwargs
+
+    def test_forward(self):
+        """Test the :meth:`Decomposition.forward` function."""
+        for node_keep_mask in [None, torch.rand(size=(self.factory.num_entities,)) < 0.5]:
+            for edge_weights in [None, torch.rand_like(self.source, dtype=torch.get_default_dtype())]:
+                y = self.instance(
+                    x=self.x,
+                    node_keep_mask=node_keep_mask,
+                    source=self.source,
+                    target=self.target,
+                    edge_type=self.edge_type,
+                    edge_weights=edge_weights,
+                )
+                assert y.shape == (self.x.shape[0], self.output_dim)
+
+
+class BasesDecompositionTestCase(DecompositionTestCase):
+    """Tests for bases Decomposition."""
+
+    cls = pykeen.nn.message_passing.BasesDecomposition

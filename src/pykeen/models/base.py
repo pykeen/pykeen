@@ -17,7 +17,7 @@ from docdata import parse_docdata
 from torch import nn
 
 from ..losses import Loss, MarginRankingLoss
-from ..nn import Embedding, EmbeddingSpecification
+from ..nn.emb import Embedding, EmbeddingSpecification
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import TriplesFactory
 from ..typing import DeviceHint, ScorePack
@@ -553,7 +553,7 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
     """A base module for PyKEEN 1.0-style KGE models."""
 
     #: The default regularizer class
-    regularizer_default: ClassVar[Type[Regularizer]] = NoRegularizer  # type: ignore
+    regularizer_default: ClassVar[Optional[Type[Regularizer]]] = None
     #: The default parameters for the default regularizer class
     regularizer_default_kwargs: ClassVar[Optional[Mapping[str, Any]]] = None
     #: The instance of the regularizer
@@ -593,11 +593,14 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
             random_seed=random_seed,
         )
         # Regularizer
-        if regularizer is None:
-            regularizer = self.regularizer_default(
+        if regularizer is not None:
+            self.regularizer = regularizer
+        elif self.regularizer_default is not None:
+            self.regularizer = self.regularizer_default(
                 **(self.regularizer_default_kwargs or {}),
             )
-        self.regularizer = regularizer
+        else:
+            self.regularizer = NoRegularizer()
 
     def post_parameter_update(self) -> None:
         """Has to be called after each parameter update."""

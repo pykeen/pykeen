@@ -8,6 +8,7 @@ from unittest import SkipTest
 
 import numpy
 import torch
+import unittest_templates
 
 import pykeen.nn.modules
 import pykeen.utils
@@ -378,7 +379,7 @@ class MuRETests(cases.TranslationalInteractionTests):
     cls = pykeen.nn.modules.MuREInteraction
 
     def _exp_score(self, h, b_h, r_vec, r_mat, t, b_t, p, power_norm) -> torch.FloatTensor:
-        s = (h @ r_mat) + r_vec - t
+        s = (h * r_mat) + r_vec - t
         s = s.norm(p=p)
         if power_norm:
             s = s.pow(p)
@@ -421,7 +422,7 @@ class MonotonicAffineTransformationInteractionTests(cases.InteractionTestCase):
             assert (c_t == c_o).all()
 
 
-class InteractionTestsTestCase(cases.TestsTestCase[Interaction]):
+class InteractionTestsTestCase(unittest_templates.MetaTestCase[Interaction]):
     """Test for tests for all interaction functions."""
 
     base_cls = Interaction

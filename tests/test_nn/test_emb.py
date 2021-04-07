@@ -8,10 +8,11 @@ from unittest.mock import Mock
 
 import numpy
 import torch
+import unittest_templates
 
-from pykeen.models.unimodal.rgcn import RGCNRepresentations
-from pykeen.nn import Embedding, EmbeddingSpecification, RepresentationModule
-from pykeen.triples import TriplesFactory
+import pykeen.nn.emb
+from pykeen.nn.emb import Embedding, EmbeddingSpecification, RepresentationModule
+from pykeen.triples.generation import generate_triples_factory
 from tests import cases, mocks
 
 
@@ -27,7 +28,8 @@ class EmbeddingTests(cases.RepresentationTestCase):
     def test_backwards_compatibility(self):
         """Test shape and num_embeddings."""
         assert self.instance.max_id == self.instance.num_embeddings
-        assert self.instance.shape == (self.instance.embedding_dim,)
+        embedding_dim = int(numpy.prod(self.instance.shape))
+        assert self.instance.shape == (embedding_dim,)
 
 
 class TensorEmbeddingTests(cases.RepresentationTestCase):
@@ -44,11 +46,10 @@ class TensorEmbeddingTests(cases.RepresentationTestCase):
 class RGCNRepresentationTests(cases.RepresentationTestCase):
     """Test RGCN representations."""
 
-    cls = RGCNRepresentations
+    cls = pykeen.nn.emb.RGCNRepresentations
     num = 8
     kwargs = dict(
-        num_bases_or_blocks=2,
-        embedding_dim=num,
+        embedding_specification=EmbeddingSpecification(embedding_dim=num),
     )
     num_relations: int = 7
     num_triples: int = 31
@@ -56,26 +57,15 @@ class RGCNRepresentationTests(cases.RepresentationTestCase):
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
-        # TODO: use triple generation
-        # generate random triples
-        mapped_triples = numpy.stack([
-            numpy.random.randint(max_id, size=(self.num_triples,))
-            for max_id in (self.num, self.num_relations, self.num)
-        ], axis=-1)
-        entity_names = [f"e_{i}" for i in range(self.num)]
-        relation_names = [f"r_{i}" for i in range(self.num_relations)]
-        triples = numpy.stack([
-            [names[i] for i in col.tolist()]
-            for col, names in zip(
-                mapped_triples.T,
-                (entity_names, relation_names, entity_names),
-            )
-        ])
-        kwargs["triples_factory"] = TriplesFactory.from_labeled_triples(triples=triples)
+        kwargs["triples_factory"] = generate_triples_factory(
+            num_entities=self.num,
+            num_relations=self.num_relations,
+            num_triples=self.num_triples,
+        )
         return kwargs
 
 
-class RepresentationModuleTestsTestCase(cases.TestsTestCase[RepresentationModule]):
+class RepresentationModuleTestsTestCase(unittest_templates.MetaTestCase[RepresentationModule]):
     """Test that there are tests for all representation modules."""
 
     base_cls = RepresentationModule

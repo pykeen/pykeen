@@ -15,7 +15,7 @@ from torch import nn
 
 from .base import Model
 from ..losses import Loss
-from ..nn import EmbeddingSpecification, RepresentationModule
+from ..nn.emb import EmbeddingSpecification, RepresentationModule
 from ..nn.modules import Interaction
 from ..regularizers import Regularizer
 from ..triples import TriplesFactory

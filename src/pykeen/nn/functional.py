@@ -933,8 +933,8 @@ def mure_interaction(
         The head entity bias.
     :param r_vec: shape: (batch_size, 1, num_relations, 1, dim)
         The relation vector.
-    :param r_mat: shape: (batch_size, 1, num_relations, 1, dim, dim)
-        The relation matrix.
+    :param r_mat: shape: (batch_size, 1, num_relations, 1, dim,)
+        The diagonal relation matrix.
     :param t: shape: (batch_size, 1, 1, num_tails, dim)
         The tail representations.
     :param b_t: shape: (batch_size, 1, 1, num_tails)
@@ -948,7 +948,7 @@ def mure_interaction(
         The scores.
     """
     return negative_norm_of_sum(
-        h @ r_mat.squeeze(dim=-3),
+        h * r_mat,
         r_vec,
         -t,
         p=p,
