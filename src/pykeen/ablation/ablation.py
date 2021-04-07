@@ -7,9 +7,10 @@ import json
 import logging
 import os
 import time
-from typing import Any, List, Mapping, Optional, Tuple, Union
+from typing import Any, Dict, List, Mapping, Optional, Tuple, Union
 from uuid import uuid4
 
+from pykeen.regularizers import NoRegularizer
 from ..training import _TRAINING_LOOP_SUFFIX
 from ..utils import normalize_string
 
@@ -218,7 +219,7 @@ def _run_ablation_experiments(
         )
 
 
-def _create_path_with_id(directory: Optional[str] = None):
+def _create_path_with_id(directory: str) -> str:
     """Add unique id to path."""
     datetime = time.strftime('%Y-%m-%d-%H-%M')
     return os.path.join(directory, f'{datetime}_{uuid4()}')
@@ -227,7 +228,7 @@ def _create_path_with_id(directory: Optional[str] = None):
 def ablation_pipeline_from_config(
     config: Mapping[str, Any],
     *,
-    directory: Optional[str] = None,
+    directory: str,
     dry_run: bool = False,
     best_replicates: Optional[int] = None,
     save_artifacts: bool = True,
@@ -311,6 +312,7 @@ def prepare_ablation(  # noqa:C901
     losses: Union[str, List[str]],
     optimizers: Union[str, List[str]],
     training_loops: Union[str, List[str]],
+    directory: str,
     create_inverse_triples: Union[bool, List[bool]] = False,
     regularizers: Union[None, str, List[str]] = None,
     negative_sampler: Optional[str] = None,
@@ -339,7 +341,6 @@ def prepare_ablation(  # noqa:C901
     stopper: Optional[str] = 'NopStopper',
     stopper_kwargs: Optional[Mapping[str, Any]] = None,
     metadata: Optional[Mapping] = None,
-    directory: Optional[str] = None,
     save_artifacts: bool = True,
 ) -> List[Tuple[str, str]]:
     """Prepare an ablation directory.
@@ -419,8 +420,10 @@ def prepare_ablation(  # noqa:C901
         optimizers = [optimizers]
     if isinstance(training_loops, str):
         training_loops = [training_loops]
-    if isinstance(regularizers, str) or regularizers is None:
+    if isinstance(regularizers, str):
         regularizers = [regularizers]
+    elif regularizers is None:
+        regularizers = [NoRegularizer()]
 
     it = itt.product(
         datasets,
@@ -467,7 +470,7 @@ def prepare_ablation(  # noqa:C901
             os.makedirs(save_model_directory, exist_ok=True)
             _experiment_optuna_config['save_model_directory'] = save_model_directory
 
-        hpo_config = dict()
+        hpo_config: Dict[str, Any] = dict()
         hpo_config['stopper'] = stopper
 
         if stopper_kwargs is not None:
