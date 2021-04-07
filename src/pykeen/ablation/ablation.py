@@ -403,6 +403,9 @@ def prepare_ablation(  # noqa:C901
     :param save_artifacts: Defines, whether each trained model sampled during HPO should be saved.
 
     :return: pairs of output directories and HPO config paths inside those directories.
+    :raises ValueError:
+            If the dataset is not specified correctly, i.e., dataset is not of type str, or a dictionary containing
+            the paths to the training, testing, and validation data.
     """
     if isinstance(datasets, str):
         datasets = [datasets]
