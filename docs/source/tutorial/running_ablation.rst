@@ -64,9 +64,9 @@ performance. Therefore, we extend the ablation study accordingly:
 
     >>> from pykeen.ablation import ablation_pipeline
     >>> metadata = dict(title= "Ablation Study Over Nations for ComplEx.")
-    >>> output_dir = "/path/to/output/dir"
+    >>> output_dir = "doctests/ablation/ex2"
 
-    >>> models = ['ComplEx]
+    >>> models = ['ComplEx']
     >>> datasets = ['Nations']
     >>> losses = ["BCEAfterSigmoidLoss"]
     >>> training_loops = ["lcwa"]
@@ -97,9 +97,9 @@ follows:
 
     >>> from pykeen.ablation import ablation_pipeline
     >>> metadata = dict(title= "Ablation Study Over Nations for ComplEx.")
-    >>> output_dir = "/path/to/output/dir"
+    >>> output_dir = "doctests/ablation/ex3"
 
-    >>> models = ['ComplEx]
+    >>> models = ['ComplEx']
     >>> datasets = ['Nations']
     >>> losses = ["BCEAfterSigmoidLoss"]
     >>> training_loops = ["lcwa"]
@@ -109,7 +109,7 @@ follows:
     >>> stopper_kwargs = {
     ...    "frequency": 5,
     ...    "patience": 20,
-    ...   "relative_delta": 0.002,
+    ...    "relative_delta": 0.002,
     ...    "metric": "hits@10",
     ... }
 
@@ -143,9 +143,9 @@ testing purposes. Therefore, we define the arguments required by Optuna by ourse
 
     >>> from pykeen.ablation import ablation_pipeline
     >>> metadata = dict(title= "Ablation Study Over Nations for ComplEx.")
-    >>> output_dir = "/path/to/output/dir"
+    >>> output_dir = "doctests/ablation/ex4"
 
-    >>> models = ['ComplEx]
+    >>> models = ['ComplEx']
     >>> datasets = ['Nations']
     >>> losses = ["BCEAfterSigmoidLoss"]
     >>> training_loops = ["lcwa"]
@@ -193,9 +193,9 @@ the best model of each ablation-experiment using the argument ``best_replicates`
 
     >>> from pykeen.ablation import ablation_pipeline
     >>> metadata = dict(title= "Ablation Study Over Nations for ComplEx.")
-    >>> output_dir = "/path/to/output/dir"
+    >>> output_dir = "doctests/ablation/ex5"
 
-    >>> models = ['ComplEx]
+    >>> models = ['ComplEx']
     >>> datasets = ['Nations']
     >>> losses = ["BCEAfterSigmoidLoss"]
     >>> training_loops = ["lcwa"]
@@ -276,7 +276,7 @@ by using the dictionary ``model_to_model_kwargs_ranges``:
 We defined an HPO range for the embedding dimension. Because the ``scale`` is ``power_two``, the lower bound (``low``)
 equals to 4, the upper bound ``high`` to 6, the embedding dimension is sampled from the set :math:`\{2^4,2^5, 2^6\}`.
 
-Next, we fix the number of training epochs to 500 using the argument ``model_to_training_loop_to_training_kwargs`` and
+Next, we fix the number of training epochs to 50 using the argument ``model_to_training_loop_to_training_kwargs`` and
 define a range for the batch size using ``model_to_training_loop_to_training_kwargs_ranges``. We use these two
 dictionaries because the defined hyper-parameters are hyper-parameters of the training function (that is a function
 of the ``training_loop``):
@@ -299,7 +299,7 @@ of the ``training_loop``):
     >>> model_to_training_loop_to_training_kwargs = {
     ...    "ComplEx": {
     ...        "lcwa": {
-    ...            "num_epochs": 500
+    ...            "num_epochs": 50
     ...        }
     ...    }
     ... }
@@ -345,7 +345,7 @@ Finally, we define a range for the learning rate which is a hyper-parameter of t
     >>> model_to_training_loop_to_training_kwargs = {
     ...    "ComplEx": {
     ...        "lcwa": {
-    ...            "num_epochs": 500
+    ...            "num_epochs": 50
     ...        }
     ...    }
     ... }
@@ -394,7 +394,7 @@ Now that we defined our own hyper-parameter values/ranges, let's have a look at 
 
     >>> metadata = dict(title= "Ablation Study Over Nations for ComplEx.")
 
-    >>> models = ['ComplEx]
+    >>> models = ['ComplEx']
     >>> datasets = ['Nations']
     >>> losses = ["BCEAfterSigmoidLoss"]
     >>> training_loops = ["lcwa"]
@@ -423,7 +423,7 @@ Now that we defined our own hyper-parameter values/ranges, let's have a look at 
     >>> model_to_training_loop_to_training_kwargs = {
     ...    "ComplEx": {
     ...        "lcwa": {
-    ...            "num_epochs": 500
+    ...            "num_epochs": 50
     ...        }
     ...    }
     ... }
@@ -469,15 +469,14 @@ Now that we defined our own hyper-parameter values/ranges, let's have a look at 
     ...    model_to_model_kwargs_ranges=model_to_model_kwargs_ranges,
     ...    model_to_training_loop_to_training_kwargs=model_to_training_loop_to_training_kwargs,
     ...    model_to_optimizer_to_optimizer_kwargs_ranges=model_to_optimizer_to_optimizer_kwargs_ranges,
-    ...    directory=out,
+    ...    directory="doctests/ablation/ex6",
     ...    best_replicates=5,
-    ...    n_trials = 2
-    ...    timeout = 300
-    ...    metric = "hits@10"
-    ...    direction = "maximize"
-    ...    sampler = "random"
+    ...    n_trials = 2,
+    ...    timeout = 300,
+    ...    metric = "hits@10",
+    ...    direction = "maximize",
+    ...    sampler = "random",
     ...    pruner =  "nop",
-    ...    best_replicates=5,
     ... )
 
 We are expected to provide the arguments ``datasets``, ``models``, ``losses``, ``optimizers``, and
@@ -552,7 +551,7 @@ defined within our program would look as follows:
             "model_to_training_loop_to_training_kwargs": {
                 "ComplEx": {
                     "lcwa": {
-                        "num_epochs": 500
+                        "num_epochs": 50
                     }
                 }
             },
