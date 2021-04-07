@@ -10,7 +10,6 @@ import time
 from typing import Any, Dict, List, Mapping, Optional, Tuple, Union
 from uuid import uuid4
 
-from pykeen.regularizers import NoRegularizer
 from ..training import _TRAINING_LOOP_SUFFIX
 from ..utils import normalize_string
 
@@ -423,7 +422,7 @@ def prepare_ablation(  # noqa:C901
     if isinstance(regularizers, str):
         regularizers = [regularizers]
     elif regularizers is None:
-        regularizers = [NoRegularizer()]
+        regularizers = ["NoRegularizer"]
 
     it = itt.product(
         datasets,
