@@ -134,7 +134,7 @@ def ablation_pipeline(
     :param best_replicates: Defines how often the final model should be re-trained and evaluated based on the best
         hyper-parameters enabling to measure the variance in performance.
     :param discard_replicates: Defines, whether the best model should be discarded after training and evaluation.
-    :param create_unique_subdi: Defines, whether a unique sub-directory for the experimental artifacts should
+    :param create_unique_subdir: Defines, whether a unique sub-directory for the experimental artifacts should
         be created. The sub-directory name is defined  by the  current  data + a unique id.
     """
     if create_unique_subdir:
