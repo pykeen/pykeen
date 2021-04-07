@@ -534,7 +534,7 @@ defined within our program would look as follows:
             "training_loops": ["lcwa"],
             "optimizers": ["adam"],
             "create_inverse_triples": [true,false],
-            "stopper": "early
+            "stopper": "early"
             "stopper_kwargs": {
                 "frequency": 5,
                 "patience": 20,
