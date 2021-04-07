@@ -35,7 +35,7 @@ class QuatE(EntityRelationEmbeddingModel):
     citation:
         author: Zhang
         year: 2019
-        link: https://arxiv.org/abs/1904.10281qua
+        link: https://arxiv.org/abs/1904.10281
         github: cheungdaven/quate
     """
 
