@@ -67,6 +67,7 @@ def ablation_pipeline(
     dry_run: bool = False,
     best_replicates: Optional[int] = None,
     discard_replicates: bool = False,
+    create_unique_subdir: bool = False,
 ) -> None:
     """Run ablation study.
 
@@ -133,9 +134,11 @@ def ablation_pipeline(
     :param best_replicates: Defines how often the final model should be re-trained and evaluated based on the best
         hyper-parameters enabling to measure the variance in performance.
     :param discard_replicates: Defines, whether the best model should be discarded after training and evaluation.
+    :param create_unique_subdi: Defines, whether a unique sub-directory for the experimental artifacts should
+        be created. The sub-directory name is defined  by the  current  data + a unique id.
     """
-    # FIXME deal with when directory is None
-    directory = _create_path_with_id(directory=directory)
+    if create_unique_subdir:
+        directory = _create_path_with_id(directory=directory)
 
     directories = prepare_ablation(
         datasets=datasets,
