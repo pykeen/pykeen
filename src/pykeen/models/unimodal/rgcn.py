@@ -24,9 +24,66 @@ __all__ = [
 class RGCN(
     ERModel[torch.FloatTensor, RelationRepresentation, torch.FloatTensor],
 ):
-    """An implementation of R-GCN from [schlichtkrull2018]_.
+    r"""An implementation of R-GCN from [schlichtkrull2018]_.
 
-    This model uses graph convolutions with relation-specific weights.
+    The \acf{rgcn}~\cite{Schlichtkrull2018} builds on an adapted \ac{gcn} that can be applied on multi-relational data
+    such as \acp{kg}.
+    More concretely, the \ac{rgcn} model consists of two major parts: i.) a \ac{gcn} based entity-encoder that computes
+    latent representations for entities and ii.) an arbitrary interaction model that computes the plausibility of facts.
+    The \ac{gcn} employed by the entity-encoder is adapted to include typed edges.
+    The forward pass of the \ac{gcn} is defined by:
+
+     .. math::
+
+        \begin{equation}\label{eq:R-GCN_encoder}
+            \textbf{e}_{i}^{l+1} = \sigma \left( \sum_{r \in \mathcal{R}}\sum_{j\in \mathcal{N}_{i}^{r}}
+             \frac{1}{c_{i,r}} \textbf{W}_{r}^{l} \textbf{e}_{j}^{l} + \textbf{W}_{0}^{l} \textbf{e}_{i}^{l}\right),
+        \end{equation}
+
+    where $\mathcal{N}_{i}^{r}$ is the set of neighbors of node \begin{math}i\end{math} that are connected to
+    $i$by relation $r$, $c_{i,r}$ is a fixed normalization constant (but it can also be introduced as an additional
+    parameter), and $\textbf{W}_{r}^{l} \in \mathbb{R}^{d^{(l)} \times d^{(l)}}$ and
+    $\textbf{W}_{0}^{l} \in \mathbb{R}^{d^{(l)} \times d^{(l)}}$ are weight matrices of the \textit{l}-th layer of the
+    \ac{rgcn}.
+    Equation~\eqref{eq:R-GCN_encoder} aggregates for each node $e_i$ the latent representations of its neighbors and its
+    own latent representation \begin{math}e_{i}^{l}\end{math} into a new latent representation $e_{i}^{l+1}$.
+    In contrast to standard \acp{gcn}, \acp{rgcn} define relation specific transformations
+    $\textbf{W}_{r}^{l}$ which depend on the type and direction of an edge.
+    The interaction model computes the plausibility score given the node representations $\textbf{e}_{i}^{L}$ that are
+    computed by the last layer $L$ of the \ac{rgcn}, i.e.,\ for a given triple $(h,r,t) \in \mathcal{K}$, the
+    corresponding node representations $h:=e_i^L$ and $t:=e_j^L$ are used:
+
+    .. math::
+
+        \begin{equation}
+            f(h,r,t) = \textbf{h} \textbf{R}_{r} \textbf{t} \enspace,
+        \end{equation}
+
+    where \begin{math}\textbf{R}_{r} \in \mathbb{R}^{d \times d}\end{math} is a diagonal matrix and $f(h,r,t)$ is the
+    interaction model of DistMult (DistMult was employed in the original work, however, the general approach is not
+    restricted to DistMult).
+    To reduce the number of parameters required for the relation-specific transformation matrices and to avoid
+    over-fitting, two regularization approaches are presented:
+
+    The first approach (\textit{basis decomposition}), represents the relation-specific transformation matrices as a
+    weighted combination of base matrices, $\{\mathbf{B}_i^l\}_{i=1}^{B}$, i.e.,
+
+    .. math::
+
+        \begin{equation}
+            \mathbf{W}_r^l = \sum \limits_{b=1}^B \alpha_{rb} \mathbf{B}^l_i .
+        \end{equation}
+
+    The second approach (\textit{block-diagonal decomposition}), restricts each transformation matrix to a
+    block-diagonal-matrix, i.e.,
+
+    .. math::
+
+        \begin{equation}
+            \mathbf{W}_r^l = diag(\mathbf{B}_{r,1}^l, \ldots, \mathbf{B}_{r,B}^l)
+        \end{equation}
+
+    where $\mathbf{B}_{r,i} \in \mathbb{R}^{(d^{(l) }/ B) \times (d^{(l)} / B)}$.
 
     .. seealso::
 
