@@ -26,6 +26,7 @@ def plot_losses(pipeline_result, *, ax=None):
     import seaborn as sns
     sns.set_style('darkgrid')
 
+    ax = _ensure_ax(ax)
     rv = sns.lineplot(x=range(len(pipeline_result.losses)), y=pipeline_result.losses, ax=ax)
 
     loss_name = loss_resolver.normalize_inst(pipeline_result.model.loss)
