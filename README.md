@@ -313,6 +313,8 @@ This project has been supported by several organizations (in alphabetical order)
 - [Fraunhofer Institute for Algorithms and Scientific Computing](https://www.scai.fraunhofer.de)
 - [Fraunhofer Institute for Intelligent Analysis and Information Systems](https://www.iais.fraunhofer.de)
 - [Fraunhofer Center for Machine Learning](https://www.cit.fraunhofer.de/de/zentren/maschinelles-lernen.html)
+- [Harvard Program in Therapeutic Science - Laboratory of Systems Pharmacology](https://hits.harvard.edu/the-program/laboratory-of-systems-pharmacology/)
+- [Laboratory of Systems Pharmacology, Harvard Medical School](https://hits.harvard.edu)
 - [Ludwig-Maximilians-Universität München](https://www.en.uni-muenchen.de/index.html)
 - [Munich Center for Machine Learning (MCML)](https://mcml.ai/)
 - [Siemens](https://new.siemens.com/global/en.html)
@@ -330,10 +332,14 @@ The PyKEEN logo was designed by Carina Steinborn.
 If you have found PyKEEN useful in your work, please consider citing [our article](https://arxiv.org/abs/2007.14175):
 
 ```bibtex
-@article{ali2020pykeen,
-  title={PyKEEN 1.0: A Python Library for Training and Evaluating Knowledge Graph Emebddings},
-  author={Ali, Mehdi and Berrendorf, Max and Hoyt, Charles Tapley and Vermue, Laurent and Sharifzadeh, Sahand and Tresp, Volker and Lehmann, Jens},
-  journal={arXiv preprint arXiv:2007.14175},
-  year={2020}
+@article{ali2021pykeen,
+    author = {Ali, Mehdi and Berrendorf, Max and Hoyt, Charles Tapley and Vermue, Laurent and Sharifzadeh, Sahand and Tresp, Volker and Lehmann, Jens},
+    journal = {Journal of Machine Learning Research},
+    number = {82},
+    pages = {1--6},
+    title = {{PyKEEN 1.0: A Python Library for Training and Evaluating Knowledge Graph Embeddings}}},
+    url = {http://jmlr.org/papers/v22/20-825.html},
+    volume = {22},
+    year = {2021}
 }
 ```
