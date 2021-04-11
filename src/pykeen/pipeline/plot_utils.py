@@ -57,6 +57,14 @@ def plot_early_stopping(pipeline_result, *, ax=None, lineplot_kwargs=None):
     return rv
 
 
+def _default_entity_embedding_getter(m) -> Embedding:
+    return m.entity_embeddings
+
+
+def _default_relation_embedding_getter(m) -> Embedding:
+    return m.relation_embeddings
+
+
 def plot_er(  # noqa: C901
     pipeline_result,
     *,
@@ -69,6 +77,8 @@ def plot_er(  # noqa: C901
     plot_relations: Optional[bool] = None,
     annotation_x_offset: float = 0.02,
     annotation_y_offset: float = 0.03,
+    entity_embedding_getter=None,
+    relation_embedding_getter=None,
     ax=None,
     **kwargs,
 ):
@@ -86,6 +96,12 @@ def plot_er(  # noqa: C901
         like :class:`pykeen.models.TransE`.
     :param annotation_x_offset: X offset of label from entity position
     :param annotation_y_offset: Y offset of label from entity position
+    :param entity_embedding_getter: A function that takes a model and returns its entity embeddings. If none,
+        defaults to :func:`_default_entity_embedding_getter`, which just gets ``model.entity_embeddings``. Note,
+        the default only works with old-style PyKEEN models.
+    :param relation_embedding_getter: A function that takes a model and returns its relation embeddings. If none,
+        defaults to :func:`_default_relation_embedding_getter`, which just gets ``model.relation_embeddings``. Note,
+        the default only works with old-style PyKEEN models.
     :param ax: The matplotlib axis, if pre-defined
     :param kwargs: The keyword arguments passed to `__init__()` of
         the reducer class (e.g., PCA, TSNE)
@@ -117,9 +133,16 @@ def plot_er(  # noqa: C901
 
     sns.set_style('whitegrid')
 
+    if entity_embedding_getter is None:
+        entity_embedding_getter = _default_entity_embedding_getter
+    if relation_embedding_getter is None:
+        relation_embedding_getter = _default_relation_embedding_getter
+
     if plot_relations and plot_entities:
-        e_embeddings, e_reduced = _reduce_embeddings(pipeline_result.model.entity_embeddings, reducer, fit=True)
-        r_embeddings, r_reduced = _reduce_embeddings(pipeline_result.model.relation_embeddings, reducer, fit=False)
+        e_embeddings, e_reduced = _reduce_embeddings(entity_embedding_getter(pipeline_result.model), reducer, fit=True)
+        r_embeddings, r_reduced = _reduce_embeddings(
+            relation_embedding_getter(pipeline_result.model), reducer, fit=False,
+        )
 
         xmax = max(r_embeddings[:, 0].max(), e_embeddings[:, 0].max()) + margin
         xmin = min(r_embeddings[:, 0].min(), e_embeddings[:, 0].min()) - margin
@@ -127,14 +150,16 @@ def plot_er(  # noqa: C901
         ymin = min(r_embeddings[:, 1].min(), e_embeddings[:, 1].min()) - margin
     elif plot_relations:
         e_embeddings, e_reduced = None, False
-        r_embeddings, r_reduced = _reduce_embeddings(pipeline_result.model.relation_embeddings, reducer, fit=True)
+        r_embeddings, r_reduced = _reduce_embeddings(
+            relation_embedding_getter(pipeline_result.model), reducer, fit=True,
+        )
 
         xmax = r_embeddings[:, 0].max() + margin
         xmin = r_embeddings[:, 0].min() - margin
         ymax = r_embeddings[:, 1].max() + margin
         ymin = r_embeddings[:, 1].min() - margin
     elif plot_entities:
-        e_embeddings, e_reduced = _reduce_embeddings(pipeline_result.model.entity_embeddings, reducer, fit=True)
+        e_embeddings, e_reduced = _reduce_embeddings(entity_embedding_getter(pipeline_result.model), reducer, fit=True)
         r_embeddings, r_reduced = None, False
 
         xmax = e_embeddings[:, 0].max() + margin
