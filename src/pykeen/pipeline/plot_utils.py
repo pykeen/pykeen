@@ -268,9 +268,10 @@ def plot(pipeline_result, er_kwargs: Optional[Mapping[str, str]] = None, figsize
     """Plot all plots."""
     import matplotlib.pyplot as plt
 
-    fig, (lax, rax) = plt.subplots(1, 2, figsize=figsize)
+    fig, axes = plt.subplots(1, 2, figsize=figsize)
 
-    pipeline_result.plot_losses(ax=lax)
-    pipeline_result.plot_er(ax=rax, **(er_kwargs or {}))
+    pipeline_result.plot_losses(ax=axes[0])
+    pipeline_result.plot_er(ax=axes[1], **(er_kwargs or {}))
 
     plt.tight_layout()
+    return fig, axes
