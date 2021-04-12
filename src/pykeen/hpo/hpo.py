@@ -600,6 +600,9 @@ def hpo_pipeline(
     _set_study_dataset(
         study=study,
         dataset=dataset,
+        training=training,
+        testing=testing,
+        validation=validation,
     )
 
     # 2. Model
@@ -813,15 +816,27 @@ def _set_study_dataset(
     testing: Union[None, str, TriplesFactory] = None,
     validation: Union[None, str, TriplesFactory] = None,
 ):
-    if (
-        (isinstance(dataset, str) and has_dataset(dataset))
-        or isinstance(dataset, Dataset)
-        or (isinstance(dataset, type) and issubclass(dataset, Dataset))
-    ):
-        if not(training is None and testing is None and validation is None):
+    if dataset is not None:
+        if training is not None or testing is not None or validation is not None:
             raise ValueError("Cannot specify dataset and training, testing and validation")
-        dataset_name = get_dataset(dataset=dataset).get_normalized_name()
-        study.set_user_attr('dataset', dataset_name)
+        elif isinstance(dataset, str):
+            if has_dataset(dataset):
+                study.set_user_attr('dataset', get_dataset(dataset=dataset).get_normalized_name())
+            else:
+                # otherwise, dataset refers to a file that should be automatically split
+                study.set_user_attr('dataset', dataset)
+        elif (
+            isinstance(dataset, Dataset)
+            or (isinstance(dataset, type) and issubclass(dataset, Dataset))
+        ):
+            # this could be custom data, so don't store anything. However, it's possible to check if this
+            # was a pre-registered dataset. If that's the desired functionality, we can uncomment the following:
+            # dataset_name = dataset.get_normalized_name()  # this works both on instances and classes
+            # if has_dataset(dataset_name):
+            #     study.set_user_attr('dataset', dataset_name)
+            pass
+        else:
+            raise TypeError(f'Dataset is invalid type: ({type(dataset)}) {dataset}')
     else:
         if isinstance(training, str):
             study.set_user_attr('training', training)
