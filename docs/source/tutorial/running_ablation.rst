@@ -507,8 +507,7 @@ It requires a minimal change compared to the previous configuration:
     ... ]
 
 In the dataset field, you don't provide a list of dataset names but dictionaries containing the paths
-to your train-validation-test splits. Check out ``tests/resources/hpo_complex_your_own_data.json`` for a
-concrete example. Yes, that's all.
+to your train-validation-test splits. Yes, that's all.
 
 Run an Ablation Study From The Command Line Interface
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
