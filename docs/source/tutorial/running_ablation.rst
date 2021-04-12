@@ -207,13 +207,12 @@ the best model of each ablation-experiment using the argument ``best_replicates`
     ...     best_replicates=5,
     ... )
 
-Eager to check out the results? Then navigate to the output directory ``path/to/output/directory`` in which you will
-find a directory whose name contains a timestamp and a unique id. Within this directory, you will find subdirectories,
-e.g., ``0000_nations_complex`` which contains all experimental artifacts of one specific ablation experiment of the
-defined ablation study. The most relevant subdirectory is ``best_pipeline`` which comprises the artifacts of the best
-performing experiment, including its definition in ``pipeline_config.json``,  the obtained results, and the trained
-model(s) in the sub-directory ``replicates``. The number of replicates in ``replicates`` corresponds to the number
-provided through the argument ``-r``.
+Eager to check out the results? Then navigate to your output directory ``path/to/output/directory``.
+Within your output directory, you will find subdirectories, e.g., ``0000_nations_complex`` which contains all
+experimental artifacts of one specific ablation experiment of the defined ablation study. The most relevant subdirectory
+is ``best_pipeline`` which comprises the artifacts of the best performing experiment, including its definition in
+``pipeline_config.json``,  the obtained results, and the trained model(s) in the sub-directory ``replicates``.
+The number of replicates in ``replicates`` corresponds to the number provided through the argument ``-r``.
 Additionally, you are provided with further information about the ablation study in the root directory: ``study.json``
 describes the ablation experiment, ``hpo_config.json`` describes the HPO setting of the ablation experiment,
 ``trials.tsv`` provides an overview of each HPO experiment.
