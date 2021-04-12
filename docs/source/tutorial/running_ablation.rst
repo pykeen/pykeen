@@ -188,7 +188,7 @@ the best model of each ablation-experiment using the argument ``best_replicates`
     ...     "metric": "hits@10",
     ... }
     >>> result = ablation_pipeline(
-    ...     directory=direcory,
+    ...     directory=directory,
     ...     models=models,
     ...     datasets=datasets,
     ...     losses=losses,
