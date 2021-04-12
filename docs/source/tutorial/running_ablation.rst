@@ -4,7 +4,7 @@ You want to find out which loss function and training approach is best-suited fo
 (model architecture)? Then performing an ablation study is the way to go!
 
 In general, an ablation study is a set of experiments in which components of a machine learning system are
-removed/replaced in order to measure the impact of these components on the system's performance. In the context of
+removed/replaced in order to measure the impact of these components on the performance of the system. In the context of
 knowledge graph embedding models, typical ablation studies involve investigating different loss functions, training
 approaches, negative samplers, and the explicit modeling of inverse relations. For a specific model composition based on
 these components, the best set of hyper-parameter values, e.g., embedding dimension, learning rate, batch size,
@@ -12,78 +12,94 @@ loss function-specific hyper-parameters such as the margin value in the margin r
 This is accomplished by a process called hyper-parameter optimization. Different approaches have been proposed, of
 which random search and grid search are very popular.
 
-
 In PyKEEN, we can define execute an ablation study within our own program or from the command line interface using a
 configuration file (``file_name.json``).
 
 First, we show how to run an ablation study within your program. For this purpose, we provide the function
-:func:`pykeen.ablation.ablation_pipeline` that requires at least following arguments: ``datasets``, ``models``,
-``losses``, ``optimizers``, ``training_loops``, and ``directory`` to define the datasets, models, loss functions,
+:func:`pykeen.ablation.ablation_pipeline` that requires the ``datasets``, ``models``, ``losses``, ``optimizers``,
+``training_loops``, and ``directory`` arguments to define the datasets, models, loss functions,
 optimizers (e.g., Adam), training approaches for our ablation study, and the output directory in which the experimental
-artifacts should be saved. In the following, we define an ablation study for ComplEx over the Nations dataset in order
-to assess the effect of different loss functions (in our example, the binary cross entropy loss and the margin ranking
-loss) and the effect of explicitly modeling inverse relations.
-
-Before we define the actual ablation study, we will define ``metadata`` about our study, which is helpful for a later
-retrospection.
-
-.. code-block:: python
-
-    >>> metadata = dict(title= "Ablation Study Over Nations for ComplEx.")
+artifacts should be saved. In the following, we define an ablation study for :class:`pykeen.models.ComplEx` over the
+:class:`pykeen.datasets.Nations` dataset in order to assess the effect of different loss functions (in our example,
+the binary cross entropy loss and the margin ranking loss) and the effect of explicitly modeling inverse relations.
 
 Now, let's start with defining the minimal requirements, i.e., the dataset(s), interaction model(s), the loss
 function(s), training approach(es), and the optimizer(s) in order to run the ablation study:
 
 .. code-block:: python
 
-    >>> import pystow
     >>> from pykeen.ablation import ablation_pipeline
     >>> metadata = dict(title="Ablation Study Over Nations for ComplEx.")
-    >>> output_dir = "doctests/ablation/ex1"
-    >>> # Define ablation study
-    >>> models = ['ComplEx']
-    >>> datasets = ['Nations']
-    >>> losses = ["BCEAfterSigmoidLoss", "MarginRankingLoss"]
-    >>> training_loops = ["LCWA"]
-    >>> optimizers = ["Adam"]
-    >>> # Run ablation experiment
-    >>> ablation_pipeline(
+    >>> directory = "doctests/ablation/ex01_minimal"
+    >>> result = ablation_pipeline(
+    ...     directory=directory,
     ...     metadata=metadata,  # Optional
-    ...     models=models,
-    ...     datasets=datasets,
-    ...     losses=losses,
-    ...     training_loops=training_loops,
-    ...     optimizers=optimizers,
-    ...     directory=output_dir,
+    ...     models=["ComplEx"],
+    ...     datasets=["Nations"],
+    ...     losses=["BCEAfterSigmoidLoss", "MarginRankingLoss"],
+    ...     training_loops=["LCWA"],
+    ...     optimizers=["Adam"],
     ... )
 
-As mentioned above, we also want to measure the effect of explicitly modeling inverse relations on the model's
-performance. Therefore, we extend the ablation study accordingly:
+We can provide arbitrary additional information about our study with the ``metadata`` keyword. Some keys, such
+as ``title`` are special and used by PyKEEN and Optuna. It can be included
 
 .. code-block:: python
 
     >>> from pykeen.ablation import ablation_pipeline
-    >>> metadata = dict(title= "Ablation Study Over Nations for ComplEx.")
-    >>> output_dir = "doctests/ablation/ex2"
-
-    >>> models = ['ComplEx']
-    >>> datasets = ['Nations']
-    >>> losses = ["BCEAfterSigmoidLoss"]
-    >>> training_loops = ["lcwa"]
-    >>> optimizers = ["adam"]
-    >>> create_inverse_triples = [True, False]
-
-    # Run ablation experiment
-    >>> ablation_pipeline(
-    ...    metadata=metadata, #Optional
-    ...    models=models,
-    ...    datasets=datasets,
-    ...    losses=losses,
-    ...    training_loops=training_loops,
-    ...    optimizers=optimizers,
-    ...    create_inverse_triples=create_inverse_triples,
-    ...    directory=output_dir,
+    >>> directory = "doctests/ablation/ex02_metadata"
+    >>> result = ablation_pipeline(
+    ...     directory=directory,
+    ...     models=["ComplEx"],
+    ...     datasets=["Nations"],
+    ...     losses=["BCEAfterSigmoidLoss", "MarginRankingLoss"],
+    ...     training_loops=["LCWA"],
+    ...     optimizers=["Adam"],
+    ...     # Add metadata with:
+    ...     metadata=dict(
+    ...         title="Ablation Study Over Nations for ComplEx.",
+    ...     ),
     ... )
+
+As mentioned above, we also want to measure the effect of explicitly modeling inverse relations on the model's
+performance. Therefore, we extend the ablation study by including the ``create_inverse_triples`` argument:
+
+.. code-block:: python
+
+    >>> from pykeen.ablation import ablation_pipeline
+    >>> metadata = dict(title="Ablation Study Over Nations for ComplEx.")
+    >>> directory = "doctests/ablation/ex03_inverse"
+    >>> result = ablation_pipeline(
+    ...    directory=directory,
+    ...    metadata=metadata,  # Optional
+    ...    models=["ComplEx"],
+    ...    datasets=["Nations"],
+    ...    losses=["BCEAfterSigmoidLoss"],
+    ...    training_loops=["LCWA"],
+    ...    optimizers=["Adam"],
+    ...    create_inverse_triples=[True, False],
+    ... )
+
+If there is only one value for either the ``models``, ``datasets``, ``losses``, ``training_loops``, ``optimizers``,
+or ``create_inverse_triples`` argument, it can be given as a single value instead of the list.
+
+.. code-block:: python
+
+    >>> from pykeen.ablation import ablation_pipeline
+    >>> metadata = dict(title="Ablation Study Over Nations for ComplEx.")
+    >>> directory = "doctests/ablation/ex04_terse_kwargs"
+    >>> result = ablation_pipeline(
+    ...    directory=directory,
+    ...    metadata=metadata,  # Optional
+    ...    models="ComplEx",
+    ...    datasets="Nations",
+    ...    losses=["BCEAfterSigmoidLoss", "MarginRankingLoss"],
+    ...    training_loops="LCWA",
+    ...    optimizers="Adam",
+    ...    create_inverse_triples=[True, False],
+    ... )
+
+.. note:: It doesn't make sense to run an ablation study if all of these values are fixed.
 
 For each of the components of a knowledge graph embedding model (KGEM) that requires hyper-parameters, i.e.,
 interaction model, loss function, and the training approach, we provide default hyper-parameter optimization (HPO)
@@ -96,15 +112,8 @@ follows:
 .. code-block:: python
 
     >>> from pykeen.ablation import ablation_pipeline
-    >>> metadata = dict(title= "Ablation Study Over Nations for ComplEx.")
-    >>> output_dir = "doctests/ablation/ex3"
-
-    >>> models = ['ComplEx']
-    >>> datasets = ['Nations']
-    >>> losses = ["BCEAfterSigmoidLoss"]
-    >>> training_loops = ["lcwa"]
-    >>> optimizers = ["adam"]
-    >>> create_inverse_triples= [True,False]
+    >>> metadata = dict(title="Ablation Study Over Nations for ComplEx.")
+    >>> directory = "doctests/ablation/ex3"
     >>> stopper = "early"
     >>> stopper_kwargs = {
     ...    "frequency": 5,
@@ -112,17 +121,15 @@ follows:
     ...    "relative_delta": 0.002,
     ...    "metric": "hits@10",
     ... }
-
-    # Run ablation experiment
-    >>> ablation_pipeline(
-    ...    metadata=metadata, #Optional
-    ...    models=models,
-    ...    datasets=datasets,
-    ...    losses=losses,
-    ...    training_loops=training_loops,
-    ...    optimizers=optimizers,
-    ...    create_inverse_triples=create_inverse_triples,
-    ...    directory=output_dir,
+    >>> result = ablation_pipeline(
+    ...    metadata=metadata,  # Optional
+    ...    directory=directory,
+    ...    models=["ComplEx"],
+    ...    datasets=["Nations"],
+    ...    losses=["BCEAfterSigmoidLoss"],
+    ...    training_loops=["LCWA"],
+    ...    optimizers=["Adam"],
+    ...    create_inverse_triples=[True, False],
     ...    stopper=stopper,
     ...    stopper_kwargs=stopper_kwargs,
     ... )
@@ -142,15 +149,15 @@ testing purposes. Therefore, we define the arguments required by Optuna by ourse
 .. code-block:: python
 
     >>> from pykeen.ablation import ablation_pipeline
-    >>> metadata = dict(title= "Ablation Study Over Nations for ComplEx.")
+    >>> metadata = dict(title="Ablation Study Over Nations for ComplEx.")
     >>> output_dir = "doctests/ablation/ex4"
 
-    >>> models = ['ComplEx']
-    >>> datasets = ['Nations']
+    >>> models = ["ComplEx"]
+    >>> datasets = ["Nations"]
     >>> losses = ["BCEAfterSigmoidLoss"]
     >>> training_loops = ["lcwa"]
     >>> optimizers = ["adam"]
-    >>> create_inverse_triples= [True,False]
+    >>> create_inverse_triples= [True, False]
     >>> stopper = "early"
     >>> stopper_kwargs = {
     ...    "frequency": 5,
@@ -158,10 +165,8 @@ testing purposes. Therefore, we define the arguments required by Optuna by ourse
     ...    "relative_delta": 0.002,
     ...    "metric": "hits@10",
     ... }
-
-    # Run ablation experiment
-    >>> ablation_pipeline(
-    ...    metadata=metadata, #Optional
+    >>> result = ablation_pipeline(
+    ...    metadata=metadata,  # Optional
     ...    models=models,
     ...    datasets=datasets,
     ...    losses=losses,
@@ -171,13 +176,13 @@ testing purposes. Therefore, we define the arguments required by Optuna by ourse
     ...    directory=output_dir,
     ...    stopper=stopper,
     ...    stopper_kwargs=stopper_kwargs,
-    ...    # Optuna related arguments
-    ...    n_trials = 2,
-    ...    timeout = 300,
-    ...    metric = "hits@10",
-    ...    direction = "maximize",
-    ...    sampler = "random",
-    ...    pruner =  "nop",
+    ...    # Optuna-related arguments
+    ...    n_trials=2,
+    ...    timeout=300,
+    ...    metric="hits@10",
+    ...    direction="maximize",
+    ...    sampler="random",
+    ...    pruner= "nop",
     ... )
 
 We set the number of HPO iterations for each experiment to 2 using the argument ``n_trials``, set a ``timeout`` of 300
@@ -192,15 +197,14 @@ the best model of each ablation-experiment using the argument ``best_replicates`
 .. code-block:: python
 
     >>> from pykeen.ablation import ablation_pipeline
-    >>> metadata = dict(title= "Ablation Study Over Nations for ComplEx.")
+    >>> metadata = dict(title="Ablation Study Over Nations for ComplEx.")
     >>> output_dir = "doctests/ablation/ex5"
-
-    >>> models = ['ComplEx']
-    >>> datasets = ['Nations']
+    >>> models = ["ComplEx"]
+    >>> datasets = ["Nations"]
     >>> losses = ["BCEAfterSigmoidLoss"]
     >>> training_loops = ["lcwa"]
     >>> optimizers = ["adam"]
-    >>> create_inverse_triples= [True,False]
+    >>> create_inverse_triples= [True, False]
     >>> stopper = "early"
     >>> stopper_kwargs = {
     ...    "frequency": 5,
@@ -208,10 +212,7 @@ the best model of each ablation-experiment using the argument ``best_replicates`
     ...    "relative_delta": 0.002,
     ...    "metric": "hits@10",
     ... }
-
-
-    # Run ablation experiment
-    >>> ablation_pipeline(
+    >>> result = ablation_pipeline(
     ...    metadata=metadata, #Optional
     ...    models=models,
     ...    datasets=datasets,
@@ -222,13 +223,13 @@ the best model of each ablation-experiment using the argument ``best_replicates`
     ...    directory=output_dir,
     ...    stopper=stopper,
     ...    stopper_kwargs=stopper_kwargs,
-    ...    # Optuna related arguments
-    ...    n_trials = 2,
-    ...    timeout = 300,
-    ...    metric = "hits@10",
-    ...    direction = "maximize",
-    ...    sampler = "random",
-    ...    pruner =  "nop",
+    ...    # Optuna-related arguments
+    ...    n_trials=2,
+    ...    timeout=300,
+    ...    metric="hits@10",
+    ...    direction="maximize",
+    ...    sampler="random",
+    ...    pruner= "nop",
     ...    best_replicates=5,
     ... )
 
@@ -241,13 +242,12 @@ model(s) in the sub-directory ``replicates``. The number of replicates in ``repl
 provided through the argument ``-r``.
 Additionally, you are provided with further information about the ablation study in the root directory: ``study.json``
 describes the ablation experiment, ``hpo_config.json`` describes the HPO setting of the ablation experiment,
-``trials.tsv`` provides an overview of each HPO-experiment.
+``trials.tsv`` provides an overview of each HPO experiment.
 
 Define Your Own HPO Ranges
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 As mentioned above, we provide default hyper-parameters/hyper-parameter ranges for each hyper-parameter.
-However, these default values/ranges don't ensure good performance. Therefore,
+However, these default values/ranges do not ensure good performance. Therefore,
 it is time that you define your own ranges, and we show you how to do it!
 For the definition of hyper-parameter values/ranges, two dictionaries are essential, ``kwargs`` that is used to assign
 the hyper-parameters fixed values, and ``kwargs_ranges`` to define ranges of values from which to sample from.
@@ -392,16 +392,14 @@ Now that we defined our own hyper-parameter values/ranges, let's have a look at 
 .. code-block:: python
 
     >>> from pykeen.ablation import ablation_pipeline
-
-    >>> metadata = dict(title= "Ablation Study Over Nations for ComplEx.")
-
-    >>> models = ['ComplEx']
-    >>> datasets = ['Nations']
+    >>> metadata = dict(title="Ablation Study Over Nations for ComplEx.")
+    >>> models = ["ComplEx"]
+    >>> datasets = ["Nations"]
     >>> losses = ["BCEAfterSigmoidLoss"]
     >>> training_loops = ["lcwa"]
     >>> optimizers = ["adam"]
-    >>> create_inverse_triples= [True,False]
-    >>> stopper = 'early'
+    >>> create_inverse_triples= [True, False]
+    >>> stopper = "early"
     >>> stopper_kwargs = {
     ...    "frequency": 5,
     ...    "patience": 20,
@@ -474,12 +472,12 @@ Now that we defined our own hyper-parameter values/ranges, let's have a look at 
     ...    model_to_optimizer_to_optimizer_kwargs_ranges=model_to_optimizer_to_optimizer_kwargs_ranges,
     ...    directory="doctests/ablation/ex6",
     ...    best_replicates=5,
-    ...    n_trials = 2,
-    ...    timeout = 300,
-    ...    metric = "hits@10",
-    ...    direction = "maximize",
-    ...    sampler = "random",
-    ...    pruner =  "nop",
+    ...    n_trials=2,
+    ...    timeout=300,
+    ...    metric="hits@10",
+    ...    direction="maximize",
+    ...    sampler="random",
+    ...    pruner="nop",
     ... )
 
 We are expected to provide the arguments ``datasets``, ``models``, ``losses``, ``optimizers``, and
@@ -491,7 +489,6 @@ hyper-parameters for the loss functions or the negative samplers. Check out the 
 
 Run an Ablation Study With Your Own Data
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 We showed how to run an ablation study with a PyKEEN integrated dataset. Now you are asking yourself, whether you can
 run ablations studies with your own data? Yes, you can!
 It requires a minimal change compared to the previous configuration:
@@ -507,18 +504,16 @@ It requires a minimal change compared to the previous configuration:
     ... ]
 
 In the dataset field, you don't provide a list of dataset names but dictionaries containing the paths
-to your train-validation-test splits. Yes, that's all.
+to your train-validation-test splits.
 
 Run an Ablation Study From The Command Line Interface
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 If you want to start an ablation study from the command line interface, we provide the function
 :func:`pykeen.experiments.cli.ablation`, which expects as an argument the path to a JSON configuration file.
 The configuration file consists of a dictionary with the sub-dictionaries ``ablation`` and ``optuna`` in which the
 ablation study and the Optuna related configuration are defined. Besides, similar to the programmatic interface, the
 ``metadata`` dictionary can be provided. The configuration file corresponding to the  ablation study that we previously
 defined within our program would look as follows:
-
 
 .. code-block:: javascript
 
@@ -602,14 +597,14 @@ The ablation study can be started as follows:
 
 .. code-block:: shell
 
-    pykeen experiments ablation path/to/complex_nation.json -d path/to/output/directory
+    $ pykeen experiments ablation path/to/complex_nation.json -d path/to/output/directory
 
-To re-train and re-evaluate the best model of each ablation-experiment `n` times in order to measure the variance in
-performance the option `-r`/`--best-replicates` should be used:
+To re-train and re-evaluate the best model of each ablation-experiment ``n`` times in order to measure the variance in
+performance the option ``-r``/``--best-replicates`` should be used:
 
 .. code-block:: shell
 
-    pykeen experiments ablation path/to/complex_nation.json -d path/to/output/directory -r 5
+    $ pykeen experiments ablation path/to/complex_nation.json -d path/to/output/directory -r 5
 
 In this tutorial, we showed how to define and start an ablation study within your program, how to execute it from the
 command line interface. Furthermore, we showed how you can define your ablation study using your own data.
