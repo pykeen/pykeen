@@ -177,6 +177,18 @@ class TestHPODatasets(unittest.TestCase):
         self.assertNotIn('testing', hpo_pipeline_result.study.user_attrs)
         self.assertNotIn('validation', hpo_pipeline_result.study.user_attrs)
 
+    def test_custom_dataset_path(self):
+        """Test passing a dataset class to HPO."""
+        hpo_pipeline_result = self._help_test_hpo(
+            study_name='HPO with custom dataset path',
+            dataset=NATIONS_TRAIN_PATH,
+        )
+        self.assertIn('dataset', hpo_pipeline_result.study.user_attrs)
+        self.assertEqual(NATIONS_TRAIN_PATH, hpo_pipeline_result.study.user_attrs['dataset'])
+        self.assertNotIn('training', hpo_pipeline_result.study.user_attrs)
+        self.assertNotIn('testing', hpo_pipeline_result.study.user_attrs)
+        self.assertNotIn('validation', hpo_pipeline_result.study.user_attrs)
+
     def test_custom_tf_object(self):
         """Test using a custom triples factories with HPO.
 
