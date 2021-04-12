@@ -29,7 +29,6 @@ function(s), training approach(es), and the optimizer(s) in order to run the abl
 .. code-block:: python
 
     >>> from pykeen.ablation import ablation_pipeline
-    >>> metadata = dict(title="Ablation Study Over Nations for ComplEx.")
     >>> directory = "doctests/ablation/ex01_minimal"
     >>> result = ablation_pipeline(
     ...      directory=directory,
