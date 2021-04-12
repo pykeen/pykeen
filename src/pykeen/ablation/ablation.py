@@ -34,6 +34,7 @@ def ablation_pipeline(
     losses: Union[str, List[str]],
     optimizers: Union[str, List[str]],
     training_loops: Union[str, List[str]],
+    *,
     create_inverse_triples: Union[bool, List[bool]] = False,
     regularizers: Union[None, str, List[str]] = None,
     negative_sampler: Union[str, None] = None,
@@ -226,8 +227,8 @@ def _create_path_with_id(directory: str) -> str:
 
 def ablation_pipeline_from_config(
     config: Mapping[str, Any],
-    *,
     directory: str,
+    *,
     dry_run: bool = False,
     best_replicates: Optional[int] = None,
     save_artifacts: bool = True,
@@ -312,6 +313,7 @@ def prepare_ablation(  # noqa:C901
     optimizers: Union[str, List[str]],
     training_loops: Union[str, List[str]],
     directory: str,
+    *,
     create_inverse_triples: Union[bool, List[bool]] = False,
     regularizers: Union[None, str, List[str]] = None,
     negative_sampler: Optional[str] = None,

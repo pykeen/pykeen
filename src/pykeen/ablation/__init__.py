@@ -22,8 +22,6 @@ performance. This can be done with the :func:`pykeen.ablation.ablation_pipeline`
         },
         directory='~/Desktop/simple_ablation_study',
     )
-
-.. note:: This tutorial will be improved with `pykeen/pykeen#116 <https://github.com/pykeen/pykeen/issues/116>`_.
 """
 
 from .ablation import (
