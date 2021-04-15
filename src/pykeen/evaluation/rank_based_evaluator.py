@@ -108,7 +108,7 @@ class RankBasedMetricResults(MetricResults):
 
     - Mean Rank (MR) with range $[0, \infty)$ where closer to 0 is better
     - Adjusted Mean Rank (AMR; [berrendorf2020]_) with range $[0, 2]$ where closer to 0 is better
-    - Mean Reciprocal Rank (MRR) with range $[0, 1]$ where closer to 1 is better
+    - Mean Reciprocal Rank (MRR) with range $(0, 1]$ where closer to 1 is better
     - Hits @ K with range $[0, 1]$ where closer to 1 is better.
     """
 
@@ -210,7 +210,7 @@ class RankBasedEvaluator(Evaluator):
 
     - Mean Rank (MR) with range $[0, \infty)$ where closer to 0 is better
     - Adjusted Mean Rank (AMR; [berrendorf2020]_) with range $[0, 2]$ where closer to 0 is better
-    - Mean Reciprocal Rank (MRR) with range $[0, 1]$ where closer to 1 is better
+    - Mean Reciprocal Rank (MRR) with range $(0, 1]$ where closer to 1 is better
     - Hits @ K with range $[0, 1]$ where closer to 1 is better.
     """
 
