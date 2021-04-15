@@ -4,7 +4,7 @@
 import itertools
 import logging
 from operator import itemgetter
-from typing import Iterable, Tuple
+from typing import Collection, Iterable, Optional, Tuple
 
 import numpy
 import pandas
@@ -181,6 +181,7 @@ def entity_relation_co_occurrence_dataframe(dataset: Dataset) -> pandas.DataFram
 
 def _relation_classification_pandas(
     triple_df: pandas.DataFrame,
+    pattern_types: Optional[Collection[str]] = None,
 ) -> Iterable[Tuple[int, str, int, float]]:
     """
     The actual work behind relation classification, built upon pandas.
@@ -188,83 +189,89 @@ def _relation_classification_pandas(
     .. note ::
         The implementation is quite memory-intense.
     """
+    if pattern_types is None:
+        pattern_types = {"unary", "binary", "ternary"}
+
     support = triple_df.value_counts(subset=["r"]).rename("support").reset_index()
 
     # unary patterns
-    logger.info("Checking unary patterns: {symmetry, anti-symmetry}")
-    # symmetry: r(x, y) => r(y, x)
-    temp_df = pandas.merge(
-        left=triple_df,
-        right=triple_df,
-        left_on=["r", "h", "t"],
-        right_on=["r", "t", "h"],
-    ).groupby(by="r").size().rename("full_count").reset_index()
-    temp_df = pandas.merge(
-        left=support,
-        right=temp_df,
-        on="r",
-    )
-    temp_df["confidence"] = temp_df["full_count"] / temp_df["support"]
-    yield from zip(
-        temp_df["r"].tolist(),
-        itertools.repeat("symmetry"),
-        temp_df["support"].tolist(),
-        temp_df["confidence"].tolist(),
-    )
+    if "unary" in pattern_types:
+        logger.info("Checking unary patterns: {symmetry, anti-symmetry}")
+        # symmetry: r(x, y) => r(y, x)
+        temp_df = pandas.merge(
+            left=triple_df,
+            right=triple_df,
+            left_on=["r", "h", "t"],
+            right_on=["r", "t", "h"],
+        ).groupby(by="r").size().rename("full_count").reset_index()
+        temp_df = pandas.merge(
+            left=support,
+            right=temp_df,
+            on="r",
+        )
+        temp_df["confidence"] = temp_df["full_count"] / temp_df["support"]
+        yield from zip(
+            temp_df["r"].tolist(),
+            itertools.repeat("symmetry"),
+            temp_df["support"].tolist(),
+            temp_df["confidence"].tolist(),
+        )
 
-    # anti-symmetry: r(x, y) => !r(y, x)
-    temp_df["confidence"] = (temp_df["support"] - temp_df["full_count"]) / temp_df["support"]
-    yield from zip(
-        temp_df["r"].tolist(),
-        itertools.repeat("anti-symmetry"),
-        temp_df["support"].tolist(),
-        temp_df["confidence"].tolist(),
-    )
+        # anti-symmetry: r(x, y) => !r(y, x)
+        temp_df["confidence"] = (temp_df["support"] - temp_df["full_count"]) / temp_df["support"]
+        yield from zip(
+            temp_df["r"].tolist(),
+            itertools.repeat("anti-symmetry"),
+            temp_df["support"].tolist(),
+            temp_df["confidence"].tolist(),
+        )
 
     # binary patterns
-    logger.info("Checking binary patterns: {inversion}")
-    # inversion: r1(x, y) => r(x, y)
-    temp_df = pandas.merge(
-        left=triple_df.rename(columns=dict(r="r1")),
-        right=triple_df,
-        left_on=["h", "t"],
-        right_on=["t", "h"],
-    ).groupby(by=["r", "r1"]).size().rename("full_count").reset_index()
-    temp_df = pandas.merge(
-        left=support,
-        right=temp_df,
-        on="r",
-    )
-    temp_df["confidence"] = (temp_df["support"] - temp_df["full_count"]) / temp_df["support"]
-    yield from zip(
-        temp_df["r"].tolist(),
-        itertools.repeat("inversion"),
-        temp_df["support"].tolist(),
-        temp_df["confidence"].tolist(),
-    )
+    if "binary" in pattern_types:
+        logger.info("Checking binary patterns: {inversion}")
+        # inversion: r1(x, y) => r(x, y)
+        temp_df = pandas.merge(
+            left=triple_df.rename(columns=dict(r="r1")),
+            right=triple_df,
+            left_on=["h", "t"],
+            right_on=["t", "h"],
+        ).groupby(by=["r", "r1"]).size().rename("full_count").reset_index()
+        temp_df = pandas.merge(
+            left=support,
+            right=temp_df,
+            on="r",
+        )
+        temp_df["confidence"] = (temp_df["support"] - temp_df["full_count"]) / temp_df["support"]
+        yield from zip(
+            temp_df["r"].tolist(),
+            itertools.repeat("inversion"),
+            temp_df["support"].tolist(),
+            temp_df["confidence"].tolist(),
+        )
 
     # ternary patterns
-    logger.info("Checking ternary patterns: {composition}")
-    # composition r1(x, y) & r2(y, z) => r3(x, z)
-    temp_df = pandas.merge(
-        left=triple_df.rename(columns=dict(h="x", r="r1", t="y")),
-        right=triple_df.rename(columns=dict(h="y", r="r2", t="z")),
-        on="y",
-    )
-    support = temp_df.groupby(by=["r1", "r2"]).size().rename(index="support").reset_index()
-    temp_df = pandas.merge(
-        left=temp_df,
-        right=triple_df.rename(columns=dict(h="x", r="r3", t="z")),
-        on=["x", "z"],
-    ).groupby(by=["r1", "r2", "r3"]).size().rename(index="full_count").reset_index()
-    temp_df = pandas.merge(left=support, right=temp_df, on=["r1", "r2"])
-    temp_df["confidence"] = temp_df["full_count"] / temp_df["support"]
-    yield from zip(
-        temp_df["r3"].tolist(),
-        itertools.repeat("composition"),
-        temp_df["support"].tolist(),
-        temp_df["confidence"].tolist(),
-    )
+    if "ternary" in pattern_types:
+        logger.info("Checking ternary patterns: {composition}")
+        # composition r1(x, y) & r2(y, z) => r3(x, z)
+        temp_df = pandas.merge(
+            left=triple_df.rename(columns=dict(h="x", r="r1", t="y")),
+            right=triple_df.rename(columns=dict(h="y", r="r2", t="z")),
+            on="y",
+        )
+        support = temp_df.groupby(by=["r1", "r2"]).size().rename(index="support").reset_index()
+        temp_df = pandas.merge(
+            left=temp_df,
+            right=triple_df.rename(columns=dict(h="x", r="r3", t="z")),
+            on=["x", "z"],
+        ).groupby(by=["r1", "r2", "r3"]).size().rename(index="full_count").reset_index()
+        temp_df = pandas.merge(left=support, right=temp_df, on=["r1", "r2"])
+        temp_df["confidence"] = temp_df["full_count"] / temp_df["support"]
+        yield from zip(
+            temp_df["r3"].tolist(),
+            itertools.repeat("composition"),
+            temp_df["support"].tolist(),
+            temp_df["confidence"].tolist(),
+        )
 
 
 def relation_classification(
@@ -272,6 +279,7 @@ def relation_classification(
     min_support: int = 0,
     min_confidence: float = 0.95,
     drop_confidence: bool = True,
+    pattern_types: Optional[Collection[str]] = None,
 ) -> pandas.DataFrame:
     r"""
     Compute relation classification based on RotatE [...]_.
@@ -314,7 +322,10 @@ def relation_classification(
     df = pandas.DataFrame(
         data=[
             (relation_id, pattern, support, confidence)
-            for (relation_id, pattern, support, confidence) in _relation_classification_pandas(triple_df=triple_df)
+            for (relation_id, pattern, support, confidence) in _relation_classification_pandas(
+                triple_df=triple_df,
+                pattern_types=pattern_types,
+            )
             if support >= min_support and confidence >= min_confidence
         ],
         columns=["relation_id", "pattern", "support", "confidence"],
