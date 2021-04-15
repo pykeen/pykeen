@@ -131,6 +131,3 @@ class RealAnalysisTests(AnalysisTests):
 
     def setUp(self) -> None:
         self.dataset = get_dataset(dataset="fb15k")
-
-    def test_relation_classification_ternary(self):
-        raise SkipTest("Memory error")

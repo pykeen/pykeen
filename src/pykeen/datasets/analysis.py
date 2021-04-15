@@ -3,12 +3,15 @@
 """Dataset analysis utilities."""
 import itertools
 import logging
+from abc import abstractmethod
+from collections import defaultdict
 from operator import itemgetter
 from typing import Collection, Iterable, Optional, Tuple
 
 import numpy
 import pandas
 import torch
+import tqdm.contrib.itertools
 
 from .base import Dataset
 from ..utils import invert_mapping
@@ -179,104 +182,6 @@ def entity_relation_co_occurrence_dataframe(dataset: Dataset) -> pandas.DataFram
     )
 
 
-def _relation_classification_pandas(
-    mapped_triples: torch.LongTensor,
-    pattern_types: Optional[Collection[str]] = None,
-) -> Iterable[Tuple[int, str, int, float]]:
-    """
-    The actual work behind relation classification, built upon pandas.
-
-    .. note ::
-        The implementation is quite memory-intense.
-    """
-    # convert to dataframe
-    triple_df = pandas.DataFrame(data=mapped_triples.numpy(), columns=["h", "r", "t"])
-
-    if pattern_types is None:
-        pattern_types = {"unary", "binary", "ternary"}
-
-    support = triple_df.value_counts(subset=["r"]).rename("support").reset_index()
-
-    # unary patterns
-    if "unary" in pattern_types:
-        logger.info("Checking unary patterns: {symmetry, anti-symmetry}")
-        # symmetry: r(x, y) => r(y, x)
-        temp_df = pandas.merge(
-            left=triple_df,
-            right=triple_df,
-            left_on=["r", "h", "t"],
-            right_on=["r", "t", "h"],
-        ).groupby(by="r").size().rename("full_count").reset_index()
-        temp_df = pandas.merge(
-            left=support,
-            right=temp_df,
-            on="r",
-        )
-        temp_df["confidence"] = temp_df["full_count"] / temp_df["support"]
-        yield from zip(
-            temp_df["r"].tolist(),
-            itertools.repeat("symmetry"),
-            temp_df["support"].tolist(),
-            temp_df["confidence"].tolist(),
-        )
-
-        # anti-symmetry: r(x, y) => !r(y, x)
-        temp_df["confidence"] = (temp_df["support"] - temp_df["full_count"]) / temp_df["support"]
-        yield from zip(
-            temp_df["r"].tolist(),
-            itertools.repeat("anti-symmetry"),
-            temp_df["support"].tolist(),
-            temp_df["confidence"].tolist(),
-        )
-
-    # binary patterns
-    if "binary" in pattern_types:
-        logger.info("Checking binary patterns: {inversion}")
-        # inversion: r1(x, y) => r(x, y)
-        temp_df = pandas.merge(
-            left=triple_df.rename(columns=dict(r="r1")),
-            right=triple_df,
-            left_on=["h", "t"],
-            right_on=["t", "h"],
-        ).groupby(by=["r", "r1"]).size().rename("full_count").reset_index()
-        temp_df = pandas.merge(
-            left=support,
-            right=temp_df,
-            on="r",
-        )
-        temp_df["confidence"] = (temp_df["support"] - temp_df["full_count"]) / temp_df["support"]
-        yield from zip(
-            temp_df["r"].tolist(),
-            itertools.repeat("inversion"),
-            temp_df["support"].tolist(),
-            temp_df["confidence"].tolist(),
-        )
-
-    # ternary patterns
-    if "ternary" in pattern_types:
-        logger.info("Checking ternary patterns: {composition}")
-        # composition r1(x, y) & r2(y, z) => r(x, z)
-        temp_df = pandas.merge(
-            left=triple_df.rename(columns=dict(h="x", r="r1", t="y")),
-            right=triple_df.rename(columns=dict(h="y", r="r2", t="z")),
-            on="y",
-        )
-        support = temp_df.groupby(by=["r1", "r2"]).size().rename(index="support").reset_index()
-        temp_df = pandas.merge(
-            left=temp_df,
-            right=triple_df.rename(columns=dict(h="x", r="r3", t="z")),
-            on=["x", "z"],
-        ).groupby(by=["r1", "r2", "r3"]).size().rename(index="full_count").reset_index()
-        temp_df = pandas.merge(left=support, right=temp_df, on=["r1", "r2"])
-        temp_df["confidence"] = temp_df["full_count"] / temp_df["support"]
-        yield from zip(
-            temp_df["r3"].tolist(),
-            itertools.repeat("composition"),
-            temp_df["support"].tolist(),
-            temp_df["confidence"].tolist(),
-        )
-
-
 def relation_classification(
     dataset: Dataset,
     min_support: int = 0,
@@ -318,20 +223,218 @@ def relation_classification(
         for triples_factory in dataset.factories
     ], dim=0)
 
-    # Get data
-    df = pandas.DataFrame(
-        data=[
-            (relation_id, pattern, support, confidence)
-            for (relation_id, pattern, support, confidence) in _relation_classification_pandas(
+    return PythonRelationCategorizer().categorize(
+        mapped_triples=mapped_triples,
+        min_support=min_support,
+        min_confidence=min_confidence,
+        drop_confidence=drop_confidence,
+        pattern_types=pattern_types,
+    )
+
+
+class RelationCategorizer:
+    """A base class for categorization of relations."""
+
+    def categorize(
+        self,
+        mapped_triples,
+        min_support: int = 0,
+        min_confidence: float = 0.95,
+        drop_confidence: bool = True,
+        pattern_types: Optional[Collection[str]] = None,
+    ):
+        if pattern_types is None:
+            pattern_types = {"unary", "binary", "ternary"}
+        base = []
+        if "unary" in pattern_types:
+            logger.info("Checking unary patterns: {symmetry, anti-symmetry}")
+            base.append(self.unary_categories(
                 mapped_triples=mapped_triples,
-                pattern_types=pattern_types,
-            )
-            if support >= min_support and confidence >= min_confidence
-        ],
-        columns=["relation_id", "pattern", "support", "confidence"],
-    ).sort_values(by=["relation_id", "confidence", "support"])
+            ))
+        if "binary" in pattern_types:
+            base.append(self.binary_categories(
+                mapped_triples=mapped_triples,
+            ))
+        if "ternary" in pattern_types:
+            base.append(self.ternary_categories(
+                mapped_triples=mapped_triples,
+            ))
 
-    if drop_confidence:
-        df = df[["relation_id", "pattern"]].drop_duplicates()
+        # Get data
+        df = pandas.DataFrame(
+            data=[
+                (relation_id, pattern, support, confidence)
+                for (relation_id, pattern, support, confidence) in itertools.chain(*base)
+                if support >= min_support and confidence >= min_confidence
+            ],
+            columns=["relation_id", "pattern", "support", "confidence"],
+        ).sort_values(by=["relation_id", "confidence", "support"])
 
-    return df
+        if drop_confidence:
+            df = df[["relation_id", "pattern"]].drop_duplicates()
+
+        return df
+
+    @abstractmethod
+    def unary_categories(self, mapped_triples) -> Iterable[Tuple[int, str, int, float]]:
+        """Determine symmetry / anti-symmetry patterns."""
+
+    @abstractmethod
+    def binary_categories(self, mapped_triples) -> Iterable[Tuple[int, str, int, float]]:
+        """Determine symmetry / anti-symmetry patterns."""
+
+    @abstractmethod
+    def ternary_categories(self, mapped_triples) -> Iterable[Tuple[int, str, int, float]]:
+        """Determine composition patterns."""
+
+
+class PandasRelationCategorizer(RelationCategorizer):
+
+    def unary_categories(self, mapped_triples) -> Iterable[Tuple[int, str, int, float]]:
+        # convert to dataframe
+        triple_df = pandas.DataFrame(data=mapped_triples.numpy(), columns=["h", "r", "t"])
+        support = triple_df.value_counts(subset=["r"]).rename("support").reset_index()
+
+        # symmetry: r(x, y) => r(y, x)
+        temp_df = pandas.merge(
+            left=triple_df,
+            right=triple_df,
+            left_on=["r", "h", "t"],
+            right_on=["r", "t", "h"],
+        ).groupby(by="r").size().rename("full_count").reset_index()
+        temp_df = pandas.merge(
+            left=support,
+            right=temp_df,
+            on="r",
+        )
+        temp_df["confidence"] = temp_df["full_count"] / temp_df["support"]
+        yield from zip(
+            temp_df["r"].tolist(),
+            itertools.repeat("symmetry"),
+            temp_df["support"].tolist(),
+            temp_df["confidence"].tolist(),
+        )
+
+        # anti-symmetry: r(x, y) => !r(y, x)
+        temp_df["confidence"] = (temp_df["support"] - temp_df["full_count"]) / temp_df["support"]
+        yield from zip(
+            temp_df["r"].tolist(),
+            itertools.repeat("anti-symmetry"),
+            temp_df["support"].tolist(),
+            temp_df["confidence"].tolist(),
+        )
+
+    def binary_categories(self, mapped_triples) -> Iterable[Tuple[int, str, int, float]]:
+        # convert to dataframe
+        triple_df = pandas.DataFrame(data=mapped_triples.numpy(), columns=["h", "r", "t"])
+        support = triple_df.value_counts(subset=["r"]).rename("support").reset_index()
+
+        # inversion: r1(x, y) => r(y, x)
+        temp_df = pandas.merge(
+            left=triple_df.rename(columns=dict(r="r1")),
+            right=triple_df,
+            left_on=["h", "t"],
+            right_on=["t", "h"],
+        ).groupby(by=["r", "r1"]).size().rename("full_count").reset_index()
+        temp_df = pandas.merge(
+            left=support,
+            right=temp_df,
+            on="r",
+        )
+        temp_df["confidence"] = (temp_df["support"] - temp_df["full_count"]) / temp_df["support"]
+        yield from zip(
+            temp_df["r"].tolist(),
+            itertools.repeat("inversion"),
+            temp_df["support"].tolist(),
+            temp_df["confidence"].tolist(),
+        )
+
+    def ternary_categories(self, mapped_triples) -> Iterable[Tuple[int, str, int, float]]:
+        # convert to dataframe
+        triple_df = pandas.DataFrame(data=mapped_triples.numpy(), columns=["h", "r", "t"])
+
+        # composition r1(x, y) & r2(y, z) => r(x, z)
+        temp_df = pandas.merge(
+            left=triple_df.rename(columns=dict(h="x", r="r1", t="y")),
+            right=triple_df.rename(columns=dict(h="y", r="r2", t="z")),
+            on="y",
+        )
+        support = temp_df.groupby(by=["r1", "r2"]).size().rename(index="support").reset_index()
+        temp_df = pandas.merge(
+            left=temp_df,
+            right=triple_df.rename(columns=dict(h="x", r="r3", t="z")),
+            on=["x", "z"],
+        ).groupby(by=["r1", "r2", "r3"]).size().rename(index="full_count").reset_index()
+        temp_df = pandas.merge(left=support, right=temp_df, on=["r1", "r2"])
+        temp_df["confidence"] = temp_df["full_count"] / temp_df["support"]
+        yield from zip(
+            temp_df["r3"].tolist(),
+            itertools.repeat("composition"),
+            temp_df["support"].tolist(),
+            temp_df["confidence"].tolist(),
+        )
+
+
+class PythonRelationCategorizer(RelationCategorizer):
+    def unary_categories(self, mapped_triples) -> Iterable[Tuple[int, str, int, float]]:
+        pairs = defaultdict(set)
+        for h, r, t in mapped_triples.tolist():
+            pairs[r].add((h, t))
+
+        # unary
+        # symmetry: r(x, y) => r(y, x)
+        for r, ht in pairs.items():
+            support = len(ht)
+            rev_ht = {(t, h) for h, t in ht}
+            full_count = len(ht.intersection(rev_ht))
+            confidence = full_count / support
+            yield r, "symmetry", support, confidence
+            yield r, "anti-symmetry", support, 1 - confidence
+
+    def binary_categories(self, mapped_triples) -> Iterable[Tuple[int, str, int, float]]:
+        pairs = defaultdict(set)
+        for h, r, t in mapped_triples.tolist():
+            pairs[r].add((h, t))
+
+        # binary
+        # inversion: r1(x, y) => r(y, x)
+        for r1, r in itertools.combinations(pairs.keys(), r=2):
+            ht1, ht2 = pairs[r1], pairs[r]
+            support = len(ht1)
+            confidence = len(ht1.intersection(ht2)) / support
+            yield r, "inversion", support, confidence
+
+    def ternary_categories(self, mapped_triples) -> Iterable[Tuple[int, str, int, float]]:
+        # ternary
+        # composition r1(x, y) & r2(y, z) => r(x, z)
+        pairs = defaultdict(set)
+        for h, r, t in mapped_triples.tolist():
+            pairs[r].add((h, t))
+        adj = defaultdict(lambda: defaultdict(set))
+        for h, r, t in mapped_triples.tolist():
+            adj[r][h].add(t)
+        ins = defaultdict(set)
+        outs = defaultdict(set)
+        for h, r, t in mapped_triples.tolist():
+            outs[h].add(r)
+            ins[t].add(r)
+        relation_pairs = {
+            (r1, r2)
+            for e, r1s in ins.items()
+            for r1 in r1s
+            for r2 in outs[e]
+        }
+        for r1, r2 in tqdm.tqdm(relation_pairs):
+            ht1 = pairs[r1]
+            zs = adj[r2]
+            lhs = {
+                (x, z)
+                for (x, y) in ht1
+                for z in zs[y]
+            }
+            support = len(lhs)
+            if not support:
+                continue
+            for r, ht in pairs.items():
+                confidence = len(lhs.intersection(ht)) / support
+                yield r, "composition", support, confidence
