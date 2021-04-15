@@ -5,7 +5,7 @@
 import logging
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import DefaultDict, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Union
+from typing import Collection, DefaultDict, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -216,6 +216,52 @@ def _get_ranks(
     return np.asarray(values, dtype=np.float64)
 
 
+def aggregate_ranks(
+    ranks: Mapping[Tuple[str, str], Sequence[float]],
+    ks: Collection[Union[int, float]],
+    num_entities: int,
+) -> Mapping[str, Union[Mapping[str, float], Mapping[str, Mapping[str, float]]]]:
+    """
+    Compute aggregated metrics based on provided ranks.
+
+    :param ranks:
+        The individual ranks, for different sides and rank-types.
+    :param ks:
+        The values for which to compute Hits@k.
+    :param num_entities:
+        The number of entities. Used for resolving relative k values.
+
+    :return:
+        A mapping from rank aggregation names to mappings of side/rank-type to values.
+    """
+    mean_rank: DefaultDict[str, Dict[str, float]] = defaultdict(dict)
+    mean_reciprocal_rank: DefaultDict[str, Dict[str, float]] = defaultdict(dict)
+    hits_at_k: DefaultDict[str, Dict[str, Dict[Union[int, float], float]]] = defaultdict(dict)
+    adjusted_mean_rank: Dict[str, float] = {}
+    for side in SIDES:
+        for rank_type in RANK_TYPES:
+            ranks = _get_ranks(ranks=ranks, side=side, rank_type=rank_type)
+            if len(ranks) < 1:
+                continue
+            hits_at_k[side][rank_type] = {
+                k: np.mean(ranks <= (k if isinstance(k, int) else int(num_entities * k)))
+                for k in ks
+            }
+            mean_rank[side][rank_type] = float(np.mean(ranks))
+            mean_reciprocal_rank[side][rank_type] = float(np.mean(np.reciprocal(ranks)))
+
+        adjusted_ranks = _get_ranks(ranks=ranks, side=side, rank_type=RANK_AVERAGE_ADJUSTED)
+        if len(adjusted_ranks) < 1:
+            continue
+        adjusted_mean_rank[side] = float(np.mean(adjusted_ranks))
+    return dict(
+        adjusted_mean_rank=adjusted_mean_rank,
+        hits_at_k=dict(hits_at_k),
+        mean_rank=dict(mean_rank),
+        mean_reciprocal_rank=dict(mean_reciprocal_rank),
+    )
+
+
 class RankBasedEvaluator(Evaluator):
     r"""A rank-based evaluator for KGE models.
 
@@ -291,45 +337,17 @@ class RankBasedEvaluator(Evaluator):
     ) -> None:  # noqa: D102
         self._update_ranks_(true_scores=true_scores, all_scores=scores, side='head')
 
-    def _get_ranks(self, side, rank_type) -> np.ndarray:
-        if side == 'both':
-            values: List[float] = sum((self.ranks.get((_side, rank_type), []) for _side in ('head', 'tail')), [])
-        else:
-            values = self.ranks.get((side, rank_type), [])
-        return np.asarray(values, dtype=np.float64)
-
     def finalize(self) -> RankBasedMetricResults:  # noqa: D102
-        mean_rank: DefaultDict[str, Dict[str, float]] = defaultdict(dict)
-        mean_reciprocal_rank: DefaultDict[str, Dict[str, float]] = defaultdict(dict)
-        hits_at_k: DefaultDict[str, Dict[str, Dict[Union[int, float], float]]] = defaultdict(dict)
-        adjusted_mean_rank: Dict[str, float] = {}
-
         if self.num_entities is None:
             raise ValueError
 
-        for side in SIDES:
-            for rank_type in RANK_TYPES:
-                ranks = _get_ranks(ranks=self.ranks, side=side, rank_type=rank_type)
-                if len(ranks) < 1:
-                    continue
-                hits_at_k[side][rank_type] = {
-                    k: np.mean(ranks <= (k if isinstance(k, int) else int(self.num_entities * k)))
-                    for k in self.ks
-                }
-                mean_rank[side][rank_type] = np.mean(ranks)
-                mean_reciprocal_rank[side][rank_type] = np.mean(np.reciprocal(ranks))
-
-            adjusted_ranks = _get_ranks(ranks=self.ranks, side=side, rank_type=RANK_AVERAGE_ADJUSTED)
-            if len(adjusted_ranks) < 1:
-                continue
-            adjusted_mean_rank[side] = float(np.mean(adjusted_ranks))
+        rank_aggregations = aggregate_ranks(
+            ranks=self.ranks,
+            ks=self.ks,
+            num_entities=self.num_entities,
+        )
 
         # Clear buffers
         self.ranks.clear()
 
-        return RankBasedMetricResults(
-            mean_rank=dict(mean_rank),
-            mean_reciprocal_rank=dict(mean_reciprocal_rank),
-            hits_at_k=dict(hits_at_k),
-            adjusted_mean_rank=adjusted_mean_rank,
-        )
+        return RankBasedMetricResults(**rank_aggregations)
