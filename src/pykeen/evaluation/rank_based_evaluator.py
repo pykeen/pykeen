@@ -102,7 +102,7 @@ def compute_rank_from_scores(
 @dataclass_json
 @dataclass
 class RankBasedMetricResults(MetricResults):
-    """Results from computing metrics.
+    r"""Results from computing metrics.
 
     Includes results from:
 
@@ -204,7 +204,7 @@ class RankBasedMetricResults(MetricResults):
 
 
 class RankBasedEvaluator(Evaluator):
-    """A rank-based evaluator for KGE models.
+    r"""A rank-based evaluator for KGE models.
 
     Calculates:
 
