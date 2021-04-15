@@ -152,6 +152,7 @@ class RankBasedEvaluatorTests(_AbstractEvaluatorTests, unittest.TestCase):
     ):
         # Check for correct class
         assert isinstance(result, RankBasedMetricResults)
+        result: RankBasedMetricResults
 
         # Check value ranges
         for side, all_type_mr in result.mean_rank.items():
@@ -175,6 +176,18 @@ class RankBasedEvaluatorTests(_AbstractEvaluatorTests, unittest.TestCase):
                     assert 0 < k < self.factory.num_entities
                     assert isinstance(h, float)
                     assert 0 <= h <= 1
+
+        # check adjusted mean rank (AMR)
+        for side, adjusted_mean_rank in result.adjusted_mean_rank.items():
+            assert side in SIDES
+            assert isinstance(adjusted_mean_rank, float)
+            assert 0 < adjusted_mean_rank < 2
+
+        # check adjusted mean rank index (AMRI)
+        for side, adjusted_mean_rank_index in result.adjusted_mean_rank_index.items():
+            assert side in SIDES
+            assert isinstance(adjusted_mean_rank_index, float)
+            assert -1 <= adjusted_mean_rank_index <= 1
 
         # TODO: Validate with data?
 
