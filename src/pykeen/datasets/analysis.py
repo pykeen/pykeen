@@ -386,9 +386,9 @@ class PythonRelationCategorizer(RelationCategorizer):
         for r, ht in pairs.items():
             support = len(ht)
             rev_ht = {(t, h) for h, t in ht}
-            full_count = len(ht.intersection(rev_ht))
-            confidence = full_count / support
+            confidence = len(ht.intersection(rev_ht)) / support
             yield r, "symmetry", support, confidence
+            confidence = len(ht.difference(rev_ht)) / support
             yield r, "anti-symmetry", support, 1 - confidence
 
     def binary_categories(self, mapped_triples) -> Iterable[Tuple[int, str, int, float]]:
