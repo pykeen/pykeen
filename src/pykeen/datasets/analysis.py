@@ -180,7 +180,7 @@ def entity_relation_co_occurrence_dataframe(dataset: Dataset) -> pandas.DataFram
 
 
 def _relation_classification_pandas(
-    triple_df: pandas.DataFrame,
+    mapped_triples: torch.LongTensor,
     pattern_types: Optional[Collection[str]] = None,
 ) -> Iterable[Tuple[int, str, int, float]]:
     """
@@ -189,6 +189,9 @@ def _relation_classification_pandas(
     .. note ::
         The implementation is quite memory-intense.
     """
+    # convert to dataframe
+    triple_df = pandas.DataFrame(data=mapped_triples.numpy(), columns=["h", "r", "t"])
+
     if pattern_types is None:
         pattern_types = {"unary", "binary", "ternary"}
 
@@ -252,7 +255,7 @@ def _relation_classification_pandas(
     # ternary patterns
     if "ternary" in pattern_types:
         logger.info("Checking ternary patterns: {composition}")
-        # composition r1(x, y) & r2(y, z) => r3(x, z)
+        # composition r1(x, y) & r2(y, z) => r(x, z)
         temp_df = pandas.merge(
             left=triple_df.rename(columns=dict(h="x", r="r1", t="y")),
             right=triple_df.rename(columns=dict(h="y", r="r2", t="z")),
@@ -315,15 +318,12 @@ def relation_classification(
         for triples_factory in dataset.factories
     ], dim=0)
 
-    # convert to dataframe
-    triple_df = pandas.DataFrame(data=mapped_triples.numpy(), columns=["h", "r", "t"])
-
     # Get data
     df = pandas.DataFrame(
         data=[
             (relation_id, pattern, support, confidence)
             for (relation_id, pattern, support, confidence) in _relation_classification_pandas(
-                triple_df=triple_df,
+                mapped_triples=mapped_triples,
                 pattern_types=pattern_types,
             )
             if support >= min_support and confidence >= min_confidence
