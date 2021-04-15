@@ -155,18 +155,23 @@ class RankBasedEvaluatorTests(_AbstractEvaluatorTests, unittest.TestCase):
         result: RankBasedMetricResults
 
         # Check value ranges
+        # check mean rank (MR)
         for side, all_type_mr in result.mean_rank.items():
             assert side in SIDES
             for rank_type, mr in all_type_mr.items():
                 assert rank_type in RANK_TYPES
                 assert isinstance(mr, float)
                 assert 1 <= mr <= self.factory.num_entities
+
+        # check mean reciprocal rank (MRR)
         for side, all_type_mrr in result.mean_reciprocal_rank.items():
             assert side in SIDES
             for rank_type, mrr in all_type_mrr.items():
                 assert rank_type in RANK_TYPES
                 assert isinstance(mrr, float)
                 assert 0 < mrr <= 1
+
+        # check hits at k (H@k)
         for side, all_type_hits_at_k in result.hits_at_k.items():
             assert side in SIDES
             for rank_type, hits_at_k in all_type_hits_at_k.items():
