@@ -10,7 +10,7 @@ import numpy
 import pandas
 import torch
 
-from .base import DataSet
+from .base import Dataset
 from ..utils import invert_mapping
 
 SUBSET_LABELS = ('testing', 'training', 'validation', 'total')
@@ -38,7 +38,7 @@ def get_id_counts(
     return total_counts
 
 
-def relation_count_dataframe(dataset: DataSet) -> pandas.DataFrame:
+def relation_count_dataframe(dataset: Dataset) -> pandas.DataFrame:
     """Create a dataframe with relation counts for all subsets, and the full dataset.
 
     Example usage:
@@ -73,7 +73,7 @@ def relation_count_dataframe(dataset: DataSet) -> pandas.DataFrame:
     return df
 
 
-def entity_count_dataframe(dataset: DataSet) -> pandas.DataFrame:
+def entity_count_dataframe(dataset: Dataset) -> pandas.DataFrame:
     """Create a dataframe with head/tail/both counts for all subsets, and the full dataset.
 
     Example usage:
@@ -120,7 +120,7 @@ def entity_count_dataframe(dataset: DataSet) -> pandas.DataFrame:
     return df
 
 
-def entity_relation_co_occurrence_dataframe(dataset: DataSet) -> pandas.DataFrame:
+def entity_relation_co_occurrence_dataframe(dataset: Dataset) -> pandas.DataFrame:
     """Create a dataframe of entity/relation co-occurrence.
 
     This information can be seen as a form of pseudo-typing, e.g. entity A is something which can be a head of
@@ -268,7 +268,7 @@ def _relation_classification_pandas(
 
 
 def relation_classification(
-    dataset: DataSet,
+    dataset: Dataset,
     min_support: int = 0,
     min_confidence: float = 0.95,
     drop_confidence: bool = True,
