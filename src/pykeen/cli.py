@@ -15,7 +15,6 @@ later, but that will cause problems - the code will get executed twice:
 
 import inspect
 import os
-import platform
 import sys
 from typing import Optional
 
@@ -39,7 +38,7 @@ from .trackers import tracker_resolver
 from .training import training_loop_resolver
 from .triples.utils import EXTENSION_IMPORTERS, PREFIX_IMPORTERS
 from .utils import get_until_first_blank
-from .version import get_version
+from .version import env_table
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 
@@ -50,21 +49,10 @@ def main():
 
 
 @main.command()
-def version():
+@click.option('-f', '--tablefmt', default='github', show_default=True)
+def version(tablefmt):
     """Print version information for debugging."""
-    import torch
-    t1 = [
-        ('`os.name`', os.name),
-        ('`platform.system()`', platform.system()),
-        ('`platform.release()`', platform.release()),
-        ('python', f'{sys.version_info[0]}.{sys.version_info[1]}.{sys.version_info[2]}'),
-        ('pykeen', get_version(with_git_hash=True)),
-        ('torch', torch.__version__),
-        ('cuda available', str(torch.cuda.is_available()).lower()),
-        ('cuda', torch.version.cuda),
-        ('cudnn', torch.backends.cudnn.version()),
-    ]
-    click.echo(tabulate(t1, tablefmt='github', headers=['Key', 'Value']))
+    click.echo(env_table(tablefmt))
 
 
 tablefmt_option = click.option('-f', '--tablefmt', default='plain', show_default=True)

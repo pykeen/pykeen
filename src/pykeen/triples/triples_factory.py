@@ -939,6 +939,9 @@ class TriplesFactory(CoreTriplesFactory):
 
         # pre-filter to keep only topk
         uniq, counts = ids.view(-1).unique(return_counts=True)
+
+        # if top is larger than the number of available options
+        top = min(top, uniq.numel())
         top_counts, top_ids = counts.topk(k=top, largest=True)
 
         # generate text
