@@ -82,6 +82,7 @@ class Dataset:
     @property
     def factories(self) -> Tuple[TriplesFactory, TriplesFactory, TriplesFactory]:
         """Return a tuple of three factories in order (training, testing, validation)."""
+        # TODO this isn't used. See also Dataset._tup()
         return self.training, self.testing, self.validation
 
     @property
