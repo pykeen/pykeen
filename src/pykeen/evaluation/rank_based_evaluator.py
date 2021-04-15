@@ -27,8 +27,8 @@ logger = logging.getLogger(__name__)
 RANK_BEST = 'best'
 RANK_WORST = 'worst'
 RANK_AVERAGE = 'avg'
+RANK_EXPECTED = "exp"
 RANK_TYPES = {RANK_BEST, RANK_WORST, RANK_AVERAGE}
-RANK_AVERAGE_ADJUSTED = 'adj'
 SIDES = {'head', 'tail', 'both'}
 
 
@@ -47,7 +47,7 @@ def compute_rank_from_scores(
             'best': best_rank,
             'worst': worst_rank,
             'avg': avg_rank,
-            'adj': adj_rank,
+            'exp': exp_rank,
         }
 
         where
@@ -61,9 +61,8 @@ def compute_rank_from_scores(
         avg_rank:
             The average rank is the average of the best and worst rank, and hence the expected rank over all
             permutations of the elements with the same score as the currently considered option.
-        adj_rank: shape: (batch_size,)
-            The adjusted rank normalises the average rank by the expected rank a random scoring would
-            achieve, which is (#number_of_options + 1)/2
+        exp_rank: shape: (batch_size,)
+            The expected rank a random scoring would achieve, which is (#number_of_options + 1)/2
     """
     # The best rank is the rank when assuming all options with an equal score are placed behind the currently
     # considered. Hence, the rank is the number of options with better scores, plus one, as the rank is one-based.
@@ -85,16 +84,11 @@ def compute_rank_from_scores(
     # The expected rank of a random scoring
     expected_rank = 0.5 * (number_of_options + 1)
 
-    # The adjusted ranks is normalized by the expected rank of a random scoring
-    adjusted_average_rank = average_rank / expected_rank
-    # TODO adjusted_worst_rank
-    # TODO adjusted_best_rank
-
     return {
         RANK_BEST: best_rank,
         RANK_WORST: worst_rank,
         RANK_AVERAGE: average_rank,
-        RANK_AVERAGE_ADJUSTED: adjusted_average_rank,
+        RANK_EXPECTED: expected_rank,
     }
 
 
@@ -312,11 +306,12 @@ class RankBasedEvaluator(Evaluator):
                 mean_rank[side][rank_type] = np.mean(ranks)
                 mean_reciprocal_rank[side][rank_type] = np.mean(np.reciprocal(ranks))
 
-            adjusted_ranks = self._get_ranks(side=side, rank_type=RANK_AVERAGE_ADJUSTED)
-            if len(adjusted_ranks) < 1:
+            expected_ranks = self._get_ranks(side=side, rank_type=RANK_EXPECTED)
+            if len(expected_ranks) < 1:
                 continue
-            adjusted_mean_rank[side] = float(np.mean(adjusted_ranks))
-            adjusted_mean_rank_index[side] = 1.0 - adjusted_mean_rank[side]
+            expected_mean_rank = float(np.mean(expected_ranks))
+            adjusted_mean_rank[side] = mean_rank[side][RANK_AVERAGE] / expected_mean_rank
+            adjusted_mean_rank_index[side] = 1.0 - (mean_rank[side][RANK_AVERAGE] - 1) / (expected_mean_rank - 1)
 
         # Clear buffers
         self.ranks.clear()
