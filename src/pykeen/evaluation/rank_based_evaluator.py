@@ -5,7 +5,7 @@
 import logging
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import DefaultDict, Dict, Iterable, List, Optional, Sequence, Tuple, Union
+from typing import DefaultDict, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -203,6 +203,19 @@ class RankBasedMetricResults(MetricResults):
         return pd.DataFrame(rows, columns=['Side', 'Type', 'Metric', 'Value'])
 
 
+def _get_ranks(
+    ranks: Mapping[Tuple[str, str], Sequence[float]],
+    side: str,
+    rank_type: str,
+) -> np.ndarray:
+    """Utility method to extract ranks as numpy arrays."""
+    if side == 'both':
+        values: List[float] = sum((ranks.get((_side, rank_type), []) for _side in ('head', 'tail')), [])
+    else:
+        values = ranks.get((side, rank_type), [])
+    return np.asarray(values, dtype=np.float64)
+
+
 class RankBasedEvaluator(Evaluator):
     r"""A rank-based evaluator for KGE models.
 
@@ -296,7 +309,7 @@ class RankBasedEvaluator(Evaluator):
 
         for side in SIDES:
             for rank_type in RANK_TYPES:
-                ranks = self._get_ranks(side=side, rank_type=rank_type)
+                ranks = _get_ranks(ranks=self.ranks, side=side, rank_type=rank_type)
                 if len(ranks) < 1:
                     continue
                 hits_at_k[side][rank_type] = {
@@ -306,7 +319,7 @@ class RankBasedEvaluator(Evaluator):
                 mean_rank[side][rank_type] = np.mean(ranks)
                 mean_reciprocal_rank[side][rank_type] = np.mean(np.reciprocal(ranks))
 
-            adjusted_ranks = self._get_ranks(side=side, rank_type=RANK_AVERAGE_ADJUSTED)
+            adjusted_ranks = _get_ranks(ranks=self.ranks, side=side, rank_type=RANK_AVERAGE_ADJUSTED)
             if len(adjusted_ranks) < 1:
                 continue
             adjusted_mean_rank[side] = float(np.mean(adjusted_ranks))
