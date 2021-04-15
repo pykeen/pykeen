@@ -2,16 +2,19 @@
 
 """Implementation of the HolE model."""
 
-from typing import Optional
+from typing import Any, ClassVar, Mapping, Optional
 
 import torch
-import torch.autograd
 
 from ..base import EntityRelationEmbeddingModel
-from ..init import embedding_xavier_uniform_
+from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
+from ...moves import irfft, rfft
+from ...nn.emb import EmbeddingSpecification
+from ...nn.init import xavier_uniform_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
+from ...typing import Constrainer, DeviceHint, Hint, Initializer
 from ...utils import clamp_norm
 
 __all__ = [
@@ -45,47 +48,54 @@ class HolE(EntityRelationEmbeddingModel):
        - `author's implementation of HolE <https://github.com/mnick/holographic-embeddings>`_
        - `scikit-kge implementation of HolE <https://github.com/mnick/scikit-kge>`_
        - OpenKE `implementation of HolE <https://github.com/thunlp/OpenKE/blob/OpenKE-PyTorch/models/TransE.py>`_
+    ---
+    citation:
+        author: Nickel
+        year: 2016
+        link: https://www.aaai.org/ocs/index.php/AAAI/AAAI16/paper/viewFile/12484/11828
+        github: mnick/holographic-embeddings
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default = dict(
-        embedding_dim=dict(type=int, low=50, high=350, q=25),
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
+        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
     )
+
+    #: The default settings for the entity constrainer
+    entity_constrainer_default_kwargs = dict(maxnorm=1., p=2, dim=-1)
 
     def __init__(
         self,
         triples_factory: TriplesFactory,
         embedding_dim: int = 200,
-        automatic_memory_optimization: Optional[bool] = None,
         loss: Optional[Loss] = None,
-        preferred_device: Optional[str] = None,
+        preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
+        entity_initializer: Hint[Initializer] = xavier_uniform_,
+        entity_constrainer: Hint[Constrainer] = clamp_norm,  # type: ignore
+        entity_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
+        relation_initializer: Hint[Constrainer] = xavier_uniform_,
     ) -> None:
         """Initialize the model."""
         super().__init__(
             triples_factory=triples_factory,
-            embedding_dim=embedding_dim,
             loss=loss,
-            automatic_memory_optimization=automatic_memory_optimization,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
+            entity_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                # Initialisation, cf. https://github.com/mnick/scikit-kge/blob/master/skge/param.py#L18-L27
+                initializer=entity_initializer,
+                constrainer=entity_constrainer,
+                constrainer_kwargs=entity_constrainer_kwargs or self.entity_constrainer_default_kwargs,
+            ),
+            relation_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=relation_initializer,
+            ),
         )
-        # Finalize initialization
-        self.reset_parameters_()
-
-    def post_parameter_update(self) -> None:  # noqa: D102
-        # Make sure to call super first
-        super().post_parameter_update()
-
-        # Normalize entity embeddings
-        self.entity_embeddings.weight.data = clamp_norm(x=self.entity_embeddings.weight.data, maxnorm=1., p=2, dim=-1)
-
-    def _reset_parameters_(self):  # noqa: D102
-        # Initialisation, cf. https://github.com/mnick/scikit-kge/blob/master/skge/param.py#L18-L27
-        embedding_xavier_uniform_(self.entity_embeddings)
-        embedding_xavier_uniform_(self.relation_embeddings)
 
     @staticmethod
     def interaction_function(
@@ -108,17 +118,21 @@ class HolE(EntityRelationEmbeddingModel):
             The scores.
         """
         # Circular correlation of entity embeddings
-        a_fft = torch.rfft(h, signal_ndim=1, onesided=True)
-        b_fft = torch.rfft(t, signal_ndim=1, onesided=True)
+        a_fft = rfft(h, dim=-1)
+        b_fft = rfft(t, dim=-1)
 
         # complex conjugate, a_fft.shape = (batch_size, num_entities, d', 2)
-        a_fft[:, :, :, 1] *= -1
+        # compatibility: new style fft returns complex tensor
+        if a_fft.ndimension() > 3:
+            a_fft[:, :, :, 1] *= -1
+        else:
+            a_fft = torch.conj(a_fft)
 
         # Hadamard product in frequency domain
         p_fft = a_fft * b_fft
 
         # inverse real FFT, shape: (batch_size, num_entities, d)
-        composite = torch.irfft(p_fft, signal_ndim=1, onesided=True, signal_sizes=(h.shape[-1],))
+        composite = irfft(p_fft, dim=-1, n=h.shape[-1])
 
         # inner product with relation embedding
         scores = torch.sum(r * composite, dim=-1, keepdim=False)
@@ -126,9 +140,9 @@ class HolE(EntityRelationEmbeddingModel):
         return scores
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(hrt_batch[:, 0]).unsqueeze(dim=1)
-        r = self.relation_embeddings(hrt_batch[:, 1]).unsqueeze(dim=1)
-        t = self.entity_embeddings(hrt_batch[:, 2]).unsqueeze(dim=1)
+        h = self.entity_embeddings(indices=hrt_batch[:, 0]).unsqueeze(dim=1)
+        r = self.relation_embeddings(indices=hrt_batch[:, 1]).unsqueeze(dim=1)
+        t = self.entity_embeddings(indices=hrt_batch[:, 2]).unsqueeze(dim=1)
 
         # Embedding Regularization
         self.regularize_if_necessary(h, r, t)
@@ -138,9 +152,9 @@ class HolE(EntityRelationEmbeddingModel):
         return scores
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(hr_batch[:, 0]).unsqueeze(dim=1)
-        r = self.relation_embeddings(hr_batch[:, 1]).unsqueeze(dim=1)
-        t = self.entity_embeddings.weight.unsqueeze(dim=0)
+        h = self.entity_embeddings(indices=hr_batch[:, 0]).unsqueeze(dim=1)
+        r = self.relation_embeddings(indices=hr_batch[:, 1]).unsqueeze(dim=1)
+        t = self.entity_embeddings(indices=None).unsqueeze(dim=0)
 
         # Embedding Regularization
         self.regularize_if_necessary(h, r, t)
@@ -150,9 +164,9 @@ class HolE(EntityRelationEmbeddingModel):
         return scores
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings.weight.unsqueeze(dim=0)
-        r = self.relation_embeddings(rt_batch[:, 0]).unsqueeze(dim=1)
-        t = self.entity_embeddings(rt_batch[:, 1]).unsqueeze(dim=1)
+        h = self.entity_embeddings(indices=None).unsqueeze(dim=0)
+        r = self.relation_embeddings(indices=rt_batch[:, 0]).unsqueeze(dim=1)
+        t = self.entity_embeddings(indices=rt_batch[:, 1]).unsqueeze(dim=1)
 
         # Embedding Regularization
         self.regularize_if_necessary(h, r, t)

@@ -2,15 +2,17 @@
 
 """Implementation of SimplE."""
 
-from typing import Optional, Tuple, Union
+from typing import Any, ClassVar, Mapping, Optional, Tuple, Type, Union
 
 import torch.autograd
 
 from ..base import EntityRelationEmbeddingModel
+from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss, SoftplusLoss
+from ...nn.emb import Embedding, EmbeddingSpecification
 from ...regularizers import PowerSumRegularizer, Regularizer
 from ...triples import TriplesFactory
-from ...utils import get_embedding, get_embedding_in_canonical_shape
+from ...typing import DeviceHint, Hint, Initializer
 
 __all__ = [
     'SimplE',
@@ -40,22 +42,28 @@ class SimplE(EntityRelationEmbeddingModel):
 
        - Official implementation: https://github.com/Mehran-k/SimplE
        - Improved implementation in pytorch: https://github.com/baharefatemi/SimplE
+    ---
+    citation:
+        author: Kazemi
+        year: 2018
+        link: https://papers.nips.cc/paper/7682-simple-embedding-for-link-prediction-in-knowledge-graphs
+        github: Mehran-k/SimplE
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default = dict(
-        embedding_dim=dict(type=int, low=50, high=350, q=25),
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
+        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
     )
     #: The default loss function class
-    loss_default = SoftplusLoss
+    loss_default: ClassVar[Type[Loss]] = SoftplusLoss
     #: The default parameters for the default loss function class
-    loss_default_kwargs = {}
+    loss_default_kwargs: ClassVar[Mapping[str, Any]] = {}
     #: The regularizer used by [trouillon2016]_ for SimplE
     #: In the paper, they use weight of 0.1, and do not normalize the
     #: regularization term by the number of elements, which is 200.
-    regularizer_default = PowerSumRegularizer
+    regularizer_default: ClassVar[Type[Regularizer]] = PowerSumRegularizer
     #: The power sum settings used by [trouillon2016]_ for SimplE
-    regularizer_default_kwargs = dict(
+    regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = dict(
         weight=20,
         p=2.0,
         normalize=True,
@@ -65,30 +73,37 @@ class SimplE(EntityRelationEmbeddingModel):
         self,
         triples_factory: TriplesFactory,
         embedding_dim: int = 200,
-        automatic_memory_optimization: Optional[bool] = None,
         loss: Optional[Loss] = None,
-        preferred_device: Optional[str] = None,
+        preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
         clamp_score: Optional[Union[float, Tuple[float, float]]] = None,
+        entity_initializer: Hint[Initializer] = None,
+        relation_initializer: Hint[Initializer] = None,
     ) -> None:
         super().__init__(
             triples_factory=triples_factory,
-            embedding_dim=embedding_dim,
-            automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
+            entity_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=entity_initializer,
+            ),
+            relation_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=relation_initializer,
+            ),
         )
 
         # extra embeddings
-        self.tail_entity_embeddings = get_embedding(
+        self.tail_entity_embeddings = Embedding.init_with_device(
             num_embeddings=triples_factory.num_entities,
             embedding_dim=embedding_dim,
             device=self.device,
         )
-        self.inverse_relation_embeddings = get_embedding(
+        self.inverse_relation_embeddings = Embedding.init_with_device(
             num_embeddings=triples_factory.num_relations,
             embedding_dim=embedding_dim,
             device=self.device,
@@ -98,32 +113,33 @@ class SimplE(EntityRelationEmbeddingModel):
             clamp_score = (-clamp_score, clamp_score)
         self.clamp = clamp_score
 
-        # Finalize initialization
-        self.reset_parameters_()
-
     def _reset_parameters_(self):  # noqa: D102
+        super()._reset_parameters_()
         for emb in [
-            self.entity_embeddings,
             self.tail_entity_embeddings,
-            self.relation_embeddings,
             self.inverse_relation_embeddings,
         ]:
             emb.reset_parameters()
 
-    def _score(self, h_ind: torch.LongTensor, r_ind: torch.LongTensor, t_ind: torch.LongTensor) -> torch.FloatTensor:
+    def _score(
+        self,
+        h_indices: Optional[torch.LongTensor],
+        r_indices: Optional[torch.LongTensor],
+        t_indices: Optional[torch.LongTensor],
+    ) -> torch.FloatTensor:  # noqa: D102
         # forward model
-        h = get_embedding_in_canonical_shape(embedding=self.entity_embeddings, ind=h_ind)
-        r = get_embedding_in_canonical_shape(embedding=self.relation_embeddings, ind=r_ind)
-        t = get_embedding_in_canonical_shape(embedding=self.tail_entity_embeddings, ind=t_ind)
+        h = self.entity_embeddings.get_in_canonical_shape(indices=h_indices)
+        r = self.relation_embeddings.get_in_canonical_shape(indices=r_indices)
+        t = self.tail_entity_embeddings.get_in_canonical_shape(indices=t_indices)
         scores = (h * r * t).sum(dim=-1)
 
         # Regularization
         self.regularize_if_necessary(h, r, t)
 
         # backward model
-        h = get_embedding_in_canonical_shape(embedding=self.entity_embeddings, ind=t_ind)
-        r = get_embedding_in_canonical_shape(embedding=self.inverse_relation_embeddings, ind=r_ind)
-        t = get_embedding_in_canonical_shape(embedding=self.tail_entity_embeddings, ind=h_ind)
+        h = self.entity_embeddings.get_in_canonical_shape(indices=t_indices)
+        r = self.inverse_relation_embeddings.get_in_canonical_shape(indices=r_indices)
+        t = self.tail_entity_embeddings.get_in_canonical_shape(indices=h_indices)
         scores = 0.5 * (scores + (h * r * t).sum(dim=-1))
 
         # Regularization
@@ -138,10 +154,10 @@ class SimplE(EntityRelationEmbeddingModel):
         return scores
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._score(h_ind=hrt_batch[:, 0], r_ind=hrt_batch[:, 1], t_ind=hrt_batch[:, 2]).view(-1, 1)
+        return self._score(h_indices=hrt_batch[:, 0], r_indices=hrt_batch[:, 1], t_indices=hrt_batch[:, 2]).view(-1, 1)
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._score(h_ind=hr_batch[:, 0], r_ind=hr_batch[:, 1], t_ind=None)
+        return self._score(h_indices=hr_batch[:, 0], r_indices=hr_batch[:, 1], t_indices=None)
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._score(h_ind=None, r_ind=rt_batch[:, 0], t_ind=rt_batch[:, 1])
+        return self._score(h_indices=None, r_indices=rt_batch[:, 0], t_indices=rt_batch[:, 1])

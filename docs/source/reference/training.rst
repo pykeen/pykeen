@@ -18,7 +18,3 @@ Base Classes
 ------------
 .. autoclass:: pykeen.training.TrainingLoop
    :members:
-
-Lookup
-------
-.. autofunction:: pykeen.training.get_training_loop_cls

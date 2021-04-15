@@ -9,13 +9,31 @@ PyKEEN
 
    installation
    tutorial/first_steps
-   tutorial/byod
+   tutorial/trackers/index
+   tutorial/checkpoints
+   tutorial/translational_toy_example
    tutorial/understanding_evaluation
    tutorial/running_hpo
-   tutorial/using_mlflow
-   tutorial/using_wandb
    tutorial/making_predictions
+   tutorial/running_ablation
    tutorial/performance
+
+.. toctree::
+   :caption: Bring Your Own
+   :name: byo
+   :maxdepth: 2
+
+   byo/data
+   byo/interaction
+
+.. toctree::
+   :caption: Extending PyKEEN
+   :name: extending
+   :maxdepth: 2
+
+   extending/datasets
+   extending/models_new
+   extending/models
 
 .. toctree::
    :caption: Reference
@@ -34,7 +52,13 @@ PyKEEN
    reference/evaluation/index
    reference/negative_sampling
    reference/hpo
+   reference/ablation
    reference/lookup
+   reference/predict
+   reference/sealant
+   reference/constants
+   reference/nn/index
+   reference/utils
 
 .. toctree::
    :caption: Appendix

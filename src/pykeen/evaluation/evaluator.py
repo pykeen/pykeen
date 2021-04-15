@@ -9,16 +9,20 @@ from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from dataclasses import dataclass
 from math import ceil
-from typing import Any, Collection, List, Mapping, Optional, Tuple, Union
+from typing import Any, Collection, Iterable, List, Mapping, Optional, Tuple, Union, cast
 
+import numpy as np
 import torch
-from dataclasses_json import dataclass_json
+from dataclasses_json import DataClassJsonMixin
+from tqdm.autonotebook import tqdm
 
-from ..models.base import Model
-from ..tqdmw import tqdm
-from ..triples.triples_factory import get_unique_entity_ids_from_triples_tensor
+from ..models import Model
+from ..triples.utils import get_entities
 from ..typing import MappedTriples
-from ..utils import is_cuda_oom_error, is_cudnn_error, normalize_string, split_list_in_batches_iter
+from ..utils import (
+    is_cuda_oom_error, is_cudnn_error, is_nonzero_larger_than_maxint_error, normalize_string,
+    split_list_in_batches_iter,
+)
 
 __all__ = [
     'Evaluator',
@@ -39,9 +43,8 @@ def optional_context_manager(condition, context_manager):
         yield
 
 
-@dataclass_json
 @dataclass
-class MetricResults:
+class MetricResults(DataClassJsonMixin):
     """Results from computing metrics."""
 
     def get_metric(self, name: str) -> float:
@@ -65,13 +68,15 @@ class Evaluator(ABC):
         self,
         filtered: bool = False,
         requires_positive_mask: bool = False,
-        batch_size: int = None,
-        slice_size: int = None,
+        batch_size: Optional[int] = None,
+        slice_size: Optional[int] = None,
+        automatic_memory_optimization: bool = True,
     ):
         self.filtered = filtered
         self.requires_positive_mask = requires_positive_mask
         self.batch_size = batch_size
         self.slice_size = slice_size
+        self.automatic_memory_optimization = automatic_memory_optimization
 
     @classmethod
     def get_normalized_name(cls) -> str:
@@ -127,6 +132,7 @@ class Evaluator(ABC):
         slice_size: Optional[int] = None,
         device: Optional[torch.device] = None,
         use_tqdm: bool = True,
+        tqdm_kwargs: Optional[Mapping[str, str]] = None,
         restrict_entities_to: Optional[torch.LongTensor] = None,
         do_time_consuming_checks: bool = True,
     ) -> MetricResults:
@@ -134,24 +140,31 @@ class Evaluator(ABC):
         if mapped_triples is None:
             mapped_triples = model.triples_factory.mapped_triples
 
-        if batch_size is None and model.automatic_memory_optimization:
-            batch_size, slice_size = self.batch_and_slice(
-                model=model,
-                mapped_triples=mapped_triples,
-                batch_size=batch_size,
-                device=device,
-                use_tqdm=False,
-                restrict_entities_to=restrict_entities_to,
-                do_time_consuming_checks=do_time_consuming_checks,
-            )
-            # The batch_size and slice_size should be accessible to outside objects for re-use, e.g. early stoppers.
-            self.batch_size = batch_size
-            self.slice_size = slice_size
+        if batch_size is None and self.automatic_memory_optimization:
+            # Using automatic memory optimization on CPU may result in undocumented crashes due to OS' OOM killer.
+            if model.device.type == 'cpu':
+                logger.info(
+                    "Currently automatic memory optimization only supports GPUs, but you're using a CPU. "
+                    "Therefore, the batch_size will be set to the default value.",
+                )
+            else:
+                batch_size, slice_size = self.batch_and_slice(
+                    model=model,
+                    mapped_triples=mapped_triples,
+                    batch_size=batch_size,
+                    device=device,
+                    use_tqdm=False,
+                    restrict_entities_to=restrict_entities_to,
+                    do_time_consuming_checks=do_time_consuming_checks,
+                )
+                # The batch_size and slice_size should be accessible to outside objects for re-use, e.g. early stoppers.
+                self.batch_size = batch_size
+                self.slice_size = slice_size
 
-            # Clear the ranks from the current evaluator
-            self.finalize()
+                # Clear the ranks from the current evaluator
+                self.finalize()
 
-        return evaluate(
+        rv = evaluate(
             model=model,
             mapped_triples=mapped_triples,
             evaluators=self,
@@ -160,9 +173,12 @@ class Evaluator(ABC):
             device=device,
             squeeze=True,
             use_tqdm=use_tqdm,
+            tqdm_kwargs=tqdm_kwargs,
             restrict_entities_to=restrict_entities_to,
             do_time_consuming_checks=do_time_consuming_checks,
         )
+        # Since squeeze is true, we can expect that evaluate returns a MetricResult, but we need to tell MyPy that
+        return cast(MetricResults, rv)
 
     def batch_and_slice(
         self,
@@ -238,7 +254,7 @@ class Evaluator(ABC):
     def _param_size_search(
         self,
         key: str,
-        start_value: int,
+        start_value: Optional[int],
         model: Model,
         mapped_triples: MappedTriples,
         device: Optional[torch.device] = None,
@@ -256,11 +272,14 @@ class Evaluator(ABC):
             values_dict[key] = start_value
             values_dict['slice_size'] = None
         elif key == 'slice_size':
+            if start_value is None:
+                start_value = ceil(model.num_entities / 2)
             self._check_slicing_availability(model, batch_size=1)
             values_dict[key] = start_value
             values_dict['batch_size'] = 1
         else:
             raise AttributeError(f'The parameter {key} is unknown.')
+
         reached_max = False
         evaluated_once = False
         logger.info(f'Starting {key} search for evaluation now...')
@@ -271,7 +290,6 @@ class Evaluator(ABC):
                 gc.collect()
                 torch.cuda.empty_cache()
                 evaluate(
-                    **values_dict,
                     model=model,
                     mapped_triples=mapped_triples,
                     evaluators=self,
@@ -281,6 +299,8 @@ class Evaluator(ABC):
                     use_tqdm=use_tqdm,
                     restrict_entities_to=restrict_entities_to,
                     do_time_consuming_checks=do_time_consuming_checks,
+                    batch_size=values_dict.get('batch_size'),
+                    slice_size=values_dict.get('slice_size'),
                 )
                 evaluated_once = True
             except RuntimeError as runtime_error:
@@ -291,7 +311,11 @@ class Evaluator(ABC):
                 # The cache of the previous run has to be freed to allow accurate memory availability estimates
                 gc.collect()
                 torch.cuda.empty_cache()
-                if not is_cudnn_error(runtime_error) and not is_cuda_oom_error(runtime_error):
+                if (
+                    not is_cudnn_error(runtime_error)
+                    and not is_cuda_oom_error(runtime_error)
+                    and not is_nonzero_larger_than_maxint_error(runtime_error)
+                ):
                     raise runtime_error
                 if values_dict[key] == 1:
                     logger.debug(
@@ -299,7 +323,8 @@ class Evaluator(ABC):
                     )
                     break
 
-                values_dict[key] //= 2
+                #  values_dict[key] will always be an int at this point
+                values_dict[key] //= 2  # type: ignore
                 reached_max = True
                 if evaluated_once:
                     logger.info(f'Concluded {key} search with batch_size={values_dict[key]}.')
@@ -311,12 +336,12 @@ class Evaluator(ABC):
                 gc.collect()
                 torch.cuda.empty_cache()
                 if not reached_max and values_dict['batch_size'] < maximum_triples:
-                    values_dict[key] *= 2
+                    values_dict[key] *= 2  # type: ignore
                 else:
                     logger.info(f'Concluded {key} search with batch_size={values_dict[key]}.')
                     break
 
-        return values_dict[key], evaluated_once
+        return cast(Tuple[int, bool], (values_dict[key], evaluated_once))
 
     @staticmethod
     def _check_slicing_availability(model: Model, batch_size: int) -> None:
@@ -441,6 +466,7 @@ def evaluate(
     device: Optional[torch.device] = None,
     squeeze: bool = True,
     use_tqdm: bool = True,
+    tqdm_kwargs: Optional[Mapping[str, str]] = None,
     restrict_entities_to: Optional[torch.LongTensor] = None,
     do_time_consuming_checks: bool = True,
 ) -> Union[MetricResults, List[MetricResults]]:
@@ -455,7 +481,8 @@ def evaluate(
     :param model:
         The model to evaluate.
     :param mapped_triples:
-        The triples on which to evaluate.
+        The triples on which to evaluate. The mapped triples should never contain inverse triples - these are created by
+        the model class on the fly.
     :param evaluators:
         An evaluator or a list of evaluators working on batches of triples and corresponding scores.
     :param only_size_probing:
@@ -489,7 +516,7 @@ def evaluate(
 
     # verify that the triples have been filtered
     if restrict_entities_to is not None and do_time_consuming_checks:
-        present_entity_ids = set(get_unique_entity_ids_from_triples_tensor(mapped_triples=mapped_triples).tolist())
+        present_entity_ids = get_entities(triples=mapped_triples)
         unwanted = present_entity_ids.difference(restrict_entities_to.tolist())
         if len(unwanted) > 0:
             raise ValueError(f'mapped_triples contains IDs of entities which are not contained in restrict_entities_to:'
@@ -526,8 +553,10 @@ def evaluate(
 
     # Prepare batches
     if batch_size is None:
-        batch_size = 1
-    batches = split_list_in_batches_iter(input_list=mapped_triples, batch_size=batch_size)
+        # This should be a reasonable default size that works on most setups while being faster than batch_size=1
+        batch_size = 32
+        logger.info(f"No evaluation batch_size provided. Setting batch_size to '{batch_size}'.")
+    batches = cast(Iterable[np.ndarray], split_list_in_batches_iter(input_list=mapped_triples, batch_size=batch_size))
 
     # Show progressbar
     num_triples = mapped_triples.shape[0]
@@ -536,17 +565,17 @@ def evaluate(
     evaluated_once = False
 
     # Disable gradient tracking
-    with optional_context_manager(
-        use_tqdm,
-        tqdm(
-            desc=f'Evaluating on {model.device}',
-            total=num_triples,
-            unit='triple',
-            unit_scale=True,
-            # Choosing no progress bar (use_tqdm=False) would still show the initial progress bar without disable=True
-            disable=not use_tqdm,
-        ),
-    ) as progress_bar, torch.no_grad():
+    _tqdm_kwargs = dict(
+        desc=f'Evaluating on {model.device}',
+        total=num_triples,
+        unit='triple',
+        unit_scale=True,
+        # Choosing no progress bar (use_tqdm=False) would still show the initial progress bar without disable=True
+        disable=not use_tqdm,
+    )
+    if tqdm_kwargs:
+        _tqdm_kwargs.update(tqdm_kwargs)
+    with optional_context_manager(use_tqdm, tqdm(**_tqdm_kwargs)) as progress_bar, torch.no_grad():
         # batch-wise processing
         for batch in batches:
             batch_size = batch.shape[0]
@@ -637,9 +666,9 @@ def _evaluate_batch(
 
     # Predict scores once
     if column == 2:  # tail scores
-        batch_scores_of_corrupted = model.predict_scores_all_tails(batch[:, 0:2], slice_size=slice_size)
+        batch_scores_of_corrupted = model.predict_t(batch[:, 0:2], slice_size=slice_size)
     else:
-        batch_scores_of_corrupted = model.predict_scores_all_heads(batch[:, 1:3], slice_size=slice_size)
+        batch_scores_of_corrupted = model.predict_h(batch[:, 1:3], slice_size=slice_size)
 
     # Select scores of true
     batch_scores_of_true = batch_scores_of_corrupted[

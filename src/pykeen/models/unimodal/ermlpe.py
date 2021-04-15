@@ -2,15 +2,19 @@
 
 """An implementation of the extension to ERMLP."""
 
-from typing import Optional, Type
+from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
 from torch import nn
+from torch.nn.init import uniform_
 
 from ..base import EntityRelationEmbeddingModel
+from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import BCEAfterSigmoidLoss, Loss
+from ...nn.emb import EmbeddingSpecification
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
+from ...typing import DeviceHint, Hint, Initializer
 
 __all__ = [
     'ERMLPE',
@@ -37,20 +41,25 @@ class ERMLPE(EntityRelationEmbeddingModel):
     ConvE can be seen as a special case of ERMLPE that contains the unnecessary inductive bias of convolutional
     filters. The aim of this model is to show that lifting this bias from ConvE (which simply leaves us with a
     modified ERMLP model), not only reduces the number of parameters but also improves performance.
-
+    ---
+    citation:
+        author: Sharifzadeh
+        year: 2019
+        link: https://github.com/pykeen/pykeen
+        github: pykeen/pykeen
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default = dict(
-        embedding_dim=dict(type=int, low=50, high=350, q=25),
-        hidden_dim=dict(type=int, low=50, high=450, q=25),
-        input_dropout=dict(type=float, low=0.0, high=0.8, q=0.1),
-        hidden_dropout=dict(type=float, low=0.0, high=0.8, q=0.1),
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
+        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+        hidden_dim=dict(type=int, low=5, high=9, scale='power_two'),
+        input_dropout=DEFAULT_DROPOUT_HPO_RANGE,
+        hidden_dropout=DEFAULT_DROPOUT_HPO_RANGE,
     )
     #: The default loss function class
-    loss_default: Type[Loss] = BCEAfterSigmoidLoss
+    loss_default: ClassVar[Type[Loss]] = BCEAfterSigmoidLoss
     #: The default parameters for the default loss function class
-    loss_default_kwargs = {}
+    loss_default_kwargs: ClassVar[Mapping[str, Any]] = {}
 
     def __init__(
         self,
@@ -59,27 +68,33 @@ class ERMLPE(EntityRelationEmbeddingModel):
         input_dropout: float = 0.2,
         hidden_dropout: float = 0.3,
         embedding_dim: int = 200,
-        automatic_memory_optimization: Optional[bool] = None,
         loss: Optional[Loss] = None,
-        preferred_device: Optional[str] = None,
+        preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
+        entity_initializer: Hint[Initializer] = uniform_,
+        relation_initializer: Hint[Initializer] = uniform_,
     ) -> None:
         super().__init__(
             triples_factory=triples_factory,
-            embedding_dim=embedding_dim,
-            automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
+            entity_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=entity_initializer,
+            ),
+            relation_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=relation_initializer,
+            ),
         )
         self.hidden_dim = hidden_dim
-        self.input_dropout = input_dropout
 
         self.linear1 = nn.Linear(2 * self.embedding_dim, self.hidden_dim)
         self.linear2 = nn.Linear(self.hidden_dim, self.embedding_dim)
-        self.input_dropout = nn.Dropout(self.input_dropout)
+        self.input_dropout = nn.Dropout(input_dropout)
         self.bn1 = nn.BatchNorm1d(self.hidden_dim)
         self.bn2 = nn.BatchNorm1d(self.embedding_dim)
         self.mlp = nn.Sequential(
@@ -93,12 +108,8 @@ class ERMLPE(EntityRelationEmbeddingModel):
             nn.ReLU(),
         )
 
-        # Finalize initialization
-        self.reset_parameters_()
-
     def _reset_parameters_(self):  # noqa: D102
-        self.entity_embeddings.reset_parameters()
-        self.relation_embeddings.reset_parameters()
+        super()._reset_parameters_()
         for module in [
             self.linear1,
             self.linear2,
@@ -109,9 +120,9 @@ class ERMLPE(EntityRelationEmbeddingModel):
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(hrt_batch[:, 0]).view(-1, self.embedding_dim)
-        r = self.relation_embeddings(hrt_batch[:, 1]).view(-1, self.embedding_dim)
-        t = self.entity_embeddings(hrt_batch[:, 2])
+        h = self.entity_embeddings(indices=hrt_batch[:, 0]).view(-1, self.embedding_dim)
+        r = self.relation_embeddings(indices=hrt_batch[:, 1]).view(-1, self.embedding_dim)
+        t = self.entity_embeddings(indices=hrt_batch[:, 2])
 
         # Embedding Regularization
         self.regularize_if_necessary(h, r, t)
@@ -131,9 +142,9 @@ class ERMLPE(EntityRelationEmbeddingModel):
         return x
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(hr_batch[:, 0]).view(-1, self.embedding_dim)
-        r = self.relation_embeddings(hr_batch[:, 1]).view(-1, self.embedding_dim)
-        t = self.entity_embeddings.weight.transpose(1, 0)
+        h = self.entity_embeddings(indices=hr_batch[:, 0]).view(-1, self.embedding_dim)
+        r = self.relation_embeddings(indices=hr_batch[:, 1]).view(-1, self.embedding_dim)
+        t = self.entity_embeddings(indices=None).transpose(1, 0)
 
         # Embedding Regularization
         self.regularize_if_necessary(h, r, t)
@@ -151,9 +162,9 @@ class ERMLPE(EntityRelationEmbeddingModel):
         return x
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings.weight
-        r = self.relation_embeddings(rt_batch[:, 0]).view(-1, self.embedding_dim)
-        t = self.entity_embeddings(rt_batch[:, 1]).view(-1, self.embedding_dim)
+        h = self.entity_embeddings(indices=None)
+        r = self.relation_embeddings(indices=rt_batch[:, 0]).view(-1, self.embedding_dim)
+        t = self.entity_embeddings(indices=rt_batch[:, 1]).view(-1, self.embedding_dim)
 
         # Embedding Regularization
         self.regularize_if_necessary(h, r, t)

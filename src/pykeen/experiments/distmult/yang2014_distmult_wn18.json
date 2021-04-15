@@ -1,13 +1,16 @@
 {
   "metadata": {
-    "title": "Learn WN18 Data Set with DistMult as described by Yang et al., 2014",
+    "title": "Learn WN18 Dataset with DistMult as described by Yang et al., 2014",
     "comments": "For each positive triple, DistMult create two negatives where head and tail are corrupted"
   },
   "pipeline": {
     "dataset": "wn18",
     "model": "DistMult",
     "model_kwargs": {
-      "embedding_dim": 100
+      "embedding_dim": 100,
+      "entity_initializer": "xavier_uniform",
+      "relation_initializer": "xavier_uniform",
+      "entity_constrainer": "normalize"
     },
     "regularizer": "Lp",
     "regularizer_kwargs": {

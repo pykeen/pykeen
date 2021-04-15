@@ -3,7 +3,7 @@
 """Implementation of wrapper around sklearn metrics."""
 
 from dataclasses import dataclass, field, fields
-from typing import Optional
+from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 import torch
@@ -68,8 +68,16 @@ class SklearnMetricResults(MetricResults):
 class SklearnEvaluator(Evaluator):
     """An evaluator that uses a Scikit-learn metric."""
 
-    def __init__(self):
-        super().__init__(filtered=False, requires_positive_mask=True)
+    all_scores: Dict[Tuple[Any, ...], np.ndarray]
+    all_positives: Dict[Tuple[Any, ...], np.ndarray]
+
+    def __init__(self, automatic_memory_optimization: bool = True, **kwargs):
+        super().__init__(
+            filtered=False,
+            requires_positive_mask=True,
+            automatic_memory_optimization=automatic_memory_optimization,
+            **kwargs,
+        )
         self.all_scores = {}
         self.all_positives = {}
 
