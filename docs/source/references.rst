@@ -42,3 +42,6 @@ References
 
 .. [balazevic2019b] Balažević, I., Allen, C., & Hospedales, T. (2019). `Multi-relational Poincaré Graph
    Embeddings <http://arxiv.org/abs/1905.09791>`_.
+
+.. [fuhr2018] Fuhr, N. (2018). `Some Common Mistakes In IR Evaluation, And How They Can Be Avoided
+   <https://doi.org/10.1145/3190580.3190586>`_. SIGIR Forum, 51(3), 32–41.

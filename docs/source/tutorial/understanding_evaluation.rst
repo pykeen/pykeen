@@ -34,34 +34,77 @@ number.
 
 Rank-Based Metrics
 ~~~~~~~~~~~~~~~~~~
-Mean Rank (MR)
-**************
-The Mean Rank (MR)
+Given the set of individual rank scores $\mathcal{I}$, the following scores are commonly used as aggregation.
 
-It lies on the range $[0.0, \infty)$ where closer to 0 is better.
+Hits @ K
+********
+The hits @ k describes the fraction of true entities that appear in the first $k$ entities of the sorted rank list.
+It is given as:
+
+.. math::
+
+    \text{hits @ k} = \frac{|\{r \in \mathcal{I} \mid r \leq k\}|}{|\mathcal{I}|}
+
+For example, if Google shows 20 results on the first page, then the percentage of results that are relevant is the
+hits @ 20. The hits @ k, regardless of $k$, lies on the $[0.0, 1.0]$ where closer to 1 is better.
+
+.. warning::
+
+    This metric does not differentiate between cases when the rank is larger than $k$.
+    This means that a miss with rank $k+1$ and $k+d$ where $d \gg 1$ have the same
+    effect on the final score. Therefore, it is less suitable for the comparison of different
+    models.
+
+Mean Rank
+*********
+The mean rank (MR) computes the arithmetic mean over all individual ranks. It is given as:
+
+.. math::
+
+    \text{MR} =\frac{1}{|\mathcal{I}|} \sum \limits_{r \in \mathcal{I}} r
+
+It has the advantage over hits @ k that it is sensitive to any model performance changes, not only what occurs
+under a certain cutoff and therefore reflects average performance. It the mean rank lies on the
+range $[0.0, \infty)$ where closer to 0 is better.
+
+.. warning::
+
+    While it remains interpretable, the mean rank is dependent on the number of candidates.
+    A mean rank of 10 might indicate strong performance for a candidate set size of 1,000,000,
+    but incredibly poor performance for a candidate set size of 20.
 
 Adjusted Mean Rank
 ******************
-The Adjusted Mean Rank (AMR) was introduced by [berrendorf2020]_.
+The adjusted mean rank (AMR) was introduced by [berrendorf2020]_.
 
 It lies on the range $[0.0, 2.0]$ where closer to 0 is better.
 
 Adjusted Mean Rank Index
 ************************
-The Adjusted Mean Rank Index (AMRI) was introduced by [berrendorf2020]_ to make the AMR
+The adjusted mean rank index (AMRI) was introduced by [berrendorf2020]_ to make the AMR
 more intuitive.
 
 It lies on the range $[-1.0, 1.0]$ where closer to 1 is better.
 
 Mean Reciprocal Rank
 ********************
-The Mean Reciprocal Rank (MRR) with range $(0.0, 1.0]$ where closer to 1 is better
+The mean reciprocal rank (MRR) is the inverse of the harmonic mean of the ranks. It is defined as:
 
-Hits @ K
-********
-Hits @ K
+.. math::
 
-It lies on the range $[0.0, 1.0]$ where closer to 1 is better.
+    \text{MRR} =\frac{1}{|\mathcal{I}|} \sum_{r \in \mathcal{I}} \frac{1}{r}
+
+.. warning::
+
+    The mean reciprocal rank has been shown to have serious flaws by [fuhr2018]_. Do **not** rely on it in your work.
+    It is only implemented and reported in PyKEEN for posterity.
+
+Despite its flaws, MRR is still often used during early stopping due to its behavior related to low rank values.
+While the hits @ k ignores changes among high rank values completely and the mean rank changes uniformly
+across the full value range, the mean reciprocal rank is more affected by changes of low rank values than high ones
+(without disregarding them completely like hits @ k does for low rank values)
+Therefore, it can be considered as soft a version of hits @ k that is less sensitive to outliers.
+It is bound on $(0, 1]$.
 
 Ranking Types
 ~~~~~~~~~~~~~
