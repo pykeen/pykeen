@@ -439,6 +439,7 @@ class DummyEvaluator(Evaluator):
             mean_rank=self.counter,
             mean_reciprocal_rank=None,
             adjusted_mean_rank=None,
+            adjusted_mean_rank_index=None,
             hits_at_k=dict(),
         )
 
