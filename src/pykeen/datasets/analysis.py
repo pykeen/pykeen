@@ -383,6 +383,7 @@ class PythonRelationCategorizer(RelationCategorizer):
 
         # unary
         # symmetry: r(x, y) => r(y, x)
+        # anti-symmetry r(x, y) => !r(x, y)
         for r, ht in pairs.items():
             support = len(ht)
             rev_ht = {(t, h) for h, t in ht}
