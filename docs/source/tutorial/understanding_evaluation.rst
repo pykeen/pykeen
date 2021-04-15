@@ -1,5 +1,5 @@
-Understanding the Evaluation
-============================
+Understanding Rank-Based Evaluation
+===================================
 This part of the tutorial is aimed to help you understand the evaluation of knowledge graph embeddings.
 In particular it explains rank-based evaluation metrics reported in :class:`pykeen.evaluation.RankBasedMetricResults`.
 
@@ -24,8 +24,6 @@ triple :math:`(h, r, t) \in \mathcal{T}_{eval}` in this set, two tasks are solve
     relation, and then performing a matrix multiplication with the matrix of all entity embeddings.
     # TODO: Link to section explaining this concept.
 
-Rank-Based Evaluation
----------------------
 In the rank-based evaluation protocol, the scores are used to sort the list of possible choices by decreasing score,
 and determine the *rank* of the true choice, i.e. the index in the sorted list. Smaller ranks indicate better
 performance. Based on these individual ranks, which are obtained for each evaluation triple and each side of the
@@ -43,7 +41,7 @@ It is given as:
 
 .. math::
 
-    \text{hits @ k} = \frac{|\{r \in \mathcal{I} \mid r \leq k\}|}{|\mathcal{I}|}
+    \text{score}_k = \frac{1}{|\mathcal{I}|} \sum \limits_{r \in \mathcal{I}} \mathbb{I}[r \leq k]
 
 For example, if Google shows 20 results on the first page, then the percentage of results that are relevant is the
 hits @ 20. The hits @ k, regardless of $k$, lies on the $[0.0, 1.0]$ where closer to 1 is better.
@@ -61,7 +59,7 @@ The mean rank (MR) computes the arithmetic mean over all individual ranks. It is
 
 .. math::
 
-    \text{MR} =\frac{1}{|\mathcal{I}|} \sum \limits_{r \in \mathcal{I}} r
+    \text{score} =\frac{1}{|\mathcal{I}|} \sum \limits_{r \in \mathcal{I}} r
 
 It has the advantage over hits @ k that it is sensitive to any model performance changes, not only what occurs
 under a certain cutoff and therefore reflects average performance. It the mean rank lies on the
@@ -75,7 +73,11 @@ range $[0.0, \infty)$ where closer to 0 is better.
 
 Adjusted Mean Rank
 ******************
-The adjusted mean rank (AMR) was introduced by [berrendorf2020]_.
+The adjusted mean rank (AMR) was introduced by [berrendorf2020]_. It is defined as
+
+.. math::
+
+    \text{score} = \frac{MR}{\mathbb{E}\left[MR\right]} = \frac{2 \sum_{i=1}^{n} r_{i}}{\sum_{i=1}^{n} (|\mathcal{S}_i|+1)}
 
 It lies on the range $[0.0, 2.0]$ where closer to 0 is better.
 
@@ -84,7 +86,11 @@ Adjusted Mean Rank Index
 The adjusted mean rank index (AMRI) was introduced by [berrendorf2020]_ to make the AMR
 more intuitive.
 
-It lies on the range $[-1.0, 1.0]$ where closer to 1 is better.
+.. math::
+
+    \text{score} = 1 - \frac{MR - 1}{\mathbb{E}\left[MR - 1\right]} = \frac{2 \sum_{i=1}^{n} (r_{i} - 1)}{\sum_{i=1}^{n} (|\mathcal{S}_i|)}
+
+The AMR has a bounded value range of $[-1, 1]$ where closer to 1 is better.
 
 Mean Reciprocal Rank
 ********************
@@ -92,7 +98,7 @@ The mean reciprocal rank (MRR) is the inverse of the harmonic mean of the ranks.
 
 .. math::
 
-    \text{MRR} =\frac{1}{|\mathcal{I}|} \sum_{r \in \mathcal{I}} \frac{1}{r}
+    \text{score} =\frac{1}{|\mathcal{I}|} \sum_{r \in \mathcal{I}} r^{-1}
 
 .. warning::
 
@@ -104,7 +110,7 @@ While the hits @ k ignores changes among high rank values completely and the mea
 across the full value range, the mean reciprocal rank is more affected by changes of low rank values than high ones
 (without disregarding them completely like hits @ k does for low rank values)
 Therefore, it can be considered as soft a version of hits @ k that is less sensitive to outliers.
-It is bound on $(0, 1]$.
+It is bound on $(0, 1]$ where closer to 1 is better.
 
 Ranking Types
 ~~~~~~~~~~~~~
