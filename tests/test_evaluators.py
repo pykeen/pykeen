@@ -264,7 +264,8 @@ class EvaluatorUtilsTests(unittest.TestCase):
         assert avg_rank.shape == (batch_size,)
         assert (avg_rank == exp_avg_rank).all(), (avg_rank, exp_avg_rank)
 
-        adj_rank = ranks.get('adj')
+        adj_rank = ranks.get('exp')
+        assert adj_rank is not None
         assert adj_rank.shape == (batch_size,)
         assert (adj_rank == exp_adj_rank).all(), (adj_rank, exp_adj_rank)
 
