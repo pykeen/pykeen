@@ -3,7 +3,7 @@
 """The easiest way to optimize a model is with the :func:`pykeen.hpo.hpo_pipeline` function.
 
 All of the following examples are about getting the best model
-when training TransE on the Nations data set. Each gives a bit
+when training TransE on the Nations dataset. Each gives a bit
 of insight into usage of the :func:`hpo_pipeline` function.
 
 The minimal usage of the hyper-parameter optimization is to specify the
@@ -28,21 +28,37 @@ as many trials as possible will be run in 60 seconds.
 ...    model='TransE',
 ... )
 
-Every model in PyKEEN not only has default hyper-parameters, but default
-strategies for optimizing these hyper-parameters. While the default values can
-be found in the ``__init__()`` function of each model, the ranges/scales can be
+Every model in PyKEEN has default values for its hyper-parameters chosen from the best-reported values in each model's
+original paper unless otherwise stated on the model's reference page. In case hyper-parameters for a model for a
+specific dataset were not available, we choose the hyper-parameters based on the findings in our
+large-scale benchmarking [ali2020a]_.
+
+
+In addition to reasonable default hyper-parameters, every model in PyKEEN has
+default "strategies" for optimizing these hyper-parameters which either constitute
+ranges for integer/floating point numbers or as enumerations for categorical variables
+and booleans.
+
+While the default values for hyper-parameters are encoded with the python syntax
+for default values of the ``__init__()`` function of each model, the ranges/scales can be
 found in the class variable :py:attr:`pykeen.models.Model.hpo_default`. For
 example, the range for TransE's embedding dimension is set to optimize
 between 50 and 350 at increments of 25 in :py:attr:`pykeen.models.TransE.hpo_default`.
 TransE also has a scoring function norm that will be optimized by a categorical
 selection of {1, 2} by default.
 
-All hyper-parameters defined in the ``hpo_default`` of your chosen Model will be
+.. note ::
+
+   These hyper-parameter ranges were chosen as reasonable defaults for the benchmark
+   datasets FB15k-237 / WN18RR. When using different datasets, the ranges might be suboptimal.
+
+All hyper-parameters defined in the ``hpo_default`` of your chosen model will be
 optimized by default. If you already have a value that you're happy with for
 one of them, you can specify it with the ``model_kwargs`` attribute. In the
 following example, the ``embedding_dim`` for a TransE model is fixed at 200,
-while the rest of the parameters will be optimized. For TransE, that means that
-the scoring function norm will be optimized between 1 and 2.
+while the rest of the parameters will be optimized using the pre-defined HPO strategies in
+the model. For TransE, that means that the scoring function norm will be optimized
+as 1 or 2.
 
 >>> from pykeen.hpo import hpo_pipeline
 >>> hpo_pipeline_result = hpo_pipeline(
@@ -65,7 +81,7 @@ size (``q``), such that 100, 200, 300, 400, and 500 are searched.
 ...     dataset='Nations',
 ...     model='TransE',
 ...     model_kwargs_ranges=dict(
-...         embedding_dim=dict(type=int, low=100, high=400, q=100),
+...         embedding_dim=dict(type=int, low=100, high=500, q=100),
 ...     ),
 ... )
 
@@ -96,8 +112,7 @@ explicitly sets the margin to `0.0` in  :py:attr:`pykeen.models.DistMultLiteral.
 
 Unlike the model's hyper-parameters, the models don't store the strategies for
 optimizing the loss functions' hyper-parameters. The pre-configured strategies
-are stored in :py:attr:`pykeen.losses.losses_hpo_defaults`. Currently, this
-list only has a strategy for optimizing margin raking loss.
+are stored in the loss function's class variable :py:attr:`pykeen.models.Loss.hpo_default`.
 
 However, similarily to how you would specify ``model_kwargs_ranges``, you can
 specify the ``loss_kwargs_ranges`` explicitly, as in the following example.
@@ -112,8 +127,6 @@ specify the ``loss_kwargs_ranges`` explicitly, as in the following example.
 ...        margin=dict(type=float, low=1.0, high=2.0),
 ...    ),
 ... )
-
-.. warning:: In the future, all losses will be re-implemented and the strategies will be stored the same as models.
 
 Optimizing the Regularizer
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -156,7 +169,7 @@ Early Stopping
 ~~~~~~~~~~~~~~
 Early stopping can be baked directly into the :mod:`optuna` optimization.
 
-The important keys are ``stopping='early'`` and ``stopper_kwargs``.
+The important keys are ``stopper='early'`` and ``stopper_kwargs``.
 When using early stopping, the :func:`hpo_pipeline` automatically takes
 care of adding appropriate callbacks to interface with :mod:`optuna`.
 
@@ -166,7 +179,7 @@ care of adding appropriate callbacks to interface with :mod:`optuna`.
 ...     dataset='Nations',
 ...     model='TransE',
 ...     stopper='early',
-...     stopper_kwargs=dict(frequency=5, patience=2, delta=0.002),
+...     stopper_kwargs=dict(frequency=5, patience=2, relative_delta=0.002),
 ... )
 
 These stopper kwargs were chosen to make the example run faster. You will
@@ -240,7 +253,7 @@ evaluation, and early stopping settings.
 ...     evaluator_kwargs=dict(filtered=True),
 ...     evaluation_kwargs=dict(batch_size=128),
 ...     stopper='early',
-...     stopper_kwargs=dict(frequency=5, patience=2, delta=0.002),
+...     stopper_kwargs=dict(frequency=5, patience=2, relative_delta=0.002),
 ... )
 
 If you have the configuration as a dictionary:
@@ -265,7 +278,7 @@ If you have the configuration as a dictionary:
 ...         evaluator_kwargs=dict(filtered=True),
 ...         evaluation_kwargs=dict(batch_size=128),
 ...         stopper='early',
-...         stopper_kwargs=dict(frequency=5, patience=2, delta=0.002),
+...         stopper_kwargs=dict(frequency=5, patience=2, relative_delta=0.002),
 ...     )
 ... }
 ... hpo_pipeline_result = hpo_pipeline_from_config(config)
@@ -292,7 +305,7 @@ If you have a configuration (in the same format) in a JSON file:
 ...         evaluator_kwargs=dict(filtered=True),
 ...         evaluation_kwargs=dict(batch_size=128),
 ...         stopper='early',
-...         stopper_kwargs=dict(frequency=5, patience=2, delta=0.002),
+...         stopper_kwargs=dict(frequency=5, patience=2, relative_delta=0.002),
 ...     )
 ... }
 ... with open('config.json', 'w') as file:

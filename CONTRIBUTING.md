@@ -6,7 +6,7 @@ the problems the KGE community is currently facing, and has a lot of excited peo
 
 ## Having a Problem? Submit an Issue.
 
-1. Check that you have the latest version of :code:`PyKEEN`
+1. Check that you have the latest version of `pykeen`
 2. Check that StackOverflow hasn't already solved your problem
 3. Go here: https://github.com/pykeen/pykeen/issues
 4. Check that this issue hasn't been solved
@@ -24,50 +24,60 @@ Same drill! Submit an issue and we'll have a nice conversation in the thread.
    https://github.com/pykeen/pykeen
 2. Clone your directory with
 
+    ```shell
     $ git clone https://github.com/<YourUsername>/pykeen
-
-3. Install with :code:`pip`. The flag, :code:`-e`, makes your installation editable, so your changes will be reflected
+    ```
+3. Install with `pip`. The flag, `-e`, makes your installation editable, so your changes will be reflected
    automatically in your installation.
 
+    ```shell
     $ cd pykeen
     $ python3 -m pip install -e .
+    ```
+4. Make a branch off of the master branch, then make contributions! This line makes a new branch and checks it out
 
-4. Make a branch off of develop, then make contributions! This line makes a new branch and checks it out
-
+    ```shell
     $ git checkout -b feature/<YourFeatureName>
+    ```
+5. This project should be well tested, so write unit tests in the `tests/` directory
+6. Check that all tests are passing and code coverage is good with `tox` before committing.
 
-5. This project should be well tested, so write unit tests in the :code:`tests/` directory
-6. Check that all tests are passing and code coverage is good with :code:`tox` before committing.
-
+    ```shell
     $ tox
-
+    ```
 ## Pull Requests
 
 Once you've got your feature or bugfix finished (or if its in a partially complete state but you want to publish it
-for comment), push it to your fork of the repository and open a pull request against the develop branch on GitHub.
+for comment), push it to your fork of the repository and open a pull request against the master branch on GitHub.
 
 Make a descriptive comment about your pull request, perhaps referencing the issue it is meant to fix (something along
 the lines of "fixes issue #10" will cause GitHub to automatically link to that issue). The maintainers will review your
-pull request and perhaps make comments about it, request changes, or may pull it in to the develop branch! If you need
+pull request and perhaps make comments about it, request changes, or may pull it in to the master branch! If you need
 to make changes to your pull request, simply push more commits to the feature branch in your fork to GitHub and they
 will automatically be added to the pull. You do not need to close and reissue your pull request to make changes!
 
-If you spend a while working on your changes, further commits may be made to the main :code:`PyKEEN` repository (called
+If you spend a while working on your changes, further commits may be made to the main `pykeen` repository (called
 "upstream") before you can make your pull request. In keep your fork up to date with upstream by pulling the
 changes--if your fork has diverged too much, it becomes difficult to properly merge pull requests without conflicts.
 
 To pull in upstream changes::
 
+    ```shell
     $ git remote add upstream https://github.com/pykeen
-    $ git fetch upstream develop
+    $ git fetch upstream maser
+    ```
 
 Check the log to make sure the upstream changes don't affect your work too much::
 
-    $ git log upstream/develop
+    ```shell
+    $ git log upstream/master
+    ```
 
 Then merge in the new changes::
 
-    $ git merge upstream/develop
+    ```shell
+    $ git merge upstream/master
+    ```
 
 More information about this whole fork-pull-merge process can be found `here on Github's
 website <https://help.github.com/articles/fork-a-repo/>`_.

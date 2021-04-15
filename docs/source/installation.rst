@@ -16,6 +16,31 @@ source on `GitHub <https://github.com/pykeen/pykeen>`_ with:
 
     $ pip install git+https://github.com/pykeen/pykeen.git
 
+Google Colab Users
+------------------
+After opening a notebook at https://colab.research.google.com, you should start your notebook with
+the following two lines:
+
+.. code-block:: bash
+
+    ! pip install git+https://github.com/pykeen/pykeen.git
+    pykeen.env()
+
+This will install the latest code, then output all of the system information via :func:`pykeen.env`.
+It works becuase Jupyter interprets any line beginning with a bang ``!`` that the remainder of the
+line should be interpreted as a bash command. If you want to make your notebook compatible on both
+Colab and local installations, change it slightly to check if PyKEEN is already installed:
+
+.. code-block:: bash
+
+    ! python -c "import pykeen" || pip install git+https://github.com/pykeen/pykeen.git
+    pykeen.env()
+
+If you're having trouble with imports related to the plugin systems, Colab might be caching an
+old version of PyKEEN. You can try adding the ``--upgrade`` flag after ``pip install``.
+
+To enable GPU usage, go to the Runtime -> Change runtime type menu to enable a GPU with your notebook.
+
 Windows Users
 -------------
 We've added experimental support for Windows as of `!95 <https://github.com/pykeen/pykeen/pull/95>`_.

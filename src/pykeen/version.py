@@ -3,15 +3,17 @@
 """Version information for PyKEEN."""
 
 import os
+import sys
 from subprocess import CalledProcessError, check_output  # noqa: S404
 
 __all__ = [
     'VERSION',
     'get_version',
     'get_git_hash',
+    'env',
 ]
 
-VERSION = '1.0.5-dev'
+VERSION = '1.4.1-dev'
 
 
 def get_git_hash() -> str:
@@ -42,6 +44,60 @@ def get_version(with_git_hash: bool = False) -> str:
     :return: The PyKEEN version as well as the git hash, if the parameter with_git_hash was set to true.
     """
     return f'{VERSION}-{get_git_hash()}' if with_git_hash else VERSION
+
+
+def env_table(tablefmt='github', headers=('Key', 'Value')) -> str:
+    """Generate a table describing the environment in which PyKEEN is being run."""
+    import torch
+    import platform
+    from tabulate import tabulate
+    import getpass
+    import time
+    rows = [
+        ('OS', os.name),
+        ('Platform', platform.system()),
+        ('Release', platform.release()),
+        ('User', getpass.getuser()),
+        ('Time', str(time.asctime())),
+        ('Python', f'{sys.version_info[0]}.{sys.version_info[1]}.{sys.version_info[2]}'),
+        ('PyKEEN', get_version(with_git_hash=True)),
+        ('PyTorch', torch.__version__),
+        ('CUDA Available?', str(torch.cuda.is_available()).lower()),
+        ('CUDA Version', torch.version.cuda or 'N/A'),
+        ('cuDNN Version', torch.backends.cudnn.version() or 'N/A'),
+    ]
+    return tabulate(rows, tablefmt=tablefmt, headers=headers)
+
+
+def env_html():
+    """Output the environment table as HTML for usage in Jupyter."""
+    from IPython.display import HTML
+    return HTML(env_table(tablefmt='html'))
+
+
+def env(file=None):
+    """Print the env or output as HTML if in Jupyter.
+
+    :param: The file to print to if not in a Jupyter setting. Defaults to sys.stdout
+    :returns: A :class:`IPython.display.HTML` if in a Jupyter notebook setting, otherwise none.
+    """
+    if _in_jupyter():
+        return env_html()
+    else:
+        print(env_table(), file=file)
+
+
+def _in_jupyter() -> bool:
+    try:
+        get_ipython = sys.modules['IPython'].get_ipython  # type: ignore
+        if 'IPKernelApp' not in get_ipython().config:
+            raise ImportError("console")
+        if 'VSCODE_PID' in os.environ:
+            raise ImportError("vscode")
+    except Exception:
+        return False
+    else:
+        return True
 
 
 if __name__ == '__main__':

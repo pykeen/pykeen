@@ -2,6 +2,7 @@
 
 """Run landmark experiments."""
 
+import json
 import logging
 import os
 import shutil
@@ -195,33 +196,20 @@ def ablation(
 
     A sample file can be run with ``pykeen experiment ablation tests/resources/hpo_complex_nations.json``.
     """
-    from pykeen.ablation import prepare_ablation
+    from pykeen.ablation import ablation_pipeline
 
-    datetime = time.strftime('%Y-%m-%d-%H-%M')
-    directory = os.path.join(directory, f'{datetime}_{uuid4()}')
+    with open(path) as file:
+        config = json.load(file)
 
-    directories = prepare_ablation(path=path, directory=directory, save_artifacts=save_artifacts)
-    if dry_run:
-        return sys.exit(0)
-
-    from pykeen.hpo import hpo_pipeline_from_path
-
-    for output_directory, rv_config_path in directories:
-        hpo_pipeline_result = hpo_pipeline_from_path(rv_config_path)
-        hpo_pipeline_result.save_to_directory(output_directory)
-
-        if not best_replicates:
-            continue
-
-        best_pipeline_dir = os.path.join(output_directory, 'best_pipeline')
-        os.makedirs(best_pipeline_dir, exist_ok=True)
-        click.echo(f'Re-training best pipeline and saving artifacts in {best_pipeline_dir}')
-        hpo_pipeline_result.replicate_best_pipeline(
-            replicates=best_replicates,
-            move_to_cpu=move_to_cpu,
-            save_replicates=not discard_replicates,
-            directory=best_pipeline_dir,
-        )
+    ablation_pipeline(
+        config=config,
+        directory=directory,
+        dry_run=dry_run,
+        best_replicates=best_replicates,
+        save_artifacts=save_artifacts,
+        move_to_cpu=move_to_cpu,
+        discard_replicates=discard_replicates,
+    )
 
 
 if __name__ == '__main__':

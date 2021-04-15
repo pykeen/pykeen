@@ -2,16 +2,19 @@
 
 """An implementation of TransH."""
 
-from typing import Optional
+from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
 from torch.nn import functional
+from torch.nn.init import uniform_
 
 from ..base import EntityRelationEmbeddingModel
+from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
+from ...nn.emb import Embedding, EmbeddingSpecification
 from ...regularizers import Regularizer, TransHRegularizer
 from ...triples import TriplesFactory
-from ...utils import get_embedding
+from ...typing import DeviceHint, Hint, Initializer
 
 __all__ = [
     'TransH',
@@ -46,17 +49,22 @@ class TransH(EntityRelationEmbeddingModel):
     .. seealso::
 
        - OpenKE `implementation of TransH <https://github.com/thunlp/OpenKE/blob/master/models/TransH.py>`_
+    ---
+    citation:
+        author: Wang
+        year: 2014
+        link: https://www.aaai.org/ocs/index.php/AAAI/AAAI14/paper/viewFile/8531/8546
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default = dict(
-        embedding_dim=dict(type=int, low=50, high=300, q=50),
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
+        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
         scoring_fct_norm=dict(type=int, low=1, high=2),
     )
     #: The custom regularizer used by [wang2014]_ for TransH
-    regularizer_default = TransHRegularizer
+    regularizer_default: ClassVar[Type[Regularizer]] = TransHRegularizer
     #: The settings used by [wang2014]_ for TransH
-    regularizer_default_kwargs = dict(
+    regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = dict(
         weight=0.05,
         epsilon=1e-5,
     )
@@ -65,12 +73,14 @@ class TransH(EntityRelationEmbeddingModel):
         self,
         triples_factory: TriplesFactory,
         embedding_dim: int = 50,
-        automatic_memory_optimization: Optional[bool] = None,
-        scoring_fct_norm: int = 1,
+        scoring_fct_norm: int = 2,
         loss: Optional[Loss] = None,
-        preferred_device: Optional[str] = None,
-        random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
+        predict_with_sigmoid: bool = False,
+        preferred_device: DeviceHint = None,
+        random_seed: Optional[int] = None,
+        entity_initializer: Hint[Initializer] = uniform_,
+        relation_initializer: Hint[Initializer] = uniform_,
     ) -> None:
         r"""Initialize TransH.
 
@@ -79,61 +89,59 @@ class TransH(EntityRelationEmbeddingModel):
         """
         super().__init__(
             triples_factory=triples_factory,
-            embedding_dim=embedding_dim,
-            automatic_memory_optimization=automatic_memory_optimization,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
+            predict_with_sigmoid=predict_with_sigmoid,
+            entity_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=entity_initializer,
+            ),
+            relation_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=relation_initializer,
+            ),
         )
 
         self.scoring_fct_norm = scoring_fct_norm
 
         # embeddings
-        self.normal_vector_embeddings = get_embedding(
+        self.normal_vector_embeddings = Embedding.init_with_device(
             num_embeddings=triples_factory.num_relations,
             embedding_dim=embedding_dim,
             device=self.device,
+            # Normalise the normal vectors by their l2 norms
+            constrainer=functional.normalize,
         )
-
-        # Finalize initialization
-        self.reset_parameters_()
-
-    def _reset_parameters_(self):  # noqa: D102
-        for emb in [
-            self.entity_embeddings,
-            self.relation_embeddings,
-            self.normal_vector_embeddings,
-        ]:
-            emb.reset_parameters()
-        # TODO: Add initialization
 
     def post_parameter_update(self) -> None:  # noqa: D102
-        # Make sure to call super first
         super().post_parameter_update()
+        self.normal_vector_embeddings.post_parameter_update()
 
-        # Normalise the normal vectors by their l2 norms
-        functional.normalize(
-            self.normal_vector_embeddings.weight.data,
-            out=self.normal_vector_embeddings.weight.data,
-        )
+    def _reset_parameters_(self):  # noqa: D102
+        super()._reset_parameters_()
+        self.normal_vector_embeddings.reset_parameters()
+        # TODO: Add initialization
 
-    def regularize_if_necessary(self) -> None:
+    def regularize_if_necessary(self, *tensors: torch.FloatTensor) -> None:
         """Update the regularizer's term given some tensors, if regularization is requested."""
+        if tensors:
+            raise ValueError('no tensors should be passed to TransH.regularize_if_necessary')
         # As described in [wang2014], all entities and relations are used to compute the regularization term
         # which enforces the defined soft constraints.
         super().regularize_if_necessary(
-            self.entity_embeddings.weight,
-            self.normal_vector_embeddings.weight,
-            self.relation_embeddings.weight,
+            self.entity_embeddings(indices=None),
+            self.normal_vector_embeddings(indices=None),  # FIXME
+            self.relation_embeddings(indices=None),
         )
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(hrt_batch[:, 0])
-        d_r = self.relation_embeddings(hrt_batch[:, 1])
-        w_r = self.normal_vector_embeddings(hrt_batch[:, 1])
-        t = self.entity_embeddings(hrt_batch[:, 2])
+        h = self.entity_embeddings(indices=hrt_batch[:, 0])
+        d_r = self.relation_embeddings(indices=hrt_batch[:, 1])
+        w_r = self.normal_vector_embeddings(indices=hrt_batch[:, 1])
+        t = self.entity_embeddings(indices=hrt_batch[:, 2])
 
         # Project to hyperplane
         ph = h - torch.sum(w_r * h, dim=-1, keepdim=True) * w_r
@@ -146,10 +154,10 @@ class TransH(EntityRelationEmbeddingModel):
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings(hr_batch[:, 0])
-        d_r = self.relation_embeddings(hr_batch[:, 1])
-        w_r = self.normal_vector_embeddings(hr_batch[:, 1])
-        t = self.entity_embeddings.weight
+        h = self.entity_embeddings(indices=hr_batch[:, 0])
+        d_r = self.relation_embeddings(indices=hr_batch[:, 1])
+        w_r = self.normal_vector_embeddings(indices=hr_batch[:, 1])
+        t = self.entity_embeddings(indices=None)
 
         # Project to hyperplane
         ph = h - torch.sum(w_r * h, dim=-1, keepdim=True) * w_r
@@ -162,11 +170,11 @@ class TransH(EntityRelationEmbeddingModel):
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
-        h = self.entity_embeddings.weight
+        h = self.entity_embeddings(indices=None)
         rel_id = rt_batch[:, 0]
-        d_r = self.relation_embeddings(rel_id)
-        w_r = self.normal_vector_embeddings(rel_id)
-        t = self.entity_embeddings(rt_batch[:, 1])
+        d_r = self.relation_embeddings(indices=rel_id)
+        w_r = self.normal_vector_embeddings(indices=rel_id)
+        t = self.entity_embeddings(indices=rt_batch[:, 1])
 
         # Project to hyperplane
         ph = h[None, :, :] - torch.sum(w_r[:, None, :] * h[None, :, :], dim=-1, keepdim=True) * w_r[:, None, :]

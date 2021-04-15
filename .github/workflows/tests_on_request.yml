@@ -1,0 +1,56 @@
+name: Tests on request
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  CI_commit:
+    if: >-
+      github.event.issue.pull_request &&
+      contains(github.event.comment.body, '@PyKEEN-bot') &&
+      contains(github.event.comment.body, 'test')
+    name: CI commit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log information
+        run: |
+          echo "Comment ${{ github.event.comment }}"
+      - name: Comment on request
+        uses: khan/pull-request-comment-trigger@master
+        id: check
+        with:
+          trigger: '@PyKEEN-bot'
+          reaction: rocket
+        env:
+          GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
+      - uses: actions/github-script@v3
+        id: get-pr
+        with:
+          script: |
+            const request = {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            }
+            core.info(`Getting PR #${request.pull_number} from ${request.owner}/${request.repo}`)
+            try {
+              const result = await github.pulls.get(request)
+              return result.data
+            } catch (err) {
+              core.setFailed(`Request failed with error ${err}`)
+            }
+
+      - name: Set environment
+        uses: actions/checkout@v2
+        if: ${{ success() }}
+        with:
+          repository: ${{ fromJSON(steps.get-pr.outputs.result).head.repo.full_name }}
+          ref: ${{ fromJSON(steps.get-pr.outputs.result).head.ref }}
+          token: ${{ secrets.PyKEEN_BOT }}
+      - name: Push CI commit to Pull Request
+        run: |
+          git config --global user.email "pykeen2019@gmail.com"
+          git config --global user.name "PyKEEN_bot"
+          git commit --allow-empty -m "Trigger CI"
+          git push

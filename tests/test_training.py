@@ -2,6 +2,7 @@
 
 """Test that training loops work correctly."""
 
+import tempfile
 import unittest
 from typing import Optional
 
@@ -10,9 +11,9 @@ from torch import optim
 
 from pykeen.datasets import Nations
 from pykeen.losses import CrossEntropyLoss
-from pykeen.models import ConvE, TransE
-from pykeen.models.base import Model
-from pykeen.training import SLCWATrainingLoop
+from pykeen.models import ConvE, Model, TransE
+from pykeen.optimizers import optimizer_resolver
+from pykeen.training import SLCWATrainingLoop, training_loop_resolver
 from pykeen.training.training_loop import NonFiniteLossError, TrainingApproachLossMismatchError
 from pykeen.typing import MappedTriples
 
@@ -20,8 +21,12 @@ from pykeen.typing import MappedTriples
 class DummyTrainingLoop(SLCWATrainingLoop):
     """A wrapper around SLCWATrainingLoop."""
 
-    def __init__(self, model: Model, sub_batch_size: int):
-        super().__init__(model=model, optimizer=optim.Adam(lr=1.0, params=model.parameters()))
+    def __init__(self, model: Model, sub_batch_size: int, automatic_memory_optimization: bool = False):
+        super().__init__(
+            model=model,
+            optimizer=optim.Adam(lr=1.0, params=model.parameters()),
+            automatic_memory_optimization=automatic_memory_optimization,
+        )
         self.sub_batch_size = sub_batch_size
 
     def _process_batch(
@@ -50,8 +55,12 @@ class DummyTrainingLoop(SLCWATrainingLoop):
 class NaNTrainingLoop(SLCWATrainingLoop):
     """A wrapper around SLCWATrainingLoop returning NaN losses."""
 
-    def __init__(self, model: Model, patience: int):
-        super().__init__(model=model, optimizer=optim.Adam(lr=1.0, params=model.parameters()))
+    def __init__(self, model: Model, patience: int, automatic_memory_optimization: bool = False):
+        super().__init__(
+            model=model,
+            optimizer=optim.Adam(lr=1.0, params=model.parameters()),
+            automatic_memory_optimization=automatic_memory_optimization,
+        )
         self.patience = patience
 
     def _process_batch(
@@ -86,17 +95,33 @@ class TrainingLoopTests(unittest.TestCase):
     def setUp(self) -> None:
         """Instantiate triples factory and model."""
         self.triples_factory = Nations().training
+        self.random_seed = 123
+        self.checkpoint_file = "PyKEEN_training_loop_test_checkpoint.pt"
+        self.num_epochs = 10
+        self.temporary_directory = tempfile.TemporaryDirectory()
+
+    def tearDown(self) -> None:
+        """Tear down the test case."""
+        self.temporary_directory.cleanup()
 
     def test_sub_batching(self):
         """Test if sub-batching works as expected."""
-        model = TransE(triples_factory=self.triples_factory, automatic_memory_optimization=False)
-        training_loop = DummyTrainingLoop(model=model, sub_batch_size=self.sub_batch_size)
+        model = TransE(triples_factory=self.triples_factory)
+        training_loop = DummyTrainingLoop(
+            model=model,
+            sub_batch_size=self.sub_batch_size,
+            automatic_memory_optimization=False,
+        )
         training_loop.train(num_epochs=1, batch_size=self.batch_size, sub_batch_size=self.sub_batch_size)
 
     def test_sub_batching_support(self):
         """Test if sub-batching works as expected."""
-        model = ConvE(triples_factory=self.triples_factory, automatic_memory_optimization=False)
-        training_loop = DummyTrainingLoop(model=model, sub_batch_size=self.sub_batch_size)
+        model = ConvE(triples_factory=self.triples_factory)
+        training_loop = DummyTrainingLoop(
+            model=model,
+            sub_batch_size=self.sub_batch_size,
+            automatic_memory_optimization=False,
+        )
 
         def _try_train():
             """Call train method."""
@@ -117,7 +142,67 @@ class TrainingLoopTests(unittest.TestCase):
         model = TransE(
             triples_factory=self.triples_factory,
             loss=CrossEntropyLoss(),
-            automatic_memory_optimization=False,
         )
         with self.assertRaises(TrainingApproachLossMismatchError):
-            NaNTrainingLoop(model=model, patience=2)
+            NaNTrainingLoop(model=model, patience=2, automatic_memory_optimization=False)
+
+    def test_lcwa_checkpoints(self):
+        """Test whether interrupting the LCWA training loop can be resumed using checkpoints."""
+        self._test_checkpoints(training_loop_type='LCWA')
+
+    def test_slcwa_checkpoints(self):
+        """Test whether interrupting the sLCWA training loop can be resumed using checkpoints."""
+        self._test_checkpoints(training_loop_type='sLCWA')
+
+    def _test_checkpoints(self, training_loop_type: str):
+        """Test whether interrupting the given training loop type can be resumed using checkpoints."""
+        training_loop_class = training_loop_resolver.lookup(training_loop_type)
+
+        # Train a model in one shot
+        model = TransE(
+            triples_factory=self.triples_factory,
+            random_seed=self.random_seed,
+        )
+        optimizer_cls = optimizer_resolver.lookup(None)
+        optimizer = optimizer_cls(params=model.get_grad_params())
+        training_loop = training_loop_class(model=model, optimizer=optimizer, automatic_memory_optimization=False)
+        losses = training_loop.train(
+            num_epochs=self.num_epochs,
+            batch_size=self.batch_size,
+            use_tqdm=False,
+            use_tqdm_batch=False,
+        )
+
+        # Train a model for the first half
+        model = TransE(
+            triples_factory=self.triples_factory,
+            random_seed=self.random_seed,
+        )
+        optimizer_cls = optimizer_resolver.lookup(None)
+        optimizer = optimizer_cls(params=model.get_grad_params())
+        training_loop = training_loop_class(model=model, optimizer=optimizer, automatic_memory_optimization=False)
+        training_loop.train(
+            num_epochs=int(self.num_epochs // 2),
+            batch_size=self.batch_size,
+            checkpoint_name=self.checkpoint_file,
+            checkpoint_directory=self.temporary_directory.name,
+            checkpoint_frequency=0,
+        )
+
+        # Continue training of the first part
+        model = TransE(
+            triples_factory=self.triples_factory,
+            random_seed=123,
+        )
+        optimizer_cls = optimizer_resolver.lookup(None)
+        optimizer = optimizer_cls(params=model.get_grad_params())
+        training_loop = training_loop_class(model=model, optimizer=optimizer, automatic_memory_optimization=False)
+        losses_2 = training_loop.train(
+            num_epochs=self.num_epochs,
+            batch_size=self.batch_size,
+            checkpoint_name=self.checkpoint_file,
+            checkpoint_directory=self.temporary_directory.name,
+            checkpoint_frequency=0,
+        )
+
+        self.assertEqual(losses, losses_2)

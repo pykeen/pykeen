@@ -4,11 +4,12 @@
 
 import json
 import os
+from typing import Sequence, cast
 
 import click
 import numpy as np
 
-from .base import PathDataSet
+from .base import PathDataset
 from ..triples import TriplesFactory
 from ..utils import random_non_negative_int
 
@@ -27,12 +28,12 @@ def main(path: str, directory: str, test_ratios, no_validation: bool, validation
     """Make a dataset from the given triples."""
     os.makedirs(directory, exist_ok=True)
 
-    triples_factory = TriplesFactory(path=path)
+    triples_factory = TriplesFactory.from_path(path=path)
     ratios = test_ratios if no_validation else validation_ratios
 
     if seed is None:
         seed = random_non_negative_int()
-    sub_triples_factories = triples_factory.split(ratios, random_state=seed)
+    sub_triples_factories = cast(Sequence[TriplesFactory], triples_factory.split(ratios, random_state=seed))
 
     for subset_name, subset_tf in zip(LABELS, sub_triples_factories):
         output_path = os.path.join(directory, f'{subset_name}.txt')
@@ -51,7 +52,7 @@ def main(path: str, directory: str, test_ratios, no_validation: bool, validation
         if no_validation:
             click.secho('Can not load as dataset if --no-validation was flagged.', fg='red')
             return
-        d = PathDataSet(
+        d = PathDataset(
             training_path=os.path.join(directory, 'train.txt'),
             testing_path=os.path.join(directory, 'test.txt'),
             validation_path=os.path.join(directory, 'valid.txt'),
