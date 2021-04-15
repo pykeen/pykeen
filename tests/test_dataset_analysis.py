@@ -2,10 +2,12 @@
 import itertools
 import unittest
 from typing import Collection, Optional, Sequence
+from unittest import SkipTest
 
 import pandas
+import pytest
 
-from pykeen.datasets import Nations
+from pykeen.datasets import Nations, get_dataset
 from pykeen.datasets.analysis import (
     SUBSET_LABELS,
     entity_count_dataframe,
@@ -78,9 +80,19 @@ class AnalysisTests(unittest.TestCase):
             list(itertools.product(SUBSET_LABELS, sorted(self.dataset.entity_to_id.keys())))
         )
 
-    def test_relation_classification(self):
-        """Test relation_classification."""
-        df = relation_classification(dataset=self.dataset, drop_confidence=False)
+    def _test_relation_classification(self, pattern_type: str):
+        """Helper method for relation classification"""
+        df = relation_classification(
+            dataset=self.dataset,
+            drop_confidence=False,
+            pattern_types={pattern_type},
+        )
+
+        pattern_types = dict(
+            unary={"symmetry", "anti-symmetry"},
+            binary={"inversion"},
+            ternary={"composition"},
+        )
 
         # check correct type
         assert isinstance(df, pandas.DataFrame)
@@ -89,12 +101,7 @@ class AnalysisTests(unittest.TestCase):
         assert df["relation_id"].isin(self.dataset.relation_to_id.values()).all()
 
         # check relation_id value range
-        assert df["pattern"].isin({
-            "symmetry",
-            "anti-symmetry",
-            "composition",
-            "inversion",
-        }).all()
+        assert df["pattern"].isin(pattern_types[pattern_type]).all()
 
         # check confidence value range
         x = df["confidence"].values
@@ -104,3 +111,26 @@ class AnalysisTests(unittest.TestCase):
         # check support value range
         x = df["support"].values
         assert (1 <= x).all()
+
+    def test_relation_classification_unary(self):
+        """Test relation_classification."""
+        self._test_relation_classification(pattern_type="unary")
+
+    def test_relation_classification_binary(self):
+        """Test relation_classification."""
+        self._test_relation_classification(pattern_type="binary")
+
+    def test_relation_classification_ternary(self):
+        """Test relation_classification."""
+        self._test_relation_classification(pattern_type="ternary")
+
+
+@pytest.mark.slow
+class RealAnalysisTests(AnalysisTests):
+    """Tests on a larger dataset."""
+
+    def setUp(self) -> None:
+        self.dataset = get_dataset(dataset="fb15k")
+
+    def test_relation_classification_ternary(self):
+        raise SkipTest("Memory error")
