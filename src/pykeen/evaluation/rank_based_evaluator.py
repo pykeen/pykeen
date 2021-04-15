@@ -96,16 +96,7 @@ def compute_rank_from_scores(
 @dataclass_json
 @dataclass
 class RankBasedMetricResults(MetricResults):
-    r"""Results from computing metrics.
-
-    Includes results from:
-
-    - Mean Rank (MR) with range $[0.0, \infty)$ where closer to 0 is better
-    - Adjusted Mean Rank (AMR; [berrendorf2020]_) with range $[0.0, 2.0]$ where closer to 0 is better
-    - Adjusted Mean Rank Index (AMRI; [berrendorf2020]_) with range $[-1.0, 1.0]$ where closer to 1 is better
-    - Mean Reciprocal Rank (MRR) with range $(0.0, 1.0]$ where closer to 1 is better
-    - Hits @ K with range $[0.0, 1.0]$ where closer to 1 is better.
-    """
+    r"""Results from computing metrics."""
 
     #: The mean over all ranks: mean_i r_i. Range is $[0.0, inf)$. Lower is better.
     mean_rank: Dict[str, Dict[str, float]] = field(metadata=dict(
@@ -205,13 +196,17 @@ class RankBasedMetricResults(MetricResults):
 class RankBasedEvaluator(Evaluator):
     r"""A rank-based evaluator for KGE models.
 
-    Calculates:
+    Calculates the following metrics:
 
     - Mean Rank (MR) with range $[0.0, \infty)$ where closer to 0 is better
     - Adjusted Mean Rank (AMR; [berrendorf2020]_) with range $[0.0, 2.0]$ where closer to 0 is better
     - Adjusted Mean Rank Index (AMRI; [berrendorf2020]_) with range $[-1.0, 1.0]$ where closer to 1 is better
     - Mean Reciprocal Rank (MRR) with range $(0.0, 1.0]$ where closer to 1 is better
     - Hits @ K with range $[0.0, 1.0]$ where closer to 1 is better.
+
+    .. [berrendorf2020] Berrendorf, *et al.* (2020) `Interpretable and Fair
+        Comparison of Link Prediction or Entity Alignment Methods with Adjusted Mean Rank
+        <https://arxiv.org/abs/2002.06914>`_.
     """
 
     ks: Sequence[Union[int, float]]

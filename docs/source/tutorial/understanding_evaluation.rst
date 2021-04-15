@@ -32,6 +32,37 @@ performance. Based on these individual ranks, which are obtained for each evalua
 prediction (left/right), there exist several aggregation measures to quantify the performance of a model in a single
 number.
 
+Rank-Based Metrics
+~~~~~~~~~~~~~~~~~~
+Mean Rank (MR)
+**************
+The Mean Rank (MR)
+
+It lies on the range $[0.0, \infty)$ where closer to 0 is better.
+
+Adjusted Mean Rank
+******************
+The Adjusted Mean Rank (AMR) was introduced by [berrendorf2020]_.
+
+It lies on the range $[0.0, 2.0]$ where closer to 0 is better.
+
+Adjusted Mean Rank Index
+************************
+The Adjusted Mean Rank Index (AMRI) was introduced by [berrendorf2020]_ to make the AMR
+more intuitive.
+
+It lies on the range $[-1.0, 1.0]$ where closer to 1 is better.
+
+Mean Reciprocal Rank
+********************
+The Mean Reciprocal Rank (MRR) with range $(0.0, 1.0]$ where closer to 1 is better
+
+Hits @ K
+********
+Hits @ K
+
+It lies on the range $[0.0, 1.0]$ where closer to 1 is better.
+
 Ranking Types
 ~~~~~~~~~~~~~
 While the aforementioned definition of the rank as "the index in the sorted list" is intuitive, it does not specify
