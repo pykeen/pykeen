@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """Dataset analysis utilities."""
-
+import itertools
+import logging
 from operator import itemgetter
+from typing import Iterable, Tuple
 
 import numpy
 import pandas
@@ -12,6 +14,8 @@ from .base import DataSet
 from ..utils import invert_mapping
 
 SUBSET_LABELS = ('testing', 'training', 'validation', 'total')
+
+logger = logging.getLogger(__name__)
 
 
 def get_id_counts(
@@ -173,3 +177,150 @@ def entity_relation_co_occurrence_dataframe(dataset: DataSet) -> pandas.DataFram
             [relation_id_to_label[relation_id] for relation_id in range(num_relations)]
         ])
     )
+
+
+def _relation_classification_pandas(
+    triple_df: pandas.DataFrame,
+) -> Iterable[Tuple[int, str, int, float]]:
+    """
+    The actual work behind relation classification, built upon pandas.
+
+    .. note ::
+        The implementation is quite memory-intense.
+    """
+    support = triple_df.value_counts(subset=["r"]).rename("support").reset_index()
+
+    # unary patterns
+    logger.info("Checking unary patterns: {symmetry, anti-symmetry}")
+    # symmetry: r(x, y) => r(y, x)
+    temp_df = pandas.merge(
+        left=triple_df,
+        right=triple_df,
+        left_on=["r", "h", "t"],
+        right_on=["r", "t", "h"],
+    ).groupby(by="r").size().rename("full_count").reset_index()
+    temp_df = pandas.merge(
+        left=support,
+        right=temp_df,
+        on="r",
+    )
+    temp_df["confidence"] = temp_df["full_count"] / temp_df["support"]
+    yield from zip(
+        temp_df["r"].tolist(),
+        itertools.repeat("symmetry"),
+        temp_df["support"].tolist(),
+        temp_df["confidence"].tolist(),
+    )
+
+    # anti-symmetry: r(x, y) => !r(y, x)
+    temp_df["confidence"] = (temp_df["support"] - temp_df["full_count"]) / temp_df["support"]
+    yield from zip(
+        temp_df["r"].tolist(),
+        itertools.repeat("anti-symmetry"),
+        temp_df["support"].tolist(),
+        temp_df["confidence"].tolist(),
+    )
+
+    # binary patterns
+    logger.info("Checking binary patterns: {inversion}")
+    # inversion: r1(x, y) => r(x, y)
+    temp_df = pandas.merge(
+        left=triple_df.rename(columns=dict(r="r1")),
+        right=triple_df,
+        left_on=["h", "t"],
+        right_on=["t", "h"],
+    ).groupby(by=["r", "r1"]).size().rename("full_count").reset_index()
+    temp_df = pandas.merge(
+        left=support,
+        right=temp_df,
+        on="r",
+    )
+    temp_df["confidence"] = (temp_df["support"] - temp_df["full_count"]) / temp_df["support"]
+    yield from zip(
+        temp_df["r"].tolist(),
+        itertools.repeat("inversion"),
+        temp_df["support"].tolist(),
+        temp_df["confidence"].tolist(),
+    )
+
+    # ternary patterns
+    logger.info("Checking ternary patterns: {composition}")
+    # composition r1(x, y) & r2(y, z) => r3(x, z)
+    temp_df = pandas.merge(
+        left=triple_df.rename(columns=dict(h="x", r="r1", t="y")),
+        right=triple_df.rename(columns=dict(h="y", r="r2", t="z")),
+        on="y",
+    )
+    support = temp_df.groupby(by=["r1", "r2"]).size().rename(index="support").reset_index()
+    temp_df = pandas.merge(
+        left=temp_df,
+        right=triple_df.rename(columns=dict(h="x", r="r3", t="z")),
+        on=["x", "z"],
+    ).groupby(by=["r1", "r2", "r3"]).size().rename(index="full_count").reset_index()
+    temp_df = pandas.merge(left=support, right=temp_df, on=["r1", "r2"])
+    temp_df["confidence"] = temp_df["full_count"] / temp_df["support"]
+    yield from zip(
+        temp_df["r3"].tolist(),
+        itertools.repeat("composition"),
+        temp_df["support"].tolist(),
+        temp_df["confidence"].tolist(),
+    )
+
+
+def relation_classification(
+    dataset: DataSet,
+    min_support: int = 0,
+    min_confidence: float = 0.95,
+    drop_confidence: bool = True,
+) -> pandas.DataFrame:
+    r"""
+    Compute relation classification based on RotatE [...]_.
+
+    The relation classifications are based upon checking whether the corresponding rules hold with sufficient support
+    and confidence. By default, we do not require a minimum support, however, a relatively high confidence.
+
+    The following four non-exclusive classes for relations are considered.
+
+    symmetry:
+
+    .. math ::
+        r(x, y) \implies r(y, x)
+
+    anti-symmetry:
+
+    .. math ::
+        r(x, y) \implies \neg r(y, x)
+
+    inversion:
+
+    .. math ::
+        r'(x, y) \implies r(y, x)
+
+    composition
+
+    .. math ::
+        r'(x, y) \land r''(y, z) \implies r(x, z)
+    """
+    # use all triples; TODO: should we do this?
+    mapped_triples = torch.cat([
+        triples_factory.mapped_triples
+        for triples_factory in dataset.factories
+    ], dim=0)
+
+    # convert to dataframe
+    triple_df = pandas.DataFrame(data=mapped_triples.numpy(), columns=["h", "r", "t"])
+
+    # Get data
+    df = pandas.DataFrame(
+        data=[
+            (relation_id, pattern, support, confidence)
+            for (relation_id, pattern, support, confidence) in _relation_classification_pandas(triple_df=triple_df)
+            if support >= min_support and confidence >= min_confidence
+        ],
+        columns=["relation_id", "pattern", "support", "confidence"],
+    ).sort_values(by=["relation_id", "confidence", "support"])
+
+    if drop_confidence:
+        df = df[["relation_id", "pattern"]].drop_duplicates()
+
+    return df

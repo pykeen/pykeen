@@ -10,7 +10,7 @@ from pykeen.datasets.analysis import (
     SUBSET_LABELS,
     entity_count_dataframe,
     entity_relation_co_occurrence_dataframe,
-    relation_count_dataframe,
+    relation_classification, relation_count_dataframe,
 )
 
 
@@ -77,3 +77,30 @@ class AnalysisTests(unittest.TestCase):
             list(df.index),
             list(itertools.product(SUBSET_LABELS, sorted(self.dataset.entity_to_id.keys())))
         )
+
+    def test_relation_classification(self):
+        """Test relation_classification."""
+        df = relation_classification(dataset=self.dataset, drop_confidence=False)
+
+        # check correct type
+        assert isinstance(df, pandas.DataFrame)
+
+        # check relation_id value range
+        assert df["relation_id"].isin(self.dataset.relation_to_id.values()).all()
+
+        # check relation_id value range
+        assert df["pattern"].isin({
+            "symmetry",
+            "anti-symmetry",
+            "composition",
+            "inversion",
+        }).all()
+
+        # check confidence value range
+        x = df["confidence"].values
+        assert (0 <= x).all()
+        assert (x <= 1).all()
+
+        # check support value range
+        x = df["support"].values
+        assert (1 <= x).all()
