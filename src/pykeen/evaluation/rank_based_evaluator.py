@@ -106,33 +106,40 @@ class RankBasedMetricResults(MetricResults):
 
     Includes results from:
 
-    - Mean Rank (MR) with range $[0, \infty)$ where closer to 0 is better
-    - Adjusted Mean Rank (AMR; [berrendorf2020]_) with range $[0, 2]$ where closer to 0 is better
-    - Mean Reciprocal Rank (MRR) with range $(0, 1]$ where closer to 1 is better
-    - Hits @ K with range $[0, 1]$ where closer to 1 is better.
+    - Mean Rank (MR) with range $[0.0, \infty)$ where closer to 0 is better
+    - Adjusted Mean Rank (AMR; [berrendorf2020]_) with range $[0.0, 2.0]$ where closer to 0 is better
+    - Adjusted Mean Rank Index (AMRI; [berrendorf2020]_) with range $[-1.0, 1.0]$ where closer to 1 is better
+    - Mean Reciprocal Rank (MRR) with range $(0.0, 1.0]$ where closer to 1 is better
+    - Hits @ K with range $[0.0, 1.0]$ where closer to 1 is better.
     """
 
-    #: The mean over all ranks: mean_i r_i. Range is $[0, inf)$. Lower is better.
+    #: The mean over all ranks: mean_i r_i. Range is $[0.0, inf)$. Lower is better.
     mean_rank: Dict[str, Dict[str, float]] = field(metadata=dict(
         doc='The mean over all ranks: mean_i r_i. Lower is better.',
     ))
 
-    #: The mean over all reciprocal ranks: mean_i (1/r_i). Range is $[0, 1]$. Higher is better.
+    #: The mean over all reciprocal ranks: mean_i (1/r_i). Range is $(0.0, 1.0]$. Higher is better.
     mean_reciprocal_rank: Dict[str, Dict[str, float]] = field(metadata=dict(
         doc='The mean over all reciprocal ranks: mean_i (1/r_i). Higher is better.',
     ))
 
     #: The hits at k for different values of k, i.e. the relative frequency of ranks not larger than k.
-    #: Range is $[0,1]$. Higher is better.
+    #: Range is $[0.0, 1.0]$. Higher is better.
     hits_at_k: Dict[str, Dict[str, Dict[Union[int, float], float]]] = field(metadata=dict(
         doc='The hits at k for different values of k, i.e. the relative frequency of ranks not larger than k.'
             ' Higher is better.',
     ))
 
     #: The mean over all chance-adjusted ranks: mean_i (2r_i / (num_entities+1)).
-    #: Range is $[0, 2]$. Lower is better. Described by [berrendorf2020]_.
+    #: Range is $[0.0, 2.0]$. Lower is better. Described by [berrendorf2020]_.
     adjusted_mean_rank: Dict[str, float] = field(metadata=dict(
         doc='The mean over all chance-adjusted ranks: mean_i (2r_i / (num_entities+1)). Lower is better.',
+    ))
+
+    #: The reindexed adjusted mean rank.
+    #: Range is $[-1.0, 1.0]$. Higher is better. Described by [berrendorf2020]_.
+    adjusted_mean_rank_index: Dict[str, float] = field(metadata=dict(
+        doc='Reindexed AMR on [-1.0, 1.0]. Higher is better.',
     ))
 
     def get_metric(self, name: str) -> float:  # noqa: D102
@@ -155,14 +162,14 @@ class RankBasedMetricResults(MetricResults):
 
         if side not in SIDES:
             raise ValueError(f'Invalid side: {side}. Allowed sides: {SIDES}')
-        if rank_type not in RANK_AVERAGE and metric in {'adjusted_mean_rank'}:
-            raise ValueError(f'Invalid rank type for adjusted mean rank: {rank_type}. Allowed type: {RANK_AVERAGE}')
+        if rank_type not in RANK_AVERAGE and metric in {'adjusted_mean_rank', 'adjusted_mean_rank_index'}:
+            raise ValueError(f'Invalid rank type for {metric}: {rank_type}. Allowed type: {RANK_AVERAGE}')
         elif rank_type not in RANK_TYPES:
             raise ValueError(f'Invalid rank type: {rank_type}. Allowed types: {RANK_TYPES}')
 
         if metric in {'mean_rank', 'mean_reciprocal_rank'}:
             return getattr(self, metric)[side][rank_type]
-        elif metric in {'adjusted_mean_rank'}:
+        elif metric in {'adjusted_mean_rank', 'adjusted_mean_rank_index'}:
             return getattr(self, metric)[side]
 
         rank_type_hits_at_k = self.hits_at_k[side][rank_type]
@@ -176,11 +183,10 @@ class RankBasedMetricResults(MetricResults):
         raise ValueError(f'Invalid metric name: {name}')
 
     def to_flat_dict(self):  # noqa: D102
-        r = {
-            f'{side}.avg.adjusted_mean_rank': self.adjusted_mean_rank[side]
-            for side in SIDES
-        }
+        r = {}
         for side in SIDES:
+            r[f'{side}.avg.adjusted_mean_rank'] = self.adjusted_mean_rank[side]
+            r[f'{side}.avg.adjusted_mean_rank_index'] = self.adjusted_mean_rank_index[side]
             for rank_type in RANK_TYPES:
                 r[f'{side}.{rank_type}.mean_rank'] = self.mean_rank[side][rank_type]
                 r[f'{side}.{rank_type}.mean_reciprocal_rank'] = self.mean_reciprocal_rank[side][rank_type]
@@ -190,11 +196,10 @@ class RankBasedMetricResults(MetricResults):
 
     def to_df(self) -> pd.DataFrame:
         """Output the metrics as a pandas dataframe."""
-        rows = [
-            (side, 'avg', 'adjusted_mean_rank', self.adjusted_mean_rank[side])
-            for side in SIDES
-        ]
+        rows = []
         for side in SIDES:
+            rows.append((side, 'avg', 'adjusted_mean_rank', self.adjusted_mean_rank[side]))
+            rows.append((side, 'avg', 'adjusted_mean_rank_index', self.adjusted_mean_rank_index[side]))
             for rank_type in RANK_TYPES:
                 rows.append((side, rank_type, 'mean_rank', self.mean_rank[side][rank_type]))
                 rows.append((side, rank_type, 'mean_reciprocal_rank', self.mean_reciprocal_rank[side][rank_type]))
@@ -208,10 +213,10 @@ class RankBasedEvaluator(Evaluator):
 
     Calculates:
 
-    - Mean Rank (MR) with range $[0, \infty)$ where closer to 0 is better
-    - Adjusted Mean Rank (AMR; [berrendorf2020]_) with range $[0, 2]$ where closer to 0 is better
-    - Mean Reciprocal Rank (MRR) with range $(0, 1]$ where closer to 1 is better
-    - Hits @ K with range $[0, 1]$ where closer to 1 is better.
+    - Mean Rank (MR) with range $[0.0, \infty)$ where closer to 0 is better
+    - Adjusted Mean Rank (AMR; [berrendorf2020]_) with range $[0.0, 2.0]$ where closer to 0 is better
+    - Mean Reciprocal Rank (MRR) with range $(0.0, 1.0]$ where closer to 1 is better
+    - Hits @ K with range $[0.0, 1.0]$ where closer to 1 is better.
     """
 
     ks: Sequence[Union[int, float]]
@@ -290,6 +295,7 @@ class RankBasedEvaluator(Evaluator):
         mean_reciprocal_rank: DefaultDict[str, Dict[str, float]] = defaultdict(dict)
         hits_at_k: DefaultDict[str, Dict[str, Dict[Union[int, float], float]]] = defaultdict(dict)
         adjusted_mean_rank: Dict[str, float] = {}
+        adjusted_mean_rank_index: Dict[str, float] = {}
 
         if self.num_entities is None:
             raise ValueError
@@ -310,6 +316,7 @@ class RankBasedEvaluator(Evaluator):
             if len(adjusted_ranks) < 1:
                 continue
             adjusted_mean_rank[side] = float(np.mean(adjusted_ranks))
+            adjusted_mean_rank_index[side] = 1.0 - adjusted_mean_rank[side]
 
         # Clear buffers
         self.ranks.clear()
@@ -319,4 +326,5 @@ class RankBasedEvaluator(Evaluator):
             mean_reciprocal_rank=dict(mean_reciprocal_rank),
             hits_at_k=dict(hits_at_k),
             adjusted_mean_rank=adjusted_mean_rank,
+            adjusted_mean_rank_index=adjusted_mean_rank_index,
         )
