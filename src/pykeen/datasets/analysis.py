@@ -221,10 +221,8 @@ def skyline(data_stream: Iterable[PatternMatch]) -> Iterable[PatternMatch]:
         data[tup[:2]].add(tup[2:])
     # for each group, yield from skyline
     for (r_id, pat), values in data.items():
-        yield from (
-            PatternMatch(r_id, pat, supp, conf)
-            for supp, conf in _get_skyline(values)
-        )
+        for supp, conf in _get_skyline(values):
+            yield PatternMatch(r_id, pat, supp, conf)
 
 
 def _composition_candidates(
