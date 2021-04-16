@@ -48,7 +48,11 @@ class MetricResults(DataClassJsonMixin):
     """Results from computing metrics."""
 
     def get_metric(self, name: str) -> float:
-        """Get the given metric from the results."""
+        """Get the given metric from the results.
+
+        :param name: The name of the metric
+        :returns: The value for the metric
+        """
         raise NotImplementedError
 
     def to_flat_dict(self) -> Mapping[str, Any]:
