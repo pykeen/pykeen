@@ -173,12 +173,12 @@ def entity_relation_co_occurrence_dataframe(dataset: Dataset) -> pandas.DataFram
         data=data,
         index=pandas.MultiIndex.from_product([
             sorted(dataset.factory_dict.keys()) + ['total'],
-            [entity_id_to_label[entity_id] for entity_id in range(num_entities)]
+            [entity_id_to_label[entity_id] for entity_id in range(num_entities)],
         ]),
         columns=pandas.MultiIndex.from_product([
             ('head', 'tail'),
-            [relation_id_to_label[relation_id] for relation_id in range(num_relations)]
-        ])
+            [relation_id_to_label[relation_id] for relation_id in range(num_relations)],
+        ]),
     )
 
 

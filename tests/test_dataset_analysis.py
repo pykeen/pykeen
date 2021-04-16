@@ -76,11 +76,11 @@ class AnalysisTests(unittest.TestCase):
         # check index
         self.assertListEqual(
             list(df.index),
-            list(itertools.product(SUBSET_LABELS, sorted(self.dataset.entity_to_id.keys())))
+            list(itertools.product(SUBSET_LABELS, sorted(self.dataset.entity_to_id.keys()))),
         )
 
     def test_relation_classification(self):
-        """Helper method for relation classification"""
+        """Helper method for relation classification."""
         df = relation_classification(
             dataset=self.dataset,
             drop_confidence=False,
@@ -120,4 +120,5 @@ class RealAnalysisTests(AnalysisTests):
     """Tests on a larger dataset."""
 
     def setUp(self) -> None:
+        """Load a larger dataset."""
         self.dataset = get_dataset(dataset="fb15k")
