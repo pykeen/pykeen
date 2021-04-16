@@ -252,22 +252,22 @@ class EvaluatorUtilsTests(unittest.TestCase):
         exp_exp_rank = torch.as_tensor([(5 + 1) / 2, (5 + 1) / 2, (4 + 1) / 2])
         ranks = compute_rank_from_scores(true_score=true_score, all_scores=all_scores)
 
-        best_rank = ranks.get('best')
-        assert best_rank.shape == (batch_size,)
-        assert (best_rank == exp_best_rank).all()
+        optimistic_rank = ranks.get('optimistic')
+        assert optimistic_rank.shape == (batch_size,)
+        assert (optimistic_rank == exp_best_rank).all()
 
-        worst_rank = ranks.get('worst')
-        assert worst_rank.shape == (batch_size,)
-        assert (worst_rank == exp_worst_rank).all()
+        pessimistic_rank = ranks.get('pessimistic')
+        assert pessimistic_rank.shape == (batch_size,)
+        assert (pessimistic_rank == exp_worst_rank).all()
 
-        avg_rank = ranks.get('avg')
-        assert avg_rank.shape == (batch_size,)
-        assert (avg_rank == exp_avg_rank).all(), (avg_rank, exp_avg_rank)
+        realistic_rank = ranks.get('realistic')
+        assert realistic_rank.shape == (batch_size,)
+        assert (realistic_rank == exp_avg_rank).all(), (realistic_rank, exp_avg_rank)
 
-        exp_rank = ranks.get('exp')
-        assert exp_rank is not None
-        assert exp_rank.shape == (batch_size,)
-        assert (exp_rank == exp_exp_rank).all(), (exp_rank, exp_exp_rank)
+        expected_realistic_rank = ranks.get('expected_realistic')
+        assert expected_realistic_rank is not None
+        assert expected_realistic_rank.shape == (batch_size,)
+        assert (expected_realistic_rank == exp_exp_rank).all(), (expected_realistic_rank, exp_exp_rank)
 
     def test_create_sparse_positive_filter_(self):
         """Test method create_sparse_positive_filter_."""

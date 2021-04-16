@@ -27,11 +27,11 @@ logger = logging.getLogger(__name__)
 SIDE_HEAD = 'head'
 SIDE_TAIL = 'tail'
 SIDE_BOTH = 'both'
-RANK_BEST = 'best'
-RANK_WORST = 'worst'
-RANK_AVERAGE = 'avg'
-RANK_EXPECTED = "exp"
-RANK_TYPES = {RANK_BEST, RANK_WORST, RANK_AVERAGE}
+RANK_OPTIMISTIC = 'optimistic'
+RANK_PESSIMISTIC = 'pessimistic'
+RANK_REALISTIC = 'realistic'
+RANK_EXPECTED = 'expected_realistic'
+RANK_TYPES = {RANK_OPTIMISTIC, RANK_PESSIMISTIC, RANK_REALISTIC}
 SIDES = {SIDE_HEAD, SIDE_TAIL, SIDE_BOTH}
 
 MEAN_RANK = 'mean_rank'
@@ -39,7 +39,7 @@ MEAN_RECIPROCAL_RANK = 'mean_reciprocal_rank'
 ADJUSTED_MEAN_RANK = 'adjusted_mean_rank'
 ADJUSTED_MEAN_RANK_INDEX = 'adjusted_mean_rank_index'
 TYPES_ALL = {MEAN_RANK, MEAN_RECIPROCAL_RANK}
-TYPES_AVG_ONLY = {ADJUSTED_MEAN_RANK, ADJUSTED_MEAN_RANK_INDEX}
+TYPES_REALISTIC_ONLY = {ADJUSTED_MEAN_RANK, ADJUSTED_MEAN_RANK_INDEX}
 
 
 def compute_rank_from_scores(
@@ -54,51 +54,51 @@ def compute_rank_from_scores(
         The scores of all corrupted triples (including the true triple).
     :return: a dictionary
         {
-            'best': best_rank,
-            'worst': worst_rank,
-            'avg': avg_rank,
-            'exp': exp_rank,
+            'optimistic': optimistic_rank,
+            'pessimistic': pessimistic_rank,
+            'realistic': realistic_rank,
+            'expected_realistic': expected_realistic_rank,
         }
 
         where
 
-        best_rank: shape: (batch_size,)
-            The best rank is the rank when assuming all options with an equal score are placed behind the current
+        optimistic_rank: shape: (batch_size,)
+            The optimistic rank is the rank when assuming all options with an equal score are placed behind the current
             test triple.
-        worst_rank:
-            The worst rank is the rank when assuming all options with an equal score are placed in front of current
-            test triple.
-        avg_rank:
-            The average rank is the average of the best and worst rank, and hence the expected rank over all
-            permutations of the elements with the same score as the currently considered option.
-        exp_rank: shape: (batch_size,)
+        pessimistic_rank:
+            The pessimistic rank is the rank when assuming all options with an equal score are placed in front of
+            current test triple.
+        realistic_rank:
+            The realistic rank is the average of the optimistic and pessimistic rank, and hence the expected rank
+            over all permutations of the elements with the same score as the currently considered option.
+        expected_realistic_rank: shape: (batch_size,)
             The expected rank a random scoring would achieve, which is (#number_of_options + 1)/2
     """
-    # The best rank is the rank when assuming all options with an equal score are placed behind the currently
+    # The optimistic rank is the rank when assuming all options with an equal score are placed behind the currently
     # considered. Hence, the rank is the number of options with better scores, plus one, as the rank is one-based.
-    best_rank = (all_scores > true_score).sum(dim=1) + 1
+    optimistic_rank = (all_scores > true_score).sum(dim=1) + 1
 
-    # The worst rank is the rank when assuming all options with an equal score are placed in front of the currently
-    # considered. Hence, the rank is the number of options which have at least the same score minus one (as the
-    # currently considered option in included in all options). As the rank is one-based, we have to add 1, which
-    # nullifies the "minus 1" from before.
-    worst_rank = (all_scores >= true_score).sum(dim=1)
+    # The pessimistic rank is the rank when assuming all options with an equal score are placed in front of the
+    # currently considered. Hence, the rank is the number of options which have at least the same score minus one
+    # (as the currently considered option in included in all options). As the rank is one-based, we have to add 1,
+    # which nullifies the "minus 1" from before.
+    pessimistic_rank = (all_scores >= true_score).sum(dim=1)
 
-    # The average rank is the average of the best and worst rank, and hence the expected rank over all permutations of
-    # the elements with the same score as the currently considered option.
-    average_rank = (best_rank + worst_rank).float() * 0.5
+    # The realistic rank is the average of the optimistic and pessimistic rank, and hence the expected rank over
+    # all permutations of the elements with the same score as the currently considered option.
+    realistic_rank = (optimistic_rank + pessimistic_rank).float() * 0.5
 
     # We set values which should be ignored to NaN, hence the number of options which should be considered is given by
     number_of_options = torch.isfinite(all_scores).sum(dim=1).float()
 
     # The expected rank of a random scoring
-    expected_rank = 0.5 * (number_of_options + 1)
+    expected_realistic_rank = 0.5 * (number_of_options + 1)
 
     return {
-        RANK_BEST: best_rank,
-        RANK_WORST: worst_rank,
-        RANK_AVERAGE: average_rank,
-        RANK_EXPECTED: expected_rank,
+        RANK_OPTIMISTIC: optimistic_rank,
+        RANK_PESSIMISTIC: pessimistic_rank,
+        RANK_REALISTIC: realistic_rank,
+        RANK_EXPECTED: expected_realistic_rank,
     }
 
 
@@ -134,7 +134,7 @@ class RankBasedMetricResults(MetricResults):
     ))
 
     def __post_init__(self):  # noqa:D105
-        self._types_avg_only = {
+        self._types_realistic_only = {
             ADJUSTED_MEAN_RANK: self.adjusted_mean_rank,
             ADJUSTED_MEAN_RANK_INDEX: self.adjusted_mean_rank_index,
         }
@@ -148,9 +148,9 @@ class RankBasedMetricResults(MetricResults):
 
         :param name: The name of the metric, created by concatenating three parts:
 
-            1. The side ("head", "tail", or "both"). Most publications exclusively report "both".
-            2. The type ("avg", "best", "worst")
-            3. The metric name ("adjusted_mean_rank_index", "adjusted_mean_rank", "mean_rank, "mean_reciprocal_rank"
+            1. The side (one of "head", "tail", or "both"). Most publications exclusively report "both".
+            2. The type (one of "optimistic", "pessimistic", "realistic")
+            3. The metric name ("adjusted_mean_rank_index", "adjusted_mean_rank", "mean_rank, "mean_reciprocal_rank",
                or "hits@k" where k defaults to 10 but can be substituted for an integer. By default, 1, 3, 5, and 10
                are available. Other K's can be calculated by setting the appropriate variable in the
                ``evaluation_kwargs`` in the :func:`pykeen.pipeline.pipeline` or setting ``ks`` in the
@@ -158,22 +158,23 @@ class RankBasedMetricResults(MetricResults):
 
             In general, all metrics are available for all combinations of sides/types except AMR and AMRI, which
             are only calculated for the average type. This is because the calculation of the expected MR in the
-            best and worst case scenarios is still an active area of research and therefore has no implementation yet.
+            optimistic and pessimistic case scenarios is still an active area of research and therefore has no
+            implementation yet.
         :return: The value for the metric
         :raises ValueError: if an invalid name is given.
 
         Get the average MR
 
-        >>> metric_results.get('both.avg.mean_rank')
+        >>> metric_results.get('both.realistic.mean_rank')
 
-        If you only give a metric name, it assumes that it's for "both" sides and "average" type.
+        If you only give a metric name, it assumes that it's for "both" sides and "realistic" type.
 
         >>> metric_results.get('adjusted_mean_rank_index')
 
         This function will do its best to infer what's going on if you only specify one part.
 
         >>> metric_results.get('left.mean_rank')
-        >>> metric_results.get('best.mean_rank')
+        >>> metric_results.get('optimistic.mean_rank')
 
         Get the default Hits @ K (where $k=10$)
 
@@ -185,13 +186,13 @@ class RankBasedMetricResults(MetricResults):
         """
         dot_count = name.count('.')
         if 0 == dot_count:  # assume average by default
-            side, rank_type, metric = SIDE_BOTH, RANK_AVERAGE, name
+            side, rank_type, metric = SIDE_BOTH, RANK_REALISTIC, name
         elif 1 == dot_count:
             # Check if it a side or rank type
             side_or_ranktype, metric = name.split('.')
             if side_or_ranktype in SIDES:
                 side = side_or_ranktype
-                rank_type = RANK_AVERAGE
+                rank_type = RANK_REALISTIC
             else:
                 side = SIDE_BOTH
                 rank_type = side_or_ranktype
@@ -202,14 +203,14 @@ class RankBasedMetricResults(MetricResults):
 
         if side not in SIDES:
             raise ValueError(f'Invalid side: {side}. Allowed sides: {SIDES}')
-        if rank_type not in RANK_AVERAGE and metric in TYPES_AVG_ONLY:
-            raise ValueError(f'Invalid rank type for {metric}: {rank_type}. Allowed type: {RANK_AVERAGE}')
+        if rank_type not in RANK_REALISTIC and metric in TYPES_REALISTIC_ONLY:
+            raise ValueError(f'Invalid rank type for {metric}: {rank_type}. Allowed type: {RANK_REALISTIC}')
         elif rank_type not in RANK_TYPES:
             raise ValueError(f'Invalid rank type: {rank_type}. Allowed types: {RANK_TYPES}')
 
         if metric in TYPES_ALL:
             return getattr(self, metric)[side][rank_type]
-        elif metric in TYPES_AVG_ONLY:
+        elif metric in TYPES_REALISTIC_ONLY:
             return getattr(self, metric)[side]
 
         # otherwise, assume is hits@k, which is handled differently
@@ -235,8 +236,8 @@ class RankBasedMetricResults(MetricResults):
 
     def _iter_rows(self) -> Iterable[Tuple[str, str, str, float]]:
         for side in SIDES:
-            for metric_name, metric_dict in sorted(self._types_avg_only.items()):
-                yield side, RANK_AVERAGE, metric_name, metric_dict[side]
+            for metric_name, metric_dict in sorted(self._types_realistic_only.items()):
+                yield side, RANK_REALISTIC, metric_name, metric_dict[side]
             for rank_type in RANK_TYPES:
                 for metric_name, metric_dict in sorted(self._types_all.items()):
                     yield side, rank_type, metric_name, metric_dict[side][rank_type]
@@ -357,8 +358,8 @@ class RankBasedEvaluator(Evaluator):
             if len(expected_ranks) < 1:
                 continue
             expected_mean_rank = float(np.mean(expected_ranks))
-            adjusted_mean_rank[side] = mean_rank[side][RANK_AVERAGE] / expected_mean_rank
-            adjusted_mean_rank_index[side] = 1.0 - (mean_rank[side][RANK_AVERAGE] - 1) / (expected_mean_rank - 1)
+            adjusted_mean_rank[side] = mean_rank[side][RANK_REALISTIC] / expected_mean_rank
+            adjusted_mean_rank_index[side] = 1.0 - (mean_rank[side][RANK_REALISTIC] - 1) / (expected_mean_rank - 1)
 
         # Clear buffers
         self.ranks.clear()
