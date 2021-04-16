@@ -96,7 +96,7 @@ The AMR has a bounded value range of $[-1, 1]$ where closer to 1 is better.
 
 Mean Reciprocal Rank
 ********************
-The mean reciprocal rank (MRR) is the arithemtic mean of reciprocal ranks, and thus the inverse of the harmonic mean 
+The mean reciprocal rank (MRR) is the arithmetic mean of reciprocal ranks, and thus the inverse of the harmonic mean
 of the ranks. It is defined as:
 
 .. math::
@@ -105,8 +105,8 @@ of the ranks. It is defined as:
 
 .. warning::
 
-    It has been argued that the mean reciprocal rank has theoretical flaws by [fuhr2018]_. However, this opinion is not undisputed, 
-    cf. [sakai2021]_.
+    It has been argued that the mean reciprocal rank has theoretical flaws by [fuhr2018]_. However, this opinion
+    is not undisputed, cf. [sakai2021]_.
 
 Despite its flaws, MRR is still often used during early stopping due to its behavior related to low rank values.
 While the hits @ k ignores changes among high rank values completely and the mean rank changes uniformly
