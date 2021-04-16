@@ -7,11 +7,11 @@ Knowledge graph embedding are usually evaluated on the task of link prediction. 
 triples :math:`\mathcal{T}_{eval} \subset \mathcal{E} \times \mathcal{R} \times \mathcal{E}` is provided, and for each
 triple :math:`(h, r, t) \in \mathcal{T}_{eval}` in this set, two tasks are solved:
 
-* In the *right-side* prediction task, a pair of head entity and relation are given and aim to predict the tail,
-  i.e. :math:`(h, r, ?)`. To this end, the knowledge graph embedding model is used to *score* each of the possible
-  choices :math:`(h, r, e)` for :math:`e \in \mathcal{E}`. Higher scores indicate higher plausibility.
-* Analogously, in the *left-side* prediction task, a pair of relation and tail entity are provided and aim to
-  predict the head, i.e. :math:`(?, r, t)`. Again, each possible choice :math:`(e, r, t)` for
+* **Right-Side** In the *right-side* prediction task, a pair of head entity and relation are given and aim to predict
+  the tail, i.e. :math:`(h, r, ?)`. To this end, the knowledge graph embedding model is used to *score* each of the
+  possible choices :math:`(h, r, e)` for :math:`e \in \mathcal{E}`. Higher scores indicate higher plausibility.
+* **Left-Side** Analogously, in the *left-side* prediction task, a pair of relation and tail entity are provided and
+  aim to predict the head, i.e. :math:`(?, r, t)`. Again, each possible choice :math:`(e, r, t)` for
   :math:`e \in \mathcal{E}` is scored according to the knowledge graph embedding model.
 
 .. note ::
