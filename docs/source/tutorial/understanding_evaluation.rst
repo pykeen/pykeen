@@ -121,6 +121,19 @@ across the full value range, the mean reciprocal rank is more affected by change
 Therefore, it can be considered as soft a version of hits @ k that is less sensitive to outliers.
 It is bound on $(0, 1]$ where closer to 1 is better.
 
+Inverse Geometric Mean Rank
+***************************
+The mean rank corresponds to the arithmetic mean, and tends to be more affected by high rank values.
+The mean reciprocal rank corresponds to the harmonic mean, and tends to be more affected by low rank values.
+The remaining Pythagorean mean, the geometric mean, lies in the center and therefore could better balance these biases.
+Therefore, the inverse geometric mean rank (IGMR) is defined as:
+
+.. math::
+
+    \text{score} = \sqrt[\|\mathcal{I}\|]{\prod \limits_{r \in \mathcal{I}} r}
+
+.. note:: This metric is novel as of its implementation in PyKEEN and was proposed by Max Berrendorf
+
 Ranking Types
 ~~~~~~~~~~~~~
 While the aforementioned definition of the rank as "the index in the sorted list" is intuitive, it does not specify
