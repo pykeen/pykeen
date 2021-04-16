@@ -17,9 +17,9 @@ from .base import Dataset
 from ..constants import PYKEEN_DATASETS
 from ..utils import invert_mapping
 
-SUBSET_LABELS = ('testing', 'training', 'validation', 'total')
-
 logger = logging.getLogger(__name__)
+
+SUBSET_LABELS = ('testing', 'training', 'validation', 'total')
 
 
 def get_id_counts(
