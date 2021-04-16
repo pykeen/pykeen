@@ -2,7 +2,6 @@
 import itertools
 import unittest
 from typing import Collection, Optional, Sequence
-from unittest import SkipTest
 
 import pandas
 import pytest
@@ -80,19 +79,22 @@ class AnalysisTests(unittest.TestCase):
             list(itertools.product(SUBSET_LABELS, sorted(self.dataset.entity_to_id.keys())))
         )
 
-    def _test_relation_classification(self, pattern_type: str):
+    def test_relation_classification(self):
         """Helper method for relation classification"""
         df = relation_classification(
             dataset=self.dataset,
             drop_confidence=False,
-            pattern_types={pattern_type},
         )
 
-        pattern_types = dict(
-            unary={"symmetry", "anti-symmetry"},
-            binary={"inversion"},
-            ternary={"composition"},
-        )
+        pattern_types = {
+            # unary
+            "symmetry",
+            "anti-symmetry",
+            # binary
+            "inversion",
+            # ternary
+            "composition",
+        }
 
         # check correct type
         assert isinstance(df, pandas.DataFrame)
@@ -100,8 +102,8 @@ class AnalysisTests(unittest.TestCase):
         # check relation_id value range
         assert df["relation_id"].isin(self.dataset.relation_to_id.values()).all()
 
-        # check relation_id value range
-        assert df["pattern"].isin(pattern_types[pattern_type]).all()
+        # check pattern value range
+        assert df["pattern"].isin(pattern_types).all()
 
         # check confidence value range
         x = df["confidence"].values
@@ -111,18 +113,6 @@ class AnalysisTests(unittest.TestCase):
         # check support value range
         x = df["support"].values
         assert (1 <= x).all()
-
-    def test_relation_classification_unary(self):
-        """Test relation_classification."""
-        self._test_relation_classification(pattern_type="unary")
-
-    def test_relation_classification_binary(self):
-        """Test relation_classification."""
-        self._test_relation_classification(pattern_type="binary")
-
-    def test_relation_classification_ternary(self):
-        """Test relation_classification."""
-        self._test_relation_classification(pattern_type="ternary")
 
 
 @pytest.mark.slow
