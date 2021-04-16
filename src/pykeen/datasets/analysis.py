@@ -284,6 +284,7 @@ def yield_unary_patterns(
     :yields:
         A pattern match tuple of relation_id, pattern_type, support, and confidence.
     """
+    logger.debug("Evaluating unary patterns: {symmetry, anti-symmetry}")
     for r, ht in pairs.items():
         support = len(ht)
         rev_ht = {(t, h) for h, t in ht}
@@ -311,6 +312,7 @@ def yield_binary_patterns(
     :yields:
         A pattern match tuple of relation_id, pattern_type, support, and confidence.
     """
+    logger.debug("Evaluating binary patterns: {inversion}")
     for (r1, ht1), (r, ht2) in itt.combinations(pairs.items(), r=2):
         support = len(ht1)
         confidence = len(ht1.intersection(ht2)) / support
@@ -338,6 +340,7 @@ def yield_ternary_patterns(
     :yields:
         A pattern match tuple of relation_id, pattern_type, support, and confidence.
     """
+    logger.debug("Evaluating ternary patterns: {composition}")
     # composition r1(x, y) & r2(y, z) => r(x, z)
     # indexing triples for fast join r1 & r2
     adj: DefaultDict[int, DefaultDict[int, Set[int]]] = defaultdict(lambda: defaultdict(set))
@@ -365,20 +368,17 @@ def yield_ternary_patterns(
 def _determine_patterns(
     mapped_triples_list: Collection[Tuple[int, int, int]],
 ) -> Iterable[PatternMatch]:
-    # unary
-    logger.debug("Evaluating unary patterns: {symmetry, anti-symmetry}")
     # indexing triples for fast lookup of entity pair sets
     pairs: DefaultDict[int, Set[Tuple[int, int]]] = defaultdict(set)
     for h, r, t in mapped_triples_list:
         pairs[r].add((h, t))
+    # unary
     yield from yield_unary_patterns(pairs=pairs)
 
     # binary
-    logger.debug("Evaluating binary patterns: {inversion}")
     yield from yield_binary_patterns(pairs=pairs)
 
     # ternary
-    logger.debug("Evaluating ternary patterns: {composition}")
     yield from yield_ternary_patterns(mapped_triples_list, pairs)
 
 
