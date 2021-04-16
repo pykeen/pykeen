@@ -347,7 +347,12 @@ def yield_ternary_patterns(
     for h, r, t in mapped_triples_list:
         adj[r][h].add(t)
     # actual evaluation of the pattern
-    for r1, r2 in tqdm(_composition_candidates(mapped_triples_list)):
+    for r1, r2 in tqdm(
+        _composition_candidates(mapped_triples_list),
+        desc="Checking ternary patterns",
+        unit="pattern",
+        unit_scale=True,
+    ):
         ht1 = pairs[r1]
         zs = adj[r2]
         lhs = {
