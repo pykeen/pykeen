@@ -196,12 +196,18 @@ def _get_skyline(xs: Collection[Tuple[int, float]]) -> Collection[Tuple[int, flo
 
 def skyline(
     data_stream: Iterable[Tuple[int, str, int, float]],
-) -> Collection[Tuple[int, str, int, float]]:
+) -> Iterable[Tuple[int, str, int, float]]:
     """
     Keep only those entries which are in the support-confidence skyline.
 
     A pair (s, c) dominates (s', c') if s > s' and c > c'. The skyline contains those entries which are not dominated
     by any other entry.
+
+    :param data_stream:
+        The stream of data, comprising tuples (relation_id, pattern-type, support, confidence).
+
+    :return:
+        A stream containing only the entries in the support-confidence skyline.
     """
     # group by (relation id, pattern type)
     data: Mapping[Tuple[int, str], Set[Tuple[int, float]]] = defaultdict(set)
@@ -387,6 +393,26 @@ def relation_classification(
             inversion,
             composition,
         }
+
+    This method generally follows the terminology of association rule mining. The patterns are expressed as
+    .. math ::
+        X_1 \land \cdot \land X_k \implies Y
+
+    where X_i is of the form r_i(h_i, t_i), and some of the h_i / t_i might re-occur in other atoms.
+    The *support* of a pattern is the number of distinct instantiations of all variables for the left hand side.
+    The *confidence* is the proportion of these instantiations where the right-hand side is also true.
+
+    :param dataset:
+        The dataset to investigate.
+    :param min_support:
+        A minimum support for patterns.
+    :param min_confidence:
+        A minimum confidence for the tested patterns.
+    :param drop_confidence:
+        Whether to drop the support/confidence information from the result frame, and also drop duplicates.
+
+    :return:
+        A dataframe with columns {"relation_id", "pattern", "support"?, "confidence"?}.
     """
     cache_path = PYKEEN_DATASETS.joinpath(dataset.__class__.__name__.lower(), "relation_patterns.tsv.xz")
     if not cache_path.is_file():
