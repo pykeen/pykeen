@@ -198,7 +198,7 @@ class RankBasedEvaluator(Evaluator):
 
     Calculates the following metrics:
 
-    - Mean Rank (MR) with range $[0.0, \infty)$ where closer to 0 is better
+    - Mean Rank (MR) with range $[1.0, \infty)$ where closer to 0 is better
     - Adjusted Mean Rank (AMR; [berrendorf2020]_) with range $(0.0, 2.0]$ where closer to 0 is better
     - Adjusted Mean Rank Index (AMRI; [berrendorf2020]_) with range $[-1.0, 1.0]$ where closer to 1 is better
     - Mean Reciprocal Rank (MRR) with range $(0.0, 1.0]$ where closer to 1 is better
