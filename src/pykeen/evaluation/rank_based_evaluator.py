@@ -124,7 +124,7 @@ class RankBasedMetricResults(MetricResults):
     ))
 
     def get_metric(self, name: str) -> float:
-        """Get the rank-based metric
+        """Get the rank-based metric.
 
         :param name: The name of the metric, created by concatenating three parts:
 
