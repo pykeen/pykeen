@@ -250,18 +250,27 @@ def _composition_candidates(
     }
 
 
-def _determine_patterns(
-    mapped_triples_list: Collection[Tuple[int, int, int]],
+def _yield_unary_patterns(
+    pairs: Mapping[int, Set[Tuple[int, int]]],
 ) -> Iterable[Tuple[int, str, int, float]]:
-    # unary
-    logger.debug("Evaluating unary patterns: {symmetry, anti-symmetry}")
-    # indexing triples for fast lookup of entity pair sets
-    pairs: Mapping[int, Set[Tuple[int, int]]] = defaultdict(set)
-    for h, r, t in mapped_triples_list:
-        pairs[r].add((h, t))
+    r"""
+    Yield unary patterns from pre-indexed triples.
 
-    # symmetry: r(x, y) => r(y, x)
-    # anti-symmetry r(x, y) => !r(x, y)
+    Patterns:
+        Symmetry
+            .. math ::
+                r(x, y) \implies r(y, x)
+
+        Anti-Symmetry
+            .. math ::
+                r(x, y) \implies \neg r(y, x)
+
+    :param pairs:
+        A mapping from relations to the set of entity pairs.
+
+    :return:
+        An iterable of (relation_id, pattern_type, support, confidence) tuples.
+    """
     for r, ht in pairs.items():
         support = len(ht)
         rev_ht = {(t, h) for h, t in ht}
@@ -270,25 +279,58 @@ def _determine_patterns(
         confidence = len(ht.difference(rev_ht)) / support
         yield r, "anti-symmetry", support, 1 - confidence
 
-    # binary
-    logger.debug("Evaluating binary patterns: {inversion}")
-    # inversion: r1(x, y) => r(y, x)
+
+def _yield_binary_patterns(
+    pairs: Mapping[int, Set[Tuple[int, int]]],
+) -> Iterable[Tuple[int, str, int, float]]:
+    r"""
+    Yield binary patterns from pre-indexed triples.
+
+    Patterns:
+        Inversion
+        .. math ::
+            r'(x, y) \implies r(y, x)
+
+    :param pairs:
+        A mapping from relations to the set of entity pairs.
+
+    :return:
+        An iterable of (relation_id, pattern_type, support, confidence) tuples.
+    """
     for r1, r in itertools.combinations(pairs.keys(), r=2):
         ht1, ht2 = pairs[r1], pairs[r]
         support = len(ht1)
         confidence = len(ht1.intersection(ht2)) / support
         yield r, "inversion", support, confidence
 
-    # ternary
-    logger.debug("Evaluating ternary patterns: {composition}")
+
+def _yield_ternary_patterns(
+    mapped_triples_list: Collection[Tuple[int, int, int]],
+    pairs: Mapping[int, Set[Tuple[int, int]]],
+) -> Iterable[Tuple[int, str, int, float]]:
+    r"""
+    Yield ternary patterns from pre-indexed triples.
+
+    Patterns:
+        Composition
+        .. math ::
+            r'(x, y) \land r''(y, z) \implies r(x, z)
+
+    :param mapped_triples_list:
+        A collection of ID-based triples.
+    :param pairs:
+        A mapping from relations to the set of entity pairs.
+
+    :return:
+        An iterable of (relation_id, pattern_type, support, confidence) tuples.
+    """
     # composition r1(x, y) & r2(y, z) => r(x, z)
     # indexing triples for fast join r1 & r2
     adj: Mapping[int, Mapping[int, Set[int]]] = defaultdict(lambda: defaultdict(set))
     for h, r, t in mapped_triples_list:
         adj[r][h].add(t)
-    relation_pairs = _composition_candidates(mapped_triples_list)
     # actual evaluation of the pattern
-    for r1, r2 in tqdm.tqdm(relation_pairs):
+    for r1, r2 in tqdm.tqdm(_composition_candidates(mapped_triples_list)):
         ht1 = pairs[r1]
         zs = adj[r2]
         lhs = {
@@ -306,6 +348,26 @@ def _determine_patterns(
             yield r, "composition", support, confidence
 
 
+def _determine_patterns(
+    mapped_triples_list: Collection[Tuple[int, int, int]],
+) -> Iterable[Tuple[int, str, int, float]]:
+    # unary
+    logger.debug("Evaluating unary patterns: {symmetry, anti-symmetry}")
+    # indexing triples for fast lookup of entity pair sets
+    pairs: Mapping[int, Set[Tuple[int, int]]] = defaultdict(set)
+    for h, r, t in mapped_triples_list:
+        pairs[r].add((h, t))
+    yield from _yield_unary_patterns(pairs=pairs)
+
+    # binary
+    logger.debug("Evaluating binary patterns: {inversion}")
+    yield from _yield_binary_patterns(pairs=pairs)
+
+    # ternary
+    logger.debug("Evaluating ternary patterns: {composition}")
+    yield from _yield_ternary_patterns(mapped_triples_list, pairs)
+
+
 def relation_classification(
     dataset: Dataset,
     min_support: int = 0,
@@ -313,32 +375,18 @@ def relation_classification(
     drop_confidence: bool = True,
 ) -> pandas.DataFrame:
     r"""
-    Compute relation classification based on RotatE [...]_.
+    Categorize relations based on patterns from RotatE [sun2019]_.
 
     The relation classifications are based upon checking whether the corresponding rules hold with sufficient support
     and confidence. By default, we do not require a minimum support, however, a relatively high confidence.
 
-    The following four non-exclusive classes for relations are considered.
-
-    symmetry:
-
-    .. math ::
-        r(x, y) \implies r(y, x)
-
-    anti-symmetry:
-
-    .. math ::
-        r(x, y) \implies \neg r(y, x)
-
-    inversion:
-
-    .. math ::
-        r'(x, y) \implies r(y, x)
-
-    composition
-
-    .. math ::
-        r'(x, y) \land r''(y, z) \implies r(x, z)
+    The following four non-exclusive classes for relations are considered:
+        {
+            symmetry,
+            anti-symmetry,
+            inversion,
+            composition,
+        }
     """
     cache_path = PYKEEN_DATASETS.joinpath(dataset.__class__.__name__.lower(), "relation_patterns.tsv.xz")
     if not cache_path.is_file():
