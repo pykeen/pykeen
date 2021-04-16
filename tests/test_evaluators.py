@@ -245,11 +245,11 @@ class EvaluatorUtilsTests(unittest.TestCase):
             [1., 1., 3., float('nan'), 0],
         ])
         # true_score: (2, 3, 3)
-        true_score = torch.tensor([2., 3., 3.]).view(batch_size, 1)
-        exp_best_rank = torch.tensor([3., 2., 1.])
-        exp_worst_rank = torch.tensor([4., 2., 1.])
+        true_score = torch.as_tensor([2., 3., 3.]).view(batch_size, 1)
+        exp_best_rank = torch.as_tensor([3., 2., 1.])
+        exp_worst_rank = torch.as_tensor([4., 2., 1.])
         exp_avg_rank = 0.5 * (exp_best_rank + exp_worst_rank)
-        exp_adj_rank = exp_avg_rank / torch.tensor([(5 + 1) / 2, (5 + 1) / 2, (4 + 1) / 2])
+        exp_exp_rank = torch.as_tensor([(5 + 1) / 2, (5 + 1) / 2, (4 + 1) / 2])
         ranks = compute_rank_from_scores(true_score=true_score, all_scores=all_scores)
 
         best_rank = ranks.get('best')
@@ -264,10 +264,10 @@ class EvaluatorUtilsTests(unittest.TestCase):
         assert avg_rank.shape == (batch_size,)
         assert (avg_rank == exp_avg_rank).all(), (avg_rank, exp_avg_rank)
 
-        adj_rank = ranks.get('exp')
-        assert adj_rank is not None
-        assert adj_rank.shape == (batch_size,)
-        assert (adj_rank == exp_adj_rank).all(), (adj_rank, exp_adj_rank)
+        exp_rank = ranks.get('exp')
+        assert exp_rank is not None
+        assert exp_rank.shape == (batch_size,)
+        assert (exp_rank == exp_exp_rank).all(), (exp_rank, exp_exp_rank)
 
     def test_create_sparse_positive_filter_(self):
         """Test method create_sparse_positive_filter_."""
