@@ -4,6 +4,7 @@
 import hashlib
 import itertools as itt
 import logging
+import typing
 from collections import defaultdict
 from operator import itemgetter
 from typing import Collection, DefaultDict, Iterable, Mapping, NamedTuple, Optional, Set, Tuple
@@ -387,6 +388,28 @@ def _determine_patterns(
     yield from yield_ternary_patterns(mapped_triples_list, pairs)
 
 
+class _HashProtocol(typing.Protocol):
+    """A type stub for a hashlib._Hash result."""
+
+    def hexdigest(self) -> str:
+        """Return the digest."""
+
+
+def triple_set_hash(
+    mapped_triples: torch.LongTensor,
+) -> _HashProtocol:
+    """
+    Compute an order-invariant hash value for a set of triples given as tensor.
+
+    :param mapped_triples:
+        The ID-based triples.
+
+    :return:
+        The hash object.
+    """
+    return hashlib.sha512("".join(map(str, sorted(mapped_triples))).encode("utf8"))
+
+
 def relation_classification(
     dataset: Dataset,
     min_support: int = 0,
@@ -452,7 +475,7 @@ def relation_classification(
 
     # include hash over triples into cache-file name
     # sort first, for triple order invariance
-    ph = hashlib.sha512("".join(map(str, sorted(mapped_triples))).encode("utf8")).hexdigest()[:16]
+    ph = triple_set_hash(mapped_triples).hexdigest()[:16]
 
     # include part hash into cache-file name
     cache_path = PYKEEN_DATASETS.joinpath(dataset.__class__.__name__.lower(), f"relation_patterns_{ph}.tsv.xz")
