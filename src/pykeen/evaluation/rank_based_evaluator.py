@@ -98,36 +98,66 @@ def compute_rank_from_scores(
 class RankBasedMetricResults(MetricResults):
     r"""Results from computing metrics."""
 
-    #: The mean over all ranks: mean_i r_i. Range is $[0, inf)$. Lower is better.
     mean_rank: Dict[str, Dict[str, float]] = field(metadata=dict(
-        doc='The mean over all ranks: mean_i r_i. Lower is better.',
+        doc='The mean over all ranks. Bound by $[0, inf)$. Lower is better.',
     ))
 
-    #: The mean over all reciprocal ranks: mean_i (1/r_i). Range is $(0, 1]$. Higher is better.
     mean_reciprocal_rank: Dict[str, Dict[str, float]] = field(metadata=dict(
-        doc='The mean over all reciprocal ranks: mean_i (1/r_i). Higher is better.',
+        doc='The mean over all reciprocal ranks. Bounded by $(0, 1]$. Higher is better.',
     ))
 
-    #: The hits at k for different values of k, i.e. the relative frequency of ranks not larger than k.
-    #: Range is $[0, 1]$. Higher is better.
     hits_at_k: Dict[str, Dict[str, Dict[Union[int, float], float]]] = field(metadata=dict(
-        doc='The hits at k for different values of k, i.e. the relative frequency of ranks not larger than k.'
-            ' Higher is better.',
+        doc='The relative frequency of ranks not larger than a given k. Bounded by $[0, 1]$. Higher is better',
     ))
 
-    #: The mean over all chance-adjusted ranks: mean_i (2r_i / (num_entities+1)).
-    #: Range is $(0, 2)$. Lower is better. Described by [berrendorf2020]_.
     adjusted_mean_rank: Dict[str, float] = field(metadata=dict(
-        doc='The mean over all chance-adjusted ranks: mean_i (2r_i / (num_entities+1)). Lower is better.',
+        doc='The mean over all chance-adjusted ranks. Bounded by $(0, 2)$. Lower is better.',
     ))
 
-    #: The reindexed adjusted mean rank.
-    #: Range is $[-1, 1]$. Higher is better. Described by [berrendorf2020]_.
     adjusted_mean_rank_index: Dict[str, float] = field(metadata=dict(
-        doc='Reindexed AMR on [-1, 1]. Higher is better.',
+        doc='The re-indexed adjusted mean rank (AMR). Bounded by $[-1, 1]$. Higher is better.',
     ))
 
-    def get_metric(self, name: str) -> float:  # noqa: D102
+    def get_metric(self, name: str) -> float:
+        """Get the rank-based metric
+
+        :param name: The name of the metric, created by concatenating three parts:
+
+            1. The side ("head", "tail", or "both"). Most publications exclusively report "both".
+            2. The type ("avg", "best", "worst")
+            3. The metric name ("adjusted_mean_rank_index", "adjusted_mean_rank", "mean_rank, "mean_reciprocal_rank"
+               or "hits@k" where k defaults to 10 but can be substituted for an integer. By default, 1, 3, 5, and 10
+               are available. Other K's can be calculated by setting the appropriate variable in the
+               ``evaluation_kwargs`` in the :func:`pykeen.pipeline.pipeline` or setting ``ks`` in the
+               :class:`pykeen.evaluation.RankBasedEvaluator`.
+
+            In general, all metrics are available for all combinations of sides/types except AMR and AMRI, which
+            are only calculated for the average type. This is because the calculation of the expected MR in the
+            best and worst case scenarios is still an active area of research and therefore has no implementation yet.
+        :return: The value for the metric
+        :raises ValueError: if an invalid name is given.
+
+        Get the average MR
+
+        >>> metric_results.get('both.avg.mean_rank')
+
+        If you only give a metric name, it assumes that it's for "both" sides and "average" type.
+
+        >>> metric_results.get('adjusted_mean_rank_index')
+
+        This function will do its best to infer what's going on if you only specify one part.
+
+        >>> metric_results.get('left.mean_rank')
+        >>> metric_results.get('best.mean_rank')
+
+        Get the default Hits @ K (where $k=10$)
+
+        >>> metric_results.get('hits@k')
+
+        Get a given Hits @ K
+
+        >>> metric_results.get('hits@5')
+        """
         dot_count = name.count('.')
         if 0 == dot_count:  # assume average by default
             side, rank_type, metric = 'both', 'avg', name
