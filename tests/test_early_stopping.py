@@ -106,6 +106,10 @@ class MockEvaluator(Evaluator):
                 }
                 for side in SIDES
             },
+            adjusted_mean_rank_index={
+                side: 0.0
+                for side in SIDES
+            },
         )
 
     def __repr__(self):  # noqa: D105
