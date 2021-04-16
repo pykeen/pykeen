@@ -3,10 +3,11 @@
 """Dataset analysis utilities."""
 import itertools
 import logging
+import pathlib
 from abc import abstractmethod
 from collections import defaultdict
 from operator import itemgetter
-from typing import Collection, Iterable, Optional, Tuple
+from typing import Collection, Iterable, Mapping, Optional, Set, Tuple
 
 import numpy
 import pandas
@@ -232,6 +233,39 @@ def relation_classification(
     )
 
 
+def _get_skyline(xs: Collection[Tuple[int, float]]) -> Collection[Tuple[int, float]]:
+    # naive implementation, O(n2)
+    return {
+        (s, c)
+        for s, c in xs
+        if not any(
+            s2 > s and c2 > c
+            for s2, c2 in xs
+        )
+    }
+
+
+def skyline(
+    data_stream: Iterable[Tuple[int, str, int, float]],
+) -> Collection[Tuple[int, str, int, float]]:
+    """
+    Keep only those entries which are in the support-confidence skyline.
+
+    A pair (s, c) dominates (s', c') if s > s' and c > c'. The skyline contains those entries which are not dominated
+    by any other entry.
+    """
+    # group by (relation id, pattern type)
+    data: Mapping[Tuple[int, str], Set[Tuple[int, float]]] = defaultdict(set)
+    for tup in data_stream:
+        data[tup[:2]].add(tup[2:])
+    # for each group, yield from skyline
+    for (r_id, pat), values in data.items():
+        yield from (
+            (r_id, pat, supp, conf)
+            for supp, conf in _get_skyline(values)
+        )
+
+
 class RelationCategorizer:
     """A base class for categorization of relations."""
 
@@ -259,16 +293,25 @@ class RelationCategorizer:
             base.append(self.ternary_categories(
                 mapped_triples=mapped_triples,
             ))
-
-        # Get data
+        # chain
+        base = itertools.chain(*base)
+        # drop zero-confidence
+        base = filter(lambda t: t[-1] > 0, base)
+        # keep only skyline
+        base = skyline(base)
         df = pandas.DataFrame(
-            data=[
-                (relation_id, pattern, support, confidence)
-                for (relation_id, pattern, support, confidence) in itertools.chain(*base)
-                if support >= min_support and confidence >= min_confidence
-            ],
+            data=list(base),
             columns=["relation_id", "pattern", "support", "confidence"],
-        ).sort_values(by=["relation_id", "confidence", "support"])
+        ).sort_values(by=["pattern", "relation_id", "confidence", "support"])
+        # TODO: Store via pystow; use dataset name
+        cache_path = pathlib.Path("/tmp/relation_patterns.tsv.xz")
+        df.to_csv(cache_path, sep="\t", index=False)
+        logger.info(f"Cached {len(df)} entries to {cache_path.as_uri()}")
+
+        df = pandas.read_csv(cache_path, sep="\t")
+        logger.info(f"Read {len(df)} cached entries to {cache_path.as_uri()}")
+
+        df = df[(df["support"] >= min_support) & (df["confidence"] >= min_confidence)]
 
         if drop_confidence:
             df = df[["relation_id", "pattern"]].drop_duplicates()
