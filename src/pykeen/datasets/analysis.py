@@ -324,10 +324,13 @@ def relation_classification(
         base = filter(lambda t: t[-1] > 0, base)
         # keep only skyline
         base = skyline(base)
+        # create data frame
         df = pandas.DataFrame(
             data=list(base),
             columns=["relation_id", "pattern", "support", "confidence"],
         ).sort_values(by=["pattern", "relation_id", "confidence", "support"])
+        # save to file
+        cache_path.parent.mkdir(exist_ok=True, parents=True)
         df.to_csv(cache_path, sep="\t", index=False)
         logger.info(f"Cached {len(df)} entries to {cache_path.as_uri()}")
     else:
