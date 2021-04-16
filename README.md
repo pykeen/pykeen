@@ -230,7 +230,7 @@ or the URL for the dataset if neither of the first two are available.
 | Adjusted Mean Rank Index (AMRI) | The re-indexed adjusted mean rank (AMR), on [-1, 1]. Higher is better.                 | [`pykeen.evaluation.RankBasedMetricResults`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.RankBasedMetricResults.html) |
 | Average Precision               | The area under the precision-recall curve, on [0.0, 1.0]. Higher is better.            | [`pykeen.evaluation.SklearnMetricResults`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.SklearnMetricResults.html)     |
 | Hits @ K                        | The relative frequency of ranks not larger than a given k, on [0, 1]. Higher is better | [`pykeen.evaluation.RankBasedMetricResults`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.RankBasedMetricResults.html) |
-| Mean Rank (MR)                  | The mean over all ranks on, [0, inf). Lower is better.                                 | [`pykeen.evaluation.RankBasedMetricResults`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.RankBasedMetricResults.html) |
+| Mean Rank (MR)                  | The mean over all ranks on, [1, inf). Lower is better.                                 | [`pykeen.evaluation.RankBasedMetricResults`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.RankBasedMetricResults.html) |
 | Mean Reciprocal Rank (MRR)      | The mean over all reciprocal ranks, on (0, 1]. Higher is better.                       | [`pykeen.evaluation.RankBasedMetricResults`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.RankBasedMetricResults.html) |
 
 ### Trackers (5)

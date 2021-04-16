@@ -100,7 +100,7 @@ class RankBasedMetricResults(MetricResults):
 
     mean_rank: Dict[str, Dict[str, float]] = field(metadata=dict(
         name="Mean Rank (MR)",
-        doc='The mean over all ranks on, [0, inf). Lower is better.',
+        doc='The mean over all ranks on, [1, inf). Lower is better.',
     ))
 
     mean_reciprocal_rank: Dict[str, Dict[str, float]] = field(metadata=dict(
