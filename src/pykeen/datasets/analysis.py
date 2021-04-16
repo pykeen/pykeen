@@ -433,7 +433,11 @@ def relation_classification(
         # determine patterns from triples
         base = _determine_patterns(mapped_triples_list=mapped_triples.tolist())
         # drop zero-confidence
-        base = filter(lambda t: t[-1] > 0, base)
+        base = (
+            pattern
+            for pattern in base
+            if pattern.confidence > 0
+        )
         # keep only skyline
         base = skyline(base)
         # create data frame
