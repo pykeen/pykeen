@@ -78,19 +78,15 @@ class Dataset:
     create_inverse_triples: bool
 
     @property
-    def factories(self) -> Tuple[TriplesFactory, TriplesFactory, TriplesFactory]:
-        """Return a tuple of three factories in order (training, testing, validation)."""
-        # TODO this isn't used. See also Dataset._tup()
-        return self.training, self.testing, self.validation
-
-    @property
     def factory_dict(self) -> Mapping[str, TriplesFactory]:
         """Return a dictionary of the three factories."""
-        return dict(
+        rv = dict(
             training=self.training,
             testing=self.testing,
-            validation=self.validation,
         )
+        if self.validation:
+            rv['validation'] = self.validation
+        return rv
 
     @property
     def entity_to_id(self):  # noqa: D401
