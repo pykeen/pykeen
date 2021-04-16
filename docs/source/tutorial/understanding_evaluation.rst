@@ -1,5 +1,5 @@
-Understanding Rank-Based Evaluation
-===================================
+Understanding the Evaluation
+============================
 This part of the tutorial is aimed to help you understand the evaluation of knowledge graph embeddings.
 In particular it explains rank-based evaluation metrics reported in :class:`pykeen.evaluation.RankBasedMetricResults`.
 
