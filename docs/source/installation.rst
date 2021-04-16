@@ -44,9 +44,10 @@ If you're having trouble with imports related to the plugin systems, try adding 
     from pkg_resources import require
     require('pykeen')
 
-Thank you `@jerryIsHere <https://github.com/jerryIsHere>`_ for the suggestion for this fix. See
-`PyKEEN Issue #373 <https://github.com/pykeen/pykeen/issues/373>`_ for more information or if you
-have further troubles.
+.. seealso::
+
+    `PyKEEN issue #373 <https://github.com/pykeen/pykeen/issues/373>`_ for more information or if you
+    would like to discuss further
 
 To enable GPU usage, go to the Runtime -> Change runtime type menu to enable a GPU with your notebook.
 
