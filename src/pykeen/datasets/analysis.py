@@ -437,7 +437,7 @@ def relation_classification(
     parts = [parts] if isinstance(parts, str) else parts
 
     # include part hash into cache-file name
-    part_hash = hashlib.sha512("".join(sorted(parts)).encode("utf8"))[:16]
+    part_hash = hashlib.sha512("".join(sorted(parts)).encode("utf8")).hexdigest()[:16]
     cache_path = PYKEEN_DATASETS.joinpath(dataset.__class__.__name__.lower(), f"relation_patterns_{part_hash}.tsv.xz")
 
     # re-use cached file if possible
