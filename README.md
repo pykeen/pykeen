@@ -223,15 +223,15 @@ or the URL for the dataset if neither of the first two are available.
 
 ### Metrics (7)
 
-| Metric                   | Description                                                                                                        | Evaluator   | Reference                                  |
-|--------------------------|--------------------------------------------------------------------------------------------------------------------|-------------|--------------------------------------------|
-| Adjusted Mean Rank       | The mean over all chance-adjusted ranks: mean_i (2r_i / (num_entities+1)). Lower is better.                        | rankbased   | `pykeen.evaluation.RankBasedMetricResults` |
-| Adjusted Mean Rank Index | Reindexed AMR on [-1.0, 1.0]. Higher is better.                                                                    | rankbased   | `pykeen.evaluation.RankBasedMetricResults` |
-| Average Precision Score  | The area under the precision-recall curve, between [0.0, 1.0]. Higher is better.                                   | sklearn     | `pykeen.evaluation.SklearnMetricResults`   |
-| Hits At K                | The hits at k for different values of k, i.e. the relative frequency of ranks not larger than k. Higher is better. | rankbased   | `pykeen.evaluation.RankBasedMetricResults` |
-| Mean Rank                | The mean over all ranks: mean_i r_i. Lower is better.                                                              | rankbased   | `pykeen.evaluation.RankBasedMetricResults` |
-| Mean Reciprocal Rank     | The mean over all reciprocal ranks: mean_i (1/r_i). Higher is better.                                              | rankbased   | `pykeen.evaluation.RankBasedMetricResults` |
-| Roc Auc Score            | The area under the ROC curve between [0.0, 1.0]. Higher is better.                                                 | sklearn     | `pykeen.evaluation.SklearnMetricResults`   |
+| Metric                   | Description                                                                                      | Evaluator   | Reference                                  |
+|--------------------------|--------------------------------------------------------------------------------------------------|-------------|--------------------------------------------|
+| Adjusted Mean Rank       | The mean over all chance-adjusted ranks. Bounded by $(0, 2)$. Lower is better.                   | rankbased   | `pykeen.evaluation.RankBasedMetricResults` |
+| Adjusted Mean Rank Index | The re-indexed adjusted mean rank (AMR). Bounded by $[-1, 1]$. Higher is better.                 | rankbased   | `pykeen.evaluation.RankBasedMetricResults` |
+| Average Precision Score  | The area under the precision-recall curve, between [0.0, 1.0]. Higher is better.                 | sklearn     | `pykeen.evaluation.SklearnMetricResults`   |
+| Hits At K                | The relative frequency of ranks not larger than a given k. Bounded by $[0, 1]$. Higher is better | rankbased   | `pykeen.evaluation.RankBasedMetricResults` |
+| Mean Rank                | The mean over all ranks. Bound by $[0, inf)$. Lower is better.                                   | rankbased   | `pykeen.evaluation.RankBasedMetricResults` |
+| Mean Reciprocal Rank     | The mean over all reciprocal ranks. Bounded by $(0, 1]$. Higher is better.                       | rankbased   | `pykeen.evaluation.RankBasedMetricResults` |
+| Roc Auc Score            | The area under the ROC curve between [0.0, 1.0]. Higher is better.                               | sklearn     | `pykeen.evaluation.SklearnMetricResults`   |
 
 ### Trackers (5)
 
