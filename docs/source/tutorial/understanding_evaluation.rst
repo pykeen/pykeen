@@ -69,8 +69,7 @@ The mean rank (MR) computes the arithmetic mean over all individual ranks. It is
 
 It has the advantage over hits @ k that it is sensitive to any model performance changes, not only what occurs
 under a certain cutoff and therefore reflects average performance. With PyKEEN's standard 1-based indexing,
-the mean rank lies on the interval $[1, \infty)$. For 0-based indexing, it would lie on the interval $[0, \infty)$.
-For both, a lower number signifies better performance.
+the mean rank lies on the interval $[1, \infty)$ where lower is better.
 
 .. warning::
 
