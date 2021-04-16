@@ -184,7 +184,7 @@ def entity_relation_co_occurrence_dataframe(dataset: Dataset) -> pandas.DataFram
 
 
 def _get_skyline(xs: Collection[Tuple[int, float]]) -> Collection[Tuple[int, float]]:
-    # naive implementation, O(n2)
+    # TODO: naive implementation, O(n2)
     return {
         (s, c)
         for s, c in xs
