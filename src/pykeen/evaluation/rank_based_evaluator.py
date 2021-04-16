@@ -183,8 +183,7 @@ class RankBasedMetricResults(MetricResults):
 
     inverse_harmonic_mean_rank: Dict[str, Dict[str, float]] = field(metadata=dict(
         name="Mean Reciprocal Rank (MRR)",
-        doc='The inverse of the harmonic mean over all ranks, on (0, 1].'
-            ' Better named "inverse harmonic mean rank" Higher is better.',
+        doc='The inverse of the harmonic mean over all ranks, on (0, 1]. Higher is better.',
     ))
 
     inverse_median_rank: Dict[str, Dict[str, float]] = field(metadata=dict(
