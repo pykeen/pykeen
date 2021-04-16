@@ -444,9 +444,18 @@ def relation_classification(
         parts = dataset.factory_dict.keys()
     parts = [parts] if isinstance(parts, str) else parts
 
+    # select triples
+    mapped_triples = torch.cat([
+        dataset.factory_dict[part].mapped_triples
+        for part in parts
+    ], dim=0).tolist()
+
+    # include hash over triples into cache-file name
+    # sort first, for triple order invariance
+    ph = hashlib.sha512("".join(map(str, sorted(mapped_triples))).encode("utf8")).hexdigest()[:16]
+
     # include part hash into cache-file name
-    part_hash = hashlib.sha512("".join(sorted(parts)).encode("utf8")).hexdigest()[:16]
-    cache_path = PYKEEN_DATASETS.joinpath(dataset.__class__.__name__.lower(), f"relation_patterns_{part_hash}.tsv.xz")
+    cache_path = PYKEEN_DATASETS.joinpath(dataset.__class__.__name__.lower(), f"relation_patterns_{ph}.tsv.xz")
 
     # re-use cached file if possible
     if not cache_path.is_file() or force:
