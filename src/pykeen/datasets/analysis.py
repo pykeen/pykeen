@@ -6,7 +6,7 @@ import itertools as itt
 import logging
 from collections import defaultdict
 from operator import itemgetter
-from typing import Collection, Iterable, Mapping, Set, Tuple
+from typing import Collection, DefaultDict, Iterable, Mapping, Set, Tuple
 
 import numpy
 import pandas
@@ -201,8 +201,8 @@ def skyline(
     """
     Keep only those entries which are in the support-confidence skyline.
 
-    A pair (s, c) dominates (s', c') if s > s' and c > c'. The skyline contains those entries which are not dominated
-    by any other entry.
+    A pair $(s, c)$ dominates $(s', c')$ if $s > s'$ and $c > c'$. The skyline contains those entries which are not
+    dominated by any other entry.
 
     :param data_stream:
         The stream of data, comprising tuples (relation_id, pattern-type, support, confidence).
@@ -211,7 +211,7 @@ def skyline(
         An entry from the support-confidence skyline.
     """
     # group by (relation id, pattern type)
-    data: Mapping[Tuple[int, str], Set[Tuple[int, float]]] = defaultdict(set)
+    data: DefaultDict[Tuple[int, str], Set[Tuple[int, float]]] = defaultdict(set)
     for tup in data_stream:
         data[tup[:2]].add(tup[2:])
     # for each group, yield from skyline
@@ -228,9 +228,10 @@ def _composition_candidates(
     r"""
     Pre-filtering relation pair candidates for composition pattern.
 
-    Determines all relation pairs (r, r') with at least one entity e such that
+    Determines all relation pairs $(r, r')$ with at least one entity e such that
 
     .. math ::
+
         \{(h, r, e), (e, r', t)\} \subseteq \mathcal{T}
 
     :param mapped_triples_list:
@@ -241,9 +242,9 @@ def _composition_candidates(
     """
     # index triples
     # incoming relations per entity
-    ins: Mapping[int, Set[int]] = defaultdict(set)
+    ins: DefaultDict[int, Set[int]] = defaultdict(set)
     # outgoing relations per entity
-    outs: Mapping[int, Set[int]] = defaultdict(set)
+    outs: DefaultDict[int, Set[int]] = defaultdict(set)
     for h, r, t in mapped_triples_list:
         outs[h].add(r)
         ins[t].add(r)
@@ -257,20 +258,18 @@ def _composition_candidates(
     }
 
 
-def _yield_unary_patterns(
+def yield_unary_patterns(
     pairs: Mapping[int, Set[Tuple[int, int]]],
 ) -> Iterable[Tuple[int, str, int, float]]:
     r"""
     Yield unary patterns from pre-indexed triples.
 
-    Patterns:
-        Symmetry
-            .. math ::
-                r(x, y) \implies r(y, x)
-
-        Anti-Symmetry
-            .. math ::
-                r(x, y) \implies \neg r(y, x)
+    =============  ===============================
+    Pattern        Equation
+    =============  ===============================
+    Symmetry       $r(x, y) \implies r(y, x)$
+    Anti-Symmetry  $r(x, y) \implies \neg r(y, x)$
+    =============  ===============================
 
     :param pairs:
         A mapping from relations to the set of entity pairs.
@@ -287,16 +286,17 @@ def _yield_unary_patterns(
         yield r, "anti-symmetry", support, 1 - confidence
 
 
-def _yield_binary_patterns(
+def yield_binary_patterns(
     pairs: Mapping[int, Set[Tuple[int, int]]],
 ) -> Iterable[Tuple[int, str, int, float]]:
     r"""
     Yield binary patterns from pre-indexed triples.
 
-    Patterns:
-        Inversion
-        .. math ::
-            r'(x, y) \implies r(y, x)
+    =========  ===========================
+    Pattern    Equation
+    =========  ===========================
+    Inversion  $r'(x, y) \implies r(y, x)$
+    =========  ===========================
 
     :param pairs:
         A mapping from relations to the set of entity pairs.
@@ -310,17 +310,18 @@ def _yield_binary_patterns(
         yield r, "inversion", support, confidence
 
 
-def _yield_ternary_patterns(
+def yield_ternary_patterns(
     mapped_triples_list: Collection[Tuple[int, int, int]],
     pairs: Mapping[int, Set[Tuple[int, int]]],
 ) -> Iterable[Tuple[int, str, int, float]]:
     r"""
     Yield ternary patterns from pre-indexed triples.
 
-    Patterns:
-        Composition
-        .. math ::
-            r'(x, y) \land r''(y, z) \implies r(x, z)
+    ===========  ===========================================
+    Pattern      Equation
+    ===========  ===========================================
+    Composition  $r'(x, y) \land r''(y, z) \implies r(x, z)$
+    ===========  ===========================================
 
     :param mapped_triples_list:
         A collection of ID-based triples.
@@ -332,7 +333,7 @@ def _yield_ternary_patterns(
     """
     # composition r1(x, y) & r2(y, z) => r(x, z)
     # indexing triples for fast join r1 & r2
-    adj: Mapping[int, Mapping[int, Set[int]]] = defaultdict(lambda: defaultdict(set))
+    adj: DefaultDict[int, DefaultDict[int, Set[int]]] = defaultdict(lambda: defaultdict(set))
     for h, r, t in mapped_triples_list:
         adj[r][h].add(t)
     # actual evaluation of the pattern
@@ -360,18 +361,18 @@ def _determine_patterns(
     # unary
     logger.debug("Evaluating unary patterns: {symmetry, anti-symmetry}")
     # indexing triples for fast lookup of entity pair sets
-    pairs: Mapping[int, Set[Tuple[int, int]]] = defaultdict(set)
+    pairs: DefaultDict[int, Set[Tuple[int, int]]] = defaultdict(set)
     for h, r, t in mapped_triples_list:
         pairs[r].add((h, t))
-    yield from _yield_unary_patterns(pairs=pairs)
+    yield from yield_unary_patterns(pairs=pairs)
 
     # binary
     logger.debug("Evaluating binary patterns: {inversion}")
-    yield from _yield_binary_patterns(pairs=pairs)
+    yield from yield_binary_patterns(pairs=pairs)
 
     # ternary
     logger.debug("Evaluating ternary patterns: {composition}")
-    yield from _yield_ternary_patterns(mapped_triples_list, pairs)
+    yield from yield_ternary_patterns(mapped_triples_list, pairs)
 
 
 def relation_classification(
@@ -387,18 +388,19 @@ def relation_classification(
     and confidence. By default, we do not require a minimum support, however, a relatively high confidence.
 
     The following four non-exclusive classes for relations are considered:
-        {
-            symmetry,
-            anti-symmetry,
-            inversion,
-            composition,
-        }
+
+    - symmetry
+    - anti-symmetry
+    - inversion
+    - composition
 
     This method generally follows the terminology of association rule mining. The patterns are expressed as
+
     .. math ::
+
         X_1 \land \cdot \land X_k \implies Y
 
-    where X_i is of the form r_i(h_i, t_i), and some of the h_i / t_i might re-occur in other atoms.
+    where $X_i$ is of the form $r_i(h_i, t_i)$, and some of the $h_i / t_i$ might re-occur in other atoms.
     The *support* of a pattern is the number of distinct instantiations of all variables for the left hand side.
     The *confidence* is the proportion of these instantiations where the right-hand side is also true.
 
