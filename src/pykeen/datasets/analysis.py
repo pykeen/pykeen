@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 
 """Dataset analysis utilities."""
-
+import hashlib
 import itertools as itt
 import logging
 from collections import defaultdict
 from operator import itemgetter
-from typing import Collection, DefaultDict, Iterable, Mapping, NamedTuple, Set, Tuple
+from typing import Collection, DefaultDict, Iterable, Mapping, NamedTuple, Optional, Set, Tuple
 
 import numpy
 import pandas
@@ -387,6 +387,7 @@ def relation_classification(
     min_support: int = 0,
     min_confidence: float = 0.95,
     drop_confidence: bool = True,
+    parts: Optional[Collection[str]] = None,
 ) -> pandas.DataFrame:
     r"""
     Categorize relations based on patterns from RotatE [sun2019]_.
@@ -419,37 +420,57 @@ def relation_classification(
         A minimum confidence for the tested patterns.
     :param drop_confidence:
         Whether to drop the support/confidence information from the result frame, and also drop duplicates.
+    :param parts:
+        Only use certain parts of the dataset, e.g., train triples. Defaults to using all triples, i.e.
+        {"training", "validation", "testing}.
+
+    .. warning ::
+        If you intend to use the relation categorization as input to your model, or hyperparameter selection, do *not*
+        include testing triples to avoid leakage!
 
     :return:
         A dataframe with columns {"relation_id", "pattern", "support"?, "confidence"?}.
     """
-    cache_path = PYKEEN_DATASETS.joinpath(dataset.__class__.__name__.lower(), "relation_patterns.tsv.xz")
+    # normalize parts
+    if parts is None:
+        parts = dataset.factory_dict.keys()
+    parts = [parts] if isinstance(parts, str) else parts
+
+    # include part hash into cache-file name
+    part_hash = hashlib.sha512("".join(sorted(parts)))[:16]
+    cache_path = PYKEEN_DATASETS.joinpath(dataset.__class__.__name__.lower(), f"relation_patterns_{part_hash}.tsv.xz")
+
+    # re-use cached file if possible
     if not cache_path.is_file():
-        # use all triples; TODO: should we do this?
-        # TODO this function should already exist somewhere
+        # select triples
         mapped_triples = torch.cat([
-            triples_factory.mapped_triples
-            for triples_factory in dataset.factories
+            dataset.factory_dict[part].mapped_triples
+            for part in parts
         ], dim=0)
+
         # determine patterns from triples
         base = _determine_patterns(mapped_triples_list=mapped_triples.tolist())
+
         # drop zero-confidence
         base = (
             pattern
             for pattern in base
             if pattern.confidence > 0
         )
+
         # keep only skyline
         base = skyline(base)
+
         # create data frame
         df = pandas.DataFrame(
             data=list(base),
             columns=["relation_id", "pattern", "support", "confidence"],
         ).sort_values(by=["pattern", "relation_id", "confidence", "support"])
+
         # save to file
         cache_path.parent.mkdir(exist_ok=True, parents=True)
         df.to_csv(cache_path, sep="\t", index=False)
-        logger.info(f"Cached {len(df)} entries to {cache_path.as_uri()}")
+        logger.info(f"Cached {len(df)} relational pattern entries to {cache_path.as_uri()}")
     else:
         df = pandas.read_csv(cache_path, sep="\t")
         logger.info(f"Loaded {len(df)} precomputed relational patterns from {cache_path.as_uri()}")
