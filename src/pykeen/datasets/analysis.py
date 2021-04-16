@@ -183,6 +183,39 @@ def entity_relation_co_occurrence_dataframe(dataset: Dataset) -> pandas.DataFram
     )
 
 
+def _get_skyline(xs: Collection[Tuple[int, float]]) -> Collection[Tuple[int, float]]:
+    # naive implementation, O(n2)
+    return {
+        (s, c)
+        for s, c in xs
+        if not any(
+            s2 > s and c2 > c
+            for s2, c2 in xs
+        )
+    }
+
+
+def skyline(
+    data_stream: Iterable[Tuple[int, str, int, float]],
+) -> Collection[Tuple[int, str, int, float]]:
+    """
+    Keep only those entries which are in the support-confidence skyline.
+
+    A pair (s, c) dominates (s', c') if s > s' and c > c'. The skyline contains those entries which are not dominated
+    by any other entry.
+    """
+    # group by (relation id, pattern type)
+    data: Mapping[Tuple[int, str], Set[Tuple[int, float]]] = defaultdict(set)
+    for tup in data_stream:
+        data[tup[:2]].add(tup[2:])
+    # for each group, yield from skyline
+    for (r_id, pat), values in data.items():
+        yield from (
+            (r_id, pat, supp, conf)
+            for supp, conf in _get_skyline(values)
+        )
+
+
 def relation_classification(
     dataset: Dataset,
     min_support: int = 0,
@@ -231,39 +264,6 @@ def relation_classification(
         drop_confidence=drop_confidence,
         pattern_types=pattern_types,
     )
-
-
-def _get_skyline(xs: Collection[Tuple[int, float]]) -> Collection[Tuple[int, float]]:
-    # naive implementation, O(n2)
-    return {
-        (s, c)
-        for s, c in xs
-        if not any(
-            s2 > s and c2 > c
-            for s2, c2 in xs
-        )
-    }
-
-
-def skyline(
-    data_stream: Iterable[Tuple[int, str, int, float]],
-) -> Collection[Tuple[int, str, int, float]]:
-    """
-    Keep only those entries which are in the support-confidence skyline.
-
-    A pair (s, c) dominates (s', c') if s > s' and c > c'. The skyline contains those entries which are not dominated
-    by any other entry.
-    """
-    # group by (relation id, pattern type)
-    data: Mapping[Tuple[int, str], Set[Tuple[int, float]]] = defaultdict(set)
-    for tup in data_stream:
-        data[tup[:2]].add(tup[2:])
-    # for each group, yield from skyline
-    for (r_id, pat), values in data.items():
-        yield from (
-            (r_id, pat, supp, conf)
-            for supp, conf in _get_skyline(values)
-        )
 
 
 class RelationCategorizer:
