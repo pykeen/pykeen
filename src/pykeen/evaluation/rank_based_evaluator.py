@@ -30,7 +30,7 @@ SIDE_BOTH = 'both'
 RANK_OPTIMISTIC = 'optimistic'
 RANK_PESSIMISTIC = 'pessimistic'
 RANK_REALISTIC = 'realistic'
-RANK_EXPECTED = 'expected_realistic'
+RANK_EXPECTED_REALISTIC = 'expected_realistic'
 RANK_TYPES = {RANK_OPTIMISTIC, RANK_PESSIMISTIC, RANK_REALISTIC}
 SIDES = {SIDE_HEAD, SIDE_TAIL, SIDE_BOTH}
 
@@ -98,7 +98,7 @@ def compute_rank_from_scores(
         RANK_OPTIMISTIC: optimistic_rank,
         RANK_PESSIMISTIC: pessimistic_rank,
         RANK_REALISTIC: realistic_rank,
-        RANK_EXPECTED: expected_realistic_rank,
+        RANK_EXPECTED_REALISTIC: expected_realistic_rank,
     }
 
 
@@ -354,7 +354,7 @@ class RankBasedEvaluator(Evaluator):
                 mean_rank[side][rank_type] = np.mean(ranks)
                 mean_reciprocal_rank[side][rank_type] = np.mean(np.reciprocal(ranks))
 
-            expected_ranks = self._get_ranks(side=side, rank_type=RANK_EXPECTED)
+            expected_ranks = self._get_ranks(side=side, rank_type=RANK_EXPECTED_REALISTIC)
             if len(expected_ranks) < 1:
                 continue
             expected_mean_rank = float(np.mean(expected_ranks))
