@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """Dataset analysis utilities."""
-import itertools
+
+import itertools as itt
 import logging
 from collections import defaultdict
 from operator import itemgetter
@@ -303,8 +304,7 @@ def _yield_binary_patterns(
     :return:
         An iterable of (relation_id, pattern_type, support, confidence) tuples.
     """
-    for r1, r in itertools.combinations(pairs.keys(), r=2):
-        ht1, ht2 = pairs[r1], pairs[r]
+    for (r1, ht1), (r, ht2) in itt.combinations(pairs.items(), r=2):
         support = len(ht1)
         confidence = len(ht1.intersection(ht2)) / support
         yield r, "inversion", support, confidence
