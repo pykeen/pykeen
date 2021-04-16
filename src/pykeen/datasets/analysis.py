@@ -6,7 +6,7 @@ import itertools as itt
 import logging
 from collections import defaultdict
 from operator import itemgetter
-from typing import Collection, DefaultDict, Iterable, Mapping, Set, Tuple
+from typing import Collection, DefaultDict, Iterable, Mapping, NamedTuple, Set, Tuple
 
 import numpy
 import pandas
@@ -20,6 +20,15 @@ from ..utils import invert_mapping
 logger = logging.getLogger(__name__)
 
 SUBSET_LABELS = ('testing', 'training', 'validation', 'total')
+
+
+class PatternMatch(NamedTuple):
+    """A pattern match tuple of relation_id, pattern_type, support, and confidence."""
+
+    relation_id: int
+    pattern_type: str
+    support: int
+    confidence: float
 
 
 def get_id_counts(
@@ -195,9 +204,7 @@ def _get_skyline(xs: Collection[Tuple[int, float]]) -> Collection[Tuple[int, flo
     }
 
 
-def skyline(
-    data_stream: Iterable[Tuple[int, str, int, float]],
-) -> Iterable[Tuple[int, str, int, float]]:
+def skyline(data_stream: Iterable[PatternMatch]) -> Iterable[PatternMatch]:
     """
     Keep only those entries which are in the support-confidence skyline.
 
@@ -217,7 +224,7 @@ def skyline(
     # for each group, yield from skyline
     for (r_id, pat), values in data.items():
         yield from (
-            (r_id, pat, supp, conf)
+            PatternMatch(r_id, pat, supp, conf)
             for supp, conf in _get_skyline(values)
         )
 
@@ -260,7 +267,7 @@ def _composition_candidates(
 
 def yield_unary_patterns(
     pairs: Mapping[int, Set[Tuple[int, int]]],
-) -> Iterable[Tuple[int, str, int, float]]:
+) -> Iterable[PatternMatch]:
     r"""
     Yield unary patterns from pre-indexed triples.
 
@@ -275,20 +282,20 @@ def yield_unary_patterns(
         A mapping from relations to the set of entity pairs.
 
     :yields:
-        A tuple (relation_id, pattern_type, support, confidence).
+        A pattern match tuple of relation_id, pattern_type, support, and confidence.
     """
     for r, ht in pairs.items():
         support = len(ht)
         rev_ht = {(t, h) for h, t in ht}
         confidence = len(ht.intersection(rev_ht)) / support
-        yield r, "symmetry", support, confidence
+        yield PatternMatch(r, "symmetry", support, confidence)
         confidence = len(ht.difference(rev_ht)) / support
-        yield r, "anti-symmetry", support, 1 - confidence
+        yield PatternMatch(r, "anti-symmetry", support, 1 - confidence)
 
 
 def yield_binary_patterns(
     pairs: Mapping[int, Set[Tuple[int, int]]],
-) -> Iterable[Tuple[int, str, int, float]]:
+) -> Iterable[PatternMatch]:
     r"""
     Yield binary patterns from pre-indexed triples.
 
@@ -302,18 +309,18 @@ def yield_binary_patterns(
         A mapping from relations to the set of entity pairs.
 
     :yields:
-        A tuple (relation_id, pattern_type, support, confidence).
+        A pattern match tuple of relation_id, pattern_type, support, and confidence.
     """
     for (r1, ht1), (r, ht2) in itt.combinations(pairs.items(), r=2):
         support = len(ht1)
         confidence = len(ht1.intersection(ht2)) / support
-        yield r, "inversion", support, confidence
+        yield PatternMatch(r, "inversion", support, confidence)
 
 
 def yield_ternary_patterns(
     mapped_triples_list: Collection[Tuple[int, int, int]],
     pairs: Mapping[int, Set[Tuple[int, int]]],
-) -> Iterable[Tuple[int, str, int, float]]:
+) -> Iterable[PatternMatch]:
     r"""
     Yield ternary patterns from pre-indexed triples.
 
@@ -329,7 +336,7 @@ def yield_ternary_patterns(
         A mapping from relations to the set of entity pairs.
 
     :yields:
-        A tuple (relation_id, pattern_type, support, confidence).
+        A pattern match tuple of relation_id, pattern_type, support, and confidence.
     """
     # composition r1(x, y) & r2(y, z) => r(x, z)
     # indexing triples for fast join r1 & r2
@@ -352,12 +359,12 @@ def yield_ternary_patterns(
             continue
         for r, ht in pairs.items():
             confidence = len(lhs.intersection(ht)) / support
-            yield r, "composition", support, confidence
+            yield PatternMatch(r, "composition", support, confidence)
 
 
 def _determine_patterns(
     mapped_triples_list: Collection[Tuple[int, int, int]],
-) -> Iterable[Tuple[int, str, int, float]]:
+) -> Iterable[PatternMatch]:
     # unary
     logger.debug("Evaluating unary patterns: {symmetry, anti-symmetry}")
     # indexing triples for fast lookup of entity pair sets
