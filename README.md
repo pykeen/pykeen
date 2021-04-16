@@ -216,10 +216,10 @@ or the URL for the dataset if neither of the first two are available.
 
 ### Evaluators (2)
 
-| Name      | Reference                              | Description                                   |
-|-----------|----------------------------------------|-----------------------------------------------|
-| rankbased | `pykeen.evaluation.RankBasedEvaluator` | A rank-based evaluator for KGE models.        |
-| sklearn   | `pykeen.evaluation.SklearnEvaluator`   | An evaluator that uses a Scikit-learn metric. |
+| Name      | Reference                                                                                                                       | Description                                   |
+|-----------|---------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------|
+| rankbased | [`pykeen.evaluation.RankBasedEvaluator`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.RankBasedEvaluator.html) | A rank-based evaluator for KGE models.        |
+| sklearn   | [`pykeen.evaluation.SklearnEvaluator`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.SklearnEvaluator.html)     | An evaluator that uses a Scikit-learn metric. |
 
 ### Metrics (7)
 

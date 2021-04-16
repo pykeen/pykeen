@@ -189,8 +189,8 @@ def evaluators(tablefmt: str):
     click.echo(_help_evaluators(tablefmt))
 
 
-def _help_evaluators(tablefmt):
-    lines = sorted(_get_lines(evaluator_resolver.lookup_dict, tablefmt, 'evaluation'))
+def _help_evaluators(tablefmt, link_fmt: Optional[str] = None):
+    lines = sorted(_get_lines(evaluator_resolver.lookup_dict, tablefmt, 'evaluation', link_fmt=link_fmt))
     return tabulate(
         lines,
         headers=['Name', 'Description'] if tablefmt == 'plain' else ['Name', 'Reference', 'Description'],
@@ -472,7 +472,7 @@ def get_readme() -> str:
             tablefmt, link_fmt='https://pykeen.readthedocs.io/en/latest/reference/stoppers.html#{}',
         ),
         n_stoppers=len(stopper_resolver.lookup_dict),
-        evaluators=_help_evaluators(tablefmt),
+        evaluators=_help_evaluators(tablefmt, link_fmt='https://pykeen.readthedocs.io/en/latest/api/{}.html'),
         n_evaluators=len(evaluator_resolver.lookup_dict),
         metrics=_help_metrics(tablefmt, link_fmt='https://pykeen.readthedocs.io/en/latest/api/{}.html'),
         n_metrics=len(get_metric_list()),
