@@ -281,10 +281,10 @@ def metrics(tablefmt: str):
     click.echo(_help_metrics(tablefmt))
 
 
-def _help_metrics(tablefmt):
+def _help_metrics(tablefmt, link_fmt=None):
     return tabulate(
-        sorted(_get_metrics_lines(tablefmt)),
-        headers=['Name', 'Reference'] if tablefmt == 'rst' else ['Metric', 'Description', 'Evaluator', 'Reference'],
+        sorted(_get_metrics_lines(tablefmt, link_fmt=link_fmt)),
+        headers=['Name', 'Reference'] if tablefmt == 'rst' else ['Metric', 'Description', 'Reference'],
         tablefmt=tablefmt,
     )
 
@@ -323,19 +323,20 @@ def _help_hpo_samplers(tablefmt: str, link_fmt: Optional[str] = None):
     )
 
 
-def _get_metrics_lines(tablefmt: str):
+def _get_metrics_lines(tablefmt: str, link_fmt=None):
     if tablefmt == 'rst':
         for name, value in metric_resolver.lookup_dict.items():
             yield name, f':class:`pykeen.evaluation.{value.__name__}`'
     else:
         for field, name, value in get_metric_list():
             if tablefmt == 'github':
+                ref = f'pykeen.evaluation.{value.__name__}'
                 yield (
-                    field.name.replace('_', ' ').title(), field.metadata['doc'],
-                    name, f'`pykeen.evaluation.{value.__name__}`',
+                    field.metadata['name'], field.metadata['doc'],
+                    f'[`{ref}`]({link_fmt.format(ref)})',
                 )
             else:
-                yield field.name, field.metadata['doc'], name, f'pykeen.evaluation.{value.__name__}'
+                yield field.metadata['name'], field.metadata['doc'], name, f'pykeen.evaluation.{value.__name__}'
 
 
 def _get_lines(d, tablefmt, submodule, link_fmt: Optional[str] = None):
@@ -473,7 +474,7 @@ def get_readme() -> str:
         n_stoppers=len(stopper_resolver.lookup_dict),
         evaluators=_help_evaluators(tablefmt),
         n_evaluators=len(evaluator_resolver.lookup_dict),
-        metrics=_help_metrics(tablefmt),
+        metrics=_help_metrics(tablefmt, link_fmt='https://pykeen.readthedocs.io/en/latest/api/{}.html'),
         n_metrics=len(get_metric_list()),
         trackers=_help_trackers(tablefmt, link_fmt='https://pykeen.readthedocs.io/en/latest/api/{}.html'),
         n_trackers=len(tracker_resolver.lookup_dict),

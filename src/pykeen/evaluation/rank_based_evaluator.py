@@ -99,22 +99,27 @@ class RankBasedMetricResults(MetricResults):
     r"""Results from computing metrics."""
 
     mean_rank: Dict[str, Dict[str, float]] = field(metadata=dict(
+        name="Mean Rank (MR)",
         doc='The mean over all ranks. Bound by $[0, inf)$. Lower is better.',
     ))
 
     mean_reciprocal_rank: Dict[str, Dict[str, float]] = field(metadata=dict(
+        name="Mean Reciprocal Rank (MRR)",
         doc='The mean over all reciprocal ranks. Bounded by $(0, 1]$. Higher is better.',
     ))
 
     hits_at_k: Dict[str, Dict[str, Dict[Union[int, float], float]]] = field(metadata=dict(
+        name='Hits @ K',
         doc='The relative frequency of ranks not larger than a given k. Bounded by $[0, 1]$. Higher is better',
     ))
 
     adjusted_mean_rank: Dict[str, float] = field(metadata=dict(
+        name='Adjusted Mean Rank (AMR)',
         doc='The mean over all chance-adjusted ranks. Bounded by $(0, 2)$. Lower is better.',
     ))
 
     adjusted_mean_rank_index: Dict[str, float] = field(metadata=dict(
+        name='Adjusted Mean Rank Index (AMRI)',
         doc='The re-indexed adjusted mean rank (AMR). Bounded by $[-1, 1]$. Higher is better.',
     ))
 
