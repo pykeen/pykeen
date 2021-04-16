@@ -6,14 +6,40 @@ import itertools
 import unittest
 from typing import Collection, Optional, Sequence
 
+import numpy as np
 import pandas
 import pytest
 
 from pykeen.datasets import Nations, get_dataset
 from pykeen.datasets.analysis import (
-    SUBSET_LABELS, entity_count_dataframe, entity_relation_co_occurrence_dataframe, relation_classification,
-    relation_count_dataframe,
+    SUBSET_LABELS, _get_skyline, entity_count_dataframe, entity_relation_co_occurrence_dataframe,
+    relation_classification, relation_count_dataframe,
 )
+
+
+def _old_skyline(xs):
+    # TODO: naive implementation, O(n2)
+    return {
+        (s, c)
+        for s, c in xs
+        if not any(
+            s2 > s and c2 > c
+            for s2, c2 in xs
+        )
+    }
+
+
+class TestUtils(unittest.TestCase):
+    """Test skyline."""
+
+    def test_skyline(self):
+        """Test the skyline function."""
+        n = 500
+        pairs = list(zip(
+            np.random.randint(low=0, high=200, size=n, dtype=int),
+            np.random.uniform(0, 6, size=n),
+        ))
+        self.assertEqual(_old_skyline(pairs), _get_skyline(pairs))
 
 
 class AnalysisTests(unittest.TestCase):

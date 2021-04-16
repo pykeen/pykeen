@@ -191,13 +191,13 @@ def entity_relation_co_occurrence_dataframe(dataset: Dataset) -> pd.DataFrame:
 
 
 def _get_skyline(xs: Collection[Tuple[int, float]]) -> Collection[Tuple[int, float]]:
-    # TODO: naive implementation, O(n2)
+    xs = sorted(xs)
     return {
         (s, c)
-        for s, c in xs
+        for i, (s, c) in enumerate(xs)
         if not any(
-            s2 > s and c2 > c
-            for s2, c2 in xs
+            s2 > s and c2 >= c
+            for s2, c2 in xs[i:]
         )
     }
 
