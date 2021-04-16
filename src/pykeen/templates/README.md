@@ -234,7 +234,7 @@ If you have found PyKEEN useful in your work, please consider citing [our articl
     journal = {Journal of Machine Learning Research},
     number = {82},
     pages = {1--6},
-    title = {% raw %}{{PyKEEN 1.0: A Python Library for Training and Evaluating Knowledge Graph Embeddings}}{% endraw %}},
+    title = {% raw %}{{PyKEEN 1.0: A Python Library for Training and Evaluating Knowledge Graph Embeddings}}{% endraw %},
     url = {http://jmlr.org/papers/v22/20-825.html},
     volume = {22},
     year = {2021}

@@ -12,7 +12,10 @@ import torch
 from pykeen.datasets import Nations
 from pykeen.evaluation import Evaluator, MetricResults, RankBasedEvaluator, RankBasedMetricResults
 from pykeen.evaluation.evaluator import create_dense_positive_mask_, create_sparse_positive_filter_, filter_scores_
-from pykeen.evaluation.rank_based_evaluator import RANK_TYPES, SIDES, compute_rank_from_scores
+from pykeen.evaluation.rank_based_evaluator import (
+    RANK_EXPECTED_REALISTIC, RANK_OPTIMISTIC, RANK_PESSIMISTIC,
+    RANK_REALISTIC, RANK_TYPES, SIDES, compute_rank_from_scores,
+)
 from pykeen.evaluation.sklearn import SklearnEvaluator, SklearnMetricResults
 from pykeen.models import Model, TransE
 from pykeen.triples import TriplesFactory
@@ -152,20 +155,26 @@ class RankBasedEvaluatorTests(_AbstractEvaluatorTests, unittest.TestCase):
     ):
         # Check for correct class
         assert isinstance(result, RankBasedMetricResults)
+        result: RankBasedMetricResults
 
         # Check value ranges
+        # check mean rank (MR)
         for side, all_type_mr in result.mean_rank.items():
             assert side in SIDES
             for rank_type, mr in all_type_mr.items():
                 assert rank_type in RANK_TYPES
                 assert isinstance(mr, float)
                 assert 1 <= mr <= self.factory.num_entities
+
+        # check mean reciprocal rank (MRR)
         for side, all_type_mrr in result.mean_reciprocal_rank.items():
             assert side in SIDES
             for rank_type, mrr in all_type_mrr.items():
                 assert rank_type in RANK_TYPES
                 assert isinstance(mrr, float)
                 assert 0 < mrr <= 1
+
+        # check hits at k (H@k)
         for side, all_type_hits_at_k in result.hits_at_k.items():
             assert side in SIDES
             for rank_type, hits_at_k in all_type_hits_at_k.items():
@@ -175,6 +184,18 @@ class RankBasedEvaluatorTests(_AbstractEvaluatorTests, unittest.TestCase):
                     assert 0 < k < self.factory.num_entities
                     assert isinstance(h, float)
                     assert 0 <= h <= 1
+
+        # check adjusted mean rank (AMR)
+        for side, adjusted_mean_rank in result.adjusted_mean_rank.items():
+            assert side in SIDES
+            assert isinstance(adjusted_mean_rank, float)
+            assert 0 < adjusted_mean_rank < 2
+
+        # check adjusted mean rank index (AMRI)
+        for side, adjusted_mean_rank_index in result.adjusted_mean_rank_index.items():
+            assert side in SIDES
+            assert isinstance(adjusted_mean_rank_index, float)
+            assert -1 <= adjusted_mean_rank_index <= 1
 
         # TODO: Validate with data?
 
@@ -227,28 +248,29 @@ class EvaluatorUtilsTests(unittest.TestCase):
             [1., 1., 3., float('nan'), 0],
         ])
         # true_score: (2, 3, 3)
-        true_score = torch.tensor([2., 3., 3.]).view(batch_size, 1)
-        exp_best_rank = torch.tensor([3., 2., 1.])
-        exp_worst_rank = torch.tensor([4., 2., 1.])
+        true_score = torch.as_tensor([2., 3., 3.]).view(batch_size, 1)
+        exp_best_rank = torch.as_tensor([3., 2., 1.])
+        exp_worst_rank = torch.as_tensor([4., 2., 1.])
         exp_avg_rank = 0.5 * (exp_best_rank + exp_worst_rank)
-        exp_adj_rank = exp_avg_rank / torch.tensor([(5 + 1) / 2, (5 + 1) / 2, (4 + 1) / 2])
+        exp_exp_rank = torch.as_tensor([(5 + 1) / 2, (5 + 1) / 2, (4 + 1) / 2])
         ranks = compute_rank_from_scores(true_score=true_score, all_scores=all_scores)
 
-        best_rank = ranks.get('best')
-        assert best_rank.shape == (batch_size,)
-        assert (best_rank == exp_best_rank).all()
+        optimistic_rank = ranks.get(RANK_OPTIMISTIC)
+        assert optimistic_rank.shape == (batch_size,)
+        assert (optimistic_rank == exp_best_rank).all()
 
-        worst_rank = ranks.get('worst')
-        assert worst_rank.shape == (batch_size,)
-        assert (worst_rank == exp_worst_rank).all()
+        pessimistic_rank = ranks.get(RANK_PESSIMISTIC)
+        assert pessimistic_rank.shape == (batch_size,)
+        assert (pessimistic_rank == exp_worst_rank).all()
 
-        avg_rank = ranks.get('avg')
-        assert avg_rank.shape == (batch_size,)
-        assert (avg_rank == exp_avg_rank).all(), (avg_rank, exp_avg_rank)
+        realistic_rank = ranks.get(RANK_REALISTIC)
+        assert realistic_rank.shape == (batch_size,)
+        assert (realistic_rank == exp_avg_rank).all(), (realistic_rank, exp_avg_rank)
 
-        adj_rank = ranks.get('adj')
-        assert adj_rank.shape == (batch_size,)
-        assert (adj_rank == exp_adj_rank).all(), (adj_rank, exp_adj_rank)
+        expected_realistic_rank = ranks.get(RANK_EXPECTED_REALISTIC)
+        assert expected_realistic_rank is not None
+        assert expected_realistic_rank.shape == (batch_size,)
+        assert (expected_realistic_rank == exp_exp_rank).all(), (expected_realistic_rank, exp_exp_rank)
 
     def test_create_sparse_positive_filter_(self):
         """Test method create_sparse_positive_filter_."""
@@ -421,6 +443,7 @@ class DummyEvaluator(Evaluator):
             mean_rank=self.counter,
             mean_reciprocal_rank=None,
             adjusted_mean_rank=None,
+            adjusted_mean_rank_index=None,
             hits_at_k=dict(),
         )
 
