@@ -79,7 +79,7 @@ The adjusted mean rank (AMR) was introduced by [berrendorf2020]_. It is defined 
 
     \text{score} = \frac{MR}{\mathbb{E}\left[MR\right]} = \frac{2 \sum_{i=1}^{n} r_{i}}{\sum_{i=1}^{n} (|\mathcal{S}_i|+1)}
 
-It lies on the range $[0.0, 2.0]$ where closer to 0 is better.
+It lies on the range $(0.0, 2.0)$ where closer to 0 is better.
 
 Adjusted Mean Rank Index
 ************************
@@ -94,7 +94,8 @@ The AMR has a bounded value range of $[-1, 1]$ where closer to 1 is better.
 
 Mean Reciprocal Rank
 ********************
-The mean reciprocal rank (MRR) is the inverse of the harmonic mean of the ranks. It is defined as:
+The mean reciprocal rank (MRR) is the arithemtic mean of reciprocal ranks, and thus the inverse of the harmonic mean 
+of the ranks. It is defined as:
 
 .. math::
 
@@ -102,8 +103,8 @@ The mean reciprocal rank (MRR) is the inverse of the harmonic mean of the ranks.
 
 .. warning::
 
-    The mean reciprocal rank has been shown to have serious flaws by [fuhr2018]_. Do **not** rely on it in your work.
-    It is only implemented and reported in PyKEEN for posterity.
+    It has been argued that the mean reciprocal rank has theoretical flaws by [fuhr2018]_. However, this opinion is not undisputed, 
+    cf. [sakai2020]_.
 
 Despite its flaws, MRR is still often used during early stopping due to its behavior related to low rank values.
 While the hits @ k ignores changes among high rank values completely and the mean rank changes uniformly
