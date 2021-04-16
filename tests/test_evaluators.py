@@ -159,7 +159,7 @@ class RankBasedEvaluatorTests(_AbstractEvaluatorTests, unittest.TestCase):
 
         # Check value ranges
         # check mean rank (MR)
-        for side, all_type_mr in result.mean_rank.items():
+        for side, all_type_mr in result.arithmetic_mean_rank.items():
             assert side in SIDES
             for rank_type, mr in all_type_mr.items():
                 assert rank_type in RANK_TYPES
@@ -167,7 +167,7 @@ class RankBasedEvaluatorTests(_AbstractEvaluatorTests, unittest.TestCase):
                 assert 1 <= mr <= self.factory.num_entities
 
         # check mean reciprocal rank (MRR)
-        for side, all_type_mrr in result.mean_reciprocal_rank.items():
+        for side, all_type_mrr in result.inverse_harmonic_mean_rank.items():
             assert side in SIDES
             for rank_type, mrr in all_type_mrr.items():
                 assert rank_type in RANK_TYPES
@@ -188,14 +188,16 @@ class RankBasedEvaluatorTests(_AbstractEvaluatorTests, unittest.TestCase):
         # check adjusted mean rank (AMR)
         for side, adjusted_mean_rank in result.adjusted_arithmetic_mean_rank.items():
             assert side in SIDES
-            assert isinstance(adjusted_mean_rank, float)
-            assert 0 < adjusted_mean_rank < 2
+            assert RANK_REALISTIC in adjusted_mean_rank
+            assert isinstance(adjusted_mean_rank[RANK_REALISTIC], float)
+            assert 0 < adjusted_mean_rank[RANK_REALISTIC] < 2
 
         # check adjusted mean rank index (AMRI)
         for side, adjusted_mean_rank_index in result.adjusted_arithmetic_mean_rank_index.items():
             assert side in SIDES
-            assert isinstance(adjusted_mean_rank_index, float)
-            assert -1 <= adjusted_mean_rank_index <= 1
+            assert RANK_REALISTIC in adjusted_mean_rank_index
+            assert isinstance(adjusted_mean_rank_index[RANK_REALISTIC], float)
+            assert -1 <= adjusted_mean_rank_index[RANK_REALISTIC] <= 1
 
         # TODO: Validate with data?
 
@@ -440,11 +442,19 @@ class DummyEvaluator(Evaluator):
 
     def finalize(self) -> MetricResults:  # noqa: D102
         return RankBasedMetricResults(
-            mean_rank=self.counter,
-            mean_reciprocal_rank=None,
+            arithmetic_mean_rank=self.counter,
+            geometric_mean_rank=None,
+            harmonic_mean_rank=None,
+            median_rank=None,
+            inverse_arithmetic_mean_rank=None,
             inverse_geometric_mean_rank=None,
-            adjusted_mean_rank=None,
-            adjusted_mean_rank_index=None,
+            inverse_harmonic_mean_rank=None,
+            inverse_median_rank=None,
+            rank_std=None,
+            rank_var=None,
+            rank_mad=None,
+            adjusted_arithmetic_mean_rank=None,
+            adjusted_arithmetic_mean_rank_index=None,
             hits_at_k=dict(),
         )
 
@@ -470,4 +480,5 @@ class TestEvaluationStructure(unittest.TestCase):
             batch_size=1,
             use_tqdm=False,
         )
-        assert eval_results.mean_rank == self.counter, 'Should end at the same value as it started'
+        self.assertIsInstance(eval_results, RankBasedMetricResults)
+        assert eval_results.arithmetic_mean_rank == self.counter, 'Should end at the same value as it started'

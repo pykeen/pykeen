@@ -5,7 +5,7 @@
 import itertools as itt
 import logging
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from typing import DefaultDict, Dict, Iterable, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
@@ -52,9 +52,9 @@ INVERSE_GEOMETRIC_MEAN_RANK = 'inverse_geometric_mean_rank'
 INVERSE_HARMONIC_MEAN_RANK = 'inverse_harmonic_mean_rank'  # also known as mean reciprocal rank (MRR)
 INVERSE_MEDIAN_RANK = 'inverse_median_rank'
 
-RANK_STD = 'std'
-RANK_VARIANCE = 'variance'
-RANK_MAD = 'median_absolute_deviation'
+RANK_STD = 'rank_std'
+RANK_VARIANCE = 'rank_var'
+RANK_MAD = 'rank_mad'
 
 all_type_funcs = {
     ARITHMETIC_MEAN_RANK: np.mean,  # This is MR
@@ -78,9 +78,9 @@ TYPES_REALISTIC_ONLY = {ADJUSTED_ARITHMETIC_MEAN_RANK, ADJUSTED_ARITHMETIC_MEAN_
 METRIC_SYNONYMS = {
     'adjusted_mean_rank': ADJUSTED_ARITHMETIC_MEAN_RANK,
     'adjusted_mean_rank_index': ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX,
-    'mrr': INVERSE_HARMONIC_MEAN_RANK,
     'mr': ARITHMETIC_MEAN_RANK,
     'mean_rank': ARITHMETIC_MEAN_RANK,
+    'mrr': INVERSE_HARMONIC_MEAN_RANK,
     'mean_reciprocal_rank': INVERSE_HARMONIC_MEAN_RANK,
 }
 
@@ -149,7 +149,7 @@ def compute_rank_from_scores(
 @dataclass_json
 @dataclass
 class RankBasedMetricResults(MetricResults):
-    r"""Results from computing metrics."""
+    """Results from computing metrics."""
 
     arithmetic_mean_rank: Dict[str, Dict[str, float]] = field(metadata=dict(
         name="Mean Rank (MR)",
@@ -191,17 +191,17 @@ class RankBasedMetricResults(MetricResults):
         doc='The inverse of the median over all ranks, on (0, 1]. Higher is better.',
     ))
 
-    std: Dict[str, Dict[str, float]] = field(metadata=dict(
+    rank_std: Dict[str, Dict[str, float]] = field(metadata=dict(
         name="Rank Standard Deviation",
         doc='The standard deviation over all ranks on, [0, inf). Lower is better.',
     ))
 
-    var: Dict[str, Dict[str, float]] = field(metadata=dict(
+    rank_var: Dict[str, Dict[str, float]] = field(metadata=dict(
         name="Rank Variance",
         doc='The variance over all ranks on, [0, inf). Lower is better.',
     ))
 
-    mad: Dict[str, Dict[str, float]] = field(metadata=dict(
+    rank_mad: Dict[str, Dict[str, float]] = field(metadata=dict(
         name="Rank Median Absolute Deviation",
         doc='The median absolute deviation over all ranks on, [0, inf). Lower is better.',
     ))
@@ -315,14 +315,15 @@ class RankBasedMetricResults(MetricResults):
         return pd.DataFrame(list(self._iter_rows()), columns=['Side', 'Type', 'Metric', 'Value'])
 
     def _iter_rows(self) -> Iterable[Tuple[str, str, str, float]]:
-        for side in SIDES:
-            for metric_name, metric_dict in sorted(self._types_realistic_only.items()):
-                yield side, RANK_REALISTIC, metric_name, metric_dict[side]
-            for rank_type in RANK_TYPES:
-                for metric_name, metric_dict in sorted(self._types_all.items()):
-                    yield side, rank_type, metric_name, metric_dict[side][rank_type]
-                for k, v in self.hits_at_k[side][rank_type].items():
-                    yield side, rank_type, f'hits_at_{k}', v
+        for side, rank_type in itt.product(SIDES, RANK_TYPES):
+            for k, v in self.hits_at_k[side][rank_type].items():
+                yield side, rank_type, f'hits_at_{k}', v
+            for f in fields(self):
+                if f.name == 'hits_at_k':
+                    continue
+                side_data = getattr(self, f.name)[side]
+                if rank_type in side_data:
+                    yield side, rank_type, f.name, side_data[rank_type]
 
 
 class RankBasedEvaluator(Evaluator):
@@ -436,8 +437,9 @@ class RankBasedEvaluator(Evaluator):
                 if 0 < len(expected_ranks):
                     # Adjusted mean rank calculation
                     expected_mean_rank = float(np.mean(expected_ranks))
-                    asr[ADJUSTED_ARITHMETIC_MEAN_RANK][side][rank_type] = asr[ARITHMETIC_MEAN_RANK][side][
-                                                                              rank_type] / expected_mean_rank
+                    asr[ADJUSTED_ARITHMETIC_MEAN_RANK][side][rank_type] = (
+                        asr[ARITHMETIC_MEAN_RANK][side][rank_type] / expected_mean_rank
+                    )
                     asr[ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX][side][rank_type] = (
                         1.0 - (asr[ARITHMETIC_MEAN_RANK][side][rank_type] - 1) / (expected_mean_rank - 1)
                     )
@@ -454,9 +456,9 @@ class RankBasedEvaluator(Evaluator):
             inverse_geometric_mean_rank=dict(asr[INVERSE_GEOMETRIC_MEAN_RANK]),
             inverse_harmonic_mean_rank=dict(asr[INVERSE_HARMONIC_MEAN_RANK]),
             inverse_median_rank=dict(asr[INVERSE_MEDIAN_RANK]),
-            std=dict(asr[RANK_STD]),
-            mad=dict(asr[RANK_MAD]),
-            var=dict(asr[RANK_VARIANCE]),
+            rank_std=dict(asr[RANK_STD]),
+            rank_mad=dict(asr[RANK_MAD]),
+            rank_var=dict(asr[RANK_VARIANCE]),
             adjusted_arithmetic_mean_rank=dict(asr[ADJUSTED_ARITHMETIC_MEAN_RANK]),
             adjusted_arithmetic_mean_rank_index=dict(asr[ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX]),
             hits_at_k=dict(hits_at_k),
