@@ -22,7 +22,7 @@ Google Colab and Kaggle Users
 a hosted version of Google's custom Jupyter notebook environment that work similarly. After opening
 a new notebook on one of these service, start your notebook with the following two lines:
 
-.. code-block:: python
+.. code-block::
 
     ! pip install git+https://github.com/pykeen/pykeen.git
     pykeen.env()
@@ -32,7 +32,7 @@ It works because Jupyter interprets any line beginning with a bang ``!`` that th
 line should be interpreted as a bash command. If you want to make your notebook compatible on both
 hosted and local installations, change it slightly to check if PyKEEN is already installed:
 
-.. code-block:: python
+.. code-block::
 
     ! python -c "import pykeen" || pip install git+https://github.com/pykeen/pykeen.git
     pykeen.env()
