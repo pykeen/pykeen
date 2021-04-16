@@ -33,8 +33,8 @@ number.
 .. note::
 
     There are theoretical implications based on whether the indexing is
-    `0-based <https://en.wikipedia.org/wiki/Zero-based_numbering>`_ (typical in mathematics and computer science)  or
-    1-based (natural). Python, PyTorch, and PyKEEN use 0-based indexing.
+    `0-based <https://en.wikipedia.org/wiki/Zero-based_numbering>`_  or
+    1-based (natural). PyKEEN uses 1-based indexing to conform with related work.
 
 Rank-Based Metrics
 ~~~~~~~~~~~~~~~~~~
@@ -68,8 +68,8 @@ The mean rank (MR) computes the arithmetic mean over all individual ranks. It is
     \text{score} =\frac{1}{|\mathcal{I}|} \sum \limits_{r \in \mathcal{I}} r
 
 It has the advantage over hits @ k that it is sensitive to any model performance changes, not only what occurs
-under a certain cutoff and therefore reflects average performance. For 0-based indexing (like in PyKEEN),
-the mean rank lies on the interval $[0, \infty)$. For 1-based indexing, it lies on the interval $[1, \infty)$.
+under a certain cutoff and therefore reflects average performance. With PyKEEN's standard 1-based indexing,
+the mean rank lies on the interval $[1, \infty)$. For 0-based indexing, it would lie on the interval $[0, \infty)$.
 For both, a lower number signifies better performance.
 
 .. warning::
