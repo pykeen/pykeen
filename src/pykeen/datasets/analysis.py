@@ -215,6 +215,41 @@ def skyline(
         )
 
 
+def _composition_candidates(
+    mapped_triples_list: Collection[Tuple[int, int, int]],
+) -> Collection[Tuple[int, int]]:
+    r"""
+    Pre-filtering relation pair candidates for composition pattern.
+
+    Determines all relation pairs (r, r') with at least one entity e such that
+
+    .. math ::
+        \{(h, r, e), (e, r', t)\} \subseteq \mathcal{T}
+
+    :param mapped_triples_list:
+        The collection of ID-based triples.
+
+    :return:
+        A set of relation pairs.
+    """
+    # index triples
+    # incoming relations per entity
+    ins: Mapping[int, Set[int]] = defaultdict(set)
+    # outgoing relations per entity
+    outs: Mapping[int, Set[int]] = defaultdict(set)
+    for h, r, t in mapped_triples_list:
+        outs[h].add(r)
+        ins[t].add(r)
+
+    # return candidates
+    return {
+        (r1, r2)
+        for e, r1s in ins.items()
+        for r1 in r1s
+        for r2 in outs[e]
+    }
+
+
 def _determine_patterns(
     mapped_triples_list: Collection[Tuple[int, int, int]],
 ) -> Iterable[Tuple[int, str, int, float]]:
@@ -269,41 +304,6 @@ def _determine_patterns(
         for r, ht in pairs.items():
             confidence = len(lhs.intersection(ht)) / support
             yield r, "composition", support, confidence
-
-
-def _composition_candidates(
-    mapped_triples_list: Collection[Tuple[int, int, int]],
-) -> Collection[Tuple[int, int]]:
-    r"""
-    Pre-filtering relation pair candidates for composition pattern.
-
-    Determines all relation pairs (r, r') with at least one entity e such that
-
-    .. math ::
-        \{(h, r, e), (e, r', t)\} \subseteq \mathcal{T}
-
-    :param mapped_triples_list:
-        The collection of ID-based triples.
-
-    :return:
-        A set of relation pairs.
-    """
-    # index triples
-    # incoming relations per entity
-    ins: Mapping[int, Set[int]] = defaultdict(set)
-    # outgoing relations per entity
-    outs: Mapping[int, Set[int]] = defaultdict(set)
-    for h, r, t in mapped_triples_list:
-        outs[h].add(r)
-        ins[t].add(r)
-
-    # return candidates
-    return {
-        (r1, r2)
-        for e, r1s in ins.items()
-        for r1 in r1s
-        for r2 in outs[e]
-    }
 
 
 def relation_classification(
