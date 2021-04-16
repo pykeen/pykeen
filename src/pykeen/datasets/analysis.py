@@ -314,7 +314,7 @@ def yield_binary_patterns(
         A pattern match tuple of relation_id, pattern_type, support, and confidence.
     """
     logger.debug("Evaluating binary patterns: {inversion}")
-    for (r1, ht1), (r, ht2) in itt.combinations(pairs.items(), r=2):
+    for (_r1, ht1), (r, ht2) in itt.combinations(pairs.items(), r=2):
         support = len(ht1)
         confidence = len(ht1.intersection(ht2)) / support
         yield PatternMatch(r, "inversion", support, confidence)
