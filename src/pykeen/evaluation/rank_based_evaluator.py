@@ -24,12 +24,22 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
+SIDE_HEAD = 'head'
+SIDE_TAIL = 'tail'
+SIDE_BOTH = 'both'
 RANK_BEST = 'best'
 RANK_WORST = 'worst'
 RANK_AVERAGE = 'avg'
 RANK_EXPECTED = "exp"
 RANK_TYPES = {RANK_BEST, RANK_WORST, RANK_AVERAGE}
-SIDES = {'head', 'tail', 'both'}
+SIDES = {SIDE_HEAD, SIDE_TAIL, SIDE_BOTH}
+
+MEAN_RANK = 'mean_rank'
+MEAN_RECIPROCAL_RANK = 'mean_reciprocal_rank'
+ADJUSTED_MEAN_RANK = 'adjusted_mean_rank'
+ADJUSTED_MEAN_RANK_INDEX = 'adjusted_mean_rank_index'
+TYPES_ALL = {MEAN_RANK, MEAN_RECIPROCAL_RANK}
+TYPES_AVG_ONLY = {ADJUSTED_MEAN_RANK, ADJUSTED_MEAN_RANK_INDEX}
 
 
 def compute_rank_from_scores(
@@ -123,6 +133,16 @@ class RankBasedMetricResults(MetricResults):
         doc='The re-indexed adjusted mean rank (AMR), on [-1, 1]. Higher is better.',
     ))
 
+    def __post_init__(self):  # noqa:D105
+        self._types_avg_only = {
+            ADJUSTED_MEAN_RANK: self.adjusted_mean_rank,
+            ADJUSTED_MEAN_RANK_INDEX: self.adjusted_mean_rank_index,
+        }
+        self._types_all = {
+            MEAN_RANK: self.mean_rank,
+            MEAN_RECIPROCAL_RANK: self.mean_reciprocal_rank,
+        }
+
     def get_metric(self, name: str) -> float:
         """Get the rank-based metric.
 
@@ -165,15 +185,15 @@ class RankBasedMetricResults(MetricResults):
         """
         dot_count = name.count('.')
         if 0 == dot_count:  # assume average by default
-            side, rank_type, metric = 'both', 'avg', name
+            side, rank_type, metric = SIDE_BOTH, RANK_AVERAGE, name
         elif 1 == dot_count:
             # Check if it a side or rank type
             side_or_ranktype, metric = name.split('.')
             if side_or_ranktype in SIDES:
                 side = side_or_ranktype
-                rank_type = 'avg'
+                rank_type = RANK_AVERAGE
             else:
-                side = 'both'
+                side = SIDE_BOTH
                 rank_type = side_or_ranktype
         elif 2 == dot_count:
             side, rank_type, metric = name.split('.')
@@ -182,16 +202,17 @@ class RankBasedMetricResults(MetricResults):
 
         if side not in SIDES:
             raise ValueError(f'Invalid side: {side}. Allowed sides: {SIDES}')
-        if rank_type not in RANK_AVERAGE and metric in {'adjusted_mean_rank', 'adjusted_mean_rank_index'}:
+        if rank_type not in RANK_AVERAGE and metric in TYPES_AVG_ONLY:
             raise ValueError(f'Invalid rank type for {metric}: {rank_type}. Allowed type: {RANK_AVERAGE}')
         elif rank_type not in RANK_TYPES:
             raise ValueError(f'Invalid rank type: {rank_type}. Allowed types: {RANK_TYPES}')
 
-        if metric in {'mean_rank', 'mean_reciprocal_rank'}:
+        if metric in TYPES_ALL:
             return getattr(self, metric)[side][rank_type]
-        elif metric in {'adjusted_mean_rank', 'adjusted_mean_rank_index'}:
+        elif metric in TYPES_AVG_ONLY:
             return getattr(self, metric)[side]
 
+        # otherwise, assume is hits@k, which is handled differently
         rank_type_hits_at_k = self.hits_at_k[side][rank_type]
         for prefix in ('hits_at_', 'hits@'):
             if not metric.startswith(prefix):
@@ -203,29 +224,24 @@ class RankBasedMetricResults(MetricResults):
         raise ValueError(f'Invalid metric name: {name}')
 
     def to_flat_dict(self):  # noqa: D102
-        r = {}
-        for side in SIDES:
-            r[f'{side}.avg.adjusted_mean_rank'] = self.adjusted_mean_rank[side]
-            r[f'{side}.avg.adjusted_mean_rank_index'] = self.adjusted_mean_rank_index[side]
-            for rank_type in RANK_TYPES:
-                r[f'{side}.{rank_type}.mean_rank'] = self.mean_rank[side][rank_type]
-                r[f'{side}.{rank_type}.mean_reciprocal_rank'] = self.mean_reciprocal_rank[side][rank_type]
-                for k, v in self.hits_at_k[side][rank_type].items():
-                    r[f'{side}.{rank_type}.hits_at_{k}'] = v
-        return r
+        return {
+            f'{side}.{rank_type}.{metric_name}': value
+            for side, rank_type, metric_name, value in self._iter_rows()
+        }
 
     def to_df(self) -> pd.DataFrame:
         """Output the metrics as a pandas dataframe."""
-        rows = []
+        return pd.DataFrame(list(self._iter_rows()), columns=['Side', 'Type', 'Metric', 'Value'])
+
+    def _iter_rows(self) -> Iterable[Tuple[str, str, str, float]]:
         for side in SIDES:
-            rows.append((side, 'avg', 'adjusted_mean_rank', self.adjusted_mean_rank[side]))
-            rows.append((side, 'avg', 'adjusted_mean_rank_index', self.adjusted_mean_rank_index[side]))
+            for metric_name, metric_dict in sorted(self._types_avg_only.items()):
+                yield side, RANK_AVERAGE, metric_name, metric_dict[side]
             for rank_type in RANK_TYPES:
-                rows.append((side, rank_type, 'mean_rank', self.mean_rank[side][rank_type]))
-                rows.append((side, rank_type, 'mean_reciprocal_rank', self.mean_reciprocal_rank[side][rank_type]))
+                for metric_name, metric_dict in sorted(self._types_all.items()):
+                    yield side, rank_type, metric_name, metric_dict[side][rank_type]
                 for k, v in self.hits_at_k[side][rank_type].items():
-                    rows.append((side, rank_type, f'hits_at_{k}', v))
-        return pd.DataFrame(rows, columns=['Side', 'Type', 'Metric', 'Value'])
+                    yield side, rank_type, f'hits_at_{k}', v
 
 
 class RankBasedEvaluator(Evaluator):
@@ -297,7 +313,7 @@ class RankBasedEvaluator(Evaluator):
         scores: torch.FloatTensor,
         dense_positive_mask: Optional[torch.FloatTensor] = None,
     ) -> None:  # noqa: D102
-        self._update_ranks_(true_scores=true_scores, all_scores=scores, side='tail')
+        self._update_ranks_(true_scores=true_scores, all_scores=scores, side=SIDE_TAIL)
 
     def process_head_scores_(
         self,
@@ -306,11 +322,11 @@ class RankBasedEvaluator(Evaluator):
         scores: torch.FloatTensor,
         dense_positive_mask: Optional[torch.FloatTensor] = None,
     ) -> None:  # noqa: D102
-        self._update_ranks_(true_scores=true_scores, all_scores=scores, side='head')
+        self._update_ranks_(true_scores=true_scores, all_scores=scores, side=SIDE_HEAD)
 
     def _get_ranks(self, side, rank_type) -> np.ndarray:
-        if side == 'both':
-            values: List[float] = sum((self.ranks.get((_side, rank_type), []) for _side in ('head', 'tail')), [])
+        if side == SIDE_BOTH:
+            values: List[float] = sum((self.ranks.get((_side, rank_type), []) for _side in (SIDE_HEAD, SIDE_TAIL)), [])
         else:
             values = self.ranks.get((side, rank_type), [])
         return np.asarray(values, dtype=np.float64)
