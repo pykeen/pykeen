@@ -388,6 +388,7 @@ def relation_classification(
     min_confidence: float = 0.95,
     drop_confidence: bool = True,
     parts: Optional[Collection[str]] = None,
+    force: bool = False,
 ) -> pandas.DataFrame:
     r"""
     Categorize relations based on patterns from RotatE [sun2019]_.
@@ -423,6 +424,8 @@ def relation_classification(
     :param parts:
         Only use certain parts of the dataset, e.g., train triples. Defaults to using all triples, i.e.
         {"training", "validation", "testing}.
+    :param force:
+        Whether to enforce re-calculation even if a cached version is available.
 
     .. warning ::
         If you intend to use the relation categorization as input to your model, or hyperparameter selection, do *not*
@@ -441,7 +444,7 @@ def relation_classification(
     cache_path = PYKEEN_DATASETS.joinpath(dataset.__class__.__name__.lower(), f"relation_patterns_{part_hash}.tsv.xz")
 
     # re-use cached file if possible
-    if not cache_path.is_file():
+    if not cache_path.is_file() or force:
         # select triples
         mapped_triples = torch.cat([
             dataset.factory_dict[part].mapped_triples
