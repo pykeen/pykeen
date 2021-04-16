@@ -221,6 +221,7 @@ def _determine_patterns(
 ) -> Iterable[Tuple[int, str, int, float]]:
     # unary
     logger.debug("Evaluating unary patterns: {symmetry, anti-symmetry}")
+    # indexing triples for fast lookup of entity pair sets
     pairs = defaultdict(set)
     for h, r, t in mapped_triples.tolist():
         pairs[r].add((h, t))
@@ -247,9 +248,12 @@ def _determine_patterns(
     # ternary
     logger.debug("Evaluating ternary patterns: {composition}")
     # composition r1(x, y) & r2(y, z) => r(x, z)
+    # indexing triples for fast join r1 & r2
     adj = defaultdict(lambda: defaultdict(set))
     for h, r, t in mapped_triples.tolist():
         adj[r][h].add(t)
+    # pre-filtering relation pair candidates:
+    # there has to be at least one entity with incoming r1 and outgoing r2 edge
     ins = defaultdict(set)
     outs = defaultdict(set)
     for h, r, t in mapped_triples.tolist():
@@ -261,6 +265,7 @@ def _determine_patterns(
         for r1 in r1s
         for r2 in outs[e]
     }
+    # actual evaluation of the pattern
     for r1, r2 in tqdm.tqdm(relation_pairs):
         ht1 = pairs[r1]
         zs = adj[r2]
@@ -270,6 +275,8 @@ def _determine_patterns(
             for z in zs[y]
         }
         support = len(lhs)
+        # skip empty support
+        # TODO: Can this happen after pre-filtering?
         if not support:
             continue
         for r, ht in pairs.items():
