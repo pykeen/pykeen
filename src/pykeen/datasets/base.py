@@ -11,8 +11,6 @@ import tarfile
 import zipfile
 from abc import abstractmethod
 from io import BytesIO
-from typing import Mapping, Optional, TextIO, Tuple, Union
-from urllib.parse import urlparse
 from typing import Any, ClassVar, Dict, List, Mapping, Optional, Sequence, TextIO, Tuple, Union, cast
 
 import click
