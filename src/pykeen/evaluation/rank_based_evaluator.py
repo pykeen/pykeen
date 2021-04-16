@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 import torch
 from dataclasses_json import dataclass_json
+from scipy.stats import gmean
 
 from .evaluator import Evaluator, MetricResults
 from ..typing import MappedTriples
@@ -35,6 +36,7 @@ RANK_TYPES = {RANK_OPTIMISTIC, RANK_PESSIMISTIC, RANK_REALISTIC}
 SIDES = {SIDE_HEAD, SIDE_TAIL, SIDE_BOTH}
 
 MEAN_RANK = 'mean_rank'
+INVERSE_GEOMETRIC_MEAN_RANK = 'inverse_geometric_mean_rank'
 MEAN_RECIPROCAL_RANK = 'mean_reciprocal_rank'
 ADJUSTED_MEAN_RANK = 'adjusted_mean_rank'
 ADJUSTED_MEAN_RANK_INDEX = 'adjusted_mean_rank_index'
@@ -118,6 +120,11 @@ class RankBasedMetricResults(MetricResults):
         doc='The mean over all reciprocal ranks, on (0, 1]. Higher is better.',
     ))
 
+    inverse_geometric_mean_rank: Dict[str, Dict[str, float]] = field(metadata=dict(
+        name="Inverse Geometric Mean Rank (IGMR)",
+        doc='The inverse of the geometric mean over all ranks, on (0, 1]. Higher is better.',
+    ))
+
     hits_at_k: Dict[str, Dict[str, Dict[Union[int, float], float]]] = field(metadata=dict(
         name='Hits @ K',
         doc='The relative frequency of ranks not larger than a given k, on [0, 1]. Higher is better',
@@ -141,6 +148,7 @@ class RankBasedMetricResults(MetricResults):
         self._types_all = {
             MEAN_RANK: self.mean_rank,
             MEAN_RECIPROCAL_RANK: self.mean_reciprocal_rank,
+            INVERSE_GEOMETRIC_MEAN_RANK: self.inverse_geometric_mean_rank,
         }
 
     def get_metric(self, name: str) -> float:
@@ -151,6 +159,7 @@ class RankBasedMetricResults(MetricResults):
             1. The side (one of "head", "tail", or "both"). Most publications exclusively report "both".
             2. The type (one of "optimistic", "pessimistic", "realistic")
             3. The metric name ("adjusted_mean_rank_index", "adjusted_mean_rank", "mean_rank, "mean_reciprocal_rank",
+               "inverse_geometric_mean_rank",
                or "hits@k" where k defaults to 10 but can be substituted for an integer. By default, 1, 3, 5, and 10
                are available. Other K's can be calculated by setting the appropriate variable in the
                ``evaluation_kwargs`` in the :func:`pykeen.pipeline.pipeline` or setting ``ks`` in the
@@ -335,6 +344,7 @@ class RankBasedEvaluator(Evaluator):
     def finalize(self) -> RankBasedMetricResults:  # noqa: D102
         mean_rank: DefaultDict[str, Dict[str, float]] = defaultdict(dict)
         mean_reciprocal_rank: DefaultDict[str, Dict[str, float]] = defaultdict(dict)
+        inverse_geometric_mean_rank: DefaultDict[str, Dict[str, float]] = defaultdict(dict)
         hits_at_k: DefaultDict[str, Dict[str, Dict[Union[int, float], float]]] = defaultdict(dict)
         adjusted_mean_rank: Dict[str, float] = {}
         adjusted_mean_rank_index: Dict[str, float] = {}
@@ -353,6 +363,7 @@ class RankBasedEvaluator(Evaluator):
                 }
                 mean_rank[side][rank_type] = np.mean(ranks)
                 mean_reciprocal_rank[side][rank_type] = np.mean(np.reciprocal(ranks))
+                inverse_geometric_mean_rank[side][rank_type] = np.reciprocal(gmean(ranks))
 
             expected_ranks = self._get_ranks(side=side, rank_type=RANK_EXPECTED_REALISTIC)
             if len(expected_ranks) < 1:
@@ -367,6 +378,7 @@ class RankBasedEvaluator(Evaluator):
         return RankBasedMetricResults(
             mean_rank=dict(mean_rank),
             mean_reciprocal_rank=dict(mean_reciprocal_rank),
+            inverse_geometric_mean_rank=inverse_geometric_mean_rank,
             hits_at_k=dict(hits_at_k),
             adjusted_mean_rank=adjusted_mean_rank,
             adjusted_mean_rank_index=adjusted_mean_rank_index,

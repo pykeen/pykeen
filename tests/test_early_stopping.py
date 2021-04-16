@@ -94,6 +94,13 @@ class MockEvaluator(Evaluator):
                 }
                 for side in SIDES
             },
+            inverse_geometric_mean_rank={
+                side: {
+                    rank_type: 1.0
+                    for rank_type in RANK_TYPES
+                }
+                for side in SIDES
+            },
             adjusted_mean_rank={
                 side: 1.0
                 for side in SIDES
