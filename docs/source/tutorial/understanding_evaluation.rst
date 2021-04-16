@@ -50,7 +50,7 @@ It is given as:
     \text{score}_k = \frac{1}{|\mathcal{I}|} \sum \limits_{r \in \mathcal{I}} \mathbb{I}[r \leq k]
 
 For example, if Google shows 20 results on the first page, then the percentage of results that are relevant is the
-hits @ 20. The hits @ k, regardless of $k$, lies on the $[0.0, 1.0]$ where closer to 1 is better.
+hits @ 20. The hits @ k, regardless of $k$, lies on the $[0, 1]$ where closer to 1 is better.
 
 .. warning::
 
@@ -88,7 +88,7 @@ The adjusted mean rank (AMR) was introduced by [berrendorf2020]_. It is defined 
 
 The derivations of $\mathbb{E}\left[MR\right]$ and $\mathcal{S}_i$ are contained within the original manuscript.
 
-It lies on the range $(0.0, 2.0)$ where closer to 0 is better.
+It lies on the open interval $(0, 2)$ where lower is better.
 
 Adjusted Mean Rank Index
 ************************

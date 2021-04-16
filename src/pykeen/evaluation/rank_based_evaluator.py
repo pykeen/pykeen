@@ -98,33 +98,33 @@ def compute_rank_from_scores(
 class RankBasedMetricResults(MetricResults):
     r"""Results from computing metrics."""
 
-    #: The mean over all ranks: mean_i r_i. Range is $[0.0, inf)$. Lower is better.
+    #: The mean over all ranks: mean_i r_i. Range is $[0, inf)$. Lower is better.
     mean_rank: Dict[str, Dict[str, float]] = field(metadata=dict(
         doc='The mean over all ranks: mean_i r_i. Lower is better.',
     ))
 
-    #: The mean over all reciprocal ranks: mean_i (1/r_i). Range is $(0.0, 1.0]$. Higher is better.
+    #: The mean over all reciprocal ranks: mean_i (1/r_i). Range is $(0, 1]$. Higher is better.
     mean_reciprocal_rank: Dict[str, Dict[str, float]] = field(metadata=dict(
         doc='The mean over all reciprocal ranks: mean_i (1/r_i). Higher is better.',
     ))
 
     #: The hits at k for different values of k, i.e. the relative frequency of ranks not larger than k.
-    #: Range is $[0.0, 1.0]$. Higher is better.
+    #: Range is $[0, 1]$. Higher is better.
     hits_at_k: Dict[str, Dict[str, Dict[Union[int, float], float]]] = field(metadata=dict(
         doc='The hits at k for different values of k, i.e. the relative frequency of ranks not larger than k.'
             ' Higher is better.',
     ))
 
     #: The mean over all chance-adjusted ranks: mean_i (2r_i / (num_entities+1)).
-    #: Range is $[0.0, 2.0]$. Lower is better. Described by [berrendorf2020]_.
+    #: Range is $(0, 2)$. Lower is better. Described by [berrendorf2020]_.
     adjusted_mean_rank: Dict[str, float] = field(metadata=dict(
         doc='The mean over all chance-adjusted ranks: mean_i (2r_i / (num_entities+1)). Lower is better.',
     ))
 
     #: The reindexed adjusted mean rank.
-    #: Range is $[-1.0, 1.0]$. Higher is better. Described by [berrendorf2020]_.
+    #: Range is $[-1, 1]$. Higher is better. Described by [berrendorf2020]_.
     adjusted_mean_rank_index: Dict[str, float] = field(metadata=dict(
-        doc='Reindexed AMR on [-1.0, 1.0]. Higher is better.',
+        doc='Reindexed AMR on [-1, 1]. Higher is better.',
     ))
 
     def get_metric(self, name: str) -> float:  # noqa: D102
@@ -198,11 +198,11 @@ class RankBasedEvaluator(Evaluator):
 
     Calculates the following metrics:
 
-    - Mean Rank (MR) with range $[1.0, \infty)$ where closer to 0 is better
-    - Adjusted Mean Rank (AMR; [berrendorf2020]_) with range $(0.0, 2.0]$ where closer to 0 is better
-    - Adjusted Mean Rank Index (AMRI; [berrendorf2020]_) with range $[-1.0, 1.0]$ where closer to 1 is better
-    - Mean Reciprocal Rank (MRR) with range $(0.0, 1.0]$ where closer to 1 is better
-    - Hits @ K with range $[0.0, 1.0]$ where closer to 1 is better.
+    - Mean Rank (MR) with range $[1, \infty)$ where closer to 0 is better
+    - Adjusted Mean Rank (AMR; [berrendorf2020]_) with range $(0, 2)$ where closer to 0 is better
+    - Adjusted Mean Rank Index (AMRI; [berrendorf2020]_) with range $[-1, 1]$ where closer to 1 is better
+    - Mean Reciprocal Rank (MRR) with range $(0, 1]$ where closer to 1 is better
+    - Hits @ K with range $[0, 1]$ where closer to 1 is better.
 
     .. [berrendorf2020] Berrendorf, *et al.* (2020) `Interpretable and Fair
         Comparison of Link Prediction or Entity Alignment Methods with Adjusted Mean Rank
