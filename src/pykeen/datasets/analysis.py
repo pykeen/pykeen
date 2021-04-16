@@ -14,7 +14,6 @@ import tqdm.contrib.itertools
 
 from .base import Dataset
 from ..constants import PYKEEN_DATASETS
-from ..typing import MappedTriples
 from ..utils import invert_mapping
 
 SUBSET_LABELS = ('testing', 'training', 'validation', 'total')
@@ -217,13 +216,13 @@ def skyline(
 
 
 def _determine_patterns(
-    mapped_triples: MappedTriples,
+    mapped_triples_list: Collection[Tuple[int, int, int]],
 ) -> Iterable[Tuple[int, str, int, float]]:
     # unary
     logger.debug("Evaluating unary patterns: {symmetry, anti-symmetry}")
     # indexing triples for fast lookup of entity pair sets
     pairs: Mapping[int, Set[Tuple[int, int]]] = defaultdict(set)
-    for h, r, t in mapped_triples.tolist():
+    for h, r, t in mapped_triples_list:
         pairs[r].add((h, t))
 
     # symmetry: r(x, y) => r(y, x)
@@ -250,21 +249,9 @@ def _determine_patterns(
     # composition r1(x, y) & r2(y, z) => r(x, z)
     # indexing triples for fast join r1 & r2
     adj: Mapping[int, Mapping[int, Set[int]]] = defaultdict(lambda: defaultdict(set))
-    for h, r, t in mapped_triples.tolist():
+    for h, r, t in mapped_triples_list:
         adj[r][h].add(t)
-    # pre-filtering relation pair candidates:
-    # there has to be at least one entity with incoming r1 and outgoing r2 edge
-    ins = defaultdict(set)
-    outs = defaultdict(set)
-    for h, r, t in mapped_triples.tolist():
-        outs[h].add(r)
-        ins[t].add(r)
-    relation_pairs = {
-        (r1, r2)
-        for e, r1s in ins.items()
-        for r1 in r1s
-        for r2 in outs[e]
-    }
+    relation_pairs = _composition_candidates(mapped_triples_list)
     # actual evaluation of the pattern
     for r1, r2 in tqdm.tqdm(relation_pairs):
         ht1 = pairs[r1]
@@ -282,6 +269,41 @@ def _determine_patterns(
         for r, ht in pairs.items():
             confidence = len(lhs.intersection(ht)) / support
             yield r, "composition", support, confidence
+
+
+def _composition_candidates(
+    mapped_triples_list: Collection[Tuple[int, int, int]],
+) -> Collection[Tuple[int, int]]:
+    r"""
+    Pre-filtering relation pair candidates for composition pattern.
+
+    Determines all relation pairs (r, r') with at least one entity e such that
+
+    .. math ::
+        \{(h, r, e), (e, r', t)\} \subset \mathcal{T}
+
+    :param mapped_triples_list:
+        The collection of ID-based triples.
+
+    :return:
+        A set of relation pairs.
+    """
+    # index triples
+    # incoming relations per entity
+    ins: Mapping[int, Set[int]] = defaultdict(set)
+    # outgoing relations per entity
+    outs: Mapping[int, Set[int]] = defaultdict(set)
+    for h, r, t in mapped_triples_list:
+        outs[h].add(r)
+        ins[t].add(r)
+
+    # return candidates
+    return {
+        (r1, r2)
+        for e, r1s in ins.items()
+        for r1 in r1s
+        for r2 in outs[e]
+    }
 
 
 def relation_classification(
@@ -326,7 +348,7 @@ def relation_classification(
             for triples_factory in dataset.factories
         ], dim=0)
         # determine patterns from triples
-        base = _determine_patterns(mapped_triples=mapped_triples)
+        base = _determine_patterns(mapped_triples_list=mapped_triples.tolist())
         # drop zero-confidence
         base = filter(lambda t: t[-1] > 0, base)
         # keep only skyline
