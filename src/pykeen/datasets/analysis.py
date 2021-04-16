@@ -280,7 +280,7 @@ def _composition_candidates(
     Determines all relation pairs (r, r') with at least one entity e such that
 
     .. math ::
-        \{(h, r, e), (e, r', t)\} \subset \mathcal{T}
+        \{(h, r, e), (e, r', t)\} \subseteq \mathcal{T}
 
     :param mapped_triples_list:
         The collection of ID-based triples.
