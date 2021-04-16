@@ -222,7 +222,7 @@ def _determine_patterns(
     # unary
     logger.debug("Evaluating unary patterns: {symmetry, anti-symmetry}")
     # indexing triples for fast lookup of entity pair sets
-    pairs = defaultdict(set)
+    pairs: Mapping[int, Set[Tuple[int, int]]] = defaultdict(set)
     for h, r, t in mapped_triples.tolist():
         pairs[r].add((h, t))
 
@@ -249,7 +249,7 @@ def _determine_patterns(
     logger.debug("Evaluating ternary patterns: {composition}")
     # composition r1(x, y) & r2(y, z) => r(x, z)
     # indexing triples for fast join r1 & r2
-    adj = defaultdict(lambda: defaultdict(set))
+    adj: Mapping[int, Mapping[int, Set[int]]] = defaultdict(lambda: defaultdict(set))
     for h, r, t in mapped_triples.tolist():
         adj[r][h].add(t)
     # pre-filtering relation pair candidates:
