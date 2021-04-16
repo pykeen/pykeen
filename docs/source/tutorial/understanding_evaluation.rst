@@ -104,7 +104,7 @@ of the ranks. It is defined as:
 .. warning::
 
     It has been argued that the mean reciprocal rank has theoretical flaws by [fuhr2018]_. However, this opinion is not undisputed, 
-    cf. [sakai2020]_.
+    cf. [sakai2021]_.
 
 Despite its flaws, MRR is still often used during early stopping due to its behavior related to low rank values.
 While the hits @ k ignores changes among high rank values completely and the mean rank changes uniformly
