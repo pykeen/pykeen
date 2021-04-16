@@ -1,4 +1,7 @@
+# -*- coding: utf-8 -*-
+
 """Tests for dataset analysis utilities."""
+
 import itertools
 import unittest
 from typing import Collection, Optional, Sequence
@@ -8,10 +11,8 @@ import pytest
 
 from pykeen.datasets import Nations, get_dataset
 from pykeen.datasets.analysis import (
-    SUBSET_LABELS,
-    entity_count_dataframe,
-    entity_relation_co_occurrence_dataframe,
-    relation_classification, relation_count_dataframe,
+    SUBSET_LABELS, entity_count_dataframe, entity_relation_co_occurrence_dataframe, relation_classification,
+    relation_count_dataframe,
 )
 
 

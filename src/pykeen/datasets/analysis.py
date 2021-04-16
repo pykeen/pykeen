@@ -350,12 +350,10 @@ def iter_ternary_patterns(
         unit="pattern",
         unit_scale=True,
     ):
-        ht1 = pairs[r1]
-        zs = adj[r2]
         lhs = {
             (x, z)
-            for (x, y) in ht1
-            for z in zs[y]
+            for x, y in pairs[r1]
+            for z in adj[r2]
         }
         support = len(lhs)
         # skip empty support
@@ -367,7 +365,7 @@ def iter_ternary_patterns(
             yield PatternMatch(r, "composition", support, confidence)
 
 
-def _determine_patterns(
+def _iter_patterns(
     mapped_triples_list: Collection[Tuple[int, int, int]],
 ) -> Iterable[PatternMatch]:
     # indexing triples for fast lookup of entity pair sets
@@ -377,7 +375,7 @@ def _determine_patterns(
 
     yield from iter_unary_patterns(pairs=pairs)
     yield from iter_binary_patterns(pairs=pairs)
-    yield from iter_ternary_patterns(mapped_triples_list, pairs)
+    yield from iter_ternary_patterns(mapped_triples_list, pairs=pairs)
 
 
 def triple_set_hash(mapped_triples: torch.LongTensor):
@@ -473,7 +471,7 @@ def relation_classification(
         ], dim=0)
 
         # determine patterns from triples
-        base = _determine_patterns(mapped_triples_list=mapped_triples.tolist())
+        base = _iter_patterns(mapped_triples_list=mapped_triples.tolist())
 
         # drop zero-confidence
         base = (
