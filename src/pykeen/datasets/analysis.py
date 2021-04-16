@@ -11,7 +11,7 @@ from typing import Collection, Iterable, Mapping, Set, Tuple
 import numpy
 import pandas
 import torch
-import tqdm.contrib.itertools
+from tqdm import tqdm
 
 from .base import Dataset
 from ..constants import PYKEEN_DATASETS
@@ -336,7 +336,7 @@ def _yield_ternary_patterns(
     for h, r, t in mapped_triples_list:
         adj[r][h].add(t)
     # actual evaluation of the pattern
-    for r1, r2 in tqdm.tqdm(_composition_candidates(mapped_triples_list)):
+    for r1, r2 in tqdm(_composition_candidates(mapped_triples_list)):
         ht1 = pairs[r1]
         zs = adj[r2]
         lhs = {
