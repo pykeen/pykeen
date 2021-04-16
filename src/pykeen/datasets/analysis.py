@@ -426,6 +426,7 @@ def relation_classification(
     cache_path = PYKEEN_DATASETS.joinpath(dataset.__class__.__name__.lower(), "relation_patterns.tsv.xz")
     if not cache_path.is_file():
         # use all triples; TODO: should we do this?
+        # TODO this function should already exist somewhere
         mapped_triples = torch.cat([
             triples_factory.mapped_triples
             for triples_factory in dataset.factories
