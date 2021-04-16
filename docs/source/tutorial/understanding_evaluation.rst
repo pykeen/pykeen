@@ -79,6 +79,8 @@ The adjusted mean rank (AMR) was introduced by [berrendorf2020]_. It is defined 
 
     \text{score} = \frac{MR}{\mathbb{E}\left[MR\right]} = \frac{2 \sum_{i=1}^{n} r_{i}}{\sum_{i=1}^{n} (|\mathcal{S}_i|+1)}
 
+The derivations of $\mathbb{E}\left[MR\right]$ and $\mathcal{S}_i$ are contained within the original manuscript.
+
 It lies on the range $(0.0, 2.0)$ where closer to 0 is better.
 
 Adjusted Mean Rank Index
