@@ -207,8 +207,8 @@ def skyline(
     :param data_stream:
         The stream of data, comprising tuples (relation_id, pattern-type, support, confidence).
 
-    :return:
-        A stream containing only the entries in the support-confidence skyline.
+    :yields:
+        An entry from the support-confidence skyline.
     """
     # group by (relation id, pattern type)
     data: Mapping[Tuple[int, str], Set[Tuple[int, float]]] = defaultdict(set)
@@ -275,8 +275,8 @@ def _yield_unary_patterns(
     :param pairs:
         A mapping from relations to the set of entity pairs.
 
-    :return:
-        An iterable of (relation_id, pattern_type, support, confidence) tuples.
+    :yields:
+        A tuple (relation_id, pattern_type, support, confidence).
     """
     for r, ht in pairs.items():
         support = len(ht)
@@ -301,8 +301,8 @@ def _yield_binary_patterns(
     :param pairs:
         A mapping from relations to the set of entity pairs.
 
-    :return:
-        An iterable of (relation_id, pattern_type, support, confidence) tuples.
+    :yields:
+        A tuple (relation_id, pattern_type, support, confidence).
     """
     for (r1, ht1), (r, ht2) in itt.combinations(pairs.items(), r=2):
         support = len(ht1)
@@ -327,8 +327,8 @@ def _yield_ternary_patterns(
     :param pairs:
         A mapping from relations to the set of entity pairs.
 
-    :return:
-        An iterable of (relation_id, pattern_type, support, confidence) tuples.
+    :yields:
+        A tuple (relation_id, pattern_type, support, confidence).
     """
     # composition r1(x, y) & r2(y, z) => r(x, z)
     # indexing triples for fast join r1 & r2
