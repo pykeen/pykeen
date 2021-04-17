@@ -161,6 +161,49 @@ def _flatten_dictionary(
     return result
 
 
+def get_embedding_in_long_canonical_shape(
+    embedding: nn.Embedding,
+    ind: Optional[torch.LongTensor],
+    col: int,
+) -> torch.FloatTensor:
+    """Get embedding in long canonical shape.
+
+    :param embedding: The embedding.
+    :param ind: The indices. If None, return all embeddings.
+    :param col: The column on which to place the embeddings, in case indices is None.
+
+    :return: shape: (batch_size, a, b, c, d)
+        where exactly one of {batch_size, a, b, c} is larger 1.
+    """
+    d = embedding.embedding_dim
+    if ind is None:
+        inner_dims = [1, 1, 1]
+        inner_dims[col - 1] = embedding.num_embeddings
+        e = embedding.weight.view([1] + inner_dims + [d])
+    else:
+        batch_size = ind.shape[0]
+        e = embedding(ind).view(batch_size, 1, 1, 1, d)
+    return e
+
+
+def get_embedding_in_canonical_shape(
+    embedding: nn.Embedding,
+    ind: Optional[torch.LongTensor],
+) -> torch.FloatTensor:
+    """Get embedding in canonical shape.
+
+    :param embedding: The embedding.
+    :param ind: The indices. If None, return all embeddings.
+
+    :return: shape: (batch_size, num_embeddings, d)
+    """
+    if ind is None:
+        e = embedding.weight.unsqueeze(dim=0)
+    else:
+        e = embedding(ind).unsqueeze(dim=1)
+    return e
+
+
 def clamp_norm(
     x: torch.Tensor,
     maxnorm: float,
