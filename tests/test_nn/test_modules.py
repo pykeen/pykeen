@@ -12,7 +12,7 @@ import unittest_templates
 
 import pykeen.nn.modules
 import pykeen.utils
-from pykeen.nn.functional import distmult_interaction
+from pykeen.nn.functional import _rotate_quaternion, _split_quaternion, distmult_interaction
 from pykeen.nn.modules import FunctionalInteraction, Interaction, TranslationalInteraction
 from pykeen.utils import clamp_norm, project_entity, strip_dim, view_complex
 from tests import cases
@@ -174,8 +174,9 @@ class QuatETests(cases.InteractionTestCase):
     cls = pykeen.nn.modules.QuatEInteraction
     dim = 4 * cases.InteractionTestCase.dim  # quaternions
 
-    def _exp_score(self, **kwargs) -> torch.FloatTensor:
-        raise NotImplementedError
+    def _exp_score(self, h, r, t) -> torch.FloatTensor:  # noqa: D102
+        h, r, t = strip_dim(h, r, t)
+        return -(_rotate_quaternion(*(_split_quaternion(x) for x in [h, r])) * t).sum()
 
 
 class RESCALTests(cases.InteractionTestCase):
