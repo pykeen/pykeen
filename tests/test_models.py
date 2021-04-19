@@ -226,6 +226,8 @@ class TestQuatE(cases.ModelTestCase):
     """Test the QuatE model."""
 
     model_cls = pykeen.models.QuatE
+    # quaternion have four components
+    embedding_dim = 4 * cases.ModelTestCase.embedding_dim
 
 
 class TestRESCAL(cases.ModelTestCase):
