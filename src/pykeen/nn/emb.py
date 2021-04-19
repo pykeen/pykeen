@@ -631,6 +631,9 @@ class CrossCorrelationCompositionModule(CompositionModule):
 composition_resolver = Resolver.from_subclasses(
     CompositionModule,
     default=MultiplicationCompositionModule,
+    skip={
+        TorchCompositionModule,
+    },
 )
 
 
