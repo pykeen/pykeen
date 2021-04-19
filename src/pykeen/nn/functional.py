@@ -1014,3 +1014,46 @@ def pair_re_interaction(
         p=p,
         power_norm=power_norm,
     )
+
+
+def quat_e_interaction(
+    h: torch.FloatTensor,
+    r: torch.FloatTensor,
+    t: torch.FloatTensor,
+):
+    """Evaluate the interaction function of QuatE for given embeddings.
+
+    The embeddings have to be in a broadcastable shape.
+
+    .. note ::
+        dim has to be divisible by 4.
+
+    :param h: shape: (batch_size, num_heads, 1, 1, dim)
+        The head representations.
+    :param r: shape: (batch_size, 1, num_relations, 1, dim)
+        The head representations.
+    :param t: shape: (batch_size, 1, 1, num_tails, dim)
+        The tail representations.
+
+    :return: shape: (...)
+        The scores.
+    """
+    h, r, t = [x.view(*x.shape[:-1], -1, 4) for x in (h, r, t)]
+
+    # Decompose into real and imaginary parts
+    h_a, h_b, h_c, h_d = torch.chunk(h, chunks=4, dim=-1)
+    r_a, r_b, r_c, r_d = torch.chunk(r, chunks=4, dim=-1)
+
+    # Rotate (=Hamilton product in quaternion space).
+    rot_h = torch.stack(
+        [
+            h_a * r_a - h_b * r_b - h_c * r_c - h_d * r_d,
+            h_a * r_b + h_b * r_a + h_c * r_d - h_d * r_c,
+            h_a * r_c - h_b * r_d + h_c * r_a + h_d * r_b,
+            h_a * r_d + h_b * r_c - h_c * r_b + h_d * r_a,
+        ],
+        dim=-1,
+    )
+
+    inner_prod = rot_h * t
+    return -inner_prod.sum(dim=[-2, -1])
