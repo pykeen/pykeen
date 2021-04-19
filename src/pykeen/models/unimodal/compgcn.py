@@ -51,7 +51,7 @@ class CompGCN(
         encoder_kwargs = encoder_kwargs or {}
 
         # TODO: Remove this, once testing is updated
-        embedding_dim = kwargs.pop("embedding_dim")
+        embedding_dim = kwargs.pop("embedding_dim", None)
         if embedding_dim is not None:
             encoder_kwargs.setdefault("embedding_specification", EmbeddingSpecification(embedding_dim=embedding_dim))
 
