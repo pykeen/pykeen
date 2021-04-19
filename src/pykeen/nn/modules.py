@@ -1154,6 +1154,20 @@ class PairREInteraction(TranslationalInteraction[FloatTensor, Tuple[FloatTensor,
         return dict(h=h, r_h=r[0], r_t=r[1], t=t)
 
 
+class QuatEInteraction(
+    FunctionalInteraction[
+        torch.FloatTensor,
+        torch.FloatTensor,
+        torch.FloatTensor,
+    ],
+):
+    """A module wrapper for the QuatE interaction function.
+
+    .. seealso:: :func:`pykeen.nn.functional.quat_e_interaction`
+    """
+    func = pkf.quat_e_interaction
+
+
 class MonotonicAffineTransformationInteraction(
     Interaction[
         HeadRepresentation,
