@@ -43,13 +43,13 @@ EXPECTED_RANKS = {
     RANK_PESSIMISTIC: None,  # TODO - research problem
 }
 
-ARITHMETIC_MEAN_RANK = 'mean_rank'  # also known as mean rank (MR)
+ARITHMETIC_MEAN_RANK = 'arithmetic_mean_rank'  # also known as mean rank (MR)
 GEOMETRIC_MEAN_RANK = 'geometric_mean_rank'
 HARMONIC_MEAN_RANK = 'harmonic_mean_rank'
 MEDIAN_RANK = 'median_rank'
 INVERSE_ARITHMETIC_MEAN_RANK = 'inverse_arithmetic_mean_rank'
 INVERSE_GEOMETRIC_MEAN_RANK = 'inverse_geometric_mean_rank'
-INVERSE_HARMONIC_MEAN_RANK = 'mean_reciprocal_rank'  # also known as mean reciprocal rank (MRR)
+INVERSE_HARMONIC_MEAN_RANK = 'inverse_harmonic_mean_rank'  # also known as mean reciprocal rank (MRR)
 INVERSE_MEDIAN_RANK = 'inverse_median_rank'
 
 RANK_STD = 'rank_std'
@@ -71,17 +71,18 @@ all_type_funcs = {
     RANK_MAD: stats.median_abs_deviation,
 }
 
-ADJUSTED_ARITHMETIC_MEAN_RANK = 'adjusted_mean_rank'
-ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX = 'adjusted_mean_rank_index'
+ADJUSTED_ARITHMETIC_MEAN_RANK = 'adjusted_arithmetic_mean_rank'
+ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX = 'adjusted_arithmetic_mean_rank_index'
 TYPES_REALISTIC_ONLY = {ADJUSTED_ARITHMETIC_MEAN_RANK, ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX}
 
 METRIC_SYNONYMS = {
-    'adjusted_arithmetic_mean_rank': ADJUSTED_ARITHMETIC_MEAN_RANK,
-    'adjusted_arithmetic_mean_rank_index': ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX,
+    'adjusted_mean_rank': ADJUSTED_ARITHMETIC_MEAN_RANK,
+    'adjusted_mean_rank_index': ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX,
+    'igmr': INVERSE_GEOMETRIC_MEAN_RANK,
     'mr': ARITHMETIC_MEAN_RANK,
-    'arithmetic_mean_rank': ARITHMETIC_MEAN_RANK,
+    'mean_rank': ARITHMETIC_MEAN_RANK,
     'mrr': INVERSE_HARMONIC_MEAN_RANK,
-    'inverse_harmonic_mean_rank': INVERSE_HARMONIC_MEAN_RANK,
+    'mean_reciprocal_rank': INVERSE_HARMONIC_MEAN_RANK,
 }
 
 
@@ -280,7 +281,8 @@ class RankBasedMetricResults(MetricResults):
         else:
             raise ValueError(f'Malformed metric name: {name}')
 
-        # allow intercepting and upgrading
+        # update old names for metrics and handle spaces
+        metric = metric.lower().replace(' ', '_')
         metric = METRIC_SYNONYMS.get(metric, metric)
 
         if side not in SIDES:
