@@ -80,7 +80,11 @@ xavier_normal_norm_ = compose(
 def init_quaternions(
     x: torch.FloatTensor,
 ) -> torch.FloatTensor:
+    """Initialize quaternion."""
     num_elements, dim = x.shape
+    if dim % 4 != 0:
+        raise ValueError("Quaternions have four components, but dimension {dim} is not divisible by four.")
+    dim //= 4
     # scaling factor
     s = 1. / math.sqrt(2 * num_elements)
     # modulus ~ Uniform[-s, s]
