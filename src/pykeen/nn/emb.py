@@ -706,7 +706,7 @@ class CompGCNLayer(nn.Module):
             self.w_loop,
             self.w_fwd,
             self.w_bwd,
-            self.w_rel,
+            self.w_rel.weight,
             self.self_loop,
         ):
             nn.init.xavier_uniform_(w)
@@ -746,7 +746,7 @@ class CompGCNLayer(nn.Module):
         m = m * self.edge_weighting(source=h, target=t).unsqueeze(dim=-1)
 
         # aggregate by sum
-        x_e = torch.zeros_like(x_e).index_add(dim=0, index=t, source=m)
+        x_e = x_e.new_zeros(x_e.shape[0], m.shape[1]).index_add(dim=0, index=t, source=m)
 
         # dropout
         x_e = self.drop(x_e)
@@ -779,16 +779,13 @@ class CompGCNLayer(nn.Module):
         :return: shape: (num_entities, output_dim) / (2 * num_relations, output_dim)
             The updated entity and relation representations.
         """
-        # self-loop
-        x_e = self.composition(x_e, self.self_loop) @ self.w_loop
-        # forward edges
+        # update entity representations: mean over self-loops / forward edges / backward edges
         h, r, t = triples.t()
-        # TODO: Verify consistent inverse relations
-        x_e = x_e + self.message(x_e=x_e, x_r=x_r, triples=(h, 2 * r, t), weight=self.w_fwd)
-        # backward edges
-        x_e = x_e + self.message(x_e=x_e, x_r=x_r, triples=(t, 2 * r + 1, h), weight=self.w_bwd)
-        # divide by three => mean
-        x_e = x_e / 3
+        x_e = (
+                  self.composition(x_e, self.self_loop) @ self.w_loop
+                  + self.message(x_e=x_e, x_r=x_r, triples=(h, 2 * r, t), weight=self.w_fwd)
+                  + self.message(x_e=x_e, x_r=x_r, triples=(t, 2 * r + 1, h), weight=self.w_bwd)
+              ) / 3
 
         if self.bias:
             x_e = self.bias(x_e)
@@ -822,6 +819,7 @@ class CompGCNRepresentation(nn.Module):
             num_embeddings=2 * triples_factory.num_relations,
         )
         input_dim = self.entity_representations.embedding_dim
+        assert self.relation_representations.embedding_dim == input_dim
         layers = []
         for i in range(num_layers):
             layers.append(
@@ -835,12 +833,12 @@ class CompGCNRepresentation(nn.Module):
         self.output_dim = output_dim
         self.layers = nn.ModuleList(layers)
 
+        self.register_buffer(name="triples", tensor=triples_factory.mapped_triples)
+
         # buffering of enriched representations
         self.enriched_embeddings = None
 
     def post_parameter_update(self) -> None:  # noqa: D102
-        super().post_parameter_update()
-
         # invalidate enriched embeddings
         self.enriched_embeddings = None
 
@@ -849,12 +847,11 @@ class CompGCNRepresentation(nn.Module):
     ) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
         """Compute enriched representations."""
         if self.enriched_embeddings is None:
-            triples: torch.LongTensor = ...
             x_e = self.entity_representations()
             x_r = self.relation_representations()
             # enrich
             for layer in self.layers:
-                x_e, x_r = layer(x_e=x_e, x_r=x_r, triples=triples)
+                x_e, x_r = layer(x_e=x_e, x_r=x_r, triples=self.triples)
             self.enriched_embeddings = (x_e, x_r)
         return self.enriched_embeddings
 
@@ -876,11 +873,11 @@ class SingleCompGCNRepresentation(RepresentationModule):
             The position, either 0 for entities, or 1 for relations.
         """
         if position == 0:  # entity
-            max_id = self.combined.entity_representations.max_id
-            shape = (self.combined.output_dim,)
+            max_id = combined.entity_representations.max_id
+            shape = (combined.output_dim,)
         elif position == 1:  # relation
-            max_id = self.combined.relation_representations.max_id
-            shape = (self.combined.output_dim,)
+            max_id = combined.relation_representations.max_id
+            shape = (combined.output_dim,)
         else:
             raise ValueError
         super().__init__(max_id=max_id, shape=shape)

@@ -8,6 +8,7 @@ import torch
 from class_resolver import Hint
 
 from ..nbase import ERModel
+from ...nn import EmbeddingSpecification
 from ...nn.emb import CompGCNRepresentation, SingleCompGCNRepresentation
 from ...nn.modules import DistMultInteraction, Interaction, interaction_resolver
 from ...triples import TriplesFactory
@@ -47,6 +48,13 @@ class CompGCN(
         interaction_kwargs: Optional[Mapping[str, Any]] = None,
         **kwargs,
     ):
+        encoder_kwargs = encoder_kwargs or {}
+
+        # TODO: Remove this, once testing is updated
+        embedding_dim = kwargs.pop("embedding_dim")
+        if embedding_dim is not None:
+            encoder_kwargs.setdefault("embedding_specification", EmbeddingSpecification(embedding_dim=embedding_dim))
+
         # combined representation
         combined = CompGCNRepresentation(
             triples_factory=triples_factory,

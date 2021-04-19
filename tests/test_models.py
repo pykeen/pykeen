@@ -18,6 +18,7 @@ from pykeen.models import (
 )
 from pykeen.models.predict import get_novelty_mask, predict
 from pykeen.models.unimodal.trans_d import _project_entity
+from pykeen.nn import EmbeddingSpecification
 from pykeen.nn.emb import Embedding
 from pykeen.utils import all_in_bounds, clamp_norm, extend_batch
 from tests import cases
@@ -43,6 +44,13 @@ class TestCompGCN(cases.ModelTestCase):
     """Test the CompGCN model."""
 
     model_cls = pykeen.models.CompGCN
+    model_kwargs = dict(
+        encoder_kwargs=dict(
+            embedding_specification=EmbeddingSpecification(
+                embedding_dim=cases.ModelTestCase.embedding_dim,
+            ),
+        ),
+    )
 
 
 class TestComplex(cases.ModelTestCase):
