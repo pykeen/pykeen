@@ -20,7 +20,7 @@ from torch.nn import functional
 
 from .init import init_phases, xavier_normal_, xavier_normal_norm_, xavier_uniform_, xavier_uniform_norm_
 from .message_passing import Decomposition, decomposition_resolver
-from .weighting import EdgeWeighting, edge_weight_resolver
+from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolver
 from ..regularizers import Regularizer
 from ..triples import TriplesFactory
 from ..typing import Constrainer, Hint, Initializer, Normalizer
@@ -650,6 +650,7 @@ class CompGCNLayer(nn.Module):
         composition: Hint[CompositionModule] = None,
         activation: Hint[nn.Module] = nn.Identity,
         activation_kwargs: Optional[Mapping[str, Any]] = None,
+        edge_weighting: Optional[Hint[EdgeWeighting]] = SymmetricEdgeWeighting,
     ):
         """
         Initialize the module.
@@ -675,6 +676,9 @@ class CompGCNLayer(nn.Module):
 
         # entity-relation composition
         self.composition = composition_resolver.make(composition)
+
+        # edge weighting
+        self.edge_weighting: EdgeWeighting = edge_weight_resolver.make(edge_weighting)
 
         # message passing weights
         self.w_loop = nn.Parameter(data=torch.empty(input_dim, output_dim))
@@ -712,7 +716,7 @@ class CompGCNLayer(nn.Module):
         self,
         x_e: torch.FloatTensor,
         x_r: torch.FloatTensor,
-        triples: Optional[Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor]],
+        triples: Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor],
         weight: nn.Parameter,
     ) -> torch.FloatTensor:
         """
@@ -723,31 +727,29 @@ class CompGCNLayer(nn.Module):
         :param x_r: shape: (2 * num_relations, input_dim)
             The relation representations (including inverse relations).
         :param triples:
-            A tuple (heads, relations, tails) of indices. None to perform self-loop.
+            A tuple (heads, relations, tails) of indices.
         :param weight:
             The transformation weight.
+
         :return:
+            The updated entity representations.
         """
-        if triples is None:
-            # compose
-            m = self.composition(x_e, self.self_loop)
-        else:
-            h, r, t = triples
-            m = self.composition(x_e[h], x_r[r])
+        h, r, t = triples
+
+        # compose
+        m = self.composition(x_e[h], x_r[r])
 
         # transform
         m = m @ weight
 
-        if triples is not None:
-            # TODO: normalization
-            # self.in_norm = self.compute_norm(self.in_index, num_ent)
+        # normalization
+        m = m * self.edge_weighting(source=h, target=t).unsqueeze(dim=-1)
 
-            # aggregate by sum
-            h, r, t = triples
-            x_e = torch.zeros_like(x_e).index_add(dim=0, index=t, source=m)
+        # aggregate by sum
+        x_e = torch.zeros_like(x_e).index_add(dim=0, index=t, source=m)
 
-            # dropout
-            x_e = self.drop(x_e)
+        # dropout
+        x_e = self.drop(x_e)
 
         return x_e
 
@@ -778,9 +780,10 @@ class CompGCNLayer(nn.Module):
             The updated entity and relation representations.
         """
         # self-loop
-        x_e = self.message(x_e=x_e, x_r=x_r, triples=None, weight=self.w_loop)
+        x_e = self.composition(x_e, self.self_loop) @ self.w_loop
         # forward edges
         h, r, t = triples.t()
+        # TODO: Verify consistent inverse relations
         x_e = x_e + self.message(x_e=x_e, x_r=x_r, triples=(h, 2 * r, t), weight=self.w_fwd)
         # backward edges
         x_e = x_e + self.message(x_e=x_e, x_r=x_r, triples=(t, 2 * r + 1, h), weight=self.w_bwd)
