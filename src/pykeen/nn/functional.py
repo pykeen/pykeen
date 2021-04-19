@@ -1018,7 +1018,7 @@ def pair_re_interaction(
 
 def _rotate_quaternion(qa: torch.FloatTensor, qb: torch.FloatTensor) -> torch.FloatTensor:
     # Rotate (=Hamilton product in quaternion space).
-    return torch.stack(
+    return torch.cat(
         [
             qa[0] * qb[0] - qa[1] * qb[1] - qa[2] * qb[2] - qa[3] * qb[3],
             qa[0] * qb[1] + qa[1] * qb[0] + qa[2] * qb[3] - qa[3] * qb[2],
@@ -1055,11 +1055,10 @@ def quat_e_interaction(
     :return: shape: (...)
         The scores.
     """
-    h, r, t = [x.view(*x.shape[:-1], -1, 4) for x in (h, r, t)]
     return -(
         # Rotation in quaternion space
         _rotate_quaternion(
             _split_quaternion(h),
             _split_quaternion(r)
-        ) * t,
-    ).sum(dim=[-2, -1])
+        ) * t
+    ).sum(dim=-1)
