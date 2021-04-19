@@ -651,6 +651,26 @@ class CompGCNLayer(nn.Module):
         activation: Hint[nn.Module] = nn.Identity,
         activation_kwargs: Optional[Mapping[str, Any]] = None,
     ):
+        """
+        Initialize the module.
+
+        :param input_dim:
+            The input dimension.
+        :param output_dim:
+            The output dimension.
+        :param dropout:
+            The dropout to use for forward and backward edges.
+        :param use_bias:  # TODO: do we really need this? it comes before a mandatory batch norm layer
+            Whether to use bias.
+        :param use_relation_bias:
+            Whether to use a bias for the relation transformation.
+        :param composition:
+            The composition function.
+        :param activation:
+            The activation to use.
+        :param activation_kwargs:
+            Additional key-word based arguments passed to the activation.
+        """
         super().__init__()
 
         # entity-relation composition
