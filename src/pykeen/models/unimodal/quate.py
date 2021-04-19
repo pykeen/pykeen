@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 """Implementation of the QuatE model."""
-import math
 from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
@@ -11,6 +10,7 @@ from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import BCEWithLogitsLoss, Loss
 from ...nn.emb import EmbeddingSpecification
+from ...nn.init import init_quaternions
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint, Hint, Initializer
@@ -18,23 +18,6 @@ from ...typing import DeviceHint, Hint, Initializer
 __all__ = [
     'QuatE',
 ]
-
-
-def init_quaternions(num_elements: int, dim: int) -> torch.FloatTensor:
-    # scaling factor
-    s = 1. / math.sqrt(2 * num_elements)
-    # modulus ~ Uniform[-s, s]
-    modulus = 2 * s * torch.rand(num_elements, dim) - s
-    # phase ~ Uniform[0, 2*pi]
-    phase = 2 * math.pi * torch.rand(num_elements, dim)
-    # real part
-    real = (modulus * phase.cos()).unsqueeze(dim=-1)
-    # purely imaginary quaternions unitary
-    imag = torch.rand(num_elements, dim, 3)
-    imag = functional.normalize(imag, p=2, dim=-1)
-    imag = imag * (modulus * phase.sin()).unsqueeze(dim=-1)
-    x = torch.cat([real, imag], dim=-1)
-    return x.view(num_elements, 4 * dim)
 
 
 class QuatE(EntityRelationEmbeddingModel):

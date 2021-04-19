@@ -5,6 +5,7 @@
 import math
 
 import numpy as np
+import torch
 import torch.nn
 import torch.nn.init
 from torch.nn import functional
@@ -74,3 +75,23 @@ xavier_normal_norm_ = compose(
     torch.nn.init.xavier_normal_,
     functional.normalize,
 )
+
+
+def init_quaternions(
+    x: torch.FloatTensor,
+) -> torch.FloatTensor:
+    num_elements, dim = x.shape
+    # scaling factor
+    s = 1. / math.sqrt(2 * num_elements)
+    # modulus ~ Uniform[-s, s]
+    modulus = 2 * s * torch.rand(num_elements, dim) - s
+    # phase ~ Uniform[0, 2*pi]
+    phase = 2 * math.pi * torch.rand(num_elements, dim)
+    # real part
+    real = (modulus * phase.cos()).unsqueeze(dim=-1)
+    # purely imaginary quaternions unitary
+    imag = torch.rand(num_elements, dim, 3)
+    imag = functional.normalize(imag, p=2, dim=-1)
+    imag = imag * (modulus * phase.sin()).unsqueeze(dim=-1)
+    x = torch.cat([real, imag], dim=-1)
+    return x.view(num_elements, 4 * dim)
