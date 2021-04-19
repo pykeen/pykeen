@@ -19,8 +19,25 @@ from ..utils import invert_mapping
 
 logger = logging.getLogger(__name__)
 
+__all__ = [
+    'get_id_counts',
+    'relation_classification',
+    'relation_count_dataframe',
+    'entity_count_dataframe',
+    'entity_relation_co_occurrence_dataframe',
+    'skyline',
+    'composition_candidates',
+    'iter_patterns',
+    'iter_unary_patterns',
+    'iter_binary_patterns',
+    'iter_ternary_patterns',
+    'triple_set_hash',
+]
+
 SUBSET_LABELS = ('testing', 'training', 'validation', 'total')
 
+
+# PatternMatch = namedtuple('PatternMatch', ['relation_id', 'pattern_type', 'support', 'confidence'])
 
 class PatternMatch(NamedTuple):
     """A pattern match tuple of relation_id, pattern_type, support, and confidence."""
@@ -226,20 +243,19 @@ def skyline(data_stream: Iterable[PatternMatch]) -> Iterable[PatternMatch]:
             yield PatternMatch(r_id, pat, supp, conf)
 
 
-def _composition_candidates(
-    mapped_triples_list: Collection[Tuple[int, int, int]],
+def composition_candidates(
+    mapped_triples: Iterable[Tuple[int, int, int]],
 ) -> Collection[Tuple[int, int]]:
-    r"""
-    Pre-filtering relation pair candidates for composition pattern.
+    r"""Pre-filtering relation pair candidates for composition pattern.
 
-    Determines all relation pairs $(r, r')$ with at least one entity e such that
+    Determines all relation pairs $(r, r')$ with at least one entity $e$ such that
 
     .. math ::
 
         \{(h, r, e), (e, r', t)\} \subseteq \mathcal{T}
 
-    :param mapped_triples_list:
-        The collection of ID-based triples.
+    :param mapped_triples:
+        An iterable over ID-based triples. Only consumed once.
 
     :return:
         A set of relation pairs.
@@ -249,7 +265,7 @@ def _composition_candidates(
     ins: DefaultDict[int, Set[int]] = defaultdict(set)
     # outgoing relations per entity
     outs: DefaultDict[int, Set[int]] = defaultdict(set)
-    for h, r, t in mapped_triples_list:
+    for h, r, t in mapped_triples:
         outs[h].add(r)
         ins[t].add(r)
 
@@ -314,7 +330,7 @@ def iter_binary_patterns(
 
 
 def iter_ternary_patterns(
-    mapped_triples_list: Collection[Tuple[int, int, int]],
+    mapped_triples: Collection[Tuple[int, int, int]],
     pairs: Mapping[int, Set[Tuple[int, int]]],
 ) -> Iterable[PatternMatch]:
     r"""
@@ -326,7 +342,7 @@ def iter_ternary_patterns(
     Composition  $r'(x, y) \land r''(y, z) \implies r(x, z)$
     ===========  ===========================================
 
-    :param mapped_triples_list:
+    :param mapped_triples:
         A collection of ID-based triples.
     :param pairs:
         A mapping from relations to the set of entity pairs.
@@ -337,11 +353,11 @@ def iter_ternary_patterns(
     # composition r1(x, y) & r2(y, z) => r(x, z)
     # indexing triples for fast join r1 & r2
     adj: DefaultDict[int, DefaultDict[int, Set[int]]] = defaultdict(lambda: defaultdict(set))
-    for h, r, t in mapped_triples_list:
+    for h, r, t in mapped_triples:
         adj[r][h].add(t)
     # actual evaluation of the pattern
     for r1, r2 in tqdm(
-        _composition_candidates(mapped_triples_list),
+        composition_candidates(mapped_triples),
         desc="Checking ternary patterns",
         unit="pattern",
         unit_scale=True,
@@ -361,17 +377,24 @@ def iter_ternary_patterns(
             yield PatternMatch(r, "composition", support, confidence)
 
 
-def _iter_patterns(
-    mapped_triples_list: Collection[Tuple[int, int, int]],
+def iter_patterns(
+    mapped_triples: Collection[Tuple[int, int, int]],
 ) -> Iterable[PatternMatch]:
+    """Iterate over unary, binary, and ternary patterns.
+
+    :param mapped_triples:
+        A collection of ID-based triples.
+
+    :yields: Patterns from :func:`iter_unary_patterns`, func:`iter_binary_patterns`, and :func:`iter_ternary_patterns`.
+    """
     # indexing triples for fast lookup of entity pair sets
     pairs: DefaultDict[int, Set[Tuple[int, int]]] = defaultdict(set)
-    for h, r, t in mapped_triples_list:
+    for h, r, t in mapped_triples:
         pairs[r].add((h, t))
 
     yield from iter_unary_patterns(pairs=pairs)
     yield from iter_binary_patterns(pairs=pairs)
-    yield from iter_ternary_patterns(mapped_triples_list, pairs=pairs)
+    yield from iter_ternary_patterns(mapped_triples, pairs=pairs)
 
 
 def triple_set_hash(mapped_triples: torch.LongTensor):
@@ -467,7 +490,7 @@ def relation_classification(
         ], dim=0)
 
         # determine patterns from triples
-        base = _iter_patterns(mapped_triples_list=mapped_triples.tolist())
+        base = iter_patterns(mapped_triples=mapped_triples.tolist())
 
         # drop zero-confidence
         base = (
