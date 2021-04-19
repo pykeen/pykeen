@@ -222,6 +222,12 @@ class TestProjE(cases.ModelTestCase):
     model_cls = pykeen.models.ProjE
 
 
+class TestQuatE(cases.ModelTestCase):
+    """Test the QuatE model."""
+
+    model_cls = pykeen.models.QuatE
+
+
 class TestRESCAL(cases.ModelTestCase):
     """Test the RESCAL model."""
 
