@@ -583,7 +583,7 @@ class RGCNRepresentations(RepresentationModule):
         return x
 
 
-class CompositionFunction(nn.Module):
+class CompositionModule(nn.Module):
     """An (elementwise) composition function for vectors."""
 
     @abstractmethod
@@ -602,24 +602,35 @@ class CompositionFunction(nn.Module):
         raise NotImplementedError
 
 
-class SubtractionCompositionFunction(CompositionFunction):
+class TorchCompositionModule(CompositionModule, ABC):
+    """Composition by a torch function."""
+
+    func: Callable[[torch.FloatTensor, torch.FloatTensor], torch.FloatTensor]
+
     def forward(self, a: torch.FloatTensor, b: torch.FloatTensor) -> torch.FloatTensor:
-        return a - b
+        return self.func(a, b)
 
 
-class MultiplicationCompositionFunction(CompositionFunction):
-    def forward(self, a: torch.FloatTensor, b: torch.FloatTensor) -> torch.FloatTensor:
-        return a * b
+class SubtractionCompositionModule(TorchCompositionModule):
+    """Composition by element-wise subtraction."""
+
+    func = torch.sub
 
 
-class CrossCorrelationCompositionFunction(CompositionFunction):
+class MultiplicationCompositionModule(TorchCompositionModule):
+    """Composition by element-wise multiplication."""
+
+    func = torch.mul
+
+
+class CrossCorrelationCompositionModule(CompositionModule):
     def forward(self, a: torch.FloatTensor, b: torch.FloatTensor) -> torch.FloatTensor:
         raise NotImplementedError
 
 
 composition_resolver = Resolver.from_subclasses(
-    CompositionFunction,
-    default=MultiplicationCompositionFunction,
+    CompositionModule,
+    default=MultiplicationCompositionModule,
 )
 
 
@@ -633,7 +644,7 @@ class CompGCNLayer(nn.Module):
         dropout: float = 0.0,
         use_bias: bool = True,
         use_relation_bias: bool = False,
-        composition: Hint[CompositionFunction] = None,
+        composition: Hint[CompositionModule] = None,
         activation: Hint[nn.Module] = nn.Identity,
         activation_kwargs: Optional[Mapping[str, Any]] = None,
     ):
