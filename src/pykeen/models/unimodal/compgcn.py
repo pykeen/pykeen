@@ -19,9 +19,7 @@ __all__ = [
 ]
 
 
-class CompGCN(
-    ERModel[torch.FloatTensor, RelationRepresentation, torch.FloatTensor],
-):
+class CompGCN(ERModel[torch.FloatTensor, RelationRepresentation, torch.FloatTensor]):
     """An implementation of CompGCN from [vashishth2020]_.
 
     This model uses graph convolutions, and composition functions.
@@ -48,7 +46,7 @@ class CompGCN(
         interaction_kwargs: Optional[Mapping[str, Any]] = None,
         **kwargs,
     ):
-        encoder_kwargs = encoder_kwargs or {}
+        encoder_kwargs = {} if encoder_kwargs is None else dict(encoder_kwargs)
 
         # TODO: Remove this, once testing is updated
         embedding_dim = kwargs.pop("embedding_dim", None)

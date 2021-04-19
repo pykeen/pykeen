@@ -9,7 +9,7 @@ import logging
 import warnings
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Callable, Mapping, Optional, Sequence, Tuple, TypeVar, Union, cast
+from typing import Any, Callable, ClassVar, Mapping, Optional, Sequence, Tuple, TypeVar, Union, cast
 
 import numpy as np
 import torch
@@ -24,7 +24,7 @@ from .message_passing import Decomposition, decomposition_resolver
 from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolver
 from ..regularizers import Regularizer
 from ..triples import TriplesFactory
-from ..typing import Constrainer, Hint, Initializer, Normalizer
+from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer
 from ..utils import Bias, activation_resolver, clamp_norm, complex_normalize, convert_to_canonical_shape
 
 __all__ = [
@@ -584,13 +584,12 @@ class RGCNRepresentations(RepresentationModule):
         return x
 
 
-class CompositionModule(nn.Module):
+class CompositionModule(nn.Module, ABC):
     """An (elementwise) composition function for vectors."""
 
     @abstractmethod
     def forward(self, a: torch.FloatTensor, b: torch.FloatTensor) -> torch.FloatTensor:
-        """
-        Compose two batches of vectors.
+        """Compose two batches of vectors.
 
         The tensors have to be broadcastable.
 
@@ -600,16 +599,15 @@ class CompositionModule(nn.Module):
             The second tensor.
         :return: shape: s
         """
-        raise NotImplementedError
 
 
-class FunctionalCompositionModule(CompositionModule, ABC):
+class FunctionalCompositionModule(CompositionModule):
     """Composition by a function (i.e. state-less)."""
 
-    func: Callable[[torch.FloatTensor, torch.FloatTensor], torch.FloatTensor]
+    func: ClassVar[Callable[[torch.FloatTensor, torch.FloatTensor], torch.FloatTensor]]
 
     def forward(self, a: torch.FloatTensor, b: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
-        return self.func(a, b)
+        return self.__class__.func(a, b)
 
 
 class SubtractionCompositionModule(FunctionalCompositionModule):
@@ -625,7 +623,7 @@ class MultiplicationCompositionModule(FunctionalCompositionModule):
 
 
 class CircularCorrelationCompositionModule(FunctionalCompositionModule):
-    """Composition by circular correlation."""
+    """Composition by circular correlation via :func:`pykeen.nn.functional.circular_correlation`."""
 
     func = pkf.circular_correlation
 
@@ -652,7 +650,7 @@ class CompGCNLayer(nn.Module):
         composition: Hint[CompositionModule] = None,
         activation: Hint[nn.Module] = nn.Identity,
         activation_kwargs: Optional[Mapping[str, Any]] = None,
-        edge_weighting: Optional[Hint[EdgeWeighting]] = SymmetricEdgeWeighting,
+        edge_weighting: HintType[EdgeWeighting] = SymmetricEdgeWeighting,
     ):
         """
         Initialize the module.
@@ -784,10 +782,10 @@ class CompGCNLayer(nn.Module):
         # update entity representations: mean over self-loops / forward edges / backward edges
         h, r, t = triples.t()
         x_e = (
-                  self.composition(x_e, self.self_loop) @ self.w_loop
-                  + self.message(x_e=x_e, x_r=x_r, triples=(h, 2 * r, t), weight=self.w_fwd)
-                  + self.message(x_e=x_e, x_r=x_r, triples=(t, 2 * r + 1, h), weight=self.w_bwd)
-              ) / 3
+            self.composition(x_e, self.self_loop) @ self.w_loop
+            + self.message(x_e=x_e, x_r=x_r, triples=(h, 2 * r, t), weight=self.w_fwd)
+            + self.message(x_e=x_e, x_r=x_r, triples=(t, 2 * r + 1, h), weight=self.w_bwd)
+        ) / 3
 
         if self.bias:
             x_e = self.bias(x_e)
@@ -801,6 +799,8 @@ class CompGCNLayer(nn.Module):
 
 class CompGCNRepresentation(nn.Module):
     """A sequence of CompGCN layers."""
+
+    enriched_embeddings: Optional[Tuple[RepresentationModule, RepresentationModule]]
 
     def __init__(
         self,
@@ -824,13 +824,11 @@ class CompGCNRepresentation(nn.Module):
         assert self.relation_representations.embedding_dim == input_dim
         layers = []
         for _ in range(num_layers):
-            layers.append(
-                CompGCNLayer(
-                    input_dim=input_dim,
-                    output_dim=output_dim,
-                    **(layer_kwargs or {}),
-                )
-            )
+            layers.append(CompGCNLayer(
+                input_dim=input_dim,
+                output_dim=output_dim,
+                **(layer_kwargs or {}),
+            ))
             input_dim = output_dim
         self.output_dim = output_dim
         self.layers = nn.ModuleList(layers)
