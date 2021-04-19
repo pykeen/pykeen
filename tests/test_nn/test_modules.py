@@ -168,6 +168,16 @@ class ProjETests(cases.InteractionTestCase):
         return (t * activation((d_e * h) + (d_r * r) + b_c)).sum() + b_p
 
 
+class QuatETests(cases.InteractionTestCase):
+    """Tests for QuatE interaction."""
+
+    cls = pykeen.nn.modules.QuatEInteraction
+    dim = 4 * cases.InteractionTestCase.dim  # quaternions
+
+    def _exp_score(self, **kwargs) -> torch.FloatTensor:
+        raise NotImplementedError
+
+
 class RESCALTests(cases.InteractionTestCase):
     """Tests for RESCAL interaction function."""
 
