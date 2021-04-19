@@ -670,6 +670,7 @@ class TestTesting(unittest.TestCase):
 
         self.assertEqual(model_names, star_model_names, msg='Forgot to add some imports')
 
+    @unittest.skip('no longer necessary?')
     def test_models_have_experiments(self):
         """Test that each model has an experiment folder in :mod:`pykeen.experiments`."""
         experiments_path = os.path.abspath(os.path.dirname(pykeen.experiments.__file__))
