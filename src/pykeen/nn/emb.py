@@ -797,7 +797,7 @@ class CompGCNLayer(nn.Module):
         return x_e, x_r
 
 
-class CompGCNRepresentation(nn.Module):
+class CompGCNRepresentations(nn.Module):
     """A sequence of CompGCN layers."""
 
     enriched_embeddings: Optional[Tuple[RepresentationModule, RepresentationModule]]
@@ -861,7 +861,7 @@ class SingleCompGCNRepresentation(RepresentationModule):
 
     def __init__(
         self,
-        combined: CompGCNRepresentation,
+        combined: CompGCNRepresentations,
         position: int = 0,
     ):
         """

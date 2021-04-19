@@ -65,6 +65,29 @@ class RGCNRepresentationTests(cases.RepresentationTestCase):
         return kwargs
 
 
+class TestCompGCNRepresentationTests(cases.RepresentationTestCase):
+    """Test CompGCN representations."""
+
+    cls = pykeen.nn.emb.CompGCNRepresentations
+    num: int = 8
+    kwargs = dict(
+        embedding_specification=EmbeddingSpecification(embedding_dim=num),
+    )
+    num_relations: int = 7
+    num_triples: int = 31
+    num_bases: int = 2
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        kwargs["triples_factory"] = generate_triples_factory(
+            num_entities=self.num,
+            num_relations=self.num_relations,
+            num_triples=self.num_triples,
+            create_inverse_triples=True,
+        )
+        return kwargs
+
+
 class RepresentationModuleTestsTestCase(unittest_templates.MetaTestCase[RepresentationModule]):
     """Test that there are tests for all representation modules."""
 
