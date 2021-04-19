@@ -42,7 +42,7 @@ class CompGCN(ERModel[torch.FloatTensor, RelationRepresentation, torch.FloatTens
         *,
         triples_factory: TriplesFactory,
         encoder_kwargs: Optional[Mapping[str, Any]] = None,
-        interaction: Hint[Interaction[torch.FloatTensor, RelationRepresentation, torch.FloatTensor]] = DistMultInteraction,
+        interaction: Hint[Interaction[torch.FloatTensor, RelationRepresentation, torch.FloatTensor]] = None,
         interaction_kwargs: Optional[Mapping[str, Any]] = None,
         **kwargs,
     ):
@@ -69,6 +69,8 @@ class CompGCN(ERModel[torch.FloatTensor, RelationRepresentation, torch.FloatTens
         )
 
         # Resolve interaction function
+        if interaction is None:
+            interaction = DistMultInteraction
         interaction = interaction_resolver.make(query=interaction, pos_kwargs=interaction_kwargs)
         super().__init__(
             entity_representations=entity_representations,
