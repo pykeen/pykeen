@@ -39,6 +39,12 @@ for cls in MultimodalModel.__subclasses__():
     SKIP_MODULES.add(cls.__name__)
 
 
+class TestCompGCN(cases.ModelTestCase):
+    """Test the CompGCN model."""
+
+    model_cls = pykeen.models.CompGCN
+
+
 class TestComplex(cases.ModelTestCase):
     """Test the ComplEx model."""
 
