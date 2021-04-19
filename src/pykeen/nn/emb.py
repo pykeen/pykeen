@@ -14,6 +14,7 @@ from typing import Any, Callable, Mapping, Optional, Sequence, Tuple, TypeVar, U
 import numpy as np
 import torch
 import torch.nn
+from class_resolver import Resolver
 from torch import nn
 from torch.nn import functional
 
@@ -577,6 +578,249 @@ class RGCNRepresentations(RepresentationModule):
     ) -> torch.FloatTensor:
         """Enrich the entity embeddings of the decoder using R-GCN message propagation."""
         x = self._real_forward()
+        if indices is not None:
+            x = x[indices]
+        return x
+
+
+class CompositionFunction(nn.Module):
+    """An (elementwise) composition function for vectors."""
+
+    @abstractmethod
+    def forward(self, a: torch.FloatTensor, b: torch.FloatTensor) -> torch.FloatTensor:
+        """
+        Compose two batches of vectors.
+
+        The tensors have to be broadcastable.
+
+        :param a: shape: s_1
+            The first tensor.
+        :param b: shape: s_2
+            The second tensor.
+        :return: shape: s
+        """
+        raise NotImplementedError
+
+
+class SubtractionCompositionFunction(CompositionFunction):
+    def forward(self, a: torch.FloatTensor, b: torch.FloatTensor) -> torch.FloatTensor:
+        return a - b
+
+
+class MultiplicationCompositionFunction(CompositionFunction):
+    def forward(self, a: torch.FloatTensor, b: torch.FloatTensor) -> torch.FloatTensor:
+        return a * b
+
+
+class CrossCorrelationCompositionFunction(CompositionFunction):
+    def forward(self, a: torch.FloatTensor, b: torch.FloatTensor) -> torch.FloatTensor:
+        raise NotImplementedError
+
+
+composition_resolver = Resolver.from_subclasses(
+    CompositionFunction,
+    default=MultiplicationCompositionFunction,
+)
+
+
+class CompGCNLayer(nn.Module):
+    """A single layer of the CompGCN model."""
+
+    def __init__(
+        self,
+        input_dim: int,
+        output_dim: int,
+        dropout: float = 0.0,
+        use_bias: bool = True,
+        use_relation_bias: bool = False,
+        composition: Hint[CompositionFunction] = None,
+        activation: Hint[nn.Module] = nn.Identity,
+        activation_kwargs: Optional[Mapping[str, Any]] = None,
+    ):
+        super().__init__()
+
+        # entity-relation composition
+        self.composition = composition_resolver.make(composition)
+
+        # message passing weights
+        self.w_loop = nn.Parameter(data=torch.empty(input_dim, output_dim))
+        self.w_fwd = nn.Parameter(data=torch.empty(input_dim, output_dim))
+        self.w_bwd = nn.Parameter(data=torch.empty(input_dim, output_dim))
+
+        # linear relation transformation
+        self.w_rel = nn.Linear(in_features=input_dim, out_features=output_dim, bias=use_relation_bias)
+
+        # layer-specific self-loop relation representation
+        self.self_loop = nn.Parameter(data=torch.empty(1, input_dim))
+
+        # other components
+        self.drop = nn.Dropout(dropout)
+        self.bn = nn.BatchNorm1d(output_dim)
+        self.bias = Bias(output_dim) if use_bias else None
+        self.activation = activation_resolver.make(query=activation, pos_kwargs=activation_kwargs)
+
+        # initialize
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        """Reset the model's parameters."""
+        for w in (
+            self.w_loop,
+            self.w_fwd,
+            self.w_bwd,
+            self.w_rel,
+            self.self_loop,
+        ):
+            nn.init.xavier_uniform_(w)
+        self.bias.reset_parameters()
+
+    def message(
+        self,
+        x_e: torch.FloatTensor,
+        x_r: torch.FloatTensor,
+        triples: Optional[Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor]],
+    ) -> torch.FloatTensor:
+        if triples is None:
+            # compose
+            m = self.composition(x_e, self.self_loop)
+            # transform (no dropout)
+            return m @ self.self_loop
+
+        # compose
+        h, r, t = triples
+        m = self.composition(x_e[h], x_r[r])
+        # transform
+        m = m @ self.w
+        # TODO: normalization
+        # self.in_norm = self.compute_norm(self.in_index, num_ent)
+        # aggregate by sum
+        x_e = torch.zeros_like(x_e).index_add(dim=0, index=t, source=m)
+        return self.drop(x_e)
+
+    def forward(
+        self,
+        x_e: torch.FloatTensor,
+        x_r: torch.FloatTensor,
+        triples: torch.LongTensor,
+    ) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
+        # split
+        h, r, t = triples.t()
+
+        # entity transformation
+        x_e = sum((
+            self.message(
+                x_e=x_e,
+                x_r=x_r,
+                triples=triples_,
+            ),
+            for triples_ in (
+            (h, 2 * r, t),  # forward; todo make sure this is the correct interpretation of inverse relations
+            (t, 2 * r + 1, h),  # backward
+            None,  # self-loop
+        )
+        )) / 3
+        if self.bias:
+            x_e = self.bias(x_e)
+        x_e = self.bn(x_e)
+        x_e = self.activation(x_e)
+
+        # Relation transformation
+        x_r = self.w_rel(x_r)
+        return x_e, x_r
+
+
+class CompGCNRepresentation(nn.Module):
+    """A sequence of CompGCN layers."""
+
+    def __init__(
+        self,
+        *,
+        triples_factory: TriplesFactory,
+        embedding_specification: EmbeddingSpecification,
+        num_layers: int = 1,
+        output_dim: int = 128,
+        layer_kwargs: Optional[Mapping[str, Any]] = None,
+    ):
+        super().__init__()
+        # TODO: Check
+        assert not triples_factory.create_inverse_triples
+        self.entity_representations = embedding_specification.make(
+            num_embeddings=triples_factory.num_entities,
+        )
+        self.relation_representations = embedding_specification.make(
+            num_embeddings=2 * triples_factory.num_relations,
+        )
+        input_dim = self.entity_representations.embedding_dim
+        layers = []
+        for i in range(num_layers):
+            layers.append(
+                CompGCNLayer(
+                    input_dim=input_dim,
+                    output_dim=output_dim,
+                    **(layer_kwargs or {}),
+                )
+            )
+            input_dim = output_dim
+        self.output_dim = output_dim
+        self.layers = nn.ModuleList(layers)
+
+        # buffering of enriched representations
+        self.enriched_embeddings = None
+
+    def post_parameter_update(self) -> None:  # noqa: D102
+        super().post_parameter_update()
+
+        # invalidate enriched embeddings
+        self.enriched_embeddings = None
+
+    def forward(
+        self,
+    ) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
+        """Compute enriched representations."""
+        if self.enriched_embeddings is None:
+            triples: torch.LongTensor = ...
+            x_e = self.entity_representations()
+            x_r = self.relation_representations()
+            # enrich
+            for layer in self.layers:
+                x_e, x_r = layer(x_e=x_e, x_r=x_r, triples=triples)
+            self.enriched_embeddings = (x_e, x_r)
+        return self.enriched_embeddings
+
+
+class SingleCompGCNRepresentation(RepresentationModule):
+    """A wrapper around the combined representation module."""
+
+    def __init__(
+        self,
+        combined: CompGCNRepresentation,
+        position: int = 0,
+    ):
+        """
+        Initialize the module.
+
+        :param combined:
+            The combined representations.
+        :param position:
+            The position, either 0 for entities, or 1 for relations.
+        """
+        if position == 0:  # entity
+            max_id = self.combined.entity_representations.max_id
+            shape = (self.combined.output_dim,)
+        elif position == 1:  # relation
+            max_id = self.combined.relation_representations.max_id
+            shape = (self.combined.output_dim,)
+        else:
+            raise ValueError
+        super().__init__(max_id=max_id, shape=shape)
+        self.combined = combined
+        self.position = position
+
+    def forward(
+        self,
+        indices: Optional[torch.LongTensor] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        x = self.combined()[self.position]
         if indices is not None:
             x = x[indices]
         return x
