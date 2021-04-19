@@ -6,11 +6,12 @@ from typing import Any, ClassVar, Mapping, Optional, Type
 import torch
 from torch.nn import functional
 
-from ..base import EntityRelationEmbeddingModel
+from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import BCEWithLogitsLoss, Loss
 from ...nn.emb import EmbeddingSpecification
 from ...nn.init import init_quaternions
+from ...nn.modules import QuatEInteraction
 from ...regularizers import LpRegularizer, Regularizer
 from ...triples import TriplesFactory
 from ...typing import DeviceHint, Hint, Initializer
@@ -20,7 +21,35 @@ __all__ = [
 ]
 
 
-class QuatE(EntityRelationEmbeddingModel):
+def quaternion_normalizer(x: torch.FloatTensor) -> torch.FloatTensor:
+    r"""
+    Normalize the length of relation vectors, if the forward constraint has not been applied yet.
+
+    Absolute value of a quaternion
+
+    .. math::
+
+        |a + bi + cj + dk| = \sqrt{a^2 + b^2 + c^2 + d^2}
+
+    L2 norm of quaternion vector:
+
+    .. math::
+        \|x\|^2 = \sum_{i=1}^d |x_i|^2
+                 = \sum_{i=1}^d (x_i.re^2 + x_i.im_1^2 + x_i.im_2^2 + x_i.im_3^2)
+    :param x:
+        The vector.
+
+    :return:
+        The normalized vector.
+    """
+    # Normalize relation embeddings
+    shape = x.shape
+    x = x.view(*shape[:-1], -1, 4)
+    x = functional.normalize(x, p=2, dim=-1)
+    return x.view(*shape)
+
+
+class QuatE(ERModel):
     r"""An implementation of QuatE [zhang2019]_.
 
     QuatE uses hypercomplex valued representations for the
@@ -62,7 +91,6 @@ class QuatE(EntityRelationEmbeddingModel):
         embedding_dim: int = 100,
         normalize_relations: bool = True,
         loss: Optional[Loss] = None,
-        regularizer: Optional[Regularizer] = None,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         entity_initializer: Hint[Initializer] = init_quaternions,
@@ -76,8 +104,6 @@ class QuatE(EntityRelationEmbeddingModel):
             The embedding dimensionality of the entity embeddings.
         :param loss:
             The loss to use. Defaults to BCEWithLogitsLoss.
-        :param regularizer:
-            The regularizer to use.
         :param preferred_device:
             The default device where to model is located.
         :param random_seed:
@@ -85,10 +111,7 @@ class QuatE(EntityRelationEmbeddingModel):
         """
         super().__init__(
             triples_factory=triples_factory,
-            loss=loss,
-            preferred_device=preferred_device,
-            random_seed=random_seed,
-            regularizer=regularizer,
+            interaction=QuatEInteraction(),
             entity_representations=EmbeddingSpecification(
                 embedding_dim=4 * embedding_dim,
                 initializer=entity_initializer,
@@ -99,130 +122,12 @@ class QuatE(EntityRelationEmbeddingModel):
                 embedding_dim=4 * embedding_dim,
                 initializer=relation_initializer,
                 initializer_kwargs=dict(num_elements=self.num_relations, dim=embedding_dim),
+                constrainer=quaternion_normalizer if normalize_relations else None,
                 dtype=torch.float,
             ),
+            loss=loss,
+            preferred_device=preferred_device,
+            random_seed=random_seed,
         )
         self.normalize_relations = normalize_relations
         self.real_embedding_dim = embedding_dim
-
-    def post_parameter_update(self) -> None:  # noqa: D102
-        r"""Normalize the length of relation vectors, if the forward constraint has not been applied yet.
-
-        Absolute value of complex number
-
-        .. math::
-
-            |a + bi + cj dk| = \sqrt{a^2 + b^2 + c^2 + d^2}
-
-        L2 norm of quaternion vector:
-
-        .. math::
-            \|x\|^2 = \sum_{i=1}^d |x_i|^2
-                     = \sum_{i=1}^d (x_i.re^2 + x_i.im_1^2 + x_i.im_2^2 + x_i.im_3^2)
-        """
-        # Make sure to call super first
-        super().post_parameter_update()
-
-        if self.normalize_relations:
-            # Normalize relation embeddings
-            rel = self.relation_embeddings.weight.data.view(self.num_relations, self.real_embedding_dim, 4)
-            rel = functional.normalize(rel, p=2, dim=-1)
-            self.relation_embeddings.weight.data = rel.view(self.num_relations, self.embedding_dim)
-
-    @staticmethod
-    def interaction_function(
-        h: torch.FloatTensor,
-        r: torch.FloatTensor,
-        t: torch.FloatTensor,
-    ) -> torch.FloatTensor:
-        """Evaluate the interaction function of QuatE for given embeddings.
-
-        The embeddings have to be in a broadcastable shape.
-
-        WARNING: No forward constraints are applied.
-
-        :param h: shape: (..., e, 4)
-            Head embeddings. Last dimension corresponds to (real, imag, imag,imag).
-        :param r: shape: (..., e, 4)
-            Relation embeddings. Last dimension corresponds to (real, imag, imag,imag).
-        :param t: shape: (..., e, 4)
-            Tail embeddings. Last dimension corresponds to (real, imag, imag,imag).
-
-        :return: shape: (...)
-            The scores.
-        """
-        # Decompose into real and imaginary part
-        h_a = h[..., 0]
-        h_b = h[..., 1]
-        h_c = h[..., 2]
-        h_d = h[..., 3]
-        r_a = r[..., 0]
-        r_b = r[..., 1]
-        r_c = r[..., 2]
-        r_d = r[..., 3]
-
-        # Rotate (=Hamilton product in quaternion space).
-        rot_h = torch.stack(
-            [
-                h_a * r_a - h_b * r_b - h_c * r_c - h_d * r_d,
-                h_a * r_b + h_b * r_a + h_c * r_d - h_d * r_c,
-                h_a * r_c - h_b * r_d + h_c * r_a + h_d * r_b,
-                h_a * r_d + h_b * r_c - h_c * r_b + h_d * r_a,
-            ],
-            dim=-1,
-        )
-
-        inner_prod = rot_h * t
-        scores = -inner_prod.sum(dim=[-2, -1])
-
-        return scores
-
-    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:
-        # Get embeddings
-        h = self.entity_embeddings(hr_batch[:, 0]).view(-1, 1, self.real_embedding_dim, 4)
-        r = self.relation_embeddings(hr_batch[:, 1]).view(-1, 1, self.real_embedding_dim, 4)
-
-        # Rank against all entities
-        t = self.entity_embeddings.weight.view(1, -1, self.real_embedding_dim, 4)
-
-        # Compute scores
-        scores = self.interaction_function(h=h, r=r, t=t)
-
-        # Embedding Regularization
-        self.regularize_if_necessary(h.view(-1, self.embedding_dim), t.view(-1, self.embedding_dim))
-
-        return scores
-
-    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        r = self.relation_embeddings(rt_batch[:, 0]).view(-1, 1, self.real_embedding_dim, 4)
-        t = self.entity_embeddings(rt_batch[:, 1]).view(-1, 1, self.real_embedding_dim, 4)
-
-        # Conjugation is an involution and is its own inverse (see https://arxiv.org/pdf/1904.10281.pdf)
-        r_inv = torch.stack([r[:, :, :, 0], -r[:, :, :, 1], -r[:, :, :, 2], -r[:, :, :, 3]], dim=-1)
-
-        # Rank against all entities
-        h = self.entity_embeddings.weight.view(1, -1, self.real_embedding_dim, 4)
-
-        # Compute scores
-        # Q_h ⊗ W_r·Q_t = Q_t ⊗ ̄W_r·Q_h (see https://arxiv.org/pdf/1904.10281.pdf)
-        scores = self.interaction_function(h=t, r=r_inv, t=h)
-
-        # Embedding Regularization
-        self.regularize_if_necessary(h.view(-1, self.embedding_dim), t.view(-1, self.embedding_dim))
-
-        return scores
-
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        # Get embeddings
-        h = self.entity_embeddings(hrt_batch[:, 0]).view(-1, self.real_embedding_dim, 4)
-        r = self.relation_embeddings(hrt_batch[:, 1]).view(-1, self.real_embedding_dim, 4)
-        t = self.entity_embeddings(hrt_batch[:, 2]).view(-1, self.real_embedding_dim, 4)
-
-        # Compute scores
-        scores = self.interaction_function(h=h, r=r, t=t).view(-1, 1)
-
-        # Embedding Regularization
-        self.regularize_if_necessary(h.view(-1, self.embedding_dim), t.view(-1, self.embedding_dim))
-
-        return scores
