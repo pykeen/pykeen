@@ -51,6 +51,7 @@
                 NIPS. 2013.
 """
 
+from .compgcn import CompGCN
 from .complex import ComplEx
 from .conv_e import ConvE
 from .conv_kb import ConvKB
@@ -76,6 +77,7 @@ from .tucker import TuckER
 from .unstructured_model import UnstructuredModel
 
 __all__ = [
+    'CompGCN',
     'ComplEx',
     'ConvE',
     'ConvKB',
