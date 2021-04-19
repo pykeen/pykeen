@@ -18,6 +18,7 @@ from class_resolver import Resolver
 from torch import nn
 from torch.nn import functional
 
+from . import functional as pkf
 from .init import init_phases, xavier_normal_, xavier_normal_norm_, xavier_uniform_, xavier_uniform_norm_
 from .message_passing import Decomposition, decomposition_resolver
 from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolver
@@ -602,8 +603,8 @@ class CompositionModule(nn.Module):
         raise NotImplementedError
 
 
-class TorchCompositionModule(CompositionModule, ABC):
-    """Composition by a torch function."""
+class FunctionalCompositionModule(CompositionModule, ABC):
+    """Composition by a function (i.e. state-less)."""
 
     func: Callable[[torch.FloatTensor, torch.FloatTensor], torch.FloatTensor]
 
@@ -611,28 +612,29 @@ class TorchCompositionModule(CompositionModule, ABC):
         return self.func(a, b)
 
 
-class SubtractionCompositionModule(TorchCompositionModule):
+class SubtractionCompositionModule(FunctionalCompositionModule):
     """Composition by element-wise subtraction."""
 
     func = torch.sub
 
 
-class MultiplicationCompositionModule(TorchCompositionModule):
+class MultiplicationCompositionModule(FunctionalCompositionModule):
     """Composition by element-wise multiplication."""
 
     func = torch.mul
 
 
-class CrossCorrelationCompositionModule(CompositionModule):
-    def forward(self, a: torch.FloatTensor, b: torch.FloatTensor) -> torch.FloatTensor:
-        raise NotImplementedError
+class CircularCorrelationCompositionModule(FunctionalCompositionModule):
+    """Composition by circular correlation."""
+
+    func = pkf.circular_correlation
 
 
 composition_resolver = Resolver.from_subclasses(
     CompositionModule,
     default=MultiplicationCompositionModule,
     skip={
-        TorchCompositionModule,
+        FunctionalCompositionModule,
     },
 )
 
