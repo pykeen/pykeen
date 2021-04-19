@@ -50,7 +50,7 @@ def quaternion_normalizer(x: torch.FloatTensor) -> torch.FloatTensor:
 
 
 class QuatE(ERModel):
-    r"""An implementation of QuatE [zhang2019]_.
+    r"""An implementation of QuatE from [zhang2019]_.
 
     QuatE uses hypercomplex valued representations for the
     entities and relations. Entities and relations are represented as vectors

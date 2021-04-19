@@ -34,7 +34,7 @@
   <a href="#installation">Installation</a> •
   <a href="#quickstart">Quickstart</a> •
   <a href="#datasets-25">Datasets</a> •
-  <a href="#models-25">Models</a> •
+  <a href="#models-26">Models</a> •
   <a href="#supporters">Support</a> •
   <a href="#citation">Citation</a>
 </p>
@@ -130,7 +130,7 @@ or the URL for the dataset if neither of the first two are available.
 | WordNet-18 (RR)                    | [`pykeen.datasets.WN18RR`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.WN18RR.html)               | [Toutanova *et al*., 2015](https://www.aclweb.org/anthology/W15-4007/)                                                  |      40559 |          11 |     92583 |
 | YAGO3-10                           | [`pykeen.datasets.YAGO310`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.YAGO310.html)             | [Mahdisoltani *et al*., 2015](http://service.tsi.telecom-paristech.fr/cgi-bin//valipub_download.cgi?dId=284)            |     123143 |          37 |   1089000 |
 
-### Models (25)
+### Models (26)
 
 | Name                | Reference                                                                                                                 | Citation                                                                                                                |
 |---------------------|---------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|
@@ -148,6 +148,7 @@ or the URL for the dataset if neither of the first two are available.
 | NTN                 | [`pykeen.models.NTN`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.NTN.html)                                 | [Socher *et al.*, 2013](https://dl.acm.org/doi/10.5555/2999611.2999715)                                                 |
 | PairRE              | [`pykeen.models.PairRE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.PairRE.html)                           | [Chao *et al.*, 2020](http://arxiv.org/abs/2011.03798)                                                                  |
 | ProjE               | [`pykeen.models.ProjE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.ProjE.html)                             | [Shi *et al.*, 2017](https://www.aaai.org/ocs/index.php/AAAI/AAAI17/paper/view/14279)                                   |
+| QuatE               | [`pykeen.models.QuatE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.QuatE.html)                             | [Zhang *et al.*, 2019](https://arxiv.org/abs/1904.10281)                                                                |
 | RESCAL              | [`pykeen.models.RESCAL`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.RESCAL.html)                           | [Nickel *et al.*, 2011](http://www.cip.ifi.lmu.de/~nickel/data/paper-icml2011.pdf)                                      |
 | RGCN                | [`pykeen.models.RGCN`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.RGCN.html)                               | [Schlichtkrull *et al.*, 2018](https://arxiv.org/pdf/1703.06103)                                                        |
 | RotatE              | [`pykeen.models.RotatE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.RotatE.html)                           | [Sun *et al.*, 2019](https://arxiv.org/abs/1902.10197v1)                                                                |
