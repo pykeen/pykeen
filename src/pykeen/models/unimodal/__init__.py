@@ -49,6 +49,8 @@
 .. [socher2013] Socher, R., *et al.* (2013) `Reasoning with neural tensor networks for knowledge base completion.
                 <https://papers.nips.cc/paper/5028-reasoning-with-neural-tensor-networks-for-knowledge-base-completion>`_.
                 NIPS. 2013.
+.. [zhang2019] Zhang, Shuai, *et al.* (2019). `Quaternion knowledge graph embeddings
+                <https://openreview.net/forum?id=cZbk98eY_WwC>`_ NeurIPS'19.
 """
 
 from .complex import ComplEx
