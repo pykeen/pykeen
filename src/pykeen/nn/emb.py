@@ -607,7 +607,7 @@ class TorchCompositionModule(CompositionModule, ABC):
 
     func: Callable[[torch.FloatTensor, torch.FloatTensor], torch.FloatTensor]
 
-    def forward(self, a: torch.FloatTensor, b: torch.FloatTensor) -> torch.FloatTensor:
+    def forward(self, a: torch.FloatTensor, b: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
         return self.func(a, b)
 
 
