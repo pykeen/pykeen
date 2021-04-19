@@ -214,8 +214,7 @@ def skyline(data_stream: Iterable[PatternMatch]) -> Iterable[PatternMatch]:
     :param data_stream:
         The stream of data, comprising tuples (relation_id, pattern-type, support, confidence).
 
-    :yields:
-        An entry from the support-confidence skyline.
+    :yields: An entry from the support-confidence skyline.
     """
     # group by (relation id, pattern type)
     data: DefaultDict[Tuple[int, str], Set[Tuple[int, float]]] = defaultdict(set)
@@ -278,8 +277,7 @@ def iter_unary_patterns(
     :param pairs:
         A mapping from relations to the set of entity pairs.
 
-    :yields:
-        A pattern match tuple of relation_id, pattern_type, support, and confidence.
+    :yields: A pattern match tuple of relation_id, pattern_type, support, and confidence.
     """
     logger.debug("Evaluating unary patterns: {symmetry, anti-symmetry}")
     for r, ht in pairs.items():
@@ -306,8 +304,7 @@ def iter_binary_patterns(
     :param pairs:
         A mapping from relations to the set of entity pairs.
 
-    :yields:
-        A pattern match tuple of relation_id, pattern_type, support, and confidence.
+    :yields: A pattern match tuple of relation_id, pattern_type, support, and confidence.
     """
     logger.debug("Evaluating binary patterns: {inversion}")
     for (_r1, ht1), (r, ht2) in itt.combinations(pairs.items(), r=2):
@@ -334,8 +331,7 @@ def iter_ternary_patterns(
     :param pairs:
         A mapping from relations to the set of entity pairs.
 
-    :yields:
-        A pattern match tuple of relation_id, pattern_type, support, and confidence.
+    :yields: A pattern match tuple of relation_id, pattern_type, support, and confidence.
     """
     logger.debug("Evaluating ternary patterns: {composition}")
     # composition r1(x, y) & r2(y, z) => r(x, z)
