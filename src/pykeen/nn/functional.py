@@ -1016,6 +1016,23 @@ def pair_re_interaction(
     )
 
 
+def _rotate_quaternion(qa: torch.FloatTensor, qb: torch.FloatTensor) -> torch.FloatTensor:
+    # Rotate (=Hamilton product in quaternion space).
+    return torch.stack(
+        [
+            qa[0] * qb[0] - qa[1] * qb[1] - qa[2] * qb[2] - qa[3] * qb[3],
+            qa[0] * qb[1] + qa[1] * qb[0] + qa[2] * qb[3] - qa[3] * qb[2],
+            qa[0] * qb[2] - qa[1] * qb[3] + qa[2] * qb[0] + qa[3] * qb[1],
+            qa[0] * qb[3] + qa[1] * qb[2] - qa[2] * qb[1] + qa[3] * qb[0],
+        ],
+        dim=-1,
+    )
+
+
+def _split_quaternion(x: torch.FloatTensor) -> torch.FloatTensor:
+    return torch.chunk(x, chunks=4, dim=-1)
+
+
 def quat_e_interaction(
     h: torch.FloatTensor,
     r: torch.FloatTensor,
@@ -1039,21 +1056,10 @@ def quat_e_interaction(
         The scores.
     """
     h, r, t = [x.view(*x.shape[:-1], -1, 4) for x in (h, r, t)]
-
-    # Decompose into real and imaginary parts
-    h_a, h_b, h_c, h_d = torch.chunk(h, chunks=4, dim=-1)
-    r_a, r_b, r_c, r_d = torch.chunk(r, chunks=4, dim=-1)
-
-    # Rotate (=Hamilton product in quaternion space).
-    rot_h = torch.stack(
-        [
-            h_a * r_a - h_b * r_b - h_c * r_c - h_d * r_d,
-            h_a * r_b + h_b * r_a + h_c * r_d - h_d * r_c,
-            h_a * r_c - h_b * r_d + h_c * r_a + h_d * r_b,
-            h_a * r_d + h_b * r_c - h_c * r_b + h_d * r_a,
-        ],
-        dim=-1,
-    )
-
-    inner_prod = rot_h * t
-    return -inner_prod.sum(dim=[-2, -1])
+    return -(
+        # Rotation in quaternion space
+        _rotate_quaternion(
+            _split_quaternion(h),
+            _split_quaternion(r)
+        ) * t,
+    ).sum(dim=[-2, -1])
