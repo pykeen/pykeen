@@ -5,10 +5,11 @@
 from typing import Any, Mapping, Optional
 
 import torch
+from class_resolver import Hint
 
 from ..nbase import ERModel
 from ...nn.emb import CompGCNRepresentation, SingleCompGCNRepresentation
-from ...nn.modules import Interaction, interaction_resolver
+from ...nn.modules import DistMultInteraction, Interaction, interaction_resolver
 from ...triples import TriplesFactory
 from ...typing import RelationRepresentation
 
@@ -42,7 +43,7 @@ class CompGCN(
         *,
         triples_factory: TriplesFactory,
         encoder_kwargs: Optional[Mapping[str, Any]] = None,
-        interaction: Interaction[torch.FloatTensor, RelationRepresentation, torch.FloatTensor],
+        interaction: Hint[Interaction[torch.FloatTensor, RelationRepresentation, torch.FloatTensor]] = DistMultInteraction,
         interaction_kwargs: Optional[Mapping[str, Any]] = None,
         **kwargs,
     ):
