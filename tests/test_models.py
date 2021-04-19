@@ -44,6 +44,7 @@ class TestCompGCN(cases.ModelTestCase):
     """Test the CompGCN model."""
 
     model_cls = pykeen.models.CompGCN
+    create_inverse_triples = True
     model_kwargs = dict(
         encoder_kwargs=dict(
             embedding_specification=EmbeddingSpecification(
@@ -51,6 +52,7 @@ class TestCompGCN(cases.ModelTestCase):
             ),
         ),
     )
+    num_constant_init = 3  # BN(2) + Bias
 
 
 class TestComplex(cases.ModelTestCase):

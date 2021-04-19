@@ -706,11 +706,11 @@ class CompGCNLayer(nn.Module):
             self.w_loop,
             self.w_fwd,
             self.w_bwd,
-            self.w_rel.weight,
             self.self_loop,
         ):
             nn.init.xavier_uniform_(w)
         self.bias.reset_parameters()
+        self.w_rel.reset_parameters()
 
     def message(
         self,
@@ -811,12 +811,12 @@ class CompGCNRepresentation(nn.Module):
     ):
         super().__init__()
         # TODO: Check
-        assert not triples_factory.create_inverse_triples
+        assert triples_factory.create_inverse_triples
         self.entity_representations = embedding_specification.make(
             num_embeddings=triples_factory.num_entities,
         )
         self.relation_representations = embedding_specification.make(
-            num_embeddings=2 * triples_factory.num_relations,
+            num_embeddings=2 * triples_factory.real_num_relations,
         )
         input_dim = self.entity_representations.embedding_dim
         assert self.relation_representations.embedding_dim == input_dim
