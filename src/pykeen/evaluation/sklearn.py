@@ -28,12 +28,14 @@ class SklearnMetricResults(MetricResults):
 
     #: The area under the ROC curve
     roc_auc_score: float = field(metadata=dict(
-        doc='The area under the ROC curve between [0.0, 1.0]. Higher is better.',
+        name="AUC-ROC",
+        doc='The area under the ROC curve, on [0, 1]. Higher is better.',
         f=metrics.roc_auc_score,
     ))
     #: The area under the precision-recall curve
     average_precision_score: float = field(metadata=dict(
-        doc='The area under the precision-recall curve, between [0.0, 1.0]. Higher is better.',
+        name="Average Precision",
+        doc='The area under the precision-recall curve, on [0, 1]. Higher is better.',
         f=metrics.average_precision_score,
     ))
 

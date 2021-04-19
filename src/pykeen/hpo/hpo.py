@@ -22,6 +22,7 @@ from ..constants import USER_DEFINED_CODE
 from ..datasets import get_dataset, has_dataset
 from ..datasets.base import Dataset
 from ..evaluation import Evaluator, evaluator_resolver
+from ..evaluation.rank_based_evaluator import ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX
 from ..losses import Loss, loss_resolver
 from ..models import Model, model_resolver
 from ..optimizers import Optimizer, optimizer_resolver, optimizers_hpo_defaults
@@ -568,10 +569,10 @@ def hpo_pipeline(
         The keyword arguments passed to the results tracker on instantiation
 
     :param metric:
-        The metric to optimize over. Defaults to ``adjusted_mean_rank``.
+        The metric to optimize over. Defaults to :data:`ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX`.
     :param direction:
-        The direction of optimization. Because the default metric is ``adjusted_mean_rank``,
-        the default direction is ``minimize``.
+        The direction of optimization. Because the default metric is :data:`ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX`,
+        the default direction is ``maximize``.
 
     :param n_jobs: The number of parallel jobs. If this argument is set to :obj:`-1`, the number is
                 set to CPU counts. If none, defaults to 1.
@@ -582,7 +583,7 @@ def hpo_pipeline(
         or :meth:`optuna.study.Study.optimize`.
     """
     if direction is None:
-        direction = 'minimize'
+        direction = 'maximize'
 
     study = create_study(
         storage=storage,
@@ -650,7 +651,7 @@ def hpo_pipeline(
     study.set_user_attr('evaluator', evaluator_cls.get_normalized_name())
     logger.info(f'Using evaluator: {evaluator_cls}')
     if metric is None:
-        metric = 'adjusted_mean_rank'
+        metric = ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX
     study.set_user_attr('metric', metric)
     logger.info(f'Attempting to {direction} {metric}')
 
