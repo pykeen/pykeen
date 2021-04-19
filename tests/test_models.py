@@ -660,6 +660,7 @@ class TestTesting(unittest.TestCase):
             'ProjE',  # FIXME
             'ERMLPE',  # FIXME
             'PairRE',
+            'QuatE',
         }
         model_names = _remove_non_models(set(pykeen.models.__all__) - SKIP_MODULES - experiment_blacklist)
         for model in _remove_non_models(model_names):
