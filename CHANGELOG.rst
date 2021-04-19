@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on `Keep a Changelog <http://keepachangelog.com/>`_
 and this project adheres to `Semantic Versioning <http://semver.org/>`_
 
+`Unreleased <https://github.com/pykeen/pykeen/compare/v1.4.0...HEAD>`_
+-----------------------------------------------------------------------
+
+New Metrics
+~~~~~~~~~~~
+- Adjusted Arithmetic Mean Rank Index (https://github.com/pykeen/pykeen/pull/378)
+- Add harmonic, geometric, and median rankings (https://github.com/pykeen/pykeen/pull/381)
+
+Added
+~~~~~
+- Documentation on using PyKEEN in Google Colab and Kaggle (https://github.com/pykeen/pykeen/pull/379,
+  thanks `@jerryIsHere <https://github.com/jerryIsHere>`_)
+- Documentation on
+- Pass custom training loops to pipeline (https://github.com/pykeen/pykeen/pull/334)
+- Compatibility later for the fft module (https://github.com/pykeen/pykeen/pull/288)
+- Official Python 3.9 support, now that PyTorch has it (https://github.com/pykeen/pykeen/pull/223)
+
+Updated
+~~~~~~~
+- R-GCN implementation now uses new-style models and is super idiomatic (https://github.com/pykeen/pykeen/pull/110)
+
+Fixed
+~~~~~
+- Regularizer passing in the pipeline and HPO (https://github.com/pykeen/pykeen/pull/345)
+- Saving results when using multimodal models (https://github.com/pykeen/pykeen/pull/349)
+
 `1.4.0 <https://github.com/pykeen/pykeen/compare/v1.3.0...v1.4.0>`_ - 2021-03-04
 --------------------------------------------------------------------------------
 New Datasets

@@ -284,7 +284,11 @@ def metrics(tablefmt: str):
 def _help_metrics(tablefmt, link_fmt=None):
     return tabulate(
         sorted(_get_metrics_lines(tablefmt, link_fmt=link_fmt)),
-        headers=['Name', 'Reference'] if tablefmt == 'rst' else ['Metric', 'Description', 'Reference'],
+        headers=(
+            ['Name', 'Reference'] if tablefmt == 'rst'
+            else ['Name', 'Description'] if tablefmt == 'github'
+            else ['Metric', 'Description', 'Reference']
+        ),
         tablefmt=tablefmt,
     )
 
@@ -329,12 +333,10 @@ def _get_metrics_lines(tablefmt: str, link_fmt=None):
             yield name, f':class:`pykeen.evaluation.{value.__name__}`'
     else:
         for field, name, value in get_metric_list():
+            if field.name in {'rank_std', 'rank_var', 'rank_mad'}:
+                continue
             if tablefmt == 'github':
-                ref = f'pykeen.evaluation.{value.__name__}'
-                yield (
-                    field.metadata['name'], field.metadata['doc'],
-                    f'[`{ref}`]({link_fmt.format(ref)})',
-                )
+                yield field.metadata['name'], field.metadata['doc']
             else:
                 yield field.metadata['name'], field.metadata['doc'], name, f'pykeen.evaluation.{value.__name__}'
 
