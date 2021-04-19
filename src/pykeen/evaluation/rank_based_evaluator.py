@@ -2,15 +2,17 @@
 
 """Implementation of ranked based evaluator."""
 
+import itertools as itt
 import logging
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from typing import DefaultDict, Dict, Iterable, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import pandas as pd
 import torch
 from dataclasses_json import dataclass_json
+from scipy import stats
 
 from .evaluator import Evaluator, MetricResults
 from ..typing import MappedTriples
@@ -27,19 +29,61 @@ logger = logging.getLogger(__name__)
 SIDE_HEAD = 'head'
 SIDE_TAIL = 'tail'
 SIDE_BOTH = 'both'
+SIDES = {SIDE_HEAD, SIDE_TAIL, SIDE_BOTH}
+
 RANK_OPTIMISTIC = 'optimistic'
 RANK_PESSIMISTIC = 'pessimistic'
 RANK_REALISTIC = 'realistic'
-RANK_EXPECTED_REALISTIC = 'expected_realistic'
 RANK_TYPES = {RANK_OPTIMISTIC, RANK_PESSIMISTIC, RANK_REALISTIC}
-SIDES = {SIDE_HEAD, SIDE_TAIL, SIDE_BOTH}
 
-MEAN_RANK = 'mean_rank'
-MEAN_RECIPROCAL_RANK = 'mean_reciprocal_rank'
-ADJUSTED_MEAN_RANK = 'adjusted_mean_rank'
-ADJUSTED_MEAN_RANK_INDEX = 'adjusted_mean_rank_index'
-TYPES_ALL = {MEAN_RANK, MEAN_RECIPROCAL_RANK}
-TYPES_REALISTIC_ONLY = {ADJUSTED_MEAN_RANK, ADJUSTED_MEAN_RANK_INDEX}
+RANK_EXPECTED_REALISTIC = 'expected_realistic'
+EXPECTED_RANKS = {
+    RANK_REALISTIC: RANK_EXPECTED_REALISTIC,
+    RANK_OPTIMISTIC: None,  # TODO - research problem
+    RANK_PESSIMISTIC: None,  # TODO - research problem
+}
+
+ARITHMETIC_MEAN_RANK = 'arithmetic_mean_rank'  # also known as mean rank (MR)
+GEOMETRIC_MEAN_RANK = 'geometric_mean_rank'
+HARMONIC_MEAN_RANK = 'harmonic_mean_rank'
+MEDIAN_RANK = 'median_rank'
+INVERSE_ARITHMETIC_MEAN_RANK = 'inverse_arithmetic_mean_rank'
+INVERSE_GEOMETRIC_MEAN_RANK = 'inverse_geometric_mean_rank'
+INVERSE_HARMONIC_MEAN_RANK = 'inverse_harmonic_mean_rank'  # also known as mean reciprocal rank (MRR)
+INVERSE_MEDIAN_RANK = 'inverse_median_rank'
+
+RANK_STD = 'rank_std'
+RANK_VARIANCE = 'rank_var'
+RANK_MAD = 'rank_mad'
+
+all_type_funcs = {
+    ARITHMETIC_MEAN_RANK: np.mean,  # This is MR
+    HARMONIC_MEAN_RANK: stats.hmean,
+    GEOMETRIC_MEAN_RANK: stats.gmean,
+    MEDIAN_RANK: np.median,
+    INVERSE_ARITHMETIC_MEAN_RANK: lambda x: np.reciprocal(np.mean(x)),
+    INVERSE_GEOMETRIC_MEAN_RANK: lambda x: np.reciprocal(stats.gmean(x)),
+    INVERSE_HARMONIC_MEAN_RANK: lambda x: np.reciprocal(stats.hmean(x)),  # This is MRR
+    INVERSE_MEDIAN_RANK: lambda x: np.reciprocal(np.median(x)),
+    # Extra stats stuff
+    RANK_STD: np.std,
+    RANK_VARIANCE: np.var,
+    RANK_MAD: stats.median_abs_deviation,
+}
+
+ADJUSTED_ARITHMETIC_MEAN_RANK = 'adjusted_arithmetic_mean_rank'
+ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX = 'adjusted_arithmetic_mean_rank_index'
+TYPES_REALISTIC_ONLY = {ADJUSTED_ARITHMETIC_MEAN_RANK, ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX}
+
+METRIC_SYNONYMS = {
+    'adjusted_mean_rank': ADJUSTED_ARITHMETIC_MEAN_RANK,
+    'adjusted_mean_rank_index': ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX,
+    'igmr': INVERSE_GEOMETRIC_MEAN_RANK,
+    'mr': ARITHMETIC_MEAN_RANK,
+    'mean_rank': ARITHMETIC_MEAN_RANK,
+    'mrr': INVERSE_HARMONIC_MEAN_RANK,
+    'mean_reciprocal_rank': INVERSE_HARMONIC_MEAN_RANK,
+}
 
 
 def compute_rank_from_scores(
@@ -106,16 +150,61 @@ def compute_rank_from_scores(
 @dataclass_json
 @dataclass
 class RankBasedMetricResults(MetricResults):
-    r"""Results from computing metrics."""
+    """Results from computing metrics."""
 
-    mean_rank: Dict[str, Dict[str, float]] = field(metadata=dict(
+    arithmetic_mean_rank: Dict[str, Dict[str, float]] = field(metadata=dict(
         name="Mean Rank (MR)",
-        doc='The mean over all ranks on, [1, inf). Lower is better.',
+        doc='The arithmetic mean over all ranks on, [1, inf). Lower is better.',
     ))
 
-    mean_reciprocal_rank: Dict[str, Dict[str, float]] = field(metadata=dict(
+    geometric_mean_rank: Dict[str, Dict[str, float]] = field(metadata=dict(
+        name="Geometric Mean Rank (GMR)",
+        doc='The geometric mean over all ranks, on [1, inf). Lower is better.',
+    ))
+
+    median_rank: Dict[str, Dict[str, float]] = field(metadata=dict(
+        name="Median Rank",
+        doc='The median over all ranks, on [1, inf). Lower is better.',
+    ))
+
+    harmonic_mean_rank: Dict[str, Dict[str, float]] = field(metadata=dict(
+        name="Harmonic Mean Rank (HMR)",
+        doc='The harmonic mean over all ranks, on [1, inf). Lower is better.',
+    ))
+
+    inverse_arithmetic_mean_rank: Dict[str, Dict[str, float]] = field(metadata=dict(
+        name="Inverse Arithmetic Mean Rank (IAMR)",
+        doc='The inverse of the arithmetic mean over all ranks, on (0, 1]. Higher is better.',
+    ))
+
+    inverse_geometric_mean_rank: Dict[str, Dict[str, float]] = field(metadata=dict(
+        name="Inverse Geometric Mean Rank (IGMR)",
+        doc='The inverse of the geometric mean over all ranks, on (0, 1]. Higher is better.',
+    ))
+
+    inverse_harmonic_mean_rank: Dict[str, Dict[str, float]] = field(metadata=dict(
         name="Mean Reciprocal Rank (MRR)",
-        doc='The mean over all reciprocal ranks, on (0, 1]. Higher is better.',
+        doc='The inverse of the harmonic mean over all ranks, on (0, 1]. Higher is better.',
+    ))
+
+    inverse_median_rank: Dict[str, Dict[str, float]] = field(metadata=dict(
+        name="Inverse Median Rank",
+        doc='The inverse of the median over all ranks, on (0, 1]. Higher is better.',
+    ))
+
+    rank_std: Dict[str, Dict[str, float]] = field(metadata=dict(
+        name="Rank Standard Deviation",
+        doc='The standard deviation over all ranks on, [0, inf). Lower is better.',
+    ))
+
+    rank_var: Dict[str, Dict[str, float]] = field(metadata=dict(
+        name="Rank Variance",
+        doc='The variance over all ranks on, [0, inf). Lower is better.',
+    ))
+
+    rank_mad: Dict[str, Dict[str, float]] = field(metadata=dict(
+        name="Rank Median Absolute Deviation",
+        doc='The median absolute deviation over all ranks on, [0, inf). Lower is better.',
     ))
 
     hits_at_k: Dict[str, Dict[str, Dict[Union[int, float], float]]] = field(metadata=dict(
@@ -123,25 +212,15 @@ class RankBasedMetricResults(MetricResults):
         doc='The relative frequency of ranks not larger than a given k, on [0, 1]. Higher is better',
     ))
 
-    adjusted_mean_rank: Dict[str, float] = field(metadata=dict(
-        name='Adjusted Mean Rank (AMR)',
+    adjusted_arithmetic_mean_rank: Dict[str, Dict[str, float]] = field(metadata=dict(
+        name='Adjusted Arithmetic Mean Rank (AAMR)',
         doc='The mean over all chance-adjusted ranks, on (0, 2). Lower is better.',
     ))
 
-    adjusted_mean_rank_index: Dict[str, float] = field(metadata=dict(
-        name='Adjusted Mean Rank Index (AMRI)',
-        doc='The re-indexed adjusted mean rank (AMR), on [-1, 1]. Higher is better.',
+    adjusted_arithmetic_mean_rank_index: Dict[str, Dict[str, float]] = field(metadata=dict(
+        name='Adjusted Arithmetic Mean Rank Index (AAMRI)',
+        doc='The re-indexed adjusted mean rank (AAMR), on [-1, 1]. Higher is better.',
     ))
-
-    def __post_init__(self):  # noqa:D105
-        self._types_realistic_only = {
-            ADJUSTED_MEAN_RANK: self.adjusted_mean_rank,
-            ADJUSTED_MEAN_RANK_INDEX: self.adjusted_mean_rank_index,
-        }
-        self._types_all = {
-            MEAN_RANK: self.mean_rank,
-            MEAN_RECIPROCAL_RANK: self.mean_reciprocal_rank,
-        }
 
     def get_metric(self, name: str) -> float:
         """Get the rank-based metric.
@@ -151,6 +230,7 @@ class RankBasedMetricResults(MetricResults):
             1. The side (one of "head", "tail", or "both"). Most publications exclusively report "both".
             2. The type (one of "optimistic", "pessimistic", "realistic")
             3. The metric name ("adjusted_mean_rank_index", "adjusted_mean_rank", "mean_rank, "mean_reciprocal_rank",
+               "inverse_geometric_mean_rank",
                or "hits@k" where k defaults to 10 but can be substituted for an integer. By default, 1, 3, 5, and 10
                are available. Other K's can be calculated by setting the appropriate variable in the
                ``evaluation_kwargs`` in the :func:`pykeen.pipeline.pipeline` or setting ``ks`` in the
@@ -201,6 +281,10 @@ class RankBasedMetricResults(MetricResults):
         else:
             raise ValueError(f'Malformed metric name: {name}')
 
+        # update old names for metrics and handle spaces
+        metric = metric.lower().replace(' ', '_')
+        metric = METRIC_SYNONYMS.get(metric, metric)
+
         if side not in SIDES:
             raise ValueError(f'Invalid side: {side}. Allowed sides: {SIDES}')
         if rank_type not in RANK_REALISTIC and metric in TYPES_REALISTIC_ONLY:
@@ -208,10 +292,8 @@ class RankBasedMetricResults(MetricResults):
         elif rank_type not in RANK_TYPES:
             raise ValueError(f'Invalid rank type: {rank_type}. Allowed types: {RANK_TYPES}')
 
-        if metric in TYPES_ALL:
+        if not metric.startswith('hits'):
             return getattr(self, metric)[side][rank_type]
-        elif metric in TYPES_REALISTIC_ONLY:
-            return getattr(self, metric)[side]
 
         # otherwise, assume is hits@k, which is handled differently
         rank_type_hits_at_k = self.hits_at_k[side][rank_type]
@@ -235,14 +317,15 @@ class RankBasedMetricResults(MetricResults):
         return pd.DataFrame(list(self._iter_rows()), columns=['Side', 'Type', 'Metric', 'Value'])
 
     def _iter_rows(self) -> Iterable[Tuple[str, str, str, float]]:
-        for side in SIDES:
-            for metric_name, metric_dict in sorted(self._types_realistic_only.items()):
-                yield side, RANK_REALISTIC, metric_name, metric_dict[side]
-            for rank_type in RANK_TYPES:
-                for metric_name, metric_dict in sorted(self._types_all.items()):
-                    yield side, rank_type, metric_name, metric_dict[side][rank_type]
-                for k, v in self.hits_at_k[side][rank_type].items():
-                    yield side, rank_type, f'hits_at_{k}', v
+        for side, rank_type in itt.product(SIDES, RANK_TYPES):
+            for k, v in self.hits_at_k[side][rank_type].items():
+                yield side, rank_type, f'hits_at_{k}', v
+            for f in fields(self):
+                if f.name == 'hits_at_k':
+                    continue
+                side_data = getattr(self, f.name)[side]
+                if rank_type in side_data:
+                    yield side, rank_type, f.name, side_data[rank_type]
 
 
 class RankBasedEvaluator(Evaluator):
@@ -333,41 +416,52 @@ class RankBasedEvaluator(Evaluator):
         return np.asarray(values, dtype=np.float64)
 
     def finalize(self) -> RankBasedMetricResults:  # noqa: D102
-        mean_rank: DefaultDict[str, Dict[str, float]] = defaultdict(dict)
-        mean_reciprocal_rank: DefaultDict[str, Dict[str, float]] = defaultdict(dict)
-        hits_at_k: DefaultDict[str, Dict[str, Dict[Union[int, float], float]]] = defaultdict(dict)
-        adjusted_mean_rank: Dict[str, float] = {}
-        adjusted_mean_rank_index: Dict[str, float] = {}
-
         if self.num_entities is None:
             raise ValueError
 
-        for side in SIDES:
-            for rank_type in RANK_TYPES:
-                ranks = self._get_ranks(side=side, rank_type=rank_type)
-                if len(ranks) < 1:
-                    continue
-                hits_at_k[side][rank_type] = {
-                    k: np.mean(ranks <= (k if isinstance(k, int) else int(self.num_entities * k)))
-                    for k in self.ks
-                }
-                mean_rank[side][rank_type] = np.mean(ranks)
-                mean_reciprocal_rank[side][rank_type] = np.mean(np.reciprocal(ranks))
+        hits_at_k: DefaultDict[str, Dict[str, Dict[Union[int, float], float]]] = defaultdict(dict)
+        asr: DefaultDict[str, DefaultDict[str, Dict[str, float]]] = defaultdict(lambda: defaultdict(dict))
 
-            expected_ranks = self._get_ranks(side=side, rank_type=RANK_EXPECTED_REALISTIC)
-            if len(expected_ranks) < 1:
+        for side, rank_type in itt.product(SIDES, RANK_TYPES):
+            ranks = self._get_ranks(side=side, rank_type=rank_type)
+            if len(ranks) < 1:
                 continue
-            expected_mean_rank = float(np.mean(expected_ranks))
-            adjusted_mean_rank[side] = mean_rank[side][RANK_REALISTIC] / expected_mean_rank
-            adjusted_mean_rank_index[side] = 1.0 - (mean_rank[side][RANK_REALISTIC] - 1) / (expected_mean_rank - 1)
+            hits_at_k[side][rank_type] = {
+                k: np.mean(ranks <= (k if isinstance(k, int) else int(self.num_entities * k)))
+                for k in self.ks
+            }
+            for metric_name, metric_func in all_type_funcs.items():
+                asr[metric_name][side][rank_type] = metric_func(ranks)
+
+            expected_rank_type = EXPECTED_RANKS.get(rank_type)
+            if expected_rank_type:
+                expected_ranks = self._get_ranks(side=side, rank_type=expected_rank_type)
+                if 0 < len(expected_ranks):
+                    # Adjusted mean rank calculation
+                    expected_mean_rank = float(np.mean(expected_ranks))
+                    asr[ADJUSTED_ARITHMETIC_MEAN_RANK][side][rank_type] = (
+                        asr[ARITHMETIC_MEAN_RANK][side][rank_type] / expected_mean_rank
+                    )
+                    asr[ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX][side][rank_type] = (
+                        1.0 - (asr[ARITHMETIC_MEAN_RANK][side][rank_type] - 1) / (expected_mean_rank - 1)
+                    )
 
         # Clear buffers
         self.ranks.clear()
 
         return RankBasedMetricResults(
-            mean_rank=dict(mean_rank),
-            mean_reciprocal_rank=dict(mean_reciprocal_rank),
+            arithmetic_mean_rank=dict(asr[ARITHMETIC_MEAN_RANK]),
+            geometric_mean_rank=dict(asr[GEOMETRIC_MEAN_RANK]),
+            harmonic_mean_rank=dict(asr[HARMONIC_MEAN_RANK]),
+            median_rank=dict(asr[MEDIAN_RANK]),
+            inverse_arithmetic_mean_rank=dict(asr[INVERSE_ARITHMETIC_MEAN_RANK]),
+            inverse_geometric_mean_rank=dict(asr[INVERSE_GEOMETRIC_MEAN_RANK]),
+            inverse_harmonic_mean_rank=dict(asr[INVERSE_HARMONIC_MEAN_RANK]),
+            inverse_median_rank=dict(asr[INVERSE_MEDIAN_RANK]),
+            rank_std=dict(asr[RANK_STD]),
+            rank_mad=dict(asr[RANK_MAD]),
+            rank_var=dict(asr[RANK_VARIANCE]),
+            adjusted_arithmetic_mean_rank=dict(asr[ADJUSTED_ARITHMETIC_MEAN_RANK]),
+            adjusted_arithmetic_mean_rank_index=dict(asr[ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX]),
             hits_at_k=dict(hits_at_k),
-            adjusted_mean_rank=adjusted_mean_rank,
-            adjusted_mean_rank_index=adjusted_mean_rank_index,
         )

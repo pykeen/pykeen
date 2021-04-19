@@ -311,6 +311,10 @@ class PipelineResult(Result):
         """
         torch.save(self.model, path, pickle_protocol=pickle.HIGHEST_PROTOCOL)
 
+    def get_metric(self, key: str) -> float:
+        """Get the given metric out of the metric result object."""
+        return self.metric_results.get_metric(key)
+
     def _get_results(self) -> Mapping[str, Any]:
         results = dict(
             times=dict(
