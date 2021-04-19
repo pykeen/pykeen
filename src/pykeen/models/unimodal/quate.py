@@ -115,13 +115,11 @@ class QuatE(ERModel):
             entity_representations=EmbeddingSpecification(
                 embedding_dim=4 * embedding_dim,
                 initializer=entity_initializer,
-                initializer_kwargs=dict(num_elements=self.num_entities, dim=embedding_dim),
                 dtype=torch.float,
             ),
             relation_representations=EmbeddingSpecification(
                 embedding_dim=4 * embedding_dim,
                 initializer=relation_initializer,
-                initializer_kwargs=dict(num_elements=self.num_relations, dim=embedding_dim),
                 constrainer=quaternion_normalizer if normalize_relations else None,
                 dtype=torch.float,
             ),
