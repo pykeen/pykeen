@@ -63,6 +63,7 @@ from .mure import MuRE
 from .ntn import NTN
 from .pair_re import PairRE
 from .proj_e import ProjE
+from .quate import QuatE
 from .rescal import RESCAL
 from .rgcn import RGCN
 from .rotate import RotatE
@@ -88,6 +89,7 @@ __all__ = [
     'NTN',
     'PairRE',
     'ProjE',
+    'QuatE',
     'RESCAL',
     'RGCN',
     'RotatE',
