@@ -713,23 +713,43 @@ class CompGCNLayer(nn.Module):
         x_e: torch.FloatTensor,
         x_r: torch.FloatTensor,
         triples: Optional[Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor]],
+        weight: nn.Parameter,
     ) -> torch.FloatTensor:
+        """
+        Perform message passing.
+
+        :param x_e: shape: (num_entities, input_dim)
+            The entity representations.
+        :param x_r: shape: (2 * num_relations, input_dim)
+            The relation representations (including inverse relations).
+        :param triples:
+            A tuple (heads, relations, tails) of indices. None to perform self-loop.
+        :param weight:
+            The transformation weight.
+        :return:
+        """
         if triples is None:
             # compose
             m = self.composition(x_e, self.self_loop)
-            # transform (no dropout)
-            return m @ self.self_loop
+        else:
+            h, r, t = triples
+            m = self.composition(x_e[h], x_r[r])
 
-        # compose
-        h, r, t = triples
-        m = self.composition(x_e[h], x_r[r])
         # transform
-        m = m @ self.w
-        # TODO: normalization
-        # self.in_norm = self.compute_norm(self.in_index, num_ent)
-        # aggregate by sum
-        x_e = torch.zeros_like(x_e).index_add(dim=0, index=t, source=m)
-        return self.drop(x_e)
+        m = m @ weight
+
+        if triples is not None:
+            # TODO: normalization
+            # self.in_norm = self.compute_norm(self.in_index, num_ent)
+
+            # aggregate by sum
+            h, r, t = triples
+            x_e = torch.zeros_like(x_e).index_add(dim=0, index=t, source=m)
+
+            # dropout
+            x_e = self.drop(x_e)
+
+        return x_e
 
     def forward(
         self,
@@ -737,22 +757,36 @@ class CompGCNLayer(nn.Module):
         x_r: torch.FloatTensor,
         triples: torch.LongTensor,
     ) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
-        # split
-        h, r, t = triples.t()
+        r"""
+        Update entity and relation representations.
 
-        # entity transformation
-        x_e = sum((
-            self.message(
-                x_e=x_e,
-                x_r=x_r,
-                triples=triples_,
-            ),
-            for triples_ in (
-            (h, 2 * r, t),  # forward; todo make sure this is the correct interpretation of inverse relations
-            (t, 2 * r + 1, h),  # backward
-            None,  # self-loop
-        )
-        )) / 3
+        .. math ::
+            X_E'[e] = \frac{1}{3} \left(
+                X_E W_s
+                + \left( \sum_{h,r,e \in T} \alpha(h, e) \phi(X_E[h], X_R[r]) W_f \right)
+                + \left( \sum_{e,r,t \in T} \alpha(e, t) \phi(X_E[t], X_R[r^{-1}]) W_b \right)
+            \right)
+
+        :param x_e: shape: (num_entities, input_dim)
+            The entity representations.
+        :param x_r: shape: (2 * num_relations, input_dim)
+            The relation representations (including inverse relations).
+        :param triples: shape: (num_triples, 3)  # TODO: Change to PyTorch Geometric edge_index / edge_type?
+            The triples.
+
+        :return: shape: (num_entities, output_dim) / (2 * num_relations, output_dim)
+            The updated entity and relation representations.
+        """
+        # self-loop
+        x_e = self.message(x_e=x_e, x_r=x_r, triples=None, weight=self.w_loop)
+        # forward edges
+        h, r, t = triples.t()
+        x_e = x_e + self.message(x_e=x_e, x_r=x_r, triples=(h, 2 * r, t), weight=self.w_fwd)
+        # backward edges
+        x_e = x_e + self.message(x_e=x_e, x_r=x_r, triples=(t, 2 * r + 1, h), weight=self.w_bwd)
+        # divide by three => mean
+        x_e = x_e / 3
+
         if self.bias:
             x_e = self.bias(x_e)
         x_e = self.bn(x_e)
