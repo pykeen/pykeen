@@ -190,16 +190,18 @@ def entity_relation_co_occurrence_dataframe(dataset: Dataset) -> pd.DataFrame:
     )
 
 
-def _get_skyline(xs: Collection[Tuple[int, float]]) -> Collection[Tuple[int, float]]:
-    xs = sorted(xs)
-    return {
-        (s, c)
-        for i, (s, c) in enumerate(xs)
-        if not any(
-            s2 > s and c2 >= c
-            for s2, c2 in xs[i:]
-        )
-    }
+def _get_skyline(
+    xs: Iterable[Tuple[int, float]],
+) -> Iterable[Tuple[int, float]]:
+    """Calculate 2-D skyline."""
+    # cf. https://stackoverflow.com/questions/19059878/dominant-set-of-points-in-on
+    largest_y = float("-inf")
+    # sort decreasingly. i dominates j for all j > i in x-dimension
+    for x_i, y_i in sorted(xs, reverse=True):
+        # if it is also dominated by any y, it is not part of the skyline
+        if y_i > largest_y:
+            yield x_i, y_i
+            largest_y = y_i
 
 
 def skyline(data_stream: Iterable[PatternMatch]) -> Iterable[PatternMatch]:
