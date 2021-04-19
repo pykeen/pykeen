@@ -18,13 +18,14 @@ from pykeen.datasets.analysis import (
 
 
 def _old_skyline(xs):
-    # TODO: naive implementation, O(n2)
+    # naive implementation, O(n2)
     return {
         (s, c)
         for s, c in xs
         if not any(
-            s2 > s and c2 > c
+            s2 >= s and c2 >= c
             for s2, c2 in xs
+            if (s, c) != (s2, c2)
         )
     }
 
@@ -39,7 +40,7 @@ class TestUtils(unittest.TestCase):
             np.random.randint(low=0, high=200, size=n, dtype=int),
             np.random.uniform(0, 6, size=n),
         ))
-        self.assertEqual(_old_skyline(pairs), _get_skyline(pairs))
+        self.assertEqual(set(_old_skyline(pairs)), set(_get_skyline(pairs)))
 
 
 class AnalysisTests(unittest.TestCase):
