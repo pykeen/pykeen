@@ -238,9 +238,6 @@ or the URL for the dataset if neither of the first two are available.
 | Mean Rank (MR)                              | The arithmetic mean over all ranks on, [1, inf). Lower is better.                      |
 | Mean Reciprocal Rank (MRR)                  | The inverse of the harmonic mean over all ranks, on (0, 1]. Higher is better.          |
 | Median Rank                                 | The median over all ranks, on [1, inf). Lower is better.                               |
-| Rank Median Absolute Deviation              | The median absolute deviation over all ranks on, [0, inf). Lower is better.            |
-| Rank Standard Deviation                     | The standard deviation over all ranks on, [0, inf). Lower is better.                   |
-| Rank Variance                               | The variance over all ranks on, [0, inf). Lower is better.                             |
 
 ### Trackers (5)
 

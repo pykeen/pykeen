@@ -333,6 +333,8 @@ def _get_metrics_lines(tablefmt: str, link_fmt=None):
             yield name, f':class:`pykeen.evaluation.{value.__name__}`'
     else:
         for field, name, value in get_metric_list():
+            if field.name in {'rank_std', 'rank_var', 'rank_mad'}:
+                continue
             if tablefmt == 'github':
                 yield field.metadata['name'], field.metadata['doc']
             else:
