@@ -1165,6 +1165,7 @@ class QuatEInteraction(
 
     .. seealso:: :func:`pykeen.nn.functional.quat_e_interaction`
     """
+
     func = pkf.quat_e_interaction
 
 

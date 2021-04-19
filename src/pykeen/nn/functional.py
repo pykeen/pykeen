@@ -1059,6 +1059,6 @@ def quat_e_interaction(
         # Rotation in quaternion space
         _rotate_quaternion(
             _split_quaternion(h),
-            _split_quaternion(r)
+            _split_quaternion(r),
         ) * t
     ).sum(dim=-1)

@@ -14,7 +14,32 @@ from .base import EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, Mul
 from .multimodal import ComplExLiteral, DistMultLiteral
 from .nbase import ERModel, _NewAbstractModel
 from .resolve import make_model, make_model_cls
-from .unimodal import (ComplEx, ConvE, ConvKB, DistMult, ERMLP, ERMLPE, HolE, KG2E, MuRE, NTN, PairRE, ProjE, QuatE, RESCAL, RGCN, RotatE, SimplE, StructuredEmbedding, TransD, TransE, TransH, TransR, TuckER, UnstructuredModel)
+from .unimodal import (
+    ComplEx,
+    ConvE,
+    ConvKB,
+    DistMult,
+    ERMLP,
+    ERMLPE,
+    HolE,
+    KG2E,
+    MuRE,
+    NTN,
+    PairRE,
+    ProjE,
+    QuatE,
+    RESCAL,
+    RGCN,
+    RotatE,
+    SimplE,
+    StructuredEmbedding,
+    TransD,
+    TransE,
+    TransH,
+    TransR,
+    TuckER,
+    UnstructuredModel,
+)
 
 __all__ = [
     # Base Models
