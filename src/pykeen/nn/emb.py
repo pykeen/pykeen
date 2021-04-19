@@ -821,7 +821,7 @@ class CompGCNRepresentation(nn.Module):
         input_dim = self.entity_representations.embedding_dim
         assert self.relation_representations.embedding_dim == input_dim
         layers = []
-        for i in range(num_layers):
+        for _ in range(num_layers):
             layers.append(
                 CompGCNLayer(
                     input_dim=input_dim,
