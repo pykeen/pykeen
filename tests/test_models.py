@@ -222,6 +222,14 @@ class TestProjE(cases.ModelTestCase):
     model_cls = pykeen.models.ProjE
 
 
+class TestQuatE(cases.ModelTestCase):
+    """Test the QuatE model."""
+
+    model_cls = pykeen.models.QuatE
+    # quaternion have four components
+    embedding_dim = 4 * cases.ModelTestCase.embedding_dim
+
+
 class TestRESCAL(cases.ModelTestCase):
     """Test the RESCAL model."""
 
@@ -660,6 +668,7 @@ class TestTesting(unittest.TestCase):
             'ProjE',  # FIXME
             'ERMLPE',  # FIXME
             'PairRE',
+            'QuatE',
         }
         model_names = _remove_non_models(set(pykeen.models.__all__) - SKIP_MODULES - experiment_blacklist)
         for model in _remove_non_models(model_names):

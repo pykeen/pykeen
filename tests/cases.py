@@ -263,10 +263,11 @@ class InteractionTestCase(
         self,
         *shapes: Tuple[int, ...],
     ):
-        self.shape_kwargs.setdefault("d", self.dim)
+        shape_kwargs = dict(self.shape_kwargs)
+        shape_kwargs.setdefault("d", self.dim)
         result = tuple(
             tuple(
-                torch.rand(*prefix_shape, *(self.shape_kwargs[dim] for dim in weight_shape), requires_grad=True)
+                torch.rand(*prefix_shape, *(shape_kwargs[dim] for dim in weight_shape), requires_grad=True)
                 for weight_shape in weight_shapes
             )
             for prefix_shape, weight_shapes in zip(
