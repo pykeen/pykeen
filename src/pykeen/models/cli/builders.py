@@ -176,7 +176,13 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
                 lr=learning_rate,
             ),
             training_loop=training_loop,
+            training_loop_kwargs=dict(
+                automatic_memory_optimization=automatic_memory_optimization,
+            ),
             evaluator=evaluator,
+            evaluator_kwargs=dict(
+                automatic_memory_optimization=automatic_memory_optimization,
+            ),
             training_kwargs=dict(
                 num_epochs=number_epochs,
                 batch_size=batch_size,
@@ -189,7 +195,6 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
                 title=title,
             ),
             random_seed=random_seed,
-            automatic_memory_optimization=automatic_memory_optimization,
         )
 
         if not silent:

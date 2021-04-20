@@ -84,6 +84,7 @@ class Objective:
     optimizer_kwargs: Optional[Mapping[str, Any]] = None
     optimizer_kwargs_ranges: Optional[Mapping[str, Any]] = None
     # 6. Training Loop
+    training_loop_kwargs: Optional[Mapping[str, Any]] = None
     negative_sampler: Optional[Type[NegativeSampler]] = None
     negative_sampler_kwargs: Optional[Mapping[str, Any]] = None
     negative_sampler_kwargs_ranges: Optional[Mapping[str, Any]] = None
@@ -220,6 +221,7 @@ class Objective:
                 negative_sampler=self.negative_sampler,
                 negative_sampler_kwargs=_negative_sampler_kwargs,
                 # 7. Training
+                training_loop_kwargs=self.training_loop_kwargs,
                 training_kwargs=_training_kwargs,
                 stopper=self.stopper,
                 stopper_kwargs=_stopper_kwargs,
@@ -442,6 +444,7 @@ def hpo_pipeline(
     optimizer_kwargs_ranges: Optional[Mapping[str, Any]] = None,
     # 6. Training Loop
     training_loop: HintType[TrainingLoop] = None,
+    training_loop_kwargs: Optional[Mapping[str, Any]] = None,
     negative_sampler: HintType[NegativeSampler] = None,
     negative_sampler_kwargs: Optional[Mapping[str, Any]] = None,
     negative_sampler_kwargs_ranges: Optional[Mapping[str, Any]] = None,
@@ -598,7 +601,6 @@ def hpo_pipeline(
     _set_study_dataset(
         study=study,
         dataset=dataset,
-        dataset_kwargs=dataset_kwargs,
         training=training,
         testing=testing,
         validation=validation,
@@ -683,6 +685,7 @@ def hpo_pipeline(
         optimizer_kwargs_ranges=optimizer_kwargs_ranges,
         # 6. Training Loop
         training_loop=training_loop_cls,
+        training_loop_kwargs=training_loop_kwargs,
         negative_sampler=negative_sampler_cls,
         negative_sampler_kwargs=negative_sampler_kwargs,
         negative_sampler_kwargs_ranges=negative_sampler_kwargs_ranges,
@@ -810,20 +813,35 @@ def _set_study_dataset(
     study: Study,
     *,
     dataset: Union[None, str, Dataset, Type[Dataset]] = None,
-    dataset_kwargs: Optional[Mapping[str, Any]] = None,
     training: Union[None, str, TriplesFactory] = None,
     testing: Union[None, str, TriplesFactory] = None,
     validation: Union[None, str, TriplesFactory] = None,
 ):
-    if (
-        (isinstance(dataset, str) and has_dataset(dataset))
-        or isinstance(dataset, Dataset)
-        or (isinstance(dataset, type) and issubclass(dataset, Dataset))
-    ):
-        dataset_name = get_dataset(dataset=dataset).get_normalized_name()
-        study.set_user_attr('dataset', dataset_name)
+    if dataset is not None:
+        if training is not None or testing is not None or validation is not None:
+            raise ValueError("Cannot specify dataset and training, testing and validation")
+        elif isinstance(dataset, str):
+            if has_dataset(dataset):
+                study.set_user_attr('dataset', get_dataset(dataset=dataset).get_normalized_name())
+            else:
+                # otherwise, dataset refers to a file that should be automatically split
+                study.set_user_attr('dataset', dataset)
+        elif (
+            isinstance(dataset, Dataset)
+            or (isinstance(dataset, type) and issubclass(dataset, Dataset))
+        ):
+            # this could be custom data, so don't store anything. However, it's possible to check if this
+            # was a pre-registered dataset. If that's the desired functionality, we can uncomment the following:
+            # dataset_name = dataset.get_normalized_name()  # this works both on instances and classes
+            # if has_dataset(dataset_name):
+            #     study.set_user_attr('dataset', dataset_name)
+            pass
+        else:
+            raise TypeError(f'Dataset is invalid type: ({type(dataset)}) {dataset}')
     else:
-        study.set_user_attr('dataset', USER_DEFINED_CODE)
-        study.set_user_attr('training', training if isinstance(training, str) else USER_DEFINED_CODE)
-        study.set_user_attr('testing', testing if isinstance(testing, str) else USER_DEFINED_CODE)
-        study.set_user_attr('validation', validation if isinstance(validation, str) else USER_DEFINED_CODE)
+        if isinstance(training, str):
+            study.set_user_attr('training', training)
+        if isinstance(testing, str):
+            study.set_user_attr('testing', testing)
+        if isinstance(validation, str):
+            study.set_user_attr('validation', validation)
