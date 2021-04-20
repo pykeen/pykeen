@@ -2,8 +2,6 @@
 
 """Click options for building magical KGE model CLIs."""
 
-from typing import Optional
-
 import click
 
 from .. import model_resolver
@@ -12,7 +10,6 @@ from ...losses import loss_resolver
 from ...optimizers import optimizer_resolver
 from ...stoppers import stopper_resolver
 from ...training import training_loop_resolver
-from ...triples import TriplesFactory
 from ...utils import random_non_negative_int, resolve_device
 
 
@@ -28,13 +25,6 @@ def _make_instantiation_callback(f):
         return f(value)()
 
     return _callback
-
-
-def triples_factory_callback(_, __, path: Optional[str]) -> Optional[TriplesFactory]:
-    """Generate a triples factory using the given path."""
-    if path is None:
-        return None
-    return TriplesFactory.from_path(path=path)
 
 
 CLI_OPTIONS = {
@@ -133,17 +123,14 @@ learning_rate_option = click.option(
 dataset_option = click.option('--dataset', help='Dataset name')
 training_option = click.option(
     '-t', '--training-triples-factory',
-    callback=triples_factory_callback,
     help='Path to training data',
 )
 testing_option = click.option(
     '-q', '--testing-triples-factory',
-    callback=triples_factory_callback,
     help='Path to testing data. If not supplied, then evaluation occurs on training data.',
 )
 valiadation_option = click.option(
     '--validation-triples-factory',
-    callback=triples_factory_callback,
     help='Path to validation data. Must be supplied for early stopping',
 )
 mlflow_uri_option = click.option(
