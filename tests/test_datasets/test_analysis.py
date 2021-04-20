@@ -8,9 +8,8 @@ from typing import Collection, Optional, Sequence
 
 import numpy as np
 import pandas
-import pytest
 
-from pykeen.datasets import Nations, get_dataset
+from pykeen.datasets import Nations
 from pykeen.datasets.analysis import (
     SUBSET_LABELS, _get_skyline, entity_count_dataframe, entity_relation_co_occurrence_dataframe,
     relation_classification, relation_count_dataframe,
@@ -141,12 +140,3 @@ class AnalysisTests(unittest.TestCase):
         # check support value range
         x = df["support"].values
         assert (1 <= x).all()
-
-
-@pytest.mark.slow
-class RealAnalysisTests(AnalysisTests):
-    """Tests on a larger dataset."""
-
-    def setUp(self) -> None:
-        """Load a larger dataset."""
-        self.dataset = get_dataset(dataset="fb15k")
