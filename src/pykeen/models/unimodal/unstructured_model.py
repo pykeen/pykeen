@@ -49,6 +49,7 @@ class UnstructuredModel(ERModel):
 
     def __init__(
         self,
+        *,
         embedding_dim: int = 50,
         scoring_fct_norm: int = 1,
         entity_initializer: Hint[Initializer] = xavier_normal_,
@@ -58,6 +59,9 @@ class UnstructuredModel(ERModel):
 
         :param embedding_dim: The entity embedding dimension $d$. Is usually $d \in [50, 300]$.
         :param scoring_fct_norm: The $l_p$ norm. Usually 1 for UM.
+        :param entity_initializer: The initializer for the entity embeddings.
+            Defaults to the xavier normal distribution.
+        :param kwargs: Remaining keyword arguments passed through to :class:`pykeen.models.ERModel`.
         """
         super().__init__(
             interaction=UnstructuredModelInteraction(p=scoring_fct_norm),
