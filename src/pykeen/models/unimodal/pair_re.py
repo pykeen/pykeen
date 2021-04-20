@@ -80,7 +80,8 @@ class PairRE(ERModel):
             embedding_dim=2 * embedding_dim,
         )
         super().__init__(
-            interaction=PairREInteraction(p=p, power_norm=power_norm),
+            interaction=PairREInteraction,
+            interaction_kwargs=dict(p=p, power_norm=power_norm),
             entity_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
                 initializer=entity_initializer,
