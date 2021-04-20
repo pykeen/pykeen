@@ -109,8 +109,8 @@ class QuatE(ERModel):
         :param relation_constrainer:
             The constrainer to use for the relation embeddings.
         :param kwargs:
-            Additional keyword based arguments passed to ERModel. Must not contain "interaction",
-            "entity_representations", or "relation_representations".
+            Additional keyword based arguments passed to :class:`pykeen.models.ERModel`. Must not contain
+            "interaction", "entity_representations", or "relation_representations".
         """
         super().__init__(
             interaction=QuatEInteraction,
