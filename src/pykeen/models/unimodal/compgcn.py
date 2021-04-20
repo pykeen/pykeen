@@ -8,7 +8,7 @@ import torch
 from class_resolver import Hint
 
 from ..nbase import ERModel
-from ...nn.emb import CombinedCompGCNRepresentations
+from ...nn.emb import CombinedCompGCNRepresentations, EmbeddingSpecification
 from ...nn.modules import DistMultInteraction, Interaction
 from ...triples import TriplesFactory
 from ...typing import RelationRepresentation
@@ -40,6 +40,7 @@ class CompGCN(ERModel[torch.FloatTensor, RelationRepresentation, torch.FloatTens
         self,
         *,
         triples_factory: TriplesFactory,
+        embedding_dim: int = 50,
         encoder_kwargs: Optional[Mapping[str, Any]] = None,
         interaction: Hint[Interaction[torch.FloatTensor, RelationRepresentation, torch.FloatTensor]] = None,
         interaction_kwargs: Optional[Mapping[str, Any]] = None,
@@ -49,8 +50,11 @@ class CompGCN(ERModel[torch.FloatTensor, RelationRepresentation, torch.FloatTens
 
         :param triples_factory:
             The triples factory.
+        :param embedding_dim:
+            The embedding dimension to be used if ``embedding_specification`` is not given explicitly in
+            ``encoder_kwargs``.
         :param encoder_kwargs:
-            Key-word arguments for the encoder, cf. :class:`pykeen.nn.emb.CombinedCompGCNRepresentations`.
+            Additional keyword arguments for the encoder, cf. :class:`pykeen.nn.emb.CombinedCompGCNRepresentations`.
         :param interaction:
             The interaction function to use as decoder.
         :param interaction_kwargs:
@@ -58,10 +62,13 @@ class CompGCN(ERModel[torch.FloatTensor, RelationRepresentation, torch.FloatTens
         :param kwargs:
             Additional keyword based arguments passed to :class:`pykeen.models.ERModel`.
         """
+        encoder_kwargs = {} if encoder_kwargs is None else dict(encoder_kwargs)
+        encoder_kwargs.setdefault('embedding_specification', EmbeddingSpecification(embedding_dim=embedding_dim))
+
         # combined representation
         entity_representations, relation_representations = CombinedCompGCNRepresentations(
             triples_factory=triples_factory,
-            **(encoder_kwargs or {}),
+            **encoder_kwargs,
         ).split()
 
         # Resolve interaction function
