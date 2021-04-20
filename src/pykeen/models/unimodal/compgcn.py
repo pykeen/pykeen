@@ -9,7 +9,7 @@ from class_resolver import Hint
 
 from ..nbase import ERModel
 from ...nn import EmbeddingSpecification
-from ...nn.emb import CompGCNRepresentations, SingleCompGCNRepresentation
+from ...nn.emb import CombinedCompGCNRepresentations
 from ...nn.modules import DistMultInteraction, Interaction, interaction_resolver
 from ...triples import CoreTriplesFactory
 from ...typing import RelationRepresentation
@@ -68,19 +68,10 @@ class CompGCN(ERModel[torch.FloatTensor, RelationRepresentation, torch.FloatTens
             encoder_kwargs.setdefault("embedding_specification", EmbeddingSpecification(embedding_dim=embedding_dim))
 
         # combined representation
-        combined = CompGCNRepresentations(
+        entity_representations, relation_representations = CombinedCompGCNRepresentations(
             triples_factory=triples_factory,
             **(encoder_kwargs or {}),
-        )
-        # wrap
-        entity_representations = SingleCompGCNRepresentation(
-            combined=combined,
-            position=0,
-        )
-        relation_representations = SingleCompGCNRepresentation(
-            combined=combined,
-            position=1,
-        )
+        ).split()
 
         # Resolve interaction function
         if interaction is None:

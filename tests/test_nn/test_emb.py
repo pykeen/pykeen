@@ -76,7 +76,7 @@ class TestSingleCompGCNRepresentationTests(cases.RepresentationTestCase):
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
-        kwargs["combined"] = pykeen.nn.emb.CompGCNRepresentations(
+        kwargs["combined"] = pykeen.nn.emb.CombinedCompGCNRepresentations(
             triples_factory=generate_triples_factory(
                 num_entities=self.num_entities,
                 num_relations=self.num_relations,
