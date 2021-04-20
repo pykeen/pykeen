@@ -532,10 +532,30 @@ def _normalize_parts(dataset: Dataset, parts: Union[None, str, Collection[str]])
     return parts
 
 
+def _add_relation_labels(
+    dataset: Dataset,
+    df: pd.DataFrame,
+    relation_id_column: str = "relation_id",
+    relation_label_column: str = "relation_label",
+) -> pd.DataFrame:
+    if dataset.relation_to_id is None:
+        return df
+    return pd.merge(
+        left=df,
+        right=pd.DataFrame(
+            data=list(dataset.relation_to_id.items()),
+            columns=[relation_label_column, relation_id_column],
+        ),
+        on=relation_id_column,
+    )
+
+
 def relation_classification2(
     *,
     dataset: Dataset,
     parts: Optional[Collection[str]] = None,
+    threshold: float = 0.95,
+    add_labels: bool = True,
 ):
     """
     Determine whether relations are of type 1:1, 1:n, m:1, or m:n.
@@ -556,15 +576,18 @@ def relation_classification2(
     df = pd.DataFrame(data=mapped_triples, columns=["h", "r", "t"])
     data = []
     for relation, group in df.groupby(by="r"):
-        maximum_t_per_h = group.groupby(by="h").agg({"t": "nunique"})["t"].max()
-        maximum_h_per_t = group.groupby(by="t").agg({"h": "nunique"})["h"].max()
-        if maximum_h_per_t > 1 and maximum_t_per_h > 1:
-            relation_type = "m:n"
-        elif maximum_h_per_t > 1:  # and maximum_t_per_h == 1
+        single_t_per_h = (group.groupby(by="h").agg({"t": "nunique"})["t"] <= 1).mean() >= threshold
+        single_h_per_t = (group.groupby(by="t").agg({"h": "nunique"})["h"] <= 1).mean() >= threshold
+        if single_h_per_t and single_t_per_h:
+            relation_type = "1:1"
+        elif single_h_per_t:  # and not single_t_per_h
             relation_type = "m:1"
-        elif maximum_t_per_h > 1:  # and maximum_h_per_t == 1
+        elif single_t_per_h:  # and not single_h_per_t
             relation_type = "1:n"
         else:
-            relation_type = "1:1"
+            relation_type = "m:n"
         data.append((relation, relation_type))
-    return pd.DataFrame(data=data, columns=["relation_id", "relation_type"])
+    df = pd.DataFrame(data=data, columns=["relation_id", "relation_type"])
+    if add_labels:
+        df = _add_relation_labels(dataset=dataset, df=df)
+    return df
