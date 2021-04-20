@@ -808,7 +808,7 @@ class CombinedCompGCNRepresentations(nn.Module):
                 dims = [dims] * num_layers
         if len(dims) != num_layers:
             raise ValueError(
-                f"The number of provided dimensions ({len(dims)}) must equal the number of layers ({num_layers})."
+                f"The number of provided dimensions ({len(dims)}) must equal the number of layers ({num_layers}).",
             )
         self.output_dim = dims[-1]
 
