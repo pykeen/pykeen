@@ -32,7 +32,7 @@ from pykeen.losses import Loss, PairwiseLoss, PointwiseLoss, SetwiseLoss
 from pykeen.models import EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, RESCAL
 from pykeen.models.cli import build_cli_from_cls
 from pykeen.nn.emb import RepresentationModule
-from pykeen.nn.modules import FunctionalInteraction, Interaction
+from pykeen.nn.modules import FunctionalInteraction, Interaction, LiteralInteraction
 from pykeen.regularizers import LpRegularizer, Regularizer
 from pykeen.trackers import ResultTracker
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
@@ -1325,3 +1325,14 @@ class BasesDecompositionTestCase(DecompositionTestCase):
     """Tests for bases Decomposition."""
 
     cls = pykeen.nn.message_passing.BasesDecomposition
+
+
+class LiteralTestCase(InteractionTestCase):
+    """Tests for literal ineractions."""
+
+    cls = LiteralInteraction
+
+    def _exp_score(self, h, r, t) -> torch.FloatTensor:  # noqa: D102
+        h_proj = self.instance.combination(*h)
+        t_proj = self.instance.combination(*t)
+        return self.instance.base(h_proj, r, t_proj)

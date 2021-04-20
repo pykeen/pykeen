@@ -4,36 +4,48 @@
 
 from typing import Any, MutableMapping
 
-import torch
-from torch import nn
-
 from pykeen.datasets.nations import NationsLiteral
-from pykeen.nn.modules import ComplExInteraction, LiteralInteraction
+from pykeen.nn.combinations import ComplExLiteralCombination, DistMultCombination
+from pykeen.nn.modules import ComplExInteraction, DistMultInteraction
 from pykeen.triples.triples_numeric_literals_factory import TriplesNumericLiteralsFactory
 from tests import cases
 
 
-class LiteralTests(cases.InteractionTestCase):
+class DistMultLiteralTestCase(cases.LiteralTestCase):
     """Tests for LiteralInteraction function."""
 
-    cls = LiteralInteraction
+    kwargs = dict(
+        base=DistMultInteraction(),
+    )
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        triples_factory: TriplesNumericLiteralsFactory = NationsLiteral().training
+        literal_embedding_dim = triples_factory.numeric_literals.shape[1]
+        kwargs["combination"] = DistMultCombination(
+            entity_embedding_dim=self.dim,
+            literal_embedding_dim=literal_embedding_dim,
+            input_dropout=0.1,
+        )
+        self.shape_kwargs["e"] = literal_embedding_dim
+        return kwargs
+
+
+class ComplExLiteralTestCase(cases.LiteralTestCase):
+    """Tests for LiteralInteraction function."""
+
     kwargs = dict(
         base=ComplExInteraction(),
     )
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
-        # TODO this doesnt make sense
         triples_factory: TriplesNumericLiteralsFactory = NationsLiteral().training
-        extra_dim = triples_factory.numeric_literals.shape[1]
-        kwargs["combination"] = nn.Sequential(
-            nn.Linear(self.dim + extra_dim, self.dim),
-            nn.Dropout(0.1),
+        literal_embedding_dim = triples_factory.numeric_literals.shape[1]
+        kwargs["combination"] = ComplExLiteralCombination(
+            entity_embedding_dim=self.dim,
+            literal_embedding_dim=literal_embedding_dim,
+            input_dropout=0.1,
         )
-        self.shape_kwargs["e"] = extra_dim
+        self.shape_kwargs["e"] = literal_embedding_dim
         return kwargs
-
-    def _exp_score(self, h, r, t) -> torch.FloatTensor:  # noqa: D102
-        h_proj = self.instance.combination(*h)
-        t_proj = self.instance.combination(*t)
-        return self.instance.base(h_proj, r, t_proj)
