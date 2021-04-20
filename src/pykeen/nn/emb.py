@@ -782,10 +782,10 @@ class CompGCNLayer(nn.Module):
         # update entity representations: mean over self-loops / forward edges / backward edges
         h, r, t = triples.t()
         x_e = (
-            self.composition(x_e, self.self_loop) @ self.w_loop
-            + self.message(x_e=x_e, x_r=x_r, triples=(h, 2 * r, t), weight=self.w_fwd)
-            + self.message(x_e=x_e, x_r=x_r, triples=(t, 2 * r + 1, h), weight=self.w_bwd)
-        ) / 3
+                  self.composition(x_e, self.self_loop) @ self.w_loop
+                  + self.message(x_e=x_e, x_r=x_r, triples=(h, 2 * r, t), weight=self.w_fwd)
+                  + self.message(x_e=x_e, x_r=x_r, triples=(t, 2 * r + 1, h), weight=self.w_bwd)
+              ) / 3
 
         if self.bias:
             x_e = self.bias(x_e)
@@ -800,7 +800,8 @@ class CompGCNLayer(nn.Module):
 class CombinedCompGCNRepresentations(nn.Module):
     """A sequence of CompGCN layers."""
 
-    enriched_embeddings: Optional[Tuple[RepresentationModule, RepresentationModule]]
+    # Buffered enriched entity and relation representations
+    enriched_representations: Optional[Tuple[RepresentationModule, RepresentationModule]]
 
     def __init__(
         self,
@@ -836,11 +837,11 @@ class CombinedCompGCNRepresentations(nn.Module):
         self.register_buffer(name="triples", tensor=triples_factory.mapped_triples)
 
         # buffering of enriched representations
-        self.enriched_embeddings = None
+        self.enriched_representations = None
 
     def post_parameter_update(self) -> None:  # noqa: D102
         # invalidate enriched embeddings
-        self.enriched_embeddings = None
+        self.enriched_representations = None
 
     def forward(
         self,
@@ -852,7 +853,7 @@ class CombinedCompGCNRepresentations(nn.Module):
             # enrich
             for layer in self.layers:
                 x_e, x_r = layer(x_e=x_e, x_r=x_r, triples=self.triples)
-            self.enriched_embeddings = (x_e, x_r)
+            self.enriched_representations = (x_e, x_r)
         return self.enriched_embeddings
 
     def split(self) -> Tuple["SingleCompGCNRepresentation", "SingleCompGCNRepresentation"]:
