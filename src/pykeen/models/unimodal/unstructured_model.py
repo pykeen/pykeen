@@ -49,14 +49,10 @@ class UnstructuredModel(ERModel):
 
     def __init__(
         self,
-        triples_factory: TriplesFactory,
         embedding_dim: int = 50,
         scoring_fct_norm: int = 1,
-        loss: Optional[Loss] = None,
-        predict_with_sigmoid: bool = False,
-        preferred_device: DeviceHint = None,
-        random_seed: Optional[int] = None,
         entity_initializer: Hint[Initializer] = xavier_normal_,
+        **kwargs,
     ) -> None:
         r"""Initialize UM.
 
@@ -64,14 +60,10 @@ class UnstructuredModel(ERModel):
         :param scoring_fct_norm: The $l_p$ norm. Usually 1 for UM.
         """
         super().__init__(
-            triples_factory=triples_factory,
-            loss=loss,
-            predict_with_sigmoid=predict_with_sigmoid,
-            preferred_device=preferred_device,
-            random_seed=random_seed,
             interaction=UnstructuredModelInteraction(p=scoring_fct_norm),
             entity_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
                 initializer=entity_initializer,
             ),
+            **kwargs,
         )
