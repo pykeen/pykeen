@@ -51,7 +51,7 @@ class TestCompGCN(cases.ModelTestCase):
     num_constant_init = 3  # BN(2) + Bias
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
-        kwargs = super(TestCompGCN, self)._pre_instantiation_hook(kwargs=kwargs)
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         kwargs["encoder_kwargs"] = dict(
             embedding_specification=EmbeddingSpecification(
                 embedding_dim=(kwargs.pop("embedding_dim")),
