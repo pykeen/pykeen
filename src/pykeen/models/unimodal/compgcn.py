@@ -8,7 +8,6 @@ import torch
 from class_resolver import Hint
 
 from ..nbase import ERModel
-from ...nn import EmbeddingSpecification
 from ...nn.emb import CombinedCompGCNRepresentations
 from ...nn.modules import DistMultInteraction, Interaction
 from ...triples import CoreTriplesFactory
@@ -59,13 +58,6 @@ class CompGCN(ERModel[torch.FloatTensor, RelationRepresentation, torch.FloatTens
         :param kwargs:
             Additional keyword based arguments passed to :class:`pykeen.models.ERModel`.
         """
-        encoder_kwargs = {} if encoder_kwargs is None else dict(encoder_kwargs)
-
-        # TODO: Remove this, once testing is updated
-        embedding_dim = kwargs.pop("embedding_dim", None)
-        if embedding_dim is not None:
-            encoder_kwargs.setdefault("embedding_specification", EmbeddingSpecification(embedding_dim=embedding_dim))
-
         # combined representation
         entity_representations, relation_representations = CombinedCompGCNRepresentations(
             triples_factory=triples_factory,
