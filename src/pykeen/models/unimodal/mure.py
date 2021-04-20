@@ -58,7 +58,8 @@ class MuRE(ERModel):
         # https://github.com/ibalazevic/multirelational-poincare/blob/34523a61ca7867591fd645bfb0c0807246c08660/model.py#L52
         # uses float64
         super().__init__(
-            interaction=MuREInteraction(p=p, power_norm=power_norm),
+            interaction=MuREInteraction,
+            interaction_kwargs=dict(p=p, power_norm=power_norm),
             entity_representations=[
                 EmbeddingSpecification(
                     embedding_dim=embedding_dim,
