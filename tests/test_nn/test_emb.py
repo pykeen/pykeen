@@ -84,7 +84,7 @@ class TestSingleCompGCNRepresentationTests(cases.RepresentationTestCase):
                 create_inverse_triples=True,
             ),
             embedding_specification=EmbeddingSpecification(embedding_dim=self.dim),
-            output_dim=self.dim,
+            dims=self.dim,
         )
         return kwargs
 
