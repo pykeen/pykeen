@@ -46,6 +46,20 @@ class CompGCN(ERModel[torch.FloatTensor, RelationRepresentation, torch.FloatTens
         interaction_kwargs: Optional[Mapping[str, Any]] = None,
         **kwargs,
     ):
+        """
+        Initialize the model.
+
+        :param triples_factory:
+            The triples factory.
+        :param encoder_kwargs:
+            Key-word arguments for the encoder, cf. CompGCNRepresentations.
+        :param interaction:
+            The interaction function to use as decoder.
+        :param interaction_kwargs:
+            Additional key-word based arguments for the interaction function.
+        :param kwargs:
+            Additional key-word based arguments passed to ERModel.
+        """
         encoder_kwargs = {} if encoder_kwargs is None else dict(encoder_kwargs)
 
         # TODO: Remove this, once testing is updated
@@ -71,6 +85,7 @@ class CompGCN(ERModel[torch.FloatTensor, RelationRepresentation, torch.FloatTens
         # Resolve interaction function
         if interaction is None:
             interaction = DistMultInteraction
+        # TODO: Pass interaction / interaction_kwargs to base class?
         interaction = interaction_resolver.make(query=interaction, pos_kwargs=interaction_kwargs)
         super().__init__(
             entity_representations=entity_representations,
