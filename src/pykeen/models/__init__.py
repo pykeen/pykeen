@@ -15,6 +15,7 @@ from .multimodal import ComplExLiteral, DistMultLiteral
 from .nbase import ERModel, _NewAbstractModel
 from .resolve import make_model, make_model_cls
 from .unimodal import (
+    CompGCN,
     ComplEx,
     ConvE,
     ConvKB,
@@ -51,6 +52,7 @@ __all__ = [
     'ERModel',
     'MultimodalModel',
     # Concrete Models
+    'CompGCN',
     'ComplEx',
     'ComplExLiteral',
     'ConvE',

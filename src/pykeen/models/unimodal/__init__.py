@@ -49,10 +49,13 @@
 .. [socher2013] Socher, R., *et al.* (2013) `Reasoning with neural tensor networks for knowledge base completion.
                 <https://papers.nips.cc/paper/5028-reasoning-with-neural-tensor-networks-for-knowledge-base-completion>`_.
                 NIPS. 2013.
+.. [vashishth2020] Vashishth, S., *et al.* (2020). `Composition-based multi-relational graph convolutional
+   networks <https://arxiv.org/abs/1911.03082>`_. *arXiv*, 1–15.
 .. [zhang2019] Zhang, Shuai, *et al.* (2019). `Quaternion knowledge graph embeddings
                 <https://openreview.net/forum?id=cZbk98eY_WwC>`_ NeurIPS'19.
 """
 
+from .compgcn import CompGCN
 from .complex import ComplEx
 from .conv_e import ConvE
 from .conv_kb import ConvKB
@@ -79,6 +82,7 @@ from .tucker import TuckER
 from .unstructured_model import UnstructuredModel
 
 __all__ = [
+    'CompGCN',
     'ComplEx',
     'ConvE',
     'ConvKB',

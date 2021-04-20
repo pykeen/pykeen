@@ -78,6 +78,17 @@ class Dataset:
     create_inverse_triples: bool
 
     @property
+    def factory_dict(self) -> Mapping[str, TriplesFactory]:
+        """Return a dictionary of the three factories."""
+        rv = dict(
+            training=self.training,
+            testing=self.testing,
+        )
+        if self.validation:
+            rv['validation'] = self.validation
+        return rv
+
+    @property
     def entity_to_id(self):  # noqa: D401
         """The mapping of entity labels to IDs."""
         return self.training.entity_to_id
