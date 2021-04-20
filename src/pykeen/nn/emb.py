@@ -889,14 +889,14 @@ class CombinedCompGCNRepresentations(nn.Module):
         self,
     ) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
         """Compute enriched representations."""
-        if self.enriched_embeddings is None:
+        if self.enriched_representations is None:
             x_e = self.entity_representations()
             x_r = self.relation_representations()
             # enrich
             for layer in self.layers:
                 x_e, x_r = layer(x_e=x_e, x_r=x_r, edge_index=self.edge_index, edge_type=self.edge_type)
             self.enriched_representations = (x_e, x_r)
-        return self.enriched_embeddings
+        return self.enriched_representations
 
     def split(self) -> Tuple["SingleCompGCNRepresentation", "SingleCompGCNRepresentation"]:
         """Return the separated representations."""
@@ -933,6 +933,7 @@ class SingleCompGCNRepresentation(RepresentationModule):
         super().__init__(max_id=max_id, shape=shape)
         self.combined = combined
         self.position = position
+        self.reset_parameters()
 
     def forward(
         self,
