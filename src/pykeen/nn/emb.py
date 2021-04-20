@@ -644,7 +644,7 @@ class CompGCNLayer(nn.Module):
     def __init__(
         self,
         input_dim: int,
-        output_dim: int,
+        output_dim: Optional[int] = None,
         dropout: float = 0.0,
         use_bias: bool = True,
         use_relation_bias: bool = False,
@@ -659,7 +659,7 @@ class CompGCNLayer(nn.Module):
         :param input_dim:
             The input dimension.
         :param output_dim:
-            The output dimension.
+            The output dimension. If None, equals the input dimension.
         :param dropout:
             The dropout to use for forward and backward edges.
         :param use_bias:  # TODO: do we really need this? it comes before a mandatory batch norm layer
@@ -674,6 +674,9 @@ class CompGCNLayer(nn.Module):
             Additional key-word based arguments passed to the activation.
         """
         super().__init__()
+
+        # normalize output dimension
+        output_dim = output_dim or input_dim
 
         # entity-relation composition
         self.composition = composition_resolver.make(composition)
@@ -717,7 +720,8 @@ class CompGCNLayer(nn.Module):
         self,
         x_e: torch.FloatTensor,
         x_r: torch.FloatTensor,
-        triples: Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor],
+        edge_index: torch.LongTensor,
+        edge_type: torch.LongTensor,
         weight: nn.Parameter,
     ) -> torch.FloatTensor:
         """
@@ -727,27 +731,30 @@ class CompGCNLayer(nn.Module):
             The entity representations.
         :param x_r: shape: (2 * num_relations, input_dim)
             The relation representations (including inverse relations).
-        :param triples:
-            A tuple (heads, relations, tails) of indices.
+        :param edge_index: shape: (2, num_edges)
+            The edge index, pairs of source and target entity for each triple.
+        :param edge_type: shape (num_edges,)
+            The edge type, i.e., relation ID, for each triple.
         :param weight:
             The transformation weight.
 
         :return:
             The updated entity representations.
         """
-        h, r, t = triples
+        # split
+        source, target = edge_index
 
         # compose
-        m = self.composition(x_e[h], x_r[r])
+        m = self.composition(x_e[source], x_r[edge_type])
 
         # transform
         m = m @ weight
 
         # normalization
-        m = m * self.edge_weighting(source=h, target=t).unsqueeze(dim=-1)
+        m = m * self.edge_weighting(source=source, target=target).unsqueeze(dim=-1)
 
         # aggregate by sum
-        x_e = x_e.new_zeros(x_e.shape[0], m.shape[1]).index_add(dim=0, index=t, source=m)
+        x_e = x_e.new_zeros(x_e.shape[0], m.shape[1]).index_add(dim=0, index=target, source=m)
 
         # dropout
         x_e = self.drop(x_e)
@@ -758,7 +765,8 @@ class CompGCNLayer(nn.Module):
         self,
         x_e: torch.FloatTensor,
         x_r: torch.FloatTensor,
-        triples: torch.LongTensor,
+        edge_index: torch.LongTensor,
+        edge_type: torch.LongTensor,
     ) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
         r"""
         Update entity and relation representations.
@@ -774,19 +782,22 @@ class CompGCNLayer(nn.Module):
             The entity representations.
         :param x_r: shape: (2 * num_relations, input_dim)
             The relation representations (including inverse relations).
-        :param triples: shape: (num_triples, 3)  # TODO: Change to PyTorch Geometric edge_index / edge_type?
-            The triples.
+        :param edge_index: shape: (2, num_edges)
+            The edge index, pairs of source and target entity for each triple.
+        :param edge_type: shape (num_edges,)
+            The edge type, i.e., relation ID, for each triple.
 
         :return: shape: (num_entities, output_dim) / (2 * num_relations, output_dim)
             The updated entity and relation representations.
         """
+        # prepare for inverse relations
+        edge_type = 2 * edge_type
         # update entity representations: mean over self-loops / forward edges / backward edges
-        h, r, t = triples.t()
         x_e = (
-                  self.composition(x_e, self.self_loop) @ self.w_loop
-                  + self.message(x_e=x_e, x_r=x_r, triples=(h, 2 * r, t), weight=self.w_fwd)
-                  + self.message(x_e=x_e, x_r=x_r, triples=(t, 2 * r + 1, h), weight=self.w_bwd)
-              ) / 3
+            self.composition(x_e, self.self_loop) @ self.w_loop
+            + self.message(x_e=x_e, x_r=x_r, edge_index=edge_index, edge_type=edge_type, weight=self.w_fwd)
+            + self.message(x_e=x_e, x_r=x_r, edge_index=edge_index.flip(0), edge_type=edge_type + 1, weight=self.w_bwd)
+        ) / 3
 
         if self.bias:
             x_e = self.bias(x_e)
@@ -883,7 +894,7 @@ class CombinedCompGCNRepresentations(nn.Module):
             x_r = self.relation_representations()
             # enrich
             for layer in self.layers:
-                x_e, x_r = layer(x_e=x_e, x_r=x_r, triples=self.triples)
+                x_e, x_r = layer(x_e=x_e, x_r=x_r, edge_index=self.edge_index, edge_type=self.edge_type)
             self.enriched_representations = (x_e, x_r)
         return self.enriched_embeddings
 
