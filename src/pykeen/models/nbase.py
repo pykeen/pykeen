@@ -342,6 +342,9 @@ class ERModel(
         :param triples_factory:
             The triples factory facilitates access to the dataset.
         :param interaction: The interaction module (e.g., TransE)
+        :param interaction_kwargs:
+            Additional key-word based parameters given to the interaction module's constructor, if not already
+            instantiated.
         :param entity_representations: The entity representation or sequence of representations
         :param relation_representations: The relation representation or sequence of representations
         :param loss:
