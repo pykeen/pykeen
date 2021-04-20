@@ -111,7 +111,7 @@ class QuatE(ERModel):
         """
         super().__init__(
             triples_factory=triples_factory,
-            interaction=QuatEInteraction(),
+            interaction=QuatEInteraction,
             entity_representations=EmbeddingSpecification(
                 embedding_dim=4 * embedding_dim,
                 initializer=entity_initializer,
