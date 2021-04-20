@@ -1003,7 +1003,8 @@ Traceback
         self.instance.post_parameter_update()
 
         # assert that the regularization term has been reset
-        assert self.instance.regularizer.regularization_term == torch.zeros(1, dtype=torch.float, device=self.instance.device)
+        expected_term = torch.zeros(1, dtype=torch.float, device=self.instance.device)
+        assert self.instance.regularizer.regularization_term == expected_term
 
     def test_post_parameter_update(self):
         """Test whether post_parameter_update correctly enforces model constraints."""
