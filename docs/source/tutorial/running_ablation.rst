@@ -30,7 +30,7 @@ function(s), training approach(es), and the optimizer(s) in order to run the abl
 
     >>> from pykeen.ablation import ablation_pipeline
     >>> directory = "doctests/ablation/ex01_minimal"
-    >>> result = ablation_pipeline(
+    >>> ablation_pipeline(
     ...     directory=directory,
     ...     models=["ComplEx"],
     ...     datasets=["Nations"],
@@ -51,7 +51,7 @@ as ``title`` are special and used by PyKEEN and :mod:`optuna`.
 
     >>> from pykeen.ablation import ablation_pipeline
     >>> directory = "doctests/ablation/ex02_metadata"
-    >>> result = ablation_pipeline(
+    >>> ablation_pipeline(
     ...     directory=directory,
     ...     models=["ComplEx"],
     ...     datasets=["Nations"],
@@ -74,7 +74,7 @@ performance. Therefore, we extend the ablation study by including the ``create_i
 
     >>> from pykeen.ablation import ablation_pipeline
     >>> directory = "doctests/ablation/ex03_inverse"
-    >>> result = ablation_pipeline(
+    >>> ablation_pipeline(
     ...     directory=directory,
     ...     models=["ComplEx"],
     ...     datasets=["Nations"],
@@ -100,7 +100,7 @@ or ``create_inverse_triples`` argument, it can be given as a single value instea
 
     >>> from pykeen.ablation import ablation_pipeline
     >>> directory = "doctests/ablation/ex04_terse_kwargs"
-    >>> result = ablation_pipeline(
+    >>> ablation_pipeline(
     ...     directory=directory,
     ...     models="ComplEx",
     ...     datasets="Nations",
@@ -127,7 +127,7 @@ follows:
 
     >>> from pykeen.ablation import ablation_pipeline
     >>> directory = "doctests/ablation/ex05_stopper"
-    >>> result = ablation_pipeline(
+    >>> ablation_pipeline(
     ...     directory=directory,
     ...     models=["ComplEx"],
     ...     datasets=["Nations"],
@@ -162,7 +162,7 @@ testing purposes. Therefore, we define the arguments required by Optuna by ourse
 
     >>> from pykeen.ablation import ablation_pipeline
     >>> directory = "doctests/ablation/ex06_optuna_kwargs"
-    >>> result = ablation_pipeline(
+    >>> ablation_pipeline(
     ...     directory=directory,
     ...     models="ComplEx",
     ...     datasets="Nations",
@@ -193,7 +193,7 @@ the best model of each ablation-experiment using the argument ``best_replicates`
 
     >>> from pykeen.ablation import ablation_pipeline
     >>> directory = "doctests/ablation/ex5"
-    >>> result = ablation_pipeline(
+    >>> ablation_pipeline(
     ...     directory=directory,
     ...     models=["ComplEx"],
     ...     datasets=["Nations"],

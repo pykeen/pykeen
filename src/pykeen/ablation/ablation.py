@@ -182,7 +182,7 @@ def ablation_pipeline(
         save_artifacts=save_artifacts,
     )
 
-    return _run_ablation_experiments(
+    _run_ablation_experiments(
         directories=directories,
         best_replicates=best_replicates,
         dry_run=dry_run,
