@@ -219,6 +219,12 @@ class TestNTNHighMemory(cases.BaseNTNTest):
     }
 
 
+class TestPairRE(cases.ModelTestCase):
+    """Test the PairRE model."""
+
+    cls = pykeen.models.PairRE
+
+
 class TestProjE(cases.ModelTestCase):
     """Test the ProjE model."""
 
