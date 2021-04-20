@@ -9,6 +9,7 @@ from typing import Optional
 
 import numpy
 import torch
+import unittest_templates
 
 import pykeen.experiments
 import pykeen.models
@@ -22,21 +23,23 @@ from pykeen.nn.emb import Embedding
 from pykeen.utils import all_in_bounds, clamp_norm, extend_batch
 from tests import cases
 from tests.constants import EPSILON
+from tests.mocks import MockModel
+from tests.test_model_mode import SimpleInteractionModel
 
 SKIP_MODULES = {
-    Model.__name__,
-    _OldAbstractModel.__name__,
-    _NewAbstractModel.__name__,
-    'DummyModel',
-    MultimodalModel.__name__,
-    EntityEmbeddingModel.__name__,
-    EntityRelationEmbeddingModel.__name__,
-    ERModel.__name__,
-    'MockModel',
-    'SimpleInteractionModel',
+    Model,
+    _OldAbstractModel,
+    _NewAbstractModel,
+    # DummyModel,
+    MultimodalModel,
+    EntityEmbeddingModel,
+    EntityRelationEmbeddingModel,
+    ERModel,
+    MockModel,
+    SimpleInteractionModel,
 }
 for cls in MultimodalModel.__subclasses__():
-    SKIP_MODULES.add(cls.__name__)
+    SKIP_MODULES.add(cls)
 
 
 class TestComplex(cases.ModelTestCase):
@@ -581,8 +584,12 @@ class TestUM(cases.DistanceModelTestCase):
     cls = pykeen.models.UnstructuredModel
 
 
-class TestTesting(unittest.TestCase):
+class TestTesting(unittest_templates.MetaTestCase[Model]):
     """Yo dawg, I heard you like testing, so I wrote a test to test the tests so you can test while you're testing."""
+
+    base_test = cases.ModelTestCase
+    base_cls = Model
+    skip_cls = SKIP_MODULES
 
     def test_documentation(self):
         """Test all models have appropriate structured documentation."""
@@ -596,32 +603,6 @@ class TestTesting(unittest.TestCase):
                 self.assertIn('author', docdata['citation'])
                 self.assertIn('link', docdata['citation'])
                 self.assertIn('year', docdata['citation'])
-
-    def test_testing(self):
-        """Check that there's a test for all models.
-
-        For now, this is excluding multimodel models. Not sure how to test those yet.
-        """
-        model_names = {
-            cls.__name__
-            for cls in model_resolver.lookup_dict.values()
-            if not issubclass(cls, ERModel)
-        }
-        model_names -= SKIP_MODULES
-
-        tested_model_names = {
-            value.cls.__name__
-            for name, value in globals().items()
-            if (
-                isinstance(value, type)
-                and issubclass(value, cases.ModelTestCase)
-                and not name.startswith('_')
-                and not issubclass(value.cls, (ERModel, MultimodalModel))
-            )
-        }
-        tested_model_names -= SKIP_MODULES
-
-        self.assertEqual(model_names, tested_model_names, msg='Some models have not been tested')
 
     def test_importing(self):
         """Test that all models are available from :mod:`pykeen.models`."""
