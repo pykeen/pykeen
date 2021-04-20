@@ -877,17 +877,13 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
     def test_save_load_model_state(self):
         """Test whether a saved model state can be re-loaded."""
         original_model = self.cls(
-            triples_factory=self.factory,
-            embedding_dim=self.embedding_dim,
             random_seed=42,
-            **(self.kwargs or {}),
+            **self.instance_kwargs,
         ).to_device_()
 
         loaded_model = self.cls(
-            triples_factory=self.factory,
-            embedding_dim=self.embedding_dim,
             random_seed=21,
-            **(self.kwargs or {}),
+            **self.instance_kwargs,
         ).to_device_()
 
         def _equal_embeddings(a: RepresentationModule, b: RepresentationModule) -> bool:
