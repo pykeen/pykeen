@@ -35,6 +35,7 @@ def ablation_pipeline(
     optimizers: Union[str, List[str]],
     training_loops: Union[str, List[str]],
     *,
+    epochs: Optional[int] = None,
     create_inverse_triples: Union[bool, List[bool]] = False,
     regularizers: Union[None, str, List[str]] = None,
     negative_sampler: Union[str, None] = None,
@@ -69,7 +70,7 @@ def ablation_pipeline(
     best_replicates: Optional[int] = None,
     discard_replicates: bool = False,
     create_unique_subdir: bool = False,
-) -> None:
+):
     """Run ablation study.
 
     :param datasets: A dataset name or list of dataset names.
@@ -78,10 +79,11 @@ def ablation_pipeline(
     :param losses: A loss function name or list of loss function names.
     :param optimizers: An optimizer name or list of optimizer names.
     :param training_loops: A training loop name or list of training loop names.
+    :param epochs: A quick way to set the ``num_epochs`` in the training kwargs.
     :param create_inverse_triples: Either a boolean for a single entry or a list of booleans.
     :param regularizers: A regularizer name, list of regularizer names, or None if no regularizer is desired.
     :param negative_sampler: A negative sampler name, list of regularizer names, or None if no negative sampler
-        is desired. Negative sampling is used only in combination with the pykeen.training.sclwa training loop.
+        is desired. Negative sampling is used only in combination with :class:`pykeen.training.SLCWATrainingLoop`.
     :param evaluator: The name of the evaluator to be used. Defaults to rank-based evaluator.
     :param stopper: The name of the stopper to be used. Defaults to NopStopper which doesn't define a
         stopping criterion.
@@ -91,7 +93,7 @@ def ablation_pipeline(
         ranges for that model to be used in HPO.
     :param model_to_loss_to_loss_kwargs: A mapping from model name to a mapping of loss name to a mapping
         of default keyword arguments for the instantiation of that loss function. This is useful because for some
-        losses, have hyper-parameters such as pykeen.losses.MarginRankingLoss
+        losses, have hyper-parameters such as :class:`pykeen.losses.MarginRankingLoss`.
     :param model_to_loss_to_loss_kwargs_ranges: A mapping from model name to a mapping of loss name
         to a mapping of keyword argument ranges for that loss to be used in HPO.
     :param model_to_optimizer_to_optimizer_kwargs: A mapping from model name to a mapping of optimizer name to a mapping
@@ -147,6 +149,7 @@ def ablation_pipeline(
         losses=losses,
         optimizers=optimizers,
         training_loops=training_loops,
+        epochs=epochs,
         create_inverse_triples=create_inverse_triples,
         regularizers=regularizers,
         model_to_model_kwargs=model_to_model_kwargs,
@@ -179,7 +182,7 @@ def ablation_pipeline(
         save_artifacts=save_artifacts,
     )
 
-    _run_ablation_experiments(
+    return _run_ablation_experiments(
         directories=directories,
         best_replicates=best_replicates,
         dry_run=dry_run,
@@ -194,7 +197,7 @@ def _run_ablation_experiments(
     dry_run: bool = False,
     move_to_cpu: bool = True,
     discard_replicates: bool = False,
-) -> None:
+):
     """Run ablation experiments."""
     if dry_run:
         return
@@ -234,7 +237,7 @@ def ablation_pipeline_from_config(
     save_artifacts: bool = True,
     move_to_cpu: bool = True,
     discard_replicates: bool = False,
-) -> None:
+):
     """Generate a set of HPO configurations.
 
     A sample file can be run with``pykeen experiment ablation tests/resources/hpo_complex_nations.json``.
@@ -314,6 +317,7 @@ def prepare_ablation(  # noqa:C901
     training_loops: Union[str, List[str]],
     directory: str,
     *,
+    epochs: Optional[int] = None,
     create_inverse_triples: Union[bool, List[bool]] = False,
     regularizers: Union[None, str, List[str]] = None,
     negative_sampler: Optional[str] = None,
@@ -351,6 +355,7 @@ def prepare_ablation(  # noqa:C901
     :param losses: A loss function name or list of loss function names.
     :param optimizers: An optimizer name or list of optimizer names.
     :param training_loops: A training loop name or list of training loop names.
+    :param epochs: A quick way to set the ``num_epochs`` in the training kwargs.
     :param create_inverse_triples: Either a boolean for a single entry or a list of booleans.
     :param regularizers: A regularizer name, list of regularizer names, or None if no regularizer is desired.
     :param negative_sampler: A negative sampler name, list of regularizer names, or None if no negative sampler
@@ -572,6 +577,9 @@ def prepare_ablation(  # noqa:C901
             hpo_config['evaluator_kwargs'] = evaluator_kwargs
         hpo_config['evaluation_kwargs'] = evaluation_kwargs or {}
         logger.info(f"Evaluator: {evaluator}")
+
+        if epochs is not None:
+            hpo_config.setdefault('training_kwargs', {}).setdefault('num_epochs', epochs)
 
         rv_config = dict(
             type='hpo',

@@ -31,12 +31,17 @@ function(s), training approach(es), and the optimizer(s) in order to run the abl
     >>> from pykeen.ablation import ablation_pipeline
     >>> directory = "doctests/ablation/ex01_minimal"
     >>> result = ablation_pipeline(
-    ...      directory=directory,
-    ...      models=["ComplEx"],
-    ...      datasets=["Nations"],
-    ...      losses=["BCEAfterSigmoidLoss", "MarginRankingLoss"],
-    ...      training_loops=["LCWA"],
-    ...      optimizers=["Adam"],
+    ...     directory=directory,
+    ...     models=["ComplEx"],
+    ...     datasets=["Nations"],
+    ...     losses=["BCEAfterSigmoidLoss", "MarginRankingLoss"],
+    ...     training_loops=["LCWA"],
+    ...     optimizers=["Adam"],
+    ...     # The following are not part of minimal configuration, but are necessary
+    ...     # for demonstration/doctests. You should make these numbers bigger when
+    ...     # you're using PyKEEN's ablation framework
+    ...     epochs=1,
+    ...     n_trials=1,
     ... )
 
 We can provide arbitrary additional information about our study with the ``metadata`` keyword. Some keys, such
@@ -47,16 +52,19 @@ as ``title`` are special and used by PyKEEN and :mod:`optuna`.
     >>> from pykeen.ablation import ablation_pipeline
     >>> directory = "doctests/ablation/ex02_metadata"
     >>> result = ablation_pipeline(
-    ...      directory=directory,
-    ...      models=["ComplEx"],
-    ...      datasets=["Nations"],
-    ...      losses=["BCEAfterSigmoidLoss", "MarginRankingLoss"],
-    ...      training_loops=["LCWA"],
-    ...      optimizers=["Adam"],
-    ...      # Add metadata with:
-    ...      metadata=dict(
-    ...          title="Ablation Study Over Nations for ComplEx.",
-    ...      ),
+    ...     directory=directory,
+    ...     models=["ComplEx"],
+    ...     datasets=["Nations"],
+    ...     losses=["BCEAfterSigmoidLoss", "MarginRankingLoss"],
+    ...     training_loops=["LCWA"],
+    ...     optimizers=["Adam"],
+    ...     # Add metadata with:
+    ...     metadata=dict(
+    ...         title="Ablation Study Over Nations for ComplEx.",
+    ...     ),
+    ...     # Fast testing configuration, make bigger in prod
+    ...     epochs=1,
+    ...     n_trials=1,
     ... )
 
 As mentioned above, we also want to measure the effect of explicitly modeling inverse relations on the model's
@@ -75,6 +83,9 @@ performance. Therefore, we extend the ablation study by including the ``create_i
     ...     optimizers=["Adam"],
     ...     # Add inverse triples with
     ...     create_inverse_triples=[True, False],
+    ...     # Fast testing configuration, make bigger in prod
+    ...     epochs=1,
+    ...     n_trials=1,
     ... )
 
 .. note::
@@ -97,6 +108,9 @@ or ``create_inverse_triples`` argument, it can be given as a single value instea
     ...     training_loops="LCWA",
     ...     optimizers="Adam",
     ...     create_inverse_triples=[True, False],
+    ...     # Fast testing configuration, make bigger in prod
+    ...     epochs=1,
+    ...     n_trials=1,
     ... )
 
 .. note:: It doesn't make sense to run an ablation study if all of these values are fixed.
@@ -120,13 +134,16 @@ follows:
     ...     losses=["BCEAfterSigmoidLoss", "MarginRankingLoss"],
     ...     training_loops=["LCWA"],
     ...     optimizers=["Adam"],
-    ...     stopper = "early"
+    ...     stopper = "early",
     ...     stopper_kwargs = {
     ...         "frequency": 5,
     ...         "patience": 20,
     ...         "relative_delta": 0.002,
     ...         "metric": "hits@10",
     ...     },
+    ...     # Fast testing configuration, make bigger in prod
+    ...     epochs=1,
+    ...     n_trials=1,
     ... )
 
 We define the early stopper using the argument ``stopper``, and through ``stopper_kwargs``, we provide instantiation
@@ -152,6 +169,8 @@ testing purposes. Therefore, we define the arguments required by Optuna by ourse
     ...     losses=["BCEAfterSigmoidLoss", "MarginRankingLoss"],
     ...     training_loops="LCWA",
     ...     optimizers="Adam",
+    ...     # Fast testing configuration, make bigger in prod
+    ...     epochs=1,
     ...     # Optuna-related arguments
     ...     n_trials=2,
     ...     timeout=300,
@@ -174,29 +193,23 @@ the best model of each ablation-experiment using the argument ``best_replicates`
 
     >>> from pykeen.ablation import ablation_pipeline
     >>> directory = "doctests/ablation/ex5"
-    >>> models = ["ComplEx"]
-    >>> datasets = ["Nations"]
-    >>> losses=["BCEAfterSigmoidLoss", "MarginRankingLoss"],
-    >>> training_loops = ["lcwa"]
-    >>> optimizers = ["adam"]
-    >>> create_inverse_triples= [True, False]
-    >>> stopper = "early"
-    >>> stopper_kwargs = {
-    ...     "frequency": 5,
-    ...     "patience": 20,
-    ...     "relative_delta": 0.002,
-    ...     "metric": "hits@10",
-    ... }
     >>> result = ablation_pipeline(
     ...     directory=directory,
-    ...     models=models,
-    ...     datasets=datasets,
-    ...     losses=losses,
-    ...     training_loops=training_loops,
-    ...     optimizers=optimizers,
-    ...     create_inverse_triples=create_inverse_triples,
-    ...     stopper=stopper,
-    ...     stopper_kwargs=stopper_kwargs,
+    ...     models=["ComplEx"],
+    ...     datasets=["Nations"],
+    ...     losses=["BCEAfterSigmoidLoss", "MarginRankingLoss"],
+    ...     training_loops=["LCWA"],
+    ...     optimizers=["Adam"],
+    ...     create_inverse_triples=[True, False],
+    ...     stopper="early",
+    ...     stopper_kwargs={
+    ...         "frequency": 5,
+    ...         "patience": 20,
+    ...         "relative_delta": 0.002,
+    ...         "metric": "hits@10",
+    ...     },
+    ...     # Fast testing configuration, make bigger in prod
+    ...     epochs=1,
     ...     # Optuna-related arguments
     ...     n_trials=2,
     ...     timeout=300,
