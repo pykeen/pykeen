@@ -76,10 +76,10 @@ class CompGCN(ERModel[torch.FloatTensor, RelationRepresentation, torch.FloatTens
         if interaction is None:
             interaction = DistMultInteraction
         super().__init__(
+            triples_factory=triples_factory,
             interaction=interaction,
             interaction_kwargs=interaction_kwargs,
             entity_representations=entity_representations,
             relation_representations=relation_representations,
-            triples_factory=triples_factory,
             **kwargs,
         )
