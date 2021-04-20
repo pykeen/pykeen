@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Implementation of the QuatE model."""
+
 from typing import Any, ClassVar, Mapping, Type
 
 import torch
@@ -108,7 +109,7 @@ class QuatE(ERModel):
         :param relation_constrainer:
             The constrainer to use for the relation embeddings.
         :param kwargs:
-            Additional key-word based arguments passed to ERModel. Must not contain "interaction",
+            Additional keyword based arguments passed to ERModel. Must not contain "interaction",
             "entity_representations", or "relation_representations".
         """
         super().__init__(
