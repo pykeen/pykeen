@@ -46,7 +46,7 @@ for cls in MultimodalModel.__subclasses__():
 class TestCompGCN(cases.ModelTestCase):
     """Test the CompGCN model."""
 
-    model_cls = pykeen.models.CompGCN
+    cls = pykeen.models.CompGCN
     create_inverse_triples = True
     model_kwargs = dict(
         encoder_kwargs=dict(
