@@ -12,7 +12,7 @@ import pandas
 from pykeen.datasets import Nations
 from pykeen.datasets.analysis import (
     SUBSET_LABELS, _get_skyline, entity_count_dataframe, entity_relation_co_occurrence_dataframe,
-    relation_classification, relation_count_dataframe,
+    relation_classification, relation_classification2, relation_count_dataframe,
 )
 
 
@@ -140,3 +140,24 @@ class AnalysisTests(unittest.TestCase):
         # check support value range
         x = df["support"].values
         assert (1 <= x).all()
+
+    def test_relation_classification2(self):
+        """Tests for relation_classification2."""
+        df = relation_classification2(
+            dataset=self.dataset,
+        )
+
+        # check correct type
+        assert isinstance(df, pandas.DataFrame)
+
+        # check relation_id value range
+        assert df["relation_id"].isin(self.dataset.relation_to_id.values()).all()
+
+        # check pattern value range
+        relation_types = {
+            "1:1",
+            "1:n",
+            "m:1",
+            "m:n",
+        }
+        assert df["relation_type"].isin(relation_types).all()

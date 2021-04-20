@@ -6,7 +6,7 @@ import hashlib
 import itertools as itt
 import logging
 from collections import defaultdict
-from typing import Collection, DefaultDict, Iterable, Mapping, NamedTuple, Optional, Set, Tuple
+from typing import Collection, DefaultDict, Iterable, Mapping, NamedTuple, Optional, Set, Tuple, Union
 
 import numpy
 import pandas as pd
@@ -397,7 +397,7 @@ def iter_patterns(
     yield from iter_ternary_patterns(mapped_triples, pairs=pairs)
 
 
-def triple_set_hash(mapped_triples: torch.LongTensor):
+def triple_set_hash(mapped_triples: Collection[Tuple[int, int, int]]):
     """
     Compute an order-invariant hash value for a set of triples given as tensor.
 
@@ -463,16 +463,8 @@ def relation_classification(
     :return:
         A dataframe with columns {"relation_id", "pattern", "support"?, "confidence"?}.
     """
-    # normalize parts
-    if parts is None:
-        parts = dataset.factory_dict.keys()
-    parts = [parts] if isinstance(parts, str) else parts
-
-    # select triples
-    mapped_triples = torch.cat([
-        dataset.factory_dict[part].mapped_triples
-        for part in parts
-    ], dim=0).tolist()
+    parts = _normalize_parts(dataset, parts)
+    mapped_triples = _get_mapped_triples(dataset, parts)
 
     # include hash over triples into cache-file name
     # sort first, for triple order invariance
@@ -523,3 +515,56 @@ def relation_classification(
         df = df[["relation_id", "pattern"]].drop_duplicates()
 
     return df
+
+
+def _get_mapped_triples(dataset: Dataset, parts: Collection[str]) -> Collection[Tuple[int, int, int]]:
+    return torch.cat([
+        dataset.factory_dict[part].mapped_triples
+        for part in parts
+    ], dim=0).tolist()
+
+
+def _normalize_parts(dataset: Dataset, parts: Union[None, str, Collection[str]]) -> Collection[str]:
+    if parts is None:
+        parts = dataset.factory_dict.keys()
+    elif isinstance(parts, str):
+        parts = [parts]
+    return parts
+
+
+def relation_classification2(
+    *,
+    dataset: Dataset,
+    parts: Optional[Collection[str]] = None,
+):
+    """
+    Determine whether relations are of type 1:1, 1:n, m:1, or m:n.
+
+    :param dataset:
+        The dataset to investigate.
+    :param parts:
+        Only use certain parts of the dataset, e.g., train triples. Defaults to using all triples, i.e.
+        {"training", "validation", "testing}.
+
+    :return:
+        A dataframe with columns ( relation_id | relation_type )
+    """
+    # TODO: This function needs a better name
+    # TODO: Consider merging with other analysis methods
+    parts = _normalize_parts(dataset=dataset, parts=parts)
+    mapped_triples = _get_mapped_triples(dataset=dataset, parts=parts)
+    df = pd.DataFrame(data=mapped_triples, columns=["h", "r", "t"])
+    data = []
+    for relation, group in df.groupby(by="r"):
+        maximum_t_per_h = group.groupby(by="h").agg({"t": "nunique"})["t"].max()
+        maximum_h_per_t = group.groupby(by="t").agg({"h": "nunique"})["h"].max()
+        if maximum_h_per_t > 1 and maximum_t_per_h > 1:
+            relation_type = "m:n"
+        elif maximum_h_per_t > 1:  # and maximum_t_per_h == 1
+            relation_type = "m:1"
+        elif maximum_t_per_h > 1:  # and maximum_h_per_t == 1
+            relation_type = "1:n"
+        else:
+            relation_type = "1:1"
+        data.append((relation, relation_type))
+    return pd.DataFrame(data=data, columns=["relation_id", "relation_type"])
