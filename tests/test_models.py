@@ -5,7 +5,7 @@
 import importlib
 import os
 import unittest
-from typing import Optional
+from typing import Any, MutableMapping, Optional
 
 import numpy
 import torch
@@ -48,14 +48,16 @@ class TestCompGCN(cases.ModelTestCase):
 
     cls = pykeen.models.CompGCN
     create_inverse_triples = True
-    model_kwargs = dict(
-        encoder_kwargs=dict(
-            embedding_specification=EmbeddingSpecification(
-                embedding_dim=cases.ModelTestCase.embedding_dim,
-            ),
-        ),
-    )
     num_constant_init = 3  # BN(2) + Bias
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super(TestCompGCN, self)._pre_instantiation_hook(kwargs=kwargs)
+        kwargs["encoder_kwargs"] = dict(
+            embedding_specification=EmbeddingSpecification(
+                embedding_dim=(kwargs.pop("embedding_dim")),
+            ),
+        )
+        return kwargs
 
 
 class TestComplex(cases.ModelTestCase):
