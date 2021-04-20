@@ -107,7 +107,7 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
     @options.num_workers_option
     @options.random_seed_option
     @_decorate_model_kwargs
-    @click.option('--inverse-triples', is_flag=True)
+    @click.option('-I', '--create-inverse-triples', is_flag=True, help='Model inverse triples')
     @click.option('--silent', is_flag=True)
     @click.option('--output', type=click.File('w'), default=sys.stdout, help='Where to dump the metric results')
     def main(
@@ -131,7 +131,7 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
         num_workers,
         random_seed,
         silent: bool,
-        inverse_triples: bool,
+        create_inverse_triples: bool,
         **model_kwargs,
     ):
         """CLI for PyKEEN."""
@@ -156,7 +156,7 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
         def _triples_factory(path: Optional[str]) -> Optional[TriplesFactory]:
             if path is None:
                 return None
-            return TriplesFactory.from_path(path=path, create_inverse_triples=inverse_triples)
+            return TriplesFactory.from_path(path=path, create_inverse_triples=create_inverse_triples)
 
         training = _triples_factory(training_triples_factory)
         testing = _triples_factory(testing_triples_factory)
@@ -167,7 +167,7 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
             model=model,
             model_kwargs=model_kwargs,
             dataset=dataset,
-            dataset_kwargs=dict(create_inverse_triples=inverse_triples),
+            dataset_kwargs=dict(create_inverse_triples=create_inverse_triples),
             training=training,
             testing=testing or training,
             validation=validation,
