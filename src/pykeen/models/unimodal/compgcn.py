@@ -10,7 +10,7 @@ from class_resolver import Hint
 from ..nbase import ERModel
 from ...nn.emb import CombinedCompGCNRepresentations
 from ...nn.modules import DistMultInteraction, Interaction
-from ...triples import CoreTriplesFactory
+from ...triples import TriplesFactory
 from ...typing import RelationRepresentation
 
 __all__ = [
@@ -39,7 +39,7 @@ class CompGCN(ERModel[torch.FloatTensor, RelationRepresentation, torch.FloatTens
     def __init__(
         self,
         *,
-        triples_factory: CoreTriplesFactory,
+        triples_factory: TriplesFactory,
         encoder_kwargs: Optional[Mapping[str, Any]] = None,
         interaction: Hint[Interaction[torch.FloatTensor, RelationRepresentation, torch.FloatTensor]] = None,
         interaction_kwargs: Optional[Mapping[str, Any]] = None,
