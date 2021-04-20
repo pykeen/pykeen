@@ -759,7 +759,7 @@ class CombinedCompGCNRepresentations(nn.Module):
     """A sequence of CompGCN layers."""
 
     # Buffered enriched entity and relation representations
-    enriched_representations: Optional[Tuple[RepresentationModule, RepresentationModule]]
+    enriched_representations: Optional[Tuple[Embedding, Embedding]]
 
     def __init__(
         self,
@@ -836,7 +836,7 @@ class CombinedCompGCNRepresentations(nn.Module):
 
     def forward(
         self,
-    ) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
+    ) -> Tuple[Embedding, Embedding]:
         """Compute enriched representations."""
         if self.enriched_representations is None:
             x_e = self.entity_representations()
