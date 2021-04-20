@@ -49,7 +49,7 @@ PyKEEN
    reference/losses
    reference/regularizers
    reference/trackers
-   reference/evaluation/index
+   reference/evaluation
    reference/negative_sampling
    reference/hpo
    reference/ablation

@@ -311,6 +311,10 @@ class PipelineResult(Result):
         """
         torch.save(self.model, path, pickle_protocol=pickle.HIGHEST_PROTOCOL)
 
+    def get_metric(self, key: str) -> float:
+        """Get the given metric out of the metric result object."""
+        return self.metric_results.get_metric(key)
+
     def _get_results(self) -> Mapping[str, Any]:
         results = dict(
             times=dict(
@@ -638,6 +642,7 @@ def pipeline(  # noqa: C901
     clear_optimizer: bool = True,
     # 6. Training Loop
     training_loop: HintType[TrainingLoop] = None,
+    training_loop_kwargs: Optional[Mapping[str, Any]] = None,
     negative_sampler: HintType[NegativeSampler] = None,
     negative_sampler_kwargs: Optional[Mapping[str, Any]] = None,
     # 7. Training (ronaldo style)
@@ -652,7 +657,6 @@ def pipeline(  # noqa: C901
     result_tracker: HintType[ResultTracker] = None,
     result_tracker_kwargs: Optional[Mapping[str, Any]] = None,
     # Misc
-    automatic_memory_optimization: bool = True,
     metadata: Optional[Dict[str, Any]] = None,
     device: Hint[torch.device] = None,
     random_seed: Optional[int] = None,
@@ -715,6 +719,8 @@ def pipeline(  # noqa: C901
     :param training_loop:
         The name of the training loop's training approach (``'slcwa'`` or ``'lcwa'``) or the training loop class.
         Defaults to :class:`pykeen.training.SLCWATrainingLoop`.
+    :param training_loop_kwargs:
+        Keyword arguments to pass to the training loop on instantiation
     :param negative_sampler:
         The name of the negative sampler (``'basic'`` or ``'bernoulli'``) or the negative sampler class.
         Only allowed when training with sLCWA.
@@ -745,9 +751,6 @@ def pipeline(  # noqa: C901
         A JSON dictionary to store with the experiment
     :param use_testing_data:
         If true, use the testing triples. Otherwise, use the validation triples. Defaults to true - use testing triples.
-    :param automatic_memory_optimization: Should automatic memory optimization be performed during training and
-        evaluation? See arguments to :class:`pykeen.training_loop.TrainingLoop`
-        and :class:`pykeen.evaluation.Evaluator`.
     :param device: The device or device name to run on. If none is given, the device will be looked up with
         :func:`pykeen.utils.resolve_device`.
     :param random_seed: The random seed to use. If none is specified, one will be assigned before any code
@@ -879,13 +882,15 @@ def pipeline(  # noqa: C901
     )
 
     training_loop_cls = training_loop_resolver.lookup(training_loop)
-    training_loop_instance: TrainingLoop
+    if training_loop_kwargs is None:
+        training_loop_kwargs = {}
+
     if negative_sampler is None:
         negative_sampler_cls = None
         training_loop_instance = training_loop_cls(
             model=model_instance,
             optimizer=optimizer_instance,
-            automatic_memory_optimization=automatic_memory_optimization,
+            **training_loop_kwargs,
         )
     elif not issubclass(training_loop_cls, SLCWATrainingLoop):
         raise ValueError('Can not specify negative sampler with LCWA')
@@ -898,9 +903,9 @@ def pipeline(  # noqa: C901
         training_loop_instance = SLCWATrainingLoop(
             model=model_instance,
             optimizer=optimizer_instance,
-            automatic_memory_optimization=automatic_memory_optimization,
             negative_sampler_cls=negative_sampler_cls,
             negative_sampler_kwargs=negative_sampler_kwargs,
+            **training_loop_kwargs,
         )
     _result_tracker.log_params(
         params=dict(cls=training_loop_instance.__class__.__name__),
@@ -910,7 +915,6 @@ def pipeline(  # noqa: C901
     if evaluator_kwargs is None:
         evaluator_kwargs = {}
     evaluator_kwargs = dict(evaluator_kwargs)
-    evaluator_kwargs.setdefault('automatic_memory_optimization', automatic_memory_optimization)
     evaluator_instance: Evaluator = evaluator_resolver.make(evaluator, evaluator_kwargs)
 
     if evaluation_kwargs is None:

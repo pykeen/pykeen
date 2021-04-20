@@ -15,6 +15,7 @@ from . import options
 from .options import CLI_OPTIONS
 from ..base import Model
 from ...nn.message_passing import Decomposition
+from ...triples import TriplesFactory
 from ...typing import Constrainer, Hint, Initializer, Normalizer
 
 __all__ = [
@@ -106,6 +107,7 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
     @options.num_workers_option
     @options.random_seed_option
     @_decorate_model_kwargs
+    @click.option('-I', '--create-inverse-triples', is_flag=True, help='Model inverse triples')
     @click.option('--silent', is_flag=True)
     @click.option('--output', type=click.File('w'), default=sys.stdout, help='Where to dump the metric results')
     def main(
@@ -129,6 +131,7 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
         num_workers,
         random_seed,
         silent: bool,
+        create_inverse_triples: bool,
         **model_kwargs,
     ):
         """CLI for PyKEEN."""
@@ -150,20 +153,36 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
             result_tracker = None
             result_tracker_kwargs = None
 
+        def _triples_factory(path: Optional[str]) -> Optional[TriplesFactory]:
+            if path is None:
+                return None
+            return TriplesFactory.from_path(path=path, create_inverse_triples=create_inverse_triples)
+
+        training = _triples_factory(training_triples_factory)
+        testing = _triples_factory(testing_triples_factory)
+        validation = _triples_factory(validation_triples_factory)
+
         pipeline_result = pipeline(
             device=device,
             model=model,
             model_kwargs=model_kwargs,
             dataset=dataset,
-            training=training_triples_factory,
-            testing=testing_triples_factory or training_triples_factory,
-            validation=validation_triples_factory,
+            dataset_kwargs=dict(create_inverse_triples=create_inverse_triples),
+            training=training,
+            testing=testing or training,
+            validation=validation,
             optimizer=optimizer,
             optimizer_kwargs=dict(
                 lr=learning_rate,
             ),
             training_loop=training_loop,
+            training_loop_kwargs=dict(
+                automatic_memory_optimization=automatic_memory_optimization,
+            ),
             evaluator=evaluator,
+            evaluator_kwargs=dict(
+                automatic_memory_optimization=automatic_memory_optimization,
+            ),
             training_kwargs=dict(
                 num_epochs=number_epochs,
                 batch_size=batch_size,
@@ -176,7 +195,6 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
                 title=title,
             ),
             random_seed=random_seed,
-            automatic_memory_optimization=automatic_memory_optimization,
         )
 
         if not silent:

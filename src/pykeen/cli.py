@@ -15,7 +15,6 @@ later, but that will cause problems - the code will get executed twice:
 
 import inspect
 import os
-import platform
 import sys
 from typing import Optional
 
@@ -39,7 +38,7 @@ from .trackers import tracker_resolver
 from .training import training_loop_resolver
 from .triples.utils import EXTENSION_IMPORTERS, PREFIX_IMPORTERS
 from .utils import get_until_first_blank
-from .version import get_version
+from .version import env_table
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 
@@ -50,21 +49,10 @@ def main():
 
 
 @main.command()
-def version():
+@click.option('-f', '--tablefmt', default='github', show_default=True)
+def version(tablefmt):
     """Print version information for debugging."""
-    import torch
-    t1 = [
-        ('`os.name`', os.name),
-        ('`platform.system()`', platform.system()),
-        ('`platform.release()`', platform.release()),
-        ('python', f'{sys.version_info[0]}.{sys.version_info[1]}.{sys.version_info[2]}'),
-        ('pykeen', get_version(with_git_hash=True)),
-        ('torch', torch.__version__),
-        ('cuda available', str(torch.cuda.is_available()).lower()),
-        ('cuda', torch.version.cuda),
-        ('cudnn', torch.backends.cudnn.version()),
-    ]
-    click.echo(tabulate(t1, tablefmt='github', headers=['Key', 'Value']))
+    click.echo(env_table(tablefmt))
 
 
 tablefmt_option = click.option('-f', '--tablefmt', default='plain', show_default=True)
@@ -201,8 +189,8 @@ def evaluators(tablefmt: str):
     click.echo(_help_evaluators(tablefmt))
 
 
-def _help_evaluators(tablefmt):
-    lines = sorted(_get_lines(evaluator_resolver.lookup_dict, tablefmt, 'evaluation'))
+def _help_evaluators(tablefmt, link_fmt: Optional[str] = None):
+    lines = sorted(_get_lines(evaluator_resolver.lookup_dict, tablefmt, 'evaluation', link_fmt=link_fmt))
     return tabulate(
         lines,
         headers=['Name', 'Description'] if tablefmt == 'plain' else ['Name', 'Reference', 'Description'],
@@ -293,10 +281,14 @@ def metrics(tablefmt: str):
     click.echo(_help_metrics(tablefmt))
 
 
-def _help_metrics(tablefmt):
+def _help_metrics(tablefmt, link_fmt=None):
     return tabulate(
-        sorted(_get_metrics_lines(tablefmt)),
-        headers=['Name', 'Reference'] if tablefmt == 'rst' else ['Metric', 'Description', 'Evaluator', 'Reference'],
+        sorted(_get_metrics_lines(tablefmt, link_fmt=link_fmt)),
+        headers=(
+            ['Name', 'Reference'] if tablefmt == 'rst'
+            else ['Name', 'Description'] if tablefmt == 'github'
+            else ['Metric', 'Description', 'Reference']
+        ),
         tablefmt=tablefmt,
     )
 
@@ -335,19 +327,18 @@ def _help_hpo_samplers(tablefmt: str, link_fmt: Optional[str] = None):
     )
 
 
-def _get_metrics_lines(tablefmt: str):
+def _get_metrics_lines(tablefmt: str, link_fmt=None):
     if tablefmt == 'rst':
         for name, value in metric_resolver.lookup_dict.items():
             yield name, f':class:`pykeen.evaluation.{value.__name__}`'
     else:
         for field, name, value in get_metric_list():
+            if field.name in {'rank_std', 'rank_var', 'rank_mad'}:
+                continue
             if tablefmt == 'github':
-                yield (
-                    field.name.replace('_', ' ').title(), field.metadata['doc'],
-                    name, f'`pykeen.evaluation.{value.__name__}`',
-                )
+                yield field.metadata['name'], field.metadata['doc']
             else:
-                yield field.name, field.metadata['doc'], name, f'pykeen.evaluation.{value.__name__}'
+                yield field.metadata['name'], field.metadata['doc'], name, f'pykeen.evaluation.{value.__name__}'
 
 
 def _get_lines(d, tablefmt, submodule, link_fmt: Optional[str] = None):
@@ -483,9 +474,9 @@ def get_readme() -> str:
             tablefmt, link_fmt='https://pykeen.readthedocs.io/en/latest/reference/stoppers.html#{}',
         ),
         n_stoppers=len(stopper_resolver.lookup_dict),
-        evaluators=_help_evaluators(tablefmt),
+        evaluators=_help_evaluators(tablefmt, link_fmt='https://pykeen.readthedocs.io/en/latest/api/{}.html'),
         n_evaluators=len(evaluator_resolver.lookup_dict),
-        metrics=_help_metrics(tablefmt),
+        metrics=_help_metrics(tablefmt, link_fmt='https://pykeen.readthedocs.io/en/latest/api/{}.html'),
         n_metrics=len(get_metric_list()),
         trackers=_help_trackers(tablefmt, link_fmt='https://pykeen.readthedocs.io/en/latest/api/{}.html'),
         n_trackers=len(tracker_resolver.lookup_dict),

@@ -20,9 +20,9 @@ class Countries(UnpackedRemoteDataset):
     ---
     name: Countries
     citation:
-        author: Zhenfeng Lei
-        year: 2017
-        github: ZhenfengLei/KGDatasets
+        author: Bouchard
+        year: 2015
+        link: https://www.aaai.org/ocs/index.php/SSS/SSS15/paper/view/10257/10026
     statistics:
         entities: 271
         relations: 2

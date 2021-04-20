@@ -36,9 +36,9 @@ class Kinships(PathDataset):
         validation: 1068
         triples: 10686
     citation:
-        author: Zhenfeng Lei
-        year: 2017
-        github: ZhenfengLei/KGDatasets
+        author: Kemp
+        year: 2006
+        link: https://www.aaai.org/Papers/AAAI/2006/AAAI06-061.pdf
     """
 
     def __init__(self, create_inverse_triples: bool = False, **kwargs):

@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import functools
+import itertools
 import logging
 import warnings
 from abc import ABC, abstractmethod
@@ -17,12 +18,13 @@ import torch.nn
 from torch import nn
 from torch.nn import functional
 
+from .compositions import CompositionModule, composition_resolver
 from .init import init_phases, xavier_normal_, xavier_normal_norm_, xavier_uniform_, xavier_uniform_norm_
 from .message_passing import Decomposition, decomposition_resolver
-from .weighting import EdgeWeighting, edge_weight_resolver
+from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolver
 from ..regularizers import Regularizer
-from ..triples import TriplesFactory
-from ..typing import Constrainer, Hint, Initializer, Normalizer
+from ..triples import CoreTriplesFactory, TriplesFactory
+from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer
 from ..utils import Bias, activation_resolver, clamp_norm, complex_normalize, convert_to_canonical_shape
 
 __all__ = [
@@ -600,6 +602,316 @@ class RGCNRepresentations(RepresentationModule):
     ) -> torch.FloatTensor:
         """Enrich the entity embeddings of the decoder using R-GCN message propagation."""
         x = self._real_forward()
+        if indices is not None:
+            x = x[indices]
+        return x
+
+
+class CompGCNLayer(nn.Module):
+    """A single layer of the CompGCN model."""
+
+    def __init__(
+        self,
+        input_dim: int,
+        output_dim: Optional[int] = None,
+        dropout: float = 0.0,
+        use_bias: bool = True,
+        use_relation_bias: bool = False,
+        composition: Hint[CompositionModule] = None,
+        activation: Hint[nn.Module] = nn.Identity,
+        activation_kwargs: Optional[Mapping[str, Any]] = None,
+        edge_weighting: HintType[EdgeWeighting] = SymmetricEdgeWeighting,
+    ):
+        """
+        Initialize the module.
+
+        :param input_dim:
+            The input dimension.
+        :param output_dim:
+            The output dimension. If None, equals the input dimension.
+        :param dropout:
+            The dropout to use for forward and backward edges.
+        :param use_bias:  # TODO: do we really need this? it comes before a mandatory batch norm layer
+            Whether to use bias.
+        :param use_relation_bias:
+            Whether to use a bias for the relation transformation.
+        :param composition:
+            The composition function.
+        :param activation:
+            The activation to use.
+        :param activation_kwargs:
+            Additional key-word based arguments passed to the activation.
+        """
+        super().__init__()
+
+        # normalize output dimension
+        output_dim = output_dim or input_dim
+
+        # entity-relation composition
+        self.composition = composition_resolver.make(composition)
+
+        # edge weighting
+        self.edge_weighting: EdgeWeighting = edge_weight_resolver.make(edge_weighting)
+
+        # message passing weights
+        self.w_loop = nn.Parameter(data=torch.empty(input_dim, output_dim))
+        self.w_fwd = nn.Parameter(data=torch.empty(input_dim, output_dim))
+        self.w_bwd = nn.Parameter(data=torch.empty(input_dim, output_dim))
+
+        # linear relation transformation
+        self.w_rel = nn.Linear(in_features=input_dim, out_features=output_dim, bias=use_relation_bias)
+
+        # layer-specific self-loop relation representation
+        self.self_loop = nn.Parameter(data=torch.empty(1, input_dim))
+
+        # other components
+        self.drop = nn.Dropout(dropout)
+        self.bn = nn.BatchNorm1d(output_dim)
+        self.bias = Bias(output_dim) if use_bias else None
+        self.activation = activation_resolver.make(query=activation, pos_kwargs=activation_kwargs)
+
+        # initialize
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        """Reset the model's parameters."""
+        for w in (
+            self.w_loop,
+            self.w_fwd,
+            self.w_bwd,
+            self.self_loop,
+        ):
+            nn.init.xavier_uniform_(w)
+        self.bias.reset_parameters()
+        self.w_rel.reset_parameters()
+
+    def message(
+        self,
+        x_e: torch.FloatTensor,
+        x_r: torch.FloatTensor,
+        edge_index: torch.LongTensor,
+        edge_type: torch.LongTensor,
+        weight: nn.Parameter,
+    ) -> torch.FloatTensor:
+        """
+        Perform message passing.
+
+        :param x_e: shape: (num_entities, input_dim)
+            The entity representations.
+        :param x_r: shape: (2 * num_relations, input_dim)
+            The relation representations (including inverse relations).
+        :param edge_index: shape: (2, num_edges)
+            The edge index, pairs of source and target entity for each triple.
+        :param edge_type: shape (num_edges,)
+            The edge type, i.e., relation ID, for each triple.
+        :param weight:
+            The transformation weight.
+
+        :return:
+            The updated entity representations.
+        """
+        # split
+        source, target = edge_index
+
+        # compose
+        m = self.composition(x_e[source], x_r[edge_type])
+
+        # transform
+        m = m @ weight
+
+        # normalization
+        m = m * self.edge_weighting(source=source, target=target).unsqueeze(dim=-1)
+
+        # aggregate by sum
+        x_e = x_e.new_zeros(x_e.shape[0], m.shape[1]).index_add(dim=0, index=target, source=m)
+
+        # dropout
+        x_e = self.drop(x_e)
+
+        return x_e
+
+    def forward(
+        self,
+        x_e: torch.FloatTensor,
+        x_r: torch.FloatTensor,
+        edge_index: torch.LongTensor,
+        edge_type: torch.LongTensor,
+    ) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
+        r"""
+        Update entity and relation representations.
+
+        .. math ::
+            X_E'[e] = \frac{1}{3} \left(
+                X_E W_s
+                + \left( \sum_{h,r,e \in T} \alpha(h, e) \phi(X_E[h], X_R[r]) W_f \right)
+                + \left( \sum_{e,r,t \in T} \alpha(e, t) \phi(X_E[t], X_R[r^{-1}]) W_b \right)
+            \right)
+
+        :param x_e: shape: (num_entities, input_dim)
+            The entity representations.
+        :param x_r: shape: (2 * num_relations, input_dim)
+            The relation representations (including inverse relations).
+        :param edge_index: shape: (2, num_edges)
+            The edge index, pairs of source and target entity for each triple.
+        :param edge_type: shape (num_edges,)
+            The edge type, i.e., relation ID, for each triple.
+
+        :return: shape: (num_entities, output_dim) / (2 * num_relations, output_dim)
+            The updated entity and relation representations.
+        """
+        # prepare for inverse relations
+        edge_type = 2 * edge_type
+        # update entity representations: mean over self-loops / forward edges / backward edges
+        x_e = (
+            self.composition(x_e, self.self_loop) @ self.w_loop
+            + self.message(x_e=x_e, x_r=x_r, edge_index=edge_index, edge_type=edge_type, weight=self.w_fwd)
+            + self.message(x_e=x_e, x_r=x_r, edge_index=edge_index.flip(0), edge_type=edge_type + 1, weight=self.w_bwd)
+        ) / 3
+
+        if self.bias:
+            x_e = self.bias(x_e)
+        x_e = self.bn(x_e)
+        x_e = self.activation(x_e)
+
+        # Relation transformation
+        x_r = self.w_rel(x_r)
+        return x_e, x_r
+
+
+class CombinedCompGCNRepresentations(nn.Module):
+    """A sequence of CompGCN layers."""
+
+    # Buffered enriched entity and relation representations
+    enriched_representations: Optional[Tuple[torch.FloatTensor, torch.FloatTensor]]
+
+    def __init__(
+        self,
+        *,
+        triples_factory: CoreTriplesFactory,
+        embedding_specification: EmbeddingSpecification,
+        num_layers: Optional[int] = 1,
+        dims: Union[None, int, Sequence[int]] = None,
+        layer_kwargs: Optional[Mapping[str, Any]] = None,
+    ):
+        """
+        Initialize the combined entity and relation representation module.
+
+        :param triples_factory:
+            The triples factory containing the training triples.
+        :param embedding_specification:
+            An embedding specification for the base entity and relation representations.
+        :param num_layers:
+            The number of message passing layers to use. If None, will be inferred by len(dims), i.e., requires dims to
+            be a sequence / list.
+        :param dims:
+            The hidden dimensions to use. If None, defaults to the embedding dimension of the base representations.
+            If an integer, is the same for all layers. The last dimension is equal to the output dimension.
+        :param layer_kwargs:
+            Additional key-word based parameters passed to the individual layers; cf. CompGCNLayer.
+        """
+        super().__init__()
+        # TODO: Check
+        assert triples_factory.create_inverse_triples
+        self.entity_representations = embedding_specification.make(
+            num_embeddings=triples_factory.num_entities,
+        )
+        self.relation_representations = embedding_specification.make(
+            num_embeddings=2 * triples_factory.real_num_relations,
+        )
+        input_dim = self.entity_representations.embedding_dim
+        assert self.relation_representations.embedding_dim == input_dim
+
+        # hidden dimension normalization
+        if dims is None:
+            dims = input_dim
+        if isinstance(dims, int):
+            if num_layers is None:
+                raise ValueError
+            else:
+                dims = [dims] * num_layers
+        if len(dims) != num_layers:
+            raise ValueError(
+                f"The number of provided dimensions ({len(dims)}) must equal the number of layers ({num_layers}).",
+            )
+        self.output_dim = dims[-1]
+
+        # Create message passing layers
+        layers = []
+        for input_dim, output_dim in zip(itertools.chain([input_dim], dims), dims):
+            layers.append(CompGCNLayer(
+                input_dim=input_dim,
+                output_dim=output_dim,
+                **(layer_kwargs or {}),
+            ))
+        self.layers = nn.ModuleList(layers)
+
+        # register buffers for adjacency matrix; we use the same format as PyTorch Geometric
+        # TODO: This always uses all training triples for message passing
+        self.register_buffer(name="edge_index", tensor=triples_factory.mapped_triples[:, [0, 2]].t())
+        self.register_buffer(name="edge_type", tensor=triples_factory.mapped_triples[:, 1])
+
+        # initialize buffer of enriched representations
+        self.enriched_representations = None
+
+    def post_parameter_update(self) -> None:  # noqa: D102
+        # invalidate enriched embeddings
+        self.enriched_representations = None
+
+    def forward(
+        self,
+    ) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
+        """Compute enriched representations."""
+        if self.enriched_representations is None:
+            x_e = self.entity_representations()
+            x_r = self.relation_representations()
+            # enrich
+            for layer in self.layers:
+                x_e, x_r = layer(x_e=x_e, x_r=x_r, edge_index=self.edge_index, edge_type=self.edge_type)
+            self.enriched_representations = (x_e, x_r)
+        return self.enriched_representations
+
+    def split(self) -> Tuple["SingleCompGCNRepresentation", "SingleCompGCNRepresentation"]:
+        """Return the separated representations."""
+        return (
+            SingleCompGCNRepresentation(self, position=0),
+            SingleCompGCNRepresentation(self, position=1),
+        )
+
+
+class SingleCompGCNRepresentation(RepresentationModule):
+    """A wrapper around the combined representation module."""
+
+    def __init__(
+        self,
+        combined: CombinedCompGCNRepresentations,
+        position: int = 0,
+    ):
+        """
+        Initialize the module.
+
+        :param combined:
+            The combined representations.
+        :param position:
+            The position, either 0 for entities, or 1 for relations.
+        """
+        if position == 0:  # entity
+            max_id = combined.entity_representations.max_id
+            shape = (combined.output_dim,)
+        elif position == 1:  # relation
+            max_id = combined.relation_representations.max_id
+            shape = (combined.output_dim,)
+        else:
+            raise ValueError
+        super().__init__(max_id=max_id, shape=shape)
+        self.combined = combined
+        self.position = position
+        self.reset_parameters()
+
+    def forward(
+        self,
+        indices: Optional[torch.LongTensor] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        x = self.combined()[self.position]
         if indices is not None:
             x = x[indices]
         return x
