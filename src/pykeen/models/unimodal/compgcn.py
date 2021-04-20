@@ -46,19 +46,18 @@ class CompGCN(ERModel[torch.FloatTensor, RelationRepresentation, torch.FloatTens
         interaction_kwargs: Optional[Mapping[str, Any]] = None,
         **kwargs,
     ):
-        """
-        Initialize the model.
+        """Initialize the model.
 
         :param triples_factory:
             The triples factory.
         :param encoder_kwargs:
-            Key-word arguments for the encoder, cf. CompGCNRepresentations.
+            Key-word arguments for the encoder, cf. :class:`pykeen.nn.emb.CombinedCompGCNRepresentations`.
         :param interaction:
             The interaction function to use as decoder.
         :param interaction_kwargs:
-            Additional key-word based arguments for the interaction function.
+            Additional keyword based arguments for the interaction function.
         :param kwargs:
-            Additional key-word based arguments passed to ERModel.
+            Additional keyword based arguments passed to :class:`pykeen.models.ERModel`.
         """
         encoder_kwargs = {} if encoder_kwargs is None else dict(encoder_kwargs)
 
