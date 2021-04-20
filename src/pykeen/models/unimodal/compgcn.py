@@ -31,7 +31,7 @@ class CompGCN(ERModel[torch.FloatTensor, RelationRepresentation, torch.FloatTens
         github: malllabiisc/CompGCN
     """
 
-    #: The default strategy for optimizing the model"s hyper-parameters
+    #: The default strategy for optimizing the model's hyper-parameters
     hpo_default = dict(
         embedding_dim=dict(type=int, low=32, high=512, q=32),
     )
@@ -40,7 +40,7 @@ class CompGCN(ERModel[torch.FloatTensor, RelationRepresentation, torch.FloatTens
         self,
         *,
         triples_factory: TriplesFactory,
-        embedding_dim: int = 50,
+        embedding_dim: int = 64,
         encoder_kwargs: Optional[Mapping[str, Any]] = None,
         interaction: Hint[Interaction[torch.FloatTensor, RelationRepresentation, torch.FloatTensor]] = None,
         interaction_kwargs: Optional[Mapping[str, Any]] = None,
