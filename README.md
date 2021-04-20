@@ -34,7 +34,7 @@
   <a href="#installation">Installation</a> •
   <a href="#quickstart">Quickstart</a> •
   <a href="#datasets-25">Datasets</a> •
-  <a href="#models-25">Models</a> •
+  <a href="#models-27">Models</a> •
   <a href="#supporters">Support</a> •
   <a href="#citation">Citation</a>
 </p>
@@ -130,10 +130,11 @@ or the URL for the dataset if neither of the first two are available.
 | WordNet-18 (RR)                    | [`pykeen.datasets.WN18RR`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.WN18RR.html)               | [Toutanova *et al*., 2015](https://www.aclweb.org/anthology/W15-4007/)                                                  |      40559 |          11 |     92583 |
 | YAGO3-10                           | [`pykeen.datasets.YAGO310`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.YAGO310.html)             | [Mahdisoltani *et al*., 2015](http://service.tsi.telecom-paristech.fr/cgi-bin//valipub_download.cgi?dId=284)            |     123143 |          37 |   1089000 |
 
-### Models (25)
+### Models (27)
 
 | Name                | Reference                                                                                                                 | Citation                                                                                                                |
 |---------------------|---------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|
+| CompGCN             | [`pykeen.models.CompGCN`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.CompGCN.html)                         | [Vashishth *et al.*, 2020](https://arxiv.org/pdf/1911.03082)                                                            |
 | ComplEx             | [`pykeen.models.ComplEx`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.ComplEx.html)                         | [Trouillon *et al.*, 2016](https://arxiv.org/abs/1606.06357)                                                            |
 | ComplExLiteral      | [`pykeen.models.ComplExLiteral`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.ComplExLiteral.html)           | [Kristiadi *et al.*, 2018](https://arxiv.org/abs/1802.00934)                                                            |
 | ConvE               | [`pykeen.models.ConvE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.ConvE.html)                             | [Dettmers *et al.*, 2018](https://www.aaai.org/ocs/index.php/AAAI/AAAI18/paper/view/17366)                              |
@@ -148,6 +149,7 @@ or the URL for the dataset if neither of the first two are available.
 | NTN                 | [`pykeen.models.NTN`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.NTN.html)                                 | [Socher *et al.*, 2013](https://dl.acm.org/doi/10.5555/2999611.2999715)                                                 |
 | PairRE              | [`pykeen.models.PairRE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.PairRE.html)                           | [Chao *et al.*, 2020](http://arxiv.org/abs/2011.03798)                                                                  |
 | ProjE               | [`pykeen.models.ProjE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.ProjE.html)                             | [Shi *et al.*, 2017](https://www.aaai.org/ocs/index.php/AAAI/AAAI17/paper/view/14279)                                   |
+| QuatE               | [`pykeen.models.QuatE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.QuatE.html)                             | [Zhang *et al.*, 2019](https://arxiv.org/abs/1904.10281)                                                                |
 | RESCAL              | [`pykeen.models.RESCAL`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.RESCAL.html)                           | [Nickel *et al.*, 2011](http://www.cip.ifi.lmu.de/~nickel/data/paper-icml2011.pdf)                                      |
 | RGCN                | [`pykeen.models.RGCN`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.RGCN.html)                               | [Schlichtkrull *et al.*, 2018](https://arxiv.org/pdf/1703.06103)                                                        |
 | RotatE              | [`pykeen.models.RotatE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.RotatE.html)                           | [Sun *et al.*, 2019](https://arxiv.org/abs/1902.10197v1)                                                                |
@@ -216,21 +218,28 @@ or the URL for the dataset if neither of the first two are available.
 
 ### Evaluators (2)
 
-| Name      | Reference                              | Description                                   |
-|-----------|----------------------------------------|-----------------------------------------------|
-| rankbased | `pykeen.evaluation.RankBasedEvaluator` | A rank-based evaluator for KGE models.        |
-| sklearn   | `pykeen.evaluation.SklearnEvaluator`   | An evaluator that uses a Scikit-learn metric. |
+| Name      | Reference                                                                                                                       | Description                                   |
+|-----------|---------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------|
+| rankbased | [`pykeen.evaluation.RankBasedEvaluator`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.RankBasedEvaluator.html) | A rank-based evaluator for KGE models.        |
+| sklearn   | [`pykeen.evaluation.SklearnEvaluator`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.SklearnEvaluator.html)     | An evaluator that uses a Scikit-learn metric. |
 
-### Metrics (6)
+### Metrics (16)
 
-| Metric                  | Description                                                                                                        | Evaluator   | Reference                                  |
-|-------------------------|--------------------------------------------------------------------------------------------------------------------|-------------|--------------------------------------------|
-| Adjusted Mean Rank      | The mean over all chance-adjusted ranks: mean_i (2r_i / (num_entities+1)). Lower is better.                        | rankbased   | `pykeen.evaluation.RankBasedMetricResults` |
-| Average Precision Score | The area under the precision-recall curve, between [0.0, 1.0]. Higher is better.                                   | sklearn     | `pykeen.evaluation.SklearnMetricResults`   |
-| Hits At K               | The hits at k for different values of k, i.e. the relative frequency of ranks not larger than k. Higher is better. | rankbased   | `pykeen.evaluation.RankBasedMetricResults` |
-| Mean Rank               | The mean over all ranks: mean_i r_i. Lower is better.                                                              | rankbased   | `pykeen.evaluation.RankBasedMetricResults` |
-| Mean Reciprocal Rank    | The mean over all reciprocal ranks: mean_i (1/r_i). Higher is better.                                              | rankbased   | `pykeen.evaluation.RankBasedMetricResults` |
-| Roc Auc Score           | The area under the ROC curve between [0.0, 1.0]. Higher is better.                                                 | sklearn     | `pykeen.evaluation.SklearnMetricResults`   |
+| Name                                        | Description                                                                            |
+|---------------------------------------------|----------------------------------------------------------------------------------------|
+| AUC-ROC                                     | The area under the ROC curve, on [0, 1]. Higher is better.                             |
+| Adjusted Arithmetic Mean Rank (AAMR)        | The mean over all chance-adjusted ranks, on (0, 2). Lower is better.                   |
+| Adjusted Arithmetic Mean Rank Index (AAMRI) | The re-indexed adjusted mean rank (AAMR), on [-1, 1]. Higher is better.                |
+| Average Precision                           | The area under the precision-recall curve, on [0, 1]. Higher is better.                |
+| Geometric Mean Rank (GMR)                   | The geometric mean over all ranks, on [1, inf). Lower is better.                       |
+| Harmonic Mean Rank (HMR)                    | The harmonic mean over all ranks, on [1, inf). Lower is better.                        |
+| Hits @ K                                    | The relative frequency of ranks not larger than a given k, on [0, 1]. Higher is better |
+| Inverse Arithmetic Mean Rank (IAMR)         | The inverse of the arithmetic mean over all ranks, on (0, 1]. Higher is better.        |
+| Inverse Geometric Mean Rank (IGMR)          | The inverse of the geometric mean over all ranks, on (0, 1]. Higher is better.         |
+| Inverse Median Rank                         | The inverse of the median over all ranks, on (0, 1]. Higher is better.                 |
+| Mean Rank (MR)                              | The arithmetic mean over all ranks on, [1, inf). Lower is better.                      |
+| Mean Reciprocal Rank (MRR)                  | The inverse of the harmonic mean over all ranks, on (0, 1]. Higher is better.          |
+| Median Rank                                 | The median over all ranks, on [1, inf). Lower is better.                               |
 
 ### Trackers (5)
 
@@ -313,6 +322,7 @@ This project has been supported by several organizations (in alphabetical order)
 - [Fraunhofer Institute for Algorithms and Scientific Computing](https://www.scai.fraunhofer.de)
 - [Fraunhofer Institute for Intelligent Analysis and Information Systems](https://www.iais.fraunhofer.de)
 - [Fraunhofer Center for Machine Learning](https://www.cit.fraunhofer.de/de/zentren/maschinelles-lernen.html)
+- [Harvard Program in Therapeutic Science - Laboratory of Systems Pharmacology](https://hits.harvard.edu/the-program/laboratory-of-systems-pharmacology/)
 - [Ludwig-Maximilians-Universität München](https://www.en.uni-muenchen.de/index.html)
 - [Munich Center for Machine Learning (MCML)](https://mcml.ai/)
 - [Siemens](https://new.siemens.com/global/en.html)
@@ -330,10 +340,14 @@ The PyKEEN logo was designed by Carina Steinborn.
 If you have found PyKEEN useful in your work, please consider citing [our article](https://arxiv.org/abs/2007.14175):
 
 ```bibtex
-@article{ali2020pykeen,
-  title={PyKEEN 1.0: A Python Library for Training and Evaluating Knowledge Graph Emebddings},
-  author={Ali, Mehdi and Berrendorf, Max and Hoyt, Charles Tapley and Vermue, Laurent and Sharifzadeh, Sahand and Tresp, Volker and Lehmann, Jens},
-  journal={arXiv preprint arXiv:2007.14175},
-  year={2020}
+@article{ali2021pykeen,
+    author = {Ali, Mehdi and Berrendorf, Max and Hoyt, Charles Tapley and Vermue, Laurent and Sharifzadeh, Sahand and Tresp, Volker and Lehmann, Jens},
+    journal = {Journal of Machine Learning Research},
+    number = {82},
+    pages = {1--6},
+    title = {{PyKEEN 1.0: A Python Library for Training and Evaluating Knowledge Graph Embeddings}},
+    url = {http://jmlr.org/papers/v22/20-825.html},
+    volume = {22},
+    year = {2021}
 }
 ```

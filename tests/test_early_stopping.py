@@ -12,7 +12,7 @@ from torch.optim import Adam
 
 from pykeen.datasets import Nations
 from pykeen.evaluation import Evaluator, MetricResults, RankBasedEvaluator, RankBasedMetricResults
-from pykeen.evaluation.rank_based_evaluator import RANK_TYPES, SIDES
+from pykeen.evaluation.rank_based_evaluator import RANK_REALISTIC, RANK_TYPES, SIDES
 from pykeen.models import Model, TransE
 from pykeen.stoppers.early_stopping import EarlyStopper, is_improvement
 from pykeen.trackers import MLFlowResultTracker
@@ -79,25 +79,39 @@ class MockEvaluator(Evaluator):
 
     def finalize(self) -> MetricResults:  # noqa: D102
         hits = next(self.losses_iter)
+        dummy_1 = {
+            side: {
+                rank_type: 10
+                for rank_type in RANK_TYPES
+            }
+            for side in SIDES
+        }
+        dummy_2 = {
+            side: {
+                rank_type: 1.0
+                for rank_type in RANK_TYPES
+            }
+            for side in SIDES
+        }
         return RankBasedMetricResults(
-            mean_rank={
+            arithmetic_mean_rank=dummy_1,
+            geometric_mean_rank=dummy_1,
+            harmonic_mean_rank=dummy_1,
+            median_rank=dummy_1,
+            inverse_arithmetic_mean_rank=dummy_2,
+            inverse_harmonic_mean_rank=dummy_2,
+            inverse_geometric_mean_rank=dummy_2,
+            inverse_median_rank=dummy_2,
+            adjusted_arithmetic_mean_rank=dummy_2,
+            adjusted_arithmetic_mean_rank_index={
                 side: {
-                    rank_type: 10
-                    for rank_type in RANK_TYPES
+                    RANK_REALISTIC: 0.0,
                 }
                 for side in SIDES
             },
-            mean_reciprocal_rank={
-                side: {
-                    rank_type: 1.0
-                    for rank_type in RANK_TYPES
-                }
-                for side in SIDES
-            },
-            adjusted_mean_rank={
-                side: 1.0
-                for side in SIDES
-            },
+            rank_std=dummy_1,
+            rank_var=dummy_1,
+            rank_mad=dummy_1,
             hits_at_k={
                 side: {
                     rank_type: {

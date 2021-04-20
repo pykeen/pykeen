@@ -415,24 +415,43 @@ def hole_interaction(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    # Circular correlation of entity embeddings
-    a_fft = rfft(h, dim=-1)
-    b_fft = rfft(t, dim=-1)
-
-    # complex conjugate
-    a_fft = torch.conj(a_fft)
-
-    # Hadamard product in frequency domain
-    p_fft = a_fft * b_fft
-
-    # inverse real FFT, shape: (b, h, 1, t, d)
-    composite = irfft(p_fft, n=h.shape[-1], dim=-1)
+    # composite: (b, h, 1, t, d)
+    composite = circular_correlation(h, t)
 
     # transpose composite: (b, h, 1, d, t)
     composite = composite.transpose(-2, -1)
 
     # inner product with relation embedding
     return (r @ composite).squeeze(dim=-2)
+
+
+def circular_correlation(
+    a: torch.FloatTensor,
+    b: torch.FloatTensor,
+) -> torch.FloatTensor:
+    """
+    Compute the circular correlation between to vectors.
+
+    .. note ::
+        The implementation uses FFT.
+
+    :param a: shape: s_1
+        The tensor with the first vectors.
+    :param b:
+        The tensor with the second vectors.
+
+    :return:
+        The circular correlation between the vectors.
+    """
+    # Circular correlation of entity embeddings
+    a_fft = rfft(a, dim=-1)
+    b_fft = rfft(b, dim=-1)
+    # complex conjugate
+    a_fft = torch.conj(a_fft)
+    # Hadamard product in frequency domain
+    p_fft = a_fft * b_fft
+    # inverse real FFT
+    return irfft(p_fft, n=a.shape[-1], dim=-1)
 
 
 def kg2e_interaction(
@@ -1014,3 +1033,51 @@ def pair_re_interaction(
         p=p,
         power_norm=power_norm,
     )
+
+
+def _rotate_quaternion(qa: torch.FloatTensor, qb: torch.FloatTensor) -> torch.FloatTensor:
+    # Rotate (=Hamilton product in quaternion space).
+    return torch.cat(
+        [
+            qa[0] * qb[0] - qa[1] * qb[1] - qa[2] * qb[2] - qa[3] * qb[3],
+            qa[0] * qb[1] + qa[1] * qb[0] + qa[2] * qb[3] - qa[3] * qb[2],
+            qa[0] * qb[2] - qa[1] * qb[3] + qa[2] * qb[0] + qa[3] * qb[1],
+            qa[0] * qb[3] + qa[1] * qb[2] - qa[2] * qb[1] + qa[3] * qb[0],
+        ],
+        dim=-1,
+    )
+
+
+def _split_quaternion(x: torch.FloatTensor) -> torch.FloatTensor:
+    return torch.chunk(x, chunks=4, dim=-1)
+
+
+def quat_e_interaction(
+    h: torch.FloatTensor,
+    r: torch.FloatTensor,
+    t: torch.FloatTensor,
+):
+    """Evaluate the interaction function of QuatE for given embeddings.
+
+    The embeddings have to be in a broadcastable shape.
+
+    .. note ::
+        dim has to be divisible by 4.
+
+    :param h: shape: (batch_size, num_heads, 1, 1, dim)
+        The head representations.
+    :param r: shape: (batch_size, 1, num_relations, 1, dim)
+        The head representations.
+    :param t: shape: (batch_size, 1, 1, num_tails, dim)
+        The tail representations.
+
+    :return: shape: (...)
+        The scores.
+    """
+    return -(
+        # Rotation in quaternion space
+        _rotate_quaternion(
+            _split_quaternion(h),
+            _split_quaternion(r),
+        ) * t
+    ).sum(dim=-1)

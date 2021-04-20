@@ -16,6 +16,41 @@ source on `GitHub <https://github.com/pykeen/pykeen>`_ with:
 
     $ pip install git+https://github.com/pykeen/pykeen.git
 
+Google Colab and Kaggle Users
+-----------------------------
+`Google Colab <https://colab.research.google.com>`_ and `Kaggle <https://www.kaggle.com>`_ both provide
+a hosted version of Google's custom Jupyter notebook environment that work similarly. After opening
+a new notebook on one of these service, start your notebook with the following two lines:
+
+.. code-block::
+
+    ! pip install git+https://github.com/pykeen/pykeen.git
+    pykeen.env()
+
+This will install the latest code, then output relevant system and environment information with :func:`pykeen.env`.
+It works because Jupyter interprets any line beginning with a bang ``!`` that the remainder of the
+line should be interpreted as a bash command. If you want to make your notebook compatible on both
+hosted and local installations, change it slightly to check if PyKEEN is already installed:
+
+.. code-block::
+
+    ! python -c "import pykeen" || pip install git+https://github.com/pykeen/pykeen.git
+    pykeen.env()
+
+If you're having trouble with imports related to the plugin systems, try adding the following lines:
+
+.. code-block:: python
+
+    from pkg_resources import require
+    require('pykeen')
+
+.. seealso::
+
+    `PyKEEN issue #373 <https://github.com/pykeen/pykeen/issues/373>`_ for more information or if you
+    would like to discuss further
+
+To enable GPU usage, go to the Runtime -> Change runtime type menu to enable a GPU with your notebook.
+
 Windows Users
 -------------
 We've added experimental support for Windows as of `!95 <https://github.com/pykeen/pykeen/pull/95>`_.
