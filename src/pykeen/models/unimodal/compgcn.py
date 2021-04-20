@@ -10,7 +10,7 @@ from class_resolver import Hint
 from ..nbase import ERModel
 from ...nn import EmbeddingSpecification
 from ...nn.emb import CombinedCompGCNRepresentations
-from ...nn.modules import DistMultInteraction, Interaction, interaction_resolver
+from ...nn.modules import DistMultInteraction, Interaction
 from ...triples import CoreTriplesFactory
 from ...typing import RelationRepresentation
 
@@ -76,12 +76,11 @@ class CompGCN(ERModel[torch.FloatTensor, RelationRepresentation, torch.FloatTens
         # Resolve interaction function
         if interaction is None:
             interaction = DistMultInteraction
-        # TODO: Pass interaction / interaction_kwargs to base class?
-        interaction = interaction_resolver.make(query=interaction, pos_kwargs=interaction_kwargs)
         super().__init__(
+            interaction=interaction,
+            interaction_kwargs=interaction_kwargs,
             entity_representations=entity_representations,
             relation_representations=relation_representations,
             triples_factory=triples_factory,
-            interaction=interaction,
             **kwargs,
         )
