@@ -5,7 +5,7 @@
 import importlib
 import os
 import unittest
-from typing import Optional
+from typing import Any, MutableMapping, Optional
 
 import numpy
 import torch
@@ -19,6 +19,7 @@ from pykeen.models import (
 )
 from pykeen.models.predict import get_novelty_mask, predict
 from pykeen.models.unimodal.trans_d import _project_entity
+from pykeen.nn import EmbeddingSpecification
 from pykeen.nn.emb import Embedding
 from pykeen.utils import all_in_bounds, clamp_norm, extend_batch
 from tests import cases
@@ -40,6 +41,24 @@ SKIP_MODULES = {
 }
 for cls in MultimodalModel.__subclasses__():
     SKIP_MODULES.add(cls)
+
+
+class TestCompGCN(cases.ModelTestCase):
+    """Test the CompGCN model."""
+
+    cls = pykeen.models.CompGCN
+    create_inverse_triples = True
+    num_constant_init = 3  # BN(2) + Bias
+    cli_extras = ['--create-inverse-triples']
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        kwargs["encoder_kwargs"] = dict(
+            embedding_specification=EmbeddingSpecification(
+                embedding_dim=(kwargs.pop("embedding_dim")),
+            ),
+        )
+        return kwargs
 
 
 class TestComplex(cases.ModelTestCase):
@@ -641,6 +660,7 @@ class TestTesting(unittest_templates.MetaTestCase[Model]):
 
         self.assertEqual(model_names, star_model_names, msg='Forgot to add some imports')
 
+    @unittest.skip('no longer necessary?')
     def test_models_have_experiments(self):
         """Test that each model has an experiment folder in :mod:`pykeen.experiments`."""
         experiments_path = os.path.abspath(os.path.dirname(pykeen.experiments.__file__))
