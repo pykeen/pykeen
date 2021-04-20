@@ -2,16 +2,14 @@
 
 """Implementation of UM."""
 
-from typing import Any, ClassVar, Mapping, Optional
+from typing import Any, ClassVar, Mapping
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...losses import Loss
 from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_normal_
 from ...nn.modules import UnstructuredModelInteraction
-from ...triples import TriplesFactory
-from ...typing import DeviceHint, Hint, Initializer
+from ...typing import Hint, Initializer
 
 __all__ = [
     'UnstructuredModel',
@@ -64,7 +62,8 @@ class UnstructuredModel(ERModel):
         :param kwargs: Remaining keyword arguments passed through to :class:`pykeen.models.ERModel`.
         """
         super().__init__(
-            interaction=UnstructuredModelInteraction(p=scoring_fct_norm),
+            interaction=UnstructuredModelInteraction,
+            interaction_kwargs=dict(p=scoring_fct_norm),
             entity_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
                 initializer=entity_initializer,
