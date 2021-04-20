@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Implementation of the QuatE model."""
-from typing import Any, ClassVar, Mapping, Optional, Type
+from typing import Any, ClassVar, Mapping, Type
 
 import torch
 from torch.nn import functional
@@ -13,8 +13,7 @@ from ...nn.emb import EmbeddingSpecification
 from ...nn.init import init_quaternions
 from ...nn.modules import QuatEInteraction
 from ...regularizers import LpRegularizer, Regularizer
-from ...triples import TriplesFactory
-from ...typing import DeviceHint, Hint, Initializer
+from ...typing import Constrainer, Hint, Initializer
 
 __all__ = [
     'QuatE',
@@ -87,30 +86,32 @@ class QuatE(ERModel):
 
     def __init__(
         self,
-        triples_factory: TriplesFactory,
+        *,
         embedding_dim: int = 100,
-        normalize_relations: bool = True,
-        loss: Optional[Loss] = None,
-        preferred_device: DeviceHint = None,
-        random_seed: Optional[int] = None,
         entity_initializer: Hint[Initializer] = init_quaternions,
         relation_initializer: Hint[Initializer] = init_quaternions,
+        relation_constrainer: Hint[Constrainer] = quaternion_normalizer,
+        **kwargs,
     ) -> None:
         """Initialize QuatE.
 
-        :param triples_factory:
-            The triple factory connected to the model.
         :param embedding_dim:
             The embedding dimensionality of the entity embeddings.
-        :param loss:
-            The loss to use. Defaults to BCEWithLogitsLoss.
-        :param preferred_device:
-            The default device where to model is located.
-        :param random_seed:
-            An optional random seed to set before the initialization of weights.
+
+            .. note ::
+                The number of parameter per entity is `4 * embedding_dim`, since quaternion are used.
+
+        :param entity_initializer:
+            The initializer to use for the entity embeddings.
+        :param relation_initializer:
+            The initializer to use for the relation embeddings.
+        :param relation_constrainer:
+            The constrainer to use for the relation embeddings.
+        :param kwargs:
+            Additional key-word based arguments passed to ERModel. Must not contain "interaction",
+            "entity_representations", or "relation_representations".
         """
         super().__init__(
-            triples_factory=triples_factory,
             interaction=QuatEInteraction,
             entity_representations=EmbeddingSpecification(
                 embedding_dim=4 * embedding_dim,
@@ -120,12 +121,8 @@ class QuatE(ERModel):
             relation_representations=EmbeddingSpecification(
                 embedding_dim=4 * embedding_dim,
                 initializer=relation_initializer,
-                constrainer=quaternion_normalizer if normalize_relations else None,
+                constrainer=relation_constrainer,
                 dtype=torch.float,
             ),
-            loss=loss,
-            preferred_device=preferred_device,
-            random_seed=random_seed,
+            **kwargs,
         )
-        self.normalize_relations = normalize_relations
-        self.real_embedding_dim = embedding_dim
