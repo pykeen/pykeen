@@ -740,10 +740,10 @@ class CompGCNLayer(nn.Module):
         edge_type = 2 * edge_type
         # update entity representations: mean over self-loops / forward edges / backward edges
         x_e = (
-            self.composition(x_e, self.self_loop) @ self.w_loop
-            + self.message(x_e=x_e, x_r=x_r, edge_index=edge_index, edge_type=edge_type, weight=self.w_fwd)
-            + self.message(x_e=x_e, x_r=x_r, edge_index=edge_index.flip(0), edge_type=edge_type + 1, weight=self.w_bwd)
-        ) / 3
+                  self.composition(x_e, self.self_loop) @ self.w_loop
+                  + self.message(x_e=x_e, x_r=x_r, edge_index=edge_index, edge_type=edge_type, weight=self.w_fwd)
+                  + self.message(x_e=x_e, x_r=x_r, edge_index=edge_index.flip(0), edge_type=edge_type + 1, weight=self.w_bwd)
+              ) / 3
 
         if self.bias:
             x_e = self.bias(x_e)
@@ -759,7 +759,7 @@ class CombinedCompGCNRepresentations(nn.Module):
     """A sequence of CompGCN layers."""
 
     # Buffered enriched entity and relation representations
-    enriched_representations: Optional[Tuple[Embedding, Embedding]]
+    enriched_representations: Optional[Tuple[torch.FloatTensor, torch.FloatTensor]]
 
     def __init__(
         self,
@@ -836,7 +836,7 @@ class CombinedCompGCNRepresentations(nn.Module):
 
     def forward(
         self,
-    ) -> Tuple[Embedding, Embedding]:
+    ) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
         """Compute enriched representations."""
         if self.enriched_representations is None:
             x_e = self.entity_representations()
