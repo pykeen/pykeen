@@ -1088,11 +1088,7 @@ Traceback
         """Tests whether reset_parameters is called in the constructor."""
         with patch.object(self.cls, 'reset_parameters_', return_value=None) as mock_method:
             try:
-                self.cls(
-                    triples_factory=self.factory,
-                    embedding_dim=self.embedding_dim,
-                    **(self.kwargs or {}),
-                )
+                self.cls(**self.instance_kwargs)
             except TypeError as error:
                 assert error.args == ("'NoneType' object is not callable",)
             mock_method.assert_called_once()
