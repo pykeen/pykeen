@@ -11,12 +11,13 @@ from operator import itemgetter
 from typing import Any, ClassVar, Generic, Iterable, List, Mapping, Optional, Sequence, Tuple, Type, Union, cast
 
 import torch
+from class_resolver import Hint
 from torch import nn
 
 from .base import Model
 from ..losses import Loss
 from ..nn.emb import EmbeddingSpecification, RepresentationModule
-from ..nn.modules import Interaction
+from ..nn.modules import Interaction, interaction_resolver
 from ..regularizers import Regularizer
 from ..triples import TriplesFactory
 from ..typing import DeviceHint, HeadRepresentation, RelationRepresentation, TailRepresentation
@@ -327,7 +328,8 @@ class ERModel(
         self,
         *,
         triples_factory: TriplesFactory,
-        interaction: Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation],
+        interaction: Hint[Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]],
+        interaction_kwargs: Optional[Mapping[str, Any]] = None,
         entity_representations: EmbeddingSpecificationHint = None,
         relation_representations: EmbeddingSpecificationHint = None,
         loss: Optional[Loss] = None,
@@ -373,7 +375,7 @@ class ERModel(
             shapes=interaction.relation_shape,
             label="relation",
         )
-        self.interaction = interaction
+        self.interaction = interaction_resolver.make(interaction, pos_kwargs=interaction_kwargs)
         # Comment: it is important that the regularizers are stored in a module list, in order to appear in
         # model.modules(). Thereby, we can collect them automatically.
         self.weight_regularizers = nn.ModuleList()
