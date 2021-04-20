@@ -929,6 +929,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
             '--embedding-dim', self.embedding_dim,
             '--batch-size', self.train_batch_size,
         ]
+        # TODO: Make sure that inverse triples are created if create_inverse_triples=True
         extras = [str(e) for e in extras]
         return extras
 
