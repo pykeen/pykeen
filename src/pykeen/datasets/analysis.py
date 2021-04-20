@@ -576,14 +576,15 @@ def relation_classification2(
     df = pd.DataFrame(data=mapped_triples, columns=["h", "r", "t"])
     data = []
     for relation, group in df.groupby(by="r"):
+        # TODO: support + confidence
         single_t_per_h = (group.groupby(by="h").agg({"t": "nunique"})["t"] <= 1).mean() >= threshold
         single_h_per_t = (group.groupby(by="t").agg({"h": "nunique"})["h"] <= 1).mean() >= threshold
         if single_h_per_t and single_t_per_h:
             relation_type = "1:1"
         elif single_h_per_t:  # and not single_t_per_h
-            relation_type = "m:1"
-        elif single_t_per_h:  # and not single_h_per_t
             relation_type = "1:n"
+        elif single_t_per_h:  # and not single_h_per_t
+            relation_type = "m:1"
         else:
             relation_type = "m:n"
         data.append((relation, relation_type))
