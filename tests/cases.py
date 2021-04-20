@@ -10,7 +10,7 @@ import timeit
 import traceback
 import unittest
 from abc import ABC, abstractmethod
-from typing import Any, ClassVar, Collection, Dict, Mapping, MutableMapping, Optional, Tuple, Type, TypeVar
+from typing import Any, ClassVar, Collection, Dict, Mapping, MutableMapping, Optional, Sequence, Tuple, Type, TypeVar
 from unittest.mock import patch
 
 import pytest
@@ -711,6 +711,9 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
     # initialization
     num_constant_init: int = 0
 
+    #: Static extras to append to the CLI
+    cli_extras: Sequence[str] = tuple()
+
     def pre_setup_hook(self) -> None:  # noqa: D102
         # for reproducible testing
         _, self.generator, _ = set_random_seed(42)
@@ -905,7 +908,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
             assert _equal_embeddings(original_model.relation_embeddings, loaded_model.relation_embeddings)
 
     @property
-    def cli_extras(self):
+    def _cli_extras(self):
         """Return a list of extra flags for the CLI."""
         kwargs = self.kwargs or {}
         extras = [
@@ -929,6 +932,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
             '--embedding-dim', self.embedding_dim,
             '--batch-size', self.train_batch_size,
         ]
+        extras.extend(self.cli_extras)
         # TODO: Make sure that inverse triples are created if create_inverse_triples=True
         extras = [str(e) for e in extras]
         return extras
@@ -936,17 +940,17 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
     @pytest.mark.slow
     def test_cli_training_nations(self):
         """Test running the pipeline on almost all models with only training data."""
-        self._help_test_cli(['-t', NATIONS_TRAIN_PATH] + self.cli_extras)
+        self._help_test_cli(['-t', NATIONS_TRAIN_PATH] + self._cli_extras)
 
     @pytest.mark.slow
     def test_cli_training_kinships(self):
         """Test running the pipeline on almost all models with only training data."""
-        self._help_test_cli(['-t', KINSHIPS_TRAIN_PATH] + self.cli_extras)
+        self._help_test_cli(['-t', KINSHIPS_TRAIN_PATH] + self._cli_extras)
 
     @pytest.mark.slow
     def test_cli_training_nations_testing(self):
         """Test running the pipeline on almost all models with only training data."""
-        self._help_test_cli(['-t', NATIONS_TRAIN_PATH, '-q', NATIONS_TEST_PATH] + self.cli_extras)
+        self._help_test_cli(['-t', NATIONS_TRAIN_PATH, '-q', NATIONS_TEST_PATH] + self._cli_extras)
 
     def _help_test_cli(self, args):
         """Test running the pipeline on all models."""
