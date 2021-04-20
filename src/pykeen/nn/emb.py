@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import functools
+import itertools
 import logging
 import warnings
 from abc import ABC, abstractmethod
@@ -808,10 +809,26 @@ class CombinedCompGCNRepresentations(nn.Module):
         *,
         triples_factory: CoreTriplesFactory,
         embedding_specification: EmbeddingSpecification,
-        num_layers: int = 1,
-        output_dim: int = 128,
+        num_layers: Optional[int] = 1,
+        dims: Union[None, int, Sequence[int]] = None,
         layer_kwargs: Optional[Mapping[str, Any]] = None,
     ):
+        """
+        Initialize the combined entity and relation representation module.
+
+        :param triples_factory:
+            The triples factory containing the training triples.
+        :param embedding_specification:
+            An embedding specification for the base entity and relation representations.
+        :param num_layers:
+            The number of message passing layers to use. If None, will be inferred by len(dims), i.e., requires dims to
+            be a sequence / list.
+        :param dims:
+            The hidden dimensions to use. If None, defaults to the embedding dimension of the base representations.
+            If an integer, is the same for all layers. The last dimension is equal to the output dimension.
+        :param layer_kwargs:
+            Additional key-word based parameters passed to the individual layers; cf. CompGCNLayer.
+        """
         super().__init__()
         # TODO: Check
         assert triples_factory.create_inverse_triples
@@ -823,20 +840,34 @@ class CombinedCompGCNRepresentations(nn.Module):
         )
         input_dim = self.entity_representations.embedding_dim
         assert self.relation_representations.embedding_dim == input_dim
+
+        # hidden dimension normalization
+        if dims is None:
+            dims = input_dim
+        if isinstance(dims, int):
+            dims = [dims] * num_layers
+        if len(dims) != num_layers:
+            raise ValueError(
+                f"The number of provided dimensions ({len(dims)}) must equal the number of layers ({num_layers})."
+            )
+        self.output_dim = dims[-1]
+
+        # Create message passing layers
         layers = []
-        for _ in range(num_layers):
+        for input_dim, output_dim in zip(itertools.chain([input_dim], dims), dims):
             layers.append(CompGCNLayer(
                 input_dim=input_dim,
                 output_dim=output_dim,
                 **(layer_kwargs or {}),
             ))
-            input_dim = output_dim
-        self.output_dim = output_dim
         self.layers = nn.ModuleList(layers)
 
-        self.register_buffer(name="triples", tensor=triples_factory.mapped_triples)
+        # register buffers for adjacency matrix; we use the same format as PyTorch Geometric
+        # TODO: This always uses all training triples for message passing
+        self.register_buffer(name="edge_index", tensor=triples_factory.mapped_triples[:, [0, 2]].t())
+        self.register_buffer(name="edge_type", tensor=triples_factory.mapped_triples[:, 1])
 
-        # buffering of enriched representations
+        # initialize buffer of enriched representations
         self.enriched_representations = None
 
     def post_parameter_update(self) -> None:  # noqa: D102
