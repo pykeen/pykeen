@@ -13,8 +13,8 @@ from tqdm.auto import tqdm
 logger = logging.getLogger(__name__)
 
 __all__ = [
-    "iter_patterns",
-    "PatternMatch",
+    "relation_cardinality_types",
+    "relation_pattern_types",
 ]
 
 # constants
@@ -371,7 +371,7 @@ def relation_pattern_classification(
     ).sort_values(by=["pattern", "relation_id", "confidence", "support"])
 
 
-def relation_cardinality_type_classification(
+def relation_cardinality_types(
     mapped_triples: Collection[Tuple[int, int, int]],
 ) -> pd.DataFrame:
     r"""
