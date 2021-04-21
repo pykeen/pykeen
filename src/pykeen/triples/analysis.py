@@ -225,6 +225,13 @@ def _is_injective_mapping(
 def iter_relation_cardinality_types(
     mapped_triples: Collection[Tuple[int, int, int]],
 ) -> Iterable[PatternMatch]:
+    """Iterate over relation-cardinality types.
+
+    :param mapped_triples:
+        A collection of ID-based triples.
+
+    :yields: A pattern match tuple of relation_id, pattern_type, support, and confidence.
+    """
     df = pd.DataFrame(data=mapped_triples, columns=["h", "r", "t"])
     for relation, group in df.groupby(by="r"):
         n_unique_heads, head_injective_conf = _is_injective_mapping(df=group, source="h", target="t")
