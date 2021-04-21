@@ -5,7 +5,9 @@ import logging
 from collections import defaultdict
 from typing import Collection, DefaultDict, Iterable, Mapping, NamedTuple, Set, Tuple
 
+import numpy
 import pandas as pd
+import torch
 from tqdm.auto import tqdm
 
 logger = logging.getLogger(__name__)
@@ -266,3 +268,46 @@ def skyline(data_stream: Iterable[PatternMatch]) -> Iterable[PatternMatch]:
     for (r_id, pat), values in data.items():
         for supp, conf in _get_skyline(values):
             yield PatternMatch(r_id, pat, supp, conf)
+
+
+def get_id_counts(id_tensor: torch.LongTensor, num_ids: int) -> numpy.ndarray:
+    """Create a dense tensor of ID counts.
+
+    :param id_tensor:
+        The tensor of IDs.
+    :param num_ids:
+        The number of IDs.
+
+    :return: shape: (num_ids,)
+         The counts for each individual ID from {0, 1, ..., num_ids-1}.
+    """
+    unique, counts = id_tensor.unique(return_counts=True)
+    total_counts = numpy.zeros(shape=(num_ids,), dtype=numpy.int64)
+    total_counts[unique.numpy()] = counts.numpy()
+    return total_counts
+
+
+def relation_classification_tmp(mapped_triples: Collection[Tuple[int, int, int]]) -> pd.DataFrame:
+    # determine patterns from triples
+    base = iter_patterns(mapped_triples=mapped_triples.tolist())
+    # drop zero-confidence
+    base = (
+        pattern
+        for pattern in base
+        if pattern.confidence > 0
+    )
+    # keep only skyline
+    base = skyline(base)
+    # create data frame
+    return pd.DataFrame(
+        data=list(base),
+        columns=["relation_id", "pattern", "support", "confidence"],
+    ).sort_values(by=["pattern", "relation_id", "confidence", "support"])
+
+
+relation_cardinalities_types = {
+    "one-to-one",
+    "one-to-many",
+    "many-to-one",
+    "many-to-many",
+}

@@ -11,13 +11,12 @@ import torch
 
 from .base import Dataset
 from ..constants import PYKEEN_DATASETS
-from ..triples.analysis import iter_patterns, iter_relation_cardinality_types, skyline, triple_set_hash
+from ..triples.analysis import get_id_counts, iter_relation_cardinality_types, relation_classification_tmp, triple_set_hash
 from ..utils import invert_mapping
 
 logger = logging.getLogger(__name__)
 
 __all__ = [
-    'get_id_counts',
     'relation_classification',
     'relation_count_dataframe',
     'entity_count_dataframe',
@@ -26,26 +25,6 @@ __all__ = [
 ]
 
 SUBSET_LABELS = ('testing', 'training', 'validation', 'total')
-
-
-# PatternMatch = namedtuple('PatternMatch', ['relation_id', 'pattern_type', 'support', 'confidence'])
-
-
-def get_id_counts(id_tensor: torch.LongTensor, num_ids: int) -> numpy.ndarray:
-    """Create a dense tensor of ID counts.
-
-    :param id_tensor:
-        The tensor of IDs.
-    :param num_ids:
-        The number of IDs.
-
-    :return: shape: (num_ids,)
-         The counts for each individual ID from {0, 1, ..., num_ids-1}.
-    """
-    unique, counts = id_tensor.unique(return_counts=True)
-    total_counts = numpy.zeros(shape=(num_ids,), dtype=numpy.int64)
-    total_counts[unique.numpy()] = counts.numpy()
-    return total_counts
 
 
 def relation_count_dataframe(dataset: Dataset) -> pd.DataFrame:
@@ -261,24 +240,7 @@ def relation_classification(
             for part in parts
         ], dim=0)
 
-        # determine patterns from triples
-        base = iter_patterns(mapped_triples=mapped_triples.tolist())
-
-        # drop zero-confidence
-        base = (
-            pattern
-            for pattern in base
-            if pattern.confidence > 0
-        )
-
-        # keep only skyline
-        base = skyline(base)
-
-        # create data frame
-        df = pd.DataFrame(
-            data=list(base),
-            columns=["relation_id", "pattern", "support", "confidence"],
-        ).sort_values(by=["pattern", "relation_id", "confidence", "support"])
+        df = relation_classification_tmp(mapped_triples)
 
         # save to file
         cache_path.parent.mkdir(exist_ok=True, parents=True)
@@ -328,15 +290,6 @@ def _add_relation_labels(
         ),
         on=relation_id_column,
     )
-
-
-# TODO: This needs a better name, too
-relation_cardinalities_types = {
-    "one-to-one",
-    "one-to-many",
-    "many-to-one",
-    "many-to-many",
-}
 
 
 def relation_cardinality_classification(
