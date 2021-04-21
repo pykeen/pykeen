@@ -11,9 +11,10 @@ import pandas
 
 from pykeen.datasets import Nations
 from pykeen.datasets.analysis import (
-    SUBSET_LABELS, _get_skyline, calculate_relation_functionality, entity_count_dataframe, entity_relation_co_occurrence_dataframe,
+    SUBSET_LABELS, calculate_relation_functionality, entity_count_dataframe, entity_relation_co_occurrence_dataframe,
     relation_cardinalities_types, relation_cardinality_classification, relation_classification, relation_count_dataframe,
 )
+from pykeen.triples.analysis import _get_skyline
 
 
 def _old_skyline(xs):
