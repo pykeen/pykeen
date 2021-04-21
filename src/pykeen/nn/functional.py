@@ -415,24 +415,43 @@ def hole_interaction(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    # Circular correlation of entity embeddings
-    a_fft = rfft(h, dim=-1)
-    b_fft = rfft(t, dim=-1)
-
-    # complex conjugate
-    a_fft = torch.conj(a_fft)
-
-    # Hadamard product in frequency domain
-    p_fft = a_fft * b_fft
-
-    # inverse real FFT, shape: (b, h, 1, t, d)
-    composite = irfft(p_fft, n=h.shape[-1], dim=-1)
+    # composite: (b, h, 1, t, d)
+    composite = circular_correlation(h, t)
 
     # transpose composite: (b, h, 1, d, t)
     composite = composite.transpose(-2, -1)
 
     # inner product with relation embedding
     return (r @ composite).squeeze(dim=-2)
+
+
+def circular_correlation(
+    a: torch.FloatTensor,
+    b: torch.FloatTensor,
+) -> torch.FloatTensor:
+    """
+    Compute the circular correlation between to vectors.
+
+    .. note ::
+        The implementation uses FFT.
+
+    :param a: shape: s_1
+        The tensor with the first vectors.
+    :param b:
+        The tensor with the second vectors.
+
+    :return:
+        The circular correlation between the vectors.
+    """
+    # Circular correlation of entity embeddings
+    a_fft = rfft(a, dim=-1)
+    b_fft = rfft(b, dim=-1)
+    # complex conjugate
+    a_fft = torch.conj(a_fft)
+    # Hadamard product in frequency domain
+    p_fft = a_fft * b_fft
+    # inverse real FFT
+    return irfft(p_fft, n=a.shape[-1], dim=-1)
 
 
 def kg2e_interaction(

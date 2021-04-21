@@ -61,6 +61,7 @@ class PairRE(ERModel):
         :param embedding_dim: The entity embedding dimension $d$.
         :param p: The $l_p$ norm.
         :param power_norm: Should the power norm be used?
+        :param kwargs: Remaining keyword arguments passed through to :class:`pykeen.models.ERModel`.
         """
         entity_normalizer_kwargs = _resolve_kwargs(
             kwargs=entity_normalizer_kwargs,
