@@ -17,7 +17,7 @@ from dataclasses_json import DataClassJsonMixin
 from tqdm.autonotebook import tqdm
 
 from ..models import Model
-from ..triples.utils import get_entities
+from ..triples.utils import get_entities, get_relations
 from ..typing import MappedTriples
 from ..utils import (
     is_cuda_oom_error, is_cudnn_error, is_nonzero_larger_than_maxint_error, normalize_string,
@@ -472,6 +472,7 @@ def evaluate(
     use_tqdm: bool = True,
     tqdm_kwargs: Optional[Mapping[str, str]] = None,
     restrict_entities_to: Optional[torch.LongTensor] = None,
+    restrict_relations_to: Optional[torch.LongTensor] = None,
     do_time_consuming_checks: bool = True,
 ) -> Union[MetricResults, List[MetricResults]]:
     """Evaluate metrics for model on mapped triples.
@@ -508,9 +509,13 @@ def evaluate(
         which might decrease performance, but the scores with afterwards be filtered to only keep those of interest.
         If provided, we assume that the triples are already filtered, such that it only contains the entities of
         interest.
+    :param restrict_relations_to:
+        Optionally restrict the evaluation to the given relation IDs. This may be useful if one is only interested in a
+        part of the relations, e.g. due to relation types, but wants to train on all available data. If provided, we
+        assume that the triples are already filtered, such that it only contains the relations of interest.
     :param do_time_consuming_checks:
         Whether to perform some time consuming checks on the provided arguments. Currently, this encompasses:
-        - If restrict_entities_to is not None, check whether the triples have been filtered.
+        - If restrict_entities_to or restrict_relations_to is not None, check whether the triples have been filtered.
         Disabling this option can accelerate the method.
     """
     if isinstance(evaluators, Evaluator):  # upgrade a single evaluator to a list
@@ -519,12 +524,23 @@ def evaluate(
     start = timeit.default_timer()
 
     # verify that the triples have been filtered
-    if restrict_entities_to is not None and do_time_consuming_checks:
-        present_entity_ids = get_entities(triples=mapped_triples)
-        unwanted = present_entity_ids.difference(restrict_entities_to.tolist())
-        if len(unwanted) > 0:
-            raise ValueError(f'mapped_triples contains IDs of entities which are not contained in restrict_entities_to:'
-                             f'{unwanted}. This will invalidate the evaluation results.')
+    if do_time_consuming_checks:
+        if restrict_entities_to is not None:
+            present_entity_ids = get_entities(triples=mapped_triples)
+            unwanted = present_entity_ids.difference(restrict_entities_to.tolist())
+            if len(unwanted) > 0:
+                raise ValueError(
+                    f'mapped_triples contains IDs of entities which are not contained in restrict_entities_to:'
+                    f'{unwanted}. This will invalidate the evaluation results.',
+                )
+        if restrict_relations_to is not None:
+            present_relation_ids = get_relations(triples=mapped_triples)
+            unwanted = present_relation_ids.difference(restrict_entities_to.tolist())
+            if len(unwanted):
+                raise ValueError(
+                    f'mapped_triples contains IDs of relations which are not contained in restrict_relations_to:'
+                    f'{unwanted}. This will invalidate the evaluation results.'
+                )
 
     # Send to device
     if device is not None:
