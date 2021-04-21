@@ -551,14 +551,12 @@ def _add_relation_labels(
 
 
 # TODO: This needs a better name, too
-# a mapping from (single head per tail?, single tail per head?) to a name for this type of relation
-_relation_type_mapping: Mapping[Tuple[bool, bool], str] = {
-    (True, True): "one-to-one",
-    (True, False): "one-to-many",
-    (False, True): "many-to-one",
-    (False, False): "many-to-many",
+relation_types2 = {
+    "one-to-one",
+    "one-to-many",
+    "many-to-one",
+    "many-to-many",
 }
-relation_types2 = frozenset(_relation_type_mapping.values())
 
 
 def _is_injective_mapping(
