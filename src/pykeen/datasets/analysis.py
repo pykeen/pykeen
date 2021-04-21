@@ -550,11 +550,61 @@ def _add_relation_labels(
     )
 
 
+# TODO: This needs a better name, too
+# a mapping from (single head per tail?, single tail per head?) to a name for this type of relation
+_relation_type_mapping: Mapping[Tuple[bool, bool], str] = {
+    (True, True): "one-to-one",
+    (True, False): "one-to-many",
+    (False, True): "many-to-one",
+    (False, False): "many-to-many",
+}
+relation_types2 = frozenset(_relation_type_mapping.values())
+
+
+def _is_injective_mapping(
+    df: pd.DataFrame,
+    source: str,
+    target: str,
+) -> Tuple[int, float]:
+    """
+    (Soft-)Determine whether there is an injective mapping from source to target.
+
+    :param df:
+        The dataframe.
+    :param source:
+        The source column.
+    :param target:
+        The target column.
+
+    :return:
+        The number of unique source values, and the relative frequency of unique target per source.
+    """
+    grouped = df.groupby(by=source)
+    support = len(grouped)
+    n_unique = grouped.agg({target: "nunique"})[target]
+    conf = (n_unique <= 1).mean()
+    return support, conf
+
+
+def iter_relation_types(
+    mapped_triples: Collection[Tuple[int, int, int]],
+) -> Iterable[PatternMatch]:
+    df = pd.DataFrame(data=mapped_triples, columns=["h", "r", "t"])
+    for relation, group in df.groupby(by="r"):
+        n_unique_heads, head_injective_conf = _is_injective_mapping(df=group, source="h", target="t")
+        n_unique_tails, tail_injective_conf = _is_injective_mapping(df=group, source="t", target="h")
+        # TODO: what is the support?
+        support = n_unique_heads + n_unique_tails
+        yield PatternMatch(relation, "one-to-one", support, head_injective_conf * tail_injective_conf)
+        yield PatternMatch(relation, "one-to-many", support, (1 - head_injective_conf) * tail_injective_conf)
+        yield PatternMatch(relation, "many-to-one", support, head_injective_conf * (1 - tail_injective_conf))
+        yield PatternMatch(relation, "many-to-many", support, (1 - head_injective_conf) * (1 - tail_injective_conf))
+
+
 def relation_classification2(
     *,
     dataset: Dataset,
     parts: Optional[Collection[str]] = None,
-    threshold: float = 0.95,
     add_labels: bool = True,
 ):
     """
@@ -565,6 +615,8 @@ def relation_classification2(
     :param parts:
         Only use certain parts of the dataset, e.g., train triples. Defaults to using all triples, i.e.
         {"training", "validation", "testing}.
+    :param add_labels:
+        Whether to add relation labels (if available).
 
     :return:
         A dataframe with columns ( relation_id | relation_type )
@@ -573,22 +625,26 @@ def relation_classification2(
     # TODO: Consider merging with other analysis methods
     parts = _normalize_parts(dataset=dataset, parts=parts)
     mapped_triples = _get_mapped_triples(dataset=dataset, parts=parts)
-    df = pd.DataFrame(data=mapped_triples, columns=["h", "r", "t"])
-    data = []
-    for relation, group in df.groupby(by="r"):
-        # TODO: support + confidence
-        single_t_per_h = (group.groupby(by="h").agg({"t": "nunique"})["t"] <= 1).mean() >= threshold
-        single_h_per_t = (group.groupby(by="t").agg({"h": "nunique"})["h"] <= 1).mean() >= threshold
-        if single_h_per_t and single_t_per_h:
-            relation_type = "1:1"
-        elif single_h_per_t:  # and not single_t_per_h
-            relation_type = "1:n"
-        elif single_t_per_h:  # and not single_h_per_t
-            relation_type = "m:1"
-        else:
-            relation_type = "m:n"
-        data.append((relation, relation_type))
-    df = pd.DataFrame(data=data, columns=["relation_id", "relation_type"])
+
+    # iterate relation types
+    base = iter_relation_types(mapped_triples=mapped_triples)
+
+    # drop zero-confidence
+    base = (
+        pattern
+        for pattern in base
+        if pattern.confidence > 0
+    )
+
+    # keep only skyline
+    # does not make much sense, since there is always exactly one entry per (relation, pattern) pair
+    # base = skyline(base)
+
+    # create data frame
+    df = pd.DataFrame(
+        data=base,
+        columns=["relation_id", "relation_type", "support", "confidence"],
+    )
     if add_labels:
         df = _add_relation_labels(dataset=dataset, df=df)
     return df
