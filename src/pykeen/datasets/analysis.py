@@ -604,7 +604,7 @@ def relation_cardinality_classification(
     dataset: Dataset,
     parts: Optional[Collection[str]] = None,
     add_labels: bool = True,
-):
+) -> pd.DataFrame:
     r"""
     Determine the relation cardinality types.
 
