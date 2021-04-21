@@ -17,6 +17,34 @@ __all__ = [
     "PatternMatch",
 ]
 
+# constants
+CARDINALITY_TYPE_ONE_TO_ONE = "one-to-one"
+CARDINALITY_TYPE_ONE_TO_MANY = "one-to-many"
+CARDINALITY_TYPE_MANY_TO_ONE = "many-to-one"
+CARDINALITY_TYPE_MANY_TO_MANY = "many-to-many"
+
+relation_cardinalities_types = {
+    CARDINALITY_TYPE_ONE_TO_ONE,
+    CARDINALITY_TYPE_ONE_TO_MANY,
+    CARDINALITY_TYPE_MANY_TO_ONE,
+    CARDINALITY_TYPE_MANY_TO_MANY,
+}
+
+# constants
+PATTERN_TYPE_SYMMETRY = "symmetry"
+PATTERN_TYPE_ANTI_SYMMETRY = "anti-symmetry"
+PATTERN_TYPE_INVERSION = "inversion"
+PATTERN_TYPE_COMPOSITION = "composition"
+relation_pattern_types = {
+    # unary
+    PATTERN_TYPE_SYMMETRY,
+    PATTERN_TYPE_ANTI_SYMMETRY,
+    # binary
+    PATTERN_TYPE_INVERSION,
+    # ternary
+    PATTERN_TYPE_COMPOSITION,
+}
+
 
 def composition_candidates(
     mapped_triples: Iterable[Tuple[int, int, int]],
@@ -84,9 +112,9 @@ def iter_unary_patterns(
         support = len(ht)
         rev_ht = {(t, h) for h, t in ht}
         confidence = len(ht.intersection(rev_ht)) / support
-        yield PatternMatch(r, "symmetry", support, confidence)
+        yield PatternMatch(r, PATTERN_TYPE_SYMMETRY, support, confidence)
         confidence = len(ht.difference(rev_ht)) / support
-        yield PatternMatch(r, "anti-symmetry", support, 1 - confidence)
+        yield PatternMatch(r, PATTERN_TYPE_ANTI_SYMMETRY, support, 1 - confidence)
 
 
 def iter_binary_patterns(
@@ -110,7 +138,7 @@ def iter_binary_patterns(
     for (_r1, ht1), (r, ht2) in itt.combinations(pairs.items(), r=2):
         support = len(ht1)
         confidence = len(ht1.intersection(ht2)) / support
-        yield PatternMatch(r, "inversion", support, confidence)
+        yield PatternMatch(r, PATTERN_TYPE_INVERSION, support, confidence)
 
 
 def iter_ternary_patterns(
@@ -158,7 +186,7 @@ def iter_ternary_patterns(
             continue
         for r, ht in pairs.items():
             confidence = len(lhs.intersection(ht)) / support
-            yield PatternMatch(r, "composition", support, confidence)
+            yield PatternMatch(r, PATTERN_TYPE_COMPOSITION, support, confidence)
 
 
 def iter_patterns(
@@ -238,10 +266,10 @@ def iter_relation_cardinality_types(
         n_unique_tails, tail_injective_conf = _is_injective_mapping(df=group, source="t", target="h")
         # TODO: what is the support?
         support = n_unique_heads + n_unique_tails
-        yield PatternMatch(relation, "one-to-one", support, head_injective_conf * tail_injective_conf)
-        yield PatternMatch(relation, "one-to-many", support, (1 - head_injective_conf) * tail_injective_conf)
-        yield PatternMatch(relation, "many-to-one", support, head_injective_conf * (1 - tail_injective_conf))
-        yield PatternMatch(relation, "many-to-many", support, (1 - head_injective_conf) * (1 - tail_injective_conf))
+        yield PatternMatch(relation, CARDINALITY_TYPE_ONE_TO_ONE, support, head_injective_conf * tail_injective_conf)
+        yield PatternMatch(relation, CARDINALITY_TYPE_ONE_TO_MANY, support, (1 - head_injective_conf) * tail_injective_conf)
+        yield PatternMatch(relation, CARDINALITY_TYPE_MANY_TO_ONE, support, head_injective_conf * (1 - tail_injective_conf))
+        yield PatternMatch(relation, CARDINALITY_TYPE_MANY_TO_MANY, support, (1 - head_injective_conf) * (1 - tail_injective_conf))
 
 
 def _get_skyline(
@@ -313,11 +341,3 @@ def relation_classification_tmp(mapped_triples: Collection[Tuple[int, int, int]]
         data=list(base),
         columns=["relation_id", "pattern", "support", "confidence"],
     ).sort_values(by=["pattern", "relation_id", "confidence", "support"])
-
-
-relation_cardinalities_types = {
-    "one-to-one",
-    "one-to-many",
-    "many-to-one",
-    "many-to-many",
-}
