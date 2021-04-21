@@ -12,7 +12,7 @@ import torch
 from .base import Dataset
 from ..constants import PYKEEN_DATASETS
 from ..triples import analysis as triple_analysis
-from ..triples.analysis import get_id_counts, iter_relation_cardinality_types, relation_pattern_classification, triple_set_hash
+from ..triples.analysis import get_id_counts, relation_cardinality_type_classification, relation_pattern_classification, triple_set_hash
 from ..utils import invert_mapping
 
 logger = logging.getLogger(__name__)
@@ -329,25 +329,7 @@ def relation_cardinality_classification(
     parts = _normalize_parts(dataset=dataset, parts=parts)
     mapped_triples = _get_mapped_triples(dataset=dataset, parts=parts)
 
-    # iterate relation types
-    base = iter_relation_cardinality_types(mapped_triples=mapped_triples)
-
-    # drop zero-confidence
-    base = (
-        pattern
-        for pattern in base
-        if pattern.confidence > 0
-    )
-
-    # keep only skyline
-    # does not make much sense, since there is always exactly one entry per (relation, pattern) pair
-    # base = skyline(base)
-
-    # create data frame
-    df = pd.DataFrame(
-        data=base,
-        columns=["relation_id", "relation_type", "support", "confidence"],
-    )
+    df = relation_cardinality_type_classification(mapped_triples)
     if add_labels:
         df = _add_relation_labels(dataset=dataset, df=df)
     return df

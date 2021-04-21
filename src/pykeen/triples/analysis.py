@@ -369,3 +369,49 @@ def relation_pattern_classification(
         data=list(base),
         columns=["relation_id", "pattern", "support", "confidence"],
     ).sort_values(by=["pattern", "relation_id", "confidence", "support"])
+
+
+def relation_cardinality_type_classification(
+    mapped_triples: Collection[Tuple[int, int, int]],
+) -> pd.DataFrame:
+    r"""
+    Determine the relation cardinality types.
+
+    The possible types are given in relation_cardinality_types.
+
+    .. note ::
+        In the current implementation, we have by definition
+
+        .. math ::
+            1 = \sum_{type} conf(relation, type)
+
+    .. note ::
+       These relation types are also mentioned in [wang2014]_. However, the paper does not provide any details on
+       their definition, nor is any code provided. Thus, their exact procedure is unknown and may not coincide with this
+       implementation.
+
+    :param mapped_triples:
+        The ID-based triples.
+
+    :return:
+        A dataframe with columns ( relation_id | relation_type )
+    """
+    # iterate relation types
+    base = iter_relation_cardinality_types(mapped_triples=mapped_triples)
+
+    # drop zero-confidence
+    base = (
+        pattern
+        for pattern in base
+        if pattern.confidence > 0
+    )
+
+    # keep only skyline
+    # does not make much sense, since there is always exactly one entry per (relation, pattern) pair
+    # base = skyline(base)
+
+    # create data frame
+    return pd.DataFrame(
+        data=base,
+        columns=["relation_id", "relation_type", "support", "confidence"],
+    )
