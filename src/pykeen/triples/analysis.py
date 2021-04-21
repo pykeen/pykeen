@@ -325,17 +325,45 @@ def get_id_counts(id_tensor: torch.LongTensor, num_ids: int) -> numpy.ndarray:
     return total_counts
 
 
-def relation_classification_tmp(mapped_triples: Collection[Tuple[int, int, int]]) -> pd.DataFrame:
+def relation_pattern_classification(
+    mapped_triples: Collection[Tuple[int, int, int]],
+) -> pd.DataFrame:
+    """
+    Categorize relations based on patterns from RotatE [sun2019]_.
+
+    The relation classifications are based upon checking whether the corresponding rules hold with sufficient support
+    and confidence. By default, we do not require a minimum support, however, a relatively high confidence.
+
+    The following four non-exclusive classes for relations are considered:
+
+    - symmetry
+    - anti-symmetry
+    - inversion
+    - composition
+
+    This method generally follows the terminology of association rule mining. The patterns are expressed as
+
+    .. math ::
+
+        X_1 \land \cdot \land X_k \implies Y
+
+    where $X_i$ is of the form $r_i(h_i, t_i)$, and some of the $h_i / t_i$ might re-occur in other atoms.
+    The *support* of a pattern is the number of distinct instantiations of all variables for the left hand side.
+    The *confidence* is the proportion of these instantiations where the right-hand side is also true.
+    """
     # determine patterns from triples
-    base = iter_patterns(mapped_triples=mapped_triples.tolist())
+    base = iter_patterns(mapped_triples=mapped_triples)
+
     # drop zero-confidence
     base = (
         pattern
         for pattern in base
         if pattern.confidence > 0
     )
+
     # keep only skyline
     base = skyline(base)
+
     # create data frame
     return pd.DataFrame(
         data=list(base),

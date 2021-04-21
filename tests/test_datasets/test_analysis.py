@@ -12,7 +12,7 @@ import pandas
 from pykeen.datasets import Nations
 from pykeen.datasets.analysis import (
     SUBSET_LABELS, calculate_relation_functionality, entity_count_dataframe, entity_relation_co_occurrence_dataframe,
-    relation_cardinality_classification, relation_classification, relation_count_dataframe,
+    relation_cardinality_classification, relation_pattern_classification, relation_count_dataframe,
 )
 from pykeen.triples.analysis import _get_skyline, relation_cardinalities_types
 
@@ -109,7 +109,7 @@ class AnalysisTests(unittest.TestCase):
 
     def test_relation_classification(self):
         """Helper method for relation classification."""
-        df = relation_classification(
+        df = relation_pattern_classification(
             dataset=self.dataset,
             drop_confidence=False,
         )
