@@ -11,7 +11,7 @@ import pandas
 
 from pykeen.datasets import Nations
 from pykeen.datasets.analysis import (
-    SUBSET_LABELS, _get_skyline, entity_count_dataframe, entity_relation_co_occurrence_dataframe,
+    SUBSET_LABELS, _get_skyline, calculate_relation_functionality, entity_count_dataframe, entity_relation_co_occurrence_dataframe,
     relation_cardinalities_types, relation_cardinality_classification, relation_classification, relation_count_dataframe,
 )
 
@@ -155,3 +155,21 @@ class AnalysisTests(unittest.TestCase):
 
         # check pattern value range
         assert df["relation_type"].isin(relation_cardinalities_types).all()
+
+    def test_calculate_relation_functionality(self):
+        """Tests calculate_relation_functionality."""
+        df = calculate_relation_functionality(
+            dataset=self.dataset,
+        )
+
+        # check correct type
+        assert isinstance(df, pandas.DataFrame)
+
+        assert {
+            "relation_id",
+            "functionality",
+            "inverse_functionality",
+        }.issubset(df.columns)
+
+        # check relation_id value range
+        assert df["relation_id"].isin(self.dataset.relation_to_id.values()).all()

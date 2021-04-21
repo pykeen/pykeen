@@ -658,3 +658,55 @@ def relation_cardinality_classification(
     if add_labels:
         df = _add_relation_labels(dataset=dataset, df=df)
     return df
+
+
+def calculate_relation_functionality(
+    *,
+    dataset: Dataset,
+    parts: Optional[Collection[str]] = None,
+    add_labels: bool = True,
+) -> pd.DataFrame:
+    """
+    Calculate the functionality and inverse functionality score per relation.
+
+    The (inverse) functionality was proposed in [wang2018]_. It is defined as the number of unique head (tail) entities
+    divided by the of triples in which the relation occurs. Thus, its value range is [0, 1]. Smaller values indicate
+    that entities usually have more than one outgoing (incoming) triple with the corresponding relation type. Hence,
+    the score is related to the relation cardinality types.
+
+    :param dataset:
+        The dataset to investigate.
+    :param parts:
+        Only use certain parts of the dataset, e.g., train triples. Defaults to using all triples, i.e.
+        {"training", "validation", "testing}.
+    :param add_labels:
+        Whether to add relation labels (if available).
+
+    :return:
+        A dataframe with columns (relation_id | functionality | inverse functionality)
+
+    # TODO: Where to put this citation? The paper is about an entity alignment model rather than a link prediction one.
+
+    [wang2018]
+        Cross-lingual Knowledge Graph Alignment via Graph Convolutional Networks
+        Zhichun Wang, Qingsong Lv, Xiaohan Lan, Yu Zhang
+        Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing
+    """
+    # TODO: Consider merging with other analysis methods
+    parts = _normalize_parts(dataset=dataset, parts=parts)
+    mapped_triples = _get_mapped_triples(dataset=dataset, parts=parts)
+    df = pd.DataFrame(data=mapped_triples, columns=["h", "r", "t"])
+    df = df.groupby(by="r").agg(dict(
+        h=["nunique", "count"],
+        t="nunique",
+    ))
+    df["functionality"] = df[("h", "nunique")] / df[("h", "count")]
+    df["inverse_functionality"] = df[("t", "nunique")] / df[("h", "count")]
+    df = df[["functionality", "inverse_functionality"]]
+    df.columns = df.columns.droplevel(1)
+    df.index.name = "relation_id"
+    df = df.reset_index()
+
+    if add_labels:
+        df = _add_relation_labels(dataset=dataset, df=df)
+    return df
