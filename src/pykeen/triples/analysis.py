@@ -3,12 +3,14 @@ import hashlib
 import itertools as itt
 import logging
 from collections import defaultdict
-from typing import Collection, DefaultDict, Iterable, Mapping, NamedTuple, Set, Tuple
+from typing import Collection, DefaultDict, Iterable, Mapping, NamedTuple, Optional, Set, Tuple
 
 import numpy
 import pandas as pd
 import torch
 from tqdm.auto import tqdm
+
+from pykeen.typing import MappedTriples
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +48,15 @@ relation_pattern_types = {
 }
 
 
+class PatternMatch(NamedTuple):
+    """A pattern match tuple of relation_id, pattern_type, support, and confidence."""
+
+    relation_id: int
+    pattern_type: str
+    support: int
+    confidence: float
+
+
 def composition_candidates(
     mapped_triples: Iterable[Tuple[int, int, int]],
 ) -> Collection[Tuple[int, int]]:
@@ -78,15 +89,6 @@ def composition_candidates(
         for e, r1s in ins.items()
         for r1, r2 in itt.product(r1s, outs[e])
     }
-
-
-class PatternMatch(NamedTuple):
-    """A pattern match tuple of relation_id, pattern_type, support, and confidence."""
-
-    relation_id: int
-    pattern_type: str
-    support: int
-    confidence: float
 
 
 def iter_unary_patterns(
@@ -308,7 +310,10 @@ def skyline(data_stream: Iterable[PatternMatch]) -> Iterable[PatternMatch]:
             yield PatternMatch(r_id, pat, supp, conf)
 
 
-def get_id_counts(id_tensor: torch.LongTensor, num_ids: int) -> numpy.ndarray:
+def get_id_counts(
+    id_tensor: torch.LongTensor,
+    num_ids: Optional[int] = None,
+) -> numpy.ndarray:
     """Create a dense tensor of ID counts.
 
     :param id_tensor:
@@ -320,9 +325,27 @@ def get_id_counts(id_tensor: torch.LongTensor, num_ids: int) -> numpy.ndarray:
          The counts for each individual ID from {0, 1, ..., num_ids-1}.
     """
     unique, counts = id_tensor.unique(return_counts=True)
+    if num_ids is None:
+        num_ids = unique.max().item() + 1
     total_counts = numpy.zeros(shape=(num_ids,), dtype=numpy.int64)
     total_counts[unique.numpy()] = counts.numpy()
     return total_counts
+
+
+def get_relation_counts(
+    mapped_triples: MappedTriples,
+) -> pd.DataFrame:
+    """
+    Create a dataframe of relation frequency.
+
+    :param mapped_triples: shape: (num_triples, 3)
+        The mapped triples.
+
+    :return:
+        A dataframe with columns ( relation_id | count )
+    """
+    unique, counts = mapped_triples[:, 1].unique(return_counts=True)
+    return pd.DataFrame(data=dict(relation_id=unique.numpy(), count=counts.numpy()))
 
 
 def relation_pattern_classification(

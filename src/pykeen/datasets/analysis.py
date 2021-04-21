@@ -12,7 +12,7 @@ import torch
 from .base import Dataset
 from ..constants import PYKEEN_DATASETS
 from ..triples import analysis as triple_analysis
-from ..triples.analysis import get_id_counts, relation_cardinality_types, relation_pattern_classification, triple_set_hash
+from ..triples.analysis import get_id_counts, get_relation_counts, relation_cardinality_types, relation_pattern_classification, triple_set_hash
 from ..utils import invert_mapping
 
 logger = logging.getLogger(__name__)
@@ -39,28 +39,27 @@ def relation_count_dataframe(dataset: Dataset) -> pd.DataFrame:
     >>> df = relation_count_dataframe(dataset=dataset)
 
     # Get the most frequent relations in training
-    >>> df.sort_values(by="training").head()
+    >>> df[df["subset"] == "training"].sort_values(by="count").head()
 
     # Get all relations which do not occur in the test part
-    >>> df[df["testing"] == 0]
+    >>> df[(df["subset"] == "testing") & (df["count"] == 0)]
 
     :param dataset:
         The dataset.
 
     :return:
-        A dataframe with one row per relation.
+        A dataframe with columns (relation_id, relation_label, subset, count)
     """
-    data = {
-        subset_name: get_id_counts(
-            id_tensor=triples_factory.mapped_triples[:, 1],
-            num_ids=dataset.num_relations,
-        )
-        for subset_name, triples_factory in dataset.factory_dict.items()
-    }
-    data['total'] = sum(data.values())
-    index = sorted(dataset.relation_to_id, key=dataset.relation_to_id.get)
-    df = pd.DataFrame(data=data, index=index, columns=SUBSET_LABELS)
-    df.index.name = 'relation_label'
+    data = []
+    for subset_name, triples_factory in dataset.factory_dict.items():
+        df = get_relation_counts(mapped_triples=triples_factory.mapped_triples)
+        df["subset"] = subset_name
+        data.append(df)
+    df = pd.concat(data, ignore_index=True)
+    df2 = df.groupby(by="relation_id").sum().reset_index()
+    df2["subset"] = None
+    df = pd.concat([df, df2], ignore_index=True)
+    df = _add_relation_labels(dataset=dataset, df=df)
     return df
 
 

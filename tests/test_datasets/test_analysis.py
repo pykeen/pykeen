@@ -10,10 +10,7 @@ import numpy as np
 import pandas
 
 from pykeen.datasets import Nations
-from pykeen.datasets.analysis import (
-    SUBSET_LABELS, calculate_relation_functionality, entity_count_dataframe, entity_relation_co_occurrence_dataframe,
-    relation_cardinality_classification, relation_pattern_classification, relation_count_dataframe,
-)
+from pykeen.datasets.analysis import (SUBSET_LABELS, calculate_relation_functionality, entity_count_dataframe, entity_relation_co_occurrence_dataframe, relation_cardinality_classification, relation_count_dataframe, relation_pattern_classification)
 from pykeen.triples.analysis import _get_skyline, relation_cardinalities_types
 
 
@@ -75,13 +72,32 @@ class AnalysisTests(unittest.TestCase):
         # check for index name
         assert df.index.name == label_name
 
+    def _test_count_dataframe_new(
+        self,
+        df: pandas.DataFrame,
+        prefix: str,
+    ):
+        """Check the general structure of a count dataframe."""
+        # check correct output type
+        assert isinstance(df, pandas.DataFrame)
+
+        # check columns
+        assert {f"{prefix}_id", f"{prefix}_label", "subset", "count"}.issubset(df.columns)
+
+        # check value range and type
+        assert (df["count"] >= 0).all()
+        assert df["count"].dtype == np.int64
+
+        # check value range subset
+        # TODO: Update when subset labels is fixed
+        assert set(SUBSET_LABELS).union({None}).issuperset(df["subset"].unique())
+
     def test_relation_count_dataframe(self):
         """Test relation_count_dataframe()."""
         df = relation_count_dataframe(dataset=self.dataset)
-        self._test_count_dataframe(
+        self._test_count_dataframe_new(
             df=df,
-            label_name='relation_label',
-            expected_labels=self.dataset.relation_to_id.keys(),
+            prefix="relation",
         )
 
     def test_entity_count_dataframe(self):
