@@ -618,7 +618,7 @@ def relation_cardinality_classification(
             1 = \sum_{type} conf(relation, type)
 
     .. note ::
-       These relation types are also mentioned in TransH [wang2014]_. However, the paper does not provide any details on
+       These relation types are also mentioned in [wang2014]_. However, the paper does not provide any details on
        their definition, nor is any code provided. Thus, their exact procedure is unknown and may not coincide with this
        implementation.
 
