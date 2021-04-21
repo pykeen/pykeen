@@ -549,6 +549,7 @@ def evaluate(
 
     # Filter triples if necessary
     if not pre_filtered_triples and (restrict_entities_to is not None or restrict_relations_to is not None):
+        # TODO: cf. new_with_restriction
         raise NotImplementedError
 
     # Send to device
