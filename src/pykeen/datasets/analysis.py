@@ -599,7 +599,7 @@ def iter_relation_types(
         yield PatternMatch(relation, "many-to-many", support, (1 - head_injective_conf) * (1 - tail_injective_conf))
 
 
-def relation_classification2(
+def relation_cardinality_classification(
     *,
     dataset: Dataset,
     parts: Optional[Collection[str]] = None,
