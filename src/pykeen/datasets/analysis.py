@@ -302,7 +302,7 @@ def iter_unary_patterns(
         confidence = len(ht.intersection(rev_ht)) / support
         yield PatternMatch(r, "symmetry", support, confidence)
         confidence = len(ht.difference(rev_ht)) / support
-        yield PatternMatch(r, "anti-symmetry", support, 1 - confidence)
+        yield PatternMatch(r, "anti-symmetry", support, confidence)
 
 
 def iter_binary_patterns(
