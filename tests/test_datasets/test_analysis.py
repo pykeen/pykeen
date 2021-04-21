@@ -12,7 +12,7 @@ import pandas
 from pykeen.datasets import Nations
 from pykeen.datasets.analysis import (
     SUBSET_LABELS, _get_skyline, entity_count_dataframe, entity_relation_co_occurrence_dataframe,
-    relation_cardinalities_types, relation_cardinality_classification, relation_classification, relation_classification2, relation_count_dataframe, relation_types2,
+    relation_cardinalities_types, relation_cardinality_classification, relation_classification, relation_count_dataframe,
 )
 
 
