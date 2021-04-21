@@ -226,8 +226,7 @@ def relation_classification(
     mapped_triples = _get_mapped_triples(dataset, parts)
 
     # include hash over triples into cache-file name
-    # sort first, for triple order invariance
-    ph = triple_set_hash(mapped_triples).hexdigest()[:16]
+    ph = triple_set_hash(mapped_triples)[:16]
 
     # include part hash into cache-file name
     cache_path = PYKEEN_DATASETS.joinpath(dataset.__class__.__name__.lower(), f"relation_patterns_{ph}.tsv.xz")

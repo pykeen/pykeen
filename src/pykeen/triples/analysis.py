@@ -181,17 +181,20 @@ def iter_patterns(
     yield from iter_ternary_patterns(mapped_triples, pairs=pairs)
 
 
-def triple_set_hash(mapped_triples: Collection[Tuple[int, int, int]]):
+def triple_set_hash(
+    mapped_triples: Collection[Tuple[int, int, int]],
+) -> str:
     """
-    Compute an order-invariant hash value for a set of triples given as tensor.
+    Compute an order-invariant hash value for a set of triples given as list of triples.
 
     :param mapped_triples:
         The ID-based triples.
 
     :return:
-        The hash object.
+        The hash digest as hex-value string.
     """
-    return hashlib.sha512("".join(map(str, sorted(mapped_triples))).encode("utf8"))
+    # sort first, for triple order invariance
+    return hashlib.sha512("".join(map(str, sorted(mapped_triples))).encode("utf8")).hexdigest()
 
 
 def _is_injective_mapping(
