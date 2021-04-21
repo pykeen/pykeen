@@ -551,7 +551,7 @@ def _add_relation_labels(
 
 
 # TODO: This needs a better name, too
-relation_types2 = {
+relation_cardinalities = {
     "one-to-one",
     "one-to-many",
     "many-to-one",
