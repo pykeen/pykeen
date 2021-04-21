@@ -551,7 +551,7 @@ def _add_relation_labels(
 
 
 # TODO: This needs a better name, too
-relation_cardinalities = {
+relation_cardinalities_types = {
     "one-to-one",
     "one-to-many",
     "many-to-one",
@@ -584,7 +584,7 @@ def _is_injective_mapping(
     return support, conf
 
 
-def iter_relation_types(
+def iter_relation_cardinality_types(
     mapped_triples: Collection[Tuple[int, int, int]],
 ) -> Iterable[PatternMatch]:
     df = pd.DataFrame(data=mapped_triples, columns=["h", "r", "t"])
@@ -605,8 +605,16 @@ def relation_cardinality_classification(
     parts: Optional[Collection[str]] = None,
     add_labels: bool = True,
 ):
-    """
-    Determine whether relations are of type 1:1, 1:n, m:1, or m:n.
+    r"""
+    Determine the relation cardinality types.
+
+    The possible types are given in relation_cardinality_types.
+
+    .. note ::
+        In the current implementation, we have by definition
+
+        .. math ::
+            1 = \sum_{type} conf(relation, type)
 
     :param dataset:
         The dataset to investigate.
@@ -619,13 +627,12 @@ def relation_cardinality_classification(
     :return:
         A dataframe with columns ( relation_id | relation_type )
     """
-    # TODO: This function needs a better name
     # TODO: Consider merging with other analysis methods
     parts = _normalize_parts(dataset=dataset, parts=parts)
     mapped_triples = _get_mapped_triples(dataset=dataset, parts=parts)
 
     # iterate relation types
-    base = iter_relation_types(mapped_triples=mapped_triples)
+    base = iter_relation_cardinality_types(mapped_triples=mapped_triples)
 
     # drop zero-confidence
     base = (
