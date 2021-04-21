@@ -474,6 +474,7 @@ def evaluate(
     restrict_entities_to: Optional[torch.LongTensor] = None,
     restrict_relations_to: Optional[torch.LongTensor] = None,
     do_time_consuming_checks: bool = True,
+    pre_filtered_triples: bool = True,
 ) -> Union[MetricResults, List[MetricResults]]:
     """Evaluate metrics for model on mapped triples.
 
@@ -516,7 +517,11 @@ def evaluate(
     :param do_time_consuming_checks:
         Whether to perform some time consuming checks on the provided arguments. Currently, this encompasses:
         - If restrict_entities_to or restrict_relations_to is not None, check whether the triples have been filtered.
-        Disabling this option can accelerate the method.
+        Disabling this option can accelerate the method. Only effective if pre_filtered_triples is set to True.
+    :param pre_filtered_triples:
+        Whether the triples have been pre-filtered to adhere to restrict_entities_to / restrict_relations_to. When set
+        to True, and the triples have *not* been filtered, the results may be invalid. Pre-filtering the triples
+        accelerates this method, and is recommended when evaluating multiple times on the same set of triples.
     """
     if isinstance(evaluators, Evaluator):  # upgrade a single evaluator to a list
         evaluators = [evaluators]
@@ -524,7 +529,7 @@ def evaluate(
     start = timeit.default_timer()
 
     # verify that the triples have been filtered
-    if do_time_consuming_checks:
+    if pre_filtered_triples and do_time_consuming_checks:
         if restrict_entities_to is not None:
             present_entity_ids = get_entities(triples=mapped_triples)
             unwanted = present_entity_ids.difference(restrict_entities_to.tolist())
@@ -541,6 +546,10 @@ def evaluate(
                     f'mapped_triples contains IDs of relations which are not contained in restrict_relations_to:'
                     f'{unwanted}. This will invalidate the evaluation results.'
                 )
+
+    # Filter triples if necessary
+    if not pre_filtered_triples and (restrict_entities_to is not None or restrict_relations_to is not None):
+        raise NotImplementedError
 
     # Send to device
     if device is not None:
