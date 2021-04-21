@@ -32,6 +32,7 @@ __all__ = [
     'iter_binary_patterns',
     'iter_ternary_patterns',
     'triple_set_hash',
+    'calculate_relation_functionality',
 ]
 
 SUBSET_LABELS = ('testing', 'training', 'validation', 'total')
@@ -685,12 +686,10 @@ def calculate_relation_functionality(
     :return:
         A dataframe with columns (relation_id | functionality | inverse functionality)
 
-    # TODO: Where to put this citation? The paper is about an entity alignment model rather than a link prediction one.
-
-    [wang2018]
-        Cross-lingual Knowledge Graph Alignment via Graph Convolutional Networks
-        Zhichun Wang, Qingsong Lv, Xiaohan Lan, Yu Zhang
-        Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing
+    .. [wang2018]
+        Wang, Z., *et al.* (2018). `Cross-lingual Knowledge Graph Alignment via Graph Convolutional Networks
+        <https://doi.org/10.18653/v1/D18-1032>`_. Proceedings of the 2018 Conference on Empirical Methods in
+        Natural Language Processing, 349–357.
     """
     # TODO: Consider merging with other analysis methods
     parts = _normalize_parts(dataset=dataset, parts=parts)
