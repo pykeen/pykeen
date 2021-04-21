@@ -141,8 +141,8 @@ class AnalysisTests(unittest.TestCase):
         x = df["support"].values
         assert (1 <= x).all()
 
-    def test_relation_classification2(self):
-        """Tests for relation_classification2."""
+    def test_relation_cardinality_classification(self):
+        """Tests for relation_cardinality_classification."""
         df = relation_cardinality_classification(
             dataset=self.dataset,
         )
