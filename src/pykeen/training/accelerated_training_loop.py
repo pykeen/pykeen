@@ -5,52 +5,29 @@
 import gc
 import logging
 import pathlib
-import pickle
-import random
 import time
-from abc import ABC, abstractmethod
-from datetime import datetime
-from hashlib import md5
-from typing import Any, List, Mapping, Optional, Tuple, Type, Union
+from typing import Any, List, Mapping, Optional, Type, Union
 
-import numpy as np
 import torch
+from accelerate import Accelerator
 from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
 from tqdm.autonotebook import tqdm, trange
 
-from ..constants import PYKEEN_CHECKPOINTS, PYKEEN_DEFAULT_CHECKPOINT
-from ..losses import Loss, has_mr_loss, has_nssa_loss
+from .training_loop import NonFiniteLossError, SubBatchingNotSupportedError, TrainingLoop, _get_optimizer_kwargs
+from ..losses import Loss, has_mr_loss
 from ..models import Model, RGCN
 from ..stoppers import Stopper
 from ..trackers import ResultTracker
 from ..training.schlichtkrull_sampler import GraphSampler
-from ..triples import Instances, TriplesFactory
-from ..typing import MappedTriples
-from ..utils import (
-    format_relative_comparison, get_batchnorm_modules, is_cuda_oom_error, is_cudnn_error,
-    normalize_string,
-)
-from .training_loop import NonFiniteLossError, TrainingApproachLossMismatchError, CheckpointMismatchError, SubBatchingNotSupportedError, TrainingLoop
-
-from accelerate import Accelerator
+from ..triples import Instances
+from ..utils import format_relative_comparison, get_batchnorm_modules
 
 __all__ = [
     'AcceleratedTrainingLoop',
 ]
 
 logger = logging.getLogger(__name__)
-
-
-
-def _get_optimizer_kwargs(optimizer: Optimizer) -> Mapping[str, Any]:
-    optimizer_kwargs = optimizer.state_dict()
-    optimizer_kwargs = {
-        key: value
-        for key, value in optimizer_kwargs['param_groups'][0].items()
-        if key != 'params'
-    }
-    return optimizer_kwargs
 
 
 class AcceleratedTrainingLoop(TrainingLoop):
@@ -82,12 +59,10 @@ class AcceleratedTrainingLoop(TrainingLoop):
         super().__init__(model=model, optimizer=optimizer, automatic_memory_optimization=automatic_memory_optimization)
         self.accelerator = Accelerator()
 
-
     @property
     def device(self):  # noqa: D401
         """The device used by the model."""
         return self.accelerator.device
-
 
     def _train(  # noqa: C901
         self,
@@ -438,10 +413,8 @@ class AcceleratedTrainingLoop(TrainingLoop):
 
         return current_epoch_loss
 
-
     def _free_graph_and_cache(self):
         self.model._free_graph_and_cache()
         # The cache of the previous run has to be freed to allow accurate memory availability estimates
         # Turned off for accelerate
         # torch.cuda.empty_cache()
-
