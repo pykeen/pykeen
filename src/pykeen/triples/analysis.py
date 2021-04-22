@@ -17,7 +17,9 @@ logger = logging.getLogger(__name__)
 
 __all__ = [
     "relation_cardinality_types",
+    "CardinalityTypeEnum",
     "relation_pattern_types",
+    "PatternTypeEnum",
 ]
 
 
@@ -28,9 +30,6 @@ class CardinalityTypeEnum(str, enum.Enum):
     one_to_many = "one-to-many"
     many_to_one = "many-to-one"
     many_to_many = "many-to-many"
-
-
-relation_cardinalities_types = set(CardinalityTypeEnum)
 
 
 class PatternTypeEnum(str, enum.Enum):
@@ -45,9 +44,6 @@ class PatternTypeEnum(str, enum.Enum):
 
     # ternary
     composition = "composition"
-
-
-relation_pattern_types = set(PatternTypeEnum)
 
 
 class PatternMatch(NamedTuple):
@@ -365,7 +361,7 @@ def get_relation_counts(
     return pd.DataFrame(data=dict(relation_id=unique.numpy(), count=counts.numpy()))
 
 
-def relation_pattern_classification(
+def relation_pattern_types(
     mapped_triples: Collection[Tuple[int, int, int]],
 ) -> pd.DataFrame:
     r"""

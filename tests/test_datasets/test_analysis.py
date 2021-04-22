@@ -10,8 +10,8 @@ import numpy as np
 import pandas
 
 from pykeen.datasets import Nations
-from pykeen.datasets.analysis import (SUBSET_LABELS, calculate_relation_functionality, entity_count_dataframe, entity_relation_co_occurrence_dataframe, relation_cardinality_classification, relation_count_dataframe, relation_pattern_classification)
-from pykeen.triples.analysis import _get_skyline, relation_cardinalities_types
+from pykeen.datasets.analysis import (SUBSET_LABELS, calculate_relation_functionality, entity_count_dataframe, entity_relation_co_occurrence_dataframe, relation_cardinality_classification, relation_count_dataframe, relation_pattern_types)
+from pykeen.triples.analysis import CardinalityTypeEnum, PatternTypeEnum, _get_skyline
 
 
 def _old_skyline(xs):
@@ -125,7 +125,7 @@ class AnalysisTests(unittest.TestCase):
 
     def test_relation_classification(self):
         """Helper method for relation classification."""
-        df = relation_pattern_classification(
+        df = relation_pattern_types(
             dataset=self.dataset,
             drop_confidence=False,
         )
@@ -147,7 +147,7 @@ class AnalysisTests(unittest.TestCase):
         assert df["relation_id"].isin(self.dataset.relation_to_id.values()).all()
 
         # check pattern value range
-        assert df["pattern"].isin(pattern_types).all()
+        assert df["pattern"].isin(set(PatternTypeEnum)).all()
 
         # check confidence value range
         x = df["confidence"].values
@@ -171,7 +171,7 @@ class AnalysisTests(unittest.TestCase):
         assert df["relation_id"].isin(self.dataset.relation_to_id.values()).all()
 
         # check pattern value range
-        assert df["relation_type"].isin(relation_cardinalities_types).all()
+        assert df["relation_type"].isin(set(CardinalityTypeEnum)).all()
 
     def test_calculate_relation_functionality(self):
         """Tests calculate_relation_functionality."""
