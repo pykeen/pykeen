@@ -105,6 +105,9 @@ def iter_unary_patterns(
     Anti-Symmetry  $r(x, y) \implies \neg r(y, x)$
     =============  ===============================
 
+    .. note ::
+        By definition, we have confidence(anti-symmetry) = 1 - confidence(symmetry).
+
     :param pairs:
         A mapping from relations to the set of entity pairs.
 
@@ -116,7 +119,7 @@ def iter_unary_patterns(
         rev_ht = {(t, h) for h, t in ht}
         confidence = len(ht.intersection(rev_ht)) / support
         yield PatternMatch(r, PATTERN_TYPE_SYMMETRY, support, confidence)
-        confidence = len(ht.difference(rev_ht)) / support
+        # confidence = len(ht.difference(rev_ht)) / support = 1 - len(ht.intersection(rev_ht)) / support
         yield PatternMatch(r, PATTERN_TYPE_ANTI_SYMMETRY, support, 1 - confidence)
 
 
