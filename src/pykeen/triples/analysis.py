@@ -351,7 +351,7 @@ def get_relation_counts(
 def relation_pattern_types(
     mapped_triples: Collection[Tuple[int, int, int]],
 ) -> pd.DataFrame:
-    """
+    r"""
     Categorize relations based on patterns from RotatE [sun2019]_.
 
     The relation classifications are based upon checking whether the corresponding rules hold with sufficient support
