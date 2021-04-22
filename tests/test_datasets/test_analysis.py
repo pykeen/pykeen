@@ -11,7 +11,7 @@ import pandas
 
 from pykeen.datasets import Nations
 from pykeen.datasets.analysis import (SUBSET_LABELS, calculate_relation_functionality, entity_count_dataframe, entity_relation_co_occurrence_dataframe, relation_cardinality_types, relation_count_dataframe, relation_pattern_types)
-from pykeen.triples.analysis import _get_skyline
+from pykeen.triples.analysis import RELATION_CARDINALITY_TYPES, RELATION_PATTERN_TYPES, _get_skyline
 
 
 def _old_skyline(xs):
@@ -130,16 +130,6 @@ class AnalysisTests(unittest.TestCase):
             drop_confidence=False,
         )
 
-        pattern_types = {
-            # unary
-            "symmetry",
-            "anti-symmetry",
-            # binary
-            "inversion",
-            # ternary
-            "composition",
-        }
-
         # check correct type
         assert isinstance(df, pandas.DataFrame)
 
@@ -147,7 +137,7 @@ class AnalysisTests(unittest.TestCase):
         assert df["relation_id"].isin(self.dataset.relation_to_id.values()).all()
 
         # check pattern value range
-        assert df["pattern"].isin(set(PatternTypeEnum)).all()
+        assert df["pattern"].isin(RELATION_PATTERN_TYPES).all()
 
         # check confidence value range
         x = df["confidence"].values
@@ -171,7 +161,7 @@ class AnalysisTests(unittest.TestCase):
         assert df["relation_id"].isin(self.dataset.relation_to_id.values()).all()
 
         # check pattern value range
-        assert df["relation_type"].isin(set(CardinalityTypeEnum)).all()
+        assert df["relation_type"].isin(RELATION_CARDINALITY_TYPES).all()
 
     def test_calculate_relation_functionality(self):
         """Tests calculate_relation_functionality."""
