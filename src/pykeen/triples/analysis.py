@@ -23,14 +23,7 @@ __all__ = [
 ]
 
 
-class StringEnum(str, enum.Enum):
-    """A base class for string enums with nicer printing."""
-
-    def __str__(self):
-        return self.value
-
-
-class CardinalityTypeEnum(StringEnum):
+class CardinalityTypeEnum(str, enum.Enum):
     """An enum for cardinality types."""
 
     one_to_one = "one-to-one"
@@ -39,7 +32,7 @@ class CardinalityTypeEnum(StringEnum):
     many_to_many = "many-to-many"
 
 
-class PatternTypeEnum(StringEnum):
+class PatternTypeEnum(str, enum.Enum):
     """An enum for pattern types."""
 
     # unary
