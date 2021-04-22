@@ -650,13 +650,16 @@ class TrainingLoop(ABC):
             loss *= (this_sub_batch_size / current_batch_size)
 
         # backward pass
-        loss.backward()
+        self._loss_backward(loss)
         current_epoch_loss = loss.item()
 
         self.model.post_forward_pass()
         # TODO why not call torch.cuda.empty_cache()? or call self._free_graph_and_cache()?
 
         return current_epoch_loss
+
+    def _loss_backward(self, loss):
+        loss.backward()
 
     @staticmethod
     @abstractmethod

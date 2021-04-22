@@ -31,6 +31,30 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
+class AlternateAcceleratedTrainingLoop(TrainingLoop, ABC):
+    """A training loop with HF accelerate."""
+
+    def __init__(
+        self,
+        model: Model,
+        optimizer: Optional[Optimizer] = None,
+        **kwargs,
+    ) -> None:
+        """Initialize the training loop.
+
+        :param model: The model to train
+        :param optimizer: The optimizer to use while training the model
+        :param automatic_memory_optimization: bool
+            Whether to automatically optimize the sub-batch size during
+            training and batch size during evaluation with regards to the hardware at hand.
+        """
+        super().__init__(model=model, optimizer=optimizer, **kwargs)
+        self.accelerator = Accelerator()
+
+    def _loss_backward(self, loss):
+        self.accelerator.backward(loss)
+
+
 class AcceleratedTrainingLoop(TrainingLoop, ABC):
     """A training loop with HF accelerate."""
 
