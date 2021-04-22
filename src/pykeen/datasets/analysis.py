@@ -12,13 +12,13 @@ import torch
 from .base import Dataset
 from ..constants import PYKEEN_DATASETS
 from ..triples import analysis as triple_analysis
-from ..triples.analysis import get_id_counts, get_relation_counts, relation_cardinality_types, relation_pattern_types, triple_set_hash
+from ..triples.analysis import get_id_counts, get_relation_counts, relation_cardinality_types, relation_pattern_classification, triple_set_hash
 from ..utils import invert_mapping
 
 logger = logging.getLogger(__name__)
 
 __all__ = [
-    'relation_pattern_types',
+    'relation_pattern_classification',
     'relation_count_dataframe',
     'entity_count_dataframe',
     'entity_relation_co_occurrence_dataframe',
@@ -239,7 +239,7 @@ def relation_classification(
             for part in parts
         ], dim=0).tolist()
 
-        df = triple_analysis.relation_pattern_types(mapped_triples)
+        df = triple_analysis.relation_pattern_classification(mapped_triples)
 
         # save to file
         cache_path.parent.mkdir(exist_ok=True, parents=True)
