@@ -44,7 +44,7 @@ class AlternateAcceleratedTrainingLoop(TrainingLoop, ABC):
         self.model, self.optimizer, train_data_loader = self.accelerator.prepare(
             self.model,
             self.optimizer,
-            train_data_loader
+            train_data_loader,
         )
         return train_data_loader
 
