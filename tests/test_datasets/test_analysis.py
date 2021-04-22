@@ -123,8 +123,8 @@ class AnalysisTests(unittest.TestCase):
             list(itertools.product(SUBSET_LABELS, sorted(self.dataset.entity_to_id.keys()))),
         )
 
-    def test_relation_classification(self):
-        """Helper method for relation classification."""
+    def test_relation_pattern_types(self):
+        """Helper method for relation pattern classification."""
         df = relation_pattern_types(
             dataset=self.dataset,
             drop_confidence=False,
@@ -148,8 +148,8 @@ class AnalysisTests(unittest.TestCase):
         x = df["support"].values
         assert (1 <= x).all()
 
-    def test_relation_cardinality_classification(self):
-        """Tests for relation_cardinality_classification."""
+    def test_relation_cardinality_types(self):
+        """Tests for relation cardinality type classification."""
         df = relation_cardinality_types(
             dataset=self.dataset,
         )
