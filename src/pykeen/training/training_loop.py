@@ -994,6 +994,11 @@ class AcceleratedTrainingLoop(TrainingLoop, ABC):
         super().__init__(**kwargs)
         self.accelerator = accelerate.Accelerator()
 
+    @property
+    def device(self):  # noqa: D401
+        """The device used by the model."""
+        return self.accelerator.device
+
     def _prepare_training(self, train_data_loader):
         # Accelerate-specific initialization of the model, optimizer, and data loader
         self.model, self.optimizer, train_data_loader = self.accelerator.prepare(
