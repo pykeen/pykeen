@@ -12,7 +12,6 @@ import torch
 from .base import Dataset
 from ..constants import PYKEEN_DATASETS
 from ..triples import analysis as triple_analysis
-from ..triples.analysis import get_id_counts, get_relation_counts, relation_cardinality_types, relation_pattern_classification, triple_set_hash
 from ..utils import invert_mapping
 
 logger = logging.getLogger(__name__)
