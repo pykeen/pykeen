@@ -89,6 +89,7 @@ def entity_count_dataframe(dataset: Dataset) -> pd.DataFrame:
     :return:
         A dataframe with one row per entity.
     """
+    # TODO: Update to long form
     data = {}
     num_entities = dataset.num_entities
     second_level_order = ("head", "tail", "total")
@@ -137,6 +138,7 @@ def entity_relation_co_occurrence_dataframe(dataset: Dataset) -> pd.DataFrame:
         where subset in {"training", "validation", "testing", "total"}, and kind in {"head", "tail"}. For each entity,
         the corresponding row can be seen a pseudo-type, i.e. for which relations it may occur as head/tail.
     """
+    # TODO: Update to long form
     num_relations = dataset.num_relations
     num_entities = dataset.num_entities
     data = numpy.zeros(shape=(4 * num_entities, 2 * num_relations), dtype=numpy.int64)
