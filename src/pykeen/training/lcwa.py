@@ -8,13 +8,14 @@ from typing import Optional, Tuple
 
 import torch
 
-from .training_loop import TrainingLoop
+from .training_loop import AcceleratedTrainingLoop, TrainingLoop
 from .utils import apply_label_smoothing
 from ..triples import LCWAInstances
 from ..typing import MappedTriples
 
 __all__ = [
     'LCWATrainingLoop',
+    'AcceleratedLCWATrainingLoop',
 ]
 
 logger = logging.getLogger(__name__)
@@ -173,3 +174,7 @@ class LCWATrainingLoop(TrainingLoop):
             )
         logger.warning(report)
         raise MemoryError("The current model can't be trained on this hardware with these parameters.")
+
+
+class AcceleratedLCWATrainingLoop(AcceleratedTrainingLoop, LCWATrainingLoop):
+    """Super-powered LCWA training loop."""

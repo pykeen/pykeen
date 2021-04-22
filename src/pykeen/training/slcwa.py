@@ -8,7 +8,7 @@ from typing import Any, Mapping, Optional, Type
 import torch
 from torch.optim.optimizer import Optimizer
 
-from .training_loop import TrainingLoop
+from .training_loop import AcceleratedTrainingLoop, TrainingLoop
 from .utils import apply_label_smoothing
 from ..losses import CrossEntropyLoss
 from ..models import Model
@@ -18,6 +18,7 @@ from ..typing import MappedTriples
 
 __all__ = [
     'SLCWATrainingLoop',
+    'AcceleratedSLCWATrainingLoop',
 ]
 
 logger = logging.getLogger(__name__)
@@ -178,3 +179,7 @@ class SLCWATrainingLoop(TrainingLoop):
             report = "This model doesn't support sub-batching and slicing is not possible for sLCWA"
         logger.warning(report)
         raise MemoryError("The current model can't be trained on this hardware with these parameters.")
+
+
+class AcceleratedSLCWATrainingLoop(AcceleratedTrainingLoop, SLCWATrainingLoop):
+    """Accelerated sLCWA training loop."""

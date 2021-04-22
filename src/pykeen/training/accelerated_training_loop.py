@@ -10,7 +10,6 @@ from abc import ABC
 from typing import Any, List, Mapping, Optional, Type, Union
 
 import torch
-from accelerate import Accelerator
 from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
 from tqdm.autonotebook import tqdm, trange
@@ -29,32 +28,6 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
-
-
-class AlternateAcceleratedTrainingLoop(TrainingLoop, ABC):
-    """A training loop with HF accelerate."""
-
-    def __init__(self, **kwargs) -> None:
-        """Initialize the training loop mixin."""
-        super().__init__(**kwargs)
-        self.accelerator = Accelerator()
-
-    def _prepare_training(self, train_data_loader):
-        # Accelerate-specific initialization of the model, optimizer, and data loader
-        self.model, self.optimizer, train_data_loader = self.accelerator.prepare(
-            self.model,
-            self.optimizer,
-            train_data_loader,
-        )
-        return train_data_loader
-
-    def _loss_backward(self, loss):
-        self.accelerator.backward(loss)
-
-    def _train(self, **kwargs):
-        if not self.accelerator.is_local_main_process:
-            kwargs['use_tqdm_batch'] = False
-        return super()._train(**kwargs)
 
 
 class AcceleratedTrainingLoop(TrainingLoop, ABC):

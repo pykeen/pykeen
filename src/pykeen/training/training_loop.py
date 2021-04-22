@@ -34,6 +34,7 @@ from ..utils import (
 
 __all__ = [
     'TrainingLoop',
+    'AcceleratedTrainingLoop',
     'NonFiniteLossError',
     'TrainingApproachLossMismatchError',
     'SubBatchingNotSupportedError',
@@ -982,3 +983,30 @@ class TrainingLoop(ABC):
         np.random.set_state(checkpoint['np_random_state'])
         torch.random.set_rng_state(checkpoint['torch_random_state'])
         logger.info(f"=> loaded checkpoint '{path}' stopped after having finished epoch {checkpoint['epoch']}")
+
+
+class AcceleratedTrainingLoop(TrainingLoop, ABC):
+    """A training loop with HF accelerate."""
+
+    def __init__(self, **kwargs) -> None:
+        """Initialize the training loop mixin."""
+        import accelerate
+        super().__init__(**kwargs)
+        self.accelerator = accelerate.Accelerator()
+
+    def _prepare_training(self, train_data_loader):
+        # Accelerate-specific initialization of the model, optimizer, and data loader
+        self.model, self.optimizer, train_data_loader = self.accelerator.prepare(
+            self.model,
+            self.optimizer,
+            train_data_loader,
+        )
+        return train_data_loader
+
+    def _loss_backward(self, loss):
+        self.accelerator.backward(loss)
+
+    def _train(self, **kwargs):
+        if not self.accelerator.is_local_main_process:
+            kwargs['use_tqdm_batch'] = False
+        return super()._train(**kwargs)

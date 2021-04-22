@@ -195,12 +195,14 @@ or the URL for the dataset if neither of the first two are available.
 | adamw    | [`torch.optim.AdamW`](https://pytorch.org/docs/stable/optim.html#torch.optim.AdamW)       | Implements AdamW algorithm.                                             |
 | sgd      | [`torch.optim.SGD`](https://pytorch.org/docs/stable/optim.html#torch.optim.SGD)           | Implements stochastic gradient descent (optionally with momentum).      |
 
-### Training Loops (2)
+### Training Loops (4)
 
-| Name   | Reference                                                                                                                                | Description                                                                               |
-|--------|------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------|
-| lcwa   | [`pykeen.training.LCWATrainingLoop`](https://pykeen.readthedocs.io/en/latest/reference/training.html#pykeen.training.LCWATrainingLoop)   | A training loop that uses the local closed world assumption training approach.            |
-| slcwa  | [`pykeen.training.SLCWATrainingLoop`](https://pykeen.readthedocs.io/en/latest/reference/training.html#pykeen.training.SLCWATrainingLoop) | A training loop that uses the stochastic local closed world assumption training approach. |
+| Name             | Reference                                                                                                                                                      | Description                                                                               |
+|------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------|
+| acceleratedlcwa  | [`pykeen.training.AcceleratedLCWATrainingLoop`](https://pykeen.readthedocs.io/en/latest/reference/training.html#pykeen.training.AcceleratedLCWATrainingLoop)   | Super-powered LCWA training loop.                                                         |
+| acceleratedslcwa | [`pykeen.training.AcceleratedSLCWATrainingLoop`](https://pykeen.readthedocs.io/en/latest/reference/training.html#pykeen.training.AcceleratedSLCWATrainingLoop) | Accelerated sLCWA training loop.                                                          |
+| lcwa             | [`pykeen.training.LCWATrainingLoop`](https://pykeen.readthedocs.io/en/latest/reference/training.html#pykeen.training.LCWATrainingLoop)                         | A training loop that uses the local closed world assumption training approach.            |
+| slcwa            | [`pykeen.training.SLCWATrainingLoop`](https://pykeen.readthedocs.io/en/latest/reference/training.html#pykeen.training.SLCWATrainingLoop)                       | A training loop that uses the stochastic local closed world assumption training approach. |
 
 ### Negative Samplers (2)
 
