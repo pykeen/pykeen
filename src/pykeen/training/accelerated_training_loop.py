@@ -6,6 +6,7 @@ import gc
 import logging
 import pathlib
 import time
+from abc import ABC
 from typing import Any, List, Mapping, Optional, Type, Union
 
 import torch
@@ -30,7 +31,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class AcceleratedTrainingLoop(TrainingLoop):
+class AcceleratedTrainingLoop(TrainingLoop, ABC):
     """A training loop with HF accelerate."""
 
     training_instances: Optional[Instances]
