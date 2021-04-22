@@ -51,6 +51,11 @@ class AlternateAcceleratedTrainingLoop(TrainingLoop, ABC):
     def _loss_backward(self, loss):
         self.accelerator.backward(loss)
 
+    def _train(self, **kwargs):
+        if not self.accelerator.is_local_main_process:
+            kwargs['use_tqdm_batch'] = False
+        return super()._train(**kwargs)
+
 
 class AcceleratedTrainingLoop(TrainingLoop, ABC):
     """A training loop with HF accelerate."""
