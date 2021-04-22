@@ -51,6 +51,15 @@ class AlternateAcceleratedTrainingLoop(TrainingLoop, ABC):
         super().__init__(model=model, optimizer=optimizer, **kwargs)
         self.accelerator = Accelerator()
 
+    def _prepare_training(self, train_data_loader):
+        # Accelerate-specific initialization of the model, optimizer, and data loader
+        self.model, self.optimizer, train_data_loader = self.accelerator.prepare(
+            self.model,
+            self.optimizer,
+            train_data_loader
+        )
+        return train_data_loader
+
     def _loss_backward(self, loss):
         self.accelerator.backward(loss)
 

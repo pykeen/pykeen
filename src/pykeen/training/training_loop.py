@@ -510,6 +510,8 @@ class TrainingLoop(ABC):
         # Save the time to track when the saved point was available
         last_checkpoint = time.time()
 
+        train_data_loader = self._prepare_training(train_data_loader)
+
         # Training Loop
         for epoch in epochs:
             # When training with an early stopper the memory pressure changes, which may allow for errors each epoch
@@ -657,6 +659,9 @@ class TrainingLoop(ABC):
         # TODO why not call torch.cuda.empty_cache()? or call self._free_graph_and_cache()?
 
         return current_epoch_loss
+
+    def _prepare_training(self, data):
+        return data
 
     def _loss_backward(self, loss):
         loss.backward()
