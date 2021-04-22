@@ -18,14 +18,16 @@ from ..utils import invert_mapping
 logger = logging.getLogger(__name__)
 
 __all__ = [
-    'relation_pattern_classification',
-    'relation_count_dataframe',
-    'entity_count_dataframe',
-    'entity_relation_co_occurrence_dataframe',
-    'calculate_relation_functionality',
+    "relation_count_dataframe",
+    "entity_count_dataframe",
+    "entity_relation_co_occurrence_dataframe",
+    "calculate_relation_functionality",
+    # relation typing
+    "relation_pattern_types",
+    "relation_cardinality_types"
 ]
 
-SUBSET_LABELS = ('testing', 'training', 'validation', 'total')
+SUBSET_LABELS = ("testing", "training", "validation", "total")
 
 
 def relation_count_dataframe(dataset: Dataset) -> pd.DataFrame:
@@ -52,7 +54,7 @@ def relation_count_dataframe(dataset: Dataset) -> pd.DataFrame:
     """
     data = []
     for subset_name, triples_factory in dataset.factory_dict.items():
-        df = get_relation_counts(mapped_triples=triples_factory.mapped_triples)
+        df = triple_analysis.get_relation_counts(mapped_triples=triples_factory.mapped_triples)
         df["subset"] = subset_name
         data.append(df)
     df = pd.concat(data, ignore_index=True)
@@ -90,23 +92,23 @@ def entity_count_dataframe(dataset: Dataset) -> pd.DataFrame:
     """
     data = {}
     num_entities = dataset.num_entities
-    second_level_order = ('head', 'tail', 'total')
+    second_level_order = ("head", "tail", "total")
     for subset_name, triples_factory in dataset.factory_dict.items():
-        for col, col_name in zip((0, 2), ('head', 'tail')):
-            data[subset_name, col_name] = get_id_counts(
+        for col, col_name in zip((0, 2), ("head", "tail")):
+            data[subset_name, col_name] = triple_analysis.get_id_counts(
                 id_tensor=triples_factory.mapped_triples[:, col],
                 num_ids=num_entities,
             )
-        data[subset_name, 'total'] = data[subset_name, 'head'] + data[subset_name, 'tail']
-    for kind in ('head', 'tail', 'total'):
-        data['total', kind] = sum(data[subset_name, kind] for subset_name in dataset.factory_dict.keys())
+        data[subset_name, "total"] = data[subset_name, "head"] + data[subset_name, "tail"]
+    for kind in ("head", "tail", "total"):
+        data["total", kind] = sum(data[subset_name, kind] for subset_name in dataset.factory_dict.keys())
     index = sorted(dataset.entity_to_id, key=dataset.entity_to_id.get)
     df = pd.DataFrame(
         data=data,
         index=index,
         columns=pd.MultiIndex.from_product(iterables=[SUBSET_LABELS, second_level_order]),
     )
-    df.index.name = 'entity_label'
+    df.index.name = "entity_label"
     return df
 
 
@@ -123,17 +125,17 @@ def entity_relation_co_occurrence_dataframe(dataset: Dataset) -> pd.DataFrame:
     >>> df = entity_count_dataframe(dataset=dataset)
 
     # Which countries have to most embassies (considering only training triples)?
-    >>> df.loc['training', ('head', 'embassy')].sort_values().tail()
+    >>> df.loc["training", ("head", "embassy")].sort_values().tail()
 
     # In which countries are to most embassies (considering only training triples)?
-    >>> df.loc['training', ('tail', 'embassy')].sort_values().tail()
+    >>> df.loc["training", ("tail", "embassy")].sort_values().tail()
 
     :param dataset:
         The dataset.
 
     :return:
         A dataframe with a multi-index (subset, entity_id) as index, and a multi-index (kind, relation) as columns,
-        where subset in {'training', 'validation', 'testing', 'total'}, and kind in {'head', 'tail'}. For each entity,
+        where subset in {"training", "validation", "testing", "total"}, and kind in {"head", "tail"}. For each entity,
         the corresponding row can be seen a pseudo-type, i.e. for which relations it may occur as head/tail.
     """
     num_relations = dataset.num_relations
@@ -159,17 +161,17 @@ def entity_relation_co_occurrence_dataframe(dataset: Dataset) -> pd.DataFrame:
     return pd.DataFrame(
         data=data,
         index=pd.MultiIndex.from_product([
-            sorted(dataset.factory_dict.keys()) + ['total'],
+            sorted(dataset.factory_dict.keys()) + ["total"],
             [entity_id_to_label[entity_id] for entity_id in range(num_entities)],
         ]),
         columns=pd.MultiIndex.from_product([
-            ('head', 'tail'),
+            ("head", "tail"),
             [relation_id_to_label[relation_id] for relation_id in range(num_relations)],
         ]),
     )
 
 
-def relation_classification(
+def relation_pattern_types(
     dataset: Dataset,
     min_support: int = 0,
     min_confidence: float = 0.95,
@@ -226,7 +228,7 @@ def relation_classification(
     mapped_triples = _get_mapped_triples(dataset, parts)
 
     # include hash over triples into cache-file name
-    ph = triple_set_hash(mapped_triples)[:16]
+    ph = triple_analysis.triple_set_hash(mapped_triples=mapped_triples)[:16]
 
     # include part hash into cache-file name
     cache_path = PYKEEN_DATASETS.joinpath(dataset.__class__.__name__.lower(), f"relation_patterns_{ph}.tsv.xz")
@@ -239,7 +241,7 @@ def relation_classification(
             for part in parts
         ], dim=0).tolist()
 
-        df = triple_analysis.relation_pattern_classification(mapped_triples)
+        df = triple_analysis.relation_pattern_types(mapped_triples=mapped_triples)
 
         # save to file
         cache_path.parent.mkdir(exist_ok=True, parents=True)
@@ -291,7 +293,7 @@ def _add_relation_labels(
     )
 
 
-def relation_cardinality_classification(
+def relation_cardinality_types(
     *,
     dataset: Dataset,
     parts: Optional[Collection[str]] = None,
@@ -328,7 +330,7 @@ def relation_cardinality_classification(
     parts = _normalize_parts(dataset=dataset, parts=parts)
     mapped_triples = _get_mapped_triples(dataset=dataset, parts=parts)
 
-    df = relation_cardinality_types(mapped_triples)
+    df = triple_analysis.relation_cardinality_types(mapped_triples=mapped_triples)
     if add_labels:
         df = _add_relation_labels(dataset=dataset, df=df)
     return df

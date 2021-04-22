@@ -10,8 +10,8 @@ import numpy as np
 import pandas
 
 from pykeen.datasets import Nations
-from pykeen.datasets.analysis import (SUBSET_LABELS, calculate_relation_functionality, entity_count_dataframe, entity_relation_co_occurrence_dataframe, relation_cardinality_classification, relation_count_dataframe, relation_pattern_types)
-from pykeen.triples.analysis import CardinalityTypeEnum, PatternTypeEnum, _get_skyline
+from pykeen.datasets.analysis import (SUBSET_LABELS, calculate_relation_functionality, entity_count_dataframe, entity_relation_co_occurrence_dataframe, relation_cardinality_types, relation_count_dataframe, relation_pattern_types)
+from pykeen.triples.analysis import _get_skyline
 
 
 def _old_skyline(xs):
@@ -160,7 +160,7 @@ class AnalysisTests(unittest.TestCase):
 
     def test_relation_cardinality_classification(self):
         """Tests for relation_cardinality_classification."""
-        df = relation_cardinality_classification(
+        df = relation_cardinality_types(
             dataset=self.dataset,
         )
 
