@@ -23,6 +23,7 @@ class NegativeSampler(ABC):
     #: The default strategy for optimizing the negative sampler's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Mapping[str, Any]]]
 
+    #: A filterer for negative batches
     filterer: Optional[Filterer]
 
     def __init__(
