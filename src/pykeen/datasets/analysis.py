@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Dataset analysis utilities."""
-
+import functools
 import logging
 from typing import Collection, Mapping, Optional, Tuple, Union
 
@@ -11,7 +11,9 @@ import torch
 
 from .base import Dataset
 from ..constants import PYKEEN_DATASETS
-from ..triples import analysis as triple_analysis
+from ..triples import CoreTriplesFactory, analysis as triple_analysis
+from ..triples.analysis import _get_counts
+from ..typing import MappedTriples
 from ..utils import invert_mapping
 
 logger = logging.getLogger(__name__)
@@ -26,15 +28,73 @@ __all__ = [
     "relation_cardinality_types"
 ]
 
+# constants
+ENTITY_ID_COLUMN_NAME = "entity_id"
+ENTITY_LABEL_COLUMN_NAME = "entity_label"
+RELATION_ID_COLUMN_NAME = "relation_id"
+RELATION_LABEL_COLUMN_NAME = "relation_label"
+SUBSET_COLUMN_NAME = "subset"
+
+#: fixme: deprecated
 SUBSET_LABELS = ("testing", "training", "validation", "total")
 
 
-def relation_count_dataframe(
-    dataset: Dataset,
-    total_count: bool = True,
-    add_labels: bool = True,
+def _get_mapped_triples(dataset: Dataset, parts: Collection[str]) -> Collection[Tuple[int, int, int]]:
+    return torch.cat([
+        dataset.factory_dict[part].mapped_triples
+        for part in parts
+    ], dim=0).tolist()
+
+
+def _normalize_parts(dataset: Dataset, parts: Union[None, str, Collection[str]]) -> Collection[str]:
+    if parts is None:
+        parts = dataset.factory_dict.keys()
+    elif isinstance(parts, str):
+        parts = [parts]
+    return parts
+
+
+def _add_labels(
+    label_to_id: Optional[Mapping[str, int]],
+    df: pd.DataFrame,
+    id_column: str,
+    label_column: str,
 ) -> pd.DataFrame:
-    """Create a dataframe with relation counts for all subsets, and the full dataset.
+    if label_to_id is None:
+        return df
+    return pd.merge(
+        left=df,
+        right=pd.DataFrame(
+            data=list(label_to_id.items()),
+            columns=[label_column, id_column],
+        ),
+        on=id_column,
+    )
+
+
+_add_entity_labels = functools.partial(
+    _add_labels,
+    id_column=ENTITY_ID_COLUMN_NAME,
+    label_column=ENTITY_LABEL_COLUMN_NAME,
+)
+
+_add_relation_labels = functools.partial(
+    _add_labels,
+    id_column=RELATION_ID_COLUMN_NAME,
+    label_column=RELATION_LABEL_COLUMN_NAME,
+)
+
+
+def relation_count_dataframe(
+    *,
+    dataset: Optional[Dataset] = None,
+    triples_factory: Optional[CoreTriplesFactory] = None,
+    mapped_triples: Optional[MappedTriples] = None,
+    add_labels: bool = True,
+    total_count: bool = False,
+    relation_to_id: Mapping[str, int] = None,
+) -> pd.DataFrame:
+    """Create a dataframe with relation counts.
 
     Example usage:
 
@@ -51,21 +111,68 @@ def relation_count_dataframe(
 
     :param dataset:
         The dataset.
+    :param triples_factory:
+        The triples factory.
+    :param mapped_triples:
+        The mapped triples.
+    :param add_labels:
+        Whether to add relation labels to the dataframe. Requires the triples factory / dataset to provide labels, or
+        to explicitly provide a relation_to_id mapping.
+    :param total_count:
+        Whether to combine the counts from all subsets, or keep the separate counts instead. Only effective if a dataset
+        is given.
+    :param relation_to_id:
+        A relation label to Id mapping. Takes precedence over mappings from triples_factory / dataset.
 
     :return:
-        A dataframe with columns (relation_id, relation_label, subset, count)
+        A dataframe with columns (relation_id, count, relation_label?, subset?)
     """
-    data = []
-    for subset_name, triples_factory in dataset.factory_dict.items():
-        df = triple_analysis.get_relation_counts(mapped_triples=triples_factory.mapped_triples)
-        df["subset"] = subset_name
-        data.append(df)
-    df = pd.concat(data, ignore_index=True)
-    if total_count:
-        df = df.groupby(by="relation_id")["count"].sum().reset_index()
-    if add_labels:
-        df = _add_relation_labels(dataset=dataset, df=df)
-    return df
+    if sum(x is not None for x in (mapped_triples, triples_factory, dataset)) != 1:
+        raise ValueError("Exactly one of {mapped_triples, triples_factory, dataset} must be not None.")
+
+    if mapped_triples is not None:
+        df = pd.DataFrame(data=dict(zip(
+            [RELATION_ID_COLUMN_NAME, "count"],
+            _get_counts(mapped_triples=mapped_triples, column=1),
+        )))
+    elif triples_factory is not None:
+        df = relation_count_dataframe(
+            mapped_triples=triples_factory.mapped_triples,
+        )
+        if add_labels and not relation_to_id and hasattr(triples_factory, "relation_to_id"):
+            relation_to_id = triples_factory.relation_to_id
+    else:
+        data = []
+        for subset_name, triples_factory in dataset.factory_dict.items():
+            df = relation_count_dataframe(
+                triples_factory=triples_factory,
+                add_labels=False,  # are added after aggregation
+            )
+            if not total_count:
+                df["subset"] = subset_name
+            data.append(df)
+        df = pd.concat(data, ignore_index=True)
+        if total_count:
+            df = df.groupby(by="relation_id")["count"].sum().reset_index()
+        if add_labels and not relation_to_id and hasattr(dataset, "relation_to_id"):
+            relation_to_id = dataset.relation_to_id
+
+    if not add_labels:
+        return df
+
+    # Infer relation to id mapping
+    if not relation_to_id and triples_factory and hasattr(triples_factory, "relation_to_id"):
+        relation_to_id = triples_factory.relation_to_id
+    if not relation_to_id and dataset and hasattr(dataset, "relation_to_id"):
+        relation_to_id = dataset.relation_to_id
+    if relation_to_id is None:
+        raise ValueError(
+            "To add relation labels, either an relation_to_id mapping has to be explicitly provided, or the "
+            "triples_factory / dataset must provide such mapping."
+        )
+
+    # add label column
+    return _add_relation_labels(df=df, label_to_id=relation_to_id)
 
 
 def entity_count_dataframe(
@@ -106,14 +213,14 @@ def entity_count_dataframe(
         data.append(df)
     df = pd.concat(data, ignore_index=True)
     if both_sides:
-        df = df.groupby(["entity_id", "subset"])["count"].sum().reset_index()
+        df = df.groupby([ENTITY_ID_COLUMN_NAME, "subset"])["count"].sum().reset_index()
     if total_count:
-        group_key = ["entity_id"]
+        group_key = [ENTITY_ID_COLUMN_NAME]
         if not both_sides:
             group_key += ["type"]
         df = df.groupby(by=group_key)["count"].sum().reset_index()
     if add_labels:
-        df = _add_entity_labels(dataset=dataset, df=df)
+        df = _add_entity_labels(label_to_id=dataset.entity_to_id, df=df)
     return df
 
 
@@ -266,67 +373,6 @@ def relation_pattern_types(
     return df
 
 
-def _get_mapped_triples(dataset: Dataset, parts: Collection[str]) -> Collection[Tuple[int, int, int]]:
-    return torch.cat([
-        dataset.factory_dict[part].mapped_triples
-        for part in parts
-    ], dim=0).tolist()
-
-
-def _normalize_parts(dataset: Dataset, parts: Union[None, str, Collection[str]]) -> Collection[str]:
-    if parts is None:
-        parts = dataset.factory_dict.keys()
-    elif isinstance(parts, str):
-        parts = [parts]
-    return parts
-
-
-def _add_labels(
-    label_mapping: Optional[Mapping[int, str]],
-    df: pd.DataFrame,
-    id_column: str,
-    label_column: str,
-) -> pd.DataFrame:
-    if label_mapping is None:
-        return df
-    return pd.merge(
-        left=df,
-        right=pd.DataFrame(
-            data=list(label_mapping.items()),
-            columns=[label_column, id_column],
-        ),
-        on=id_column,
-    )
-
-
-def _add_entity_labels(
-    dataset: Dataset,
-    df: pd.DataFrame,
-    entity_id_column: str = "entity_id",
-    entity_label_column: str = "entity_label",
-) -> pd.DataFrame:
-    return _add_labels(
-        label_mapping=dataset.entity_to_id,
-        df=df,
-        id_column=entity_id_column,
-        label_column=entity_label_column,
-    )
-
-
-def _add_relation_labels(
-    dataset: Dataset,
-    df: pd.DataFrame,
-    relation_id_column: str = "relation_id",
-    relation_label_column: str = "relation_label",
-) -> pd.DataFrame:
-    return _add_labels(
-        label_mapping=dataset.relation_to_id,
-        df=df,
-        id_column=relation_id_column,
-        label_column=relation_label_column,
-    )
-
-
 def relation_cardinality_types(
     *,
     dataset: Dataset,
@@ -366,7 +412,7 @@ def relation_cardinality_types(
 
     df = triple_analysis.relation_cardinality_types(mapped_triples=mapped_triples)
     if add_labels:
-        df = _add_relation_labels(dataset=dataset, df=df)
+        df = _add_relation_labels(df=df, label_to_id=dataset.relation_to_id)
     return df
 
 
@@ -416,5 +462,5 @@ def calculate_relation_functionality(
     df = df.reset_index()
 
     if add_labels:
-        df = _add_relation_labels(dataset=dataset, df=df)
+        df = _add_relation_labels(df=df, label_to_id=dataset.relation_to_id)
     return df
