@@ -4,11 +4,12 @@
 
 from typing import Any, MutableMapping
 
-import numpy
+import torch
 import unittest_templates
 
 from pykeen.datasets import Nations
 from pykeen.sampling.filtering import BloomFilterer, DefaultFilterer, Filterer, PythonSetFilterer
+from pykeen.utils import set_random_seed
 
 
 class FiltererTest(unittest_templates.GenericTestCase[Filterer]):
@@ -20,15 +21,18 @@ class FiltererTest(unittest_templates.GenericTestCase[Filterer]):
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        self.generator = set_random_seed(seed=self.seed)[1]
         kwargs["triples_factory"] = self.triples_factory = Nations().training
         return kwargs
 
     def post_instantiation_hook(self) -> None:  # noqa: D102
-        seed = 42
-        random = numpy.random.RandomState(seed=seed)
         self.slcwa_instances = self.triples_factory.create_slcwa_instances()
-        batch_indices = random.randint(low=0, high=len(self.slcwa_instances), size=(self.batch_size,))
-        self.positive_batch = self.slcwa_instances.mapped_triples[batch_indices]
+        self.positive_batch = self.slcwa_instances.mapped_triples[torch.randint(
+            low=0,
+            high=len(self.slcwa_instances),
+            size=(self.batch_size,),
+            generator=self.generator,
+        )]
 
     def test_filter(self):
         """Test the filter method."""
