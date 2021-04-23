@@ -8,10 +8,10 @@ from unittest import SkipTest
 
 import numpy
 import torch
+import unittest_templates
 
 import pykeen.nn.modules
 import pykeen.utils
-import unittest_templates
 from pykeen.nn.functional import _rotate_quaternion, _split_quaternion, distmult_interaction
 from pykeen.nn.modules import FunctionalInteraction, Interaction, LiteralInteraction, TranslationalInteraction
 from pykeen.utils import clamp_norm, project_entity, strip_dim, view_complex
