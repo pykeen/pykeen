@@ -51,7 +51,12 @@ class Filterer(nn.Module):
 
 
 class DefaultFilterer(Filterer):
-    """The default filterer."""
+    """
+    The default filterer.
+
+    .. warning ::
+        This filterer may contain a correctness error, cf. https://github.com/pykeen/pykeen/issues/272
+    """
 
     def __init__(self, triples_factory: CoreTriplesFactory):
         super().__init__()
