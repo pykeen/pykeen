@@ -106,6 +106,51 @@ class BloomFilterer(Filterer):
     #: The bit-array for the Bloom filter data structure
     bit_array: torch.BoolTensor
 
+    def __init__(
+        self,
+        triples_factory: CoreTriplesFactory,
+        error_rate: float = 0.001,
+    ):
+        """Initialize the Bloom filter based filterer.
+
+        :param triples_factory:
+            The triples factory.
+        :param error_rate:
+            The desired error rate.
+        """
+        super().__init__()
+
+        # Allocate bit array
+        self.ideal_num_elements = triples_factory.num_triples
+        size = self.num_bits(num=self.ideal_num_elements, error_rate=error_rate)
+        self.register_buffer(name="bit_array", tensor=torch.zeros(size, dtype=torch.bool))
+        self.register_buffer(
+            name="mersenne",
+            tensor=torch.as_tensor(
+                data=[2 ** x - 1 for x in [17, 19, 31]],
+                dtype=torch.long,
+            ).unsqueeze(dim=0),
+        )
+
+        # calculate number of hashing rounds
+        self.rounds = self.num_probes(num_elements=self.ideal_num_elements, num_bits=size)
+
+        # index triples
+        self.add(triples=triples_factory.mapped_triples)
+
+        # Store some meta-data
+        self.error_rate = error_rate
+
+    def __repr__(self):  # noqa:D105
+        return (
+            f"{self.__class__.__name__}("
+            f"error_rate={self.error_rate}, "
+            f"size={self.bit_array.shape[0]}, "
+            f"rounds={self.rounds}, "
+            f"ideal_num_elements={self.ideal_num_elements}, "
+            f")"
+        )
+
     @staticmethod
     def num_bits(num: int, error_rate: float = 0.01) -> int:
         """
@@ -140,54 +185,6 @@ class BloomFilterer(Filterer):
         num_bits = num_bits
         real_num_probes_k = (num_bits / num_elements) * math.log(2)
         return int(math.ceil(real_num_probes_k))
-
-    def __init__(
-        self,
-        triples_factory: CoreTriplesFactory,
-        error_rate: float = 0.001,
-    ):
-        """
-        Initialize the Bloom filter based filterer.
-
-        :param triples_factory:
-            The triples factory.
-        :param error_rate:
-            The desired error rate.
-        :param kwargs:
-            Additional keyword based arguments passed to Filterer.
-        """
-        super().__init__()
-
-        # Allocate bit array
-        self.ideal_num_elements = triples_factory.num_triples
-        size = self.num_bits(num=self.ideal_num_elements, error_rate=error_rate)
-        self.register_buffer(name="bit_array", tensor=torch.zeros(size, dtype=torch.bool))
-        self.register_buffer(
-            name="mersenne",
-            tensor=torch.as_tensor(
-                data=[2 ** x - 1 for x in [17, 19, 31]],
-                dtype=torch.long,
-            ).unsqueeze(dim=0),
-        )
-
-        # calculate number of hashing rounds
-        self.rounds = self.num_probes(num_elements=self.ideal_num_elements, num_bits=size)
-
-        # index triples
-        self.add(triples=triples_factory.mapped_triples)
-
-        # Store some meta-data
-        self.error_rate = error_rate
-
-    def __repr__(self):  # noqa:D105
-        return (
-            f"{self.__class__.__name__}("
-            f"error_rate={self.error_rate}, "
-            f"size={self.bit_array.shape[0]}, "
-            f"rounds={self.rounds}, "
-            f"ideal_num_elements={self.ideal_num_elements}, "
-            f")"
-        )
 
     def probe(
         self,
