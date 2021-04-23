@@ -13,10 +13,11 @@ from torch import nn
 from ..triples import CoreTriplesFactory
 
 __all__ = [
-    'filterer_resolver',
-    'Filterer',
-    'DefaultFilterer',
-    'BloomFilterer',
+    "filterer_resolver",
+    "Filterer",
+    "DefaultFilterer",
+    "BloomFilterer",
+    "PythonSetFilterer",
 ]
 
 
