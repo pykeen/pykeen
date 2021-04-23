@@ -916,9 +916,9 @@ def pipeline(  # noqa: C901
         evaluator_kwargs = {}
     evaluator_kwargs = dict(evaluator_kwargs)
     if evaluator_kwargs.get('filtered'):
-        all_pos_triples = torch.cat([training.mapped_triples, testing.mapped_triples],dim=0)
+        all_pos_triples = torch.cat([training.mapped_triples, testing.mapped_triples], dim=0)
         if validation is not None:
-            all_pos_triples = torch.cat([all_pos_triples,validation.mapped_triples],dim=0)
+            all_pos_triples = torch.cat([all_pos_triples, validation.mapped_triples], dim=0)
         evaluator_kwargs['all_pos_triples'] = all_pos_triples
     evaluator_instance: Evaluator = evaluator_resolver.make(evaluator, evaluator_kwargs)
 
