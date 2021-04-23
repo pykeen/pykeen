@@ -8,7 +8,7 @@ import numpy
 import unittest_templates
 
 from pykeen.datasets import Nations
-from pykeen.sampling.filtering import DefaultFilterer, Filterer
+from pykeen.sampling.filtering import BloomFilterer, DefaultFilterer, Filterer
 
 
 class FiltererTest(unittest_templates.GenericTestCase[Filterer]):
@@ -49,3 +49,16 @@ class DefaultFiltererTests(FiltererTest):
     """Tests for the default filterer."""
 
     cls = DefaultFilterer
+
+
+class BloomFiltererTest(FiltererTest):
+    """Tests for the bloom filterer."""
+
+    cls = BloomFilterer
+
+
+class FiltererMetaTestCase(unittest_templates.MetaTestCase[Filterer]):
+    """Test all filterers are tested."""
+
+    base_cls = Filterer
+    base_test = FiltererTest
