@@ -43,7 +43,9 @@ class ComplExLiteralTestCase(cases.LiteralTestCase):
         triples_factory: TriplesNumericLiteralsFactory = NationsLiteral().training
         literal_embedding_dim = triples_factory.numeric_literals.shape[1]
         kwargs["combination"] = ComplExLiteralCombination(
-            entity_embedding_dim=self.dim,
+            # typically, the model takes care of adjusting the dimension size for "complex"
+            # tensors, but we have to do it manually here for testing purposes
+            entity_embedding_dim=self.dim // 2,
             literal_embedding_dim=literal_embedding_dim,
             input_dropout=0.1,
         )

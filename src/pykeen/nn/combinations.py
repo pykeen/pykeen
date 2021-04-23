@@ -80,15 +80,14 @@ class ComplExLiteralCombination(ComplexCombination):
         literal_embedding_dim: int,
         input_dropout: float = 0.0,
     ):
-        _actual_embedding_dim = entity_embedding_dim // 2
         real = nn.Sequential(
             nn.Dropout(input_dropout),
-            nn.Linear(_actual_embedding_dim + literal_embedding_dim, _actual_embedding_dim),
+            nn.Linear(entity_embedding_dim + literal_embedding_dim, entity_embedding_dim),
             torch.nn.Tanh(),
         )
         imag = nn.Sequential(
             nn.Dropout(input_dropout),
-            nn.Linear(_actual_embedding_dim + literal_embedding_dim, _actual_embedding_dim),
+            nn.Linear(entity_embedding_dim + literal_embedding_dim, entity_embedding_dim),
             torch.nn.Tanh(),
         )
         super().__init__(real=real, imag=imag, entity_embedding_dim=entity_embedding_dim)
