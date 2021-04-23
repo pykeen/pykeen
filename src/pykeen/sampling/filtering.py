@@ -198,14 +198,14 @@ class BloomFilterer(Filterer):
         """
         # pre-hash
         x = (self.mersenne * batch).sum(dim=-1)
-        for i in range(self.num_probes_k):
+        for i in range(self.rounds):
             # cf. https://github.com/skeeto/hash-prospector#two-round-functions
             x = x ^ (x >> 16)
             x = x * 0x7feb352d
             x = x ^ (x >> 15)
             x = x * 0x846ca68b
             x = x ^ (x >> 16)
-            yield x.sum(dim=-1) % self.num_bits_m
+            yield x.sum(dim=-1) % self.bit_array.shape[0]
 
     def add(self, triples: torch.LongTensor) -> None:
         """
