@@ -225,6 +225,7 @@ class FiltererTest(unittest_templates.GenericTestCase[Filterer]):
         self.positive_batch = self.slcwa_instances.mapped_triples[batch_indices]
 
     def test_filter(self):
+        """Test the filter method."""
         # Check whether filtering works correctly
         # First giving an example where all triples have to be filtered
         _, batch_filter = self.instance(negative_batch=self.positive_batch)
