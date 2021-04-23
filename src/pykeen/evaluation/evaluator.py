@@ -556,7 +556,7 @@ def evaluate(
     if filtering_necessary or positive_masks_required:
         all_pos_triples = torch.cat([model.triples_factory.mapped_triples, mapped_triples], dim=0)
         if additional_pos_triples is not None:
-            # TODO: Apply torch.unique()
+            # TODO: Apply torch.unique()?
             all_pos_triples = torch.cat([all_pos_triples, additional_pos_triples], dim=0)
         all_pos_triples = all_pos_triples.to(device=device)
     else:
