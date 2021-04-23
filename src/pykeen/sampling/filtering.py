@@ -100,6 +100,39 @@ class DefaultFilterer(Filterer):
         return negative_batch[~final_filter], ~final_filter
 
 
+class PythonSetFilterer(Filterer):
+    """
+    A filterer using Python sets for filtering.
+
+    This filterer is expected to be rather slow due to the conversion from torch long tensors to Python tuples. It can
+    still serve as a baseline for performance comparison.
+    """
+
+    def __init__(
+        self,
+        triples_factory: CoreTriplesFactory,
+    ):
+        """
+        Initialize the filterer.
+
+        :param triples_factory:
+            The triples factory.
+        """
+        super().__init__()
+        # store set of triples
+        self.triples = set(map(tuple, triples_factory.mapped_triples.tolist()))
+
+    def forward(
+        self,
+        negative_batch: torch.LongTensor,
+    ) -> Tuple[torch.LongTensor, Optional[torch.BoolTensor]]:  # noqa: D102
+        keep_mask = torch.as_tensor(
+            data=[tuple(triple) not in self.triples for triple in negative_batch.tolist()],
+            dtype=torch.bool,
+        )
+        return negative_batch[keep_mask], keep_mask
+
+
 class BloomFilterer(Filterer):
     """
     A filterer for negative triples based on the Bloom filter.
