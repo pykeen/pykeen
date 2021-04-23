@@ -42,16 +42,6 @@ class Filterer(nn.Module):
         raise NotImplementedError
 
 
-class NoFilterer(Filterer):
-    """Dummy filterer which just forwards the batch."""
-
-    def forward(
-        self,
-        negative_batch: torch.LongTensor,
-    ) -> Tuple[torch.LongTensor, Optional[torch.BoolTensor]]:  # noqa: D102
-        return negative_batch, None
-
-
 class DefaultFilterer(Filterer):
     """The default filterer."""
 

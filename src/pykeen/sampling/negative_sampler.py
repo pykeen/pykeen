@@ -39,9 +39,8 @@ class NegativeSampler(ABC):
         self.triples_factory = triples_factory
         self.num_negs_per_pos = num_negs_per_pos if num_negs_per_pos is not None else 1
         self.filterer = filterer_resolver.make(
-            query=DefaultFilterer if filtered else NoFilterer,
             pos_kwargs=dict(triples_factory=triples_factory),
-        )
+        ) if filtered else None
 
     @classmethod
     def get_normalized_name(cls) -> str:
