@@ -916,10 +916,12 @@ def pipeline(  # noqa: C901
         evaluator_kwargs = {}
     evaluator_kwargs = dict(evaluator_kwargs)
     if evaluator_kwargs.get('filtered'):
-        all_pos_triples = torch.cat([training.mapped_triples, testing.mapped_triples], dim=0)
-        if validation is not None:
-            all_pos_triples = torch.cat([all_pos_triples, validation.mapped_triples], dim=0)
-        evaluator_kwargs['all_pos_triples'] = all_pos_triples
+        if use_testing_data and validation is not None:
+            logging.info("Validation triples are added to the set of known positive triples which are filtered out"
+                         "during evaluation since we evaluate on the test set. "
+                         "This is the standard approach described by (Bordes et. al, 2013).")
+            evaluator_kwargs['additional_pos_triples'] = validation.mapped_triples
+
     evaluator_instance: Evaluator = evaluator_resolver.make(evaluator, evaluator_kwargs)
 
     if evaluation_kwargs is None:
