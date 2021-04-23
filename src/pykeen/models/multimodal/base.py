@@ -2,14 +2,13 @@
 
 """Base classes for multi-modal models."""
 
-from typing import Optional, Sequence, Union
+from typing import Sequence, Union
 
 from ..nbase import ERModel, EmbeddingSpecificationHint
-from ...losses import Loss
 from ...nn.emb import EmbeddingSpecification, LiteralRepresentation, RepresentationModule
 from ...nn.modules import LiteralInteraction
 from ...triples import TriplesNumericLiteralsFactory
-from ...typing import DeviceHint, HeadRepresentation, RelationRepresentation, TailRepresentation
+from ...typing import HeadRepresentation, RelationRepresentation, TailRepresentation
 
 __all__ = [
     'LiteralModel',

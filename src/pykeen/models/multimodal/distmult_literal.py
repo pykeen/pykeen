@@ -2,19 +2,16 @@
 
 """Implementation of the DistMultLiteral model."""
 
-from typing import Any, ClassVar, Mapping, Optional
+from typing import Any, ClassVar, Mapping
 
 import torch.nn as nn
 
 from .base import LiteralModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...losses import Loss
 from ...nn.combinations import DistMultCombination
 from ...nn.emb import EmbeddingSpecification
 from ...nn.modules import DistMultInteraction, LiteralInteraction
-from ...regularizers import Regularizer
 from ...triples import TriplesNumericLiteralsFactory
-from ...typing import DeviceHint
 
 __all__ = [
     'DistMultLiteral',

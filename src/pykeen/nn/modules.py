@@ -16,7 +16,7 @@ from torch import FloatTensor, nn
 
 from . import functional as pkf
 from .combinations import Combination
-from ..typing import HeadRepresentation, RelationRepresentation, TailRepresentation, HintOrType
+from ..typing import HeadRepresentation, HintOrType, RelationRepresentation, TailRepresentation
 from ..utils import CANONICAL_DIMENSIONS, convert_to_canonical_shape, ensure_tuple, upgrade_to_sequence
 
 __all__ = [

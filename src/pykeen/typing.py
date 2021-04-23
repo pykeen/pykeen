@@ -2,7 +2,7 @@
 
 """Type hints for PyKEEN."""
 
-from typing import Callable, Mapping, NamedTuple, Sequence, Type, TypeVar, Union, cast
+from typing import Callable, Mapping, NamedTuple, Sequence, TypeVar, Union, cast
 
 import numpy as np
 import torch
