@@ -16,7 +16,7 @@ from torch import FloatTensor, nn
 
 from . import functional as pkf
 from .combinations import Combination
-from ..typing import HeadRepresentation, RelationRepresentation, TailRepresentation
+from ..typing import HeadRepresentation, RelationRepresentation, TailRepresentation, HintOrType
 from ..utils import CANONICAL_DIMENSIONS, convert_to_canonical_shape, ensure_tuple, upgrade_to_sequence
 
 __all__ = [
@@ -336,12 +336,13 @@ class LiteralInteraction(
 
     def __init__(
         self,
-        base: Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation],
+        base: HintOrType[Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]],
         combination: Combination,
+        base_kwargs: Optional[Mapping[str, Any]] = None,
     ):
         # TODO documentation for this
         super().__init__()
-        self.base = base
+        self.base = interaction_resolver.make(base, base_kwargs)
         self.combination = combination
         self.entity_shape = tuple(self.base.entity_shape) + ("e",)
 
