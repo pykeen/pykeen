@@ -3,7 +3,7 @@
 """Dataset analysis utilities."""
 
 import logging
-from typing import Collection, Optional, Tuple, Union
+from typing import Collection, Mapping, Optional, Tuple, Union
 
 import numpy
 import pandas as pd
@@ -29,7 +29,11 @@ __all__ = [
 SUBSET_LABELS = ("testing", "training", "validation", "total")
 
 
-def relation_count_dataframe(dataset: Dataset) -> pd.DataFrame:
+def relation_count_dataframe(
+    dataset: Dataset,
+    total_count: bool = True,
+    add_labels: bool = True,
+) -> pd.DataFrame:
     """Create a dataframe with relation counts for all subsets, and the full dataset.
 
     Example usage:
@@ -57,14 +61,19 @@ def relation_count_dataframe(dataset: Dataset) -> pd.DataFrame:
         df["subset"] = subset_name
         data.append(df)
     df = pd.concat(data, ignore_index=True)
-    df2 = df.groupby(by="relation_id").sum().reset_index()
-    df2["subset"] = None
-    df = pd.concat([df, df2], ignore_index=True)
-    df = _add_relation_labels(dataset=dataset, df=df)
+    if total_count:
+        df = df.groupby(by="relation_id")["count"].sum().reset_index()
+    if add_labels:
+        df = _add_relation_labels(dataset=dataset, df=df)
     return df
 
 
-def entity_count_dataframe(dataset: Dataset) -> pd.DataFrame:
+def entity_count_dataframe(
+    dataset: Dataset,
+    both_sides: bool = True,
+    total_count: bool = True,
+    add_labels: bool = True,
+) -> pd.DataFrame:
     """Create a dataframe with head/tail/both counts for all subsets, and the full dataset.
 
     Example usage:
@@ -89,26 +98,22 @@ def entity_count_dataframe(dataset: Dataset) -> pd.DataFrame:
     :return:
         A dataframe with one row per entity.
     """
-    # TODO: Update to long form
-    data = {}
-    num_entities = dataset.num_entities
-    second_level_order = ("head", "tail", "total")
+    # TODO: Merge duplicate code
+    data = []
     for subset_name, triples_factory in dataset.factory_dict.items():
-        for col, col_name in zip((0, 2), ("head", "tail")):
-            data[subset_name, col_name] = triple_analysis.get_id_counts(
-                id_tensor=triples_factory.mapped_triples[:, col],
-                num_ids=num_entities,
-            )
-        data[subset_name, "total"] = data[subset_name, "head"] + data[subset_name, "tail"]
-    for kind in ("head", "tail", "total"):
-        data["total", kind] = sum(data[subset_name, kind] for subset_name in dataset.factory_dict.keys())
-    index = sorted(dataset.entity_to_id, key=dataset.entity_to_id.get)
-    df = pd.DataFrame(
-        data=data,
-        index=index,
-        columns=pd.MultiIndex.from_product(iterables=[SUBSET_LABELS, second_level_order]),
-    )
-    df.index.name = "entity_label"
+        df = triple_analysis.get_entity_counts(mapped_triples=triples_factory.mapped_triples)
+        df["subset"] = subset_name
+        data.append(df)
+    df = pd.concat(data, ignore_index=True)
+    if both_sides:
+        df = df.groupby(["entity_id", "subset"])["count"].sum().reset_index()
+    if total_count:
+        group_key = ["entity_id"]
+        if not both_sides:
+            group_key += ["type"]
+        df = df.groupby(by=group_key)["count"].sum().reset_index()
+    if add_labels:
+        df = _add_entity_labels(dataset=dataset, df=df)
     return df
 
 
@@ -276,21 +281,49 @@ def _normalize_parts(dataset: Dataset, parts: Union[None, str, Collection[str]])
     return parts
 
 
+def _add_labels(
+    label_mapping: Optional[Mapping[int, str]],
+    df: pd.DataFrame,
+    id_column: str,
+    label_column: str,
+) -> pd.DataFrame:
+    if label_mapping is None:
+        return df
+    return pd.merge(
+        left=df,
+        right=pd.DataFrame(
+            data=list(label_mapping.items()),
+            columns=[label_column, id_column],
+        ),
+        on=id_column,
+    )
+
+
+def _add_entity_labels(
+    dataset: Dataset,
+    df: pd.DataFrame,
+    entity_id_column: str = "entity_id",
+    entity_label_column: str = "entity_label",
+) -> pd.DataFrame:
+    return _add_labels(
+        label_mapping=dataset.entity_to_id,
+        df=df,
+        id_column=entity_id_column,
+        label_column=entity_label_column,
+    )
+
+
 def _add_relation_labels(
     dataset: Dataset,
     df: pd.DataFrame,
     relation_id_column: str = "relation_id",
     relation_label_column: str = "relation_label",
 ) -> pd.DataFrame:
-    if dataset.relation_to_id is None:
-        return df
-    return pd.merge(
-        left=df,
-        right=pd.DataFrame(
-            data=list(dataset.relation_to_id.items()),
-            columns=[relation_label_column, relation_id_column],
-        ),
-        on=relation_id_column,
+    return _add_labels(
+        label_mapping=dataset.relation_to_id,
+        df=df,
+        id_column=relation_id_column,
+        label_column=relation_label_column,
     )
 
 

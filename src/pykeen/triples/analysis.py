@@ -362,7 +362,6 @@ def get_entity_counts(
     for label, col in (
         ("head", 0),
         ("tail", 2),
-        ("both", [0, 2]),
     ):
         unique, counts = _get_counts(mapped_triples=mapped_triples, column=col)
         data["entity_id"].append(unique)

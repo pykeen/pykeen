@@ -103,11 +103,9 @@ class AnalysisTests(unittest.TestCase):
     def test_entity_count_dataframe(self):
         """Test entity_count_dataframe()."""
         df = entity_count_dataframe(dataset=self.dataset)
-        self._test_count_dataframe(
+        self._test_count_dataframe_new(
             df=df,
-            label_name='entity_label',
-            expected_labels=self.dataset.entity_to_id.keys(),
-            second_level_column_labels=['head', 'tail', 'total'],
+            prefix="entity",
         )
 
     def test_entity_relation_co_occurrence_dataframe(self):
