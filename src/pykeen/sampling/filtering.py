@@ -1,4 +1,7 @@
+# -*- coding: utf-8 -*-
+
 """Filterer for negative triples."""
+
 import math
 from abc import abstractmethod
 from typing import Iterable, Optional, Tuple
@@ -9,12 +12,16 @@ from torch import nn
 
 from ..triples import CoreTriplesFactory
 
+__all__ = [
+    'filterer_resolver',
+    'Filterer',
+    'DefaultFilterer',
+    'BloomFilterer',
+]
+
 
 class Filterer(nn.Module):
     """An interface for filtering methods for negative triples."""
-
-    def __init__(self, **kwargs):
-        super().__init__()
 
     @abstractmethod
     def forward(
@@ -138,7 +145,6 @@ class BloomFilterer(Filterer):
         self,
         triples_factory: CoreTriplesFactory,
         error_rate: float = 0.001,
-        **kwargs,
     ):
         """
         Initialize the Bloom filter based filterer.
@@ -150,7 +156,7 @@ class BloomFilterer(Filterer):
         :param kwargs:
             Additional keyword based arguments passed to Filterer.
         """
-        super().__init__(**kwargs)
+        super().__init__()
 
         # Allocate bit array
         self.ideal_num_elements = triples_factory.num_triples

@@ -109,14 +109,14 @@ class BernoulliNegativeSampler(NegativeSampler):
         negative_batch[tail_mask, 2] = negative_entities[tail_mask]
 
         # If filtering is activated, all negative triples that are positive in the training dataset will be removed
-        if self.filterer is None:
+        if self.filterer is not None:
+            negative_batch, batch_filter = self.filterer(negative_batch=negative_batch)
+        else:
             # To make sure we don't replace the head by the original value
             # we shift all values greater or equal than the original value by one up
             # for that reason we choose the random value from [0, num_entities -1]
             negative_batch[head_mask, 0] += (negative_batch[head_mask, 0] >= positive_batch[head_mask, 0]).long()
             negative_batch[tail_mask, 2] += (negative_batch[tail_mask, 2] >= positive_batch[tail_mask, 2]).long()
             batch_filter = None
-        else:
-            negative_batch, batch_filter = self.filterer(negative_batch=negative_batch)
 
         return negative_batch, batch_filter
