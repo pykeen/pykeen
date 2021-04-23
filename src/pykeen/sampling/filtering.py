@@ -1,6 +1,7 @@
 """Filterer for negative triples."""
+import math
 from abc import abstractmethod
-from typing import Optional, Tuple
+from typing import Iterable, Optional, Tuple
 
 import torch
 from class_resolver import Resolver
@@ -79,6 +80,165 @@ class DefaultFilterer(Filterer):
                 raise e
         # Return only those proposed negative triples that are not positive in the training dataset
         return negative_batch[~final_filter], ~final_filter
+
+
+class BloomFilterer(Filterer):
+    """
+    A filterer for negative triples based on the Bloom filter.
+
+    Pure PyTorch, a proper module which can be moved to GPU, and support batch-wise computation.
+
+    .. seealso ::
+        * https://github.com/hiway/python-bloom-filter/ - for calculation of sizes, and rough structure of code
+        * https://github.com/skeeto/hash-prospector#two-round-functions - for parts of the hash function
+    """
+
+    #: some prime numbers for tuple hashing
+    mersenne: torch.LongTensor
+
+    #: The bit-array for the Bloom filter data structure
+    bit_array: torch.BoolTensor
+
+    @staticmethod
+    def num_bits(num: int, error_rate: float = 0.01) -> int:
+        """
+        Determine the required number of bits.
+
+        :param num:
+            The number of elements the Bloom filter shall store.
+        :param error_rate:
+            The desired error rate.
+
+        :return:
+            The required number of bits.
+        """
+        numerator = -1 * num * math.log(error_rate)
+        denominator = math.log(2) ** 2
+        real_num_bits_m = numerator / denominator
+        return int(math.ceil(real_num_bits_m))
+
+    @staticmethod
+    def num_probes(num_elements: int, num_bits: int):
+        """
+        Determine the number of probes / hashing rounds.
+
+        :param num_elements:
+            The number of elements.
+        :param num_bits:
+            The number of bits, i.e., the size of the Bloom filter.
+
+        :return:
+            The number of hashing rounds.
+        """
+        num_bits = num_bits
+        real_num_probes_k = (num_bits / num_elements) * math.log(2)
+        return int(math.ceil(real_num_probes_k))
+
+    def __init__(
+        self,
+        triples_factory: CoreTriplesFactory,
+        error_rate: float = 0.001,
+        **kwargs,
+    ):
+        """
+        Initialize the Bloom filter based filterer.
+
+        :param triples_factory:
+            The triples factory.
+        :param error_rate:
+            The desired error rate.
+        :param kwargs:
+            Additional keyword based arguments passed to Filterer.
+        """
+        super().__init__(**kwargs)
+
+        # Allocate bit array
+        self.ideal_num_elements = triples_factory.num_triples
+        size = self.num_bits(num=self.ideal_num_elements, error_rate=error_rate)
+        self.register_buffer(name="bit_array", tensor=torch.zeros(size, dtype=torch.bool))
+        self.register_buffer(
+            name="mersenne",
+            tensor=torch.as_tensor(
+                data=[2 ** x - 1 for x in [17, 19, 31]],
+                dtype=torch.long,
+            ).unsqueeze(dim=0),
+        )
+
+        # calculate number of hashing rounds
+        self.rounds = self.num_probes(num_elements=self.ideal_num_elements, num_bits=size)
+
+        # index triples
+        self.add(triples=triples_factory.mapped_triples)
+
+        # Store some meta-data
+        self.error_rate = error_rate
+
+    def __repr__(self):
+        return (
+            f"{self.__class__.__name__}("
+            f"error_rate={self.error_rate}, "
+            f"size={self.bit_array.shape[0]}, "
+            f"rounds={self.rounds}, "
+            f"ideal_num_elements={self.ideal_num_elements}, "
+            f")"
+        )
+
+    def probe(
+        self,
+        batch: torch.LongTensor,
+    ) -> Iterable[torch.LongTensor]:
+        """
+        Iterate over indices from the probes.
+
+        :param batch: shape: (batch_size, 3)
+            A batch of elements.
+
+        :yields:
+            Indices of the k-th round, shape: (batch_size,).
+        """
+        # pre-hash
+        x = (self.mersenne * batch).sum(dim=-1)
+        for i in range(self.num_probes_k):
+            # cf. https://github.com/skeeto/hash-prospector#two-round-functions
+            x = x ^ (x >> 16)
+            x = x * 0x7feb352d
+            x = x ^ (x >> 15)
+            x = x * 0x846ca68b
+            x = x ^ (x >> 16)
+            yield x.sum(dim=-1) % self.num_bits_m
+
+    def add(self, triples: torch.LongTensor) -> None:
+        """
+        Add triples to the Bloom filter.
+
+        :param triples:
+            The triples.
+        """
+        for i in self.probe(batch=triples):
+            self.bit_array[i] = True
+
+    def contains(self, batch: torch.LongTensor) -> torch.BoolTensor:
+        """
+        Check whether a triple is contained.
+
+        :param batch: shape (batch_size, 3)
+            The batch of triples.
+
+        :return: shape: (batch_size,)
+            The result. False guarantees that the element was not contained in the indexed triples. True can be
+            erroneous.
+        """
+        result = batch.new_ones(batch.shape[0], dtype=torch.bool)
+        for i in self.probe(batch):
+            result &= self.bit_array[i]
+        return result
+
+    def forward(
+        self,
+        negative_batch: torch.LongTensor,
+    ) -> Tuple[torch.LongTensor, Optional[torch.BoolTensor]]:  # noqa: D102
+        keep_mask = ~self.contains(batch=negative_batch)
+        return negative_batch[keep_mask], keep_mask
 
 
 filterer_resolver = Resolver.from_subclasses(
