@@ -52,7 +52,8 @@ def _normalize_parts(dataset: Dataset, parts: Union[None, str, Collection[str]])
         parts = dataset.factory_dict.keys()
     elif isinstance(parts, str):
         parts = [parts]
-    return parts
+    # unique
+    return list(set(parts))
 
 
 def _add_labels(
@@ -91,6 +92,7 @@ def relation_count_dataframe(
     dataset: Optional[Dataset] = None,
     triples_factory: Optional[CoreTriplesFactory] = None,
     mapped_triples: Optional[MappedTriples] = None,
+    parts: Optional[Collection[str]] = None,
     add_labels: bool = True,
     total_count: bool = False,
     relation_to_id: Mapping[str, int] = None,
@@ -116,6 +118,8 @@ def relation_count_dataframe(
         The triples factory.
     :param mapped_triples:
         The mapped triples.
+    :param parts:
+        Can be used in conjuction with dataset to select only a part of the triples factories.
     :param add_labels:
         Whether to add relation labels to the dataframe. Requires the triples factory / dataset to provide labels, or
         to explicitly provide a relation_to_id mapping.
@@ -142,10 +146,11 @@ def relation_count_dataframe(
             add_labels=False,  # are added after aggregation
         )
     else:
+        parts = _normalize_parts(dataset=dataset, parts=parts)
         data = []
-        for subset_name, triples_factory in dataset.factory_dict.items():
+        for subset_name in parts:
             df = relation_count_dataframe(
-                triples_factory=triples_factory,
+                triples_factory=dataset.factory_dict[subset_name],
                 add_labels=False,  # are added after aggregation
             )
             if not total_count:
