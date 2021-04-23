@@ -211,7 +211,7 @@ class BloomFilterer(Filterer):
             x = x ^ (x >> 15)
             x = x * 0x846ca68b
             x = x ^ (x >> 16)
-            yield x.sum(dim=-1) % self.bit_array.shape[0]
+            yield x % self.bit_array.shape[0]
 
     def add(self, triples: torch.LongTensor) -> None:
         """
