@@ -12,9 +12,6 @@ from ..triples import CoreTriplesFactory
 class Filterer(nn.Module):
     """An interface for filtering methods for negative triples."""
 
-    def __init__(self, **kwargs):
-        super().__init__()
-
     @abstractmethod
     def forward(
         self,
