@@ -2,10 +2,10 @@
 
 """Tests for filterers."""
 
-import unittest_templates
 from typing import Any, MutableMapping
 
 import numpy
+import unittest_templates
 
 from pykeen.datasets import Nations
 from pykeen.sampling.filtering import DefaultFilterer, Filterer
