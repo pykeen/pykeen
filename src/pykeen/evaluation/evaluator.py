@@ -494,8 +494,7 @@ def evaluate(
     :param evaluators:
         An evaluator or a list of evaluators working on batches of triples and corresponding scores.
     :param additional_pos_triples:
-        Additional triples to be known to be true (i.e. representing facts). Is required when performing filtered
-        evaluation.
+        Additional true triples to filter out during filtered evaluation.
     :param only_size_probing:
         The evaluation is only performed for two batches to test the memory footprint, especially on GPUs.
     :param batch_size: >0
