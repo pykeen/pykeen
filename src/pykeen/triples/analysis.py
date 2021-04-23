@@ -372,24 +372,6 @@ def get_entity_counts(
     return pd.DataFrame(data=data)
 
 
-def get_relation_counts(
-    mapped_triples: MappedTriples,
-) -> pd.DataFrame:
-    """
-    Create a dataframe of relation frequency.
-
-    :param mapped_triples: shape: (num_triples, 3)
-        The mapped triples.
-
-    :return:
-        A dataframe with columns ( relation_id | count )
-    """
-    return pd.DataFrame(data=dict(zip(
-        ["relation_id", "count"],
-        _get_counts(mapped_triples=mapped_triples, column=1),
-    )))
-
-
 def relation_pattern_types(
     mapped_triples: Collection[Tuple[int, int, int]],
 ) -> pd.DataFrame:
