@@ -96,15 +96,15 @@ class BasicNegativeSampler(NegativeSampler):
             # To make sure we don't replace the {head, relation, tail} by the
             # original value we shift all values greater or equal than the original value by one up
             # for that reason we choose the random value from [0, num_{heads, relations, tails} -1]
-            if not self.filtered:
+            if self.filterer is None:
                 negative_batch[start:stop, index] += (
                     negative_batch[start:stop, index] >= positive_batch[start:stop, index]
                 ).long()
 
         # If filtering is activated, all negative triples that are positive in the training dataset will be removed
-        if self.filtered:
-            negative_batch, batch_filter = self.filter_negative_triples(negative_batch=negative_batch)
-        else:
+        if self.filterer is None:
             batch_filter = None
+        else:
+            negative_batch, batch_filter = self.filterer(negative_batch=negative_batch)
 
         return negative_batch, batch_filter

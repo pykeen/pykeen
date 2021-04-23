@@ -3,13 +3,16 @@
 """Test that samplers can be executed."""
 
 import unittest
-from typing import ClassVar, Type
+from typing import Any, ClassVar, MutableMapping, Type
+from unittest import SkipTest
 
 import numpy
 import torch
+import unittest_templates
 
 from pykeen.datasets import Nations
 from pykeen.sampling import BasicNegativeSampler, BernoulliNegativeSampler, NegativeSampler
+from pykeen.sampling.filtering import DefaultFilterer, Filterer, NoFilterer
 from pykeen.training.schlichtkrull_sampler import GraphSampler, _compute_compressed_adjacency_list
 from pykeen.triples import SLCWAInstances, TriplesFactory
 
@@ -75,18 +78,6 @@ class _NegativeSamplingTestCase:
 
         # Check that all elements got corrupted
         assert (negative_batch != self.positive_batch).any(dim=1).all()
-
-        # Check whether filtering works correctly
-        # First giving an example where all triples have to be filtered
-        _, batch_filter = self.negative_sampler.filter_negative_triples(negative_batch=self.positive_batch)
-        # The filter should remove all triples
-        assert batch_filter.sum() == 0
-        # Create an example where no triples will be filtered
-        _, batch_filter = self.negative_sampler.filter_negative_triples(
-            negative_batch=(self.positive_batch + self.negative_sampler.num_entities),
-        )
-        # The filter should not remove any triple
-        assert self.positive_batch.size()[0] == batch_filter.sum()
 
         # Generate scaled negative sample
         scaled_negative_batch, _ = self.scaling_negative_sampler.sample(
@@ -213,3 +204,51 @@ class AdjacencyListCompressionTest(unittest.TestCase):
                 int(a) for a in ((triples[:, 0] == i) | (triples[:, 2] == i)).nonzero(as_tuple=False).flatten()
             )
             assert adjacent_edges == set(map(int, edge_ids))
+
+
+class FiltererTest(unittest_templates.GenericTestCase[Filterer]):
+    """A basic test for filtering."""
+
+    seed = 42
+    batch_size = 16
+    num_negs_per_pos = 10
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        kwargs["triples_factory"] = self.triples_factory = Nations().training
+        return kwargs
+
+    def post_instantiation_hook(self) -> None:  # noqa: D102
+        seed = 42
+        random = numpy.random.RandomState(seed=seed)
+        self.slcwa_instances = self.triples_factory.create_slcwa_instances()
+        batch_indices = random.randint(low=0, high=len(self.slcwa_instances), size=(self.batch_size,))
+        self.positive_batch = self.slcwa_instances.mapped_triples[batch_indices]
+
+    def test_filter(self):
+        # Check whether filtering works correctly
+        # First giving an example where all triples have to be filtered
+        _, batch_filter = self.instance(negative_batch=self.positive_batch)
+        # The filter should remove all triples
+        assert batch_filter.sum() == 0
+        # Create an example where no triples will be filtered
+        _, batch_filter = self.instance(
+            negative_batch=(self.positive_batch + self.triples_factory.num_entities),
+        )
+        # The filter should not remove any triple
+        assert self.positive_batch.size()[0] == batch_filter.sum()
+
+
+class NoFiltererTests(FiltererTest):
+    """Tests for the Nop filterer."""
+
+    cls = NoFilterer
+
+    def test_filter(self):  # noqa: D102
+        raise SkipTest("NoFilterer does not filter all positives.")
+
+
+class DefaultFiltererTests(FiltererTest):
+    """Tests for the default filterer."""
+
+    cls = DefaultFilterer
