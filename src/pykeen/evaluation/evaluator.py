@@ -71,12 +71,14 @@ class Evaluator(ABC):
     def __init__(
         self,
         filtered: bool = False,
+        all_pos_triples: Optional[MappedTriples] = None,
         requires_positive_mask: bool = False,
         batch_size: Optional[int] = None,
         slice_size: Optional[int] = None,
         automatic_memory_optimization: bool = True,
     ):
         self.filtered = filtered
+        self.all_pos_triples = all_pos_triples
         self.requires_positive_mask = requires_positive_mask
         self.batch_size = batch_size
         self.slice_size = slice_size
@@ -171,6 +173,7 @@ class Evaluator(ABC):
         rv = evaluate(
             model=model,
             mapped_triples=mapped_triples,
+            all_pos_triples=self.all_pos_triples,
             evaluators=self,
             batch_size=batch_size,
             slice_size=slice_size,
@@ -464,6 +467,7 @@ def evaluate(
     model: Model,
     mapped_triples: MappedTriples,
     evaluators: Union[Evaluator, Collection[Evaluator]],
+    all_pos_triples: Optional[MappedTriples] = None,
     only_size_probing: bool = False,
     batch_size: Optional[int] = None,
     slice_size: Optional[int] = None,
@@ -489,6 +493,8 @@ def evaluate(
         the model class on the fly.
     :param evaluators:
         An evaluator or a list of evaluators working on batches of triples and corresponding scores.
+    :param all_pos_triples:
+        The triples to be known to be true (i.e. representing facts). Is required when performing filtered evaluation.
     :param only_size_probing:
         The evaluation is only performed for two batches to test the memory footprint, especially on GPUs.
     :param batch_size: >0
@@ -547,7 +553,8 @@ def evaluate(
 
     # Prepare for result filtering
     if filtering_necessary or positive_masks_required:
-        all_pos_triples = torch.cat([model.triples_factory.mapped_triples, mapped_triples], dim=0)
+        if all_pos_triples is None:
+            raise ValueError("When applying filtered evaluation, all_pos_triples needs to be provided.")
         all_pos_triples = all_pos_triples.to(device=device)
     else:
         all_pos_triples = None
