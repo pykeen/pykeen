@@ -102,9 +102,9 @@ class BasicNegativeSampler(NegativeSampler):
                 ).long()
 
         # If filtering is activated, all negative triples that are positive in the training dataset will be removed
-        if self.filterer is None:
-            batch_filter = None
-        else:
+        if self.filterer is not None:
             negative_batch, batch_filter = self.filterer(negative_batch=negative_batch)
+        else:
+            batch_filter = None
 
         return negative_batch, batch_filter
