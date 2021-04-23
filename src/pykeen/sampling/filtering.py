@@ -59,6 +59,12 @@ class DefaultFilterer(Filterer):
     """
 
     def __init__(self, triples_factory: CoreTriplesFactory):
+        """
+        Initialize the filterer.
+
+        :param triples_factory:
+            The triples factory.
+        """
         super().__init__()
         # Make sure the mapped triples are initiated
         # Copy the mapped triples to the device for efficient filtering
