@@ -179,7 +179,7 @@ class BloomFilterer(Filterer):
         # Store some meta-data
         self.error_rate = error_rate
 
-    def __repr__(self):
+    def __repr__(self):  # noqa:D105
         return (
             f"{self.__class__.__name__}("
             f"error_rate={self.error_rate}, "
@@ -204,7 +204,7 @@ class BloomFilterer(Filterer):
         """
         # pre-hash
         x = (self.mersenne * batch).sum(dim=-1)
-        for i in range(self.rounds):
+        for _ in range(self.rounds):
             # cf. https://github.com/skeeto/hash-prospector#two-round-functions
             x = x ^ (x >> 16)
             x = x * 0x7feb352d
