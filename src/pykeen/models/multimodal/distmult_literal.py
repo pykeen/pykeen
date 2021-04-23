@@ -44,11 +44,7 @@ class DistMultLiteral(LiteralModel):
         triples_factory: TriplesNumericLiteralsFactory,
         embedding_dim: int = 50,
         input_dropout: float = 0.0,
-        loss: Optional[Loss] = None,
-        preferred_device: DeviceHint = None,
-        random_seed: Optional[int] = None,
-        regularizer: Optional[Regularizer] = None,
-        predict_with_sigmoid: bool = False,
+        **kwargs,
     ) -> None:
         super().__init__(
             triples_factory=triples_factory,
@@ -64,20 +60,13 @@ class DistMultLiteral(LiteralModel):
                 EmbeddingSpecification(
                     embedding_dim=embedding_dim,
                     initializer=nn.init.xavier_normal_,
-                    # TODO: Verify
-                    regularizer=regularizer,
                 ),
             ],
             relation_representations=[
                 EmbeddingSpecification(
                     embedding_dim=embedding_dim,
                     initializer=nn.init.xavier_normal_,
-                    # TODO: Verify
-                    regularizer=regularizer,
                 ),
             ],
-            loss=loss,
-            predict_with_sigmoid=predict_with_sigmoid,
-            preferred_device=preferred_device,
-            random_seed=random_seed,
+            **kwargs,
         )

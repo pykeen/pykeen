@@ -2,7 +2,7 @@
 
 """Implementation of the ComplexLiteral model."""
 
-from typing import Any, ClassVar, Mapping, Optional, Type
+from typing import Any, ClassVar, Mapping, Type
 
 import torch
 import torch.nn as nn
@@ -13,9 +13,7 @@ from ...losses import BCEWithLogitsLoss, Loss
 from ...nn.combinations import ComplExLiteralCombination
 from ...nn.emb import EmbeddingSpecification
 from ...nn.modules import ComplExInteraction, LiteralInteraction
-from ...regularizers import Regularizer
 from ...triples import TriplesNumericLiteralsFactory
-from ...typing import DeviceHint
 
 __all__ = [
     'ComplExLiteral',
@@ -47,11 +45,7 @@ class ComplExLiteral(LiteralModel):
         triples_factory: TriplesNumericLiteralsFactory,
         embedding_dim: int = 50,
         input_dropout: float = 0.2,
-        loss: Optional[Loss] = None,
-        predict_with_sigmoid: bool = False,
-        preferred_device: DeviceHint = None,
-        random_seed: Optional[int] = None,
-        regularizer: Optional[Regularizer] = None,
+        **kwargs,
     ) -> None:
         """Initialize the model."""
         super().__init__(
@@ -69,8 +63,6 @@ class ComplExLiteral(LiteralModel):
                     embedding_dim=embedding_dim,
                     initializer=nn.init.xavier_normal_,
                     dtype=torch.complex64,
-                    # TODO: verify
-                    regularizer=regularizer,
                 ),
             ],
             relation_representations=[
@@ -78,12 +70,7 @@ class ComplExLiteral(LiteralModel):
                     embedding_dim=embedding_dim,
                     initializer=nn.init.xavier_normal_,
                     dtype=torch.complex64,
-                    # TODO: verify
-                    regularizer=regularizer,
                 ),
             ],
-            loss=loss,
-            predict_with_sigmoid=predict_with_sigmoid,
-            preferred_device=preferred_device,
-            random_seed=random_seed,
+            **kwargs,
         )

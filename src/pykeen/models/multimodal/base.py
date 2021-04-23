@@ -25,22 +25,15 @@ class LiteralModel(ERModel[HeadRepresentation, RelationRepresentation, TailRepre
         interaction: LiteralInteraction,
         entity_representations: Sequence[Union[EmbeddingSpecification, RepresentationModule]],
         relation_representations: EmbeddingSpecificationHint = None,
-        loss: Optional[Loss] = None,
-        predict_with_sigmoid: bool = False,
-        preferred_device: DeviceHint = None,
-        random_seed: Optional[int] = None,
+        **kwargs,
     ):
         literal_representation = LiteralRepresentation(
             numeric_literals=triples_factory.get_numeric_literals_tensor(),
         )
-
         super().__init__(
             triples_factory=triples_factory,
             interaction=interaction,
-            loss=loss,
-            predict_with_sigmoid=predict_with_sigmoid,
-            preferred_device=preferred_device,
-            random_seed=random_seed,
             entity_representations=[*entity_representations, literal_representation],
             relation_representations=relation_representations,
+            **kwargs,
         )
