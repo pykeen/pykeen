@@ -4,7 +4,6 @@
 
 import unittest
 from typing import Any, ClassVar, MutableMapping, Type
-from unittest import SkipTest
 
 import numpy
 import torch
@@ -12,7 +11,7 @@ import unittest_templates
 
 from pykeen.datasets import Nations
 from pykeen.sampling import BasicNegativeSampler, BernoulliNegativeSampler, NegativeSampler
-from pykeen.sampling.filtering import DefaultFilterer, Filterer, NoFilterer
+from pykeen.sampling.filtering import DefaultFilterer, Filterer
 from pykeen.training.schlichtkrull_sampler import GraphSampler, _compute_compressed_adjacency_list
 from pykeen.triples import SLCWAInstances, TriplesFactory
 
@@ -237,15 +236,6 @@ class FiltererTest(unittest_templates.GenericTestCase[Filterer]):
         )
         # The filter should not remove any triple
         assert self.positive_batch.size()[0] == batch_filter.sum()
-
-
-class NoFiltererTests(FiltererTest):
-    """Tests for the Nop filterer."""
-
-    cls = NoFilterer
-
-    def test_filter(self):  # noqa: D102
-        raise SkipTest("NoFilterer does not filter all positives.")
 
 
 class DefaultFiltererTests(FiltererTest):
