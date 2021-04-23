@@ -2,8 +2,9 @@
 import hashlib
 import itertools as itt
 import logging
+import warnings
 from collections import defaultdict
-from typing import Collection, DefaultDict, Iterable, Mapping, NamedTuple, Optional, Set, Tuple
+from typing import Collection, DefaultDict, Iterable, Mapping, MutableMapping, NamedTuple, Optional, Sequence, Set, Tuple, Union
 
 import numpy
 import pandas as pd
@@ -328,12 +329,48 @@ def get_id_counts(
     :return: shape: (num_ids,)
          The counts for each individual ID from {0, 1, ..., num_ids-1}.
     """
+    warnings.warn("Deprecated. Use get_entity_counts or get_relation_counts.")
     unique, counts = id_tensor.unique(return_counts=True)
     if num_ids is None:
         num_ids = unique.max().item() + 1
     total_counts = numpy.zeros(shape=(num_ids,), dtype=numpy.int64)
     total_counts[unique.numpy()] = counts.numpy()
     return total_counts
+
+
+def _get_counts(
+    mapped_triples: MappedTriples,
+    column: Union[int, Sequence[int]],
+) -> Tuple[numpy.ndarray, numpy.ndarray]:
+    unique, counts = mapped_triples[:, column].view(-1).unique(return_counts=True)
+    return unique.numpy(), counts.numpy()
+
+
+def get_entity_counts(
+    mapped_triples: MappedTriples,
+) -> pd.DataFrame:
+    """
+    Create a dataframe of entity frequencies.
+
+    :param mapped_triples: shape: (num_triples, 3)
+        The mapped triples.
+
+    :return:
+        A dataframe with columns ( entity_id | count | type )
+    """
+    data: MutableMapping[Sequence] = defaultdict(list)
+    for label, col in (
+        ("head", 0),
+        ("tail", 2),
+        ("both", [0, 2]),
+    ):
+        unique, counts = _get_counts(mapped_triples=mapped_triples, column=col)
+        data["entity_id"].append(unique)
+        data["count"].append(counts)
+        data["type"].extend([label] * len(counts))
+    for key in ("entity_id", "count"):
+        data[key] = numpy.concatenate(data[key], axis=0)
+    return pd.DataFrame(data=data)
 
 
 def get_relation_counts(
@@ -348,8 +385,10 @@ def get_relation_counts(
     :return:
         A dataframe with columns ( relation_id | count )
     """
-    unique, counts = mapped_triples[:, 1].unique(return_counts=True)
-    return pd.DataFrame(data=dict(relation_id=unique.numpy(), count=counts.numpy()))
+    return pd.DataFrame(data=dict(zip(
+        ["relation_id", "count"],
+        _get_counts(mapped_triples=mapped_triples, column=1),
+    )))
 
 
 def relation_pattern_types(
