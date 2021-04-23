@@ -138,9 +138,8 @@ def relation_count_dataframe(
     elif triples_factory is not None:
         df = relation_count_dataframe(
             mapped_triples=triples_factory.mapped_triples,
+            add_labels=False,  # are added after aggregation
         )
-        if add_labels and not relation_to_id and hasattr(triples_factory, "relation_to_id"):
-            relation_to_id = triples_factory.relation_to_id
     else:
         data = []
         for subset_name, triples_factory in dataset.factory_dict.items():
@@ -154,8 +153,6 @@ def relation_count_dataframe(
         df = pd.concat(data, ignore_index=True)
         if total_count:
             df = df.groupby(by="relation_id")["count"].sum().reset_index()
-        if add_labels and not relation_to_id and hasattr(dataset, "relation_to_id"):
-            relation_to_id = dataset.relation_to_id
 
     if not add_labels:
         return df
