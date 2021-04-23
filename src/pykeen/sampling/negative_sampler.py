@@ -3,11 +3,12 @@
 """Basic structure for a negative sampler."""
 
 from abc import ABC, abstractmethod
-from typing import Any, ClassVar, Mapping, Optional, Tuple
+from typing import Any, ClassVar, Mapping, Optional, Tuple, Type, Union
 
 import torch
+from class_resolver import Hint
 
-from .filtering import filterer_resolver
+from .filtering import Filterer, filterer_resolver
 from ..triples import TriplesFactory
 from ..utils import normalize_string
 
@@ -22,11 +23,14 @@ class NegativeSampler(ABC):
     #: The default strategy for optimizing the negative sampler's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Mapping[str, Any]]]
 
+    filterer: Optional[Filterer]
+
     def __init__(
         self,
         triples_factory: TriplesFactory,
         num_negs_per_pos: Optional[int] = None,
         filtered: bool = False,
+        filterer: Hint[Union[Filterer, Type[Filterer]]] = None,
     ) -> None:
         """Initialize the negative sampler with the given entities.
 
@@ -35,11 +39,14 @@ class NegativeSampler(ABC):
         :param filtered: Whether proposed corrupted triples that are in the training data should be filtered.
             Defaults to False. See explanation in :func:`filter_negative_triples` for why this is
             a reasonable default.
+        :param filterer: If filtered is set to True, this can be used to choose which filter module from
+            :mod:`pykeen.sampling.filtering` is used.
         """
         self.triples_factory = triples_factory
         self.num_negs_per_pos = num_negs_per_pos if num_negs_per_pos is not None else 1
         self.filterer = filterer_resolver.make(
-            pos_kwargs=dict(triples_factory=triples_factory),
+            filterer,
+            triples_factory=triples_factory,
         ) if filtered else None
 
     @classmethod
