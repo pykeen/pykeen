@@ -32,6 +32,7 @@ class NegativeSampler(ABC):
         num_negs_per_pos: Optional[int] = None,
         filtered: bool = False,
         filterer: Hint[Union[Filterer, Type[Filterer]]] = None,
+        filterer_kwargs: Optional[Mapping[str, Any]] = None,
     ) -> None:
         """Initialize the negative sampler with the given entities.
 
@@ -42,11 +43,14 @@ class NegativeSampler(ABC):
             a reasonable default.
         :param filterer: If filtered is set to True, this can be used to choose which filter module from
             :mod:`pykeen.sampling.filtering` is used.
+        :param filterer_kwargs:
+            Additional keyword-based arguments passed to the filterer upon construction.
         """
         self.triples_factory = triples_factory
         self.num_negs_per_pos = num_negs_per_pos if num_negs_per_pos is not None else 1
         self.filterer = filterer_resolver.make(
             filterer,
+            pos_kwargs=filterer_kwargs,
             triples_factory=triples_factory,
         ) if filtered else None
 
