@@ -511,6 +511,8 @@ class TrainingLoop(ABC):
         # Save the time to track when the saved point was available
         last_checkpoint = time.time()
 
+        # A hook for modifying the data loader (and anything else that needs to be updated during training)
+        # used for example by the :mod:`accelerate` mixin
         train_data_loader = self._prepare_training(train_data_loader)
 
         # Training Loop
@@ -661,10 +663,14 @@ class TrainingLoop(ABC):
 
         return current_epoch_loss
 
-    def _prepare_training(self, data):
+    def _prepare_training(self, data: DataLoader) -> DataLoader:
+        # A hook for modifying the data loader (and anything else that needs to be updated during training)
+        # used for example by the :mod:`accelerate` mixin. By default, does not modify the data loader at all.
         return data
 
-    def _loss_backward(self, loss):
+    def _loss_backward(self, loss: torch.nn.Module) -> None:
+        # A hook for how the loss's backward function is applied. Used for example by the :mod:`accelerate` mixin.
+        # By default, just calls :func:`torch.nn.Module.backward`.
         loss.backward()
 
     @staticmethod
@@ -990,7 +996,13 @@ class AcceleratedTrainingLoop(TrainingLoop, ABC):
 
     def __init__(self, **kwargs) -> None:
         """Initialize the training loop mixin."""
-        import accelerate
+        try:
+            import accelerate
+        except ImportError:
+            raise ImportError(
+                'Need to install `accelerate` to use the accelerated training loop. '
+                'Do this with: \n\n\t`pip install accelerate`',
+            )
         super().__init__(**kwargs)
         self.accelerator = accelerate.Accelerator()
 
@@ -999,19 +1011,21 @@ class AcceleratedTrainingLoop(TrainingLoop, ABC):
         """The device used by the model."""
         return self.accelerator.device
 
-    def _prepare_training(self, train_data_loader):
+    def _prepare_training(self, data: DataLoader) -> DataLoader:
         # Accelerate-specific initialization of the model, optimizer, and data loader
-        self.model, self.optimizer, train_data_loader = self.accelerator.prepare(
+        self.model, self.optimizer, data = self.accelerator.prepare(
             self.model,
             self.optimizer,
-            train_data_loader,
+            data,
         )
-        return train_data_loader
+        return data
 
     def _loss_backward(self, loss):
         self.accelerator.backward(loss)
 
     def _train(self, **kwargs):
+        # If the accelerator is running, it makes several processes. If it's not the main one,
+        # intercept the kwargs for _train() to force turning off the tqdm logging per batch
         if not self.accelerator.is_local_main_process:
             kwargs['use_tqdm_batch'] = False
         return super()._train(**kwargs)
