@@ -29,6 +29,7 @@ __all__ = [
 ]
 
 # constants
+COUNT_COLUMN_NAME = "count"
 ENTITY_ID_COLUMN_NAME = "entity_id"
 ENTITY_LABEL_COLUMN_NAME = "entity_label"
 RELATION_ID_COLUMN_NAME = "relation_id"
@@ -104,7 +105,7 @@ def relation_count_dataframe(
     >>> df = relation_count_dataframe(dataset=dataset)
 
     # Get the most frequent relations in training
-    >>> df[df["subset"] == "training"].sort_values(by="count").head()
+    >>> df[df["subset"] == "training"].sort_values(by="count", ascending=False).head()
 
     # Get all relations which do not occur in the test part
     >>> df[(df["subset"] == "testing") & (df["count"] == 0)]
@@ -132,7 +133,7 @@ def relation_count_dataframe(
 
     if mapped_triples is not None:
         df = pd.DataFrame(data=dict(zip(
-            [RELATION_ID_COLUMN_NAME, "count"],
+            [RELATION_ID_COLUMN_NAME, COUNT_COLUMN_NAME],
             _get_counts(mapped_triples=mapped_triples, column=1),
         )))
     elif triples_factory is not None:
@@ -152,7 +153,7 @@ def relation_count_dataframe(
             data.append(df)
         df = pd.concat(data, ignore_index=True)
         if total_count:
-            df = df.groupby(by="relation_id")["count"].sum().reset_index()
+            df = df.groupby(by=RELATION_ID_COLUMN_NAME)[COUNT_COLUMN_NAME].sum().reset_index()
 
     if not add_labels:
         return df
