@@ -7,7 +7,7 @@ from typing import Any, ClassVar, Mapping, Optional, Tuple
 
 import torch
 
-from .filtering import DefaultFilterer, NoFilterer, filterer_resolver
+from .filtering import filterer_resolver
 from ..triples import TriplesFactory
 from ..utils import normalize_string
 
