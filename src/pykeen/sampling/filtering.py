@@ -1,4 +1,7 @@
+# -*- coding: utf-8 -*-
+
 """Filterer for negative triples."""
+
 from abc import abstractmethod
 from typing import Optional, Tuple
 
@@ -7,6 +10,12 @@ from class_resolver import Resolver
 from torch import nn
 
 from ..triples import CoreTriplesFactory
+
+__all__ = [
+    'filterer_resolver',
+    'Filterer',
+    'DefaultFilterer',
+]
 
 
 class Filterer(nn.Module):
