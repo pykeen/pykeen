@@ -992,10 +992,9 @@ class TrainingLoop(ABC):
 
 
 class AcceleratedTrainingLoop(TrainingLoop, ABC):
-    """A training loop with HF accelerate."""
+    """A distributed version of :class:`TrainingLoop` enabled by the :class:`accelerate.Accelerator`."""
 
     def __init__(self, **kwargs) -> None:
-        """Initialize the training loop mixin."""
         try:
             import accelerate
         except ImportError:
