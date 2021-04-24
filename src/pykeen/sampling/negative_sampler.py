@@ -3,10 +3,10 @@
 """Basic structure for a negative sampler."""
 
 from abc import ABC, abstractmethod
-from typing import Any, ClassVar, Mapping, Optional, Tuple, Type, Union
+from typing import Any, ClassVar, Mapping, Optional, Tuple
 
 import torch
-from class_resolver import Hint, HintOrType
+from class_resolver import HintOrType
 
 from .filtering import Filterer, filterer_resolver
 from ..triples import TriplesFactory

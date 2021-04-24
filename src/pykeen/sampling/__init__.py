@@ -16,10 +16,19 @@ We denote with $\mathcal{N}$ the set of all potential negative triples:
     \mathcal{H}(r, t) &=& \{(h', r, t) \mid h' \in \mathcal{E} \land h' \neq h\}
 
 In theory, all positive triples in $\mathcal{K}$ should be excluded from this set of candidate negative
-triples $\mathcal{N}$ such that $\mathcal{N}^- = \mathcal{N} \setminus \mathcal{K}$. In practice, however,
-since usually $|\mathcal{N}| \gg |\mathcal{K}|$, the likelihood of generating a false negative is rather low.
-Therefore, the additional filter step is often omitted to lower computational cost. It should be taken
-into account that a corrupted triple that is *not part* of the knowledge graph can represent a true fact.
+triples $\mathcal{N}$ such that $\mathcal{N}^- = \mathcal{N} \setminus \mathcal{K}$. If these false
+negatives are ranked higher than testing triples during evaluation, the resulting metrics become less
+accurate.
+
+An algorithm for removing these false negatives was proposed in [bordes2013]_.
+In practice, however, since usually $|\mathcal{N}| \gg |\mathcal{K}|$, the likelihood of generating a false
+negative is rather low. Therefore, the additional filter step is often omitted to lower computational cost.
+
+.. warning:: 
+
+    It should be taken into account that a corrupted triple that is *not part*
+    of the knowledge graph can represent a true fact. These false negatives can
+    not be removed *a priori* in the filtered setting because they are unknown.
 """  # noqa
 
 from typing import Set, Type
