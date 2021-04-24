@@ -660,9 +660,13 @@ class ArchiveSingleDataset(LazyDataset):
         """Extract file from archive."""
         raise NotImplementedError
 
+    @staticmethod
+    def _download(location: str, path: Union[str, pathlib.Path]):
+        download(location, path)
+
     def _load(self) -> None:
         if not os.path.exists(self._get_path()):
-            download(self.url, self._get_path())  # noqa:S310
+            self._download(self.url, self._get_path())  # noqa:S310
 
         _actual_path = os.path.join(self.cache_root, self._relative_path)
         if not os.path.exists(_actual_path):

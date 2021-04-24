@@ -2,17 +2,18 @@
 
 """The Wk3l-15k dataset family.
 
-Get a summary with ``python -m pykeen.datasets.WK3l15k``
+Get a summary with ``python -m pykeen.datasets.wk3l``
 """
+from pathlib import Path
+from typing import Union
 
 import click
 from more_click import verbose_option
 
 from pykeen.datasets.base import ZipFileSingleDataset
+from pystow.utils import download_from_google
 
-# TODO: Download does not work properly for Google Drive
-URL = 'https://drive.google.com/open?id=1AsPPU4ka1Rc9u-XYMGWtvV65hF3egi0z'
-
+GOOGLE_DRIVE_ID = '1AsPPU4ka1Rc9u-XYMGWtvV65hF3egi0z'
 GRAPH_PAIRS = ("en_fr", "en_de")
 SIDES = tuple(sum((pair.split("_") for pair in GRAPH_PAIRS), start=[]))
 
@@ -36,11 +37,15 @@ class WK3l15k(ZipFileSingleDataset):
         suffix = 5 if graph_pair == "en_fr" else 6
         file_name = f"P_{side}_v{suffix}.csv"
         super().__init__(
-            url=URL,
+            url=GOOGLE_DRIVE_ID,
             relative_path=f"data/WK3l-15k/{graph_pair}/{file_name}",
             name="wk3l15k.zip",
             **kwargs,
         )
+
+    @staticmethod
+    def _download(location: str, path: Union[str, Path]):
+        download_from_google(location, path)
 
 
 @click.command()
