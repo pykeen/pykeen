@@ -172,9 +172,9 @@ incapability to solve of one the tasks.
 
 Filtering
 ~~~~~~~~~
-The rank-based evaluation allows using the "filtered setting", which is enabled by default. When evaluating
-the tail prediction for a triple :math:`(h, r, t)`, i.e. scoring all triples :math:`(h, r, e)`, there may be
-additional known triples :math:`(h, r, t')` for :math:`t \neq t'`. If the model predicts a higher score for
+The rank-based evaluation allows using the "filtered setting" motivated by [bordes2013]_, which is enabled by default.
+When evaluating the tail prediction for a triple :math:`(h, r, t)`, i.e. scoring all triples :math:`(h, r, e)`, there
+may be additional known triples :math:`(h, r, t')` for :math:`t \neq t'`. If the model predicts a higher score for
 :math:`(h, r, t')`, the rank will increase, and hence the measured model performance will decrease. However, giving
 :math:`(h, r, t')` a high score (and thus a low rank) is desirable since it is a true triple as well. Thus, the
 filtered evaluation setting ignores for a given triple :math:`(h, r, t)` the scores of all other *known* true triples

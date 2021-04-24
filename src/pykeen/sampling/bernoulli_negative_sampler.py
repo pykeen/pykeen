@@ -2,10 +2,12 @@
 
 """Negative sampling algorithm based on the work of [wang2014]_."""
 
-from typing import Optional, Tuple
+from typing import Any, Mapping, Optional, Tuple
 
 import torch
+from class_resolver import HintOrType
 
+from .filtering import Filterer
 from .negative_sampler import NegativeSampler
 from ..triples import TriplesFactory
 
@@ -46,11 +48,27 @@ class BernoulliNegativeSampler(NegativeSampler):
         triples_factory: TriplesFactory,
         num_negs_per_pos: Optional[int] = None,
         filtered: bool = False,
+        filterer: HintOrType[Filterer] = None,
+        filterer_kwargs: Optional[Mapping[str, Any]] = None,
     ) -> None:
+        """Initialize the bernoulli negative sampler with the given entities.
+
+        :param triples_factory: The factory holding the triples to sample from
+        :param num_negs_per_pos: Number of negative samples to make per positive triple. Defaults to 1.
+        :param filtered: Whether proposed corrupted triples that are in the training data should be filtered.
+            Defaults to False. See explanation in :func:`filter_negative_triples` for why this is
+            a reasonable default.
+        :param filterer: If filtered is set to True, this can be used to choose which filter module from
+            :mod:`pykeen.sampling.filtering` is used.
+        :param filterer_kwargs:
+            Additional keyword-based arguments passed to the filterer upon construction.
+        """
         super().__init__(
             triples_factory=triples_factory,
             num_negs_per_pos=num_negs_per_pos,
             filtered=filtered,
+            filterer=filterer,
+            filterer_kwargs=filterer_kwargs,
         )
         # Preprocessing: Compute corruption probabilities
         triples = self.triples_factory.mapped_triples

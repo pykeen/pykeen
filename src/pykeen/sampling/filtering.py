@@ -1,6 +1,75 @@
 # -*- coding: utf-8 -*-
 
-"""Filterer for negative triples."""
+r"""Consider the following properties of relation $r$. Because the corruption operations are applied independently
+of triples, the resulting candidate corrupt triples could overlap with known positive triples in $\mathcal{K}$.
+
+=====================  ============================================  ===============================================================
+Property of :math:`r`  Example pair of triples                       Implications
+=====================  ============================================  ===============================================================
+one-to-many            :math:`(h,r,t_1), (h,r,t_2) \in \mathcal{K}`  :math:`(h,r,t_2) \in T(h,r,t_1) \cup (h,r,t_1) \in T(h,r,t_2)`
+multiple               :math:`(h,r_1,t), (h,r_2,t) \in \mathcal{K}`  :math:`(h,r_2,t) \in R(h,r_1,t) \cup (h,r_1,t) \in R(h,r_2,t)`
+many-to-one            :math:`(h_1,r,t), (h_2,r,t) \in \mathcal{K}`  :math:`(h_2,r,t) \in H(h_1,r,t) \cup (h_1,r,t) \in H(h_2,r,t)`
+=====================  ============================================  ===============================================================
+
+If no relations in $\mathcal{K}$ satisfy any of the relevant properties for the corruption schema chosen in negative
+sampling, then there is guaranteed to be no overlap between $\mathcal{N}$ and $\mathcal{K}$ such that 
+$\mathcal{N} \cap \mathcal{K} \neq \emptyset$. However, this scenario is very unlikely for real-world knowledge graphs.
+
+The known positive triples that appear in $\mathcal{N}$ are false negatives. This is problematic becuase they will
+be scored well by the knowledge graph embedding model during evaluation, have lower ranks, and ultimately lead to
+worse performance on rank-based evaluation metrics such as the (arithmetic) mean rank.
+
+[bordes2013]_ proposed an exact algorithm in which all known positive triples in $\mathcal{K}$ are excluded from
+the set of candidate negative triples $\mathcal{N}$ such that $\mathcal{N}^- = \mathcal{N} \setminus \mathcal{K}$
+in order to yield more accurate evaluations. However, in practice, $|\mathcal{N}| \gg |\mathcal{K}|$, so the
+likelihood of generating a false negative is rather low. Therefore, the additional filter step is often omitted
+to lower computational cost.
+
+By default, PyKEEN does *not* filter false negatives from $\mathcal{N}$. To enable the "filtered setting", the
+``filtered`` keyword can be given to ``negative_sampler_kwargs`` like in:
+
+.. code-block:: python
+
+    results = pipeline(
+        dataset='YAGO3-10',
+        model='PairRE',
+        training_loop='sLCWA',
+        negative_sampler='basic',
+        negative_sampler_kwargs=dict(
+            filtered=True,    
+        ),
+    )
+
+PyKEEN implements several algorithms for filtering with different properties that can be chosen using the
+``filterer`` keyword argument in ``negative_sampler_kwargs``. By default, an exact algorithm is used in
+:class:`pykeen.sampling.filtering.DefaultFilterer`. However, a filterer based on
+`bloom filters <https://en.wikipedia.org/wiki/Bloom_filter>`_ is also available in
+:class:`pykeen.sampling.filtering.BloomFilterer`that trades exact correctness for speed and efficiency.
+It can be activated with:
+
+.. code-block:: python
+
+    from pykeen.pipeline import pipeline
+
+    results = pipeline(
+        dataset='YAGO3-10',
+        model='PairRE',
+        training_loop='sLCWA',
+        negative_sampler='basic',
+        negative_sampler_kwargs=dict(
+            filtered=True,
+            filterer='bloom',    
+        ),
+    )
+
+More information on them can be found in :mod:`pykeen.sampling.filtering`.
+
+.. warning:: 
+
+    It should be taken into account that a corrupted triple that is *not part*
+    of the knowledge graph can represent a true fact. These false negatives can
+    not be removed *a priori* in the filtered setting because they are unknown.
+"""  # noqa
 
 import math
 from abc import abstractmethod
