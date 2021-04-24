@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from typing import Any, ClassVar, Mapping, Optional, Tuple, Type, Union
 
 import torch
-from class_resolver import Hint
+from class_resolver import Hint, HintOrType
 
 from .filtering import Filterer, filterer_resolver
 from ..triples import TriplesFactory
@@ -31,7 +31,7 @@ class NegativeSampler(ABC):
         triples_factory: TriplesFactory,
         num_negs_per_pos: Optional[int] = None,
         filtered: bool = False,
-        filterer: Hint[Union[Filterer, Type[Filterer]]] = None,
+        filterer: HintOrType[Filterer] = None,
         filterer_kwargs: Optional[Mapping[str, Any]] = None,
     ) -> None:
         """Initialize the negative sampler with the given entities.

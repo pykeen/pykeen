@@ -52,19 +52,15 @@ class Filterer(nn.Module):
 
 
 class DefaultFilterer(Filterer):
-    """
-    The default filterer.
+    """The default filterer.
 
-    .. warning ::
-        This filterer may contain a correctness error, cf. https://github.com/pykeen/pykeen/issues/272
+    .. warning:: This filterer may contain a correctness error, cf. https://github.com/pykeen/pykeen/issues/272
     """
 
     def __init__(self, triples_factory: CoreTriplesFactory):
-        """
-        Initialize the filterer.
+        """Initialize the filterer.
 
-        :param triples_factory:
-            The triples factory.
+        :param triples_factory: The triples factory.
         """
         super().__init__()
         # Make sure the mapped triples are initiated
@@ -102,22 +98,16 @@ class DefaultFilterer(Filterer):
 
 
 class PythonSetFilterer(Filterer):
-    """
-    A filterer using Python sets for filtering.
+    """A filterer using Python sets for filtering.
 
     This filterer is expected to be rather slow due to the conversion from torch long tensors to Python tuples. It can
     still serve as a baseline for performance comparison.
     """
 
-    def __init__(
-        self,
-        triples_factory: CoreTriplesFactory,
-    ):
-        """
-        Initialize the filterer.
+    def __init__(self, triples_factory: CoreTriplesFactory):
+        """Initialize the filterer.
 
-        :param triples_factory:
-            The triples factory.
+        :param triples_factory: The triples factory.
         """
         super().__init__()
         # store set of triples
@@ -135,8 +125,7 @@ class PythonSetFilterer(Filterer):
 
 
 class BloomFilterer(Filterer):
-    """
-    A filterer for negative triples based on the Bloom filter.
+    """A filterer for negative triples based on the Bloom filter.
 
     Pure PyTorch, a proper module which can be moved to GPU, and support batch-wise computation.
 
@@ -151,17 +140,11 @@ class BloomFilterer(Filterer):
     #: The bit-array for the Bloom filter data structure
     bit_array: torch.BoolTensor
 
-    def __init__(
-        self,
-        triples_factory: CoreTriplesFactory,
-        error_rate: float = 0.001,
-    ):
+    def __init__(self, triples_factory: CoreTriplesFactory, error_rate: float = 0.001):
         """Initialize the Bloom filter based filterer.
 
-        :param triples_factory:
-            The triples factory.
-        :param error_rate:
-            The desired error rate.
+        :param triples_factory: The triples factory.
+        :param error_rate: The desired error rate.
         """
         super().__init__()
 
