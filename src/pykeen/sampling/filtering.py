@@ -16,9 +16,16 @@ If no relations in $\mathcal{K}$ satisfy any of the relevant properties for the 
 sampling, then there is guaranteed to be no overlap between $\mathcal{N}$ and $\mathcal{K}$ such that 
 $\mathcal{N} \cap \mathcal{K} \neq \emptyset$. However, this scenario is very unlikely for real-world knowledge graphs.
 
-The known positive triples that appear in $\mathcal{N}$ are false negatives. This is problematic becuase they will
-be scored well by the knowledge graph embedding model during evaluation, have lower ranks, and ultimately lead to
+The known positive triples that appear in $\mathcal{N}$ are known false negatives. This is problematic becuase they
+will be scored well by the knowledge graph embedding model during evaluation, have lower ranks, and ultimately lead to
 worse performance on rank-based evaluation metrics such as the (arithmetic) mean rank.
+
+.. warning:: 
+
+    It should be taken into account that a corrupted triple that is *not part*
+    of the knowledge graph can represent a true fact. These "unknown" false negatives can
+    not be removed *a priori* in the filtered setting. The philosophy of the methodology again relies
+    on the low number of unknown false negatives such that learning can take place.
 
 Identifying False Negatives
 ---------------------------
@@ -64,14 +71,6 @@ It can be activated with:
             filterer='bloom',    
         ),
     )
-
-More information on them can be found in :mod:`pykeen.sampling.filtering`.
-
-.. warning:: 
-
-    It should be taken into account that a corrupted triple that is *not part*
-    of the knowledge graph can represent a true fact. These false negatives can
-    not be removed *a priori* in the filtered setting because they are unknown.
 """  # noqa
 
 import math
@@ -132,7 +131,8 @@ class DefaultFilterer(Filterer):
     def __init__(self, triples_factory: CoreTriplesFactory):
         """Initialize the filterer.
 
-        :param triples_factory: The triples factory.
+        :param triples_factory:
+            The triples factory.
         """
         super().__init__()
         # Make sure the mapped triples are initiated
@@ -179,7 +179,8 @@ class PythonSetFilterer(Filterer):
     def __init__(self, triples_factory: CoreTriplesFactory):
         """Initialize the filterer.
 
-        :param triples_factory: The triples factory.
+        :param triples_factory:
+            The triples factory.
         """
         super().__init__()
         # store set of triples
@@ -197,7 +198,8 @@ class PythonSetFilterer(Filterer):
 
 
 class BloomFilterer(Filterer):
-    """A filterer for negative triples based on the Bloom filter.
+    """
+    A filterer for negative triples based on the Bloom filter.
 
     Pure PyTorch, a proper module which can be moved to GPU, and support batch-wise computation.
 
@@ -213,10 +215,13 @@ class BloomFilterer(Filterer):
     bit_array: torch.BoolTensor
 
     def __init__(self, triples_factory: CoreTriplesFactory, error_rate: float = 0.001):
-        """Initialize the Bloom filter based filterer.
+        """
+        Initialize the Bloom filter based filterer.
 
-        :param triples_factory: The triples factory.
-        :param error_rate: The desired error rate.
+        :param triples_factory:
+            The triples factory.
+        :param error_rate:
+            The desired error rate.
         """
         super().__init__()
 
@@ -311,12 +316,7 @@ class BloomFilterer(Filterer):
             yield x % self.bit_array.shape[0]
 
     def add(self, triples: torch.LongTensor) -> None:
-        """
-        Add triples to the Bloom filter.
-
-        :param triples:
-            The triples.
-        """
+        """Add triples to the Bloom filter."""
         for i in self.probe(batch=triples):
             self.bit_array[i] = True
 
