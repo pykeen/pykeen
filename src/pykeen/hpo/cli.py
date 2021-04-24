@@ -19,7 +19,7 @@ from ..losses import loss_resolver
 @sampler_resolver.get_option('--sampler', help="Which sampler should be used?")
 @click.option('--storage', help="Where to output trials dataframe")
 @click.option('--n-trials', type=int, help="Number of trials to run")
-@click.option('--timeout', type=int, help="Number of trials to run")
+@click.option('--timeout', type=int, help="The timeout in seconds")
 @click.option('-o', '--output', type=click.Path(file_okay=False, dir_okay=True), help="Where to output results")
 def optimize(
     model: str,
