@@ -3,13 +3,13 @@
 r"""Consider the following properties of relation $r$. Because the corruption operations are applied independently
 of triples, the resulting candidate corrupt triples could overlap with known positive triples in $\mathcal{K}$.
 
-=====================  ============================================  ===============================================================
+=====================  ============================================  ==============================================================
 Property of :math:`r`  Example pair of triples                       Implications
-=====================  ============================================  ===============================================================
+=====================  ============================================  ==============================================================
 one-to-many            :math:`(h,r,t_1), (h,r,t_2) \in \mathcal{K}`  :math:`(h,r,t_2) \in T(h,r,t_1) \cup (h,r,t_1) \in T(h,r,t_2)`
 multiple               :math:`(h,r_1,t), (h,r_2,t) \in \mathcal{K}`  :math:`(h,r_2,t) \in R(h,r_1,t) \cup (h,r_1,t) \in R(h,r_2,t)`
 many-to-one            :math:`(h_1,r,t), (h_2,r,t) \in \mathcal{K}`  :math:`(h_2,r,t) \in H(h_1,r,t) \cup (h_1,r,t) \in H(h_2,r,t)`
-=====================  ============================================  ===============================================================
+=====================  ============================================  ==============================================================
 
 If no relations in $\mathcal{K}$ satisfy any of the relevant properties for the corruption schema chosen in negative
 sampling, then there is guaranteed to be no overlap between $\mathcal{N}$ and $\mathcal{K}$ such that 
@@ -44,7 +44,7 @@ PyKEEN implements several algorithms for filtering with different properties tha
 ``filterer`` keyword argument in ``negative_sampler_kwargs``. By default, an exact algorithm is used in
 :class:`pykeen.sampling.filtering.DefaultFilterer`. However, a filterer based on
 `bloom filters <https://en.wikipedia.org/wiki/Bloom_filter>`_ is also available in
-:class:`pykeen.sampling.filtering.BloomFilterer`that trades exact correctness for speed and efficiency.
+:class:`pykeen.sampling.filtering.BloomFilterer` that trades exact correctness for speed and efficiency.
 It can be activated with:
 
 .. code-block:: python
