@@ -172,13 +172,12 @@ incapability to solve of one the tasks.
 
 Filtering
 ~~~~~~~~~
-The rank-based evaluation allows using the "filtered setting" motivated by [bordes2013]_, which is enabled by default.
-When evaluating the tail prediction for a triple :math:`(h, r, t)`, i.e. scoring all triples :math:`(h, r, e)`, there
-may be additional known triples :math:`(h, r, t')` for :math:`t \neq t'`. If the model predicts a higher score for
-:math:`(h, r, t')`, the rank will increase, and hence the measured model performance will decrease. However, giving
-:math:`(h, r, t')` a high score (and thus a low rank) is desirable since it is a true triple as well. Thus, the
-filtered evaluation setting ignores for a given triple :math:`(h, r, t)` the scores of all other *known* true triples
-:math:`(h, r, t')`.
+The formulation of standard negative sampling algorithms leads to the generation of known false negatives, which will
+have low ranks and therefore worsen the metrics reported during rank-based evaluation. The "filtered setting" proposed
+by [bordes2013]_ can remove known false negatives, but it comes with a large performance cost. Since the number of
+false negatives is effectively small, this correction can be reasonably omitted. By default, PyKEEN does *not*
+enable the "filtered setting", but it does implement several variants that are described in detail in
+:mod:`pykeen.sampling.filtering`.
 
 Entity and Relation Restriction
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

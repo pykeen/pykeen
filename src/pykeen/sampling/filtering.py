@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
-r"""Consider the following properties of relation $r$. Because the corruption operations are applied independently
-of triples, the resulting candidate corrupt triples could overlap with known positive triples in $\mathcal{K}$.
+r"""Consider the following properties of relation $r$. Because the corruption operations (see `Corruption`_)
+are applied independently of triples, the resulting candidate corrupt triples could overlap with known positive
+triples in $\mathcal{K}$.
 
 =====================  ============================================  ==============================================================
 Property of :math:`r`  Example pair of triples                       Implications
@@ -19,6 +20,8 @@ The known positive triples that appear in $\mathcal{N}$ are false negatives. Thi
 be scored well by the knowledge graph embedding model during evaluation, have lower ranks, and ultimately lead to
 worse performance on rank-based evaluation metrics such as the (arithmetic) mean rank.
 
+Identifying False Negatives
+---------------------------
 [bordes2013]_ proposed an exact algorithm in which all known positive triples in $\mathcal{K}$ are excluded from
 the set of candidate negative triples $\mathcal{N}$ such that $\mathcal{N}^- = \mathcal{N} \setminus \mathcal{K}$
 in order to yield more accurate evaluations. However, in practice, $|\mathcal{N}| \gg |\mathcal{K}|$, so the
