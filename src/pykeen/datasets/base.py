@@ -671,7 +671,7 @@ class ArchiveSingleDataset(LazyDataset):
         _actual_path = os.path.join(self.cache_root, self._relative_path)
         if not os.path.exists(_actual_path):
             logger.error(
-                '[%s] untaring from %s (%s) to %s',
+                '[%s] decompressing from %s (%s) to %s',
                 self.__class__.__name__,
                 self._get_path(),
                 self._relative_path,
