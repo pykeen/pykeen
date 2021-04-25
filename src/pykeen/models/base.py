@@ -28,7 +28,6 @@ __all__ = [
     '_OldAbstractModel',
     'EntityEmbeddingModel',
     'EntityRelationEmbeddingModel',
-    'MultimodalModel',
 ]
 
 logger = logging.getLogger(__name__)
@@ -814,22 +813,6 @@ class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
         super().post_parameter_update()
         self.entity_embeddings.post_parameter_update()
         self.relation_embeddings.post_parameter_update()
-
-
-class MultimodalModel(_OldAbstractModel, ABC, autoreset=False):
-    """A base module for multimodal KGE models."""
-
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self(h_indices=hrt_batch[:, 0], r_indices=hrt_batch[:, 1], t_indices=hrt_batch[:, 2]).view(-1, 1)
-
-    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self(h_indices=hr_batch[:, 0], r_indices=hr_batch[:, 1], t_indices=None)
-
-    def score_r(self, ht_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self(h_indices=ht_batch[:, 0], r_indices=None, t_indices=ht_batch[:, 1])
-
-    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self(h_indices=None, r_indices=rt_batch[:, 0], t_indices=rt_batch[:, 1])
 
 
 def _add_post_reset_parameters(cls: Type[Model]) -> None:
