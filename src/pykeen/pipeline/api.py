@@ -917,10 +917,12 @@ def pipeline(  # noqa: C901
     evaluator_kwargs = dict(evaluator_kwargs)
     if evaluator_kwargs.get('filtered'):
         if use_testing_data and validation is not None:
-            logging.info("Validation triples are added to the set of known positive triples which are filtered out"
-                         "during evaluation since we evaluate on the test set. "
-                         "This is the standard approach described by (Bordes et al., 2013).")
-            evaluator_kwargs['additional_pos_triples'] = validation.mapped_triples
+            logging.info(
+                "Validation triples are added to the set of known positive triples which are filtered out"
+                "during evaluation since we evaluate on the test set. "
+                "This is the standard approach described by (Bordes et al., 2013).",
+            )
+            evaluator_kwargs['additional_filter_triples'] = validation.mapped_triples
 
     evaluator_instance: Evaluator = evaluator_resolver.make(evaluator, evaluator_kwargs)
 
