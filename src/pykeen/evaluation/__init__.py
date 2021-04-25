@@ -50,7 +50,7 @@ For instance, if you want to evaluate your final model in the filtered setting o
     validation_triples = fb15k237.validation.mapped_triples
     testing_triples = fb15k237.testing.mapped_triples
 
-    # Define evaluator, and define validation  triples as additional positive triples
+    # Define evaluator, and define validation triples as additional positive triples
     rb_evaluator = RankBasedEvaluator(
         filtered=True, # Note: It is per default True
         additional_pos_triples=fb15k237.validation.mapped_triples
