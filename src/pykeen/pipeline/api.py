@@ -661,7 +661,7 @@ def pipeline(  # noqa: C901
     device: Hint[torch.device] = None,
     random_seed: Optional[int] = None,
     use_testing_data: bool = True,
-    evaluate_on_cpu_if_needed: bool = False,
+    evaluation_fallback: bool = False,
 ) -> PipelineResult:
     """Train and evaluate a model.
 
@@ -757,8 +757,9 @@ def pipeline(  # noqa: C901
     :param random_seed: The random seed to use. If none is specified, one will be assigned before any code
         is run for reproducibility purposes. In the returned :class:`PipelineResult` instance, it can be accessed
         through :data:`PipelineResult.random_seed`.
-    :param evaluate_on_cpu_if_needed:
-        If true, the evaluation will fall back to using the CPU in cases where it failed using the GPU.
+    :param evaluation_fallback:
+        If true, in cases where the evaluation failed using the GPU it will fall back to using a smaller batch size or
+        in the last instance evaluate on the CPU, if even the smallest possible batch size is too big for the GPU.
 
     :returns: A pipeline result package.
 
@@ -1017,7 +1018,7 @@ def pipeline(  # noqa: C901
             )
         except (MemoryError, RuntimeError) as e:
             # If the evaluation still fail using the CPU, the error is raised
-            if model_instance.device.type != 'cuda' or not evaluate_on_cpu_if_needed:
+            if model_instance.device.type != 'cuda' or not evaluation_fallback:
                 raise e
 
             # When the evaluation failed due to OOM on the GPU due to a batch size set too high, the evaluation is
