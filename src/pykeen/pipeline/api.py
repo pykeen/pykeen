@@ -196,7 +196,7 @@ from ..stoppers import EarlyStopper, Stopper, stopper_resolver
 from ..trackers import ResultTracker, tracker_resolver
 from ..training import SLCWATrainingLoop, TrainingLoop, training_loop_resolver
 from ..triples import TriplesFactory
-from ..typing import Hint, HintType
+from ..typing import Hint, HintType, MappedTriples
 from ..utils import (
     Result, ensure_ftp_directory, fix_dataclass_init_docs, get_json_bytes_io, get_model_io, random_non_negative_int,
     resolve_device, set_random_seed,
@@ -1013,53 +1013,13 @@ def pipeline(  # noqa: C901
     logging.debug(f"evaluation_kwargs: {evaluation_kwargs}")
     evaluate_start_time = time.time()
 
-    # recursive alternative to running an infinite loop
-    # metric_results: MetricResults = _safe_evaluate(
-    #     model_instance=model_instance,
-    #     mapped_triples=mapped_triples,
-    #     evaluator_instance=evaluator_instance,
-    #     evaluation_kwargs=evaluation_kwargs,
-    #     evaluation_fallback=evaluation_fallback,
-    # )
-
-    # Begin an infinite loop to go through several possible training failure recovery scenarios
-    while True:
-        try:
-            metric_results: MetricResults = evaluator_instance.evaluate(
-                model=model_instance,
-                mapped_triples=mapped_triples,
-                **evaluation_kwargs,
-            )
-        except (MemoryError, RuntimeError) as e:
-            # If the evaluation still fail using the CPU, the error is raised
-            if model_instance.device.type != 'cuda' or not evaluation_fallback:
-                raise e
-
-            # When the evaluation failed due to OOM on the GPU due to a batch size set too high, the evaluation is
-            # restarted with PyKEEN's automatic memory optimization
-            elif 'batch_size' in evaluation_kwargs:
-                logging.warning(
-                    "You tried to evaluate the current model on %s with batch_size=%d which was too big for %s.",
-                    model_instance.device, evaluation_kwargs['batch_size'], model_instance.device,
-                )
-                logging.warning("Will activate the built-in PyKEEN memory optimization to find a suitable batch size.")
-                del evaluation_kwargs['batch_size']
-
-            # When the evaluation failed due to OOM on the GPU even with automatic memory optimization, the evaluation
-            # is restarted using the cpu
-            else:  # 'batch_size' not in evaluation_kwargs
-                logging.warning(
-                    "Tried to evaluate the current model on %s, but the model and the dataset are too big for the "
-                    "%s memory currently available.",
-                    model_instance.device, model_instance.device,
-                )
-                logging.warning(
-                    "Will revert to using the CPU for evaluation, which will increase the evaluation time "
-                    "significantly.",
-                )
-                model_instance.to_cpu_()
-        else:
-            break  # evaluation was successful, don't continue the ``while True`` loop
+    metric_results: MetricResults = _safe_evaluate(
+        model=model_instance,
+        mapped_triples=mapped_triples,
+        evaluator=evaluator_instance,
+        evaluation_kwargs=evaluation_kwargs,
+        evaluation_fallback=evaluation_fallback,
+    )
 
     evaluate_end_time = time.time() - evaluate_start_time
     _result_tracker.log_metrics(
@@ -1082,54 +1042,48 @@ def pipeline(  # noqa: C901
 
 
 def _safe_evaluate(
-    model_instance,
-    mapped_triples,
-    evaluator_instance,
-    evaluation_kwargs,
-    evaluation_fallback,
+    model: Model,
+    mapped_triples: MappedTriples,
+    evaluator: Evaluator,
+    evaluation_kwargs: Dict[str, Any],
+    evaluation_fallback: bool = False,
 ) -> MetricResults:
-    try:
-        metric_results: MetricResults = evaluator_instance.evaluate(
-            model=model_instance,
-            mapped_triples=mapped_triples,
-            **evaluation_kwargs,
-        )
-    except (MemoryError, RuntimeError) as e:
-        # If the evaluation still fail using the CPU, the error is raised
-        if model_instance.device.type != 'cuda' or not evaluation_fallback:
-            raise e
-
-        # When the evaluation failed due to OOM on the GPU due to a batch size set too high, the evaluation is
-        # restarted with PyKEEN's automatic memory optimization
-        if 'batch_size' in evaluation_kwargs:
-            logging.warning(
-                "You tried to evaluate the current model on %s with batch_size=%d which was too big for %s.",
-                model_instance.device, evaluation_kwargs['batch_size'], model_instance.device,
+    while True:
+        try:
+            metric_results: MetricResults = evaluator.evaluate(
+                model=model,
+                mapped_triples=mapped_triples,
+                **evaluation_kwargs,
             )
-            logging.warning("Will activate the built-in PyKEEN memory optimization to find a suitable batch size.")
-            del evaluation_kwargs['batch_size']
+        except (MemoryError, RuntimeError) as e:
+            # If the evaluation still fail using the CPU, the error is raised
+            if model.device.type != 'cuda' or not evaluation_fallback:
+                raise e
 
-        # When the evaluation failed due to OOM on the GPU even with automatic memory optimization, the evaluation
-        # is restarted using the cpu
-        else:  # 'batch_size' not in evaluation_kwargs
-            logging.warning(
-                "Tried to evaluate the current model on %s, but the model and the dataset are too big for the "
-                "%s memory currently available.",
-                model_instance.device, model_instance.device,
-            )
-            logging.warning(
-                "Will revert to using the CPU for evaluation, which will increase the evaluation time "
-                "significantly.",
-            )
-            model_instance.to_cpu_()
+            # When the evaluation failed due to OOM on the GPU due to a batch size set too high, the evaluation is
+            # restarted with PyKEEN's automatic memory optimization
+            elif 'batch_size' in evaluation_kwargs:
+                logging.warning(
+                    "You tried to evaluate the current model on %s with batch_size=%d which was too big for %s.",
+                    model.device, evaluation_kwargs['batch_size'], model.device,
+                )
+                logging.warning("Will activate the built-in PyKEEN memory optimization to find a suitable batch size.")
+                del evaluation_kwargs['batch_size']
 
-        return _safe_evaluate(
-            model_instance=model_instance,
-            mapped_triples=mapped_triples,
-            evaluator_instance=evaluator_instance,
-            evaluation_kwargs=evaluation_kwargs,
-            evaluation_fallback=evaluation_fallback,
-        )
+            # When the evaluation failed due to OOM on the GPU even with automatic memory optimization, the evaluation
+            # is restarted using the cpu
+            else:  # 'batch_size' not in evaluation_kwargs
+                logging.warning(
+                    "Tried to evaluate the current model on %s, but the model and the dataset are too big for the "
+                    "%s memory currently available.",
+                    model.device, model.device,
+                )
+                logging.warning(
+                    "Will revert to using the CPU for evaluation, which will increase the evaluation time "
+                    "significantly.",
+                )
+                model.to_cpu_()
+        else:
+            break  # evaluation was successful, don't continue the ``while True`` loop
 
-    else:
-        return metric_results
+    return metric_results
