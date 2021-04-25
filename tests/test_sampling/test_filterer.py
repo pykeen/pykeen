@@ -8,7 +8,7 @@ import torch
 import unittest_templates
 
 from pykeen.datasets import Nations
-from pykeen.sampling.filtering import BloomFilterer, DefaultFilterer, Filterer, PythonSetFilterer
+from pykeen.sampling.filtering import BloomFilterer, OldFilterer, Filterer, PythonSetFilterer
 from pykeen.utils import set_random_seed
 
 
@@ -49,10 +49,10 @@ class FiltererTest(unittest_templates.GenericTestCase[Filterer]):
         assert self.positive_batch.size()[0] == batch_filter.sum()
 
 
-class DefaultFiltererTests(FiltererTest):
-    """Tests for the default filterer."""
+class OldFiltererTests(FiltererTest):
+    """Tests for the old filterer."""
 
-    cls = DefaultFilterer
+    cls = OldFilterer
 
 
 class PythonSetFiltererTest(FiltererTest):

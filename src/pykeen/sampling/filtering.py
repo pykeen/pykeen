@@ -86,7 +86,7 @@ from ..triples import CoreTriplesFactory
 __all__ = [
     "filterer_resolver",
     "Filterer",
-    "DefaultFilterer",
+    "OldFilterer",
     "BloomFilterer",
     "PythonSetFilterer",
 ]
@@ -122,7 +122,7 @@ class Filterer(nn.Module):
         raise NotImplementedError
 
 
-class DefaultFilterer(Filterer):
+class OldFilterer(Filterer):
     """The default filterer.
 
     .. warning:: This filterer may contain a correctness error, cf. https://github.com/pykeen/pykeen/issues/272
@@ -346,5 +346,5 @@ class BloomFilterer(Filterer):
 
 filterer_resolver = Resolver.from_subclasses(
     base=Filterer,
-    default=DefaultFilterer,
+    default=OldFilterer,
 )
