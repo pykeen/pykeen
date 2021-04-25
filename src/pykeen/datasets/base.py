@@ -602,8 +602,8 @@ class PackedZipRemoteDataset(LazyDataset):
                 )
 
 
-class ArchiveSingleDataset(LazyDataset):
-    """Loads a dataset that's a single file inside an archive."""
+class TarFileSingleDataset(LazyDataset):
+    """Loads a dataset that's a single file inside a tar.gz archive."""
 
     ratios = (0.8, 0.1, 0.1)
     _triples_factory: Optional[TriplesFactory]
@@ -651,37 +651,21 @@ class ArchiveSingleDataset(LazyDataset):
     def _get_path(self) -> str:
         return os.path.join(self.cache_root, self.name)
 
-    def _extract(
-        self,
-        archive_path: str,
-        relative_path: str,
-        output_root: pathlib.Path,
-    ):
-        """Extract file from archive."""
-        raise NotImplementedError
-
-    @staticmethod
-    def _download(location: str, path: Union[str, pathlib.Path]):
-        download(location, path)
-
     def _load(self) -> None:
         if not os.path.exists(self._get_path()):
-            self._download(self.url, self._get_path())  # noqa:S310
+            download(self.url, self._get_path())  # noqa:S310
 
         _actual_path = os.path.join(self.cache_root, self._relative_path)
         if not os.path.exists(_actual_path):
             logger.error(
-                '[%s] decompressing from %s (%s) to %s',
+                '[%s] untaring from %s (%s) to %s',
                 self.__class__.__name__,
                 self._get_path(),
                 self._relative_path,
                 _actual_path,
             )
-            self._extract(
-                archive_path=self._get_path(),
-                relative_path=self._relative_path,
-                output_root=self.cache_root,
-            )
+            with tarfile.open(self._get_path()) as tar_file:
+                tar_file.extract(self._relative_path, self.cache_root)
 
         df = pd.read_csv(_actual_path, sep=self.delimiter)
         tf_path = self._get_path()
@@ -701,32 +685,6 @@ class ArchiveSingleDataset(LazyDataset):
 
     def _load_validation(self) -> None:
         pass  # already loaded by _load()
-
-
-class TarFileSingleDataset(ArchiveSingleDataset):
-    """Loads a dataset that's a single file inside an .tar.gz archive."""
-
-    def _extract(
-        self,
-        archive_path: str,
-        relative_path: str,
-        output_root: pathlib.Path,
-    ):
-        with tarfile.open(archive_path) as tar_file:
-            tar_file.extract(relative_path, output_root)
-
-
-class ZipFileSingleDataset(ArchiveSingleDataset):
-    """Loads a dataset that's a single file inside a zip archive."""
-
-    def _extract(
-        self,
-        archive_path: str,
-        relative_path: str,
-        output_root: pathlib.Path,
-    ):
-        with zipfile.ZipFile(self._get_path()) as zf:
-            zf.extract(self._relative_path, self.cache_root)
 
 
 class TabbedDataset(LazyDataset):
