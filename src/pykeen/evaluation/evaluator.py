@@ -77,19 +77,18 @@ class Evaluator(ABC):
         slice_size: Optional[int] = None,
         automatic_memory_optimization: bool = True,
     ):
-        """
+        """Initialize the evaluator.
 
-        # TODO write these docs!
-
-        :param filtered:
-        :param additional_filter_triples:
-        :param requires_positive_mask:
-        :param batch_size:
-        :param slice_size:
-        :param automatic_memory_optimization:
+        :param filtered: Defines, whether a filtered evaluation should be performed.
+        :param additional_filter_triples: Additional true triples to filter out during filtered evaluation.
+        :param requires_positive_mask: Defines, whether an evaluator needs access to the masks.
+        :param batch_size: >0. Evaluation batch size.
+        :param slice_size: >0. The divisor for the scoring function when using slicing
+        :param automatic_memory_optimization: Whether to automatically optimize the sub-batch size during
+            batch size during evaluation with regards to the hardware at hand.
         """
         self.filtered = filtered
-        self.additional_pos_triples = additional_filter_triples
+        self.additional_filter_triples = additional_filter_triples
         self.requires_positive_mask = requires_positive_mask
         self.batch_size = batch_size
         self.slice_size = slice_size
@@ -184,7 +183,7 @@ class Evaluator(ABC):
         rv = evaluate(
             model=model,
             mapped_triples=mapped_triples,
-            additional_pos_triples=self.additional_pos_triples,
+            additional_filter_triples=self.additional_filter_triples,
             evaluators=self,
             batch_size=batch_size,
             slice_size=slice_size,
@@ -478,7 +477,7 @@ def evaluate(
     model: Model,
     mapped_triples: MappedTriples,
     evaluators: Union[Evaluator, Collection[Evaluator]],
-    additional_pos_triples: Optional[MappedTriples] = None,
+    additional_filter_triples: Optional[MappedTriples] = None,
     only_size_probing: bool = False,
     batch_size: Optional[int] = None,
     slice_size: Optional[int] = None,
@@ -504,7 +503,7 @@ def evaluate(
         the model class on the fly.
     :param evaluators:
         An evaluator or a list of evaluators working on batches of triples and corresponding scores.
-    :param additional_pos_triples:
+    :param additional_filter_triples:
         Additional true triples to filter out during filtered evaluation.
     :param only_size_probing:
         The evaluation is only performed for two batches to test the memory footprint, especially on GPUs.
@@ -565,9 +564,9 @@ def evaluate(
     # Prepare for result filtering
     if filtering_necessary or positive_masks_required:
         all_pos_triples = torch.cat([model.triples_factory.mapped_triples, mapped_triples], dim=0)
-        if additional_pos_triples is not None:
+        if additional_filter_triples is not None:
             # TODO: Apply torch.unique()?
-            all_pos_triples = torch.cat([all_pos_triples, additional_pos_triples], dim=0)
+            all_pos_triples = torch.cat([all_pos_triples, additional_filter_triples], dim=0)
         all_pos_triples = all_pos_triples.to(device=device)
     else:
         all_pos_triples = None
