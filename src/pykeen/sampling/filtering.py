@@ -35,8 +35,8 @@ number of false negatives without filtering.
 
 Identifying False Negatives During Training
 -------------------------------------------
-By default, PyKEEN does *not* filter false negatives from $\mathcal{N}$ during training. To enable the
-"filtered setting" during training, the ``filtered`` keyword can be given to ``negative_sampler_kwargs`` like in:
+By default, PyKEEN does *not* filter false negatives from $\mathcal{N}$ during training. To enable filtering of
+negative examples during training, the ``filtered`` keyword can be given to ``negative_sampler_kwargs`` like in:
 
 .. code-block:: python
 
