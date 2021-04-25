@@ -350,7 +350,6 @@ class RankBasedEvaluator(Evaluator):
         self,
         ks: Optional[Iterable[Union[int, float]]] = None,
         filtered: bool = True,
-        automatic_memory_optimization: bool = True,
         **kwargs,
     ):
         """Initialize rank-based evaluator.
@@ -360,8 +359,9 @@ class RankBasedEvaluator(Evaluator):
         :param filtered:
             Whether to use the filtered evaluation protocol. If enabled, ranking another true triple higher than the
             currently considered one will not decrease the score.
+        :param kwargs: Additional keyword arguments that are passed to the base class.
         """
-        super().__init__(filtered=filtered, automatic_memory_optimization=automatic_memory_optimization, **kwargs)
+        super().__init__(filtered=filtered, **kwargs)
         self.ks = tuple(ks) if ks is not None else (1, 3, 5, 10)
         for k in self.ks:
             if isinstance(k, float) and not (0 < k < 1):

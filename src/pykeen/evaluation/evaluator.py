@@ -71,14 +71,25 @@ class Evaluator(ABC):
     def __init__(
         self,
         filtered: bool = False,
-        additional_pos_triples: Optional[MappedTriples] = None,
+        additional_filter_triples: Optional[MappedTriples] = None,
         requires_positive_mask: bool = False,
         batch_size: Optional[int] = None,
         slice_size: Optional[int] = None,
         automatic_memory_optimization: bool = True,
     ):
+        """
+
+        # TODO write these docs!
+
+        :param filtered:
+        :param additional_filter_triples:
+        :param requires_positive_mask:
+        :param batch_size:
+        :param slice_size:
+        :param automatic_memory_optimization:
+        """
         self.filtered = filtered
-        self.additional_pos_triples = additional_pos_triples
+        self.additional_pos_triples = additional_filter_triples
         self.requires_positive_mask = requires_positive_mask
         self.batch_size = batch_size
         self.slice_size = slice_size
