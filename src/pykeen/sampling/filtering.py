@@ -137,7 +137,6 @@ class Filterer(nn.Module):
         :return:
             A pair (filtered_negative_batch, keep_mask) of shape ???
         """
-
         keep_mask = ~self.contains(batch=negative_batch)
         return negative_batch[keep_mask], keep_mask
 
