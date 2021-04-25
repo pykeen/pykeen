@@ -92,6 +92,10 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
             entity_to_id=self.entity_to_id,
         )
 
+    def get_numeric_literals_tensor(self) -> torch.FloatTensor:
+        """Return the numeric literals as a tensor."""
+        return torch.as_tensor(self.numeric_literals, dtype=torch.float32)
+
     def extra_repr(self) -> str:  # noqa: D102
         return super().extra_repr() + (
             f"num_literals={len(self.literals_to_id)}"
@@ -115,7 +119,3 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
             numeric_literals=self.numeric_literals,
             literals_to_id=self.literals_to_id,
         )
-
-    def literal_initializer(self, _) -> torch.FloatTensor:
-        """Initialize an embedding, for use as the ``initializer`` kwarg for :class:`pykeen.nn.Embedding`."""
-        return torch.as_tensor(self.numeric_literals, dtype=torch.float)
