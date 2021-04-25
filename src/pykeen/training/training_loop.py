@@ -1017,6 +1017,11 @@ class AcceleratedTrainingLoop(TrainingLoop, ABC):
             self.optimizer,
             data,
         )
+
+        # torch DDP wraps the model into torch.DistributedDataParallel, hence our model functions are not available
+        # fix that by explicitly call the module of DDP which is our model
+        self.model = self.model.module
+        
         return data
 
     def _loss_backward(self, loss):
