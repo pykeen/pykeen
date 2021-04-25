@@ -75,7 +75,6 @@ class Evaluator(ABC):
         batch_size: Optional[int] = None,
         slice_size: Optional[int] = None,
         automatic_memory_optimization: bool = True,
-        additional_filter_triples: Optional[MappedTriples] = None,
     ):
         """Initialize the evaluator.
 
@@ -85,43 +84,8 @@ class Evaluator(ABC):
         :param slice_size: >0. The divisor for the scoring function when using slicing
         :param automatic_memory_optimization: Whether to automatically optimize the sub-batch size during
             batch size during evaluation with regards to the hardware at hand.
-        :param additional_filter_triples: Additional true triples to filter out during filtered evaluation.
-
-            Evaluate your final model on the test set of FB15K-237, and provide the validation triples as additional
-            positive triples:
-
-            .. code-block:: python
-
-                from pykeen.datasets import FB15k237
-                from pykeen.evaluation import RankBasedEvaluator
-                from pykeen.models import TransE
-
-                # Get FB15k-237 dataset
-                fb15k237 = FB15k237()
-
-                # Get triples
-                validation_triples = fb15k237.validation.mapped_triples
-                testing_triples = fb15k237.testing.mapped_triples
-
-                # Define evaluator, and define validation triples as additional positive triples
-                rb_evaluator = RankBasedEvaluator(
-                    filtered=True,  # Note: this is True by default; we're just being explicit
-                    additional_filter_triples=fb15k237.validation.mapped_triples
-                )
-
-                # Define model
-                model = TransE(
-                    triples_factory=fb15k237.training,
-                )
-
-                # Evaluate your model
-                results = rb_evaluator.evaluate(
-                    model=model,
-                    mapped_triples=fb15k237.testing.mapped_triples,
-                )
         """
         self.filtered = filtered
-        self.additional_filter_triples = additional_filter_triples
         self.requires_positive_mask = requires_positive_mask
         self.batch_size = batch_size
         self.slice_size = slice_size
@@ -177,6 +141,7 @@ class Evaluator(ABC):
         self,
         model: Model,
         mapped_triples: Optional[MappedTriples] = None,
+        additional_filter_triples: Optional[MappedTriples] = None,
         batch_size: Optional[int] = None,
         slice_size: Optional[int] = None,
         device: Optional[torch.device] = None,
@@ -187,6 +152,7 @@ class Evaluator(ABC):
     ) -> MetricResults:
         """Run :func:`pykeen.evaluation.evaluate` with this evaluator."""
         if mapped_triples is None:
+            # TODO: Add warning that the training data is used to evaluate
             mapped_triples = model.triples_factory.mapped_triples
 
         if batch_size is None and self.automatic_memory_optimization:
@@ -200,6 +166,7 @@ class Evaluator(ABC):
                 batch_size, slice_size = self.batch_and_slice(
                     model=model,
                     mapped_triples=mapped_triples,
+                    additional_filter_triples=additional_filter_triples,
                     batch_size=batch_size,
                     device=device,
                     use_tqdm=False,
@@ -216,7 +183,7 @@ class Evaluator(ABC):
         rv = evaluate(
             model=model,
             mapped_triples=mapped_triples,
-            additional_filter_triples=self.additional_filter_triples,
+            additional_filter_triples=additional_filter_triples,
             evaluators=self,
             batch_size=batch_size,
             slice_size=slice_size,
@@ -234,6 +201,7 @@ class Evaluator(ABC):
         self,
         model: Model,
         mapped_triples: MappedTriples,
+        additional_filter_triples: Optional[MappedTriples] = None,
         batch_size: Optional[int] = None,
         device: Optional[torch.device] = None,
         use_tqdm: bool = False,
@@ -254,6 +222,8 @@ class Evaluator(ABC):
             The model to evaluate.
         :param mapped_triples:
             The triples on which to evaluate.
+        :param additional_filter_triples:
+            Additional true triples to filter out during filtered evaluation.
         :param batch_size:
             The initial batch size to start with. None defaults to number_of_triples.
         :param device:
@@ -274,6 +244,7 @@ class Evaluator(ABC):
             start_value=batch_size,
             model=model,
             mapped_triples=mapped_triples,
+            additional_filter_triples=additional_filter_triples,
             device=device,
             use_tqdm=use_tqdm,
             restrict_entities_to=restrict_entities_to,
@@ -291,6 +262,7 @@ class Evaluator(ABC):
             start_value=ceil(model.num_entities / 2),
             model=model,
             mapped_triples=mapped_triples,
+            additional_filter_triples=additional_filter_triples,
             device=device,
             use_tqdm=use_tqdm,
             restrict_entities_to=restrict_entities_to,
@@ -307,6 +279,7 @@ class Evaluator(ABC):
         start_value: Optional[int],
         model: Model,
         mapped_triples: MappedTriples,
+        additional_filter_triples: Optional[MappedTriples] = None,
         device: Optional[torch.device] = None,
         use_tqdm: bool = False,
         restrict_entities_to: Optional[torch.LongTensor] = None,
@@ -342,6 +315,7 @@ class Evaluator(ABC):
                 evaluate(
                     model=model,
                     mapped_triples=mapped_triples,
+                    additional_filter_triples=additional_filter_triples,
                     evaluators=self,
                     only_size_probing=True,
                     device=device,

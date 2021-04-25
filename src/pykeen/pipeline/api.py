@@ -582,8 +582,15 @@ def pipeline_from_config(
 
 def _build_model_helper(
     *,
-    model, model_kwargs, loss, loss_kwargs, _device, _random_seed, regularizer, regularizer_kwargs,
-    training,
+    model,
+    model_kwargs,
+    loss,
+    loss_kwargs,
+    _device,
+    _random_seed,
+    regularizer,
+    regularizer_kwargs,
+    training_triples_factory,
 ) -> Model:
     if model_kwargs is None:
         model_kwargs = {}
@@ -608,7 +615,7 @@ def _build_model_helper(
 
     return model_resolver.make(
         model,
-        triples_factory=training,
+        triples_factory=training_triples_factory,
         loss=loss_instance,
         **model_kwargs,
     )
@@ -661,6 +668,7 @@ def pipeline(  # noqa: C901
     device: Hint[torch.device] = None,
     random_seed: Optional[int] = None,
     use_testing_data: bool = True,
+    filter_validation_when_testing: bool = True,
 ) -> PipelineResult:
     """Train and evaluate a model.
 
@@ -756,6 +764,9 @@ def pipeline(  # noqa: C901
     :param random_seed: The random seed to use. If none is specified, one will be assigned before any code
         is run for reproducibility purposes. In the returned :class:`PipelineResult` instance, it can be accessed
         through :data:`PipelineResult.random_seed`.
+    :param filter_validation_when_testing:
+        If true, the validation triples are also filtered during testing. # TODO: Add reference to docs
+        Defaults to true.
 
     :returns: A pipeline result package.
 
@@ -862,7 +873,7 @@ def pipeline(  # noqa: C901
             regularizer_kwargs=regularizer_kwargs,
             _device=_device,
             _random_seed=_random_seed,
-            training=training,
+            training_triples_factory=training,
         )
 
     # Log model parameters
@@ -915,14 +926,6 @@ def pipeline(  # noqa: C901
     if evaluator_kwargs is None:
         evaluator_kwargs = {}
     evaluator_kwargs = dict(evaluator_kwargs)
-    if evaluator_kwargs.get('filtered'):
-        if use_testing_data and validation is not None:
-            logging.info(
-                "Because we evaluate on the test set, validation triples are added to the set of known positive triples"
-                "which are filtered out when performing filtered evaluation following the approach described by"
-                "(Bordes et al., 2013).",
-            )
-            evaluator_kwargs['additional_filter_triples'] = validation.mapped_triples
 
     evaluator_instance: Evaluator = evaluator_resolver.make(evaluator, evaluator_kwargs)
 
@@ -1002,6 +1005,28 @@ def pipeline(  # noqa: C901
         raise ValueError('no validation triples available')
     else:
         mapped_triples = validation.mapped_triples
+
+    if (
+        evaluator_instance.filtered
+        and filter_validation_when_testing
+        and validation is not None
+        and use_testing_data
+    ):
+        logging.info(
+            "Because we evaluate on the test set, validation triples are added to the set of known positive triples"
+            "which are filtered out when performing filtered evaluation following the approach described by"
+            "(Bordes et al., 2013).",
+        )
+        additional_filter_triples = validation.mapped_triples
+    else:
+        additional_filter_triples = None
+
+    if evaluation_kwargs.get('additional_filter_triples') and additional_filter_triples is not None:
+        evaluation_kwargs['additional_filter_triples'] = torch.cat(
+            [evaluation_kwargs['additional_filter_triples'], additional_filter_triples], dim=0
+        )
+    elif additional_filter_triples is not None:
+        evaluation_kwargs['additional_filter_triples'] = additional_filter_triples
 
     # Evaluate
     # Reuse optimal evaluation parameters from training if available
