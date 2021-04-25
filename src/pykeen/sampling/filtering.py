@@ -16,7 +16,7 @@ If no relations in $\mathcal{K}$ satisfy any of the relevant properties for the 
 sampling, then there is guaranteed to be no overlap between $\mathcal{N}$ and $\mathcal{K}$ such that 
 $\mathcal{N} \cap \mathcal{K} \neq \emptyset$. However, this scenario is very unlikely for real-world knowledge graphs.
 
-The known positive triples that appear in $\mathcal{N}$ are known false negatives. This is problematic becuase they
+The known positive triples that appear in $\mathcal{N}$ are known false negatives. This is problematic because they
 will be scored well by the knowledge graph embedding model during evaluation, have lower ranks, and ultimately lead to
 worse performance on rank-based evaluation metrics such as the (arithmetic) mean rank.
 
