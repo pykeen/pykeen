@@ -95,7 +95,11 @@ class BasicNegativeSampler(NegativeSampler):
             stop = min(start + split_idx, num_negs)
 
             # Relations have a different index maximum than entities
-            index_max = self.num_relations - 1 if index == 1 else self.num_entities - 1
+            index_max = self.num_relations if index == 1 else self.num_entities
+
+            # If we do not use a filterer, we at least make sure to not replace the triples by the original value
+            if self.filterer is None:
+                index_max -= 1
 
             negative_batch[start:stop, index] = torch.randint(
                 high=index_max,
