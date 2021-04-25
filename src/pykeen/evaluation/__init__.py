@@ -2,7 +2,7 @@
 
 """Evaluation.
 
-Knowlede graph embeddings models are usually evaluated based on link prediction, which is on knowledge graphs defined
+Knowledge graph embeddings models are usually evaluated based on link prediction, which is defined
 as predicting the tail/head entities for $(h,r)$/$(r,t)$ pairs.
 
 However, given the fact that usually true negative examples are not available, both the training and the test set
