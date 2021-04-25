@@ -6,10 +6,12 @@
    <https://arxiv.org/abs/1802.00934>`_. *arXiv*, 1802.00934.
 """
 
+from .base import LiteralModel
 from .complex_literal import ComplExLiteral
 from .distmult_literal import DistMultLiteral
 
 __all__ = [
+    'LiteralModel',
     'ComplExLiteral',
     'DistMultLiteral',
 ]

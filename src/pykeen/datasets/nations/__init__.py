@@ -8,6 +8,7 @@ from docdata import parse_docdata
 
 from ..base import PathDataset
 from ..literal_base import NumericPathDataset
+from ...triples import TriplesNumericLiteralsFactory
 
 __all__ = [
     'NATIONS_TRAIN_PATH',
@@ -62,6 +63,8 @@ class Nations(PathDataset):
 
 class NationsLiteral(NumericPathDataset):
     """The Nations dataset with literals."""
+
+    training: TriplesNumericLiteralsFactory
 
     def __init__(self, create_inverse_triples: bool = False, **kwargs):
         """Initialize the Nations dataset with literals.
