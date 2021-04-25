@@ -22,7 +22,7 @@ are filtered to exclude known true facts from the train, validation and test set
 ranking another true entity higher.
 
 .. note ::
-    In PyKEEN, we provide training and evaluation pipelines for which the set of positive triples are pre-defined.
+    In PyKEEN, we provide training and evaluation pipelines for which the set of positive triples is pre-defined.
     During hyper-parameter optimization (HPO), the set of triples that should be filtered out consists per default of
     the training and validation set, and out of training, validation, and test triples during the evaluation
     of the final model on the test set. We explicitly do not use test triples for filtering during HPO in order to avoid
