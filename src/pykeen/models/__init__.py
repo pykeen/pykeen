@@ -6,11 +6,16 @@ entities and relations. In general, a larger score indicates a higher plausibili
 score value is model-dependent, and usually it cannot be directly interpreted as a probability.
 """  # noqa: D205, D400
 
-from typing import Mapping, Set, Type, Union
+from typing import Set, Type
 
-from .base import EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, MultimodalModel  # noqa:F401
+from class_resolver import Resolver, get_subclasses
+
+from .base import EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, MultimodalModel, _OldAbstractModel
 from .multimodal import ComplExLiteral, DistMultLiteral
+from .nbase import ERModel, _NewAbstractModel
+from .resolve import make_model, make_model_cls
 from .unimodal import (
+    CompGCN,
     ComplEx,
     ConvE,
     ConvKB,
@@ -19,8 +24,11 @@ from .unimodal import (
     ERMLPE,
     HolE,
     KG2E,
+    MuRE,
     NTN,
+    PairRE,
     ProjE,
+    QuatE,
     RESCAL,
     RGCN,
     RotatE,
@@ -33,9 +41,18 @@ from .unimodal import (
     TuckER,
     UnstructuredModel,
 )
-from ..utils import get_cls, normalize_string
 
 __all__ = [
+    # Base Models
+    'Model',
+    '_OldAbstractModel',
+    'EntityEmbeddingModel',
+    'EntityRelationEmbeddingModel',
+    '_NewAbstractModel',
+    'ERModel',
+    'MultimodalModel',
+    # Concrete Models
+    'CompGCN',
     'ComplEx',
     'ComplExLiteral',
     'ConvE',
@@ -46,8 +63,11 @@ __all__ = [
     'ERMLPE',
     'HolE',
     'KG2E',
+    'MuRE',
     'NTN',
+    'PairRE',
     'ProjE',
+    'QuatE',
     'RESCAL',
     'RGCN',
     'RotatE',
@@ -59,35 +79,15 @@ __all__ = [
     'TransR',
     'TuckER',
     'UnstructuredModel',
-    'models',
-    'get_model_cls',
+    # Utils
+    'model_resolver',
+    'make_model',
+    'make_model_cls',
 ]
 
-
-def _concrete_subclasses(cls: Type[Model]):
-    for subcls in cls.__subclasses__():
-        if not subcls._is_base_model:
-            yield subcls
-        yield from _concrete_subclasses(subcls)
-
-
-_MODELS: Set[Type[Model]] = set(_concrete_subclasses(Model))  # type: ignore
-
-#: A mapping of models' names to their implementations
-models: Mapping[str, Type[Model]] = {
-    normalize_string(cls.__name__): cls
-    for cls in _MODELS
+_MODELS: Set[Type[Model]] = {
+    subcls
+    for subcls in get_subclasses(Model)  # type: ignore
+    if not subcls._is_base_model
 }
-
-
-def get_model_cls(query: Union[str, Type[Model]]) -> Type[Model]:
-    """Look up a model class by name (case/punctuation insensitive) in :data:`pykeen.models.models`.
-
-    :param query: The name of the model (case insensitive, punctuation insensitive).
-    :return: The model class
-    """
-    return get_cls(
-        query,
-        base=Model,  # type: ignore
-        lookup_dict=models,
-    )
+model_resolver = Resolver(classes=_MODELS, base=Model)  # type: ignore

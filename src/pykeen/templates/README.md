@@ -98,6 +98,10 @@ in ``pykeen``.
 
 ### Datasets ({{ n_datasets }})
 
+The citation for each dataset corresponds to either the paper describing the dataset,
+the first paper published using the dataset with knowledge graph embedding models,
+or the URL for the dataset if neither of the first two are available.
+
 {{ datasets }}
 
 ### Models ({{ n_models }})
@@ -202,10 +206,12 @@ See [CONTRIBUTING.md](/CONTRIBUTING.md) for more information on getting involved
 This project has been supported by several organizations (in alphabetical order):
 
 - [Bayer](https://www.bayer.com/)
-- [Enveda Therapeutics](https://envedatherapeutics.com/)
+- [CoronaWhy](https://www.coronawhy.org/)
+- [Enveda Biosciences](https://www.envedabio.com/)
 - [Fraunhofer Institute for Algorithms and Scientific Computing](https://www.scai.fraunhofer.de)
 - [Fraunhofer Institute for Intelligent Analysis and Information Systems](https://www.iais.fraunhofer.de)
 - [Fraunhofer Center for Machine Learning](https://www.cit.fraunhofer.de/de/zentren/maschinelles-lernen.html)
+- [Harvard Program in Therapeutic Science - Laboratory of Systems Pharmacology](https://hits.harvard.edu/the-program/laboratory-of-systems-pharmacology/)
 - [Ludwig-Maximilians-Universität München](https://www.en.uni-muenchen.de/index.html)
 - [Munich Center for Machine Learning (MCML)](https://mcml.ai/)
 - [Siemens](https://new.siemens.com/global/en.html)
@@ -223,10 +229,14 @@ The PyKEEN logo was designed by Carina Steinborn.
 If you have found PyKEEN useful in your work, please consider citing [our article](https://arxiv.org/abs/2007.14175):
 
 ```bibtex
-@article{ali2020pykeen,
-  title={PyKEEN 1.0: A Python Library for Training and Evaluating Knowledge Graph Emebddings},
-  author={Ali, Mehdi and Berrendorf, Max and Hoyt, Charles Tapley and Vermue, Laurent and Sharifzadeh, Sahand and Tresp, Volker and Lehmann, Jens},
-  journal={arXiv preprint arXiv:2007.14175},
-  year={2020}
+@article{ali2021pykeen,
+    author = {Ali, Mehdi and Berrendorf, Max and Hoyt, Charles Tapley and Vermue, Laurent and Sharifzadeh, Sahand and Tresp, Volker and Lehmann, Jens},
+    journal = {Journal of Machine Learning Research},
+    number = {82},
+    pages = {1--6},
+    title = {% raw %}{{PyKEEN 1.0: A Python Library for Training and Evaluating Knowledge Graph Embeddings}}{% endraw %},
+    url = {http://jmlr.org/papers/v22/20-825.html},
+    volume = {22},
+    year = {2021}
 }
 ```

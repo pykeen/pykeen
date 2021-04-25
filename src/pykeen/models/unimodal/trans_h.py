@@ -6,14 +6,15 @@ from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
 from torch.nn import functional
+from torch.nn.init import uniform_
 
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
-from ...nn import Embedding
+from ...nn.emb import Embedding, EmbeddingSpecification
 from ...regularizers import Regularizer, TransHRegularizer
 from ...triples import TriplesFactory
-from ...typing import DeviceHint
+from ...typing import DeviceHint, Hint, Initializer
 
 __all__ = [
     'TransH',
@@ -48,6 +49,11 @@ class TransH(EntityRelationEmbeddingModel):
     .. seealso::
 
        - OpenKE `implementation of TransH <https://github.com/thunlp/OpenKE/blob/master/models/TransH.py>`_
+    ---
+    citation:
+        author: Wang
+        year: 2014
+        link: https://www.aaai.org/ocs/index.php/AAAI/AAAI14/paper/viewFile/8531/8546
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
@@ -73,6 +79,8 @@ class TransH(EntityRelationEmbeddingModel):
         predict_with_sigmoid: bool = False,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
+        entity_initializer: Hint[Initializer] = uniform_,
+        relation_initializer: Hint[Initializer] = uniform_,
     ) -> None:
         r"""Initialize TransH.
 
@@ -81,12 +89,19 @@ class TransH(EntityRelationEmbeddingModel):
         """
         super().__init__(
             triples_factory=triples_factory,
-            embedding_dim=embedding_dim,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
             predict_with_sigmoid=predict_with_sigmoid,
+            entity_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=entity_initializer,
+            ),
+            relation_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=relation_initializer,
+            ),
         )
 
         self.scoring_fct_norm = scoring_fct_norm
@@ -109,8 +124,10 @@ class TransH(EntityRelationEmbeddingModel):
         self.normal_vector_embeddings.reset_parameters()
         # TODO: Add initialization
 
-    def regularize_if_necessary(self) -> None:
+    def regularize_if_necessary(self, *tensors: torch.FloatTensor) -> None:
         """Update the regularizer's term given some tensors, if regularization is requested."""
+        if tensors:
+            raise ValueError('no tensors should be passed to TransH.regularize_if_necessary')
         # As described in [wang2014], all entities and relations are used to compute the regularization term
         # which enforces the defined soft constraints.
         super().regularize_if_necessary(

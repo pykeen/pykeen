@@ -7,7 +7,9 @@
     "dataset": "fb15k",
     "model": "ComplEx",
     "model_kwargs": {
-      "embedding_dim": 200
+      "embedding_dim": 200,
+      "entity_initializer": "xavier_uniform",
+      "relation_initializer": "xavier_uniform"
     },
     "regularizer": "Lp",
     "regularizer_kwargs": {

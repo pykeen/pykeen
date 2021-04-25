@@ -9,16 +9,20 @@ from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from dataclasses import dataclass
 from math import ceil
-from typing import Any, Collection, List, Mapping, Optional, Tuple, Union
+from typing import Any, Collection, Iterable, List, Mapping, Optional, Tuple, Union, cast
 
+import numpy as np
 import torch
-from dataclasses_json import dataclass_json
+from dataclasses_json import DataClassJsonMixin
 from tqdm.autonotebook import tqdm
 
-from ..models.base import Model
+from ..models import Model
 from ..triples.utils import get_entities
 from ..typing import MappedTriples
-from ..utils import is_cuda_oom_error, is_cudnn_error, normalize_string, split_list_in_batches_iter
+from ..utils import (
+    is_cuda_oom_error, is_cudnn_error, is_nonzero_larger_than_maxint_error, normalize_string,
+    split_list_in_batches_iter,
+)
 
 __all__ = [
     'Evaluator',
@@ -39,13 +43,16 @@ def optional_context_manager(condition, context_manager):
         yield
 
 
-@dataclass_json
 @dataclass
-class MetricResults:
+class MetricResults(DataClassJsonMixin):
     """Results from computing metrics."""
 
     def get_metric(self, name: str) -> float:
-        """Get the given metric from the results."""
+        """Get the given metric from the results.
+
+        :param name: The name of the metric
+        :returns: The value for the metric
+        """
         raise NotImplementedError
 
     def to_flat_dict(self) -> Mapping[str, Any]:
@@ -161,7 +168,7 @@ class Evaluator(ABC):
                 # Clear the ranks from the current evaluator
                 self.finalize()
 
-        return evaluate(
+        rv = evaluate(
             model=model,
             mapped_triples=mapped_triples,
             evaluators=self,
@@ -174,6 +181,8 @@ class Evaluator(ABC):
             restrict_entities_to=restrict_entities_to,
             do_time_consuming_checks=do_time_consuming_checks,
         )
+        # Since squeeze is true, we can expect that evaluate returns a MetricResult, but we need to tell MyPy that
+        return cast(MetricResults, rv)
 
     def batch_and_slice(
         self,
@@ -249,7 +258,7 @@ class Evaluator(ABC):
     def _param_size_search(
         self,
         key: str,
-        start_value: int,
+        start_value: Optional[int],
         model: Model,
         mapped_triples: MappedTriples,
         device: Optional[torch.device] = None,
@@ -267,11 +276,14 @@ class Evaluator(ABC):
             values_dict[key] = start_value
             values_dict['slice_size'] = None
         elif key == 'slice_size':
+            if start_value is None:
+                start_value = ceil(model.num_entities / 2)
             self._check_slicing_availability(model, batch_size=1)
             values_dict[key] = start_value
             values_dict['batch_size'] = 1
         else:
             raise AttributeError(f'The parameter {key} is unknown.')
+
         reached_max = False
         evaluated_once = False
         logger.info(f'Starting {key} search for evaluation now...')
@@ -282,7 +294,6 @@ class Evaluator(ABC):
                 gc.collect()
                 torch.cuda.empty_cache()
                 evaluate(
-                    **values_dict,
                     model=model,
                     mapped_triples=mapped_triples,
                     evaluators=self,
@@ -292,6 +303,8 @@ class Evaluator(ABC):
                     use_tqdm=use_tqdm,
                     restrict_entities_to=restrict_entities_to,
                     do_time_consuming_checks=do_time_consuming_checks,
+                    batch_size=values_dict.get('batch_size'),
+                    slice_size=values_dict.get('slice_size'),
                 )
                 evaluated_once = True
             except RuntimeError as runtime_error:
@@ -302,7 +315,11 @@ class Evaluator(ABC):
                 # The cache of the previous run has to be freed to allow accurate memory availability estimates
                 gc.collect()
                 torch.cuda.empty_cache()
-                if not is_cudnn_error(runtime_error) and not is_cuda_oom_error(runtime_error):
+                if (
+                    not is_cudnn_error(runtime_error)
+                    and not is_cuda_oom_error(runtime_error)
+                    and not is_nonzero_larger_than_maxint_error(runtime_error)
+                ):
                     raise runtime_error
                 if values_dict[key] == 1:
                     logger.debug(
@@ -310,7 +327,8 @@ class Evaluator(ABC):
                     )
                     break
 
-                values_dict[key] //= 2
+                #  values_dict[key] will always be an int at this point
+                values_dict[key] //= 2  # type: ignore
                 reached_max = True
                 if evaluated_once:
                     logger.info(f'Concluded {key} search with batch_size={values_dict[key]}.')
@@ -322,12 +340,12 @@ class Evaluator(ABC):
                 gc.collect()
                 torch.cuda.empty_cache()
                 if not reached_max and values_dict['batch_size'] < maximum_triples:
-                    values_dict[key] *= 2
+                    values_dict[key] *= 2  # type: ignore
                 else:
                     logger.info(f'Concluded {key} search with batch_size={values_dict[key]}.')
                     break
 
-        return values_dict[key], evaluated_once
+        return cast(Tuple[int, bool], (values_dict[key], evaluated_once))
 
     @staticmethod
     def _check_slicing_availability(model: Model, batch_size: int) -> None:
@@ -467,7 +485,8 @@ def evaluate(
     :param model:
         The model to evaluate.
     :param mapped_triples:
-        The triples on which to evaluate.
+        The triples on which to evaluate. The mapped triples should never contain inverse triples - these are created by
+        the model class on the fly.
     :param evaluators:
         An evaluator or a list of evaluators working on batches of triples and corresponding scores.
     :param only_size_probing:
@@ -541,7 +560,7 @@ def evaluate(
         # This should be a reasonable default size that works on most setups while being faster than batch_size=1
         batch_size = 32
         logger.info(f"No evaluation batch_size provided. Setting batch_size to '{batch_size}'.")
-    batches = split_list_in_batches_iter(input_list=mapped_triples, batch_size=batch_size)
+    batches = cast(Iterable[np.ndarray], split_list_in_batches_iter(input_list=mapped_triples, batch_size=batch_size))
 
     # Show progressbar
     num_triples = mapped_triples.shape[0]
@@ -651,9 +670,9 @@ def _evaluate_batch(
 
     # Predict scores once
     if column == 2:  # tail scores
-        batch_scores_of_corrupted = model.predict_scores_all_tails(batch[:, 0:2], slice_size=slice_size)
+        batch_scores_of_corrupted = model.predict_t(batch[:, 0:2], slice_size=slice_size)
     else:
-        batch_scores_of_corrupted = model.predict_scores_all_heads(batch[:, 1:3], slice_size=slice_size)
+        batch_scores_of_corrupted = model.predict_h(batch[:, 1:3], slice_size=slice_size)
 
     # Select scores of true
     batch_scores_of_true = batch_scores_of_corrupted[

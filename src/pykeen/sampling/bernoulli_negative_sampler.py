@@ -2,10 +2,12 @@
 
 """Negative sampling algorithm based on the work of [wang2014]_."""
 
-from typing import Optional, Tuple
+from typing import Any, Mapping, Optional, Tuple
 
 import torch
+from class_resolver import HintOrType
 
+from .filtering import Filterer
 from .negative_sampler import NegativeSampler
 from ..triples import TriplesFactory
 
@@ -46,11 +48,27 @@ class BernoulliNegativeSampler(NegativeSampler):
         triples_factory: TriplesFactory,
         num_negs_per_pos: Optional[int] = None,
         filtered: bool = False,
+        filterer: HintOrType[Filterer] = None,
+        filterer_kwargs: Optional[Mapping[str, Any]] = None,
     ) -> None:
+        """Initialize the bernoulli negative sampler with the given entities.
+
+        :param triples_factory: The factory holding the triples to sample from
+        :param num_negs_per_pos: Number of negative samples to make per positive triple. Defaults to 1.
+        :param filtered: Whether proposed corrupted triples that are in the training data should be filtered.
+            Defaults to False. See explanation in :func:`filter_negative_triples` for why this is
+            a reasonable default.
+        :param filterer: If filtered is set to True, this can be used to choose which filter module from
+            :mod:`pykeen.sampling.filtering` is used.
+        :param filterer_kwargs:
+            Additional keyword-based arguments passed to the filterer upon construction.
+        """
         super().__init__(
             triples_factory=triples_factory,
             num_negs_per_pos=num_negs_per_pos,
             filtered=filtered,
+            filterer=filterer,
+            filterer_kwargs=filterer_kwargs,
         )
         # Preprocessing: Compute corruption probabilities
         triples = self.triples_factory.mapped_triples
@@ -94,10 +112,15 @@ class BernoulliNegativeSampler(NegativeSampler):
         # Tails are corrupted if heads are not corrupted
         tail_mask = ~head_mask
 
-        # Randomly sample corruption. See below for explanation of
-        # why this is on a range of [0, num_entities - 1]
+        index_max = self.triples_factory.num_entities
+        # If we do not use a filterer, we at least make sure to not replace the triples by the original value
+        # See below for explanation of why this is on a range of [0, num_entities - 1]
+        if self.filterer is None:
+            index_max -= 1
+
+        # Randomly sample corruption.
         negative_entities = torch.randint(
-            self.triples_factory.num_entities - 1,
+            index_max,
             size=(num_negs,),
             device=positive_batch.device,
         )
@@ -109,8 +132,8 @@ class BernoulliNegativeSampler(NegativeSampler):
         negative_batch[tail_mask, 2] = negative_entities[tail_mask]
 
         # If filtering is activated, all negative triples that are positive in the training dataset will be removed
-        if self.filtered:
-            negative_batch, batch_filter = self.filter_negative_triples(negative_batch=negative_batch)
+        if self.filterer is not None:
+            negative_batch, batch_filter = self.filterer(negative_batch=negative_batch)
         else:
             # To make sure we don't replace the head by the original value
             # we shift all values greater or equal than the original value by one up

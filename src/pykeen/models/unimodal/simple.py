@@ -9,10 +9,10 @@ import torch.autograd
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss, SoftplusLoss
-from ...nn import Embedding
+from ...nn.emb import Embedding, EmbeddingSpecification
 from ...regularizers import PowerSumRegularizer, Regularizer
 from ...triples import TriplesFactory
-from ...typing import DeviceHint
+from ...typing import DeviceHint, Hint, Initializer
 
 __all__ = [
     'SimplE',
@@ -42,6 +42,12 @@ class SimplE(EntityRelationEmbeddingModel):
 
        - Official implementation: https://github.com/Mehran-k/SimplE
        - Improved implementation in pytorch: https://github.com/baharefatemi/SimplE
+    ---
+    citation:
+        author: Kazemi
+        year: 2018
+        link: https://papers.nips.cc/paper/7682-simple-embedding-for-link-prediction-in-knowledge-graphs
+        github: Mehran-k/SimplE
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
@@ -72,14 +78,23 @@ class SimplE(EntityRelationEmbeddingModel):
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
         clamp_score: Optional[Union[float, Tuple[float, float]]] = None,
+        entity_initializer: Hint[Initializer] = None,
+        relation_initializer: Hint[Initializer] = None,
     ) -> None:
         super().__init__(
             triples_factory=triples_factory,
-            embedding_dim=embedding_dim,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
+            entity_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=entity_initializer,
+            ),
+            relation_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=relation_initializer,
+            ),
         )
 
         # extra embeddings

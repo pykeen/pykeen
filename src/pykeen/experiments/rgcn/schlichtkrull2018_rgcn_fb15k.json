@@ -8,8 +8,13 @@
     "model": "R-GCN",
     "model_kwargs": {
       "embedding_dim": 500,
-      "num_bases_or_blocks": 100,
-      "decomposition": "block"
+      "decomposition": "block",
+      "decomposition_kwargs": {
+        "num_blocks": 100
+      },
+      "base_entity_initializer": "xavier_uniform",
+      "relation_initializer": "xavier_uniform",
+      "interaction": "distmult"
     },
     "optimizer": "Adagrad",
     "optimizer_kwargs": {

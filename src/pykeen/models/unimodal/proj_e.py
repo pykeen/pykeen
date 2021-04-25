@@ -12,10 +12,11 @@ from torch import nn
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import BCEWithLogitsLoss, Loss
+from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_uniform_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
-from ...typing import DeviceHint
+from ...typing import DeviceHint, Hint, Initializer
 
 __all__ = [
     'ProjE',
@@ -45,6 +46,12 @@ class ProjE(EntityRelationEmbeddingModel):
     .. seealso::
 
        - Official Implementation: https://github.com/nddsg/ProjE
+    ---
+    citation:
+        author: Shi
+        year: 2017
+        link: https://www.aaai.org/ocs/index.php/AAAI/AAAI17/paper/view/14279
+        github: nddsg/ProjE
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
@@ -65,16 +72,23 @@ class ProjE(EntityRelationEmbeddingModel):
         random_seed: Optional[int] = None,
         inner_non_linearity: Optional[nn.Module] = None,
         regularizer: Optional[Regularizer] = None,
+        entity_initializer: Hint[Initializer] = xavier_uniform_,
+        relation_initializer: Hint[Initializer] = xavier_uniform_,
     ) -> None:
         super().__init__(
             triples_factory=triples_factory,
-            embedding_dim=embedding_dim,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
-            entity_initializer=xavier_uniform_,
-            relation_initializer=xavier_uniform_,
+            entity_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=entity_initializer,
+            ),
+            relation_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=relation_initializer,
+            ),
         )
 
         # Global entity projection

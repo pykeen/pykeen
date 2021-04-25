@@ -12,12 +12,15 @@ import torch
 from pykeen.datasets import Nations
 from pykeen.evaluation import Evaluator, MetricResults, RankBasedEvaluator, RankBasedMetricResults
 from pykeen.evaluation.evaluator import create_dense_positive_mask_, create_sparse_positive_filter_, filter_scores_
-from pykeen.evaluation.rank_based_evaluator import RANK_TYPES, SIDES, compute_rank_from_scores
+from pykeen.evaluation.rank_based_evaluator import (
+    RANK_EXPECTED_REALISTIC, RANK_OPTIMISTIC, RANK_PESSIMISTIC,
+    RANK_REALISTIC, RANK_TYPES, SIDES, compute_rank_from_scores,
+)
 from pykeen.evaluation.sklearn import SklearnEvaluator, SklearnMetricResults
-from pykeen.models import TransE
-from pykeen.models.base import EntityRelationEmbeddingModel, Model
+from pykeen.models import Model, TransE
 from pykeen.triples import TriplesFactory
 from pykeen.typing import MappedTriples
+from tests.mocks import MockModel
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +74,7 @@ class _AbstractEvaluatorTests:
         # Compute mask only if required
         if self.evaluator.requires_positive_mask:
             # TODO: Re-use filtering code
-            triples = self.factory.mapped_triples
+            triples = self.factory.mapped_triples.to(self.model.device)
             if inverse:
                 sel_col, start_col = 0, 1
             else:
@@ -152,20 +155,26 @@ class RankBasedEvaluatorTests(_AbstractEvaluatorTests, unittest.TestCase):
     ):
         # Check for correct class
         assert isinstance(result, RankBasedMetricResults)
+        result: RankBasedMetricResults
 
         # Check value ranges
-        for side, all_type_mr in result.mean_rank.items():
+        # check mean rank (MR)
+        for side, all_type_mr in result.arithmetic_mean_rank.items():
             assert side in SIDES
             for rank_type, mr in all_type_mr.items():
                 assert rank_type in RANK_TYPES
                 assert isinstance(mr, float)
                 assert 1 <= mr <= self.factory.num_entities
-        for side, all_type_mrr in result.mean_reciprocal_rank.items():
+
+        # check mean reciprocal rank (MRR)
+        for side, all_type_mrr in result.inverse_harmonic_mean_rank.items():
             assert side in SIDES
             for rank_type, mrr in all_type_mrr.items():
                 assert rank_type in RANK_TYPES
                 assert isinstance(mrr, float)
                 assert 0 < mrr <= 1
+
+        # check hits at k (H@k)
         for side, all_type_hits_at_k in result.hits_at_k.items():
             assert side in SIDES
             for rank_type, hits_at_k in all_type_hits_at_k.items():
@@ -175,6 +184,20 @@ class RankBasedEvaluatorTests(_AbstractEvaluatorTests, unittest.TestCase):
                     assert 0 < k < self.factory.num_entities
                     assert isinstance(h, float)
                     assert 0 <= h <= 1
+
+        # check adjusted mean rank (AMR)
+        for side, adjusted_mean_rank in result.adjusted_arithmetic_mean_rank.items():
+            assert side in SIDES
+            assert RANK_REALISTIC in adjusted_mean_rank
+            assert isinstance(adjusted_mean_rank[RANK_REALISTIC], float)
+            assert 0 < adjusted_mean_rank[RANK_REALISTIC] < 2
+
+        # check adjusted mean rank index (AMRI)
+        for side, adjusted_mean_rank_index in result.adjusted_arithmetic_mean_rank_index.items():
+            assert side in SIDES
+            assert RANK_REALISTIC in adjusted_mean_rank_index
+            assert isinstance(adjusted_mean_rank_index[RANK_REALISTIC], float)
+            assert -1 <= adjusted_mean_rank_index[RANK_REALISTIC] <= 1
 
         # TODO: Validate with data?
 
@@ -193,12 +216,12 @@ class SklearnEvaluatorTest(_AbstractEvaluatorTests, unittest.TestCase):
         assert isinstance(result, SklearnMetricResults)
 
         # check value
-        scores = data['scores'].detach().numpy()
-        mask = data['mask'].detach().float().numpy()
+        scores = data['scores'].detach().cpu().numpy()
+        mask = data['mask'].detach().cpu().float().numpy()
 
         # filtering
         uniq = dict()
-        batch = data['batch'].detach().numpy()
+        batch = data['batch'].detach().cpu().numpy()
         for i, (h, r) in enumerate(batch[:, :2]):
             uniq[int(h), int(r)] = i
         indices = sorted(uniq.values())
@@ -227,28 +250,29 @@ class EvaluatorUtilsTests(unittest.TestCase):
             [1., 1., 3., float('nan'), 0],
         ])
         # true_score: (2, 3, 3)
-        true_score = torch.tensor([2., 3., 3.]).view(batch_size, 1)
-        exp_best_rank = torch.tensor([3., 2., 1.])
-        exp_worst_rank = torch.tensor([4., 2., 1.])
+        true_score = torch.as_tensor([2., 3., 3.]).view(batch_size, 1)
+        exp_best_rank = torch.as_tensor([3., 2., 1.])
+        exp_worst_rank = torch.as_tensor([4., 2., 1.])
         exp_avg_rank = 0.5 * (exp_best_rank + exp_worst_rank)
-        exp_adj_rank = exp_avg_rank / torch.tensor([(5 + 1) / 2, (5 + 1) / 2, (4 + 1) / 2])
+        exp_exp_rank = torch.as_tensor([(5 + 1) / 2, (5 + 1) / 2, (4 + 1) / 2])
         ranks = compute_rank_from_scores(true_score=true_score, all_scores=all_scores)
 
-        best_rank = ranks.get('best')
-        assert best_rank.shape == (batch_size,)
-        assert (best_rank == exp_best_rank).all()
+        optimistic_rank = ranks.get(RANK_OPTIMISTIC)
+        assert optimistic_rank.shape == (batch_size,)
+        assert (optimistic_rank == exp_best_rank).all()
 
-        worst_rank = ranks.get('worst')
-        assert worst_rank.shape == (batch_size,)
-        assert (worst_rank == exp_worst_rank).all()
+        pessimistic_rank = ranks.get(RANK_PESSIMISTIC)
+        assert pessimistic_rank.shape == (batch_size,)
+        assert (pessimistic_rank == exp_worst_rank).all()
 
-        avg_rank = ranks.get('avg')
-        assert avg_rank.shape == (batch_size,)
-        assert (avg_rank == exp_avg_rank).all(), (avg_rank, exp_avg_rank)
+        realistic_rank = ranks.get(RANK_REALISTIC)
+        assert realistic_rank.shape == (batch_size,)
+        assert (realistic_rank == exp_avg_rank).all(), (realistic_rank, exp_avg_rank)
 
-        adj_rank = ranks.get('adj')
-        assert adj_rank.shape == (batch_size,)
-        assert (adj_rank == exp_adj_rank).all(), (adj_rank, exp_adj_rank)
+        expected_realistic_rank = ranks.get(RANK_EXPECTED_REALISTIC)
+        assert expected_realistic_rank is not None
+        assert expected_realistic_rank.shape == (batch_size,)
+        assert (expected_realistic_rank == exp_exp_rank).all(), (expected_realistic_rank, exp_exp_rank)
 
     def test_create_sparse_positive_filter_(self):
         """Test method create_sparse_positive_filter_."""
@@ -418,42 +442,24 @@ class DummyEvaluator(Evaluator):
 
     def finalize(self) -> MetricResults:  # noqa: D102
         return RankBasedMetricResults(
-            mean_rank=self.counter,
-            mean_reciprocal_rank=None,
-            adjusted_mean_rank=None,
+            arithmetic_mean_rank=self.counter,
+            geometric_mean_rank=None,
+            harmonic_mean_rank=None,
+            median_rank=None,
+            inverse_arithmetic_mean_rank=None,
+            inverse_geometric_mean_rank=None,
+            inverse_harmonic_mean_rank=None,
+            inverse_median_rank=None,
+            rank_std=None,
+            rank_var=None,
+            rank_mad=None,
+            adjusted_arithmetic_mean_rank=None,
+            adjusted_arithmetic_mean_rank_index=None,
             hits_at_k=dict(),
         )
 
     def __repr__(self):  # noqa: D105
         return f'{self.__class__.__name__}(losses={self.losses})'
-
-
-class MockModel(EntityRelationEmbeddingModel):
-    """A dummy model returning fake scores."""
-
-    def __init__(self, triples_factory: TriplesFactory):
-        super().__init__(triples_factory=triples_factory)
-        num_entities = self.num_entities
-        self.scores = torch.arange(num_entities, dtype=torch.float)
-
-    def _generate_fake_scores(self, batch: torch.LongTensor) -> torch.FloatTensor:
-        """Generate fake scores s[b, i] = i of size (batch_size, num_entities)."""
-        batch_size = batch.shape[0]
-        batch_scores = self.scores.view(1, -1).repeat(batch_size, 1)
-        assert batch_scores.shape == (batch_size, self.num_entities)
-        return batch_scores
-
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._generate_fake_scores(batch=hrt_batch)
-
-    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._generate_fake_scores(batch=hr_batch)
-
-    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._generate_fake_scores(batch=rt_batch)
-
-    def reset_parameters_(self) -> Model:  # noqa: D102
-        pass  # Not needed for unittest
 
 
 class TestEvaluationStructure(unittest.TestCase):
@@ -474,4 +480,5 @@ class TestEvaluationStructure(unittest.TestCase):
             batch_size=1,
             use_tqdm=False,
         )
-        assert eval_results.mean_rank == self.counter, 'Should end at the same value as it started'
+        self.assertIsInstance(eval_results, RankBasedMetricResults)
+        assert eval_results.arithmetic_mean_rank == self.counter, 'Should end at the same value as it started'

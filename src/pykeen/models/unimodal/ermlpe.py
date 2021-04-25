@@ -6,13 +6,15 @@ from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
 from torch import nn
+from torch.nn.init import uniform_
 
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import BCEAfterSigmoidLoss, Loss
+from ...nn.emb import EmbeddingSpecification
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
-from ...typing import DeviceHint
+from ...typing import DeviceHint, Hint, Initializer
 
 __all__ = [
     'ERMLPE',
@@ -39,7 +41,12 @@ class ERMLPE(EntityRelationEmbeddingModel):
     ConvE can be seen as a special case of ERMLPE that contains the unnecessary inductive bias of convolutional
     filters. The aim of this model is to show that lifting this bias from ConvE (which simply leaves us with a
     modified ERMLP model), not only reduces the number of parameters but also improves performance.
-
+    ---
+    citation:
+        author: Sharifzadeh
+        year: 2019
+        link: https://github.com/pykeen/pykeen
+        github: pykeen/pykeen
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
@@ -65,21 +72,29 @@ class ERMLPE(EntityRelationEmbeddingModel):
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
+        entity_initializer: Hint[Initializer] = uniform_,
+        relation_initializer: Hint[Initializer] = uniform_,
     ) -> None:
         super().__init__(
             triples_factory=triples_factory,
-            embedding_dim=embedding_dim,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
+            entity_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=entity_initializer,
+            ),
+            relation_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=relation_initializer,
+            ),
         )
         self.hidden_dim = hidden_dim
-        self.input_dropout = input_dropout
 
         self.linear1 = nn.Linear(2 * self.embedding_dim, self.hidden_dim)
         self.linear2 = nn.Linear(self.hidden_dim, self.embedding_dim)
-        self.input_dropout = nn.Dropout(self.input_dropout)
+        self.input_dropout = nn.Dropout(input_dropout)
         self.bn1 = nn.BatchNorm1d(self.hidden_dim)
         self.bn2 = nn.BatchNorm1d(self.embedding_dim)
         self.mlp = nn.Sequential(

@@ -5,6 +5,162 @@ All notable changes to this project will be documented in this file.
 The format is based on `Keep a Changelog <http://keepachangelog.com/>`_
 and this project adheres to `Semantic Versioning <http://semver.org/>`_
 
+`Unreleased <https://github.com/pykeen/pykeen/compare/v1.4.0...HEAD>`_
+-----------------------------------------------------------------------
+
+New Metrics
+~~~~~~~~~~~
+- Adjusted Arithmetic Mean Rank Index (https://github.com/pykeen/pykeen/pull/378)
+- Add harmonic, geometric, and median rankings (https://github.com/pykeen/pykeen/pull/381)
+
+Added
+~~~~~
+- Documentation on using PyKEEN in Google Colab and Kaggle (https://github.com/pykeen/pykeen/pull/379,
+  thanks `@jerryIsHere <https://github.com/jerryIsHere>`_)
+- Documentation on
+- Pass custom training loops to pipeline (https://github.com/pykeen/pykeen/pull/334)
+- Compatibility later for the fft module (https://github.com/pykeen/pykeen/pull/288)
+- Official Python 3.9 support, now that PyTorch has it (https://github.com/pykeen/pykeen/pull/223)
+
+Updated
+~~~~~~~
+- R-GCN implementation now uses new-style models and is super idiomatic (https://github.com/pykeen/pykeen/pull/110)
+
+Fixed
+~~~~~
+- Regularizer passing in the pipeline and HPO (https://github.com/pykeen/pykeen/pull/345)
+- Saving results when using multimodal models (https://github.com/pykeen/pykeen/pull/349)
+
+`1.4.0 <https://github.com/pykeen/pykeen/compare/v1.3.0...v1.4.0>`_ - 2021-03-04
+--------------------------------------------------------------------------------
+New Datasets
+~~~~~~~~~~~~
+- Countries (https://github.com/pykeen/pykeen/pull/314)
+- DB100K (https://github.com/pykeen/pykeen/issues/316)
+
+New Models
+~~~~~~~~~~
+- MuRE (https://github.com/pykeen/pykeen/pull/311)
+- PairRE (https://github.com/pykeen/pykeen/pull/309)
+- Monotonic affine transformer (https://github.com/pykeen/pykeen/pull/324)
+
+New Algorithms
+~~~~~~~~~~~~~~
+If you're interested in any of these, please get in touch with us
+regarding an upcoming publication.
+
+- Dataset Similarity (https://github.com/pykeen/pykeen/pull/294)
+- Dataset Deterioration (https://github.com/pykeen/pykeen/pull/295)
+- Dataset Remix (https://github.com/pykeen/pykeen/pull/296)
+
+Added
+~~~~~
+- New-style models (https://github.com/pykeen/pykeen/pull/260) for direct usage of interaction
+  modules
+- Ability to train ``pipeline()`` using an Interaction module rather than a Model
+  (https://github.com/pykeen/pykeen/pull/326, https://github.com/pykeen/pykeen/pull/330).
+
+Changes
+~~~~~~~
+- Lookup of assets is now mediated by the ``class_resolver`` package (https://github.com/pykeen/pykeen/pull/321,
+  https://github.com/pykeen/pykeen/pull/327)
+- The ``docdata`` package is now used to parse structured information out of the model and dataset documentation
+  in order to make a more informative README with links to citations (https://github.com/pykeen/pykeen/pull/303).
+
+`1.3.0 <https://github.com/pykeen/pykeen/compare/v1.1.0...v1.3.0>`_ - 2021-02-15
+--------------------------------------------------------------------------------
+We skipped version 1.2.0 because we made an accidental release before this version
+was ready. We're only human, and are looking into improving our release workflow
+to live in CI/CD so something like this doesn't happen again. However, as an end user,
+this won't have an effect on you.
+
+New Datasets
+~~~~~~~~~~~~
+- CSKG (https://github.com/pykeen/pykeen/pull/249)
+- DBpedia50 (https://github.com/pykeen/pykeen/issues/278)
+
+New Trackers
+~~~~~~~~~~~~
+- General file-based Tracker (https://github.com/pykeen/pykeen/pull/254)
+- CSV Tracker (https://github.com/pykeen/pykeen/pull/254)
+- JSON Tracker (https://github.com/pykeen/pykeen/pull/254)
+
+Fixed
+~~~~~
+- Fixed ComplEx's implementation (https://github.com/pykeen/pykeen/pull/313)
+- Fixed OGB's reuse entity identifiers (https://github.com/pykeen/pykeen/pull/318, thanks @tgebhart)
+
+Added
+~~~~~
+- ``pykeen version`` command for more easily reporting your environment in issues
+  (https://github.com/pykeen/pykeen/issues/251)
+- Functional forms of all interaction models (e.g., TransE, RotatE) (https://github.com/pykeen/pykeen/issues/238,
+  `pykeen.nn.functional documentation <https://pykeen.readthedocs.io/en/latest/reference/nn/functional.html>`_). These
+  can be generally reused, even outside of the typical PyKEEN workflows.
+- Modular forms of all interaction models (https://github.com/pykeen/pykeen/issues/242,
+  `pykeen.nn.modules documentation <https://pykeen.readthedocs.io/en/latest/reference/nn/modules.html>`_). These wrap
+  the functional forms of interaction models and store hyper-parameters such as the ``p`` value for the L_p norm in
+  TransE.
+- The initializer, normalizer, and constrainer for the entity and relation embeddings are now exposed through the
+  ``__init__()`` function of each KGEM class and can be configured. A future update will enable HPO on these as well
+  (https://github.com/pykeen/pykeen/issues/282).
+
+Refactoring and Future Preparation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+This release contains a few big refactors. Most won't affect end-users, but if you're writing your own PyKEEN
+models, these are important. Many of them are motivated to make it possible to introduce a new interface that makes
+it much easier for researchers (who shouldn't have to understand the inner workings of PyKEEN) to make new models.
+
+- The regularizer has been refactored (https://github.com/pykeen/pykeen/issues/266,
+  https://github.com/pykeen/pykeen/issues/274). It no longer accepts a ``torch.device`` when instantiated.
+- The ``pykeen.nn.Embedding`` class has been improved in several ways:
+  - Embedding Specification class makes it easier to write new classes (https://github.com/pykeen/pykeen/issues/277)
+  - Refactor to make shape of embedding explicit (https://github.com/pykeen/pykeen/issues/287)
+  - Specification of complex datatype (https://github.com/pykeen/pykeen/issues/292)
+- Refactoring of the loss model class to provide a meaningful class hierarchy
+  (https://github.com/pykeen/pykeen/issues/256, https://github.com/pykeen/pykeen/issues/262)
+- Refactoring of the base model class to provide a consistent interface (https://github.com/pykeen/pykeen/issues/246,
+  https://github.com/pykeen/pykeen/issues/248, https://github.com/pykeen/pykeen/issues/253,
+  https://github.com/pykeen/pykeen/issues/257). This allowed for simplification of the loss computation based on
+  the new hierarchy and also new implementation of regularizer class.
+- More automated testing of typing with MyPy (https://github.com/pykeen/pykeen/issues/255) and automated checking
+  of documentation with ``doctests`` (https://github.com/pykeen/pykeen/issues/291)
+
+Triples Loading
+~~~~~~~~~~~~~~~
+We've made some improvements to the ``pykeen.triples.TriplesFactory`` to facilitate loading even larger datasets
+(https://github.com/pykeen/pykeen/issues/216). However, this required an interface change. This will affect any
+code that loads custom triples. If you're loading triples from a path, you should now use:
+
+.. code-block:: python
+
+    path = ...
+
+    # Old (doesn't work anymore)
+    tf = TriplesFactory(path=path)
+
+    # New
+    tf = TriplesFactory.from_path(path)
+
+Predictions
+~~~~~~~~~~~
+While refactoring the base model class, we excised the prediction functionality to a new module
+``pykeen.models.predict`` (docs: https://pykeen.readthedocs.io/en/latest/reference/predict.html#functions).
+We also renamed some of the prediction functions inside the base model to make them more consistent, but we now
+recommend you use the functions from ``pykeen.models.predict`` instead.
+
+- ``Model.predict_heads()`` -> ``Model.get_head_prediction_df()``
+- ``Model.predict_relations()`` -> ``Model.get_head_prediction_df()``
+- ``Model.predict_tails()`` -> ``Model.get_head_prediction_df()``
+- ``Model.score_all_triples()`` -> ``Model.get_all_prediction_df()``
+
+Fixed
+~~~~~
+- Do not create inverse triples for validation and testing factory (https://github.com/pykeen/pykeen/issues/270)
+- Treat nonzero applied to large tensor error as OOM for batch size search (https://github.com/pykeen/pykeen/issues/279)
+- Fix bug in loading ConceptNet (https://github.com/pykeen/pykeen/issues/290). If your experiments relied on this
+  dataset, you should rerun them.
+
 `1.1.0 <https://github.com/pykeen/pykeen/compare/v1.0.5...v1.1.0>`_ - 2021-01-20
 --------------------------------------------------------------------------------
 New Datasets

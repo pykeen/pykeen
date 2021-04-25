@@ -5,19 +5,19 @@
 import inspect
 import json
 import os
-from typing import Iterable, Optional, Set, Type
+from typing import Callable, Iterable, Optional, Set, Type, Union
 
+import torch
 from torch import nn
 
 from .cli import HERE
 from ..datasets import datasets as datasets_dict
-from ..losses import _LOSS_SUFFIX, losses as losses_dict
-from ..models import models as models_dict
-from ..models.base import Model
-from ..optimizers import optimizers as optimizers_dict
-from ..regularizers import _REGULARIZER_SUFFIX, regularizers as regularizers_dict
-from ..sampling import _NEGATIVE_SAMPLER_SUFFIX, negative_samplers as negative_samplers_dict
-from ..training import _TRAINING_LOOP_SUFFIX, training_loops as training_loops_dict
+from ..losses import loss_resolver
+from ..models import Model, model_resolver
+from ..optimizers import optimizer_resolver
+from ..regularizers import regularizer_resolver
+from ..sampling import negative_sampler_resolver
+from ..training import training_loop_resolver
 from ..utils import normalize_string
 
 _SKIP_NAMES = {
@@ -28,13 +28,14 @@ _SKIP_ANNOTATIONS = {
     nn.Embedding, Optional[nn.Embedding], Type[nn.Embedding], Optional[Type[nn.Embedding]],
     nn.Module, Optional[nn.Module], Type[nn.Module], Optional[Type[nn.Module]],
     Model, Optional[Model], Type[Model], Optional[Type[Model]],
+    Union[str, Callable[[torch.FloatTensor], torch.FloatTensor]],
 }
 
 
 def iterate_config_paths() -> Iterable[str]:
     """Iterate over all configuration paths."""
     for model in os.listdir(HERE):
-        if model not in models_dict:
+        if model not in model_resolver.lookup_dict:
             continue
         model_directory = os.path.join(HERE, model)
         for config in os.listdir(model_directory):
@@ -152,7 +153,7 @@ def get_configuration_errors(path: str):  # noqa: C901
         return value
 
     _check(
-        pipeline, 'model', models_dict,
+        pipeline, 'model', model_resolver.lookup_dict,
         normalize=True, check_kwargs=True,
     )
     _check(
@@ -160,29 +161,29 @@ def get_configuration_errors(path: str):  # noqa: C901
         normalize=False, check_kwargs=False,
     )
     _check(
-        pipeline, 'optimizer', optimizers_dict,
+        pipeline, 'optimizer', optimizer_resolver.lookup_dict,
         normalize=True, check_kwargs=True,
         required_kwargs={'lr'},
     )
     _check(
-        pipeline, 'loss', losses_dict,
-        normalize=True, suffix=_LOSS_SUFFIX, check_kwargs=True,
+        pipeline, 'loss', loss_resolver.lookup_dict,
+        normalize=True, suffix=loss_resolver.suffix, check_kwargs=True,
     )
     _check(
-        pipeline, 'regularizer', regularizers_dict,
-        normalize=True, suffix=_REGULARIZER_SUFFIX, check_kwargs=True, required=False,
+        pipeline, 'regularizer', regularizer_resolver.lookup_dict,
+        normalize=True, suffix=regularizer_resolver.suffix, check_kwargs=True, required=False,
         allowed_missing_kwargs={'dim'},
     )
 
     training_loop = _check(
-        pipeline, 'training_loop', training_loops_dict,
-        normalize=True, suffix=_TRAINING_LOOP_SUFFIX, check_kwargs=False,
+        pipeline, 'training_loop', training_loop_resolver.lookup_dict,
+        normalize=True, suffix=training_loop_resolver.suffix, check_kwargs=False,
     )
 
     if training_loop == 'slcwa':
         _check(
-            pipeline, 'negative_sampler', negative_samplers_dict,
-            normalize=True, suffix=_NEGATIVE_SAMPLER_SUFFIX, check_kwargs=True,
+            pipeline, 'negative_sampler', negative_sampler_resolver.lookup_dict,
+            normalize=True, suffix=negative_sampler_resolver.suffix, check_kwargs=True,
         )
 
     return errors

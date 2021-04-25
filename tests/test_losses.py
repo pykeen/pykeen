@@ -5,8 +5,12 @@
 import unittest
 
 import torch
+import unittest_templates
 
-from pykeen.losses import BCEAfterSigmoidLoss, BCEWithLogitsLoss, CrossEntropyLoss, MSELoss, NSSALoss, SoftplusLoss
+from pykeen.losses import (
+    BCEAfterSigmoidLoss, BCEWithLogitsLoss, CrossEntropyLoss, Loss, MSELoss, MarginRankingLoss, NSSALoss, PairwiseLoss,
+    PointwiseLoss, SetwiseLoss, SoftplusLoss,
+)
 from pykeen.pipeline import PipelineResult, pipeline
 from tests import cases
 
@@ -102,4 +106,20 @@ class MSELossTestCase(cases.PointwiseLossTestCase):
 
     cls = MSELoss
 
-# TODO reimplement then test MarginRankingLoss using PR #18 solution
+
+class MarginRankingLossTestCase(cases.PairwiseLossTestCase):
+    """Tests for margin ranking loss."""
+
+    cls = MarginRankingLoss
+
+
+class TestLosses(unittest_templates.MetaTestCase[Loss]):
+    """Test that the loss functions all have tests."""
+
+    base_cls = Loss
+    base_test = cases.LossTestCase
+    skip_cls = {
+        PairwiseLoss,
+        PointwiseLoss,
+        SetwiseLoss,
+    }

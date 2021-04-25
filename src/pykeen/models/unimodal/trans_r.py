@@ -8,17 +8,16 @@ from typing import Any, ClassVar, Mapping, Optional
 import torch
 import torch.autograd
 import torch.nn.init
-from torch.nn import functional
 
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
-from ...nn import Embedding
-from ...nn.init import xavier_uniform_
+from ...nn.emb import Embedding, EmbeddingSpecification
+from ...nn.init import xavier_uniform_, xavier_uniform_norm_
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
-from ...typing import DeviceHint
-from ...utils import clamp_norm, compose
+from ...typing import Constrainer, DeviceHint, Hint, Initializer
+from ...utils import clamp_norm
 
 __all__ = [
     'TransR',
@@ -64,6 +63,11 @@ class TransR(EntityRelationEmbeddingModel):
          <https://github.com/thunlp/OpenKE/blob/master/models/TransR.py>`_
        - OpenKE `PyTorch implementation of TransR
          <https://github.com/thunlp/OpenKE/blob/OpenKE-PyTorch/models/TransR.py>`_
+    ---
+    citation:
+        author: Lin
+        year: 2015
+        link: http://www.aaai.org/ocs/index.php/AAAI/AAAI15/paper/download/9571/9523/
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
@@ -83,25 +87,30 @@ class TransR(EntityRelationEmbeddingModel):
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
+        entity_initializer: Hint[Initializer] = xavier_uniform_,
+        entity_constrainer: Hint[Constrainer] = clamp_norm,  # type: ignore
+        relation_initializer: Hint[Initializer] = xavier_uniform_norm_,
+        relation_constrainer: Hint[Constrainer] = clamp_norm,  # type: ignore
     ) -> None:
         """Initialize the model."""
         super().__init__(
             triples_factory=triples_factory,
-            embedding_dim=embedding_dim,
-            relation_dim=relation_dim,
             loss=loss,
             preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
-            entity_initializer=xavier_uniform_,
-            entity_constrainer=clamp_norm,
-            entity_constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
-            relation_initializer=compose(
-                xavier_uniform_,
-                functional.normalize,
+            entity_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=entity_initializer,
+                constrainer=entity_constrainer,
+                constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
             ),
-            relation_constrainer=clamp_norm,
-            relation_constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
+            relation_representations=EmbeddingSpecification(
+                embedding_dim=relation_dim,
+                initializer=relation_initializer,
+                constrainer=relation_constrainer,
+                constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
+            ),
         )
         self.scoring_fct_norm = scoring_fct_norm
 

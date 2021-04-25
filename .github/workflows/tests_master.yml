@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [ 3.7, 3.8 ]
+        python-version: [ 3.7, 3.9 ]
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python ${{ matrix.python-version }}
@@ -28,6 +28,9 @@ jobs:
       - name: Check code quality with flake8
         run: tox -e flake8
 
+      - name: Check code quality with flake8/darglint (limited)
+        run: tox -e darglint
+
       - name: Check package metadata with Pyroma
         run: tox -e pyroma
 
@@ -39,7 +42,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [ 3.7, 3.8 ]
+        python-version: [ 3.7, 3.9 ]
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python ${{ matrix.python-version }}
@@ -55,6 +58,9 @@ jobs:
       - name: Check README.rst
         run: tox -e readme
 
+      - name: Check docstring coverage
+        run: tox -e docstr-coverage
+
       - name: Check documentation build with Sphinx
         run: |
           sudo apt-get install graphviz
@@ -65,7 +71,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [ 3.7, 3.8 ]
+        python-version: [ 3.7, 3.9 ]
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python ${{ matrix.python-version }}
@@ -78,13 +84,15 @@ jobs:
         run: tox -e py
       - name: Run slow tests
         run: tox -e integration
+      - name: Run doctests
+        run: tox -e doctests
   windows:
     if: "!contains(github.event.head_commit.message, 'skip ci')"
     name: Windows
     runs-on: windows-latest
     strategy:
       matrix:
-        python-version: [ 3.7, 3.8 ]
+        python-version: [ 3.7, 3.9 ]
     steps:
       - uses: actions/checkout@v2
       - uses: conda-incubator/setup-miniconda@v2
@@ -95,7 +103,7 @@ jobs:
         run: |
           conda install pip setuptools wheel pytest sqlite
           conda install pytorch torchvision cudatoolkit=10.2 -c pytorch
-          pip install -e .[mlflow,wandb]
+          pip install -e .[mlflow,wandb,tests]
       - name: Run fast tests
         run: pytest --durations=20 tests -m "not slow"
       - name: Run slow tests
