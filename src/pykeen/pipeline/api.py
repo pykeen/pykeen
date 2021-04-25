@@ -763,7 +763,12 @@ def pipeline(  # noqa: C901
 
     :returns: A pipeline result package.
 
-    :raises ValueError: if a negative sampler is specified with LCWA
+    :raises ValueError:
+        If a negative sampler is specified with LCWA
+    :raises MemoryError:
+        If it is not possible to evaluate the model on the hardware at hand with the given parameters.
+    :raises RuntimeError:
+        If CUDA ran into OOM issues trying to evaluate the model on the hardware at hand with the given parameters.
     """
     if training_kwargs is None:
         training_kwargs = {}
