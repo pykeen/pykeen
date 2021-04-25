@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 r"""
-Among the corrupted triples in $\mathcal{H}(r, t)$ / $\mathcal{T}(h, r)$, there might be true triples that are part of
+Among the corrupted triples in $\mathcal{N}(h, r, t)$ , there might be true triples that are part of
 the knowledge graph. If these false negatives are ranked higher than the current test triple $t^{+}$, the results
-might get distorted.Therefore, the \emph{filtered} evaluation setting has been proposed [bordes2013]_, in which
+might get distorted. Therefore, the \emph{filtered} evaluation setting has been proposed [bordes2013]_, in which
 the corrupted triples are filtered to exclude known true facts from the train, validation and test set. Thus, the
 rank does not decrease when ranking another true entity higher.
 
