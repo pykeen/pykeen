@@ -1012,7 +1012,6 @@ def pipeline(  # noqa: C901
     logging.debug("Evaluation will be run with following parameters:")
     logging.debug(f"evaluation_kwargs: {evaluation_kwargs}")
     evaluate_start_time = time.time()
-
     metric_results: MetricResults = _safe_evaluate(
         model=model_instance,
         mapped_triples=mapped_triples,
@@ -1020,7 +1019,6 @@ def pipeline(  # noqa: C901
         evaluation_kwargs=evaluation_kwargs,
         evaluation_fallback=evaluation_fallback,
     )
-
     evaluate_end_time = time.time() - evaluate_start_time
     _result_tracker.log_metrics(
         metrics=metric_results.to_dict(),
