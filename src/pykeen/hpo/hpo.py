@@ -95,6 +95,7 @@ class Objective:
     # 8. Evaluation
     evaluator_kwargs: Optional[Mapping[str, Any]] = None
     evaluation_kwargs: Optional[Mapping[str, Any]] = None
+    filter_validation_when_testing: Optional[bool] = None
     # 9. Trackers
     result_tracker_kwargs: Optional[Mapping[str, Any]] = None
     # Misc.
@@ -229,6 +230,7 @@ class Objective:
                 evaluator=self.evaluator,
                 evaluator_kwargs=self.evaluator_kwargs,
                 evaluation_kwargs=self.evaluation_kwargs,
+                filter_validation_when_testing=self.filter_validation_when_testing,
                 # 9. Tracker
                 result_tracker=self.result_tracker,
                 result_tracker_kwargs=self.result_tracker_kwargs,
@@ -458,6 +460,7 @@ def hpo_pipeline(
     evaluator_kwargs: Optional[Mapping[str, Any]] = None,
     evaluation_kwargs: Optional[Mapping[str, Any]] = None,
     metric: Optional[str] = None,
+    filter_validation_when_testing: Optional[bool] = None,
     # 9. Tracking
     result_tracker: HintType[ResultTracker] = None,
     result_tracker_kwargs: Optional[Mapping[str, Any]] = None,
@@ -562,6 +565,10 @@ def hpo_pipeline(
         Keyword arguments to pass to the evaluator on instantiation
     :param evaluation_kwargs:
         Keyword arguments to pass to the evaluator's evaluate function on call
+    :param filter_validation_when_testing:
+        If true, during the evaluating of the test dataset, validation triples are added to the set of known positive
+        triples, which are filtered out when performing filtered evaluation following the approach described by
+        (Bordes et al., 2013). Defaults to true.
 
     :param result_tracker:
         The ResultsTracker class or name
@@ -654,6 +661,10 @@ def hpo_pipeline(
         metric = ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX
     study.set_user_attr('metric', metric)
     logger.info(f'Attempting to {direction} {metric}')
+    if filter_validation_when_testing is None:
+        filter_validation_when_testing = True
+    study.set_user_attr('filter_validation_when_testing', filter_validation_when_testing)
+    logger.info(f'Filter validation triples when testing: {filter_validation_when_testing}')
 
     # 9. Tracking
     result_tracker_cls: Type[ResultTracker] = tracker_resolver.lookup(result_tracker)
@@ -698,6 +709,7 @@ def hpo_pipeline(
         evaluator=evaluator_cls,
         evaluator_kwargs=evaluator_kwargs,
         evaluation_kwargs=evaluation_kwargs,
+        filter_validation_when_testing=filter_validation_when_testing,
         # 9. Tracker
         result_tracker=result_tracker_cls,
         result_tracker_kwargs=result_tracker_kwargs,

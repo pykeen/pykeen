@@ -112,7 +112,7 @@ like in:
 
 Filtering during evaluation is implemented differently than in negative sampling:
 
-First, there are no choices between an exact or aproxomate algorithm via a
+First, there are no choices between an exact or approximate algorithm via a
 :class:`pykeen.sampling.filtering.Filterer`. Instead, the evaluation filtering can modify the
 scores in-place and does so instead of selecting only the non-filtered entries. The reason is
 mainly that evaluation always is done in 1:n scoring, and thus, we gain some efficiently here

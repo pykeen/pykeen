@@ -179,15 +179,47 @@ may be additional known triples :math:`(h, r, t')` for :math:`t \neq t'`. If the
 :math:`(h, r, t')` a high score (and thus a low rank) is desirable since it is a true triple as well. Thus, the
 filtered evaluation setting ignores for a given triple :math:`(h, r, t)` the scores of all other *known* true triples
 :math:`(h, r, t')`.
-In PyKEEN, we provide training and evaluation workflows for which the set of positive triples is pre-defined.
-We differentiate two scenarios in which the set of *known* true triples is built differently. During hyper-parameter
-optimization (HPO), the set of *known* true triples consists per default of the training and validation set.
-Only during the evaluation of the final model on the test set, it consists of training, validation, and
-test triples. We explicitly do not use test triples for filtering during HPO in order
-to avoid any test leakage.
-When using an :class:`pykeen.evaluation.Evaluator` directly in your custom workflow to evaluate your model, the
-set of *known* true triples consists of the training triples and the triples to evaluate on. However, you can provide
-additional triples that should be added to the set of *known* triples.
+
+PyKEEN provides training and evaluation workflows for which the set of positive triples is pre-defined. When using
+the :func:`pykeen.hpo.hpo_pipeline` or :func:`pykeen.pipeline.pipeline`, PyKEEN differentiates two scenarios in which
+the set of *known* true triples is built differently according to [bordes2013]_.
+During hyper-parameter optimization (HPO) and early stopping, the set of *known* true triples consists per default of
+the training and validation set. Only during the evaluation of the final model on the test set, it consists of training,
+validation, and test triples. We explicitly do not use test triples for filtering during HPO and early stopping in
+order to avoid any test leakage. In case the validation triples should *not* be filtered when evaluating the test
+dataset, the argument ``filter_validation_when_testing=False`` can be passed to the two functions above.
+
+Please note that when using an :class:`pykeen.evaluation.Evaluator` directly in your custom workflow to evaluate your
+model, the set of *known* true triples consists of the training triples and the triples to evaluate on. However, you can
+provide additional triples, e.g. the validation triples, that should be added to the set of *known* triples during
+evaluation by passing these to the argument ``additional_filter_triples`` to the :func:`pykeen.evaluation.evaluate` as
+shown in the following:
+
+.. code-block:: python
+
+    from pykeen.datasets import FB15k237
+    from pykeen.evaluation import RankBasedEvaluator
+    from pykeen.models import TransE
+
+    # Get FB15k-237 dataset
+    fb15k237 = FB15k237()
+
+    # Define evaluator, and define validation triples as additional positive triples
+    rb_evaluator = RankBasedEvaluator(
+        filtered=True,  # Note: this is True by default; we're just being explicit
+    )
+
+    # Define model
+    model = TransE(
+        triples_factory=fb15k237.training,
+    )
+
+    # Evaluate your model
+    results = rb_evaluator.evaluate(
+        model=model,
+        mapped_triples=fb15k237.testing.mapped_triples,
+        additional_filter_triples=fb15k237.validation.mapped_triples
+    )
 
 Entity and Relation Restriction
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

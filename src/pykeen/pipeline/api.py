@@ -765,8 +765,9 @@ def pipeline(  # noqa: C901
         is run for reproducibility purposes. In the returned :class:`PipelineResult` instance, it can be accessed
         through :data:`PipelineResult.random_seed`.
     :param filter_validation_when_testing:
-        If true, the validation triples are also filtered during testing. # TODO: Add reference to docs
-        Defaults to true.
+        If true, during the evaluating of the test dataset, validation triples are added to the set of known positive
+        triples, which are filtered out when performing filtered evaluation following the approach described by
+        (Bordes et al., 2013).
 
     :returns: A pipeline result package.
 
