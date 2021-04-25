@@ -17,10 +17,10 @@ rank does not decrease when ranking another true entity higher.
 When using an evaluator, i.e., :class:`pykeen.evaluation.RankBasedEvaluator` or
 :class:`pykeen.evaluation.SklearnEvaluator` in the filtered setting, per default, the training and the triples to
 evaluate are used for filtering the sets of corrupted triples. An additional set of known positive triples can be
-provided through the argument `additional_pos_triples` in the constructor of an evaluator.
+provided through the argument `additional_filter_triples` in the constructor of an evaluator.
 For instance, if you want to evaluate your final model in the filtered setting on the test set of FB15k-237 following
 [bordes2013]_, you need to provide the validation triples as additional positive triples
-(`additional_pos_triples`) in the constructor:
+(`additional_filter_triples`) in the constructor:
 
 .. code-block:: python
 
@@ -38,7 +38,7 @@ For instance, if you want to evaluate your final model in the filtered setting o
     # Define evaluator, and define validation triples as additional positive triples
     rb_evaluator = RankBasedEvaluator(
         filtered=True,  # Note: this is True by default; we're just being explicit
-        additional_pos_triples=fb15k237.validation.mapped_triples
+        additional_filter_triples=fb15k237.validation.mapped_triples
     )
 
     # Define model
