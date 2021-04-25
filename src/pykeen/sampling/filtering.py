@@ -33,10 +33,10 @@ hold for all entities; e.g., for a hub entity which is connected to many other e
 number of false negatives without filtering.
  
 
-Identifying False Negatives
----------------------------
-By default, PyKEEN does *not* filter false negatives from $\mathcal{N}$. To enable the "filtered setting", the
-``filtered`` keyword can be given to ``negative_sampler_kwargs`` like in:
+Identifying False Negatives During Training
+-------------------------------------------
+By default, PyKEEN does *not* filter false negatives from $\mathcal{N}$ during training. To enable the
+"filtered setting", the ``filtered`` keyword can be given to ``negative_sampler_kwargs`` like in:
 
 .. code-block:: python
 
@@ -91,6 +91,11 @@ on Python's built-in sets, the :class:`pykeen.sampling.filtering.PythonSetFilter
             filterer='python-set',    
         ),
     )
+    
+Identifying False Negatives During Evaluation
+---------------------------------------------
+In contrast to training, PyKEEN does filter false negatives from $\mathcal{N}$ during evaluation by default.
+This is covered in the next section on evaluation.
 """  # noqa
 
 import math
