@@ -1,8 +1,13 @@
 # -*- coding: utf-8 -*-
 
 r"""
-Among the corrupted triples in $\mathcal{N}(h, r, t)$ , there might be true triples that are part of
-the knowledge graph. If these false negatives are ranked higher than the current test triple $t^{+}$, the results
+While the implementation is slightly different than in the negative sampler, from a high-level, the
+evaluation can also be thought of as applying corruption operations to triples in the knowledge graph
+to generate a set of corrupted triples $\mathcal{N}(h, r, t)$ for each known positive triple
+$(h,r,t) \in \mathcal{K}$. Like in training, there is the potential for known positive triples to appear in 
+$\mathcal{N}(h, r, t)$, which are false negatives.
+
+If these false negatives are ranked higher than the current test triple $t^{+}$, the results
 might get distorted. Therefore, the \emph{filtered} evaluation setting has been proposed [bordes2013]_, in which
 the corrupted triples are filtered to exclude known true facts from the train, validation and test set. Thus, the
 rank does not decrease when ranking another true entity higher.
