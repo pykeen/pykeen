@@ -13,7 +13,7 @@ import unittest_templates
 import pykeen.nn.modules
 import pykeen.utils
 from pykeen.nn.functional import _rotate_quaternion, _split_quaternion, distmult_interaction
-from pykeen.nn.modules import FunctionalInteraction, Interaction, TranslationalInteraction
+from pykeen.nn.modules import FunctionalInteraction, Interaction, LiteralInteraction, TranslationalInteraction
 from pykeen.utils import clamp_norm, project_entity, strip_dim, view_complex
 from tests import cases
 
@@ -411,9 +411,6 @@ class MonotonicAffineTransformationInteractionTests(cases.InteractionTestCase):
         base=pykeen.nn.modules.TransEInteraction(p=2),
     )
 
-    def test_forward_consistency_with_functional(self):  # noqa: D102
-        raise SkipTest("Not a functional interaction.")
-
     def test_scores(self):  # noqa: D102
         raise SkipTest("Not a functional interaction.")
 
@@ -442,5 +439,5 @@ class InteractionTestsTestCase(unittest_templates.MetaTestCase[Interaction]):
         Interaction,
         FunctionalInteraction,
         TranslationalInteraction,
-        # LiteralInteraction,
+        LiteralInteraction,
     }

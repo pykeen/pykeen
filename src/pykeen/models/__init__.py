@@ -10,8 +10,8 @@ from typing import Set, Type
 
 from class_resolver import Resolver, get_subclasses
 
-from .base import EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, MultimodalModel, _OldAbstractModel
-from .multimodal import ComplExLiteral, DistMultLiteral
+from .base import EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, _OldAbstractModel
+from .multimodal import ComplExLiteral, DistMultLiteral, LiteralModel
 from .nbase import ERModel, _NewAbstractModel
 from .resolve import make_model, make_model_cls
 from .unimodal import (
@@ -50,7 +50,7 @@ __all__ = [
     'EntityRelationEmbeddingModel',
     '_NewAbstractModel',
     'ERModel',
-    'MultimodalModel',
+    'LiteralModel',
     # Concrete Models
     'CompGCN',
     'ComplEx',
