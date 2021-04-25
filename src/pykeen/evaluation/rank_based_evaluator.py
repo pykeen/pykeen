@@ -361,7 +361,11 @@ class RankBasedEvaluator(Evaluator):
             currently considered one will not decrease the score.
         :param kwargs: Additional keyword arguments that are passed to the base class.
         """
-        super().__init__(filtered=filtered, **kwargs)
+        super().__init__(
+            filtered=filtered,
+            requires_positive_mask=False,
+            **kwargs,
+        )
         self.ks = tuple(ks) if ks is not None else (1, 3, 5, 10)
         for k in self.ks:
             if isinstance(k, float) and not (0 < k < 1):

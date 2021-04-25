@@ -180,6 +180,8 @@ may be additional known triples :math:`(h, r, t')` for :math:`t \neq t'`. If the
 filtered evaluation setting ignores for a given triple :math:`(h, r, t)` the scores of all other *known* true triples
 :math:`(h, r, t')`.
 
+TODO should the new content go here instead of in the reference section?
+
 Entity and Relation Restriction
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Sometimes, we are only interested in a certain set of entities and/or relations,

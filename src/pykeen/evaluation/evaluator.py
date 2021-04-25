@@ -71,21 +71,21 @@ class Evaluator(ABC):
     def __init__(
         self,
         filtered: bool = False,
-        additional_filter_triples: Optional[MappedTriples] = None,
         requires_positive_mask: bool = False,
         batch_size: Optional[int] = None,
         slice_size: Optional[int] = None,
         automatic_memory_optimization: bool = True,
+        additional_filter_triples: Optional[MappedTriples] = None,
     ):
         """Initialize the evaluator.
 
-        :param filtered: Defines, whether a filtered evaluation should be performed.
-        :param additional_filter_triples: Additional true triples to filter out during filtered evaluation.
-        :param requires_positive_mask: Defines, whether an evaluator needs access to the masks.
+        :param filtered: Should filtered evaluation be performed?
+        :param requires_positive_mask: Does the evaluator need access to the masks?
         :param batch_size: >0. Evaluation batch size.
         :param slice_size: >0. The divisor for the scoring function when using slicing
         :param automatic_memory_optimization: Whether to automatically optimize the sub-batch size during
             batch size during evaluation with regards to the hardware at hand.
+        :param additional_filter_triples: Additional true triples to filter out during filtered evaluation.
         """
         self.filtered = filtered
         self.additional_filter_triples = additional_filter_triples

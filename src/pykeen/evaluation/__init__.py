@@ -3,7 +3,7 @@
 r"""
 While the implementation is slightly different than in the negative sampler, from a high-level, the
 evaluation can also be thought of as applying corruption operations to triples 
-$(h,r,t) \in \mathcal{T_{\text{testing}}$ in the testing set to generate a set of corrupted triples
+$(h,r,t) \in \mathcal{T_{\text{testing}}}$ in the testing set to generate a set of corrupted triples
 $\mathcal{N}(h, r, t)$. Like in training, there is the potential for known positive triples to appear in 
 $\mathcal{N}(h, r, t)$, which are false negatives.
 
