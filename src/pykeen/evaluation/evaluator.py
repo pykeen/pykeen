@@ -86,6 +86,39 @@ class Evaluator(ABC):
         :param automatic_memory_optimization: Whether to automatically optimize the sub-batch size during
             batch size during evaluation with regards to the hardware at hand.
         :param additional_filter_triples: Additional true triples to filter out during filtered evaluation.
+
+            Evaluate your final model on the test set of FB15K-237, and provide the validation triples as additional
+            positive triples:
+
+            .. code-block:: python
+
+                from pykeen.datasets import FB15k237
+                from pykeen.evaluation import RankBasedEvaluator
+                from pykeen.models import TransE
+
+                # Get FB15k-237 dataset
+                fb15k237 = FB15k237()
+
+                # Get triples
+                validation_triples = fb15k237.validation.mapped_triples
+                testing_triples = fb15k237.testing.mapped_triples
+
+                # Define evaluator, and define validation triples as additional positive triples
+                rb_evaluator = RankBasedEvaluator(
+                    filtered=True,  # Note: this is True by default; we're just being explicit
+                    additional_filter_triples=fb15k237.validation.mapped_triples
+                )
+
+                # Define model
+                model = TransE(
+                    triples_factory=fb15k237.training,
+                )
+
+                # Evaluate your model
+                results = rb_evaluator.evaluate(
+                    model=model,
+                    mapped_triples=fb15k237.testing.mapped_triples,
+                )
         """
         self.filtered = filtered
         self.additional_filter_triples = additional_filter_triples
