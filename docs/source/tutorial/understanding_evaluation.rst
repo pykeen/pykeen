@@ -179,8 +179,15 @@ may be additional known triples :math:`(h, r, t')` for :math:`t \neq t'`. If the
 :math:`(h, r, t')` a high score (and thus a low rank) is desirable since it is a true triple as well. Thus, the
 filtered evaluation setting ignores for a given triple :math:`(h, r, t)` the scores of all other *known* true triples
 :math:`(h, r, t')`.
-
-TODO should the new content go here instead of in the reference section?
+In PyKEEN, we provide training and evaluation workflows for which the set of positive triples is pre-defined.
+We differentiate two scenarios in which the set of *known* true triples is built differently. During hyper-parameter
+optimization (HPO), the set of *known* true triples consists per default of the training and validation set.
+Only during the evaluation of the final model on the test set, it consists of training, validation, and
+test triples. We explicitly do not use test triples for filtering during HPO in order
+to avoid any test leakage.
+When using :class:`pykeen.evaluation.Evaluator` directly in your custom workflow to evaluate your model, the
+set of *known* true triples consists of the training triples and the triples to evaluate on. However, you can provide
+additional triples that should be added to the set of *known* triples.
 
 Entity and Relation Restriction
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
