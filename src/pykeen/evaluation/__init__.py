@@ -2,15 +2,16 @@
 
 r"""
 While the implementation is slightly different than in the negative sampler, from a high-level, the
-evaluation can also be thought of as applying corruption operations to triples in the knowledge graph
-to generate a set of corrupted triples $\mathcal{N}(h, r, t)$ for each known positive triple
-$(h,r,t) \in \mathcal{K}$. Like in training, there is the potential for known positive triples to appear in 
+evaluation can also be thought of as applying corruption operations to triples 
+$(h,r,t) \in \mathcal{T_{\text{testing}}$ in the testing set to generate a set of corrupted triples
+$\mathcal{N}(h, r, t)$. Like in training, there is the potential for known positive triples to appear in 
 $\mathcal{N}(h, r, t)$, which are false negatives.
 
-If these false negatives are ranked higher than the current test triple $t^{+}$, the results
-might get distorted. Therefore, the \emph{filtered} evaluation setting has been proposed [bordes2013]_, in which
-the corrupted triples are filtered to exclude known true facts from the train, validation and test set. Thus, the
-rank does not decrease when ranking another true entity higher.
+If these false negatives are ranked better than the current test triple $(h,r,t)$, other true positive
+triples might be ranked worse and therefore worsen the rank-based metrics reported during evaluation.
+In order to address this, [bordes2013]_ proposed the \emph{filtered} evaluation setting in which
+the corrupted triples are filtered to exclude known true facts from the train, validation and test set.
+Thus, the rank does not worsen when ranking a false positive entity better.
 
 .. note ::
     In PyKEEN, we provide training and evaluation pipelines for which the set of positive triples is pre-defined.
