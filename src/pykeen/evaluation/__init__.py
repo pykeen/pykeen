@@ -12,7 +12,7 @@ For each test triple $t^{+} = (h,r,t) \in \mathcal{K}_{test}$ two sets of corrup
     * $\mathcal{T}(h, r) = \{(h, r, t') \mid t' \in \mathcal{E} - \{t\}\}$
 
 where $\mathcal{H}(r, t)$ contains all the triples where the head entity has been corrupted, and $\mathcal{T}(h, r)$
-contains all the triples with corrupted tail entity.
+contains all the triples with corrupted tail entities.
 
 Among the corrupted triples in $\mathcal{H}(r, t)$ / $\mathcal{T}(h, r)$, there might be true triples that are part of
 the knowledge graph.
