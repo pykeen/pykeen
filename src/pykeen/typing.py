@@ -2,15 +2,17 @@
 
 """Type hints for PyKEEN."""
 
-from typing import Callable, Mapping, NamedTuple, Sequence, Type, TypeVar, Union, cast
+from typing import Callable, Mapping, NamedTuple, Sequence, TypeVar, Union, cast
 
 import numpy as np
 import torch
+from class_resolver import Hint, HintOrType, HintType
 
 __all__ = [
     # General types
     'Hint',
     'HintType',
+    'HintOrType',
     'Mutation',
     'OneOrSequence',
     # Triples
@@ -36,8 +38,7 @@ __all__ = [
 ]
 
 X = TypeVar('X')
-Hint = Union[None, str, X]
-HintType = Hint[Type[X]]
+
 #: A function that mutates the input and returns a new object of the same type as output
 Mutation = Callable[[X], X]
 OneOrSequence = Union[X, Sequence[X]]
