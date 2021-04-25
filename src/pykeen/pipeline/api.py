@@ -765,10 +765,6 @@ def pipeline(  # noqa: C901
 
     :raises ValueError:
         If a negative sampler is specified with LCWA
-    :raises MemoryError:
-        If it is not possible to evaluate the model on the hardware at hand with the given parameters.
-    :raises RuntimeError:
-        If CUDA ran into OOM issues trying to evaluate the model on the hardware at hand with the given parameters.
     """
     if training_kwargs is None:
         training_kwargs = {}
@@ -1046,6 +1042,22 @@ def _safe_evaluate(
     evaluation_kwargs: Dict[str, Any],
     evaluation_fallback: bool = False,
 ) -> MetricResults:
+    """Evaluate with a potentially safe fallback to CPU.
+
+    :param model: The model
+    :param mapped_triples: Mapped triples
+    :param evaluator: An evaluator
+    :param evaluation_kwargs: Kwargs for the evaluator (might get modified in place)
+    :param evaluation_fallback:
+        If true, in cases where the evaluation failed using the GPU it will fall back to using a smaller batch size or
+        in the last instance evaluate on the CPU, if even the smallest possible batch size is too big for the GPU.
+    :return: A metric result
+
+    :raises MemoryError:
+        If it is not possible to evaluate the model on the hardware at hand with the given parameters.
+    :raises RuntimeError:
+        If CUDA ran into OOM issues trying to evaluate the model on the hardware at hand with the given parameters.
+    """
     while True:
         try:
             metric_results: MetricResults = evaluator.evaluate(
