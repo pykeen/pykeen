@@ -1006,6 +1006,7 @@ def pipeline(  # noqa: C901
     else:
         mapped_triples = validation.mapped_triples
 
+    # Determine whether the validation triples should also be filtered while performing test evaluation
     if (
         evaluator_instance.filtered
         and filter_validation_when_testing
@@ -1013,7 +1014,7 @@ def pipeline(  # noqa: C901
         and use_testing_data
     ):
         logging.info(
-            "Because we evaluate on the test set, validation triples are added to the set of known positive triples"
+            "When evaluating the test dataset, validation triples are added to the set of known positive triples"
             "which are filtered out when performing filtered evaluation following the approach described by"
             "(Bordes et al., 2013).",
         )
@@ -1021,6 +1022,7 @@ def pipeline(  # noqa: C901
     else:
         additional_filter_triples = None
 
+    # Combining the added validation filter with optional additional filter triples
     if evaluation_kwargs.get('additional_filter_triples') and additional_filter_triples is not None:
         evaluation_kwargs['additional_filter_triples'] = torch.cat(
             [evaluation_kwargs['additional_filter_triples'], additional_filter_triples], dim=0
