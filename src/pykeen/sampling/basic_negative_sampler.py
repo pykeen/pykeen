@@ -2,10 +2,12 @@
 
 """Negative sampling algorithm based on the work of of Bordes *et al.*."""
 
-from typing import Collection, Optional, Tuple
+from typing import Any, Collection, Mapping, Optional, Tuple
 
 import torch
+from class_resolver import HintOrType
 
+from .filtering import Filterer
 from .negative_sampler import NegativeSampler
 from ..triples import TriplesFactory
 
@@ -46,21 +48,29 @@ class BasicNegativeSampler(NegativeSampler):
         triples_factory: TriplesFactory,
         num_negs_per_pos: Optional[int] = None,
         filtered: bool = False,
+        filterer: HintOrType[Filterer] = None,
+        filterer_kwargs: Optional[Mapping[str, Any]] = None,
         corruption_scheme: Optional[Collection[str]] = None,
     ) -> None:
-        """Initialize the negative sampler with the given entities.
+        """Initialize the basic negative sampler with the given entities.
 
         :param triples_factory: The factory holding the triples to sample from
         :param num_negs_per_pos: Number of negative samples to make per positive triple. Defaults to 1.
         :param filtered: Whether proposed corrupted triples that are in the training data should be filtered.
             Defaults to False. See explanation in :func:`filter_negative_triples` for why this is
             a reasonable default.
+        :param filterer: If filtered is set to True, this can be used to choose which filter module from
+            :mod:`pykeen.sampling.filtering` is used.
+        :param filterer_kwargs:
+            Additional keyword-based arguments passed to the filterer upon construction.
         :param corruption_scheme: What sides ('h', 'r', 't') should be corrupted. Defaults to head and tail ('h', 't').
         """
         super().__init__(
             triples_factory=triples_factory,
             num_negs_per_pos=num_negs_per_pos,
             filtered=filtered,
+            filterer=filterer,
+            filterer_kwargs=filterer_kwargs,
         )
         self.corruption_scheme = corruption_scheme or ('h', 't')
         # Set the indices
@@ -85,7 +95,11 @@ class BasicNegativeSampler(NegativeSampler):
             stop = min(start + split_idx, num_negs)
 
             # Relations have a different index maximum than entities
-            index_max = self.num_relations - 1 if index == 1 else self.num_entities - 1
+            index_max = self.num_relations if index == 1 else self.num_entities
+
+            # If we do not use a filterer, we at least make sure to not replace the triples by the original value
+            if self.filterer is None:
+                index_max -= 1
 
             negative_batch[start:stop, index] = torch.randint(
                 high=index_max,
