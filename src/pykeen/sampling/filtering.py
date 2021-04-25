@@ -346,5 +346,5 @@ class BloomFilterer(Filterer):
 
 filterer_resolver = Resolver.from_subclasses(
     base=Filterer,
-    default=OldFilterer,
+    default=BloomFilterer,
 )
