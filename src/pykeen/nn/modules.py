@@ -340,10 +340,18 @@ class LiteralInteraction(
         combination: Combination,
         base_kwargs: Optional[Mapping[str, Any]] = None,
     ):
-        # TODO documentation for this
+        """Instantiate the module.
+
+        :param combination: The module used to concatenate the literals to the entity representations
+        :param base: The interaction module
+        :param base_kwargs: Keyword arguments for the interaction module
+        """
         super().__init__()
         self.base = interaction_resolver.make(base, base_kwargs)
         self.combination = combination
+        # The appended "e" represents the literals that get concatenated
+        # on the entity representations. It does not necessarily have the
+        # same dimension "d" as the entity representations.
         self.entity_shape = tuple(self.base.entity_shape) + ("e",)
 
     def forward(

@@ -16,7 +16,7 @@ __all__ = [
 
 
 class LiteralModel(ERModel[HeadRepresentation, RelationRepresentation, TailRepresentation], autoreset=False):
-    """Base class for models with entity literals."""
+    """Base class for models with entity literals that uses combinations from :class:`pykeen.nn.combinations`."""
 
     def __init__(
         self,
