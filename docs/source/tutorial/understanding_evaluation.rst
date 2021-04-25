@@ -185,7 +185,7 @@ optimization (HPO), the set of *known* true triples consists per default of the 
 Only during the evaluation of the final model on the test set, it consists of training, validation, and
 test triples. We explicitly do not use test triples for filtering during HPO in order
 to avoid any test leakage.
-When using :class:`pykeen.evaluation.Evaluator` directly in your custom workflow to evaluate your model, the
+When using an :class:`pykeen.evaluation.Evaluator` directly in your custom workflow to evaluate your model, the
 set of *known* true triples consists of the training triples and the triples to evaluate on. However, you can provide
 additional triples that should be added to the set of *known* triples.
 
