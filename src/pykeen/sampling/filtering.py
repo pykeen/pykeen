@@ -114,7 +114,6 @@ __all__ = [
 class Filterer(nn.Module):
     """An interface for filtering methods for negative triples."""
 
-    @abstractmethod
     def forward(
         self,
         negative_batch: torch.LongTensor,
@@ -138,6 +137,23 @@ class Filterer(nn.Module):
         :return:
             A pair (filtered_negative_batch, keep_mask) of shape ???
         """
+
+        keep_mask = ~self.contains(batch=negative_batch)
+        return negative_batch[keep_mask], keep_mask
+
+    @abstractmethod
+    def contains(self, batch: torch.LongTensor) -> torch.BoolTensor:
+        """
+        Check whether a triple is contained.
+
+        Supports batching.
+
+        :param batch: shape (batch_size, 3)
+            The batch of triples.
+
+        :return: shape: (batch_size,)
+            Whether the triples are contained in the training triples.
+        """
         raise NotImplementedError
 
 
@@ -158,15 +174,12 @@ class PythonSetFilterer(Filterer):
         # store set of triples
         self.triples = set(map(tuple, triples_factory.mapped_triples.tolist()))
 
-    def forward(
-        self,
-        negative_batch: torch.LongTensor,
-    ) -> Tuple[torch.LongTensor, Optional[torch.BoolTensor]]:  # noqa: D102
-        keep_mask = torch.as_tensor(
-            data=[tuple(triple) not in self.triples for triple in negative_batch.tolist()],
+    def contains(self, batch: torch.LongTensor) -> torch.BoolTensor:  # noqa: D102
+        return torch.as_tensor(
+            data=[tuple(triple) in self.triples for triple in batch.tolist()],
             dtype=torch.bool,
+            device=batch.device,
         )
-        return negative_batch[keep_mask], keep_mask
 
 
 class BloomFilterer(Filterer):
@@ -307,13 +320,6 @@ class BloomFilterer(Filterer):
         for i in self.probe(batch):
             result &= self.bit_array[i]
         return result
-
-    def forward(
-        self,
-        negative_batch: torch.LongTensor,
-    ) -> Tuple[torch.LongTensor, Optional[torch.BoolTensor]]:  # noqa: D102
-        keep_mask = ~self.contains(batch=negative_batch)
-        return negative_batch[keep_mask], keep_mask
 
 
 filterer_resolver = Resolver.from_subclasses(
