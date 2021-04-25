@@ -112,10 +112,15 @@ class BernoulliNegativeSampler(NegativeSampler):
         # Tails are corrupted if heads are not corrupted
         tail_mask = ~head_mask
 
-        # Randomly sample corruption. See below for explanation of
-        # why this is on a range of [0, num_entities - 1]
+        index_max = self.triples_factory.num_entities
+        # If we do not use a filterer, we at least make sure to not replace the triples by the original value
+        # See below for explanation of why this is on a range of [0, num_entities - 1]
+        if self.filterer is None:
+            index_max -= 1
+
+        # Randomly sample corruption.
         negative_entities = torch.randint(
-            self.triples_factory.num_entities - 1,
+            index_max,
             size=(num_negs,),
             device=positive_batch.device,
         )
