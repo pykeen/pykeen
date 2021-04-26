@@ -196,6 +196,7 @@ class MinimalTriplesFactory:
     }
     num_entities = 2
     num_relations = 2
+    create_inverse_triples: bool = False
 
     @classmethod
     def get_entity_ids(cls):  # noqa:D102

@@ -7,6 +7,7 @@ import itertools
 import logging
 import os
 import re
+from functools import lru_cache
 from typing import Any, Callable, Collection, Dict, List, Mapping, Optional, Sequence, Set, TextIO, Union
 
 import numpy as np
@@ -284,11 +285,11 @@ class CoreTriplesFactory:
 
     def get_entity_ids(self) -> Collection[int]:
         """Get the set of entity identifiers."""
-        raise NotImplementedError  # TODO @mberr should these be pre-cached on __init__?
+        return list(range(self.num_entities))
 
     def get_relation_ids(self) -> Collection[int]:
         """Get the set of relation identifiers."""
-        raise NotImplementedError
+        return list(range(self.num_relations))
 
     def extra_repr(self) -> str:
         """Extra representation string."""
