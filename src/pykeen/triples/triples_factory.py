@@ -6,6 +6,7 @@ import dataclasses
 import itertools
 import logging
 import os
+import pathlib
 import re
 from typing import Any, Callable, Collection, Dict, List, Mapping, Optional, Sequence, Set, TextIO, Union
 
@@ -719,7 +720,7 @@ class TriplesFactory(CoreTriplesFactory):
     @classmethod
     def from_path(
         cls,
-        path: Union[str, TextIO],
+        path: Union[os.PathLike, TextIO],
         create_inverse_triples: bool = False,
         entity_to_id: Optional[EntityMapping] = None,
         relation_to_id: Optional[RelationMapping] = None,
@@ -750,12 +751,15 @@ class TriplesFactory(CoreTriplesFactory):
         :return:
             A new triples factory.
         """
-        if isinstance(path, str):
-            path = os.path.abspath(path)
-        elif isinstance(path, TextIO):
-            path = os.path.abspath(path.name)
-        else:
+        if isinstance(path, TextIO):
+            path = pathlib.Path(path.name)
+        elif isinstance(path, str):
+            path = pathlib.Path(path)
+        elif not isinstance(path, pathlib.Path):
             raise TypeError(f'path is invalid type: {type(path)}')
+
+        # resolve path
+        path = path.resolve()
 
         # TODO: Check if lazy evaluation would make sense
         triples = load_triples(path, **(load_triples_kwargs or {}))

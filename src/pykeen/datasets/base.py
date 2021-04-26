@@ -138,7 +138,7 @@ class Dataset:
         return f'{self.__class__.__name__}(num_entities={self.num_entities}, num_relations={self.num_relations})'
 
     @classmethod
-    def from_path(cls, path: str, ratios: Optional[List[float]] = None) -> 'Dataset':
+    def from_path(cls, path: os.PathLike, ratios: Optional[List[float]] = None) -> 'Dataset':
         """Create a dataset from a single triples factory by splitting it in 3."""
         tf = TriplesFactory.from_path(path=path)
         return cls.from_tf(tf=tf, ratios=ratios)
