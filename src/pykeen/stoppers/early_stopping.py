@@ -122,7 +122,7 @@ class EarlyStopper(Stopper):
         # Evaluate
         metric_results = self.evaluator.evaluate(
             model=self.model,
-            training_triples_factory=self.training_triples_factory,
+            additional_filter_triples=self.training_triples_factory.mapped_triples,
             mapped_triples=self.evaluation_triples_factory.mapped_triples,
             use_tqdm=False,
             batch_size=self.evaluation_batch_size,

@@ -476,7 +476,7 @@ class TestEvaluationStructure(unittest.TestCase):
         """Test if the evaluator has a balanced call of head and tail processors."""
         eval_results = self.evaluator.evaluate(
             model=self.model,
-            training_triples_factory=self.dataset.training,
+            additional_filter_triples=self.dataset.training.mapped_triples,
             mapped_triples=self.dataset.testing.mapped_triples,
             batch_size=1,
             use_tqdm=False,

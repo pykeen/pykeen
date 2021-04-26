@@ -17,7 +17,6 @@ from dataclasses_json import DataClassJsonMixin
 from tqdm.autonotebook import tqdm
 
 from ..models import Model
-from ..triples import TriplesFactory
 from ..triples.utils import get_entities
 from ..typing import MappedTriples
 from ..utils import (
@@ -140,7 +139,7 @@ class Evaluator(ABC):
         tqdm_kwargs: Optional[Mapping[str, str]] = None,
         restrict_entities_to: Optional[torch.LongTensor] = None,
         do_time_consuming_checks: bool = True,
-        training_triples_factory: Optional[TriplesFactory] = None,
+        additional_filter_triples: Optional[MappedTriples] = None,
     ) -> MetricResults:
         """Run :func:`pykeen.evaluation.evaluate` with this evaluator."""
         if batch_size is None and self.automatic_memory_optimization:
@@ -154,7 +153,7 @@ class Evaluator(ABC):
                 batch_size, slice_size = self.batch_and_slice(
                     model=model,
                     mapped_triples=mapped_triples,
-                    training_triples_factory=training_triples_factory,
+                    additional_filter_triples=additional_filter_triples,
                     batch_size=batch_size,
                     device=device,
                     use_tqdm=False,
@@ -170,7 +169,7 @@ class Evaluator(ABC):
 
         rv = evaluate(
             model=model,
-            training_triples_factory=training_triples_factory,
+            additional_filtered_triples=additional_filter_triples,
             mapped_triples=mapped_triples,
             evaluators=self,
             batch_size=batch_size,
@@ -194,7 +193,7 @@ class Evaluator(ABC):
         use_tqdm: bool = False,
         restrict_entities_to: Optional[torch.LongTensor] = None,
         do_time_consuming_checks: bool = True,
-        training_triples_factory: Optional[TriplesFactory] = None,
+        additional_filter_triples: Optional[MappedTriples] = None,
     ) -> Tuple[int, Optional[int]]:
         """Find the maximum possible batch_size and slice_size for evaluation with the current setting.
 
@@ -218,7 +217,7 @@ class Evaluator(ABC):
             Should a progress bar be displayed?
         :param restrict_entities_to:
             Whether to restrict the evaluation to certain entities of interest.
-        :param training_triples_factory:
+        :param additional_filter_triples:
             Only needed if the evaluator is in filtered mode
 
         :return:
@@ -231,7 +230,7 @@ class Evaluator(ABC):
             key='batch_size',
             start_value=batch_size,
             model=model,
-            training_triples_factory=training_triples_factory,
+            additional_filter_triples=additional_filter_triples,
             mapped_triples=mapped_triples,
             device=device,
             use_tqdm=use_tqdm,
@@ -249,7 +248,7 @@ class Evaluator(ABC):
             # must have failed to start slice_size search, we start with trying half the entities.
             start_value=ceil(model.num_entities / 2),
             model=model,
-            training_triples_factory=training_triples_factory,
+            additional_filter_triples=additional_filter_triples,
             mapped_triples=mapped_triples,
             device=device,
             use_tqdm=use_tqdm,
@@ -271,7 +270,7 @@ class Evaluator(ABC):
         use_tqdm: bool = False,
         restrict_entities_to: Optional[torch.LongTensor] = None,
         do_time_consuming_checks: bool = True,
-        training_triples_factory: Optional[TriplesFactory] = None,
+        additional_filter_triples: Optional[MappedTriples] = None,
     ) -> Tuple[int, bool]:
         values_dict = {}
         maximum_triples = mapped_triples.shape[0]
@@ -302,7 +301,7 @@ class Evaluator(ABC):
                 torch.cuda.empty_cache()
                 evaluate(
                     model=model,
-                    training_triples_factory=training_triples_factory,
+                    additional_filtered_triples=additional_filter_triples,
                     mapped_triples=mapped_triples,
                     evaluators=self,
                     only_size_probing=True,
@@ -481,7 +480,7 @@ def evaluate(
     tqdm_kwargs: Optional[Mapping[str, str]] = None,
     restrict_entities_to: Optional[torch.LongTensor] = None,
     do_time_consuming_checks: bool = True,
-    training_triples_factory: Optional[TriplesFactory] = None,
+    additional_filtered_triples: Optional[MappedTriples] = None,
 ) -> Union[MetricResults, List[MetricResults]]:
     """Evaluate metrics for model on mapped triples.
 
@@ -521,7 +520,7 @@ def evaluate(
         Whether to perform some time consuming checks on the provided arguments. Currently, this encompasses:
         - If restrict_entities_to is not None, check whether the triples have been filtered.
         Disabling this option can accelerate the method.
-    :param training_triples_factory:
+    :param additional_filtered_triples:
         Only needed if the evaluator is in filtered mode
     """
     if isinstance(evaluators, Evaluator):  # upgrade a single evaluator to a list
@@ -558,9 +557,9 @@ def evaluate(
 
     # Prepare for result filtering
     if filtering_necessary or positive_masks_required:
-        if training_triples_factory is None:
-            raise ValueError
-        all_pos_triples = torch.cat([training_triples_factory.mapped_triples, mapped_triples], dim=0)
+        if additional_filtered_triples is None:
+            raise ValueError('should at least pass mapped training triples if filtering')
+        all_pos_triples = torch.cat([additional_filtered_triples, mapped_triples], dim=0)
         all_pos_triples = all_pos_triples.to(device=device)
     else:
         all_pos_triples = None
