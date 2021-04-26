@@ -20,6 +20,11 @@ from pykeen.training import SLCWATrainingLoop
 from pykeen.typing import MappedTriples
 from tests.mocks import MockModel
 
+try:
+    import mlflow
+except ImportError:
+    mlflow = None
+
 
 class TestRandom(unittest.TestCase):
     """Random tests for early stopper."""
@@ -203,6 +208,7 @@ class TestEarlyStopping(unittest.TestCase):
             self.assertFalse(self.stopper.should_stop(epoch=epoch))
         self.assertTrue(self.stopper.should_stop(epoch=epoch))
 
+    @unittest.skipUnless(mlflow is not None, reason='MLFlow not installed')
     def test_result_logging_with_mlflow(self):
         """Test whether the MLFLow result logger works."""
         self.stopper.result_tracker = MLFlowResultTracker()
