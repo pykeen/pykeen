@@ -18,11 +18,15 @@ from pykeen.datasets import LazyDataset
 from pykeen.triples import TriplesFactory
 from pykeen.typing import TorchRandomHint
 
+__all__ = [
+    "WK3l15k",
+]
+
+logger = logging.getLogger(__name__)
+
 GOOGLE_DRIVE_ID = "1AsPPU4ka1Rc9u-XYMGWtvV65hF3egi0z"
 GRAPH_PAIRS = ("en_fr", "en_de")
 SIDES = tuple(sum((pair.split("_") for pair in GRAPH_PAIRS), start=[]))
-
-logger = logging.getLogger(__name__)
 
 
 class WK3l15k(LazyDataset):
@@ -109,15 +113,12 @@ class WK3l15k(LazyDataset):
 
 
 @click.command()
-@click.option("--graph-pair", type=click.Choice(GRAPH_PAIRS, case_sensitive=True), default="en_de")
-@click.option("--side", type=click.Choice(SIDES, case_sensitive=True), default="en")
 @verbose_option
-def _main(
-    graph_pair: str,
-    side: str,
-):
-    ds = WK3l15k(graph_pair=graph_pair, side=side)
-    ds.summarize()
+def _main():
+    for graph_pair in GRAPH_PAIRS:
+        for side in graph_pair.split("_"):
+            ds = WK3l15k(graph_pair=graph_pair, side=side)
+            ds.summarize()
 
 
 if __name__ == "__main__":
