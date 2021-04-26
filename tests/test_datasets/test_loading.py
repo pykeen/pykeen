@@ -82,13 +82,13 @@ class MockTarFileRemoteDataset(TarFileRemoteDataset):
         super().__init__(
             url=...,
             cache_root=cache_root,
-            relative_testing_path='nations/test.txt',
-            relative_training_path='nations/train.txt',
-            relative_validation_path='nations/valid.txt',
+            relative_testing_path=pathlib.PurePath('nations', 'test.txt'),
+            relative_training_path=pathlib.PurePath('nations', 'train.txt'),
+            relative_validation_path=pathlib.PurePath('nations', 'valid.txt'),
         )
 
     def _get_bytes(self) -> BytesIO:
-        with open(os.path.join(constants.RESOURCES, 'nations.tar.gz'), 'rb') as file:
+        with constants.RESOURCES.joinpath('nations.tar.gz').open('rb') as file:
             return BytesIO(file.read())
 
 
