@@ -228,6 +228,8 @@ class Evaluator(ABC):
             Should a progress bar be displayed?
         :param restrict_entities_to:
             Whether to restrict the evaluation to certain entities of interest.
+        :param additional_filter_triples:
+            Only needed if the evaluator is in filtered mode
 
         :return:
             Maximum possible batch size and, if necessary, the slice_size, which defaults to None.
@@ -366,7 +368,7 @@ class Evaluator(ABC):
     @staticmethod
     def _check_slicing_availability(model: Model, batch_size: int) -> None:
         # Test if slicing is implemented for the required functions of this model
-        if model.triples_factory.create_inverse_triples:
+        if model.use_inverse_triples:
             if not model.can_slice_t:
                 raise MemoryError(f"The current model can't be evaluated on this hardware with these parameters, as "
                                   f"evaluation batch_size={batch_size} is too big and slicing is not implemented for "
@@ -531,6 +533,8 @@ def evaluate(
         Whether to perform some time consuming checks on the provided arguments. Currently, this encompasses:
         - If restrict_entities_to is not None, check whether the triples have been filtered.
         Disabling this option can accelerate the method.
+    :param additional_filtered_triples:
+        Only needed if the evaluator is in filtered mode
     """
     if isinstance(evaluators, Evaluator):  # upgrade a single evaluator to a list
         evaluators = [evaluators]
@@ -566,11 +570,18 @@ def evaluate(
 
     # Prepare for result filtering
     if filtering_necessary or positive_masks_required:
-        all_pos_triples = torch.cat([model.triples_factory.mapped_triples, mapped_triples], dim=0)
-        if additional_filtered_triples is not None:
-            # TODO: Apply torch.unique()?
-            all_pos_triples = torch.cat([all_pos_triples, additional_filtered_triples], dim=0)
-        all_pos_triples = all_pos_triples.to(device=device)
+        # FIXME!!
+        # all_pos_triples = torch.cat([model.triples_factory.mapped_triples, mapped_triples], dim=0)
+        # if additional_filtered_triples is not None:
+        #     all_pos_triples = torch.cat([all_pos_triples, additional_filtered_triples], dim=0)
+        if additional_filtered_triples is None:
+            logger.warning(
+                'filtered setting was enabled, but there were no `additional_filtered_triples`.'
+                ' This means you probably forgot to pass the training triples.',
+            )
+            all_pos_triples = mapped_triples
+        else:
+            all_pos_triples = torch.cat([additional_filtered_triples, mapped_triples], dim=0)
     else:
         all_pos_triples = None
 
@@ -608,7 +619,7 @@ def evaluate(
             relation_filter = None
             for column in (0, 2):
                 relation_filter = _evaluate_batch(
-                    batch=batch,
+                    batch=batch,  # TODO fix typing
                     model=model,
                     column=column,
                     filtered_evaluators=filtered_evaluators,

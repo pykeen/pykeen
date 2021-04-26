@@ -226,6 +226,8 @@ class PipelineResult(Result):
     #: The model trained by the pipeline
     model: Model
 
+    training: TriplesFactory
+
     #: The training loop used by the pipeline
     training_loop: TrainingLoop
 
@@ -871,7 +873,6 @@ def pipeline(  # noqa: C901
         model_instance = model
         # TODO should training be reset?
         # TODO should kwargs for loss and regularizer be checked and raised for?
-        model_instance.triples_factory = training
     else:
         model_instance = _build_model_helper(
             model=model,
@@ -909,6 +910,7 @@ def pipeline(  # noqa: C901
         negative_sampler_cls = None
         training_loop_instance = training_loop_cls(
             model=model_instance,
+            triples_factory=training,
             optimizer=optimizer_instance,
             **training_loop_kwargs,
         )
@@ -922,6 +924,7 @@ def pipeline(  # noqa: C901
         )
         training_loop_instance = SLCWATrainingLoop(
             model=model_instance,
+            triples_factory=training,
             optimizer=optimizer_instance,
             negative_sampler_cls=negative_sampler_cls,
             negative_sampler_kwargs=negative_sampler_kwargs,
@@ -959,6 +962,7 @@ def pipeline(  # noqa: C901
         stopper,
         model=model_instance,
         evaluator=evaluator_instance,
+        training_triples_factory=training,
         evaluation_triples_factory=validation,
         result_tracker=_result_tracker,
         **stopper_kwargs,
@@ -1052,6 +1056,7 @@ def pipeline(  # noqa: C901
     evaluate_start_time = time.time()
     metric_results: MetricResults = _safe_evaluate(
         model=model_instance,
+        training_triples_factory=training,
         mapped_triples=mapped_triples,
         evaluator=evaluator_instance,
         evaluation_kwargs=evaluation_kwargs,
@@ -1067,6 +1072,7 @@ def pipeline(  # noqa: C901
     return PipelineResult(
         random_seed=_random_seed,
         model=model_instance,
+        training=training,
         training_loop=training_loop_instance,
         losses=losses,
         stopper=stopper_instance,
@@ -1079,6 +1085,7 @@ def pipeline(  # noqa: C901
 
 def _safe_evaluate(
     model: Model,
+    training_triples_factory: TriplesFactory,
     mapped_triples: MappedTriples,
     evaluator: Evaluator,
     evaluation_kwargs: Dict[str, Any],
@@ -1087,7 +1094,8 @@ def _safe_evaluate(
     """Evaluate with a potentially safe fallback to CPU.
 
     :param model: The model
-    :param mapped_triples: Mapped triples
+    :param training_triples_factory: Training triples factory
+    :param mapped_triples: Mapped triples from the evaluation set (test or valid)
     :param evaluator: An evaluator
     :param evaluation_kwargs: Kwargs for the evaluator (might get modified in place)
     :param evaluation_fallback:
@@ -1105,6 +1113,7 @@ def _safe_evaluate(
             metric_results: MetricResults = evaluator.evaluate(
                 model=model,
                 mapped_triples=mapped_triples,
+                additional_filter_triples=training_triples_factory.mapped_triples,
                 **evaluation_kwargs,
             )
         except (MemoryError, RuntimeError) as e:
