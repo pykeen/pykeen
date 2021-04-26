@@ -17,8 +17,8 @@ LABELS = ['train', 'test', 'valid']
 
 
 @click.command()
-@click.argument('path', dtype=pathlib.Path)
-@click.option('-d', '--directory', default=pathlib.Path.cwd(), show_default=True, dtype=pathlib.Path)
+@click.argument('path', type=pathlib.Path)
+@click.option('-d', '--directory', default=pathlib.Path.cwd(), show_default=True, type=pathlib.Path)
 @click.option('--test-ratios', type=float, nargs=2, default=[0.8, 0.2], show_default=True)
 @click.option('--no-validation', is_flag=True)
 @click.option('--validation-ratios', type=float, nargs=3, default=[0.8, 0.1, 0.1], show_default=True)

@@ -721,7 +721,7 @@ class TabbedDataset(LazyDataset):
         if eager:
             self._load()
 
-    def _get_path(self) -> Optional[str]:
+    def _get_path(self) -> Optional[pathlib.Path]:
         """Get the path of the data if there's a single file."""
 
     def _get_df(self) -> pd.DataFrame:
