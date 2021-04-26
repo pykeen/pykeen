@@ -189,11 +189,11 @@ validation, and test triples. We explicitly do not use test triples for filterin
 order to avoid any test leakage. In case the validation triples should *not* be filtered when evaluating the test
 dataset, the argument ``filter_validation_when_testing=False`` can be passed to the two functions above.
 
-Please note that when using an :class:`pykeen.evaluation.Evaluator` directly in your custom workflow to evaluate your
-model, the set of *known* true triples consists of the training triples and the triples to evaluate on. However, you can
-provide additional triples, e.g. the validation triples, that should be added to the set of *known* triples during
-evaluation by passing these to the argument ``additional_filter_triples`` to the :func:`pykeen.evaluation.evaluate` as
-shown in the following:
+Please note that when using an :class:`pykeen.evaluation.Evaluator` directly in a custom workflow to evaluate your
+model, the set of *known* true triples comprises both the training triples and evaluation triples. However, you can
+provide additional triples, e.g. the validation triples, that should be added to the set of *known* true triples during
+evaluation with the ``additional_filter_triples`` argument in :func:`pykeen.evaluation.evaluate` (via
+:func:`pykeen.evaluation.Evaluator.evaluate`) as shown in the following:
 
 .. code-block:: python
 
@@ -204,11 +204,6 @@ shown in the following:
     # Get FB15k-237 dataset
     dataset = FB15k237()
 
-    # Define evaluator
-    evaluator = RankBasedEvaluator(
-        filtered=True,  # Note: this is True by default; we're just being explicit
-    )
-
     # Define model
     model = TransE(
         triples_factory=dataset.training,
@@ -216,6 +211,11 @@ shown in the following:
 
     # Train your model (code is omitted for brevity)
     ...
+
+    # Define evaluator
+    evaluator = RankBasedEvaluator(
+        filtered=True,  # Note: this is True by default; we're just being explicit
+    )
 
     # Evaluate your model with not only testing triples,
     # but also filter on validation triples
