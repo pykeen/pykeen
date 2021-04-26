@@ -578,7 +578,7 @@ class TestEvaluationFiltering(unittest.TestCase):
         eval_results = self.evaluator.evaluate(
             model=self.model,
             mapped_triples=self.test_triples,
-            additional_filtered_triples=self.validation_triples,
+            additional_filter_triples=self.validation_triples,
             batch_size=1,
             use_tqdm=False,
         )

@@ -148,7 +148,7 @@ class Evaluator(ABC):
         tqdm_kwargs: Optional[Mapping[str, str]] = None,
         restrict_entities_to: Optional[torch.LongTensor] = None,
         do_time_consuming_checks: bool = True,
-        additional_filtered_triples: Optional[MappedTriples] = None,
+        additional_filter_triples: Optional[MappedTriples] = None,
     ) -> MetricResults:
         """Run :func:`pykeen.evaluation.evaluate` with this evaluator."""
         if batch_size is None and self.automatic_memory_optimization:
@@ -162,7 +162,7 @@ class Evaluator(ABC):
                 batch_size, slice_size = self.batch_and_slice(
                     model=model,
                     mapped_triples=mapped_triples,
-                    additional_filtered_triples=additional_filtered_triples,
+                    additional_filtered_triples=additional_filter_triples,
                     batch_size=batch_size,
                     device=device,
                     use_tqdm=False,
@@ -179,7 +179,7 @@ class Evaluator(ABC):
         rv = evaluate(
             model=model,
             mapped_triples=mapped_triples,
-            additional_filtered_triples=additional_filtered_triples,
+            additional_filtered_triples=additional_filter_triples,
             evaluators=self,
             batch_size=batch_size,
             slice_size=slice_size,
