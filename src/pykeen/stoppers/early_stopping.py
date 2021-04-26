@@ -62,6 +62,8 @@ class EarlyStopper(Stopper):
     model: Model = dataclasses.field(repr=False)
     #: The evaluator
     evaluator: Evaluator
+    #: The triples to use for training (to be used during filtered evaluation)
+    training_triples_factory: TriplesFactory
     #: The triples to use for evaluation
     evaluation_triples_factory: TriplesFactory
     #: Size of the evaluation batches
@@ -120,6 +122,7 @@ class EarlyStopper(Stopper):
         # Evaluate
         metric_results = self.evaluator.evaluate(
             model=self.model,
+            training_mapped_triples=self.training_triples_factory.mapped_triples,
             mapped_triples=self.evaluation_triples_factory.mapped_triples,
             use_tqdm=False,
             batch_size=self.evaluation_batch_size,

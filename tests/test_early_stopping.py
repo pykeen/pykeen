@@ -170,6 +170,7 @@ class TestEarlyStopping(unittest.TestCase):
         self.stopper = EarlyStopper(
             model=self.model,
             evaluator=self.mock_evaluator,
+            training_triples_factory=nations.training,
             evaluation_triples_factory=nations.validation,
             patience=self.patience,
             relative_delta=self.delta,
@@ -255,6 +256,7 @@ class TestEarlyStoppingRealWorld(unittest.TestCase):
         stopper = EarlyStopper(
             model=model,
             evaluator=evaluator,
+            training_triples_factory=nations.training,
             evaluation_triples_factory=nations.validation,
             patience=self.patience,
             relative_delta=self.relative_delta,

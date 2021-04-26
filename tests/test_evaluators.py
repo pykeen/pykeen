@@ -469,14 +469,15 @@ class TestEvaluationStructure(unittest.TestCase):
         """Prepare for testing the evaluation structure."""
         self.counter = 1337
         self.evaluator = DummyEvaluator(counter=self.counter, filtered=True, automatic_memory_optimization=False)
-        self.triples_factory = Nations().training
-        self.model = MockModel(triples_factory=self.triples_factory)
+        self.dataset = Nations()
+        self.model = MockModel(triples_factory=self.dataset.training)
 
     def test_evaluation_structure(self):
         """Test if the evaluator has a balanced call of head and tail processors."""
         eval_results = self.evaluator.evaluate(
             model=self.model,
-            mapped_triples=self.triples_factory.mapped_triples,
+            training_mapped_triples=self.dataset.training.mapped_triples,
+            mapped_triples=self.dataset.testing.mapped_triples,
             batch_size=1,
             use_tqdm=False,
         )

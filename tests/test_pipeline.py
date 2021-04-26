@@ -30,17 +30,17 @@ class TestPipeline(unittest.TestCase):
     def setUpClass(cls):
         """Set up a shared result."""
         cls.device = resolve_device('cuda')
+        cls.dataset = Nations()
         cls.result = pipeline(
             model='TransE',
-            dataset='nations',
+            dataset=cls.dataset,
             training_kwargs=dict(num_epochs=5, use_tqdm=False),
             evaluation_kwargs=dict(use_tqdm=False),
             device=cls.device,
             random_seed=42,
         )
         cls.model = cls.result.model
-        nations = Nations()
-        cls.testing_mapped_triples = nations.testing.mapped_triples.to(cls.model.device)
+        cls.testing_mapped_triples = cls.dataset.testing.mapped_triples.to(cls.model.device)
 
     def test_predict_tails_no_novelties(self):
         """Test scoring tails without labeling as novel w.r.t. training and testing."""
@@ -50,7 +50,7 @@ class TestPipeline(unittest.TestCase):
             add_novelties=False,
         )
         self.assertEqual(['tail_id', 'tail_label', 'score'], list(tails_df.columns))
-        self.assertEqual(len(self.model.triples_factory.entity_to_id), len(tails_df.index))
+        self.assertEqual(len(self.dataset.training.entity_to_id), len(tails_df.index))
 
     def test_predict_tails_remove_known(self):
         """Test scoring tails while removing non-novel triples w.r.t. training and testing."""
@@ -107,7 +107,7 @@ class TestPipeline(unittest.TestCase):
             ['head_id', 'head_label', 'relation_id', 'relation_label', 'tail_id', 'tail_label', 'score'],
             list(all_df.columns),
         )
-        possible = self.model.triples_factory.num_relations * self.model.num_entities ** 2
+        possible = self.dataset.training.num_relations * self.model.num_entities ** 2
         self.assertEqual(possible, len(all_df.index))
 
     def test_predict_all_remove_known(self):
@@ -118,8 +118,8 @@ class TestPipeline(unittest.TestCase):
             ['head_id', 'head_label', 'relation_id', 'relation_label', 'tail_id', 'tail_label', 'score'],
             list(all_df.columns),
         )
-        possible = self.model.triples_factory.num_relations * self.model.num_entities ** 2
-        known = self.model.triples_factory.num_triples + self.testing_mapped_triples.shape[0]
+        possible = self.dataset.training.num_relations * self.model.num_entities ** 2
+        known = self.dataset.training.num_triples + self.testing_mapped_triples.shape[0]
         self.assertNotEqual(possible, known, msg='testing and training triples cover all possible triples')
         self.assertEqual(possible - known, len(all_df.index))
 
@@ -134,9 +134,9 @@ class TestPipeline(unittest.TestCase):
             ],
             list(all_df.columns),
         )
-        possible = self.model.triples_factory.num_relations * self.model.num_entities ** 2
+        possible = self.dataset.training.num_relations * self.model.num_entities ** 2
         self.assertEqual(possible, len(all_df.index))
-        self.assertEqual(self.model.triples_factory.num_triples, all_df['in_training'].sum())
+        self.assertEqual(self.dataset.training.num_triples, all_df['in_training'].sum())
         self.assertEqual(self.testing_mapped_triples.shape[0], all_df['in_testing'].sum())
 
 
