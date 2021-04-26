@@ -52,13 +52,13 @@ This example shows how to reload a previously trained model. The
 a file named ``trained_model.pkl``, so we will use the one from the
 previous example.
 
-.. code-block:: python
-
-    import torch
-
-    model = torch.load('doctests/nations_rotate_1/trained_model.pkl')
-    training = get_dataset("nations").training
-    predicted_tails_df = model.get_tail_prediction_df('brazil', 'intergovorgs', triples_factory=training)
+>>> import torch
+>>> from pykeen.datasets import get_dataset
+>>> model = torch.load('doctests/nations_rotate/trained_model.pkl')
+>>> training = get_dataset("nations").training
+>>> # Predict tails
+>>> predicted_tails_df = model.get_tail_prediction_df('brazil', 'intergovorgs', triples_factory=training)
+>>> # everything else is the same as above
 
 There's an example model available at
 https://github.com/pykeen/pykeen/blob/master/notebooks/hello_world/nations_transe/trained_model.pkl
