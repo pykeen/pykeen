@@ -1014,7 +1014,7 @@ def pipeline(  # noqa: C901
     evaluate_start_time = time.time()
     metric_results: MetricResults = _safe_evaluate(
         model=model_instance,
-        training_mapped_triples=training.mapped_triples,
+        training_triples_factory=training,
         mapped_triples=mapped_triples,
         evaluator=evaluator_instance,
         evaluation_kwargs=evaluation_kwargs,
@@ -1043,7 +1043,7 @@ def pipeline(  # noqa: C901
 
 def _safe_evaluate(
     model: Model,
-    training_mapped_triples: MappedTriples,
+    training_triples_factory: TriplesFactory,
     mapped_triples: MappedTriples,
     evaluator: Evaluator,
     evaluation_kwargs: Dict[str, Any],
@@ -1052,7 +1052,7 @@ def _safe_evaluate(
     """Evaluate with a potentially safe fallback to CPU.
 
     :param model: The model
-    :param training_mapped_triples: Mapped triples from the training set
+    :param training_triples_factory: Training triples factory
     :param mapped_triples: Mapped triples from the evaluation set (test or valid)
     :param evaluator: An evaluator
     :param evaluation_kwargs: Kwargs for the evaluator (might get modified in place)
@@ -1071,7 +1071,7 @@ def _safe_evaluate(
             metric_results: MetricResults = evaluator.evaluate(
                 model=model,
                 mapped_triples=mapped_triples,
-                training_mapped_triples=training_mapped_triples,
+                training_triples_factory=training_triples_factory,
                 **evaluation_kwargs,
             )
         except (MemoryError, RuntimeError) as e:
