@@ -141,7 +141,6 @@ class Evaluator(ABC):
         self,
         model: Model,
         mapped_triples: MappedTriples,
-        additional_filter_triples: Optional[MappedTriples] = None,
         batch_size: Optional[int] = None,
         slice_size: Optional[int] = None,
         device: Optional[torch.device] = None,
@@ -149,6 +148,7 @@ class Evaluator(ABC):
         tqdm_kwargs: Optional[Mapping[str, str]] = None,
         restrict_entities_to: Optional[torch.LongTensor] = None,
         do_time_consuming_checks: bool = True,
+        additional_filter_triples: Optional[MappedTriples] = None,
     ) -> MetricResults:
         """Run :func:`pykeen.evaluation.evaluate` with this evaluator."""
         if batch_size is None and self.automatic_memory_optimization:
@@ -197,12 +197,12 @@ class Evaluator(ABC):
         self,
         model: Model,
         mapped_triples: MappedTriples,
-        additional_filter_triples: Optional[MappedTriples] = None,
         batch_size: Optional[int] = None,
         device: Optional[torch.device] = None,
         use_tqdm: bool = False,
         restrict_entities_to: Optional[torch.LongTensor] = None,
         do_time_consuming_checks: bool = True,
+        additional_filter_triples: Optional[MappedTriples] = None,
     ) -> Tuple[int, Optional[int]]:
         """Find the maximum possible batch_size and slice_size for evaluation with the current setting.
 
@@ -275,11 +275,11 @@ class Evaluator(ABC):
         start_value: Optional[int],
         model: Model,
         mapped_triples: MappedTriples,
-        additional_filter_triples: Optional[MappedTriples] = None,
         device: Optional[torch.device] = None,
         use_tqdm: bool = False,
         restrict_entities_to: Optional[torch.LongTensor] = None,
         do_time_consuming_checks: bool = True,
+        additional_filter_triples: Optional[MappedTriples] = None,
     ) -> Tuple[int, bool]:
         values_dict = {}
         maximum_triples = mapped_triples.shape[0]
@@ -480,7 +480,6 @@ def evaluate(
     model: Model,
     mapped_triples: MappedTriples,
     evaluators: Union[Evaluator, Collection[Evaluator]],
-    additional_filter_triples: Optional[MappedTriples] = None,
     only_size_probing: bool = False,
     batch_size: Optional[int] = None,
     slice_size: Optional[int] = None,
@@ -490,6 +489,7 @@ def evaluate(
     tqdm_kwargs: Optional[Mapping[str, str]] = None,
     restrict_entities_to: Optional[torch.LongTensor] = None,
     do_time_consuming_checks: bool = True,
+    additional_filter_triples: Optional[MappedTriples] = None,
 ) -> Union[MetricResults, List[MetricResults]]:
     """Evaluate metrics for model on mapped triples.
 
