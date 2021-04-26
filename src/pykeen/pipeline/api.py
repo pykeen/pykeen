@@ -1012,14 +1012,12 @@ def pipeline(  # noqa: C901
         mapped_triples = validation.mapped_triples
 
     # Determine whether the validation triples should also be filtered while performing test evaluation
-    if not (
+    if (
         evaluator_instance.filtered
         and use_testing_data
         and filter_validation_when_testing
         and validation is not None
     ):
-        additional_filter_triples = None
-    else:
         logging.info(
             "When evaluating the test dataset, validation triples are added to the set of known positive triples"
             " which are filtered out when performing filtered evaluation following the approach described by"
