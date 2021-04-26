@@ -32,6 +32,7 @@ from .nations import Nations
 from .ogb import OGBBioKG, OGBWikiKG
 from .openbiolink import OpenBioLink, OpenBioLinkF1, OpenBioLinkF2, OpenBioLinkLQ
 from .umls import UMLS
+from .wk3l import WK3l15k
 from .wordnet import WN18, WN18RR
 from .yago import YAGO310
 from ..triples import CoreTriplesFactory, TriplesFactory
@@ -53,6 +54,7 @@ __all__ = [
     'UMLS',
     'FB15k',
     'FB15k237',
+    'WK3l15k',
     'WN18',
     'WN18RR',
     'YAGO310',
