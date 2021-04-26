@@ -55,7 +55,7 @@ previous example.
 >>> import torch
 >>> from pykeen.datasets import get_dataset
 >>> model = torch.load('doctests/nations_rotate/trained_model.pkl')
->>> training = get_dataset("nations").training
+>>> training = get_dataset(dataset="nations").training
 >>> # Predict tails
 >>> predicted_tails_df = model.get_tail_prediction_df('brazil', 'intergovorgs', triples_factory=training)
 >>> # everything else is the same as above
