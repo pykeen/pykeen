@@ -30,20 +30,20 @@ model:
 
 >>> from pykeen.pipeline import pipeline
 >>> # Run the pipeline
->>> pipeline_result = pipeline(dataset='Nations', model='RotatE')
->>> model = pipeline_result.model
+>>> result = pipeline(dataset='Nations', model='RotatE')
+>>> model = result.model
 >>> # Predict tails
->>> predicted_tails_df = model.get_tail_prediction_df('brazil', 'intergovorgs')
+>>> predicted_tails_df = model.get_tail_prediction_df('brazil', 'intergovorgs', triples_factory=result.training)
 >>> # Predict relations
->>> predicted_relations_df = model.get_relation_prediction_df('brazil', 'uk')
+>>> predicted_relations_df = model.get_relation_prediction_df('brazil', 'uk', triples_factory=result.training)
 >>> # Predict heads
->>> predicted_heads_df = model.get_head_prediction_df('conferences', 'brazil')
+>>> predicted_heads_df = model.get_head_prediction_df('conferences', 'brazil', triples_factory=result.training)
 >>> # Score all triples (memory intensive)
->>> predictions_df = model.get_all_prediction_df()
+>>> predictions_df = model.get_all_prediction_df(triples_factory=result.training)
 >>> # Score top K triples
->>> top_k_predictions_df = model.get_all_prediction_df(k=150)
+>>> top_k_predictions_df = model.get_all_prediction_df(k=150, triples_factory=result.training)
 >>> # save the model
->>> pipeline_result.save_to_directory('doctests/nations_rotate')
+>>> result.save_to_directory('doctests/nations_rotate')
 
 Loading a Model
 ~~~~~~~~~~~~~~~
@@ -52,11 +52,13 @@ This example shows how to reload a previously trained model. The
 a file named ``trained_model.pkl``, so we will use the one from the
 previous example.
 
->>> import torch
->>> model = torch.load('doctests/nations_rotate/trained_model.pkl')
->>> # Predict tails
->>> predicted_tails_df = model.get_tail_prediction_df('brazil', 'intergovorgs')
->>> # everything else is the same as above
+.. code-block:: python
+
+    import torch
+
+    model = torch.load('doctests/nations_rotate_1/trained_model.pkl')
+    training = ...  # load some other way
+    predicted_tails_df = model.get_tail_prediction_df('brazil', 'intergovorgs')
 
 There's an example model available at
 https://github.com/pykeen/pykeen/blob/master/notebooks/hello_world/nations_transe/trained_model.pkl
