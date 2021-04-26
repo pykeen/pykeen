@@ -1033,7 +1033,8 @@ def pipeline(  # noqa: C901
                 ' so the custom ones will be concatenated',
             )
             evaluation_kwargs['additional_filter_triples'] = torch.cat(
-                [evaluation_kwargs['additional_filter_triples'], additional_filter_triples], dim=0
+                [evaluation_kwargs['additional_filter_triples'], additional_filter_triples],
+                dim=0,
             )
 
     # Evaluate
