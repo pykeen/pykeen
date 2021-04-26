@@ -430,9 +430,9 @@ class RemoteDataset(PathDataset):
     def __init__(
         self,
         url: str,
-        relative_training_path: pathlib.Path,
-        relative_testing_path: pathlib.Path,
-        relative_validation_path: pathlib.Path,
+        relative_training_path: pathlib.PurePath,
+        relative_testing_path: pathlib.PurePath,
+        relative_validation_path: pathlib.PurePath,
         cache_root: Optional[str] = None,
         eager: bool = False,
         create_inverse_triples: bool = False,
