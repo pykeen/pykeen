@@ -95,7 +95,7 @@ class Objective:
     # 8. Evaluation
     evaluator_kwargs: Optional[Mapping[str, Any]] = None
     evaluation_kwargs: Optional[Mapping[str, Any]] = None
-    filter_validation_when_testing: Optional[bool] = None
+    filter_validation_when_testing: bool = True
     # 9. Trackers
     result_tracker_kwargs: Optional[Mapping[str, Any]] = None
     # Misc.
@@ -460,7 +460,7 @@ def hpo_pipeline(
     evaluator_kwargs: Optional[Mapping[str, Any]] = None,
     evaluation_kwargs: Optional[Mapping[str, Any]] = None,
     metric: Optional[str] = None,
-    filter_validation_when_testing: Optional[bool] = None,
+    filter_validation_when_testing: bool = True,
     # 9. Tracking
     result_tracker: HintType[ResultTracker] = None,
     result_tracker_kwargs: Optional[Mapping[str, Any]] = None,
@@ -661,8 +661,6 @@ def hpo_pipeline(
         metric = ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX
     study.set_user_attr('metric', metric)
     logger.info(f'Attempting to {direction} {metric}')
-    if filter_validation_when_testing is None:
-        filter_validation_when_testing = True
     study.set_user_attr('filter_validation_when_testing', filter_validation_when_testing)
     logger.info('Filter validation triples when testing: %s', filter_validation_when_testing)
 
