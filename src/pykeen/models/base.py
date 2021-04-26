@@ -602,8 +602,8 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
         else:
             self.regularizer = NoRegularizer()
 
-        self._entity_ids = sorted(triples_factory.get_entity_ids())
-        self._relation_ids = sorted(triples_factory.get_relation_ids())
+        self._entity_ids = triples_factory.entity_ids
+        self._relation_ids = triples_factory.relation_ids
 
     def post_parameter_update(self) -> None:
         """Has to be called after each parameter update."""
