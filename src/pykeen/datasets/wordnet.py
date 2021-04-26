@@ -2,7 +2,6 @@
 
 """WordNet datasets."""
 
-import os
 import pathlib
 
 from docdata import parse_docdata

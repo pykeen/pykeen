@@ -64,7 +64,12 @@ class MockTarFileSingleDataset(TarFileSingleDataset):
     """Mock downloading a tar.gz archive with a single file."""
 
     def __init__(self, cache_root: str):
-        super().__init__(url=..., name=..., relative_path=pathlib.PurePath('nations', 'train.txt'), cache_root=cache_root)
+        super().__init__(
+            url=...,
+            name=...,
+            relative_path=pathlib.PurePath('nations', 'train.txt'),
+            cache_root=cache_root,
+        )
 
     def _get_path(self) -> str:
         return constants.RESOURCES.joinpath('nations.tar.gz')

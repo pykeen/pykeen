@@ -5,7 +5,6 @@
 import dataclasses
 import itertools
 import logging
-import os
 import pathlib
 import re
 from typing import Any, Callable, Collection, Dict, List, Mapping, Optional, Sequence, Set, TextIO, Union

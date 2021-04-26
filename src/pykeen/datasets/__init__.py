@@ -8,7 +8,6 @@ They are loaded automatically with :func:`pkg_resources.iter_entry_points`.
 """
 
 import logging
-import os
 import pathlib
 from typing import Any, Mapping, Optional, Set, Type, Union
 
@@ -125,7 +124,7 @@ def get_dataset(
             dataset_path = pathlib.Path(dataset).resolve()
             if not dataset_path.is_file():
                 raise ValueError(
-                    f'dataset is neither a pre-defined dataset string nor a filepath: {dataset_path.as_uri()}'
+                    f'dataset is neither a pre-defined dataset string nor a filepath: {dataset_path.as_uri()}',
                 )
             else:
                 return Dataset.from_path(dataset_path)
