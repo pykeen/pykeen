@@ -239,8 +239,8 @@ class Evaluator(ABC):
             key='batch_size',
             start_value=batch_size,
             model=model,
+            additional_filter_triples=additional_filter_triples,
             mapped_triples=mapped_triples,
-            additional_filtered_triples=additional_filter_triples,
             device=device,
             use_tqdm=use_tqdm,
             restrict_entities_to=restrict_entities_to,
@@ -258,7 +258,7 @@ class Evaluator(ABC):
             start_value=ceil(model.num_entities / 2),
             model=model,
             mapped_triples=mapped_triples,
-            additional_filtered_triples=additional_filter_triples,
+            additional_filter_triples=additional_filter_triples,
             device=device,
             use_tqdm=use_tqdm,
             restrict_entities_to=restrict_entities_to,
@@ -279,7 +279,7 @@ class Evaluator(ABC):
         use_tqdm: bool = False,
         restrict_entities_to: Optional[torch.LongTensor] = None,
         do_time_consuming_checks: bool = True,
-        additional_filtered_triples: Optional[MappedTriples] = None,
+        additional_filter_triples: Optional[MappedTriples] = None,
     ) -> Tuple[int, bool]:
         values_dict = {}
         maximum_triples = mapped_triples.shape[0]
@@ -311,7 +311,7 @@ class Evaluator(ABC):
                 evaluate(
                     model=model,
                     mapped_triples=mapped_triples,
-                    additional_filtered_triples=additional_filtered_triples,
+                    additional_filtered_triples=additional_filter_triples,
                     evaluators=self,
                     only_size_probing=True,
                     device=device,
