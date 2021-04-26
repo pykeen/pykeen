@@ -100,6 +100,7 @@ class TrainingLoop(ABC):
         """Initialize the training loop.
 
         :param model: The model to train
+        :param triples_factory: The training triples factory
         :param optimizer: The optimizer to use while training the model
         :param automatic_memory_optimization: bool
             Whether to automatically optimize the sub-batch size during
@@ -133,11 +134,6 @@ class TrainingLoop(ABC):
     def get_normalized_name(cls) -> str:
         """Get the normalized name of the training loop."""
         return normalize_string(cls.__name__, suffix=TrainingLoop.__name__)
-
-    @property
-    def triples_factory(self) -> TriplesFactory:  # noqa: D401
-        """The triples factory in the model."""
-        return self.model.triples_factory
 
     @property
     def device(self):  # noqa: D401

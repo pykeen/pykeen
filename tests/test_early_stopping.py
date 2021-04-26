@@ -20,6 +20,11 @@ from pykeen.training import SLCWATrainingLoop
 from pykeen.typing import MappedTriples
 from tests.mocks import MockModel
 
+try:
+    import mlflow
+except ImportError:
+    mlflow = None
+
 
 class TestRandom(unittest.TestCase):
     """Random tests for early stopper."""
@@ -170,6 +175,7 @@ class TestEarlyStopping(unittest.TestCase):
         self.stopper = EarlyStopper(
             model=self.model,
             evaluator=self.mock_evaluator,
+            training_triples_factory=nations.training,
             evaluation_triples_factory=nations.validation,
             patience=self.patience,
             relative_delta=self.delta,
@@ -202,6 +208,7 @@ class TestEarlyStopping(unittest.TestCase):
             self.assertFalse(self.stopper.should_stop(epoch=epoch))
         self.assertTrue(self.stopper.should_stop(epoch=epoch))
 
+    @unittest.skipUnless(mlflow is not None, reason='MLFlow not installed')
     def test_result_logging_with_mlflow(self):
         """Test whether the MLFLow result logger works."""
         self.stopper.result_tracker = MLFlowResultTracker()
@@ -255,6 +262,7 @@ class TestEarlyStoppingRealWorld(unittest.TestCase):
         stopper = EarlyStopper(
             model=model,
             evaluator=evaluator,
+            training_triples_factory=nations.training,
             evaluation_triples_factory=nations.validation,
             patience=self.patience,
             relative_delta=self.relative_delta,
