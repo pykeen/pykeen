@@ -196,7 +196,7 @@ from ..stoppers import EarlyStopper, Stopper, stopper_resolver
 from ..trackers import ResultTracker, tracker_resolver
 from ..training import SLCWATrainingLoop, TrainingLoop, training_loop_resolver
 from ..triples import TriplesFactory
-from ..typing import Hint, HintType
+from ..typing import Hint, HintType, MappedTriples
 from ..utils import (
     Result, ensure_ftp_directory, fix_dataclass_init_docs, get_json_bytes_io, get_model_io, random_non_negative_int,
     resolve_device, set_random_seed,
@@ -668,6 +668,7 @@ def pipeline(  # noqa: C901
     device: Hint[torch.device] = None,
     random_seed: Optional[int] = None,
     use_testing_data: bool = True,
+    evaluation_fallback: bool = False,
     filter_validation_when_testing: bool = True,
 ) -> PipelineResult:
     """Train and evaluate a model.
@@ -764,6 +765,9 @@ def pipeline(  # noqa: C901
     :param random_seed: The random seed to use. If none is specified, one will be assigned before any code
         is run for reproducibility purposes. In the returned :class:`PipelineResult` instance, it can be accessed
         through :data:`PipelineResult.random_seed`.
+    :param evaluation_fallback:
+        If true, in cases where the evaluation failed using the GPU it will fall back to using a smaller batch size or
+        in the last instance evaluate on the CPU, if even the smallest possible batch size is too big for the GPU.
     :param filter_validation_when_testing:
         If true, during the evaluating of the test dataset, validation triples are added to the set of known positive
         triples, which are filtered out when performing filtered evaluation following the approach described by
@@ -771,7 +775,8 @@ def pipeline(  # noqa: C901
 
     :returns: A pipeline result package.
 
-    :raises ValueError: if a negative sampler is specified with LCWA
+    :raises ValueError:
+        If a negative sampler is specified with LCWA
     """
     if training_kwargs is None:
         training_kwargs = {}
@@ -927,7 +932,6 @@ def pipeline(  # noqa: C901
     if evaluator_kwargs is None:
         evaluator_kwargs = {}
     evaluator_kwargs = dict(evaluator_kwargs)
-
     evaluator_instance: Evaluator = evaluator_resolver.make(evaluator, evaluator_kwargs)
 
     if evaluation_kwargs is None:
@@ -1040,10 +1044,12 @@ def pipeline(  # noqa: C901
     logging.debug("Evaluation will be run with following parameters:")
     logging.debug(f"evaluation_kwargs: {evaluation_kwargs}")
     evaluate_start_time = time.time()
-    metric_results: MetricResults = evaluator_instance.evaluate(
+    metric_results: MetricResults = _safe_evaluate(
         model=model_instance,
         mapped_triples=mapped_triples,
-        **evaluation_kwargs,
+        evaluator=evaluator_instance,
+        evaluation_kwargs=evaluation_kwargs,
+        evaluation_fallback=evaluation_fallback,
     )
     evaluate_end_time = time.time() - evaluate_start_time
     _result_tracker.log_metrics(
@@ -1063,3 +1069,67 @@ def pipeline(  # noqa: C901
         train_seconds=training_end_time,
         evaluate_seconds=evaluate_end_time,
     )
+
+
+def _safe_evaluate(
+    model: Model,
+    mapped_triples: MappedTriples,
+    evaluator: Evaluator,
+    evaluation_kwargs: Dict[str, Any],
+    evaluation_fallback: bool = False,
+) -> MetricResults:
+    """Evaluate with a potentially safe fallback to CPU.
+
+    :param model: The model
+    :param mapped_triples: Mapped triples
+    :param evaluator: An evaluator
+    :param evaluation_kwargs: Kwargs for the evaluator (might get modified in place)
+    :param evaluation_fallback:
+        If true, in cases where the evaluation failed using the GPU it will fall back to using a smaller batch size or
+        in the last instance evaluate on the CPU, if even the smallest possible batch size is too big for the GPU.
+    :return: A metric result
+
+    :raises MemoryError:
+        If it is not possible to evaluate the model on the hardware at hand with the given parameters.
+    :raises RuntimeError:
+        If CUDA ran into OOM issues trying to evaluate the model on the hardware at hand with the given parameters.
+    """
+    while True:
+        try:
+            metric_results: MetricResults = evaluator.evaluate(
+                model=model,
+                mapped_triples=mapped_triples,
+                **evaluation_kwargs,
+            )
+        except (MemoryError, RuntimeError) as e:
+            # If the evaluation still fail using the CPU, the error is raised
+            if model.device.type != 'cuda' or not evaluation_fallback:
+                raise e
+
+            # When the evaluation failed due to OOM on the GPU due to a batch size set too high, the evaluation is
+            # restarted with PyKEEN's automatic memory optimization
+            elif 'batch_size' in evaluation_kwargs:
+                logging.warning(
+                    "You tried to evaluate the current model on %s with batch_size=%d which was too big for %s.",
+                    model.device, evaluation_kwargs['batch_size'], model.device,
+                )
+                logging.warning("Will activate the built-in PyKEEN memory optimization to find a suitable batch size.")
+                del evaluation_kwargs['batch_size']
+
+            # When the evaluation failed due to OOM on the GPU even with automatic memory optimization, the evaluation
+            # is restarted using the cpu
+            else:  # 'batch_size' not in evaluation_kwargs
+                logging.warning(
+                    "Tried to evaluate the current model on %s, but the model and the dataset are too big for the "
+                    "%s memory currently available.",
+                    model.device, model.device,
+                )
+                logging.warning(
+                    "Will revert to using the CPU for evaluation, which will increase the evaluation time "
+                    "significantly.",
+                )
+                model.to_cpu_()
+        else:
+            break  # evaluation was successful, don't continue the ``while True`` loop
+
+    return metric_results
