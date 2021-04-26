@@ -2,7 +2,6 @@
 
 """Test that datasets can be loaded."""
 
-import os
 import pathlib
 import unittest
 from io import BytesIO
