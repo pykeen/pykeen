@@ -771,7 +771,10 @@ def pipeline(  # noqa: C901
     :param filter_validation_when_testing:
         If true, during the evaluating of the test dataset, validation triples are added to the set of known positive
         triples, which are filtered out when performing filtered evaluation following the approach described by
-        [bordes2013]_.
+        [bordes2013]_. This should be explicitly set to false only in the scenario that you are training a single
+        model using the pipeline and evaluating with the testing set, but never using the validation set for
+        optimization at all. This is a very atypical scenario, so it is left as true by default to promote
+        comparability to previous publications.
 
     :returns: A pipeline result package.
 
