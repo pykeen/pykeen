@@ -202,23 +202,27 @@ shown in the following:
     from pykeen.models import TransE
 
     # Get FB15k-237 dataset
-    fb15k237 = FB15k237()
+    dataset = FB15k237()
 
-    # Define evaluator, and define validation triples as additional positive triples
-    rb_evaluator = RankBasedEvaluator(
+    # Define evaluator
+    evaluator = RankBasedEvaluator(
         filtered=True,  # Note: this is True by default; we're just being explicit
     )
 
     # Define model
     model = TransE(
-        triples_factory=fb15k237.training,
+        triples_factory=dataset.training,
     )
 
-    # Evaluate your model
-    results = rb_evaluator.evaluate(
+    # Train your model (code is omitted for brevity)
+    ...
+
+    # Evaluate your model with not only testing triples,
+    # but also filter on validation triples
+    results = evaluator.evaluate(
         model=model,
-        mapped_triples=fb15k237.testing.mapped_triples,
-        additional_filter_triples=fb15k237.validation.mapped_triples
+        mapped_triples=dataset.testing.mapped_triples,
+        additional_filter_triples=dataset.validation.mapped_triples
     )
 
 Entity and Relation Restriction
