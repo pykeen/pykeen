@@ -782,6 +782,8 @@ def pipeline(  # noqa: C901
 
     :raises ValueError:
         If a negative sampler is specified with LCWA
+    :raises TypeError:
+        If an invalid argument type is given for ``evaluation_kwargs["additional_filter_triples"]``
     """
     if training_kwargs is None:
         training_kwargs = {}
@@ -1032,7 +1034,10 @@ def pipeline(  # noqa: C901
     elif torch.is_tensor(popped_additional_filter_triples):  # a single MappedTriple
         additional_filter_triples.append(popped_additional_filter_triples)
     else:
-        raise TypeError(f'Invalid type `for additional_filter_triples`: {type(popped_additional_filter_triples)}')
+        raise TypeError(
+            f'Invalid type for `evaluation_kwargs["additional_filter_triples"]`:'
+            f' {type(popped_additional_filter_triples)}',
+        )
 
     # Determine whether the validation triples should also be filtered while performing test evaluation
     if (
