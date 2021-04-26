@@ -484,50 +484,6 @@ class TestEvaluationStructure(unittest.TestCase):
         assert eval_results.arithmetic_mean_rank == self.counter, 'Should end at the same value as it started'
 
 
-class DummyFilterEvaluator(Evaluator):
-    """A dummy evaluator for testing the filtering behaviour."""
-
-    def __init__(self, *, counter: int, filtered: bool, automatic_memory_optimization: bool = True) -> None:
-        super().__init__(filtered=filtered, automatic_memory_optimization=automatic_memory_optimization)
-        self.counter = counter
-
-    def process_tail_scores_(
-        self,
-        hrt_batch: MappedTriples,
-        true_scores: torch.FloatTensor,
-        scores: torch.FloatTensor,
-        dense_positive_mask: Optional[torch.FloatTensor] = None,
-    ) -> None:  # noqa: D102
-        self.counter += 1
-
-    def process_head_scores_(
-        self,
-        hrt_batch: MappedTriples,
-        true_scores: torch.FloatTensor,
-        scores: torch.FloatTensor,
-        dense_positive_mask: Optional[torch.FloatTensor] = None,
-    ) -> None:  # noqa: D102
-        self.counter -= 1
-
-    def finalize(self) -> MetricResults:  # noqa: D102
-        return RankBasedMetricResults(
-            arithmetic_mean_rank=self.counter,
-            geometric_mean_rank=None,
-            harmonic_mean_rank=None,
-            median_rank=None,
-            inverse_arithmetic_mean_rank=None,
-            inverse_geometric_mean_rank=None,
-            inverse_harmonic_mean_rank=None,
-            inverse_median_rank=None,
-            rank_std=None,
-            rank_var=None,
-            rank_mad=None,
-            adjusted_arithmetic_mean_rank=None,
-            adjusted_arithmetic_mean_rank_index=None,
-            hits_at_k=dict(),
-        )
-
-
 class TestEvaluationFiltering(unittest.TestCase):
     """Tests for testing the correct filtering of positive triples of the evaluation procedure."""
 
