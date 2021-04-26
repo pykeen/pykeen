@@ -1042,8 +1042,8 @@ def pipeline(  # noqa: C901
             )
 
     # Evaluate
-    # Reuse optimal evaluation parameters from training if available
-    if evaluator_instance.batch_size is not None or evaluator_instance.slice_size is not None:
+    # Reuse optimal evaluation parameters from training if available, only if the validation triples are used again
+    if evaluator_instance.batch_size is not None or evaluator_instance.slice_size is not None and not use_testing_data:
         evaluation_kwargs['batch_size'] = evaluator_instance.batch_size
         evaluation_kwargs['slice_size'] = evaluator_instance.slice_size
     # Add logging about evaluator for debugging
