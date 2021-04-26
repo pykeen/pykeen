@@ -148,7 +148,7 @@ class Evaluator(ABC):
         tqdm_kwargs: Optional[Mapping[str, str]] = None,
         restrict_entities_to: Optional[torch.LongTensor] = None,
         do_time_consuming_checks: bool = True,
-        additional_filter_triples: Optional[MappedTriples] = None,
+        additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
     ) -> MetricResults:
         """Run :func:`pykeen.evaluation.evaluate` with this evaluator."""
         if batch_size is None and self.automatic_memory_optimization:
@@ -202,7 +202,7 @@ class Evaluator(ABC):
         use_tqdm: bool = False,
         restrict_entities_to: Optional[torch.LongTensor] = None,
         do_time_consuming_checks: bool = True,
-        additional_filter_triples: Optional[MappedTriples] = None,
+        additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
     ) -> Tuple[int, Optional[int]]:
         """Find the maximum possible batch_size and slice_size for evaluation with the current setting.
 
@@ -280,7 +280,7 @@ class Evaluator(ABC):
         use_tqdm: bool = False,
         restrict_entities_to: Optional[torch.LongTensor] = None,
         do_time_consuming_checks: bool = True,
-        additional_filter_triples: Optional[MappedTriples] = None,
+        additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
     ) -> Tuple[int, bool]:
         values_dict = {}
         maximum_triples = mapped_triples.shape[0]
@@ -490,7 +490,7 @@ def evaluate(
     tqdm_kwargs: Optional[Mapping[str, str]] = None,
     restrict_entities_to: Optional[torch.LongTensor] = None,
     do_time_consuming_checks: bool = True,
-    additional_filtered_triples: Optional[MappedTriples] = None,
+    additional_filtered_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
 ) -> Union[MetricResults, List[MetricResults]]:
     """Evaluate metrics for model on mapped triples.
 
@@ -573,6 +573,8 @@ def evaluate(
                 ' This means you probably forgot to pass (at least) the training triples.',
             )
             all_pos_triples = mapped_triples
+        elif isinstance(additional_filtered_triples, (list, tuple)):
+            all_pos_triples = torch.cat([*additional_filtered_triples, mapped_triples], dim=0)
         else:
             all_pos_triples = torch.cat([additional_filtered_triples, mapped_triples], dim=0)
         all_pos_triples = all_pos_triples.to(device=device)

@@ -243,7 +243,10 @@ evaluation with the ``additional_filter_triples`` argument in :func:`pykeen.eval
     results = evaluator.evaluate(
         model=model,
         mapped_triples=dataset.testing.mapped_triples,
-        additional_filter_triples=dataset.validation.mapped_triples
+        additional_filter_triples=[
+            dataset.training.mapped_triples,
+            dataset.validation.mapped_triples,
+        ],
     )
 
 Entity and Relation Restriction
