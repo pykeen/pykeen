@@ -1114,7 +1114,6 @@ def _safe_evaluate(
             metric_results: MetricResults = evaluator.evaluate(
                 model=model,
                 mapped_triples=mapped_triples,
-                additional_filter_triples=training_triples_factory.mapped_triples,
                 **evaluation_kwargs,
             )
         except (MemoryError, RuntimeError) as e:
