@@ -1027,7 +1027,6 @@ def pipeline(  # noqa: C901
         )
         additional_filter_triples = validation.mapped_triples
 
-    if additional_filter_triples is not None:
         if 'additional_filter_triples' not in evaluation_kwargs:
             evaluation_kwargs['additional_filter_triples'] = additional_filter_triples
         else:
