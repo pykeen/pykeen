@@ -578,9 +578,9 @@ def evaluate(
             all_pos_triples = mapped_triples
         else:
             all_pos_triples = torch.cat([additional_filtered_triples, mapped_triples], dim=0)
+        all_pos_triples = all_pos_triples.to(device=device)
     else:
         all_pos_triples = None
-    all_pos_triples = all_pos_triples.to(device=device)
 
     # Send tensors to device
     mapped_triples = mapped_triples.to(device=device)
