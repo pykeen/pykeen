@@ -355,7 +355,7 @@ class Evaluator(ABC):
     @staticmethod
     def _check_slicing_availability(model: Model, batch_size: int) -> None:
         # Test if slicing is implemented for the required functions of this model
-        if model.create_inverse_triples:
+        if model.use_inverse_triples:
             if not model.can_slice_t:
                 raise MemoryError(f"The current model can't be evaluated on this hardware with these parameters, as "
                                   f"evaluation batch_size={batch_size} is too big and slicing is not implemented for "

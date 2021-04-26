@@ -102,7 +102,7 @@ class Model(nn.Module, ABC):
         else:
             self.loss = loss
 
-        self._create_inverse_triples = triples_factory.create_inverse_triples
+        self._use_inverse_triples = triples_factory.create_inverse_triples
         self._num_entities = triples_factory.num_entities
         self._num_relations = triples_factory.num_relations
 
@@ -153,9 +153,9 @@ class Model(nn.Module, ABC):
         return self._num_relations
 
     @property
-    def create_inverse_triples(self) -> bool:  # noqa: D401,D400
+    def use_inverse_triples(self) -> bool:  # noqa: D401,D400
         """Should triples be modeled with their inverses?"""
-        return self._create_inverse_triples
+        return self._use_inverse_triples
 
     """Base methods"""
 
@@ -333,7 +333,7 @@ class Model(nn.Module, ABC):
             For each r-t pair, the scores for all possible heads.
         """
         self.eval()  # Enforce evaluation mode
-        if self.create_inverse_triples:
+        if self.use_inverse_triples:
             scores = self.score_h_inverse(rt_batch=rt_batch, slice_size=slice_size)
         elif slice_size is None:
             scores = self.score_h(rt_batch)
@@ -503,7 +503,7 @@ class Model(nn.Module, ABC):
     """Inverse scoring"""
 
     def _prepare_inverse_batch(self, batch: torch.LongTensor, index_relation: int) -> torch.LongTensor:
-        if not self.create_inverse_triples:
+        if not self.use_inverse_triples:
             raise ValueError(
                 "Your model is not configured to predict with inverse relations."
                 " Set ``create_inverse_triples=True`` when creating the dataset/triples factory"
