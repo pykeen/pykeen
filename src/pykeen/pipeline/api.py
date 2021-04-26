@@ -1020,8 +1020,8 @@ def pipeline(  # noqa: C901
     ):
         logging.info(
             "When evaluating the test dataset, validation triples are added to the set of known positive triples"
-            "which are filtered out when performing filtered evaluation following the approach described by"
-            "(Bordes et al., 2013).",
+            " which are filtered out when performing filtered evaluation following the approach described by"
+            " (Bordes et al., 2013).",
         )
         additional_filter_triples = validation.mapped_triples
     else:
