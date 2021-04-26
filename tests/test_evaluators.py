@@ -482,3 +482,104 @@ class TestEvaluationStructure(unittest.TestCase):
         )
         self.assertIsInstance(eval_results, RankBasedMetricResults)
         assert eval_results.arithmetic_mean_rank == self.counter, 'Should end at the same value as it started'
+
+
+class DummyFilterEvaluator(Evaluator):
+    """A dummy evaluator for testing the filtering behaviour."""
+
+    def __init__(self, *, counter: int, filtered: bool, automatic_memory_optimization: bool = True) -> None:
+        super().__init__(filtered=filtered, automatic_memory_optimization=automatic_memory_optimization)
+        self.counter = counter
+
+    def process_tail_scores_(
+        self,
+        hrt_batch: MappedTriples,
+        true_scores: torch.FloatTensor,
+        scores: torch.FloatTensor,
+        dense_positive_mask: Optional[torch.FloatTensor] = None,
+    ) -> None:  # noqa: D102
+        self.counter += 1
+
+    def process_head_scores_(
+        self,
+        hrt_batch: MappedTriples,
+        true_scores: torch.FloatTensor,
+        scores: torch.FloatTensor,
+        dense_positive_mask: Optional[torch.FloatTensor] = None,
+    ) -> None:  # noqa: D102
+        self.counter -= 1
+
+    def finalize(self) -> MetricResults:  # noqa: D102
+        return RankBasedMetricResults(
+            arithmetic_mean_rank=self.counter,
+            geometric_mean_rank=None,
+            harmonic_mean_rank=None,
+            median_rank=None,
+            inverse_arithmetic_mean_rank=None,
+            inverse_geometric_mean_rank=None,
+            inverse_harmonic_mean_rank=None,
+            inverse_median_rank=None,
+            rank_std=None,
+            rank_var=None,
+            rank_mad=None,
+            adjusted_arithmetic_mean_rank=None,
+            adjusted_arithmetic_mean_rank_index=None,
+            hits_at_k=dict(),
+        )
+
+
+class TestEvaluationFiltering(unittest.TestCase):
+    """Tests for testing the correct filtering of positive triples of the evaluation procedure."""
+
+    def setUp(self):
+        """Prepare for testing the evaluation filtering."""
+        self.evaluator = RankBasedEvaluator(filtered=True, automatic_memory_optimization=False)
+        self.triples_factory = Nations().training
+        self.model = MockModel(triples_factory=self.triples_factory)
+
+        # The MockModel gives the highest score to the highest entity id
+        max_score = self.model.triples_factory.num_entities - 1
+
+        # The test triples are created to yield the third highest score on both head and tail prediction
+        self.test_triples = torch.tensor([[max_score - 2, 0, max_score - 2]])
+
+        # Write new mapped triples to the model, since the model's triples will be used to filter
+        # These triples are created to yield the highest score on both head and tail prediction for the
+        # test triple at hand
+        self.model.triples_factory.mapped_triples = torch.tensor(
+            [
+                [max_score - 2, 0, max_score],
+                [max_score, 0, max_score - 2],
+            ],
+        )
+
+        # The validation triples are created to yield the second highest score on both head and tail prediction for the
+        # test triple at hand
+        self.validation_triples = torch.tensor(
+            [
+                [max_score - 2, 0, max_score - 1],
+                [max_score - 1, 0, max_score - 2],
+            ],
+        )
+
+    def test_evaluation_filtering_without_validation_triples(self):
+        """Test if the evaluator's triple filtering works as expected."""
+        eval_results = self.evaluator.evaluate(
+            model=self.model,
+            mapped_triples=self.test_triples,
+            batch_size=1,
+            use_tqdm=False,
+        )
+        assert eval_results.arithmetic_mean_rank['both']['realistic'] == 2, 'The rank should equal 2'
+
+    def test_evaluation_filtering_with_validation_triples(self):
+        """Test if the evaluator's triple filtering works as expected when including additional filter triples."""
+
+        eval_results = self.evaluator.evaluate(
+            model=self.model,
+            mapped_triples=self.test_triples,
+            additional_filter_triples=self.validation_triples,
+            batch_size=1,
+            use_tqdm=False,
+        )
+        assert eval_results.arithmetic_mean_rank['both']['realistic'] == 1, 'The rank should equal 1'
