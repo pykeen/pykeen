@@ -771,7 +771,7 @@ def pipeline(  # noqa: C901
     :param filter_validation_when_testing:
         If true, during the evaluating of the test dataset, validation triples are added to the set of known positive
         triples, which are filtered out when performing filtered evaluation following the approach described by
-        (Bordes et al., 2013).
+        [bordes2013]_.
 
     :returns: A pipeline result package.
 
