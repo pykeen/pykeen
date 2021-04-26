@@ -180,18 +180,39 @@ may be additional known triples :math:`(h, r, t')` for :math:`t \neq t'`. If the
 filtered evaluation setting ignores for a given triple :math:`(h, r, t)` the scores of all other *known* true triples
 :math:`(h, r, t')`.
 
-PyKEEN provides training and evaluation workflows for which the set of positive triples is pre-defined. When using
-the :func:`pykeen.hpo.hpo_pipeline` or :func:`pykeen.pipeline.pipeline`, PyKEEN differentiates two scenarios in which
-the set of *known* true triples is built differently according to [bordes2013]_.
-During hyper-parameter optimization (HPO) and early stopping, the set of *known* true triples consists per default of
-the training and validation set. Only during the evaluation of the final model on the test set, it consists of training,
-validation, and test triples. We explicitly do not use test triples for filtering during HPO and early stopping in
-order to avoid any test leakage. In case the validation triples should *not* be filtered when evaluating the test
-dataset, the argument ``filter_validation_when_testing=False`` can be passed to the two functions above.
+Below, we present the philosophy from [bordes2013]_ and how it is implemented in PyKEEN:
 
-Please note that when using an :class:`pykeen.evaluation.Evaluator` directly in a custom workflow to evaluate your
-model, the set of *known* true triples comprises both the training triples and evaluation triples. However, you can
-provide additional triples, e.g. the validation triples, that should be added to the set of *known* true triples during
+HPO Scenario
+************
+During training/optimization with :func:`pykeen.hpo.hpo_pipeline`, the set of known positive triples comprises the
+training and validation sets. After optimization is finished and the final evaluation is done, the set of known
+positive triples comprises the training, validation, and testing set. PyKEEN explicitly does not use test triples
+for filtering during HPO avoid any test leakage.
+
+Early Stopper Scenario
+**********************
+When early stopping is used during training, it periodically uses the validation set for calculating the loss
+and evaluation metrics. During this evaluation, the set of known positive triples comprises the training and
+validation sets. When final evaluation is done with the testing set, the set of known positive triples comprises the
+training, validation, and testing set. PyKEEN explicitly does not use test triples for filtering when early stopping
+is being used to avoid any test leakage.
+
+Pipeline Scenario
+*****************
+During vanilla training with the :func:`pykeen.pipeline.pipeline` that has no optimization, no early stopping, nor
+any *post-hoc* choices using the validation set, the set of known positive triples comprises the training and
+testing sets. This scenario is very atypical, and regardless, should be augmented with the validation triples
+to make more comparable to other published results that do not consider this scenario.
+
+Custom Training Loops
+*********************
+In case the validation triples should *not* be filtered when evaluating the test dataset, the argument
+``filter_validation_when_testing=False`` can be passed to either the :func:`pykeen.hpo.hpo_pipeline` or
+:func:`pykeen.pipeline.pipeline`.
+
+When writing a custom training loop and using an :class:`pykeen.evaluation.Evaluator` directly, the set of *known*
+positive triples comprises both the training triples and evaluation triples. However, you can provide additional
+triples, e.g. the validation triples, that should be added to the set of *known* positive triples during
 evaluation with the ``additional_filter_triples`` argument in :func:`pykeen.evaluation.evaluate` (via
 :func:`pykeen.evaluation.Evaluator.evaluate`) as shown in the following:
 
