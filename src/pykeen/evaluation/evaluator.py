@@ -218,8 +218,6 @@ class Evaluator(ABC):
             The model to evaluate.
         :param mapped_triples:
             The triples on which to evaluate.
-        :param additional_filter_triples:
-            Additional true triples to filter out during filtered evaluation.
         :param batch_size:
             The initial batch size to start with. None defaults to number_of_triples.
         :param device:
@@ -229,7 +227,8 @@ class Evaluator(ABC):
         :param restrict_entities_to:
             Whether to restrict the evaluation to certain entities of interest.
         :param additional_filter_triples:
-            Only needed if the evaluator is in filtered mode
+            Additional true triples to filter out during filtered evaluation. Only needed if the evaluator is in
+            filtered mode.
 
         :return:
             Maximum possible batch size and, if necessary, the slice_size, which defaults to None.
