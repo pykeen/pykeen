@@ -257,8 +257,8 @@ class Evaluator(ABC):
             # must have failed to start slice_size search, we start with trying half the entities.
             start_value=ceil(model.num_entities / 2),
             model=model,
-            mapped_triples=mapped_triples,
             additional_filter_triples=additional_filter_triples,
+            mapped_triples=mapped_triples,
             device=device,
             use_tqdm=use_tqdm,
             restrict_entities_to=restrict_entities_to,
@@ -310,8 +310,8 @@ class Evaluator(ABC):
                 torch.cuda.empty_cache()
                 evaluate(
                     model=model,
-                    mapped_triples=mapped_triples,
                     additional_filtered_triples=additional_filter_triples,
+                    mapped_triples=mapped_triples,
                     evaluators=self,
                     only_size_probing=True,
                     device=device,
