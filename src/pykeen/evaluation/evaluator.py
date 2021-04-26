@@ -140,7 +140,7 @@ class Evaluator(ABC):
     def evaluate(
         self,
         model: Model,
-        mapped_triples: Optional[MappedTriples] = None,
+        mapped_triples: MappedTriples,
         additional_filter_triples: Optional[MappedTriples] = None,
         batch_size: Optional[int] = None,
         slice_size: Optional[int] = None,
@@ -151,10 +151,6 @@ class Evaluator(ABC):
         do_time_consuming_checks: bool = True,
     ) -> MetricResults:
         """Run :func:`pykeen.evaluation.evaluate` with this evaluator."""
-        if mapped_triples is None:
-            # TODO: Add warning that the training data is used to evaluate
-            mapped_triples = model.triples_factory.mapped_triples
-
         if batch_size is None and self.automatic_memory_optimization:
             # Using automatic memory optimization on CPU may result in undocumented crashes due to OS' OOM killer.
             if model.device.type == 'cpu':
