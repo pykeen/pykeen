@@ -1027,13 +1027,17 @@ def pipeline(  # noqa: C901
         )
         additional_filter_triples = validation.mapped_triples
 
-    # Combining the added validation filter with optional additional filter triples
-    if evaluation_kwargs.get('additional_filter_triples') and additional_filter_triples is not None:
-        evaluation_kwargs['additional_filter_triples'] = torch.cat(
-            [evaluation_kwargs['additional_filter_triples'], additional_filter_triples], dim=0
-        )
-    elif additional_filter_triples is not None:
-        evaluation_kwargs['additional_filter_triples'] = additional_filter_triples
+    if additional_filter_triples is not None:
+        if 'additional_filter_triples' not in evaluation_kwargs:
+            evaluation_kwargs['additional_filter_triples'] = additional_filter_triples
+        else:
+            logger.info(
+                'there were already `additional_filter_triples` in the evaluation arguments,'
+                ' so the custom ones will be concatenated',
+            )
+            evaluation_kwargs['additional_filter_triples'] = torch.cat(
+                [evaluation_kwargs['additional_filter_triples'], additional_filter_triples], dim=0
+            )
 
     # Evaluate
     # Reuse optimal evaluation parameters from training if available
