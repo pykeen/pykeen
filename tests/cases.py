@@ -846,6 +846,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         """Test that sLCWA training does not fail."""
         loop = SLCWATrainingLoop(
             model=self.instance,
+            triples_factory=self.factory,
             optimizer=Adagrad(params=self.instance.get_grad_params(), lr=0.001),
             **(self.training_loop_kwargs or {}),
         )
@@ -862,6 +863,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         """Test that LCWA training does not fail."""
         loop = LCWATrainingLoop(
             model=self.instance,
+            triples_factory=self.factory,
             optimizer=Adagrad(params=self.instance.get_grad_params(), lr=0.001),
             **(self.training_loop_kwargs or {}),
         )

@@ -15,7 +15,7 @@ import torch
 
 from .instances import Instances, LCWAInstances, SLCWAInstances
 from .splitting import split
-from .utils import load_triples
+from .utils import get_entities, get_relations, load_triples
 from ..typing import EntityMapping, LabeledTriples, MappedTriples, RelationMapping, TorchRandomHint
 from ..utils import compact_mapping, format_relative_comparison, invert_mapping, torch_is_in_1d
 
@@ -196,6 +196,8 @@ class CoreTriplesFactory:
         mapped_triples: MappedTriples,
         num_entities: int,
         num_relations: int,
+        entity_ids: Collection[int],
+        relation_ids: Collection[int],
         create_inverse_triples: bool = False,
         metadata: Optional[Mapping[str, Any]] = None,
     ):
@@ -217,6 +219,8 @@ class CoreTriplesFactory:
         self.mapped_triples = mapped_triples
         self._num_entities = num_entities
         self._num_relations = num_relations
+        self.entity_ids = entity_ids
+        self.relation_ids = relation_ids
         self.create_inverse_triples = create_inverse_triples
         if metadata is None:
             metadata = dict()
@@ -228,6 +232,8 @@ class CoreTriplesFactory:
         mapped_triples: MappedTriples,
         num_entities: Optional[int] = None,
         num_relations: Optional[int] = None,
+        entity_ids: Collection[int] = None,
+        relation_ids: Collection[int] = None,
         create_inverse_triples: bool = False,
         metadata: Optional[Mapping[str, Any]] = None,
     ) -> "CoreTriplesFactory":
@@ -252,10 +258,16 @@ class CoreTriplesFactory:
             num_entities = mapped_triples[:, [0, 2]].max().item() + 1
         if num_relations is None:
             num_relations = mapped_triples[:, 1].max().item() + 1
+        if entity_ids is None:
+            entity_ids = get_entities(mapped_triples)
+        if relation_ids is None:
+            relation_ids = get_relations(mapped_triples)
         return CoreTriplesFactory(
             mapped_triples=mapped_triples,
             num_entities=num_entities,
             num_relations=num_relations,
+            entity_ids=entity_ids,
+            relation_ids=relation_ids,
             create_inverse_triples=create_inverse_triples,
             metadata=metadata,
         )
@@ -281,14 +293,6 @@ class CoreTriplesFactory:
     def num_triples(self) -> int:  # noqa: D401
         """The number of triples."""
         return self.mapped_triples.shape[0]
-
-    def get_entity_ids(self) -> Collection[int]:
-        """Get the set of entity identifiers."""
-        raise NotImplementedError  # TODO @mberr should these be pre-cached on __init__?
-
-    def get_relation_ids(self) -> Collection[int]:
-        """Get the set of relation identifiers."""
-        raise NotImplementedError
 
     def extra_repr(self) -> str:
         """Extra representation string."""
@@ -413,6 +417,8 @@ class CoreTriplesFactory:
             mapped_triples=mapped_triples,
             num_entities=self.num_entities,
             num_relations=self.real_num_relations,
+            entity_ids=self.entity_ids,
+            relation_ids=self.relation_ids,
             create_inverse_triples=create_inverse_triples,
             metadata={
                 **(extra_metadata or {}),
@@ -630,6 +636,8 @@ class TriplesFactory(CoreTriplesFactory):
             mapped_triples=mapped_triples,
             num_entities=len(entity_to_id),
             num_relations=len(relation_to_id),
+            entity_ids=sorted(entity_to_id.values()),
+            relation_ids=sorted(relation_to_id.values()),
             create_inverse_triples=create_inverse_triples,
             metadata=metadata,
         )
@@ -814,14 +822,6 @@ class TriplesFactory(CoreTriplesFactory):
     def relation_id_to_label(self) -> Mapping[int, str]:
         """Return the mapping from relations IDs to labels."""
         return self.relation_labeling.id_to_label
-
-    def get_entity_ids(self) -> Collection[int]:
-        """Get the set of entity identifiers."""
-        return self.entity_to_id.values()
-
-    def get_relation_ids(self) -> Collection[int]:
-        """Get the set of relation identifiers."""
-        return self.relation_to_id.values()
 
     @property
     def triples(self) -> np.ndarray:  # noqa: D401

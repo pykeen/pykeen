@@ -178,7 +178,7 @@ def plot_er(  # noqa: C901
         subtitle = f' using {reducer_cls.__name__}'
 
     if plot_entities:
-        entity_id_to_label = pipeline_result.model.triples_factory.entity_id_to_label
+        entity_id_to_label = pipeline_result.training.entity_id_to_label
         for entity_id, entity_reduced_embedding in enumerate(e_embeddings):
             entity_label = entity_id_to_label[entity_id]
             if entities and entity_label not in entities:
@@ -188,7 +188,7 @@ def plot_er(  # noqa: C901
             ax.annotate(entity_label, (x + annotation_x_offset, y + annotation_y_offset))
 
     if plot_relations:
-        relation_id_to_label = pipeline_result.model.triples_factory.relation_id_to_label
+        relation_id_to_label = pipeline_result.training.relation_id_to_label
         for relation_id, relation_reduced_embedding in enumerate(r_embeddings):
             relation_label = relation_id_to_label[relation_id]
             if relations and relation_label not in relations:
