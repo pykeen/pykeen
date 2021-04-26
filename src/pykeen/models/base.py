@@ -102,9 +102,9 @@ class Model(nn.Module, ABC):
         else:
             self.loss = loss
 
-        self._use_inverse_triples = triples_factory.create_inverse_triples
-        self._num_entities = triples_factory.num_entities
-        self._num_relations = triples_factory.num_relations
+        self.use_inverse_triples = triples_factory.create_inverse_triples
+        self.num_entities = triples_factory.num_entities
+        self.num_relations = triples_factory.num_relations
 
         '''
         When predict_with_sigmoid is set to True, the sigmoid function is applied to the logits during evaluation and
@@ -141,21 +141,6 @@ class Model(nn.Module, ABC):
         self.to_device_()
         self.post_parameter_update()
         return self
-
-    @property
-    def num_entities(self) -> int:  # noqa: D401
-        """The number of entities in the knowledge graph."""
-        return self._num_entities
-
-    @property
-    def num_relations(self) -> int:  # noqa: D401
-        """The number of unique relation types in the knowledge graph."""
-        return self._num_relations
-
-    @property
-    def use_inverse_triples(self) -> bool:  # noqa: D401,D400
-        """Should triples be modeled with their inverses?"""
-        return self._use_inverse_triples
 
     """Base methods"""
 
