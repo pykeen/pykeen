@@ -508,8 +508,6 @@ def evaluate(
         the model class on the fly.
     :param evaluators:
         An evaluator or a list of evaluators working on batches of triples and corresponding scores.
-    :param additional_filtered_triples:
-        Additional true triples to filter out during filtered evaluation.
     :param only_size_probing:
         The evaluation is only performed for two batches to test the memory footprint, especially on GPUs.
     :param batch_size: >0
@@ -534,7 +532,7 @@ def evaluate(
         - If restrict_entities_to is not None, check whether the triples have been filtered.
         Disabling this option can accelerate the method.
     :param additional_filtered_triples:
-        Only needed if the evaluator is in filtered mode
+        Additional true triples to filter out during filtered evaluation.
     """
     if isinstance(evaluators, Evaluator):  # upgrade a single evaluator to a list
         evaluators = [evaluators]
