@@ -270,6 +270,7 @@ class TestEarlyStoppingRealWorld(unittest.TestCase):
         )
         training_loop = SLCWATrainingLoop(
             model=model,
+            triples_factory=nations.training,
             optimizer=Adam(params=model.get_grad_params()),
             automatic_memory_optimization=False,
         )
