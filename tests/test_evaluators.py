@@ -495,7 +495,7 @@ class TestEvaluationFiltering(unittest.TestCase):
         self.model = MockModel(triples_factory=self.triples_factory)
 
         # The MockModel gives the highest score to the highest entity id
-        max_score = self.model.triples_factory.num_entities - 1
+        max_score = self.triples_factory.num_entities - 1
 
         # The test triples are created to yield the third highest score on both head and tail prediction
         self.test_triples = torch.tensor([[max_score - 2, 0, max_score - 2]])
@@ -503,7 +503,7 @@ class TestEvaluationFiltering(unittest.TestCase):
         # Write new mapped triples to the model, since the model's triples will be used to filter
         # These triples are created to yield the highest score on both head and tail prediction for the
         # test triple at hand
-        self.model.triples_factory.mapped_triples = torch.tensor(
+        self.training_triples = torch.tensor(
             [
                 [max_score - 2, 0, max_score],
                 [max_score, 0, max_score - 2],
@@ -524,6 +524,7 @@ class TestEvaluationFiltering(unittest.TestCase):
         eval_results = self.evaluator.evaluate(
             model=self.model,
             mapped_triples=self.test_triples,
+            additional_filter_triples=self.training_triples,
             batch_size=1,
             use_tqdm=False,
         )
@@ -531,11 +532,13 @@ class TestEvaluationFiltering(unittest.TestCase):
 
     def test_evaluation_filtering_with_validation_triples(self):
         """Test if the evaluator's triple filtering works as expected when including additional filter triples."""
-
         eval_results = self.evaluator.evaluate(
             model=self.model,
             mapped_triples=self.test_triples,
-            additional_filter_triples=self.validation_triples,
+            additional_filter_triples=[
+                self.training_triples,
+                self.validation_triples,
+            ],
             batch_size=1,
             use_tqdm=False,
         )
