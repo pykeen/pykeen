@@ -570,14 +570,10 @@ def evaluate(
 
     # Prepare for result filtering
     if filtering_necessary or positive_masks_required:
-        # FIXME!!
-        # all_pos_triples = torch.cat([model.triples_factory.mapped_triples, mapped_triples], dim=0)
-        # if additional_filtered_triples is not None:
-        #     all_pos_triples = torch.cat([all_pos_triples, additional_filtered_triples], dim=0)
         if additional_filtered_triples is None:
             logger.warning(
                 'filtered setting was enabled, but there were no `additional_filtered_triples`.'
-                ' This means you probably forgot to pass the training triples.',
+                ' This means you probably forgot to pass (at least) the training triples.',
             )
             all_pos_triples = mapped_triples
         else:

@@ -1018,6 +1018,17 @@ def pipeline(  # noqa: C901
     else:
         mapped_triples = validation.mapped_triples
 
+
+    # Build up a list of triples
+    aft_list = [
+        training.mapped_triples,
+    ]
+
+    # If the user gave custom "additional_filter_triples"
+    ek_aft = evaluation_kwargs.pop('additional_filter_triples', None)
+    if ek_aft is not None:
+        aft_list.append(ek_aft)
+
     # Determine whether the validation triples should also be filtered while performing test evaluation
     if (
         evaluator_instance.filtered
@@ -1030,20 +1041,10 @@ def pipeline(  # noqa: C901
             " which are filtered out when performing filtered evaluation following the approach described by"
             " (Bordes et al., 2013).",
         )
-        additional_filter_triples = validation.mapped_triples
+        aft_list.append(validation.mapped_triples)
 
-        if 'additional_filter_triples' not in evaluation_kwargs:
-            evaluation_kwargs['additional_filter_triples'] = additional_filter_triples
-        else:
-            logger.info(
-                'there were already `additional_filter_triples` in the evaluation arguments,'
-                ' so the custom ones will be concatenated',
-            )
-            # TODO consider implications of duplicates
-            evaluation_kwargs['additional_filter_triples'] = torch.cat(
-                [evaluation_kwargs['additional_filter_triples'], additional_filter_triples],
-                dim=0,
-            )
+    # TODO consider implications of duplicates
+    evaluation_kwargs['additional_filter_triples'] = torch.cat(aft_list, dim=0) if len(aft_list) > 1 else aft_list[0]
 
     # Evaluate
     # Reuse optimal evaluation parameters from training if available, only if the validation triples are used again
