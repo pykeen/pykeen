@@ -196,12 +196,6 @@ class MinimalTriplesFactory:
     }
     num_entities = 2
     num_relations = 2
+    entity_ids = list(range(num_entities))
+    relation_ids = list(range(num_relations))
     create_inverse_triples: bool = False
-
-    @classmethod
-    def get_entity_ids(cls):  # noqa:D102
-        return cls.entity_to_id.values()
-
-    @classmethod
-    def get_relation_ids(cls):  # noqa:D102
-        return cls.relation_to_id.values()
