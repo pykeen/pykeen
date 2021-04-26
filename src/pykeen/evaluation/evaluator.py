@@ -162,7 +162,7 @@ class Evaluator(ABC):
                 batch_size, slice_size = self.batch_and_slice(
                     model=model,
                     mapped_triples=mapped_triples,
-                    additional_filtered_triples=additional_filter_triples,
+                    additional_filter_triples=additional_filter_triples,
                     batch_size=batch_size,
                     device=device,
                     use_tqdm=False,
@@ -202,7 +202,7 @@ class Evaluator(ABC):
         use_tqdm: bool = False,
         restrict_entities_to: Optional[torch.LongTensor] = None,
         do_time_consuming_checks: bool = True,
-        additional_filtered_triples: Optional[MappedTriples] = None,
+        additional_filter_triples: Optional[MappedTriples] = None,
     ) -> Tuple[int, Optional[int]]:
         """Find the maximum possible batch_size and slice_size for evaluation with the current setting.
 
@@ -218,7 +218,7 @@ class Evaluator(ABC):
             The model to evaluate.
         :param mapped_triples:
             The triples on which to evaluate.
-        :param additional_filtered_triples:
+        :param additional_filter_triples:
             Additional true triples to filter out during filtered evaluation.
         :param batch_size:
             The initial batch size to start with. None defaults to number_of_triples.
@@ -240,7 +240,7 @@ class Evaluator(ABC):
             start_value=batch_size,
             model=model,
             mapped_triples=mapped_triples,
-            additional_filtered_triples=additional_filtered_triples,
+            additional_filtered_triples=additional_filter_triples,
             device=device,
             use_tqdm=use_tqdm,
             restrict_entities_to=restrict_entities_to,
@@ -258,7 +258,7 @@ class Evaluator(ABC):
             start_value=ceil(model.num_entities / 2),
             model=model,
             mapped_triples=mapped_triples,
-            additional_filtered_triples=additional_filtered_triples,
+            additional_filtered_triples=additional_filter_triples,
             device=device,
             use_tqdm=use_tqdm,
             restrict_entities_to=restrict_entities_to,
