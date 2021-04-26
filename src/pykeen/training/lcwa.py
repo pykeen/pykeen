@@ -10,7 +10,7 @@ import torch
 
 from .training_loop import TrainingLoop
 from .utils import apply_label_smoothing
-from ..triples import LCWAInstances
+from ..triples import Instances, TriplesFactory
 from ..typing import MappedTriples
 
 __all__ = [
@@ -23,8 +23,8 @@ logger = logging.getLogger(__name__)
 class LCWATrainingLoop(TrainingLoop):
     """A training loop that uses the local closed world assumption training approach."""
 
-    def _create_instances(self, use_tqdm: Optional[bool] = None) -> LCWAInstances:  # noqa: D102
-        return self.triples_factory.create_lcwa_instances(use_tqdm=use_tqdm)
+    def _create_instances(self, triples_factory: TriplesFactory) -> Instances:  # noqa: D102
+        return triples_factory.create_lcwa_instances()
 
     @staticmethod
     def _get_batch_size(batch: Tuple[MappedTriples, torch.FloatTensor]) -> int:  # noqa: D102
@@ -111,6 +111,7 @@ class LCWATrainingLoop(TrainingLoop):
         batch_size: int,
         sub_batch_size: int,
         supports_sub_batching: bool,
+        triples_factory: Optional[TriplesFactory] = None,
     ) -> int:  # noqa: D102
         self._check_slicing_availability(supports_sub_batching)
         reached_max = False
@@ -128,6 +129,7 @@ class LCWATrainingLoop(TrainingLoop):
                     sub_batch_size=sub_batch_size,
                     slice_size=slice_size,
                     only_size_probing=True,
+                    triples_factory=triples_factory,
                 )
             except RuntimeError as e:
                 self._free_graph_and_cache()

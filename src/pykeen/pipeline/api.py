@@ -894,6 +894,7 @@ def pipeline(  # noqa: C901
         negative_sampler_cls = None
         training_loop_instance = training_loop_cls(
             model=model_instance,
+            triples_factory=training,
             optimizer=optimizer_instance,
             **training_loop_kwargs,
         )
@@ -907,6 +908,7 @@ def pipeline(  # noqa: C901
         )
         training_loop_instance = SLCWATrainingLoop(
             model=model_instance,
+            triples_factory=training,
             optimizer=optimizer_instance,
             negative_sampler_cls=negative_sampler_cls,
             negative_sampler_kwargs=negative_sampler_kwargs,
@@ -984,6 +986,7 @@ def pipeline(  # noqa: C901
     # Train like Cristiano Ronaldo
     training_start_time = time.time()
     losses = training_loop_instance.train(
+        triples_factory=training,
         stopper=stopper_instance,
         result_tracker=_result_tracker,
         clear_optimizer=clear_optimizer,
