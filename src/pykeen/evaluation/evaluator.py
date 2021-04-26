@@ -574,7 +574,7 @@ def evaluate(
                 ' Try:\n\n\tadditional_filtered_triples=[dataset.training.mapped_triples]\n\n'
                 'Or if you want to use the Bordes et al. (2013) approach to filtering,'
                 ' do:\n\n\tadditional_filtered_triples=[dataset.training.mapped_triples,'
-                ' dataset.validation.mapped_triples]\n\n',
+                ' dataset.validation.mapped_triples]\n',
             )
             all_pos_triples = mapped_triples
         elif isinstance(additional_filtered_triples, (list, tuple)):
