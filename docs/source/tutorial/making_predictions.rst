@@ -57,8 +57,8 @@ previous example.
     import torch
 
     model = torch.load('doctests/nations_rotate_1/trained_model.pkl')
-    training = ...  # load some other way
-    predicted_tails_df = model.get_tail_prediction_df('brazil', 'intergovorgs')
+    training = get_dataset("nations").training
+    predicted_tails_df = model.get_tail_prediction_df('brazil', 'intergovorgs', triples_factory=training)
 
 There's an example model available at
 https://github.com/pykeen/pykeen/blob/master/notebooks/hello_world/nations_transe/trained_model.pkl
