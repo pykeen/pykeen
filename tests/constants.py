@@ -2,7 +2,7 @@
 
 """Constants for PyKEEN testing."""
 
-import os
+import pathlib
 
 __all__ = [
     'HERE',
@@ -10,6 +10,6 @@ __all__ = [
     'EPSILON',
 ]
 
-HERE = os.path.abspath(os.path.dirname(__file__))
-RESOURCES = os.path.join(HERE, 'resources')
+HERE = pathlib.Path(__file__).resolve().parent
+RESOURCES = HERE.joinpath('resources')
 EPSILON = 1.0e-07

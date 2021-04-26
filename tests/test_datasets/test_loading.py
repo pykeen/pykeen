@@ -3,6 +3,7 @@
 """Test that datasets can be loaded."""
 
 import os
+import pathlib
 import unittest
 from io import BytesIO
 
@@ -63,10 +64,10 @@ class MockTarFileSingleDataset(TarFileSingleDataset):
     """Mock downloading a tar.gz archive with a single file."""
 
     def __init__(self, cache_root: str):
-        super().__init__(url=..., name=..., relative_path='nations/train.txt', cache_root=cache_root)
+        super().__init__(url=..., name=..., relative_path=pathlib.PurePath('nations', 'train.txt'), cache_root=cache_root)
 
     def _get_path(self) -> str:
-        return os.path.join(constants.RESOURCES, 'nations.tar.gz')
+        return constants.RESOURCES.joinpath('nations.tar.gz')
 
 
 class MockTarFileRemoteDataset(TarFileRemoteDataset):

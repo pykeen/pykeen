@@ -664,7 +664,8 @@ class TarFileSingleDataset(LazyDataset):
                 _actual_path,
             )
             with tarfile.open(self._get_path()) as tar_file:
-                tar_file.extract(self._relative_path, self.cache_root)
+                # tarfile does not like pathlib
+                tar_file.extract(str(self._relative_path), self.cache_root)
 
         df = pd.read_csv(_actual_path, sep=self.delimiter)
         tf_path = self._get_path()
