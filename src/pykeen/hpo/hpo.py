@@ -568,7 +568,7 @@ def hpo_pipeline(
     :param filter_validation_when_testing:
         If true, during the evaluating of the test dataset, validation triples are added to the set of known positive
         triples, which are filtered out when performing filtered evaluation following the approach described by
-        (Bordes et al., 2013). Defaults to true.
+        [bordes2013]_. Defaults to true.
 
     :param result_tracker:
         The ResultsTracker class or name
@@ -664,7 +664,7 @@ def hpo_pipeline(
     if filter_validation_when_testing is None:
         filter_validation_when_testing = True
     study.set_user_attr('filter_validation_when_testing', filter_validation_when_testing)
-    logger.info(f'Filter validation triples when testing: {filter_validation_when_testing}')
+    logger.info('Filter validation triples when testing: %s', filter_validation_when_testing)
 
     # 9. Tracking
     result_tracker_cls: Type[ResultTracker] = tracker_resolver.lookup(result_tracker)
