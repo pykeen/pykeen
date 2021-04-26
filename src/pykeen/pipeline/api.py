@@ -1019,14 +1019,20 @@ def pipeline(  # noqa: C901
         mapped_triples = validation.mapped_triples
 
     # Build up a list of triples
-    additional_filter_triples = [
+    additional_filter_triples: List[MappedTriples] = [
         training.mapped_triples,
     ]
 
     # If the user gave custom "additional_filter_triples"
-    ek_aft = evaluation_kwargs.pop('additional_filter_triples', None)
-    if ek_aft is not None:
-        additional_filter_triples.append(ek_aft)
+    popped_additional_filter_triples = evaluation_kwargs.pop('additional_filter_triples', None)
+    if popped_additional_filter_triples is None:
+        pass
+    elif isinstance(popped_additional_filter_triples, (list, tuple)):
+        additional_filter_triples.extend(popped_additional_filter_triples)
+    elif torch.is_tensor(popped_additional_filter_triples):  # a single MappedTriple
+        additional_filter_triples.append(popped_additional_filter_triples)
+    else:
+        raise TypeError(f'Invalid type `for additional_filter_triples`: {type(popped_additional_filter_triples)}')
 
     # Determine whether the validation triples should also be filtered while performing test evaluation
     if (
