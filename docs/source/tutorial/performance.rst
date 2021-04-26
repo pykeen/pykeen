@@ -150,3 +150,18 @@ automatic memory optimization determines the maximum sub-batch size for training
 above described process :ref:`sub_batching`. The batch sizes are determined using binary search taking into
 consideration the `CUDA architecture <https://developer.download.nvidia.com/video/gputechconf/gtc/2019/presentation/s9926-tensor-core-performance-the-ultimate-guide.pdf>`_
 which ensures that the chosen batch size is the most CUDA efficient one.
+
+Evaluation Fallback
+-------------------
+Usually the evaluation is performed on the GPU for faster speeds. In addition, users might choose a batch size upfront
+in their evaluation configuration to fully utilize the GPU to achieve the fastest evaluation speeds possible.
+However, during larger setups testing different model configurations and dataset partitions such as e.g. HPO the
+hardware requirements might change drastically, which might cause that the evaluation no longer can be run with the
+pre-set batch size or not on the GPU at all for larger datasets and memory intense models.
+Since PyKEEN will abide by the user configurations, the evaluation will crash in these cases even though the training
+finished successfully and thus loose the progress achieved and/or leave trials unfinished.
+Given that the batch size and the device have no impact on the evaluation results, PyKEEN offers a way to overcome this
+problem through the evaluation fallback option of the pipeline. This will cause the evaluation to fall back to using a
+smaller batch size in cases where the evaluation failed using the GPU with a set batch size and in the last instance to
+evaluate on the CPU, if even the smallest possible batch size is too big for the GPU.
+Note: This can lead to significantly longer evaluation times in cases where the evaluation falls back to using the CPU.

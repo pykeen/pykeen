@@ -5,7 +5,7 @@ Negative Sampling
     :headings: --
 
 Filtering
----------
+=========
 .. automodapi:: pykeen.sampling.filtering
     :no-heading:
     :headings: --

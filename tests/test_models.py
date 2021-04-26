@@ -14,9 +14,10 @@ import unittest_templates
 import pykeen.experiments
 import pykeen.models
 from pykeen.models import (
-    ERModel, EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, MultimodalModel, _MODELS,
+    ERModel, EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, _MODELS,
     _NewAbstractModel, _OldAbstractModel, model_resolver,
 )
+from pykeen.models.multimodal.base import LiteralModel
 from pykeen.models.predict import get_novelty_mask, predict
 from pykeen.models.unimodal.trans_d import _project_entity
 from pykeen.nn import EmbeddingSpecification
@@ -32,15 +33,13 @@ SKIP_MODULES = {
     _OldAbstractModel,
     _NewAbstractModel,
     # DummyModel,
-    MultimodalModel,
+    LiteralModel,
     EntityEmbeddingModel,
     EntityRelationEmbeddingModel,
     ERModel,
     MockModel,
     SimpleInteractionModel,
-}
-for cls in MultimodalModel.__subclasses__():
-    SKIP_MODULES.add(cls)
+} | set(LiteralModel.__subclasses__())
 
 
 class TestCompGCN(cases.ModelTestCase):
@@ -705,7 +704,6 @@ class TestModelUtilities(unittest.TestCase):
         """Test that classes are checked as abstract properly."""
         self.assertTrue(EntityEmbeddingModel._is_base_model)
         self.assertTrue(EntityRelationEmbeddingModel._is_base_model)
-        self.assertTrue(MultimodalModel._is_base_model)
         for cls in _MODELS:
             self.assertFalse(
                 cls._is_base_model,
