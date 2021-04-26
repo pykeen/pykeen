@@ -1035,6 +1035,7 @@ def pipeline(  # noqa: C901
                 'there were already `additional_filter_triples` in the evaluation arguments,'
                 ' so the custom ones will be concatenated',
             )
+            # TODO consider implications of duplicates
             evaluation_kwargs['additional_filter_triples'] = torch.cat(
                 [evaluation_kwargs['additional_filter_triples'], additional_filter_triples],
                 dim=0,
