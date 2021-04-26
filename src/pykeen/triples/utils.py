@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Instance creation utilities."""
-
+import pathlib
 from typing import Callable, Mapping, Optional, Sequence, Set, TextIO, Union
 
 import numpy as np
@@ -31,7 +31,7 @@ EXTENSION_IMPORTERS: Mapping[str, Callable[[str], LabeledTriples]] = _load_impor
 
 
 def load_triples(
-    path: Union[str, TextIO],
+    path: Union[str, pathlib.Path, TextIO],
     delimiter: str = '\t',
     encoding: Optional[str] = None,
     column_remapping: Optional[Sequence[int]] = None,
@@ -54,7 +54,8 @@ def load_triples(
     - :mod:`pybel.io.pykeen`
     - :mod:`bio2bel.io.pykeen`
     """
-    if isinstance(path, str):
+    if isinstance(path, (str, pathlib.Path)):
+        path = str(path)
         for extension, handler in EXTENSION_IMPORTERS.items():
             if path.endswith(f'.{extension}'):
                 return handler(path)
