@@ -11,6 +11,7 @@ import pandas as pd
 import torch
 
 from .base import Model
+from ..triples import TriplesFactory
 from ..typing import MappedTriples, ScorePack
 
 __all__ = [
@@ -28,6 +29,8 @@ def get_head_prediction_df(
     model: Model,
     relation_label: str,
     tail_label: str,
+    *,
+    triples_factory: TriplesFactory,
     add_novelties: bool = True,
     remove_known: bool = False,
     testing: Optional[torch.LongTensor] = None,
@@ -37,6 +40,7 @@ def get_head_prediction_df(
     :param model: A PyKEEN model
     :param relation_label: The string label for the relation
     :param tail_label: The string label for the tail entity
+    :param triples_factory: Training triples factory
     :param add_novelties: Should the dataframe include a column denoting if the ranked head entities correspond
         to novel triples?
     :param remove_known: Should non-novel triples (those appearing in the training set) be shown with the results?
@@ -58,17 +62,17 @@ def get_head_prediction_df(
     ...     dataset='Nations',
     ...     model='RotatE',
     ... )
-    >>> df = get_head_prediction_df(result.model, 'accusation', 'brazil')
+    >>> df = get_head_prediction_df(result.model, 'accusation', 'brazil', triples_factory=result.training)
     """
-    tail_id = model.triples_factory.entity_to_id[tail_label]
-    relation_id = model.triples_factory.relation_to_id[relation_label]
+    tail_id = triples_factory.entity_to_id[tail_label]
+    relation_id = triples_factory.relation_to_id[relation_label]
     rt_batch = torch.as_tensor([[relation_id, tail_id]], dtype=torch.long, device=model.device)
     scores = model.predict_h(rt_batch)
     scores = scores[0, :].tolist()
     rv = pd.DataFrame(
         [
             (entity_id, entity_label, scores[entity_id])
-            for entity_label, entity_id in model.triples_factory.entity_to_id.items()
+            for entity_label, entity_id in triples_factory.entity_to_id.items()
         ],
         columns=['head_id', 'head_label', 'score'],
     ).sort_values('score', ascending=False)
@@ -77,7 +81,7 @@ def get_head_prediction_df(
         df=rv,
         add_novelties=add_novelties,
         remove_known=remove_known,
-        training=model.triples_factory.mapped_triples,
+        training=triples_factory.mapped_triples,
         testing=testing,
         query_ids_key='head_id',
         col=0,
@@ -90,6 +94,7 @@ def get_tail_prediction_df(
     head_label: str,
     relation_label: str,
     *,
+    triples_factory: TriplesFactory,
     add_novelties: bool = True,
     remove_known: bool = False,
     testing: Optional[torch.LongTensor] = None,
@@ -99,6 +104,7 @@ def get_tail_prediction_df(
     :param model: A PyKEEN model
     :param head_label: The string label for the head entity
     :param relation_label: The string label for the relation
+    :param triples_factory: Training triples factory
     :param add_novelties: Should the dataframe include a column denoting if the ranked tail entities correspond
         to novel triples?
     :param remove_known: Should non-novel triples (those appearing in the training set) be shown with the results?
@@ -120,17 +126,17 @@ def get_tail_prediction_df(
     ...     dataset='Nations',
     ...     model='RotatE',
     ... )
-    >>> df = get_tail_prediction_df(result.model, 'brazil', 'accusation')
+    >>> df = get_tail_prediction_df(result.model, 'brazil', 'accusation', triples_factory=result.training)
     """
-    head_id = model.triples_factory.entity_to_id[head_label]
-    relation_id = model.triples_factory.relation_to_id[relation_label]
+    head_id = triples_factory.entity_to_id[head_label]
+    relation_id = triples_factory.relation_to_id[relation_label]
     batch = torch.as_tensor([[head_id, relation_id]], dtype=torch.long, device=model.device)
     scores = model.predict_t(batch)
     scores = scores[0, :].tolist()
     rv = pd.DataFrame(
         [
             (entity_id, entity_label, scores[entity_id])
-            for entity_label, entity_id in model.triples_factory.entity_to_id.items()
+            for entity_label, entity_id in triples_factory.entity_to_id.items()
         ],
         columns=['tail_id', 'tail_label', 'score'],
     ).sort_values('score', ascending=False)
@@ -140,7 +146,7 @@ def get_tail_prediction_df(
         add_novelties=add_novelties,
         remove_known=remove_known,
         testing=testing,
-        training=model.triples_factory.mapped_triples,
+        training=triples_factory.mapped_triples,
         query_ids_key='tail_id',
         col=2,
         other_col_ids=(head_id, relation_id),
@@ -151,6 +157,8 @@ def get_relation_prediction_df(
     model: Model,
     head_label: str,
     tail_label: str,
+    *,
+    triples_factory: TriplesFactory,
     add_novelties: bool = True,
     remove_known: bool = False,
     testing: Optional[torch.LongTensor] = None,
@@ -160,6 +168,7 @@ def get_relation_prediction_df(
     :param model: A PyKEEN model
     :param head_label: The string label for the head entity
     :param tail_label: The string label for the tail entity
+    :param triples_factory: Training triples factory
     :param add_novelties: Should the dataframe include a column denoting if the ranked relations correspond
         to novel triples?
     :param remove_known: Should non-novel triples (those appearing in the training set) be shown with the results?
@@ -181,17 +190,17 @@ def get_relation_prediction_df(
     ...     dataset='Nations',
     ...     model='RotatE',
     ... )
-    >>> df = get_relation_prediction_df(result.model, 'brazil', 'uk')
+    >>> df = get_relation_prediction_df(result.model, 'brazil', 'uk', triples_factory=result.training)
     """
-    head_id = model.triples_factory.entity_to_id[head_label]
-    tail_id = model.triples_factory.entity_to_id[tail_label]
+    head_id = triples_factory.entity_to_id[head_label]
+    tail_id = triples_factory.entity_to_id[tail_label]
     batch = torch.as_tensor([[head_id, tail_id]], dtype=torch.long, device=model.device)
     scores = model.predict_r(batch)
     scores = scores[0, :].tolist()
     rv = pd.DataFrame(
         [
             (relation_id, relation_label, scores[relation_id])
-            for relation_label, relation_id in model.triples_factory.relation_to_id.items()
+            for relation_label, relation_id in triples_factory.relation_to_id.items()
         ],
         columns=['relation_id', 'relation_label', 'score'],
     ).sort_values('score', ascending=False)
@@ -201,7 +210,7 @@ def get_relation_prediction_df(
         add_novelties=add_novelties,
         remove_known=remove_known,
         testing=testing,
-        training=model.triples_factory.mapped_triples,
+        training=triples_factory.mapped_triples,
         query_ids_key='relation_id',
         col=1,
         other_col_ids=(head_id, tail_id),
@@ -211,6 +220,7 @@ def get_relation_prediction_df(
 def get_all_prediction_df(
     model: Model,
     *,
+    triples_factory: TriplesFactory,
     k: Optional[int] = None,
     batch_size: int = 1,
     return_tensors: bool = False,
@@ -224,6 +234,7 @@ def get_all_prediction_df(
     .. warning:: Setting k=None may lead to huge memory requirements.
 
     :param model: A PyKEEN model
+    :param triples_factory: Training triples factory
     :param k: The number of triples to return. Set to ``None`` to keep all.
     :param batch_size: The batch size to use for calculating scores
     :param return_tensors: If true, only return tensors. If false (default), return as a pandas DataFrame
@@ -251,21 +262,21 @@ def get_all_prediction_df(
         model = result.model
 
         # Get scores for *all* triples
-        df = get_all_prediction_df(model)
+        df = get_all_prediction_df(model, triples_factory=result.training)
 
         # Get scores for top 15 triples
-        top_df = get_all_prediction_df(model, k=15)
+        top_df = get_all_prediction_df(model, k=15, triples_factory=result.training)
     """
     score_pack = predict(model=model, k=k, batch_size=batch_size)
     if return_tensors:
         return score_pack
 
-    df = model.triples_factory.tensor_to_df(score_pack.result, score=score_pack.scores)
+    df = triples_factory.tensor_to_df(score_pack.result, score=score_pack.scores)
     return _postprocess_prediction_all_df(
         df=df,
         add_novelties=add_novelties,
         remove_known=remove_known,
-        training=model.triples_factory.mapped_triples,
+        training=triples_factory.mapped_triples,
         testing=testing,
     )
 

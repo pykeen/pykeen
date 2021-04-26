@@ -48,9 +48,6 @@ class Model(nn.Module, ABC):
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]]
 
-    #: A triples factory with the training triples
-    triples_factory: TriplesFactory
-
     #: The device on which this model and its submodules are stored
     device: torch.device
 
@@ -85,8 +82,6 @@ class Model(nn.Module, ABC):
             The preferred device for model training and inference.
         :param random_seed:
             A random seed to use for initialising the model's weights. **Should** be set when aiming at reproducibility.
-        :param regularizer:
-            A regularizer to use for training.
         """
         super().__init__()
 
@@ -107,8 +102,6 @@ class Model(nn.Module, ABC):
         else:
             self.loss = loss
 
-        # The triples factory facilitates access to the dataset.
-        self.triples_factory = triples_factory
         self._create_inverse_triples = triples_factory.create_inverse_triples
         self._num_entities = triples_factory.num_entities
         self._num_relations = triples_factory.num_relations
@@ -459,7 +452,7 @@ class Model(nn.Module, ABC):
         ...     dataset='Nations',
         ...     model='RotatE',
         ... )
-        >>> df = result.model.get_head_prediction_df('accusation', 'brazil')
+        >>> df = result.model.get_head_prediction_df('accusation', 'brazil', triples_factory=result.training)
         """
         from .predict import get_head_prediction_df
         warnings.warn('Use pykeen.models.predict.get_head_prediction_df', DeprecationWarning)
@@ -501,7 +494,7 @@ class Model(nn.Module, ABC):
         ...     dataset='Nations',
         ...     model='RotatE',
         ... )
-        >>> df = result.model.get_tail_prediction_df('brazil', 'accusation')
+        >>> df = result.model.get_tail_prediction_df('brazil', 'accusation', triples_factory=result.training)
         """
         from .predict import get_tail_prediction_df
         warnings.warn('Use pykeen.models.predict.get_tail_prediction_df', DeprecationWarning)
