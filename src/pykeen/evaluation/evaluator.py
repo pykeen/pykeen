@@ -178,8 +178,8 @@ class Evaluator(ABC):
 
         rv = evaluate(
             model=model,
-            mapped_triples=mapped_triples,
             additional_filtered_triples=additional_filter_triples,
+            mapped_triples=mapped_triples,
             evaluators=self,
             batch_size=batch_size,
             slice_size=slice_size,
