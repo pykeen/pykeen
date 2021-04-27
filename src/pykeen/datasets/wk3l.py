@@ -31,7 +31,12 @@ GRAPH_PAIRS = ("en_fr", "en_de")
 class WK3l15k(LazyDataset):
     """The WK3l-15k dataset family.
 
-    The datasets were first described in https://www.ijcai.org/Proceedings/2017/0209.pdf.
+    ---
+    name: WK3l-15k Family
+    citation:
+        author: Chen
+        year: 2017
+        link: https://www.ijcai.org/Proceedings/2017/0209.pdf
     """
 
     ratios = (0.8, 0.1, 0.1)
