@@ -1020,43 +1020,51 @@ def pipeline(  # noqa: C901
     else:
         mapped_triples = validation.mapped_triples
 
-    # Build up a list of triples
-    additional_filter_triples: List[MappedTriples] = [
-        training.mapped_triples,
-    ]
+    # Build up a list of triples if we want to be in the filtered setting
+    if evaluator_instance.filtered:
+        additional_filter_triples: List[MappedTriples] = [
+            training.mapped_triples,
+        ]
 
-    # If the user gave custom "additional_filter_triples"
-    popped_additional_filter_triples = evaluation_kwargs.pop('additional_filter_triples', None)
-    if popped_additional_filter_triples is None:
-        pass
-    elif isinstance(popped_additional_filter_triples, (list, tuple)):
-        additional_filter_triples.extend(popped_additional_filter_triples)
-    elif torch.is_tensor(popped_additional_filter_triples):  # a single MappedTriple
-        additional_filter_triples.append(popped_additional_filter_triples)
-    else:
-        raise TypeError(
-            f'Invalid type for `evaluation_kwargs["additional_filter_triples"]`:'
-            f' {type(popped_additional_filter_triples)}',
-        )
+        # If the user gave custom "additional_filter_triples"
+        popped_additional_filter_triples = evaluation_kwargs.pop('additional_filter_triples', None)
+        if popped_additional_filter_triples is None:
+            pass
+        elif isinstance(popped_additional_filter_triples, (list, tuple)):
+            additional_filter_triples.extend(popped_additional_filter_triples)
+        elif torch.is_tensor(popped_additional_filter_triples):  # a single MappedTriple
+            additional_filter_triples.append(popped_additional_filter_triples)
+        else:
+            raise TypeError(
+                f'Invalid type for `evaluation_kwargs["additional_filter_triples"]`:'
+                f' {type(popped_additional_filter_triples)}',
+            )
 
-    # Determine whether the validation triples should also be filtered while performing test evaluation
-    if (
-        evaluator_instance.filtered
-        and use_testing_data
-        and filter_validation_when_testing
-        and validation is not None
-    ):
-        logging.info(
-            "When evaluating the test dataset, validation triples are added to the set of known positive triples"
-            " which are filtered out when performing filtered evaluation following the approach described by"
-            " (Bordes et al., 2013).",
-        )
-        additional_filter_triples.append(validation.mapped_triples)
-    elif evaluator_instance.filtered and isinstance(stopper, EarlyStopper):
-        additional_filter_triples.append(validation.mapped_triples)
+        # Determine whether the validation triples should also be filtered while performing test evaluation
+        if (
+            use_testing_data
+            and filter_validation_when_testing
+            and validation is not None
+        ):
+            logging.info(
+                "When evaluating the test dataset, validation triples are added to the set of known positive triples"
+                " which are filtered out when performing filtered evaluation following the approach described by"
+                " (Bordes et al., 2013).",
+            )
+            additional_filter_triples.append(validation.mapped_triples)
+        elif (
+            isinstance(stopper, EarlyStopper)
+            and validation is not None
+        ):
+            logging.info(
+                "When evaluating the test dataset after running the pipeline with earl stopping, the validation triples"
+                " are added to the set of known positive triples which are filtered out when performing filtered"
+                " evaluation following the approach described by (Bordes et al., 2013).",
+            )
+            additional_filter_triples.append(validation.mapped_triples)
 
-    # TODO consider implications of duplicates
-    evaluation_kwargs['additional_filter_triples'] = additional_filter_triples
+        # TODO consider implications of duplicates
+        evaluation_kwargs['additional_filter_triples'] = additional_filter_triples
 
     # Evaluate
     # Reuse optimal evaluation parameters from training if available, only if the validation triples are used again
