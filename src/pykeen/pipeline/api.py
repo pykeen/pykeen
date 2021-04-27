@@ -195,7 +195,7 @@ from ..sampling import NegativeSampler, negative_sampler_resolver
 from ..stoppers import EarlyStopper, Stopper, stopper_resolver
 from ..trackers import ResultTracker, tracker_resolver
 from ..training import SLCWATrainingLoop, TrainingLoop, training_loop_resolver
-from ..triples import TriplesFactory
+from ..triples import CoreTriplesFactory
 from ..typing import Hint, HintType, MappedTriples
 from ..utils import (
     Result, ensure_ftp_directory, fix_dataclass_init_docs, get_json_bytes_io, get_model_io, random_non_negative_int,
@@ -226,7 +226,8 @@ class PipelineResult(Result):
     #: The model trained by the pipeline
     model: Model
 
-    training: TriplesFactory
+    #: The training triples
+    training: CoreTriplesFactory
 
     #: The training loop used by the pipeline
     training_loop: TrainingLoop
@@ -621,9 +622,9 @@ def pipeline(  # noqa: C901
     # 1. Dataset
     dataset: Union[None, str, Dataset, Type[Dataset]] = None,
     dataset_kwargs: Optional[Mapping[str, Any]] = None,
-    training: Hint[TriplesFactory] = None,
-    testing: Hint[TriplesFactory] = None,
-    validation: Hint[TriplesFactory] = None,
+    training: Hint[CoreTriplesFactory] = None,
+    testing: Hint[CoreTriplesFactory] = None,
+    validation: Hint[CoreTriplesFactory] = None,
     evaluation_entity_whitelist: Optional[Collection[str]] = None,
     evaluation_relation_whitelist: Optional[Collection[str]] = None,
     # 2. Model
@@ -1044,7 +1045,7 @@ def pipeline(  # noqa: C901
 
 def _safe_evaluate(
     model: Model,
-    training_triples_factory: TriplesFactory,
+    training_triples_factory: CoreTriplesFactory,
     mapped_triples: MappedTriples,
     evaluator: Evaluator,
     evaluation_kwargs: Dict[str, Any],
