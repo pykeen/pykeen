@@ -9,6 +9,7 @@ from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from dataclasses import dataclass
 from math import ceil
+from textwrap import dedent
 from typing import Any, Collection, Iterable, List, Mapping, Optional, Tuple, Union, cast
 
 import numpy as np
@@ -568,14 +569,19 @@ def evaluate(
     # Prepare for result filtering
     if filtering_necessary or positive_masks_required:
         if additional_filtered_triples is None:
-            logger.warning(
-                'Filtered setting was enabled, but there were no `additional_filtered_triples`.'
-                ' This means you probably forgot to pass (at least) the training triples.'
-                ' Try:\n\n\tadditional_filtered_triples=[dataset.training.mapped_triples]\n\n'
-                'Or if you want to use the Bordes et al. (2013) approach to filtering,'
-                ' do:\n\n\tadditional_filtered_triples=[dataset.training.mapped_triples,'
-                ' dataset.validation.mapped_triples]\n',
-            )
+            logger.warning(dedent('''\
+                The filtered setting was enabled, but there were no `additional_filtered_triples`
+                given. This means you probably forgot to pass (at least) the training triples. Try:
+
+                    additional_filtered_triples=[dataset.training.mapped_triples]
+
+                Or if you want to use the Bordes et al. (2013) approach to filtering, do:
+
+                    additional_filtered_triples=[
+                        dataset.training.mapped_triples,
+                        dataset.validation.mapped_triples,
+                    ]
+                '''))
             all_pos_triples = mapped_triples
         elif isinstance(additional_filtered_triples, (list, tuple)):
             all_pos_triples = torch.cat([*additional_filtered_triples, mapped_triples], dim=0)
