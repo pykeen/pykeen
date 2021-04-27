@@ -976,7 +976,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
             msg=f'''
 Command
 =======
-$ pykeen train {self.cls.__name__.lower()} {' '.join(args)}
+$ pykeen train {self.cls.__name__.lower()} {' '.join(map(str, args))}
 
 Output
 ======
