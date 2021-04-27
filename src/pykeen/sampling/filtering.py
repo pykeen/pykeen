@@ -116,7 +116,7 @@ First, there are no choices between an exact or approximate algorithm via a
 :class:`pykeen.sampling.filtering.Filterer`. Instead, the evaluation filtering can modify the
 scores in-place and does so instead of selecting only the non-filtered entries. The reason is
 mainly that evaluation always is done in 1:n scoring, and thus, we gain some efficiently here
-by keeping the tensor in "dense" shape (batch_size, num_entities).
+by keeping the tensor in "dense" shape ``(batch_size, num_entities)``.
 
 Second, filtering during evaluation has to be correct, and is crucial for reproducing results
 from the filtered setting. For evaluation it makes sense to use all information we have to get
