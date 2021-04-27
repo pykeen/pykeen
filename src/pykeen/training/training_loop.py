@@ -151,7 +151,7 @@ class TrainingLoop(ABC):
 
     def train(
         self,
-        triples_factory: TriplesFactory,
+        triples_factory: CoreTriplesFactory,
         num_epochs: int = 1,
         batch_size: Optional[int] = None,
         slice_size: Optional[int] = None,
@@ -320,7 +320,7 @@ class TrainingLoop(ABC):
 
     def _train(  # noqa: C901
         self,
-        triples_factory: TriplesFactory,
+        triples_factory: CoreTriplesFactory,
         num_epochs: int = 1,
         batch_size: Optional[int] = None,
         slice_size: Optional[int] = None,
@@ -671,7 +671,7 @@ class TrainingLoop(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def _create_instances(self, triples_factory: TriplesFactory) -> Instances:
+    def _create_instances(self, triples_factory: CoreTriplesFactory) -> Instances:
         """Create the training instances at the beginning of the training loop."""
         raise NotImplementedError
 
@@ -690,7 +690,7 @@ class TrainingLoop(ABC):
     def batch_size_search(
         self,
         *,
-        triples_factory: TriplesFactory,
+        triples_factory: CoreTriplesFactory,
         batch_size: Optional[int] = None,
     ) -> Tuple[int, bool]:
         """Find the maximum batch size for training with the current setting.
@@ -761,7 +761,7 @@ class TrainingLoop(ABC):
         *,
         batch_size: int,
         sampler: Optional[str],
-        triples_factory: TriplesFactory,
+        triples_factory: CoreTriplesFactory,
     ) -> Tuple[int, Optional[int]]:
         """Check if sub-batching and/or slicing is necessary to train the model on the hardware at hand."""
         sub_batch_size, finished_search, supports_sub_batching = self._sub_batch_size_search(
@@ -785,7 +785,7 @@ class TrainingLoop(ABC):
     def _slice_size_search(
         self,
         *,
-        triples_factory: TriplesFactory,
+        triples_factory: CoreTriplesFactory,
         batch_size: int,
         sub_batch_size: int,
         supports_sub_batching: bool,
@@ -816,7 +816,7 @@ class TrainingLoop(ABC):
         *,
         batch_size: int,
         sampler: Optional[str],
-        triples_factory: TriplesFactory,
+        triples_factory: CoreTriplesFactory,
     ) -> Tuple[int, bool, bool]:
         """Find the allowable sub batch size for training with the current setting.
 

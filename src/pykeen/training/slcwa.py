@@ -73,7 +73,7 @@ class SLCWATrainingLoop(TrainingLoop):
         """
         return self.negative_sampler.num_negs_per_pos
 
-    def _create_instances(self, triples_factory: TriplesFactory) -> Instances:  # noqa: D102
+    def _create_instances(self, triples_factory: CoreTriplesFactory) -> Instances:  # noqa: D102
         return triples_factory.create_slcwa_instances()
 
     @staticmethod
@@ -171,7 +171,7 @@ class SLCWATrainingLoop(TrainingLoop):
     def _slice_size_search(
         self,
         *,
-        triples_factory: TriplesFactory,
+        triples_factory: CoreTriplesFactory,
         batch_size: int,
         sub_batch_size: int,
         supports_sub_batching: bool,
