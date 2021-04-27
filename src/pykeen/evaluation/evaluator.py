@@ -83,7 +83,7 @@ class Evaluator(ABC):
         :param batch_size: >0. Evaluation batch size.
         :param slice_size: >0. The divisor for the scoring function when using slicing
         :param automatic_memory_optimization: Whether to automatically optimize the sub-batch size during
-            batch size during evaluation with regards to the hardware at hand.
+            evaluation with regards to the hardware at hand.
         """
         self.filtered = filtered
         self.requires_positive_mask = requires_positive_mask
