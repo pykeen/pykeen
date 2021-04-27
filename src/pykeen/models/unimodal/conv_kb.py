@@ -15,7 +15,7 @@ from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDD
 from ...losses import Loss
 from ...nn.emb import EmbeddingSpecification
 from ...regularizers import LpRegularizer, Regularizer
-from ...triples import TriplesFactory
+from ...triples import CoreTriplesFactory
 from ...typing import DeviceHint, Hint, Initializer
 
 __all__ = [
@@ -82,7 +82,7 @@ class ConvKB(EntityRelationEmbeddingModel):
 
     def __init__(
         self,
-        triples_factory: TriplesFactory,
+        triples_factory: CoreTriplesFactory,
         hidden_dropout_rate: float = 0.,
         embedding_dim: int = 200,
         loss: Optional[Loss] = None,

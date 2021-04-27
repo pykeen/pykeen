@@ -23,7 +23,7 @@ from .init import init_phases, xavier_normal_, xavier_normal_norm_, xavier_unifo
 from .message_passing import Decomposition, decomposition_resolver
 from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolver
 from ..regularizers import Regularizer
-from ..triples import CoreTriplesFactory, TriplesFactory
+from ..triples import CoreTriplesFactory
 from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer
 from ..utils import Bias, activation_resolver, clamp_norm, complex_normalize, convert_to_canonical_shape
 
@@ -469,7 +469,7 @@ class RGCNRepresentations(RepresentationModule):
 
     def __init__(
         self,
-        triples_factory: TriplesFactory,
+        triples_factory: CoreTriplesFactory,
         embedding_specification: EmbeddingSpecification,
         num_layers: int = 2,
         use_bias: bool = True,
@@ -763,10 +763,10 @@ class CompGCNLayer(nn.Module):
         edge_type = 2 * edge_type
         # update entity representations: mean over self-loops / forward edges / backward edges
         x_e = (
-            self.composition(x_e, self.self_loop) @ self.w_loop
-            + self.message(x_e=x_e, x_r=x_r, edge_index=edge_index, edge_type=edge_type, weight=self.w_fwd)
-            + self.message(x_e=x_e, x_r=x_r, edge_index=edge_index.flip(0), edge_type=edge_type + 1, weight=self.w_bwd)
-        ) / 3
+                  self.composition(x_e, self.self_loop) @ self.w_loop
+                  + self.message(x_e=x_e, x_r=x_r, edge_index=edge_index, edge_type=edge_type, weight=self.w_fwd)
+                  + self.message(x_e=x_e, x_r=x_r, edge_index=edge_index.flip(0), edge_type=edge_type + 1, weight=self.w_bwd)
+              ) / 3
 
         if self.bias:
             x_e = self.bias(x_e)

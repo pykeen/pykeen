@@ -13,7 +13,7 @@ from .utils import apply_label_smoothing
 from ..losses import CrossEntropyLoss
 from ..models import Model
 from ..sampling import BasicNegativeSampler, NegativeSampler
-from ..triples import Instances, TriplesFactory
+from ..triples import CoreTriplesFactory, Instances
 from ..typing import MappedTriples
 
 __all__ = [
@@ -32,7 +32,7 @@ class SLCWATrainingLoop(TrainingLoop):
     def __init__(
         self,
         model: Model,
-        triples_factory: TriplesFactory,
+        triples_factory: CoreTriplesFactory,
         optimizer: Optional[Optimizer] = None,
         negative_sampler_cls: Optional[Type[NegativeSampler]] = None,
         negative_sampler_kwargs: Optional[Mapping[str, Any]] = None,

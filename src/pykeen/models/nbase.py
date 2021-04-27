@@ -19,7 +19,7 @@ from ..losses import Loss
 from ..nn.emb import EmbeddingSpecification, RepresentationModule
 from ..nn.modules import Interaction, interaction_resolver
 from ..regularizers import Regularizer
-from ..triples import TriplesFactory
+from ..triples import CoreTriplesFactory, TriplesFactory
 from ..typing import DeviceHint, HeadRepresentation, RelationRepresentation, TailRepresentation
 from ..utils import check_shapes
 
@@ -327,7 +327,7 @@ class ERModel(
     def __init__(
         self,
         *,
-        triples_factory: TriplesFactory,
+        triples_factory: CoreTriplesFactory,
         interaction: Hint[Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]],
         interaction_kwargs: Optional[Mapping[str, Any]] = None,
         entity_representations: EmbeddingSpecificationHint = None,

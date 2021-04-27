@@ -25,7 +25,7 @@ from ..models import Model, RGCN
 from ..stoppers import Stopper
 from ..trackers import ResultTracker
 from ..training.schlichtkrull_sampler import GraphSampler
-from ..triples import Instances, TriplesFactory
+from ..triples import CoreTriplesFactory, Instances
 from ..typing import MappedTriples
 from ..utils import (
     format_relative_comparison, get_batchnorm_modules, is_cuda_oom_error, is_cudnn_error,
@@ -93,7 +93,7 @@ class TrainingLoop(ABC):
     def __init__(
         self,
         model: Model,
-        triples_factory: TriplesFactory,
+        triples_factory: CoreTriplesFactory,
         optimizer: Optional[Optimizer] = None,
         automatic_memory_optimization: bool = True,
     ) -> None:

@@ -19,7 +19,7 @@ from torch import nn
 from ..losses import Loss, MarginRankingLoss
 from ..nn.emb import Embedding, EmbeddingSpecification
 from ..regularizers import NoRegularizer, Regularizer
-from ..triples import TriplesFactory
+from ..triples import CoreTriplesFactory, TriplesFactory
 from ..typing import DeviceHint, ScorePack
 from ..utils import NoRandomSeedNecessary, _can_slice, extend_batch, resolve_device, set_random_seed
 
@@ -62,7 +62,7 @@ class Model(nn.Module, ABC):
 
     def __init__(
         self,
-        triples_factory: TriplesFactory,
+        triples_factory: CoreTriplesFactory,
         loss: Optional[Loss] = None,
         predict_with_sigmoid: bool = False,
         preferred_device: DeviceHint = None,
@@ -546,7 +546,7 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
 
     def __init__(
         self,
-        triples_factory: TriplesFactory,
+        triples_factory: CoreTriplesFactory,
         loss: Optional[Loss] = None,
         predict_with_sigmoid: bool = False,
         preferred_device: DeviceHint = None,
@@ -704,7 +704,7 @@ class EntityEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
 
     def __init__(
         self,
-        triples_factory: TriplesFactory,
+        triples_factory: CoreTriplesFactory,
         entity_representations: EmbeddingSpecification,
         loss: Optional[Loss] = None,
         predict_with_sigmoid: bool = False,
@@ -753,7 +753,7 @@ class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
 
     def __init__(
         self,
-        triples_factory: TriplesFactory,
+        triples_factory: CoreTriplesFactory,
         entity_representations: EmbeddingSpecification,
         relation_representations: EmbeddingSpecification,
         loss: Optional[Loss] = None,

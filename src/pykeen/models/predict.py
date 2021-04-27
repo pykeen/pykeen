@@ -11,7 +11,7 @@ import pandas as pd
 import torch
 
 from .base import Model
-from ..triples import TriplesFactory
+from ..triples import CoreTriplesFactory, TriplesFactory
 from ..typing import MappedTriples, ScorePack
 
 __all__ = [
@@ -30,7 +30,7 @@ def get_head_prediction_df(
     relation_label: str,
     tail_label: str,
     *,
-    triples_factory: TriplesFactory,
+    triples_factory: CoreTriplesFactory,
     add_novelties: bool = True,
     remove_known: bool = False,
     testing: Optional[torch.LongTensor] = None,
@@ -94,7 +94,7 @@ def get_tail_prediction_df(
     head_label: str,
     relation_label: str,
     *,
-    triples_factory: TriplesFactory,
+    triples_factory: CoreTriplesFactory,
     add_novelties: bool = True,
     remove_known: bool = False,
     testing: Optional[torch.LongTensor] = None,
@@ -158,7 +158,7 @@ def get_relation_prediction_df(
     head_label: str,
     tail_label: str,
     *,
-    triples_factory: TriplesFactory,
+    triples_factory: CoreTriplesFactory,
     add_novelties: bool = True,
     remove_known: bool = False,
     testing: Optional[torch.LongTensor] = None,
@@ -220,7 +220,7 @@ def get_relation_prediction_df(
 def get_all_prediction_df(
     model: Model,
     *,
-    triples_factory: TriplesFactory,
+    triples_factory: CoreTriplesFactory,
     k: Optional[int] = None,
     batch_size: int = 1,
     return_tensors: bool = False,
