@@ -128,7 +128,12 @@ class TrainingLoopTests(unittest.TestCase):
             sub_batch_size=self.sub_batch_size,
             automatic_memory_optimization=False,
         )
-        training_loop.train(num_epochs=1, batch_size=self.batch_size, sub_batch_size=self.sub_batch_size)
+        training_loop.train(
+            triples_factory=self.triples_factory,
+            num_epochs=1,
+            batch_size=self.batch_size,
+            sub_batch_size=self.sub_batch_size,
+        )
 
     def test_sub_batching_support(self):
         """Test if sub-batching works as expected."""
@@ -142,7 +147,12 @@ class TrainingLoopTests(unittest.TestCase):
 
         def _try_train():
             """Call train method."""
-            training_loop.train(num_epochs=1, batch_size=self.batch_size, sub_batch_size=self.sub_batch_size)
+            training_loop.train(
+                triples_factory=self.triples_factory,
+                num_epochs=1,
+                batch_size=self.batch_size,
+                sub_batch_size=self.sub_batch_size,
+            )
 
         self.assertRaises(NotImplementedError, _try_train)
 
@@ -152,7 +162,7 @@ class TrainingLoopTests(unittest.TestCase):
         training_loop = NaNTrainingLoop(model=model, triples_factory=self.triples_factory, patience=2)
 
         with self.assertRaises(NonFiniteLossError):
-            training_loop.train(num_epochs=3, batch_size=self.batch_size)
+            training_loop.train(triples_factory=self.triples_factory, num_epochs=3, batch_size=self.batch_size)
 
     def test_blacklist_loss_on_slcwa(self):
         """Test an allowed sLCWA loss."""
@@ -194,6 +204,7 @@ class TrainingLoopTests(unittest.TestCase):
             automatic_memory_optimization=False,
         )
         losses = training_loop.train(
+            triples_factory=self.triples_factory,
             num_epochs=self.num_epochs,
             batch_size=self.batch_size,
             use_tqdm=False,
@@ -214,6 +225,7 @@ class TrainingLoopTests(unittest.TestCase):
             automatic_memory_optimization=False,
         )
         training_loop.train(
+            triples_factory=self.triples_factory,
             num_epochs=int(self.num_epochs // 2),
             batch_size=self.batch_size,
             checkpoint_name=self.checkpoint_file,
@@ -235,6 +247,7 @@ class TrainingLoopTests(unittest.TestCase):
             automatic_memory_optimization=False,
         )
         losses_2 = training_loop.train(
+            triples_factory=self.triples_factory,
             num_epochs=self.num_epochs,
             batch_size=self.batch_size,
             checkpoint_name=self.checkpoint_file,

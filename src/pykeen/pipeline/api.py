@@ -1005,6 +1005,7 @@ def pipeline(  # noqa: C901
     # Train like Cristiano Ronaldo
     training_start_time = time.time()
     losses = training_loop_instance.train(
+        triples_factory=training,
         stopper=stopper_instance,
         result_tracker=_result_tracker,
         clear_optimizer=clear_optimizer,
