@@ -4,6 +4,7 @@
 
 Get a summary with ``python -m pykeen.datasets.wk3l``
 """
+
 import logging
 import pathlib
 import zipfile
