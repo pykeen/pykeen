@@ -61,7 +61,7 @@ class LossTensorTest(unittest.TestCase):
             loss=loss_cls,
         )
 
-        loop = LCWATrainingLoop(model=model)
+        loop = LCWATrainingLoop(model=model, triples_factory=factory)
         loss = loop._mr_loss_helper(predictions=self.predictions, labels=self.labels)
         self.assertEqual(14, loss)
 
@@ -77,7 +77,7 @@ class LossTensorTest(unittest.TestCase):
             loss=loss_cls,
         )
 
-        loop = LCWATrainingLoop(model=model)
+        loop = LCWATrainingLoop(model=model, triples_factory=factory)
         loss = loop._mr_loss_helper(predictions=self.predictions, labels=self.labels)
         self.assertEqual(1, loss)
 

@@ -180,6 +180,77 @@ may be additional known triples :math:`(h, r, t')` for :math:`t \neq t'`. If the
 filtered evaluation setting ignores for a given triple :math:`(h, r, t)` the scores of all other *known* true triples
 :math:`(h, r, t')`.
 
+Below, we present the philosophy from [bordes2013]_ and how it is implemented in PyKEEN:
+
+HPO Scenario
+************
+During training/optimization with :func:`pykeen.hpo.hpo_pipeline`, the set of known positive triples comprises the
+training and validation sets. After optimization is finished and the final evaluation is done, the set of known
+positive triples comprises the training, validation, and testing set. PyKEEN explicitly does not use test triples
+for filtering during HPO to avoid any test leakage.
+
+Early Stopper Scenario
+**********************
+When early stopping is used during training, it periodically uses the validation set for calculating the loss
+and evaluation metrics. During this evaluation, the set of known positive triples comprises the training and
+validation sets. When final evaluation is done with the testing set, the set of known positive triples comprises the
+training, validation, and testing set. PyKEEN explicitly does not use test triples for filtering when early stopping
+is being used to avoid any test leakage.
+
+Pipeline Scenario
+*****************
+During vanilla training with the :func:`pykeen.pipeline.pipeline` that has no optimization, no early stopping, nor
+any *post-hoc* choices using the validation set, the set of known positive triples comprises the training and
+testing sets. This scenario is very atypical, and regardless, should be augmented with the validation triples
+to make more comparable to other published results that do not consider this scenario.
+
+Custom Training Loops
+*********************
+In case the validation triples should *not* be filtered when evaluating the test dataset, the argument
+``filter_validation_when_testing=False`` can be passed to either the :func:`pykeen.hpo.hpo_pipeline` or
+:func:`pykeen.pipeline.pipeline`.
+
+If you're rolling your own pipeline, you should keep the following in mind: the :class:`pykeen.evaluation.Evaluator`
+when in the filtered setting with ``filtered=True`` will always use the evaluation set (regardless of whether it is the
+testing set or validation set) for filtering. Any other triples that should be filtered should be passed to
+``additional_filter_triples`` in :func:`pykeen.evaluation.Evaluator.evaluate`. Typically, this minimally includes
+the training triples. With the [bordes2013]_ technique where the testing set is used for evaluation, the
+``additional_filter_triples`` should include both the training triples and validation triples as in the following
+example:
+
+.. code-block:: python
+
+    from pykeen.datasets import FB15k237
+    from pykeen.evaluation import RankBasedEvaluator
+    from pykeen.models import TransE
+
+    # Get FB15k-237 dataset
+    dataset = FB15k237()
+
+    # Define model
+    model = TransE(
+        triples_factory=dataset.training,
+    )
+
+    # Train your model (code is omitted for brevity)
+    ...
+
+    # Define evaluator
+    evaluator = RankBasedEvaluator(
+        filtered=True,  # Note: this is True by default; we're just being explicit
+    )
+
+    # Evaluate your model with not only testing triples,
+    # but also filter on validation triples
+    results = evaluator.evaluate(
+        model=model,
+        mapped_triples=dataset.testing.mapped_triples,
+        additional_filter_triples=[
+            dataset.training.mapped_triples,
+            dataset.validation.mapped_triples,
+        ],
+    )
+
 Entity and Relation Restriction
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Sometimes, we are only interested in a certain set of entities and/or relations,

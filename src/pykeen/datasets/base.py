@@ -21,7 +21,7 @@ from pystow.utils import download, name_from_url
 from tabulate import tabulate
 
 from ..constants import PYKEEN_DATASETS
-from ..triples import TriplesFactory
+from ..triples import CoreTriplesFactory, TriplesFactory
 from ..triples.deteriorate import deteriorate
 from ..triples.remix import remix
 from ..triples.triples_factory import splits_similarity
@@ -69,16 +69,16 @@ class Dataset:
     """Contains a lazy reference to a training, testing, and validation dataset."""
 
     #: A factory wrapping the training triples
-    training: TriplesFactory
+    training: CoreTriplesFactory
     #: A factory wrapping the testing triples, that share indices with the training triples
-    testing: TriplesFactory
+    testing: CoreTriplesFactory
     #: A factory wrapping the validation triples, that share indices with the training triples
-    validation: Optional[TriplesFactory]
+    validation: Optional[CoreTriplesFactory]
     #: All datasets should take care of inverse triple creation
     create_inverse_triples: bool
 
     @property
-    def factory_dict(self) -> Mapping[str, TriplesFactory]:
+    def factory_dict(self) -> Mapping[str, CoreTriplesFactory]:
         """Return a dictionary of the three factories."""
         rv = dict(
             training=self.training,
@@ -91,11 +91,15 @@ class Dataset:
     @property
     def entity_to_id(self):  # noqa: D401
         """The mapping of entity labels to IDs."""
+        if not isinstance(self.training, TriplesFactory):
+            raise AttributeError(f"{self.training.__class__} does not have labeling information.")
         return self.training.entity_to_id
 
     @property
     def relation_to_id(self):  # noqa: D401
         """The mapping of relation labels to IDs."""
+        if not isinstance(self.training, TriplesFactory):
+            raise AttributeError(f"{self.training.__class__} does not have labeling information.")
         return self.training.relation_to_id
 
     @property
@@ -123,6 +127,8 @@ class Dataset:
         t = tabulate(rows, headers=['Name', 'Entities', 'Relations', 'Triples'])
         rv = f'{title or self.__class__.__name__} (create_inverse_triples={self.create_inverse_triples})\n{t}'
         if show_examples:
+            if not isinstance(self.training, TriplesFactory):
+                raise AttributeError(f"{self.training.__class__} does not have labeling information.")
             examples = tabulate(
                 self.training.label_triples(self.training.mapped_triples[:show_examples]),
                 headers=['Head', 'Relation', 'tail'],
@@ -207,9 +213,9 @@ class EagerDataset(Dataset):
 
     def __init__(
         self,
-        training: TriplesFactory,
-        testing: TriplesFactory,
-        validation: Optional[TriplesFactory] = None,
+        training: CoreTriplesFactory,
+        testing: CoreTriplesFactory,
+        validation: Optional[CoreTriplesFactory] = None,
     ) -> None:
         """Initialize the eager dataset.
 

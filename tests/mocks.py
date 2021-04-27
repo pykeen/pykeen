@@ -9,7 +9,7 @@ from torch import nn
 
 from pykeen.models import EntityRelationEmbeddingModel, Model
 from pykeen.nn.emb import EmbeddingSpecification, RepresentationModule
-from pykeen.triples import TriplesFactory
+from pykeen.triples import CoreTriplesFactory
 
 __all__ = [
     'CustomRepresentations',
@@ -32,7 +32,7 @@ class CustomRepresentations(RepresentationModule):
 class MockModel(EntityRelationEmbeddingModel):
     """A mock model returning fake scores."""
 
-    def __init__(self, triples_factory: TriplesFactory):
+    def __init__(self, triples_factory: CoreTriplesFactory):
         super().__init__(
             triples_factory=triples_factory,
             entity_representations=EmbeddingSpecification(embedding_dim=50),

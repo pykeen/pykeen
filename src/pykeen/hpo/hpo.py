@@ -32,7 +32,7 @@ from ..sampling import NegativeSampler, negative_sampler_resolver
 from ..stoppers import EarlyStopper, Stopper, stopper_resolver
 from ..trackers import ResultTracker, tracker_resolver
 from ..training import SLCWATrainingLoop, TrainingLoop, training_loop_resolver
-from ..triples import TriplesFactory
+from ..triples import CoreTriplesFactory
 from ..typing import Hint, HintType
 from ..utils import Result, ensure_ftp_directory, fix_dataclass_init_docs, get_df_io, get_json_bytes_io
 from ..version import get_git_hash, get_version
@@ -65,9 +65,9 @@ class Objective:
 
     # 1. Dataset
     dataset_kwargs: Optional[Mapping[str, Any]] = None
-    training: Hint[TriplesFactory] = None
-    testing: Hint[TriplesFactory] = None
-    validation: Hint[TriplesFactory] = None
+    training: Hint[CoreTriplesFactory] = None
+    testing: Hint[CoreTriplesFactory] = None
+    validation: Hint[CoreTriplesFactory] = None
     evaluation_entity_whitelist: Optional[Collection[str]] = None
     evaluation_relation_whitelist: Optional[Collection[str]] = None
     # 2. Model
@@ -95,6 +95,7 @@ class Objective:
     # 8. Evaluation
     evaluator_kwargs: Optional[Mapping[str, Any]] = None
     evaluation_kwargs: Optional[Mapping[str, Any]] = None
+    filter_validation_when_testing: bool = True
     # 9. Trackers
     result_tracker_kwargs: Optional[Mapping[str, Any]] = None
     # Misc.
@@ -229,6 +230,7 @@ class Objective:
                 evaluator=self.evaluator,
                 evaluator_kwargs=self.evaluator_kwargs,
                 evaluation_kwargs=self.evaluation_kwargs,
+                filter_validation_when_testing=self.filter_validation_when_testing,
                 # 9. Tracker
                 result_tracker=self.result_tracker,
                 result_tracker_kwargs=self.result_tracker_kwargs,
@@ -421,9 +423,9 @@ def hpo_pipeline(
     # 1. Dataset
     dataset: Union[None, str, Dataset, Type[Dataset]] = None,
     dataset_kwargs: Optional[Mapping[str, Any]] = None,
-    training: Hint[TriplesFactory] = None,
-    testing: Hint[TriplesFactory] = None,
-    validation: Hint[TriplesFactory] = None,
+    training: Hint[CoreTriplesFactory] = None,
+    testing: Hint[CoreTriplesFactory] = None,
+    validation: Hint[CoreTriplesFactory] = None,
     evaluation_entity_whitelist: Optional[Collection[str]] = None,
     evaluation_relation_whitelist: Optional[Collection[str]] = None,
     # 2. Model
@@ -458,6 +460,7 @@ def hpo_pipeline(
     evaluator_kwargs: Optional[Mapping[str, Any]] = None,
     evaluation_kwargs: Optional[Mapping[str, Any]] = None,
     metric: Optional[str] = None,
+    filter_validation_when_testing: bool = True,
     # 9. Tracking
     result_tracker: HintType[ResultTracker] = None,
     result_tracker_kwargs: Optional[Mapping[str, Any]] = None,
@@ -562,6 +565,10 @@ def hpo_pipeline(
         Keyword arguments to pass to the evaluator on instantiation
     :param evaluation_kwargs:
         Keyword arguments to pass to the evaluator's evaluate function on call
+    :param filter_validation_when_testing:
+        If true, during evaluating on the test dataset, validation triples are added to the set of known positive
+        triples, which are filtered out when performing filtered evaluation following the approach described by
+        [bordes2013]_. Defaults to true.
 
     :param result_tracker:
         The ResultsTracker class or name
@@ -654,6 +661,8 @@ def hpo_pipeline(
         metric = ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX
     study.set_user_attr('metric', metric)
     logger.info(f'Attempting to {direction} {metric}')
+    study.set_user_attr('filter_validation_when_testing', filter_validation_when_testing)
+    logger.info('Filter validation triples when testing: %s', filter_validation_when_testing)
 
     # 9. Tracking
     result_tracker_cls: Type[ResultTracker] = tracker_resolver.lookup(result_tracker)
@@ -698,6 +707,7 @@ def hpo_pipeline(
         evaluator=evaluator_cls,
         evaluator_kwargs=evaluator_kwargs,
         evaluation_kwargs=evaluation_kwargs,
+        filter_validation_when_testing=filter_validation_when_testing,
         # 9. Tracker
         result_tracker=result_tracker_cls,
         result_tracker_kwargs=result_tracker_kwargs,
@@ -813,9 +823,9 @@ def _set_study_dataset(
     study: Study,
     *,
     dataset: Union[None, str, Dataset, Type[Dataset]] = None,
-    training: Union[None, str, TriplesFactory] = None,
-    testing: Union[None, str, TriplesFactory] = None,
-    validation: Union[None, str, TriplesFactory] = None,
+    training: Union[None, str, CoreTriplesFactory] = None,
+    testing: Union[None, str, CoreTriplesFactory] = None,
+    validation: Union[None, str, CoreTriplesFactory] = None,
 ):
     if dataset is not None:
         if training is not None or testing is not None or validation is not None:
