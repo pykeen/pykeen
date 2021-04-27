@@ -10,7 +10,7 @@ from class_resolver import Hint
 from ..nbase import ERModel
 from ...nn.emb import CombinedCompGCNRepresentations, EmbeddingSpecification
 from ...nn.modules import DistMultInteraction, Interaction
-from ...triples import CoreTriplesFactory, TriplesFactory
+from ...triples import CoreTriplesFactory
 from ...typing import RelationRepresentation
 
 __all__ = [
