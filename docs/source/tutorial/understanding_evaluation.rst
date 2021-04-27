@@ -210,11 +210,13 @@ In case the validation triples should *not* be filtered when evaluating the test
 ``filter_validation_when_testing=False`` can be passed to either the :func:`pykeen.hpo.hpo_pipeline` or
 :func:`pykeen.pipeline.pipeline`.
 
-When writing a custom training loop and using an :class:`pykeen.evaluation.Evaluator` directly, the set of *known*
-positive triples comprises both the training triples and evaluation triples. However, you can provide additional
-triples, e.g. the validation triples, that should be added to the set of *known* positive triples during
-evaluation with the ``additional_filter_triples`` argument in :func:`pykeen.evaluation.evaluate` (via
-:func:`pykeen.evaluation.Evaluator.evaluate`) as shown in the following:
+If you're rolling your own pipeline, you should keep the following in mind: the :class:`pykeen.evaluation.Evaluator`
+when in the filtered setting with ``filtered=True`` will always use the evaluation set (regardless of whether it is the
+testing set or validation set) for filtering. Any other triples that should be filtered should be passed to
+``additional_filter_triples`` in :func:`pykeen.evaluation.Evaluator.evaluate`. Typically, this minimally includes
+the training triples. With the [bordes2013]_ technique where the testing set is used for evaluation, the
+``additional_filter_triples`` should include both the training triples and validation triples as in the following
+example:
 
 .. code-block:: python
 
