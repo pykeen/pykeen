@@ -14,9 +14,9 @@ import pandas
 from more_click import verbose_option
 from pystow.utils import download_from_google
 
-from pykeen.datasets import LazyDataset
-from pykeen.triples import TriplesFactory
-from pykeen.typing import TorchRandomHint
+from .base import LazyDataset
+from ..triples import TriplesFactory
+from ..typing import TorchRandomHint
 
 __all__ = [
     "WK3l15k",
@@ -26,7 +26,6 @@ logger = logging.getLogger(__name__)
 
 GOOGLE_DRIVE_ID = "1AsPPU4ka1Rc9u-XYMGWtvV65hF3egi0z"
 GRAPH_PAIRS = ("en_fr", "en_de")
-SIDES = tuple(sum((pair.split("_") for pair in GRAPH_PAIRS), start=[]))
 
 
 class WK3l15k(LazyDataset):
