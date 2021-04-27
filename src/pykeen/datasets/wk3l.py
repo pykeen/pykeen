@@ -73,10 +73,12 @@ class WK3l15k(LazyDataset):
 
         # ensure file is present
         if not path.is_file() or self.force:
+            logger.info(f"Downloading file from Google Drive (ID: {self.drive_id})")
             download_from_google(self.drive_id, path)
 
         # read all triples from file
         with zipfile.ZipFile(path) as zf:
+            logger.info(f"Reading from {path.as_uri()}")
             with zf.open(str(self._relative_path), mode="r") as triples_file:
                 df = pandas.read_csv(
                     triples_file,
@@ -87,10 +89,10 @@ class WK3l15k(LazyDataset):
                     encoding="utf8",
                 )
         # some "entities" have numeric labels
+        # pandas.read_csv(..., dtype=str) does not work properly.
         df = df.astype(dtype=str)
 
         # create triples factory
-        tf_path = path
         tf = TriplesFactory.from_labeled_triples(
             triples=df.values,
             create_inverse_triples=self.create_inverse_triples,
@@ -105,7 +107,7 @@ class WK3l15k(LazyDataset):
                 random_state=self.random_state,
             ),
         )
-        logger.info("[%s] done splitting data from %s", self.__class__.__name__, tf_path)
+        logger.info("[%s] done splitting data from %s", self.__class__.__name__, path)
 
     def _load_validation(self) -> None:
         pass  # already loaded by _load()
