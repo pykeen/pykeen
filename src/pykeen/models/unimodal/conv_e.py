@@ -93,7 +93,12 @@ class ConvE(EntityRelationEmbeddingModel):
     >>> # Step 5: Evaluate the model
     >>> from pykeen.evaluation import RankBasedEvaluator
     >>> evaluator = RankBasedEvaluator()
-    >>> metric_result = evaluator.evaluate(model=model, mapped_triples=dataset.testing.mapped_triples, batch_size=8192)
+    >>> metric_result = evaluator.evaluate(
+    ...     model=model,
+    ...     mapped_triples=dataset.testing.mapped_triples,
+    ...     additional_filter_triples=dataset.training.mapped_triples,
+    ...     batch_size=8192,
+    ... )
     ---
     citation:
         author: Dettmers
