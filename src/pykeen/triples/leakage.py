@@ -28,6 +28,8 @@ __all__ = [
     'reindex',
 ]
 
+# TODO: Update to CoreTriplesFactory
+
 logger = logging.getLogger(__name__)
 X = TypeVar('X')
 Y = TypeVar('Y')
@@ -368,9 +370,9 @@ def _translate_triples(
         [
             trans[column]
             for column, trans in zip(
-                triples.t(),
-                (entity_translation, relation_translation, entity_translation),
-            )
+            triples.t(),
+            (entity_translation, relation_translation, entity_translation),
+        )
         ],
         dim=-1,
     )
