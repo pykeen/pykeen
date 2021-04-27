@@ -1052,6 +1052,8 @@ def pipeline(  # noqa: C901
             " (Bordes et al., 2013).",
         )
         additional_filter_triples.append(validation.mapped_triples)
+    elif evaluator_instance.filtered and isinstance(stopper, EarlyStopper):
+        additional_filter_triples.append(validation.mapped_triples)
 
     # TODO consider implications of duplicates
     evaluation_kwargs['additional_filter_triples'] = additional_filter_triples
