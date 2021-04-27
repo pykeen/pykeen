@@ -37,6 +37,9 @@ def main(
     directory = directory.resolve()
     directory.mkdir(exist_ok=True, parents=True)
 
+    # Normalize path
+    path = path.expanduser().resolve()
+
     triples_factory = TriplesFactory.from_path(path=path)
     ratios = test_ratios if no_validation else validation_ratios
 
@@ -50,7 +53,7 @@ def main(
         np.savetxt(output_path, subset_tf.triples, delimiter='\t', fmt='%s')
 
     metadata = dict(
-        source=path.resolve(),
+        source=str(path),
         ratios=dict(zip(LABELS, ratios)),
         seed=seed,
     )
