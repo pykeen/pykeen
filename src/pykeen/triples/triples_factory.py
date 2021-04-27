@@ -304,7 +304,7 @@ class CoreTriplesFactory:
         ]
         d.extend(sorted(self.metadata.items()))  # type: ignore
         return ', '.join(
-            f'{k}="{v}"' if isinstance(v, str) else f'{k}={v}'
+            f'{k}="{v}"' if isinstance(v, (str, pathlib.Path)) else f'{k}={v}'
             for k, v in d
         )
 
