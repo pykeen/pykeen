@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Instance creation utilities."""
+
 import pathlib
 from typing import Callable, Mapping, Optional, Sequence, Set, TextIO, Union
 
