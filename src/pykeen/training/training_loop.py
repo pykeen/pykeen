@@ -710,7 +710,7 @@ class TrainingLoop(ABC):
             batch_size = 8192
 
         # Set upper bound
-        batch_size = min(batch_size, self._num_triples)
+        batch_size = min(batch_size, triples_factory.num_triples)
 
         reached_max = False
         evaluated_once = False
