@@ -184,7 +184,7 @@ class TestHPODatasets(unittest.TestCase):
             dataset=NATIONS_TRAIN_PATH,
         )
         self.assertIn('dataset', hpo_pipeline_result.study.user_attrs)
-        self.assertEqual(NATIONS_TRAIN_PATH, hpo_pipeline_result.study.user_attrs['dataset'])
+        self.assertEqual(str(NATIONS_TRAIN_PATH), hpo_pipeline_result.study.user_attrs['dataset'])
         self.assertNotIn('training', hpo_pipeline_result.study.user_attrs)
         self.assertNotIn('testing', hpo_pipeline_result.study.user_attrs)
         self.assertNotIn('validation', hpo_pipeline_result.study.user_attrs)
@@ -223,11 +223,11 @@ class TestHPODatasets(unittest.TestCase):
         # Since paths were passed for training, testing, and validation,
         # they should be stored as study-level attributes
         self.assertIn('training', hpo_pipeline_result.study.user_attrs)
-        self.assertEqual(NATIONS_TRAIN_PATH, hpo_pipeline_result.study.user_attrs['training'])
+        self.assertEqual(str(NATIONS_TRAIN_PATH), hpo_pipeline_result.study.user_attrs['training'])
         self.assertIn('testing', hpo_pipeline_result.study.user_attrs)
-        self.assertEqual(NATIONS_TEST_PATH, hpo_pipeline_result.study.user_attrs['testing'])
+        self.assertEqual(str(NATIONS_TEST_PATH), hpo_pipeline_result.study.user_attrs['testing'])
         self.assertIn('validation', hpo_pipeline_result.study.user_attrs)
-        self.assertEqual(NATIONS_VALIDATE_PATH, hpo_pipeline_result.study.user_attrs['validation'])
+        self.assertEqual(str(NATIONS_VALIDATE_PATH), hpo_pipeline_result.study.user_attrs['validation'])
 
     def _help_test_hpo(self, **kwargs):
         hpo_pipeline_result = hpo_pipeline(

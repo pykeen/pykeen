@@ -117,8 +117,8 @@ def get_dataset(
             logger.warning('dataset_kwargs not used since a pre-instantiated dataset was given')
         return dataset
 
-    if isinstance(dataset, str):
-        if has_dataset(dataset):
+    if isinstance(dataset, (str, pathlib.Path)):
+        if isinstance(dataset, str) and has_dataset(dataset):
             dataset: Type[Dataset] = datasets[normalize_string(dataset)]  # type: ignore
         else:
             dataset_path = pathlib.Path(dataset).resolve()
@@ -135,8 +135,8 @@ def get_dataset(
     if dataset is not None:
         raise TypeError(f'Dataset is invalid type: {type(dataset)}')
 
-    if isinstance(training, str) and isinstance(testing, str):
-        if validation is None or isinstance(validation, str):
+    if isinstance(training, (str, pathlib.Path)) and isinstance(testing, (str, pathlib.Path)):
+        if validation is None or isinstance(validation, (str, pathlib.Path)):
             return PathDataset(
                 training_path=training,
                 testing_path=testing,
