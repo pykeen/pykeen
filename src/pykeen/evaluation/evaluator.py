@@ -581,7 +581,7 @@ def evaluate(
                         dataset.training.mapped_triples,
                         dataset.validation.mapped_triples,
                     ]
-                '''))
+            '''))
             all_pos_triples = mapped_triples
         elif isinstance(additional_filtered_triples, (list, tuple)):
             all_pos_triples = torch.cat([*additional_filtered_triples, mapped_triples], dim=0)
