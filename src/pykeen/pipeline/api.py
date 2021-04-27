@@ -1052,6 +1052,7 @@ def pipeline(  # noqa: C901
             additional_filter_triples.append(validation.mapped_triples)
         elif (
             isinstance(stopper, EarlyStopper)
+            and filter_validation_when_testing
             and validation is not None
         ):
             logging.info(
