@@ -4,6 +4,7 @@
 
 Get a summary with ``python -m pykeen.datasets.drkg``
 """
+
 import pathlib
 
 import click

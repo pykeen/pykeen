@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """YAGO3 datasets."""
+
 import pathlib
 
 from docdata import parse_docdata

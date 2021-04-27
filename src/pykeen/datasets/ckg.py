@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Clinical Knowledge Graph."""
+
 import pathlib
 import tarfile
 from pathlib import Path
