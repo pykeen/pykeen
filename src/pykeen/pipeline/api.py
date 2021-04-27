@@ -1027,10 +1027,8 @@ def pipeline(  # noqa: C901
         ]
 
         # If the user gave custom "additional_filter_triples"
-        popped_additional_filter_triples = evaluation_kwargs.pop('additional_filter_triples', None)
-        if popped_additional_filter_triples is None:
-            pass
-        elif isinstance(popped_additional_filter_triples, (list, tuple)):
+        popped_additional_filter_triples = evaluation_kwargs.pop('additional_filter_triples', [])
+        if isinstance(popped_additional_filter_triples, (list, tuple)):
             additional_filter_triples.extend(popped_additional_filter_triples)
         elif torch.is_tensor(popped_additional_filter_triples):  # a single MappedTriple
             additional_filter_triples.append(popped_additional_filter_triples)
