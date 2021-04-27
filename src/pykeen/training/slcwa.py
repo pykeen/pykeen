@@ -41,6 +41,7 @@ class SLCWATrainingLoop(TrainingLoop):
         """Initialize the training loop.
 
         :param model: The model to train
+        :param triples_factory: The triples factory to train over
         :param optimizer: The optimizer to use while training the model
         :param negative_sampler_cls: The class of the negative sampler
         :param negative_sampler_kwargs: Keyword arguments to pass to the negative sampler class on instantiation
@@ -169,6 +170,8 @@ class SLCWATrainingLoop(TrainingLoop):
 
     def _slice_size_search(
         self,
+        *,
+        triples_factory: TriplesFactory,
         batch_size: int,
         sub_batch_size: int,
         supports_sub_batching: bool,
