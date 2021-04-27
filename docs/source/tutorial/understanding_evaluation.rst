@@ -187,7 +187,7 @@ HPO Scenario
 During training/optimization with :func:`pykeen.hpo.hpo_pipeline`, the set of known positive triples comprises the
 training and validation sets. After optimization is finished and the final evaluation is done, the set of known
 positive triples comprises the training, validation, and testing set. PyKEEN explicitly does not use test triples
-for filtering during HPO avoid any test leakage.
+for filtering during HPO to avoid any test leakage.
 
 Early Stopper Scenario
 **********************
