@@ -28,8 +28,6 @@ __all__ = [
     'reindex',
 ]
 
-# TODO: Update to CoreTriplesFactory
-
 logger = logging.getLogger(__name__)
 X = TypeVar('X')
 Y = TypeVar('Y')
