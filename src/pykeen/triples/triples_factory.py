@@ -7,7 +7,7 @@ import itertools
 import logging
 import os
 import re
-from typing import Any, Callable, Collection, Dict, List, Mapping, Optional, Sequence, Set, TextIO, Union
+from typing import Any, Callable, Collection, Dict, List, Mapping, Optional, Sequence, Set, TextIO, Union, cast
 
 import numpy as np
 import pandas as pd
@@ -557,8 +557,8 @@ class CoreTriplesFactory:
 
     def new_with_restriction(
         self,
-        entities: Union[None, Collection[int]] = None,
-        relations: Union[None, Collection[int]] = None,
+        entities: Union[None, Collection[int], Collection[str]] = None,
+        relations: Union[None, Collection[int], Collection[str]] = None,
         invert_entity_selection: bool = False,
         invert_relation_selection: bool = False,
     ) -> 'CoreTriplesFactory':
@@ -582,6 +582,9 @@ class CoreTriplesFactory:
         extra_metadata = {}
         # Filter for entities
         if entities is not None:
+            if any(isinstance(e, str) for e in entities):
+                raise ValueError(f"{self.__class__} does not support label-based restriction.")
+            entities = cast(Collection[int], entities)
             extra_metadata['entity_restriction'] = entities
             keep_mask = self.get_mask_for_entities(entities=entities, invert=invert_entity_selection)
             remaining_entities = self.num_entities - len(entities) if invert_entity_selection else len(entities)
@@ -589,6 +592,9 @@ class CoreTriplesFactory:
 
         # Filter for relations
         if relations is not None:
+            if any(isinstance(r, str) for r in relations):
+                raise ValueError(f"{self.__class__} does not support label-based restriction.")
+            relations = cast(Collection[int], relations)
             extra_metadata['relation_restriction'] = relations
             relation_mask = self.get_mask_for_relations(relations=relations, invert=invert_relation_selection)
             remaining_relations = self.num_relations - len(relations) if invert_entity_selection else len(relations)
@@ -999,7 +1005,7 @@ class TriplesFactory(CoreTriplesFactory):
         ).with_labels(entity_to_id=self.entity_to_id, relation_to_id=self.relation_to_id)
 
 
-def cat_triples(*triples_factories: TriplesFactory) -> MappedTriples:
+def cat_triples(*triples_factories: CoreTriplesFactory) -> MappedTriples:
     """Concatenate several triples factories."""
     return torch.cat([
         factory.mapped_triples

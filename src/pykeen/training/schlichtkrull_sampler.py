@@ -8,11 +8,11 @@ from typing import List, Optional, Tuple
 import torch
 from torch.utils.data.sampler import Sampler
 
-from ..triples import TriplesFactory
+from ..triples import CoreTriplesFactory
 
 
 def _compute_compressed_adjacency_list(
-    triples_factory: TriplesFactory,
+    triples_factory: CoreTriplesFactory,
 ) -> Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor]:
     """Compute compressed undirected adjacency list representation for efficient sampling.
 
@@ -54,7 +54,7 @@ class GraphSampler(Sampler):
 
     def __init__(
         self,
-        triples_factory: TriplesFactory,
+        triples_factory: CoreTriplesFactory,
         num_samples: Optional[int] = None,
     ):
         mapped_triples = triples_factory.mapped_triples

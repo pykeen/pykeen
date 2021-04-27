@@ -13,15 +13,15 @@ relationship between datasets' splits' distances and their maximum performance.
 
 from typing import List, Sequence
 
-from pykeen.triples.splitting import normalize_ratios, split
-from pykeen.triples.triples_factory import TriplesFactory, cat_triples
+from .splitting import normalize_ratios, split
+from .triples_factory import CoreTriplesFactory, cat_triples
 
 __all__ = [
     'remix',
 ]
 
 
-def remix(*triples_factories: TriplesFactory, **kwargs) -> List[TriplesFactory]:
+def remix(*triples_factories: CoreTriplesFactory, **kwargs) -> List[CoreTriplesFactory]:
     """Remix the triples from the training, testing, and validation set.
 
     :param triples_factories: A sequence of triples factories
@@ -43,7 +43,7 @@ def remix(*triples_factories: TriplesFactory, **kwargs) -> List[TriplesFactory]:
     ]
 
 
-def _get_ratios(*triples_factories: TriplesFactory) -> Sequence[float]:
+def _get_ratios(*triples_factories: CoreTriplesFactory) -> Sequence[float]:
     total = sum(tf.num_triples for tf in triples_factories)
     ratios = normalize_ratios([tf.num_triples / total for tf in triples_factories])
     return ratios

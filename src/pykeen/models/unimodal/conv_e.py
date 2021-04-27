@@ -17,7 +17,7 @@ from ...nn.emb import Embedding, EmbeddingSpecification
 from ...nn.init import xavier_normal_
 from ...nn.modules import _calculate_missing_shape_information
 from ...regularizers import Regularizer
-from ...triples import TriplesFactory
+from ...triples import CoreTriplesFactory
 from ...typing import DeviceHint, Hint, Initializer
 from ...utils import is_cudnn_error
 
@@ -122,7 +122,7 @@ class ConvE(EntityRelationEmbeddingModel):
 
     def __init__(
         self,
-        triples_factory: TriplesFactory,
+        triples_factory: CoreTriplesFactory,
         input_channels: Optional[int] = None,
         output_channels: int = 32,
         embedding_height: Optional[int] = None,
