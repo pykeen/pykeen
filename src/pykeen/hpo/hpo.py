@@ -32,7 +32,7 @@ from ..sampling import NegativeSampler, negative_sampler_resolver
 from ..stoppers import EarlyStopper, Stopper, stopper_resolver
 from ..trackers import ResultTracker, tracker_resolver
 from ..training import SLCWATrainingLoop, TrainingLoop, training_loop_resolver
-from ..triples import TriplesFactory
+from ..triples import CoreTriplesFactory
 from ..typing import Hint, HintType
 from ..utils import Result, ensure_ftp_directory, fix_dataclass_init_docs, get_df_io, get_json_bytes_io
 from ..version import get_git_hash, get_version
@@ -65,9 +65,9 @@ class Objective:
 
     # 1. Dataset
     dataset_kwargs: Optional[Mapping[str, Any]] = None
-    training: Hint[TriplesFactory] = None
-    testing: Hint[TriplesFactory] = None
-    validation: Hint[TriplesFactory] = None
+    training: Hint[CoreTriplesFactory] = None
+    testing: Hint[CoreTriplesFactory] = None
+    validation: Hint[CoreTriplesFactory] = None
     evaluation_entity_whitelist: Optional[Collection[str]] = None
     evaluation_relation_whitelist: Optional[Collection[str]] = None
     # 2. Model
@@ -423,9 +423,9 @@ def hpo_pipeline(
     # 1. Dataset
     dataset: Union[None, str, Dataset, Type[Dataset]] = None,
     dataset_kwargs: Optional[Mapping[str, Any]] = None,
-    training: Hint[TriplesFactory] = None,
-    testing: Hint[TriplesFactory] = None,
-    validation: Hint[TriplesFactory] = None,
+    training: Hint[CoreTriplesFactory] = None,
+    testing: Hint[CoreTriplesFactory] = None,
+    validation: Hint[CoreTriplesFactory] = None,
     evaluation_entity_whitelist: Optional[Collection[str]] = None,
     evaluation_relation_whitelist: Optional[Collection[str]] = None,
     # 2. Model
@@ -823,9 +823,9 @@ def _set_study_dataset(
     study: Study,
     *,
     dataset: Union[None, str, Dataset, Type[Dataset]] = None,
-    training: Union[None, str, TriplesFactory] = None,
-    testing: Union[None, str, TriplesFactory] = None,
-    validation: Union[None, str, TriplesFactory] = None,
+    training: Union[None, str, CoreTriplesFactory] = None,
+    testing: Union[None, str, CoreTriplesFactory] = None,
+    validation: Union[None, str, CoreTriplesFactory] = None,
 ):
     if dataset is not None:
         if training is not None or testing is not None or validation is not None:

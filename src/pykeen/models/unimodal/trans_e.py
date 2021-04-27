@@ -14,7 +14,7 @@ from ...losses import Loss
 from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_uniform_, xavier_uniform_norm_
 from ...regularizers import Regularizer
-from ...triples import TriplesFactory
+from ...triples import CoreTriplesFactory
 from ...typing import Constrainer, DeviceHint, Hint, Initializer
 
 __all__ = [
@@ -57,7 +57,7 @@ class TransE(EntityRelationEmbeddingModel):
 
     def __init__(
         self,
-        triples_factory: TriplesFactory,
+        triples_factory: CoreTriplesFactory,
         embedding_dim: int = 50,
         scoring_fct_norm: int = 1,
         loss: Optional[Loss] = None,

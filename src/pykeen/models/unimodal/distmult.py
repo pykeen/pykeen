@@ -14,7 +14,7 @@ from ...losses import Loss
 from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_normal_norm_, xavier_uniform_
 from ...regularizers import LpRegularizer, Regularizer
-from ...triples import TriplesFactory
+from ...triples import CoreTriplesFactory
 from ...typing import Constrainer, DeviceHint, Hint, Initializer
 
 __all__ = [
@@ -75,7 +75,7 @@ class DistMult(EntityRelationEmbeddingModel):
 
     def __init__(
         self,
-        triples_factory: TriplesFactory,
+        triples_factory: CoreTriplesFactory,
         embedding_dim: int = 50,
         loss: Optional[Loss] = None,
         preferred_device: DeviceHint = None,

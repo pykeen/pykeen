@@ -11,7 +11,7 @@ from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss, SoftplusLoss
 from ...nn.emb import Embedding, EmbeddingSpecification
 from ...regularizers import PowerSumRegularizer, Regularizer
-from ...triples import TriplesFactory
+from ...triples import CoreTriplesFactory
 from ...typing import DeviceHint, Hint, Initializer
 
 __all__ = [
@@ -71,7 +71,7 @@ class SimplE(EntityRelationEmbeddingModel):
 
     def __init__(
         self,
-        triples_factory: TriplesFactory,
+        triples_factory: CoreTriplesFactory,
         embedding_dim: int = 200,
         loss: Optional[Loss] = None,
         preferred_device: DeviceHint = None,
