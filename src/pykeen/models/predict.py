@@ -11,7 +11,7 @@ import pandas as pd
 import torch
 
 from .base import Model
-from ..triples import CoreTriplesFactory, TriplesFactory
+from ..triples import CoreTriplesFactory
 from ..typing import MappedTriples, ScorePack
 
 __all__ = [
