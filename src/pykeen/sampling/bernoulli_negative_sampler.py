@@ -71,16 +71,16 @@ class BernoulliNegativeSampler(NegativeSampler):
             filterer_kwargs=filterer_kwargs,
         )
         # Preprocessing: Compute corruption probabilities
-        triples = self.triples_factory.mapped_triples
+        triples = triples_factory.mapped_triples
         head_rel_uniq, tail_count = torch.unique(triples[:, :2], return_counts=True, dim=0)
         rel_tail_uniq, head_count = torch.unique(triples[:, 1:], return_counts=True, dim=0)
 
         self.corrupt_head_probability = torch.empty(
-            self.triples_factory.num_relations,
+            triples_factory.num_relations,
             device=triples_factory.mapped_triples.device,
         )
 
-        for r in range(self.triples_factory.num_relations):
+        for r in range(triples_factory.num_relations):
             # compute tph, i.e. the average number of tail entities per head
             mask = (head_rel_uniq[:, 1] == r)
             tph = tail_count[mask].float().mean()
@@ -112,7 +112,7 @@ class BernoulliNegativeSampler(NegativeSampler):
         # Tails are corrupted if heads are not corrupted
         tail_mask = ~head_mask
 
-        index_max = self.triples_factory.num_entities
+        index_max = self.num_entities
         # If we do not use a filterer, we at least make sure to not replace the triples by the original value
         # See below for explanation of why this is on a range of [0, num_entities - 1]
         if self.filterer is None:
