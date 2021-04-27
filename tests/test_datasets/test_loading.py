@@ -66,7 +66,7 @@ class MockTarFileSingleDataset(TarFileSingleDataset):
         super().__init__(
             url=...,
             name=...,
-            relative_path=pathlib.PurePath('nations', 'train.txt'),
+            relative_path=pathlib.PurePosixPath('nations', 'train.txt'),
             cache_root=cache_root,
         )
 

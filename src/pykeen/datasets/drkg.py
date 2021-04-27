@@ -4,6 +4,7 @@
 
 Get a summary with ``python -m pykeen.datasets.drkg``
 """
+import pathlib
 
 import click
 from docdata import parse_docdata
@@ -49,7 +50,7 @@ class DRKG(TarFileSingleDataset):
         """
         super().__init__(
             url=URL,
-            relative_path='drkg.tsv',
+            relative_path=pathlib.PurePosixPath('drkg.tsv'),
             create_inverse_triples=create_inverse_triples,
             random_state=random_state,
             **kwargs,

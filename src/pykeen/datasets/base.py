@@ -610,7 +610,7 @@ class TarFileSingleDataset(LazyDataset):
     def __init__(
         self,
         url: str,
-        relative_path: str,
+        relative_path: pathlib.PurePosixPath,
         name: Optional[str] = None,
         cache_root: Optional[str] = None,
         eager: bool = False,
