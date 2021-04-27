@@ -15,15 +15,23 @@ from pykeen.models import ConvE, Model, TransE
 from pykeen.optimizers import optimizer_resolver
 from pykeen.training import SLCWATrainingLoop, training_loop_resolver
 from pykeen.training.training_loop import NonFiniteLossError, TrainingApproachLossMismatchError
+from pykeen.triples import TriplesFactory
 from pykeen.typing import MappedTriples
 
 
 class DummyTrainingLoop(SLCWATrainingLoop):
     """A wrapper around SLCWATrainingLoop."""
 
-    def __init__(self, model: Model, sub_batch_size: int, automatic_memory_optimization: bool = False):
+    def __init__(
+        self,
+        model: Model,
+        triples_factory: TriplesFactory,
+        sub_batch_size: int,
+        automatic_memory_optimization: bool = False,
+    ):
         super().__init__(
             model=model,
+            triples_factory=triples_factory,
             optimizer=optim.Adam(lr=1.0, params=model.parameters()),
             automatic_memory_optimization=automatic_memory_optimization,
         )
@@ -55,9 +63,16 @@ class DummyTrainingLoop(SLCWATrainingLoop):
 class NaNTrainingLoop(SLCWATrainingLoop):
     """A wrapper around SLCWATrainingLoop returning NaN losses."""
 
-    def __init__(self, model: Model, patience: int, automatic_memory_optimization: bool = False):
+    def __init__(
+        self,
+        model: Model,
+        triples_factory: TriplesFactory,
+        patience: int,
+        automatic_memory_optimization: bool = False,
+    ):
         super().__init__(
             model=model,
+            triples_factory=triples_factory,
             optimizer=optim.Adam(lr=1.0, params=model.parameters()),
             automatic_memory_optimization=automatic_memory_optimization,
         )
@@ -109,6 +124,7 @@ class TrainingLoopTests(unittest.TestCase):
         model = TransE(triples_factory=self.triples_factory)
         training_loop = DummyTrainingLoop(
             model=model,
+            triples_factory=self.triples_factory,
             sub_batch_size=self.sub_batch_size,
             automatic_memory_optimization=False,
         )
@@ -119,6 +135,7 @@ class TrainingLoopTests(unittest.TestCase):
         model = ConvE(triples_factory=self.triples_factory)
         training_loop = DummyTrainingLoop(
             model=model,
+            triples_factory=self.triples_factory,
             sub_batch_size=self.sub_batch_size,
             automatic_memory_optimization=False,
         )
@@ -132,7 +149,7 @@ class TrainingLoopTests(unittest.TestCase):
     def test_error_on_nan(self):
         """Test if the correct error is raised for non-finite loss values."""
         model = TransE(triples_factory=self.triples_factory)
-        training_loop = NaNTrainingLoop(model=model, patience=2)
+        training_loop = NaNTrainingLoop(model=model, triples_factory=self.triples_factory, patience=2)
 
         with self.assertRaises(NonFiniteLossError):
             training_loop.train(num_epochs=3, batch_size=self.batch_size)
@@ -144,7 +161,12 @@ class TrainingLoopTests(unittest.TestCase):
             loss=CrossEntropyLoss(),
         )
         with self.assertRaises(TrainingApproachLossMismatchError):
-            NaNTrainingLoop(model=model, patience=2, automatic_memory_optimization=False)
+            NaNTrainingLoop(
+                model=model,
+                triples_factory=self.triples_factory,
+                patience=2,
+                automatic_memory_optimization=False,
+            )
 
     def test_lcwa_checkpoints(self):
         """Test whether interrupting the LCWA training loop can be resumed using checkpoints."""
@@ -165,7 +187,12 @@ class TrainingLoopTests(unittest.TestCase):
         )
         optimizer_cls = optimizer_resolver.lookup(None)
         optimizer = optimizer_cls(params=model.get_grad_params())
-        training_loop = training_loop_class(model=model, optimizer=optimizer, automatic_memory_optimization=False)
+        training_loop = training_loop_class(
+            model=model,
+            triples_factory=self.triples_factory,
+            optimizer=optimizer,
+            automatic_memory_optimization=False,
+        )
         losses = training_loop.train(
             num_epochs=self.num_epochs,
             batch_size=self.batch_size,
@@ -180,7 +207,12 @@ class TrainingLoopTests(unittest.TestCase):
         )
         optimizer_cls = optimizer_resolver.lookup(None)
         optimizer = optimizer_cls(params=model.get_grad_params())
-        training_loop = training_loop_class(model=model, optimizer=optimizer, automatic_memory_optimization=False)
+        training_loop = training_loop_class(
+            model=model,
+            triples_factory=self.triples_factory,
+            optimizer=optimizer,
+            automatic_memory_optimization=False,
+        )
         training_loop.train(
             num_epochs=int(self.num_epochs // 2),
             batch_size=self.batch_size,
@@ -196,7 +228,12 @@ class TrainingLoopTests(unittest.TestCase):
         )
         optimizer_cls = optimizer_resolver.lookup(None)
         optimizer = optimizer_cls(params=model.get_grad_params())
-        training_loop = training_loop_class(model=model, optimizer=optimizer, automatic_memory_optimization=False)
+        training_loop = training_loop_class(
+            model=model,
+            triples_factory=self.triples_factory,
+            optimizer=optimizer,
+            automatic_memory_optimization=False,
+        )
         losses_2 = training_loop.train(
             num_epochs=self.num_epochs,
             batch_size=self.batch_size,
