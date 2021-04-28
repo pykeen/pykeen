@@ -45,8 +45,6 @@ class WK3l15k(LazyDataset):
         triples: 209041
     """
 
-    ratios = (0.8, 0.1, 0.1)
-
     def __init__(
         self,
         graph_pair: str = "en_de",
@@ -55,29 +53,56 @@ class WK3l15k(LazyDataset):
         eager: bool = False,
         create_inverse_triples: bool = False,
         random_state: TorchRandomHint = None,
+        split_ratios: Tuple[int, int, int] = (0.8, 0.1, 0.1),
         force: bool = False,
     ):
+        """
+        Initialize the dataset.
+
+        :param graph_pair:
+            The graph-pair within the dataset family (cf. GRAPH_PAIRS).
+        :param side:
+            The side of the graph-pair, a substring of the graph-pair selection.
+        :param cache_root:
+            The cache root.
+        :param eager:
+            Whether to directly load the dataset, or defer it to the first access of a relevant attribute.
+        :param create_inverse_triples:
+            Whether to create inverse triples.
+        :param random_state:
+            The random state used for splitting.
+        :param force:
+            Whether to enforce re-download of existing files.
+        """
+        # Input validation.
         if graph_pair not in GRAPH_PAIRS:
             raise ValueError(f"Invalid graph pair: Allowed are: {GRAPH_PAIRS}")
         available_sides = graph_pair.split("_")
         if side not in available_sides:
             raise ValueError(f"side must be one of {available_sides}")
+
+        # compose relative file name within the archive.
         suffix = 5 if graph_pair == "en_fr" else 6
         file_name = f"P_{side}_v{suffix}.csv"
         self._relative_path = pathlib.PurePosixPath("data", "WK3l-15k", graph_pair, file_name)
+
+        # For downloading
+        self.drive_id = GOOGLE_DRIVE_ID
+        self.force = force
         self.cache_root = self._help_cache(cache_root)
 
+        # For splitting
         self.random_state = random_state
-        self.drive_id = GOOGLE_DRIVE_ID
-        self.name = "wk3l15k.zip"
+        self.ratios = split_ratios
+
+        # Whether to create inverse triples
         self.create_inverse_triples = create_inverse_triples
-        self.force = force
 
         if eager:
             self._load()
 
     def _get_path(self) -> pathlib.Path:
-        return self.cache_root.joinpath(self.name)
+        return self.cache_root.joinpath("wk3l15k.zip")
 
     def _load(self) -> None:
         path = self._get_path()
