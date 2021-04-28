@@ -40,6 +40,12 @@ class MTransEDataset(LazyDataset, ABC):
     #: The internal dataset name
     DATASET_NAME: ClassVar[str]
 
+    #: The hex digest for the zip file
+    SHA512: str = (
+        "b5b64db8acec2ef83a418008e8ff6ddcd3ea1db95a0a158825ea9cffa5a3c34a"
+        "9aba6945674304f8623ab21c7248fed900028e71ad602883a307364b6e3681dc"
+    )
+
     def __init__(
         self,
         graph_pair: str = "en_de",
@@ -111,9 +117,10 @@ class MTransEDataset(LazyDataset, ABC):
         path = self.cache_root.joinpath("data.zip")
 
         # ensure file is present
+        # TODO: Re-use ensure_from_google?
         if not path.is_file() or self.force:
             logger.info(f"Downloading file from Google Drive (ID: {self.drive_id})")
-            download_from_google(self.drive_id, path)
+            download_from_google(self.drive_id, path, hexdigests=dict(sha512=self.SHA512))
 
         # read all triples from file
         with zipfile.ZipFile(path) as zf:
