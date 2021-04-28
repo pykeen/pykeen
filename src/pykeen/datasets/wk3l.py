@@ -12,6 +12,7 @@ from typing import Optional, Tuple, cast
 
 import click
 import pandas
+from docdata import parse_docdata
 from more_click import verbose_option
 from pystow.utils import download_from_google
 
@@ -29,6 +30,7 @@ GOOGLE_DRIVE_ID = "1AsPPU4ka1Rc9u-XYMGWtvV65hF3egi0z"
 GRAPH_PAIRS = ("en_fr", "en_de")
 
 
+@parse_docdata
 class WK3l15k(LazyDataset):
     """The WK3l-15k dataset family.
 
