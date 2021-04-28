@@ -18,11 +18,12 @@ from dataclasses_json import DataClassJsonMixin
 from tqdm.autonotebook import tqdm
 
 from ..models import Model
+from ..triples.triples_factory import restrict_triples
 from ..triples.utils import get_entities, get_relations
 from ..typing import MappedTriples
 from ..utils import (
-    is_cuda_oom_error, is_cudnn_error, is_nonzero_larger_than_maxint_error, normalize_string,
-    split_list_in_batches_iter,
+    format_relative_comparison, is_cuda_oom_error, is_cudnn_error, is_nonzero_larger_than_maxint_error,
+    normalize_string, split_list_in_batches_iter,
 )
 
 __all__ = [
@@ -565,13 +566,19 @@ def evaluate(
             if len(unwanted):
                 raise ValueError(
                     f'mapped_triples contains IDs of relations which are not contained in restrict_relations_to:'
-                    f'{unwanted}. This will invalidate the evaluation results.'
+                    f'{unwanted}. This will invalidate the evaluation results.',
                 )
 
     # Filter triples if necessary
     if not pre_filtered_triples and (restrict_entities_to is not None or restrict_relations_to is not None):
-        # TODO: cf. new_with_restriction
-        raise NotImplementedError
+        old_num_triples = mapped_triples.shape[0]
+        mapped_triples = restrict_triples(
+            mapped_triples=mapped_triples,
+            entities=restrict_entities_to,
+            relations=restrict_relations_to,
+        )
+        logger.info(f"keeping {format_relative_comparison(mapped_triples.shape[0], old_num_triples)} triples.")
+        # TODO: Also restrict filter triples? This should not affect correctness, but might improve performance.
 
     # Send to device
     if device is not None:
