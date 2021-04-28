@@ -537,10 +537,12 @@ class CoreTriplesFactory:
 
     def entities_to_ids(self, entities: Collection[int]) -> Collection[int]:
         """Normalize entities to IDs."""
+        # comment: this method is used to allow sub-classes overriding the * to ID conversion
         return entities
 
     def relations_to_ids(self, relations: Collection[int]) -> Collection[int]:
         """Normalize relations to IDs."""
+        # comment: this method is used to allow sub-classes overriding the * to ID conversion
         return relations
 
     def get_mask_for_relations(
