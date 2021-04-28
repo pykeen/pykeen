@@ -165,7 +165,6 @@ class WK3l15k(MTransEDataset):
 
     @staticmethod
     def _get_relative_path(graph_pair: str, side: str) -> pathlib.PurePosixPath:  # noqa: D102
-        # compose relative file name within the archive.
         suffix = 5 if graph_pair == "en_fr" else 6
         file_name = f"P_{side}_v{suffix}.csv"
         return pathlib.PurePosixPath("data", "WK3l-15k", graph_pair, file_name)
@@ -190,10 +189,36 @@ class WK3l120k(MTransEDataset):
 
     @staticmethod
     def _get_relative_path(graph_pair: str, side: str) -> pathlib.PurePosixPath:  # noqa: D102
-        # compose relative file name within the archive.
         suffix = 5 if graph_pair == "en_fr" else 6
         file_name = f"P_{side}_v{suffix}_120k.csv"
         return pathlib.PurePosixPath("data", "WK3l-120k", graph_pair, file_name)
+
+
+class CN3l(MTransEDataset):
+    """The CN3l dataset family.
+
+    ---
+    name: CN3l Family
+    citation:
+        author: Chen
+        year: 2017
+        link: https://www.ijcai.org/Proceedings/2017/0209.pdf
+    single: true
+    statistics:
+        entities: 3206
+        relations: 42
+        triples: 21777
+    """
+    FILE_NAMES = {
+        ("en_de", "en"): "C_en_d.csv",
+        ("en_de", "de"): "C_de.csv",
+        ("en_fr", "en"): "C_en_f.csv",
+        ("en_fr", "fr"): "C_fr.csv",
+    }
+
+    @staticmethod
+    def _get_relative_path(graph_pair: str, side: str) -> pathlib.PurePosixPath:  # noqa: D102
+        return pathlib.PurePosixPath("data", "CN3l", graph_pair, CN3l.FILE_NAMES[graph_pair, side])
 
 
 @click.command()
@@ -201,7 +226,7 @@ class WK3l120k(MTransEDataset):
 def _main():
     for graph_pair in GRAPH_PAIRS:
         for side in graph_pair.split("_"):
-            for cls in (WK3l15k, WK3l120k):
+            for cls in (WK3l15k, WK3l120k, CN3l):
                 ds = cls(graph_pair=graph_pair, side=side)
                 ds.summarize()
 
