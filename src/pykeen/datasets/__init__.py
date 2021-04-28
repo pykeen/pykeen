@@ -34,7 +34,7 @@ from .openbiolink import OpenBioLink, OpenBioLinkF1, OpenBioLinkF2, OpenBioLinkL
 from .umls import UMLS
 from .wordnet import WN18, WN18RR
 from .yago import YAGO310
-from ..triples import CoreTriplesFactory, TriplesFactory
+from ..triples import CoreTriplesFactory
 from ..utils import normalize_string
 
 __all__ = [
@@ -87,9 +87,9 @@ def get_dataset(
     *,
     dataset: Union[None, str, Dataset, Type[Dataset]] = None,
     dataset_kwargs: Optional[Mapping[str, Any]] = None,
-    training: Union[None, str, TriplesFactory] = None,
-    testing: Union[None, str, TriplesFactory] = None,
-    validation: Union[None, str, TriplesFactory] = None,
+    training: Union[None, str, CoreTriplesFactory] = None,
+    testing: Union[None, str, CoreTriplesFactory] = None,
+    validation: Union[None, str, CoreTriplesFactory] = None,
 ) -> Dataset:
     """Get the dataset.
 

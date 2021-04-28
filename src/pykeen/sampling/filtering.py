@@ -33,10 +33,10 @@ hold for all entities; e.g., for a hub entity which is connected to many other e
 number of false negatives without filtering.
  
 
-Identifying False Negatives
----------------------------
-By default, PyKEEN does *not* filter false negatives from $\mathcal{N}$. To enable the "filtered setting", the
-``filtered`` keyword can be given to ``negative_sampler_kwargs`` like in:
+Identifying False Negatives During Training
+-------------------------------------------
+By default, PyKEEN does *not* filter false negatives from $\mathcal{N}$ during training. To enable filtering of
+negative examples during training, the ``filtered`` keyword can be given to ``negative_sampler_kwargs`` like in:
 
 .. code-block:: python
 
@@ -91,6 +91,36 @@ on Python's built-in sets, the :class:`pykeen.sampling.filtering.PythonSetFilter
             filterer='python-set',    
         ),
     )
+    
+Identifying False Negatives During Evaluation
+---------------------------------------------
+In contrast to training, PyKEEN **does** filter false negatives from $\mathcal{N}$ during evaluation by default.
+To disable the "filtered setting" during evaluation, the ``filtered`` keyword can be given to ``evaluator_kwargs``
+like in:
+
+.. code-block:: python
+
+    from pykeen.pipeline import pipeline
+
+    results = pipeline(
+        dataset='YAGO3-10',
+        model='PairRE',
+        evaluator_kwargs=dict(
+            filtered=False,
+        ),
+    )
+
+Filtering during evaluation is implemented differently than in negative sampling:
+
+First, there are no choices between an exact or approximate algorithm via a
+:class:`pykeen.sampling.filtering.Filterer`. Instead, the evaluation filtering can modify the
+scores in-place and does so instead of selecting only the non-filtered entries. The reason is
+mainly that evaluation always is done in 1:n scoring, and thus, we gain some efficiently here
+by keeping the tensor in "dense" shape ``(batch_size, num_entities)``.
+
+Second, filtering during evaluation has to be correct, and is crucial for reproducing results
+from the filtered setting. For evaluation it makes sense to use all information we have to get
+as solid evaluation results as possible.
 """  # noqa
 
 import math

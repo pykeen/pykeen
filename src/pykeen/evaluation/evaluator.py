@@ -9,6 +9,7 @@ from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from dataclasses import dataclass
 from math import ceil
+from textwrap import dedent
 from typing import Any, Collection, Iterable, List, Mapping, Optional, Tuple, Union, cast
 
 import numpy as np
@@ -76,6 +77,15 @@ class Evaluator(ABC):
         slice_size: Optional[int] = None,
         automatic_memory_optimization: bool = True,
     ):
+        """Initialize the evaluator.
+
+        :param filtered: Should filtered evaluation be performed?
+        :param requires_positive_mask: Does the evaluator need access to the masks?
+        :param batch_size: >0. Evaluation batch size.
+        :param slice_size: >0. The divisor for the scoring function when using slicing
+        :param automatic_memory_optimization: Whether to automatically optimize the sub-batch size during
+            evaluation with regards to the hardware at hand.
+        """
         self.filtered = filtered
         self.requires_positive_mask = requires_positive_mask
         self.batch_size = batch_size
@@ -131,7 +141,7 @@ class Evaluator(ABC):
     def evaluate(
         self,
         model: Model,
-        mapped_triples: Optional[MappedTriples] = None,
+        mapped_triples: MappedTriples,
         batch_size: Optional[int] = None,
         slice_size: Optional[int] = None,
         device: Optional[torch.device] = None,
@@ -139,11 +149,9 @@ class Evaluator(ABC):
         tqdm_kwargs: Optional[Mapping[str, str]] = None,
         restrict_entities_to: Optional[torch.LongTensor] = None,
         do_time_consuming_checks: bool = True,
+        additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
     ) -> MetricResults:
         """Run :func:`pykeen.evaluation.evaluate` with this evaluator."""
-        if mapped_triples is None:
-            mapped_triples = model.triples_factory.mapped_triples
-
         if batch_size is None and self.automatic_memory_optimization:
             # Using automatic memory optimization on CPU may result in undocumented crashes due to OS' OOM killer.
             if model.device.type == 'cpu':
@@ -155,6 +163,7 @@ class Evaluator(ABC):
                 batch_size, slice_size = self.batch_and_slice(
                     model=model,
                     mapped_triples=mapped_triples,
+                    additional_filter_triples=additional_filter_triples,
                     batch_size=batch_size,
                     device=device,
                     use_tqdm=False,
@@ -170,6 +179,7 @@ class Evaluator(ABC):
 
         rv = evaluate(
             model=model,
+            additional_filtered_triples=additional_filter_triples,
             mapped_triples=mapped_triples,
             evaluators=self,
             batch_size=batch_size,
@@ -193,6 +203,7 @@ class Evaluator(ABC):
         use_tqdm: bool = False,
         restrict_entities_to: Optional[torch.LongTensor] = None,
         do_time_consuming_checks: bool = True,
+        additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
     ) -> Tuple[int, Optional[int]]:
         """Find the maximum possible batch_size and slice_size for evaluation with the current setting.
 
@@ -216,6 +227,9 @@ class Evaluator(ABC):
             Should a progress bar be displayed?
         :param restrict_entities_to:
             Whether to restrict the evaluation to certain entities of interest.
+        :param additional_filter_triples:
+            Additional true triples to filter out during filtered evaluation. Only needed if the evaluator is in
+            filtered mode.
 
         :return:
             Maximum possible batch size and, if necessary, the slice_size, which defaults to None.
@@ -227,6 +241,7 @@ class Evaluator(ABC):
             key='batch_size',
             start_value=batch_size,
             model=model,
+            additional_filter_triples=additional_filter_triples,
             mapped_triples=mapped_triples,
             device=device,
             use_tqdm=use_tqdm,
@@ -244,6 +259,7 @@ class Evaluator(ABC):
             # must have failed to start slice_size search, we start with trying half the entities.
             start_value=ceil(model.num_entities / 2),
             model=model,
+            additional_filter_triples=additional_filter_triples,
             mapped_triples=mapped_triples,
             device=device,
             use_tqdm=use_tqdm,
@@ -265,6 +281,7 @@ class Evaluator(ABC):
         use_tqdm: bool = False,
         restrict_entities_to: Optional[torch.LongTensor] = None,
         do_time_consuming_checks: bool = True,
+        additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
     ) -> Tuple[int, bool]:
         values_dict = {}
         maximum_triples = mapped_triples.shape[0]
@@ -295,6 +312,7 @@ class Evaluator(ABC):
                 torch.cuda.empty_cache()
                 evaluate(
                     model=model,
+                    additional_filtered_triples=additional_filter_triples,
                     mapped_triples=mapped_triples,
                     evaluators=self,
                     only_size_probing=True,
@@ -350,7 +368,7 @@ class Evaluator(ABC):
     @staticmethod
     def _check_slicing_availability(model: Model, batch_size: int) -> None:
         # Test if slicing is implemented for the required functions of this model
-        if model.triples_factory.create_inverse_triples:
+        if model.use_inverse_triples:
             if not model.can_slice_t:
                 raise MemoryError(f"The current model can't be evaluated on this hardware with these parameters, as "
                                   f"evaluation batch_size={batch_size} is too big and slicing is not implemented for "
@@ -475,6 +493,7 @@ def evaluate(
     restrict_relations_to: Optional[torch.LongTensor] = None,
     do_time_consuming_checks: bool = True,
     pre_filtered_triples: bool = True,
+    additional_filtered_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
 ) -> Union[MetricResults, List[MetricResults]]:
     """Evaluate metrics for model on mapped triples.
 
@@ -522,6 +541,8 @@ def evaluate(
         Whether the triples have been pre-filtered to adhere to restrict_entities_to / restrict_relations_to. When set
         to True, and the triples have *not* been filtered, the results may be invalid. Pre-filtering the triples
         accelerates this method, and is recommended when evaluating multiple times on the same set of triples.
+    :param additional_filtered_triples:
+        Additional true triples to filter out during filtered evaluation.
     """
     if isinstance(evaluators, Evaluator):  # upgrade a single evaluator to a list
         evaluators = [evaluators]
@@ -573,7 +594,25 @@ def evaluate(
 
     # Prepare for result filtering
     if filtering_necessary or positive_masks_required:
-        all_pos_triples = torch.cat([model.triples_factory.mapped_triples, mapped_triples], dim=0)
+        if additional_filtered_triples is None:
+            logger.warning(dedent('''\
+                The filtered setting was enabled, but there were no `additional_filtered_triples`
+                given. This means you probably forgot to pass (at least) the training triples. Try:
+
+                    additional_filtered_triples=[dataset.training.mapped_triples]
+
+                Or if you want to use the Bordes et al. (2013) approach to filtering, do:
+
+                    additional_filtered_triples=[
+                        dataset.training.mapped_triples,
+                        dataset.validation.mapped_triples,
+                    ]
+            '''))
+            all_pos_triples = mapped_triples
+        elif isinstance(additional_filtered_triples, (list, tuple)):
+            all_pos_triples = torch.cat([*additional_filtered_triples, mapped_triples], dim=0)
+        else:
+            all_pos_triples = torch.cat([additional_filtered_triples, mapped_triples], dim=0)
         all_pos_triples = all_pos_triples.to(device=device)
     else:
         all_pos_triples = None
@@ -612,7 +651,7 @@ def evaluate(
             relation_filter = None
             for column in (0, 2):
                 relation_filter = _evaluate_batch(
-                    batch=batch,
+                    batch=batch,  # TODO fix typing
                     model=model,
                     column=column,
                     filtered_evaluators=filtered_evaluators,
