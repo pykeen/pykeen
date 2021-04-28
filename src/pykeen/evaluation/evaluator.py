@@ -564,7 +564,7 @@ def evaluate(
                 )
         if restrict_relations_to is not None:
             present_relation_ids = get_relations(triples=mapped_triples)
-            unwanted = present_relation_ids.difference(restrict_entities_to)
+            unwanted = present_relation_ids.difference(restrict_relations_to)
             if len(unwanted):
                 raise ValueError(
                     f'mapped_triples contains IDs of relations which are not contained in restrict_relations_to:'
