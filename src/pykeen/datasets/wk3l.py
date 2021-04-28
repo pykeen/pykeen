@@ -38,6 +38,11 @@ class WK3l15k(LazyDataset):
         author: Chen
         year: 2017
         link: https://www.ijcai.org/Proceedings/2017/0209.pdf
+    single: true
+    statistics:
+        entities: 15126
+        relations: 1841
+        triples: 209041
     """
 
     ratios = (0.8, 0.1, 0.1)
