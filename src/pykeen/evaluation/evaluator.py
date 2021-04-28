@@ -529,13 +529,14 @@ def evaluate(
         Optionally restrict the evaluation to the given entity IDs. This may be useful if one is only interested in a
         part of the entities, e.g. due to type constraints, but wants to train on all available data. For ranking the
         entities, we still compute all scores for all possible replacement entities to avoid irregular access patterns
-        which might decrease performance, but the scores with afterwards be filtered to only keep those of interest.
-        If provided, we assume that the triples are already filtered, such that it only contains the entities of
-        interest.
+        which might decrease performance, but the scores will afterwards be filtered to only keep those of interest.
+        If provided, we assume by default that the triples are already filtered, such that it only contains the
+        entities of interest. To explicitly filter within this method, pass `pre_filtered_triples=False`.
     :param restrict_relations_to:
         Optionally restrict the evaluation to the given relation IDs. This may be useful if one is only interested in a
         part of the relations, e.g. due to relation types, but wants to train on all available data. If provided, we
-        assume that the triples are already filtered, such that it only contains the relations of interest.
+        assume by default that the triples are already filtered, such that it only contains the relations of interest.
+        To explicitly filter within this method, pass `pre_filtered_triples=False`.
     :param do_time_consuming_checks:
         Whether to perform some time consuming checks on the provided arguments. Currently, this encompasses:
         - If restrict_entities_to or restrict_relations_to is not None, check whether the triples have been filtered.
