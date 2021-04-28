@@ -13,7 +13,7 @@ from ...moves import irfft, rfft
 from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_uniform_
 from ...regularizers import Regularizer
-from ...triples import TriplesFactory
+from ...triples import CoreTriplesFactory
 from ...typing import Constrainer, DeviceHint, Hint, Initializer
 from ...utils import clamp_norm
 
@@ -66,7 +66,7 @@ class HolE(EntityRelationEmbeddingModel):
 
     def __init__(
         self,
-        triples_factory: TriplesFactory,
+        triples_factory: CoreTriplesFactory,
         embedding_dim: int = 200,
         loss: Optional[Loss] = None,
         preferred_device: DeviceHint = None,

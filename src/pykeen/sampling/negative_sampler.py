@@ -9,7 +9,7 @@ import torch
 from class_resolver import HintOrType
 
 from .filtering import Filterer, filterer_resolver
-from ..triples import TriplesFactory
+from ..triples import CoreTriplesFactory
 from ..utils import normalize_string
 
 __all__ = [
@@ -28,7 +28,7 @@ class NegativeSampler(ABC):
 
     def __init__(
         self,
-        triples_factory: TriplesFactory,
+        triples_factory: CoreTriplesFactory,
         num_negs_per_pos: Optional[int] = None,
         filtered: bool = False,
         filterer: HintOrType[Filterer] = None,

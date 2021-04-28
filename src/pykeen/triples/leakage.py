@@ -11,14 +11,14 @@ novel triples.
 
 import logging
 from collections import defaultdict
-from typing import Collection, Dict, Iterable, List, Mapping, Optional, Set, Tuple, TypeVar, Union
+from typing import Collection, Dict, Iterable, List, Mapping, Optional, Set, Tuple, TypeVar, Union, cast
 
 import numpy
 import scipy.sparse
 import torch
 
 from pykeen.datasets.base import EagerDataset
-from pykeen.triples.triples_factory import TriplesFactory, cat_triples
+from pykeen.triples.triples_factory import CoreTriplesFactory, TriplesFactory, cat_triples
 from pykeen.typing import MappedTriples
 from pykeen.utils import compact_mapping
 
@@ -109,7 +109,7 @@ def jaccard_similarity_scipy(
 
 
 def triples_factory_to_sparse_matrices(
-    triples_factory: TriplesFactory,
+    triples_factory: CoreTriplesFactory,
 ) -> Tuple[scipy.sparse.spmatrix, scipy.sparse.spmatrix]:
     """Compute relation representations as sparse matrices of entity pairs.
 
@@ -216,14 +216,14 @@ def get_candidate_pairs(
 class Sealant:
     """Stores inverse frequencies and inverse mappings in a given triples factory."""
 
-    triples_factory: TriplesFactory
+    triples_factory: CoreTriplesFactory
     minimum_frequency: float
     inverses: Mapping[int, int]
     inverse_relations_to_delete: Set[int]
 
     def __init__(
         self,
-        triples_factory: TriplesFactory,
+        triples_factory: CoreTriplesFactory,
         minimum_frequency: Optional[float] = None,
         symmetric: bool = True,
     ):
@@ -266,17 +266,17 @@ class Sealant:
         )
         logger.info(f'identified {len(self.candidates)} from {self.triples_factory} to delete')
 
-    def apply(self, triples_factory: TriplesFactory) -> TriplesFactory:
+    def apply(self, triples_factory: CoreTriplesFactory) -> CoreTriplesFactory:
         """Make a new triples factory containing neither duplicate nor inverse relationships."""
         return triples_factory.new_with_restriction(relations=self.relations_to_delete, invert_relation_selection=True)
 
 
 def unleak(
-    train: TriplesFactory,
-    *triples_factories: TriplesFactory,
+    train: CoreTriplesFactory,
+    *triples_factories: CoreTriplesFactory,
     n: Union[None, int, float] = None,
     minimum_frequency: Optional[float] = None,
-) -> Iterable[TriplesFactory]:
+) -> Iterable[CoreTriplesFactory]:
     """Unleak a train, test, and validate triples factory.
 
     :param train: The target triples factory
@@ -378,10 +378,14 @@ def _translate_triples(
     return triples
 
 
-def reindex(*triples_factories: TriplesFactory) -> List[TriplesFactory]:
+def reindex(*triples_factories: CoreTriplesFactory) -> List[CoreTriplesFactory]:
     """Reindex a set of triples factories."""
     # get entities and relations occurring in triples
     all_triples = cat_triples(*triples_factories)
+
+    if not all(isinstance(f, TriplesFactory) for f in triples_factories):
+        raise NotImplementedError("reindex has not been updated for non-TriplesFactory yet.")
+    triples_factories = cast(Tuple[TriplesFactory, ...], triples_factories)
 
     # generate ID translation and new label to Id mappings
     one_factory = triples_factories[0]

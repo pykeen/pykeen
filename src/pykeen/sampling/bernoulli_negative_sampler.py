@@ -9,7 +9,7 @@ from class_resolver import HintOrType
 
 from .filtering import Filterer
 from .negative_sampler import NegativeSampler
-from ..triples import TriplesFactory
+from ..triples import CoreTriplesFactory
 
 __all__ = [
     'BernoulliNegativeSampler',
@@ -45,7 +45,7 @@ class BernoulliNegativeSampler(NegativeSampler):
 
     def __init__(
         self,
-        triples_factory: TriplesFactory,
+        triples_factory: CoreTriplesFactory,
         num_negs_per_pos: Optional[int] = None,
         filtered: bool = False,
         filterer: HintOrType[Filterer] = None,
