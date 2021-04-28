@@ -71,8 +71,13 @@ class WK3l15k(LazyDataset):
             Whether to create inverse triples.
         :param random_state:
             The random state used for splitting.
+        :param split_ratios:
+            The split ratios used for splitting the dataset into train / validation / test.
         :param force:
             Whether to enforce re-download of existing files.
+
+        :raises ValueError:
+            If the graph pair or side is invalid.
         """
         # Input validation.
         if graph_pair not in GRAPH_PAIRS:
