@@ -8,8 +8,8 @@ Get a summary with ``python -m pykeen.datasets.wk3l``
 import logging
 import pathlib
 import zipfile
-from abc import abstractmethod
-from typing import Optional, Tuple, cast
+from abc import ABC
+from typing import ClassVar, Mapping, Optional, Tuple, cast
 
 import click
 import pandas
@@ -31,8 +31,14 @@ GOOGLE_DRIVE_ID = "1AsPPU4ka1Rc9u-XYMGWtvV65hF3egi0z"
 GRAPH_PAIRS = ("en_fr", "en_de")
 
 
-class MTransEDataset(LazyDataset):
+class MTransEDataset(LazyDataset, ABC):
     """Base class for WK3l datasets (WK3l-15k, WK3l-120k, CN3l)."""
+
+    #: The mapping from (graph-pair, side) to triple file name
+    FILE_NAMES: ClassVar[Mapping[Tuple[str, str], str]]
+
+    #: The internal dataset name
+    DATASET_NAME: ClassVar[str]
 
     def __init__(
         self,
@@ -75,7 +81,12 @@ class MTransEDataset(LazyDataset):
         if side not in available_sides:
             raise ValueError(f"side must be one of {available_sides}")
 
-        self._relative_path = self._get_relative_path(graph_pair=graph_pair, side=side)
+        self._relative_path = pathlib.PurePosixPath(
+            "data",
+            self.DATASET_NAME,
+            graph_pair,
+            self.FILE_NAMES[graph_pair, side],
+        )
 
         # For downloading
         self.drive_id = GOOGLE_DRIVE_ID
@@ -95,11 +106,6 @@ class MTransEDataset(LazyDataset):
     def _extend_cache_root(self, cache_root: pathlib.Path) -> pathlib.Path:  # noqa: D102
         # shared directory for multiple datasets.
         return cache_root.joinpath("wk3l")
-
-    @staticmethod
-    @abstractmethod
-    def _get_relative_path(graph_pair: str, side: str) -> pathlib.PurePosixPath:
-        """The relative path within the archive."""
 
     def _load(self) -> None:
         path = self.cache_root.joinpath("data.zip")
@@ -150,6 +156,9 @@ class MTransEDataset(LazyDataset):
 class WK3l15k(MTransEDataset):
     """The WK3l-15k dataset family.
 
+    .. note ::
+        This dataset contains artifacts from incorrectly treating literals as entities.
+
     ---
     name: WK3l-15k Family
     citation:
@@ -163,16 +172,21 @@ class WK3l15k(MTransEDataset):
         triples: 209041
     """
 
-    @staticmethod
-    def _get_relative_path(graph_pair: str, side: str) -> pathlib.PurePosixPath:  # noqa: D102
-        suffix = 5 if graph_pair == "en_fr" else 6
-        file_name = f"P_{side}_v{suffix}.csv"
-        return pathlib.PurePosixPath("data", "WK3l-15k", graph_pair, file_name)
+    DATASET_NAME = "WK3l-15k"
+    FILE_NAMES = {
+        ("en_de", "en"): "P_en_v6.csv",
+        ("en_de", "de"): "P_de_v6.csv",
+        ("en_fr", "en"): "P_en_v5.csv",
+        ("en_fr", "fr"): "P_fr_v5.csv",
+    }
 
 
 @parse_docdata
 class WK3l120k(MTransEDataset):
     """The WK3l-120k dataset family.
+
+    .. note ::
+        This dataset contains artifacts from incorrectly treating literals as entities.
 
     ---
     name: WK3l-120k Family
@@ -187,13 +201,16 @@ class WK3l120k(MTransEDataset):
         triples: 1375406
     """
 
-    @staticmethod
-    def _get_relative_path(graph_pair: str, side: str) -> pathlib.PurePosixPath:  # noqa: D102
-        suffix = 5 if graph_pair == "en_fr" else 6
-        file_name = f"P_{side}_v{suffix}_120k.csv"
-        return pathlib.PurePosixPath("data", "WK3l-120k", graph_pair, file_name)
+    DATASET_NAME = "WK3l-120k"
+    FILE_NAMES = {
+        ("en_de", "en"): "P_en_v6_120k.csv",
+        ("en_de", "de"): "P_de_v6_120k.csv",
+        ("en_fr", "en"): "P_en_v5_120k.csv",
+        ("en_fr", "fr"): "P_fr_v5_120k.csv",
+    }
 
 
+@parse_docdata
 class CN3l(MTransEDataset):
     """The CN3l dataset family.
 
@@ -209,16 +226,14 @@ class CN3l(MTransEDataset):
         relations: 42
         triples: 21777
     """
+
+    DATASET_NAME = "CN3l"
     FILE_NAMES = {
         ("en_de", "en"): "C_en_d.csv",
         ("en_de", "de"): "C_de.csv",
         ("en_fr", "en"): "C_en_f.csv",
         ("en_fr", "fr"): "C_fr.csv",
     }
-
-    @staticmethod
-    def _get_relative_path(graph_pair: str, side: str) -> pathlib.PurePosixPath:  # noqa: D102
-        return pathlib.PurePosixPath("data", "CN3l", graph_pair, CN3l.FILE_NAMES[graph_pair, side])
 
 
 @click.command()
