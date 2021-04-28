@@ -78,9 +78,9 @@ class WN18RR(TarFileRemoteDataset):
         """
         super().__init__(
             url='https://github.com/TimDettmers/ConvE/raw/master/WN18RR.tar.gz',
-            relative_training_path=pathlib.PurePath('train.txt'),
-            relative_testing_path=pathlib.PurePath('test.txt'),
-            relative_validation_path=pathlib.PurePath('valid.txt'),
+            relative_training_path='train.txt',
+            relative_testing_path='test.txt',
+            relative_validation_path='valid.txt',
             create_inverse_triples=create_inverse_triples,
             **kwargs,
         )

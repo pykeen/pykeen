@@ -6,7 +6,7 @@
 * FB15k-237
 """
 
-import pathlib
+import os
 
 import click
 from docdata import parse_docdata
@@ -49,9 +49,9 @@ class FB15k(TarFileRemoteDataset):
         """
         super().__init__(
             url='https://everest.hds.utc.fr/lib/exe/fetch.php?media=en:fb15k.tgz',
-            relative_training_path='FB15k/freebase_mtr100_mte100-train.txt',
-            relative_testing_path='FB15k/freebase_mtr100_mte100-test.txt',
-            relative_validation_path='FB15k/freebase_mtr100_mte100-valid.txt',
+            relative_training_path=os.path.join('FB15k', 'freebase_mtr100_mte100-train.txt'),
+            relative_testing_path=os.path.join('FB15k', 'freebase_mtr100_mte100-test.txt'),
+            relative_validation_path=os.path.join('FB15k', 'freebase_mtr100_mte100-valid.txt'),
             create_inverse_triples=create_inverse_triples,
             **kwargs,
         )
@@ -84,9 +84,9 @@ class FB15k237(ZipFileRemoteDataset):
         """
         super().__init__(
             url='https://download.microsoft.com/download/8/7/0/8700516A-AB3D-4850-B4BB-805C515AECE1/FB15K-237.2.zip',
-            relative_training_path=pathlib.PurePath('Release', 'train.txt'),
-            relative_testing_path=pathlib.PurePath('Release', 'test.txt'),
-            relative_validation_path=pathlib.PurePath('Release', 'valid.txt'),
+            relative_training_path=os.path.join('Release', 'train.txt'),
+            relative_testing_path=os.path.join('Release', 'test.txt'),
+            relative_validation_path=os.path.join('Release', 'valid.txt'),
             create_inverse_triples=create_inverse_triples,
             **kwargs,
         )

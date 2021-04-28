@@ -764,15 +764,7 @@ class TriplesFactory(CoreTriplesFactory):
         :return:
             A new triples factory.
         """
-        if isinstance(path, TextIO):
-            path = pathlib.Path(path.name)
-        elif isinstance(path, str):
-            path = pathlib.Path(path)
-        elif not isinstance(path, pathlib.Path):
-            raise TypeError(f'path is invalid type: {type(path)}')
-
-        # resolve path
-        path = path.resolve()
+        path = normalize_path(path)
 
         # TODO: Check if lazy evaluation would make sense
         triples = load_triples(path, **(load_triples_kwargs or {}))
@@ -1045,3 +1037,15 @@ def splits_similarity(a: Sequence[CoreTriplesFactory], b: Sequence[CoreTriplesFa
 
 def _smt(x):
     return set(tuple(xx.detach().numpy().tolist()) for xx in x)
+
+
+def normalize_path(path: Union[str, pathlib.Path, TextIO]) -> pathlib.Path:
+    """Normalize path."""
+    if isinstance(path, TextIO):
+        return pathlib.Path(path.name).resolve()
+    elif isinstance(path, str):
+        return pathlib.Path(path).resolve()
+    elif isinstance(path, pathlib.Path):
+        return path.resolve()
+    else:
+        raise TypeError(f'path is invalid type: {type(path)}')
