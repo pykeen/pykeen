@@ -571,12 +571,17 @@ class CoreTriplesFactory:
             A new triples factory, which has only a subset of the triples containing the entities and relations of
             interest. The label-to-ID mapping is *not* modified.
         """
+        # prepare metadata
+        extra_metadata = {}
+        if entities is not None:
+            extra_metadata["entity_restriction"] = entities
+        if relations is not None:
+            extra_metadata["relation_restriction"] = relations
+
         keep_mask = None
 
-        extra_metadata = {}
         # Filter for entities
         if entities is not None:
-            extra_metadata['entity_restriction'] = entities
             entities = self.entities_to_ids(entities=entities)
             keep_mask = _get_triple_mask(
                 ids=entities,
@@ -590,7 +595,6 @@ class CoreTriplesFactory:
 
         # Filter for relations
         if relations is not None:
-            extra_metadata['relation_restriction'] = relations
             relations = self.relations_to_ids(relations=relations)
             relation_mask = _get_triple_mask(
                 ids=relations,
