@@ -187,6 +187,56 @@ class Labeling:
         return self._vectorized_labeler(ids, (unknown_label,))
 
 
+def restrict_triples(
+    mapped_triples: MappedTriples,
+    entities: Optional[Collection[int]] = None,
+    relations: Optional[Collection[int]] = None,
+    invert_entity_selection: bool = False,
+    invert_relation_selection: bool = False,
+) -> MappedTriples:
+    """Select a subset of triples based on the given entity and relation ID selection.
+
+    :param mapped_triples:
+        The ID-based triples.
+    :param entities:
+        The entity IDs of interest. If None, defaults to all entities.
+    :param relations:
+        The relation IDs of interest. If None, defaults to all relations.
+    :param invert_entity_selection:
+        Whether to invert the entity selection, i.e. select those triples without the provided entities.
+    :param invert_relation_selection:
+        Whether to invert the relation selection, i.e. select those triples without the provided relations.
+    :return:
+        A tensor of triples containing the entities and relations of interest.
+    """
+    keep_mask = None
+
+    # Filter for entities
+    if entities is not None:
+        keep_mask = _get_triple_mask(
+            ids=entities,
+            triples=mapped_triples,
+            columns=(0, 2),  # head and entity need to fulfil the requirement
+            invert=invert_entity_selection,
+        )
+
+    # Filter for relations
+    if relations is not None:
+        relation_mask = _get_triple_mask(
+            ids=relations,
+            triples=mapped_triples,
+            columns=1,
+            invert=invert_relation_selection,
+        )
+        keep_mask = relation_mask if keep_mask is None else keep_mask & relation_mask
+
+    # No filter
+    if keep_mask is None:
+        return mapped_triples
+
+    return mapped_triples[keep_mask]
+
+
 @dataclasses.dataclass
 class CoreTriplesFactory:
     """Create instances from ID-based triples."""
@@ -575,46 +625,32 @@ class CoreTriplesFactory:
         extra_metadata = {}
         if entities is not None:
             extra_metadata["entity_restriction"] = entities
-        if relations is not None:
-            extra_metadata["relation_restriction"] = relations
-
-        keep_mask = None
-
-        # Filter for entities
-        if entities is not None:
             entities = self.entities_to_ids(entities=entities)
-            keep_mask = _get_triple_mask(
-                ids=entities,
-                triples=self.mapped_triples,
-                columns=(0, 2),  # head and entity need to fulfil the requirement
-                invert=invert_entity_selection,
-                max_id=self.num_entities,
-            )
             remaining_entities = (self.num_entities - len(entities)) if invert_entity_selection else len(entities)
             logger.info(f"keeping {format_relative_comparison(remaining_entities, self.num_entities)} entities.")
-
-        # Filter for relations
         if relations is not None:
+            extra_metadata["relation_restriction"] = relations
             relations = self.relations_to_ids(relations=relations)
-            relation_mask = _get_triple_mask(
-                ids=relations,
-                triples=self.mapped_triples,
-                columns=1,
-                invert=invert_relation_selection,
-                max_id=self.num_relations,
-            )
             remaining_relations = (self.num_relations - len(relations)) if invert_entity_selection else len(relations)
             logger.info(f"keeping {format_relative_comparison(remaining_relations, self.num_relations)} relations.")
-            keep_mask = relation_mask if keep_mask is None else keep_mask & relation_mask
+
+        # Delegate to function
+        mapped_triples = restrict_triples(
+            mapped_triples=self.mapped_triples,
+            entities=entities,
+            relations=relations,
+            invert_entity_selection=invert_entity_selection,
+            invert_relation_selection=invert_relation_selection,
+        )
 
         # No filtering happened
-        if keep_mask is None:
+        if mapped_triples.shape[0] == self.num_triples:
             return self
 
-        num_triples = keep_mask.sum()
-        logger.info(f"keeping {format_relative_comparison(num_triples, self.num_triples)} triples.")
+        logger.info(f"keeping {format_relative_comparison(mapped_triples.shape[0], self.num_triples)} triples.")
+
         return self.clone_and_exchange_triples(
-            mapped_triples=self.mapped_triples[keep_mask],
+            mapped_triples=mapped_triples,
             extra_metadata=extra_metadata,
         )
 
