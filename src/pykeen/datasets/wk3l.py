@@ -8,6 +8,7 @@ Get a summary with ``python -m pykeen.datasets.wk3l``
 import logging
 import pathlib
 import zipfile
+from abc import abstractmethod
 from typing import Optional, Tuple, cast
 
 import click
@@ -30,22 +31,8 @@ GOOGLE_DRIVE_ID = "1AsPPU4ka1Rc9u-XYMGWtvV65hF3egi0z"
 GRAPH_PAIRS = ("en_fr", "en_de")
 
 
-@parse_docdata
-class WK3l15k(LazyDataset):
-    """The WK3l-15k dataset family.
-
-    ---
-    name: WK3l-15k Family
-    citation:
-        author: Chen
-        year: 2017
-        link: https://www.ijcai.org/Proceedings/2017/0209.pdf
-    single: true
-    statistics:
-        entities: 15126
-        relations: 1841
-        triples: 209041
-    """
+class MTransEDataset(LazyDataset):
+    """Base class for WK3l datasets (WK3l-15k, WK3l-120k, CN3l)."""
 
     def __init__(
         self,
@@ -88,10 +75,7 @@ class WK3l15k(LazyDataset):
         if side not in available_sides:
             raise ValueError(f"side must be one of {available_sides}")
 
-        # compose relative file name within the archive.
-        suffix = 5 if graph_pair == "en_fr" else 6
-        file_name = f"P_{side}_v{suffix}.csv"
-        self._relative_path = pathlib.PurePosixPath("data", "WK3l-15k", graph_pair, file_name)
+        self._relative_path = self._get_relative_path(graph_pair=graph_pair, side=side)
 
         # For downloading
         self.drive_id = GOOGLE_DRIVE_ID
@@ -108,11 +92,17 @@ class WK3l15k(LazyDataset):
         if eager:
             self._load()
 
-    def _get_path(self) -> pathlib.Path:
-        return self.cache_root.joinpath("wk3l15k.zip")
+    def _extend_cache_root(self, cache_root: pathlib.Path) -> pathlib.Path:  # noqa: D102
+        # shared directory for multiple datasets.
+        return cache_root.joinpath("wk3l")
+
+    @staticmethod
+    @abstractmethod
+    def _get_relative_path(graph_pair: str, side: str) -> pathlib.PurePosixPath:
+        """The relative path within the archive."""
 
     def _load(self) -> None:
-        path = self._get_path()
+        path = self.cache_root.joinpath("data.zip")
 
         # ensure file is present
         if not path.is_file() or self.force:
@@ -156,13 +146,64 @@ class WK3l15k(LazyDataset):
         pass  # already loaded by _load()
 
 
+@parse_docdata
+class WK3l15k(MTransEDataset):
+    """The WK3l-15k dataset family.
+
+    ---
+    name: WK3l-15k Family
+    citation:
+        author: Chen
+        year: 2017
+        link: https://www.ijcai.org/Proceedings/2017/0209.pdf
+    single: true
+    statistics:
+        entities: 15126
+        relations: 1841
+        triples: 209041
+    """
+
+    @staticmethod
+    def _get_relative_path(graph_pair: str, side: str) -> pathlib.PurePosixPath:  # noqa: D102
+        # compose relative file name within the archive.
+        suffix = 5 if graph_pair == "en_fr" else 6
+        file_name = f"P_{side}_v{suffix}.csv"
+        return pathlib.PurePosixPath("data", "WK3l-15k", graph_pair, file_name)
+
+
+@parse_docdata
+class WK3l120k(MTransEDataset):
+    """The WK3l-120k dataset family.
+
+    ---
+    name: WK3l-120k Family
+    citation:
+        author: Chen
+        year: 2017
+        link: https://www.ijcai.org/Proceedings/2017/0209.pdf
+    single: true
+    statistics:
+        entities: 119748
+        relations: 3109
+        triples: 1375406
+    """
+
+    @staticmethod
+    def _get_relative_path(graph_pair: str, side: str) -> pathlib.PurePosixPath:  # noqa: D102
+        # compose relative file name within the archive.
+        suffix = 5 if graph_pair == "en_fr" else 6
+        file_name = f"P_{side}_v{suffix}_120k.csv"
+        return pathlib.PurePosixPath("data", "WK3l-120k", graph_pair, file_name)
+
+
 @click.command()
 @verbose_option
 def _main():
     for graph_pair in GRAPH_PAIRS:
         for side in graph_pair.split("_"):
-            ds = WK3l15k(graph_pair=graph_pair, side=side)
-            ds.summarize()
+            for cls in (WK3l15k, WK3l120k):
+                ds = cls(graph_pair=graph_pair, side=side)
+                ds.summarize()
 
 
 if __name__ == "__main__":

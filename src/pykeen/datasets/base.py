@@ -295,10 +295,14 @@ class LazyDataset(Dataset):
         """
         if cache_root is None:
             cache_root = PYKEEN_DATASETS
-        cache_root = pathlib.Path(cache_root) / self.__class__.__name__.lower()
+        cache_root = self._extend_cache_root(cache_root=cache_root)
         cache_root.mkdir(parents=True, exist_ok=True)
         logger.debug('using cache root at %s', cache_root)
         return cache_root
+
+    def _extend_cache_root(self, cache_root: pathlib.Path) -> pathlib.Path:
+        """Get appropriate cache sub-directory."""
+        return cache_root.joinpath(self.__class__.__name__.lower())
 
 
 class PathDataset(LazyDataset):
