@@ -523,6 +523,8 @@ def evaluate(
         Return a single instance of :class:`MetricResults` if only one evaluator was given.
     :param use_tqdm:
         Should a progress bar be displayed?
+    :param tqdm_kwargs:
+        Additional keyword based arguments passed to the progress bar.
     :param restrict_entities_to:
         Optionally restrict the evaluation to the given entity IDs. This may be useful if one is only interested in a
         part of the entities, e.g. due to type constraints, but wants to train on all available data. For ranking the
