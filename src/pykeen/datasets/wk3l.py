@@ -55,7 +55,7 @@ class WK3l15k(LazyDataset):
         eager: bool = False,
         create_inverse_triples: bool = False,
         random_state: TorchRandomHint = None,
-        split_ratios: Tuple[int, int, int] = (0.8, 0.1, 0.1),
+        split_ratios: Tuple[float, float, float] = (0.8, 0.1, 0.1),
         force: bool = False,
     ):
         """
