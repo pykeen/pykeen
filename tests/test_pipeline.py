@@ -6,6 +6,7 @@ import tempfile
 import unittest
 
 import pandas as pd
+import torch
 
 import pykeen.regularizers
 from pykeen.datasets import EagerDataset, Nations
@@ -21,6 +22,7 @@ from pykeen.regularizers import NoRegularizer
 from pykeen.training import SLCWATrainingLoop
 from pykeen.triples.generation import generate_triples_factory
 from pykeen.utils import resolve_device
+from tests.mocks import MockModel
 
 
 class TestPipeline(unittest.TestCase):
@@ -387,3 +389,70 @@ class TestAttributes(unittest.TestCase):
                 self.assertIsInstance(pipeline_result, PipelineResult)
                 self.assertIsInstance(pipeline_result.model, Model)
                 self.assertIsInstance(pipeline_result.model.regularizer, cls)
+
+
+class TestPipelineEvaluationFiltering(unittest.TestCase):
+    """Test filtering of triples during evaluation using the pipeline."""
+
+    @classmethod
+    def setUpClass(cls):
+        """Set up a shared result."""
+        cls.device = resolve_device('cuda')
+        cls.dataset = Nations()
+
+        cls.model = MockModel(triples_factory=cls.dataset.training)
+
+        # The MockModel gives the highest score to the highest entity id
+        max_score = cls.dataset.num_entities - 1
+
+        # The test triples are created to yield the third highest score on both head and tail prediction
+        cls.dataset.testing.mapped_triples = torch.tensor([[max_score - 2, 0, max_score - 2]])
+
+        # Write new mapped triples to the model, since the model's triples will be used to filter
+        # These triples are created to yield the highest score on both head and tail prediction for the
+        # test triple at hand
+        cls.dataset.training.mapped_triples = torch.tensor(
+            [
+                [max_score - 2, 0, max_score],
+                [max_score, 0, max_score - 2],
+            ],
+        )
+
+        # The validation triples are created to yield the second highest score on both head and tail prediction for the
+        # test triple at hand
+        cls.dataset.validation.mapped_triples = torch.tensor(
+            [
+                [max_score - 2, 0, max_score - 1],
+                [max_score - 1, 0, max_score - 2],
+            ],
+        )
+
+    def test_pipeline_evaluation_filtering_without_validation_triples(self):
+        """Test if the evaluator's triple filtering works as expected using the pipeline."""
+        results = pipeline(
+            model=self.model,
+            dataset=self.dataset,
+            training_loop_kwargs=dict(automatic_memory_optimization=False),
+            training_kwargs=dict(num_epochs=0, use_tqdm=False),
+            evaluator_kwargs=dict(filtered=True, automatic_memory_optimization=False),
+            evaluation_kwargs=dict(use_tqdm=False),
+            device=self.device,
+            random_seed=42,
+            filter_validation_when_testing=False,
+        )
+        assert results.metric_results.arithmetic_mean_rank['both']['realistic'] == 2, 'The rank should equal 2'
+
+    def test_pipeline_evaluation_filtering_with_validation_triples(self):
+        """Test if the evaluator's triple filtering with validation triples works as expected using the pipeline."""
+        results = pipeline(
+            model=self.model,
+            dataset=self.dataset,
+            training_loop_kwargs=dict(automatic_memory_optimization=False),
+            training_kwargs=dict(num_epochs=0, use_tqdm=False),
+            evaluator_kwargs=dict(filtered=True, automatic_memory_optimization=False),
+            evaluation_kwargs=dict(use_tqdm=False),
+            device=self.device,
+            random_seed=42,
+            filter_validation_when_testing=True,
+        )
+        assert results.metric_results.arithmetic_mean_rank['both']['realistic'] == 1, 'The rank should equal 1'

@@ -10,7 +10,7 @@ import torch
 
 from .training_loop import TrainingLoop
 from .utils import apply_label_smoothing
-from ..triples import Instances, TriplesFactory
+from ..triples import CoreTriplesFactory, Instances
 from ..typing import MappedTriples
 
 __all__ = [
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 class LCWATrainingLoop(TrainingLoop):
     """A training loop that uses the local closed world assumption training approach."""
 
-    def _create_instances(self, triples_factory: TriplesFactory) -> Instances:  # noqa: D102
+    def _create_instances(self, triples_factory: CoreTriplesFactory) -> Instances:  # noqa: D102
         return triples_factory.create_lcwa_instances()
 
     @staticmethod
@@ -109,7 +109,7 @@ class LCWATrainingLoop(TrainingLoop):
     def _slice_size_search(
         self,
         *,
-        triples_factory: TriplesFactory,
+        triples_factory: CoreTriplesFactory,
         batch_size: int,
         sub_batch_size: int,
         supports_sub_batching: bool,

@@ -9,6 +9,7 @@ from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from dataclasses import dataclass
 from math import ceil
+from textwrap import dedent
 from typing import Any, Collection, Iterable, List, Mapping, Optional, Tuple, Union, cast
 
 import numpy as np
@@ -76,6 +77,15 @@ class Evaluator(ABC):
         slice_size: Optional[int] = None,
         automatic_memory_optimization: bool = True,
     ):
+        """Initialize the evaluator.
+
+        :param filtered: Should filtered evaluation be performed?
+        :param requires_positive_mask: Does the evaluator need access to the masks?
+        :param batch_size: >0. Evaluation batch size.
+        :param slice_size: >0. The divisor for the scoring function when using slicing
+        :param automatic_memory_optimization: Whether to automatically optimize the sub-batch size during
+            evaluation with regards to the hardware at hand.
+        """
         self.filtered = filtered
         self.requires_positive_mask = requires_positive_mask
         self.batch_size = batch_size
@@ -139,7 +149,7 @@ class Evaluator(ABC):
         tqdm_kwargs: Optional[Mapping[str, str]] = None,
         restrict_entities_to: Optional[torch.LongTensor] = None,
         do_time_consuming_checks: bool = True,
-        additional_filter_triples: Optional[MappedTriples] = None,
+        additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
     ) -> MetricResults:
         """Run :func:`pykeen.evaluation.evaluate` with this evaluator."""
         if batch_size is None and self.automatic_memory_optimization:
@@ -193,7 +203,7 @@ class Evaluator(ABC):
         use_tqdm: bool = False,
         restrict_entities_to: Optional[torch.LongTensor] = None,
         do_time_consuming_checks: bool = True,
-        additional_filter_triples: Optional[MappedTriples] = None,
+        additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
     ) -> Tuple[int, Optional[int]]:
         """Find the maximum possible batch_size and slice_size for evaluation with the current setting.
 
@@ -218,7 +228,8 @@ class Evaluator(ABC):
         :param restrict_entities_to:
             Whether to restrict the evaluation to certain entities of interest.
         :param additional_filter_triples:
-            Only needed if the evaluator is in filtered mode
+            Additional true triples to filter out during filtered evaluation. Only needed if the evaluator is in
+            filtered mode.
 
         :return:
             Maximum possible batch size and, if necessary, the slice_size, which defaults to None.
@@ -270,7 +281,7 @@ class Evaluator(ABC):
         use_tqdm: bool = False,
         restrict_entities_to: Optional[torch.LongTensor] = None,
         do_time_consuming_checks: bool = True,
-        additional_filter_triples: Optional[MappedTriples] = None,
+        additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
     ) -> Tuple[int, bool]:
         values_dict = {}
         maximum_triples = mapped_triples.shape[0]
@@ -480,7 +491,7 @@ def evaluate(
     tqdm_kwargs: Optional[Mapping[str, str]] = None,
     restrict_entities_to: Optional[torch.LongTensor] = None,
     do_time_consuming_checks: bool = True,
-    additional_filtered_triples: Optional[MappedTriples] = None,
+    additional_filtered_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
 ) -> Union[MetricResults, List[MetricResults]]:
     """Evaluate metrics for model on mapped triples.
 
@@ -521,7 +532,7 @@ def evaluate(
         - If restrict_entities_to is not None, check whether the triples have been filtered.
         Disabling this option can accelerate the method.
     :param additional_filtered_triples:
-        Only needed if the evaluator is in filtered mode
+        Additional true triples to filter out during filtered evaluation.
     """
     if isinstance(evaluators, Evaluator):  # upgrade a single evaluator to a list
         evaluators = [evaluators]
@@ -558,11 +569,22 @@ def evaluate(
     # Prepare for result filtering
     if filtering_necessary or positive_masks_required:
         if additional_filtered_triples is None:
-            logger.warning(
-                'filtered setting was enabled, but there were no `additional_filtered_triples`.'
-                ' This means you probably forgot to pass the training triples.',
-            )
+            logger.warning(dedent('''\
+                The filtered setting was enabled, but there were no `additional_filtered_triples`
+                given. This means you probably forgot to pass (at least) the training triples. Try:
+
+                    additional_filtered_triples=[dataset.training.mapped_triples]
+
+                Or if you want to use the Bordes et al. (2013) approach to filtering, do:
+
+                    additional_filtered_triples=[
+                        dataset.training.mapped_triples,
+                        dataset.validation.mapped_triples,
+                    ]
+            '''))
             all_pos_triples = mapped_triples
+        elif isinstance(additional_filtered_triples, (list, tuple)):
+            all_pos_triples = torch.cat([*additional_filtered_triples, mapped_triples], dim=0)
         else:
             all_pos_triples = torch.cat([additional_filtered_triples, mapped_triples], dim=0)
         all_pos_triples = all_pos_triples.to(device=device)

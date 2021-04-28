@@ -73,11 +73,10 @@ class SklearnEvaluator(Evaluator):
     all_scores: Dict[Tuple[Any, ...], np.ndarray]
     all_positives: Dict[Tuple[Any, ...], np.ndarray]
 
-    def __init__(self, automatic_memory_optimization: bool = True, **kwargs):
+    def __init__(self, **kwargs):
         super().__init__(
             filtered=False,
             requires_positive_mask=True,
-            automatic_memory_optimization=automatic_memory_optimization,
             **kwargs,
         )
         self.all_scores = {}

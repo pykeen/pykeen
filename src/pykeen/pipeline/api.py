@@ -195,7 +195,7 @@ from ..sampling import NegativeSampler, negative_sampler_resolver
 from ..stoppers import EarlyStopper, Stopper, stopper_resolver
 from ..trackers import ResultTracker, tracker_resolver
 from ..training import SLCWATrainingLoop, TrainingLoop, training_loop_resolver
-from ..triples import TriplesFactory
+from ..triples import CoreTriplesFactory
 from ..typing import Hint, HintType, MappedTriples
 from ..utils import (
     Result, ensure_ftp_directory, fix_dataclass_init_docs, get_json_bytes_io, get_model_io, random_non_negative_int,
@@ -226,7 +226,8 @@ class PipelineResult(Result):
     #: The model trained by the pipeline
     model: Model
 
-    training: TriplesFactory
+    #: The training triples
+    training: CoreTriplesFactory
 
     #: The training loop used by the pipeline
     training_loop: TrainingLoop
@@ -584,8 +585,15 @@ def pipeline_from_config(
 
 def _build_model_helper(
     *,
-    model, model_kwargs, loss, loss_kwargs, _device, _random_seed, regularizer, regularizer_kwargs,
-    training,
+    model,
+    model_kwargs,
+    loss,
+    loss_kwargs,
+    _device,
+    _random_seed,
+    regularizer,
+    regularizer_kwargs,
+    training_triples_factory,
 ) -> Model:
     if model_kwargs is None:
         model_kwargs = {}
@@ -610,7 +618,7 @@ def _build_model_helper(
 
     return model_resolver.make(
         model,
-        triples_factory=training,
+        triples_factory=training_triples_factory,
         loss=loss_instance,
         **model_kwargs,
     )
@@ -621,9 +629,9 @@ def pipeline(  # noqa: C901
     # 1. Dataset
     dataset: Union[None, str, Dataset, Type[Dataset]] = None,
     dataset_kwargs: Optional[Mapping[str, Any]] = None,
-    training: Hint[TriplesFactory] = None,
-    testing: Hint[TriplesFactory] = None,
-    validation: Hint[TriplesFactory] = None,
+    training: Hint[CoreTriplesFactory] = None,
+    testing: Hint[CoreTriplesFactory] = None,
+    validation: Hint[CoreTriplesFactory] = None,
     evaluation_entity_whitelist: Optional[Collection[str]] = None,
     evaluation_relation_whitelist: Optional[Collection[str]] = None,
     # 2. Model
@@ -664,6 +672,7 @@ def pipeline(  # noqa: C901
     random_seed: Optional[int] = None,
     use_testing_data: bool = True,
     evaluation_fallback: bool = False,
+    filter_validation_when_testing: bool = True,
 ) -> PipelineResult:
     """Train and evaluate a model.
 
@@ -762,11 +771,20 @@ def pipeline(  # noqa: C901
     :param evaluation_fallback:
         If true, in cases where the evaluation failed using the GPU it will fall back to using a smaller batch size or
         in the last instance evaluate on the CPU, if even the smallest possible batch size is too big for the GPU.
+    :param filter_validation_when_testing:
+        If true, during the evaluating of the test dataset, validation triples are added to the set of known positive
+        triples, which are filtered out when performing filtered evaluation following the approach described by
+        [bordes2013]_. This should be explicitly set to false only in the scenario that you are training a single
+        model using the pipeline and evaluating with the testing set, but never using the validation set for
+        optimization at all. This is a very atypical scenario, so it is left as true by default to promote
+        comparability to previous publications.
 
     :returns: A pipeline result package.
 
     :raises ValueError:
         If a negative sampler is specified with LCWA
+    :raises TypeError:
+        If an invalid argument type is given for ``evaluation_kwargs["additional_filter_triples"]``
     """
     if training_kwargs is None:
         training_kwargs = {}
@@ -868,7 +886,7 @@ def pipeline(  # noqa: C901
             regularizer_kwargs=regularizer_kwargs,
             _device=_device,
             _random_seed=_random_seed,
-            training=training,
+            training_triples_factory=training,
         )
 
     # Log model parameters
@@ -1004,6 +1022,51 @@ def pipeline(  # noqa: C901
     else:
         mapped_triples = validation.mapped_triples
 
+    # Build up a list of triples if we want to be in the filtered setting
+    if evaluator_instance.filtered:
+        additional_filter_triples: List[MappedTriples] = [
+            training.mapped_triples,
+        ]
+
+        # If the user gave custom "additional_filter_triples"
+        popped_additional_filter_triples = evaluation_kwargs.pop('additional_filter_triples', [])
+        if isinstance(popped_additional_filter_triples, (list, tuple)):
+            additional_filter_triples.extend(popped_additional_filter_triples)
+        elif torch.is_tensor(popped_additional_filter_triples):  # a single MappedTriple
+            additional_filter_triples.append(popped_additional_filter_triples)
+        else:
+            raise TypeError(
+                f'Invalid type for `evaluation_kwargs["additional_filter_triples"]`:'
+                f' {type(popped_additional_filter_triples)}',
+            )
+
+        # Determine whether the validation triples should also be filtered while performing test evaluation
+        if (
+            use_testing_data
+            and filter_validation_when_testing
+            and validation is not None
+        ):
+            logging.info(
+                "When evaluating the test dataset, validation triples are added to the set of known positive triples"
+                " which are filtered out when performing filtered evaluation following the approach described by"
+                " (Bordes et al., 2013).",
+            )
+            additional_filter_triples.append(validation.mapped_triples)
+        elif (
+            isinstance(stopper, EarlyStopper)
+            and filter_validation_when_testing
+            and validation is not None
+        ):
+            logging.info(
+                "When evaluating the test dataset after running the pipeline with earl stopping, the validation triples"
+                " are added to the set of known positive triples which are filtered out when performing filtered"
+                " evaluation following the approach described by (Bordes et al., 2013).",
+            )
+            additional_filter_triples.append(validation.mapped_triples)
+
+        # TODO consider implications of duplicates
+        evaluation_kwargs['additional_filter_triples'] = additional_filter_triples
+
     # Evaluate
     # Reuse optimal evaluation parameters from training if available, only if the validation triples are used again
     if evaluator_instance.batch_size is not None or evaluator_instance.slice_size is not None and not use_testing_data:
@@ -1015,7 +1078,6 @@ def pipeline(  # noqa: C901
     evaluate_start_time = time.time()
     metric_results: MetricResults = _safe_evaluate(
         model=model_instance,
-        training_triples_factory=training,
         mapped_triples=mapped_triples,
         evaluator=evaluator_instance,
         evaluation_kwargs=evaluation_kwargs,
@@ -1044,7 +1106,6 @@ def pipeline(  # noqa: C901
 
 def _safe_evaluate(
     model: Model,
-    training_triples_factory: TriplesFactory,
     mapped_triples: MappedTriples,
     evaluator: Evaluator,
     evaluation_kwargs: Dict[str, Any],
@@ -1053,7 +1114,6 @@ def _safe_evaluate(
     """Evaluate with a potentially safe fallback to CPU.
 
     :param model: The model
-    :param training_triples_factory: Training triples factory
     :param mapped_triples: Mapped triples from the evaluation set (test or valid)
     :param evaluator: An evaluator
     :param evaluation_kwargs: Kwargs for the evaluator (might get modified in place)
@@ -1072,7 +1132,6 @@ def _safe_evaluate(
             metric_results: MetricResults = evaluator.evaluate(
                 model=model,
                 mapped_triples=mapped_triples,
-                additional_filter_triples=training_triples_factory.mapped_triples,
                 **evaluation_kwargs,
             )
         except (MemoryError, RuntimeError) as e:

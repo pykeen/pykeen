@@ -11,7 +11,7 @@ import pandas as pd
 import torch
 
 from .base import Model
-from ..triples import TriplesFactory
+from ..triples import CoreTriplesFactory, TriplesFactory
 from ..typing import MappedTriples, ScorePack
 
 __all__ = [
@@ -220,7 +220,7 @@ def get_relation_prediction_df(
 def get_all_prediction_df(
     model: Model,
     *,
-    triples_factory: TriplesFactory,
+    triples_factory: CoreTriplesFactory,
     k: Optional[int] = None,
     batch_size: int = 1,
     return_tensors: bool = False,
