@@ -7,7 +7,7 @@ import itertools
 import logging
 import os
 import re
-from typing import Any, Callable, Collection, Dict, List, Mapping, Optional, Sequence, Set, TextIO, Union
+from typing import Any, Callable, Collection, Dict, List, Mapping, Optional, Sequence, Set, TextIO, Union, cast
 
 import numpy as np
 import pandas as pd
@@ -535,15 +535,19 @@ class CoreTriplesFactory:
             ))
         ]
 
-    def entities_to_ids(self, entities: Collection[int]) -> Collection[int]:
+    def entities_to_ids(self, entities: Union[Collection[int], Collection[str]]) -> Collection[int]:
         """Normalize entities to IDs."""
-        # comment: this method is used to allow sub-classes overriding the * to ID conversion
-        return entities
+        for e in entities:
+            if not isinstance(e, int):
+                raise ValueError(f"{self.__class__.__name__} cannot convert entity IDs from {type(e)} to int.")
+        return cast(Collection[int], entities)
 
-    def relations_to_ids(self, relations: Collection[int]) -> Collection[int]:
+    def relations_to_ids(self, relations: Union[Collection[int], Collection[str]]) -> Collection[int]:
         """Normalize relations to IDs."""
-        # comment: this method is used to allow sub-classes overriding the * to ID conversion
-        return relations
+        for e in relations:
+            if not isinstance(e, int):
+                raise ValueError(f"{self.__class__.__name__} cannot convert relation IDs from {type(e)} to int.")
+        return cast(Collection[int], relations)
 
     def get_mask_for_relations(
         self,
