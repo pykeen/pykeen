@@ -490,8 +490,8 @@ def evaluate(
     squeeze: bool = True,
     use_tqdm: bool = True,
     tqdm_kwargs: Optional[Mapping[str, str]] = None,
-    restrict_entities_to: Optional[torch.LongTensor] = None,
-    restrict_relations_to: Optional[torch.LongTensor] = None,
+    restrict_entities_to: Optional[Collection[int]] = None,
+    restrict_relations_to: Optional[Collection[int]] = None,
     do_time_consuming_checks: bool = True,
     pre_filtered_triples: bool = True,
     additional_filtered_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
@@ -556,7 +556,7 @@ def evaluate(
     if pre_filtered_triples and do_time_consuming_checks:
         if restrict_entities_to is not None:
             present_entity_ids = get_entities(triples=mapped_triples)
-            unwanted = present_entity_ids.difference(restrict_entities_to.tolist())
+            unwanted = present_entity_ids.difference(restrict_entities_to)
             if len(unwanted) > 0:
                 raise ValueError(
                     f'mapped_triples contains IDs of entities which are not contained in restrict_entities_to:'
@@ -564,7 +564,7 @@ def evaluate(
                 )
         if restrict_relations_to is not None:
             present_relation_ids = get_relations(triples=mapped_triples)
-            unwanted = present_relation_ids.difference(restrict_entities_to.tolist())
+            unwanted = present_relation_ids.difference(restrict_entities_to)
             if len(unwanted):
                 raise ValueError(
                     f'mapped_triples contains IDs of relations which are not contained in restrict_relations_to:'
