@@ -441,9 +441,9 @@ class RemoteDataset(PathDataset):
     def __init__(
         self,
         url: str,
-        relative_training_path: pathlib.PurePath,
-        relative_testing_path: pathlib.PurePath,
-        relative_validation_path: pathlib.PurePath,
+        relative_training_path: Union[str, pathlib.PurePath],
+        relative_testing_path: Union[str, pathlib.PurePath],
+        relative_validation_path: Union[str, pathlib.PurePath],
         cache_root: Optional[str] = None,
         eager: bool = False,
         create_inverse_triples: bool = False,
@@ -457,16 +457,16 @@ class RemoteDataset(PathDataset):
         :param relative_validation_path: The path inside the cache root where the validation path gets extracted
         :param cache_root:
             An optional directory to store the extracted files. Is none is given, the default PyKEEN directory is used.
-            This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.pykeen``.
+            This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.data/pykeen``.
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         """
         self.cache_root = self._help_cache(cache_root)
 
         self.url = url
-        self._relative_training_path = relative_training_path
-        self._relative_testing_path = relative_testing_path
-        self._relative_validation_path = relative_validation_path
+        self._relative_training_path = pathlib.PurePath(relative_training_path)
+        self._relative_testing_path = pathlib.PurePath(relative_testing_path)
+        self._relative_validation_path = pathlib.PurePath(relative_validation_path)
 
         training_path, testing_path, validation_path = self._get_paths()
         super().__init__(
@@ -621,7 +621,7 @@ class TarFileSingleDataset(LazyDataset):
     def __init__(
         self,
         url: str,
-        relative_path: pathlib.PurePosixPath,
+        relative_path: Union[str, pathlib.PurePosixPath],
         name: Optional[str] = None,
         cache_root: Optional[str] = None,
         eager: bool = False,
@@ -653,7 +653,7 @@ class TarFileSingleDataset(LazyDataset):
         self.delimiter = delimiter or '\t'
         self.url = url
         self.create_inverse_triples = create_inverse_triples
-        self._relative_path = relative_path
+        self._relative_path = pathlib.PurePosixPath(relative_path)
 
         if eager:
             self._load()
