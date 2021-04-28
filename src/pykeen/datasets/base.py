@@ -10,7 +10,7 @@ import tarfile
 import zipfile
 from abc import abstractmethod
 from io import BytesIO
-from typing import Any, ClassVar, Dict, List, Mapping, Optional, Sequence, TextIO, Tuple, Union, cast
+from typing import Any, ClassVar, Dict, List, Mapping, Optional, Sequence, Tuple, Union, cast
 
 import click
 import pandas as pd
@@ -35,7 +35,6 @@ __all__ = [
     'RemoteDataset',
     'UnpackedRemoteDataset',
     'TarFileRemoteDataset',
-    'ZipFileRemoteDataset',
     'PackedZipRemoteDataset',
     'TarFileSingleDataset',
     'TabbedDataset',
@@ -310,9 +309,9 @@ class PathDataset(LazyDataset):
 
     def __init__(
         self,
-        training_path: Union[str, pathlib.Path, TextIO],
-        testing_path: Union[str, pathlib.Path, TextIO],
-        validation_path: Union[None, pathlib.Path, str, TextIO],
+        training_path: Union[str, pathlib.Path],
+        testing_path: Union[str, pathlib.Path],
+        validation_path: Union[None, str, pathlib.Path],
         eager: bool = False,
         create_inverse_triples: bool = False,
         load_triples_kwargs: Optional[Mapping[str, Any]] = None,
@@ -327,10 +326,9 @@ class PathDataset(LazyDataset):
         :param load_triples_kwargs: Arguments to pass through to :func:`TriplesFactory.from_path`
             and ultimately through to :func:`pykeen.triples.utils.load_triples`.
         """
-        # TODO: Normalize paths here?
-        self.training_path = training_path
-        self.testing_path = testing_path
-        self.validation_path = validation_path
+        self.training_path = pathlib.Path(training_path)
+        self.testing_path = pathlib.Path(testing_path)
+        self.validation_path = pathlib.Path(validation_path) if validation_path else None
 
         self.create_inverse_triples = create_inverse_triples
         self.load_triples_kwargs = load_triples_kwargs
@@ -391,6 +389,7 @@ class UnpackedRemoteDataset(PathDataset):
         eager: bool = False,
         create_inverse_triples: bool = False,
         load_triples_kwargs: Optional[Mapping[str, Any]] = None,
+        backend: str = 'requests',
     ):
         """Initialize dataset.
 
@@ -399,13 +398,14 @@ class UnpackedRemoteDataset(PathDataset):
         :param validation_url: The URL of the validation file
         :param cache_root:
             An optional directory to store the extracted files. Is none is given, the default PyKEEN directory is used.
-            This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.pykeen``.
+            This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.data/pykeen``.
         :param stream: Use :mod:`requests` be used for download if true otherwise use :mod:`urllib`
         :param force: If true, redownload any cached files
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param load_triples_kwargs: Arguments to pass through to :func:`TriplesFactory.from_path`
             and ultimately through to :func:`pykeen.triples.utils.load_triples`.
+        :param backend: Either 'urllib' or 'requests'
         """
         self.cache_root = self._help_cache(cache_root)
 
@@ -423,7 +423,10 @@ class UnpackedRemoteDataset(PathDataset):
             (self.validation_url, validation_path),
         ]:
             if force or not path.is_file():
-                download(url, path, stream=stream, backend='requests')
+                if backend == 'requests':
+                    download(url, path, stream=stream, backend=backend)
+                else:
+                    download(url, path, backend=backend)
 
         super().__init__(
             training_path=training_path,
@@ -518,15 +521,6 @@ class TarFileRemoteDataset(RemoteDataset):
             tf.extractall(path=self.cache_root)
 
 
-# TODO replace this with the new zip remote dataset class
-class ZipFileRemoteDataset(RemoteDataset):
-    """A remote dataset stored as a zip file."""
-
-    def _extract(self, archive_file: BytesIO) -> None:  # noqa: D102
-        with zipfile.ZipFile(file=archive_file) as zf:
-            zf.extractall(path=self.cache_root)
-
-
 class PackedZipRemoteDataset(LazyDataset):
     """Contains a lazy reference to a remote dataset that is loaded if needed."""
 
@@ -538,9 +532,9 @@ class PackedZipRemoteDataset(LazyDataset):
 
     def __init__(
         self,
-        relative_training_path: str,
-        relative_testing_path: str,
-        relative_validation_path: str,
+        relative_training_path: Union[str, pathlib.PurePath],
+        relative_testing_path: Union[str, pathlib.PurePath],
+        relative_validation_path: Union[str, pathlib.PurePath],
         url: Optional[str] = None,
         name: Optional[str] = None,
         cache_root: Optional[str] = None,
@@ -574,9 +568,9 @@ class PackedZipRemoteDataset(LazyDataset):
         if not self.path.is_file() and not self.url:
             raise ValueError(f'must specify url to download from since path does not exist: {self.path}')
 
-        self.relative_training_path = relative_training_path
-        self.relative_testing_path = relative_testing_path
-        self.relative_validation_path = relative_validation_path
+        self.relative_training_path = pathlib.PurePath(relative_training_path)
+        self.relative_testing_path = pathlib.PurePath(relative_testing_path)
+        self.relative_validation_path = pathlib.PurePath(relative_validation_path)
         self.create_inverse_triples = create_inverse_triples
         if eager:
             self._load()
@@ -589,7 +583,7 @@ class PackedZipRemoteDataset(LazyDataset):
     def _load_validation(self) -> None:
         self._validation = self._load_helper(self.relative_validation_path)
 
-    def _load_helper(self, relative_path: str) -> TriplesFactory:
+    def _load_helper(self, relative_path: pathlib.PurePath) -> TriplesFactory:
         if not self.path.is_file():
             if self.url is None:
                 raise ValueError('url should be set')
@@ -597,7 +591,7 @@ class PackedZipRemoteDataset(LazyDataset):
             download(url=self.url, path=self.path)
 
         with zipfile.ZipFile(file=self.path) as zf:
-            with zf.open(relative_path) as file:
+            with zf.open(str(relative_path)) as file:
                 logger.debug('loading %s', relative_path)
                 df = pd.read_csv(
                     file,
