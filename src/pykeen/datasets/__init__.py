@@ -119,17 +119,20 @@ def get_dataset(
             logger.warning('dataset_kwargs not used since a pre-instantiated dataset was given')
         return dataset
 
-    if isinstance(dataset, (str, pathlib.Path)):
-        if isinstance(dataset, str) and has_dataset(dataset):
+    if isinstance(dataset, str):
+        if has_dataset(dataset):
             dataset: Type[Dataset] = datasets[normalize_string(dataset)]  # type: ignore
         else:
-            dataset_path = pathlib.Path(dataset).resolve()
-            if not dataset_path.is_file():
-                raise ValueError(
-                    f'dataset is neither a pre-defined dataset string nor a filepath: {dataset_path.as_uri()}',
-                )
-            else:
-                return Dataset.from_path(dataset_path)
+            dataset = pathlib.Path(dataset)
+
+    if isinstance(dataset, pathlib.Path):
+        dataset_path = dataset.resolve()
+        if not dataset_path.is_file():
+            raise ValueError(
+                f'dataset is neither a pre-defined dataset string nor a filepath: {dataset_path.as_uri()}',
+            )
+        else:
+            return Dataset.from_path(dataset_path)
 
     if isinstance(dataset, type) and issubclass(dataset, Dataset):
         return dataset(**(dataset_kwargs or {}))  # type: ignore
