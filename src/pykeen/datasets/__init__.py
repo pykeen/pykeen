@@ -87,7 +87,7 @@ datasets: Mapping[str, Type[Dataset]] = {
 
 def get_dataset(
     *,
-    dataset: Union[None, str, Dataset, Type[Dataset]] = None,
+    dataset: Union[None, str, pathlib.Path, Dataset, Type[Dataset]] = None,
     dataset_kwargs: Optional[Mapping[str, Any]] = None,
     training: Union[None, str, CoreTriplesFactory] = None,
     testing: Union[None, str, CoreTriplesFactory] = None,
