@@ -89,9 +89,9 @@ def get_dataset(
     *,
     dataset: Union[None, str, pathlib.Path, Dataset, Type[Dataset]] = None,
     dataset_kwargs: Optional[Mapping[str, Any]] = None,
-    training: Union[None, str, CoreTriplesFactory] = None,
-    testing: Union[None, str, CoreTriplesFactory] = None,
-    validation: Union[None, str, CoreTriplesFactory] = None,
+    training: Union[None, str, pathlib.Path, CoreTriplesFactory] = None,
+    testing: Union[None, str, pathlib.Path, CoreTriplesFactory] = None,
+    validation: Union[None, str, pathlib.Path, CoreTriplesFactory] = None,
 ) -> Dataset:
     """Get the dataset.
 
