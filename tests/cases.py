@@ -90,10 +90,7 @@ class DatasetTestCase(unittest.TestCase):
         self.assertFalse(self.dataset._loaded_validation)
 
         # Load
-        try:
-            self.dataset._load()
-        except (EOFError, IOError):
-            self.skipTest('Problem with connection. Try this test again later.')
+        self.dataset._load()
 
         self.assertIsInstance(self.dataset.training, TriplesFactory)
         self.assertIsInstance(self.dataset.testing, TriplesFactory)
@@ -846,6 +843,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         """Test that sLCWA training does not fail."""
         loop = SLCWATrainingLoop(
             model=self.instance,
+            triples_factory=self.factory,
             optimizer=Adagrad(params=self.instance.get_grad_params(), lr=0.001),
             **(self.training_loop_kwargs or {}),
         )
@@ -862,6 +860,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         """Test that LCWA training does not fail."""
         loop = LCWATrainingLoop(
             model=self.instance,
+            triples_factory=self.factory,
             optimizer=Adagrad(params=self.instance.get_grad_params(), lr=0.001),
             **(self.training_loop_kwargs or {}),
         )
@@ -875,7 +874,13 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
 
     def _safe_train_loop(self, loop: TrainingLoop, num_epochs, batch_size, sampler):
         try:
-            losses = loop.train(num_epochs=num_epochs, batch_size=batch_size, sampler=sampler, use_tqdm=False)
+            losses = loop.train(
+                triples_factory=self.factory,
+                num_epochs=num_epochs,
+                batch_size=batch_size,
+                sampler=sampler,
+                use_tqdm=False,
+            )
         except RuntimeError as e:
             if str(e) == 'fft: ATen not compiled with MKL support':
                 self.skipTest(str(e))
@@ -974,7 +979,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
             msg=f'''
 Command
 =======
-$ pykeen train {self.cls.__name__.lower()} {' '.join(args)}
+$ pykeen train {self.cls.__name__.lower()} {' '.join(map(str, args))}
 
 Output
 ======

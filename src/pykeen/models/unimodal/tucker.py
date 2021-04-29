@@ -14,7 +14,7 @@ from ...losses import BCEAfterSigmoidLoss, Loss
 from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_normal_
 from ...regularizers import Regularizer
-from ...triples import TriplesFactory
+from ...triples import CoreTriplesFactory
 from ...typing import DeviceHint, Hint, Initializer
 
 __all__ = [
@@ -86,7 +86,7 @@ class TuckER(EntityRelationEmbeddingModel):
 
     def __init__(
         self,
-        triples_factory: TriplesFactory,
+        triples_factory: CoreTriplesFactory,
         embedding_dim: int = 200,
         relation_dim: Optional[int] = None,
         loss: Optional[Loss] = None,

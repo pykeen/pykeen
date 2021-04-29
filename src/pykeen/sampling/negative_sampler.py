@@ -9,7 +9,7 @@ import torch
 from class_resolver import HintOrType
 
 from .filtering import Filterer, filterer_resolver
-from ..triples import TriplesFactory
+from ..triples import CoreTriplesFactory
 from ..utils import normalize_string
 
 __all__ = [
@@ -28,7 +28,7 @@ class NegativeSampler(ABC):
 
     def __init__(
         self,
-        triples_factory: TriplesFactory,
+        triples_factory: CoreTriplesFactory,
         num_negs_per_pos: Optional[int] = None,
         filtered: bool = False,
         filterer: HintOrType[Filterer] = None,
@@ -46,7 +46,8 @@ class NegativeSampler(ABC):
         :param filterer_kwargs:
             Additional keyword-based arguments passed to the filterer upon construction.
         """
-        self.triples_factory = triples_factory
+        self.num_entities = triples_factory.num_entities
+        self.num_relations = triples_factory.num_relations
         self.num_negs_per_pos = num_negs_per_pos if num_negs_per_pos is not None else 1
         self.filterer = filterer_resolver.make(
             filterer,
@@ -58,16 +59,6 @@ class NegativeSampler(ABC):
     def get_normalized_name(cls) -> str:
         """Get the normalized name of the negative sampler."""
         return normalize_string(cls.__name__, suffix=NegativeSampler.__name__)
-
-    @property
-    def num_entities(self) -> int:  # noqa: D401
-        """The number of entities to sample from."""
-        return self.triples_factory.num_entities
-
-    @property
-    def num_relations(self) -> int:  # noqa: D401
-        """The number of relations to sample from."""
-        return self.triples_factory.num_relations
 
     @abstractmethod
     def sample(self, positive_batch: torch.LongTensor) -> Tuple[torch.LongTensor, Optional[torch.Tensor]]:
