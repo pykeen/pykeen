@@ -568,9 +568,10 @@ class PackedZipRemoteDataset(LazyDataset):
         if not self.path.is_file() and not self.url:
             raise ValueError(f'must specify url to download from since path does not exist: {self.path}')
 
-        self.relative_training_path = pathlib.PurePath(relative_training_path)
-        self.relative_testing_path = pathlib.PurePath(relative_testing_path)
-        self.relative_validation_path = pathlib.PurePath(relative_validation_path)
+        # relative paths within zipfile's always follow Posix path
+        self.relative_training_path = pathlib.PurePosixPath(relative_training_path)
+        self.relative_testing_path = pathlib.PurePosixPath(relative_testing_path)
+        self.relative_validation_path = pathlib.PurePosixPath(relative_validation_path)
         self.create_inverse_triples = create_inverse_triples
         if eager:
             self._load()
