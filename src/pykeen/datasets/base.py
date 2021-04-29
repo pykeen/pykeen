@@ -591,7 +591,7 @@ class PackedZipRemoteDataset(LazyDataset):
             download(url=self.url, path=self.path)
 
         with zipfile.ZipFile(file=self.path) as zf:
-            with zf.open(str(relative_path)) as file:
+            with zf.open(relative_path.as_posix()) as file:
                 logger.debug('loading %s', relative_path)
                 df = pd.read_csv(
                     file,
