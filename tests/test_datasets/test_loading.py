@@ -100,7 +100,6 @@ class MockUnpackedRemoteDataset(UnpackedRemoteDataset):
             training_url=NATIONS_TRAIN_PATH.as_uri(),
             testing_url=NATIONS_TEST_PATH.as_uri(),
             validation_url=NATIONS_VALIDATE_PATH.as_uri(),
-            backend='urllib',  # urllib can handle file-paths directly
         )
 
 
