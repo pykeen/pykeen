@@ -611,7 +611,6 @@ class TarFileSingleDataset(LazyDataset):
     """Loads a dataset that's a single file inside a tar.gz archive."""
 
     ratios = (0.8, 0.1, 0.1)
-    _triples_factory: Optional[TriplesFactory]
 
     def __init__(
         self,
