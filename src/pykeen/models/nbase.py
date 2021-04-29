@@ -365,20 +365,20 @@ class ERModel(
             random_seed=random_seed,
             predict_with_sigmoid=predict_with_sigmoid,
         )
+        self.interaction = interaction_resolver.make(interaction, pos_kwargs=interaction_kwargs)
         self.entity_representations = _prepare_representation_module_list(
             representations=entity_representations,
             num_embeddings=triples_factory.num_entities,
-            shapes=interaction.entity_shape,
+            shapes=self.interaction.entity_shape,
             label="entity",
-            skip_checks=interaction.tail_entity_shape is not None,
+            skip_checks=self.interaction.tail_entity_shape is not None,
         )
         self.relation_representations = _prepare_representation_module_list(
             representations=relation_representations,
             num_embeddings=triples_factory.num_relations,
-            shapes=interaction.relation_shape,
+            shapes=self.interaction.relation_shape,
             label="relation",
         )
-        self.interaction = interaction_resolver.make(interaction, pos_kwargs=interaction_kwargs)
         # Comment: it is important that the regularizers are stored in a module list, in order to appear in
         # model.modules(). Thereby, we can collect them automatically.
         self.weight_regularizers = nn.ModuleList()
