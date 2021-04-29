@@ -8,14 +8,14 @@ They are loaded automatically with :func:`pkg_resources.iter_entry_points`.
 """
 
 import logging
-import os
+import pathlib
 from typing import Any, Mapping, Optional, Set, Type, Union
 
 from pkg_resources import iter_entry_points
 
 from .base import (  # noqa:F401
     Dataset, EagerDataset, LazyDataset, PackedZipRemoteDataset, PathDataset, RemoteDataset, SingleTabbedDataset,
-    TarFileRemoteDataset, UnpackedRemoteDataset, ZipFileRemoteDataset,
+    TarFileRemoteDataset, UnpackedRemoteDataset,
 )
 from .ckg import CKG
 from .codex import CoDExLarge, CoDExMedium, CoDExSmall
@@ -87,11 +87,11 @@ datasets: Mapping[str, Type[Dataset]] = {
 
 def get_dataset(
     *,
-    dataset: Union[None, str, Dataset, Type[Dataset]] = None,
+    dataset: Union[None, str, pathlib.Path, Dataset, Type[Dataset]] = None,
     dataset_kwargs: Optional[Mapping[str, Any]] = None,
-    training: Union[None, str, CoreTriplesFactory] = None,
-    testing: Union[None, str, CoreTriplesFactory] = None,
-    validation: Union[None, str, CoreTriplesFactory] = None,
+    training: Union[None, str, pathlib.Path, CoreTriplesFactory] = None,
+    testing: Union[None, str, pathlib.Path, CoreTriplesFactory] = None,
+    validation: Union[None, str, pathlib.Path, CoreTriplesFactory] = None,
 ) -> Dataset:
     """Get the dataset.
 
@@ -122,10 +122,17 @@ def get_dataset(
     if isinstance(dataset, str):
         if has_dataset(dataset):
             dataset: Type[Dataset] = datasets[normalize_string(dataset)]  # type: ignore
-        elif not os.path.exists(dataset):
-            raise ValueError(f'dataset is neither a pre-defined dataset string nor a filepath: {dataset}')
         else:
-            return Dataset.from_path(dataset)
+            dataset = pathlib.Path(dataset)
+
+    if isinstance(dataset, pathlib.Path):
+        dataset_path = dataset.resolve()
+        if not dataset_path.is_file():
+            raise ValueError(
+                f'dataset is neither a pre-defined dataset string nor a filepath: {dataset_path.as_uri()}',
+            )
+        else:
+            return Dataset.from_path(dataset_path)
 
     if isinstance(dataset, type) and issubclass(dataset, Dataset):
         return dataset(**(dataset_kwargs or {}))  # type: ignore
@@ -133,8 +140,8 @@ def get_dataset(
     if dataset is not None:
         raise TypeError(f'Dataset is invalid type: {type(dataset)}')
 
-    if isinstance(training, str) and isinstance(testing, str):
-        if validation is None or isinstance(validation, str):
+    if isinstance(training, (str, pathlib.Path)) and isinstance(testing, (str, pathlib.Path)):
+        if validation is None or isinstance(validation, (str, pathlib.Path)):
             return PathDataset(
                 training_path=training,
                 testing_path=testing,

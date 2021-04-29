@@ -5,7 +5,7 @@
 import dataclasses
 import itertools
 import logging
-import os
+import pathlib
 import re
 from typing import Any, Callable, Collection, Dict, List, Mapping, Optional, Sequence, Set, TextIO, Union, cast
 
@@ -304,7 +304,7 @@ class CoreTriplesFactory:
         ]
         d.extend(sorted(self.metadata.items()))  # type: ignore
         return ', '.join(
-            f'{k}="{v}"' if isinstance(v, str) else f'{k}={v}'
+            f'{k}="{v}"' if isinstance(v, (str, pathlib.Path)) else f'{k}={v}'
             for k, v in d
         )
 
@@ -733,7 +733,7 @@ class TriplesFactory(CoreTriplesFactory):
     @classmethod
     def from_path(
         cls,
-        path: Union[str, TextIO],
+        path: Union[str, pathlib.Path, TextIO],
         create_inverse_triples: bool = False,
         entity_to_id: Optional[EntityMapping] = None,
         relation_to_id: Optional[RelationMapping] = None,
@@ -764,12 +764,7 @@ class TriplesFactory(CoreTriplesFactory):
         :return:
             A new triples factory.
         """
-        if isinstance(path, str):
-            path = os.path.abspath(path)
-        elif isinstance(path, TextIO):
-            path = os.path.abspath(path.name)
-        else:
-            raise TypeError(f'path is invalid type: {type(path)}')
+        path = normalize_path(path)
 
         # TODO: Check if lazy evaluation would make sense
         triples = load_triples(path, **(load_triples_kwargs or {}))
@@ -1042,3 +1037,15 @@ def splits_similarity(a: Sequence[CoreTriplesFactory], b: Sequence[CoreTriplesFa
 
 def _smt(x):
     return set(tuple(xx.detach().numpy().tolist()) for xx in x)
+
+
+def normalize_path(path: Union[str, pathlib.Path, TextIO]) -> pathlib.Path:
+    """Normalize path."""
+    if isinstance(path, TextIO):
+        return pathlib.Path(path.name).resolve()
+    elif isinstance(path, str):
+        return pathlib.Path(path).resolve()
+    elif isinstance(path, pathlib.Path):
+        return path.resolve()
+    else:
+        raise TypeError(f'path is invalid type: {type(path)}')

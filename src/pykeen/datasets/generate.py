@@ -3,7 +3,7 @@
 """A script for splitting triples into a dataset."""
 
 import json
-import os
+import pathlib
 from typing import Sequence, cast
 
 import click
@@ -17,16 +17,28 @@ LABELS = ['train', 'test', 'valid']
 
 
 @click.command()
-@click.argument('path')
-@click.option('-d', '--directory', default=os.getcwd(), show_default=True)
+@click.argument('path', type=pathlib.Path)
+@click.option('-d', '--directory', default=pathlib.Path.cwd(), show_default=True, type=pathlib.Path)
 @click.option('--test-ratios', type=float, nargs=2, default=[0.8, 0.2], show_default=True)
 @click.option('--no-validation', is_flag=True)
 @click.option('--validation-ratios', type=float, nargs=3, default=[0.8, 0.1, 0.1], show_default=True)
 @click.option('--reload', is_flag=True)
 @click.option('--seed', type=int)
-def main(path: str, directory: str, test_ratios, no_validation: bool, validation_ratios, reload, seed):
+def main(
+    path: pathlib.Path,
+    directory: pathlib.Path,
+    test_ratios: Sequence[float],
+    no_validation: bool,
+    validation_ratios: Sequence[float],
+    reload: bool,
+    seed: int,
+):
     """Make a dataset from the given triples."""
-    os.makedirs(directory, exist_ok=True)
+    directory = directory.resolve()
+    directory.mkdir(exist_ok=True, parents=True)
+
+    # Normalize path
+    path = path.expanduser().resolve()
 
     triples_factory = TriplesFactory.from_path(path=path)
     ratios = test_ratios if no_validation else validation_ratios
@@ -36,16 +48,16 @@ def main(path: str, directory: str, test_ratios, no_validation: bool, validation
     sub_triples_factories = cast(Sequence[TriplesFactory], triples_factory.split(ratios, random_state=seed))
 
     for subset_name, subset_tf in zip(LABELS, sub_triples_factories):
-        output_path = os.path.join(directory, f'{subset_name}.txt')
-        click.echo(f'Outputing {subset_name} to {output_path}')
+        output_path = directory.joinpath(subset_name).with_suffix(".txt")
+        click.echo(f'Outputing {subset_name} to {output_path.as_uri()}')
         np.savetxt(output_path, subset_tf.triples, delimiter='\t', fmt='%s')
 
     metadata = dict(
-        source=os.path.abspath(path),
+        source=str(path),
         ratios=dict(zip(LABELS, ratios)),
         seed=seed,
     )
-    with open(os.path.join(directory, 'metadata.json'), 'w') as file:
+    with directory.joinpath("metadata.json").open("w") as file:
         json.dump(metadata, file, indent=2)
 
     if reload:
@@ -53,9 +65,9 @@ def main(path: str, directory: str, test_ratios, no_validation: bool, validation
             click.secho('Can not load as dataset if --no-validation was flagged.', fg='red')
             return
         d = PathDataset(
-            training_path=os.path.join(directory, 'train.txt'),
-            testing_path=os.path.join(directory, 'test.txt'),
-            validation_path=os.path.join(directory, 'valid.txt'),
+            training_path=directory.joinpath('train.txt'),
+            testing_path=directory.joinpath('test.txt'),
+            validation_path=directory.joinpath('valid.txt'),
             eager=True,
         )
         print(d)

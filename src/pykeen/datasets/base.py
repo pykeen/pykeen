@@ -5,13 +5,12 @@
 from __future__ import annotations
 
 import logging
-import os
 import pathlib
 import tarfile
 import zipfile
 from abc import abstractmethod
 from io import BytesIO
-from typing import Any, ClassVar, Dict, List, Mapping, Optional, Sequence, TextIO, Tuple, Union, cast
+from typing import Any, ClassVar, Dict, List, Mapping, Optional, Sequence, Tuple, Union, cast
 
 import click
 import pandas as pd
@@ -36,7 +35,6 @@ __all__ = [
     'RemoteDataset',
     'UnpackedRemoteDataset',
     'TarFileRemoteDataset',
-    'ZipFileRemoteDataset',
     'PackedZipRemoteDataset',
     'TarFileSingleDataset',
     'TabbedDataset',
@@ -136,15 +134,15 @@ class Dataset:
             rv += '\n' + examples
         return rv + end
 
-    def summarize(self, title: Optional[str] = None, file=None) -> None:
+    def summarize(self, title: Optional[str] = None, show_examples: Optional[int] = 5, file=None) -> None:
         """Print a summary of the dataset."""
-        print(self.summary_str(title=title), file=file)
+        print(self.summary_str(title=title, show_examples=show_examples), file=file)
 
     def __str__(self) -> str:  # noqa: D105
         return f'{self.__class__.__name__}(num_entities={self.num_entities}, num_relations={self.num_relations})'
 
     @classmethod
-    def from_path(cls, path: str, ratios: Optional[List[float]] = None) -> 'Dataset':
+    def from_path(cls, path: Union[str, pathlib.Path], ratios: Optional[List[float]] = None) -> 'Dataset':
         """Create a dataset from a single triples factory by splitting it in 3."""
         tf = TriplesFactory.from_path(path=path)
         return cls.from_tf(tf=tf, ratios=ratios)
@@ -166,6 +164,7 @@ class Dataset:
         @verbose_option
         def main():
             """Run the dataset CLI."""
+            click.secho(f'Loading {cls.__name__}', fg='green', bold=True)
             click.echo(cls().summary_str())
 
         main()
@@ -311,9 +310,9 @@ class PathDataset(LazyDataset):
 
     def __init__(
         self,
-        training_path: Union[str, TextIO],
-        testing_path: Union[str, TextIO],
-        validation_path: Union[None, str, TextIO],
+        training_path: Union[str, pathlib.Path],
+        testing_path: Union[str, pathlib.Path],
+        validation_path: Union[None, str, pathlib.Path],
         eager: bool = False,
         create_inverse_triples: bool = False,
         load_triples_kwargs: Optional[Mapping[str, Any]] = None,
@@ -328,9 +327,9 @@ class PathDataset(LazyDataset):
         :param load_triples_kwargs: Arguments to pass through to :func:`TriplesFactory.from_path`
             and ultimately through to :func:`pykeen.triples.utils.load_triples`.
         """
-        self.training_path = training_path
-        self.testing_path = testing_path
-        self.validation_path = validation_path
+        self.training_path = pathlib.Path(training_path)
+        self.testing_path = pathlib.Path(testing_path)
+        self.validation_path = pathlib.Path(validation_path) if validation_path else None
 
         self.create_inverse_triples = create_inverse_triples
         self.load_triples_kwargs = load_triples_kwargs
@@ -386,11 +385,11 @@ class UnpackedRemoteDataset(PathDataset):
         testing_url: str,
         validation_url: str,
         cache_root: Optional[str] = None,
-        stream: bool = True,
         force: bool = False,
         eager: bool = False,
         create_inverse_triples: bool = False,
         load_triples_kwargs: Optional[Mapping[str, Any]] = None,
+        download_kwargs: Optional[Mapping[str, Any]] = None,
     ):
         """Initialize dataset.
 
@@ -399,13 +398,13 @@ class UnpackedRemoteDataset(PathDataset):
         :param validation_url: The URL of the validation file
         :param cache_root:
             An optional directory to store the extracted files. Is none is given, the default PyKEEN directory is used.
-            This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.pykeen``.
-        :param stream: Use :mod:`requests` be used for download if true otherwise use :mod:`urllib`
+            This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.data/pykeen``.
         :param force: If true, redownload any cached files
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param load_triples_kwargs: Arguments to pass through to :func:`TriplesFactory.from_path`
             and ultimately through to :func:`pykeen.triples.utils.load_triples`.
+        :param download_kwargs: Keyword arguments to pass to :func:`pystow.utils.download`
         """
         self.cache_root = self._help_cache(cache_root)
 
@@ -413,18 +412,20 @@ class UnpackedRemoteDataset(PathDataset):
         self.testing_url = testing_url
         self.validation_url = validation_url
 
-        training_path = os.path.join(self.cache_root, name_from_url(self.training_url))
-        testing_path = os.path.join(self.cache_root, name_from_url(self.testing_url))
-        validation_path = os.path.join(self.cache_root, name_from_url(self.validation_url))
+        training_path = self.cache_root.joinpath(name_from_url(self.training_url))
+        testing_path = self.cache_root.joinpath(name_from_url(self.testing_url))
+        validation_path = self.cache_root.joinpath(name_from_url(self.validation_url))
+
+        download_kwargs = {} if download_kwargs is None else dict(download_kwargs)
+        download_kwargs.setdefault('backend', 'urllib')
 
         for url, path in [
             (self.training_url, training_path),
             (self.testing_url, testing_path),
             (self.validation_url, validation_path),
         ]:
-            if os.path.exists(path) and not force:
-                continue
-            download(url, path, stream=stream, backend='requests')
+            if force or not path.is_file():
+                download(url, path, **download_kwargs)
 
         super().__init__(
             training_path=training_path,
@@ -442,9 +443,9 @@ class RemoteDataset(PathDataset):
     def __init__(
         self,
         url: str,
-        relative_training_path: str,
-        relative_testing_path: str,
-        relative_validation_path: str,
+        relative_training_path: Union[str, pathlib.PurePath],
+        relative_testing_path: Union[str, pathlib.PurePath],
+        relative_validation_path: Union[str, pathlib.PurePath],
         cache_root: Optional[str] = None,
         eager: bool = False,
         create_inverse_triples: bool = False,
@@ -458,16 +459,16 @@ class RemoteDataset(PathDataset):
         :param relative_validation_path: The path inside the cache root where the validation path gets extracted
         :param cache_root:
             An optional directory to store the extracted files. Is none is given, the default PyKEEN directory is used.
-            This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.pykeen``.
+            This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.data/pykeen``.
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         """
         self.cache_root = self._help_cache(cache_root)
 
         self.url = url
-        self._relative_training_path = relative_training_path
-        self._relative_testing_path = relative_testing_path
-        self._relative_validation_path = relative_validation_path
+        self._relative_training_path = pathlib.PurePath(relative_training_path)
+        self._relative_testing_path = pathlib.PurePath(relative_testing_path)
+        self._relative_validation_path = pathlib.PurePath(relative_validation_path)
 
         training_path, testing_path, validation_path = self._get_paths()
         super().__init__(
@@ -478,12 +479,12 @@ class RemoteDataset(PathDataset):
             create_inverse_triples=create_inverse_triples,
         )
 
-    def _get_paths(self) -> Tuple[str, str, str]:  # noqa: D401
+    def _get_paths(self) -> Tuple[pathlib.Path, pathlib.Path, pathlib.Path]:  # noqa: D401
         """The paths where the extracted files can be found."""
         return (
-            os.path.join(self.cache_root, self._relative_training_path),
-            os.path.join(self.cache_root, self._relative_testing_path),
-            os.path.join(self.cache_root, self._relative_validation_path),
+            self.cache_root.joinpath(self._relative_training_path),
+            self.cache_root.joinpath(self._relative_testing_path),
+            self.cache_root.joinpath(self._relative_validation_path),
         )
 
     @abstractmethod
@@ -499,7 +500,7 @@ class RemoteDataset(PathDataset):
 
     def _load(self) -> None:  # noqa: D102
         all_unpacked = all(
-            os.path.exists(path) and os.path.isfile(path)
+            path.is_file()
             for path in self._get_paths()
         )
 
@@ -519,15 +520,6 @@ class TarFileRemoteDataset(RemoteDataset):
             tf.extractall(path=self.cache_root)
 
 
-# TODO replace this with the new zip remote dataset class
-class ZipFileRemoteDataset(RemoteDataset):
-    """A remote dataset stored as a zip file."""
-
-    def _extract(self, archive_file: BytesIO) -> None:  # noqa: D102
-        with zipfile.ZipFile(file=archive_file) as zf:
-            zf.extractall(path=self.cache_root)
-
-
 class PackedZipRemoteDataset(LazyDataset):
     """Contains a lazy reference to a remote dataset that is loaded if needed."""
 
@@ -539,9 +531,9 @@ class PackedZipRemoteDataset(LazyDataset):
 
     def __init__(
         self,
-        relative_training_path: str,
-        relative_testing_path: str,
-        relative_validation_path: str,
+        relative_training_path: Union[str, pathlib.PurePath],
+        relative_testing_path: Union[str, pathlib.PurePath],
+        relative_validation_path: Union[str, pathlib.PurePath],
         url: Optional[str] = None,
         name: Optional[str] = None,
         cache_root: Optional[str] = None,
@@ -568,16 +560,16 @@ class PackedZipRemoteDataset(LazyDataset):
         self.cache_root = self._help_cache(cache_root)
 
         self.name = name or name_from_url(url)
-        self.path = os.path.join(self.cache_root, self.name)
+        self.path = self.cache_root.joinpath(self.name)
         logger.debug('file path at %s', self.path)
 
         self.url = url
-        if not os.path.exists(self.path) and not self.url:
+        if not self.path.is_file() and not self.url:
             raise ValueError(f'must specify url to download from since path does not exist: {self.path}')
 
-        self.relative_training_path = relative_training_path
-        self.relative_testing_path = relative_testing_path
-        self.relative_validation_path = relative_validation_path
+        self.relative_training_path = pathlib.PurePath(relative_training_path)
+        self.relative_testing_path = pathlib.PurePath(relative_testing_path)
+        self.relative_validation_path = pathlib.PurePath(relative_validation_path)
         self.create_inverse_triples = create_inverse_triples
         if eager:
             self._load()
@@ -590,15 +582,16 @@ class PackedZipRemoteDataset(LazyDataset):
     def _load_validation(self) -> None:
         self._validation = self._load_helper(self.relative_validation_path)
 
-    def _load_helper(self, relative_path: str) -> TriplesFactory:
-        if not os.path.exists(self.path):
+    def _load_helper(self, relative_path: pathlib.PurePath) -> TriplesFactory:
+        if not self.path.is_file():
             if self.url is None:
                 raise ValueError('url should be set')
             logger.info('downloading data from %s to %s', self.url, self.path)
             download(url=self.url, path=self.path)
 
         with zipfile.ZipFile(file=self.path) as zf:
-            with zf.open(relative_path) as file:
+            # relative paths within zip file's always follow Posix path, even on Windows
+            with zf.open(relative_path.as_posix()) as file:
                 logger.debug('loading %s', relative_path)
                 df = pd.read_csv(
                     file,
@@ -617,12 +610,11 @@ class TarFileSingleDataset(LazyDataset):
     """Loads a dataset that's a single file inside a tar.gz archive."""
 
     ratios = (0.8, 0.1, 0.1)
-    _triples_factory: Optional[TriplesFactory]
 
     def __init__(
         self,
         url: str,
-        relative_path: str,
+        relative_path: Union[str, pathlib.PurePosixPath],
         name: Optional[str] = None,
         cache_root: Optional[str] = None,
         eager: bool = False,
@@ -654,20 +646,20 @@ class TarFileSingleDataset(LazyDataset):
         self.delimiter = delimiter or '\t'
         self.url = url
         self.create_inverse_triples = create_inverse_triples
-        self._relative_path = relative_path
+        self._relative_path = pathlib.PurePosixPath(relative_path)
 
         if eager:
             self._load()
 
-    def _get_path(self) -> str:
-        return os.path.join(self.cache_root, self.name)
+    def _get_path(self) -> pathlib.Path:
+        return self.cache_root.joinpath(self.name)
 
     def _load(self) -> None:
-        if not os.path.exists(self._get_path()):
+        if not self._get_path().is_file():
             download(self.url, self._get_path())  # noqa:S310
 
-        _actual_path = os.path.join(self.cache_root, self._relative_path)
-        if not os.path.exists(_actual_path):
+        _actual_path = self.cache_root.joinpath(self._relative_path)
+        if not _actual_path.is_file():
             logger.error(
                 '[%s] untaring from %s (%s) to %s',
                 self.__class__.__name__,
@@ -676,7 +668,8 @@ class TarFileSingleDataset(LazyDataset):
                 _actual_path,
             )
             with tarfile.open(self._get_path()) as tar_file:
-                tar_file.extract(self._relative_path, self.cache_root)
+                # tarfile does not like pathlib
+                tar_file.extract(str(self._relative_path), self.cache_root)
 
         df = pd.read_csv(_actual_path, sep=self.delimiter)
         tf_path = self._get_path()
@@ -732,7 +725,7 @@ class TabbedDataset(LazyDataset):
         if eager:
             self._load()
 
-    def _get_path(self) -> Optional[str]:
+    def _get_path(self) -> Optional[pathlib.Path]:
         """Get the path of the data if there's a single file."""
 
     def _get_df(self) -> pd.DataFrame:
@@ -806,17 +799,17 @@ class SingleTabbedDataset(TabbedDataset):
         self.read_csv_kwargs.setdefault('sep', '\t')
 
         self.url = url
-        if not os.path.exists(self._get_path()) and not self.url:
+        if not self._get_path().is_file() and not self.url:
             raise ValueError(f'must specify url to download from since path does not exist: {self._get_path()}')
 
         if eager:
             self._load()
 
-    def _get_path(self) -> str:
-        return os.path.join(self.cache_root, self.name)
+    def _get_path(self) -> pathlib.Path:
+        return self.cache_root.joinpath(self.name)
 
     def _get_df(self) -> pd.DataFrame:
-        if not os.path.exists(self._get_path()):
+        if not self._get_path().is_file():
             logger.info('downloading data from %s to %s', self.url, self._get_path())
             download(url=self.url, path=self._get_path())  # noqa:S310
         df = pd.read_csv(self._get_path(), **self.read_csv_kwargs)

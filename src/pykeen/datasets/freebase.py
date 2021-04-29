@@ -12,7 +12,7 @@ import click
 from docdata import parse_docdata
 from more_click import verbose_option
 
-from .base import TarFileRemoteDataset, ZipFileRemoteDataset
+from .base import PackedZipRemoteDataset, TarFileRemoteDataset
 
 __all__ = [
     'FB15k',
@@ -58,7 +58,7 @@ class FB15k(TarFileRemoteDataset):
 
 
 @parse_docdata
-class FB15k237(ZipFileRemoteDataset):
+class FB15k237(PackedZipRemoteDataset):
     """The FB15k-237 dataset.
 
     ---
