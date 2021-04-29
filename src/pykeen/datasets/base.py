@@ -134,9 +134,9 @@ class Dataset:
             rv += '\n' + examples
         return rv + end
 
-    def summarize(self, title: Optional[str] = None, file=None) -> None:
+    def summarize(self, title: Optional[str] = None, show_examples: Optional[int] = 5, file=None) -> None:
         """Print a summary of the dataset."""
-        print(self.summary_str(title=title), file=file)
+        print(self.summary_str(title=title, show_examples=show_examples), file=file)
 
     def __str__(self) -> str:  # noqa: D105
         return f'{self.__class__.__name__}(num_entities={self.num_entities}, num_relations={self.num_relations})'
@@ -164,6 +164,7 @@ class Dataset:
         @verbose_option
         def main():
             """Run the dataset CLI."""
+            click.secho(f'Loading {cls.__name__}', fg='green', bold=True)
             click.echo(cls().summary_str())
 
         main()
@@ -384,12 +385,11 @@ class UnpackedRemoteDataset(PathDataset):
         testing_url: str,
         validation_url: str,
         cache_root: Optional[str] = None,
-        stream: bool = True,
         force: bool = False,
         eager: bool = False,
         create_inverse_triples: bool = False,
         load_triples_kwargs: Optional[Mapping[str, Any]] = None,
-        backend: str = 'requests',
+        download_kwargs: Optional[Mapping[str, Any]] = None,
     ):
         """Initialize dataset.
 
@@ -399,13 +399,12 @@ class UnpackedRemoteDataset(PathDataset):
         :param cache_root:
             An optional directory to store the extracted files. Is none is given, the default PyKEEN directory is used.
             This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.data/pykeen``.
-        :param stream: Use :mod:`requests` be used for download if true otherwise use :mod:`urllib`
         :param force: If true, redownload any cached files
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param load_triples_kwargs: Arguments to pass through to :func:`TriplesFactory.from_path`
             and ultimately through to :func:`pykeen.triples.utils.load_triples`.
-        :param backend: Either 'urllib' or 'requests'
+        :param download_kwargs: Keyword arguments to pass to :func:`pystow.utils.download`
         """
         self.cache_root = self._help_cache(cache_root)
 
@@ -417,16 +416,16 @@ class UnpackedRemoteDataset(PathDataset):
         testing_path = self.cache_root.joinpath(name_from_url(self.testing_url))
         validation_path = self.cache_root.joinpath(name_from_url(self.validation_url))
 
+        download_kwargs = {} if download_kwargs is None else dict(download_kwargs)
+        download_kwargs.setdefault('backend', 'urllib')
+
         for url, path in [
             (self.training_url, training_path),
             (self.testing_url, testing_path),
             (self.validation_url, validation_path),
         ]:
             if force or not path.is_file():
-                if backend == 'requests':
-                    download(url, path, stream=stream, backend=backend)
-                else:
-                    download(url, path, backend=backend)
+                download(url, path, **download_kwargs)
 
         super().__init__(
             training_path=training_path,
