@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Run dataset CLI."""
+from textwrap import dedent
 
 import click
 from more_click import verbose_option
@@ -36,10 +37,23 @@ def analyze(dataset):
     from pykeen.datasets import get_dataset
     from pykeen.constants import PYKEEN_DATASETS
     from . import analysis
-    import matplotlib.pyplot as plt
     from tqdm import tqdm
-    import seaborn as sns
     import pandas as pd
+    try:
+        import matplotlib.pyplot as plt
+        import seaborn as sns
+    except ImportError as error:
+        raise RuntimeError(dedent(
+            """
+            Please install plotting dependencies by
+            
+                pip install pykeen[plotting]
+            
+            or directly by
+            
+                pip install matplotlib seaborn 
+            """
+        )) from error
     dataset_instance = get_dataset(dataset=dataset)
     d = PYKEEN_DATASETS.joinpath(dataset_instance.__class__.__name__.lower(), 'analysis')
     d.mkdir(parents=True, exist_ok=True)
