@@ -184,7 +184,7 @@ def iter_ternary_patterns(
         lhs = {
             (x, z)
             for x, y in pairs[r1]
-            for z in adj[r2]
+            for z in adj[r2][y]
         }
         support = len(lhs)
         # skip empty support
