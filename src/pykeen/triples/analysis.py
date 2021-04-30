@@ -437,3 +437,36 @@ def relation_cardinality_types(
         data=base,
         columns=["relation_id", "relation_type", "support", "confidence"],
     )
+
+
+def entity_relation_co_occurrence(
+    mapped_triples: MappedTriples,
+) -> pd.DataFrame:
+    """
+    Calculate entity-relation co-occurrence.
+
+    :param mapped_triples:
+        The ID-based triples.
+
+    :return:
+        A dataframe with columns ( entity_id | relation_id | type | count )
+    """
+    data = []
+
+    for name, columns in dict(
+        head=[0, 1],
+        tail=[2, 1],
+    ).items():
+        unique, counts = mapped_triples[:, columns].unique(dim=0, return_counts=True)
+        e, r = unique.t().numpy()
+        df = pd.DataFrame(
+            data=dict(
+                entity_id=e,
+                relation_id=r,
+                count=counts.numpy(),
+            ),
+        )
+        df["type"] = name
+        data.append(df)
+
+    return pd.concat(data, ignore_index=True)
