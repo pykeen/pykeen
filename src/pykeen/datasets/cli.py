@@ -42,7 +42,7 @@ def analyze(dataset):
     try:
         import matplotlib.pyplot as plt
         import seaborn as sns
-    except ImportError as error:
+    except ImportError:
         raise ImportError(dedent("""\
             Please install plotting dependencies by
 
