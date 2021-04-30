@@ -6,15 +6,20 @@ import click
 from more_click import verbose_option
 
 
-@click.command()
-@verbose_option
+@click.group()
 def main():
+    """Run the dataset CLI."""
+
+
+@main.command()
+@verbose_option
+def summarize():
     """Load all datasets."""
     from . import datasets
     import docdata
     for name, dataset in sorted(
-            datasets.items(),
-            key=lambda pair: docdata.get_docdata(pair[1])['statistics']['triples'],
+        datasets.items(),
+        key=lambda pair: docdata.get_docdata(pair[1])['statistics']['triples'],
     ):
         click.secho(f'Loading {name}', fg='green', bold=True)
         try:
@@ -22,6 +27,69 @@ def main():
         except Exception as e:
             click.secho(f'Failed {name}', fg='red', bold=True)
             click.secho(str(e), fg='red', bold=True)
+
+
+@main.command()
+@verbose_option
+@click.argument('dataset')
+def analyze(dataset):
+    from pykeen.datasets import get_dataset
+    from pykeen.constants import PYKEEN_DATASETS
+    from . import analysis
+    import matplotlib.pyplot as plt
+    from tqdm import tqdm
+    import seaborn as sns
+    import pandas as pd
+    dataset_instance = get_dataset(dataset=dataset)
+    d = PYKEEN_DATASETS.joinpath(dataset_instance.__class__.__name__.lower(), 'analysis')
+    d.mkdir(parents=True, exist_ok=True)
+
+    dfs = {}
+    it = tqdm(analysis.__dict__.items())
+    for name, func in it:
+        if not name.startswith('get') or not name.endswith('df'):
+            continue
+        it.set_postfix(func=name)
+        key = name[len('get_'):-len('_df')]
+        path = d.joinpath(key).with_suffix('.tsv')
+        if path.exists():
+            df = pd.read_csv(path, sep='\t')
+        else:
+            df = func(dataset=dataset_instance)
+            df.to_csv(d.joinpath(key).with_suffix('.tsv'), sep='\t', index=False)
+        dfs[key] = df
+
+    relation_count_df = (
+        dfs['relation_count']
+            .groupby('relation_label')
+            .sum()
+            .reset_index()
+            .sort_values('count', ascending=False)
+
+    )
+    entity_count_df = (
+        dfs['entity_count']
+            .groupby('entity_label')
+            .sum()
+            .reset_index()
+            .sort_values('count', ascending=False)
+    )
+
+    fig, ax = plt.subplots(1, 1, figsize=(8, 0.2 * len(relation_count_df.index)))
+    sns.barplot(data=entity_count_df, y='entity_label', x='count', ax=ax)
+    ax.set_ylabel('')
+    ax.set_xscale('log')
+    fig.tight_layout()
+    fig.savefig(d.joinpath('entity_counts.svg'))
+    plt.close(fig)
+
+    fig, ax = plt.subplots(1, 1, figsize=(8, 0.2 * len(relation_count_df.index)))
+    sns.barplot(data=relation_count_df, y='relation_label', x='count', ax=ax)
+    ax.set_ylabel('')
+    ax.set_xscale('log')
+    fig.tight_layout()
+    fig.savefig(d.joinpath('relation_counts.svg'))
+    plt.close(fig)
 
 
 if __name__ == '__main__':
