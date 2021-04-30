@@ -2,13 +2,11 @@
 import hashlib
 import itertools as itt
 import logging
-import warnings
 from collections import defaultdict
-from typing import Collection, DefaultDict, Iterable, Mapping, MutableMapping, NamedTuple, Optional, Sequence, Set, Tuple, Union
+from typing import Collection, DefaultDict, Iterable, Mapping, MutableMapping, NamedTuple, Sequence, Set, Tuple, Union
 
 import numpy
 import pandas as pd
-import torch
 from tqdm.auto import tqdm
 
 from pykeen.typing import MappedTriples
@@ -313,29 +311,6 @@ def skyline(data_stream: Iterable[PatternMatch]) -> Iterable[PatternMatch]:
     for (r_id, pat), values in data.items():
         for supp, conf in _get_skyline(values):
             yield PatternMatch(r_id, pat, supp, conf)
-
-
-def get_id_counts(
-    id_tensor: torch.LongTensor,
-    num_ids: Optional[int] = None,
-) -> numpy.ndarray:
-    """Create a dense tensor of ID counts.
-
-    :param id_tensor:
-        The tensor of IDs.
-    :param num_ids:
-        The number of IDs.
-
-    :return: shape: (num_ids,)
-         The counts for each individual ID from {0, 1, ..., num_ids-1}.
-    """
-    warnings.warn("Deprecated. Use get_entity_counts or get_relation_counts.")
-    unique, counts = id_tensor.unique(return_counts=True)
-    if num_ids is None:
-        num_ids = unique.max().item() + 1
-    total_counts = numpy.zeros(shape=(num_ids,), dtype=numpy.int64)
-    total_counts[unique.numpy()] = counts.numpy()
-    return total_counts
 
 
 def _get_counts(
