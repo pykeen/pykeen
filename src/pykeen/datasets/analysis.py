@@ -20,13 +20,13 @@ from ..utils import invert_mapping
 logger = logging.getLogger(__name__)
 
 __all__ = [
-    "relation_count_dataframe",
-    "entity_count_dataframe",
-    "entity_relation_co_occurrence_dataframe",
-    "calculate_relation_functionality",
+    "get_relation_count_df",
+    "get_entity_count_df",
+    "get_entity_relation_co_occurrence_df",
+    "get_relation_functionality_df",
     # relation typing
-    "relation_pattern_types",
-    "relation_cardinality_types"
+    "get_relation_pattern_types_df",
+    "get_relation_cardinality_types_df"
 ]
 
 # constants
@@ -88,7 +88,7 @@ _add_relation_labels = functools.partial(
 )
 
 
-def relation_count_dataframe(
+def get_relation_count_df(
     *,
     dataset: Optional[Dataset] = None,
     triples_factory: Optional[CoreTriplesFactory] = None,
@@ -104,8 +104,8 @@ def relation_count_dataframe(
 
     >>> from pykeen.datasets import Nations
     >>> dataset = Nations()
-    >>> from pykeen.datasets.analysis import relation_count_dataframe
-    >>> df = relation_count_dataframe(dataset=dataset)
+    >>> from pykeen.datasets.analysis import get_relation_count_df
+    >>> df = get_relation_count_df(dataset=dataset)
 
     # Get the most frequent relations in training
     >>> df[df["subset"] == "training"].sort_values(by="count", ascending=False).head()
@@ -142,7 +142,7 @@ def relation_count_dataframe(
             _get_counts(mapped_triples=mapped_triples, column=1),
         )))
     elif triples_factory is not None:
-        df = relation_count_dataframe(
+        df = get_relation_count_df(
             mapped_triples=triples_factory.mapped_triples,
             add_labels=False,  # are added after aggregation
         )
@@ -150,7 +150,7 @@ def relation_count_dataframe(
         parts = _normalize_parts(dataset=dataset, parts=parts)
         data = []
         for subset_name in parts:
-            df = relation_count_dataframe(
+            df = get_relation_count_df(
                 triples_factory=dataset.factory_dict[subset_name],
                 add_labels=False,  # are added after aggregation
             )
@@ -179,7 +179,7 @@ def relation_count_dataframe(
     return _add_relation_labels(df=df, label_to_id=relation_to_id)
 
 
-def entity_count_dataframe(
+def get_entity_count_df(
     dataset: Dataset,
     both_sides: bool = True,
     total_count: bool = True,
@@ -191,8 +191,8 @@ def entity_count_dataframe(
 
     >>> from pykeen.datasets import FB15k237
     >>> dataset = FB15k237()
-    >>> from pykeen.datasets.analysis import relation_count_dataframe
-    >>> df = entity_count_dataframe(dataset=dataset)
+    >>> from pykeen.datasets.analysis import get_relation_count_df
+    >>> df = get_entity_count_df(dataset=dataset)
 
     # Get the most frequent entities in training (counting both, occurrences as heads as well as occurences as tails)
     >>> df.sort_values(by=[("training", "total")]).tail()
@@ -228,7 +228,7 @@ def entity_count_dataframe(
     return df
 
 
-def entity_relation_co_occurrence_dataframe(dataset: Dataset) -> pd.DataFrame:
+def get_entity_relation_co_occurrence_df(dataset: Dataset) -> pd.DataFrame:
     """Create a dataframe of entity/relation co-occurrence.
 
     This information can be seen as a form of pseudo-typing, e.g. entity A is something which can be a head of
@@ -237,8 +237,8 @@ def entity_relation_co_occurrence_dataframe(dataset: Dataset) -> pd.DataFrame:
     Example usages:
     >>> from pykeen.datasets import Nations
     >>> dataset = Nations()
-    >>> from pykeen.datasets.analysis import relation_count_dataframe
-    >>> df = entity_count_dataframe(dataset=dataset)
+    >>> from pykeen.datasets.analysis import get_relation_count_df
+    >>> df = get_entity_count_df(dataset=dataset)
 
     # Which countries have to most embassies (considering only training triples)?
     >>> df.loc["training", ("head", "embassy")].sort_values().tail()
@@ -288,8 +288,9 @@ def entity_relation_co_occurrence_dataframe(dataset: Dataset) -> pd.DataFrame:
     )
 
 
-def relation_pattern_types(
+def get_relation_pattern_types_df(
     dataset: Dataset,
+    *,
     min_support: int = 0,
     min_confidence: float = 0.95,
     drop_confidence: bool = True,
@@ -377,7 +378,7 @@ def relation_pattern_types(
     return df
 
 
-def relation_cardinality_types(
+def get_relation_cardinality_types_df(
     *,
     dataset: Dataset,
     parts: Optional[Collection[str]] = None,
@@ -420,7 +421,7 @@ def relation_cardinality_types(
     return df
 
 
-def calculate_relation_functionality(
+def get_relation_functionality_df(
     *,
     dataset: Dataset,
     parts: Optional[Collection[str]] = None,

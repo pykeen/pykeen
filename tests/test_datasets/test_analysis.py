@@ -10,7 +10,7 @@ import numpy as np
 import pandas
 
 from pykeen.datasets import Nations
-from pykeen.datasets.analysis import (SUBSET_LABELS, calculate_relation_functionality, entity_count_dataframe, entity_relation_co_occurrence_dataframe, relation_cardinality_types, relation_count_dataframe, relation_pattern_types)
+from pykeen.datasets.analysis import (SUBSET_LABELS, get_relation_functionality_df, get_entity_count_df, get_entity_relation_co_occurrence_df, get_relation_cardinality_types_df, get_relation_count_df, get_relation_pattern_types_df)
 from pykeen.triples.analysis import RELATION_CARDINALITY_TYPES, RELATION_PATTERN_TYPES, _get_skyline
 
 
@@ -94,7 +94,7 @@ class AnalysisTests(unittest.TestCase):
 
     def test_relation_count_dataframe(self):
         """Test relation_count_dataframe()."""
-        df = relation_count_dataframe(dataset=self.dataset)
+        df = get_relation_count_df(dataset=self.dataset)
         self._test_count_dataframe_new(
             df=df,
             prefix="relation",
@@ -102,7 +102,7 @@ class AnalysisTests(unittest.TestCase):
 
     def test_entity_count_dataframe(self):
         """Test entity_count_dataframe()."""
-        df = entity_count_dataframe(dataset=self.dataset)
+        df = get_entity_count_df(dataset=self.dataset)
         self._test_count_dataframe_new(
             df=df,
             prefix="entity",
@@ -110,7 +110,7 @@ class AnalysisTests(unittest.TestCase):
 
     def test_entity_relation_co_occurrence_dataframe(self):
         """Test entity_relation_co_occurrence_dataframe()."""
-        df = entity_relation_co_occurrence_dataframe(dataset=self.dataset)
+        df = get_entity_relation_co_occurrence_df(dataset=self.dataset)
 
         # check correct type
         assert isinstance(df, pandas.DataFrame)
@@ -123,7 +123,7 @@ class AnalysisTests(unittest.TestCase):
 
     def test_relation_pattern_types(self):
         """Helper method for relation pattern classification."""
-        df = relation_pattern_types(
+        df = get_relation_pattern_types_df(
             dataset=self.dataset,
             drop_confidence=False,
         )
@@ -148,7 +148,7 @@ class AnalysisTests(unittest.TestCase):
 
     def test_relation_cardinality_types(self):
         """Tests for relation cardinality type classification."""
-        df = relation_cardinality_types(
+        df = get_relation_cardinality_types_df(
             dataset=self.dataset,
         )
 
@@ -163,7 +163,7 @@ class AnalysisTests(unittest.TestCase):
 
     def test_calculate_relation_functionality(self):
         """Tests calculate_relation_functionality."""
-        df = calculate_relation_functionality(
+        df = get_relation_functionality_df(
             dataset=self.dataset,
         )
 
