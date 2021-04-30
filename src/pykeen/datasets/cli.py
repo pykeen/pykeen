@@ -33,7 +33,8 @@ def summarize():
 @main.command()
 @verbose_option
 @click.argument('dataset')
-def analyze(dataset):
+@click.option('-f', '--force', is_flag=True)
+def analyze(dataset, force: bool):
     from pykeen.datasets import get_dataset
     from pykeen.constants import PYKEEN_DATASETS
     from . import analysis
@@ -64,7 +65,7 @@ def analyze(dataset):
         it.set_postfix(func=name)
         key = name[len('get_'):-len('_df')]
         path = d.joinpath(key).with_suffix('.tsv')
-        if path.exists():
+        if path.exists() and not force:
             df = pd.read_csv(path, sep='\t')
         else:
             df = func(dataset=dataset_instance)
