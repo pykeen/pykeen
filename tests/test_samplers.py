@@ -3,15 +3,17 @@
 """Test that samplers can be executed."""
 
 import unittest
-from typing import ClassVar, Type
+from typing import Any, MutableMapping
 
 import numpy
 import torch
+import unittest_templates
 
 from pykeen.datasets import Nations
 from pykeen.sampling import BasicNegativeSampler, BernoulliNegativeSampler, NegativeSampler
 from pykeen.training.schlichtkrull_sampler import GraphSampler, _compute_compressed_adjacency_list
 from pykeen.triples import SLCWAInstances, TriplesFactory
+from pykeen.typing import MappedTriples
 
 
 def _array_check_bounds(
@@ -23,46 +25,42 @@ def _array_check_bounds(
     return (low <= array).all() and (array < high).all()
 
 
-class _NegativeSamplingTestCase:
+class _NegativeSamplingTestCase(unittest_templates.GenericTestCase[NegativeSampler]):
     """A test case for quickly defining common tests for samplers."""
 
     #: The batch size
-    batch_size: int
+    batch_size: int = 16
     #: The random seed
-    seed: int
+    seed: int = 42
+    #: The number of negatives per positive
+    num_negs_per_pos: int = 10
     #: The triples factory
     triples_factory: TriplesFactory
     #: The sLCWA instances
     slcwa_instances: SLCWAInstances
-    #: Class of negative sampling to test
-    negative_sampling_cls: ClassVar[Type[NegativeSampler]]
-    #: The negative sampler instance, initialized in setUp
-    negative_sampler: NegativeSampler
     #: A positive batch
-    positive_batch: torch.LongTensor
+    positive_batch: MappedTriples
 
-    def setUp(self) -> None:
-        """Set up the test case with a triples factory and model."""
-        self.batch_size = 16
-        self.seed = 42
-        self.num_negs_per_pos = 10
-        self.triples_factory = Nations().training
-        self.slcwa_instances = self.triples_factory.create_slcwa_instances()
-        self.negative_sampler = self.negative_sampling_cls(triples_factory=self.triples_factory)
-        self.scaling_negative_sampler = self.negative_sampling_cls(
-            triples_factory=self.triples_factory,
-            num_negs_per_pos=self.num_negs_per_pos,
-        )
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        self.triples_factory = kwargs["triples_factory"] = Nations().training
+        kwargs["num_negs_per_pos"] = self.num_negs_per_pos
+        return kwargs
+
+    def post_instantiation_hook(self) -> None:  # noqa: D102
+        slcwa_instances = self.triples_factory.create_slcwa_instances()
         random = numpy.random.RandomState(seed=self.seed)
-        batch_indices = random.randint(low=0, high=len(self.slcwa_instances), size=(self.batch_size,))
-        self.positive_batch = self.slcwa_instances.mapped_triples[batch_indices]
+        batch_indices = random.randint(low=0, high=len(slcwa_instances), size=(self.batch_size,))
+        self.positive_batch = slcwa_instances.mapped_triples[batch_indices]
 
     def test_sample(self) -> None:
+        """Test the negative sample method."""
         # Generate negative sample
-        negative_batch, _ = self.negative_sampler.sample(positive_batch=self.positive_batch)
+        negative_batch, filter_mask = self.instance.sample(positive_batch=self.positive_batch)
 
         # check shape
-        assert negative_batch.shape == self.positive_batch.shape
+        shape = self.positive_batch.shape
+        assert negative_batch.shape == (shape[0] * self.num_negs_per_pos, shape[1])
 
         # check bounds: heads
         assert _array_check_bounds(negative_batch[:, 0], low=0, high=self.triples_factory.num_entities)
@@ -74,52 +72,48 @@ class _NegativeSamplingTestCase:
         assert _array_check_bounds(negative_batch[:, 2], low=0, high=self.triples_factory.num_entities)
 
         # Check that all elements got corrupted
-        assert (negative_batch != self.positive_batch).any(dim=1).all()
+        negative_batch = negative_batch.view(shape[0], self.num_negs_per_pos, shape[1])
+        assert (negative_batch != self.positive_batch.unsqueeze(dim=1)).any(dim=-1).all()
 
-        # Generate scaled negative sample
-        scaled_negative_batch, _ = self.scaling_negative_sampler.sample(
-            positive_batch=self.positive_batch,
-        )
+        self.verify_negative_batch(negative_batch=negative_batch)
 
-        assert scaled_negative_batch.shape[0] == self.positive_batch.shape[0] * self.num_negs_per_pos
-        assert scaled_negative_batch.shape[1] == self.positive_batch.shape[1]
+    def verify_negative_batch(self, negative_batch: MappedTriples):
+        """Verify properties of negative batch."""
 
 
-class BasicNegativeSamplerTest(_NegativeSamplingTestCase, unittest.TestCase):
+class BasicNegativeSamplerTest(_NegativeSamplingTestCase):
     """Test the basic negative sampler."""
 
-    negative_sampling_cls = BasicNegativeSampler
+    cls = BasicNegativeSampler
 
-    def test_sample_basic(self):
+    def verify_negative_batch(self, negative_batch: MappedTriples):
         """Test if relations and half of heads and tails are not corrupted."""
-        # Generate negative samples
-        negative_batch, _ = self.negative_sampler.sample(positive_batch=self.positive_batch)
+        positive_batch = self.positive_batch.unsqueeze(dim=1)
 
         # test that the relations were not changed
-        assert (self.positive_batch[:, 1] == negative_batch[:, 1]).all()
+        assert (positive_batch[..., 1] == negative_batch[..., 1]).all()
 
         # Test that half of the subjects and half of the objects are corrupted
         half_size = self.positive_batch.shape[0] // 2
-        num_subj_corrupted = (self.positive_batch[:, 0] != negative_batch[:, 0]).sum()
-        num_obj_corrupted = (self.positive_batch[:, 2] != negative_batch[:, 2]).sum()
+        num_subj_corrupted = (self.positive_batch[..., 0] != negative_batch[..., 0]).sum()
+        num_obj_corrupted = (self.positive_batch[..., 2] != negative_batch[..., 2]).sum()
         assert num_obj_corrupted - 1 <= num_subj_corrupted
         assert num_subj_corrupted - 1 <= num_obj_corrupted
         assert num_subj_corrupted - 1 <= self.positive_batch.shape[0]
         assert half_size - 1 <= num_subj_corrupted
 
 
-class BernoulliNegativeSamplerTest(_NegativeSamplingTestCase, unittest.TestCase):
+class BernoulliNegativeSamplerTest(_NegativeSamplingTestCase):
     """Test the Bernoulli negative sampler."""
 
-    negative_sampling_cls = BernoulliNegativeSampler
+    cls = BernoulliNegativeSampler
 
-    def test_sample_bern(self):
+    def verify_negative_batch(self, negative_batch: MappedTriples):
         """Test if relations are not corrupted."""
-        # Generate negative sample for additional tests
-        negative_batch, _ = self.negative_sampler.sample(positive_batch=self.positive_batch)
+        positive_batch = self.positive_batch.unsqueeze(dim=1)
 
         # test that the relations were not changed
-        assert (self.positive_batch[:, 1] == negative_batch[:, 1]).all()
+        assert (positive_batch[..., 1] == negative_batch[..., 1]).all()
 
 
 class GraphSamplerTest(unittest.TestCase):
