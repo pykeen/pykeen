@@ -426,11 +426,11 @@ def get_relation_functionality_df(
     mapped_triples = _get_mapped_triples(dataset=dataset, parts=parts)
     df = pd.DataFrame(data=mapped_triples, columns=["h", "r", "t"])
     df = df.groupby(by="r").agg(dict(
-        h=["nunique", "count"],
+        h=["nunique", triple_analysis.COUNT_COLUMN_NAME],
         t="nunique",
     ))
-    df["functionality"] = df[("h", "nunique")] / df[("h", "count")]
-    df["inverse_functionality"] = df[("t", "nunique")] / df[("h", "count")]
+    df["functionality"] = df[("h", "nunique")] / df[("h", triple_analysis.COUNT_COLUMN_NAME)]
+    df["inverse_functionality"] = df[("t", "nunique")] / df[("h", triple_analysis.COUNT_COLUMN_NAME)]
     df = df[["functionality", "inverse_functionality"]]
     df.columns = df.columns.droplevel(1)
     df.index.name = triple_analysis.RELATION_ID_COLUMN_NAME
