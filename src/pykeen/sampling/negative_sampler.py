@@ -21,7 +21,9 @@ class NegativeSampler(ABC):
     """A negative sampler."""
 
     #: The default strategy for optimizing the negative sampler's hyper-parameters
-    hpo_default: ClassVar[Mapping[str, Mapping[str, Any]]]
+    hpo_default: ClassVar[Mapping[str, Mapping[str, Any]]] = dict(
+        num_negs_per_pos=dict(type=int, low=1, high=100, q=10),
+    )
 
     #: A filterer for negative batches
     filterer: Optional[Filterer]

@@ -35,11 +35,6 @@ class BasicNegativeSampler(NegativeSampler):
        actual positive triples $(h,r,t) \in \mathcal{K}$ will be removed.
     """
 
-    #: The default strategy for optimizing the negative sampler's hyper-parameters
-    hpo_default = dict(
-        num_negs_per_pos=dict(type=int, low=1, high=100, q=10),
-    )
-
     def __init__(
         self,
         *,
