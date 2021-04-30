@@ -306,6 +306,7 @@ def get_relation_pattern_types_df(
     drop_confidence: bool = True,
     parts: Optional[Collection[str]] = None,
     force: bool = False,
+    add_labels: bool = True,
 ) -> pd.DataFrame:
     r"""
     Categorize relations based on patterns from RotatE [sun2019]_.
@@ -383,7 +384,15 @@ def get_relation_pattern_types_df(
     df = df[(df["support"] >= min_support) & (df["confidence"] >= min_confidence)]
 
     if drop_confidence:
-        df = df[["relation_id", "pattern"]].drop_duplicates()
+        df = df[[triple_analysis.RELATION_ID_COLUMN_NAME, "pattern"]].drop_duplicates()
+
+    if add_labels:
+        df = _add_labels(
+            df=df,
+            label_to_id=dataset.relation_to_id,
+            id_column=triple_analysis.RELATION_ID_COLUMN_NAME,
+            label_column=RELATION_LABEL_COLUMN_NAME,
+        )
 
     return df
 
