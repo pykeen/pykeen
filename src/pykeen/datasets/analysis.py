@@ -74,10 +74,16 @@ def _add_entity_labels(
 ) -> pd.DataFrame:
     if not add_labels:
         return df
-    assert not (label_to_id is None and triples_factory is None and dataset is None)
+    if not label_to_id:
+        if triples_factory:
+            label_to_id = triples_factory.entity_to_id
+        elif dataset:
+            label_to_id = dataset.entity_to_id
+        else:
+            raise ValueError
     return _add_labels(
         df=df,
-        label_to_id=label_to_id or triples_factory.entity_to_id or dataset.entity_to_id,
+        label_to_id=label_to_id,
         id_column=triple_analysis.ENTITY_ID_COLUMN_NAME,
         label_column=ENTITY_LABEL_COLUMN_NAME,
     )
@@ -93,10 +99,16 @@ def _add_relation_labels(
 ) -> pd.DataFrame:
     if not add_labels:
         return df
-    assert not (label_to_id is None and triples_factory is None and dataset is None)
+    if not label_to_id:
+        if triples_factory:
+            label_to_id = triples_factory.relation_to_id
+        elif dataset:
+            label_to_id = dataset.relation_to_id
+        else:
+            raise ValueError
     return _add_labels(
         df=df,
-        label_to_id=label_to_id or triples_factory.relation_to_id or dataset.relation_to_id,
+        label_to_id=label_to_id,
         id_column=triple_analysis.RELATION_ID_COLUMN_NAME,
         label_column=RELATION_LABEL_COLUMN_NAME,
     )
@@ -105,7 +117,7 @@ def _add_relation_labels(
 def _aggregate(
     df: pd.DataFrame,
     group_key: Sequence[str],
-    both_sides: bool = False,
+    both_sides: bool = True,
     total_count: bool = False,
 ) -> pd.DataFrame:
     group_key = list(group_key)

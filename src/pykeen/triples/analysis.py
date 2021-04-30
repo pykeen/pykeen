@@ -351,6 +351,7 @@ def get_entity_counts(
             }
         )
         df[ENTITY_POSITION_COLUMN_NAME] = label
+        data.append(df)
     return pd.concat(data, ignore_index=True)
 
 
