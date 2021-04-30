@@ -21,7 +21,7 @@ __all__ = [
     "get_relation_functionality_df",
     # relation typing
     "get_relation_pattern_types_df",
-    "get_relation_cardinality_types_df"
+    "get_relation_cardinality_types_df",
 ]
 
 # constants
@@ -156,6 +156,8 @@ def get_relation_count_df(
         Whether to add relation labels to the dataframe.
     :param total_count:
         Whether to combine the counts from all subsets, or keep the separate counts instead.
+    :param add_labels:
+        Whether to add relation labels (if available).
 
     :return:
         A dataframe with columns (relation_id, count, relation_label?, subset?)
@@ -200,6 +202,8 @@ def get_entity_count_df(
 
     :param dataset:
         The dataset.
+    :param add_labels:
+        Whether to add entity labels (if available).
 
     :return:
         A dataframe with one row per entity.
@@ -245,6 +249,8 @@ def get_entity_relation_co_occurrence_df(
 
     :param dataset:
         The dataset.
+    :param add_labels:
+        Whether to add entity/relation labels (if available).
 
     :return:
         A dataframe with a multi-index (subset, entity_id) as index, and a multi-index (kind, relation) as columns,
@@ -318,6 +324,8 @@ def get_relation_pattern_types_df(
         {"training", "validation", "testing}.
     :param force:
         Whether to enforce re-calculation even if a cached version is available.
+    :param add_labels:
+        Whether to add relation labels (if available).
 
     .. warning ::
 
@@ -403,6 +411,18 @@ def get_relation_cardinality_types_df(
     return _add_relation_labels(df=df, add_labels=add_labels, dataset=dataset)
 
 
+def get_relation_injectivity_df(
+    *,
+    dataset: Dataset,
+    parts: Optional[Collection[str]] = None,
+    add_labels: bool = True,
+) -> pd.DataFrame:
+    parts = _normalize_parts(dataset=dataset, parts=parts)
+    mapped_triples = _get_mapped_triples(dataset=dataset, parts=parts)
+    df = triple_analysis.relation_injectivity(mapped_triples=mapped_triples)
+    return _add_relation_labels(df=df, add_labels=add_labels, dataset=dataset)
+
+
 def get_relation_functionality_df(
     *,
     dataset: Dataset,
@@ -436,15 +456,5 @@ def get_relation_functionality_df(
     # TODO: Consider merging with other analysis methods
     parts = _normalize_parts(dataset=dataset, parts=parts)
     mapped_triples = _get_mapped_triples(dataset=dataset, parts=parts)
-    df = pd.DataFrame(data=mapped_triples, columns=["h", "r", "t"])
-    df = df.groupby(by="r").agg(dict(
-        h=["nunique", triple_analysis.COUNT_COLUMN_NAME],
-        t="nunique",
-    ))
-    df["functionality"] = df[("h", "nunique")] / df[("h", triple_analysis.COUNT_COLUMN_NAME)]
-    df["inverse_functionality"] = df[("t", "nunique")] / df[("h", triple_analysis.COUNT_COLUMN_NAME)]
-    df = df[["functionality", "inverse_functionality"]]
-    df.columns = df.columns.droplevel(1)
-    df.index.name = triple_analysis.RELATION_ID_COLUMN_NAME
-    df = df.reset_index()
+    df = triple_analysis.get_relation_functionality(mapped_triples)
     return _add_relation_labels(df=df, add_labels=add_labels, dataset=dataset)

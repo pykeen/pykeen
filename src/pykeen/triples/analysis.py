@@ -1,4 +1,7 @@
+# -*- coding: utf-8 -*-
+
 """Analysis utilities for (mapped) triples."""
+
 import hashlib
 import itertools as itt
 import logging
@@ -9,7 +12,7 @@ import numpy
 import pandas as pd
 from tqdm.auto import tqdm
 
-from pykeen.typing import MappedTriples
+from ..typing import MappedTriples
 
 logger = logging.getLogger(__name__)
 
@@ -270,16 +273,32 @@ def iter_relation_cardinality_types(
 
     :yields: A pattern match tuple of relation_id, pattern_type, support, and confidence.
     """
+    it = _help_iter_relation_cardinality_types(mapped_triples)
+    for relation, support, head_injective_conf, tail_injective_conf in it:
+        yield PatternMatch(
+            relation, CARDINALITY_TYPE_ONE_TO_ONE, support, head_injective_conf * tail_injective_conf,
+        )
+        yield PatternMatch(
+            relation, CARDINALITY_TYPE_ONE_TO_MANY, support, (1 - head_injective_conf) * tail_injective_conf,
+        )
+        yield PatternMatch(
+            relation, CARDINALITY_TYPE_MANY_TO_ONE, support, head_injective_conf * (1 - tail_injective_conf),
+        )
+        yield PatternMatch(
+            relation, CARDINALITY_TYPE_MANY_TO_MANY, support, (1 - head_injective_conf) * (1 - tail_injective_conf),
+        )
+
+
+def _help_iter_relation_cardinality_types(
+    mapped_triples: Collection[Tuple[int, int, int]],
+) -> Iterable[PatternMatch]:
     df = pd.DataFrame(data=mapped_triples, columns=["h", "r", "t"])
     for relation, group in df.groupby(by="r"):
         n_unique_heads, head_injective_conf = _is_injective_mapping(df=group, source="h", target="t")
         n_unique_tails, tail_injective_conf = _is_injective_mapping(df=group, source="t", target="h")
         # TODO: what is the support?
         support = n_unique_heads + n_unique_tails
-        yield PatternMatch(relation, CARDINALITY_TYPE_ONE_TO_ONE, support, head_injective_conf * tail_injective_conf)
-        yield PatternMatch(relation, CARDINALITY_TYPE_ONE_TO_MANY, support, (1 - head_injective_conf) * tail_injective_conf)
-        yield PatternMatch(relation, CARDINALITY_TYPE_MANY_TO_ONE, support, head_injective_conf * (1 - tail_injective_conf))
-        yield PatternMatch(relation, CARDINALITY_TYPE_MANY_TO_MANY, support, (1 - head_injective_conf) * (1 - tail_injective_conf))
+        yield relation, support, head_injective_conf, tail_injective_conf
 
 
 def _get_skyline(
@@ -344,12 +363,10 @@ def get_entity_counts(
         ("tail", 2),
     ):
         unique, counts = _get_counts(mapped_triples=mapped_triples, column=col)
-        df = pd.DataFrame(
-            data={
-                ENTITY_ID_COLUMN_NAME: unique,
-                COUNT_COLUMN_NAME: counts,
-            }
-        )
+        df = pd.DataFrame({
+            ENTITY_ID_COLUMN_NAME: unique,
+            COUNT_COLUMN_NAME: counts,
+        })
         df[ENTITY_POSITION_COLUMN_NAME] = label
         data.append(df)
     return pd.concat(data, ignore_index=True)
@@ -417,6 +434,16 @@ def relation_pattern_types(
         data=list(base),
         columns=[RELATION_ID_COLUMN_NAME, "pattern", "support", "confidence"],
     ).sort_values(by=["pattern", RELATION_ID_COLUMN_NAME, "confidence", "support"])
+
+
+def relation_injectivity(
+    mapped_triples: Collection[Tuple[int, int, int]],
+):
+    it = _help_iter_relation_cardinality_types(mapped_triples)
+    return pd.DataFrame(
+        data=it,
+        columns=[RELATION_ID_COLUMN_NAME, "support", "head", "tail"],
+    )
 
 
 def relation_cardinality_types(
@@ -496,3 +523,26 @@ def entity_relation_co_occurrence(
         data.append(df)
 
     return pd.concat(data, ignore_index=True)
+
+
+def get_relation_functionality(mapped_triples: Collection[Tuple[int, int, int]]) -> pd.DataFrame:
+    """Calculate relation functionalities.
+
+    :param mapped_triples:
+        The ID-based triples.
+
+    :return:
+        A dataframe with columns ( functionality | inverse_functionality )
+    """
+    df = pd.DataFrame(data=mapped_triples, columns=["h", "r", "t"])
+    df = df.groupby(by="r").agg(dict(
+        h=["nunique", COUNT_COLUMN_NAME],
+        t="nunique",
+    ))
+    df["functionality"] = df[("h", "nunique")] / df[("h", COUNT_COLUMN_NAME)]
+    df["inverse_functionality"] = df[("t", "nunique")] / df[("h", COUNT_COLUMN_NAME)]
+    df = df[["functionality", "inverse_functionality"]]
+    df.columns = df.columns.droplevel(1)
+    df.index.name = RELATION_ID_COLUMN_NAME
+    df = df.reset_index()
+    return df

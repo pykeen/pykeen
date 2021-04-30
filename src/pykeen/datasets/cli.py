@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """Run dataset CLI."""
+
+import logging
 from textwrap import dedent
 
 import click
@@ -35,6 +37,7 @@ def summarize():
 @click.argument('dataset')
 @click.option('-f', '--force', is_flag=True)
 def analyze(dataset, force: bool):
+    """Generate analysis."""
     from pykeen.datasets import get_dataset
     from pykeen.constants import PYKEEN_DATASETS
     from . import analysis
@@ -53,6 +56,10 @@ def analyze(dataset, force: bool):
 
                 pip install matplotlib seaborn
         """)) from None
+
+    # Raise matplotlib level
+    logging.getLogger('matplotlib').setLevel(logging.WARNING)
+
     dataset_instance = get_dataset(dataset=dataset)
     d = PYKEEN_DATASETS.joinpath(dataset_instance.__class__.__name__.lower(), 'analysis')
     d.mkdir(parents=True, exist_ok=True)
@@ -72,23 +79,28 @@ def analyze(dataset, force: bool):
             df.to_csv(d.joinpath(key).with_suffix('.tsv'), sep='\t', index=False)
         dfs[key] = df
 
-    relation_count_df = (
-        dfs['relation_count']
-            .groupby('relation_label')
-            .sum()
-            .reset_index()
-            .sort_values('count', ascending=False)
-
+    fig, ax = plt.subplots(1, 1)
+    sns.scatterplot(
+        data=dfs['relation_injectivity'],
+        x='head',
+        y='tail',
+        size='support',
+        hue='support',
+        ax=ax,
     )
+    ax.set_title('Injetivity')
+    fig.tight_layout()
+    fig.savefig(d.joinpath('relation_injectivity.svg'))
+    plt.close(fig)
+
     entity_count_df = (
         dfs['entity_count']
-            .groupby('entity_label')
-            .sum()
-            .reset_index()
-            .sort_values('count', ascending=False)
+        .groupby('entity_label')
+        .sum()
+        .reset_index()
+        .sort_values('count', ascending=False)
     )
-
-    fig, ax = plt.subplots(1, 1, figsize=(8, 0.2 * len(relation_count_df.index)))
+    fig, ax = plt.subplots(1, 1, figsize=(8, 0.2 * len(entity_count_df.index)))
     sns.barplot(data=entity_count_df, y='entity_label', x='count', ax=ax)
     ax.set_ylabel('')
     ax.set_xscale('log')
@@ -96,6 +108,13 @@ def analyze(dataset, force: bool):
     fig.savefig(d.joinpath('entity_counts.svg'))
     plt.close(fig)
 
+    relation_count_df = (
+        dfs['relation_count']
+        .groupby('relation_label')
+        .sum()
+        .reset_index()
+        .sort_values('count', ascending=False)
+    )
     fig, ax = plt.subplots(1, 1, figsize=(8, 0.2 * len(relation_count_df.index)))
     sns.barplot(data=relation_count_df, y='relation_label', x='count', ax=ax)
     ax.set_ylabel('')

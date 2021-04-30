@@ -10,7 +10,10 @@ import numpy as np
 import pandas
 
 from pykeen.datasets import Nations
-from pykeen.datasets.analysis import (get_entity_count_df, get_entity_relation_co_occurrence_df, get_relation_cardinality_types_df, get_relation_count_df, get_relation_functionality_df, get_relation_pattern_types_df)
+from pykeen.datasets.analysis import (
+    get_entity_count_df, get_entity_relation_co_occurrence_df, get_relation_cardinality_types_df, get_relation_count_df,
+    get_relation_functionality_df, get_relation_pattern_types_df,
+)
 from pykeen.triples.analysis import RELATION_CARDINALITY_TYPES, RELATION_PATTERN_TYPES, _get_skyline
 
 #: fixme: deprecated
