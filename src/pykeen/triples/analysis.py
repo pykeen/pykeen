@@ -3,7 +3,7 @@ import hashlib
 import itertools as itt
 import logging
 from collections import defaultdict
-from typing import Collection, DefaultDict, Iterable, Mapping, MutableMapping, NamedTuple, Sequence, Set, Tuple, Union
+from typing import Collection, DefaultDict, Iterable, Mapping, NamedTuple, Sequence, Set, Tuple, Union
 
 import numpy
 import pandas as pd
@@ -46,6 +46,11 @@ RELATION_PATTERN_TYPES = {
     # ternary
     PATTERN_TYPE_COMPOSITION,
 }
+
+COUNT_COLUMN_NAME = "count"
+ENTITY_ID_COLUMN_NAME = "entity_id"
+RELATION_ID_COLUMN_NAME = "relation_id"
+ENTITY_POSITION_COLUMN_NAME = "entity_position"
 
 
 class PatternMatch(NamedTuple):
@@ -333,18 +338,20 @@ def get_entity_counts(
     :return:
         A dataframe with columns ( entity_id | count | type )
     """
-    data: MutableMapping[Sequence] = defaultdict(list)
+    data = []
     for label, col in (
         ("head", 0),
         ("tail", 2),
     ):
         unique, counts = _get_counts(mapped_triples=mapped_triples, column=col)
-        data["entity_id"].append(unique)
-        data["count"].append(counts)
-        data["type"].extend([label] * len(counts))
-    for key in ("entity_id", "count"):
-        data[key] = numpy.concatenate(data[key], axis=0)
-    return pd.DataFrame(data=data)
+        df = pd.DataFrame(
+            data={
+                ENTITY_ID_COLUMN_NAME: unique,
+                COUNT_COLUMN_NAME: counts,
+            }
+        )
+        df[ENTITY_POSITION_COLUMN_NAME] = label
+    return pd.concat(data, ignore_index=True)
 
 
 def relation_pattern_types(
@@ -389,8 +396,8 @@ def relation_pattern_types(
     # create data frame
     return pd.DataFrame(
         data=list(base),
-        columns=["relation_id", "pattern", "support", "confidence"],
-    ).sort_values(by=["pattern", "relation_id", "confidence", "support"])
+        columns=[RELATION_ID_COLUMN_NAME, "pattern", "support", "confidence"],
+    ).sort_values(by=["pattern", RELATION_ID_COLUMN_NAME, "confidence", "support"])
 
 
 def relation_cardinality_types(
@@ -435,7 +442,7 @@ def relation_cardinality_types(
     # create data frame
     return pd.DataFrame(
         data=base,
-        columns=["relation_id", "relation_type", "support", "confidence"],
+        columns=[RELATION_ID_COLUMN_NAME, "relation_type", "support", "confidence"],
     )
 
 
@@ -460,13 +467,13 @@ def entity_relation_co_occurrence(
         unique, counts = mapped_triples[:, columns].unique(dim=0, return_counts=True)
         e, r = unique.t().numpy()
         df = pd.DataFrame(
-            data=dict(
-                entity_id=e,
-                relation_id=r,
-                count=counts.numpy(),
-            ),
+            data={
+                ENTITY_ID_COLUMN_NAME: e,
+                RELATION_ID_COLUMN_NAME: r,
+                COUNT_COLUMN_NAME: counts.numpy(),
+            },
         )
-        df["type"] = name
+        df[ENTITY_POSITION_COLUMN_NAME] = name
         data.append(df)
 
     return pd.concat(data, ignore_index=True)

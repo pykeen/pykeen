@@ -4,18 +4,15 @@
 
 import functools
 import logging
-from typing import Collection, Mapping, Optional, Tuple, Union
+from typing import Collection, Mapping, Optional, Sequence, Tuple, Union
 
-import numpy
 import pandas as pd
 import torch
 
 from .base import Dataset
 from ..constants import PYKEEN_DATASETS
 from ..triples import CoreTriplesFactory, analysis as triple_analysis
-from ..triples.analysis import _get_counts
 from ..typing import MappedTriples
-from ..utils import invert_mapping
 
 logger = logging.getLogger(__name__)
 
@@ -30,15 +27,9 @@ __all__ = [
 ]
 
 # constants
-COUNT_COLUMN_NAME = "count"
-ENTITY_ID_COLUMN_NAME = "entity_id"
 ENTITY_LABEL_COLUMN_NAME = "entity_label"
-RELATION_ID_COLUMN_NAME = "relation_id"
 RELATION_LABEL_COLUMN_NAME = "relation_label"
 SUBSET_COLUMN_NAME = "subset"
-
-#: fixme: deprecated
-SUBSET_LABELS = ("testing", "training", "validation", "total")
 
 
 def _get_mapped_triples(dataset: Dataset, parts: Collection[str]) -> Collection[Tuple[int, int, int]]:
@@ -58,8 +49,8 @@ def _normalize_parts(dataset: Dataset, parts: Union[None, str, Collection[str]])
 
 
 def _add_labels(
-    label_to_id: Optional[Mapping[str, int]],
     df: pd.DataFrame,
+    label_to_id: Optional[Mapping[str, int]],
     id_column: str,
     label_column: str,
 ) -> pd.DataFrame:
@@ -75,17 +66,27 @@ def _add_labels(
     )
 
 
-_add_entity_labels = functools.partial(
-    _add_labels,
-    id_column=ENTITY_ID_COLUMN_NAME,
-    label_column=ENTITY_LABEL_COLUMN_NAME,
-)
-
 _add_relation_labels = functools.partial(
     _add_labels,
-    id_column=RELATION_ID_COLUMN_NAME,
+    id_column=triple_analysis.RELATION_ID_COLUMN_NAME,
     label_column=RELATION_LABEL_COLUMN_NAME,
 )
+
+
+def _aggregate(
+    df: pd.DataFrame,
+    group_key: Sequence[str],
+    both_sides: bool = False,
+    total_count: bool = False,
+) -> pd.DataFrame:
+    group_key = list(group_key)
+    if both_sides:
+        df = df.groupby(group_key + [SUBSET_COLUMN_NAME])[triple_analysis.COUNT_COLUMN_NAME].sum().reset_index()
+    if total_count:
+        if not both_sides:
+            group_key += ["type"]
+        df = df.groupby(by=group_key)[triple_analysis.COUNT_COLUMN_NAME].sum().reset_index()
+    return df
 
 
 def get_relation_count_df(
@@ -138,8 +139,8 @@ def get_relation_count_df(
 
     if mapped_triples is not None:
         df = pd.DataFrame(data=dict(zip(
-            [RELATION_ID_COLUMN_NAME, COUNT_COLUMN_NAME],
-            _get_counts(mapped_triples=mapped_triples, column=1),
+            [triple_analysis.RELATION_ID_COLUMN_NAME, triple_analysis.COUNT_COLUMN_NAME],
+            triple_analysis._get_counts(mapped_triples=mapped_triples, column=1),
         )))
     elif triples_factory is not None:
         df = get_relation_count_df(
@@ -159,7 +160,7 @@ def get_relation_count_df(
             data.append(df)
         df = pd.concat(data, ignore_index=True)
         if total_count:
-            df = df.groupby(by=RELATION_ID_COLUMN_NAME)[COUNT_COLUMN_NAME].sum().reset_index()
+            df = df.groupby(by=triple_analysis.RELATION_ID_COLUMN_NAME)[triple_analysis.COUNT_COLUMN_NAME].sum().reset_index()
 
     if not add_labels:
         return df
@@ -216,19 +217,28 @@ def get_entity_count_df(
         df["subset"] = subset_name
         data.append(df)
     df = pd.concat(data, ignore_index=True)
-    if both_sides:
-        df = df.groupby([ENTITY_ID_COLUMN_NAME, "subset"])["count"].sum().reset_index()
-    if total_count:
-        group_key = [ENTITY_ID_COLUMN_NAME]
-        if not both_sides:
-            group_key += ["type"]
-        df = df.groupby(by=group_key)["count"].sum().reset_index()
+    df = _aggregate(
+        df=df,
+        group_key=[triple_analysis.ENTITY_ID_COLUMN_NAME],
+        both_sides=both_sides,
+        total_count=total_count,
+    )
     if add_labels:
-        df = _add_entity_labels(label_to_id=dataset.entity_to_id, df=df)
+        df = _add_labels(
+            df=df,
+            label_to_id=dataset.entity_to_id,
+            id_column=triple_analysis.ENTITY_ID_COLUMN_NAME,
+            label_column=ENTITY_LABEL_COLUMN_NAME,
+        )
     return df
 
 
-def get_entity_relation_co_occurrence_df(dataset: Dataset) -> pd.DataFrame:
+def get_entity_relation_co_occurrence_df(
+    dataset: Dataset,
+    both_sides: bool = True,
+    total_count: bool = True,
+    add_labels: bool = True,
+) -> pd.DataFrame:
     """Create a dataframe of entity/relation co-occurrence.
 
     This information can be seen as a form of pseudo-typing, e.g. entity A is something which can be a head of
@@ -254,38 +264,38 @@ def get_entity_relation_co_occurrence_df(dataset: Dataset) -> pd.DataFrame:
         where subset in {"training", "validation", "testing", "total"}, and kind in {"head", "tail"}. For each entity,
         the corresponding row can be seen a pseudo-type, i.e. for which relations it may occur as head/tail.
     """
-    # TODO: Update to long form
-    num_relations = dataset.num_relations
-    num_entities = dataset.num_entities
-    data = numpy.zeros(shape=(4 * num_entities, 2 * num_relations), dtype=numpy.int64)
-    for i, (_, triples_factory) in enumerate(sorted(dataset.factory_dict.items())):
-        # head-relation co-occurrence
-        unique_hr, counts_hr = triples_factory.mapped_triples[:, :2].unique(dim=0, return_counts=True)
-        h, r = unique_hr.t().numpy()
-        data[i * num_entities:(i + 1) * num_entities, :num_relations][h, r] = counts_hr.numpy()
-
-        # tail-relation co-occurrence
-        unique_rt, counts_rt = triples_factory.mapped_triples[:, 1:].unique(dim=0, return_counts=True)
-        r, t = unique_rt.t().numpy()
-        data[i * num_entities:(i + 1) * num_entities, num_relations:][t, r] = counts_rt.numpy()
-
-    # full dataset
-    data[3 * num_entities:] = sum(data[i * num_entities:(i + 1) * num_entities] for i in range(3))
-    entity_id_to_label, relation_id_to_label = [
-        invert_mapping(mapping=mapping)
-        for mapping in (dataset.entity_to_id, dataset.relation_to_id)
-    ]
-    return pd.DataFrame(
-        data=data,
-        index=pd.MultiIndex.from_product([
-            sorted(dataset.factory_dict.keys()) + ["total"],
-            [entity_id_to_label[entity_id] for entity_id in range(num_entities)],
-        ]),
-        columns=pd.MultiIndex.from_product([
-            ("head", "tail"),
-            [relation_id_to_label[relation_id] for relation_id in range(num_relations)],
-        ]),
+    data = []
+    for subset_name, triples_factory in dataset.factory_dict.items():
+        df = triple_analysis.entity_relation_co_occurrence(mapped_triples=triples_factory.mapped_triples)
+        df["subset"] = subset_name
+        data.append(df)
+    df = pd.concat(data, ignore_index=True)
+    df = _aggregate(
+        df=df,
+        group_key=[
+            triple_analysis.ENTITY_ID_COLUMN_NAME,
+            triple_analysis.RELATION_ID_COLUMN_NAME,
+            triple_analysis.ENTITY_POSITION_COLUMN_NAME,
+        ],
+        both_sides=both_sides,
+        total_count=total_count,
     )
+    if add_labels:
+        # entity labels
+        df = _add_labels(
+            df=df,
+            label_to_id=dataset.entity_to_id,
+            id_column=triple_analysis.ENTITY_ID_COLUMN_NAME,
+            label_column=ENTITY_LABEL_COLUMN_NAME,
+        )
+        # relation labels
+        df = _add_labels(
+            df=df,
+            label_to_id=dataset.relation_to_id,
+            id_column=triple_analysis.RELATION_ID_COLUMN_NAME,
+            label_column=RELATION_LABEL_COLUMN_NAME,
+        )
+    return df
 
 
 def get_relation_pattern_types_df(
