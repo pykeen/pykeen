@@ -11,6 +11,7 @@ import unittest_templates
 
 from pykeen.datasets import Nations
 from pykeen.sampling import BasicNegativeSampler, BernoulliNegativeSampler, NegativeSampler
+from pykeen.sampling.pseudo_type_negative_sampling import PseudoTypedNegativeSampler
 from pykeen.training.schlichtkrull_sampler import GraphSampler, _compute_compressed_adjacency_list
 from pykeen.triples import SLCWAInstances, TriplesFactory
 from pykeen.typing import MappedTriples
@@ -114,6 +115,12 @@ class BernoulliNegativeSamplerTest(_NegativeSamplingTestCase):
 
         # test that the relations were not changed
         assert (positive_batch[..., 1] == negative_batch[..., 1]).all()
+
+
+class PseudoTypedNegativeSamplerTest(_NegativeSamplingTestCase):
+    """Test the pseudo-type negative sampler."""
+
+    cls = PseudoTypedNegativeSampler
 
 
 class GraphSamplerTest(unittest.TestCase):
