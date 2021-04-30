@@ -45,12 +45,12 @@ def analyze(dataset):
     except ImportError as error:
         raise ImportError(dedent("""\
             Please install plotting dependencies by
-            
+
                 pip install pykeen[plotting]
-            
+
             or directly by
-            
-                pip install matplotlib seaborn 
+
+                pip install matplotlib seaborn
         """)) from None
     dataset_instance = get_dataset(dataset=dataset)
     d = PYKEEN_DATASETS.joinpath(dataset_instance.__class__.__name__.lower(), 'analysis')
