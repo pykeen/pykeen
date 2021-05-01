@@ -7,6 +7,7 @@ from textwrap import dedent
 
 import click
 from more_click import verbose_option
+from tqdm import tqdm
 
 
 @click.group()
@@ -18,12 +19,7 @@ def main():
 @verbose_option
 def summarize():
     """Load all datasets."""
-    from . import datasets
-    import docdata
-    for name, dataset in sorted(
-        datasets.items(),
-        key=lambda pair: docdata.get_docdata(pair[1])['statistics']['triples'],
-    ):
+    for name, dataset in _iter_datasets():
         click.secho(f'Loading {name}', fg='green', bold=True)
         try:
             dataset().summarize(show_examples=None)
@@ -32,13 +28,39 @@ def summarize():
             click.secho(str(e), fg='red', bold=True)
 
 
+def _iter_datasets():
+    from . import datasets
+    import docdata
+    it = tqdm(
+        sorted(
+            datasets.items(),
+            key=lambda pair: docdata.get_docdata(pair[1])['statistics']['triples'],
+        ),
+        desc='Datasets',
+    )
+    for k, v in it:
+        it.set_postfix(name=k)
+        yield k, v
+
+
 @main.command()
 @verbose_option
-@click.argument('dataset')
+@click.option('--dataset')
 @click.option('-f', '--force', is_flag=True)
+@click.option('-a', '--all-datasets', is_flag=True)
 @click.option('--countplots', is_flag=True)
-def analyze(dataset, force: bool, countplots: bool):
+def analyze(dataset, force: bool, all_datasets: bool, countplots: bool):
     """Generate analysis."""
+    if all_datasets:
+        for name, dataset in _iter_datasets():
+            _analyze(dataset, force, countplots)
+    elif dataset:
+        _analyze(dataset, force, countplots)
+    else:
+        raise ValueError
+
+
+def _analyze(dataset, force, countplots):
     from pykeen.datasets import get_dataset
     from pykeen.constants import PYKEEN_DATASETS
     from . import analysis
@@ -67,7 +89,7 @@ def analyze(dataset, force: bool, countplots: bool):
     d.mkdir(parents=True, exist_ok=True)
 
     dfs = {}
-    it = tqdm(analysis.__dict__.items())
+    it = tqdm(analysis.__dict__.items(), leave=False, desc='Stats')
     for name, func in it:
         if not name.startswith('get') or not name.endswith('df'):
             continue
@@ -93,6 +115,18 @@ def analyze(dataset, force: bool, countplots: bool):
     ax.set_title(f'{docdata.get_docdata(dataset_instance.__class__)["name"]} Relation Injectivity')
     fig.tight_layout()
     fig.savefig(d.joinpath('relation_injectivity.svg'))
+    plt.close(fig)
+
+    fig, ax = plt.subplots(1, 1)
+    sns.scatterplot(
+        data=dfs['relation_functionality'],
+        x='functionality',
+        y='inverse_functionality',
+        ax=ax,
+    )
+    ax.set_title(f'{docdata.get_docdata(dataset_instance.__class__)["name"]} Relation Functionality')
+    fig.tight_layout()
+    fig.savefig(d.joinpath('relation_functionality.svg'))
     plt.close(fig)
 
     if countplots:

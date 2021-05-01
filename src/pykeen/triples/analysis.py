@@ -82,21 +82,47 @@ def composition_candidates(
     :return:
         A set of relation pairs.
     """
+    ins, outs = index_relations(mapped_triples)
+
+    # return candidates
+    return {
+        (r1, r2)
+        for tail, tail_in_relations in ins.items()
+        if tail in outs
+        for r1, r2 in itt.product(tail_in_relations, outs[tail])
+    }
+
+
+def index_relations(
+    triples: Iterable[Tuple[int, int, int]],
+) -> Tuple[Mapping[int, Set[int]], Mapping[int, Set[int]]]:
+    """Create an index for in-relationships and out-relationships."""
     # index triples
     # incoming relations per entity
     ins: DefaultDict[int, Set[int]] = defaultdict(set)
     # outgoing relations per entity
     outs: DefaultDict[int, Set[int]] = defaultdict(set)
-    for h, r, t in mapped_triples:
+    for h, r, t in triples:
         outs[h].add(r)
         ins[t].add(r)
+    return dict(ins), dict(outs)
 
-    # return candidates
-    return {
-        (r1, r2)
-        for e, r1s in ins.items()
-        for r1, r2 in itt.product(r1s, outs[e])
-    }
+
+def index_pairs(triples: Iterable[Tuple[int, int, int]]) -> Mapping[int, Set[Tuple[int, int]]]:
+    """Create a mapping from relation to head/tail pairs for fast lookup."""
+    rv: DefaultDict[int, Set[Tuple[int, int]]] = defaultdict(set)
+    for h, r, t in triples:
+        rv[r].add((h, t))
+    return dict(rv)
+
+
+def get_adjacency_dict(triples: Iterable[Tuple[int, int, int]]) -> Mapping[int, Mapping[int, Set[int]]]:
+    """Create a two-level mapping from relation to head to tails."""
+    # indexing triples for fast join r1 & r2
+    rv: DefaultDict[int, DefaultDict[int, Set[int]]] = defaultdict(lambda: defaultdict(set))
+    for h, r, t in triples:
+        rv[r][h].add(t)
+    return rv
 
 
 def iter_unary_patterns(
@@ -176,10 +202,8 @@ def iter_ternary_patterns(
     """
     logger.debug("Evaluating ternary patterns: {composition}")
     # composition r1(x, y) & r2(y, z) => r(x, z)
-    # indexing triples for fast join r1 & r2
-    adj: DefaultDict[int, DefaultDict[int, Set[int]]] = defaultdict(lambda: defaultdict(set))
-    for h, r, t in mapped_triples:
-        adj[r][h].add(t)
+    adj = get_adjacency_dict(mapped_triples)
+
     # actual evaluation of the pattern
     for r1, r2 in tqdm(
         composition_candidates(mapped_triples),
@@ -212,10 +236,7 @@ def iter_patterns(
 
     :yields: Patterns from :func:`iter_unary_patterns`, func:`iter_binary_patterns`, and :func:`iter_ternary_patterns`.
     """
-    # indexing triples for fast lookup of entity pair sets
-    pairs: DefaultDict[int, Set[Tuple[int, int]]] = defaultdict(set)
-    for h, r, t in mapped_triples:
-        pairs[r].add((h, t))
+    pairs = index_pairs(mapped_triples)
 
     yield from iter_unary_patterns(pairs=pairs)
     yield from iter_binary_patterns(pairs=pairs)
