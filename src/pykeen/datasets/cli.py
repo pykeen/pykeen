@@ -86,7 +86,7 @@ def _analyze(dataset, force, countplots, directory: Union[None, str, pathlib.Pat
             or directly by
 
                 pip install matplotlib seaborn
-        """)) from None
+        """))
 
     # Raise matplotlib level
     logging.getLogger('matplotlib').setLevel(logging.WARNING)
