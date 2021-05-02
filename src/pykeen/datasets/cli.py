@@ -3,7 +3,9 @@
 """Run dataset CLI."""
 
 import logging
+import pathlib
 from textwrap import dedent
+from types import Union
 
 import click
 from more_click import verbose_option
@@ -49,18 +51,19 @@ def _iter_datasets():
 @click.option('-f', '--force', is_flag=True)
 @click.option('-a', '--all-datasets', is_flag=True)
 @click.option('--countplots', is_flag=True)
-def analyze(dataset, force: bool, all_datasets: bool, countplots: bool):
+@click.option('-d', '--directory', type=click.Path(dir_okay=True, file_okay=False, resolve_path=True))
+def analyze(dataset, force: bool, all_datasets: bool, countplots: bool, directory):
     """Generate analysis."""
     if all_datasets:
         for name, dataset in _iter_datasets():
-            _analyze(dataset, force, countplots)
+            _analyze(dataset, force, countplots, directory=directory)
     elif dataset:
-        _analyze(dataset, force, countplots)
+        _analyze(dataset, force, countplots, directory=directory)
     else:
         raise ValueError
 
 
-def _analyze(dataset, force, countplots):
+def _analyze(dataset, force, countplots, directory: Union[None, str, pathlib.Path]):
     from pykeen.datasets import get_dataset
     from pykeen.constants import PYKEEN_DATASETS
     from . import analysis
@@ -84,8 +87,14 @@ def _analyze(dataset, force, countplots):
     # Raise matplotlib level
     logging.getLogger('matplotlib').setLevel(logging.WARNING)
 
+    if directory is None:
+        directory = PYKEEN_DATASETS
+    else:
+        directory = pathlib.Path(directory)
+        directory.mkdir(exist_ok=True, parents=True)
+
     dataset_instance = get_dataset(dataset=dataset)
-    d = PYKEEN_DATASETS.joinpath(dataset_instance.__class__.__name__.lower(), 'analysis')
+    d = directory.joinpath(dataset_instance.__class__.__name__.lower(), 'analysis')
     d.mkdir(parents=True, exist_ok=True)
 
     dfs = {}
