@@ -6,12 +6,13 @@ import hashlib
 import itertools as itt
 import logging
 from collections import defaultdict
-from typing import Collection, DefaultDict, Iterable, Mapping, NamedTuple, Sequence, Set, Tuple, Union
+from typing import Collection, DefaultDict, Iterable, Mapping, NamedTuple, Optional, Sequence, Set, Tuple, Union
 
 import numpy
 import pandas as pd
 from tqdm.auto import tqdm
 
+from . import TriplesFactory
 from ..typing import MappedTriples
 
 logger = logging.getLogger(__name__)
@@ -54,6 +55,8 @@ COUNT_COLUMN_NAME = "count"
 ENTITY_ID_COLUMN_NAME = "entity_id"
 RELATION_ID_COLUMN_NAME = "relation_id"
 ENTITY_POSITION_COLUMN_NAME = "entity_position"
+RELATION_LABEL_COLUMN_NAME = "relation_label"
+ENTITY_LABEL_COLUMN_NAME = "entity_label"
 
 
 class PatternMatch(NamedTuple):
@@ -459,16 +462,21 @@ def relation_pattern_types(
 
 def relation_injectivity(
     mapped_triples: Collection[Tuple[int, int, int]],
-):
+    add_labels: bool = True,
+    label_to_id: Optional[Mapping[str, int]] = None,
+) -> pd.DataFrame:
     it = _help_iter_relation_cardinality_types(mapped_triples)
-    return pd.DataFrame(
+    df = pd.DataFrame(
         data=it,
         columns=[RELATION_ID_COLUMN_NAME, "support", "head", "tail"],
     )
+    return _add_relation_labels(df, add_labels=add_labels, label_to_id=label_to_id)
 
 
 def relation_cardinality_types(
     mapped_triples: Collection[Tuple[int, int, int]],
+    add_labels: bool = True,
+    label_to_id: Optional[Mapping[str, int]] = None,
 ) -> pd.DataFrame:
     r"""
     Determine the relation cardinality types.
@@ -488,6 +496,8 @@ def relation_cardinality_types(
 
     :param mapped_triples:
         The ID-based triples.
+    :param add_labels:
+        Whether to add relation labels (if available).
 
     :return:
         A dataframe with columns ( relation_id | relation_type )
@@ -507,10 +517,11 @@ def relation_cardinality_types(
     # base = skyline(base)
 
     # create data frame
-    return pd.DataFrame(
+    df = pd.DataFrame(
         data=base,
         columns=[RELATION_ID_COLUMN_NAME, "relation_type", "support", "confidence"],
     )
+    return _add_relation_labels(df, add_labels=add_labels, label_to_id=label_to_id)
 
 
 def entity_relation_co_occurrence(
@@ -546,7 +557,11 @@ def entity_relation_co_occurrence(
     return pd.concat(data, ignore_index=True)
 
 
-def get_relation_functionality(mapped_triples: Collection[Tuple[int, int, int]]) -> pd.DataFrame:
+def get_relation_functionality(
+    mapped_triples: Collection[Tuple[int, int, int]],
+    add_labels: bool = True,
+    label_to_id: Optional[Mapping[str, int]] = None,
+) -> pd.DataFrame:
     """Calculate relation functionalities.
 
     :param mapped_triples:
@@ -566,4 +581,43 @@ def get_relation_functionality(mapped_triples: Collection[Tuple[int, int, int]])
     df.columns = df.columns.droplevel(1)
     df.index.name = RELATION_ID_COLUMN_NAME
     df = df.reset_index()
-    return df
+    return _add_relation_labels(df, add_labels=add_labels, label_to_id=label_to_id)
+
+
+def _add_relation_labels(
+    df: pd.DataFrame,
+    *,
+    add_labels: bool,
+    label_to_id: Optional[Mapping[str, int]] = None,
+    triples_factory: Optional[TriplesFactory] = None,
+) -> pd.DataFrame:
+    if not add_labels:
+        return df
+    if not label_to_id:
+        if not triples_factory:
+            raise ValueError
+        label_to_id = triples_factory.relation_to_id
+    return _add_labels(
+        df=df,
+        label_to_id=label_to_id,
+        id_column=RELATION_ID_COLUMN_NAME,
+        label_column=RELATION_LABEL_COLUMN_NAME,
+    )
+
+
+def _add_labels(
+    df: pd.DataFrame,
+    label_to_id: Optional[Mapping[str, int]],
+    id_column: str,
+    label_column: str,
+) -> pd.DataFrame:
+    if label_to_id is None:
+        return df
+    return pd.merge(
+        left=df,
+        right=pd.DataFrame(
+            data=list(label_to_id.items()),
+            columns=[label_column, id_column],
+        ),
+        on=id_column,
+    )

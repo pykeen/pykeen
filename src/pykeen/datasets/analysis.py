@@ -25,8 +25,8 @@ __all__ = [
 ]
 
 # constants
-ENTITY_LABEL_COLUMN_NAME = "entity_label"
-RELATION_LABEL_COLUMN_NAME = "relation_label"
+
+
 SUBSET_COLUMN_NAME = "subset"
 
 
@@ -46,24 +46,6 @@ def _normalize_parts(dataset: Dataset, parts: Union[None, str, Collection[str]])
     return list(set(parts))
 
 
-def _add_labels(
-    df: pd.DataFrame,
-    label_to_id: Optional[Mapping[str, int]],
-    id_column: str,
-    label_column: str,
-) -> pd.DataFrame:
-    if label_to_id is None:
-        return df
-    return pd.merge(
-        left=df,
-        right=pd.DataFrame(
-            data=list(label_to_id.items()),
-            columns=[label_column, id_column],
-        ),
-        on=id_column,
-    )
-
-
 def _add_entity_labels(
     *,
     df: pd.DataFrame,
@@ -81,11 +63,11 @@ def _add_entity_labels(
             label_to_id = dataset.entity_to_id
         else:
             raise ValueError
-    return _add_labels(
+    return triple_analysis._add_labels(
         df=df,
         label_to_id=label_to_id,
         id_column=triple_analysis.ENTITY_ID_COLUMN_NAME,
-        label_column=ENTITY_LABEL_COLUMN_NAME,
+        label_column=triple_analysis.ENTITY_LABEL_COLUMN_NAME,
     )
 
 
@@ -93,24 +75,16 @@ def _add_relation_labels(
     *,
     df: pd.DataFrame,
     add_labels: bool,
-    label_to_id: Optional[Mapping[str, int]] = None,
-    triples_factory: Optional[TriplesFactory] = None,
     dataset: Optional[Dataset] = None,
 ) -> pd.DataFrame:
     if not add_labels:
         return df
-    if not label_to_id:
-        if triples_factory:
-            label_to_id = triples_factory.relation_to_id
-        elif dataset:
-            label_to_id = dataset.relation_to_id
-        else:
-            raise ValueError
-    return _add_labels(
+    if not dataset:
+        raise ValueError('Need a dataset when add_labels is true')
+    return triple_analysis._add_relation_labels(
         df=df,
-        label_to_id=label_to_id,
-        id_column=triple_analysis.RELATION_ID_COLUMN_NAME,
-        label_column=RELATION_LABEL_COLUMN_NAME,
+        add_labels=add_labels,
+        label_to_id=dataset.relation_to_id,
     )
 
 
@@ -407,8 +381,11 @@ def get_relation_cardinality_types_df(
     # TODO: Consider merging with other analysis methods
     parts = _normalize_parts(dataset=dataset, parts=parts)
     mapped_triples = _get_mapped_triples(dataset=dataset, parts=parts)
-    df = triple_analysis.relation_cardinality_types(mapped_triples=mapped_triples)
-    return _add_relation_labels(df=df, add_labels=add_labels, dataset=dataset)
+    return triple_analysis.relation_cardinality_types(
+        mapped_triples=mapped_triples,
+        add_labels=add_labels,
+        label_to_id=dataset.relation_to_id,
+    )
 
 
 def get_relation_injectivity_df(
@@ -419,8 +396,11 @@ def get_relation_injectivity_df(
 ) -> pd.DataFrame:
     parts = _normalize_parts(dataset=dataset, parts=parts)
     mapped_triples = _get_mapped_triples(dataset=dataset, parts=parts)
-    df = triple_analysis.relation_injectivity(mapped_triples=mapped_triples)
-    return _add_relation_labels(df=df, add_labels=add_labels, dataset=dataset)
+    return triple_analysis.relation_injectivity(
+        mapped_triples=mapped_triples,
+        add_labels=add_labels,
+        label_to_id=dataset.relation_to_id,
+    )
 
 
 def get_relation_functionality_df(
@@ -456,5 +436,8 @@ def get_relation_functionality_df(
     # TODO: Consider merging with other analysis methods
     parts = _normalize_parts(dataset=dataset, parts=parts)
     mapped_triples = _get_mapped_triples(dataset=dataset, parts=parts)
-    df = triple_analysis.get_relation_functionality(mapped_triples)
-    return _add_relation_labels(df=df, add_labels=add_labels, dataset=dataset)
+    return triple_analysis.get_relation_functionality(
+        mapped_triples,
+        add_labels=add_labels,
+        label_to_id=dataset.relation_to_id,
+    )
