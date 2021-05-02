@@ -5,7 +5,7 @@
 import logging
 import pathlib
 from textwrap import dedent
-from types import Union
+from typing import Union
 
 import click
 from more_click import verbose_option
