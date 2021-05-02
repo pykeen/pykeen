@@ -257,7 +257,7 @@ def get_relation_pattern_types_df(
     *,
     min_support: int = 0,
     min_confidence: float = 0.95,
-    drop_confidence: bool = True,
+    drop_confidence: bool = False,
     parts: Optional[Collection[str]] = None,
     force: bool = False,
     add_labels: bool = True,
@@ -340,7 +340,7 @@ def get_relation_pattern_types_df(
     df = df[(df["support"] >= min_support) & (df["confidence"] >= min_confidence)]
 
     if drop_confidence:
-        df = df[[triple_analysis.RELATION_ID_COLUMN_NAME, "pattern", "support", "confidence"]].drop_duplicates()
+        df = df[[triple_analysis.RELATION_ID_COLUMN_NAME, "pattern"]].drop_duplicates()
 
     return _add_relation_labels(df=df, add_labels=add_labels, dataset=dataset)
 
