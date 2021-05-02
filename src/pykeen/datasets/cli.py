@@ -30,14 +30,24 @@ def summarize():
             click.secho(str(e), fg='red', bold=True)
 
 
-def _iter_datasets():
+def _iter_datasets(regex_name_filter=None):
     from . import datasets
     import docdata
+    it = sorted(
+        datasets.items(),
+        key=lambda pair: docdata.get_docdata(pair[1])['statistics']['triples'],
+    )
+    if regex_name_filter is not None:
+        if isinstance(regex_name_filter, str):
+            import re
+            regex_name_filter = re.compile(regex_name_filter)
+        it = [
+            (name, dataset)
+            for name, dataset in it
+            if regex_name_filter.match(name)
+        ]
     it = tqdm(
-        sorted(
-            datasets.items(),
-            key=lambda pair: docdata.get_docdata(pair[1])['statistics']['triples'],
-        ),
+        it,
         desc='Datasets',
     )
     for k, v in it:
@@ -47,20 +57,14 @@ def _iter_datasets():
 
 @main.command()
 @verbose_option
-@click.option('--dataset')
+@click.option('--dataset', help='Regex for filtering datasets by name')
 @click.option('-f', '--force', is_flag=True)
-@click.option('-a', '--all-datasets', is_flag=True)
 @click.option('--countplots', is_flag=True)
 @click.option('-d', '--directory', type=click.Path(dir_okay=True, file_okay=False, resolve_path=True))
-def analyze(dataset, force: bool, all_datasets: bool, countplots: bool, directory):
+def analyze(dataset, force: bool, countplots: bool, directory):
     """Generate analysis."""
-    if all_datasets:
-        for name, dataset in _iter_datasets():
-            _analyze(dataset, force, countplots, directory=directory)
-    elif dataset:
+    for name, dataset in _iter_datasets(regex_name_filter=dataset):
         _analyze(dataset, force, countplots, directory=directory)
-    else:
-        raise ValueError
 
 
 def _analyze(dataset, force, countplots, directory: Union[None, str, pathlib.Path]):
