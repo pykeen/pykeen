@@ -4,17 +4,16 @@
 
 import itertools
 import unittest
-from typing import Collection, Optional, Sequence
 
 import numpy as np
 import pandas
 
 from pykeen.datasets import Nations
 from pykeen.datasets.analysis import (
-    get_entity_count_df, get_entity_relation_co_occurrence_df, get_relation_cardinality_types_df, get_relation_count_df,
+    SUBSET_COLUMN_NAME, get_entity_count_df, get_entity_relation_co_occurrence_df, get_relation_cardinality_types_df, get_relation_count_df,
     get_relation_functionality_df, get_relation_pattern_types_df,
 )
-from pykeen.triples.analysis import RELATION_CARDINALITY_TYPES, RELATION_PATTERN_TYPES, _get_skyline
+from pykeen.triples.analysis import COUNT_COLUMN_NAME, RELATION_CARDINALITY_TYPES, RELATION_ID_COLUMN_NAME, RELATION_LABEL_COLUMN_NAME, RELATION_PATTERN_TYPES, _get_skyline
 
 #: fixme: deprecated
 SUBSET_LABELS = ("testing", "training", "validation", "total")
@@ -46,6 +45,35 @@ class TestUtils(unittest.TestCase):
         self.assertEqual(set(_old_skyline(pairs)), set(_get_skyline(pairs)))
 
 
+def _test_count_dataframe(
+    df: pandas.DataFrame,
+    id_column_name: str,
+    label_column_name: str,
+    labels: bool = False,
+    total: bool = True,
+):
+    """Check the general structure of a count dataframe."""
+    # check correct output type
+    assert isinstance(df, pandas.DataFrame)
+
+    expected_columns = {id_column_name, COUNT_COLUMN_NAME}
+    if labels:
+        expected_columns.add(label_column_name)
+    if not total:
+        expected_columns.add(SUBSET_COLUMN_NAME)
+
+    # check columns
+    assert expected_columns == set(df.columns)
+
+    # check value range and type
+    assert (df[COUNT_COLUMN_NAME] >= 0).all()
+    assert df[COUNT_COLUMN_NAME].dtype == np.int64
+
+    # check value range subset
+    if total:
+        assert set(SUBSET_LABELS).issuperset(df[SUBSET_COLUMN_NAME].unique())
+
+
 class AnalysisTests(unittest.TestCase):
     """Tests for dataset analysis utilities."""
 
@@ -53,66 +81,29 @@ class AnalysisTests(unittest.TestCase):
         """Initialize the unittest."""
         self.dataset = Nations()
 
-    def _test_count_dataframe(
-        self,
-        df: pandas.DataFrame,
-        label_name: str,
-        expected_labels: Collection[str],
-        first_level_column_labels: Sequence[str] = SUBSET_LABELS,
-        second_level_column_labels: Optional[Sequence[str]] = None,
-    ):
-        """Check the general structure of a count dataframe."""
-        # check correct output type
-        assert isinstance(df, pandas.DataFrame)
-
-        # check correct column (and column order)
-        if second_level_column_labels is None:
-            expected_columns = list(first_level_column_labels)
-        else:
-            expected_columns = list(itertools.product(first_level_column_labels, second_level_column_labels))
-        self.assertListEqual(list(df.columns), expected_columns)
-
-        # check that there is information for each relation
-        self.assertSetEqual(set(df.index), set(expected_labels))
-
-        # check for index name
-        assert df.index.name == label_name
-
-    def _test_count_dataframe_new(
-        self,
-        df: pandas.DataFrame,
-        prefix: str,
-    ):
-        """Check the general structure of a count dataframe."""
-        # check correct output type
-        assert isinstance(df, pandas.DataFrame)
-
-        # check columns
-        assert {f"{prefix}_id", f"{prefix}_label", "subset", "count"}.issubset(df.columns)
-
-        # check value range and type
-        assert (df["count"] >= 0).all()
-        assert df["count"].dtype == np.int64
-
-        # check value range subset
-        # TODO: Update when subset labels is fixed
-        assert set(SUBSET_LABELS).union({None}).issuperset(df["subset"].unique())
-
     def test_relation_count_dataframe(self):
-        """Test relation_count_dataframe()."""
-        df = get_relation_count_df(dataset=self.dataset)
-        self._test_count_dataframe_new(
-            df=df,
-            prefix="relation",
-        )
+        """Test relation count dataframe."""
+        for labels, total in itertools.product((False, True), repeat=2):
+            df = get_relation_count_df(dataset=self.dataset, add_labels=labels, total_count=total)
+            _test_count_dataframe(
+                df=df,
+                id_column_name=RELATION_ID_COLUMN_NAME,
+                label_column_name=RELATION_LABEL_COLUMN_NAME,
+                labels=labels,
+                total=total,
+            )
 
     def test_entity_count_dataframe(self):
-        """Test entity_count_dataframe()."""
-        df = get_entity_count_df(dataset=self.dataset)
-        self._test_count_dataframe_new(
-            df=df,
-            prefix="entity",
-        )
+        """Test entity count dataframe."""
+        for labels, total in itertools.product((False, True), repeat=2):
+            df = get_entity_count_df(dataset=self.dataset, add_labels=labels, total_count=total)
+            _test_count_dataframe(
+                df=df,
+                id_column_name=RELATION_ID_COLUMN_NAME,
+                label_column_name=RELATION_LABEL_COLUMN_NAME,
+                labels=labels,
+                total=total,
+            )
 
     def test_entity_relation_co_occurrence_dataframe(self):
         """Test entity_relation_co_occurrence_dataframe()."""
