@@ -81,6 +81,10 @@ class _NegativeSamplingTestCase(unittest_templates.GenericTestCase[NegativeSampl
     def verify_negative_batch(self, negative_batch: MappedTriples):
         """Verify properties of negative batch."""
 
+    def test_small_batch(self):
+        """Test on a small batch."""
+        self.negative_sampler.sample(positive_batch=self.positive_batch[:1])
+
 
 class BasicNegativeSamplerTest(_NegativeSamplingTestCase):
     """Test the basic negative sampler."""

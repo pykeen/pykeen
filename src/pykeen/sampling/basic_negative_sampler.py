@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Negative sampling algorithm based on the work of of Bordes *et al.*."""
-
+import math
 from typing import Collection, Optional, Tuple
 
 import torch
@@ -62,7 +62,7 @@ class BasicNegativeSampler(NegativeSampler):
         num_negs = positive_batch.shape[0]
 
         # Equally corrupt all sides
-        split_idx = num_negs // len(self._corruption_indices)
+        split_idx = int(math.ceil(num_negs / len(self._corruption_indices)))
 
         # Copy positive batch for corruption.
         # Do not detach, as no gradients should flow into the indices.
