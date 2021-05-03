@@ -91,6 +91,7 @@ def _add_labels(
         if not triples_factory:
             raise ValueError
         label_to_id = getattr(triples_factory, label_to_id_mapping_name)
+    assert label_to_id is not None
     return pd.merge(
         left=df,
         right=pd.DataFrame(
@@ -395,7 +396,7 @@ def iter_relation_cardinality_types(
 
 def _help_iter_relation_cardinality_types(
     mapped_triples: Collection[Tuple[int, int, int]],
-) -> Iterable[PatternMatch]:
+) -> Iterable[Tuple[int, int, float, float]]:
     df = pd.DataFrame(data=mapped_triples, columns=["h", "r", "t"])
     for relation, group in df.groupby(by="r"):
         n_unique_heads, head_injective_conf = _is_injective_mapping(df=group, source="h", target="t")
