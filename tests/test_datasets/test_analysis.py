@@ -13,7 +13,7 @@ from pykeen.datasets.analysis import (
     SUBSET_COLUMN_NAME, get_entity_count_df, get_entity_relation_co_occurrence_df, get_relation_cardinality_types_df, get_relation_count_df,
     get_relation_functionality_df, get_relation_pattern_types_df,
 )
-from pykeen.triples.analysis import COUNT_COLUMN_NAME, RELATION_CARDINALITY_TYPES, RELATION_ID_COLUMN_NAME, RELATION_LABEL_COLUMN_NAME, RELATION_PATTERN_TYPES, _get_skyline
+from pykeen.triples.analysis import COUNT_COLUMN_NAME, ENTITY_ID_COLUMN_NAME, ENTITY_LABEL_COLUMN_NAME, RELATION_CARDINALITY_TYPES, RELATION_ID_COLUMN_NAME, RELATION_LABEL_COLUMN_NAME, RELATION_PATTERN_TYPES, _get_skyline
 
 #: fixme: deprecated
 SUBSET_LABELS = ("testing", "training", "validation", "total")
@@ -70,7 +70,7 @@ def _test_count_dataframe(
     assert df[COUNT_COLUMN_NAME].dtype == np.int64
 
     # check value range subset
-    if total:
+    if not total:
         assert set(SUBSET_LABELS).issuperset(df[SUBSET_COLUMN_NAME].unique())
 
 
@@ -105,8 +105,8 @@ class AnalysisTests(unittest.TestCase):
                     add_labels=labels,
                     total_count=total,
                 ),
-                id_column_name=RELATION_ID_COLUMN_NAME,
-                label_column_name=RELATION_LABEL_COLUMN_NAME,
+                id_column_name=ENTITY_ID_COLUMN_NAME,
+                label_column_name=ENTITY_LABEL_COLUMN_NAME,
                 labels=labels,
                 total=total,
             )
