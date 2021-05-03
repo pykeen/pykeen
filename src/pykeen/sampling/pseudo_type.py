@@ -38,7 +38,7 @@ class PseudoTypedNegativeSampler(NegativeSampler):
         :param kwargs:
             Additional keyword based arguments passed to NegativeSampler.
         """
-        super().__init__(triples_factory=triples_factory, **kwargs, )
+        super().__init__(triples_factory=triples_factory, **kwargs)
         # index triples
         self.tails = defaultdict(set)
         self.heads = defaultdict(set)
@@ -63,13 +63,11 @@ class PseudoTypedNegativeSampler(NegativeSampler):
                 )
                 for e in pool[r].difference({true})
             ]
-            if not candidates:
-                # TODO: use masking or fallback
-                raise AssertionError(r"Could not generate negative samples for triple {[h, r, t]}")
-            chosen = [
-                random.choice(candidates)
-                for _ in range(self.num_negs_per_pos)
-            ]
+            k = max(len(candidates), self.num_negs_per_pos)
+            chosen = random.sample(candidates, k=k)
+            # fallback heuristic: random
+            k = self.num_negs_per_pos - len(chosen)
+            chosen += list(random.randrange(self.num_entities) for _ in range(k))
             for j, (k, e) in enumerate(chosen):
                 negative_batch[i, j, k] = e
 
