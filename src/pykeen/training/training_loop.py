@@ -11,7 +11,7 @@ import time
 from abc import ABC, abstractmethod
 from datetime import datetime
 from hashlib import md5
-from typing import Any, List, Mapping, Optional, Tuple, Type, Union
+from typing import Any, Generic, List, Mapping, Optional, Tuple, Type, Union
 
 import numpy as np
 import torch
@@ -26,7 +26,7 @@ from ..stoppers import Stopper
 from ..trackers import ResultTracker
 from ..training.schlichtkrull_sampler import GraphSampler
 from ..triples import CoreTriplesFactory, Instances
-from ..typing import MappedTriples
+from ..triples.instances import BatchType
 from ..utils import (
     format_relative_comparison, get_batchnorm_modules, is_cuda_oom_error, is_cudnn_error,
     normalize_string,
@@ -78,10 +78,10 @@ def _get_optimizer_kwargs(optimizer: Optimizer) -> Mapping[str, Any]:
     return optimizer_kwargs
 
 
-class TrainingLoop(ABC):
+class TrainingLoop(Generic[BatchType], ABC):
     """A training loop."""
 
-    training_instances: Optional[Instances]
+    training_instances: Optional[Instances[BatchType]]
     losses_per_epochs: List[float]
     loss_blacklist: Optional[List[Type[Loss]]] = None
 
@@ -175,6 +175,8 @@ class TrainingLoop(ABC):
     ) -> Optional[List[float]]:
         """Train the KGE model.
 
+        :param triples_factory:
+            The training triples.
         :param num_epochs:
             The number of epochs to train the model.
         :param batch_size:
@@ -636,7 +638,15 @@ class TrainingLoop(ABC):
 
         return self.losses_per_epochs
 
-    def _forward_pass(self, batch, start, stop, current_batch_size, label_smoothing, slice_size):
+    def _forward_pass(
+        self,
+        batch: BatchType,
+        start: int,
+        stop: int,
+        current_batch_size: int,
+        label_smoothing: float,
+        slice_size: Optional[int],
+    ) -> float:
         # forward pass
         loss = self._process_batch(
             batch=batch,
@@ -666,7 +676,7 @@ class TrainingLoop(ABC):
 
     @staticmethod
     @abstractmethod
-    def _get_batch_size(batch: Union[MappedTriples, Tuple[MappedTriples, torch.FloatTensor]]) -> int:
+    def _get_batch_size(batch: BatchType) -> int:
         """Get the batch size from a (sub-) batch."""
         raise NotImplementedError
 
@@ -678,7 +688,7 @@ class TrainingLoop(ABC):
     @abstractmethod
     def _process_batch(
         self,
-        batch: Any,
+        batch: BatchType,
         start: int,
         stop: int,
         label_smoothing: float = 0.0,
