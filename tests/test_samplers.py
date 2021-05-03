@@ -84,6 +84,10 @@ class _NegativeSamplingTestCase:
         assert scaled_negative_batch.shape[0] == self.positive_batch.shape[0] * self.num_negs_per_pos
         assert scaled_negative_batch.shape[1] == self.positive_batch.shape[1]
 
+    def test_small_batch(self):
+        """Test on a small batch."""
+        self.negative_sampler.sample(positive_batch=self.positive_batch[:1])
+
 
 class BasicNegativeSamplerTest(_NegativeSamplingTestCase, unittest.TestCase):
     """Test the basic negative sampler."""
