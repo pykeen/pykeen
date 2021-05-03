@@ -83,7 +83,7 @@ class _NegativeSamplingTestCase(unittest_templates.GenericTestCase[NegativeSampl
 
     def test_small_batch(self):
         """Test on a small batch."""
-        self.negative_sampler.sample(positive_batch=self.positive_batch[:1])
+        self.instance.sample(positive_batch=self.positive_batch[:1])
 
 
 class BasicNegativeSamplerTest(_NegativeSamplingTestCase):
