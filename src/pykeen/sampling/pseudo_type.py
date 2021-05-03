@@ -63,11 +63,11 @@ class PseudoTypedNegativeSampler(NegativeSampler):
                 )
                 for e in pool[r].difference({true})
             ]
-            k = max(len(candidates), self.num_negs_per_pos)
+            k = min(len(candidates), self.num_negs_per_pos)
             chosen = random.sample(candidates, k=k)
             # fallback heuristic: random
             k = self.num_negs_per_pos - len(chosen)
-            chosen += list(random.randrange(self.num_entities) for _ in range(k))
+            chosen.extend(random.choices([(i, e) for e in range(self.num_entities) for i in (0, 2)], k=k))
             for j, (k, e) in enumerate(chosen):
                 negative_batch[i, j, k] = e
 
