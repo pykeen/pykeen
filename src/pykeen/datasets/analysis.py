@@ -3,14 +3,14 @@
 """Dataset analysis utilities."""
 
 import logging
-from typing import Collection, Mapping, Optional, Sequence, Tuple, Union
+from typing import Collection, Optional, Sequence, Tuple, Union
 
 import pandas as pd
 import torch
 
 from .base import Dataset
 from ..constants import PYKEEN_DATASETS
-from ..triples import TriplesFactory, analysis as triple_analysis
+from ..triples import analysis as triple_analysis
 
 logger = logging.getLogger(__name__)
 
@@ -25,8 +25,6 @@ __all__ = [
 ]
 
 # constants
-
-
 SUBSET_COLUMN_NAME = "subset"
 
 
@@ -44,48 +42,6 @@ def _normalize_parts(dataset: Dataset, parts: Union[None, str, Collection[str]])
         parts = [parts]
     # unique
     return list(set(parts))
-
-
-def _add_entity_labels(
-    *,
-    df: pd.DataFrame,
-    add_labels: bool,
-    label_to_id: Optional[Mapping[str, int]] = None,
-    triples_factory: Optional[TriplesFactory] = None,
-    dataset: Optional[Dataset] = None,
-) -> pd.DataFrame:
-    if not add_labels:
-        return df
-    if not label_to_id:
-        if triples_factory:
-            label_to_id = triples_factory.entity_to_id
-        elif dataset:
-            label_to_id = dataset.entity_to_id
-        else:
-            raise ValueError
-    return triple_analysis._add_labels(
-        df=df,
-        label_to_id=label_to_id,
-        id_column=triple_analysis.ENTITY_ID_COLUMN_NAME,
-        label_column=triple_analysis.ENTITY_LABEL_COLUMN_NAME,
-    )
-
-
-def _add_relation_labels(
-    *,
-    df: pd.DataFrame,
-    add_labels: bool,
-    dataset: Optional[Dataset] = None,
-) -> pd.DataFrame:
-    if not add_labels:
-        return df
-    if not dataset:
-        raise ValueError('Need a dataset when add_labels is true')
-    return triple_analysis._add_relation_labels(
-        df=df,
-        add_labels=add_labels,
-        label_to_id=dataset.relation_to_id,
-    )
 
 
 def _aggregate(
@@ -147,7 +103,11 @@ def get_relation_count_df(
         group_key=[triple_analysis.RELATION_ID_COLUMN_NAME],
         total_count=total_count,
     )
-    return _add_relation_labels(df=df, add_labels=add_labels, dataset=dataset)
+    return triple_analysis.add_relation_labels(
+        df=df,
+        add_labels=add_labels,
+        label_to_id=dataset.relation_to_id,
+    )
 
 
 def get_entity_count_df(
@@ -186,7 +146,7 @@ def get_entity_count_df(
     data = []
     for subset_name, triples_factory in dataset.factory_dict.items():
         df = triple_analysis.get_entity_counts(mapped_triples=triples_factory.mapped_triples)
-        df["subset"] = subset_name
+        df[SUBSET_COLUMN_NAME] = subset_name
         data.append(df)
     df = pd.concat(data, ignore_index=True)
     df = _aggregate(
@@ -195,7 +155,11 @@ def get_entity_count_df(
         both_sides=both_sides,
         total_count=total_count,
     )
-    return _add_entity_labels(df=df, add_labels=add_labels, dataset=dataset)
+    return triple_analysis.add_entity_labels(
+        df=df,
+        add_labels=add_labels,
+        label_to_id=dataset.entity_to_id,
+    )
 
 
 def get_entity_relation_co_occurrence_df(
@@ -247,8 +211,16 @@ def get_entity_relation_co_occurrence_df(
         both_sides=both_sides,
         total_count=total_count,
     )
-    df = _add_entity_labels(df=df, add_labels=add_labels, dataset=dataset)
-    df = _add_relation_labels(df=df, add_labels=add_labels, dataset=dataset)
+    df = triple_analysis.add_entity_labels(
+        df=df,
+        add_labels=add_labels,
+        label_to_id=dataset.entity_to_id,
+    )
+    df = triple_analysis.add_relation_labels(
+        df=df,
+        add_labels=add_labels,
+        label_to_id=dataset.relation_to_id,
+    )
     return df
 
 
@@ -342,7 +314,11 @@ def get_relation_pattern_types_df(
     if drop_confidence:
         df = df[[triple_analysis.RELATION_ID_COLUMN_NAME, "pattern"]].drop_duplicates()
 
-    return _add_relation_labels(df=df, add_labels=add_labels, dataset=dataset)
+    return triple_analysis.add_relation_labels(
+        df=df,
+        add_labels=add_labels,
+        label_to_id=dataset.relation_to_id,
+    )
 
 
 def get_relation_cardinality_types_df(

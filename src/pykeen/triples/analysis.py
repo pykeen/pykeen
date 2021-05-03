@@ -18,6 +18,8 @@ from ..typing import MappedTriples
 logger = logging.getLogger(__name__)
 
 __all__ = [
+    "add_entity_labels",
+    "add_relation_labels",
     "relation_cardinality_types",
     "relation_pattern_types",
 ]
@@ -66,6 +68,69 @@ CONFIDENCE_COLUMN_NAME = "confidence"
 SUPPORT_COLUMN_NAME = "support"
 POSITION_TAIL = "tail"
 POSITION_HEAD = "head"
+
+
+def _add_labels(
+    df: pd.DataFrame,
+    label_to_id: Optional[Mapping[str, int]],
+    id_column: str,
+    label_column: str,
+) -> pd.DataFrame:
+    """Add labels to a dataframe."""
+    if label_to_id is None:
+        return df
+    return pd.merge(
+        left=df,
+        right=pd.DataFrame(
+            data=list(label_to_id.items()),
+            columns=[label_column, id_column],
+        ),
+        on=id_column,
+    )
+
+
+def add_entity_labels(
+    *,
+    df: pd.DataFrame,
+    add_labels: bool,
+    label_to_id: Optional[Mapping[str, int]] = None,
+    triples_factory: Optional[TriplesFactory] = None,
+) -> pd.DataFrame:
+    """Add entity labels to a dataframe."""
+    if not add_labels:
+        return df
+    if not label_to_id:
+        if not triples_factory:
+            raise ValueError
+        label_to_id = triples_factory.relation_to_id
+    return _add_labels(
+        df=df,
+        label_to_id=label_to_id,
+        id_column=ENTITY_ID_COLUMN_NAME,
+        label_column=ENTITY_LABEL_COLUMN_NAME,
+    )
+
+
+def add_relation_labels(
+    df: pd.DataFrame,
+    *,
+    add_labels: bool,
+    label_to_id: Optional[Mapping[str, int]] = None,
+    triples_factory: Optional[TriplesFactory] = None,
+) -> pd.DataFrame:
+    """Add relation labels to a dataframe."""
+    if not add_labels:
+        return df
+    if not label_to_id:
+        if not triples_factory:
+            raise ValueError
+        label_to_id = triples_factory.relation_to_id
+    return _add_labels(
+        df=df,
+        label_to_id=label_to_id,
+        id_column=RELATION_ID_COLUMN_NAME,
+        label_column=RELATION_LABEL_COLUMN_NAME,
+    )
 
 
 class PatternMatch(NamedTuple):
@@ -479,7 +544,7 @@ def relation_injectivity(
         data=it,
         columns=[RELATION_ID_COLUMN_NAME, SUPPORT_COLUMN_NAME, POSITION_HEAD, POSITION_TAIL],
     )
-    return _add_relation_labels(df, add_labels=add_labels, label_to_id=label_to_id)
+    return add_relation_labels(df, add_labels=add_labels, label_to_id=label_to_id)
 
 
 def relation_cardinality_types(
@@ -535,7 +600,7 @@ def relation_cardinality_types(
             CONFIDENCE_COLUMN_NAME,
         ],
     )
-    return _add_relation_labels(df, add_labels=add_labels, label_to_id=label_to_id)
+    return add_relation_labels(df, add_labels=add_labels, label_to_id=label_to_id)
 
 
 def entity_relation_co_occurrence(
@@ -595,43 +660,4 @@ def get_relation_functionality(
     df.columns = df.columns.droplevel(1)
     df.index.name = RELATION_ID_COLUMN_NAME
     df = df.reset_index()
-    return _add_relation_labels(df, add_labels=add_labels, label_to_id=label_to_id)
-
-
-def _add_relation_labels(
-    df: pd.DataFrame,
-    *,
-    add_labels: bool,
-    label_to_id: Optional[Mapping[str, int]] = None,
-    triples_factory: Optional[TriplesFactory] = None,
-) -> pd.DataFrame:
-    if not add_labels:
-        return df
-    if not label_to_id:
-        if not triples_factory:
-            raise ValueError
-        label_to_id = triples_factory.relation_to_id
-    return _add_labels(
-        df=df,
-        label_to_id=label_to_id,
-        id_column=RELATION_ID_COLUMN_NAME,
-        label_column=RELATION_LABEL_COLUMN_NAME,
-    )
-
-
-def _add_labels(
-    df: pd.DataFrame,
-    label_to_id: Optional[Mapping[str, int]],
-    id_column: str,
-    label_column: str,
-) -> pd.DataFrame:
-    if label_to_id is None:
-        return df
-    return pd.merge(
-        left=df,
-        right=pd.DataFrame(
-            data=list(label_to_id.items()),
-            columns=[label_column, id_column],
-        ),
-        on=id_column,
-    )
+    return add_relation_labels(df, add_labels=add_labels, label_to_id=label_to_id)
