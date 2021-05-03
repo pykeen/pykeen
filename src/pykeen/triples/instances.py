@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 """Implementation of basic instance factory which creates just instances based on standard KG triples."""
-
+from abc import ABC
 from dataclasses import dataclass
-from typing import Mapping, Optional, Tuple
+from typing import Generic, Mapping, Optional, Tuple, TypeVar
 
 import numpy as np
 import scipy.sparse
@@ -23,10 +23,14 @@ __all__ = [
     'MultimodalLCWAInstances',
 ]
 
+BatchType = TypeVar("BatchType")
+SLCWABatchType = Tuple[MappedTriples, MappedTriples, Optional[torch.BoolTensor]]
+LCWABatchType = Tuple[MappedTriples, torch.FloatTensor]
+
 
 @fix_dataclass_init_docs
 @dataclass
-class Instances(data.Dataset):
+class Instances(data.Dataset, Generic[BatchType], ABC):
     """Triples and mappings to their indices."""
 
     def __len__(self):  # noqa:D401
@@ -36,7 +40,7 @@ class Instances(data.Dataset):
 
 @fix_dataclass_init_docs
 @dataclass
-class SLCWAInstances(Instances):
+class SLCWAInstances(Instances[SLCWABatchType]):
     """Triples and mappings to their indices for sLCWA."""
 
     #: The mapped triples, shape: (num_triples, 3)
@@ -48,7 +52,7 @@ class SLCWAInstances(Instances):
     def __len__(self):  # noqa: D105
         return self.mapped_triples.shape[0]
 
-    def __getitem__(self, item: int) -> Tuple[MappedTriples, MappedTriples, Optional[torch.BoolTensor]]:  # noqa: D105
+    def __getitem__(self, item: int) -> SLCWABatchType:  # noqa: D105
         positive = self.mapped_triples[item]
         negative, mask = self.negative_sampler.sample(positive_batch=positive)
         return positive, negative, mask
@@ -56,7 +60,7 @@ class SLCWAInstances(Instances):
 
 @fix_dataclass_init_docs
 @dataclass
-class LCWAInstances(Instances):
+class LCWAInstances(Instances[LCWABatchType]):
     """Triples and mappings to their indices for LCWA."""
 
     #: The unique pairs
@@ -93,7 +97,7 @@ class LCWAInstances(Instances):
     def __len__(self) -> int:  # noqa: D105
         return self.pairs.shape[0]
 
-    def __getitem__(self, item):  # noqa: D105
+    def __getitem__(self, item: int) -> LCWABatchType:  # noqa: D105
         return self.pairs[item], np.asarray(self.compressed[item, :].todense())[0, :]
 
 
