@@ -546,6 +546,19 @@ def relation_injectivity(
     add_labels: bool = True,
     label_to_id: Optional[Mapping[str, int]] = None,
 ) -> pd.DataFrame:
+    """
+    Calculate "soft" injectivity scores for each relation.
+
+    :param mapped_triples:
+        The ID-based triples.
+    :param add_labels:
+        Whether to add labels.
+    :param label_to_id:
+        The label to Id mapping.
+
+    :return:
+        A dataframe with one row per relation, its number of occurrences and head / tail injectivity scores.
+    """
     it = _help_iter_relation_cardinality_types(mapped_triples)
     df = pd.DataFrame(
         data=it,

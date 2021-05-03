@@ -63,7 +63,7 @@ def _iter_datasets(regex_name_filter=None):
 @click.option('-d', '--directory', type=click.Path(dir_okay=True, file_okay=False, resolve_path=True))
 def analyze(dataset, force: bool, countplots: bool, directory):
     """Generate analysis."""
-    for name, dataset in _iter_datasets(regex_name_filter=dataset):
+    for _name, dataset in _iter_datasets(regex_name_filter=dataset):
         _analyze(dataset, force, countplots, directory=directory)
 
 
