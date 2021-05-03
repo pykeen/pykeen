@@ -84,9 +84,12 @@ class AnalysisTests(unittest.TestCase):
     def test_relation_count_dataframe(self):
         """Test relation count dataframe."""
         for labels, total in itertools.product((False, True), repeat=2):
-            df = get_relation_count_df(dataset=self.dataset, add_labels=labels, total_count=total)
             _test_count_dataframe(
-                df=df,
+                df=get_relation_count_df(
+                    dataset=self.dataset,
+                    add_labels=labels,
+                    total_count=total,
+                ),
                 id_column_name=RELATION_ID_COLUMN_NAME,
                 label_column_name=RELATION_LABEL_COLUMN_NAME,
                 labels=labels,
@@ -96,9 +99,12 @@ class AnalysisTests(unittest.TestCase):
     def test_entity_count_dataframe(self):
         """Test entity count dataframe."""
         for labels, total in itertools.product((False, True), repeat=2):
-            df = get_entity_count_df(dataset=self.dataset, add_labels=labels, total_count=total)
             _test_count_dataframe(
-                df=df,
+                df=get_entity_count_df(
+                    dataset=self.dataset,
+                    add_labels=labels,
+                    total_count=total,
+                ),
                 id_column_name=RELATION_ID_COLUMN_NAME,
                 label_column_name=RELATION_LABEL_COLUMN_NAME,
                 labels=labels,
