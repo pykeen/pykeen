@@ -3,7 +3,7 @@
 """Dataset analysis utilities."""
 
 import logging
-from typing import Callable, Collection, Optional, Sequence, Tuple, Union
+from typing import Callable, Collection, Optional, Tuple, Union
 
 import pandas as pd
 import torch
@@ -45,42 +45,51 @@ def _normalize_parts(dataset: Dataset, parts: Union[None, str, Collection[str]])
     return list(set(parts))
 
 
-def _aggregate(
-    df: pd.DataFrame,
-    group_key: Sequence[str],
-    both_sides: bool = True,
-    total_count: bool = False,
-) -> pd.DataFrame:
-    group_key = list(group_key)
-    if both_sides:
-        df = df.groupby(group_key + [SUBSET_COLUMN_NAME])[triple_analysis.COUNT_COLUMN_NAME].sum().reset_index()
-    if total_count:
-        if not both_sides:
-            group_key += ["type"]
-        df = df.groupby(by=group_key)[triple_analysis.COUNT_COLUMN_NAME].sum().reset_index()
-    return df
-
-
 def _common(
     dataset: Dataset,
     triple_func: Callable[[MappedTriples], pd.DataFrame],
-    group_key: Sequence[str],
-    both_sides: bool = True,
-    total_count: bool = False,
+    merge_sides: bool = True,
+    merge_subsets: bool = True,
     add_labels: bool = True,
 ) -> pd.DataFrame:
+    """
+    Execute triple analysis over a dataset.
+
+    :param dataset:
+        The dataset.
+    :param triple_func:
+        The analysis function on the triples.
+    :param merge_sides:
+        Whether to merge sides, i.e., entity positions: head vs. tail.
+    :param merge_subsets:
+        Whether to merge subsets, i.e., train/validation/test.
+    :param add_labels:
+        Whether to add entity / relation labels.
+
+    :return:
+        An aggregated dataframe.
+    """
+    # compute over all triples
     data = []
     for subset_name, triples_factory in dataset.factory_dict.items():
         df = triple_func(triples_factory.mapped_triples)
         df[SUBSET_COLUMN_NAME] = subset_name
         data.append(df)
     df = pd.concat(data, ignore_index=True)
-    df = _aggregate(
-        df=df,
-        group_key=group_key,
-        both_sides=both_sides,
-        total_count=total_count,
-    )
+
+    # Determine group key
+    group_key = []
+    for key, condition in (
+        (triple_analysis.ENTITY_ID_COLUMN_NAME, True),
+        (triple_analysis.RELATION_ID_COLUMN_NAME, True),
+        (triple_analysis.ENTITY_POSITION_COLUMN_NAME, not merge_sides),
+        (SUBSET_COLUMN_NAME, not merge_subsets),
+    ):
+        if condition and key in df.columns:
+            group_key.append(key)
+    df = df.groupby(by=group_key)[triple_analysis.COUNT_COLUMN_NAME].sum().reset_index()
+
+    # Add labels if requested
     if add_labels and triple_analysis.ENTITY_ID_COLUMN_NAME in df.columns:
         df = triple_analysis.add_entity_labels(
             df=df,
@@ -98,32 +107,19 @@ def _common(
 
 def get_relation_count_df(
     dataset: Dataset,
-    total_count: bool = True,
+    merge_subsets: bool = True,
     add_labels: bool = True,
 ) -> pd.DataFrame:
     """Create a dataframe with relation counts.
-
-    Example usage:
-
-    >>> from pykeen.datasets import Nations
-    >>> dataset = Nations()
-    >>> from pykeen.datasets.analysis import get_relation_count_df
-    >>> df = get_relation_count_df(dataset=dataset)
-
-    # Get the most frequent relations in training
-    >>> df[df["subset"] == "training"].sort_values(by="count", ascending=False).head()
-
-    # Get all relations which do not occur in the test part
-    >>> df[(df["subset"] == "testing") & (df["count"] == 0)]
 
     :param dataset:
         The dataset.
     :param add_labels:
         Whether to add relation labels to the dataframe.
-    :param total_count:
-        Whether to combine the counts from all subsets, or keep the separate counts instead.
+    :param merge_subsets:
+        Whether to merge subsets, i.e., train/validation/test.
     :param add_labels:
-        Whether to add relation labels (if available).
+        Whether to add entity / relation labels.
 
     :return:
         A dataframe with columns (relation_id, count, relation_label?, subset?)
@@ -131,40 +127,27 @@ def get_relation_count_df(
     return _common(
         dataset=dataset,
         triple_func=triple_analysis.get_relation_counts,
-        group_key=[triple_analysis.RELATION_ID_COLUMN_NAME],
-        total_count=total_count,
+        merge_subsets=merge_subsets,
         add_labels=add_labels,
     )
 
 
 def get_entity_count_df(
     dataset: Dataset,
-    both_sides: bool = True,
-    total_count: bool = True,
+    merge_sides: bool = True,
+    merge_subsets: bool = True,
     add_labels: bool = True,
 ) -> pd.DataFrame:
-    """Create a dataframe with head/tail/both counts for all subsets, and the full dataset.
-
-    Example usage:
-
-    >>> from pykeen.datasets import FB15k237
-    >>> dataset = FB15k237()
-    >>> from pykeen.datasets.analysis import get_relation_count_df
-    >>> df = get_entity_count_df(dataset=dataset)
-
-    # Get the most frequent entities in training (counting both, occurrences as heads as well as occurences as tails)
-    >>> df.sort_values(by=[("training", "total")]).tail()
-
-    # Get entities which do not occur in testing
-    >>> df[df[("testing", "total")] == 0]
-
-    # Get entities which never occur as head entity (in any subset)
-    >>> df[df[("total", "head")] == 0]
+    """Create a dataframe with entity counts.
 
     :param dataset:
         The dataset.
+    :param merge_sides:
+        Whether to merge sides, i.e., entity positions: head vs. tail.
+    :param merge_subsets:
+        Whether to merge subsets, i.e., train/validation/test.
     :param add_labels:
-        Whether to add entity labels (if available).
+        Whether to add entity / relation labels.
 
     :return:
         A dataframe with one row per entity.
@@ -172,17 +155,16 @@ def get_entity_count_df(
     return _common(
         dataset=dataset,
         triple_func=triple_analysis.get_entity_counts,
-        group_key=[triple_analysis.ENTITY_ID_COLUMN_NAME],
-        both_sides=both_sides,
-        total_count=total_count,
+        merge_sides=merge_sides,
+        merge_subsets=merge_subsets,
         add_labels=add_labels,
     )
 
 
 def get_entity_relation_co_occurrence_df(
     dataset: Dataset,
-    both_sides: bool = True,
-    total_count: bool = True,
+    merge_sides: bool = True,
+    merge_subsets: bool = True,
     add_labels: bool = True,
 ) -> pd.DataFrame:
     """Create a dataframe of entity/relation co-occurrence.
@@ -190,38 +172,24 @@ def get_entity_relation_co_occurrence_df(
     This information can be seen as a form of pseudo-typing, e.g. entity A is something which can be a head of
     `born_in`.
 
-    Example usages:
-    >>> from pykeen.datasets import Nations
-    >>> dataset = Nations()
-    >>> from pykeen.datasets.analysis import get_relation_count_df
-    >>> df = get_entity_count_df(dataset=dataset)
-
-    # Which countries have to most embassies (considering only training triples)?
-    >>> df.loc["training", ("head", "embassy")].sort_values().tail()
-
-    # In which countries are to most embassies (considering only training triples)?
-    >>> df.loc["training", ("tail", "embassy")].sort_values().tail()
-
     :param dataset:
         The dataset.
+    :param merge_sides:
+        Whether to merge sides, i.e., entity positions: head vs. tail.
+    :param merge_subsets:
+        Whether to merge subsets, i.e., train/validation/test.
     :param add_labels:
-        Whether to add entity/relation labels (if available).
+        Whether to add entity / relation labels.
 
     :return:
-        A dataframe with a multi-index (subset, entity_id) as index, and a multi-index (kind, relation) as columns,
-        where subset in {"training", "validation", "testing", "total"}, and kind in {"head", "tail"}. For each entity,
-        the corresponding row can be seen a pseudo-type, i.e. for which relations it may occur as head/tail.
+        A dataframe of entity-relation pairs with their occurrence count.
     """
     return _common(
         dataset=dataset,
         triple_func=triple_analysis.entity_relation_co_occurrence,
-        group_key=[
-            triple_analysis.ENTITY_ID_COLUMN_NAME,
-            triple_analysis.RELATION_ID_COLUMN_NAME,
-            triple_analysis.ENTITY_POSITION_COLUMN_NAME,
-        ],
-        both_sides=both_sides,
-        total_count=total_count,
+        merge_sides=merge_sides,
+        merge_subsets=merge_subsets,
+        add_labels=add_labels,
     )
 
 

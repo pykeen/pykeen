@@ -4,16 +4,13 @@
 
 import itertools
 import unittest
+from typing import Iterable, Mapping
 
 import numpy as np
 import pandas
 
-from pykeen.datasets import Nations
-from pykeen.datasets.analysis import (
-    SUBSET_COLUMN_NAME, get_entity_count_df, get_entity_relation_co_occurrence_df, get_relation_cardinality_types_df, get_relation_count_df,
-    get_relation_functionality_df, get_relation_pattern_types_df,
-)
-from pykeen.triples.analysis import COUNT_COLUMN_NAME, ENTITY_ID_COLUMN_NAME, ENTITY_LABEL_COLUMN_NAME, RELATION_CARDINALITY_TYPES, RELATION_ID_COLUMN_NAME, RELATION_LABEL_COLUMN_NAME, RELATION_PATTERN_TYPES, _get_skyline
+from pykeen.datasets import Dataset, Nations, analysis as dataset_analysis
+from pykeen.triples import analysis as triple_analysis
 
 #: fixme: deprecated
 SUBSET_LABELS = ("testing", "training", "validation", "total")
@@ -42,39 +39,80 @@ class TestUtils(unittest.TestCase):
             np.random.randint(low=0, high=200, size=n, dtype=int),
             np.random.uniform(0, 6, size=n),
         ))
-        self.assertEqual(set(_old_skyline(pairs)), set(_get_skyline(pairs)))
+        self.assertEqual(set(_old_skyline(pairs)), set(triple_analysis._get_skyline(pairs)))
 
 
 def _test_count_dataframe(
+    dataset: Dataset,
     df: pandas.DataFrame,
-    id_column_name: str,
-    label_column_name: str,
-    labels: bool = False,
-    total: bool = True,
+    labels: bool = True,
+    merge_subsets: bool = True,
+    merge_sides: bool = True,
 ):
     """Check the general structure of a count dataframe."""
     # check correct output type
     assert isinstance(df, pandas.DataFrame)
 
-    expected_columns = {id_column_name, COUNT_COLUMN_NAME}
-    if labels:
-        expected_columns.add(label_column_name)
-    if not total:
-        expected_columns.add(SUBSET_COLUMN_NAME)
+    expected_columns = {triple_analysis.COUNT_COLUMN_NAME}
+    expected_columns.update(_check_labels(
+        df=df,
+        labels=labels,
+        id_column_name=triple_analysis.ENTITY_ID_COLUMN_NAME,
+        label_column_name=triple_analysis.ENTITY_LABEL_COLUMN_NAME,
+        label_to_id=dataset.entity_to_id,
+    ))
+    expected_columns.update(_check_labels(
+        df=df,
+        labels=labels,
+        id_column_name=triple_analysis.RELATION_ID_COLUMN_NAME,
+        label_column_name=triple_analysis.RELATION_LABEL_COLUMN_NAME,
+        label_to_id=dataset.relation_to_id,
+    ))
+
+    if not merge_subsets:
+        expected_columns.add(dataset_analysis.SUBSET_COLUMN_NAME)
+
+        # check value range subset
+        assert df[dataset_analysis.SUBSET_COLUMN_NAME].isin(SUBSET_LABELS).all()
+
+    if not merge_sides:
+        expected_columns.add(triple_analysis.ENTITY_POSITION_COLUMN_NAME)
+
+        # check value range side
+        assert df[triple_analysis.ENTITY_POSITION_COLUMN_NAME].isin({
+            triple_analysis.POSITION_HEAD,
+            triple_analysis.POSITION_TAIL,
+        }).all()
 
     # check columns
     assert expected_columns == set(df.columns)
 
     # check value range and type
-    assert (df[COUNT_COLUMN_NAME] >= 0).all()
-    assert df[COUNT_COLUMN_NAME].dtype == np.int64
-
-    # check value range subset
-    if not total:
-        assert set(SUBSET_LABELS).issuperset(df[SUBSET_COLUMN_NAME].unique())
+    assert (df[triple_analysis.COUNT_COLUMN_NAME] >= 0).all()
+    assert df[triple_analysis.COUNT_COLUMN_NAME].dtype == np.int64
 
 
-class AnalysisTests(unittest.TestCase):
+def _check_labels(
+    df: pandas.DataFrame,
+    labels: bool,
+    id_column_name: str,
+    label_column_name: str,
+    label_to_id: Mapping[str, int],
+) -> Iterable[str]:
+    if id_column_name in df.columns:
+        yield id_column_name
+
+        # check value range entity IDs
+        assert df[id_column_name].isin(label_to_id.values()).all()
+
+        if labels:
+            yield label_column_name
+
+            # check value range entity labels
+            assert df[label_column_name].isin(label_to_id.keys()).all()
+
+
+class DatasetAnalysisTests(unittest.TestCase):
     """Tests for dataset analysis utilities."""
 
     def setUp(self) -> None:
@@ -83,50 +121,53 @@ class AnalysisTests(unittest.TestCase):
 
     def test_relation_count_dataframe(self):
         """Test relation count dataframe."""
-        for labels, total in itertools.product((False, True), repeat=2):
+        for labels, merge_subsets in itertools.product((False, True), repeat=2):
             _test_count_dataframe(
-                df=get_relation_count_df(
+                dataset=self.dataset,
+                df=dataset_analysis.get_relation_count_df(
                     dataset=self.dataset,
                     add_labels=labels,
-                    total_count=total,
+                    merge_subsets=merge_subsets,
                 ),
-                id_column_name=RELATION_ID_COLUMN_NAME,
-                label_column_name=RELATION_LABEL_COLUMN_NAME,
                 labels=labels,
-                total=total,
+                merge_subsets=merge_subsets,
             )
 
     def test_entity_count_dataframe(self):
         """Test entity count dataframe."""
-        for labels, total in itertools.product((False, True), repeat=2):
+        for labels, merge_subsets, merge_sides in itertools.product((False, True), repeat=3):
             _test_count_dataframe(
-                df=get_entity_count_df(
+                dataset=self.dataset,
+                df=dataset_analysis.get_entity_count_df(
                     dataset=self.dataset,
                     add_labels=labels,
-                    total_count=total,
+                    merge_subsets=merge_subsets,
+                    merge_sides=merge_sides,
                 ),
-                id_column_name=ENTITY_ID_COLUMN_NAME,
-                label_column_name=ENTITY_LABEL_COLUMN_NAME,
                 labels=labels,
-                total=total,
+                merge_subsets=merge_subsets,
+                merge_sides=merge_sides,
             )
 
     def test_entity_relation_co_occurrence_dataframe(self):
-        """Test entity_relation_co_occurrence_dataframe()."""
-        df = get_entity_relation_co_occurrence_df(dataset=self.dataset)
-
-        # check correct type
-        assert isinstance(df, pandas.DataFrame)
-
-        # check index
-        self.assertListEqual(
-            list(df.index),
-            list(itertools.product(SUBSET_LABELS, sorted(self.dataset.entity_to_id.keys()))),
-        )
+        """Test entity-relation co-occurrence dataframe."""
+        for labels, merge_sides, merge_subsets in itertools.product((False, True), repeat=3):
+            _test_count_dataframe(
+                dataset=self.dataset,
+                df=dataset_analysis.get_entity_relation_co_occurrence_df(
+                    dataset=self.dataset,
+                    merge_sides=merge_sides,
+                    merge_subsets=merge_subsets,
+                    add_labels=labels,
+                ),
+                labels=labels,
+                merge_subsets=merge_subsets,
+                merge_sides=merge_sides,
+            )
 
     def test_relation_pattern_types(self):
         """Helper method for relation pattern classification."""
-        df = get_relation_pattern_types_df(
+        df = dataset_analysis.get_relation_pattern_types_df(
             dataset=self.dataset,
             drop_confidence=False,
         )
@@ -135,23 +176,23 @@ class AnalysisTests(unittest.TestCase):
         assert isinstance(df, pandas.DataFrame)
 
         # check relation_id value range
-        assert df["relation_id"].isin(self.dataset.relation_to_id.values()).all()
+        assert df[triple_analysis.RELATION_ID_COLUMN_NAME].isin(self.dataset.relation_to_id.values()).all()
 
         # check pattern value range
-        assert df["pattern"].isin(RELATION_PATTERN_TYPES).all()
+        assert df[triple_analysis.PATTERN_TYPE_COLUMN_NAME].isin(triple_analysis.RELATION_PATTERN_TYPES).all()
 
         # check confidence value range
-        x = df["confidence"].values
+        x = df[triple_analysis.CONFIDENCE_COLUMN_NAME].values
         assert (0 <= x).all()
         assert (x <= 1).all()
 
         # check support value range
-        x = df["support"].values
+        x = df[triple_analysis.SUPPORT_COLUMN_NAME].values
         assert (1 <= x).all()
 
     def test_relation_cardinality_types(self):
         """Tests for relation cardinality type classification."""
-        df = get_relation_cardinality_types_df(
+        df = dataset_analysis.get_relation_cardinality_types_df(
             dataset=self.dataset,
         )
 
@@ -159,14 +200,14 @@ class AnalysisTests(unittest.TestCase):
         assert isinstance(df, pandas.DataFrame)
 
         # check relation_id value range
-        assert df["relation_id"].isin(self.dataset.relation_to_id.values()).all()
+        assert df[triple_analysis.RELATION_ID_COLUMN_NAME].isin(self.dataset.relation_to_id.values()).all()
 
         # check pattern value range
-        assert df["relation_type"].isin(RELATION_CARDINALITY_TYPES).all()
+        assert df[triple_analysis.CARDINALITY_TYPE_COLUMN_NAME].isin(triple_analysis.RELATION_CARDINALITY_TYPES).all()
 
     def test_calculate_relation_functionality(self):
         """Tests calculate_relation_functionality."""
-        df = get_relation_functionality_df(
+        df = dataset_analysis.get_relation_functionality_df(
             dataset=self.dataset,
         )
 
@@ -174,10 +215,10 @@ class AnalysisTests(unittest.TestCase):
         assert isinstance(df, pandas.DataFrame)
 
         assert {
-            "relation_id",
-            "functionality",
-            "inverse_functionality",
+            triple_analysis.RELATION_ID_COLUMN_NAME,
+            triple_analysis.FUNCTIONALITY_COLUMN_NAME,
+            triple_analysis.INVERSE_FUNCTIONALITY_COLUMN_NAME,
         }.issubset(df.columns)
 
         # check relation_id value range
-        assert df["relation_id"].isin(self.dataset.relation_to_id.values()).all()
+        assert df[triple_analysis.RELATION_ID_COLUMN_NAME].isin(self.dataset.relation_to_id.values()).all()
