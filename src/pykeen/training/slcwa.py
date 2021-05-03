@@ -12,9 +12,9 @@ from .training_loop import TrainingLoop
 from .utils import apply_label_smoothing
 from ..losses import CrossEntropyLoss
 from ..models import Model
-from ..sampling import BasicNegativeSampler, NegativeSampler
+from ..sampling import NegativeSampler, negative_sampler_resolver
 from ..triples import CoreTriplesFactory, Instances
-from ..typing import MappedTriples
+from ..triples.instances import SLCWABatchType
 
 __all__ = [
     'SLCWATrainingLoop',
@@ -23,10 +23,9 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class SLCWATrainingLoop(TrainingLoop):
+class SLCWATrainingLoop(TrainingLoop[SLCWABatchType]):
     """A training loop that uses the stochastic local closed world assumption training approach."""
 
-    negative_sampler: NegativeSampler
     loss_blacklist = [CrossEntropyLoss]
 
     def __init__(
@@ -56,13 +55,10 @@ class SLCWATrainingLoop(TrainingLoop):
             optimizer=optimizer,
             automatic_memory_optimization=automatic_memory_optimization,
         )
-
-        if negative_sampler_cls is None:
-            negative_sampler_cls = BasicNegativeSampler
-
-        self.negative_sampler = negative_sampler_cls(
+        self.negative_sampler = negative_sampler_resolver.make(
+            query=negative_sampler_cls,
+            pos_kwargs=negative_sampler_kwargs,
             triples_factory=triples_factory,
-            **(negative_sampler_kwargs or {}),
         )
 
     @property
@@ -74,15 +70,15 @@ class SLCWATrainingLoop(TrainingLoop):
         return self.negative_sampler.num_negs_per_pos
 
     def _create_instances(self, triples_factory: CoreTriplesFactory) -> Instances:  # noqa: D102
-        return triples_factory.create_slcwa_instances()
+        return triples_factory.create_slcwa_instances(negative_sampler=self.negative_sampler)
 
     @staticmethod
-    def _get_batch_size(batch: MappedTriples) -> int:  # noqa: D102
-        return batch.shape[0]
+    def _get_batch_size(batch: SLCWABatchType) -> int:  # noqa: D102
+        return batch[0].shape[0]
 
     def _process_batch(
         self,
-        batch: MappedTriples,
+        batch: SLCWABatchType,
         start: int,
         stop: int,
         label_smoothing: float = 0.0,
@@ -92,15 +88,14 @@ class SLCWATrainingLoop(TrainingLoop):
         if slice_size is not None:
             raise AttributeError('Slicing is not possible for sLCWA training loops.')
 
-        # Send positive batch to device
-        positive_batch = batch[start:stop].to(device=self.device)
+        # split batch
+        positive_batch, negative_batch, positive_filter = batch
 
-        # Create negative samples
-        neg_samples, neg_samples_filter = self.negative_sampler.sample(positive_batch=positive_batch)
-
-        # Ensure they reside on the device (should hold already for most simple negative samplers, e.g.
-        # BasicNegativeSampler, BernoulliNegativeSampler
-        negative_batch = neg_samples.to(self.device)
+        # send to device
+        positive_batch = positive_batch[start:stop].to(device=self.device)
+        # TODO: Does this work?
+        negative_batch = negative_batch[start:stop].to(device=self.device)
+        positive_filter = positive_filter[start:stop].to(device=self.device)
 
         # Make it negative batch broadcastable (required for num_negs_per_pos > 1).
         negative_batch = negative_batch.view(-1, 3)
@@ -113,7 +108,7 @@ class SLCWATrainingLoop(TrainingLoop):
             positive_scores,
             negative_scores,
             label_smoothing,
-            neg_samples_filter,
+            positive_filter,
         )
         return loss
 

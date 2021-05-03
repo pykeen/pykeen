@@ -12,6 +12,7 @@ import torch
 from .instances import MultimodalLCWAInstances, MultimodalSLCWAInstances
 from .triples_factory import TriplesFactory
 from .utils import load_triples
+from ..sampling import NegativeSampler
 from ..typing import EntityMapping, LabeledTriples
 
 __all__ = [
@@ -102,13 +103,14 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
             f"num_literals={len(self.literals_to_id)}"
         )
 
-    def create_slcwa_instances(self) -> MultimodalSLCWAInstances:
+    def create_slcwa_instances(self, negative_sampler: NegativeSampler) -> MultimodalSLCWAInstances:
         """Create multi-modal sLCWA instances for this factory's triples."""
-        slcwa_instances = super().create_slcwa_instances()
+        slcwa_instances = super().create_slcwa_instances(negative_sampler=negative_sampler)
         return MultimodalSLCWAInstances(
             mapped_triples=slcwa_instances.mapped_triples,
             numeric_literals=self.numeric_literals,
             literals_to_id=self.literals_to_id,
+            negative_sampler=negative_sampler,
         )
 
     def create_lcwa_instances(self, use_tqdm: Optional[bool] = None) -> MultimodalLCWAInstances:

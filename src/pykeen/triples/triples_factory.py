@@ -16,6 +16,7 @@ import torch
 from .instances import Instances, LCWAInstances, SLCWAInstances
 from .splitting import split
 from .utils import get_entities, get_relations, load_triples
+from ..sampling import NegativeSampler
 from ..typing import EntityMapping, LabeledTriples, MappedTriples, RelationMapping, TorchRandomHint
 from ..utils import compact_mapping, format_relative_comparison, invert_mapping, torch_is_in_1d
 
@@ -357,9 +358,12 @@ class CoreTriplesFactory:
             torch.stack([t, self._get_inverse_relation_id(r), h], dim=-1),
         ])
 
-    def create_slcwa_instances(self) -> Instances:
+    def create_slcwa_instances(self, negative_sampler: NegativeSampler) -> Instances:
         """Create sLCWA instances for this factory's triples."""
-        return SLCWAInstances(mapped_triples=self._add_inverse_triples_if_necessary(mapped_triples=self.mapped_triples))
+        return SLCWAInstances(
+            mapped_triples=self._add_inverse_triples_if_necessary(mapped_triples=self.mapped_triples),
+            negative_sampler=negative_sampler,
+        )
 
     def create_lcwa_instances(self, use_tqdm: Optional[bool] = None) -> Instances:
         """Create LCWA instances for this factory's triples."""
