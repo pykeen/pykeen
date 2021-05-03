@@ -12,9 +12,6 @@ import pandas
 from pykeen.datasets import Dataset, Nations, analysis as dataset_analysis
 from pykeen.triples import analysis as triple_analysis
 
-#: fixme: deprecated
-SUBSET_LABELS = ("testing", "training", "validation", "total")
-
 
 def _old_skyline(xs):
     # naive implementation, O(n2)
@@ -73,7 +70,7 @@ def _test_count_dataframe(
         expected_columns.add(dataset_analysis.SUBSET_COLUMN_NAME)
 
         # check value range subset
-        assert df[dataset_analysis.SUBSET_COLUMN_NAME].isin(SUBSET_LABELS).all()
+        assert df[dataset_analysis.SUBSET_COLUMN_NAME].isin(dataset.factory_dict.keys()).all()
 
     if not merge_sides:
         expected_columns.add(triple_analysis.ENTITY_POSITION_COLUMN_NAME)
