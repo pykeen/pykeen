@@ -3,7 +3,7 @@
 """Dataset analysis utilities."""
 
 import logging
-from typing import Collection, Optional, Sequence, Tuple, Union
+from typing import Callable, Collection, Optional, Sequence, Tuple, Union
 
 import pandas as pd
 import torch
@@ -11,6 +11,7 @@ import torch
 from .base import Dataset
 from ..constants import PYKEEN_DATASETS
 from ..triples import analysis as triple_analysis
+from ..typing import MappedTriples
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +61,41 @@ def _aggregate(
     return df
 
 
+def _common(
+    dataset: Dataset,
+    triple_func: Callable[[MappedTriples], pd.DataFrame],
+    group_key: Sequence[str],
+    both_sides: bool = True,
+    total_count: bool = False,
+    add_labels: bool = True,
+) -> pd.DataFrame:
+    data = []
+    for subset_name, triples_factory in dataset.factory_dict.items():
+        df = triple_func(triples_factory.mapped_triples)
+        df[SUBSET_COLUMN_NAME] = subset_name
+        data.append(df)
+    df = pd.concat(data, ignore_index=True)
+    df = _aggregate(
+        df=df,
+        group_key=group_key,
+        both_sides=both_sides,
+        total_count=total_count,
+    )
+    if add_labels and triple_analysis.ENTITY_ID_COLUMN_NAME in df.columns:
+        df = triple_analysis.add_entity_labels(
+            df=df,
+            add_labels=add_labels,
+            label_to_id=dataset.entity_to_id,
+        )
+    if add_labels and triple_analysis.RELATION_ID_COLUMN_NAME in df.columns:
+        df = triple_analysis.add_relation_labels(
+            df=df,
+            add_labels=add_labels,
+            label_to_id=dataset.relation_to_id,
+        )
+    return df
+
+
 def get_relation_count_df(
     dataset: Dataset,
     total_count: bool = True,
@@ -92,21 +128,12 @@ def get_relation_count_df(
     :return:
         A dataframe with columns (relation_id, count, relation_label?, subset?)
     """
-    data = []
-    for subset_name, triples_factory in dataset.factory_dict.items():
-        df = triple_analysis.get_relation_counts(mapped_triples=triples_factory.mapped_triples)
-        df["subset"] = subset_name
-        data.append(df)
-    df = pd.concat(data, ignore_index=True)
-    df = _aggregate(
-        df=df,
+    return _common(
+        dataset=dataset,
+        triple_func=triple_analysis.get_relation_counts,
         group_key=[triple_analysis.RELATION_ID_COLUMN_NAME],
         total_count=total_count,
-    )
-    return triple_analysis.add_relation_labels(
-        df=df,
         add_labels=add_labels,
-        label_to_id=dataset.relation_to_id,
     )
 
 
@@ -142,23 +169,13 @@ def get_entity_count_df(
     :return:
         A dataframe with one row per entity.
     """
-    # TODO: Merge duplicate code
-    data = []
-    for subset_name, triples_factory in dataset.factory_dict.items():
-        df = triple_analysis.get_entity_counts(mapped_triples=triples_factory.mapped_triples)
-        df[SUBSET_COLUMN_NAME] = subset_name
-        data.append(df)
-    df = pd.concat(data, ignore_index=True)
-    df = _aggregate(
-        df=df,
+    return _common(
+        dataset=dataset,
+        triple_func=triple_analysis.get_entity_counts,
         group_key=[triple_analysis.ENTITY_ID_COLUMN_NAME],
         both_sides=both_sides,
         total_count=total_count,
-    )
-    return triple_analysis.add_entity_labels(
-        df=df,
         add_labels=add_labels,
-        label_to_id=dataset.entity_to_id,
     )
 
 
@@ -195,14 +212,9 @@ def get_entity_relation_co_occurrence_df(
         where subset in {"training", "validation", "testing", "total"}, and kind in {"head", "tail"}. For each entity,
         the corresponding row can be seen a pseudo-type, i.e. for which relations it may occur as head/tail.
     """
-    data = []
-    for subset_name, triples_factory in dataset.factory_dict.items():
-        df = triple_analysis.entity_relation_co_occurrence(mapped_triples=triples_factory.mapped_triples)
-        df["subset"] = subset_name
-        data.append(df)
-    df = pd.concat(data, ignore_index=True)
-    df = _aggregate(
-        df=df,
+    return _common(
+        dataset=dataset,
+        triple_func=triple_analysis.entity_relation_co_occurrence,
         group_key=[
             triple_analysis.ENTITY_ID_COLUMN_NAME,
             triple_analysis.RELATION_ID_COLUMN_NAME,
@@ -211,17 +223,6 @@ def get_entity_relation_co_occurrence_df(
         both_sides=both_sides,
         total_count=total_count,
     )
-    df = triple_analysis.add_entity_labels(
-        df=df,
-        add_labels=add_labels,
-        label_to_id=dataset.entity_to_id,
-    )
-    df = triple_analysis.add_relation_labels(
-        df=df,
-        add_labels=add_labels,
-        label_to_id=dataset.relation_to_id,
-    )
-    return df
 
 
 def get_relation_pattern_types_df(
@@ -281,6 +282,7 @@ def get_relation_pattern_types_df(
     :return:
         A dataframe with columns {"relation_id", "pattern", "support"?, "confidence"?}.
     """
+    # TODO: Merge with _common?
     parts = _normalize_parts(dataset, parts)
     mapped_triples = _get_mapped_triples(dataset, parts)
 
