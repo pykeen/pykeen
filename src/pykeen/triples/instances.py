@@ -3,10 +3,11 @@
 """Implementation of basic instance factory which creates just instances based on standard KG triples."""
 
 from dataclasses import dataclass
-from typing import Mapping, Tuple
+from typing import Mapping, Optional, Tuple
 
 import numpy as np
 import scipy.sparse
+import torch
 from torch.utils import data
 
 from ..sampling import NegativeSampler
@@ -47,10 +48,10 @@ class SLCWAInstances(Instances):
     def __len__(self):  # noqa: D105
         return self.mapped_triples.shape[0]
 
-    def __getitem__(self, item: int) -> Tuple[MappedTriples, MappedTriples]:  # noqa: D105
+    def __getitem__(self, item: int) -> Tuple[MappedTriples, MappedTriples, Optional[torch.BoolTensor]]:  # noqa: D105
         positive = self.mapped_triples[item]
-        negative = self.negative_sampler.sample(positive_batch=positive)
-        return positive, negative
+        negative, mask = self.negative_sampler.sample(positive_batch=positive)
+        return positive, negative, mask
 
 
 @fix_dataclass_init_docs
