@@ -2,424 +2,206 @@
 
 """Dataset analysis utilities."""
 
-import hashlib
-import itertools as itt
 import logging
-from collections import defaultdict
-from typing import Collection, DefaultDict, Iterable, Mapping, NamedTuple, Optional, Set, Tuple
+from typing import Callable, Collection, Optional, Tuple, Union
 
-import numpy
 import pandas as pd
 import torch
-from tqdm import tqdm
 
 from .base import Dataset
 from ..constants import PYKEEN_DATASETS
-from ..utils import invert_mapping
+from ..triples import analysis as triple_analysis
+from ..typing import MappedTriples
 
 logger = logging.getLogger(__name__)
 
 __all__ = [
-    'get_id_counts',
-    'relation_classification',
-    'relation_count_dataframe',
-    'entity_count_dataframe',
-    'entity_relation_co_occurrence_dataframe',
-    'skyline',
-    'composition_candidates',
-    'iter_patterns',
-    'iter_unary_patterns',
-    'iter_binary_patterns',
-    'iter_ternary_patterns',
-    'triple_set_hash',
+    "get_relation_count_df",
+    "get_entity_count_df",
+    "get_entity_relation_co_occurrence_df",
+    "get_relation_functionality_df",
+    # relation typing
+    "get_relation_pattern_types_df",
+    "get_relation_cardinality_types_df",
 ]
 
-SUBSET_LABELS = ('testing', 'training', 'validation', 'total')
+# constants
+SUBSET_COLUMN_NAME = "subset"
 
 
-# PatternMatch = namedtuple('PatternMatch', ['relation_id', 'pattern_type', 'support', 'confidence'])
-
-class PatternMatch(NamedTuple):
-    """A pattern match tuple of relation_id, pattern_type, support, and confidence."""
-
-    relation_id: int
-    pattern_type: str
-    support: int
-    confidence: float
+def _get_mapped_triples(dataset: Dataset, parts: Collection[str]) -> Collection[Tuple[int, int, int]]:
+    return torch.cat([
+        dataset.factory_dict[part].mapped_triples
+        for part in parts
+    ], dim=0).tolist()
 
 
-def get_id_counts(id_tensor: torch.LongTensor, num_ids: int) -> numpy.ndarray:
-    """Create a dense tensor of ID counts.
+def _normalize_parts(dataset: Dataset, parts: Union[None, str, Collection[str]]) -> Collection[str]:
+    if parts is None:
+        parts = dataset.factory_dict.keys()
+    elif isinstance(parts, str):
+        parts = [parts]
+    # unique
+    return list(set(parts))
 
-    :param id_tensor:
-        The tensor of IDs.
-    :param num_ids:
-        The number of IDs.
 
-    :return: shape: (num_ids,)
-         The counts for each individual ID from {0, 1, ..., num_ids-1}.
+def _common(
+    dataset: Dataset,
+    triple_func: Callable[[MappedTriples], pd.DataFrame],
+    merge_sides: bool = True,
+    merge_subsets: bool = True,
+    add_labels: bool = True,
+) -> pd.DataFrame:
     """
-    unique, counts = id_tensor.unique(return_counts=True)
-    total_counts = numpy.zeros(shape=(num_ids,), dtype=numpy.int64)
-    total_counts[unique.numpy()] = counts.numpy()
-    return total_counts
-
-
-def relation_count_dataframe(dataset: Dataset) -> pd.DataFrame:
-    """Create a dataframe with relation counts for all subsets, and the full dataset.
-
-    Example usage:
-
-    >>> from pykeen.datasets import Nations
-    >>> dataset = Nations()
-    >>> from pykeen.datasets.analysis import relation_count_dataframe
-    >>> df = relation_count_dataframe(dataset=dataset)
-
-    # Get the most frequent relations in training
-    >>> df.sort_values(by="training").head()
-
-    # Get all relations which do not occur in the test part
-    >>> df[df["testing"] == 0]
+    Execute triple analysis over a dataset.
 
     :param dataset:
         The dataset.
+    :param triple_func:
+        The analysis function on the triples.
+    :param merge_sides:
+        Whether to merge sides, i.e., entity positions: head vs. tail.
+    :param merge_subsets:
+        Whether to merge subsets, i.e., train/validation/test.
+    :param add_labels:
+        Whether to add entity / relation labels.
 
     :return:
-        A dataframe with one row per relation.
+        An aggregated dataframe.
     """
-    data = {
-        subset_name: get_id_counts(
-            id_tensor=triples_factory.mapped_triples[:, 1],
-            num_ids=dataset.num_relations,
+    # compute over all triples
+    data = []
+    for subset_name, triples_factory in dataset.factory_dict.items():
+        df = triple_func(triples_factory.mapped_triples)
+        df[SUBSET_COLUMN_NAME] = subset_name
+        data.append(df)
+    df = pd.concat(data, ignore_index=True)
+
+    # Determine group key
+    group_key = []
+    for key, condition in (
+        (triple_analysis.ENTITY_ID_COLUMN_NAME, True),
+        (triple_analysis.RELATION_ID_COLUMN_NAME, True),
+        (triple_analysis.ENTITY_POSITION_COLUMN_NAME, not merge_sides),
+        (SUBSET_COLUMN_NAME, not merge_subsets),
+    ):
+        if condition and key in df.columns:
+            group_key.append(key)
+    df = df.groupby(by=group_key)[triple_analysis.COUNT_COLUMN_NAME].sum().reset_index()
+
+    # Add labels if requested
+    if add_labels and triple_analysis.ENTITY_ID_COLUMN_NAME in df.columns:
+        df = triple_analysis.add_entity_labels(
+            df=df,
+            add_labels=add_labels,
+            label_to_id=dataset.entity_to_id,
         )
-        for subset_name, triples_factory in dataset.factory_dict.items()
-    }
-    data['total'] = sum(data.values())
-    index = sorted(dataset.relation_to_id, key=dataset.relation_to_id.get)
-    df = pd.DataFrame(data=data, index=index, columns=SUBSET_LABELS)
-    df.index.name = 'relation_label'
+    if add_labels and triple_analysis.RELATION_ID_COLUMN_NAME in df.columns:
+        df = triple_analysis.add_relation_labels(
+            df=df,
+            add_labels=add_labels,
+            label_to_id=dataset.relation_to_id,
+        )
     return df
 
 
-def entity_count_dataframe(dataset: Dataset) -> pd.DataFrame:
-    """Create a dataframe with head/tail/both counts for all subsets, and the full dataset.
-
-    Example usage:
-
-    >>> from pykeen.datasets import FB15k237
-    >>> dataset = FB15k237()
-    >>> from pykeen.datasets.analysis import relation_count_dataframe
-    >>> df = entity_count_dataframe(dataset=dataset)
-
-    # Get the most frequent entities in training (counting both, occurrences as heads as well as occurences as tails)
-    >>> df.sort_values(by=[("training", "total")]).tail()
-
-    # Get entities which do not occur in testing
-    >>> df[df[("testing", "total")] == 0]
-
-    # Get entities which never occur as head entity (in any subset)
-    >>> df[df[("total", "head")] == 0]
+def get_relation_count_df(
+    dataset: Dataset,
+    merge_subsets: bool = True,
+    add_labels: bool = True,
+) -> pd.DataFrame:
+    """Create a dataframe with relation counts.
 
     :param dataset:
         The dataset.
+    :param add_labels:
+        Whether to add relation labels to the dataframe.
+    :param merge_subsets:
+        Whether to merge subsets, i.e., train/validation/test.
+    :param add_labels:
+        Whether to add entity / relation labels.
+
+    :return:
+        A dataframe with columns (relation_id, count, relation_label?, subset?)
+    """
+    return _common(
+        dataset=dataset,
+        triple_func=triple_analysis.get_relation_counts,
+        merge_subsets=merge_subsets,
+        add_labels=add_labels,
+    )
+
+
+def get_entity_count_df(
+    dataset: Dataset,
+    merge_sides: bool = True,
+    merge_subsets: bool = True,
+    add_labels: bool = True,
+) -> pd.DataFrame:
+    """Create a dataframe with entity counts.
+
+    :param dataset:
+        The dataset.
+    :param merge_sides:
+        Whether to merge sides, i.e., entity positions: head vs. tail.
+    :param merge_subsets:
+        Whether to merge subsets, i.e., train/validation/test.
+    :param add_labels:
+        Whether to add entity / relation labels.
 
     :return:
         A dataframe with one row per entity.
     """
-    data = {}
-    num_entities = dataset.num_entities
-    second_level_order = ('head', 'tail', 'total')
-    for subset_name, triples_factory in dataset.factory_dict.items():
-        for col, col_name in zip((0, 2), ('head', 'tail')):
-            data[subset_name, col_name] = get_id_counts(
-                id_tensor=triples_factory.mapped_triples[:, col],
-                num_ids=num_entities,
-            )
-        data[subset_name, 'total'] = data[subset_name, 'head'] + data[subset_name, 'tail']
-    for kind in ('head', 'tail', 'total'):
-        data['total', kind] = sum(data[subset_name, kind] for subset_name in dataset.factory_dict.keys())
-    index = sorted(dataset.entity_to_id, key=dataset.entity_to_id.get)
-    df = pd.DataFrame(
-        data=data,
-        index=index,
-        columns=pd.MultiIndex.from_product(iterables=[SUBSET_LABELS, second_level_order]),
+    return _common(
+        dataset=dataset,
+        triple_func=triple_analysis.get_entity_counts,
+        merge_sides=merge_sides,
+        merge_subsets=merge_subsets,
+        add_labels=add_labels,
     )
-    df.index.name = 'entity_label'
-    return df
 
 
-def entity_relation_co_occurrence_dataframe(dataset: Dataset) -> pd.DataFrame:
+def get_entity_relation_co_occurrence_df(
+    dataset: Dataset,
+    merge_sides: bool = True,
+    merge_subsets: bool = True,
+    add_labels: bool = True,
+) -> pd.DataFrame:
     """Create a dataframe of entity/relation co-occurrence.
 
     This information can be seen as a form of pseudo-typing, e.g. entity A is something which can be a head of
     `born_in`.
 
-    Example usages:
-    >>> from pykeen.datasets import Nations
-    >>> dataset = Nations()
-    >>> from pykeen.datasets.analysis import relation_count_dataframe
-    >>> df = entity_count_dataframe(dataset=dataset)
-
-    # Which countries have to most embassies (considering only training triples)?
-    >>> df.loc['training', ('head', 'embassy')].sort_values().tail()
-
-    # In which countries are to most embassies (considering only training triples)?
-    >>> df.loc['training', ('tail', 'embassy')].sort_values().tail()
-
     :param dataset:
         The dataset.
+    :param merge_sides:
+        Whether to merge sides, i.e., entity positions: head vs. tail.
+    :param merge_subsets:
+        Whether to merge subsets, i.e., train/validation/test.
+    :param add_labels:
+        Whether to add entity / relation labels.
 
     :return:
-        A dataframe with a multi-index (subset, entity_id) as index, and a multi-index (kind, relation) as columns,
-        where subset in {'training', 'validation', 'testing', 'total'}, and kind in {'head', 'tail'}. For each entity,
-        the corresponding row can be seen a pseudo-type, i.e. for which relations it may occur as head/tail.
+        A dataframe of entity-relation pairs with their occurrence count.
     """
-    num_relations = dataset.num_relations
-    num_entities = dataset.num_entities
-    data = numpy.zeros(shape=(4 * num_entities, 2 * num_relations), dtype=numpy.int64)
-    for i, (_, triples_factory) in enumerate(sorted(dataset.factory_dict.items())):
-        # head-relation co-occurrence
-        unique_hr, counts_hr = triples_factory.mapped_triples[:, :2].unique(dim=0, return_counts=True)
-        h, r = unique_hr.t().numpy()
-        data[i * num_entities:(i + 1) * num_entities, :num_relations][h, r] = counts_hr.numpy()
-
-        # tail-relation co-occurrence
-        unique_rt, counts_rt = triples_factory.mapped_triples[:, 1:].unique(dim=0, return_counts=True)
-        r, t = unique_rt.t().numpy()
-        data[i * num_entities:(i + 1) * num_entities, num_relations:][t, r] = counts_rt.numpy()
-
-    # full dataset
-    data[3 * num_entities:] = sum(data[i * num_entities:(i + 1) * num_entities] for i in range(3))
-    entity_id_to_label, relation_id_to_label = [
-        invert_mapping(mapping=mapping)
-        for mapping in (dataset.entity_to_id, dataset.relation_to_id)
-    ]
-    return pd.DataFrame(
-        data=data,
-        index=pd.MultiIndex.from_product([
-            sorted(dataset.factory_dict.keys()) + ['total'],
-            [entity_id_to_label[entity_id] for entity_id in range(num_entities)],
-        ]),
-        columns=pd.MultiIndex.from_product([
-            ('head', 'tail'),
-            [relation_id_to_label[relation_id] for relation_id in range(num_relations)],
-        ]),
+    return _common(
+        dataset=dataset,
+        triple_func=triple_analysis.entity_relation_co_occurrence,
+        merge_sides=merge_sides,
+        merge_subsets=merge_subsets,
+        add_labels=add_labels,
     )
 
 
-def _get_skyline(
-    xs: Iterable[Tuple[int, float]],
-) -> Iterable[Tuple[int, float]]:
-    """Calculate 2-D skyline."""
-    # cf. https://stackoverflow.com/questions/19059878/dominant-set-of-points-in-on
-    largest_y = float("-inf")
-    # sort decreasingly. i dominates j for all j > i in x-dimension
-    for x_i, y_i in sorted(xs, reverse=True):
-        # if it is also dominated by any y, it is not part of the skyline
-        if y_i > largest_y:
-            yield x_i, y_i
-            largest_y = y_i
-
-
-def skyline(data_stream: Iterable[PatternMatch]) -> Iterable[PatternMatch]:
-    """
-    Keep only those entries which are in the support-confidence skyline.
-
-    A pair $(s, c)$ dominates $(s', c')$ if $s > s'$ and $c > c'$. The skyline contains those entries which are not
-    dominated by any other entry.
-
-    :param data_stream:
-        The stream of data, comprising tuples (relation_id, pattern-type, support, confidence).
-
-    :yields: An entry from the support-confidence skyline.
-    """
-    # group by (relation id, pattern type)
-    data: DefaultDict[Tuple[int, str], Set[Tuple[int, float]]] = defaultdict(set)
-    for tup in data_stream:
-        data[tup[:2]].add(tup[2:])
-    # for each group, yield from skyline
-    for (r_id, pat), values in data.items():
-        for supp, conf in _get_skyline(values):
-            yield PatternMatch(r_id, pat, supp, conf)
-
-
-def composition_candidates(
-    mapped_triples: Iterable[Tuple[int, int, int]],
-) -> Collection[Tuple[int, int]]:
-    r"""Pre-filtering relation pair candidates for composition pattern.
-
-    Determines all relation pairs $(r, r')$ with at least one entity $e$ such that
-
-    .. math ::
-
-        \{(h, r, e), (e, r', t)\} \subseteq \mathcal{T}
-
-    :param mapped_triples:
-        An iterable over ID-based triples. Only consumed once.
-
-    :return:
-        A set of relation pairs.
-    """
-    # index triples
-    # incoming relations per entity
-    ins: DefaultDict[int, Set[int]] = defaultdict(set)
-    # outgoing relations per entity
-    outs: DefaultDict[int, Set[int]] = defaultdict(set)
-    for h, r, t in mapped_triples:
-        outs[h].add(r)
-        ins[t].add(r)
-
-    # return candidates
-    return {
-        (r1, r2)
-        for e, r1s in ins.items()
-        for r1, r2 in itt.product(r1s, outs[e])
-    }
-
-
-def iter_unary_patterns(
-    pairs: Mapping[int, Set[Tuple[int, int]]],
-) -> Iterable[PatternMatch]:
-    r"""
-    Yield unary patterns from pre-indexed triples.
-
-    =============  ===============================
-    Pattern        Equation
-    =============  ===============================
-    Symmetry       $r(x, y) \implies r(y, x)$
-    Anti-Symmetry  $r(x, y) \implies \neg r(y, x)$
-    =============  ===============================
-
-    .. note ::
-        By definition, we have confidence(anti-symmetry) = 1 - confidence(symmetry).
-
-    :param pairs:
-        A mapping from relations to the set of entity pairs.
-
-    :yields: A pattern match tuple of relation_id, pattern_type, support, and confidence.
-    """
-    logger.debug("Evaluating unary patterns: {symmetry, anti-symmetry}")
-    for r, ht in pairs.items():
-        support = len(ht)
-        rev_ht = {(t, h) for h, t in ht}
-        confidence = len(ht.intersection(rev_ht)) / support
-        yield PatternMatch(r, "symmetry", support, confidence)
-        # confidence = len(ht.difference(rev_ht)) / support
-        yield PatternMatch(r, "anti-symmetry", support, 1 - confidence)
-
-
-def iter_binary_patterns(
-    pairs: Mapping[int, Set[Tuple[int, int]]],
-) -> Iterable[PatternMatch]:
-    r"""
-    Yield binary patterns from pre-indexed triples.
-
-    =========  ===========================
-    Pattern    Equation
-    =========  ===========================
-    Inversion  $r'(x, y) \implies r(y, x)$
-    =========  ===========================
-
-    :param pairs:
-        A mapping from relations to the set of entity pairs.
-
-    :yields: A pattern match tuple of relation_id, pattern_type, support, and confidence.
-    """
-    logger.debug("Evaluating binary patterns: {inversion}")
-    for (_r1, ht1), (r, ht2) in itt.combinations(pairs.items(), r=2):
-        support = len(ht1)
-        confidence = len(ht1.intersection(ht2)) / support
-        yield PatternMatch(r, "inversion", support, confidence)
-
-
-def iter_ternary_patterns(
-    mapped_triples: Collection[Tuple[int, int, int]],
-    pairs: Mapping[int, Set[Tuple[int, int]]],
-) -> Iterable[PatternMatch]:
-    r"""
-    Yield ternary patterns from pre-indexed triples.
-
-    ===========  ===========================================
-    Pattern      Equation
-    ===========  ===========================================
-    Composition  $r'(x, y) \land r''(y, z) \implies r(x, z)$
-    ===========  ===========================================
-
-    :param mapped_triples:
-        A collection of ID-based triples.
-    :param pairs:
-        A mapping from relations to the set of entity pairs.
-
-    :yields: A pattern match tuple of relation_id, pattern_type, support, and confidence.
-    """
-    logger.debug("Evaluating ternary patterns: {composition}")
-    # composition r1(x, y) & r2(y, z) => r(x, z)
-    # indexing triples for fast join r1 & r2
-    adj: DefaultDict[int, DefaultDict[int, Set[int]]] = defaultdict(lambda: defaultdict(set))
-    for h, r, t in mapped_triples:
-        adj[r][h].add(t)
-    # actual evaluation of the pattern
-    for r1, r2 in tqdm(
-        composition_candidates(mapped_triples),
-        desc="Checking ternary patterns",
-        unit="pattern",
-        unit_scale=True,
-    ):
-        lhs = {
-            (x, z)
-            for x, y in pairs[r1]
-            for z in adj[r2]
-        }
-        support = len(lhs)
-        # skip empty support
-        # TODO: Can this happen after pre-filtering?
-        if not support:
-            continue
-        for r, ht in pairs.items():
-            confidence = len(lhs.intersection(ht)) / support
-            yield PatternMatch(r, "composition", support, confidence)
-
-
-def iter_patterns(
-    mapped_triples: Collection[Tuple[int, int, int]],
-) -> Iterable[PatternMatch]:
-    """Iterate over unary, binary, and ternary patterns.
-
-    :param mapped_triples:
-        A collection of ID-based triples.
-
-    :yields: Patterns from :func:`iter_unary_patterns`, func:`iter_binary_patterns`, and :func:`iter_ternary_patterns`.
-    """
-    # indexing triples for fast lookup of entity pair sets
-    pairs: DefaultDict[int, Set[Tuple[int, int]]] = defaultdict(set)
-    for h, r, t in mapped_triples:
-        pairs[r].add((h, t))
-
-    yield from iter_unary_patterns(pairs=pairs)
-    yield from iter_binary_patterns(pairs=pairs)
-    yield from iter_ternary_patterns(mapped_triples, pairs=pairs)
-
-
-def triple_set_hash(mapped_triples: torch.LongTensor):
-    """
-    Compute an order-invariant hash value for a set of triples given as tensor.
-
-    :param mapped_triples:
-        The ID-based triples.
-
-    :return:
-        The hash object.
-    """
-    return hashlib.sha512("".join(map(str, sorted(mapped_triples))).encode("utf8"))
-
-
-def relation_classification(
+def get_relation_pattern_types_df(
     dataset: Dataset,
+    *,
     min_support: int = 0,
     min_confidence: float = 0.95,
-    drop_confidence: bool = True,
+    drop_confidence: bool = False,
     parts: Optional[Collection[str]] = None,
     force: bool = False,
+    add_labels: bool = True,
 ) -> pd.DataFrame:
     r"""
     Categorize relations based on patterns from RotatE [sun2019]_.
@@ -457,6 +239,8 @@ def relation_classification(
         {"training", "validation", "testing}.
     :param force:
         Whether to enforce re-calculation even if a cached version is available.
+    :param add_labels:
+        Whether to add relation labels (if available).
 
     .. warning ::
 
@@ -466,20 +250,12 @@ def relation_classification(
     :return:
         A dataframe with columns {"relation_id", "pattern", "support"?, "confidence"?}.
     """
-    # normalize parts
-    if parts is None:
-        parts = dataset.factory_dict.keys()
-    parts = [parts] if isinstance(parts, str) else parts
-
-    # select triples
-    mapped_triples = torch.cat([
-        dataset.factory_dict[part].mapped_triples
-        for part in parts
-    ], dim=0).tolist()
+    # TODO: Merge with _common?
+    parts = _normalize_parts(dataset, parts)
+    mapped_triples = _get_mapped_triples(dataset, parts)
 
     # include hash over triples into cache-file name
-    # sort first, for triple order invariance
-    ph = triple_set_hash(mapped_triples).hexdigest()[:16]
+    ph = triple_analysis.triple_set_hash(mapped_triples=mapped_triples)[:16]
 
     # include part hash into cache-file name
     cache_path = PYKEEN_DATASETS.joinpath(dataset.__class__.__name__.lower(), f"relation_patterns_{ph}.tsv.xz")
@@ -490,26 +266,9 @@ def relation_classification(
         mapped_triples = torch.cat([
             dataset.factory_dict[part].mapped_triples
             for part in parts
-        ], dim=0)
+        ], dim=0).tolist()
 
-        # determine patterns from triples
-        base = iter_patterns(mapped_triples=mapped_triples.tolist())
-
-        # drop zero-confidence
-        base = (
-            pattern
-            for pattern in base
-            if pattern.confidence > 0
-        )
-
-        # keep only skyline
-        base = skyline(base)
-
-        # create data frame
-        df = pd.DataFrame(
-            data=list(base),
-            columns=["relation_id", "pattern", "support", "confidence"],
-        ).sort_values(by=["pattern", "relation_id", "confidence", "support"])
+        df = triple_analysis.relation_pattern_types(mapped_triples=mapped_triples)
 
         # save to file
         cache_path.parent.mkdir(exist_ok=True, parents=True)
@@ -520,9 +279,128 @@ def relation_classification(
         logger.info(f"Loaded {len(df)} precomputed relational patterns from {cache_path.as_uri()}")
 
     # Prune by support and confidence
-    df = df[(df["support"] >= min_support) & (df["confidence"] >= min_confidence)]
+    sufficient_support = (df[triple_analysis.SUPPORT_COLUMN_NAME] >= min_support)
+    sufficient_confidence = (df[triple_analysis.CONFIDENCE_COLUMN_NAME] >= min_confidence)
+    df = df[sufficient_support & sufficient_confidence]
 
     if drop_confidence:
-        df = df[["relation_id", "pattern"]].drop_duplicates()
+        df = df[[triple_analysis.RELATION_ID_COLUMN_NAME, triple_analysis.PATTERN_TYPE_COLUMN_NAME]].drop_duplicates()
 
-    return df
+    return triple_analysis.add_relation_labels(
+        df=df,
+        add_labels=add_labels,
+        label_to_id=dataset.relation_to_id,
+    )
+
+
+def get_relation_cardinality_types_df(
+    *,
+    dataset: Dataset,
+    parts: Optional[Collection[str]] = None,
+    add_labels: bool = True,
+) -> pd.DataFrame:
+    r"""
+    Determine the relation cardinality types.
+
+    The possible types are given in relation_cardinality_types.
+
+    .. note ::
+        In the current implementation, we have by definition
+
+        .. math ::
+            1 = \sum_{type} conf(relation, type)
+
+    .. note ::
+       These relation types are also mentioned in [wang2014]_. However, the paper does not provide any details on
+       their definition, nor is any code provided. Thus, their exact procedure is unknown and may not coincide with this
+       implementation.
+
+    :param dataset:
+        The dataset to investigate.
+    :param parts:
+        Only use certain parts of the dataset, e.g., train triples. Defaults to using all triples, i.e.
+        {"training", "validation", "testing}.
+    :param add_labels:
+        Whether to add relation labels (if available).
+
+    :return:
+        A dataframe with columns ( relation_id | relation_type )
+    """
+    # TODO: Consider merging with other analysis methods
+    parts = _normalize_parts(dataset=dataset, parts=parts)
+    mapped_triples = _get_mapped_triples(dataset=dataset, parts=parts)
+    return triple_analysis.relation_cardinality_types(
+        mapped_triples=mapped_triples,
+        add_labels=add_labels,
+        label_to_id=dataset.relation_to_id,
+    )
+
+
+def get_relation_injectivity_df(
+    *,
+    dataset: Dataset,
+    parts: Optional[Collection[str]] = None,
+    add_labels: bool = True,
+) -> pd.DataFrame:
+    """
+    Calculate "soft" injectivity scores for each relation.
+
+    :param dataset:
+        The dataset to investigate.
+    :param parts:
+        Only use certain parts of the dataset, e.g., train triples. Defaults to using all triples, i.e.
+        {"training", "validation", "testing}.
+    :param add_labels:
+        Whether to add relation labels (if available).
+
+    :return:
+        A dataframe with one row per relation, its number of occurrences and head / tail injectivity scores.
+    """
+    # TODO: Consider merging with other analysis methods
+    parts = _normalize_parts(dataset=dataset, parts=parts)
+    mapped_triples = _get_mapped_triples(dataset=dataset, parts=parts)
+    return triple_analysis.relation_injectivity(
+        mapped_triples=mapped_triples,
+        add_labels=add_labels,
+        label_to_id=dataset.relation_to_id,
+    )
+
+
+def get_relation_functionality_df(
+    *,
+    dataset: Dataset,
+    parts: Optional[Collection[str]] = None,
+    add_labels: bool = True,
+) -> pd.DataFrame:
+    """
+    Calculate the functionality and inverse functionality score per relation.
+
+    The (inverse) functionality was proposed in [wang2018]_. It is defined as the number of unique head (tail) entities
+    divided by the of triples in which the relation occurs. Thus, its value range is [0, 1]. Smaller values indicate
+    that entities usually have more than one outgoing (incoming) triple with the corresponding relation type. Hence,
+    the score is related to the relation cardinality types.
+
+    :param dataset:
+        The dataset to investigate.
+    :param parts:
+        Only use certain parts of the dataset, e.g., train triples. Defaults to using all triples, i.e.
+        {"training", "validation", "testing}.
+    :param add_labels:
+        Whether to add relation labels (if available).
+
+    :return:
+        A dataframe with columns (relation_id | functionality | inverse functionality)
+
+    .. [wang2018]
+        Wang, Z., *et al.* (2018). `Cross-lingual Knowledge Graph Alignment via Graph Convolutional Networks
+        <https://doi.org/10.18653/v1/D18-1032>`_. Proceedings of the 2018 Conference on Empirical Methods in
+        Natural Language Processing, 349–357.
+    """
+    # TODO: Consider merging with other analysis methods
+    parts = _normalize_parts(dataset=dataset, parts=parts)
+    mapped_triples = _get_mapped_triples(dataset=dataset, parts=parts)
+    return triple_analysis.get_relation_functionality(
+        mapped_triples,
+        add_labels=add_labels,
+        label_to_id=dataset.relation_to_id,
+    )
