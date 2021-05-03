@@ -279,10 +279,12 @@ def get_relation_pattern_types_df(
         logger.info(f"Loaded {len(df)} precomputed relational patterns from {cache_path.as_uri()}")
 
     # Prune by support and confidence
-    df = df[(df["support"] >= min_support) & (df["confidence"] >= min_confidence)]
+    sufficient_support = (df[triple_analysis.SUPPORT_COLUMN_NAME] >= min_support)
+    sufficient_confidence = (df[triple_analysis.CONFIDENCE_COLUMN_NAME] >= min_confidence)
+    df = df[sufficient_support & sufficient_confidence]
 
     if drop_confidence:
-        df = df[[triple_analysis.RELATION_ID_COLUMN_NAME, "pattern"]].drop_duplicates()
+        df = df[[triple_analysis.RELATION_ID_COLUMN_NAME, triple_analysis.PATTERN_TYPE_COLUMN_NAME]].drop_duplicates()
 
     return triple_analysis.add_relation_labels(
         df=df,
