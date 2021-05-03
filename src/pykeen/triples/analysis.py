@@ -51,12 +51,21 @@ RELATION_PATTERN_TYPES = {
     PATTERN_TYPE_COMPOSITION,
 }
 
+# column names
 COUNT_COLUMN_NAME = "count"
 ENTITY_ID_COLUMN_NAME = "entity_id"
 RELATION_ID_COLUMN_NAME = "relation_id"
 ENTITY_POSITION_COLUMN_NAME = "entity_position"
 RELATION_LABEL_COLUMN_NAME = "relation_label"
 ENTITY_LABEL_COLUMN_NAME = "entity_label"
+INVERSE_FUNCTIONALITY_COLUMN_NAME = "inverse_functionality"
+FUNCTIONALITY_COLUMN_NAME = "functionality"
+CARDINALITY_TYPE_COLUMN_NAME = "relation_type"
+PATTERN_TYPE_COLUMN_NAME = "pattern"
+CONFIDENCE_COLUMN_NAME = "confidence"
+SUPPORT_COLUMN_NAME = "support"
+POSITION_TAIL = "tail"
+POSITION_HEAD = "head"
 
 
 class PatternMatch(NamedTuple):
@@ -383,8 +392,8 @@ def get_entity_counts(
     """
     data = []
     for label, col in (
-        ("head", 0),
-        ("tail", 2),
+        (POSITION_HEAD, 0),
+        (POSITION_TAIL, 2),
     ):
         unique, counts = _get_counts(mapped_triples=mapped_triples, column=col)
         df = pd.DataFrame({
@@ -456,8 +465,8 @@ def relation_pattern_types(
     # create data frame
     return pd.DataFrame(
         data=list(base),
-        columns=[RELATION_ID_COLUMN_NAME, "pattern", "support", "confidence"],
-    ).sort_values(by=["pattern", RELATION_ID_COLUMN_NAME, "confidence", "support"])
+        columns=[RELATION_ID_COLUMN_NAME, PATTERN_TYPE_COLUMN_NAME, SUPPORT_COLUMN_NAME, CONFIDENCE_COLUMN_NAME],
+    ).sort_values(by=[PATTERN_TYPE_COLUMN_NAME, RELATION_ID_COLUMN_NAME, CONFIDENCE_COLUMN_NAME, SUPPORT_COLUMN_NAME])
 
 
 def relation_injectivity(
@@ -468,7 +477,7 @@ def relation_injectivity(
     it = _help_iter_relation_cardinality_types(mapped_triples)
     df = pd.DataFrame(
         data=it,
-        columns=[RELATION_ID_COLUMN_NAME, "support", "head", "tail"],
+        columns=[RELATION_ID_COLUMN_NAME, SUPPORT_COLUMN_NAME, POSITION_HEAD, POSITION_TAIL],
     )
     return _add_relation_labels(df, add_labels=add_labels, label_to_id=label_to_id)
 
@@ -519,7 +528,12 @@ def relation_cardinality_types(
     # create data frame
     df = pd.DataFrame(
         data=base,
-        columns=[RELATION_ID_COLUMN_NAME, "relation_type", "support", "confidence"],
+        columns=[
+            RELATION_ID_COLUMN_NAME,
+            CARDINALITY_TYPE_COLUMN_NAME,
+            SUPPORT_COLUMN_NAME,
+            CONFIDENCE_COLUMN_NAME,
+        ],
     )
     return _add_relation_labels(df, add_labels=add_labels, label_to_id=label_to_id)
 
@@ -575,9 +589,9 @@ def get_relation_functionality(
         h=["nunique", COUNT_COLUMN_NAME],
         t="nunique",
     ))
-    df["functionality"] = df[("h", "nunique")] / df[("h", COUNT_COLUMN_NAME)]
-    df["inverse_functionality"] = df[("t", "nunique")] / df[("h", COUNT_COLUMN_NAME)]
-    df = df[["functionality", "inverse_functionality"]]
+    df[FUNCTIONALITY_COLUMN_NAME] = df[("h", "nunique")] / df[("h", COUNT_COLUMN_NAME)]
+    df[INVERSE_FUNCTIONALITY_COLUMN_NAME] = df[("t", "nunique")] / df[("h", COUNT_COLUMN_NAME)]
+    df = df[[FUNCTIONALITY_COLUMN_NAME, INVERSE_FUNCTIONALITY_COLUMN_NAME]]
     df.columns = df.columns.droplevel(1)
     df.index.name = RELATION_ID_COLUMN_NAME
     df = df.reset_index()
