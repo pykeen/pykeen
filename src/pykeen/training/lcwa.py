@@ -4,14 +4,14 @@
 
 import logging
 from math import ceil
-from typing import Optional, Tuple
+from typing import Optional
 
 import torch
 
 from .training_loop import TrainingLoop
 from .utils import apply_label_smoothing
 from ..triples import CoreTriplesFactory, Instances
-from ..typing import MappedTriples
+from ..triples.instances import LCWABatchType
 
 __all__ = [
     'LCWATrainingLoop',
@@ -20,19 +20,19 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class LCWATrainingLoop(TrainingLoop):
+class LCWATrainingLoop(TrainingLoop[LCWABatchType]):
     """A training loop that uses the local closed world assumption training approach."""
 
     def _create_instances(self, triples_factory: CoreTriplesFactory) -> Instances:  # noqa: D102
         return triples_factory.create_lcwa_instances()
 
     @staticmethod
-    def _get_batch_size(batch: Tuple[MappedTriples, torch.FloatTensor]) -> int:  # noqa: D102
+    def _get_batch_size(batch: LCWABatchType) -> int:  # noqa: D102
         return batch[0].shape[0]
 
     def _process_batch(
         self,
-        batch: Tuple[MappedTriples, torch.FloatTensor],
+        batch: LCWABatchType,
         start: int,
         stop: int,
         label_smoothing: float = 0.0,
