@@ -20,7 +20,12 @@ logger = logging.getLogger(__name__)
 __all__ = [
     "add_entity_labels",
     "add_relation_labels",
+    "entity_relation_co_occurrence",
+    "get_entity_counts",
+    "get_relation_counts",
+    "get_relation_functionality",
     "relation_cardinality_types",
+    "relation_injectivity",
     "relation_pattern_types",
 ]
 
