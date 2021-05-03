@@ -752,3 +752,26 @@ class TestModelUtilities(unittest.TestCase):
                     exp_content.add(tuple(c))
 
             assert actual_content == exp_content
+
+
+class ERModelTests(cases.ModelTestCase):
+    """Tests for the general ER-Model."""
+
+    cls = pykeen.models.ERModel
+    kwargs = dict(
+        interaction="distmult",  # use name to test interaction resolution
+    )
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        embedding_dim = kwargs.pop("embedding_dim")
+        kwargs["entity_representations"] = EmbeddingSpecification(embedding_dim=embedding_dim)
+        kwargs["relation_representations"] = EmbeddingSpecification(embedding_dim=embedding_dim)
+        return kwargs
+
+    def test_has_hpo_defaults(self):  # noqa: D102
+        raise unittest.SkipTest(f"Base class {self.cls} does not provide HPO defaults.")
+
+    def test_reset_parameters_constructor_call(self):  # noqa: D102
+        # TODO: Do we really want this?
+        raise unittest.SkipTest(f"Base class {self.cls} does not call reset_parameters in the constructor.")
