@@ -342,6 +342,21 @@ def get_relation_injectivity_df(
     parts: Optional[Collection[str]] = None,
     add_labels: bool = True,
 ) -> pd.DataFrame:
+    """
+    Calculate "soft" injectivity scores for each relation.
+
+    :param dataset:
+        The dataset to investigate.
+    :param parts:
+        Only use certain parts of the dataset, e.g., train triples. Defaults to using all triples, i.e.
+        {"training", "validation", "testing}.
+    :param add_labels:
+        Whether to add relation labels (if available).
+
+    :return:
+        A dataframe with one row per relation, its number of occurrences and head / tail injectivity scores.
+    """
+    # TODO: Consider merging with other analysis methods
     parts = _normalize_parts(dataset=dataset, parts=parts)
     mapped_triples = _get_mapped_triples(dataset=dataset, parts=parts)
     return triple_analysis.relation_injectivity(
