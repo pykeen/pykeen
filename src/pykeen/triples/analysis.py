@@ -77,13 +77,20 @@ POSITION_HEAD = "head"
 
 def _add_labels(
     df: pd.DataFrame,
+    add_labels: bool,
     label_to_id: Optional[Mapping[str, int]],
     id_column: str,
     label_column: str,
+    label_to_id_mapping_name: str,
+    triples_factory: Optional[TriplesFactory] = None,
 ) -> pd.DataFrame:
     """Add labels to a dataframe."""
-    if label_to_id is None:
+    if not add_labels:
         return df
+    if not label_to_id:
+        if not triples_factory:
+            raise ValueError
+        label_to_id = getattr(triples_factory, label_to_id_mapping_name)
     return pd.merge(
         left=df,
         right=pd.DataFrame(
@@ -102,17 +109,14 @@ def add_entity_labels(
     triples_factory: Optional[TriplesFactory] = None,
 ) -> pd.DataFrame:
     """Add entity labels to a dataframe."""
-    if not add_labels:
-        return df
-    if not label_to_id:
-        if not triples_factory:
-            raise ValueError
-        label_to_id = triples_factory.relation_to_id
     return _add_labels(
         df=df,
+        add_labels=add_labels,
         label_to_id=label_to_id,
         id_column=ENTITY_ID_COLUMN_NAME,
         label_column=ENTITY_LABEL_COLUMN_NAME,
+        label_to_id_mapping_name="entity_to_id",
+        triples_factory=triples_factory,
     )
 
 
@@ -124,17 +128,14 @@ def add_relation_labels(
     triples_factory: Optional[TriplesFactory] = None,
 ) -> pd.DataFrame:
     """Add relation labels to a dataframe."""
-    if not add_labels:
-        return df
-    if not label_to_id:
-        if not triples_factory:
-            raise ValueError
-        label_to_id = triples_factory.relation_to_id
     return _add_labels(
         df=df,
+        add_labels=add_labels,
         label_to_id=label_to_id,
         id_column=RELATION_ID_COLUMN_NAME,
         label_column=RELATION_LABEL_COLUMN_NAME,
+        label_to_id_mapping_name="relation_to_id",
+        triples_factory=triples_factory,
     )
 
 
