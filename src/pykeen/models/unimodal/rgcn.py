@@ -26,33 +26,37 @@ class RGCN(
 ):
     r"""An implementation of R-GCN from [schlichtkrull2018]_.
 
-    The Relational Graph Convolutional Network (R-GCN) [schlichtkrull2018] builds on an adapted GCN that can be applied
-    on multi-relational data such as Knowledge Graphs.
-    More concretely, the RGCN model consists of two major parts: i.) a GCN-based entity-encoder that computes
-    latent representations for entities and ii.) an arbitrary interaction model that computes the plausibility of facts.
+    The Relational Graph Convolutional Network (R-GCN) builds on an adapted GCN that can be applied
+    on multi-relational data such as Knowledge Graphs. More concretely, the model consists of two major parts:
+
+    1. A GCN-based entity-encoder that computes latent representations for entities
+    2. An arbitrary interaction model that computes the plausibility of facts.
+
     The GCN employed by the entity-encoder is adapted to include typed edges.
     The forward pass of the GCN is defined by:
 
      .. math::
 
         \textbf{e}_{i}^{l+1} = \sigma \left( \sum_{r \in \mathcal{R}}\sum_{j\in \mathcal{N}_{i}^{r}}
-        \frac{1}{c_{i,r}} \textbf{W}_{r}^{l} \textbf{e}_{j}^{l} + \textbf{W}_{0}^{l} \textbf{e}_{i}^{l}\right),
+        \frac{1}{c_{i,r}} \textbf{W}_{r}^{l} \textbf{e}_{j}^{l} + \textbf{W}_{0}^{l} \textbf{e}_{i}^{l}\right)
 
     where $\mathcal{N}_{i}^{r}$ is the set of neighbors of node $i$ that are connected to
     $i$ by relation $r$, $c_{i,r}$ is a fixed normalization constant (but it can also be introduced as an additional
     parameter), and $\textbf{W}_{r}^{l} \in \mathbb{R}^{d^{(l)} \times d^{(l)}}$ and
     $\textbf{W}_{0}^{l} \in \mathbb{R}^{d^{(l)} \times d^{(l)}}$ are weight matrices of the `l`-th layer of the
-    RGCN.
+    R-GCN.
+
     The encoder aggregates for each node $e_i$ the latent representations of its neighbors and its
     own latent representation $e_{i}^{l}$ into a new latent representation $e_{i}^{l+1}$.
-    In contrast to standard GCN, RGCN defines relation specific transformations
+    In contrast to standard GCN, R-GCN defines relation specific transformations
     $\textbf{W}_{r}^{l}$ which depend on the type and direction of an edge.
     The interaction model computes the plausibility score given the node representations $\textbf{e}_{i}^{L}$ that are
-    computed by the last layer $L$ of the RGCN, i.e., for a given triple $(h,r,t) \in \mathcal{K}$, the
+    computed by the last layer $L$ of the R-GCN, i.e., for a given triple $(h,r,t) \in \mathcal{K}$, the
     corresponding node representations $h:=e_i^L$ and $t:=e_j^L$ are used:
 
     .. math::
-        f(h,r,t) = \textbf{h} \textbf{R}_{r} \textbf{t} \enspace,
+
+        f(h,r,t) = \textbf{h} \textbf{R}_{r} \textbf{t}
 
     where $\textbf{R}_{r} \in \mathbb{R}^{d \times d}$ is a diagonal matrix and $f(h,r,t)$ is the
     interaction model of DistMult (DistMult was employed in the original work, however, the general approach is not
@@ -60,25 +64,28 @@ class RGCN(
     To reduce the number of parameters required for the relation-specific transformation matrices and to avoid
     over-fitting, two regularization approaches are presented:
 
-    The first approach (_basis decomposition_), represents the relation-specific transformation matrices as a
-    weighted combination of base matrices, $\{\mathbf{B}_i^l\}_{i=1}^{B}$, i.e.,
+    The first approach (basis decomposition; :class:`pykeen.nn.message_passing.BlockDecomposition`), represents
+    the relation-specific transformation matrices as a weighted combination of base matrices,
+    $\{\mathbf{B}_i^l\}_{i=1}^{B}$, i.e.,
 
     .. math::
-        \mathbf{W}_r^l = \sum \limits_{b=1}^B \alpha_{rb} \mathbf{B}^l_i .
 
-    The second approach (_block-diagonal decomposition_), restricts each transformation matrix to a
-    block-diagonal-matrix, i.e.,
+        \mathbf{W}_r^l = \sum \limits_{b=1}^B \alpha_{rb} \mathbf{B}^l_i
+
+    The second approach (block-diagonal decomposition; :class:`pykeen.nn.message_passing.BasesDecomposition`),
+    restricts each transformation matrix to a block-diagonal-matrix, i.e.,
 
     .. math::
+
         \mathbf{W}_r^l = diag(\mathbf{B}_{r,1}^l, \ldots, \mathbf{B}_{r,B}^l)
 
     where $\mathbf{B}_{r,i} \in \mathbb{R}^{(d^{(l) }/ B) \times (d^{(l)} / B)}$.
 
     .. seealso::
 
-       - `Pytorch Geometric"s implementation of R-GCN
+       - `Pytorch Geometric's implementation of R-GCN
          <https://github.com/rusty1s/pytorch_geometric/blob/1.3.2/examples/rgcn.py>`_
-       - `DGL"s implementation of R-GCN
+       - `DGL's implementation of R-GCN
          <https://github.com/dmlc/dgl/tree/v0.4.0/examples/pytorch/rgcn>`_
     ---
     citation:
