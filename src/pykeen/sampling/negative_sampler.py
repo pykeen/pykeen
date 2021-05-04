@@ -3,7 +3,7 @@
 """Basic structure for a negative sampler."""
 
 from abc import ABC, abstractmethod
-from typing import Any, ClassVar, List, Mapping, Optional, Sequence, Tuple
+from typing import Any, ClassVar, List, Mapping, Optional, Tuple
 
 import torch
 from class_resolver import HintOrType
@@ -16,6 +16,7 @@ __all__ = [
     'NegativeSampler',
 ]
 
+SLCWASampleType = MappedTriples
 SLCWABatchType = Tuple[MappedTriples, MappedTriples, Optional[torch.BoolTensor]]
 
 
@@ -94,7 +95,7 @@ class NegativeSampler(ABC):
         """
         raise NotImplementedError
 
-    def collate(self, batch: List[MappedTriples]) -> SLCWABatchType:
+    def collate(self, batch: List[SLCWASampleType]) -> SLCWABatchType:
         """
         Collate a batch of positive triples, and add negative samples.
 

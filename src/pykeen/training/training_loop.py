@@ -11,7 +11,7 @@ import time
 from abc import ABC, abstractmethod
 from datetime import datetime
 from hashlib import md5
-from typing import Any, Generic, List, Mapping, Optional, Tuple, Type, Union
+from typing import Any, Callable, Generic, List, Mapping, Optional, Tuple, Type, TypeVar, Union
 
 import numpy as np
 import torch
@@ -26,7 +26,6 @@ from ..stoppers import Stopper
 from ..trackers import ResultTracker
 from ..training.schlichtkrull_sampler import GraphSampler
 from ..triples import CoreTriplesFactory, Instances
-from ..triples.instances import BatchType
 from ..utils import (
     format_relative_comparison, get_batchnorm_modules, is_cuda_oom_error, is_cudnn_error,
     normalize_string,
@@ -40,6 +39,9 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
+
+SampleType = TypeVar("SampleType")
+BatchType = TypeVar("BatchType")
 
 
 class NonFiniteLossError(RuntimeError):
@@ -78,10 +80,10 @@ def _get_optimizer_kwargs(optimizer: Optimizer) -> Mapping[str, Any]:
     return optimizer_kwargs
 
 
-class TrainingLoop(Generic[BatchType], ABC):
+class TrainingLoop(Generic[SampleType, BatchType], ABC):
     """A training loop."""
 
-    training_instances: Optional[Instances[BatchType]]
+    training_instances: Optional[Instances[SampleType]]
     losses_per_epochs: List[float]
     loss_blacklist: Optional[List[Type[Loss]]] = None
 
@@ -513,6 +515,7 @@ class TrainingLoop(Generic[BatchType], ABC):
             shuffle=shuffle,
             num_workers=num_workers,
             drop_last=drop_last,
+            collate_fn=self.get_collator(),
         )
 
         # Save the time to track when the saved point was available
@@ -684,6 +687,10 @@ class TrainingLoop(Generic[BatchType], ABC):
     def _create_instances(self, triples_factory: CoreTriplesFactory) -> Instances:
         """Create the training instances at the beginning of the training loop."""
         raise NotImplementedError
+
+    def get_collator(self) -> Optional[Callable[[List[SampleType]], BatchType]]:
+        """Get the batch collator."""
+        return None
 
     @abstractmethod
     def _process_batch(

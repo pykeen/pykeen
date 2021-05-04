@@ -3,7 +3,7 @@
 """Training KGE models based on the sLCWA."""
 
 import logging
-from typing import Any, Mapping, Optional, Type
+from typing import Any, Callable, List, Mapping, Optional, Type
 
 import torch
 from torch.optim.optimizer import Optimizer
@@ -13,8 +13,8 @@ from .utils import apply_label_smoothing
 from ..losses import CrossEntropyLoss
 from ..models import Model
 from ..sampling import NegativeSampler, negative_sampler_resolver
+from ..sampling.negative_sampler import SLCWABatchType, SLCWASampleType
 from ..triples import CoreTriplesFactory, Instances
-from ..triples.instances import SLCWABatchType
 
 __all__ = [
     'SLCWATrainingLoop',
@@ -71,6 +71,9 @@ class SLCWATrainingLoop(TrainingLoop[SLCWABatchType]):
 
     def _create_instances(self, triples_factory: CoreTriplesFactory) -> Instances:  # noqa: D102
         return triples_factory.create_slcwa_instances(negative_sampler=self.negative_sampler)
+
+    def get_collator(self) -> Optional[Callable[[List[SLCWASampleType]], SLCWABatchType]]:  # noqa: D102
+        return self.negative_sampler.collate
 
     @staticmethod
     def _get_batch_size(batch: SLCWABatchType) -> int:  # noqa: D102
