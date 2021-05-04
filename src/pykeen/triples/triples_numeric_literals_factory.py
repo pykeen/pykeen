@@ -12,7 +12,6 @@ import torch
 from .instances import MultimodalLCWAInstances, MultimodalSLCWAInstances
 from .triples_factory import TriplesFactory
 from .utils import load_triples
-from ..sampling import NegativeSampler
 from ..typing import EntityMapping, LabeledTriples
 
 __all__ = [
