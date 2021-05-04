@@ -28,8 +28,12 @@ class RGCN(
 
     The Relational Graph Convolutional Network (R-GCN) comprises two parts:
 
-    1. A GCN-based entity-encoder that computes enriched representations for entities, cf. `RGCNRepresentations`
-    2. An arbitrary interaction model which computes the plausibility of facts given the enriched representations.
+    1. A GCN-based entity-encoder that computes enriched representations for entities, cf. `RGCNRepresentations`. 
+       The GCN is modified to use different weights dependending on the type of the relation.
+    2. An arbitrary interaction model which computes the plausibility of facts given the enriched representations, 
+       cf. `InteractionModule`.
+       
+    # TODO: Move the following part to RGCNRepresentations
 
     The GCN employed by the entity-encoder is adapted to include typed edges.
     The forward pass of the GCN is defined by:
