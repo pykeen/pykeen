@@ -70,7 +70,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
         return self.negative_sampler.num_negs_per_pos
 
     def _create_instances(self, triples_factory: CoreTriplesFactory) -> Instances:  # noqa: D102
-        return triples_factory.create_slcwa_instances(negative_sampler=self.negative_sampler)
+        return triples_factory.create_slcwa_instances()
 
     def get_collator(self) -> Optional[Callable[[List[SLCWASampleType]], SLCWABatchType]]:  # noqa: D102
         return self.negative_sampler.collate
