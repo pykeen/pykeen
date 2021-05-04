@@ -3,9 +3,10 @@
 """Training KGE models based on the sLCWA."""
 
 import logging
-from typing import Any, Callable, List, Mapping, Optional, Type
+from typing import Any, Callable, List, Mapping, Optional
 
 import torch
+from class_resolver import HintOrType
 from torch.optim.optimizer import Optimizer
 
 from .training_loop import TrainingLoop
@@ -33,7 +34,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
         model: Model,
         triples_factory: CoreTriplesFactory,
         optimizer: Optional[Optimizer] = None,
-        negative_sampler_cls: Optional[Type[NegativeSampler]] = None,
+        negative_sampler: HintOrType[NegativeSampler] = None,
         negative_sampler_kwargs: Optional[Mapping[str, Any]] = None,
         automatic_memory_optimization: bool = True,
     ):
@@ -42,7 +43,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
         :param model: The model to train
         :param triples_factory: The triples factory to train over
         :param optimizer: The optimizer to use while training the model
-        :param negative_sampler_cls: The class of the negative sampler
+        :param negative_sampler: The class, instance, or name of the negative sampler
         :param negative_sampler_kwargs: Keyword arguments to pass to the negative sampler class on instantiation
          for every positive one
         :param automatic_memory_optimization:
@@ -56,7 +57,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
             automatic_memory_optimization=automatic_memory_optimization,
         )
         self.negative_sampler = negative_sampler_resolver.make(
-            query=negative_sampler_cls,
+            query=negative_sampler,
             pos_kwargs=negative_sampler_kwargs,
             triples_factory=triples_factory,
         )
@@ -72,7 +73,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
     def _create_instances(self, triples_factory: CoreTriplesFactory) -> Instances:  # noqa: D102
         return triples_factory.create_slcwa_instances()
 
-    def get_collator(self) -> Optional[Callable[[List[SLCWASampleType]], SLCWABatchType]]:  # noqa: D102
+    def get_collator(self) -> Callable[[List[SLCWASampleType]], SLCWABatchType]:  # noqa: D102
         return self.negative_sampler.collate
 
     @staticmethod
