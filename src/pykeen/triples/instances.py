@@ -3,14 +3,13 @@
 """Implementation of basic instance factory which creates just instances based on standard KG triples."""
 from abc import ABC
 from dataclasses import dataclass
-from typing import Generic, Mapping, Optional, Tuple, TypeVar
+from typing import Generic, Mapping, Tuple, TypeVar
 
 import numpy as np
 import scipy.sparse
 import torch
 from torch.utils import data
 
-from ..sampling import NegativeSampler
 from ..typing import MappedTriples
 from ..utils import fix_dataclass_init_docs
 
@@ -24,7 +23,6 @@ __all__ = [
 ]
 
 BatchType = TypeVar("BatchType")
-SLCWABatchType = Tuple[MappedTriples, MappedTriples, Optional[torch.BoolTensor]]
 LCWABatchType = Tuple[MappedTriples, torch.FloatTensor]
 
 
@@ -40,22 +38,17 @@ class Instances(data.Dataset, Generic[BatchType], ABC):
 
 @fix_dataclass_init_docs
 @dataclass
-class SLCWAInstances(Instances[SLCWABatchType]):
+class SLCWAInstances(Instances[MappedTriples]):
     """Triples and mappings to their indices for sLCWA."""
 
     #: The mapped triples, shape: (num_triples, 3)
     mapped_triples: MappedTriples
 
-    #: The negative sampler
-    negative_sampler: NegativeSampler
-
     def __len__(self):  # noqa: D105
         return self.mapped_triples.shape[0]
 
-    def __getitem__(self, item: int) -> SLCWABatchType:  # noqa: D105
-        positive = self.mapped_triples[item]
-        negative, mask = self.negative_sampler.sample(positive_batch=positive)
-        return positive, negative, mask
+    def __getitem__(self, item: int) -> MappedTriples:  # noqa: D105
+        return self.mapped_triples[item]
 
 
 @fix_dataclass_init_docs
