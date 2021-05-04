@@ -23,13 +23,14 @@ from .init import init_phases, xavier_normal_, xavier_normal_norm_, xavier_unifo
 from .message_passing import Decomposition, decomposition_resolver
 from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolver
 from ..regularizers import Regularizer
-from ..triples import CoreTriplesFactory, TriplesFactory
+from ..triples import CoreTriplesFactory
 from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer
 from ..utils import Bias, activation_resolver, clamp_norm, complex_normalize, convert_to_canonical_shape
 
 __all__ = [
     'RepresentationModule',
     'Embedding',
+    'LiteralRepresentation',
     'EmbeddingSpecification',
 ]
 
@@ -345,6 +346,28 @@ class Embedding(RepresentationModule):
         return x
 
 
+class LiteralRepresentation(Embedding):
+    """Literal representations."""
+
+    def __init__(
+        self,
+        numeric_literals: torch.FloatTensor,
+    ):
+        self._numeric_literals = numeric_literals
+        num_embeddings, embedding_dim = numeric_literals.shape
+        super().__init__(
+            num_embeddings=num_embeddings,
+            embedding_dim=embedding_dim,
+            initializer=self._initialize_literals,
+        )
+        # freeze
+        self._embeddings.requires_grad_(False)
+
+    # use this instead of a lambda to make sure that it can be pickled
+    def _initialize_literals(self, _) -> torch.FloatTensor:
+        return self._numeric_literals
+
+
 @dataclass
 class EmbeddingSpecification:
     """An embedding specification."""
@@ -446,7 +469,7 @@ class RGCNRepresentations(RepresentationModule):
 
     def __init__(
         self,
-        triples_factory: TriplesFactory,
+        triples_factory: CoreTriplesFactory,
         embedding_specification: EmbeddingSpecification,
         num_layers: int = 2,
         use_bias: bool = True,

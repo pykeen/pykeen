@@ -2,7 +2,6 @@
 
 """Run landmark experiments."""
 
-import json
 import logging
 import os
 import shutil
@@ -194,19 +193,15 @@ def ablation(
 ) -> None:
     """Generate a set of HPO configurations.
 
-    A sample file can be run with ``pykeen experiment ablation tests/resources/hpo_complex_nations.json``.
+    A sample file can be run with ``pykeen experiments ablation tests/resources/hpo_complex_nations.json``.
     """
-    from pykeen.ablation import ablation_pipeline
+    from ..ablation.ablation import prepare_ablation_from_path, _run_ablation_experiments
+    directories = prepare_ablation_from_path(path=path, directory=directory, save_artifacts=save_artifacts)
 
-    with open(path) as file:
-        config = json.load(file)
-
-    ablation_pipeline(
-        config=config,
-        directory=directory,
-        dry_run=dry_run,
+    _run_ablation_experiments(
+        directories=directories,
         best_replicates=best_replicates,
-        save_artifacts=save_artifacts,
+        dry_run=dry_run,
         move_to_cpu=move_to_cpu,
         discard_replicates=discard_replicates,
     )

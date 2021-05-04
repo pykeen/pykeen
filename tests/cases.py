@@ -32,7 +32,7 @@ from pykeen.losses import Loss, PairwiseLoss, PointwiseLoss, SetwiseLoss
 from pykeen.models import EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, RESCAL
 from pykeen.models.cli import build_cli_from_cls
 from pykeen.nn.emb import RepresentationModule
-from pykeen.nn.modules import Interaction
+from pykeen.nn.modules import FunctionalInteraction, Interaction, LiteralInteraction
 from pykeen.regularizers import LpRegularizer, Regularizer
 from pykeen.trackers import ResultTracker
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
@@ -90,10 +90,7 @@ class DatasetTestCase(unittest.TestCase):
         self.assertFalse(self.dataset._loaded_validation)
 
         # Load
-        try:
-            self.dataset._load()
-        except (EOFError, IOError):
-            self.skipTest('Problem with connection. Try this test again later.')
+        self.dataset._load()
 
         self.assertIsInstance(self.dataset.training, TriplesFactory)
         self.assertIsInstance(self.dataset.testing, TriplesFactory)
@@ -272,7 +269,7 @@ class InteractionTestCase(
             )
             for prefix_shape, weight_shapes in zip(
                 shapes,
-                [self.cls.entity_shape, self.cls.relation_shape, self.cls.entity_shape],
+                [self.instance.entity_shape, self.instance.relation_shape, self.instance.entity_shape],
             )
         )
         return unpack_singletons(*result)
@@ -445,6 +442,9 @@ class InteractionTestCase(
 
     def test_forward_consistency_with_functional(self):
         """Test forward's consistency with functional."""
+        if not isinstance(self.instance, FunctionalInteraction):
+            self.skipTest('Not a functional interaction')
+
         # set in eval mode (otherwise there are non-deterministic factors like Dropout
         self.instance.eval()
         for hs, rs, ts in self._get_test_shapes():
@@ -462,10 +462,14 @@ class InteractionTestCase(
             # test multiple different initializations
             self.instance.reset_parameters()
             h, r, t = self._get_hrt((1, 1, 1, 1), (1, 1, 1, 1), (1, 1, 1, 1))
-            kwargs = self.instance._prepare_for_functional(h=h, r=r, t=t)
 
-            # calculate by functional
-            scores_f = self.cls.func(**kwargs).view(-1)
+            if isinstance(self.instance, FunctionalInteraction):
+                kwargs = self.instance._prepare_for_functional(h=h, r=r, t=t)
+                # calculate by functional
+                scores_f = self.cls.func(**kwargs).view(-1)
+            else:
+                kwargs = dict(h=h, r=r, t=t)
+                scores_f = self.instance(h=h, r=r, t=t)
 
             # calculate manually
             scores_f_manual = self._exp_score(**kwargs).view(-1)
@@ -839,6 +843,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         """Test that sLCWA training does not fail."""
         loop = SLCWATrainingLoop(
             model=self.instance,
+            triples_factory=self.factory,
             optimizer=Adagrad(params=self.instance.get_grad_params(), lr=0.001),
             **(self.training_loop_kwargs or {}),
         )
@@ -855,6 +860,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         """Test that LCWA training does not fail."""
         loop = LCWATrainingLoop(
             model=self.instance,
+            triples_factory=self.factory,
             optimizer=Adagrad(params=self.instance.get_grad_params(), lr=0.001),
             **(self.training_loop_kwargs or {}),
         )
@@ -868,7 +874,13 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
 
     def _safe_train_loop(self, loop: TrainingLoop, num_epochs, batch_size, sampler):
         try:
-            losses = loop.train(num_epochs=num_epochs, batch_size=batch_size, sampler=sampler, use_tqdm=False)
+            losses = loop.train(
+                triples_factory=self.factory,
+                num_epochs=num_epochs,
+                batch_size=batch_size,
+                sampler=sampler,
+                use_tqdm=False,
+            )
         except RuntimeError as e:
             if str(e) == 'fft: ATen not compiled with MKL support':
                 self.skipTest(str(e))
@@ -967,7 +979,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
             msg=f'''
 Command
 =======
-$ pykeen train {self.cls.__name__.lower()} {' '.join(args)}
+$ pykeen train {self.cls.__name__.lower()} {' '.join(map(str, args))}
 
 Output
 ======
@@ -1318,3 +1330,14 @@ class BasesDecompositionTestCase(DecompositionTestCase):
     """Tests for bases Decomposition."""
 
     cls = pykeen.nn.message_passing.BasesDecomposition
+
+
+class LiteralTestCase(InteractionTestCase):
+    """Tests for literal ineractions."""
+
+    cls = LiteralInteraction
+
+    def _exp_score(self, h, r, t) -> torch.FloatTensor:  # noqa: D102
+        h_proj = self.instance.combination(*h)
+        t_proj = self.instance.combination(*t)
+        return self.instance.base(h_proj, r, t_proj)

@@ -2,12 +2,13 @@
 
 """Get triples from the Nations dataset."""
 
-import os
+import pathlib
 
 from docdata import parse_docdata
 
 from ..base import PathDataset
 from ..literal_base import NumericPathDataset
+from ...triples import TriplesNumericLiteralsFactory
 
 __all__ = [
     'NATIONS_TRAIN_PATH',
@@ -18,12 +19,12 @@ __all__ = [
     'NationsLiteral',
 ]
 
-HERE = os.path.abspath(os.path.dirname(__file__))
+HERE = pathlib.Path(__file__).resolve().parent
 
-NATIONS_TRAIN_PATH = os.path.join(HERE, 'train.txt')
-NATIONS_TEST_PATH = os.path.join(HERE, 'test.txt')
-NATIONS_VALIDATE_PATH = os.path.join(HERE, 'valid.txt')
-NATIONS_LITERALS_PATH = os.path.join(HERE, 'literals.txt')
+NATIONS_TRAIN_PATH = HERE.joinpath('train.txt')
+NATIONS_TEST_PATH = HERE.joinpath('test.txt')
+NATIONS_VALIDATE_PATH = HERE.joinpath('valid.txt')
+NATIONS_LITERALS_PATH = HERE.joinpath('literals.txt')
 
 
 @parse_docdata
@@ -62,6 +63,8 @@ class Nations(PathDataset):
 
 class NationsLiteral(NumericPathDataset):
     """The Nations dataset with literals."""
+
+    training: TriplesNumericLiteralsFactory
 
     def __init__(self, create_inverse_triples: bool = False, **kwargs):
         """Initialize the Nations dataset with literals.

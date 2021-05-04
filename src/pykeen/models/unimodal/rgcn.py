@@ -13,7 +13,7 @@ from ...nn.emb import EmbeddingSpecification, RGCNRepresentations
 from ...nn.message_passing import Decomposition
 from ...nn.modules import Interaction, interaction_resolver
 from ...nn.weighting import EdgeWeighting
-from ...triples import TriplesFactory
+from ...triples import CoreTriplesFactory
 from ...typing import Initializer, RelationRepresentation
 
 __all__ = [
@@ -107,7 +107,7 @@ class RGCN(
     def __init__(
         self,
         *,
-        triples_factory: TriplesFactory,
+        triples_factory: CoreTriplesFactory,
         embedding_dim: int = 500,
         num_layers: int = 2,
         # https://github.com/MichSchli/RelationPrediction/blob/c77b094fe5c17685ed138dae9ae49b304e0d8d89/code/encoders/affine_transform.py#L24-L28
