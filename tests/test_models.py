@@ -29,17 +29,17 @@ from tests.mocks import MockModel
 from tests.test_model_mode import SimpleInteractionModel
 
 SKIP_MODULES = {
-    Model,
-    _OldAbstractModel,
-    _NewAbstractModel,
-    # DummyModel,
-    LiteralModel,
-    EntityEmbeddingModel,
-    EntityRelationEmbeddingModel,
-    ERModel,
-    MockModel,
-    SimpleInteractionModel,
-} | set(LiteralModel.__subclasses__())
+                   Model,
+                   _OldAbstractModel,
+                   _NewAbstractModel,
+                   # DummyModel,
+                   LiteralModel,
+                   EntityEmbeddingModel,
+                   EntityRelationEmbeddingModel,
+                   ERModel,
+                   MockModel,
+                   SimpleInteractionModel,
+               } | set(LiteralModel.__subclasses__())
 
 
 class TestCompGCN(cases.ModelTestCase):
@@ -771,7 +771,3 @@ class ERModelTests(cases.ModelTestCase):
 
     def test_has_hpo_defaults(self):  # noqa: D102
         raise unittest.SkipTest(f"Base class {self.cls} does not provide HPO defaults.")
-
-    def test_reset_parameters_constructor_call(self):  # noqa: D102
-        # TODO: Do we really want this?
-        raise unittest.SkipTest(f"Base class {self.cls} does not call reset_parameters in the constructor.")
