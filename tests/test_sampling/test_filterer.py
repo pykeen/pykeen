@@ -22,7 +22,8 @@ class FiltererTest(unittest_templates.GenericTestCase[Filterer]):
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         self.generator = set_random_seed(seed=self.seed)[1]
-        kwargs["triples_factory"] = self.triples_factory = Nations().training
+        self.triples_factory = Nations().training
+        kwargs["mapped_triples"] = self.triples_factory.mapped_triples
         return kwargs
 
     def post_instantiation_hook(self) -> None:  # noqa: D102
