@@ -54,7 +54,6 @@ class NegativeSampler(ABC):
             triples_factory=triples_factory,
         ) if filtered else None
 
-    @abstractmethod
     def sample(self, positive_batch: torch.LongTensor) -> Tuple[torch.LongTensor, Optional[torch.Tensor]]:
         """
         Generate negative samples from the positive batch.
@@ -69,5 +68,25 @@ class NegativeSampler(ABC):
                 The negative batch. It holds batch_num_negatives <= num_negs_per_pos * batch_size.
             2. filter_mask: shape: (batch_size * num_negatives)
                 An optional filter mask to be applied to the repeated positive scores.
+        """
+        # create unfiltered negative batch
+        negative_batch = self._sample_no_filter(positive_batch=positive_batch)
+
+        if self.filterer is None:
+            return negative_batch, None
+
+        # If filtering is activated, all negative triples that are positive in the training dataset will be removed
+        return self.filterer(negative_batch=negative_batch)
+
+    @abstractmethod
+    def _sample_no_filter(self, positive_batch: torch.LongTensor) -> torch.LongTensor:
+        """
+        Generate negative samples from the positive batch without application of any filter.
+
+        :param positive_batch: shape: (batch_size, 3)
+            The positive triples.
+
+        :return: shape: (batch_size, num_negs_per_pos, 3)
+            The negative triples.
         """
         raise NotImplementedError

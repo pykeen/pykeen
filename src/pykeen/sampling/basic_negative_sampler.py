@@ -2,7 +2,7 @@
 
 """Negative sampling algorithm based on the work of of Bordes *et al.*."""
 import math
-from typing import Any, Collection, Mapping, Optional, Tuple
+from typing import Any, Collection, Mapping, Optional
 
 import torch
 from class_resolver import HintOrType
@@ -76,8 +76,7 @@ class BasicNegativeSampler(NegativeSampler):
         # Set the indices
         self._corruption_indices = [LOOKUP[side] for side in self.corruption_scheme]
 
-    def sample(self, positive_batch: torch.LongTensor) -> Tuple[torch.LongTensor, Optional[torch.Tensor]]:
-        """Generate negative samples from the positive batch."""
+    def _sample_no_filter(self, positive_batch: torch.LongTensor) -> torch.LongTensor:  # noqa: D102
         if self.num_negs_per_pos > 1:
             positive_batch = positive_batch.repeat(self.num_negs_per_pos, 1)
 
@@ -95,11 +94,8 @@ class BasicNegativeSampler(NegativeSampler):
             stop = min(start + split_idx, num_negs)
 
             # Relations have a different index maximum than entities
-            index_max = self.num_relations if index == 1 else self.num_entities
-
-            # If we do not use a filterer, we at least make sure to not replace the triples by the original value
-            if self.filterer is None:
-                index_max -= 1
+            # At least make sure to not replace the triples by the original value
+            index_max = (self.num_relations if index == 1 else self.num_entities) - 1
 
             negative_batch[start:stop, index] = torch.randint(
                 high=index_max,
@@ -110,15 +106,8 @@ class BasicNegativeSampler(NegativeSampler):
             # To make sure we don't replace the {head, relation, tail} by the
             # original value we shift all values greater or equal than the original value by one up
             # for that reason we choose the random value from [0, num_{heads, relations, tails} -1]
-            if self.filterer is None:
-                negative_batch[start:stop, index] += (
-                    negative_batch[start:stop, index] >= positive_batch[start:stop, index]
-                ).long()
+            negative_batch[start:stop, index] += (
+                negative_batch[start:stop, index] >= positive_batch[start:stop, index]
+            ).long()
 
-        # If filtering is activated, all negative triples that are positive in the training dataset will be removed
-        if self.filterer is not None:
-            negative_batch, batch_filter = self.filterer(negative_batch=negative_batch)
-        else:
-            batch_filter = None
-
-        return negative_batch, batch_filter
+        return negative_batch
