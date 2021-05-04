@@ -32,6 +32,10 @@ __all__ = [
     'Embedding',
     'LiteralRepresentation',
     'EmbeddingSpecification',
+    'RGCNRepresentations',
+    'CompGCNLayer',
+    'CombinedCompGCNRepresentations',
+    'SingleCompGCNRepresentation',
 ]
 
 logger = logging.getLogger(__name__)
