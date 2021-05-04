@@ -34,7 +34,7 @@ class RGCN(
     2. An arbitrary interaction model which computes the plausibility of facts given the enriched representations, 
        cf. :class:`pykeen.nn.modules.Interaction`.
 
-    # TODO: Move the following part to RGCNRepresentations
+    .. todo:: Move the following part to :class:`pykeen.nn.emb.RGCNRepresentations`
 
     The GCN employed by the entity encoder is adapted to include typed edges.
     The forward pass of the GCN is defined by:
