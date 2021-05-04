@@ -10,8 +10,7 @@ import torch
 import unittest_templates
 
 from pykeen.datasets import Nations
-from pykeen.sampling import BasicNegativeSampler, BernoulliNegativeSampler, NegativeSampler
-from pykeen.sampling.pseudo_type import PseudoTypedNegativeSampler
+from pykeen.sampling import BasicNegativeSampler, BernoulliNegativeSampler, NegativeSampler, PseudoTypedNegativeSampler
 from pykeen.training.schlichtkrull_sampler import GraphSampler, _compute_compressed_adjacency_list
 from pykeen.triples import SLCWAInstances, TriplesFactory
 from pykeen.typing import MappedTriples
