@@ -1,13 +1,17 @@
 # -*- coding: utf-8 -*-
 
 """An adapter for TensorBoard."""
+
 import datetime
 import pathlib
-from typing import Any, Dict, Mapping, Optional
+from typing import Any, Dict, Mapping, Optional, TYPE_CHECKING, Type
 
 from .base import ResultTracker
 from ..constants import PYKEEN_LOGS
 from ..utils import flatten_dictionary
+
+if TYPE_CHECKING:
+    import torch.utils.tensorboard
 
 __all__ = [
     'TensorBoardResultTracker',
@@ -16,6 +20,9 @@ __all__ = [
 
 class TensorBoardResultTracker(ResultTracker):
     """A tracker for TensorBoard."""
+
+    #: The class that's used to instantiate a summarywriter
+    SummaryWriter: Type['torch.utils.tensorboard.SummaryWriter']
 
     def __init__(
         self,
