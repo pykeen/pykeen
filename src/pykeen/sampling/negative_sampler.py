@@ -95,7 +95,8 @@ class NegativeSampler(ABC):
         """
         raise NotImplementedError
 
-    def collate(self, batch: List[SLCWASampleType]) -> SLCWABatchType:
+    # this is done for mypy: actually MappedTriples should be replaced by SLCWASampleType
+    def collate(self, batch: List[MappedTriples]) -> SLCWABatchType:
         """
         Collate a batch of positive triples, and add negative samples.
 
