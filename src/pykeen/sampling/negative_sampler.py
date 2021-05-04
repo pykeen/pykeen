@@ -10,7 +10,6 @@ from class_resolver import HintOrType
 
 from .filtering import Filterer, filterer_resolver
 from ..triples import CoreTriplesFactory
-from ..utils import normalize_string
 
 __all__ = [
     'NegativeSampler',
@@ -54,11 +53,6 @@ class NegativeSampler(ABC):
             pos_kwargs=filterer_kwargs,
             triples_factory=triples_factory,
         ) if filtered else None
-
-    @classmethod
-    def get_normalized_name(cls) -> str:
-        """Get the normalized name of the negative sampler."""
-        return normalize_string(cls.__name__, suffix=NegativeSampler.__name__)
 
     @abstractmethod
     def sample(self, positive_batch: torch.LongTensor) -> Tuple[torch.LongTensor, Optional[torch.Tensor]]:
