@@ -42,7 +42,7 @@ class TensorBoardResultTracker(ResultTracker):
             The additional run details which are presented as tags to be logged
         """
         from torch.utils.tensorboard import SummaryWriter as _SummaryWriter
-        self.SummaryWriter = _SummaryWriter
+        self.summary_writer_cls = _SummaryWriter
         self.tags = tags
 
         if experiment_path is None:
