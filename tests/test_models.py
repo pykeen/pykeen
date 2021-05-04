@@ -29,17 +29,18 @@ from tests.mocks import MockModel
 from tests.test_model_mode import SimpleInteractionModel
 
 SKIP_MODULES = {
-                   Model,
-                   _OldAbstractModel,
-                   _NewAbstractModel,
-                   # DummyModel,
-                   LiteralModel,
-                   EntityEmbeddingModel,
-                   EntityRelationEmbeddingModel,
-                   ERModel,
-                   MockModel,
-                   SimpleInteractionModel,
-               } | set(LiteralModel.__subclasses__())
+    Model,
+    _OldAbstractModel,
+    _NewAbstractModel,
+    # DummyModel,
+    LiteralModel,
+    EntityEmbeddingModel,
+    EntityRelationEmbeddingModel,
+    ERModel,
+    MockModel,
+    SimpleInteractionModel,
+}
+SKIP_MODULES.update(LiteralModel.__subclasses__())
 
 
 class TestCompGCN(cases.ModelTestCase):
