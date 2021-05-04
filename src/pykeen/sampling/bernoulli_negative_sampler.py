@@ -134,4 +134,4 @@ class BernoulliNegativeSampler(NegativeSampler):
         negative_batch[head_mask, 0] += (negative_batch[head_mask, 0] >= positive_batch[head_mask, 0]).long()
         negative_batch[tail_mask, 2] += (negative_batch[tail_mask, 2] >= positive_batch[tail_mask, 2]).long()
 
-        return negative_batch
+        return negative_batch.view(-1, self.num_negs_per_pos, 3)

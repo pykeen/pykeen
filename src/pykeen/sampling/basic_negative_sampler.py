@@ -110,4 +110,4 @@ class BasicNegativeSampler(NegativeSampler):
                 negative_batch[start:stop, index] >= positive_batch[start:stop, index]
             ).long()
 
-        return negative_batch
+        return negative_batch.view(-1, self.num_negs_per_pos, 3)
