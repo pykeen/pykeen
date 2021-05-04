@@ -29,7 +29,7 @@ class RGCN(
     The Relational Graph Convolutional Network (R-GCN) builds on an adapted GCN that can be applied
     on multi-relational data such as Knowledge Graphs. More concretely, the model consists of two major parts:
 
-    1. A GCN-based entity-encoder that computes enriched representations for entities
+    1. A GCN-based entity-encoder that computes enriched representations for entities, cf. `RGCNRepresentations`
     2. An arbitrary interaction model which computes the plausibility of facts given the enriched representations.
 
     The GCN employed by the entity-encoder is adapted to include typed edges.
