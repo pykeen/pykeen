@@ -92,7 +92,7 @@ class BernoulliNegativeSampler(NegativeSampler):
             # Set parameter for Bernoulli distribution
             self.corrupt_head_probability[r] = tph / (tph + hpt)
 
-    def _sample_no_filter(self, positive_batch: torch.LongTensor) -> torch.LongTensor:  # noqa: D102
+    def _corrupt_batch(self, positive_batch: torch.LongTensor) -> torch.LongTensor:  # noqa: D102
         if self.num_negs_per_pos > 1:
             positive_batch = positive_batch.repeat(self.num_negs_per_pos, 1)
 

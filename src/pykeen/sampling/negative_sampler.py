@@ -69,8 +69,8 @@ class NegativeSampler(ABC):
             2. filter_mask: shape: (batch_size * num_negatives)
                 An optional filter mask to be applied to the repeated positive scores.
         """
-        # create unfiltered negative batch
-        negative_batch = self._sample_no_filter(positive_batch=positive_batch)
+        # create unfiltered negative batch by corruption
+        negative_batch = self._corrupt_batch(positive_batch=positive_batch)
 
         if self.filterer is None:
             return negative_batch, None
@@ -79,7 +79,7 @@ class NegativeSampler(ABC):
         return self.filterer(negative_batch=negative_batch)
 
     @abstractmethod
-    def _sample_no_filter(self, positive_batch: torch.LongTensor) -> torch.LongTensor:
+    def _corrupt_batch(self, positive_batch: torch.LongTensor) -> torch.LongTensor:
         """
         Generate negative samples from the positive batch without application of any filter.
 
