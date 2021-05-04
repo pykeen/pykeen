@@ -56,5 +56,18 @@ class NegativeSampler(ABC):
 
     @abstractmethod
     def sample(self, positive_batch: torch.LongTensor) -> Tuple[torch.LongTensor, Optional[torch.Tensor]]:
-        """Generate negative samples from the positive batch."""
+        """
+        Generate negative samples from the positive batch.
+
+        :param positive_batch: shape: (batch_size, 3)
+            The positive triples.
+
+        :return:
+            A pair (negative_batch, filter_mask) where
+
+            1. negative_batch: shape: (batch_num_negatives, 3)
+                The negative batch. It holds batch_num_negatives <= num_negs_per_pos * batch_size.
+            2. filter_mask: shape: (batch_size * num_negatives)
+                An optional filter mask to be applied to the repeated positive scores.
+        """
         raise NotImplementedError
