@@ -20,7 +20,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class LCWATrainingLoop(TrainingLoop[LCWABatchType]):
+class LCWATrainingLoop(TrainingLoop[LCWABatchType, LCWABatchType]):
     """A training loop that uses the local closed world assumption training approach."""
 
     def _create_instances(self, triples_factory: CoreTriplesFactory) -> Instances:  # noqa: D102

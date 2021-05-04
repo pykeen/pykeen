@@ -23,7 +23,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class SLCWATrainingLoop(TrainingLoop[SLCWABatchType]):
+class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
     """A training loop that uses the stochastic local closed world assumption training approach."""
 
     loss_blacklist = [CrossEntropyLoss]
