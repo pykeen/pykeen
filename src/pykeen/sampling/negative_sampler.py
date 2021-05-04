@@ -55,7 +55,7 @@ class NegativeSampler(ABC):
         self.filterer = filterer_resolver.make(
             filterer,
             pos_kwargs=filterer_kwargs,
-            triples_factory=triples_factory,
+            mapped_triples=triples_factory.mapped_triples,
         ) if filtered else None
 
     def sample(self, positive_batch: torch.LongTensor) -> Tuple[torch.LongTensor, Optional[torch.BoolTensor]]:
