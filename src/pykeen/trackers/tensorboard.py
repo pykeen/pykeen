@@ -41,7 +41,7 @@ class TensorBoardResultTracker(ResultTracker):
         if experiment_path is None:
             if experiment_name is None:
                 experiment_name = datetime.datetime.now().isoformat()
-            path = PYKEEN_LOGS / f"tensorboard/{experiment_name}"
+            path = PYKEEN_LOGS.joinpath("tensorboard", experiment_name)
         elif isinstance(experiment_path, str):
             path = pathlib.Path(experiment_path)
         self.path = path
