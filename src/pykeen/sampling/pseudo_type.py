@@ -1,4 +1,7 @@
+# -*- coding: utf-8 -*-
+
 """Pseudo-Typed negative sampling."""
+
 import logging
 import random
 from typing import Optional, Tuple
