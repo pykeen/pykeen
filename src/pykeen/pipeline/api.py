@@ -1046,22 +1046,18 @@ def pipeline(  # noqa: C901
             and filter_validation_when_testing
             and validation is not None
         ):
-            logging.info(
-                "When evaluating the test dataset, validation triples are added to the set of known positive triples"
-                " which are filtered out when performing filtered evaluation following the approach described by"
-                " (Bordes et al., 2013).",
-            )
-            additional_filter_triples.append(validation.mapped_triples)
-        elif (
-            isinstance(stopper, EarlyStopper)
-            and filter_validation_when_testing
-            and validation is not None
-        ):
-            logging.info(
-                "When evaluating the test dataset after running the pipeline with earl stopping, the validation triples"
-                " are added to the set of known positive triples which are filtered out when performing filtered"
-                " evaluation following the approach described by (Bordes et al., 2013).",
-            )
+            if isinstance(stopper, EarlyStopper):
+                logging.info(
+                    "When evaluating the test dataset after running the pipeline with early stopping, the validation"
+                    " triples are added to the set of known positive triples which are filtered out when performing"
+                    " filtered evaluation following the approach described by (Bordes et al., 2013).",
+                )
+            else:
+                logging.info(
+                    "When evaluating the test dataset, validation triples are added to the set of known positive"
+                    " triples which are filtered out when performing filtered evaluation following the approach"
+                    " described by (Bordes et al., 2013).",
+                )
             additional_filter_triples.append(validation.mapped_triples)
 
         # TODO consider implications of duplicates
