@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 __all__ = [
     "add_entity_labels",
     "add_relation_labels",
+    "create_relation_to_entity_set_mapping",
     "entity_relation_co_occurrence",
     "get_entity_counts",
     "get_relation_counts",
@@ -681,3 +682,23 @@ def get_relation_functionality(
     df.index.name = RELATION_ID_COLUMN_NAME
     df = df.reset_index()
     return add_relation_labels(df, add_labels=add_labels, label_to_id=label_to_id)
+
+
+def create_relation_to_entity_set_mapping(
+    triples: Iterable[Tuple[int, int, int]],
+) -> Tuple[Mapping[int, Set[int]], Mapping[int, Set[int]]]:
+    """
+    Create mappings from relation IDs to the set of their head / tail entities.
+
+    :param triples:
+        The triples.
+
+    :return:
+        A pair of dictionaries, each mapping relation IDs to entity ID sets.
+    """
+    tails = defaultdict(set)
+    heads = defaultdict(set)
+    for h, r, t in triples:
+        heads[r].add(h)
+        tails[r].add(t)
+    return heads, tails

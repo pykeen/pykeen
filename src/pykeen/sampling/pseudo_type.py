@@ -1,38 +1,19 @@
 """Pseudo-Typed negative sampling."""
 import logging
 import random
-from collections import defaultdict
-from typing import Iterable, Mapping, Optional, Set, Tuple
+from typing import Optional, Tuple
 
 import torch
 
 from .negative_sampler import NegativeSampler
 from ..triples import CoreTriplesFactory
+from ..triples.analysis import create_relation_to_entity_set_mapping
 
 __all__ = [
     "PseudoTypedNegativeSampler",
 ]
 
 logger = logging.getLogger(__name__)
-
-
-def index_triples(triples: Iterable[Tuple[int, int, int]]) -> Tuple[Mapping[int, Set[int]], Mapping[int, Set[int]]]:
-    """
-    Create mappings from relation IDs to the set of their head / tail entities.
-
-    :param triples:
-        The triples.
-
-    :return:
-        A pair of dictionaries, each mapping relation IDs to entity ID sets.
-    """
-    # note: this is different than the index_triples from pykeen.triples.analysis
-    tails = defaultdict(set)
-    heads = defaultdict(set)
-    for h, r, t in triples:
-        heads[r].add(h)
-        tails[r].add(t)
-    return heads, tails
 
 
 class PseudoTypedNegativeSampler(NegativeSampler):
@@ -58,7 +39,7 @@ class PseudoTypedNegativeSampler(NegativeSampler):
             Additional keyword based arguments passed to NegativeSampler.
         """
         super().__init__(triples_factory=triples_factory, **kwargs)
-        self.heads, self.tails = index_triples(triples=triples_factory.mapped_triples.tolist())
+        self.heads, self.tails = create_relation_to_entity_set_mapping(triples=triples_factory.mapped_triples.tolist())
         for r in set(self.heads.keys()).union(self.tails.keys()):
             if len(self.heads[r]) < 2 and len(self.tails[r]) < 2:
                 logger.warning(f"Relation {r} does not have a sufficient number of distinct heads and tails.")
