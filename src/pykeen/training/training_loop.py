@@ -7,6 +7,7 @@ import logging
 import pathlib
 import pickle
 import random
+import tempfile
 import time
 from abc import ABC, abstractmethod
 from datetime import datetime
@@ -393,6 +394,11 @@ class TrainingLoop(ABC):
             raise ValueError('must set training instances before running _train()')
         if self.optimizer is None:
             raise ValueError('optimizer must be set before running _train()')
+        # When using early stopping models have to be saved separately at the best epoch, since the training loop will
+        # due to the patience continue to train after the best epoch and thus alter the model
+        if stopper is not None:
+            last_best_stopper_model_epoch = None
+            best_epoch_model_path = tempfile.NamedTemporaryFile()
 
         if isinstance(self.model, RGCN) and sampler != 'schlichtkrull':
             logger.warning(
@@ -606,6 +612,9 @@ class TrainingLoop(ABC):
                 should_stop = False
                 if stopper is not None and stopper.should_evaluate(epoch) and stopper.should_stop(epoch):
                     should_stop = True
+                # When the stopper obtained a new best epoch, this model has to be saved for reconstruction
+                if stopper is not None and stopper.best_epoch != last_best_stopper_model_epoch:
+                    self._save_state(path=best_epoch_model_path.name)
             # When the training loop failed, a fallback checkpoint is created to resume training.
             except (MemoryError, RuntimeError) as e:
                 logger.warning(f'The training loop just failed during epoch {epoch} due to error {str(e)}.')
@@ -632,7 +641,13 @@ class TrainingLoop(ABC):
                     last_checkpoint = time.time()
 
             if should_stop:
+                self._load_state(path=best_epoch_model_path.name)
+                best_epoch_model_path.close()
                 return self.losses_per_epochs
+
+        # If the early stopper never stopped the training loop, the temporary file path needs to be terminated
+        if stopper is not None:
+            best_epoch_model_path.close()
 
         return self.losses_per_epochs
 
