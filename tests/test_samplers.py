@@ -11,7 +11,7 @@ import torch
 from pykeen.datasets import Nations
 from pykeen.sampling import BasicNegativeSampler, BernoulliNegativeSampler, NegativeSampler
 from pykeen.training.schlichtkrull_sampler import GraphSampler, _compute_compressed_adjacency_list
-from pykeen.triples import Instances, SLCWAInstances, TriplesFactory
+from pykeen.triples import Instances, TriplesFactory
 
 
 def _array_check_bounds(
