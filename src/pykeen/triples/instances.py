@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Implementation of basic instance factory which creates just instances based on standard KG triples."""
+
 from abc import ABC
 from dataclasses import dataclass
 from typing import Generic, Mapping, Tuple, TypeVar
