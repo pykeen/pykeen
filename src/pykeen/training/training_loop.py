@@ -11,7 +11,7 @@ import time
 from abc import ABC, abstractmethod
 from datetime import datetime
 from hashlib import md5
-from typing import Any, Callable, Generic, List, Mapping, Optional, Tuple, Type, TypeVar, Union
+from typing import Any, Callable, ClassVar, Generic, List, Mapping, Optional, Tuple, Type, TypeVar, Union
 
 import numpy as np
 import torch
@@ -85,7 +85,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
 
     training_instances: Optional[Instances[SampleType]]
     losses_per_epochs: List[float]
-    loss_blacklist: Optional[List[Type[Loss]]] = None
+    loss_blacklist: ClassVar[Optional[List[Type[Loss]]]] = None
 
     hpo_default = dict(
         num_epochs=dict(type=int, low=100, high=1000, q=100),
