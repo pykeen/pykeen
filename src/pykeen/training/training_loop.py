@@ -173,6 +173,8 @@ class TrainingLoop(ABC):
     ) -> Optional[List[float]]:
         """Train the KGE model.
 
+        :param triples_factory:
+            The training triples factory
         :param num_epochs:
             The number of epochs to train the model.
         :param batch_size:
@@ -343,6 +345,8 @@ class TrainingLoop(ABC):
     ) -> Optional[List[float]]:
         """Train the KGE model.
 
+        :param triples_factory:
+            The training triples factory
         :param num_epochs:
             The number of epochs to train the model.
         :param batch_size:
@@ -707,6 +711,8 @@ class TrainingLoop(ABC):
 
         :param triples_factory:
             The triples factory over which search is run
+        :param training_instances:
+            The training instances generated from the triples factory
         :param batch_size:
             The batch size to start the search with. If None, set batch_size=num_triples (i.e. full batch training).
 
@@ -783,6 +789,7 @@ class TrainingLoop(ABC):
 
         slice_size = self._slice_size_search(
             triples_factory=triples_factory,
+            training_instances=training_instances,
             batch_size=batch_size,
             sub_batch_size=sub_batch_size,
             supports_sub_batching=supports_sub_batching,
@@ -794,6 +801,7 @@ class TrainingLoop(ABC):
         self,
         *,
         triples_factory: CoreTriplesFactory,
+        training_instances: Instances,
         batch_size: int,
         sub_batch_size: int,
         supports_sub_batching: bool,
