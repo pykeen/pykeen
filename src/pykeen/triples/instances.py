@@ -39,6 +39,19 @@ class Instances(data.Dataset, Generic[BatchType], ABC):
     def __getitem__(self, item: int) -> BatchType:  # noqa: D105
         raise NotImplementedError
 
+    @classmethod
+    def from_triples(cls, mapped_triples: MappedTriples, num_entities: int) -> 'Instances':
+        """Create instances from mapped triples.
+
+        :param mapped_triples: shape: (num_triples, 3)
+            The ID-based triples.
+        :param num_entities:
+            The number of entities.
+        :return:
+            The instances.
+        """
+        raise NotImplementedError
+
 
 @fix_dataclass_init_docs
 @dataclass
@@ -53,6 +66,10 @@ class SLCWAInstances(Instances[MappedTriples]):
 
     def __getitem__(self, item: int) -> MappedTriples:  # noqa: D105
         return self.mapped_triples[item]
+
+    @classmethod
+    def from_triples(cls, mapped_triples: MappedTriples, num_entities: int) -> Instances:  # noqa:D102
+        return cls(mapped_triples=mapped_triples)
 
 
 @fix_dataclass_init_docs
