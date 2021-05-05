@@ -11,7 +11,7 @@ import torch
 from pykeen.datasets import Nations
 from pykeen.sampling import BasicNegativeSampler, BernoulliNegativeSampler, NegativeSampler
 from pykeen.training.schlichtkrull_sampler import GraphSampler, _compute_compressed_adjacency_list
-from pykeen.triples import SLCWAInstances, TriplesFactory
+from pykeen.triples import Instances, SLCWAInstances, TriplesFactory
 
 
 def _array_check_bounds(
@@ -32,12 +32,12 @@ class _NegativeSamplingTestCase:
     seed: int
     #: The triples factory
     triples_factory: TriplesFactory
-    #: The sLCWA instances
-    slcwa_instances: SLCWAInstances
+    #: The instances
+    training_instances: Instances
     #: Class of negative sampling to test
-    negative_sampling_cls: ClassVar[Type[NegativeSampler]]
+    cls: ClassVar[Type[NegativeSampler]]
     #: The negative sampler instance, initialized in setUp
-    negative_sampler: NegativeSampler
+    instance: NegativeSampler
     #: A positive batch
     positive_batch: torch.LongTensor
 
@@ -47,19 +47,19 @@ class _NegativeSamplingTestCase:
         self.seed = 42
         self.num_negs_per_pos = 10
         self.triples_factory = Nations().training
-        self.slcwa_instances = self.triples_factory.create_slcwa_instances()
-        self.negative_sampler = self.negative_sampling_cls(triples_factory=self.triples_factory)
-        self.scaling_negative_sampler = self.negative_sampling_cls(
+        self.training_instances = self.triples_factory.create_slcwa_instances()
+        self.instance = self.cls(triples_factory=self.triples_factory)
+        self.scaling_negative_sampler = self.cls(
             triples_factory=self.triples_factory,
             num_negs_per_pos=self.num_negs_per_pos,
         )
         random = numpy.random.RandomState(seed=self.seed)
-        batch_indices = random.randint(low=0, high=len(self.slcwa_instances), size=(self.batch_size,))
-        self.positive_batch = self.slcwa_instances.mapped_triples[batch_indices]
+        batch_indices = random.randint(low=0, high=len(self.training_instances), size=(self.batch_size,))
+        self.positive_batch = self.training_instances.mapped_triples[batch_indices]
 
     def test_sample(self) -> None:
         # Generate negative sample
-        negative_batch, _ = self.negative_sampler.sample(positive_batch=self.positive_batch)
+        negative_batch, _ = self.instance.sample(positive_batch=self.positive_batch)
 
         # check shape
         assert negative_batch.shape == self.positive_batch.shape
@@ -86,18 +86,18 @@ class _NegativeSamplingTestCase:
 
     def test_small_batch(self):
         """Test on a small batch."""
-        self.negative_sampler.sample(positive_batch=self.positive_batch[:1])
+        self.instance.sample(positive_batch=self.positive_batch[:1])
 
 
 class BasicNegativeSamplerTest(_NegativeSamplingTestCase, unittest.TestCase):
     """Test the basic negative sampler."""
 
-    negative_sampling_cls = BasicNegativeSampler
+    cls = BasicNegativeSampler
 
     def test_sample_basic(self):
         """Test if relations and half of heads and tails are not corrupted."""
         # Generate negative samples
-        negative_batch, _ = self.negative_sampler.sample(positive_batch=self.positive_batch)
+        negative_batch, _ = self.instance.sample(positive_batch=self.positive_batch)
 
         # test that the relations were not changed
         assert (self.positive_batch[:, 1] == negative_batch[:, 1]).all()
@@ -115,12 +115,12 @@ class BasicNegativeSamplerTest(_NegativeSamplingTestCase, unittest.TestCase):
 class BernoulliNegativeSamplerTest(_NegativeSamplingTestCase, unittest.TestCase):
     """Test the Bernoulli negative sampler."""
 
-    negative_sampling_cls = BernoulliNegativeSampler
+    cls = BernoulliNegativeSampler
 
     def test_sample_bern(self):
         """Test if relations are not corrupted."""
         # Generate negative sample for additional tests
-        negative_batch, _ = self.negative_sampler.sample(positive_batch=self.positive_batch)
+        negative_batch, _ = self.instance.sample(positive_batch=self.positive_batch)
 
         # test that the relations were not changed
         assert (self.positive_batch[:, 1] == negative_batch[:, 1]).all()
