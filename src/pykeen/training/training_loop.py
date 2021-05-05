@@ -396,7 +396,7 @@ class TrainingLoop(ABC):
             raise ValueError('optimizer must be set before running _train()')
         # When using early stopping models have to be saved separately at the best epoch, since the training loop will
         # due to the patience continue to train after the best epoch and thus alter the model
-        if stopper is not None:
+        if stopper is not None and not only_size_probing:
             last_best_stopper_model_epoch = None
             best_epoch_model_path = tempfile.NamedTemporaryFile()
 
