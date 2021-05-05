@@ -647,6 +647,8 @@ class TrainingLoop(ABC):
 
         # If the early stopper never stopped the training loop, the temporary file path needs to be terminated
         if stopper is not None:
+            if last_best_stopper_model_epoch is not None:
+                self._load_state(path=best_epoch_model_path.name)
             best_epoch_model_path.close()
 
         return self.losses_per_epochs
