@@ -35,6 +35,9 @@ class Instances(data.Dataset, Generic[BatchType], ABC):
         """The number of instances."""
         raise NotImplementedError
 
+    def __getitem__(self, item: int) -> BatchType:  # noqa: D105
+        raise NotImplementedError
+
 
 @fix_dataclass_init_docs
 @dataclass
