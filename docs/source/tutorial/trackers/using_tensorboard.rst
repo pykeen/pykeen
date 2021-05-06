@@ -36,6 +36,24 @@ argument like:
         dataset='Kinships',
         result_tracker='tensorboard',
         result_tracker_kwargs=dict(
-        experiment_name='test',
+        experiment_name='rotate-kinships',
+        ),
+    )
+
+Specifying a Custom Log Directory
+-----------------
+If you want to specify a custom directory to store the tensorboard logs, use the ``experiment_path`` keyword
+argument like:
+
+.. code-block:: python
+
+    from pykeen.pipeline import pipeline
+
+    pipeline_result = pipeline(
+        model='RotatE',
+        dataset='Kinships',
+        result_tracker='tensorboard',
+        result_tracker_kwargs=dict(
+        experiment_path='tb-logs',
         ),
     )
