@@ -11,7 +11,7 @@ from torch import optim
 
 from pykeen.datasets import Nations
 from pykeen.losses import CrossEntropyLoss
-from pykeen.models import ConvE, Model, TransE, UnstructuredModel
+from pykeen.models import ConvE, Model, TransE
 from pykeen.optimizers import optimizer_resolver
 from pykeen.stoppers.early_stopping import EarlyStopper
 from pykeen.training import SLCWATrainingLoop, training_loop_resolver
@@ -294,7 +294,11 @@ class TestTrainingEarlyStopping(unittest.TestCase):
 
     def test_early_stopper_best_epoch_model_retrieval(self):
         """Test if the best epoch model is returned when using the early stopper."""
-        training_loop = DummyTrainingLoop(model=self.model, triples_factory=self.triples_factory.training, sub_batch_size=self.batch_size)
+        training_loop = DummyTrainingLoop(
+            model=self.model,
+            triples_factory=self.triples_factory.training,
+            sub_batch_size=self.batch_size,
+        )
 
         _ = training_loop.train(
             triples_factory=self.triples_factory.training,

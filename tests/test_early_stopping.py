@@ -3,7 +3,7 @@
 """Tests of early stopping."""
 
 import unittest
-from typing import Iterable, List, Optional
+from typing import List
 
 import numpy
 import pytest
