@@ -110,6 +110,7 @@ class LCWATrainingLoop(TrainingLoop[LCWABatchType, LCWABatchType]):
         self,
         *,
         triples_factory: CoreTriplesFactory,
+        training_instances: Instances,
         batch_size: int,
         sub_batch_size: int,
         supports_sub_batching: bool,
@@ -126,6 +127,7 @@ class LCWATrainingLoop(TrainingLoop[LCWABatchType, LCWABatchType]):
                 logger.debug(f'Trying slice size {slice_size} now.')
                 self._train(
                     triples_factory=triples_factory,
+                    training_instances=training_instances,
                     num_epochs=1,
                     batch_size=batch_size,
                     sub_batch_size=sub_batch_size,

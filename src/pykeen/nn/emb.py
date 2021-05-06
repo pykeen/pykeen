@@ -254,10 +254,10 @@ class Embedding(RepresentationModule):
         )
 
         self.initializer = cast(Initializer, _handle(
-            initializer, initializers, initializer_kwargs, default=nn.init.normal_,
+            initializer, initializers, initializer_kwargs, default=nn.init.normal_, label='initializer',
         ))
-        self.normalizer = _handle(normalizer, normalizers, normalizer_kwargs)
-        self.constrainer = _handle(constrainer, constrainers, constrainer_kwargs)
+        self.normalizer = _handle(normalizer, normalizers, normalizer_kwargs, label='normalizer')
+        self.constrainer = _handle(constrainer, constrainers, constrainer_kwargs, label='constrainer')
         self.regularizer = regularizer
 
         self._embeddings = torch.nn.Embedding(
@@ -438,6 +438,7 @@ initializers = {
     'normal': torch.nn.init.normal_,
     'uniform': torch.nn.init.uniform_,
     'phases': init_phases,
+    'init_phases': init_phases,
 }
 
 constrainers = {
@@ -453,11 +454,19 @@ normalizers: Mapping[str, Normalizer] = {}
 X = TypeVar('X', bound=Callable)
 
 
-def _handle(value: Hint[X], lookup: Mapping[str, X], kwargs, default: Optional[X] = None) -> Optional[X]:
+def _handle(
+    value: Hint[X],
+    lookup: Mapping[str, X],
+    kwargs, default: Optional[X] = None,
+    label: Optional[str] = None,
+) -> Optional[X]:
     if value is None:
         return default
     elif isinstance(value, str):
-        value = lookup[value]
+        try:
+            value = lookup[value]
+        except KeyError:
+            raise KeyError(f'{value} is an invalid {label}. Try one of: {sorted(lookup)}')
     if kwargs:
         rv = functools.partial(value, **kwargs)  # type: ignore
         return cast(X, rv)
