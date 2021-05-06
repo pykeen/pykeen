@@ -22,7 +22,7 @@ class TensorBoardResultTracker(ResultTracker):
     """A tracker for TensorBoard."""
 
     #: The class that's used to instantiate a summarywriter
-    SummaryWriter: Type['torch.utils.tensorboard.SummaryWriter']
+    summary_writer_cls: Type['torch.utils.tensorboard.SummaryWriter']
 
     def __init__(
         self,
@@ -41,8 +41,8 @@ class TensorBoardResultTracker(ResultTracker):
         :param tags:
             The additional run details which are presented as tags to be logged
         """
-        from torch.utils.tensorboard import SummaryWriter as _SummaryWriter
-        self.summary_writer_cls = _SummaryWriter
+        import torch.utils.tensorboard
+        self.summary_writer_cls = torch.utils.tensorboard.SummaryWriter
         self.tags = tags
 
         if experiment_path is None:
