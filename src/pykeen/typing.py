@@ -2,7 +2,7 @@
 
 """Type hints for PyKEEN."""
 
-from typing import Callable, Mapping, NamedTuple, Sequence, TypeVar, Union, cast
+from typing import Callable, IO, Mapping, NamedTuple, Sequence, TypeVar, Union, cast
 
 import numpy as np
 import torch
@@ -23,6 +23,7 @@ __all__ = [
     # Others
     'DeviceHint',
     'TorchRandomHint',
+    'TemporaryFile',
     # Tensor Functions
     'Initializer',
     'Normalizer',
@@ -89,3 +90,13 @@ class ScorePack(NamedTuple):
 
     result: torch.LongTensor
     scores: torch.FloatTensor
+
+
+class TemporaryFile(IO[bytes]):
+    """Temporary file wrapper
+
+    This class provides a wrapper around files opened for
+    temporary use.  In particular, it seeks to automatically
+    remove the file when it is no longer needed.
+    """
+    name: str
