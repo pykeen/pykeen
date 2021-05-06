@@ -4,26 +4,22 @@
 
 import logging
 import os
+import pathlib
 import shutil
 import sys
 import time
-from typing import Optional
+from typing import Optional, Union
 from uuid import uuid4
 
 import click
+from more_click import verbose_option
 
 __all__ = [
     'experiments',
 ]
 
 logger = logging.getLogger(__name__)
-HERE = os.path.abspath(os.path.dirname(__file__))
-
-
-def _turn_on_debugging(_ctx, _param, value):
-    if value:
-        logging.basicConfig(level=logging.INFO)
-        logger.setLevel(logging.INFO)
+HERE = pathlib.Path(__file__).parent.resolve()
 
 
 def _make_dir(_ctx, _param, value):
@@ -31,12 +27,6 @@ def _make_dir(_ctx, _param, value):
     return value
 
 
-verbose_option = click.option(
-    '-v', '--verbose',
-    is_flag=True,
-    expose_value=False,
-    callback=_turn_on_debugging,
-)
 directory_option = click.option(
     '-d', '--directory',
     type=click.Path(dir_okay=True, file_okay=False),
@@ -67,6 +57,7 @@ def experiments():
 @move_to_cpu_option
 @discard_replicates_option
 @directory_option
+@verbose_option
 def reproduce(
     model: str,
     reference: str,
@@ -81,7 +72,7 @@ def reproduce(
     Example: $ pykeen experiments reproduce tucker balazevic2019 fb15k
     """
     file_name = f'{reference}_{model}_{dataset}'
-    path = os.path.join(HERE, model, f'{file_name}.json')
+    path = HERE.joinpath(model, file_name).with_suffix('.json')
     _help_reproduce(
         directory=directory,
         path=path,
@@ -118,7 +109,7 @@ def run(
 def _help_reproduce(
     *,
     directory: str,
-    path: str,
+    path: Union[str, pathlib.Path],
     replicates: int,
     move_to_cpu: bool = False,
     save_replicates: bool = True,
@@ -138,7 +129,7 @@ def _help_reproduce(
 
     if not os.path.exists(path):
         click.secho(f'Could not find configuration at {path}', fg='red')
-        return sys.exit(1)
+        sys.exit(1)
     click.echo(f'Running configuration at {path}')
 
     # Create directory in which all experimental artifacts are saved
@@ -184,7 +175,7 @@ def optimize(path: str, directory: str):
 @verbose_option
 def ablation(
     path: str,
-    directory: Optional[str],
+    directory: str,
     dry_run: bool,
     best_replicates: int,
     save_artifacts: bool,
