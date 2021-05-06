@@ -42,7 +42,8 @@ class MockModel(EntityRelationEmbeddingModel):
             relation_representations=EmbeddingSpecification(embedding_dim=50),
         )
         num_entities = self.num_entities
-        self.scores = torch.arange(num_entities, dtype=torch.float)
+        self.scores = torch.arange(num_entities, dtype=torch.float, requires_grad=True)
+        self.num_backward_propagations = 0
 
     def _generate_fake_scores(self, batch: torch.LongTensor) -> torch.FloatTensor:
         """Generate fake scores s[b, i] = i of size (batch_size, num_entities)."""
@@ -61,7 +62,7 @@ class MockModel(EntityRelationEmbeddingModel):
         return self._generate_fake_scores(batch=rt_batch)
 
     def reset_parameters_(self) -> Model:  # noqa: D102
-        pass  # Not needed for unittest
+        self.num_backward_propagations += 1
 
 
 class MockEvaluator(Evaluator):

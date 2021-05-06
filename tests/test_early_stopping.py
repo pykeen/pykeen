@@ -16,7 +16,7 @@ from pykeen.models import Model, TransE
 from pykeen.stoppers.early_stopping import EarlyStopper, is_improvement
 from pykeen.trackers import MLFlowResultTracker
 from pykeen.training import SLCWATrainingLoop
-from tests.mocks import MockModel, MockEvaluator
+from tests.mocks import MockEvaluator, MockModel
 
 try:
     import mlflow

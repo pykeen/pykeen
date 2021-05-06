@@ -248,6 +248,8 @@ class TrainingLoop(ABC):
         # If a checkpoint file is given, it must be loaded if it exists already
         save_checkpoints = False
         checkpoint_path = None
+        best_epoch_model_path = None
+        last_best_epoch = None
         if checkpoint_name:
             checkpoint_path = checkpoint_directory.joinpath(checkpoint_name)
             if checkpoint_path.is_file():
@@ -1007,6 +1009,11 @@ class TrainingLoop(ABC):
         else:
             torch_cuda_random_state = None
 
+        if best_epoch_model_checkpoint_path is not None:
+            best_epoch_model_checkpoint = torch.load(best_epoch_model_checkpoint_path)
+        else:
+            best_epoch_model_checkpoint = None
+
         torch.save(
             {
                 'epoch': self._epoch,
@@ -1021,7 +1028,7 @@ class TrainingLoop(ABC):
                 'torch_random_state': torch.random.get_rng_state(),
                 'torch_cuda_random_state': torch_cuda_random_state,
                 # This is an entire checkpoint for the optional best model when using early stopping
-                'best_epoch_model_checkpoint_path': torch.load(best_epoch_model_checkpoint_path),
+                'best_epoch_model_checkpoint': best_epoch_model_checkpoint,
             },
             path,
             pickle_protocol=pickle.HIGHEST_PROTOCOL,
