@@ -393,6 +393,7 @@ class EmbeddingSpecification:
     regularizer: Optional['Regularizer'] = None
 
     dtype: Optional[torch.dtype] = None
+    dropout: Optional[float] = None
 
     def make(self, *, num_embeddings: int, device: Optional[torch.device] = None) -> Embedding:
         """Create an embedding with this specification."""
@@ -408,6 +409,7 @@ class EmbeddingSpecification:
             constrainer_kwargs=self.constrainer_kwargs,
             regularizer=self.regularizer,
             dtype=self.dtype,
+            dropout=self.dropout,
         )
         if device is not None:
             rv = rv.to(device)
