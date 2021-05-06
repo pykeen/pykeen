@@ -591,7 +591,8 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
 
     def __init_subclass__(cls, autoreset: bool = True, **kwargs):  # noqa:D105
         super().__init_subclass__(**kwargs)
-        if not inspect.isabstract(cls):
+        cls._is_base_model = not autoreset
+        if not cls._is_base_model:
             _add_post_reset_parameters(cls)
 
     def post_parameter_update(self) -> None:
