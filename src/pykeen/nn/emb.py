@@ -199,10 +199,10 @@ class Embedding(RepresentationModule):
     embedding vectors are of unit length. A *constrainer* can be used similarly, but it is applied after each parameter
     update (using the post_parameter_update hook), i.e., outside of the automatic gradient computation.
 
-    The optional dropout can be used as a regularization technique. Moreover, it enables to obtain uncertainty estimates
-    via techniques such as `Monte-Carlo dropout <https://arxiv.org/abs/1506.02142>`_. The following simple example shows
-    how to obtain different scores for a single triple from an (untrained) model. These scores can be considered as
-    samples from a distribution over the scores.
+    The optional dropout can also be used as a regularization technique. Moreover, it enables to obtain uncertainty
+    estimates via techniques such as `Monte-Carlo dropout <https://arxiv.org/abs/1506.02142>`_. The following simple
+    example shows how to obtain different scores for a single triple from an (untrained) model. These scores can be
+    considered as samples from a distribution over the scores.
 
     >>> from pykeen.datasets.nations import Nations
     >>> dataset = Nations()
