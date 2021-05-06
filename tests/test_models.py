@@ -760,15 +760,5 @@ class ERModelTests(cases.ModelTestCase):
         kwargs["relation_representations"] = EmbeddingSpecification(embedding_dim=embedding_dim)
         return kwargs
 
-    def post_instantiation_hook(self) -> None:
-        """Move the model to the correct device (from super()) and explicitly reset the parameters.
-
-        This is necessary only for the test on :class:`ERModel` directly since the ``autoreset``
-        parameter is set to false on base classes. This means that users must explicitly call
-        :func:`ERModel.reset_parameters_` if they directly instantiate the base class.
-        """
-        super().post_instantiation_hook()
-        self.instance.reset_parameters_()
-
     def test_has_hpo_defaults(self):  # noqa: D102
         raise unittest.SkipTest(f"Base class {self.cls} does not provide HPO defaults.")
