@@ -114,6 +114,13 @@ class Model(nn.Module, ABC):
         self.predict_with_sigmoid = predict_with_sigmoid
 
     def __init_subclass__(cls, **kwargs):  # noqa:D105
+        """Initialize the subclass.
+
+        This checks for all subclasses if they are tagged with :class:`abc.ABC` with :func:`inspect.isabstract`.
+        All non-abstract deriving models should have citation information. Subclasses can further override
+        ``__init_subclass__``, but need to remember to call ``super().__init_subclass__`` as well so this
+        gets run.
+        """
         if not inspect.isabstract(cls):
             parse_docdata(cls)
 
@@ -592,7 +599,7 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
     def __init_subclass__(cls, autoreset: bool = True, **kwargs):  # noqa:D105
         super().__init_subclass__(**kwargs)
         cls._is_base_model = not autoreset
-        if not cls._is_base_model:
+        if autoreset:
             _add_post_reset_parameters(cls)
 
     def post_parameter_update(self) -> None:
