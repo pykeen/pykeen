@@ -167,3 +167,21 @@ class EmbeddingSpecificationTests(unittest.TestCase):
         )
         e = s.make(num_embeddings=100)
         self.assertEqual((5, 10), e.shape)
+
+    def test_make_errors(self):
+        """Test errors on making with an invalid key."""
+        with self.assertRaises(KeyError):
+            EmbeddingSpecification(
+                shape=(1, 1),
+                initializer='garbage',
+            ).make(num_embeddings=1)
+        with self.assertRaises(KeyError):
+            EmbeddingSpecification(
+                shape=(1, 1),
+                constrainer='garbage',
+            ).make(num_embeddings=1)
+        with self.assertRaises(KeyError):
+            EmbeddingSpecification(
+                shape=(1, 1),
+                normalizer='garbage',
+            ).make(num_embeddings=1)

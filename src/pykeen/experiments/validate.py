@@ -5,7 +5,7 @@
 import inspect
 import json
 import os
-from typing import Callable, Iterable, Optional, Set, Type, Union
+from typing import Callable, Iterable, Optional, Set, Tuple, Type, Union
 
 import torch
 from torch import nn
@@ -32,7 +32,7 @@ _SKIP_ANNOTATIONS = {
 }
 
 
-def iterate_config_paths() -> Iterable[str]:
+def iterate_config_paths() -> Iterable[Tuple[str, str, str]]:
     """Iterate over all configuration paths."""
     for model in os.listdir(HERE):
         if model not in model_resolver.lookup_dict:
@@ -126,7 +126,11 @@ def get_configuration_errors(path: str):  # noqa: C901
 
         missing_kwargs = []
         for name, parameter in signature.parameters.items():
-            if name == 'self' or parameter.default is inspect._empty or parameter.default is None:
+            if (
+                name == 'self'
+                or parameter.default is inspect._empty  # type:ignore
+                or parameter.default is None
+            ):
                 continue
 
             annotation = choice.__init__.__annotations__.get(name)
