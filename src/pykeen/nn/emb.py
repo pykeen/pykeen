@@ -192,6 +192,35 @@ class Embedding(RepresentationModule):
 
     This class provides the same interface as :class:`torch.nn.Embedding` and
     can be used throughout PyKEEN as a more fully featured drop-in replacement.
+
+    It extends it by adding additional options for normalizing, constraining, or applying dropout.
+
+    When a *normalizer* is selected, it is applied in every forward pass. It can be used, e.g., to ensure that the
+    embedding vectors are of unit length. A *constrainer* can be used similarly, but it is applied after each parameter
+    update (using the post_parameter_update hook), i.e., outside of the automatic gradient computation.
+
+    The optional dropout can be used as a regularization technique. Moreover, it enables to obtain uncertainty estimates
+    via techniques such as Monte-Carlo dropout. The following simple example shows how to obtain different scores
+    for a single triple from an (untrained) model. These scores can be considered as samples from a distribution over
+    the scores.
+
+    >>> from pykeen.datasets.nations import Nations
+    >>> dataset = Nations()
+    # TODO: Move resolution to ERModel, once https://github.com/pykeen/pykeen/pull/411 is solved
+    >>> from pykeen.nn.modules import interaction_resolver
+    >>> interaction = interaction_resolver.make("distmult")
+    >>> from pykeen.nn.emb import EmbeddingSpecification
+    >>> spec = EmbeddingSpecification(embedding_dim=3, dropout=0.1)
+    >>> from pykeen.models import ERModel
+    >>> model = ERModel(
+    ...     triples_factory=dataset.training,
+    ...     interaction=interaction,
+    ...     entity_representations=spec,
+    ...     relation_representations=spec,
+    ... )
+    >>> import torch
+    >>> batch = torch.as_tensor(data=[[0, 1, 0]]).repeat(10, 1)
+    >>> scores = model.score_hrt(batch)
     """
 
     normalizer: Optional[Normalizer]
@@ -771,10 +800,10 @@ class CompGCNLayer(nn.Module):
         edge_type = 2 * edge_type
         # update entity representations: mean over self-loops / forward edges / backward edges
         x_e = (
-            self.composition(x_e, self.self_loop) @ self.w_loop
-            + self.message(x_e=x_e, x_r=x_r, edge_index=edge_index, edge_type=edge_type, weight=self.w_fwd)
-            + self.message(x_e=x_e, x_r=x_r, edge_index=edge_index.flip(0), edge_type=edge_type + 1, weight=self.w_bwd)
-        ) / 3
+                  self.composition(x_e, self.self_loop) @ self.w_loop
+                  + self.message(x_e=x_e, x_r=x_r, edge_index=edge_index, edge_type=edge_type, weight=self.w_fwd)
+                  + self.message(x_e=x_e, x_r=x_r, edge_index=edge_index.flip(0), edge_type=edge_type + 1, weight=self.w_bwd)
+              ) / 3
 
         if self.bias:
             x_e = self.bias(x_e)
