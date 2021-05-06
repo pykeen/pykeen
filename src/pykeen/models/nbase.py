@@ -314,6 +314,13 @@ class ERModel(
 ):
     """A commonly useful base for KGEMs using embeddings and interaction modules.
 
+    This model does not use post-init hooks to automatically initialize all of its
+    parameters. Rather, the call to :func:`Model.reset_parameters_` happens at the end of
+    ``ERModel.__init__``. This is possible because all trainable parameters should necessarily
+    be passed through the ``super().__init__()`` in subclasses of :class:`ERModel`.
+
+    Other code can still be put after the call to ``super().__init__()`` in subclasses, such as
+    registering regularizers (as done in :class:`pykeen.models.ConvKB` and :class:`pykeen.models.TransH`).
     ---
     citation:
         author: Ali
