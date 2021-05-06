@@ -212,6 +212,7 @@ class Embedding(RepresentationModule):
         regularizer: Optional['Regularizer'] = None,
         trainable: bool = True,
         dtype: Optional[torch.dtype] = None,
+        dropout: Optional[float] = None,
     ):
         """Instantiate an embedding with extended functionality.
 
@@ -235,6 +236,8 @@ class Embedding(RepresentationModule):
             to be in-place, but the weight tensor is modified in-place.
         :param constrainer_kwargs:
             Additional keyword arguments passed to the constrainer
+        :param dropout:
+            A dropout value for the embeddings.
         """
         # normalize embedding_dim vs. shape
         _embedding_dim, shape = process_shape(embedding_dim, shape)
@@ -265,6 +268,7 @@ class Embedding(RepresentationModule):
             embedding_dim=_embedding_dim,
         )
         self._embeddings.requires_grad_(trainable)
+        self.dropout = None if dropout is None else nn.Dropout(dropout)
 
     @classmethod
     def init_with_device(
@@ -343,6 +347,8 @@ class Embedding(RepresentationModule):
             x = self.normalizer(x)
         if self.regularizer is not None:
             self.regularizer.update(x)
+        if self.dropout is not None:
+            x = self.dropout(x)
         return x
 
 
@@ -763,10 +769,10 @@ class CompGCNLayer(nn.Module):
         edge_type = 2 * edge_type
         # update entity representations: mean over self-loops / forward edges / backward edges
         x_e = (
-            self.composition(x_e, self.self_loop) @ self.w_loop
-            + self.message(x_e=x_e, x_r=x_r, edge_index=edge_index, edge_type=edge_type, weight=self.w_fwd)
-            + self.message(x_e=x_e, x_r=x_r, edge_index=edge_index.flip(0), edge_type=edge_type + 1, weight=self.w_bwd)
-        ) / 3
+                  self.composition(x_e, self.self_loop) @ self.w_loop
+                  + self.message(x_e=x_e, x_r=x_r, edge_index=edge_index, edge_type=edge_type, weight=self.w_fwd)
+                  + self.message(x_e=x_e, x_r=x_r, edge_index=edge_index.flip(0), edge_type=edge_type + 1, weight=self.w_bwd)
+              ) / 3
 
         if self.bias:
             x_e = self.bias(x_e)
