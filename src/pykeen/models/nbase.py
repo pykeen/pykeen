@@ -11,7 +11,6 @@ from operator import itemgetter
 from typing import Any, ClassVar, Generic, Iterable, List, Mapping, Optional, Sequence, Tuple, Type, Union, cast
 
 import torch
-from class_resolver import Hint
 from torch import nn
 
 from .base import Model
@@ -342,7 +341,11 @@ class ERModel(
         self,
         *,
         triples_factory: CoreTriplesFactory,
-        interaction: Hint[Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]],
+        interaction: Union[
+            str,
+            Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation],
+            Type[Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]],
+        ],
         interaction_kwargs: Optional[Mapping[str, Any]] = None,
         entity_representations: EmbeddingSpecificationHint = None,
         relation_representations: EmbeddingSpecificationHint = None,
