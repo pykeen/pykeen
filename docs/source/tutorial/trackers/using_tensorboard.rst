@@ -54,6 +54,9 @@ argument like:
         dataset='Kinships',
         result_tracker='tensorboard',
         result_tracker_kwargs=dict(
-        experiment_path='tb-logs',
+        experiment_path='tb-logs/rotate-kinships',
         ),
     )
+
+Please be aware that if you re-run an experiment using the same directory, then the logs will be combined.
+It is advisable to use a unique sub-directory for each experiment to allow for easy comparison.
