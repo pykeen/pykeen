@@ -253,11 +253,20 @@ class Embedding(RepresentationModule):
             shape=shape,
         )
 
-        self.initializer = cast(Initializer, _handle(
-            initializer, initializers, initializer_kwargs, default=nn.init.normal_,
-        ))
-        self.normalizer = _handle(normalizer, normalizers, normalizer_kwargs)
-        self.constrainer = _handle(constrainer, constrainers, constrainer_kwargs)
+        try:
+            self.initializer = cast(Initializer, _handle(
+                initializer, initializers, initializer_kwargs, default=nn.init.normal_,
+            ))
+        except KeyError:
+            raise KeyError(f'{initializer} is an invalid initializer. Try one of: {sorted(initializers)}')
+        try:
+            self.normalizer = _handle(normalizer, normalizers, normalizer_kwargs)
+        except KeyError:
+            raise KeyError(f'{normalizer} is an invalid normalizer. Try one of: {sorted(normalizers)}')
+        try:
+            self.constrainer = _handle(constrainer, constrainers, constrainer_kwargs)
+        except KeyError:
+            raise KeyError(f'{constrainer} is an invalid constrainer. Try one of: {sorted(constrainers)}')
         self.regularizer = regularizer
 
         self._embeddings = torch.nn.Embedding(
@@ -438,6 +447,7 @@ initializers = {
     'normal': torch.nn.init.normal_,
     'uniform': torch.nn.init.uniform_,
     'phases': init_phases,
+    'init_phases': init_phases,
 }
 
 constrainers = {
