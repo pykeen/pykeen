@@ -206,15 +206,12 @@ class Embedding(RepresentationModule):
 
     >>> from pykeen.datasets.nations import Nations
     >>> dataset = Nations()
-    # TODO: Move resolution to ERModel, once https://github.com/pykeen/pykeen/pull/411 is solved
-    >>> from pykeen.nn.modules import interaction_resolver
-    >>> interaction = interaction_resolver.make("distmult")
     >>> from pykeen.nn.emb import EmbeddingSpecification
     >>> spec = EmbeddingSpecification(embedding_dim=3, dropout=0.1)
     >>> from pykeen.models import ERModel
     >>> model = ERModel(
     ...     triples_factory=dataset.training,
-    ...     interaction=interaction,
+    ...     interaction='distmult',
     ...     entity_representations=spec,
     ...     relation_representations=spec,
     ... )
