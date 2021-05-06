@@ -110,7 +110,7 @@ class Model(nn.Module, ABC):
         '''
         self.predict_with_sigmoid = predict_with_sigmoid
 
-    def __init_subclass__(cls, **kwargs):  # noqa:D105
+    def __init_subclass__(cls, **kwargs):
         """Initialize the subclass.
 
         This checks for all subclasses if they are tagged with :class:`abc.ABC` with :func:`inspect.isabstract`.
