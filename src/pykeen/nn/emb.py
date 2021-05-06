@@ -226,6 +226,7 @@ class Embedding(RepresentationModule):
     normalizer: Optional[Normalizer]
     constrainer: Optional[Constrainer]
     regularizer: Optional['Regularizer']
+    dropout: Optional[nn.Dropout]
 
     def __init__(
         self,
