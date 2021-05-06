@@ -46,7 +46,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
         :param optimizer: The optimizer to use while training the model
         :param negative_sampler: The class, instance, or name of the negative sampler
         :param negative_sampler_kwargs: Keyword arguments to pass to the negative sampler class on instantiation
-         for every positive one
+            for every positive one
         :param automatic_memory_optimization:
             Whether to automatically optimize the sub-batch size during
             training and batch size during evaluation with regards to the hardware at hand.
@@ -62,14 +62,6 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
             pos_kwargs=negative_sampler_kwargs,
             triples_factory=triples_factory,
         )
-
-    @property
-    def num_negs_per_pos(self) -> int:
-        """Return number of negatives per positive from the sampler.
-
-        Property for API compatibility
-        """
-        return self.negative_sampler.num_negs_per_pos
 
     def _create_instances(self, triples_factory: CoreTriplesFactory) -> Instances:  # noqa: D102
         return triples_factory.create_slcwa_instances()
@@ -126,8 +118,8 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
         _batch_filter=None,
     ) -> torch.FloatTensor:
         # Repeat positives scores (necessary for more than one negative per positive)
-        if self.num_negs_per_pos > 1:
-            positive_scores = positive_scores.repeat(self.num_negs_per_pos, 1)
+        if self.negative_sampler.num_negs_per_pos > 1:
+            positive_scores = positive_scores.repeat(self.negative_sampler.num_negs_per_pos, 1)
 
         if _batch_filter is not None:
             positive_scores = positive_scores[_batch_filter]
