@@ -14,7 +14,7 @@ import unittest_templates
 import pykeen.experiments
 import pykeen.models
 from pykeen.models import (
-    ERModel, EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, _MODELS,
+    ERModel, EntityEmbeddingModel, EntityRelationEmbeddingModel, Model,
     _NewAbstractModel, _OldAbstractModel, model_resolver,
 )
 from pykeen.models.multimodal.base import LiteralModel
@@ -705,7 +705,7 @@ class TestModelUtilities(unittest.TestCase):
         """Test that classes are checked as abstract properly."""
         self.assertTrue(EntityEmbeddingModel._is_base_model)
         self.assertTrue(EntityRelationEmbeddingModel._is_base_model)
-        for cls in _MODELS:
+        for cls in model_resolver.lookup_dict:
             self.assertFalse(
                 cls._is_base_model,
                 msg=f'{cls.__name__} should not be marked as a a base model',
