@@ -976,10 +976,10 @@ class TrainingLoop(ABC):
         torch.cuda.empty_cache()
 
     def _save_state(
-            self,
-            path: Union[str, pathlib.Path],
-            stopper: Optional[Stopper] = None,
-            best_epoch_model_checkpoint_path: Optional[Union[str, pathlib.Path]] = None,
+        self,
+        path: Union[str, pathlib.Path],
+        stopper: Optional[Stopper] = None,
+        best_epoch_model_checkpoint_path: Optional[Union[str, pathlib.Path]] = None,
     ) -> None:
         """Save the state of the training loop.
 
