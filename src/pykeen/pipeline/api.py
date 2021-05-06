@@ -441,7 +441,7 @@ class PipelineResult(Result):
 
 
 def replicate_pipeline_from_path(
-    path: str,
+    path: Union[str, pathlib.Path],
     directory: str,
     replicates: int,
     move_to_cpu: bool = False,
@@ -542,7 +542,7 @@ def save_pipeline_results_to_directory(
 
 
 def pipeline_from_path(
-    path: str,
+    path: Union[str, pathlib.Path],
     **kwargs,
 ) -> PipelineResult:
     """Run the pipeline with configuration in a JSON file at the given path.
