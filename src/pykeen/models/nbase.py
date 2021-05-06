@@ -38,7 +38,7 @@ EmbeddingSpecificationHint = Union[
 ]
 
 
-class _NewAbstractModel(Model, ABC, autoreset=False):
+class _NewAbstractModel(Model, ABC):
     """An abstract class for knowledge graph embedding models (KGEMs).
 
     The only function that needs to be implemented for a given subclass is
@@ -311,7 +311,6 @@ def _prepare_representation_module_list(
 class ERModel(
     Generic[HeadRepresentation, RelationRepresentation, TailRepresentation],
     _NewAbstractModel,
-    autoreset=False,
 ):
     """A commonly useful base for KGEMs using embeddings and interaction modules.
 
@@ -389,6 +388,8 @@ class ERModel(
         # Comment: it is important that the regularizers are stored in a module list, in order to appear in
         # model.modules(). Thereby, we can collect them automatically.
         self.weight_regularizers = nn.ModuleList()
+        # Explicitly call reset_parameters to trigger initialization
+        self.reset_parameters_()
 
     def append_weight_regularizer(
         self,

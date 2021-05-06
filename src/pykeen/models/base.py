@@ -112,12 +112,6 @@ class Model(nn.Module, ABC):
         '''
         self.predict_with_sigmoid = predict_with_sigmoid
 
-    def __init_subclass__(cls, autoreset: bool = True, **kwargs):  # noqa:D105
-        cls._is_base_model = not autoreset
-        if not cls._is_base_model:
-            _add_post_reset_parameters(cls)
-            parse_docdata(cls)
-
     """Properties"""
 
     @property
@@ -589,6 +583,12 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
 
         self._entity_ids = triples_factory.entity_ids
         self._relation_ids = triples_factory.relation_ids
+
+    def __init_subclass__(cls, autoreset: bool = True, **kwargs):  # noqa:D105
+        cls._is_base_model = not autoreset
+        if not cls._is_base_model:
+            _add_post_reset_parameters(cls)
+            parse_docdata(cls)
 
     def post_parameter_update(self) -> None:
         """Has to be called after each parameter update."""
