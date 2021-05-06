@@ -253,20 +253,11 @@ class Embedding(RepresentationModule):
             shape=shape,
         )
 
-        try:
-            self.initializer = cast(Initializer, _handle(
-                initializer, initializers, initializer_kwargs, default=nn.init.normal_,
-            ))
-        except KeyError:
-            raise KeyError(f'{initializer} is an invalid initializer. Try one of: {sorted(initializers)}')
-        try:
-            self.normalizer = _handle(normalizer, normalizers, normalizer_kwargs)
-        except KeyError:
-            raise KeyError(f'{normalizer} is an invalid normalizer. Try one of: {sorted(normalizers)}')
-        try:
-            self.constrainer = _handle(constrainer, constrainers, constrainer_kwargs)
-        except KeyError:
-            raise KeyError(f'{constrainer} is an invalid constrainer. Try one of: {sorted(constrainers)}')
+        self.initializer = cast(Initializer, _handle(
+            initializer, initializers, initializer_kwargs, default=nn.init.normal_, label='initializer',
+        ))
+        self.normalizer = _handle(normalizer, normalizers, normalizer_kwargs, label='normalizer')
+        self.constrainer = _handle(constrainer, constrainers, constrainer_kwargs, label='constrainer')
         self.regularizer = regularizer
 
         self._embeddings = torch.nn.Embedding(
@@ -463,11 +454,19 @@ normalizers: Mapping[str, Normalizer] = {}
 X = TypeVar('X', bound=Callable)
 
 
-def _handle(value: Hint[X], lookup: Mapping[str, X], kwargs, default: Optional[X] = None) -> Optional[X]:
+def _handle(
+    value: Hint[X],
+    lookup: Mapping[str, X],
+    kwargs, default: Optional[X] = None,
+    label: Optional[str] = None,
+) -> Optional[X]:
     if value is None:
         return default
     elif isinstance(value, str):
-        value = lookup[value]
+        try:
+            value = lookup[value]
+        except KeyError:
+            raise KeyError(f'{value} is an invalid {label}. Try one of: {sorted(lookup)}')
     if kwargs:
         rv = functools.partial(value, **kwargs)  # type: ignore
         return cast(X, rv)
