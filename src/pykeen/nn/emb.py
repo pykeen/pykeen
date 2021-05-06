@@ -200,9 +200,9 @@ class Embedding(RepresentationModule):
     update (using the post_parameter_update hook), i.e., outside of the automatic gradient computation.
 
     The optional dropout can be used as a regularization technique. Moreover, it enables to obtain uncertainty estimates
-    via techniques such as Monte-Carlo dropout. The following simple example shows how to obtain different scores
-    for a single triple from an (untrained) model. These scores can be considered as samples from a distribution over
-    the scores.
+    via techniques such as `Monte-Carlo dropout <https://arxiv.org/abs/1506.02142>`_. The following simple example shows
+    how to obtain different scores for a single triple from an (untrained) model. These scores can be considered as
+    samples from a distribution over the scores.
 
     >>> from pykeen.datasets.nations import Nations
     >>> dataset = Nations()
@@ -800,10 +800,10 @@ class CompGCNLayer(nn.Module):
         edge_type = 2 * edge_type
         # update entity representations: mean over self-loops / forward edges / backward edges
         x_e = (
-            self.composition(x_e, self.self_loop) @ self.w_loop
-            + self.message(x_e=x_e, x_r=x_r, edge_index=edge_index, edge_type=edge_type, weight=self.w_fwd)
-            + self.message(x_e=x_e, x_r=x_r, edge_index=edge_index.flip(0), edge_type=edge_type + 1, weight=self.w_bwd)
-        ) / 3
+                  self.composition(x_e, self.self_loop) @ self.w_loop
+                  + self.message(x_e=x_e, x_r=x_r, edge_index=edge_index, edge_type=edge_type, weight=self.w_fwd)
+                  + self.message(x_e=x_e, x_r=x_r, edge_index=edge_index.flip(0), edge_type=edge_type + 1, weight=self.w_bwd)
+              ) / 3
 
         if self.bias:
             x_e = self.bias(x_e)
