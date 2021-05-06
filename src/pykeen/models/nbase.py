@@ -319,6 +319,12 @@ class ERModel(
         If you directly instantiate :class:`ERModel`, you must also call :func:`ERModel.reset_parameters_`
         explicitly. This is because any subclasses use the :func:`ERModel.__init_subclasses__` function to
         automatically register a post-``__init__()`` call, but the base class does not.
+    ---
+    citation:
+        author: Ali
+        year: 2021
+        link: https://jmlr.org/papers/v22/20-825.html
+        github: pykeen/pykeen
     """
 
     #: The entity representations
