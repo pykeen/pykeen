@@ -314,11 +314,6 @@ class ERModel(
 ):
     """A commonly useful base for KGEMs using embeddings and interaction modules.
 
-    .. warning::
-
-        If you directly instantiate :class:`ERModel`, you must also call :func:`ERModel.reset_parameters_`
-        explicitly. This is because any subclasses use the :func:`ERModel.__init_subclasses__` function to
-        automatically register a post-``__init__()`` call, but the base class does not.
     ---
     citation:
         author: Ali

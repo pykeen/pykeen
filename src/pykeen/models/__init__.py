@@ -87,6 +87,10 @@ model_resolver = Resolver.from_subclasses(
     base=Model,
     skip={
         _NewAbstractModel,
+        # We might be able to relax this later
+        ERModel,
+        LiteralModel,
+        # Old style models should never be looked up
         _OldAbstractModel,
         EntityEmbeddingModel,
         EntityRelationEmbeddingModel,
