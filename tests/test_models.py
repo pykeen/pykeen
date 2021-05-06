@@ -701,16 +701,6 @@ def _remove_non_models(elements):
 class TestModelUtilities(unittest.TestCase):
     """Extra tests for utility functions."""
 
-    def test_abstract(self):
-        """Test that classes are checked as abstract properly."""
-        self.assertTrue(EntityEmbeddingModel._is_base_model)
-        self.assertTrue(EntityRelationEmbeddingModel._is_base_model)
-        for cls in model_resolver.lookup_dict:
-            self.assertFalse(
-                cls._is_base_model,
-                msg=f'{cls.__name__} should not be marked as a a base model',
-            )
-
     def test_get_novelty_mask(self):
         """Test `get_novelty_mask()`."""
         num_triples = 7

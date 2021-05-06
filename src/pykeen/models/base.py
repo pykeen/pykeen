@@ -43,9 +43,6 @@ class Model(nn.Module, ABC):
     and relation representations in the form of :class:`pykeen.nn.Embedding`.
     """
 
-    #: Keep track of if this is a base model
-    _is_base_model: ClassVar[bool]
-
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]]
 
@@ -598,7 +595,6 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
 
     def __init_subclass__(cls, autoreset: bool = True, **kwargs):  # noqa:D105
         super().__init_subclass__(**kwargs)
-        cls._is_base_model = not autoreset
         if autoreset:
             _add_post_reset_parameters(cls)
 
