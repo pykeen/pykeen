@@ -3,7 +3,7 @@
 """Training KGE models based on the sLCWA."""
 
 import logging
-from typing import Any, Mapping, Optional, Tuple, TypeVar
+from typing import Any, Mapping, Optional
 
 import torch
 from class_resolver import HintOrType
@@ -15,6 +15,7 @@ from ..losses import CrossEntropyLoss
 from ..models import Model
 from ..sampling import NegativeSampler, negative_sampler_resolver
 from ..triples import CoreTriplesFactory, Instances
+from ..triples.instances import SLCWABatchType, SLCWASampleType
 from ..typing import MappedTriples
 
 __all__ = [
@@ -22,9 +23,6 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
-
-SLCWASampleType = TypeVar('SLCWASampleType', bound=MappedTriples)
-SLCWABatchType = Tuple[MappedTriples, MappedTriples, Optional[torch.BoolTensor]]
 
 
 class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
