@@ -3,22 +3,18 @@
 """Basic structure for a negative sampler."""
 
 from abc import ABC, abstractmethod
-from typing import Any, ClassVar, Mapping, Optional, Tuple, TypeVar
+from typing import Any, ClassVar, Mapping, Optional, Tuple
 
 import torch
 from class_resolver import HintOrType
 
 from .filtering import Filterer, filterer_resolver
 from ..triples import CoreTriplesFactory
-from ..typing import MappedTriples
 from ..utils import normalize_string
 
 __all__ = [
     'NegativeSampler',
 ]
-
-SLCWASampleType = TypeVar('SLCWASampleType', bound=MappedTriples)
-SLCWABatchType = Tuple[MappedTriples, MappedTriples, Optional[torch.BoolTensor]]
 
 
 class NegativeSampler(ABC):
