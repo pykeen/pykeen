@@ -417,6 +417,7 @@ class TrainingLoop(ABC):
         ):
             # Create a path
             best_epoch_model_file_path = pathlib.Path(NamedTemporaryFile().name)
+        best_epoch_model_checkpoint_file_path: Optional[pathlib.Path] = None
 
         if isinstance(self.model, RGCN) and sampler != 'schlichtkrull':
             logger.warning(
