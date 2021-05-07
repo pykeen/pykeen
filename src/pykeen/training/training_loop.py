@@ -410,7 +410,7 @@ class TrainingLoop(ABC):
         # due to the patience continue to train after the best epoch and thus alter the model
         if stopper is not None and not only_size_probing and last_best_epoch is None and best_epoch_model_file is None:
             best_epoch_model_file = NamedTemporaryFile()
-        best_epoch_model_checkpoint_path: Union[str, None] = None
+        best_epoch_model_checkpoint_file: Union[IO[bytes], None] = None
 
         if isinstance(self.model, RGCN) and sampler != 'schlichtkrull':
             logger.warning(
@@ -632,7 +632,7 @@ class TrainingLoop(ABC):
                     should_stop = True
                 # When the stopper obtained a new best epoch, this model has to be saved for reconstruction
                 if stopper is not None and stopper.best_epoch != last_best_epoch and best_epoch_model_file is not None:
-                    self._save_state(path=best_epoch_model_file.name)
+                    self._save_state(path=best_epoch_model_file.file)
                     last_best_epoch = epoch
             # When the training loop failed, a fallback checkpoint is created to resume training.
             except (MemoryError, RuntimeError) as e:
@@ -640,11 +640,11 @@ class TrainingLoop(ABC):
                 if checkpoint_on_failure_file_path:
                     # When there wasn't a best epoch the checkpoint path should be None
                     if last_best_epoch is not None and best_epoch_model_file is not None:
-                        best_epoch_model_checkpoint_path = best_epoch_model_file.name
+                        best_epoch_model_checkpoint_file = best_epoch_model_file
                     self._save_state(
                         path=checkpoint_on_failure_file_path,
                         stopper=stopper,
-                        best_epoch_model_checkpoint_path=best_epoch_model_checkpoint_path,
+                        best_epoch_model_checkpoint_file=best_epoch_model_checkpoint_file,
                     )
                     logger.warning(
                         "However, don't worry we got you covered. PyKEEN just saved a checkpoint when this happened "
@@ -665,22 +665,24 @@ class TrainingLoop(ABC):
                 ):
                     # When there wasn't a best epoch the checkpoint path should be None
                     if last_best_epoch is not None and best_epoch_model_file is not None:
-                        best_epoch_model_checkpoint_path = best_epoch_model_file.name
+                        best_epoch_model_checkpoint_file = best_epoch_model_file
                     self._save_state(
                         path=checkpoint_path,
                         stopper=stopper,
-                        best_epoch_model_checkpoint_path=best_epoch_model_checkpoint_path,
+                        best_epoch_model_checkpoint_file=best_epoch_model_checkpoint_file,
                     )  # type: ignore
                     last_checkpoint = time.time()
 
-            if should_stop and best_epoch_model_file is not None:
-                self._load_state(path=best_epoch_model_file.name)
+            if should_stop and last_best_epoch is not None:
+                with open(best_epoch_model_file.name, 'rb') as read_file:
+                    self._load_state(path=read_file)
                 return self.losses_per_epochs
 
         # If the stopper didn't stop the training loop but derived a best epoch, the model has to be reconstructed
         # at that state
         if stopper is not None and last_best_epoch is not None and best_epoch_model_file is not None:
-            self._load_state(path=best_epoch_model_file.name)
+            with open(best_epoch_model_file.name, 'rb') as read_file:
+                self._load_state(path=read_file)
 
         return self.losses_per_epochs
 
@@ -986,9 +988,9 @@ class TrainingLoop(ABC):
 
     def _save_state(
         self,
-        path: Union[str, pathlib.Path],
+        path: Union[IO[bytes], str, pathlib.Path],
         stopper: Optional[Stopper] = None,
-        best_epoch_model_checkpoint_path: Optional[Union[str, pathlib.Path]] = None,
+        best_epoch_model_checkpoint_file: Optional[IO[bytes]] = None,
     ) -> None:
         """Save the state of the training loop.
 
@@ -997,8 +999,8 @@ class TrainingLoop(ABC):
         :param stopper:
             An instance of :class:`pykeen.stopper.EarlyStopper` with settings for checking
             if training should stop early
-        :param best_epoch_model_checkpoint_path:
-            Path of the file containing the checkpoint for the best epoch model when using early stopping.
+        :param best_epoch_model_checkpoint_file:
+            The file containing the checkpoint for the best epoch model when using early stopping.
         """
         if self.optimizer is None:
             raise ValueError
@@ -1016,8 +1018,9 @@ class TrainingLoop(ABC):
         else:
             torch_cuda_random_state = None
 
-        if best_epoch_model_checkpoint_path is not None:
-            best_epoch_model_checkpoint = torch.load(best_epoch_model_checkpoint_path)
+        if best_epoch_model_checkpoint_file is not None:
+            with open(best_epoch_model_checkpoint_file.name, 'rb') as read_file:
+                best_epoch_model_checkpoint = torch.load(read_file)
         else:
             best_epoch_model_checkpoint = None
 
@@ -1044,7 +1047,7 @@ class TrainingLoop(ABC):
 
     def _load_state(
             self,
-            path: Union[str, pathlib.Path],
+            path: Union[IO[bytes], str, pathlib.Path],
     ) -> Tuple[Optional[IO[bytes]], Optional[int]]:
         """Load the state of the training loop from a checkpoint.
 
@@ -1089,11 +1092,10 @@ class TrainingLoop(ABC):
         best_epoch = None
         if checkpoint['best_epoch_model_checkpoint'] is not None:
             best_epoch_model_file = NamedTemporaryFile()
-            best_epoch_model_path = best_epoch_model_file.name
             best_epoch = checkpoint['best_epoch_model_checkpoint']['epoch']
             torch.save(
                 checkpoint['best_epoch_model_checkpoint'],
-                best_epoch_model_path,
+                best_epoch_model_file.file,
                 pickle_protocol=pickle.HIGHEST_PROTOCOL,
             )
 
