@@ -89,7 +89,7 @@ class NaNTrainingLoop(SLCWATrainingLoop):
     ) -> torch.FloatTensor:  # noqa: D102
         self.patience -= 1
         if self.patience < 0:
-            return torch.as_tensor([float('nan')], device=batch[0].device, dtype=torch.float32)
+            return torch.as_tensor([float('nan')], device=batch.device, dtype=torch.float32)
         else:
             factor = 1.0
         loss = super()._process_batch(
