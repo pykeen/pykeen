@@ -11,7 +11,7 @@ import torch
 from .training_loop import TrainingLoop
 from .utils import apply_label_smoothing
 from ..triples import CoreTriplesFactory, Instances
-from ..triples.instances import LCWABatchType
+from ..triples.instances import LCWABatchType, LCWASampleType
 
 __all__ = [
     'LCWATrainingLoop',
@@ -20,7 +20,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class LCWATrainingLoop(TrainingLoop[LCWABatchType, LCWABatchType]):
+class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
     """A training loop that uses the local closed world assumption training approach."""
 
     def _create_instances(self, triples_factory: CoreTriplesFactory) -> Instances:  # noqa: D102

@@ -24,6 +24,7 @@ __all__ = [
 ]
 
 BatchType = TypeVar("BatchType")
+LCWASampleType = Tuple[MappedTriples, torch.FloatTensor]
 LCWABatchType = Tuple[MappedTriples, torch.FloatTensor]
 SLCWASampleType = TypeVar('SLCWASampleType', bound=MappedTriples)
 SLCWABatchType = Tuple[MappedTriples, MappedTriples, Optional[torch.BoolTensor]]
