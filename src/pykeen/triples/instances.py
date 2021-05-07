@@ -2,11 +2,13 @@
 
 """Implementation of basic instance factory which creates just instances based on standard KG triples."""
 
+from abc import ABC
 from dataclasses import dataclass
-from typing import Mapping
+from typing import Generic, Mapping, Optional, Tuple, TypeVar
 
 import numpy as np
 import scipy.sparse
+import torch
 from torch.utils import data
 
 from ..typing import MappedTriples
@@ -21,20 +23,42 @@ __all__ = [
     'MultimodalLCWAInstances',
 ]
 
+BatchType = TypeVar("BatchType")
+LCWASampleType = Tuple[MappedTriples, torch.FloatTensor]
+LCWABatchType = Tuple[MappedTriples, torch.FloatTensor]
+SLCWASampleType = TypeVar('SLCWASampleType', bound=MappedTriples)
+SLCWABatchType = Tuple[MappedTriples, MappedTriples, Optional[torch.BoolTensor]]
+
 
 @fix_dataclass_init_docs
 @dataclass
-class Instances(data.Dataset):
+class Instances(data.Dataset, Generic[BatchType], ABC):
     """Triples and mappings to their indices."""
 
     def __len__(self):  # noqa:D401
         """The number of instances."""
         raise NotImplementedError
 
+    def __getitem__(self, item: int) -> BatchType:  # noqa: D105
+        raise NotImplementedError
+
+    @classmethod
+    def from_triples(cls, mapped_triples: MappedTriples, num_entities: int) -> 'Instances':
+        """Create instances from mapped triples.
+
+        :param mapped_triples: shape: (num_triples, 3)
+            The ID-based triples.
+        :param num_entities:
+            The number of entities.
+        :return:
+            The instances.
+        """
+        raise NotImplementedError
+
 
 @fix_dataclass_init_docs
 @dataclass
-class SLCWAInstances(Instances):
+class SLCWAInstances(Instances[MappedTriples]):
     """Triples and mappings to their indices for sLCWA."""
 
     #: The mapped triples, shape: (num_triples, 3)
@@ -43,13 +67,17 @@ class SLCWAInstances(Instances):
     def __len__(self):  # noqa: D105
         return self.mapped_triples.shape[0]
 
-    def __getitem__(self, item):  # noqa: D105
+    def __getitem__(self, item: int) -> MappedTriples:  # noqa: D105
         return self.mapped_triples[item]
+
+    @classmethod
+    def from_triples(cls, mapped_triples: MappedTriples, num_entities: int) -> Instances:  # noqa:D102
+        return cls(mapped_triples=mapped_triples)
 
 
 @fix_dataclass_init_docs
 @dataclass
-class LCWAInstances(Instances):
+class LCWAInstances(Instances[LCWABatchType]):
     """Triples and mappings to their indices for LCWA."""
 
     #: The unique pairs
@@ -86,7 +114,7 @@ class LCWAInstances(Instances):
     def __len__(self) -> int:  # noqa: D105
         return self.pairs.shape[0]
 
-    def __getitem__(self, item):  # noqa: D105
+    def __getitem__(self, item: int) -> LCWABatchType:  # noqa: D105
         return self.pairs[item], np.asarray(self.compressed[item, :].todense())[0, :]
 
 

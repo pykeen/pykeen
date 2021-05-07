@@ -929,7 +929,7 @@ def pipeline(  # noqa: C901
             model=model_instance,
             triples_factory=training,
             optimizer=optimizer_instance,
-            negative_sampler_cls=negative_sampler_cls,
+            negative_sampler=negative_sampler_cls,
             negative_sampler_kwargs=negative_sampler_kwargs,
             **training_loop_kwargs,
         )
