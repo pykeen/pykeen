@@ -32,6 +32,10 @@ __all__ = [
     'Embedding',
     'LiteralRepresentation',
     'EmbeddingSpecification',
+    'RGCNRepresentations',
+    'CompGCNLayer',
+    'CombinedCompGCNRepresentations',
+    'SingleCompGCNRepresentation',
 ]
 
 logger = logging.getLogger(__name__)
@@ -474,7 +478,10 @@ def _handle(
 
 
 class RGCNRepresentations(RepresentationModule):
-    """Entity representations enriched by R-GCN."""
+    """Entity representations enriched by R-GCN.
+
+    .. todo:: Transfer docs from R-GCN model class
+    """
 
     def __init__(
         self,
@@ -491,6 +498,23 @@ class RGCNRepresentations(RepresentationModule):
         decomposition: Hint[Decomposition] = None,
         decomposition_kwargs: Optional[Mapping[str, Any]] = None,
     ):
+        """Instantiate the R-GCN encoder.
+
+        .. todo:: Write docs for all arguments here
+
+        :param triples_factory:
+        :param embedding_specification:
+        :param num_layers:
+        :param use_bias:
+        :param use_batch_norm:
+        :param activation:
+        :param activation_kwargs:
+        :param edge_dropout:
+        :param self_loop_dropout:
+        :param edge_weighting:
+        :param decomposition:
+        :param decomposition_kwargs:
+        """
         base_embeddings = embedding_specification.make(num_embeddings=triples_factory.num_entities)
         super().__init__(max_id=triples_factory.num_entities, shape=base_embeddings.shape)
         self.entity_embeddings = base_embeddings

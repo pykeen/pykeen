@@ -61,7 +61,13 @@ def _reduce_relation_specific(
 
 
 class Decomposition(nn.Module, ABC):
-    """Base module for relation-specific message passing."""
+    """Base module for relation-specific message passing.
+
+    .. todo::
+
+        What does it mean mathematically to be a "decomposition"? is there any kind of functional form that
+        we can extract?
+    """
 
     def __init__(
         self,
@@ -122,7 +128,15 @@ class Decomposition(nn.Module, ABC):
 
 
 class BasesDecomposition(Decomposition):
-    """Represent relation-weights as a linear combination of base transformation matrices."""
+    r"""Represent relation-weights as a linear combination of base transformation matrices.
+
+    The basis decomposition represents the relation-specific transformation matrices
+    as a weighted combination of base matrices, $\{\mathbf{B}_i^l\}_{i=1}^{B}$, i.e.,
+
+    .. math::
+
+        \mathbf{W}_r^l = \sum \limits_{b=1}^B \alpha_{rb} \mathbf{B}^l_i
+    """
 
     def __init__(
         self,
@@ -298,7 +312,16 @@ class BasesDecomposition(Decomposition):
 
 
 class BlockDecomposition(Decomposition):
-    """Represent relation-specific weight matrices via block-diagonal matrices."""
+    r"""Represent relation-specific weight matrices via block-diagonal matrices.
+
+    The block-diagonal decomposition restricts each transformation matrix to a block-diagonal-matrix, i.e.,
+
+    .. math::
+
+        \mathbf{W}_r^l = diag(\mathbf{B}_{r,1}^l, \ldots, \mathbf{B}_{r,B}^l)
+
+    where $\mathbf{B}_{r,i} \in \mathbb{R}^{(d^{(l) }/ B) \times (d^{(l)} / B)}$.
+    """
 
     def __init__(
         self,
