@@ -13,7 +13,6 @@ from pykeen.datasets import Nations
 from pykeen.losses import CrossEntropyLoss
 from pykeen.models import ConvE, Model, TransE
 from pykeen.optimizers import optimizer_resolver
-from pykeen.sampling.negative_sampler import SLCWABatchType
 from pykeen.training import SLCWATrainingLoop, training_loop_resolver
 from pykeen.training.training_loop import NonFiniteLossError, TrainingApproachLossMismatchError
 from pykeen.triples import TriplesFactory
@@ -81,7 +80,7 @@ class NaNTrainingLoop(SLCWATrainingLoop):
 
     def _process_batch(
         self,
-        batch: SLCWABatchType,
+        batch: MappedTriples,
         start: int,
         stop: int,
         label_smoothing: float = 0.0,

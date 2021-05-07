@@ -7,10 +7,10 @@ from typing import Any, ClassVar, Mapping, Optional, Tuple, TypeVar
 
 import torch
 from class_resolver import HintOrType
-from pykeen.typing import MappedTriples
 
 from .filtering import Filterer, filterer_resolver
 from ..triples import CoreTriplesFactory
+from ..typing import MappedTriples
 from ..utils import normalize_string
 
 __all__ = [

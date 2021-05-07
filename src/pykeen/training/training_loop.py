@@ -11,7 +11,7 @@ import time
 from abc import ABC, abstractmethod
 from datetime import datetime
 from hashlib import md5
-from typing import Any, Callable, ClassVar, Generic, List, Mapping, Optional, Tuple, Type, TypeVar, Union
+from typing import Any, ClassVar, Generic, List, Mapping, Optional, Tuple, Type, TypeVar, Union
 
 import numpy as np
 import torch
