@@ -21,7 +21,9 @@ class NegativeSampler(ABC):
     """A negative sampler."""
 
     #: The default strategy for optimizing the negative sampler's hyper-parameters
-    hpo_default: ClassVar[Mapping[str, Mapping[str, Any]]]
+    hpo_default: ClassVar[Mapping[str, Mapping[str, Any]]] = dict(
+        num_negs_per_pos=dict(type=int, low=1, high=100, q=10),
+    )
 
     #: A filterer for negative batches
     filterer: Optional[Filterer]
@@ -36,7 +38,7 @@ class NegativeSampler(ABC):
     ) -> None:
         """Initialize the negative sampler with the given entities.
 
-        :param triples_factory: The factory holding the triples to sample from
+        :param triples_factory: The factory holding the positive training triples
         :param num_negs_per_pos: Number of negative samples to make per positive triple. Defaults to 1.
         :param filtered: Whether proposed corrupted triples that are in the training data should be filtered.
             Defaults to False. See explanation in :func:`filter_negative_triples` for why this is
