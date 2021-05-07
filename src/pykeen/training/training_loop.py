@@ -11,7 +11,7 @@ import time
 from abc import ABC, abstractmethod
 from datetime import datetime
 from hashlib import md5
-from typing import Any, List, Mapping, Optional, Tuple, Type, Union
+from typing import Any, List, Mapping, Optional, Sequence, Tuple, Type, Union
 
 import numpy as np
 import torch
@@ -78,6 +78,30 @@ def _get_optimizer_kwargs(optimizer: Optimizer) -> Mapping[str, Any]:
     return optimizer_kwargs
 
 
+class TrainingCallback:
+    """
+    An interface for training callbacks.
+
+    The interaction points are similar to those of `Keras <https://keras.io/guides/writing_your_own_callbacks/#an-overview-of-callback-methods>`_.
+
+    The training callback is registered with the training loop, and can access its attributes.
+    """
+
+    def __init__(self):
+        """Initialize the callback."""
+        self.loop = None
+
+    def register_loop(self, loop: "TrainingLoop"):
+        """Register the training loop."""
+        self.loop = loop
+
+    def on_evaluation_batch(self, batch) -> None:
+        """Callback for evaluation (validation/test) batches."""
+
+    def on_training_batch(self, batch) -> None:
+        """Callback for training batches."""
+
+
 class TrainingLoop(ABC):
     """A training loop."""
 
@@ -108,6 +132,7 @@ class TrainingLoop(ABC):
         self.model = model
         self.optimizer = optimizer
         self.losses_per_epochs = []
+        self._should_stop = False
         self.automatic_memory_optimization = automatic_memory_optimization
 
         logger.debug("we don't really need the triples factory: %s", triples_factory)
@@ -170,6 +195,7 @@ class TrainingLoop(ABC):
         checkpoint_frequency: Optional[int] = None,
         checkpoint_on_failure: bool = False,
         drop_last: Optional[bool] = None,
+        callbacks: Optional[Sequence[TrainingCallback]] = None,
     ) -> Optional[List[float]]:
         """Train the KGE model.
 
@@ -230,6 +256,11 @@ class TrainingLoop(ABC):
         :return:
             The losses per epoch.
         """
+        callbacks = list(callbacks or [])
+        for callback in callbacks:
+            callback.register_loop(loop=self)
+        self._should_stop = False
+
         # Create training instances. Use the _create_instances function to allow subclasses
         # to modify this behavior
         training_instances = self._create_instances(triples_factory)
@@ -306,6 +337,7 @@ class TrainingLoop(ABC):
                 checkpoint_frequency=checkpoint_frequency,
                 checkpoint_on_failure_file_path=checkpoint_on_failure_file_path,
                 drop_last=drop_last,
+                callbacks=callbacks,
                 triples_factory=triples_factory,
                 training_instances=training_instances,
             )
@@ -342,6 +374,7 @@ class TrainingLoop(ABC):
         checkpoint_frequency: Optional[int] = None,
         checkpoint_on_failure_file_path: Union[None, str, pathlib.Path] = None,
         drop_last: Optional[bool] = None,
+        callbacks: Optional[Sequence[TrainingCallback]] = None,
     ) -> Optional[List[float]]:
         """Train the KGE model.
 
@@ -584,6 +617,10 @@ class TrainingLoop(ABC):
                     if only_size_probing and evaluated_once:
                         break
 
+                    # Callbacks for evaluation batches
+                    for callback in callbacks:
+                        callback.on_training_batch(batch)
+
                     evaluated_once = True
 
                 del batch
@@ -611,9 +648,14 @@ class TrainingLoop(ABC):
                 # Save the last successful finished epoch
                 self._epoch = epoch
 
-                should_stop = False
-                if stopper is not None and stopper.should_evaluate(epoch) and stopper.should_stop(epoch):
-                    should_stop = True
+                # TODO: do not evaluate every epoch
+                evaluation_data_loader = ...
+                for evaluation_batch in evaluation_data_loader:
+                    for callback in callbacks:
+                        callback.on_evaluation_batch(batch=evaluation_batch)
+                # should_stop = False
+                # if stopper is not None and stopper.should_evaluate(epoch) and stopper.should_stop(epoch):
+                #     should_stop = True
             # When the training loop failed, a fallback checkpoint is created to resume training.
             except (MemoryError, RuntimeError) as e:
                 logger.warning(f'The training loop just failed during epoch {epoch} due to error {str(e)}.')
@@ -633,13 +675,13 @@ class TrainingLoop(ABC):
                 # MyPy overrides are because you should
                 if (
                     minutes_since_last_checkpoint >= checkpoint_frequency  # type: ignore
-                    or should_stop
+                    or self._should_stop
                     or epoch == num_epochs
                 ):
                     self._save_state(path=checkpoint_path, stopper=stopper)  # type: ignore
                     last_checkpoint = time.time()
 
-            if should_stop:
+            if self._should_stop:
                 return self.losses_per_epochs
 
         return self.losses_per_epochs
