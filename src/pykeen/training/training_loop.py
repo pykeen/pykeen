@@ -11,7 +11,7 @@ import time
 from abc import ABC, abstractmethod
 from datetime import datetime
 from hashlib import md5
-from typing import Any, List, Mapping, Optional, Tuple, Type, Union
+from typing import Any, Callable, ClassVar, Generic, List, Mapping, Optional, Tuple, Type, TypeVar, Union
 
 import numpy as np
 import torch
@@ -26,7 +26,6 @@ from ..stoppers import Stopper
 from ..trackers import ResultTracker
 from ..training.schlichtkrull_sampler import GraphSampler
 from ..triples import CoreTriplesFactory, Instances
-from ..typing import MappedTriples
 from ..utils import (
     format_relative_comparison, get_batchnorm_modules, is_cuda_oom_error, is_cudnn_error,
     normalize_string,
@@ -40,6 +39,9 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
+
+SampleType = TypeVar("SampleType")
+BatchType = TypeVar("BatchType")
 
 
 class NonFiniteLossError(RuntimeError):
@@ -78,11 +80,11 @@ def _get_optimizer_kwargs(optimizer: Optimizer) -> Mapping[str, Any]:
     return optimizer_kwargs
 
 
-class TrainingLoop(ABC):
+class TrainingLoop(Generic[SampleType, BatchType], ABC):
     """A training loop."""
 
     losses_per_epochs: List[float]
-    loss_blacklist: Optional[List[Type[Loss]]] = None
+    loss_blacklist: ClassVar[Optional[List[Type[Loss]]]] = None
 
     hpo_default = dict(
         num_epochs=dict(type=int, low=100, high=1000, q=100),
@@ -174,7 +176,7 @@ class TrainingLoop(ABC):
         """Train the KGE model.
 
         :param triples_factory:
-            The training triples factory
+            The training triples.
         :param num_epochs:
             The number of epochs to train the model.
         :param batch_size:
@@ -519,6 +521,7 @@ class TrainingLoop(ABC):
             shuffle=shuffle,
             num_workers=num_workers,
             drop_last=drop_last,
+            collate_fn=self.get_collator(),
         )
 
         # Save the time to track when the saved point was available
@@ -644,7 +647,15 @@ class TrainingLoop(ABC):
 
         return self.losses_per_epochs
 
-    def _forward_pass(self, batch, start, stop, current_batch_size, label_smoothing, slice_size):
+    def _forward_pass(
+        self,
+        batch: BatchType,
+        start: int,
+        stop: int,
+        current_batch_size: int,
+        label_smoothing: float,
+        slice_size: Optional[int],
+    ) -> float:
         # forward pass
         loss = self._process_batch(
             batch=batch,
@@ -674,7 +685,7 @@ class TrainingLoop(ABC):
 
     @staticmethod
     @abstractmethod
-    def _get_batch_size(batch: Union[MappedTriples, Tuple[MappedTriples, torch.FloatTensor]]) -> int:
+    def _get_batch_size(batch: BatchType) -> int:
         """Get the batch size from a (sub-) batch."""
         raise NotImplementedError
 
@@ -683,10 +694,14 @@ class TrainingLoop(ABC):
         """Create the training instances at the beginning of the training loop."""
         raise NotImplementedError
 
+    def get_collator(self) -> Optional[Callable[[List[SampleType]], BatchType]]:
+        """Get the batch collator."""
+        return None
+
     @abstractmethod
     def _process_batch(
         self,
-        batch: Any,
+        batch: BatchType,
         start: int,
         stop: int,
         label_smoothing: float = 0.0,

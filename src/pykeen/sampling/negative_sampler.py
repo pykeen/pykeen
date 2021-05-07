@@ -3,18 +3,21 @@
 """Basic structure for a negative sampler."""
 
 from abc import ABC, abstractmethod
-from typing import Any, ClassVar, Mapping, Optional, Tuple
+from typing import Any, ClassVar, List, Mapping, Optional, Tuple, TypeVar
 
 import torch
-from class_resolver import HintOrType
+from class_resolver import HintOrType, normalize_string
 
 from .filtering import Filterer, filterer_resolver
 from ..triples import CoreTriplesFactory
-from ..utils import normalize_string
+from ..typing import MappedTriples
 
 __all__ = [
     'NegativeSampler',
 ]
+
+SLCWASampleType = TypeVar('SLCWASampleType', bound=MappedTriples)
+SLCWABatchType = Tuple[MappedTriples, MappedTriples, Optional[torch.BoolTensor]]
 
 
 class NegativeSampler(ABC):
@@ -52,7 +55,7 @@ class NegativeSampler(ABC):
         self.filterer = filterer_resolver.make(
             filterer,
             pos_kwargs=filterer_kwargs,
-            triples_factory=triples_factory,
+            mapped_triples=triples_factory.mapped_triples,
         ) if filtered else None
 
     @classmethod
@@ -60,7 +63,59 @@ class NegativeSampler(ABC):
         """Get the normalized name of the negative sampler."""
         return normalize_string(cls.__name__, suffix=NegativeSampler.__name__)
 
+    def sample(self, positive_batch: torch.LongTensor) -> Tuple[torch.LongTensor, Optional[torch.BoolTensor]]:
+        """
+        Generate negative samples from the positive batch.
+
+        :param positive_batch: shape: (batch_size, 3)
+            The positive triples.
+
+        :return:
+            A pair (negative_batch, filter_mask) where
+
+            1. negative_batch: shape: (batch_size, num_negatives, 3)
+                The negative batch.
+            2. filter_mask: shape: (batch_size, num_negatives)
+                An optional filter mask. True where negative samples are valid.
+        """
+        # create unfiltered negative batch by corruption
+        negative_batch = self._corrupt_batch(positive_batch=positive_batch)
+
+        if self.filterer is None:
+            return negative_batch, None
+
+        # If filtering is activated, all negative triples that are positive in the training dataset will be removed
+        return self.filterer(negative_batch=negative_batch)
+
     @abstractmethod
-    def sample(self, positive_batch: torch.LongTensor) -> Tuple[torch.LongTensor, Optional[torch.Tensor]]:
-        """Generate negative samples from the positive batch."""
+    def _corrupt_batch(self, positive_batch: torch.LongTensor) -> torch.LongTensor:
+        """
+        Generate negative samples from the positive batch without application of any filter.
+
+        :param positive_batch: shape: (batch_size, 3)
+            The positive triples.
+
+        :return: shape: (batch_size, num_negs_per_pos, 3)
+            The negative triples.
+        """
         raise NotImplementedError
+
+    def collate(self, batch: List[SLCWASampleType]) -> SLCWABatchType:
+        """
+        Collate a batch of positive triples, and add negative samples.
+
+        :param batch:
+            The batch of positive triples.
+
+        :return:
+            A triple (positive, negative, mask) where
+            1. positive: shape: (batch_size, 3)
+                The positive triples.
+            2. negative: shape: (batch_size, num_negs_per_pos, 3)
+                The negative triples.
+            3. mask: shape: (batch_size, num_negs_per_pos)
+                An optional mask. True indicates that this negative sample should be considered.
+        """
+        positive_batch = torch.stack(batch, dim=0)
+        negative_batch, mask = self.sample(positive_batch=positive_batch)
+        return positive_batch, negative_batch, mask
