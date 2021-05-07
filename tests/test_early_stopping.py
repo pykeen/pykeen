@@ -12,13 +12,18 @@ from torch.optim import Adam
 
 from pykeen.datasets import Nations
 from pykeen.evaluation import Evaluator, MetricResults, RankBasedEvaluator, RankBasedMetricResults
-from pykeen.evaluation.rank_based_evaluator import RANK_TYPES, SIDES
+from pykeen.evaluation.rank_based_evaluator import RANK_REALISTIC, RANK_TYPES, SIDES
 from pykeen.models import Model, TransE
 from pykeen.stoppers.early_stopping import EarlyStopper, is_improvement
 from pykeen.trackers import MLFlowResultTracker
 from pykeen.training import SLCWATrainingLoop
 from pykeen.typing import MappedTriples
 from tests.mocks import MockModel
+
+try:
+    import mlflow
+except ImportError:
+    mlflow = None
 
 
 class TestRandom(unittest.TestCase):
@@ -79,25 +84,39 @@ class MockEvaluator(Evaluator):
 
     def finalize(self) -> MetricResults:  # noqa: D102
         hits = next(self.losses_iter)
+        dummy_1 = {
+            side: {
+                rank_type: 10
+                for rank_type in RANK_TYPES
+            }
+            for side in SIDES
+        }
+        dummy_2 = {
+            side: {
+                rank_type: 1.0
+                for rank_type in RANK_TYPES
+            }
+            for side in SIDES
+        }
         return RankBasedMetricResults(
-            mean_rank={
+            arithmetic_mean_rank=dummy_1,
+            geometric_mean_rank=dummy_1,
+            harmonic_mean_rank=dummy_1,
+            median_rank=dummy_1,
+            inverse_arithmetic_mean_rank=dummy_2,
+            inverse_harmonic_mean_rank=dummy_2,
+            inverse_geometric_mean_rank=dummy_2,
+            inverse_median_rank=dummy_2,
+            adjusted_arithmetic_mean_rank=dummy_2,
+            adjusted_arithmetic_mean_rank_index={
                 side: {
-                    rank_type: 10
-                    for rank_type in RANK_TYPES
+                    RANK_REALISTIC: 0.0,
                 }
                 for side in SIDES
             },
-            mean_reciprocal_rank={
-                side: {
-                    rank_type: 1.0
-                    for rank_type in RANK_TYPES
-                }
-                for side in SIDES
-            },
-            adjusted_mean_rank={
-                side: 1.0
-                for side in SIDES
-            },
+            rank_std=dummy_1,
+            rank_var=dummy_1,
+            rank_mad=dummy_1,
             hits_at_k={
                 side: {
                     rank_type: {
@@ -156,6 +175,7 @@ class TestEarlyStopping(unittest.TestCase):
         self.stopper = EarlyStopper(
             model=self.model,
             evaluator=self.mock_evaluator,
+            training_triples_factory=nations.training,
             evaluation_triples_factory=nations.validation,
             patience=self.patience,
             relative_delta=self.delta,
@@ -188,6 +208,7 @@ class TestEarlyStopping(unittest.TestCase):
             self.assertFalse(self.stopper.should_stop(epoch=epoch))
         self.assertTrue(self.stopper.should_stop(epoch=epoch))
 
+    @unittest.skipUnless(mlflow is not None, reason='MLFlow not installed')
     def test_result_logging_with_mlflow(self):
         """Test whether the MLFLow result logger works."""
         self.stopper.result_tracker = MLFlowResultTracker()
@@ -241,6 +262,7 @@ class TestEarlyStoppingRealWorld(unittest.TestCase):
         stopper = EarlyStopper(
             model=model,
             evaluator=evaluator,
+            training_triples_factory=nations.training,
             evaluation_triples_factory=nations.validation,
             patience=self.patience,
             relative_delta=self.relative_delta,
@@ -248,10 +270,12 @@ class TestEarlyStoppingRealWorld(unittest.TestCase):
         )
         training_loop = SLCWATrainingLoop(
             model=model,
+            triples_factory=nations.training,
             optimizer=Adam(params=model.get_grad_params()),
             automatic_memory_optimization=False,
         )
         losses = training_loop.train(
+            triples_factory=nations.training,
             num_epochs=self.max_num_epochs,
             batch_size=self.batch_size,
             stopper=stopper,

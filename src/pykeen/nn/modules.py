@@ -15,7 +15,8 @@ from class_resolver import Resolver
 from torch import FloatTensor, nn
 
 from . import functional as pkf
-from ..typing import HeadRepresentation, RelationRepresentation, TailRepresentation
+from .combinations import Combination
+from ..typing import HeadRepresentation, HintOrType, RelationRepresentation, TailRepresentation
 from ..utils import CANONICAL_DIMENSIONS, convert_to_canonical_shape, ensure_tuple, upgrade_to_sequence
 
 __all__ = [
@@ -23,6 +24,7 @@ __all__ = [
     # Base Classes
     'Interaction',
     'FunctionalInteraction',
+    'LiteralInteraction',
     'TranslationalInteraction',
     # Adapter classes
     'MonotonicAffineTransformationInteraction',
@@ -324,6 +326,60 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
                 continue
             if hasattr(mod, 'reset_parameters'):
                 mod.reset_parameters()
+
+
+class LiteralInteraction(
+    Interaction,
+    Generic[HeadRepresentation, RelationRepresentation, TailRepresentation],
+):
+    """The interaction function shared by literal-containing interactions."""
+
+    def __init__(
+        self,
+        base: HintOrType[Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]],
+        combination: Combination,
+        base_kwargs: Optional[Mapping[str, Any]] = None,
+    ):
+        """Instantiate the module.
+
+        :param combination: The module used to concatenate the literals to the entity representations
+        :param base: The interaction module
+        :param base_kwargs: Keyword arguments for the interaction module
+        """
+        super().__init__()
+        self.base = interaction_resolver.make(base, base_kwargs)
+        self.combination = combination
+        # The appended "e" represents the literals that get concatenated
+        # on the entity representations. It does not necessarily have the
+        # same dimension "d" as the entity representations.
+        self.entity_shape = tuple(self.base.entity_shape) + ("e",)
+
+    def forward(
+        self,
+        h: HeadRepresentation,
+        r: RelationRepresentation,
+        t: TailRepresentation,
+    ) -> torch.FloatTensor:
+        """Compute broadcasted triple scores given broadcasted representations for head, relation and tails.
+
+        :param h: shape: (batch_size, num_heads, 1, 1, ``*``)
+            The head representations.
+        :param r: shape: (batch_size, 1, num_relations, 1, ``*``)
+            The relation representations.
+        :param t: shape: (batch_size, 1, 1, num_tails, ``*``)
+            The tail representations.
+
+        :return: shape: (batch_size, num_heads, num_relations, num_tails)
+            The scores.
+        """
+        # alternate way of combining entity embeddings + literals
+        # h = torch.cat(h, dim=-1)
+        # h = self.combination(h.view(-1, h.shape[-1])).view(*h.shape[:-1], -1)  # type: ignore
+        # t = torch.cat(t, dim=-1)
+        # t = self.combination(t.view(-1, t.shape[-1])).view(*t.shape[:-1], -1)  # type: ignore
+        h_proj = self.combination(*h)
+        t_proj = self.combination(*t)
+        return self.base(h=h_proj, r=r, t=t_proj)
 
 
 class FunctionalInteraction(Interaction, Generic[HeadRepresentation, RelationRepresentation, TailRepresentation]):
@@ -1152,6 +1208,21 @@ class PairREInteraction(TranslationalInteraction[FloatTensor, Tuple[FloatTensor,
         t: TailRepresentation,
     ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
         return dict(h=h, r_h=r[0], r_t=r[1], t=t)
+
+
+class QuatEInteraction(
+    FunctionalInteraction[
+        torch.FloatTensor,
+        torch.FloatTensor,
+        torch.FloatTensor,
+    ],
+):
+    """A module wrapper for the QuatE interaction function.
+
+    .. seealso:: :func:`pykeen.nn.functional.quat_e_interaction`
+    """
+
+    func = pkf.quat_e_interaction
 
 
 class MonotonicAffineTransformationInteraction(

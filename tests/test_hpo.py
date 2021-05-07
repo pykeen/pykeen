@@ -8,7 +8,10 @@ import unittest
 import optuna
 import pytest
 
-from pykeen.datasets.nations import NATIONS_TRAIN_PATH, NationsLiteral
+from pykeen.datasets.nations import (
+    NATIONS_TEST_PATH, NATIONS_TRAIN_PATH, NATIONS_VALIDATE_PATH, Nations,
+    NationsLiteral,
+)
 from pykeen.hpo import hpo_pipeline
 from pykeen.hpo.hpo import suggest_kwargs
 from pykeen.triples import TriplesFactory
@@ -144,7 +147,49 @@ class TestHyperparameterOptimization(unittest.TestCase):
             study.optimize(objective, n_trials=2)
             self.assertIn('Upper bound 4 is not greater than lower bound 4.', context.exception)
 
-    def test_custom_tf(self):
+
+@pytest.mark.slow
+class TestHPODatasets(unittest.TestCase):
+    """Test different ways of loading data in HPO."""
+
+    def test_custom_dataset_instance(self):
+        """Test passing a pre-instantiated dataset to HPO."""
+        hpo_pipeline_result = self._help_test_hpo(
+            study_name='HPO with custom dataset instance',
+            dataset=Nations(),  # mock a "custom" dataset by using one already available
+        )
+        # Since custom data was passed, we can't store any of this
+        self.assertNotIn('dataset', hpo_pipeline_result.study.user_attrs)
+        self.assertNotIn('training', hpo_pipeline_result.study.user_attrs)
+        self.assertNotIn('testing', hpo_pipeline_result.study.user_attrs)
+        self.assertNotIn('validation', hpo_pipeline_result.study.user_attrs)
+
+    def test_custom_dataset_cls(self):
+        """Test passing a dataset class to HPO."""
+        hpo_pipeline_result = self._help_test_hpo(
+            study_name='HPO with custom dataset class',
+            dataset=Nations,
+        )
+        # currently, any custom data doesn't get stored.
+        self.assertNotIn('dataset', hpo_pipeline_result.study.user_attrs)
+        # self.assertEqual(Nations.get_normalized_name(), hpo_pipeline_result.study.user_attrs['dataset'])
+        self.assertNotIn('training', hpo_pipeline_result.study.user_attrs)
+        self.assertNotIn('testing', hpo_pipeline_result.study.user_attrs)
+        self.assertNotIn('validation', hpo_pipeline_result.study.user_attrs)
+
+    def test_custom_dataset_path(self):
+        """Test passing a dataset class to HPO."""
+        hpo_pipeline_result = self._help_test_hpo(
+            study_name='HPO with custom dataset path',
+            dataset=NATIONS_TRAIN_PATH,
+        )
+        self.assertIn('dataset', hpo_pipeline_result.study.user_attrs)
+        self.assertEqual(str(NATIONS_TRAIN_PATH), hpo_pipeline_result.study.user_attrs['dataset'])
+        self.assertNotIn('training', hpo_pipeline_result.study.user_attrs)
+        self.assertNotIn('testing', hpo_pipeline_result.study.user_attrs)
+        self.assertNotIn('validation', hpo_pipeline_result.study.user_attrs)
+
+    def test_custom_tf_object(self):
         """Test using a custom triples factories with HPO.
 
         .. seealso:: https://github.com/pykeen/pykeen/issues/230
@@ -152,17 +197,49 @@ class TestHyperparameterOptimization(unittest.TestCase):
         tf = TriplesFactory.from_path(path=NATIONS_TRAIN_PATH)
         training, testing, validation = tf.split([.8, .1, .1], random_state=0)
 
-        hpo_pipeline_result = hpo_pipeline(
+        hpo_pipeline_result = self._help_test_hpo(
+            study_name='HPO with custom triples factories',
             training=training,
             testing=testing,
             validation=validation,
-            model='TransE',
-            n_trials=2,
-            training_kwargs=dict(num_epochs=2),
         )
+        self.assertNotIn('dataset', hpo_pipeline_result.study.user_attrs)
+        # Since there's no source path information, these shouldn't be
+        # added, even if it might be possible to infer path information
+        # from the triples factories
+        self.assertNotIn('training', hpo_pipeline_result.study.user_attrs)
+        self.assertNotIn('testing', hpo_pipeline_result.study.user_attrs)
+        self.assertNotIn('validation', hpo_pipeline_result.study.user_attrs)
 
+    def test_custom_paths(self):
+        """Test using a custom triples paths with HPO."""
+        hpo_pipeline_result = self._help_test_hpo(
+            study_name='HPO with custom triples paths',
+            training=NATIONS_TRAIN_PATH,  # mock "custom" paths
+            testing=NATIONS_TEST_PATH,
+            validation=NATIONS_VALIDATE_PATH,
+        )
+        self.assertNotIn('dataset', hpo_pipeline_result.study.user_attrs)
+        # Since paths were passed for training, testing, and validation,
+        # they should be stored as study-level attributes
+        self.assertIn('training', hpo_pipeline_result.study.user_attrs)
+        self.assertEqual(str(NATIONS_TRAIN_PATH), hpo_pipeline_result.study.user_attrs['training'])
+        self.assertIn('testing', hpo_pipeline_result.study.user_attrs)
+        self.assertEqual(str(NATIONS_TEST_PATH), hpo_pipeline_result.study.user_attrs['testing'])
+        self.assertIn('validation', hpo_pipeline_result.study.user_attrs)
+        self.assertEqual(str(NATIONS_VALIDATE_PATH), hpo_pipeline_result.study.user_attrs['validation'])
+
+    def _help_test_hpo(self, **kwargs):
+        hpo_pipeline_result = hpo_pipeline(
+            **kwargs,
+            model='TransE',
+            n_trials=1,
+            training_kwargs=dict(num_epochs=1, use_tqdm=False),
+            evaluation_kwargs=dict(use_tqdm=False),
+        )
         with tempfile.TemporaryDirectory() as directory:
             hpo_pipeline_result.save_to_directory(directory)
+        return hpo_pipeline_result
 
 
 @pytest.mark.slow

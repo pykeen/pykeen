@@ -26,6 +26,7 @@ def plot_losses(pipeline_result, *, ax=None):
     import seaborn as sns
     sns.set_style('darkgrid')
 
+    ax = _ensure_ax(ax)
     rv = sns.lineplot(x=range(len(pipeline_result.losses)), y=pipeline_result.losses, ax=ax)
 
     loss_name = loss_resolver.normalize_inst(pipeline_result.model.loss)
@@ -56,6 +57,14 @@ def plot_early_stopping(pipeline_result, *, ax=None, lineplot_kwargs=None):
     return rv
 
 
+def _default_entity_embedding_getter(m) -> Embedding:
+    return m.entity_embeddings
+
+
+def _default_relation_embedding_getter(m) -> Embedding:
+    return m.relation_embeddings
+
+
 def plot_er(  # noqa: C901
     pipeline_result,
     *,
@@ -68,6 +77,8 @@ def plot_er(  # noqa: C901
     plot_relations: Optional[bool] = None,
     annotation_x_offset: float = 0.02,
     annotation_y_offset: float = 0.03,
+    entity_embedding_getter=None,
+    relation_embedding_getter=None,
     ax=None,
     **kwargs,
 ):
@@ -85,6 +96,12 @@ def plot_er(  # noqa: C901
         like :class:`pykeen.models.TransE`.
     :param annotation_x_offset: X offset of label from entity position
     :param annotation_y_offset: Y offset of label from entity position
+    :param entity_embedding_getter: A function that takes a model and returns its entity embeddings. If none,
+        defaults to :func:`_default_entity_embedding_getter`, which just gets ``model.entity_embeddings``. Note,
+        the default only works with old-style PyKEEN models.
+    :param relation_embedding_getter: A function that takes a model and returns its relation embeddings. If none,
+        defaults to :func:`_default_relation_embedding_getter`, which just gets ``model.relation_embeddings``. Note,
+        the default only works with old-style PyKEEN models.
     :param ax: The matplotlib axis, if pre-defined
     :param kwargs: The keyword arguments passed to `__init__()` of
         the reducer class (e.g., PCA, TSNE)
@@ -116,9 +133,16 @@ def plot_er(  # noqa: C901
 
     sns.set_style('whitegrid')
 
+    if entity_embedding_getter is None:
+        entity_embedding_getter = _default_entity_embedding_getter
+    if relation_embedding_getter is None:
+        relation_embedding_getter = _default_relation_embedding_getter
+
     if plot_relations and plot_entities:
-        e_embeddings, e_reduced = _reduce_embeddings(pipeline_result.model.entity_embeddings, reducer, fit=True)
-        r_embeddings, r_reduced = _reduce_embeddings(pipeline_result.model.relation_embeddings, reducer, fit=False)
+        e_embeddings, e_reduced = _reduce_embeddings(entity_embedding_getter(pipeline_result.model), reducer, fit=True)
+        r_embeddings, r_reduced = _reduce_embeddings(
+            relation_embedding_getter(pipeline_result.model), reducer, fit=False,
+        )
 
         xmax = max(r_embeddings[:, 0].max(), e_embeddings[:, 0].max()) + margin
         xmin = min(r_embeddings[:, 0].min(), e_embeddings[:, 0].min()) - margin
@@ -126,14 +150,16 @@ def plot_er(  # noqa: C901
         ymin = min(r_embeddings[:, 1].min(), e_embeddings[:, 1].min()) - margin
     elif plot_relations:
         e_embeddings, e_reduced = None, False
-        r_embeddings, r_reduced = _reduce_embeddings(pipeline_result.model.relation_embeddings, reducer, fit=True)
+        r_embeddings, r_reduced = _reduce_embeddings(
+            relation_embedding_getter(pipeline_result.model), reducer, fit=True,
+        )
 
         xmax = r_embeddings[:, 0].max() + margin
         xmin = r_embeddings[:, 0].min() - margin
         ymax = r_embeddings[:, 1].max() + margin
         ymin = r_embeddings[:, 1].min() - margin
     elif plot_entities:
-        e_embeddings, e_reduced = _reduce_embeddings(pipeline_result.model.entity_embeddings, reducer, fit=True)
+        e_embeddings, e_reduced = _reduce_embeddings(entity_embedding_getter(pipeline_result.model), reducer, fit=True)
         r_embeddings, r_reduced = None, False
 
         xmax = e_embeddings[:, 0].max() + margin
@@ -152,7 +178,7 @@ def plot_er(  # noqa: C901
         subtitle = f' using {reducer_cls.__name__}'
 
     if plot_entities:
-        entity_id_to_label = pipeline_result.model.triples_factory.entity_id_to_label
+        entity_id_to_label = pipeline_result.training.entity_id_to_label
         for entity_id, entity_reduced_embedding in enumerate(e_embeddings):
             entity_label = entity_id_to_label[entity_id]
             if entities and entity_label not in entities:
@@ -162,7 +188,7 @@ def plot_er(  # noqa: C901
             ax.annotate(entity_label, (x + annotation_x_offset, y + annotation_y_offset))
 
     if plot_relations:
-        relation_id_to_label = pipeline_result.model.triples_factory.relation_id_to_label
+        relation_id_to_label = pipeline_result.training.relation_id_to_label
         for relation_id, relation_reduced_embedding in enumerate(r_embeddings):
             relation_label = relation_id_to_label[relation_id]
             if relations and relation_label not in relations:
@@ -242,9 +268,10 @@ def plot(pipeline_result, er_kwargs: Optional[Mapping[str, str]] = None, figsize
     """Plot all plots."""
     import matplotlib.pyplot as plt
 
-    fig, (lax, rax) = plt.subplots(1, 2, figsize=figsize)
+    fig, axes = plt.subplots(1, 2, figsize=figsize)
 
-    pipeline_result.plot_losses(ax=lax)
-    pipeline_result.plot_er(ax=rax, **(er_kwargs or {}))
+    pipeline_result.plot_losses(ax=axes[0])
+    pipeline_result.plot_er(ax=axes[1], **(er_kwargs or {}))
 
     plt.tight_layout()
+    return fig, axes

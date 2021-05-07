@@ -11,7 +11,8 @@ import torch
 import unittest_templates
 
 import pykeen.nn.emb
-from pykeen.nn.emb import Embedding, EmbeddingSpecification, RepresentationModule
+from pykeen.datasets.nations import NationsLiteral
+from pykeen.nn.emb import Embedding, EmbeddingSpecification, LiteralRepresentation, RepresentationModule
 from pykeen.triples.generation import generate_triples_factory
 from tests import cases, mocks
 
@@ -30,6 +31,29 @@ class EmbeddingTests(cases.RepresentationTestCase):
         assert self.instance.max_id == self.instance.num_embeddings
         embedding_dim = int(numpy.prod(self.instance.shape))
         assert self.instance.shape == (embedding_dim,)
+
+    def test_dropout(self):
+        """Test dropout layer."""
+        # create a new instance with guaranteed dropout
+        kwargs = self.instance_kwargs
+        kwargs.pop("dropout", None)
+        dropout_instance = self.cls(**kwargs, dropout=0.1)
+        # set to training mode
+        dropout_instance.train()
+        # check for different output
+        indices = torch.arange(2)
+        first = dropout_instance(indices)
+        second = dropout_instance(indices)
+        assert not torch.allclose(first, second)
+
+
+class LiteralEmbeddingTests(cases.RepresentationTestCase):
+    """Tests for literal embeddings."""
+
+    cls = LiteralRepresentation
+    kwargs = dict(
+        numeric_literals=NationsLiteral().training.numeric_literals,
+    )
 
 
 class TensorEmbeddingTests(cases.RepresentationTestCase):
@@ -61,6 +85,30 @@ class RGCNRepresentationTests(cases.RepresentationTestCase):
             num_entities=self.num,
             num_relations=self.num_relations,
             num_triples=self.num_triples,
+        )
+        return kwargs
+
+
+class TestSingleCompGCNRepresentationTests(cases.RepresentationTestCase):
+    """Test single CompGCN representations."""
+
+    cls = pykeen.nn.emb.SingleCompGCNRepresentation
+    num_entities: int = 8
+    num_relations: int = 7
+    num_triples: int = 31
+    dim: int = 3
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        kwargs["combined"] = pykeen.nn.emb.CombinedCompGCNRepresentations(
+            triples_factory=generate_triples_factory(
+                num_entities=self.num_entities,
+                num_relations=self.num_relations,
+                num_triples=self.num_triples,
+                create_inverse_triples=True,
+            ),
+            embedding_specification=EmbeddingSpecification(embedding_dim=self.dim),
+            dims=self.dim,
         )
         return kwargs
 
@@ -119,3 +167,21 @@ class EmbeddingSpecificationTests(unittest.TestCase):
         )
         e = s.make(num_embeddings=100)
         self.assertEqual((5, 10), e.shape)
+
+    def test_make_errors(self):
+        """Test errors on making with an invalid key."""
+        with self.assertRaises(KeyError):
+            EmbeddingSpecification(
+                shape=(1, 1),
+                initializer='garbage',
+            ).make(num_embeddings=1)
+        with self.assertRaises(KeyError):
+            EmbeddingSpecification(
+                shape=(1, 1),
+                constrainer='garbage',
+            ).make(num_embeddings=1)
+        with self.assertRaises(KeyError):
+            EmbeddingSpecification(
+                shape=(1, 1),
+                normalizer='garbage',
+            ).make(num_embeddings=1)

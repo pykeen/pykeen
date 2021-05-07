@@ -195,8 +195,8 @@ from ..sampling import NegativeSampler, negative_sampler_resolver
 from ..stoppers import EarlyStopper, Stopper, stopper_resolver
 from ..trackers import ResultTracker, tracker_resolver
 from ..training import SLCWATrainingLoop, TrainingLoop, training_loop_resolver
-from ..triples import TriplesFactory
-from ..typing import Hint, HintType
+from ..triples import CoreTriplesFactory
+from ..typing import Hint, HintType, MappedTriples
 from ..utils import (
     Result, ensure_ftp_directory, fix_dataclass_init_docs, get_json_bytes_io, get_model_io, random_non_negative_int,
     resolve_device, set_random_seed,
@@ -225,6 +225,9 @@ class PipelineResult(Result):
 
     #: The model trained by the pipeline
     model: Model
+
+    #: The training triples
+    training: CoreTriplesFactory
 
     #: The training loop used by the pipeline
     training_loop: TrainingLoop
@@ -310,6 +313,10 @@ class PipelineResult(Result):
         The model contains within it the triples factory that was used for training.
         """
         torch.save(self.model, path, pickle_protocol=pickle.HIGHEST_PROTOCOL)
+
+    def get_metric(self, key: str) -> float:
+        """Get the given metric out of the metric result object."""
+        return self.metric_results.get_metric(key)
 
     def _get_results(self) -> Mapping[str, Any]:
         results = dict(
@@ -434,7 +441,7 @@ class PipelineResult(Result):
 
 
 def replicate_pipeline_from_path(
-    path: str,
+    path: Union[str, pathlib.Path],
     directory: str,
     replicates: int,
     move_to_cpu: bool = False,
@@ -535,7 +542,7 @@ def save_pipeline_results_to_directory(
 
 
 def pipeline_from_path(
-    path: str,
+    path: Union[str, pathlib.Path],
     **kwargs,
 ) -> PipelineResult:
     """Run the pipeline with configuration in a JSON file at the given path.
@@ -578,8 +585,15 @@ def pipeline_from_config(
 
 def _build_model_helper(
     *,
-    model, model_kwargs, loss, loss_kwargs, _device, _random_seed, regularizer, regularizer_kwargs,
-    training,
+    model,
+    model_kwargs,
+    loss,
+    loss_kwargs,
+    _device,
+    _random_seed,
+    regularizer,
+    regularizer_kwargs,
+    training_triples_factory,
 ) -> Model:
     if model_kwargs is None:
         model_kwargs = {}
@@ -604,7 +618,7 @@ def _build_model_helper(
 
     return model_resolver.make(
         model,
-        triples_factory=training,
+        triples_factory=training_triples_factory,
         loss=loss_instance,
         **model_kwargs,
     )
@@ -615,9 +629,9 @@ def pipeline(  # noqa: C901
     # 1. Dataset
     dataset: Union[None, str, Dataset, Type[Dataset]] = None,
     dataset_kwargs: Optional[Mapping[str, Any]] = None,
-    training: Hint[TriplesFactory] = None,
-    testing: Hint[TriplesFactory] = None,
-    validation: Hint[TriplesFactory] = None,
+    training: Hint[CoreTriplesFactory] = None,
+    testing: Hint[CoreTriplesFactory] = None,
+    validation: Hint[CoreTriplesFactory] = None,
     evaluation_entity_whitelist: Optional[Collection[str]] = None,
     evaluation_relation_whitelist: Optional[Collection[str]] = None,
     # 2. Model
@@ -638,6 +652,7 @@ def pipeline(  # noqa: C901
     clear_optimizer: bool = True,
     # 6. Training Loop
     training_loop: HintType[TrainingLoop] = None,
+    training_loop_kwargs: Optional[Mapping[str, Any]] = None,
     negative_sampler: HintType[NegativeSampler] = None,
     negative_sampler_kwargs: Optional[Mapping[str, Any]] = None,
     # 7. Training (ronaldo style)
@@ -652,11 +667,12 @@ def pipeline(  # noqa: C901
     result_tracker: HintType[ResultTracker] = None,
     result_tracker_kwargs: Optional[Mapping[str, Any]] = None,
     # Misc
-    automatic_memory_optimization: bool = True,
     metadata: Optional[Dict[str, Any]] = None,
     device: Hint[torch.device] = None,
     random_seed: Optional[int] = None,
     use_testing_data: bool = True,
+    evaluation_fallback: bool = False,
+    filter_validation_when_testing: bool = True,
 ) -> PipelineResult:
     """Train and evaluate a model.
 
@@ -715,6 +731,8 @@ def pipeline(  # noqa: C901
     :param training_loop:
         The name of the training loop's training approach (``'slcwa'`` or ``'lcwa'``) or the training loop class.
         Defaults to :class:`pykeen.training.SLCWATrainingLoop`.
+    :param training_loop_kwargs:
+        Keyword arguments to pass to the training loop on instantiation
     :param negative_sampler:
         The name of the negative sampler (``'basic'`` or ``'bernoulli'``) or the negative sampler class.
         Only allowed when training with sLCWA.
@@ -745,18 +763,28 @@ def pipeline(  # noqa: C901
         A JSON dictionary to store with the experiment
     :param use_testing_data:
         If true, use the testing triples. Otherwise, use the validation triples. Defaults to true - use testing triples.
-    :param automatic_memory_optimization: Should automatic memory optimization be performed during training and
-        evaluation? See arguments to :class:`pykeen.training_loop.TrainingLoop`
-        and :class:`pykeen.evaluation.Evaluator`.
     :param device: The device or device name to run on. If none is given, the device will be looked up with
         :func:`pykeen.utils.resolve_device`.
     :param random_seed: The random seed to use. If none is specified, one will be assigned before any code
         is run for reproducibility purposes. In the returned :class:`PipelineResult` instance, it can be accessed
         through :data:`PipelineResult.random_seed`.
+    :param evaluation_fallback:
+        If true, in cases where the evaluation failed using the GPU it will fall back to using a smaller batch size or
+        in the last instance evaluate on the CPU, if even the smallest possible batch size is too big for the GPU.
+    :param filter_validation_when_testing:
+        If true, during the evaluating of the test dataset, validation triples are added to the set of known positive
+        triples, which are filtered out when performing filtered evaluation following the approach described by
+        [bordes2013]_. This should be explicitly set to false only in the scenario that you are training a single
+        model using the pipeline and evaluating with the testing set, but never using the validation set for
+        optimization at all. This is a very atypical scenario, so it is left as true by default to promote
+        comparability to previous publications.
 
     :returns: A pipeline result package.
 
-    :raises ValueError: if a negative sampler is specified with LCWA
+    :raises ValueError:
+        If a negative sampler is specified with LCWA
+    :raises TypeError:
+        If an invalid argument type is given for ``evaluation_kwargs["additional_filter_triples"]``
     """
     if training_kwargs is None:
         training_kwargs = {}
@@ -848,7 +876,6 @@ def pipeline(  # noqa: C901
         model_instance = model
         # TODO should training be reset?
         # TODO should kwargs for loss and regularizer be checked and raised for?
-        model_instance.triples_factory = training
     else:
         model_instance = _build_model_helper(
             model=model,
@@ -859,7 +886,7 @@ def pipeline(  # noqa: C901
             regularizer_kwargs=regularizer_kwargs,
             _device=_device,
             _random_seed=_random_seed,
-            training=training,
+            training_triples_factory=training,
         )
 
     # Log model parameters
@@ -879,13 +906,16 @@ def pipeline(  # noqa: C901
     )
 
     training_loop_cls = training_loop_resolver.lookup(training_loop)
-    training_loop_instance: TrainingLoop
+    if training_loop_kwargs is None:
+        training_loop_kwargs = {}
+
     if negative_sampler is None:
         negative_sampler_cls = None
         training_loop_instance = training_loop_cls(
             model=model_instance,
+            triples_factory=training,
             optimizer=optimizer_instance,
-            automatic_memory_optimization=automatic_memory_optimization,
+            **training_loop_kwargs,
         )
     elif not issubclass(training_loop_cls, SLCWATrainingLoop):
         raise ValueError('Can not specify negative sampler with LCWA')
@@ -897,10 +927,11 @@ def pipeline(  # noqa: C901
         )
         training_loop_instance = SLCWATrainingLoop(
             model=model_instance,
+            triples_factory=training,
             optimizer=optimizer_instance,
-            automatic_memory_optimization=automatic_memory_optimization,
             negative_sampler_cls=negative_sampler_cls,
             negative_sampler_kwargs=negative_sampler_kwargs,
+            **training_loop_kwargs,
         )
     _result_tracker.log_params(
         params=dict(cls=training_loop_instance.__class__.__name__),
@@ -910,7 +941,6 @@ def pipeline(  # noqa: C901
     if evaluator_kwargs is None:
         evaluator_kwargs = {}
     evaluator_kwargs = dict(evaluator_kwargs)
-    evaluator_kwargs.setdefault('automatic_memory_optimization', automatic_memory_optimization)
     evaluator_instance: Evaluator = evaluator_resolver.make(evaluator, evaluator_kwargs)
 
     if evaluation_kwargs is None:
@@ -935,6 +965,7 @@ def pipeline(  # noqa: C901
         stopper,
         model=model_instance,
         evaluator=evaluator_instance,
+        training_triples_factory=training,
         evaluation_triples_factory=validation,
         result_tracker=_result_tracker,
         **stopper_kwargs,
@@ -975,6 +1006,7 @@ def pipeline(  # noqa: C901
     # Train like Cristiano Ronaldo
     training_start_time = time.time()
     losses = training_loop_instance.train(
+        triples_factory=training,
         stopper=stopper_instance,
         result_tracker=_result_tracker,
         clear_optimizer=clear_optimizer,
@@ -990,19 +1022,62 @@ def pipeline(  # noqa: C901
     else:
         mapped_triples = validation.mapped_triples
 
+    # Build up a list of triples if we want to be in the filtered setting
+    if evaluator_instance.filtered:
+        additional_filter_triples: List[MappedTriples] = [
+            training.mapped_triples,
+        ]
+
+        # If the user gave custom "additional_filter_triples"
+        popped_additional_filter_triples = evaluation_kwargs.pop('additional_filter_triples', [])
+        if isinstance(popped_additional_filter_triples, (list, tuple)):
+            additional_filter_triples.extend(popped_additional_filter_triples)
+        elif torch.is_tensor(popped_additional_filter_triples):  # a single MappedTriple
+            additional_filter_triples.append(popped_additional_filter_triples)
+        else:
+            raise TypeError(
+                f'Invalid type for `evaluation_kwargs["additional_filter_triples"]`:'
+                f' {type(popped_additional_filter_triples)}',
+            )
+
+        # Determine whether the validation triples should also be filtered while performing test evaluation
+        if (
+            use_testing_data
+            and filter_validation_when_testing
+            and validation is not None
+        ):
+            if isinstance(stopper, EarlyStopper):
+                logging.info(
+                    "When evaluating the test dataset after running the pipeline with early stopping, the validation"
+                    " triples are added to the set of known positive triples which are filtered out when performing"
+                    " filtered evaluation following the approach described by (Bordes et al., 2013).",
+                )
+            else:
+                logging.info(
+                    "When evaluating the test dataset, validation triples are added to the set of known positive"
+                    " triples which are filtered out when performing filtered evaluation following the approach"
+                    " described by (Bordes et al., 2013).",
+                )
+            additional_filter_triples.append(validation.mapped_triples)
+
+        # TODO consider implications of duplicates
+        evaluation_kwargs['additional_filter_triples'] = additional_filter_triples
+
     # Evaluate
-    # Reuse optimal evaluation parameters from training if available
-    if evaluator_instance.batch_size is not None or evaluator_instance.slice_size is not None:
+    # Reuse optimal evaluation parameters from training if available, only if the validation triples are used again
+    if evaluator_instance.batch_size is not None or evaluator_instance.slice_size is not None and not use_testing_data:
         evaluation_kwargs['batch_size'] = evaluator_instance.batch_size
         evaluation_kwargs['slice_size'] = evaluator_instance.slice_size
     # Add logging about evaluator for debugging
     logging.debug("Evaluation will be run with following parameters:")
     logging.debug(f"evaluation_kwargs: {evaluation_kwargs}")
     evaluate_start_time = time.time()
-    metric_results: MetricResults = evaluator_instance.evaluate(
+    metric_results: MetricResults = _safe_evaluate(
         model=model_instance,
         mapped_triples=mapped_triples,
-        **evaluation_kwargs,
+        evaluator=evaluator_instance,
+        evaluation_kwargs=evaluation_kwargs,
+        evaluation_fallback=evaluation_fallback,
     )
     evaluate_end_time = time.time() - evaluate_start_time
     _result_tracker.log_metrics(
@@ -1014,6 +1089,7 @@ def pipeline(  # noqa: C901
     return PipelineResult(
         random_seed=_random_seed,
         model=model_instance,
+        training=training,
         training_loop=training_loop_instance,
         losses=losses,
         stopper=stopper_instance,
@@ -1022,3 +1098,67 @@ def pipeline(  # noqa: C901
         train_seconds=training_end_time,
         evaluate_seconds=evaluate_end_time,
     )
+
+
+def _safe_evaluate(
+    model: Model,
+    mapped_triples: MappedTriples,
+    evaluator: Evaluator,
+    evaluation_kwargs: Dict[str, Any],
+    evaluation_fallback: bool = False,
+) -> MetricResults:
+    """Evaluate with a potentially safe fallback to CPU.
+
+    :param model: The model
+    :param mapped_triples: Mapped triples from the evaluation set (test or valid)
+    :param evaluator: An evaluator
+    :param evaluation_kwargs: Kwargs for the evaluator (might get modified in place)
+    :param evaluation_fallback:
+        If true, in cases where the evaluation failed using the GPU it will fall back to using a smaller batch size or
+        in the last instance evaluate on the CPU, if even the smallest possible batch size is too big for the GPU.
+    :return: A metric result
+
+    :raises MemoryError:
+        If it is not possible to evaluate the model on the hardware at hand with the given parameters.
+    :raises RuntimeError:
+        If CUDA ran into OOM issues trying to evaluate the model on the hardware at hand with the given parameters.
+    """
+    while True:
+        try:
+            metric_results: MetricResults = evaluator.evaluate(
+                model=model,
+                mapped_triples=mapped_triples,
+                **evaluation_kwargs,
+            )
+        except (MemoryError, RuntimeError) as e:
+            # If the evaluation still fail using the CPU, the error is raised
+            if model.device.type != 'cuda' or not evaluation_fallback:
+                raise e
+
+            # When the evaluation failed due to OOM on the GPU due to a batch size set too high, the evaluation is
+            # restarted with PyKEEN's automatic memory optimization
+            elif 'batch_size' in evaluation_kwargs:
+                logging.warning(
+                    "You tried to evaluate the current model on %s with batch_size=%d which was too big for %s.",
+                    model.device, evaluation_kwargs['batch_size'], model.device,
+                )
+                logging.warning("Will activate the built-in PyKEEN memory optimization to find a suitable batch size.")
+                del evaluation_kwargs['batch_size']
+
+            # When the evaluation failed due to OOM on the GPU even with automatic memory optimization, the evaluation
+            # is restarted using the cpu
+            else:  # 'batch_size' not in evaluation_kwargs
+                logging.warning(
+                    "Tried to evaluate the current model on %s, but the model and the dataset are too big for the "
+                    "%s memory currently available.",
+                    model.device, model.device,
+                )
+                logging.warning(
+                    "Will revert to using the CPU for evaluation, which will increase the evaluation time "
+                    "significantly.",
+                )
+                model.to_cpu_()
+        else:
+            break  # evaluation was successful, don't continue the ``while True`` loop
+
+    return metric_results

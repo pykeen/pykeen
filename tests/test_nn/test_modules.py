@@ -12,8 +12,8 @@ import unittest_templates
 
 import pykeen.nn.modules
 import pykeen.utils
-from pykeen.nn.functional import distmult_interaction
-from pykeen.nn.modules import FunctionalInteraction, Interaction, TranslationalInteraction
+from pykeen.nn.functional import _rotate_quaternion, _split_quaternion, distmult_interaction
+from pykeen.nn.modules import FunctionalInteraction, Interaction, LiteralInteraction, TranslationalInteraction
 from pykeen.utils import clamp_norm, project_entity, strip_dim, view_complex
 from tests import cases
 
@@ -166,6 +166,17 @@ class ProjETests(cases.InteractionTestCase):
         # f(h, r, t) = g(t z(D_e h + D_r r + b_c) + b_p)
         h, r, t = strip_dim(h, r, t)
         return (t * activation((d_e * h) + (d_r * r) + b_c)).sum() + b_p
+
+
+class QuatETests(cases.InteractionTestCase):
+    """Tests for QuatE interaction."""
+
+    cls = pykeen.nn.modules.QuatEInteraction
+    dim = 4 * cases.InteractionTestCase.dim  # quaternions
+
+    def _exp_score(self, h, r, t) -> torch.FloatTensor:  # noqa: D102
+        h, r, t = strip_dim(h, r, t)
+        return -(_rotate_quaternion(*(_split_quaternion(x) for x in [h, r])) * t).sum()
 
 
 class RESCALTests(cases.InteractionTestCase):
@@ -400,9 +411,6 @@ class MonotonicAffineTransformationInteractionTests(cases.InteractionTestCase):
         base=pykeen.nn.modules.TransEInteraction(p=2),
     )
 
-    def test_forward_consistency_with_functional(self):  # noqa: D102
-        raise SkipTest("Not a functional interaction.")
-
     def test_scores(self):  # noqa: D102
         raise SkipTest("Not a functional interaction.")
 
@@ -431,5 +439,5 @@ class InteractionTestsTestCase(unittest_templates.MetaTestCase[Interaction]):
         Interaction,
         FunctionalInteraction,
         TranslationalInteraction,
-        # LiteralInteraction,
+        LiteralInteraction,
     }

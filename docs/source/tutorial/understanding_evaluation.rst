@@ -7,11 +7,11 @@ Knowledge graph embedding are usually evaluated on the task of link prediction. 
 triples :math:`\mathcal{T}_{eval} \subset \mathcal{E} \times \mathcal{R} \times \mathcal{E}` is provided, and for each
 triple :math:`(h, r, t) \in \mathcal{T}_{eval}` in this set, two tasks are solved:
 
-* In the *right-side* prediction task, a pair of head entity and relation are given and aim to predict the tail,
-  i.e. :math:`(h, r, ?)`. To this end, the knowledge graph embedding model is used to *score* each of the possible
-  choices :math:`(h, r, e)` for :math:`e \in \mathcal{E}`. Higher scores indicate higher plausibility.
-* Analogously, in the *left-side* prediction task, a pair of relation and tail entity are provided and aim to
-  predict the head, i.e. :math:`(?, r, t)`. Again, each possible choice :math:`(e, r, t)` for
+* **Right-Side** In the *right-side* prediction task, a pair of head entity and relation are given and aim to predict
+  the tail, i.e. :math:`(h, r, ?)`. To this end, the knowledge graph embedding model is used to *score* each of the
+  possible choices :math:`(h, r, e)` for :math:`e \in \mathcal{E}`. Higher scores indicate higher plausibility.
+* **Left-Side** Analogously, in the *left-side* prediction task, a pair of relation and tail entity are provided and
+  aim to predict the head, i.e. :math:`(?, r, t)`. Again, each possible choice :math:`(e, r, t)` for
   :math:`e \in \mathcal{E}` is scored according to the knowledge graph embedding model.
 
 .. note ::
@@ -24,13 +24,115 @@ triple :math:`(h, r, t) \in \mathcal{T}_{eval}` in this set, two tasks are solve
     relation, and then performing a matrix multiplication with the matrix of all entity embeddings.
     # TODO: Link to section explaining this concept.
 
-Rank-Based Evaluation
----------------------
 In the rank-based evaluation protocol, the scores are used to sort the list of possible choices by decreasing score,
 and determine the *rank* of the true choice, i.e. the index in the sorted list. Smaller ranks indicate better
 performance. Based on these individual ranks, which are obtained for each evaluation triple and each side of the
 prediction (left/right), there exist several aggregation measures to quantify the performance of a model in a single
 number.
+
+.. note::
+
+    There are theoretical implications based on whether the indexing is
+    `0-based <https://en.wikipedia.org/wiki/Zero-based_numbering>`_  or
+    1-based (natural). PyKEEN uses 1-based indexing to conform with related work.
+
+Rank-Based Metrics
+~~~~~~~~~~~~~~~~~~
+Given the set of individual rank scores $\mathcal{I}$, the following scores are commonly used as aggregation.
+
+Hits @ K
+********
+The hits @ k describes the fraction of true entities that appear in the first $k$ entities of the sorted rank list.
+It is given as:
+
+.. math::
+
+    \text{score}_k = \frac{1}{|\mathcal{I}|} \sum \limits_{r \in \mathcal{I}} \mathbb{I}[r \leq k]
+
+For example, if Google shows 20 results on the first page, then the percentage of results that are relevant is the
+hits @ 20. The hits @ k, regardless of $k$, lies on the $[0, 1]$ where closer to 1 is better.
+
+.. warning::
+
+    This metric does not differentiate between cases when the rank is larger than $k$.
+    This means that a miss with rank $k+1$ and $k+d$ where $d \gg 1$ have the same
+    effect on the final score. Therefore, it is less suitable for the comparison of different
+    models.
+
+Mean Rank
+*********
+The mean rank (MR) computes the arithmetic mean over all individual ranks. It is given as:
+
+.. math::
+
+    \text{score} =\frac{1}{|\mathcal{I}|} \sum \limits_{r \in \mathcal{I}} r
+
+It has the advantage over hits @ k that it is sensitive to any model performance changes, not only what occurs
+under a certain cutoff and therefore reflects average performance. With PyKEEN's standard 1-based indexing,
+the mean rank lies on the interval $[1, \infty)$ where lower is better.
+
+.. warning::
+
+    While it remains interpretable, the mean rank is dependent on the number of candidates.
+    A mean rank of 10 might indicate strong performance for a candidate set size of 1,000,000,
+    but incredibly poor performance for a candidate set size of 20.
+
+Adjusted Mean Rank
+******************
+The adjusted mean rank (AMR) was introduced by [berrendorf2020]_. It is defined as
+
+.. math::
+
+    \text{score} = \frac{MR}{\mathbb{E}\left[MR\right]} = \frac{2 \sum_{i=1}^{n} r_{i}}{\sum_{i=1}^{n} (|\mathcal{S}_i|+1)}
+
+The derivations of $\mathbb{E}\left[MR\right]$ and $\mathcal{S}_i$ are contained within the original manuscript.
+
+It lies on the open interval $(0, 2)$ where lower is better.
+
+Adjusted Mean Rank Index
+************************
+The adjusted mean rank index (AMRI) was introduced by [berrendorf2020]_ to make the AMR
+more intuitive.
+
+.. math::
+
+    \text{score} = 1 - \frac{MR - 1}{\mathbb{E}\left[MR - 1\right]} = \frac{2 \sum_{i=1}^{n} (r_{i} - 1)}{\sum_{i=1}^{n} (|\mathcal{S}_i|)}
+
+The AMR has a bounded value range of $[-1, 1]$ where closer to 1 is better.
+
+Mean Reciprocal Rank
+********************
+The mean reciprocal rank (MRR) is the arithmetic mean of reciprocal ranks, and thus the inverse of the harmonic mean
+of the ranks. It is defined as:
+
+.. math::
+
+    \text{score} =\frac{1}{|\mathcal{I}|} \sum_{r \in \mathcal{I}} r^{-1}
+
+.. warning::
+
+    It has been argued that the mean reciprocal rank has theoretical flaws by [fuhr2018]_. However, this opinion
+    is not undisputed, cf. [sakai2021]_.
+
+Despite its flaws, MRR is still often used during early stopping due to its behavior related to low rank values.
+While the hits @ k ignores changes among high rank values completely and the mean rank changes uniformly
+across the full value range, the mean reciprocal rank is more affected by changes of low rank values than high ones
+(without disregarding them completely like hits @ k does for low rank values)
+Therefore, it can be considered as soft a version of hits @ k that is less sensitive to outliers.
+It is bound on $(0, 1]$ where closer to 1 is better.
+
+Inverse Geometric Mean Rank
+***************************
+The mean rank corresponds to the arithmetic mean, and tends to be more affected by high rank values.
+The mean reciprocal rank corresponds to the harmonic mean, and tends to be more affected by low rank values.
+The remaining Pythagorean mean, the geometric mean, lies in the center and therefore could better balance these biases.
+Therefore, the inverse geometric mean rank (IGMR) is defined as:
+
+.. math::
+
+    \text{score} = \sqrt[\|\mathcal{I}\|]{\prod \limits_{r \in \mathcal{I}} r}
+
+.. note:: This metric is novel as of its implementation in PyKEEN and was proposed by Max Berrendorf
 
 Ranking Types
 ~~~~~~~~~~~~~
@@ -70,13 +172,84 @@ incapability to solve of one the tasks.
 
 Filtering
 ~~~~~~~~~
-The rank-based evaluation allows using the "filtered setting", which is enabled by default. When evaluating
-the tail prediction for a triple :math:`(h, r, t)`, i.e. scoring all triples :math:`(h, r, e)`, there may be
-additional known triples :math:`(h, r, t')` for :math:`t \neq t'`. If the model predicts a higher score for
+The rank-based evaluation allows using the "filtered setting", proposed by [bordes2013]_, which is enabled by default.
+When evaluating the tail prediction for a triple :math:`(h, r, t)`, i.e. scoring all triples :math:`(h, r, e)`, there
+may be additional known triples :math:`(h, r, t')` for :math:`t \neq t'`. If the model predicts a higher score for
 :math:`(h, r, t')`, the rank will increase, and hence the measured model performance will decrease. However, giving
 :math:`(h, r, t')` a high score (and thus a low rank) is desirable since it is a true triple as well. Thus, the
 filtered evaluation setting ignores for a given triple :math:`(h, r, t)` the scores of all other *known* true triples
 :math:`(h, r, t')`.
+
+Below, we present the philosophy from [bordes2013]_ and how it is implemented in PyKEEN:
+
+HPO Scenario
+************
+During training/optimization with :func:`pykeen.hpo.hpo_pipeline`, the set of known positive triples comprises the
+training and validation sets. After optimization is finished and the final evaluation is done, the set of known
+positive triples comprises the training, validation, and testing set. PyKEEN explicitly does not use test triples
+for filtering during HPO to avoid any test leakage.
+
+Early Stopper Scenario
+**********************
+When early stopping is used during training, it periodically uses the validation set for calculating the loss
+and evaluation metrics. During this evaluation, the set of known positive triples comprises the training and
+validation sets. When final evaluation is done with the testing set, the set of known positive triples comprises the
+training, validation, and testing set. PyKEEN explicitly does not use test triples for filtering when early stopping
+is being used to avoid any test leakage.
+
+Pipeline Scenario
+*****************
+During vanilla training with the :func:`pykeen.pipeline.pipeline` that has no optimization, no early stopping, nor
+any *post-hoc* choices using the validation set, the set of known positive triples comprises the training and
+testing sets. This scenario is very atypical, and regardless, should be augmented with the validation triples
+to make more comparable to other published results that do not consider this scenario.
+
+Custom Training Loops
+*********************
+In case the validation triples should *not* be filtered when evaluating the test dataset, the argument
+``filter_validation_when_testing=False`` can be passed to either the :func:`pykeen.hpo.hpo_pipeline` or
+:func:`pykeen.pipeline.pipeline`.
+
+If you're rolling your own pipeline, you should keep the following in mind: the :class:`pykeen.evaluation.Evaluator`
+when in the filtered setting with ``filtered=True`` will always use the evaluation set (regardless of whether it is the
+testing set or validation set) for filtering. Any other triples that should be filtered should be passed to
+``additional_filter_triples`` in :func:`pykeen.evaluation.Evaluator.evaluate`. Typically, this minimally includes
+the training triples. With the [bordes2013]_ technique where the testing set is used for evaluation, the
+``additional_filter_triples`` should include both the training triples and validation triples as in the following
+example:
+
+.. code-block:: python
+
+    from pykeen.datasets import FB15k237
+    from pykeen.evaluation import RankBasedEvaluator
+    from pykeen.models import TransE
+
+    # Get FB15k-237 dataset
+    dataset = FB15k237()
+
+    # Define model
+    model = TransE(
+        triples_factory=dataset.training,
+    )
+
+    # Train your model (code is omitted for brevity)
+    ...
+
+    # Define evaluator
+    evaluator = RankBasedEvaluator(
+        filtered=True,  # Note: this is True by default; we're just being explicit
+    )
+
+    # Evaluate your model with not only testing triples,
+    # but also filter on validation triples
+    results = evaluator.evaluate(
+        model=model,
+        mapped_triples=dataset.testing.mapped_triples,
+        additional_filter_triples=[
+            dataset.training.mapped_triples,
+            dataset.validation.mapped_triples,
+        ],
+    )
 
 Entity and Relation Restriction
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

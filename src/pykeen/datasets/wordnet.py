@@ -2,7 +2,7 @@
 
 """WordNet datasets."""
 
-import os
+import pathlib
 
 from docdata import parse_docdata
 
@@ -43,9 +43,9 @@ class WN18(TarFileRemoteDataset):
         """
         super().__init__(
             url='https://everest.hds.utc.fr/lib/exe/fetch.php?media=en:wordnet-mlj12.tar.gz',
-            relative_training_path=os.path.join('wordnet-mlj12', 'wordnet-mlj12-train.txt'),
-            relative_testing_path=os.path.join('wordnet-mlj12', 'wordnet-mlj12-test.txt'),
-            relative_validation_path=os.path.join('wordnet-mlj12', 'wordnet-mlj12-valid.txt'),
+            relative_training_path=pathlib.PurePath('wordnet-mlj12', 'wordnet-mlj12-train.txt'),
+            relative_testing_path=pathlib.PurePath('wordnet-mlj12', 'wordnet-mlj12-test.txt'),
+            relative_validation_path=pathlib.PurePath('wordnet-mlj12', 'wordnet-mlj12-valid.txt'),
             create_inverse_triples=create_inverse_triples,
             **kwargs,
         )

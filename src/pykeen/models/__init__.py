@@ -6,15 +6,14 @@ entities and relations. In general, a larger score indicates a higher plausibili
 score value is model-dependent, and usually it cannot be directly interpreted as a probability.
 """  # noqa: D205, D400
 
-from typing import Set, Type
+from class_resolver import Resolver
 
-from class_resolver import Resolver, get_subclasses
-
-from .base import EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, MultimodalModel, _OldAbstractModel
-from .multimodal import ComplExLiteral, DistMultLiteral
+from .base import EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, _OldAbstractModel
+from .multimodal import ComplExLiteral, DistMultLiteral, LiteralModel
 from .nbase import ERModel, _NewAbstractModel
 from .resolve import make_model, make_model_cls
 from .unimodal import (
+    CompGCN,
     ComplEx,
     ConvE,
     ConvKB,
@@ -27,6 +26,7 @@ from .unimodal import (
     NTN,
     PairRE,
     ProjE,
+    QuatE,
     RESCAL,
     RGCN,
     RotatE,
@@ -48,8 +48,9 @@ __all__ = [
     'EntityRelationEmbeddingModel',
     '_NewAbstractModel',
     'ERModel',
-    'MultimodalModel',
+    'LiteralModel',
     # Concrete Models
+    'CompGCN',
     'ComplEx',
     'ComplExLiteral',
     'ConvE',
@@ -64,6 +65,7 @@ __all__ = [
     'NTN',
     'PairRE',
     'ProjE',
+    'QuatE',
     'RESCAL',
     'RGCN',
     'RotatE',
@@ -81,9 +83,16 @@ __all__ = [
     'make_model_cls',
 ]
 
-_MODELS: Set[Type[Model]] = {
-    subcls
-    for subcls in get_subclasses(Model)  # type: ignore
-    if not subcls._is_base_model
-}
-model_resolver = Resolver(classes=_MODELS, base=Model)  # type: ignore
+model_resolver = Resolver.from_subclasses(
+    base=Model,
+    skip={
+        _NewAbstractModel,
+        # We might be able to relax this later
+        ERModel,
+        LiteralModel,
+        # Old style models should never be looked up
+        _OldAbstractModel,
+        EntityEmbeddingModel,
+        EntityRelationEmbeddingModel,
+    },
+)
