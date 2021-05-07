@@ -12,7 +12,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from hashlib import md5
 from tempfile import NamedTemporaryFile
-from typing import Any, List, IO, Mapping, Optional, Tuple, Type, Union
+from typing import Any, IO, List, Mapping, Optional, Tuple, Type, Union
 
 import numpy as np
 import torch
@@ -1085,7 +1085,7 @@ class TrainingLoop(ABC):
             )
 
         # If the checkpoint was saved with a best epoch model from the early stopper, this model has to be retrieved
-        best_epoch_model_path = None
+        best_epoch_model_file = None
         best_epoch = None
         if checkpoint['best_epoch_model_checkpoint'] is not None:
             best_epoch_model_file = NamedTemporaryFile()
