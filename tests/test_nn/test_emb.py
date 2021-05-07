@@ -32,6 +32,20 @@ class EmbeddingTests(cases.RepresentationTestCase):
         embedding_dim = int(numpy.prod(self.instance.shape))
         assert self.instance.shape == (embedding_dim,)
 
+    def test_dropout(self):
+        """Test dropout layer."""
+        # create a new instance with guaranteed dropout
+        kwargs = self.instance_kwargs
+        kwargs.pop("dropout", None)
+        dropout_instance = self.cls(**kwargs, dropout=0.1)
+        # set to training mode
+        dropout_instance.train()
+        # check for different output
+        indices = torch.arange(2)
+        first = dropout_instance(indices)
+        second = dropout_instance(indices)
+        assert not torch.allclose(first, second)
+
 
 class LiteralEmbeddingTests(cases.RepresentationTestCase):
     """Tests for literal embeddings."""

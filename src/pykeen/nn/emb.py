@@ -192,11 +192,38 @@ class Embedding(RepresentationModule):
 
     This class provides the same interface as :class:`torch.nn.Embedding` and
     can be used throughout PyKEEN as a more fully featured drop-in replacement.
+
+    It extends it by adding additional options for normalizing, constraining, or applying dropout.
+
+    When a *normalizer* is selected, it is applied in every forward pass. It can be used, e.g., to ensure that the
+    embedding vectors are of unit length. A *constrainer* can be used similarly, but it is applied after each parameter
+    update (using the post_parameter_update hook), i.e., outside of the automatic gradient computation.
+
+    The optional dropout can also be used as a regularization technique. Moreover, it enables to obtain uncertainty
+    estimates via techniques such as `Monte-Carlo dropout <https://arxiv.org/abs/1506.02142>`_. The following simple
+    example shows how to obtain different scores for a single triple from an (untrained) model. These scores can be
+    considered as samples from a distribution over the scores.
+
+    >>> from pykeen.datasets.nations import Nations
+    >>> dataset = Nations()
+    >>> from pykeen.nn.emb import EmbeddingSpecification
+    >>> spec = EmbeddingSpecification(embedding_dim=3, dropout=0.1)
+    >>> from pykeen.models import ERModel
+    >>> model = ERModel(
+    ...     triples_factory=dataset.training,
+    ...     interaction='distmult',
+    ...     entity_representations=spec,
+    ...     relation_representations=spec,
+    ... )
+    >>> import torch
+    >>> batch = torch.as_tensor(data=[[0, 1, 0]]).repeat(10, 1)
+    >>> scores = model.score_hrt(batch)
     """
 
     normalizer: Optional[Normalizer]
     constrainer: Optional[Constrainer]
     regularizer: Optional['Regularizer']
+    dropout: Optional[nn.Dropout]
 
     def __init__(
         self,
@@ -212,6 +239,7 @@ class Embedding(RepresentationModule):
         regularizer: Optional['Regularizer'] = None,
         trainable: bool = True,
         dtype: Optional[torch.dtype] = None,
+        dropout: Optional[float] = None,
     ):
         """Instantiate an embedding with extended functionality.
 
@@ -235,6 +263,8 @@ class Embedding(RepresentationModule):
             to be in-place, but the weight tensor is modified in-place.
         :param constrainer_kwargs:
             Additional keyword arguments passed to the constrainer
+        :param dropout:
+            A dropout value for the embeddings.
         """
         # normalize embedding_dim vs. shape
         _embedding_dim, shape = process_shape(embedding_dim, shape)
@@ -265,6 +295,7 @@ class Embedding(RepresentationModule):
             embedding_dim=_embedding_dim,
         )
         self._embeddings.requires_grad_(trainable)
+        self.dropout = None if dropout is None else nn.Dropout(dropout)
 
     @classmethod
     def init_with_device(
@@ -343,6 +374,8 @@ class Embedding(RepresentationModule):
             x = self.normalizer(x)
         if self.regularizer is not None:
             self.regularizer.update(x)
+        if self.dropout is not None:
+            x = self.dropout(x)
         return x
 
 
@@ -387,6 +420,7 @@ class EmbeddingSpecification:
     regularizer: Optional['Regularizer'] = None
 
     dtype: Optional[torch.dtype] = None
+    dropout: Optional[float] = None
 
     def make(self, *, num_embeddings: int, device: Optional[torch.device] = None) -> Embedding:
         """Create an embedding with this specification."""
@@ -402,6 +436,7 @@ class EmbeddingSpecification:
             constrainer_kwargs=self.constrainer_kwargs,
             regularizer=self.regularizer,
             dtype=self.dtype,
+            dropout=self.dropout,
         )
         if device is not None:
             rv = rv.to(device)
