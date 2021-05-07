@@ -12,7 +12,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from hashlib import md5
 from tempfile import NamedTemporaryFile
-from typing import Any, List, Mapping, Optional, Tuple, Type, Union
+from typing import Any, List, IO, Mapping, Optional, Tuple, Type, Union
 
 import numpy as np
 import torch
@@ -27,7 +27,7 @@ from ..stoppers import Stopper
 from ..trackers import ResultTracker
 from ..training.schlichtkrull_sampler import GraphSampler
 from ..triples import CoreTriplesFactory, Instances
-from ..typing import MappedTriples, TemporaryFile
+from ..typing import MappedTriples
 from ..utils import (
     format_relative_comparison, get_batchnorm_modules, is_cuda_oom_error, is_cudnn_error,
     normalize_string,
@@ -346,7 +346,7 @@ class TrainingLoop(ABC):
         checkpoint_path: Union[None, str, pathlib.Path] = None,
         checkpoint_frequency: Optional[int] = None,
         checkpoint_on_failure_file_path: Union[None, str, pathlib.Path] = None,
-        best_epoch_model_file: Optional[TemporaryFile] = None,
+        best_epoch_model_file: Optional[IO[bytes]] = None,
         last_best_epoch: Optional[int] = None,
         drop_last: Optional[bool] = None,
     ) -> Optional[List[float]]:
@@ -410,6 +410,7 @@ class TrainingLoop(ABC):
         # due to the patience continue to train after the best epoch and thus alter the model
         if stopper is not None and not only_size_probing and last_best_epoch is None and best_epoch_model_file is None:
             best_epoch_model_file = NamedTemporaryFile()
+        best_epoch_model_checkpoint_path: Union[str, None] = None
 
         if isinstance(self.model, RGCN) and sampler != 'schlichtkrull':
             logger.warning(
@@ -640,8 +641,6 @@ class TrainingLoop(ABC):
                     # When there wasn't a best epoch the checkpoint path should be None
                     if last_best_epoch is not None and best_epoch_model_file is not None:
                         best_epoch_model_checkpoint_path = best_epoch_model_file.name
-                    else:
-                        best_epoch_model_checkpoint_path = None
                     self._save_state(
                         path=checkpoint_on_failure_file_path,
                         stopper=stopper,
@@ -667,8 +666,6 @@ class TrainingLoop(ABC):
                     # When there wasn't a best epoch the checkpoint path should be None
                     if last_best_epoch is not None and best_epoch_model_file is not None:
                         best_epoch_model_checkpoint_path = best_epoch_model_file.name
-                    else:
-                        best_epoch_model_checkpoint_path = None
                     self._save_state(
                         path=checkpoint_path,
                         stopper=stopper,
@@ -1048,7 +1045,7 @@ class TrainingLoop(ABC):
     def _load_state(
             self,
             path: Union[str, pathlib.Path],
-    ) -> Tuple[Optional[TemporaryFile], Optional[int]]:
+    ) -> Tuple[Optional[IO[bytes]], Optional[int]]:
         """Load the state of the training loop from a checkpoint.
 
         :param path:
