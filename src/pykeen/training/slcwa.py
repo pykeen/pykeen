@@ -68,7 +68,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
 
     @staticmethod
     def _get_batch_size(batch: SLCWABatchType) -> int:  # noqa: D102
-        return batch[0].shape[0]
+        return batch.shape[0]
 
     def _process_batch(
         self,
@@ -82,15 +82,15 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
         if slice_size is not None:
             raise AttributeError('Slicing is not possible for sLCWA training loops.')
 
-        # split batch
-        positive_batch, negative_batch, positive_filter = batch
+        # Send positive batch to device
+        positive_batch = batch[start:stop].to(device=self.device)
 
-        # send to device
-        positive_batch = positive_batch[start:stop].to(device=self.device)
-        negative_batch = negative_batch[start:stop]
-        if positive_filter:
-            negative_batch = negative_batch[positive_filter[start:stop]]
-        negative_batch = negative_batch.to(device=self.device)
+        # Create negative samples
+        neg_samples, neg_samples_filter = self.negative_sampler.sample(positive_batch=positive_batch)
+
+        # Ensure they reside on the device (should hold already for most simple negative samplers, e.g.
+        # BasicNegativeSampler, BernoulliNegativeSampler
+        negative_batch = neg_samples.to(self.device)
 
         # Make it negative batch broadcastable (required for num_negs_per_pos > 1).
         negative_batch = negative_batch.view(-1, 3)
@@ -103,7 +103,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
             positive_scores,
             negative_scores,
             label_smoothing,
-            positive_filter,
+            neg_samples_filter,
         )
         return loss
 
