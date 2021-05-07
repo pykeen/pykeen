@@ -36,7 +36,7 @@ argument like:
         dataset='Kinships',
         result_tracker='tensorboard',
         result_tracker_kwargs=dict(
-        experiment_name='rotate-kinships',
+            experiment_name='rotate-kinships',
         ),
     )
 
@@ -54,7 +54,7 @@ argument like:
         dataset='Kinships',
         result_tracker='tensorboard',
         result_tracker_kwargs=dict(
-        experiment_path='tb-logs/rotate-kinships',
+            experiment_path='tb-logs/rotate-kinships',
         ),
     )
 
