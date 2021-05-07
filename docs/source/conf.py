@@ -259,6 +259,7 @@ intersphinx_mapping = {
     'pybel': ('https://pybel.readthedocs.io/en/latest/', None),
     'bio2bel': ('https://bio2bel.readthedocs.io/en/latest/', None),
     'boto3': ('https://boto3.amazonaws.com/v1/documentation/api/latest/', None),
+    'accelerate': ('https://huggingface.co/docs/accelerate', None),
 }
 
 autoclass_content = 'both'

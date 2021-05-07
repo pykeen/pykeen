@@ -8,13 +8,14 @@ from typing import Optional, Tuple
 
 import torch
 
-from .training_loop import TrainingLoop
+from .training_loop import AcceleratedTrainingLoop, TrainingLoop
 from .utils import apply_label_smoothing
 from ..triples import CoreTriplesFactory, Instances
 from ..typing import MappedTriples
 
 __all__ = [
     'LCWATrainingLoop',
+    'AcceleratedLCWATrainingLoop',
 ]
 
 logger = logging.getLogger(__name__)
@@ -178,3 +179,29 @@ class LCWATrainingLoop(TrainingLoop):
             )
         logger.warning(report)
         raise MemoryError("The current model can't be trained on this hardware with these parameters.")
+
+
+class AcceleratedLCWATrainingLoop(AcceleratedTrainingLoop, LCWATrainingLoop):
+    """A distributed version of :class:`LCWATrainingLoop` enabled by the :class:`accelerate.Accelerator`.
+
+    While you can still write typical PyKEEN code like:
+
+    .. code-block:: python
+
+        # train.py
+        from pykeen.pipeline import pipeline
+
+        result = pipeline(
+            dataset='YAGO3',
+            model='PairRE',
+            training_loop='AcceleratedLCWA',
+        )
+
+    you will need to run this code in a special way using 🤗 Accelerate's launcher.
+
+    .. code-block:: sh
+
+        $ accelerate launch train.py
+
+    .. note:: You also need to run ``accelerate config`` and answer the questions the first time.
+    """

@@ -8,11 +8,15 @@ Stochastic Local Closed World Assumption
    :members:
    :inherited-members:
 
+.. autoclass:: pykeen.training.AcceleratedSLCWATrainingLoop
+
 Local Closed World Assumption
 -----------------------------
 .. autoclass:: pykeen.training.LCWATrainingLoop
    :members:
    :inherited-members:
+
+.. autoclass:: pykeen.training.AcceleratedLCWATrainingLoop
 
 Base Classes
 ------------

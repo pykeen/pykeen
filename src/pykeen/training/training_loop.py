@@ -34,6 +34,7 @@ from ..utils import (
 
 __all__ = [
     'TrainingLoop',
+    'AcceleratedTrainingLoop',
     'NonFiniteLossError',
     'TrainingApproachLossMismatchError',
     'SubBatchingNotSupportedError',
@@ -524,6 +525,10 @@ class TrainingLoop(ABC):
         # Save the time to track when the saved point was available
         last_checkpoint = time.time()
 
+        # A hook for modifying the data loader (and anything else that needs to be updated during training)
+        # used for example by the :mod:`accelerate` mixin
+        train_data_loader = self._prepare_training(train_data_loader)
+
         # Training Loop
         for epoch in epochs:
             # When training with an early stopper the memory pressure changes, which may allow for errors each epoch
@@ -664,13 +669,23 @@ class TrainingLoop(ABC):
             loss *= (this_sub_batch_size / current_batch_size)
 
         # backward pass
-        loss.backward()
+        self._loss_backward(loss)
         current_epoch_loss = loss.item()
 
         self.model.post_forward_pass()
         # TODO why not call torch.cuda.empty_cache()? or call self._free_graph_and_cache()?
 
         return current_epoch_loss
+
+    def _prepare_training(self, data: DataLoader) -> DataLoader:
+        # A hook for modifying the data loader (and anything else that needs to be updated during training)
+        # used for example by the :mod:`accelerate` mixin. By default, does not modify the data loader at all.
+        return data
+
+    def _loss_backward(self, loss: torch.nn.Module) -> None:
+        # A hook for how the loss's backward function is applied. Used for example by the :mod:`accelerate` mixin.
+        # By default, just calls :func:`torch.nn.Module.backward`.
+        loss.backward()
 
     @staticmethod
     @abstractmethod
@@ -1032,3 +1047,47 @@ class TrainingLoop(ABC):
         np.random.set_state(checkpoint['np_random_state'])
         torch.random.set_rng_state(checkpoint['torch_random_state'])
         logger.info(f"=> loaded checkpoint '{path}' stopped after having finished epoch {checkpoint['epoch']}")
+
+
+class AcceleratedTrainingLoop(TrainingLoop, ABC):
+    """A distributed version of :class:`TrainingLoop` enabled by the :class:`accelerate.Accelerator`."""
+
+    def __init__(self, **kwargs) -> None:
+        try:
+            import accelerate
+        except ImportError:
+            raise ImportError(
+                'Need to install `accelerate` to use the accelerated training loop. '
+                'Do this with: \n\n\t`pip install accelerate`',
+            )
+        super().__init__(**kwargs)
+        self.accelerator = accelerate.Accelerator()
+
+    @property
+    def device(self):  # noqa: D401
+        """The device used by the model."""
+        return self.accelerator.device
+
+    def _prepare_training(self, data: DataLoader) -> DataLoader:
+        # Accelerate-specific initialization of the model, optimizer, and data loader
+        self.model, self.optimizer, data = self.accelerator.prepare(
+            self.model,
+            self.optimizer,
+            data,
+        )
+
+        # torch DDP wraps the model into torch.DistributedDataParallel, hence our model functions are not available
+        # fix that by explicitly call the module of DDP which is our model
+        self.model = self.model.module
+        
+        return data
+
+    def _loss_backward(self, loss):
+        self.accelerator.backward(loss)
+
+    def _train(self, **kwargs):
+        # If the accelerator is running, it makes several processes. If it's not the main one,
+        # intercept the kwargs for _train() to force turning off the tqdm logging per batch
+        if not self.accelerator.is_local_main_process:
+            kwargs['use_tqdm_batch'] = False
+        return super()._train(**kwargs)
