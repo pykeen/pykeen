@@ -66,9 +66,6 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
     def _create_instances(self, triples_factory: CoreTriplesFactory) -> Instances:  # noqa: D102
         return triples_factory.create_slcwa_instances()
 
-    def get_collator(self) -> Callable[[List[SLCWASampleType]], SLCWABatchType]:  # noqa: D102
-        return self.negative_sampler.collate
-
     @staticmethod
     def _get_batch_size(batch: SLCWABatchType) -> int:  # noqa: D102
         return batch[0].shape[0]
