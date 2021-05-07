@@ -2,7 +2,7 @@
 
 """Negative sampling algorithm based on the work of [wang2014]_."""
 
-from typing import Any, Mapping, Optional
+from typing import Any, Mapping, Optional, Tuple
 
 import torch
 from class_resolver import HintOrType
@@ -92,7 +92,8 @@ class BernoulliNegativeSampler(NegativeSampler):
             # Set parameter for Bernoulli distribution
             self.corrupt_head_probability[r] = tph / (tph + hpt)
 
-    def _corrupt_batch(self, positive_batch: torch.LongTensor) -> torch.LongTensor:  # noqa: D102
+    def sample(self, positive_batch: torch.LongTensor) -> Tuple[torch.LongTensor, Optional[torch.Tensor]]:
+        """Sample a negative batched based on the bern approach."""
         if self.num_negs_per_pos > 1:
             positive_batch = positive_batch.repeat(self.num_negs_per_pos, 1)
 
@@ -111,9 +112,11 @@ class BernoulliNegativeSampler(NegativeSampler):
         # Tails are corrupted if heads are not corrupted
         tail_mask = ~head_mask
 
-        # We at least make sure to not replace the triples by the original value
+        index_max = self.num_entities
+        # If we do not use a filterer, we at least make sure to not replace the triples by the original value
         # See below for explanation of why this is on a range of [0, num_entities - 1]
-        index_max = self.num_entities - 1
+        if self.filterer is None:
+            index_max -= 1
 
         # Randomly sample corruption.
         negative_entities = torch.randint(
@@ -128,10 +131,15 @@ class BernoulliNegativeSampler(NegativeSampler):
         # Replace tails
         negative_batch[tail_mask, 2] = negative_entities[tail_mask]
 
-        # To make sure we don't replace the head by the original value
-        # we shift all values greater or equal than the original value by one up
-        # for that reason we choose the random value from [0, num_entities -1]
-        negative_batch[head_mask, 0] += (negative_batch[head_mask, 0] >= positive_batch[head_mask, 0]).long()
-        negative_batch[tail_mask, 2] += (negative_batch[tail_mask, 2] >= positive_batch[tail_mask, 2]).long()
+        # If filtering is activated, all negative triples that are positive in the training dataset will be removed
+        if self.filterer is not None:
+            negative_batch, batch_filter = self.filterer(negative_batch=negative_batch)
+        else:
+            # To make sure we don't replace the head by the original value
+            # we shift all values greater or equal than the original value by one up
+            # for that reason we choose the random value from [0, num_entities -1]
+            negative_batch[head_mask, 0] += (negative_batch[head_mask, 0] >= positive_batch[head_mask, 0]).long()
+            negative_batch[tail_mask, 2] += (negative_batch[tail_mask, 2] >= positive_batch[tail_mask, 2]).long()
+            batch_filter = None
 
-        return negative_batch.view(-1, self.num_negs_per_pos, 3)
+        return negative_batch, batch_filter
