@@ -18,6 +18,7 @@ from typing import (
     Any, Callable, Collection, Dict, Generic, Iterable, List, Mapping, Optional, Sequence, Tuple, Type, TypeVar,
     Union,
 )
+from uuid import uuid4
 
 import numpy as np
 import pandas as pd
@@ -86,6 +87,7 @@ __all__ = [
     'complex_normalize',
     'lp_norm',
     'powersum_norm',
+    'create_path_with_id,
 ]
 
 logger = logging.getLogger(__name__)
@@ -1081,6 +1083,12 @@ def complex_normalize(x: torch.Tensor) -> torch.Tensor:
     y = x.view(*x.shape[:-1], x.shape[-1] // 2, 2)
     y = functional.normalize(y, p=2, dim=-1)
     return y.view(*x.shape)
+
+
+def create_path_with_id(directory: str) -> str:
+    """Add unique id to path."""
+    datetime = time.strftime('%Y-%m-%d-%H-%M')
+    return os.path.join(directory, f'{datetime}_{uuid4()}')
 
 
 if __name__ == '__main__':
