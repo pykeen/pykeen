@@ -16,9 +16,6 @@ __all__ = [
     'MultiTrainingCallback',
 ]
 
-#: A hint for constructing a :class:`MultiTrainingCallback`
-TrainingCallbackHint = Union[None, 'TrainingCallback', Collection['TrainingCallback']]
-
 
 class TrainingCallback:
     """An interface for training callbacks.
@@ -64,6 +61,10 @@ class TrackerCallback(TrainingCallback):
     def post_epoch(self, *, epoch: int, epoch_loss: float) -> None:
         """Log the epoch and loss."""
         self.result_tracker.log_metrics({'loss': epoch_loss}, step=epoch)
+
+
+#: A hint for constructing a :class:`MultiTrainingCallback`
+TrainingCallbackHint = Union[None, TrainingCallback, Collection[TrainingCallback]]
 
 
 class MultiTrainingCallback(TrainingCallback):
