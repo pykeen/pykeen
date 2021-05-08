@@ -57,7 +57,7 @@ class MultiTrainingCallback(TrainingCallback):
     """A wrapper for calling multiple training callbacks together."""
 
     #: A collection of callbacks
-    callbacks: Collection[TrainingCallback]
+    callbacks: List[TrainingCallback]
 
     def __init__(self, callbacks: TrainingCallbackHint = None) -> None:
         """Initialize the callback."""
@@ -67,13 +67,17 @@ class MultiTrainingCallback(TrainingCallback):
         elif isinstance(callbacks, TrainingCallback):
             self.callbacks = [callbacks]
         else:
-            self.callbacks = callbacks
+            self.callbacks = list(callbacks)
 
     def register_loop(self, *, loop: 'TrainingLoop') -> None:
         """Register the training loop."""
         super().register_loop(loop=loop)
         for callback in self.callbacks:
             callback.register_loop(loop=loop)
+
+    def register_callback(self, callback: TrainingCallback) -> None:
+        """Register a callback."""
+        self.callbacks.append(callback)
 
     def post_batch(self, *, batch) -> None:
         """Call for training batches."""
