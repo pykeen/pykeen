@@ -571,7 +571,7 @@ class TrainingLoop(ABC):
                         stop = min(start + sub_batch_size, current_batch_size)
 
                         # forward pass call
-                        current_epoch_loss += self._forward_pass(
+                        batch_loss = self._forward_pass(
                             batch,
                             start,
                             stop,
@@ -579,6 +579,8 @@ class TrainingLoop(ABC):
                             label_smoothing,
                             slice_size,
                         )
+                        current_epoch_loss += batch_loss
+                        callback.on_batch(epoch=epoch, batch_loss=batch_loss)
 
                     # when called by batch_size_search(), the parameter update should not be applied.
                     if not only_size_probing:
@@ -593,7 +595,7 @@ class TrainingLoop(ABC):
                     if only_size_probing and evaluated_once:
                         break
 
-                    callback.post_batch(batch=batch)
+                    callback.post_batches(epoch=epoch, batch=batch)
 
                     evaluated_once = True
 
