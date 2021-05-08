@@ -21,6 +21,7 @@ from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
 from tqdm.autonotebook import tqdm, trange
 
+from .callbacks import MultiTrainingCallback, TrackerCallback, TrainingCallbackHint
 from ..constants import PYKEEN_CHECKPOINTS, PYKEEN_DEFAULT_CHECKPOINT
 from ..losses import Loss, has_mr_loss, has_nssa_loss
 from ..models import Model, RGCN
@@ -172,6 +173,7 @@ class TrainingLoop(ABC):
         checkpoint_frequency: Optional[int] = None,
         checkpoint_on_failure: bool = False,
         drop_last: Optional[bool] = None,
+        callbacks: TrainingCallbackHint = None,
     ) -> Optional[List[float]]:
         """Train the KGE model.
 
@@ -228,6 +230,9 @@ class TrainingLoop(ABC):
         :param drop_last:
             Whether to drop the last batch in each epoch to prevent smaller batches. Defaults to False, except if the
             model contains batch normalization layers. Can be provided explicitly to override.
+        :param callbacks:
+            An optional :class:`pykeen.training.TrainingCallback` or collection of callback instances that define
+            one of several functionalities. Their interface was inspired by Keras.
 
         :return:
             The losses per epoch.
@@ -312,6 +317,7 @@ class TrainingLoop(ABC):
                 best_epoch_model_file_path=best_epoch_model_file_path,
                 last_best_epoch=last_best_epoch,
                 drop_last=drop_last,
+                callbacks=callbacks,
                 triples_factory=triples_factory,
                 training_instances=training_instances,
             )
@@ -350,6 +356,7 @@ class TrainingLoop(ABC):
         best_epoch_model_file_path: Optional[pathlib.Path] = None,
         last_best_epoch: Optional[int] = None,
         drop_last: Optional[bool] = None,
+        callbacks: TrainingCallbackHint = None,
     ) -> Optional[List[float]]:
         """Train the KGE model.
 
@@ -425,6 +432,14 @@ class TrainingLoop(ABC):
                 sampler,
             )
 
+        # Prepare all of the callbacks
+        callback = MultiTrainingCallback(callbacks)
+        # Register a callback for the result tracker, if given
+        if result_tracker is not None:
+            callback.register_callback(TrackerCallback(result_tracker))
+
+        callback.register_loop(self)
+
         # Take the biggest possible training batch_size, if batch_size not set
         batch_size_sufficient = False
         if batch_size is None:
@@ -460,10 +475,6 @@ class TrainingLoop(ABC):
                 triples_factory=triples_factory,
                 training_instances=training_instances,
             )
-
-        # Create dummy result tracker
-        if result_tracker is None:
-            result_tracker = ResultTracker()
 
         if sub_batch_size is None or sub_batch_size == batch_size:  # by default do not split batches in sub-batches
             sub_batch_size = batch_size
@@ -585,7 +596,7 @@ class TrainingLoop(ABC):
                         stop = min(start + sub_batch_size, current_batch_size)
 
                         # forward pass call
-                        current_epoch_loss += self._forward_pass(
+                        batch_loss = self._forward_pass(
                             batch,
                             start,
                             stop,
@@ -593,6 +604,8 @@ class TrainingLoop(ABC):
                             label_smoothing,
                             slice_size,
                         )
+                        current_epoch_loss += batch_loss
+                        callback.on_batch(epoch=epoch, batch_loss=batch_loss)
 
                     # when called by batch_size_search(), the parameter update should not be applied.
                     if not only_size_probing:
@@ -606,6 +619,8 @@ class TrainingLoop(ABC):
                     # For testing purposes we're only interested in processing one batch
                     if only_size_probing and evaluated_once:
                         break
+
+                    callback.post_batch(epoch=epoch, batch=batch)
 
                     evaluated_once = True
 
@@ -622,7 +637,6 @@ class TrainingLoop(ABC):
                 # Track epoch loss
                 epoch_loss = current_epoch_loss / num_training_instances
                 self.losses_per_epochs.append(epoch_loss)
-                result_tracker.log_metrics({'loss': epoch_loss}, step=epoch)
 
                 # Print loss information to console
                 if _use_outer_tqdm:
@@ -668,6 +682,9 @@ class TrainingLoop(ABC):
                     os.remove(best_epoch_model_file_path)
                 raise e
 
+            # Includes a call to result_tracker.log_metrics
+            callback.post_epoch(epoch=epoch, epoch_loss=epoch_loss)
+
             # If a checkpoint file is given, we check whether it is time to save a checkpoint
             if save_checkpoints and checkpoint_path is not None:
                 minutes_since_last_checkpoint = (time.time() - last_checkpoint) // 60
@@ -693,6 +710,8 @@ class TrainingLoop(ABC):
                 if pathlib.Path.is_file(best_epoch_model_file_path):
                     os.remove(best_epoch_model_file_path)
                 return self.losses_per_epochs
+
+        callback.post_train(losses=self.losses_per_epochs)
 
         # If the stopper didn't stop the training loop but derived a best epoch, the model has to be reconstructed
         # at that state
