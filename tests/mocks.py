@@ -62,7 +62,7 @@ class MockModel(EntityRelationEmbeddingModel):
         return self._generate_fake_scores(batch=rt_batch)
 
     def reset_parameters_(self) -> Model:  # noqa: D102
-        self.num_backward_propagations += 1
+        pass  # Not needed for unittest
 
 
 class MockEvaluator(Evaluator):

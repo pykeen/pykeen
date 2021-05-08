@@ -306,4 +306,4 @@ class TestTrainingEarlyStopping(unittest.TestCase):
             batch_size=self.batch_size,
             stopper=self.stopper,
         )
-        self.assertEqual(training_loop.model.num_backward_propagations, self.patience)
+        self.assertEqual(training_loop._epoch, len(self.stopper.results) - self.patience)

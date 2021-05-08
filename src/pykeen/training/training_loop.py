@@ -1107,7 +1107,7 @@ class TrainingLoop(ABC):
         # If the checkpoint was saved with a best epoch model from the early stopper, this model has to be retrieved
         best_epoch_model_file_path = None
         best_epoch = None
-        if checkpoint['best_epoch_model_checkpoint'] is not None:
+        if checkpoint.get('best_epoch_model_checkpoint'):
             best_epoch_model_file_path = pathlib.Path(NamedTemporaryFile().name)
             best_epoch = checkpoint['best_epoch_model_checkpoint']['epoch']
             torch.save(
