@@ -11,7 +11,7 @@ import time
 from abc import ABC, abstractmethod
 from datetime import datetime
 from hashlib import md5
-from typing import Any, List, Mapping, Optional, Sequence, Tuple, Type, Union
+from typing import Any, List, Mapping, Optional, Tuple, Type, Union
 
 import numpy as np
 import torch
@@ -19,6 +19,7 @@ from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
 from tqdm.autonotebook import tqdm, trange
 
+from .callbacks import MultiTrainingCallback, TrainingCallbackHint
 from ..constants import PYKEEN_CHECKPOINTS, PYKEEN_DEFAULT_CHECKPOINT
 from ..losses import Loss, has_mr_loss, has_nssa_loss
 from ..models import Model, RGCN
@@ -76,42 +77,6 @@ def _get_optimizer_kwargs(optimizer: Optimizer) -> Mapping[str, Any]:
         if key != 'params'
     }
     return optimizer_kwargs
-
-
-class TrainingCallback:
-    """An interface for training callbacks.
-
-    The interaction points are similar to those of `Keras <https://keras.io/guides/writing_your_own_callbacks/#an-overview-of-callback-methods>`_.
-
-    The training callback is registered with the training loop, and can access its attributes.
-    """
-
-    def __init__(self):
-        """Initialize the callback."""
-        self._loop = None
-
-    @property
-    def loop(self) -> 'TrainingLoop':
-        """The training loop."""
-        if self._loop is None:
-            raise ValueError('Callback was never initialized')
-        return self._loop
-
-    def register_loop(self, *, loop: "TrainingLoop") -> None:
-        """Register the training loop."""
-        self._loop = loop
-
-    def on_evaluation_batch(self, *, batch) -> None:
-        """Callback for evaluation (validation/test) batches."""
-
-    def on_training_batch(self, *, batch) -> None:
-        """Callback for training batches."""
-
-    def post_epoch(self, *, epoch: int, loss: float) -> None:
-        """Call after epoch."""
-
-    def post_train(self, *, losses: List[float]) -> None:
-        """Call after training."""
 
 
 class TrainingLoop(ABC):
@@ -206,7 +171,7 @@ class TrainingLoop(ABC):
         checkpoint_frequency: Optional[int] = None,
         checkpoint_on_failure: bool = False,
         drop_last: Optional[bool] = None,
-        callbacks: Union[None, TrainingCallback, Sequence[TrainingCallback]] = None,
+        callbacks: TrainingCallbackHint = None,
     ) -> Optional[List[float]]:
         """Train the KGE model.
 
@@ -267,13 +232,6 @@ class TrainingLoop(ABC):
         :return:
             The losses per epoch.
         """
-        if callbacks is None:
-            callbacks = []
-        elif isinstance(callbacks, TrainingCallback):
-            callbacks = [callbacks]
-        for callback in callbacks:
-            callback.register_loop(loop=self)
-
         # Create training instances. Use the _create_instances function to allow subclasses
         # to modify this behavior
         training_instances = self._create_instances(triples_factory)
@@ -387,7 +345,7 @@ class TrainingLoop(ABC):
         checkpoint_frequency: Optional[int] = None,
         checkpoint_on_failure_file_path: Union[None, str, pathlib.Path] = None,
         drop_last: Optional[bool] = None,
-        callbacks: Optional[Sequence[TrainingCallback]] = None,
+        callbacks: TrainingCallbackHint = None,
     ) -> Optional[List[float]]:
         """Train the KGE model.
 
@@ -447,6 +405,9 @@ class TrainingLoop(ABC):
                 'Using RGCN without graph-based sampling! Please select sampler="schlichtkrull" instead of %s.',
                 sampler,
             )
+
+        # Prepare all of the callbacks
+        callback = MultiTrainingCallback(callbacks)
 
         # Take the biggest possible training batch_size, if batch_size not set
         batch_size_sufficient = False
@@ -630,9 +591,7 @@ class TrainingLoop(ABC):
                     if only_size_probing and evaluated_once:
                         break
 
-                    # Callbacks for evaluation batches
-                    for callback in callbacks:
-                        callback.on_training_batch(batch=batch)
+                    callback.on_training_batch(batch=batch)
 
                     evaluated_once = True
 
@@ -677,8 +636,7 @@ class TrainingLoop(ABC):
                     )
                 raise e
 
-            for callback in callbacks:
-                callback.post_epoch(epoch=epoch, loss=epoch_loss)
+            callback.post_epoch(epoch=epoch, loss=epoch_loss)
 
             # If a checkpoint file is given, we check whether it is time to save a checkpoint
             if save_checkpoints:
@@ -695,8 +653,7 @@ class TrainingLoop(ABC):
             if should_stop:
                 return self.losses_per_epochs
 
-        for callback in callbacks:
-            callback.post_train(losses=self.losses_per_epochs)
+        callback.post_train(losses=self.losses_per_epochs)
 
         return self.losses_per_epochs
 
