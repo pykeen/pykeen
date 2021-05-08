@@ -19,7 +19,7 @@ from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
 from tqdm.autonotebook import tqdm, trange
 
-from .callbacks import MultiTrainingCallback, TrainingCallbackHint
+from .callbacks import MultiTrainingCallback, TrackerCallback, TrainingCallbackHint
 from ..constants import PYKEEN_CHECKPOINTS, PYKEEN_DEFAULT_CHECKPOINT
 from ..losses import Loss, has_mr_loss, has_nssa_loss
 from ..models import Model, RGCN
@@ -411,6 +411,9 @@ class TrainingLoop(ABC):
 
         # Prepare all of the callbacks
         callback = MultiTrainingCallback(callbacks)
+        # Register a callback for the result tracker, if given
+        if result_tracker is not None:
+            callback.register_callback(TrackerCallback(result_tracker))
 
         # Take the biggest possible training batch_size, if batch_size not set
         batch_size_sufficient = False
@@ -447,10 +450,6 @@ class TrainingLoop(ABC):
                 triples_factory=triples_factory,
                 training_instances=training_instances,
             )
-
-        # Create dummy result tracker
-        if result_tracker is None:
-            result_tracker = ResultTracker()
 
         if sub_batch_size is None or sub_batch_size == batch_size:  # by default do not split batches in sub-batches
             sub_batch_size = batch_size
@@ -611,7 +610,6 @@ class TrainingLoop(ABC):
                 # Track epoch loss
                 epoch_loss = current_epoch_loss / num_training_instances
                 self.losses_per_epochs.append(epoch_loss)
-                result_tracker.log_metrics({'loss': epoch_loss}, step=epoch)
 
                 # Print loss information to console
                 if _use_outer_tqdm:
@@ -639,7 +637,8 @@ class TrainingLoop(ABC):
                     )
                 raise e
 
-            callback.post_epoch(epoch=epoch, loss=epoch_loss)
+            # Includes a call to result_tracker.log_metrics
+            callback.post_epoch(epoch=epoch, epoch_loss=epoch_loss)
 
             # If a checkpoint file is given, we check whether it is time to save a checkpoint
             if save_checkpoints:

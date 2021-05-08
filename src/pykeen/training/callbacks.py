@@ -2,9 +2,9 @@
 
 """Training callbacks."""
 
-from __future__ import annotations
-
 from typing import Collection, List, TYPE_CHECKING, Union
+
+from ..trackers import ResultTracker
 
 if TYPE_CHECKING:
     from .training_loop import TrainingLoop
@@ -12,6 +12,7 @@ if TYPE_CHECKING:
 __all__ = [
     'TrainingCallbackHint',
     'TrainingCallback',
+    'TrackerCallback',
     'MultiTrainingCallback',
 ]
 
@@ -46,11 +47,23 @@ class TrainingCallback:
     def post_batch(self, *, batch) -> None:
         """Call for training batches."""
 
-    def post_epoch(self, *, epoch: int, loss: float) -> None:
+    def post_epoch(self, *, epoch: int, epoch_loss: float) -> None:
         """Call after epoch."""
 
     def post_train(self, *, losses: List[float]) -> None:
         """Call after training."""
+
+
+class TrackerCallback(TrainingCallback):
+    """An adapter for the :class:`pykeen.trackers.ResultTracker."""
+
+    def __init__(self, result_tracker: ResultTracker):
+        super().__init__()
+        self.result_tracker = result_tracker
+
+    def post_epoch(self, *, epoch: int, epoch_loss: float) -> None:
+        """Log the epoch and loss."""
+        self.result_tracker.log_metrics({'loss': epoch_loss}, step=epoch)
 
 
 class MultiTrainingCallback(TrainingCallback):
@@ -84,10 +97,10 @@ class MultiTrainingCallback(TrainingCallback):
         for callback in self.callbacks:
             callback.post_batch(batch=batch)
 
-    def post_epoch(self, *, epoch: int, loss: float) -> None:
+    def post_epoch(self, *, epoch: int, epoch_loss: float) -> None:
         """Call after epoch."""
         for callback in self.callbacks:
-            callback.post_epoch(epoch=epoch, loss=loss)
+            callback.post_epoch(epoch=epoch, epoch_loss=epoch_loss)
 
     def post_train(self, *, losses: List[float]) -> None:
         """Call after training."""
