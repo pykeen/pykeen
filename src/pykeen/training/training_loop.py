@@ -4,6 +4,7 @@
 
 import gc
 import logging
+import os
 import pathlib
 import pickle
 import random
@@ -11,7 +12,8 @@ import time
 from abc import ABC, abstractmethod
 from datetime import datetime
 from hashlib import md5
-from typing import Any, List, Mapping, Optional, Tuple, Type, Union
+from tempfile import NamedTemporaryFile
+from typing import Any, IO, List, Mapping, Optional, Tuple, Type, Union
 
 import numpy as np
 import torch
@@ -252,10 +254,12 @@ class TrainingLoop(ABC):
         # If a checkpoint file is given, it must be loaded if it exists already
         save_checkpoints = False
         checkpoint_path = None
+        best_epoch_model_file_path = None
+        last_best_epoch = None
         if checkpoint_name:
             checkpoint_path = checkpoint_directory.joinpath(checkpoint_name)
             if checkpoint_path.is_file():
-                self._load_state(path=checkpoint_path)
+                best_epoch_model_file_path, last_best_epoch = self._load_state(path=checkpoint_path)
                 if stopper is not None:
                     stopper_dict = stopper.load_summary_dict_from_training_loop_checkpoint(path=checkpoint_path)
                     # If the stopper dict has any keys, those are written back to the stopper
@@ -310,6 +314,8 @@ class TrainingLoop(ABC):
                 checkpoint_path=checkpoint_path,
                 checkpoint_frequency=checkpoint_frequency,
                 checkpoint_on_failure_file_path=checkpoint_on_failure_file_path,
+                best_epoch_model_file_path=best_epoch_model_file_path,
+                last_best_epoch=last_best_epoch,
                 drop_last=drop_last,
                 callbacks=callbacks,
                 triples_factory=triples_factory,
@@ -347,6 +353,8 @@ class TrainingLoop(ABC):
         checkpoint_path: Union[None, str, pathlib.Path] = None,
         checkpoint_frequency: Optional[int] = None,
         checkpoint_on_failure_file_path: Union[None, str, pathlib.Path] = None,
+        best_epoch_model_file_path: Optional[pathlib.Path] = None,
+        last_best_epoch: Optional[int] = None,
         drop_last: Optional[bool] = None,
         callbacks: TrainingCallbackHint = None,
     ) -> Optional[List[float]]:
@@ -393,6 +401,10 @@ class TrainingLoop(ABC):
             The frequency of saving checkpoints in minutes. Setting it to 0 will save a checkpoint after every epoch.
         :param checkpoint_on_failure_file_path:
             The full filepath for saving checkpoints on failure.
+        :param best_epoch_model_file_path:
+            The file path for the best epoch model when using early stoppers and resuming training.
+        :param last_best_epoch:
+            The last best epoch that the early stopper saved when resuming training.
         :param drop_last:
             Whether to drop the last batch in each epoch to prevent smaller batches. Defaults to False, except if the
             model contains batch normalization layers. Can be provided explicitly to override.
@@ -402,6 +414,17 @@ class TrainingLoop(ABC):
         """
         if self.optimizer is None:
             raise ValueError('optimizer must be set before running _train()')
+        # When using early stopping models have to be saved separately at the best epoch, since the training loop will
+        # due to the patience continue to train after the best epoch and thus alter the model
+        if (
+                stopper is not None
+                and not only_size_probing
+                and last_best_epoch is None
+                and best_epoch_model_file_path is None
+        ):
+            # Create a path
+            best_epoch_model_file_path = pathlib.Path(NamedTemporaryFile().name)
+        best_epoch_model_checkpoint_file_path: Optional[pathlib.Path] = None
 
         if isinstance(self.model, RGCN) and sampler != 'schlichtkrull':
             logger.warning(
@@ -628,24 +651,42 @@ class TrainingLoop(ABC):
                 should_stop = False
                 if stopper is not None and stopper.should_evaluate(epoch) and stopper.should_stop(epoch):
                     should_stop = True
+                # When the stopper obtained a new best epoch, this model has to be saved for reconstruction
+                if (
+                        stopper is not None
+                        and stopper.best_epoch != last_best_epoch
+                        and best_epoch_model_file_path is not None
+                ):
+                    self._save_state(path=best_epoch_model_file_path)
+                    last_best_epoch = epoch
             # When the training loop failed, a fallback checkpoint is created to resume training.
             except (MemoryError, RuntimeError) as e:
                 logger.warning(f'The training loop just failed during epoch {epoch} due to error {str(e)}.')
                 if checkpoint_on_failure_file_path:
-                    self._save_state(path=checkpoint_on_failure_file_path, stopper=stopper)
+                    # When there wasn't a best epoch the checkpoint path should be None
+                    if last_best_epoch is not None and best_epoch_model_file_path is not None:
+                        best_epoch_model_checkpoint_file_path = best_epoch_model_file_path
+                    self._save_state(
+                        path=checkpoint_on_failure_file_path,
+                        stopper=stopper,
+                        best_epoch_model_checkpoint_file_path=best_epoch_model_checkpoint_file_path,
+                    )
                     logger.warning(
                         "However, don't worry we got you covered. PyKEEN just saved a checkpoint when this happened "
                         f"at '{checkpoint_on_failure_file_path}'. To resume training from the checkpoint file just "
                         f"restart your code and pass this file path to the training loop or pipeline you used "
                         f"as 'checkpoint_file' argument.",
                     )
+                # Delete temporary best epoch model
+                if best_epoch_model_file_path is not None and best_epoch_model_file_path.is_file():
+                    os.remove(best_epoch_model_file_path)
                 raise e
 
             # Includes a call to result_tracker.log_metrics
             callback.post_epoch(epoch=epoch, epoch_loss=epoch_loss)
 
             # If a checkpoint file is given, we check whether it is time to save a checkpoint
-            if save_checkpoints:
+            if save_checkpoints and checkpoint_path is not None:
                 minutes_since_last_checkpoint = (time.time() - last_checkpoint) // 60
                 # MyPy overrides are because you should
                 if (
@@ -653,13 +694,32 @@ class TrainingLoop(ABC):
                     or should_stop
                     or epoch == num_epochs
                 ):
-                    self._save_state(path=checkpoint_path, stopper=stopper)  # type: ignore
+                    # When there wasn't a best epoch the checkpoint path should be None
+                    if last_best_epoch is not None and best_epoch_model_file_path is not None:
+                        best_epoch_model_checkpoint_file_path = best_epoch_model_file_path
+                    self._save_state(
+                        path=checkpoint_path,
+                        stopper=stopper,
+                        best_epoch_model_checkpoint_file_path=best_epoch_model_checkpoint_file_path,
+                    )  # type: ignore
                     last_checkpoint = time.time()
 
-            if should_stop:
+            if should_stop and last_best_epoch is not None and best_epoch_model_file_path is not None:
+                self._load_state(path=best_epoch_model_file_path)
+                # Delete temporary best epoch model
+                if pathlib.Path.is_file(best_epoch_model_file_path):
+                    os.remove(best_epoch_model_file_path)
                 return self.losses_per_epochs
 
         callback.post_train(losses=self.losses_per_epochs)
+
+        # If the stopper didn't stop the training loop but derived a best epoch, the model has to be reconstructed
+        # at that state
+        if stopper is not None and last_best_epoch is not None and best_epoch_model_file_path is not None:
+            self._load_state(path=best_epoch_model_file_path)
+            # Delete temporary best epoch model
+            if pathlib.Path.is_file(best_epoch_model_file_path):
+                os.remove(best_epoch_model_file_path)
 
         return self.losses_per_epochs
 
@@ -963,7 +1023,12 @@ class TrainingLoop(ABC):
         # The cache of the previous run has to be freed to allow accurate memory availability estimates
         torch.cuda.empty_cache()
 
-    def _save_state(self, path: Union[str, pathlib.Path], stopper: Optional[Stopper] = None) -> None:
+    def _save_state(
+        self,
+        path: Union[IO[bytes], str, pathlib.Path],
+        stopper: Optional[Stopper] = None,
+        best_epoch_model_checkpoint_file_path: Optional[pathlib.Path] = None,
+    ) -> None:
         """Save the state of the training loop.
 
         :param path:
@@ -971,6 +1036,8 @@ class TrainingLoop(ABC):
         :param stopper:
             An instance of :class:`pykeen.stopper.EarlyStopper` with settings for checking
             if training should stop early
+        :param best_epoch_model_checkpoint_file_path:
+            The file path for the checkpoint of the best epoch model when using early stopping.
         """
         if self.optimizer is None:
             raise ValueError
@@ -988,6 +1055,11 @@ class TrainingLoop(ABC):
         else:
             torch_cuda_random_state = None
 
+        if best_epoch_model_checkpoint_file_path is not None:
+            best_epoch_model_checkpoint = torch.load(best_epoch_model_checkpoint_file_path)
+        else:
+            best_epoch_model_checkpoint = None
+
         torch.save(
             {
                 'epoch': self._epoch,
@@ -1001,17 +1073,25 @@ class TrainingLoop(ABC):
                 'np_random_state': np.random.get_state(),
                 'torch_random_state': torch.random.get_rng_state(),
                 'torch_cuda_random_state': torch_cuda_random_state,
+                # This is an entire checkpoint for the optional best model when using early stopping
+                'best_epoch_model_checkpoint': best_epoch_model_checkpoint,
             },
             path,
             pickle_protocol=pickle.HIGHEST_PROTOCOL,
         )
         logger.info(f"=> Saved checkpoint after having finished epoch {self._epoch}.")
 
-    def _load_state(self, path: Union[str, pathlib.Path]) -> None:
+    def _load_state(
+            self,
+            path: Union[str, pathlib.Path],
+    ) -> Tuple[Optional[pathlib.Path], Optional[int]]:
         """Load the state of the training loop from a checkpoint.
 
         :param path:
             Path of the file where to load the state from.
+
+        :return:
+            Temporary file path of the best epoch model and the best epoch when using early stoppers, None otherwise.
 
         :raises CheckpointMismatchError:
             If the given checkpoint file has a non-matching checksum, i.e. it was saved with a different configuration.
@@ -1043,6 +1123,18 @@ class TrainingLoop(ABC):
                 "be deterministic.",
             )
 
+        # If the checkpoint was saved with a best epoch model from the early stopper, this model has to be retrieved
+        best_epoch_model_file_path = None
+        best_epoch = None
+        if checkpoint.get('best_epoch_model_checkpoint'):
+            best_epoch_model_file_path = pathlib.Path(NamedTemporaryFile().name)
+            best_epoch = checkpoint['best_epoch_model_checkpoint']['epoch']
+            torch.save(
+                checkpoint['best_epoch_model_checkpoint'],
+                best_epoch_model_file_path,
+                pickle_protocol=pickle.HIGHEST_PROTOCOL,
+            )
+
         self._epoch = checkpoint['epoch']
         self.losses_per_epochs = checkpoint['loss']
         self.model.load_state_dict(checkpoint['model_state_dict'])
@@ -1051,3 +1143,5 @@ class TrainingLoop(ABC):
         np.random.set_state(checkpoint['np_random_state'])
         torch.random.set_rng_state(checkpoint['torch_random_state'])
         logger.info(f"=> loaded checkpoint '{path}' stopped after having finished epoch {checkpoint['epoch']}")
+
+        return best_epoch_model_file_path, best_epoch
