@@ -43,10 +43,7 @@ class TrainingCallback:
         """Register the training loop."""
         self._loop = loop
 
-    def on_evaluation_batch(self, *, batch) -> None:
-        """Call for evaluation (validation/test) batches."""
-
-    def on_training_batch(self, *, batch) -> None:
+    def post_batch(self, *, batch) -> None:
         """Call for training batches."""
 
     def post_epoch(self, *, epoch: int, loss: float) -> None:
@@ -78,15 +75,10 @@ class MultiTrainingCallback(TrainingCallback):
         for callback in self.callbacks:
             callback.register_loop(loop=loop)
 
-    def on_evaluation_batch(self, *, batch) -> None:
-        """Call for evaluation (validation/test) batches."""
-        for callback in self.callbacks:
-            callback.on_training_batch(batch=batch)
-
-    def on_training_batch(self, *, batch) -> None:
+    def post_batch(self, *, batch) -> None:
         """Call for training batches."""
         for callback in self.callbacks:
-            callback.on_training_batch(batch=batch)
+            callback.post_batch(batch=batch)
 
     def post_epoch(self, *, epoch: int, loss: float) -> None:
         """Call after epoch."""

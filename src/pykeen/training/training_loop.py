@@ -228,6 +228,9 @@ class TrainingLoop(ABC):
         :param drop_last:
             Whether to drop the last batch in each epoch to prevent smaller batches. Defaults to False, except if the
             model contains batch normalization layers. Can be provided explicitly to override.
+        :param callbacks:
+            An optional :class:`pykeen.training.TrainingCallback` or collection of callback instances that define
+            one of several functionalities. Their interface was inspired by Keras.
 
         :return:
             The losses per epoch.
@@ -591,7 +594,7 @@ class TrainingLoop(ABC):
                     if only_size_probing and evaluated_once:
                         break
 
-                    callback.on_training_batch(batch=batch)
+                    callback.post_batch(batch=batch)
 
                     evaluated_once = True
 
