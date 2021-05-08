@@ -144,7 +144,6 @@ class TrainingLoop(ABC):
         self.model = model
         self.optimizer = optimizer
         self.losses_per_epochs = []
-        self._should_stop = False
         self.automatic_memory_optimization = automatic_memory_optimization
 
         logger.debug("we don't really need the triples factory: %s", triples_factory)
@@ -274,7 +273,6 @@ class TrainingLoop(ABC):
             callbacks = [callbacks]
         for callback in callbacks:
             callback.register_loop(loop=self)
-        self._should_stop = False
 
         # Create training instances. Use the _create_instances function to allow subclasses
         # to modify this behavior
@@ -663,6 +661,9 @@ class TrainingLoop(ABC):
                 # Save the last successful finished epoch
                 self._epoch = epoch
 
+                should_stop = False
+                if stopper is not None and stopper.should_evaluate(epoch) and stopper.should_stop(epoch):
+                    should_stop = True
             # When the training loop failed, a fallback checkpoint is created to resume training.
             except (MemoryError, RuntimeError) as e:
                 logger.warning(f'The training loop just failed during epoch {epoch} due to error {str(e)}.')
@@ -685,13 +686,13 @@ class TrainingLoop(ABC):
                 # MyPy overrides are because you should
                 if (
                     minutes_since_last_checkpoint >= checkpoint_frequency  # type: ignore
-                    or self._should_stop
+                    or should_stop
                     or epoch == num_epochs
                 ):
                     self._save_state(path=checkpoint_path, stopper=stopper)  # type: ignore
                     last_checkpoint = time.time()
 
-            if self._should_stop:
+            if should_stop:
                 return self.losses_per_epochs
 
         for callback in callbacks:
