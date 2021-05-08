@@ -106,6 +106,11 @@ class MultiTrainingCallback(TrainingCallback):
         """Register a callback."""
         self.callbacks.append(callback)
 
+    def on_batch(self, epoch: int, batch_loss: float) -> None:
+        """Call for training batches."""
+        for callback in self.callbacks:
+            callback.on_batch(epoch=epoch, batch_loss=batch_loss)
+
     def post_batches(self, epoch: int, batch) -> None:
         """Call for training batches."""
         for callback in self.callbacks:
