@@ -620,7 +620,7 @@ class TrainingLoop(ABC):
                     if only_size_probing and evaluated_once:
                         break
 
-                    callback.post_batches(epoch=epoch, batch=batch)
+                    callback.post_batch(epoch=epoch, batch=batch)
 
                     evaluated_once = True
 

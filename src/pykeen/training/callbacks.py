@@ -54,7 +54,7 @@ class TrainingCallback:
     def on_batch(self, epoch: int, batch_loss: float) -> None:
         """Call for training batches."""
 
-    def post_batches(self, epoch: int, batch) -> None:
+    def post_batch(self, epoch: int, batch) -> None:
         """Call for training batches."""
 
     def post_epoch(self, epoch: int, epoch_loss: float) -> None:
@@ -109,14 +109,14 @@ class MultiTrainingCallback(TrainingCallback):
             callback.register_loop(self._loop)
 
     def on_batch(self, epoch: int, batch_loss: float) -> None:
-        """Call for training batches."""
+        """Call for each batch."""
         for callback in self.callbacks:
             callback.on_batch(epoch=epoch, batch_loss=batch_loss)
 
-    def post_batches(self, epoch: int, batch) -> None:
-        """Call for training batches."""
+    def post_batch(self, epoch: int, batch) -> None:
+        """Call after each batch."""
         for callback in self.callbacks:
-            callback.post_batches(epoch=epoch, batch=batch)
+            callback.post_batch(epoch=epoch, batch=batch)
 
     def post_epoch(self, epoch: int, epoch_loss: float) -> None:
         """Call after epoch."""
