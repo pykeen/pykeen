@@ -431,11 +431,11 @@ class RankBasedEvaluator(Evaluator):
             if len(ranks) < 1:
                 continue
             hits_at_k[side][rank_type] = {
-                k: np.mean(ranks <= (k if isinstance(k, int) else int(self.num_entities * k)))
+                k: np.mean(ranks <= (k if isinstance(k, int) else int(self.num_entities * k))).item()
                 for k in self.ks
             }
             for metric_name, metric_func in all_type_funcs.items():
-                asr[metric_name][side][rank_type] = metric_func(ranks)
+                asr[metric_name][side][rank_type] = metric_func(ranks).item()
 
             expected_rank_type = EXPECTED_RANKS.get(rank_type)
             if expected_rank_type:
