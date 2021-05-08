@@ -415,6 +415,8 @@ class TrainingLoop(ABC):
         if result_tracker is not None:
             callback.register_callback(TrackerCallback(result_tracker))
 
+        callback.register_loop(self)
+
         # Take the biggest possible training batch_size, if batch_size not set
         batch_size_sufficient = False
         if batch_size is None:
