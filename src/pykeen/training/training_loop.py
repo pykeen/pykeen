@@ -79,8 +79,7 @@ def _get_optimizer_kwargs(optimizer: Optimizer) -> Mapping[str, Any]:
 
 
 class TrainingCallback:
-    """
-    An interface for training callbacks.
+    """An interface for training callbacks.
 
     The interaction points are similar to those of `Keras <https://keras.io/guides/writing_your_own_callbacks/#an-overview-of-callback-methods>`_.
 
@@ -89,17 +88,30 @@ class TrainingCallback:
 
     def __init__(self):
         """Initialize the callback."""
-        self.loop = None
+        self._loop = None
 
-    def register_loop(self, loop: "TrainingLoop"):
+    @property
+    def loop(self) -> 'TrainingLoop':
+        """The training loop."""
+        if self._loop is None:
+            raise ValueError('Callback was never initialized')
+        return self._loop
+
+    def register_loop(self, *, loop: "TrainingLoop") -> None:
         """Register the training loop."""
-        self.loop = loop
+        self._loop = loop
 
-    def on_evaluation_batch(self, batch) -> None:
+    def on_evaluation_batch(self, *, batch) -> None:
         """Callback for evaluation (validation/test) batches."""
 
-    def on_training_batch(self, batch) -> None:
+    def on_training_batch(self, *, batch) -> None:
         """Callback for training batches."""
+
+    def post_epoch(self, *, epoch: int, loss: float) -> None:
+        """Call after epoch."""
+
+    def post_train(self, *, losses: List[float]) -> None:
+        """Call after training."""
 
 
 class TrainingLoop(ABC):
@@ -195,7 +207,7 @@ class TrainingLoop(ABC):
         checkpoint_frequency: Optional[int] = None,
         checkpoint_on_failure: bool = False,
         drop_last: Optional[bool] = None,
-        callbacks: Optional[Sequence[TrainingCallback]] = None,
+        callbacks: Union[None, TrainingCallback, Sequence[TrainingCallback]] = None,
     ) -> Optional[List[float]]:
         """Train the KGE model.
 
@@ -256,7 +268,10 @@ class TrainingLoop(ABC):
         :return:
             The losses per epoch.
         """
-        callbacks = list(callbacks or [])
+        if callbacks is None:
+            callbacks = []
+        elif isinstance(callbacks, TrainingCallback):
+            callbacks = [callbacks]
         for callback in callbacks:
             callback.register_loop(loop=self)
         self._should_stop = False
@@ -619,7 +634,7 @@ class TrainingLoop(ABC):
 
                     # Callbacks for evaluation batches
                     for callback in callbacks:
-                        callback.on_training_batch(batch)
+                        callback.on_training_batch(batch=batch)
 
                     evaluated_once = True
 
@@ -648,14 +663,6 @@ class TrainingLoop(ABC):
                 # Save the last successful finished epoch
                 self._epoch = epoch
 
-                # TODO: do not evaluate every epoch
-                evaluation_data_loader = ...
-                for evaluation_batch in evaluation_data_loader:
-                    for callback in callbacks:
-                        callback.on_evaluation_batch(batch=evaluation_batch)
-                # should_stop = False
-                # if stopper is not None and stopper.should_evaluate(epoch) and stopper.should_stop(epoch):
-                #     should_stop = True
             # When the training loop failed, a fallback checkpoint is created to resume training.
             except (MemoryError, RuntimeError) as e:
                 logger.warning(f'The training loop just failed during epoch {epoch} due to error {str(e)}.')
@@ -668,6 +675,9 @@ class TrainingLoop(ABC):
                         f"as 'checkpoint_file' argument.",
                     )
                 raise e
+
+            for callback in callbacks:
+                callback.post_epoch(epoch=epoch, loss=epoch_loss)
 
             # If a checkpoint file is given, we check whether it is time to save a checkpoint
             if save_checkpoints:
@@ -683,6 +693,9 @@ class TrainingLoop(ABC):
 
             if self._should_stop:
                 return self.losses_per_epochs
+
+        for callback in callbacks:
+            callback.post_train(losses=self.losses_per_epochs)
 
         return self.losses_per_epochs
 

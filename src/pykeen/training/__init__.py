@@ -18,10 +18,11 @@ from class_resolver import Resolver
 
 from .lcwa import LCWATrainingLoop  # noqa: F401
 from .slcwa import SLCWATrainingLoop  # noqa: F401
-from .training_loop import NonFiniteLossError, TrainingLoop  # noqa: F401
+from .training_loop import NonFiniteLossError, TrainingLoop, TrainingCallback  # noqa: F401
 
 __all__ = [
     'TrainingLoop',
+    'TrainingCallback',
     'SLCWATrainingLoop',
     'LCWATrainingLoop',
     'NonFiniteLossError',
