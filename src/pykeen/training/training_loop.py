@@ -635,8 +635,11 @@ class TrainingLoop(ABC):
                 self._epoch = epoch
 
                 should_stop = False
-                if stopper is not None and stopper.should_evaluate(epoch) and stopper.should_stop(epoch):
-                    should_stop = True
+                if stopper is not None and stopper.should_evaluate(epoch):
+                    if stopper.should_stop(epoch):
+                        should_stop = True
+                    # Since the model is also used within the stopper, its graph and cache have to be cleared
+                    self._free_graph_and_cache()
                 # When the stopper obtained a new best epoch, this model has to be saved for reconstruction
                 if (
                         stopper is not None
