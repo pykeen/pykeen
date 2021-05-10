@@ -1,19 +1,33 @@
-name: Tests master
+name: Tests on PR from external
 
 on:
-  push:
+  pull_request_target:
+    types:
+      - opened
+      - edited
+      - synchronize
     branches:
       - master
 
 jobs:
+  welcome:
+    runs-on: ubuntu-latest
+    if: github.event.action == 'opened'
+    steps:
+      - uses: actions/first-interaction@v1
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          pr-message: |-
+            Congrats on making your first Pull Request and thanks for taking the time to improve PyKEEN! ❤️! 🎉
   lint:
-    if: "!contains(github.event.head_commit.message, 'skip ci')"
+    if: github.repository_owner != 'pykeen'
     name: Lint
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [ 3.7, 3.9 ]
+        python-version: [ 3.7, 3.8 ]
     steps:
+      - if: github.repository_owner != 'pykeen'
       - uses: actions/checkout@v2
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
@@ -37,12 +51,12 @@ jobs:
       - name: Check static typing with MyPy
         run: tox -e mypy
   docs:
-    if: "!contains(github.event.head_commit.message, 'skip ci')"
+    if: github.repository_owner != 'pykeen'
     name: Documentation
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [ 3.7, 3.9 ]
+        python-version: [ 3.7, 3.8 ]
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python ${{ matrix.python-version }}
@@ -66,12 +80,12 @@ jobs:
           sudo apt-get install graphviz
           tox -e docs
   tests:
-    if: "!contains(github.event.head_commit.message, 'skip ci')"
+    if: github.repository_owner != 'pykeen'
     name: Tests
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [ 3.7, 3.9 ]
+        python-version: [ 3.7, 3.8 ]
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python ${{ matrix.python-version }}
@@ -87,12 +101,12 @@ jobs:
       - name: Run doctests
         run: tox -e doctests
   windows:
-    if: "!contains(github.event.head_commit.message, 'skip ci')"
+    if: github.repository_owner != 'pykeen'
     name: Windows
     runs-on: windows-latest
     strategy:
       matrix:
-        python-version: [ 3.7, 3.9 ]
+        python-version: [ 3.7, 3.8 ]
     steps:
       - uses: actions/checkout@v2
       - uses: conda-incubator/setup-miniconda@v2
@@ -108,14 +122,3 @@ jobs:
         run: pytest --durations=20 tests -m "not slow"
       - name: Run slow tests
         run: pytest --durations=20 tests -m "slow"
-  readthedocs:
-    if: "!contains(github.event.head_commit.message, 'skip ci')"
-    name: Read the Docs
-    runs-on: ubuntu-latest
-    steps:
-      - name: Trigger RTDs build
-        uses: dfm/rtds-action@v1
-        with:
-          webhook_url: ${{ secrets.RTDS_WEBHOOK_URL }}
-          webhook_token: ${{ secrets.RTDS_WEBHOOK_TOKEN }}
-          commit_ref: ${{ github.ref }}
