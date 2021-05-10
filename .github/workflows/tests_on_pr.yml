@@ -32,7 +32,7 @@ jobs:
         id: Event-message-2
         run: 'echo "payload: ${{ toJson(github.event.head.repo.fork) }}"'
   lint:
-    if: ${{ github.event.head.repo.fork && github.event.sender.login == 'PyKEEN-bot' }}
+    if: github.event.head.repo.fork && github.event.sender.login == 'PyKEEN-bot'
     name: Lint
     runs-on: ubuntu-latest
     strategy:
@@ -62,7 +62,7 @@ jobs:
       - name: Check static typing with MyPy
         run: tox -e mypy
   docs:
-    if: ${{ github.event.head.repo.fork && github.event.sender.login == 'PyKEEN-bot' }}
+    if: github.event.head.repo.fork && github.event.sender.login == 'PyKEEN-bot'
     name: Documentation
     runs-on: ubuntu-latest
     strategy:
@@ -91,7 +91,7 @@ jobs:
           sudo apt-get install graphviz
           tox -e docs
   tests:
-    if: ${{ github.event.head.repo.fork && github.event.sender.login == 'PyKEEN-bot' }}
+    if: github.event.head.repo.fork && github.event.sender.login == 'PyKEEN-bot'
     name: Tests
     runs-on: ubuntu-latest
     strategy:
@@ -112,7 +112,7 @@ jobs:
       - name: Run doctests
         run: tox -e doctests
   windows:
-    if: ${{ github.event.head.repo.fork && github.event.sender.login == 'PyKEEN-bot' }}
+    if: github.event.head.repo.fork && github.event.sender.login == 'PyKEEN-bot'
     name: Windows
     runs-on: windows-latest
     strategy:
