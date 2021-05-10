@@ -1,4 +1,4 @@
-name: Tests on PR from external
+name: Tests on PR
 
 on:
   pull_request_target:
