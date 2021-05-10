@@ -10,16 +10,8 @@ on:
       - master
 
 jobs:
-  # TODO for later. See https://github.com/amannn/action-semantic-pull-request for more options
-  #  semantics:
-  #    runs-on: ubuntu-latest
-  #    steps:
-  #      - uses: amannn/action-semantic-pull-request@v1.2.0
-  #        env:
-  #          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   welcome:
     runs-on: ubuntu-latest
-    needs: semantics
     if: github.event.action == 'opened'
     steps:
       - uses: actions/first-interaction@v1
@@ -28,12 +20,14 @@ jobs:
           pr-message: |-
             Congrats on making your first Pull Request and thanks for taking the time to improve PyKEEN! ❤️! 🎉
   lint:
+    if: "!contains(github.event.head_commit.message, 'Trigger CI')"
     name: Lint
     runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: [ 3.7, 3.8 ]
     steps:
+      - if: "!contains(github.event.head_commit.message, 'Trigger CI')"
       - uses: actions/checkout@v2
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
@@ -57,6 +51,7 @@ jobs:
       - name: Check static typing with MyPy
         run: tox -e mypy
   docs:
+    if: "!contains(github.event.head_commit.message, 'Trigger CI')"
     name: Documentation
     runs-on: ubuntu-latest
     strategy:
@@ -85,6 +80,7 @@ jobs:
           sudo apt-get install graphviz
           tox -e docs
   tests:
+    if: "!contains(github.event.head_commit.message, 'Trigger CI')"
     name: Tests
     runs-on: ubuntu-latest
     strategy:
@@ -105,6 +101,7 @@ jobs:
       - name: Run doctests
         run: tox -e doctests
   windows:
+    if: "!contains(github.event.head_commit.message, 'Trigger CI')"
     name: Windows
     runs-on: windows-latest
     strategy:
@@ -125,17 +122,3 @@ jobs:
         run: pytest --durations=20 tests -m "not slow"
       - name: Run slow tests
         run: pytest --durations=20 tests -m "slow"
-  tests_completed:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Step 1
-        id: PR-check
-        run: echo ::set-output name=status::pending
-        continue-on-error: true
-      - name: Dump steps context
-        env:
-          STEPS_CONTEXT: ${{ toJson(steps) }}
-        run: echo "$STEPS_CONTEXT"
-      - name: Check on failures
-        if: steps.PR-check.outputs.status == 'pending'
-        run: exit 1
