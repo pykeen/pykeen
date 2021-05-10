@@ -4,7 +4,7 @@
 
 import tempfile
 import unittest
-from typing import Optional
+from typing import List, Optional
 
 import torch
 from torch import optim
@@ -13,10 +13,12 @@ from pykeen.datasets import Nations
 from pykeen.losses import CrossEntropyLoss
 from pykeen.models import ConvE, Model, TransE
 from pykeen.optimizers import optimizer_resolver
+from pykeen.stoppers.early_stopping import EarlyStopper
 from pykeen.training import SLCWATrainingLoop, training_loop_resolver
 from pykeen.training.training_loop import NonFiniteLossError, TrainingApproachLossMismatchError
 from pykeen.triples import TriplesFactory
 from pykeen.typing import MappedTriples
+from tests.mocks import MockEvaluator, MockModel
 
 
 class DummyTrainingLoop(SLCWATrainingLoop):
@@ -256,3 +258,52 @@ class TrainingLoopTests(unittest.TestCase):
         )
 
         self.assertEqual(losses, losses_2)
+
+
+class TestTrainingEarlyStopping(unittest.TestCase):
+    """Tests for early stopping during training."""
+
+    batch_size: int = 128
+    #: The window size used by the early stopper
+    patience: int = 2
+    #: The mock losses the mock evaluator will return
+    mock_losses: List[float] = [10.0, 9.0, 8.0, 8.0, 8.0, 8.0]
+    #: The (zeroed) index  - 1 at which stopping will occur
+    stop_constant: int = 4
+    #: The minimum improvement
+    delta: float = 0.0
+    #: The best results
+    best_results: List[float] = [10.0, 9.0, 8.0, 8.0, 8.0]
+
+    def setUp(self):
+        """Prepare for testing the early stopper."""
+        # Set automatic_memory_optimization to false for tests
+        self.mock_evaluator = MockEvaluator(self.mock_losses, automatic_memory_optimization=False)
+        self.triples_factory = Nations()
+        self.model = MockModel(triples_factory=self.triples_factory.training)
+        self.stopper = EarlyStopper(
+            model=self.model,
+            evaluator=self.mock_evaluator,
+            training_triples_factory=self.triples_factory.training,
+            evaluation_triples_factory=self.triples_factory.validation,
+            patience=self.patience,
+            relative_delta=self.delta,
+            larger_is_better=False,
+            frequency=1,
+        )
+
+    def test_early_stopper_best_epoch_model_retrieval(self):
+        """Test if the best epoch model is returned when using the early stopper."""
+        training_loop = DummyTrainingLoop(
+            model=self.model,
+            triples_factory=self.triples_factory.training,
+            sub_batch_size=self.batch_size,
+        )
+
+        _ = training_loop.train(
+            triples_factory=self.triples_factory.training,
+            num_epochs=10,
+            batch_size=self.batch_size,
+            stopper=self.stopper,
+        )
+        self.assertEqual(training_loop._epoch, len(self.stopper.results) - self.patience)

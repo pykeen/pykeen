@@ -11,7 +11,6 @@ from operator import itemgetter
 from typing import Any, ClassVar, Generic, Iterable, List, Mapping, Optional, Sequence, Tuple, Type, Union, cast
 
 import torch
-from class_resolver import Hint
 from torch import nn
 
 from .base import Model
@@ -38,7 +37,7 @@ EmbeddingSpecificationHint = Union[
 ]
 
 
-class _NewAbstractModel(Model, ABC, autoreset=False):
+class _NewAbstractModel(Model, ABC):
     """An abstract class for knowledge graph embedding models (KGEMs).
 
     The only function that needs to be implemented for a given subclass is
@@ -311,9 +310,23 @@ def _prepare_representation_module_list(
 class ERModel(
     Generic[HeadRepresentation, RelationRepresentation, TailRepresentation],
     _NewAbstractModel,
-    autoreset=False,
 ):
-    """A commonly useful base for KGEMs using embeddings and interaction modules."""
+    """A commonly useful base for KGEMs using embeddings and interaction modules.
+
+    This model does not use post-init hooks to automatically initialize all of its
+    parameters. Rather, the call to :func:`Model.reset_parameters_` happens at the end of
+    ``ERModel.__init__``. This is possible because all trainable parameters should necessarily
+    be passed through the ``super().__init__()`` in subclasses of :class:`ERModel`.
+
+    Other code can still be put after the call to ``super().__init__()`` in subclasses, such as
+    registering regularizers (as done in :class:`pykeen.models.ConvKB` and :class:`pykeen.models.TransH`).
+    ---
+    citation:
+        author: Ali
+        year: 2021
+        link: https://jmlr.org/papers/v22/20-825.html
+        github: pykeen/pykeen
+    """
 
     #: The entity representations
     entity_representations: Sequence[RepresentationModule]
@@ -328,7 +341,11 @@ class ERModel(
         self,
         *,
         triples_factory: CoreTriplesFactory,
-        interaction: Hint[Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]],
+        interaction: Union[
+            str,
+            Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation],
+            Type[Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]],
+        ],
         interaction_kwargs: Optional[Mapping[str, Any]] = None,
         entity_representations: EmbeddingSpecificationHint = None,
         relation_representations: EmbeddingSpecificationHint = None,
@@ -365,23 +382,25 @@ class ERModel(
             random_seed=random_seed,
             predict_with_sigmoid=predict_with_sigmoid,
         )
+        self.interaction = interaction_resolver.make(interaction, pos_kwargs=interaction_kwargs)
         self.entity_representations = _prepare_representation_module_list(
             representations=entity_representations,
             num_embeddings=triples_factory.num_entities,
-            shapes=interaction.entity_shape,
+            shapes=self.interaction.entity_shape,
             label="entity",
-            skip_checks=interaction.tail_entity_shape is not None,
+            skip_checks=self.interaction.tail_entity_shape is not None,
         )
         self.relation_representations = _prepare_representation_module_list(
             representations=relation_representations,
             num_embeddings=triples_factory.num_relations,
-            shapes=interaction.relation_shape,
+            shapes=self.interaction.relation_shape,
             label="relation",
         )
-        self.interaction = interaction_resolver.make(interaction, pos_kwargs=interaction_kwargs)
         # Comment: it is important that the regularizers are stored in a module list, in order to appear in
         # model.modules(). Thereby, we can collect them automatically.
         self.weight_regularizers = nn.ModuleList()
+        # Explicitly call reset_parameters to trigger initialization
+        self.reset_parameters_()
 
     def append_weight_regularizer(
         self,
