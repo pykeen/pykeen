@@ -113,9 +113,6 @@ jobs:
     if: "!contains(github.event.head_commit.message, 'Trigger CI')"
     runs-on: ubuntu-latest
     steps:
-      - name: Step 0
-        id: Event-message
-        run: 'echo "payload: ${{ toJson(github.event) }}"'
       - name: Step 1
         id: PR-check
         run: echo ::set-output name=status::pending
