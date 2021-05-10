@@ -48,8 +48,7 @@ class _NegativeSamplingTestCase:
         self.num_negs_per_pos = 10
         self.triples_factory = Nations().training
         self.training_instances = self.triples_factory.create_slcwa_instances()
-        self.instance = self.cls(triples_factory=self.triples_factory)
-        self.scaling_negative_sampler = self.cls(
+        self.instance = self.cls(
             triples_factory=self.triples_factory,
             num_negs_per_pos=self.num_negs_per_pos,
         )
@@ -66,7 +65,8 @@ class _NegativeSamplingTestCase:
             assert batch_filter is None
 
         # check shape
-        assert negative_batch.shape == self.positive_batch.shape
+        assert negative_batch.shape[0] == self.positive_batch.shape[0] * self.num_negs_per_pos
+        assert negative_batch.shape[1] == self.positive_batch.shape[1]
 
         # check bounds: heads
         assert _array_check_bounds(negative_batch[:, 0], low=0, high=self.triples_factory.num_entities)
@@ -79,14 +79,6 @@ class _NegativeSamplingTestCase:
 
         # Check that all elements got corrupted
         assert (negative_batch != self.positive_batch).any(dim=1).all()
-
-        # Generate scaled negative sample
-        scaled_negative_batch, _ = self.scaling_negative_sampler.sample(
-            positive_batch=self.positive_batch,
-        )
-
-        assert scaled_negative_batch.shape[0] == self.positive_batch.shape[0] * self.num_negs_per_pos
-        assert scaled_negative_batch.shape[1] == self.positive_batch.shape[1]
 
     def test_small_batch(self):
         """Test on a small batch."""
