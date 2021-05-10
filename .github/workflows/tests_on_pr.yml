@@ -19,6 +19,12 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           pr-message: |-
             Congrats on making your first Pull Request and thanks for taking the time to improve PyKEEN! ❤️! 🎉
+  analyze_environment:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Step 0
+        id: Event-message
+        run: 'echo "payload: ${{ toJson(github.event) }}"'
   lint:
     if: github.event.repository.full_name != 'pykeen/pykeen'
     name: Lint
