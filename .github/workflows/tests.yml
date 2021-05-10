@@ -7,6 +7,18 @@ on:
       - '!master'
 
 jobs:
+  analyze_environment:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Step 0
+        id: Event-message
+        run: 'echo "payload: ${{ toJson(github.event) }}"'
+      - name: Step 1
+        id: Event-message-1
+        run: 'echo "payload: ${{ toJson(github.event.sender.login) }}"'
+      - name: Step 2
+        id: Event-message-2
+        run: 'echo "payload: ${{ toJson(github.event.head.repo.fork) }}"'
   lint:
     if: "contains(github.event.head_commit.message, 'Trigger CI')"
     name: Lint
