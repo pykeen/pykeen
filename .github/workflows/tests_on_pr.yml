@@ -1,4 +1,4 @@
-name: Tests on PR
+name: Tests on PR from external
 
 on:
   pull_request_target:
@@ -20,14 +20,14 @@ jobs:
           pr-message: |-
             Congrats on making your first Pull Request and thanks for taking the time to improve PyKEEN! ❤️! 🎉
   lint:
-    if: "!contains(github.event.head_commit.message, 'Trigger CI')"
+    if: github.event.repository.full_name != 'pykeen/pykeen'
     name: Lint
     runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: [ 3.7, 3.8 ]
     steps:
-      - if: "!contains(github.event.head_commit.message, 'Trigger CI')"
+      - if: github.event.repository.full_name != 'pykeen/pykeen'
       - uses: actions/checkout@v2
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
@@ -51,7 +51,7 @@ jobs:
       - name: Check static typing with MyPy
         run: tox -e mypy
   docs:
-    if: "!contains(github.event.head_commit.message, 'Trigger CI')"
+    if: github.event.repository.full_name != 'pykeen/pykeen'
     name: Documentation
     runs-on: ubuntu-latest
     strategy:
@@ -80,7 +80,7 @@ jobs:
           sudo apt-get install graphviz
           tox -e docs
   tests:
-    if: "!contains(github.event.head_commit.message, 'Trigger CI')"
+    if: github.event.repository.full_name != 'pykeen/pykeen'
     name: Tests
     runs-on: ubuntu-latest
     strategy:
@@ -101,7 +101,7 @@ jobs:
       - name: Run doctests
         run: tox -e doctests
   windows:
-    if: "!contains(github.event.head_commit.message, 'Trigger CI')"
+    if: github.event.repository.full_name != 'pykeen/pykeen'
     name: Windows
     runs-on: windows-latest
     strategy:
