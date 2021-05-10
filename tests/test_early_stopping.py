@@ -3,7 +3,7 @@
 """Tests of early stopping."""
 
 import unittest
-from typing import Iterable, List, Optional
+from typing import List
 
 import numpy
 import pytest
@@ -11,14 +11,12 @@ import torch
 from torch.optim import Adam
 
 from pykeen.datasets import Nations
-from pykeen.evaluation import Evaluator, MetricResults, RankBasedEvaluator, RankBasedMetricResults
-from pykeen.evaluation.rank_based_evaluator import RANK_REALISTIC, RANK_TYPES, SIDES
+from pykeen.evaluation import RankBasedEvaluator
 from pykeen.models import Model, TransE
 from pykeen.stoppers.early_stopping import EarlyStopper, is_improvement
 from pykeen.trackers import MLFlowResultTracker
 from pykeen.training import SLCWATrainingLoop
-from pykeen.typing import MappedTriples
-from tests.mocks import MockModel
+from tests.mocks import MockEvaluator, MockModel
 
 try:
     import mlflow
@@ -54,81 +52,6 @@ class TestRandom(unittest.TestCase):
                     larger_is_better=larger_is_better,
                     relative_delta=relative_delta,
                 ))
-
-
-class MockEvaluator(Evaluator):
-    """A mock evaluator for testing early stopping."""
-
-    def __init__(self, losses: Iterable[float], automatic_memory_optimization: bool = True) -> None:
-        super().__init__(automatic_memory_optimization=automatic_memory_optimization)
-        self.losses = tuple(losses)
-        self.losses_iter = iter(self.losses)
-
-    def process_tail_scores_(
-        self,
-        hrt_batch: MappedTriples,
-        true_scores: torch.FloatTensor,
-        scores: torch.FloatTensor,
-        dense_positive_mask: Optional[torch.FloatTensor] = None,
-    ) -> None:  # noqa: D102
-        pass
-
-    def process_head_scores_(
-        self,
-        hrt_batch: MappedTriples,
-        true_scores: torch.FloatTensor,
-        scores: torch.FloatTensor,
-        dense_positive_mask: Optional[torch.FloatTensor] = None,
-    ) -> None:  # noqa: D102
-        pass
-
-    def finalize(self) -> MetricResults:  # noqa: D102
-        hits = next(self.losses_iter)
-        dummy_1 = {
-            side: {
-                rank_type: 10
-                for rank_type in RANK_TYPES
-            }
-            for side in SIDES
-        }
-        dummy_2 = {
-            side: {
-                rank_type: 1.0
-                for rank_type in RANK_TYPES
-            }
-            for side in SIDES
-        }
-        return RankBasedMetricResults(
-            arithmetic_mean_rank=dummy_1,
-            geometric_mean_rank=dummy_1,
-            harmonic_mean_rank=dummy_1,
-            median_rank=dummy_1,
-            inverse_arithmetic_mean_rank=dummy_2,
-            inverse_harmonic_mean_rank=dummy_2,
-            inverse_geometric_mean_rank=dummy_2,
-            inverse_median_rank=dummy_2,
-            adjusted_arithmetic_mean_rank=dummy_2,
-            adjusted_arithmetic_mean_rank_index={
-                side: {
-                    RANK_REALISTIC: 0.0,
-                }
-                for side in SIDES
-            },
-            rank_std=dummy_1,
-            rank_var=dummy_1,
-            rank_mad=dummy_1,
-            hits_at_k={
-                side: {
-                    rank_type: {
-                        10: hits,
-                    } for rank_type in RANK_TYPES
-                }
-                for side in SIDES
-            },
-        )
-
-    def __repr__(self):  # noqa: D105
-        return f'{self.__class__.__name__}(losses={self.losses})'
 
 
 class LogCallWrapper:
@@ -281,5 +204,9 @@ class TestEarlyStoppingRealWorld(unittest.TestCase):
             stopper=stopper,
             use_tqdm=False,
         )
-        self.assertEqual(stopper.number_results, len(losses) // stopper.frequency)
-        self.assertEqual(self.stop_epoch, len(losses), msg='Did not stop early like it should have')
+        self.assertEqual(stopper.number_results, (len(losses) + self.patience * stopper.frequency) // stopper.frequency)
+        self.assertEqual(
+            self.stop_epoch,
+            (len(losses) + 2 * stopper.frequency),
+            msg='Did not stop early like it should have',
+        )
