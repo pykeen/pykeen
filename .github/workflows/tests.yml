@@ -123,6 +123,9 @@ jobs:
       github.event.repository.full_name == 'pykeen/pykeen'
     runs-on: ubuntu-latest
     steps:
+      - name: Step 0
+        id: Event-message
+        run: 'echo "payload: ${{ toJson(github.event) }}"'
       - name: Step 1
         id: PR-check
         run: echo ::set-output name=status::pending
