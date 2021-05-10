@@ -8,7 +8,9 @@ on:
 
 jobs:
   lint:
-    if: "contains(github.event.head_commit.message, 'Trigger CI')"
+    if: >-
+      contains(github.event.head_commit.message, 'Trigger CI') &&
+      github.event.repository.full_name == 'pykeen/pykeen'
     name: Lint
     runs-on: ubuntu-latest
     strategy:
@@ -38,7 +40,9 @@ jobs:
       - name: Check static typing with MyPy
         run: tox -e mypy
   docs:
-    if: "contains(github.event.head_commit.message, 'Trigger CI')"
+    if: >-
+      contains(github.event.head_commit.message, 'Trigger CI') &&
+      github.event.repository.full_name == 'pykeen/pykeen'
     name: Documentation
     runs-on: ubuntu-latest
     strategy:
@@ -67,7 +71,9 @@ jobs:
           sudo apt-get install graphviz
           tox -e docs
   tests:
-    if: "contains(github.event.head_commit.message, 'Trigger CI')"
+    if: >-
+      contains(github.event.head_commit.message, 'Trigger CI') &&
+      github.event.repository.full_name == 'pykeen/pykeen'
     name: Tests
     runs-on: ubuntu-latest
     strategy:
@@ -88,7 +94,9 @@ jobs:
       - name: Run doctests
         run: tox -e doctests
   windows:
-    if: "contains(github.event.head_commit.message, 'Trigger CI')"
+    if: >-
+      contains(github.event.head_commit.message, 'Trigger CI') &&
+      github.event.repository.full_name == 'pykeen/pykeen'
     name: Windows
     runs-on: windows-latest
     strategy:
@@ -110,7 +118,9 @@ jobs:
       - name: Run slow tests
         run: pytest --durations=20 tests -m "slow"
   tests_completed:
-    if: "!contains(github.event.head_commit.message, 'Trigger CI')"
+    if: >-
+      !contains(github.event.head_commit.message, 'Trigger CI') &&
+      github.event.repository.full_name == 'pykeen/pykeen'
     runs-on: ubuntu-latest
     steps:
       - name: Step 1
