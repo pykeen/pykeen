@@ -25,9 +25,15 @@ jobs:
       - name: Step 0
         id: Event-message
         run: 'echo "payload: ${{ toJson(github.event) }}"'
+  analyze_environment_2:
+    runs-on: ubuntu-latest
+    steps:
       - name: Step 1
         id: Event-message-1
         run: 'echo "payload: ${{ toJson(github.event.sender.login) }}"'
+  analyze_environment_3:
+    runs-on: ubuntu-latest
+    steps:
       - name: Step 2
         id: Event-message-2
         run: 'echo "payload: ${{ toJson(github.event.head.repo.fork) }}"'
