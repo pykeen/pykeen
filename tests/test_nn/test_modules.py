@@ -4,14 +4,16 @@
 
 import logging
 from typing import Tuple
+from unittest import SkipTest
 
 import numpy
 import torch
+import unittest_templates
 
 import pykeen.nn.modules
 import pykeen.utils
-from pykeen.nn.functional import distmult_interaction
-from pykeen.nn.modules import FunctionalInteraction, Interaction, TranslationalInteraction
+from pykeen.nn.functional import _rotate_quaternion, _split_quaternion, distmult_interaction
+from pykeen.nn.modules import FunctionalInteraction, Interaction, LiteralInteraction, TranslationalInteraction
 from pykeen.utils import clamp_norm, project_entity, strip_dim, view_complex
 from tests import cases
 
@@ -164,6 +166,17 @@ class ProjETests(cases.InteractionTestCase):
         # f(h, r, t) = g(t z(D_e h + D_r r + b_c) + b_p)
         h, r, t = strip_dim(h, r, t)
         return (t * activation((d_e * h) + (d_r * r) + b_c)).sum() + b_p
+
+
+class QuatETests(cases.InteractionTestCase):
+    """Tests for QuatE interaction."""
+
+    cls = pykeen.nn.modules.QuatEInteraction
+    dim = 4 * cases.InteractionTestCase.dim  # quaternions
+
+    def _exp_score(self, h, r, t) -> torch.FloatTensor:  # noqa: D102
+        h, r, t = strip_dim(h, r, t)
+        return -(_rotate_quaternion(*(_split_quaternion(x) for x in [h, r])) * t).sum()
 
 
 class RESCALTests(cases.InteractionTestCase):
@@ -377,7 +390,7 @@ class MuRETests(cases.TranslationalInteractionTests):
     cls = pykeen.nn.modules.MuREInteraction
 
     def _exp_score(self, h, b_h, r_vec, r_mat, t, b_t, p, power_norm) -> torch.FloatTensor:
-        s = (h @ r_mat) + r_vec - t
+        s = (h * r_mat) + r_vec - t
         s = s.norm(p=p)
         if power_norm:
             s = s.pow(p)
@@ -390,7 +403,34 @@ class MuRETests(cases.TranslationalInteractionTests):
         pass
 
 
-class InteractionTestsTestCase(cases.TestsTestCase[Interaction]):
+class MonotonicAffineTransformationInteractionTests(cases.InteractionTestCase):
+    """Tests for monotonic affine transformation interaction adapter."""
+
+    cls = pykeen.nn.modules.MonotonicAffineTransformationInteraction
+    kwargs = dict(
+        base=pykeen.nn.modules.TransEInteraction(p=2),
+    )
+
+    def test_scores(self):  # noqa: D102
+        raise SkipTest("Not a functional interaction.")
+
+    def _exp_score(self, **kwargs) -> torch.FloatTensor:  # noqa: D102
+        # We do not need this, since we do not check for functional consistency anyway
+        raise NotImplementedError
+
+    def test_monotonicity(self):
+        """Verify monotonicity."""
+        for hs, rs, ts in self._get_test_shapes():
+            h, r, t = self._get_hrt(hs, rs, ts)
+            s_t = self.instance(h=h, r=r, t=t).view(-1)
+            s_o = self.instance.base(h=h, r=r, t=t).view(-1)
+            # intra-interaction comparison
+            c_t = (s_t.unsqueeze(dim=0) > s_t.unsqueeze(dim=1))
+            c_o = (s_o.unsqueeze(dim=0) > s_o.unsqueeze(dim=1))
+            assert (c_t == c_o).all()
+
+
+class InteractionTestsTestCase(unittest_templates.MetaTestCase[Interaction]):
     """Test for tests for all interaction functions."""
 
     base_cls = Interaction
@@ -399,5 +439,5 @@ class InteractionTestsTestCase(cases.TestsTestCase[Interaction]):
         Interaction,
         FunctionalInteraction,
         TranslationalInteraction,
-        # LiteralInteraction,
+        LiteralInteraction,
     }

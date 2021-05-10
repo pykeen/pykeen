@@ -14,10 +14,11 @@ slcwa   :class:`pykeen.training.SLCWATrainingLoop`
 
 from typing import Set, Type
 
+from class_resolver import Resolver
+
 from .lcwa import LCWATrainingLoop  # noqa: F401
 from .slcwa import SLCWATrainingLoop  # noqa: F401
 from .training_loop import NonFiniteLossError, TrainingLoop  # noqa: F401
-from ..utils import Resolver
 
 __all__ = [
     'TrainingLoop',

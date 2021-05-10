@@ -5,15 +5,15 @@
 from typing import Any, ClassVar, Mapping, Optional
 
 import torch
-import torch.autograd
 
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss
-from ...nn import EmbeddingSpecification
+from ...moves import irfft, rfft
+from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_uniform_
 from ...regularizers import Regularizer
-from ...triples import TriplesFactory
+from ...triples import CoreTriplesFactory
 from ...typing import Constrainer, DeviceHint, Hint, Initializer
 from ...utils import clamp_norm
 
@@ -66,7 +66,7 @@ class HolE(EntityRelationEmbeddingModel):
 
     def __init__(
         self,
-        triples_factory: TriplesFactory,
+        triples_factory: CoreTriplesFactory,
         embedding_dim: int = 200,
         loss: Optional[Loss] = None,
         preferred_device: DeviceHint = None,
@@ -118,17 +118,21 @@ class HolE(EntityRelationEmbeddingModel):
             The scores.
         """
         # Circular correlation of entity embeddings
-        a_fft = torch.rfft(h, signal_ndim=1, onesided=True)
-        b_fft = torch.rfft(t, signal_ndim=1, onesided=True)
+        a_fft = rfft(h, dim=-1)
+        b_fft = rfft(t, dim=-1)
 
         # complex conjugate, a_fft.shape = (batch_size, num_entities, d', 2)
-        a_fft[:, :, :, 1] *= -1
+        # compatibility: new style fft returns complex tensor
+        if a_fft.ndimension() > 3:
+            a_fft[:, :, :, 1] *= -1
+        else:
+            a_fft = torch.conj(a_fft)
 
         # Hadamard product in frequency domain
         p_fft = a_fft * b_fft
 
         # inverse real FFT, shape: (batch_size, num_entities, d)
-        composite = torch.irfft(p_fft, signal_ndim=1, onesided=True, signal_sizes=(h.shape[-1],))
+        composite = irfft(p_fft, dim=-1, n=h.shape[-1])
 
         # inner product with relation embedding
         scores = torch.sum(r * composite, dim=-1, keepdim=False)

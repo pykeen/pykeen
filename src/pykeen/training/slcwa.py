@@ -13,7 +13,7 @@ from .utils import apply_label_smoothing
 from ..losses import CrossEntropyLoss
 from ..models import Model
 from ..sampling import BasicNegativeSampler, NegativeSampler
-from ..triples import Instances
+from ..triples import CoreTriplesFactory, Instances
 from ..typing import MappedTriples
 
 __all__ = [
@@ -32,6 +32,7 @@ class SLCWATrainingLoop(TrainingLoop):
     def __init__(
         self,
         model: Model,
+        triples_factory: CoreTriplesFactory,
         optimizer: Optional[Optimizer] = None,
         negative_sampler_cls: Optional[Type[NegativeSampler]] = None,
         negative_sampler_kwargs: Optional[Mapping[str, Any]] = None,
@@ -40,6 +41,7 @@ class SLCWATrainingLoop(TrainingLoop):
         """Initialize the training loop.
 
         :param model: The model to train
+        :param triples_factory: The triples factory to train over
         :param optimizer: The optimizer to use while training the model
         :param negative_sampler_cls: The class of the negative sampler
         :param negative_sampler_kwargs: Keyword arguments to pass to the negative sampler class on instantiation
@@ -50,6 +52,7 @@ class SLCWATrainingLoop(TrainingLoop):
         """
         super().__init__(
             model=model,
+            triples_factory=triples_factory,
             optimizer=optimizer,
             automatic_memory_optimization=automatic_memory_optimization,
         )
@@ -58,7 +61,7 @@ class SLCWATrainingLoop(TrainingLoop):
             negative_sampler_cls = BasicNegativeSampler
 
         self.negative_sampler = negative_sampler_cls(
-            triples_factory=self.triples_factory,
+            triples_factory=triples_factory,
             **(negative_sampler_kwargs or {}),
         )
 
@@ -70,8 +73,8 @@ class SLCWATrainingLoop(TrainingLoop):
         """
         return self.negative_sampler.num_negs_per_pos
 
-    def _create_instances(self, use_tqdm: Optional[bool] = None) -> Instances:  # noqa: D102
-        return self.triples_factory.create_slcwa_instances()
+    def _create_instances(self, triples_factory: CoreTriplesFactory) -> Instances:  # noqa: D102
+        return triples_factory.create_slcwa_instances()
 
     @staticmethod
     def _get_batch_size(batch: MappedTriples) -> int:  # noqa: D102
@@ -167,6 +170,9 @@ class SLCWATrainingLoop(TrainingLoop):
 
     def _slice_size_search(
         self,
+        *,
+        triples_factory: CoreTriplesFactory,
+        training_instances: Instances,
         batch_size: int,
         sub_batch_size: int,
         supports_sub_batching: bool,

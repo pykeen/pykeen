@@ -16,11 +16,11 @@ from typing import Optional, Tuple, Union
 
 import numpy
 import torch
-import torch.fft
 from torch import nn
 
 from .compute_kernel import _complex_native_complex
 from .sim import KG2E_SIMILARITIES
+from ..moves import irfft, rfft
 from ..typing import GaussianDistribution
 from ..utils import (
     broadcast_cat, clamp_norm, estimate_cost_of_sequence, extended_einsum, is_cudnn_error, negative_norm,
@@ -205,8 +205,10 @@ def conve_interaction(
     # repeat if necessary, and concat head and relation, batch_size', num_input_channels, 2*height, width
     # with batch_size' = batch_size * num_heads * num_relations
     x = broadcast_cat(
-        h.view(*h.shape[:-1], input_channels, embedding_height, embedding_width),
-        r.view(*r.shape[:-1], input_channels, embedding_height, embedding_width),
+        [
+            h.view(*h.shape[:-1], input_channels, embedding_height, embedding_width),
+            r.view(*r.shape[:-1], input_channels, embedding_height, embedding_width),
+        ],
         dim=-2,
     ).view(-1, input_channels, 2 * embedding_height, embedding_width)
 
@@ -383,7 +385,7 @@ def ermlpe_interaction(
         The scores.
     """
     # repeat if necessary, and concat head and relation, (batch_size, num_heads, num_relations, 1, 2 * embedding_dim)
-    x = broadcast_cat(h, r, dim=-1)
+    x = broadcast_cat([h, r], dim=-1)
 
     # Predict t embedding, shape: (b, h, r, 1, d)
     shape = x.shape
@@ -413,24 +415,43 @@ def hole_interaction(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    # Circular correlation of entity embeddings
-    a_fft = torch.fft.rfft(h, dim=-1)
-    b_fft = torch.fft.rfft(t, dim=-1)
-
-    # complex conjugate
-    a_fft = torch.conj(a_fft)
-
-    # Hadamard product in frequency domain
-    p_fft = a_fft * b_fft
-
-    # inverse real FFT, shape: (b, h, 1, t, d)
-    composite = torch.fft.irfft(p_fft, n=h.shape[-1], dim=-1)
+    # composite: (b, h, 1, t, d)
+    composite = circular_correlation(h, t)
 
     # transpose composite: (b, h, 1, d, t)
     composite = composite.transpose(-2, -1)
 
     # inner product with relation embedding
     return (r @ composite).squeeze(dim=-2)
+
+
+def circular_correlation(
+    a: torch.FloatTensor,
+    b: torch.FloatTensor,
+) -> torch.FloatTensor:
+    """
+    Compute the circular correlation between to vectors.
+
+    .. note ::
+        The implementation uses FFT.
+
+    :param a: shape: s_1
+        The tensor with the first vectors.
+    :param b:
+        The tensor with the second vectors.
+
+    :return:
+        The circular correlation between the vectors.
+    """
+    # Circular correlation of entity embeddings
+    a_fft = rfft(a, dim=-1)
+    b_fft = rfft(b, dim=-1)
+    # complex conjugate
+    a_fft = torch.conj(a_fft)
+    # Hadamard product in frequency domain
+    p_fft = a_fft * b_fft
+    # inverse real FFT
+    return irfft(p_fft, n=a.shape[-1], dim=-1)
 
 
 def kg2e_interaction(
@@ -931,8 +952,8 @@ def mure_interaction(
         The head entity bias.
     :param r_vec: shape: (batch_size, 1, num_relations, 1, dim)
         The relation vector.
-    :param r_mat: shape: (batch_size, 1, num_relations, 1, dim, dim)
-        The relation matrix.
+    :param r_mat: shape: (batch_size, 1, num_relations, 1, dim,)
+        The diagonal relation matrix.
     :param t: shape: (batch_size, 1, 1, num_tails, dim)
         The tail representations.
     :param b_t: shape: (batch_size, 1, 1, num_tails)
@@ -946,7 +967,7 @@ def mure_interaction(
         The scores.
     """
     return negative_norm_of_sum(
-        h @ r_mat.squeeze(dim=-3),
+        h * r_mat,
         r_vec,
         -t,
         p=p,
@@ -1012,3 +1033,51 @@ def pair_re_interaction(
         p=p,
         power_norm=power_norm,
     )
+
+
+def _rotate_quaternion(qa: torch.FloatTensor, qb: torch.FloatTensor) -> torch.FloatTensor:
+    # Rotate (=Hamilton product in quaternion space).
+    return torch.cat(
+        [
+            qa[0] * qb[0] - qa[1] * qb[1] - qa[2] * qb[2] - qa[3] * qb[3],
+            qa[0] * qb[1] + qa[1] * qb[0] + qa[2] * qb[3] - qa[3] * qb[2],
+            qa[0] * qb[2] - qa[1] * qb[3] + qa[2] * qb[0] + qa[3] * qb[1],
+            qa[0] * qb[3] + qa[1] * qb[2] - qa[2] * qb[1] + qa[3] * qb[0],
+        ],
+        dim=-1,
+    )
+
+
+def _split_quaternion(x: torch.FloatTensor) -> torch.FloatTensor:
+    return torch.chunk(x, chunks=4, dim=-1)
+
+
+def quat_e_interaction(
+    h: torch.FloatTensor,
+    r: torch.FloatTensor,
+    t: torch.FloatTensor,
+):
+    """Evaluate the interaction function of QuatE for given embeddings.
+
+    The embeddings have to be in a broadcastable shape.
+
+    .. note ::
+        dim has to be divisible by 4.
+
+    :param h: shape: (batch_size, num_heads, 1, 1, dim)
+        The head representations.
+    :param r: shape: (batch_size, 1, num_relations, 1, dim)
+        The head representations.
+    :param t: shape: (batch_size, 1, 1, num_tails, dim)
+        The tail representations.
+
+    :return: shape: (...)
+        The scores.
+    """
+    return -(
+        # Rotation in quaternion space
+        _rotate_quaternion(
+            _split_quaternion(h),
+            _split_quaternion(r),
+        ) * t
+    ).sum(dim=-1)

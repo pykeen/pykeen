@@ -136,10 +136,9 @@ triples $\mathcal{b}$ in the subset $\mathcal{B} \in 2^{2^{\mathcal{T}}}$.
 from typing import Any, Callable, ClassVar, Mapping, Optional, Set, Type, Union
 
 import torch
+from class_resolver import Resolver, normalize_string
 from torch.nn import functional
 from torch.nn.modules.loss import _Loss
-
-from .utils import Resolver, normalize_string
 
 __all__ = [
     # Base Classes

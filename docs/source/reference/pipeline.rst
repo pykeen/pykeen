@@ -1,9 +1,5 @@
 Pipeline
 ========
-.. autofunction:: pykeen.pipeline.pipeline
-
-.. autoclass:: pykeen.pipeline.PipelineResult
-    :members:
-
-.. automodule:: pykeen.pipeline_plot
-    :members:
+.. automodapi:: pykeen.pipeline
+    :no-heading:
+    :no-inheritance-diagram:

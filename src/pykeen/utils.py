@@ -19,15 +19,17 @@ from typing import (
     Union,
 )
 
-import click
 import numpy as np
 import pandas as pd
 import torch
 import torch.nn
 import torch.nn.modules.batchnorm
+from class_resolver import Resolver, normalize_string
+from torch import nn
+from torch.nn import functional
 
 from .constants import PYKEEN_BENCHMARKS
-from .typing import DeviceHint, HintType, MappedTriples, TorchRandomHint
+from .typing import DeviceHint, MappedTriples, TorchRandomHint
 from .version import get_git_hash
 
 __all__ = [
@@ -44,9 +46,6 @@ __all__ = [
     'split_list_in_batches_iter',
     'torch_is_in_1d',
     'normalize_string',
-    'normalized_lookup',
-    'get_cls',
-    'Resolver',
     'get_until_first_blank',
     'flatten_dictionary',
     'set_random_seed',
@@ -59,7 +58,6 @@ __all__ = [
     'upgrade_to_sequence',
     'ensure_tuple',
     'unpack_singletons',
-    'get_subclasses',
     'extend_batch',
     'check_shapes',
     'all_in_bounds',
@@ -83,6 +81,11 @@ __all__ = [
     'CANONICAL_DIMENSIONS',
     'convert_to_canonical_shape',
     'get_expected_norm',
+    'Bias',
+    'activation_resolver',
+    'complex_normalize',
+    'lp_norm',
+    'powersum_norm',
 ]
 
 logger = logging.getLogger(__name__)
@@ -116,130 +119,6 @@ def split_list_in_batches_iter(input_list: List[X], batch_size: int) -> Iterable
         input_list[i:i + batch_size]
         for i in range(0, len(input_list), batch_size)
     )
-
-
-def normalize_string(s: str, *, suffix: Optional[str] = None) -> str:
-    """Normalize a string for lookup."""
-    s = s.lower().replace('-', '').replace('_', '').replace(' ', '')
-    if suffix is not None and s.endswith(suffix.lower()):
-        return s[:-len(suffix)]
-    return s
-
-
-def normalized_lookup(classes: Iterable[Type[X]], suffix: Optional[str] = None) -> Mapping[str, Type[X]]:
-    """Make a normalized lookup dict."""
-    return {
-        normalize_string(cls.__name__, suffix=suffix): cls
-        for cls in classes
-    }
-
-
-def get_cls(
-    query: Union[None, str, Type[X]],
-    base: Type[X],
-    lookup_dict: Mapping[str, Type[X]],
-    lookup_dict_synonyms: Optional[Mapping[str, Type[X]]] = None,
-    default: Optional[Type[X]] = None,
-    suffix: Optional[str] = None,
-) -> Type[X]:
-    """Get a class by string, default, or implementation."""
-    if query is None:
-        if default is None:
-            raise ValueError(f'No default {base.__name__} set')
-        return default
-    elif not isinstance(query, (str, type)):
-        raise TypeError(f'Invalid {base.__name__} type: {type(query)} - {query}')
-    elif isinstance(query, str):
-        key = normalize_string(query, suffix=suffix)
-        if key in lookup_dict:
-            return lookup_dict[key]
-        if lookup_dict_synonyms is not None and key in lookup_dict_synonyms:
-            return lookup_dict_synonyms[key]
-        raise ValueError(f'Invalid {base.__name__} name: {query}')
-    elif issubclass(query, base):
-        return query
-    raise TypeError(f'Not subclass of {base.__name__}: {query}')
-
-
-class Resolver(Generic[X]):
-    """Resolve from a list of classes."""
-
-    def __init__(
-        self,
-        classes: Collection[Type[X]],
-        *,
-        base: Type[X],
-        default: Optional[Type[X]] = None,
-        suffix: Optional[str] = None,
-        synonyms: Optional[Mapping[str, Type[X]]] = None,
-    ):
-        """Initialize the resolver.
-
-        :param classes: A list of classes
-        :param base: The base class
-        :param default: The default class
-        :param suffix: The optional shared suffix of all classes
-        :param synonyms: The optional synonym dictionary
-        """
-        self.base = base
-        self.default = default
-        self.suffix = suffix
-        self.synonyms = synonyms
-        self.lookup_dict = {
-            self.normalize_cls(cls): cls
-            for cls in classes
-        }
-
-    def normalize_inst(self, x: X) -> str:
-        """Normalize the class name of the instance."""
-        return self.normalize_cls(x.__class__)
-
-    def normalize_cls(self, cls: Type[X]) -> str:
-        """Normalize the class name."""
-        return self.normalize(cls.__name__)
-
-    def normalize(self, s: str) -> str:
-        """Normalize the string with this resolve's suffix."""
-        return normalize_string(s, suffix=self.suffix)
-
-    def lookup(self, query: HintType[X]) -> Type[X]:
-        """Lookup a class."""
-        return get_cls(
-            query,
-            base=self.base,
-            lookup_dict=self.lookup_dict,
-            lookup_dict_synonyms=self.synonyms,
-            default=self.default,
-            suffix=self.suffix,
-        )
-
-    def make(self, query: HintType[X], pos_kwargs: Optional[Mapping[str, Any]] = None, **kwargs) -> X:
-        """Instantiate a class with optional kwargs."""
-        cls: Type[X] = self.lookup(query)
-        return cls(**(pos_kwargs or {}), **kwargs)  # type: ignore
-
-    def get_option(self, *flags: str, default: Optional[str] = None, **kwargs):
-        """Get a click option for this resolver."""
-        if default is None:
-            if self.default is None:
-                raise ValueError
-            default = self.normalize_cls(self.default)
-
-        return click.option(
-            *flags,
-            type=click.Choice(list(self.lookup_dict)),
-            default=default,
-            show_default=True,
-            callback=_make_callback(self.lookup),
-            **kwargs,
-        )
-
-
-def _make_callback(f):
-    def _callback(_, __, value):
-        return f(value)
-
-    return _callback
 
 
 def get_until_first_blank(s: str) -> str:
@@ -600,41 +479,66 @@ def format_relative_comparison(
 
 
 def broadcast_cat(
-    x: torch.FloatTensor,
-    y: torch.FloatTensor,
+    tensors: Sequence[torch.FloatTensor],
     dim: int,
 ) -> torch.FloatTensor:
-    """Concatenate with broadcasting.
+    """Concatenate tensors with broadcasting support.
 
-    :param x:
-        The first tensor.
-    :param y:
-        The second tensor.
+    :param tensors:
+        The tensors. Each of the tensors is require to have the same number of dimensions.
+        For each dimension not equal to dim, the extent has to match the other tensors', or be one.
+        If it is one, the tensor is repeated to match the extent of the othe tensors.
     :param dim:
         The concat dimension.
 
-    :return: A concatenated, broadcasted
+    :return: A concatenated, broadcasted tensor.
 
     :raises ValueError: if the x and y dimensions are not the same
     :raises ValueError: if broadcasting is not possible
     """
-    if x.ndimension() != y.ndimension():
-        raise ValueError
+    # input validation
+    if len(tensors) == 0:
+        raise ValueError("Must pass at least one tensor.")
+    if len({x.ndimension() for x in tensors}) != 1:
+        raise ValueError(
+            f"The number of dimensions has to be the same for all tensors, but is {set(t.shape for t in tensors)}",
+        )
+
+    # base case
+    if len(tensors) == 1:
+        return tensors[0]
+
+    # normalize dim
     if dim < 0:
-        dim = x.ndimension() + dim
-    x_rep, y_rep = [], []
-    for d, (xd, yd) in enumerate(zip(x.shape, y.shape)):
-        xr = yr = 1
-        if d != dim and xd != yd:
-            if xd == 1:
-                xr = yd
-            elif yd == 1:
-                yr = xd
-            else:
-                raise ValueError
-        x_rep.append(xr)
-        y_rep.append(yr)
-    return torch.cat([x.repeat(*x_rep), y.repeat(*y_rep)], dim=dim)
+        dim = tensors[0].ndimension() + dim
+
+    # calculate repeats for each tensor
+    repeats = [
+        [1 for _ in t.shape]
+        for t in tensors
+    ]
+    for i, dims in enumerate(zip(*(t.shape for t in tensors))):
+        # dimensions along concatenation axis do not need to match
+        if i == dim:
+            continue
+
+        # get desired extent along dimension
+        d_max = max(dims)
+        if not {1, d_max}.issuperset(dims):
+            raise ValueError(f"Tensors have invalid shape along {i} dimension: {set(dims)}")
+
+        for j, td in enumerate(dims):
+            if td != d_max:
+                repeats[j][i] = d_max
+
+    # repeat tensors along axes if necessary
+    tensors = [
+        t.repeat(*r)
+        for t, r in zip(tensors, repeats)
+    ]
+
+    # concatenate
+    return torch.cat(tensors, dim=dim)
 
 
 def get_batchnorm_modules(module: torch.nn.Module) -> List[torch.nn.Module]:
@@ -965,17 +869,6 @@ def unpack_singletons(*xs: Tuple[X]) -> Sequence[Union[X, Tuple[X]]]:
     )
 
 
-def get_subclasses(cls: Type[X]) -> Iterable[Type[X]]:
-    """Get all subclasses.
-
-    :param cls: The ancestor class
-    :yields: Descendant classes of the ancestor class
-    """
-    for subclass in cls.__subclasses__():
-        yield from get_subclasses(subclass)
-        yield subclass
-
-
 def _can_slice(fn) -> bool:
     """Check if a model's score_X function can slice."""
     return 'slice_size' in inspect.getfullargspec(fn).args
@@ -1102,6 +995,92 @@ def get_expected_norm(
         return math.pow(exp_abs_norm_p * d, 1 / p)
     else:
         raise TypeError(f"norm not implemented for {type(p)}: {p}")
+
+
+activation_resolver = Resolver(
+    classes=(
+        nn.LeakyReLU,
+        nn.PReLU,
+        nn.ReLU,
+        nn.Softplus,
+        nn.Sigmoid,
+        nn.Tanh,
+    ),
+    base=nn.Module,  # type: ignore
+    default=nn.ReLU,
+)
+
+
+class Bias(nn.Module):
+    """A module wrapper for adding a bias."""
+
+    def __init__(self, dim: int):
+        """Initialize the module.
+
+        :param dim: >0
+            The dimension of the input.
+        """
+        super().__init__()
+        self.bias = nn.Parameter(torch.empty(dim), requires_grad=True)
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        """Reset the layer's parameters."""
+        nn.init.zeros_(self.bias)
+
+    def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:
+        """Add the learned bias to the input.
+
+        :param x: shape: (n, d)
+            The input.
+
+        :return:
+            x + b[None, :]
+        """
+        return x + self.bias.unsqueeze(dim=0)
+
+
+def lp_norm(x: torch.FloatTensor, p: float, dim: Optional[int], normalize: bool) -> torch.FloatTensor:
+    """Return the $L_p$ norm."""
+    value = x.norm(p=p, dim=dim)
+    if not normalize:
+        return value
+    return value / get_expected_norm(p=p, d=x.shape[-1])
+
+
+def powersum_norm(x: torch.FloatTensor, p: float, dim: Optional[int], normalize: bool) -> torch.FloatTensor:
+    """Return the power sum norm."""
+    value = x.abs().pow(p).sum(dim=dim)
+    if not normalize:
+        return value
+    dim = torch.as_tensor(x.shape[-1], dtype=torch.float, device=x.device)
+    return value / dim
+
+
+def complex_normalize(x: torch.Tensor) -> torch.Tensor:
+    r"""Normalize a vector of complex numbers such that each element is of unit-length.
+
+    :param x: A tensor formulating complex numbers
+    :returns: A normalized version accoring to the following definition.
+
+    The `modulus of complex number <https://en.wikipedia.org/wiki/Absolute_value#Complex_numbers>`_ is given as:
+
+    .. math::
+
+        |a + ib| = \sqrt{a^2 + b^2}
+
+    $l_2$ norm of complex vector $x \in \mathbb{C}^d$:
+
+    .. math::
+        \|x\|^2 = \sum_{i=1}^d |x_i|^2
+                 = \sum_{i=1}^d \left(\operatorname{Re}(x_i)^2 + \operatorname{Im}(x_i)^2\right)
+                 = \left(\sum_{i=1}^d \operatorname{Re}(x_i)^2) + (\sum_{i=1}^d \operatorname{Im}(x_i)^2\right)
+                 = \|\operatorname{Re}(x)\|^2 + \|\operatorname{Im}(x)\|^2
+                 = \| [\operatorname{Re}(x); \operatorname{Im}(x)] \|^2
+    """
+    y = x.view(*x.shape[:-1], x.shape[-1] // 2, 2)
+    y = functional.normalize(y, p=2, dim=-1)
+    return y.view(*x.shape)
 
 
 if __name__ == '__main__':

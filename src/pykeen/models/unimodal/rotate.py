@@ -9,12 +9,12 @@ import torch.autograd
 
 from ..base import EntityRelationEmbeddingModel
 from ...losses import Loss
-from ...nn import EmbeddingSpecification
+from ...nn.emb import EmbeddingSpecification
 from ...nn.init import init_phases, xavier_uniform_
-from ...nn.norm import complex_normalize
 from ...regularizers import Regularizer
-from ...triples import TriplesFactory
+from ...triples import CoreTriplesFactory
 from ...typing import Constrainer, DeviceHint, Hint, Initializer
+from ...utils import complex_normalize
 
 __all__ = [
     'RotatE',
@@ -59,7 +59,7 @@ class RotatE(EntityRelationEmbeddingModel):
 
     def __init__(
         self,
-        triples_factory: TriplesFactory,
+        triples_factory: CoreTriplesFactory,
         embedding_dim: int = 200,
         loss: Optional[Loss] = None,
         preferred_device: DeviceHint = None,

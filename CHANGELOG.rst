@@ -5,6 +5,68 @@ All notable changes to this project will be documented in this file.
 The format is based on `Keep a Changelog <http://keepachangelog.com/>`_
 and this project adheres to `Semantic Versioning <http://semver.org/>`_
 
+`Unreleased <https://github.com/pykeen/pykeen/compare/v1.4.0...HEAD>`_
+-----------------------------------------------------------------------
+
+New Metrics
+~~~~~~~~~~~
+- Adjusted Arithmetic Mean Rank Index (https://github.com/pykeen/pykeen/pull/378)
+- Add harmonic, geometric, and median rankings (https://github.com/pykeen/pykeen/pull/381)
+
+Added
+~~~~~
+- Documentation on using PyKEEN in Google Colab and Kaggle (https://github.com/pykeen/pykeen/pull/379,
+  thanks `@jerryIsHere <https://github.com/jerryIsHere>`_)
+- Documentation on
+- Pass custom training loops to pipeline (https://github.com/pykeen/pykeen/pull/334)
+- Compatibility later for the fft module (https://github.com/pykeen/pykeen/pull/288)
+- Official Python 3.9 support, now that PyTorch has it (https://github.com/pykeen/pykeen/pull/223)
+
+Updated
+~~~~~~~
+- R-GCN implementation now uses new-style models and is super idiomatic (https://github.com/pykeen/pykeen/pull/110)
+
+Fixed
+~~~~~
+- Regularizer passing in the pipeline and HPO (https://github.com/pykeen/pykeen/pull/345)
+- Saving results when using multimodal models (https://github.com/pykeen/pykeen/pull/349)
+
+`1.4.0 <https://github.com/pykeen/pykeen/compare/v1.3.0...v1.4.0>`_ - 2021-03-04
+--------------------------------------------------------------------------------
+New Datasets
+~~~~~~~~~~~~
+- Countries (https://github.com/pykeen/pykeen/pull/314)
+- DB100K (https://github.com/pykeen/pykeen/issues/316)
+
+New Models
+~~~~~~~~~~
+- MuRE (https://github.com/pykeen/pykeen/pull/311)
+- PairRE (https://github.com/pykeen/pykeen/pull/309)
+- Monotonic affine transformer (https://github.com/pykeen/pykeen/pull/324)
+
+New Algorithms
+~~~~~~~~~~~~~~
+If you're interested in any of these, please get in touch with us
+regarding an upcoming publication.
+
+- Dataset Similarity (https://github.com/pykeen/pykeen/pull/294)
+- Dataset Deterioration (https://github.com/pykeen/pykeen/pull/295)
+- Dataset Remix (https://github.com/pykeen/pykeen/pull/296)
+
+Added
+~~~~~
+- New-style models (https://github.com/pykeen/pykeen/pull/260) for direct usage of interaction
+  modules
+- Ability to train ``pipeline()`` using an Interaction module rather than a Model
+  (https://github.com/pykeen/pykeen/pull/326, https://github.com/pykeen/pykeen/pull/330).
+
+Changes
+~~~~~~~
+- Lookup of assets is now mediated by the ``class_resolver`` package (https://github.com/pykeen/pykeen/pull/321,
+  https://github.com/pykeen/pykeen/pull/327)
+- The ``docdata`` package is now used to parse structured information out of the model and dataset documentation
+  in order to make a more informative README with links to citations (https://github.com/pykeen/pykeen/pull/303).
+
 `1.3.0 <https://github.com/pykeen/pykeen/compare/v1.1.0...v1.3.0>`_ - 2021-02-15
 --------------------------------------------------------------------------------
 We skipped version 1.2.0 because we made an accidental release before this version
@@ -22,6 +84,11 @@ New Trackers
 - General file-based Tracker (https://github.com/pykeen/pykeen/pull/254)
 - CSV Tracker (https://github.com/pykeen/pykeen/pull/254)
 - JSON Tracker (https://github.com/pykeen/pykeen/pull/254)
+
+Fixed
+~~~~~
+- Fixed ComplEx's implementation (https://github.com/pykeen/pykeen/pull/313)
+- Fixed OGB's reuse entity identifiers (https://github.com/pykeen/pykeen/pull/318, thanks @tgebhart)
 
 Added
 ~~~~~

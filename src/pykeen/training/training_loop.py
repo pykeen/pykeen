@@ -4,6 +4,7 @@
 
 import gc
 import logging
+import os
 import pathlib
 import pickle
 import random
@@ -11,7 +12,8 @@ import time
 from abc import ABC, abstractmethod
 from datetime import datetime
 from hashlib import md5
-from typing import Any, List, Mapping, Optional, Tuple, Type, Union
+from tempfile import NamedTemporaryFile
+from typing import Any, IO, List, Mapping, Optional, Tuple, Type, Union
 
 import numpy as np
 import torch
@@ -21,11 +23,11 @@ from tqdm.autonotebook import tqdm, trange
 
 from ..constants import PYKEEN_CHECKPOINTS, PYKEEN_DEFAULT_CHECKPOINT
 from ..losses import Loss, has_mr_loss, has_nssa_loss
-from ..models import Model
+from ..models import Model, RGCN
 from ..stoppers import Stopper
 from ..trackers import ResultTracker
 from ..training.schlichtkrull_sampler import GraphSampler
-from ..triples import Instances, TriplesFactory
+from ..triples import CoreTriplesFactory, Instances
 from ..typing import MappedTriples
 from ..utils import (
     format_relative_comparison, get_batchnorm_modules, is_cuda_oom_error, is_cudnn_error,
@@ -81,7 +83,6 @@ def _get_optimizer_kwargs(optimizer: Optimizer) -> Mapping[str, Any]:
 class TrainingLoop(ABC):
     """A training loop."""
 
-    training_instances: Optional[Instances]
     losses_per_epochs: List[float]
     loss_blacklist: Optional[List[Type[Loss]]] = None
 
@@ -93,12 +94,14 @@ class TrainingLoop(ABC):
     def __init__(
         self,
         model: Model,
+        triples_factory: CoreTriplesFactory,
         optimizer: Optional[Optimizer] = None,
         automatic_memory_optimization: bool = True,
     ) -> None:
         """Initialize the training loop.
 
         :param model: The model to train
+        :param triples_factory: The training triples factory
         :param optimizer: The optimizer to use while training the model
         :param automatic_memory_optimization: bool
             Whether to automatically optimize the sub-batch size during
@@ -106,9 +109,10 @@ class TrainingLoop(ABC):
         """
         self.model = model
         self.optimizer = optimizer
-        self.training_instances = None
         self.losses_per_epochs = []
         self.automatic_memory_optimization = automatic_memory_optimization
+
+        logger.debug("we don't really need the triples factory: %s", triples_factory)
 
         if self.loss_blacklist and isinstance(self.model.loss, tuple(self.loss_blacklist)):
             raise TrainingApproachLossMismatchError(
@@ -133,11 +137,6 @@ class TrainingLoop(ABC):
         return normalize_string(cls.__name__, suffix=TrainingLoop.__name__)
 
     @property
-    def triples_factory(self) -> TriplesFactory:  # noqa: D401
-        """The triples factory in the model."""
-        return self.model.triples_factory
-
-    @property
     def device(self):  # noqa: D401
         """The device used by the model."""
         return self.model.device
@@ -152,6 +151,7 @@ class TrainingLoop(ABC):
 
     def train(
         self,
+        triples_factory: CoreTriplesFactory,
         num_epochs: int = 1,
         batch_size: Optional[int] = None,
         slice_size: Optional[int] = None,
@@ -175,6 +175,8 @@ class TrainingLoop(ABC):
     ) -> Optional[List[float]]:
         """Train the KGE model.
 
+        :param triples_factory:
+            The training triples factory
         :param num_epochs:
             The number of epochs to train the model.
         :param batch_size:
@@ -230,9 +232,9 @@ class TrainingLoop(ABC):
         :return:
             The losses per epoch.
         """
-        # Create training instances
-        # During size probing the training instances should not show the tqdm progress bar
-        self.training_instances = self._create_instances(use_tqdm=not only_size_probing)
+        # Create training instances. Use the _create_instances function to allow subclasses
+        # to modify this behavior
+        training_instances = self._create_instances(triples_factory)
 
         # In some cases, e.g. using Optuna for HPO, the cuda cache from a previous run is not cleared
         torch.cuda.empty_cache()
@@ -247,10 +249,12 @@ class TrainingLoop(ABC):
         # If a checkpoint file is given, it must be loaded if it exists already
         save_checkpoints = False
         checkpoint_path = None
+        best_epoch_model_file_path = None
+        last_best_epoch = None
         if checkpoint_name:
             checkpoint_path = checkpoint_directory.joinpath(checkpoint_name)
             if checkpoint_path.is_file():
-                self._load_state(path=checkpoint_path)
+                best_epoch_model_file_path, last_best_epoch = self._load_state(path=checkpoint_path)
                 if stopper is not None:
                     stopper_dict = stopper.load_summary_dict_from_training_loop_checkpoint(path=checkpoint_path)
                     # If the stopper dict has any keys, those are written back to the stopper
@@ -305,7 +309,11 @@ class TrainingLoop(ABC):
                 checkpoint_path=checkpoint_path,
                 checkpoint_frequency=checkpoint_frequency,
                 checkpoint_on_failure_file_path=checkpoint_on_failure_file_path,
+                best_epoch_model_file_path=best_epoch_model_file_path,
+                last_best_epoch=last_best_epoch,
                 drop_last=drop_last,
+                triples_factory=triples_factory,
+                training_instances=training_instances,
             )
 
         # Ensure the release of memory
@@ -319,6 +327,8 @@ class TrainingLoop(ABC):
 
     def _train(  # noqa: C901
         self,
+        triples_factory: CoreTriplesFactory,
+        training_instances: Instances,
         num_epochs: int = 1,
         batch_size: Optional[int] = None,
         slice_size: Optional[int] = None,
@@ -337,10 +347,14 @@ class TrainingLoop(ABC):
         checkpoint_path: Union[None, str, pathlib.Path] = None,
         checkpoint_frequency: Optional[int] = None,
         checkpoint_on_failure_file_path: Union[None, str, pathlib.Path] = None,
+        best_epoch_model_file_path: Optional[pathlib.Path] = None,
+        last_best_epoch: Optional[int] = None,
         drop_last: Optional[bool] = None,
     ) -> Optional[List[float]]:
         """Train the KGE model.
 
+        :param triples_factory:
+            The training triples factory
         :param num_epochs:
             The number of epochs to train the model.
         :param batch_size:
@@ -380,6 +394,10 @@ class TrainingLoop(ABC):
             The frequency of saving checkpoints in minutes. Setting it to 0 will save a checkpoint after every epoch.
         :param checkpoint_on_failure_file_path:
             The full filepath for saving checkpoints on failure.
+        :param best_epoch_model_file_path:
+            The file path for the best epoch model when using early stoppers and resuming training.
+        :param last_best_epoch:
+            The last best epoch that the early stopper saved when resuming training.
         :param drop_last:
             Whether to drop the last batch in each epoch to prevent smaller batches. Defaults to False, except if the
             model contains batch normalization layers. Can be provided explicitly to override.
@@ -387,10 +405,25 @@ class TrainingLoop(ABC):
         :return:
             The losses per epoch.
         """
-        if self.training_instances is None:
-            raise ValueError('must set training instances before running _train()')
         if self.optimizer is None:
             raise ValueError('optimizer must be set before running _train()')
+        # When using early stopping models have to be saved separately at the best epoch, since the training loop will
+        # due to the patience continue to train after the best epoch and thus alter the model
+        if (
+                stopper is not None
+                and not only_size_probing
+                and last_best_epoch is None
+                and best_epoch_model_file_path is None
+        ):
+            # Create a path
+            best_epoch_model_file_path = pathlib.Path(NamedTemporaryFile().name)
+        best_epoch_model_checkpoint_file_path: Optional[pathlib.Path] = None
+
+        if isinstance(self.model, RGCN) and sampler != 'schlichtkrull':
+            logger.warning(
+                'Using RGCN without graph-based sampling! Please select sampler="schlichtkrull" instead of %s.',
+                sampler,
+            )
 
         # Take the biggest possible training batch_size, if batch_size not set
         batch_size_sufficient = False
@@ -405,7 +438,10 @@ class TrainingLoop(ABC):
                         "Therefore, the batch_size will be set to the default value '{batch_size}'",
                     )
                 else:
-                    batch_size, batch_size_sufficient = self.batch_size_search()
+                    batch_size, batch_size_sufficient = self.batch_size_search(
+                        triples_factory=triples_factory,
+                        training_instances=training_instances,
+                    )
             else:
                 batch_size = 256
                 logger.info(f"No batch_size provided. Setting batch_size to '{batch_size}'.")
@@ -418,7 +454,12 @@ class TrainingLoop(ABC):
             and not continue_training
         ):
             # return the relevant parameters slice_size and batch_size
-            sub_batch_size, slice_size = self.sub_batch_and_slice(batch_size)
+            sub_batch_size, slice_size = self.sub_batch_and_slice(
+                batch_size=batch_size,
+                sampler=sampler,
+                triples_factory=triples_factory,
+                training_instances=training_instances,
+            )
 
         # Create dummy result tracker
         if result_tracker is None:
@@ -437,7 +478,7 @@ class TrainingLoop(ABC):
             if drop_last and not only_size_probing:
                 logger.info(
                     "Dropping last (incomplete) batch each epoch (%s batches).",
-                    format_relative_comparison(part=1, total=len(self.training_instances)),
+                    format_relative_comparison(part=1, total=len(training_instances)),
                 )
 
         # Sanity check
@@ -463,7 +504,9 @@ class TrainingLoop(ABC):
 
         # Create Sampler
         if sampler == 'schlichtkrull':
-            sampler = GraphSampler(self.triples_factory, num_samples=sub_batch_size)
+            if triples_factory is None:
+                raise ValueError('need to pass triples_factory when using graph sampling')
+            sampler = GraphSampler(triples_factory, num_samples=sub_batch_size)
             shuffle = False
         else:
             sampler = None
@@ -473,7 +516,7 @@ class TrainingLoop(ABC):
             num_workers = 0
 
         # Bind
-        num_training_instances = len(self.training_instances)
+        num_training_instances = len(training_instances)
 
         _use_outer_tqdm = not only_size_probing and use_tqdm
         _use_inner_tqdm = _use_outer_tqdm and use_tqdm_batch
@@ -494,7 +537,7 @@ class TrainingLoop(ABC):
 
         train_data_loader = DataLoader(
             sampler=sampler,
-            dataset=self.training_instances,
+            dataset=training_instances,
             batch_size=batch_size,
             shuffle=shuffle,
             num_workers=num_workers,
@@ -594,21 +637,39 @@ class TrainingLoop(ABC):
                 should_stop = False
                 if stopper is not None and stopper.should_evaluate(epoch) and stopper.should_stop(epoch):
                     should_stop = True
+                # When the stopper obtained a new best epoch, this model has to be saved for reconstruction
+                if (
+                        stopper is not None
+                        and stopper.best_epoch != last_best_epoch
+                        and best_epoch_model_file_path is not None
+                ):
+                    self._save_state(path=best_epoch_model_file_path)
+                    last_best_epoch = epoch
             # When the training loop failed, a fallback checkpoint is created to resume training.
             except (MemoryError, RuntimeError) as e:
                 logger.warning(f'The training loop just failed during epoch {epoch} due to error {str(e)}.')
                 if checkpoint_on_failure_file_path:
-                    self._save_state(path=checkpoint_on_failure_file_path, stopper=stopper)
+                    # When there wasn't a best epoch the checkpoint path should be None
+                    if last_best_epoch is not None and best_epoch_model_file_path is not None:
+                        best_epoch_model_checkpoint_file_path = best_epoch_model_file_path
+                    self._save_state(
+                        path=checkpoint_on_failure_file_path,
+                        stopper=stopper,
+                        best_epoch_model_checkpoint_file_path=best_epoch_model_checkpoint_file_path,
+                    )
                     logger.warning(
                         "However, don't worry we got you covered. PyKEEN just saved a checkpoint when this happened "
                         f"at '{checkpoint_on_failure_file_path}'. To resume training from the checkpoint file just "
                         f"restart your code and pass this file path to the training loop or pipeline you used "
                         f"as 'checkpoint_file' argument.",
                     )
+                # Delete temporary best epoch model
+                if best_epoch_model_file_path is not None and best_epoch_model_file_path.is_file():
+                    os.remove(best_epoch_model_file_path)
                 raise e
 
             # If a checkpoint file is given, we check whether it is time to save a checkpoint
-            if save_checkpoints:
+            if save_checkpoints and checkpoint_path is not None:
                 minutes_since_last_checkpoint = (time.time() - last_checkpoint) // 60
                 # MyPy overrides are because you should
                 if (
@@ -616,11 +677,30 @@ class TrainingLoop(ABC):
                     or should_stop
                     or epoch == num_epochs
                 ):
-                    self._save_state(path=checkpoint_path, stopper=stopper)  # type: ignore
+                    # When there wasn't a best epoch the checkpoint path should be None
+                    if last_best_epoch is not None and best_epoch_model_file_path is not None:
+                        best_epoch_model_checkpoint_file_path = best_epoch_model_file_path
+                    self._save_state(
+                        path=checkpoint_path,
+                        stopper=stopper,
+                        best_epoch_model_checkpoint_file_path=best_epoch_model_checkpoint_file_path,
+                    )  # type: ignore
                     last_checkpoint = time.time()
 
-            if should_stop:
+            if should_stop and last_best_epoch is not None and best_epoch_model_file_path is not None:
+                self._load_state(path=best_epoch_model_file_path)
+                # Delete temporary best epoch model
+                if pathlib.Path.is_file(best_epoch_model_file_path):
+                    os.remove(best_epoch_model_file_path)
                 return self.losses_per_epochs
+
+        # If the stopper didn't stop the training loop but derived a best epoch, the model has to be reconstructed
+        # at that state
+        if stopper is not None and last_best_epoch is not None and best_epoch_model_file_path is not None:
+            self._load_state(path=best_epoch_model_file_path)
+            # Delete temporary best epoch model
+            if pathlib.Path.is_file(best_epoch_model_file_path):
+                os.remove(best_epoch_model_file_path)
 
         return self.losses_per_epochs
 
@@ -659,7 +739,7 @@ class TrainingLoop(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def _create_instances(self, use_tqdm: Optional[bool] = None) -> Instances:
+    def _create_instances(self, triples_factory: CoreTriplesFactory) -> Instances:
         """Create the training instances at the beginning of the training loop."""
         raise NotImplementedError
 
@@ -677,6 +757,9 @@ class TrainingLoop(ABC):
 
     def batch_size_search(
         self,
+        *,
+        triples_factory: CoreTriplesFactory,
+        training_instances: Instances,
         batch_size: Optional[int] = None,
     ) -> Tuple[int, bool]:
         """Find the maximum batch size for training with the current setting.
@@ -686,6 +769,10 @@ class TrainingLoop(ABC):
         that this batch size was successfully evaluated. Otherwise, the output will be batch size 1 and the boolean
         value will be False.
 
+        :param triples_factory:
+            The triples factory over which search is run
+        :param training_instances:
+            The training instances generated from the triples factory
         :param batch_size:
             The batch size to start the search with. If None, set batch_size=num_triples (i.e. full batch training).
 
@@ -697,7 +784,7 @@ class TrainingLoop(ABC):
             batch_size = 8192
 
         # Set upper bound
-        batch_size = min(batch_size, self.triples_factory.num_triples)
+        batch_size = min(batch_size, triples_factory.num_triples)
 
         reached_max = False
         evaluated_once = False
@@ -706,7 +793,14 @@ class TrainingLoop(ABC):
             logger.debug(f'Trying batch_size={batch_size}.')
             try:
                 self._free_graph_and_cache()
-                self._train(num_epochs=1, batch_size=batch_size, sub_batch_size=None, only_size_probing=True)
+                self._train(
+                    num_epochs=1,
+                    batch_size=batch_size,
+                    sub_batch_size=None,
+                    only_size_probing=True,
+                    triples_factory=triples_factory,
+                    training_instances=training_instances,
+                )
             except RuntimeError as runtime_error:
                 self._free_graph_and_cache()
                 if not is_cudnn_error(runtime_error) and not is_cuda_oom_error(runtime_error):
@@ -725,7 +819,7 @@ class TrainingLoop(ABC):
                 logger.debug(f'batch_size={batch_size} was too big, trying less now.')
             else:
                 self._free_graph_and_cache()
-                if not reached_max and batch_size <= self.triples_factory.num_triples:
+                if not reached_max and batch_size <= triples_factory.num_triples:
                     batch_size *= 2
                 else:
                     logger.info(f'Concluded batch_size search with batch_size={batch_size}.')
@@ -734,14 +828,28 @@ class TrainingLoop(ABC):
 
         return batch_size, evaluated_once
 
-    def sub_batch_and_slice(self, batch_size: int) -> Tuple[int, Optional[int]]:
+    def sub_batch_and_slice(
+        self,
+        *,
+        batch_size: int,
+        sampler: Optional[str],
+        triples_factory: CoreTriplesFactory,
+        training_instances: Instances,
+    ) -> Tuple[int, Optional[int]]:
         """Check if sub-batching and/or slicing is necessary to train the model on the hardware at hand."""
-        sub_batch_size, finished_search, supports_sub_batching = self._sub_batch_size_search(batch_size=batch_size)
+        sub_batch_size, finished_search, supports_sub_batching = self._sub_batch_size_search(
+            batch_size=batch_size,
+            sampler=sampler,
+            triples_factory=triples_factory,
+            training_instances=training_instances,
+        )
         # If the sub_batch_size did not finish search with a possibility that fits the hardware, we have to try slicing
         if finished_search:
             return sub_batch_size, None
 
         slice_size = self._slice_size_search(
+            triples_factory=triples_factory,
+            training_instances=training_instances,
             batch_size=batch_size,
             sub_batch_size=sub_batch_size,
             supports_sub_batching=supports_sub_batching,
@@ -749,7 +857,15 @@ class TrainingLoop(ABC):
         return sub_batch_size, slice_size
 
     @abstractmethod
-    def _slice_size_search(self, batch_size: int, sub_batch_size: int, supports_sub_batching: bool) -> int:
+    def _slice_size_search(
+        self,
+        *,
+        triples_factory: CoreTriplesFactory,
+        training_instances: Instances,
+        batch_size: int,
+        sub_batch_size: int,
+        supports_sub_batching: bool,
+    ) -> int:
         """Find the maximum slice size for training with the current setting.
 
         This method finds the biggest slice size to train the model with the given training data and the desired batch
@@ -771,7 +887,14 @@ class TrainingLoop(ABC):
         """
         raise NotImplementedError
 
-    def _sub_batch_size_search(self, batch_size: int) -> Tuple[int, bool, bool]:
+    def _sub_batch_size_search(
+        self,
+        *,
+        batch_size: int,
+        sampler: Optional[str],
+        triples_factory: CoreTriplesFactory,
+        training_instances: Instances,
+    ) -> Tuple[int, bool, bool]:
         """Find the allowable sub batch size for training with the current setting.
 
         This method checks if it is possible to train the model with the given training data and the desired batch size
@@ -793,7 +916,15 @@ class TrainingLoop(ABC):
             # The cache of the previous run has to be freed to allow accurate memory availability estimates
             self._free_graph_and_cache()
             logger.debug(f'Trying batch_size {batch_size} for training now.')
-            self._train(num_epochs=1, batch_size=batch_size, sub_batch_size=sub_batch_size, only_size_probing=True)
+            self._train(
+                triples_factory=triples_factory,
+                training_instances=training_instances,
+                num_epochs=1,
+                batch_size=batch_size,
+                sub_batch_size=sub_batch_size,
+                sampler=sampler,
+                only_size_probing=True,
+            )
         except RuntimeError as runtime_error:
             self._free_graph_and_cache()
             if not is_cudnn_error(runtime_error) and not is_cuda_oom_error(runtime_error):
@@ -819,7 +950,10 @@ class TrainingLoop(ABC):
                             num_epochs=1,
                             batch_size=batch_size,
                             sub_batch_size=sub_batch_size,
+                            sampler=sampler,
                             only_size_probing=True,
+                            triples_factory=triples_factory,
+                            training_instances=training_instances,
                         )
                     except RuntimeError as runtime_error:
                         self._free_graph_and_cache()
@@ -870,7 +1004,12 @@ class TrainingLoop(ABC):
         # The cache of the previous run has to be freed to allow accurate memory availability estimates
         torch.cuda.empty_cache()
 
-    def _save_state(self, path: Union[str, pathlib.Path], stopper: Optional[Stopper] = None) -> None:
+    def _save_state(
+        self,
+        path: Union[IO[bytes], str, pathlib.Path],
+        stopper: Optional[Stopper] = None,
+        best_epoch_model_checkpoint_file_path: Optional[pathlib.Path] = None,
+    ) -> None:
         """Save the state of the training loop.
 
         :param path:
@@ -878,6 +1017,8 @@ class TrainingLoop(ABC):
         :param stopper:
             An instance of :class:`pykeen.stopper.EarlyStopper` with settings for checking
             if training should stop early
+        :param best_epoch_model_checkpoint_file_path:
+            The file path for the checkpoint of the best epoch model when using early stopping.
         """
         if self.optimizer is None:
             raise ValueError
@@ -895,6 +1036,11 @@ class TrainingLoop(ABC):
         else:
             torch_cuda_random_state = None
 
+        if best_epoch_model_checkpoint_file_path is not None:
+            best_epoch_model_checkpoint = torch.load(best_epoch_model_checkpoint_file_path)
+        else:
+            best_epoch_model_checkpoint = None
+
         torch.save(
             {
                 'epoch': self._epoch,
@@ -908,17 +1054,25 @@ class TrainingLoop(ABC):
                 'np_random_state': np.random.get_state(),
                 'torch_random_state': torch.random.get_rng_state(),
                 'torch_cuda_random_state': torch_cuda_random_state,
+                # This is an entire checkpoint for the optional best model when using early stopping
+                'best_epoch_model_checkpoint': best_epoch_model_checkpoint,
             },
             path,
             pickle_protocol=pickle.HIGHEST_PROTOCOL,
         )
         logger.info(f"=> Saved checkpoint after having finished epoch {self._epoch}.")
 
-    def _load_state(self, path: Union[str, pathlib.Path]) -> None:
+    def _load_state(
+            self,
+            path: Union[str, pathlib.Path],
+    ) -> Tuple[Optional[pathlib.Path], Optional[int]]:
         """Load the state of the training loop from a checkpoint.
 
         :param path:
             Path of the file where to load the state from.
+
+        :return:
+            Temporary file path of the best epoch model and the best epoch when using early stoppers, None otherwise.
 
         :raises CheckpointMismatchError:
             If the given checkpoint file has a non-matching checksum, i.e. it was saved with a different configuration.
@@ -950,6 +1104,18 @@ class TrainingLoop(ABC):
                 "be deterministic.",
             )
 
+        # If the checkpoint was saved with a best epoch model from the early stopper, this model has to be retrieved
+        best_epoch_model_file_path = None
+        best_epoch = None
+        if checkpoint.get('best_epoch_model_checkpoint'):
+            best_epoch_model_file_path = pathlib.Path(NamedTemporaryFile().name)
+            best_epoch = checkpoint['best_epoch_model_checkpoint']['epoch']
+            torch.save(
+                checkpoint['best_epoch_model_checkpoint'],
+                best_epoch_model_file_path,
+                pickle_protocol=pickle.HIGHEST_PROTOCOL,
+            )
+
         self._epoch = checkpoint['epoch']
         self.losses_per_epochs = checkpoint['loss']
         self.model.load_state_dict(checkpoint['model_state_dict'])
@@ -958,3 +1124,5 @@ class TrainingLoop(ABC):
         np.random.set_state(checkpoint['np_random_state'])
         torch.random.set_rng_state(checkpoint['torch_random_state'])
         logger.info(f"=> loaded checkpoint '{path}' stopped after having finished epoch {checkpoint['epoch']}")
+
+        return best_epoch_model_file_path, best_epoch

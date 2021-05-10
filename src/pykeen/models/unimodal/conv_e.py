@@ -13,11 +13,11 @@ from torch.nn import functional as F  # noqa: N812
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE
 from ...losses import BCEAfterSigmoidLoss, Loss
-from ...nn import Embedding, EmbeddingSpecification
+from ...nn.emb import Embedding, EmbeddingSpecification
 from ...nn.init import xavier_normal_
 from ...nn.modules import _calculate_missing_shape_information
 from ...regularizers import Regularizer
-from ...triples import TriplesFactory
+from ...triples import CoreTriplesFactory
 from ...typing import DeviceHint, Hint, Initializer
 from ...utils import is_cudnn_error
 
@@ -93,7 +93,12 @@ class ConvE(EntityRelationEmbeddingModel):
     >>> # Step 5: Evaluate the model
     >>> from pykeen.evaluation import RankBasedEvaluator
     >>> evaluator = RankBasedEvaluator()
-    >>> metric_result = evaluator.evaluate(model=model, mapped_triples=dataset.testing.mapped_triples, batch_size=8192)
+    >>> metric_result = evaluator.evaluate(
+    ...     model=model,
+    ...     mapped_triples=dataset.testing.mapped_triples,
+    ...     additional_filter_triples=dataset.training.mapped_triples,
+    ...     batch_size=8192,
+    ... )
     ---
     citation:
         author: Dettmers
@@ -122,7 +127,7 @@ class ConvE(EntityRelationEmbeddingModel):
 
     def __init__(
         self,
-        triples_factory: TriplesFactory,
+        triples_factory: CoreTriplesFactory,
         input_channels: Optional[int] = None,
         output_channels: int = 32,
         embedding_height: Optional[int] = None,

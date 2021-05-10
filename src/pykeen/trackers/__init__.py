@@ -2,12 +2,13 @@
 
 """Result trackers in PyKEEN."""
 
+from class_resolver import Resolver, get_subclasses
+
 from .base import ResultTracker
 from .file import CSVResultTracker, FileResultTracker, JSONResultTracker
 from .mlflow import MLFlowResultTracker
 from .neptune import NeptuneResultTracker
 from .wandb import WANDBResultTracker
-from ..utils import Resolver, get_subclasses
 
 __all__ = [
     # Base classes

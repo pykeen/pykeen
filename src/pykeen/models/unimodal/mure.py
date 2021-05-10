@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 
 """Implementation of MuRE."""
+
 from typing import Any, ClassVar, Mapping, Optional
 
 from torch.nn.init import normal_, uniform_, zeros_
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...nn import EmbeddingSpecification
+from ...nn.emb import EmbeddingSpecification
 from ...nn.modules import MuREInteraction
 from ...typing import Hint, Initializer
 
@@ -52,12 +53,14 @@ class MuRE(ERModel):
         :param embedding_dim: The entity embedding dimension $d$. Defaults to 200. Is usually $d \in [50, 300]$.
         :param p: The $l_p$ norm. Defaults to 2.
         :param power_norm: Should the power norm be used? Defaults to true.
+        :param kwargs: Remaining keyword arguments passed through to :class:`pykeen.models.ERModel`.
         """
         # comment:
         # https://github.com/ibalazevic/multirelational-poincare/blob/34523a61ca7867591fd645bfb0c0807246c08660/model.py#L52
         # uses float64
         super().__init__(
-            interaction=MuREInteraction(p=p, power_norm=power_norm),
+            interaction=MuREInteraction,
+            interaction_kwargs=dict(p=p, power_norm=power_norm),
             entity_representations=[
                 EmbeddingSpecification(
                     embedding_dim=embedding_dim,
@@ -78,6 +81,7 @@ class MuRE(ERModel):
                 ),
             ],
             relation_representations=[
+                # relation offset
                 EmbeddingSpecification(
                     embedding_dim=embedding_dim,
                     initializer=relation_initializer,
@@ -85,8 +89,9 @@ class MuRE(ERModel):
                         std=1.0e-03,
                     ),
                 ),
+                # diagonal relation transformation matrix
                 EmbeddingSpecification(
-                    shape=(embedding_dim, embedding_dim),
+                    shape=(embedding_dim,),
                     initializer=relation_matrix_initializer,
                     initializer_kwargs=relation_matrix_initializer_kwargs or dict(
                         a=-1,

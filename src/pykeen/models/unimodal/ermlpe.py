@@ -11,9 +11,9 @@ from torch.nn.init import uniform_
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import BCEAfterSigmoidLoss, Loss
-from ...nn import EmbeddingSpecification
+from ...nn.emb import EmbeddingSpecification
 from ...regularizers import Regularizer
-from ...triples import TriplesFactory
+from ...triples import CoreTriplesFactory
 from ...typing import DeviceHint, Hint, Initializer
 
 __all__ = [
@@ -63,7 +63,7 @@ class ERMLPE(EntityRelationEmbeddingModel):
 
     def __init__(
         self,
-        triples_factory: TriplesFactory,
+        triples_factory: CoreTriplesFactory,
         hidden_dim: int = 300,
         input_dropout: float = 0.2,
         hidden_dropout: float = 0.3,

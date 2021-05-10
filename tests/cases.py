@@ -10,17 +10,20 @@ import timeit
 import traceback
 import unittest
 from abc import ABC, abstractmethod
-from typing import Any, ClassVar, Collection, Dict, Generic, Mapping, MutableMapping, Optional, Tuple, Type, TypeVar
+from typing import Any, ClassVar, Collection, Dict, Mapping, MutableMapping, Optional, Sequence, Tuple, Type, TypeVar
 from unittest.mock import patch
 
 import pytest
 import torch
+import unittest_templates
 from click.testing import CliRunner, Result
 from torch import optim
 from torch.nn import functional
 from torch.optim import Adagrad, SGD
 
 import pykeen.models
+import pykeen.nn.message_passing
+import pykeen.nn.weighting
 from pykeen.datasets import Nations
 from pykeen.datasets.base import LazyDataset
 from pykeen.datasets.kinships import KINSHIPS_TRAIN_PATH
@@ -28,14 +31,14 @@ from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH
 from pykeen.losses import Loss, PairwiseLoss, PointwiseLoss, SetwiseLoss
 from pykeen.models import EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, RESCAL
 from pykeen.models.cli import build_cli_from_cls
-from pykeen.nn import RepresentationModule
-from pykeen.nn.modules import Interaction
+from pykeen.nn.emb import RepresentationModule
+from pykeen.nn.modules import FunctionalInteraction, Interaction, LiteralInteraction
 from pykeen.regularizers import LpRegularizer, Regularizer
 from pykeen.trackers import ResultTracker
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
 from pykeen.triples import TriplesFactory
 from pykeen.typing import HeadRepresentation, MappedTriples, RelationRepresentation, TailRepresentation
-from pykeen.utils import all_in_bounds, get_subclasses, resolve_device, set_random_seed, unpack_singletons
+from pykeen.utils import all_in_bounds, resolve_device, set_random_seed, unpack_singletons
 from tests.constants import EPSILON
 from tests.mocks import CustomRepresentations
 from tests.utils import rand
@@ -45,29 +48,14 @@ T = TypeVar("T")
 logger = logging.getLogger(__name__)
 
 
-class GenericTestCase(Generic[T], unittest.TestCase):
+class GenericTestCase(unittest_templates.GenericTestCase[T]):
     """Generic tests."""
 
-    cls: ClassVar[Type[T]]
-    kwargs: ClassVar[Optional[Mapping[str, Any]]] = None
-    instance: T
     generator: torch.Generator
 
-    def setUp(self) -> None:
-        """Set up the generic testing method."""
-        # fix seeds for reproducibility
+    def pre_setup_hook(self) -> None:
+        """Instantiate a generator for usage in the test case."""
         self.generator = set_random_seed(seed=42)[1]
-        kwargs = self.kwargs or {}
-        kwargs = self._pre_instantiation_hook(kwargs=dict(kwargs))
-        self.instance = self.cls(**kwargs)
-        self.post_instantiation_hook()
-
-    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
-        """Perform actions before instantiation, potentially modyfing kwargs."""
-        return kwargs
-
-    def post_instantiation_hook(self) -> None:
-        """Perform actions after instantiation."""
 
 
 class DatasetTestCase(unittest.TestCase):
@@ -102,10 +90,7 @@ class DatasetTestCase(unittest.TestCase):
         self.assertFalse(self.dataset._loaded_validation)
 
         # Load
-        try:
-            self.dataset._load()
-        except (EOFError, IOError):
-            self.skipTest('Problem with connection. Try this test again later.')
+        self.dataset._load()
 
         self.assertIsInstance(self.dataset.training, TriplesFactory)
         self.assertIsInstance(self.dataset.testing, TriplesFactory)
@@ -275,15 +260,16 @@ class InteractionTestCase(
         self,
         *shapes: Tuple[int, ...],
     ):
-        self.shape_kwargs.setdefault("d", self.dim)
+        shape_kwargs = dict(self.shape_kwargs)
+        shape_kwargs.setdefault("d", self.dim)
         result = tuple(
             tuple(
-                torch.rand(*prefix_shape, *(self.shape_kwargs[dim] for dim in weight_shape), requires_grad=True)
+                torch.rand(*prefix_shape, *(shape_kwargs[dim] for dim in weight_shape), requires_grad=True)
                 for weight_shape in weight_shapes
             )
             for prefix_shape, weight_shapes in zip(
                 shapes,
-                [self.cls.entity_shape, self.cls.relation_shape, self.cls.entity_shape],
+                [self.instance.entity_shape, self.instance.relation_shape, self.instance.entity_shape],
             )
         )
         return unpack_singletons(*result)
@@ -456,6 +442,9 @@ class InteractionTestCase(
 
     def test_forward_consistency_with_functional(self):
         """Test forward's consistency with functional."""
+        if not isinstance(self.instance, FunctionalInteraction):
+            self.skipTest('Not a functional interaction')
+
         # set in eval mode (otherwise there are non-deterministic factors like Dropout
         self.instance.eval()
         for hs, rs, ts in self._get_test_shapes():
@@ -473,10 +462,14 @@ class InteractionTestCase(
             # test multiple different initializations
             self.instance.reset_parameters()
             h, r, t = self._get_hrt((1, 1, 1, 1), (1, 1, 1, 1), (1, 1, 1, 1))
-            kwargs = self.instance._prepare_for_functional(h=h, r=r, t=t)
 
-            # calculate by functional
-            scores_f = self.cls.func(**kwargs).view(-1)
+            if isinstance(self.instance, FunctionalInteraction):
+                kwargs = self.instance._prepare_for_functional(h=h, r=r, t=t)
+                # calculate by functional
+                scores_f = self.cls.func(**kwargs).view(-1)
+            else:
+                kwargs = dict(h=h, r=r, t=t)
+                scores_f = self.instance(h=h, r=r, t=t)
 
             # calculate manually
             scores_f_manual = self._exp_score(**kwargs).view(-1)
@@ -566,21 +559,6 @@ class FileResultTrackerTests(ResultTrackerTests):
         # delete intermediate files
         self.path.unlink()
         self.temporary_directory.cleanup()
-
-
-class TestsTestCase(Generic[T], unittest.TestCase):
-    """A generic test for tests."""
-
-    base_cls: Type[T]
-    base_test: Type[GenericTestCase[T]]
-    skip_cls: Collection[T] = tuple()
-
-    def test_testing(self):
-        """Check that there is a test for all subclasses."""
-        to_test = set(get_subclasses(self.base_cls)).difference(self.skip_cls)
-        tested = (test_cls.cls for test_cls in get_subclasses(self.base_test) if hasattr(test_cls, "cls"))
-        not_tested = to_test.difference(tested)
-        assert not not_tested, not_tested
 
 
 class RegularizerTestCase(GenericTestCase[Regularizer]):
@@ -703,23 +681,14 @@ class LpRegularizerTest(RegularizerTestCase):
         return value
 
 
-class ModelTestCase(unittest.TestCase):
+class ModelTestCase(unittest_templates.GenericTestCase[Model]):
     """A test case for quickly defining common tests for KGE models."""
-
-    #: The class of the model to test
-    model_cls: ClassVar[Type[Model]]
-
-    #: Additional arguments passed to the model's constructor method
-    model_kwargs: ClassVar[Optional[Mapping[str, Any]]] = None
 
     #: Additional arguments passed to the training loop's constructor method
     training_loop_kwargs: ClassVar[Optional[Mapping[str, Any]]] = None
 
     #: The triples factory instance
     factory: TriplesFactory
-
-    #: The model instance
-    model: Model
 
     #: The batch size for use for forward_* tests
     batch_size: int = 20
@@ -746,45 +715,53 @@ class ModelTestCase(unittest.TestCase):
     # initialization
     num_constant_init: int = 0
 
-    def setUp(self) -> None:
-        """Set up the test case with a triples factory and model."""
+    #: Static extras to append to the CLI
+    cli_extras: Sequence[str] = tuple()
+
+    def pre_setup_hook(self) -> None:  # noqa: D102
+        # for reproducible testing
         _, self.generator, _ = set_random_seed(42)
 
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         dataset = Nations(create_inverse_triples=self.create_inverse_triples)
         self.factory = dataset.training
-        self.model = self.model_cls(
-            triples_factory=self.factory,
-            embedding_dim=self.embedding_dim,
-            **(self.model_kwargs or {}),
-        ).to_device_()
+        # insert shared parameters
+        kwargs["triples_factory"] = self.factory
+        kwargs["embedding_dim"] = self.embedding_dim
+        return kwargs
+
+    def post_instantiation_hook(self) -> None:  # noqa: D102
+        # move model to correct device
+        self.instance = self.instance.to_device_()
 
     def test_get_grad_parameters(self):
         """Test the model's ``get_grad_params()`` method."""
         # assert there is at least one trainable parameter
-        assert len(list(self.model.get_grad_params())) > 0
+        assert len(list(self.instance.get_grad_params())) > 0
 
         # Check that all the parameters actually require a gradient
-        for parameter in self.model.get_grad_params():
+        for parameter in self.instance.get_grad_params():
             assert parameter.requires_grad
 
         # Try to initialize an optimizer
-        optimizer = SGD(params=self.model.get_grad_params(), lr=1.0)
+        optimizer = SGD(params=self.instance.get_grad_params(), lr=1.0)
         assert optimizer is not None
 
     def test_reset_parameters_(self):
         """Test :func:`Model.reset_parameters_`."""
         # get model parameters
-        params = list(self.model.parameters())
+        params = list(self.instance.parameters())
         old_content = {
             id(p): p.data.detach().clone()
             for p in params
         }
 
         # re-initialize
-        self.model.reset_parameters_()
+        self.instance.reset_parameters_()
 
         # check that the operation works in-place
-        new_params = list(self.model.parameters())
+        new_params = list(self.instance.parameters())
         assert set(id(np) for np in new_params) == set(id(p) for p in params)
 
         # check that the parameters where modified
@@ -808,13 +785,13 @@ class ModelTestCase(unittest.TestCase):
     def test_save(self) -> None:
         """Test that the model can be saved properly."""
         with tempfile.TemporaryDirectory() as temp_directory:
-            torch.save(self.model, os.path.join(temp_directory, 'model.pickle'))
+            torch.save(self.instance, os.path.join(temp_directory, 'model.pickle'))
 
     def test_score_hrt(self) -> None:
         """Test the model's ``score_hrt()`` function."""
-        batch = self.factory.mapped_triples[:self.batch_size, :].to(self.model.device)
+        batch = self.factory.mapped_triples[:self.batch_size, :].to(self.instance.device)
         try:
-            scores = self.model.score_hrt(batch)
+            scores = self.instance.score_hrt(batch)
         except RuntimeError as e:
             if str(e) == 'fft: ATen not compiled with MKL support':
                 self.skipTest(str(e))
@@ -825,13 +802,13 @@ class ModelTestCase(unittest.TestCase):
 
     def test_score_t(self) -> None:
         """Test the model's ``score_t()`` function."""
-        batch = self.factory.mapped_triples[:self.batch_size, :2].to(self.model.device)
+        batch = self.factory.mapped_triples[:self.batch_size, :2].to(self.instance.device)
         # assert batch comprises (head, relation) pairs
         assert batch.shape == (self.batch_size, 2)
         assert (batch[:, 0] < self.factory.num_entities).all()
         assert (batch[:, 1] < self.factory.num_relations).all()
         try:
-            scores = self.model.score_t(batch)
+            scores = self.instance.score_t(batch)
         except NotImplementedError:
             self.fail(msg='Score_o not yet implemented')
         except RuntimeError as e:
@@ -839,18 +816,18 @@ class ModelTestCase(unittest.TestCase):
                 self.skipTest(str(e))
             else:
                 raise e
-        assert scores.shape == (self.batch_size, self.model.num_entities)
+        assert scores.shape == (self.batch_size, self.instance.num_entities)
         self._check_scores(batch, scores)
 
     def test_score_h(self) -> None:
         """Test the model's ``score_h()`` function."""
-        batch = self.factory.mapped_triples[:self.batch_size, 1:].to(self.model.device)
+        batch = self.factory.mapped_triples[:self.batch_size, 1:].to(self.instance.device)
         # assert batch comprises (relation, tail) pairs
         assert batch.shape == (self.batch_size, 2)
         assert (batch[:, 0] < self.factory.num_relations).all()
         assert (batch[:, 1] < self.factory.num_entities).all()
         try:
-            scores = self.model.score_h(batch)
+            scores = self.instance.score_h(batch)
         except NotImplementedError:
             self.fail(msg='Score_s not yet implemented')
         except RuntimeError as e:
@@ -858,15 +835,16 @@ class ModelTestCase(unittest.TestCase):
                 self.skipTest(str(e))
             else:
                 raise e
-        assert scores.shape == (self.batch_size, self.model.num_entities)
+        assert scores.shape == (self.batch_size, self.instance.num_entities)
         self._check_scores(batch, scores)
 
     @pytest.mark.slow
     def test_train_slcwa(self) -> None:
         """Test that sLCWA training does not fail."""
         loop = SLCWATrainingLoop(
-            model=self.model,
-            optimizer=Adagrad(params=self.model.get_grad_params(), lr=0.001),
+            model=self.instance,
+            triples_factory=self.factory,
+            optimizer=Adagrad(params=self.instance.get_grad_params(), lr=0.001),
             **(self.training_loop_kwargs or {}),
         )
         losses = self._safe_train_loop(
@@ -881,8 +859,9 @@ class ModelTestCase(unittest.TestCase):
     def test_train_lcwa(self) -> None:
         """Test that LCWA training does not fail."""
         loop = LCWATrainingLoop(
-            model=self.model,
-            optimizer=Adagrad(params=self.model.get_grad_params(), lr=0.001),
+            model=self.instance,
+            triples_factory=self.factory,
+            optimizer=Adagrad(params=self.instance.get_grad_params(), lr=0.001),
             **(self.training_loop_kwargs or {}),
         )
         losses = self._safe_train_loop(
@@ -895,7 +874,13 @@ class ModelTestCase(unittest.TestCase):
 
     def _safe_train_loop(self, loop: TrainingLoop, num_epochs, batch_size, sampler):
         try:
-            losses = loop.train(num_epochs=num_epochs, batch_size=batch_size, sampler=sampler, use_tqdm=False)
+            losses = loop.train(
+                triples_factory=self.factory,
+                num_epochs=num_epochs,
+                batch_size=batch_size,
+                sampler=sampler,
+                use_tqdm=False,
+            )
         except RuntimeError as e:
             if str(e) == 'fft: ATen not compiled with MKL support':
                 self.skipTest(str(e))
@@ -906,18 +891,14 @@ class ModelTestCase(unittest.TestCase):
 
     def test_save_load_model_state(self):
         """Test whether a saved model state can be re-loaded."""
-        original_model = self.model_cls(
-            triples_factory=self.factory,
-            embedding_dim=self.embedding_dim,
+        original_model = self.cls(
             random_seed=42,
-            **(self.model_kwargs or {}),
+            **self.instance_kwargs,
         ).to_device_()
 
-        loaded_model = self.model_cls(
-            triples_factory=self.factory,
-            embedding_dim=self.embedding_dim,
+        loaded_model = self.cls(
             random_seed=21,
-            **(self.model_kwargs or {}),
+            **self.instance_kwargs,
         ).to_device_()
 
         def _equal_embeddings(a: RepresentationModule, b: RepresentationModule) -> bool:
@@ -939,9 +920,9 @@ class ModelTestCase(unittest.TestCase):
             assert _equal_embeddings(original_model.relation_embeddings, loaded_model.relation_embeddings)
 
     @property
-    def cli_extras(self):
+    def _cli_extras(self):
         """Return a list of extra flags for the CLI."""
-        kwargs = self.model_kwargs or {}
+        kwargs = self.kwargs or {}
         extras = [
             '--silent',
         ]
@@ -963,30 +944,32 @@ class ModelTestCase(unittest.TestCase):
             '--embedding-dim', self.embedding_dim,
             '--batch-size', self.train_batch_size,
         ]
+        extras.extend(self.cli_extras)
+        # TODO: Make sure that inverse triples are created if create_inverse_triples=True
         extras = [str(e) for e in extras]
         return extras
 
     @pytest.mark.slow
     def test_cli_training_nations(self):
         """Test running the pipeline on almost all models with only training data."""
-        self._help_test_cli(['-t', NATIONS_TRAIN_PATH] + self.cli_extras)
+        self._help_test_cli(['-t', NATIONS_TRAIN_PATH] + self._cli_extras)
 
     @pytest.mark.slow
     def test_cli_training_kinships(self):
         """Test running the pipeline on almost all models with only training data."""
-        self._help_test_cli(['-t', KINSHIPS_TRAIN_PATH] + self.cli_extras)
+        self._help_test_cli(['-t', KINSHIPS_TRAIN_PATH] + self._cli_extras)
 
     @pytest.mark.slow
     def test_cli_training_nations_testing(self):
         """Test running the pipeline on almost all models with only training data."""
-        self._help_test_cli(['-t', NATIONS_TRAIN_PATH, '-q', NATIONS_TEST_PATH] + self.cli_extras)
+        self._help_test_cli(['-t', NATIONS_TRAIN_PATH, '-q', NATIONS_TEST_PATH] + self._cli_extras)
 
     def _help_test_cli(self, args):
         """Test running the pipeline on all models."""
-        if issubclass(self.model_cls, pykeen.models.RGCN):
-            self.skipTest('There is a problem with non-reproducible unittest for R-GCN.')
+        if issubclass(self.cls, pykeen.models.RGCN) or self.cls is pykeen.models.ERModel:
+            self.skipTest(f"Cannot choose interaction via CLI for {self.cls}.")
         runner = CliRunner()
-        cli = build_cli_from_cls(self.model_cls)
+        cli = build_cli_from_cls(self.cls)
         # TODO: Catch HolE MKL error?
         result: Result = runner.invoke(cli, args)
 
@@ -996,7 +979,7 @@ class ModelTestCase(unittest.TestCase):
             msg=f'''
 Command
 =======
-$ pykeen train {self.model_cls.__name__.lower()} {' '.join(args)}
+$ pykeen train {self.cls.__name__.lower()} {' '.join(map(str, args))}
 
 Output
 ======
@@ -1015,38 +998,39 @@ Traceback
     def test_has_hpo_defaults(self):
         """Test that there are defaults for HPO."""
         try:
-            d = self.model_cls.hpo_default
+            d = self.cls.hpo_default
         except AttributeError:
-            self.fail(msg=f'{self.model_cls.__name__} is missing hpo_default class attribute')
+            self.fail(msg=f'{self.cls.__name__} is missing hpo_default class attribute')
         else:
             self.assertIsInstance(d, dict)
 
     def test_post_parameter_update_regularizer(self):
         """Test whether post_parameter_update resets the regularization term."""
-        if not hasattr(self.model, 'regularizer'):
+        if not hasattr(self.instance, 'regularizer'):
             self.skipTest('no regularizer')
 
         # set regularizer term to something that isn't zero
-        self.model.regularizer.regularization_term = torch.ones(1, dtype=torch.float, device=self.model.device)
+        self.instance.regularizer.regularization_term = torch.ones(1, dtype=torch.float, device=self.instance.device)
 
         # call post_parameter_update
-        self.model.post_parameter_update()
+        self.instance.post_parameter_update()
 
         # assert that the regularization term has been reset
-        assert self.model.regularizer.regularization_term == torch.zeros(1, dtype=torch.float, device=self.model.device)
+        expected_term = torch.zeros(1, dtype=torch.float, device=self.instance.device)
+        assert self.instance.regularizer.regularization_term == expected_term
 
     def test_post_parameter_update(self):
         """Test whether post_parameter_update correctly enforces model constraints."""
         # do one optimization step
-        opt = optim.SGD(params=self.model.parameters(), lr=1.)
-        batch = self.factory.mapped_triples[:self.batch_size, :].to(self.model.device)
-        scores = self.model.score_hrt(hrt_batch=batch)
+        opt = optim.SGD(params=self.instance.parameters(), lr=1.)
+        batch = self.factory.mapped_triples[:self.batch_size, :].to(self.instance.device)
+        scores = self.instance.score_hrt(hrt_batch=batch)
         fake_loss = scores.mean()
         fake_loss.backward()
         opt.step()
 
         # call post_parameter_update
-        self.model.post_parameter_update()
+        self.instance.post_parameter_update()
 
         # check model constraints
         self._check_constraints()
@@ -1056,15 +1040,15 @@ Traceback
 
     def test_score_h_with_score_hrt_equality(self) -> None:
         """Test the equality of the model's  ``score_h()`` and ``score_hrt()`` function."""
-        batch = self.factory.mapped_triples[:self.batch_size, 1:].to(self.model.device)
-        self.model.eval()
+        batch = self.factory.mapped_triples[:self.batch_size, 1:].to(self.instance.device)
+        self.instance.eval()
         # assert batch comprises (relation, tail) pairs
         assert batch.shape == (self.batch_size, 2)
         assert (batch[:, 0] < self.factory.num_relations).all()
         assert (batch[:, 1] < self.factory.num_entities).all()
         try:
-            scores_h = self.model.score_h(batch)
-            scores_hrt = super(self.model.__class__, self.model).score_h(batch)
+            scores_h = self.instance.score_h(batch)
+            scores_hrt = super(self.instance.__class__, self.instance).score_h(batch)
         except NotImplementedError:
             self.fail(msg='Score_h not yet implemented')
         except RuntimeError as e:
@@ -1077,15 +1061,15 @@ Traceback
 
     def test_score_r_with_score_hrt_equality(self) -> None:
         """Test the equality of the model's  ``score_r()`` and ``score_hrt()`` function."""
-        batch = self.factory.mapped_triples[:self.batch_size, [0, 2]].to(self.model.device)
-        self.model.eval()
+        batch = self.factory.mapped_triples[:self.batch_size, [0, 2]].to(self.instance.device)
+        self.instance.eval()
         # assert batch comprises (relation, tail) pairs
         assert batch.shape == (self.batch_size, 2)
         assert (batch[:, 0] < self.factory.num_entities).all()
         assert (batch[:, 1] < self.factory.num_entities).all()
         try:
-            scores_r = self.model.score_r(batch)
-            scores_hrt = super(self.model.__class__, self.model).score_r(batch)
+            scores_r = self.instance.score_r(batch)
+            scores_hrt = super(self.instance.__class__, self.instance).score_r(batch)
         except NotImplementedError:
             self.fail(msg='Score_h not yet implemented')
         except RuntimeError as e:
@@ -1098,15 +1082,15 @@ Traceback
 
     def test_score_t_with_score_hrt_equality(self) -> None:
         """Test the equality of the model's  ``score_t()`` and ``score_hrt()`` function."""
-        batch = self.factory.mapped_triples[:self.batch_size, :-1].to(self.model.device)
-        self.model.eval()
+        batch = self.factory.mapped_triples[:self.batch_size, :-1].to(self.instance.device)
+        self.instance.eval()
         # assert batch comprises (relation, tail) pairs
         assert batch.shape == (self.batch_size, 2)
         assert (batch[:, 0] < self.factory.num_entities).all()
         assert (batch[:, 1] < self.factory.num_relations).all()
         try:
-            scores_t = self.model.score_t(batch)
-            scores_hrt = super(self.model.__class__, self.model).score_t(batch)
+            scores_t = self.instance.score_t(batch)
+            scores_hrt = super(self.instance.__class__, self.instance).score_t(batch)
         except NotImplementedError:
             self.fail(msg='Score_h not yet implemented')
         except RuntimeError as e:
@@ -1119,45 +1103,41 @@ Traceback
 
     def test_reset_parameters_constructor_call(self):
         """Tests whether reset_parameters is called in the constructor."""
-        with patch.object(self.model_cls, 'reset_parameters_', return_value=None) as mock_method:
+        with patch.object(self.cls, 'reset_parameters_', return_value=None) as mock_method:
             try:
-                self.model_cls(
-                    triples_factory=self.factory,
-                    embedding_dim=self.embedding_dim,
-                    **(self.model_kwargs or {}),
-                )
+                self.cls(**self.instance_kwargs)
             except TypeError as error:
                 assert error.args == ("'NoneType' object is not callable",)
             mock_method.assert_called_once()
 
     def test_custom_representations(self):
         """Tests whether we can provide custom representations."""
-        if isinstance(self.model, EntityEmbeddingModel):
-            old_embeddings = self.model.entity_embeddings
-            self.model.entity_embeddings = CustomRepresentations(
+        if isinstance(self.instance, EntityEmbeddingModel):
+            old_embeddings = self.instance.entity_embeddings
+            self.instance.entity_embeddings = CustomRepresentations(
                 num_entities=self.factory.num_entities,
                 shape=old_embeddings.shape,
             )
             # call some functions
-            self.model.reset_parameters_()
+            self.instance.reset_parameters_()
             self.test_score_hrt()
             self.test_score_t()
             # reset to old state
-            self.model.entity_embeddings = old_embeddings
-        elif isinstance(self.model, EntityRelationEmbeddingModel):
-            old_embeddings = self.model.relation_embeddings
-            self.model.relation_embeddings = CustomRepresentations(
+            self.instance.entity_embeddings = old_embeddings
+        elif isinstance(self.instance, EntityRelationEmbeddingModel):
+            old_embeddings = self.instance.relation_embeddings
+            self.instance.relation_embeddings = CustomRepresentations(
                 num_entities=self.factory.num_relations,
                 shape=old_embeddings.shape,
             )
             # call some functions
-            self.model.reset_parameters_()
+            self.instance.reset_parameters_()
             self.test_score_hrt()
             self.test_score_t()
             # reset to old state
-            self.model.relation_embeddings = old_embeddings
+            self.instance.relation_embeddings = old_embeddings
         else:
-            self.skipTest(f'Not testing custom representations for model: {self.model.__class__.__name__}')
+            self.skipTest(f'Not testing custom representations for model: {self.instance.__class__.__name__}')
 
 
 class DistanceModelTestCase(ModelTestCase):
@@ -1172,7 +1152,7 @@ class DistanceModelTestCase(ModelTestCase):
 class BaseKG2ETest(ModelTestCase):
     """General tests for the KG2E model."""
 
-    model_cls = pykeen.models.KG2E
+    cls = pykeen.models.KG2E
 
     def _check_constraints(self):
         """Check model constraints.
@@ -1180,28 +1160,28 @@ class BaseKG2ETest(ModelTestCase):
         * Entity and relation embeddings have to have at most unit L2 norm.
         * Covariances have to have values between c_min and c_max
         """
-        for embedding in (self.model.entity_embeddings, self.model.relation_embeddings):
+        for embedding in (self.instance.entity_embeddings, self.instance.relation_embeddings):
             assert all_in_bounds(embedding(indices=None).norm(p=2, dim=-1), high=1., a_tol=EPSILON)
-        for cov in (self.model.entity_covariances, self.model.relation_covariances):
-            assert all_in_bounds(cov(indices=None), low=self.model.c_min, high=self.model.c_max)
+        for cov in (self.instance.entity_covariances, self.instance.relation_covariances):
+            assert all_in_bounds(cov(indices=None), low=self.instance.c_min, high=self.instance.c_max)
 
 
 class BaseNTNTest(ModelTestCase):
     """Test the NTN model."""
 
-    model_cls = pykeen.models.NTN
+    cls = pykeen.models.NTN
 
     def test_can_slice(self):
         """Test that the slicing properties are calculated correctly."""
-        self.assertTrue(self.model.can_slice_h)
-        self.assertFalse(self.model.can_slice_r)
-        self.assertTrue(self.model.can_slice_t)
+        self.assertTrue(self.instance.can_slice_h)
+        self.assertFalse(self.instance.can_slice_r)
+        self.assertTrue(self.instance.can_slice_t)
 
 
 class BaseRGCNTest(ModelTestCase):
     """Test the R-GCN model."""
 
-    model_cls = pykeen.models.RGCN
+    cls = pykeen.models.RGCN
     sampler = 'schlichtkrull'
 
     def _check_constraints(self):
@@ -1209,7 +1189,7 @@ class BaseRGCNTest(ModelTestCase):
 
         Enriched embeddings have to be reset.
         """
-        assert self.model.entity_representations.enriched_embeddings is None
+        assert self.instance.entity_representations[0].enriched_embeddings is None
 
 
 class RepresentationTestCase(GenericTestCase[RepresentationModule]):
@@ -1284,3 +1264,80 @@ class RepresentationTestCase(GenericTestCase[RepresentationModule]):
     def test_all_indices(self):
         """Test with all indices."""
         self._test_indices(indices=torch.arange(self.instance.max_id))
+
+
+class EdgeWeightingTestCase(GenericTestCase[pykeen.nn.weighting.EdgeWeighting]):
+    """Tests for message weighting."""
+
+    #: The number of entities
+    num_entities: int = 16
+
+    #: The number of triples
+    num_triples: int = 101
+
+    def post_instantiation_hook(self):  # noqa: D102
+        self.source, self.target = torch.randint(self.num_entities, size=(2, self.num_triples))
+
+    def test_message_weighting(self):
+        """Perform common tests for message weighting."""
+        weights = self.instance(source=self.source, target=self.target)
+
+        # check shape
+        assert weights.shape == self.source.shape
+
+        # check dtype
+        assert weights.dtype == torch.float32
+
+        # check finite values (e.g. due to division by zero)
+        assert torch.isfinite(weights).all()
+
+        # check non-negativity
+        assert (weights >= 0.).all()
+
+
+class DecompositionTestCase(GenericTestCase[pykeen.nn.message_passing.Decomposition]):
+    """Tests for relation-specific weight decomposition message passing classes."""
+
+    #: The input dimension
+    input_dim: int = 3
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        self.output_dim = self.input_dim
+        self.factory = Nations().training
+        self.source, self.edge_type, self.target = self.factory.mapped_triples.t()
+        self.x = torch.rand(self.factory.num_entities, self.input_dim)
+        kwargs["input_dim"] = self.input_dim
+        kwargs["num_relations"] = self.factory.num_relations
+        return kwargs
+
+    def test_forward(self):
+        """Test the :meth:`Decomposition.forward` function."""
+        for node_keep_mask in [None, torch.rand(size=(self.factory.num_entities,)) < 0.5]:
+            for edge_weights in [None, torch.rand_like(self.source, dtype=torch.get_default_dtype())]:
+                y = self.instance(
+                    x=self.x,
+                    node_keep_mask=node_keep_mask,
+                    source=self.source,
+                    target=self.target,
+                    edge_type=self.edge_type,
+                    edge_weights=edge_weights,
+                )
+                assert y.shape == (self.x.shape[0], self.output_dim)
+
+
+class BasesDecompositionTestCase(DecompositionTestCase):
+    """Tests for bases Decomposition."""
+
+    cls = pykeen.nn.message_passing.BasesDecomposition
+
+
+class LiteralTestCase(InteractionTestCase):
+    """Tests for literal ineractions."""
+
+    cls = LiteralInteraction
+
+    def _exp_score(self, h, r, t) -> torch.FloatTensor:  # noqa: D102
+        h_proj = self.instance.combination(*h)
+        t_proj = self.instance.combination(*t)
+        return self.instance.base(h_proj, r, t_proj)

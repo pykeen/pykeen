@@ -28,9 +28,10 @@ The following code will create a scenario in which training will stop
 
 from typing import Collection, Type
 
+from class_resolver import Resolver, get_subclasses
+
 from .early_stopping import EarlyStopper, StopperCallback  # noqa: F401
 from .stopper import NopStopper, Stopper
-from ..utils import Resolver, get_subclasses
 
 __all__ = [
     'Stopper',

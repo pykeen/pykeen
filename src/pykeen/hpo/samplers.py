@@ -17,9 +17,8 @@ tpe     :class:`optuna.samplers.TPESampler`
 
 from typing import Set, Type
 
+from class_resolver import Resolver
 from optuna.samplers import BaseSampler, GridSampler, RandomSampler, TPESampler
-
-from ..utils import Resolver
 
 __all__ = [
     'sampler_resolver',

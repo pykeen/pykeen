@@ -76,18 +76,6 @@ class _NegativeSamplingTestCase:
         # Check that all elements got corrupted
         assert (negative_batch != self.positive_batch).any(dim=1).all()
 
-        # Check whether filtering works correctly
-        # First giving an example where all triples have to be filtered
-        _, batch_filter = self.negative_sampler.filter_negative_triples(negative_batch=self.positive_batch)
-        # The filter should remove all triples
-        assert batch_filter.sum() == 0
-        # Create an example where no triples will be filtered
-        _, batch_filter = self.negative_sampler.filter_negative_triples(
-            negative_batch=(self.positive_batch + self.negative_sampler.num_entities),
-        )
-        # The filter should not remove any triple
-        assert self.positive_batch.size()[0] == batch_filter.sum()
-
         # Generate scaled negative sample
         scaled_negative_batch, _ = self.scaling_negative_sampler.sample(
             positive_batch=self.positive_batch,
@@ -95,6 +83,10 @@ class _NegativeSamplingTestCase:
 
         assert scaled_negative_batch.shape[0] == self.positive_batch.shape[0] * self.num_negs_per_pos
         assert scaled_negative_batch.shape[1] == self.positive_batch.shape[1]
+
+    def test_small_batch(self):
+        """Test on a small batch."""
+        self.negative_sampler.sample(positive_batch=self.positive_batch[:1])
 
 
 class BasicNegativeSamplerTest(_NegativeSamplingTestCase, unittest.TestCase):
@@ -150,7 +142,7 @@ class GraphSamplerTest(unittest.TestCase):
             # sample a batch
             batch_indices = []
             for j in self.graph_sampler:
-                batch_indices.append(j)
+                batch_indices.append(torch.as_tensor(j))
             batch = torch.stack(batch_indices)
 
             # check shape

@@ -28,12 +28,14 @@ class SklearnMetricResults(MetricResults):
 
     #: The area under the ROC curve
     roc_auc_score: float = field(metadata=dict(
-        doc='The area under the ROC curve between [0.0, 1.0]. Higher is better.',
+        name="AUC-ROC",
+        doc='The area under the ROC curve, on [0, 1]. Higher is better.',
         f=metrics.roc_auc_score,
     ))
     #: The area under the precision-recall curve
     average_precision_score: float = field(metadata=dict(
-        doc='The area under the precision-recall curve, between [0.0, 1.0]. Higher is better.',
+        name="Average Precision",
+        doc='The area under the precision-recall curve, on [0, 1]. Higher is better.',
         f=metrics.average_precision_score,
     ))
 
@@ -71,11 +73,10 @@ class SklearnEvaluator(Evaluator):
     all_scores: Dict[Tuple[Any, ...], np.ndarray]
     all_positives: Dict[Tuple[Any, ...], np.ndarray]
 
-    def __init__(self, automatic_memory_optimization: bool = True, **kwargs):
+    def __init__(self, **kwargs):
         super().__init__(
             filtered=False,
             requires_positive_mask=True,
-            automatic_memory_optimization=automatic_memory_optimization,
             **kwargs,
         )
         self.all_scores = {}
