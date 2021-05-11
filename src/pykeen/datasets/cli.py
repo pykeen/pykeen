@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """Run dataset CLI."""
-import itertools
+
+import itertools as itt
 import logging
 import pathlib
 from textwrap import dedent
@@ -12,7 +13,7 @@ import pandas
 from more_click import verbose_option
 from tqdm import tqdm
 
-from pykeen.datasets import get_dataset
+from . import get_dataset
 
 
 @click.group()
@@ -180,19 +181,18 @@ def _analyze(dataset, force, countplots, directory: Union[None, str, pathlib.Pat
 @main.command()
 @verbose_option
 @click.option('--dataset', help='Regex for filtering datasets by name')
-def verify(
-    dataset: str,
-):
+def verify(dataset: str):
     """Verify dataset integrity."""
     data = []
     keys = None
     for name, dataset in _iter_datasets(regex_name_filter=dataset):
         dataset_instance = get_dataset(dataset=dataset)
-        data.append(list(itertools.chain(
+        data.append(list(itt.chain(
             [name],
-            itertools.chain(*(
-                (f.num_entities, f.num_relations)
-                for _, f in sorted(dataset_instance.factory_dict.items()))),
+            itt.chain.from_iterable(
+                (triples_factory.num_entities, triples_factory.num_relations)
+                for _, triples_factory in sorted(dataset_instance.factory_dict.items())
+            ),
         )))
         keys = keys or sorted(dataset_instance.factory_dict.keys())
     if not keys:
@@ -202,13 +202,12 @@ def verify(
         columns=["name"] + [f"num_{part}_{a}" for part in keys for a in ("entities", "relations")],
     )
     valid = None
-    for part in ("validation", "testing"):
-        for a in ("entities", "relations"):
-            this_valid = df[f"num_training_{a}"] == df[f"num_{part}_{a}"]
-            if valid is None:
-                valid = this_valid
-            else:
-                valid = valid & this_valid
+    for part, a in itt.product(("validation", "testing"), ("entities", "relations")):
+        this_valid = df[f"num_training_{a}"] == df[f"num_{part}_{a}"]
+        if valid is None:
+            valid = this_valid
+        else:
+            valid = valid & this_valid
     df["valid"] = valid
     print(df.to_markdown())
 
