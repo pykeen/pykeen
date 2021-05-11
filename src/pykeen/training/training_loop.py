@@ -84,6 +84,9 @@ def _get_optimizer_kwargs(optimizer: Optimizer) -> Mapping[str, Any]:
 class TrainingLoop(ABC):
     """A training loop."""
 
+    model: Model
+    optimizer: Optimizer
+
     losses_per_epochs: List[float]
     loss_blacklist: Optional[List[Type[Loss]]] = None
 
@@ -438,7 +441,7 @@ class TrainingLoop(ABC):
         if result_tracker is not None:
             callback.register_callback(TrackerCallback(result_tracker))
 
-        callback.register_loop(self)
+        callback.register_training_loop(self)
 
         # Take the biggest possible training batch_size, if batch_size not set
         batch_size_sufficient = False

@@ -38,18 +38,28 @@ class TrainingCallback:
 
     def __init__(self):
         """Initialize the callback."""
-        self._loop = None
+        self._training_loop = None
 
     @property
-    def loop(self):  # noqa:D401
+    def training_loop(self):  # noqa:D401
         """The training loop."""
-        if self._loop is None:
+        if self._training_loop is None:
             raise ValueError('Callback was never initialized')
-        return self._loop
+        return self._training_loop
 
-    def register_loop(self, loop) -> None:
+    @property
+    def model(self):  # noqa:D401
+        """The model, accessed via the training loop."""
+        return self.training_loop.model
+
+    @property
+    def optimizer(self):  # noqa:D401
+        """The optimizer, accessed via the training loop."""
+        return self.training_loop.optimizer
+
+    def register_training_loop(self, training_loop) -> None:
         """Register the training loop."""
-        self._loop = loop
+        self._training_loop = training_loop
 
     def on_batch(self, epoch: int, batch_loss: float, **kwargs: Any) -> None:
         """Call for training batches."""
@@ -96,17 +106,17 @@ class MultiTrainingCallback(TrainingCallback):
         else:
             self.callbacks = list(callbacks)
 
-    def register_loop(self, loop) -> None:
+    def register_training_loop(self, loop) -> None:
         """Register the training loop."""
-        super().register_loop(loop=loop)
+        super().register_training_loop(training_loop=loop)
         for callback in self.callbacks:
-            callback.register_loop(loop=loop)
+            callback.register_training_loop(training_loop=loop)
 
     def register_callback(self, callback: TrainingCallback) -> None:
         """Register a callback."""
         self.callbacks.append(callback)
-        if self._loop is not None:
-            callback.register_loop(self._loop)
+        if self._training_loop is not None:
+            callback.register_training_loop(self._training_loop)
 
     def on_batch(self, epoch: int, batch_loss: float, **kwargs: Any) -> None:
         """Call for each batch."""
