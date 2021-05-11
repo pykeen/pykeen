@@ -79,14 +79,18 @@ class _NegativeSamplingTestCase:
         # check bounds: tails
         assert _array_check_bounds(negative_batch[:, 2], low=0, high=self.triples_factory.num_entities)
 
+        positive_batch = self._update_positive_batch(self.positive_batch, batch_filter)
+
+        assert (negative_batch != positive_batch).any(dim=1).all()
+
+    def _update_positive_batch(self, positive_batch, batch_filter):
         # cf. slcwa training loop, mr loss helper
-        positive_batch = self.positive_batch
         if self.num_negs_per_pos > 1:
             positive_batch = positive_batch.repeat(self.num_negs_per_pos, 1)
 
         if batch_filter is not None:
             positive_batch = positive_batch[batch_filter]
-        assert (negative_batch != positive_batch).any(dim=1).all()
+        return positive_batch
 
     def test_small_batch(self):
         """Test on a small batch."""
@@ -107,16 +111,17 @@ class BasicNegativeSamplerTest(_NegativeSamplingTestCase, unittest.TestCase):
         else:
             assert batch_filter is None
 
+        positive_batch = self._update_positive_batch(self.positive_batch, batch_filter)
         # test that the relations were not changed
-        assert (self.positive_batch[:, 1] == negative_batch[:, 1]).all()
+        assert (positive_batch[:, 1] == negative_batch[:, 1]).all()
 
         # Test that half of the subjects and half of the objects are corrupted
         half_size = self.positive_batch.shape[0] // 2
-        num_subj_corrupted = (self.positive_batch[:, 0] != negative_batch[:, 0]).sum()
-        num_obj_corrupted = (self.positive_batch[:, 2] != negative_batch[:, 2]).sum()
+        num_subj_corrupted = (positive_batch[:, 0] != negative_batch[:, 0]).sum()
+        num_obj_corrupted = (positive_batch[:, 2] != negative_batch[:, 2]).sum()
         assert num_obj_corrupted - 1 <= num_subj_corrupted
         assert num_subj_corrupted - 1 <= num_obj_corrupted
-        assert num_subj_corrupted - 1 <= self.positive_batch.shape[0]
+        assert num_subj_corrupted - 1 <= positive_batch.shape[0]
         assert half_size - 1 <= num_subj_corrupted
 
 
@@ -134,8 +139,9 @@ class BernoulliNegativeSamplerTest(_NegativeSamplingTestCase, unittest.TestCase)
         else:
             assert batch_filter is None
 
+        positive_batch = self._update_positive_batch(self.positive_batch, batch_filter)
         # test that the relations were not changed
-        assert (self.positive_batch[:, 1] == negative_batch[:, 1]).all()
+        assert (positive_batch[:, 1] == negative_batch[:, 1]).all()
 
 
 class GraphSamplerTest(unittest.TestCase):
