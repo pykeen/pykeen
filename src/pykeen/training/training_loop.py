@@ -635,8 +635,11 @@ class TrainingLoop(ABC):
                 self._epoch = epoch
 
                 should_stop = False
-                if stopper is not None and stopper.should_evaluate(epoch) and stopper.should_stop(epoch):
-                    should_stop = True
+                if stopper is not None and stopper.should_evaluate(epoch):
+                    if stopper.should_stop(epoch):
+                        should_stop = True
+                    # Since the model is also used within the stopper, its graph and cache have to be cleared
+                    self._free_graph_and_cache()
                 # When the stopper obtained a new best epoch, this model has to be saved for reconstruction
                 if (
                         stopper is not None
@@ -647,6 +650,10 @@ class TrainingLoop(ABC):
                     last_best_epoch = epoch
             # When the training loop failed, a fallback checkpoint is created to resume training.
             except (MemoryError, RuntimeError) as e:
+                # During automatic memory optimization only the error message is of interest
+                if only_size_probing:
+                    raise e
+
                 logger.warning(f'The training loop just failed during epoch {epoch} due to error {str(e)}.')
                 if checkpoint_on_failure_file_path:
                     # When there wasn't a best epoch the checkpoint path should be None
@@ -658,10 +665,10 @@ class TrainingLoop(ABC):
                         best_epoch_model_checkpoint_file_path=best_epoch_model_checkpoint_file_path,
                     )
                     logger.warning(
-                        "However, don't worry we got you covered. PyKEEN just saved a checkpoint when this happened "
-                        f"at '{checkpoint_on_failure_file_path}'. To resume training from the checkpoint file just "
-                        f"restart your code and pass this file path to the training loop or pipeline you used "
-                        f"as 'checkpoint_file' argument.",
+                        "However, don't worry we got you covered. PyKEEN just saved a checkpoint when this "
+                        f"happened at '{checkpoint_on_failure_file_path}'. To resume training from the checkpoint "
+                        f"file just restart your code and pass this file path to the training loop or pipeline you "
+                        f"used as 'checkpoint_file' argument.",
                     )
                 # Delete temporary best epoch model
                 if best_epoch_model_file_path is not None and best_epoch_model_file_path.is_file():
