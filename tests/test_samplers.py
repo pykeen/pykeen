@@ -77,8 +77,14 @@ class _NegativeSamplingTestCase:
         # check bounds: tails
         assert _array_check_bounds(negative_batch[:, 2], low=0, high=self.triples_factory.num_entities)
 
-        # Check that all elements got corrupted
-        assert (negative_batch != self.positive_batch).any(dim=1).all()
+        # cf. slcwa training loop, mr loss helper
+        positive_batch = self.positive_batch
+        if self.num_negs_per_pos > 1:
+            positive_batch = positive_batch.repeat(self.num_negs_per_pos, 1)
+
+        if batch_filter is not None:
+            positive_batch = positive_batch[batch_filter]
+        assert (negative_batch != positive_batch).any(dim=1).all()
 
     def test_small_batch(self):
         """Test on a small batch."""
