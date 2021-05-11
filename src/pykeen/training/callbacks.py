@@ -21,7 +21,7 @@ be useful to log all batch losses. This could be accomplished with the following
             print(epoch, batch_loss)
 """
 
-from typing import Collection, List, Union
+from typing import Any, Collection, List, Union
 
 from ..trackers import ResultTracker
 
@@ -51,16 +51,16 @@ class TrainingCallback:
         """Register the training loop."""
         self._loop = loop
 
-    def on_batch(self, epoch: int, batch_loss: float) -> None:
+    def on_batch(self, epoch: int, batch_loss: float, **kwargs: Any) -> None:
         """Call for training batches."""
 
-    def post_batch(self, epoch: int, batch) -> None:
+    def post_batch(self, epoch: int, batch, **kwargs: Any) -> None:
         """Call for training batches."""
 
-    def post_epoch(self, epoch: int, epoch_loss: float) -> None:
+    def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:
         """Call after epoch."""
 
-    def post_train(self, losses: List[float]) -> None:
+    def post_train(self, losses: List[float], **kwargs: Any) -> None:
         """Call after training."""
 
 
@@ -71,7 +71,7 @@ class TrackerCallback(TrainingCallback):
         super().__init__()
         self.result_tracker = result_tracker
 
-    def post_epoch(self, epoch: int, epoch_loss: float) -> None:
+    def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:
         """Log the epoch and loss."""
         self.result_tracker.log_metrics({'loss': epoch_loss}, step=epoch)
 
@@ -108,22 +108,22 @@ class MultiTrainingCallback(TrainingCallback):
         if self._loop is not None:
             callback.register_loop(self._loop)
 
-    def on_batch(self, epoch: int, batch_loss: float) -> None:
+    def on_batch(self, epoch: int, batch_loss: float, **kwargs: Any) -> None:
         """Call for each batch."""
         for callback in self.callbacks:
             callback.on_batch(epoch=epoch, batch_loss=batch_loss)
 
-    def post_batch(self, epoch: int, batch) -> None:
+    def post_batch(self, epoch: int, batch, **kwargs: Any) -> None:
         """Call after each batch."""
         for callback in self.callbacks:
             callback.post_batch(epoch=epoch, batch=batch)
 
-    def post_epoch(self, epoch: int, epoch_loss: float) -> None:
+    def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:
         """Call after epoch."""
         for callback in self.callbacks:
             callback.post_epoch(epoch=epoch, epoch_loss=epoch_loss)
 
-    def post_train(self, losses: List[float]) -> None:
+    def post_train(self, losses: List[float], **kwargs: Any) -> None:
         """Call after training."""
         for callback in self.callbacks:
             callback.post_train(losses=losses)
