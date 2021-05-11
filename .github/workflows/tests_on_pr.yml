@@ -20,12 +20,12 @@ jobs:
           pr-message: |-
             Congrats on making your first Pull Request and thanks for taking the time to improve PyKEEN! ❤️! 🎉
   lint:
-    if: github.event.repository.full_name != 'pykeen/pykeen'
+    if: github.event.pull_request.head.repo.full_name != 'pykeen/pykeen' && github.event.sender.login == 'PyKEEN-bot'
     name: Lint
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [ 3.7, 3.8 ]
+        python-version: [ 3.7, 3.9 ]
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python ${{ matrix.python-version }}
@@ -50,12 +50,12 @@ jobs:
       - name: Check static typing with MyPy
         run: tox -e mypy
   docs:
-    if: github.event.repository.full_name != 'pykeen/pykeen'
+    if: github.event.pull_request.head.repo.full_name != 'pykeen/pykeen' && github.event.sender.login == 'PyKEEN-bot'
     name: Documentation
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [ 3.7, 3.8 ]
+        python-version: [ 3.7, 3.9 ]
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python ${{ matrix.python-version }}
@@ -79,12 +79,12 @@ jobs:
           sudo apt-get install graphviz
           tox -e docs
   tests:
-    if: github.event.repository.full_name != 'pykeen/pykeen'
+    if: github.event.pull_request.head.repo.full_name != 'pykeen/pykeen' && github.event.sender.login == 'PyKEEN-bot'
     name: Tests
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [ 3.7, 3.8 ]
+        python-version: [ 3.7, 3.9 ]
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python ${{ matrix.python-version }}
@@ -100,12 +100,12 @@ jobs:
       - name: Run doctests
         run: tox -e doctests
   windows:
-    if: github.event.repository.full_name != 'pykeen/pykeen'
+    if: github.event.pull_request.head.repo.full_name != 'pykeen/pykeen' && github.event.sender.login == 'PyKEEN-bot'
     name: Windows
     runs-on: windows-latest
     strategy:
       matrix:
-        python-version: [ 3.7, 3.8 ]
+        python-version: [ 3.7, 3.9 ]
     steps:
       - uses: actions/checkout@v2
       - uses: conda-incubator/setup-miniconda@v2
