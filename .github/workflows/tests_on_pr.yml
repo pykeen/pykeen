@@ -19,6 +19,18 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           pr-message: |-
             Congrats on making your first Pull Request and thanks for taking the time to improve PyKEEN! ❤️! 🎉
+  analyze_environment:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Step 0
+        id: Event-message
+        run: 'echo "payload: ${{ toJson(github.event) }}"'
+      - name: Step 1
+        id: Event-message-1
+        run: 'echo "payload: ${{ toJson(github.event.sender.login) }}"'
+      - name: Step 2
+        id: Event-message-2
+        run: 'echo "payload: ${{ toJson(github.event.head.repo.full_name) }}"'
   lint:
     if: ${{ !startsWith(github.event.head.repo.full_name, 'pykeen/pykeen') && github.event.sender.login == 'PyKEEN-bot' }}
     name: Lint
@@ -50,7 +62,7 @@ jobs:
       - name: Check static typing with MyPy
         run: tox -e mypy
   docs:
-    if: ${{ !startsWith(github.event.head.repo.full_name, 'pykeen/pykeen') && github.event.sender.login == 'PyKEEN-bot' }}
+    if: ${{ !startsWith(github.event.head.repo.full_name, 'pykeen/pykeen') && github.event.sender.login == 'PyKEEN-bot' }}i
     name: Documentation
     runs-on: ubuntu-latest
     strategy:
@@ -79,7 +91,7 @@ jobs:
           sudo apt-get install graphviz
           tox -e docs
   tests:
-    if: ${{ !startsWith(github.event.head.repo.full_name, 'pykeen/pykeen') && github.event.sender.login == 'PyKEEN-bot' }}
+    if: ${{ !startsWith(github.event.head.repo.full_name, 'pykeen/pykeen') && github.event.sender.login == 'PyKEEN-bot' }}i
     name: Tests
     runs-on: ubuntu-latest
     strategy:
@@ -100,7 +112,7 @@ jobs:
       - name: Run doctests
         run: tox -e doctests
   windows:
-    if: ${{ !startsWith(github.event.head.repo.full_name, 'pykeen/pykeen') && github.event.sender.login == 'PyKEEN-bot' }}
+    if: ${{ !startsWith(github.event.head.repo.full_name, 'pykeen/pykeen') && github.event.sender.login == 'PyKEEN-bot' }}i
     name: Windows
     runs-on: windows-latest
     strategy:
