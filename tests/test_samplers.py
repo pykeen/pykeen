@@ -61,6 +61,8 @@ class _NegativeSamplingTestCase:
         negative_batch, batch_filter = self.instance.sample(positive_batch=self.positive_batch)
         if self.instance.filterer is not None:
             assert batch_filter is not None
+            assert batch_filter.shape == (self.batch_size * self.num_negs_per_pos,)
+            assert batch_filter.dtype == torch.bool
         else:
             assert batch_filter is None
 
