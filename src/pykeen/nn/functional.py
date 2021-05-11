@@ -1081,3 +1081,59 @@ def quat_e_interaction(
             _split_quaternion(r),
         ) * t
     ).sum(dim=-1)
+
+
+def hake_interaction(
+    phase_h: torch.FloatTensor,
+    mod_h: torch.FloatTensor,
+    phase_r: torch.FloatTensor,
+    mod_r: torch.FloatTensor,
+    bias_r: torch.FloatTensor,
+    phase_t: torch.FloatTensor,
+    mod_t: torch.FloatTensor,
+    gamma: float = 12.0,
+    modulus_weight: float = 1.0,
+    phase_weight: float = 0.5,
+) -> torch.FloatTensor:
+    """
+    Evaluate the HAKE scoring function.
+
+    :param phase_h: shape: (batch_size, num_heads, 1, 1, dim)
+        The phases for the head entities.
+    :param mod_h: shape: (batch_size, num_heads, 1, 1, dim)
+        The modulus for the head entities.
+    :param phase_r: (batch_size, 1, num_relations, 1, dim)
+        The phases for the relations.
+    :param mod_r: (batch_size, 1, num_relations, 1, dim)
+        The modulus for the relations.
+    :param bias_r: (batch_size, 1, num_relations, 1, dim)
+        The bias for the relations.
+    :param phase_t: shape: (batch_size, 1, 1, num_tails, dim)
+        The phases for the tail entities.
+    :param mod_t: shape: (batch_size, 1, 1, num_tails, dim)
+        The modulus for the tail entities.
+    :param phase_weight:
+        A weight for the phase term.
+    :param modulus_weight:
+        A weight for the modulus term.
+    :param gamma:
+        A constant offset.
+
+    :return:
+        A score tensor.
+    """
+    bias_r = bias_r.clamp(max=1)
+    mod_r = mod_r.abs()
+    indicator = (bias_r < -mod_r)
+    bias_r[indicator] = -mod_r[indicator]
+
+    # compute phase score
+    phase_score = phase_h + phase_r - phase_t
+    phase_score = (0.5 * phase_score).sin().norm(p=1, dim=-1)
+
+    # compute modulus score
+    modulus_score = mod_h * (mod_r + bias_r) - mod_t * (1 - bias_r)
+    modulus_score = modulus_score.norm(p=2, dim=-1)
+
+    # combine
+    return gamma - (phase_weight * phase_score + modulus_weight * modulus_score)
