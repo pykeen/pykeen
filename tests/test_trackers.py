@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Tests for result trackers."""
-
+from pykeen.trackers.base import ConsoleTracker
 from pykeen.trackers.file import CSVResultTracker, JSONResultTracker
 from tests import cases
 
@@ -16,3 +16,9 @@ class JSONResultTrackerTests(cases.FileResultTrackerTests):
     """Tests for JSONResultTracker."""
 
     cls = JSONResultTracker
+
+
+class ConsoleTrackerTests(cases.ResultTrackerTests):
+    """Tests for console tracker."""
+
+    cls = ConsoleTracker
