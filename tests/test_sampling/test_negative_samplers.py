@@ -13,16 +13,8 @@ class BasicNegativeSamplerTest(cases.NegativeSamplerGenericTestCase):
 
     def test_sample_basic(self):
         """Test if relations and half of heads and tails are not corrupted."""
-        # Generate negative samples
         negative_batch, batch_filter = self.instance.sample(positive_batch=self.positive_batch)
-        if self.instance.filterer:
-            assert batch_filter is not None
-        else:
-            assert batch_filter is None
-
         positive_batch = self._update_positive_batch(self.positive_batch, batch_filter)
-        # test that the relations were not changed
-        assert (positive_batch[:, 1] == negative_batch[:, 1]).all()
 
         # Test that half of the subjects and half of the objects are corrupted
         half_size = self.positive_batch.shape[0] // 2
@@ -38,16 +30,3 @@ class BernoulliNegativeSamplerTest(cases.NegativeSamplerGenericTestCase):
     """Test the Bernoulli negative sampler."""
 
     cls = BernoulliNegativeSampler
-
-    def test_sample_bern(self):
-        """Test if relations are not corrupted."""
-        # Generate negative sample for additional tests
-        negative_batch, batch_filter = self.instance.sample(positive_batch=self.positive_batch)
-        if self.instance.filterer:
-            assert batch_filter is not None
-        else:
-            assert batch_filter is None
-
-        positive_batch = self._update_positive_batch(self.positive_batch, batch_filter)
-        # test that the relations were not changed
-        assert (positive_batch[:, 1] == negative_batch[:, 1]).all()
