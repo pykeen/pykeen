@@ -148,10 +148,10 @@ def _analyze(dataset, force, countplots, directory: Union[None, str, pathlib.Pat
     if countplots:
         entity_count_df = (
             dfs['entity_count']
-                .groupby('entity_label')
-                .sum()
-                .reset_index()
-                .sort_values('count', ascending=False)
+            .groupby('entity_label')
+            .sum()
+            .reset_index()
+            .sort_values('count', ascending=False)
         )
         fig, ax = plt.subplots(1, 1)
         sns.barplot(data=entity_count_df, y='entity_label', x='count', ax=ax)
@@ -163,10 +163,10 @@ def _analyze(dataset, force, countplots, directory: Union[None, str, pathlib.Pat
 
         relation_count_df = (
             dfs['relation_count']
-                .groupby('relation_label')
-                .sum()
-                .reset_index()
-                .sort_values('count', ascending=False)
+            .groupby('relation_label')
+            .sum()
+            .reset_index()
+            .sort_values('count', ascending=False)
         )
         fig, ax = plt.subplots(1, 1)
         sns.barplot(data=relation_count_df, y='relation_label', x='count', ax=ax)
@@ -188,9 +188,19 @@ def verify(
     keys = None
     for name, dataset in _iter_datasets(regex_name_filter=dataset):
         dataset_instance = get_dataset(dataset=dataset)
-        data.append(list(itertools.chain([name], itertools.chain(*((f.num_entities, f.num_relations) for _, f in sorted(dataset_instance.factory_dict.items()))))))
+        data.append(list(itertools.chain(
+            [name],
+            itertools.chain(*(
+                (f.num_entities, f.num_relations)
+                for _, f in sorted(dataset_instance.factory_dict.items()))),
+        )))
         keys = keys or sorted(dataset_instance.factory_dict.keys())
-    df = pandas.DataFrame(data=data, columns=["name"] + [f"num_{part}_{a}" for part in keys for a in ("entities", "relations")])
+    if not keys:
+        return
+    df = pandas.DataFrame(
+        data=data,
+        columns=["name"] + [f"num_{part}_{a}" for part in keys for a in ("entities", "relations")],
+    )
     valid = None
     for part in ("validation", "testing"):
         for a in ("entities", "relations"):

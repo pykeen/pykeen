@@ -584,6 +584,7 @@ class PackedZipRemoteDataset(LazyDataset):
         )
 
     def _load_validation(self) -> None:
+        assert self._training is not None
         self._validation = self._load_helper(
             self.relative_validation_path,
             entity_to_id=self._training.entity_to_id,
