@@ -577,12 +577,25 @@ class PackedZipRemoteDataset(LazyDataset):
 
     def _load(self) -> None:  # noqa: D102
         self._training = self._load_helper(self.relative_training_path)
-        self._testing = self._load_helper(self.relative_testing_path)
+        self._testing = self._load_helper(
+            self.relative_testing_path,
+            entity_to_id=self._training.entity_to_id,
+            relation_to_id=self._training.relation_to_id,
+        )
 
     def _load_validation(self) -> None:
-        self._validation = self._load_helper(self.relative_validation_path)
+        self._validation = self._load_helper(
+            self.relative_validation_path,
+            entity_to_id=self._training.entity_to_id,
+            relation_to_id=self._training.relation_to_id,
+        )
 
-    def _load_helper(self, relative_path: pathlib.PurePath) -> TriplesFactory:
+    def _load_helper(
+        self,
+        relative_path: pathlib.PurePath,
+        entity_to_id: Optional[Mapping[str, Any]] = None,
+        relation_to_id: Optional[Mapping[str, Any]] = None,
+    ) -> TriplesFactory:
         if not self.path.is_file():
             if self.url is None:
                 raise ValueError('url should be set')
@@ -603,6 +616,8 @@ class PackedZipRemoteDataset(LazyDataset):
                     triples=df.values,
                     create_inverse_triples=self.create_inverse_triples,
                     metadata={'path': relative_path},
+                    entity_to_id=entity_to_id,
+                    relation_to_id=relation_to_id,
                 )
 
 
