@@ -17,7 +17,7 @@ class BasicNegativeSamplerTest(cases.NegativeSamplerGenericTestCase):
         positive_batch = self._update_positive_batch(self.positive_batch, batch_filter)
 
         # Test that half of the subjects and half of the objects are corrupted
-        half_size = self.positive_batch.shape[0] // 2
+        half_size = positive_batch.shape[0] // 2
         num_subj_corrupted = (positive_batch[:, 0] != negative_batch[:, 0]).sum()
         num_obj_corrupted = (positive_batch[:, 2] != negative_batch[:, 2]).sum()
         assert num_obj_corrupted - 1 <= num_subj_corrupted
