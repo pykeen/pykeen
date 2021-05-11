@@ -966,7 +966,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
 
     def _help_test_cli(self, args):
         """Test running the pipeline on all models."""
-        if issubclass(self.cls, pykeen.models.RGCN):
+        if issubclass(self.cls, pykeen.models.RGCN) or self.cls is pykeen.models.ERModel:
             self.skipTest(f"Cannot choose interaction via CLI for {self.cls}.")
         runner = CliRunner()
         cli = build_cli_from_cls(self.cls)
