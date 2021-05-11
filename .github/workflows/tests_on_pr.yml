@@ -1,13 +1,26 @@
-name: Tests master
+name: Tests on PR
 
 on:
-  push:
+  pull_request_target:
+    types:
+      - opened
+      - edited
+      - synchronize
     branches:
       - master
 
 jobs:
+  welcome:
+    runs-on: ubuntu-latest
+    if: github.event.action == 'opened'
+    steps:
+      - uses: actions/first-interaction@v1
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          pr-message: |-
+            Congrats on making your first Pull Request and thanks for taking the time to improve PyKEEN! ❤️! 🎉
   lint:
-    if: "!contains(github.event.head_commit.message, 'skip ci')"
+    if: ${{ !startsWith(github.event.head.repo.full_name, 'pykeen/pykeen') && github.event.sender.login == 'PyKEEN-bot' }}
     name: Lint
     runs-on: ubuntu-latest
     strategy:
@@ -37,7 +50,7 @@ jobs:
       - name: Check static typing with MyPy
         run: tox -e mypy
   docs:
-    if: "!contains(github.event.head_commit.message, 'skip ci')"
+    if: ${{ !startsWith(github.event.head.repo.full_name, 'pykeen/pykeen') && github.event.sender.login == 'PyKEEN-bot' }}
     name: Documentation
     runs-on: ubuntu-latest
     strategy:
@@ -66,7 +79,7 @@ jobs:
           sudo apt-get install graphviz
           tox -e docs
   tests:
-    if: "!contains(github.event.head_commit.message, 'skip ci')"
+    if: ${{ !startsWith(github.event.head.repo.full_name, 'pykeen/pykeen') && github.event.sender.login == 'PyKEEN-bot' }}
     name: Tests
     runs-on: ubuntu-latest
     strategy:
@@ -87,7 +100,7 @@ jobs:
       - name: Run doctests
         run: tox -e doctests
   windows:
-    if: "!contains(github.event.head_commit.message, 'skip ci')"
+    if: ${{ !startsWith(github.event.head.repo.full_name, 'pykeen/pykeen') && github.event.sender.login == 'PyKEEN-bot' }}
     name: Windows
     runs-on: windows-latest
     strategy:
@@ -108,14 +121,3 @@ jobs:
         run: pytest --durations=20 tests -m "not slow"
       - name: Run slow tests
         run: pytest --durations=20 tests -m "slow"
-  readthedocs:
-    if: "!contains(github.event.head_commit.message, 'skip ci')"
-    name: Read the Docs
-    runs-on: ubuntu-latest
-    steps:
-      - name: Trigger RTDs build
-        uses: dfm/rtds-action@v1
-        with:
-          webhook_url: ${{ secrets.RTDS_WEBHOOK_URL }}
-          webhook_token: ${{ secrets.RTDS_WEBHOOK_TOKEN }}
-          commit_ref: ${{ github.ref }}
