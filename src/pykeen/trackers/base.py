@@ -40,7 +40,7 @@ class ResultTracker:
         """
 
 
-class ConsoleTracker(ResultTracker):
+class ConsoleResultTracker(ResultTracker):
     """A class that directly prints to console."""
 
     def __init__(
