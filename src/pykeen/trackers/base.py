@@ -4,6 +4,8 @@
 import re
 from typing import Any, Mapping, Optional, Pattern, Union
 
+from tqdm.auto import tqdm
+
 from ..utils import flatten_dictionary
 
 __all__ = [
@@ -80,7 +82,7 @@ class ConsoleResultTracker(ResultTracker):
 
     def start_run(self, run_name: Optional[str] = None) -> None:  # noqa: D102
         if run_name is not None and self.start_end_run:
-            print(f"Starting run: {run_name}")
+            tqdm.write(f"Starting run: {run_name}")
 
     def log_params(self, params: Mapping[str, Any], prefix: Optional[str] = None) -> None:  # noqa: D102
         if not self.print_metrics:
@@ -88,7 +90,7 @@ class ConsoleResultTracker(ResultTracker):
 
         for key, value in flatten_dictionary(dictionary=params).items():
             if not self.parameter_filter or self.parameter_filter.match(key):
-                print(f"Parameter: {key} = {value}")
+                tqdm.write(f"Parameter: {key} = {value}")
 
     def log_metrics(
         self,
@@ -99,11 +101,11 @@ class ConsoleResultTracker(ResultTracker):
         if not self.print_metrics:
             return
 
-        print(f"Step: {step}")
+        tqdm.write(f"Step: {step}")
         for key, value in flatten_dictionary(dictionary=metrics, prefix=prefix).items():
             if not self.metric_filter or self.metric_filter.match(key):
-                print(f"Parameter: {key} = {value}")
+                tqdm.write(f"Parameter: {key} = {value}")
 
     def end_run(self) -> None:  # noqa: D102
         if self.start_end_run:
-            print("Finished run.")
+            tqdm.write("Finished run.")
