@@ -118,6 +118,38 @@ class ERMLPETests(cases.InteractionTestCase):
         return mlp(x).view(1, -1) @ t.view(-1, 1)
 
 
+class HAKETests(cases.InteractionTestCase):
+    """Tests for HAKE interaction."""
+
+    cls = pykeen.nn.modules.HAKEInteraction
+
+    def _exp_score(
+        self,
+        h_phase: torch.FloatTensor,
+        h_modulus: torch.FloatTensor,
+        r_phase: torch.FloatTensor,
+        r_modulus: torch.FloatTensor,
+        r_bias: torch.FloatTensor,
+        t_phase: torch.FloatTensor,
+        t_modulus: torch.FloatTensor,
+        gamma: float,
+        modulus_weight: float,
+        phase_weight: float,
+    ) -> torch.FloatTensor:  # noqa: D102
+        # remove batch/num dimension
+        h_phase, h_modulus, r_phase, r_modulus, r_bias, t_phase, t_modulus = strip_dim(
+            h_phase, h_modulus, r_phase, r_modulus, r_bias, t_phase, t_modulus)
+        r_bias = r_bias.clamp(max=1)
+        r_modulus = r_modulus.abs()
+        indicator = (r_bias < -r_modulus)
+        r_bias[indicator] = -r_modulus[indicator]
+        phase = h_phase + r_phase - t_phase
+        phase_score = (0.5 * phase).sin().norm(p=1, dim=-1)
+        modulus = h_modulus * (r_modulus + r_bias) - t_modulus * (1 - r_bias)
+        modulus_score = modulus.norm(p=2, dim=-1)
+        return gamma - (phase_weight * phase_score + modulus_weight * modulus_score)
+
+
 class HolETests(cases.InteractionTestCase):
     """Tests for HolE interaction function."""
 

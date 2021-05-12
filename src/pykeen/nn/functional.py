@@ -1084,13 +1084,13 @@ def quat_e_interaction(
 
 
 def hake_interaction(
-    phase_h: torch.FloatTensor,
-    mod_h: torch.FloatTensor,
-    phase_r: torch.FloatTensor,
-    mod_r: torch.FloatTensor,
-    bias_r: torch.FloatTensor,
-    phase_t: torch.FloatTensor,
-    mod_t: torch.FloatTensor,
+    h_phase: torch.FloatTensor,
+    h_modulus: torch.FloatTensor,
+    r_phase: torch.FloatTensor,
+    r_modulus: torch.FloatTensor,
+    r_bias: torch.FloatTensor,
+    t_phase: torch.FloatTensor,
+    t_modulus: torch.FloatTensor,
     gamma: float = 12.0,
     modulus_weight: float = 1.0,
     phase_weight: float = 0.5,
@@ -1098,19 +1098,19 @@ def hake_interaction(
     """
     Evaluate the HAKE scoring function.
 
-    :param phase_h: shape: (batch_size, num_heads, 1, 1, dim)
+    :param h_phase: shape: (batch_size, num_heads, 1, 1, dim)
         The phases for the head entities.
-    :param mod_h: shape: (batch_size, num_heads, 1, 1, dim)
+    :param h_modulus: shape: (batch_size, num_heads, 1, 1, dim)
         The modulus for the head entities.
-    :param phase_r: (batch_size, 1, num_relations, 1, dim)
+    :param r_phase: (batch_size, 1, num_relations, 1, dim)
         The phases for the relations.
-    :param mod_r: (batch_size, 1, num_relations, 1, dim)
+    :param r_modulus: (batch_size, 1, num_relations, 1, dim)
         The modulus for the relations.
-    :param bias_r: (batch_size, 1, num_relations, 1, dim)
+    :param r_bias: (batch_size, 1, num_relations, 1, dim)
         The bias for the relations.
-    :param phase_t: shape: (batch_size, 1, 1, num_tails, dim)
+    :param t_phase: shape: (batch_size, 1, 1, num_tails, dim)
         The phases for the tail entities.
-    :param mod_t: shape: (batch_size, 1, 1, num_tails, dim)
+    :param t_modulus: shape: (batch_size, 1, 1, num_tails, dim)
         The modulus for the tail entities.
     :param phase_weight:
         A weight for the phase term.
@@ -1122,17 +1122,17 @@ def hake_interaction(
     :return:
         A score tensor.
     """
-    bias_r = bias_r.clamp(max=1)
-    mod_r = mod_r.abs()
-    indicator = (bias_r < -mod_r)
-    bias_r[indicator] = -mod_r[indicator]
+    r_bias = r_bias.clamp(max=1)
+    r_modulus = r_modulus.abs()
+    indicator = (r_bias < -r_modulus)
+    r_bias[indicator] = -r_modulus[indicator]
 
     # compute phase score
-    phase_score = phase_h + phase_r - phase_t
+    phase_score = h_phase + r_phase - t_phase
     phase_score = (0.5 * phase_score).sin().norm(p=1, dim=-1)
 
     # compute modulus score
-    modulus_score = mod_h * (mod_r + bias_r) - mod_t * (1 - bias_r)
+    modulus_score = h_modulus * (r_modulus + r_bias) - t_modulus * (1 - r_bias)
     modulus_score = modulus_score.norm(p=2, dim=-1)
 
     # combine

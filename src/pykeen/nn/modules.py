@@ -1225,6 +1225,66 @@ class QuatEInteraction(
     func = pkf.quat_e_interaction
 
 
+class HAKEInteraction(
+    FunctionalInteraction[
+        Tuple[torch.FloatTensor, torch.FloatTensor],
+        Tuple[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor],
+        Tuple[torch.FloatTensor, torch.FloatTensor],
+    ],
+):
+    """A module wrapper for the HAKE interaction function.
+
+    .. seealso :: :func:`pykeen.nn.functional.hake_interaction`
+    """
+
+    func = pkf.hake_interaction
+
+    #: phase + modulus
+    entity_shape = ("d", "d")
+    #: phase + modulus + bias
+    relation_shape = ("d", "d", "d")
+
+    def __init__(
+        self,
+        gamma: float = 12.0,
+        modulus_weight: float = 1.0,
+        phase_weight: float = 0.5,
+    ):
+        """
+        Initialize the interaction module.
+
+        :param gamma:
+            A constant offset.
+        :param modulus_weight:
+            The weight for the modulus term.
+        :param phase_weight:
+            The weight for the phase term.
+        """
+        super().__init__()
+        self.gamma = gamma
+        self.modulus_weight = modulus_weight
+        self.phase_weight = phase_weight
+
+    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
+        return dict(gamma=self.gamma, modulus_weight=self.modulus_weight, phase_weight=self.phase_weight)
+
+    @staticmethod
+    def _prepare_hrt_for_functional(
+        h: HeadRepresentation,
+        r: RelationRepresentation,
+        t: TailRepresentation,
+    ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
+        return dict(
+            h_phase=h[0],
+            h_modulus=h[1],
+            r_phase=r[0],
+            r_modulus=r[1],
+            r_bias=r[2],
+            t_phase=t[0],
+            t_modulus=t[1],
+        )
+
+
 class MonotonicAffineTransformationInteraction(
     Interaction[
         HeadRepresentation,
