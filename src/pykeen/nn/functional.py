@@ -1123,6 +1123,9 @@ def hake_interaction(
         The paper mentions a single trainable weight parameter :math:`\lambda`.
         The implementation uses two, one for modulus and one for phase.
 
+    .. seealso ::
+        official implementation: https://github.com/MIRALab-USTC/KGE-HAKE/blob/6a82e17855f465d4ec15b880da0d1faaa7c6100c/codes/models.py#L295-L365
+
     :param h_phase: shape: (batch_size, num_heads, 1, 1, dim)
         The phases for the head entities.
     :param h_modulus: shape: (batch_size, num_heads, 1, 1, dim)
