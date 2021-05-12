@@ -1088,11 +1088,10 @@ def hake_interaction(
     h_modulus: torch.FloatTensor,
     r_phase: torch.FloatTensor,
     r_modulus: torch.FloatTensor,
-    r_bias: torch.FloatTensor,
     t_phase: torch.FloatTensor,
     t_modulus: torch.FloatTensor,
-    modulus_weight: float = 1.0,
-    phase_weight: float = 0.5,
+    modulus_weight: torch.FloatTensor,
+    phase_weight: torch.FloatTensor,
 ) -> torch.FloatTensor:
     r"""
     Evaluate the HAKE scoring function from [zhang2020]_.
@@ -1113,47 +1112,42 @@ def hake_interaction(
 
         d_{r, p} = \|\sin ((h_p + r_p - t_p) / 2) \|_1
 
-    The authors argue that a modification of the modulus distance empirically improves the results
-    
-    .. math ::
-        d_{r, m}'(h, t) = \|h_m \odot r_m + (h_m + t_m) \cdot r_m' - t_m \|_2
-                        = \|h_m \odot \frac{r_m + r_m'}{1 - r_m'} - t_m \|_2
+    .. note ::
+        In the paper, a second version is mentioned where a different relation modulus
+        parametrization is used.
 
-    where :math:`r_m'` is named a _mixture bias_, and :math:`-r_m < r_m' < 1`.
+    .. note ::
+        The moduli are expected to be positive real numbers.
+
+    .. note ::
+        The paper mentions a single trainable weight parameter :math:`\lambda`.
+        The implementation uses two, one for modulus and one for phase.
 
     :param h_phase: shape: (batch_size, num_heads, 1, 1, dim)
         The phases for the head entities.
     :param h_modulus: shape: (batch_size, num_heads, 1, 1, dim)
-        The modulus for the head entities.
+        The modulus for the head entities. It is expected to be positive.
     :param r_phase: (batch_size, 1, num_relations, 1, dim)
         The phases for the relations.
     :param r_modulus: (batch_size, 1, num_relations, 1, dim)
-        The modulus for the relations.
-    :param r_bias: (batch_size, 1, num_relations, 1, dim)
-        The bias for the relations.
+        The modulus for the relations. It is expected to be positive.
     :param t_phase: shape: (batch_size, 1, 1, num_tails, dim)
         The phases for the tail entities.
     :param t_modulus: shape: (batch_size, 1, 1, num_tails, dim)
-        The modulus for the tail entities.
+        The modulus for the tail entities. It is expected to be positive.
     :param phase_weight:
-        A weight for the phase term.
+        A (trainable) scalar weight for the phase term.
     :param modulus_weight:
-        A weight for the modulus term.
-    :return:
+        A (trainable) scalar weight for the modulus term.
+
+    :return: shape: (batch_size, num_heads, num_relations, num_tails)
         A score tensor.
     """
-    r_bias = r_bias.clamp(max=1)
-    r_modulus = r_modulus.abs()
-    indicator = (r_bias < -r_modulus)
-    r_bias[indicator] = -r_modulus[indicator]
-
     # compute phase score
-    phase_score = h_phase + r_phase - t_phase
-    phase_score = (0.5 * phase_score).sin().norm(p=1, dim=-1)
+    distance = phase_weight * (0.5 * (h_phase + r_phase - t_phase)).sin().norm(p=1, dim=-1)
 
     # compute modulus score
-    modulus_score = h_modulus * (r_modulus + r_bias) - t_modulus * (1 - r_bias)
-    modulus_score = modulus_score.norm(p=2, dim=-1)
+    distance = distance + modulus_weight * (h_modulus * r_modulus - t_modulus).norm(p=2, dim=-1)
 
     # combine
-    return -(phase_weight * phase_score + modulus_weight * modulus_score)
+    return -distance
