@@ -1100,7 +1100,7 @@ def mode_interaction(
 
     # TODO: this is like a real RotatE.
     """
-    return (h * r - t).norm(p=2, dim=-1)
+    return negative_norm_of_sum(h * r, -t, p=2, power_norm=False)
 
 
 def p_rotate_interaction(
