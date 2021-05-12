@@ -1103,6 +1103,23 @@ def mode_interaction(
     return (h * r - t).norm(p=2, dim=-1)
 
 
+def p_rotate_interaction(
+    h: torch.FloatTensor,
+    r: torch.FloatTensor,
+    t: torch.FloatTensor,
+    **kwargs,
+) -> torch.FloatTensor:
+    r"""
+    Evaluate the pRotatE scoring function.
+
+    The score function is given as
+
+    .. math ::
+        \|\sin ((h + r - t)/2)\|_p
+    """
+    return negative_norm((0.5 * (h + r - t)).sin(), **kwargs)
+
+
 def hake_interaction(
     h_phase: torch.FloatTensor,
     h_modulus: torch.FloatTensor,
@@ -1165,11 +1182,8 @@ def hake_interaction(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         A score tensor.
     """
-    # compute phase score
-    distance = phase_weight * (0.5 * (h_phase + r_phase - t_phase)).sin().norm(p=1, dim=-1)
+    # compute phase score: pRotatE
+    score = phase_weight * p_rotate_interaction(h=h_phase, r=r_phase, t=t_phase, p=1)
 
     # compute modulus score
-    distance = distance + modulus_weight * (h_modulus * r_modulus.abs() - t_modulus).norm(p=2, dim=-1)
-
-    # combine
-    return -distance
+    return score + modulus_weight * negative_norm_of_sum(h_modulus * r_modulus.abs(), -t_modulus, p=2)
