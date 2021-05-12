@@ -71,7 +71,7 @@ class ConsoleResultTracker(ResultTracker):
             A regular expression to filter metrics. If None, print all parameters.
         :param start_end_run:
             Whether to print start/end run messages.
-        :param writer: 
+        :param writer:
             The writer to use - one of "tqdm", "builtin", or "logger".
         """
         self.start_end_run = start_end_run
