@@ -12,6 +12,7 @@ from ..utils import flatten_dictionary
 
 __all__ = [
     'ResultTracker',
+    'ConsoleResultTracker',
 ]
 
 
