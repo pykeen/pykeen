@@ -76,7 +76,7 @@ class TestTriplesFactory(unittest.TestCase):
             ['e1', 'a.', 'e5'],
             ['e1', 'a', 'e2'],
         ]
-        t = np.array(t, dtype=np.str)
+        t = np.array(t, dtype=str)
         factory = TriplesFactory.from_labeled_triples(triples=t, create_inverse_triples=True)
         instances = factory.create_slcwa_instances()
         assert len(instances) == 4
@@ -91,7 +91,7 @@ class TestTriplesFactory(unittest.TestCase):
             ['e1', 'a', 'e2'],
             ['e1', 'a.', 'e5'],
         ]
-        t = np.array(t, dtype=np.str)
+        t = np.array(t, dtype=str)
         for create_inverse_triples in (False, True):
             with patch("pykeen.triples.triples_factory.logger.warning") as warning:
                 factory = TriplesFactory.from_labeled_triples(triples=t, create_inverse_triples=create_inverse_triples)

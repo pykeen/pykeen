@@ -30,7 +30,7 @@ class LossTensorTest(unittest.TestCase):
                 ['susan', 'likes', 'pizza'],
                 ['peter', 'likes', 'susan'],
             ],
-            dtype=np.str,
+            dtype=str,
         )
 
         self.labels = torch.tensor([
