@@ -139,7 +139,7 @@ class HAKETests(cases.InteractionTestCase):
             h_phase, h_modulus, r_phase, r_modulus, t_phase, t_modulus)
         phase = h_phase + r_phase - t_phase
         phase_score = (0.5 * phase).sin().norm(p=1, dim=-1)
-        modulus = h_modulus * r_modulus - t_modulus
+        modulus = h_modulus * r_modulus.abs() - t_modulus
         modulus_score = modulus.norm(p=2, dim=-1)
         return -(phase_weight * phase_score + modulus_weight * modulus_score)
 
