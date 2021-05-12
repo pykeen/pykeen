@@ -59,7 +59,7 @@ numeric_triples = np.array(
         ['susan', '/lit/hasAge', '28'],
         ['susan', '/lit/hasHeight', '170'],
     ],
-    dtype=np.str,
+    dtype=str,
 )
 
 
