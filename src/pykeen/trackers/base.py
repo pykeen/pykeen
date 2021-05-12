@@ -2,7 +2,7 @@
 
 """Utilities and base classes for PyKEEN tracker adapters."""
 import re
-from typing import Any, Mapping, Optional
+from typing import Any, Mapping, Optional, Pattern, Union
 
 from ..utils import flatten_dictionary
 
@@ -47,9 +47,9 @@ class ConsoleTracker(ResultTracker):
         self,
         *,
         print_parameters: bool = True,
-        parameter_filter: Optional[str] = None,
+        parameter_filter: Union[None, str, Pattern[str]] = None,
         print_metrics: bool = True,
-        metric_filter: Optional[str] = None,
+        metric_filter: Union[None, str, Pattern[str]] = None,
         start_end_run: bool = False,
     ):
         """
@@ -78,11 +78,11 @@ class ConsoleTracker(ResultTracker):
             metric_filter = re.compile(metric_filter)
         self.metric_filter = metric_filter
 
-    def start_run(self, run_name: Optional[str] = None) -> None:
+    def start_run(self, run_name: Optional[str] = None) -> None:  # noqa: D102
         if run_name is not None and self.start_end_run:
             print(f"Starting run: {run_name}")
 
-    def log_params(self, params: Mapping[str, Any], prefix: Optional[str] = None) -> None:
+    def log_params(self, params: Mapping[str, Any], prefix: Optional[str] = None) -> None:  # noqa: D102
         if not self.print_metrics:
             return
 
@@ -90,7 +90,12 @@ class ConsoleTracker(ResultTracker):
             if not self.parameter_filter or self.parameter_filter.match(key):
                 print(f"Parameter: {key} = {value}")
 
-    def log_metrics(self, metrics: Mapping[str, float], step: Optional[int] = None, prefix: Optional[str] = None) -> None:
+    def log_metrics(
+        self,
+        metrics: Mapping[str, float],
+        step: Optional[int] = None,
+        prefix: Optional[str] = None,
+    ) -> None:  # noqa: D102
         if not self.print_metrics:
             return
 
@@ -99,6 +104,6 @@ class ConsoleTracker(ResultTracker):
             if not self.metric_filter or self.metric_filter.match(key):
                 print(f"Parameter: {key} = {value}")
 
-    def end_run(self) -> None:
+    def end_run(self) -> None:  # noqa: D102
         if self.start_end_run:
-            print(f"Finished run.")
+            print("Finished run.")
