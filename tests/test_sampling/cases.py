@@ -82,7 +82,7 @@ class NegativeSamplerGenericTestCase(unittest_templates.GenericTestCase[Negative
         assert _array_check_bounds(negative_batch[:, 2], low=0, high=self.triples_factory.num_entities)
 
         positive_batch = self._update_positive_batch(self.positive_batch, batch_filter)
-        # test that the relations were not changed during _update_positive_batch
+        # test that the relations were not changed by the negative sampler
         assert (positive_batch[:, 1] == negative_batch[:, 1]).all()
 
         assert (negative_batch != positive_batch).any(dim=1).all()
