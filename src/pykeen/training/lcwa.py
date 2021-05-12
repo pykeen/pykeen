@@ -3,10 +3,10 @@
 """Training KGE models based on the LCWA."""
 
 import logging
+from math import ceil
 from typing import Optional
 
 import torch
-from math import ceil
 
 from .training_loop import TrainingLoop
 from .utils import apply_label_smoothing
