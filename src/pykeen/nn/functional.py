@@ -1095,8 +1095,32 @@ def hake_interaction(
     modulus_weight: float = 1.0,
     phase_weight: float = 0.5,
 ) -> torch.FloatTensor:
-    """
+    r"""
     Evaluate the HAKE scoring function from [zhang2020]_.
+    
+    HAKE models entities in polar coordinate system with a modulus and a phase part,
+    where the modulus aims to capture a hierarchy level, and the phase enables distinction
+    on the same level of hierarchy.
+
+    The score function is given as a combination of a modulus distance and a phase distance
+
+    .. math ::
+        -d_{r, m}(h_m, t_m) - \lambda d_{r, p}(h_p, t_p)
+
+    In its simplest form, the distances are given as
+
+    .. math ::
+        d_{r, m} = \|h_m \odot r_m - t_m\|_2
+
+        d_{r, p} = \|\sin ((h_p + r_p - t_p) / 2) \|_1
+
+    The authors argue that a modification of the modulus distance empirically improves the results
+    
+    .. math ::
+        d_{r, m}'(h, t) = \|h_m \odot r_m + (h_m + t_m) \cdot r_m' - t_m \|_2
+                        = \|h_m \odot \frac{r_m + r_m'}{1 - r_m'} - t_m \|_2
+
+    where :math:`r_m'` is named a _mixture bias_, and :math:`-r_m < r_m' < 1`.
 
     :param h_phase: shape: (batch_size, num_heads, 1, 1, dim)
         The phases for the head entities.
