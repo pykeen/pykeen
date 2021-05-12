@@ -1103,14 +1103,16 @@ def hake_interaction(
     The score function is given as a combination of a modulus distance and a phase distance
 
     .. math ::
-        -d_{r, m}(h_m, t_m) - \lambda d_{r, p}(h_p, t_p)
+        -\lambda_m d_{r, m}(h_m, t_m) - \lambda_p d_{r, p}(h_p, t_p)
 
-    In its simplest form, the distances are given as
+    with
 
     .. math ::
         d_{r, m} = \|h_m \odot r_m - t_m\|_2
 
         d_{r, p} = \|\sin ((h_p + r_p - t_p) / 2) \|_1
+
+    and trainable scalar weights :math:`\lambda_m, \lambda_p`.
 
     .. note ::
         In the paper, a second version is mentioned where a different relation modulus
