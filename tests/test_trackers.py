@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Tests for result trackers."""
+
 from pykeen.trackers.base import ConsoleResultTracker
 from pykeen.trackers.file import CSVResultTracker, JSONResultTracker
 from tests import cases
