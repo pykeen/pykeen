@@ -95,7 +95,7 @@ class MockEvaluator(Evaluator):
         hits = next(self.losses_iter)
         dummy_1 = {
             side: {
-                rank_type: 10
+                rank_type: 10.0
                 for rank_type in RANK_TYPES
             }
             for side in SIDES

@@ -13,7 +13,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from hashlib import md5
 from tempfile import NamedTemporaryFile
-from typing import Any, IO, List, Mapping, Optional, Tuple, Type, Union
+from typing import Any, ClassVar, Generic, IO, List, Mapping, Optional, Tuple, Type, TypeVar, Union
 
 import numpy as np
 import torch
@@ -28,7 +28,6 @@ from ..stoppers import Stopper
 from ..trackers import ResultTracker
 from ..training.schlichtkrull_sampler import GraphSampler
 from ..triples import CoreTriplesFactory, Instances
-from ..typing import MappedTriples
 from ..utils import (
     format_relative_comparison, get_batchnorm_modules, is_cuda_oom_error, is_cudnn_error,
     normalize_string,
@@ -42,6 +41,9 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
+
+SampleType = TypeVar("SampleType")
+BatchType = TypeVar("BatchType")
 
 
 class NonFiniteLossError(RuntimeError):
@@ -80,11 +82,11 @@ def _get_optimizer_kwargs(optimizer: Optimizer) -> Mapping[str, Any]:
     return optimizer_kwargs
 
 
-class TrainingLoop(ABC):
+class TrainingLoop(Generic[SampleType, BatchType], ABC):
     """A training loop."""
 
     losses_per_epochs: List[float]
-    loss_blacklist: Optional[List[Type[Loss]]] = None
+    loss_blacklist: ClassVar[Optional[List[Type[Loss]]]] = None
 
     hpo_default = dict(
         num_epochs=dict(type=int, low=100, high=1000, q=100),
@@ -176,7 +178,7 @@ class TrainingLoop(ABC):
         """Train the KGE model.
 
         :param triples_factory:
-            The training triples factory
+            The training triples.
         :param num_epochs:
             The number of epochs to train the model.
         :param batch_size:
@@ -410,10 +412,10 @@ class TrainingLoop(ABC):
         # When using early stopping models have to be saved separately at the best epoch, since the training loop will
         # due to the patience continue to train after the best epoch and thus alter the model
         if (
-                stopper is not None
-                and not only_size_probing
-                and last_best_epoch is None
-                and best_epoch_model_file_path is None
+            stopper is not None
+            and not only_size_probing
+            and last_best_epoch is None
+            and best_epoch_model_file_path is None
         ):
             # Create a path
             best_epoch_model_file_path = pathlib.Path(NamedTemporaryFile().name)
@@ -642,9 +644,9 @@ class TrainingLoop(ABC):
                     self._free_graph_and_cache()
                 # When the stopper obtained a new best epoch, this model has to be saved for reconstruction
                 if (
-                        stopper is not None
-                        and stopper.best_epoch != last_best_epoch
-                        and best_epoch_model_file_path is not None
+                    stopper is not None
+                    and stopper.best_epoch != last_best_epoch
+                    and best_epoch_model_file_path is not None
                 ):
                     self._save_state(path=best_epoch_model_file_path)
                     last_best_epoch = epoch
@@ -711,7 +713,15 @@ class TrainingLoop(ABC):
 
         return self.losses_per_epochs
 
-    def _forward_pass(self, batch, start, stop, current_batch_size, label_smoothing, slice_size):
+    def _forward_pass(
+        self,
+        batch: BatchType,
+        start: int,
+        stop: int,
+        current_batch_size: int,
+        label_smoothing: float,
+        slice_size: Optional[int],
+    ) -> float:
         # forward pass
         loss = self._process_batch(
             batch=batch,
@@ -741,7 +751,7 @@ class TrainingLoop(ABC):
 
     @staticmethod
     @abstractmethod
-    def _get_batch_size(batch: Union[MappedTriples, Tuple[MappedTriples, torch.FloatTensor]]) -> int:
+    def _get_batch_size(batch: BatchType) -> int:
         """Get the batch size from a (sub-) batch."""
         raise NotImplementedError
 
@@ -753,7 +763,7 @@ class TrainingLoop(ABC):
     @abstractmethod
     def _process_batch(
         self,
-        batch: Any,
+        batch: BatchType,
         start: int,
         stop: int,
         label_smoothing: float = 0.0,
@@ -1070,8 +1080,8 @@ class TrainingLoop(ABC):
         logger.info(f"=> Saved checkpoint after having finished epoch {self._epoch}.")
 
     def _load_state(
-            self,
-            path: Union[str, pathlib.Path],
+        self,
+        path: Union[str, pathlib.Path],
     ) -> Tuple[Optional[pathlib.Path], Optional[int]]:
         """Load the state of the training loop from a checkpoint.
 
