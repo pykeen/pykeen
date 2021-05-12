@@ -11,7 +11,6 @@ and (batch_size, 1, 1, num_tails, ``*``), and return a score tensor of shape
 from __future__ import annotations
 
 import functools
-from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 
 import numpy
@@ -51,52 +50,6 @@ __all__ = [
     'tucker_interaction',
     'unstructured_model_interaction',
 ]
-
-
-@dataclass
-class SizeInformation:
-    """Size information of generic score function."""
-
-    #: The batch size of the head representations.
-    bh: int
-
-    #: The number of head representations per batch
-    nh: int
-
-    #: The batch size of the relation representations.
-    br: int
-
-    #: The number of relation representations per batch
-    nr: int
-
-    #: The batch size of the tail representations.
-    bt: int
-
-    #: The number of tail representations per batch
-    nt: int
-
-    @property
-    def same(self) -> bool:
-        """Whether all representations have the same shape."""
-        return (
-            self.bh == self.br
-            and self.bh == self.bt
-            and self.nh == self.nr
-            and self.nh == self.nt
-        )
-
-    @classmethod
-    def extract(
-        cls,
-        h: torch.Tensor,
-        r: torch.Tensor,
-        t: torch.Tensor,
-    ) -> SizeInformation:
-        """Extract size information from tensors."""
-        bh, nh = h.shape[:2]
-        br, nr = r.shape[:2]
-        bt, nt = t.shape[:2]
-        return cls(bh=bh, nh=nh, br=br, nr=nr, bt=bt, nt=nt)
 
 
 def _extract_sizes(
@@ -346,13 +299,11 @@ def ermlp_interaction(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    sizes = SizeInformation.extract(h, r, t)
-
     # same shape
-    if sizes.same:
+    if h.shape == r.shape and h.shape == t.shape:
         return final(activation(
             hidden(torch.cat([h, r, t], dim=-1).view(-1, 3 * h.shape[-1]))),
-        ).view(sizes.bh, sizes.nh, sizes.nr, sizes.nt)
+        ).view(*h.shape[:-1])
 
     hidden_dim = hidden.weight.shape[0]
     # split, shape: (embedding_dim, hidden_dim)
