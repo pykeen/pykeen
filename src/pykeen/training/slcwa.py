@@ -14,8 +14,8 @@ from .utils import apply_label_smoothing
 from ..losses import CrossEntropyLoss
 from ..models import Model
 from ..sampling import NegativeSampler, negative_sampler_resolver
-from ..sampling.negative_sampler import SLCWABatchType, SLCWASampleType
 from ..triples import CoreTriplesFactory, Instances
+from ..triples.instances import SLCWABatchType, SLCWASampleType
 
 __all__ = [
     'SLCWATrainingLoop',

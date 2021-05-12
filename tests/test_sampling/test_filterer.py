@@ -23,13 +23,13 @@ class FiltererTest(unittest_templates.GenericTestCase[Filterer]):
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         self.generator = set_random_seed(seed=self.seed)[1]
         self.triples_factory = Nations().training
-        kwargs["mapped_triples"] = self.triples_factory.mapped_triples
+        kwargs["mapped_triples"] = self.mapped_triples = self.triples_factory.mapped_triples
         return kwargs
 
     def post_instantiation_hook(self) -> None:  # noqa: D102
-        self.positive_batch = self.triples_factory.mapped_triples[torch.randint(
+        self.positive_batch = self.mapped_triples[torch.randint(
             low=0,
-            high=self.triples_factory.num_triples,
+            high=self.mapped_triples.shape[0],
             size=(self.batch_size,),
             generator=self.generator,
         )]

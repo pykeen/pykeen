@@ -2,14 +2,18 @@
 
 """Run dataset CLI."""
 
+import itertools as itt
 import logging
 import pathlib
 from textwrap import dedent
 from typing import Union
 
 import click
+import pandas
 from more_click import verbose_option
 from tqdm import tqdm
+
+from . import get_dataset
 
 
 @click.group()
@@ -172,6 +176,40 @@ def _analyze(dataset, force, countplots, directory: Union[None, str, pathlib.Pat
         fig.tight_layout()
         fig.savefig(d.joinpath('relation_counts.svg'))
         plt.close(fig)
+
+
+@main.command()
+@verbose_option
+@click.option('--dataset', help='Regex for filtering datasets by name')
+def verify(dataset: str):
+    """Verify dataset integrity."""
+    data = []
+    keys = None
+    for name, dataset in _iter_datasets(regex_name_filter=dataset):
+        dataset_instance = get_dataset(dataset=dataset)
+        data.append(list(itt.chain(
+            [name],
+            itt.chain.from_iterable(
+                (triples_factory.num_entities, triples_factory.num_relations)
+                for _, triples_factory in sorted(dataset_instance.factory_dict.items())
+            ),
+        )))
+        keys = keys or sorted(dataset_instance.factory_dict.keys())
+    if not keys:
+        return
+    df = pandas.DataFrame(
+        data=data,
+        columns=["name"] + [f"num_{part}_{a}" for part in keys for a in ("entities", "relations")],
+    )
+    valid = None
+    for part, a in itt.product(("validation", "testing"), ("entities", "relations")):
+        this_valid = df[f"num_training_{a}"] == df[f"num_{part}_{a}"]
+        if valid is None:
+            valid = this_valid
+        else:
+            valid = valid & this_valid
+    df["valid"] = valid
+    print(df.to_markdown())
 
 
 if __name__ == '__main__':

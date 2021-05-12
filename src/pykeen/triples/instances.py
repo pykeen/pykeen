@@ -4,7 +4,7 @@
 
 from abc import ABC
 from dataclasses import dataclass
-from typing import Generic, Mapping, Tuple, TypeVar
+from typing import Generic, Mapping, Optional, Tuple, TypeVar
 
 import numpy as np
 import scipy.sparse
@@ -24,7 +24,10 @@ __all__ = [
 ]
 
 BatchType = TypeVar("BatchType")
+LCWASampleType = Tuple[MappedTriples, torch.FloatTensor]
 LCWABatchType = Tuple[MappedTriples, torch.FloatTensor]
+SLCWASampleType = TypeVar('SLCWASampleType', bound=MappedTriples)
+SLCWABatchType = Tuple[MappedTriples, MappedTriples, Optional[torch.BoolTensor]]
 
 
 @fix_dataclass_init_docs
