@@ -129,25 +129,19 @@ class HAKETests(cases.InteractionTestCase):
         h_modulus: torch.FloatTensor,
         r_phase: torch.FloatTensor,
         r_modulus: torch.FloatTensor,
-        r_bias: torch.FloatTensor,
         t_phase: torch.FloatTensor,
         t_modulus: torch.FloatTensor,
-        gamma: float,
-        modulus_weight: float,
-        phase_weight: float,
+        modulus_weight: torch.FloatTensor,
+        phase_weight: torch.FloatTensor,
     ) -> torch.FloatTensor:  # noqa: D102
         # remove batch/num dimension
-        h_phase, h_modulus, r_phase, r_modulus, r_bias, t_phase, t_modulus = strip_dim(
-            h_phase, h_modulus, r_phase, r_modulus, r_bias, t_phase, t_modulus)
-        r_bias = r_bias.clamp(max=1)
-        r_modulus = r_modulus.abs()
-        indicator = (r_bias < -r_modulus)
-        r_bias[indicator] = -r_modulus[indicator]
+        h_phase, h_modulus, r_phase, r_modulus, t_phase, t_modulus = strip_dim(
+            h_phase, h_modulus, r_phase, r_modulus, t_phase, t_modulus)
         phase = h_phase + r_phase - t_phase
         phase_score = (0.5 * phase).sin().norm(p=1, dim=-1)
-        modulus = h_modulus * (r_modulus + r_bias) - t_modulus * (1 - r_bias)
+        modulus = h_modulus * r_modulus - t_modulus
         modulus_score = modulus.norm(p=2, dim=-1)
-        return gamma - (phase_weight * phase_score + modulus_weight * modulus_score)
+        return -(phase_weight * phase_score + modulus_weight * modulus_score)
 
 
 class HolETests(cases.InteractionTestCase):

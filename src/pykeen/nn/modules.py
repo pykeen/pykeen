@@ -1228,7 +1228,7 @@ class QuatEInteraction(
 class HAKEInteraction(
     FunctionalInteraction[
         Tuple[torch.FloatTensor, torch.FloatTensor],
-        Tuple[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor],
+        Tuple[torch.FloatTensor, torch.FloatTensor],
         Tuple[torch.FloatTensor, torch.FloatTensor],
     ],
 ):
@@ -1241,8 +1241,7 @@ class HAKEInteraction(
 
     #: phase + modulus
     entity_shape = ("d", "d")
-    #: phase + modulus + bias
-    relation_shape = ("d", "d", "d")
+    relation_shape = ("d", "d")
 
     def __init__(
         self,
@@ -1253,13 +1252,13 @@ class HAKEInteraction(
         Initialize the interaction module.
 
         :param modulus_weight:
-            The weight for the modulus term.
+            The initial weight for the modulus term.
         :param phase_weight:
-            The weight for the phase term.
+            The initial weight for the phase term.
         """
         super().__init__()
-        self.modulus_weight = modulus_weight
-        self.phase_weight = phase_weight
+        self.modulus_weight = nn.Parameter(data=torch.as_tensor(data=modulus_weight))
+        self.phase_weight = nn.Parameter(data=torch.as_tensor(data=phase_weight))
 
     def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
         return dict(modulus_weight=self.modulus_weight, phase_weight=self.phase_weight)
@@ -1275,7 +1274,6 @@ class HAKEInteraction(
             h_modulus=h[1],
             r_phase=r[0],
             r_modulus=r[1],
-            r_bias=r[2],
             t_phase=t[0],
             t_modulus=t[1],
         )
