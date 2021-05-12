@@ -2,7 +2,7 @@ Using Tensorboard
 =========================
 
 `Tensorboard <https://www.tensorflow.org/tensorboard/>`_ (TB) is a service for tracking experimental results during training.
-It is part of the Tensorflow project.
+It is part of the larger Tensorflow project but can be used independently.
 
 Minimal Pipeline Example
 ---------------------------------
@@ -60,3 +60,14 @@ argument like:
 
 Please be aware that if you re-run an experiment using the same directory, then the logs will be combined.
 It is advisable to use a unique sub-directory for each experiment to allow for easy comparison.
+
+Starting a Tensorboard Server
+-----------------
+Assuming Tensorboard has been installed and is in your current path, it can be started as follows:
+
+.. code-block:: bash
+
+    tensorboard --logdir=~/.data/pykeen/logs/tensorboard/
+
+With the value passed to the ``logdir`` being the location of you logs. Tensorboard can then be accessed via
+a browser at: http://localhost:6006/

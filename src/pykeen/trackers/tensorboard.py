@@ -2,8 +2,8 @@
 
 """An adapter for TensorBoard."""
 
-import datetime
 import pathlib
+import time
 from typing import Any, Dict, Mapping, Optional, TYPE_CHECKING, Type
 
 from .base import ResultTracker
@@ -47,7 +47,7 @@ class TensorBoardResultTracker(ResultTracker):
 
         if experiment_path is None:
             if experiment_name is None:
-                experiment_name = datetime.datetime.now().isoformat()
+                experiment_name = time.strftime('%Y-%m-%d-%H-%M-%S')
             path = PYKEEN_LOGS.joinpath("tensorboard", experiment_name)
         elif isinstance(experiment_path, str):
             path = pathlib.Path(experiment_path)
