@@ -31,7 +31,7 @@ triples = np.array(
         ['susan', 'likes', 'pizza'],
         ['peter', 'likes', 'susan'],
     ],
-    dtype=np.str,
+    dtype=str,
 )
 
 instance_mapped_triples = np.array(
