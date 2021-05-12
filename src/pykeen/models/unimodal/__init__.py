@@ -53,6 +53,8 @@
    networks <https://arxiv.org/abs/1911.03082>`_. *arXiv*, 1–15.
 .. [zhang2019] Zhang, Shuai, *et al.* (2019). `Quaternion knowledge graph embeddings
                 <https://openreview.net/forum?id=cZbk98eY_WwC>`_ NeurIPS'19.
+.. [zhang2020] Z. Zhang, *et al.* (2020) `Learning Hierarchy-Aware Knowledge Graph Embeddings for Link Prediction.
+   <https://arxiv.org/abs/1911.09419>`_. AAAI. 2020.
 """
 
 from .compgcn import CompGCN

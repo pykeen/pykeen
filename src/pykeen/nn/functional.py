@@ -1096,7 +1096,7 @@ def hake_interaction(
     phase_weight: float = 0.5,
 ) -> torch.FloatTensor:
     """
-    Evaluate the HAKE scoring function.
+    Evaluate the HAKE scoring function from [zhang2020]_.
 
     :param h_phase: shape: (batch_size, num_heads, 1, 1, dim)
         The phases for the head entities.

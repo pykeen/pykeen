@@ -1232,7 +1232,7 @@ class HAKEInteraction(
         Tuple[torch.FloatTensor, torch.FloatTensor],
     ],
 ):
-    """A module wrapper for the HAKE interaction function.
+    """A module wrapper for the HAKE interaction function from [zhang2020]_.
 
     .. seealso :: :func:`pykeen.nn.functional.hake_interaction`
     """
