@@ -1117,9 +1117,6 @@ def hake_interaction(
         parametrization is used.
 
     .. note ::
-        The moduli are expected to be positive real numbers.
-
-    .. note ::
         The paper mentions a single trainable weight parameter :math:`\lambda`.
         The implementation uses two, one for modulus and one for phase.
 
@@ -1129,15 +1126,15 @@ def hake_interaction(
     :param h_phase: shape: (batch_size, num_heads, 1, 1, dim)
         The phases for the head entities.
     :param h_modulus: shape: (batch_size, num_heads, 1, 1, dim)
-        The modulus for the head entities. It is expected to be positive.
+        The modulus for the head entities.
     :param r_phase: (batch_size, 1, num_relations, 1, dim)
         The phases for the relations.
     :param r_modulus: (batch_size, 1, num_relations, 1, dim)
-        The modulus for the relations. It is expected to be positive.
+        The modulus for the relations.
     :param t_phase: shape: (batch_size, 1, 1, num_tails, dim)
         The phases for the tail entities.
     :param t_modulus: shape: (batch_size, 1, 1, num_tails, dim)
-        The modulus for the tail entities. It is expected to be positive.
+        The modulus for the tail entities.
     :param phase_weight:
         A (trainable) scalar weight for the phase term.
     :param modulus_weight:
@@ -1150,7 +1147,7 @@ def hake_interaction(
     distance = phase_weight * (0.5 * (h_phase + r_phase - t_phase)).sin().norm(p=1, dim=-1)
 
     # compute modulus score
-    distance = distance + modulus_weight * (h_modulus * r_modulus - t_modulus).norm(p=2, dim=-1)
+    distance = distance + modulus_weight * (h_modulus * r_modulus.abs() - t_modulus).norm(p=2, dim=-1)
 
     # combine
     return -distance
