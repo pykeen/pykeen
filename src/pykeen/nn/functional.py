@@ -1083,6 +1083,26 @@ def quat_e_interaction(
     ).sum(dim=-1)
 
 
+def mode_interaction(
+    h: torch.FloatTensor,
+    r: torch.FloatTensor,
+    t: torch.FloatTensor,
+) -> torch.FloatTensor:
+    r"""
+    Evaluate the ModE scoring function from [zhang2020]_.
+
+    It is a simplification of the HAKE scoring function using only a modulus part.
+
+    The score function is given as
+
+    .. math ::
+        \|h \odot r - t\|
+
+    # TODO: this is like a real RotatE.
+    """
+    return (h * r - t).norm(p=2, dim=-1)
+
+
 def hake_interaction(
     h_phase: torch.FloatTensor,
     h_modulus: torch.FloatTensor,
