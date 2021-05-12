@@ -1091,7 +1091,6 @@ def hake_interaction(
     r_bias: torch.FloatTensor,
     t_phase: torch.FloatTensor,
     t_modulus: torch.FloatTensor,
-    gamma: float = 12.0,
     modulus_weight: float = 1.0,
     phase_weight: float = 0.5,
 ) -> torch.FloatTensor:
@@ -1140,9 +1139,6 @@ def hake_interaction(
         A weight for the phase term.
     :param modulus_weight:
         A weight for the modulus term.
-    :param gamma:
-        A constant offset.
-
     :return:
         A score tensor.
     """
@@ -1160,4 +1156,4 @@ def hake_interaction(
     modulus_score = modulus_score.norm(p=2, dim=-1)
 
     # combine
-    return gamma - (phase_weight * phase_score + modulus_weight * modulus_score)
+    return -(phase_weight * phase_score + modulus_weight * modulus_score)

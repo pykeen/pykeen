@@ -1246,27 +1246,23 @@ class HAKEInteraction(
 
     def __init__(
         self,
-        gamma: float = 12.0,
         modulus_weight: float = 1.0,
         phase_weight: float = 0.5,
     ):
         """
         Initialize the interaction module.
 
-        :param gamma:
-            A constant offset.
         :param modulus_weight:
             The weight for the modulus term.
         :param phase_weight:
             The weight for the phase term.
         """
         super().__init__()
-        self.gamma = gamma
         self.modulus_weight = modulus_weight
         self.phase_weight = phase_weight
 
     def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
-        return dict(gamma=self.gamma, modulus_weight=self.modulus_weight, phase_weight=self.phase_weight)
+        return dict(modulus_weight=self.modulus_weight, phase_weight=self.phase_weight)
 
     @staticmethod
     def _prepare_hrt_for_functional(
