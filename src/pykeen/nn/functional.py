@@ -1119,7 +1119,12 @@ def p_rotate_interaction(
     The score function is given as
 
     .. math ::
-        \|\sin ((h + r - t)/2)\|_p
+        \|\sin \Big(\frac{h + r - t}{2}\Big)\|_p
+
+    :param p:
+        The parameter p for selecting the norm, cf. torch.norm.
+    :param power_norm:
+        Whether to return the powered norm instead.
     """
     return negative_norm((0.5 * (h + r - t)).sin(), p=p, power_norm=power_norm)
 
@@ -1151,7 +1156,7 @@ def hake_interaction(
     .. math ::
         d_{r, m} = \|h_m \odot r_m - t_m\|_2
 
-        d_{r, p} = \|\sin ((h_p + r_p - t_p) / 2) \|_1
+        d_{r, p} = \|\sin \Big(\frac{h_p + r_p - t_p}{2}\Big) \|_1
 
     and trainable scalar weights :math:`\lambda_m, \lambda_p`.
 
