@@ -1109,7 +1109,8 @@ def p_rotate_interaction(
     h: torch.FloatTensor,
     r: torch.FloatTensor,
     t: torch.FloatTensor,
-    **kwargs,
+    p: Union[str, int, float] = 2,
+    power_norm: bool = False,
 ) -> torch.FloatTensor:
     r"""
     Evaluate the pRotatE scoring function.
@@ -1119,7 +1120,7 @@ def p_rotate_interaction(
     .. math ::
         \|\sin ((h + r - t)/2)\|_p
     """
-    return negative_norm((0.5 * (h + r - t)).sin(), **kwargs)
+    return negative_norm((0.5 * (h + r - t)).sin(), p=p, power_norm=power_norm)
 
 
 def hake_interaction(
