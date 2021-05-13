@@ -716,6 +716,7 @@ class EntityEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
 
     def __init__(
         self,
+        *,
         triples_factory: CoreTriplesFactory,
         entity_representations: EmbeddingSpecification,
         loss: Optional[Loss] = None,
@@ -765,6 +766,7 @@ class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
 
     def __init__(
         self,
+        *,
         triples_factory: CoreTriplesFactory,
         entity_representations: EmbeddingSpecification,
         relation_representations: EmbeddingSpecification,
