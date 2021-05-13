@@ -73,7 +73,7 @@ class NTN(EntityEmbeddingModel):
             tangent :class:`torch.nn.Tanh`.
         :param entity_initializer: Entity initializer function. Defaults to :func:`torch.nn.init.uniform_`
         :param kwargs:
-            Remaining keyword arguments to forward to :class:`pykeen.models.EntityRelationEmbeddingModel`
+            Remaining keyword arguments to forward to :class:`pykeen.models.EntityEmbeddingModel`
         """
         super().__init__(
             entity_representations=EmbeddingSpecification(
