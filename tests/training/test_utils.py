@@ -30,7 +30,7 @@ class LossTensorTest(unittest.TestCase):
                 ['susan', 'likes', 'pizza'],
                 ['peter', 'likes', 'susan'],
             ],
-            dtype=np.str,
+            dtype=str,
         )
 
         self.labels = torch.tensor([
@@ -137,10 +137,10 @@ class BatchCompilationTest(unittest.TestCase):
     def test_lazy_compile_random_batches(self):
         """Test method lazy_compile_random_batches."""
         indices = np.arange(self.num_samples)
-        input_array = self.random.randint(low=0, high=self.num_entities, size=(self.num_samples, 2), dtype=np.long)
+        input_array = self.random.randint(low=0, high=self.num_entities, size=(self.num_samples, 2), dtype=np.int64)
         targets = []
         for _ in range(self.num_samples):
-            targets.append(list(set(self.random.randint(low=0, high=self.num_entities, size=(5,), dtype=np.long))))
+            targets.append(list(set(self.random.randint(low=0, high=self.num_entities, size=(5,), dtype=np.int64))))
         target_array = np.asarray(targets)
 
         def _batch_compiler(batch_indices):
