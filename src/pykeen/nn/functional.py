@@ -37,6 +37,7 @@ __all__ = [
     'hake_interaction',
     'hole_interaction',
     'kg2e_interaction',
+    'mode_interaction',
     'mure_interaction',
     'ntn_interaction',
     'pair_re_interaction',
@@ -1093,7 +1094,7 @@ def mode_interaction(
     r"""
     Evaluate the ModE scoring function from [zhang2020]_.
 
-    It is a simplification of the HAKE scoring function using only a modulus part.
+    It is a simplification of :func:`hake_interaction` using only a modulus part.
 
     The score function is given as
 
