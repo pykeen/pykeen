@@ -779,11 +779,14 @@ def suggest_kwargs(
                     base=info.get('q') or info.get('base') or 2,
                 )
             elif scale is None or scale == 'linear':
+                # get log from info - could either be a boolean or string
+                log = info.get('log') in {True, 'TRUE', 'True', 'true', 't', 'YES', 'Yes', 'yes', 'y'}
                 _kwargs[name] = trial.suggest_int(
                     name=prefixed_name,
                     low=low,
                     high=high,
                     step=info.get('q') or info.get('step') or 1,
+                    log=log,
                 )
             else:
                 logger.warning(f'Unhandled scale {scale} for parameter {name} of data type {dtype}')
