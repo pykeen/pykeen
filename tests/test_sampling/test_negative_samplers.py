@@ -2,7 +2,7 @@
 
 """Test that samplers can be executed."""
 
-from pykeen.sampling import BasicNegativeSampler, BernoulliNegativeSampler
+from pykeen.sampling import BasicNegativeSampler, BernoulliNegativeSampler, PseudoTypedNegativeSampler
 from tests.test_sampling import cases
 
 
@@ -30,3 +30,9 @@ class BernoulliNegativeSamplerTest(cases.NegativeSamplerGenericTestCase):
     """Test the Bernoulli negative sampler."""
 
     cls = BernoulliNegativeSampler
+
+
+class PseudoTypedNegativeSamplerTest(cases.NegativeSamplerGenericTestCase):
+    """Test the pseudo-type negative sampler."""
+
+    cls = PseudoTypedNegativeSampler

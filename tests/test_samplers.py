@@ -16,6 +16,8 @@ from pykeen.triples import SLCWAInstances, TriplesFactory
 from pykeen.typing import MappedTriples
 
 
+# TODO this whole file needs to be deleted after moving the new tests for the pseudo-typed sampler over
+
 def _array_check_bounds(
     array: torch.LongTensor,
     low: int,
