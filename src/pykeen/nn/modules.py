@@ -35,6 +35,7 @@ __all__ = [
     'DistMultInteraction',
     'ERMLPInteraction',
     'ERMLPEInteraction',
+    'HAKEInteraction',
     'HolEInteraction',
     'KG2EInteraction',
     'MuREInteraction',
