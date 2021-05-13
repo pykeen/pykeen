@@ -1132,7 +1132,7 @@ def hake_interaction(
 ) -> torch.FloatTensor:
     r"""
     Evaluate the HAKE scoring function from [zhang2020]_.
-    
+
     HAKE models entities in polar coordinate system with a modulus and a phase part,
     where the modulus aims to capture a hierarchy level, and the phase enables distinction
     on the same level of hierarchy.
@@ -1160,7 +1160,7 @@ def hake_interaction(
         The implementation uses two, one for modulus and one for phase.
 
     .. seealso ::
-        official implementation: https://github.com/MIRALab-USTC/KGE-HAKE/blob/6a82e17855f465d4ec15b880da0d1faaa7c6100c/codes/models.py#L295-L365
+        official implementation: https://github.com/MIRALab-USTC/KGE-HAKE/blob/6a82e17/codes/models.py#L295-L365
 
     :param h_phase: shape: (batch_size, num_heads, 1, 1, dim)
         The phases for the head entities.
