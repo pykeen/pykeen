@@ -9,11 +9,8 @@ from torch import nn
 
 from ..base import EntityEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...losses import Loss
 from ...nn.emb import EmbeddingSpecification
-from ...regularizers import Regularizer
-from ...triples import CoreTriplesFactory
-from ...typing import DeviceHint, Hint, Initializer
+from ...typing import Hint, Initializer
 
 __all__ = [
     'NTN',
@@ -61,62 +58,58 @@ class NTN(EntityEmbeddingModel):
 
     def __init__(
         self,
-        triples_factory: CoreTriplesFactory,
+        *,
         embedding_dim: int = 100,
         num_slices: int = 4,
-        loss: Optional[Loss] = None,
-        preferred_device: DeviceHint = None,
-        random_seed: Optional[int] = None,
         non_linearity: Optional[nn.Module] = None,
-        regularizer: Optional[Regularizer] = None,
         entity_initializer: Hint[Initializer] = None,
+        **kwargs,
     ) -> None:
         r"""Initialize NTN.
 
         :param embedding_dim: The entity embedding dimension $d$. Is usually $d \in [50, 350]$.
         :param num_slices:
         :param non_linearity: A non-linear activation function. Defaults to the hyperbolic
-         tangent :class:`torch.nn.Tanh`.
+            tangent :class:`torch.nn.Tanh`.
+        :param entity_initializer: Entity initializer function. Defaults to :func:`torch.nn.init.uniform_`
+        :param kwargs:
+            Remaining keyword arguments to forward to :class:`pykeen.models.EntityRelationEmbeddingModel`
         """
         super().__init__(
-            triples_factory=triples_factory,
-            loss=loss,
-            preferred_device=preferred_device,
-            random_seed=random_seed,
-            regularizer=regularizer,
             entity_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
                 initializer=entity_initializer,
             ),
+            **kwargs,
         )
         self.num_slices = num_slices
 
         self.w = nn.Parameter(data=torch.empty(
-            triples_factory.num_relations,
+            self.num_relations,
             num_slices,
             embedding_dim,
             embedding_dim,
             device=self.device,
         ), requires_grad=True)
         self.vh = nn.Parameter(data=torch.empty(
-            triples_factory.num_relations,
+            self.num_relations,
             num_slices,
             embedding_dim,
             device=self.device,
         ), requires_grad=True)
         self.vt = nn.Parameter(data=torch.empty(
-            triples_factory.num_relations,
+            self.num_relations,
             num_slices,
             embedding_dim,
             device=self.device,
         ), requires_grad=True)
         self.b = nn.Parameter(data=torch.empty(
-            triples_factory.num_relations,
+            self.num_relations,
             num_slices,
             device=self.device,
         ), requires_grad=True)
         self.u = nn.Parameter(data=torch.empty(
-            triples_factory.num_relations,
+            self.num_relations,
             num_slices,
             device=self.device,
         ), requires_grad=True)

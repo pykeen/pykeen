@@ -2,7 +2,7 @@
 
 """TransE."""
 
-from typing import Any, ClassVar, Mapping, Optional
+from typing import Any, ClassVar, Mapping
 
 import torch
 import torch.autograd
@@ -10,12 +10,9 @@ from torch.nn import functional
 
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...losses import Loss
 from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_uniform_, xavier_uniform_norm_
-from ...regularizers import Regularizer
-from ...triples import CoreTriplesFactory
-from ...typing import Constrainer, DeviceHint, Hint, Initializer
+from ...typing import Constrainer, Hint, Initializer
 
 __all__ = [
     'TransE',
@@ -57,32 +54,26 @@ class TransE(EntityRelationEmbeddingModel):
 
     def __init__(
         self,
-        triples_factory: CoreTriplesFactory,
+        *,
         embedding_dim: int = 50,
         scoring_fct_norm: int = 1,
-        loss: Optional[Loss] = None,
-        preferred_device: DeviceHint = None,
-        random_seed: Optional[int] = None,
-        regularizer: Optional[Regularizer] = None,
         entity_initializer: Hint[Initializer] = xavier_uniform_,
         entity_constrainer: Hint[Constrainer] = functional.normalize,
         relation_initializer: Hint[Initializer] = xavier_uniform_norm_,
+        **kwargs,
     ) -> None:
         r"""Initialize TransE.
 
         :param embedding_dim: The entity embedding dimension $d$. Is usually $d \in [50, 300]$.
         :param scoring_fct_norm: The :math:`l_p` norm applied in the interaction function. Is usually ``1`` or ``2.``.
+        :param kwargs:
+            Remaining keyword arguments to forward to :class:`pykeen.models.EntityRelationEmbeddingModel`
 
         .. seealso::
 
            - OpenKE `implementation of TransE <https://github.com/thunlp/OpenKE/blob/OpenKE-PyTorch/models/TransE.py>`_
         """
         super().__init__(
-            triples_factory=triples_factory,
-            loss=loss,
-            preferred_device=preferred_device,
-            random_seed=random_seed,
-            regularizer=regularizer,
             entity_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
                 initializer=entity_initializer,
@@ -92,6 +83,7 @@ class TransE(EntityRelationEmbeddingModel):
                 embedding_dim=embedding_dim,
                 initializer=relation_initializer,
             ),
+            **kwargs,
         )
         self.scoring_fct_norm = scoring_fct_norm
 

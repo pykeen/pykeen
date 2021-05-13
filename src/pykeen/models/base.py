@@ -58,6 +58,10 @@ class Model(nn.Module, ABC):
     #: The instance of the loss
     loss: Loss
 
+    num_entities: int
+    num_relations: int
+    use_inverse_triples: bool
+
     def __init__(
         self,
         triples_factory: CoreTriplesFactory,

@@ -13,9 +13,7 @@ from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDD
 from ...losses import BCEAfterSigmoidLoss, Loss
 from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_normal_
-from ...regularizers import Regularizer
-from ...triples import CoreTriplesFactory
-from ...typing import DeviceHint, Hint, Initializer
+from ...typing import Hint, Initializer
 
 __all__ = [
     'TuckER',
@@ -86,23 +84,22 @@ class TuckER(EntityRelationEmbeddingModel):
 
     def __init__(
         self,
-        triples_factory: CoreTriplesFactory,
+        *,
         embedding_dim: int = 200,
         relation_dim: Optional[int] = None,
-        loss: Optional[Loss] = None,
-        preferred_device: DeviceHint = None,
-        random_seed: Optional[int] = None,
         dropout_0: float = 0.3,
         dropout_1: float = 0.4,
         dropout_2: float = 0.5,
-        regularizer: Optional[Regularizer] = None,
         apply_batch_normalization: bool = True,
         entity_initializer: Hint[Initializer] = xavier_normal_,
         relation_initializer: Hint[Initializer] = xavier_normal_,
+        **kwargs,
     ) -> None:
         """Initialize the model.
 
         The dropout values correspond to the following dropouts in the model's score function:
+
+        .. math::
 
             DO_2(BN(DO_0(BN(h)) x_1 DO_1(W x_2 r))) x_3 t
 
@@ -110,11 +107,6 @@ class TuckER(EntityRelationEmbeddingModel):
         product along the i-th mode, BN denotes batch normalization, and DO dropout.
         """
         super().__init__(
-            triples_factory=triples_factory,
-            loss=loss,
-            preferred_device=preferred_device,
-            random_seed=random_seed,
-            regularizer=regularizer,
             entity_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
                 initializer=entity_initializer,
@@ -123,6 +115,7 @@ class TuckER(EntityRelationEmbeddingModel):
                 embedding_dim=relation_dim or embedding_dim,
                 initializer=relation_initializer,
             ),
+            **kwargs,
         )
 
         # Core tensor

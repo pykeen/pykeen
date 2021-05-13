@@ -1,15 +1,13 @@
 # -*- coding: utf-8 -*-
 
 """Negative sampling algorithm based on the work of of Bordes *et al.*."""
+
 import math
-from typing import Any, Collection, Mapping, Optional, Tuple
+from typing import Collection, Optional, Tuple
 
 import torch
-from class_resolver import HintOrType
 
-from .filtering import Filterer
 from .negative_sampler import NegativeSampler
-from ..triples import CoreTriplesFactory
 
 __all__ = [
     'BasicNegativeSampler',
@@ -38,40 +36,20 @@ class BasicNegativeSampler(NegativeSampler):
        actual positive triples $(h,r,t) \in \mathcal{K}$ will be removed.
     """
 
-    #: The default strategy for optimizing the negative sampler's hyper-parameters
-    hpo_default = dict(
-        num_negs_per_pos=dict(type=int, low=1, high=100, q=10),
-    )
-
     def __init__(
         self,
-        triples_factory: CoreTriplesFactory,
-        num_negs_per_pos: Optional[int] = None,
-        filtered: bool = False,
-        filterer: HintOrType[Filterer] = None,
-        filterer_kwargs: Optional[Mapping[str, Any]] = None,
+        *,
         corruption_scheme: Optional[Collection[str]] = None,
+        **kwargs,
     ) -> None:
         """Initialize the basic negative sampler with the given entities.
 
-        :param triples_factory: The factory holding the triples to sample from
-        :param num_negs_per_pos: Number of negative samples to make per positive triple. Defaults to 1.
-        :param filtered: Whether proposed corrupted triples that are in the training data should be filtered.
-            Defaults to False. See explanation in :func:`filter_negative_triples` for why this is
-            a reasonable default.
-        :param filterer: If filtered is set to True, this can be used to choose which filter module from
-            :mod:`pykeen.sampling.filtering` is used.
-        :param filterer_kwargs:
-            Additional keyword-based arguments passed to the filterer upon construction.
-        :param corruption_scheme: What sides ('h', 'r', 't') should be corrupted. Defaults to head and tail ('h', 't').
+        :param corruption_scheme:
+            What sides ('h', 'r', 't') should be corrupted. Defaults to head and tail ('h', 't').
+        :param kwargs:
+            Additional keyword based arguments passed to :class:`pykeen.sampling.NegativeSampler`.
         """
-        super().__init__(
-            triples_factory=triples_factory,
-            num_negs_per_pos=num_negs_per_pos,
-            filtered=filtered,
-            filterer=filterer,
-            filterer_kwargs=filterer_kwargs,
-        )
+        super().__init__(**kwargs)
         self.corruption_scheme = corruption_scheme or ('h', 't')
         # Set the indices
         self._corruption_indices = [LOOKUP[side] for side in self.corruption_scheme]
