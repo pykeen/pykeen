@@ -131,7 +131,7 @@ import torch
 from class_resolver import Resolver
 from torch import nn
 
-from ..triples import CoreTriplesFactory
+from ..typing import MappedTriples
 
 __all__ = [
     "filterer_resolver",
@@ -146,7 +146,7 @@ class Filterer(nn.Module):
 
     def forward(
         self,
-        negative_batch: torch.LongTensor,
+        negative_batch: MappedTriples,
     ) -> Tuple[torch.LongTensor, Optional[torch.BoolTensor]]:
         """Filter all proposed negative samples that are positive in the training dataset.
 
@@ -161,7 +161,7 @@ class Filterer(nn.Module):
             Filtering is a very expensive task, since every proposed negative sample has to be checked against the
             entire training dataset.
 
-        :param negative_batch: shape: ???
+        :param negative_batch: shape: (batch_size, num_negatives, 3)
             The batch of negative triples.
 
         :return:
@@ -171,7 +171,7 @@ class Filterer(nn.Module):
         return negative_batch[keep_mask], keep_mask
 
     @abstractmethod
-    def contains(self, batch: torch.LongTensor) -> torch.BoolTensor:
+    def contains(self, batch: MappedTriples) -> torch.BoolTensor:
         """
         Check whether a triple is contained.
 
@@ -193,17 +193,17 @@ class PythonSetFilterer(Filterer):
     still serve as a baseline for performance comparison.
     """
 
-    def __init__(self, triples_factory: CoreTriplesFactory):
+    def __init__(self, mapped_triples: MappedTriples):
         """Initialize the filterer.
 
-        :param triples_factory:
-            The triples factory.
+        :param mapped_triples:
+            The ID-based triples.
         """
         super().__init__()
         # store set of triples
-        self.triples = set(map(tuple, triples_factory.mapped_triples.tolist()))
+        self.triples = set(map(tuple, mapped_triples.tolist()))
 
-    def contains(self, batch: torch.LongTensor) -> torch.BoolTensor:  # noqa: D102
+    def contains(self, batch: MappedTriples) -> torch.BoolTensor:  # noqa: D102
         return torch.as_tensor(
             data=[tuple(triple) in self.triples for triple in batch.tolist()],
             dtype=torch.bool,
@@ -228,19 +228,19 @@ class BloomFilterer(Filterer):
     #: The bit-array for the Bloom filter data structure
     bit_array: torch.BoolTensor
 
-    def __init__(self, triples_factory: CoreTriplesFactory, error_rate: float = 0.001):
+    def __init__(self, mapped_triples: MappedTriples, error_rate: float = 0.001):
         """
         Initialize the Bloom filter based filterer.
 
-        :param triples_factory:
-            The triples factory.
+        :param mapped_triples:
+            The ID-based triples.
         :param error_rate:
             The desired error rate.
         """
         super().__init__()
 
         # Allocate bit array
-        self.ideal_num_elements = triples_factory.num_triples
+        self.ideal_num_elements = mapped_triples.shape[0]
         size = self.num_bits(num=self.ideal_num_elements, error_rate=error_rate)
         self.register_buffer(name="bit_array", tensor=torch.zeros(size, dtype=torch.bool))
         self.register_buffer(
@@ -255,7 +255,7 @@ class BloomFilterer(Filterer):
         self.rounds = self.num_probes(num_elements=self.ideal_num_elements, num_bits=size)
 
         # index triples
-        self.add(triples=triples_factory.mapped_triples)
+        self.add(triples=mapped_triples)
 
         # Store some meta-data
         self.error_rate = error_rate
@@ -307,7 +307,7 @@ class BloomFilterer(Filterer):
 
     def probe(
         self,
-        batch: torch.LongTensor,
+        batch: MappedTriples,
     ) -> Iterable[torch.LongTensor]:
         """
         Iterate over indices from the probes.
@@ -315,8 +315,7 @@ class BloomFilterer(Filterer):
         :param batch: shape: (batch_size, 3)
             A batch of elements.
 
-        :yields:
-            Indices of the k-th round, shape: (batch_size,).
+        :yields: Indices of the k-th round, shape: (batch_size,).
         """
         # pre-hash
         x = (self.mersenne * batch).sum(dim=-1)
@@ -329,12 +328,12 @@ class BloomFilterer(Filterer):
             x = x ^ (x >> 16)
             yield x % self.bit_array.shape[0]
 
-    def add(self, triples: torch.LongTensor) -> None:
+    def add(self, triples: MappedTriples) -> None:
         """Add triples to the Bloom filter."""
         for i in self.probe(batch=triples):
             self.bit_array[i] = True
 
-    def contains(self, batch: torch.LongTensor) -> torch.BoolTensor:
+    def contains(self, batch: MappedTriples) -> torch.BoolTensor:
         """
         Check whether a triple is contained.
 

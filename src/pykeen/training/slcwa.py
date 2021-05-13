@@ -3,17 +3,19 @@
 """Training KGE models based on the sLCWA."""
 
 import logging
-from typing import Any, Mapping, Optional, Type
+from typing import Any, Mapping, Optional
 
 import torch
+from class_resolver import HintOrType
 from torch.optim.optimizer import Optimizer
 
 from .training_loop import TrainingLoop
 from .utils import apply_label_smoothing
 from ..losses import CrossEntropyLoss
 from ..models import Model
-from ..sampling import BasicNegativeSampler, NegativeSampler
+from ..sampling import NegativeSampler, negative_sampler_resolver
 from ..triples import CoreTriplesFactory, Instances
+from ..triples.instances import SLCWABatchType, SLCWASampleType
 from ..typing import MappedTriples
 
 __all__ = [
@@ -23,7 +25,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class SLCWATrainingLoop(TrainingLoop):
+class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
     """A training loop that uses the stochastic local closed world assumption training approach."""
 
     negative_sampler: NegativeSampler
@@ -34,7 +36,7 @@ class SLCWATrainingLoop(TrainingLoop):
         model: Model,
         triples_factory: CoreTriplesFactory,
         optimizer: Optional[Optimizer] = None,
-        negative_sampler_cls: Optional[Type[NegativeSampler]] = None,
+        negative_sampler: HintOrType[NegativeSampler] = None,
         negative_sampler_kwargs: Optional[Mapping[str, Any]] = None,
         automatic_memory_optimization: bool = True,
     ):
@@ -43,9 +45,9 @@ class SLCWATrainingLoop(TrainingLoop):
         :param model: The model to train
         :param triples_factory: The triples factory to train over
         :param optimizer: The optimizer to use while training the model
-        :param negative_sampler_cls: The class of the negative sampler
+        :param negative_sampler: The class, instance, or name of the negative sampler
         :param negative_sampler_kwargs: Keyword arguments to pass to the negative sampler class on instantiation
-         for every positive one
+            for every positive one
         :param automatic_memory_optimization:
             Whether to automatically optimize the sub-batch size during
             training and batch size during evaluation with regards to the hardware at hand.
@@ -56,22 +58,11 @@ class SLCWATrainingLoop(TrainingLoop):
             optimizer=optimizer,
             automatic_memory_optimization=automatic_memory_optimization,
         )
-
-        if negative_sampler_cls is None:
-            negative_sampler_cls = BasicNegativeSampler
-
-        self.negative_sampler = negative_sampler_cls(
+        self.negative_sampler = negative_sampler_resolver.make(
+            query=negative_sampler,
+            pos_kwargs=negative_sampler_kwargs,
             triples_factory=triples_factory,
-            **(negative_sampler_kwargs or {}),
         )
-
-    @property
-    def num_negs_per_pos(self) -> int:
-        """Return number of negatives per positive from the sampler.
-
-        Property for API compatibility
-        """
-        return self.negative_sampler.num_negs_per_pos
 
     def _create_instances(self, triples_factory: CoreTriplesFactory) -> Instances:  # noqa: D102
         return triples_factory.create_slcwa_instances()
@@ -125,8 +116,8 @@ class SLCWATrainingLoop(TrainingLoop):
         _batch_filter=None,
     ) -> torch.FloatTensor:
         # Repeat positives scores (necessary for more than one negative per positive)
-        if self.num_negs_per_pos > 1:
-            positive_scores = positive_scores.repeat(self.num_negs_per_pos, 1)
+        if self.negative_sampler.num_negs_per_pos > 1:
+            positive_scores = positive_scores.repeat(self.negative_sampler.num_negs_per_pos, 1)
 
         if _batch_filter is not None:
             positive_scores = positive_scores[_batch_filter]
@@ -172,6 +163,7 @@ class SLCWATrainingLoop(TrainingLoop):
         self,
         *,
         triples_factory: CoreTriplesFactory,
+        training_instances: Instances,
         batch_size: int,
         sub_batch_size: int,
         supports_sub_batching: bool,

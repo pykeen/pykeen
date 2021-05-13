@@ -22,7 +22,7 @@ class NegativeSampler(ABC):
 
     #: The default strategy for optimizing the negative sampler's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Mapping[str, Any]]] = dict(
-        num_negs_per_pos=dict(type=int, low=1, high=100, q=10),
+        num_negs_per_pos=dict(type=int, low=1, high=100, log=True),
     )
 
     #: A filterer for negative batches
@@ -54,7 +54,7 @@ class NegativeSampler(ABC):
         self.filterer = filterer_resolver.make(
             filterer,
             pos_kwargs=filterer_kwargs,
-            triples_factory=triples_factory,
+            mapped_triples=triples_factory.mapped_triples,
         ) if filtered else None
 
     @classmethod

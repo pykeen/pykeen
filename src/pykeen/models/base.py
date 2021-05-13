@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import functools
+import inspect
 import logging
 import pickle
 import warnings
@@ -42,9 +43,6 @@ class Model(nn.Module, ABC):
     and relation representations in the form of :class:`pykeen.nn.Embedding`.
     """
 
-    #: Keep track of if this is a base model
-    _is_base_model: ClassVar[bool]
-
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]]
 
@@ -59,6 +57,10 @@ class Model(nn.Module, ABC):
     loss_default_kwargs: ClassVar[Optional[Mapping[str, Any]]] = dict(margin=1.0, reduction='mean')
     #: The instance of the loss
     loss: Loss
+
+    num_entities: int
+    num_relations: int
+    use_inverse_triples: bool
 
     def __init__(
         self,
@@ -112,10 +114,15 @@ class Model(nn.Module, ABC):
         '''
         self.predict_with_sigmoid = predict_with_sigmoid
 
-    def __init_subclass__(cls, autoreset: bool = True, **kwargs):  # noqa:D105
-        cls._is_base_model = not autoreset
-        if not cls._is_base_model:
-            _add_post_reset_parameters(cls)
+    def __init_subclass__(cls, **kwargs):
+        """Initialize the subclass.
+
+        This checks for all subclasses if they are tagged with :class:`abc.ABC` with :func:`inspect.isabstract`.
+        All non-abstract deriving models should have citation information. Subclasses can further override
+        ``__init_subclass__``, but need to remember to call ``super().__init_subclass__`` as well so this
+        gets run.
+        """
+        if not inspect.isabstract(cls):
             parse_docdata(cls)
 
     """Properties"""
@@ -590,6 +597,11 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
         self._entity_ids = triples_factory.entity_ids
         self._relation_ids = triples_factory.relation_ids
 
+    def __init_subclass__(cls, autoreset: bool = True, **kwargs):  # noqa:D105
+        super().__init_subclass__(**kwargs)
+        if autoreset:
+            _add_post_reset_parameters(cls)
+
     def post_parameter_update(self) -> None:
         """Has to be called after each parameter update."""
         self.regularizer.reset()
@@ -704,6 +716,7 @@ class EntityEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
 
     def __init__(
         self,
+        *,
         triples_factory: CoreTriplesFactory,
         entity_representations: EmbeddingSpecification,
         loss: Optional[Loss] = None,
@@ -753,6 +766,7 @@ class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
 
     def __init__(
         self,
+        *,
         triples_factory: CoreTriplesFactory,
         entity_representations: EmbeddingSpecification,
         relation_representations: EmbeddingSpecification,

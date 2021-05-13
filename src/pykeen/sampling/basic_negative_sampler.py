@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Negative sampling algorithm based on the work of of Bordes *et al.*."""
+
 import math
 from typing import Collection, Optional, Tuple
 
@@ -46,7 +47,7 @@ class BasicNegativeSampler(NegativeSampler):
         :param corruption_scheme:
             What sides ('h', 'r', 't') should be corrupted. Defaults to head and tail ('h', 't').
         :param kwargs:
-            Additional keyword based arguments passed to NegativeSampler.
+            Additional keyword based arguments passed to :class:`pykeen.sampling.NegativeSampler`.
         """
         super().__init__(**kwargs)
         self.corruption_scheme = corruption_scheme or ('h', 't')

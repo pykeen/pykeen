@@ -129,6 +129,19 @@ class DatasetTestCase(unittest.TestCase):
         # assert (end - start) < 1.0e-02
         self.assertAlmostEqual(start, end, delta=1.0e-02, msg='Caching should have made this operation fast')
 
+        # Test consistency of training / validation / testing mapping
+        training = self.dataset.training
+        for part, factory in self.dataset.factory_dict.items():
+            if not isinstance(factory, TriplesFactory):
+                logger.warning("Skipping mapping consistency checks since triples factory does not provide mappings.")
+                continue
+            if part == "training":
+                continue
+            assert training.entity_to_id == factory.entity_to_id
+            assert training.num_entities == factory.num_entities
+            assert training.relation_to_id == factory.relation_to_id
+            assert training.num_relations == factory.num_relations
+
 
 class LocalDatasetTestCase(DatasetTestCase):
     """A test case for datasets that don't need a cache directory."""
@@ -966,7 +979,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
 
     def _help_test_cli(self, args):
         """Test running the pipeline on all models."""
-        if issubclass(self.cls, pykeen.models.RGCN):
+        if issubclass(self.cls, pykeen.models.RGCN) or self.cls is pykeen.models.ERModel:
             self.skipTest(f"Cannot choose interaction via CLI for {self.cls}.")
         runner = CliRunner()
         cli = build_cli_from_cls(self.cls)

@@ -21,7 +21,8 @@ class Stopper(ABC):
     """A harness for stopping training."""
 
     def __init__(self, *args, **kwargs):
-        pass
+        # To make MyPy happy
+        self.best_epoch = None
 
     def should_evaluate(self, epoch: int) -> bool:
         """Check if the stopper should be evaluated on the given epoch."""

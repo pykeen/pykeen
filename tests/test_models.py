@@ -14,7 +14,7 @@ import unittest_templates
 import pykeen.experiments
 import pykeen.models
 from pykeen.models import (
-    ERModel, EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, _MODELS,
+    ERModel, EntityEmbeddingModel, EntityRelationEmbeddingModel, Model,
     _NewAbstractModel, _OldAbstractModel, model_resolver,
 )
 from pykeen.models.multimodal.base import LiteralModel
@@ -39,7 +39,8 @@ SKIP_MODULES = {
     ERModel,
     MockModel,
     SimpleInteractionModel,
-} | set(LiteralModel.__subclasses__())
+}
+SKIP_MODULES.update(LiteralModel.__subclasses__())
 
 
 class TestCompGCN(cases.ModelTestCase):
@@ -700,16 +701,6 @@ def _remove_non_models(elements):
 class TestModelUtilities(unittest.TestCase):
     """Extra tests for utility functions."""
 
-    def test_abstract(self):
-        """Test that classes are checked as abstract properly."""
-        self.assertTrue(EntityEmbeddingModel._is_base_model)
-        self.assertTrue(EntityRelationEmbeddingModel._is_base_model)
-        for cls in _MODELS:
-            self.assertFalse(
-                cls._is_base_model,
-                msg=f'{cls.__name__} should not be marked as a a base model',
-            )
-
     def test_get_novelty_mask(self):
         """Test `get_novelty_mask()`."""
         num_triples = 7
@@ -752,3 +743,22 @@ class TestModelUtilities(unittest.TestCase):
                     exp_content.add(tuple(c))
 
             assert actual_content == exp_content
+
+
+class ERModelTests(cases.ModelTestCase):
+    """Tests for the general ER-Model."""
+
+    cls = pykeen.models.ERModel
+    kwargs = dict(
+        interaction="distmult",  # use name to test interaction resolution
+    )
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        embedding_dim = kwargs.pop("embedding_dim")
+        kwargs["entity_representations"] = EmbeddingSpecification(embedding_dim=embedding_dim)
+        kwargs["relation_representations"] = EmbeddingSpecification(embedding_dim=embedding_dim)
+        return kwargs
+
+    def test_has_hpo_defaults(self):  # noqa: D102
+        raise unittest.SkipTest(f"Base class {self.cls} does not provide HPO defaults.")
