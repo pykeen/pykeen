@@ -4,8 +4,8 @@
 
 import logging
 import random
-from itertools import starmap
-from typing import List, Optional, Tuple
+from itertools import product, starmap
+from typing import List, Optional, Tuple, cast
 
 import torch
 
@@ -63,7 +63,7 @@ class PseudoTypedNegativeSampler(NegativeSampler):
         return negative_batch.view(-1, 3), None
 
     def _sample_helper(self, h: int, r: int, t: int) -> List[Tuple[int, int]]:
-        candidates = [
+        candidates: List[Tuple[int, int]] = [
             (position, candidate)
             for position, relation_to_candidates, current_entity in (
                 (0, self.heads, h),
@@ -72,8 +72,11 @@ class PseudoTypedNegativeSampler(NegativeSampler):
             for candidate in relation_to_candidates[r].difference({current_entity})
         ]
         k = min(len(candidates), self.num_negs_per_pos)
-        chosen = random.sample(candidates, k=k)
+        chosen: List[Tuple[int, int]] = random.sample(candidates, k=k)
         # fallback heuristic: random
         k = self.num_negs_per_pos - len(chosen)
-        chosen.extend(random.choices([(i, e) for e in range(self.num_entities) for i in (0, 2)], k=k))
+        chosen.extend(cast(List[Tuple[int, int]], random.choices(
+            list(product((0, 2), range(self.num_entities))),  # cross product of positions/candidates
+            k=k,
+        )))
         return chosen
