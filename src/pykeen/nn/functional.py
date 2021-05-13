@@ -1113,7 +1113,7 @@ def p_rotate_interaction(
     power_norm: bool = False,
 ) -> torch.FloatTensor:
     r"""
-    Evaluate the pRotatE scoring function.
+    Evaluate the pRotatE scoring function from [sun2019]_.
 
     The score function is given as
 
