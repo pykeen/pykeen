@@ -55,7 +55,7 @@ class LossTensorTest(unittest.TestCase):
         )
 
         model = TransE(
-            factory,
+            triples_factory=factory,
             embedding_dim=8,
             preferred_device='cpu',
             loss=loss_cls,
@@ -71,7 +71,7 @@ class LossTensorTest(unittest.TestCase):
         )
 
         model = TransE(
-            factory,
+            triples_factory=factory,
             embedding_dim=8,
             preferred_device='cpu',
             loss=loss_cls,

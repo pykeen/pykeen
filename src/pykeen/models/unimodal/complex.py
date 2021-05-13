@@ -12,8 +12,7 @@ from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss, SoftplusLoss
 from ...nn.emb import EmbeddingSpecification
 from ...regularizers import LpRegularizer, Regularizer
-from ...triples import CoreTriplesFactory
-from ...typing import DeviceHint, Hint, Initializer
+from ...typing import Hint, Initializer
 from ...utils import split_complex
 
 __all__ = [
@@ -76,38 +75,24 @@ class ComplEx(EntityRelationEmbeddingModel):
 
     def __init__(
         self,
-        triples_factory: CoreTriplesFactory,
+        *,
         embedding_dim: int = 200,
-        loss: Optional[Loss] = None,
-        regularizer: Optional[Regularizer] = None,
-        preferred_device: DeviceHint = None,
-        random_seed: Optional[int] = None,
         # initialize with entity and relation embeddings with standard normal distribution, cf.
         # https://github.com/ttrouill/complex/blob/dc4eb93408d9a5288c986695b58488ac80b1cc17/efe/models.py#L481-L487
         entity_initializer: Hint[Initializer] = normal_,
         relation_initializer: Hint[Initializer] = normal_,
+        **kwargs,
     ) -> None:
         """Initialize ComplEx.
 
-        :param triples_factory:
-            The triple factory connected to the model.
         :param embedding_dim:
             The embedding dimensionality of the entity embeddings.
-        :param loss:
-            The loss to use. Defaults to SoftplusLoss.
-        :param regularizer:
-            The regularizer to use.
-        :param preferred_device:
-            The default device where to model is located.
-        :param random_seed:
-            An optional random seed to set before the initialization of weights.
+        :param entity_initializer: Entity initializer function. Defaults to :func:`torch.nn.init.normal_`
+        :param relation_initializer: Relation initializer function. Defaults to :func:`torch.nn.init.normal_`
+        :param kwargs:
+            Remaining keyword arguments to forward to :class:`pykeen.models.EntityRelationEmbeddingModel`
         """
         super().__init__(
-            triples_factory=triples_factory,
-            loss=loss,
-            preferred_device=preferred_device,
-            random_seed=random_seed,
-            regularizer=regularizer,
             entity_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
                 initializer=entity_initializer,
@@ -118,6 +103,7 @@ class ComplEx(EntityRelationEmbeddingModel):
                 initializer=relation_initializer,
                 dtype=torch.cfloat,
             ),
+            **kwargs,
         )
 
     @staticmethod
