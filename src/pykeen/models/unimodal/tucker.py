@@ -64,7 +64,7 @@ class TuckER(EntityRelationEmbeddingModel):
         \text{Dropout}_2(BN(\text{Dropout}_0(BN(h)) \times_1 \text{Dropout}_1(W \times_2 r))) \times_3 t
 
     where h,r,t are the head, relation, and tail embedding, W is the core tensor, \times_i denotes the tensor
-    product along the i-th mode, BN denotes batch normalization, and DO dropout.
+    product along the i-th mode, BN denotes batch normalization, and :math:`\text{Dropout}` dropout.
 
     .. seealso::
 
