@@ -148,12 +148,6 @@ class TuckER(EntityRelationEmbeddingModel):
         """
         Evaluate the scoring function.
 
-        Compute scoring function W \times_1 h \times_2 r \times_3 t as in the official implementation, i.e. as
-
-            DO(BN(DO(BN(h)) \times_1 DO(W \times_2 r))) \times_3 t
-
-        where BN denotes BatchNorm and DO denotes Dropout
-
         :param h: shape: (batch_size, 1, embedding_dim) or (1, num_entities, embedding_dim)
         :param r: shape: (batch_size, relation_dim)
         :param t: shape: (1, num_entities, embedding_dim) or (batch_size, 1, embedding_dim)
