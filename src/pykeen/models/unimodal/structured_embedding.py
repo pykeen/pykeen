@@ -63,7 +63,7 @@ class StructuredEmbedding(EntityEmbeddingModel):
 
         :param embedding_dim: The entity embedding dimension $d$. Is usually $d \in [50, 300]$.
         :param scoring_fct_norm: The $l_p$ norm. Usually 1 for SE.
-        :param entity_initializer: Entity initializer function. Defaults to :func:`pykeen.nn.init.xavier_uniform`_
+        :param entity_initializer: Entity initializer function. Defaults to :func:`pykeen.nn.init.xavier_uniform_`
         :param entity_constrainer: Entity constrainer function. Defaults to :func:`torch.nn.functional.normalize`
         :param entity_constrainer_kwargs: Keyword arguments to be used when calling the entity constrainer
         :param kwargs:
