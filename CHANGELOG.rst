@@ -7,6 +7,9 @@ and this project adheres to `Semantic Versioning <http://semver.org/>`_
 
 `Unreleased <https://github.com/pykeen/pykeen/compare/v1.4.0...HEAD>`_
 -----------------------------------------------------------------------
+Updated
+~~~~~~~
+- Updated interfaces of models and negative samplers to enforce kwargs (https://github.com/pykeen/pykeen/pull/445)
 
 New Metrics
 ~~~~~~~~~~~
