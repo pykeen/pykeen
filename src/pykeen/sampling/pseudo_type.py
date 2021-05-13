@@ -4,7 +4,8 @@
 
 import logging
 import random
-from typing import Optional, Tuple
+from itertools import starmap
+from typing import List, Optional, Tuple
 
 import torch
 
@@ -52,22 +53,27 @@ class PseudoTypedNegativeSampler(NegativeSampler):
         negative_batch = positive_batch.unsqueeze(dim=1).repeat(1, self.num_negs_per_pos, 1)
 
         # TODO: Can we vectorize this? .tolist is an expensive operation which requires synchronization
-        for i, (h, r, t) in enumerate(positive_batch.tolist()):
-            candidates = [
-                (k, e)
-                for k, pool, true in (
-                    (0, self.heads, h),
-                    (2, self.tails, t),
-                )
-                for e in pool[r].difference({true})
-            ]
-            k = min(len(candidates), self.num_negs_per_pos)
-            chosen = random.sample(candidates, k=k)
-            # fallback heuristic: random
-            k = self.num_negs_per_pos - len(chosen)
-            chosen.extend(random.choices([(i, e) for e in range(self.num_entities) for i in (0, 2)], k=k))
+        chosens = starmap(self._sample_helper, positive_batch.tolist())
+
+        for i, chosen in enumerate(chosens):
             for j, (k, e) in enumerate(chosen):
                 negative_batch[i, j, k] = e
 
         # TODO: Filtering
         return negative_batch.view(-1, 3), None
+
+    def _sample_helper(self, h: int, r: int, t: int) -> List[Tuple[int, int]]:
+        candidates = [
+            (position, candidate)
+            for position, relation_to_candidates, current_entity in (
+                (0, self.heads, h),
+                (2, self.tails, t),
+            )
+            for candidate in relation_to_candidates[r].difference({current_entity})
+        ]
+        k = min(len(candidates), self.num_negs_per_pos)
+        chosen = random.sample(candidates, k=k)
+        # fallback heuristic: random
+        k = self.num_negs_per_pos - len(chosen)
+        chosen.extend(random.choices([(i, e) for e in range(self.num_entities) for i in (0, 2)], k=k))
+        return chosen
