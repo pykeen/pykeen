@@ -61,9 +61,9 @@ class TuckER(EntityRelationEmbeddingModel):
 
     .. math::
 
-        \text{Dropout}_2(BN(\text{Dropout}_0(BN(h)) x_1 \text{Dropout}_1(W x_2 r))) x_3 t
+        \text{Dropout}_2(BN(\text{Dropout}_0(BN(h)) \times_1 \text{Dropout}_1(W \times_2 r))) \times_3 t
 
-    where h,r,t are the head, relation, and tail embedding, W is the core tensor, x_i denotes the tensor
+    where h,r,t are the head, relation, and tail embedding, W is the core tensor, \times_i denotes the tensor
     product along the i-th mode, BN denotes batch normalization, and DO dropout.
 
     .. seealso::
@@ -148,9 +148,9 @@ class TuckER(EntityRelationEmbeddingModel):
         """
         Evaluate the scoring function.
 
-        Compute scoring function W x_1 h x_2 r x_3 t as in the official implementation, i.e. as
+        Compute scoring function W \times_1 h \times_2 r \times_3 t as in the official implementation, i.e. as
 
-            DO(BN(DO(BN(h)) x_1 DO(W x_2 r))) x_3 t
+            DO(BN(DO(BN(h)) \times_1 DO(W \times_2 r))) \times_3 t
 
         where BN denotes BatchNorm and DO denotes Dropout
 
