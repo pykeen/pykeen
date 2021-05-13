@@ -57,6 +57,15 @@ class TuckER(EntityRelationEmbeddingModel):
 
     where $\textbf{h},\textbf{t}$ correspond to rows of $\textbf{E}$ and $\textbf{r}$ to a row of $\textbf{R}$.
 
+    The dropout values correspond to the following dropouts in the model's score function:
+
+    .. math::
+
+        \text{Dropout}_2(BN(\text{Dropout}_0(BN(h)) x_1 \text{Dropout}_1(W x_2 r))) x_3 t
+
+    where h,r,t are the head, relation, and tail embedding, W is the core tensor, x_i denotes the tensor
+    product along the i-th mode, BN denotes batch normalization, and DO dropout.
+
     .. seealso::
 
        - Official implementation: https://github.com/ibalazevic/TuckER
@@ -95,17 +104,6 @@ class TuckER(EntityRelationEmbeddingModel):
         relation_initializer: Hint[Initializer] = xavier_normal_,
         **kwargs,
     ) -> None:
-        """Initialize the model.
-
-        The dropout values correspond to the following dropouts in the model's score function:
-
-        .. math::
-
-            DO_2(BN(DO_0(BN(h)) x_1 DO_1(W x_2 r))) x_3 t
-
-        where h,r,t are the head, relation, and tail embedding, W is the core tensor, x_i denotes the tensor
-        product along the i-th mode, BN denotes batch normalization, and DO dropout.
-        """
         super().__init__(
             entity_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,

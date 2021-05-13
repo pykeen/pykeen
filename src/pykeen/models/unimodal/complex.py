@@ -87,6 +87,8 @@ class ComplEx(EntityRelationEmbeddingModel):
 
         :param embedding_dim:
             The embedding dimensionality of the entity embeddings.
+        :param entity_initializer: Entity initializer function. Defaults to :func:`torch.nn.init.normal_`
+        :param relation_initializer: Relation initializer function. Defaults to :func:`torch.nn.init.normal_`
         :param kwargs:
             Remaining keyword arguments to forward to :class:`pykeen.models.EntityRelationEmbeddingModel`
         """

@@ -60,12 +60,18 @@ class TransE(EntityRelationEmbeddingModel):
         entity_initializer: Hint[Initializer] = xavier_uniform_,
         entity_constrainer: Hint[Constrainer] = functional.normalize,
         relation_initializer: Hint[Initializer] = xavier_uniform_norm_,
+        relation_constrainer: Hint[Constrainer] = None,
         **kwargs,
     ) -> None:
         r"""Initialize TransE.
 
         :param embedding_dim: The entity embedding dimension $d$. Is usually $d \in [50, 300]$.
         :param scoring_fct_norm: The :math:`l_p` norm applied in the interaction function. Is usually ``1`` or ``2.``.
+        :param entity_initializer: Entity initializer function. Defaults to :func:`pykeen.nn.init.xavier_uniform_`
+        :param entity_constrainer: Entity constrainer function. Defaults to :func:`torch.nn.init.normalize`
+        :param relation_initializer: Relation initializer function.
+            Defaults to :func:`pykeen.nn.init.xavier_uniform_norm_`
+        :param relation_constrainer: Relation constrainer function. Defaults to none.
         :param kwargs:
             Remaining keyword arguments to forward to :class:`pykeen.models.EntityRelationEmbeddingModel`
 
@@ -82,6 +88,7 @@ class TransE(EntityRelationEmbeddingModel):
             relation_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
                 initializer=relation_initializer,
+                constrainer=relation_constrainer,
             ),
             **kwargs,
         )

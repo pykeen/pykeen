@@ -68,7 +68,7 @@ class NTN(EntityEmbeddingModel):
         r"""Initialize NTN.
 
         :param embedding_dim: The entity embedding dimension $d$. Is usually $d \in [50, 350]$.
-        :param num_slices:
+        :param num_slices: The number of slices in the parameters
         :param non_linearity: A non-linear activation function. Defaults to the hyperbolic
             tangent :class:`torch.nn.Tanh`.
         :param entity_initializer: Entity initializer function. Defaults to :func:`torch.nn.init.uniform_`
@@ -138,6 +138,8 @@ class NTN(EntityEmbeddingModel):
         :param h_indices: shape: (batch_size,)
         :param r_indices: shape: (batch_size,)
         :param t_indices: shape: (batch_size,)
+        :param slice_size: >0
+            The divisor for the scoring function when using slicing.
 
         :return: shape: (batch_size, num_entities)
         """
