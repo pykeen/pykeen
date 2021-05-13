@@ -769,7 +769,8 @@ def suggest_kwargs(
         prefixed_name = f'{prefix}.{name}'
         dtype, low, high = info['type'], info.get('low'), info.get('high')
         if dtype in {int, 'int'}:
-            if info.get('scale') in {'power_two', 'power'}:
+            scale = info.get('scale')
+            if scale in {'power_two', 'power'}:
                 _kwargs[name] = suggest_discrete_power_int(
                     trial=trial,
                     name=prefixed_name,
@@ -777,13 +778,15 @@ def suggest_kwargs(
                     high=high,
                     base=info.get('q') or info.get('base') or 2,
                 )
-            else:
+            elif scale is None or scale == 'linear':
                 _kwargs[name] = trial.suggest_int(
                     name=prefixed_name,
                     low=low,
                     high=high,
                     step=info.get('q') or info.get('step') or 1,
                 )
+            else:
+                logger.warning(f'Unhandled scale {scale} for parameter {name} of data type {dtype}')
 
         elif dtype in {float, 'float'}:
             if info.get('scale') == 'log':
