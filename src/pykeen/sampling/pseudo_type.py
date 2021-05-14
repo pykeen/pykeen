@@ -54,10 +54,10 @@ class PseudoTypedNegativeSampler(NegativeSampler):
 
         # TODO: Can we vectorize this? .tolist is an expensive operation which requires synchronization
         chosens = starmap(self._sample_helper, positive_batch.tolist())
-
-        for i, chosen in enumerate(chosens):
-            for j, (k, e) in enumerate(chosen):
-                negative_batch[i, j, k] = e
+        chosens = list(chosens)
+        c_t = torch.as_tensor(chosens)
+        k, e = c_t[..., 0], c_t[..., 1]
+        negative_batch = torch.scatter(negative_batch, dim=-1, index=k, src=e)
 
         # TODO: Filtering
         return negative_batch.view(-1, 3), None
