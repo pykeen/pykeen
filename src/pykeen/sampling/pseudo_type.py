@@ -75,10 +75,12 @@ class PseudoTypedNegativeSampler(NegativeSampler):
         start_tails = self.offsets[2 * r + 1].unsqueeze(dim=-1)
         end = self.offsets[2 * r + 2].unsqueeze(dim=-1)
         num_choices = end - start_heads
-        # TODO: Fallback
         negative_ids = (start_heads + torch.rand(size=(batch_size, self.num_negs_per_pos)) * num_choices).long()
         entity_id = self.data[negative_ids]
         triple_position = 2 * (negative_ids >= start_tails).long()
+        # fallback heuristic: random
+        fill_mask = torch.arange(self.num_negs_per_pos).unsqueeze(dim=0) >= num_choices
+        entity_id[fill_mask] = torch.randint(self.num_entities, size=(fill_mask.sum(),), device=negative_batch.device)
         negative_batch[
             torch.arange(batch_size, device=negative_batch.device).unsqueeze(dim=-1),
             torch.arange(self.num_negs_per_pos, device=negative_batch.device).unsqueeze(dim=0),
