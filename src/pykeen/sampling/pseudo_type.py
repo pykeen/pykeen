@@ -3,9 +3,7 @@
 """Pseudo-Typed negative sampling."""
 
 import logging
-import random
-from itertools import product, starmap
-from typing import List, Optional, Tuple, cast
+from typing import Optional, Tuple
 
 import torch
 
@@ -21,11 +19,17 @@ logger = logging.getLogger(__name__)
 
 
 class PseudoTypedNegativeSampler(NegativeSampler):
-    """
+    r"""
     A negative sampler using pseudo-types.
 
     To generate a corrupted head entity for triple (h, r, t), only those entities are considered which occur as a
     head entity in a triple with the relation r.
+
+    Data Structure
+    --------------
+
+    heads:
+        (r_1, t_1) -> {h_1^1, \ldots, h_{k_1}^1}
     """
 
     def __init__(
@@ -43,40 +47,43 @@ class PseudoTypedNegativeSampler(NegativeSampler):
             Additional keyword based arguments passed to NegativeSampler.
         """
         super().__init__(triples_factory=triples_factory, **kwargs)
-        self.heads, self.tails = create_relation_to_entity_set_mapping(triples=triples_factory.mapped_triples.tolist())
-        for r in set(self.heads.keys()).union(self.tails.keys()):
-            if len(self.heads[r]) < 2 and len(self.tails[r]) < 2:
+        heads, tails = create_relation_to_entity_set_mapping(triples=triples_factory.mapped_triples.tolist())
+
+        relations = set(heads.keys()).union(tails.keys())
+        for r in relations:
+            if len(heads[r]) < 2 and len(tails[r]) < 2:
                 logger.warning(f"Relation {r} does not have a sufficient number of distinct heads and tails.")
 
+        # create index structure
+        data = []
+        offset = 0
+        offsets = [offset]
+        for r in range(self.num_relations):
+            for m in (heads, tails):
+                data.extend(sorted(m[r]))
+                offset = len(data)
+                offsets.append(offset)
+        self.data = torch.as_tensor(data=data, dtype=torch.long)
+        self.offsets = torch.as_tensor(data=offsets, dtype=torch.long)
+
     def sample(self, positive_batch: torch.LongTensor) -> Tuple[torch.LongTensor, Optional[torch.Tensor]]:  # noqa: D102
+        batch_size = positive_batch.shape[0]
         # shape: (batch_size, neg, 3)
         negative_batch = positive_batch.unsqueeze(dim=1).repeat(1, self.num_negs_per_pos, 1)
-
-        # TODO: Can we vectorize this? .tolist is an expensive operation which requires synchronization
-        chosens = starmap(self._sample_helper, positive_batch.tolist())
-        chosens = list(chosens)
-        c_t = torch.as_tensor(chosens)
-        k, e = c_t[..., 0], c_t[..., 1]
-        negative_batch = torch.scatter(negative_batch, dim=-1, index=k, src=e)
+        r = positive_batch[:, 1]
+        start_heads = self.offsets[2 * r].unsqueeze(dim=-1)
+        start_tails = self.offsets[2 * r + 1].unsqueeze(dim=-1)
+        end = self.offsets[2 * r + 2].unsqueeze(dim=-1)
+        num_choices = end - start_heads
+        # TODO: Fallback
+        negative_ids = (start_heads + torch.rand(size=(batch_size, self.num_negs_per_pos)) * num_choices).long()
+        entity_id = self.data[negative_ids]
+        triple_position = 2 * (negative_ids >= start_tails).long()
+        negative_batch[
+            torch.arange(batch_size, device=negative_batch.device).unsqueeze(dim=-1),
+            torch.arange(self.num_negs_per_pos, device=negative_batch.device).unsqueeze(dim=0),
+            triple_position,
+        ] = entity_id
 
         # TODO: Filtering
         return negative_batch.view(-1, 3), None
-
-    def _sample_helper(self, h: int, r: int, t: int) -> List[Tuple[int, int]]:
-        candidates: List[Tuple[int, int]] = [
-            (position, candidate)
-            for position, relation_to_candidates, current_entity in (
-                (0, self.heads, h),
-                (2, self.tails, t),
-            )
-            for candidate in relation_to_candidates[r].difference({current_entity})
-        ]
-        k = min(len(candidates), self.num_negs_per_pos)
-        chosen: List[Tuple[int, int]] = random.sample(candidates, k=k)
-        # fallback heuristic: random
-        k = self.num_negs_per_pos - len(chosen)
-        chosen.extend(cast(List[Tuple[int, int]], random.choices(
-            list(product((0, 2), range(self.num_entities))),  # cross product of positions/candidates
-            k=k,
-        )))
-        return chosen
