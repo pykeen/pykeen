@@ -72,7 +72,7 @@ class BernoulliNegativeSampler(NegativeSampler):
 
     def _corrupt_batch(self, positive_batch: torch.LongTensor) -> torch.LongTensor:  # noqa: D102
         if self.num_negs_per_pos > 1:
-            positive_batch = positive_batch.repeat(self.num_negs_per_pos, 1)
+            positive_batch = positive_batch.repeat_interleave(repeats=self.num_negs_per_pos, dim=0)
 
         # Bind number of negatives to sample
         num_negs = positive_batch.shape[0]
