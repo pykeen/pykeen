@@ -178,6 +178,23 @@ class Loss(_Loss):
         super().__init__(size_average=size_average, reduce=reduce, reduction=reduction)
         self._reduction_method = _REDUCTION_METHODS[reduction]
 
+    def process_slcwa_scores(
+        self,
+        positive_scores: torch.FloatTensor,
+        negative_scores: torch.FloatTensor,
+        label_smoothing: Optional[float] = None,
+        batch_filter: Optional[torch.BoolTensor] = None,
+    ) -> torch.FloatTensor:
+        raise NotImplementedError
+
+    def process_lcwa_scores(
+        self,
+        predictions: torch.FloatTensor,
+        labels: torch.FloatTensor,
+        label_smoothing: Optional[float] = None,
+    ) -> torch.FloatTensor:
+        raise NotImplementedError
+
 
 class PointwiseLoss(Loss):
     """Pointwise loss functions compute an independent loss term for each triple-label pair."""
