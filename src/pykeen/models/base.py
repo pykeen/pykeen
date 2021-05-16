@@ -223,9 +223,13 @@ class Model(nn.Module, ABC):
             For each r-t pair, the scores for all possible heads.
         """
 
-    @abstractmethod
     def collect_regularization_term(self) -> torch.FloatTensor:
         """Get the regularization term for the loss function."""
+        return self.loss(tensor_1, tensor_2) + self._collect_regularization_term()
+
+    @abstractmethod
+    def _collect_regularization_term(self):
+        raise NotImplementedError
 
     """Concrete methods"""
 
