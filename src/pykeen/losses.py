@@ -244,7 +244,7 @@ class Loss(_Loss):
         label_smoothing: Optional[float] = None,  # TODO: Shouldn't this be part of the loss' constructor parameters?
     ) -> torch.FloatTensor:
         # Apply label smoothing
-        if label_smoothing > 0.:
+        if label_smoothing is not None and label_smoothing > 0.:
             labels = apply_label_smoothing(
                 labels=labels,
                 epsilon=label_smoothing,
