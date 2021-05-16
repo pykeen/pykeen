@@ -193,7 +193,7 @@ class LossTestCase(GenericTestCase[Loss]):
 
     def test_process_slcwa_scores(self):
         """Test processing scores from SLCWA training loop."""
-        positive_scores = torch.rand(self.batch_size, requires_grad=True)
+        positive_scores = torch.rand(self.batch_size, 1, requires_grad=True)
         negative_scores = torch.rand(self.batch_size, self.num_neg_per_pos, requires_grad=True)
         loss_value = self.instance.process_slcwa_scores(
             positive_scores=positive_scores,

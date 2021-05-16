@@ -215,9 +215,9 @@ class Loss(_Loss):
         """
         Process scores from sLCWA training loop.
 
-        :param positive_scores: shape: (batch_size,)
+        :param positive_scores: shape: (batch_size, 1)
             The scores for positive triples.
-        :param negative_scores: shape: (batch_size, num_neg_per_pos)
+        :param negative_scores: shape: (batch_size, num_neg_per_pos)  # TODO: Pre-filtered? => shape: (nnz,)
             The scores for the negative triples.
         :param label_smoothing:
             An optional label smoothing parameter.
@@ -228,7 +228,8 @@ class Loss(_Loss):
             A scalar loss term.
         """
         # Stack predictions
-        positive_scores = positive_scores.unsqueeze(dim=1)
+        # TODO: fix this, once the negative batches have appropriate size
+        negative_scores = negative_scores.view(*positive_scores.shape[:-1], -1)
         predictions = torch.cat([positive_scores, negative_scores], dim=-1)
 
         # Create target
