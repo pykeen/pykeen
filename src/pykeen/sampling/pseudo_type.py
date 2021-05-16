@@ -104,4 +104,4 @@ class PseudoTypedNegativeSampler(NegativeSampler):
             triple_position,
         ] = entity_id
 
-        return negative_batch.view(-1, 3)
+        return negative_batch.view(-1, self.num_negs_per_pos, 3)
