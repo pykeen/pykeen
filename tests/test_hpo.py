@@ -122,15 +122,10 @@ class TestHyperparameterOptimization(unittest.TestCase):
 
     def test_sampling_values_from_2_power_x(self):
         """Test making a study that has a range defined by f(x) = 2^x."""
-
-        def objective(trial):
-            suggest_kwargs(prefix='model', trial=trial, kwargs_ranges=model_kwargs_ranges)
-            return 1.
-
         model_kwargs_ranges = dict(
             embedding_dim=dict(type=int, low=0, high=4, scale='power_two'),
         )
-
+        objective = _test_suggest(model_kwargs_ranges)
         study = optuna.create_study()
         study.optimize(objective, n_trials=2)
 
@@ -138,14 +133,33 @@ class TestHyperparameterOptimization(unittest.TestCase):
         self.assertIn(('params', 'model.embedding_dim'), df.columns)
         self.assertTrue(df[('params', 'model.embedding_dim')].isin({1, 2, 4, 8, 16}).all())
 
-        model_kwargs_ranges = dict(
-            embedding_dim=dict(type=int, low=0, high=4, scale='power_two'),
-        )
-
+        objective = _test_suggest(model_kwargs_ranges)
         with self.assertRaises(Exception) as context:
             study = optuna.create_study()
             study.optimize(objective, n_trials=2)
             self.assertIn('Upper bound 4 is not greater than lower bound 4.', context.exception)
+
+    def test_sampling_values_from_power_x(self):
+        """Test making a study that has a range defined by f(x) = base^x."""
+        kwargs_ranges = dict(
+            embedding_dim=dict(type=int, low=0, high=2, scale='power', base=10),
+        )
+        objective = _test_suggest(kwargs_ranges)
+        study = optuna.create_study()
+        study.optimize(objective, n_trials=2)
+
+        df = study.trials_dataframe(multi_index=True)
+        self.assertIn(('params', 'model.embedding_dim'), df.columns)
+        values = df[('params', 'model.embedding_dim')]
+        self.assertTrue(values.isin({1, 10, 100}).all(), msg=f'Got values: {values}')
+
+
+def _test_suggest(kwargs_ranges):
+    def objective(trial):
+        suggest_kwargs(prefix='model', trial=trial, kwargs_ranges=kwargs_ranges)
+        return 1.
+
+    return objective
 
 
 @pytest.mark.slow

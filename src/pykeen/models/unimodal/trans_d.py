@@ -9,12 +9,9 @@ import torch.autograd
 
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...losses import Loss
 from ...nn.emb import Embedding, EmbeddingSpecification
 from ...nn.init import xavier_normal_, xavier_uniform_, xavier_uniform_norm_
-from ...regularizers import Regularizer
-from ...triples import CoreTriplesFactory
-from ...typing import Constrainer, DeviceHint, Hint, Initializer
+from ...typing import Constrainer, Hint, Initializer
 from ...utils import clamp_norm
 
 __all__ = [
@@ -119,24 +116,16 @@ class TransD(EntityRelationEmbeddingModel):
 
     def __init__(
         self,
-        triples_factory: CoreTriplesFactory,
+        *,
         embedding_dim: int = 50,
         relation_dim: int = 30,
-        loss: Optional[Loss] = None,
-        preferred_device: DeviceHint = None,
-        random_seed: Optional[int] = None,
-        regularizer: Optional[Regularizer] = None,
         entity_initializer: Hint[Initializer] = xavier_uniform_,
         relation_initializer: Hint[Initializer] = xavier_uniform_norm_,
         entity_constrainer: Hint[Constrainer] = clamp_norm,  # type: ignore
         relation_constrainer: Hint[Constrainer] = clamp_norm,  # type: ignore
+        **kwargs,
     ) -> None:
         super().__init__(
-            triples_factory=triples_factory,
-            loss=loss,
-            preferred_device=preferred_device,
-            random_seed=random_seed,
-            regularizer=regularizer,
             entity_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
                 initializer=entity_initializer,
@@ -149,16 +138,17 @@ class TransD(EntityRelationEmbeddingModel):
                 constrainer=relation_constrainer,
                 constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
             ),
+            **kwargs,
         )
 
         self.entity_projections = Embedding.init_with_device(
-            num_embeddings=triples_factory.num_entities,
+            num_embeddings=self.num_entities,
             embedding_dim=embedding_dim,
             device=self.device,
             initializer=xavier_normal_,
         )
         self.relation_projections = Embedding.init_with_device(
-            num_embeddings=triples_factory.num_relations,
+            num_embeddings=self.num_relations,
             embedding_dim=relation_dim,
             device=self.device,
             initializer=xavier_normal_,

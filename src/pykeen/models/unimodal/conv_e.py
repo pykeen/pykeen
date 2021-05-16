@@ -16,9 +16,8 @@ from ...losses import BCEAfterSigmoidLoss, Loss
 from ...nn.emb import Embedding, EmbeddingSpecification
 from ...nn.init import xavier_normal_
 from ...nn.modules import _calculate_missing_shape_information
-from ...regularizers import Regularizer
 from ...triples import CoreTriplesFactory
-from ...typing import DeviceHint, Hint, Initializer
+from ...typing import Hint, Initializer
 from ...utils import is_cudnn_error
 
 __all__ = [
@@ -138,13 +137,10 @@ class ConvE(EntityRelationEmbeddingModel):
         output_dropout: float = 0.3,
         feature_map_dropout: float = 0.2,
         embedding_dim: int = 200,
-        loss: Optional[Loss] = None,
-        preferred_device: DeviceHint = None,
-        random_seed: Optional[int] = None,
-        regularizer: Optional[Regularizer] = None,
         apply_batch_normalization: bool = True,
         entity_initializer: Hint[Initializer] = xavier_normal_,
         relation_initializer: Hint[Initializer] = xavier_normal_,
+        **kwargs,
     ) -> None:
         """Initialize the model."""
         # ConvE should be trained with inverse triples
@@ -157,10 +153,6 @@ class ConvE(EntityRelationEmbeddingModel):
 
         super().__init__(
             triples_factory=triples_factory,
-            loss=loss,
-            preferred_device=preferred_device,
-            random_seed=random_seed,
-            regularizer=regularizer,
             entity_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
                 initializer=entity_initializer,
@@ -169,11 +161,12 @@ class ConvE(EntityRelationEmbeddingModel):
                 embedding_dim=embedding_dim,
                 initializer=relation_initializer,
             ),
+            **kwargs,
         )
 
         # ConvE uses one bias for each entity
         self.bias_term = Embedding.init_with_device(
-            num_embeddings=triples_factory.num_entities,
+            num_embeddings=self.num_entities,
             embedding_dim=1,
             device=self.device,
             initializer=nn.init.zeros_,

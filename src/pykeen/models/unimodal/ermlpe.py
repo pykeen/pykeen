@@ -2,7 +2,7 @@
 
 """An implementation of the extension to ERMLP."""
 
-from typing import Any, ClassVar, Mapping, Optional, Type
+from typing import Any, ClassVar, Mapping, Type
 
 import torch
 from torch import nn
@@ -12,9 +12,7 @@ from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import BCEAfterSigmoidLoss, Loss
 from ...nn.emb import EmbeddingSpecification
-from ...regularizers import Regularizer
-from ...triples import CoreTriplesFactory
-from ...typing import DeviceHint, Hint, Initializer
+from ...typing import Hint, Initializer
 
 __all__ = [
     'ERMLPE',
@@ -63,24 +61,16 @@ class ERMLPE(EntityRelationEmbeddingModel):
 
     def __init__(
         self,
-        triples_factory: CoreTriplesFactory,
+        *,
         hidden_dim: int = 300,
         input_dropout: float = 0.2,
         hidden_dropout: float = 0.3,
         embedding_dim: int = 200,
-        loss: Optional[Loss] = None,
-        preferred_device: DeviceHint = None,
-        random_seed: Optional[int] = None,
-        regularizer: Optional[Regularizer] = None,
         entity_initializer: Hint[Initializer] = uniform_,
         relation_initializer: Hint[Initializer] = uniform_,
+        **kwargs,
     ) -> None:
         super().__init__(
-            triples_factory=triples_factory,
-            loss=loss,
-            preferred_device=preferred_device,
-            random_seed=random_seed,
-            regularizer=regularizer,
             entity_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
                 initializer=entity_initializer,
@@ -89,6 +79,7 @@ class ERMLPE(EntityRelationEmbeddingModel):
                 embedding_dim=embedding_dim,
                 initializer=relation_initializer,
             ),
+            **kwargs,
         )
         self.hidden_dim = hidden_dim
 

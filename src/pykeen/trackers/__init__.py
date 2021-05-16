@@ -4,7 +4,7 @@
 
 from class_resolver import Resolver, get_subclasses
 
-from .base import ResultTracker
+from .base import ConsoleResultTracker, ResultTracker
 from .file import CSVResultTracker, FileResultTracker, JSONResultTracker
 from .mlflow import MLFlowResultTracker
 from .tensorboard import TensorBoardResultTracker
@@ -22,6 +22,7 @@ __all__ = [
     'JSONResultTracker',
     'CSVResultTracker',
     'TensorBoardResultTracker',
+    'ConsoleResultTracker',
     # Utilities
     'tracker_resolver',
 ]
