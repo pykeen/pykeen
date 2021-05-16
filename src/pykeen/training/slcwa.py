@@ -86,27 +86,29 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
         # Send positive batch to device
         positive_batch = batch[start:stop].to(device=self.device)
 
-        # Create negative samples
-        neg_samples, neg_samples_filter = self.negative_sampler.sample(positive_batch=positive_batch)
+        # Create negative samples, shape: (batch_size, num_neg_per_pos, 3)
+        negative_batch, positive_filter = self.negative_sampler.sample(positive_batch=positive_batch)
+
+        # apply filter mask
+        if positive_filter is None:
+            negative_batch = negative_batch.view(-1, 3)
+        else:
+            negative_batch = negative_batch[positive_filter]
 
         # Ensure they reside on the device (should hold already for most simple negative samplers, e.g.
         # BasicNegativeSampler, BernoulliNegativeSampler
-        negative_batch = neg_samples.to(self.device)
-
-        # Make it negative batch broadcastable (required for num_negs_per_pos > 1).
-        negative_batch = negative_batch.view(-1, 3)
+        negative_batch = negative_batch.to(self.device)
 
         # Compute negative and positive scores
         positive_scores = self.model.score_hrt(positive_batch)
         negative_scores = self.model.score_hrt(negative_batch)
 
-        loss = self._loss_helper(  # type: ignore
+        return self._loss_helper(  # type: ignore
             positive_scores,
             negative_scores,
             label_smoothing,
-            neg_samples_filter,
+            positive_filter,
         )
-        return loss
 
     def _mr_loss_helper(
         self,
@@ -116,8 +118,10 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
         _batch_filter=None,
     ) -> torch.FloatTensor:
         # Repeat positives scores (necessary for more than one negative per positive)
+        # TODO: Likely we do not need this, since most losses can handle broadcasting => view as (batch_size, 1)
+        #  instead.
         if self.negative_sampler.num_negs_per_pos > 1:
-            positive_scores = positive_scores.repeat(self.negative_sampler.num_negs_per_pos, 1)
+            positive_scores = positive_scores.repeat_interleave(repeats=self.negative_sampler.num_negs_per_pos, dim=0)
 
         if _batch_filter is not None:
             positive_scores = positive_scores[_batch_filter]
