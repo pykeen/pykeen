@@ -248,7 +248,7 @@ class Loss(_Loss):
             labels = apply_label_smoothing(
                 labels=labels,
                 epsilon=label_smoothing,
-                num_classes=self.model.num_entities,
+                num_classes=self.model.num_entities,  # FIXME no model available to loss
             )
 
         return self(predictions, labels)
