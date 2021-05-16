@@ -110,13 +110,12 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
 
     def _new_loss_helper(
         self,
-        loss: Loss,
         predictions: torch.FloatTensor,
         labels: torch.FloatTensor,
         label_smoothing: float,
         batch_filter: Optional[torch.BoolTensor] = None,
     ) -> torch.FloatTensor:
-        return loss.process_slcwa_scores(
+        return self.model.loss.process_slcwa_scores(
             predictions,
             labels,
             label_smoothing=label_smoothing,

@@ -60,12 +60,11 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
 
     def _new_loss_helper(
         self,
-        loss: Loss,
         predictions: torch.FloatTensor,
         labels: torch.FloatTensor,
         label_smoothing: float,
     ) -> torch.FloatTensor:
-        return loss.process_lcwa_scores(
+        return self.model.loss.process_lcwa_scores(
             predictions,
             labels,
             label_smoothing=label_smoothing,
