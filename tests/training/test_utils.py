@@ -47,38 +47,19 @@ class LossTensorTest(unittest.TestCase):
 
     def test_lcwa_margin_ranking_loss_helper(self):
         """Test if output is correct for the LCWA training loop use case."""
-        factory = TriplesFactory.from_labeled_triples(triples=self.triples)
-
+        # TODO should we move/delete this test?
         loss_cls = MarginRankingLoss(
             margin=0,
             reduction='sum',
         )
-
-        model = TransE(
-            triples_factory=factory,
-            embedding_dim=8,
-            preferred_device='cpu',
-            loss=loss_cls,
-        )
-
-        loop = LCWATrainingLoop(model=model, triples_factory=factory)
-        loss = loop._mr_loss_helper(predictions=self.predictions, labels=self.labels)
+        loss = loss_cls.process_lcwa_scores(predictions=self.predictions, labels=self.labels)
         self.assertEqual(14, loss)
 
         loss_cls = MarginRankingLoss(
             margin=0,
             reduction='mean',
         )
-
-        model = TransE(
-            triples_factory=factory,
-            embedding_dim=8,
-            preferred_device='cpu',
-            loss=loss_cls,
-        )
-
-        loop = LCWATrainingLoop(model=model, triples_factory=factory)
-        loss = loop._mr_loss_helper(predictions=self.predictions, labels=self.labels)
+        loss = loss_cls.process_lcwa_scores(predictions=self.predictions, labels=self.labels)
         self.assertEqual(1, loss)
 
 

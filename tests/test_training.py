@@ -294,6 +294,7 @@ class TestTrainingEarlyStopping(unittest.TestCase):
 
     def test_early_stopper_best_epoch_model_retrieval(self):
         """Test if the best epoch model is returned when using the early stopper."""
+        # TODO this test is failing
         training_loop = DummyTrainingLoop(
             model=self.model,
             triples_factory=self.triples_factory.training,
