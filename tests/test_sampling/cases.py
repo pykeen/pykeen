@@ -58,21 +58,21 @@ class NegativeSamplerGenericTestCase(unittest_templates.GenericTestCase[Negative
         kwargs['triples_factory'] = self.triples_factory
         return kwargs
 
-    def _test_sample(self) -> None:
+    def check_sample(self, instance: NegativeSampler) -> None:
         """Test generating a negative sample."""
         # Generate negative sample
-        negative_batch, batch_filter = self.instance.sample(positive_batch=self.positive_batch)
+        negative_batch, batch_filter = instance.sample(positive_batch=self.positive_batch)
 
         # check filter shape if necessary
-        if self.instance.filterer is not None:
+        if instance.filterer is not None:
             assert batch_filter is not None
-            assert batch_filter.shape == (self.batch_size, self.instance.num_negs_per_pos)
+            assert batch_filter.shape == (self.batch_size, instance.num_negs_per_pos)
             assert batch_filter.dtype == torch.bool
         else:
             assert batch_filter is None
 
         # check shape
-        assert negative_batch.shape == (self.positive_batch.shape[0], self.instance.num_negs_per_pos, 3)
+        assert negative_batch.shape == (self.positive_batch.shape[0], instance.num_negs_per_pos, 3)
 
         # check bounds: heads
         assert _array_check_bounds(negative_batch[..., 0], low=0, high=self.triples_factory.num_entities)
@@ -83,8 +83,8 @@ class NegativeSamplerGenericTestCase(unittest_templates.GenericTestCase[Negative
         # check bounds: tails
         assert _array_check_bounds(negative_batch[..., 2], low=0, high=self.triples_factory.num_entities)
 
-        if self.instance.filterer is not None:
-            positive_batch = self.positive_batch.unsqueeze(dim=1).repeat(1, self.instance.num_negs_per_pos, 1)
+        if instance.filterer is not None:
+            positive_batch = self.positive_batch.unsqueeze(dim=1).repeat(1, instance.num_negs_per_pos, 1)
             positive_batch = positive_batch[batch_filter]
             negative_batch = negative_batch[batch_filter]
 
@@ -93,13 +93,13 @@ class NegativeSamplerGenericTestCase(unittest_templates.GenericTestCase[Negative
 
     def test_sample_no_filter(self) -> None:
         """Test generating a negative sample."""
-        self._test_sample()
+        self.check_sample(self.instance)
 
     def test_sample_filtered(self) -> None:
         """Test generating a negative sample with filtering."""
         filterer = PythonSetFilterer(mapped_triples=self.triples_factory.mapped_triples)
-        self.instance = self.cls(**self.instance_kwargs, filterer=filterer)
-        self._test_sample()
+        instance = self.cls(**self.instance_kwargs, filterer=filterer)
+        self.check_sample(instance)
 
     def _update_positive_batch(self, positive_batch, batch_filter):
         # shape: (batch_size, 1, num_neg)
