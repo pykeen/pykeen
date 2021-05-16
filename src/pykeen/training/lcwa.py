@@ -10,6 +10,7 @@ import torch
 
 from .training_loop import TrainingLoop
 from .utils import apply_label_smoothing
+from ..losses import Loss
 from ..triples import CoreTriplesFactory, Instances
 from ..triples.instances import LCWABatchType, LCWASampleType
 
@@ -56,6 +57,19 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
             label_smoothing,
         )
         return loss
+
+    def _new_loss_helper(
+        self,
+        loss: Loss,
+        predictions: torch.FloatTensor,
+        labels: torch.FloatTensor,
+        label_smoothing: float,
+    ) -> torch.FloatTensor:
+        return loss.process_lcwa_scores(
+            predictions,
+            labels,
+            label_smoothing=label_smoothing,
+        )
 
     def _label_loss_helper(
         self,

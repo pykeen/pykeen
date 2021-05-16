@@ -11,7 +11,7 @@ from torch.optim.optimizer import Optimizer
 
 from .training_loop import TrainingLoop
 from .utils import apply_label_smoothing
-from ..losses import CrossEntropyLoss
+from ..losses import CrossEntropyLoss, Loss
 from ..models import Model
 from ..sampling import NegativeSampler, negative_sampler_resolver
 from ..triples import CoreTriplesFactory, Instances
@@ -107,6 +107,21 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
             neg_samples_filter,
         )
         return loss
+
+    def _new_loss_helper(
+        self,
+        loss: Loss,
+        predictions: torch.FloatTensor,
+        labels: torch.FloatTensor,
+        label_smoothing: float,
+        batch_filter: Optional[torch.BoolTensor] = None,
+    ) -> torch.FloatTensor:
+        return loss.process_slcwa_scores(
+            predictions,
+            labels,
+            label_smoothing=label_smoothing,
+            batch_filter=batch_filter,
+        )
 
     def _mr_loss_helper(
         self,
