@@ -104,5 +104,9 @@ class PseudoTypedNegativeSampler(NegativeSampler):
             triple_position,
         ] = entity_id
 
-        # TODO: Filtering
+        # If filtering is activated, all negative triples that are positive in the training dataset will be removed
+        # TODO: Wrong shape
+        if self.filterer is not None:
+            negative_batch, batch_filter = self.filterer(negative_batch=negative_batch)
+
         return negative_batch.view(-1, 3), None
