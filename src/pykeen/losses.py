@@ -209,7 +209,7 @@ class Loss(_Loss):
         self,
         positive_scores: torch.FloatTensor,
         negative_scores: torch.FloatTensor,
-        label_smoothing: Optional[float] = None,
+        label_smoothing: Optional[float] = None,  # TODO: Shouldn't this be part of the loss' constructor parameters?
         batch_filter: Optional[torch.BoolTensor] = None,
     ) -> torch.FloatTensor:
         """
@@ -241,7 +241,7 @@ class Loss(_Loss):
         self,
         predictions: torch.FloatTensor,
         labels: torch.FloatTensor,
-        label_smoothing: Optional[float] = None,
+        label_smoothing: Optional[float] = None,  # TODO: Shouldn't this be part of the loss' constructor parameters?
     ) -> torch.FloatTensor:
         # Apply label smoothing
         if label_smoothing > 0.:
