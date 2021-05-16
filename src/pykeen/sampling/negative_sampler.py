@@ -72,7 +72,7 @@ class NegativeSampler(ABC):
             A pair (negative_batch, filter_mask) where
 
             1. negative_batch: shape: (batch_size, num_negatives, 3)
-                The negative batch.
+                The negative batch. `negative_batch[i, :, :]` contains the negative examples generated from `positive_batch[i, :]`.
             2. filter_mask: shape: (batch_size, num_negatives)
                 An optional filter mask. True where negative samples are valid.
         """
