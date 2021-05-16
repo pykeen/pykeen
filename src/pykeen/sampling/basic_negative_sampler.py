@@ -2,9 +2,9 @@
 
 """Negative sampling algorithm based on the work of of Bordes *et al.*."""
 
+import math
 from typing import Collection, Optional
 
-import math
 import torch
 
 from .negative_sampler import NegativeSampler

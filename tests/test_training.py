@@ -17,6 +17,7 @@ from pykeen.stoppers.early_stopping import EarlyStopper
 from pykeen.training import SLCWATrainingLoop, training_loop_resolver
 from pykeen.training.training_loop import NonFiniteLossError, TrainingApproachLossMismatchError
 from pykeen.triples import TriplesFactory
+from pykeen.triples.instances import SLCWABatchType
 from pykeen.typing import MappedTriples
 from tests.mocks import MockEvaluator, MockModel
 
