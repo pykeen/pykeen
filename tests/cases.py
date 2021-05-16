@@ -177,6 +177,9 @@ class LossTestCase(GenericTestCase[Loss]):
     #: The number of negatives per positive for sLCWA training loop.
     num_neg_per_pos: ClassVar[int] = 7
 
+    #: The number of entities LCWA training loop / label smoothing.
+    num_entities: ClassVar[int] = 7
+
     def _check_loss_value(self, loss_value: torch.FloatTensor) -> None:
         """Check loss value dimensionality, and ability for backward."""
         # test reduction
@@ -197,6 +200,17 @@ class LossTestCase(GenericTestCase[Loss]):
             negative_scores=negative_scores,
             label_smoothing=None,
             batch_filter=None,
+        )
+        self._check_loss_value(loss_value=loss_value)
+
+    def test_process_lcwa_scores(self):
+        """Test processing scores from LCWA training loop."""
+        predictions = torch.rand(self.batch_size, self.num_entities, requires_grad=True)
+        labels = (torch.rand(self.batch_size, self.num_entities, requires_grad=True) > 0.8).float()
+        loss_value = self.instance.process_lcwa_scores(
+            predictions=predictions,
+            labels=labels,
+            label_smoothing=None,
         )
         self._check_loss_value(loss_value=loss_value)
 
