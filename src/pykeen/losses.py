@@ -186,6 +186,14 @@ def apply_label_smoothing(
     return new_label_true * labels + new_label_false * (1.0 - labels)
 
 
+class UnsupportedLabelSmoothingError(RuntimeError):
+    """Raised if a loss does not support label smoothing."""
+
+    def __init__(self, instance: object):
+        """Initialize the error."""
+        super().__init__(f"{instance.__class__.__name__} does not support label smoothing.")
+
+
 _REDUCTION_METHODS = dict(
     mean=torch.mean,
     sum=torch.sum,
@@ -385,7 +393,7 @@ class MarginRankingLoss(PairwiseLoss):
     ) -> torch.FloatTensor:  # noqa: D102
         # Sanity check
         if label_smoothing:
-            raise RuntimeError('Label smoothing can not be used with margin ranking loss.')
+            raise UnsupportedLabelSmoothingError(self)
 
         # prepare for broadcasting, shape: (batch_size, 1, 3)
         positive_scores = positive_scores.unsqueeze(dim=1)
@@ -406,7 +414,7 @@ class MarginRankingLoss(PairwiseLoss):
     ) -> torch.FloatTensor:  # noqa: D102
         # Sanity check
         if label_smoothing:
-            raise RuntimeError('Label smoothing can not be used with margin ranking loss.')
+            raise UnsupportedLabelSmoothingError(self)
 
         # This shows how often one row has to be repeated
         repeat_rows = (labels == 1).nonzero(as_tuple=False)[:, 0]
@@ -522,8 +530,9 @@ class NSSALoss(SetwiseLoss):
         label_smoothing: Optional[float] = None,
         num_entities: Optional[int] = None,
     ) -> torch.FloatTensor:  # noqa: D102
+        # Sanity check
         if label_smoothing:
-            raise NotImplementedError
+            raise UnsupportedLabelSmoothingError(self)
 
         # Split positive and negative scores
         positive_scores = predictions[labels == 1]
