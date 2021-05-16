@@ -228,12 +228,13 @@ class Loss(_Loss):
             A scalar loss term.
         """
         # Stack predictions
-        predictions = torch.cat([positive_scores, negative_scores], dim=0)
+        positive_scores = positive_scores.unsqueeze(dim=1)
+        predictions = torch.cat([positive_scores, negative_scores], dim=-1)
 
         # Create target
         ones = torch.ones_like(positive_scores, device=positive_scores.device)
         zeros = torch.zeros_like(negative_scores, device=negative_scores.device)
-        labels = torch.cat([ones, zeros], dim=0)
+        labels = torch.cat([ones, zeros], dim=-1)
 
         return self.process_lcwa_scores(predictions, labels, label_smoothing=label_smoothing)
 
