@@ -73,7 +73,7 @@ class PseudoTypedNegativeSampler(NegativeSampler):
     def sample(self, positive_batch: torch.LongTensor) -> Tuple[torch.LongTensor, Optional[torch.Tensor]]:  # noqa: D102
         batch_size = positive_batch.shape[0]
         # shape: (batch_size, neg, 3)
-        negative_batch = positive_batch.unsqueeze(dim=1).repeat(1, self.num_negs_per_pos, 1)
+        negative_batch = positive_batch.unsqueeze(dim=0).repeat(self.num_negs_per_pos, 1, 1)
         r = positive_batch[:, 1]
         start_heads = self.offsets[2 * r].unsqueeze(dim=-1)
         start_tails = self.offsets[2 * r + 1].unsqueeze(dim=-1)
@@ -86,8 +86,8 @@ class PseudoTypedNegativeSampler(NegativeSampler):
         fill_mask = torch.arange(self.num_negs_per_pos).unsqueeze(dim=0) >= num_choices
         entity_id[fill_mask] = torch.randint(self.num_entities, size=(fill_mask.sum(),), device=negative_batch.device)
         negative_batch[
-            torch.arange(batch_size, device=negative_batch.device).unsqueeze(dim=-1),
             torch.arange(self.num_negs_per_pos, device=negative_batch.device).unsqueeze(dim=0),
+            torch.arange(batch_size, device=negative_batch.device).unsqueeze(dim=-1),
             triple_position,
         ] = entity_id
 
