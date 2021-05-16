@@ -6,11 +6,10 @@ from abc import ABC, abstractmethod
 from typing import Any, ClassVar, Mapping, Optional, Tuple
 
 import torch
-from class_resolver import HintOrType
+from class_resolver import HintOrType, normalize_string
 
 from .filtering import Filterer, filterer_resolver
 from ..triples import CoreTriplesFactory
-from ..utils import normalize_string
 
 __all__ = [
     'NegativeSampler',
@@ -62,7 +61,41 @@ class NegativeSampler(ABC):
         """Get the normalized name of the negative sampler."""
         return normalize_string(cls.__name__, suffix=NegativeSampler.__name__)
 
+    def sample(self, positive_batch: torch.LongTensor) -> Tuple[torch.LongTensor, Optional[torch.BoolTensor]]:
+        """
+        Generate negative samples from the positive batch.
+
+        :param positive_batch: shape: (batch_size, 3)
+            The positive triples.
+
+        :return:
+            A pair (negative_batch, filter_mask) where
+
+            1. negative_batch: shape: (batch_size, num_negatives, 3)
+               The negative batch. ``negative_batch[i, :, :]`` contains the negative examples generated from
+               ``positive_batch[i, :]``.
+            2. filter_mask: shape: (batch_size, num_negatives)
+               An optional filter mask. True where negative samples are valid.
+        """
+        # create unfiltered negative batch by corruption
+        negative_batch = self.corrupt_batch(positive_batch=positive_batch)
+
+        if self.filterer is None:
+            return negative_batch, None
+
+        # If filtering is activated, all negative triples that are positive in the training dataset will be removed
+        return negative_batch, self.filterer(negative_batch=negative_batch)
+
     @abstractmethod
-    def sample(self, positive_batch: torch.LongTensor) -> Tuple[torch.LongTensor, Optional[torch.Tensor]]:
-        """Generate negative samples from the positive batch."""
+    def corrupt_batch(self, positive_batch: torch.LongTensor) -> torch.LongTensor:
+        """
+        Generate negative samples from the positive batch without application of any filter.
+
+        :param positive_batch: shape: (batch_size, 3)
+            The positive triples.
+
+        :return: shape: (batch_size, num_negs_per_pos, 3)
+            The negative triples. ``result[i, :, :]`` contains the negative examples generated from
+            ``positive_batch[i, :]``.
+        """
         raise NotImplementedError
