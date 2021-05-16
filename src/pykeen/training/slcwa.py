@@ -86,7 +86,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
         # Send positive batch to device
         positive_batch = batch[start:stop].to(device=self.device)
 
-        # Create negative samples
+        # Create negative samples, shape: (batch_size, num_neg_per_pos, 3)
         negative_batch, positive_filter = self.negative_sampler.sample(positive_batch=positive_batch)
 
         # Ensure they reside on the device (should hold already for most simple negative samplers, e.g.
@@ -116,7 +116,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
     ) -> torch.FloatTensor:
         # Repeat positives scores (necessary for more than one negative per positive)
         if self.negative_sampler.num_negs_per_pos > 1:
-            positive_scores = positive_scores.repeat(self.negative_sampler.num_negs_per_pos, 1)
+            positive_scores = positive_scores.repeat_interleave(repeats=self.negative_sampler.num_negs_per_pos, dim=0)
 
         if _batch_filter is not None:
             positive_scores = positive_scores[_batch_filter]
