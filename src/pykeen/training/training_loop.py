@@ -13,7 +13,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from hashlib import md5
 from tempfile import NamedTemporaryFile
-from typing import Any, Callable, ClassVar, Generic, IO, List, Mapping, Optional, Tuple, Type, TypeVar, Union
+from typing import Any, ClassVar, Generic, IO, List, Mapping, Optional, Tuple, Type, TypeVar, Union
 
 import numpy as np
 import torch
@@ -544,7 +544,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             shuffle=shuffle,
             num_workers=num_workers,
             drop_last=drop_last,
-            collate_fn=self.get_collator(),
         )
 
         # Save the time to track when the saved point was available
@@ -760,10 +759,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
     def _create_instances(self, triples_factory: CoreTriplesFactory) -> Instances:
         """Create the training instances at the beginning of the training loop."""
         raise NotImplementedError
-
-    def get_collator(self) -> Optional[Callable[[List[SampleType]], BatchType]]:
-        """Get the batch collator."""
-        return None
 
     @abstractmethod
     def _process_batch(

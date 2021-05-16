@@ -3,7 +3,7 @@
 """Training KGE models based on the sLCWA."""
 
 import logging
-from typing import Any, Callable, List, Mapping, Optional
+from typing import Any, Mapping, Optional
 
 import torch
 from class_resolver import HintOrType
@@ -16,6 +16,7 @@ from ..models import Model
 from ..sampling import NegativeSampler, negative_sampler_resolver
 from ..triples import CoreTriplesFactory, Instances
 from ..triples.instances import SLCWABatchType, SLCWASampleType
+from ..typing import MappedTriples
 
 __all__ = [
     'SLCWATrainingLoop',
@@ -66,16 +67,13 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
     def _create_instances(self, triples_factory: CoreTriplesFactory) -> Instances:  # noqa: D102
         return triples_factory.create_slcwa_instances()
 
-    def get_collator(self) -> Callable[[List[SLCWASampleType]], SLCWABatchType]:  # noqa: D102
-        return self.negative_sampler.collate
-
     @staticmethod
-    def _get_batch_size(batch: SLCWABatchType) -> int:  # noqa: D102
-        return batch[0].shape[0]
+    def _get_batch_size(batch: MappedTriples) -> int:  # noqa: D102
+        return batch.shape[0]
 
     def _process_batch(
         self,
-        batch: SLCWABatchType,
+        batch: MappedTriples,
         start: int,
         stop: int,
         label_smoothing: float = 0.0,
@@ -85,15 +83,15 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
         if slice_size is not None:
             raise AttributeError('Slicing is not possible for sLCWA training loops.')
 
-        # split batch
-        positive_batch, negative_batch, positive_filter = batch
+        # Send positive batch to device
+        positive_batch = batch[start:stop].to(device=self.device)
 
-        # send to device
-        positive_batch = positive_batch[start:stop].to(device=self.device)
-        negative_batch = negative_batch[start:stop]
-        if positive_filter:
-            negative_batch = negative_batch[positive_filter[start:stop]]
-        negative_batch = negative_batch.to(device=self.device)
+        # Create negative samples
+        neg_samples, neg_samples_filter = self.negative_sampler.sample(positive_batch=positive_batch)
+
+        # Ensure they reside on the device (should hold already for most simple negative samplers, e.g.
+        # BasicNegativeSampler, BernoulliNegativeSampler
+        negative_batch = neg_samples.to(self.device)
 
         # Make it negative batch broadcastable (required for num_negs_per_pos > 1).
         negative_batch = negative_batch.view(-1, 3)
@@ -106,7 +104,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
             positive_scores,
             negative_scores,
             label_smoothing,
-            positive_filter,
+            neg_samples_filter,
         )
         return loss
 
