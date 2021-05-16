@@ -27,7 +27,7 @@ class PseudoTypedNegativeSampler(NegativeSampler):
 
     For this sampling, we need to store for each relation the set of head / tail entities. For efficient
     vectorized sampling, the following data structure is employed, which is partially inspired by the
-    CSR format of sparse matrices (cf. https://en.wikipedia.org/wiki/Sparse_matrix#Compressed_sparse_row_(CSR,_CRS_or_Yale_format) TODO: Use Sphinx link).
+    CSR format of sparse matrices (cf. :class:`scipy.sparse.csr_matrix`).
 
     We use two arrays, `offsets` and `data`. The `offsets` array is of shape `(2 * num_relations + 1,)`. The `data`
     array contains the sorted set of heads and tails for each relation, i.e. `data[offsets[2*i]:offsets[2*i+1]]`
