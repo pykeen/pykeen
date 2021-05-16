@@ -177,7 +177,7 @@ def apply_label_smoothing(
         other classes.
     :param num_classes:
         The number of classes.
-    :returns A smoothed label tensor
+    :returns: A smoothed label tensor
 
     ..seealso:
         http://www.deeplearningbook.org/contents/regularization.html, chapter 7.5.1
