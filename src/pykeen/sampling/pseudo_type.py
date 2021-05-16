@@ -48,12 +48,12 @@ class PseudoTypedNegativeSampler(NegativeSampler):
         **kwargs,
     ):
         """
-        Instantiate the negative sampler.
+        Instantiate the pseudo-typed negative sampler.
 
         :param triples_factory:
             The factory holding the positive training triples
         :param kwargs:
-            Additional keyword based arguments passed to NegativeSampler.
+            Additional keyword based arguments passed to :class:`pykeen.sampling.NegativeSampler`.
         """
         super().__init__(triples_factory=triples_factory, **kwargs)
         heads, tails = create_relation_to_entity_set_mapping(triples=triples_factory.mapped_triples.tolist())
