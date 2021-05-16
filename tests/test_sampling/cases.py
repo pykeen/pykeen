@@ -83,6 +83,11 @@ class NegativeSamplerGenericTestCase(unittest_templates.GenericTestCase[Negative
 
         positive_batch = self._update_positive_batch(self.positive_batch, batch_filter)
         # test that the relations were not changed by the negative sampler
+        self.assertEqual(positive_batch[:, 1].shape, negative_batch[:, 1].shape)
+        self.assertEqual(
+            positive_batch[:, 1].detach().numpy().tolist(),
+            negative_batch[:, 1].detach().numpy().tolist(),
+        )
         assert (positive_batch[:, 1] == negative_batch[:, 1]).all()
 
         assert (negative_batch != positive_batch).any(dim=1).all()
