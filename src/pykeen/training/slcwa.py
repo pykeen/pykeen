@@ -115,6 +115,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
         _batch_filter=None,
     ) -> torch.FloatTensor:
         # Repeat positives scores (necessary for more than one negative per positive)
+        # TODO: Likely we do not need this, since most losses can handle broadcasting => view as (batch_size, 1) instead.
         if self.negative_sampler.num_negs_per_pos > 1:
             positive_scores = positive_scores.repeat_interleave(repeats=self.negative_sampler.num_negs_per_pos, dim=0)
 
