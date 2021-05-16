@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Pseudo-Typed negative sampling."""
-
+import itertools
 import logging
 from typing import Optional, Tuple
 
@@ -58,15 +58,13 @@ class PseudoTypedNegativeSampler(NegativeSampler):
 
         # create index structure
         data = []
-        offset = 0
-        offsets = [offset]
-        for r in range(self.num_relations):
-            for m in (heads, tails):
-                data.extend(sorted(m[r]))
-                offset = len(data)
-                offsets.append(offset)
+        offsets = torch.empty(2 * self.num_relations + 1, dtype=torch.long)
+        offsets[0] = 0
+        for i, (r, m) in enumerate(itertools.product(range(self.num_relations), (heads, tails)), start=1):
+            data.extend(sorted(m[r]))
+            offsets[i] = len(data)
         self.data = torch.as_tensor(data=data, dtype=torch.long)
-        self.offsets = torch.as_tensor(data=offsets, dtype=torch.long)
+        self.offsets = offsets
 
     def sample(self, positive_batch: torch.LongTensor) -> Tuple[torch.LongTensor, Optional[torch.Tensor]]:  # noqa: D102
         batch_size = positive_batch.shape[0]
