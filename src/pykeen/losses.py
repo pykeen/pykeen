@@ -183,8 +183,7 @@ def apply_label_smoothing(
     """
     new_label_true = (1.0 - epsilon)
     new_label_false = epsilon / (num_classes - 1)
-    labels = new_label_true * labels + new_label_false * (1.0 - labels)
-    return labels
+    return new_label_true * labels + new_label_false * (1.0 - labels)
 
 
 _REDUCTION_METHODS = dict(
