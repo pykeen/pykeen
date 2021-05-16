@@ -227,7 +227,6 @@ class Loss(_Loss):
         :return:
             A scalar loss term.
         """
-        # TODO: Make sure that the regularization term is added in the training loops
         # Stack predictions
         predictions = torch.cat([positive_scores, negative_scores], dim=0)
 
