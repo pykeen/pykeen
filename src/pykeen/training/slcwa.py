@@ -100,13 +100,12 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
         positive_scores = self.model.score_hrt(positive_batch)
         negative_scores = self.model.score_hrt(negative_batch)
 
-        loss = self._loss_helper(  # type: ignore
+        return self._loss_helper(  # type: ignore
             positive_scores,
             negative_scores,
             label_smoothing,
             positive_filter,
         )
-        return loss
 
     def _mr_loss_helper(
         self,
