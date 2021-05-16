@@ -177,6 +177,7 @@ def apply_label_smoothing(
         other classes.
     :param num_classes:
         The number of classes.
+    :returns A smoothed label tensor
 
     ..seealso:
         http://www.deeplearningbook.org/contents/regularization.html, chapter 7.5.1
@@ -256,8 +257,9 @@ class Loss(_Loss):
         label_smoothing: Optional[float] = None,  # TODO: Shouldn't this be part of the loss' constructor parameters?
         num_entities: Optional[int] = None,
     ) -> torch.FloatTensor:
+        """Process scores from LCWA training loop."""
         # Apply label smoothing
-        if label_smoothing is not None and label_smoothing > 0.:
+        if label_smoothing is not None and num_entities is not None and label_smoothing > 0.:
             labels = apply_label_smoothing(
                 labels=labels,
                 epsilon=label_smoothing,
@@ -546,6 +548,10 @@ class NSSALoss(SetwiseLoss):
         neg_scores: torch.FloatTensor,
     ) -> torch.FloatTensor:
         """Calculate the loss for the given scores.
+
+        :param pos_scores: Positive score tensor
+        :param neg_scores: Negative score tensor
+        :returns: A loss value
 
         .. seealso:: https://github.com/DeepGraphLearning/KnowledgeGraphEmbedding/blob/master/codes/model.py
         """
