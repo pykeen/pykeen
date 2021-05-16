@@ -51,7 +51,7 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
 
         return self.model.loss.process_lcwa_scores(
             predictions=predictions,
-            batch_labels_full=batch_labels_full,
+            labels=batch_labels_full,
             label_smoothing=label_smoothing,
         )
 
@@ -77,12 +77,7 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
         labels: torch.FloatTensor,
         _label_smoothing=None,
     ) -> torch.FloatTensor:
-        """Compute self adversarial negative sampling loss."""
-        # Split positive and negative scores
-        positive_scores = predictions[labels == 1]
-        negative_scores = predictions[labels == 0]
-
-        return self.model.compute_loss(positive_scores, negative_scores)
+        raise AssertionError("Do not use the loss helper, but rather the loss' builtin process_lcwa_scores.")
 
     def _slice_size_search(
         self,

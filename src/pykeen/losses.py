@@ -476,6 +476,18 @@ class NSSALoss(SetwiseLoss):
         self.adversarial_temperature = adversarial_temperature
         self.margin = margin
 
+    def process_lcwa_scores(
+        self,
+        predictions: torch.FloatTensor,
+        labels: torch.FloatTensor,
+        label_smoothing: Optional[float] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        # Split positive and negative scores
+        positive_scores = predictions[labels == 1]
+        negative_scores = predictions[labels == 0]
+
+        return self(pos_scores=positive_scores, neg_scores=negative_scores)
+
     def forward(
         self,
         pos_scores: torch.FloatTensor,
