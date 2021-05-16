@@ -174,6 +174,9 @@ class LossTestCase(GenericTestCase[Loss]):
     #: The batch size
     batch_size: ClassVar[int] = 3
 
+    #: The number of negatives per positive for sLCWA training loop.
+    num_neg_per_pos: ClassVar[int] = 7
+
     def _check_loss_value(self, loss_value: torch.FloatTensor) -> None:
         """Check loss value dimensionality, and ability for backward."""
         # test reduction
@@ -184,6 +187,18 @@ class LossTestCase(GenericTestCase[Loss]):
 
         # Test backward
         loss_value.backward()
+
+    def test_process_slcwa_scores(self):
+        """Test processing scores from SLCWA training loop."""
+        positive_scores = torch.rand(self.batch_size, requires_grad=True)
+        negative_scores = torch.rand(self.batch_size, self.num_neg_per_pos, requires_grad=True)
+        loss_value = self.instance.process_slcwa_scores(
+            positive_scores=positive_scores,
+            negative_scores=negative_scores,
+            label_smoothing=None,
+            batch_filter=None,
+        )
+        self._check_loss_value(loss_value=loss_value)
 
 
 # TODO update
