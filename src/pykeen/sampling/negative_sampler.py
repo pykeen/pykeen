@@ -3,14 +3,13 @@
 """Basic structure for a negative sampler."""
 
 from abc import ABC, abstractmethod
-from typing import Any, ClassVar, List, Mapping, Optional, Tuple
+from typing import Any, ClassVar, Mapping, Optional, Tuple
 
 import torch
 from class_resolver import HintOrType, normalize_string
 
 from .filtering import Filterer, filterer_resolver
 from ..triples import CoreTriplesFactory
-from ..triples.instances import SLCWABatchType, SLCWASampleType
 
 __all__ = [
     'NegativeSampler',
@@ -98,23 +97,3 @@ class NegativeSampler(ABC):
             The negative triples.
         """
         raise NotImplementedError
-
-    def collate(self, batch: List[SLCWASampleType]) -> SLCWABatchType:
-        """
-        Collate a batch of positive triples, and add negative samples.
-
-        :param batch:
-            The batch of positive triples.
-
-        :return:
-            A triple (positive, negative, mask) where
-            1. positive: shape: (batch_size, 3)
-                The positive triples.
-            2. negative: shape: (batch_size, num_negs_per_pos, 3)
-                The negative triples.
-            3. mask: shape: (batch_size, num_negs_per_pos)
-                An optional mask. True indicates that this negative sample should be considered.
-        """
-        positive_batch = torch.stack(batch, dim=0)
-        negative_batch, mask = self.sample(positive_batch=positive_batch)
-        return positive_batch, negative_batch, mask
