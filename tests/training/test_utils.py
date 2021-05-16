@@ -8,7 +8,7 @@ from typing import Type
 import numpy as np
 import torch
 
-from pykeen.losses import MarginRankingLoss, apply_label_smoothing
+from pykeen.losses import MarginRankingLoss
 from pykeen.models import Model, TransE
 from pykeen.training.lcwa import LCWATrainingLoop
 from pykeen.training.utils import lazy_compile_random_batches
@@ -80,47 +80,6 @@ class LossTensorTest(unittest.TestCase):
         loop = LCWATrainingLoop(model=model, triples_factory=factory)
         loss = loop._mr_loss_helper(predictions=self.predictions, labels=self.labels)
         self.assertEqual(1, loss)
-
-
-class LabelSmoothingTest(unittest.TestCase):
-    """Test label smoothing."""
-
-    batch_size: int = 16
-    num_entities: int = 32
-    epsilon: float = 0.1
-    relative_tolerance: float = 1.e-4  # larger tolerance for float32
-
-    def setUp(self) -> None:
-        """Set up the test case with a fixed random seed."""
-        self.random = np.random.RandomState(seed=42)
-
-    def test_lcwa_label_smoothing(self):
-        """Test if output is correct for the LCWA training loop use case."""
-        # Create dummy dense labels
-        labels = torch.zeros(self.batch_size, self.num_entities)
-        for i in range(self.batch_size):
-            labels[i, self.random.randint(self.num_entities)] = 1.0
-        # Check if labels form a probability distribution
-        np.testing.assert_allclose(torch.sum(labels, dim=1).numpy(), 1.0)
-
-        # Apply label smoothing
-        smooth_labels = apply_label_smoothing(labels=labels, epsilon=self.epsilon, num_classes=self.num_entities)
-        # Check if smooth labels form probability distribution
-        np.testing.assert_allclose(torch.sum(smooth_labels, dim=1).numpy(), 1.0, rtol=self.relative_tolerance)
-
-    def test_slcwa_label_smoothing(self):
-        """Test if output is correct for the sLCWA training loop use case."""
-        # Create dummy sLCWA labels
-        ones = torch.ones(self.batch_size, 1)
-        zeros = torch.zeros(self.batch_size, 1)
-        labels = torch.cat([ones, zeros], dim=0)
-
-        # Apply label smoothing
-        smooth_labels = apply_label_smoothing(labels=labels, epsilon=self.epsilon, num_classes=self.num_entities)
-        exp_true = 1.0 - self.epsilon
-        np.testing.assert_allclose(smooth_labels[:self.batch_size], exp_true, rtol=self.relative_tolerance)
-        exp_false = self.epsilon / (self.num_entities - 1.)
-        np.testing.assert_allclose(smooth_labels[self.batch_size:], exp_false, rtol=self.relative_tolerance)
 
 
 class BatchCompilationTest(unittest.TestCase):
