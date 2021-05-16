@@ -210,6 +210,7 @@ class Loss(_Loss):
         negative_scores: torch.FloatTensor,
         label_smoothing: Optional[float] = None,  # TODO: Shouldn't this be part of the loss' constructor parameters?
         batch_filter: Optional[torch.BoolTensor] = None,
+        num_entities: Optional[int] = None,
     ) -> torch.FloatTensor:
         """
         Process scores from sLCWA training loop.
@@ -222,6 +223,8 @@ class Loss(_Loss):
             An optional label smoothing parameter.
         :param batch_filter: shape: (batch_size, num_neg_per_pos)
             An optional filter. If given, ... TODO: describe
+        :param num_entities:
+            The number of entities. Only required if label smoothing is enabled.
 
         :return:
             A scalar loss term.
@@ -243,13 +246,14 @@ class Loss(_Loss):
         predictions: torch.FloatTensor,
         labels: torch.FloatTensor,
         label_smoothing: Optional[float] = None,  # TODO: Shouldn't this be part of the loss' constructor parameters?
+        num_entities: Optional[int] = None,
     ) -> torch.FloatTensor:
         # Apply label smoothing
         if label_smoothing is not None and label_smoothing > 0.:
             labels = apply_label_smoothing(
                 labels=labels,
                 epsilon=label_smoothing,
-                num_classes=self.model.num_entities,  # FIXME no model available to loss
+                num_classes=num_entities,  # FIXME no model available to loss
             )
 
         return self(predictions, labels)

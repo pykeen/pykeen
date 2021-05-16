@@ -200,6 +200,7 @@ class LossTestCase(GenericTestCase[Loss]):
             negative_scores=negative_scores,
             label_smoothing=None,
             batch_filter=None,
+            num_entities=self.num_entities,
         )
         self._check_loss_value(loss_value=loss_value)
 
@@ -219,6 +220,7 @@ class LossTestCase(GenericTestCase[Loss]):
             predictions=predictions,
             labels=labels,
             label_smoothing=label_smoothing,
+            num_entities=self.num_entities,
         )
         self._check_loss_value(loss_value=loss_value)
 

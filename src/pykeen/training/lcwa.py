@@ -53,6 +53,7 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
             predictions=predictions,
             labels=batch_labels_full,
             label_smoothing=label_smoothing,
+            num_entities=self.model.num_entities,
         ) + self.model.collect_regularization_term()
 
     def _slice_size_search(

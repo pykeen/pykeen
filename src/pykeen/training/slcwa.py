@@ -101,6 +101,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
             negative_scores=negative_scores,
             label_smoothing=label_smoothing,
             batch_filter=neg_samples_filter,
+            num_entities=self.model.num_entities,
         ) + self.model.collect_regularization_term()
 
     def _slice_size_search(
