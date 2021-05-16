@@ -11,6 +11,7 @@ import traceback
 import unittest
 from abc import ABC, abstractmethod
 from typing import Any, ClassVar, Collection, Dict, Mapping, MutableMapping, Optional, Sequence, Tuple, Type, TypeVar
+from unittest.case import SkipTest
 from unittest.mock import patch
 
 import pytest
@@ -28,7 +29,7 @@ from pykeen.datasets import Nations
 from pykeen.datasets.base import LazyDataset
 from pykeen.datasets.kinships import KINSHIPS_TRAIN_PATH
 from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH
-from pykeen.losses import Loss, PairwiseLoss, PointwiseLoss, SetwiseLoss
+from pykeen.losses import Loss, PairwiseLoss, PointwiseLoss, SetwiseLoss, UnsupportedLabelSmoothingError
 from pykeen.models import EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, RESCAL
 from pykeen.models.cli import build_cli_from_cls
 from pykeen.nn.emb import RepresentationModule
@@ -210,7 +211,10 @@ class LossTestCase(GenericTestCase[Loss]):
 
     def test_process_lcwa_scores_smooth(self):
         """Test processing scores from LCWA training loop with smoothing."""
-        self.help_test_process_lcwa_scores(label_smoothing=0.01)
+        try:
+            self.help_test_process_lcwa_scores(label_smoothing=0.01)
+        except UnsupportedLabelSmoothingError as error:
+            raise SkipTest from error
 
     def help_test_process_lcwa_scores(self, label_smoothing):
         """Help test processing scores from LCWA training loop."""

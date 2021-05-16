@@ -10,7 +10,7 @@ import unittest_templates
 
 from pykeen.losses import (
     BCEAfterSigmoidLoss, BCEWithLogitsLoss, CrossEntropyLoss, Loss, MSELoss, MarginRankingLoss, NSSALoss, PairwiseLoss,
-    PointwiseLoss, SetwiseLoss, SoftplusLoss, apply_label_smoothing,
+    PointwiseLoss, SetwiseLoss, SoftplusLoss, UnsupportedLabelSmoothingError, apply_label_smoothing,
 )
 from pykeen.pipeline import PipelineResult, pipeline
 from tests import cases
@@ -115,9 +115,9 @@ class MarginRankingLossTestCase(cases.PairwiseLossTestCase):
 
     def test_label_smoothing_raise(self):
         """Test errors are raised if label smoothing is given."""
-        with self.assertRaises(RuntimeError):
+        with self.assertRaises(UnsupportedLabelSmoothingError):
             self.instance.process_lcwa_scores(..., ..., label_smoothing=5)
-        with self.assertRaises(RuntimeError):
+        with self.assertRaises(UnsupportedLabelSmoothingError):
             self.instance.process_lcwa_scores(..., ..., label_smoothing=5)
 
 
