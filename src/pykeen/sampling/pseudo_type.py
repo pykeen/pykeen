@@ -35,8 +35,11 @@ class PseudoTypedNegativeSampler(NegativeSampler):
     ``data[offsets[2*i+1]:offsets[2*i+2]]`` the ID of tail entities.
     """
 
-    data: torch.LongTensor
+    #: The array of offsets within the data array, shape: (2 * num_relations + 1,)
     offsets: torch.LongTensor
+
+    #: The concatenated sorted sets of head/tail entities
+    data: torch.LongTensor
 
     def __init__(
         self,
@@ -72,19 +75,29 @@ class PseudoTypedNegativeSampler(NegativeSampler):
 
     def sample(self, positive_batch: torch.LongTensor) -> Tuple[torch.LongTensor, Optional[torch.Tensor]]:  # noqa: D102
         batch_size = positive_batch.shape[0]
-        # shape: (batch_size, neg, 3)
+
+        # shape: (neg, batch_size, 3)
         negative_batch = positive_batch.unsqueeze(dim=0).repeat(self.num_negs_per_pos, 1, 1)
+
+        # Uniformly sample from head/tail offsets
         r = positive_batch[:, 1]
         start_heads = self.offsets[2 * r].unsqueeze(dim=-1)
         start_tails = self.offsets[2 * r + 1].unsqueeze(dim=-1)
         end = self.offsets[2 * r + 2].unsqueeze(dim=-1)
         num_choices = end - start_heads
         negative_ids = start_heads + (torch.rand(size=(batch_size, self.num_negs_per_pos)) * num_choices).long()
+
+        # get corresponding entity
         entity_id = self.data[negative_ids]
+
+        # and position within triple (0: head, 2: tail)
         triple_position = 2 * (negative_ids >= start_tails).long()
+
         # fallback heuristic: random
         fill_mask = torch.arange(self.num_negs_per_pos).unsqueeze(dim=0) >= num_choices
         entity_id[fill_mask] = torch.randint(self.num_entities, size=(fill_mask.sum(),), device=negative_batch.device)
+
+        # write into negative batch
         negative_batch[
             torch.arange(self.num_negs_per_pos, device=negative_batch.device).unsqueeze(dim=0),
             torch.arange(batch_size, device=negative_batch.device).unsqueeze(dim=-1),
