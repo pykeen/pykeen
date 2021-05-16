@@ -8,11 +8,10 @@ from typing import Type
 import numpy as np
 import torch
 
-from pykeen.losses import MarginRankingLoss
+from pykeen.losses import MarginRankingLoss, apply_label_smoothing
 from pykeen.models import Model, TransE
 from pykeen.training.lcwa import LCWATrainingLoop
 from pykeen.training.utils import lazy_compile_random_batches
-from pykeen.utils import apply_label_smoothing
 from pykeen.triples import TriplesFactory
 
 
