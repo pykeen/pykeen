@@ -204,13 +204,21 @@ class LossTestCase(GenericTestCase[Loss]):
         self._check_loss_value(loss_value=loss_value)
 
     def test_process_lcwa_scores(self):
-        """Test processing scores from LCWA training loop."""
+        """Test processing scores from LCWA training loop without smoothing."""
+        self.help_test_process_lcwa_scores(label_smoothing=None)
+
+    def test_process_lcwa_scores_smooth(self):
+        """Test processing scores from LCWA training loop with smoothing."""
+        self.help_test_process_lcwa_scores(label_smoothing=0.01)
+
+    def help_test_process_lcwa_scores(self, label_smoothing):
+        """Help test processing scores from LCWA training loop."""
         predictions = torch.rand(self.batch_size, self.num_entities, requires_grad=True)
         labels = (torch.rand(self.batch_size, self.num_entities, requires_grad=True) > 0.8).float()
         loss_value = self.instance.process_lcwa_scores(
             predictions=predictions,
             labels=labels,
-            label_smoothing=None,
+            label_smoothing=label_smoothing,
         )
         self._check_loss_value(loss_value=loss_value)
 
