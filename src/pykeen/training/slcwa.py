@@ -10,7 +10,6 @@ from class_resolver import HintOrType
 from torch.optim.optimizer import Optimizer
 
 from .training_loop import TrainingLoop
-from .utils import apply_label_smoothing
 from ..losses import CrossEntropyLoss
 from ..models import Model
 from ..sampling import NegativeSampler, negative_sampler_resolver
@@ -100,13 +99,13 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
         positive_scores = self.model.score_hrt(positive_batch)
         negative_scores = self.model.score_hrt(negative_batch)
 
-        loss = self._loss_helper(  # type: ignore
-            positive_scores,
-            negative_scores,
-            label_smoothing,
-            neg_samples_filter,
+        # TODO: Add regularization term from model.compute_loss
+        return self.model.loss.process_slcwa_scores(
+            positive_scores=positive_scores,
+            negative_scores=negative_scores,
+            label_smoothing=label_smoothing,
+            batch_filter=neg_samples_filter,
         )
-        return loss
 
     def _mr_loss_helper(
         self,
@@ -141,23 +140,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
         label_smoothing: float,
         _batch_filter=None,
     ) -> torch.FloatTensor:
-        # Stack predictions
-        predictions = torch.cat([positive_scores, negative_scores], dim=0)
-        # Create target
-        ones = torch.ones_like(positive_scores, device=self.device)
-        zeros = torch.zeros_like(negative_scores, device=self.device)
-        labels = torch.cat([ones, zeros], dim=0)
-
-        if label_smoothing > 0.:
-            labels = apply_label_smoothing(
-                labels=labels,
-                epsilon=label_smoothing,
-                num_classes=self.model.num_entities,
-            )
-
-        # Normalize the loss to have the average loss per positive triple
-        # This allows comparability of sLCWA and LCWA losses
-        return self.model.compute_loss(predictions, labels)
+        raise AssertionError("Do not use the loss helper, but rather the loss' builtin process_slcwa_scores.")
 
     def _slice_size_search(
         self,
