@@ -2,12 +2,8 @@
 
 """Negative sampling algorithm based on the work of [wang2014]_."""
 
-from typing import Any, Mapping, Optional
-
 import torch
-from class_resolver import HintOrType
 
-from .filtering import Filterer
 from .negative_sampler import NegativeSampler
 from ..triples import CoreTriplesFactory
 
@@ -38,38 +34,20 @@ class BernoulliNegativeSampler(NegativeSampler):
     actual positive triples $(h,r,t) \in \mathcal{K}$ will be removed.
     """
 
-    #: The default strategy for optimizing the negative sampler's hyper-parameters
-    hpo_default = dict(
-        num_negs_per_pos=dict(type=int, low=1, high=100, q=10),
-    )
-
     def __init__(
         self,
+        *,
         triples_factory: CoreTriplesFactory,
-        num_negs_per_pos: Optional[int] = None,
-        filtered: bool = False,
-        filterer: HintOrType[Filterer] = None,
-        filterer_kwargs: Optional[Mapping[str, Any]] = None,
+        **kwargs,
     ) -> None:
         """Initialize the bernoulli negative sampler with the given entities.
 
-        :param triples_factory: The factory holding the triples to sample from
-        :param num_negs_per_pos: Number of negative samples to make per positive triple. Defaults to 1.
-        :param filtered: Whether proposed corrupted triples that are in the training data should be filtered.
-            Defaults to False. See explanation in :func:`filter_negative_triples` for why this is
-            a reasonable default.
-        :param filterer: If filtered is set to True, this can be used to choose which filter module from
-            :mod:`pykeen.sampling.filtering` is used.
-        :param filterer_kwargs:
-            Additional keyword-based arguments passed to the filterer upon construction.
+        :param triples_factory:
+            The factory holding the positive training triples
+        :param kwargs:
+            Additional keyword based arguments passed to :class:`pykeen.sampling.NegativeSampler`.
         """
-        super().__init__(
-            triples_factory=triples_factory,
-            num_negs_per_pos=num_negs_per_pos,
-            filtered=filtered,
-            filterer=filterer,
-            filterer_kwargs=filterer_kwargs,
-        )
+        super().__init__(triples_factory=triples_factory, **kwargs)
         # Preprocessing: Compute corruption probabilities
         triples = triples_factory.mapped_triples
         head_rel_uniq, tail_count = torch.unique(triples[:, :2], return_counts=True, dim=0)

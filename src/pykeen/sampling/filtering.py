@@ -314,8 +314,7 @@ class BloomFilterer(Filterer):
         :param batch: shape: (batch_size, 3)
             A batch of elements.
 
-        :yields:
-            Indices of the k-th round, shape: (batch_size,).
+        :yields: Indices of the k-th round, shape: (batch_size,).
         """
         # pre-hash
         x = (self.mersenne * batch).sum(dim=-1)

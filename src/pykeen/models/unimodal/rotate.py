@@ -2,18 +2,15 @@
 
 """Implementation of the RotatE model."""
 
-from typing import Any, ClassVar, Mapping, Optional
+from typing import Any, ClassVar, Mapping
 
 import torch
 import torch.autograd
 
 from ..base import EntityRelationEmbeddingModel
-from ...losses import Loss
 from ...nn.emb import EmbeddingSpecification
 from ...nn.init import init_phases, xavier_uniform_
-from ...regularizers import Regularizer
-from ...triples import CoreTriplesFactory
-from ...typing import Constrainer, DeviceHint, Hint, Initializer
+from ...typing import Constrainer, Hint, Initializer
 from ...utils import complex_normalize
 
 __all__ = [
@@ -59,22 +56,14 @@ class RotatE(EntityRelationEmbeddingModel):
 
     def __init__(
         self,
-        triples_factory: CoreTriplesFactory,
+        *,
         embedding_dim: int = 200,
-        loss: Optional[Loss] = None,
-        preferred_device: DeviceHint = None,
-        random_seed: Optional[int] = None,
-        regularizer: Optional[Regularizer] = None,
         entity_initializer: Hint[Initializer] = xavier_uniform_,
         relation_initializer: Hint[Initializer] = init_phases,
         relation_constrainer: Hint[Constrainer] = complex_normalize,
+        **kwargs,
     ) -> None:
         super().__init__(
-            triples_factory=triples_factory,
-            loss=loss,
-            preferred_device=preferred_device,
-            random_seed=random_seed,
-            regularizer=regularizer,
             entity_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
                 initializer=entity_initializer,
@@ -86,6 +75,7 @@ class RotatE(EntityRelationEmbeddingModel):
                 constrainer=relation_constrainer,
                 dtype=torch.cfloat,
             ),
+            **kwargs,
         )
         self.real_embedding_dim = embedding_dim
 
