@@ -140,7 +140,7 @@ from class_resolver import Resolver, normalize_string
 from torch.nn import functional
 from torch.nn.modules.loss import _Loss
 
-from pykeen.training.utils import apply_label_smoothing
+from pykeen.utils import apply_label_smoothing
 
 __all__ = [
     # Base Classes
@@ -207,8 +207,8 @@ class Loss(_Loss):
         predictions = torch.cat([positive_scores, negative_scores], dim=0)
 
         # Create target
-        ones = torch.ones_like(positive_scores, device=self.device)
-        zeros = torch.zeros_like(negative_scores, device=self.device)
+        ones = torch.ones_like(positive_scores, device=positive_scores.device)
+        zeros = torch.zeros_like(negative_scores, device=negative_scores.device)
         labels = torch.cat([ones, zeros], dim=0)
 
         return self.process_lcwa_scores(predictions, labels, label_smoothing=label_smoothing)
