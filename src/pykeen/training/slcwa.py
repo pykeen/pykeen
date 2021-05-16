@@ -114,14 +114,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
         _label_smoothing=None,
         _batch_filter=None,
     ) -> torch.FloatTensor:
-        # Repeat positives scores (necessary for more than one negative per positive)
-        if self.negative_sampler.num_negs_per_pos > 1:
-            positive_scores = positive_scores.repeat(self.negative_sampler.num_negs_per_pos, 1)
-
-        if _batch_filter is not None:
-            positive_scores = positive_scores[_batch_filter]
-
-        return self.model.compute_loss(positive_scores, negative_scores)
+        raise AssertionError("Do not use the loss helper, but rather the loss' builtin process_slcwa_scores.")
 
     def _self_adversarial_negative_sampling_loss_helper(
         self,
@@ -131,7 +124,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
         _batch_filter=None,
     ) -> torch.FloatTensor:
         """Compute self adversarial negative sampling loss."""
-        return self.model.compute_loss(positive_scores, negative_scores)
+        raise AssertionError("Do not use the loss helper, but rather the loss' builtin process_slcwa_scores.")
 
     def _label_loss_helper(
         self,
