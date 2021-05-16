@@ -187,6 +187,21 @@ class Loss(_Loss):
         label_smoothing: Optional[float] = None,
         batch_filter: Optional[torch.BoolTensor] = None,
     ) -> torch.FloatTensor:
+        """
+        Process scores from sLCWA training loop.
+
+        :param positive_scores: shape: (batch_size,)
+            The scores for positive triples.
+        :param negative_scores: shape: (batch_size, num_neg_per_pos)
+            The scores for the negative triples.
+        :param label_smoothing:
+            An optional label smoothing parameter.
+        :param batch_filter: shape: (batch_size, num_neg_per_pos)
+            An optional filter. If given, ... TODO: describe
+
+        :return:
+            A scalar loss term.
+        """
         # TODO: Make sure that the regularization term is added in the training loops
         # Stack predictions
         predictions = torch.cat([positive_scores, negative_scores], dim=0)
