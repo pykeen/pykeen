@@ -13,11 +13,11 @@ from pykeen.datasets import Nations
 from pykeen.losses import CrossEntropyLoss
 from pykeen.models import ConvE, Model, TransE
 from pykeen.optimizers import optimizer_resolver
-from pykeen.sampling.negative_sampler import SLCWABatchType
 from pykeen.stoppers.early_stopping import EarlyStopper
 from pykeen.training import SLCWATrainingLoop, training_loop_resolver
 from pykeen.training.training_loop import NonFiniteLossError, TrainingApproachLossMismatchError
 from pykeen.triples import TriplesFactory
+from pykeen.triples.instances import SLCWABatchType
 from pykeen.typing import MappedTriples
 from tests.mocks import MockEvaluator, MockModel
 
