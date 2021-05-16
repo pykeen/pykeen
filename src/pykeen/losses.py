@@ -140,7 +140,7 @@ from class_resolver import Resolver, normalize_string
 from torch.nn import functional
 from torch.nn.modules.loss import _Loss
 
-from pykeen.training.utils import apply_label_smoothing
+from pykeen.utils import apply_label_smoothing
 
 __all__ = [
     # Base Classes

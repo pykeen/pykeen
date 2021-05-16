@@ -9,7 +9,7 @@ from typing import Optional
 import torch
 
 from .training_loop import TrainingLoop
-from .utils import apply_label_smoothing
+from ..utils import apply_label_smoothing
 from ..losses import Loss
 from ..triples import CoreTriplesFactory, Instances
 from ..triples.instances import LCWABatchType, LCWASampleType

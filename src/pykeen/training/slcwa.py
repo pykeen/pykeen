@@ -10,7 +10,7 @@ from class_resolver import HintOrType
 from torch.optim.optimizer import Optimizer
 
 from .training_loop import TrainingLoop
-from .utils import apply_label_smoothing
+from ..utils import apply_label_smoothing
 from ..losses import CrossEntropyLoss, Loss
 from ..models import Model
 from ..sampling import NegativeSampler, negative_sampler_resolver
