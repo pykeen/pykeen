@@ -381,6 +381,7 @@ class MarginRankingLoss(PairwiseLoss):
         negative_scores: torch.FloatTensor,
         label_smoothing: Optional[float] = None,
         batch_filter: Optional[torch.BoolTensor] = None,
+        num_entities: Optional[int] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         # Sanity check
         if label_smoothing:
@@ -401,6 +402,7 @@ class MarginRankingLoss(PairwiseLoss):
         predictions: torch.FloatTensor,
         labels: torch.FloatTensor,
         label_smoothing: Optional[float] = None,
+        num_entities: Optional[int] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         # Sanity check
         if label_smoothing:
@@ -518,7 +520,11 @@ class NSSALoss(SetwiseLoss):
         predictions: torch.FloatTensor,
         labels: torch.FloatTensor,
         label_smoothing: Optional[float] = None,
+        num_entities: Optional[int] = None,
     ) -> torch.FloatTensor:  # noqa: D102
+        if label_smoothing:
+            raise NotImplementedError
+
         # Split positive and negative scores
         positive_scores = predictions[labels == 1]
         negative_scores = predictions[labels == 0]
