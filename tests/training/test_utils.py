@@ -10,9 +10,7 @@ import torch
 
 from pykeen.losses import MarginRankingLoss
 from pykeen.models import Model, TransE
-from pykeen.training.lcwa import LCWATrainingLoop
 from pykeen.training.utils import lazy_compile_random_batches
-from pykeen.triples import TriplesFactory
 
 
 class LossTensorTest(unittest.TestCase):
