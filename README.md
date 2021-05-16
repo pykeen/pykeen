@@ -209,7 +209,7 @@ or the URL for the dataset if neither of the first two are available.
 |-------------|---------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------|
 | basic       | [`pykeen.sampling.BasicNegativeSampler`](https://pykeen.readthedocs.io/en/latest/api/pykeen.sampling.BasicNegativeSampler.html)             | A basic negative sampler.                                                              |
 | bernoulli   | [`pykeen.sampling.BernoulliNegativeSampler`](https://pykeen.readthedocs.io/en/latest/api/pykeen.sampling.BernoulliNegativeSampler.html)     | An implementation of the Bernoulli negative sampling approach proposed by [wang2014]_. |
-| pseudotyped | [`pykeen.sampling.PseudoTypedNegativeSampler`](https://pykeen.readthedocs.io/en/latest/api/pykeen.sampling.PseudoTypedNegativeSampler.html) |                                                                                        |
+| pseudotyped | [`pykeen.sampling.PseudoTypedNegativeSampler`](https://pykeen.readthedocs.io/en/latest/api/pykeen.sampling.PseudoTypedNegativeSampler.html) | A sampler that accounts for which entities co-occur with a relation.                   |
 
 ### Stoppers (2)
 

@@ -19,8 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 class PseudoTypedNegativeSampler(NegativeSampler):
-    r"""
-    A negative sampler using pseudo-types.
+    r"""A sampler that accounts for which entities co-occur with a relation.
 
     To generate a corrupted head entity for triple $(h, r, t)$, only those entities are considered which occur as a
     head entity in a triple with the relation $r$.
@@ -33,6 +32,8 @@ class PseudoTypedNegativeSampler(NegativeSampler):
     The ``data`` array contains the sorted set of heads and tails for each relation, i.e.
     ``data[offsets[2*i]:offsets[2*i+1]]`` are the IDs of head entities for relation ``i``, and
     ``data[offsets[2*i+1]:offsets[2*i+2]]`` the ID of tail entities.
+
+    .. warning:: With this type of sampler, filtering for false negatives is more important.
     """
 
     #: The array of offsets within the data array, shape: (2 * num_relations + 1,)
