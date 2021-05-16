@@ -8,9 +8,10 @@ import logging
 import os
 import time
 from typing import Any, Dict, List, Mapping, Optional, Tuple, Union
+from uuid import uuid4
 
 from ..training import _TRAINING_LOOP_SUFFIX
-from ..utils import create_path_with_id, normalize_string
+from ..utils import normalize_string
 
 __all__ = [
     'ablation_pipeline',
@@ -140,7 +141,7 @@ def ablation_pipeline(
         be created. The sub-directory name is defined  by the  current  data + a unique id.
     """
     if create_unique_subdir:
-        directory = create_path_with_id(directory=directory)
+        directory = _create_path_with_id(directory=directory)
 
     directories = prepare_ablation(
         datasets=datasets,
@@ -219,6 +220,12 @@ def _run_ablation_experiments(
             save_replicates=not discard_replicates,
             directory=best_pipeline_dir,
         )
+
+
+def _create_path_with_id(directory: str) -> str:
+    """Add unique id to path."""
+    datetime = time.strftime('%Y-%m-%d-%H-%M')
+    return os.path.join(directory, f'{datetime}_{uuid4()}')
 
 
 def ablation_pipeline_from_config(
