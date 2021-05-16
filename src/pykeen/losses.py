@@ -185,6 +185,7 @@ class Loss(_Loss):
         label_smoothing: Optional[float] = None,
         batch_filter: Optional[torch.BoolTensor] = None,
     ) -> torch.FloatTensor:
+        # TODO: Make sure that the regularization term is added in the training loops
         raise NotImplementedError
 
     def process_lcwa_scores(
