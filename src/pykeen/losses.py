@@ -140,6 +140,8 @@ from class_resolver import Resolver, normalize_string
 from torch.nn import functional
 from torch.nn.modules.loss import _Loss
 
+from pykeen.training.utils import apply_label_smoothing
+
 __all__ = [
     # Base Classes
     'Loss',
@@ -186,7 +188,15 @@ class Loss(_Loss):
         batch_filter: Optional[torch.BoolTensor] = None,
     ) -> torch.FloatTensor:
         # TODO: Make sure that the regularization term is added in the training loops
-        raise NotImplementedError
+        # Stack predictions
+        predictions = torch.cat([positive_scores, negative_scores], dim=0)
+
+        # Create target
+        ones = torch.ones_like(positive_scores, device=self.device)
+        zeros = torch.zeros_like(negative_scores, device=self.device)
+        labels = torch.cat([ones, zeros], dim=0)
+
+        return self.process_lcwa_scores(predictions, labels, label_smoothing=label_smoothing)
 
     def process_lcwa_scores(
         self,
@@ -194,7 +204,15 @@ class Loss(_Loss):
         labels: torch.FloatTensor,
         label_smoothing: Optional[float] = None,
     ) -> torch.FloatTensor:
-        raise NotImplementedError
+        # Apply label smoothing
+        if label_smoothing > 0.:
+            labels = apply_label_smoothing(
+                labels=labels,
+                epsilon=label_smoothing,
+                num_classes=self.model.num_entities,
+            )
+
+        return self(predictions, labels)
 
 
 class PointwiseLoss(Loss):
