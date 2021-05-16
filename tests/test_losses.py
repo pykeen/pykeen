@@ -113,6 +113,13 @@ class MarginRankingLossTestCase(cases.PairwiseLossTestCase):
 
     cls = MarginRankingLoss
 
+    def test_label_smoothing_raise(self):
+        """Test errors are raised if label smoothing is given."""
+        with self.assertRaises(RuntimeError):
+            self.instance.process_lcwa_scores(..., ..., label_smoothing=5)
+        with self.assertRaises(RuntimeError):
+            self.instance.process_lcwa_scores(..., ..., label_smoothing=5)
+
 
 class TestLosses(unittest_templates.MetaTestCase[Loss]):
     """Test that the loss functions all have tests."""
