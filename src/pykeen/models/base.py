@@ -223,7 +223,6 @@ class Model(nn.Module, ABC):
             For each r-t pair, the scores for all possible heads.
         """
 
-    @abstractmethod
     def compute_loss(
         self,
         tensor_1: torch.FloatTensor,
@@ -240,6 +239,11 @@ class Model(nn.Module, ABC):
 
         .. note:: generally the two tensors do not need to have the same shape, but only one which is broadcastable.
         """
+        return self.loss(tensor_1, tensor_2) + self._collect_regularization_term()
+
+    @abstractmethod
+    def _collect_regularization_term(self):
+        raise NotImplementedError
 
     """Concrete methods"""
 
@@ -683,23 +687,8 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
         scores = expanded_scores.view(ht_batch.shape[0], -1)
         return scores
 
-    def compute_loss(
-        self,
-        tensor_1: torch.FloatTensor,
-        tensor_2: torch.FloatTensor,
-    ) -> torch.FloatTensor:
-        """Compute the loss for functions requiring two separate tensors as input.
-
-        :param tensor_1: shape: s
-            The tensor containing predictions or positive scores.
-        :param tensor_2: shape: s
-            The tensor containing target values or the negative scores.
-        :return: dtype: float, scalar
-            The label loss value.
-
-        .. note:: generally the two tensors do not need to have the same shape, but only one which is broadcastable.
-        """
-        return self.loss(tensor_1, tensor_2) + self.regularizer.term
+    def _collect_regularization_term(self):
+        return self.regularizer.term
 
     def post_forward_pass(self):
         """Run after calculating the forward loss."""

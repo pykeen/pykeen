@@ -122,26 +122,6 @@ class _NewAbstractModel(Model, ABC):
             if hasattr(module, "post_parameter_update"):
                 module.post_parameter_update()
 
-    def compute_loss(
-        self,
-        tensor_1: torch.FloatTensor,
-        tensor_2: torch.FloatTensor,
-    ) -> torch.FloatTensor:
-        """Compute the loss for functions requiring two separate tensors as input.
-
-        :param tensor_1: shape: s
-            The tensor containing predictions or positive scores.
-        :param tensor_2: shape: s'
-            The tensor containing target values or the negative scores.
-
-        .. note ::
-            `s` and `s'` need to be broadcastable.
-
-        :return: dtype: float, scalar
-            The label loss value.
-        """
-        return self.loss(tensor_1, tensor_2) + self._collect_regularization_term()
-
     def _collect_regularization_term(self):
         return sum(
             regularizer.pop_regularization_term()
