@@ -49,12 +49,11 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
         else:
             predictions = self.model.score_t(hr_batch=batch_pairs, slice_size=slice_size)  # type: ignore
 
-        # TODO: Add regularization term from model.compute_loss
         return self.model.loss.process_lcwa_scores(
             predictions=predictions,
             labels=batch_labels_full,
             label_smoothing=label_smoothing,
-        )
+        ) + self.model.collect_regularization_term()
 
     def _slice_size_search(
         self,

@@ -99,13 +99,12 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
         positive_scores = self.model.score_hrt(positive_batch)
         negative_scores = self.model.score_hrt(negative_batch)
 
-        # TODO: Add regularization term from model.compute_loss
         return self.model.loss.process_slcwa_scores(
             positive_scores=positive_scores,
             negative_scores=negative_scores,
             label_smoothing=label_smoothing,
             batch_filter=neg_samples_filter,
-        )
+        ) + self.model.collect_regularization_term()
 
     def _slice_size_search(
         self,
