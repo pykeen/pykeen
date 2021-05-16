@@ -125,7 +125,7 @@ as solid evaluation results as possible.
 
 import math
 from abc import abstractmethod
-from typing import Iterable, Optional, Tuple
+from typing import Iterable
 
 import torch
 from class_resolver import Resolver
@@ -147,7 +147,7 @@ class Filterer(nn.Module):
     def forward(
         self,
         negative_batch: MappedTriples,
-    ) -> Tuple[torch.LongTensor, Optional[torch.BoolTensor]]:
+    ) -> torch.BoolTensor:
         """Filter all proposed negative samples that are positive in the training dataset.
 
         Normally there is a low probability that proposed negative samples are positive in the training datasets and
@@ -164,11 +164,10 @@ class Filterer(nn.Module):
         :param negative_batch: shape: (batch_size, num_negatives, 3)
             The batch of negative triples.
 
-        :return:
-            A pair (filtered_negative_batch, keep_mask) of shape ???
+        :return: shape: (batch_size, num_negatives)
+            A mask, where True indicates that the negative sample is valid.
         """
-        keep_mask = ~self.contains(batch=negative_batch)
-        return negative_batch[keep_mask], keep_mask
+        return ~self.contains(batch=negative_batch)
 
     @abstractmethod
     def contains(self, batch: MappedTriples) -> torch.BoolTensor:
@@ -315,8 +314,7 @@ class BloomFilterer(Filterer):
         :param batch: shape: (batch_size, 3)
             A batch of elements.
 
-        :yields:
-            Indices of the k-th round, shape: (batch_size,).
+        :yields: Indices of the k-th round, shape: (batch_size,).
         """
         # pre-hash
         x = (self.mersenne * batch).sum(dim=-1)

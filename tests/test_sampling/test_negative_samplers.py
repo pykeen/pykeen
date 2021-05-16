@@ -14,15 +14,16 @@ class BasicNegativeSamplerTest(cases.NegativeSamplerGenericTestCase):
     def test_sample_basic(self):
         """Test if relations and half of heads and tails are not corrupted."""
         negative_batch, batch_filter = self.instance.sample(positive_batch=self.positive_batch)
-        positive_batch = self._update_positive_batch(self.positive_batch, batch_filter)
 
         # Test that half of the subjects and half of the objects are corrupted
-        half_size = positive_batch.shape[0] // 2
-        num_subj_corrupted = (positive_batch[:, 0] != negative_batch[:, 0]).sum()
-        num_obj_corrupted = (positive_batch[:, 2] != negative_batch[:, 2]).sum()
+        positive_batch = self.positive_batch.unsqueeze(dim=1)
+        num_triples = negative_batch[..., 0].numel()
+        half_size = num_triples // 2
+        num_subj_corrupted = (positive_batch[..., 0] != negative_batch[..., 0]).sum()
+        num_obj_corrupted = (positive_batch[..., 2] != negative_batch[..., 2]).sum()
         assert num_obj_corrupted - 1 <= num_subj_corrupted
         assert num_subj_corrupted - 1 <= num_obj_corrupted
-        assert num_subj_corrupted - 1 <= positive_batch.shape[0]
+        assert num_subj_corrupted - 1 <= num_triples
         assert half_size - 1 <= num_subj_corrupted
 
 

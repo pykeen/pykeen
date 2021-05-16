@@ -28,7 +28,7 @@ class TestBaseModel(unittest.TestCase):
         self.batch_size = 16
         self.embedding_dim = 8
         self.factory = Nations().training
-        self.model = TransE(self.factory, embedding_dim=self.embedding_dim).to_device_()
+        self.model = TransE(triples_factory=self.factory, embedding_dim=self.embedding_dim).to_device_()
 
     def _check_scores(self, scores) -> None:
         """Check the scores produced by a forward function."""
@@ -161,7 +161,7 @@ class TestBaseModelScoringFunctions(unittest.TestCase):
 class SimpleInteractionModel(EntityRelationEmbeddingModel):
     """A model with a simple interaction function for testing the base model."""
 
-    def __init__(self, triples_factory: TriplesFactory):
+    def __init__(self, *, triples_factory: TriplesFactory):
         super().__init__(
             triples_factory=triples_factory,
             entity_representations=EmbeddingSpecification(embedding_dim=50),

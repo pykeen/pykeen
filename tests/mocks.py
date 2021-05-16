@@ -35,7 +35,7 @@ class CustomRepresentations(RepresentationModule):
 class MockModel(EntityRelationEmbeddingModel):
     """A mock model returning fake scores."""
 
-    def __init__(self, triples_factory: CoreTriplesFactory):
+    def __init__(self, *, triples_factory: CoreTriplesFactory):
         super().__init__(
             triples_factory=triples_factory,
             entity_representations=EmbeddingSpecification(embedding_dim=50),
