@@ -10,6 +10,7 @@ import unittest_templates
 
 from pykeen.datasets import Nations
 from pykeen.sampling import NegativeSampler
+from pykeen.sampling.filtering import PythonSetFilterer
 from pykeen.triples import Instances, TriplesFactory
 
 __all__ = [
@@ -57,40 +58,52 @@ class NegativeSamplerGenericTestCase(unittest_templates.GenericTestCase[Negative
         kwargs['triples_factory'] = self.triples_factory
         return kwargs
 
-    def test_sample(self) -> None:
+    def _test_sample(self) -> None:
         """Test generating a negative sample."""
         # Generate negative sample
         negative_batch, batch_filter = self.instance.sample(positive_batch=self.positive_batch)
+
+        # check filter shape if necessary
         if self.instance.filterer is not None:
             assert batch_filter is not None
-            assert batch_filter.shape == (self.batch_size * self.instance.num_negs_per_pos,)
+            assert batch_filter.shape == (self.batch_size, self.instance.num_negs_per_pos)
             assert batch_filter.dtype == torch.bool
         else:
             assert batch_filter is None
 
         # check shape
-        assert negative_batch.shape[0] == self.positive_batch.shape[0] * self.instance.num_negs_per_pos
-        assert negative_batch.shape[1] == self.positive_batch.shape[1]
+        assert negative_batch.shape == (self.positive_batch.shape[0], self.instance.num_negs_per_pos, 3)
 
         # check bounds: heads
-        assert _array_check_bounds(negative_batch[:, 0], low=0, high=self.triples_factory.num_entities)
+        assert _array_check_bounds(negative_batch[..., 0], low=0, high=self.triples_factory.num_entities)
 
         # check bounds: relations
-        assert _array_check_bounds(negative_batch[:, 1], low=0, high=self.triples_factory.num_relations)
+        assert _array_check_bounds(negative_batch[..., 1], low=0, high=self.triples_factory.num_relations)
 
         # check bounds: tails
-        assert _array_check_bounds(negative_batch[:, 2], low=0, high=self.triples_factory.num_entities)
+        assert _array_check_bounds(negative_batch[..., 2], low=0, high=self.triples_factory.num_entities)
 
-        positive_batch = self._update_positive_batch(self.positive_batch, batch_filter)
-        # test that the relations were not changed by the negative sampler
-        assert (positive_batch[:, 1] == negative_batch[:, 1]).all()
+        if self.instance.filterer is not None:
+            positive_batch = self.positive_batch.unsqueeze(dim=1).repeat(1, self.instance.num_negs_per_pos, 1)
+            positive_batch = positive_batch[batch_filter]
+            negative_batch = negative_batch[batch_filter]
 
-        assert (negative_batch != positive_batch).any(dim=1).all()
+            # test that the negative triple is not the original positive triple
+            assert (negative_batch != positive_batch).any(dim=-1).all()
+
+    def test_sample_no_filter(self) -> None:
+        """Test generating a negative sample."""
+        self._test_sample()
+
+    def test_sample_filtered(self) -> None:
+        """Test generating a negative sample with filtering."""
+        filterer = PythonSetFilterer(mapped_triples=self.triples_factory.mapped_triples)
+        self.instance = self.cls(**self.instance_kwargs, filterer=filterer)
+        self._test_sample()
 
     def _update_positive_batch(self, positive_batch, batch_filter):
-        # cf. slcwa training loop, mr loss helper
-        if self.instance.num_negs_per_pos > 1:
-            positive_batch = positive_batch.repeat(self.instance.num_negs_per_pos, 1)
+        # shape: (batch_size, 1, num_neg)
+        positive_batch = positive_batch.unsqueeze(dim=1)
 
         if batch_filter is not None:
             positive_batch = positive_batch[batch_filter]
