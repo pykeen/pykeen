@@ -25,11 +25,13 @@ class PseudoTypedNegativeSampler(NegativeSampler):
     To generate a corrupted head entity for triple (h, r, t), only those entities are considered which occur as a
     head entity in a triple with the relation r.
 
-    Data Structure
-    --------------
+    For this sampling, we need to store for each relation the set of head / tail entities. For efficient
+    vectorized sampling, the following data structure is employed, which is partially inspired by the
+    CSR format of sparse matrices (cf. https://en.wikipedia.org/wiki/Sparse_matrix#Compressed_sparse_row_(CSR,_CRS_or_Yale_format) TODO: Use Sphinx link).
 
-    heads:
-        (r_1, t_1) -> {h_1^1, \ldots, h_{k_1}^1}
+    We use two arrays, `offsets` and `data`. The `offsets` array is of shape `(2 * num_relations + 1,)`. The `data`
+    array contains the sorted set of heads and tails for each relation, i.e. `data[offsets[2*i]:offsets[2*i+1]]`
+    are the IDs of head entities for relation `i`, and `data[offsets[2*i+1]:offsets[2*i+2]]` the ID of tail entities.
     """
 
     def __init__(
