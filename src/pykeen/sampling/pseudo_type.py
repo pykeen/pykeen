@@ -22,17 +22,21 @@ class PseudoTypedNegativeSampler(NegativeSampler):
     r"""
     A negative sampler using pseudo-types.
 
-    To generate a corrupted head entity for triple (h, r, t), only those entities are considered which occur as a
-    head entity in a triple with the relation r.
+    To generate a corrupted head entity for triple $(h, r, t)$, only those entities are considered which occur as a
+    head entity in a triple with the relation $r$.
 
     For this sampling, we need to store for each relation the set of head / tail entities. For efficient
     vectorized sampling, the following data structure is employed, which is partially inspired by the
     CSR format of sparse matrices (cf. :class:`scipy.sparse.csr_matrix`).
 
-    We use two arrays, `offsets` and `data`. The `offsets` array is of shape `(2 * num_relations + 1,)`. The `data`
-    array contains the sorted set of heads and tails for each relation, i.e. `data[offsets[2*i]:offsets[2*i+1]]`
-    are the IDs of head entities for relation `i`, and `data[offsets[2*i+1]:offsets[2*i+2]]` the ID of tail entities.
+    We use two arrays, ``offsets`` and ``data``. The `offsets` array is of shape ``(2 * num_relations + 1,)``.
+    The ``data`` array contains the sorted set of heads and tails for each relation, i.e.
+    ``data[offsets[2*i]:offsets[2*i+1]]`` are the IDs of head entities for relation ``i``, and
+    ``data[offsets[2*i+1]:offsets[2*i+2]]`` the ID of tail entities.
     """
+
+    data: torch.LongTensor
+    offsets: torch.LongTensor
 
     def __init__(
         self,
