@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 """Pseudo-Typed negative sampling."""
+
 import itertools
 import logging
-from typing import Optional, Tuple
 
 import torch
 
@@ -73,7 +73,7 @@ class PseudoTypedNegativeSampler(NegativeSampler):
         self.data = torch.as_tensor(data=data, dtype=torch.long)
         self.offsets = offsets
 
-    def sample(self, positive_batch: torch.LongTensor) -> Tuple[torch.LongTensor, Optional[torch.Tensor]]:  # noqa: D102
+    def corrupt_batch(self, positive_batch: torch.LongTensor):  # noqa: D102
         batch_size = positive_batch.shape[0]
 
         # shape: (neg, batch_size, 3)
@@ -104,9 +104,4 @@ class PseudoTypedNegativeSampler(NegativeSampler):
             triple_position,
         ] = entity_id
 
-        # If filtering is activated, all negative triples that are positive in the training dataset will be removed
-        # TODO: Wrong shape
-        if self.filterer is not None:
-            negative_batch, batch_filter = self.filterer(negative_batch=negative_batch)
-
-        return negative_batch.view(-1, 3), None
+        return negative_batch.view(-1, 3)
