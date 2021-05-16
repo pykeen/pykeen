@@ -22,7 +22,7 @@ from torch.utils.data import DataLoader
 from tqdm.autonotebook import tqdm, trange
 
 from ..constants import PYKEEN_CHECKPOINTS, PYKEEN_DEFAULT_CHECKPOINT
-from ..losses import Loss, has_mr_loss, has_nssa_loss
+from ..losses import Loss, has_mr_loss
 from ..models import Model, RGCN
 from ..stoppers import Stopper
 from ..trackers import ResultTracker
@@ -121,13 +121,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                 f'Can not use loss {self.model.loss.__class__.__name__}'
                 f' with training approach {self.__class__.__name__}',
             )
-
-        if has_mr_loss(self.model):
-            self._loss_helper = self._mr_loss_helper
-        elif has_nssa_loss(self.model):
-            self._loss_helper = self._self_adversarial_negative_sampling_loss_helper
-        else:
-            self._loss_helper = self._label_loss_helper  # type: ignore
 
         # The internal epoch state tracks the last finished epoch of the training loop to allow for
         # seamless loading and saving of training checkpoints
@@ -991,30 +984,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         self._free_graph_and_cache()
 
         return sub_batch_size, finished_search, supports_sub_batching
-
-    def _mr_loss_helper(
-        self,
-        positive_scores: torch.FloatTensor,
-        negative_scores: torch.FloatTensor,
-        _label_smoothing=None,
-    ) -> torch.FloatTensor:
-        raise NotImplementedError
-
-    def _label_loss_helper(
-        self,
-        positive_scores: torch.FloatTensor,
-        negative_scores: torch.FloatTensor,
-        label_smoothing: float,
-    ) -> torch.FloatTensor:
-        raise NotImplementedError
-
-    def _self_adversarial_negative_sampling_loss_helper(
-        self,
-        positive_scores: torch.FloatTensor,
-        negative_scores: torch.FloatTensor,
-        _label_smoothing=None,
-    ) -> torch.FloatTensor:
-        raise NotImplementedError
 
     def _free_graph_and_cache(self):
         self.model._free_graph_and_cache()

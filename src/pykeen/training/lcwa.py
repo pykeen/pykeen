@@ -49,35 +49,12 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
         else:
             predictions = self.model.score_t(hr_batch=batch_pairs, slice_size=slice_size)  # type: ignore
 
+        # TODO: Add regularization term from model.compute_loss
         return self.model.loss.process_lcwa_scores(
             predictions=predictions,
             labels=batch_labels_full,
             label_smoothing=label_smoothing,
         )
-
-    def _label_loss_helper(
-        self,
-        predictions: torch.FloatTensor,
-        labels: torch.FloatTensor,
-        label_smoothing: float,
-    ) -> torch.FloatTensor:
-        raise AssertionError("Do not use the loss helper, but rather the loss' builtin process_lcwa_scores.")
-
-    def _mr_loss_helper(
-        self,
-        predictions: torch.FloatTensor,
-        labels: torch.FloatTensor,
-        _label_smoothing=None,
-    ) -> torch.FloatTensor:
-        raise AssertionError("Do not use the loss helper, but rather the loss' builtin process_lcwa_scores.")
-
-    def _self_adversarial_negative_sampling_loss_helper(
-        self,
-        predictions: torch.FloatTensor,
-        labels: torch.FloatTensor,
-        _label_smoothing=None,
-    ) -> torch.FloatTensor:
-        raise AssertionError("Do not use the loss helper, but rather the loss' builtin process_lcwa_scores.")
 
     def _slice_size_search(
         self,

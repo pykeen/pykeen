@@ -107,34 +107,6 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
             batch_filter=neg_samples_filter,
         )
 
-    def _mr_loss_helper(
-        self,
-        positive_scores: torch.FloatTensor,
-        negative_scores: torch.FloatTensor,
-        _label_smoothing=None,
-        _batch_filter=None,
-    ) -> torch.FloatTensor:
-        raise AssertionError("Do not use the loss helper, but rather the loss' builtin process_slcwa_scores.")
-
-    def _self_adversarial_negative_sampling_loss_helper(
-        self,
-        positive_scores: torch.FloatTensor,
-        negative_scores: torch.FloatTensor,
-        _label_smoothing=None,
-        _batch_filter=None,
-    ) -> torch.FloatTensor:
-        """Compute self adversarial negative sampling loss."""
-        raise AssertionError("Do not use the loss helper, but rather the loss' builtin process_slcwa_scores.")
-
-    def _label_loss_helper(
-        self,
-        positive_scores: torch.FloatTensor,
-        negative_scores: torch.FloatTensor,
-        label_smoothing: float,
-        _batch_filter=None,
-    ) -> torch.FloatTensor:
-        raise AssertionError("Do not use the loss helper, but rather the loss' builtin process_slcwa_scores.")
-
     def _slice_size_search(
         self,
         *,
