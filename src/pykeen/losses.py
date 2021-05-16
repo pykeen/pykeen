@@ -346,6 +346,23 @@ class MarginRankingLoss(PairwiseLoss):
         else:
             self.margin_activation = margin_activation
 
+    def process_slcwa_scores(
+        self,
+        positive_scores: torch.FloatTensor,
+        negative_scores: torch.FloatTensor,
+        label_smoothing: Optional[float] = None,
+        batch_filter: Optional[torch.BoolTensor] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        # prepare for broadcasting, shape: (batch_size, 1, 3)
+        positive_scores = positive_scores.unsqueeze(dim=1)
+
+        if batch_filter is not None:
+            # negative_scores have already been filtered in the sampler!
+            num_neg_per_pos = batch_filter.shape[1]
+            positive_scores = positive_scores.repeat(1, num_neg_per_pos, 1)[batch_filter]
+
+        return self(pos_scores=positive_scores, neg_scores=negative_scores)
+
     def forward(
         self,
         pos_scores: torch.FloatTensor,
