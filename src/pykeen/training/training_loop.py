@@ -22,7 +22,7 @@ from torch.utils.data import DataLoader
 from tqdm.autonotebook import tqdm, trange
 
 from ..constants import PYKEEN_CHECKPOINTS, PYKEEN_DEFAULT_CHECKPOINT
-from ..losses import Loss, has_mr_loss
+from ..losses import Loss
 from ..models import Model, RGCN
 from ..stoppers import Stopper
 from ..trackers import ResultTracker
@@ -475,10 +475,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                     "Dropping last (incomplete) batch each epoch (%s batches).",
                     format_relative_comparison(part=1, total=len(training_instances)),
                 )
-
-        # Sanity check
-        if has_mr_loss(self.model) and label_smoothing > 0.:
-            raise RuntimeError('Label smoothing can not be used with margin ranking loss.')
 
         # Force weight initialization if training continuation is not explicitly requested.
         if not continue_training:

@@ -154,8 +154,6 @@ __all__ = [
     'MSELoss',
     'NSSALoss',
     'SoftplusLoss',
-    'has_mr_loss',
-    'has_nssa_loss',
     # Utils
     'loss_resolver',
 ]
@@ -380,6 +378,10 @@ class MarginRankingLoss(PairwiseLoss):
         label_smoothing: Optional[float] = None,
         batch_filter: Optional[torch.BoolTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
+        # Sanity check
+        if label_smoothing:
+            raise RuntimeError('Label smoothing can not be used with margin ranking loss.')
+
         # prepare for broadcasting, shape: (batch_size, 1, 3)
         positive_scores = positive_scores.unsqueeze(dim=1)
 
@@ -396,6 +398,10 @@ class MarginRankingLoss(PairwiseLoss):
         labels: torch.FloatTensor,
         label_smoothing: Optional[float] = None,
     ) -> torch.FloatTensor:  # noqa: D102
+        # Sanity check
+        if label_smoothing:
+            raise RuntimeError('Label smoothing can not be used with margin ranking loss.')
+
         # This shows how often one row has to be repeated
         repeat_rows = (labels == 1).nonzero(as_tuple=False)[:, 0]
         # Create boolean indices for negative labels in the repeated rows
@@ -561,13 +567,3 @@ loss_resolver = Resolver(
     suffix=_LOSS_SUFFIX,
     synonyms=losses_synonyms,
 )
-
-
-def has_mr_loss(model) -> bool:
-    """Check if the model has a marging ranking loss."""
-    return isinstance(model.loss, MarginRankingLoss)
-
-
-def has_nssa_loss(model) -> bool:
-    """Check if the model has a NSSA loss."""
-    return isinstance(model.loss, NSSALoss)
