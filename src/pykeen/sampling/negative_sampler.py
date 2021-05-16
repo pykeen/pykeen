@@ -84,7 +84,8 @@ class NegativeSampler(ABC):
             return negative_batch, None
 
         # If filtering is activated, all negative triples that are positive in the training dataset will be removed
-        return self.filterer(negative_batch=negative_batch)
+        # FIXME should this be: (negative_batch, self.filterer(negative_batch=negative_batch)) ?
+        return self.filterer.forward(negative_batch=negative_batch)
 
     @abstractmethod
     def corrupt_batch(self, positive_batch: torch.LongTensor) -> torch.LongTensor:
