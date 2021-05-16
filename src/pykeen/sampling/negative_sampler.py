@@ -94,6 +94,6 @@ class NegativeSampler(ABC):
             The positive triples.
 
         :return: shape: (batch_size, num_negs_per_pos, 3)
-            The negative triples.
+            The negative triples. `result[i, :, :]` contains the negative examples generated from `positive_batch[i, :]`.
         """
         raise NotImplementedError
