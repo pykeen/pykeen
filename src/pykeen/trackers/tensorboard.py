@@ -51,6 +51,10 @@ class TensorBoardResultTracker(ResultTracker):
             path = PYKEEN_LOGS.joinpath("tensorboard", experiment_name)
         elif isinstance(experiment_path, str):
             path = pathlib.Path(experiment_path)
+        else:
+            if experiment_name is None:
+                experiment_name = time.strftime('%Y-%m-%d-%H-%M-%S')
+            path = PYKEEN_LOGS.joinpath("tensorboard", experiment_name)
         self.path = path
 
         self.writer = self.summary_writer_cls(log_dir=self.path)
