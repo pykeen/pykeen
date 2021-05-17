@@ -1,8 +1,34 @@
 Using Tensorboard
 =========================
 
-`Tensorboard <https://www.tensorflow.org/tensorboard/>`_ (TB) is a service for tracking experimental results during training.
-It is part of the larger Tensorflow project but can be used independently.
+`Tensorboard <https://www.tensorflow.org/tensorboard/>`_ (TB) is a service for tracking experimental results
+during or after training.
+It is part of the larger Tensorflow project but can be used independently of it.
+
+Installing Tensorboard
+-----------------
+If Tensorboard is not currently installed upon your system, it can be installed with ``pip install tensorboard``
+or install PyKEEN with the ``tensorboard`` extra with ``pip install pykeen[tensorboard]``.
+
+One important thing to note is that tensorboard logs can created without actually installing tensorboard itself.
+However, if you want to view and interact with the data created via the tracker, it must be installed.
+
+Starting a Tensorboard Frontend Server
+-----------------
+Assuming Tensorboard has been installed and is in your current path, it can be started as follows:
+
+.. code-block:: bash
+
+    tensorboard --logdir=~/.data/pykeen/logs/tensorboard/
+
+With the value passed to the ``logdir`` being the location on the file system of the log directory.
+The Tensorboard can then be accessed via a browser at: http://localhost:6006/
+
+.. note::
+
+    It is not required for the Tensorboard process to be running whilst the training is happening. Indeed,
+    it only needs to be started once you want to interact and view the logs. It can be stopped at any time
+    and the logs will persist in the filesystem.
 
 Minimal Pipeline Example
 ---------------------------------
@@ -22,7 +48,7 @@ It is placed in a subdirectory of :mod:`pystow` default data directory with PyKE
 which will likely be at ``~/.data/pykeen/logs/tensorboard`` on your system. The file is named based on the
 current time if no alternative is provided.
 
-Specifying a Name
+Specifying a Log Name
 -----------------
 If you want to specify the name of the log file in the default directory, use the ``experiment_name`` keyword
 argument like:
@@ -58,16 +84,7 @@ argument like:
         ),
     )
 
-Please be aware that if you re-run an experiment using the same directory, then the logs will be combined.
-It is advisable to use a unique sub-directory for each experiment to allow for easy comparison.
+.. warning::
 
-Starting a Tensorboard Server
------------------
-Assuming Tensorboard has been installed and is in your current path, it can be started as follows:
-
-.. code-block:: bash
-
-    tensorboard --logdir=~/.data/pykeen/logs/tensorboard/
-
-With the value passed to the ``logdir`` being the location of you logs. Tensorboard can then be accessed via
-a browser at: http://localhost:6006/
+    Please be aware that if you re-run an experiment using the same directory, then the logs will be combined.
+    It is advisable to use a unique sub-directory for each experiment to allow for easy comparison.
