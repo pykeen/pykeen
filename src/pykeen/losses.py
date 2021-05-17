@@ -238,17 +238,17 @@ class Loss(_Loss):
         :return:
             A scalar loss term.
         """
-        # Stack predictions
-        # TODO: fix this, once the negative batches have appropriate size
-        negative_scores = negative_scores.view(*positive_scores.shape[:-1], -1)
-        predictions = torch.cat([positive_scores, negative_scores], dim=-1)
-
-        # Create target
-        ones = torch.ones_like(positive_scores, device=positive_scores.device)
-        zeros = torch.zeros_like(negative_scores, device=negative_scores.device)
-        labels = torch.cat([ones, zeros], dim=-1)
-
-        return self.process_lcwa_scores(predictions, labels, label_smoothing=label_smoothing)
+        return self.process_lcwa_scores(
+            predictions=positive_scores,
+            labels=torch.ones_like(positive_scores),
+            label_smoothing=label_smoothing,
+            num_entities=num_entities,
+        ) + self.process_lcwa_scores(
+            predictions=negative_scores,
+            labels=torch.zeros_like(negative_scores),
+            label_smoothing=label_smoothing,
+            num_entities=num_entities,
+        )
 
     def process_lcwa_scores(
         self,
@@ -541,6 +541,24 @@ class NSSALoss(SetwiseLoss):
         negative_scores = predictions[labels == 0]
 
         return self(pos_scores=positive_scores, neg_scores=negative_scores)
+
+    def process_slcwa_scores(
+        self,
+        positive_scores: torch.FloatTensor,
+        negative_scores: torch.FloatTensor,
+        label_smoothing: Optional[float] = None,
+        batch_filter: Optional[torch.BoolTensor] = None,
+        num_entities: Optional[int] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        # Sanity check
+        if label_smoothing:
+            raise UnsupportedLabelSmoothingError(self)
+
+        return self(
+            pos_scores=positive_scores,
+            neg_scores=negative_scores,
+        )
+
 
     def forward(
         self,
