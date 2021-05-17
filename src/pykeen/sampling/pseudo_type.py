@@ -77,8 +77,8 @@ class PseudoTypedNegativeSampler(NegativeSampler):
     def corrupt_batch(self, positive_batch: torch.LongTensor):  # noqa: D102
         batch_size = positive_batch.shape[0]
 
-        # shape: (neg, batch_size, 3)
-        negative_batch = positive_batch.unsqueeze(dim=0).repeat(self.num_negs_per_pos, 1, 1)
+        # shape: (batch_size, num_neg_per_pos, 3)
+        negative_batch = positive_batch.unsqueeze(dim=1).repeat(1, self.num_negs_per_pos, 1)
 
         # Uniformly sample from head/tail offsets
         r = positive_batch[:, 1]
@@ -100,9 +100,9 @@ class PseudoTypedNegativeSampler(NegativeSampler):
 
         # write into negative batch
         negative_batch[
-            torch.arange(self.num_negs_per_pos, device=negative_batch.device).unsqueeze(dim=0),
             torch.arange(batch_size, device=negative_batch.device).unsqueeze(dim=-1),
+            torch.arange(self.num_negs_per_pos, device=negative_batch.device).unsqueeze(dim=0),
             triple_position,
         ] = entity_id
 
-        return negative_batch.view(-1, self.num_negs_per_pos, 3)
+        return negative_batch
