@@ -54,7 +54,7 @@ class TensorBoardResultTracker(ResultTracker):
         self.path = path
 
     def start_run(self, run_name: Optional[str] = None) -> None:  # noqa: D102
-        self.writer = self.summary_writer_cls(log_dir=self.path, comment=run_name)
+        self.writer = self.summary_writer_cls(log_dir=self.path)
 
     def log_metrics(
         self,
