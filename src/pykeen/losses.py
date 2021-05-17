@@ -259,11 +259,13 @@ class Loss(_Loss):
     ) -> torch.FloatTensor:
         """Process scores from LCWA training loop."""
         # Apply label smoothing
-        if label_smoothing is not None and num_entities is not None and label_smoothing > 0.:
+        if label_smoothing is not None and label_smoothing > 0.:
+            if num_entities is None:
+                raise ValueError('must pass num_entities with label_smoothing')
             labels = apply_label_smoothing(
                 labels=labels,
                 epsilon=label_smoothing,
-                num_classes=num_entities,  # FIXME no model available to loss
+                num_classes=num_entities,
             )
 
         return self(predictions, labels)
