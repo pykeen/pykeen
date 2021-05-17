@@ -46,7 +46,7 @@ class PseudoTypedNegativeSamplerTest(cases.NegativeSamplerGenericTestCase):
         assert (negative_batch[..., 1] == positive_batch[..., 1]).all()
         # only corruption of a single entity (note: we do not check for exactly 2, since we do not filter).
         assert ((negative_batch == positive_batch).sum(dim=-1) >= 2).all()
-        # check that corrupted entities co-occur with relation in training data
+        # check that corrupted entities co-occur with the relation in training data
         for entity_pos in (0, 2):
             er_training = {(r, e) for r, e in self.triples_factory.mapped_triples[:, [1, entity_pos]].tolist()}
             er_negative = {(r, e) for r, e in negative_batch.view(-1, 3)[:, [1, entity_pos]].tolist()}
