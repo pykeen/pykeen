@@ -561,6 +561,8 @@ class NSSALoss(SetwiseLoss):
         if label_smoothing:
             raise UnsupportedLabelSmoothingError(self)
 
+        # fixme: consistency to margin loss, all-pairs?
+
         # Split positive and negative scores
         positive_scores = predictions[labels == 1]
         negative_scores = predictions[labels == 0]
