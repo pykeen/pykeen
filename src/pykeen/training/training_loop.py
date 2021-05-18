@@ -12,7 +12,6 @@ import time
 from abc import ABC, abstractmethod
 from datetime import datetime
 from hashlib import md5
-from typing import Any, List, Mapping, Optional, Sequence, Tuple, Type, Union
 from tempfile import NamedTemporaryFile
 from typing import Any, ClassVar, Generic, IO, List, Mapping, Optional, Tuple, Type, TypeVar, Union
 
@@ -667,7 +666,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                 # for evaluation_batch in evaluation_data_loader:
                 #     for callback in callbacks:
                 #         callback.on_evaluation_batch(batch=evaluation_batch)
-                should_stop = False
                 if stopper is not None and stopper.should_evaluate(epoch):
                     if stopper.should_stop(epoch):
                         self._should_stop = True
