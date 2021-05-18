@@ -200,7 +200,10 @@ class UnsupportedLabelSmoothingError(RuntimeError):
 
     def __init__(self, instance: object):
         """Initialize the error."""
-        super().__init__(f"{instance.__class__.__name__} does not support label smoothing.")
+        self.instance = instance
+
+    def __str__(self) -> str:
+        return f"{self.instance.__class__.__name__} does not support label smoothing."
 
 
 _REDUCTION_METHODS = dict(
