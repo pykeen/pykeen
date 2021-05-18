@@ -566,7 +566,7 @@ class NSSALoss(SetwiseLoss):
         pos_mask = labels == 1
 
         # compute negative weights
-        weights = predictions.detach()
+        weights = predictions.detach().clone()
         weights[pos_mask] = float("-inf")
         weights = weights.mul(self.adversarial_temperature).softmax(dim=1)
 
