@@ -27,6 +27,10 @@ class NegativeSampler(ABC):
     #: A filterer for negative batches
     filterer: Optional[Filterer]
 
+    num_entities: int
+    num_relations: int
+    num_negs_per_pos: int
+
     def __init__(
         self,
         triples_factory: CoreTriplesFactory,
