@@ -595,6 +595,8 @@ class NSSALoss(SetwiseLoss):
     ) -> torch.FloatTensor:
         """Calculate the loss for the given scores.
 
+        # TODO: the shapes do not match for lcwa usage.
+
         :param pos_scores: shape: (batch_size,)
             Positive score tensor
         :param neg_scores: (batch_size, num_neg_per_pos)
