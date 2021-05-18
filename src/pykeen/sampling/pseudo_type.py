@@ -4,6 +4,7 @@
 
 import itertools
 import logging
+from typing import Tuple
 
 import torch
 
@@ -18,11 +19,11 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class PseudoTypedNegativeSampler(NegativeSampler):
-    r"""A sampler that accounts for which entities co-occur with a relation.
-
-    To generate a corrupted head entity for triple $(h, r, t)$, only those entities are considered which occur as a
-    head entity in a triple with the relation $r$.
+def create_index(
+    triples_factory: CoreTriplesFactory,
+) -> Tuple[torch.LongTensor, torch.LongTensor]:
+    """
+    Create an index for efficient vectorized pseudo-type negative sampling.
 
     For this sampling, we need to store for each relation the set of head / tail entities. For efficient
     vectorized sampling, the following data structure is employed, which is partially inspired by the
@@ -30,8 +31,39 @@ class PseudoTypedNegativeSampler(NegativeSampler):
 
     We use two arrays, ``offsets`` and ``data``. The `offsets` array is of shape ``(2 * num_relations + 1,)``.
     The ``data`` array contains the sorted set of heads and tails for each relation, i.e.
-    ``data[offsets[2*i]:offsets[2*i+1]]`` are the IDs of head entities for relation ``i``, and
-    ``data[offsets[2*i+1]:offsets[2*i+2]]`` the ID of tail entities.
+    ``data[offsets[2*r]:offsets[2*r+1]]`` are the IDs of head entities for relation ``r``, and
+    ``data[offsets[2*r+1]:offsets[2*r+2]]`` the ID of tail entities.
+
+    :param triples_factory:
+        The triples factory.
+
+    :return:
+        A pair (data, offsets) containing the compressed triples.
+    """
+    heads, tails = create_relation_to_entity_set_mapping(triples=triples_factory.mapped_triples.tolist())
+    relations = set(heads.keys()).union(tails.keys())
+
+    # TODO: move this warning to PseudoTypeNegativeSampler's constructor?
+    for r in relations:
+        if len(heads[r]) < 2 and len(tails[r]) < 2:
+            logger.warning(f"Relation {r} does not have a sufficient number of distinct heads and tails.")
+
+    # create index structure
+    data = []
+    offsets = torch.empty(2 * triples_factory.num_relations + 1, dtype=torch.long)
+    offsets[0] = 0
+    for i, (r, m) in enumerate(itertools.product(range(triples_factory.num_relations), (heads, tails)), start=1):
+        data.extend(sorted(m[r]))
+        offsets[i] = len(data)
+    data = torch.as_tensor(data=data, dtype=torch.long)
+    return data, offsets
+
+
+class PseudoTypedNegativeSampler(NegativeSampler):
+    r"""A sampler that accounts for which entities co-occur with a relation.
+
+    To generate a corrupted head entity for triple $(h, r, t)$, only those entities are considered which occur as a
+    head entity in a triple with the relation $r$.
 
     .. warning:: With this type of sampler, filtering for false negatives is more important.
     """
@@ -57,22 +89,7 @@ class PseudoTypedNegativeSampler(NegativeSampler):
             Additional keyword based arguments passed to :class:`pykeen.sampling.NegativeSampler`.
         """
         super().__init__(triples_factory=triples_factory, **kwargs)
-        heads, tails = create_relation_to_entity_set_mapping(triples=triples_factory.mapped_triples.tolist())
-
-        relations = set(heads.keys()).union(tails.keys())
-        for r in relations:
-            if len(heads[r]) < 2 and len(tails[r]) < 2:
-                logger.warning(f"Relation {r} does not have a sufficient number of distinct heads and tails.")
-
-        # create index structure
-        data = []
-        offsets = torch.empty(2 * self.num_relations + 1, dtype=torch.long)
-        offsets[0] = 0
-        for i, (r, m) in enumerate(itertools.product(range(self.num_relations), (heads, tails)), start=1):
-            data.extend(sorted(m[r]))
-            offsets[i] = len(data)
-        self.data = torch.as_tensor(data=data, dtype=torch.long)
-        self.offsets = offsets
+        self.data, self.offsets = create_index(triples_factory)
 
     def corrupt_batch(self, positive_batch: torch.LongTensor):  # noqa: D102
         batch_size = positive_batch.shape[0]
