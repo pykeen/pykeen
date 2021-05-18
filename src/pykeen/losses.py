@@ -178,6 +178,7 @@ def apply_label_smoothing(
     :param num_classes:
         The number of classes.
     :returns: A smoothed label tensor
+    :raises ValueError: if episilon is negative or if num_classes is None
 
     ..seealso:
         https://www.deeplearningbook.org/contents/regularization.html, chapter 7.5.1
