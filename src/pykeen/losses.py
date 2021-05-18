@@ -561,13 +561,22 @@ class NSSALoss(SetwiseLoss):
         if label_smoothing:
             raise UnsupportedLabelSmoothingError(self)
 
-        # fixme: consistency to margin loss, all-pairs?
+        pos_mask = labels == 1
+
+        # compute negative weights
+        weights = predictions.detach()
+        weights[pos_mask] = float("-inf")
+        weights = weights.mul(self.adversarial_temperature).softmax(dim=1)
 
         # Split positive and negative scores
-        positive_scores = predictions[labels == 1]
-        negative_scores = predictions[labels == 0]
+        positive_scores = predictions[pos_mask]
+        negative_scores = predictions[~pos_mask]
 
-        return self(pos_scores=positive_scores, neg_scores=negative_scores)
+        return self(
+            pos_scores=positive_scores,
+            neg_scores=negative_scores,
+            neg_weights=weights[~pos_mask],
+        )
 
     def process_slcwa_scores(
         self,
@@ -594,35 +603,38 @@ class NSSALoss(SetwiseLoss):
             # use filled negatives scores
             negative_scores = negative_scores_
 
+        # compute weights (without gradient tracking)
+        weights = negative_scores.detach().mul(self.adversarial_temperature).softmax(dim=-1)
+
         return self(
             pos_scores=positive_scores,
             neg_scores=negative_scores,
+            neg_weights=weights,
         )
 
     def forward(
         self,
         pos_scores: torch.FloatTensor,
         neg_scores: torch.FloatTensor,
+        neg_weights: torch.FloatTensor,
     ) -> torch.FloatTensor:
         """Calculate the loss for the given scores.
 
-        # TODO: the shapes do not match for lcwa usage.
-
-        :param pos_scores: shape: (batch_size,)
+        :param pos_scores: shape: s_p
             Positive score tensor
-        :param neg_scores: (batch_size, num_neg_per_pos)
+        :param neg_scores: shape: s_n
             Negative score tensor
+        :param neg_weights: shape: s_n
 
         :returns: A loss value
 
         .. seealso:: https://github.com/DeepGraphLearning/KnowledgeGraphEmbedding/blob/master/codes/model.py
         """
-        neg_score_weights = functional.softmax(neg_scores * self.adversarial_temperature, dim=-1).detach()
-        neg_distances = -neg_scores
-        weighted_neg_scores = neg_score_weights * functional.logsigmoid(neg_distances - self.margin)
-        neg_loss = self._reduction_method(weighted_neg_scores)
-        pos_distances = -pos_scores
-        pos_loss = self._reduction_method(functional.logsigmoid(self.margin - pos_distances))
+        neg_loss = functional.logsigmoid(-neg_scores - self.margin)
+        neg_loss = neg_weights * neg_loss
+        neg_loss = self._reduction_method(neg_loss)
+        pos_loss = functional.logsigmoid(self.margin - -pos_scores)
+        pos_loss = self._reduction_method(pos_loss)
         loss = -pos_loss - neg_loss
 
         if self._reduction_method is torch.mean:
