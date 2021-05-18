@@ -49,7 +49,7 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
         else:
             predictions = self.model.score_t(hr_batch=batch_pairs, slice_size=slice_size)  # type: ignore
 
-        return self.model.loss.process_lcwa_scores(
+        return self.loss.process_lcwa_scores(
             predictions=predictions,
             labels=batch_labels_full,
             label_smoothing=label_smoothing,

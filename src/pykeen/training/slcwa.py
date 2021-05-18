@@ -103,7 +103,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
         negative_scores = self.model.score_hrt(negative_batch)
         # negative_scores = self.model.score_hrt(negative_batch.view(-1, 3)).view(*negative_batch.shape[:-1])
 
-        return self.model.loss.process_slcwa_scores(
+        return self.loss.process_slcwa_scores(
             positive_scores=positive_scores,
             negative_scores=negative_scores,
             label_smoothing=label_smoothing,
