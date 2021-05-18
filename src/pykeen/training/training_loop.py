@@ -148,6 +148,11 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         return self.model.device
 
     @property
+    def loss(self):  # noqa: D401
+        """The loss used by the model."""
+        return self.model.loss
+
+    @property
     def checksum(self) -> str:  # noqa: D401
         """The checksum of the model and optimizer the training loop was configured with."""
         h = md5()  # noqa: S303

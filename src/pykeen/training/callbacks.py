@@ -53,6 +53,11 @@ class TrainingCallback:
         return self.training_loop.model
 
     @property
+    def loss(self):  # noqa: D401
+        """The loss, accessed via the training loop."""
+        return self.training_loop.loss
+
+    @property
     def optimizer(self):  # noqa:D401
         """The optimizer, accessed via the training loop."""
         return self.training_loop.optimizer
