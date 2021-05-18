@@ -161,8 +161,8 @@ __all__ = [
 
 def apply_label_smoothing(
     labels: torch.FloatTensor,
-    epsilon: float,
-    num_classes: int,
+    epsilon: Optional[float] = None,
+    num_classes: Optional[int] = None,
 ) -> torch.FloatTensor:
     """Apply label smoothing to a target tensor.
 
@@ -180,8 +180,15 @@ def apply_label_smoothing(
     :returns: A smoothed label tensor
 
     ..seealso:
-        http://www.deeplearningbook.org/contents/regularization.html, chapter 7.5.1
+        https://www.deeplearningbook.org/contents/regularization.html, chapter 7.5.1
     """
+    if not epsilon:  # either none or zero
+        return labels
+    if epsilon < 0.0:
+        raise ValueError('episilon must be positive')
+    if num_classes is None:
+        raise ValueError('must pass num_classes to perform label smoothing')
+
     new_label_true = (1.0 - epsilon)
     new_label_false = epsilon / (num_classes - 1)
     return new_label_true * labels + new_label_false * (1.0 - labels)
@@ -217,7 +224,7 @@ class Loss(_Loss):
         self,
         positive_scores: torch.FloatTensor,
         negative_scores: torch.FloatTensor,
-        label_smoothing: Optional[float] = None,  # TODO: Shouldn't this be part of the loss' constructor parameters?
+        label_smoothing: Optional[float] = None,
         batch_filter: Optional[torch.BoolTensor] = None,
         num_entities: Optional[int] = None,
     ) -> torch.FloatTensor:
@@ -254,20 +261,15 @@ class Loss(_Loss):
         self,
         predictions: torch.FloatTensor,
         labels: torch.FloatTensor,
-        label_smoothing: Optional[float] = None,  # TODO: Shouldn't this be part of the loss' constructor parameters?
+        label_smoothing: Optional[float] = None,
         num_entities: Optional[int] = None,
     ) -> torch.FloatTensor:
         """Process scores from LCWA training loop."""
-        # Apply label smoothing
-        if label_smoothing is not None and label_smoothing > 0.:
-            if num_entities is None:
-                raise ValueError('must pass num_entities with label_smoothing')
-            labels = apply_label_smoothing(
-                labels=labels,
-                epsilon=label_smoothing,
-                num_classes=num_entities,
-            )
-
+        labels = apply_label_smoothing(
+            labels=labels,
+            epsilon=label_smoothing,
+            num_classes=num_entities,
+        )
         return self(predictions, labels)
 
 
@@ -560,7 +562,6 @@ class NSSALoss(SetwiseLoss):
             pos_scores=positive_scores,
             neg_scores=negative_scores,
         )
-
 
     def forward(
         self,
