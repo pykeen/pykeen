@@ -66,7 +66,7 @@ mock_resolver(loss_resolver, RandomLoss)
 
 def random_ablation():
     ablation_pipeline(
-        datasets='FB15k-237',
+        datasets='Nations',
         models=[
             'TransE',
             'TransR',
