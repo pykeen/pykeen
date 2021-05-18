@@ -249,9 +249,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         :return:
             The losses per epoch.
         """
-        callbacks = list(callbacks or [])
-        for callback in callbacks:
-            callback.register_loop(loop=self)
         self._should_stop = False
 
         # Create training instances. Use the _create_instances function to allow subclasses
@@ -673,7 +670,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                 should_stop = False
                 if stopper is not None and stopper.should_evaluate(epoch):
                     if stopper.should_stop(epoch):
-                        should_stop = True
+                        self._should_stop = True
                     # Since the model is also used within the stopper, its graph and cache have to be cleared
                     self._free_graph_and_cache()
                 # When the stopper obtained a new best epoch, this model has to be saved for reconstruction
@@ -684,7 +681,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                 ):
                     self._save_state(path=best_epoch_model_file_path)
                     last_best_epoch = epoch
-
             # When the training loop failed, a fallback checkpoint is created to resume training.
             except (MemoryError, RuntimeError) as e:
                 # During automatic memory optimization only the error message is of interest
@@ -734,7 +730,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                     )  # type: ignore
                     last_checkpoint = time.time()
 
-            if should_stop and last_best_epoch is not None and best_epoch_model_file_path is not None:
+            if self._should_stop and last_best_epoch is not None and best_epoch_model_file_path is not None:
                 self._load_state(path=best_epoch_model_file_path)
                 # Delete temporary best epoch model
                 if pathlib.Path.is_file(best_epoch_model_file_path):
