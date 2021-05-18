@@ -546,6 +546,8 @@ class NSSALoss(SetwiseLoss):
 
         .. note:: The default hyperparameters are based the experiments for FB15K-237 in [sun2019]_.
         """
+        # TODO: The "temperature" parameter here is more an reciprocal temperature, following the standard nomenclature
+        #  for softmax temperature
         super().__init__(reduction=reduction)
         self.adversarial_temperature = adversarial_temperature
         self.margin = margin
