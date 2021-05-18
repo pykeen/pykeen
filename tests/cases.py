@@ -196,7 +196,7 @@ class LossTestCase(GenericTestCase[Loss]):
         self,
         positive_scores: torch.FloatTensor,
         negative_scores: torch.FloatTensor,
-        batch_filter: torch.BoolTensor = None,
+        batch_filter: Optional[torch.BoolTensor] = None,
     ):
         """Help test processing scores from SLCWA training loop."""
         loss_value = self.instance.process_slcwa_scores(
