@@ -271,12 +271,16 @@ class Loss(_Loss):
         """
         Process scores from LCWA training loop.
 
+        # TODO: Input shapes are different for default delegation from slcwa
+
         :param predictions: shape: (batch_size, num_entities)
             The scores.
         :param labels: shape: (batch_size, num_entities)
             The labels.
         :param label_smoothing:
             An optional label smoothing parameter.
+        :param num_entities:
+            The number of entities.
 
         :return:
             A scalar loss value.
@@ -285,7 +289,7 @@ class Loss(_Loss):
         labels = apply_label_smoothing(
             labels=labels,
             epsilon=label_smoothing,
-            num_classes=labels.shape[1],
+            num_classes=num_entities,
         )
         return self(predictions, labels)
 
@@ -575,6 +579,10 @@ class NSSALoss(SetwiseLoss):
         if label_smoothing:
             raise UnsupportedLabelSmoothingError(self)
 
+        if batch_filter is not None:
+            # negative_scores have already been filtered in the sampler!
+            raise NotImplementedError(f"{self.__class__.__name__} requires unfiltered scores for correct softmax!")
+
         return self(
             pos_scores=positive_scores,
             neg_scores=negative_scores,
@@ -587,8 +595,11 @@ class NSSALoss(SetwiseLoss):
     ) -> torch.FloatTensor:
         """Calculate the loss for the given scores.
 
-        :param pos_scores: Positive score tensor
-        :param neg_scores: Negative score tensor
+        :param pos_scores: shape: (batch_size,)
+            Positive score tensor
+        :param neg_scores: (batch_size, num_neg_per_pos)
+            Negative score tensor
+
         :returns: A loss value
 
         .. seealso:: https://github.com/DeepGraphLearning/KnowledgeGraphEmbedding/blob/master/codes/model.py
