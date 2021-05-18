@@ -608,6 +608,9 @@ def _build_model_helper(
             del model_kwargs['regularizer']
         model_kwargs['regularizer'] = regularizer_resolver.make(regularizer, regularizer_kwargs)
 
+    if not model_resolver.supports_argument(model, 'regularizer') and 'regularizer' in model_kwargs:
+        raise ValueError('model does not support regularizer: {model}')
+
     if 'loss' in model_kwargs:
         if loss is None:
             loss = model_kwargs.pop('loss')
