@@ -242,7 +242,7 @@ class Loss(_Loss):
         :param label_smoothing:
             An optional label smoothing parameter.
         :param batch_filter: shape: (batch_size, num_neg_per_pos)
-            An optional filter. If given, ... TODO: describe
+            An optional filter of scores to keep. If given, ... TODO: describe
         :param num_entities:
             The number of entities. Only required if label smoothing is enabled.
 
@@ -581,7 +581,16 @@ class NSSALoss(SetwiseLoss):
 
         if batch_filter is not None:
             # negative_scores have already been filtered in the sampler!
-            raise NotImplementedError(f"{self.__class__.__name__} requires unfiltered scores for correct softmax!")
+            # (dense) softmax requires unfiltered scores / masking
+            negative_scores_ = torch.zeros_like(batch_filter, dtype=positive_scores.dtype)
+            negative_scores_[batch_filter] = negative_scores
+            # we need to fill the scores with -inf for all filtered negative examples
+            # EXCEPT if all negative samples are filtered (since softmax over only -inf yields nan)
+            fill_mask = ~batch_filter
+            fill_mask = fill_mask & ~(fill_mask.all(dim=1, keepdim=True))
+            negative_scores_[fill_mask] = float("-inf")
+            # use filled negatives scores
+            negative_scores = negative_scores_
 
         return self(
             pos_scores=positive_scores,
