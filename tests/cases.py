@@ -192,18 +192,38 @@ class LossTestCase(GenericTestCase[Loss]):
         # Test backward
         loss_value.backward()
 
-    def test_process_slcwa_scores(self):
-        """Test processing scores from SLCWA training loop."""
-        positive_scores = torch.rand(self.batch_size, 1, requires_grad=True)
-        negative_scores = torch.rand(self.batch_size, self.num_neg_per_pos, requires_grad=True)
+    def help_test_process_slcwa_scores(
+        self,
+        positive_scores: torch.FloatTensor,
+        negative_scores: torch.FloatTensor,
+        batch_filter: torch.BoolTensor = None,
+    ):
+        """Help test processing scores from SLCWA training loop."""
         loss_value = self.instance.process_slcwa_scores(
             positive_scores=positive_scores,
             negative_scores=negative_scores,
             label_smoothing=None,
-            batch_filter=None,
+            batch_filter=batch_filter,
             num_entities=self.num_entities,
         )
         self._check_loss_value(loss_value=loss_value)
+
+    def test_process_slcwa_scores(self):
+        """Test processing scores from SLCWA training loop."""
+        positive_scores = torch.rand(self.batch_size, 1, requires_grad=True)
+        negative_scores = torch.rand(self.batch_size, self.num_neg_per_pos, requires_grad=True)
+        self.help_test_process_slcwa_scores(positive_scores=positive_scores, negative_scores=negative_scores)
+
+    def test_process_slcwa_scores_filtered(self):
+        """Test processing scores from SLCWA training loop with filtering."""
+        positive_scores = torch.rand(self.batch_size, 1, requires_grad=True)
+        negative_scores = torch.rand(self.batch_size, self.num_neg_per_pos, requires_grad=True)
+        batch_filter = torch.rand(self.batch_size, self.num_neg_per_pos) < 0.5
+        self.help_test_process_slcwa_scores(
+            positive_scores=positive_scores,
+            negative_scores=negative_scores[batch_filter],
+            batch_filter=batch_filter,
+        )
 
     def test_process_lcwa_scores(self):
         """Test processing scores from LCWA training loop without smoothing."""
