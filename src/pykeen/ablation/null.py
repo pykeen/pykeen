@@ -10,7 +10,7 @@ from more_click import verbose_option
 from pykeen.ablation import ablation_pipeline
 from pykeen.constants import PYKEEN_EXPERIMENTS
 from pykeen.losses import Loss, loss_resolver
-from pykeen.models import ERModel, model_resolver
+from pykeen.models import TransE, model_resolver
 from torch import FloatTensor
 from torch.nn.init import uniform_
 
@@ -19,10 +19,8 @@ from class_resolver import Resolver
 X = TypeVar('X')
 
 
-class RandomModel(ERModel):
+class RandomModel(TransE):
     """Generate random scores."""
-
-    hpo_default = {}
 
     def forward(
         self,
@@ -34,7 +32,7 @@ class RandomModel(ERModel):
     ) -> FloatTensor:
         """Return a random result."""
         # shape: (batch_size, num_heads, num_relations, num_tails)
-        size = ...  # TODO
+        size = 1, self.num_entities, self.num_relations, self.num_relations  # TODO
         rv = torch.empty(size=size)
         uniform_(rv)
         return cast(FloatTensor, rv)
@@ -49,10 +47,9 @@ class RandomLoss(Loss):
         labels: FloatTensor,
     ) -> FloatTensor:
         """Return a random result."""
-        size = ...  # # TODO
-        rv = torch.empty(size=size)
-        uniform_(rv)
-        return cast(FloatTensor, rv)
+        with torch.no_grad():
+            rv = cast(FloatTensor, torch.rand(1))
+        return rv
 
 
 def mock_resolver(resolver: Resolver, cls):
