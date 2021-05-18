@@ -615,7 +615,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                             slice_size,
                         )
                         current_epoch_loss += batch_loss
-                        callback.on_batch(epoch=epoch, batch_loss=batch_loss)
+                        callback.on_batch(epoch=epoch, batch=batch, batch_loss=batch_loss)
 
                     # when called by batch_size_search(), the parameter update should not be applied.
                     if not only_size_probing:

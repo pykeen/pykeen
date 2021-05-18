@@ -17,7 +17,7 @@ be useful to log all batch losses. This could be accomplished with the following
     from pykeen.training import TrainingCallback
 
     class BatchLossReportCallback(TrainingCallback):
-        def on_batch(self, epoch: int, batch_loss: float):
+        def on_batch(self, epoch: int, batch, batch_loss: float):
             print(epoch, batch_loss)
 """
 
@@ -66,7 +66,7 @@ class TrainingCallback:
         """Register the training loop."""
         self._training_loop = training_loop
 
-    def on_batch(self, epoch: int, batch_loss: float, **kwargs: Any) -> None:
+    def on_batch(self, epoch: int, batch, batch_loss: float, **kwargs: Any) -> None:
         """Call for training batches."""
 
     def post_batch(self, epoch: int, batch, **kwargs: Any) -> None:
@@ -123,10 +123,10 @@ class MultiTrainingCallback(TrainingCallback):
         if self._training_loop is not None:
             callback.register_training_loop(self._training_loop)
 
-    def on_batch(self, epoch: int, batch_loss: float, **kwargs: Any) -> None:
+    def on_batch(self, epoch: int, batch, batch_loss: float, **kwargs: Any) -> None:
         """Call for each batch."""
         for callback in self.callbacks:
-            callback.on_batch(epoch=epoch, batch_loss=batch_loss)
+            callback.on_batch(epoch=epoch, batch=batch, batch_loss=batch_loss)
 
     def post_batch(self, epoch: int, batch, **kwargs: Any) -> None:
         """Call after each batch."""
