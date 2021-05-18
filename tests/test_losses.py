@@ -74,7 +74,7 @@ class TestCustomLossFunctions(unittest.TestCase):
         # expected_loss ≈ 0.34
         expected_loss = (-pos_loss - neg_loss) / 2.
 
-        loss = loss_fct(pos_scores, neg_scores).item()
+        loss = loss_fct(pos_scores, neg_scores, weights).item()
 
         self.assertAlmostEqual(expected_loss, 0.34, delta=0.02)
         self.assertAlmostEqual(expected_loss, loss, delta=0.02)
