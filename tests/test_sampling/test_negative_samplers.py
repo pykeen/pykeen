@@ -52,7 +52,6 @@ class PseudoTypedNegativeSamplerTest(cases.NegativeSamplerGenericTestCase):
             er_training = {(r, e) for r, e in self.triples_factory.mapped_triples[:, [1, entity_pos]].tolist()}
             er_negative = {(r, e) for r, e in negative_batch.view(-1, 3)[:, [1, entity_pos]].tolist()}
             assert er_negative.issubset(er_training)
-        assert negative_batch
 
     def test_index_structure(self):
         """Test the index structure."""

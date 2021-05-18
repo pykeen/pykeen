@@ -111,10 +111,6 @@ class PseudoTypedNegativeSampler(NegativeSampler):
         # and position within triple (0: head, 2: tail)
         triple_position = 2 * (negative_ids >= start_tails).long()
 
-        # fallback heuristic: random
-        fill_mask = torch.arange(self.num_negs_per_pos).unsqueeze(dim=0) >= num_choices
-        entity_id[fill_mask] = torch.randint(self.num_entities, size=(fill_mask.sum(),), device=negative_batch.device)
-
         # write into negative batch
         negative_batch[
             torch.arange(batch_size, device=negative_batch.device).unsqueeze(dim=-1),
