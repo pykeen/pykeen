@@ -304,16 +304,6 @@ class SetwiseLossTestCase(LossTestCase):
         """Test the loss is the right type."""
         self.assertIsInstance(self.instance, SetwiseLoss)
 
-    def test_forward(self):
-        """Test forward(scores, labels)."""
-        scores = torch.rand(self.batch_size, self.num_entities, requires_grad=True)
-        labels = torch.rand(self.batch_size, self.num_entities, requires_grad=False)
-        loss_value = self.instance(
-            scores,
-            labels,
-        )
-        self._check_loss_value(loss_value=loss_value)
-
 
 class InteractionTestCase(
     GenericTestCase[Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]],
