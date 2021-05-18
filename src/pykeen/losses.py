@@ -268,11 +268,24 @@ class Loss(_Loss):
         label_smoothing: Optional[float] = None,
         num_entities: Optional[int] = None,
     ) -> torch.FloatTensor:
-        """Process scores from LCWA training loop."""
+        """
+        Process scores from LCWA training loop.
+
+        :param predictions: shape: (batch_size, num_entities)
+            The scores.
+        :param labels: shape: (batch_size, num_entities)
+            The labels.
+        :param label_smoothing:
+            An optional label smoothing parameter.
+
+        :return:
+            A scalar loss value.
+        """
+        # TODO: Do label smoothing only once
         labels = apply_label_smoothing(
             labels=labels,
             epsilon=label_smoothing,
-            num_classes=num_entities,
+            num_classes=labels.shape[1],
         )
         return self(predictions, labels)
 
