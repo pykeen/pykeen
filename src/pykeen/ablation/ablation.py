@@ -7,6 +7,7 @@ import json
 import logging
 import os
 import time
+from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Tuple, Union
 from uuid import uuid4
 
@@ -29,7 +30,7 @@ Mapping3D = Mapping[str, Mapping[str, Mapping[str, Any]]]
 
 def ablation_pipeline(
     datasets: Union[str, List[str]],
-    directory: str,
+    directory: Union[str, Path],
     models: Union[str, List[str]],
     losses: Union[str, List[str]],
     optimizers: Union[str, List[str]],
@@ -140,6 +141,8 @@ def ablation_pipeline(
     :param create_unique_subdir: Defines, whether a unique sub-directory for the experimental artifacts should
         be created. The sub-directory name is defined  by the  current  data + a unique id.
     """
+    if isinstance(directory, str):
+        directory = Path(directory).resolve()
     if create_unique_subdir:
         directory = _create_path_with_id(directory=directory)
 
@@ -222,10 +225,10 @@ def _run_ablation_experiments(
         )
 
 
-def _create_path_with_id(directory: str) -> str:
+def _create_path_with_id(directory: Path) -> Path:
     """Add unique id to path."""
     datetime = time.strftime('%Y-%m-%d-%H-%M')
-    return os.path.join(directory, f'{datetime}_{uuid4()}')
+    return directory.joinpath(f'{datetime}_{uuid4()}')
 
 
 def ablation_pipeline_from_config(
@@ -265,7 +268,7 @@ def ablation_pipeline_from_config(
     )
 
 
-def prepare_ablation_from_path(path: str, directory: str, save_artifacts: bool) -> List[Tuple[str, str]]:
+def prepare_ablation_from_path(path: str, directory: Union[str, Path], save_artifacts: bool) -> List[Tuple[str, str]]:
     """Prepare a set of ablation study directories.
 
     :param path: Path to configuration file defining the ablation studies.
@@ -283,7 +286,7 @@ def prepare_ablation_from_path(path: str, directory: str, save_artifacts: bool) 
 
 def prepare_ablation_from_config(
     config: Mapping[str, Any],
-    directory: str,
+    directory: Union[str, Path],
     save_artifacts: bool,
 ) -> List[Tuple[str, str]]:
     """Prepare a set of ablation study directories.
@@ -315,7 +318,7 @@ def prepare_ablation(  # noqa:C901
     losses: Union[str, List[str]],
     optimizers: Union[str, List[str]],
     training_loops: Union[str, List[str]],
-    directory: str,
+    directory: Union[str, Path],
     *,
     epochs: Optional[int] = None,
     create_inverse_triples: Union[bool, List[bool]] = False,
@@ -414,6 +417,8 @@ def prepare_ablation(  # noqa:C901
             If the dataset is not specified correctly, i.e., dataset is not of type str, or a dictionary containing
             the paths to the training, testing, and validation data.
     """
+    if isinstance(directory, str):
+        directory = Path(directory)
     if isinstance(datasets, str):
         datasets = [datasets]
     if isinstance(create_inverse_triples, bool):
