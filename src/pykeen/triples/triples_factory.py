@@ -7,7 +7,7 @@ import itertools
 import logging
 import pathlib
 import re
-from typing import Any, Callable, Collection, Dict, List, Mapping, Optional, Sequence, Set, TextIO, Union, cast
+from typing import Any, Callable, Collection, Dict, List, Mapping, Optional, Sequence, Set, TextIO, Type, Union, cast
 
 import numpy as np
 import pandas as pd
@@ -109,7 +109,7 @@ def _map_triples_elements_to_ids(
 
     triples_of_ids = np.concatenate([head_column, relation_column, tail_column], axis=1)
 
-    triples_of_ids = np.array(triples_of_ids, dtype=np.long)
+    triples_of_ids = np.array(triples_of_ids, dtype=np.int64)
     # Note: Unique changes the order of the triples
     # Note: Using unique means implicit balancing of training samples
     unique_mapped_triples = np.unique(ar=triples_of_ids, axis=0)
@@ -359,11 +359,14 @@ class CoreTriplesFactory:
 
     def create_slcwa_instances(self) -> Instances:
         """Create sLCWA instances for this factory's triples."""
-        return SLCWAInstances(mapped_triples=self._add_inverse_triples_if_necessary(mapped_triples=self.mapped_triples))
+        return self._create_instances(SLCWAInstances)
 
     def create_lcwa_instances(self, use_tqdm: Optional[bool] = None) -> Instances:
         """Create LCWA instances for this factory's triples."""
-        return LCWAInstances.from_triples(
+        return self._create_instances(LCWAInstances)
+
+    def _create_instances(self, instances_cls: Type[Instances]) -> Instances:
+        return instances_cls.from_triples(
             mapped_triples=self._add_inverse_triples_if_necessary(mapped_triples=self.mapped_triples),
             num_entities=self.num_entities,
         )
