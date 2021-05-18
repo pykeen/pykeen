@@ -3,6 +3,7 @@
 """Test that samplers can be executed."""
 
 from pykeen.sampling import BasicNegativeSampler, BernoulliNegativeSampler, PseudoTypedNegativeSampler
+from pykeen.sampling.pseudo_type import create_index
 from tests.test_sampling import cases
 
 
@@ -52,3 +53,14 @@ class PseudoTypedNegativeSamplerTest(cases.NegativeSamplerGenericTestCase):
             er_negative = {(r, e) for r, e in negative_batch.view(-1, 3)[:, [1, entity_pos]].tolist()}
             assert er_negative.issubset(er_training)
         assert negative_batch
+
+    def test_index_structure(self):
+        """Test the index structure."""
+        data, offsets = create_index(triples_factory=self.triples_factory)
+        triples = self.triples_factory.mapped_triples
+        for r in range(self.triples_factory.num_relations):
+            triples_with_r = triples[triples[:, 1] == r]
+            for i, entity_pos in enumerate((0, 2)):
+                index_entities = set(data[offsets[2 * r + i]: offsets[2 * r + i + 1]].tolist())
+                triple_entities = set(triples_with_r[:, entity_pos].tolist())
+                assert index_entities == triple_entities
