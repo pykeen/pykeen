@@ -21,7 +21,7 @@ from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
 from tqdm.autonotebook import tqdm, trange
 
-from .callbacks import MultiTrainingCallback, TrackerCallback, TrainingCallbackHint
+from .callbacks import MultiTrainingCallback, StopperCallback, TrackerCallback, TrainingCallbackHint
 from ..constants import PYKEEN_CHECKPOINTS, PYKEEN_DEFAULT_CHECKPOINT
 from ..losses import Loss, has_mr_loss, has_nssa_loss
 from ..models import Model, RGCN
@@ -450,6 +450,9 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         # Register a callback for the result tracker, if given
         if result_tracker is not None:
             callback.register_callback(TrackerCallback(result_tracker))
+        # Register a callback for the early stopper, if given
+        if stopper is not None:
+            callback.register_callback(StopperCallback(stopper))
 
         callback.register_training_loop(self)
 

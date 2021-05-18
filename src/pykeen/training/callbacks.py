@@ -23,12 +23,14 @@ be useful to log all batch losses. This could be accomplished with the following
 
 from typing import Any, Collection, List, Union
 
+from ..stoppers import Stopper
 from ..trackers import ResultTracker
 
 __all__ = [
     'TrainingCallbackHint',
     'TrainingCallback',
     'TrackerCallback',
+    'StopperCallback',
     'MultiTrainingCallback',
 ]
 
@@ -89,6 +91,17 @@ class TrackerCallback(TrainingCallback):
     def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:
         """Log the epoch and loss."""
         self.result_tracker.log_metrics({'loss': epoch_loss}, step=epoch)
+
+
+class StopperCallback(TrainingCallback):
+    """An adapter for the :class:`pykeen.stopper.Stopper`."""
+
+    def __init__(self, stopper: Stopper):
+        super().__init__()
+        self.stopper = stopper
+
+    def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:
+        raise NotImplementedError
 
 
 #: A hint for constructing a :class:`MultiTrainingCallback`
