@@ -93,12 +93,12 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
         negative_batch = negative_batch[start:stop]
         if positive_filter:
             negative_batch = negative_batch[positive_filter[start:stop]]
+        # Make it negative batch broadcastable (required for num_negs_per_pos > 1).
+        negative_batch = negative_batch.view(-1, 3)
+
         # Ensure they reside on the device (should hold already for most simple negative samplers, e.g.
         # BasicNegativeSampler, BernoulliNegativeSampler
         negative_batch = negative_batch.to(self.device)
-
-        # Make it negative batch broadcastable (required for num_negs_per_pos > 1).
-        negative_batch = negative_batch.view(-1, 3)
 
         # Compute negative and positive scores
         positive_scores = self.model.score_hrt(positive_batch)
