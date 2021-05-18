@@ -2,9 +2,9 @@
 
 """Negative sampling algorithm based on the work of of Bordes *et al.*."""
 
+import math
 from typing import Collection, Optional
 
-import math
 import torch
 
 from .negative_sampler import NegativeSampler
@@ -54,7 +54,7 @@ class BasicNegativeSampler(NegativeSampler):
         # Set the indices
         self._corruption_indices = [LOOKUP[side] for side in self.corruption_scheme]
 
-    def _corrupt_batch(self, positive_batch: torch.LongTensor) -> torch.LongTensor:  # noqa: D102
+    def corrupt_batch(self, positive_batch: torch.LongTensor) -> torch.LongTensor:  # noqa: D102
         if self.num_negs_per_pos > 1:
             positive_batch = positive_batch.repeat(self.num_negs_per_pos, 1)
 
