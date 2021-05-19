@@ -314,10 +314,8 @@ See [CONTRIBUTING.md](/CONTRIBUTING.md) for more information on getting involved
 
 ## Acknowledgements
 
-### Supporters
-
 <details>
-<summary>Supporters</summary>
+<summary><h3>Supporters</h3></summary>
 
 This project has been supported by several organizations (in alphabetical order):
 
