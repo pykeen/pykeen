@@ -47,8 +47,7 @@ class RandomLoss(Loss):
         labels: FloatTensor,
     ) -> FloatTensor:
         """Return a random result."""
-        with torch.no_grad():
-            rv = cast(FloatTensor, torch.rand(1))
+        rv = cast(FloatTensor, torch.rand(1, requires_grad=True))
         return rv
 
 
@@ -65,6 +64,7 @@ mock_resolver(loss_resolver, RandomLoss)
 
 
 def random_ablation():
+    directory = PYKEEN_EXPERIMENTS.joinpath('rand_ablation')
     ablation_pipeline(
         datasets='Nations',
         models=[
@@ -73,13 +73,16 @@ def random_ablation():
         ],
         losses=[
             'NSSA',
-            'BCE',
-            'MR',
+            'BCEaftersigmoid',
+            'marginranking',
         ],
-        directory=PYKEEN_EXPERIMENTS.joinpath('rand_ablation'),
+        directory=directory,
         optimizers='Adam',
         training_loops=['LCWA', 'sLCWA'],
+        epochs=1,
+        n_trials=1,
     )
+    click.echo(f'Written to {directory.resolve().as_posix()}')
 
 
 @click.command()
