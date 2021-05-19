@@ -2,7 +2,7 @@
 
 """Implementation of the QuatE model."""
 
-from typing import Any, ClassVar, Mapping, Type
+from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
 from torch.nn import functional
@@ -15,6 +15,7 @@ from ...nn.init import init_quaternions
 from ...nn.modules import QuatEInteraction
 from ...regularizers import LpRegularizer, Regularizer
 from ...typing import Constrainer, Hint, Initializer
+from ...utils import get_expected_norm
 
 __all__ = [
     'QuatE',
@@ -76,12 +77,13 @@ class QuatE(ERModel):
     loss_default: ClassVar[Type[Loss]] = BCEWithLogitsLoss
     #: The default parameters for the default loss function class
     loss_default_kwargs: ClassVar[Mapping[str, Any]] = dict(reduction='mean')
+    # TODO: We do not need this anymore
     #: The regularizer used by [zhang2019]_ for QuatE.
     regularizer_default: ClassVar[Type[Regularizer]] = LpRegularizer
     #: The LP settings used by [zhang2019]_ for QuatE.
     regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = dict(
-        weight=0.0025,
-        p=3.0,
+        weight=0.3 / get_expected_norm(p=2, d=100),
+        p=2.0,
         normalize=True,
     )
 
@@ -90,7 +92,11 @@ class QuatE(ERModel):
         *,
         embedding_dim: int = 100,
         entity_initializer: Hint[Initializer] = init_quaternions,
+        entity_regularizer: Hint[Regularizer] = LpRegularizer,
+        entity_regularizer_kwargs: Optional[Mapping[str, Any]] = None,
         relation_initializer: Hint[Initializer] = init_quaternions,
+        relation_regularizer: Hint[Regularizer] = LpRegularizer,
+        relation_regularizer_kwargs: Optional[Mapping[str, Any]] = None,
         relation_constrainer: Hint[Constrainer] = quaternion_normalizer,
         **kwargs,
     ) -> None:
@@ -118,12 +124,16 @@ class QuatE(ERModel):
                 embedding_dim=4 * embedding_dim,
                 initializer=entity_initializer,
                 dtype=torch.float,
+                regularizer=entity_regularizer,
+                regularizer_kwargs=entity_regularizer_kwargs or self.regularizer_default_kwargs,
             ),
             relation_representations=EmbeddingSpecification(
                 embedding_dim=4 * embedding_dim,
                 initializer=relation_initializer,
                 constrainer=relation_constrainer,
                 dtype=torch.float,
+                regularizer=relation_regularizer,
+                regularizer_kwargs=relation_regularizer_kwargs or self.regularizer_default_kwargs,
             ),
             **kwargs,
         )
