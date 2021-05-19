@@ -222,7 +222,7 @@ class Embedding(RepresentationModule):
 
     normalizer: Optional[Normalizer]
     constrainer: Optional[Constrainer]
-    regularizer: Optional['Regularizer']
+    regularizer: Optional[Regularizer]
     dropout: Optional[nn.Dropout]
 
     def __init__(
@@ -236,7 +236,7 @@ class Embedding(RepresentationModule):
         normalizer_kwargs: Optional[Mapping[str, Any]] = None,
         constrainer: Hint[Constrainer] = None,
         constrainer_kwargs: Optional[Mapping[str, Any]] = None,
-        regularizer: Hint['Regularizer'] = None,
+        regularizer: Hint[Regularizer] = None,
         regularizer_kwargs: Optional[Mapping[str, Any]] = None,
         trainable: bool = True,
         dtype: Optional[torch.dtype] = None,
@@ -424,7 +424,7 @@ class EmbeddingSpecification:
     constrainer: Hint[Constrainer] = None
     constrainer_kwargs: Optional[Mapping[str, Any]] = None
 
-    regularizer: Hint['Regularizer'] = None
+    regularizer: Hint[Regularizer] = None
     regularizer_kwargs: Optional[Mapping[str, Any]] = None
 
     dtype: Optional[torch.dtype] = None
