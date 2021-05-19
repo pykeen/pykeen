@@ -424,7 +424,8 @@ class EmbeddingSpecification:
     constrainer: Hint[Constrainer] = None
     constrainer_kwargs: Optional[Mapping[str, Any]] = None
 
-    regularizer: Optional['Regularizer'] = None
+    regularizer: Hint['Regularizer'] = None
+    regularizer_kwargs: Optional[Mapping[str, Any]] = None
 
     dtype: Optional[torch.dtype] = None
     dropout: Optional[float] = None
@@ -442,6 +443,7 @@ class EmbeddingSpecification:
             constrainer=self.constrainer,
             constrainer_kwargs=self.constrainer_kwargs,
             regularizer=self.regularizer,
+            regularizer_kwargs=self.regularizer_kwargs,
             dtype=self.dtype,
             dropout=self.dropout,
         )
