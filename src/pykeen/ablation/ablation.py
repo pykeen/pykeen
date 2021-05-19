@@ -434,7 +434,7 @@ def prepare_ablation(  # noqa:C901
     if isinstance(regularizers, str):
         regularizers = [regularizers]
     elif regularizers is None:
-        regularizers = ["NoRegularizer"]
+        regularizers = [None]
 
     it = itt.product(
         datasets,
@@ -528,14 +528,19 @@ def prepare_ablation(  # noqa:C901
         logger.info(f"Loss functions: {loss}")
 
         # Add regularizer to current_pipeline
-        hpo_config['regularizer'] = regularizer
-        _set_arguments(config=model_to_regularizer_to_regularizer_kwargs, key='regularizer_kwargs', value=regularizer)
-        _set_arguments(
-            config=model_to_regularizer_to_regularizer_kwargs_ranges,
-            key='regularizer_kwargs_ranges',
-            value=regularizer,
-        )
-        logger.info(f"Regularizer: {regularizer}")
+        if regularizer is not None:
+            hpo_config['regularizer'] = regularizer
+            _set_arguments(
+                config=model_to_regularizer_to_regularizer_kwargs,
+                key='regularizer_kwargs',
+                value=regularizer,
+            )
+            _set_arguments(
+                config=model_to_regularizer_to_regularizer_kwargs_ranges,
+                key='regularizer_kwargs_ranges',
+                value=regularizer,
+            )
+            logger.info(f"Regularizer: {regularizer}")
 
         # Add optimizer to current_pipeline
         hpo_config['optimizer'] = optimizer
