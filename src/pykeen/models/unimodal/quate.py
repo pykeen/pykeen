@@ -102,6 +102,9 @@ class QuatE(ERModel):
     ) -> None:
         """Initialize QuatE.
 
+        .. note ::
+            The default parameters correspond to the first setting for FB15k-237 described from [zhang2019]_.
+
         :param embedding_dim:
             The embedding dimensionality of the entity embeddings.
 
