@@ -314,8 +314,7 @@ See [CONTRIBUTING.md](/CONTRIBUTING.md) for more information on getting involved
 
 ## Acknowledgements
 
-<details>
-<summary><h3>Supporters</h3></summary>
+### Supporters
 
 This project has been supported by several organizations (in alphabetical order):
 
@@ -333,8 +332,6 @@ This project has been supported by several organizations (in alphabetical order)
 - [Technical University of Denmark - DTU Compute - Section for Cognitive Systems](https://www.compute.dtu.dk/english/research/research-sections/cogsys)
 - [Technical University of Denmark - DTU Compute - Section for Statistics and Data Analysis](https://www.compute.dtu.dk/english/research/research-sections/stat)
 - [University of Bonn](https://www.uni-bonn.de/)
-
-</details>
 
 ### Funding
 
