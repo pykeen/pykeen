@@ -77,9 +77,6 @@ class QuatE(ERModel):
     loss_default: ClassVar[Type[Loss]] = BCEWithLogitsLoss
     #: The default parameters for the default loss function class
     loss_default_kwargs: ClassVar[Mapping[str, Any]] = dict(reduction='mean')
-    # TODO: We do not need this anymore
-    #: The regularizer used by [zhang2019]_ for QuatE.
-    regularizer_default: ClassVar[Type[Regularizer]] = LpRegularizer
     #: The LP settings used by [zhang2019]_ for QuatE.
     regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = dict(
         weight=0.3 / get_expected_norm(p=2, d=100),
@@ -113,8 +110,18 @@ class QuatE(ERModel):
 
         :param entity_initializer:
             The initializer to use for the entity embeddings.
+        :param entity_regularizer:
+            The regularizer to use for the entity embeddings.
+        :param entity_regularizer_kwargs:
+            The keyword arguments passed to the entity regularizer. Defaults to
+            :data:`QuatE.regularizer_default_kwargs` if not specified.
         :param relation_initializer:
             The initializer to use for the relation embeddings.
+        :param relation_regularizer:
+            The regularizer to use for the relation embeddings.
+        :param relation_regularizer_kwargs:
+            The keyword arguments passed to the relation regularizer. Defaults to
+            :data:`QuatE.regularizer_default_kwargs` if not specified.
         :param relation_constrainer:
             The constrainer to use for the relation embeddings.
         :param kwargs:
