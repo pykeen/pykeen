@@ -309,7 +309,7 @@ at https://github.com/pykeen/benchmarking.
 
 ## Contributing
 
-Contributions, whether filing an issue, making a pull request, or forking, are appreciated. 
+Contributions, whether filing an issue, making a pull request, or forking, are appreciated.
 See [CONTRIBUTING.md](/CONTRIBUTING.md) for more information on getting involved.
 
 ## Acknowledgements
@@ -332,6 +332,11 @@ This project has been supported by several organizations (in alphabetical order)
 - [Technical University of Denmark - DTU Compute - Section for Cognitive Systems](https://www.compute.dtu.dk/english/research/research-sections/cogsys)
 - [Technical University of Denmark - DTU Compute - Section for Statistics and Data Analysis](https://www.compute.dtu.dk/english/research/research-sections/stat)
 - [University of Bonn](https://www.uni-bonn.de/)
+
+### Funding
+
+The development of PyKEEN is funded under the DARPA [Automating Scientific Knowledge Extraction
+(ASKE)](https://www.darpa.mil/program/automating-scientific-knowledge-extraction) program under award HR00111990009.
 
 ### Logo
 
