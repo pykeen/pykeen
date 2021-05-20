@@ -33,7 +33,7 @@ def _append():
             logger.warning('Way too much to do for RGCN...')
             continue
         _x = _generate(model, config, path)
-        _x.__name__ = f'test_integrity_{model}_{config[:-len(".json")]}'
+        _x.__name__ = f'test_integrity_{model}_{config.stem}'
         setattr(TestExperimentIntegrity, _x.__name__, _x)
 
 
