@@ -87,8 +87,6 @@ class NegativeSampler(ABC):
         if self.filterer is None:
             return negative_batch, None
 
-        raise ValueError('if this error is not raised it means this function is not tested')
-
         # If filtering is activated, all negative triples that are positive in the training dataset will be removed
         return negative_batch, self.filterer(negative_batch=negative_batch)
 
