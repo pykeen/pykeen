@@ -216,7 +216,7 @@ def _run_ablation_experiments(
             continue
 
         best_pipeline_dir = output_directory.joinpath('best_pipeline')
-        best_pipeline_dir.mkdir(exist_ok=True)
+        best_pipeline_dir.mkdir(exist_ok=True, parents=True)
         logger.info('Re-training best pipeline and saving artifacts in %s', best_pipeline_dir)
         hpo_pipeline_result.replicate_best_pipeline(
             replicates=best_replicates,
@@ -471,7 +471,7 @@ def prepare_ablation(  # noqa:C901
         dataset_name = normalize_string(dataset) if isinstance(dataset, str) else 'user_data'
         experiment_name = f'{counter:04d}_{dataset_name}_{normalize_string(model)}'
         output_directory = directory.joinpath(experiment_name)
-        output_directory.mkdir(exist_ok=True)
+        output_directory.mkdir(exist_ok=True, parents=True)
         # TODO what happens if already exists?
 
         _experiment_optuna_config = {
@@ -485,7 +485,7 @@ def prepare_ablation(  # noqa:C901
         _experiment_optuna_config['storage'] = f'sqlite:///{output_directory.as_posix()}/optuna_results.db'
         if save_artifacts:
             save_model_directory = output_directory.joinpath('artifacts')
-            save_model_directory.mkdir(exist_ok=True)
+            save_model_directory.mkdir(exist_ok=True, parents=True)
             _experiment_optuna_config['save_model_directory'] = save_model_directory.as_posix()
 
         hpo_config: Dict[str, Any] = dict()

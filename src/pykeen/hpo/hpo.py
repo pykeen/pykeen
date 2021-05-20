@@ -319,7 +319,7 @@ class HpoPipelineResult(Result):
         """Dump the results of a study to the given directory."""
         if isinstance(directory, str):
             directory = pathlib.Path(directory).resolve()
-        directory.mkdir(exist_ok=True)
+        directory.mkdir(exist_ok=True, parents=True)
 
         # Output study information
         with directory.joinpath('study.json').open('w') as file:
@@ -330,7 +330,7 @@ class HpoPipelineResult(Result):
         df.to_csv(directory.joinpath('trials.tsv'), sep='\t', index=False)
 
         best_pipeline_directory = directory.joinpath('best_pipeline')
-        best_pipeline_directory.mkdir(exist_ok=True)
+        best_pipeline_directory.mkdir(exist_ok=True, parents=True)
         # Output best trial as pipeline configuration file
         with best_pipeline_directory.joinpath('pipeline_config.json').open('w') as file:
             json.dump(self._get_best_study_config(), file, indent=2, sort_keys=True)
