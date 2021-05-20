@@ -2,22 +2,30 @@
 
 """Test for sLCWA and LCWA."""
 
+from pykeen.sampling.filtering import BloomFilterer, PythonSetFilterer
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop
 from tests.test_training import cases
-
-
-class FilteredSLCWATrainingLoopTestCase(cases.SLCWATrainingLoopTestCase):
-    """Test sLCWA with filtered negative sampling."""
-
-    cls = SLCWATrainingLoop
-    filtered = True
 
 
 class UnfilteredSLCWATrainingLoopTestCase(cases.SLCWATrainingLoopTestCase):
     """Test sLCWA with unfiltered negative sampling."""
 
     cls = SLCWATrainingLoop
-    filtered = False
+    filterer = None
+
+
+class SetFilteredSLCWATrainingLoopTestCase(cases.SLCWATrainingLoopTestCase):
+    """Test sLCWA with set filtered negative sampling."""
+
+    cls = SLCWATrainingLoop
+    filterer = PythonSetFilterer
+
+
+class BloomFilteredSLCWATrainingLoopTestCase(cases.SLCWATrainingLoopTestCase):
+    """Test sLCWA with bloom filtered negative sampling."""
+
+    cls = SLCWATrainingLoop
+    filterer = BloomFilterer
 
 
 class LCWATrainingLoopTestCase(cases.TrainingLoopTestCase):

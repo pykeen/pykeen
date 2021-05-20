@@ -4,7 +4,7 @@
 
 import tempfile
 from collections import MutableMapping
-from typing import Any, ClassVar, Type
+from typing import Any, ClassVar, Optional, Type
 
 import torch
 import unittest_templates
@@ -13,6 +13,7 @@ from torch.optim import Adam, Optimizer
 from pykeen.datasets import Nations
 from pykeen.losses import CrossEntropyLoss
 from pykeen.models import ConvE, Model, TransE
+from pykeen.sampling.filtering import Filterer
 from pykeen.training import TrainingLoop
 from pykeen.training.training_loop import NonFiniteLossError, TrainingApproachLossMismatchError
 from pykeen.triples import TriplesFactory
@@ -171,12 +172,12 @@ class SLCWATrainingLoopTestCase(TrainingLoopTestCase):
     """A generic test case for sLCWA training loops."""
 
     #: Should negative samples be filtered?
-    filtered: ClassVar[bool]
+    filterer: ClassVar[Optional[Type[Filterer]]] = None
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         kwargs["negative_sampler"] = "basic"
-        kwargs["negative_sampler_kwargs"] = {"filtered": self.filtered}
+        kwargs["negative_sampler_kwargs"] = {"filterer": self.filterer}
         return kwargs
 
     def test_blacklist_loss_on_slcwa(self):
