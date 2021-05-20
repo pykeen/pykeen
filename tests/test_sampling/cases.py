@@ -2,7 +2,7 @@
 
 """Test cases for sampling."""
 
-from typing import Any, ClassVar, MutableMapping
+from typing import Any, MutableMapping
 
 import numpy
 import torch
@@ -10,7 +10,7 @@ import unittest_templates
 
 from pykeen.datasets import Nations
 from pykeen.sampling import NegativeSampler
-from pykeen.sampling.filtering import PythonSetFilterer
+from pykeen.sampling.filtering import BloomFilterer, PythonSetFilterer
 from pykeen.triples import Instances, TriplesFactory
 
 __all__ = [
@@ -40,8 +40,6 @@ class NegativeSamplerGenericTestCase(unittest_templates.GenericTestCase[Negative
     training_instances: Instances
     #: A positive batch
     positive_batch: torch.LongTensor
-    #: Should negative samples be filtered?
-    filtered: ClassVar[bool] = False
     #: Kwargs
     kwargs = {
         'num_negs_per_pos': 10,
@@ -58,7 +56,6 @@ class NegativeSamplerGenericTestCase(unittest_templates.GenericTestCase[Negative
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         kwargs['triples_factory'] = self.triples_factory
-        kwargs['filtered'] = self.filtered
         return kwargs
 
     def check_sample(self, instance: NegativeSampler) -> None:
@@ -98,10 +95,13 @@ class NegativeSamplerGenericTestCase(unittest_templates.GenericTestCase[Negative
         """Test generating a negative sample."""
         self.check_sample(self.instance)
 
-    def test_sample_filtered(self) -> None:
+    def test_sample_set_filtered(self) -> None:
         """Test generating a negative sample with filtering."""
-        filterer = PythonSetFilterer(mapped_triples=self.triples_factory.mapped_triples)
-        instance = self.cls(**self.instance_kwargs, filterer=filterer)
+        instance = self.cls(**self.instance_kwargs, filterer=PythonSetFilterer)
+        self.check_sample(instance)
+
+    def test_sample_bloom_filtered(self):
+        instance = self.cls(**self.instance_kwargs, filterer=BloomFilterer)
         self.check_sample(instance)
 
     def _update_positive_batch(self, positive_batch, batch_filter):
