@@ -2,7 +2,6 @@
 
 """Test that training loops work correctly."""
 
-import tempfile
 import unittest
 from typing import List, Optional
 
@@ -11,9 +10,8 @@ from torch import optim
 
 from pykeen.datasets import Nations
 from pykeen.models import Model, TransE
-from pykeen.optimizers import optimizer_resolver
 from pykeen.stoppers.early_stopping import EarlyStopper
-from pykeen.training import SLCWATrainingLoop, training_loop_resolver
+from pykeen.training import SLCWATrainingLoop
 from pykeen.training.training_loop import NonFiniteLossError
 from pykeen.triples import TriplesFactory
 from pykeen.typing import MappedTriples
@@ -111,14 +109,6 @@ class TrainingLoopTests(unittest.TestCase):
     def setUp(self) -> None:
         """Instantiate triples factory and model."""
         self.triples_factory = Nations().training
-        self.random_seed = 123
-        self.checkpoint_file = "PyKEEN_training_loop_test_checkpoint.pt"
-        self.num_epochs = 10
-        self.temporary_directory = tempfile.TemporaryDirectory()
-
-    def tearDown(self) -> None:
-        """Tear down the test case."""
-        self.temporary_directory.cleanup()
 
     def test_error_on_nan(self):
         """Test if the correct error is raised for non-finite loss values."""
@@ -127,86 +117,6 @@ class TrainingLoopTests(unittest.TestCase):
 
         with self.assertRaises(NonFiniteLossError):
             training_loop.train(triples_factory=self.triples_factory, num_epochs=3, batch_size=self.batch_size)
-
-    def test_lcwa_checkpoints(self):
-        """Test whether interrupting the LCWA training loop can be resumed using checkpoints."""
-        self._test_checkpoints(training_loop_type='LCWA')
-
-    def test_slcwa_checkpoints(self):
-        """Test whether interrupting the sLCWA training loop can be resumed using checkpoints."""
-        self._test_checkpoints(training_loop_type='sLCWA')
-
-    # TODO put in generic class
-    def _test_checkpoints(self, training_loop_type: str):
-        """Test whether interrupting the given training loop type can be resumed using checkpoints."""
-        training_loop_class = training_loop_resolver.lookup(training_loop_type)
-
-        # Train a model in one shot
-        model = TransE(
-            triples_factory=self.triples_factory,
-            random_seed=self.random_seed,
-        )
-        optimizer_cls = optimizer_resolver.lookup(None)
-        optimizer = optimizer_cls(params=model.get_grad_params())
-        training_loop = training_loop_class(
-            model=model,
-            triples_factory=self.triples_factory,
-            optimizer=optimizer,
-            automatic_memory_optimization=False,
-        )
-        losses = training_loop.train(
-            triples_factory=self.triples_factory,
-            num_epochs=self.num_epochs,
-            batch_size=self.batch_size,
-            use_tqdm=False,
-            use_tqdm_batch=False,
-        )
-
-        # Train a model for the first half
-        model = TransE(
-            triples_factory=self.triples_factory,
-            random_seed=self.random_seed,
-        )
-        optimizer_cls = optimizer_resolver.lookup(None)
-        optimizer = optimizer_cls(params=model.get_grad_params())
-        training_loop = training_loop_class(
-            model=model,
-            triples_factory=self.triples_factory,
-            optimizer=optimizer,
-            automatic_memory_optimization=False,
-        )
-        training_loop.train(
-            triples_factory=self.triples_factory,
-            num_epochs=int(self.num_epochs // 2),
-            batch_size=self.batch_size,
-            checkpoint_name=self.checkpoint_file,
-            checkpoint_directory=self.temporary_directory.name,
-            checkpoint_frequency=0,
-        )
-
-        # Continue training of the first part
-        model = TransE(
-            triples_factory=self.triples_factory,
-            random_seed=123,
-        )
-        optimizer_cls = optimizer_resolver.lookup(None)
-        optimizer = optimizer_cls(params=model.get_grad_params())
-        training_loop = training_loop_class(
-            model=model,
-            triples_factory=self.triples_factory,
-            optimizer=optimizer,
-            automatic_memory_optimization=False,
-        )
-        losses_2 = training_loop.train(
-            triples_factory=self.triples_factory,
-            num_epochs=self.num_epochs,
-            batch_size=self.batch_size,
-            checkpoint_name=self.checkpoint_file,
-            checkpoint_directory=self.temporary_directory.name,
-            checkpoint_frequency=0,
-        )
-
-        self.assertEqual(losses, losses_2)
 
 
 class TestTrainingEarlyStopping(unittest.TestCase):

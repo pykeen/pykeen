@@ -2,6 +2,7 @@
 
 """Test cases for training."""
 
+import tempfile
 from collections import MutableMapping
 from typing import Any, ClassVar, Type
 
@@ -31,6 +32,7 @@ class TrainingLoopTestCase(unittest_templates.GenericTestCase[TrainingLoop]):
     random_seed = 0
     batch_size: int = 128
     sub_batch_size: int = 30
+    num_epochs: int = 10
 
     def pre_setup_hook(self) -> None:
         self.triples_factory = Nations().training
@@ -81,6 +83,57 @@ class TrainingLoopTestCase(unittest_templates.GenericTestCase[TrainingLoop]):
                 batch_size=self.batch_size,
                 sub_batch_size=self.sub_batch_size,
             )
+
+    def test_checkpoints(self):
+        """Test whether interrupting the given training loop type can be resumed using checkpoints."""
+        # Train a model in one shot
+        model = TransE(
+            triples_factory=self.triples_factory,
+            random_seed=self.random_seed,
+        )
+        training_loop = self._with_model(model)
+        losses = training_loop.train(
+            triples_factory=self.triples_factory,
+            num_epochs=self.num_epochs,
+            batch_size=self.batch_size,
+            use_tqdm=False,
+            use_tqdm_batch=False,
+        )
+
+        with tempfile.TemporaryDirectory() as directory:
+            name = 'checkpoint.pt'
+
+            # Train a model for the first half
+            model = TransE(
+                triples_factory=self.triples_factory,
+                random_seed=self.random_seed,
+            )
+            training_loop = self._with_model(model)
+            training_loop.train(
+                triples_factory=self.triples_factory,
+                num_epochs=int(self.num_epochs // 2),
+                batch_size=self.batch_size,
+                checkpoint_name=name,
+                checkpoint_directory=directory,
+                checkpoint_frequency=0,
+            )
+
+            # Continue training of the first part
+            model = TransE(
+                triples_factory=self.triples_factory,
+                random_seed=123,
+            )
+            training_loop = self._with_model(model)
+            losses_2 = training_loop.train(
+                triples_factory=self.triples_factory,
+                num_epochs=self.num_epochs,
+                batch_size=self.batch_size,
+                checkpoint_name=name,
+                checkpoint_directory=directory,
+                checkpoint_frequency=0,
+            )
+
+        self.assertEqual(losses, losses_2)
 
 
 class SLCWATrainingLoopTestCase(TrainingLoopTestCase):
