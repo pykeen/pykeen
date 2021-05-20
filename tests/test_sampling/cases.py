@@ -96,11 +96,12 @@ class NegativeSamplerGenericTestCase(unittest_templates.GenericTestCase[Negative
         self.check_sample(self.instance)
 
     def test_sample_set_filtered(self) -> None:
-        """Test generating a negative sample with filtering."""
+        """Test generating a negative sample with set-based filtering."""
         instance = self.cls(**self.instance_kwargs, filterer=PythonSetFilterer)
         self.check_sample(instance)
 
     def test_sample_bloom_filtered(self):
+        """Test generating a negative sample with bloom filtering."""
         instance = self.cls(**self.instance_kwargs, filterer=BloomFilterer)
         self.check_sample(instance)
 
