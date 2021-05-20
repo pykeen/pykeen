@@ -346,7 +346,7 @@ class BloomFilterer(Filterer):
             The result. False guarantees that the element was not contained in the indexed triples. True can be
             erroneous.
         """
-        result = batch.new_ones(batch.shape[0], dtype=torch.bool)
+        result = batch.new_ones(batch.shape[:-1], dtype=torch.bool)
         for i in self.probe(batch):
             result &= self.bit_array[i]
         return result
