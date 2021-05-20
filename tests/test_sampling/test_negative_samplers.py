@@ -11,6 +11,7 @@ class BasicNegativeSamplerTest(cases.NegativeSamplerGenericTestCase):
     """Test the basic negative sampler."""
 
     cls = BasicNegativeSampler
+    filtered = False
 
     def test_sample_basic(self):
         """Test if relations and half of heads and tails are not corrupted."""
@@ -28,16 +29,25 @@ class BasicNegativeSamplerTest(cases.NegativeSamplerGenericTestCase):
         assert half_size - 1 <= num_subj_corrupted
 
 
-class BernoulliNegativeSamplerTest(cases.NegativeSamplerGenericTestCase):
+class UnfilteredBernoulliNegativeSamplerTest(cases.NegativeSamplerGenericTestCase):
     """Test the Bernoulli negative sampler."""
 
     cls = BernoulliNegativeSampler
+    filtered = False
+
+
+class FilteredBernoulliNegativeSamplerTest(cases.NegativeSamplerGenericTestCase):
+    """Test the Bernoulli negative sampler."""
+
+    cls = BernoulliNegativeSampler
+    filtered = True
 
 
 class PseudoTypedNegativeSamplerTest(cases.NegativeSamplerGenericTestCase):
     """Test the pseudo-type negative sampler."""
 
     cls = PseudoTypedNegativeSampler
+    filtered = False
 
     def test_corrupt_batch(self):
         """Additional test for corrupt_batch."""

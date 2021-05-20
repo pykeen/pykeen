@@ -2,7 +2,7 @@
 
 """Test cases for sampling."""
 
-from typing import Any, MutableMapping
+from typing import Any, ClassVar, MutableMapping
 
 import numpy
 import torch
@@ -40,6 +40,8 @@ class NegativeSamplerGenericTestCase(unittest_templates.GenericTestCase[Negative
     training_instances: Instances
     #: A positive batch
     positive_batch: torch.LongTensor
+    #: Should negative samples be filtered?
+    filtered: ClassVar[bool] = False
     #: Kwargs
     kwargs = {
         'num_negs_per_pos': 10,
@@ -56,6 +58,7 @@ class NegativeSamplerGenericTestCase(unittest_templates.GenericTestCase[Negative
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         kwargs['triples_factory'] = self.triples_factory
+        kwargs['filtered'] = self.filtered
         return kwargs
 
     def check_sample(self, instance: NegativeSampler) -> None:
