@@ -203,11 +203,16 @@ class PythonSetFilterer(Filterer):
         self.triples = set(map(tuple, mapped_triples.tolist()))
 
     def contains(self, batch: MappedTriples) -> torch.BoolTensor:  # noqa: D102
-        return torch.as_tensor(
-            data=[tuple(triple) in self.triples for triple in batch.tolist()],
+        # bv = batch.view(-1, 3)
+        rv = torch.as_tensor(
+            data=[
+                tuple(triple) in self.triples
+                for triple in batch.tolist()  # TODO needs reshaping
+            ],
             dtype=torch.bool,
             device=batch.device,
         )
+        return rv
 
 
 class BloomFilterer(Filterer):
