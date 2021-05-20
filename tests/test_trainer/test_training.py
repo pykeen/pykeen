@@ -10,12 +10,11 @@ import torch
 from torch import optim
 
 from pykeen.datasets import Nations
-from pykeen.losses import CrossEntropyLoss
-from pykeen.models import ConvE, Model, TransE
+from pykeen.models import Model, TransE
 from pykeen.optimizers import optimizer_resolver
 from pykeen.stoppers.early_stopping import EarlyStopper
 from pykeen.training import SLCWATrainingLoop, training_loop_resolver
-from pykeen.training.training_loop import NonFiniteLossError, TrainingApproachLossMismatchError
+from pykeen.training.training_loop import NonFiniteLossError
 from pykeen.triples import TriplesFactory
 from pykeen.typing import MappedTriples
 from tests.mocks import MockEvaluator, MockModel
@@ -121,43 +120,6 @@ class TrainingLoopTests(unittest.TestCase):
         """Tear down the test case."""
         self.temporary_directory.cleanup()
 
-    def test_sub_batching(self):
-        """Test if sub-batching works as expected."""
-        model = TransE(triples_factory=self.triples_factory)
-        training_loop = DummyTrainingLoop(
-            model=model,
-            triples_factory=self.triples_factory,
-            sub_batch_size=self.sub_batch_size,
-            automatic_memory_optimization=False,
-        )
-        training_loop.train(
-            triples_factory=self.triples_factory,
-            num_epochs=1,
-            batch_size=self.batch_size,
-            sub_batch_size=self.sub_batch_size,
-        )
-
-    def test_sub_batching_support(self):
-        """Test if sub-batching works as expected."""
-        model = ConvE(triples_factory=self.triples_factory)
-        training_loop = DummyTrainingLoop(
-            model=model,
-            triples_factory=self.triples_factory,
-            sub_batch_size=self.sub_batch_size,
-            automatic_memory_optimization=False,
-        )
-
-        def _try_train():
-            """Call train method."""
-            training_loop.train(
-                triples_factory=self.triples_factory,
-                num_epochs=1,
-                batch_size=self.batch_size,
-                sub_batch_size=self.sub_batch_size,
-            )
-
-        self.assertRaises(NotImplementedError, _try_train)
-
     def test_error_on_nan(self):
         """Test if the correct error is raised for non-finite loss values."""
         model = TransE(triples_factory=self.triples_factory)
@@ -165,20 +127,6 @@ class TrainingLoopTests(unittest.TestCase):
 
         with self.assertRaises(NonFiniteLossError):
             training_loop.train(triples_factory=self.triples_factory, num_epochs=3, batch_size=self.batch_size)
-
-    def test_blacklist_loss_on_slcwa(self):
-        """Test an allowed sLCWA loss."""
-        model = TransE(
-            triples_factory=self.triples_factory,
-            loss=CrossEntropyLoss(),
-        )
-        with self.assertRaises(TrainingApproachLossMismatchError):
-            NaNTrainingLoop(
-                model=model,
-                triples_factory=self.triples_factory,
-                patience=2,
-                automatic_memory_optimization=False,
-            )
 
     def test_lcwa_checkpoints(self):
         """Test whether interrupting the LCWA training loop can be resumed using checkpoints."""
@@ -188,6 +136,7 @@ class TrainingLoopTests(unittest.TestCase):
         """Test whether interrupting the sLCWA training loop can be resumed using checkpoints."""
         self._test_checkpoints(training_loop_type='sLCWA')
 
+    # TODO put in generic class
     def _test_checkpoints(self, training_loop_type: str):
         """Test whether interrupting the given training loop type can be resumed using checkpoints."""
         training_loop_class = training_loop_resolver.lookup(training_loop_type)
