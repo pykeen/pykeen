@@ -315,22 +315,24 @@ class HpoPipelineResult(Result):
             pipeline_config['training_kwargs']['num_epochs'] = int(stopped_epoch)
         return dict(metadata=metadata, pipeline=pipeline_config)
 
-    def save_to_directory(self, directory: str, **kwargs) -> None:
+    def save_to_directory(self, directory: Union[str, pathlib.Path], **kwargs) -> None:
         """Dump the results of a study to the given directory."""
-        os.makedirs(directory, exist_ok=True)
+        if isinstance(directory, str):
+            directory = pathlib.Path(directory).resolve()
+        directory.mkdir(exist_ok=True)
 
         # Output study information
-        with open(os.path.join(directory, 'study.json'), 'w') as file:
+        with directory.joinpath('study.json').open('w') as file:
             json.dump(self.study.user_attrs, file, indent=2, sort_keys=True)
 
         # Output all trials
         df = self.study.trials_dataframe()
-        df.to_csv(os.path.join(directory, 'trials.tsv'), sep='\t', index=False)
+        df.to_csv(directory.joinpath('trials.tsv'), sep='\t', index=False)
 
-        best_pipeline_directory = os.path.join(directory, 'best_pipeline')
-        os.makedirs(best_pipeline_directory, exist_ok=True)
+        best_pipeline_directory = directory.joinpath('best_pipeline')
+        best_pipeline_directory.mkdir(exist_ok=True)
         # Output best trial as pipeline configuration file
-        with open(os.path.join(best_pipeline_directory, 'pipeline_config.json'), 'w') as file:
+        with best_pipeline_directory.joinpath('pipeline_config.json').open('w') as file:
             json.dump(self._get_best_study_config(), file, indent=2, sort_keys=True)
 
     def save_to_ftp(self, directory: str, ftp: ftplib.FTP):
@@ -376,7 +378,7 @@ class HpoPipelineResult(Result):
     def replicate_best_pipeline(
         self,
         *,
-        directory: str,
+        directory: Union[str, pathlib.Path],
         replicates: int,
         move_to_cpu: bool = False,
         save_replicates: bool = True,
@@ -403,7 +405,7 @@ class HpoPipelineResult(Result):
         )
 
 
-def hpo_pipeline_from_path(path: str, **kwargs) -> HpoPipelineResult:
+def hpo_pipeline_from_path(path: Union[str, pathlib.Path], **kwargs) -> HpoPipelineResult:
     """Run a HPO study from the configuration at the given path."""
     with open(path) as file:
         config = json.load(file)
