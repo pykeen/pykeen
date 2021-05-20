@@ -36,6 +36,7 @@ class TrainingLoopTestCase(unittest_templates.GenericTestCase[TrainingLoop]):
     num_epochs: int = 10
 
     def pre_setup_hook(self) -> None:
+        """Prepare case-level variables before the setup() function."""
         self.triples_factory = Nations().training
         self.model = TransE(triples_factory=self.triples_factory, random_seed=self.random_seed)
         self.optimizer = self.optimizer_cls(self.model.get_grad_params())
