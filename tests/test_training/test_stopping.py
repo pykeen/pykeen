@@ -9,10 +9,9 @@ import torch
 from torch import optim
 
 from pykeen.datasets import Nations
-from pykeen.models import Model, TransE
+from pykeen.models import Model
 from pykeen.stoppers.early_stopping import EarlyStopper
 from pykeen.training import SLCWATrainingLoop
-from pykeen.training.training_loop import NonFiniteLossError
 from pykeen.triples import TriplesFactory
 from pykeen.typing import MappedTriples
 from tests.mocks import MockEvaluator, MockModel
@@ -57,66 +56,6 @@ class DummyTrainingLoop(SLCWATrainingLoop):
             label_smoothing=label_smoothing,
             slice_size=slice_size,
         )
-
-
-class NaNTrainingLoop(SLCWATrainingLoop):
-    """A wrapper around SLCWATrainingLoop returning NaN losses."""
-
-    def __init__(
-        self,
-        model: Model,
-        triples_factory: TriplesFactory,
-        patience: int,
-        automatic_memory_optimization: bool = False,
-    ):
-        super().__init__(
-            model=model,
-            triples_factory=triples_factory,
-            optimizer=optim.Adam(lr=1.0, params=model.parameters()),
-            automatic_memory_optimization=automatic_memory_optimization,
-        )
-        self.patience = patience
-
-    def _process_batch(
-        self,
-        batch: MappedTriples,
-        start: int,
-        stop: int,
-        label_smoothing: float = 0.0,
-        slice_size: Optional[int] = None,
-    ) -> torch.FloatTensor:  # noqa: D102
-        self.patience -= 1
-        if self.patience < 0:
-            return torch.as_tensor([float('nan')], device=batch.device, dtype=torch.float32)
-        else:
-            factor = 1.0
-        loss = super()._process_batch(
-            batch=batch,
-            start=start,
-            stop=stop,
-            label_smoothing=label_smoothing,
-            slice_size=slice_size,
-        )
-        return factor * loss
-
-
-class TrainingLoopTests(unittest.TestCase):
-    """Tests for the general training loop."""
-
-    batch_size: int = 128
-    sub_batch_size: int = 30
-
-    def setUp(self) -> None:
-        """Instantiate triples factory and model."""
-        self.triples_factory = Nations().training
-
-    def test_error_on_nan(self):
-        """Test if the correct error is raised for non-finite loss values."""
-        model = TransE(triples_factory=self.triples_factory)
-        training_loop = NaNTrainingLoop(model=model, triples_factory=self.triples_factory, patience=2)
-
-        with self.assertRaises(NonFiniteLossError):
-            training_loop.train(triples_factory=self.triples_factory, num_epochs=3, batch_size=self.batch_size)
 
 
 class TestTrainingEarlyStopping(unittest.TestCase):

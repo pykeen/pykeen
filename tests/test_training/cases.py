@@ -6,6 +6,7 @@ import tempfile
 from collections import MutableMapping
 from typing import Any, ClassVar, Type
 
+import torch
 import unittest_templates
 from torch.optim import Adam, Optimizer
 
@@ -13,7 +14,7 @@ from pykeen.datasets import Nations
 from pykeen.losses import CrossEntropyLoss
 from pykeen.models import ConvE, Model, TransE
 from pykeen.training import TrainingLoop
-from pykeen.training.training_loop import TrainingApproachLossMismatchError
+from pykeen.training.training_loop import NonFiniteLossError, TrainingApproachLossMismatchError
 from pykeen.triples import TriplesFactory
 
 __all__ = [
@@ -82,6 +83,35 @@ class TrainingLoopTestCase(unittest_templates.GenericTestCase[TrainingLoop]):
                 num_epochs=1,
                 batch_size=self.batch_size,
                 sub_batch_size=self.sub_batch_size,
+            )
+
+    def test_error_on_nan(self):
+        """Test if the correct error is raised for non-finite loss values."""
+        model = TransE(triples_factory=self.triples_factory)
+        patience = 2
+
+        class NaNTrainingLoop(self.cls):
+            def __init__(self, **kwargs):
+                super().__init__(**kwargs)
+                self.patience = patience
+
+            def _process_batch(self, *args, **kwargs):
+                loss = super()._process_batch(*args, **kwargs)
+                self.patience -= 1
+                if self.patience < 0:
+                    return torch.as_tensor([float('nan')], device=loss.device, dtype=torch.float32)
+                return loss
+
+        training_loop = NaNTrainingLoop(
+            model=model,
+            triples_factory=self.triples_factory,
+            optimizer=self.optimizer_cls(model.get_grad_params()),
+        )
+        with self.assertRaises(NonFiniteLossError):
+            training_loop.train(
+                triples_factory=self.triples_factory,
+                num_epochs=patience + 1,
+                batch_size=self.batch_size,
             )
 
     def test_checkpoints(self):

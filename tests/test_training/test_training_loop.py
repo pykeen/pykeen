@@ -3,7 +3,7 @@
 """Test for sLCWA and LCWA."""
 
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop
-from tests.test_trainer import cases
+from tests.test_training import cases
 
 
 class FilteredSLCWATrainingLoopTestCase(cases.SLCWATrainingLoopTestCase):
