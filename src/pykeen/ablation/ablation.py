@@ -525,7 +525,11 @@ def prepare_ablation(  # noqa:C901
         # Add regularizer to current_pipeline
         if regularizer is not None:
             hpo_config['regularizer'] = regularizer
-            _set_arguments(config=model_to_regularizer_to_regularizer_kwargs, key='regularizer_kwargs', value=regularizer)
+            _set_arguments(
+                config=model_to_regularizer_to_regularizer_kwargs,
+                key='regularizer_kwargs',
+                value=regularizer,
+            )
             _set_arguments(
                 config=model_to_regularizer_to_regularizer_kwargs_ranges,
                 key='regularizer_kwargs_ranges',
