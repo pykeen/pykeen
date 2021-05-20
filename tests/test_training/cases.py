@@ -3,8 +3,7 @@
 """Test cases for training."""
 
 import tempfile
-from collections import MutableMapping
-from typing import Any, ClassVar, Optional, Type
+from typing import Any, ClassVar, MutableMapping, Optional, Type
 
 import torch
 import unittest_templates
