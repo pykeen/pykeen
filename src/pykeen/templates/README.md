@@ -196,7 +196,7 @@ at https://github.com/pykeen/benchmarking.
 
 ## Contributing
 
-Contributions, whether filing an issue, making a pull request, or forking, are appreciated. 
+Contributions, whether filing an issue, making a pull request, or forking, are appreciated.
 See [CONTRIBUTING.md](/CONTRIBUTING.md) for more information on getting involved.
 
 ## Acknowledgements
@@ -220,13 +220,19 @@ This project has been supported by several organizations (in alphabetical order)
 - [Technical University of Denmark - DTU Compute - Section for Statistics and Data Analysis](https://www.compute.dtu.dk/english/research/research-sections/stat)
 - [University of Bonn](https://www.uni-bonn.de/)
 
+### Funding
+
+The development of PyKEEN is funded under the DARPA [Automating Scientific Knowledge Extraction
+(ASKE)](https://www.darpa.mil/program/automating-scientific-knowledge-extraction) program under award HR00111990009.
+
 ### Logo
 
-The PyKEEN logo was designed by Carina Steinborn.
+The PyKEEN logo was designed by [Carina Steinborn](https://www.xing.com/profile/Carina_Steinborn2)
 
 ## Citation
 
-If you have found PyKEEN useful in your work, please consider citing [our article](https://arxiv.org/abs/2007.14175):
+If you have found PyKEEN useful in your work, please consider citing
+[our article](http://jmlr.org/papers/v22/20-825.html):
 
 ```bibtex
 @article{ali2021pykeen,
