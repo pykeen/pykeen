@@ -44,18 +44,18 @@
 The latest stable version of PyKEEN can be downloaded and installed from
 [PyPI](https://pypi.org/project/pykeen) with:
 
-```bash
+```shell
 $ pip install pykeen
 ```
 
 The latest version of PyKEEN can be installed directly from the
 source on [GitHub](https://github.com/pykeen/pykeen) with:
 
-```bash
-pip install git+https://github.com/pykeen/pykeen.git
+```shell
+$ pip install git+https://github.com/pykeen/pykeen.git
 ```
 
-More information about installation (e.g., development mode, Windows installation, extras)
+More information about installation (e.g., development mode, Windows installation, Colab, Kaggle, extras)
 can be found in the [installation documentation](https://pykeen.readthedocs.io/en/latest/installation.html).
 
 ## Quickstart [![Documentation Status](https://readthedocs.org/projects/pykeen/badge/?version=latest)](https://pykeen.readthedocs.io/en/latest/?badge=latest)
@@ -161,8 +161,8 @@ algorithm, can also be used.
 PyKEEN includes a set of curated experimental settings for reproducing past landmark
 experiments. They can be accessed and run like:
 
-```bash
-pykeen experiments reproduce tucker balazevic2019 fb15k
+```shell
+$ pykeen experiments reproduce tucker balazevic2019 fb15k
 ```
 
 Where the three arguments are the model name, the reference, and the dataset.
@@ -173,8 +173,8 @@ The output directory can be optionally set with `-d`.
 PyKEEN includes the ability to specify ablation studies using the
 hyper-parameter optimization module. They can be run like:
 
-```bash
-pykeen experiments ablation ~/path/to/config.json
+```shell
+$ pykeen experiments ablation ~/path/to/config.json
 ```
 
 ### Large-scale Reproducibility and Benchmarking Study
@@ -222,8 +222,12 @@ This project has been supported by several organizations (in alphabetical order)
 
 ### Funding
 
-The development of PyKEEN is funded under the DARPA [Automating Scientific Knowledge Extraction
-(ASKE)](https://www.darpa.mil/program/automating-scientific-knowledge-extraction) program under award HR00111990009.
+The development of PyKEEN has been funded by the following grants:
+
+| Funding Body                                             | Program                                                                                                                       | Grant         |
+|----------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------|---------------|
+| DARPA                                                    | [Automating Scientific Knowledge Extraction (ASKE)](https://www.darpa.mil/program/automating-scientific-knowledge-extraction) | HR00111990009 |
+| German Federal Ministry of Education and Research (BMBF) | [Maschinelles Lernen mit Wissensgraphen (MLWin)](https://mlwin.de)                                                            | 01IS18050D    |
 
 ### Logo
 
