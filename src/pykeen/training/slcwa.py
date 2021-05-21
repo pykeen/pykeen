@@ -38,7 +38,6 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
         negative_sampler: HintOrType[NegativeSampler] = None,
         negative_sampler_kwargs: Optional[Mapping[str, Any]] = None,
         automatic_memory_optimization: bool = True,
-        collate: bool = True,
     ):
         """Initialize the training loop.
 
@@ -51,15 +50,12 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
         :param automatic_memory_optimization:
             Whether to automatically optimize the sub-batch size during
             training and batch size during evaluation with regards to the hardware at hand.
-        :param collate:
-            Whether to enable collation in the data loader
         """
         super().__init__(
             model=model,
             triples_factory=triples_factory,
             optimizer=optimizer,
             automatic_memory_optimization=automatic_memory_optimization,
-            collate=collate,
         )
         self.negative_sampler = negative_sampler_resolver.make(
             query=negative_sampler,

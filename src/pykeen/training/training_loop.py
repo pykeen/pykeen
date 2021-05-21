@@ -103,7 +103,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         triples_factory: CoreTriplesFactory,
         optimizer: Optional[Optimizer] = None,
         automatic_memory_optimization: bool = True,
-        collate: bool = True,
     ) -> None:
         """Initialize the training loop.
 
@@ -113,14 +112,11 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         :param automatic_memory_optimization: bool
             Whether to automatically optimize the sub-batch size during
             training and batch size during evaluation with regards to the hardware at hand.
-        :param collate:
-            Whether to enable collation in the data loader
         """
         self.model = model
         self.optimizer = optimizer
         self.losses_per_epochs = []
         self.automatic_memory_optimization = automatic_memory_optimization
-        self.collate = collate
 
         logger.debug("we don't really need the triples factory: %s", triples_factory)
 
@@ -567,7 +563,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             shuffle=shuffle,
             num_workers=num_workers,
             drop_last=drop_last,
-            collate_fn=self.get_collator() if self.collate else None,
+            collate_fn=self.get_collator(),
         )
 
         # Save the time to track when the saved point was available
