@@ -116,11 +116,13 @@ from class_resolver import Resolver, get_subclasses
 from .basic_negative_sampler import BasicNegativeSampler
 from .bernoulli_negative_sampler import BernoulliNegativeSampler
 from .negative_sampler import NegativeSampler
+from .pseudo_type import PseudoTypedNegativeSampler
 
 __all__ = [
     'NegativeSampler',
     'BasicNegativeSampler',
     'BernoulliNegativeSampler',
+    'PseudoTypedNegativeSampler',
     # Utils
     'negative_sampler_resolver',
 ]

@@ -203,12 +203,13 @@ or the URL for the dataset if neither of the first two are available.
 | lcwa   | [`pykeen.training.LCWATrainingLoop`](https://pykeen.readthedocs.io/en/latest/reference/training.html#pykeen.training.LCWATrainingLoop)   | A training loop that uses the local closed world assumption training approach.            |
 | slcwa  | [`pykeen.training.SLCWATrainingLoop`](https://pykeen.readthedocs.io/en/latest/reference/training.html#pykeen.training.SLCWATrainingLoop) | A training loop that uses the stochastic local closed world assumption training approach. |
 
-### Negative Samplers (2)
+### Negative Samplers (3)
 
-| Name      | Reference                                                                                                                               | Description                                                                            |
-|-----------|-----------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------|
-| basic     | [`pykeen.sampling.BasicNegativeSampler`](https://pykeen.readthedocs.io/en/latest/api/pykeen.sampling.BasicNegativeSampler.html)         | A basic negative sampler.                                                              |
-| bernoulli | [`pykeen.sampling.BernoulliNegativeSampler`](https://pykeen.readthedocs.io/en/latest/api/pykeen.sampling.BernoulliNegativeSampler.html) | An implementation of the Bernoulli negative sampling approach proposed by [wang2014]_. |
+| Name        | Reference                                                                                                                                   | Description                                                                            |
+|-------------|---------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------|
+| basic       | [`pykeen.sampling.BasicNegativeSampler`](https://pykeen.readthedocs.io/en/latest/api/pykeen.sampling.BasicNegativeSampler.html)             | A basic negative sampler.                                                              |
+| bernoulli   | [`pykeen.sampling.BernoulliNegativeSampler`](https://pykeen.readthedocs.io/en/latest/api/pykeen.sampling.BernoulliNegativeSampler.html)     | An implementation of the Bernoulli negative sampling approach proposed by [wang2014]_. |
+| pseudotyped | [`pykeen.sampling.PseudoTypedNegativeSampler`](https://pykeen.readthedocs.io/en/latest/api/pykeen.sampling.PseudoTypedNegativeSampler.html) | A sampler that accounts for which entities co-occur with a relation.                   |
 
 ### Stoppers (2)
 

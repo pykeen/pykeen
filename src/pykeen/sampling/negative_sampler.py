@@ -28,6 +28,10 @@ class NegativeSampler(ABC):
     #: A filterer for negative batches
     filterer: Optional[Filterer]
 
+    num_entities: int
+    num_relations: int
+    num_negs_per_pos: int
+
     def __init__(
         self,
         triples_factory: CoreTriplesFactory,
@@ -55,7 +59,7 @@ class NegativeSampler(ABC):
             filterer,
             pos_kwargs=filterer_kwargs,
             mapped_triples=triples_factory.mapped_triples,
-        ) if filtered else None
+        ) if filterer is not None or filtered else None
 
     @classmethod
     def get_normalized_name(cls) -> str:
