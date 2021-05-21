@@ -32,7 +32,7 @@ If you're in a Jupyter notebook, it will be pretty printed as an HTML table.
 
 import logging
 
-from .version import env, get_version  # noqa: F401
+from .version import env, get_git_branch, get_git_hash, get_version  # noqa: F401
 
 # This will set the global logging level to info to ensure that info messages are shown in all parts of the software.
 logging.getLogger(__name__).setLevel(logging.INFO)
