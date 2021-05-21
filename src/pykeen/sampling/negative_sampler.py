@@ -58,7 +58,7 @@ class NegativeSampler(ABC):
             filterer,
             pos_kwargs=filterer_kwargs,
             mapped_triples=triples_factory.mapped_triples,
-        ) if filtered else None
+        ) if filterer is not None or filtered else None
 
     @classmethod
     def get_normalized_name(cls) -> str:
