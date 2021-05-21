@@ -222,16 +222,21 @@ This project has been supported by several organizations (in alphabetical order)
 
 ### Funding
 
-The development of PyKEEN is funded under the DARPA [Automating Scientific Knowledge Extraction
-(ASKE)](https://www.darpa.mil/program/automating-scientific-knowledge-extraction) program under award HR00111990009.
+The development of PyKEEN has been funded by the following grants:
+
+| Funding Body                                             | Program                                                                                                                       | Grant         |
+|----------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------|---------------|
+| DARPA                                                    | [Automating Scientific Knowledge Extraction (ASKE)](https://www.darpa.mil/program/automating-scientific-knowledge-extraction) | HR00111990009 |
+| German Federal Ministry of Education and Research (BMBF) | [Maschinelles Lernen mit Wissensgraphen (MLWin)](https://mlwin.de)                                                            | 01IS18050D    |
 
 ### Logo
 
-The PyKEEN logo was designed by [Carina Steinborn](https://www.xing.com/profile/Carina_Steinborn2).
+The PyKEEN logo was designed by [Carina Steinborn](https://www.xing.com/profile/Carina_Steinborn2)
 
 ## Citation
 
-If you have found PyKEEN useful in your work, please consider citing [our article](http://jmlr.org/papers/v22/20-825.html):
+If you have found PyKEEN useful in your work, please consider citing
+[our article](http://jmlr.org/papers/v22/20-825.html):
 
 ```bibtex
 @article{ali2021pykeen,
