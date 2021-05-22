@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """A compatibility layer for different versions of PyTorch."""
+
 from typing import Optional
 
 import torch

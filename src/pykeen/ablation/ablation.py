@@ -331,7 +331,7 @@ def prepare_ablation(  # noqa:C901
     *,
     epochs: Optional[int] = None,
     create_inverse_triples: Union[bool, List[bool]] = False,
-    regularizers: Union[None, str, List[str]] = None,
+    regularizers: Union[None, str, List[str], List[None]] = None,
     negative_sampler: Optional[str] = None,
     evaluator: Optional[str] = None,
     model_to_model_kwargs: Optional[Mapping2D] = None,
