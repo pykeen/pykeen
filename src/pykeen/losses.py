@@ -133,10 +133,10 @@ triples $\mathcal{b}$ in the subset $\mathcal{B} \in 2^{2^{\mathcal{T}}}$.
     \mathcal{L}_L(\mathcal{B}) = \frac{1}{|\mathcal{B}|} \sum \limits_{\mathcal{b} \in \mathcal{B}} L(\mathcal{b})
 """
 
-from typing import Any, ClassVar, Mapping, Optional, Set, Type
+from typing import Any, ClassVar, Mapping, Optional, Set
 
 import torch
-from class_resolver import Hint, Resolver, normalize_string
+from class_resolver import Hint, Resolver
 from torch import nn
 from torch.nn import functional
 from torch.nn.modules.loss import _Loss
@@ -688,37 +688,15 @@ class NSSALoss(SetwiseLoss):
         return loss
 
 
-# TODO: Alternative?
-# Can we add synonyms after instantiating the resolver
-# loss_resolver = Resolver.from_subclasses(
-#     base=Loss,
-#     default=MarginRankingLoss,
-# )
-
-_LOSS_SUFFIX = 'Loss'
-_LOSSES: Set[Type[Loss]] = {
-    MarginRankingLoss,
-    BCEWithLogitsLoss,
-    SoftplusLoss,
-    BCEAfterSigmoidLoss,
-    CrossEntropyLoss,
-    MSELoss,
-    NSSALoss,
-}
-losses_synonyms: Mapping[str, Type[Loss]] = {
-    normalize_string(synonym, suffix=_LOSS_SUFFIX): cls
-    for cls in _LOSSES
-    if cls.synonyms is not None
-    for synonym in cls.synonyms
-}
-# TODO update class resolver to get more clever about finding synonyms
 loss_resolver = Resolver.from_subclasses(
     Loss,
     default=MarginRankingLoss,
-    synonyms=losses_synonyms,
     skip={
         PairwiseLoss,
         PointwiseLoss,
         SetwiseLoss,
     },
 )
+for _name, _cls in loss_resolver.lookup_dict.items():
+    for _synonym in _cls.synonyms or []:
+        loss_resolver.synonyms[_synonym] = _cls
