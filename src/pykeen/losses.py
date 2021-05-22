@@ -687,6 +687,13 @@ class NSSALoss(SetwiseLoss):
         return loss
 
 
+# TODO: Alternative?
+# Can we add synonyms after instantiating the resolver
+# loss_resolver = Resolver.from_subclasses(
+#     base=Loss,
+#     default=MarginRankingLoss,
+# )
+
 _LOSS_SUFFIX = 'Loss'
 _LOSSES: Set[Type[Loss]] = {
     MarginRankingLoss,
