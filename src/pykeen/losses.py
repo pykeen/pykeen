@@ -543,7 +543,7 @@ class BCEAfterSigmoidLoss(PointwiseLoss):
 
 
 class CrossEntropyLoss(SetwiseLoss):
-    """A module for the cross entopy loss that evaluates the cross entropy after softmax output.
+    """A module for the cross entropy loss that evaluates the cross entropy after softmax output.
 
     .. seealso:: :class:`torch.nn.CrossEntropyLoss`
     """
@@ -552,7 +552,6 @@ class CrossEntropyLoss(SetwiseLoss):
         self,
         logits: torch.FloatTensor,
         labels: torch.FloatTensor,
-        **kwargs,
     ) -> torch.FloatTensor:  # noqa: D102
         # cross entropy expects a proper probability distribution -> normalize labels
         p_true = functional.normalize(labels, p=1, dim=-1)
