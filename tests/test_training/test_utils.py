@@ -8,7 +8,6 @@ from typing import Type
 import numpy as np
 import torch
 
-from pykeen.losses import MarginRankingLoss
 from pykeen.models import Model, TransE
 from pykeen.training.utils import lazy_compile_random_batches
 
@@ -42,23 +41,6 @@ class LossTensorTest(unittest.TestCase):
             [1., 1., 1., 0., 1.],
             [0., 1., 1., 1., 0.],
         ])
-
-    def test_lcwa_margin_ranking_loss_helper(self):
-        """Test if output is correct for the LCWA training loop use case."""
-        # TODO should we move/delete this test?
-        loss_cls = MarginRankingLoss(
-            margin=0,
-            reduction='sum',
-        )
-        loss = loss_cls.process_lcwa_scores(predictions=self.predictions, labels=self.labels)
-        self.assertEqual(14, loss)
-
-        loss_cls = MarginRankingLoss(
-            margin=0,
-            reduction='mean',
-        )
-        loss = loss_cls.process_lcwa_scores(predictions=self.predictions, labels=self.labels)
-        self.assertEqual(1, loss)
 
 
 class BatchCompilationTest(unittest.TestCase):
