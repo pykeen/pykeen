@@ -217,7 +217,7 @@ class Loss(_Loss):
 
     synonyms: ClassVar[Optional[Set[str]]] = None
 
-    #: The default strategy for optimizing the model's hyper-parameters
+    #: The default strategy for optimizing the loss's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]] = {}
 
     def __init__(self, size_average=None, reduce=None, reduction: str = 'mean'):
