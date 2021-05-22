@@ -671,10 +671,13 @@ class NSSALoss(SetwiseLoss):
 
         .. seealso:: https://github.com/DeepGraphLearning/KnowledgeGraphEmbedding/blob/master/codes/model.py
         """
+        # -w * log sigma(-(m + n)) - log sigma (m + p)
+        # p >> -m => m + p >> 0 => sigma(m + p) ~= 1 => log sigma(m + p) ~= 0 => -log sigma(m + p) ~= 0
+        # p << -m => m + p << 0 => sigma(m + p) ~= 0 => log sigma(m + p) << 0 => -log sigma(m + p) >> 0
         neg_loss = functional.logsigmoid(-neg_scores - self.margin)
         neg_loss = neg_weights * neg_loss
         neg_loss = self._reduction_method(neg_loss)
-        pos_loss = functional.logsigmoid(self.margin - -pos_scores)
+        pos_loss = functional.logsigmoid(self.margin + pos_scores)
         pos_loss = self._reduction_method(pos_loss)
         loss = -pos_loss - neg_loss
 
