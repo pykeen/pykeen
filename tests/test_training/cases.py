@@ -10,7 +10,7 @@ import unittest_templates
 from torch.optim import Adam, Optimizer
 
 from pykeen.datasets import Nations
-from pykeen.losses import CrossEntropyLoss, Loss, MarginRankingLoss
+from pykeen.losses import CrossEntropyLoss, Loss
 from pykeen.models import ConvE, Model, TransE
 from pykeen.sampling.filtering import Filterer
 from pykeen.training import TrainingLoop
