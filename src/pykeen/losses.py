@@ -454,11 +454,16 @@ class MarginRankingLoss(PairwiseLoss):
         if label_smoothing:
             raise UnsupportedLabelSmoothingError(self)
 
-        # This shows how often one row has to be repeated
+        # for LCWA scores, we consider all pairs of positive and negative scores for a single batch element.
+        # note: this leads to non-uniform memory requirements for different batches, depending on the total number of
+        # positive entries in the labels tensor.
+
+        # This shows how often one row has to be repeated,
+        # shape: (batch_num_positives,), if row i has k positive entries, this tensor will have k entries with i
         repeat_rows = (labels == 1).nonzero(as_tuple=False)[:, 0]
-        # Create boolean indices for negative labels in the repeated rows
+        # Create boolean indices for negative labels in the repeated rows, shape: (batch_num_positives, num_entities)
         labels_negative = labels[repeat_rows] == 0
-        # Repeat the predictions and filter for negative labels
+        # Repeat the predictions and filter for negative labels, shape: (batch_num_pos_neg_pairs,)
         negative_scores = predictions[repeat_rows][labels_negative]
 
         # This tells us how often each true label should be repeated
