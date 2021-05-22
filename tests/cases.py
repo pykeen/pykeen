@@ -259,15 +259,14 @@ class LossTestCase(GenericTestCase[Loss]):
             loss = self.instance.process_lcwa_scores(predictions=predictions, labels=labels)
             loss.backward()
             optimizer.step()
-        # negative scores decreased
-        assert predictions[0, 0] < 0
-        # positive scores increased
-        assert predictions[0, 1] > 0
+
+        # negative scores decreased compared to positive ones
+        assert predictions[0, 0] < predictions[0, 1] - 1.0e-06
 
     def test_optimization_direction_slcwa(self):
         """Test whether the loss leads to increasing positive scores, and decreasing negative scores."""
-        positive_scores = torch.zeros(1, 1, requires_grad=True)
-        negative_scores = torch.zeros(1, 1, 1, requires_grad=True)
+        positive_scores = torch.zeros(self.batch_size, requires_grad=True)
+        negative_scores = torch.zeros(self.batch_size, self.num_neg_per_pos, requires_grad=True)
         optimizer = optimizer_resolver.make(query=None, params=[positive_scores, negative_scores])
         for _ in range(10):
             optimizer.zero_grad()
@@ -277,10 +276,9 @@ class LossTestCase(GenericTestCase[Loss]):
             )
             loss.backward()
             optimizer.step()
-        # negative scores decreased
-        assert negative_scores < 0
-        # positive scores increased
-        assert positive_scores > 0
+
+        # negative scores decreased compared to positive ones
+        assert (negative_scores < positive_scores.unsqueeze(dim=1) - 1.0e-06).all()
 
 
 # TODO update
