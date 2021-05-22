@@ -577,6 +577,7 @@ class NSSALoss(SetwiseLoss):
 
         :param margin: The loss's margin (also written as gamma in the reference paper)
         :param adversarial_temperature: The negative sampling temperature (also written as alpha in the reference paper)
+
             .. note ::
                 The adversarial temperature is the inverse of the softmax temperature used when computing the weights!
                 Its name is only kept for consistency with the nomenclature of [sun2019]_.
@@ -584,7 +585,7 @@ class NSSALoss(SetwiseLoss):
             The name of the reduction operation to aggregate the individual loss values from a batch to a scalar loss
             value. From {'mean', 'sum'}.
 
-        .. note:: The default hyperparameters are based the experiments for FB15K-237 in [sun2019]_.
+        .. note:: The default hyperparameters are based the experiments for FB15k-237 in [sun2019]_.
         """
         super().__init__(reduction=reduction)
         self.inverse_softmax_temperature = adversarial_temperature
