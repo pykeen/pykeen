@@ -500,7 +500,14 @@ class MarginRankingLoss(PairwiseLoss):
 
 
 class SoftplusLoss(PointwiseLoss):
-    """A module for the softplus loss."""
+    r"""
+    A module for the softplus loss.
+
+    .. math ::
+        L(score, label) = softplus(- label \cdot score)
+
+    with $label \in \{-1, 1\}$.
+    """
 
     def __init__(self, reduction: str = 'mean') -> None:
         super().__init__(reduction=reduction)
