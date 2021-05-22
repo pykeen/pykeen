@@ -186,9 +186,9 @@ def apply_label_smoothing(
     if not epsilon:  # either none or zero
         return labels
     if epsilon < 0.0:
-        raise ValueError('episilon must be positive')
+        raise ValueError(f"epsilon must be positive, but is {epsilon}")
     if num_classes is None:
-        raise ValueError('must pass num_classes to perform label smoothing')
+        raise ValueError("must pass num_classes to perform label smoothing")
 
     new_label_true = (1.0 - epsilon)
     new_label_false = epsilon / (num_classes - 1)
