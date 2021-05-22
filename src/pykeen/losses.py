@@ -501,7 +501,7 @@ class SoftplusLoss(PointwiseLoss):
 
     def __init__(self, reduction: str = 'mean') -> None:
         super().__init__(reduction=reduction)
-        self.softplus = torch.nn.Softplus(beta=1, threshold=20)
+        self.softplus = nn.Softplus()
 
     def forward(
         self,
