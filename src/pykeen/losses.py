@@ -251,17 +251,20 @@ class Loss(_Loss):
         :return:
             A scalar loss term.
         """
-        return self.process_lcwa_scores(
-            predictions=positive_scores,
-            labels=torch.ones_like(positive_scores),
-            label_smoothing=label_smoothing,
-            num_entities=num_entities,
-        ) + self.process_lcwa_scores(
-            predictions=negative_scores,
-            labels=torch.zeros_like(negative_scores),
-            label_smoothing=label_smoothing,
-            num_entities=num_entities,
+        # flatten and stack
+        positive_scores = positive_scores.view(-1)
+        negative_scores = negative_scores.view(-1)
+        predictions = torch.cat([positive_scores, negative_scores], dim=0)
+        labels = torch.cat([torch.ones_like(positive_scores), torch.zeros_like(negative_scores)])
+
+        # apply label smoothing if necessary.
+        labels = apply_label_smoothing(
+            labels=labels,
+            epsilon=label_smoothing,
+            num_classes=num_entities,
         )
+
+        return self(predictions, labels)
 
     def process_lcwa_scores(
         self,
@@ -272,8 +275,6 @@ class Loss(_Loss):
     ) -> torch.FloatTensor:
         """
         Process scores from LCWA training loop.
-
-        # TODO: Input shapes are different for default delegation from slcwa
 
         :param predictions: shape: (batch_size, num_entities)
             The scores.
