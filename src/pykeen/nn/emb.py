@@ -19,7 +19,7 @@ from torch import nn
 from torch.nn import functional
 
 from .compositions import CompositionModule, composition_resolver
-from .init import init_phases, xavier_normal_, xavier_normal_norm_, xavier_uniform_, xavier_uniform_norm_
+from .init import init_phases, xavier_normal_, xavier_normal_norm_, xavier_uniform_, xavier_uniform_norm_, normal_norm_, uniform_norm_
 from .message_passing import Decomposition, decomposition_resolver
 from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolver
 from ..regularizers import Regularizer, regularizer_resolver
@@ -480,7 +480,9 @@ initializers = {
     'xavier_normal': xavier_uniform_,
     'xavier_normal_norm': xavier_normal_norm_,
     'normal': torch.nn.init.normal_,
+    'normal_norm': normal_norm_,
     'uniform': torch.nn.init.uniform_,
+    'uniform_norm': uniform_norm_,
     'phases': init_phases,
     'init_phases': init_phases,
 }
