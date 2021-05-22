@@ -710,8 +710,14 @@ losses_synonyms: Mapping[str, Type[Loss]] = {
     if cls.synonyms is not None
     for synonym in cls.synonyms
 }
+# TODO update class resolver to get more clever about finding synonyms
 loss_resolver = Resolver.from_subclasses(
     Loss,
     default=MarginRankingLoss,
     synonyms=losses_synonyms,
+    skip={
+        PairwiseLoss,
+        PointwiseLoss,
+        SetwiseLoss,
+    },
 )
