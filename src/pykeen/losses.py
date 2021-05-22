@@ -141,7 +141,6 @@ from torch import nn
 from torch.nn import functional
 from torch.nn.modules.loss import _Loss
 
-
 __all__ = [
     # Base Classes
     'Loss',
