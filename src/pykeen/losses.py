@@ -710,11 +710,8 @@ losses_synonyms: Mapping[str, Type[Loss]] = {
     if cls.synonyms is not None
     for synonym in cls.synonyms
 }
-# TODO: Can we use Resolver.from_subclasses?
-loss_resolver = Resolver(
-    _LOSSES,
-    base=Loss,
+loss_resolver = Resolver.from_subclasses(
+    Loss,
     default=MarginRankingLoss,
-    suffix=_LOSS_SUFFIX,
     synonyms=losses_synonyms,
 )
