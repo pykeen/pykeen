@@ -475,9 +475,9 @@ def process_shape(
 
 
 initializers = {
-    'xavier_uniform': xavier_normal_,
+    'xavier_uniform': xavier_uniform_,
     'xavier_uniform_norm': xavier_uniform_norm_,
-    'xavier_normal': xavier_uniform_,
+    'xavier_normal': xavier_normal_,
     'xavier_normal_norm': xavier_normal_norm_,
     'normal': torch.nn.init.normal_,
     'normal_norm': normal_norm_,
