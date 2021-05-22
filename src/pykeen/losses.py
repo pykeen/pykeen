@@ -539,8 +539,7 @@ class BCEAfterSigmoidLoss(PointwiseLoss):
         labels: torch.FloatTensor,
         **kwargs,
     ) -> torch.FloatTensor:  # noqa: D102
-        post_sigmoid = torch.sigmoid(logits)
-        return functional.binary_cross_entropy(post_sigmoid, labels, **kwargs)
+        return functional.binary_cross_entropy(logits.sigmoid(), labels, **kwargs)
 
 
 class CrossEntropyLoss(SetwiseLoss):
