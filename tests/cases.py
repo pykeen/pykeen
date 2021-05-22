@@ -34,6 +34,7 @@ from pykeen.models import EntityEmbeddingModel, EntityRelationEmbeddingModel, Mo
 from pykeen.models.cli import build_cli_from_cls
 from pykeen.nn.emb import RepresentationModule
 from pykeen.nn.modules import FunctionalInteraction, Interaction, LiteralInteraction
+from pykeen.optimizers import optimizer_resolver
 from pykeen.regularizers import LpRegularizer, Regularizer
 from pykeen.trackers import ResultTracker
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
@@ -247,6 +248,21 @@ class LossTestCase(GenericTestCase[Loss]):
             num_entities=self.num_entities,
         )
         self._check_loss_value(loss_value=loss_value)
+
+    def test_optimization_direction_lcwa(self):
+        """Test whether the loss leads to increasing positive scores, and decreasing negative scores."""
+        labels = torch.as_tensor(data=[0, 1], dtype=torch.get_default_dtype()).view(1, -1)
+        predictions = torch.zeros(1, 2, requires_grad=True)
+        optimizer = optimizer_resolver.make(query=None, params=[predictions])
+        for _ in range(10):
+            optimizer.zero_grad()
+            loss = self.instance.process_lcwa_scores(predictions=predictions, labels=labels)
+            loss.backward()
+            optimizer.step()
+        # negative scores decreased
+        assert predictions[0, 0] < 0
+        # positive scores increased
+        assert predictions[0, 1] > 0
 
 
 # TODO update

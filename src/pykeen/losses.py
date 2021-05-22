@@ -398,7 +398,7 @@ class MarginRankingLoss(PairwiseLoss):
         margin=dict(type=int, low=0, high=3, q=1),
         # todo(cthoyt): how to we specify choices? Can we directly create them from the
         #  resolver?
-        margin_activation=dict(...),
+        # margin_activation=dict(...),
     )
 
     def __init__(
