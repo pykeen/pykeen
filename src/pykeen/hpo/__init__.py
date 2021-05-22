@@ -85,8 +85,38 @@ size (``q``), such that 100, 200, 300, 400, and 500 are searched.
 ...     ),
 ... )
 
-If the given range is not divisible by the step size, then the
-upper bound will be omitted.
+.. warning::
+
+    If the given range is not divisible by the step size, then the
+    upper bound will be omitted.
+
+If you want to optimize the entity initializer, you can use the `categorical` type,
+which requres a `choices` key with a list of choices. This works for strings, integers,
+floats, etc.
+
+>>> from pykeen.hpo import hpo_pipeline
+>>> hpo_result = hpo_pipeline(
+...     n_trials=30,
+...     dataset='Nations',
+...     model='TransE',
+...     model_kwargs_ranges=dict(
+...         entity_initializer=dict(type='categorical', choices=[
+...             'xavier_uniform',
+...             'xavier_uniform_norm',
+...             'uniform',
+...         ]),
+...     ),
+... )
+
+The same could be used for constrainers, normalizers, and regularizers over both entities and
+relations. However, different models might have different names for the initializer, normalizer,
+constrainer and regularizer since there could be multiple representations for either the entity,
+relation, or both. Check your desired model's documentation page for the kwargs that you can
+optimize over.
+
+The HPO pipeline does not support optimizing over the hyper-parameters for each
+initializer. If you are interested in this, consider rolling your own ablation
+study pipeline.
 
 Optimizing the Loss
 ~~~~~~~~~~~~~~~~~~~
