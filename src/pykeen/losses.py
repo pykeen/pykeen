@@ -237,12 +237,14 @@ class Loss(_Loss):
 
         :param positive_scores: shape: (batch_size, 1)
             The scores for positive triples.
-        :param negative_scores: shape: (batch_size, num_neg_per_pos)  # TODO: Pre-filtered? => shape: (nnz,)
-            The scores for the negative triples.
+        :param negative_scores: shape: (batch_size, num_neg_per_pos) or (num_unfiltered_negatives,)
+            The scores for the negative triples, either in dense 2D shape, or in case they are already filtered, in
+            sparse shape. If they are given in sparse shape, batch_filter needs to be provided, too.
         :param label_smoothing:
             An optional label smoothing parameter.
         :param batch_filter: shape: (batch_size, num_neg_per_pos)
-            An optional filter of scores to keep. If given, ... TODO: describe
+            An optional filter of negative scores which were kept. Given if and only if negative_scores have been
+            pre-filtered.
         :param num_entities:
             The number of entities. Only required if label smoothing is enabled.
 
