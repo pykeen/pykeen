@@ -577,16 +577,17 @@ class NSSALoss(SetwiseLoss):
 
         :param margin: The loss's margin (also written as gamma in the reference paper)
         :param adversarial_temperature: The negative sampling temperature (also written as alpha in the reference paper)
+            .. note ::
+                The adversarial temperature is the inverse of the softmax temperature used when computing the weights!
+                Its name is only kept for consistency with the nomenclature of [sun2019]_.
         :param reduction:
             The name of the reduction operation to aggregate the individual loss values from a batch to a scalar loss
             value. From {'mean', 'sum'}.
 
         .. note:: The default hyperparameters are based the experiments for FB15K-237 in [sun2019]_.
         """
-        # TODO: The "temperature" parameter here is more an reciprocal temperature, following the standard nomenclature
-        #  for softmax temperature
         super().__init__(reduction=reduction)
-        self.adversarial_temperature = adversarial_temperature
+        self.inverse_softmax_temperature = adversarial_temperature
         self.margin = margin
 
     def process_lcwa_scores(
@@ -602,10 +603,11 @@ class NSSALoss(SetwiseLoss):
 
         pos_mask = labels == 1
 
-        # compute negative weights
+        # compute negative weights (without gradient tracking)
+        # clone is necessary since we modify in-place
         weights = predictions.detach().clone()
         weights[pos_mask] = float("-inf")
-        weights = weights.mul(self.adversarial_temperature).softmax(dim=1)
+        weights = weights.mul(self.inverse_softmax_temperature).softmax(dim=1)
 
         # Split positive and negative scores
         positive_scores = predictions[pos_mask]
@@ -643,7 +645,7 @@ class NSSALoss(SetwiseLoss):
             negative_scores = negative_scores_
 
         # compute weights (without gradient tracking)
-        weights = negative_scores.detach().mul(self.adversarial_temperature).softmax(dim=-1)
+        weights = negative_scores.detach().mul(self.inverse_softmax_temperature).softmax(dim=-1)
 
         return self(
             pos_scores=positive_scores,

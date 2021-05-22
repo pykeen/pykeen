@@ -93,7 +93,7 @@ class TestCustomLossFunctions(unittest.TestCase):
         self.assertIsInstance(pipeline_results, PipelineResult)
         self.assertIsInstance(pipeline_results.model.loss, loss)
         self.assertEqual(pipeline_results.model.loss.margin, 1.)
-        self.assertEqual(pipeline_results.model.loss.adversarial_temperature, 1.)
+        self.assertEqual(pipeline_results.model.loss.inverse_softmax_temperature, 1.)
 
 
 class BCEWithLogitsLossTestCase(cases.PointwiseLossTestCase):
