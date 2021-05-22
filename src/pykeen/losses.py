@@ -393,6 +393,9 @@ class MarginRankingLoss(PairwiseLoss):
 
     hpo_default: ClassVar[Mapping[str, Any]] = dict(
         margin=dict(type=int, low=0, high=3, q=1),
+        # todo(cthoyt): how to we specify choices? Can we directly create them from the
+        #  resolver?
+        margin_activation=dict(...),
     )
 
     def __init__(
@@ -436,6 +439,7 @@ class MarginRankingLoss(PairwiseLoss):
             # negative_scores have already been filtered in the sampler!
             num_neg_per_pos = batch_filter.shape[1]
             positive_scores = positive_scores.repeat(1, num_neg_per_pos, 1)[batch_filter]
+            # shape: (nnz,)
 
         return self(pos_scores=positive_scores, neg_scores=negative_scores)
 
@@ -468,7 +472,20 @@ class MarginRankingLoss(PairwiseLoss):
         self,
         pos_scores: torch.FloatTensor,
         neg_scores: torch.FloatTensor,
-    ) -> torch.FloatTensor:  # noqa: D102
+    ) -> torch.FloatTensor:
+        """
+        Compute the margin loss.
+
+        The scores have to be in broadcastable shape.
+
+        :param pos_scores:
+            The positive scores.
+        :param neg_scores:
+            The negative scores.
+
+        :return:
+            A scalar loss term.
+        """
         return self._reduction_method(self.margin_activation(
             neg_scores - pos_scores + self.margin,
         ))
