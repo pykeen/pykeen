@@ -384,7 +384,10 @@ margin_activation_resolver = Resolver(
 
 
 class MarginRankingLoss(PairwiseLoss):
-    """A module for the margin ranking loss.
+    r"""A module for the margin ranking loss.
+
+    .. math ::
+        L(score^+, score^-) = activation(score^- - score^+ + margin)
 
     .. seealso:: :class:`torch.nn.MarginRankingLoss`
     """
