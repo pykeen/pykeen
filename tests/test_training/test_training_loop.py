@@ -2,7 +2,7 @@
 
 """Test for sLCWA and LCWA."""
 
-from pykeen.losses import CrossEntropyLoss, MarginRankingLoss, NSSALoss
+from pykeen.losses import MarginRankingLoss, NSSALoss, SoftplusLoss
 from pykeen.sampling.filtering import BloomFilterer, PythonSetFilterer
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop
 from tests.test_training import cases
@@ -13,7 +13,7 @@ class MRUnfilteredSLCWATrainingLoopTestCase(cases.SLCWATrainingLoopTestCase):
 
     cls = SLCWATrainingLoop
     filterer = None
-    loss = MarginRankingLoss
+    loss_cls = MarginRankingLoss
 
 
 class NSSAUnfilteredSLCWATrainingLoopTestCase(cases.SLCWATrainingLoopTestCase):
@@ -21,15 +21,15 @@ class NSSAUnfilteredSLCWATrainingLoopTestCase(cases.SLCWATrainingLoopTestCase):
 
     cls = SLCWATrainingLoop
     filterer = None
-    loss = NSSALoss
+    loss_cls = NSSALoss
 
 
-class CEUnfilteredSLCWATrainingLoopTestCase(cases.SLCWATrainingLoopTestCase):
-    """Test sLCWA with unfiltered negative sampling with cross entropy loss."""
+class SoftplusUnfilteredSLCWATrainingLoopTestCase(cases.SLCWATrainingLoopTestCase):
+    """Test sLCWA with unfiltered negative sampling with softplus loss."""
 
     cls = SLCWATrainingLoop
     filterer = None
-    loss = CrossEntropyLoss
+    loss_cls = SoftplusLoss
 
 
 class MRSetFilteredSLCWATrainingLoopTestCase(cases.SLCWATrainingLoopTestCase):
@@ -37,7 +37,7 @@ class MRSetFilteredSLCWATrainingLoopTestCase(cases.SLCWATrainingLoopTestCase):
 
     cls = SLCWATrainingLoop
     filterer = PythonSetFilterer
-    loss = MarginRankingLoss
+    loss_cls = MarginRankingLoss
 
 
 class NSSASetFilteredSLCWATrainingLoopTestCase(cases.SLCWATrainingLoopTestCase):
@@ -45,15 +45,15 @@ class NSSASetFilteredSLCWATrainingLoopTestCase(cases.SLCWATrainingLoopTestCase):
 
     cls = SLCWATrainingLoop
     filterer = PythonSetFilterer
-    loss = NSSALoss
+    loss_cls = NSSALoss
 
 
-class CESetFilteredSLCWATrainingLoopTestCase(cases.SLCWATrainingLoopTestCase):
-    """Test sLCWA with set filtered negative sampling with cross entropy loss."""
+class SoftplusSetFilteredSLCWATrainingLoopTestCase(cases.SLCWATrainingLoopTestCase):
+    """Test sLCWA with set filtered negative sampling with softplus loss."""
 
     cls = SLCWATrainingLoop
     filterer = PythonSetFilterer
-    loss = CrossEntropyLoss
+    loss_cls = SoftplusLoss
 
 
 # Multiple permutations of loss not necessary for bloom filter since it's more of a
@@ -69,18 +69,18 @@ class MRLossLCWATrainingLoopTestCase(cases.TrainingLoopTestCase):
     """Test LCWA with margin ranking loss."""
 
     cls = LCWATrainingLoop
-    loss = MarginRankingLoss
+    loss_cls = MarginRankingLoss
 
 
 class NSSALossLCWATrainingLoopTestCase(cases.TrainingLoopTestCase):
     """Test LCWA with NSSA loss."""
 
     cls = LCWATrainingLoop
-    loss = NSSALoss
+    loss_cls = NSSALoss
 
 
-class CELCWATrainingLoopTestCase(cases.TrainingLoopTestCase):
-    """Test LCWA with cross entropy loss."""
+class SoftPlusLCWATrainingLoopTestCase(cases.TrainingLoopTestCase):
+    """Test LCWA with softplus loss."""
 
     cls = LCWATrainingLoop
-    loss = CrossEntropyLoss
+    loss_cls = SoftplusLoss

@@ -637,7 +637,7 @@ class NSSALoss(SetwiseLoss):
             # negative_scores have already been filtered in the sampler!
             # (dense) softmax requires unfiltered scores / masking
             negative_scores_ = torch.zeros_like(batch_filter, dtype=positive_scores.dtype)
-            negative_scores_[batch_filter] = negative_scores
+            negative_scores_[batch_filter] = negative_scores.view(1, -1)
             # we need to fill the scores with -inf for all filtered negative examples
             # EXCEPT if all negative samples are filtered (since softmax over only -inf yields nan)
             fill_mask = ~batch_filter
