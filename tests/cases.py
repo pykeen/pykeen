@@ -11,6 +11,7 @@ import traceback
 import unittest
 from abc import ABC, abstractmethod
 from typing import Any, ClassVar, Collection, Dict, Mapping, MutableMapping, Optional, Sequence, Tuple, Type, TypeVar
+from unittest.case import SkipTest
 from unittest.mock import patch
 
 import pytest
@@ -28,11 +29,12 @@ from pykeen.datasets import Nations
 from pykeen.datasets.base import LazyDataset
 from pykeen.datasets.kinships import KINSHIPS_TRAIN_PATH
 from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH
-from pykeen.losses import Loss, PairwiseLoss, PointwiseLoss, SetwiseLoss
+from pykeen.losses import Loss, PairwiseLoss, PointwiseLoss, SetwiseLoss, UnsupportedLabelSmoothingError
 from pykeen.models import EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, RESCAL
 from pykeen.models.cli import build_cli_from_cls
 from pykeen.nn.emb import RepresentationModule
 from pykeen.nn.modules import FunctionalInteraction, Interaction, LiteralInteraction
+from pykeen.optimizers import optimizer_resolver
 from pykeen.regularizers import LpRegularizer, Regularizer
 from pykeen.trackers import ResultTracker
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
@@ -167,12 +169,17 @@ class CachedDatasetCase(DatasetTestCase):
         self.directory.cleanup()
 
 
-# TODO update
 class LossTestCase(GenericTestCase[Loss]):
     """Base unittest for loss functions."""
 
     #: The batch size
     batch_size: ClassVar[int] = 3
+
+    #: The number of negatives per positive for sLCWA training loop.
+    num_neg_per_pos: ClassVar[int] = 7
+
+    #: The number of entities LCWA training loop / label smoothing.
+    num_entities: ClassVar[int] = 7
 
     def _check_loss_value(self, loss_value: torch.FloatTensor) -> None:
         """Check loss value dimensionality, and ability for backward."""
@@ -185,8 +192,94 @@ class LossTestCase(GenericTestCase[Loss]):
         # Test backward
         loss_value.backward()
 
+    def help_test_process_slcwa_scores(
+        self,
+        positive_scores: torch.FloatTensor,
+        negative_scores: torch.FloatTensor,
+        batch_filter: Optional[torch.BoolTensor] = None,
+    ):
+        """Help test processing scores from SLCWA training loop."""
+        loss_value = self.instance.process_slcwa_scores(
+            positive_scores=positive_scores,
+            negative_scores=negative_scores,
+            label_smoothing=None,
+            batch_filter=batch_filter,
+            num_entities=self.num_entities,
+        )
+        self._check_loss_value(loss_value=loss_value)
 
-# TODO update
+    def test_process_slcwa_scores(self):
+        """Test processing scores from SLCWA training loop."""
+        positive_scores = torch.rand(self.batch_size, 1, requires_grad=True)
+        negative_scores = torch.rand(self.batch_size, self.num_neg_per_pos, requires_grad=True)
+        self.help_test_process_slcwa_scores(positive_scores=positive_scores, negative_scores=negative_scores)
+
+    def test_process_slcwa_scores_filtered(self):
+        """Test processing scores from SLCWA training loop with filtering."""
+        positive_scores = torch.rand(self.batch_size, 1, requires_grad=True)
+        negative_scores = torch.rand(self.batch_size, self.num_neg_per_pos, requires_grad=True)
+        batch_filter = torch.rand(self.batch_size, self.num_neg_per_pos) < 0.5
+        self.help_test_process_slcwa_scores(
+            positive_scores=positive_scores,
+            negative_scores=negative_scores[batch_filter],
+            batch_filter=batch_filter,
+        )
+
+    def test_process_lcwa_scores(self):
+        """Test processing scores from LCWA training loop without smoothing."""
+        self.help_test_process_lcwa_scores(label_smoothing=None)
+
+    def test_process_lcwa_scores_smooth(self):
+        """Test processing scores from LCWA training loop with smoothing."""
+        try:
+            self.help_test_process_lcwa_scores(label_smoothing=0.01)
+        except UnsupportedLabelSmoothingError as error:
+            raise SkipTest from error
+
+    def help_test_process_lcwa_scores(self, label_smoothing):
+        """Help test processing scores from LCWA training loop."""
+        predictions = torch.rand(self.batch_size, self.num_entities, requires_grad=True)
+        labels = (torch.rand(self.batch_size, self.num_entities, requires_grad=True) > 0.8).float()
+        loss_value = self.instance.process_lcwa_scores(
+            predictions=predictions,
+            labels=labels,
+            label_smoothing=label_smoothing,
+            num_entities=self.num_entities,
+        )
+        self._check_loss_value(loss_value=loss_value)
+
+    def test_optimization_direction_lcwa(self):
+        """Test whether the loss leads to increasing positive scores, and decreasing negative scores."""
+        labels = torch.as_tensor(data=[0, 1], dtype=torch.get_default_dtype()).view(1, -1)
+        predictions = torch.zeros(1, 2, requires_grad=True)
+        optimizer = optimizer_resolver.make(query=None, params=[predictions])
+        for _ in range(10):
+            optimizer.zero_grad()
+            loss = self.instance.process_lcwa_scores(predictions=predictions, labels=labels)
+            loss.backward()
+            optimizer.step()
+
+        # negative scores decreased compared to positive ones
+        assert predictions[0, 0] < predictions[0, 1] - 1.0e-06
+
+    def test_optimization_direction_slcwa(self):
+        """Test whether the loss leads to increasing positive scores, and decreasing negative scores."""
+        positive_scores = torch.zeros(self.batch_size, requires_grad=True)
+        negative_scores = torch.zeros(self.batch_size, self.num_neg_per_pos, requires_grad=True)
+        optimizer = optimizer_resolver.make(query=None, params=[positive_scores, negative_scores])
+        for _ in range(10):
+            optimizer.zero_grad()
+            loss = self.instance.process_slcwa_scores(
+                positive_scores=positive_scores,
+                negative_scores=negative_scores,
+            )
+            loss.backward()
+            optimizer.step()
+
+        # negative scores decreased compared to positive ones
+        assert (negative_scores < positive_scores.unsqueeze(dim=1) - 1.0e-06).all()
+
+
 class PointwiseLossTestCase(LossTestCase):
     """Base unit test for label-based losses."""
 
@@ -208,7 +301,6 @@ class PointwiseLossTestCase(LossTestCase):
         self._check_loss_value(loss_value)
 
 
-# TODO update
 class PairwiseLossTestCase(LossTestCase):
     """Base unit test for pair-wise losses."""
 
@@ -230,7 +322,6 @@ class PairwiseLossTestCase(LossTestCase):
         self._check_loss_value(loss_value)
 
 
-# TODO update
 class SetwiseLossTestCase(LossTestCase):
     """Unit tests for setwise losses."""
 
@@ -240,16 +331,6 @@ class SetwiseLossTestCase(LossTestCase):
     def test_type(self):
         """Test the loss is the right type."""
         self.assertIsInstance(self.instance, SetwiseLoss)
-
-    def test_forward(self):
-        """Test forward(scores, labels)."""
-        scores = torch.rand(self.batch_size, self.num_entities, requires_grad=True)
-        labels = torch.rand(self.batch_size, self.num_entities, requires_grad=False)
-        loss_value = self.instance(
-            scores,
-            labels,
-        )
-        self._check_loss_value(loss_value=loss_value)
 
 
 class InteractionTestCase(
