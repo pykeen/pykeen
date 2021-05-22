@@ -10,7 +10,7 @@ import unittest_templates
 from torch.optim import Adam, Optimizer
 
 from pykeen.datasets import Nations
-from pykeen.losses import CrossEntropyLoss
+from pykeen.losses import CrossEntropyLoss, Loss, MarginRankingLoss
 from pykeen.models import ConvE, Model, TransE
 from pykeen.sampling.filtering import Filterer
 from pykeen.training import TrainingLoop
@@ -28,6 +28,8 @@ class TrainingLoopTestCase(unittest_templates.GenericTestCase[TrainingLoop]):
 
     model: Model
     factory: TriplesFactory
+    loss_cls: ClassVar[Type[Loss]]
+    loss: Loss
     optimizer_cls: ClassVar[Type[Optimizer]] = Adam
     optimizer: Optimizer
     random_seed = 0
@@ -38,7 +40,8 @@ class TrainingLoopTestCase(unittest_templates.GenericTestCase[TrainingLoop]):
     def pre_setup_hook(self) -> None:
         """Prepare case-level variables before the setup() function."""
         self.triples_factory = Nations().training
-        self.model = TransE(triples_factory=self.triples_factory, random_seed=self.random_seed)
+        self.loss = self.loss_cls()
+        self.model = TransE(triples_factory=self.triples_factory, loss=self.loss, random_seed=self.random_seed)
         self.optimizer = self.optimizer_cls(self.model.get_grad_params())
 
     def _with_model(self, model: Model) -> TrainingLoop:
