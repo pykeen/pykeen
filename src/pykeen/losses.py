@@ -133,10 +133,11 @@ triples $\mathcal{b}$ in the subset $\mathcal{B} \in 2^{2^{\mathcal{T}}}$.
     \mathcal{L}_L(\mathcal{B}) = \frac{1}{|\mathcal{B}|} \sum \limits_{\mathcal{b} \in \mathcal{B}} L(\mathcal{b})
 """
 
-from typing import Any, Callable, ClassVar, Mapping, Optional, Set, Type, Union
+from typing import Any, ClassVar, Mapping, Optional, Set, Type
 
 import torch
-from class_resolver import Resolver, normalize_string
+from class_resolver import Hint, Resolver, normalize_string
+from torch import nn
 from torch.nn import functional
 from torch.nn.modules.loss import _Loss
 
@@ -369,10 +370,17 @@ class MSELoss(PointwiseLoss):
         return functional.mse_loss(scores, labels, reduction=self.reduction)
 
 
-MARGIN_ACTIVATIONS: Mapping[str, Callable[[torch.FloatTensor], torch.FloatTensor]] = {
-    'relu': functional.relu,
-    'softplus': functional.softplus,
-}
+margin_activation_resolver = Resolver(
+    classes={
+        nn.ReLU,
+        nn.Softplus,
+    },
+    base=nn.Module,  # type: ignore
+    synonyms=dict(
+        hard=nn.ReLU,
+        soft=nn.Softplus,
+    ),
+)
 
 
 class MarginRankingLoss(PairwiseLoss):
@@ -390,7 +398,7 @@ class MarginRankingLoss(PairwiseLoss):
     def __init__(
         self,
         margin: float = 1.0,
-        margin_activation: Union[str, Callable[[torch.FloatTensor], torch.FloatTensor]] = 'relu',
+        margin_activation: Hint[nn.Module] = 'relu',
         reduction: str = 'mean',
     ):
         r"""Initialize the margin loss instance.
@@ -407,11 +415,7 @@ class MarginRankingLoss(PairwiseLoss):
         """
         super().__init__(reduction=reduction)
         self.margin = margin
-
-        if isinstance(margin_activation, str):
-            self.margin_activation = MARGIN_ACTIVATIONS[margin_activation]
-        else:
-            self.margin_activation = margin_activation
+        self.margin_activation = margin_activation_resolver.make(margin_activation)
 
     def process_slcwa_scores(
         self,
