@@ -169,7 +169,6 @@ class CachedDatasetCase(DatasetTestCase):
         self.directory.cleanup()
 
 
-# TODO update
 class LossTestCase(GenericTestCase[Loss]):
     """Base unittest for loss functions."""
 
@@ -281,7 +280,6 @@ class LossTestCase(GenericTestCase[Loss]):
         assert (negative_scores < positive_scores.unsqueeze(dim=1) - 1.0e-06).all()
 
 
-# TODO update
 class PointwiseLossTestCase(LossTestCase):
     """Base unit test for label-based losses."""
 
@@ -303,7 +301,6 @@ class PointwiseLossTestCase(LossTestCase):
         self._check_loss_value(loss_value)
 
 
-# TODO update
 class PairwiseLossTestCase(LossTestCase):
     """Base unit test for pair-wise losses."""
 
@@ -325,7 +322,6 @@ class PairwiseLossTestCase(LossTestCase):
         self._check_loss_value(loss_value)
 
 
-# TODO update
 class SetwiseLossTestCase(LossTestCase):
     """Unit tests for setwise losses."""
 
