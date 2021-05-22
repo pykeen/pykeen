@@ -141,6 +141,7 @@ from torch import nn
 from torch.nn import functional
 from torch.nn.modules.loss import _Loss
 
+
 __all__ = [
     # Base Classes
     'Loss',
@@ -396,9 +397,10 @@ class MarginRankingLoss(PairwiseLoss):
 
     hpo_default: ClassVar[Mapping[str, Any]] = dict(
         margin=dict(type=int, low=0, high=3, q=1),
-        # todo(cthoyt): how to we specify choices? Can we directly create them from the
-        #  resolver?
-        # margin_activation=dict(...),
+        margin_activation=dict(
+            type='categorical',
+            choices=margin_activation_resolver.options,
+        ),
     )
 
     def __init__(
