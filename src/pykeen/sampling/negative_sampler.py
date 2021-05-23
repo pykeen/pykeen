@@ -107,7 +107,7 @@ class NegativeSampler(ABC):
 
     def collate(self, batch: List[SLCWASampleType]) -> SLCWABatchType:
         """
-        Collate a batch of positive triples, and add negative samples.
+        Collate a batch of positive triples and add negative samples.
 
         :param batch:
             The batch of positive triples.
