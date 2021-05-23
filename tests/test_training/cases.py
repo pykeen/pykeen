@@ -174,12 +174,12 @@ class SLCWATrainingLoopTestCase(TrainingLoopTestCase):
     """A generic test case for sLCWA training loops."""
 
     #: Should negative samples be filtered?
-    filterer: ClassVar[Optional[Type[Filterer]]] = None
+    filterer_cls: ClassVar[Optional[Type[Filterer]]] = None
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         kwargs["negative_sampler"] = "basic"
-        kwargs["negative_sampler_kwargs"] = {"filterer": self.filterer}
+        kwargs["negative_sampler_kwargs"] = {"filterer": self.filterer_cls}
         return kwargs
 
     def test_blacklist_loss_on_slcwa(self):
