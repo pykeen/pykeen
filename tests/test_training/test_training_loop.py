@@ -12,7 +12,7 @@ class MRUnfilteredSLCWATrainingLoopTestCase(cases.SLCWATrainingLoopTestCase):
     """Test sLCWA with unfiltered negative sampling with margin ranking loss."""
 
     cls = SLCWATrainingLoop
-    filterer = None
+    filterer_cls = None
     loss_cls = MarginRankingLoss
 
 
@@ -20,7 +20,7 @@ class NSSAUnfilteredSLCWATrainingLoopTestCase(cases.SLCWATrainingLoopTestCase):
     """Test sLCWA with unfiltered negative sampling with NSSA loss."""
 
     cls = SLCWATrainingLoop
-    filterer = None
+    filterer_cls = None
     loss_cls = NSSALoss
 
 
@@ -28,7 +28,7 @@ class SoftplusUnfilteredSLCWATrainingLoopTestCase(cases.SLCWATrainingLoopTestCas
     """Test sLCWA with unfiltered negative sampling with softplus loss."""
 
     cls = SLCWATrainingLoop
-    filterer = None
+    filterer_cls = None
     loss_cls = SoftplusLoss
 
 
@@ -36,7 +36,7 @@ class MRSetFilteredSLCWATrainingLoopTestCase(cases.SLCWATrainingLoopTestCase):
     """Test sLCWA with set filtered negative sampling with margin ranking loss."""
 
     cls = SLCWATrainingLoop
-    filterer = PythonSetFilterer
+    filterer_cls = PythonSetFilterer
     loss_cls = MarginRankingLoss
 
 
@@ -44,7 +44,7 @@ class NSSASetFilteredSLCWATrainingLoopTestCase(cases.SLCWATrainingLoopTestCase):
     """Test sLCWA with set filtered negative sampling with NSSA loss."""
 
     cls = SLCWATrainingLoop
-    filterer = PythonSetFilterer
+    filterer_cls = PythonSetFilterer
     loss_cls = NSSALoss
 
 
@@ -52,7 +52,7 @@ class SoftplusSetFilteredSLCWATrainingLoopTestCase(cases.SLCWATrainingLoopTestCa
     """Test sLCWA with set filtered negative sampling with softplus loss."""
 
     cls = SLCWATrainingLoop
-    filterer = PythonSetFilterer
+    filterer_cls = PythonSetFilterer
     loss_cls = SoftplusLoss
 
 
@@ -62,7 +62,8 @@ class BloomFilteredSLCWATrainingLoopTestCase(cases.SLCWATrainingLoopTestCase):
     """Test sLCWA with bloom filtered negative sampling."""
 
     cls = SLCWATrainingLoop
-    filterer = BloomFilterer
+    filterer_cls = BloomFilterer
+    loss_cls = MarginRankingLoss
 
 
 class MRLossLCWATrainingLoopTestCase(cases.TrainingLoopTestCase):
