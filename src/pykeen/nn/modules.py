@@ -1323,6 +1323,17 @@ class CrossEInteraction(FunctionalInteraction[FloatTensor, Tuple[FloatTensor, Fl
         combination_activation: HintOrType[nn.Module] = nn.Tanh,
         combination_activation_kwargs: Optional[Mapping[str, Any]] = None,
     ):
+        """
+        Instantiate the interaction module.
+
+        :param embedding_dim:
+            The embedding dimension.
+        :param combination_activation:
+            The combination activation function.
+        :param combination_activation_kwargs:
+            Additional keyword-based arguments passed to the constructor of the combination activation function (if
+            not already instantiated).
+        """
         super().__init__()
         self.combination_activation = activation_resolver.make(
             combination_activation,
