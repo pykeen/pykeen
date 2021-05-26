@@ -53,6 +53,9 @@
    networks <https://arxiv.org/abs/1911.03082>`_. *arXiv*, 1–15.
 .. [zhang2019] Zhang, Shuai, *et al.* (2019). `Quaternion knowledge graph embeddings
                 <https://openreview.net/forum?id=cZbk98eY_WwC>`_ NeurIPS'19.
+.. [zhang2019b] Zhang, W., *et al.* (2019). `Interaction Embeddings for Prediction and Explanation in Knowledge
+   Graphs <https://doi.org/10.1145/3289600.3291014>`. WSDM '19: Proceedings of the Twelfth ACM International
+   Conference on Web Search and Data Mining.
 """
 
 from .compgcn import CompGCN

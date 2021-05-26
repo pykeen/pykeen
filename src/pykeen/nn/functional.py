@@ -31,6 +31,7 @@ __all__ = [
     'complex_interaction',
     'conve_interaction',
     'convkb_interaction',
+    'cross_e_interaction',
     'distmult_interaction',
     'ermlp_interaction',
     'ermlpe_interaction',
@@ -1093,11 +1094,7 @@ def cross_e_interaction(
     dropout: Optional[nn.Dropout] = None,
 ) -> torch.FloatTensor:
     r"""
-    Evaluate the interaction function of CrossE for the given representations.
-
-    # TODO: Move this references
-    cf. https://arxiv.org/abs/1903.04750
-    cf. https://github.com/wencolani/CrossE
+    Evaluate the interaction function of CrossE for the given representations from [zhang2019b]_.
 
     .. math ::
         Dropout(Activation(c_r \odot h + c_r \odot h \odot r + b))^T t)
@@ -1126,12 +1123,14 @@ def cross_e_interaction(
     :param bias: shape: (1, 1, 1, 1, dim)
         The combination bias.
     :param activation:
-        The combination activation. Should be tanh for consistency with the CrossE paper.
+        The combination activation. Should be :class:`torch.nn.Tanh` for consistency with the CrossE paper.
     :param dropout:
         Dropout applied after the combination.
 
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
+
+    .. seealso:: https://github.com/wencolani/CrossE
     """
     # head interaction
     h = c_r * h
