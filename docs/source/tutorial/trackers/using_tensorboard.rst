@@ -27,12 +27,12 @@ The Tensorboard can then be accessed via a browser at: http://localhost:6006/
 .. note::
 
     It is not required for the Tensorboard process to be running whilst the training is happening. Indeed,
-    it only needs to be started once you want to interact and view the logs. It can be stopped at any time
-    and the logs will persist in the filesystem.
+    it only needs to be started once you want to interact with and view the logs. It can be stopped at any
+    time and the logs will persist in the filesystem.
 
 Minimal Pipeline Example
 ---------------------------------
-A CSV log file can be generated with the following:
+A tensorboard tracker can be generated as follows:
 
 .. code-block:: python
 
@@ -44,7 +44,7 @@ A CSV log file can be generated with the following:
         result_tracker='tensorboard',
     )
 
-It is placed in a subdirectory of :mod:`pystow` default data directory with PyKEEN called ``tensorboard``,
+It is placed in a subdirectory of :mod:`pystow` default data directory of PyKEEN called ``tensorboard``,
 which will likely be at ``~/.data/pykeen/logs/tensorboard`` on your system. The file is named based on the
 current time if no alternative is provided.
 
@@ -88,3 +88,22 @@ argument like:
 
     Please be aware that if you re-run an experiment using the same directory, then the logs will be combined.
     It is advisable to use a unique sub-directory for each experiment to allow for easy comparison.
+
+Minimal HPO Pipeline Example
+---------------------------------
+Tensorboard tracking can also be used in conjunction with a HPO pipeline as follows:
+
+.. code-block:: python
+
+    from pykeen.pipeline import pipeline
+
+    hpo_pipeline_result = hpo_pipeline(
+        n_trials=30,
+        dataset='Nations',
+        model='TransE',
+        result_tracker='tensorboard',
+    )
+
+This provides a way to compare directly between different trails and parameter configurations. Please not that it
+is recommended to leave the experiment name as the default value here to allow for a directory to be created per
+trail.
