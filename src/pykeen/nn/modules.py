@@ -1322,6 +1322,7 @@ class CrossEInteraction(FunctionalInteraction[FloatTensor, Tuple[FloatTensor, Fl
         embedding_dim: int = 50,
         combination_activation: HintOrType[nn.Module] = nn.Tanh,
         combination_activation_kwargs: Optional[Mapping[str, Any]] = None,
+        combination_dropout: Optional[float] = 0.5,
     ):
         """
         Instantiate the interaction module.
@@ -1333,6 +1334,8 @@ class CrossEInteraction(FunctionalInteraction[FloatTensor, Tuple[FloatTensor, Fl
         :param combination_activation_kwargs:
             Additional keyword-based arguments passed to the constructor of the combination activation function (if
             not already instantiated).
+        :param combination_dropout:
+            An optional dropout applied to the combination.
         """
         super().__init__()
         self.combination_activation = activation_resolver.make(
@@ -1340,9 +1343,14 @@ class CrossEInteraction(FunctionalInteraction[FloatTensor, Tuple[FloatTensor, Fl
             pos_kwargs=combination_activation_kwargs,
         )
         self.combination_bias = nn.Parameter(data=torch.zeros(1, 1, 1, 1, embedding_dim))
+        self.combination_dropout = nn.Dropout(combination_dropout) if combination_dropout else None
 
     def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
-        return dict(combination_bias=self.combination_bias, combination_activation=self.combination_activation)
+        return dict(
+            combination_bias=self.combination_bias,
+            combination_activation=self.combination_activation,
+            combination_dropout=self.combination_dropout,
+        )
 
     @staticmethod
     def _prepare_hrt_for_functional(

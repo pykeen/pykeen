@@ -1090,7 +1090,7 @@ def cross_e_interaction(
     t: torch.FloatTensor,
     combination_bias: torch.FloatTensor,
     combination_activation: nn.Module,
-    dropout: Optional[nn.Dropout] = None,
+    combination_dropout: Optional[nn.Dropout] = None,
 ) -> torch.FloatTensor:
     r"""
     Evaluate the interaction function of CrossE for the given representations.
@@ -1127,7 +1127,7 @@ def cross_e_interaction(
         The combination bias.
     :param combination_activation:
         The combination activation. Should be tanh for consistency with the CrossE paper.
-    :param dropout:
+    :param combination_dropout:
         Dropout applied after the combination.
 
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
@@ -1139,7 +1139,7 @@ def cross_e_interaction(
     r = h * r
     # combination
     x = combination_activation(h + r + combination_bias)
-    if dropout is not None:
-        x = dropout(x)
+    if combination_dropout is not None:
+        x = combination_dropout(x)
     # similarity
     return (x * t).sum(dim=-1)
