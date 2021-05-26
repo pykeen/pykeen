@@ -29,7 +29,7 @@ class CrossE(ERModel[FloatTensor, Tuple[FloatTensor, FloatTensor], FloatTensor])
     def __init__(
         self,
         *,
-        embedding_dim: int = 200,
+        embedding_dim: int = 50,
         combination_activation: HintOrType[nn.Module] = nn.Tanh,
         combination_activation_kwargs: Optional[Mapping[str, Any]] = None,
         combination_dropout: Optional[float] = 0.5,
@@ -37,7 +37,7 @@ class CrossE(ERModel[FloatTensor, Tuple[FloatTensor, FloatTensor], FloatTensor])
     ) -> None:
         r"""Initialize CrossE via the :class:`pykeen.nn.modules.CrossEInteraction` interaction.
 
-        :param embedding_dim: The entity embedding dimension $d$. Defaults to 200. Is usually $d \in [50, 300]$.
+        :param embedding_dim: The entity embedding dimension $d$. Defaults to 50.
         :param combination_activation:
             The combination activation function.
         :param combination_activation_kwargs:
