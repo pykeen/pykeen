@@ -22,7 +22,7 @@ from .compositions import CompositionModule, composition_resolver
 from .init import init_phases, xavier_normal_, xavier_normal_norm_, xavier_uniform_, xavier_uniform_norm_
 from .message_passing import Decomposition, decomposition_resolver
 from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolver
-from ..regularizers import Regularizer
+from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import CoreTriplesFactory
 from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer
 from ..utils import Bias, activation_resolver, clamp_norm, complex_normalize, convert_to_canonical_shape
@@ -222,7 +222,7 @@ class Embedding(RepresentationModule):
 
     normalizer: Optional[Normalizer]
     constrainer: Optional[Constrainer]
-    regularizer: Optional['Regularizer']
+    regularizer: Optional[Regularizer]
     dropout: Optional[nn.Dropout]
 
     def __init__(
@@ -236,7 +236,8 @@ class Embedding(RepresentationModule):
         normalizer_kwargs: Optional[Mapping[str, Any]] = None,
         constrainer: Hint[Constrainer] = None,
         constrainer_kwargs: Optional[Mapping[str, Any]] = None,
-        regularizer: Optional['Regularizer'] = None,
+        regularizer: Hint[Regularizer] = None,
+        regularizer_kwargs: Optional[Mapping[str, Any]] = None,
         trainable: bool = True,
         dtype: Optional[torch.dtype] = None,
         dropout: Optional[float] = None,
@@ -263,6 +264,10 @@ class Embedding(RepresentationModule):
             to be in-place, but the weight tensor is modified in-place.
         :param constrainer_kwargs:
             Additional keyword arguments passed to the constrainer
+        :param regularizer:
+            A regularizer, which is applied to the selected embeddings in forward pass
+        :param regularizer_kwargs:
+            Additional keyword arguments passed to the regularizer
         :param dropout:
             A dropout value for the embeddings.
         """
@@ -288,6 +293,8 @@ class Embedding(RepresentationModule):
         ))
         self.normalizer = _handle(normalizer, normalizers, normalizer_kwargs, label='normalizer')
         self.constrainer = _handle(constrainer, constrainers, constrainer_kwargs, label='constrainer')
+        if regularizer is not None:
+            regularizer = regularizer_resolver.make(regularizer, pos_kwargs=regularizer_kwargs)
         self.regularizer = regularizer
 
         self._embeddings = torch.nn.Embedding(
@@ -417,7 +424,8 @@ class EmbeddingSpecification:
     constrainer: Hint[Constrainer] = None
     constrainer_kwargs: Optional[Mapping[str, Any]] = None
 
-    regularizer: Optional['Regularizer'] = None
+    regularizer: Hint[Regularizer] = None
+    regularizer_kwargs: Optional[Mapping[str, Any]] = None
 
     dtype: Optional[torch.dtype] = None
     dropout: Optional[float] = None
@@ -435,6 +443,7 @@ class EmbeddingSpecification:
             constrainer=self.constrainer,
             constrainer_kwargs=self.constrainer_kwargs,
             regularizer=self.regularizer,
+            regularizer_kwargs=self.regularizer_kwargs,
             dtype=self.dtype,
             dropout=self.dropout,
         )

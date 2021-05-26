@@ -4,10 +4,11 @@
 
 import inspect
 import json
-import os
+import pathlib
 from typing import Callable, Iterable, Optional, Set, Tuple, Type, Union
 
 import torch
+from class_resolver import Hint
 from torch import nn
 
 from .cli import HERE
@@ -29,25 +30,25 @@ _SKIP_ANNOTATIONS = {
     nn.Module, Optional[nn.Module], Type[nn.Module], Optional[Type[nn.Module]],
     Model, Optional[Model], Type[Model], Optional[Type[Model]],
     Union[str, Callable[[torch.FloatTensor], torch.FloatTensor]],
+    Hint[nn.Module],
 }
 _SKIP_EXTRANEOUS = {
     'predict_with_sigmoid',
 }
 
 
-def iterate_config_paths() -> Iterable[Tuple[str, str, str]]:
+def iterate_config_paths() -> Iterable[Tuple[str, pathlib.Path, pathlib.Path]]:
     """Iterate over all configuration paths."""
-    for model in os.listdir(HERE):
-        if model not in model_resolver.lookup_dict:
+    for model_directory in HERE.iterdir():
+        if model_directory.name not in model_resolver.lookup_dict:
             continue
-        model_directory = os.path.join(HERE, model)
-        for config in os.listdir(model_directory):
-            if config.startswith('hpo'):
+        for config in model_directory.iterdir():
+            if config.name.startswith('hpo'):
                 continue
-            path = os.path.join(model_directory, config)
-            if not os.path.isfile(path) or not path.endswith('.json'):
+            path = model_directory.joinpath(config)
+            if not path.is_file() or not path.suffix == '.json':
                 continue
-            yield model, config, path
+            yield model_directory.name, config, path
 
 
 def _should_skip_because_type(x):
@@ -59,7 +60,7 @@ def _should_skip_because_type(x):
     return False
 
 
-def get_configuration_errors(path: str):  # noqa: C901
+def get_configuration_errors(path: Union[str, pathlib.Path]):  # noqa: C901
     """Get a list of errors with a given experimental configuration JSON file."""
     with open(path) as file:
         configuration = json.load(file)
