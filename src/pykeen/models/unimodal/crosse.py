@@ -4,9 +4,9 @@
 
 from typing import Any, Mapping, Optional, Tuple
 
+from class_resolver import HintOrType
 from torch import FloatTensor, nn
 
-from class_resolver import HintOrType
 from ..nbase import ERModel
 from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_uniform_
