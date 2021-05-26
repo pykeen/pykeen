@@ -17,7 +17,9 @@ from torch import FloatTensor, nn
 from . import functional as pkf
 from .combinations import Combination
 from ..typing import HeadRepresentation, HintOrType, RelationRepresentation, TailRepresentation
-from ..utils import CANONICAL_DIMENSIONS, activation_resolver, convert_to_canonical_shape, ensure_tuple, upgrade_to_sequence
+from ..utils import (
+    CANONICAL_DIMENSIONS, activation_resolver, convert_to_canonical_shape, ensure_tuple, upgrade_to_sequence,
+)
 
 __all__ = [
     'interaction_resolver',
@@ -1347,9 +1349,9 @@ class CrossEInteraction(FunctionalInteraction[FloatTensor, Tuple[FloatTensor, Fl
 
     def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
         return dict(
-            combination_bias=self.combination_bias,
-            combination_activation=self.combination_activation,
-            combination_dropout=self.combination_dropout,
+            bias=self.combination_bias,
+            activation=self.combination_activation,
+            dropout=self.combination_dropout,
         )
 
     @staticmethod

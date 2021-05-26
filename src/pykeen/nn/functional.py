@@ -1088,9 +1088,9 @@ def cross_e_interaction(
     r: torch.FloatTensor,
     c_r: torch.FloatTensor,
     t: torch.FloatTensor,
-    combination_bias: torch.FloatTensor,
-    combination_activation: nn.Module,
-    combination_dropout: Optional[nn.Dropout] = None,
+    bias: torch.FloatTensor,
+    activation: nn.Module,
+    dropout: Optional[nn.Dropout] = None,
 ) -> torch.FloatTensor:
     r"""
     Evaluate the interaction function of CrossE for the given representations.
@@ -1123,11 +1123,11 @@ def cross_e_interaction(
         The relation-specific interaction vector.
     :param t: shape: (batch_size, 1, 1, num_tails, dim)
         The tail representations.
-    :param combination_bias: shape: (1, 1, 1, 1, dim)
+    :param bias: shape: (1, 1, 1, 1, dim)
         The combination bias.
-    :param combination_activation:
+    :param activation:
         The combination activation. Should be tanh for consistency with the CrossE paper.
-    :param combination_dropout:
+    :param dropout:
         Dropout applied after the combination.
 
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
@@ -1138,8 +1138,8 @@ def cross_e_interaction(
     # relation interaction (notice that h has been updated)
     r = h * r
     # combination
-    x = combination_activation(h + r + combination_bias)
-    if combination_dropout is not None:
-        x = combination_dropout(x)
+    x = activation(h + r + bias)
+    if dropout is not None:
+        x = dropout(x)
     # similarity
     return (x * t).sum(dim=-1)
