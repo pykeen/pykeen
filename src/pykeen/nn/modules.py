@@ -1315,6 +1315,7 @@ class CrossEInteraction(FunctionalInteraction[FloatTensor, Tuple[FloatTensor, Fl
     """
 
     func = pkf.cross_e_interaction
+    relation_shape = ("d", "d")
 
     def __init__(
         self,

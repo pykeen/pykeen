@@ -81,6 +81,19 @@ class ConvKBTests(cases.InteractionTestCase):
         return linear(x.view(1, -1))
 
 
+class CrossETests(cases.InteractionTestCase):
+    """Tests for CrossE interaction function."""
+
+    cls = pykeen.nn.modules.CrossEInteraction
+    kwargs = dict(
+        embedding_dim=cases.InteractionTestCase.dim,
+    )
+
+    def _exp_score(self, h, r, c_r, t, combination_bias, combination_activation) -> torch.FloatTensor:  # noqa: D102
+        h, r, c_r, t, combination_bias = strip_dim(h, r, c_r, t, combination_bias)
+        return (combination_activation(h * c_r + h * r * c_r + combination_bias) * t).sum()
+
+
 class DistMultTests(cases.InteractionTestCase):
     """Tests for DistMult interaction function."""
 
