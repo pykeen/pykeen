@@ -62,7 +62,7 @@ class CrossE(ERModel[FloatTensor, Tuple[FloatTensor, FloatTensor], FloatTensor])
                 combination_activation=combination_activation,
                 combination_activation_kwargs=combination_activation_kwargs,
                 combination_dropout=combination_dropout,
-
+                embedding_dim=embedding_dim,
             ),
             entity_representations=[
                 EmbeddingSpecification(
