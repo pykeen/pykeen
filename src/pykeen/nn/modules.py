@@ -17,7 +17,7 @@ from torch import FloatTensor, nn
 from . import functional as pkf
 from .combinations import Combination
 from ..typing import HeadRepresentation, HintOrType, RelationRepresentation, TailRepresentation
-from ..utils import CANONICAL_DIMENSIONS, convert_to_canonical_shape, ensure_tuple, upgrade_to_sequence
+from ..utils import CANONICAL_DIMENSIONS, activation_resolver, convert_to_canonical_shape, ensure_tuple, upgrade_to_sequence
 
 __all__ = [
     'interaction_resolver',
@@ -1306,6 +1306,40 @@ class MonotonicAffineTransformationInteraction(
         t: TailRepresentation,
     ) -> torch.FloatTensor:  # noqa: D102
         return self.log_scale.exp() * self.base(h=h, r=r, t=t) + self.bias
+
+
+class CrossEInteraction(FunctionalInteraction[FloatTensor, Tuple[FloatTensor, FloatTensor], FloatTensor]):
+    """A module wrapper for the CrossE interaction function.
+
+    .. seealso:: :func:`pykeen.nn.functional.cross_e_interaction`
+    """
+
+    func = pkf.cross_e_interaction
+
+    def __init__(
+        self,
+        embedding_dim: int = 50,
+        combination_activation: HintOrType[nn.Module] = nn.Tanh,
+        combination_activation_kwargs: Optional[Mapping[str, Any]] = None,
+    ):
+        super().__init__()
+        self.combination_activation = activation_resolver.make(
+            combination_activation,
+            pos_kwargs=combination_activation_kwargs,
+        )
+        self.combination_bias = nn.Parameter(data=torch.zeros(1, 1, 1, 1, embedding_dim))
+
+    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
+        return dict(combination_bias=self.combination_bias, combination_activation=self.combination_activation)
+
+    @staticmethod
+    def _prepare_hrt_for_functional(
+        h: FloatTensor,
+        r: Tuple[FloatTensor, FloatTensor],
+        t: FloatTensor,
+    ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
+        r, c_r = r
+        return dict(h=h, r=r, c_r=c_r, t=t)
 
 
 interaction_resolver = Resolver.from_subclasses(
