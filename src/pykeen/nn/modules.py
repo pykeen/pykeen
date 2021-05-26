@@ -34,6 +34,7 @@ __all__ = [
     'ComplExInteraction',
     'ConvEInteraction',
     'ConvKBInteraction',
+    'CrossEInteraction',
     'DistMultInteraction',
     'ERMLPInteraction',
     'ERMLPEInteraction',
