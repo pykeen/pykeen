@@ -62,6 +62,7 @@ from .compgcn import CompGCN
 from .complex import ComplEx
 from .conv_e import ConvE
 from .conv_kb import ConvKB
+from .crosse import CrossE
 from .distmult import DistMult
 from .ermlp import ERMLP
 from .ermlpe import ERMLPE
@@ -89,6 +90,7 @@ __all__ = [
     'ComplEx',
     'ConvE',
     'ConvKB',
+    'CrossE',
     'DistMult',
     'ERMLP',
     'ERMLPE',
