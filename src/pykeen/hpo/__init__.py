@@ -33,7 +33,6 @@ original paper unless otherwise stated on the model's reference page. In case hy
 specific dataset were not available, we choose the hyper-parameters based on the findings in our
 large-scale benchmarking [ali2020a]_.
 
-
 In addition to reasonable default hyper-parameters, every model in PyKEEN has
 default "strategies" for optimizing these hyper-parameters which either constitute
 ranges for integer/floating point numbers or as enumerations for categorical variables
@@ -70,7 +69,7 @@ as 1 or 2.
 ...    n_trials=30,
 ... )
 
-If you would like to set your own HPO strategy, you can do so with the
+If you would like to set your own HPO strategy for the model's hyperparameters, you can do so with the
 ``model_kwargs_ranges`` argument. In the example below, the embeddings are
 searched over a larger range (``low`` and ``high``), but with a higher step
 size (``q``), such that 100, 200, 300, 400, and 500 are searched.
@@ -118,6 +117,9 @@ The HPO pipeline does not support optimizing over the hyper-parameters for each
 initializer. If you are interested in this, consider rolling your own ablation
 study pipeline.
 
+Optimizing Different Components
+-------------------------------
+
 Optimizing the Loss
 ~~~~~~~~~~~~~~~~~~~
 While each model has its own default loss, you can explicitly specify a loss
@@ -158,24 +160,7 @@ specify the ``loss_kwargs_ranges`` explicitly, as in the following example.
 ...    ),
 ... )
 
-Optimizing the Regularizer
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-Every model has a default regularizer (:py:attr:`pykeen.models.Model.regularizer_default`)
-and default hyper-parameters for the regularizer (:py:attr:`pykeen.models.Model.regularizer_default_kwargs`).
-Better than the loss is that every regularizer class has a built-in hyper-parameter optimization
-strategy just like the model at :py:attr:`pykeen.regularizers.Regularizer.hpo_default`.
 
-Therefore, the rules for specifying ``regularizer``, ``regularizer_kwargs``, and
-``regularizer_kwargs_ranges`` are the same as for models.
-
-Optimizing the Optimizer
-~~~~~~~~~~~~~~~~~~~~~~~~
-Yo dawg, I heard you liked optimization, so we put an optimizer around your
-optimizer so you can optimize while you optimize. Since all optimizers used
-in PyKEEN come from the PyTorch implementations, they obviously do not have
-``hpo_defaults`` class variables. Instead, every optimizer has a default
-optimization strategy stored in :py:attr:`pykeen.optimizers.optimizers_hpo_defaults`
-the same way that the default strategies for losses are stored externally.
 
 Optimizing the Negative Sampler
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -185,6 +170,15 @@ Each has a strategy stored in :py:attr:`pykeen.sampling.NegativeSampler.hpo_defa
 
 Like models and regularizers, the rules are the same for specifying ``negative_sampler``,
 ``negative_sampler_kwargs``, and ``negative_sampler_kwargs_ranges``.
+
+Optimizing the Optimizer
+~~~~~~~~~~~~~~~~~~~~~~~~
+Yo dawg, I heard you liked optimization, so we put an optimizer around your
+optimizer so you can optimize while you optimize. Since all optimizers used
+in PyKEEN come from the PyTorch implementations, they obviously do not have
+``hpo_defaults`` class variables. Instead, every optimizer has a default
+optimization strategy stored in :py:attr:`pykeen.optimizers.optimizers_hpo_defaults`
+the same way that the default strategies for losses are stored externally.
 
 Optimizing Everything Else
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -196,7 +190,7 @@ have corresponding `*_kwargs` and `*_kwargs_ranges`:
 - ``evaluation``
 
 Early Stopping
-~~~~~~~~~~~~~~
+--------------
 Early stopping can be baked directly into the :mod:`optuna` optimization.
 
 The important keys are ``stopper='early'`` and ``stopper_kwargs``.
@@ -215,11 +209,62 @@ care of adding appropriate callbacks to interface with :mod:`optuna`.
 These stopper kwargs were chosen to make the example run faster. You will
 likely want to use different ones.
 
-Optimizing Optuna
-~~~~~~~~~~~~~~~~~
-By default, :mod:`optuna` uses the Tree-structured Parzen Estimator (TPE)
-estimator (:class:`optuna.samplers.TPESampler`), which is a probabilistic
-approach.
+Configuring Optuna
+------------------
+Choosing a Search Algorithm
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Because PyKEEN's hyper-parameter optimization pipeline is powered by Optuna, it can directly use all of
+Optuna's built-in samplers listed on :mod:`optuna.samplers` or any custom subclass of
+:class:`optuna.samplers.BaseSampler`.
+
+By default, PyKEEN uses the Tree-structured Parzen Estimator (TPE; :class:`optuna.samplers.TPESampler`),
+a probabilistic search algorithm. You can explicitly set the sampler using the ``sampler`` argument
+(not to be confused with the negative sampler used when training under the sLCWA):
+
+>>> from pykeen.hpo import hpo_pipeline
+>>> from optuna.samplers import TPESampler
+>>> hpo_pipeline_result = hpo_pipeline(
+...    n_trials=30,
+...    sampler=TPESampler,
+...    dataset='Nations',
+...    model='TransE',
+... )
+
+You can alternatively pass a string so you don't have to worry about importing Optuna. PyKEEN knows that sampler
+classes always end in "Sampler" so you can pass either "TPE" or "TPESampler" as a string. This is case-insensitive.
+
+>>> from pykeen.hpo import hpo_pipeline
+>>> hpo_pipeline_result = hpo_pipeline(
+...    n_trials=30,
+...    sampler="tpe",
+...    dataset='Nations',
+...    model='TransE',
+... )
+
+It's also possible to pass a sampler instance directly:
+
+>>> from pykeen.hpo import hpo_pipeline
+>>> from optuna.samplers import TPESampler
+>>> sampler = TPESampler(prior_weight=1.1)
+>>> hpo_pipeline_result = hpo_pipeline(
+...    n_trials=30,
+...    sampler=sampler,
+...    dataset='Nations',
+...    model='TransE',
+... )
+
+If you're working in a JSON-based configuration setting, you won't be able to instantiate the sampler
+with your desired settings like this. As a solution, you can pass the keyword arguments via the
+``sampler_kwargs`` argument in combination with specifying the sampler as a string/class to the HPO pipeline like in:
+
+>>> from pykeen.hpo import hpo_pipeline
+>>> hpo_pipeline_result = hpo_pipeline(
+...    n_trials=30,
+...    sampler="tpe",
+...    sampler_kwargs=dict(prior_weight=1.1),
+...    dataset='Nations',
+...    model='TransE',
+... )
 
 To emulate most hyper-parameter optimizations that have used random
 sampling, use :class:`optuna.samplers.RandomSampler` like in:
@@ -233,33 +278,19 @@ sampling, use :class:`optuna.samplers.RandomSampler` like in:
 ...    model='TransE',
 ... )
 
-Alternatively, the strings ``"tpe"`` or ``"random"`` can be used so you
-don't have to import :mod:`optuna` in your script.
+Grid search can be performed using :class:`optuna.samplers.GridSampler` like in:
 
 >>> from pykeen.hpo import hpo_pipeline
+>>> from optuna.samplers import GridSampler
 >>> hpo_pipeline_result = hpo_pipeline(
 ...    n_trials=30,
-...    sampler='random',
-...    dataset='Nations',
-...    model='TransE',
-... )
-
-While :class:`optuna.samplers.RandomSampler` doesn't (currently) take
-any arguments, the ``sampler_kwargs`` parameter can be used to pass
-arguments by keyword to the instantiation of
-:class:`optuna.samplers.TPESampler` like in:
-
->>> from pykeen.hpo import hpo_pipeline
->>> hpo_pipeline_result = hpo_pipeline(
-...    n_trials=30,
-...    sampler='tpe',
-...    sampler_kwargs=dict(prior_weight=1.1),
+...    sampler=GridSampler,
 ...    dataset='Nations',
 ...    model='TransE',
 ... )
 
 Full Examples
-~~~~~~~~~~~~~
+-------------
 The examples above have shown the permutation of one setting at a time. This
 section has some more complete examples.
 
