@@ -3,8 +3,8 @@
 """The easiest way to optimize a model is with the :func:`pykeen.hpo.hpo_pipeline` function.
 
 All of the following examples are about getting the best model
-when training TransE on the Nations dataset. Each gives a bit
-of insight into usage of the :func:`hpo_pipeline` function.
+when training :class:`pykeen.models.TransE` on the :class:`pykeen.datasets.Nations` dataset.
+Each gives a bit of insight into usage of the :func:`hpo_pipeline` function.
 
 The minimal usage of the hyper-parameter optimization is to specify the
 dataset, the model, and how much to run. The following example shows how to
@@ -28,16 +28,206 @@ as many trials as possible will be run in 60 seconds.
 ...    model='TransE',
 ... )
 
-Every model in PyKEEN has default values for its hyper-parameters chosen from the best-reported values in each model's
+The hyper-parameter optimization pipeline has the ability to optimize hyper-parameters for the corresponding
+``*_kwargs`` arguments in the :func:`pykeen.pipeline.pipeline`:
+
+- ``model``
+- ``loss``
+- ``regularizer``
+- ``optimizer``
+- ``negative_sampler``
+- ``training``
+
+Defaults
+--------
+Each component's hyper-parameters have a reasonable default values. For example, every model in PyKEEN has
+default for its hyper-parameters chosen from the best-reported values in each model's
 original paper unless otherwise stated on the model's reference page. In case hyper-parameters for a model for a
 specific dataset were not available, we choose the hyper-parameters based on the findings in our
 large-scale benchmarking [ali2020a]_.
 
-In addition to reasonable default hyper-parameters, every model in PyKEEN has
-default "strategies" for optimizing these hyper-parameters which either constitute
-ranges for integer/floating point numbers or as enumerations for categorical variables
-and booleans.
+Some components contain strategies for doing hyper-parameter optimization. When you call the
+:func:`pykeen.hpo.hpo_pipeline`, the following steps are taken to determine what happens for each hyper-parameter
+in each componenent:
 
+1. If an explicit value was passed, use it.
+2. If no explicit value was passed and an HPO strategy was passed, use the explicit strategy.
+3. If no explicit value was passed and no HPO strategy was passed and there is a default
+   HPO strategy, use the default strategy.
+4. If no explicit value was passed, no HPO strategy was passed, and there is no default HPO strategy, use
+   the default hyper-parameter value
+5. If no explicit value was passed, no HPO strategy was passed, and there is no default HPO strategy, and
+   there is no default hyper-parameter value, raise an :class:`TypeError`
+
+For example, the TransE model's default HPO strategy for its ``embedding_dim`` argument is to search between
+$[16, 256]$ with a step size of 16. The $l_p$ norm is set to search as either 1 or 2. This will be overridden
+with 50 in the following code:
+
+>>> from pykeen.hpo import hpo_pipeline
+>>> hpo_pipeline_result = hpo_pipeline(
+...     dataset='Nations',
+...     model='TransE',
+...     model_kwargs=dict(embedding_dim=50),
+... )
+
+The strategy can be explicitly overridden with:
+
+>>> from pykeen.hpo import hpo_pipeline
+>>> hpo_pipeline_result = hpo_pipeline(
+...     dataset='Nations',
+...     model='TransE',
+...     model_kwargs_ranges=dict(
+...         embedding_dim=dict(type=int, low=16, high=256, step=32),
+...     ),
+... )
+
+Each model, loss, regularizer, negative sampler, and training loop specify a class variable called ``hpo_defaults``
+in which there's a dictionary with all of the default strategies. They keys match up to the arguments in their
+respective ``__init__()`` functions.
+
+Since optimizers aren't re-implemented in PyKEEN, there's a specfic dictionary at
+:py:attr:`pykeen.optimizers.optimizers_hpo_defaults` containing their strategies. It's debatable whether
+you should optimize the optimizers (yo dawg), so you can always choose to set the learning rate ``lr`` to a constant
+value.
+
+Strategies
+----------
+An HPO strategy is a Python :class:`dict` with a ``type`` key corresponding to a categorical variable, boolean
+variable, integer variable, or floating point number variable. The value itself for ``type``
+should be one of the following:
+
+1. ``"categorical"``
+2. ``bool`` or ``"bool"``
+3. ``int`` or ``"int"``
+4. ``float`` or ``"float"``
+
+Several strategies can be grouped together in a dictionary where the key is the name of the hyper-parameter
+for the component in the ``*_kwargs_ranges`` arguments to the HPO pipeline.
+
+Categorical
+~~~~~~~~~~~
+The only other key to use inside a categorical variable is ``choices``. For example, if you want to
+choose between Kullback-Leibler divergence or expected likelihood as similarity used in the KG2E model,
+you can write a strategy like:
+
+>>> from pykeen.hpo import hpo_pipeline
+>>> hpo_pipeline_result = hpo_pipeline(
+...     dataset='Nations',
+...     model='KG2E',
+...     model_kwargs_ranges=dict(
+...         dist_similarity=dict(type='categorical', choices=['KL', 'EL']),
+...     ),
+... )
+
+Boolean
+~~~~~~~
+The boolean variable actually doesn't need any extra keys besides the type, so a strategy for a boolean
+variable always looks like ``dict(type='bool')``. Under the hood, this is automatically translated to a categorical
+variable with ``choices=[True, False]``.
+
+>>> from pykeen.hpo import hpo_pipeline
+>>> hpo_pipeline_result = hpo_pipeline(
+...     dataset='Nations',
+...     model='TransE',
+...     training_loop='sLCWA',
+...     negative_sampler_kwargs_ranges=dict(
+...         filtered=dict(type=boolean),
+...     ),
+... )
+
+Integers and Floating Point Numbers
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The integer and floating point number strategies share several aspects. Both require a ``low`` and ``high`` entry
+like in ``dict(type=float, low=0.0, high=1.0)`` or ``dict(type=int, low=1, high=10)``.
+
+Linear Scale
+************
+By default, you don't need to specify a ``scale``, but you can be explicit by setting ``scale='linear'``.
+This behavior should be self explanatory - there is no rescaling and you get back uniform distribution
+within the bounds specified by the ``low`` and ``high`` arguments. This applies to both ``type=int`` and
+``type=float``. The following example uniformly choose from [1,100]:
+
+>>> from pykeen.hpo import hpo_pipeline
+>>> hpo_pipeline_result = hpo_pipeline(
+...     dataset='Nations',
+...     model='TransE',
+...     training_loop='sLCWA',
+...     negative_sampler_kwargs_ranges=dict(
+...         num_negs_per_positive=dict(type=int, low=1, high=100),
+...     ),
+... )
+
+Power Scale (``type=int`` only)
+*******************************
+The power scale was originally implemented as ``scale='power_two'`` to support
+:class:`pykeen.models.ConvE`'s ``output_channels`` parameter. However, using two as a base is a bit limiting, so we
+also implemented a more general ``scale='power'`` where you can set set ``base``. Here's an example to optimize over
+the number of negatives per positive ratio using `base=10`:
+
+>>> from pykeen.hpo import hpo_pipeline
+>>> hpo_pipeline_result = hpo_pipeline(
+...     dataset='Nations',
+...     model='TransE',
+...     training_loop='sLCWA',
+...     negative_sampler_kwargs_ranges=dict(
+...         num_negs_per_positive=dict(type=int, scale='power', base=10, low=0, high=2),
+...     ),
+... )
+
+The power scale can only be used with `type=int` and not bool, categorical, or float. I like this scale because
+it can quickly discretize a large search space. In this example, you will get `[10**0, 10**1, 10**2]` as
+choices then uniformly choose from them.
+
+Logarithmic Reweighting
+***********************
+The evil twin to the power scale is logarithmic reweighting on the linear scale. This is applicable ``type=int`` and
+``type=float``. Rather than changing the choices themselves, the log scale uses Optuna's built in ``log`` functionality
+to reassign the probabilities uniformly over the log'd distribution. The same example as above could be
+accomplished with:
+
+>>> from pykeen.hpo import hpo_pipeline
+>>> hpo_pipeline_result = hpo_pipeline(
+...     dataset='Nations',
+...     model='TransE',
+...     training_loop='sLCWA',
+...     negative_sampler_kwargs_ranges=dict(
+...         num_negs_per_positive=dict(type=int, low=1, high=100, log=True),
+...     ),
+... )
+
+but this time, it's not discretized. However, you're just as likely to pick from $[1,10]$ as $[10, 100]$.
+
+Stepping
+********
+With the linear scale, you can specify the ``step`` size. This discretizes the distribution in linear space,
+so if you want to pick from $10, 20, ... 100$, you can do:
+
+>>> from pykeen.hpo import hpo_pipeline
+>>> hpo_pipeline_result = hpo_pipeline(
+...     dataset='Nations',
+...     model='TransE',
+...     training_loop='sLCWA',
+...     negative_sampler_kwargs_ranges=dict(
+...         num_negs_per_positive=dict(type=int, low=10, high=100, step=10),
+...     ),
+... )
+
+This actually also works with logarithmic reweighting, since it is still technically on a linear scale,
+but with probabilites reweighted logarithmically. So now you'd pick from one of $[10]$ or $[20, 30, 40, ..., 100]$
+with the same probability
+
+>>> from pykeen.hpo import hpo_pipeline
+>>> hpo_pipeline_result = hpo_pipeline(
+...     dataset='Nations',
+...     model='TransE',
+...     training_loop='sLCWA',
+...     negative_sampler_kwargs_ranges=dict(
+...         num_negs_per_positive=dict(type=int, low=10, high=100, step=10, log=True),
+...     ),
+... )
+
+Custom Strategies
+-----------------
 While the default values for hyper-parameters are encoded with the python syntax
 for default values of the ``__init__()`` function of each model, the ranges/scales can be
 found in the class variable :py:attr:`pykeen.models.Model.hpo_default`. For
@@ -89,8 +279,8 @@ size (``q``), such that 100, 200, 300, 400, and 500 are searched.
     If the given range is not divisible by the step size, then the
     upper bound will be omitted.
 
-If you want to optimize the entity initializer, you can use the `categorical` type,
-which requres a `choices` key with a list of choices. This works for strings, integers,
+If you want to optimize the entity initializer, you can use the ``type='categorical'`` type,
+which requres a ``choices=[...]`` key with a list of choices. This works for strings, integers,
 floats, etc.
 
 >>> from pykeen.hpo import hpo_pipeline
@@ -113,12 +303,12 @@ constrainer and regularizer since there could be multiple representations for ei
 relation, or both. Check your desired model's documentation page for the kwargs that you can
 optimize over.
 
+Keys of :data:`pykeen.nn.emb.initializers` can be passed as initializers as strings and
+keys of :data:`pykeen.nn.emb.constrainers` can be passed as constrainers as strings.
+
 The HPO pipeline does not support optimizing over the hyper-parameters for each
 initializer. If you are interested in this, consider rolling your own ablation
 study pipeline.
-
-Optimizing Different Components
--------------------------------
 
 Optimizing the Loss
 ~~~~~~~~~~~~~~~~~~~
@@ -159,8 +349,6 @@ specify the ``loss_kwargs_ranges`` explicitly, as in the following example.
 ...        margin=dict(type=float, low=1.0, high=2.0),
 ...    ),
 ... )
-
-
 
 Optimizing the Negative Sampler
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

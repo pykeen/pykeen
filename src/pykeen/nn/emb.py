@@ -35,6 +35,9 @@ __all__ = [
     'Embedding',
     'LiteralRepresentation',
     'EmbeddingSpecification',
+    'constrainers',
+    'initializers',
+    'normalizers',
 ]
 
 logger = logging.getLogger(__name__)
@@ -254,7 +257,18 @@ class Embedding(RepresentationModule):
         :param initializer:
             An optional initializer, which takes an uninitialized (num_embeddings, embedding_dim) tensor as input,
             and returns an initialized tensor of same shape and dtype (which may be the same, i.e. the
-            initialization may be in-place)
+            initialization may be in-place). Can be passed as a function, or as string corresponding to a key in
+            :data:`pykeen.nn.emb.initializers` such as:
+
+            - ``"xavier_uniform"``
+            - ``"xavier_uniform_norm"``
+            - ``"xavier_normal"``
+            - ``"xavier_normal_norm"``
+            - ``"normal"``
+            - ``"normal_norm"``
+            - ``"uniform"``
+            - ``"uniform_norm"``
+            - ``"init_phases"``
         :param initializer_kwargs:
             Additional keyword arguments passed to the initializer
         :param normalizer:
@@ -264,7 +278,13 @@ class Embedding(RepresentationModule):
         :param constrainer:
             A function which is applied to the weights after each parameter update, without tracking gradients.
             It may be used to enforce model constraints outside of gradient-based training. The function does not need
-            to be in-place, but the weight tensor is modified in-place.
+            to be in-place, but the weight tensor is modified in-place. Can be passed as a function, or as a string
+            corresponding to a key in :data:`pykeen.nn.emb.constrainers` such as:
+
+            - ``'normalize'``
+            - ``'complex_normalize'``
+            - ``'clamp'``
+            - ``'clamp_norm'``
         :param constrainer_kwargs:
             Additional keyword arguments passed to the constrainer
         :param regularizer:
@@ -821,10 +841,11 @@ class CompGCNLayer(nn.Module):
         edge_type = 2 * edge_type
         # update entity representations: mean over self-loops / forward edges / backward edges
         x_e = (
-            self.composition(x_e, self.self_loop) @ self.w_loop
-            + self.message(x_e=x_e, x_r=x_r, edge_index=edge_index, edge_type=edge_type, weight=self.w_fwd)
-            + self.message(x_e=x_e, x_r=x_r, edge_index=edge_index.flip(0), edge_type=edge_type + 1, weight=self.w_bwd)
-        ) / 3
+                  self.composition(x_e, self.self_loop) @ self.w_loop
+                  + self.message(x_e=x_e, x_r=x_r, edge_index=edge_index, edge_type=edge_type, weight=self.w_fwd)
+                  + self.message(x_e=x_e, x_r=x_r, edge_index=edge_index.flip(0), edge_type=edge_type + 1,
+                                 weight=self.w_bwd)
+              ) / 3
 
         if self.bias:
             x_e = self.bias(x_e)
