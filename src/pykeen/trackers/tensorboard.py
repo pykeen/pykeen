@@ -4,7 +4,7 @@
 
 import pathlib
 import time
-from typing import Any, Dict, Mapping, Optional, TYPE_CHECKING, Type
+from typing import Any, Dict, Mapping, Optional, TYPE_CHECKING, Type, Union
 
 from .base import ResultTracker
 from ..constants import PYKEEN_LOGS
@@ -23,10 +23,11 @@ class TensorBoardResultTracker(ResultTracker):
 
     #: The class that's used to instantiate a summarywriter
     summary_writer_cls: Type['torch.utils.tensorboard.SummaryWriter']
+    path: pathlib.Path
 
     def __init__(
         self,
-        experiment_path: Optional[str] = None,
+        experiment_path: Union[None, str, pathlib.Path] = None,
         experiment_name: Optional[str] = None,
         tags: Optional[Dict[str, Any]] = None,
     ):
@@ -45,17 +46,14 @@ class TensorBoardResultTracker(ResultTracker):
         self.summary_writer_cls = torch.utils.tensorboard.SummaryWriter
         self.tags = tags
 
-        if experiment_path is None:
-            if experiment_name is None:
-                experiment_name = time.strftime('%Y-%m-%d-%H-%M-%S')
-            path = PYKEEN_LOGS.joinpath("tensorboard", experiment_name)
-        elif isinstance(experiment_path, str):
-            path = pathlib.Path(experiment_path)
+        if isinstance(experiment_path, str):
+            self.path = pathlib.Path(experiment_path)
+        elif isinstance(experiment_path, pathlib.Path):
+            self.path = experiment_path
         else:
             if experiment_name is None:
                 experiment_name = time.strftime('%Y-%m-%d-%H-%M-%S')
-            path = PYKEEN_LOGS.joinpath("tensorboard", experiment_name)
-        self.path = path
+            self.path = PYKEEN_LOGS.joinpath("tensorboard", experiment_name)
 
         self.writer = self.summary_writer_cls(log_dir=self.path)
 
