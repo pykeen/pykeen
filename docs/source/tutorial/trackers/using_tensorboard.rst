@@ -1,38 +1,39 @@
 Using Tensorboard
-=========================
-
-`Tensorboard <https://www.tensorflow.org/tensorboard/>`_ (TB) is a service for tracking experimental results
-during or after training.
-It is part of the larger Tensorflow project but can be used independently of it.
+=================
+`Tensorboard <https://www.tensorflow.org/tensorboard/>`_ is a service for tracking experimental results
+during or after training. It is part of the larger Tensorflow project but can be used independently of it.
 
 Installing Tensorboard
------------------
-If Tensorboard is not currently installed upon your system, it can be installed with ``pip install tensorboard``
-or install PyKEEN with the ``tensorboard`` extra with ``pip install pykeen[tensorboard]``.
+----------------------
+The :mod:`tensorboard` package can either be installed directly with ``pip install tensorboard``
+or with PyKEEN by using the ``tensorboard`` extra in ``pip install pykeen[tensorboard]``.
 
-One important thing to note is that tensorboard logs can created without actually installing tensorboard itself.
-However, if you want to view and interact with the data created via the tracker, it must be installed.
+.. note::
 
-Starting a Tensorboard Frontend Server
------------------
-Assuming Tensorboard has been installed and is in your current path, it can be started as follows:
+    Tensorboard logs can created without actually installing tensorboard itself.
+    However, if you want to view and interact with the data created via the tracker, it must be installed.
 
-.. code-block:: bash
+Starting Tensorboard
+--------------------
+The :mod:`tensorboard` web application can be started from the command line with
 
-    tensorboard --logdir=~/.data/pykeen/logs/tensorboard/
+.. code-block:: shell
 
-With the value passed to the ``logdir`` being the location on the file system of the log directory.
+    $ tensorboard --logdir=~/.data/pykeen/logs/tensorboard/
+
+where the value passed to the ``--logdir`` is location of log directory. By default, PyKEEN logs to
+``~/.data/pykeen/logs/tensorboard/``, but this is configurable.
 The Tensorboard can then be accessed via a browser at: http://localhost:6006/
 
 .. note::
 
-    It is not required for the Tensorboard process to be running whilst the training is happening. Indeed,
+    It is not required for the Tensorboard process to be running while the training is happening. Indeed,
     it only needs to be started once you want to interact with and view the logs. It can be stopped at any
     time and the logs will persist in the filesystem.
 
 Minimal Pipeline Example
----------------------------------
-A tensorboard tracker can be generated as follows:
+------------------------
+The tensorboard tracker can be used during training with the :func:`pykeen.pipeline.pipeline` as follows:
 
 .. code-block:: python
 
@@ -49,7 +50,7 @@ which will likely be at ``~/.data/pykeen/logs/tensorboard`` on your system. The 
 current time if no alternative is provided.
 
 Specifying a Log Name
------------------
+---------------------
 If you want to specify the name of the log file in the default directory, use the ``experiment_name`` keyword
 argument like:
 
@@ -67,7 +68,7 @@ argument like:
     )
 
 Specifying a Custom Log Directory
------------------
+---------------------------------
 If you want to specify a custom directory to store the tensorboard logs, use the ``experiment_path`` keyword
 argument like:
 
@@ -90,7 +91,7 @@ argument like:
     It is advisable to use a unique sub-directory for each experiment to allow for easy comparison.
 
 Minimal HPO Pipeline Example
----------------------------------
+----------------------------
 Tensorboard tracking can also be used in conjunction with a HPO pipeline as follows:
 
 .. code-block:: python
