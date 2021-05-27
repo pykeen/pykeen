@@ -19,7 +19,10 @@ from torch import nn
 from torch.nn import functional
 
 from .compositions import CompositionModule, composition_resolver
-from .init import init_phases, xavier_normal_, xavier_normal_norm_, xavier_uniform_, xavier_uniform_norm_, normal_norm_, uniform_norm_
+from .init import (
+    init_phases, normal_norm_, uniform_norm_, xavier_normal_, xavier_normal_norm_, xavier_uniform_,
+    xavier_uniform_norm_,
+)
 from .message_passing import Decomposition, decomposition_resolver
 from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolver
 from ..regularizers import Regularizer, regularizer_resolver
