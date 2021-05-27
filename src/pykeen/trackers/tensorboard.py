@@ -4,7 +4,7 @@
 
 import pathlib
 import time
-from typing import Any, Dict, Mapping, Optional, TYPE_CHECKING, Type, Union
+from typing import Any, Dict, Mapping, Optional, TYPE_CHECKING, Union
 
 from .base import ResultTracker
 from ..constants import PYKEEN_LOGS
@@ -21,8 +21,7 @@ __all__ = [
 class TensorBoardResultTracker(ResultTracker):
     """A tracker for TensorBoard."""
 
-    #: The class that's used to instantiate a summarywriter
-    summary_writer_cls: Type['torch.utils.tensorboard.SummaryWriter']
+    summary_writer: 'torch.utils.tensorboard.SummaryWriter'
     path: pathlib.Path
 
     def __init__(
@@ -43,7 +42,6 @@ class TensorBoardResultTracker(ResultTracker):
             The additional run details which are presented as tags to be logged
         """
         import torch.utils.tensorboard
-        self.summary_writer_cls = torch.utils.tensorboard.SummaryWriter
         self.tags = tags
 
         if isinstance(experiment_path, str):
@@ -55,7 +53,7 @@ class TensorBoardResultTracker(ResultTracker):
                 experiment_name = time.strftime('%Y-%m-%d-%H-%M-%S')
             self.path = PYKEEN_LOGS.joinpath("tensorboard", experiment_name)
 
-        self.writer = self.summary_writer_cls(log_dir=self.path)
+        self.writer = torch.utils.tensorboard.SummaryWriter(log_dir=self.path)
 
     def log_metrics(
         self,
