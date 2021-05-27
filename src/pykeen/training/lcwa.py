@@ -9,7 +9,6 @@ from typing import Optional
 import torch
 
 from .training_loop import TrainingLoop
-from .utils import apply_label_smoothing
 from ..triples import CoreTriplesFactory, Instances
 from ..triples.instances import LCWABatchType, LCWASampleType
 
@@ -50,61 +49,12 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
         else:
             predictions = self.model.score_t(hr_batch=batch_pairs, slice_size=slice_size)  # type: ignore
 
-        loss = self._loss_helper(
-            predictions,
-            batch_labels_full,
-            label_smoothing,
-        )
-        return loss
-
-    def _label_loss_helper(
-        self,
-        predictions: torch.FloatTensor,
-        labels: torch.FloatTensor,
-        label_smoothing: float,
-    ) -> torch.FloatTensor:
-        # Apply label smoothing
-        if label_smoothing > 0.:
-            labels = apply_label_smoothing(
-                labels=labels,
-                epsilon=label_smoothing,
-                num_classes=self.model.num_entities,
-            )
-
-        return self.model.compute_loss(predictions, labels)
-
-    def _mr_loss_helper(
-        self,
-        predictions: torch.FloatTensor,
-        labels: torch.FloatTensor,
-        _label_smoothing=None,
-    ) -> torch.FloatTensor:
-        # This shows how often one row has to be repeated
-        repeat_rows = (labels == 1).nonzero(as_tuple=False)[:, 0]
-        # Create boolean indices for negative labels in the repeated rows
-        labels_negative = labels[repeat_rows] == 0
-        # Repeat the predictions and filter for negative labels
-        negative_scores = predictions[repeat_rows][labels_negative]
-
-        # This tells us how often each true label should be repeated
-        repeat_true_labels = (labels[repeat_rows] == 0).nonzero(as_tuple=False)[:, 0]
-        # First filter the predictions for true labels and then repeat them based on the repeat vector
-        positive_scores = predictions[labels == 1][repeat_true_labels]
-
-        return self.model.compute_loss(positive_scores, negative_scores)
-
-    def _self_adversarial_negative_sampling_loss_helper(
-        self,
-        predictions: torch.FloatTensor,
-        labels: torch.FloatTensor,
-        _label_smoothing=None,
-    ) -> torch.FloatTensor:
-        """Compute self adversarial negative sampling loss."""
-        # Split positive and negative scores
-        positive_scores = predictions[labels == 1]
-        negative_scores = predictions[labels == 0]
-
-        return self.model.compute_loss(positive_scores, negative_scores)
+        return self.loss.process_lcwa_scores(
+            predictions=predictions,
+            labels=batch_labels_full,
+            label_smoothing=label_smoothing,
+            num_entities=self.model.num_entities,
+        ) + self.model.collect_regularization_term()
 
     def _slice_size_search(
         self,
