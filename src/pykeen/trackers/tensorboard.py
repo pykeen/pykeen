@@ -45,15 +45,17 @@ class TensorBoardResultTracker(ResultTracker):
         self.tags = tags
 
         if isinstance(experiment_path, str):
-            self.path = pathlib.Path(experiment_path)
+            path = pathlib.Path(experiment_path)
         elif isinstance(experiment_path, pathlib.Path):
-            self.path = experiment_path
+            path = experiment_path
         else:
             if experiment_name is None:
                 experiment_name = time.strftime('%Y-%m-%d-%H-%M-%S')
-            self.path = PYKEEN_LOGS.joinpath("tensorboard", experiment_name)
+            path = PYKEEN_LOGS.joinpath("tensorboard", experiment_name)
 
-        self.writer = torch.utils.tensorboard.SummaryWriter(log_dir=self.path)
+        # if we really need access to the path later, we can expose it as a property
+        #  via self.writer.log_dir
+        self.writer = torch.utils.tensorboard.SummaryWriter(log_dir=path.resolve())
 
     def log_metrics(
         self,
