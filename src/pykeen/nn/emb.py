@@ -547,9 +547,45 @@ def _handle(
 
 
 class RGCNRepresentations(RepresentationModule):
-    """Entity representations enriched by R-GCN.
+    r"""Entity representations enriched by R-GCN.
 
-    .. todo:: Transfer docs from R-GCN model class
+    The GCN employed by the entity encoder is adapted to include typed edges.
+    The forward pass of the GCN is defined by:
+
+     .. math::
+
+        \textbf{e}_{i}^{l+1} = \sigma \left( \sum_{r \in \mathcal{R}}\sum_{j\in \mathcal{N}_{i}^{r}}
+        \frac{1}{c_{i,r}} \textbf{W}_{r}^{l} \textbf{e}_{j}^{l} + \textbf{W}_{0}^{l} \textbf{e}_{i}^{l}\right)
+
+    where $\mathcal{N}_{i}^{r}$ is the set of neighbors of node $i$ that are connected to
+    $i$ by relation $r$, $c_{i,r}$ is a fixed normalization constant (but it can also be introduced as an additional
+    parameter), and $\textbf{W}_{r}^{l} \in \mathbb{R}^{d^{(l)} \times d^{(l)}}$ and
+    $\textbf{W}_{0}^{l} \in \mathbb{R}^{d^{(l)} \times d^{(l)}}$ are weight matrices of the `l`-th layer of the
+    R-GCN.
+
+    The encoder aggregates for each node $e_i$ the latent representations of its neighbors and its
+    own latent representation $e_{i}^{l}$ into a new latent representation $e_{i}^{l+1}$.
+    In contrast to standard GCN, R-GCN defines relation specific transformations
+    $\textbf{W}_{r}^{l}$ which depend on the type and direction of an edge.
+
+    The :class:`pykeen.nn.message_passing.Decomposition` module provides an interface for a regularization approach
+    that reduces the number of parameters required for the relation-specific transformation matrices and mitigates
+    over-fitting. The two approaches published with R-GCN are implemented in PyKEEN. The first, basis decomposition
+    (:class:`pykeen.nn.message_passing.BasesDecomposition`), represents the relation-specific transformation matrices
+    as a weighted combination of base matrices, $\{\mathbf{B}_i^l\}_{i=1}^{B}$, i.e.,
+
+    .. math::
+
+        \mathbf{W}_r^l = \sum \limits_{b=1}^B \alpha_{rb} \mathbf{B}^l_i
+
+    The second, block-diagonal decomposition (:class:`pykeen.nn.message_passing.BlockDecomposition`),
+    restricts each transformation matrix to a block-diagonal-matrix, i.e.,
+
+    .. math::
+
+        \mathbf{W}_r^l = diag(\mathbf{B}_{r,1}^l, \ldots, \mathbf{B}_{r,B}^l)
+
+    where $\mathbf{B}_{r,i} \in \mathbb{R}^{(d^{(l) }/ B) \times (d^{(l)} / B)}$.
     """
 
     def __init__(

@@ -26,69 +26,29 @@ class RGCN(
 ):
     r"""An implementation of R-GCN from [schlichtkrull2018]_.
 
-    The Relational Graph Convolutional Network (R-GCN) comprises two parts:
+    The Relational Graph Convolutional Network (R-GCN) comprises three parts:
 
     1. A GCN-based entity encoder that computes enriched representations for entities, cf.
-       :class:`pykeen.nn.emb.RGCNRepresentations`. The GCN is modified to use different weights depending on the
-       type of the relation.
-    2. An arbitrary interaction model which computes the plausibility of facts given the enriched representations, 
+       :class:`pykeen.nn.emb.RGCNRepresentations`. The representation for entity $i$ at level $l \in (1,\dots,L)$
+       is denoted as $\textbf{e}_i^l$.
+       The GCN is modified to use different weights depending on the type of the relation.
+    2. Relation representations $\textbf{R}_{r} \in \mathbb{R}^{d \times d}$ is a diagonal matrix that are learned
+       independently from the GCN-based encoder.
+    3. An arbitrary interaction model which computes the plausibility of facts given the enriched representations,
        cf. :class:`pykeen.nn.modules.Interaction`.
 
-    .. todo:: Move the following part to :class:`pykeen.nn.emb.RGCNRepresentations`
-
-    The GCN employed by the entity encoder is adapted to include typed edges.
-    The forward pass of the GCN is defined by:
-
-     .. math::
-
-        \textbf{e}_{i}^{l+1} = \sigma \left( \sum_{r \in \mathcal{R}}\sum_{j\in \mathcal{N}_{i}^{r}}
-        \frac{1}{c_{i,r}} \textbf{W}_{r}^{l} \textbf{e}_{j}^{l} + \textbf{W}_{0}^{l} \textbf{e}_{i}^{l}\right)
-
-    where $\mathcal{N}_{i}^{r}$ is the set of neighbors of node $i$ that are connected to
-    $i$ by relation $r$, $c_{i,r}$ is a fixed normalization constant (but it can also be introduced as an additional
-    parameter), and $\textbf{W}_{r}^{l} \in \mathbb{R}^{d^{(l)} \times d^{(l)}}$ and
-    $\textbf{W}_{0}^{l} \in \mathbb{R}^{d^{(l)} \times d^{(l)}}$ are weight matrices of the `l`-th layer of the
-    R-GCN.
-
-    The encoder aggregates for each node $e_i$ the latent representations of its neighbors and its
-    own latent representation $e_{i}^{l}$ into a new latent representation $e_{i}^{l+1}$.
-    In contrast to standard GCN, R-GCN defines relation specific transformations
-    $\textbf{W}_{r}^{l}$ which depend on the type and direction of an edge.
-
-    The interaction model computes the plausibility score given the node representations $\textbf{e}_{i}^{L}$ that are
-    computed by the last layer $L$ of the R-GCN, i.e., for a given triple $(h,r,t) \in \mathcal{K}$, the
-    corresponding node representations $h:=e_i^L$ and $t:=e_j^L$ are used:
+    Scores for each triple $(h,r,t) \in \mathcal{K}$ are calculated by using the representations in the final level
+    of the GCN-based encoder $\textbf{e}_h^L$ and $\textbf{e}_t^L$ along with relation representation $\textbf{R}_{r}$.
+    While the original implementation of R-GCN used the DistMult model and we use it as a default, this implementation
+    allows the specification of an arbitrary interaction model.
 
     .. math::
 
-        f(h,r,t) = \textbf{h} \textbf{R}_{r} \textbf{t}
-
-    where $\textbf{R}_{r} \in \mathbb{R}^{d \times d}$ is a diagonal matrix and $f(h,r,t)$ is the
-    interaction model of DistMult (DistMult was employed in the original work, however, the general approach is not
-    restricted to DistMult).
-
-    The :class:`pykeen.nn.message_passing.Decomposition` module provides an interface for a regularization approach
-    that reduces the number of parameters required for the relation-specific transformation matrices and mitigates
-    over-fitting. The two approaches published with R-GCN are implemented in PyKEEN. The first, basis decomposition
-    (:class:`pykeen.nn.message_passing.BasesDecomposition`), represents the relation-specific transformation matrices
-    as a weighted combination of base matrices, $\{\mathbf{B}_i^l\}_{i=1}^{B}$, i.e.,
-
-    .. math::
-
-        \mathbf{W}_r^l = \sum \limits_{b=1}^B \alpha_{rb} \mathbf{B}^l_i
-
-    The second, block-diagonal decomposition (:class:`pykeen.nn.message_passing.BlockDecomposition`),
-    restricts each transformation matrix to a block-diagonal-matrix, i.e.,
-
-    .. math::
-
-        \mathbf{W}_r^l = diag(\mathbf{B}_{r,1}^l, \ldots, \mathbf{B}_{r,B}^l)
-
-    where $\mathbf{B}_{r,i} \in \mathbb{R}^{(d^{(l) }/ B) \times (d^{(l)} / B)}$.
+        f(h,r,t) = \textbf{e}_h^L \textbf{R}_{r} \textbf{e}_t^L
 
     .. seealso::
 
-       - `Pytorch Geometric's implementation of R-GCN
+       - `PyTorch Geometric's implementation of R-GCN
          <https://github.com/rusty1s/pytorch_geometric/blob/1.3.2/examples/rgcn.py>`_
        - `DGL's implementation of R-GCN
          <https://github.com/dmlc/dgl/tree/v0.4.0/examples/pytorch/rgcn>`_
