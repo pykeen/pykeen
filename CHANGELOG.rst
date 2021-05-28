@@ -20,6 +20,8 @@ New Models
 ~~~~~~~~~~
 - QuatE (https://github.com/pykeen/pykeen/pull/367)
 - CompGCN (https://github.com/pykeen/pykeen/pull/382)
+- HAKE (https://github.com/pykeen/pykeen/pull/442)
+- pRotatE (https://github.com/pykeen/pykeen/pull/442)
 
 Datasets
 ~~~~~~~~
