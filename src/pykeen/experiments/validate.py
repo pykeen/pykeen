@@ -8,6 +8,7 @@ import pathlib
 from typing import Callable, Iterable, Optional, Set, Tuple, Type, Union
 
 import torch
+from class_resolver import Hint
 from torch import nn
 
 from .cli import HERE
@@ -29,6 +30,7 @@ _SKIP_ANNOTATIONS = {
     nn.Module, Optional[nn.Module], Type[nn.Module], Optional[Type[nn.Module]],
     Model, Optional[Model], Type[Model], Optional[Type[Model]],
     Union[str, Callable[[torch.FloatTensor], torch.FloatTensor]],
+    Hint[nn.Module],
 }
 _SKIP_EXTRANEOUS = {
     'predict_with_sigmoid',

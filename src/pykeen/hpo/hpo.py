@@ -769,7 +769,13 @@ def suggest_kwargs(
             continue  # has been set by default, won't be suggested
 
         prefixed_name = f'{prefix}.{name}'
+
+        # TODO: make it even easier to specify categorical strategies just as lists
+        # if isinstance(info, (tuple, list, set)):
+        #     info = dict(type='categorical', choices=list(info))
+
         dtype, low, high = info['type'], info.get('low'), info.get('high')
+        log = info.get('log') in {True, 'TRUE', 'True', 'true', 't', 'YES', 'Yes', 'yes', 'y'}
         if dtype in {int, 'int'}:
             scale = info.get('scale')
             if scale in {'power_two', 'power'}:
@@ -782,7 +788,6 @@ def suggest_kwargs(
                 )
             elif scale is None or scale == 'linear':
                 # get log from info - could either be a boolean or string
-                log = info.get('log') in {True, 'TRUE', 'True', 'true', 't', 'YES', 'Yes', 'yes', 'y'}
                 _kwargs[name] = trial.suggest_int(
                     name=prefixed_name,
                     low=low,
@@ -794,10 +799,13 @@ def suggest_kwargs(
                 logger.warning(f'Unhandled scale {scale} for parameter {name} of data type {dtype}')
 
         elif dtype in {float, 'float'}:
-            if info.get('scale') == 'log':
-                _kwargs[name] = trial.suggest_loguniform(name=prefixed_name, low=low, high=high)
-            else:
-                _kwargs[name] = trial.suggest_uniform(name=prefixed_name, low=low, high=high)
+            _kwargs[name] = trial.suggest_float(
+                name=prefixed_name,
+                low=low,
+                high=high,
+                step=info.get('q') or info.get('step'),
+                log=log,
+            )
         elif dtype == 'categorical':
             choices = info['choices']
             _kwargs[name] = trial.suggest_categorical(name=prefixed_name, choices=choices)
