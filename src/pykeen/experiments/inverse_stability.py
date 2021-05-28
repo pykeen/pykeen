@@ -57,13 +57,13 @@ def main(force: bool, clip: int):
 
 def run_inverse_stability_workflow(dataset: str, model: str, training_loop: str, random_seed=0, device='cpu'):
     """Run an inverse stability experiment."""
-    dataset: Dataset = get_dataset(
+    dataset_instance: Dataset = get_dataset(
         dataset=dataset,
         dataset_kwargs=dict(
             create_inverse_triples=True,
         ),
     )
-    dataset_name = dataset.get_normalized_name()
+    dataset_name = dataset_instance.get_normalized_name()
     model_cls: Type[Model] = model_resolver.lookup(model)
     model_name = model_cls.__name__.lower()
 
@@ -71,7 +71,7 @@ def run_inverse_stability_workflow(dataset: str, model: str, training_loop: str,
     dataset_dir.mkdir(exist_ok=True, parents=True)
 
     pipeline_result = pipeline(
-        dataset=dataset,
+        dataset=dataset_instance,
         model=model,
         training_loop=training_loop,
         training_kwargs=dict(
@@ -83,7 +83,7 @@ def run_inverse_stability_workflow(dataset: str, model: str, training_loop: str,
         random_seed=random_seed,
         device=device,
     )
-    test_tf = dataset.testing
+    test_tf = dataset_instance.testing
     model = pipeline_result.model
     # Score with original triples
     scores_forward = model.score_hrt(test_tf.mapped_triples)

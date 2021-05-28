@@ -30,7 +30,7 @@ from .hetionet import Hetionet
 from .kinships import Kinships
 from .nations import Nations
 from .ogb import OGBBioKG, OGBWikiKG
-from .openbiolink import OpenBioLink, OpenBioLinkF1, OpenBioLinkF2, OpenBioLinkLQ
+from .openbiolink import OpenBioLink, OpenBioLinkLQ
 from .umls import UMLS
 from .wk3l import WK3l15k
 from .wordnet import WN18, WN18RR
@@ -43,8 +43,6 @@ __all__ = [
     'Kinships',
     'Nations',
     'OpenBioLink',
-    'OpenBioLinkF1',
-    'OpenBioLinkF2',
     'OpenBioLinkLQ',
     'CoDExSmall',
     'CoDExMedium',
@@ -71,10 +69,24 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-_DATASETS: Set[Type[Dataset]] = {
-    entry.load()
-    for entry in iter_entry_points(group='pykeen.datasets')
-}
+
+def _load_datasets() -> Set[Type[Dataset]]:
+    rv = set()
+    for entry in iter_entry_points(group='pykeen.datasets'):
+        try:
+            cls = entry.load()
+        except ImportError:
+            logger.warning(
+                'PyKEEN was unable to load dataset %s. Try uninstalling PyKEEN with ``pip uninstall pykeen`` '
+                'then reinstalling', entry.name,
+            )
+            continue
+        else:
+            rv.add(cls)
+    return rv
+
+
+_DATASETS = _load_datasets()
 if not _DATASETS:
     raise RuntimeError('Datasets have been loaded with entrypoints since PyKEEN v1.0.5. Please reinstall.')
 
