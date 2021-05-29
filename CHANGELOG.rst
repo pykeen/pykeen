@@ -20,6 +20,7 @@ New Models
 ~~~~~~~~~~
 - QuatE (https://github.com/pykeen/pykeen/pull/367)
 - CompGCN (https://github.com/pykeen/pykeen/pull/382)
+- CrossE (https://github.com/pykeen/pykeen/pull/467)
 
 Datasets
 ~~~~~~~~
