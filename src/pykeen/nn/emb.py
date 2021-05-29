@@ -19,7 +19,10 @@ from torch import nn
 from torch.nn import functional
 
 from .compositions import CompositionModule, composition_resolver
-from .init import init_phases, xavier_normal_, xavier_normal_norm_, xavier_uniform_, xavier_uniform_norm_
+from .init import (
+    init_phases, normal_norm_, uniform_norm_, xavier_normal_, xavier_normal_norm_, xavier_uniform_,
+    xavier_uniform_norm_,
+)
 from .message_passing import Decomposition, decomposition_resolver
 from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolver
 from ..regularizers import Regularizer, regularizer_resolver
@@ -32,6 +35,9 @@ __all__ = [
     'Embedding',
     'LiteralRepresentation',
     'EmbeddingSpecification',
+    'constrainers',
+    'initializers',
+    'normalizers',
 ]
 
 logger = logging.getLogger(__name__)
@@ -251,7 +257,18 @@ class Embedding(RepresentationModule):
         :param initializer:
             An optional initializer, which takes an uninitialized (num_embeddings, embedding_dim) tensor as input,
             and returns an initialized tensor of same shape and dtype (which may be the same, i.e. the
-            initialization may be in-place)
+            initialization may be in-place). Can be passed as a function, or as string corresponding to a key in
+            :data:`pykeen.nn.emb.initializers` such as:
+
+            - ``"xavier_uniform"``
+            - ``"xavier_uniform_norm"``
+            - ``"xavier_normal"``
+            - ``"xavier_normal_norm"``
+            - ``"normal"``
+            - ``"normal_norm"``
+            - ``"uniform"``
+            - ``"uniform_norm"``
+            - ``"init_phases"``
         :param initializer_kwargs:
             Additional keyword arguments passed to the initializer
         :param normalizer:
@@ -261,7 +278,13 @@ class Embedding(RepresentationModule):
         :param constrainer:
             A function which is applied to the weights after each parameter update, without tracking gradients.
             It may be used to enforce model constraints outside of gradient-based training. The function does not need
-            to be in-place, but the weight tensor is modified in-place.
+            to be in-place, but the weight tensor is modified in-place. Can be passed as a function, or as a string
+            corresponding to a key in :data:`pykeen.nn.emb.constrainers` such as:
+
+            - ``'normalize'``
+            - ``'complex_normalize'``
+            - ``'clamp'``
+            - ``'clamp_norm'``
         :param constrainer_kwargs:
             Additional keyword arguments passed to the constrainer
         :param regularizer:
@@ -475,12 +498,14 @@ def process_shape(
 
 
 initializers = {
-    'xavier_uniform': xavier_normal_,
+    'xavier_uniform': xavier_uniform_,
     'xavier_uniform_norm': xavier_uniform_norm_,
-    'xavier_normal': xavier_uniform_,
+    'xavier_normal': xavier_normal_,
     'xavier_normal_norm': xavier_normal_norm_,
     'normal': torch.nn.init.normal_,
+    'normal_norm': normal_norm_,
     'uniform': torch.nn.init.uniform_,
+    'uniform_norm': uniform_norm_,
     'phases': init_phases,
     'init_phases': init_phases,
 }
