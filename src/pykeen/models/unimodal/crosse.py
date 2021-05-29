@@ -2,12 +2,13 @@
 
 """Implementation of CrossE."""
 
-from typing import Any, Mapping, Optional, Tuple
+from typing import Any, ClassVar, Mapping, Optional, Tuple
 
 from class_resolver import HintOrType
 from torch import FloatTensor, nn
 
 from ..nbase import ERModel
+from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_uniform_
 from ...nn.modules import CrossEInteraction
@@ -27,6 +28,11 @@ class CrossE(ERModel[FloatTensor, Tuple[FloatTensor, FloatTensor], FloatTensor])
         year: 2019
         link: https://arxiv.org/abs/1903.04750
     """
+
+    #: The default strategy for optimizing the model's hyper-parameters
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
+        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+    )
 
     def __init__(
         self,
