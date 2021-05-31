@@ -10,7 +10,6 @@ from class_resolver import HintOrType
 from torch.optim.optimizer import Optimizer
 
 from .training_loop import TrainingLoop
-from .utils import apply_label_smoothing
 from ..losses import CrossEntropyLoss
 from ..models import Model
 from ..sampling import NegativeSampler, negative_sampler_resolver
@@ -101,67 +100,15 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
 
         # Compute negative and positive scores
         positive_scores = self.model.score_hrt(positive_batch)
-        negative_scores = self.model.score_hrt(negative_batch)
+        negative_scores = self.model.score_hrt(negative_batch).view(*negative_batch.shape[:-1])
 
-        return self._loss_helper(  # type: ignore
-            positive_scores,
-            negative_scores,
-            label_smoothing,
-            positive_filter,
-        )
-
-    def _mr_loss_helper(
-        self,
-        positive_scores: torch.FloatTensor,
-        negative_scores: torch.FloatTensor,
-        _label_smoothing=None,
-        _batch_filter=None,
-    ) -> torch.FloatTensor:
-        # Repeat positives scores (necessary for more than one negative per positive)
-        # TODO: Likely we do not need this, since most losses can handle broadcasting => view as (batch_size, 1)
-        #  instead.
-        if self.negative_sampler.num_negs_per_pos > 1:
-            positive_scores = positive_scores.repeat_interleave(repeats=self.negative_sampler.num_negs_per_pos, dim=0)
-
-        if _batch_filter is not None:
-            positive_scores = positive_scores[_batch_filter]
-
-        return self.model.compute_loss(positive_scores, negative_scores)
-
-    def _self_adversarial_negative_sampling_loss_helper(
-        self,
-        positive_scores: torch.FloatTensor,
-        negative_scores: torch.FloatTensor,
-        _label_smoothing=None,
-        _batch_filter=None,
-    ) -> torch.FloatTensor:
-        """Compute self adversarial negative sampling loss."""
-        return self.model.compute_loss(positive_scores, negative_scores)
-
-    def _label_loss_helper(
-        self,
-        positive_scores: torch.FloatTensor,
-        negative_scores: torch.FloatTensor,
-        label_smoothing: float,
-        _batch_filter=None,
-    ) -> torch.FloatTensor:
-        # Stack predictions
-        predictions = torch.cat([positive_scores, negative_scores], dim=0)
-        # Create target
-        ones = torch.ones_like(positive_scores, device=self.device)
-        zeros = torch.zeros_like(negative_scores, device=self.device)
-        labels = torch.cat([ones, zeros], dim=0)
-
-        if label_smoothing > 0.:
-            labels = apply_label_smoothing(
-                labels=labels,
-                epsilon=label_smoothing,
-                num_classes=self.model.num_entities,
-            )
-
-        # Normalize the loss to have the average loss per positive triple
-        # This allows comparability of sLCWA and LCWA losses
-        return self.model.compute_loss(predictions, labels)
+        return self.loss.process_slcwa_scores(
+            positive_scores=positive_scores,
+            negative_scores=negative_scores,
+            label_smoothing=label_smoothing,
+            batch_filter=positive_filter,
+            num_entities=self.model.num_entities,
+        ) + self.model.collect_regularization_term()
 
     def _slice_size_search(
         self,
