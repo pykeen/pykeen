@@ -442,6 +442,18 @@ class MuRETests(cases.TranslationalInteractionTests):
         pass
 
 
+class ModETests(cases.InteractionTestCase):
+    """Tests for ModE interaction function."""
+
+    raise NotImplementedError
+
+
+class PRotatE(cases.InteractionTestCase):
+    """Tests for PRotatE interaction function."""
+
+    raise NotImplementedError
+
+
 class MonotonicAffineTransformationInteractionTests(cases.InteractionTestCase):
     """Tests for monotonic affine transformation interaction adapter."""
 
