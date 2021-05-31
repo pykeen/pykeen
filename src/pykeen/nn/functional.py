@@ -1087,7 +1087,6 @@ def quat_e_interaction(
     ).sum(dim=-1)
 
 
-<<<<<<< HEAD
 def mode_interaction(
     h: torch.FloatTensor,
     r: torch.FloatTensor,
@@ -1198,7 +1197,8 @@ def hake_interaction(
 
     # compute modulus score
     return score + modulus_weight * negative_norm_of_sum(h_modulus * r_modulus.abs(), -t_modulus, p=2)
-=======
+
+
 def cross_e_interaction(
     h: torch.FloatTensor,
     r: torch.FloatTensor,
@@ -1257,4 +1257,3 @@ def cross_e_interaction(
         x = dropout(x)
     # similarity
     return (x * t).sum(dim=-1)
->>>>>>> master
