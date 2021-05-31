@@ -453,7 +453,7 @@ class TranslationalInteraction(
         :param p:
             The norm used with :func:`torch.norm`. Typically is 1 or 2.
         :param power_norm:
-            Whether to use the p-th power of the L_p norm. It has the advantage of being differentiable around 0,
+            Whether to use the p-th power of the $L_p$ norm. It has the advantage of being differentiable around 0,
             and numerically more stable.
         """
         super().__init__()

@@ -68,6 +68,7 @@ from .crosse import CrossE
 from .distmult import DistMult
 from .ermlp import ERMLP
 from .ermlpe import ERMLPE
+from .hake import HAKE, ModE
 from .hole import HolE
 from .kg2e import KG2E
 from .mure import MuRE
@@ -77,7 +78,7 @@ from .proj_e import ProjE
 from .quate import QuatE
 from .rescal import RESCAL
 from .rgcn import RGCN
-from .rotate import RotatE
+from .rotate import PRotatE, RotatE
 from .simple import SimplE
 from .structured_embedding import StructuredEmbedding
 from .trans_d import TransD
@@ -96,12 +97,15 @@ __all__ = [
     'DistMult',
     'ERMLP',
     'ERMLPE',
+    'HAKE',
     'HolE',
     'KG2E',
+    'ModE',
     'MuRE',
     'NTN',
     'PairRE',
     'ProjE',
+    'PRotatE',
     'QuatE',
     'RESCAL',
     'RGCN',

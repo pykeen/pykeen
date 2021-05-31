@@ -618,6 +618,24 @@ class TestCrossE(cases.ModelTestCase):
     num_constant_init = 1
 
 
+class TestHAKE(cases.ModelTestCase):
+    """Test the HAKE model."""
+
+    cls = pykeen.models.HAKE
+
+
+class TestModE(cases.ModelTestCase):
+    """Test the ModE model."""
+
+    cls = pykeen.models.ModE
+
+
+class TestPRotatE(cases.ModelTestCase):
+    """Test the pRotatE model."""
+
+    cls = pykeen.models.PRotatE
+
+
 class TestTesting(unittest_templates.MetaTestCase[Model]):
     """Yo dawg, I heard you like testing, so I wrote a test to test the tests so you can test while you're testing."""
 

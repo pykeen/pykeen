@@ -2,19 +2,24 @@
 
 """Implementation of the RotatE model."""
 
-from typing import Any, ClassVar, Mapping
+from typing import Any, ClassVar, Mapping, Union
 
 import torch
 import torch.autograd
+from torch import FloatTensor
 
 from ..base import EntityRelationEmbeddingModel
+from ..nbase import ERModel
+from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.emb import EmbeddingSpecification
 from ...nn.init import init_phases, xavier_uniform_
+from ...nn.modules import PRotatEInteration
 from ...typing import Constrainer, Hint, Initializer
 from ...utils import complex_normalize
 
 __all__ = [
     'RotatE',
+    'PRotatE',
 ]
 
 
@@ -173,3 +178,62 @@ class RotatE(EntityRelationEmbeddingModel):
         self.regularize_if_necessary(h.view(-1, self.embedding_dim), t.view(-1, self.embedding_dim))
 
         return scores
+
+
+class PRotatE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
+    r"""An implementation of pRotatE from [sun2019]_.
+
+    ---
+    citation:
+        author: Sun
+        year: 2019
+        link: https://arxiv.org/abs/1902.10197v1
+    """
+
+    #: The default strategy for optimizing the model's hyper-parameters
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
+        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+    )
+
+    def __init__(
+        self,
+        *,
+        embedding_dim: int = 50,  # TODO check
+        p: Union[str, int, float] = 2,
+        power_norm: bool = False,
+        entity_initializer: Hint[Initializer] = xavier_uniform_,  # TODO check
+        relation_initializer: Hint[Initializer] = xavier_uniform_,  # TODO check
+        **kwargs,
+    ) -> None:
+        r"""Initialize pRotatE via the :class:`pykeen.nn.modules.PRotatEInteraction` interaction.
+
+        :param embedding_dim: The entity embedding dimension $d$. Defaults to 50.
+        :param p:
+            The norm used with :func:`torch.norm`. Typically is 1 or 2.
+        :param power_norm:
+            Whether to use the p-th power of the $L_p$ norm. It has the advantage of being differentiable around 0,
+            and numerically more stable.
+        :param entity_initializer: Entity initializer function. Defaults to :func:`pykeen.nn.init.xavier_uniform_`
+        :param relation_initializer: Relation initializer function. Defaults to :func:`pykeen.nn.init.xavier_uniform_`
+        :param kwargs: Remaining keyword arguments passed through to :class:`pykeen.models.ERModel`.
+        """
+        super().__init__(
+            interaction=PRotatEInteration,
+            interaction_kwargs=dict(
+                p=p,
+                power_norm=power_norm,
+            ),
+            entity_representations=[
+                EmbeddingSpecification(
+                    embedding_dim=embedding_dim,
+                    initializer=entity_initializer,
+                ),
+            ],
+            relation_representations=[
+                EmbeddingSpecification(
+                    embedding_dim=embedding_dim,
+                    initializer=relation_initializer,
+                ),
+            ],
+            **kwargs,
+        )
