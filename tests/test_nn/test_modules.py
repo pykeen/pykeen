@@ -445,13 +445,13 @@ class MuRETests(cases.TranslationalInteractionTests):
 class ModETests(cases.InteractionTestCase):
     """Tests for ModE interaction function."""
 
-    raise NotImplementedError
+    cls = pykeen.nn.modules.ModEInteraction
 
 
 class PRotatE(cases.InteractionTestCase):
     """Tests for PRotatE interaction function."""
 
-    raise NotImplementedError
+    cls = pykeen.nn.modules.PRotatEInteration
 
 
 class MonotonicAffineTransformationInteractionTests(cases.InteractionTestCase):
