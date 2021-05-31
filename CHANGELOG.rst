@@ -23,6 +23,7 @@ New Models
 - CrossE (https://github.com/pykeen/pykeen/pull/467)
 - HAKE (https://github.com/pykeen/pykeen/pull/442)
 - pRotatE (https://github.com/pykeen/pykeen/pull/442)
+- ModE (https://github.com/pykeen/pykeen/pull/442)
 
 Datasets
 ~~~~~~~~
