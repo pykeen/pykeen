@@ -787,7 +787,7 @@ class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
         return self.relation_embeddings.embedding_dim
 
     @property
-    def entity_representations(self) -> Sequence[RepresentationModule]:# noqa:D401
+    def entity_representations(self) -> Sequence[RepresentationModule]:  # noqa:D401
         """The entity representations.
 
         This property provides forward compatibility with the new-style :class:`pykeen.models.ERModel`.
@@ -795,7 +795,7 @@ class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
         return [self.entity_embeddings]
 
     @property
-    def relation_representations(self) -> Sequence[RepresentationModule]:# noqa:D401
+    def relation_representations(self) -> Sequence[RepresentationModule]:  # noqa:D401
         """The relation representations.
 
         This property provides forward compatibility with the new-style :class:`pykeen.models.ERModel`.
