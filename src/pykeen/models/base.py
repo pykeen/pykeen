@@ -774,7 +774,7 @@ class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
         return self.entity_embeddings.embedding_dim
 
     @property
-    def relation_dim(self):  # noqa:D401
+    def relation_dim(self) -> int:  # noqa:D401
         """The relation embedding dimension."""
         return self.relation_embeddings.embedding_dim
 
