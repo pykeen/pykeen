@@ -16,6 +16,7 @@ later, but that will cause problems - the code will get executed twice:
 import inspect
 import os
 import sys
+from pathlib import Path
 from typing import Optional
 
 import click
@@ -40,7 +41,7 @@ from .triples.utils import EXTENSION_IMPORTERS, PREFIX_IMPORTERS
 from .utils import get_until_first_blank
 from .version import env_table
 
-HERE = os.path.abspath(os.path.dirname(__file__))
+HERE = Path(__file__).resolve().parent
 
 
 @click.group()
@@ -443,7 +444,7 @@ def readme(check: bool):
 def get_readme() -> str:
     """Get the readme."""
     from jinja2 import FileSystemLoader, Environment
-    loader = FileSystemLoader(os.path.join(HERE, 'templates'))
+    loader = FileSystemLoader(HERE.joinpath('templates'))
     environment = Environment(
         autoescape=True,
         loader=loader,

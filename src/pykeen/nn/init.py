@@ -17,6 +17,8 @@ __all__ = [
     'xavier_uniform_norm_',
     'xavier_normal_',
     'xavier_normal_norm_',
+    'uniform_norm_',
+    'normal_norm_',
     'init_phases',
 ]
 
@@ -73,6 +75,14 @@ xavier_uniform_norm_ = compose(
 )
 xavier_normal_norm_ = compose(
     torch.nn.init.xavier_normal_,
+    functional.normalize,
+)
+uniform_norm_ = compose(
+    torch.nn.init.uniform_,
+    functional.normalize,
+)
+normal_norm_ = compose(
+    torch.nn.init.normal_,
     functional.normalize,
 )
 

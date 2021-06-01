@@ -13,14 +13,10 @@ from .base import PackedZipRemoteDataset
 
 __all__ = [
     'OpenBioLink',
-    'OpenBioLinkF1',
-    'OpenBioLinkF2',
     'OpenBioLinkLQ',
 ]
 
 HQ_URL = 'https://samwald.info/res/OpenBioLink_2020_final/HQ_DIR.zip'
-F1_URL = 'https://github.com/PyKEEN/pykeen-openbiolink-benchmark/raw/master/filter_1/openbiolink_f1.zip'
-F2_URL = 'https://github.com/PyKEEN/pykeen-openbiolink-benchmark/raw/master/filter_2/openbiolink_f2.zip'
 LQ_URL = 'https://samwald.info/res/OpenBioLink_2020_final/ALL_DIR.zip'
 
 
@@ -67,78 +63,6 @@ class OpenBioLink(PackedZipRemoteDataset):
 
 
 @parse_docdata
-class OpenBioLinkF1(PackedZipRemoteDataset):
-    """The PyKEEN First Filtered OpenBioLink 2020 Dataset.
-
-    ---
-    name: OpenBioLink (F1)
-    citation:
-        author: Mubeen
-        year: 2020
-        github: PyKEEN/pykeen-openbiolink-benchmark
-    statistics:
-        entities: 116425
-        relations: 19
-        training: 1616040
-        testing: 45026
-        validation: 55637
-        triples: 1716703
-    """
-
-    def __init__(self, create_inverse_triples: bool = False, **kwargs):
-        """Initialize the OpenBioLink (Filter-1) dataset.
-
-        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
-        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.PackedZipRemoteDataset`.
-        """
-        super().__init__(
-            url=F1_URL,
-            name='openbiolink_f1.zip',
-            relative_training_path='train.tsv',
-            relative_testing_path='test.tsv',
-            relative_validation_path='val.tsv',
-            create_inverse_triples=create_inverse_triples,
-            **kwargs,
-        )
-
-
-@parse_docdata
-class OpenBioLinkF2(PackedZipRemoteDataset):
-    """The PyKEEN Second Filtered OpenBioLink 2020 Dataset.
-
-    ---
-    name: OpenBioLink (F2)
-    citation:
-        author: Mubeen
-        year: 2020
-        github: PyKEEN/pykeen-openbiolink-benchmark
-    statistics:
-        entities: 110628
-        relations: 17
-        training: 676156
-        testing: 30075
-        validation: 28694
-        triples: 734925
-    """
-
-    def __init__(self, create_inverse_triples: bool = False, **kwargs):
-        """Initialize the OpenBioLink (Filter-2) dataset.
-
-        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
-        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.PackedZipRemoteDataset`.
-        """
-        super().__init__(
-            url=F2_URL,
-            name='openbiolink_f2.zip',
-            relative_training_path='train.tsv',
-            relative_testing_path='test.tsv',
-            relative_validation_path='val.tsv',
-            create_inverse_triples=create_inverse_triples,
-            **kwargs,
-        )
-
-
-@parse_docdata
 class OpenBioLinkLQ(PackedZipRemoteDataset):
     """The low-quality variant of the OpenBioLink dataset.
 
@@ -178,7 +102,7 @@ class OpenBioLinkLQ(PackedZipRemoteDataset):
 @click.command()
 @verbose_option
 def _main():
-    for cls in [OpenBioLink, OpenBioLinkF1, OpenBioLinkF2, OpenBioLinkLQ]:
+    for cls in [OpenBioLink, OpenBioLinkLQ]:
         cls().summarize()
 
 

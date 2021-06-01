@@ -8,14 +8,14 @@ They are loaded automatically with :func:`pkg_resources.iter_entry_points`.
 """
 
 import logging
-import os
+import pathlib
 from typing import Any, Mapping, Optional, Set, Type, Union
 
 from pkg_resources import iter_entry_points
 
 from .base import (  # noqa:F401
     Dataset, EagerDataset, LazyDataset, PackedZipRemoteDataset, PathDataset, RemoteDataset, SingleTabbedDataset,
-    TarFileRemoteDataset, UnpackedRemoteDataset, ZipFileRemoteDataset,
+    TarFileRemoteDataset, UnpackedRemoteDataset,
 )
 from .ckg import CKG
 from .codex import CoDExLarge, CoDExMedium, CoDExSmall
@@ -30,8 +30,9 @@ from .hetionet import Hetionet
 from .kinships import Kinships
 from .nations import Nations
 from .ogb import OGBBioKG, OGBWikiKG
-from .openbiolink import OpenBioLink, OpenBioLinkF1, OpenBioLinkF2, OpenBioLinkLQ
+from .openbiolink import OpenBioLink, OpenBioLinkLQ
 from .umls import UMLS
+from .wk3l import WK3l15k
 from .wordnet import WN18, WN18RR
 from .yago import YAGO310
 from ..triples import CoreTriplesFactory
@@ -42,8 +43,6 @@ __all__ = [
     'Kinships',
     'Nations',
     'OpenBioLink',
-    'OpenBioLinkF1',
-    'OpenBioLinkF2',
     'OpenBioLinkLQ',
     'CoDExSmall',
     'CoDExMedium',
@@ -53,6 +52,7 @@ __all__ = [
     'UMLS',
     'FB15k',
     'FB15k237',
+    'WK3l15k',
     'WN18',
     'WN18RR',
     'YAGO310',
@@ -69,10 +69,24 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-_DATASETS: Set[Type[Dataset]] = {
-    entry.load()
-    for entry in iter_entry_points(group='pykeen.datasets')
-}
+
+def _load_datasets() -> Set[Type[Dataset]]:
+    rv = set()
+    for entry in iter_entry_points(group='pykeen.datasets'):
+        try:
+            cls = entry.load()
+        except ImportError:
+            logger.warning(
+                'PyKEEN was unable to load dataset %s. Try uninstalling PyKEEN with ``pip uninstall pykeen`` '
+                'then reinstalling', entry.name,
+            )
+            continue
+        else:
+            rv.add(cls)
+    return rv
+
+
+_DATASETS = _load_datasets()
 if not _DATASETS:
     raise RuntimeError('Datasets have been loaded with entrypoints since PyKEEN v1.0.5. Please reinstall.')
 
@@ -85,11 +99,11 @@ datasets: Mapping[str, Type[Dataset]] = {
 
 def get_dataset(
     *,
-    dataset: Union[None, str, Dataset, Type[Dataset]] = None,
+    dataset: Union[None, str, pathlib.Path, Dataset, Type[Dataset]] = None,
     dataset_kwargs: Optional[Mapping[str, Any]] = None,
-    training: Union[None, str, CoreTriplesFactory] = None,
-    testing: Union[None, str, CoreTriplesFactory] = None,
-    validation: Union[None, str, CoreTriplesFactory] = None,
+    training: Union[None, str, pathlib.Path, CoreTriplesFactory] = None,
+    testing: Union[None, str, pathlib.Path, CoreTriplesFactory] = None,
+    validation: Union[None, str, pathlib.Path, CoreTriplesFactory] = None,
 ) -> Dataset:
     """Get the dataset.
 
@@ -120,10 +134,17 @@ def get_dataset(
     if isinstance(dataset, str):
         if has_dataset(dataset):
             dataset: Type[Dataset] = datasets[normalize_string(dataset)]  # type: ignore
-        elif not os.path.exists(dataset):
-            raise ValueError(f'dataset is neither a pre-defined dataset string nor a filepath: {dataset}')
         else:
-            return Dataset.from_path(dataset)
+            dataset = pathlib.Path(dataset)
+
+    if isinstance(dataset, pathlib.Path):
+        dataset_path = dataset.resolve()
+        if not dataset_path.is_file():
+            raise ValueError(
+                f'dataset is neither a pre-defined dataset string nor a filepath: {dataset_path.as_uri()}',
+            )
+        else:
+            return Dataset.from_path(dataset_path)
 
     if isinstance(dataset, type) and issubclass(dataset, Dataset):
         return dataset(**(dataset_kwargs or {}))  # type: ignore
@@ -131,8 +152,8 @@ def get_dataset(
     if dataset is not None:
         raise TypeError(f'Dataset is invalid type: {type(dataset)}')
 
-    if isinstance(training, str) and isinstance(testing, str):
-        if validation is None or isinstance(validation, str):
+    if isinstance(training, (str, pathlib.Path)) and isinstance(testing, (str, pathlib.Path)):
+        if validation is None or isinstance(validation, (str, pathlib.Path)):
             return PathDataset(
                 training_path=training,
                 testing_path=testing,

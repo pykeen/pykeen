@@ -5,9 +5,9 @@
 import dataclasses
 import itertools
 import logging
-import os
+import pathlib
 import re
-from typing import Any, Callable, Collection, Dict, List, Mapping, Optional, Sequence, Set, TextIO, Union, cast
+from typing import Any, Callable, Collection, Dict, List, Mapping, Optional, Sequence, Set, TextIO, Type, Union, cast
 
 import numpy as np
 import pandas as pd
@@ -109,7 +109,7 @@ def _map_triples_elements_to_ids(
 
     triples_of_ids = np.concatenate([head_column, relation_column, tail_column], axis=1)
 
-    triples_of_ids = np.array(triples_of_ids, dtype=np.long)
+    triples_of_ids = np.array(triples_of_ids, dtype=np.int64)
     # Note: Unique changes the order of the triples
     # Note: Using unique means implicit balancing of training samples
     unique_mapped_triples = np.unique(ar=triples_of_ids, axis=0)
@@ -354,7 +354,7 @@ class CoreTriplesFactory:
         ]
         d.extend(sorted(self.metadata.items()))  # type: ignore
         return ', '.join(
-            f'{k}="{v}"' if isinstance(v, str) else f'{k}={v}'
+            f'{k}="{v}"' if isinstance(v, (str, pathlib.Path)) else f'{k}={v}'
             for k, v in d
         )
 
@@ -409,11 +409,14 @@ class CoreTriplesFactory:
 
     def create_slcwa_instances(self) -> Instances:
         """Create sLCWA instances for this factory's triples."""
-        return SLCWAInstances(mapped_triples=self._add_inverse_triples_if_necessary(mapped_triples=self.mapped_triples))
+        return self._create_instances(SLCWAInstances)
 
     def create_lcwa_instances(self, use_tqdm: Optional[bool] = None) -> Instances:
         """Create LCWA instances for this factory's triples."""
-        return LCWAInstances.from_triples(
+        return self._create_instances(LCWAInstances)
+
+    def _create_instances(self, instances_cls: Type[Instances]) -> Instances:
+        return instances_cls.from_triples(
             mapped_triples=self._add_inverse_triples_if_necessary(mapped_triples=self.mapped_triples),
             num_entities=self.num_entities,
         )
@@ -781,7 +784,7 @@ class TriplesFactory(CoreTriplesFactory):
     @classmethod
     def from_path(
         cls,
-        path: Union[str, TextIO],
+        path: Union[str, pathlib.Path, TextIO],
         create_inverse_triples: bool = False,
         entity_to_id: Optional[EntityMapping] = None,
         relation_to_id: Optional[RelationMapping] = None,
@@ -812,12 +815,7 @@ class TriplesFactory(CoreTriplesFactory):
         :return:
             A new triples factory.
         """
-        if isinstance(path, str):
-            path = os.path.abspath(path)
-        elif isinstance(path, TextIO):
-            path = os.path.abspath(path.name)
-        else:
-            raise TypeError(f'path is invalid type: {type(path)}')
+        path = normalize_path(path)
 
         # TODO: Check if lazy evaluation would make sense
         triples = load_triples(path, **(load_triples_kwargs or {}))
@@ -1077,3 +1075,15 @@ def splits_similarity(a: Sequence[CoreTriplesFactory], b: Sequence[CoreTriplesFa
 
 def _smt(x):
     return set(tuple(xx.detach().numpy().tolist()) for xx in x)
+
+
+def normalize_path(path: Union[str, pathlib.Path, TextIO]) -> pathlib.Path:
+    """Normalize path."""
+    if isinstance(path, TextIO):
+        return pathlib.Path(path.name).resolve()
+    elif isinstance(path, str):
+        return pathlib.Path(path).resolve()
+    elif isinstance(path, pathlib.Path):
+        return path.resolve()
+    else:
+        raise TypeError(f'path is invalid type: {type(path)}')
