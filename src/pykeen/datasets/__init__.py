@@ -12,6 +12,7 @@ import pathlib
 from typing import Any, Mapping, Optional, Type, Union
 
 from class_resolver import Resolver
+
 from .base import (  # noqa:F401
     Dataset, EagerDataset, LazyDataset, PackedZipRemoteDataset, PathDataset, RemoteDataset, SingleTabbedDataset,
     TarFileRemoteDataset, UnpackedRemoteDataset,
