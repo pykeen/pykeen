@@ -10,7 +10,7 @@ import logging
 import pickle
 import warnings
 from abc import ABC, abstractmethod
-from typing import Any, ClassVar, Iterable, Mapping, Optional, Type, Union
+from typing import Any, ClassVar, Iterable, Mapping, Optional, Sequence, Type, Union
 
 import pandas as pd
 import torch
@@ -18,7 +18,7 @@ from docdata import parse_docdata
 from torch import nn
 
 from ..losses import Loss, MarginRankingLoss
-from ..nn.emb import Embedding, EmbeddingSpecification
+from ..nn.emb import Embedding, EmbeddingSpecification, RepresentationModule
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import CoreTriplesFactory
 from ..typing import DeviceHint, ScorePack
@@ -718,6 +718,14 @@ class EntityEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
         """The entity embedding dimension."""
         return self.entity_embeddings.embedding_dim
 
+    @property
+    def entity_representations(self) -> Sequence[RepresentationModule]:  # noqa:D401
+        """The entity representations.
+
+        This property provides forward compatibility with the new-style :class:`pykeen.models.ERModel`.
+        """
+        return [self.entity_embeddings]
+
     def _reset_parameters_(self):  # noqa: D102
         self.entity_embeddings.reset_parameters()
 
@@ -777,6 +785,22 @@ class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
     def relation_dim(self) -> int:  # noqa:D401
         """The relation embedding dimension."""
         return self.relation_embeddings.embedding_dim
+
+    @property
+    def entity_representations(self) -> Sequence[RepresentationModule]:# noqa:D401
+        """The entity representations.
+
+        This property provides forward compatibility with the new-style :class:`pykeen.models.ERModel`.
+        """
+        return [self.entity_embeddings]
+
+    @property
+    def relation_representations(self) -> Sequence[RepresentationModule]:# noqa:D401
+        """The relation representations.
+
+        This property provides forward compatibility with the new-style :class:`pykeen.models.ERModel`.
+        """
+        return [self.relation_embeddings]
 
     def _reset_parameters_(self):  # noqa: D102
         self.entity_embeddings.reset_parameters()
