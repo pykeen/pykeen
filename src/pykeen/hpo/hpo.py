@@ -487,9 +487,9 @@ def hpo_pipeline(
     """Train a model on the given dataset.
 
     :param dataset:
-        The name of the dataset (a key from :data:`pykeen.datasets.datasets`) or the :class:`pykeen.datasets.Dataset`
-        instance. Alternatively, the training triples factory (``training``), testing triples factory (``testing``),
-        and validation triples factory (``validation``; optional) can be specified.
+        The name of the dataset (a key for the :data:`pykeen.datasets.dataset_resolver`) or the
+        :class:`pykeen.datasets.Dataset` instance. Alternatively, the training triples factory (``training``), testing
+        triples factory (``testing``), and validation triples factory (``validation``; optional) can be specified.
     :param dataset_kwargs:
         The keyword arguments passed to the dataset upon instantiation
     :param training:
