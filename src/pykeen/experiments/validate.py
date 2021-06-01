@@ -12,7 +12,7 @@ from class_resolver import Hint
 from torch import nn
 
 from .cli import HERE
-from ..datasets import datasets as datasets_dict
+from ..datasets import dataset_resolver
 from ..losses import loss_resolver
 from ..models import Model, model_resolver
 from ..optimizers import optimizer_resolver
@@ -165,7 +165,7 @@ def get_configuration_errors(path: Union[str, pathlib.Path]):  # noqa: C901
         normalize=True, check_kwargs=True,
     )
     _check(
-        pipeline, 'dataset', datasets_dict,
+        pipeline, 'dataset', dataset_resolver.lookup_dict,
         normalize=False, check_kwargs=False,
     )
     _check(
