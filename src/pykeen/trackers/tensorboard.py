@@ -28,7 +28,6 @@ class TensorBoardResultTracker(ResultTracker):
         self,
         experiment_path: Union[None, str, pathlib.Path] = None,
         experiment_name: Optional[str] = None,
-        tags: Optional[Dict[str, Any]] = None,
     ):
         """
         Initialize result tracking via Tensorboard.
@@ -38,11 +37,8 @@ class TensorBoardResultTracker(ResultTracker):
         :param experiment_name:
             The name of the experiment, will be used as a sub directory name for the logging. If no default is given,
             the current time is used. If set, experiment_path is set, this argument has no effect.
-        :param tags:
-            The additional run details which are presented as tags to be logged
         """
         import torch.utils.tensorboard
-        self.tags = tags
 
         if isinstance(experiment_path, str):
             path = pathlib.Path(experiment_path)
