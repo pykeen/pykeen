@@ -15,6 +15,7 @@ New Metrics
 New Trackers
 ~~~~~~~~~~~~
 - Console Tracker (https://github.com/pykeen/pykeen/pull/440)
+- Tensorboard Tracker (https://github.com/pykeen/pykeen/pull/416; thanks @sbonner0)
 
 New Models
 ~~~~~~~~~~
