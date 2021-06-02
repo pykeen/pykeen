@@ -214,7 +214,7 @@ class Embedding(RepresentationModule):
     example shows how to obtain different scores for a single triple from an (untrained) model. These scores can be
     considered as samples from a distribution over the scores.
 
-    >>> from pykeen.datasets.nations import Nations
+    >>> from pykeen.datasets import Nations
     >>> dataset = Nations()
     >>> from pykeen.nn.emb import EmbeddingSpecification
     >>> spec = EmbeddingSpecification(embedding_dim=3, dropout=0.1)
