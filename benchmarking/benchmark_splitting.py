@@ -16,7 +16,7 @@ import torch
 from humanize import intword
 from tqdm import tqdm
 
-from pykeen.datasets import datasets, get_dataset
+from pykeen.datasets import dataset_resolver, get_dataset
 from pykeen.triples.splitting import split
 from pykeen.utils import get_benchmark
 from pykeen.version import get_git_hash
@@ -65,7 +65,7 @@ def main(replicates: int, force: bool):
 
     click.echo(f'output directory: {SPLITTING_DIRECTORY.as_posix()}')
     rows = []
-    outer_it = tqdm(sorted(datasets), desc='Dataset')
+    outer_it = tqdm(sorted(dataset_resolver.lookup_dict), desc='Dataset')
     for dataset in outer_it:
         dataset_path = RESULTS_DIRECTORY / f'{dataset}.tsv'
         if dataset_path.exists() and not force:
