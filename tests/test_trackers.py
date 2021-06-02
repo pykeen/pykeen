@@ -2,6 +2,7 @@
 
 """Tests for result trackers."""
 
+from pykeen.trackers import TensorBoardResultTracker
 from pykeen.trackers.base import ConsoleResultTracker
 from pykeen.trackers.file import CSVResultTracker, JSONResultTracker
 from tests import cases
@@ -23,3 +24,9 @@ class ConsoleResultTrackerTests(cases.ResultTrackerTests):
     """Tests for console tracker."""
 
     cls = ConsoleResultTracker
+
+
+class TensorboardTrackerTests(cases.ResultTrackerTests):
+    """Tests for console tracker."""
+
+    cls = TensorBoardResultTracker

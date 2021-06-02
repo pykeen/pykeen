@@ -8,6 +8,7 @@ from .base import ConsoleResultTracker, ResultTracker
 from .file import CSVResultTracker, FileResultTracker, JSONResultTracker
 from .mlflow import MLFlowResultTracker
 from .neptune import NeptuneResultTracker
+from .tensorboard import TensorBoardResultTracker
 from .wandb import WANDBResultTracker
 
 __all__ = [
@@ -20,6 +21,7 @@ __all__ = [
     'WANDBResultTracker',
     'JSONResultTracker',
     'CSVResultTracker',
+    'TensorBoardResultTracker',
     'ConsoleResultTracker',
     # Utilities
     'tracker_resolver',
