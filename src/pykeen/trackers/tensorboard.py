@@ -4,7 +4,7 @@
 
 import pathlib
 import time
-from typing import Any, Dict, Mapping, Optional, TYPE_CHECKING, Union
+from typing import Any, Mapping, Optional, TYPE_CHECKING, Union
 
 from .base import ResultTracker
 from ..constants import PYKEEN_LOGS
