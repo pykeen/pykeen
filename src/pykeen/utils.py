@@ -1083,6 +1083,40 @@ def complex_normalize(x: torch.Tensor) -> torch.Tensor:
     return y.view(*x.shape)
 
 
+class MultiTripleHash(nn.Module):
+    """Vectorized hashing for triples."""
+
+    #: some prime numbers for tuple hashing
+    mersenne: torch.LongTensor
+
+    def __init__(self):
+        """Initialize buffer."""
+        super().__init__()
+        self.register_buffer(
+            name="mersenne",
+            tensor=torch.as_tensor(
+                data=[2 ** x - 1 for x in [17, 19, 31]],
+                dtype=torch.long,
+            ).unsqueeze(dim=0),
+        )
+
+    def forward(
+        self,
+        batch: torch.LongTensor,
+    ) -> Iterable[torch.LongTensor]:
+        """Yield triple hash values."""
+        # pre-hash
+        x = (self.mersenne * batch).sum(dim=-1)
+        while True:
+            # cf. https://github.com/skeeto/hash-prospector#two-round-functions
+            x = x ^ (x >> 16)
+            x = x * 0x7feb352d
+            x = x ^ (x >> 15)
+            x = x * 0x846ca68b
+            x = x ^ (x >> 16)
+            yield x
+
+
 if __name__ == '__main__':
     import doctest
 

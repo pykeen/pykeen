@@ -122,7 +122,7 @@ Second, filtering during evaluation has to be correct, and is crucial for reprod
 from the filtered setting. For evaluation it makes sense to use all information we have to get
 as solid evaluation results as possible.
 """  # noqa
-
+import itertools
 import math
 from abc import abstractmethod
 from typing import Iterable
@@ -139,6 +139,8 @@ __all__ = [
     "BloomFilterer",
     "PythonSetFilterer",
 ]
+
+from ..utils import MultiTripleHash
 
 
 class Filterer(nn.Module):
@@ -224,9 +226,6 @@ class BloomFilterer(Filterer):
         * https://github.com/skeeto/hash-prospector#two-round-functions - for parts of the hash function
     """
 
-    #: some prime numbers for tuple hashing
-    mersenne: torch.LongTensor
-
     #: The bit-array for the Bloom filter data structure
     bit_array: torch.BoolTensor
 
@@ -245,13 +244,7 @@ class BloomFilterer(Filterer):
         self.ideal_num_elements = mapped_triples.shape[0]
         size = self.num_bits(num=self.ideal_num_elements, error_rate=error_rate)
         self.register_buffer(name="bit_array", tensor=torch.zeros(size, dtype=torch.bool))
-        self.register_buffer(
-            name="mersenne",
-            tensor=torch.as_tensor(
-                data=[2 ** x - 1 for x in [17, 19, 31]],
-                dtype=torch.long,
-            ).unsqueeze(dim=0),
-        )
+        self.hasher = MultiTripleHash()
 
         # calculate number of hashing rounds
         self.rounds = self.num_probes(num_elements=self.ideal_num_elements, num_bits=size)
@@ -319,16 +312,8 @@ class BloomFilterer(Filterer):
 
         :yields: Indices of the k-th round, shape: (batch_size,).
         """
-        # pre-hash
-        x = (self.mersenne * batch).sum(dim=-1)
-        for _ in range(self.rounds):
-            # cf. https://github.com/skeeto/hash-prospector#two-round-functions
-            x = x ^ (x >> 16)
-            x = x * 0x7feb352d
-            x = x ^ (x >> 15)
-            x = x * 0x846ca68b
-            x = x ^ (x >> 16)
-            yield x % self.bit_array.shape[0]
+        for y in itertools.islice(self.hasher(batch), self.rounds):
+            yield y % self.bit_array.shape[0]
 
     def add(self, triples: MappedTriples) -> None:
         """Add triples to the Bloom filter."""
