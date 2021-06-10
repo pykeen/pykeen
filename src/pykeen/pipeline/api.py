@@ -175,7 +175,7 @@ import pathlib
 import pickle
 import time
 from dataclasses import dataclass, field
-from typing import Any, Collection, Dict, Iterable, List, Mapping, MutableMapping, Optional, Type, Union
+from typing import Any, Collection, Dict, Iterable, List, Mapping, MutableMapping, Optional, Type, Union, cast
 
 import pandas as pd
 import torch
@@ -881,7 +881,7 @@ def pipeline(  # noqa: C901
         )
 
     if isinstance(model, Model):
-        model_instance = model
+        model_instance = cast(Model, model)
         # TODO should training be reset?
         # TODO should kwargs for loss and regularizer be checked and raised for?
     else:

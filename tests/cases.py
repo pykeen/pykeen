@@ -10,7 +10,9 @@ import timeit
 import traceback
 import unittest
 from abc import ABC, abstractmethod
-from typing import Any, ClassVar, Collection, Dict, Mapping, MutableMapping, Optional, Sequence, Tuple, Type, TypeVar
+from typing import (
+    Any, ClassVar, Collection, Dict, Iterable, Mapping, MutableMapping, Optional, Sequence, Tuple, Type, TypeVar,
+)
 from unittest.case import SkipTest
 from unittest.mock import patch
 
@@ -40,7 +42,7 @@ from pykeen.trackers import ResultTracker
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
 from pykeen.triples import TriplesFactory
 from pykeen.typing import HeadRepresentation, MappedTriples, RelationRepresentation, TailRepresentation
-from pykeen.utils import all_in_bounds, resolve_device, set_random_seed, unpack_singletons
+from pykeen.utils import all_in_bounds, get_batchnorm_modules, resolve_device, set_random_seed, unpack_singletons
 from tests.constants import EPSILON
 from tests.mocks import CustomRepresentations
 from tests.utils import rand
@@ -380,25 +382,34 @@ class InteractionTestCase(
     def _additional_score_checks(self, scores):
         """Additional checks for scores."""
 
+    @property
+    def _score_batch_sizes(self) -> Iterable[int]:
+        """Return the list of batch sizes to test."""
+        if get_batchnorm_modules(self.instance):
+            return [self.batch_size]
+        return [1, self.batch_size]
+
     def test_score_hrt(self):
         """Test score_hrt."""
-        h, r, t = self._get_hrt(
-            (self.batch_size,),
-            (self.batch_size,),
-            (self.batch_size,),
-        )
-        scores = self.instance.score_hrt(h=h, r=r, t=t)
-        self._check_scores(scores=scores, exp_shape=(self.batch_size, 1))
+        for batch_size in self._score_batch_sizes:
+            h, r, t = self._get_hrt(
+                (batch_size,),
+                (batch_size,),
+                (batch_size,),
+            )
+            scores = self.instance.score_hrt(h=h, r=r, t=t)
+            self._check_scores(scores=scores, exp_shape=(batch_size, 1))
 
     def test_score_h(self):
         """Test score_h."""
-        h, r, t = self._get_hrt(
-            (self.num_entities,),
-            (self.batch_size,),
-            (self.batch_size,),
-        )
-        scores = self.instance.score_h(all_entities=h, r=r, t=t)
-        self._check_scores(scores=scores, exp_shape=(self.batch_size, self.num_entities))
+        for batch_size in self._score_batch_sizes:
+            h, r, t = self._get_hrt(
+                (self.num_entities,),
+                (batch_size,),
+                (batch_size,),
+            )
+            scores = self.instance.score_h(all_entities=h, r=r, t=t)
+            self._check_scores(scores=scores, exp_shape=(batch_size, self.num_entities))
 
     def test_score_h_slicing(self):
         """Test score_h with slicing."""
@@ -415,17 +426,18 @@ class InteractionTestCase(
 
     def test_score_r(self):
         """Test score_r."""
-        h, r, t = self._get_hrt(
-            (self.batch_size,),
-            (self.num_relations,),
-            (self.batch_size,),
-        )
-        scores = self.instance.score_r(h=h, all_relations=r, t=t)
-        if len(self.cls.relation_shape) == 0:
-            exp_shape = (self.batch_size, 1)
-        else:
-            exp_shape = (self.batch_size, self.num_relations)
-        self._check_scores(scores=scores, exp_shape=exp_shape)
+        for batch_size in self._score_batch_sizes:
+            h, r, t = self._get_hrt(
+                (batch_size,),
+                (self.num_relations,),
+                (batch_size,),
+            )
+            scores = self.instance.score_r(h=h, all_relations=r, t=t)
+            if len(self.cls.relation_shape) == 0:
+                exp_shape = (batch_size, 1)
+            else:
+                exp_shape = (batch_size, self.num_relations)
+            self._check_scores(scores=scores, exp_shape=exp_shape)
 
     def test_score_r_slicing(self):
         """Test score_r with slicing."""
@@ -444,13 +456,14 @@ class InteractionTestCase(
 
     def test_score_t(self):
         """Test score_t."""
-        h, r, t = self._get_hrt(
-            (self.batch_size,),
-            (self.batch_size,),
-            (self.num_entities,),
-        )
-        scores = self.instance.score_t(h=h, r=r, all_entities=t)
-        self._check_scores(scores=scores, exp_shape=(self.batch_size, self.num_entities))
+        for batch_size in self._score_batch_sizes:
+            h, r, t = self._get_hrt(
+                (batch_size,),
+                (batch_size,),
+                (self.num_entities,),
+            )
+            scores = self.instance.score_t(h=h, r=r, all_entities=t)
+            self._check_scores(scores=scores, exp_shape=(batch_size, self.num_entities))
 
     def test_score_t_slicing(self):
         """Test score_t with slicing."""
