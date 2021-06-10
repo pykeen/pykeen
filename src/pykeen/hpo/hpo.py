@@ -315,22 +315,24 @@ class HpoPipelineResult(Result):
             pipeline_config['training_kwargs']['num_epochs'] = int(stopped_epoch)
         return dict(metadata=metadata, pipeline=pipeline_config)
 
-    def save_to_directory(self, directory: str, **kwargs) -> None:
+    def save_to_directory(self, directory: Union[str, pathlib.Path], **kwargs) -> None:
         """Dump the results of a study to the given directory."""
-        os.makedirs(directory, exist_ok=True)
+        if isinstance(directory, str):
+            directory = pathlib.Path(directory).resolve()
+        directory.mkdir(exist_ok=True, parents=True)
 
         # Output study information
-        with open(os.path.join(directory, 'study.json'), 'w') as file:
+        with directory.joinpath('study.json').open('w') as file:
             json.dump(self.study.user_attrs, file, indent=2, sort_keys=True)
 
         # Output all trials
         df = self.study.trials_dataframe()
-        df.to_csv(os.path.join(directory, 'trials.tsv'), sep='\t', index=False)
+        df.to_csv(directory.joinpath('trials.tsv'), sep='\t', index=False)
 
-        best_pipeline_directory = os.path.join(directory, 'best_pipeline')
-        os.makedirs(best_pipeline_directory, exist_ok=True)
+        best_pipeline_directory = directory.joinpath('best_pipeline')
+        best_pipeline_directory.mkdir(exist_ok=True, parents=True)
         # Output best trial as pipeline configuration file
-        with open(os.path.join(best_pipeline_directory, 'pipeline_config.json'), 'w') as file:
+        with best_pipeline_directory.joinpath('pipeline_config.json').open('w') as file:
             json.dump(self._get_best_study_config(), file, indent=2, sort_keys=True)
 
     def save_to_ftp(self, directory: str, ftp: ftplib.FTP):
@@ -376,7 +378,7 @@ class HpoPipelineResult(Result):
     def replicate_best_pipeline(
         self,
         *,
-        directory: str,
+        directory: Union[str, pathlib.Path],
         replicates: int,
         move_to_cpu: bool = False,
         save_replicates: bool = True,
@@ -403,7 +405,7 @@ class HpoPipelineResult(Result):
         )
 
 
-def hpo_pipeline_from_path(path: str, **kwargs) -> HpoPipelineResult:
+def hpo_pipeline_from_path(path: Union[str, pathlib.Path], **kwargs) -> HpoPipelineResult:
     """Run a HPO study from the configuration at the given path."""
     with open(path) as file:
         config = json.load(file)
@@ -485,9 +487,9 @@ def hpo_pipeline(
     """Train a model on the given dataset.
 
     :param dataset:
-        The name of the dataset (a key from :data:`pykeen.datasets.datasets`) or the :class:`pykeen.datasets.Dataset`
-        instance. Alternatively, the training triples factory (``training``), testing triples factory (``testing``),
-        and validation triples factory (``validation``; optional) can be specified.
+        The name of the dataset (a key for the :data:`pykeen.datasets.dataset_resolver`) or the
+        :class:`pykeen.datasets.Dataset` instance. Alternatively, the training triples factory (``training``), testing
+        triples factory (``testing``), and validation triples factory (``validation``; optional) can be specified.
     :param dataset_kwargs:
         The keyword arguments passed to the dataset upon instantiation
     :param training:
@@ -767,32 +769,43 @@ def suggest_kwargs(
             continue  # has been set by default, won't be suggested
 
         prefixed_name = f'{prefix}.{name}'
+
+        # TODO: make it even easier to specify categorical strategies just as lists
+        # if isinstance(info, (tuple, list, set)):
+        #     info = dict(type='categorical', choices=list(info))
+
         dtype, low, high = info['type'], info.get('low'), info.get('high')
+        log = info.get('log') in {True, 'TRUE', 'True', 'true', 't', 'YES', 'Yes', 'yes', 'y'}
         if dtype in {int, 'int'}:
-            q, scale = info.get('q'), info.get('scale')
-            if scale == 'power_two':
-                _kwargs[name] = suggest_discrete_power_two_int(
+            scale = info.get('scale')
+            if scale in {'power_two', 'power'}:
+                _kwargs[name] = suggest_discrete_power_int(
                     trial=trial,
                     name=prefixed_name,
                     low=low,
                     high=high,
+                    base=info.get('q') or info.get('base') or 2,
                 )
-            elif q is not None:
-                _kwargs[name] = suggest_discrete_uniform_int(
-                    trial=trial,
+            elif scale is None or scale == 'linear':
+                # get log from info - could either be a boolean or string
+                _kwargs[name] = trial.suggest_int(
                     name=prefixed_name,
                     low=low,
                     high=high,
-                    q=q,
+                    step=info.get('q') or info.get('step') or 1,
+                    log=log,
                 )
             else:
-                _kwargs[name] = trial.suggest_int(name=prefixed_name, low=low, high=high)
+                logger.warning(f'Unhandled scale {scale} for parameter {name} of data type {dtype}')
 
         elif dtype in {float, 'float'}:
-            if info.get('scale') == 'log':
-                _kwargs[name] = trial.suggest_loguniform(name=prefixed_name, low=low, high=high)
-            else:
-                _kwargs[name] = trial.suggest_uniform(name=prefixed_name, low=low, high=high)
+            _kwargs[name] = trial.suggest_float(
+                name=prefixed_name,
+                low=low,
+                high=high,
+                step=info.get('q') or info.get('step'),
+                log=log,
+            )
         elif dtype == 'categorical':
             choices = info['choices']
             _kwargs[name] = trial.suggest_categorical(name=prefixed_name, choices=choices)
@@ -804,19 +817,11 @@ def suggest_kwargs(
     return _kwargs
 
 
-def suggest_discrete_uniform_int(trial: Trial, name, low, high, q) -> int:
-    """Suggest an integer in the given range [low, high] inclusive with step size q."""
-    if (high - low) % q:
-        logger.warning(f'bad range given: range({low}, {high}, {q}) - not divisible by q')
-    choices = list(range(low, high + 1, q))
-    return trial.suggest_categorical(name=name, choices=choices)
-
-
-def suggest_discrete_power_two_int(trial: Trial, name, low, high) -> int:
+def suggest_discrete_power_int(trial: Trial, name: str, low: int, high: int, base: int = 2) -> int:
     """Suggest an integer in the given range [2^low, 2^high]."""
     if high <= low:
         raise Exception(f"Upper bound {high} is not greater than lower bound {low}.")
-    choices = [2 ** i for i in range(low, high + 1)]
+    choices = [base ** i for i in range(low, high + 1)]
     return trial.suggest_categorical(name=name, choices=choices)
 
 

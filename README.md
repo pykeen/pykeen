@@ -34,7 +34,7 @@
   <a href="#installation">Installation</a> •
   <a href="#quickstart">Quickstart</a> •
   <a href="#datasets-26">Datasets</a> •
-  <a href="#models-27">Models</a> •
+  <a href="#models-28">Models</a> •
   <a href="#supporters">Support</a> •
   <a href="#citation">Citation</a>
 </p>
@@ -44,18 +44,18 @@
 The latest stable version of PyKEEN can be downloaded and installed from
 [PyPI](https://pypi.org/project/pykeen) with:
 
-```bash
+```shell
 $ pip install pykeen
 ```
 
 The latest version of PyKEEN can be installed directly from the
 source on [GitHub](https://github.com/pykeen/pykeen) with:
 
-```bash
-pip install git+https://github.com/pykeen/pykeen.git
+```shell
+$ pip install git+https://github.com/pykeen/pykeen.git
 ```
 
-More information about installation (e.g., development mode, Windows installation, extras)
+More information about installation (e.g., development mode, Windows installation, Colab, Kaggle, extras)
 can be found in the [installation documentation](https://pykeen.readthedocs.io/en/latest/installation.html).
 
 ## Quickstart [![Documentation Status](https://readthedocs.org/projects/pykeen/badge/?version=latest)](https://pykeen.readthedocs.io/en/latest/?badge=latest)
@@ -131,7 +131,7 @@ or the URL for the dataset if neither of the first two are available.
 | WordNet-18 (RR)                    | [`pykeen.datasets.WN18RR`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.WN18RR.html)               | [Toutanova *et al*., 2015](https://www.aclweb.org/anthology/W15-4007/)                                                  |      40559 |          11 |     92583 |
 | YAGO3-10                           | [`pykeen.datasets.YAGO310`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.YAGO310.html)             | [Mahdisoltani *et al*., 2015](http://service.tsi.telecom-paristech.fr/cgi-bin//valipub_download.cgi?dId=284)            |     123143 |          37 |   1089000 |
 
-### Models (27)
+### Models (28)
 
 | Name                | Reference                                                                                                                 | Citation                                                                                                                |
 |---------------------|---------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|
@@ -140,6 +140,7 @@ or the URL for the dataset if neither of the first two are available.
 | ComplExLiteral      | [`pykeen.models.ComplExLiteral`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.ComplExLiteral.html)           | [Kristiadi *et al.*, 2018](https://arxiv.org/abs/1802.00934)                                                            |
 | ConvE               | [`pykeen.models.ConvE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.ConvE.html)                             | [Dettmers *et al.*, 2018](https://www.aaai.org/ocs/index.php/AAAI/AAAI18/paper/view/17366)                              |
 | ConvKB              | [`pykeen.models.ConvKB`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.ConvKB.html)                           | [Nguyen *et al.*, 2018](https://www.aclweb.org/anthology/N18-2053)                                                      |
+| CrossE              | [`pykeen.models.CrossE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.CrossE.html)                           | [Zhang *et al.*, 2019](https://arxiv.org/abs/1903.04750)                                                                |
 | DistMult            | [`pykeen.models.DistMult`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.DistMult.html)                       | [Yang *et al.*, 2014](https://arxiv.org/abs/1412.6575)                                                                  |
 | DistMultLiteral     | [`pykeen.models.DistMultLiteral`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.DistMultLiteral.html)         | [Kristiadi *et al.*, 2018](https://arxiv.org/abs/1802.00934)                                                            |
 | ERMLP               | [`pykeen.models.ERMLP`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.ERMLP.html)                             | [Dong *et al.*, 2014](https://dl.acm.org/citation.cfm?id=2623623)                                                       |
@@ -169,7 +170,7 @@ or the URL for the dataset if neither of the first two are available.
 |-----------------|---------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------|
 | bceaftersigmoid | [`pykeen.losses.BCEAfterSigmoidLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.BCEAfterSigmoidLoss.html) | A module for the numerically unstable version of explicit Sigmoid + BCE loss.                     |
 | bcewithlogits   | [`pykeen.losses.BCEWithLogitsLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.BCEWithLogitsLoss.html)     | A module for the binary cross entropy loss.                                                       |
-| crossentropy    | [`pykeen.losses.CrossEntropyLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.CrossEntropyLoss.html)       | A module for the cross entopy loss that evaluates the cross entropy after softmax output.         |
+| crossentropy    | [`pykeen.losses.CrossEntropyLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.CrossEntropyLoss.html)       | A module for the cross entropy loss that evaluates the cross entropy after softmax output.        |
 | marginranking   | [`pykeen.losses.MarginRankingLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.MarginRankingLoss.html)     | A module for the margin ranking loss.                                                             |
 | mse             | [`pykeen.losses.MSELoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.MSELoss.html)                         | A module for the mean square error loss.                                                          |
 | nssa            | [`pykeen.losses.NSSALoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.NSSALoss.html)                       | An implementation of the self-adversarial negative sampling loss function proposed by [sun2019]_. |
@@ -203,12 +204,13 @@ or the URL for the dataset if neither of the first two are available.
 | lcwa   | [`pykeen.training.LCWATrainingLoop`](https://pykeen.readthedocs.io/en/latest/reference/training.html#pykeen.training.LCWATrainingLoop)   | A training loop that uses the local closed world assumption training approach.            |
 | slcwa  | [`pykeen.training.SLCWATrainingLoop`](https://pykeen.readthedocs.io/en/latest/reference/training.html#pykeen.training.SLCWATrainingLoop) | A training loop that uses the stochastic local closed world assumption training approach. |
 
-### Negative Samplers (2)
+### Negative Samplers (3)
 
-| Name      | Reference                                                                                                                               | Description                                                                            |
-|-----------|-----------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------|
-| basic     | [`pykeen.sampling.BasicNegativeSampler`](https://pykeen.readthedocs.io/en/latest/api/pykeen.sampling.BasicNegativeSampler.html)         | A basic negative sampler.                                                              |
-| bernoulli | [`pykeen.sampling.BernoulliNegativeSampler`](https://pykeen.readthedocs.io/en/latest/api/pykeen.sampling.BernoulliNegativeSampler.html) | An implementation of the Bernoulli negative sampling approach proposed by [wang2014]_. |
+| Name        | Reference                                                                                                                                   | Description                                                                            |
+|-------------|---------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------|
+| basic       | [`pykeen.sampling.BasicNegativeSampler`](https://pykeen.readthedocs.io/en/latest/api/pykeen.sampling.BasicNegativeSampler.html)             | A basic negative sampler.                                                              |
+| bernoulli   | [`pykeen.sampling.BernoulliNegativeSampler`](https://pykeen.readthedocs.io/en/latest/api/pykeen.sampling.BernoulliNegativeSampler.html)     | An implementation of the Bernoulli negative sampling approach proposed by [wang2014]_. |
+| pseudotyped | [`pykeen.sampling.PseudoTypedNegativeSampler`](https://pykeen.readthedocs.io/en/latest/api/pykeen.sampling.PseudoTypedNegativeSampler.html) | A sampler that accounts for which entities co-occur with a relation.                   |
 
 ### Stoppers (2)
 
@@ -242,15 +244,17 @@ or the URL for the dataset if neither of the first two are available.
 | Mean Reciprocal Rank (MRR)                  | The inverse of the harmonic mean over all ranks, on (0, 1]. Higher is better.          |
 | Median Rank                                 | The median over all ranks, on [1, inf). Lower is better.                               |
 
-### Trackers (5)
+### Trackers (7)
 
-| Name    | Reference                                                                                                                       | Description                            |
-|---------|---------------------------------------------------------------------------------------------------------------------------------|----------------------------------------|
-| csv     | [`pykeen.trackers.CSVResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.CSVResultTracker.html)         | Tracking results to a CSV file.        |
-| json    | [`pykeen.trackers.JSONResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.JSONResultTracker.html)       | Tracking results to a JSON lines file. |
-| mlflow  | [`pykeen.trackers.MLFlowResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.MLFlowResultTracker.html)   | A tracker for MLflow.                  |
-| neptune | [`pykeen.trackers.NeptuneResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.NeptuneResultTracker.html) | A tracker for Neptune.ai.              |
-| wandb   | [`pykeen.trackers.WANDBResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.WANDBResultTracker.html)     | A tracker for Weights and Biases.      |
+| Name        | Reference                                                                                                                               | Description                              |
+|-------------|-----------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------|
+| console     | [`pykeen.trackers.ConsoleResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.ConsoleResultTracker.html)         | A class that directly prints to console. |
+| csv         | [`pykeen.trackers.CSVResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.CSVResultTracker.html)                 | Tracking results to a CSV file.          |
+| json        | [`pykeen.trackers.JSONResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.JSONResultTracker.html)               | Tracking results to a JSON lines file.   |
+| mlflow      | [`pykeen.trackers.MLFlowResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.MLFlowResultTracker.html)           | A tracker for MLflow.                    |
+| neptune     | [`pykeen.trackers.NeptuneResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.NeptuneResultTracker.html)         | A tracker for Neptune.ai.                |
+| tensorboard | [`pykeen.trackers.TensorBoardResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.TensorBoardResultTracker.html) | A tracker for TensorBoard.               |
+| wandb       | [`pykeen.trackers.WANDBResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.WANDBResultTracker.html)             | A tracker for Weights and Biases.        |
 
 ## Hyper-parameter Optimization
 
@@ -273,8 +277,8 @@ algorithm, can also be used.
 PyKEEN includes a set of curated experimental settings for reproducing past landmark
 experiments. They can be accessed and run like:
 
-```bash
-pykeen experiments reproduce tucker balazevic2019 fb15k
+```shell
+$ pykeen experiments reproduce tucker balazevic2019 fb15k
 ```
 
 Where the three arguments are the model name, the reference, and the dataset.
@@ -285,8 +289,8 @@ The output directory can be optionally set with `-d`.
 PyKEEN includes the ability to specify ablation studies using the
 hyper-parameter optimization module. They can be run like:
 
-```bash
-pykeen experiments ablation ~/path/to/config.json
+```shell
+$ pykeen experiments ablation ~/path/to/config.json
 ```
 
 ### Large-scale Reproducibility and Benchmarking Study
@@ -308,7 +312,7 @@ at https://github.com/pykeen/benchmarking.
 
 ## Contributing
 
-Contributions, whether filing an issue, making a pull request, or forking, are appreciated. 
+Contributions, whether filing an issue, making a pull request, or forking, are appreciated.
 See [CONTRIBUTING.md](/CONTRIBUTING.md) for more information on getting involved.
 
 ## Acknowledgements
@@ -332,13 +336,23 @@ This project has been supported by several organizations (in alphabetical order)
 - [Technical University of Denmark - DTU Compute - Section for Statistics and Data Analysis](https://www.compute.dtu.dk/english/research/research-sections/stat)
 - [University of Bonn](https://www.uni-bonn.de/)
 
+### Funding
+
+The development of PyKEEN has been funded by the following grants:
+
+| Funding Body                                             | Program                                                                                                                       | Grant         |
+|----------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------|---------------|
+| DARPA                                                    | [Automating Scientific Knowledge Extraction (ASKE)](https://www.darpa.mil/program/automating-scientific-knowledge-extraction) | HR00111990009 |
+| German Federal Ministry of Education and Research (BMBF) | [Maschinelles Lernen mit Wissensgraphen (MLWin)](https://mlwin.de)                                                            | 01IS18050D    |
+
 ### Logo
 
-The PyKEEN logo was designed by Carina Steinborn.
+The PyKEEN logo was designed by [Carina Steinborn](https://www.xing.com/profile/Carina_Steinborn2)
 
 ## Citation
 
-If you have found PyKEEN useful in your work, please consider citing [our article](https://arxiv.org/abs/2007.14175):
+If you have found PyKEEN useful in your work, please consider citing
+[our article](http://jmlr.org/papers/v22/20-825.html):
 
 ```bibtex
 @article{ali2021pykeen,

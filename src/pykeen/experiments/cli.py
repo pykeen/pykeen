@@ -108,7 +108,7 @@ def run(
 
 def _help_reproduce(
     *,
-    directory: str,
+    directory: Union[str, pathlib.Path],
     path: Union[str, pathlib.Path],
     replicates: int,
     move_to_cpu: bool = False,
@@ -127,7 +127,10 @@ def _help_reproduce(
     """
     from pykeen.pipeline import replicate_pipeline_from_path
 
-    if not os.path.exists(path):
+    if isinstance(path, str):
+        path = pathlib.Path(path).resolve()
+
+    if not path.is_file():
         click.secho(f'Could not find configuration at {path}', fg='red')
         sys.exit(1)
     click.echo(f'Running configuration at {path}')
@@ -138,9 +141,11 @@ def _help_reproduce(
         experiment_id = f'{datetime}_{uuid4()}_{file_name}'
     else:
         experiment_id = f'{datetime}_{uuid4()}'
-    output_directory = os.path.join(directory, experiment_id)
 
-    os.makedirs(output_directory, exist_ok=True)
+    if isinstance(directory, str):
+        directory = pathlib.Path(directory).resolve()
+    output_directory = directory.joinpath(experiment_id)
+    output_directory.mkdir(exist_ok=True, parents=True)
 
     replicate_pipeline_from_path(
         path=path,

@@ -35,7 +35,7 @@ class CustomRepresentations(RepresentationModule):
 class MockModel(EntityRelationEmbeddingModel):
     """A mock model returning fake scores."""
 
-    def __init__(self, triples_factory: CoreTriplesFactory):
+    def __init__(self, *, triples_factory: CoreTriplesFactory):
         super().__init__(
             triples_factory=triples_factory,
             entity_representations=EmbeddingSpecification(embedding_dim=50),
@@ -53,7 +53,7 @@ class MockModel(EntityRelationEmbeddingModel):
         return batch_scores
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._generate_fake_scores(batch=hrt_batch)
+        return self.scores[torch.randint(high=self.num_entities, size=hrt_batch.shape[:-1])]
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         return self._generate_fake_scores(batch=hr_batch)

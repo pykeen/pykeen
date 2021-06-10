@@ -38,11 +38,11 @@ class FiltererTest(unittest_templates.GenericTestCase[Filterer]):
         """Test the filter method."""
         # Check whether filtering works correctly
         # First giving an example where all triples have to be filtered
-        _, batch_filter = self.instance(negative_batch=self.positive_batch)
+        batch_filter = self.instance(negative_batch=self.positive_batch)
         # The filter should remove all triples
         assert batch_filter.sum() == 0
         # Create an example where no triples will be filtered
-        _, batch_filter = self.instance(
+        batch_filter = self.instance(
             negative_batch=(self.positive_batch + self.triples_factory.num_entities),
         )
         # The filter should not remove any triple

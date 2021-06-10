@@ -21,8 +21,9 @@ from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
 from tqdm.autonotebook import tqdm, trange
 
+from .callbacks import MultiTrainingCallback, TrackerCallback, TrainingCallbackHint
 from ..constants import PYKEEN_CHECKPOINTS, PYKEEN_DEFAULT_CHECKPOINT
-from ..losses import Loss, has_mr_loss, has_nssa_loss
+from ..losses import Loss
 from ..models import Model, RGCN
 from ..stoppers import Stopper
 from ..trackers import ResultTracker
@@ -85,6 +86,9 @@ def _get_optimizer_kwargs(optimizer: Optimizer) -> Mapping[str, Any]:
 class TrainingLoop(Generic[SampleType, BatchType], ABC):
     """A training loop."""
 
+    model: Model
+    optimizer: Optimizer
+
     losses_per_epochs: List[float]
     loss_blacklist: ClassVar[Optional[List[Type[Loss]]]] = None
 
@@ -122,13 +126,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                 f' with training approach {self.__class__.__name__}',
             )
 
-        if has_mr_loss(self.model):
-            self._loss_helper = self._mr_loss_helper
-        elif has_nssa_loss(self.model):
-            self._loss_helper = self._self_adversarial_negative_sampling_loss_helper
-        else:
-            self._loss_helper = self._label_loss_helper  # type: ignore
-
         # The internal epoch state tracks the last finished epoch of the training loop to allow for
         # seamless loading and saving of training checkpoints
         self._epoch = 0
@@ -142,6 +139,11 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
     def device(self):  # noqa: D401
         """The device used by the model."""
         return self.model.device
+
+    @property
+    def loss(self):  # noqa: D401
+        """The loss used by the model."""
+        return self.model.loss
 
     @property
     def checksum(self) -> str:  # noqa: D401
@@ -174,6 +176,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         checkpoint_frequency: Optional[int] = None,
         checkpoint_on_failure: bool = False,
         drop_last: Optional[bool] = None,
+        callbacks: TrainingCallbackHint = None,
     ) -> Optional[List[float]]:
         """Train the KGE model.
 
@@ -230,6 +233,9 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         :param drop_last:
             Whether to drop the last batch in each epoch to prevent smaller batches. Defaults to False, except if the
             model contains batch normalization layers. Can be provided explicitly to override.
+        :param callbacks:
+            An optional :class:`pykeen.training.TrainingCallback` or collection of callback instances that define
+            one of several functionalities. Their interface was inspired by Keras.
 
         :return:
             The losses per epoch.
@@ -314,6 +320,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                 best_epoch_model_file_path=best_epoch_model_file_path,
                 last_best_epoch=last_best_epoch,
                 drop_last=drop_last,
+                callbacks=callbacks,
                 triples_factory=triples_factory,
                 training_instances=training_instances,
             )
@@ -352,6 +359,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         best_epoch_model_file_path: Optional[pathlib.Path] = None,
         last_best_epoch: Optional[int] = None,
         drop_last: Optional[bool] = None,
+        callbacks: TrainingCallbackHint = None,
     ) -> Optional[List[float]]:
         """Train the KGE model.
 
@@ -427,6 +435,14 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                 sampler,
             )
 
+        # Prepare all of the callbacks
+        callback = MultiTrainingCallback(callbacks)
+        # Register a callback for the result tracker, if given
+        if result_tracker is not None:
+            callback.register_callback(TrackerCallback(result_tracker))
+
+        callback.register_training_loop(self)
+
         # Take the biggest possible training batch_size, if batch_size not set
         batch_size_sufficient = False
         if batch_size is None:
@@ -463,10 +479,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                 training_instances=training_instances,
             )
 
-        # Create dummy result tracker
-        if result_tracker is None:
-            result_tracker = ResultTracker()
-
         if sub_batch_size is None or sub_batch_size == batch_size:  # by default do not split batches in sub-batches
             sub_batch_size = batch_size
         elif get_batchnorm_modules(self.model):  # if there are any, this is truthy
@@ -482,10 +494,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                     "Dropping last (incomplete) batch each epoch (%s batches).",
                     format_relative_comparison(part=1, total=len(training_instances)),
                 )
-
-        # Sanity check
-        if has_mr_loss(self.model) and label_smoothing > 0.:
-            raise RuntimeError('Label smoothing can not be used with margin ranking loss.')
 
         # Force weight initialization if training continuation is not explicitly requested.
         if not continue_training:
@@ -587,7 +595,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                         stop = min(start + sub_batch_size, current_batch_size)
 
                         # forward pass call
-                        current_epoch_loss += self._forward_pass(
+                        batch_loss = self._forward_pass(
                             batch,
                             start,
                             stop,
@@ -595,6 +603,8 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                             label_smoothing,
                             slice_size,
                         )
+                        current_epoch_loss += batch_loss
+                        callback.on_batch(epoch=epoch, batch=batch, batch_loss=batch_loss)
 
                     # when called by batch_size_search(), the parameter update should not be applied.
                     if not only_size_probing:
@@ -608,6 +618,8 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                     # For testing purposes we're only interested in processing one batch
                     if only_size_probing and evaluated_once:
                         break
+
+                    callback.post_batch(epoch=epoch, batch=batch)
 
                     evaluated_once = True
 
@@ -624,7 +636,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                 # Track epoch loss
                 epoch_loss = current_epoch_loss / num_training_instances
                 self.losses_per_epochs.append(epoch_loss)
-                result_tracker.log_metrics({'loss': epoch_loss}, step=epoch)
 
                 # Print loss information to console
                 if _use_outer_tqdm:
@@ -677,6 +688,9 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                     os.remove(best_epoch_model_file_path)
                 raise e
 
+            # Includes a call to result_tracker.log_metrics
+            callback.post_epoch(epoch=epoch, epoch_loss=epoch_loss)
+
             # If a checkpoint file is given, we check whether it is time to save a checkpoint
             if save_checkpoints and checkpoint_path is not None:
                 minutes_since_last_checkpoint = (time.time() - last_checkpoint) // 60
@@ -702,6 +716,8 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                 if pathlib.Path.is_file(best_epoch_model_file_path):
                     os.remove(best_epoch_model_file_path)
                 return self.losses_per_epochs
+
+        callback.post_train(losses=self.losses_per_epochs)
 
         # If the stopper didn't stop the training loop but derived a best epoch, the model has to be reconstructed
         # at that state
@@ -991,30 +1007,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         self._free_graph_and_cache()
 
         return sub_batch_size, finished_search, supports_sub_batching
-
-    def _mr_loss_helper(
-        self,
-        positive_scores: torch.FloatTensor,
-        negative_scores: torch.FloatTensor,
-        _label_smoothing=None,
-    ) -> torch.FloatTensor:
-        raise NotImplementedError
-
-    def _label_loss_helper(
-        self,
-        positive_scores: torch.FloatTensor,
-        negative_scores: torch.FloatTensor,
-        label_smoothing: float,
-    ) -> torch.FloatTensor:
-        raise NotImplementedError
-
-    def _self_adversarial_negative_sampling_loss_helper(
-        self,
-        positive_scores: torch.FloatTensor,
-        negative_scores: torch.FloatTensor,
-        _label_smoothing=None,
-    ) -> torch.FloatTensor:
-        raise NotImplementedError
 
     def _free_graph_and_cache(self):
         self.model._free_graph_and_cache()

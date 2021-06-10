@@ -109,7 +109,7 @@ def _map_triples_elements_to_ids(
 
     triples_of_ids = np.concatenate([head_column, relation_column, tail_column], axis=1)
 
-    triples_of_ids = np.array(triples_of_ids, dtype=np.long)
+    triples_of_ids = np.array(triples_of_ids, dtype=np.int64)
     # Note: Unique changes the order of the triples
     # Note: Using unique means implicit balancing of training samples
     unique_mapped_triples = np.unique(ar=triples_of_ids, axis=0)
