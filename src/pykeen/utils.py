@@ -1133,6 +1133,7 @@ class Mersenne(MultiTripleHash):
                 dtype=torch.long,
             ).unsqueeze(dim=0),
         )
+        self.register_buffer(name="offset", tensor=torch.randint(self.max_val, size=tuple()))
 
     def forward(
         self,
@@ -1140,7 +1141,7 @@ class Mersenne(MultiTripleHash):
         rounds: int,
     ) -> Iterable[torch.LongTensor]:
         # pre-hash
-        x = (self.mersenne * batch).sum(dim=-1)
+        x = (self.mersenne * batch).sum(dim=-1) + self.offset
         for _ in range(rounds):
             x = _skeeto_2round_32bit(x)
             yield x % self.max_val
@@ -1197,6 +1198,7 @@ class MinHash:
     def __init__(
         self,
         num_permutations: int = 256,
+        max_val: int = _max_long,
         **kwargs,
     ):
         """
@@ -1206,15 +1208,18 @@ class MinHash:
             The number of permutations to use. Increasing the number increases accuracy but also computation time and
             storage space.
         """
-        max_long = torch.iinfo(torch.long).max
-        self.min_hash_values = torch.full(size=(num_permutations,), fill_value=max_long)
-        self.hasher = Mersenne(**kwargs)
+        self.min_hash_values = torch.full(size=(num_permutations,), fill_value=max_val)
+        self.hasher = Mersenne(**kwargs, max_val=max_val)
 
     def update(self, batch: torch.LongTensor) -> None:
         """Update MinHash with a batch."""
         for i, hash_batch in enumerate(self.hasher(batch, self.min_hash_values.shape[0])):
             min_hash = hash_batch.min()
             self.min_hash_values[i] = torch.min(min_hash, self.min_hash_values[i])
+
+    def size(self):
+        """Cardinality estimation, cf. <http://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=365694>`_."""
+        return float(self.min_hash_values.shape[0]) / (self.min_hash_values.double() / float(_max_long)).sum() - 1.0
 
     def jaccard(self, other: "MinHash") -> torch.FloatTensor:
         """Return estimated jaccard similarity."""
