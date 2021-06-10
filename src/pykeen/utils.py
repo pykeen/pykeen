@@ -1089,16 +1089,16 @@ class MultiTripleHash(nn.Module):
     #: some prime numbers for tuple hashing
     mersenne: torch.LongTensor
 
-    def __init__(self):
+    def __init__(self, size: int = 3, max_val: int = torch.iinfo(torch.long).max):
         """Initialize buffer."""
         super().__init__()
-        self.register_buffer(
-            name="mersenne",
-            tensor=torch.as_tensor(
-                data=[2 ** x - 1 for x in [17, 19, 31]],
-                dtype=torch.long,
-            ).unsqueeze(dim=0),
-        )
+        # multiply-shift-add family
+        log_max_val = int(math.ceil(math.log2(max_val)))
+        max_val = 2 ** log_max_val
+        self.register_buffer(name="scale", tensor=1 + 2 * torch.randint(max_val // 2, size=(size,)))
+        self.register_buffer(name="bias", tensor=torch.randint(max_val, size=(size,)))
+        self.register_buffer(name="coef", tensor=1 + 2 * torch.randint(max_val // 2, size=(2, size,)))
+        self.shift = 63 - log_max_val
 
     def forward(
         self,
@@ -1107,7 +1107,9 @@ class MultiTripleHash(nn.Module):
     ) -> Iterable[torch.LongTensor]:
         """Yield triple hash values."""
         # pre-hash
-        x = (self.mersenne * batch).sum(dim=-1)
+        high = batch >> 32
+        low = batch - (high << 32)
+        x = (self.coef[0] * high + self.coef[1] * low).sum()
         for _ in range(rounds):
             # cf. https://github.com/skeeto/hash-prospector#two-round-functions
             x = x ^ (x >> 16)
