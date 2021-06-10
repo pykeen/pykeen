@@ -42,7 +42,7 @@ from pykeen.trackers import ResultTracker
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
 from pykeen.triples import TriplesFactory
 from pykeen.typing import HeadRepresentation, MappedTriples, RelationRepresentation, TailRepresentation
-from pykeen.utils import all_in_bounds, resolve_device, set_random_seed, unpack_singletons
+from pykeen.utils import all_in_bounds, get_batchnorm_modules, resolve_device, set_random_seed, unpack_singletons
 from tests.constants import EPSILON
 from tests.mocks import CustomRepresentations
 from tests.utils import rand
@@ -384,6 +384,9 @@ class InteractionTestCase(
 
     @property
     def _score_batch_sizes(self) -> Iterable[int]:
+        """Return the list of batch sizes to test."""
+        if get_batchnorm_modules(self.instance):
+            return [self.batch_size]
         return [1, self.batch_size]
 
     def test_score_hrt(self):
