@@ -384,6 +384,16 @@ class InteractionTestCase(
         scores_no_slice = self.instance.score_t(h=h, r=r, all_entities=t, slice_size=None)
         self._check_close_scores(scores=scores, scores_no_slice=scores_no_slice)
 
+    def test_score_t_singleton_batch(self):
+        """Test score_t with a batch size of 1."""
+        h, r, t = self._get_hrt(
+            (1,),
+            (1,),
+            (self.num_entities,),
+        )
+        scores = self.instance.score_t(h=h, r=r, all_entities=t)
+        self._check_scores(scores=scores, exp_shape=(1, self.num_entities))
+
     def _check_close_scores(self, scores, scores_no_slice):
         self.assertTrue(torch.isfinite(scores).all(), msg=f'Normal scores had nan:\n\t{scores}')
         self.assertTrue(torch.isfinite(scores_no_slice).all(), msg=f'Slice scores had nan\n\t{scores}')
