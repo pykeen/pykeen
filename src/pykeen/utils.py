@@ -1166,10 +1166,6 @@ class MultiplyShiftAdd(MultiTripleHash):
         self.register_buffer(name="coef", tensor=1 + 2 * torch.randint(self.max_long // 2, size=(2 * size + 1,)))
         self.shift = 63 - log_max_val
 
-    @staticmethod
-    def _unsigned(x: torch.LongTensor) -> torch.LongTensor:
-        return x & MultiTripleHash.max_long
-
     def forward(
         self,
         batch: torch.LongTensor,
@@ -1182,7 +1178,7 @@ class MultiplyShiftAdd(MultiTripleHash):
         shape = [1] * len(batch.shape[:-1]) + [-1]
         x = (self.bias + self.scale[0].view(*shape) * high + self.scale[1].view(*shape) * low).sum(dim=-1)
         # make unsigned
-        x = self._unsigned(x)
+        x = _unsigned(x)
         for _ in range(rounds):
             # cf. https://github.com/skeeto/hash-prospector#two-round-functions
             x = _skeeto_2round_32bit(x)
