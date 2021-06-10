@@ -1103,11 +1103,12 @@ class MultiTripleHash(nn.Module):
     def forward(
         self,
         batch: torch.LongTensor,
+        rounds: int,
     ) -> Iterable[torch.LongTensor]:
         """Yield triple hash values."""
         # pre-hash
         x = (self.mersenne * batch).sum(dim=-1)
-        while True:
+        for _ in range(rounds):
             # cf. https://github.com/skeeto/hash-prospector#two-round-functions
             x = x ^ (x >> 16)
             x = x * 0x7feb352d

@@ -312,7 +312,7 @@ class BloomFilterer(Filterer):
 
         :yields: Indices of the k-th round, shape: (batch_size,).
         """
-        for y in itertools.islice(self.hasher(batch), self.rounds):
+        for y in self.hasher(batch, rounds=self.rounds):
             yield y % self.bit_array.shape[0]
 
     def add(self, triples: MappedTriples) -> None:
