@@ -1084,21 +1084,96 @@ def complex_normalize(x: torch.Tensor) -> torch.Tensor:
 
 
 class MultiTripleHash(nn.Module):
+    """Interface for vectorized hashing for triples."""
+
+    def __init__(self, vector_size: int = 3, max_val: int = 2 ** 63 - 1):
+        super().__init__()
+        self.vector_size = vector_size
+        self.max_val = max_val
+
+    @abstractmethod
+    def forward(
+        self,
+        batch: torch.LongTensor,
+        rounds: int,
+    ) -> Iterable[torch.LongTensor]:
+        raise NotImplementedError
+
+
+_max_long = torch.iinfo(torch.long).max
+
+
+def _unsigned(x: torch.LongTensor) -> torch.LongTensor:
+    return x & _max_long
+
+
+def _skeeto_2round_32bit(x: torch.LongTensor) -> torch.LongTensor:
+    # cf. https://github.com/skeeto/hash-prospector#two-round-functions
+    x = x ^ (x >> 16)
+    x = _unsigned(x * 0x7feb352d)
+    x = x ^ (x >> 15)
+    x = _unsigned(x * 0x846ca68b)
+    x = x ^ (x >> 16)
+    return x
+
+
+class Mersenne(MultiTripleHash):
+    #: some prime numbers for tuple hashing
+    mersenne: torch.LongTensor
+
+    def __init__(self, vector_size: int = 3, **kwargs):
+        super().__init__(vector_size=vector_size, **kwargs)
+        mersenne = [2 ** x - 1 for x in [17, 19, 31]]
+        assert vector_size <= 3
+        mersenne = mersenne[:vector_size]
+        self.register_buffer(
+            name="mersenne",
+            tensor=torch.as_tensor(
+                data=mersenne,
+                dtype=torch.long,
+            ).unsqueeze(dim=0),
+        )
+
+    def forward(
+        self,
+        batch: torch.LongTensor,
+        rounds: int,
+    ) -> Iterable[torch.LongTensor]:
+        # pre-hash
+        x = (self.mersenne * batch).sum(dim=-1)
+        for _ in range(rounds):
+            # cf. https://github.com/skeeto/hash-prospector#two-round-functions
+            x = x ^ (x >> 16)
+            x = x * 0x7feb352d
+            x = x ^ (x >> 15)
+            x = x * 0x846ca68b
+            x = x ^ (x >> 16)
+            yield x % self.max_val
+
+
+class MultiplyShiftAdd(MultiTripleHash):
     """Vectorized hashing for triples."""
 
     #: some prime numbers for tuple hashing
     mersenne: torch.LongTensor
 
-    def __init__(self, size: int = 3, max_val: int = torch.iinfo(torch.long).max):
+    #: The maximum long value
+    max_long: int = torch.iinfo(torch.long).max
+
+    def __init__(self, size: int = 3, max_val: int = torch.iinfo(torch.long).max - 1):
         """Initialize buffer."""
         super().__init__()
         # multiply-shift-add family
         log_max_val = int(math.ceil(math.log2(max_val)))
-        max_val = 2 ** log_max_val
-        self.register_buffer(name="scale", tensor=1 + 2 * torch.randint(max_val // 2, size=(size,)))
+        max_val = 2 ** log_max_val - 1
+        self.register_buffer(name="scale", tensor=1 + 2 * torch.randint(max_val // 2, size=(2, size,)))
         self.register_buffer(name="bias", tensor=torch.randint(max_val, size=(size,)))
-        self.register_buffer(name="coef", tensor=1 + 2 * torch.randint(max_val // 2, size=(2, size,)))
+        self.register_buffer(name="coef", tensor=1 + 2 * torch.randint(self.max_long // 2, size=(2 * size + 1,)))
         self.shift = 63 - log_max_val
+
+    @staticmethod
+    def _unsigned(x: torch.LongTensor) -> torch.LongTensor:
+        return x & MultiTripleHash.max_long
 
     def forward(
         self,
@@ -1109,13 +1184,17 @@ class MultiTripleHash(nn.Module):
         # pre-hash
         high = batch >> 32
         low = batch - (high << 32)
-        x = (self.coef[0] * high + self.coef[1] * low).sum()
+        shape = [1] * len(batch.shape[:-1]) + [-1]
+        x = (self.bias + self.scale[0].view(*shape) * high + self.scale[1].view(*shape) * low).sum(dim=-1)
+        # make unsigned
+        x = self._unsigned(x)
+        x = x << self.shift
         for _ in range(rounds):
             # cf. https://github.com/skeeto/hash-prospector#two-round-functions
             x = x ^ (x >> 16)
-            x = x * 0x7feb352d
+            x = self._unsigned(x * 0x7feb352d)
             x = x ^ (x >> 15)
-            x = x * 0x846ca68b
+            x = self._unsigned(x * 0x846ca68b)
             x = x ^ (x >> 16)
             yield x
 
@@ -1132,6 +1211,7 @@ class MinHash:
     def __init__(
         self,
         num_permutations: int = 256,
+        **kwargs,
     ):
         """
         Initialize the minHash.
@@ -1142,12 +1222,13 @@ class MinHash:
         """
         max_long = torch.iinfo(torch.long).max
         self.min_hash_values = torch.full(size=(num_permutations,), fill_value=max_long)
-        self.hasher = MultiTripleHash()
+        self.hasher = Mersenne(**kwargs)
 
     def update(self, batch: torch.LongTensor) -> None:
         """Update MinHash with a batch."""
         for i, hash_batch in enumerate(self.hasher(batch, self.min_hash_values.shape[0])):
-            self.min_hash_values[i] = torch.min(hash_batch.min(), self.min_hash_values[i])
+            min_hash = hash_batch.min()
+            self.min_hash_values[i] = torch.min(min_hash, self.min_hash_values[i])
 
     def jaccard(self, other: "MinHash") -> torch.FloatTensor:
         """Return estimated jaccard similarity."""
