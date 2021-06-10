@@ -1142,12 +1142,7 @@ class Mersenne(MultiTripleHash):
         # pre-hash
         x = (self.mersenne * batch).sum(dim=-1)
         for _ in range(rounds):
-            # cf. https://github.com/skeeto/hash-prospector#two-round-functions
-            x = x ^ (x >> 16)
-            x = x * 0x7feb352d
-            x = x ^ (x >> 15)
-            x = x * 0x846ca68b
-            x = x ^ (x >> 16)
+            x = _skeeto_2round_32bit(x)
             yield x % self.max_val
 
 
@@ -1188,15 +1183,10 @@ class MultiplyShiftAdd(MultiTripleHash):
         x = (self.bias + self.scale[0].view(*shape) * high + self.scale[1].view(*shape) * low).sum(dim=-1)
         # make unsigned
         x = self._unsigned(x)
-        x = x << self.shift
         for _ in range(rounds):
             # cf. https://github.com/skeeto/hash-prospector#two-round-functions
-            x = x ^ (x >> 16)
-            x = self._unsigned(x * 0x7feb352d)
-            x = x ^ (x >> 15)
-            x = self._unsigned(x * 0x846ca68b)
-            x = x ^ (x >> 16)
-            yield x
+            x = _skeeto_2round_32bit(x)
+            yield x >> self.shift
 
 
 class MinHash:
