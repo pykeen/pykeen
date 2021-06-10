@@ -1118,6 +1118,40 @@ class MultiTripleHash(nn.Module):
             yield x
 
 
+class MinHash:
+    """A MinHash for fast approximate Jaccard coefficient estimation."""
+
+    # cf. https://en.wikipedia.org/wiki/MinHash
+    # cf. https://github.com/ekzhu/datasketch/blob/master/datasketch/minhash.py
+
+    #: The minimum hash values encountered to far, one for each hash function
+    min_hash_values: torch.LongTensor
+
+    def __init__(
+        self,
+        num_permutations: int = 256,
+    ):
+        """
+        Initialize the minHash.
+
+        :param num_permutations:
+            The number of permutations to use. Increasing the number increases accuracy but also computation time and
+            storage space.
+        """
+        max_long = torch.iinfo(torch.long).max
+        self.min_hash_values = torch.full(size=(num_permutations,), fill_value=max_long)
+        self.hasher = MultiTripleHash()
+
+    def update(self, batch: torch.LongTensor) -> None:
+        """Update MinHash with a batch."""
+        for i, hash_batch in enumerate(self.hasher(batch, self.min_hash_values.shape[0])):
+            self.min_hash_values[i] = torch.min(hash_batch.min(), self.min_hash_values[i])
+
+    def jaccard(self, other: "MinHash") -> torch.FloatTensor:
+        """Return estimated jaccard similarity."""
+        return (self.min_hash_values == other.min_hash_values).sum().float() / self.min_hash_values.shape[0]
+
+
 if __name__ == '__main__':
     import doctest
 
