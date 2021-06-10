@@ -609,6 +609,15 @@ class TestUM(cases.DistanceModelTestCase):
     cls = pykeen.models.UnstructuredModel
 
 
+class TestCrossE(cases.ModelTestCase):
+    """Test the CrossE model."""
+
+    cls = pykeen.models.CrossE
+
+    # the combination bias
+    num_constant_init = 1
+
+
 class TestTesting(unittest_templates.MetaTestCase[Model]):
     """Yo dawg, I heard you like testing, so I wrote a test to test the tests so you can test while you're testing."""
 

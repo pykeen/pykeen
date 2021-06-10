@@ -7,11 +7,25 @@ and this project adheres to `Semantic Versioning <http://semver.org/>`_
 
 `Unreleased <https://github.com/pykeen/pykeen/compare/v1.4.0...HEAD>`_
 -----------------------------------------------------------------------
-
 New Metrics
 ~~~~~~~~~~~
 - Adjusted Arithmetic Mean Rank Index (https://github.com/pykeen/pykeen/pull/378)
 - Add harmonic, geometric, and median rankings (https://github.com/pykeen/pykeen/pull/381)
+
+New Trackers
+~~~~~~~~~~~~
+- Console Tracker (https://github.com/pykeen/pykeen/pull/440)
+- Tensorboard Tracker (https://github.com/pykeen/pykeen/pull/416; thanks @sbonner0)
+
+New Models
+~~~~~~~~~~
+- QuatE (https://github.com/pykeen/pykeen/pull/367)
+- CompGCN (https://github.com/pykeen/pykeen/pull/382)
+- CrossE (https://github.com/pykeen/pykeen/pull/467)
+
+Datasets
+~~~~~~~~
+- Removed invalid datasets (OpenBioLink filtered sets; https://github.com/pykeen/pykeen/pull/#439)
 
 Added
 ~~~~~
@@ -21,10 +35,14 @@ Added
 - Pass custom training loops to pipeline (https://github.com/pykeen/pykeen/pull/334)
 - Compatibility later for the fft module (https://github.com/pykeen/pykeen/pull/288)
 - Official Python 3.9 support, now that PyTorch has it (https://github.com/pykeen/pykeen/pull/223)
-
+- Utilities for dataset analysis (https://github.com/pykeen/pykeen/pull/16, https://github.com/pykeen/pykeen/pull/392)
 Updated
 ~~~~~~~
 - R-GCN implementation now uses new-style models and is super idiomatic (https://github.com/pykeen/pykeen/pull/110)
+
+Changed
+~~~~~~~
+- Updated interfaces of models and negative samplers to enforce kwargs (https://github.com/pykeen/pykeen/pull/445)
 
 Fixed
 ~~~~~

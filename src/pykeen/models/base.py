@@ -10,7 +10,7 @@ import logging
 import pickle
 import warnings
 from abc import ABC, abstractmethod
-from typing import Any, ClassVar, Iterable, Mapping, Optional, Type, Union
+from typing import Any, ClassVar, Iterable, Mapping, Optional, Sequence, Type, Union
 
 import pandas as pd
 import torch
@@ -18,7 +18,7 @@ from docdata import parse_docdata
 from torch import nn
 
 from ..losses import Loss, MarginRankingLoss
-from ..nn.emb import Embedding, EmbeddingSpecification
+from ..nn.emb import Embedding, EmbeddingSpecification, RepresentationModule
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import CoreTriplesFactory
 from ..typing import DeviceHint, ScorePack
@@ -57,6 +57,10 @@ class Model(nn.Module, ABC):
     loss_default_kwargs: ClassVar[Optional[Mapping[str, Any]]] = dict(margin=1.0, reduction='mean')
     #: The instance of the loss
     loss: Loss
+
+    num_entities: int
+    num_relations: int
+    use_inverse_triples: bool
 
     def __init__(
         self,
@@ -220,22 +224,8 @@ class Model(nn.Module, ABC):
         """
 
     @abstractmethod
-    def compute_loss(
-        self,
-        tensor_1: torch.FloatTensor,
-        tensor_2: torch.FloatTensor,
-    ) -> torch.FloatTensor:
-        """Compute the loss for functions requiring two separate tensors as input.
-
-        :param tensor_1: shape: s
-            The tensor containing predictions or positive scores.
-        :param tensor_2: shape: s
-            The tensor containing target values or the negative scores.
-        :return: dtype: float, scalar
-            The label loss value.
-
-        .. note:: generally the two tensors do not need to have the same shape, but only one which is broadcastable.
-        """
+    def collect_regularization_term(self) -> torch.FloatTensor:
+        """Get the regularization term for the loss function."""
 
     """Concrete methods"""
 
@@ -679,23 +669,8 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
         scores = expanded_scores.view(ht_batch.shape[0], -1)
         return scores
 
-    def compute_loss(
-        self,
-        tensor_1: torch.FloatTensor,
-        tensor_2: torch.FloatTensor,
-    ) -> torch.FloatTensor:
-        """Compute the loss for functions requiring two separate tensors as input.
-
-        :param tensor_1: shape: s
-            The tensor containing predictions or positive scores.
-        :param tensor_2: shape: s
-            The tensor containing target values or the negative scores.
-        :return: dtype: float, scalar
-            The label loss value.
-
-        .. note:: generally the two tensors do not need to have the same shape, but only one which is broadcastable.
-        """
-        return self.loss(tensor_1, tensor_2) + self.regularizer.term
+    def collect_regularization_term(self) -> torch.FloatTensor:  # noqa: D102
+        return self.regularizer.term
 
     def post_forward_pass(self):
         """Run after calculating the forward loss."""
@@ -708,10 +683,11 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
 class EntityEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
     """A base module for most KGE models that have one embedding for entities."""
 
-    entity_embedding: Embedding
+    entity_embeddings: Embedding
 
     def __init__(
         self,
+        *,
         triples_factory: CoreTriplesFactory,
         entity_representations: EmbeddingSpecification,
         loss: Optional[Loss] = None,
@@ -742,6 +718,14 @@ class EntityEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
         """The entity embedding dimension."""
         return self.entity_embeddings.embedding_dim
 
+    @property
+    def entity_representations(self) -> Sequence[RepresentationModule]:  # noqa:D401
+        """The entity representations.
+
+        This property provides forward compatibility with the new-style :class:`pykeen.models.ERModel`.
+        """
+        return [self.entity_embeddings]
+
     def _reset_parameters_(self):  # noqa: D102
         self.entity_embeddings.reset_parameters()
 
@@ -755,12 +739,13 @@ class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
     """A base module for KGE models that have different embeddings for entities and relations."""
 
     #: Primary embeddings for entities
-    entity_embedding: Embedding
+    entity_embeddings: Embedding
     #: Primary embeddings for relations
-    relation_embedding: Embedding
+    relation_embeddings: Embedding
 
     def __init__(
         self,
+        *,
         triples_factory: CoreTriplesFactory,
         entity_representations: EmbeddingSpecification,
         relation_representations: EmbeddingSpecification,
@@ -797,9 +782,25 @@ class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
         return self.entity_embeddings.embedding_dim
 
     @property
-    def relation_dim(self):  # noqa:D401
+    def relation_dim(self) -> int:  # noqa:D401
         """The relation embedding dimension."""
         return self.relation_embeddings.embedding_dim
+
+    @property
+    def entity_representations(self) -> Sequence[RepresentationModule]:  # noqa:D401
+        """The entity representations.
+
+        This property provides forward compatibility with the new-style :class:`pykeen.models.ERModel`.
+        """
+        return [self.entity_embeddings]
+
+    @property
+    def relation_representations(self) -> Sequence[RepresentationModule]:  # noqa:D401
+        """The relation representations.
+
+        This property provides forward compatibility with the new-style :class:`pykeen.models.ERModel`.
+        """
+        return [self.relation_embeddings]
 
     def _reset_parameters_(self):  # noqa: D102
         self.entity_embeddings.reset_parameters()

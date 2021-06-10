@@ -9,11 +9,13 @@ from textwrap import dedent
 from typing import Union
 
 import click
-import pandas
+import docdata
+import pandas as pd
 from more_click import verbose_option
 from tqdm import tqdm
 
-from . import get_dataset
+from . import dataset_resolver, get_dataset
+from ..constants import PYKEEN_DATASETS
 
 
 @click.group()
@@ -35,10 +37,8 @@ def summarize():
 
 
 def _iter_datasets(regex_name_filter=None):
-    from . import datasets
-    import docdata
     it = sorted(
-        datasets.items(),
+        dataset_resolver.lookup_dict.items(),
         key=lambda pair: docdata.get_docdata(pair[1])['statistics']['triples'],
     )
     if regex_name_filter is not None:
@@ -72,12 +72,8 @@ def analyze(dataset, force: bool, countplots: bool, directory):
 
 
 def _analyze(dataset, force, countplots, directory: Union[None, str, pathlib.Path]):
-    from pykeen.datasets import get_dataset
-    from pykeen.constants import PYKEEN_DATASETS
     from . import analysis
-    from tqdm import tqdm
-    import pandas as pd
-    import docdata
+
     try:
         import matplotlib.pyplot as plt
         import seaborn as sns
@@ -197,7 +193,7 @@ def verify(dataset: str):
         keys = keys or sorted(dataset_instance.factory_dict.keys())
     if not keys:
         return
-    df = pandas.DataFrame(
+    df = pd.DataFrame(
         data=data,
         columns=["name"] + [f"num_{part}_{a}" for part in keys for a in ("entities", "relations")],
     )

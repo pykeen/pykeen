@@ -19,10 +19,13 @@ from torch import nn
 from torch.nn import functional
 
 from .compositions import CompositionModule, composition_resolver
-from .init import init_phases, xavier_normal_, xavier_normal_norm_, xavier_uniform_, xavier_uniform_norm_
+from .init import (
+    init_phases, normal_norm_, uniform_norm_, xavier_normal_, xavier_normal_norm_, xavier_uniform_,
+    xavier_uniform_norm_,
+)
 from .message_passing import Decomposition, decomposition_resolver
 from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolver
-from ..regularizers import Regularizer
+from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import CoreTriplesFactory
 from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer
 from ..utils import Bias, activation_resolver, clamp_norm, complex_normalize, convert_to_canonical_shape
@@ -32,6 +35,9 @@ __all__ = [
     'Embedding',
     'LiteralRepresentation',
     'EmbeddingSpecification',
+    'constrainers',
+    'initializers',
+    'normalizers',
 ]
 
 logger = logging.getLogger(__name__)
@@ -204,7 +210,7 @@ class Embedding(RepresentationModule):
     example shows how to obtain different scores for a single triple from an (untrained) model. These scores can be
     considered as samples from a distribution over the scores.
 
-    >>> from pykeen.datasets.nations import Nations
+    >>> from pykeen.datasets import Nations
     >>> dataset = Nations()
     >>> from pykeen.nn.emb import EmbeddingSpecification
     >>> spec = EmbeddingSpecification(embedding_dim=3, dropout=0.1)
@@ -222,7 +228,7 @@ class Embedding(RepresentationModule):
 
     normalizer: Optional[Normalizer]
     constrainer: Optional[Constrainer]
-    regularizer: Optional['Regularizer']
+    regularizer: Optional[Regularizer]
     dropout: Optional[nn.Dropout]
 
     def __init__(
@@ -236,7 +242,8 @@ class Embedding(RepresentationModule):
         normalizer_kwargs: Optional[Mapping[str, Any]] = None,
         constrainer: Hint[Constrainer] = None,
         constrainer_kwargs: Optional[Mapping[str, Any]] = None,
-        regularizer: Optional['Regularizer'] = None,
+        regularizer: Hint[Regularizer] = None,
+        regularizer_kwargs: Optional[Mapping[str, Any]] = None,
         trainable: bool = True,
         dtype: Optional[torch.dtype] = None,
         dropout: Optional[float] = None,
@@ -250,7 +257,18 @@ class Embedding(RepresentationModule):
         :param initializer:
             An optional initializer, which takes an uninitialized (num_embeddings, embedding_dim) tensor as input,
             and returns an initialized tensor of same shape and dtype (which may be the same, i.e. the
-            initialization may be in-place)
+            initialization may be in-place). Can be passed as a function, or as string corresponding to a key in
+            :data:`pykeen.nn.emb.initializers` such as:
+
+            - ``"xavier_uniform"``
+            - ``"xavier_uniform_norm"``
+            - ``"xavier_normal"``
+            - ``"xavier_normal_norm"``
+            - ``"normal"``
+            - ``"normal_norm"``
+            - ``"uniform"``
+            - ``"uniform_norm"``
+            - ``"init_phases"``
         :param initializer_kwargs:
             Additional keyword arguments passed to the initializer
         :param normalizer:
@@ -260,9 +278,19 @@ class Embedding(RepresentationModule):
         :param constrainer:
             A function which is applied to the weights after each parameter update, without tracking gradients.
             It may be used to enforce model constraints outside of gradient-based training. The function does not need
-            to be in-place, but the weight tensor is modified in-place.
+            to be in-place, but the weight tensor is modified in-place. Can be passed as a function, or as a string
+            corresponding to a key in :data:`pykeen.nn.emb.constrainers` such as:
+
+            - ``'normalize'``
+            - ``'complex_normalize'``
+            - ``'clamp'``
+            - ``'clamp_norm'``
         :param constrainer_kwargs:
             Additional keyword arguments passed to the constrainer
+        :param regularizer:
+            A regularizer, which is applied to the selected embeddings in forward pass
+        :param regularizer_kwargs:
+            Additional keyword arguments passed to the regularizer
         :param dropout:
             A dropout value for the embeddings.
         """
@@ -288,6 +316,8 @@ class Embedding(RepresentationModule):
         ))
         self.normalizer = _handle(normalizer, normalizers, normalizer_kwargs, label='normalizer')
         self.constrainer = _handle(constrainer, constrainers, constrainer_kwargs, label='constrainer')
+        if regularizer is not None:
+            regularizer = regularizer_resolver.make(regularizer, pos_kwargs=regularizer_kwargs)
         self.regularizer = regularizer
 
         self._embeddings = torch.nn.Embedding(
@@ -417,7 +447,8 @@ class EmbeddingSpecification:
     constrainer: Hint[Constrainer] = None
     constrainer_kwargs: Optional[Mapping[str, Any]] = None
 
-    regularizer: Optional['Regularizer'] = None
+    regularizer: Hint[Regularizer] = None
+    regularizer_kwargs: Optional[Mapping[str, Any]] = None
 
     dtype: Optional[torch.dtype] = None
     dropout: Optional[float] = None
@@ -435,6 +466,7 @@ class EmbeddingSpecification:
             constrainer=self.constrainer,
             constrainer_kwargs=self.constrainer_kwargs,
             regularizer=self.regularizer,
+            regularizer_kwargs=self.regularizer_kwargs,
             dtype=self.dtype,
             dropout=self.dropout,
         )
@@ -466,12 +498,14 @@ def process_shape(
 
 
 initializers = {
-    'xavier_uniform': xavier_normal_,
+    'xavier_uniform': xavier_uniform_,
     'xavier_uniform_norm': xavier_uniform_norm_,
-    'xavier_normal': xavier_uniform_,
+    'xavier_normal': xavier_normal_,
     'xavier_normal_norm': xavier_normal_norm_,
     'normal': torch.nn.init.normal_,
+    'normal_norm': normal_norm_,
     'uniform': torch.nn.init.uniform_,
+    'uniform_norm': uniform_norm_,
     'phases': init_phases,
     'init_phases': init_phases,
 }
