@@ -263,3 +263,6 @@ intersphinx_mapping = {
 }
 
 autoclass_content = 'both'
+# autodoc_member_order = 'bysource'
+# autodoc_typehints = 'both' # TODO turn on after 4.1 release
+# autodoc_preserve_defaults = True
