@@ -23,7 +23,7 @@ import click
 from click_default_group import DefaultGroup
 from tabulate import tabulate
 
-from .datasets import datasets as datasets_dict
+from .datasets import dataset_resolver
 from .evaluation import evaluator_resolver, get_metric_list, metric_resolver
 from .experiments.cli import experiments
 from .hpo.cli import optimize
@@ -371,7 +371,7 @@ def _get_lines(d, tablefmt, submodule, link_fmt: Optional[str] = None):
 
 
 def _get_dataset_lines(tablefmt, link_fmt: Optional[str] = None):
-    for name, value in sorted(datasets_dict.items()):
+    for name, value in sorted(dataset_resolver.lookup_dict.items()):
         reference = f'pykeen.datasets.{value.__name__}'
         if tablefmt == 'rst':
             reference = f':class:`{reference}`'
@@ -460,7 +460,7 @@ def get_readme() -> str:
         losses=_help_losses(tablefmt, link_fmt='https://pykeen.readthedocs.io/en/latest/api/{}.html'),
         n_losses=len(loss_resolver.lookup_dict),
         datasets=_help_datasets(tablefmt, link_fmt='https://pykeen.readthedocs.io/en/latest/api/{}.html'),
-        n_datasets=len(datasets_dict),
+        n_datasets=len(dataset_resolver.lookup_dict),
         training_loops=_help_training(
             tablefmt, link_fmt='https://pykeen.readthedocs.io/en/latest/reference/training.html#{}',
         ),

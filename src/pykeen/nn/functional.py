@@ -11,7 +11,6 @@ and (batch_size, 1, 1, num_tails, ``*``), and return a score tensor of shape
 from __future__ import annotations
 
 import functools
-from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 
 import numpy
@@ -31,6 +30,7 @@ __all__ = [
     'complex_interaction',
     'conve_interaction',
     'convkb_interaction',
+    'cross_e_interaction',
     'distmult_interaction',
     'ermlp_interaction',
     'ermlpe_interaction',
@@ -51,52 +51,6 @@ __all__ = [
     'tucker_interaction',
     'unstructured_model_interaction',
 ]
-
-
-@dataclass
-class SizeInformation:
-    """Size information of generic score function."""
-
-    #: The batch size of the head representations.
-    bh: int
-
-    #: The number of head representations per batch
-    nh: int
-
-    #: The batch size of the relation representations.
-    br: int
-
-    #: The number of relation representations per batch
-    nr: int
-
-    #: The batch size of the tail representations.
-    bt: int
-
-    #: The number of tail representations per batch
-    nt: int
-
-    @property
-    def same(self) -> bool:
-        """Whether all representations have the same shape."""
-        return (
-            self.bh == self.br
-            and self.bh == self.bt
-            and self.nh == self.nr
-            and self.nh == self.nt
-        )
-
-    @classmethod
-    def extract(
-        cls,
-        h: torch.Tensor,
-        r: torch.Tensor,
-        t: torch.Tensor,
-    ) -> SizeInformation:
-        """Extract size information from tensors."""
-        bh, nh = h.shape[:2]
-        br, nr = r.shape[:2]
-        bt, nt = t.shape[:2]
-        return cls(bh=bh, nh=nh, br=br, nr=nr, bt=bt, nt=nt)
 
 
 def _extract_sizes(
@@ -346,13 +300,11 @@ def ermlp_interaction(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    sizes = SizeInformation.extract(h, r, t)
-
     # same shape
-    if sizes.same:
+    if h.shape == r.shape and h.shape == t.shape:
         return final(activation(
             hidden(torch.cat([h, r, t], dim=-1).view(-1, 3 * h.shape[-1]))),
-        ).view(sizes.bh, sizes.nh, sizes.nr, sizes.nt)
+        ).view(*h.shape[:-1])
 
     hidden_dim = hidden.weight.shape[0]
     # split, shape: (embedding_dim, hidden_dim)
@@ -1081,3 +1033,63 @@ def quat_e_interaction(
             _split_quaternion(r),
         ) * t
     ).sum(dim=-1)
+
+
+def cross_e_interaction(
+    h: torch.FloatTensor,
+    r: torch.FloatTensor,
+    c_r: torch.FloatTensor,
+    t: torch.FloatTensor,
+    bias: torch.FloatTensor,
+    activation: nn.Module,
+    dropout: Optional[nn.Dropout] = None,
+) -> torch.FloatTensor:
+    r"""
+    Evaluate the interaction function of CrossE for the given representations from [zhang2019b]_.
+
+    .. math ::
+        Dropout(Activation(c_r \odot h + c_r \odot h \odot r + b))^T t)
+
+    .. note ::
+        The representations have to be in a broadcastable shape.
+
+    .. note ::
+        The CrossE paper described an additional sigmoid activation as part of the interaction function. Since using a
+        log-likelihood loss can cause numerical problems (due to explicitly calling sigmoid before log), we do not
+        apply this in our implementation but rather opt for the numerically stable variant. However, the model itself
+        has an option ``predict_with_sigmoid``, which can be used to enforce application of sigmoid during inference.
+        This can also have an impact of rank-based evaluation, since limited numerical precision can lead to exactly
+        equal scores for multiple choices. The definition of a rank is not unambiguous in such case, and there exist
+        multiple competing variants how to break the ties. More information on this can be found in the documentation of
+        rank-based evaluation.
+
+    :param h: shape: (batch_size, num_heads, 1, 1, dim)
+        The head representations.
+    :param r: shape: (batch_size, 1, num_relations, 1, dim)
+        The relation representations.
+    :param c_r: shape: (batch_size, 1, num_relations, 1, dim)
+        The relation-specific interaction vector.
+    :param t: shape: (batch_size, 1, 1, num_tails, dim)
+        The tail representations.
+    :param bias: shape: (1, 1, 1, 1, dim)
+        The combination bias.
+    :param activation:
+        The combination activation. Should be :class:`torch.nn.Tanh` for consistency with the CrossE paper.
+    :param dropout:
+        Dropout applied after the combination.
+
+    :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        The scores.
+
+    .. seealso:: https://github.com/wencolani/CrossE
+    """
+    # head interaction
+    h = c_r * h
+    # relation interaction (notice that h has been updated)
+    r = h * r
+    # combination
+    x = activation(h + r + bias)
+    if dropout is not None:
+        x = dropout(x)
+    # similarity
+    return (x * t).sum(dim=-1)

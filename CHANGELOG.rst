@@ -15,11 +15,13 @@ New Metrics
 New Trackers
 ~~~~~~~~~~~~
 - Console Tracker (https://github.com/pykeen/pykeen/pull/440)
+- Tensorboard Tracker (https://github.com/pykeen/pykeen/pull/416; thanks @sbonner0)
 
 New Models
 ~~~~~~~~~~
 - QuatE (https://github.com/pykeen/pykeen/pull/367)
 - CompGCN (https://github.com/pykeen/pykeen/pull/382)
+- CrossE (https://github.com/pykeen/pykeen/pull/467)
 
 Datasets
 ~~~~~~~~

@@ -28,56 +28,75 @@ The embeddings learned for entities and relations are not only useful for link
 prediction (see :ref:`making_predictions`), but also for other downstream machine
 learning tasks like clustering, regression, and classification.
 
-The embeddings themselves are typically stored in an instance of
-:class:`pykeen.nn.emb.Embedding`, which wraps the :class:`torch.nn.Embedding`
-and extends the more general :class:`pykeen.nn.emb.RepresentationModule` class.
-All entity representations can be accessed from a model with the following:
+Knowledge graph embedding models can potentially have multiple entity representations and
+multiple relation representations, so they are respectively stored as sequences in the
+``entity_representations`` and ``relation_representations`` attributes of each model.
+While the exact contents of these sequences are model-dependent, the first element of
+each is usually the "primary" representation for either the entities or relations.
+
+Typically, the values in these sequences are instances of the :class:`pykeen.nn.emb.Embedding`.
+This implements a similar, but more powerful, interface to the built-in :class:`torch.nn.Embedding`
+class. However, the values in these sequences can more generally be instances of any subclasses of
+:class:`pykeen.nn.emb.RepresentationModule`. This allows for more powerful encoders those in GNNs
+such as :class:`pykeen.models.RGCN` to be implemented and used.
+
+The entity representations and relation representations can be accessed like this:
 
 .. code-block:: python
 
+    from typing import List
+
+    import pykeen.nn
     from pykeen.pipeline import pipeline
 
     result = pipeline(model='TransE', dataset='UMLS')
     model = result.model
 
-    entity_embeddings: torch.FloatTensor = model.entity_embeddings()
+    entity_representation_modules: List['pykeen.nn.RepresentationModule'] = model.entity_representations
+    relation_representation_modules: List['pykeen.nn.RepresentationModule'] = model.relation_representations
 
-or more explicitly:
+Most models, like :class:`pykeen.models.TransE`, only have one representation for entities and one
+for relations. This means that the ``entity_representations`` and ``relation_representations``
+lists both have a length of 1. All of the entity embeddings can be accessed like:
 
 .. code-block:: python
 
-    entity_embeddings: torch.FloatTensor = model.entity_embeddings(indices=None)
+    entity_embeddings: pykeen.nn.Embedding = entity_representation_modules[0]
+    relation_embeddings: pykeen.nn.Embedding = relation_representation_modules[0]
+
+Since all representations are subclasses of :class:`torch.nn.Module`, you need to call them like functions
+to invoke the `forward()` and get the values.
+
+.. code-block:: python
+
+    entity_embedding_tensor: torch.FloatTensor = entity_embeddings()
+    relation_embedding_tensor: torch.FloatTensor = relation_embeddings()
+
+The `forward()` function of all :class:`pykeen.nn.emb.RepresentationModule` takes an ``indices`` parameter.
+By default, it is ``None`` and returns all values. More explicitly, this looks like:
+
+.. code-block:: python
+
+    entity_embedding_tensor: torch.FloatTensor = entity_embeddings(indices=None)
+    relation_embedding_tensor: torch.FloatTensor = relation_embeddings(indices=None)
 
 If you'd like to only look up certain embeddings, you can use the ``indices`` parameter
 and pass a :class:`torch.LongTensor` with their corresponding indices.
 
-Some models, like :class:`pykeen.models.TransD` have more than one embedding for entities.
-Old-style models (e.g., ones inheriting from :class:`pykeen.models.EntityRelationEmbeddingModel`)
-define one embedding as primary (e.g., :data:`pykeen.models.TransD.entity_embedding`) and others
-are considered as secondary (e.g., :data:`pykeen.models.TransD.entity_projections`).
-
-New-style models (e.g., ones inheriting from :class:`pykeen.models.ERModel`) are
-generalized to easier allow for multiple entity representations and
-relation representations. These models have two lists of entity and relation
-representations respectively. You can access them via
+You might want to detach them from the GPU and convert to a :class:`numpy.ndarray` with
 
 .. code-block:: python
 
-    entity_representation_modules:   List['pykeen.nn.Embedding'] = model.entity_representations
-    relation_representation_modules: List['pykeen.nn.Embedding'] = model.relation_representations
+    entity_embedding_tensor = model.entity_representations[0](indices=None).detach().numpy()
 
-If you want to obtain a single representation, you can index this list then call the function
-to unwrap the embeddings, e.g.
+.. warning::
 
-.. code-block:: python
-
-    first_entity_representation_module: 'pykeen.nn.Embedding' = entity_representations[0]
-    first_entity_representations: torch.FloatTensor = first_entity_representations_module()
-
-and treat them as before. The ordering in this list corresponds to the
-ordering of representations defined in the interaction function. Some
-models may provide Pythonic properties that provide a vanity attribute
-to the instance of the class for a specific entity or relation representation.
+    Some old-style models (e.g., ones inheriting from :class:`pykeen.models.EntityRelationEmbeddingModel`)
+    don't fully implement the ``entity_representations`` and ``relation_representations`` interface. This means
+    that they might have additional embeddings stored in attributes that aren't exposed through these sequences.
+    For example, :class:`pykeen.models.TransD` has a secondary entity embedding in
+    :data:`pykeen.models.TransD.entity_projections`.
+    Eventually, all models will be upgraded to new-style models and this won't be a problem.
 
 Beyond the Pipeline
 -------------------
