@@ -5,8 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on `Keep a Changelog <http://keepachangelog.com/>`_
 and this project adheres to `Semantic Versioning <http://semver.org/>`_
 
-`Unreleased <https://github.com/pykeen/pykeen/compare/v1.4.0...HEAD>`_
+`Unreleased <https://github.com/pykeen/pykeen/compare/v1.5.0...HEAD>`_
 -----------------------------------------------------------------------
+
+`1.5.0 <https://github.com/pykeen/pykeen/compare/v1.4.0...v1.5.0>`_ - 2021-06-13
+--------------------------------------------------------------------------------
 New Metrics
 ~~~~~~~~~~~
 - Adjusted Arithmetic Mean Rank Index (https://github.com/pykeen/pykeen/pull/378)
@@ -32,7 +35,7 @@ Datasets
 ~~~~~~~~
 - Removed invalid datasets (OpenBioLink filtered sets; https://github.com/pykeen/pykeen/pull/https://github.com/pykeen/pykeen/pull/439)
 - Added WK3k-15K (https://github.com/pykeen/pykeen/pull/403)
-- Aded WK3l-120K (https://github.com/pykeen/pykeen/pull/403)
+- Added WK3l-120K (https://github.com/pykeen/pykeen/pull/403)
 - Added CN3l (https://github.com/pykeen/pykeen/pull/403)
 
 Added
