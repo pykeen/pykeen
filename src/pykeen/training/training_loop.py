@@ -89,7 +89,7 @@ def _get_lr_scheduler_kwargs(lr_scheduler: Union[_LRScheduler, ReduceLROnPlateau
     lr_scheduler_kwargs = {
         key: value
         for key, value in lr_scheduler_kwargs.items()
-        if key[0] != '_' and key not in ['base_lrs', 'last_epoch']
+        if not key.startswith('_') and key not in ['base_lrs', 'last_epoch']
     }
     return lr_scheduler_kwargs
 
