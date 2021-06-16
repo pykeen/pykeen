@@ -5,6 +5,7 @@
 from typing import Any, ClassVar, Mapping, Type
 
 import torch
+from torch import linalg
 from torch.nn import functional
 from torch.nn.init import uniform_
 
@@ -143,7 +144,7 @@ class TransH(EntityRelationEmbeddingModel):
         # Regularization term
         self.regularize_if_necessary()
 
-        return -torch.norm(ph + d_r - pt, p=2, dim=-1, keepdim=True)
+        return -linalg.vector_norm(ph + d_r - pt, ord=2, dim=-1, keepdim=True)
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
@@ -159,7 +160,7 @@ class TransH(EntityRelationEmbeddingModel):
         # Regularization term
         self.regularize_if_necessary()
 
-        return -torch.norm(ph[:, None, :] + d_r[:, None, :] - pt, p=2, dim=-1)
+        return -linalg.vector_norm(ph[:, None, :] + d_r[:, None, :] - pt, ord=2, dim=-1)
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
@@ -176,4 +177,4 @@ class TransH(EntityRelationEmbeddingModel):
         # Regularization term
         self.regularize_if_necessary()
 
-        return -torch.norm(ph + d_r[:, None, :] - pt[:, None, :], p=2, dim=-1)
+        return -linalg.vector_norm(ph + d_r[:, None, :] - pt[:, None, :], ord=2, dim=-1)

@@ -7,7 +7,7 @@ from typing import Any, ClassVar, Mapping, Optional
 
 import numpy as np
 import torch
-from torch import nn
+from torch import linalg, nn
 from torch.nn import functional
 
 from ..base import EntityEmbeddingModel
@@ -118,7 +118,7 @@ class StructuredEmbedding(EntityEmbeddingModel):
         proj_h = rel_h @ h
         proj_t = rel_t @ t
 
-        scores = -torch.norm(proj_h - proj_t, dim=1, p=self.scoring_fct_norm)
+        scores = -linalg.vector_norm(proj_h - proj_t, dim=1, ord=self.scoring_fct_norm)
         return scores
 
     def score_t(self, hr_batch: torch.LongTensor, slice_size: int = None) -> torch.FloatTensor:  # noqa: D102
@@ -146,7 +146,7 @@ class StructuredEmbedding(EntityEmbeddingModel):
             proj_h = rel_h @ h
             proj_t = rel_t @ t_all
 
-        scores = -torch.norm(proj_h[:, None, :, 0] - proj_t[:, :, :, 0], dim=-1, p=self.scoring_fct_norm)
+        scores = -linalg.vector_norm(proj_h[:, None, :, 0] - proj_t[:, :, :, 0], dim=-1, ord=self.scoring_fct_norm)
 
         return scores
 
@@ -175,6 +175,6 @@ class StructuredEmbedding(EntityEmbeddingModel):
             proj_h = rel_h @ h_all
             proj_t = rel_t @ t
 
-        scores = -torch.norm(proj_h[:, :, :, 0] - proj_t[:, None, :, 0], dim=-1, p=self.scoring_fct_norm)
+        scores = -linalg.vector_norm(proj_h[:, :, :, 0] - proj_t[:, None, :, 0], dim=-1, ord=self.scoring_fct_norm)
 
         return scores
