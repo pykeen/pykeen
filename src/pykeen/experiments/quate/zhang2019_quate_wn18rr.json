@@ -23,7 +23,7 @@
     "loss_kwargs": {
       "reduction": "mean"
     },
-    "training_loop": "OWA",
+    "training_loop": "SLCWA",
     "training_kwargs": {
       "num_epochs": 40000,
       "batch_size": 9300
