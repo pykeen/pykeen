@@ -655,7 +655,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
 
                 # Update learning rate scheduler
                 if self.lr_scheduler is not None:
-                    self.lr_scheduler.step()
+                    self.lr_scheduler.step(epoch=epoch)
 
                 # Track epoch loss
                 epoch_loss = current_epoch_loss / num_training_instances
