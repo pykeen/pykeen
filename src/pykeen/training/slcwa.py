@@ -3,15 +3,15 @@
 """Training KGE models based on the sLCWA."""
 
 import logging
-from typing import Any, Mapping, Optional, Union
+from typing import Any, Mapping, Optional
 
 import torch
 from class_resolver import HintOrType
-from torch.optim.lr_scheduler import _LRScheduler
 from torch.optim.optimizer import Optimizer
 
 from .training_loop import TrainingLoop
 from ..losses import CrossEntropyLoss
+from ..lr_schedulers import LRScheduler
 from ..models import Model
 from ..sampling import NegativeSampler, negative_sampler_resolver
 from ..triples import CoreTriplesFactory, Instances
@@ -36,7 +36,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
         model: Model,
         triples_factory: CoreTriplesFactory,
         optimizer: Optional[Optimizer] = None,
-        lr_scheduler: Optional[_LRScheduler] = None,
+        lr_scheduler: Optional[LRScheduler] = None,
         negative_sampler: HintOrType[NegativeSampler] = None,
         negative_sampler_kwargs: Optional[Mapping[str, Any]] = None,
         automatic_memory_optimization: bool = True,

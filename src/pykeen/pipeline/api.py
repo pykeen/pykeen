@@ -179,15 +179,14 @@ from typing import Any, Collection, Dict, Iterable, List, Mapping, MutableMappin
 
 import pandas as pd
 import torch
-from torch.optim.lr_scheduler import _LRScheduler
 from torch.optim.optimizer import Optimizer
 
 from ..constants import PYKEEN_CHECKPOINTS, USER_DEFINED_CODE
 from ..datasets import get_dataset
 from ..datasets.base import Dataset
 from ..evaluation import Evaluator, MetricResults, evaluator_resolver
-from ..lr_schedulers import lr_scheduler_resolver
 from ..losses import Loss, loss_resolver
+from ..lr_schedulers import LRScheduler, lr_scheduler_resolver
 from ..models import Model, make_model_cls, model_resolver
 from ..nn.modules import Interaction
 from ..optimizers import optimizer_resolver
@@ -661,7 +660,7 @@ def pipeline(  # noqa: C901
     optimizer_kwargs: Optional[Mapping[str, Any]] = None,
     clear_optimizer: bool = True,
     # 5.1 Learning Rate Scheduler
-    lr_scheduler: HintType[_LRScheduler] = None,
+    lr_scheduler: HintType[LRScheduler] = None,
     lr_scheduler_kwargs: Optional[Mapping[str, Any]] = None,
     # 6. Training Loop
     training_loop: HintType[TrainingLoop] = None,

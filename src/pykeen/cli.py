@@ -29,9 +29,9 @@ from .experiments.cli import experiments
 from .hpo.cli import optimize
 from .hpo.samplers import sampler_resolver
 from .losses import loss_resolver
+from .lr_schedulers import lr_scheduler_resolver
 from .models import model_resolver
 from .models.cli import build_cli_from_cls
-from .lr_schedulers import lr_scheduler_resolver
 from .optimizers import optimizer_resolver
 from .regularizers import regularizer_resolver
 from .sampling import negative_sampler_resolver

@@ -6,20 +6,12 @@ from typing import Any, Mapping, Type
 
 from class_resolver import Resolver
 from torch.optim.lr_scheduler import (
-    _LRScheduler,
-    CosineAnnealingLR,
-    CosineAnnealingWarmRestarts,
-    CyclicLR,
-    ExponentialLR,
-    LambdaLR,
-    MultiplicativeLR,
-    MultiStepLR,
-    OneCycleLR,
-    StepLR,
+    CosineAnnealingLR, CosineAnnealingWarmRestarts, CyclicLR, ExponentialLR, LambdaLR, MultiStepLR, MultiplicativeLR,
+    OneCycleLR, StepLR, _LRScheduler,
 )
 
 __all__ = [
-    '_LRScheduler',
+    'LRScheduler',
     'lr_schedulers_hpo_defaults',
     'lr_scheduler_resolver',
 ]
@@ -27,6 +19,9 @@ __all__.extend((
     subcls.__name__
     for subcls in _LRScheduler.__subclasses__()
 ))
+
+#: A wrapper around the hidden scheduler base class
+LRScheduler = _LRScheduler
 
 #: The default strategy for optimizing the lr_schedulers' hyper-parameters
 lr_schedulers_hpo_defaults: Mapping[Type[_LRScheduler], Mapping[str, Any]] = {
