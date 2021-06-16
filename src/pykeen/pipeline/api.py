@@ -920,11 +920,14 @@ def pipeline(  # noqa: C901
         params=model_instance.get_grad_params(),
     )
 
-    lr_scheduler_instance = lr_scheduler_resolver.make(
-        lr_scheduler,
-        lr_scheduler_kwargs,
-        optimizer=optimizer_instance,
-    )
+    if lr_scheduler is not None:
+        lr_scheduler_instance = lr_scheduler_resolver.make(
+            lr_scheduler,
+            lr_scheduler_kwargs,
+            optimizer=optimizer_instance,
+        )
+    else:
+        lr_scheduler_instance = None
 
     # Many changes to the optimizer by an optional lr scheduler are shown in the optimizer itself and thus logged
     # TODO: Check whether this is sufficient or the lr scheduler should also have a result tracker
