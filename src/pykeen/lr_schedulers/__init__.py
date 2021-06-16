@@ -94,4 +94,8 @@ lr_schedulers_hpo_defaults: Mapping[Type[_LRScheduler], Mapping[str, Any]] = {
     ),
 }
 
-lr_scheduler_resolver = Resolver(_LR_SCHEDULER_LIST, base=_LRScheduler, default=ExponentialLR)
+lr_scheduler_resolver = Resolver(
+    _LR_SCHEDULER_LIST,
+    base=_LRScheduler,
+    default=ExponentialLR,
+)
