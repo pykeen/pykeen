@@ -3,10 +3,11 @@
 """Training KGE models based on the sLCWA."""
 
 import logging
-from typing import Any, Mapping, Optional
+from typing import Any, Mapping, Optional, Union
 
 import torch
 from class_resolver import HintOrType
+from torch.optim.lr_scheduler import _LRScheduler, ReduceLROnPlateau
 from torch.optim.optimizer import Optimizer
 
 from .training_loop import TrainingLoop
@@ -35,6 +36,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
         model: Model,
         triples_factory: CoreTriplesFactory,
         optimizer: Optional[Optimizer] = None,
+        lr_scheduler: Optional[Union[_LRScheduler, ReduceLROnPlateau]] = None,
         negative_sampler: HintOrType[NegativeSampler] = None,
         negative_sampler_kwargs: Optional[Mapping[str, Any]] = None,
         automatic_memory_optimization: bool = True,
@@ -44,6 +46,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
         :param model: The model to train
         :param triples_factory: The triples factory to train over
         :param optimizer: The optimizer to use while training the model
+        :param lr_scheduler: The learning rate scheduler you want to use while training the model
         :param negative_sampler: The class, instance, or name of the negative sampler
         :param negative_sampler_kwargs: Keyword arguments to pass to the negative sampler class on instantiation
             for every positive one
@@ -55,6 +58,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
             model=model,
             triples_factory=triples_factory,
             optimizer=optimizer,
+            lr_scheduler=lr_scheduler,
             automatic_memory_optimization=automatic_memory_optimization,
         )
         self.negative_sampler = negative_sampler_resolver.make(

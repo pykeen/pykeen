@@ -17,8 +17,8 @@ from typing import Any, ClassVar, Generic, IO, List, Mapping, Optional, Tuple, T
 
 import numpy as np
 import torch
+from torch.optim.lr_scheduler import _LRScheduler, ReduceLROnPlateau
 from torch.optim.optimizer import Optimizer
-from torch.optim.lr_scheduler import _LRScheduler
 from torch.utils.data import DataLoader
 from tqdm.autonotebook import tqdm, trange
 
@@ -84,7 +84,7 @@ def _get_optimizer_kwargs(optimizer: Optimizer) -> Mapping[str, Any]:
     return optimizer_kwargs
 
 
-def _get_lr_scheduler_kwargs(lr_scheduler: _LRScheduler) -> Mapping[str, Any]:
+def _get_lr_scheduler_kwargs(lr_scheduler: Union[_LRScheduler, ReduceLROnPlateau]) -> Mapping[str, Any]:
     lr_scheduler_kwargs = lr_scheduler.state_dict()
     lr_scheduler_kwargs = {
         key: value
@@ -97,7 +97,7 @@ def _get_lr_scheduler_kwargs(lr_scheduler: _LRScheduler) -> Mapping[str, Any]:
 class TrainingLoop(Generic[SampleType, BatchType], ABC):
     """A training loop."""
 
-    lr_scheduler: _LRScheduler
+    lr_scheduler: Union[Union[_LRScheduler, ReduceLROnPlateau], ReduceLROnPlateau]
     model: Model
     optimizer: Optimizer
 
@@ -114,7 +114,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         model: Model,
         triples_factory: CoreTriplesFactory,
         optimizer: Optional[Optimizer] = None,
-        lr_scheduler: Optional[_LRScheduler] = None,
+        lr_scheduler: Optional[Union[_LRScheduler, ReduceLROnPlateau]] = None,
         automatic_memory_optimization: bool = True,
     ) -> None:
         """Initialize the training loop.
