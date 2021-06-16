@@ -19,7 +19,7 @@ StepLR                       :class:`torch.optim.lr_scheduler.StepLR`
 .. note:: This table can be re-generated with ``pykeen ls lr_schedulers -f rst``
 """
 
-from typing import Any, Mapping, Set, Type
+from typing import Any, Mapping, Type
 
 from class_resolver import Resolver
 from torch.optim.lr_scheduler import (
@@ -40,18 +40,6 @@ __all__ = [
     'lr_schedulers_hpo_defaults',
     'lr_scheduler_resolver',
 ]
-
-_LR_SCHEDULER_LIST: Set[Type[_LRScheduler]] = {
-    CosineAnnealingLR,
-    CosineAnnealingWarmRestarts,
-    CyclicLR,
-    ExponentialLR,
-    LambdaLR,
-    MultiplicativeLR,
-    MultiStepLR,
-    OneCycleLR,
-    StepLR,
-}
 
 #: The default strategy for optimizing the lr_schedulers' hyper-parameters
 # TODO: Adjust search space to something reasonable
@@ -94,8 +82,7 @@ lr_schedulers_hpo_defaults: Mapping[Type[_LRScheduler], Mapping[str, Any]] = {
     ),
 }
 
-lr_scheduler_resolver = Resolver(
-    _LR_SCHEDULER_LIST,
-    base=_LRScheduler,
+lr_scheduler_resolver = Resolver.from_subclasses(
+    _LRScheduler,
     default=ExponentialLR,
 )
