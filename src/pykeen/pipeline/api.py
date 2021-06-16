@@ -179,12 +179,14 @@ from typing import Any, Collection, Dict, Iterable, List, Mapping, MutableMappin
 
 import pandas as pd
 import torch
+from torch.optim.lr_scheduler import _LRScheduler
 from torch.optim.optimizer import Optimizer
 
 from ..constants import PYKEEN_CHECKPOINTS, USER_DEFINED_CODE
 from ..datasets import get_dataset
 from ..datasets.base import Dataset
 from ..evaluation import Evaluator, MetricResults, evaluator_resolver
+from ..lr_schedulers import lr_scheduler_resolver
 from ..losses import Loss, loss_resolver
 from ..models import Model, make_model_cls, model_resolver
 from ..nn.modules import Interaction
@@ -658,20 +660,23 @@ def pipeline(  # noqa: C901
     optimizer: HintType[Optimizer] = None,
     optimizer_kwargs: Optional[Mapping[str, Any]] = None,
     clear_optimizer: bool = True,
-    # 6. Training Loop
+    # 6. Learning Rate Scheduler
+    lr_scheduler: HintType[_LRScheduler] = None,
+    lr_scheduler_kwargs: Optional[Mapping[str, Any]] = None,
+    # 7. Training Loop
     training_loop: HintType[TrainingLoop] = None,
     training_loop_kwargs: Optional[Mapping[str, Any]] = None,
     negative_sampler: HintType[NegativeSampler] = None,
     negative_sampler_kwargs: Optional[Mapping[str, Any]] = None,
-    # 7. Training (ronaldo style)
+    # 8. Training (ronaldo style)
     training_kwargs: Optional[Mapping[str, Any]] = None,
     stopper: HintType[Stopper] = None,
     stopper_kwargs: Optional[Mapping[str, Any]] = None,
-    # 8. Evaluation
+    # 9. Evaluation
     evaluator: HintType[Evaluator] = None,
     evaluator_kwargs: Optional[Mapping[str, Any]] = None,
     evaluation_kwargs: Optional[Mapping[str, Any]] = None,
-    # 9. Tracking
+    # 10. Tracking
     result_tracker: HintType[ResultTracker] = None,
     result_tracker_kwargs: Optional[Mapping[str, Any]] = None,
     # Misc
@@ -735,6 +740,12 @@ def pipeline(  # noqa: C901
         Whether to delete the optimizer instance after training. As the optimizer might have additional memory
         consumption due to e.g. moments in Adam, this is the default option. If you want to continue training, you
         should set it to False, as the optimizer's internal parameter will get lost otherwise.
+
+    :param lr_scheduler:
+        The name of the lr_scheduler or the lr_scheduler class.
+        Defaults to :class:`torch.optim.lr_scheduler.ExponentialLR`.
+    :param lr_scheduler_kwargs:
+        Keyword arguments to pass to the lr_scheduler on instantiation
 
     :param training_loop:
         The name of the training loop's training approach (``'slcwa'`` or ``'lcwa'``) or the training loop class.
@@ -908,6 +919,15 @@ def pipeline(  # noqa: C901
         optimizer_kwargs,
         params=model_instance.get_grad_params(),
     )
+
+    lr_scheduler_instance = lr_scheduler_resolver.make(
+        lr_scheduler,
+        lr_scheduler_kwargs,
+        optimizer=optimizer_instance,
+    )
+
+    # Many changes to the optimizer by an optional lr scheduler are shown in the optimizer itself and thus logged
+    # TODO: Check whether this is sufficient or the lr scheduler should also have a result tracker
     _result_tracker.log_params(
         params=dict(cls=optimizer_instance.__class__.__name__, kwargs=optimizer_kwargs),
         prefix='optimizer',
@@ -923,6 +943,7 @@ def pipeline(  # noqa: C901
             model=model_instance,
             triples_factory=training,
             optimizer=optimizer_instance,
+            lr_scheduler=lr_scheduler_instance,
             **training_loop_kwargs,
         )
     elif not issubclass(training_loop_cls, SLCWATrainingLoop):
