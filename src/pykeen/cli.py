@@ -31,6 +31,7 @@ from .hpo.samplers import sampler_resolver
 from .losses import loss_resolver
 from .models import model_resolver
 from .models.cli import build_cli_from_cls
+from .lr_schedulers import lr_scheduler_resolver
 from .optimizers import optimizer_resolver
 from .regularizers import regularizer_resolver
 from .sampling import negative_sampler_resolver
@@ -225,6 +226,25 @@ def optimizers(tablefmt: str):
 def _help_optimizers(tablefmt: str, link_fmt: Optional[str] = None):
     lines = _get_lines_alternative(
         tablefmt, optimizer_resolver.lookup_dict, 'torch.optim', 'pykeen.optimizers',
+        link_fmt=link_fmt,
+    )
+    return tabulate(
+        lines,
+        headers=['Name', 'Reference', 'Description'],
+        tablefmt=tablefmt,
+    )
+
+
+@ls.command()
+@tablefmt_option
+def lr_schedulers(tablefmt: str):
+    """List optimizers."""
+    click.echo(_help_lr_schedulers(tablefmt))
+
+
+def _help_lr_schedulers(tablefmt: str, link_fmt: Optional[str] = None):
+    lines = _get_lines_alternative(
+        tablefmt, lr_scheduler_resolver.lookup_dict, 'torch.optim.lr_scheduler', 'pykeen.lr_schedulers',
         link_fmt=link_fmt,
     )
     return tabulate(
