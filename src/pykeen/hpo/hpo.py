@@ -25,6 +25,7 @@ from ..datasets.base import Dataset
 from ..evaluation import Evaluator, evaluator_resolver
 from ..evaluation.rank_based_evaluator import ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX
 from ..losses import Loss, loss_resolver
+from ..lr_schedulers import LRScheduler, lr_scheduler_resolver, lr_schedulers_hpo_defaults
 from ..models import Model, model_resolver
 from ..optimizers import Optimizer, optimizer_resolver, optimizers_hpo_defaults
 from ..pipeline import pipeline, replicate_pipeline_from_config
@@ -58,6 +59,7 @@ class Objective:
     model: Type[Model]  # 2.
     loss: Type[Loss]  # 3.
     optimizer: Type[Optimizer]  # 5.
+    lr_scheduler: Type[LRScheduler]  # 5.1
     training_loop: Type[TrainingLoop]  # 6.
     stopper: Type[Stopper]  # 7.
     evaluator: Type[Evaluator]  # 8.
@@ -84,6 +86,9 @@ class Objective:
     # 5. Optimizer
     optimizer_kwargs: Optional[Mapping[str, Any]] = None
     optimizer_kwargs_ranges: Optional[Mapping[str, Any]] = None
+    # 5.1 Learning Rate Scheduler
+    lr_scheduler_kwargs: Optional[Mapping[str, Any]] = None,
+    lr_scheduler_kwargs_ranges: Optional[Mapping[str, Any]] = None
     # 6. Training Loop
     training_loop_kwargs: Optional[Mapping[str, Any]] = None
     negative_sampler: Optional[Type[NegativeSampler]] = None
@@ -121,7 +126,7 @@ class Objective:
         if self.model_kwargs is not None:
             problems = [
                 x
-                for x in ('loss', 'regularizer', 'optimizer', 'training', 'negative_sampler', 'stopper')
+                for x in ('loss', 'regularizer', 'optimizer', 'lr_scheduler', 'training', 'negative_sampler', 'stopper')
                 if x in self.model_kwargs
             ]
             if problems:
@@ -170,6 +175,14 @@ class Objective:
             kwargs=self.optimizer_kwargs,
             kwargs_ranges=self.optimizer_kwargs_ranges,
         )
+        # 5.1 Learning Rate Scheduler
+        _lr_scheduler_kwargs = _get_kwargs(
+            trial=trial,
+            prefix='lr_scheduler',
+            default_kwargs_ranges=lr_schedulers_hpo_defaults[self.lr_scheduler],
+            kwargs=self.lr_scheduler_kwargs,
+            kwargs_ranges=self.lr_scheduler_kwargs_ranges,
+        )
 
         _negative_sampler_kwargs: Mapping[str, Any]
         if self.training_loop is not SLCWATrainingLoop:
@@ -214,10 +227,13 @@ class Objective:
                 # 4. Regularizer
                 regularizer=self.regularizer,
                 regularizer_kwargs=_regularizer_kwargs,
-                clear_optimizer=True,
                 # 5. Optimizer
                 optimizer=self.optimizer,
                 optimizer_kwargs=_optimizer_kwargs,
+                clear_optimizer=True,
+                # 5.1 Learning Rate Scheduler
+                lr_scheduler=self.lr_scheduler,
+                lr_scheduler_kwargs=_lr_scheduler_kwargs,
                 # 6. Training Loop
                 training_loop=self.training_loop,
                 negative_sampler=self.negative_sampler,
@@ -447,6 +463,10 @@ def hpo_pipeline(
     optimizer: HintType[Optimizer] = None,
     optimizer_kwargs: Optional[Mapping[str, Any]] = None,
     optimizer_kwargs_ranges: Optional[Mapping[str, Any]] = None,
+    # 5.1 Learning Rate Scheduler
+    lr_scheduler: HintType[LRScheduler] = None,
+    lr_scheduler_kwargs: Optional[Mapping[str, Any]] = None,
+    lr_scheduler_kwargs_ranges: Optional[Mapping[str, Any]] = None,
     # 6. Training Loop
     training_loop: HintType[TrainingLoop] = None,
     training_loop_kwargs: Optional[Mapping[str, Any]] = None,
@@ -538,6 +558,13 @@ def hpo_pipeline(
     :param optimizer_kwargs_ranges:
         Strategies for optimizing the optimizers' hyper-parameters to override
         the defaults
+
+    :param lr_scheduler:
+        The name of the lr_scheduler or the lr_scheduler class.
+    :param lr_scheduler_kwargs:
+        Keyword arguments to pass to the lr_scheduler on instantiation
+    :param lr_scheduler_kwargs_ranges:
+        Strategies for optimizing the lr_schedulers' hyper-parameters to override the defaults
 
     :param training_loop:
         The name of the training approach (``'slcwa'`` or ``'lcwa'``) or the training loop class
@@ -639,6 +666,10 @@ def hpo_pipeline(
     optimizer_cls: Type[Optimizer] = optimizer_resolver.lookup(optimizer)
     study.set_user_attr('optimizer', optimizer_resolver.normalize_cls(optimizer_cls))
     logger.info(f'Using optimizer: {optimizer_cls}')
+    # 5.1 Learning Rate Scheduler
+    lr_scheduler_cls: Type[LRScheduler] = lr_scheduler_resolver.lookup(lr_scheduler)
+    study.set_user_attr('lr_scheduler', lr_scheduler_resolver.normalize_cls(lr_scheduler_cls))
+    logger.info(f'Using lr_scheduler: {lr_scheduler_cls}')
     # 6. Training Loop
     training_loop_cls: Type[TrainingLoop] = training_loop_resolver.lookup(training_loop)
     study.set_user_attr('training_loop', training_loop_cls.get_normalized_name())
@@ -695,6 +726,10 @@ def hpo_pipeline(
         optimizer=optimizer_cls,
         optimizer_kwargs=optimizer_kwargs,
         optimizer_kwargs_ranges=optimizer_kwargs_ranges,
+        # 5.1 Learning Rate Scheduler
+        lr_scheduler=lr_scheduler_cls,
+        lr_scheduler_kwargs=lr_scheduler_kwargs,
+        lr_scheduler_kwargs_ranges=lr_scheduler_kwargs_ranges,
         # 6. Training Loop
         training_loop=training_loop_cls,
         training_loop_kwargs=training_loop_kwargs,
