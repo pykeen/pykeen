@@ -18,6 +18,7 @@ from typing import Any, ClassVar, Generic, IO, List, Mapping, Optional, Tuple, T
 import numpy as np
 import torch
 from torch.optim.optimizer import Optimizer
+from torch.optim.lr_scheduler import _LRScheduler
 from torch.utils.data import DataLoader
 from tqdm.autonotebook import tqdm, trange
 
@@ -83,9 +84,20 @@ def _get_optimizer_kwargs(optimizer: Optimizer) -> Mapping[str, Any]:
     return optimizer_kwargs
 
 
+def _get_lr_scheduler_kwargs(lr_scheduler: _LRScheduler) -> Mapping[str, Any]:
+    lr_scheduler_kwargs = lr_scheduler.state_dict()
+    lr_scheduler_kwargs = {
+        key: value
+        for key, value in lr_scheduler_kwargs.items()
+        if key[0] != '_' and key not in ['base_lrs', 'last_epoch']
+    }
+    return lr_scheduler_kwargs
+
+
 class TrainingLoop(Generic[SampleType, BatchType], ABC):
     """A training loop."""
 
+    lr_scheduler: _LRScheduler
     model: Model
     optimizer: Optimizer
 
@@ -102,6 +114,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         model: Model,
         triples_factory: CoreTriplesFactory,
         optimizer: Optional[Optimizer] = None,
+        lr_scheduler: Optional[_LRScheduler] = None,
         automatic_memory_optimization: bool = True,
     ) -> None:
         """Initialize the training loop.
@@ -109,12 +122,14 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         :param model: The model to train
         :param triples_factory: The training triples factory
         :param optimizer: The optimizer to use while training the model
+        :param lr_scheduler: The learning rate scheduler you want to use while training the model
         :param automatic_memory_optimization: bool
             Whether to automatically optimize the sub-batch size during
             training and batch size during evaluation with regards to the hardware at hand.
         """
         self.model = model
         self.optimizer = optimizer
+        self.lr_scheduler = lr_scheduler
         self.losses_per_epochs = []
         self.automatic_memory_optimization = automatic_memory_optimization
 
@@ -331,6 +346,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         # Clear optimizer
         if clear_optimizer:
             self.optimizer = None
+            self.lr_scheduler = None
 
         return result
 
@@ -506,6 +522,10 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                 params=self.model.get_grad_params(),
                 **optimizer_kwargs,
             )
+
+            # Create a new lr scheduler and add the optimizer
+            lr_scheduler_kwargs = _get_lr_scheduler_kwargs(self.lr_scheduler)
+            self.lr_scheduler = self.lr_scheduler.__class__(self.optimizer, **lr_scheduler_kwargs)
         elif not self.optimizer.state:
             raise ValueError('Cannot continue_training without being trained once.')
 
@@ -632,6 +652,10 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                 # When size probing we don't need the losses
                 if only_size_probing:
                     return None
+
+                # Update learning rate scheduler
+                if self.lr_scheduler is not None:
+                    self.lr_scheduler.step()
 
                 # Track epoch loss
                 epoch_loss = current_epoch_loss / num_training_instances
@@ -1050,12 +1074,18 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         else:
             best_epoch_model_checkpoint = None
 
+        if self.lr_scheduler is None:
+            lr_scheduler_state_dict = None
+        else:
+            lr_scheduler_state_dict = self.lr_scheduler.state_dict()
+
         torch.save(
             {
                 'epoch': self._epoch,
                 'loss': self.losses_per_epochs,
                 'model_state_dict': self.model.state_dict(),
                 'optimizer_state_dict': self.optimizer.state_dict(),
+                'lr_scheduler_state_dict': lr_scheduler_state_dict,
                 'checksum': self.checksum,
                 'random_seed': self.model._random_seed,
                 'stopper_dict': stopper_dict,
@@ -1129,6 +1159,8 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         self.losses_per_epochs = checkpoint['loss']
         self.model.load_state_dict(checkpoint['model_state_dict'])
         self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        if self.lr_scheduler is not None:
+            self.lr_scheduler.load_state_dict(checkpoint['lr_scheduler_state_dict'])
         random.setstate(checkpoint['random_state'])
         np.random.set_state(checkpoint['np_random_state'])
         torch.random.set_rng_state(checkpoint['torch_random_state'])
