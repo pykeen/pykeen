@@ -79,7 +79,7 @@ def _get_optimizer_kwargs(optimizer: Optimizer) -> Mapping[str, Any]:
     optimizer_kwargs = {
         key: value
         for key, value in optimizer_kwargs['param_groups'][0].items()
-        if key != 'params'
+        if key not in ['params', 'initial_lr']
     }
     return optimizer_kwargs
 
