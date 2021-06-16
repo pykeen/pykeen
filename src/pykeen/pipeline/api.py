@@ -660,23 +660,23 @@ def pipeline(  # noqa: C901
     optimizer: HintType[Optimizer] = None,
     optimizer_kwargs: Optional[Mapping[str, Any]] = None,
     clear_optimizer: bool = True,
-    # 6. Learning Rate Scheduler
+    # 5.1 Learning Rate Scheduler
     lr_scheduler: HintType[_LRScheduler] = None,
     lr_scheduler_kwargs: Optional[Mapping[str, Any]] = None,
-    # 7. Training Loop
+    # 6. Training Loop
     training_loop: HintType[TrainingLoop] = None,
     training_loop_kwargs: Optional[Mapping[str, Any]] = None,
     negative_sampler: HintType[NegativeSampler] = None,
     negative_sampler_kwargs: Optional[Mapping[str, Any]] = None,
-    # 8. Training (ronaldo style)
+    # 7. Training (ronaldo style)
     training_kwargs: Optional[Mapping[str, Any]] = None,
     stopper: HintType[Stopper] = None,
     stopper_kwargs: Optional[Mapping[str, Any]] = None,
-    # 9. Evaluation
+    # 8. Evaluation
     evaluator: HintType[Evaluator] = None,
     evaluator_kwargs: Optional[Mapping[str, Any]] = None,
     evaluation_kwargs: Optional[Mapping[str, Any]] = None,
-    # 10. Tracking
+    # 9. Tracking
     result_tracker: HintType[ResultTracker] = None,
     result_tracker_kwargs: Optional[Mapping[str, Any]] = None,
     # Misc
