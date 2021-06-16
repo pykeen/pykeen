@@ -87,7 +87,7 @@ class Objective:
     optimizer_kwargs: Optional[Mapping[str, Any]] = None
     optimizer_kwargs_ranges: Optional[Mapping[str, Any]] = None
     # 5.1 Learning Rate Scheduler
-    lr_scheduler_kwargs: Optional[Mapping[str, Any]] = None,
+    lr_scheduler_kwargs: Optional[Mapping[str, Any]] = None
     lr_scheduler_kwargs_ranges: Optional[Mapping[str, Any]] = None
     # 6. Training Loop
     training_loop_kwargs: Optional[Mapping[str, Any]] = None
