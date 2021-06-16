@@ -6,14 +6,21 @@
     "dataset": "fb15k",
     "model": "QuatE",
     "model_kwargs": {
-      "embedding_dim": 200
-    },
-    "regularizer": "Lp",
-    "regularizer_kwargs": {
-      "apply_only_once": false,
-      "weight": 0.05,
-      "p": 2.0,
-      "normalize": false
+      "embedding_dim": 200,
+      "entity_regularizer": "Lp",
+      "entity_regularizer_kwargs": {
+        "apply_only_once": false,
+        "weight": 0.05,
+        "p": 2.0,
+        "normalize": false
+      },
+      "relation_regularizer": "Lp",
+      "relation_regularizer_kwargs": {
+        "apply_only_once": false,
+        "weight": 0.05,
+        "p": 2.0,
+        "normalize": false
+      }
     },
     "optimizer": "Adagrad",
     "optimizer_kwargs": {
