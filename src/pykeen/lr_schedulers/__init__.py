@@ -40,6 +40,10 @@ __all__ = [
     'lr_schedulers_hpo_defaults',
     'lr_scheduler_resolver',
 ]
+__all__.extend((
+    subcls.__name__
+    for subcls in _LRScheduler.__subclasses__()
+))
 
 #: The default strategy for optimizing the lr_schedulers' hyper-parameters
 # TODO: Adjust search space to something reasonable
