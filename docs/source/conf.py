@@ -52,7 +52,7 @@ copyright = f'2019-{date.today().year}, PyKEEN Project Team'
 author = 'PyKEEN Project Team'
 
 # The full version, including alpha/beta/rc tags.
-release = '1.4.1-dev'
+release = '1.5.1-dev'
 
 # The short X.Y version.
 parsed_version = re.match(
@@ -263,3 +263,6 @@ intersphinx_mapping = {
 }
 
 autoclass_content = 'both'
+# autodoc_member_order = 'bysource'
+# autodoc_typehints = 'both' # TODO turn on after 4.1 release
+# autodoc_preserve_defaults = True

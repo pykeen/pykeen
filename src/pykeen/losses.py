@@ -586,7 +586,7 @@ class NSSALoss(SetwiseLoss):
             The name of the reduction operation to aggregate the individual loss values from a batch to a scalar loss
             value. From {'mean', 'sum'}.
 
-        .. note:: The default hyperparameters are based the experiments for FB15k-237 in [sun2019]_.
+        .. note:: The default hyperparameters are based on the experiments for FB15k-237 in [sun2019]_.
         """
         super().__init__(reduction=reduction)
         self.inverse_softmax_temperature = adversarial_temperature
