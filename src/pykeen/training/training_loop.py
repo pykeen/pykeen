@@ -523,9 +523,10 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                 **optimizer_kwargs,
             )
 
-            # Create a new lr scheduler and add the optimizer
-            lr_scheduler_kwargs = _get_lr_scheduler_kwargs(self.lr_scheduler)
-            self.lr_scheduler = self.lr_scheduler.__class__(self.optimizer, **lr_scheduler_kwargs)
+            if self.lr_scheduler is not None:
+                # Create a new lr scheduler and add the optimizer
+                lr_scheduler_kwargs = _get_lr_scheduler_kwargs(self.lr_scheduler)
+                self.lr_scheduler = self.lr_scheduler.__class__(self.optimizer, **lr_scheduler_kwargs)
         elif not self.optimizer.state:
             raise ValueError('Cannot continue_training without being trained once.')
 
