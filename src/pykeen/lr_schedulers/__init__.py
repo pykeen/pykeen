@@ -1,23 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Learning Rate Schedulers available in PyKEEN.
-
-===========================  =============================================================
-Name                         Reference
-===========================  =============================================================
-CosineAnnealingLR            :class:`torch.optim.lr_scheduler.CosineAnnealingLR`
-CosineAnnealingWarmRestarts  :class:`torch.optim.lr_scheduler.CosineAnnealingWarmRestarts`
-CyclicLR                     :class:`torch.optim.lr_scheduler.CyclicLR`
-ExponentialLR                :class:`torch.optim.lr_scheduler.ExponentialLR`
-LambdaLR                     :class:`torch.optim.lr_scheduler.LambdaLR`
-MultiplicativeLR             :class:`torch.optim.lr_scheduler.MultiplicativeLR`
-MultiStepLR                  :class:`torch.optim.lr_scheduler.MultiStepLR`
-OneCycleLR                   :class:`torch.optim.lr_scheduler.OneCycleLR`
-StepLR                       :class:`torch.optim.lr_scheduler.StepLR`
-===========================  =============================================================
-
-.. note:: This table can be re-generated with ``pykeen ls lr_schedulers -f rst``
-"""
+"""Learning Rate Schedulers available in PyKEEN."""
 
 from typing import Any, Mapping, Type
 
@@ -46,8 +29,8 @@ __all__.extend((
 ))
 
 #: The default strategy for optimizing the lr_schedulers' hyper-parameters
-# TODO: Adjust search space to something reasonable
 lr_schedulers_hpo_defaults: Mapping[Type[_LRScheduler], Mapping[str, Any]] = {
+    # TODO: Adjust search spaces to something reasonable
     CosineAnnealingLR: dict(
         eta_min=dict(type=float, low=0.001, high=0.1, scale='log'),
         T_max=dict(type=float, low=0.001, high=0.1, scale='log'),
@@ -86,6 +69,7 @@ lr_schedulers_hpo_defaults: Mapping[Type[_LRScheduler], Mapping[str, Any]] = {
     ),
 }
 
+#: A resolver for learning rate schedulers
 lr_scheduler_resolver = Resolver.from_subclasses(
     _LRScheduler,
     default=ExponentialLR,
