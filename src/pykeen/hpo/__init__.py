@@ -368,6 +368,40 @@ in PyKEEN come from the PyTorch implementations, they obviously do not have
 optimization strategy stored in :py:attr:`pykeen.optimizers.optimizers_hpo_defaults`
 the same way that the default strategies for losses are stored externally.
 
+Optimizing the Optimized Optimizer - a.k.a. Learning Rate Schedulers
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+If optimizing your optimizer doesn't cut it for you, you can turn it up a notch and use learning
+rate schedulers (lr_scheduler) that will vary the learning rate of the optimizer. This can e.g.
+be useful to have a more aggressive learning rate in the beginning to quickly make progress
+while lowering the learning rate over time to allow the model to smoothly converge to the optimum.
+
+PyKEEN allows you to use the learning rate schedulers provided by PyTorch, which you can
+simply specify as you would in the :func:`pykeen.pipeline.pipeline`.
+
+>>> from pykeen.pipeline import pipeline
+>>> pipeline_result = pipeline(
+...     dataset='Nations',
+...     model='TransE',
+...     lr_scheduler='ExponentialLR',
+... )
+>>> pipeline_result.save_to_directory('nations_transe')
+
+The same way as the optimizers don't come with ``hpo_defaults`` class variables, lr_schedulers rely
+on their own optimization strategies provided in :py:attr:`pykeen.lr_schedulers.lr_schedulers_hpo_defaults`
+In case you are ready to explore even more you can of course also set your own ranges with the
+``lr_scheduler_kwargs_ranges`` keyword argument as in:
+
+>>> from pykeen.pipeline import pipeline
+>>> pipeline_result = pipeline(
+...     dataset='Nations',
+...     model='TransE',
+...     lr_scheduler='ExponentialLR',
+...     lr_scheduler_kwargs_ranges=dict(
+...         gamma=dict(type=float, low=0.8, high=1.0),
+...     ),
+... )
+>>> pipeline_result.save_to_directory('nations_transe')
+
 Optimizing Everything Else
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 Without loss of generality, the following arguments to :func:`pykeen.pipeline.pipeline`

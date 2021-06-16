@@ -139,6 +139,21 @@ argument as in:
 ... )
 >>> pipeline_result.save_to_directory('nations_transe')
 
+In PyKEEN you can also use the learning rate schedulers provided by PyTorch, which can be
+turned on with the ``lr_scheduler`` keyword argument together with the ``lr_scheduler_kwargs``
+keyword argument to specify arguments for the learning rate scheduler as in:
+
+>>> from pykeen.pipeline import pipeline
+>>> pipeline_result = pipeline(
+...     dataset='Nations',
+...     model='TransE',
+...     lr_scheduler='ExponentialLR',
+...     lr_scheduler_kwargs=dict(
+...         gamma=0.99,
+...     ),
+... )
+>>> pipeline_result.save_to_directory('nations_transe')
+
 Deeper Configuration
 ~~~~~~~~~~~~~~~~~~~~
 Arguments for the model can be given as a dictionary using ``model_kwargs``.
@@ -186,7 +201,7 @@ from ..datasets import get_dataset
 from ..datasets.base import Dataset
 from ..evaluation import Evaluator, MetricResults, evaluator_resolver
 from ..losses import Loss, loss_resolver
-from ..lr_schedulers import LRScheduler, lr_scheduler_resolver
+from ..lr_schedulers import ExponentialLR, LRScheduler, lr_scheduler_resolver
 from ..models import Model, make_model_cls, model_resolver
 from ..nn.modules import Interaction
 from ..optimizers import optimizer_resolver
