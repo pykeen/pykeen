@@ -7,7 +7,7 @@ from typing import Any, Mapping, Optional, Union
 
 import torch
 from class_resolver import HintOrType
-from torch.optim.lr_scheduler import _LRScheduler, ReduceLROnPlateau
+from torch.optim.lr_scheduler import _LRScheduler
 from torch.optim.optimizer import Optimizer
 
 from .training_loop import TrainingLoop
@@ -36,7 +36,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
         model: Model,
         triples_factory: CoreTriplesFactory,
         optimizer: Optional[Optimizer] = None,
-        lr_scheduler: Optional[Union[_LRScheduler, ReduceLROnPlateau]] = None,
+        lr_scheduler: Optional[_LRScheduler] = None,
         negative_sampler: HintOrType[NegativeSampler] = None,
         negative_sampler_kwargs: Optional[Mapping[str, Any]] = None,
         automatic_memory_optimization: bool = True,
