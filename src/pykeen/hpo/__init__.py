@@ -23,9 +23,9 @@ as many trials as possible will be run in 60 seconds.
 
 >>> from pykeen.hpo import hpo_pipeline
 >>> hpo_pipeline_result = hpo_pipeline(
-...    timeout=60,
-...    dataset='Nations',
-...    model='TransE',
+...     timeout=60,
+...     dataset='Nations',
+...     model='TransE',
 ... )
 
 The hyper-parameter optimization pipeline has the ability to optimize hyper-parameters for the corresponding
@@ -251,12 +251,12 @@ as 1 or 2.
 
 >>> from pykeen.hpo import hpo_pipeline
 >>> hpo_pipeline_result = hpo_pipeline(
-...    model='TransE',
-...    model_kwargs=dict(
-...        embedding_dim=200,
-...    ),
-...    dataset='Nations',
-...    n_trials=30,
+...     model='TransE',
+...     model_kwargs=dict(
+...         embedding_dim=200,
+...     ),
+...     dataset='Nations',
+...     n_trials=30,
 ... )
 
 If you would like to set your own HPO strategy for the model's hyperparameters, you can do so with the
@@ -317,10 +317,10 @@ the same way as in :func:`pykeen.pipeline.pipeline`.
 
 >>> from pykeen.hpo import hpo_pipeline
 >>> hpo_pipeline_result = hpo_pipeline(
-...    n_trials=30,
-...    dataset='Nations',
-...    model='TransE',
-...    loss='MarginRankingLoss',
+...     n_trials=30,
+...     dataset='Nations',
+...     model='TransE',
+...     loss='MarginRankingLoss',
 ... )
 
 As stated in the documentation for :func:`pykeen.pipeline.pipeline`, each model
@@ -341,13 +341,13 @@ specify the ``loss_kwargs_ranges`` explicitly, as in the following example.
 
 >>> from pykeen.hpo import hpo_pipeline
 >>> hpo_pipeline_result = hpo_pipeline(
-...    n_trials=30,
-...    dataset='Nations',
-...    model='TransE',
-...    loss='MarginRankingLoss',
-...    loss_kwargs_ranges=dict(
-...        margin=dict(type=float, low=1.0, high=2.0),
-...    ),
+...     n_trials=30,
+...     dataset='Nations',
+...     model='TransE',
+...     loss='MarginRankingLoss',
+...     loss_kwargs_ranges=dict(
+...         margin=dict(type=float, low=1.0, high=2.0),
+...     ),
 ... )
 
 Optimizing the Negative Sampler
@@ -446,10 +446,10 @@ a probabilistic search algorithm. You can explicitly set the sampler using the `
 >>> from pykeen.hpo import hpo_pipeline
 >>> from optuna.samplers import TPESampler
 >>> hpo_pipeline_result = hpo_pipeline(
-...    n_trials=30,
-...    sampler=TPESampler,
-...    dataset='Nations',
-...    model='TransE',
+...     n_trials=30,
+...     sampler=TPESampler,
+...     dataset='Nations',
+...     model='TransE',
 ... )
 
 You can alternatively pass a string so you don't have to worry about importing Optuna. PyKEEN knows that sampler
@@ -457,10 +457,10 @@ classes always end in "Sampler" so you can pass either "TPE" or "TPESampler" as 
 
 >>> from pykeen.hpo import hpo_pipeline
 >>> hpo_pipeline_result = hpo_pipeline(
-...    n_trials=30,
-...    sampler="tpe",
-...    dataset='Nations',
-...    model='TransE',
+...     n_trials=30,
+...     sampler="tpe",
+...     dataset='Nations',
+...     model='TransE',
 ... )
 
 It's also possible to pass a sampler instance directly:
@@ -469,10 +469,10 @@ It's also possible to pass a sampler instance directly:
 >>> from optuna.samplers import TPESampler
 >>> sampler = TPESampler(prior_weight=1.1)
 >>> hpo_pipeline_result = hpo_pipeline(
-...    n_trials=30,
-...    sampler=sampler,
-...    dataset='Nations',
-...    model='TransE',
+...     n_trials=30,
+...     sampler=sampler,
+...     dataset='Nations',
+...     model='TransE',
 ... )
 
 If you're working in a JSON-based configuration setting, you won't be able to instantiate the sampler
@@ -481,11 +481,11 @@ with your desired settings like this. As a solution, you can pass the keyword ar
 
 >>> from pykeen.hpo import hpo_pipeline
 >>> hpo_pipeline_result = hpo_pipeline(
-...    n_trials=30,
-...    sampler="tpe",
-...    sampler_kwargs=dict(prior_weight=1.1),
-...    dataset='Nations',
-...    model='TransE',
+...     n_trials=30,
+...     sampler="tpe",
+...     sampler_kwargs=dict(prior_weight=1.1),
+...     dataset='Nations',
+...     model='TransE',
 ... )
 
 To emulate most hyper-parameter optimizations that have used random
@@ -494,10 +494,10 @@ sampling, use :class:`optuna.samplers.RandomSampler` like in:
 >>> from pykeen.hpo import hpo_pipeline
 >>> from optuna.samplers import RandomSampler
 >>> hpo_pipeline_result = hpo_pipeline(
-...    n_trials=30,
-...    sampler=RandomSampler,
-...    dataset='Nations',
-...    model='TransE',
+...     n_trials=30,
+...     sampler=RandomSampler,
+...     dataset='Nations',
+...     model='TransE',
 ... )
 
 Grid search can be performed using :class:`optuna.samplers.GridSampler` like in:
@@ -505,10 +505,10 @@ Grid search can be performed using :class:`optuna.samplers.GridSampler` like in:
 >>> from pykeen.hpo import hpo_pipeline
 >>> from optuna.samplers import GridSampler
 >>> hpo_pipeline_result = hpo_pipeline(
-...    n_trials=30,
-...    sampler=GridSampler,
-...    dataset='Nations',
-...    model='TransE',
+...     n_trials=30,
+...     sampler=GridSampler,
+...     dataset='Nations',
+...     model='TransE',
 ... )
 
 Full Examples
@@ -592,7 +592,7 @@ If you have a configuration (in the same format) in a JSON file:
 ...     )
 ... }
 ... with open('config.json', 'w') as file:
-...    json.dump(config, file, indent=2)
+...     json.dump(config, file, indent=2)
 ... hpo_pipeline_result = hpo_pipeline_from_path('config.json')
 
 .. seealso::
