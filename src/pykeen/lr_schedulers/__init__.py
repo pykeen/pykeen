@@ -18,6 +18,7 @@ __all__ = [
 __all__.extend((
     subcls.__name__
     for subcls in _LRScheduler.__subclasses__()
+    if subcls.__name__ != 'SWALR'
 ))
 
 #: A wrapper around the hidden scheduler base class
