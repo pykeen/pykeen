@@ -683,6 +683,7 @@ def pipeline(  # noqa: C901
     negative_sampler: HintType[NegativeSampler] = None,
     negative_sampler_kwargs: Optional[Mapping[str, Any]] = None,
     # 7. Training (ronaldo style)
+    epochs: Optional[int] = None,
     training_kwargs: Optional[Mapping[str, Any]] = None,
     stopper: HintType[Stopper] = None,
     stopper_kwargs: Optional[Mapping[str, Any]] = None,
@@ -773,6 +774,8 @@ def pipeline(  # noqa: C901
     :param negative_sampler_kwargs:
         Keyword arguments to pass to the negative sampler class on instantiation
 
+    :param epochs:
+        A shortcut for setting the ``num_epochs`` key in the ``training_kwargs`` dict.
     :param training_kwargs:
         Keyword arguments to pass to the training loop's train function on call
     :param stopper:
@@ -1019,6 +1022,8 @@ def pipeline(  # noqa: C901
         **stopper_kwargs,
     )
 
+    if epochs is not None:
+        training_kwargs['num_epochs'] = epochs
     training_kwargs.setdefault('num_epochs', 5)
     training_kwargs.setdefault('batch_size', 256)
     _result_tracker.log_params(params=training_kwargs, prefix='training')
