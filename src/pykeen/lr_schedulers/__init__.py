@@ -25,7 +25,7 @@ __all__.extend((
 LRScheduler = _LRScheduler
 
 #: The default strategy for optimizing the lr_schedulers' hyper-parameters
-lr_schedulers_hpo_defaults: Mapping[Type[LRScheduler], Mapping[str, Any]] = {
+lr_schedulers_hpo_defaults: Mapping[Type[_LRScheduler], Mapping[str, Any]] = {
     CosineAnnealingLR: dict(
         T_max=dict(type=int, low=10, high=1000, step=50),
     ),
