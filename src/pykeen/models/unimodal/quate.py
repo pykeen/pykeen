@@ -11,6 +11,7 @@ from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import BCEWithLogitsLoss, Loss
 from ...nn.emb import EmbeddingSpecification
+from ...nn.functional import quat_e_interaction
 from ...nn.init import init_quaternions
 from ...nn.modules import QuatEInteraction
 from ...regularizers import LpRegularizer, Regularizer
@@ -147,3 +148,35 @@ class QuatE(ERModel):
             ),
             **kwargs,
         )
+
+    def score_h(self, rt_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:
+        """Forward pass using left side (head) prediction.
+        :param rt_batch: shape: (batch_size, 2), dtype: long
+            The indices of (relation, tail) pairs.
+        :param slice_size:
+            The slice size.
+        :return: shape: (batch_size, num_entities), dtype: float
+            For each r-t pair, the scores for all possible heads.
+        """
+
+        # Get embeddings
+        embedding_dim = self.entity_representations[0].shape[0] // 4
+        r = self.relation_representations[0](rt_batch[:, 0]).view(-1, 1, embedding_dim, 4)
+
+        # Conjugation is an involution and is its own inverse (see https://arxiv.org/pdf/1904.10281.pdf)
+        r_inv = torch.stack([r[:, :, :, 0], -r[:, :, :, 1], -r[:, :, :, 2], -r[:, :, :, 3]], dim=-1)
+        r_inv = r_inv.view(rt_batch.shape[0], -1).view(rt_batch.shape[0], 1, 1, 1, 4 * embedding_dim)
+
+        # Rank against all entities
+        h = self.entity_representations[0].get_in_more_canonical_shape(dim="h", indices=None)
+        t = self.entity_representations[0].get_in_more_canonical_shape(dim="t", indices=rt_batch[:, 1])
+
+        # Compute scores
+        # Q_h ⊗ W_r·Q_t = Q_t ⊗ ̄W_r·Q_h (see https://arxiv.org/pdf/1904.10281.pdf)
+        scores = quat_e_interaction(h=t, r=r_inv, t=h)
+
+        # Embedding Regularization
+        # FIXME: Apply regularization
+        # self.regularize_if_necessary(h.view(-1, self.embedding_dim), t.view(-1, self.embedding_dim))
+
+        return scores.view(rt_batch.shape[0], self.num_entities)
