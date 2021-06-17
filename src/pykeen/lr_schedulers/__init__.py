@@ -28,40 +28,36 @@ LRScheduler = _LRScheduler
 lr_schedulers_hpo_defaults: Mapping[Type[_LRScheduler], Mapping[str, Any]] = {
     # TODO: Adjust search spaces to something reasonable
     CosineAnnealingLR: dict(
-        eta_min=dict(type=float, low=0.001, high=0.1, scale='log'),
-        T_max=dict(type=float, low=0.001, high=0.1, scale='log'),
+        T_max=dict(type=int, low=10, high=1000, step=50),
     ),
     CosineAnnealingWarmRestarts: dict(
-        T_0=dict(type=float, low=0.001, high=0.1, scale='log'),
-        T_multi=dict(type=float, low=0.001, high=0.1, scale='log'),
-        eta_min=dict(type=float, low=0.001, high=0.1, scale='log'),
+        T_0=dict(type=int, low=10, high=200, step=50),
     ),
     CyclicLR: dict(
         base_lr=dict(type=float, low=0.001, high=0.1, scale='log'),
-        max_lr=dict(type=float, low=0.001, high=0.1, scale='log'),
+        max_lr=dict(type=float, low=0.1, high=0.3, scale='log'),
         # TODO: Decide whether all parameters should be available
     ),
     ExponentialLR: dict(
-        gamma=dict(type=float, low=0.001, high=0.1, scale='log'),
+        gamma=dict(type=float, low=0.8, high=1.0, step=0.025),
     ),
     LambdaLR: dict(
-        lr_lambda=dict(type=float, low=0.001, high=0.1, scale='log'),
+        lr_lambda=dict(type='categorical', choices=[lambda epoch: epoch // 30, lambda epoch: 0.95 ** epoch]),
     ),
     MultiplicativeLR: dict(
-        lr_lambda=dict(type=float, low=0.001, high=0.1, scale='log'),
+        lr_lambda=dict(type='categorical', choices=[lambda epoch: 0.85, lambda epoch: 0.9, lambda epoch: 0.95]),
     ),
     MultiStepLR: dict(
-        gamma=dict(type=float, low=0.001, high=0.1, scale='log'),
-        milestones=dict(type=float, low=0.001, high=0.1, scale='log'),
+        gamma=dict(type=float, low=0.1, high=0.9, step=0.1),
+        milestones=dict(type='categorical', choices=[75, 130, 190, 240, 370]),
     ),
     OneCycleLR: dict(
-        max_lr=dict(type=float, low=0.001, high=0.1, scale='log'),
-        pct_start=dict(type=float, low=0.001, high=0.1, scale='log'),
+        max_lr=dict(type=float, low=0.1, high=0.3, scale='log'),
         # TODO: Decide whether all parameters should be available
     ),
     StepLR: dict(
-        gamma=dict(type=float, low=0.001, high=0.1, scale='log'),
-        step_size=dict(type=float, low=0.001, high=0.1, scale='log'),
+        gamma=dict(type=float, low=0.1, high=0.9, step=0.1),
+        step_size=dict(type=int, low=1, high=50, step=5),
     ),
 }
 
