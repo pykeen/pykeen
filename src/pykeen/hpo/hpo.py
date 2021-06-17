@@ -59,7 +59,6 @@ class Objective:
     model: Type[Model]  # 2.
     loss: Type[Loss]  # 3.
     optimizer: Type[Optimizer]  # 5.
-    lr_scheduler: Type[LRScheduler]  # 5.1
     training_loop: Type[TrainingLoop]  # 6.
     stopper: Type[Stopper]  # 7.
     evaluator: Type[Evaluator]  # 8.
@@ -87,6 +86,7 @@ class Objective:
     optimizer_kwargs: Optional[Mapping[str, Any]] = None
     optimizer_kwargs_ranges: Optional[Mapping[str, Any]] = None
     # 5.1 Learning Rate Scheduler
+    lr_scheduler: Optional[Type[LRScheduler]] = None
     lr_scheduler_kwargs: Optional[Mapping[str, Any]] = None
     lr_scheduler_kwargs_ranges: Optional[Mapping[str, Any]] = None
     # 6. Training Loop
@@ -176,13 +176,17 @@ class Objective:
             kwargs_ranges=self.optimizer_kwargs_ranges,
         )
         # 5.1 Learning Rate Scheduler
-        _lr_scheduler_kwargs = _get_kwargs(
-            trial=trial,
-            prefix='lr_scheduler',
-            default_kwargs_ranges=lr_schedulers_hpo_defaults[self.lr_scheduler],
-            kwargs=self.lr_scheduler_kwargs,
-            kwargs_ranges=self.lr_scheduler_kwargs_ranges,
-        )
+        _lr_scheduler_kwargs: Optional[Mapping[str, Any]]
+        if self.lr_scheduler is None:
+            _lr_scheduler_kwargs = None
+        else:
+            _lr_scheduler_kwargs = _get_kwargs(
+                trial=trial,
+                prefix='lr_scheduler',
+                default_kwargs_ranges=lr_schedulers_hpo_defaults[self.lr_scheduler],
+                kwargs=self.lr_scheduler_kwargs,
+                kwargs_ranges=self.lr_scheduler_kwargs_ranges,
+            )
 
         _negative_sampler_kwargs: Mapping[str, Any]
         if self.training_loop is not SLCWATrainingLoop:
