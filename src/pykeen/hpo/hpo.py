@@ -176,10 +176,8 @@ class Objective:
             kwargs_ranges=self.optimizer_kwargs_ranges,
         )
         # 5.1 Learning Rate Scheduler
-        _lr_scheduler_kwargs: Optional[Mapping[str, Any]]
-        if self.lr_scheduler is None:
-            _lr_scheduler_kwargs = None
-        else:
+        _lr_scheduler_kwargs: Optional[Mapping[str, Any]] = None
+        if self.lr_scheduler is not None:
             _lr_scheduler_kwargs = _get_kwargs(
                 trial=trial,
                 prefix='lr_scheduler',
