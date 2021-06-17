@@ -60,6 +60,6 @@ lr_schedulers_hpo_defaults: Mapping[Type[_LRScheduler], Mapping[str, Any]] = {
 
 #: A resolver for learning rate schedulers
 lr_scheduler_resolver = Resolver.from_subclasses(
-    _LRScheduler,
+    LRScheduler,
     default=ExponentialLR,
 )
