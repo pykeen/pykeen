@@ -671,9 +671,11 @@ def hpo_pipeline(
     study.set_user_attr('optimizer', optimizer_resolver.normalize_cls(optimizer_cls))
     logger.info(f'Using optimizer: {optimizer_cls}')
     # 5.1 Learning Rate Scheduler
-    lr_scheduler_cls: Type[LRScheduler] = lr_scheduler_resolver.lookup(lr_scheduler)
-    study.set_user_attr('lr_scheduler', lr_scheduler_resolver.normalize_cls(lr_scheduler_cls))
-    logger.info(f'Using lr_scheduler: {lr_scheduler_cls}')
+    lr_scheduler_cls: Optional[Type[LRScheduler]] = None
+    if lr_scheduler is not None:
+        lr_scheduler_cls = lr_scheduler_resolver.lookup(lr_scheduler)
+        study.set_user_attr('lr_scheduler', lr_scheduler_resolver.normalize_cls(lr_scheduler_cls))
+        logger.info(f'Using lr_scheduler: {lr_scheduler_cls}')
     # 6. Training Loop
     training_loop_cls: Type[TrainingLoop] = training_loop_resolver.lookup(training_loop)
     study.set_user_attr('training_loop', training_loop_cls.get_normalized_name())
