@@ -378,8 +378,8 @@ while lowering the learning rate over time to allow the model to smoothly conver
 PyKEEN allows you to use the learning rate schedulers provided by PyTorch, which you can
 simply specify as you would in the :func:`pykeen.pipeline.pipeline`.
 
->>> from pykeen.pipeline import pipeline
->>> pipeline_result = pipeline(
+>>> from pykeen.hpo import hpo_pipeline
+>>> hpo_pipeline_result = hpo_pipeline(
 ...     dataset='Nations',
 ...     model='TransE',
 ...     lr_scheduler='ExponentialLR',
@@ -391,8 +391,8 @@ on their own optimization strategies provided in :py:attr:`pykeen.lr_schedulers.
 In case you are ready to explore even more you can of course also set your own ranges with the
 ``lr_scheduler_kwargs_ranges`` keyword argument as in:
 
->>> from pykeen.pipeline import pipeline
->>> pipeline_result = pipeline(
+>>> from pykeen.hpo import hpo_pipeline
+>>> hpo_pipeline_result = hpo_pipeline(
 ...     dataset='Nations',
 ...     model='TransE',
 ...     lr_scheduler='ExponentialLR',

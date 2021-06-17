@@ -97,7 +97,7 @@ def _get_lr_scheduler_kwargs(lr_scheduler: LRScheduler) -> Mapping[str, Any]:
 class TrainingLoop(Generic[SampleType, BatchType], ABC):
     """A training loop."""
 
-    lr_scheduler: LRScheduler
+    lr_scheduler: Optional[LRScheduler]
     model: Model
     optimizer: Optimizer
 
