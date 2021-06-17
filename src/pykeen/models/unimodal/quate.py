@@ -160,12 +160,12 @@ class QuatE(ERModel):
         """
 
         # Get embeddings
-        embedding_dim = self.entity_representations[0].shape[0] // 4
-        r = self.relation_representations[0](rt_batch[:, 0]).view(-1, 1, embedding_dim, 4)
+        real_embedding_dim = self.entity_representations[0].shape[0] // 4
+        r = self.relation_representations[0](rt_batch[:, 0]).view(-1, 1, real_embedding_dim, 4)
 
         # Conjugation is an involution and is its own inverse (see https://arxiv.org/pdf/1904.10281.pdf)
         r_inv = torch.stack([r[:, :, :, 0], -r[:, :, :, 1], -r[:, :, :, 2], -r[:, :, :, 3]], dim=-1)
-        r_inv = r_inv.view(rt_batch.shape[0], -1).view(rt_batch.shape[0], 1, 1, 1, 4 * embedding_dim)
+        r_inv = r_inv.view(rt_batch.shape[0], -1).view(rt_batch.shape[0], 1, 1, 1, 4 * real_embedding_dim)
 
         # Rank against all entities
         h = self.entity_representations[0].get_in_more_canonical_shape(dim="h", indices=None)
