@@ -476,6 +476,7 @@ def hpo_pipeline(
     negative_sampler_kwargs: Optional[Mapping[str, Any]] = None,
     negative_sampler_kwargs_ranges: Optional[Mapping[str, Any]] = None,
     # 7. Training
+    epochs: Optional[int] = None,
     training_kwargs: Optional[Mapping[str, Any]] = None,
     training_kwargs_ranges: Optional[Mapping[str, Any]] = None,
     stopper: HintType[Stopper] = None,
@@ -580,6 +581,8 @@ def hpo_pipeline(
         Strategies for optimizing the negative samplers' hyper-parameters to override
         the defaults
 
+    :param epochs:
+        A shortcut for setting the ``num_epochs`` key in the ``training_kwargs`` dict.
     :param training_kwargs:
         Keyword arguments to pass to the training loop's train function on call
     :param training_kwargs_ranges:
@@ -687,6 +690,10 @@ def hpo_pipeline(
     else:
         negative_sampler_cls = None
     # 7. Training
+    if epochs is not None:
+        if training_kwargs is None:
+            training_kwargs = {}
+        training_kwargs['num_epochs'] = epochs
     stopper_cls: Type[Stopper] = stopper_resolver.lookup(stopper)
     if stopper_cls is EarlyStopper and training_kwargs_ranges and 'epochs' in training_kwargs_ranges:
         raise ValueError('can not use early stopping while optimizing epochs')
