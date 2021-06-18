@@ -182,7 +182,7 @@ dataset in order to ensure that those datasets are created with the same mapping
 As we have set the argument ``checkpoint_name='my_checkpoint.pt'`` when running the pipeline, PyKEEN saves the
 checkpoint in ``/your/home/dir/.data/pykeen/checkpoints/my_checkpoint.pt``.
 
-When you are sure that you're datasets shown above are the same, you can simply rerun that code and PyKEEN will
+When you are sure that your datasets shown above are the same, you can simply rerun that code and PyKEEN will
 automatically resume the training where it has left. However, if you only have changed the dataset or you sample it, you
 need to make sure that the mappings are correct when resuming training from the checkpoint. This can be done by loading
 the mappings from the checkpoint in the following way.
