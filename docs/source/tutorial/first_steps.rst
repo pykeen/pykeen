@@ -122,10 +122,10 @@ executed with one of the previous examples.
 
     # Pick a training approach (sLCWA or LCWA)
     from pykeen.training import SLCWATrainingLoop
-    training_loop = SLCWATrainingLoop(model=model, optimizer=optimizer)
+    training_loop = SLCWATrainingLoop(model=model, triples_factory=training_triples_factory, optimizer=optimizer)
 
     # Train like Cristiano Ronaldo
-    training_loop.train(num_epochs=5, batch_size=256)
+    training_loop.train(triples_factory=training_triples_factory, num_epochs=5, batch_size=256)
 
     # Pick an evaluator
     from pykeen.evaluation import RankBasedEvaluator
@@ -135,5 +135,5 @@ executed with one of the previous examples.
     mapped_triples = dataset.testing.mapped_triples
 
     # Evaluate
-    results = evaluator.evaluate(model, mapped_triples, batch_size=1024)
+    results = evaluator.evaluate(model=model, mapped_triples=mapped_triples, batch_size=1024)
     print(results)
