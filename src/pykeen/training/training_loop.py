@@ -1093,8 +1093,8 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         entity_to_id_dict = None
         # Only save mappings when non-PyKEEN datasets were used
         if (
-            '/pykeen/datasets/' in str(triples_factory.metadata['path'])
-            or '/.data/pykeen/datasets/' in str(triples_factory.metadata['path'])
+            '/pykeen/datasets/' not in str(triples_factory.metadata['path'])
+            and '/.data/pykeen/datasets/' not in str(triples_factory.metadata['path'])
         ):
             if triples_factory is not None:
                 relation_to_id_dict = triples_factory.relation_to_id
