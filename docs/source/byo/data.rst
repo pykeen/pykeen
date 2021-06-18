@@ -151,3 +151,8 @@ you should specify the splits:
 ...                                          # higher, especially with early stopper enabled
 ... )
 >>> result.save_to_directory('doctests/test_unstratified_stopped_transe')
+
+Bring Your Own Data and Checkpoints
+-----------------------------------
+For a tutorial on how to use your own data together with checkpoints
+please go to :ref:`byod_and_checkpoints_training` and :ref:`byod_and_checkpoints_manually`.

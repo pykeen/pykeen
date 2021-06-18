@@ -140,6 +140,8 @@ regular checkpoints as defined above, e.g. with this code:
 
 Note: Use this argument with caution, since every failed training loop will create a distinct checkpoint file.
 
+.. _byod_and_checkpoints_training:
+
 Checkpoints and Bring Your Own Data - Resuming training
 -------------------------------------------------------
 When continuing the training or general usage of a model it is of vital importance that the ``entity_to_id`` and
@@ -221,9 +223,10 @@ Now you can simply resume the pipeline with the same code as above:
 In case you feel that this is too much work we still got you covered, since PyKEEN will check in the background whether
 the provided triples factory mappings match those provided in the checkpoints and will warn you if that is not the case.
 
+.. _byod_and_checkpoints_manually:
+
 Checkpoints and Bring Your Own Data - Loading models manually
 -------------------------------------------------------------
-
 Instead of just resuming training with checkpoints as shown above, you can also manually load models from checkpoints
 for investigation or performing prediction tasks. This can be done in the following way:
 
