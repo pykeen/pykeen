@@ -9,7 +9,7 @@ import logging
 import os
 import pathlib
 from dataclasses import dataclass
-from typing import Any, Collection, Dict, Mapping, Optional, Type, Union
+from typing import Any, Callable, Collection, Dict, Mapping, Optional, Type, Union, cast
 
 import torch
 from optuna import Study, Trial, create_study
@@ -661,7 +661,7 @@ def hpo_pipeline(
     if regularizer is not None:
         regularizer_cls = regularizer_resolver.lookup(regularizer)
     elif getattr(model_cls, 'regularizer_default', None):
-        regularizer_cls = model_cls.regularizer_default
+        regularizer_cls = model_cls.regularizer_default  # type:ignore
     else:
         regularizer_cls = None
     if regularizer_cls:
@@ -691,8 +691,7 @@ def hpo_pipeline(
         negative_sampler_cls = None
     # 7. Training
     if epochs is not None:
-        if training_kwargs is None:
-            training_kwargs = {}
+        training_kwargs = {} if training_kwargs is None else dict(training_kwargs)
         training_kwargs['num_epochs'] = epochs
     stopper_cls: Type[Stopper] = stopper_resolver.lookup(stopper)
     if stopper_cls is EarlyStopper and training_kwargs_ranges and 'epochs' in training_kwargs_ranges:
@@ -769,7 +768,7 @@ def hpo_pipeline(
 
     # Invoke optimization of the objective function.
     study.optimize(
-        objective,
+        cast(Callable[[Trial], float], objective),
         n_trials=n_trials,
         timeout=timeout,
         n_jobs=n_jobs or 1,
@@ -868,7 +867,7 @@ def suggest_discrete_power_int(trial: Trial, name: str, low: int, high: int, bas
     if high <= low:
         raise Exception(f"Upper bound {high} is not greater than lower bound {low}.")
     choices = [base ** i for i in range(low, high + 1)]
-    return trial.suggest_categorical(name=name, choices=choices)
+    return cast(int, trial.suggest_categorical(name=name, choices=choices))
 
 
 def _set_study_dataset(
