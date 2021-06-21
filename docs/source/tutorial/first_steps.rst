@@ -129,7 +129,7 @@ executed with one of the previous examples.
     ... )
 
     >>> # Train like Cristiano Ronaldo
-    >>> training_loop.train(
+    >>> _ = training_loop.train(
     ...     triples_factory=training_triples_factory,
     ...     num_epochs=5,
     ...     batch_size=256,
@@ -147,9 +147,9 @@ executed with one of the previous examples.
     ...     model=model,
     ...     mapped_triples=mapped_triples,
     ...     batch_size=1024,
-    ...     additional_filtered_triples=[
+    ...     additional_filter_triples=[
     ...         dataset.training.mapped_triples,
     ...         dataset.validation.mapped_triples,
     ...     ],
     ... )
-    >>> print(results)
+    >>> # print(results)
