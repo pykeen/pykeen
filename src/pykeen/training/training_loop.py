@@ -1088,17 +1088,11 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         else:
             lr_scheduler_state_dict = self.lr_scheduler.state_dict()
 
-        # TODO: Find easy and robust way to determine whether this is not a PyKEEN provided dataset
         relation_to_id_dict = None
         entity_to_id_dict = None
-        # Only save mappings when non-PyKEEN datasets were used
-        if (
-            '/pykeen/datasets/' not in str(triples_factory.metadata['path'])
-            and '/.data/pykeen/datasets/' not in str(triples_factory.metadata['path'])
-        ):
-            if triples_factory is not None:
-                relation_to_id_dict = triples_factory.relation_to_id
-                entity_to_id_dict = triples_factory.entity_to_id
+        if triples_factory is not None:
+            relation_to_id_dict = triples_factory.relation_to_id
+            entity_to_id_dict = triples_factory.entity_to_id
 
         torch.save(
             {
@@ -1137,8 +1131,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         :param triples_factory:
             The triples factory being used in the current training loop. This is being used to check whether the
             entity and relation to id mappings from the checkpoint match those provided by the current triples
-            factory. Note: This is only used when the checkpoint was saved using custom datasets not provided by
-            PyKEEN.
+            factory.
 
         :return:
             Temporary file path of the best epoch model and the best epoch when using early stoppers, None otherwise.
@@ -1186,22 +1179,22 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             )
 
         # Check whether the triples factory mappings match those from the checkpoints
-        relation_to_id_dict = checkpoint['relation_to_id_dict']
-        entity_to_id_dict = checkpoint['entity_to_id_dict']
+        relation_to_id_dict = checkpoint.get('relation_to_id_dict')
+        entity_to_id_dict = checkpoint.get('entity_to_id_dict')
         if relation_to_id_dict is not None and entity_to_id_dict is not None and triples_factory is not None:
             if relation_to_id_dict != triples_factory.relation_to_id:
                 logger.warning(
                     'The model provided by the checkpoint was trained on different relation_to_id mappings than the '
                     'ones provided by the current triples factory. This will most likely render the current learning '
                     'state of your model useless. This is usually caused by using a completely different dataset '
-                    'or sampling a sub-dataset from a bigger dataset before handing it to the PyKEEN triples factory.'
+                    'or sampling a sub-dataset from a bigger dataset before handing it to the PyKEEN triples factory.',
                 )
             if entity_to_id_dict != triples_factory.entity_to_id:
                 logger.warning(
                     'The model provided by the checkpoint was trained on different entity_to_id mappings than the '
                     'ones provided by the current triples factory. This will most likely render the current learning '
                     'state of your model useless. This is usually caused by using a completely different dataset '
-                    'or sampling a sub-dataset from a bigger dataset before handing it to the PyKEEN triples factory.'
+                    'or sampling a sub-dataset from a bigger dataset before handing it to the PyKEEN triples factory.',
                 )
 
         self._epoch = checkpoint['epoch']
