@@ -29,7 +29,7 @@ from ..models import Model, RGCN
 from ..stoppers import Stopper
 from ..trackers import ResultTracker
 from ..training.schlichtkrull_sampler import GraphSampler
-from ..triples import CoreTriplesFactory, Instances
+from ..triples import CoreTriplesFactory, Instances, TriplesFactory
 from ..utils import (
     format_relative_comparison, get_batchnorm_modules, is_cuda_oom_error, is_cudnn_error,
     normalize_string,
@@ -1090,7 +1090,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
 
         relation_to_id_dict = None
         entity_to_id_dict = None
-        if triples_factory is not None:
+        if triples_factory is not None and isinstance(triples_factory, TriplesFactory):
             relation_to_id_dict = triples_factory.relation_to_id
             entity_to_id_dict = triples_factory.entity_to_id
 
@@ -1181,7 +1181,12 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         # Check whether the triples factory mappings match those from the checkpoints
         relation_to_id_dict = checkpoint.get('relation_to_id_dict')
         entity_to_id_dict = checkpoint.get('entity_to_id_dict')
-        if relation_to_id_dict is not None and entity_to_id_dict is not None and triples_factory is not None:
+        if (
+            relation_to_id_dict is not None
+            and entity_to_id_dict is not None
+            and triples_factory is not None
+            and isinstance(triples_factory, TriplesFactory)
+        ):
             if relation_to_id_dict != triples_factory.relation_to_id:
                 logger.warning(
                     'The model provided by the checkpoint was trained on different relation_to_id mappings than the '
