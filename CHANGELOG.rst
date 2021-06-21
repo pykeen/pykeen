@@ -7,6 +7,9 @@ and this project adheres to `Semantic Versioning <http://semver.org/>`_
 
 `Unreleased <https://github.com/pykeen/pykeen/compare/v1.5.0...HEAD>`_
 -----------------------------------------------------------------------
+Added
+~~~~~
+- Tutorial in using checkpoints when bringing your own data (https://github.com/pykeen/pykeen/pull/498)
 
 `1.5.0 <https://github.com/pykeen/pykeen/compare/v1.4.0...v1.5.0>`_ - 2021-06-13
 --------------------------------------------------------------------------------

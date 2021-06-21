@@ -149,8 +149,8 @@ label to identifier (``entity_to_id``) and relation label to identifier (``relat
 as the ones that were used when saving the checkpoint. If they are not, then any downstream usage will be nonsense.
 
 If you're using a dataset provided by PyKEEN, you're automatically covered. However, when using your own datasets
-(see :ref:`bring_your_own_data`), you are responsible for making sure this is the case. Below are two typical examples of
-combining bringing your own data with checkpoints.
+(see :ref:`bring_your_own_data`), you are responsible for making sure this is the case. Below are two typical examples
+of combining bringing your own data with checkpoints.
 
 Resuming Training
 ~~~~~~~~~~~~~~~~~
