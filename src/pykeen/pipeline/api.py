@@ -139,6 +139,21 @@ argument as in:
 ... )
 >>> pipeline_result.save_to_directory('nations_transe')
 
+In PyKEEN you can also use the learning rate schedulers provided by PyTorch, which can be
+turned on with the ``lr_scheduler`` keyword argument together with the ``lr_scheduler_kwargs``
+keyword argument to specify arguments for the learning rate scheduler as in:
+
+>>> from pykeen.pipeline import pipeline
+>>> pipeline_result = pipeline(
+...     dataset='Nations',
+...     model='TransE',
+...     lr_scheduler='ExponentialLR',
+...     lr_scheduler_kwargs=dict(
+...         gamma=0.99,
+...     ),
+... )
+>>> pipeline_result.save_to_directory('nations_transe')
+
 Deeper Configuration
 ~~~~~~~~~~~~~~~~~~~~
 Arguments for the model can be given as a dictionary using ``model_kwargs``.
@@ -186,6 +201,7 @@ from ..datasets import get_dataset
 from ..datasets.base import Dataset
 from ..evaluation import Evaluator, MetricResults, evaluator_resolver
 from ..losses import Loss, loss_resolver
+from ..lr_schedulers import LRScheduler, lr_scheduler_resolver
 from ..models import Model, make_model_cls, model_resolver
 from ..nn.modules import Interaction
 from ..optimizers import optimizer_resolver
@@ -658,6 +674,9 @@ def pipeline(  # noqa: C901
     optimizer: HintType[Optimizer] = None,
     optimizer_kwargs: Optional[Mapping[str, Any]] = None,
     clear_optimizer: bool = True,
+    # 5.1 Learning Rate Scheduler
+    lr_scheduler: HintType[LRScheduler] = None,
+    lr_scheduler_kwargs: Optional[Mapping[str, Any]] = None,
     # 6. Training Loop
     training_loop: HintType[TrainingLoop] = None,
     training_loop_kwargs: Optional[Mapping[str, Any]] = None,
@@ -735,6 +754,12 @@ def pipeline(  # noqa: C901
         Whether to delete the optimizer instance after training. As the optimizer might have additional memory
         consumption due to e.g. moments in Adam, this is the default option. If you want to continue training, you
         should set it to False, as the optimizer's internal parameter will get lost otherwise.
+
+    :param lr_scheduler:
+        The name of the lr_scheduler or the lr_scheduler class.
+        Defaults to :class:`torch.optim.lr_scheduler.ExponentialLR`.
+    :param lr_scheduler_kwargs:
+        Keyword arguments to pass to the lr_scheduler on instantiation
 
     :param training_loop:
         The name of the training loop's training approach (``'slcwa'`` or ``'lcwa'``) or the training loop class.
@@ -913,6 +938,20 @@ def pipeline(  # noqa: C901
         prefix='optimizer',
     )
 
+    lr_scheduler_instance: Optional[LRScheduler]
+    if lr_scheduler is None:
+        lr_scheduler_instance = None
+    else:
+        lr_scheduler_instance = lr_scheduler_resolver.make(
+            lr_scheduler,
+            lr_scheduler_kwargs,
+            optimizer=optimizer_instance,
+        )
+        _result_tracker.log_params(
+            params=dict(cls=lr_scheduler_instance.__class__.__name__, kwargs=lr_scheduler_kwargs),
+            prefix='lr_scheduler',
+        )
+
     training_loop_cls = training_loop_resolver.lookup(training_loop)
     if training_loop_kwargs is None:
         training_loop_kwargs = {}
@@ -923,6 +962,7 @@ def pipeline(  # noqa: C901
             model=model_instance,
             triples_factory=training,
             optimizer=optimizer_instance,
+            lr_scheduler=lr_scheduler_instance,
             **training_loop_kwargs,
         )
     elif not issubclass(training_loop_cls, SLCWATrainingLoop):
