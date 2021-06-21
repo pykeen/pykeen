@@ -153,14 +153,15 @@ of using your own data:
 
 >>> from pykeen.pipeline import pipeline
 >>> from pykeen.triples import TriplesFactory
->>> train = TriplesFactory.from_path('/my/data/train_triples_1.txt')
+>>> from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH, NATIONS_VALIDATE_PATH
+>>> train = TriplesFactory.from_path(NATIONS_TRAIN_PATH)
 >>> val = TriplesFactory.from_path(
-...     '/my/data/val_triples_1.txt',
+...     path=NATIONS_VALIDATE_PATH,
 ...     entity_to_id=train.entity_to_id,
 ...     relation_to_id=train.relation_to_id,
 ...     )
 >>> test = TriplesFactory.from_path(
-...     '/my/data/test_triples_1.txt',
+...     path=NATIONS_TEST_PATH,
 ...     entity_to_id=train.entity_to_id,
 ...     relation_to_id=train.relation_to_id,
 ...     )
@@ -193,15 +194,20 @@ the mappings from the checkpoint in the following way.
 You have now loaded the checkpoint that contains the mappings, which now can be used to create mappings that match the
 model saved in the checkpoint in the following way
 
->>> train = TriplesFactory.from_path('/my/data/train_triples_sampled.txt',
+>>> from pykeen.triples import TriplesFactory
+>>> from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH, NATIONS_VALIDATE_PATH
+>>> train = TriplesFactory.from_path(
+...     path=NATIONS_TRAIN_PATH,
 ...     entity_to_id=checkpoint['entity_to_id_dict'],
 ...     relation_to_id=checkpoint['relation_to_id_dict'],
 ...     )
->>> val = TriplesFactory.from_path('/my/data/val_triples_1.txt',
+>>> val = TriplesFactory.from_path(
+...     path=NATIONS_VALIDATE_PATH,
 ...     entity_to_id=checkpoint['entity_to_id_dict'],
 ...     relation_to_id=checkpoint['relation_to_id_dict'],
 ...     )
->>> test = TriplesFactory.from_path('/my/data/test_triples_1.txt',
+>>> test = TriplesFactory.from_path(
+...     path=NATIONS_TEST_PATH,
 ...     entity_to_id=checkpoint['entity_to_id_dict'],
 ...     relation_to_id=checkpoint['relation_to_id_dict'],
 ...     )
@@ -238,7 +244,9 @@ for investigation or performing prediction tasks. This can be done in the follow
 You have now loaded the checkpoint that contains both the model as well as the ``entity_to_id`` and ``relation_to_id``
 mapping from the example above. To load these into PyKEEN you just have to do the following:
 
->>> train = TriplesFactory.from_path('/my/data/train_triples_1.txt',
+>>> from pykeen.datasets.nations import NATIONS_TRAIN_PATH
+>>> train = TriplesFactory.from_path(
+...     path=NATIONS_TRAIN_PATH,
 ...     entity_to_id=checkpoint['entity_to_id_dict'],
 ...     relation_to_id=checkpoint['relation_to_id_dict'],
 ...     )
