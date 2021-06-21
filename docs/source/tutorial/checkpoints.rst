@@ -142,8 +142,8 @@ Note: Use this argument with caution, since every failed training loop will crea
 
 .. _byod_and_checkpoints_training:
 
-Checkpoints and Bring Your Own Data - Resuming training
--------------------------------------------------------
+Checkpoints When Bringing Your Own Data: Resuming Training
+----------------------------------------------------------
 When continuing the training or general usage of a model it is of vital importance that the ``entity_to_id`` and
 ``relation_to_id`` mappings that were used when saving the checkpoint are the same as when continuing to use the model.
 When using datasets provided by PyKEEN we have you covered, since PyKEEN makes sure this is the case. However,
@@ -200,17 +200,17 @@ model saved in the checkpoint in the following way
 ...     path=NATIONS_TRAIN_PATH,
 ...     entity_to_id=checkpoint['entity_to_id_dict'],
 ...     relation_to_id=checkpoint['relation_to_id_dict'],
-...     )
+... )
 >>> val = TriplesFactory.from_path(
 ...     path=NATIONS_VALIDATE_PATH,
 ...     entity_to_id=checkpoint['entity_to_id_dict'],
 ...     relation_to_id=checkpoint['relation_to_id_dict'],
-...     )
+... )
 >>> test = TriplesFactory.from_path(
 ...     path=NATIONS_TEST_PATH,
 ...     entity_to_id=checkpoint['entity_to_id_dict'],
 ...     relation_to_id=checkpoint['relation_to_id_dict'],
-...     )
+... )
 
 Now you can simply resume the pipeline with the same code as above:
 
@@ -249,7 +249,7 @@ mapping from the example above. To load these into PyKEEN you just have to do th
 ...     path=NATIONS_TRAIN_PATH,
 ...     entity_to_id=checkpoint['entity_to_id_dict'],
 ...     relation_to_id=checkpoint['relation_to_id_dict'],
-...     )
+... )
 
 ... now load the model and pass the train triples factory to the model
 
