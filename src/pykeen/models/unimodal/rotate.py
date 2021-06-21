@@ -118,7 +118,7 @@ class RotatE(EntityRelationEmbeddingModel):
         )
         # Workaround until https://github.com/pytorch/pytorch/issues/30704 is fixed
         diff = rot_h - t
-        scores = -linalg.vector_norm(diff.view(diff.shape[:-2] + (-1,)), dim=-1)
+        scores = -linalg.vector_norm(diff, dim=(-2, -1))
 
         return scores
 
