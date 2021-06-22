@@ -99,9 +99,12 @@ in ``pykeen``.
 
 ### Datasets ({{ n_datasets }})
 
-The citation for each dataset corresponds to either the paper describing the dataset,
-the first paper published using the dataset with knowledge graph embedding models,
-or the URL for the dataset if neither of the first two are available.
+The following datasets are built in to PyKEEN. The citation for each dataset corresponds to either the paper
+describing the dataset, the first paper published using the dataset with knowledge graph embedding models,
+or the URL for the dataset if neither of the first two are available. If you want to use a custom dataset,
+see the [Bring Your Own Dataset](https://pykeen.readthedocs.io/en/latest/byo/data.html) tutorial. If you
+have a suggestion for another dataset to include in PyKEEN, please let us know
+[here](https://github.com/pykeen/pykeen/issues/new?assignees=cthoyt&labels=New+Dataset&template=dataset-request.md&title=Add+%5BDATASET+NAME%5D).
 
 {{ datasets }}
 
