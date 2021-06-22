@@ -53,7 +53,7 @@ def _run(*args: str) -> Optional[str]:
                 cwd=os.path.dirname(__file__),
                 stderr=devnull,
             )
-        except CalledProcessError:
+        except (CalledProcessError, FileNotFoundError):
             return None
         else:
             return ret.strip().decode('utf-8')
