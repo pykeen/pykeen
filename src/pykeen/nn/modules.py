@@ -36,6 +36,7 @@ __all__ = [
     'ConvKBInteraction',
     'CrossEInteraction',
     'DistMultInteraction',
+    'DistMAInteraction',
     'ERMLPInteraction',
     'ERMLPEInteraction',
     'HolEInteraction',
@@ -698,6 +699,15 @@ class DistMultInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatT
     """
 
     func = pkf.distmult_interaction
+
+
+class DistMAInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
+    """A module wrapper for the stateless DistMA interaction function.
+
+    .. seealso:: :func:`pykeen.nn.functional.dist_ma_interaction`
+    """
+
+    func = pkf.dist_ma_interaction
 
 
 class ERMLPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):

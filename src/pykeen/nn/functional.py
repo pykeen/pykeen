@@ -17,7 +17,7 @@ import numpy
 import torch
 from torch import nn
 
-from .compute_kernel import _complex_native_complex
+from .compute_kernel import _complex_native_complex, batched_dot
 from .sim import KG2E_SIMILARITIES
 from ..moves import irfft, rfft
 from ..typing import GaussianDistribution
@@ -31,6 +31,7 @@ __all__ = [
     'conve_interaction',
     'convkb_interaction',
     'cross_e_interaction',
+    'dist_ma_interaction',
     'distmult_interaction',
     'ermlp_interaction',
     'ermlpe_interaction',
@@ -272,6 +273,29 @@ def distmult_interaction(
         The scores.
     """
     return tensor_product(h, r, t).sum(dim=-1)
+
+
+def dist_ma_interaction(
+    h: torch.FloatTensor,
+    r: torch.FloatTensor,
+    t: torch.FloatTensor,
+) -> torch.FloatTensor:
+    r"""Evaluate the DistMA interaction function from [shi2019]_.
+
+    .. math ::
+        \langle h, r\rangle + \langle r, t\rangle + \langle h, t\rangle
+
+    :param h: shape: (batch_size, num_heads, 1, 1, dim)
+        The head representations.
+    :param r: shape: (batch_size, 1, num_relations, 1, dim)
+        The relation representations.
+    :param t: shape: (batch_size, 1, 1, num_tails, dim)
+        The tail representations.
+
+    :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        The scores.
+    """
+    return batched_dot(h, r) + batched_dot(r, t) + batched_dot(h, t)
 
 
 def ermlp_interaction(
