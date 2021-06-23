@@ -103,6 +103,15 @@ class DistMultTests(cases.InteractionTestCase):
         return (h * r * t).sum(dim=-1)
 
 
+class DistMATests(cases.InteractionTestCase):
+    """Tests for DistMA interaction function."""
+
+    cls = pykeen.nn.modules.DistMAInteraction
+
+    def _exp_score(self, h, r, t) -> torch.FloatTensor:
+        return (h * r).sum() + (r * t).sum() + (h * t).sum()
+
+
 class ERMLPTests(cases.InteractionTestCase):
     """Tests for ERMLP interaction function."""
 
