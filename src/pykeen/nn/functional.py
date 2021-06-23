@@ -31,6 +31,7 @@ __all__ = [
     'conve_interaction',
     'convkb_interaction',
     'cross_e_interaction',
+    'dist_ma_interaction',
     'distmult_interaction',
     'ermlp_interaction',
     'ermlpe_interaction',
