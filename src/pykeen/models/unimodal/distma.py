@@ -33,7 +33,7 @@ class DistMA(ERModel):
 
     def __init__(
         self,
-        embedding_dim: int = 200,
+        embedding_dim: int = 256,
         entity_initializer: Hint[Initializer] = None,
         entity_initializer_kwargs: Optional[Mapping[str, Any]] = None,
         entity_normalizer: Hint[Normalizer] = None,
