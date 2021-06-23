@@ -49,6 +49,8 @@
 .. [socher2013] Socher, R., *et al.* (2013) `Reasoning with neural tensor networks for knowledge base completion.
                 <https://papers.nips.cc/paper/5028-reasoning-with-neural-tensor-networks-for-knowledge-base-completion>`_.
                 NIPS. 2013.
+.. [shi2019] Shi, X. *et al.* (2019). `Modeling Multi-mapping Relations for Precise Cross-lingual Entity Alignment
+             <https://www.aclweb.org/anthology/D19-1075>`_. EMNLP-IJCNLP 2019.
 .. [vashishth2020] Vashishth, S., *et al.* (2020). `Composition-based multi-relational graph convolutional
    networks <https://arxiv.org/abs/1911.03082>`_. *arXiv*, 1–15.
 .. [zhang2019] Zhang, Shuai, *et al.* (2019). `Quaternion knowledge graph embeddings
@@ -63,6 +65,7 @@ from .complex import ComplEx
 from .conv_e import ConvE
 from .conv_kb import ConvKB
 from .crosse import CrossE
+from .distma import DistMA
 from .distmult import DistMult
 from .ermlp import ERMLP
 from .ermlpe import ERMLPE
@@ -91,6 +94,7 @@ __all__ = [
     'ConvE',
     'ConvKB',
     'CrossE',
+    'DistMA',
     'DistMult',
     'ERMLP',
     'ERMLPE',

@@ -280,7 +280,7 @@ def dist_ma_interaction(
     r: torch.FloatTensor,
     t: torch.FloatTensor,
 ) -> torch.FloatTensor:
-    r"""Evaluate the DistMA interaction function.
+    r"""Evaluate the DistMA interaction function from [shi2019]_.
 
     .. math ::
         \langle h, r\rangle + \langle r, t\rangle + \langle h, t\rangle
@@ -291,8 +291,6 @@ def dist_ma_interaction(
         The relation representations.
     :param t: shape: (batch_size, 1, 1, num_tails, dim)
         The tail representations.
-
-    TODO: correctly link https://www.aclweb.org/anthology/D19-1075/
 
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
