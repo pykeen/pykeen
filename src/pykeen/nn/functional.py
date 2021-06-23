@@ -292,6 +292,8 @@ def dist_ma_interaction(
     :param t: shape: (batch_size, 1, 1, num_tails, dim)
         The tail representations.
 
+    TODO: correctly link https://www.aclweb.org/anthology/D19-1075/
+
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
