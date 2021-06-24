@@ -570,8 +570,7 @@ def evaluate(
         mapped_triples=mapped_triples,
         additional_filter_triples=additional_filter_triples,
         device=device,
-        filtering_necessary=filtering_necessary,
-        positive_masks_required=positive_masks_required,
+        necessary=filtering_necessary or positive_masks_required,
     )
 
     # Send tensors to device
@@ -649,12 +648,11 @@ def _prepare_filter_triples(
     mapped_triples: MappedTriples,
     additional_filter_triples: Union[None, MappedTriples, Sequence[MappedTriples]],
     device: torch.device,
-    filtering_necessary: bool,
-    positive_masks_required: bool,
+    necessary: bool,
 ) -> Optional[MappedTriples]:
     """Prepare triples for filtering."""
     # Prepare for result filtering
-    if filtering_necessary or positive_masks_required:
+    if necessary:
         if additional_filter_triples is None:
             logger.warning(dedent('''\
                 The filtered setting was enabled, but there were no `additional_filter_triples`
