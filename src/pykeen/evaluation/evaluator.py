@@ -10,7 +10,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from math import ceil
 from textwrap import dedent
-from typing import Any, Collection, Iterable, List, Mapping, Optional, Tuple, Union, cast
+from typing import Any, Collection, Iterable, List, Mapping, Optional, Sequence, Tuple, Union, cast
 
 import numpy as np
 import torch
@@ -566,30 +566,13 @@ def evaluate(
     # This can only be an unfiltered evaluator.
     positive_masks_required = any(e.requires_positive_mask for e in unfiltered_evaluators)
 
-    # Prepare for result filtering
-    if filtering_necessary or positive_masks_required:
-        if additional_filter_triples is None:
-            logger.warning(dedent('''\
-                The filtered setting was enabled, but there were no `additional_filter_triples`
-                given. This means you probably forgot to pass (at least) the training triples. Try:
-
-                    additional_filter_triples=[dataset.training.mapped_triples]
-
-                Or if you want to use the Bordes et al. (2013) approach to filtering, do:
-
-                    additional_filter_triples=[
-                        dataset.training.mapped_triples,
-                        dataset.validation.mapped_triples,
-                    ]
-            '''))
-            all_pos_triples = mapped_triples
-        elif isinstance(additional_filter_triples, (list, tuple)):
-            all_pos_triples = torch.cat([*additional_filter_triples, mapped_triples], dim=0)
-        else:
-            all_pos_triples = torch.cat([additional_filter_triples, mapped_triples], dim=0)
-        all_pos_triples = all_pos_triples.to(device=device)
-    else:
-        all_pos_triples = None
+    all_pos_triples = _prepare_filter_triples(
+        mapped_triples=mapped_triples,
+        additional_filter_triples=additional_filter_triples,
+        device=device,
+        filtering_necessary=filtering_necessary,
+        positive_masks_required=positive_masks_required,
+    )
 
     # Send tensors to device
     mapped_triples = mapped_triples.to(device=device)
@@ -660,6 +643,41 @@ def evaluate(
         return results[0]
 
     return results
+
+
+def _prepare_filter_triples(
+    mapped_triples: MappedTriples,
+    additional_filter_triples: Union[None, MappedTriples, Sequence[MappedTriples]],
+    device: torch.device,
+    filtering_necessary: bool,
+    positive_masks_required: bool,
+) -> Optional[MappedTriples]:
+    """Prepare triples for filtering."""
+    # Prepare for result filtering
+    if filtering_necessary or positive_masks_required:
+        if additional_filter_triples is None:
+            logger.warning(dedent('''\
+                The filtered setting was enabled, but there were no `additional_filter_triples`
+                given. This means you probably forgot to pass (at least) the training triples. Try:
+
+                    additional_filter_triples=[dataset.training.mapped_triples]
+
+                Or if you want to use the Bordes et al. (2013) approach to filtering, do:
+
+                    additional_filter_triples=[
+                        dataset.training.mapped_triples,
+                        dataset.validation.mapped_triples,
+                    ]
+            '''))
+            all_pos_triples = mapped_triples
+        elif isinstance(additional_filter_triples, (list, tuple)):
+            all_pos_triples = torch.cat([*additional_filter_triples, mapped_triples], dim=0)
+        else:
+            all_pos_triples = torch.cat([additional_filter_triples, mapped_triples], dim=0)
+        all_pos_triples = all_pos_triples.to(device=device)
+    else:
+        all_pos_triples = None
+    return all_pos_triples
 
 
 def _evaluate_batch(
