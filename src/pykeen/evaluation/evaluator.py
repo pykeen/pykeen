@@ -13,6 +13,7 @@ from textwrap import dedent
 from typing import Any, Collection, Iterable, List, Mapping, Optional, Sequence, Tuple, Union, cast
 
 import numpy as np
+import pandas
 import torch
 from dataclasses_json import DataClassJsonMixin
 from tqdm.autonotebook import tqdm
@@ -676,6 +677,69 @@ def _prepare_filter_triples(
     else:
         all_pos_triples = None
     return all_pos_triples
+
+
+def get_expected_mean_rank(
+    mapped_triples: MappedTriples,
+    num_entities: int,
+    additional_filter_triples: Union[None, MappedTriples, Sequence[MappedTriples]] = None,
+    filtered: bool = True,
+) -> float:
+    """
+    Compute expected mean rank of a model with random scoring function.
+
+    :param mapped_triples:
+        The evaluation triples.
+    :param num_entities:
+        The number of entities.
+    :param additional_filter_triples:
+        Additional filter triples in case of filtered evaluation.
+    :param filtered:
+        Whether to use filtered ranks.
+
+    :return:
+        The expected mean rank.
+    """
+    expected_mean_rank = (num_entities + 1) / 2
+    if not filtered:
+        return expected_mean_rank
+
+    # TODO: run on gpu?
+    filter_triples = _prepare_filter_triples(
+        mapped_triples=mapped_triples,
+        additional_filter_triples=additional_filter_triples,
+        device=torch.device("cpu"),
+        necessary=filtered,
+    )
+
+    # keep only unique filter triples
+    filter_triples = filter_triples.unique(dim=0)
+
+    # compute the absolute number of filtered entities
+    num_filtered = 0
+    df_filter = pandas.DataFrame(data=filter_triples.numpy(), columns=["h", "r", "t"])
+    df_eval = pandas.DataFrame(data=mapped_triples.numpy(), columns=["h", "r", "t"])
+
+    # for each prediction side...
+    for side in ("h", "t"):
+        # group by fixed part:
+        key = [side, "r"]
+        # get keys with actually occur in the evaluation triples
+        uniq_occurring_keys = df_eval[key].drop_duplicates()
+        # keep only relevant filter triples
+        df_filter_select = pandas.merge(uniq_occurring_keys, df_filter, on=key)
+        # get number of filtered tail entities for (head, relation) pair (-1 since the true entry is not filtered)
+        # since the triples are unique, we do not need to care about duplicates anymore
+        num_filtered_per_key = df_filter_select.groupby(by=key).size() - 1
+        # get number of times this (head, relation) combination occurs in the evaluation triples
+        eval_key_frequency = df_eval.groupby(by=key).size()
+        num_filtered += float((eval_key_frequency * num_filtered_per_key).values.sum())
+
+    # the average number of entities which are filtered
+    avg_num_filtered = num_filtered / (2 * mapped_triples.shape[0])
+
+    # we need to correct the mean rank by (avg_num_filtered / 2)
+    return expected_mean_rank - avg_num_filtered / 2
 
 
 def _evaluate_batch(
