@@ -692,6 +692,38 @@ def structured_embedding_interaction(
     )
 
 
+def toruse_interaction(
+    h: torch.FloatTensor,
+    r: torch.FloatTensor,
+    t: torch.FloatTensor,
+    p: Union[int, str] = 2,
+    power_norm: bool = False,
+) -> torch.FloatTensor:
+    """Evaluate the TorusE interaction function from [ebisu2018].
+
+    .. note ::
+        This only implements the two L_p norm based variants.
+
+    :param h: shape: (batch_size, num_heads, 1, 1, dim)
+        The head representations.
+    :param r: shape: (batch_size, 1, num_relations, 1, dim)
+        The relation representations.
+    :param t: shape: (batch_size, 1, 1, num_tails, dim)
+        The tail representations.
+    :param p:
+        The p for the norm.
+    :param power_norm:
+        Whether to return the powered norm.
+
+    :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        The scores.
+    """
+    d = tensor_sum(h, r, -t)
+    d = d - torch.floor(d)
+    d = torch.minimum(d, 1.0 - d)
+    return negative_norm(d, p=p, power_norm=power_norm)
+
+
 def transd_interaction(
     h: torch.FloatTensor,
     r: torch.FloatTensor,

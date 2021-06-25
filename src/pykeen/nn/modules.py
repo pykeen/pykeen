@@ -49,6 +49,7 @@ __all__ = [
     'RotatEInteraction',
     'SimplEInteraction',
     'StructuredEmbeddingInteraction',
+    'TorusEInteraction',
     'TransDInteraction',
     'TransEInteraction',
     'TransHInteraction',
@@ -1007,6 +1008,18 @@ class UnstructuredModelInteraction(
         t: TailRepresentation,
     ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
         return dict(h=h, t=t)
+
+
+class TorusEInteraction(TranslationalInteraction[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]):
+    """A stateful module for the TorusE interaction function.
+
+    .. seealso:: :func:`pykeen.nn.functional.toruse_interaction`
+    """
+
+    func = pkf.toruse_interaction
+
+    def __init__(self, p: int = 2, power_norm: bool = False):
+        super().__init__(p=p, power_norm=power_norm)
 
 
 class TransDInteraction(

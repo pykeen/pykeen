@@ -1,38 +1,43 @@
 # -*- coding: utf-8 -*-
 
-"""Implementation of DistMA."""
+"""Implementation of TorusE."""
 
 from typing import Any, ClassVar, Mapping, Optional
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.emb import EmbeddingSpecification
-from ...nn.modules import DistMAInteraction
+from ...nn.modules import TorusEInteraction
 from ...typing import Hint, Initializer, Normalizer
 
 __all__ = [
-    "DistMA",
+    "TorusE",
 ]
 
 
-class DistMA(ERModel):
-    r"""An implementation of DistMA from [shi2019]_.
+class TorusE(ERModel):
+    r"""An implementation of TorusE from [ebisu2018]_.
 
     ---
     citation:
-        author: Shi
-        year: 2019
-        link: https://www.aclweb.org/anthology/D19-1075.pdf
+        author: Ebisu
+        year: 2018
+        link: https://www.aaai.org/ocs/index.php/AAAI/AAAI18/paper/view/16227
+        arxiv: 1711.05435
+        github: TakumaE/TorusE
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]] = dict(
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+        p=dict(type=int, low=1, high=2),
     )
 
     def __init__(
         self,
         embedding_dim: int = 256,
+        p: int = 2,
+        power_norm: bool = False,
         entity_initializer: Hint[Initializer] = None,
         entity_initializer_kwargs: Optional[Mapping[str, Any]] = None,
         entity_normalizer: Hint[Normalizer] = None,
@@ -41,9 +46,11 @@ class DistMA(ERModel):
         relation_initializer_kwargs: Optional[Mapping[str, Any]] = None,
         **kwargs,
     ) -> None:
-        r"""Initialize DistMA via the :class:`pykeen.nn.modules.DistMAInteraction` interaction.
+        r"""Initialize TorusE via the :class:`pykeen.nn.modules.TorusEInteraction` interaction.
 
         :param embedding_dim: The entity embedding dimension $d$.
+        :param p: The p for the norm.
+        :param power_norm: Whether to use the p-th power of the L_p norm instead.
         :param entity_initializer: Entity initializer function. Defaults to None
         :param entity_initializer_kwargs: Keyword arguments to be used when calling the entity initializer
         :param entity_normalizer: Entity normalizer function. Defaults to None
@@ -53,7 +60,8 @@ class DistMA(ERModel):
         :param kwargs: Remaining keyword arguments passed through to :class:`pykeen.models.ERModel`.
         """
         super().__init__(
-            interaction=DistMAInteraction,
+            interaction=TorusEInteraction,
+            interaction_kwargs=dict(p=p, power_norm=power_norm),
             entity_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
                 initializer=entity_initializer,
