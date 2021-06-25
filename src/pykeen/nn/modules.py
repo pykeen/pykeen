@@ -1018,7 +1018,7 @@ class TorusEInteraction(TranslationalInteraction[torch.FloatTensor, torch.FloatT
 
     func = pkf.toruse_interaction
 
-    def __init__(self, p: int = 2, power_norm: bool = True):
+    def __init__(self, p: int = 2, power_norm: bool = False):
         super().__init__(p=p, power_norm=power_norm)
 
 

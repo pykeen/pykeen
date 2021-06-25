@@ -438,7 +438,11 @@ class TorusETests(cases.TranslationalInteractionTests):
         p: Union[int, str] = 2,
         power_norm: bool = False,
     ) -> torch.FloatTensor:
-        raise NotImplementedError  # FIXME @mberr
+        assert not power_norm
+        d = (h + r - t)
+        d = d - torch.floor(d)
+        d = torch.minimum(d, 1.0 - d)
+        return -d.norm(p=p)
 
 
 class MonotonicAffineTransformationInteractionTests(cases.InteractionTestCase):
