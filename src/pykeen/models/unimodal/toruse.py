@@ -37,6 +37,7 @@ class TorusE(ERModel):
         self,
         embedding_dim: int = 256,
         p: int = 2,
+        power_norm: bool = False,
         entity_initializer: Hint[Initializer] = None,
         entity_initializer_kwargs: Optional[Mapping[str, Any]] = None,
         entity_normalizer: Hint[Normalizer] = None,
@@ -59,7 +60,7 @@ class TorusE(ERModel):
         """
         super().__init__(
             interaction=TorusEInteraction,
-            interaction_kwargs=dict(p=p),
+            interaction_kwargs=dict(p=p, power_norm=power_norm),
             entity_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
                 initializer=entity_initializer,
