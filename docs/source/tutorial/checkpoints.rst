@@ -140,6 +140,133 @@ regular checkpoints as defined above, e.g. with this code:
 
 Note: Use this argument with caution, since every failed training loop will create a distinct checkpoint file.
 
+.. _byod_and_checkpoints_training:
+
+Checkpoints When Bringing Your Own Data
+---------------------------------------
+When continuing the training or in general using the model after resuming training, it is critical that the entity
+label to identifier (``entity_to_id``) and relation label to identifier (``relation_to_id``) mappings are the same
+as the ones that were used when saving the checkpoint. If they are not, then any downstream usage will be nonsense.
+
+If you're using a dataset provided by PyKEEN, you're automatically covered. However, when using your own datasets
+(see :ref:`bring_your_own_data`), you are responsible for making sure this is the case. Below are two typical examples
+of combining bringing your own data with checkpoints.
+
+Resuming Training
+~~~~~~~~~~~~~~~~~
+The following example shows using custom triples factories for the training, validation, and testing datasets derived
+from files containing labeled triples. Note how the ``entity_to_id`` and ``relation_to_id`` arguments are used when
+creating the ``validation`` and ``testing`` triples factories in order to ensure that those datasets are created with
+the same mappings as the training dataset. Because the ``checkpoint_name`` is set to ``'my_checkpoint.pt'``, PyKEEN
+saves the checkpoint in ``~/.data/pykeen/checkpoints/my_checkpoint.pt``.
+
+>>> from pykeen.pipeline import pipeline
+>>> from pykeen.triples import TriplesFactory
+>>> from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH, NATIONS_VALIDATE_PATH
+>>> training = TriplesFactory.from_path(
+...     path=NATIONS_TRAIN_PATH,
+... )
+>>> validation = TriplesFactory.from_path(
+...     path=NATIONS_VALIDATE_PATH,
+...     entity_to_id=train.entity_to_id,
+...     relation_to_id=train.relation_to_id,
+... )
+>>> testing = TriplesFactory.from_path(
+...     path=NATIONS_TEST_PATH,
+...     entity_to_id=train.entity_to_id,
+...     relation_to_id=train.relation_to_id,
+... )
+>>> pipeline_result = pipeline(
+...     training=training,
+...     validation=validation,
+...     testing=testing,
+...     model='TransE',
+...     optimizer='Adam',
+...     training_kwargs=dict(
+...         num_epochs=2000,
+...         checkpoint_name='my_checkpoint.pt',
+...     ),
+... )
+
+When you are sure that your datasets shown above are the same, you can simply rerun that code and PyKEEN will
+automatically resume the training where it has left. However, if you only have changed the dataset or you sample it, you
+need to make sure that the mappings are correct when resuming training from the checkpoint. This can be done by loading
+the mappings from the checkpoint in the following way.
+
+>>> import torch
+>>> from pykeen.constants import PYKEEN_CHECKPOINTS
+>>> checkpoint = torch.load(PYKEEN_CHECKPOINTS.joinpath('my_checkpoint.pt')
+
+You have now loaded the checkpoint that contains the mappings, which now can be used to create mappings that match the
+model saved in the checkpoint in the following way
+
+>>> from pykeen.triples import TriplesFactory
+>>> from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH, NATIONS_VALIDATE_PATH
+>>> training = TriplesFactory.from_path(
+...     path=NATIONS_TRAIN_PATH,
+...     entity_to_id=checkpoint['entity_to_id_dict'],
+...     relation_to_id=checkpoint['relation_to_id_dict'],
+... )
+>>> validation = TriplesFactory.from_path(
+...     path=NATIONS_VALIDATE_PATH,
+...     entity_to_id=checkpoint['entity_to_id_dict'],
+...     relation_to_id=checkpoint['relation_to_id_dict'],
+... )
+>>> testing = TriplesFactory.from_path(
+...     path=NATIONS_TEST_PATH,
+...     entity_to_id=checkpoint['entity_to_id_dict'],
+...     relation_to_id=checkpoint['relation_to_id_dict'],
+... )
+
+Now you can simply resume the pipeline with the same code as above:
+
+>>> pipeline_result = pipeline(
+...     training=training,
+...     validation=validation,
+...     testing=testing,
+...     model='TransE',
+...     optimizer='Adam',
+...     training_kwargs=dict(
+...         num_epochs=2000,
+...         checkpoint_name='my_checkpoint.pt',
+...     ),
+... )
+
+In case you feel that this is too much work we still got you covered, since PyKEEN will check in the background whether
+the provided triples factory mappings match those provided in the checkpoints and will warn you if that is not the case.
+
+.. _byod_and_checkpoints_manually:
+
+Loading Models Manually
+~~~~~~~~~~~~~~~~~~~~~~~
+Instead of just resuming training with checkpoints as shown above, you can also manually load models from checkpoints
+for investigation or performing prediction tasks. This can be done in the following way:
+
+>>> import torch
+>>> from pykeen.constants import PYKEEN_CHECKPOINTS
+>>> from pykeen.pipeline import pipeline
+>>> from pykeen.triples import TriplesFactory
+>>> checkpoint = torch.load(PYKEEN_CHECKPOINTS.joinpath('my_checkpoint.pt'))
+
+You have now loaded the checkpoint that contains both the model as well as the ``entity_to_id`` and ``relation_to_id``
+mapping from the example above. To load these into PyKEEN you just have to do the following:
+
+>>> from pykeen.datasets.nations import NATIONS_TRAIN_PATH
+>>> train = TriplesFactory.from_path(
+...     path=NATIONS_TRAIN_PATH,
+...     entity_to_id=checkpoint['entity_to_id_dict'],
+...     relation_to_id=checkpoint['relation_to_id_dict'],
+... )
+
+... now load the model and pass the train triples factory to the model
+
+>>> from pykeen.models import TransE
+>>> my_model = TransE(triples_factory=train)
+>>> my_model.load_state_dict(checkpoint['model_state_dict'])
+
+Now you have loaded the model and ensured that the mapping in the triples factory is aligned with the model weights.
+Enjoy!
+
 .. todo:: Tutorial on recovery from hpo_pipeline.
 
 .. _word_of_caution:

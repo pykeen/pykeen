@@ -34,7 +34,7 @@
   <a href="#installation">Installation</a> •
   <a href="#quickstart">Quickstart</a> •
   <a href="#datasets-26">Datasets</a> •
-  <a href="#models-28">Models</a> •
+  <a href="#models-30">Models</a> •
   <a href="#supporters">Support</a> •
   <a href="#citation">Citation</a>
 </p>
@@ -79,8 +79,9 @@ result = pipeline(
 ```
 
 The results are returned in an instance of the [PipelineResult](https://pykeen.readthedocs.io/en/latest/reference/pipeline.html#pykeen.pipeline.PipelineResult)
-dataclass that has attributes for the trained model, the training loop, the evaluation, and more. See the tutorials on
-[understanding the evaluation](https://pykeen.readthedocs.io/en/latest/tutorial/understanding_evaluation.html)
+dataclass that has attributes for the trained model, the training loop, the evaluation, and more. See the tutorials
+on [using your own dataset](https://pykeen.readthedocs.io/en/latest/byo/data.html),
+[understanding the evaluation](https://pykeen.readthedocs.io/en/latest/tutorial/understanding_evaluation.html),
 and [making novel link predictions](https://pykeen.readthedocs.io/en/latest/tutorial/making_predictions.html).
 
 PyKEEN is extensible such that:
@@ -98,9 +99,12 @@ in ``pykeen``.
 
 ### Datasets (26)
 
-The citation for each dataset corresponds to either the paper describing the dataset,
-the first paper published using the dataset with knowledge graph embedding models,
-or the URL for the dataset if neither of the first two are available.
+The following datasets are built in to PyKEEN. The citation for each dataset corresponds to either the paper
+describing the dataset, the first paper published using the dataset with knowledge graph embedding models,
+or the URL for the dataset if neither of the first two are available. If you want to use a custom dataset,
+see the [Bring Your Own Dataset](https://pykeen.readthedocs.io/en/latest/byo/data.html) tutorial. If you
+have a suggestion for another dataset to include in PyKEEN, please let us know
+[here](https://github.com/pykeen/pykeen/issues/new?assignees=cthoyt&labels=New+Dataset&template=dataset-request.md&title=Add+%5BDATASET+NAME%5D).
 
 | Name                               | Documentation                                                                                                     | Citation                                                                                                                |   Entities |   Relations |   Triples |
 |------------------------------------|-------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|------------|-------------|-----------|
@@ -131,7 +135,7 @@ or the URL for the dataset if neither of the first two are available.
 | WordNet-18 (RR)                    | [`pykeen.datasets.WN18RR`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.WN18RR.html)               | [Toutanova *et al*., 2015](https://www.aclweb.org/anthology/W15-4007/)                                                  |      40559 |          11 |     92583 |
 | YAGO3-10                           | [`pykeen.datasets.YAGO310`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.YAGO310.html)             | [Mahdisoltani *et al*., 2015](http://service.tsi.telecom-paristech.fr/cgi-bin//valipub_download.cgi?dId=284)            |     123143 |          37 |   1089000 |
 
-### Models (28)
+### Models (30)
 
 | Name                | Reference                                                                                                                 | Citation                                                                                                                |
 |---------------------|---------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|
@@ -141,6 +145,7 @@ or the URL for the dataset if neither of the first two are available.
 | ConvE               | [`pykeen.models.ConvE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.ConvE.html)                             | [Dettmers *et al.*, 2018](https://www.aaai.org/ocs/index.php/AAAI/AAAI18/paper/view/17366)                              |
 | ConvKB              | [`pykeen.models.ConvKB`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.ConvKB.html)                           | [Nguyen *et al.*, 2018](https://www.aclweb.org/anthology/N18-2053)                                                      |
 | CrossE              | [`pykeen.models.CrossE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.CrossE.html)                           | [Zhang *et al.*, 2019](https://arxiv.org/abs/1903.04750)                                                                |
+| DistMA              | [`pykeen.models.DistMA`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.DistMA.html)                           | [Shi *et al.*, 2019](https://www.aclweb.org/anthology/D19-1075.pdf)                                                     |
 | DistMult            | [`pykeen.models.DistMult`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.DistMult.html)                       | [Yang *et al.*, 2014](https://arxiv.org/abs/1412.6575)                                                                  |
 | DistMultLiteral     | [`pykeen.models.DistMultLiteral`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.DistMultLiteral.html)         | [Kristiadi *et al.*, 2018](https://arxiv.org/abs/1802.00934)                                                            |
 | ERMLP               | [`pykeen.models.ERMLP`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.ERMLP.html)                             | [Dong *et al.*, 2014](https://dl.acm.org/citation.cfm?id=2623623)                                                       |
@@ -157,6 +162,7 @@ or the URL for the dataset if neither of the first two are available.
 | RotatE              | [`pykeen.models.RotatE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.RotatE.html)                           | [Sun *et al.*, 2019](https://arxiv.org/abs/1902.10197v1)                                                                |
 | SimplE              | [`pykeen.models.SimplE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.SimplE.html)                           | [Kazemi *et al.*, 2018](https://papers.nips.cc/paper/7682-simple-embedding-for-link-prediction-in-knowledge-graphs)     |
 | StructuredEmbedding | [`pykeen.models.StructuredEmbedding`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.StructuredEmbedding.html) | [Bordes *et al.*, 2011](http://www.aaai.org/ocs/index.php/AAAI/AAAI11/paper/download/3659/3898)                         |
+| TorusE              | [`pykeen.models.TorusE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.TorusE.html)                           | [Ebisu *et al.*, 2018](https://www.aaai.org/ocs/index.php/AAAI/AAAI18/paper/view/16227)                                 |
 | TransD              | [`pykeen.models.TransD`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.TransD.html)                           | [Ji *et al.*, 2015](http://www.aclweb.org/anthology/P15-1067)                                                           |
 | TransE              | [`pykeen.models.TransE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.TransE.html)                           | [Bordes *et al.*, 2013](http://papers.nips.cc/paper/5071-translating-embeddings-for-modeling-multi-relational-data.pdf) |
 | TransH              | [`pykeen.models.TransH`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.TransH.html)                           | [Wang *et al.*, 2014](https://www.aaai.org/ocs/index.php/AAAI/AAAI14/paper/viewFile/8531/8546)                          |

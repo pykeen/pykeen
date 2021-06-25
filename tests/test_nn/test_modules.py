@@ -3,7 +3,7 @@
 """Tests for interaction functions."""
 
 import logging
-from typing import Tuple
+from typing import Tuple, Union
 from unittest import SkipTest
 
 import numpy
@@ -101,6 +101,15 @@ class DistMultTests(cases.InteractionTestCase):
 
     def _exp_score(self, h, r, t) -> torch.FloatTensor:
         return (h * r * t).sum(dim=-1)
+
+
+class DistMATests(cases.InteractionTestCase):
+    """Tests for DistMA interaction function."""
+
+    cls = pykeen.nn.modules.DistMAInteraction
+
+    def _exp_score(self, h, r, t) -> torch.FloatTensor:
+        return (h * r).sum() + (r * t).sum() + (h * t).sum()
 
 
 class ERMLPTests(cases.InteractionTestCase):
@@ -414,6 +423,26 @@ class MuRETests(cases.TranslationalInteractionTests):
     def _additional_score_checks(self, scores):
         # Since MuRE has offsets, the scores do not need to negative
         pass
+
+
+class TorusETests(cases.TranslationalInteractionTests):
+    """Tests for the TorusE interaction function."""
+
+    cls = pykeen.nn.modules.TorusEInteraction
+
+    def _exp_score(
+        self,
+        h: torch.FloatTensor,
+        r: torch.FloatTensor,
+        t: torch.FloatTensor,
+        p: Union[int, str] = 2,
+        power_norm: bool = False,
+    ) -> torch.FloatTensor:
+        assert not power_norm
+        d = (h + r - t)
+        d = d - torch.floor(d)
+        d = torch.minimum(d, 1.0 - d)
+        return -d.norm(p=p)
 
 
 class MonotonicAffineTransformationInteractionTests(cases.InteractionTestCase):

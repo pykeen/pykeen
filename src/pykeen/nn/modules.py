@@ -36,6 +36,7 @@ __all__ = [
     'ConvKBInteraction',
     'CrossEInteraction',
     'DistMultInteraction',
+    'DistMAInteraction',
     'ERMLPInteraction',
     'ERMLPEInteraction',
     'HolEInteraction',
@@ -48,6 +49,7 @@ __all__ = [
     'RotatEInteraction',
     'SimplEInteraction',
     'StructuredEmbeddingInteraction',
+    'TorusEInteraction',
     'TransDInteraction',
     'TransEInteraction',
     'TransHInteraction',
@@ -700,6 +702,15 @@ class DistMultInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatT
     func = pkf.distmult_interaction
 
 
+class DistMAInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
+    """A module wrapper for the stateless DistMA interaction function.
+
+    .. seealso:: :func:`pykeen.nn.functional.dist_ma_interaction`
+    """
+
+    func = pkf.dist_ma_interaction
+
+
 class ERMLPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
     """A stateful module for the ER-MLP interaction.
 
@@ -997,6 +1008,18 @@ class UnstructuredModelInteraction(
         t: TailRepresentation,
     ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
         return dict(h=h, t=t)
+
+
+class TorusEInteraction(TranslationalInteraction[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]):
+    """A stateful module for the TorusE interaction function.
+
+    .. seealso:: :func:`pykeen.nn.functional.toruse_interaction`
+    """
+
+    func = pkf.toruse_interaction
+
+    def __init__(self, p: int = 2, power_norm: bool = False):
+        super().__init__(p=p, power_norm=power_norm)
 
 
 class TransDInteraction(
