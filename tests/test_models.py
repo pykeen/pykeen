@@ -357,6 +357,12 @@ class TestSEHighMemory(_BaseTestSE):
     }
 
 
+class TestTorusE(cases.DistanceModelTestCase):
+    """Test the TorusE model."""
+
+    cls = pykeen.models.TorusE
+
+
 class TestTransD(cases.DistanceModelTestCase):
     """Test the TransD model."""
 
