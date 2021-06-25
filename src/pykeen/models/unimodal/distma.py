@@ -28,7 +28,6 @@ class DistMA(ERModel):
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]] = dict(
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
-        p=dict(type=int, low=1, high=2),
     )
 
     def __init__(

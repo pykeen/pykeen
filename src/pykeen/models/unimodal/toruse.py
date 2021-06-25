@@ -35,6 +35,7 @@ class TorusE(ERModel):
     def __init__(
         self,
         embedding_dim: int = 256,
+        p: int = 2,
         entity_initializer: Hint[Initializer] = None,
         entity_initializer_kwargs: Optional[Mapping[str, Any]] = None,
         entity_normalizer: Hint[Normalizer] = None,
@@ -46,6 +47,7 @@ class TorusE(ERModel):
         r"""Initialize TorusE via the :class:`pykeen.nn.modules.TorusEInteraction` interaction.
 
         :param embedding_dim: The entity embedding dimension $d$.
+        :param p: The p for the norm.
         :param entity_initializer: Entity initializer function. Defaults to None
         :param entity_initializer_kwargs: Keyword arguments to be used when calling the entity initializer
         :param entity_normalizer: Entity normalizer function. Defaults to None
@@ -56,6 +58,7 @@ class TorusE(ERModel):
         """
         super().__init__(
             interaction=TorusEInteraction,
+            interaction_kwargs=dict(p=p),
             entity_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
                 initializer=entity_initializer,
