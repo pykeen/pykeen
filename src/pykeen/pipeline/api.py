@@ -701,6 +701,7 @@ def pipeline(  # noqa: C901
     use_testing_data: bool = True,
     evaluation_fallback: bool = False,
     filter_validation_when_testing: bool = True,
+    use_tqdm: Optional[bool] = None,
 ) -> PipelineResult:
     """Train and evaluate a model.
 
@@ -814,6 +815,9 @@ def pipeline(  # noqa: C901
         model using the pipeline and evaluating with the testing set, but never using the validation set for
         optimization at all. This is a very atypical scenario, so it is left as true by default to promote
         comparability to previous publications.
+    :param use_tqdm:
+        Globally set the usage of tqdm progress bars. Typically more useful to set to false, since the training
+        loop and evaluation have it turned on by default.
 
     :returns: A pipeline result package.
 
@@ -1024,6 +1028,8 @@ def pipeline(  # noqa: C901
 
     if epochs is not None:
         training_kwargs['num_epochs'] = epochs
+    if use_tqdm is not None:
+        training_kwargs['use_tqdm'] = use_tqdm
     training_kwargs.setdefault('num_epochs', 5)
     training_kwargs.setdefault('batch_size', 256)
     _result_tracker.log_params(params=training_kwargs, prefix='training')
@@ -1121,6 +1127,8 @@ def pipeline(  # noqa: C901
     if evaluator_instance.batch_size is not None or evaluator_instance.slice_size is not None and not use_testing_data:
         evaluation_kwargs['batch_size'] = evaluator_instance.batch_size
         evaluation_kwargs['slice_size'] = evaluator_instance.slice_size
+    if use_tqdm is not None:
+        evaluation_kwargs['use_tqdm'] = use_tqdm
     # Add logging about evaluator for debugging
     logging.debug("Evaluation will be run with following parameters:")
     logging.debug(f"evaluation_kwargs: {evaluation_kwargs}")
