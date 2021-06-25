@@ -21,7 +21,7 @@ class TorusE(ERModel):
     ---
     citation:
         author: Ebisu
-        year: 2017
+        year: 2018
         link: https://www.aaai.org/ocs/index.php/AAAI/AAAI18/paper/view/16227
         arxiv: 1711.05435
         github: TakumaE/TorusE
