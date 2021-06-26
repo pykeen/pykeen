@@ -2,6 +2,7 @@
 
 """Clinical Knowledge Graph."""
 
+import pathlib
 import tarfile
 from pathlib import Path
 from typing import Iterable, Optional
@@ -58,10 +59,10 @@ class CKG(TabbedDataset):
             random_state=random_state,
             **kwargs,
         )
-        self.preloaded_path = self.cache_root / 'preloaded.tsv.gz'
+        self.preloaded_path = self.cache_root.joinpath('preloaded.tsv.gz')
 
-    def _get_path(self) -> Optional[str]:
-        return self.preloaded_path.as_posix()
+    def _get_path(self) -> Optional[pathlib.Path]:
+        return self.preloaded_path
 
     def _get_df(self) -> pd.DataFrame:
         if self.preloaded_path.exists():

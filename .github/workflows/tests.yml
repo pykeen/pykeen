@@ -102,7 +102,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
         run: |
-          conda install pip setuptools wheel pytest sqlite
+          conda install pip setuptools wheel sqlite
           conda install pytorch torchvision cudatoolkit=10.2 -c pytorch
           pip install -e .[mlflow,wandb,tests]
       - name: Run fast tests

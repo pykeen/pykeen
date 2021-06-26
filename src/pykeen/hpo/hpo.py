@@ -7,6 +7,7 @@ import ftplib
 import json
 import logging
 import os
+import pathlib
 from dataclasses import dataclass
 from typing import Any, Collection, Dict, Mapping, Optional, Type, Union
 
@@ -24,6 +25,7 @@ from ..datasets.base import Dataset
 from ..evaluation import Evaluator, evaluator_resolver
 from ..evaluation.rank_based_evaluator import ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX
 from ..losses import Loss, loss_resolver
+from ..lr_schedulers import LRScheduler, lr_scheduler_resolver, lr_schedulers_hpo_defaults
 from ..models import Model, model_resolver
 from ..optimizers import Optimizer, optimizer_resolver, optimizers_hpo_defaults
 from ..pipeline import pipeline, replicate_pipeline_from_config
@@ -83,6 +85,10 @@ class Objective:
     # 5. Optimizer
     optimizer_kwargs: Optional[Mapping[str, Any]] = None
     optimizer_kwargs_ranges: Optional[Mapping[str, Any]] = None
+    # 5.1 Learning Rate Scheduler
+    lr_scheduler: Optional[Type[LRScheduler]] = None
+    lr_scheduler_kwargs: Optional[Mapping[str, Any]] = None
+    lr_scheduler_kwargs_ranges: Optional[Mapping[str, Any]] = None
     # 6. Training Loop
     training_loop_kwargs: Optional[Mapping[str, Any]] = None
     negative_sampler: Optional[Type[NegativeSampler]] = None
@@ -120,7 +126,7 @@ class Objective:
         if self.model_kwargs is not None:
             problems = [
                 x
-                for x in ('loss', 'regularizer', 'optimizer', 'training', 'negative_sampler', 'stopper')
+                for x in ('loss', 'regularizer', 'optimizer', 'lr_scheduler', 'training', 'negative_sampler', 'stopper')
                 if x in self.model_kwargs
             ]
             if problems:
@@ -169,6 +175,16 @@ class Objective:
             kwargs=self.optimizer_kwargs,
             kwargs_ranges=self.optimizer_kwargs_ranges,
         )
+        # 5.1 Learning Rate Scheduler
+        _lr_scheduler_kwargs: Optional[Mapping[str, Any]] = None
+        if self.lr_scheduler is not None:
+            _lr_scheduler_kwargs = _get_kwargs(
+                trial=trial,
+                prefix='lr_scheduler',
+                default_kwargs_ranges=lr_schedulers_hpo_defaults[self.lr_scheduler],
+                kwargs=self.lr_scheduler_kwargs,
+                kwargs_ranges=self.lr_scheduler_kwargs_ranges,
+            )
 
         _negative_sampler_kwargs: Mapping[str, Any]
         if self.training_loop is not SLCWATrainingLoop:
@@ -213,10 +229,13 @@ class Objective:
                 # 4. Regularizer
                 regularizer=self.regularizer,
                 regularizer_kwargs=_regularizer_kwargs,
-                clear_optimizer=True,
                 # 5. Optimizer
                 optimizer=self.optimizer,
                 optimizer_kwargs=_optimizer_kwargs,
+                clear_optimizer=True,
+                # 5.1 Learning Rate Scheduler
+                lr_scheduler=self.lr_scheduler,
+                lr_scheduler_kwargs=_lr_scheduler_kwargs,
                 # 6. Training Loop
                 training_loop=self.training_loop,
                 negative_sampler=self.negative_sampler,
@@ -314,22 +333,24 @@ class HpoPipelineResult(Result):
             pipeline_config['training_kwargs']['num_epochs'] = int(stopped_epoch)
         return dict(metadata=metadata, pipeline=pipeline_config)
 
-    def save_to_directory(self, directory: str, **kwargs) -> None:
+    def save_to_directory(self, directory: Union[str, pathlib.Path], **kwargs) -> None:
         """Dump the results of a study to the given directory."""
-        os.makedirs(directory, exist_ok=True)
+        if isinstance(directory, str):
+            directory = pathlib.Path(directory).resolve()
+        directory.mkdir(exist_ok=True, parents=True)
 
         # Output study information
-        with open(os.path.join(directory, 'study.json'), 'w') as file:
+        with directory.joinpath('study.json').open('w') as file:
             json.dump(self.study.user_attrs, file, indent=2, sort_keys=True)
 
         # Output all trials
         df = self.study.trials_dataframe()
-        df.to_csv(os.path.join(directory, 'trials.tsv'), sep='\t', index=False)
+        df.to_csv(directory.joinpath('trials.tsv'), sep='\t', index=False)
 
-        best_pipeline_directory = os.path.join(directory, 'best_pipeline')
-        os.makedirs(best_pipeline_directory, exist_ok=True)
+        best_pipeline_directory = directory.joinpath('best_pipeline')
+        best_pipeline_directory.mkdir(exist_ok=True, parents=True)
         # Output best trial as pipeline configuration file
-        with open(os.path.join(best_pipeline_directory, 'pipeline_config.json'), 'w') as file:
+        with best_pipeline_directory.joinpath('pipeline_config.json').open('w') as file:
             json.dump(self._get_best_study_config(), file, indent=2, sort_keys=True)
 
     def save_to_ftp(self, directory: str, ftp: ftplib.FTP):
@@ -375,7 +396,7 @@ class HpoPipelineResult(Result):
     def replicate_best_pipeline(
         self,
         *,
-        directory: str,
+        directory: Union[str, pathlib.Path],
         replicates: int,
         move_to_cpu: bool = False,
         save_replicates: bool = True,
@@ -402,7 +423,7 @@ class HpoPipelineResult(Result):
         )
 
 
-def hpo_pipeline_from_path(path: str, **kwargs) -> HpoPipelineResult:
+def hpo_pipeline_from_path(path: Union[str, pathlib.Path], **kwargs) -> HpoPipelineResult:
     """Run a HPO study from the configuration at the given path."""
     with open(path) as file:
         config = json.load(file)
@@ -444,6 +465,10 @@ def hpo_pipeline(
     optimizer: HintType[Optimizer] = None,
     optimizer_kwargs: Optional[Mapping[str, Any]] = None,
     optimizer_kwargs_ranges: Optional[Mapping[str, Any]] = None,
+    # 5.1 Learning Rate Scheduler
+    lr_scheduler: HintType[LRScheduler] = None,
+    lr_scheduler_kwargs: Optional[Mapping[str, Any]] = None,
+    lr_scheduler_kwargs_ranges: Optional[Mapping[str, Any]] = None,
     # 6. Training Loop
     training_loop: HintType[TrainingLoop] = None,
     training_loop_kwargs: Optional[Mapping[str, Any]] = None,
@@ -484,9 +509,9 @@ def hpo_pipeline(
     """Train a model on the given dataset.
 
     :param dataset:
-        The name of the dataset (a key from :data:`pykeen.datasets.datasets`) or the :class:`pykeen.datasets.Dataset`
-        instance. Alternatively, the training triples factory (``training``), testing triples factory (``testing``),
-        and validation triples factory (``validation``; optional) can be specified.
+        The name of the dataset (a key for the :data:`pykeen.datasets.dataset_resolver`) or the
+        :class:`pykeen.datasets.Dataset` instance. Alternatively, the training triples factory (``training``), testing
+        triples factory (``testing``), and validation triples factory (``validation``; optional) can be specified.
     :param dataset_kwargs:
         The keyword arguments passed to the dataset upon instantiation
     :param training:
@@ -535,6 +560,13 @@ def hpo_pipeline(
     :param optimizer_kwargs_ranges:
         Strategies for optimizing the optimizers' hyper-parameters to override
         the defaults
+
+    :param lr_scheduler:
+        The name of the lr_scheduler or the lr_scheduler class.
+    :param lr_scheduler_kwargs:
+        Keyword arguments to pass to the lr_scheduler on instantiation
+    :param lr_scheduler_kwargs_ranges:
+        Strategies for optimizing the lr_schedulers' hyper-parameters to override the defaults
 
     :param training_loop:
         The name of the training approach (``'slcwa'`` or ``'lcwa'``) or the training loop class
@@ -636,6 +668,12 @@ def hpo_pipeline(
     optimizer_cls: Type[Optimizer] = optimizer_resolver.lookup(optimizer)
     study.set_user_attr('optimizer', optimizer_resolver.normalize_cls(optimizer_cls))
     logger.info(f'Using optimizer: {optimizer_cls}')
+    # 5.1 Learning Rate Scheduler
+    lr_scheduler_cls: Optional[Type[LRScheduler]] = None
+    if lr_scheduler is not None:
+        lr_scheduler_cls = lr_scheduler_resolver.lookup(lr_scheduler)
+        study.set_user_attr('lr_scheduler', lr_scheduler_resolver.normalize_cls(lr_scheduler_cls))
+        logger.info(f'Using lr_scheduler: {lr_scheduler_cls}')
     # 6. Training Loop
     training_loop_cls: Type[TrainingLoop] = training_loop_resolver.lookup(training_loop)
     study.set_user_attr('training_loop', training_loop_cls.get_normalized_name())
@@ -692,6 +730,10 @@ def hpo_pipeline(
         optimizer=optimizer_cls,
         optimizer_kwargs=optimizer_kwargs,
         optimizer_kwargs_ranges=optimizer_kwargs_ranges,
+        # 5.1 Learning Rate Scheduler
+        lr_scheduler=lr_scheduler_cls,
+        lr_scheduler_kwargs=lr_scheduler_kwargs,
+        lr_scheduler_kwargs_ranges=lr_scheduler_kwargs_ranges,
         # 6. Training Loop
         training_loop=training_loop_cls,
         training_loop_kwargs=training_loop_kwargs,
@@ -766,32 +808,43 @@ def suggest_kwargs(
             continue  # has been set by default, won't be suggested
 
         prefixed_name = f'{prefix}.{name}'
+
+        # TODO: make it even easier to specify categorical strategies just as lists
+        # if isinstance(info, (tuple, list, set)):
+        #     info = dict(type='categorical', choices=list(info))
+
         dtype, low, high = info['type'], info.get('low'), info.get('high')
+        log = info.get('log') in {True, 'TRUE', 'True', 'true', 't', 'YES', 'Yes', 'yes', 'y'}
         if dtype in {int, 'int'}:
-            q, scale = info.get('q'), info.get('scale')
-            if scale == 'power_two':
-                _kwargs[name] = suggest_discrete_power_two_int(
+            scale = info.get('scale')
+            if scale in {'power_two', 'power'}:
+                _kwargs[name] = suggest_discrete_power_int(
                     trial=trial,
                     name=prefixed_name,
                     low=low,
                     high=high,
+                    base=info.get('q') or info.get('base') or 2,
                 )
-            elif q is not None:
-                _kwargs[name] = suggest_discrete_uniform_int(
-                    trial=trial,
+            elif scale is None or scale == 'linear':
+                # get log from info - could either be a boolean or string
+                _kwargs[name] = trial.suggest_int(
                     name=prefixed_name,
                     low=low,
                     high=high,
-                    q=q,
+                    step=info.get('q') or info.get('step') or 1,
+                    log=log,
                 )
             else:
-                _kwargs[name] = trial.suggest_int(name=prefixed_name, low=low, high=high)
+                logger.warning(f'Unhandled scale {scale} for parameter {name} of data type {dtype}')
 
         elif dtype in {float, 'float'}:
-            if info.get('scale') == 'log':
-                _kwargs[name] = trial.suggest_loguniform(name=prefixed_name, low=low, high=high)
-            else:
-                _kwargs[name] = trial.suggest_uniform(name=prefixed_name, low=low, high=high)
+            _kwargs[name] = trial.suggest_float(
+                name=prefixed_name,
+                low=low,
+                high=high,
+                step=info.get('q') or info.get('step'),
+                log=log,
+            )
         elif dtype == 'categorical':
             choices = info['choices']
             _kwargs[name] = trial.suggest_categorical(name=prefixed_name, choices=choices)
@@ -803,19 +856,11 @@ def suggest_kwargs(
     return _kwargs
 
 
-def suggest_discrete_uniform_int(trial: Trial, name, low, high, q) -> int:
-    """Suggest an integer in the given range [low, high] inclusive with step size q."""
-    if (high - low) % q:
-        logger.warning(f'bad range given: range({low}, {high}, {q}) - not divisible by q')
-    choices = list(range(low, high + 1, q))
-    return trial.suggest_categorical(name=name, choices=choices)
-
-
-def suggest_discrete_power_two_int(trial: Trial, name, low, high) -> int:
+def suggest_discrete_power_int(trial: Trial, name: str, low: int, high: int, base: int = 2) -> int:
     """Suggest an integer in the given range [2^low, 2^high]."""
     if high <= low:
         raise Exception(f"Upper bound {high} is not greater than lower bound {low}.")
-    choices = [2 ** i for i in range(low, high + 1)]
+    choices = [base ** i for i in range(low, high + 1)]
     return trial.suggest_categorical(name=name, choices=choices)
 
 
@@ -830,12 +875,12 @@ def _set_study_dataset(
     if dataset is not None:
         if training is not None or testing is not None or validation is not None:
             raise ValueError("Cannot specify dataset and training, testing and validation")
-        elif isinstance(dataset, str):
-            if has_dataset(dataset):
+        elif isinstance(dataset, (str, pathlib.Path)):
+            if isinstance(dataset, str) and has_dataset(dataset):
                 study.set_user_attr('dataset', get_dataset(dataset=dataset).get_normalized_name())
             else:
                 # otherwise, dataset refers to a file that should be automatically split
-                study.set_user_attr('dataset', dataset)
+                study.set_user_attr('dataset', str(dataset))
         elif (
             isinstance(dataset, Dataset)
             or (isinstance(dataset, type) and issubclass(dataset, Dataset))
@@ -849,9 +894,9 @@ def _set_study_dataset(
         else:
             raise TypeError(f'Dataset is invalid type: ({type(dataset)}) {dataset}')
     else:
-        if isinstance(training, str):
-            study.set_user_attr('training', training)
-        if isinstance(testing, str):
-            study.set_user_attr('testing', testing)
-        if isinstance(validation, str):
-            study.set_user_attr('validation', validation)
+        if isinstance(training, (str, pathlib.Path)):
+            study.set_user_attr('training', str(training))
+        if isinstance(testing, (str, pathlib.Path)):
+            study.set_user_attr('testing', str(testing))
+        if isinstance(validation, (str, pathlib.Path)):
+            study.set_user_attr('validation', str(validation))

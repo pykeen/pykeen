@@ -63,6 +63,7 @@ from typing import Any, Mapping, Optional, Sequence, Tuple, Type, Union
 from .nbase import ERModel, EmbeddingSpecificationHint
 from ..nn.emb import EmbeddingSpecification, RepresentationModule
 from ..nn.modules import Interaction, interaction_resolver
+from ..typing import HeadRepresentation, RelationRepresentation, TailRepresentation
 
 __all__ = [
     'make_model',
@@ -74,7 +75,11 @@ logger = logging.getLogger(__name__)
 
 def make_model(
     dimensions: Union[int, Mapping[str, int]],
-    interaction: Union[str, Interaction, Type[Interaction]],
+    interaction: Union[
+        str,
+        Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation],
+        Type[Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]],
+    ],
     interaction_kwargs: Optional[Mapping[str, Any]] = None,
     entity_representations: EmbeddingSpecificationHint = None,
     relation_representations: EmbeddingSpecificationHint = None,
@@ -104,7 +109,10 @@ class DimensionError(ValueError):
 
 def make_model_cls(
     dimensions: Union[int, Mapping[str, int]],
-    interaction: Union[str, Interaction, Type[Interaction]],
+    interaction: Union[
+        str, Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation],
+        Type[Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]],
+    ],
     interaction_kwargs: Optional[Mapping[str, Any]] = None,
     entity_representations: EmbeddingSpecificationHint = None,
     relation_representations: EmbeddingSpecificationHint = None,
@@ -117,7 +125,7 @@ def make_model_cls(
 
     entity_representations, relation_representations = _normalize_entity_representations(
         dimensions=dimensions,
-        interaction=interaction_instance.__class__,
+        interaction=interaction_instance.__class__,  # type: ignore
         entity_representations=entity_representations,
         relation_representations=relation_representations,
     )
@@ -125,7 +133,7 @@ def make_model_cls(
     # TODO pack/unpack dimensions as default kwargs such that they don't actually need to be used
     #  to create the class
 
-    class ChildERModel(ERModel):
+    class ChildERModel(ERModel[HeadRepresentation, RelationRepresentation, TailRepresentation]):
         def __init__(self, **kwargs) -> None:
             """Initialize the model."""
             super().__init__(
@@ -142,7 +150,7 @@ def make_model_cls(
 
 def _normalize_entity_representations(
     dimensions: Union[int, Mapping[str, int]],
-    interaction: Type[Interaction],
+    interaction: Type[Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]],
     entity_representations: EmbeddingSpecificationHint,
     relation_representations: EmbeddingSpecificationHint,
 ) -> Tuple[

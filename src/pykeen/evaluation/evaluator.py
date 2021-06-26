@@ -179,7 +179,7 @@ class Evaluator(ABC):
 
         rv = evaluate(
             model=model,
-            additional_filtered_triples=additional_filter_triples,
+            additional_filter_triples=additional_filter_triples,
             mapped_triples=mapped_triples,
             evaluators=self,
             batch_size=batch_size,
@@ -312,7 +312,7 @@ class Evaluator(ABC):
                 torch.cuda.empty_cache()
                 evaluate(
                     model=model,
-                    additional_filtered_triples=additional_filter_triples,
+                    additional_filter_triples=additional_filter_triples,
                     mapped_triples=mapped_triples,
                     evaluators=self,
                     only_size_probing=True,
@@ -491,7 +491,7 @@ def evaluate(
     tqdm_kwargs: Optional[Mapping[str, str]] = None,
     restrict_entities_to: Optional[torch.LongTensor] = None,
     do_time_consuming_checks: bool = True,
-    additional_filtered_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
+    additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
 ) -> Union[MetricResults, List[MetricResults]]:
     """Evaluate metrics for model on mapped triples.
 
@@ -531,7 +531,7 @@ def evaluate(
         Whether to perform some time consuming checks on the provided arguments. Currently, this encompasses:
         - If restrict_entities_to is not None, check whether the triples have been filtered.
         Disabling this option can accelerate the method.
-    :param additional_filtered_triples:
+    :param additional_filter_triples:
         Additional true triples to filter out during filtered evaluation.
     """
     if isinstance(evaluators, Evaluator):  # upgrade a single evaluator to a list
@@ -568,25 +568,25 @@ def evaluate(
 
     # Prepare for result filtering
     if filtering_necessary or positive_masks_required:
-        if additional_filtered_triples is None:
+        if additional_filter_triples is None:
             logger.warning(dedent('''\
-                The filtered setting was enabled, but there were no `additional_filtered_triples`
+                The filtered setting was enabled, but there were no `additional_filter_triples`
                 given. This means you probably forgot to pass (at least) the training triples. Try:
 
-                    additional_filtered_triples=[dataset.training.mapped_triples]
+                    additional_filter_triples=[dataset.training.mapped_triples]
 
                 Or if you want to use the Bordes et al. (2013) approach to filtering, do:
 
-                    additional_filtered_triples=[
+                    additional_filter_triples=[
                         dataset.training.mapped_triples,
                         dataset.validation.mapped_triples,
                     ]
             '''))
             all_pos_triples = mapped_triples
-        elif isinstance(additional_filtered_triples, (list, tuple)):
-            all_pos_triples = torch.cat([*additional_filtered_triples, mapped_triples], dim=0)
+        elif isinstance(additional_filter_triples, (list, tuple)):
+            all_pos_triples = torch.cat([*additional_filter_triples, mapped_triples], dim=0)
         else:
-            all_pos_triples = torch.cat([additional_filtered_triples, mapped_triples], dim=0)
+            all_pos_triples = torch.cat([additional_filter_triples, mapped_triples], dim=0)
         all_pos_triples = all_pos_triples.to(device=device)
     else:
         all_pos_triples = None

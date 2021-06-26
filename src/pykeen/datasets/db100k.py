@@ -39,9 +39,6 @@ class DB100K(UnpackedRemoteDataset):
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.UnpackedRemoteDataset`.
         """
-        # GitHub's raw.githubusercontent.com service rejects requests that are streamable. This is
-        # normally the default for all of PyKEEN's remote datasets, so just switch the default here.
-        kwargs.setdefault('stream', False)
         super().__init__(
             training_url=f'{BASE_URL}/_train.txt',
             testing_url=f'{BASE_URL}/_test.txt',

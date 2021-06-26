@@ -1,3 +1,5 @@
+.. _bring_your_own_data:
+
 Bring Your Own Data
 ===================
 As an alternative to using a pre-packaged dataset, the training and testing can be set explicitly
@@ -151,3 +153,8 @@ you should specify the splits:
 ...                                          # higher, especially with early stopper enabled
 ... )
 >>> result.save_to_directory('doctests/test_unstratified_stopped_transe')
+
+Bring Your Own Data with Checkpoints
+------------------------------------
+For a tutorial on how to use your own data together with checkpoints,
+see :ref:`byod_and_checkpoints_training` and :ref:`byod_and_checkpoints_manually`.

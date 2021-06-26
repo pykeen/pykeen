@@ -4,14 +4,15 @@
 
 import inspect
 import json
-import os
-from typing import Callable, Iterable, Optional, Set, Type, Union
+import pathlib
+from typing import Callable, Iterable, Optional, Set, Tuple, Type, Union
 
 import torch
+from class_resolver import Hint
 from torch import nn
 
 from .cli import HERE
-from ..datasets import datasets as datasets_dict
+from ..datasets import dataset_resolver
 from ..losses import loss_resolver
 from ..models import Model, model_resolver
 from ..optimizers import optimizer_resolver
@@ -29,22 +30,25 @@ _SKIP_ANNOTATIONS = {
     nn.Module, Optional[nn.Module], Type[nn.Module], Optional[Type[nn.Module]],
     Model, Optional[Model], Type[Model], Optional[Type[Model]],
     Union[str, Callable[[torch.FloatTensor], torch.FloatTensor]],
+    Hint[nn.Module],
+}
+_SKIP_EXTRANEOUS = {
+    'predict_with_sigmoid',
 }
 
 
-def iterate_config_paths() -> Iterable[str]:
+def iterate_config_paths() -> Iterable[Tuple[str, pathlib.Path, pathlib.Path]]:
     """Iterate over all configuration paths."""
-    for model in os.listdir(HERE):
-        if model not in model_resolver.lookup_dict:
+    for model_directory in HERE.iterdir():
+        if model_directory.name not in model_resolver.lookup_dict:
             continue
-        model_directory = os.path.join(HERE, model)
-        for config in os.listdir(model_directory):
-            if config.startswith('hpo'):
+        for config in model_directory.iterdir():
+            if config.name.startswith('hpo'):
                 continue
-            path = os.path.join(model_directory, config)
-            if not os.path.isfile(path) or not path.endswith('.json'):
+            path = model_directory.joinpath(config)
+            if not path.is_file() or not path.suffix == '.json':
                 continue
-            yield model, config, path
+            yield model_directory.name, config, path
 
 
 def _should_skip_because_type(x):
@@ -56,7 +60,7 @@ def _should_skip_because_type(x):
     return False
 
 
-def get_configuration_errors(path: str):  # noqa: C901
+def get_configuration_errors(path: Union[str, pathlib.Path]):  # noqa: C901
     """Get a list of errors with a given experimental configuration JSON file."""
     with open(path) as file:
         configuration = json.load(file)
@@ -107,7 +111,7 @@ def get_configuration_errors(path: str):  # noqa: C901
         for name in kwargs_value:
             if name == 'self':
                 continue
-            if name not in signature.parameters:
+            if name not in signature.parameters and name not in _SKIP_EXTRANEOUS:
                 extraneous_kwargs.append(name)
         if extraneous_kwargs:
             _x = '\n'.join(
@@ -126,7 +130,11 @@ def get_configuration_errors(path: str):  # noqa: C901
 
         missing_kwargs = []
         for name, parameter in signature.parameters.items():
-            if name == 'self' or parameter.default is inspect._empty or parameter.default is None:
+            if (
+                name == 'self'
+                or parameter.default is inspect._empty  # type:ignore
+                or parameter.default is None
+            ):
                 continue
 
             annotation = choice.__init__.__annotations__.get(name)
@@ -157,7 +165,7 @@ def get_configuration_errors(path: str):  # noqa: C901
         normalize=True, check_kwargs=True,
     )
     _check(
-        pipeline, 'dataset', datasets_dict,
+        pipeline, 'dataset', dataset_resolver.lookup_dict,
         normalize=False, check_kwargs=False,
     )
     _check(

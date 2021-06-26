@@ -13,10 +13,13 @@ slcwa   :class:`pykeen.training.SLCWATrainingLoop`
 """
 
 from class_resolver import Resolver
-
-from .lcwa import AcceleratedLCWATrainingLoop, LCWATrainingLoop  # noqa: F401
-from .slcwa import AcceleratedSLCWATrainingLoop, SLCWATrainingLoop  # noqa: F401
-from .training_loop import AcceleratedTrainingLoop, NonFiniteLossError, TrainingLoop  # noqa: F401
+from .callbacks import TrainingCallback  # noqa: F401
+from .lcwa import AcceleratedLCWATrainingLoop, LCWATrainingLoop, LCWATrainingLoop  # noqa: F401
+from .slcwa import AcceleratedSLCWATrainingLoop, SLCWATrainingLoop, SLCWATrainingLoop  # noqa: F401
+from .training_loop import (  # noqa: F401
+    AcceleratedTrainingLoop, NonFiniteLossError, NonFiniteLossError, TrainingLoop,
+    TrainingLoop,
+)
 
 __all__ = [
     'TrainingLoop',
@@ -26,6 +29,7 @@ __all__ = [
     'AcceleratedLCWATrainingLoop',
     'NonFiniteLossError',
     'training_loop_resolver',
+    'TrainingCallback',
 ]
 
 _TRAINING_LOOP_SUFFIX = 'TrainingLoop'

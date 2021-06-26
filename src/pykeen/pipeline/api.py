@@ -139,6 +139,21 @@ argument as in:
 ... )
 >>> pipeline_result.save_to_directory('nations_transe')
 
+In PyKEEN you can also use the learning rate schedulers provided by PyTorch, which can be
+turned on with the ``lr_scheduler`` keyword argument together with the ``lr_scheduler_kwargs``
+keyword argument to specify arguments for the learning rate scheduler as in:
+
+>>> from pykeen.pipeline import pipeline
+>>> pipeline_result = pipeline(
+...     dataset='Nations',
+...     model='TransE',
+...     lr_scheduler='ExponentialLR',
+...     lr_scheduler_kwargs=dict(
+...         gamma=0.99,
+...     ),
+... )
+>>> pipeline_result.save_to_directory('nations_transe')
+
 Deeper Configuration
 ~~~~~~~~~~~~~~~~~~~~
 Arguments for the model can be given as a dictionary using ``model_kwargs``.
@@ -175,8 +190,7 @@ import pathlib
 import pickle
 import time
 from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Any, Collection, Dict, Iterable, List, Mapping, MutableMapping, Optional, Type, Union
+from typing import Any, Collection, Dict, Iterable, List, Mapping, MutableMapping, Optional, Type, Union, cast
 
 import pandas as pd
 import torch
@@ -187,6 +201,7 @@ from ..datasets import get_dataset
 from ..datasets.base import Dataset
 from ..evaluation import Evaluator, MetricResults, evaluator_resolver
 from ..losses import Loss, loss_resolver
+from ..lr_schedulers import LRScheduler, lr_scheduler_resolver
 from ..models import Model, make_model_cls, model_resolver
 from ..nn.modules import Interaction
 from ..optimizers import optimizer_resolver
@@ -304,7 +319,7 @@ class PipelineResult(Result):
         from .plot_utils import plot
         return plot(self, **kwargs)
 
-    def save_model(self, path: str) -> None:
+    def save_model(self, path: Union[str, pathlib.Path]) -> None:
         """Save the trained model to the given path using :func:`torch.save`.
 
         :param path: The path to which the model is saved. Should have an extension appropriate for a pickle,
@@ -333,21 +348,23 @@ class PipelineResult(Result):
 
     def save_to_directory(
         self,
-        directory: Union[str, Path],
+        directory: Union[str, pathlib.Path],
         *,
         save_metadata: bool = True,
         save_replicates: bool = True,
         **_kwargs,
     ) -> None:
         """Save all artifacts in the given directory."""
-        os.makedirs(directory, exist_ok=True)
+        if isinstance(directory, str):
+            directory = pathlib.Path(directory).resolve()
+        directory.mkdir(exist_ok=True, parents=True)
 
-        with open(os.path.join(directory, 'metadata.json'), 'w') as file:
+        with directory.joinpath('metadata.json').open('w') as file:
             json.dump(self.metadata, file, indent=2, sort_keys=True)
-        with open(os.path.join(directory, 'results.json'), 'w') as file:
+        with directory.joinpath('results.json').open('w') as file:
             json.dump(self._get_results(), file, indent=2, sort_keys=True)
         if save_replicates:
-            self.save_model(os.path.join(directory, 'trained_model.pkl'))
+            self.save_model(directory.joinpath('trained_model.pkl'))
 
     def save_to_ftp(self, directory: str, ftp: ftplib.FTP) -> None:
         """Save all artifacts to the given directory in the FTP server.
@@ -392,6 +409,7 @@ class PipelineResult(Result):
             server = FTPServer(address, handler)
             server.serve_forever()
         """
+        # TODO use pathlib here
         ensure_ftp_directory(ftp=ftp, directory=directory)
 
         metadata_path = os.path.join(directory, 'metadata.json')
@@ -441,8 +459,8 @@ class PipelineResult(Result):
 
 
 def replicate_pipeline_from_path(
-    path: str,
-    directory: str,
+    path: Union[str, pathlib.Path],
+    directory: Union[str, pathlib.Path],
     replicates: int,
     move_to_cpu: bool = False,
     save_replicates: bool = True,
@@ -471,7 +489,7 @@ def replicate_pipeline_from_path(
 
 def replicate_pipeline_from_config(
     config: Mapping[str, Any],
-    directory: str,
+    directory: Union[str, pathlib.Path],
     replicates: int,
     move_to_cpu: bool = False,
     save_replicates: bool = True,
@@ -507,7 +525,7 @@ def _iterate_moved(pipeline_results: Iterable[PipelineResult]):
 
 def save_pipeline_results_to_directory(
     *,
-    directory: str,
+    directory: Union[str, pathlib.Path],
     pipeline_results: Iterable[PipelineResult],
     move_to_cpu: bool = False,
     save_metadata: bool = False,
@@ -524,25 +542,31 @@ def save_pipeline_results_to_directory(
     :param save_replicates: Should the artifacts of the replicates be saved?
     :param width: How many leading zeros should be put in the replicate names?
     """
-    replicates_directory = os.path.join(directory, 'replicates')
+    if isinstance(directory, str):
+        directory = pathlib.Path(directory).resolve()
+    replicates_directory = directory.joinpath('replicates')
     losses_rows = []
 
     if move_to_cpu:
         pipeline_results = _iterate_moved(pipeline_results)
 
     for i, pipeline_result in enumerate(pipeline_results):
-        sd = os.path.join(replicates_directory, f'replicate-{i:0{width}}')
-        os.makedirs(sd, exist_ok=True)
-        pipeline_result.save_to_directory(sd, save_metadata=save_metadata, save_replicates=save_replicates)
+        replicate_directory = replicates_directory.joinpath(f'replicate-{i:0{width}}')
+        replicate_directory.mkdir(exist_ok=True, parents=True)
+        pipeline_result.save_to_directory(
+            replicate_directory,
+            save_metadata=save_metadata,
+            save_replicates=save_replicates,
+        )
         for epoch, loss in enumerate(pipeline_result.losses):
             losses_rows.append((i, epoch, loss))
 
     losses_df = pd.DataFrame(losses_rows, columns=['Replicate', 'Epoch', 'Loss'])
-    losses_df.to_csv(os.path.join(directory, 'all_replicates_losses.tsv'), sep='\t', index=False)
+    losses_df.to_csv(directory.joinpath('all_replicates_losses.tsv'), sep='\t', index=False)
 
 
 def pipeline_from_path(
-    path: str,
+    path: Union[str, pathlib.Path],
     **kwargs,
 ) -> PipelineResult:
     """Run the pipeline with configuration in a JSON file at the given path.
@@ -650,6 +674,9 @@ def pipeline(  # noqa: C901
     optimizer: HintType[Optimizer] = None,
     optimizer_kwargs: Optional[Mapping[str, Any]] = None,
     clear_optimizer: bool = True,
+    # 5.1 Learning Rate Scheduler
+    lr_scheduler: HintType[LRScheduler] = None,
+    lr_scheduler_kwargs: Optional[Mapping[str, Any]] = None,
     # 6. Training Loop
     training_loop: HintType[TrainingLoop] = None,
     training_loop_kwargs: Optional[Mapping[str, Any]] = None,
@@ -677,9 +704,9 @@ def pipeline(  # noqa: C901
     """Train and evaluate a model.
 
     :param dataset:
-        The name of the dataset (a key from :data:`pykeen.datasets.datasets`) or the :class:`pykeen.datasets.Dataset`
-        instance. Alternatively, the training triples factory (``training``), testing triples factory (``testing``),
-        and validation triples factory (``validation``; optional) can be specified.
+        The name of the dataset (a key for the :data:`pykeen.datasets.dataset_resolver`) or the
+        :class:`pykeen.datasets.Dataset` instance. Alternatively, the training triples factory (``training``), testing
+        triples factory (``testing``), and validation triples factory (``validation``; optional) can be specified.
     :param dataset_kwargs:
         The keyword arguments passed to the dataset upon instantiation
     :param training:
@@ -727,6 +754,12 @@ def pipeline(  # noqa: C901
         Whether to delete the optimizer instance after training. As the optimizer might have additional memory
         consumption due to e.g. moments in Adam, this is the default option. If you want to continue training, you
         should set it to False, as the optimizer's internal parameter will get lost otherwise.
+
+    :param lr_scheduler:
+        The name of the lr_scheduler or the lr_scheduler class.
+        Defaults to :class:`torch.optim.lr_scheduler.ExponentialLR`.
+    :param lr_scheduler_kwargs:
+        Keyword arguments to pass to the lr_scheduler on instantiation
 
     :param training_loop:
         The name of the training loop's training approach (``'slcwa'`` or ``'lcwa'``) or the training loop class.
@@ -873,7 +906,7 @@ def pipeline(  # noqa: C901
         )
 
     if isinstance(model, Model):
-        model_instance = model
+        model_instance = cast(Model, model)
         # TODO should training be reset?
         # TODO should kwargs for loss and regularizer be checked and raised for?
     else:
@@ -905,6 +938,20 @@ def pipeline(  # noqa: C901
         prefix='optimizer',
     )
 
+    lr_scheduler_instance: Optional[LRScheduler]
+    if lr_scheduler is None:
+        lr_scheduler_instance = None
+    else:
+        lr_scheduler_instance = lr_scheduler_resolver.make(
+            lr_scheduler,
+            lr_scheduler_kwargs,
+            optimizer=optimizer_instance,
+        )
+        _result_tracker.log_params(
+            params=dict(cls=lr_scheduler_instance.__class__.__name__, kwargs=lr_scheduler_kwargs),
+            prefix='lr_scheduler',
+        )
+
     training_loop_cls = training_loop_resolver.lookup(training_loop)
     if training_loop_kwargs is None:
         training_loop_kwargs = {}
@@ -915,6 +962,7 @@ def pipeline(  # noqa: C901
             model=model_instance,
             triples_factory=training,
             optimizer=optimizer_instance,
+            lr_scheduler=lr_scheduler_instance,
             **training_loop_kwargs,
         )
     elif not issubclass(training_loop_cls, SLCWATrainingLoop):
@@ -929,7 +977,7 @@ def pipeline(  # noqa: C901
             model=model_instance,
             triples_factory=training,
             optimizer=optimizer_instance,
-            negative_sampler_cls=negative_sampler_cls,
+            negative_sampler=negative_sampler_cls,
             negative_sampler_kwargs=negative_sampler_kwargs,
             **training_loop_kwargs,
         )
@@ -1046,22 +1094,18 @@ def pipeline(  # noqa: C901
             and filter_validation_when_testing
             and validation is not None
         ):
-            logging.info(
-                "When evaluating the test dataset, validation triples are added to the set of known positive triples"
-                " which are filtered out when performing filtered evaluation following the approach described by"
-                " (Bordes et al., 2013).",
-            )
-            additional_filter_triples.append(validation.mapped_triples)
-        elif (
-            isinstance(stopper, EarlyStopper)
-            and filter_validation_when_testing
-            and validation is not None
-        ):
-            logging.info(
-                "When evaluating the test dataset after running the pipeline with earl stopping, the validation triples"
-                " are added to the set of known positive triples which are filtered out when performing filtered"
-                " evaluation following the approach described by (Bordes et al., 2013).",
-            )
+            if isinstance(stopper, EarlyStopper):
+                logging.info(
+                    "When evaluating the test dataset after running the pipeline with early stopping, the validation"
+                    " triples are added to the set of known positive triples which are filtered out when performing"
+                    " filtered evaluation following the approach described by (Bordes et al., 2013).",
+                )
+            else:
+                logging.info(
+                    "When evaluating the test dataset, validation triples are added to the set of known positive"
+                    " triples which are filtered out when performing filtered evaluation following the approach"
+                    " described by (Bordes et al., 2013).",
+                )
             additional_filter_triples.append(validation.mapped_triples)
 
         # TODO consider implications of duplicates

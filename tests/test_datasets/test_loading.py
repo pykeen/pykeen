@@ -2,15 +2,17 @@
 
 """Test that datasets can be loaded."""
 
-import os
+import pathlib
 import unittest
 from io import BytesIO
+from urllib.request import urlopen
 
-import pytest
-
-from pykeen.datasets import FB15k237, Kinships, Nations, datasets
-from pykeen.datasets.base import SingleTabbedDataset, TarFileRemoteDataset, TarFileSingleDataset
-from pykeen.datasets.nations import NATIONS_TRAIN_PATH
+from pykeen.datasets import Kinships, Nations, dataset_resolver
+from pykeen.datasets.base import (
+    PackedZipRemoteDataset, SingleTabbedDataset, TarFileRemoteDataset,
+    TarFileSingleDataset, UnpackedRemoteDataset,
+)
+from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH, NATIONS_VALIDATE_PATH
 from tests import cases, constants
 
 
@@ -19,7 +21,7 @@ class TestAnnotated(unittest.TestCase):
 
     def test_annotated(self):
         """Check :func:`pykeen.utils_docs.with_structured_docstr`` was properly applied ot all datasets."""
-        for name, cls in sorted(datasets.items()):
+        for name, cls in sorted(dataset_resolver.lookup_dict.items()):
             with self.subTest(name=name):
                 try:
                     docdata = cls.__docdata__
@@ -63,10 +65,15 @@ class MockTarFileSingleDataset(TarFileSingleDataset):
     """Mock downloading a tar.gz archive with a single file."""
 
     def __init__(self, cache_root: str):
-        super().__init__(url=..., name=..., relative_path='nations/train.txt', cache_root=cache_root)
+        super().__init__(
+            url=...,
+            name=...,
+            relative_path='nations/train.txt',
+            cache_root=cache_root,
+        )
 
     def _get_path(self) -> str:
-        return os.path.join(constants.RESOURCES, 'nations.tar.gz')
+        return constants.RESOURCES.joinpath('nations.tar.gz')
 
 
 class MockTarFileRemoteDataset(TarFileRemoteDataset):
@@ -74,16 +81,39 @@ class MockTarFileRemoteDataset(TarFileRemoteDataset):
 
     def __init__(self, cache_root: str):
         super().__init__(
-            url=...,
+            url=constants.RESOURCES.joinpath('nations.tar.gz').as_uri(),
             cache_root=cache_root,
-            relative_testing_path='nations/test.txt',
-            relative_training_path='nations/train.txt',
-            relative_validation_path='nations/valid.txt',
+            relative_testing_path=pathlib.PurePath('nations', 'test.txt'),
+            relative_training_path=pathlib.PurePath('nations', 'train.txt'),
+            relative_validation_path=pathlib.PurePath('nations', 'valid.txt'),
         )
 
     def _get_bytes(self) -> BytesIO:
-        with open(os.path.join(constants.RESOURCES, 'nations.tar.gz'), 'rb') as file:
-            return BytesIO(file.read())
+        return BytesIO(urlopen(self.url).read())  # noqa:S310
+
+
+class MockUnpackedRemoteDataset(UnpackedRemoteDataset):
+    """Mock downloading three pre-stratified files."""
+
+    def __init__(self):
+        super().__init__(
+            training_url=NATIONS_TRAIN_PATH.as_uri(),
+            testing_url=NATIONS_TEST_PATH.as_uri(),
+            validation_url=NATIONS_VALIDATE_PATH.as_uri(),
+        )
+
+
+class MockZipFileRemoteDataset(PackedZipRemoteDataset):
+    """Mock downloading a zip archive with three pre-stratified files."""
+
+    def __init__(self, cache_root: str):
+        super().__init__(
+            url=constants.RESOURCES.joinpath('nations.zip').as_uri(),
+            cache_root=cache_root,
+            relative_testing_path=pathlib.PurePath('nations', 'test.txt'),
+            relative_training_path=pathlib.PurePath('nations', 'train.txt'),
+            relative_validation_path=pathlib.PurePath('nations', 'valid.txt'),
+        )
 
 
 class TestSingle(cases.CachedDatasetCase):
@@ -148,13 +178,19 @@ class TestPathDataset(cases.LocalDatasetTestCase):
     dataset_cls = Kinships
 
 
-# TestFB15K237 is a stand-in to test the ZipFileRemoteDataset
+class TestUnpackedRemote(cases.LocalDatasetTestCase):
+    """Test the loading an uncompressed, pre-stratified dataset with Nations as the example."""
 
-@pytest.mark.slow
-class TestFB15K237(cases.CachedDatasetCase):
-    """Test the FB15k-237 dataset."""
+    exp_num_entities = 14
+    exp_num_relations = 55
+    exp_num_triples = 1992
+    dataset_cls = MockUnpackedRemoteDataset
 
-    exp_num_entities = 14505
-    exp_num_relations = 237
-    exp_num_triples = 310_079
-    dataset_cls = FB15k237
+
+class TestZipFileRemote(cases.CachedDatasetCase):
+    """Test the loading an zip compressed, pre-stratified dataset with Nations as the example."""
+
+    exp_num_entities = 14
+    exp_num_relations = 55
+    exp_num_triples = 1992
+    dataset_cls = MockZipFileRemoteDataset

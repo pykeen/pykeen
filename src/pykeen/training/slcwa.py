@@ -3,17 +3,19 @@
 """Training KGE models based on the sLCWA."""
 
 import logging
-from typing import Any, Mapping, Optional, Type
+from typing import Any, Mapping, Optional
 
 import torch
 from torch.optim.optimizer import Optimizer
 
+from class_resolver import HintOrType
 from .training_loop import AcceleratedTrainingLoop, TrainingLoop
-from .utils import apply_label_smoothing
 from ..losses import CrossEntropyLoss
+from ..lr_schedulers import LRScheduler
 from ..models import Model
-from ..sampling import BasicNegativeSampler, NegativeSampler
+from ..sampling import NegativeSampler, negative_sampler_resolver
 from ..triples import CoreTriplesFactory, Instances
+from ..triples.instances import SLCWABatchType, SLCWASampleType
 from ..typing import MappedTriples
 
 __all__ = [
@@ -24,7 +26,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class SLCWATrainingLoop(TrainingLoop):
+class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
     """A training loop that uses the stochastic local closed world assumption training approach."""
 
     negative_sampler: NegativeSampler
@@ -35,7 +37,8 @@ class SLCWATrainingLoop(TrainingLoop):
         model: Model,
         triples_factory: CoreTriplesFactory,
         optimizer: Optional[Optimizer] = None,
-        negative_sampler_cls: Optional[Type[NegativeSampler]] = None,
+        lr_scheduler: Optional[LRScheduler] = None,
+        negative_sampler: HintOrType[NegativeSampler] = None,
         negative_sampler_kwargs: Optional[Mapping[str, Any]] = None,
         automatic_memory_optimization: bool = True,
     ):
@@ -44,9 +47,10 @@ class SLCWATrainingLoop(TrainingLoop):
         :param model: The model to train
         :param triples_factory: The triples factory to train over
         :param optimizer: The optimizer to use while training the model
-        :param negative_sampler_cls: The class of the negative sampler
+        :param lr_scheduler: The learning rate scheduler you want to use while training the model
+        :param negative_sampler: The class, instance, or name of the negative sampler
         :param negative_sampler_kwargs: Keyword arguments to pass to the negative sampler class on instantiation
-         for every positive one
+            for every positive one
         :param automatic_memory_optimization:
             Whether to automatically optimize the sub-batch size during
             training and batch size during evaluation with regards to the hardware at hand.
@@ -55,24 +59,14 @@ class SLCWATrainingLoop(TrainingLoop):
             model=model,
             triples_factory=triples_factory,
             optimizer=optimizer,
+            lr_scheduler=lr_scheduler,
             automatic_memory_optimization=automatic_memory_optimization,
         )
-
-        if negative_sampler_cls is None:
-            negative_sampler_cls = BasicNegativeSampler
-
-        self.negative_sampler = negative_sampler_cls(
+        self.negative_sampler = negative_sampler_resolver.make(
+            query=negative_sampler,
+            pos_kwargs=negative_sampler_kwargs,
             triples_factory=triples_factory,
-            **(negative_sampler_kwargs or {}),
         )
-
-    @property
-    def num_negs_per_pos(self) -> int:
-        """Return number of negatives per positive from the sampler.
-
-        Property for API compatibility
-        """
-        return self.negative_sampler.num_negs_per_pos
 
     def _create_instances(self, triples_factory: CoreTriplesFactory) -> Instances:  # noqa: D102
         return triples_factory.create_slcwa_instances()
@@ -96,83 +90,36 @@ class SLCWATrainingLoop(TrainingLoop):
         # Send positive batch to device
         positive_batch = batch[start:stop].to(device=self.device)
 
-        # Create negative samples
-        neg_samples, neg_samples_filter = self.negative_sampler.sample(positive_batch=positive_batch)
+        # Create negative samples, shape: (batch_size, num_neg_per_pos, 3)
+        negative_batch, positive_filter = self.negative_sampler.sample(positive_batch=positive_batch)
+
+        # apply filter mask
+        if positive_filter is None:
+            negative_batch = negative_batch.view(-1, 3)
+        else:
+            negative_batch = negative_batch[positive_filter]
 
         # Ensure they reside on the device (should hold already for most simple negative samplers, e.g.
         # BasicNegativeSampler, BernoulliNegativeSampler
-        negative_batch = neg_samples.to(self.device)
-
-        # Make it negative batch broadcastable (required for num_negs_per_pos > 1).
-        negative_batch = negative_batch.view(-1, 3)
+        negative_batch = negative_batch.to(self.device)
 
         # Compute negative and positive scores
         positive_scores = self.model.score_hrt(positive_batch)
-        negative_scores = self.model.score_hrt(negative_batch)
+        negative_scores = self.model.score_hrt(negative_batch).view(*negative_batch.shape[:-1])
 
-        loss = self._loss_helper(  # type: ignore
-            positive_scores,
-            negative_scores,
-            label_smoothing,
-            neg_samples_filter,
-        )
-        return loss
-
-    def _mr_loss_helper(
-        self,
-        positive_scores: torch.FloatTensor,
-        negative_scores: torch.FloatTensor,
-        _label_smoothing=None,
-        _batch_filter=None,
-    ) -> torch.FloatTensor:
-        # Repeat positives scores (necessary for more than one negative per positive)
-        if self.num_negs_per_pos > 1:
-            positive_scores = positive_scores.repeat(self.num_negs_per_pos, 1)
-
-        if _batch_filter is not None:
-            positive_scores = positive_scores[_batch_filter]
-
-        return self.model.compute_loss(positive_scores, negative_scores)
-
-    def _self_adversarial_negative_sampling_loss_helper(
-        self,
-        positive_scores: torch.FloatTensor,
-        negative_scores: torch.FloatTensor,
-        _label_smoothing=None,
-        _batch_filter=None,
-    ) -> torch.FloatTensor:
-        """Compute self adversarial negative sampling loss."""
-        return self.model.compute_loss(positive_scores, negative_scores)
-
-    def _label_loss_helper(
-        self,
-        positive_scores: torch.FloatTensor,
-        negative_scores: torch.FloatTensor,
-        label_smoothing: float,
-        _batch_filter=None,
-    ) -> torch.FloatTensor:
-        # Stack predictions
-        predictions = torch.cat([positive_scores, negative_scores], dim=0)
-        # Create target
-        ones = torch.ones_like(positive_scores, device=self.device)
-        zeros = torch.zeros_like(negative_scores, device=self.device)
-        labels = torch.cat([ones, zeros], dim=0)
-
-        if label_smoothing > 0.:
-            labels = apply_label_smoothing(
-                labels=labels,
-                epsilon=label_smoothing,
-                num_classes=self.model.num_entities,
-            )
-
-        # Normalize the loss to have the average loss per positive triple
-        # This allows comparability of sLCWA and LCWA losses
-        return self.model.compute_loss(predictions, labels)
+        return self.loss.process_slcwa_scores(
+            positive_scores=positive_scores,
+            negative_scores=negative_scores,
+            label_smoothing=label_smoothing,
+            batch_filter=positive_filter,
+            num_entities=self.model.num_entities,
+        ) + self.model.collect_regularization_term()
 
     def _slice_size_search(
         self,
         *,
         triples_factory: CoreTriplesFactory,
+        training_instances: Instances,
         batch_size: int,
         sub_batch_size: int,
         supports_sub_batching: bool,

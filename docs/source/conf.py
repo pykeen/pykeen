@@ -52,7 +52,7 @@ copyright = f'2019-{date.today().year}, PyKEEN Project Team'
 author = 'PyKEEN Project Team'
 
 # The full version, including alpha/beta/rc tags.
-release = '1.4.1-dev'
+release = '1.5.1-dev'
 
 # The short X.Y version.
 parsed_version = re.match(
@@ -260,6 +260,10 @@ intersphinx_mapping = {
     'bio2bel': ('https://bio2bel.readthedocs.io/en/latest/', None),
     'boto3': ('https://boto3.amazonaws.com/v1/documentation/api/latest/', None),
     'accelerate': ('https://huggingface.co/docs/accelerate', None),
+    'scipy': ('https://docs.scipy.org/doc/scipy/reference/', None),
 }
 
 autoclass_content = 'both'
+# autodoc_member_order = 'bysource'
+# autodoc_typehints = 'both' # TODO turn on after 4.1 release
+# autodoc_preserve_defaults = True

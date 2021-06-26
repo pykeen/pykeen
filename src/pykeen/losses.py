@@ -133,10 +133,11 @@ triples $\mathcal{b}$ in the subset $\mathcal{B} \in 2^{2^{\mathcal{T}}}$.
     \mathcal{L}_L(\mathcal{B}) = \frac{1}{|\mathcal{B}|} \sum \limits_{\mathcal{b} \in \mathcal{B}} L(\mathcal{b})
 """
 
-from typing import Any, Callable, ClassVar, Mapping, Optional, Set, Type, Union
+from typing import Any, ClassVar, Mapping, Optional, Set
 
 import torch
-from class_resolver import Resolver, normalize_string
+from class_resolver import Hint, Resolver
+from torch import nn
 from torch.nn import functional
 from torch.nn.modules.loss import _Loss
 
@@ -154,11 +155,57 @@ __all__ = [
     'MSELoss',
     'NSSALoss',
     'SoftplusLoss',
-    'has_mr_loss',
-    'has_nssa_loss',
     # Utils
     'loss_resolver',
 ]
+
+
+def apply_label_smoothing(
+    labels: torch.FloatTensor,
+    epsilon: Optional[float] = None,
+    num_classes: Optional[int] = None,
+) -> torch.FloatTensor:
+    """Apply label smoothing to a target tensor.
+
+    Redistributes epsilon probability mass from the true target uniformly to the remaining classes by replacing
+        * a hard one by (1 - epsilon)
+        * a hard zero by epsilon / (num_classes - 1)
+
+    :param labels:
+        The one-hot label tensor.
+    :param epsilon:
+        The smoothing parameter. Determines how much probability should be transferred from the true class to the
+        other classes.
+    :param num_classes:
+        The number of classes.
+    :returns: A smoothed label tensor
+    :raises ValueError: if episilon is negative or if num_classes is None
+
+    ..seealso:
+        https://www.deeplearningbook.org/contents/regularization.html, chapter 7.5.1
+    """
+    if not epsilon:  # either none or zero
+        return labels
+    if epsilon < 0.0:
+        raise ValueError(f"epsilon must be positive, but is {epsilon}")
+    if num_classes is None:
+        raise ValueError("must pass num_classes to perform label smoothing")
+
+    new_label_true = (1.0 - epsilon)
+    new_label_false = epsilon / (num_classes - 1)
+    return new_label_true * labels + new_label_false * (1.0 - labels)
+
+
+class UnsupportedLabelSmoothingError(RuntimeError):
+    """Raised if a loss does not support label smoothing."""
+
+    def __init__(self, instance: object):
+        """Initialize the error."""
+        self.instance = instance
+
+    def __str__(self) -> str:
+        return f"{self.instance.__class__.__name__} does not support label smoothing."
+
 
 _REDUCTION_METHODS = dict(
     mean=torch.mean,
@@ -171,12 +218,84 @@ class Loss(_Loss):
 
     synonyms: ClassVar[Optional[Set[str]]] = None
 
-    #: The default strategy for optimizing the model's hyper-parameters
+    #: The default strategy for optimizing the loss's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]] = {}
 
     def __init__(self, size_average=None, reduce=None, reduction: str = 'mean'):
         super().__init__(size_average=size_average, reduce=reduce, reduction=reduction)
         self._reduction_method = _REDUCTION_METHODS[reduction]
+
+    def process_slcwa_scores(
+        self,
+        positive_scores: torch.FloatTensor,
+        negative_scores: torch.FloatTensor,
+        label_smoothing: Optional[float] = None,
+        batch_filter: Optional[torch.BoolTensor] = None,
+        num_entities: Optional[int] = None,
+    ) -> torch.FloatTensor:
+        """
+        Process scores from sLCWA training loop.
+
+        :param positive_scores: shape: (batch_size, 1)
+            The scores for positive triples.
+        :param negative_scores: shape: (batch_size, num_neg_per_pos) or (num_unfiltered_negatives,)
+            The scores for the negative triples, either in dense 2D shape, or in case they are already filtered, in
+            sparse shape. If they are given in sparse shape, batch_filter needs to be provided, too.
+        :param label_smoothing:
+            An optional label smoothing parameter.
+        :param batch_filter: shape: (batch_size, num_neg_per_pos)
+            An optional filter of negative scores which were kept. Given if and only if negative_scores have been
+            pre-filtered.
+        :param num_entities:
+            The number of entities. Only required if label smoothing is enabled.
+
+        :return:
+            A scalar loss term.
+        """
+        # flatten and stack
+        positive_scores = positive_scores.view(-1)
+        negative_scores = negative_scores.view(-1)
+        predictions = torch.cat([positive_scores, negative_scores], dim=0)
+        labels = torch.cat([torch.ones_like(positive_scores), torch.zeros_like(negative_scores)])
+
+        # apply label smoothing if necessary.
+        labels = apply_label_smoothing(
+            labels=labels,
+            epsilon=label_smoothing,
+            num_classes=num_entities,
+        )
+
+        return self(predictions, labels)
+
+    def process_lcwa_scores(
+        self,
+        predictions: torch.FloatTensor,
+        labels: torch.FloatTensor,
+        label_smoothing: Optional[float] = None,
+        num_entities: Optional[int] = None,
+    ) -> torch.FloatTensor:
+        """
+        Process scores from LCWA training loop.
+
+        :param predictions: shape: (batch_size, num_entities)
+            The scores.
+        :param labels: shape: (batch_size, num_entities)
+            The labels.
+        :param label_smoothing:
+            An optional label smoothing parameter.
+        :param num_entities:
+            The number of entities.
+
+        :return:
+            A scalar loss value.
+        """
+        # TODO: Do label smoothing only once
+        labels = apply_label_smoothing(
+            labels=labels,
+            epsilon=label_smoothing,
+            num_classes=num_entities,
+        )
+        return self(predictions, labels)
 
 
 class PointwiseLoss(Loss):
@@ -251,14 +370,24 @@ class MSELoss(PointwiseLoss):
         return functional.mse_loss(scores, labels, reduction=self.reduction)
 
 
-MARGIN_ACTIVATIONS: Mapping[str, Callable[[torch.FloatTensor], torch.FloatTensor]] = {
-    'relu': functional.relu,
-    'softplus': functional.softplus,
-}
+margin_activation_resolver = Resolver(
+    classes={
+        nn.ReLU,
+        nn.Softplus,
+    },
+    base=nn.Module,  # type: ignore
+    synonyms=dict(
+        hard=nn.ReLU,
+        soft=nn.Softplus,
+    ),
+)
 
 
 class MarginRankingLoss(PairwiseLoss):
-    """A module for the margin ranking loss.
+    r"""A module for the margin ranking loss.
+
+    .. math ::
+        L(score^+, score^-) = activation(score^- - score^+ + margin)
 
     .. seealso:: :class:`torch.nn.MarginRankingLoss`
     """
@@ -267,12 +396,16 @@ class MarginRankingLoss(PairwiseLoss):
 
     hpo_default: ClassVar[Mapping[str, Any]] = dict(
         margin=dict(type=int, low=0, high=3, q=1),
+        margin_activation=dict(
+            type='categorical',
+            choices=margin_activation_resolver.options,
+        ),
     )
 
     def __init__(
         self,
         margin: float = 1.0,
-        margin_activation: Union[str, Callable[[torch.FloatTensor], torch.FloatTensor]] = 'relu',
+        margin_activation: Hint[nn.Module] = 'relu',
         reduction: str = 'mean',
     ):
         r"""Initialize the margin loss instance.
@@ -289,28 +422,97 @@ class MarginRankingLoss(PairwiseLoss):
         """
         super().__init__(reduction=reduction)
         self.margin = margin
+        self.margin_activation = margin_activation_resolver.make(margin_activation)
 
-        if isinstance(margin_activation, str):
-            self.margin_activation = MARGIN_ACTIVATIONS[margin_activation]
-        else:
-            self.margin_activation = margin_activation
+    def process_slcwa_scores(
+        self,
+        positive_scores: torch.FloatTensor,
+        negative_scores: torch.FloatTensor,
+        label_smoothing: Optional[float] = None,
+        batch_filter: Optional[torch.BoolTensor] = None,
+        num_entities: Optional[int] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        # Sanity check
+        if label_smoothing:
+            raise UnsupportedLabelSmoothingError(self)
+
+        # prepare for broadcasting, shape: (batch_size, 1, 3)
+        positive_scores = positive_scores.unsqueeze(dim=1)
+
+        if batch_filter is not None:
+            # negative_scores have already been filtered in the sampler!
+            num_neg_per_pos = batch_filter.shape[1]
+            positive_scores = positive_scores.repeat(1, num_neg_per_pos, 1)[batch_filter]
+            # shape: (nnz,)
+
+        return self(pos_scores=positive_scores, neg_scores=negative_scores)
+
+    def process_lcwa_scores(
+        self,
+        predictions: torch.FloatTensor,
+        labels: torch.FloatTensor,
+        label_smoothing: Optional[float] = None,
+        num_entities: Optional[int] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        # Sanity check
+        if label_smoothing:
+            raise UnsupportedLabelSmoothingError(self)
+
+        # for LCWA scores, we consider all pairs of positive and negative scores for a single batch element.
+        # note: this leads to non-uniform memory requirements for different batches, depending on the total number of
+        # positive entries in the labels tensor.
+
+        # This shows how often one row has to be repeated,
+        # shape: (batch_num_positives,), if row i has k positive entries, this tensor will have k entries with i
+        repeat_rows = (labels == 1).nonzero(as_tuple=False)[:, 0]
+        # Create boolean indices for negative labels in the repeated rows, shape: (batch_num_positives, num_entities)
+        labels_negative = labels[repeat_rows] == 0
+        # Repeat the predictions and filter for negative labels, shape: (batch_num_pos_neg_pairs,)
+        negative_scores = predictions[repeat_rows][labels_negative]
+
+        # This tells us how often each true label should be repeated
+        repeat_true_labels = (labels[repeat_rows] == 0).nonzero(as_tuple=False)[:, 0]
+        # First filter the predictions for true labels and then repeat them based on the repeat vector
+        positive_scores = predictions[labels == 1][repeat_true_labels]
+
+        return self(pos_scores=positive_scores, neg_scores=negative_scores)
 
     def forward(
         self,
         pos_scores: torch.FloatTensor,
         neg_scores: torch.FloatTensor,
-    ) -> torch.FloatTensor:  # noqa: D102
+    ) -> torch.FloatTensor:
+        """
+        Compute the margin loss.
+
+        The scores have to be in broadcastable shape.
+
+        :param pos_scores:
+            The positive scores.
+        :param neg_scores:
+            The negative scores.
+
+        :return:
+            A scalar loss term.
+        """
         return self._reduction_method(self.margin_activation(
             neg_scores - pos_scores + self.margin,
         ))
 
 
 class SoftplusLoss(PointwiseLoss):
-    """A module for the softplus loss."""
+    r"""
+    A module for the softplus loss.
+
+    .. math ::
+        L(score, label) = softplus(- label \cdot score)
+
+    with $label \in \{-1, 1\}$.
+    """
 
     def __init__(self, reduction: str = 'mean') -> None:
         super().__init__(reduction=reduction)
-        self.softplus = torch.nn.Softplus(beta=1, threshold=20)
+        self.softplus = nn.Softplus()
 
     def forward(
         self,
@@ -338,12 +540,11 @@ class BCEAfterSigmoidLoss(PointwiseLoss):
         labels: torch.FloatTensor,
         **kwargs,
     ) -> torch.FloatTensor:  # noqa: D102
-        post_sigmoid = torch.sigmoid(logits)
-        return functional.binary_cross_entropy(post_sigmoid, labels, **kwargs)
+        return functional.binary_cross_entropy(logits.sigmoid(), labels, **kwargs)
 
 
 class CrossEntropyLoss(SetwiseLoss):
-    """A module for the cross entopy loss that evaluates the cross entropy after softmax output.
+    """A module for the cross entropy loss that evaluates the cross entropy after softmax output.
 
     .. seealso:: :class:`torch.nn.CrossEntropyLoss`
     """
@@ -352,7 +553,6 @@ class CrossEntropyLoss(SetwiseLoss):
         self,
         logits: torch.FloatTensor,
         labels: torch.FloatTensor,
-        **kwargs,
     ) -> torch.FloatTensor:  # noqa: D102
         # cross entropy expects a proper probability distribution -> normalize labels
         p_true = functional.normalize(labels, p=1, dim=-1)
@@ -378,31 +578,109 @@ class NSSALoss(SetwiseLoss):
 
         :param margin: The loss's margin (also written as gamma in the reference paper)
         :param adversarial_temperature: The negative sampling temperature (also written as alpha in the reference paper)
+
+            .. note ::
+                The adversarial temperature is the inverse of the softmax temperature used when computing the weights!
+                Its name is only kept for consistency with the nomenclature of [sun2019]_.
         :param reduction:
             The name of the reduction operation to aggregate the individual loss values from a batch to a scalar loss
             value. From {'mean', 'sum'}.
 
-        .. note:: The default hyperparameters are based the experiments for FB15K-237 in [sun2019]_.
+        .. note:: The default hyperparameters are based on the experiments for FB15k-237 in [sun2019]_.
         """
         super().__init__(reduction=reduction)
-        self.adversarial_temperature = adversarial_temperature
+        self.inverse_softmax_temperature = adversarial_temperature
         self.margin = margin
+
+    def process_lcwa_scores(
+        self,
+        predictions: torch.FloatTensor,
+        labels: torch.FloatTensor,
+        label_smoothing: Optional[float] = None,
+        num_entities: Optional[int] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        # Sanity check
+        if label_smoothing:
+            raise UnsupportedLabelSmoothingError(self)
+
+        pos_mask = labels == 1
+
+        # compute negative weights (without gradient tracking)
+        # clone is necessary since we modify in-place
+        weights = predictions.detach().clone()
+        weights[pos_mask] = float("-inf")
+        weights = weights.mul(self.inverse_softmax_temperature).softmax(dim=1)
+
+        # Split positive and negative scores
+        positive_scores = predictions[pos_mask]
+        negative_scores = predictions[~pos_mask]
+
+        return self(
+            pos_scores=positive_scores,
+            neg_scores=negative_scores,
+            neg_weights=weights[~pos_mask],
+        )
+
+    def process_slcwa_scores(
+        self,
+        positive_scores: torch.FloatTensor,
+        negative_scores: torch.FloatTensor,
+        label_smoothing: Optional[float] = None,
+        batch_filter: Optional[torch.BoolTensor] = None,
+        num_entities: Optional[int] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        # Sanity check
+        if label_smoothing:
+            raise UnsupportedLabelSmoothingError(self)
+
+        if batch_filter is not None:
+            # negative_scores have already been filtered in the sampler!
+            # (dense) softmax requires unfiltered scores / masking
+            negative_scores_ = torch.zeros_like(batch_filter, dtype=positive_scores.dtype)
+            negative_scores_[batch_filter] = negative_scores
+            # we need to fill the scores with -inf for all filtered negative examples
+            # EXCEPT if all negative samples are filtered (since softmax over only -inf yields nan)
+            fill_mask = ~batch_filter
+            fill_mask = fill_mask & ~(fill_mask.all(dim=1, keepdim=True))
+            negative_scores_[fill_mask] = float("-inf")
+            # use filled negatives scores
+            negative_scores = negative_scores_
+
+        # compute weights (without gradient tracking)
+        weights = negative_scores.detach().mul(self.inverse_softmax_temperature).softmax(dim=-1)
+
+        return self(
+            pos_scores=positive_scores,
+            neg_scores=negative_scores,
+            neg_weights=weights,
+        )
 
     def forward(
         self,
         pos_scores: torch.FloatTensor,
         neg_scores: torch.FloatTensor,
+        neg_weights: torch.FloatTensor,
     ) -> torch.FloatTensor:
         """Calculate the loss for the given scores.
 
+        :param pos_scores: shape: s_p
+            Positive score tensor
+        :param neg_scores: shape: s_n
+            Negative score tensor
+        :param neg_weights: shape: s_n
+
+        :returns: A loss value
+
         .. seealso:: https://github.com/DeepGraphLearning/KnowledgeGraphEmbedding/blob/master/codes/model.py
         """
-        neg_score_weights = functional.softmax(neg_scores * self.adversarial_temperature, dim=-1).detach()
-        neg_distances = -neg_scores
-        weighted_neg_scores = neg_score_weights * functional.logsigmoid(neg_distances - self.margin)
-        neg_loss = self._reduction_method(weighted_neg_scores)
-        pos_distances = -pos_scores
-        pos_loss = self._reduction_method(functional.logsigmoid(self.margin - pos_distances))
+        # -w * log sigma(-(m + n)) - log sigma (m + p)
+        # p >> -m => m + p >> 0 => sigma(m + p) ~= 1 => log sigma(m + p) ~= 0 => -log sigma(m + p) ~= 0
+        # p << -m => m + p << 0 => sigma(m + p) ~= 0 => log sigma(m + p) << 0 => -log sigma(m + p) >> 0
+        neg_loss = functional.logsigmoid(-neg_scores - self.margin)
+        neg_loss = neg_weights * neg_loss
+        neg_loss = self._reduction_method(neg_loss)
+        pos_loss = functional.logsigmoid(self.margin + pos_scores)
+        pos_loss = self._reduction_method(pos_loss)
         loss = -pos_loss - neg_loss
 
         if self._reduction_method is torch.mean:
@@ -411,36 +689,15 @@ class NSSALoss(SetwiseLoss):
         return loss
 
 
-_LOSS_SUFFIX = 'Loss'
-_LOSSES: Set[Type[Loss]] = {
-    MarginRankingLoss,
-    BCEWithLogitsLoss,
-    SoftplusLoss,
-    BCEAfterSigmoidLoss,
-    CrossEntropyLoss,
-    MSELoss,
-    NSSALoss,
-}
-losses_synonyms: Mapping[str, Type[Loss]] = {
-    normalize_string(synonym, suffix=_LOSS_SUFFIX): cls
-    for cls in _LOSSES
-    if cls.synonyms is not None
-    for synonym in cls.synonyms
-}
-loss_resolver = Resolver(
-    _LOSSES,
-    base=Loss,
+loss_resolver = Resolver.from_subclasses(
+    Loss,
     default=MarginRankingLoss,
-    suffix=_LOSS_SUFFIX,
-    synonyms=losses_synonyms,
+    skip={
+        PairwiseLoss,
+        PointwiseLoss,
+        SetwiseLoss,
+    },
 )
-
-
-def has_mr_loss(model) -> bool:
-    """Check if the model has a marging ranking loss."""
-    return isinstance(model.loss, MarginRankingLoss)
-
-
-def has_nssa_loss(model) -> bool:
-    """Check if the model has a NSSA loss."""
-    return isinstance(model.loss, NSSALoss)
+for _name, _cls in loss_resolver.lookup_dict.items():
+    for _synonym in _cls.synonyms or []:
+        loss_resolver.synonyms[_synonym] = _cls
