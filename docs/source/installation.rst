@@ -108,12 +108,13 @@ of the ``setup.cfg``. They can be included with installation using the bracket n
 ``pip install pykeen[docs]`` or ``pip install -e .[docs]``. Several can be listed, comma-delimited like in
 ``pip install pykeen[docs,plotting]``.
 
-==============  =======================================================
-Name            Description
-==============  =======================================================
-``plotting``    Plotting with ``seaborn`` and generation of word clouds
-``mlflow``      Tracking of results with ``mlflow``
-``wandb``       Tracking of results with ``wandb``
-``docs``        Building of the documentation
-``templating``  Building of templated documentation, like the README
-==============  =======================================================
+===============  ==============================================================================
+Name             Description
+===============  ==============================================================================
+``plotting``     Plotting with ``seaborn`` and generation of word clouds
+``mlflow``       Tracking of results with ``mlflow``
+``wandb``        Tracking of results with ``wandb``
+``tensorboard``  Tracking of results with :mod:`tensorboard` via :mod:`torch.utils.tensorboard`
+``docs``         Building of the documentation
+``templating``   Building of templated documentation, like the README
+===============  ==============================================================================

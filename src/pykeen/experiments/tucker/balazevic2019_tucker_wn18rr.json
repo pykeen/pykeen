@@ -4,7 +4,7 @@
     "comments": "Check whether dropouts are used correctly. They make use of inverse relations. Could not find number of epochs.In the code 500 was the default value for all datasets, that's we assume that this is the number of epochs. For evaluation, the non-deterministic rank is used, cf. https://github.com/ibalazevic/TuckER/blob/63dbba8751670db0d807579303679c0a2c266130/main.py#L78 ."
   },
   "pipeline": {
-    "dataset": "wn18",
+    "dataset": "wn18rr",
     "dataset_kwargs": {
       "create_inverse_triples": true
     },
@@ -21,8 +21,11 @@
     },
     "optimizer": "Adam",
     "optimizer_kwargs": {
-      "lr": 0.01,
-      "weight_decay": 1.0
+      "lr": 0.01
+    },
+    "lr_scheduler": "ExponentialLR",
+    "lr_scheduler_kwargs": {
+      "gamma": 1.0
     },
     "loss": "BCEAfterSigmoid",
     "loss_kwargs": {

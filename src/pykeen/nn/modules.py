@@ -17,7 +17,9 @@ from torch import FloatTensor, nn
 from . import functional as pkf
 from .combinations import Combination
 from ..typing import HeadRepresentation, HintOrType, RelationRepresentation, TailRepresentation
-from ..utils import CANONICAL_DIMENSIONS, convert_to_canonical_shape, ensure_tuple, upgrade_to_sequence
+from ..utils import (
+    CANONICAL_DIMENSIONS, activation_resolver, convert_to_canonical_shape, ensure_tuple, upgrade_to_sequence,
+)
 
 __all__ = [
     'interaction_resolver',
@@ -32,7 +34,9 @@ __all__ = [
     'ComplExInteraction',
     'ConvEInteraction',
     'ConvKBInteraction',
+    'CrossEInteraction',
     'DistMultInteraction',
+    'DistMAInteraction',
     'ERMLPInteraction',
     'ERMLPEInteraction',
     'HolEInteraction',
@@ -45,6 +49,7 @@ __all__ = [
     'RotatEInteraction',
     'SimplEInteraction',
     'StructuredEmbeddingInteraction',
+    'TorusEInteraction',
     'TransDInteraction',
     'TransEInteraction',
     'TransHInteraction',
@@ -697,6 +702,15 @@ class DistMultInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatT
     func = pkf.distmult_interaction
 
 
+class DistMAInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
+    """A module wrapper for the stateless DistMA interaction function.
+
+    .. seealso:: :func:`pykeen.nn.functional.dist_ma_interaction`
+    """
+
+    func = pkf.dist_ma_interaction
+
+
 class ERMLPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
     """A stateful module for the ER-MLP interaction.
 
@@ -994,6 +1008,18 @@ class UnstructuredModelInteraction(
         t: TailRepresentation,
     ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
         return dict(h=h, t=t)
+
+
+class TorusEInteraction(TranslationalInteraction[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]):
+    """A stateful module for the TorusE interaction function.
+
+    .. seealso:: :func:`pykeen.nn.functional.toruse_interaction`
+    """
+
+    func = pkf.toruse_interaction
+
+    def __init__(self, p: int = 2, power_norm: bool = False):
+        super().__init__(p=p, power_norm=power_norm)
 
 
 class TransDInteraction(
@@ -1306,6 +1332,60 @@ class MonotonicAffineTransformationInteraction(
         t: TailRepresentation,
     ) -> torch.FloatTensor:  # noqa: D102
         return self.log_scale.exp() * self.base(h=h, r=r, t=t) + self.bias
+
+
+class CrossEInteraction(FunctionalInteraction[FloatTensor, Tuple[FloatTensor, FloatTensor], FloatTensor]):
+    """A module wrapper for the CrossE interaction function.
+
+    .. seealso:: :func:`pykeen.nn.functional.cross_e_interaction`
+    """
+
+    func = pkf.cross_e_interaction
+    relation_shape = ("d", "d")
+
+    def __init__(
+        self,
+        embedding_dim: int = 50,
+        combination_activation: HintOrType[nn.Module] = nn.Tanh,
+        combination_activation_kwargs: Optional[Mapping[str, Any]] = None,
+        combination_dropout: Optional[float] = 0.5,
+    ):
+        """
+        Instantiate the interaction module.
+
+        :param embedding_dim:
+            The embedding dimension.
+        :param combination_activation:
+            The combination activation function.
+        :param combination_activation_kwargs:
+            Additional keyword-based arguments passed to the constructor of the combination activation function (if
+            not already instantiated).
+        :param combination_dropout:
+            An optional dropout applied to the combination.
+        """
+        super().__init__()
+        self.combination_activation = activation_resolver.make(
+            combination_activation,
+            pos_kwargs=combination_activation_kwargs,
+        )
+        self.combination_bias = nn.Parameter(data=torch.zeros(1, 1, 1, 1, embedding_dim))
+        self.combination_dropout = nn.Dropout(combination_dropout) if combination_dropout else None
+
+    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
+        return dict(
+            bias=self.combination_bias,
+            activation=self.combination_activation,
+            dropout=self.combination_dropout,
+        )
+
+    @staticmethod
+    def _prepare_hrt_for_functional(
+        h: FloatTensor,
+        r: Tuple[FloatTensor, FloatTensor],
+        t: FloatTensor,
+    ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
+        r, c_r = r
+        return dict(h=h, r=r, c_r=c_r, t=t)
 
 
 interaction_resolver = Resolver.from_subclasses(

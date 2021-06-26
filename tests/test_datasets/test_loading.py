@@ -7,7 +7,7 @@ import unittest
 from io import BytesIO
 from urllib.request import urlopen
 
-from pykeen.datasets import Kinships, Nations, datasets
+from pykeen.datasets import Kinships, Nations, dataset_resolver
 from pykeen.datasets.base import (
     PackedZipRemoteDataset, SingleTabbedDataset, TarFileRemoteDataset,
     TarFileSingleDataset, UnpackedRemoteDataset,
@@ -21,7 +21,7 @@ class TestAnnotated(unittest.TestCase):
 
     def test_annotated(self):
         """Check :func:`pykeen.utils_docs.with_structured_docstr`` was properly applied ot all datasets."""
-        for name, cls in sorted(datasets.items()):
+        for name, cls in sorted(dataset_resolver.lookup_dict.items()):
             with self.subTest(name=name):
                 try:
                     docdata = cls.__docdata__

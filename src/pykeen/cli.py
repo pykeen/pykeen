@@ -16,18 +16,20 @@ later, but that will cause problems - the code will get executed twice:
 import inspect
 import os
 import sys
+from pathlib import Path
 from typing import Optional
 
 import click
 from click_default_group import DefaultGroup
 from tabulate import tabulate
 
-from .datasets import datasets as datasets_dict
+from .datasets import dataset_resolver
 from .evaluation import evaluator_resolver, get_metric_list, metric_resolver
 from .experiments.cli import experiments
 from .hpo.cli import optimize
 from .hpo.samplers import sampler_resolver
 from .losses import loss_resolver
+from .lr_schedulers import lr_scheduler_resolver
 from .models import model_resolver
 from .models.cli import build_cli_from_cls
 from .optimizers import optimizer_resolver
@@ -40,7 +42,7 @@ from .triples.utils import EXTENSION_IMPORTERS, PREFIX_IMPORTERS
 from .utils import get_until_first_blank
 from .version import env_table
 
-HERE = os.path.abspath(os.path.dirname(__file__))
+HERE = Path(__file__).resolve().parent
 
 
 @click.group()
@@ -235,6 +237,25 @@ def _help_optimizers(tablefmt: str, link_fmt: Optional[str] = None):
 
 @ls.command()
 @tablefmt_option
+def lr_schedulers(tablefmt: str):
+    """List optimizers."""
+    click.echo(_help_lr_schedulers(tablefmt))
+
+
+def _help_lr_schedulers(tablefmt: str, link_fmt: Optional[str] = None):
+    lines = _get_lines_alternative(
+        tablefmt, lr_scheduler_resolver.lookup_dict, 'torch.optim.lr_scheduler', 'pykeen.lr_schedulers',
+        link_fmt=link_fmt,
+    )
+    return tabulate(
+        lines,
+        headers=['Name', 'Reference', 'Description'],
+        tablefmt=tablefmt,
+    )
+
+
+@ls.command()
+@tablefmt_option
 def regularizers(tablefmt: str):
     """List regularizers."""
     click.echo(_help_regularizers(tablefmt))
@@ -370,7 +391,7 @@ def _get_lines(d, tablefmt, submodule, link_fmt: Optional[str] = None):
 
 
 def _get_dataset_lines(tablefmt, link_fmt: Optional[str] = None):
-    for name, value in sorted(datasets_dict.items()):
+    for name, value in sorted(dataset_resolver.lookup_dict.items()):
         reference = f'pykeen.datasets.{value.__name__}'
         if tablefmt == 'rst':
             reference = f':class:`{reference}`'
@@ -443,7 +464,7 @@ def readme(check: bool):
 def get_readme() -> str:
     """Get the readme."""
     from jinja2 import FileSystemLoader, Environment
-    loader = FileSystemLoader(os.path.join(HERE, 'templates'))
+    loader = FileSystemLoader(HERE.joinpath('templates'))
     environment = Environment(
         autoescape=True,
         loader=loader,
@@ -459,7 +480,7 @@ def get_readme() -> str:
         losses=_help_losses(tablefmt, link_fmt='https://pykeen.readthedocs.io/en/latest/api/{}.html'),
         n_losses=len(loss_resolver.lookup_dict),
         datasets=_help_datasets(tablefmt, link_fmt='https://pykeen.readthedocs.io/en/latest/api/{}.html'),
-        n_datasets=len(datasets_dict),
+        n_datasets=len(dataset_resolver.lookup_dict),
         training_loops=_help_training(
             tablefmt, link_fmt='https://pykeen.readthedocs.io/en/latest/reference/training.html#{}',
         ),

@@ -156,6 +156,12 @@ class TestDistMult(cases.ModelTestCase):
         self._test_score_all_triples(k=None)
 
 
+class TestDistMA(cases.ModelTestCase):
+    """Test the DistMA model."""
+
+    cls = pykeen.models.DistMA
+
+
 class TestERMLP(cases.ModelTestCase):
     """Test the ERMLP model."""
 
@@ -349,6 +355,12 @@ class TestSEHighMemory(_BaseTestSE):
     training_loop_kwargs = {
         'automatic_memory_optimization': False,
     }
+
+
+class TestTorusE(cases.DistanceModelTestCase):
+    """Test the TorusE model."""
+
+    cls = pykeen.models.TorusE
 
 
 class TestTransD(cases.DistanceModelTestCase):
@@ -607,6 +619,15 @@ class TestUM(cases.DistanceModelTestCase):
     """Test the Unstructured Model."""
 
     cls = pykeen.models.UnstructuredModel
+
+
+class TestCrossE(cases.ModelTestCase):
+    """Test the CrossE model."""
+
+    cls = pykeen.models.CrossE
+
+    # the combination bias
+    num_constant_init = 1
 
 
 class TestTesting(unittest_templates.MetaTestCase[Model]):
