@@ -35,6 +35,7 @@ from .umls import UMLS
 from .wk3l import WK3l15k
 from .wordnet import WN18, WN18RR
 from .yago import YAGO310
+from .wd50k import WD50K_Triples
 from ..triples import CoreTriplesFactory
 
 __all__ = [
@@ -63,6 +64,7 @@ __all__ = [
     'DBpedia50',
     'DB100K',
     'Countries',
+    'WD50K_Triples',
     # Utilities
     'dataset_resolver',
     'get_dataset',
