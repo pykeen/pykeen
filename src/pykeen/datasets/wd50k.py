@@ -52,10 +52,9 @@ class WD50KT(UnpackedRemoteDataset):
             testing_url=TRIPLES_TEST_URL,
             validation_url=TRIPLES_VALID_URL,
             create_inverse_triples=create_inverse_triples,
-            load_triples_kwargs={'delimiter':','},
+            load_triples_kwargs={'delimiter': ','},
             **kwargs,
         )
-
 
 
 @click.command()
