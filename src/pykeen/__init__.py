@@ -13,8 +13,8 @@ approach
 (:class:`pykeen.training.SLCWATrainingLoop`) and evaluates with rank-based evaluation
 (:class:`pykeen.evaluation.RankBasedEvaluator`).
 
->>> from pykeen.pipeline import pipeline
->>> result = pipeline(
+>>> import pykeen
+>>> result = pykeen.pipeline(
 ...     model='TransE',
 ...     dataset='Nations',
 ... )
@@ -32,6 +32,7 @@ If you're in a Jupyter notebook, it will be pretty printed as an HTML table.
 
 import logging
 
+from .pipeline import pipeline  # noqa: F401
 from .version import env, get_git_branch, get_git_hash, get_version  # noqa: F401
 
 # This will set the global logging level to info to ensure that info messages are shown in all parts of the software.
