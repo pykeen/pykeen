@@ -21,8 +21,8 @@ TRIPLES_TRAIN_URL = f'{BASE_URL}/triples/train.txt'
 
 
 @parse_docdata
-class WD50K_Triples(UnpackedRemoteDataset):
-    """The triple-only version of WD50K.
+class WD50KT(UnpackedRemoteDataset):
+    """The triples-only version of WD50K.
 
     ---
     name: WD50K (triples)
@@ -60,7 +60,7 @@ class WD50K_Triples(UnpackedRemoteDataset):
 @click.command()
 @verbose_option
 def _main():
-    for cls in [WD50K_Triples]:
+    for cls in [WD50KT]:
         click.secho(f'Loading {cls.__name__}', fg='green', bold=True)
         d = cls()
         d.summarize()
