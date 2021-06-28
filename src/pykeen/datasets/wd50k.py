@@ -30,6 +30,7 @@ class WD50KT(UnpackedRemoteDataset):
         author: Galkin
         year: 2020
         link: https://www.aclweb.org/anthology/2020.emnlp-main.596/
+        arxiv: 2009.10847
         github: migalkin/StarE
     statistics:
         entities: 40107
