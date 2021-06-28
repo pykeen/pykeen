@@ -48,3 +48,7 @@ References
 
 .. [sakai2021] Sakai, T. (2021). `On Fuhr's Guideline for IR Evaluation
    <https://doi.org/10.1145/3451964.3451976>`_. SIGIR Forum, 54(1), 1-8.
+
+.. [galkin2020] Galkin, M., *et al.* (2020). `Message Passing for Hyper-Relational Knowledge Graphs
+   <https://doi.org/10.18653/v1/2020.emnlp-main.596>`_. Proceedings of the 2020 Conference on Empirical
+   Methods in Natural Language Processing (EMNLP), 7346–7359.
