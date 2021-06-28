@@ -258,7 +258,7 @@ def get_all_prediction_df(
         from pykeen.models.predict import get_all_prediction_df
 
         # Train a model (quickly)
-        result = pipeline(model='RotatE', dataset='Nations', training_kwargs=dict(num_epochs=5))
+        result = pipeline(model='RotatE', dataset='Nations', epochs=5)
         model = result.model
 
         # Get scores for *all* triples
