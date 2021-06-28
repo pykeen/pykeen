@@ -4,6 +4,8 @@
 
 - GitHub Repository: https://github.com/migalkin/StarE/tree/master/data/clean/wd50k/
 - Paper: https://www.aclweb.org/anthology/2020.emnlp-main.596/
+
+Get a summary with ``python -m pykeen.datasets.wd50k``,
 """
 
 import click
