@@ -32,6 +32,7 @@ from .nations import Nations
 from .ogb import OGBBioKG, OGBWikiKG
 from .openbiolink import OpenBioLink, OpenBioLinkLQ
 from .umls import UMLS
+from .wd50k import WD50KT
 from .wk3l import WK3l15k
 from .wordnet import WN18, WN18RR
 from .yago import YAGO310
@@ -63,6 +64,7 @@ __all__ = [
     'DBpedia50',
     'DB100K',
     'Countries',
+    'WD50KT',
     # Utilities
     'dataset_resolver',
     'get_dataset',
