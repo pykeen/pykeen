@@ -3,7 +3,7 @@
 import itertools as itt
 import time
 from abc import ABC
-from typing import Optional, cast
+from typing import Any, List, Mapping, Optional, Tuple, Type, cast
 
 import click
 import matplotlib.pyplot as plt
@@ -247,7 +247,7 @@ def _build(batch_size: int) -> pd.DataFrame:
     datasets = sorted(dataset_resolver, key=Dataset._sort_key)
     # CoDEx Large is the first dataset where this gets a bit out of hand
     datasets = datasets[:datasets.index(dataset_resolver.lookup('CoDExLarge'))]
-    models_kwargs = [
+    models_kwargs: List[Tuple[Type[EvaluationOnlyModel], Mapping[str, Any]]] = [
         (PseudoTypeBaseline, dict(normalize=True)),
         (EntityCoOccurrenceBaseline, dict(normalize=True)),
         (SoftInverseTripleBaseline, dict()),
@@ -285,6 +285,7 @@ def _build(batch_size: int) -> pd.DataFrame:
 
 
 def _evaluate_baseline(dataset: Dataset, model: Model, batch_size=None) -> RankBasedMetricResults:
+    assert dataset.validation is not None
     evaluator = RankBasedEvaluator()
     return cast(RankBasedMetricResults, evaluate(
         model=model,
