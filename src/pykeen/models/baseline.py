@@ -195,11 +195,10 @@ def main(batch_size: int):
         _main(batch_size=batch_size)
 
 
-def _main(batch_size: int, normalize: bool = True):
+def _main(batch_size: int) -> None:
     datasets = sorted(dataset_resolver, key=Dataset._sort_key)
-    # Remove the following line when ready to run for all datasets
-    # datasets = datasets[:3]
-    datasets = datasets[:datasets.index(dataset_resolver.lookup('fb15k237'))]
+    # CoDEx Large is the first dataset where this gets a bit out of hand
+    datasets = datasets[:datasets.index(dataset_resolver.lookup('CoDExLarge'))]
     models_kwargs = [
         (PseudoTypeBaseline, dict(normalize=True)),
         (EntityCoOccurrenceBaseline, dict(normalize=True)),
