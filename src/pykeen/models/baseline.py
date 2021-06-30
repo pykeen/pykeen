@@ -199,6 +199,7 @@ def _main():
     models = [
         PseudoTypeBaseline,
         EntityCoOccurrenceBaseline,
+        SoftInverseTripleBaseline,
     ]
 
     records = []
