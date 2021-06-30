@@ -148,7 +148,7 @@ class SoftInverseTripleBaseline(EvaluationOnlyModel):
     """Score based on relation similarity."""
 
     def __init__(self, triples_factory: CoreTriplesFactory, threshold: Optional[float] = None):
-        super().__init__(triples_factory=triples_factory)
+        super().__init__(triples_factory=triples_factory, random_seed=0, preferred_device='cpu')
         # compute relation similarity matrix
         self.sim = _get_relation_similarity(triples_factory, to_inverse=False)
         self.sim_inv = _get_relation_similarity(triples_factory, to_inverse=True)
