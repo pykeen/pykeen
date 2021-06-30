@@ -76,8 +76,8 @@ class PseudoTypeBaseline(EvaluationOnlyModel):
         normalize: bool = False,
     ):
         super().__init__(triples_factory=triples_factory, random_seed=0, preferred_device='cpu')
-        self.head_per_relation = _get_csr_matrix(triples_factory=triples_factory, col_index=0)
-        self.tail_per_relation = _get_csr_matrix(triples_factory=triples_factory, col_index=2)
+        self.head_per_relation = _get_csr_matrix(triples_factory=triples_factory, col_index=0, normalize=normalize)
+        self.tail_per_relation = _get_csr_matrix(triples_factory=triples_factory, col_index=2, normalize=normalize)
         self.normalize = normalize
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:
@@ -98,8 +98,8 @@ class EntityCoOccurrenceBaseline(EvaluationOnlyModel):
         normalize: bool = False,
     ):
         super().__init__(triples_factory=triples_factory, random_seed=0, preferred_device='cpu')
-        self.head_per_tail = _get_csr_matrix(triples_factory=triples_factory, row_index=2, col_index=0)
-        self.tail_per_head = _get_csr_matrix(triples_factory=triples_factory, row_index=0, col_index=2)
+        self.head_per_tail = _get_csr_matrix(triples_factory=triples_factory, row_index=2, col_index=0, normalize=normalize)
+        self.tail_per_head = _get_csr_matrix(triples_factory=triples_factory, row_index=0, col_index=2, normalize=normalize)
         self.normalize = normalize
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:
