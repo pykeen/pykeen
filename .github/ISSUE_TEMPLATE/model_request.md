@@ -2,7 +2,7 @@
 name: Model request
 about: Suggest a new model that should be implemented in this package
 title: ''
-labels: New Model
+labels: ''
 assignees: ''
 
 ---
