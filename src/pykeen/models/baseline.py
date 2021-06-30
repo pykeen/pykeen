@@ -205,6 +205,7 @@ def _main(batch_size: int, normalize: bool = True):
         (EntityCoOccurrenceBaseline, dict(normalize=True)),
         (SoftInverseTripleBaseline, dict()),
     ]
+    kwargs_keys = sorted({k for _, d in models_kwargs for k in d})
 
     records = []
     it = tqdm(itt.product(datasets, models_kwargs), desc='Baseline', total=len(datasets) * len(models_kwargs))
@@ -224,11 +225,12 @@ def _main(batch_size: int, normalize: bool = True):
             dataset.training.num_relations,
             dataset.training.num_triples,
             model_name,
+            *(kwargs.get(key) for key in kwargs_keys),
             elapsed_seconds,
             *(result.get_metric(metric) for metric in METRICS),
         ))
 
-    columns = ['dataset', '|E|', '|R|', 'triples', 'model', 'time', *METRICS]
+    columns = ['dataset', '|E|', '|R|', 'triples', 'model', *kwargs_keys, 'time', *METRICS]
     df = pd.DataFrame(records, columns=columns)
     df.to_csv(BENCHMARK_PATH, sep='\t', index=False)
     print(tabulate(df.round(3).values, headers=columns, tablefmt='github'))
