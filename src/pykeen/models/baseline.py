@@ -56,15 +56,15 @@ class EvaluationOnlyModel(Model, ABC):
         # TODO: this is not needed for non-parametric models!
         raise NotImplementedError
 
-    def collect_regularization_term(self) -> torch.FloatTensor:
+    def collect_regularization_term(self) -> torch.FloatTensor:  # noqa:D102
         # TODO: this is not needed for non-parametric models!
         raise NotImplementedError
 
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:
+    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa:D102
         # TODO: this is not needed for evaluation
         raise NotImplementedError
 
-    def score_r(self, ht_batch: torch.LongTensor) -> torch.FloatTensor:
+    def score_r(self, ht_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa:D102
         # TODO: this is not needed for evaluation
         raise NotImplementedError
 
@@ -82,11 +82,11 @@ class PseudoTypeBaseline(EvaluationOnlyModel):
         self.tail_per_relation = _get_csr_matrix(triples_factory=triples_factory, col_index=2, normalize=normalize)
         self.normalize = normalize
 
-    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:
+    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa:D102
         r = hr_batch[:, 1].cpu().numpy()
         return torch.from_numpy(self.tail_per_relation[r].todense())
 
-    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:
+    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa:D102
         r = rt_batch[:, 0].cpu().numpy()
         return torch.from_numpy(self.head_per_relation[r].todense())
 
@@ -100,15 +100,19 @@ class EntityCoOccurrenceBaseline(EvaluationOnlyModel):
         normalize: bool = False,
     ):
         super().__init__(triples_factory=triples_factory, random_seed=0, preferred_device='cpu')
-        self.head_per_tail = _get_csr_matrix(triples_factory=triples_factory, row_index=2, col_index=0, normalize=normalize)
-        self.tail_per_head = _get_csr_matrix(triples_factory=triples_factory, row_index=0, col_index=2, normalize=normalize)
+        self.head_per_tail = _get_csr_matrix(
+            triples_factory=triples_factory, row_index=2, col_index=0, normalize=normalize,
+        )
+        self.tail_per_head = _get_csr_matrix(
+            triples_factory=triples_factory, row_index=0, col_index=2, normalize=normalize,
+        )
         self.normalize = normalize
 
-    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:
+    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa:D102
         h = hr_batch[:, 0].cpu().numpy()
         return torch.from_numpy(self.tail_per_head[h].todense())
 
-    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:
+    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa:D102
         t = rt_batch[:, 1].cpu().numpy()
         return torch.from_numpy(self.head_per_tail[t].todense())
 
@@ -122,7 +126,7 @@ def _get_relation_similarity(triples_factory: CoreTriplesFactory, to_inverse: bo
             numpy.ones((mapped_triples.shape[0],), dtype=int),
             (
                 mapped_triples[:, 1],
-                triples_factory.num_entities * mapped_triples[:, 0] + mapped_triples[:, 2]
+                triples_factory.num_entities * mapped_triples[:, 0] + mapped_triples[:, 2],
             ),
         ),
         shape=(triples_factory.num_relations, triples_factory.num_entities ** 2),
@@ -134,7 +138,7 @@ def _get_relation_similarity(triples_factory: CoreTriplesFactory, to_inverse: bo
                 numpy.ones((mapped_triples.shape[0],), dtype=int),
                 (
                     mapped_triples[:, 1],
-                    triples_factory.num_entities * mapped_triples[:, 2] + mapped_triples[:, 0]
+                    triples_factory.num_entities * mapped_triples[:, 2] + mapped_triples[:, 0],
                 ),
             ),
             shape=(triples_factory.num_relations, triples_factory.num_entities ** 2),
@@ -162,24 +166,24 @@ class SoftInverseTripleBaseline(EvaluationOnlyModel):
         self.rel_to_head = scipy.sparse.coo_matrix(
             (
                 numpy.ones(shape=(triples_factory.num_triples,), dtype=numpy.float32),
-                (mapped_triples[:, 1], mapped_triples[:, 0])
+                (mapped_triples[:, 1], mapped_triples[:, 0]),
             ),
             shape=(triples_factory.num_relations, triples_factory.num_entities),
         ).tocsr()
         self.rel_to_tail = scipy.sparse.coo_matrix(
             (
                 numpy.ones(shape=(triples_factory.num_triples,), dtype=numpy.float32),
-                (mapped_triples[:, 1], mapped_triples[:, 2])
+                (mapped_triples[:, 1], mapped_triples[:, 2]),
             ),
             shape=(triples_factory.num_relations, triples_factory.num_entities),
         ).tocsr()
 
-    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:
+    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa:D102
         r = hr_batch[:, 1]
         return torch.from_numpy(self.sim[r, :] @ self.rel_to_tail + self.sim_inv[r, :] @ self.rel_to_head)
         # shape: (num_relations, num_entities)
 
-    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:
+    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa:D102
         r = rt_batch[:, 0]
         return torch.from_numpy(self.sim[r, :] @ self.rel_to_head + self.sim_inv[r, :] @ self.rel_to_tail)
 
@@ -209,7 +213,7 @@ def _plot(df: pd.DataFrame):
         df[[*keep, *METRICS]],
         id_vars=keep,
         value_vars=METRICS,
-        var_name='metric'
+        var_name='metric',
     )
 
     # Plot relation between # triples and time, stratified by model
