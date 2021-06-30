@@ -230,7 +230,7 @@ def _main(batch_size: int, normalize: bool = True):
             *(result.get_metric(metric) for metric in METRICS),
         ))
 
-    columns = ['dataset', '|E|', '|R|', 'triples', 'model', *kwargs_keys, 'time', *METRICS]
+    columns = ['dataset', 'E', 'R', 'triples', 'model', *kwargs_keys, 'time', *METRICS]
     df = pd.DataFrame(records, columns=columns)
     df.to_csv(BENCHMARK_PATH, sep='\t', index=False)
     print(tabulate(df.round(3).values, headers=columns, tablefmt='github'))
