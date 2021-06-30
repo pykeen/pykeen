@@ -2,7 +2,7 @@
 
 import itertools as itt
 from abc import ABC
-from typing import cast
+from typing import Optional, cast
 
 import click
 import numpy
@@ -108,6 +108,75 @@ class EntityCoOccurrenceBaseline(EvaluationOnlyModel):
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:
         t = rt_batch[:, 1].cpu().numpy()
         return torch.from_numpy(self.head_per_tail[t].todense())
+
+
+def _get_relation_similarity(triples_factory: CoreTriplesFactory, to_inverse: bool = False) -> numpy.ndarray:
+    # TODO: overlap with inverse triple detection
+    assert triples_factory.num_entities * triples_factory.num_relations < numpy.iinfo(int_type=int).max
+    mapped_triples = numpy.asarray(triples_factory.mapped_triples)
+    r = scipy.sparse.coo_matrix(
+        (
+            numpy.ones((mapped_triples.shape[0],), dtype=int),
+            (
+                mapped_triples[:, 1],
+                triples_factory.num_entities * mapped_triples[:, 0] + mapped_triples[:, 2]
+            ),
+        ),
+        shape=(triples_factory.num_relations, triples_factory.num_entities ** 2),
+    )
+    cardinality = numpy.asarray(r.sum(axis=1)).squeeze(axis=-1)
+    if to_inverse:
+        r2 = scipy.sparse.coo_matrix(
+            (
+                numpy.ones((mapped_triples.shape[0],), dtype=int),
+                (
+                    mapped_triples[:, 1],
+                    triples_factory.num_entities * mapped_triples[:, 2] + mapped_triples[:, 0]
+                ),
+            ),
+            shape=(triples_factory.num_relations, triples_factory.num_entities ** 2),
+        )
+    else:
+        r2 = r
+    intersection = numpy.asarray((r @ r2.T).todense())
+    union = cardinality[:, None] + cardinality[None, :] - intersection
+    return intersection.astype(numpy.float32) / union.astype(numpy.float32)
+
+
+class SoftInverseTripleBaseline(EvaluationOnlyModel):
+    """Score based on relation similarity."""
+
+    def __init__(self, triples_factory: CoreTriplesFactory, threshold: Optional[float] = None):
+        super().__init__(triples_factory=triples_factory)
+        # compute relation similarity matrix
+        self.sim = _get_relation_similarity(triples_factory, to_inverse=False)
+        self.sim_inv = _get_relation_similarity(triples_factory, to_inverse=True)
+        if threshold:
+            self.sim[self.sim < threshold] = 0.0
+            self.sim_inv[self.sim_inv < threshold] = 0.0
+
+        mapped_triples = numpy.asarray(triples_factory.mapped_triples)
+        self.rel_to_head = scipy.sparse.coo_matrix(
+            (
+                numpy.ones(shape=(triples_factory.num_triples,), dtype=numpy.float32),
+                (mapped_triples[:, 1], mapped_triples[:, 0])
+            )
+        ).tocsr()
+        self.rel_to_tail = scipy.sparse.coo_matrix(
+            (
+                numpy.ones(shape=(triples_factory.num_triples,), dtype=numpy.float32),
+                (mapped_triples[:, 1], mapped_triples[:, 2])
+            )
+        ).tocsr()
+
+    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:
+        r = hr_batch[:, 1]
+        return torch.from_numpy(self.sim[r, :] @ self.rel_to_tail + self.sim_inv[r, :] @ self.rel_to_head)
+        # shape: (num_relations, num_entities)
+
+    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:
+        r = rt_batch[:, 0]
+        return torch.from_numpy(self.sim[r, :] @ self.rel_to_head + self.sim_inv[r, :] @ self.rel_to_tail)
 
 
 BENCHMARK_PATH = PYKEEN_EXPERIMENTS.joinpath('baseline_benchmark.tsv')
