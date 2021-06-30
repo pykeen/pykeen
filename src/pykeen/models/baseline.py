@@ -110,7 +110,11 @@ class EntityCoOccurrenceBaseline(EvaluationOnlyModel):
         return torch.from_numpy(self.head_per_tail[t].todense())
 
 
-def _get_relation_similarity(triples_factory: CoreTriplesFactory, to_inverse: bool = False) -> numpy.ndarray:
+def _get_relation_similarity(
+    triples_factory: CoreTriplesFactory,
+    to_inverse: bool = False,
+    threshold: Optional[float] = None,
+) -> scipy.sparse.csr_matrix:
     # TODO: overlap with inverse triple detection
     assert triples_factory.num_entities * triples_factory.num_relations < numpy.iinfo(int_type=int).max
     mapped_triples = numpy.asarray(triples_factory.mapped_triples)
@@ -140,20 +144,26 @@ def _get_relation_similarity(triples_factory: CoreTriplesFactory, to_inverse: bo
         r2 = r
     intersection = numpy.asarray((r @ r2.T).todense())
     union = cardinality[:, None] + cardinality[None, :] - intersection
-    return intersection.astype(numpy.float32) / union.astype(numpy.float32)
+    sim = intersection.astype(numpy.float32) / union.astype(numpy.float32)
+    if threshold is not None:
+        sim[sim < threshold] = 0.0
+    sim = scipy.sparse.csr_matrix(sim)
+    sim.eliminate_zeros()
+    return sim
 
 
 class SoftInverseTripleBaseline(EvaluationOnlyModel):
     """Score based on relation similarity."""
 
-    def __init__(self, triples_factory: CoreTriplesFactory, threshold: Optional[float] = None):
+    def __init__(
+        self,
+        triples_factory: CoreTriplesFactory,
+        threshold: Optional[float] = None,
+    ):
         super().__init__(triples_factory=triples_factory)
         # compute relation similarity matrix
-        self.sim = _get_relation_similarity(triples_factory, to_inverse=False)
-        self.sim_inv = _get_relation_similarity(triples_factory, to_inverse=True)
-        if threshold:
-            self.sim[self.sim < threshold] = 0.0
-            self.sim_inv[self.sim_inv < threshold] = 0.0
+        self.sim = _get_relation_similarity(triples_factory, to_inverse=False, threshold=threshold)
+        self.sim_inv = _get_relation_similarity(triples_factory, to_inverse=True, threshold=threshold)
 
         mapped_triples = numpy.asarray(triples_factory.mapped_triples)
         self.rel_to_head = scipy.sparse.coo_matrix(
@@ -168,17 +178,20 @@ class SoftInverseTripleBaseline(EvaluationOnlyModel):
                 numpy.ones(shape=(triples_factory.num_triples,), dtype=numpy.float32),
                 (mapped_triples[:, 1], mapped_triples[:, 2])
             ),
-            shape = (triples_factory.num_relations, triples_factory.num_entities),
+            shape=(triples_factory.num_relations, triples_factory.num_entities),
         ).tocsr()
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:
         r = hr_batch[:, 1]
-        return torch.from_numpy(self.sim[r, :] @ self.rel_to_tail + self.sim_inv[r, :] @ self.rel_to_head)
-        # shape: (num_relations, num_entities)
+        scores = self.sim[r, :] @ self.rel_to_tail + self.sim_inv[r, :] @ self.rel_to_head
+        scores = numpy.asarray(scores.todense())
+        return torch.from_numpy(scores)
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:
         r = rt_batch[:, 0]
-        return torch.from_numpy(self.sim[r, :] @ self.rel_to_head + self.sim_inv[r, :] @ self.rel_to_tail)
+        scores = self.sim[r, :] @ self.rel_to_head + self.sim_inv[r, :] @ self.rel_to_tail
+        scores = numpy.asarray(scores.todense())
+        return torch.from_numpy(scores)
 
 
 BENCHMARK_PATH = PYKEEN_EXPERIMENTS.joinpath('baseline_benchmark.tsv')
