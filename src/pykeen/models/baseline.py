@@ -1,9 +1,10 @@
 """Non-parametric baselines."""
+
+import itertools as itt
 from abc import ABC
 from typing import cast
 
 import click
-import docdata
 import numpy
 import pandas as pd
 import scipy.sparse
@@ -115,22 +116,27 @@ BENCHMARK_PATH = PYKEEN_EXPERIMENTS.joinpath('baseline_benchmark.tsv')
 @verbose_option
 def main():
     """Show-case baseline."""
-    it = sorted(dataset_resolver, key=lambda c: docdata.get_docdata(c)['statistics']['triples'])
-    # it = it[:3]
-    it = tqdm(it, desc='Baseline')
+    datasets = sorted(dataset_resolver, key=Dataset._sort_key)
+    datasets = datasets[:3]
+    models = [
+        PseudoTypeBaseline,
+        EntityCoOccurrenceBaseline,
+    ]
+
     records = {}
-    for dataset_cls in it:
-        it.set_postfix({'dataset': dataset_cls.__name__})
+    it = tqdm(itt.product(datasets, models), desc='Baseline', total=len(datasets) * len(models))
+    for dataset_cls, model_cls in it:
+        it.set_postfix({'dataset': dataset_cls.__name__, 'model': model_cls.__name__})
         dataset = dataset_cls()
-        result = _showcase(dataset)
-        records[dataset_cls.__name__] = _get_record(result)
-    df = pd.DataFrame.from_dict(records, orient='index')
+        model = model_cls(triples_factory=dataset.training, normalize=True)
+        result = _evaluate_baseline(dataset, model)
+        records[dataset_cls.__name__, model_cls.__name__] = _get_record(result)
+    df = pd.DataFrame.from_dict(records, orient='index').reset_index()
     df.to_csv(BENCHMARK_PATH, sep='\t', index=False)
-    print(tabulate(df.round(3), headers=['Dataset', *df.columns]))
+    print(tabulate(df.round(3), headers=['Index', *df.columns]))
 
 
-def _showcase(dataset: Dataset, normalize: bool = True) -> RankBasedMetricResults:
-    model = PseudoTypeBaseline(triples_factory=dataset.training, normalize=normalize)
+def _evaluate_baseline(dataset: Dataset, model: Model) -> RankBasedMetricResults:
     evaluator = RankBasedEvaluator()
     return cast(RankBasedMetricResults, evaluate(
         model=model,
