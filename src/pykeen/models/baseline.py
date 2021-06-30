@@ -214,7 +214,7 @@ def _main():
     models_kwargs = [
         (PseudoTypeBaseline, dict(normalize=True)),
         (EntityCoOccurrenceBaseline, dict(normalize=True)),
-        (SoftInverseTripleBaseline, dict()),
+        (SoftInverseTripleBaseline, dict(threshold=0.97)),
     ]
 
     records = []
