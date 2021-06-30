@@ -6,9 +6,11 @@ from abc import ABC
 from typing import Optional, cast
 
 import click
+import matplotlib.pyplot as plt
 import numpy
 import pandas as pd
 import scipy.sparse
+import seaborn as sns
 import torch
 from more_click import verbose_option
 from sklearn.preprocessing import normalize as sklearn_normalize
@@ -189,13 +191,55 @@ METRICS = ['mrr', 'hits@1', 'hits@10', 'aamr', 'aamri']
 @click.command()
 @verbose_option
 @click.option('--batch-size', default=1024, show_default=True)
-def main(batch_size: int):
+@click.option('--rebuild', is_flag=True)
+def main(batch_size: int, rebuild: bool):
     """Show-case baseline."""
-    with logging_redirect_tqdm():
-        _main(batch_size=batch_size)
+    if not BENCHMARK_PATH.is_file() or rebuild:
+        with logging_redirect_tqdm():
+            df = _build(batch_size=batch_size)
+    else:
+        df = pd.read_csv(BENCHMARK_PATH, sep='\t')
+
+    _plot(df)
 
 
-def _main(batch_size: int) -> None:
+def _plot(df: pd.DataFrame):
+    keep = [col for col in df.columns if col not in METRICS]
+    tsdf = pd.melt(
+        df[[*keep, *METRICS]],
+        id_vars=keep,
+        value_vars=METRICS,
+        var_name='metric'
+    )
+
+    # Plot relation between # triples and time, stratified by model
+    # Interpretation: exponential relationship between # triples and time
+    fig, ax = plt.subplots()
+    sns.scatterplot(data=tsdf, x='triples', y='time', hue='model', ax=ax)
+    ax.set_yscale('log')
+    ax.set_xscale('log')
+    fig.savefig(PYKEEN_EXPERIMENTS.joinpath('baseline_benchmark_timeplot.svg'))
+    fig.savefig(PYKEEN_EXPERIMENTS.joinpath('baseline_benchmark_timeplot.png'), dpi=300)
+    plt.close(fig)
+
+    # Make a scatterplot grid showing relation between # triples and result, stratified by model and metric.
+    # Interpretation: no dataset size dependence
+    g = sns.FacetGrid(
+        tsdf[~tsdf.metric.isin({'aamr', 'aamri'})],
+        col="model",
+        hue='dataset',
+        row='metric',
+        margin_titles=True,
+    )
+    g.map(sns.scatterplot, "triples", "value")
+    g.add_legend()
+    g.set(xscale='log')
+    g.savefig(PYKEEN_EXPERIMENTS.joinpath('baseline_benchmark_scatterplot.svg'))
+    g.savefig(PYKEEN_EXPERIMENTS.joinpath('baseline_benchmark_scatterplot.png'), dpi=300)
+    plt.close(g.fig)
+
+
+def _build(batch_size: int) -> pd.DataFrame:
     datasets = sorted(dataset_resolver, key=Dataset._sort_key)
     # CoDEx Large is the first dataset where this gets a bit out of hand
     datasets = datasets[:datasets.index(dataset_resolver.lookup('CoDExLarge'))]
@@ -233,6 +277,7 @@ def _main(batch_size: int) -> None:
     df = pd.DataFrame(records, columns=columns)
     df.to_csv(BENCHMARK_PATH, sep='\t', index=False)
     print(tabulate(df.round(3).values, headers=columns, tablefmt='github'))
+    return df
 
 
 def _evaluate_baseline(dataset: Dataset, model: Model, batch_size=None) -> RankBasedMetricResults:
