@@ -1,5 +1,6 @@
 """Non-parametric baselines."""
 import pprint
+from abc import ABC
 
 import numpy
 import scipy.sparse
@@ -36,7 +37,27 @@ def _get_csr_matrix(
     return matrix
 
 
-class PseudoTypeBaseline(Model):
+class EvaluationOnlyModel(Model, ABC):
+    """A model which only implements the methods used for evaluation."""
+
+    def _reset_parameters_(self):
+        # TODO: this is not needed for non-parametric models!
+        raise NotImplementedError
+
+    def collect_regularization_term(self) -> torch.FloatTensor:
+        # TODO: this is not needed for non-parametric models!
+        raise NotImplementedError
+
+    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:
+        # TODO: this is not needed for evaluation
+        raise NotImplementedError
+
+    def score_r(self, ht_batch: torch.LongTensor) -> torch.FloatTensor:
+        # TODO: this is not needed for evaluation
+        raise NotImplementedError
+
+
+class PseudoTypeBaseline(EvaluationOnlyModel):
     """Score based on entity-relation co-occurrence."""
 
     def __init__(
@@ -57,24 +78,8 @@ class PseudoTypeBaseline(Model):
         r = rt_batch[:, 0].cpu().numpy()
         return torch.from_numpy(self.head_per_relation[r].todense())
 
-    def _reset_parameters_(self):
-        # TODO: this is not needed for non-parametric models!
-        raise NotImplementedError
 
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:
-        # TODO: this is not needed for evaluation
-        raise NotImplementedError
-
-    def score_r(self, ht_batch: torch.LongTensor) -> torch.FloatTensor:
-        # TODO: this is not needed for evaluation
-        raise NotImplementedError
-
-    def collect_regularization_term(self) -> torch.FloatTensor:
-        # TODO: this is not needed for non-parametric models!
-        raise NotImplementedError
-
-
-class EntityCoOccurrenceBaseline(Model):
+class EntityCoOccurrenceBaseline(EvaluationOnlyModel):
     """Score based on entity-entity co-occurrence."""
 
     def __init__(
@@ -94,22 +99,6 @@ class EntityCoOccurrenceBaseline(Model):
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:
         t = rt_batch[:, 1].cpu().numpy()
         return torch.from_numpy(self.head_per_tail[t].todense())
-
-    def _reset_parameters_(self):
-        # TODO: this is not needed for non-parametric models!
-        raise NotImplementedError
-
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:
-        # TODO: this is not needed for evaluation
-        raise NotImplementedError
-
-    def score_r(self, ht_batch: torch.LongTensor) -> torch.FloatTensor:
-        # TODO: this is not needed for evaluation
-        raise NotImplementedError
-
-    def collect_regularization_term(self) -> torch.FloatTensor:
-        # TODO: this is not needed for non-parametric models!
-        raise NotImplementedError
 
 
 def main():
