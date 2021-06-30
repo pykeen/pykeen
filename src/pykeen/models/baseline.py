@@ -4,6 +4,7 @@ import pprint
 import numpy
 import scipy.sparse
 import torch
+from sklearn.preprocessing import normalize as sklearn_normalize
 
 from pykeen.datasets import get_dataset
 from pykeen.evaluation import RankBasedEvaluator, evaluate
@@ -15,25 +16,31 @@ def _get_csr_matrix(
     triples_factory: CoreTriplesFactory,
     col_index: int,
     row_index: int = 1,
+    normalize: bool = False,
 ) -> scipy.sparse.csr_matrix:
     """Create a co-occurrence matrix from triples."""
     row, col = triples_factory.mapped_triples.T[[row_index, col_index]]
-    return scipy.sparse.coo_matrix(
-        (
-            numpy.ones(triples_factory.num_triples),
-            (row, col)
-        ),
+    matrix = scipy.sparse.coo_matrix(
+        (numpy.ones(triples_factory.num_triples), (row, col)),
         shape=(triples_factory.num_relations, triples_factory.num_entities),
     ).tocsr()
+    if normalize:
+        matrix = sklearn_normalize(matrix, norm="l1", axis=1)
+    return matrix
 
 
 class PseudoTypeBaseline(Model):
     """Score based on entity-relation co-occurrence."""
 
-    def __init__(self, triples_factory: CoreTriplesFactory):
+    def __init__(
+        self,
+        triples_factory: CoreTriplesFactory,
+        normalize: bool = False,
+    ):
         super().__init__(triples_factory=triples_factory)
         self.head_per_relation = _get_csr_matrix(triples_factory=triples_factory, col_index=0)
         self.tail_per_relation = _get_csr_matrix(triples_factory=triples_factory, col_index=2)
+        self.normalize = normalize
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:
         r = hr_batch[:, 1].cpu().numpy()
@@ -64,7 +71,7 @@ def main():
     """Show-case baseline."""
     # achieves ~23% MRR / ~17% H@1 / ~35% H@10 in around ~1min total train+eval time on cpu
     dataset = get_dataset(dataset="fb15k237")
-    model = PseudoTypeBaseline(triples_factory=dataset.training)
+    model = PseudoTypeBaseline(triples_factory=dataset.training, normalize=True)
     evaluator = RankBasedEvaluator()
     result = evaluate(
         model=model,
