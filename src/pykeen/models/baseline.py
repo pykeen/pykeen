@@ -1,14 +1,21 @@
 """Non-parametric baselines."""
-import pprint
 from abc import ABC
+from typing import cast
 
+import click
+import docdata
 import numpy
+import pandas as pd
 import scipy.sparse
 import torch
+from more_click import verbose_option
 from sklearn.preprocessing import normalize as sklearn_normalize
+from tabulate import tabulate
+from tqdm import tqdm
 
-from pykeen.datasets import get_dataset
-from pykeen.evaluation import RankBasedEvaluator, evaluate
+from pykeen.constants import PYKEEN_EXPERIMENTS
+from pykeen.datasets import Dataset, dataset_resolver
+from pykeen.evaluation import RankBasedEvaluator, RankBasedMetricResults, evaluate
 from pykeen.models import Model
 from pykeen.triples import CoreTriplesFactory
 
@@ -101,22 +108,50 @@ class EntityCoOccurrenceBaseline(EvaluationOnlyModel):
         return torch.from_numpy(self.head_per_tail[t].todense())
 
 
+BENCHMARK_PATH = PYKEEN_EXPERIMENTS.joinpath('baseline_benchmark.tsv')
+
+
+@click.command()
+@verbose_option
 def main():
     """Show-case baseline."""
-    # achieves ~23% MRR / ~17% H@1 / ~35% H@10 in around ~1min total train+eval time on cpu
-    dataset = get_dataset(dataset="fb15k237")
-    model = PseudoTypeBaseline(triples_factory=dataset.training, normalize=True)
+    it = sorted(dataset_resolver, key=lambda c: docdata.get_docdata(c)['statistics']['triples'])
+    # it = it[:3]
+    it = tqdm(it, desc='Baseline')
+    records = {}
+    for dataset_cls in it:
+        it.set_postfix({'dataset': dataset_cls.__name__})
+        dataset = dataset_cls()
+        result = _showcase(dataset)
+        records[dataset_cls.__name__] = _get_record(result)
+    df = pd.DataFrame.from_dict(records, orient='index')
+    df.to_csv(BENCHMARK_PATH, sep='\t', index=False)
+    print(tabulate(df.round(3), headers=['Dataset', *df.columns]))
+
+
+def _showcase(dataset: Dataset, normalize: bool = True) -> RankBasedMetricResults:
+    model = PseudoTypeBaseline(triples_factory=dataset.training, normalize=normalize)
     evaluator = RankBasedEvaluator()
-    result = evaluate(
+    return cast(RankBasedMetricResults, evaluate(
         model=model,
         mapped_triples=dataset.testing.mapped_triples,
         evaluators=evaluator,
         additional_filter_triples=[
             dataset.training.mapped_triples,
             dataset.validation.mapped_triples,
-        ]
-    )
-    pprint.pprint(result.to_dict())
+        ],
+        use_tqdm=False,
+    ))
+
+
+def _get_record(m: RankBasedMetricResults) -> dict[str, float]:
+    return {
+        'mrr': m.get_metric('mrr'),
+        'hits@1': m.get_metric('hits@1'),
+        'hits@10': m.get_metric('hits@10'),
+        'aamr': m.get_metric('aamr'),
+        'aamri': m.get_metric('aamri'),
+    }
 
 
 if __name__ == '__main__':
