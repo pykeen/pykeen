@@ -13,6 +13,7 @@ from more_click import verbose_option
 from sklearn.preprocessing import normalize as sklearn_normalize
 from tabulate import tabulate
 from tqdm import tqdm
+from tqdm.contrib.logging import logging_redirect_tqdm
 
 from pykeen.constants import PYKEEN_EXPERIMENTS
 from pykeen.datasets import Dataset, dataset_resolver
@@ -73,7 +74,7 @@ class PseudoTypeBaseline(EvaluationOnlyModel):
         triples_factory: CoreTriplesFactory,
         normalize: bool = False,
     ):
-        super().__init__(triples_factory=triples_factory)
+        super().__init__(triples_factory=triples_factory, random_seed=0, preferred_device='cpu')
         self.head_per_relation = _get_csr_matrix(triples_factory=triples_factory, col_index=0)
         self.tail_per_relation = _get_csr_matrix(triples_factory=triples_factory, col_index=2)
         self.normalize = normalize
@@ -95,7 +96,7 @@ class EntityCoOccurrenceBaseline(EvaluationOnlyModel):
         triples_factory: CoreTriplesFactory,
         normalize: bool = False,
     ):
-        super().__init__(triples_factory=triples_factory)
+        super().__init__(triples_factory=triples_factory, random_seed=0, preferred_device='cpu')
         self.head_per_tail = _get_csr_matrix(triples_factory=triples_factory, row_index=2, col_index=0)
         self.tail_per_head = _get_csr_matrix(triples_factory=triples_factory, row_index=0, col_index=2)
         self.normalize = normalize
@@ -110,55 +111,58 @@ class EntityCoOccurrenceBaseline(EvaluationOnlyModel):
 
 
 BENCHMARK_PATH = PYKEEN_EXPERIMENTS.joinpath('baseline_benchmark.tsv')
+METRICS = ['mrr', 'hits@1', 'hits@10', 'aamr', 'aamri']
 
 
 @click.command()
 @verbose_option
 def main():
     """Show-case baseline."""
-    # datasets = sorted(dataset_resolver, key=Dataset._sort_key) # when it's all done
-    # datasets = datasets[:3]  # for testing
-    datasets = [dataset_resolver.lookup('fb15k237')]
+    with logging_redirect_tqdm():
+        _main()
+
+
+def _main():
+    datasets = sorted(dataset_resolver, key=Dataset._sort_key)
+    # Remove the following line when ready to run for all datasets
+    # datasets = datasets[:3]
+    datasets = datasets[:datasets.index(dataset_resolver.lookup('fb15k237'))]
     models = [
         PseudoTypeBaseline,
         EntityCoOccurrenceBaseline,
     ]
 
-    records = {}
+    records = []
     it = tqdm(itt.product(datasets, models), desc='Baseline', total=len(datasets) * len(models))
     for dataset_cls, model_cls in it:
         it.set_postfix({'dataset': dataset_cls.__name__, 'model': model_cls.__name__})
         dataset = dataset_cls()
         model = model_cls(triples_factory=dataset.training, normalize=True)
-        result = _evaluate_baseline(dataset, model)
-        records[dataset_cls.__name__, model_cls.__name__] = _get_record(result)
-    df = pd.DataFrame.from_dict(records, orient='index').reset_index()
+        result = _evaluate_baseline(dataset, model, batch_size=256)
+        records.append((
+            dataset_cls.__name__,
+            model_cls.__name__,
+            *(result.get_metric(metric) for metric in METRICS),
+        ))
+    columns = ['dataset', 'model', *METRICS]
+    df = pd.DataFrame(records, columns=columns)
     df.to_csv(BENCHMARK_PATH, sep='\t', index=False)
-    print(tabulate(df.round(3), headers=['Index', *df.columns]))
+    print(tabulate(df.round(3).values, headers=columns, tablefmt='github'))
 
 
-def _evaluate_baseline(dataset: Dataset, model: Model) -> RankBasedMetricResults:
+def _evaluate_baseline(dataset: Dataset, model: Model, batch_size=None) -> RankBasedMetricResults:
     evaluator = RankBasedEvaluator()
     return cast(RankBasedMetricResults, evaluate(
         model=model,
         mapped_triples=dataset.testing.mapped_triples,
         evaluators=evaluator,
+        batch_size=batch_size,
         additional_filter_triples=[
             dataset.training.mapped_triples,
             dataset.validation.mapped_triples,
         ],
         use_tqdm=100_000 < dataset.training.num_triples,  # only use for big datasets
     ))
-
-
-def _get_record(m: RankBasedMetricResults) -> dict[str, float]:
-    return {
-        'mrr': m.get_metric('mrr'),
-        'hits@1': m.get_metric('hits@1'),
-        'hits@10': m.get_metric('hits@10'),
-        'aamr': m.get_metric('aamr'),
-        'aamri': m.get_metric('aamri'),
-    }
 
 
 if __name__ == '__main__':
