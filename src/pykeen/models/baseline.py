@@ -1,6 +1,7 @@
 """Non-parametric baselines."""
 
 import itertools as itt
+import time
 from abc import ABC
 from typing import Optional, cast
 
@@ -168,7 +169,7 @@ class SoftInverseTripleBaseline(EvaluationOnlyModel):
                 numpy.ones(shape=(triples_factory.num_triples,), dtype=numpy.float32),
                 (mapped_triples[:, 1], mapped_triples[:, 2])
             ),
-            shape = (triples_factory.num_relations, triples_factory.num_entities),
+            shape=(triples_factory.num_relations, triples_factory.num_entities),
         ).tocsr()
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:
@@ -187,13 +188,14 @@ METRICS = ['mrr', 'hits@1', 'hits@10', 'aamr', 'aamri']
 
 @click.command()
 @verbose_option
-def main():
+@click.option('--batch-size', default=1024, show_default=True)
+def main(batch_size: int):
     """Show-case baseline."""
     with logging_redirect_tqdm():
-        _main()
+        _main(batch_size=batch_size)
 
 
-def _main():
+def _main(batch_size: int, normalize: bool = True):
     datasets = sorted(dataset_resolver, key=Dataset._sort_key)
     # Remove the following line when ready to run for all datasets
     # datasets = datasets[:3]
@@ -207,16 +209,26 @@ def _main():
     records = []
     it = tqdm(itt.product(datasets, models_kwargs), desc='Baseline', total=len(datasets) * len(models_kwargs))
     for dataset_cls, (model_cls, kwargs) in it:
-        it.set_postfix({'dataset': dataset_cls.__name__, 'model': model_cls.__name__})
+        model_name = model_cls.__name__[:-len('Baseline')]
+        it.set_postfix({'dataset': dataset_cls.__name__, 'model': model_name})
         dataset = dataset_cls()
         model = model_cls(triples_factory=dataset.training, **kwargs)
-        result = _evaluate_baseline(dataset, model, batch_size=256)
+
+        start_time = time.time()
+        result = _evaluate_baseline(dataset, model, batch_size=batch_size)
+        elapsed_seconds = time.time() - start_time
+
         records.append((
             dataset_cls.__name__,
-            model_cls.__name__,
+            dataset.training.num_entities,
+            dataset.training.num_relations,
+            dataset.training.num_triples,
+            model_name,
+            elapsed_seconds,
             *(result.get_metric(metric) for metric in METRICS),
         ))
-    columns = ['dataset', 'model', *METRICS]
+
+    columns = ['dataset', '|E|', '|R|', 'triples', 'model', 'time', *METRICS]
     df = pd.DataFrame(records, columns=columns)
     df.to_csv(BENCHMARK_PATH, sep='\t', index=False)
     print(tabulate(df.round(3).values, headers=columns, tablefmt='github'))
