@@ -160,13 +160,15 @@ class SoftInverseTripleBaseline(EvaluationOnlyModel):
             (
                 numpy.ones(shape=(triples_factory.num_triples,), dtype=numpy.float32),
                 (mapped_triples[:, 1], mapped_triples[:, 0])
-            )
+            ),
+            shape=(triples_factory.num_relations, triples_factory.num_entities),
         ).tocsr()
         self.rel_to_tail = scipy.sparse.coo_matrix(
             (
                 numpy.ones(shape=(triples_factory.num_triples,), dtype=numpy.float32),
                 (mapped_triples[:, 1], mapped_triples[:, 2])
-            )
+            ),
+            shape = (triples_factory.num_relations, triples_factory.num_entities),
         ).tocsr()
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:
