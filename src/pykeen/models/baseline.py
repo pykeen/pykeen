@@ -116,8 +116,9 @@ BENCHMARK_PATH = PYKEEN_EXPERIMENTS.joinpath('baseline_benchmark.tsv')
 @verbose_option
 def main():
     """Show-case baseline."""
-    datasets = sorted(dataset_resolver, key=Dataset._sort_key)
-    datasets = datasets[:3]
+    # datasets = sorted(dataset_resolver, key=Dataset._sort_key) # when it's all done
+    # datasets = datasets[:3]  # for testing
+    datasets = [dataset_resolver.lookup('fb15k237')]
     models = [
         PseudoTypeBaseline,
         EntityCoOccurrenceBaseline,
@@ -146,7 +147,7 @@ def _evaluate_baseline(dataset: Dataset, model: Model) -> RankBasedMetricResults
             dataset.training.mapped_triples,
             dataset.validation.mapped_triples,
         ],
-        use_tqdm=False,
+        use_tqdm=100_000 < dataset.training.num_triples,  # only use for big datasets
     ))
 
 
