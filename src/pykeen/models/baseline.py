@@ -33,10 +33,11 @@ def _get_max_id(triples_factory: CoreTriplesFactory, index: int) -> int:
 def _get_csr_matrix(
     triples_factory: CoreTriplesFactory,
     col_index: int,
-    row_index: int = 1,
+    row_index: int,
     normalize: bool = False,
 ) -> scipy.sparse.csr_matrix:
     """Create a co-occurrence matrix from triples."""
+    assert row_index != col_index
     row, col = triples_factory.mapped_triples.T[[row_index, col_index]]
     num_rows = _get_max_id(triples_factory=triples_factory, index=row_index)
     num_columns = _get_max_id(triples_factory=triples_factory, index=col_index)
@@ -78,8 +79,12 @@ class PseudoTypeBaseline(EvaluationOnlyModel):
         normalize: bool = False,
     ):
         super().__init__(triples_factory=triples_factory, random_seed=0, preferred_device='cpu')
-        self.head_per_relation = _get_csr_matrix(triples_factory=triples_factory, col_index=0, normalize=normalize)
-        self.tail_per_relation = _get_csr_matrix(triples_factory=triples_factory, col_index=2, normalize=normalize)
+        self.head_per_relation = _get_csr_matrix(
+            triples_factory=triples_factory, row_index=1, col_index=0, normalize=normalize,
+        )
+        self.tail_per_relation = _get_csr_matrix(
+            triples_factory=triples_factory, row_index=1, col_index=2, normalize=normalize,
+        )
         self.normalize = normalize
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa:D102
