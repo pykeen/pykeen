@@ -198,18 +198,18 @@ def _main():
     # Remove the following line when ready to run for all datasets
     # datasets = datasets[:3]
     datasets = datasets[:datasets.index(dataset_resolver.lookup('fb15k237'))]
-    models = [
-        PseudoTypeBaseline,
-        EntityCoOccurrenceBaseline,
-        SoftInverseTripleBaseline,
+    models_kwargs = [
+        (PseudoTypeBaseline, dict(normalize=True)),
+        (EntityCoOccurrenceBaseline, dict(normalize=True)),
+        (SoftInverseTripleBaseline, dict()),
     ]
 
     records = []
-    it = tqdm(itt.product(datasets, models), desc='Baseline', total=len(datasets) * len(models))
-    for dataset_cls, model_cls in it:
+    it = tqdm(itt.product(datasets, models_kwargs), desc='Baseline', total=len(datasets) * len(models_kwargs))
+    for dataset_cls, (model_cls, kwargs) in it:
         it.set_postfix({'dataset': dataset_cls.__name__, 'model': model_cls.__name__})
         dataset = dataset_cls()
-        model = model_cls(triples_factory=dataset.training, normalize=True)
+        model = model_cls(triples_factory=dataset.training, **kwargs)
         result = _evaluate_baseline(dataset, model, batch_size=256)
         records.append((
             dataset_cls.__name__,
