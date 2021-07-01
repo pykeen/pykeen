@@ -132,6 +132,13 @@ class MarginalDistributionBaseline(EvaluationOnlyModel):
 
     .. note ::
         This model cannot make use of GPU acceleration, since internally it uses scipy's sparse matrices.
+
+    ---
+    citation:
+        author: Berrendorf
+        year: 2021
+        link: https://github.com/pykeen/pykeen/pull/514
+        github: pykeen/pykeen
     """
 
     def __init__(
@@ -232,7 +239,15 @@ def _get_relation_similarity(
 
 
 class SoftInverseTripleBaseline(EvaluationOnlyModel):
-    """Score based on relation similarity."""
+    """Score based on relation similarity.
+
+    ---
+    citation:
+        author: Berrendorf
+        year: 2021
+        link: https://github.com/pykeen/pykeen/pull/514
+        github: pykeen/pykeen
+    """
 
     def __init__(
         self,
