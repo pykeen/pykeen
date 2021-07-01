@@ -64,7 +64,7 @@ class EvaluationOnlyModel(Model, ABC):
         """
         super().__init__(
             triples_factory=triples_factory,
-            # These operations are deterministic and a random feed can be fixed
+            # These operations are deterministic and a random seed can be fixed
             # just to avoid warnings
             random_seed=0,
             # These operations do not need to be performed on a GPU
