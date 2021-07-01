@@ -67,13 +67,13 @@ def get_csr_matrix(
 ) -> scipy.sparse.csr_matrix:
     # create sparse matrix
     matrix = scipy.sparse.coo_matrix(
-        (numpy.ones(row_indices.shape), (row_indices, col_indices)),
+        (numpy.ones(row_indices.shape, dtype=numpy.float32), (row_indices, col_indices)),
         shape=shape,
     ).tocsr()
     # remove duplicates (in-place)
     matrix.sum_duplicates()
     # store logits for sparse multiplication by sparse addition
-    matrix.data = matrix.data.log()
+    matrix.data = numpy.log(matrix.data)
     return matrix
 
 
@@ -162,7 +162,7 @@ class MarginalDistributionBaseline(EvaluationOnlyModel):
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa:D102
         h, r = hr_batch.cpu().numpy().T
         # create empty sparse matrix (i.e., filled by zeros) representation logits
-        scores = scipy.sparse.csr_matrix(hr_batch.shape[0], self.num_entities)
+        scores = scipy.sparse.csr_matrix((hr_batch.shape[0], self.num_entities), dtype=numpy.float32)
         # use tail-per-head marginal distribution
         if self.tail_per_head is not None:
             scores += self.tail_per_head[h]
@@ -179,7 +179,7 @@ class MarginalDistributionBaseline(EvaluationOnlyModel):
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa:D102
         r, t = rt_batch.cpu().numpy().T
         # create empty sparse matrix (i.e., filled by zeros) representation logits
-        scores = scipy.sparse.csr_matrix(rt_batch.shape[0], self.num_entities)
+        scores = scipy.sparse.csr_matrix((rt_batch.shape[0], self.num_entities), dtype=numpy.float32)
         # use head-per-relation marginal distribution
         if self.head_per_relation is not None:
             scores += self.head_per_relation[r]
