@@ -137,6 +137,7 @@ from typing import Any, ClassVar, Mapping, Optional, Set
 
 import torch
 from class_resolver import Hint, Resolver
+from docdata import parse_docdata
 from torch import nn
 from torch.nn import functional
 from torch.nn.modules.loss import _Loss
@@ -315,6 +316,7 @@ class SetwiseLoss(Loss):
     """Setwise loss functions compare the scores of several triples."""
 
 
+@parse_docdata
 class BCEWithLogitsLoss(PointwiseLoss):
     r"""A module for the binary cross entropy loss.
 
@@ -341,6 +343,8 @@ class BCEWithLogitsLoss(PointwiseLoss):
         a negative distance as score and cannot produce positive model outputs.
 
     .. seealso:: :class:`torch.nn.BCEWithLogitsLoss`
+    ---
+    name: Binary cross entropy (with logits)
     """
 
     synonyms = {'Negative Log Likelihood Loss'}
@@ -353,10 +357,13 @@ class BCEWithLogitsLoss(PointwiseLoss):
         return functional.binary_cross_entropy_with_logits(scores, labels, reduction=self.reduction)
 
 
+@parse_docdata
 class MSELoss(PointwiseLoss):
     """A module for the mean square error loss.
 
     .. seealso:: :class:`torch.nn.MSELoss`
+    ---
+    name: Mean square error
     """
 
     synonyms = {'Mean Square Error Loss', 'Mean Squared Error Loss'}
@@ -383,6 +390,7 @@ margin_activation_resolver = Resolver(
 )
 
 
+@parse_docdata
 class MarginRankingLoss(PairwiseLoss):
     r"""A module for the margin ranking loss.
 
@@ -390,6 +398,8 @@ class MarginRankingLoss(PairwiseLoss):
         L(score^+, score^-) = activation(score^- - score^+ + margin)
 
     .. seealso:: :class:`torch.nn.MarginRankingLoss`
+    ---
+    name: Margin ranking
     """
 
     synonyms = {"Pairwise Hinge Loss"}
@@ -500,6 +510,7 @@ class MarginRankingLoss(PairwiseLoss):
         ))
 
 
+@parse_docdata
 class SoftplusLoss(PointwiseLoss):
     r"""
     A module for the softplus loss.
@@ -508,6 +519,8 @@ class SoftplusLoss(PointwiseLoss):
         L(score, label) = softplus(- label \cdot score)
 
     with $label \in \{-1, 1\}$.
+    ---
+    name: Softplus
     """
 
     def __init__(self, reduction: str = 'mean') -> None:
@@ -528,10 +541,13 @@ class SoftplusLoss(PointwiseLoss):
         return loss
 
 
+@parse_docdata
 class BCEAfterSigmoidLoss(PointwiseLoss):
     """A module for the numerically unstable version of explicit Sigmoid + BCE loss.
 
     .. seealso:: :class:`torch.nn.BCELoss`
+    ---
+    name: Binary cross entropy (after sigmoid)
     """
 
     def forward(
@@ -543,10 +559,13 @@ class BCEAfterSigmoidLoss(PointwiseLoss):
         return functional.binary_cross_entropy(logits.sigmoid(), labels, **kwargs)
 
 
+@parse_docdata
 class CrossEntropyLoss(SetwiseLoss):
     """A module for the cross entropy loss that evaluates the cross entropy after softmax output.
 
     .. seealso:: :class:`torch.nn.CrossEntropyLoss`
+    ---
+    name: Cross entropy
     """
 
     def forward(
@@ -563,8 +582,13 @@ class CrossEntropyLoss(SetwiseLoss):
         return self._reduction_method(sample_wise_cross_entropy)
 
 
+@parse_docdata
 class NSSALoss(SetwiseLoss):
-    """An implementation of the self-adversarial negative sampling loss function proposed by [sun2019]_."""
+    """An implementation of the self-adversarial negative sampling loss function proposed by [sun2019]_.
+
+    ---
+    name: Self-adversarial negative sampling
+    """
 
     synonyms = {'Self-Adversarial Negative Sampling Loss', 'Negative Sampling Self-Adversarial Loss'}
 
