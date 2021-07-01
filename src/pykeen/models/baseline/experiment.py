@@ -92,8 +92,8 @@ def _plot(df: pd.DataFrame, skip_small: bool = True, test: bool = False) -> None
         kind='violin',
         aspect=1.5,
     ).set(xlabel='Adjusted Mean Rank Index', ylabel='')
-    g.fig.savefig(PYKEEN_EXPERIMENTS.joinpath('baseline_benchmark_aamri.svg'))
-    g.fig.savefig(PYKEEN_EXPERIMENTS.joinpath('baseline_benchmark_aamri.png'), dpi=300)
+    g.fig.savefig(BENCHMARK_DIRECTORY.joinpath('aamri.svg'))
+    g.fig.savefig(BENCHMARK_DIRECTORY.joinpath('aamri.png'), dpi=300)
     plt.close(g.fig)
 
     # Make a violinplot grid showing relation between # triples and result, stratified by model and metric.
