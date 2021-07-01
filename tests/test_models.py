@@ -44,6 +44,7 @@ SKIP_MODULES = {
     EvaluationOnlyModel,
 }
 SKIP_MODULES.update(LiteralModel.__subclasses__())
+SKIP_MODULES.update(EvaluationOnlyModel.__subclasses__())
 
 
 class TestCompGCN(cases.ModelTestCase):
