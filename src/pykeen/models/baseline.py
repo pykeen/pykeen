@@ -33,11 +33,6 @@ KS = (1, 5, 10, 50, 100)
 METRICS = ['mrr', 'iamr', 'igmr', *(f'hits@{k}' for k in KS), 'aamr', 'aamri']
 
 
-def _get_max_id(triples_factory: CoreTriplesFactory, index: int) -> int:
-    """Get the number of entities or relations, depending on the selected column index."""
-    return triples_factory.num_relations if index == 1 else triples_factory.num_entities
-
-
 def get_csr_matrix(
     row_indices: numpy.ndarray,
     col_indices: numpy.ndarray,
@@ -185,6 +180,7 @@ class MarginalDistributionBaseline(EvaluationOnlyModel):
         )
 
 
+# TODO: Remove this model from this PR?
 def _get_relation_similarity(
     triples_factory: CoreTriplesFactory,
     to_inverse: bool = False,
