@@ -1,9 +1,12 @@
+# -*- coding: utf-8 -*-
+
 """Non-parametric baselines."""
 
 import itertools as itt
 import time
 from abc import ABC
 from functools import partial
+from pathlib import Path
 from typing import Any, List, Mapping, Optional, Sequence, Tuple, Type, cast
 
 import click
@@ -25,6 +28,11 @@ from pykeen.datasets import Dataset, dataset_resolver
 from pykeen.evaluation import RankBasedEvaluator, RankBasedMetricResults, evaluate
 from pykeen.models import Model
 from pykeen.triples import CoreTriplesFactory
+
+BENCHMARK_PATH = PYKEEN_EXPERIMENTS.joinpath('baseline_benchmark.tsv')
+TEST_BENCHMARK_PATH = PYKEEN_EXPERIMENTS.joinpath('baseline_benchmark_test.tsv')
+KS = (1, 5, 10, 50, 100)
+METRICS = ['mrr', 'iamr', 'igmr', *(f'hits@{k}' for k in KS), 'aamr', 'aamri']
 
 
 def _get_max_id(triples_factory: CoreTriplesFactory, index: int) -> int:
@@ -208,28 +216,25 @@ class SoftInverseTripleBaseline(EvaluationOnlyModel):
         return torch.from_numpy(scores)
 
 
-BENCHMARK_PATH = PYKEEN_EXPERIMENTS.joinpath('baseline_benchmark.tsv')
-METRICS = ['mrr', 'hits@1', 'hits@3', 'hits@10', 'aamr', 'aamri']
-
-
 @click.command()
 @verbose_option
 @click.option('--batch-size', default=2048, show_default=True)
 @click.option('--trials', default=10, show_default=True)
 @click.option('--rebuild', is_flag=True)
-def main(batch_size: int, trials: int, rebuild: bool):
-    """Show-case baseline."""
-    if not BENCHMARK_PATH.is_file() or rebuild:
+@click.option('--test', is_flag=True)
+@click.option('--path')
+def main(batch_size: int, trials: int, rebuild: bool, test: bool, path):
+    """Run the baseline showcase."""
+    if path is None:
+        path = TEST_BENCHMARK_PATH if test else BENCHMARK_PATH
+    path = Path(path)
+    if not path.is_file() or rebuild or test:
         with logging_redirect_tqdm():
-            df = _build(batch_size=batch_size, trials=trials)
+            df = _build(batch_size=batch_size, trials=trials, path=path, test=test)
     else:
-        df = _read()
+        df = pd.read_csv(path, sep='\t')
 
-    _plot(df)
-
-
-def _read() -> pd.DataFrame:
-    return pd.read_csv(BENCHMARK_PATH, sep='\t')
+    _plot(df, test=test)
 
 
 def _melt(df: pd.DataFrame) -> pd.DataFrame:
@@ -242,8 +247,8 @@ def _melt(df: pd.DataFrame) -> pd.DataFrame:
     )
 
 
-def _plot(df: pd.DataFrame, skip_small: bool = True):
-    if skip_small:
+def _plot(df: pd.DataFrame, skip_small: bool = True, test: bool = False):
+    if skip_small and not test:
         df = df[~df.dataset.isin({'Nations', 'Countries', 'UMLS', 'Kinships'})]
     tsdf = _melt(df)
 
@@ -293,10 +298,13 @@ def _plot(df: pd.DataFrame, skip_small: bool = True):
     plt.close(g.fig)
 
 
-def _build(batch_size: int, trials: int) -> pd.DataFrame:
+def _build(batch_size: int, trials: int, path: Union[str, Path], test: bool = False) -> pd.DataFrame:
     datasets = sorted(dataset_resolver, key=Dataset.triples_sort_key)
-    # FB15K and CoDEx Large are the first datasets where this gets a bit out of hand
-    datasets = datasets[:1 + datasets.index(dataset_resolver.lookup('FB15k-237'))]
+    if test:
+        datasets = datasets[:4]
+    else:
+        # FB15K and CoDEx Large are the first datasets where this gets a bit out of hand
+        datasets = datasets[:1 + datasets.index(dataset_resolver.lookup('FB15k'))]
     models_kwargs: List[Tuple[Type[EvaluationOnlyModel], Mapping[str, Any]]] = [
         (PseudoTypeBaseline, dict(normalize=True)),
         (EntityCoOccurrenceBaseline, dict(normalize=True)),
@@ -318,7 +326,7 @@ def _build(batch_size: int, trials: int) -> pd.DataFrame:
     rows = list(itt.chain.from_iterable(it))
     columns = ['dataset', 'entities', 'relations', 'triples', 'trial', 'model', *kwargs_keys, 'time', *METRICS]
     df = pd.DataFrame(rows, columns=columns)
-    df.to_csv(BENCHMARK_PATH, sep='\t', index=False)
+    df.to_csv(path, sep='\t', index=False)
     print(tabulate(df.round(3).values, headers=columns, tablefmt='github'))
     return df
 
@@ -366,7 +374,7 @@ def _run_trials(
 
 def _evaluate_baseline(dataset: Dataset, model: Model, batch_size=None) -> RankBasedMetricResults:
     assert dataset.validation is not None
-    evaluator = RankBasedEvaluator()
+    evaluator = RankBasedEvaluator(ks=KS)
     return cast(RankBasedMetricResults, evaluate(
         model=model,
         mapped_triples=dataset.testing.mapped_triples,
