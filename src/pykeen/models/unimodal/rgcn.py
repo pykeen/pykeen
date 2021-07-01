@@ -35,6 +35,7 @@ class RGCN(
        - `DGL"s implementation of R-GCN
          <https://github.com/dmlc/dgl/tree/v0.4.0/examples/pytorch/rgcn>`_
     ---
+    name: R-GCN
     citation:
         author: Schlichtkrull
         year: 2018
