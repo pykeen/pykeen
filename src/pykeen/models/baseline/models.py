@@ -90,6 +90,13 @@ class MarginalDistributionBaseline(EvaluationOnlyModel):
 
         :param triples_factory:
             The triples factory containing the training triples.
+        :param entity_margin:
+            ...
+        :param relation_margin:
+            ...
+
+        If you set ``entity_margin=False`` and ``relation_margin=False``, it will
+        lead to a uniform distribution, i.e. equal scores for all entities.
         """
         super().__init__(triples_factory=triples_factory)
         h, r, t = numpy.asarray(triples_factory.mapped_triples).T

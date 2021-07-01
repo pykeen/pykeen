@@ -22,10 +22,12 @@ from tqdm.contrib.logging import logging_redirect_tqdm
 from pykeen.constants import PYKEEN_EXPERIMENTS
 from pykeen.datasets import Dataset, dataset_resolver
 from pykeen.models import Model
-from pykeen.models.baseline.models import EvaluationOnlyModel, MarginalDistributionBaseline
+from pykeen.models.baseline.models import EvaluationOnlyModel, MarginalDistributionBaseline, SoftInverseTripleBaseline
 
-BENCHMARK_PATH = PYKEEN_EXPERIMENTS.joinpath('baseline_benchmark.tsv')
-TEST_BENCHMARK_PATH = PYKEEN_EXPERIMENTS.joinpath('baseline_benchmark_test.tsv')
+BENCHMARK_DIRECTORY = PYKEEN_EXPERIMENTS.joinpath('nonparametric_baseline_benchmark')
+BENCHMARK_DIRECTORY.mkdir(exist_ok=True, parents=True)
+BENCHMARK_PATH = BENCHMARK_DIRECTORY.joinpath('results.tsv')
+TEST_BENCHMARK_PATH = BENCHMARK_DIRECTORY.joinpath('test_results.tsv')
 KS = (1, 5, 10, 50, 100)
 METRICS = ['mrr', 'iamr', 'igmr', *(f'hits@{k}' for k in KS), 'aamr', 'aamri']
 
@@ -77,8 +79,8 @@ def _plot(df: pd.DataFrame, skip_small: bool = True, test: bool = False) -> None
         kind='box',
         aspect=1.5,
     ).set(xscale='log', xlabel='Time (seconds)', ylabel='')
-    g.fig.savefig(PYKEEN_EXPERIMENTS.joinpath('baseline_benchmark_timeplot.svg'))
-    g.fig.savefig(PYKEEN_EXPERIMENTS.joinpath('baseline_benchmark_timeplot.png'), dpi=300)
+    g.fig.savefig(BENCHMARK_DIRECTORY.joinpath('times.svg'))
+    g.fig.savefig(BENCHMARK_DIRECTORY.joinpath('times.png'), dpi=300)
     plt.close(g.fig)
 
     # Show AMRI plots. Surprisingly, some performance is really good.
@@ -108,8 +110,8 @@ def _plot(df: pd.DataFrame, skip_small: bool = True, test: bool = False) -> None
         aspect=1.5,
     )
     g.set(ylabel='')
-    g.fig.savefig(PYKEEN_EXPERIMENTS.joinpath('baseline_benchmark_scatterplot.svg'))
-    g.fig.savefig(PYKEEN_EXPERIMENTS.joinpath('baseline_benchmark_scatterplot.png'), dpi=300)
+    g.fig.savefig(BENCHMARK_DIRECTORY.joinpath('summary.svg'))
+    g.fig.savefig(BENCHMARK_DIRECTORY.joinpath('summary.png'), dpi=300)
     plt.close(g.fig)
 
 
@@ -120,24 +122,25 @@ def _build(batch_size: int, trials: int, path: Union[str, Path], test: bool = Fa
     else:
         # FB15K and CoDEx Large are the first datasets where this gets a bit out of hand
         datasets = datasets[:1 + datasets.index(dataset_resolver.lookup('FB15k'))]
-    models_kwargs: List[Tuple[Type[EvaluationOnlyModel], Mapping[str, Any]]] = [
+    model_settings: List[Tuple[Type[EvaluationOnlyModel], Mapping[str, Any]]] = [
         (MarginalDistributionBaseline, dict(entity_margin=True, relation_margin=True)),
-        (MarginalDistributionBaseline, dict(entity_margin=True, relation_margin=False)),
+        # FIXME entity_margin=True, relation_margin=False throws an error
+        # (MarginalDistributionBaseline, dict(entity_margin=True, relation_margin=False)),
         (MarginalDistributionBaseline, dict(entity_margin=False, relation_margin=True)),
-        # (SoftInverseTripleBaseline, dict(threshold=0.97)),
+        (SoftInverseTripleBaseline, dict(threshold=0.97)),
     ]
-    kwargs_keys = sorted({k for _, d in models_kwargs for k in d})
-
+    kwargs_keys = sorted({key for _, kwargs in model_settings for key in kwargs})
+    func = partial(
+        _run_trials,
+        batch_size=batch_size,
+        kwargs_keys=kwargs_keys,
+        trials=trials,
+    )
     it = process_map(
-        partial(
-            _run_trials,
-            batch_size=batch_size,
-            kwargs_keys=kwargs_keys,
-            trials=trials,
-        ),
-        itt.product(datasets, models_kwargs),
+        func,
+        itt.product(datasets, model_settings),
         desc='Baseline',
-        total=len(datasets) * len(models_kwargs),
+        total=len(datasets) * len(model_settings),
     )
     rows = list(itt.chain.from_iterable(it))
     columns = ['dataset', 'entities', 'relations', 'triples', 'trial', 'model', *kwargs_keys, 'time', *METRICS]
@@ -181,11 +184,17 @@ def _run_trials(
             *base_record,
             trial,
             model_name,
-            *(model_kwargs.get(key) for key in kwargs_keys),
+            *(_clean(model_kwargs.get(key)) for key in kwargs_keys),
             elapsed_seconds,
             *(result.get_metric(metric) for metric in METRICS),
         ))
     return records
+
+
+def _clean(x):
+    if x is None or pd.isna(x):
+        return ''
+    return x
 
 
 def _evaluate_baseline(dataset: Dataset, model: Model, batch_size=None):
