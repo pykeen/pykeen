@@ -242,7 +242,9 @@ def _melt(df: pd.DataFrame) -> pd.DataFrame:
     )
 
 
-def _plot(df: pd.DataFrame):
+def _plot(df: pd.DataFrame, skip_small: bool = True):
+    if skip_small:
+        df = df[~df.dataset.isin({'Nations', 'Countries', 'UMLS', 'Kinships'})]
     tsdf = _melt(df)
 
     # Plot relation between dataset and time, stratified by model
@@ -252,7 +254,7 @@ def _plot(df: pd.DataFrame):
         y='dataset',
         x='time',
         hue='model',
-        kind='violin',
+        kind='box',
         aspect=1.5,
     ).set(xscale='log', xlabel='Time (seconds)', ylabel='')
     g.fig.savefig(PYKEEN_EXPERIMENTS.joinpath('baseline_benchmark_timeplot.svg'))
@@ -267,7 +269,7 @@ def _plot(df: pd.DataFrame):
         hue='model',
         kind='violin',
         aspect=1.5,
-    ).set(xlabel='Adjusted Mean Rank Index', xlim=[-1, 1], ylabel='')
+    ).set(xlabel='Adjusted Mean Rank Index', ylabel='')
     g.fig.savefig(PYKEEN_EXPERIMENTS.joinpath('baseline_benchmark_aamri.svg'))
     g.fig.savefig(PYKEEN_EXPERIMENTS.joinpath('baseline_benchmark_aamri.png'), dpi=300)
     plt.close(g.fig)
@@ -285,7 +287,7 @@ def _plot(df: pd.DataFrame):
         height=0.5 * tsdf['dataset'].nunique(),
         aspect=1.5,
     )
-    g.set(xlim=[0, 1], ylabel='')
+    g.set(ylabel='')
     g.fig.savefig(PYKEEN_EXPERIMENTS.joinpath('baseline_benchmark_scatterplot.svg'))
     g.fig.savefig(PYKEEN_EXPERIMENTS.joinpath('baseline_benchmark_scatterplot.png'), dpi=300)
     plt.close(g.fig)
