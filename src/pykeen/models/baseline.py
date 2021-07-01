@@ -38,26 +38,6 @@ def _get_max_id(triples_factory: CoreTriplesFactory, index: int) -> int:
     return triples_factory.num_relations if index == 1 else triples_factory.num_entities
 
 
-def _get_csr_matrix(
-    triples_factory: CoreTriplesFactory,
-    col_index: int,
-    row_index: int,
-    normalize: bool = False,
-) -> scipy.sparse.csr_matrix:
-    """Create a co-occurrence matrix from triples."""
-    assert row_index != col_index
-    row, col = triples_factory.mapped_triples.T[[row_index, col_index]]
-    num_rows = _get_max_id(triples_factory=triples_factory, index=row_index)
-    num_columns = _get_max_id(triples_factory=triples_factory, index=col_index)
-    matrix = scipy.sparse.coo_matrix(
-        (numpy.ones(triples_factory.num_triples), (row, col)),
-        shape=(num_rows, num_columns),
-    ).tocsr()
-    if normalize:
-        matrix = sklearn_normalize(matrix, norm="l1", axis=1)
-    return matrix
-
-
 def get_csr_matrix(
     row_indices: numpy.ndarray,
     col_indices: numpy.ndarray,
