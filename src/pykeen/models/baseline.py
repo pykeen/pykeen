@@ -10,11 +10,9 @@ from pathlib import Path
 from typing import Any, List, Mapping, Optional, Sequence, Tuple, Type, Union, cast
 
 import click
-import matplotlib.pyplot as plt
 import numpy
 import pandas as pd
 import scipy.sparse
-import seaborn as sns
 import torch
 from more_click import verbose_option
 from sklearn.preprocessing import normalize as sklearn_normalize
@@ -295,13 +293,10 @@ class SoftInverseTripleBaseline(EvaluationOnlyModel):
 @click.option('--batch-size', default=2048, show_default=True)
 @click.option('--trials', default=10, show_default=True)
 @click.option('--rebuild', is_flag=True)
-@click.option('--test', is_flag=True)
-@click.option('--path')
-def main(batch_size: int, trials: int, rebuild: bool, test: bool, path):
+@click.option('--test', is_flag=True, help='Run on the 5 smallest datasets and output to different path')
+def main(batch_size: int, trials: int, rebuild: bool, test: bool):
     """Run the baseline showcase."""
-    if path is None:
-        path = TEST_BENCHMARK_PATH if test else BENCHMARK_PATH
-    path = Path(path)
+    path = TEST_BENCHMARK_PATH if test else BENCHMARK_PATH
     if not path.is_file() or rebuild or test:
         with logging_redirect_tqdm():
             df = _build(batch_size=batch_size, trials=trials, path=path, test=test)
@@ -321,9 +316,13 @@ def _melt(df: pd.DataFrame) -> pd.DataFrame:
     )
 
 
-def _plot(df: pd.DataFrame, skip_small: bool = True, test: bool = False):
+def _plot(df: pd.DataFrame, skip_small: bool = True, test: bool = False) -> None:
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+
     if skip_small and not test:
         df = df[~df.dataset.isin({'Nations', 'Countries', 'UMLS', 'Kinships'})]
+
     tsdf = _melt(df)
 
     # Plot relation between dataset and time, stratified by model
