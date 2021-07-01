@@ -7,7 +7,7 @@ import time
 from abc import ABC
 from functools import partial
 from pathlib import Path
-from typing import Any, List, Mapping, Optional, Sequence, Tuple, Type, cast
+from typing import Any, List, Mapping, Optional, Sequence, Tuple, Type, Union, cast
 
 import click
 import matplotlib.pyplot as plt
