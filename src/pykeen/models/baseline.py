@@ -43,6 +43,7 @@ def get_csr_matrix(
     col_indices: numpy.ndarray,
     shape: Tuple[int, int],
 ) -> scipy.sparse.csr_matrix:
+    """Create a sparse matrix, for the given non-zero locations."""
     # create sparse matrix
     matrix = scipy.sparse.coo_matrix(
         (numpy.ones(row_indices.shape, dtype=numpy.float32), (row_indices, col_indices)),
