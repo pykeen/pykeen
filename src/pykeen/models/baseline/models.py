@@ -64,8 +64,8 @@ class MarginalDistributionBaseline(EvaluationOnlyModel):
     .. math ::
         P(t | h, r) = P(t | h) * P(t | r)
 
-    Depending on the settings, we either set $P(t | *) = \frac{1}{n}$, or estimate them by counting occurrences in the
-    training triples.
+    Depending on the settings, we either set $P(t | *) = \frac{1}{n}$ where $n$ is the number of entities,
+    or estimate them by counting occurrences in the training triples.
 
     .. note ::
         This model cannot make use of GPU acceleration, since internally it uses scipy's sparse matrices.
