@@ -3,7 +3,8 @@
 import itertools as itt
 import time
 from abc import ABC
-from typing import Any, List, Mapping, Optional, Tuple, Type, cast
+from functools import partial
+from typing import Any, List, Mapping, Optional, Sequence, Tuple, Type, cast
 
 import click
 import matplotlib.pyplot as plt
@@ -15,7 +16,8 @@ import torch
 from more_click import verbose_option
 from sklearn.preprocessing import normalize as sklearn_normalize
 from tabulate import tabulate
-from tqdm import tqdm, trange
+from tqdm import trange
+from tqdm.contrib.concurrent import process_map
 from tqdm.contrib.logging import logging_redirect_tqdm
 
 from pykeen.constants import PYKEEN_EXPERIMENTS
@@ -212,8 +214,8 @@ METRICS = ['mrr', 'hits@1', 'hits@3', 'hits@10', 'aamr', 'aamri']
 
 @click.command()
 @verbose_option
-@click.option('--batch-size', default=1024, show_default=True)
-@click.option('--trials', default=30, show_default=True)
+@click.option('--batch-size', default=2048, show_default=True)
+@click.option('--trials', default=10, show_default=True)
 @click.option('--rebuild', is_flag=True)
 def main(batch_size: int, trials: int, rebuild: bool):
     """Show-case baseline."""
@@ -291,9 +293,8 @@ def _plot(df: pd.DataFrame):
 
 def _build(batch_size: int, trials: int) -> pd.DataFrame:
     datasets = sorted(dataset_resolver, key=Dataset.triples_sort_key)
-    # CoDEx Large is the first dataset where this gets a bit out of hand
-    # datasets = datasets[:datasets.index(dataset_resolver.lookup('CoDExLarge'))]
-    datasets = datasets[:8]
+    # FB15K and CoDEx Large are the first datasets where this gets a bit out of hand
+    datasets = datasets[:1 + datasets.index(dataset_resolver.lookup('FB15k-237'))]
     models_kwargs: List[Tuple[Type[EvaluationOnlyModel], Mapping[str, Any]]] = [
         (PseudoTypeBaseline, dict(normalize=True)),
         (EntityCoOccurrenceBaseline, dict(normalize=True)),
@@ -301,47 +302,64 @@ def _build(batch_size: int, trials: int) -> pd.DataFrame:
     ]
     kwargs_keys = sorted({k for _, d in models_kwargs for k in d})
 
-    records = []
-    it = tqdm(
+    it = process_map(
+        partial(
+            _run_trials,
+            batch_size=batch_size,
+            kwargs_keys=kwargs_keys,
+            trials=trials,
+        ),
         itt.product(datasets, models_kwargs),
         desc='Baseline',
         total=len(datasets) * len(models_kwargs),
     )
-    for dataset_cls, (model_cls, kwargs) in it:
-        model_name = model_cls.__name__[:-len('Baseline')]
-        it.set_postfix({'dataset': dataset_cls.__name__, 'model': model_name})
-        dataset = dataset_cls()
-        base_record = (
-            dataset_cls.__name__,
-            dataset.training.num_entities,
-            dataset.training.num_relations,
-            dataset.training.num_triples,
-        )
-        for trial in trange(trials, leave=False, desc='Trials'):
-            if trials != 0:
-                trial_dataset = dataset.remix(random_state=trial)
-            else:
-                trial_dataset = dataset
-            model = model_cls(triples_factory=trial_dataset.training, **kwargs)
-
-            start_time = time.time()
-            result = _evaluate_baseline(trial_dataset, model, batch_size=batch_size)
-            elapsed_seconds = time.time() - start_time
-
-            records.append((
-                *base_record,
-                trial,
-                model_name,
-                *(kwargs.get(key) for key in kwargs_keys),
-                elapsed_seconds,
-                *(result.get_metric(metric) for metric in METRICS),
-            ))
-
-    columns = ['dataset', 'E', 'R', 'triples', 'trial', 'model', *kwargs_keys, 'time', *METRICS]
-    df = pd.DataFrame(records, columns=columns)
+    rows = list(itt.chain.from_iterable(it))
+    columns = ['dataset', 'entities', 'relations', 'triples', 'trial', 'model', *kwargs_keys, 'time', *METRICS]
+    df = pd.DataFrame(rows, columns=columns)
     df.to_csv(BENCHMARK_PATH, sep='\t', index=False)
     print(tabulate(df.round(3).values, headers=columns, tablefmt='github'))
     return df
+
+
+def _run_trials(
+    t: Tuple[Type[Dataset], Tuple[Type[Model], Mapping[str, Any]]],
+    *,
+    trials: int,
+    batch_size: int,
+    kwargs_keys: Sequence[str],
+) -> List[Tuple[Any, ...]]:
+    dataset_cls, (model_cls, model_kwargs) = t
+
+    model_name = model_cls.__name__[:-len('Baseline')]
+    dataset_name = dataset_cls.__name__
+    dataset = dataset_cls()
+    base_record = (
+        dataset_name,
+        dataset.training.num_entities,
+        dataset.training.num_relations,
+        dataset.training.num_triples,
+    )
+    records = []
+    for trial in trange(trials, leave=False, desc=f'{dataset_name}/{model_name}'):
+        if trials != 0:
+            trial_dataset = dataset.remix(random_state=trial)
+        else:
+            trial_dataset = dataset
+        model = model_cls(triples_factory=trial_dataset.training, **model_kwargs)
+
+        start_time = time.time()
+        result = _evaluate_baseline(trial_dataset, model, batch_size=batch_size)
+        elapsed_seconds = time.time() - start_time
+
+        records.append((
+            *base_record,
+            trial,
+            model_name,
+            *(model_kwargs.get(key) for key in kwargs_keys),
+            elapsed_seconds,
+            *(result.get_metric(metric) for metric in METRICS),
+        ))
+    return records
 
 
 def _evaluate_baseline(dataset: Dataset, model: Model, batch_size=None) -> RankBasedMetricResults:
