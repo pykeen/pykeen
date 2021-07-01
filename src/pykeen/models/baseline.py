@@ -97,6 +97,41 @@ class EvaluationOnlyModel(Model, ABC):
         raise NotImplementedError
 
 
+def _score(
+    entity_relation_batch: torch.LongTensor,
+    per_entity: Optional[scipy.sparse.csr_matrix],
+    per_relation: Optional[scipy.sparse.csr_matrix],
+    num_entities: int,
+) -> torch.FloatTensor:
+    """Shared code for computing entity scores from marginals."""
+    batch_size = entity_relation_batch.shape[0]
+
+    # base case
+    if per_entity is None and per_relation is None:
+        return torch.full(size=(batch_size, num_entities), fill_value=1 / num_entities)
+
+    e, r = entity_relation_batch.cpu().numpy().T
+
+    # create empty sparse matrix (i.e., filled by zeros) representation logits
+    scores = scipy.sparse.csr_matrix((batch_size, num_entities), dtype=numpy.float32)
+
+    # use per-entity marginal distribution
+    if per_entity is not None:
+        scores += per_entity[e]
+
+    # use per-relation marginal distribution
+    if per_relation is not None:
+        scores += per_relation[r]
+
+    # convert to probabilities
+    scores.data = numpy.exp(scores.data)
+    scores = sklearn_normalize(scores, norm="l1")
+
+    # note: we need to work with dense arrays only to comply with returning torch tensors. Otherwise, we could
+    # stay sparse here, with a potential of a huge memory benefit on large datasets!
+    return torch.from_numpy(scores.todense())
+
+
 class MarginalDistributionBaseline(EvaluationOnlyModel):
     r"""
     Score based on marginal distributions.
@@ -160,44 +195,20 @@ class MarginalDistributionBaseline(EvaluationOnlyModel):
             self.head_per_tail = self.tail_per_head = None
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa:D102
-        if self.tail_per_head is None and self.tail_per_relation is None:
-            return torch.full(size=(hr_batch.shape[0], self.num_entities), fill_value=1 / self.num_entities)
-
-        h, r = hr_batch.cpu().numpy().T
-        # create empty sparse matrix (i.e., filled by zeros) representation logits
-        scores = scipy.sparse.csr_matrix((hr_batch.shape[0], self.num_entities), dtype=numpy.float32)
-        # use tail-per-head marginal distribution
-        if self.tail_per_head is not None:
-            scores += self.tail_per_head[h]
-        # use tail-per-relation marginal distribution
-        if self.tail_per_relation is not None:
-            scores += self.tail_per_relation[r]
-        # convert to probabilities
-        scores.data = numpy.exp(scores.data)
-        scores = sklearn_normalize(scores, norm="l1")
-        # note: we need to work with dense arrays only to comply with returning torch tensors. Otherwise, we could
-        # stay sparse here, with a potential of a huge memory benefit on large datasets!
-        return torch.from_numpy(scores.todense())
+        return _score(
+            entity_relation_batch=hr_batch,
+            per_entity=self.tail_per_head,
+            per_relation=self.tail_per_relation,
+            num_entities=self.num_entities,
+        )
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa:D102
-        if self.head_per_relation is None and self.head_per_tail is None:
-            return torch.full(size=(rt_batch.shape[0], self.num_entities), fill_value=1 / self.num_entities)
-
-        r, t = rt_batch.cpu().numpy().T
-        # create empty sparse matrix (i.e., filled by zeros) representation logits
-        scores = scipy.sparse.csr_matrix((rt_batch.shape[0], self.num_entities), dtype=numpy.float32)
-        # use head-per-relation marginal distribution
-        if self.head_per_relation is not None:
-            scores += self.head_per_relation[r]
-        # use head-per-tail marginal distribution
-        if self.head_per_tail is not None:
-            scores += self.head_per_tail[t]
-        # convert to probabilities
-        scores.data = numpy.exp(scores.data)
-        scores = sklearn_normalize(scores, norm="l1")
-        # note: we need to work with dense arrays only to comply with returning torch tensors. Otherwise, we could
-        # stay sparse here, with a potential of a huge memory benefit on large datasets!
-        return torch.from_numpy(scores.todense())
+        return _score(
+            entity_relation_batch=rt_batch.flip(1),
+            per_entity=self.head_per_tail,
+            per_relation=self.head_per_relation,
+            num_entities=self.num_entities,
+        )
 
 
 def _get_relation_similarity(
