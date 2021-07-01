@@ -27,6 +27,12 @@ from pykeen.evaluation import RankBasedEvaluator, RankBasedMetricResults, evalua
 from pykeen.models import Model
 from pykeen.triples import CoreTriplesFactory
 
+__all__ = [
+    'EvaluationOnlyModel',
+    'MarginalDistributionBaseline',
+    'SoftInverseTripleBaseline',
+]
+
 BENCHMARK_PATH = PYKEEN_EXPERIMENTS.joinpath('baseline_benchmark.tsv')
 TEST_BENCHMARK_PATH = PYKEEN_EXPERIMENTS.joinpath('baseline_benchmark_test.tsv')
 KS = (1, 5, 10, 50, 100)
@@ -51,21 +57,36 @@ def get_csr_matrix(
 class EvaluationOnlyModel(Model, ABC):
     """A model which only implements the methods used for evaluation."""
 
+    def __init__(self, triples_factory: CoreTriplesFactory):
+        """Non-parametric models take a minimal set of arguments.
+
+        :param triples_factory: The training triples factory is used to assign the number of entities, relations,
+            and inverse condition in the non-parametric model.
+        """
+        super().__init__(
+            triples_factory=triples_factory,
+            # These operations are deterministic and a random feed can be fixed
+            # just to avoid warnings
+            random_seed=0,
+            # These operations do not need to be performed on a GPU
+            preferred_device='cpu',
+        )
+
     def _reset_parameters_(self):
-        # TODO: this is not needed for non-parametric models!
-        raise NotImplementedError
+        """Non-parametric models do not implement :meth:`Model._reset_parameters_`."""
+        raise RuntimeError
 
-    def collect_regularization_term(self) -> torch.FloatTensor:  # noqa:D102
-        # TODO: this is not needed for non-parametric models!
-        raise NotImplementedError
+    def collect_regularization_term(self):  # noqa:D102
+        """Non-parametric models do not implement :meth:`Model.collect_regularization_term`."""
+        raise RuntimeError
 
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa:D102
-        # TODO: this is not needed for evaluation
-        raise NotImplementedError
+    def score_hrt(self, hrt_batch: torch.LongTensor):  # noqa:D102
+        """Non-parametric models do not implement :meth:`Model.score_hrt`."""
+        raise RuntimeError
 
-    def score_r(self, ht_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa:D102
-        # TODO: this is not needed for evaluation
-        raise NotImplementedError
+    def score_r(self, ht_batch: torch.LongTensor):  # noqa:D102
+        """Non-parametric models do not implement :meth:`Model.score_r`."""
+        raise RuntimeError
 
 
 def _score(
@@ -106,8 +127,8 @@ class MarginalDistributionBaseline(EvaluationOnlyModel):
     .. math ::
         P(t | h, r) = P(t | h) * P(t | r)
 
-    Depending on the settings, we either set P(t | *) = 1/n, or estimate them by counting occurrences in the training
-    triples.
+    Depending on the settings, we either set $P(t | *) = \frac{1}{n}$, or estimate them by counting occurrences in the
+    training triples.
 
     .. note ::
         This model cannot make use of GPU acceleration, since internally it uses scipy's sparse matrices.
@@ -125,11 +146,7 @@ class MarginalDistributionBaseline(EvaluationOnlyModel):
         :param triples_factory:
             The triples factory containing the training triples.
         """
-        super().__init__(
-            triples_factory=triples_factory,
-            random_seed=0,  # TODO: Why do we provide the random seed?
-            preferred_device='cpu',
-        )
+        super().__init__(triples_factory=triples_factory)
         h, r, t = numpy.asarray(triples_factory.mapped_triples).T
         if relation_margin:
             self.head_per_relation, self.tail_per_relation = [
@@ -222,7 +239,7 @@ class SoftInverseTripleBaseline(EvaluationOnlyModel):
         triples_factory: CoreTriplesFactory,
         threshold: Optional[float] = None,
     ):
-        super().__init__(triples_factory=triples_factory, random_seed=0, preferred_device='cpu')
+        super().__init__(triples_factory=triples_factory)
         # compute relation similarity matrix
         self.sim = _get_relation_similarity(triples_factory, to_inverse=False, threshold=threshold)
         self.sim_inv = _get_relation_similarity(triples_factory, to_inverse=True, threshold=threshold)

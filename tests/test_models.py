@@ -15,8 +15,8 @@ import pykeen.experiments
 import pykeen.models
 from pykeen.datasets import Nations
 from pykeen.models import (
-    ERModel, EntityEmbeddingModel, EntityRelationEmbeddingModel, Model,
-    _NewAbstractModel, _OldAbstractModel, model_resolver,
+    ERModel, EntityEmbeddingModel, EntityRelationEmbeddingModel, EvaluationOnlyModel, Model, _NewAbstractModel,
+    _OldAbstractModel, model_resolver,
 )
 from pykeen.models.baseline import MarginalDistributionBaseline
 from pykeen.models.multimodal.base import LiteralModel
@@ -41,6 +41,7 @@ SKIP_MODULES = {
     ERModel,
     MockModel,
     SimpleInteractionModel,
+    EvaluationOnlyModel,
 }
 SKIP_MODULES.update(LiteralModel.__subclasses__())
 
