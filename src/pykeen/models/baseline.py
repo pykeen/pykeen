@@ -121,8 +121,8 @@ class MarginalDistributionBaseline(EvaluationOnlyModel):
     def __init__(
         self,
         triples_factory: CoreTriplesFactory,
-        entity_margin: bool = False,
-        relation_margin: bool = False,
+        entity_margin: bool = True,
+        relation_margin: bool = True,
     ):
         """
         Initialize the model.
@@ -160,6 +160,9 @@ class MarginalDistributionBaseline(EvaluationOnlyModel):
             self.head_per_tail = self.tail_per_head = None
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa:D102
+        if self.tail_per_head is None and self.tail_per_relation is None:
+            return torch.full(size=(hr_batch.shape[0], self.num_entities), fill_value=1 / self.num_entities)
+
         h, r = hr_batch.cpu().numpy().T
         # create empty sparse matrix (i.e., filled by zeros) representation logits
         scores = scipy.sparse.csr_matrix((hr_batch.shape[0], self.num_entities), dtype=numpy.float32)
@@ -177,6 +180,9 @@ class MarginalDistributionBaseline(EvaluationOnlyModel):
         return torch.from_numpy(scores.todense())
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa:D102
+        if self.head_per_relation is None and self.head_per_tail is None:
+            return torch.full(size=(rt_batch.shape[0], self.num_entities), fill_value=1 / self.num_entities)
+
         r, t = rt_batch.cpu().numpy().T
         # create empty sparse matrix (i.e., filled by zeros) representation logits
         scores = scipy.sparse.csr_matrix((rt_batch.shape[0], self.num_entities), dtype=numpy.float32)
@@ -368,9 +374,9 @@ def _build(batch_size: int, trials: int, path: Union[str, Path], test: bool = Fa
         # FB15K and CoDEx Large are the first datasets where this gets a bit out of hand
         datasets = datasets[:1 + datasets.index(dataset_resolver.lookup('FB15k'))]
     models_kwargs: List[Tuple[Type[EvaluationOnlyModel], Mapping[str, Any]]] = [
-        (MarginalDistributionBaseline, dict(entity_margin=True)),
-        (MarginalDistributionBaseline, dict(relation_margin=True)),
         (MarginalDistributionBaseline, dict(entity_margin=True, relation_margin=True)),
+        (MarginalDistributionBaseline, dict(entity_margin=True, relation_margin=False)),
+        (MarginalDistributionBaseline, dict(entity_margin=False, relation_margin=True)),
         (SoftInverseTripleBaseline, dict(threshold=0.97)),
     ]
     kwargs_keys = sorted({k for _, d in models_kwargs for k in d})
