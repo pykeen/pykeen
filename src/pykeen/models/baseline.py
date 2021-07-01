@@ -135,6 +135,7 @@ class MarginalDistributionBaseline(EvaluationOnlyModel):
         This model cannot make use of GPU acceleration, since internally it uses scipy's sparse matrices.
 
     ---
+    name: Marginal Distribution Baseline
     citation:
         author: Berrendorf
         year: 2021
@@ -243,6 +244,7 @@ class SoftInverseTripleBaseline(EvaluationOnlyModel):
     """Score based on relation similarity.
 
     ---
+    name: Soft Inverse Triple Baseline
     citation:
         author: Berrendorf
         year: 2021
