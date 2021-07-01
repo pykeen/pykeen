@@ -141,13 +141,8 @@ class MarginalDistributionBaseline(EvaluationOnlyModel):
     .. math ::
         P(t | h, r) = P(t | h) * P(t | r)
 
-    Depending on the settings, we either
-    This baseline is a simplification of modelling the tail entity distribution for a given (head, relation) pair,
-    which only considers the relation, i.e.,
-
-
-
-    The probability distribution ``P(t | r)`` is obtained by counting the relative frequency.
+    Depending on the settings, we either set P(t | *) = 1/n, or estimate them by counting occurrences in the training
+    triples.
 
     .. note ::
         This model cannot make use of GPU acceleration, since internally it uses scipy's sparse matrices.
