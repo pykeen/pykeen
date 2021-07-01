@@ -22,6 +22,7 @@ class DistMultLiteral(LiteralModel):
     """An implementation of the LiteralE model with the DistMult interaction from [kristiadi2018]_.
 
     ---
+    name: DistMult Literal
     citation:
         author: Kristiadi
         year: 2018
