@@ -81,24 +81,50 @@ class EvaluationOnlyModel(Model, ABC):
 
 
 class PseudoTypeBaseline(EvaluationOnlyModel):
-    """Score based on entity-relation co-occurrence."""
+    r"""
+    Score based on entity-relation co-occurrence.
+
+    This baseline is a simplification of modelling the tail entity distribution for a given (head, relation) pair,
+    which only considers the relation, i.e.,
+
+    .. math ::
+        P(t | h, r) = P(t | r)
+
+    The probability distribution ``P(t | r)`` is obtained by counting the relative frequency.
+
+    .. note ::
+        This model cannot make use of GPU acceleration, since internally it uses scipy's sparse matrices.
+    """
 
     def __init__(
         self,
         triples_factory: CoreTriplesFactory,
-        normalize: bool = False,
+        normalize: bool = True,
     ):
-        super().__init__(triples_factory=triples_factory, random_seed=0, preferred_device='cpu')
+        """
+        Initialize the model.
+
+        :param triples_factory:
+            The triples factory containing the training triples.
+        :param normalize:
+            Whether to normalize the entity frequencies. If True, the predictions are proper probability distributions.
+        """
+        super().__init__(
+            triples_factory=triples_factory,
+            random_seed=0,  # TODO: Why do we provide the random seed?
+            preferred_device='cpu',
+        )
         self.head_per_relation = _get_csr_matrix(
             triples_factory=triples_factory, row_index=1, col_index=0, normalize=normalize,
         )
         self.tail_per_relation = _get_csr_matrix(
             triples_factory=triples_factory, row_index=1, col_index=2, normalize=normalize,
         )
-        self.normalize = normalize
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa:D102
         r = hr_batch[:, 1].cpu().numpy()
+        # note: we need to make this a dense array only to comply with returning torch tensors. Otherwise, we could
+        # stay sparse here, with a potential of a huge memory benefit on large datasets!
         return torch.from_numpy(self.tail_per_relation[r].todense())
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa:D102
