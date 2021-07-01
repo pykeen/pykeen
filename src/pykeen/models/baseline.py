@@ -39,16 +39,13 @@ def get_csr_matrix(
     shape: Tuple[int, int],
 ) -> scipy.sparse.csr_matrix:
     """Create a sparse matrix, for the given non-zero locations."""
-    # create sparse matrix
+    # create sparse matrix of absolute counts
     matrix = scipy.sparse.coo_matrix(
         (numpy.ones(row_indices.shape, dtype=numpy.float32), (row_indices, col_indices)),
         shape=shape,
     ).tocsr()
-    # remove duplicates (in-place)
-    matrix.sum_duplicates()
-    # store logits for sparse multiplication by sparse addition
-    matrix.data = numpy.log(matrix.data)
-    return matrix
+    # normalize to relative counts
+    return sklearn_normalize(matrix, norm="l1")
 
 
 class EvaluationOnlyModel(Model, ABC):
@@ -86,20 +83,14 @@ def _score(
 
     e, r = entity_relation_batch.cpu().numpy().T
 
-    # create empty sparse matrix (i.e., filled by zeros) representation logits
-    scores = scipy.sparse.csr_matrix((batch_size, num_entities), dtype=numpy.float32)
-
-    # use per-entity marginal distribution
-    if per_entity is not None:
-        scores += per_entity[e]
-
-    # use per-relation marginal distribution
-    if per_relation is not None:
-        scores += per_relation[r]
-
-    # convert to probabilities
-    scores.data = numpy.exp(scores.data)
-    scores = sklearn_normalize(scores, norm="l1")
+    if per_entity is None:  # and per_relation is not None
+        scores = per_relation[r]
+    elif per_relation is None:  # and per_entity is not None
+        scores = per_entity[r]
+    else:  # per_relation is not None and per_entity is not None
+        e_score = per_entity[e]
+        r_score = per_relation[r]
+        scores = e_score.multiply(r_score)
 
     # note: we need to work with dense arrays only to comply with returning torch tensors. Otherwise, we could
     # stay sparse here, with a potential of a huge memory benefit on large datasets!
@@ -359,7 +350,7 @@ def _build(batch_size: int, trials: int, path: Union[str, Path], test: bool = Fa
         (MarginalDistributionBaseline, dict(entity_margin=True, relation_margin=True)),
         (MarginalDistributionBaseline, dict(entity_margin=True, relation_margin=False)),
         (MarginalDistributionBaseline, dict(entity_margin=False, relation_margin=True)),
-        (SoftInverseTripleBaseline, dict(threshold=0.97)),
+        # (SoftInverseTripleBaseline, dict(threshold=0.97)),
     ]
     kwargs_keys = sorted({k for _, d in models_kwargs for k in d})
 
