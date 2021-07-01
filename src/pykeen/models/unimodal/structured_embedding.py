@@ -37,6 +37,7 @@ class StructuredEmbedding(EntityEmbeddingModel):
     By employing different projections for the embeddings of the head and tail entities, SE explicitly differentiates
     the role of an entity as either the subject or object.
     ---
+    name: Structured Embedding
     citation:
         author: Bordes
         year: 2011
