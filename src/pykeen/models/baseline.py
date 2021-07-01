@@ -136,8 +136,8 @@ class MarginalDistributionBaseline(EvaluationOnlyModel):
     .. math ::
         P(t | h, r) = P(t | h) * P(t | r)
 
-    Depending on the settings, we either set P(t | *) = 1/n, or estimate them by counting occurrences in the training
-    triples.
+    Depending on the settings, we either set $P(t | *) = \frac{1}{n}$, or estimate them by counting occurrences in the
+    training triples.
 
     .. note ::
         This model cannot make use of GPU acceleration, since internally it uses scipy's sparse matrices.
@@ -155,11 +155,7 @@ class MarginalDistributionBaseline(EvaluationOnlyModel):
         :param triples_factory:
             The triples factory containing the training triples.
         """
-        super().__init__(
-            triples_factory=triples_factory,
-            random_seed=0,  # TODO: Why do we provide the random seed?
-            preferred_device='cpu',
-        )
+        super().__init__(triples_factory=triples_factory)
         h, r, t = numpy.asarray(triples_factory.mapped_triples).T
         if relation_margin:
             self.head_per_relation, self.tail_per_relation = [
@@ -252,7 +248,7 @@ class SoftInverseTripleBaseline(EvaluationOnlyModel):
         triples_factory: CoreTriplesFactory,
         threshold: Optional[float] = None,
     ):
-        super().__init__(triples_factory=triples_factory, random_seed=0, preferred_device='cpu')
+        super().__init__(triples_factory=triples_factory)
         # compute relation similarity matrix
         self.sim = _get_relation_similarity(triples_factory, to_inverse=False, threshold=threshold)
         self.sim_inv = _get_relation_similarity(triples_factory, to_inverse=True, threshold=threshold)
