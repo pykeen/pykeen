@@ -77,15 +77,19 @@ class EvaluationOnlyModel(Model, ABC):
 
     def _reset_parameters_(self):
         """Non-parametric models do not implement :meth:`Model._reset_parameters_`."""
+        raise RuntimeError
 
     def collect_regularization_term(self):  # noqa:D102
         """Non-parametric models do not implement :meth:`Model.collect_regularization_term`."""
+        raise RuntimeError
 
     def score_hrt(self, hrt_batch: torch.LongTensor):  # noqa:D102
         """Non-parametric models do not implement :meth:`Model.score_hrt`."""
+        raise RuntimeError
 
     def score_r(self, ht_batch: torch.LongTensor):  # noqa:D102
         """Non-parametric models do not implement :meth:`Model.score_r`."""
+        raise RuntimeError
 
 
 def _score(
