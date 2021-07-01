@@ -60,6 +60,23 @@ def _get_csr_matrix(
     return matrix
 
 
+def get_csr_matrix(
+    row_indices: numpy.ndarray,
+    col_indices: numpy.ndarray,
+    shape: Tuple[int, int],
+) -> scipy.sparse.csr_matrix:
+    # create sparse matrix
+    matrix = scipy.sparse.coo_matrix(
+        (numpy.ones(row_indices.shape), (row_indices, col_indices)),
+        shape=shape,
+    ).tocsr()
+    # remove duplicates (in-place)
+    matrix.sum_duplicates()
+    # store logits for sparse multiplication by sparse addition
+    matrix.data = matrix.data.log()
+    return matrix
+
+
 class EvaluationOnlyModel(Model, ABC):
     """A model which only implements the methods used for evaluation."""
 
@@ -80,15 +97,20 @@ class EvaluationOnlyModel(Model, ABC):
         raise NotImplementedError
 
 
-class PseudoTypeBaseline(EvaluationOnlyModel):
+class MarginalDistributionBaseline(EvaluationOnlyModel):
     r"""
-    Score based on entity-relation co-occurrence.
+    Score based on marginal distributions.
 
+    To predict scores for the tails, we simplify
+
+    .. math ::
+        P(t | h, r) = P(t | h) * P(t | r)
+
+    Depending on the settings, we either
     This baseline is a simplification of modelling the tail entity distribution for a given (head, relation) pair,
     which only considers the relation, i.e.,
 
-    .. math ::
-        P(t | h, r) = P(t | r)
+
 
     The probability distribution ``P(t | r)`` is obtained by counting the relative frequency.
 
@@ -99,63 +121,77 @@ class PseudoTypeBaseline(EvaluationOnlyModel):
     def __init__(
         self,
         triples_factory: CoreTriplesFactory,
-        normalize: bool = True,
+        entity_margin: bool = False,
+        relation_margin: bool = False,
     ):
         """
         Initialize the model.
 
         :param triples_factory:
             The triples factory containing the training triples.
-        :param normalize:
-            Whether to normalize the entity frequencies. If True, the predictions are proper probability distributions.
         """
         super().__init__(
             triples_factory=triples_factory,
             random_seed=0,  # TODO: Why do we provide the random seed?
             preferred_device='cpu',
         )
-        self.head_per_relation = _get_csr_matrix(
-            triples_factory=triples_factory, row_index=1, col_index=0, normalize=normalize,
-        )
-        self.tail_per_relation = _get_csr_matrix(
-            triples_factory=triples_factory, row_index=1, col_index=2, normalize=normalize,
-        )
+        h, r, t = numpy.asarray(triples_factory.mapped_triples).T
+        if relation_margin:
+            self.head_per_relation, self.tail_per_relation = [
+                get_csr_matrix(
+                    row_indices=r,
+                    col_indices=col_indices,
+                    shape=(triples_factory.num_relations, triples_factory.num_entities),
+                )
+                for col_indices in (h, t)
+            ]
+        else:
+            self.head_per_relation = self.tail_per_relation = None
+        if entity_margin:
+            self.head_per_tail, self.tail_per_head = [
+                get_csr_matrix(
+                    row_indices=row_indices,
+                    col_indices=col_indices,
+                    shape=(triples_factory.num_entities, triples_factory.num_entities),
+                )
+                for row_indices, col_indices in ((t, h), (h, t))
+            ]
+        else:
+            self.head_per_tail = self.tail_per_head = None
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa:D102
-        r = hr_batch[:, 1].cpu().numpy()
-        # note: we need to make this a dense array only to comply with returning torch tensors. Otherwise, we could
+        h, r = hr_batch.cpu().numpy().T
+        # create empty sparse matrix (i.e., filled by zeros) representation logits
+        scores = scipy.sparse.csr_matrix(hr_batch.shape[0], self.num_entities)
+        # use tail-per-head marginal distribution
+        if self.tail_per_head is not None:
+            scores += self.tail_per_head[h]
+        # use tail-per-relation marginal distribution
+        if self.tail_per_relation is not None:
+            scores += self.tail_per_relation[r]
+        # convert to probabilities
+        scores.data = numpy.exp(scores.data)
+        scores = sklearn_normalize(scores, norm="l1")
+        # note: we need to work with dense arrays only to comply with returning torch tensors. Otherwise, we could
         # stay sparse here, with a potential of a huge memory benefit on large datasets!
-        return torch.from_numpy(self.tail_per_relation[r].todense())
+        return torch.from_numpy(scores.todense())
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa:D102
-        r = rt_batch[:, 0].cpu().numpy()
-        return torch.from_numpy(self.head_per_relation[r].todense())
-
-
-class EntityCoOccurrenceBaseline(EvaluationOnlyModel):
-    """Score based on entity-entity co-occurrence."""
-
-    def __init__(
-        self,
-        triples_factory: CoreTriplesFactory,
-        normalize: bool = False,
-    ):
-        super().__init__(triples_factory=triples_factory, random_seed=0, preferred_device='cpu')
-        self.head_per_tail = _get_csr_matrix(
-            triples_factory=triples_factory, row_index=2, col_index=0, normalize=normalize,
-        )
-        self.tail_per_head = _get_csr_matrix(
-            triples_factory=triples_factory, row_index=0, col_index=2, normalize=normalize,
-        )
-        self.normalize = normalize
-
-    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa:D102
-        h = hr_batch[:, 0].cpu().numpy()
-        return torch.from_numpy(self.tail_per_head[h].todense())
-
-    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa:D102
-        t = rt_batch[:, 1].cpu().numpy()
-        return torch.from_numpy(self.head_per_tail[t].todense())
+        r, t = rt_batch.cpu().numpy().T
+        # create empty sparse matrix (i.e., filled by zeros) representation logits
+        scores = scipy.sparse.csr_matrix(rt_batch.shape[0], self.num_entities)
+        # use head-per-relation marginal distribution
+        if self.head_per_relation is not None:
+            scores += self.head_per_relation[r]
+        # use head-per-tail marginal distribution
+        if self.head_per_tail is not None:
+            scores += self.head_per_tail[t]
+        # convert to probabilities
+        scores.data = numpy.exp(scores.data)
+        scores = sklearn_normalize(scores, norm="l1")
+        # note: we need to work with dense arrays only to comply with returning torch tensors. Otherwise, we could
+        # stay sparse here, with a potential of a huge memory benefit on large datasets!
+        return torch.from_numpy(scores.todense())
 
 
 def _get_relation_similarity(
@@ -332,8 +368,9 @@ def _build(batch_size: int, trials: int, path: Union[str, Path], test: bool = Fa
         # FB15K and CoDEx Large are the first datasets where this gets a bit out of hand
         datasets = datasets[:1 + datasets.index(dataset_resolver.lookup('FB15k'))]
     models_kwargs: List[Tuple[Type[EvaluationOnlyModel], Mapping[str, Any]]] = [
-        (PseudoTypeBaseline, dict(normalize=True)),
-        (EntityCoOccurrenceBaseline, dict(normalize=True)),
+        (MarginalDistributionBaseline, dict(entity_margin=True)),
+        (MarginalDistributionBaseline, dict(relation_margin=True)),
+        (MarginalDistributionBaseline, dict(entity_margin=True, relation_margin=True)),
         (SoftInverseTripleBaseline, dict(threshold=0.97)),
     ]
     kwargs_keys = sorted({k for _, d in models_kwargs for k in d})
