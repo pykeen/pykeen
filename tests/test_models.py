@@ -13,12 +13,10 @@ import unittest_templates
 
 import pykeen.experiments
 import pykeen.models
-from pykeen.datasets import Nations
 from pykeen.models import (
     ERModel, EntityEmbeddingModel, EntityRelationEmbeddingModel, EvaluationOnlyModel, Model, _NewAbstractModel,
     _OldAbstractModel, model_resolver,
 )
-from pykeen.models.baseline import MarginalDistributionBaseline
 from pykeen.models.multimodal.base import LiteralModel
 from pykeen.models.predict import get_novelty_mask, predict
 from pykeen.models.unimodal.trans_d import _project_entity
@@ -787,38 +785,3 @@ class ERModelTests(cases.ModelTestCase):
 
     def test_has_hpo_defaults(self):  # noqa: D102
         raise unittest.SkipTest(f"Base class {self.cls} does not provide HPO defaults.")
-
-
-class MarginalDistributionBaselineTests(unittest_templates.GenericTestCase[MarginalDistributionBaseline]):
-    """Tests for MarginalDistributionBaseline."""
-
-    #: The batch size
-    batch_size: int = 3
-
-    #: The tested class
-    cls = MarginalDistributionBaseline
-
-    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
-        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
-        dataset = Nations()
-        self.factory = dataset.training
-        kwargs["triples_factory"] = self.factory
-        return kwargs
-
-    def test_score_t(self):
-        """Test score_t."""
-        hr_batch = self.factory.mapped_triples[torch.randint(self.factory.num_triples, size=(self.batch_size,))][:, :2]
-        scores = self.instance.score_t(hr_batch=hr_batch)
-        assert scores.shape == (self.batch_size, self.factory.num_entities)
-        # check probability distribution
-        assert (0.0 <= scores).all() and (scores <= 1.0).all()
-        assert torch.allclose(scores.sum(dim=1), torch.ones(self.batch_size))
-
-    def test_score_h(self):
-        """Test score_h."""
-        rt_batch = self.factory.mapped_triples[torch.randint(self.factory.num_triples, size=(self.batch_size,))][:, 1:]
-        scores = self.instance.score_h(rt_batch=rt_batch)
-        assert scores.shape == (self.batch_size, self.factory.num_entities)
-        # check probability distribution
-        assert (0.0 <= scores).all() and (scores <= 1.0).all()
-        assert torch.allclose(scores.sum(dim=1), torch.ones(self.batch_size))
