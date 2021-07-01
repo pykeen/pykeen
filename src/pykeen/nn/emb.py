@@ -925,7 +925,7 @@ class CombinedCompGCNRepresentations(nn.Module):
 
         # register buffers for adjacency matrix; we use the same format as PyTorch Geometric
         # TODO: This always uses all training triples for message passing
-        self.register_buffer(name="edge_index", tensor=triples_factory.mapped_triples[:, [0, 2]].t())
+        self.register_buffer(name="edge_index", tensor=triples_factory.mapped_triples[:, 0::2].t())
         self.register_buffer(name="edge_type", tensor=triples_factory.mapped_triples[:, 1])
 
         # initialize buffer of enriched representations

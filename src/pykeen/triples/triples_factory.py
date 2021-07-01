@@ -255,7 +255,7 @@ class CoreTriplesFactory:
             A new triples factory.
         """
         if num_entities is None:
-            num_entities = mapped_triples[:, [0, 2]].max().item() + 1
+            num_entities = mapped_triples[:, 0::2].max().item() + 1
         if num_relations is None:
             num_relations = mapped_triples[:, 1].max().item() + 1
         if entity_ids is None:
@@ -909,7 +909,7 @@ class TriplesFactory(CoreTriplesFactory):
             ``pip install git+https://github.com/kavgan/word_cloud.git``.
         """
         return self._word_cloud(
-            ids=self.mapped_triples[:, [0, 2]],
+            ids=self.mapped_triples[:, 0::2],
             id_to_label=self.entity_labeling.id_to_label,
             top=top or 100,
         )

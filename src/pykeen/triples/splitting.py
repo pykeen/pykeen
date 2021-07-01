@@ -73,7 +73,7 @@ def _get_cover_deterministic(triples: MappedTriples) -> torch.BoolTensor:
     :return: shape: (n,)
         A boolean mask indicating whether the triple is part of the cover.
     """
-    num_entities = triples[:, [0, 2]].max() + 1
+    num_entities = triples[:, 0::2].max() + 1
     num_relations = triples[:, 1].max() + 1
     num_triples = triples.shape[0]
 
