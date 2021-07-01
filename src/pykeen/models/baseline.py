@@ -111,6 +111,7 @@ def _score(
     else:  # per_relation is not None and per_entity is not None
         e_score = per_entity[e]
         r_score = per_relation[r]
+        # TODO: e_score.sum(1) == 1, r_score.sum(1) == 1, scores.sum(1) << 1
         scores = e_score.multiply(r_score)
 
     # note: we need to work with dense arrays only to comply with returning torch tensors. Otherwise, we could
