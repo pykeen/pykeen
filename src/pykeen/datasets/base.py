@@ -10,7 +10,7 @@ import tarfile
 import zipfile
 from abc import abstractmethod
 from io import BytesIO
-from typing import Any, ClassVar, Dict, List, Mapping, Optional, Sequence, Tuple, Union, cast
+from typing import Any, ClassVar, Dict, List, Mapping, Optional, Sequence, Tuple, Type, Union, cast
 
 import click
 import docdata
@@ -112,7 +112,7 @@ class Dataset:
         return self.training.num_relations
 
     @staticmethod
-    def _sort_key(cls) -> int:
+    def triples_sort_key(cls: Type[Dataset]) -> int:
         """Get the number of triples for sorting."""
         return docdata.get_docdata(cls)['statistics']['triples']
 

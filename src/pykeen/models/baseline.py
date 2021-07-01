@@ -15,7 +15,7 @@ import torch
 from more_click import verbose_option
 from sklearn.preprocessing import normalize as sklearn_normalize
 from tabulate import tabulate
-from tqdm import tqdm
+from tqdm import tqdm, trange
 from tqdm.contrib.logging import logging_redirect_tqdm
 
 from pykeen.constants import PYKEEN_EXPERIMENTS
@@ -207,64 +207,93 @@ class SoftInverseTripleBaseline(EvaluationOnlyModel):
 
 
 BENCHMARK_PATH = PYKEEN_EXPERIMENTS.joinpath('baseline_benchmark.tsv')
-METRICS = ['mrr', 'hits@1', 'hits@10', 'aamr', 'aamri']
+METRICS = ['mrr', 'hits@1', 'hits@3', 'hits@10', 'aamr', 'aamri']
 
 
 @click.command()
 @verbose_option
 @click.option('--batch-size', default=1024, show_default=True)
+@click.option('--trials', default=30, show_default=True)
 @click.option('--rebuild', is_flag=True)
-def main(batch_size: int, rebuild: bool):
+def main(batch_size: int, trials: int, rebuild: bool):
     """Show-case baseline."""
     if not BENCHMARK_PATH.is_file() or rebuild:
         with logging_redirect_tqdm():
-            df = _build(batch_size=batch_size)
+            df = _build(batch_size=batch_size, trials=trials)
     else:
-        df = pd.read_csv(BENCHMARK_PATH, sep='\t')
+        df = _read()
 
     _plot(df)
 
 
-def _plot(df: pd.DataFrame):
+def _read() -> pd.DataFrame:
+    return pd.read_csv(BENCHMARK_PATH, sep='\t')
+
+
+def _melt(df: pd.DataFrame) -> pd.DataFrame:
     keep = [col for col in df.columns if col not in METRICS]
-    tsdf = pd.melt(
+    return pd.melt(
         df[[*keep, *METRICS]],
         id_vars=keep,
         value_vars=METRICS,
         var_name='metric',
     )
 
-    # Plot relation between # triples and time, stratified by model
-    # Interpretation: exponential relationship between # triples and time
-    fig, ax = plt.subplots()
-    sns.scatterplot(data=tsdf, x='triples', y='time', hue='model', ax=ax)
-    ax.set_yscale('log')
-    ax.set_xscale('log')
-    fig.savefig(PYKEEN_EXPERIMENTS.joinpath('baseline_benchmark_timeplot.svg'))
-    fig.savefig(PYKEEN_EXPERIMENTS.joinpath('baseline_benchmark_timeplot.png'), dpi=300)
-    plt.close(fig)
 
-    # Make a scatterplot grid showing relation between # triples and result, stratified by model and metric.
+def _plot(df: pd.DataFrame):
+    tsdf = _melt(df)
+
+    # Plot relation between dataset and time, stratified by model
+    # Interpretation: exponential relationship between # triples and time
+    g = sns.catplot(
+        data=tsdf,
+        y='dataset',
+        x='time',
+        hue='model',
+        kind='violin',
+        aspect=1.5,
+    ).set(xscale='log', xlabel='Time (seconds)', ylabel='')
+    g.fig.savefig(PYKEEN_EXPERIMENTS.joinpath('baseline_benchmark_timeplot.svg'))
+    g.fig.savefig(PYKEEN_EXPERIMENTS.joinpath('baseline_benchmark_timeplot.png'), dpi=300)
+    plt.close(g.fig)
+
+    # Show AMRI plots. Surprisingly, some performance is really good.
+    g = sns.catplot(
+        data=tsdf[tsdf.metric == 'aamri'],
+        y='dataset',
+        x='value',
+        hue='model',
+        kind='violin',
+        aspect=1.5,
+    ).set(xlabel='Adjusted Mean Rank Index', xlim=[-1, 1], ylabel='')
+    g.fig.savefig(PYKEEN_EXPERIMENTS.joinpath('baseline_benchmark_aamri.svg'))
+    g.fig.savefig(PYKEEN_EXPERIMENTS.joinpath('baseline_benchmark_aamri.png'), dpi=300)
+    plt.close(g.fig)
+
+    # Make a violinplot grid showing relation between # triples and result, stratified by model and metric.
     # Interpretation: no dataset size dependence
-    g = sns.FacetGrid(
-        tsdf[~tsdf.metric.isin({'aamr', 'aamri'})],
-        col="model",
-        hue='dataset',
-        row='metric',
-        margin_titles=True,
+    g = sns.catplot(
+        data=tsdf[~tsdf.metric.isin({'aamr', 'aamri'})],
+        y='dataset',
+        x='value',
+        hue='model',
+        col='metric',
+        kind="violin",
+        col_wrap=2,
+        height=0.5 * tsdf['dataset'].nunique(),
+        aspect=1.5,
     )
-    g.map(sns.scatterplot, "triples", "value")
-    g.add_legend()
-    g.set(xscale='log')
-    g.savefig(PYKEEN_EXPERIMENTS.joinpath('baseline_benchmark_scatterplot.svg'))
-    g.savefig(PYKEEN_EXPERIMENTS.joinpath('baseline_benchmark_scatterplot.png'), dpi=300)
+    g.set(xlim=[0, 1], ylabel='')
+    g.fig.savefig(PYKEEN_EXPERIMENTS.joinpath('baseline_benchmark_scatterplot.svg'))
+    g.fig.savefig(PYKEEN_EXPERIMENTS.joinpath('baseline_benchmark_scatterplot.png'), dpi=300)
     plt.close(g.fig)
 
 
-def _build(batch_size: int) -> pd.DataFrame:
-    datasets = sorted(dataset_resolver, key=Dataset._sort_key)
+def _build(batch_size: int, trials: int) -> pd.DataFrame:
+    datasets = sorted(dataset_resolver, key=Dataset.triples_sort_key)
     # CoDEx Large is the first dataset where this gets a bit out of hand
-    datasets = datasets[:datasets.index(dataset_resolver.lookup('CoDExLarge'))]
+    # datasets = datasets[:datasets.index(dataset_resolver.lookup('CoDExLarge'))]
+    datasets = datasets[:8]
     models_kwargs: List[Tuple[Type[EvaluationOnlyModel], Mapping[str, Any]]] = [
         (PseudoTypeBaseline, dict(normalize=True)),
         (EntityCoOccurrenceBaseline, dict(normalize=True)),
@@ -273,29 +302,42 @@ def _build(batch_size: int) -> pd.DataFrame:
     kwargs_keys = sorted({k for _, d in models_kwargs for k in d})
 
     records = []
-    it = tqdm(itt.product(datasets, models_kwargs), desc='Baseline', total=len(datasets) * len(models_kwargs))
+    it = tqdm(
+        itt.product(datasets, models_kwargs),
+        desc='Baseline',
+        total=len(datasets) * len(models_kwargs),
+    )
     for dataset_cls, (model_cls, kwargs) in it:
         model_name = model_cls.__name__[:-len('Baseline')]
         it.set_postfix({'dataset': dataset_cls.__name__, 'model': model_name})
         dataset = dataset_cls()
-        model = model_cls(triples_factory=dataset.training, **kwargs)
-
-        start_time = time.time()
-        result = _evaluate_baseline(dataset, model, batch_size=batch_size)
-        elapsed_seconds = time.time() - start_time
-
-        records.append((
+        base_record = (
             dataset_cls.__name__,
             dataset.training.num_entities,
             dataset.training.num_relations,
             dataset.training.num_triples,
-            model_name,
-            *(kwargs.get(key) for key in kwargs_keys),
-            elapsed_seconds,
-            *(result.get_metric(metric) for metric in METRICS),
-        ))
+        )
+        for trial in trange(trials, leave=False, desc='Trials'):
+            if trials != 0:
+                trial_dataset = dataset.remix(random_state=trial)
+            else:
+                trial_dataset = dataset
+            model = model_cls(triples_factory=trial_dataset.training, **kwargs)
 
-    columns = ['dataset', 'E', 'R', 'triples', 'model', *kwargs_keys, 'time', *METRICS]
+            start_time = time.time()
+            result = _evaluate_baseline(trial_dataset, model, batch_size=batch_size)
+            elapsed_seconds = time.time() - start_time
+
+            records.append((
+                *base_record,
+                trial,
+                model_name,
+                *(kwargs.get(key) for key in kwargs_keys),
+                elapsed_seconds,
+                *(result.get_metric(metric) for metric in METRICS),
+            ))
+
+    columns = ['dataset', 'E', 'R', 'triples', 'trial', 'model', *kwargs_keys, 'time', *METRICS]
     df = pd.DataFrame(records, columns=columns)
     df.to_csv(BENCHMARK_PATH, sep='\t', index=False)
     print(tabulate(df.round(3).values, headers=columns, tablefmt='github'))
