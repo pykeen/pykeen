@@ -27,6 +27,12 @@ from pykeen.evaluation import RankBasedEvaluator, RankBasedMetricResults, evalua
 from pykeen.models import Model
 from pykeen.triples import CoreTriplesFactory
 
+__all__ = [
+    'EvaluationOnlyModel',
+    'MarginalDistributionBaseline',
+    'SoftInverseTripleBaseline',
+]
+
 BENCHMARK_PATH = PYKEEN_EXPERIMENTS.joinpath('baseline_benchmark.tsv')
 TEST_BENCHMARK_PATH = PYKEEN_EXPERIMENTS.joinpath('baseline_benchmark_test.tsv')
 KS = (1, 5, 10, 50, 100)
@@ -54,21 +60,32 @@ def get_csr_matrix(
 class EvaluationOnlyModel(Model, ABC):
     """A model which only implements the methods used for evaluation."""
 
+    def __init__(self, triples_factory: CoreTriplesFactory):
+        """Non-parametric models take a minimal set of arguments.
+
+        :param triples_factory: The training triples factory is used to assign the number of entities, relations,
+            and inverse condition in the non-parametric model.
+        """
+        super().__init__(
+            triples_factory=triples_factory,
+            # These operations are deterministic and a random feed can be fixed
+            # just to avoid warnings
+            random_seed=0,
+            # These operations do not need to be performed on a GPU
+            preferred_device='cpu',
+        )
+
     def _reset_parameters_(self):
-        # TODO: this is not needed for non-parametric models!
-        raise NotImplementedError
+        """Non-parametric models do not implement :meth:`Model._reset_parameters_`."""
 
-    def collect_regularization_term(self) -> torch.FloatTensor:  # noqa:D102
-        # TODO: this is not needed for non-parametric models!
-        raise NotImplementedError
+    def collect_regularization_term(self):  # noqa:D102
+        """Non-parametric models do not implement :meth:`Model.collect_regularization_term`."""
 
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa:D102
-        # TODO: this is not needed for evaluation
-        raise NotImplementedError
+    def score_hrt(self, hrt_batch: torch.LongTensor):  # noqa:D102
+        """Non-parametric models do not implement :meth:`Model.score_hrt`."""
 
-    def score_r(self, ht_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa:D102
-        # TODO: this is not needed for evaluation
-        raise NotImplementedError
+    def score_r(self, ht_batch: torch.LongTensor):  # noqa:D102
+        """Non-parametric models do not implement :meth:`Model.score_r`."""
 
 
 def _score(

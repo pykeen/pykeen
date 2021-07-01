@@ -9,6 +9,7 @@ score value is model-dependent, and usually it cannot be directly interpreted as
 from class_resolver import Resolver
 
 from .base import EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, _OldAbstractModel
+from .baseline import EvaluationOnlyModel, MarginalDistributionBaseline, SoftInverseTripleBaseline
 from .multimodal import ComplExLiteral, DistMultLiteral, LiteralModel
 from .nbase import ERModel, _NewAbstractModel
 from .resolve import make_model, make_model_cls
@@ -52,6 +53,7 @@ __all__ = [
     '_NewAbstractModel',
     'ERModel',
     'LiteralModel',
+    'EvaluationOnlyModel',
     # Concrete Models
     'CompGCN',
     'ComplEx',
@@ -83,6 +85,9 @@ __all__ = [
     'TransR',
     'TuckER',
     'UnstructuredModel',
+    # Evaluation-only models
+    'MarginalDistributionBaseline',
+    'SoftInverseTripleBaseline',
     # Utils
     'model_resolver',
     'make_model',
