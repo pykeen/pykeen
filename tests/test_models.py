@@ -14,7 +14,7 @@ import unittest_templates
 import pykeen.experiments
 import pykeen.models
 from pykeen.models import (
-    ERModel, EntityEmbeddingModel, EntityRelationEmbeddingModel, Model,
+    ERModel, EntityRelationEmbeddingModel, Model,
     _NewAbstractModel, _OldAbstractModel, model_resolver,
 )
 from pykeen.models.multimodal.base import LiteralModel
@@ -34,7 +34,6 @@ SKIP_MODULES = {
     _NewAbstractModel,
     # DummyModel,
     LiteralModel,
-    EntityEmbeddingModel,
     EntityRelationEmbeddingModel,
     ERModel,
     MockModel,

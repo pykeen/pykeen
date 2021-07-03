@@ -32,7 +32,7 @@ from pykeen.datasets.base import LazyDataset
 from pykeen.datasets.kinships import KINSHIPS_TRAIN_PATH
 from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH
 from pykeen.losses import Loss, PairwiseLoss, PointwiseLoss, SetwiseLoss, UnsupportedLabelSmoothingError
-from pykeen.models import EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, RESCAL
+from pykeen.models import EntityRelationEmbeddingModel, Model, RESCAL
 from pykeen.models.cli import build_cli_from_cls
 from pykeen.nn.emb import RepresentationModule
 from pykeen.nn.modules import FunctionalInteraction, Interaction, LiteralInteraction
@@ -1012,8 +1012,6 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
             """Test whether two embeddings are equal."""
             return (a(indices=None) == b(indices=None)).all()
 
-        if isinstance(original_model, EntityEmbeddingModel):
-            assert not _equal_embeddings(original_model.entity_embeddings, loaded_model.entity_embeddings)
         if isinstance(original_model, EntityRelationEmbeddingModel):
             assert not _equal_embeddings(original_model.relation_embeddings, loaded_model.relation_embeddings)
 
@@ -1021,8 +1019,6 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
             file_path = os.path.join(tmpdirname, 'test.pt')
             original_model.save_state(path=file_path)
             loaded_model.load_state(path=file_path)
-        if isinstance(original_model, EntityEmbeddingModel):
-            assert _equal_embeddings(original_model.entity_embeddings, loaded_model.entity_embeddings)
         if isinstance(original_model, EntityRelationEmbeddingModel):
             assert _equal_embeddings(original_model.relation_embeddings, loaded_model.relation_embeddings)
 
@@ -1219,19 +1215,7 @@ Traceback
 
     def test_custom_representations(self):
         """Tests whether we can provide custom representations."""
-        if isinstance(self.instance, EntityEmbeddingModel):
-            old_embeddings = self.instance.entity_embeddings
-            self.instance.entity_embeddings = CustomRepresentations(
-                num_entities=self.factory.num_entities,
-                shape=old_embeddings.shape,
-            )
-            # call some functions
-            self.instance.reset_parameters_()
-            self.test_score_hrt()
-            self.test_score_t()
-            # reset to old state
-            self.instance.entity_embeddings = old_embeddings
-        elif isinstance(self.instance, EntityRelationEmbeddingModel):
+        if isinstance(self.instance, EntityRelationEmbeddingModel):
             old_embeddings = self.instance.relation_embeddings
             self.instance.relation_embeddings = CustomRepresentations(
                 num_entities=self.factory.num_relations,
