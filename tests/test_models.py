@@ -327,7 +327,7 @@ class TestSimplE(cases.ModelTestCase):
     cls = pykeen.models.SimplE
 
 
-class _BaseTestSE(cases.ModelTestCase):
+class TestSE(cases.ModelTestCase):
     """Test the Structured Embedding model."""
 
     cls = pykeen.models.StructuredEmbedding
@@ -337,24 +337,8 @@ class _BaseTestSE(cases.ModelTestCase):
 
         Entity embeddings have to have unit L2 norm.
         """
-        norms = self.instance.entity_embeddings(indices=None).norm(p=2, dim=-1)
+        norms = self.instance.entity_representations[0](indices=None).norm(p=2, dim=-1)
         assert torch.allclose(norms, torch.ones_like(norms))
-
-
-class TestSELowMemory(_BaseTestSE):
-    """Tests SE with low memory."""
-
-    training_loop_kwargs = {
-        'automatic_memory_optimization': True,
-    }
-
-
-class TestSEHighMemory(_BaseTestSE):
-    """Tests SE with low memory."""
-
-    training_loop_kwargs = {
-        'automatic_memory_optimization': False,
-    }
 
 
 class TestTorusE(cases.DistanceModelTestCase):
