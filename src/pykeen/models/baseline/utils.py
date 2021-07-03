@@ -47,7 +47,9 @@ def marginal_score(
 
     e, r = entity_relation_batch.cpu().numpy().T
 
-    if per_entity is None:  # and per_relation is not None
+    if per_entity is None and per_relation is None:
+        raise NotImplementedError
+    elif per_entity is None:  # and per_relation is not None
         scores = per_relation[r]
     elif per_relation is None:  # and per_entity is not None
         scores = per_entity[r]
