@@ -219,27 +219,13 @@ class TestKG2EWithEL(cases.BaseKG2ETest):
     }
 
 
-class TestNTNLowMemory(cases.BaseNTNTest):
-    """Test the NTN model with automatic memory optimization."""
+class TestNTN(cases.ModelTestCase):
+    """Test the NTN model."""
+
+    cls = pykeen.models.NTN
 
     kwargs = {
         'num_slices': 2,
-    }
-
-    training_loop_kwargs = {
-        'automatic_memory_optimization': True,
-    }
-
-
-class TestNTNHighMemory(cases.BaseNTNTest):
-    """Test the NTN model without automatic memory optimization."""
-
-    kwargs = {
-        'num_slices': 2,
-    }
-
-    training_loop_kwargs = {
-        'automatic_memory_optimization': False,
     }
 
 

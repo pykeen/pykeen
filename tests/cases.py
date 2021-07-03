@@ -1257,18 +1257,6 @@ class BaseKG2ETest(ModelTestCase):
             assert all_in_bounds(cov(indices=None), low=self.instance.c_min, high=self.instance.c_max)
 
 
-class BaseNTNTest(ModelTestCase):
-    """Test the NTN model."""
-
-    cls = pykeen.models.NTN
-
-    def test_can_slice(self):
-        """Test that the slicing properties are calculated correctly."""
-        self.assertTrue(self.instance.can_slice_h)
-        self.assertFalse(self.instance.can_slice_r)
-        self.assertTrue(self.instance.can_slice_t)
-
-
 class BaseRGCNTest(ModelTestCase):
     """Test the R-GCN model."""
 
