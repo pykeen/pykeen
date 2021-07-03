@@ -14,8 +14,8 @@ import unittest_templates
 import pykeen.experiments
 import pykeen.models
 from pykeen.models import (
-    ERModel, EntityEmbeddingModel, EntityRelationEmbeddingModel, EvaluationOnlyModel, Model, _NewAbstractModel,
-    _OldAbstractModel, model_resolver,
+    ERModel, EntityRelationEmbeddingModel, EvaluationOnlyModel, Model, _NewAbstractModel, _OldAbstractModel,
+    model_resolver,
 )
 from pykeen.models.multimodal.base import LiteralModel
 from pykeen.models.predict import get_novelty_mask, predict
@@ -34,7 +34,6 @@ SKIP_MODULES = {
     _NewAbstractModel,
     # DummyModel,
     LiteralModel,
-    EntityEmbeddingModel,
     EntityRelationEmbeddingModel,
     ERModel,
     MockModel,
@@ -222,27 +221,13 @@ class TestKG2EWithEL(cases.BaseKG2ETest):
     }
 
 
-class TestNTNLowMemory(cases.BaseNTNTest):
-    """Test the NTN model with automatic memory optimization."""
+class TestNTN(cases.ModelTestCase):
+    """Test the NTN model."""
+
+    cls = pykeen.models.NTN
 
     kwargs = {
         'num_slices': 2,
-    }
-
-    training_loop_kwargs = {
-        'automatic_memory_optimization': True,
-    }
-
-
-class TestNTNHighMemory(cases.BaseNTNTest):
-    """Test the NTN model without automatic memory optimization."""
-
-    kwargs = {
-        'num_slices': 2,
-    }
-
-    training_loop_kwargs = {
-        'automatic_memory_optimization': False,
     }
 
 
@@ -329,7 +314,7 @@ class TestSimplE(cases.ModelTestCase):
     cls = pykeen.models.SimplE
 
 
-class _BaseTestSE(cases.ModelTestCase):
+class TestSE(cases.ModelTestCase):
     """Test the Structured Embedding model."""
 
     cls = pykeen.models.StructuredEmbedding
@@ -339,24 +324,8 @@ class _BaseTestSE(cases.ModelTestCase):
 
         Entity embeddings have to have unit L2 norm.
         """
-        norms = self.instance.entity_embeddings(indices=None).norm(p=2, dim=-1)
+        norms = self.instance.entity_representations[0](indices=None).norm(p=2, dim=-1)
         assert torch.allclose(norms, torch.ones_like(norms))
-
-
-class TestSELowMemory(_BaseTestSE):
-    """Tests SE with low memory."""
-
-    training_loop_kwargs = {
-        'automatic_memory_optimization': True,
-    }
-
-
-class TestSEHighMemory(_BaseTestSE):
-    """Tests SE with low memory."""
-
-    training_loop_kwargs = {
-        'automatic_memory_optimization': False,
-    }
 
 
 class TestTorusE(cases.DistanceModelTestCase):
