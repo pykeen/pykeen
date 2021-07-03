@@ -9,7 +9,7 @@ import itertools as itt
 import time
 from functools import partial
 from pathlib import Path
-from typing import Any, List, Mapping, Sequence, Tuple, Type, Union, cast
+from typing import Any, List, Mapping, Optional, Sequence, Tuple, Type, Union, cast
 
 import click
 import pandas as pd
@@ -60,6 +60,15 @@ def _melt(df: pd.DataFrame) -> pd.DataFrame:
     )
 
 
+def _relabel_model(model: str, entity_margin: Optional[bool], relation_margin: Optional[bool]) -> str:
+    rv = model
+    if isinstance(entity_margin, bool):
+        rv = f'{rv} {"/e" if entity_margin else ""}'
+    if isinstance(relation_margin, bool):
+        rv = f'{rv} {"/r" if relation_margin else ""}'
+    return rv
+
+
 def _plot(df: pd.DataFrame, skip_small: bool = True, test: bool = False) -> None:
     import matplotlib.pyplot as plt
     import seaborn as sns
@@ -68,6 +77,10 @@ def _plot(df: pd.DataFrame, skip_small: bool = True, test: bool = False) -> None
         df = df[~df.dataset.isin({'Nations', 'Countries', 'UMLS', 'Kinships'})]
 
     tsdf = _melt(df)
+    tsdf['model'] = [
+        _relabel_model(model, entity_margin, relation_margin)
+        for model, entity_margin, relation_margin in tsdf[['model', 'entity_margin', 'relation_margin']].values
+    ]
 
     # Plot relation between dataset and time, stratified by model
     # Interpretation: exponential relationship between # triples and time
@@ -83,7 +96,7 @@ def _plot(df: pd.DataFrame, skip_small: bool = True, test: bool = False) -> None
     g.fig.savefig(BENCHMARK_DIRECTORY.joinpath('times.png'), dpi=300)
     plt.close(g.fig)
 
-    # Show AMRI plots. Surprisingly, some performance is really good.
+    # Show adjusted AMR index plots. Surprisingly, some performance is really good.
     g = sns.catplot(
         data=tsdf[tsdf.metric == 'aamri'],
         y='dataset',
