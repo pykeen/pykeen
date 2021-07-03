@@ -59,10 +59,10 @@ class MarginalDistributionBaseline(EvaluationOnlyModel):
     r"""
     Score based on marginal distributions.
 
-    To predict scores for the tails, we simplify
+    To predict scores for the tails, we make the following simplification of $P(t | h, r)$:
 
     .. math ::
-        P(t | h, r) = P(t | h) * P(t | r)
+        P(t | h, r) \sim P(t | h) * P(t | r)
 
     Depending on the settings, we either set $P(t | *) = \frac{1}{n}$ where $n$ is the number of entities,
     or estimate them by counting occurrences in the training triples.
