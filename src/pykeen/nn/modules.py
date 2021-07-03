@@ -1068,11 +1068,24 @@ class NTNInteraction(
     relation_shape = ("kdd", "kd", "kd", "k", "k")
     func = pkf.ntn_interaction
 
-    def __init__(self, non_linearity: Optional[nn.Module] = None):
+    def __init__(
+        self,
+        activation: HintOrType[nn.Module] = None,
+        activation_kwargs: Optional[Mapping[str, Any]] = None,
+    ):
+        """Initialize NTN with the given non-linear activation function.
+
+        :param activation: A non-linear activation function. Defaults to the hyperbolic
+            tangent :class:`torch.nn.Tanh` if none, otherwise uses the :data:`pykeen.utils.activation_resolver`
+            for lookup.
+        :param activation_kwargs: If the ``activation`` is passed as a class, these keyword arguments
+            are used during its instantiation.
+        """
         super().__init__()
-        if non_linearity is None:
-            non_linearity = nn.Tanh()
-        self.non_linearity = non_linearity
+        if activation is None:
+            self.non_linearity = nn.Tanh()
+        else:
+            self.non_linearity = activation_resolver.make(activation, activation_kwargs)
 
     @staticmethod
     def _prepare_hrt_for_functional(
