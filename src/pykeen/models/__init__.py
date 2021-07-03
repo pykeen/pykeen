@@ -8,10 +8,7 @@ score value is model-dependent, and usually it cannot be directly interpreted as
 
 from class_resolver import Resolver
 
-from .base import (
-    EntityRelationEmbeddingModel, EntityRelationEmbeddingModel, Model, Model, _OldAbstractModel,
-    _OldAbstractModel,
-)
+from .base import EntityRelationEmbeddingModel, Model, _OldAbstractModel, _OldAbstractModel
 from .baseline import EvaluationOnlyModel, MarginalDistributionBaseline, SoftInverseTripleBaseline
 from .multimodal import ComplExLiteral, DistMultLiteral, LiteralModel
 from .nbase import ERModel, _NewAbstractModel
