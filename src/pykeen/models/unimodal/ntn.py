@@ -38,6 +38,12 @@ class NTN(ERModel):
     for each relation a separate neural network which makes the model very expressive, but at the same time
     computationally expensive.
 
+    .. note::
+
+        We split the original $V_r$ matrix into two parts, to separate $V_r [h; r] = V_r^h h + V_r^t t$.
+        The latter is more efficient, if $h$ and $t$ are not of the same shape,
+        e.g., since we are in a :meth:`score_h` / :meth:`score_t` setting.
+
     .. seealso::
 
        - Original Implementation (Matlab): `<https://github.com/khurram18/NeuralTensorNetworks>`_
