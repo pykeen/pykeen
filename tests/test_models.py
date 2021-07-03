@@ -14,8 +14,8 @@ import unittest_templates
 import pykeen.experiments
 import pykeen.models
 from pykeen.models import (
-    ERModel, EntityRelationEmbeddingModel, EvaluationOnlyModel, Model, _NewAbstractModel, _OldAbstractModel,
-    model_resolver,
+    ERModel, EntityRelationEmbeddingModel, EvaluationOnlyModel, Model,
+    _NewAbstractModel, _OldAbstractModel, model_resolver,
 )
 from pykeen.models.multimodal.base import LiteralModel
 from pykeen.models.predict import get_novelty_mask, predict
