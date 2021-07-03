@@ -14,7 +14,7 @@ import unittest_templates
 import pykeen.experiments
 import pykeen.models
 from pykeen.models import (
-    ERModel, EntityEmbeddingModel, EntityRelationEmbeddingModel, Model,
+    ERModel, EntityRelationEmbeddingModel, Model,
     _NewAbstractModel, _OldAbstractModel, model_resolver,
 )
 from pykeen.models.multimodal.base import LiteralModel
@@ -34,7 +34,6 @@ SKIP_MODULES = {
     _NewAbstractModel,
     # DummyModel,
     LiteralModel,
-    EntityEmbeddingModel,
     EntityRelationEmbeddingModel,
     ERModel,
     MockModel,
@@ -220,27 +219,13 @@ class TestKG2EWithEL(cases.BaseKG2ETest):
     }
 
 
-class TestNTNLowMemory(cases.BaseNTNTest):
-    """Test the NTN model with automatic memory optimization."""
+class TestNTN(cases.ModelTestCase):
+    """Test the NTN model."""
+
+    cls = pykeen.models.NTN
 
     kwargs = {
         'num_slices': 2,
-    }
-
-    training_loop_kwargs = {
-        'automatic_memory_optimization': True,
-    }
-
-
-class TestNTNHighMemory(cases.BaseNTNTest):
-    """Test the NTN model without automatic memory optimization."""
-
-    kwargs = {
-        'num_slices': 2,
-    }
-
-    training_loop_kwargs = {
-        'automatic_memory_optimization': False,
     }
 
 
