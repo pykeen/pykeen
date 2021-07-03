@@ -2,21 +2,17 @@
 
 """Implementation of structured model (SE)."""
 
-import functools
 from typing import Any, ClassVar, Mapping, Optional
 
-import numpy as np
 from class_resolver import Hint
-from torch import nn
 from torch.nn import functional
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn import EmbeddingSpecification
-from ...nn.init import xavier_uniform_
+from ...nn.init import xavier_uniform_, xavier_uniform_norm_
 from ...nn.modules import StructuredEmbeddingInteraction
 from ...typing import Constrainer, Initializer
-from ...utils import compose
 
 __all__ = [
     'StructuredEmbedding',
@@ -59,6 +55,7 @@ class StructuredEmbedding(ERModel):
         entity_initializer: Hint[Initializer] = xavier_uniform_,
         entity_constrainer: Hint[Constrainer] = functional.normalize,
         entity_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
+        relation_initializer: Hint[Initializer] = xavier_uniform_norm_,
         **kwargs,
     ) -> None:
         r"""Initialize SE.
@@ -71,13 +68,6 @@ class StructuredEmbedding(ERModel):
         :param kwargs:
             Remaining keyword arguments to forward to :class:`pykeen.models.EntityEmbeddingModel`
         """
-        # Embeddings
-        init_bound = 6 / np.sqrt(embedding_dim)
-        # Initialise relation embeddings to unit length
-        relation_initializer = compose(
-            functools.partial(nn.init.uniform_, a=-init_bound, b=+init_bound),
-            functional.normalize,
-        )
         super().__init__(
             interaction=StructuredEmbeddingInteraction(
                 p=scoring_fct_norm,
