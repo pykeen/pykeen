@@ -15,15 +15,12 @@ Get a summary with ``python -m pykeen.datasets.wikidata5m``,
 
 import pathlib
 
-import click
 from docdata import parse_docdata
-from more_click import verbose_option
 
 from .base import TarFileRemoteDataset
 
 __all__ = [
-    'Wikidata5mTransductive',
-    'Wikidata5mInductive',
+    'Wikidata5M',
 ]
 
 TRANSDUCTIVE_URL = 'https://www.dropbox.com/s/6sbhm0rwo4l73jq/wikidata5m_transductive.tar.gz?dl=1'
@@ -31,18 +28,18 @@ INDUCTIVE_URL = 'https://www.dropbox.com/s/csed3cgal3m7rzo/wikidata5m_inductive.
 
 
 @parse_docdata
-class Wikidata5mTransductive(TarFileRemoteDataset):
-    """The Wikidata5M Transductive dataset.
+class Wikidata5M(TarFileRemoteDataset):
+    """The Wikidata5M dataset.
 
     ---
-    name: Wikidata5M (Transductive)
+    name: Wikidata5M
     statistics:
-        entities:
-        relations:
-        training:
-        testing:
-        validation:
-        triples:
+        entities: 4594149
+        relations: 822
+        training: 20614279
+        testing: 4977
+        validation: 4983
+        triples: 20624239
     citation:
         author: Wang
         year: 2019
@@ -51,64 +48,20 @@ class Wikidata5mTransductive(TarFileRemoteDataset):
     """
 
     def __init__(self, create_inverse_triples: bool = False, **kwargs):
-        """Initialize the Wikidata5M Transductive dataset.
+        """Initialize the Wikidata5M dataset.
 
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.TarFileRemoteDataset`.
         """
         super().__init__(
             url=TRANSDUCTIVE_URL,
-            relative_training_path=pathlib.PurePath('wikidata5m_transductive', 'wikidata5m_transductive_train.txt'),
-            relative_testing_path=pathlib.PurePath('wikidata5m_transductive', 'wikidata5m_transductive_test.txt'),
-            relative_validation_path=pathlib.PurePath('wikidata5m_transductive', 'wikidata5m_transductive_valid.txt'),
+            relative_training_path=pathlib.PurePath('wikidata5m_transductive_train.txt'),
+            relative_testing_path=pathlib.PurePath('wikidata5m_transductive_test.txt'),
+            relative_validation_path=pathlib.PurePath('wikidata5m_transductive_valid.txt'),
             create_inverse_triples=create_inverse_triples,
             **kwargs,
         )
-
-
-@parse_docdata
-class Wikidata5mInductive(TarFileRemoteDataset):
-    """The Wikidata5M Inductive dataset.
-
-    ---
-    name: Wikidata5M (Inductive)
-    statistics:
-        entities:
-        relations:
-        training:
-        testing:
-        validation:
-        triples:
-    citation:
-        author: Wang
-        year: 2019
-        arxiv: 1911.06136
-        link: https://arxiv.org/abs/1911.06136
-    """
-
-    def __init__(self, create_inverse_triples: bool = False, **kwargs):
-        """Initialize the Wikidata5M Inductive dataset.
-
-        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
-        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.TarFileRemoteDataset`.
-        """
-        super().__init__(
-            url=INDUCTIVE_URL,
-            relative_training_path=pathlib.PurePath('wikidata5m_inductive', 'wikidata5m_inductive_train.txt'),
-            relative_testing_path=pathlib.PurePath('wikidata5m_inductive', 'wikidata5m_inductive_test.txt'),
-            relative_validation_path=pathlib.PurePath('wikidata5m_inductive', 'wikidata5m_inductive_valid.txt'),
-            create_inverse_triples=create_inverse_triples,
-            **kwargs,
-        )
-
-
-@click.command()
-@verbose_option
-def _main():
-    for cls in (Wikidata5mTransductive, Wikidata5mInductive):
-        ds = cls()
-        ds.summarize()
 
 
 if __name__ == "__main__":
-    _main()
+    Wikidata5M.cli()
