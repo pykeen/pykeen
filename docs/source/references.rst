@@ -52,3 +52,6 @@ References
 .. [galkin2020] Galkin, M., *et al.* (2020). `Message Passing for Hyper-Relational Knowledge Graphs
    <https://doi.org/10.18653/v1/2020.emnlp-main.596>`_. Proceedings of the 2020 Conference on Empirical
    Methods in Natural Language Processing (EMNLP), 7346–7359.
+
+.. [wang2019] Wang, X., *et al* (2019). `KEPLER: A Unified Model for Knowledge Embedding and Pre-trained Language
+   Representation <https://arxiv.org/pdf/1911.06136.pdf>`_. *arXiv*, 1911.06136.
