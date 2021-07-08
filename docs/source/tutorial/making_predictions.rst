@@ -18,6 +18,7 @@ After training a model, there are four high-level interfaces for making predicti
 2. :func:`pykeen.models.predict.get_relation_prediction_df` for a given head/tail pair
 3. :func:`pykeen.models.predict.get_head_prediction_df` for a given relation/tail pair
 4. :func:`pykeen.models.predict.get_all_prediction_df` for prioritizing links
+5. :func:`pykeen.models.predict.predict_triples` for computing scores for explicitly provided triples
 
 Scientifically, :func:`pykeen.models.predict.get_all_prediction_df` is the most interesting in a scenario where
 predictions could be tested and validated experimentally.
@@ -29,19 +30,22 @@ which will already be in memory. Each of the high-level interfaces are exposed t
 model:
 
 >>> from pykeen.pipeline import pipeline
+>>> from pykeen.models import predict
 >>> # Run the pipeline
 >>> result = pipeline(dataset='Nations', model='RotatE')
 >>> model = result.model
 >>> # Predict tails
->>> predicted_tails_df = model.get_tail_prediction_df('brazil', 'intergovorgs', triples_factory=result.training)
+>>> predicted_tails_df = predict.get_tail_prediction_df(model, 'brazil', 'intergovorgs', triples_factory=result.training)
 >>> # Predict relations
->>> predicted_relations_df = model.get_relation_prediction_df('brazil', 'uk', triples_factory=result.training)
+>>> predicted_relations_df = predict.get_relation_prediction_df(model, 'brazil', 'uk', triples_factory=result.training)
 >>> # Predict heads
->>> predicted_heads_df = model.get_head_prediction_df('conferences', 'brazil', triples_factory=result.training)
+>>> predicted_heads_df = predict.get_head_prediction_df(model, 'conferences', 'brazil', triples_factory=result.training)
 >>> # Score all triples (memory intensive)
->>> predictions_df = model.get_all_prediction_df(triples_factory=result.training)
+>>> predictions_df = predict.get_all_prediction_df(model, triples_factory=result.training)
 >>> # Score top K triples
->>> top_k_predictions_df = model.get_all_prediction_df(k=150, triples_factory=result.training)
+>>> top_k_predictions_df = predict.get_all_prediction_df(model, k=150, triples_factory=result.training)
+>>> # Score training triples
+>>> score_df = predict.predict_triples(model=model, triples=result.training.mapped_triples, triples_factory=result.training)
 >>> # save the model
 >>> result.save_to_directory('doctests/nations_rotate')
 
