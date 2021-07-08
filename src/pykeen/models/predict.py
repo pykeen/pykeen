@@ -22,6 +22,8 @@ __all__ = [
     'get_tail_prediction_df',
 ]
 
+from ..utils import is_cuda_oom_error
+
 logger = logging.getLogger(__name__)
 
 
@@ -513,12 +515,46 @@ def _process_remove_known(df: pd.DataFrame, remove_known: bool, testing: Optiona
     return df
 
 
+@torch.no_grad()
+def _predict_triples(
+    model: Model,
+    mapped_triples: MappedTriples,
+    batch_size: Optional[int] = None,
+) -> torch.FloatTensor:
+    """Predict scores for triples while dealing with reducing batch size for CUDA OOM."""
+    # base case: infer maximum batch size
+    if batch_size is None:
+        return _predict_triples(model=model, batch_size=mapped_triples.shape[0])
+
+    # base case: single batch
+    if batch_size >= mapped_triples.shape[0]:
+        return model.predict_hrt(hrt_batch=mapped_triples)
+
+    if batch_size <= 0:
+        # TODO: this could happen because of AMO
+        raise ValueError("batch_size must be positive.")
+
+    try:
+        return torch.cat([
+            model.predict_hrt(hrt_batch=hrt_batch)
+            for hrt_batch in mapped_triples.split(split_size=batch_size, dim=0)
+        ], dim=0)
+    except RuntimeError as error:
+        # TODO: Can we make AMO code re-usable? e.g. like https://gist.github.com/mberr/c37a8068b38cabc98228db2cbe358043
+        if is_cuda_oom_error(error):
+            return _predict_triples(mapped_triples=mapped_triples, batch_size=batch_size // 2)
+
+        # no OOM error.
+        raise error
+
+
 def predict_triples(
     *,
     model: Model,
     triples: Union[MappedTriples, LabeledTriples],
     # we only need the labeling component
     triples_factory: Optional[TriplesFactory] = None,
+    batch_size: Optional[int] = None,
 ) -> pd.DataFrame:
     """
     Predict on labeled or mapped triples.
@@ -529,7 +565,9 @@ def predict_triples(
         The triples, either label-based or ID-based.
     :param triples_factory:
         The triples factory. Must be given if triples are label-based. If provided and triples are ID-based, add labels
-         to result.
+        to result.
+    :param batch_size:
+        The batch size to use. Use None for automatic memory optimization.
 
     :return: columns: head | relation | tail |
         A dataframe with one row per triple.
@@ -543,7 +581,6 @@ def predict_triples(
 
     assert torch.is_tensor(triples)
 
-    # TODO: batching / memory optimization
-    scores = model.predict_hrt(hrt_batch=triples)
+    scores = _predict_triples(model=model, mapped_triples=triples, batch_size=batch_size)
 
     return triples_factory.tensor_to_df(tensor=triples, score=scores)
