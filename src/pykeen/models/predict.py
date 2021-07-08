@@ -561,7 +561,11 @@ def predict_triples(
     >>> from pykeen.pipeline import pipeline
     >>> result = pipeline(dataset="nations", model="TransE")
     >>> from pykeen.models.predict import predict_triples
-    >>> df = predict_triples(model=result.model, triples=result.training.mapped_triples, triples_factory=result.training)
+    >>> df = predict_triples(
+    ...     model=result.model,
+    ...     triples=result.training.mapped_triples,
+    ...     triples_factory=result.training,
+    ... )
 
     :param model:
         The model.
