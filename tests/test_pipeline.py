@@ -14,7 +14,7 @@ from pykeen.datasets import EagerDataset, Nations
 from pykeen.models import ERModel, Model
 from pykeen.models.predict import (
     get_all_prediction_df, get_head_prediction_df, get_relation_prediction_df,
-    get_tail_prediction_df, predict_triples,
+    get_tail_prediction_df, predict_triples_df,
 )
 from pykeen.models.resolve import DimensionError, make_model, make_model_cls
 from pykeen.nn.modules import TransEInteraction
@@ -173,7 +173,7 @@ class TestPipeline(unittest.TestCase):
 
     def test_predict_triples(self):
         """Test scoring explicitly provided triples."""
-        df = predict_triples(
+        df = predict_triples_df(
             model=self.model,
             triples=self.testing_mapped_triples,
             triples_factory=self.dataset.training,

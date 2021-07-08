@@ -17,6 +17,7 @@ from ..utils import is_cuda_oom_error
 
 __all__ = [
     'predict',
+    'predict_triples_df',
     'get_all_prediction_df',
     'get_head_prediction_df',
     'get_relation_prediction_df',
@@ -547,7 +548,7 @@ def _predict_triples(
         raise error
 
 
-def predict_triples(
+def predict_triples_df(
     *,
     model: Model,
     triples: Union[MappedTriples, LabeledTriples],
@@ -560,8 +561,8 @@ def predict_triples(
     Example:
     >>> from pykeen.pipeline import pipeline
     >>> result = pipeline(dataset="nations", model="TransE")
-    >>> from pykeen.models.predict import predict_triples
-    >>> df = predict_triples(
+    >>> from pykeen.models.predict import predict_triples_df
+    >>> df = predict_triples_df(
     ...     model=result.model,
     ...     triples=result.training.mapped_triples,
     ...     triples_factory=result.training,
