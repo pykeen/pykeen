@@ -13,6 +13,7 @@ import torch
 from .base import Model
 from ..triples import CoreTriplesFactory, TriplesFactory
 from ..typing import LabeledTriples, MappedTriples, ScorePack
+from ..utils import is_cuda_oom_error
 
 __all__ = [
     'predict',
@@ -21,8 +22,6 @@ __all__ = [
     'get_relation_prediction_df',
     'get_tail_prediction_df',
 ]
-
-from ..utils import is_cuda_oom_error
 
 logger = logging.getLogger(__name__)
 
