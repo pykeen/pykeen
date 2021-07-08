@@ -524,7 +524,7 @@ def _predict_triples(
     """Predict scores for triples while dealing with reducing batch size for CUDA OOM."""
     # base case: infer maximum batch size
     if batch_size is None:
-        return _predict_triples(model=model, batch_size=mapped_triples.shape[0])
+        return _predict_triples(model=model, mapped_triples=mapped_triples, batch_size=mapped_triples.shape[0])
 
     # base case: single batch
     if batch_size >= mapped_triples.shape[0]:
@@ -542,7 +542,7 @@ def _predict_triples(
     except RuntimeError as error:
         # TODO: Can we make AMO code re-usable? e.g. like https://gist.github.com/mberr/c37a8068b38cabc98228db2cbe358043
         if is_cuda_oom_error(error):
-            return _predict_triples(mapped_triples=mapped_triples, batch_size=batch_size // 2)
+            return _predict_triples(model=model, mapped_triples=mapped_triples, batch_size=batch_size // 2)
 
         # no OOM error.
         raise error
@@ -581,6 +581,6 @@ def predict_triples(
 
     assert torch.is_tensor(triples)
 
-    scores = _predict_triples(model=model, mapped_triples=triples, batch_size=batch_size)
+    scores = _predict_triples(model=model, mapped_triples=triples, batch_size=batch_size).squeeze(dim=1)
 
     return triples_factory.tensor_to_df(tensor=triples, score=scores)
