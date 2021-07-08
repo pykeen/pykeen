@@ -1002,6 +1002,14 @@ class TriplesFactory(CoreTriplesFactory):
             invert_relation_selection=invert_relation_selection,
         ).with_labels(entity_to_id=self.entity_to_id, relation_to_id=self.relation_to_id)
 
+    def map_triples(self, triples: LabeledTriples) -> MappedTriples:
+        """Convert label-based triples to ID-based triples."""
+        return _map_triples_elements_to_ids(
+            triples=triples,
+            entity_to_id=self.entity_to_id,
+            relation_to_id=self.relation_to_id,
+        )
+
 
 def cat_triples(*triples_factories: CoreTriplesFactory) -> MappedTriples:
     """Concatenate several triples factories."""
