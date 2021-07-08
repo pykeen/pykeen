@@ -12,7 +12,7 @@ import torch
 
 from .base import Model
 from ..triples import CoreTriplesFactory, TriplesFactory
-from ..typing import MappedTriples, ScorePack
+from ..typing import LabeledTriples, MappedTriples, ScorePack
 
 __all__ = [
     'predict',
@@ -511,3 +511,39 @@ def _process_remove_known(df: pd.DataFrame, remove_known: bool, testing: Optiona
     df = df[~df['in_testing']]
     del df['in_testing']
     return df
+
+
+def predict_triples(
+    *,
+    model: Model,
+    triples: Union[MappedTriples, LabeledTriples],
+    # we only need the labeling component
+    triples_factory: Optional[TriplesFactory] = None,
+) -> pd.DataFrame:
+    """
+    Predict on labeled or mapped triples.
+
+    :param model:
+        The model.
+    :param triples: shape: (num_triples, 3)
+        The triples, either label-based or ID-based.
+    :param triples_factory:
+        The triples factory. Must be given if triples are label-based. If provided and triples are ID-based, add labels
+         to result.
+
+    :return: columns: head | relation | tail |
+        A dataframe with one row per triple.
+    """
+    if not torch.is_tensor(triples) or triples.dtype != torch.long:
+        if triples_factory is None:
+            raise ValueError("If triples are not ID-based, a triples_factory must be provided.")
+
+        # convert to ID-based
+        triples = triples_factory.map_triples(triples)
+
+    assert torch.is_tensor(triples)
+
+    # TODO: batching / memory optimization
+    scores = model.predict_hrt(hrt_batch=triples)
+
+    return triples_factory.tensor_to_df(tensor=triples, score=scores)
