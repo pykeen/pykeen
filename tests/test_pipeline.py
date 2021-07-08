@@ -5,6 +5,7 @@
 import tempfile
 import unittest
 
+import pandas
 import pandas as pd
 import torch
 
@@ -13,7 +14,7 @@ from pykeen.datasets import EagerDataset, Nations
 from pykeen.models import ERModel, Model
 from pykeen.models.predict import (
     get_all_prediction_df, get_head_prediction_df, get_relation_prediction_df,
-    get_tail_prediction_df,
+    get_tail_prediction_df, predict_triples,
 )
 from pykeen.models.resolve import DimensionError, make_model, make_model_cls
 from pykeen.nn.modules import TransEInteraction
@@ -169,6 +170,17 @@ class TestPipeline(unittest.TestCase):
         self.assertEqual(possible, len(all_df.index))
         self.assertEqual(self.dataset.training.num_triples, all_df['in_training'].sum())
         self.assertEqual(self.testing_mapped_triples.shape[0], all_df['in_testing'].sum())
+
+    def test_predict_triples(self):
+        """Test scoring explicitly provided triples."""
+        df = predict_triples(
+            model=self.model,
+            triples=self.testing_mapped_triples,
+            triples_factory=self.dataset.training,
+        )
+        assert isinstance(df, pandas.DataFrame)
+        assert df.shape[0] == self.testing_mapped_triples.shape[0]
+        assert {"head_id", "relation_id", "tail_id", "score"}.issubset(df.columns)
 
 
 class TestPipelineTriples(unittest.TestCase):
