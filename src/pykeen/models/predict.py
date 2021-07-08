@@ -552,12 +552,17 @@ def predict_triples(
     *,
     model: Model,
     triples: Union[MappedTriples, LabeledTriples],
-    # we only need the labeling component
-    triples_factory: Optional[TriplesFactory] = None,
+    triples_factory: Optional[CoreTriplesFactory] = None,
     batch_size: Optional[int] = None,
 ) -> pd.DataFrame:
     """
     Predict on labeled or mapped triples.
+
+    Example:
+    >>> from pykeen.pipeline import pipeline
+    >>> result = pipeline(dataset="nations", model="TransE")
+    >>> from pykeen.models.predict import predict_triples
+    >>> df = predict_triples(model=result.model, triples=result.training.mapped_triples, triples_factory=result.training)
 
     :param model:
         The model.
@@ -569,12 +574,12 @@ def predict_triples(
     :param batch_size:
         The batch size to use. Use None for automatic memory optimization.
 
-    :return: columns: head | relation | tail |
+    :return: columns: head_id | relation_id | tail_id | score | *
         A dataframe with one row per triple.
     """
     if not torch.is_tensor(triples) or triples.dtype != torch.long:
-        if triples_factory is None:
-            raise ValueError("If triples are not ID-based, a triples_factory must be provided.")
+        if triples_factory is None or not isinstance(triples_factory, TriplesFactory):
+            raise ValueError("If triples are not ID-based, a triples_factory must be provided and label-based.")
 
         # convert to ID-based
         triples = triples_factory.map_triples(triples)
