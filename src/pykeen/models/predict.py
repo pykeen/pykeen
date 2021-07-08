@@ -579,6 +579,9 @@ def predict_triples(
 
     :return: columns: head_id | relation_id | tail_id | score | *
         A dataframe with one row per triple.
+
+    :raise ValueError:
+        If label-based triples have been provided, but the triples factory does not provide a mapping.
     """
     if not torch.is_tensor(triples) or triples.dtype != torch.long:
         if triples_factory is None or not isinstance(triples_factory, TriplesFactory):
