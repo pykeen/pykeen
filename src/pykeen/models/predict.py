@@ -550,9 +550,9 @@ def _predict_triples(
 
 
 def predict_triples_df(
-    *,
     model: Model,
-    triples: Union[MappedTriples, LabeledTriples],
+    *,
+    triples: Union[None, MappedTriples, LabeledTriples],
     triples_factory: Optional[CoreTriplesFactory] = None,
     batch_size: Optional[int] = None,
 ) -> pd.DataFrame:
@@ -572,7 +572,8 @@ def predict_triples_df(
     :param model:
         The model.
     :param triples: shape: (num_triples, 3)
-        The triples, either label-based or ID-based.
+        The triples, either label-based or ID-based. If None, a triples factory has to be provided, and its triples will
+        be used.
     :param triples_factory:
         The triples factory. Must be given if triples are label-based. If provided and triples are ID-based, add labels
         to result.
@@ -585,6 +586,12 @@ def predict_triples_df(
     :raises ValueError:
         If label-based triples have been provided, but the triples factory does not provide a mapping.
     """
+    if triples is None:
+        if triples_factory is None:
+            raise ValueError("If no triples are provided, a triples_factory must be provided.")
+
+        triples = triples_factory.mapped_triples
+
     if not torch.is_tensor(triples) or triples.dtype != torch.long:
         if triples_factory is None or not isinstance(triples_factory, TriplesFactory):
             raise ValueError("If triples are not ID-based, a triples_factory must be provided and label-based.")
