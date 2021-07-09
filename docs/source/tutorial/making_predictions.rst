@@ -35,9 +35,11 @@ model:
 >>> result = pipeline(dataset='Nations', model='RotatE')
 >>> model = result.model
 >>> # Predict tails
->>> predicted_tails_df = predict.get_tail_prediction_df(model, 'brazil', 'intergovorgs', triples_factory=result.training)
+>>> predicted_tails_df = predict.get_tail_prediction_df(
+...     model, 'brazil', 'intergovorgs', triples_factory=result.training)
 >>> # Predict relations
->>> predicted_relations_df = predict.get_relation_prediction_df(model, 'brazil', 'uk', triples_factory=result.training)
+>>> predicted_relations_df = predict.get_relation_prediction_df(
+...     model, 'brazil', 'uk', triples_factory=result.training)
 >>> # Predict heads
 >>> predicted_heads_df = predict.get_head_prediction_df(model, 'conferences', 'brazil', triples_factory=result.training)
 >>> # Score all triples (memory intensive)
