@@ -12,6 +12,7 @@ import torch
 
 from .base import Model
 from ..triples import CoreTriplesFactory, TriplesFactory
+from ..triples.utils import tensor_to_df
 from ..typing import LabeledTriples, MappedTriples, ScorePack
 from ..utils import is_cuda_oom_error
 
@@ -594,5 +595,8 @@ def predict_triples_df(
     assert torch.is_tensor(triples)
 
     scores = _predict_triples(model=model, mapped_triples=triples, batch_size=batch_size).squeeze(dim=1)
+
+    if triples_factory is None:
+        return tensor_to_df(tensor=triples, score=scores)
 
     return triples_factory.tensor_to_df(tensor=triples, score=scores)
