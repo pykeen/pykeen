@@ -599,7 +599,7 @@ def predict_triples_df(
 
         triples = triples_factory.mapped_triples
 
-    if not torch.is_tensor(triples) or triples.dtype != torch.long:
+    if not isinstance(triples, torch.Tensor) or triples.dtype != torch.long:
         if triples_factory is None or not isinstance(triples_factory, TriplesFactory):
             raise ValueError("If triples are not ID-based, a triples_factory must be provided and label-based.")
 
