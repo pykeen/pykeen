@@ -6,6 +6,7 @@ import pathlib
 from typing import Callable, Mapping, Optional, Sequence, Set, TextIO, Union
 
 import numpy as np
+import pandas
 import torch
 from pkg_resources import iter_entry_points
 
@@ -16,6 +17,8 @@ __all__ = [
     'get_entities',
     'get_relations',
 ]
+
+TRIPLES_DF_COLUMNS = ('head_id', 'head_label', 'relation_id', 'relation_label', 'tail_id', 'tail_label')
 
 
 def _load_importers(group_subname: str) -> Mapping[str, Callable[[str], LabeledTriples]]:
@@ -90,3 +93,49 @@ def get_entities(triples: torch.LongTensor) -> Set[int]:
 def get_relations(triples: torch.LongTensor) -> Set[int]:
     """Get all relations from the triples."""
     return set(triples[:, 1].tolist())
+
+
+def tensor_to_df(
+    tensor: torch.LongTensor,
+    **kwargs: Union[torch.Tensor, np.ndarray, Sequence],
+) -> pandas.DataFrame:
+    """Take a tensor of triples and make a pandas dataframe with labels.
+
+    :param tensor: shape: (n, 3)
+        The triples, ID-based and in format (head_id, relation_id, tail_id).
+    :param kwargs:
+        Any additional number of columns. Each column needs to be of shape (n,). Reserved column names:
+        {"head_id", "head_label", "relation_id", "relation_label", "tail_id", "tail_label"}.
+
+    :return:
+        A dataframe with n rows, and 3 + len(kwargs) columns.
+
+    :raises ValueError:
+        If a reserved column name appears in kwargs.
+    """
+    # Input validation
+    additional_columns = set(kwargs.keys())
+    forbidden = additional_columns.intersection(TRIPLES_DF_COLUMNS)
+    if len(forbidden) > 0:
+        raise ValueError(
+            f'The key-words for additional arguments must not be in {TRIPLES_DF_COLUMNS}, but {forbidden} were '
+            f'used.',
+        )
+
+    # convert to numpy
+    tensor = tensor.cpu().numpy()
+    data = dict(zip(['head_id', 'relation_id', 'tail_id'], tensor.T))
+
+    # Additional columns
+    for key, values in kwargs.items():
+        # convert PyTorch tensors to numpy
+        if isinstance(values, torch.Tensor):
+            values = values.cpu().numpy()
+        data[key] = values
+
+    # convert to dataframe
+    rv = pandas.DataFrame(data=data)
+
+    # Re-order columns
+    columns = list(TRIPLES_DF_COLUMNS[::2]) + sorted(set(rv.columns).difference(TRIPLES_DF_COLUMNS))
+    return rv.loc[:, columns]
