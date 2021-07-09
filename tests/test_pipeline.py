@@ -173,14 +173,15 @@ class TestPipeline(unittest.TestCase):
 
     def test_predict_triples(self):
         """Test scoring explicitly provided triples."""
-        df = predict_triples_df(
-            model=self.model,
-            triples=self.testing_mapped_triples,
-            triples_factory=self.dataset.training,
-        )
-        assert isinstance(df, pandas.DataFrame)
-        assert df.shape[0] == self.testing_mapped_triples.shape[0]
-        assert {"head_id", "relation_id", "tail_id", "score"}.issubset(df.columns)
+        for triples_factory in (None, self.dataset.training):
+            df = predict_triples_df(
+                model=self.model,
+                triples=self.testing_mapped_triples,
+                triples_factory=triples_factory,
+            )
+            assert isinstance(df, pandas.DataFrame)
+            assert df.shape[0] == self.testing_mapped_triples.shape[0]
+            assert {"head_id", "relation_id", "tail_id", "score"}.issubset(df.columns)
 
 
 class TestPipelineTriples(unittest.TestCase):
