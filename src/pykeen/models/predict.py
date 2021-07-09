@@ -4,8 +4,9 @@
 
 import itertools as itt
 import logging
-from typing import Optional, Tuple, Union
+from typing import Optional, Sequence, Tuple, Union
 
+import numpy
 import numpy as np
 import pandas as pd
 import torch
@@ -552,7 +553,7 @@ def _predict_triples(
 def predict_triples_df(
     model: Model,
     *,
-    triples: Union[None, MappedTriples, LabeledTriples],
+    triples: Union[None, MappedTriples, LabeledTriples, Union[Tuple[str, str, str], Sequence[Tuple[str, str, str]]]],
     triples_factory: Optional[CoreTriplesFactory] = None,
     batch_size: Optional[int] = None,
 ) -> pd.DataFrame:
@@ -565,15 +566,21 @@ def predict_triples_df(
     >>> from pykeen.models.predict import predict_triples_df
     >>> df = predict_triples_df(
     ...     model=result.model,
-    ...     triples=result.training.mapped_triples,
+    ...     triples=("uk", "conferences", "brazil"),
     ...     triples_factory=result.training,
     ... )
 
     :param model:
         The model.
     :param triples: shape: (num_triples, 3)
-        The triples, either label-based or ID-based. If None, a triples factory has to be provided, and its triples will
-        be used.
+        The triples in one of the following formats:
+
+        - A single label-based triple.
+        - A list of label-based triples.
+        - An array of label-based triples
+        - An array of ID-based triples.
+        - None. In this case, a triples factory has to be provided, and its triples will be used.
+
     :param triples_factory:
         The triples factory. Must be given if triples are label-based. If provided and triples are ID-based, add labels
         to result.
@@ -596,10 +603,16 @@ def predict_triples_df(
         if triples_factory is None or not isinstance(triples_factory, TriplesFactory):
             raise ValueError("If triples are not ID-based, a triples_factory must be provided and label-based.")
 
+        # make sure triples are a numpy array
+        triples = numpy.asanyarray(triples)
+
+        # make sure triples are 2d
+        triples = numpy.atleast_2d(triples)
+
         # convert to ID-based
         triples = triples_factory.map_triples(triples)
 
-    assert torch.is_tensor(triples)
+    assert torch.is_tensor(triples) and triples.dtype == torch.long
 
     scores = _predict_triples(model=model, mapped_triples=triples, batch_size=batch_size).squeeze(dim=1)
 
