@@ -16,6 +16,7 @@ __all__ = [
     'load_triples',
     'get_entities',
     'get_relations',
+    'tensor_to_df',
 ]
 
 TRIPLES_DF_COLUMNS = ('head_id', 'head_label', 'relation_id', 'relation_label', 'tail_id', 'tail_label')
