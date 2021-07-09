@@ -281,7 +281,7 @@ class PipelineResult(Result):
     def plot_losses(self, **kwargs):
         """Plot the losses per epoch.
 
-        :param kwargs: The keyword arguments passed to :func:`pykeen.pipeline_plot.plot_losses`.
+        :param kwargs: The keyword arguments passed to :func:`pykeen.pipeline.plot_utils.plot_losses`.
         :returns: The axis
         """
         from .plot_utils import plot_losses
@@ -290,7 +290,7 @@ class PipelineResult(Result):
     def plot_early_stopping(self, **kwargs):
         """Plot the evaluations during early stopping.
 
-        :param kwargs: The keyword arguments passed to :func:`pykeen.pipeline_plot.plot_early_stopping`
+        :param kwargs: The keyword arguments passed to :func:`pykeen.pipeline.plot_utils.plot_early_stopping`
         :returns: The axis
         """
         from .plot_utils import plot_early_stopping
@@ -299,7 +299,7 @@ class PipelineResult(Result):
     def plot_er(self, **kwargs):
         """Plot the reduced entities and relation vectors in 2D.
 
-        :param kwargs: The keyword arguments passed to :func:`pykeen.pipeline_plot.plot_er`
+        :param kwargs: The keyword arguments passed to :func:`pykeen.pipeline.plot_utils.plot_er`
         :returns: The axis
 
         .. warning::
