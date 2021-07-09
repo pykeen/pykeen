@@ -167,8 +167,8 @@ class Labeling:
     def __post_init__(self):
         """Precompute inverse mappings."""
         self.id_to_label = invert_mapping(mapping=self.label_to_id)
-        self._vectorized_mapper = np.vectorize(self.label_to_id.get)
-        self._vectorized_labeler = np.vectorize(self.id_to_label.get)
+        self._vectorized_mapper = np.vectorize(self.label_to_id.get, otypes=[int])
+        self._vectorized_labeler = np.vectorize(self.id_to_label.get, otypes=[str])
 
     def label(
         self,
