@@ -77,29 +77,6 @@ the mean rank lies on the interval $[1, \infty)$ where lower is better.
     A mean rank of 10 might indicate strong performance for a candidate set size of 1,000,000,
     but incredibly poor performance for a candidate set size of 20.
 
-Adjusted Mean Rank
-******************
-The adjusted mean rank (AMR) was introduced by [berrendorf2020]_. It is defined as
-
-.. math::
-
-    \text{score} = \frac{MR}{\mathbb{E}\left[MR\right]} = \frac{2 \sum_{i=1}^{n} r_{i}}{\sum_{i=1}^{n} (|\mathcal{S}_i|+1)}
-
-The derivations of $\mathbb{E}\left[MR\right]$ and $\mathcal{S}_i$ are contained within the original manuscript.
-
-It lies on the open interval $(0, 2)$ where lower is better.
-
-Adjusted Mean Rank Index
-************************
-The adjusted mean rank index (AMRI) was introduced by [berrendorf2020]_ to make the AMR
-more intuitive.
-
-.. math::
-
-    \text{score} = 1 - \frac{MR - 1}{\mathbb{E}\left[MR - 1\right]} = \frac{2 \sum_{i=1}^{n} (r_{i} - 1)}{\sum_{i=1}^{n} (|\mathcal{S}_i|)}
-
-The AMR has a bounded value range of $[-1, 1]$ where closer to 1 is better.
-
 Mean Reciprocal Rank
 ********************
 The mean reciprocal rank (MRR) is the arithmetic mean of reciprocal ranks, and thus the inverse of the harmonic mean
@@ -133,6 +110,65 @@ Therefore, the inverse geometric mean rank (IGMR) is defined as:
     \text{score} = \sqrt[\|\mathcal{I}\|]{\prod \limits_{r \in \mathcal{I}} r}
 
 .. note:: This metric is novel as of its implementation in PyKEEN and was proposed by Max Berrendorf
+
+Adjusted Rank-Based Metrics
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Typical rank-based metrics are affected by the number of entities in knowledge graphs, therefore
+making results not comparable. The following adjustments were proposed or inspired by [berrendorf2020]_
+in order to make the metrics invariant to number of entities.
+
+The expectation and variance of a discrete uniform variable $X \sim \mathcal{U}(a, b)$ are respectively
+$\mathbb{E}\left[X\right] = \frac{b+a}{2}$ and $\text{Var}\left[X\right] = \frac{\left( b-a+1\right)^2}{12}$.
+We assume discrete uniform distribution over the ranks such that
+$r_i \sim \mathcal{U}(1, N_i) \in [1,\ldots,N_i]$.
+While the upper bound $N_i$ *may* vary by ranking task $i$, e.g., due to filtered evaluation, we assume
+it remains constant throughout the following derivations such that $\forall i: N_i = n$.
+We use $\doteq$ to denote equivalences asserted under this assumption.
+
+Adjusted Mean Rank
+******************
+The expectation of an inverse-uniform distributed variable $\frac{1}{X} \sim \mathcal{U}(\frac{1}{a},\frac{1}{b})$
+is $\mathbb{E}\left[\frac{1}{X}\right] = \frac{\ln b - \ln a}{b - a}$.
+Given our uniformly distributed variable $r_i$  with parameters $a=1$ and $b=N_i$ and its corresponding
+inverse-uniform distributed variable $r_i^{-1}$, we get:
+
+.. math::
+
+    \mathbb{E}\left[r_i^{-1}\right]
+    = \frac{\ln 1 - \ln N_i}{N_i - 1}
+    = \frac{\ln N_i}{N_i - 1}
+    \doteq \frac{\ln n}{n - 1}
+
+
+The expected value of the mean rank is then derived like:
+
+.. math::
+
+    \mathbb{E}\left[\text{MRR}\right]
+    = \mathbb{E}\left[\frac{1}{n} \sum \limits_{i=1}^n r_i^{-1}\right]
+    = \frac{1}{n} \sum \limits_{i=1}^n \mathbb{E}\left[r_i^{-1}\right]
+    = \mathbb{E}\left[r_i^{-1}\right]
+    \doteq \frac{\ln n}{n - 1}
+
+The adjusted mean rank (AMR) was introduced by [berrendorf2020]_. It is defined as the ratio
+of the mean rank to the expected mean rank
+
+.. math::
+
+    \text{MRR}^{*}(r_1,\ldots,r_n) = \frac{\text{MRR}(r_1,\ldots,r_n)}{\mathbb{E}\left[\text{MRR}\right] }
+
+It lies on the open interval $(0, 2)$ where lower is better.
+
+Adjusted Mean Rank Index
+************************
+The adjusted mean rank index (AMRI) was introduced by [berrendorf2020]_ to make the AMR
+more intuitive.
+
+.. math::
+
+    \text{score} = 1 - \frac{MR - 1}{\mathbb{E}\left[MR - 1\right]} = \frac{2 \sum_{i=1}^{n} (r_{i} - 1)}{\sum_{i=1}^{n} (|\mathcal{S}_i|)}
+
+The AMR has a bounded value range of $[-1, 1]$ where closer to 1 is better.
 
 Ranking Types
 ~~~~~~~~~~~~~
