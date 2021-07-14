@@ -33,6 +33,8 @@ model:
 >>> from pykeen.models import predict
 >>> # Run the pipeline
 >>> result = pipeline(dataset='Nations', model='RotatE')
+>>> # save the model
+>>> result.save_to_directory('doctests/nations_rotate')
 >>> model = result.model
 >>> # Predict tails
 >>> predicted_tails_df = predict.get_tail_prediction_df(
@@ -48,12 +50,12 @@ model:
 >>> predictions_df = predict.get_all_prediction_df(model, triples_factory=result.training)
 >>> # Score top K triples
 >>> top_k_predictions_df = predict.get_all_prediction_df(model, k=150, triples_factory=result.training)
->>> # Score training triples
+>>> # Score a given list of triples
 >>> score_df = predict.predict_triples_df(
-...     model=model, triples=result.training.mapped_triples, triples_factory=result.training,
+...     model=model,
+...     triples=[('brazil', 'conferences', 'uk'), ('brazil', 'intergovorgs', 'uk')],
+...     triples_factory=result.training,
 ... )
->>> # save the model
->>> result.save_to_directory('doctests/nations_rotate')
 
 Loading a Model
 ~~~~~~~~~~~~~~~
