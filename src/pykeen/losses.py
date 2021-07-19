@@ -158,6 +158,7 @@ __all__ = [
     'MSELoss',
     'NSSALoss',
     'SoftplusLoss',
+    'DoubleMarginLoss',
     # Utils
     'loss_resolver',
 ]
