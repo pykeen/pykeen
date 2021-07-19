@@ -445,6 +445,22 @@ class TorusETests(cases.TranslationalInteractionTests):
         return -d.norm(p=p)
 
 
+class TransFTests(cases.InteractionTestCase):
+    """Tests for the TransF interaction function."""
+
+    cls = pykeen.nn.modules.TransFInteraction
+
+    def _exp_score(
+        self,
+        h: torch.FloatTensor,
+        r: torch.FloatTensor,
+        t: torch.FloatTensor,
+    ) -> torch.FloatTensor:
+        left = ((h + r) * t).sum(dim=-1)
+        right = (h * (t - r)).sum(dim=-1)
+        return left + right
+
+
 class MonotonicAffineTransformationInteractionTests(cases.InteractionTestCase):
     """Tests for monotonic affine transformation interaction adapter."""
 
