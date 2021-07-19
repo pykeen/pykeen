@@ -568,8 +568,7 @@ class DoubleMarginLoss(PointwiseLoss):
                 raise ValueError(f"The offset must not be negative, but it is: {offset}")
             return positive_margin, positive_margin - offset
 
-        raise ValueError(dedent(
-            f"""
+        raise ValueError(dedent(f"""\
             Invalid combination of margins and offset:
             
                 positive_margin={positive_margin}
@@ -580,8 +579,7 @@ class DoubleMarginLoss(PointwiseLoss):
                 1. positive & negative margin
                 2. negative margin & offset
                 3. positive margin & offset
-            """,
-        ))
+        """))
 
     def __init__(
         self,
