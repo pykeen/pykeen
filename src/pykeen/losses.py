@@ -521,7 +521,7 @@ class DoubleMarginLoss(PointwiseLoss):
     (somewhere between the positive and negative margin), while still resulting in sparse losses with no gradients for
     sufficiently correct examples.
 
-    cf.
+    # TODO: Proper citation
 
     Bootstrapping Entity Alignment with Knowledge Graph Embedding
     Zequn Sun, Wei Hu∗, Qingheng Zhang and Yuzhong Qu
