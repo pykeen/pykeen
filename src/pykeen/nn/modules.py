@@ -52,6 +52,7 @@ __all__ = [
     'TorusEInteraction',
     'TransDInteraction',
     'TransEInteraction',
+    'TransFInteraction',
     'TransHInteraction',
     'TransRInteraction',
     'TuckerInteraction',
