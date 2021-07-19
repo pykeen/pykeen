@@ -101,6 +101,21 @@ pairwise logistic loss can be considered as a special case of the soft margin ra
     Pairwise Logistic                $h(\Delta) = \log(1 + \exp(\Delta))$
     ===============================  ==============================================
 
+Atypical Pairwise Loss Functions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The following pairwise loss function use the full generalized form of $L(k, \bar{k}) = \dots$
+for their definitions:
+
+.. table::
+    :align: center
+    :widths: auto
+
+    ==============  =============================================
+    Pairwise Loss   Formulation
+    ==============  =============================================
+    Double Loss     $h(\bar{\lambda} + \bar{k}) + h(\lambda - k)$
+    ==============  =============================================
+
 Batching
 ~~~~~~~~
 The pairwise loss for a set of pairs of positive/negative triples $\mathcal{L}_L: 2^{\mathcal{K} \times
@@ -517,7 +532,7 @@ class MarginRankingLoss(PairwiseLoss):
 
 @parse_docdata
 class DoubleMarginLoss(PointwiseLoss):
-    r"""A limit-based scoring loss, with separate margins for positive and negative elements from [sun2018]_
+    r"""A limit-based scoring loss, with separate margins for positive and negative elements from [sun2018]_.
 
     Despite its similarity to the margin-based loss, this loss is quite different to it, since it uses absolute margins
     for positive/negative scores, rather than comparing the difference. Hence, it has a natural decision boundary
@@ -525,8 +540,10 @@ class DoubleMarginLoss(PointwiseLoss):
     sufficiently correct examples.
 
     .. math ::
-        L(score^+, score^-) = activation(margin^- + score^-) + activation(margin^+ - score^+)
+        L(k, \bar{k}) = h(\bar{\lambda} + \bar{k}) + h(\lambda - k)
 
+    Where $k$ is positive scores, $\bar{k}$ is negative scores, $\lambda$ is the positive margin, $\bar{\lambda}$ is
+    the negative margin, and $h$ is an activation function, like the ReLU or softmax.
     ---
     name: Double Margin
     """
