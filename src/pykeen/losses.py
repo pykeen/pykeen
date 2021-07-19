@@ -669,17 +669,21 @@ class DoubleMarginLoss(PointwiseLoss):
         # positive term
         if batch_filter is None:
             # implicitly repeat positive scores
-            loss = self.margin_activation(self.positive_margin - positive_scores) * negative_scores.shape[1]
+            # TODO: This may be incorrect for mean aggregation?
+            positive_loss = self.margin_activation(self.positive_margin - positive_scores) * negative_scores.shape[1]
         else:
             # negative_scores have already been filtered in the sampler!
             num_neg_per_pos = batch_filter.shape[1]
             positive_scores = positive_scores.unsqueeze(dim=1).repeat(1, num_neg_per_pos, 1)[batch_filter]
             # shape: (nnz,)
-            loss = self.margin_activation(self.positive_margin - positive_scores)
-        loss = self.positive_weight * self._reduction_method(loss)
-
+            positive_loss = self.margin_activation(self.positive_margin - positive_scores)
+        
         # negative term
-        return loss + self.negative_weight * self._reduction_method(self.negative_margin + negative_scores)
+        return (
+            self.positive_weight * self._reduction_method(positive_loss)
+        ) + self.negative_weight * self._reduction_method(
+            self.margin_activation(self.negative_margin + negative_scores)
+        )
 
     def process_lcwa_scores(
         self,
