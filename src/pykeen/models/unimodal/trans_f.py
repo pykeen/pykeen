@@ -41,7 +41,7 @@ class TransF(ERModel):
         relation_initializer_kwargs: Optional[Mapping[str, Any]] = None,
         **kwargs,
     ) -> None:
-        r"""Initialize PairRE via the :class:`pykeen.nn.modules.PairREInteraction` interaction.
+        r"""Initialize TransF via the :class:`pykeen.nn.modules.TransFInteraction` interaction.
 
         :param embedding_dim: The entity embedding dimension $d$.
         :param entity_initializer: Entity initializer function. Defaults to :func:`torch.nn.init.uniform_`
