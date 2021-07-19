@@ -47,6 +47,7 @@ __all__ = [
     'structured_embedding_interaction',
     'transd_interaction',
     'transe_interaction',
+    'transf_interaction',
     'transh_interaction',
     'transr_interaction',
     'tucker_interaction',
