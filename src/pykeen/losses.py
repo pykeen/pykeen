@@ -133,7 +133,8 @@ triples $\mathcal{b}$ in the subset $\mathcal{B} \in 2^{2^{\mathcal{T}}}$.
     \mathcal{L}_L(\mathcal{B}) = \frac{1}{|\mathcal{B}|} \sum \limits_{\mathcal{b} \in \mathcal{B}} L(\mathcal{b})
 """
 import logging
-from typing import Any, ClassVar, Mapping, Optional, Set
+from textwrap import dedent
+from typing import Any, ClassVar, Mapping, Optional, Set, Tuple
 
 import torch
 from class_resolver import Hint, Resolver
@@ -537,7 +538,7 @@ class DoubleMarginLoss(PointwiseLoss):
 
     hpo_default: ClassVar[Mapping[str, Any]] = dict(
         margin_positive=dict(type=float, low=-1, high=1),
-        margin_negative=dict(type=float, low=-1, high=1),
+        offset=dict(type=float, low=0, high=1),
         positive_negative_balance=dict(type=float, low=1.0e-03, high=1.0 - 1.0e-03),
         margin_activation=dict(
             type='categorical',
@@ -545,10 +546,55 @@ class DoubleMarginLoss(PointwiseLoss):
         ),
     )
 
+    @staticmethod
+    def resolve_margin(
+        positive_margin: Optional[float],
+        negative_margin: Optional[float],
+        offset: Optional[float],
+    ) -> Tuple[float, float]:
+        """Resolve margins from multiple methods how to specify them."""
+        # 1. positive & negative margin
+        if positive_margin is not None and negative_margin is not None and offset is None:
+            if negative_margin > positive_margin:
+                raise ValueError(
+                    f"Positive margin ({positive_margin}) must not be smaller than the negative one "
+                    f"({negative_margin}).",
+                )
+            return positive_margin, negative_margin
+
+        # 2. negative margin & offset
+        if negative_margin is not None and offset is not None and positive_margin is None:
+            if offset < 0:
+                raise ValueError(f"The offset must not be negative, but it is: {offset}")
+            return negative_margin + offset, negative_margin
+
+        # 3. positive margin & offset
+        if positive_margin is not None and offset is not None and negative_margin is None:
+            if offset < 0:
+                raise ValueError(f"The offset must not be negative, but it is: {offset}")
+            return positive_margin, positive_margin - offset
+
+        raise ValueError(dedent(
+            f"""
+            Invalid combination of margins and offset:
+            
+                positive_margin={positive_margin}
+                negative_margin={negative_margin}
+                offset={offset}
+
+            Supported are:
+                1. positive & negative margin
+                2. negative margin & offset
+                3. positive margin & offset
+            """,
+        ))
+
     def __init__(
         self,
-        positive_margin: float = 1.0,
-        negative_margin: float = 0.0,
+        *,
+        positive_margin: Optional[float] = 1.0,
+        negative_margin: Optional[float] = 0.0,
+        offset: Optional[float] = None,
         positive_negative_balance: float = 0.5,
         margin_activation: Hint[nn.Module] = 'relu',
         reduction: str = 'mean',
@@ -572,11 +618,11 @@ class DoubleMarginLoss(PointwiseLoss):
         super().__init__(reduction=reduction)
         if positive_negative_balance <= 0 or positive_negative_balance >= 1:
             raise ValueError(f"The positive-negative balance weight must be in (0, 1), but is {positive_negative_balance}")
-        if positive_margin < negative_margin:
-            logger.warning("Positive margin should not be smaller than negative margin. Swapping them.")
-            positive_margin, negative_margin = negative_margin, positive_margin
-        self.positive_margin = positive_margin
-        self.negative_margin = negative_margin
+        self.positive_margin, self.negative_margin = self.resolve_margin(
+            positive_margin=positive_margin,
+            negative_margin=negative_margin,
+            offset=offset,
+        )
         self.negative_weight = 1.0 - positive_negative_balance
         self.positive_weight = positive_negative_balance
         self.margin_activation = margin_activation_resolver.make(margin_activation)
