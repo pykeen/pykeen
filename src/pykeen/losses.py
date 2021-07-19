@@ -564,7 +564,19 @@ class DoubleMarginLoss(PointwiseLoss):
         negative_margin: Optional[float],
         offset: Optional[float],
     ) -> Tuple[float, float]:
-        """Resolve margins from multiple methods how to specify them."""
+        """Resolve margins from multiple methods how to specify them.
+
+        :param positive_margin:
+            The (absolute) margin for the positive scores. Should be larger than the negative one.
+        :param negative_margin:
+            The (absolute) margin for the negative scores. Should be smaller than the positive one.
+        :param offset:
+            TODO
+        :returns:
+            TODO
+        :raises ValueError:
+            TODO
+        """
         # 1. positive & negative margin
         if positive_margin is not None and negative_margin is not None and offset is None:
             if negative_margin > positive_margin:
@@ -588,7 +600,7 @@ class DoubleMarginLoss(PointwiseLoss):
 
         raise ValueError(dedent(f"""\
             Invalid combination of margins and offset:
-            
+
                 positive_margin={positive_margin}
                 negative_margin={negative_margin}
                 offset={offset}
@@ -615,6 +627,8 @@ class DoubleMarginLoss(PointwiseLoss):
             The (absolute) margin for the positive scores. Should be larger than the negative one.
         :param negative_margin:
             The (absolute) margin for the negative scores. Should be smaller than the positive one.
+        :param offset:
+            TODO @mberr
         :param positive_negative_balance:
             The balance between positive and negative term. Must be in (0, 1).
         :param margin_activation:
@@ -624,10 +638,13 @@ class DoubleMarginLoss(PointwiseLoss):
         :param reduction:
             The name of the reduction operation to aggregate the individual loss values from a batch to a scalar loss
             value. From {'mean', 'sum'}.
+        :raises ValueError: If the positive/negative balance is not within the right range
         """
         super().__init__(reduction=reduction)
-        if positive_negative_balance <= 0 or positive_negative_balance >= 1:
-            raise ValueError(f"The positive-negative balance weight must be in (0, 1), but is {positive_negative_balance}")
+        if not (0 <= positive_negative_balance <= 1):
+            raise ValueError(
+                f"The positive-negative balance weight must be in (0, 1), but is {positive_negative_balance}",
+            )
         self.positive_margin, self.negative_margin = self.resolve_margin(
             positive_margin=positive_margin,
             negative_margin=negative_margin,
@@ -700,9 +717,9 @@ class DoubleMarginLoss(PointwiseLoss):
             A scalar loss term.
         """
         return self.positive_weight * self._reduction_method(
-            labels * self.margin_activation(self.positive_margin - predictions)
+            labels * self.margin_activation(self.positive_margin - predictions),
         ) + self.negative_weight * self._reduction_method(
-            (1.0 - labels) * self.margin_activation(self.negative_margin + predictions)
+            (1.0 - labels) * self.margin_activation(self.negative_margin + predictions),
         )
 
 
