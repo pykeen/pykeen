@@ -132,7 +132,7 @@ triples $\mathcal{b}$ in the subset $\mathcal{B} \in 2^{2^{\mathcal{T}}}$.
 
     \mathcal{L}_L(\mathcal{B}) = \frac{1}{|\mathcal{B}|} \sum \limits_{\mathcal{b} \in \mathcal{B}} L(\mathcal{b})
 """
-
+import logging
 from typing import Any, ClassVar, Mapping, Optional, Set
 
 import torch
@@ -159,6 +159,8 @@ __all__ = [
     # Utils
     'loss_resolver',
 ]
+
+logger = logging.getLogger(__name__)
 
 
 def apply_label_smoothing(
@@ -508,6 +510,144 @@ class MarginRankingLoss(PairwiseLoss):
         return self._reduction_method(self.margin_activation(
             neg_scores - pos_scores + self.margin,
         ))
+
+
+@parse_docdata
+class DoubleMarginLoss(PointwiseLoss):
+    r"""A module for a limit-based scoring loss, with separate margins for positive and negative elements.
+
+    Despite its similarity to the margin-based loss, this loss is quite different to it, since it uses absolute margins
+    for positive/negative scores, rather than comparing the difference. Hence, it has a natural decision boundary
+    (somewhere between the positive and negative margin), while still resulting in sparse losses with no gradients for
+    sufficiently correct examples.
+
+    cf.
+
+    Bootstrapping Entity Alignment with Knowledge Graph Embedding
+    Zequn Sun, Wei Hu∗, Qingheng Zhang and Yuzhong Qu
+    Proceedings of the Twenty-Seventh International Joint Conference on Artificial Intelligence (IJCAI-18)
+
+
+    .. math ::
+        L(score^+, score^-) = activation(margin^- + score^-) + activation(margin^+ - score^+)
+
+    ---
+    name: Double Margin
+    """
+
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
+        margin_positive=dict(type=float, low=-1, high=1),
+        margin_negative=dict(type=float, low=-1, high=1),
+        positive_negative_balance=dict(type=float, low=1.0e-03, high=1.0 - 1.0e-03),
+        margin_activation=dict(
+            type='categorical',
+            choices=margin_activation_resolver.options,
+        ),
+    )
+
+    def __init__(
+        self,
+        positive_margin: float = 1.0,
+        negative_margin: float = 0.0,
+        positive_negative_balance: float = 0.5,
+        margin_activation: Hint[nn.Module] = 'relu',
+        reduction: str = 'mean',
+    ):
+        r"""Initialize the double margin loss.
+
+        :param positive_margin:
+            The (absolute) margin for the positive scores. Should be larger than the negative one.
+        :param negative_margin:
+            The (absolute) margin for the negative scores. Should be smaller than the positive one.
+        :param positive_negative_balance:
+            The balance between positive and negative term. Must be in (0, 1).
+        :param margin_activation:
+            A margin activation. Defaults to ``'relu'``, i.e. $h(\Delta) = max(0, \Delta + \lambda)$, which is the
+            default "margin loss". Using ``'softplus'`` leads to a "soft-margin" formulation as discussed in
+            https://arxiv.org/abs/1703.07737.
+        :param reduction:
+            The name of the reduction operation to aggregate the individual loss values from a batch to a scalar loss
+            value. From {'mean', 'sum'}.
+        """
+        super().__init__(reduction=reduction)
+        if positive_negative_balance <= 0 or positive_negative_balance >= 1:
+            raise ValueError(f"The positive-negative balance weight must be in (0, 1), but is {positive_negative_balance}")
+        if positive_margin < negative_margin:
+            logger.warning("Positive margin should not be smaller than negative margin. Swapping them.")
+            positive_margin, negative_margin = negative_margin, positive_margin
+        self.positive_margin = positive_margin
+        self.negative_margin = negative_margin
+        self.negative_weight = 1.0 - positive_negative_balance
+        self.positive_weight = positive_negative_balance
+        self.margin_activation = margin_activation_resolver.make(margin_activation)
+
+    def process_slcwa_scores(
+        self,
+        positive_scores: torch.FloatTensor,
+        negative_scores: torch.FloatTensor,
+        label_smoothing: Optional[float] = None,
+        batch_filter: Optional[torch.BoolTensor] = None,
+        num_entities: Optional[int] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        # Sanity check
+        if label_smoothing:
+            raise UnsupportedLabelSmoothingError(self)
+
+        # positive term
+        if batch_filter is None:
+            # implicitly repeat positive scores
+            loss = self.margin_activation(self.positive_margin - positive_scores) * negative_scores.shape[1]
+        else:
+            # negative_scores have already been filtered in the sampler!
+            num_neg_per_pos = batch_filter.shape[1]
+            positive_scores = positive_scores.unsqueeze(dim=1).repeat(1, num_neg_per_pos, 1)[batch_filter]
+            # shape: (nnz,)
+            loss = self.margin_activation(self.positive_margin - positive_scores)
+        loss = self.positive_weight * self._reduction_method(loss)
+
+        # negative term
+        return loss + self.negative_weight * self._reduction_method(self.negative_margin + negative_scores)
+
+    def process_lcwa_scores(
+        self,
+        predictions: torch.FloatTensor,
+        labels: torch.FloatTensor,
+        label_smoothing: Optional[float] = None,
+        num_entities: Optional[int] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        # Sanity check
+        if label_smoothing:
+            labels = apply_label_smoothing(
+                labels=labels,
+                epsilon=label_smoothing,
+                num_classes=num_entities,
+            )
+
+        return self(predictions=predictions, labels=labels)
+
+    def forward(
+        self,
+        predictions: torch.FloatTensor,
+        labels: torch.FloatTensor,
+    ) -> torch.FloatTensor:
+        """
+        Compute the double margin loss.
+
+        The scores have to be in broadcastable shape.
+
+        :param predictions:
+            The predicted scores.
+        :param labels:
+            The labels.
+
+        :return:
+            A scalar loss term.
+        """
+        return self.positive_weight * self._reduction_method(
+            labels * self.margin_activation(self.positive_margin - predictions)
+        ) + self.negative_weight * self._reduction_method(
+            (1.0 - labels) * self.margin_activation(self.negative_margin + predictions)
+        )
 
 
 @parse_docdata
