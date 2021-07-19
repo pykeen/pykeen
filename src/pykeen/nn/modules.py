@@ -472,6 +472,15 @@ class TransEInteraction(TranslationalInteraction[FloatTensor, FloatTensor, Float
     func = pkf.transe_interaction
 
 
+class TransFInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
+    """A stateless module for the TransF interaction function.
+
+    .. seealso:: :func:`pykeen.nn.functional.transf_interaction`
+    """
+
+    func = pkf.transf_interaction
+
+
 class ComplExInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
     """A module wrapper for the stateless ComplEx interaction function.
 
