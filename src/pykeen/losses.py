@@ -132,6 +132,7 @@ triples $\mathcal{b}$ in the subset $\mathcal{B} \in 2^{2^{\mathcal{T}}}$.
 
     \mathcal{L}_L(\mathcal{B}) = \frac{1}{|\mathcal{B}|} \sum \limits_{\mathcal{b} \in \mathcal{B}} L(\mathcal{b})
 """
+
 import logging
 from textwrap import dedent
 from typing import Any, ClassVar, Mapping, Optional, Set, Tuple
