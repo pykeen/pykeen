@@ -34,7 +34,7 @@
   <a href="#installation">Installation</a> •
   <a href="#quickstart">Quickstart</a> •
   <a href="#datasets-27">Datasets</a> •
-  <a href="#models-30">Models</a> •
+  <a href="#models-31">Models</a> •
   <a href="#supporters">Support</a> •
   <a href="#citation">Citation</a>
 </p>
@@ -136,7 +136,7 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 | WordNet-18 (RR)                    | [`pykeen.datasets.WN18RR`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.WN18RR.html)               | [Toutanova *et al*., 2015](https://www.aclweb.org/anthology/W15-4007/)                                                  |      40559 |          11 |     92583 |
 | YAGO3-10                           | [`pykeen.datasets.YAGO310`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.YAGO310.html)             | [Mahdisoltani *et al*., 2015](http://service.tsi.telecom-paristech.fr/cgi-bin//valipub_download.cgi?dId=284)            |     123143 |          37 |   1089000 |
 
-### Models (30)
+### Models (31)
 
 | Name                 | Reference                                                                                                                 | Citation                                                                                                                |
 |----------------------|---------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|
@@ -166,6 +166,7 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 | TorusE               | [`pykeen.models.TorusE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.TorusE.html)                           | [Ebisu *et al.*, 2018](https://www.aaai.org/ocs/index.php/AAAI/AAAI18/paper/view/16227)                                 |
 | TransD               | [`pykeen.models.TransD`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.TransD.html)                           | [Ji *et al.*, 2015](http://www.aclweb.org/anthology/P15-1067)                                                           |
 | TransE               | [`pykeen.models.TransE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.TransE.html)                           | [Bordes *et al.*, 2013](http://papers.nips.cc/paper/5071-translating-embeddings-for-modeling-multi-relational-data.pdf) |
+| TransF               | [`pykeen.models.TransF`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.TransF.html)                           | [Feng *et al.*, 2016](https://www.aaai.org/ocs/index.php/KR/KR16/paper/view/12887)                                      |
 | TransH               | [`pykeen.models.TransH`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.TransH.html)                           | [Wang *et al.*, 2014](https://www.aaai.org/ocs/index.php/AAAI/AAAI14/paper/viewFile/8531/8546)                          |
 | TransR               | [`pykeen.models.TransR`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.TransR.html)                           | [Lin *et al.*, 2015](http://www.aaai.org/ocs/index.php/AAAI/AAAI15/paper/download/9571/9523/)                           |
 | TuckER               | [`pykeen.models.TuckER`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.TuckER.html)                           | [Balažević *et al.*, 2019](https://arxiv.org/abs/1901.09590)                                                            |
