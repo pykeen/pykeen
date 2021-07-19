@@ -505,6 +505,12 @@ class TestTransE(cases.DistanceModelTestCase):
         assert torch.allclose(entity_norms, torch.ones_like(entity_norms))
 
 
+class TestTransF(cases.ModelTestCase):
+    """Test the TransF model."""
+
+    cls = pykeen.models.TransF
+
+
 class TestTransH(cases.DistanceModelTestCase):
     """Test the TransH model."""
 
