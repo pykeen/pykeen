@@ -515,19 +515,12 @@ class MarginRankingLoss(PairwiseLoss):
 
 @parse_docdata
 class DoubleMarginLoss(PointwiseLoss):
-    r"""A module for a limit-based scoring loss, with separate margins for positive and negative elements.
+    r"""A limit-based scoring loss, with separate margins for positive and negative elements from [sun2018]_
 
     Despite its similarity to the margin-based loss, this loss is quite different to it, since it uses absolute margins
     for positive/negative scores, rather than comparing the difference. Hence, it has a natural decision boundary
     (somewhere between the positive and negative margin), while still resulting in sparse losses with no gradients for
     sufficiently correct examples.
-
-    # TODO: Proper citation
-
-    Bootstrapping Entity Alignment with Knowledge Graph Embedding
-    Zequn Sun, Wei Hu∗, Qingheng Zhang and Yuzhong Qu
-    Proceedings of the Twenty-Seventh International Joint Conference on Artificial Intelligence (IJCAI-18)
-
 
     .. math ::
         L(score^+, score^-) = activation(margin^- + score^-) + activation(margin^+ - score^+)
