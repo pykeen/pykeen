@@ -55,3 +55,7 @@ References
 
 .. [wang2019] Wang, X., *et al* (2019). `KEPLER: A Unified Model for Knowledge Embedding and Pre-trained Language
    Representation <https://arxiv.org/pdf/1911.06136.pdf>`_. *arXiv*, 1911.06136.
+
+.. [sun2018] Sun, Z., *et al.* (2018). `Bootstrapping Entity Alignment with Knowledge Graph Embedding.
+   <https://dl.acm.org/doi/10.5555/3304222.3304381>`_
+   *Proceedings of the 27th International Joint Conference on Artificial Intelligence*, 4396–4402.
