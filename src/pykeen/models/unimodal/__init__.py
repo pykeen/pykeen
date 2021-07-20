@@ -19,6 +19,8 @@
               <https://dl.acm.org/citation.cfm?id=2623623>`_. ACM.
 .. [ebisu2018] Ebisu, T., *et al.* (2018) `https://www.aaai.org/ocs/index.php/AAAI/AAAI18/paper/view/16227
                <https://www.aaai.org/ocs/index.php/AAAI/AAAI18/paper/view/16227>`_. AAAI'18.
+.. [feng2016] Feng, J. *et al.* (2016) `Knowledge Graph Embedding by Flexible Translation
+              <https://www.aaai.org/ocs/index.php/KR/KR16/paper/view/12887>`_. KR'16.
 .. [ji2015] Ji, G., *et al.* (2015). `Knowledge graph embedding via dynamic mapping matrix
             <http://www.aclweb.org/anthology/P15-1067>`_. ACL.
 .. [kazemi2018] Kazemi, S.M. and Poole, D. (2018). `SimplE Embedding for Link Prediction in Knowledge Graphs
@@ -86,6 +88,7 @@ from .structured_embedding import StructuredEmbedding
 from .toruse import TorusE
 from .trans_d import TransD
 from .trans_e import TransE
+from .trans_f import TransF
 from .trans_h import TransH
 from .trans_r import TransR
 from .tucker import TuckER
@@ -116,6 +119,7 @@ __all__ = [
     'TorusE',
     'TransD',
     'TransE',
+    'TransF',
     'TransH',
     'TransR',
     'TuckER',
