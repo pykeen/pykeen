@@ -23,6 +23,7 @@ __all__ = [
     'Wikidata5M',
 ]
 
+# TODO: get a more stable link on Zenodo or figshare for this
 TRANSDUCTIVE_URL = 'https://www.dropbox.com/s/6sbhm0rwo4l73jq/wikidata5m_transductive.tar.gz?dl=1'
 INDUCTIVE_URL = 'https://www.dropbox.com/s/csed3cgal3m7rzo/wikidata5m_inductive.tar.gz?dl=1'
 
