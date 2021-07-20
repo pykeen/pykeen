@@ -165,6 +165,7 @@ __all__ = [
     'Loss',
     'PointwiseLoss',
     'DeltaPointwiseLoss',
+    'GeneralMarginRankingLoss',
     'PairwiseLoss',
     'SetwiseLoss',
     # Concrete Classes
@@ -177,6 +178,8 @@ __all__ = [
     'SoftplusLoss',
     'PointwiseHingeLoss',
     'DoubleMarginLoss',
+    'SoftMarginRankingLoss',
+    'PairwiseLogisticLoss',
     # Utils
     'loss_resolver',
 ]
@@ -414,31 +417,13 @@ margin_activation_resolver = Resolver(
 
 
 @parse_docdata
-class MarginRankingLoss(PairwiseLoss):
-    r"""A module for the margin ranking loss.
-
-    .. math ::
-        L(score^+, score^-) = activation(score^- - score^+ + margin)
-
-    .. seealso:: :class:`torch.nn.MarginRankingLoss`
-    ---
-    name: Margin ranking
-    """
-
-    synonyms = {"Pairwise Hinge Loss"}
-
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        margin=dict(type=int, low=0, high=3, q=1),
-        margin_activation=dict(
-            type='categorical',
-            choices=margin_activation_resolver.options,
-        ),
-    )
+class GeneralMarginRankingLoss(PairwiseLoss):
+    """Generalized margin ranking loss."""
 
     def __init__(
         self,
-        margin: float = 1.0,
-        margin_activation: Hint[nn.Module] = 'relu',
+        margin: float,
+        margin_activation: Hint[nn.Module],
         reduction: str = 'mean',
     ):
         r"""Initialize the margin loss instance.
@@ -533,22 +518,54 @@ class MarginRankingLoss(PairwiseLoss):
         ))
 
 
-# class SoftMarginRanking(MarginRankingLoss):
-#     """The soft margin ranking loss."""
-#
-#     hpo_default: ClassVar[Mapping[str, Any]] = dict(
-#         margin=dict(type=int, low=0, high=3, q=1),
-#     )
-#
-#     def __init__(self, margin: float = 1.0, reduction: str = 'mean'):
-#         super().__init__(margin=margin, margin_activation='softplus', reduction=reduction)
-#
-#
-# class PairwiseLogisticLoss(SoftMarginRanking):
-#     """The pairwise logistic loss."""
-#
-#     def __init__(self, reduction: str = 'mean'):
-#         super().__init__(margin=0.0, reduction=reduction)
+class MarginRankingLoss(GeneralMarginRankingLoss):
+    r"""A module for the margin ranking loss.
+
+    .. math ::
+        L(score^+, score^-) = activation(score^- - score^+ + margin)
+
+    .. seealso:: :class:`torch.nn.MarginRankingLoss`
+    ---
+    name: Margin ranking
+    """
+
+    synonyms = {"Pairwise Hinge Loss"}
+
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
+        margin=dict(type=int, low=0, high=3, q=1),
+    )
+
+    def __init__(self, margin: float = 1.0, reduction: str = 'mean'):
+        r"""Initialize the margin loss instance.
+
+        :param margin:
+            The margin by which positive and negative scores should be apart.
+        :param reduction:
+            The name of the reduction operation to aggregate the individual loss values from a batch to a scalar loss
+            value. From {'mean', 'sum'}.
+        """
+        super().__init__(margin=margin, margin_activation='relu', reduction=reduction)
+
+
+class SoftMarginRankingLoss(GeneralMarginRankingLoss):
+    """The soft margin ranking loss."""
+
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
+        margin=dict(type=int, low=0, high=3, q=1),
+    )
+
+    def __init__(self, margin: float = 1.0, reduction: str = 'mean'):
+        super().__init__(margin=margin, margin_activation='softplus', reduction=reduction)
+
+
+class PairwiseLogisticLoss(GeneralMarginRankingLoss):
+    """The pairwise logistic loss.
+
+    Equivalent to :class:`pykeen.losses.SoftMarginRankingLoss` where ``margin=0``.
+    """
+
+    def __init__(self, reduction: str = 'mean'):
+        super().__init__(margin=0.0, margin_activation='softplus', reduction=reduction)
 
 
 @parse_docdata
