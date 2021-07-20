@@ -33,7 +33,7 @@
 <p align="center">
   <a href="#installation">Installation</a> •
   <a href="#quickstart">Quickstart</a> •
-  <a href="#datasets-27">Datasets</a> •
+  <a href="#datasets-28">Datasets</a> •
   <a href="#models-31">Models</a> •
   <a href="#supporters">Support</a> •
   <a href="#citation">Citation</a>
@@ -97,7 +97,7 @@ The full documentation can be found at https://pykeen.readthedocs.io.
 Below are the models, datasets, training modes, evaluators, and metrics implemented
 in ``pykeen``.
 
-### Datasets (27)
+### Datasets (28)
 
 The following datasets are built in to PyKEEN. The citation for each dataset corresponds to either the paper
 describing the dataset, the first paper published using the dataset with knowledge graph embedding models,
@@ -130,6 +130,7 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 | OpenBioLink                        | [`pykeen.datasets.OpenBioLinkLQ`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.OpenBioLinkLQ.html) | [Breit *et al*., 2020](https://doi.org/10.1093/bioinformatics/btaa274)                                                  |     480876 |          32 |  27320889 |
 | Unified Medical Language System    | [`pykeen.datasets.UMLS`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.UMLS.html)                   | [`ZhenfengLei/KGDatasets`](https://github.com/ZhenfengLei/KGDatasets)                                                   |        135 |          46 |      6529 |
 | WD50K (triples)                    | [`pykeen.datasets.WD50KT`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.WD50KT.html)               | [Galkin *et al*., 2020](https://www.aclweb.org/anthology/2020.emnlp-main.596/)                                          |      40107 |         473 |    232344 |
+| Wikidata5M                         | [`pykeen.datasets.Wikidata5M`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.Wikidata5M.html)       | [Wang *et al*., 2019](https://arxiv.org/abs/1911.06136)                                                                 |    4594149 |         822 |  20624239 |
 | WK3l-120k Family                   | [`pykeen.datasets.WK3l120k`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.WK3l120k.html)           | [Chen *et al*., 2017](https://www.ijcai.org/Proceedings/2017/0209.pdf)                                                  |     119748 |        3109 |   1375406 |
 | WK3l-15k Family                    | [`pykeen.datasets.WK3l15k`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.WK3l15k.html)             | [Chen *et al*., 2017](https://www.ijcai.org/Proceedings/2017/0209.pdf)                                                  |      15126 |        1841 |    209041 |
 | WordNet-18                         | [`pykeen.datasets.WN18`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.WN18.html)                   | [Bordes *et al*., 2014](https://arxiv.org/abs/1301.3485)                                                                |      40943 |          18 |    151442 |
