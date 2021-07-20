@@ -30,7 +30,7 @@ INDUCTIVE_URL = 'https://www.dropbox.com/s/csed3cgal3m7rzo/wikidata5m_inductive.
 
 @parse_docdata
 class Wikidata5M(TarFileRemoteDataset):
-    """The Wikidata5M dataset.
+    """The Wikidata5M dataset from [wang2019]_.
 
     ---
     name: Wikidata5M
