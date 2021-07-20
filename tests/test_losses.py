@@ -8,6 +8,7 @@ import numpy as np
 import torch
 import unittest_templates
 
+import pykeen.losses
 from pykeen.losses import (
     BCEAfterSigmoidLoss, BCEWithLogitsLoss, CrossEntropyLoss, DoubleMarginLoss, Loss, MSELoss, MarginRankingLoss,
     NSSALoss, PairwiseLoss, PointwiseLoss, SetwiseLoss, SoftplusLoss, UnsupportedLabelSmoothingError,
@@ -137,6 +138,7 @@ class TestLosses(unittest_templates.MetaTestCase[Loss]):
         PairwiseLoss,
         PointwiseLoss,
         SetwiseLoss,
+        pykeen.losses.DeltaPointwiseLoss,
     }
 
 

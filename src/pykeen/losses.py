@@ -51,6 +51,7 @@ Examples
     Square Error                   $g(s, l) = \frac{1}{2}(s - l)^2$
     Binary Cross Entropy           $g(s, l) = -(l*\log (\sigma(s))+(1-l)*(\log (1-\sigma(s))))$
     Pointwise Hinge                $g(s, l) = \max(0, \lambda -\hat{l}*s)$
+    ??                             $g(s, l) = \log(1+\exp(\lambda-\hat{l}*s))$
     Pointwise Logistic (softplus)  $g(s, l) = \log(1+\exp(-\hat{l}*s))$
     =============================  ============================================================
 
@@ -93,13 +94,13 @@ pairwise logistic loss can be considered as a special case of the soft margin ra
     :align: center
     :widths: auto
 
-    ===============================  ==============================================
-    Pairwise Loss                    Formulation
-    ===============================  ==============================================
-    Pairwise Hinge (margin ranking)  $h(\Delta) = \max(0, \Delta + \lambda)$
-    Soft Margin Ranking              $h(\Delta) = \log(1 + \exp(\Delta + \lambda))$
-    Pairwise Logistic                $h(\Delta) = \log(1 + \exp(\Delta))$
-    ===============================  ==============================================
+    ===============================  ===========  ======================  ==============================================
+    Pairwise Loss                    Activation   Margin                  Formulation
+    ===============================  ===========  ======================  ==============================================
+    Pairwise Hinge (margin ranking)  ReLU         $\lambda \neq 0$        $h(\Delta) = \max(0, \Delta + \lambda)$
+    Soft Margin Ranking              softplus     $\lambda \neq 0$        $h(\Delta) = \log(1 + \exp(\Delta + \lambda))$
+    Pairwise Logistic                softplus     $\lambda=0$             $h(\Delta) = \log(1 + \exp(\Delta))$
+    ===============================  ===========  ======================  ==============================================
 
 Atypical Pairwise Loss Functions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -163,6 +164,7 @@ __all__ = [
     # Base Classes
     'Loss',
     'PointwiseLoss',
+    'DeltaPointwiseLoss',
     'PairwiseLoss',
     'SetwiseLoss',
     # Concrete Classes
@@ -173,6 +175,7 @@ __all__ = [
     'MSELoss',
     'NSSALoss',
     'SoftplusLoss',
+    'PointwiseHingeLoss',
     'DoubleMarginLoss',
     # Utils
     'loss_resolver',
@@ -200,7 +203,7 @@ def apply_label_smoothing(
     :param num_classes:
         The number of classes.
     :returns: A smoothed label tensor
-    :raises ValueError: if episilon is negative or if num_classes is None
+    :raises ValueError: if epsilon is negative or if num_classes is None
 
     ..seealso:
         https://www.deeplearningbook.org/contents/regularization.html, chapter 7.5.1
@@ -530,6 +533,24 @@ class MarginRankingLoss(PairwiseLoss):
         ))
 
 
+# class SoftMarginRanking(MarginRankingLoss):
+#     """The soft margin ranking loss."""
+#
+#     hpo_default: ClassVar[Mapping[str, Any]] = dict(
+#         margin=dict(type=int, low=0, high=3, q=1),
+#     )
+#
+#     def __init__(self, margin: float = 1.0, reduction: str = 'mean'):
+#         super().__init__(margin=margin, margin_activation='softplus', reduction=reduction)
+#
+#
+# class PairwiseLogisticLoss(SoftMarginRanking):
+#     """The pairwise logistic loss."""
+#
+#     def __init__(self, reduction: str = 'mean'):
+#         super().__init__(margin=0.0, reduction=reduction)
+
+
 @parse_docdata
 class DoubleMarginLoss(PointwiseLoss):
     r"""A limit-based scoring loss, with separate margins for positive and negative elements from [sun2018]_.
@@ -750,22 +771,27 @@ class DoubleMarginLoss(PointwiseLoss):
         )
 
 
-@parse_docdata
-class SoftplusLoss(PointwiseLoss):
-    r"""
-    A module for the softplus loss.
+class DeltaPointwiseLoss(PointwiseLoss):
+    r"""A generic class for delta-pointwise losses.
 
-    .. math ::
-        L(score, label) = softplus(- label \cdot score)
+    ===================  ==========  ======================  ========================================================  =========================================
+    Pointwise Loss       Activation  Margin                  Formulation                                               Implementation
+    ===================  ==========  ======================  ========================================================  =========================================
+    Hinge                ReLU        $\lambda \neq 0$        $g(s, l) = \max(0, \lambda -\hat{l}*s)$                   :class:`pykeen.losses.PointwiseHingeLoss`
+    ???                  softplus    $\lambda \neq 0$        $g(s, l) = \log(1+\exp(\lambda -\hat{l}*s))$
+    Logistic (softplus)  softplus    $\lambda = 0$           $g(s, l) = \log(1+\exp(-\hat{l}*s))$                      :class:`pykeen.losses.SoftplusLoss`
+    ===================  ==========  ======================  ========================================================  =========================================
+    """  # noqa:E501
 
-    with $label \in \{-1, 1\}$.
-    ---
-    name: Softplus
-    """
-
-    def __init__(self, reduction: str = 'mean') -> None:
+    def __init__(
+        self,
+        margin: Optional[float] = 0.0,
+        margin_activation: Hint[nn.Module] = 'softplus',
+        reduction: str = 'mean',
+    ) -> None:
         super().__init__(reduction=reduction)
-        self.softplus = nn.Softplus()
+        self.margin = margin
+        self.margin_activation = margin_activation_resolver.make(margin_activation)
 
     def forward(
         self,
@@ -776,9 +802,46 @@ class SoftplusLoss(PointwiseLoss):
         assert 0. <= labels.min() and labels.max() <= 1.
         # scale labels from [0, 1] to [-1, 1]
         labels = 2 * labels - 1
-        loss = self.softplus((-1) * labels * logits)
+        loss = self.margin_activation(self.margin - labels * logits)
         loss = self._reduction_method(loss)
         return loss
+
+
+@parse_docdata
+class PointwiseHingeLoss(DeltaPointwiseLoss):
+    r"""
+    A module for the pointwise hinge loss.
+
+    .. math ::
+        g(s,l) = \max(0, \lambda -\hat{l}*s)
+
+    with scores $s$ and labels $l$ that have been rescaled to  $\hat{l} \in \{-1, 1\}$.
+    ---
+    name: Pointwise Hinge
+    """
+
+    # TODO what should the default margin be
+    # TODO default HPO
+
+    def __init__(self, margin: float = 1.0, reduction: str = 'mean') -> None:
+        super().__init__(margin=margin, margin_activation='relu', reduction=reduction)
+
+
+@parse_docdata
+class SoftplusLoss(DeltaPointwiseLoss):
+    r"""
+    A module for the softplus loss.
+
+    .. math ::
+        g(s, l) = \log(1 + \exp(-\hat{l} \cdot s))
+
+    with scores $s$ and labels $l$ that have been rescaled to $\hat{l} \in \{-1, 1\}$.
+    ---
+    name: Softplus
+    """
+
+    def __init__(self, reduction: str = 'mean') -> None:
+        super().__init__(margin=0.0, margin_activation='softplus', reduction=reduction)
 
 
 @parse_docdata
@@ -960,6 +1023,7 @@ loss_resolver = Resolver.from_subclasses(
         PairwiseLoss,
         PointwiseLoss,
         SetwiseLoss,
+        DeltaPointwiseLoss,
     },
 )
 for _name, _cls in loss_resolver.lookup_dict.items():
