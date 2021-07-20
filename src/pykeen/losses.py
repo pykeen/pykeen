@@ -416,7 +416,6 @@ margin_activation_resolver = Resolver(
 )
 
 
-@parse_docdata
 class GeneralMarginRankingLoss(PairwiseLoss):
     """Generalized margin ranking loss."""
 
@@ -518,8 +517,9 @@ class GeneralMarginRankingLoss(PairwiseLoss):
         ))
 
 
+@parse_docdata
 class MarginRankingLoss(GeneralMarginRankingLoss):
-    r"""A module for the margin ranking loss.
+    r"""A module for the pairwise hinge loss (i.e., margin ranking loss).
 
     .. math ::
         L(score^+, score^-) = activation(score^- - score^+ + margin)
@@ -547,8 +547,13 @@ class MarginRankingLoss(GeneralMarginRankingLoss):
         super().__init__(margin=margin, margin_activation='relu', reduction=reduction)
 
 
+@parse_docdata
 class SoftMarginRankingLoss(GeneralMarginRankingLoss):
-    """The soft margin ranking loss."""
+    """A module for the soft pairwise hinge loss (i.e., soft margin ranking loss).
+
+    ---
+    name: Soft margin ranking
+    """
 
     hpo_default: ClassVar[Mapping[str, Any]] = dict(
         margin=dict(type=int, low=0, high=3, q=1),
@@ -558,10 +563,14 @@ class SoftMarginRankingLoss(GeneralMarginRankingLoss):
         super().__init__(margin=margin, margin_activation='softplus', reduction=reduction)
 
 
+@parse_docdata
 class PairwiseLogisticLoss(GeneralMarginRankingLoss):
     """The pairwise logistic loss.
 
     Equivalent to :class:`pykeen.losses.SoftMarginRankingLoss` where ``margin=0``.
+
+    ---
+    name: Pairwise logistic
     """
 
     def __init__(self, reduction: str = 'mean'):
@@ -846,8 +855,7 @@ class PointwiseHingeLoss(DeltaPointwiseLoss):
 
 @parse_docdata
 class SoftplusLoss(DeltaPointwiseLoss):
-    r"""
-    A module for the softplus loss.
+    r"""A module for the pointwise logistic loss (i.e., softplus loss).
 
     .. math ::
         g(s, l) = \log(1 + \exp(-\hat{l} \cdot s))
@@ -1041,6 +1049,7 @@ loss_resolver = Resolver.from_subclasses(
         PointwiseLoss,
         SetwiseLoss,
         DeltaPointwiseLoss,
+        GeneralMarginRankingLoss,
     },
 )
 for _name, _cls in loss_resolver.lookup_dict.items():
