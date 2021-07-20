@@ -639,12 +639,16 @@ class DoubleMarginLoss(PointwiseLoss):
     ):
         r"""Initialize the double margin loss.
 
+        .. note ::
+            There are multiple variants to set the pair of margins. A full documentation is provided in
+            :func:`DoubleMarginLoss.resolve_margins`.
+
         :param positive_margin:
             The (absolute) margin for the positive scores. Should be larger than the negative one.
         :param negative_margin:
             The (absolute) margin for the negative scores. Should be smaller than the positive one.
         :param offset:
-            TODO @mberr
+            The offset between positive and negative margin. Must be non-negative.
         :param positive_negative_balance:
             The balance between positive and negative term. Must be in (0, 1).
         :param margin_activation:
