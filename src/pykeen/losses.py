@@ -566,16 +566,32 @@ class DoubleMarginLoss(PointwiseLoss):
     ) -> Tuple[float, float]:
         """Resolve margins from multiple methods how to specify them.
 
+        The method supports three combinations:
+
+        - positive_margin & negative_margin.
+            This returns the values as-is.
+        - negative_margin & offset
+            This sets positive_margin = negative_margin + offset
+        - positive_margin & offset
+            This sets negative_margin = positive_margin - offset
+
+        .. note ::
+            Notice that this method does not apply a precedence between the three methods, but requires the remaining
+            parameter to be None. This is done to fail fast on ambiguous input rather than delay a failure to a later
+            point in time where it might be harder to find its cause.
+
         :param positive_margin:
             The (absolute) margin for the positive scores. Should be larger than the negative one.
         :param negative_margin:
             The (absolute) margin for the negative scores. Should be smaller than the positive one.
         :param offset:
-            TODO
+            The offset between positive and negative margin. Must be non-negative.
+
         :returns:
-            TODO
+            A pair of the positive and negative margin. Guaranteed to fulfil positive_margin >= negative_margin.
+
         :raises ValueError:
-            TODO
+            In case of an invalid combination.
         """
         # 1. positive & negative margin
         if positive_margin is not None and negative_margin is not None and offset is None:
@@ -677,11 +693,11 @@ class DoubleMarginLoss(PointwiseLoss):
             positive_scores = positive_scores.unsqueeze(dim=1).repeat(1, num_neg_per_pos, 1)[batch_filter]
             # shape: (nnz,)
             positive_loss = self.margin_activation(self.positive_margin - positive_scores)
-        
+
         # negative term
         return (
-            self.positive_weight * self._reduction_method(positive_loss)
-        ) + self.negative_weight * self._reduction_method(
+                   self.positive_weight * self._reduction_method(positive_loss)
+               ) + self.negative_weight * self._reduction_method(
             self.margin_activation(self.negative_margin + negative_scores)
         )
 
