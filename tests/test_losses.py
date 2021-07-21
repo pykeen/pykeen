@@ -9,9 +9,9 @@ import torch
 import unittest_templates
 
 from pykeen.losses import (
-    BCEAfterSigmoidLoss, BCEWithLogitsLoss, CrossEntropyLoss, DoubleMarginLoss, Loss, MSELoss, MarginRankingLoss,
-    NSSALoss, PairwiseLoss, PointwiseLoss, SetwiseLoss, SoftplusLoss, UnsupportedLabelSmoothingError,
-    apply_label_smoothing,
+    BCEAfterSigmoidLoss, BCEWithLogitsLoss, CrossEntropyLoss, DoubleMarginLoss, FocalLoss, Loss, MSELoss,
+    MarginRankingLoss, NSSALoss, PairwiseLoss, PointwiseLoss, SetwiseLoss, SoftplusLoss,
+    UnsupportedLabelSmoothingError, apply_label_smoothing,
 )
 from pykeen.pipeline import PipelineResult, pipeline
 from tests import cases
@@ -33,6 +33,12 @@ class DoubleMarginLossTests(cases.PointwiseLossTestCase):
     """Unit test for DoubleMarginLoss."""
 
     cls = DoubleMarginLoss
+
+
+class FocalLossTests(cases.PointwiseLossTestCase):
+    """Tests for focal loss."""
+
+    cls = FocalLoss
 
 
 class SoftplusLossTests(cases.PointwiseLossTestCase):

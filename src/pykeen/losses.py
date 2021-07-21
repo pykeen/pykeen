@@ -169,6 +169,7 @@ __all__ = [
     'BCEAfterSigmoidLoss',
     'BCEWithLogitsLoss',
     'CrossEntropyLoss',
+    'FocalLoss',
     'MarginRankingLoss',
     'MSELoss',
     'NSSALoss',
@@ -951,6 +952,68 @@ class NSSALoss(SetwiseLoss):
             loss = loss / 2.
 
         return loss
+
+
+@parse_docdata
+class FocalLoss(PointwiseLoss):
+    """
+    Implementation of the focal loss as a module.
+
+    Inspired by the functional form from torchvision.
+
+    Proposed by [lin2018]_.
+
+    # TODO: Move to correct place
+    Focal Loss for Dense Object Detection
+    Tsung-Yi Lin, Priya Goyal, Ross Girshick, Kaiming He, Piotr Dollár
+    ICCV'17.
+    https://arxiv.org/abs/1708.02002
+
+    .. seealso ::
+        https://pytorch.org/vision/stable/_modules/torchvision/ops/focal_loss.html
+
+    ---
+    name: Focal
+    """
+
+    def __init__(
+        self,
+        *,
+        gamma: float = 2.0,
+        alpha: Optional[float] = None,
+        **kwargs,
+    ):
+        """
+        Initialize the loss module.
+
+        :param gamma:
+            Exponent of the modulating factor (1 - p_t) to balance easy vs hard examples.
+        :param alpha:
+            Weighting factor in range (0,1) to balance positive vs negative examples.
+        :param kwargs:
+            Additional keyword-based arguments passed to PointwiseLoss.
+        """
+        super().__init__(**kwargs)
+        if alpha is not None and not (0 < alpha < 1):
+            raise ValueError(f"If alpha is provided, it must be from (0, 1), i.e. the open interval, but it is {alpha}")
+        self.alpha = alpha
+        self.gamma = gamma
+
+    def forward(
+        self,
+        prediction: torch.FloatTensor,
+        labels: torch.FloatTensor,
+    ) -> torch.FloatTensor:  # noqa: D102
+        p = prediction.sigmoid()
+        ce_loss = functional.binary_cross_entropy_with_logits(prediction, labels, reduction="none")
+        p_t = p * labels + (1 - p) * (1 - labels)
+        loss = ce_loss * ((1 - p_t) ** self.gamma)
+
+        if self.alpha is not None:
+            alpha_t = self.alpha * labels + (1 - self.alpha) * (1 - labels)
+            loss = alpha_t * loss
+
+        return self._reduction_method(loss)
 
 
 loss_resolver = Resolver.from_subclasses(
