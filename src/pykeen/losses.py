@@ -360,6 +360,10 @@ class BCEWithLogitsLoss(PointwiseLoss):
 
         \sigma(x) = \frac{1}{1 + \exp(-x)}
 
+    .. note::
+
+        The softplus activation function $h_{\text{softplus}}(x) = -\log(\sigma(x))$.
+
     Thus, the problem is framed as a binary classification problem of triples, where the interaction functions' outputs
     are regarded as logits.
 
@@ -368,7 +372,10 @@ class BCEWithLogitsLoss(PointwiseLoss):
         This loss is not well-suited for translational distance models because these models produce
         a negative distance as score and cannot produce positive model outputs.
 
-    .. seealso:: :class:`torch.nn.BCEWithLogitsLoss`
+    .. note::
+
+        The related :mod:`torch` module is :class:`torch.nn.BCEWithLogitsLoss`, but it can not be used
+        interchangeably in PyKEEN because of the extended functionality implemented in PyKEEN's loss functions.
     ---
     name: Binary cross entropy (with logits)
     """
@@ -387,7 +394,10 @@ class BCEWithLogitsLoss(PointwiseLoss):
 class MSELoss(PointwiseLoss):
     """A module for the mean square error loss.
 
-    .. seealso:: :class:`torch.nn.MSELoss`
+    .. note::
+
+        The related :mod:`torch` module is :class:`torch.nn.MSELoss`, but it can not be used
+        interchangeably in PyKEEN because of the extended functionality implemented in PyKEEN's loss functions.
     ---
     name: Mean square error
     """
@@ -417,7 +427,17 @@ margin_activation_resolver = Resolver(
 
 
 class GeneralMarginRankingLoss(PairwiseLoss):
-    """Generalized margin ranking loss."""
+    r"""Generalized margin ranking loss.
+
+    TODO check order -> is it f(k) - f(\bar{k}) or f(\bar{k}) - f(k)?
+
+    .. math ::
+        L(k, \bar{k}) = h(f(k) - f(\bar{k}) + \lambda)
+
+    Where $k$ are the positive triples, $\bar{k}$ are the negative triples, $f$ is the interaction function (e.g.,
+    TransE has $f(h,r,t)=h+r-t$), $h$ is an activation function like the ReLU or softmax,
+    and $\lambda$ is the margin.
+    """
 
     def __init__(
         self,
@@ -522,9 +542,16 @@ class MarginRankingLoss(GeneralMarginRankingLoss):
     r"""A module for the pairwise hinge loss (i.e., margin ranking loss).
 
     .. math ::
-        L(score^+, score^-) = activation(score^- - score^+ + margin)
+        L(k, \bar{k}) = \max(0, f(k) - f(\bar{k}) + \lambda)
 
-    .. seealso:: :class:`torch.nn.MarginRankingLoss`
+    Where $k$ are the positive triples, $\bar{k}$ are the negative triples, $f$ is the interaction function (e.g.,
+    TransE has $f(h,r,t)=h+r-t$), $h(x)=\max(0,x)$ is the ReLU activation function,
+    and $\lambda$ is the margin.
+
+    .. note::
+
+        The related :mod:`torch` module is :class:`torch.nn.MarginRankingLoss`, but it can not be used
+        interchangeably in PyKEEN because of the extended functionality implemented in PyKEEN's loss functions.
     ---
     name: Margin ranking
     """
@@ -549,8 +576,14 @@ class MarginRankingLoss(GeneralMarginRankingLoss):
 
 @parse_docdata
 class SoftMarginRankingLoss(GeneralMarginRankingLoss):
-    """A module for the soft pairwise hinge loss (i.e., soft margin ranking loss).
+    r"""A module for the soft pairwise hinge loss (i.e., soft margin ranking loss).
 
+    .. math ::
+        L(k, \bar{k}) = \log(1 + \exp(f(k) - f(\bar{k}) + \lambda))
+
+    Where $k$ are the positive triples, $\bar{k}$ are the negative triples, $f$ is the interaction function (e.g.,
+    TransE has $f(h,r,t)=h+r-t$), $h(x)=\log(1 + \exp(x))$ is the softmax activation function,
+    and $\lambda$ is the margin.
     ---
     name: Soft margin ranking
     """
@@ -564,17 +597,22 @@ class SoftMarginRankingLoss(GeneralMarginRankingLoss):
 
 
 @parse_docdata
-class PairwiseLogisticLoss(GeneralMarginRankingLoss):
-    """The pairwise logistic loss.
+class PairwiseLogisticLoss(SoftMarginRankingLoss):
+    r"""The pairwise logistic loss.
 
-    Equivalent to :class:`pykeen.losses.SoftMarginRankingLoss` where ``margin=0``.
+    .. math ::
+        L(k, \bar{k}) = \log(1 + \exp(f(k) - f(\bar{k})))
 
+    Where $k$ are the positive triples, $\bar{k}$ are the negative triples, $f$ is the interaction function (e.g.,
+    TransE has $f(h,r,t)=h+r-t$), $h(x)=\log(1 + \exp(x))$ is the softmax activation function.
+
+    .. note:: Equivalent to :class:`pykeen.losses.SoftMarginRankingLoss` where ``margin=0``.
     ---
     name: Pairwise logistic
     """
 
     def __init__(self, reduction: str = 'mean'):
-        super().__init__(margin=0.0, margin_activation='softplus', reduction=reduction)
+        super().__init__(margin=0.0, reduction=reduction)
 
 
 @parse_docdata
@@ -873,7 +911,10 @@ class SoftplusLoss(DeltaPointwiseLoss):
 class BCEAfterSigmoidLoss(PointwiseLoss):
     """A module for the numerically unstable version of explicit Sigmoid + BCE loss.
 
-    .. seealso:: :class:`torch.nn.BCELoss`
+    .. note::
+
+        The related :mod:`torch` module is :class:`torch.nn.BCELoss`, but it can not be used
+        interchangeably in PyKEEN because of the extended functionality implemented in PyKEEN's loss functions.
     ---
     name: Binary cross entropy (after sigmoid)
     """
@@ -891,7 +932,10 @@ class BCEAfterSigmoidLoss(PointwiseLoss):
 class CrossEntropyLoss(SetwiseLoss):
     """A module for the cross entropy loss that evaluates the cross entropy after softmax output.
 
-    .. seealso:: :class:`torch.nn.CrossEntropyLoss`
+    .. note::
+
+        The related :mod:`torch` module is :class:`torch.nn.CrossEntropyLoss`, but it can not be used
+        interchangeably in PyKEEN because of the extended functionality implemented in PyKEEN's loss functions.
     ---
     name: Cross entropy
     """
