@@ -548,6 +548,13 @@ class MarginRankingLoss(GeneralMarginRankingLoss):
     TransE has $f(h,r,t)=h+r-t$), $h(x)=\max(0,x)$ is the ReLU activation function,
     and $\lambda$ is the margin.
 
+    .. seealso::
+
+        MRL is closely related to :class:`pykeen.losses.SoftMarginRankingLoss`, only differing in that this loss
+        uses the ReLU activation and :class:`pykeen.losses.SoftMarginRankingLoss` uses the softmax activation. MRL
+        is also related to the :class:`pykeen.losses.PairwiseLogisticLoss` as this is a special case of the
+        :class:`pykeen.losses.SoftMarginRankingLoss` with no margin.
+
     .. note::
 
         The related :mod:`torch` module is :class:`torch.nn.MarginRankingLoss`, but it can not be used
@@ -584,6 +591,12 @@ class SoftMarginRankingLoss(GeneralMarginRankingLoss):
     Where $k$ are the positive triples, $\bar{k}$ are the negative triples, $f$ is the interaction function (e.g.,
     TransE has $f(h,r,t)=h+r-t$), $h(x)=\log(1 + \exp(x))$ is the softmax activation function,
     and $\lambda$ is the margin.
+
+    .. seealso::
+
+        When choosing `margin=0``, this loss becomes equivalent to :class:`pykeen.losses.SoftMarginRankingLoss`.
+        It is also closely related to :class:`pykeen.losses.MarginRankingLoss`, only differing in that this loss
+        uses the softmax activation and :class:`pykeen.losses.MarginRankingLoss` uses the ReLU activation.
     ---
     name: Soft margin ranking
     """
@@ -606,7 +619,10 @@ class PairwiseLogisticLoss(SoftMarginRankingLoss):
     Where $k$ are the positive triples, $\bar{k}$ are the negative triples, $f$ is the interaction function (e.g.,
     TransE has $f(h,r,t)=h+r-t$), $h(x)=\log(1 + \exp(x))$ is the softmax activation function.
 
-    .. note:: Equivalent to :class:`pykeen.losses.SoftMarginRankingLoss` where ``margin=0``.
+    .. seealso::
+
+        This loss is equivalent to :class:`pykeen.losses.SoftMarginRankingLoss` where ``margin=0``. It is also
+        closely related to :class:`pykeen.losses.MarginRankingLoss` based on the choice of activation function.
     ---
     name: Pairwise logistic
     """
