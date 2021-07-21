@@ -70,25 +70,27 @@ defined as the arithmetic mean of the pointwise losses over each triple in the s
 Pairwise Loss Functions
 -----------------------
 A pairwise loss is applied to a pair of triples - a positive and a negative one. It is defined as $L: \mathcal{K}
-\times \mathcal{\bar{K}} \rightarrow \mathbb{R}$ and computes a real value for the pair. Typically,
-a pairwise loss is computed as a function $g$ of the difference between the scores of the positive and negative
-triples that takes the form $g: \mathbb{R} \times \mathbb{R} \rightarrow \mathbb{R}$.
+\times \mathcal{\bar{K}} \rightarrow \mathbb{R}$ and computes a real value for the pair.
+
+All loss functions implemented in PyKEEN induce an auxillary loss function based on the chosen interaction
+function $L{*}: \mathbb{R} \times \mathbb{R} \rightarrow \mathbb{R}$ that simply passes the scores through.
+Note that $L$ is often used interchangbly with $L^{*}$.
 
 .. math::
 
-    L(k, \bar{k}) = g(f(k), f(\bar{k}))
+    L(k, \bar{k}) = L^{*}(f(k), f(\bar{k}))
 
-Examples
-~~~~~~~~
-Typically, $g$ takes the following form in which a function $h: \mathbb{R} \rightarrow \mathbb{R}$
-is used on the differences in the scores of the positive an the negative triples.
+Delta Pairwise Loss Functions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Delta pairwise losses are computed on the differences between the scores of the positive and negative
+triples (e.g., $\Delta := f(k) - f(\bar{k})$) with transfer function $g: \mathbb{R} \rightarrow \mathbb{R}$ that take
+the form of:
 
 .. math::
 
-    g(f(k), f(\bar{k})) = h(f(k) - f(\bar{k}))
+    L^{*}(f(k), f(\bar{k})) = g(f(k) - f(\bar{k})) := g(\Delta)
 
-In the following examples of pairwise loss functions, the shorthand is used: $\Delta := f(k) - f(\bar{k})$. The
-pairwise logistic loss can be considered as a special case of the soft margin ranking loss where $\lambda = 0$.
+The following table shows delta pairwise loss functions:
 
 .. table::
     :align: center
@@ -97,13 +99,18 @@ pairwise logistic loss can be considered as a special case of the soft margin ra
     ===============================  ===========  ======================  ==============================================
     Pairwise Loss                    Activation   Margin                  Formulation
     ===============================  ===========  ======================  ==============================================
-    Pairwise Hinge (margin ranking)  ReLU         $\lambda \neq 0$        $h(\Delta) = \max(0, \Delta + \lambda)$
-    Soft Margin Ranking              softplus     $\lambda \neq 0$        $h(\Delta) = \log(1 + \exp(\Delta + \lambda))$
-    Pairwise Logistic                softplus     $\lambda=0$             $h(\Delta) = \log(1 + \exp(\Delta))$
+    Pairwise Hinge (margin ranking)  ReLU         $\lambda \neq 0$        $g(\Delta) = \max(0, \Delta + \lambda)$
+    Soft Margin Ranking              softplus     $\lambda \neq 0$        $g(\Delta) = \log(1 + \exp(\Delta + \lambda))$
+    Pairwise Logistic                softplus     $\lambda=0$             $g(\Delta) = \log(1 + \exp(\Delta))$
     ===============================  ===========  ======================  ==============================================
 
-Atypical Pairwise Loss Functions
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. note::
+
+    The pairwise logistic loss can be considered as a special case of the soft margin
+    ranking loss where $\lambda = 0$.
+
+Inseparable Pairwise Loss Functions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 The following pairwise loss function use the full generalized form of $L(k, \bar{k}) = \dots$
 for their definitions:
 
@@ -111,11 +118,11 @@ for their definitions:
     :align: center
     :widths: auto
 
-    ==============  =============================================
+    ==============  ===================================================
     Pairwise Loss   Formulation
-    ==============  =============================================
-    Double Loss     $h(\bar{\lambda} + \bar{k}) + h(\lambda - k)$
-    ==============  =============================================
+    ==============  ===================================================
+    Double Loss     $h(\bar{\lambda} + f(\bar{k})) + h(\lambda - f(k))$
+    ==============  ===================================================
 
 Batching
 ~~~~~~~~
@@ -432,11 +439,11 @@ class GeneralMarginRankingLoss(PairwiseLoss):
     TODO check order -> is it f(k) - f(\bar{k}) or f(\bar{k}) - f(k)?
 
     .. math ::
-        L(k, \bar{k}) = h(f(k) - f(\bar{k}) + \lambda)
+        L(k, \bar{k}) = g(f(k) - f(\bar{k}) + \lambda)
 
     Where $k$ are the positive triples, $\bar{k}$ are the negative triples, $f$ is the interaction function (e.g.,
-    TransE has $f(h,r,t)=h+r-t$), $h$ is an activation function like the ReLU or softmax,
-    and $\lambda$ is the margin.
+    :class:`pykeen.models.TransE` has $f(h,r,t)=\mathbf{e}_h+\mathbf{r}_r-\mathbf{e}_t$), $g(x)$ is an activation
+    function like the ReLU or softmax, and $\lambda$ is the margin.
     """
 
     def __init__(
@@ -545,7 +552,7 @@ class MarginRankingLoss(GeneralMarginRankingLoss):
         L(k, \bar{k}) = \max(0, f(k) - f(\bar{k}) + \lambda)
 
     Where $k$ are the positive triples, $\bar{k}$ are the negative triples, $f$ is the interaction function (e.g.,
-    TransE has $f(h,r,t)=h+r-t$), $h(x)=\max(0,x)$ is the ReLU activation function,
+    TransE has $f(h,r,t)=h+r-t$), $g(x)=\max(0,x)$ is the ReLU activation function,
     and $\lambda$ is the margin.
 
     .. seealso::
@@ -589,8 +596,8 @@ class SoftMarginRankingLoss(GeneralMarginRankingLoss):
         L(k, \bar{k}) = \log(1 + \exp(f(k) - f(\bar{k}) + \lambda))
 
     Where $k$ are the positive triples, $\bar{k}$ are the negative triples, $f$ is the interaction function (e.g.,
-    TransE has $f(h,r,t)=h+r-t$), $h(x)=\log(1 + \exp(x))$ is the softmax activation function,
-    and $\lambda$ is the margin.
+    :class:`pykeen.models.TransE` has $f(h,r,t)=\mathbf{e}_h+\mathbf{r}_r-\mathbf{e}_t$), $g(x)=\log(1 + \exp(x))$
+    is the softmax activation function, and $\lambda$ is the margin.
 
     .. seealso::
 
@@ -617,7 +624,8 @@ class PairwiseLogisticLoss(SoftMarginRankingLoss):
         L(k, \bar{k}) = \log(1 + \exp(f(k) - f(\bar{k})))
 
     Where $k$ are the positive triples, $\bar{k}$ are the negative triples, $f$ is the interaction function (e.g.,
-    TransE has $f(h,r,t)=h+r-t$), $h(x)=\log(1 + \exp(x))$ is the softmax activation function.
+    :class:`pykeen.models.TransE` has $f(h,r,t)=\mathbf{e}_h+\mathbf{r}_r-\mathbf{e}_t$), $g(x)=\log(1 + \exp(x))$
+    is the softmax activation function.
 
     .. seealso::
 
@@ -641,10 +649,10 @@ class DoubleMarginLoss(PointwiseLoss):
     sufficiently correct examples.
 
     .. math ::
-        L(k, \bar{k}) = h(\bar{\lambda} + \bar{k}) + h(\lambda - k)
+        L(k, \bar{k}) = g(\bar{\lambda} + \bar{k}) + h(\lambda - k)
 
     Where $k$ is positive scores, $\bar{k}$ is negative scores, $\lambda$ is the positive margin, $\bar{\lambda}$ is
-    the negative margin, and $h$ is an activation function, like the ReLU or softmax.
+    the negative margin, and $g$ is an activation function, like the ReLU or softmax.
     ---
     name: Double Margin
     """
