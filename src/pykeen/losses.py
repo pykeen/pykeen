@@ -956,22 +956,15 @@ class NSSALoss(SetwiseLoss):
 
 @parse_docdata
 class FocalLoss(PointwiseLoss):
-    """
-    Implementation of the focal loss as a module.
+    """An implementation of the focal loss proposed by [lin2018]_.
 
-    Inspired by the functional form from torchvision.
+    It is an adaptation of the (binary) cross entropy loss, which deals better with imbalanced data.
+    The implementation is strongly inspired by the implementation in
+    :func:`torchvision.ops.sigmoid_focal_loss`, except it is using
+    a module rather than the functional form.
 
-    Proposed by [lin2018]_.
-
-    # TODO: Move to correct place
-    Focal Loss for Dense Object Detection
-    Tsung-Yi Lin, Priya Goyal, Ross Girshick, Kaiming He, Piotr Dollár
-    ICCV'17.
-    https://arxiv.org/abs/1708.02002
-
-    .. seealso ::
-        https://pytorch.org/vision/stable/_modules/torchvision/ops/focal_loss.html
-
+    Focal loss has some other nice properties, e.g., better calibrated predicted probabilities. See
+    [mukhoti2020]_.
     ---
     name: Focal
     """
@@ -991,7 +984,7 @@ class FocalLoss(PointwiseLoss):
         :param alpha:
             Weighting factor in range (0,1) to balance positive vs negative examples.
         :param kwargs:
-            Additional keyword-based arguments passed to PointwiseLoss.
+            Additional keyword-based arguments passed to :class:`pykeen.losses.PointwiseLoss`.
         """
         super().__init__(**kwargs)
         if alpha is not None and not (0 < alpha < 1):
