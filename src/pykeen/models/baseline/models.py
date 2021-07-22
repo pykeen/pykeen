@@ -3,20 +3,17 @@
 """Non-parametric baseline models."""
 
 from abc import ABC
-from typing import Optional
 
 import numpy
-import scipy.sparse
 import torch
 
-from .utils import get_relation_similarity, marginal_score, get_csr_matrix
+from .utils import get_csr_matrix, marginal_score
 from ..base import Model
 from ...triples import CoreTriplesFactory
 
 __all__ = [
     'EvaluationOnlyModel',
     'MarginalDistributionBaseline',
-    'SoftInverseTripleBaseline',
 ]
 
 
@@ -138,54 +135,3 @@ class MarginalDistributionBaseline(EvaluationOnlyModel):
             per_relation=self.head_per_relation,
             num_entities=self.num_entities,
         )
-
-
-class SoftInverseTripleBaseline(EvaluationOnlyModel):
-    """Score based on relation similarity.
-
-    ---
-    name: Soft Inverse Triple Baseline
-    citation:
-        author: Berrendorf
-        year: 2021
-        link: https://github.com/pykeen/pykeen/pull/514
-        github: pykeen/pykeen
-    """
-
-    def __init__(
-        self,
-        triples_factory: CoreTriplesFactory,
-        threshold: Optional[float] = None,
-    ):
-        super().__init__(triples_factory=triples_factory)
-        # compute relation similarity matrix
-        self.sim = get_relation_similarity(triples_factory, to_inverse=False, threshold=threshold)
-        self.sim_inv = get_relation_similarity(triples_factory, to_inverse=True, threshold=threshold)
-
-        mapped_triples = numpy.asarray(triples_factory.mapped_triples)
-        self.rel_to_head = scipy.sparse.coo_matrix(
-            (
-                numpy.ones(shape=(triples_factory.num_triples,), dtype=numpy.float32),
-                (mapped_triples[:, 1], mapped_triples[:, 0]),
-            ),
-            shape=(triples_factory.num_relations, triples_factory.num_entities),
-        ).tocsr()
-        self.rel_to_tail = scipy.sparse.coo_matrix(
-            (
-                numpy.ones(shape=(triples_factory.num_triples,), dtype=numpy.float32),
-                (mapped_triples[:, 1], mapped_triples[:, 2]),
-            ),
-            shape=(triples_factory.num_relations, triples_factory.num_entities),
-        ).tocsr()
-
-    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa:D102
-        r = hr_batch[:, 1]
-        scores = self.sim[r, :] @ self.rel_to_tail + self.sim_inv[r, :] @ self.rel_to_head
-        scores = numpy.asarray(scores.todense())
-        return torch.from_numpy(scores)
-
-    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa:D102
-        r = rt_batch[:, 0]
-        scores = self.sim[r, :] @ self.rel_to_head + self.sim_inv[r, :] @ self.rel_to_tail
-        scores = numpy.asarray(scores.todense())
-        return torch.from_numpy(scores)
