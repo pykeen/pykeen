@@ -32,6 +32,12 @@ class DoubleMarginLossTests(cases.PointwiseLossTestCase):
     cls = pykeen.losses.DoubleMarginLoss
 
 
+class FocalLossTests(cases.PointwiseLossTestCase):
+    """Tests for focal loss."""
+
+    cls = pykeen.losses.FocalLoss
+
+
 class SoftplusLossTests(cases.PointwiseLossTestCase):
     """Unit test for SoftplusLoss."""
 
