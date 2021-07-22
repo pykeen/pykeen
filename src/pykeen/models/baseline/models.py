@@ -148,7 +148,7 @@ class SoftInverseTripleBaseline(EvaluationOnlyModel):
     citation:
         author: Berrendorf
         year: 2021
-        link: https://github.com/pykeen/pykeen/pull/514
+        link: https://github.com/pykeen/pykeen/pull/543
         github: pykeen/pykeen
     """
 
