@@ -22,7 +22,7 @@ from tqdm.contrib.logging import logging_redirect_tqdm
 from pykeen.constants import PYKEEN_EXPERIMENTS
 from pykeen.datasets import Dataset, dataset_resolver
 from pykeen.models import Model
-from pykeen.models.baseline.models import EvaluationOnlyModel, MarginalDistributionBaseline, SoftInverseTripleBaseline
+from pykeen.models.baseline.models import EvaluationOnlyModel, MarginalDistributionBaseline
 
 BENCHMARK_DIRECTORY = PYKEEN_EXPERIMENTS.joinpath('nonparametric_baseline_benchmark')
 BENCHMARK_DIRECTORY.mkdir(exist_ok=True, parents=True)
@@ -140,7 +140,6 @@ def _build(batch_size: int, trials: int, path: Union[str, Path], test: bool = Fa
         # FIXME entity_margin=True, relation_margin=False throws an error
         # (MarginalDistributionBaseline, dict(entity_margin=True, relation_margin=False)),
         (MarginalDistributionBaseline, dict(entity_margin=False, relation_margin=True)),
-        (SoftInverseTripleBaseline, dict(threshold=0.97)),
     ]
     kwargs_keys = sorted({key for _, kwargs in model_settings for key in kwargs})
     func = partial(
