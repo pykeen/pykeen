@@ -956,12 +956,20 @@ class NSSALoss(SetwiseLoss):
 
 @parse_docdata
 class FocalLoss(PointwiseLoss):
-    """A module for the focal loss proposed by [lin2018]_.
+    r"""A module for the focal loss proposed by [lin2018]_.
 
     It is an adaptation of the (binary) cross entropy loss, which deals better with imbalanced data.
     The implementation is strongly inspired by the implementation in
     :func:`torchvision.ops.sigmoid_focal_loss`, except it is using
     a module rather than the functional form.
+
+    The loss is given as
+
+    .. math ::
+        FL(p_t) = -(1 - p_t)^\gamma \log (p_t)
+
+    with :math:`p_t = y \cdot p + (1 - y) \cdot (1 - p)`, where :math:`p` refers to the predicted probability, and `y`
+    to the ground truth label in :math:`{0, 1}`.
 
     Focal loss has some other nice properties, e.g., better calibrated predicted probabilities. See
     [mukhoti2020]_.
@@ -982,8 +990,14 @@ class FocalLoss(PointwiseLoss):
         :param gamma: >= 0
             Exponent of the modulating factor (1 - p_t) to balance easy vs hard examples. Setting gamma > 0 reduces the
             relative loss for well-classified examples.
+            The default value of 2 is taken from [lin2018]_, which report this setting to work best for their
+            experiments. However, these experiments where conducted on the task of object classification in images, so
+            take it with a grain of salt.
         :param alpha:
-            Weighting factor in range (0,1) to balance positive vs negative examples.
+            Weighting factor in range (0, 1) to balance positive vs negative examples. alpha is the weight for the
+            positive class, i.e., increasing it will let the loss focus more on this class. The weight for the negative
+            class is obtained as 1 - alpha.
+            [lin2018]_ recommends to either set this to the inverse class frequency, or treat it as a hyper-parameter.
         :param kwargs:
             Additional keyword-based arguments passed to :class:`pykeen.losses.PointwiseLoss`.
         :raises ValueError:
