@@ -979,8 +979,9 @@ class FocalLoss(PointwiseLoss):
         """
         Initialize the loss module.
 
-        :param gamma:
-            Exponent of the modulating factor (1 - p_t) to balance easy vs hard examples.
+        :param gamma: >= 0
+            Exponent of the modulating factor (1 - p_t) to balance easy vs hard examples. Setting gamma > 0 reduces the
+            relative loss for well-classified examples.
         :param alpha:
             Weighting factor in range (0,1) to balance positive vs negative examples.
         :param kwargs:
@@ -989,6 +990,8 @@ class FocalLoss(PointwiseLoss):
             If alpha is in the wrong range
         """
         super().__init__(**kwargs)
+        if gamma < 0:
+            raise ValueError(f"gamma must be non-negative, but is {gamma}")
         if alpha is not None and not (0 < alpha < 1):
             raise ValueError(f"If alpha is provided, it must be from (0, 1), i.e. the open interval, but it is {alpha}")
         self.alpha = alpha
