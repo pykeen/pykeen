@@ -10,9 +10,9 @@ import unittest_templates
 
 import pykeen.losses
 from pykeen.losses import (
-    BCEAfterSigmoidLoss, BCEWithLogitsLoss, CrossEntropyLoss, DoubleMarginLoss, Loss, MSELoss,
-    MarginRankingLoss, NSSALoss, PairwiseLoss, PointwiseLoss, SetwiseLoss, SoftplusLoss,
-    UnsupportedLabelSmoothingError, apply_label_smoothing,
+    BCEAfterSigmoidLoss, BCEWithLogitsLoss, CrossEntropyLoss, DoubleMarginLoss, Loss, MSELoss, MarginRankingLoss,
+    NSSALoss, PairwiseLoss, PointwiseLoss, SetwiseLoss, SoftplusLoss, UnsupportedLabelSmoothingError,
+    apply_label_smoothing,
 )
 from pykeen.pipeline import PipelineResult, pipeline
 from tests import cases
