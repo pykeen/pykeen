@@ -956,7 +956,7 @@ class NSSALoss(SetwiseLoss):
 
 @parse_docdata
 class FocalLoss(PointwiseLoss):
-    """An implementation of the focal loss proposed by [lin2018]_.
+    """A module for the focal loss proposed by [lin2018]_.
 
     It is an adaptation of the (binary) cross entropy loss, which deals better with imbalanced data.
     The implementation is strongly inspired by the implementation in
