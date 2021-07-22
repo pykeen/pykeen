@@ -9,13 +9,11 @@ import scipy.sparse
 import torch
 from sklearn.preprocessing import normalize as sklearn_normalize
 
-from ...triples import CoreTriplesFactory
-
 __all__ = [
     'get_csr_matrix',
     'marginal_score',
-    'get_relation_similarity',
 ]
+
 
 def get_csr_matrix(
     row_indices: numpy.ndarray,
@@ -62,46 +60,3 @@ def marginal_score(
     # note: we need to work with dense arrays only to comply with returning torch tensors. Otherwise, we could
     # stay sparse here, with a potential of a huge memory benefit on large datasets!
     return torch.from_numpy(scores.todense())
-
-
-def get_relation_similarity(
-    triples_factory: CoreTriplesFactory,
-    to_inverse: bool = False,
-    threshold: Optional[float] = None,
-) -> scipy.sparse.csr_matrix:
-    """Get the relation similarity."""
-    # TODO: overlap with inverse triple detection
-    assert triples_factory.num_entities * triples_factory.num_relations < numpy.iinfo(int_type=int).max
-    mapped_triples = numpy.asarray(triples_factory.mapped_triples)
-    r = scipy.sparse.coo_matrix(
-        (
-            numpy.ones((mapped_triples.shape[0],), dtype=int),
-            (
-                mapped_triples[:, 1],
-                triples_factory.num_entities * mapped_triples[:, 0] + mapped_triples[:, 2],
-            ),
-        ),
-        shape=(triples_factory.num_relations, triples_factory.num_entities ** 2),
-    )
-    cardinality = numpy.asarray(r.sum(axis=1)).squeeze(axis=-1)
-    if to_inverse:
-        r2 = scipy.sparse.coo_matrix(
-            (
-                numpy.ones((mapped_triples.shape[0],), dtype=int),
-                (
-                    mapped_triples[:, 1],
-                    triples_factory.num_entities * mapped_triples[:, 2] + mapped_triples[:, 0],
-                ),
-            ),
-            shape=(triples_factory.num_relations, triples_factory.num_entities ** 2),
-        )
-    else:
-        r2 = r
-    intersection = numpy.asarray((r @ r2.T).todense())
-    union = cardinality[:, None] + cardinality[None, :] - intersection
-    sim = intersection.astype(numpy.float32) / union.astype(numpy.float32)
-    if threshold is not None:
-        sim[sim < threshold] = 0.0
-    sim = scipy.sparse.csr_matrix(sim)
-    sim.eliminate_zeros()
-    return sim
