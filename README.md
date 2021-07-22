@@ -172,7 +172,7 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 | TuckER               | [`pykeen.models.TuckER`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.TuckER.html)                           | [Balažević *et al.*, 2019](https://arxiv.org/abs/1901.09590)                                                            |
 | Unstructured Model   | [`pykeen.models.UnstructuredModel`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.UnstructuredModel.html)     | [Bordes *et al.*, 2014](https://link.springer.com/content/pdf/10.1007%2Fs10994-013-5363-6.pdf)                          |
 
-### Losses (8)
+### Losses (9)
 
 | Name                                 | Reference                                                                                                                 | Description                                                                                           |
 |--------------------------------------|---------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------|
@@ -180,6 +180,7 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 | Binary cross entropy (with logits)   | [`pykeen.losses.BCEWithLogitsLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.BCEWithLogitsLoss.html)     | A module for the binary cross entropy loss.                                                           |
 | Cross entropy                        | [`pykeen.losses.CrossEntropyLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.CrossEntropyLoss.html)       | A module for the cross entropy loss that evaluates the cross entropy after softmax output.            |
 | Double Margin                        | [`pykeen.losses.DoubleMarginLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.DoubleMarginLoss.html)       | A limit-based scoring loss, with separate margins for positive and negative elements from [sun2018]_. |
+| Focal                                | [`pykeen.losses.FocalLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.FocalLoss.html)                     | A module for the focal loss proposed by [lin2018]_.                                                   |
 | Margin ranking                       | [`pykeen.losses.MarginRankingLoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.MarginRankingLoss.html)     | A module for the margin ranking loss.                                                                 |
 | Mean square error                    | [`pykeen.losses.MSELoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.MSELoss.html)                         | A module for the mean square error loss.                                                              |
 | Self-adversarial negative sampling   | [`pykeen.losses.NSSALoss`](https://pykeen.readthedocs.io/en/latest/api/pykeen.losses.NSSALoss.html)                       | An implementation of the self-adversarial negative sampling loss function proposed by [sun2019]_.     |

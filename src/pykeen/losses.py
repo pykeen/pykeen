@@ -169,6 +169,7 @@ __all__ = [
     'BCEAfterSigmoidLoss',
     'BCEWithLogitsLoss',
     'CrossEntropyLoss',
+    'FocalLoss',
     'MarginRankingLoss',
     'MSELoss',
     'NSSALoss',
@@ -951,6 +952,80 @@ class NSSALoss(SetwiseLoss):
             loss = loss / 2.
 
         return loss
+
+
+@parse_docdata
+class FocalLoss(PointwiseLoss):
+    r"""A module for the focal loss proposed by [lin2018]_.
+
+    It is an adaptation of the (binary) cross entropy loss, which deals better with imbalanced data.
+    The implementation is strongly inspired by the implementation in
+    :func:`torchvision.ops.sigmoid_focal_loss`, except it is using
+    a module rather than the functional form.
+
+    The loss is given as
+
+    .. math ::
+        FL(p_t) = -(1 - p_t)^\gamma \log (p_t)
+
+    with :math:`p_t = y \cdot p + (1 - y) \cdot (1 - p)`, where :math:`p` refers to the predicted probability, and `y`
+    to the ground truth label in :math:`{0, 1}`.
+
+    Focal loss has some other nice properties, e.g., better calibrated predicted probabilities. See
+    [mukhoti2020]_.
+    ---
+    name: Focal
+    """
+
+    def __init__(
+        self,
+        *,
+        gamma: float = 2.0,
+        alpha: Optional[float] = None,
+        **kwargs,
+    ):
+        """
+        Initialize the loss module.
+
+        :param gamma: >= 0
+            Exponent of the modulating factor (1 - p_t) to balance easy vs hard examples. Setting gamma > 0 reduces the
+            relative loss for well-classified examples.
+            The default value of 2 is taken from [lin2018]_, which report this setting to work best for their
+            experiments. However, these experiments where conducted on the task of object classification in images, so
+            take it with a grain of salt.
+        :param alpha:
+            Weighting factor in range (0, 1) to balance positive vs negative examples. alpha is the weight for the
+            positive class, i.e., increasing it will let the loss focus more on this class. The weight for the negative
+            class is obtained as 1 - alpha.
+            [lin2018]_ recommends to either set this to the inverse class frequency, or treat it as a hyper-parameter.
+        :param kwargs:
+            Additional keyword-based arguments passed to :class:`pykeen.losses.PointwiseLoss`.
+        :raises ValueError:
+            If alpha is in the wrong range
+        """
+        super().__init__(**kwargs)
+        if gamma < 0:
+            raise ValueError(f"gamma must be non-negative, but is {gamma}")
+        if alpha is not None and not (0 < alpha < 1):
+            raise ValueError(f"If alpha is provided, it must be from (0, 1), i.e. the open interval, but it is {alpha}")
+        self.alpha = alpha
+        self.gamma = gamma
+
+    def forward(
+        self,
+        prediction: torch.FloatTensor,
+        labels: torch.FloatTensor,
+    ) -> torch.FloatTensor:  # noqa: D102
+        p = prediction.sigmoid()
+        ce_loss = functional.binary_cross_entropy_with_logits(prediction, labels, reduction="none")
+        p_t = p * labels + (1 - p) * (1 - labels)
+        loss = ce_loss * ((1 - p_t) ** self.gamma)
+
+        if self.alpha is not None:
+            alpha_t = self.alpha * labels + (1 - self.alpha) * (1 - labels)
+            loss = alpha_t * loss
+
+        return self._reduction_method(loss)
 
 
 loss_resolver = Resolver.from_subclasses(
