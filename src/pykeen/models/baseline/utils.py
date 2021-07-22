@@ -57,7 +57,6 @@ def marginal_score(
         e_score = per_entity[e]
         r_score = per_relation[r]
         scores = e_score.multiply(r_score)
-        # TODO: this may be incorrect?
         scores = sklearn_normalize(scores, norm="l1", axis=1)
 
     # note: we need to work with dense arrays only to comply with returning torch tensors. Otherwise, we could
