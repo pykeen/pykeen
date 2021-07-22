@@ -100,7 +100,6 @@ model_resolver = Resolver.from_subclasses(
     skip={
         # Abstract Models
         _NewAbstractModel,
-        EvaluationOnlyModel,
         # We might be able to relax this later
         ERModel,
         LiteralModel,
