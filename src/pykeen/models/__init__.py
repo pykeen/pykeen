@@ -7,11 +7,9 @@ score value is model-dependent, and usually it cannot be directly interpreted as
 """  # noqa: D205, D400
 
 from class_resolver import Resolver, get_subclasses
+
 from .base import EntityRelationEmbeddingModel, Model, _OldAbstractModel
-from .baseline import (
-    EvaluationOnlyModel, MarginalDistributionBaseline, MarginalDistributionBaseline,
-    SoftInverseTripleBaseline,
-)
+from .baseline import EvaluationOnlyModel, MarginalDistributionBaseline, SoftInverseTripleBaseline
 from .multimodal import ComplExLiteral, DistMultLiteral, LiteralModel
 from .nbase import ERModel, _NewAbstractModel
 from .resolve import make_model, make_model_cls
