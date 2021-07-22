@@ -50,7 +50,7 @@ def marginal_score(
     elif per_entity is None:  # and per_relation is not None
         scores = per_relation[r]
     elif per_relation is None:  # and per_entity is not None
-        scores = per_entity[r]
+        scores = per_entity[e]
     else:  # per_relation is not None and per_entity is not None
         e_score = per_entity[e]
         r_score = per_relation[r]
