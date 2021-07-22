@@ -985,6 +985,8 @@ class FocalLoss(PointwiseLoss):
             Weighting factor in range (0,1) to balance positive vs negative examples.
         :param kwargs:
             Additional keyword-based arguments passed to :class:`pykeen.losses.PointwiseLoss`.
+        :raises ValueError:
+            If alpha is in the wrong range
         """
         super().__init__(**kwargs)
         if alpha is not None and not (0 < alpha < 1):
