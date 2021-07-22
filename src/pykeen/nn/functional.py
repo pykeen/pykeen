@@ -47,6 +47,7 @@ __all__ = [
     'structured_embedding_interaction',
     'transd_interaction',
     'transe_interaction',
+    'transf_interaction',
     'transh_interaction',
     'transr_interaction',
     'tucker_interaction',
@@ -794,6 +795,26 @@ def transe_interaction(
         The scores.
     """
     return negative_norm_of_sum(h, r, -t, p=p, power_norm=power_norm)
+
+
+def transf_interaction(
+    h: torch.FloatTensor,
+    r: torch.FloatTensor,
+    t: torch.FloatTensor,
+) -> torch.FloatTensor:
+    """Evaluate the TransF interaction function.
+
+    :param h: shape: (batch_size, num_heads, 1, 1, dim)
+        The head representations.
+    :param r: shape: (batch_size, 1, num_relations, 1, dim)
+        The relation representations.
+    :param t: shape: (batch_size, 1, 1, num_tails, dim)
+        The tail representations.
+
+    :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        The scores.
+    """
+    return batched_dot(h + r, t) + batched_dot(h, t - r)
 
 
 def transh_interaction(

@@ -254,6 +254,7 @@ texinfo_documents = [
 intersphinx_mapping = {
     'https://docs.python.org/3/': None,
     'torch': ('https://pytorch.org/docs/stable', None),
+    'torchvision': ('https://pytorch.org/vision/stable', None),
     'numpy': ('https://numpy.org/doc/stable', None),
     'optuna': ('https://optuna.readthedocs.io/en/latest', None),
     'pybel': ('https://pybel.readthedocs.io/en/latest/', None),

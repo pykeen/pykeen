@@ -101,6 +101,21 @@ pairwise logistic loss can be considered as a special case of the soft margin ra
     Pairwise Logistic                $h(\Delta) = \log(1 + \exp(\Delta))$
     ===============================  ==============================================
 
+Atypical Pairwise Loss Functions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The following pairwise loss function use the full generalized form of $L(k, \bar{k}) = \dots$
+for their definitions:
+
+.. table::
+    :align: center
+    :widths: auto
+
+    ==============  =============================================
+    Pairwise Loss   Formulation
+    ==============  =============================================
+    Double Loss     $h(\bar{\lambda} + \bar{k}) + h(\lambda - k)$
+    ==============  =============================================
+
 Batching
 ~~~~~~~~
 The pairwise loss for a set of pairs of positive/negative triples $\mathcal{L}_L: 2^{\mathcal{K} \times
@@ -133,7 +148,9 @@ triples $\mathcal{b}$ in the subset $\mathcal{B} \in 2^{2^{\mathcal{T}}}$.
     \mathcal{L}_L(\mathcal{B}) = \frac{1}{|\mathcal{B}|} \sum \limits_{\mathcal{b} \in \mathcal{B}} L(\mathcal{b})
 """
 
-from typing import Any, ClassVar, Mapping, Optional, Set
+import logging
+from textwrap import dedent
+from typing import Any, ClassVar, Mapping, Optional, Set, Tuple
 
 import torch
 from class_resolver import Hint, Resolver
@@ -152,13 +169,17 @@ __all__ = [
     'BCEAfterSigmoidLoss',
     'BCEWithLogitsLoss',
     'CrossEntropyLoss',
+    'FocalLoss',
     'MarginRankingLoss',
     'MSELoss',
     'NSSALoss',
     'SoftplusLoss',
+    'DoubleMarginLoss',
     # Utils
     'loss_resolver',
 ]
+
+logger = logging.getLogger(__name__)
 
 
 def apply_label_smoothing(
@@ -511,6 +532,226 @@ class MarginRankingLoss(PairwiseLoss):
 
 
 @parse_docdata
+class DoubleMarginLoss(PointwiseLoss):
+    r"""A limit-based scoring loss, with separate margins for positive and negative elements from [sun2018]_.
+
+    Despite its similarity to the margin-based loss, this loss is quite different to it, since it uses absolute margins
+    for positive/negative scores, rather than comparing the difference. Hence, it has a natural decision boundary
+    (somewhere between the positive and negative margin), while still resulting in sparse losses with no gradients for
+    sufficiently correct examples.
+
+    .. math ::
+        L(k, \bar{k}) = h(\bar{\lambda} + \bar{k}) + h(\lambda - k)
+
+    Where $k$ is positive scores, $\bar{k}$ is negative scores, $\lambda$ is the positive margin, $\bar{\lambda}$ is
+    the negative margin, and $h$ is an activation function, like the ReLU or softmax.
+    ---
+    name: Double Margin
+    """
+
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
+        margin_positive=dict(type=float, low=-1, high=1),
+        offset=dict(type=float, low=0, high=1),
+        positive_negative_balance=dict(type=float, low=1.0e-03, high=1.0 - 1.0e-03),
+        margin_activation=dict(
+            type='categorical',
+            choices=margin_activation_resolver.options,
+        ),
+    )
+
+    @staticmethod
+    def resolve_margin(
+        positive_margin: Optional[float],
+        negative_margin: Optional[float],
+        offset: Optional[float],
+    ) -> Tuple[float, float]:
+        """Resolve margins from multiple methods how to specify them.
+
+        The method supports three combinations:
+
+        - positive_margin & negative_margin.
+            This returns the values as-is.
+        - negative_margin & offset
+            This sets positive_margin = negative_margin + offset
+        - positive_margin & offset
+            This sets negative_margin = positive_margin - offset
+
+        .. note ::
+            Notice that this method does not apply a precedence between the three methods, but requires the remaining
+            parameter to be None. This is done to fail fast on ambiguous input rather than delay a failure to a later
+            point in time where it might be harder to find its cause.
+
+        :param positive_margin:
+            The (absolute) margin for the positive scores. Should be larger than the negative one.
+        :param negative_margin:
+            The (absolute) margin for the negative scores. Should be smaller than the positive one.
+        :param offset:
+            The offset between positive and negative margin. Must be non-negative.
+
+        :returns:
+            A pair of the positive and negative margin. Guaranteed to fulfil positive_margin >= negative_margin.
+
+        :raises ValueError:
+            In case of an invalid combination.
+        """
+        # 1. positive & negative margin
+        if positive_margin is not None and negative_margin is not None and offset is None:
+            if negative_margin > positive_margin:
+                raise ValueError(
+                    f"Positive margin ({positive_margin}) must not be smaller than the negative one "
+                    f"({negative_margin}).",
+                )
+            return positive_margin, negative_margin
+
+        # 2. negative margin & offset
+        if negative_margin is not None and offset is not None and positive_margin is None:
+            if offset < 0:
+                raise ValueError(f"The offset must not be negative, but it is: {offset}")
+            return negative_margin + offset, negative_margin
+
+        # 3. positive margin & offset
+        if positive_margin is not None and offset is not None and negative_margin is None:
+            if offset < 0:
+                raise ValueError(f"The offset must not be negative, but it is: {offset}")
+            return positive_margin, positive_margin - offset
+
+        raise ValueError(dedent(f"""\
+            Invalid combination of margins and offset:
+
+                positive_margin={positive_margin}
+                negative_margin={negative_margin}
+                offset={offset}
+
+            Supported are:
+                1. positive & negative margin
+                2. negative margin & offset
+                3. positive margin & offset
+        """))
+
+    def __init__(
+        self,
+        *,
+        positive_margin: Optional[float] = 1.0,
+        negative_margin: Optional[float] = 0.0,
+        offset: Optional[float] = None,
+        positive_negative_balance: float = 0.5,
+        margin_activation: Hint[nn.Module] = 'relu',
+        reduction: str = 'mean',
+    ):
+        r"""Initialize the double margin loss.
+
+        .. note ::
+            There are multiple variants to set the pair of margins. A full documentation is provided in
+            :func:`DoubleMarginLoss.resolve_margins`.
+
+        :param positive_margin:
+            The (absolute) margin for the positive scores. Should be larger than the negative one.
+        :param negative_margin:
+            The (absolute) margin for the negative scores. Should be smaller than the positive one.
+        :param offset:
+            The offset between positive and negative margin. Must be non-negative.
+        :param positive_negative_balance:
+            The balance between positive and negative term. Must be in (0, 1).
+        :param margin_activation:
+            A margin activation. Defaults to ``'relu'``, i.e. $h(\Delta) = max(0, \Delta + \lambda)$, which is the
+            default "margin loss". Using ``'softplus'`` leads to a "soft-margin" formulation as discussed in
+            https://arxiv.org/abs/1703.07737.
+        :param reduction:
+            The name of the reduction operation to aggregate the individual loss values from a batch to a scalar loss
+            value. From {'mean', 'sum'}.
+        :raises ValueError: If the positive/negative balance is not within the right range
+        """
+        super().__init__(reduction=reduction)
+        if not (0 <= positive_negative_balance <= 1):
+            raise ValueError(
+                f"The positive-negative balance weight must be in (0, 1), but is {positive_negative_balance}",
+            )
+        self.positive_margin, self.negative_margin = self.resolve_margin(
+            positive_margin=positive_margin,
+            negative_margin=negative_margin,
+            offset=offset,
+        )
+        self.negative_weight = 1.0 - positive_negative_balance
+        self.positive_weight = positive_negative_balance
+        self.margin_activation = margin_activation_resolver.make(margin_activation)
+
+    def process_slcwa_scores(
+        self,
+        positive_scores: torch.FloatTensor,
+        negative_scores: torch.FloatTensor,
+        label_smoothing: Optional[float] = None,
+        batch_filter: Optional[torch.BoolTensor] = None,
+        num_entities: Optional[int] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        # Sanity check
+        if label_smoothing:
+            raise UnsupportedLabelSmoothingError(self)
+
+        # positive term
+        if batch_filter is None:
+            # implicitly repeat positive scores
+            positive_loss = self.margin_activation(self.positive_margin - positive_scores)
+            positive_loss = self._reduction_method(positive_loss)
+            if self.reduction == "sum":
+                positive_loss = positive_loss * negative_scores.shape[1]
+            elif self.reduction != "mean":
+                raise NotImplementedError(
+                    f"There is not implementation for reduction={self.reduction} and filtered negatives",
+                )
+        else:
+            num_neg_per_pos = batch_filter.shape[1]
+            positive_scores = positive_scores.unsqueeze(dim=1).repeat(1, num_neg_per_pos, 1)[batch_filter]
+            # shape: (nnz,)
+            positive_loss = self._reduction_method(self.margin_activation(self.positive_margin - positive_scores))
+
+        # negative term
+        # negative_scores have already been filtered in the sampler!
+        negative_loss = self._reduction_method(self.margin_activation(self.negative_margin + negative_scores))
+        return self.positive_weight * positive_loss + self.negative_weight * negative_loss
+
+    def process_lcwa_scores(
+        self,
+        predictions: torch.FloatTensor,
+        labels: torch.FloatTensor,
+        label_smoothing: Optional[float] = None,
+        num_entities: Optional[int] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        # Sanity check
+        if label_smoothing:
+            labels = apply_label_smoothing(
+                labels=labels,
+                epsilon=label_smoothing,
+                num_classes=num_entities,
+            )
+
+        return self(predictions=predictions, labels=labels)
+
+    def forward(
+        self,
+        predictions: torch.FloatTensor,
+        labels: torch.FloatTensor,
+    ) -> torch.FloatTensor:
+        """
+        Compute the double margin loss.
+
+        The scores have to be in broadcastable shape.
+
+        :param predictions:
+            The predicted scores.
+        :param labels:
+            The labels.
+
+        :return:
+            A scalar loss term.
+        """
+        return self.positive_weight * self._reduction_method(
+            labels * self.margin_activation(self.positive_margin - predictions),
+        ) + self.negative_weight * self._reduction_method(
+            (1.0 - labels) * self.margin_activation(self.negative_margin + predictions),
+        )
+
+
+@parse_docdata
 class SoftplusLoss(PointwiseLoss):
     r"""
     A module for the softplus loss.
@@ -711,6 +952,80 @@ class NSSALoss(SetwiseLoss):
             loss = loss / 2.
 
         return loss
+
+
+@parse_docdata
+class FocalLoss(PointwiseLoss):
+    r"""A module for the focal loss proposed by [lin2018]_.
+
+    It is an adaptation of the (binary) cross entropy loss, which deals better with imbalanced data.
+    The implementation is strongly inspired by the implementation in
+    :func:`torchvision.ops.sigmoid_focal_loss`, except it is using
+    a module rather than the functional form.
+
+    The loss is given as
+
+    .. math ::
+        FL(p_t) = -(1 - p_t)^\gamma \log (p_t)
+
+    with :math:`p_t = y \cdot p + (1 - y) \cdot (1 - p)`, where :math:`p` refers to the predicted probability, and `y`
+    to the ground truth label in :math:`{0, 1}`.
+
+    Focal loss has some other nice properties, e.g., better calibrated predicted probabilities. See
+    [mukhoti2020]_.
+    ---
+    name: Focal
+    """
+
+    def __init__(
+        self,
+        *,
+        gamma: float = 2.0,
+        alpha: Optional[float] = None,
+        **kwargs,
+    ):
+        """
+        Initialize the loss module.
+
+        :param gamma: >= 0
+            Exponent of the modulating factor (1 - p_t) to balance easy vs hard examples. Setting gamma > 0 reduces the
+            relative loss for well-classified examples.
+            The default value of 2 is taken from [lin2018]_, which report this setting to work best for their
+            experiments. However, these experiments where conducted on the task of object classification in images, so
+            take it with a grain of salt.
+        :param alpha:
+            Weighting factor in range (0, 1) to balance positive vs negative examples. alpha is the weight for the
+            positive class, i.e., increasing it will let the loss focus more on this class. The weight for the negative
+            class is obtained as 1 - alpha.
+            [lin2018]_ recommends to either set this to the inverse class frequency, or treat it as a hyper-parameter.
+        :param kwargs:
+            Additional keyword-based arguments passed to :class:`pykeen.losses.PointwiseLoss`.
+        :raises ValueError:
+            If alpha is in the wrong range
+        """
+        super().__init__(**kwargs)
+        if gamma < 0:
+            raise ValueError(f"gamma must be non-negative, but is {gamma}")
+        if alpha is not None and not (0 < alpha < 1):
+            raise ValueError(f"If alpha is provided, it must be from (0, 1), i.e. the open interval, but it is {alpha}")
+        self.alpha = alpha
+        self.gamma = gamma
+
+    def forward(
+        self,
+        prediction: torch.FloatTensor,
+        labels: torch.FloatTensor,
+    ) -> torch.FloatTensor:  # noqa: D102
+        p = prediction.sigmoid()
+        ce_loss = functional.binary_cross_entropy_with_logits(prediction, labels, reduction="none")
+        p_t = p * labels + (1 - p) * (1 - labels)
+        loss = ce_loss * ((1 - p_t) ** self.gamma)
+
+        if self.alpha is not None:
+            alpha_t = self.alpha * labels + (1 - self.alpha) * (1 - labels)
+            loss = alpha_t * loss
+
+        return self._reduction_method(loss)
 
 
 loss_resolver = Resolver.from_subclasses(

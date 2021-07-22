@@ -4,18 +4,22 @@
 
 import itertools as itt
 import logging
-from typing import Optional, Tuple, Union
+from typing import Optional, Sequence, Tuple, Union
 
+import numpy
 import numpy as np
 import pandas as pd
 import torch
 
 from .base import Model
 from ..triples import CoreTriplesFactory, TriplesFactory
-from ..typing import MappedTriples, ScorePack
+from ..triples.utils import tensor_to_df
+from ..typing import LabeledTriples, MappedTriples, ScorePack
+from ..utils import is_cuda_oom_error
 
 __all__ = [
     'predict',
+    'predict_triples_df',
     'get_all_prediction_df',
     'get_head_prediction_df',
     'get_relation_prediction_df',
@@ -511,3 +515,108 @@ def _process_remove_known(df: pd.DataFrame, remove_known: bool, testing: Optiona
     df = df[~df['in_testing']]
     del df['in_testing']
     return df
+
+
+@torch.no_grad()
+def _predict_triples(
+    model: Model,
+    mapped_triples: MappedTriples,
+    batch_size: Optional[int] = None,
+) -> torch.FloatTensor:
+    """Predict scores for triples while dealing with reducing batch size for CUDA OOM."""
+    # base case: infer maximum batch size
+    if batch_size is None:
+        return _predict_triples(model=model, mapped_triples=mapped_triples, batch_size=mapped_triples.shape[0])
+
+    # base case: single batch
+    if batch_size >= mapped_triples.shape[0]:
+        return model.predict_hrt(hrt_batch=mapped_triples)
+
+    if batch_size <= 0:
+        # TODO: this could happen because of AMO
+        raise ValueError("batch_size must be positive.")
+
+    try:
+        return torch.cat([
+            model.predict_hrt(hrt_batch=hrt_batch)
+            for hrt_batch in mapped_triples.split(split_size=batch_size, dim=0)
+        ], dim=0)
+    except RuntimeError as error:
+        # TODO: Can we make AMO code re-usable? e.g. like https://gist.github.com/mberr/c37a8068b38cabc98228db2cbe358043
+        if is_cuda_oom_error(error):
+            return _predict_triples(model=model, mapped_triples=mapped_triples, batch_size=batch_size // 2)
+
+        # no OOM error.
+        raise error
+
+
+def predict_triples_df(
+    model: Model,
+    *,
+    triples: Union[None, MappedTriples, LabeledTriples, Union[Tuple[str, str, str], Sequence[Tuple[str, str, str]]]],
+    triples_factory: Optional[CoreTriplesFactory] = None,
+    batch_size: Optional[int] = None,
+) -> pd.DataFrame:
+    """
+    Predict on labeled or mapped triples.
+
+    Example:
+    >>> from pykeen.pipeline import pipeline
+    >>> result = pipeline(dataset="nations", model="TransE")
+    >>> from pykeen.models.predict import predict_triples_df
+    >>> df = predict_triples_df(
+    ...     model=result.model,
+    ...     triples=("uk", "conferences", "brazil"),
+    ...     triples_factory=result.training,
+    ... )
+
+    :param model:
+        The model.
+    :param triples: shape: (num_triples, 3)
+        The triples in one of the following formats:
+
+        - A single label-based triple.
+        - A list of label-based triples.
+        - An array of label-based triples
+        - An array of ID-based triples.
+        - None. In this case, a triples factory has to be provided, and its triples will be used.
+
+    :param triples_factory:
+        The triples factory. Must be given if triples are label-based. If provided and triples are ID-based, add labels
+        to result.
+    :param batch_size:
+        The batch size to use. Use None for automatic memory optimization.
+
+    :return: columns: head_id | relation_id | tail_id | score | *
+        A dataframe with one row per triple.
+
+    :raises ValueError:
+        If label-based triples have been provided, but the triples factory does not provide a mapping.
+    """
+    if triples is None:
+        if triples_factory is None:
+            raise ValueError("If no triples are provided, a triples_factory must be provided.")
+
+        triples = triples_factory.mapped_triples
+
+    if not isinstance(triples, torch.Tensor) or triples.dtype != torch.long:
+        if triples_factory is None or not isinstance(triples_factory, TriplesFactory):
+            raise ValueError("If triples are not ID-based, a triples_factory must be provided and label-based.")
+
+        # make sure triples are a numpy array
+        triples = numpy.asanyarray(triples)
+
+        # make sure triples are 2d
+        triples = numpy.atleast_2d(triples)
+
+        # convert to ID-based
+        triples = triples_factory.map_triples(triples)
+
+    assert torch.is_tensor(triples) and triples.dtype == torch.long
+
+    scores = _predict_triples(model=model, mapped_triples=triples, batch_size=batch_size).squeeze(dim=1)
+
+    if triples_factory is None:
+        return tensor_to_df(tensor=triples, score=scores)
+
+    return triples_factory.tensor_to_df(tensor=triples, score=scores)
