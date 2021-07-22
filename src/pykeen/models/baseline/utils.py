@@ -17,6 +17,7 @@ __all__ = [
     'get_relation_similarity',
 ]
 
+
 def get_csr_matrix(
     row_indices: numpy.ndarray,
     col_indices: numpy.ndarray,
@@ -47,18 +48,17 @@ def marginal_score(
 
     e, r = entity_relation_batch.cpu().numpy().T
 
-    if per_entity is None and per_relation is None:
-        raise NotImplementedError
-    elif per_entity is None:  # and per_relation is not None
+    if per_relation is not None and per_entity is None:
         scores = per_relation[r]
-    elif per_relation is None:  # and per_entity is not None
-        scores = per_entity[r]
-    else:  # per_relation is not None and per_entity is not None
+    elif per_relation is None and per_entity is not None:
+        scores = per_entity[e]
+    elif per_relation is not None and per_entity is not None:
         e_score = per_entity[e]
         r_score = per_relation[r]
         scores = e_score.multiply(r_score)
-        # TODO: this may be incorrect?
         scores = sklearn_normalize(scores, norm="l1", axis=1)
+    else:
+        raise AssertionError  # for mypy
 
     # note: we need to work with dense arrays only to comply with returning torch tensors. Otherwise, we could
     # stay sparse here, with a potential of a huge memory benefit on large datasets!

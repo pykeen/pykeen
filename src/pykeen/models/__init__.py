@@ -6,10 +6,12 @@ entities and relations. In general, a larger score indicates a higher plausibili
 score value is model-dependent, and usually it cannot be directly interpreted as a probability.
 """  # noqa: D205, D400
 
-from class_resolver import Resolver
-
-from .base import EntityRelationEmbeddingModel, Model, _OldAbstractModel, _OldAbstractModel
-from .baseline import EvaluationOnlyModel, MarginalDistributionBaseline, SoftInverseTripleBaseline
+from class_resolver import Resolver, get_subclasses
+from .base import EntityRelationEmbeddingModel, Model, _OldAbstractModel
+from .baseline import (
+    EvaluationOnlyModel, MarginalDistributionBaseline, MarginalDistributionBaseline,
+    SoftInverseTripleBaseline,
+)
 from .multimodal import ComplExLiteral, DistMultLiteral, LiteralModel
 from .nbase import ERModel, _NewAbstractModel
 from .resolve import make_model, make_model_cls
@@ -104,6 +106,9 @@ model_resolver = Resolver.from_subclasses(
         # We might be able to relax this later
         ERModel,
         LiteralModel,
+        # baseline models behave differently
+        EvaluationOnlyModel,
+        *get_subclasses(EvaluationOnlyModel),
         # Old style models should never be looked up
         _OldAbstractModel,
         EntityRelationEmbeddingModel,

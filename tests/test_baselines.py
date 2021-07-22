@@ -44,3 +44,30 @@ class MarginalDistributionBaselineTests(unittest_templates.GenericTestCase[Margi
         # check probability distribution
         assert (0.0 <= scores).all() and (scores <= 1.0).all()
         assert torch.allclose(scores.sum(dim=1), torch.ones(self.batch_size))
+
+
+class OnlyRelationMarginalDistributionBaselineTests(MarginalDistributionBaselineTests):
+    """Tests for MarginalDistributionBaseline using only the relation margin."""
+
+    kwargs = dict(
+        entity_margin=False,
+        relation_margin=True,
+    )
+
+
+class OnlyEntityMarginalDistributionBaselineTests(MarginalDistributionBaselineTests):
+    """Tests for MarginalDistributionBaseline using only the entity margin."""
+
+    kwargs = dict(
+        entity_margin=True,
+        relation_margin=False,
+    )
+
+
+class TrivialMarginalDistributionBaselineTests(MarginalDistributionBaselineTests):
+    """Tests for MarginalDistributionBaseline not actually using a marginal distribution."""
+
+    kwargs = dict(
+        entity_margin=False,
+        relation_margin=False,
+    )

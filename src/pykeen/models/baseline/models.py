@@ -9,7 +9,7 @@ import numpy
 import scipy.sparse
 import torch
 
-from .utils import get_relation_similarity, marginal_score, get_csr_matrix
+from .utils import get_csr_matrix, get_relation_similarity, marginal_score
 from ..base import Model
 from ...triples import CoreTriplesFactory
 
