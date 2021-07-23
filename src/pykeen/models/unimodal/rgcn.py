@@ -71,7 +71,7 @@ class RGCN(
         relation_initializer: Hint[Initializer] = nn.init.xavier_uniform_,
         relation_initializer_kwargs: Optional[Mapping[str, Any]] = None,
         relation_representations: EmbeddingSpecificationHint = None,
-        interaction: Interaction[torch.FloatTensor, RelationRepresentation, torch.FloatTensor],
+        interaction: Interaction[torch.FloatTensor, RelationRepresentation, torch.FloatTensor] = 'DistMult',
         interaction_kwargs: Optional[Mapping[str, Any]] = None,
         use_bias: bool = True,
         use_batch_norm: bool = False,
