@@ -6,7 +6,7 @@ import os
 import sys
 from functools import lru_cache
 from subprocess import CalledProcessError, check_output  # noqa: S404
-from typing import Optional
+from typing import Optional, Tuple
 
 __all__ = [
     'VERSION',
