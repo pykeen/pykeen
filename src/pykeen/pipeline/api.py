@@ -194,6 +194,7 @@ from typing import Any, Collection, Dict, Iterable, List, Mapping, MutableMappin
 
 import pandas as pd
 import torch
+from class_resolver import KeywordArgumentError
 from torch.optim.optimizer import Optimizer
 
 from ..constants import PYKEEN_CHECKPOINTS, USER_DEFINED_CODE
@@ -204,6 +205,7 @@ from ..losses import Loss, loss_resolver
 from ..lr_schedulers import LRScheduler, lr_scheduler_resolver
 from ..models import Model, make_model_cls, model_resolver
 from ..nn.modules import Interaction
+from .exc import ModelArgumentError
 from ..optimizers import optimizer_resolver
 from ..regularizers import Regularizer, regularizer_resolver
 from ..sampling import NegativeSampler, negative_sampler_resolver
@@ -640,12 +642,15 @@ def _build_model_helper(
             del model_kwargs['loss']
     loss_instance = loss_resolver.make(loss, loss_kwargs)
 
-    return model_resolver.make(
-        model,
-        triples_factory=training_triples_factory,
-        loss=loss_instance,
-        **model_kwargs,
-    )
+    try:
+        return model_resolver.make(
+            model,
+            triples_factory=training_triples_factory,
+            loss=loss_instance,
+            **model_kwargs,
+        )
+    except KeywordArgumentError as e:
+        raise ModelArgumentError(e)
 
 
 def pipeline(  # noqa: C901
