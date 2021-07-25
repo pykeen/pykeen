@@ -6,7 +6,7 @@ import os
 import sys
 from functools import lru_cache
 from subprocess import CalledProcessError, check_output  # noqa: S404
-from typing import Optional
+from typing import Optional, Tuple
 
 __all__ = [
     'VERSION',
@@ -69,18 +69,16 @@ def get_version(with_git_hash: bool = False) -> str:
     return f'{VERSION}-{get_git_hash(terse=True)}' if with_git_hash else VERSION
 
 
-def env_table(tablefmt='github', headers=('Key', 'Value')) -> str:
+def env_table(tablefmt: str = 'github', headers: Tuple[str, str] = ('Key', 'Value')) -> str:
     """Generate a table describing the environment in which PyKEEN is being run."""
     import torch
     import platform
     from tabulate import tabulate
-    import getpass
     import time
     rows = [
         ('OS', os.name),
         ('Platform', platform.system()),
         ('Release', platform.release()),
-        ('User', getpass.getuser()),
         ('Time', str(time.asctime())),
         ('Python', f'{sys.version_info[0]}.{sys.version_info[1]}.{sys.version_info[2]}'),
         ('PyKEEN', get_version()),
