@@ -210,6 +210,9 @@ class Objective:
         if self.stopper is not None and issubclass(self.stopper, EarlyStopper):
             self._update_stopper_callbacks(_stopper_kwargs, trial)
 
+        # create result tracker to allow to gracefully close failed trials
+        result_tracker = tracker_resolver.make(query=self.result_tracker, pos_kwargs=self.result_tracker_kwargs)
+
         try:
             result = pipeline(
                 # 1. Dataset
@@ -251,13 +254,16 @@ class Objective:
                 evaluation_kwargs=self.evaluation_kwargs,
                 filter_validation_when_testing=self.filter_validation_when_testing,
                 # 9. Tracker
-                result_tracker=self.result_tracker,
-                result_tracker_kwargs=self.result_tracker_kwargs,
+                result_tracker=result_tracker,
+                result_tracker_kwargs=None,
                 # Misc.
                 use_testing_data=False,  # use validation set during HPO!
                 device=self.device,
             )
         except (MemoryError, RuntimeError) as e:
+            # close run in result tracker
+            result_tracker.end_run()
+
             trial.set_user_attr('failure', str(e))
             # Will trigger Optuna to set the state of the trial as failed
             return None
