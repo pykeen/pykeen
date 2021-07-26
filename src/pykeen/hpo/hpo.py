@@ -715,7 +715,7 @@ def hpo_pipeline(
     logger.info('Filter validation triples when testing: %s', filter_validation_when_testing)
 
     # 9. Tracking
-    result_tracker: Union[ResultTracker, Type[ResultTracker]]
+    result_tracker
     if not isinstance(result_tracker, ResultTracker):
         result_tracker = tracker_resolver.lookup(result_tracker)
 
