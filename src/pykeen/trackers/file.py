@@ -72,7 +72,7 @@ class FileResultTracker(ResultTracker):
         path.parent.mkdir(exist_ok=True, parents=True)
         self.file = path.open(mode="w", newline="", encoding="utf8")
 
-    def end_run(self) -> None:  # noqa: D102
+    def end_run(self, success: bool = True) -> None:  # noqa: D102
         self.file.close()
 
 
