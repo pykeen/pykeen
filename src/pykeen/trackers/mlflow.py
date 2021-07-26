@@ -68,4 +68,5 @@ class MLFlowResultTracker(ResultTracker):
         self.mlflow.log_params(params=params)
 
     def end_run(self, success: bool = True) -> None:  # noqa: D102
-        self.mlflow.end_run(status=RunStatus.FINISHED if success else RunStatus.FAILED)
+        status = RunStatus.to_string(RunStatus.FINISHED) if success else RunStatus.to_string(RunStatus.FAILED)
+        self.mlflow.end_run(status=status)
