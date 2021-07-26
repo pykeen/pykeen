@@ -62,7 +62,7 @@ class Objective:
     training_loop: Type[TrainingLoop]  # 6.
     stopper: Type[Stopper]  # 7.
     evaluator: Type[Evaluator]  # 8.
-    result_tracker: Type[ResultTracker]  # 9.
+    result_tracker: Union[ResultTracker, Type[ResultTracker]]  # 9.
     metric: str
 
     # 1. Dataset
@@ -715,7 +715,9 @@ def hpo_pipeline(
     logger.info('Filter validation triples when testing: %s', filter_validation_when_testing)
 
     # 9. Tracking
-    result_tracker_cls: Type[ResultTracker] = tracker_resolver.lookup(result_tracker)
+    result_tracker: Union[ResultTracker, Type[ResultTracker]]
+    if not isinstance(result_tracker, ResultTracker):
+        result_tracker = tracker_resolver.lookup(result_tracker)
 
     objective = Objective(
         # 1. Dataset
@@ -763,7 +765,7 @@ def hpo_pipeline(
         evaluation_kwargs=evaluation_kwargs,
         filter_validation_when_testing=filter_validation_when_testing,
         # 9. Tracker
-        result_tracker=result_tracker_cls,
+        result_tracker=result_tracker,
         result_tracker_kwargs=result_tracker_kwargs,
         # Optuna Misc.
         metric=metric,
