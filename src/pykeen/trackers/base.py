@@ -122,6 +122,8 @@ class ConsoleResultTracker(ResultTracker):
             if not self.metric_filter or self.metric_filter.match(key):
                 self.write(f"Parameter: {key} = {value}")
 
-    def end_run(self) -> None:  # noqa: D102
+    def end_run(self, success: bool = True) -> None:  # noqa: D102
+        if not success:
+            self.write("Run failed.")
         if self.start_end_run:
             self.write("Finished run.")
