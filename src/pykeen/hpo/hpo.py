@@ -262,7 +262,7 @@ class Objective:
             )
         except (MemoryError, RuntimeError) as e:
             # close run in result tracker
-            result_tracker.end_run()
+            result_tracker.end_run(success=False)
 
             trial.set_user_attr('failure', str(e))
             # Will trigger Optuna to set the state of the trial as failed
