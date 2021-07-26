@@ -38,10 +38,13 @@ class ResultTracker:
         :param prefix: An optional prefix to prepend to every key in metrics.
         """
 
-    def end_run(self) -> None:
+    def end_run(self, success: bool = True) -> None:
         """End a run.
 
         HAS to be called after the experiment is finished.
+
+        :param success:
+            Can be used to signal failed runs. May be ignored.
         """
 
 
