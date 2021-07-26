@@ -4,8 +4,6 @@
 
 from typing import Any, Dict, Mapping, Optional
 
-from mlflow.entities import RunStatus
-
 from .base import ResultTracker
 from ..utils import flatten_dictionary
 
@@ -68,5 +66,5 @@ class MLFlowResultTracker(ResultTracker):
         self.mlflow.log_params(params=params)
 
     def end_run(self, success: bool = True) -> None:  # noqa: D102
-        status = RunStatus.to_string(RunStatus.FINISHED if success else RunStatus.FAILED)
-        self.mlflow.end_run(status=status)
+        status = self.mlflow.entities.RunStatus.FINISHED if success else self.mlflow.entities.RunStatus.FAILED
+        self.mlflow.end_run(status=self.mlflow.entities.RunStatus.to_string(status))
