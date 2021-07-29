@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Utility classes for constructing inductive datasets."""
+"""Utility class for constructing inductive datasets."""
 
 from typing import Optional, Mapping
 
@@ -96,7 +96,7 @@ class InductiveDataset():
         is_transductive_training = self.transductive_training is not None
         is_inductive_inference = self.inductive_inference is not None
         is_inductive_testing = self.inductive_testing is not None
-        return is_transductive_training and is_inductive_inference is not None and is_inductive_testing is not None
+        return is_transductive_training and is_inductive_inference and is_inductive_testing
 
     @property
     def _loaded_transductive_testing(self) -> bool:
