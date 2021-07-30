@@ -271,16 +271,14 @@ class TestSplit(unittest.TestCase):
                 self.assertEqual(n, len(factories))
                 self._test_invariants(*factories)
 
-                factories_42 = self.triples_factory.split(ratios, method=method, random_state=42)
-                self.assertEqual(n, len(factories_42))
-                self._test_invariants(*factories_42)
+                factories_resplit = self.triples_factory.split(ratios, method=method, random_state=0)
+                self.assertEqual(n, len(factories_resplit))
+                self._test_invariants(*factories_resplit)
 
-                for factory_0, factory_42 in zip(factories, factories_42):
-                    triples_0 = factory_0.mapped_triples.detach().cpu().numpy()
-                    triples_42 = factory_42.mapped_triples.detach().cpu().numpy()
-                    print(triples_0)
-                    print(triples_42)
-                    self.assertTrue((triples_0 == triples_42))
+                for factory, factory_resplit in zip(factories, factories_resplit):
+                    _triples = factory.mapped_triples.detach().cpu().numpy()
+                    triples_resplit = factory_resplit.mapped_triples.detach().cpu().numpy()
+                    self.assertTrue((_triples == triples_resplit).all())
 
     def test_cleanup_deterministic(self):
         """Test that triples in a test set can get moved properly to the training set."""
