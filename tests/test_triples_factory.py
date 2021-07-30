@@ -20,8 +20,8 @@ from pykeen.triples.splitting import (
     _tf_cleanup_randomized,
     get_absolute_split_sizes, normalize_ratios,
 )
-from pykeen.triples.triples_factory import INVERSE_SUFFIX, TRIPLES_DF_COLUMNS, _map_triples_elements_to_ids
-from pykeen.triples.utils import get_entities, get_relations, load_triples
+from pykeen.triples.triples_factory import INVERSE_SUFFIX, _map_triples_elements_to_ids
+from pykeen.triples.utils import TRIPLES_DF_COLUMNS, get_entities, get_relations, load_triples
 from tests.constants import RESOURCES
 
 triples = np.array(

@@ -10,9 +10,10 @@ import tarfile
 import zipfile
 from abc import abstractmethod
 from io import BytesIO
-from typing import Any, ClassVar, Dict, List, Mapping, Optional, Sequence, Tuple, Union, cast
+from typing import Any, ClassVar, Dict, List, Mapping, Optional, Sequence, Tuple, Type, Union, cast
 
 import click
+import docdata
 import pandas as pd
 import requests
 from more_click import verbose_option
@@ -109,6 +110,11 @@ class Dataset:
     def num_relations(self):  # noqa: D401
         """The number of relations."""
         return self.training.num_relations
+
+    @staticmethod
+    def triples_sort_key(cls: Type[Dataset]) -> int:
+        """Get the number of triples for sorting."""
+        return docdata.get_docdata(cls)['statistics']['triples']
 
     def _summary_rows(self):
         return [

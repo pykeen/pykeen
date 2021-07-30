@@ -9,7 +9,7 @@ import logging
 import os
 import pathlib
 from dataclasses import dataclass
-from typing import Any, Collection, Dict, Mapping, Optional, Type, Union
+from typing import Any, Callable, Collection, Dict, Mapping, Optional, Type, Union, cast
 
 import torch
 from optuna import Study, Trial, create_study
@@ -62,7 +62,7 @@ class Objective:
     training_loop: Type[TrainingLoop]  # 6.
     stopper: Type[Stopper]  # 7.
     evaluator: Type[Evaluator]  # 8.
-    result_tracker: Type[ResultTracker]  # 9.
+    result_tracker: Union[ResultTracker, Type[ResultTracker]]  # 9.
     metric: str
 
     # 1. Dataset
@@ -210,6 +210,9 @@ class Objective:
         if self.stopper is not None and issubclass(self.stopper, EarlyStopper):
             self._update_stopper_callbacks(_stopper_kwargs, trial)
 
+        # create result tracker to allow to gracefully close failed trials
+        result_tracker = tracker_resolver.make(query=self.result_tracker, pos_kwargs=self.result_tracker_kwargs)
+
         try:
             result = pipeline(
                 # 1. Dataset
@@ -251,13 +254,16 @@ class Objective:
                 evaluation_kwargs=self.evaluation_kwargs,
                 filter_validation_when_testing=self.filter_validation_when_testing,
                 # 9. Tracker
-                result_tracker=self.result_tracker,
-                result_tracker_kwargs=self.result_tracker_kwargs,
+                result_tracker=result_tracker,
+                result_tracker_kwargs=None,
                 # Misc.
                 use_testing_data=False,  # use validation set during HPO!
                 device=self.device,
             )
         except (MemoryError, RuntimeError) as e:
+            # close run in result tracker
+            result_tracker.end_run(success=False)
+
             trial.set_user_attr('failure', str(e))
             # Will trigger Optuna to set the state of the trial as failed
             return None
@@ -476,6 +482,7 @@ def hpo_pipeline(
     negative_sampler_kwargs: Optional[Mapping[str, Any]] = None,
     negative_sampler_kwargs_ranges: Optional[Mapping[str, Any]] = None,
     # 7. Training
+    epochs: Optional[int] = None,
     training_kwargs: Optional[Mapping[str, Any]] = None,
     training_kwargs_ranges: Optional[Mapping[str, Any]] = None,
     stopper: HintType[Stopper] = None,
@@ -580,6 +587,8 @@ def hpo_pipeline(
         Strategies for optimizing the negative samplers' hyper-parameters to override
         the defaults
 
+    :param epochs:
+        A shortcut for setting the ``num_epochs`` key in the ``training_kwargs`` dict.
     :param training_kwargs:
         Keyword arguments to pass to the training loop's train function on call
     :param training_kwargs_ranges:
@@ -658,7 +667,7 @@ def hpo_pipeline(
     if regularizer is not None:
         regularizer_cls = regularizer_resolver.lookup(regularizer)
     elif getattr(model_cls, 'regularizer_default', None):
-        regularizer_cls = model_cls.regularizer_default
+        regularizer_cls = model_cls.regularizer_default  # type:ignore
     else:
         regularizer_cls = None
     if regularizer_cls:
@@ -687,6 +696,9 @@ def hpo_pipeline(
     else:
         negative_sampler_cls = None
     # 7. Training
+    if epochs is not None:
+        training_kwargs = {} if training_kwargs is None else dict(training_kwargs)
+        training_kwargs['num_epochs'] = epochs
     stopper_cls: Type[Stopper] = stopper_resolver.lookup(stopper)
     if stopper_cls is EarlyStopper and training_kwargs_ranges and 'epochs' in training_kwargs_ranges:
         raise ValueError('can not use early stopping while optimizing epochs')
@@ -703,7 +715,8 @@ def hpo_pipeline(
     logger.info('Filter validation triples when testing: %s', filter_validation_when_testing)
 
     # 9. Tracking
-    result_tracker_cls: Type[ResultTracker] = tracker_resolver.lookup(result_tracker)
+    if not isinstance(result_tracker, ResultTracker):
+        result_tracker = tracker_resolver.lookup(result_tracker)
 
     objective = Objective(
         # 1. Dataset
@@ -751,7 +764,7 @@ def hpo_pipeline(
         evaluation_kwargs=evaluation_kwargs,
         filter_validation_when_testing=filter_validation_when_testing,
         # 9. Tracker
-        result_tracker=result_tracker_cls,
+        result_tracker=result_tracker,
         result_tracker_kwargs=result_tracker_kwargs,
         # Optuna Misc.
         metric=metric,
@@ -762,7 +775,7 @@ def hpo_pipeline(
 
     # Invoke optimization of the objective function.
     study.optimize(
-        objective,
+        cast(Callable[[Trial], float], objective),
         n_trials=n_trials,
         timeout=timeout,
         n_jobs=n_jobs or 1,
@@ -861,7 +874,7 @@ def suggest_discrete_power_int(trial: Trial, name: str, low: int, high: int, bas
     if high <= low:
         raise Exception(f"Upper bound {high} is not greater than lower bound {low}.")
     choices = [base ** i for i in range(low, high + 1)]
-    return trial.suggest_categorical(name=name, choices=choices)
+    return cast(int, trial.suggest_categorical(name=name, choices=choices))
 
 
 def _set_study_dataset(
