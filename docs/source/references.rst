@@ -59,3 +59,10 @@ References
 .. [sun2018] Sun, Z., *et al.* (2018). `Bootstrapping Entity Alignment with Knowledge Graph Embedding.
    <https://dl.acm.org/doi/10.5555/3304222.3304381>`_
    *Proceedings of the 27th International Joint Conference on Artificial Intelligence*, 4396–4402.
+
+.. [lin2018] Lin, T.-Y., *et al*. (2017). `Focal Loss for Dense Object Detection
+   <https://doi.org/10.1109/TPAMI.2018.2858826>`_. *IEEE Transactions on Pattern Analysis and Machine
+   Intelligence*, 42(2), 318–327.
+
+.. [mukhoti2020] Mukhoti, J., *et al*. (2020). `Calibrating Deep Neural Networks using Focal Loss
+   <http://arxiv.org/abs/2002.09437>`_.
