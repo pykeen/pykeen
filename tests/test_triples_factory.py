@@ -229,7 +229,8 @@ class TestSplit(unittest.TestCase):
 
     def setUp(self) -> None:
         """Set up the tests."""
-        self.triples_factory = Nations().training
+        self.dataset = Nations()
+        self.triples_factory = self.dataset.training
         self.assertEqual(1592, self.triples_factory.num_triples)
 
     def _test_invariants(self, training_triples_factory: TriplesFactory, *other_factories: TriplesFactory) -> None:
@@ -257,7 +258,7 @@ class TestSplit(unittest.TestCase):
             id(self.triples_factory.relation_to_id),
         })
 
-    def test_split(self):
+    def test_split_tf(self):
         """Test splitting a factory."""
         cases = [
             (2, 0.8),
@@ -267,18 +268,18 @@ class TestSplit(unittest.TestCase):
         ]
         for method, (n, ratios), in itt.product(SPLIT_METHODS, cases):
             with self.subTest(method=method, ratios=ratios):
-                factories = self.triples_factory.split(ratios, method=method, random_state=0)
-                self.assertEqual(n, len(factories))
-                self._test_invariants(*factories)
+                factories_1 = self.triples_factory.split(ratios, method=method, random_state=0)
+                self.assertEqual(n, len(factories_1))
+                self._test_invariants(*factories_1)
 
-                factories_resplit = self.triples_factory.split(ratios, method=method, random_state=0)
-                self.assertEqual(n, len(factories_resplit))
-                self._test_invariants(*factories_resplit)
+                factories_2 = self.triples_factory.split(ratios, method=method, random_state=0)
+                self.assertEqual(n, len(factories_2))
+                self._test_invariants(*factories_2)
 
-                for factory, factory_resplit in zip(factories, factories_resplit):
-                    _triples = factory.mapped_triples.detach().cpu().numpy()
-                    triples_resplit = factory_resplit.mapped_triples.detach().cpu().numpy()
-                    self.assertTrue((_triples == triples_resplit).all())
+                for factory_1, factory_2 in zip(factories_1, factories_2):
+                    triples_1 = factory_1.mapped_triples.detach().cpu().numpy()
+                    triples_2 = factory_2.mapped_triples.detach().cpu().numpy()
+                    self.assertTrue((triples_1 == triples_2).all())
 
     def test_cleanup_deterministic(self):
         """Test that triples in a test set can get moved properly to the training set."""
