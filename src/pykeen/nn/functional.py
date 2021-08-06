@@ -11,14 +11,13 @@ and (batch_size, 1, 1, num_tails, ``*``), and return a score tensor of shape
 from __future__ import annotations
 
 import functools
-from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 
 import numpy
 import torch
 from torch import nn
 
-from .compute_kernel import _complex_native_complex
+from .compute_kernel import _complex_native_complex, batched_dot
 from .sim import KG2E_SIMILARITIES
 from ..moves import irfft, rfft
 from ..typing import GaussianDistribution
@@ -32,6 +31,7 @@ __all__ = [
     'conve_interaction',
     'convkb_interaction',
     'cross_e_interaction',
+    'dist_ma_interaction',
     'distmult_interaction',
     'ermlp_interaction',
     'ermlpe_interaction',
@@ -47,57 +47,12 @@ __all__ = [
     'structured_embedding_interaction',
     'transd_interaction',
     'transe_interaction',
+    'transf_interaction',
     'transh_interaction',
     'transr_interaction',
     'tucker_interaction',
     'unstructured_model_interaction',
 ]
-
-
-@dataclass
-class SizeInformation:
-    """Size information of generic score function."""
-
-    #: The batch size of the head representations.
-    bh: int
-
-    #: The number of head representations per batch
-    nh: int
-
-    #: The batch size of the relation representations.
-    br: int
-
-    #: The number of relation representations per batch
-    nr: int
-
-    #: The batch size of the tail representations.
-    bt: int
-
-    #: The number of tail representations per batch
-    nt: int
-
-    @property
-    def same(self) -> bool:
-        """Whether all representations have the same shape."""
-        return (
-            self.bh == self.br
-            and self.bh == self.bt
-            and self.nh == self.nr
-            and self.nh == self.nt
-        )
-
-    @classmethod
-    def extract(
-        cls,
-        h: torch.Tensor,
-        r: torch.Tensor,
-        t: torch.Tensor,
-    ) -> SizeInformation:
-        """Extract size information from tensors."""
-        bh, nh = h.shape[:2]
-        br, nr = r.shape[:2]
-        bt, nt = t.shape[:2]
-        return cls(bh=bh, nh=nh, br=br, nr=nr, bt=bt, nt=nt)
 
 
 def _extract_sizes(
@@ -321,6 +276,29 @@ def distmult_interaction(
     return tensor_product(h, r, t).sum(dim=-1)
 
 
+def dist_ma_interaction(
+    h: torch.FloatTensor,
+    r: torch.FloatTensor,
+    t: torch.FloatTensor,
+) -> torch.FloatTensor:
+    r"""Evaluate the DistMA interaction function from [shi2019]_.
+
+    .. math ::
+        \langle h, r\rangle + \langle r, t\rangle + \langle h, t\rangle
+
+    :param h: shape: (batch_size, num_heads, 1, 1, dim)
+        The head representations.
+    :param r: shape: (batch_size, 1, num_relations, 1, dim)
+        The relation representations.
+    :param t: shape: (batch_size, 1, 1, num_tails, dim)
+        The tail representations.
+
+    :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        The scores.
+    """
+    return batched_dot(h, r) + batched_dot(r, t) + batched_dot(h, t)
+
+
 def ermlp_interaction(
     h: torch.FloatTensor,
     r: torch.FloatTensor,
@@ -347,13 +325,11 @@ def ermlp_interaction(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    sizes = SizeInformation.extract(h, r, t)
-
     # same shape
-    if sizes.same:
+    if h.shape == r.shape and h.shape == t.shape:
         return final(activation(
             hidden(torch.cat([h, r, t], dim=-1).view(-1, 3 * h.shape[-1]))),
-        ).view(sizes.bh, sizes.nh, sizes.nr, sizes.nt)
+        ).view(*h.shape[:-1])
 
     hidden_dim = hidden.weight.shape[0]
     # split, shape: (embedding_dim, hidden_dim)
@@ -717,6 +693,38 @@ def structured_embedding_interaction(
     )
 
 
+def toruse_interaction(
+    h: torch.FloatTensor,
+    r: torch.FloatTensor,
+    t: torch.FloatTensor,
+    p: Union[int, str] = 2,
+    power_norm: bool = False,
+) -> torch.FloatTensor:
+    """Evaluate the TorusE interaction function from [ebisu2018].
+
+    .. note ::
+        This only implements the two L_p norm based variants.
+
+    :param h: shape: (batch_size, num_heads, 1, 1, dim)
+        The head representations.
+    :param r: shape: (batch_size, 1, num_relations, 1, dim)
+        The relation representations.
+    :param t: shape: (batch_size, 1, 1, num_tails, dim)
+        The tail representations.
+    :param p:
+        The p for the norm.
+    :param power_norm:
+        Whether to return the powered norm.
+
+    :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        The scores.
+    """
+    d = tensor_sum(h, r, -t)
+    d = d - torch.floor(d)
+    d = torch.minimum(d, 1.0 - d)
+    return negative_norm(d, p=p, power_norm=power_norm)
+
+
 def transd_interaction(
     h: torch.FloatTensor,
     r: torch.FloatTensor,
@@ -787,6 +795,26 @@ def transe_interaction(
         The scores.
     """
     return negative_norm_of_sum(h, r, -t, p=p, power_norm=power_norm)
+
+
+def transf_interaction(
+    h: torch.FloatTensor,
+    r: torch.FloatTensor,
+    t: torch.FloatTensor,
+) -> torch.FloatTensor:
+    """Evaluate the TransF interaction function.
+
+    :param h: shape: (batch_size, num_heads, 1, 1, dim)
+        The head representations.
+    :param r: shape: (batch_size, 1, num_relations, 1, dim)
+        The relation representations.
+    :param t: shape: (batch_size, 1, 1, num_tails, dim)
+        The tail representations.
+
+    :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        The scores.
+    """
+    return batched_dot(h + r, t) + batched_dot(h, t - r)
 
 
 def transh_interaction(

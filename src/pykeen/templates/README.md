@@ -79,8 +79,9 @@ result = pipeline(
 ```
 
 The results are returned in an instance of the [PipelineResult](https://pykeen.readthedocs.io/en/latest/reference/pipeline.html#pykeen.pipeline.PipelineResult)
-dataclass that has attributes for the trained model, the training loop, the evaluation, and more. See the tutorials on
-[understanding the evaluation](https://pykeen.readthedocs.io/en/latest/tutorial/understanding_evaluation.html)
+dataclass that has attributes for the trained model, the training loop, the evaluation, and more. See the tutorials
+on [using your own dataset](https://pykeen.readthedocs.io/en/latest/byo/data.html),
+[understanding the evaluation](https://pykeen.readthedocs.io/en/latest/tutorial/understanding_evaluation.html),
 and [making novel link predictions](https://pykeen.readthedocs.io/en/latest/tutorial/making_predictions.html).
 
 PyKEEN is extensible such that:
@@ -98,9 +99,12 @@ in ``pykeen``.
 
 ### Datasets ({{ n_datasets }})
 
-The citation for each dataset corresponds to either the paper describing the dataset,
-the first paper published using the dataset with knowledge graph embedding models,
-or the URL for the dataset if neither of the first two are available.
+The following datasets are built in to PyKEEN. The citation for each dataset corresponds to either the paper
+describing the dataset, the first paper published using the dataset with knowledge graph embedding models,
+or the URL for the dataset if neither of the first two are available. If you want to use a custom dataset,
+see the [Bring Your Own Dataset](https://pykeen.readthedocs.io/en/latest/byo/data.html) tutorial. If you
+have a suggestion for another dataset to include in PyKEEN, please let us know
+[here](https://github.com/pykeen/pykeen/issues/new?assignees=cthoyt&labels=New+Dataset&template=dataset-request.md&title=Add+%5BDATASET+NAME%5D).
 
 {{ datasets }}
 
@@ -224,10 +228,12 @@ This project has been supported by several organizations (in alphabetical order)
 
 The development of PyKEEN has been funded by the following grants:
 
-| Funding Body                                             | Program                                                                                                                       | Grant         |
-|----------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------|---------------|
-| DARPA                                                    | [Automating Scientific Knowledge Extraction (ASKE)](https://www.darpa.mil/program/automating-scientific-knowledge-extraction) | HR00111990009 |
-| German Federal Ministry of Education and Research (BMBF) | [Maschinelles Lernen mit Wissensgraphen (MLWin)](https://mlwin.de)                                                            | 01IS18050D    |
+| Funding Body                                             | Program                                                                                                                       | Grant           |
+|----------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------|-----------------|
+| DARPA                                                    | [Automating Scientific Knowledge Extraction (ASKE)](https://www.darpa.mil/program/automating-scientific-knowledge-extraction) | HR00111990009   |
+| German Federal Ministry of Education and Research (BMBF) | [Maschinelles Lernen mit Wissensgraphen (MLWin)](https://mlwin.de)                                                            | 01IS18050D      |
+| German Federal Ministry of Education and Research (BMBF) | [Munich Center for Machine Learning (MCML)](https://mcml.ai)                                                            | 01IS18036A      |
+| Innovation Fund Denmark (Innovationsfonden)              | [Danish Center for Big Data Analytics driven Innovation (DABAI)](https://dabai.dk)                                            | Grand Solutions |
 
 ### Logo
 

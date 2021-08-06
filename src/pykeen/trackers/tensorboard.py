@@ -4,7 +4,7 @@
 
 import pathlib
 import time
-from typing import Any, Dict, Mapping, Optional, TYPE_CHECKING, Union
+from typing import Any, Mapping, Optional, TYPE_CHECKING, Union
 
 from .base import ResultTracker
 from ..constants import PYKEEN_LOGS
@@ -70,6 +70,6 @@ class TensorBoardResultTracker(ResultTracker):
             self.writer.add_text(tag=str(key), text_string=str(value))
         self.writer.flush()
 
-    def end_run(self) -> None:  # noqa: D102
+    def end_run(self, success: bool = True) -> None:  # noqa: D102
         self.writer.flush()
         self.writer.close()
