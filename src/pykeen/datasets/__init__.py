@@ -34,6 +34,7 @@ from .ogb import OGBBioKG, OGBWikiKG
 from .openbiolink import OpenBioLink, OpenBioLinkLQ
 from .umls import UMLS
 from .wd50k import WD50KT
+from .wikidata5m import Wikidata5M
 from .wk3l import WK3l15k
 from .wordnet import WN18, WN18RR
 from .yago import YAGO310
@@ -66,6 +67,7 @@ __all__ = [
     'DB100K',
     'Countries',
     'WD50KT',
+    'Wikidata5M',
     # Utilities
     'dataset_resolver',
     'get_dataset',
