@@ -162,6 +162,7 @@ class Dataset:
             raise NotADirectoryError(path)
 
         tfs = dict()
+        # TODO: Make a constant for the names
         for key in ("training", "testing", "validation"):
             tf_path = path.joinpath(key).with_suffix(suffix=".pt")
             if tf_path.is_file():
