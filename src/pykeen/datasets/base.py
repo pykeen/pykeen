@@ -153,6 +153,33 @@ class Dataset:
         tf = TriplesFactory.from_path(path=path)
         return cls.from_tf(tf=tf, ratios=ratios)
 
+    @classmethod
+    def from_directory_binary(cls, path: Union[str, pathlib.Path]) -> 'Dataset':
+        """Load a dataset from a directory."""
+        path = pathlib.Path(path)
+
+        if not path.is_dir():
+            raise NotADirectoryError(path)
+
+        tfs = dict()
+        for key in ("train", "testing", "validation"):
+            tf_path = path.joinpath(key).with_suffix(suffix=".pt")
+            if tf_path.is_file():
+                tfs[key] = TriplesFactory.from_path_binary(path=path)
+            else:
+                logger.warning(f"{tf_path.as_uri()} does not exist.")
+
+        return EagerDataset(**tfs)
+
+    def to_directory_binary(self, path: Union[str, pathlib.Path]) -> None:
+        """Store a dataset to a path in binary format."""
+        path = pathlib.Path(path)
+        path.mkdir(exist_ok=True, parents=True)
+        for key, value in self.factory_dict.items():
+            tf_path = path.joinpath(key).with_suffix(suffix=".pt")
+            value.to_path_binary(tf_path)
+            logger.info(f"Stored {key} factory to {tf_path.as_uri()}")
+
     @staticmethod
     def from_tf(tf: TriplesFactory, ratios: Optional[List[float]] = None) -> 'Dataset':
         """Create a dataset from a single triples factory by splitting it in 3."""
