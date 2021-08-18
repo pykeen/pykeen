@@ -758,6 +758,45 @@ class TriplesFactory(CoreTriplesFactory):
             },
         )
 
+    def to_path_binary(
+        self,
+        path: Union[str, pathlib.Path, TextIO],
+    ) -> None:
+        """
+        Save triples factory to path in (PyTorch's .pt) binary format.
+
+        :param path:
+            The path to store the triples factory to.
+        """
+        path = normalize_path(path)
+        torch.save(dict(
+            mapped_triples=self.mapped_triples,
+            entity_to_id=self.entity_to_id,
+            relation_to_id=self.relation_to_id,
+            create_inverse_triples=self.create_inverse_triples,
+            metadata=self.metadata,
+        ), path)
+        logger.info(f"Stored {self} to {path.as_uri()}")
+
+    @classmethod
+    def from_path_binary(
+        cls,
+        path: Union[str, pathlib.Path, TextIO],
+    ) -> "TriplesFactory":  # noqa: D102
+        """
+        Load triples factory from a binary file.
+
+        :param path:
+            The path, pointing to an existing PyTorch .pt file.
+
+        :return:
+            The loaded triples factory.
+        """
+        path = normalize_path(path)
+        logger.info(f"Loading from {path.as_uri()}")
+        data = torch.load(path)
+        return cls(**data)
+
     def clone_and_exchange_triples(
         self,
         mapped_triples: MappedTriples,
