@@ -203,13 +203,13 @@ def _cached_get_dataset(
         return Dataset.from_directory_binary(path)
 
     # load dataset without cache
-    dataset = dataset_resolver.make(dataset, dataset_kwargs)
+    dataset_instance = dataset_resolver.make(dataset, dataset_kwargs)
 
     # store cache
     logger.info(f"Caching preprocessed dataset to {path.as_uri()}")
-    dataset.to_directory_binary(path=path)
+    dataset_instance.to_directory_binary(path=path)
 
-    return dataset
+    return dataset_instance
 
 
 def has_dataset(key: str) -> bool:
