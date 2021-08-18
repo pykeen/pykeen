@@ -162,10 +162,10 @@ class Dataset:
             raise NotADirectoryError(path)
 
         tfs = dict()
-        for key in ("train", "testing", "validation"):
+        for key in ("training", "testing", "validation"):
             tf_path = path.joinpath(key).with_suffix(suffix=".pt")
             if tf_path.is_file():
-                tfs[key] = TriplesFactory.from_path_binary(path=path)
+                tfs[key] = TriplesFactory.from_path_binary(path=tf_path)
             else:
                 logger.warning(f"{tf_path.as_uri()} does not exist.")
 
