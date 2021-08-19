@@ -935,6 +935,14 @@ class CombinedCompGCNRepresentations(nn.Module):
         # invalidate enriched embeddings
         self.enriched_representations = None
 
+    def train(self, mode: bool = True):  # noqa: D102
+        # when changing from evaluation to training mode, the buffered representations have been computed without
+        # gradient tracking. hence, we need to invalidate them.
+        # note: this occurs in practice when continuing training after evaluation.
+        if mode and not self.training:
+            self.enriched_representations = None
+        return super().train(mode=mode)
+
     def forward(
         self,
     ) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
