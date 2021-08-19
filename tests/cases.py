@@ -37,6 +37,7 @@ from pykeen.models.cli import build_cli_from_cls
 from pykeen.nn.emb import RepresentationModule
 from pykeen.nn.modules import FunctionalInteraction, Interaction, LiteralInteraction
 from pykeen.optimizers import optimizer_resolver
+from pykeen.pipeline import pipeline
 from pykeen.regularizers import LpRegularizer, Regularizer
 from pykeen.trackers import ResultTracker
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
@@ -1056,6 +1057,26 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
     def test_cli_training_nations(self):
         """Test running the pipeline on almost all models with only training data."""
         self._help_test_cli(['-t', NATIONS_TRAIN_PATH] + self._cli_extras)
+
+    @pytest.mark.slow
+    def test_pipeline_nations_early_stopper(self):
+        """Test running the pipeline with early stopping."""
+        model_kwargs = dict(self.instance_kwargs)
+        # triples factory is added by the pipeline
+        model_kwargs.pop("triples_factory")
+        pipeline(
+            model=self.cls,
+            model_kwargs=model_kwargs,
+            dataset="nations",
+            dataset_kwargs=dict(create_inverse_triples=self.create_inverse_triples),
+            stopper="early",
+            training_loop_kwargs=self.training_loop_kwargs,
+            stopper_kwargs=dict(frequency=1),
+            training_kwargs=dict(
+                batch_size=self.train_batch_size,
+                num_epochs=self.train_num_epochs,
+            ),
+        )
 
     @pytest.mark.slow
     def test_cli_training_kinships(self):
