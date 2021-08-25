@@ -554,7 +554,7 @@ class CoreTriplesFactory:
             A new triples factory, which has only a subset of the triples containing the entities and relations of
             interest. The label-to-ID mapping is *not* modified.
         """
-        keep_mask = None
+        keep_mask: Optional[torch.BoolTensor] = None
 
         extra_metadata = {}
         # Filter for entities
@@ -582,7 +582,7 @@ class CoreTriplesFactory:
         if keep_mask is None:
             return self
 
-        num_triples = keep_mask.sum()
+        num_triples = keep_mask.sum().item()
         logger.info(f"keeping {format_relative_comparison(num_triples, self.num_triples)} triples.")
         return self.clone_and_exchange_triples(
             mapped_triples=self.mapped_triples[keep_mask],
