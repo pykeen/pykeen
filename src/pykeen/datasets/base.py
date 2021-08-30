@@ -38,6 +38,7 @@ __all__ = [
     'TarFileRemoteDataset',
     'PackedZipRemoteDataset',
     'TarFileSingleDataset',
+    'ZipFileSingleDataset',
     'TabbedDataset',
     'SingleTabbedDataset',
     'dataset_similarity',
@@ -182,19 +183,23 @@ class Dataset:
 
     def remix(self, random_state: TorchRandomHint = None, **kwargs) -> Dataset:
         """Remix a dataset using :func:`pykeen.triples.remix.remix`."""
-        return EagerDataset(*remix(
-            *self._tup(),
-            random_state=random_state,
-            **kwargs,
-        ))
+        return EagerDataset(
+            *remix(
+                *self._tup(),
+                random_state=random_state,
+                **kwargs,
+            )
+        )
 
     def deteriorate(self, n: Union[int, float], random_state: TorchRandomHint = None) -> Dataset:
         """Deteriorate n triples from the dataset's training with :func:`pykeen.triples.deteriorate.deteriorate`."""
-        return EagerDataset(*deteriorate(
-            *self._tup(),
-            n=n,
-            random_state=random_state,
-        ))
+        return EagerDataset(
+            *deteriorate(
+                *self._tup(),
+                n=n,
+                random_state=random_state,
+            )
+        )
 
     def similarity(self, other: Dataset, metric: Optional[str] = None) -> float:
         """Compute the similarity between two shuffles of the same dataset.
@@ -692,6 +697,90 @@ class TarFileSingleDataset(LazyDataset):
             with tarfile.open(self._get_path()) as tar_file:
                 # tarfile does not like pathlib
                 tar_file.extract(str(self._relative_path), self.cache_root)
+
+        df = pd.read_csv(_actual_path, sep=self.delimiter)
+        tf_path = self._get_path()
+        tf = TriplesFactory.from_labeled_triples(
+            triples=df.values,
+            create_inverse_triples=self.create_inverse_triples,
+            metadata={'path': tf_path},
+        )
+        self._training, self._testing, self._validation = cast(
+            Tuple[TriplesFactory, TriplesFactory, TriplesFactory],
+            tf.split(
+                ratios=self.ratios,
+                random_state=self.random_state,
+            ),
+        )
+        logger.info('[%s] done splitting data from %s', self.__class__.__name__, tf_path)
+
+    def _load_validation(self) -> None:
+        pass  # already loaded by _load()
+
+
+class ZipFileSingleDataset(LazyDataset):
+    """Loads a dataset that's a single file inside a zip archive."""
+
+    ratios = (0.8, 0.1, 0.1)
+
+    def __init__(
+        self,
+        url: str,
+        relative_path: Union[str, pathlib.PurePosixPath],
+        name: Optional[str] = None,
+        cache_root: Optional[str] = None,
+        eager: bool = False,
+        create_inverse_triples: bool = False,
+        delimiter: Optional[str] = None,
+        random_state: TorchRandomHint = None,
+    ):
+        """Initialize dataset.
+
+        :param url:
+            The url where to download the dataset from
+        :param relative_path:
+            The path inside the archive to the contained dataset.
+        :param name:
+            The name of the file. If not given, tries to get the name from the end of the URL
+        :param cache_root:
+            An optional directory to store the extracted files. Is none is given, the default PyKEEN directory is used.
+            This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.pykeen``.
+        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
+        :param eager: Should the data be loaded eagerly? Defaults to false.
+        :param random_state: An optional random state to make the training/testing/validation split reproducible.
+        :param delimiter:
+            The delimiter for the contained dataset.
+        """
+        self.cache_root = self._help_cache(cache_root)
+
+        self.name = name or name_from_url(url)
+        self.random_state = random_state
+        self.delimiter = delimiter or '\t'
+        self.url = url
+        self.create_inverse_triples = create_inverse_triples
+        self._relative_path = pathlib.PurePosixPath(relative_path)
+
+        if eager:
+            self._load()
+
+    def _get_path(self) -> pathlib.Path:
+        return self.cache_root.joinpath(self.name)
+
+    def _load(self) -> None:
+        if not self._get_path().is_file():
+            download(self.url, self._get_path())  # noqa:S310
+
+        _actual_path = self.cache_root.joinpath(self._relative_path)
+        if not _actual_path.is_file():
+            logger.error(
+                '[%s] untaring from %s (%s) to %s',
+                self.__class__.__name__,
+                self._get_path(),
+                self._relative_path,
+                _actual_path,
+            )
+            with zipfile.ZipFile(self._get_path(), 'r') as zip_ref:
+                zip_ref.extractall(self.cache_root)
 
         df = pd.read_csv(_actual_path, sep=self.delimiter)
         tf_path = self._get_path()
