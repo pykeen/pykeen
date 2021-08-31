@@ -9,7 +9,7 @@ import click
 from docdata import parse_docdata
 from more_click import verbose_option
 
-from .base import SingleTabbedDataset
+from .base import ZipSingleDataset
 from ..typing import TorchRandomHint
 
 __all__ = [
@@ -20,7 +20,7 @@ URL = 'https://github.com/dsi-bdi/biokg/releases/download/v1.0.0/biokg.zip'
 
 
 @parse_docdata
-class BioKG(SingleTabbedDataset):
+class BioKG(ZipSingleDataset):
     """The BioKG dataset.
 
     ---
@@ -52,7 +52,7 @@ class BioKG(SingleTabbedDataset):
         """
         super().__init__(
             url=URL,
-            name='biokg.links.tsv',
+            relative_path="biokg.links.tsv",
             create_inverse_triples=create_inverse_triples,
             random_state=random_state,
             **kwargs,
