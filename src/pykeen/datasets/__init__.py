@@ -80,8 +80,7 @@ logger = logging.getLogger(__name__)
 
 dataset_resolver = Resolver.from_entrypoint(group='pykeen.datasets', base=Dataset)
 if not dataset_resolver.lookup_dict:
-    raise RuntimeError(
-        dedent('''\
+    raise RuntimeError(dedent('''\
     Datasets have been loaded with entrypoints since PyKEEN v1.0.5, which is now a
     very old version of PyKEEN.
 
@@ -96,8 +95,7 @@ if not dataset_resolver.lookup_dict:
 
     If issues with Kaggle or Colab persist, please join the conversation at
     https://github.com/pykeen/pykeen/issues/373
-    '''),
-    )
+    '''))
 
 
 def get_dataset(
