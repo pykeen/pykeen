@@ -2,7 +2,7 @@
 
 """The `BioKG <https://github.com/dsi-bdi/biokg/>`_ dataset.
 
-Get a summary with ``python -m pykeen.datasets.biokg``
+Get a summary with ``python -m pykeen.datasets.biokg``.
 """
 
 import click
@@ -27,6 +27,9 @@ class BioKG(SingleTabbedDataset):
     name: BioKG
     citation:
         github: dsi-bdi/biokg
+        author: Walsh
+        year: 2019
+        link: https://doi.org/10.1145/3340531.3412776
     single: true
     statistics:
         entities: 105524
@@ -41,7 +44,7 @@ class BioKG(SingleTabbedDataset):
         random_state: TorchRandomHint = 0,
         **kwargs,
     ):
-        """Initialize the `BioKG <https://github.com/dsi-bdi/biokg/>`_ dataset.
+        """Initialize the BioKG dataset from [walsh2020]_.
 
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param random_state: The random seed to use in splitting the dataset. Defaults to 0.
