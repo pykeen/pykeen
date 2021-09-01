@@ -66,3 +66,7 @@ References
 
 .. [mukhoti2020] Mukhoti, J., *et al*. (2020). `Calibrating Deep Neural Networks using Focal Loss
    <http://arxiv.org/abs/2002.09437>`_.
+
+.. [walsh2020] Walsh, B., *et al* (2020). `BioKG: A Knowledge Graph for Relational Learning On Biological Data
+   <https://doi.org/10.1145/3340531.3412776>`_. *Proceedings of the 29th ACM International Conference on Information &
+   Knowledge Management*, 3173–3180.
