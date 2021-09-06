@@ -282,6 +282,25 @@ class LossTestCase(GenericTestCase[Loss]):
         # negative scores decreased compared to positive ones
         assert (negative_scores < positive_scores.unsqueeze(dim=1) - 1.0e-06).all()
 
+    def test_get_config(self):
+        """Test whether get_config allows re-instantiation."""
+        # re-instantiate from config
+        config = self.instance.get_config()
+        instance = self.cls(**config)
+
+        # check equivalent instance by equivalent loss values.
+        positive = torch.rand(self.batch_size, 1)
+        negative = torch.rand(self.batch_size, self.num_neg_per_pos)
+        first_loss = self.instance.process_slcwa_scores(
+            positive_scores=positive,
+            negative_scores=negative,
+        )
+        second_loss = instance.process_slcwa_scores(
+            positive_scores=positive,
+            negative_scores=negative,
+        )
+        assert torch.allclose(first_loss, second_loss)
+
 
 class PointwiseLossTestCase(LossTestCase):
     """Base unit test for label-based losses."""
