@@ -929,11 +929,20 @@ def pipeline(  # noqa: C901
             training_triples_factory=training,
         )
 
-    # Log model parameters
-    _result_tracker.log_params(
-        params=dict(cls=model_instance.__class__.__name__, kwargs=model_kwargs),
-        prefix='model',
-    )
+        # Log model parameters
+        _result_tracker.log_params(
+            params=dict(cls=model_instance.__class__.__name__, kwargs=model_kwargs),
+            prefix='model',
+        )
+
+        # Log loss kwargs
+        _result_tracker.log_params(
+            params=dict(
+                cls=model_instance.loss.__class__.__name__,
+                kwargs=loss_kwargs,
+            ),
+            prefix="loss",
+        )
 
     optimizer_instance = optimizer_resolver.make(
         optimizer,
