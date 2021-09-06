@@ -150,7 +150,7 @@ triples $\mathcal{b}$ in the subset $\mathcal{B} \in 2^{2^{\mathcal{T}}}$.
 
 import logging
 from textwrap import dedent
-from typing import Any, ClassVar, Mapping, Optional, Set, Tuple
+from typing import Any, ClassVar, Mapping, MutableMapping, Optional, Set, Tuple
 
 import torch
 from class_resolver import Hint, Resolver
@@ -319,8 +319,8 @@ class Loss(_Loss):
         )
         return self(predictions, labels)
 
-    def get_config(self) -> Mapping[str, Any]:
-        """Return the configuration necessary to re-instantiate the module as dictionary."""
+    def get_config(self) -> MutableMapping[str, Any]:
+        """Return the configuration necessary to re-instantiate the module as a JSON-serializable dictionary."""
         reduction_name = None
         for key, value in _REDUCTION_METHODS.items():
             if self._reduction_method is value:
@@ -541,8 +541,8 @@ class MarginRankingLoss(PairwiseLoss):
             neg_scores - pos_scores + self.margin,
         ))
 
-    def get_config(self) -> Mapping[str, Any]:  # noqa: D102
-        config = dict(super().get_config())
+    def get_config(self) -> MutableMapping[str, Any]:  # noqa: D102
+        config = super().get_config()
         config["margin"] = self.margin
         config["margin_activation"] = margin_activation_resolver.normalize_inst(self.margin_activation)
         return config
@@ -767,8 +767,8 @@ class DoubleMarginLoss(PointwiseLoss):
             (1.0 - labels) * self.margin_activation(self.negative_margin + predictions),
         )
 
-    def get_config(self) -> Mapping[str, Any]:  # noqa: D102
-        config = dict(super().get_config())
+    def get_config(self) -> MutableMapping[str, Any]:  # noqa: D102
+        config = super().get_config()
         config["positive_margin"] = self.positive_margin
         config["negative_margin"] = self.negative_margin
         config["positive_negative_balance"] = self.positive_weight
@@ -978,8 +978,8 @@ class NSSALoss(SetwiseLoss):
 
         return loss
 
-    def get_config(self) -> Mapping[str, Any]:  # noqa: D102
-        config = dict(super().get_config())
+    def get_config(self) -> MutableMapping[str, Any]:  # noqa: D102
+        config = super().get_config()
         config["adversarial_temperature"] = self.inverse_softmax_temperature
         config["margin"] = self.margin
         return config
@@ -1058,8 +1058,8 @@ class FocalLoss(PointwiseLoss):
 
         return self._reduction_method(loss)
 
-    def get_config(self) -> Mapping[str, Any]:  # noqa: D102
-        config = dict(super().get_config())
+    def get_config(self) -> MutableMapping[str, Any]:  # noqa: D102
+        config = super().get_config()
         config["gamma"] = self.gamma
         config["alpha"] = self.alpha
         return config
