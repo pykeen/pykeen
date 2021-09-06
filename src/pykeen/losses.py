@@ -321,13 +321,8 @@ class Loss(_Loss):
 
     def get_config(self) -> MutableMapping[str, Any]:
         """Return the configuration necessary to re-instantiate the module as a JSON-serializable dictionary."""
-        reduction_name = None
-        for key, value in _REDUCTION_METHODS.items():
-            if self._reduction_method is value:
-                reduction_name = key
-        assert reduction_name is not None
         return {
-            "reduction": reduction_name,
+            "reduction": self.reduction,
         }
 
 
