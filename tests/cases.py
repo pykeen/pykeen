@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """Test cases for PyKEEN."""
-
+import io
+import json
 import logging
 import os
 import pathlib
@@ -282,7 +283,7 @@ class LossTestCase(GenericTestCase[Loss]):
         # negative scores decreased compared to positive ones
         assert (negative_scores < positive_scores.unsqueeze(dim=1) - 1.0e-06).all()
 
-    def test_get_config(self):
+    def test_get_config_reinstantiation(self):
         """Test whether get_config allows re-instantiation."""
         # re-instantiate from config
         config = self.instance.get_config()
@@ -300,6 +301,12 @@ class LossTestCase(GenericTestCase[Loss]):
             negative_scores=negative,
         )
         assert torch.allclose(first_loss, second_loss)
+
+    def test_get_config_json(self):
+        """Test whether the configuration can be serialized to JSON."""
+        config = self.instance.get_config()
+        with io.StringIO() as mock_file:
+            json.dump(config, mock_file)
 
 
 class PointwiseLossTestCase(LossTestCase):
