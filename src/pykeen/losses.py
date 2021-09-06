@@ -319,6 +319,17 @@ class Loss(_Loss):
         )
         return self(predictions, labels)
 
+    def get_config(self) -> Mapping[str, Any]:
+        """Return the configuration necessary to re-instantiate the module as dictionary."""
+        reduction_name = None
+        for key, value in _REDUCTION_METHODS.items():
+            if self._reduction_method is value:
+                reduction_name = key
+        assert reduction_name is not None
+        return {
+            "reduction": reduction_name,
+        }
+
 
 class PointwiseLoss(Loss):
     """Pointwise loss functions compute an independent loss term for each triple-label pair."""
