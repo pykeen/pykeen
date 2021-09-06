@@ -541,6 +541,12 @@ class MarginRankingLoss(PairwiseLoss):
             neg_scores - pos_scores + self.margin,
         ))
 
+    def get_config(self) -> Mapping[str, Any]:  # noqa: D102
+        config = dict(super().get_config())
+        config["margin"] = self.margin
+        config["margin_activation"] = margin_activation_resolver.normalize_inst(self.margin_activation)
+        return config
+
 
 @parse_docdata
 class DoubleMarginLoss(PointwiseLoss):
@@ -761,6 +767,14 @@ class DoubleMarginLoss(PointwiseLoss):
             (1.0 - labels) * self.margin_activation(self.negative_margin + predictions),
         )
 
+    def get_config(self) -> Mapping[str, Any]:  # noqa: D102
+        config = dict(super().get_config())
+        config["positive_margin"] = self.positive_margin
+        config["negative_margin"] = self.negative_margin
+        config["positive_negative_balance"] = self.positive_weight
+        config["margin_activation"] = margin_activation_resolver.normalize_inst(self.margin_activation)
+        return config
+
 
 @parse_docdata
 class SoftplusLoss(PointwiseLoss):
@@ -964,6 +978,12 @@ class NSSALoss(SetwiseLoss):
 
         return loss
 
+    def get_config(self) -> Mapping[str, Any]:  # noqa: D102
+        config = dict(super().get_config())
+        config["adversarial_temperature"] = self.inverse_softmax_temperature
+        config["margin"] = self.margin
+        return config
+
 
 @parse_docdata
 class FocalLoss(PointwiseLoss):
@@ -1037,6 +1057,12 @@ class FocalLoss(PointwiseLoss):
             loss = alpha_t * loss
 
         return self._reduction_method(loss)
+
+    def get_config(self) -> Mapping[str, Any]:  # noqa: D102
+        config = dict(super().get_config())
+        config["gamma"] = self.gamma
+        config["alpha"] = self.alpha
+        return config
 
 
 loss_resolver = Resolver.from_subclasses(
