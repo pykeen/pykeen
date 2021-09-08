@@ -18,6 +18,7 @@ from .base import (  # noqa:F401
     Dataset, EagerDataset, LazyDataset, PackedZipRemoteDataset, PathDataset, RemoteDataset, SingleTabbedDataset,
     TarFileRemoteDataset, UnpackedRemoteDataset,
 )
+from .biokg import BioKG
 from .ckg import CKG
 from .codex import CoDExLarge, CoDExMedium, CoDExSmall
 from .conceptnet import ConceptNet
@@ -60,6 +61,7 @@ __all__ = [
     'WN18RR',
     'YAGO310',
     'DRKG',
+    'BioKG',
     'ConceptNet',
     'CKG',
     'CSKG',
