@@ -35,7 +35,7 @@ class BioKG(ZipSingleDataset):
         entities: 105524
         types: 13
         relations: 17
-        triples: 105524
+        triples: 2067997
     """
 
     def __init__(
