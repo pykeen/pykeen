@@ -85,19 +85,25 @@ def get_relation_similarity(
         shape=(triples_factory.num_relations, triples_factory.num_entities ** 2),
     )
     cardinality = numpy.asarray(r.sum(axis=1)).squeeze(axis=-1)
-    if to_inverse:
-        r2 = scipy.sparse.coo_matrix(
+    if not to_inverse:
+        return _help_get_relation_similarity(r, r, cardinality=cardinality, threshold=threshold)
+
+    r2 = scipy.sparse.coo_matrix(
+        (
+            numpy.ones((mapped_triples.shape[0],), dtype=int),
             (
-                numpy.ones((mapped_triples.shape[0],), dtype=int),
-                (
-                    mapped_triples[:, 1],
-                    triples_factory.num_entities * mapped_triples[:, 2] + mapped_triples[:, 0],
-                ),
+                mapped_triples[:, 1],
+                triples_factory.num_entities * mapped_triples[:, 2] + mapped_triples[:, 0],
             ),
-            shape=(triples_factory.num_relations, triples_factory.num_entities ** 2),
-        )
-    else:
-        r2 = r
+        ),
+        shape=(triples_factory.num_relations, triples_factory.num_entities ** 2),
+    )
+    return _help_get_relation_similarity(r, r2, cardinality=cardinality, threshold=threshold)
+
+
+def _help_get_relation_similarity(
+    r, r2, cardinality, threshold: Optional[float] = None,
+) -> scipy.sparse.csr_matrix:
     intersection = numpy.asarray((r @ r2.T).todense())
     union = cardinality[:, None] + cardinality[None, :] - intersection
     sim = intersection.astype(numpy.float32) / union.astype(numpy.float32)
