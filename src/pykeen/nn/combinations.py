@@ -15,8 +15,6 @@ __all__ = [
     'Combination',
     'RealCombination',
     'RealNoConcatCombination',
-    'Gate',
-    'ParameterizedRealGatedCombination',
     'ParameterizedRealCombination',
     'ComplexCombination',
     'ParameterizedComplexCombination',
@@ -24,7 +22,7 @@ __all__ = [
     'LinearDropout',
     'DistMultCombination',
     'ComplExLiteralCombination',
-    'SimpleGate',
+    'Gate',
     'DistMultGatedCombination',
 ]
 
@@ -61,36 +59,6 @@ class RealNoConcatCombination(Combination, ABC):
     def score(self, x: torch.FloatTensor, literal: torch.FloatTensor) -> torch.FloatTensor:
         """Score besed on the entity representations and literals."""
         raise NotImplementedError
-
-
-class Gate(nn.Module, ABC):
-    """Base class for gates.
-
-    A gating mechanism is a strategy commonly used in RNNs
-    that allows the model to understand and decide what new information to keep or wich can be discarded.
-    """
-    @abstractmethod
-    def forward(self, x: torch.FloatTensor, literal: torch.FloatTensor) -> torch.FloatTensor:
-        """
-        Score the combined entity representation and literals with an incorporated
-        gating mechanism that incorporates or ignores literal information based on percived relevance.
-        """
-        raise NotImplementedError
-
-
-class ParameterizedRealGatedCombination(RealNoConcatCombination):
-    """A gated real combination parametrized by a gate."""
-
-    def __init__(self, gate: Gate):
-        """Initialize the parameterized real combination.
-        :param gate: The gate used to score the combination of the entity representation and literals.
-        """
-        super().__init__()
-        self.module = gate
-
-    def score(self, x: torch.FloatTensor, literal: torch.FloatTensor) -> torch.FloatTensor:
-        """Score the combined entity representation and literals baes on the given gating mechanism."""
-        return self.module(x, literal)
 
 
 class ParameterizedRealCombination(RealCombination):
@@ -242,7 +210,7 @@ class ComplExLiteralCombination(ParameterizedComplexCombination):
         )
 
 
-class SimpleGate(Gate):
+class Gate(nn.Module):
     """A module that implements a gated linear transformation for the combination of entities and literals.
 
     Implementation based on https://github.com/SmartDataAnalytics/LiteralE/blob/master/model.py Gate class.
@@ -287,7 +255,7 @@ class SimpleGate(Gate):
         return z * h + (1 - z) * x
 
 
-class DistMultGatedCombination(ParameterizedRealGatedCombination):
+class DistMultGatedCombination(RealNoConcatCombination):
     """The gate combination used in :class:`pykeen.models.DistMultGatedLiteral`."""
 
     # TODO Add dropout
@@ -301,8 +269,14 @@ class DistMultGatedCombination(ParameterizedRealGatedCombination):
         :param literal_embedding_dim: The dimension of the literals.
         """
 
-        super().__init__(SimpleGate(
+        super().__init__()
+
+        self.module = Gate(
             entity_embedding_dim=entity_embedding_dim,
             literal_embedding_dim=literal_embedding_dim,
             activation='sigmoid',
-        ))
+        )
+
+    def score(self, x: torch.FloatTensor, literal: torch.FloatTensor) -> torch.FloatTensor:
+        """Score the combined entity representation and literals baes on the given gating mechanism."""
+        return self.module(x, literal)
