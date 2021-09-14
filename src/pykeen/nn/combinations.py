@@ -69,9 +69,6 @@ class Gate(nn.Module, ABC):
     A gating mechanism is a strategy commonly used in RNNs
     that allows the model to understand and decide what new information to keep or wich can be discarded.
     """
-    def __init__(self):
-        super().__init__()
-
     @abstractmethod
     def forward(self, x: torch.FloatTensor, literal: torch.FloatTensor) -> torch.FloatTensor:
         """
@@ -268,22 +265,24 @@ class SimpleGate(Gate):
 
         self.gate_activation = activation_resolver.make(activation, activation_kwargs)
 
-        self.h_layer = nn.Linear(entity_embedding_dim + literal_embedding_dim, entity_embedding_dim)
+        self.combination_linear_layer = nn.Linear(entity_embedding_dim + literal_embedding_dim, entity_embedding_dim)
 
-        self.g_ze_layer = nn.Linear(entity_embedding_dim, entity_embedding_dim)
+        self.gate_entity_layer = nn.Linear(entity_embedding_dim, entity_embedding_dim)
 
-        self.g_zl_layer = nn.Linear(literal_embedding_dim, entity_embedding_dim)
+        self.gate_literal_layer = nn.Linear(literal_embedding_dim, entity_embedding_dim)
 
         self.bias = nn.Parameter(torch.zeros(entity_embedding_dim))
+
+        self.hyperbolic_tangent = torch.nn.Tanh()
 
     def forward(self, x: torch.FloatTensor, literal: torch.FloatTensor) -> torch.FloatTensor:
         """Given the entity and literal representations calucaltes a new embedding that contains information of both."""
 
-        concatenated = torch.cat([x, literal], -1)
+        combination = torch.cat([x, literal], -1)
 
-        z = self.gate_activation(self.g_ze_layer(x) + self.g_zl_layer(literal) + self.bias)
+        z = self.gate_activation(self.gate_entity_layer(x) + self.gate_literal_layer(literal) + self.bias)
 
-        h = torch.nn.Tanh()(self.h_layer(concatenated))
+        h = self.hyperbolic_tangent(self.combination_linear_layer(combination))
 
         return z * h + (1 - z) * x
 
