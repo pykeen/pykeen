@@ -4,15 +4,15 @@
 
 import logging
 import pathlib
-from typing import Dict, Optional, TextIO, Tuple, Union
+from typing import Any, Dict, Optional, TextIO, Tuple, Union
 
 import numpy as np
 import torch
 
+from ..typing import EntityMapping, LabeledTriples, MappedTriples
 from .instances import MultimodalLCWAInstances, MultimodalSLCWAInstances
 from .triples_factory import TriplesFactory
 from .utils import load_triples
-from ..typing import EntityMapping, LabeledTriples
 
 __all__ = [
     'TriplesNumericLiteralsFactory',
@@ -119,4 +119,25 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
             compressed=lcwa_instances.compressed,
             numeric_literals=self.numeric_literals,
             literals_to_id=self.literals_to_id,
+        )
+
+    def clone_and_exchange_triples(
+        self,
+        mapped_triples: MappedTriples,
+        extra_metadata: Optional[Dict[str, Any]] = None,
+        keep_metadata: bool = True,
+        create_inverse_triples: Optional[bool] = None,
+    ) -> "TriplesNumericLiteralsFactory":  # noqa: D102
+        if create_inverse_triples is None:
+            create_inverse_triples = self.create_inverse_triples
+        return TriplesNumericLiteralsFactory(
+            numeric_triples = self.numeric_triples,
+            entity_to_id=self.entity_to_id,
+            relation_to_id=self.relation_to_id,
+            mapped_triples=mapped_triples,
+            create_inverse_triples=create_inverse_triples,
+            metadata={
+                **(extra_metadata or {}),
+                **(self.metadata if keep_metadata else {}),  # type: ignore
+            },
         )
