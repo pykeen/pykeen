@@ -71,7 +71,10 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         """
 
         if path is None:
-            base = TriplesFactory.from_labeled_triples(triples=triples, **kwargs)
+            if triples is None:
+                base = TriplesFactory(**kwargs)
+            else:
+                base = TriplesFactory.from_labeled_triples(triples=triples, **kwargs)
         else:
             base = TriplesFactory.from_path(path=path, **kwargs)
         super().__init__(
@@ -134,9 +137,9 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         if create_inverse_triples is None:
             create_inverse_triples = self.create_inverse_triples
         return TriplesNumericLiteralsFactory(
-                triples=mapped_triples,
                 numeric_triples=self.numeric_triples,
                 
+                mapped_triples=mapped_triples,
                 entity_to_id=self.entity_to_id,
                 relation_to_id=self.relation_to_id,
                 create_inverse_triples=create_inverse_triples,
