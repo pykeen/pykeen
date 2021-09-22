@@ -69,6 +69,7 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         :param numeric_triples:  A 3-column numpy array with numeric triples in it. If not
          specified, you should specify ``path_to_numeric_triples``.
         """
+
         if path is None:
             base = TriplesFactory.from_labeled_triples(triples=triples, **kwargs)
         else:
@@ -85,11 +86,13 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         elif path_to_numeric_triples is not None and numeric_triples is not None:
             raise ValueError('Must not specify both path_to_numeric_triples and numeric_triples')
         elif path_to_numeric_triples is not None:
-            numeric_triples = load_triples(path_to_numeric_triples)
+            self.numeric_triples = load_triples(path_to_numeric_triples)
+        else:
+            self.numeric_triples = numeric_triples
 
         assert self.entity_to_id is not None
         self.numeric_literals, self.literals_to_id = create_matrix_of_literals(
-            numeric_triples=numeric_triples,
+            numeric_triples=self.numeric_triples,
             entity_to_id=self.entity_to_id,
         )
 
@@ -131,13 +134,14 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         if create_inverse_triples is None:
             create_inverse_triples = self.create_inverse_triples
         return TriplesNumericLiteralsFactory(
-            numeric_triples = self.numeric_triples,
-            entity_to_id=self.entity_to_id,
-            relation_to_id=self.relation_to_id,
-            mapped_triples=mapped_triples,
-            create_inverse_triples=create_inverse_triples,
-            metadata={
-                **(extra_metadata or {}),
-                **(self.metadata if keep_metadata else {}),  # type: ignore
-            },
-        )
+                triples=mapped_triples,
+                numeric_triples=self.numeric_triples,
+                
+                entity_to_id=self.entity_to_id,
+                relation_to_id=self.relation_to_id,
+                create_inverse_triples=create_inverse_triples,
+                metadata={
+                    **(extra_metadata or {}),
+                    **(self.metadata if keep_metadata else {}),  # type: ignore
+                },
+            )
