@@ -137,14 +137,13 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         if create_inverse_triples is None:
             create_inverse_triples = self.create_inverse_triples
         return TriplesNumericLiteralsFactory(
-                numeric_triples=self.numeric_triples,
-                
-                mapped_triples=mapped_triples,
-                entity_to_id=self.entity_to_id,
-                relation_to_id=self.relation_to_id,
-                create_inverse_triples=create_inverse_triples,
-                metadata={
-                    **(extra_metadata or {}),
-                    **(self.metadata if keep_metadata else {}),  # type: ignore
-                },
-            )
+            numeric_triples=self.numeric_triples,
+            mapped_triples=mapped_triples,
+            entity_to_id=self.entity_to_id,
+            relation_to_id=self.relation_to_id,
+            create_inverse_triples=create_inverse_triples,
+            metadata={
+                **(extra_metadata or {}),
+                **(self.metadata if keep_metadata else {}),  # type: ignore
+            },
+        )
