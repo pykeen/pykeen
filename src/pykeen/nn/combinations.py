@@ -6,9 +6,9 @@ from abc import ABC, abstractmethod
 from typing import Any, Mapping, Optional
 
 import torch
+from class_resolver import HintOrType
 from torch import nn
 
-from class_resolver import HintOrType
 from ..utils import activation_resolver, combine_complex, split_complex
 
 __all__ = [
@@ -55,7 +55,7 @@ class ParameterizedRealCombination(Combination):
         super().__init__()
         self.module = module
 
-    def forward(self, x: torch.FloatTensor,  literal: torch.FloatTensor) -> torch.FloatTensor:
+    def forward(self, x: torch.FloatTensor, literal: torch.FloatTensor) -> torch.FloatTensor:
         """Score the combined entity representation and literals with the parameterized module."""
         return self.module(torch.cat([x, literal], dim=-1))
 
