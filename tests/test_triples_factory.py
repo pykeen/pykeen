@@ -512,7 +512,7 @@ class TestLiterals(unittest.TestCase):
 
         triples_numeric_literal_factory = TriplesNumericLiteralsFactory(
             triples=triples_larger,
-            numeric_triples=numeric_triples
+            numeric_triples=numeric_triples,
         )
 
         left, right = triples_numeric_literal_factory.split()
