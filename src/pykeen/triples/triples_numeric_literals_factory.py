@@ -9,10 +9,10 @@ from typing import Any, Dict, Optional, TextIO, Tuple, Union
 import numpy as np
 import torch
 
-from ..typing import EntityMapping, LabeledTriples, MappedTriples
 from .instances import MultimodalLCWAInstances, MultimodalSLCWAInstances
 from .triples_factory import TriplesFactory
 from .utils import load_triples
+from ..typing import EntityMapping, LabeledTriples, MappedTriples
 
 __all__ = [
     'TriplesNumericLiteralsFactory',
