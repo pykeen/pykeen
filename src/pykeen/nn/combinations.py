@@ -13,6 +13,7 @@ from ..utils import activation_resolver, combine_complex, split_complex
 
 __all__ = [
     'Combination',
+    'RealCombination',
     'ParameterizedRealCombination',
     'ComplexCombination',
     'ParameterizedComplexCombination',
@@ -32,19 +33,20 @@ class Combination(nn.Module, ABC):
         raise NotImplementedError
 
 
-class ParametrizedCombination(Combination):
-    """A combination based on wrapping a module."""
-
-    def __init__(self, module: nn.Module) -> None:
-        super().__init__()
-        self.module = module
+class RealCombination(Combination, ABC):
+    """A mid-level base class for combinations of real-valued vectors."""
 
     def forward(self, x: torch.FloatTensor, literal: torch.FloatTensor) -> torch.FloatTensor:
-        """Score the combined entity representation and literals baes on the given gating mechanism."""
-        return self.module(x, literal)
+        """Combine the entity representation and literal, then score."""
+        return self.score(torch.cat([x, literal], dim=-1))
+
+    @abstractmethod
+    def score(self, x: torch.FloatTensor) -> torch.FloatTensor:
+        """Score the combined entity representation and literals."""
+        raise NotImplementedError
 
 
-class ParameterizedRealCombination(Combination):
+class ParameterizedRealCombination(RealCombination):
     """A real combination parametrized by a scoring module."""
 
     def __init__(self, module: nn.Module):
@@ -55,9 +57,9 @@ class ParameterizedRealCombination(Combination):
         super().__init__()
         self.module = module
 
-    def forward(self, x: torch.FloatTensor, literal: torch.FloatTensor) -> torch.FloatTensor:
+    def score(self, x: torch.FloatTensor) -> torch.FloatTensor:
         """Score the combined entity representation and literals with the parameterized module."""
-        return self.module(torch.cat([x, literal], dim=-1))
+        return self.module(x)
 
 
 class ComplexCombination(Combination, ABC):
