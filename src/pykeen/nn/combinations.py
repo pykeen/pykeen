@@ -6,15 +6,13 @@ from abc import ABC, abstractmethod
 from typing import Any, Mapping, Optional
 
 import torch
-from class_resolver import HintOrType
 from torch import nn
 
+from class_resolver import HintOrType
 from ..utils import activation_resolver, combine_complex, split_complex
 
 __all__ = [
     'Combination',
-    'RealCombination',
-    'RealNoConcatCombination',
     'ParameterizedRealCombination',
     'ComplexCombination',
     'ParameterizedComplexCombination',
@@ -22,8 +20,7 @@ __all__ = [
     'LinearDropout',
     'DistMultCombination',
     'ComplExLiteralCombination',
-    'Gate',
-    'DistMultGatedCombination',
+    'GatedCombination',
 ]
 
 
@@ -35,33 +32,19 @@ class Combination(nn.Module, ABC):
         raise NotImplementedError
 
 
-class RealCombination(Combination, ABC):
-    """A mid-level base class for combinations of real-valued vectors."""
+class ParametrizedCombination(Combination):
+    """A combination based on wrapping a module."""
+
+    def __init__(self, module: nn.Module) -> None:
+        super().__init__()
+        self.module = module
 
     def forward(self, x: torch.FloatTensor, literal: torch.FloatTensor) -> torch.FloatTensor:
-        """Combine the entity representation and literal, then score."""
-        return self.score(torch.cat([x, literal], dim=-1))
-
-    @abstractmethod
-    def score(self, x: torch.FloatTensor) -> torch.FloatTensor:
-        """Score the combined entity representation and literals."""
-        raise NotImplementedError
+        """Score the combined entity representation and literals baes on the given gating mechanism."""
+        return self.module(x, literal)
 
 
-class RealNoConcatCombination(Combination, ABC):
-    """A mid-level base class for combinations of real-valued vectors for a gated prespective."""
-
-    def forward(self, x: torch.FloatTensor, literal: torch.FloatTensor) -> torch.FloatTensor:
-        """Pass the separated entity and literal embeddings to the scoring function."""
-        return self.score(x, literal)
-
-    @abstractmethod
-    def score(self, x: torch.FloatTensor, literal: torch.FloatTensor) -> torch.FloatTensor:
-        """Score besed on the entity representations and literals."""
-        raise NotImplementedError
-
-
-class ParameterizedRealCombination(RealCombination):
+class ParameterizedRealCombination(Combination):
     """A real combination parametrized by a scoring module."""
 
     def __init__(self, module: nn.Module):
@@ -72,9 +55,9 @@ class ParameterizedRealCombination(RealCombination):
         super().__init__()
         self.module = module
 
-    def score(self, x: torch.FloatTensor) -> torch.FloatTensor:
+    def forward(self, x: torch.FloatTensor,  literal: torch.FloatTensor) -> torch.FloatTensor:
         """Score the combined entity representation and literals with the parameterized module."""
-        return self.module(x)
+        return self.module(torch.cat([x, literal], dim=-1))
 
 
 class ComplexCombination(Combination, ABC):
@@ -210,7 +193,7 @@ class ComplExLiteralCombination(ParameterizedComplexCombination):
         )
 
 
-class Gate(nn.Module):
+class GatedCombination(Combination):
     """A module that implements a gated linear transformation for the combination of entities and literals.
 
     Implementation based on https://github.com/SmartDataAnalytics/LiteralE/blob/master/model.py Gate class.
@@ -230,53 +213,22 @@ class Gate(nn.Module):
         :param activation: An optional, pre-instantiated activation module, like :class:`torch.nn.sigmoid`.
         """
         super().__init__()
-
         self.gate_activation = activation_resolver.make(activation, activation_kwargs)
-
-        self.combination_linear_layer = nn.Linear(entity_embedding_dim + literal_embedding_dim, entity_embedding_dim)
-
-        self.gate_entity_layer = nn.Linear(entity_embedding_dim, entity_embedding_dim)
-
-        self.gate_literal_layer = nn.Linear(literal_embedding_dim, entity_embedding_dim)
-
+        self.combination_linear_layer = nn.Linear(
+            entity_embedding_dim + literal_embedding_dim, entity_embedding_dim,
+        )
+        self.gate_entity_layer = nn.Linear(
+            entity_embedding_dim, entity_embedding_dim,
+        )
+        self.gate_literal_layer = nn.Linear(
+            literal_embedding_dim, entity_embedding_dim,
+        )
         self.bias = nn.Parameter(torch.zeros(entity_embedding_dim))
-
         self.hyperbolic_tangent = torch.nn.Tanh()
 
     def forward(self, x: torch.FloatTensor, literal: torch.FloatTensor) -> torch.FloatTensor:
         """Given the entity and literal representations calucaltes a new embedding that contains information of both."""
-
         combination = torch.cat([x, literal], -1)
-
         z = self.gate_activation(self.gate_entity_layer(x) + self.gate_literal_layer(literal) + self.bias)
-
         h = self.hyperbolic_tangent(self.combination_linear_layer(combination))
-
         return z * h + (1 - z) * x
-
-
-class DistMultGatedCombination(RealNoConcatCombination):
-    """The gate combination used in :class:`pykeen.models.DistMultGatedLiteral`."""
-
-    # TODO Add dropout
-    def __init__(
-        self,
-        entity_embedding_dim: int,
-        literal_embedding_dim: int,
-    ) -> None:
-        """Instantiate the :class:`ParameterizedRealGatedCombination` with a :class:`Gate`.
-        :param entity_embedding_dim: The dimension of the entity representations.
-        :param literal_embedding_dim: The dimension of the literals.
-        """
-
-        super().__init__()
-
-        self.module = Gate(
-            entity_embedding_dim=entity_embedding_dim,
-            literal_embedding_dim=literal_embedding_dim,
-            activation='sigmoid',
-        )
-
-    def score(self, x: torch.FloatTensor, literal: torch.FloatTensor) -> torch.FloatTensor:
-        """Score the combined entity representation and literals baes on the given gating mechanism."""
-        return self.module(x, literal)
