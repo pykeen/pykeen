@@ -69,14 +69,12 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         :param numeric_triples:  A 3-column numpy array with numeric triples in it. If not
          specified, you should specify ``path_to_numeric_triples``.
         """
-
-        if path is None:
-            if triples is None:
-                base = TriplesFactory(**kwargs)
-            else:
-                base = TriplesFactory.from_labeled_triples(triples=triples, **kwargs)
-        else:
+        if path is not None:
             base = TriplesFactory.from_path(path=path, **kwargs)
+        elif triples is None:
+            base = TriplesFactory(**kwargs)
+        else:
+            base = TriplesFactory.from_labeled_triples(triples=triples, **kwargs)
         super().__init__(
             entity_to_id=base.entity_to_id,
             relation_to_id=base.relation_to_id,
