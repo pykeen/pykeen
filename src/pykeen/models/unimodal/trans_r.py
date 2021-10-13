@@ -8,6 +8,7 @@ from typing import Any, ClassVar, Mapping
 import torch
 import torch.autograd
 import torch.nn.init
+from torch import linalg
 
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
@@ -154,7 +155,7 @@ class TransR(EntityRelationEmbeddingModel):
         t_bot = clamp_norm(t_bot, p=2, dim=-1, maxnorm=1.)
 
         # evaluate score function, shape: (b, e)
-        return -torch.norm(h_bot + r - t_bot, dim=-1) ** 2
+        return -linalg.vector_norm(h_bot + r - t_bot, dim=-1) ** 2
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
