@@ -51,11 +51,17 @@ Examples
     Square Error                   $g(s, l) = \frac{1}{2}(s - l)^2$
     Binary Cross Entropy           $g(s, l) = -(l*\log (\sigma(s))+(1-l)*(\log (1-\sigma(s))))$
     Pointwise Hinge                $g(s, l) = \max(0, \lambda -\hat{l}*s)$
+    Soft Pointwise Hinge           $g(s, l) = \log(1+\exp(\lambda-\hat{l}*s))$
     Pointwise Logistic (softplus)  $g(s, l) = \log(1+\exp(-\hat{l}*s))$
     =============================  ============================================================
 
 For the pointwise logistic and pointwise hinge losses, $\hat{l}$ has been rescaled from $\{0,1\}$ to $\{-1,1\}$.
 The sigmoid logistic loss function is defined as $\sigma(z) = \frac{1}{1 + e^{-z}}$.
+
+.. note::
+
+    The pointwise logistic loss can be considered as a special case of the pointwise soft hinge loss
+    where $\lambda = 0$.
 
 Batching
 ~~~~~~~~
@@ -69,40 +75,47 @@ defined as the arithmetic mean of the pointwise losses over each triple in the s
 Pairwise Loss Functions
 -----------------------
 A pairwise loss is applied to a pair of triples - a positive and a negative one. It is defined as $L: \mathcal{K}
-\times \mathcal{\bar{K}} \rightarrow \mathbb{R}$ and computes a real value for the pair. Typically,
-a pairwise loss is computed as a function $g$ of the difference between the scores of the positive and negative
-triples that takes the form $g: \mathbb{R} \times \mathbb{R} \rightarrow \mathbb{R}$.
+\times \mathcal{\bar{K}} \rightarrow \mathbb{R}$ and computes a real value for the pair.
+
+All loss functions implemented in PyKEEN induce an auxillary loss function based on the chosen interaction
+function $L{*}: \mathbb{R} \times \mathbb{R} \rightarrow \mathbb{R}$ that simply passes the scores through.
+Note that $L$ is often used interchangbly with $L^{*}$.
 
 .. math::
 
-    L(k, \bar{k}) = g(f(k), f(\bar{k}))
+    L(k, \bar{k}) = L^{*}(f(k), f(\bar{k}))
 
-Examples
-~~~~~~~~
-Typically, $g$ takes the following form in which a function $h: \mathbb{R} \rightarrow \mathbb{R}$
-is used on the differences in the scores of the positive an the negative triples.
+Delta Pairwise Loss Functions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Delta pairwise losses are computed on the differences between the scores of the positive and negative
+triples (e.g., $\Delta := f(k) - f(\bar{k})$) with transfer function $g: \mathbb{R} \rightarrow \mathbb{R}$ that take
+the form of:
 
 .. math::
 
-    g(f(k), f(\bar{k})) = h(f(k) - f(\bar{k}))
+    L^{*}(f(k), f(\bar{k})) = g(f(k) - f(\bar{k})) := g(\Delta)
 
-In the following examples of pairwise loss functions, the shorthand is used: $\Delta := f(k) - f(\bar{k})$. The
-pairwise logistic loss can be considered as a special case of the soft margin ranking loss where $\lambda = 0$.
+The following table shows delta pairwise loss functions:
 
 .. table::
     :align: center
     :widths: auto
 
-    ===============================  ==============================================
-    Pairwise Loss                    Formulation
-    ===============================  ==============================================
-    Pairwise Hinge (margin ranking)  $h(\Delta) = \max(0, \Delta + \lambda)$
-    Soft Margin Ranking              $h(\Delta) = \log(1 + \exp(\Delta + \lambda))$
-    Pairwise Logistic                $h(\Delta) = \log(1 + \exp(\Delta))$
-    ===============================  ==============================================
+    =========================================  ===========  ======================  ==============================================
+    Pairwise Loss                              Activation   Margin                  Formulation
+    =========================================  ===========  ======================  ==============================================
+    Pairwise Hinge (margin ranking)            ReLU         $\lambda \neq 0$        $g(\Delta) = \max(0, \Delta + \lambda)$
+    Soft Pairwise Hinge (soft margin ranking)  softplus     $\lambda \neq 0$        $g(\Delta) = \log(1 + \exp(\Delta + \lambda))$
+    Pairwise Logistic                          softplus     $\lambda=0$             $g(\Delta) = \log(1 + \exp(\Delta))$
+    =========================================  ===========  ======================  ==============================================
 
-Atypical Pairwise Loss Functions
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. note::
+
+    The pairwise logistic loss can be considered as a special case of the pairwise soft hinge loss
+    where $\lambda = 0$.
+
+Inseparable Pairwise Loss Functions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 The following pairwise loss function use the full generalized form of $L(k, \bar{k}) = \dots$
 for their definitions:
 
@@ -110,11 +123,11 @@ for their definitions:
     :align: center
     :widths: auto
 
-    ==============  =============================================
+    ==============  ===================================================
     Pairwise Loss   Formulation
-    ==============  =============================================
-    Double Loss     $h(\bar{\lambda} + \bar{k}) + h(\lambda - k)$
-    ==============  =============================================
+    ==============  ===================================================
+    Double Loss     $h(\bar{\lambda} + f(\bar{k})) + h(\lambda - f(k))$
+    ==============  ===================================================
 
 Batching
 ~~~~~~~~
@@ -146,7 +159,7 @@ triples $\mathcal{b}$ in the subset $\mathcal{B} \in 2^{2^{\mathcal{T}}}$.
 .. math::
 
     \mathcal{L}_L(\mathcal{B}) = \frac{1}{|\mathcal{B}|} \sum \limits_{\mathcal{b} \in \mathcal{B}} L(\mathcal{b})
-"""
+"""  # noqa: E501
 
 import logging
 from textwrap import dedent
@@ -163,6 +176,8 @@ __all__ = [
     # Base Classes
     'Loss',
     'PointwiseLoss',
+    'DeltaPointwiseLoss',
+    'MarginPairwiseLoss',
     'PairwiseLoss',
     'SetwiseLoss',
     # Concrete Classes
@@ -174,12 +189,18 @@ __all__ = [
     'MSELoss',
     'NSSALoss',
     'SoftplusLoss',
+    'SoftPointwiseHingeLoss',
+    'PointwiseHingeLoss',
     'DoubleMarginLoss',
+    'SoftMarginRankingLoss',
+    'PairwiseLogisticLoss',
     # Utils
     'loss_resolver',
 ]
 
 logger = logging.getLogger(__name__)
+
+DEFAULT_MARGIN_HPO_STRATEGY = dict(type=float, low=0, high=3)
 
 
 def apply_label_smoothing(
@@ -201,7 +222,7 @@ def apply_label_smoothing(
     :param num_classes:
         The number of classes.
     :returns: A smoothed label tensor
-    :raises ValueError: if episilon is negative or if num_classes is None
+    :raises ValueError: if epsilon is negative or if num_classes is None
 
     ..seealso:
         https://www.deeplearningbook.org/contents/regularization.html, chapter 7.5.1
@@ -355,6 +376,10 @@ class BCEWithLogitsLoss(PointwiseLoss):
 
         \sigma(x) = \frac{1}{1 + \exp(-x)}
 
+    .. note::
+
+        The softplus activation function $h_{\text{softplus}}(x) = -\log(\sigma(x))$.
+
     Thus, the problem is framed as a binary classification problem of triples, where the interaction functions' outputs
     are regarded as logits.
 
@@ -363,7 +388,10 @@ class BCEWithLogitsLoss(PointwiseLoss):
         This loss is not well-suited for translational distance models because these models produce
         a negative distance as score and cannot produce positive model outputs.
 
-    .. seealso:: :class:`torch.nn.BCEWithLogitsLoss`
+    .. note::
+
+        The related :mod:`torch` module is :class:`torch.nn.BCEWithLogitsLoss`, but it can not be used
+        interchangeably in PyKEEN because of the extended functionality implemented in PyKEEN's loss functions.
     ---
     name: Binary cross entropy (with logits)
     """
@@ -382,7 +410,10 @@ class BCEWithLogitsLoss(PointwiseLoss):
 class MSELoss(PointwiseLoss):
     """A module for the mean square error loss.
 
-    .. seealso:: :class:`torch.nn.MSELoss`
+    .. note::
+
+        The related :mod:`torch` module is :class:`torch.nn.MSELoss`, but it can not be used
+        interchangeably in PyKEEN because of the extended functionality implemented in PyKEEN's loss functions.
     ---
     name: Mean square error
     """
@@ -411,32 +442,21 @@ margin_activation_resolver = Resolver(
 )
 
 
-@parse_docdata
-class MarginRankingLoss(PairwiseLoss):
-    r"""A module for the margin ranking loss.
+class MarginPairwiseLoss(PairwiseLoss):
+    r"""Generalized margin ranking loss.
 
     .. math ::
-        L(score^+, score^-) = activation(score^- - score^+ + margin)
+        L(k, \bar{k}) = g(f(\bar{k}) - f(k) + \lambda)
 
-    .. seealso:: :class:`torch.nn.MarginRankingLoss`
-    ---
-    name: Margin ranking
+    Where $k$ are the positive triples, $\bar{k}$ are the negative triples, $f$ is the interaction function (e.g.,
+    :class:`pykeen.models.TransE` has $f(h,r,t)=\mathbf{e}_h+\mathbf{r}_r-\mathbf{e}_t$), $g(x)$ is an activation
+    function like the ReLU or softmax, and $\lambda$ is the margin.
     """
-
-    synonyms = {"Pairwise Hinge Loss"}
-
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        margin=dict(type=int, low=0, high=3, q=1),
-        margin_activation=dict(
-            type='categorical',
-            choices=margin_activation_resolver.options,
-        ),
-    )
 
     def __init__(
         self,
-        margin: float = 1.0,
-        margin_activation: Hint[nn.Module] = 'relu',
+        margin: float,
+        margin_activation: Hint[nn.Module],
         reduction: str = 'mean',
     ):
         r"""Initialize the margin loss instance.
@@ -532,6 +552,101 @@ class MarginRankingLoss(PairwiseLoss):
 
 
 @parse_docdata
+class MarginRankingLoss(MarginPairwiseLoss):
+    r"""A module for the pairwise hinge loss (i.e., margin ranking loss).
+
+    .. math ::
+        L(k, \bar{k}) = \max(0, f(k) - f(\bar{k}) + \lambda)
+
+    Where $k$ are the positive triples, $\bar{k}$ are the negative triples, $f$ is the interaction function (e.g.,
+    TransE has $f(h,r,t)=h+r-t$), $g(x)=\max(0,x)$ is the ReLU activation function,
+    and $\lambda$ is the margin.
+
+    .. seealso::
+
+        MRL is closely related to :class:`pykeen.losses.SoftMarginRankingLoss`, only differing in that this loss
+        uses the ReLU activation and :class:`pykeen.losses.SoftMarginRankingLoss` uses the softmax activation. MRL
+        is also related to the :class:`pykeen.losses.PairwiseLogisticLoss` as this is a special case of the
+        :class:`pykeen.losses.SoftMarginRankingLoss` with no margin.
+
+    .. note::
+
+        The related :mod:`torch` module is :class:`torch.nn.MarginRankingLoss`, but it can not be used
+        interchangeably in PyKEEN because of the extended functionality implemented in PyKEEN's loss functions.
+    ---
+    name: Margin ranking
+    """
+
+    synonyms = {"Pairwise Hinge Loss"}
+
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
+        margin=DEFAULT_MARGIN_HPO_STRATEGY,
+    )
+
+    def __init__(self, margin: float = 1.0, reduction: str = 'mean'):
+        r"""Initialize the margin loss instance.
+
+        :param margin:
+            The margin by which positive and negative scores should be apart.
+        :param reduction:
+            The name of the reduction operation to aggregate the individual loss values from a batch to a scalar loss
+            value. From {'mean', 'sum'}.
+        """
+        super().__init__(margin=margin, margin_activation='relu', reduction=reduction)
+
+
+@parse_docdata
+class SoftMarginRankingLoss(MarginPairwiseLoss):
+    r"""A module for the soft pairwise hinge loss (i.e., soft margin ranking loss).
+
+    .. math ::
+        L(k, \bar{k}) = \log(1 + \exp(f(k) - f(\bar{k}) + \lambda))
+
+    Where $k$ are the positive triples, $\bar{k}$ are the negative triples, $f$ is the interaction function (e.g.,
+    :class:`pykeen.models.TransE` has $f(h,r,t)=\mathbf{e}_h+\mathbf{r}_r-\mathbf{e}_t$), $g(x)=\log(1 + \exp(x))$
+    is the softmax activation function, and $\lambda$ is the margin.
+
+    .. seealso::
+
+        When choosing `margin=0``, this loss becomes equivalent to :class:`pykeen.losses.SoftMarginRankingLoss`.
+        It is also closely related to :class:`pykeen.losses.MarginRankingLoss`, only differing in that this loss
+        uses the softmax activation and :class:`pykeen.losses.MarginRankingLoss` uses the ReLU activation.
+    ---
+    name: Soft margin ranking
+    """
+
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
+        margin=DEFAULT_MARGIN_HPO_STRATEGY,
+    )
+
+    def __init__(self, margin: float = 1.0, reduction: str = 'mean'):
+        super().__init__(margin=margin, margin_activation='softplus', reduction=reduction)
+
+
+@parse_docdata
+class PairwiseLogisticLoss(SoftMarginRankingLoss):
+    r"""The pairwise logistic loss.
+
+    .. math ::
+        L(k, \bar{k}) = \log(1 + \exp(f(k) - f(\bar{k})))
+
+    Where $k$ are the positive triples, $\bar{k}$ are the negative triples, $f$ is the interaction function (e.g.,
+    :class:`pykeen.models.TransE` has $f(h,r,t)=\mathbf{e}_h+\mathbf{r}_r-\mathbf{e}_t$), $g(x)=\log(1 + \exp(x))$
+    is the softmax activation function.
+
+    .. seealso::
+
+        This loss is equivalent to :class:`pykeen.losses.SoftMarginRankingLoss` where ``margin=0``. It is also
+        closely related to :class:`pykeen.losses.MarginRankingLoss` based on the choice of activation function.
+    ---
+    name: Pairwise logistic
+    """
+
+    def __init__(self, reduction: str = 'mean'):
+        super().__init__(margin=0.0, reduction=reduction)
+
+
+@parse_docdata
 class DoubleMarginLoss(PointwiseLoss):
     r"""A limit-based scoring loss, with separate margins for positive and negative elements from [sun2018]_.
 
@@ -541,10 +656,10 @@ class DoubleMarginLoss(PointwiseLoss):
     sufficiently correct examples.
 
     .. math ::
-        L(k, \bar{k}) = h(\bar{\lambda} + \bar{k}) + h(\lambda - k)
+        L(k, \bar{k}) = g(\bar{\lambda} + \bar{k}) + h(\lambda - k)
 
     Where $k$ is positive scores, $\bar{k}$ is negative scores, $\lambda$ is the positive margin, $\bar{\lambda}$ is
-    the negative margin, and $h$ is an activation function, like the ReLU or softmax.
+    the negative margin, and $g$ is an activation function, like the ReLU or softmax.
     ---
     name: Double Margin
     """
@@ -751,22 +866,27 @@ class DoubleMarginLoss(PointwiseLoss):
         )
 
 
-@parse_docdata
-class SoftplusLoss(PointwiseLoss):
-    r"""
-    A module for the softplus loss.
+class DeltaPointwiseLoss(PointwiseLoss):
+    r"""A generic class for delta-pointwise losses.
 
-    .. math ::
-        L(score, label) = softplus(- label \cdot score)
+    =============================  ==========  ======================  ========================================================  =============================================
+    Pointwise Loss                 Activation  Margin                  Formulation                                               Implementation
+    =============================  ==========  ======================  ========================================================  =============================================
+    Pointwise Hinge                ReLU        $\lambda \neq 0$        $g(s, l) = \max(0, \lambda -\hat{l}*s)$                   :class:`pykeen.losses.PointwiseHingeLoss`
+    Soft Pointwise Hinge           softplus    $\lambda \neq 0$        $g(s, l) = \log(1+\exp(\lambda -\hat{l}*s))$              :class:`pykeen.losses.SoftPointwiseHingeLoss`
+    Pointwise Logistic (softplus)  softplus    $\lambda = 0$           $g(s, l) = \log(1+\exp(-\hat{l}*s))$                      :class:`pykeen.losses.SoftplusLoss`
+    =============================  ==========  ======================  ========================================================  =============================================
+    """  # noqa:E501
 
-    with $label \in \{-1, 1\}$.
-    ---
-    name: Softplus
-    """
-
-    def __init__(self, reduction: str = 'mean') -> None:
+    def __init__(
+        self,
+        margin: Optional[float] = 0.0,
+        margin_activation: Hint[nn.Module] = 'softplus',
+        reduction: str = 'mean',
+    ) -> None:
         super().__init__(reduction=reduction)
-        self.softplus = nn.Softplus()
+        self.margin = margin
+        self.margin_activation = margin_activation_resolver.make(margin_activation)
 
     def forward(
         self,
@@ -777,16 +897,85 @@ class SoftplusLoss(PointwiseLoss):
         assert 0. <= labels.min() and labels.max() <= 1.
         # scale labels from [0, 1] to [-1, 1]
         labels = 2 * labels - 1
-        loss = self.softplus((-1) * labels * logits)
+        loss = self.margin_activation(self.margin - labels * logits)
         loss = self._reduction_method(loss)
         return loss
+
+
+@parse_docdata
+class PointwiseHingeLoss(DeltaPointwiseLoss):
+    r"""
+    A module for the pointwise hinge loss.
+
+    .. math ::
+        g(s,l) = \max(0, \lambda -\hat{l}*s)
+
+    with scores $s$ and labels $l$ that have been rescaled to  $\hat{l} \in \{-1, 1\}$.
+    ---
+    name: Pointwise Hinge
+    """
+
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
+        margin=DEFAULT_MARGIN_HPO_STRATEGY,
+    )
+
+    def __init__(self, margin: float = 1.0, reduction: str = 'mean') -> None:
+        super().__init__(margin=margin, margin_activation='relu', reduction=reduction)
+
+
+@parse_docdata
+class SoftPointwiseHingeLoss(DeltaPointwiseLoss):
+    r"""A module for the soft pointwise hinge loss .
+
+    This loss is appropriate for interaction functions which do not include a bias term,
+    and have a limited value range, e.g., distance-based ones like TransE.
+
+    .. seealso::
+
+        When choosing ``margin=0``, this loss becomes equivalent to :class:`pykeen.losses.SoftplusLoss`.
+        It is also closely related to :class:`pykeen.losses.PointwiseHingeLoss`, only differing in that this loss
+        uses the softmax activation and :class:`pykeen.losses.PointwiseHingeLoss` uses the ReLU activation.
+    ---
+    name: Soft Pointwise Hinge
+    """
+
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
+        margin=DEFAULT_MARGIN_HPO_STRATEGY,
+    )
+
+    def __init__(self, margin: float = 1.0, reduction: str = 'mean') -> None:
+        super().__init__(margin=margin, margin_activation='softplus', reduction=reduction)
+
+
+@parse_docdata
+class SoftplusLoss(SoftPointwiseHingeLoss):
+    r"""A module for the pointwise logistic loss (i.e., softplus loss).
+
+    .. math ::
+        g(s, l) = \log(1 + \exp(-\hat{l} \cdot s))
+
+    with scores $s$ and labels $l$ that have been rescaled to $\hat{l} \in \{-1, 1\}$.
+
+    .. seealso::
+
+        This class is a special case of :class:`pykeen.losses.SoftPointwiseHingeLoss` where the margin
+        is set to ``margin=0``.
+    ---
+    name: Softplus
+    """
+
+    def __init__(self, reduction: str = 'mean') -> None:
+        super().__init__(margin=0.0, reduction=reduction)
 
 
 @parse_docdata
 class BCEAfterSigmoidLoss(PointwiseLoss):
     """A module for the numerically unstable version of explicit Sigmoid + BCE loss.
 
-    .. seealso:: :class:`torch.nn.BCELoss`
+    .. note::
+
+        The related :mod:`torch` module is :class:`torch.nn.BCELoss`, but it can not be used
+        interchangeably in PyKEEN because of the extended functionality implemented in PyKEEN's loss functions.
     ---
     name: Binary cross entropy (after sigmoid)
     """
@@ -804,7 +993,10 @@ class BCEAfterSigmoidLoss(PointwiseLoss):
 class CrossEntropyLoss(SetwiseLoss):
     """A module for the cross entropy loss that evaluates the cross entropy after softmax output.
 
-    .. seealso:: :class:`torch.nn.CrossEntropyLoss`
+    .. note::
+
+        The related :mod:`torch` module is :class:`torch.nn.CrossEntropyLoss`, but it can not be used
+        interchangeably in PyKEEN because of the extended functionality implemented in PyKEEN's loss functions.
     ---
     name: Cross entropy
     """
@@ -1035,6 +1227,8 @@ loss_resolver = Resolver.from_subclasses(
         PairwiseLoss,
         PointwiseLoss,
         SetwiseLoss,
+        DeltaPointwiseLoss,
+        MarginPairwiseLoss,
     },
 )
 for _name, _cls in loss_resolver.lookup_dict.items():
