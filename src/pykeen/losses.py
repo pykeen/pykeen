@@ -51,12 +51,17 @@ Examples
     Square Error                   $g(s, l) = \frac{1}{2}(s - l)^2$
     Binary Cross Entropy           $g(s, l) = -(l*\log (\sigma(s))+(1-l)*(\log (1-\sigma(s))))$
     Pointwise Hinge                $g(s, l) = \max(0, \lambda -\hat{l}*s)$
-    Pointwise Soft Hinge           $g(s, l) = \log(1+\exp(\lambda-\hat{l}*s))$
+    Soft Pointwise Hinge           $g(s, l) = \log(1+\exp(\lambda-\hat{l}*s))$
     Pointwise Logistic (softplus)  $g(s, l) = \log(1+\exp(-\hat{l}*s))$
     =============================  ============================================================
 
 For the pointwise logistic and pointwise hinge losses, $\hat{l}$ has been rescaled from $\{0,1\}$ to $\{-1,1\}$.
 The sigmoid logistic loss function is defined as $\sigma(z) = \frac{1}{1 + e^{-z}}$.
+
+.. note::
+
+    The pointwise logistic loss can be considered as a special case of the pointwise soft hinge loss
+    where $\lambda = 0$.
 
 Batching
 ~~~~~~~~
@@ -100,14 +105,14 @@ The following table shows delta pairwise loss functions:
     Pairwise Loss                              Activation   Margin                  Formulation
     =========================================  ===========  ======================  ==============================================
     Pairwise Hinge (margin ranking)            ReLU         $\lambda \neq 0$        $g(\Delta) = \max(0, \Delta + \lambda)$
-    Pairwise Soft Hinge (soft margin ranking)  softplus     $\lambda \neq 0$        $g(\Delta) = \log(1 + \exp(\Delta + \lambda))$
+    Soft Pairwise Hinge (soft margin ranking)  softplus     $\lambda \neq 0$        $g(\Delta) = \log(1 + \exp(\Delta + \lambda))$
     Pairwise Logistic                          softplus     $\lambda=0$             $g(\Delta) = \log(1 + \exp(\Delta))$
     =========================================  ===========  ======================  ==============================================
 
 .. note::
 
-    The pairwise logistic loss can be considered as a special case of the soft margin
-    ranking loss where $\lambda = 0$.
+    The pairwise logistic loss can be considered as a special case of the pairwise soft hinge loss
+    where $\lambda = 0$.
 
 Inseparable Pairwise Loss Functions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -161,18 +166,19 @@ from textwrap import dedent
 from typing import Any, ClassVar, Mapping, Optional, Set, Tuple
 
 import torch
-from class_resolver import Hint, Resolver
 from docdata import parse_docdata
 from torch import nn
 from torch.nn import functional
 from torch.nn.modules.loss import _Loss
+
+from class_resolver import Hint, Resolver
 
 __all__ = [
     # Base Classes
     'Loss',
     'PointwiseLoss',
     'DeltaPointwiseLoss',
-    'GeneralMarginRankingLoss',
+    'MarginPairwiseLoss',
     'PairwiseLoss',
     'SetwiseLoss',
     # Concrete Classes
@@ -184,6 +190,7 @@ __all__ = [
     'MSELoss',
     'NSSALoss',
     'SoftplusLoss',
+    'SoftPointwiseHingeLoss',
     'PointwiseHingeLoss',
     'DoubleMarginLoss',
     'SoftMarginRankingLoss',
@@ -434,7 +441,7 @@ margin_activation_resolver = Resolver(
 )
 
 
-class GeneralMarginRankingLoss(PairwiseLoss):
+class MarginPairwiseLoss(PairwiseLoss):
     r"""Generalized margin ranking loss.
 
     TODO check order -> is it f(k) - f(\bar{k}) or f(\bar{k}) - f(k)?
@@ -546,7 +553,7 @@ class GeneralMarginRankingLoss(PairwiseLoss):
 
 
 @parse_docdata
-class MarginRankingLoss(GeneralMarginRankingLoss):
+class MarginRankingLoss(MarginPairwiseLoss):
     r"""A module for the pairwise hinge loss (i.e., margin ranking loss).
 
     .. math ::
@@ -590,7 +597,7 @@ class MarginRankingLoss(GeneralMarginRankingLoss):
 
 
 @parse_docdata
-class SoftMarginRankingLoss(GeneralMarginRankingLoss):
+class SoftMarginRankingLoss(MarginPairwiseLoss):
     r"""A module for the soft pairwise hinge loss (i.e., soft margin ranking loss).
 
     .. math ::
@@ -863,13 +870,13 @@ class DoubleMarginLoss(PointwiseLoss):
 class DeltaPointwiseLoss(PointwiseLoss):
     r"""A generic class for delta-pointwise losses.
 
-    =============================  ==========  ======================  ========================================================  =========================================
+    =============================  ==========  ======================  ========================================================  =============================================
     Pointwise Loss                 Activation  Margin                  Formulation                                               Implementation
-    =============================  ==========  ======================  ========================================================  =========================================
+    =============================  ==========  ======================  ========================================================  =============================================
     Pointwise Hinge                ReLU        $\lambda \neq 0$        $g(s, l) = \max(0, \lambda -\hat{l}*s)$                   :class:`pykeen.losses.PointwiseHingeLoss`
-    Pointwise Soft Hinge           softplus    $\lambda \neq 0$        $g(s, l) = \log(1+\exp(\lambda -\hat{l}*s))$
+    Soft Pointwise Hinge           softplus    $\lambda \neq 0$        $g(s, l) = \log(1+\exp(\lambda -\hat{l}*s))$              :class:`pykeen.losses.SoftPointwiseHingeLoss`
     Pointwise Logistic (softplus)  softplus    $\lambda = 0$           $g(s, l) = \log(1+\exp(-\hat{l}*s))$                      :class:`pykeen.losses.SoftplusLoss`
-    =============================  ==========  ======================  ========================================================  =========================================
+    =============================  ==========  ======================  ========================================================  =============================================
     """  # noqa:E501
 
     def __init__(
@@ -917,19 +924,42 @@ class PointwiseHingeLoss(DeltaPointwiseLoss):
 
 
 @parse_docdata
-class SoftplusLoss(DeltaPointwiseLoss):
+class SoftPointwiseHingeLoss(DeltaPointwiseLoss):
+    r"""A module for the soft pointwise hinge loss .
+
+
+    .. seealso::
+
+        When choosing ``margin=0``, this loss becomes equivalent to :class:`pykeen.losses.SoftplusLoss`.
+        It is also closely related to :class:`pykeen.losses.PointwiseHingeLoss`, only differing in that this loss
+        uses the softmax activation and :class:`pykeen.losses.PointwiseHingeLoss` uses the ReLU activation.
+    ---
+    name: Soft Pointwise Hinge
+    """
+
+    def __init__(self, margin: float, reduction: str = 'mean') -> None:
+        super().__init__(margin=margin, margin_activation='softplus', reduction=reduction)
+
+
+@parse_docdata
+class SoftplusLoss(SoftPointwiseHingeLoss):
     r"""A module for the pointwise logistic loss (i.e., softplus loss).
 
     .. math ::
         g(s, l) = \log(1 + \exp(-\hat{l} \cdot s))
 
     with scores $s$ and labels $l$ that have been rescaled to $\hat{l} \in \{-1, 1\}$.
+
+    .. seealso::
+
+        This class is a special case of :class:`pykeen.losses.SoftPointwiseHingeLoss` where the margin
+        is set to ``margin=0``.
     ---
     name: Softplus
     """
 
     def __init__(self, reduction: str = 'mean') -> None:
-        super().__init__(margin=0.0, margin_activation='softplus', reduction=reduction)
+        super().__init__(margin=0.0, reduction=reduction)
 
 
 @parse_docdata
@@ -1192,7 +1222,7 @@ loss_resolver = Resolver.from_subclasses(
         PointwiseLoss,
         SetwiseLoss,
         DeltaPointwiseLoss,
-        GeneralMarginRankingLoss,
+        MarginPairwiseLoss,
     },
 )
 for _name, _cls in loss_resolver.lookup_dict.items():

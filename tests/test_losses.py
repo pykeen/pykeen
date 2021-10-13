@@ -152,7 +152,7 @@ class TestLosses(unittest_templates.MetaTestCase[Loss]):
         PointwiseLoss,
         SetwiseLoss,
         pykeen.losses.DeltaPointwiseLoss,
-        pykeen.losses.GeneralMarginRankingLoss,
+        pykeen.losses.MarginPairwiseLoss,
     }
 
 
