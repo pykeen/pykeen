@@ -930,6 +930,8 @@ class PointwiseHingeLoss(DeltaPointwiseLoss):
 class SoftPointwiseHingeLoss(DeltaPointwiseLoss):
     r"""A module for the soft pointwise hinge loss .
 
+    This loss is appropriate for interaction functions which do not include a bias term,
+    and have a limited value range, e.g., distance-based ones.
 
     .. seealso::
 
