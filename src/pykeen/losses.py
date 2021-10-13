@@ -159,7 +159,7 @@ triples $\mathcal{b}$ in the subset $\mathcal{B} \in 2^{2^{\mathcal{T}}}$.
 .. math::
 
     \mathcal{L}_L(\mathcal{B}) = \frac{1}{|\mathcal{B}|} \sum \limits_{\mathcal{b} \in \mathcal{B}} L(\mathcal{b})
-"""
+"""  # noqa: E501
 
 import logging
 from textwrap import dedent
@@ -171,7 +171,6 @@ from docdata import parse_docdata
 from torch import nn
 from torch.nn import functional
 from torch.nn.modules.loss import _Loss
-
 
 __all__ = [
     # Base Classes
@@ -446,10 +445,8 @@ margin_activation_resolver = Resolver(
 class MarginPairwiseLoss(PairwiseLoss):
     r"""Generalized margin ranking loss.
 
-    TODO check order -> is it f(k) - f(\bar{k}) or f(\bar{k}) - f(k)?
-
     .. math ::
-        L(k, \bar{k}) = g(f(k) - f(\bar{k}) + \lambda)
+        L(k, \bar{k}) = g(f(\bar{k}) - f(k) + \lambda)
 
     Where $k$ are the positive triples, $\bar{k}$ are the negative triples, $f$ is the interaction function (e.g.,
     :class:`pykeen.models.TransE` has $f(h,r,t)=\mathbf{e}_h+\mathbf{r}_r-\mathbf{e}_t$), $g(x)$ is an activation
@@ -931,7 +928,7 @@ class SoftPointwiseHingeLoss(DeltaPointwiseLoss):
     r"""A module for the soft pointwise hinge loss .
 
     This loss is appropriate for interaction functions which do not include a bias term,
-    and have a limited value range, e.g., distance-based ones.
+    and have a limited value range, e.g., distance-based ones like TransE.
 
     .. seealso::
 
