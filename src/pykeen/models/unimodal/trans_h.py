@@ -177,4 +177,4 @@ class TransH(EntityRelationEmbeddingModel):
         # Regularization term
         self.regularize_if_necessary()
 
-        return -linalg.vector_norm(ph + d_r[:, None, :] - pt[:, None, :], ord=2, dim=-1)
+        return -linalg.vector_norm(ph + (d_r[:, None, :] - pt[:, None, :]), ord=2, dim=-1)
