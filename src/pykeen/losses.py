@@ -51,7 +51,7 @@ Examples
     Square Error                   $g(s, l) = \frac{1}{2}(s - l)^2$
     Binary Cross Entropy           $g(s, l) = -(l*\log (\sigma(s))+(1-l)*(\log (1-\sigma(s))))$
     Pointwise Hinge                $g(s, l) = \max(0, \lambda -\hat{l}*s)$
-    ??                             $g(s, l) = \log(1+\exp(\lambda-\hat{l}*s))$
+    Pointwise Soft Hinge           $g(s, l) = \log(1+\exp(\lambda-\hat{l}*s))$
     Pointwise Logistic (softplus)  $g(s, l) = \log(1+\exp(-\hat{l}*s))$
     =============================  ============================================================
 
