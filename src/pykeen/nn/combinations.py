@@ -221,9 +221,11 @@ class GatedCombination(Combination):
         )
         self.gate_entity_layer = nn.Linear(
             entity_embedding_dim, entity_embedding_dim,
+            bias=False
         )
         self.gate_literal_layer = nn.Linear(
             literal_embedding_dim, entity_embedding_dim,
+            bias=False
         )
         self.bias = nn.Parameter(torch.zeros(entity_embedding_dim))
         self.hyperbolic_tangent = torch.nn.Tanh()
