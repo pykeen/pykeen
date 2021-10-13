@@ -198,6 +198,10 @@ class ComplExLiteralCombination(ParameterizedComplexCombination):
 class GatedCombination(Combination):
     """A module that implements a gated linear transformation for the combination of entities and literals.
 
+    Compared to the other Combinations, this combination makes use of a gating mechanism commonly found in RNNs.
+    The main goal of this gating mechanism is to learn which parts of the additional literal information is
+    useful or not and act accordingly, by incorporating them into the new combined embedding or discarding them.
+
     Implementation based on https://github.com/SmartDataAnalytics/LiteralE/blob/master/model.py Gate class.
     """
 
@@ -215,7 +219,10 @@ class GatedCombination(Combination):
 
         :param entity_embedding_dim: The dimension of the entity representations.
         :param literal_embedding_dim: The dimension of the literals.
-        :param activation: An optional, pre-instantiated activation module, like :class:`torch.nn.sigmoid`.
+        :param gate_activation: An optional, pre-instantiated activation module,
+            like :class:`torch.nn.sigmoid`, used on the gate output.
+        :param linlayer_activation_kwargs: An optional, pre-instantiated activation module,
+            like :class:`torch.nn.sigmoid`, used on the linear layer output.
         """
         super().__init__()
         self.gate_activation = activation_resolver.make(gate_activation, gate_activation_kwargs)
