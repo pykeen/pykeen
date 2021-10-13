@@ -14,7 +14,7 @@ import unittest_templates
 import pykeen.experiments
 import pykeen.models
 from pykeen.models import (
-    ERModel, EntityEmbeddingModel, EntityRelationEmbeddingModel, Model,
+    ERModel, EntityRelationEmbeddingModel, EvaluationOnlyModel, Model,
     _NewAbstractModel, _OldAbstractModel, model_resolver,
 )
 from pykeen.models.multimodal.base import LiteralModel
@@ -34,13 +34,14 @@ SKIP_MODULES = {
     _NewAbstractModel,
     # DummyModel,
     LiteralModel,
-    EntityEmbeddingModel,
     EntityRelationEmbeddingModel,
     ERModel,
     MockModel,
     SimpleInteractionModel,
+    EvaluationOnlyModel,
 }
 SKIP_MODULES.update(LiteralModel.__subclasses__())
+SKIP_MODULES.update(EvaluationOnlyModel.__subclasses__())
 
 
 class TestCompGCN(cases.ModelTestCase):
@@ -156,6 +157,12 @@ class TestDistMult(cases.ModelTestCase):
         self._test_score_all_triples(k=None)
 
 
+class TestDistMA(cases.ModelTestCase):
+    """Test the DistMA model."""
+
+    cls = pykeen.models.DistMA
+
+
 class TestERMLP(cases.ModelTestCase):
     """Test the ERMLP model."""
 
@@ -214,27 +221,13 @@ class TestKG2EWithEL(cases.BaseKG2ETest):
     }
 
 
-class TestNTNLowMemory(cases.BaseNTNTest):
-    """Test the NTN model with automatic memory optimization."""
+class TestNTN(cases.ModelTestCase):
+    """Test the NTN model."""
+
+    cls = pykeen.models.NTN
 
     kwargs = {
         'num_slices': 2,
-    }
-
-    training_loop_kwargs = {
-        'automatic_memory_optimization': True,
-    }
-
-
-class TestNTNHighMemory(cases.BaseNTNTest):
-    """Test the NTN model without automatic memory optimization."""
-
-    kwargs = {
-        'num_slices': 2,
-    }
-
-    training_loop_kwargs = {
-        'automatic_memory_optimization': False,
     }
 
 
@@ -321,7 +314,7 @@ class TestSimplE(cases.ModelTestCase):
     cls = pykeen.models.SimplE
 
 
-class _BaseTestSE(cases.ModelTestCase):
+class TestSE(cases.ModelTestCase):
     """Test the Structured Embedding model."""
 
     cls = pykeen.models.StructuredEmbedding
@@ -331,24 +324,14 @@ class _BaseTestSE(cases.ModelTestCase):
 
         Entity embeddings have to have unit L2 norm.
         """
-        norms = self.instance.entity_embeddings(indices=None).norm(p=2, dim=-1)
+        norms = self.instance.entity_representations[0](indices=None).norm(p=2, dim=-1)
         assert torch.allclose(norms, torch.ones_like(norms))
 
 
-class TestSELowMemory(_BaseTestSE):
-    """Tests SE with low memory."""
+class TestTorusE(cases.DistanceModelTestCase):
+    """Test the TorusE model."""
 
-    training_loop_kwargs = {
-        'automatic_memory_optimization': True,
-    }
-
-
-class TestSEHighMemory(_BaseTestSE):
-    """Tests SE with low memory."""
-
-    training_loop_kwargs = {
-        'automatic_memory_optimization': False,
-    }
+    cls = pykeen.models.TorusE
 
 
 class TestTransD(cases.DistanceModelTestCase):
@@ -522,6 +505,12 @@ class TestTransE(cases.DistanceModelTestCase):
         """
         entity_norms = self.instance.entity_embeddings(indices=None).norm(p=2, dim=-1)
         assert torch.allclose(entity_norms, torch.ones_like(entity_norms))
+
+
+class TestTransF(cases.ModelTestCase):
+    """Test the TransF model."""
+
+    cls = pykeen.models.TransF
 
 
 class TestTransH(cases.DistanceModelTestCase):

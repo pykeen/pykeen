@@ -139,6 +139,21 @@ argument as in:
 ... )
 >>> pipeline_result.save_to_directory('nations_transe')
 
+In PyKEEN you can also use the learning rate schedulers provided by PyTorch, which can be
+turned on with the ``lr_scheduler`` keyword argument together with the ``lr_scheduler_kwargs``
+keyword argument to specify arguments for the learning rate scheduler as in:
+
+>>> from pykeen.pipeline import pipeline
+>>> pipeline_result = pipeline(
+...     dataset='Nations',
+...     model='TransE',
+...     lr_scheduler='ExponentialLR',
+...     lr_scheduler_kwargs=dict(
+...         gamma=0.99,
+...     ),
+... )
+>>> pipeline_result.save_to_directory('nations_transe')
+
 Deeper Configuration
 ~~~~~~~~~~~~~~~~~~~~
 Arguments for the model can be given as a dictionary using ``model_kwargs``.
@@ -186,6 +201,7 @@ from ..datasets import get_dataset
 from ..datasets.base import Dataset
 from ..evaluation import Evaluator, MetricResults, evaluator_resolver
 from ..losses import Loss, loss_resolver
+from ..lr_schedulers import LRScheduler, lr_scheduler_resolver
 from ..models import Model, make_model_cls, model_resolver
 from ..nn.modules import Interaction
 from ..optimizers import optimizer_resolver
@@ -658,12 +674,16 @@ def pipeline(  # noqa: C901
     optimizer: HintType[Optimizer] = None,
     optimizer_kwargs: Optional[Mapping[str, Any]] = None,
     clear_optimizer: bool = True,
+    # 5.1 Learning Rate Scheduler
+    lr_scheduler: HintType[LRScheduler] = None,
+    lr_scheduler_kwargs: Optional[Mapping[str, Any]] = None,
     # 6. Training Loop
     training_loop: HintType[TrainingLoop] = None,
     training_loop_kwargs: Optional[Mapping[str, Any]] = None,
     negative_sampler: HintType[NegativeSampler] = None,
     negative_sampler_kwargs: Optional[Mapping[str, Any]] = None,
     # 7. Training (ronaldo style)
+    epochs: Optional[int] = None,
     training_kwargs: Optional[Mapping[str, Any]] = None,
     stopper: HintType[Stopper] = None,
     stopper_kwargs: Optional[Mapping[str, Any]] = None,
@@ -681,6 +701,7 @@ def pipeline(  # noqa: C901
     use_testing_data: bool = True,
     evaluation_fallback: bool = False,
     filter_validation_when_testing: bool = True,
+    use_tqdm: Optional[bool] = None,
 ) -> PipelineResult:
     """Train and evaluate a model.
 
@@ -736,6 +757,12 @@ def pipeline(  # noqa: C901
         consumption due to e.g. moments in Adam, this is the default option. If you want to continue training, you
         should set it to False, as the optimizer's internal parameter will get lost otherwise.
 
+    :param lr_scheduler:
+        The name of the lr_scheduler or the lr_scheduler class.
+        Defaults to :class:`torch.optim.lr_scheduler.ExponentialLR`.
+    :param lr_scheduler_kwargs:
+        Keyword arguments to pass to the lr_scheduler on instantiation
+
     :param training_loop:
         The name of the training loop's training approach (``'slcwa'`` or ``'lcwa'``) or the training loop class.
         Defaults to :class:`pykeen.training.SLCWATrainingLoop`.
@@ -748,6 +775,8 @@ def pipeline(  # noqa: C901
     :param negative_sampler_kwargs:
         Keyword arguments to pass to the negative sampler class on instantiation
 
+    :param epochs:
+        A shortcut for setting the ``num_epochs`` key in the ``training_kwargs`` dict.
     :param training_kwargs:
         Keyword arguments to pass to the training loop's train function on call
     :param stopper:
@@ -786,6 +815,9 @@ def pipeline(  # noqa: C901
         model using the pipeline and evaluating with the testing set, but never using the validation set for
         optimization at all. This is a very atypical scenario, so it is left as true by default to promote
         comparability to previous publications.
+    :param use_tqdm:
+        Globally set the usage of tqdm progress bars. Typically more useful to set to false, since the training
+        loop and evaluation have it turned on by default.
 
     :returns: A pipeline result package.
 
@@ -913,6 +945,20 @@ def pipeline(  # noqa: C901
         prefix='optimizer',
     )
 
+    lr_scheduler_instance: Optional[LRScheduler]
+    if lr_scheduler is None:
+        lr_scheduler_instance = None
+    else:
+        lr_scheduler_instance = lr_scheduler_resolver.make(
+            lr_scheduler,
+            lr_scheduler_kwargs,
+            optimizer=optimizer_instance,
+        )
+        _result_tracker.log_params(
+            params=dict(cls=lr_scheduler_instance.__class__.__name__, kwargs=lr_scheduler_kwargs),
+            prefix='lr_scheduler',
+        )
+
     training_loop_cls = training_loop_resolver.lookup(training_loop)
     if training_loop_kwargs is None:
         training_loop_kwargs = {}
@@ -923,6 +969,7 @@ def pipeline(  # noqa: C901
             model=model_instance,
             triples_factory=training,
             optimizer=optimizer_instance,
+            lr_scheduler=lr_scheduler_instance,
             **training_loop_kwargs,
         )
     elif not issubclass(training_loop_cls, SLCWATrainingLoop):
@@ -979,6 +1026,10 @@ def pipeline(  # noqa: C901
         **stopper_kwargs,
     )
 
+    if epochs is not None:
+        training_kwargs['num_epochs'] = epochs
+    if use_tqdm is not None:
+        training_kwargs['use_tqdm'] = use_tqdm
     training_kwargs.setdefault('num_epochs', 5)
     training_kwargs.setdefault('batch_size', 256)
     _result_tracker.log_params(params=training_kwargs, prefix='training')
@@ -1076,6 +1127,8 @@ def pipeline(  # noqa: C901
     if evaluator_instance.batch_size is not None or evaluator_instance.slice_size is not None and not use_testing_data:
         evaluation_kwargs['batch_size'] = evaluator_instance.batch_size
         evaluation_kwargs['slice_size'] = evaluator_instance.slice_size
+    if use_tqdm is not None:
+        evaluation_kwargs['use_tqdm'] = use_tqdm
     # Add logging about evaluator for debugging
     logging.debug("Evaluation will be run with following parameters:")
     logging.debug(f"evaluation_kwargs: {evaluation_kwargs}")

@@ -15,7 +15,7 @@ import torch
 
 from .instances import Instances, LCWAInstances, SLCWAInstances
 from .splitting import split
-from .utils import get_entities, get_relations, load_triples
+from .utils import TRIPLES_DF_COLUMNS, get_entities, get_relations, load_triples, tensor_to_df
 from ..typing import EntityMapping, LabeledTriples, MappedTriples, RelationMapping, TorchRandomHint
 from ..utils import compact_mapping, format_relative_comparison, invert_mapping, torch_is_in_1d
 
@@ -33,7 +33,6 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 INVERSE_SUFFIX = '_inverse'
-TRIPLES_DF_COLUMNS = ('head_id', 'head_label', 'relation_id', 'relation_label', 'tail_id', 'tail_label')
 
 
 def create_entity_mapping(triples: LabeledTriples) -> EntityMapping:
@@ -168,8 +167,8 @@ class Labeling:
     def __post_init__(self):
         """Precompute inverse mappings."""
         self.id_to_label = invert_mapping(mapping=self.label_to_id)
-        self._vectorized_mapper = np.vectorize(self.label_to_id.get)
-        self._vectorized_labeler = np.vectorize(self.id_to_label.get)
+        self._vectorized_mapper = np.vectorize(self.label_to_id.get, otypes=[int])
+        self._vectorized_labeler = np.vectorize(self.id_to_label.get, otypes=[str])
 
     def label(
         self,
@@ -531,32 +530,7 @@ class CoreTriplesFactory:
         :return:
             A dataframe with n rows, and 6 + len(kwargs) columns.
         """
-        # Input validation
-        additional_columns = set(kwargs.keys())
-        forbidden = additional_columns.intersection(TRIPLES_DF_COLUMNS)
-        if len(forbidden) > 0:
-            raise ValueError(
-                f'The key-words for additional arguments must not be in {TRIPLES_DF_COLUMNS}, but {forbidden} were '
-                f'used.',
-            )
-
-        # convert to numpy
-        tensor = tensor.cpu().numpy()
-        data = dict(zip(['head_id', 'relation_id', 'tail_id'], tensor.T))
-
-        # Additional columns
-        for key, values in kwargs.items():
-            # convert PyTorch tensors to numpy
-            if isinstance(values, torch.Tensor):
-                values = values.cpu().numpy()
-            data[key] = values
-
-        # convert to dataframe
-        rv = pd.DataFrame(data=data)
-
-        # Re-order columns
-        columns = list(TRIPLES_DF_COLUMNS[::2]) + sorted(set(rv.columns).difference(TRIPLES_DF_COLUMNS))
-        return rv.loc[:, columns]
+        return tensor_to_df(tensor=tensor, **kwargs)
 
     def new_with_restriction(
         self,
@@ -580,7 +554,7 @@ class CoreTriplesFactory:
             A new triples factory, which has only a subset of the triples containing the entities and relations of
             interest. The label-to-ID mapping is *not* modified.
         """
-        keep_mask = None
+        keep_mask: Optional[torch.BoolTensor] = None
 
         extra_metadata = {}
         # Filter for entities
@@ -608,7 +582,7 @@ class CoreTriplesFactory:
         if keep_mask is None:
             return self
 
-        num_triples = keep_mask.sum()
+        num_triples = keep_mask.sum().item()
         logger.info(f"keeping {format_relative_comparison(num_triples, self.num_triples)} triples.")
         return self.clone_and_exchange_triples(
             mapped_triples=self.mapped_triples[keep_mask],
@@ -1001,6 +975,14 @@ class TriplesFactory(CoreTriplesFactory):
             invert_entity_selection=invert_entity_selection,
             invert_relation_selection=invert_relation_selection,
         ).with_labels(entity_to_id=self.entity_to_id, relation_to_id=self.relation_to_id)
+
+    def map_triples(self, triples: LabeledTriples) -> MappedTriples:
+        """Convert label-based triples to ID-based triples."""
+        return _map_triples_elements_to_ids(
+            triples=triples,
+            entity_to_id=self.entity_to_id,
+            relation_to_id=self.relation_to_id,
+        )
 
 
 def cat_triples(*triples_factories: CoreTriplesFactory) -> MappedTriples:
