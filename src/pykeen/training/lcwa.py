@@ -3,6 +3,7 @@
 """Training KGE models based on the LCWA."""
 
 import logging
+from abc import ABC, abstractmethod
 from math import ceil
 from typing import Optional
 
@@ -10,7 +11,8 @@ import torch
 
 from .training_loop import TrainingLoop
 from ..triples import CoreTriplesFactory, Instances
-from ..triples.instances import LCWABatchType, LCWASampleType
+from ..triples.instances import LCWABatchType, LCWASampleType, RelationLCWAInstances
+from ..typing import MappedTriples
 
 __all__ = [
     'LCWATrainingLoop',
@@ -19,11 +21,8 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
+class _LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType], ABC):
     """A training loop that uses the local closed world assumption training approach."""
-
-    def _create_instances(self, triples_factory: CoreTriplesFactory) -> Instances:  # noqa: D102
-        return triples_factory.create_lcwa_instances()
 
     @staticmethod
     def _get_batch_size(batch: LCWABatchType) -> int:  # noqa: D102
@@ -44,16 +43,13 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
         batch_pairs = batch_pairs[start:stop].to(device=self.device)
         batch_labels_full = batch_labels_full[start:stop].to(device=self.device)
 
-        if slice_size is None:
-            predictions = self.model.score_t(hr_batch=batch_pairs)
-        else:
-            predictions = self.model.score_t(hr_batch=batch_pairs, slice_size=slice_size)  # type: ignore
+        predictions = self._score(batch_pairs=batch_pairs, slice_size=slice_size)
 
         return self.loss.process_lcwa_scores(
             predictions=predictions,
             labels=batch_labels_full,
             label_smoothing=label_smoothing,
-            num_entities=self.model.num_entities,
+            num_entities=self._num_targets(),
         ) + self.model.collect_regularization_term()
 
     def _slice_size_search(
@@ -114,7 +110,7 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
         return slice_size
 
     def _check_slicing_availability(self, supports_sub_batching: bool):
-        if self.model.can_slice_t:
+        if self._model_can_slice():
             return
         elif supports_sub_batching:
             report = (
@@ -128,3 +124,52 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
             )
         logger.warning(report)
         raise MemoryError("The current model can't be trained on this hardware with these parameters.")
+
+    @abstractmethod
+    def _model_can_slice(self) -> bool:
+        """Determine whether the model can slice along the relevant dimension."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def _score(self, batch_pairs: MappedTriples, slice_size: Optional[int]) -> torch.FloatTensor:
+        """Compute scores for a given batch, optionally with slicing."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def _num_targets(self) -> int:
+        """The number of targets (either number of entities or relations)."""
+        raise NotImplementedError
+
+
+class LCWATrainingLoop(_LCWATrainingLoop):
+    def _create_instances(self, triples_factory: CoreTriplesFactory) -> Instances:  # noqa: D102
+        return triples_factory.create_lcwa_instances()
+
+    def _model_can_slice(self) -> bool:  # noqa: D102
+        return self.model.can_slice_t
+
+    def _score(self, batch_pairs: MappedTriples, slice_size: Optional[int]) -> torch.FloatTensor:  # noqa: D102
+        if slice_size is None:
+            return self.model.score_t(hr_batch=batch_pairs)
+        return self.model.score_t(hr_batch=batch_pairs, slice_size=slice_size)  # type: ignore
+
+    def _num_targets(self) -> int:  # noqa: D102
+        return self.model.num_entities
+
+
+class RelationLCWATrainingLoop(_LCWATrainingLoop):
+    """An LCWA training loop for relation prediction."""
+
+    def _create_instances(self, triples_factory: CoreTriplesFactory) -> Instances:  # noqa: D102
+        return triples_factory._create_instances(instances_cls=RelationLCWAInstances)
+
+    def _model_can_slice(self) -> bool:  # noqa: D102
+        return self.model.can_slice_r
+
+    def _score(self, batch_pairs: MappedTriples, slice_size: Optional[int]) -> torch.FloatTensor:  # noqa: D102
+        if slice_size is None:
+            return self.model.score_r(ht_batch=batch_pairs)
+        return self.model.score_r(ht_batch=batch_pairs, slice_size=slice_size)  # type: ignore
+
+    def _num_targets(self) -> int:  # noqa: D102
+        return self.model.num_relations
