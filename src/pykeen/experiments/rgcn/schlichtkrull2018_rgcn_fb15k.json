@@ -32,7 +32,7 @@
     "training_kwargs": {
       "num_epochs": 500,
       "batch_size": 30000,
-      "sub_batch_size": 800
+      "sampler": "schlichtkrull"
     },
     "evaluator_kwargs": {
       "filtered": true

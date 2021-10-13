@@ -91,9 +91,10 @@ def _get_model_lines(tablefmt: str, link_fmt: Optional[str] = None):
                 reference = f'[`{reference}`]({link_fmt.format(reference)})'
             else:
                 reference = f'`{reference}`'
+            name = docdata.get('name', model.__name__)
             citation = docdata['citation']
             citation_str = f"[{citation['author']} *et al.*, {citation['year']}]({citation['link']})"
-            yield model.__name__, reference, citation_str
+            yield name, reference, citation_str
         else:
             line = str(model.__doc__.splitlines()[0])
             l, r = line.find('['), line.find(']')
@@ -271,19 +272,23 @@ def _help_regularizers(tablefmt, link_fmt: Optional[str] = None):
 
 
 def _get_lines_alternative(tablefmt, d, torch_prefix, pykeen_prefix, link_fmt: Optional[str] = None):
-    for name, submodule in sorted(d.items()):
+    for name, cls in sorted(d.items()):
         if any(
-            submodule.__module__.startswith(_prefix)
+            cls.__module__.startswith(_prefix)
             for _prefix in ('torch', 'optuna')
         ):
-            path = f'{torch_prefix}.{submodule.__qualname__}'
+            path = f'{torch_prefix}.{cls.__qualname__}'
         else:  # from pykeen
-            path = f'{pykeen_prefix}.{submodule.__qualname__}'
+            path = f'{pykeen_prefix}.{cls.__qualname__}'
+
+        docdata = getattr(cls, '__docdata__', None)
+        if docdata is not None:
+            name = docdata.get('name', name)
 
         if tablefmt == 'rst':
             yield name, f':class:`{path}`'
         elif tablefmt == 'github':
-            doc = submodule.__doc__
+            doc = cls.__doc__
             if link_fmt:
                 reference = f'[`{path}`]({link_fmt.format(path)})'
             else:
@@ -291,7 +296,7 @@ def _get_lines_alternative(tablefmt, d, torch_prefix, pykeen_prefix, link_fmt: O
 
             yield name, reference, get_until_first_blank(doc)
         else:
-            doc = submodule.__doc__
+            doc = cls.__doc__
             yield name, path, get_until_first_blank(doc)
 
 

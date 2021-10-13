@@ -36,6 +36,7 @@ __all__ = [
     'ConvKBInteraction',
     'CrossEInteraction',
     'DistMultInteraction',
+    'DistMAInteraction',
     'ERMLPInteraction',
     'ERMLPEInteraction',
     'HolEInteraction',
@@ -48,8 +49,10 @@ __all__ = [
     'RotatEInteraction',
     'SimplEInteraction',
     'StructuredEmbeddingInteraction',
+    'TorusEInteraction',
     'TransDInteraction',
     'TransEInteraction',
+    'TransFInteraction',
     'TransHInteraction',
     'TransRInteraction',
     'TuckerInteraction',
@@ -470,6 +473,15 @@ class TransEInteraction(TranslationalInteraction[FloatTensor, FloatTensor, Float
     func = pkf.transe_interaction
 
 
+class TransFInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
+    """A stateless module for the TransF interaction function.
+
+    .. seealso:: :func:`pykeen.nn.functional.transf_interaction`
+    """
+
+    func = pkf.transf_interaction
+
+
 class ComplExInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
     """A module wrapper for the stateless ComplEx interaction function.
 
@@ -698,6 +710,15 @@ class DistMultInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatT
     """
 
     func = pkf.distmult_interaction
+
+
+class DistMAInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
+    """A module wrapper for the stateless DistMA interaction function.
+
+    .. seealso:: :func:`pykeen.nn.functional.dist_ma_interaction`
+    """
+
+    func = pkf.dist_ma_interaction
 
 
 class ERMLPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
@@ -999,6 +1020,18 @@ class UnstructuredModelInteraction(
         return dict(h=h, t=t)
 
 
+class TorusEInteraction(TranslationalInteraction[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]):
+    """A stateful module for the TorusE interaction function.
+
+    .. seealso:: :func:`pykeen.nn.functional.toruse_interaction`
+    """
+
+    func = pkf.toruse_interaction
+
+    def __init__(self, p: int = 2, power_norm: bool = False):
+        super().__init__(p=p, power_norm=power_norm)
+
+
 class TransDInteraction(
     TranslationalInteraction[
         Tuple[torch.FloatTensor, torch.FloatTensor],
@@ -1045,11 +1078,24 @@ class NTNInteraction(
     relation_shape = ("kdd", "kd", "kd", "k", "k")
     func = pkf.ntn_interaction
 
-    def __init__(self, non_linearity: Optional[nn.Module] = None):
+    def __init__(
+        self,
+        activation: HintOrType[nn.Module] = None,
+        activation_kwargs: Optional[Mapping[str, Any]] = None,
+    ):
+        """Initialize NTN with the given non-linear activation function.
+
+        :param activation: A non-linear activation function. Defaults to the hyperbolic
+            tangent :class:`torch.nn.Tanh` if none, otherwise uses the :data:`pykeen.utils.activation_resolver`
+            for lookup.
+        :param activation_kwargs: If the ``activation`` is passed as a class, these keyword arguments
+            are used during its instantiation.
+        """
         super().__init__()
-        if non_linearity is None:
-            non_linearity = nn.Tanh()
-        self.non_linearity = non_linearity
+        if activation is None:
+            self.non_linearity = nn.Tanh()
+        else:
+            self.non_linearity = activation_resolver.make(activation, activation_kwargs)
 
     @staticmethod
     def _prepare_hrt_for_functional(

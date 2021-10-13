@@ -61,7 +61,20 @@ def _reduce_relation_specific(
 
 
 class Decomposition(nn.Module, ABC):
-    """Base module for relation-specific message passing."""
+    r"""Base module for relation-specific message passing.
+
+    A decomposition module implementation offers a way to reduce the number of parameters needed by learning
+    independent $d^2$ matrices for each relation. In R-GCN, the two proposed variants are treated as
+    hyper-parameters, and for different datasets different decompositions are superior in performance.
+
+    The decomposition module itself does not compute the full matrix from the factors, but rather provides efficient
+    means to compute the product of the factorized matrix with the source nodes' latent features to construct the
+    messages. This is usually more efficient than constructing the full matrices.
+
+    For an intuition, you can think about a simple low-rank matrix factorization of rank `1`, where $W = w w^T$
+    for a $d$-dimensional vector `w`. Then, computing $Wv$ as $(w w^T) v$ gives you an intermediate result of size
+    $d \times d$, while you can also compute $w(w^Tv)$, where the intermediate result is just a scalar.
+    """
 
     def __init__(
         self,
@@ -122,7 +135,15 @@ class Decomposition(nn.Module, ABC):
 
 
 class BasesDecomposition(Decomposition):
-    """Represent relation-weights as a linear combination of base transformation matrices."""
+    r"""Represent relation-weights as a linear combination of base transformation matrices.
+
+    The basis decomposition represents the relation-specific transformation matrices
+    as a weighted combination of base matrices, $\{\mathbf{B}_i^l\}_{i=1}^{B}$, i.e.,
+
+    .. math::
+
+        \mathbf{W}_r^l = \sum \limits_{b=1}^B \alpha_{rb} \mathbf{B}^l_i
+    """
 
     def __init__(
         self,
@@ -298,7 +319,16 @@ class BasesDecomposition(Decomposition):
 
 
 class BlockDecomposition(Decomposition):
-    """Represent relation-specific weight matrices via block-diagonal matrices."""
+    r"""Represent relation-specific weight matrices via block-diagonal matrices.
+
+    The block-diagonal decomposition restricts each transformation matrix to a block-diagonal-matrix, i.e.,
+
+    .. math::
+
+        \mathbf{W}_r^l = diag(\mathbf{B}_{r,1}^l, \ldots, \mathbf{B}_{r,B}^l)
+
+    where $\mathbf{B}_{r,i} \in \mathbb{R}^{(d^{(l) }/ B) \times (d^{(l)} / B)}$.
+    """
 
     def __init__(
         self,

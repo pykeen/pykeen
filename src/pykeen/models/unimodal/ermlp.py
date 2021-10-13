@@ -34,6 +34,7 @@ class ERMLP(EntityRelationEmbeddingModel):
     $\textbf{w} \in \mathbb{R}^{k}$, the weights of the output layer, and $g$ denotes an activation function such
     as the hyperbolic tangent.
     ---
+    name: ER-MLP
     citation:
         author: Dong
         year: 2014

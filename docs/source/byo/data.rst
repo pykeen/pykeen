@@ -1,3 +1,5 @@
+.. _bring_your_own_data:
+
 Bring Your Own Data
 ===================
 As an alternative to using a pre-packaged dataset, the training and testing can be set explicitly
@@ -18,7 +20,7 @@ pipeline like this:
 ...     training=NATIONS_TRAIN_PATH,
 ...     testing=NATIONS_TEST_PATH,
 ...     model='TransE',
-...     training_kwargs=dict(num_epochs=5),  # short epochs for testing - you should go higher
+...     epochs=5,  # short epochs for testing - you should go higher
 ... )
 >>> result.save_to_directory('doctests/test_pre_stratified_transe')
 
@@ -37,7 +39,7 @@ the :func:`pykeen.pipeline.pipeline` as in:
 ...     testing=NATIONS_TEST_PATH,
 ...     validation=NATIONS_VALIDATE_PATH,
 ...     model='TransE',
-...     training_kwargs=dict(num_epochs=5),  # short epochs for testing - you should go higher
+...     epochs=5,  # short epochs for testing - you should go higher
 ... )
 >>> result.save_to_directory('doctests/test_hpo_pre_stratified_transe')
 
@@ -54,7 +56,7 @@ to the :class:`pykeen.pipeline.pipeline` to enable options like ``create_inverse
 ...     testing=NATIONS_TEST_PATH,
 ...     dataset_kwargs={'create_inverse_triples': True},
 ...     model='TransE',
-...     training_kwargs=dict(num_epochs=5),  # short epochs for testing - you should go higher
+...     epochs=5,  # short epochs for testing - you should go higher
 ... )
 >>> result.save_to_directory('doctests/test_pre_stratified_transe')
 
@@ -74,7 +76,7 @@ TSV files, you can use the :class:`pykeen.triples.TriplesFactory` interface.
 ...     training=training,
 ...     testing=testing,
 ...     model='TransE',
-...     training_kwargs=dict(num_epochs=5),  # short epochs for testing - you should go higher
+...     epochs=5,  # short epochs for testing - you should go higher
 ... )
 >>> result.save_to_directory('doctests/test_pre_stratified_transe')
 
@@ -107,7 +109,7 @@ desired behavior as in:
 ...     training=training,
 ...     testing=testing,
 ...     model='TransE',
-...     training_kwargs=dict(num_epochs=5),  # short epochs for testing - you should go higher
+...     epochs=5,  # short epochs for testing - you should go higher
 ... )
 >>> result.save_to_directory('doctests/test_pre_stratified_transe')
 
@@ -129,7 +131,7 @@ a stratified dataset.
 ...     training=training,
 ...     testing=testing,
 ...     model='TransE',
-...     training_kwargs=dict(num_epochs=5),  # short epochs for testing - you should go higher
+...     epochs=5,  # short epochs for testing - you should go higher
 ... )
 >>> result.save_to_directory('doctests/test_unstratified_transe')
 
@@ -147,7 +149,12 @@ you should specify the splits:
 ...     validation=validation,
 ...     model='TransE',
 ...     stopper='early',
-...     training_kwargs=dict(num_epochs=5),  # short epochs for testing - you should go
-...                                          # higher, especially with early stopper enabled
+...     epochs=5,  # short epochs for testing - you should go
+...                # higher, especially with early stopper enabled
 ... )
 >>> result.save_to_directory('doctests/test_unstratified_stopped_transe')
+
+Bring Your Own Data with Checkpoints
+------------------------------------
+For a tutorial on how to use your own data together with checkpoints,
+see :ref:`byod_and_checkpoints_training` and :ref:`byod_and_checkpoints_manually`.

@@ -26,6 +26,7 @@ class ComplExLiteral(LiteralModel):
     This module is a configuration of the general :class:`pykeen.models.LiteralModel` with the
     :class:`pykeen.nn.modules.ComplExInteraction` and :class:`pykeen.nn.combinations.ComplExLiteralCombination`.
     ---
+    name: ComplEx Literal
     citation:
         author: Kristiadi
         year: 2018

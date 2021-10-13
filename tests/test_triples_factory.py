@@ -20,8 +20,8 @@ from pykeen.triples.splitting import (
     _tf_cleanup_randomized,
     get_absolute_split_sizes, normalize_ratios,
 )
-from pykeen.triples.triples_factory import INVERSE_SUFFIX, TRIPLES_DF_COLUMNS, _map_triples_elements_to_ids
-from pykeen.triples.utils import get_entities, get_relations, load_triples
+from pykeen.triples.triples_factory import INVERSE_SUFFIX, _map_triples_elements_to_ids
+from pykeen.triples.utils import TRIPLES_DF_COLUMNS, get_entities, get_relations, load_triples
 from tests.constants import RESOURCES
 
 triples = np.array(
@@ -493,6 +493,35 @@ class TestLiterals(unittest.TestCase):
         y, z = t.split()
         self.assertEqual(NATIONS_TRAIN_PATH, y.metadata['path'])
         self.assertEqual(NATIONS_TRAIN_PATH, z.metadata['path'])
+
+    def test_triples_numeric_literals_factory_split(self):
+        """Test splitting a TriplesNumericLiteralsFactory object."""
+        # Slightly larger number of triples to guarantee split can find coverage of all entities and relations.
+        triples_larger = np.array(
+            [
+                ['peter', 'likes', 'chocolate_cake'],
+                ['chocolate_cake', 'isA', 'dish'],
+                ['susan', 'likes', 'chocolate_cake'],
+                ['susan', 'likes', 'pizza'],
+                ['peter', 'likes', 'susan'],
+                ['peter', 'isA', 'person'],
+                ['susan', 'isA', 'person'],
+            ],
+            dtype=str,
+        )
+
+        triples_numeric_literal_factory = TriplesNumericLiteralsFactory(
+            triples=triples_larger,
+            numeric_triples=numeric_triples,
+        )
+
+        left, right = triples_numeric_literal_factory.split()
+
+        self.assertIsInstance(left, TriplesNumericLiteralsFactory)
+        self.assertIsInstance(right, TriplesNumericLiteralsFactory)
+
+        assert (left.numeric_literals == triples_numeric_literal_factory.numeric_literals).all()
+        assert (right.numeric_literals == triples_numeric_literal_factory.numeric_literals).all()
 
 
 class TestUtils(unittest.TestCase):
