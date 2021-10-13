@@ -28,6 +28,9 @@ LCWASampleType = Tuple[MappedTriples, torch.FloatTensor]
 LCWABatchType = Tuple[MappedTriples, torch.FloatTensor]
 SLCWASampleType = TypeVar('SLCWASampleType', bound=MappedTriples)
 SLCWABatchType = Tuple[MappedTriples, MappedTriples, Optional[torch.BoolTensor]]
+# for relation prediction
+RelationLCWASampleType = Tuple[MappedTriples, torch.FloatTensor]
+RelationLCWABatchType = Tuple[MappedTriples, torch.FloatTensor]
 
 
 @fix_dataclass_init_docs
@@ -43,13 +46,16 @@ class Instances(data.Dataset, Generic[BatchType], ABC):
         raise NotImplementedError
 
     @classmethod
-    def from_triples(cls, mapped_triples: MappedTriples, num_entities: int) -> 'Instances':
+    def from_triples(cls, mapped_triples: MappedTriples, num_entities: int, num_relations: int) -> 'Instances':
         """Create instances from mapped triples.
 
         :param mapped_triples: shape: (num_triples, 3)
             The ID-based triples.
         :param num_entities:
             The number of entities.
+        :param num_relations:
+            The number of relations.
+
         :return:
             The instances.
         """
@@ -71,7 +77,7 @@ class SLCWAInstances(Instances[MappedTriples]):
         return self.mapped_triples[item]
 
     @classmethod
-    def from_triples(cls, mapped_triples: MappedTriples, num_entities: int) -> Instances:  # noqa:D102
+    def from_triples(cls, mapped_triples: MappedTriples, **kwargs) -> Instances:  # noqa:D102
         return cls(mapped_triples=mapped_triples)
 
 
@@ -87,7 +93,7 @@ class LCWAInstances(Instances[LCWABatchType]):
     compressed: scipy.sparse.csr_matrix
 
     @classmethod
-    def from_triples(cls, mapped_triples: MappedTriples, num_entities: int) -> Instances:
+    def from_triples(cls, mapped_triples: MappedTriples, num_entities: int, **kwargs) -> Instances:
         """
         Create LCWA instances from triples.
 
@@ -110,6 +116,49 @@ class LCWAInstances(Instances[LCWABatchType]):
         # convert to csr for fast row slicing
         compressed = compressed.tocsr()
         return cls(pairs=unique_hr, compressed=compressed)
+
+    def __len__(self) -> int:  # noqa: D105
+        return self.pairs.shape[0]
+
+    def __getitem__(self, item: int) -> LCWABatchType:  # noqa: D105
+        return self.pairs[item], np.asarray(self.compressed[item, :].todense())[0, :]
+
+
+@fix_dataclass_init_docs
+@dataclass
+class RelationLCWAInstances(Instances[RelationLCWABatchType]):
+    """LCWA instances for relation prediction."""
+
+    #: The unique h-t pairs
+    pairs: np.ndarray
+
+    #: The compressed triples in CSR format
+    compressed: scipy.sparse.csr_matrix
+
+    @classmethod
+    def from_triples(cls, mapped_triples: MappedTriples, num_relations: int, **kwargs) -> Instances:
+        """
+        Create LCWA instances from triples.
+
+        :param mapped_triples: shape: (num_triples, 3)
+            The ID-based triples.
+        :param num_relations:
+            The number of relations.
+
+        :return:
+            The instances.
+        """
+        mapped_triples = mapped_triples.numpy()
+        unique_ht, pair_idx_to_triple_idx = np.unique(mapped_triples[:, [0, 2]], return_inverse=True, axis=0)
+        num_pairs = unique_ht.shape[0]
+        relations = mapped_triples[:, 1]
+        compressed = scipy.sparse.coo_matrix(
+            (np.ones(mapped_triples.shape[0], dtype=np.float32), (pair_idx_to_triple_idx, relations)),
+            shape=(num_pairs, num_relations),
+        )
+        # convert to csr for fast row slicing
+        compressed = compressed.tocsr()
+        return cls(pairs=unique_ht, compressed=compressed)
 
     def __len__(self) -> int:  # noqa: D105
         return self.pairs.shape[0]

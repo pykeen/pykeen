@@ -368,6 +368,7 @@ class CoreTriplesFactory:
         return instances_cls.from_triples(
             mapped_triples=self._add_inverse_triples_if_necessary(mapped_triples=self.mapped_triples),
             num_entities=self.num_entities,
+            num_relations=self.num_relations,
         )
 
     def get_most_frequent_relations(self, n: Union[int, float]) -> Set[int]:
