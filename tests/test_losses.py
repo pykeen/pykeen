@@ -50,6 +50,12 @@ class PointwiseHingeLossTests(cases.PointwiseLossTestCase):
     cls = pykeen.losses.PointwiseHingeLoss
 
 
+class SoftPointwiseHingeLossTests(cases.PointwiseLossTestCase):
+    """Unit test for the soft pointwise hinge loss."""
+
+    cls = pykeen.losses.SoftPointwiseHingeLoss
+
+
 class NSSALossTests(cases.SetwiseLossTestCase):
     """Unit test for NSSALoss."""
 

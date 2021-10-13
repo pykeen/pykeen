@@ -943,7 +943,7 @@ class SoftPointwiseHingeLoss(DeltaPointwiseLoss):
         margin=DEFAULT_MARGIN_HPO_STRATEGY,
     )
 
-    def __init__(self, margin: float, reduction: str = 'mean') -> None:
+    def __init__(self, margin: float = 1.0, reduction: str = 'mean') -> None:
         super().__init__(margin=margin, margin_activation='softplus', reduction=reduction)
 
 
