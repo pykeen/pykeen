@@ -206,8 +206,10 @@ class GatedCombination(Combination):
         entity_embedding_dim: int,
         literal_embedding_dim: int,
         input_dropout: float = 0.0,
-        activation: HintOrType[nn.Module] = 'sigmoid',
-        activation_kwargs: Optional[Mapping[str, Any]] = None,
+        gate_activation: HintOrType[nn.Module] = 'sigmoid',
+        gate_activation_kwargs: Optional[Mapping[str, Any]] = None,
+        linlayer_activation: HintOrType[nn.Module] = 'tanh',
+        linlayer_activation_kwargs: Optional[Mapping[str, Any]] = None,
     ) -> None:
         """Instantiate the :class:`torch.nn.Module`.
 
@@ -216,7 +218,7 @@ class GatedCombination(Combination):
         :param activation: An optional, pre-instantiated activation module, like :class:`torch.nn.sigmoid`.
         """
         super().__init__()
-        self.gate_activation = activation_resolver.make(activation, activation_kwargs)
+        self.gate_activation = activation_resolver.make(gate_activation, gate_activation_kwargs)
         self.combination_linear_layer = nn.Linear(
             entity_embedding_dim + literal_embedding_dim, entity_embedding_dim,
         )
@@ -229,7 +231,8 @@ class GatedCombination(Combination):
             bias=False
         )
         self.bias = nn.Parameter(torch.zeros(entity_embedding_dim))
-        self.hyperbolic_tangent = torch.nn.Tanh()
+
+        self.linlayer_activation = activation_resolver.make(linlayer_activation, linlayer_activation_kwargs)
 
         self.dropout = nn.Dropout(input_dropout)
 
@@ -237,5 +240,5 @@ class GatedCombination(Combination):
         """Given the entity and literal representations calucaltes a new embedding that contains information of both."""
         combination = torch.cat([x, literal], -1)
         z = self.gate_activation(self.gate_entity_layer(x) + self.gate_literal_layer(literal) + self.bias)
-        h = self.hyperbolic_tangent(self.combination_linear_layer(combination))
+        h = self.linlayer_activation(self.combination_linear_layer(combination))
         return self.dropout(z * h + (1 - z) * x)
