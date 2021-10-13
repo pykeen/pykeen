@@ -64,16 +64,16 @@ class Decomposition(nn.Module, ABC):
     r"""Base module for relation-specific message passing.
 
     A decomposition module implementation offers a way to reduce the number of parameters needed by learning
-    independent :math:`d^2` matrices for each relation. In RGCN, the two proposed variants are treated as
-    hyperparameters, and for different datasets different decompositions are superior in performance.
+    independent $d^2$ matrices for each relation. In R-GCN, the two proposed variants are treated as
+    hyper-parameters, and for different datasets different decompositions are superior in performance.
 
     The decomposition module itself does not compute the full matrix from the factors, but rather provides efficient
     means to compute the product of the factorized matrix with the source nodes' latent features to construct the
     messages. This is usually more efficient than constructing the full matrices.
 
-    For an intuition, you can think about a simple low-rank matrix factorization of rank `1`, where :math:`W = w w^T`
-    for a `d`-dimensional vector `w`. Then, computing `Wv` as `(w w^T) v` gives you an intermediate result of size
-    :math:`d \times d`, while you can also compute `w(w^Tv)`, where the intermediate result is just a scalar.
+    For an intuition, you can think about a simple low-rank matrix factorization of rank `1`, where $W = w w^T$
+    for a $d$-dimensional vector `w`. Then, computing $Wv$ as $(w w^T) v$ gives you an intermediate result of size
+    $d \times d$, while you can also compute $w(w^Tv)$, where the intermediate result is just a scalar.
     """
 
     def __init__(
