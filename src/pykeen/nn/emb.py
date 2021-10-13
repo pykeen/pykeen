@@ -568,24 +568,8 @@ class RGCNRepresentations(RepresentationModule):
     In contrast to standard GCN, R-GCN defines relation specific transformations
     $\textbf{W}_{r}^{l}$ which depend on the type and direction of an edge.
 
-    The :class:`pykeen.nn.message_passing.Decomposition` module provides an interface for a regularization approach
-    that reduces the number of parameters required for the relation-specific transformation matrices and mitigates
-    over-fitting. The two approaches published with R-GCN are implemented in PyKEEN. The first, basis decomposition
-    (:class:`pykeen.nn.message_passing.BasesDecomposition`), represents the relation-specific transformation matrices
-    as a weighted combination of base matrices, $\{\mathbf{B}_i^l\}_{i=1}^{B}$, i.e.,
-
-    .. math::
-
-        \mathbf{W}_r^l = \sum \limits_{b=1}^B \alpha_{rb} \mathbf{B}^l_i
-
-    The second, block-diagonal decomposition (:class:`pykeen.nn.message_passing.BlockDecomposition`),
-    restricts each transformation matrix to a block-diagonal-matrix, i.e.,
-
-    .. math::
-
-        \mathbf{W}_r^l = diag(\mathbf{B}_{r,1}^l, \ldots, \mathbf{B}_{r,B}^l)
-
-    where $\mathbf{B}_{r,i} \in \mathbb{R}^{(d^{(l) }/ B) \times (d^{(l)} / B)}$.
+    Since having one matrix for each relation introduces a large number of additional parameters, the authors instead
+    propose to use a decomposition, cf. :class:`pykeen.nn.message_passing.Decomposition`.
     """
 
     def __init__(
