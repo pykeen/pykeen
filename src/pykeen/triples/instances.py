@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 """Implementation of basic instance factory which creates just instances based on standard KG triples."""
-
 from abc import ABC
 from dataclasses import dataclass
 from typing import Generic, Mapping, Optional, Tuple, TypeVar
@@ -89,6 +88,7 @@ class _LCWAInstances(Instances[LCWABatchType]):
     #: The compressed triples in CSR format
     compressed: scipy.sparse.csr_matrix
 
+    #: The column to predict
     target_column: int
 
     @classmethod
@@ -118,7 +118,7 @@ class _LCWAInstances(Instances[LCWABatchType]):
         )
         # convert to csr for fast row slicing
         compressed = compressed.tocsr()
-        return cls(pairs=unique_pairs, compressed=compressed)
+        return cls(pairs=unique_pairs, compressed=compressed, target_column=cls.target_column)
 
     @staticmethod
     def _get_target_size(num_entities: int, num_relations: int) -> int:
