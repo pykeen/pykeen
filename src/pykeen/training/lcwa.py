@@ -16,13 +16,14 @@ from ..typing import MappedTriples
 
 __all__ = [
     'LCWATrainingLoop',
+    'RelationLCWATrainingLoop',
 ]
 
 logger = logging.getLogger(__name__)
 
 
 class _LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType], ABC):
-    """A training loop that uses the local closed world assumption training approach."""
+    """A base class for local closed world assumption training approaches."""
 
     @staticmethod
     def _get_batch_size(batch: LCWABatchType) -> int:  # noqa: D102
@@ -142,6 +143,8 @@ class _LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType], ABC):
 
 
 class LCWATrainingLoop(_LCWATrainingLoop):
+    """A training loop that uses the local closed world assumption training approach."""
+
     def _create_instances(self, triples_factory: CoreTriplesFactory) -> Instances:  # noqa: D102
         return triples_factory.create_lcwa_instances()
 
