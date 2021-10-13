@@ -494,6 +494,35 @@ class TestLiterals(unittest.TestCase):
         self.assertEqual(NATIONS_TRAIN_PATH, y.metadata['path'])
         self.assertEqual(NATIONS_TRAIN_PATH, z.metadata['path'])
 
+    def test_triples_numeric_literals_factory_split(self):
+        """Test splitting a TriplesNumericLiteralsFactory object."""
+        # Slightly larger number of triples to guarantee split can find coverage of all entities and relations.
+        triples_larger = np.array(
+            [
+                ['peter', 'likes', 'chocolate_cake'],
+                ['chocolate_cake', 'isA', 'dish'],
+                ['susan', 'likes', 'chocolate_cake'],
+                ['susan', 'likes', 'pizza'],
+                ['peter', 'likes', 'susan'],
+                ['peter', 'isA', 'person'],
+                ['susan', 'isA', 'person'],
+            ],
+            dtype=str,
+        )
+
+        triples_numeric_literal_factory = TriplesNumericLiteralsFactory(
+            triples=triples_larger,
+            numeric_triples=numeric_triples,
+        )
+
+        left, right = triples_numeric_literal_factory.split()
+
+        self.assertIsInstance(left, TriplesNumericLiteralsFactory)
+        self.assertIsInstance(right, TriplesNumericLiteralsFactory)
+
+        assert (left.numeric_literals == triples_numeric_literal_factory.numeric_literals).all()
+        assert (right.numeric_literals == triples_numeric_literal_factory.numeric_literals).all()
+
 
 class TestUtils(unittest.TestCase):
     """Test triples utilities."""

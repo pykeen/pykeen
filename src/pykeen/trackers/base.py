@@ -38,10 +38,13 @@ class ResultTracker:
         :param prefix: An optional prefix to prepend to every key in metrics.
         """
 
-    def end_run(self) -> None:
+    def end_run(self, success: bool = True) -> None:
         """End a run.
 
         HAS to be called after the experiment is finished.
+
+        :param success:
+            Can be used to signal failed runs. May be ignored.
         """
 
 
@@ -119,6 +122,8 @@ class ConsoleResultTracker(ResultTracker):
             if not self.metric_filter or self.metric_filter.match(key):
                 self.write(f"Parameter: {key} = {value}")
 
-    def end_run(self) -> None:  # noqa: D102
+    def end_run(self, success: bool = True) -> None:  # noqa: D102
+        if not success:
+            self.write("Run failed.")
         if self.start_end_run:
             self.write("Finished run.")

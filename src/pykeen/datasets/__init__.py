@@ -18,6 +18,7 @@ from .base import (  # noqa:F401
     Dataset, EagerDataset, LazyDataset, PackedZipRemoteDataset, PathDataset, RemoteDataset, SingleTabbedDataset,
     TarFileRemoteDataset, UnpackedRemoteDataset,
 )
+from .biokg import BioKG
 from .ckg import CKG
 from .codex import CoDExLarge, CoDExMedium, CoDExSmall
 from .conceptnet import ConceptNet
@@ -34,6 +35,7 @@ from .ogb import OGBBioKG, OGBWikiKG
 from .openbiolink import OpenBioLink, OpenBioLinkLQ
 from .umls import UMLS
 from .wd50k import WD50KT
+from .wikidata5m import Wikidata5M
 from .wk3l import WK3l15k
 from .wordnet import WN18, WN18RR
 from .yago import YAGO310
@@ -59,6 +61,7 @@ __all__ = [
     'WN18RR',
     'YAGO310',
     'DRKG',
+    'BioKG',
     'ConceptNet',
     'CKG',
     'CSKG',
@@ -66,6 +69,7 @@ __all__ = [
     'DB100K',
     'Countries',
     'WD50KT',
+    'Wikidata5M',
     # Utilities
     'dataset_resolver',
     'get_dataset',

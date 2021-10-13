@@ -14,7 +14,7 @@ import unittest_templates
 import pykeen.experiments
 import pykeen.models
 from pykeen.models import (
-    ERModel, EntityRelationEmbeddingModel, Model,
+    ERModel, EntityRelationEmbeddingModel, EvaluationOnlyModel, Model,
     _NewAbstractModel, _OldAbstractModel, model_resolver,
 )
 from pykeen.models.multimodal.base import LiteralModel
@@ -38,8 +38,10 @@ SKIP_MODULES = {
     ERModel,
     MockModel,
     SimpleInteractionModel,
+    EvaluationOnlyModel,
 }
 SKIP_MODULES.update(LiteralModel.__subclasses__())
+SKIP_MODULES.update(EvaluationOnlyModel.__subclasses__())
 
 
 class TestCompGCN(cases.ModelTestCase):
