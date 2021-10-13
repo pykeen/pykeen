@@ -124,4 +124,4 @@ class TransE(EntityRelationEmbeddingModel):
         t = self.entity_embeddings(indices=rt_batch[:, 1])
 
         # TODO: Use torch.cdist (see note above in score_hrt())
-        return -linalg.vector_norm(h[None, :, :] + r[:, None, :] - t[:, None, :], dim=-1, ord=self.scoring_fct_norm)
+        return -linalg.vector_norm(h[None, :, :] + (r[:, None, :] - t[:, None, :]), dim=-1, ord=self.scoring_fct_norm)
