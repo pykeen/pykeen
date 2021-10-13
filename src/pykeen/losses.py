@@ -96,13 +96,13 @@ The following table shows delta pairwise loss functions:
     :align: center
     :widths: auto
 
-    ===============================  ===========  ======================  ==============================================
-    Pairwise Loss                    Activation   Margin                  Formulation
-    ===============================  ===========  ======================  ==============================================
-    Pairwise Hinge (margin ranking)  ReLU         $\lambda \neq 0$        $g(\Delta) = \max(0, \Delta + \lambda)$
-    Soft Margin Ranking              softplus     $\lambda \neq 0$        $g(\Delta) = \log(1 + \exp(\Delta + \lambda))$
-    Pairwise Logistic                softplus     $\lambda=0$             $g(\Delta) = \log(1 + \exp(\Delta))$
-    ===============================  ===========  ======================  ==============================================
+    =========================================  ===========  ======================  ==============================================
+    Pairwise Loss                              Activation   Margin                  Formulation
+    =========================================  ===========  ======================  ==============================================
+    Pairwise Hinge (margin ranking)            ReLU         $\lambda \neq 0$        $g(\Delta) = \max(0, \Delta + \lambda)$
+    Pairwise Soft Hinge (soft margin ranking)  softplus     $\lambda \neq 0$        $g(\Delta) = \log(1 + \exp(\Delta + \lambda))$
+    Pairwise Logistic                          softplus     $\lambda=0$             $g(\Delta) = \log(1 + \exp(\Delta))$
+    =========================================  ===========  ======================  ==============================================
 
 .. note::
 
@@ -863,13 +863,13 @@ class DoubleMarginLoss(PointwiseLoss):
 class DeltaPointwiseLoss(PointwiseLoss):
     r"""A generic class for delta-pointwise losses.
 
-    ===================  ==========  ======================  ========================================================  =========================================
-    Pointwise Loss       Activation  Margin                  Formulation                                               Implementation
-    ===================  ==========  ======================  ========================================================  =========================================
-    Hinge                ReLU        $\lambda \neq 0$        $g(s, l) = \max(0, \lambda -\hat{l}*s)$                   :class:`pykeen.losses.PointwiseHingeLoss`
-    ???                  softplus    $\lambda \neq 0$        $g(s, l) = \log(1+\exp(\lambda -\hat{l}*s))$
-    Logistic (softplus)  softplus    $\lambda = 0$           $g(s, l) = \log(1+\exp(-\hat{l}*s))$                      :class:`pykeen.losses.SoftplusLoss`
-    ===================  ==========  ======================  ========================================================  =========================================
+    =============================  ==========  ======================  ========================================================  =========================================
+    Pointwise Loss                 Activation  Margin                  Formulation                                               Implementation
+    =============================  ==========  ======================  ========================================================  =========================================
+    Pointwise Hinge                ReLU        $\lambda \neq 0$        $g(s, l) = \max(0, \lambda -\hat{l}*s)$                   :class:`pykeen.losses.PointwiseHingeLoss`
+    Pointwise Soft Hinge           softplus    $\lambda \neq 0$        $g(s, l) = \log(1+\exp(\lambda -\hat{l}*s))$
+    Pointwise Logistic (softplus)  softplus    $\lambda = 0$           $g(s, l) = \log(1+\exp(-\hat{l}*s))$                      :class:`pykeen.losses.SoftplusLoss`
+    =============================  ==========  ======================  ========================================================  =========================================
     """  # noqa:E501
 
     def __init__(
