@@ -166,12 +166,12 @@ from textwrap import dedent
 from typing import Any, ClassVar, Mapping, Optional, Set, Tuple
 
 import torch
+from class_resolver import Hint, Resolver
 from docdata import parse_docdata
 from torch import nn
 from torch.nn import functional
 from torch.nn.modules.loss import _Loss
 
-from class_resolver import Hint, Resolver
 
 __all__ = [
     # Base Classes
