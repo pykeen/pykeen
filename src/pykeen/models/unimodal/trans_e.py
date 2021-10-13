@@ -4,10 +4,9 @@
 
 from typing import Any, ClassVar, Mapping
 
-import torch
 import torch.autograd
-from torch.nn import functional
 from torch import linalg
+from torch.nn import functional
 
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
