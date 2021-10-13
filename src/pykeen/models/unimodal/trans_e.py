@@ -101,6 +101,12 @@ class TransE(EntityRelationEmbeddingModel):
         r = self.relation_embeddings(indices=hrt_batch[:, 1])
         t = self.entity_embeddings(indices=hrt_batch[:, 2])
 
+        # TODO: Use torch.cdist
+        #  There were some performance/memory issues with cdist, cf.
+        #  https://github.com/pytorch/pytorch/issues?q=cdist however, @mberr thinks
+        #  they are mostly resolved by now. A Benefit would be that we can harness the
+        #  future (performance) improvements made by the core torch developers. However,
+        #  this will require some benchmarking.
         return -linalg.vector_norm(h + r - t, dim=-1, ord=self.scoring_fct_norm, keepdim=True)
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
@@ -109,7 +115,7 @@ class TransE(EntityRelationEmbeddingModel):
         r = self.relation_embeddings(indices=hr_batch[:, 1])
         t = self.entity_embeddings(indices=None)
 
-        # TODO: Use torch.cdist
+        # TODO: Use torch.cdist (see note above in score_hrt())
         return -linalg.vector_norm(h[:, None, :] + r[:, None, :] - t[None, :, :], dim=-1, ord=self.scoring_fct_norm)
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
@@ -118,5 +124,5 @@ class TransE(EntityRelationEmbeddingModel):
         r = self.relation_embeddings(indices=rt_batch[:, 0])
         t = self.entity_embeddings(indices=rt_batch[:, 1])
 
-        # TODO: Use torch.cdist
+        # TODO: Use torch.cdist (see note above in score_hrt())
         return -linalg.vector_norm(h[None, :, :] + r[:, None, :] - t[:, None, :], dim=-1, ord=self.scoring_fct_norm)
