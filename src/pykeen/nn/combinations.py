@@ -205,6 +205,7 @@ class GatedCombination(Combination):
         self,
         entity_embedding_dim: int,
         literal_embedding_dim: int,
+        input_dropout: float = 0.0,
         activation: HintOrType[nn.Module] = 'sigmoid',
         activation_kwargs: Optional[Mapping[str, Any]] = None,
     ) -> None:
@@ -230,9 +231,11 @@ class GatedCombination(Combination):
         self.bias = nn.Parameter(torch.zeros(entity_embedding_dim))
         self.hyperbolic_tangent = torch.nn.Tanh()
 
+        self.dropout = nn.Dropout(input_dropout)
+
     def forward(self, x: torch.FloatTensor, literal: torch.FloatTensor) -> torch.FloatTensor:
         """Given the entity and literal representations calucaltes a new embedding that contains information of both."""
         combination = torch.cat([x, literal], -1)
         z = self.gate_activation(self.gate_entity_layer(x) + self.gate_literal_layer(literal) + self.bias)
         h = self.hyperbolic_tangent(self.combination_linear_layer(combination))
-        return z * h + (1 - z) * x
+        return self.dropout(z * h + (1 - z) * x)

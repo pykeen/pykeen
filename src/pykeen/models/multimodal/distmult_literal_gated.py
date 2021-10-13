@@ -41,6 +41,7 @@ class DistMultLiteralGated(LiteralModel):
         self,
         triples_factory: TriplesNumericLiteralsFactory,
         embedding_dim: int = 50,
+        input_dropout: float = 0.0,
         **kwargs,
     ) -> None:
         super().__init__(
@@ -50,6 +51,7 @@ class DistMultLiteralGated(LiteralModel):
                 combination=GatedCombination(
                     entity_embedding_dim=embedding_dim,
                     literal_embedding_dim=triples_factory.numeric_literals.shape[1],
+                    input_dropout=input_dropout,
                 ),
             ),
             entity_representations=[
