@@ -589,20 +589,30 @@ class RGCNRepresentations(RepresentationModule):
     ):
         """Instantiate the R-GCN encoder.
 
-        .. todo:: Write docs for all arguments here
-
         :param triples_factory:
+            The triples factory holding the training triples used for message passing.
         :param embedding_specification:
+            The base embedding specification.
         :param num_layers:
+            The number of layers.
         :param use_bias:
+            Whether to use a bias.
         :param use_batch_norm:
+            Whether to use batch normalization.
         :param activation:
+            The activation.
         :param activation_kwargs:
+            Additional keyword based arguments passed if the activation is not pre-instantiated. Ignored otherwise.
         :param edge_dropout:
+            The edge dropout to use. Does not apply to self-loops.
         :param self_loop_dropout:
+            The self-loop dropout to use.
         :param edge_weighting:
+            The edge weighting mechanism.
         :param decomposition:
+            The decomposition, cf. :class:`pykeen.nn.message_passing.Decomposition`.
         :param decomposition_kwargs:
+            Additional keyword based arguments passed to the decomposition upon instantiation.
         """
         base_embeddings = embedding_specification.make(num_embeddings=triples_factory.num_entities)
         super().__init__(max_id=triples_factory.num_entities, shape=base_embeddings.shape)
@@ -885,10 +895,10 @@ class CompGCNLayer(nn.Module):
         edge_type = 2 * edge_type
         # update entity representations: mean over self-loops / forward edges / backward edges
         x_e = (
-            self.composition(x_e, self.self_loop) @ self.w_loop
-            + self.message(x_e=x_e, x_r=x_r, edge_index=edge_index, edge_type=edge_type, weight=self.w_fwd)
-            + self.message(x_e=x_e, x_r=x_r, edge_index=edge_index.flip(0), edge_type=edge_type + 1, weight=self.w_bwd)
-        ) / 3
+                  self.composition(x_e, self.self_loop) @ self.w_loop
+                  + self.message(x_e=x_e, x_r=x_r, edge_index=edge_index, edge_type=edge_type, weight=self.w_fwd)
+                  + self.message(x_e=x_e, x_r=x_r, edge_index=edge_index.flip(0), edge_type=edge_type + 1, weight=self.w_bwd)
+              ) / 3
 
         if self.bias:
             x_e = self.bias(x_e)
