@@ -201,6 +201,8 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_MARGIN_HPO_STRATEGY = dict(type=float, low=0, high=3)
+
 
 def apply_label_smoothing(
     labels: torch.FloatTensor,
@@ -581,7 +583,7 @@ class MarginRankingLoss(MarginPairwiseLoss):
     synonyms = {"Pairwise Hinge Loss"}
 
     hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        margin=dict(type=int, low=0, high=3, q=1),
+        margin=DEFAULT_MARGIN_HPO_STRATEGY,
     )
 
     def __init__(self, margin: float = 1.0, reduction: str = 'mean'):
@@ -617,7 +619,7 @@ class SoftMarginRankingLoss(MarginPairwiseLoss):
     """
 
     hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        margin=dict(type=int, low=0, high=3, q=1),
+        margin=DEFAULT_MARGIN_HPO_STRATEGY,
     )
 
     def __init__(self, margin: float = 1.0, reduction: str = 'mean'):
@@ -916,8 +918,9 @@ class PointwiseHingeLoss(DeltaPointwiseLoss):
     name: Pointwise Hinge
     """
 
-    # TODO what should the default margin be
-    # TODO default HPO
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
+        margin=DEFAULT_MARGIN_HPO_STRATEGY,
+    )
 
     def __init__(self, margin: float = 1.0, reduction: str = 'mean') -> None:
         super().__init__(margin=margin, margin_activation='relu', reduction=reduction)
@@ -936,6 +939,10 @@ class SoftPointwiseHingeLoss(DeltaPointwiseLoss):
     ---
     name: Soft Pointwise Hinge
     """
+
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
+        margin=DEFAULT_MARGIN_HPO_STRATEGY,
+    )
 
     def __init__(self, margin: float, reduction: str = 'mean') -> None:
         super().__init__(margin=margin, margin_activation='softplus', reduction=reduction)
