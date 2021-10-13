@@ -6,6 +6,7 @@ from typing import Any, ClassVar, Mapping, Optional
 
 import torch
 import torch.autograd
+from torch import linalg
 
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
@@ -193,7 +194,7 @@ class TransD(EntityRelationEmbeddingModel):
         t_bot = _project_entity(e=t, e_p=t_p, r=r, r_p=r_p)
 
         # score = -||h_bot + r - t_bot||_2^2
-        return -torch.norm(h_bot + r - t_bot, dim=-1, p=2) ** 2
+        return -linalg.vector_norm(h_bot + r - t_bot, dim=-1, ord=2) ** 2
 
     def _score(
         self,

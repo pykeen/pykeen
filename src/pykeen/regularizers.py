@@ -9,7 +9,7 @@ from typing import Any, ClassVar, Iterable, Mapping, Optional
 
 import torch
 from class_resolver import Resolver, normalize_string
-from torch import nn
+from torch import linalg, nn
 from torch.nn import functional
 
 from .utils import lp_norm, powersum_norm
@@ -220,7 +220,7 @@ class TransHRegularizer(Regularizer):
             return
         entity_embeddings, normal_vector_embeddings, relation_embeddings = tensors
         # Entity soft constraint
-        self.regularization_term += torch.sum(functional.relu(torch.norm(entity_embeddings, dim=-1) ** 2 - 1.0))
+        self.regularization_term += torch.sum(functional.relu(linalg.vector_norm(entity_embeddings, dim=-1) ** 2 - 1.0))
 
         # Orthogonality soft constraint
         d_r_n = functional.normalize(relation_embeddings, dim=-1)
