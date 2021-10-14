@@ -822,7 +822,6 @@ def _get_kwargs(
     _kwargs_ranges = dict(default_kwargs_ranges)
     if kwargs_ranges is not None:
         _kwargs_ranges.update(kwargs_ranges)
-    # TODO validity check?
     return suggest_kwargs(
         trial=trial,
         prefix=prefix,
