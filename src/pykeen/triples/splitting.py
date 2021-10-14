@@ -75,15 +75,25 @@ def _get_cover_deterministic(triples: MappedTriples) -> torch.BoolTensor:
         A boolean mask indicating whether the triple is part of the cover.
     """
     df = pandas.DataFrame(
-        data=triples.cpu().numpy(),
+        data=triples.numpy(),
         columns=["h", "r", "t"],
-    )
-    num_triples = triples.shape[0]
-    df["triple_id"] = numpy.arange(num_triples)
-    seed_mask = torch.zeros(num_triples, dtype=torch.bool)
-    for column in "hrt":
-        seed_mask[df.groupby(by=column).agg({"triple_id": "first"})["triple_id"].values] = True
+    ).reset_index()
+    
+    # relation coverage
+    chosen = set(df.groupby(by="r").agg({"index": "first"})["index"].values)
 
+    # entity coverage
+    entities = set(numpy.unique(df[["h", "r"]]))
+    entities -= set(numpy.unique(df.loc[df["index"].isin(chosen), ["h", "r"]]))
+    for column in "ht":
+        mask = ~df["index"].isin(chosen) & df[column].isin(entities)
+        this_chosen = df[mask].groupby(by=column).agg({"index": "first"})
+        entities -= set(numpy.unique(this_chosen.index))
+        chosen |= set(this_chosen["index"])
+    
+    num_triples = triples.shape[0]
+    seed_mask = torch.zeros(num_triples, dtype=torch.bool)
+    seed_mask[list(chosen)] = True
     return seed_mask
 
 
