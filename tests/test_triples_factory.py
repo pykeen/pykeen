@@ -11,7 +11,7 @@ import numpy as np
 import pytest
 import torch
 
-from pykeen.datasets import Nations
+from pykeen.datasets import Hetionet, Nations, SingleTabbedDataset
 from pykeen.datasets.nations import NATIONS_TRAIN_PATH
 from pykeen.triples import LCWAInstances, TriplesFactory, TriplesNumericLiteralsFactory
 from pykeen.triples.generation import generate_triples
@@ -229,7 +229,8 @@ class TestSplit(unittest.TestCase):
 
     def setUp(self) -> None:
         """Set up the tests."""
-        self.triples_factory = Nations().training
+        self.dataset = Nations()
+        self.triples_factory = self.dataset.training
         self.assertEqual(1592, self.triples_factory.num_triples)
 
     def _test_invariants(self, training_triples_factory: TriplesFactory, *other_factories: TriplesFactory) -> None:
@@ -257,7 +258,7 @@ class TestSplit(unittest.TestCase):
             id(self.triples_factory.relation_to_id),
         })
 
-    def test_split(self):
+    def test_split_tf(self):
         """Test splitting a factory."""
         cases = [
             (2, 0.8),
@@ -267,9 +268,45 @@ class TestSplit(unittest.TestCase):
         ]
         for method, (n, ratios), in itt.product(SPLIT_METHODS, cases):
             with self.subTest(method=method, ratios=ratios):
-                factories = self.triples_factory.split(ratios, method=method)
-                self.assertEqual(n, len(factories))
-                self._test_invariants(*factories)
+                factories_1 = self.triples_factory.split(ratios, method=method, random_state=0)
+                self.assertEqual(n, len(factories_1))
+                self._test_invariants(*factories_1)
+
+                factories_2 = self.triples_factory.split(ratios, method=method, random_state=0)
+                self.assertEqual(n, len(factories_2))
+                self._test_invariants(*factories_2)
+
+                self._compare_factories(factories_1, factories_2)
+
+    def test_load_model(self):
+        """Test splitting a tabbed dataset."""
+
+        class MockSingleTabbedDataset(SingleTabbedDataset):
+            def __init__(self, random_state=0, **kwargs):
+                super().__init__(url=NATIONS_TRAIN_PATH.as_uri(), random_state=random_state, **kwargs)
+
+        dataset_classes = [MockSingleTabbedDataset]
+        if Hetionet(eager=False)._get_path().is_file():
+            dataset_classes.append(Hetionet)
+
+        for cls in dataset_classes:
+            with self.subTest(name=cls.__name__):
+                self._test_random_dataset(cls)
+
+    def _test_random_dataset(self, cls) -> None:
+        ds1 = cls(random_state=0)
+        ds2 = cls(random_state=0)
+        self._compare_factories(
+            (ds1.training, ds1.testing, ds1.validation),
+            (ds2.training, ds2.testing, ds2.validation),
+            msg=f'Failed on {ds1.__class__.__name__}',
+        )
+
+    def _compare_factories(self, factories_1, factories_2, msg=None) -> None:
+        for factory_1, factory_2 in zip(factories_1, factories_2):
+            triples_1 = factory_1.mapped_triples.detach().cpu().numpy()
+            triples_2 = factory_2.mapped_triples.detach().cpu().numpy()
+            self.assertTrue((triples_1 == triples_2).all(), msg=msg)
 
     def test_cleanup_deterministic(self):
         """Test that triples in a test set can get moved properly to the training set."""
