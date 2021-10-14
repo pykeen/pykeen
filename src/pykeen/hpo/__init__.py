@@ -153,7 +153,7 @@ within the bounds specified by the ``low`` and ``high`` arguments. This applies 
 ...     model='TransE',
 ...     training_loop='sLCWA',
 ...     negative_sampler_kwargs_ranges=dict(
-...         num_negs_per_positive=dict(type=int, low=1, high=100),
+...         num_negs_per_pos=dict(type=int, low=1, high=100),
 ...     ),
 ... )
 
@@ -170,7 +170,7 @@ the number of negatives per positive ratio using `base=10`:
 ...     model='TransE',
 ...     training_loop='sLCWA',
 ...     negative_sampler_kwargs_ranges=dict(
-...         num_negs_per_positive=dict(type=int, scale='power', base=10, low=0, high=2),
+...         num_negs_per_pos=dict(type=int, scale='power', base=10, low=0, high=2),
 ...     ),
 ... )
 
@@ -191,7 +191,7 @@ accomplished with:
 ...     model='TransE',
 ...     training_loop='sLCWA',
 ...     negative_sampler_kwargs_ranges=dict(
-...         num_negs_per_positive=dict(type=int, low=1, high=100, log=True),
+...         num_negs_per_pos=dict(type=int, low=1, high=100, log=True),
 ...     ),
 ... )
 
@@ -208,7 +208,7 @@ so if you want to pick from $10, 20, ... 100$, you can do:
 ...     model='TransE',
 ...     training_loop='sLCWA',
 ...     negative_sampler_kwargs_ranges=dict(
-...         num_negs_per_positive=dict(type=int, low=10, high=100, step=10),
+...         num_negs_per_pos=dict(type=int, low=10, high=100, step=10),
 ...     ),
 ... )
 
@@ -222,7 +222,7 @@ with the same probability
 ...     model='TransE',
 ...     training_loop='sLCWA',
 ...     negative_sampler_kwargs_ranges=dict(
-...         num_negs_per_positive=dict(type=int, low=10, high=100, step=10, log=True),
+...         num_negs_per_pos=dict(type=int, low=10, high=100, step=10, log=True),
 ...     ),
 ... )
 
