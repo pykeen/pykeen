@@ -68,6 +68,15 @@ def _get_cover_deterministic(triples: MappedTriples) -> torch.BoolTensor:
     """
     Get a coverage mask for all entities and relations.
 
+    The implementation uses a greedy coverage algorithm for selecting triples. If there are multiple triples to
+    choose, the smaller ID is preferred.
+    
+    1. Select one triple for each relation.
+    2. Select one triple for each head entity, which is not yet covered.
+    3. Select one triple for each tail entity, which is not yet covered.
+
+    The cover is guaranteed to contain at most $num_relations + num_unique_heads + num_unique_tails$ triples.
+
     :param triples: shape: (n, 3)
         The triples (ID-based).
 
