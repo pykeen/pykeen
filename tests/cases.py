@@ -325,6 +325,17 @@ class PairwiseLossTestCase(LossTestCase):
         self._check_loss_value(loss_value)
 
 
+class GMRLTestCase(PairwiseLossTestCase):
+    """Tests for generalized margin ranking loss."""
+
+    def test_label_smoothing_raise(self):
+        """Test errors are raised if label smoothing is given."""
+        with self.assertRaises(UnsupportedLabelSmoothingError):
+            self.instance.process_lcwa_scores(..., ..., label_smoothing=5)
+        with self.assertRaises(UnsupportedLabelSmoothingError):
+            self.instance.process_lcwa_scores(..., ..., label_smoothing=5)
+
+
 class SetwiseLossTestCase(LossTestCase):
     """Unit tests for setwise losses."""
 
