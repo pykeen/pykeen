@@ -4,12 +4,13 @@
 
 import dataclasses
 import ftplib
+import inspect
 import json
 import logging
 import os
 import pathlib
 from dataclasses import dataclass
-from typing import Any, Callable, Collection, Dict, Mapping, Optional, Type, Union, cast
+from typing import Any, Callable, Collection, Dict, Iterable, Mapping, Optional, Type, Union, cast
 
 import torch
 from optuna import Study, Trial, create_study
@@ -49,6 +50,16 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 STOPPED_EPOCH_KEY = 'stopped_epoch'
+
+
+class ExtraKeysError(ValueError):
+    """Raised on extra keys being used."""
+
+    def __init__(self, keys: Iterable[str]):
+        super().__init__(sorted(keys))
+
+    def __str__(self) -> str:
+        return f"Invalid keys: {self.args[0]}"
 
 
 @dataclass
@@ -192,6 +203,17 @@ class Objective:
         elif self.negative_sampler is None:
             raise ValueError("Negative sampler class must be made explicit when training under sLCWA")
         else:
+            # TODO this fixes the issue for negative samplers, but does not generally address it.
+            #  For example, some of them obscure their arguments with **kwargs, so should we look
+            #  at the parent class? Sounds like something to put in class resolver by using the
+            #  inspect module. For now, this solution will rely on the fact that the sampler is a
+            #  direct descendent of a parent NegativeSampler
+            direct_params = inspect.signature(self.negative_sampler).parameters
+            parent_params = inspect.signature(self.negative_sampler.__bases__[0]).parameters
+            valid_keys = set(direct_params).union(parent_params) - {"kwargs"}
+            invalid_keys = set(self.negative_sampler_kwargs_ranges or []) - valid_keys
+            if invalid_keys:
+                raise ExtraKeysError(invalid_keys)
             _negative_sampler_kwargs = _get_kwargs(
                 trial=trial,
                 prefix='negative_sampler',
@@ -800,6 +822,7 @@ def _get_kwargs(
     _kwargs_ranges = dict(default_kwargs_ranges)
     if kwargs_ranges is not None:
         _kwargs_ranges.update(kwargs_ranges)
+    # TODO validity check?
     return suggest_kwargs(
         trial=trial,
         prefix=prefix,
