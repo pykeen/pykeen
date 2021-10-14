@@ -14,7 +14,7 @@ import unittest_templates
 import pykeen.experiments
 import pykeen.models
 from pykeen.models import (
-    ERModel, EntityRelationEmbeddingModel, Model,
+    ERModel, EntityRelationEmbeddingModel, EvaluationOnlyModel, Model,
     _NewAbstractModel, _OldAbstractModel, model_resolver,
 )
 from pykeen.models.multimodal.base import LiteralModel
@@ -38,8 +38,10 @@ SKIP_MODULES = {
     ERModel,
     MockModel,
     SimpleInteractionModel,
+    EvaluationOnlyModel,
 }
 SKIP_MODULES.update(LiteralModel.__subclasses__())
+SKIP_MODULES.update(EvaluationOnlyModel.__subclasses__())
 
 
 class TestCompGCN(cases.ModelTestCase):
@@ -503,6 +505,12 @@ class TestTransE(cases.DistanceModelTestCase):
         """
         entity_norms = self.instance.entity_embeddings(indices=None).norm(p=2, dim=-1)
         assert torch.allclose(entity_norms, torch.ones_like(entity_norms))
+
+
+class TestTransF(cases.ModelTestCase):
+    """Test the TransF model."""
+
+    cls = pykeen.models.TransF
 
 
 class TestTransH(cases.DistanceModelTestCase):

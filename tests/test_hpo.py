@@ -4,9 +4,11 @@
 
 import tempfile
 import unittest
+from unittest.mock import MagicMock
 
 import optuna
 import pytest
+from optuna.trial import TrialState
 
 from pykeen.datasets.nations import (
     NATIONS_TEST_PATH, NATIONS_TRAIN_PATH, NATIONS_VALIDATE_PATH, Nations,
@@ -14,6 +16,7 @@ from pykeen.datasets.nations import (
 )
 from pykeen.hpo import hpo_pipeline
 from pykeen.hpo.hpo import suggest_kwargs
+from pykeen.trackers import ResultTracker, tracker_resolver
 from pykeen.triples import TriplesFactory
 
 
@@ -152,6 +155,31 @@ class TestHyperparameterOptimization(unittest.TestCase):
         self.assertIn(('params', 'model.embedding_dim'), df.columns)
         values = df[('params', 'model.embedding_dim')]
         self.assertTrue(values.isin({1, 10, 100}).all(), msg=f'Got values: {values}')
+
+    def test_failing_trials(self):
+        """Test whether failing trials are correctly reported."""
+
+        class MockResultTracker(MagicMock, ResultTracker):
+            """A mock result tracker."""
+
+        tracker_resolver.register(cls=MockResultTracker)
+
+        mock_result_tracker = MockResultTracker()
+        mock_result_tracker.end_run = MagicMock()
+        result = hpo_pipeline(
+            dataset="nations",
+            model="distmult",
+            model_kwargs_ranges=dict(
+                embedding_dim=dict(
+                    type=int, low=-10, high=-1,  # will fail
+                ),
+            ),
+            n_trials=1,
+            result_tracker=mock_result_tracker,
+        )
+        # verify failure
+        assert all(t.state == TrialState.FAIL for t in result.study.trials)
+        assert all(ca[1]["success"] is False for ca in mock_result_tracker.end_run.call_args_list)
 
 
 def _test_suggest(kwargs_ranges):

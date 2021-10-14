@@ -47,6 +47,7 @@ __all__ = [
     'structured_embedding_interaction',
     'transd_interaction',
     'transe_interaction',
+    'transf_interaction',
     'transh_interaction',
     'transr_interaction',
     'tucker_interaction',
@@ -678,7 +679,7 @@ def structured_embedding_interaction(
     :param t: shape: (batch_size, 1, 1, num_tails, dim)
         The tail representations.
     :param p:
-        The p for the norm. cf. torch.norm.
+        The p for the norm. cf. :func:`torch.linalg.vector_norm`.
     :param power_norm:
         Whether to return the powered norm.
 
@@ -796,6 +797,26 @@ def transe_interaction(
     return negative_norm_of_sum(h, r, -t, p=p, power_norm=power_norm)
 
 
+def transf_interaction(
+    h: torch.FloatTensor,
+    r: torch.FloatTensor,
+    t: torch.FloatTensor,
+) -> torch.FloatTensor:
+    """Evaluate the TransF interaction function.
+
+    :param h: shape: (batch_size, num_heads, 1, 1, dim)
+        The head representations.
+    :param r: shape: (batch_size, 1, num_relations, 1, dim)
+        The relation representations.
+    :param t: shape: (batch_size, 1, 1, num_tails, dim)
+        The tail representations.
+
+    :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        The scores.
+    """
+    return batched_dot(h + r, t) + batched_dot(h, t - r)
+
+
 def transh_interaction(
     h: torch.FloatTensor,
     w_r: torch.FloatTensor,
@@ -815,7 +836,7 @@ def transh_interaction(
     :param t: shape: (batch_size, 1, 1, num_tails, dim)
         The tail representations.
     :param p:
-        The p for the norm. cf. torch.norm.
+        The p for the norm. cf. :func:`torch.linalg.vector_norm`.
     :param power_norm:
         Whether to return $|x-y|_p^p$.
 
@@ -967,7 +988,7 @@ def mure_interaction(
     :param b_t: shape: (batch_size, 1, 1, num_tails)
         The tail entity bias.
     :param p:
-        The parameter p for selecting the norm, cf. torch.norm.
+        The parameter p for selecting the norm, cf. :func:`torch.linalg.vector_norm`.
     :param power_norm:
         Whether to return the powered norm instead.
 

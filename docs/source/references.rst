@@ -52,3 +52,21 @@ References
 .. [galkin2020] Galkin, M., *et al.* (2020). `Message Passing for Hyper-Relational Knowledge Graphs
    <https://doi.org/10.18653/v1/2020.emnlp-main.596>`_. Proceedings of the 2020 Conference on Empirical
    Methods in Natural Language Processing (EMNLP), 7346–7359.
+
+.. [wang2019] Wang, X., *et al* (2019). `KEPLER: A Unified Model for Knowledge Embedding and Pre-trained Language
+   Representation <https://arxiv.org/pdf/1911.06136.pdf>`_. *arXiv*, 1911.06136.
+
+.. [sun2018] Sun, Z., *et al.* (2018). `Bootstrapping Entity Alignment with Knowledge Graph Embedding.
+   <https://dl.acm.org/doi/10.5555/3304222.3304381>`_
+   *Proceedings of the 27th International Joint Conference on Artificial Intelligence*, 4396–4402.
+
+.. [lin2018] Lin, T.-Y., *et al*. (2017). `Focal Loss for Dense Object Detection
+   <https://doi.org/10.1109/TPAMI.2018.2858826>`_. *IEEE Transactions on Pattern Analysis and Machine
+   Intelligence*, 42(2), 318–327.
+
+.. [mukhoti2020] Mukhoti, J., *et al*. (2020). `Calibrating Deep Neural Networks using Focal Loss
+   <http://arxiv.org/abs/2002.09437>`_.
+
+.. [walsh2020] Walsh, B., *et al* (2020). `BioKG: A Knowledge Graph for Relational Learning On Biological Data
+   <https://doi.org/10.1145/3340531.3412776>`_. *Proceedings of the 29th ACM International Conference on Information &
+   Knowledge Management*, 3173–3180.
