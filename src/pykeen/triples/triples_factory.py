@@ -360,7 +360,7 @@ class CoreTriplesFactory:
         """Create sLCWA instances for this factory's triples."""
         return self._create_instances(SLCWAInstances)
 
-    def create_lcwa_instances(self, use_tqdm: Optional[bool] = None, target: int = 2) -> Instances:
+    def create_lcwa_instances(self, use_tqdm: Optional[bool] = None, target: Optional[int] = None) -> Instances:
         """Create LCWA instances for this factory's triples."""
         return self._create_instances(LCWAInstances, target=target)
 

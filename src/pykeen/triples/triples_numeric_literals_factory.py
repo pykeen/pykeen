@@ -115,7 +115,11 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
             literals_to_id=self.literals_to_id,
         )
 
-    def create_lcwa_instances(self, use_tqdm: Optional[bool] = None, target: int = 2) -> MultimodalLCWAInstances:
+    def create_lcwa_instances(
+        self,
+        use_tqdm: Optional[bool] = None,
+        target: Optional[int] = None,
+    ) -> MultimodalLCWAInstances:
         """Create multi-modal LCWA instances for this factory's triples."""
         lcwa_instances = super().create_lcwa_instances(use_tqdm=use_tqdm, target=target)
         return MultimodalLCWAInstances(
