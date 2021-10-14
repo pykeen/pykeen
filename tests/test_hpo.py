@@ -15,7 +15,7 @@ from pykeen.datasets.nations import (
     NationsLiteral,
 )
 from pykeen.hpo import hpo_pipeline
-from pykeen.hpo.hpo import suggest_kwargs
+from pykeen.hpo.hpo import ExtraKeysError, suggest_kwargs
 from pykeen.trackers import ResultTracker, tracker_resolver
 from pykeen.triples import TriplesFactory
 
@@ -55,17 +55,26 @@ class TestHyperparameterOptimization(unittest.TestCase):
 
     def test_fail_invalid_kwarg_ranges(self):
         """Test that an exception is thrown if an incorrect argument is passed."""
-        with self.assertRaises(ValueError):
-            hpo_pipeline(
-                dataset='Nations',
-                model='TransE',
-                n_trials=1,
-                training_loop='sLCWA',
-                training_kwargs=dict(num_epochs=5, use_tqdm=False),
-                negative_sampler_kwargs_ranges=dict(
-                    garbage_key=dict(type=int, low=1, high=100),
-                ),
-            )
+        kwargs = dict(
+            dataset='Nations',
+            model='TransE',
+            n_trials=1,
+            training_loop='sLCWA',
+            training_kwargs=dict(num_epochs=5, use_tqdm=False),
+            negative_sampler_kwargs_ranges=dict(
+                garbage_key=dict(type=int, low=1, high=100),
+            ),
+        )
+
+        # This tests when a default negative sampler is chosen
+        with self.assertRaises(ExtraKeysError) as e:
+            hpo_pipeline(**kwargs)
+            self.assertEqual(["garbage_key"], e.exception.args[0])
+
+        # This tests when an explicit negative sampler is chosen
+        with self.assertRaises(ExtraKeysError) as e:
+            hpo_pipeline(**kwargs, negative_sampler='basic')
+            self.assertEqual(["garbage_key"], e.exception.args[0])
 
     def test_specified_model_hyperparameter(self):
         """Test making a study that has a specified model hyper-parameter."""
