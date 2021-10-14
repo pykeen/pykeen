@@ -24,6 +24,7 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
 
     def __init__(
         self,
+        *,
         target: int = 2,
         **kwargs,
     ):
