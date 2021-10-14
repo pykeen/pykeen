@@ -4,7 +4,7 @@
 
 import logging
 import typing
-from typing import Collection, Optional, Sequence, Tuple, Union
+from typing import Collection, Optional, Sequence, Set, Tuple, Union
 
 import numpy
 import pandas
@@ -64,11 +64,11 @@ def _split_triples(
     return triples_groups
 
 
-def _get_cover_for_column(df: pandas.DataFrame, column: str, index_column: str = "index") -> Collection[int]:
+def _get_cover_for_column(df: pandas.DataFrame, column: str, index_column: str = "index") -> Set[int]:
     return set(df.groupby(by=column).agg({index_column: "min"})[index_column].values)
 
 
-def _get_covered_entities(df: pandas.DataFrame, chosen: Collection[int]) -> Collection[int]:
+def _get_covered_entities(df: pandas.DataFrame, chosen: Collection[int]) -> Set[int]:
     return set(numpy.unique(df.loc[df["index"].isin(chosen), ["h", "t"]]))
 
 
@@ -78,7 +78,7 @@ def _get_cover_deterministic(triples: MappedTriples) -> torch.BoolTensor:
 
     The implementation uses a greedy coverage algorithm for selecting triples. If there are multiple triples to
     choose, the smaller ID is preferred.
-    
+
     1. Select one triple for each relation.
     2. Select one triple for each head entity, which is not yet covered.
     3. Select one triple for each tail entity, which is not yet covered.
