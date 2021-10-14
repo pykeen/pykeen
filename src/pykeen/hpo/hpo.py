@@ -189,11 +189,13 @@ class Objective:
         _negative_sampler_kwargs: Mapping[str, Any]
         if self.training_loop is not SLCWATrainingLoop:
             _negative_sampler_kwargs = {}
+        elif self.negative_sampler is None:
+            raise ValueError("Negative sampler class must be made explicit when training under sLCWA")
         else:
             _negative_sampler_kwargs = _get_kwargs(
                 trial=trial,
                 prefix='negative_sampler',
-                default_kwargs_ranges={} if self.negative_sampler is None else self.negative_sampler.hpo_default,
+                default_kwargs_ranges=self.negative_sampler.hpo_default,
                 kwargs=self.negative_sampler_kwargs,
                 kwargs_ranges=self.negative_sampler_kwargs_ranges,
             )
