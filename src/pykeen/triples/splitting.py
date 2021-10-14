@@ -4,7 +4,7 @@
 
 import logging
 import typing
-from typing import Optional, Sequence, Tuple, Union
+from typing import Collection, Optional, Sequence, Tuple, Union
 
 import numpy
 import pandas
@@ -64,6 +64,14 @@ def _split_triples(
     return triples_groups
 
 
+def _get_cover_for_column(df: pandas.DataFrame, column: str, index_column: str = "index") -> Collection[int]:
+    return set(df.groupby(by=column).agg({index_column: "min"})[index_column].values)
+
+
+def _get_covered_entities(df: pandas.DataFrame, chosen: Collection[int]) -> Collection[int]:
+    return set(numpy.unique(df.loc[df["index"].isin(chosen), ["h", "t"]]))
+
+
 def _get_cover_deterministic(triples: MappedTriples) -> torch.BoolTensor:
     """
     Get a coverage mask for all entities and relations.
@@ -88,18 +96,18 @@ def _get_cover_deterministic(triples: MappedTriples) -> torch.BoolTensor:
         columns=["h", "r", "t"],
     ).reset_index()
 
-    # relation coverage
-    chosen = set(df.groupby(by="r").agg({"index": "first"})["index"].values)
+    # select one triple per relation
+    chosen = _get_cover_for_column(df=df, column="r")
 
-    # entity coverage
-    entities = set(numpy.unique(df[["h", "r"]]))
-    entities -= set(numpy.unique(df.loc[df["index"].isin(chosen), ["h", "r"]]))
+    # maintain set of covered entities
+    covered = _get_covered_entities(df=df, chosen=chosen)
+
+    # Select one triple for each head/tail entity, which is not yet covered.
     for column in "ht":
-        mask = ~df["index"].isin(chosen) & df[column].isin(entities)
-        this_chosen = df[mask].groupby(by=column).agg({"index": "first"})
-        entities -= set(numpy.unique(this_chosen.index))
-        chosen |= set(this_chosen["index"])
+        covered = _get_covered_entities(df=df, chosen=chosen)
+        chosen |= _get_cover_for_column(df=df[~df[column].isin(covered)], column=column)
 
+    # create mask
     num_triples = triples.shape[0]
     seed_mask = torch.zeros(num_triples, dtype=torch.bool)
     seed_mask[list(chosen)] = True
