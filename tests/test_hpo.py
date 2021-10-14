@@ -55,25 +55,17 @@ class TestHyperparameterOptimization(unittest.TestCase):
 
     def test_fail_invalid_kwarg_ranges(self):
         """Test that an exception is thrown if an incorrect argument is passed."""
-        kwargs = dict(
-            dataset='Nations',
-            model='TransE',
-            n_trials=1,
-            training_loop='sLCWA',
-            training_kwargs=dict(num_epochs=5, use_tqdm=False),
-            negative_sampler_kwargs_ranges=dict(
-                garbage_key=dict(type=int, low=1, high=100),
-            ),
-        )
-
-        # This tests when a default negative sampler is chosen
         with self.assertRaises(ExtraKeysError) as e:
-            hpo_pipeline(**kwargs)
-            self.assertEqual(["garbage_key"], e.exception.args[0])
-
-        # This tests when an explicit negative sampler is chosen
-        with self.assertRaises(ExtraKeysError) as e:
-            hpo_pipeline(**kwargs, negative_sampler='basic')
+            hpo_pipeline(
+                dataset='Nations',
+                model='TransE',
+                n_trials=1,
+                training_loop='sLCWA',
+                training_kwargs=dict(num_epochs=5, use_tqdm=False),
+                negative_sampler_kwargs_ranges=dict(
+                    garbage_key=dict(type=int, low=1, high=100),
+                ),
+            )
             self.assertEqual(["garbage_key"], e.exception.args[0])
 
     def test_specified_model_hyperparameter(self):
