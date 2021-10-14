@@ -78,7 +78,7 @@ def _get_cover_deterministic(triples: MappedTriples) -> torch.BoolTensor:
         data=triples.numpy(),
         columns=["h", "r", "t"],
     ).reset_index()
-    
+
     # relation coverage
     chosen = set(df.groupby(by="r").agg({"index": "first"})["index"].values)
 
@@ -90,7 +90,7 @@ def _get_cover_deterministic(triples: MappedTriples) -> torch.BoolTensor:
         this_chosen = df[mask].groupby(by=column).agg({"index": "first"})
         entities -= set(numpy.unique(this_chosen.index))
         chosen |= set(this_chosen["index"])
-    
+
     num_triples = triples.shape[0]
     seed_mask = torch.zeros(num_triples, dtype=torch.bool)
     seed_mask[list(chosen)] = True
