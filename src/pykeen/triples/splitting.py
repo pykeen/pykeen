@@ -7,6 +7,7 @@ import typing
 from typing import Optional, Sequence, Tuple, Union
 
 import numpy
+import pandas
 import torch
 
 from ..typing import MappedTriples, TorchRandomHint
@@ -73,26 +74,16 @@ def _get_cover_deterministic(triples: MappedTriples) -> torch.BoolTensor:
     :return: shape: (n,)
         A boolean mask indicating whether the triple is part of the cover.
     """
-    num_entities = triples[:, [0, 2]].max() + 1
-    num_relations = triples[:, 1].max() + 1
+    df = pandas.DataFrame(
+        data=triples.cpu().numpy(),
+        columns=["h", "r", "t"],
+    )
     num_triples = triples.shape[0]
-
-    # index
-    entities = torch.full(size=(num_entities,), fill_value=-1, dtype=torch.long)
-    relations = torch.full(size=(num_relations,), fill_value=-1, dtype=torch.long)
-    h, r, t = triples.T
-    triple_id = torch.arange(num_triples)
-    entities[h] = relations[r] = entities[t] = triple_id
-
-    if entities.min() < 0:
-        raise TripleCoverageError(arr=entities, name="entities")
-    if relations.min() < 0:
-        raise TripleCoverageError(arr=relations, name="relations")
-
-    # select
+    df["triple_id"] = numpy.arange(num_triples)
     seed_mask = torch.zeros(num_triples, dtype=torch.bool)
-    seed_mask[entities] = True
-    seed_mask[relations] = True
+    for column in "hrt":
+        seed_mask[df.groupby(by=column).agg({"triple_id": "first"})["triple_id"].values] = True
+
     return seed_mask
 
 
