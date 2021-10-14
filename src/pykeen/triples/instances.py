@@ -79,7 +79,7 @@ class SLCWAInstances(Instances[MappedTriples]):
 
 @fix_dataclass_init_docs
 @dataclass
-class _LCWAInstances(Instances[LCWABatchType]):
+class LCWAInstances(Instances[LCWABatchType]):
     """Triples and mappings to their indices for LCWA."""
 
     #: The unique pairs
@@ -89,7 +89,7 @@ class _LCWAInstances(Instances[LCWABatchType]):
     compressed: scipy.sparse.csr_matrix
 
     #: The column to predict
-    target_column: int
+    target: int
 
     @classmethod
     def from_triples(cls, mapped_triples: MappedTriples, num_entities: int, num_relations: int) -> Instances:
@@ -107,18 +107,18 @@ class _LCWAInstances(Instances[LCWABatchType]):
             The instances.
         """
         mapped_triples = mapped_triples.numpy()
-        other_columns = sorted(set(range(3)).difference({cls.target_column}))
+        other_columns = sorted(set(range(3)).difference({cls.target}))
         unique_pairs, pair_idx_to_triple_idx = np.unique(mapped_triples[:, other_columns], return_inverse=True, axis=0)
         num_pairs = unique_pairs.shape[0]
-        tails = mapped_triples[:, cls.target_column]
-        target_size = num_relations if cls.target_column == 1 else num_entities
+        tails = mapped_triples[:, cls.target]
+        target_size = num_relations if cls.target == 1 else num_entities
         compressed = scipy.sparse.coo_matrix(
             (np.ones(mapped_triples.shape[0], dtype=np.float32), (pair_idx_to_triple_idx, tails)),
             shape=(num_pairs, target_size),
         )
         # convert to csr for fast row slicing
         compressed = compressed.tocsr()
-        return cls(pairs=unique_pairs, compressed=compressed, target_column=cls.target_column)
+        return cls(pairs=unique_pairs, compressed=compressed, target_column=cls.target)
 
     @staticmethod
     def _get_target_size(num_entities: int, num_relations: int) -> int:
@@ -129,22 +129,6 @@ class _LCWAInstances(Instances[LCWABatchType]):
 
     def __getitem__(self, item: int) -> LCWABatchType:  # noqa: D105
         return self.pairs[item], np.asarray(self.compressed[item, :].todense())[0, :]
-
-
-@fix_dataclass_init_docs
-@dataclass
-class LCWAInstances(_LCWAInstances):
-    """Triples and mappings to their indices for LCWA."""
-
-    target_column = 2
-
-
-@fix_dataclass_init_docs
-@dataclass
-class RelationLCWAInstances(_LCWAInstances):
-    """LCWA instances for relation prediction."""
-
-    target_column = 1
 
 
 @fix_dataclass_init_docs

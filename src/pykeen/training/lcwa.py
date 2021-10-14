@@ -3,7 +3,6 @@
 """Training KGE models based on the LCWA."""
 
 import logging
-from abc import ABC, abstractmethod
 from math import ceil
 from typing import Optional
 
@@ -11,19 +10,45 @@ import torch
 
 from .training_loop import TrainingLoop
 from ..triples import CoreTriplesFactory, Instances
-from ..triples.instances import LCWABatchType, LCWASampleType, RelationLCWAInstances
-from ..typing import MappedTriples
+from ..triples.instances import LCWABatchType, LCWASampleType
 
 __all__ = [
     'LCWATrainingLoop',
-    'RelationLCWATrainingLoop',
 ]
 
 logger = logging.getLogger(__name__)
 
 
-class _LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType], ABC):
-    """A base class for local closed world assumption training approaches."""
+class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
+    """A training loop that uses the local closed world assumption training approach."""
+
+    def __init__(
+        self,
+        target: int = 2,
+        **kwargs,
+    ):
+        """
+        Initialize the training loop.
+
+        :param target:
+            The target column. From {0, 1, 2} for head/relation/tail prediction.
+        :param kwargs:
+            Additional keyword-based parameters passed to TrainingLoop.__init__
+        """
+        super().__init__(**kwargs)
+        self.target = target
+        if target == 0:
+            self.score_method = self.model.score_h
+        elif target == 1:
+            self.score_method = self.model.score_r
+        elif target == 2:
+            self.score_method = self.model.score_t
+        else:
+            raise ValueError(f"Invalid target column: {target}. Must be from {{0, 1, 2}}.")
+        self.num_targets = self.model.num_relations if target == 1 else self.model.num_entities
+
+    def _create_instances(self, triples_factory: CoreTriplesFactory) -> Instances:  # noqa: D102
+        return triples_factory.create_lcwa_instances(target=self.target)
 
     @staticmethod
     def _get_batch_size(batch: LCWABatchType) -> int:  # noqa: D102
@@ -44,13 +69,16 @@ class _LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType], ABC):
         batch_pairs = batch_pairs[start:stop].to(device=self.device)
         batch_labels_full = batch_labels_full[start:stop].to(device=self.device)
 
-        predictions = self._score(batch_pairs=batch_pairs, slice_size=slice_size)
+        if slice_size is None:
+            predictions = self.score_method(batch_pairs)
+        else:
+            predictions = self.score_method(batch_pairs, slice_size=slice_size)  # type: ignore
 
         return self.loss.process_lcwa_scores(
             predictions=predictions,
             labels=batch_labels_full,
             label_smoothing=label_smoothing,
-            num_entities=self._num_targets(),
+            num_entities=self.num_targets,
         ) + self.model.collect_regularization_term()
 
     def _slice_size_search(
@@ -111,7 +139,11 @@ class _LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType], ABC):
         return slice_size
 
     def _check_slicing_availability(self, supports_sub_batching: bool):
-        if self._model_can_slice():
+        if self.target == 0 and self.model.can_slice_h:
+            return
+        if self.target == 1 and self.model.can_slice_r:
+            return
+        if self.target == 2 and self.model.can_slice_t:
             return
         elif supports_sub_batching:
             report = (
@@ -125,54 +157,3 @@ class _LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType], ABC):
             )
         logger.warning(report)
         raise MemoryError("The current model can't be trained on this hardware with these parameters.")
-
-    @abstractmethod
-    def _model_can_slice(self) -> bool:
-        """Determine whether the model can slice along the relevant dimension."""
-        raise NotImplementedError
-
-    @abstractmethod
-    def _score(self, batch_pairs: MappedTriples, slice_size: Optional[int]) -> torch.FloatTensor:
-        """Compute scores for a given batch, optionally with slicing."""
-        raise NotImplementedError
-
-    @abstractmethod
-    def _num_targets(self) -> int:
-        """The number of targets (either number of entities or relations)."""
-        raise NotImplementedError
-
-
-class LCWATrainingLoop(_LCWATrainingLoop):
-    """A training loop that uses the local closed world assumption training approach."""
-
-    def _create_instances(self, triples_factory: CoreTriplesFactory) -> Instances:  # noqa: D102
-        return triples_factory.create_lcwa_instances()
-
-    def _model_can_slice(self) -> bool:  # noqa: D102
-        return self.model.can_slice_t
-
-    def _score(self, batch_pairs: MappedTriples, slice_size: Optional[int]) -> torch.FloatTensor:  # noqa: D102
-        if slice_size is None:
-            return self.model.score_t(hr_batch=batch_pairs)
-        return self.model.score_t(hr_batch=batch_pairs, slice_size=slice_size)  # type: ignore
-
-    def _num_targets(self) -> int:  # noqa: D102
-        return self.model.num_entities
-
-
-class RelationLCWATrainingLoop(_LCWATrainingLoop):
-    """An LCWA training loop for relation prediction."""
-
-    def _create_instances(self, triples_factory: CoreTriplesFactory) -> Instances:  # noqa: D102
-        return triples_factory._create_instances(instances_cls=RelationLCWAInstances)
-
-    def _model_can_slice(self) -> bool:  # noqa: D102
-        return self.model.can_slice_r
-
-    def _score(self, batch_pairs: MappedTriples, slice_size: Optional[int]) -> torch.FloatTensor:  # noqa: D102
-        if slice_size is None:
-            return self.model.score_r(ht_batch=batch_pairs)
-        return self.model.score_r(ht_batch=batch_pairs, slice_size=slice_size)  # type: ignore
-
-    def _num_targets(self) -> int:  # noqa: D102
-        return self.model.num_relations

@@ -360,15 +360,16 @@ class CoreTriplesFactory:
         """Create sLCWA instances for this factory's triples."""
         return self._create_instances(SLCWAInstances)
 
-    def create_lcwa_instances(self, use_tqdm: Optional[bool] = None) -> Instances:
+    def create_lcwa_instances(self, use_tqdm: Optional[bool] = None, target: int = 2) -> Instances:
         """Create LCWA instances for this factory's triples."""
-        return self._create_instances(LCWAInstances)
+        return self._create_instances(LCWAInstances, target=target)
 
-    def _create_instances(self, instances_cls: Type[Instances]) -> Instances:
+    def _create_instances(self, instances_cls: Type[Instances], **kwargs) -> Instances:
         return instances_cls.from_triples(
             mapped_triples=self._add_inverse_triples_if_necessary(mapped_triples=self.mapped_triples),
             num_entities=self.num_entities,
             num_relations=self.num_relations,
+            **kwargs,
         )
 
     def get_most_frequent_relations(self, n: Union[int, float]) -> Set[int]:
