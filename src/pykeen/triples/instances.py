@@ -36,7 +36,14 @@ class Instances(data.Dataset[BatchType], Generic[BatchType], ABC):
         raise NotImplementedError
 
     @classmethod
-    def from_triples(cls, mapped_triples: MappedTriples, num_entities: int, num_relations: int) -> 'Instances':
+    def from_triples(
+        cls,
+        mapped_triples: MappedTriples,
+        *,
+        num_entities: int,
+        num_relations: int,
+        **kwargs,
+    ) -> 'Instances':
         """Create instances from mapped triples.
 
         :param mapped_triples: shape: (num_triples, 3)
@@ -69,7 +76,14 @@ class SLCWAInstances(Instances[MappedTriples]):
         return self.mapped_triples[item]
 
     @classmethod
-    def from_triples(cls, mapped_triples: MappedTriples, **kwargs) -> Instances:  # noqa:D102
+    def from_triples(
+        cls,
+        mapped_triples: MappedTriples,
+        *,
+        num_entities: int,
+        num_relations: int,
+        **kwargs,
+    ) -> Instances:  # noqa:D102
         return cls(mapped_triples=mapped_triples)
 
 
@@ -85,11 +99,16 @@ class LCWAInstances(Instances[LCWABatchType]):
         self.pairs = pairs
         self.compressed = compressed
 
-    #: The column to predict
-    target: int
-
     @classmethod
-    def from_triples(cls, mapped_triples: MappedTriples, num_entities: int, num_relations: int) -> Instances:
+    def from_triples(
+        cls,
+        mapped_triples: MappedTriples,
+        *,
+        num_entities: int,
+        num_relations: int,
+        target: Optional[int] = None,
+        **kwargs,
+    ) -> Instances:
         """
         Create LCWA instances from triples.
 
@@ -99,23 +118,27 @@ class LCWAInstances(Instances[LCWABatchType]):
             The number of entities.
         :param num_relations:
             The number of relations.
+        :param target:
+            The column to predict
 
         :return:
             The instances.
         """
+        if target is None:
+            target = 2
         mapped_triples = mapped_triples.numpy()
-        other_columns = sorted(set(range(3)).difference({cls.target}))
+        other_columns = sorted(set(range(3)).difference({target}))
         unique_pairs, pair_idx_to_triple_idx = np.unique(mapped_triples[:, other_columns], return_inverse=True, axis=0)
         num_pairs = unique_pairs.shape[0]
-        tails = mapped_triples[:, cls.target]
-        target_size = num_relations if cls.target == 1 else num_entities
+        tails = mapped_triples[:, target]
+        target_size = num_relations if target == 1 else num_entities
         compressed = scipy.sparse.coo_matrix(
             (np.ones(mapped_triples.shape[0], dtype=np.float32), (pair_idx_to_triple_idx, tails)),
             shape=(num_pairs, target_size),
         )
         # convert to csr for fast row slicing
         compressed = compressed.tocsr()
-        return cls(pairs=unique_pairs, compressed=compressed, target_column=cls.target)
+        return cls(pairs=unique_pairs, compressed=compressed)
 
     @staticmethod
     def _get_target_size(num_entities: int, num_relations: int) -> int:
