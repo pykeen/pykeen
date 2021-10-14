@@ -53,6 +53,20 @@ class TestHyperparameterOptimization(unittest.TestCase):
         self.assertIn(('params', 'loss.margin'), df.columns)
         self.assertNotIn(('params', 'training.num_epochs'), df.columns)
 
+    def test_fail_invalid_kwarg_ranges(self):
+        """Test that an exception is thrown if an incorrect argument is passed."""
+        with self.assertRaises(ValueError):
+            hpo_pipeline(
+                dataset='Nations',
+                model='TransE',
+                n_trials=1,
+                training_loop='sLCWA',
+                training_kwargs=dict(num_epochs=5, use_tqdm=False),
+                negative_sampler_kwargs_ranges=dict(
+                    garbage_key=dict(type=int, low=1, high=100),
+                ),
+            )
+
     def test_specified_model_hyperparameter(self):
         """Test making a study that has a specified model hyper-parameter."""
         target_embedding_dim = 50
