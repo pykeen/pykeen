@@ -37,7 +37,9 @@ __all__ = [
     'UnpackedRemoteDataset',
     'TarFileRemoteDataset',
     'PackedZipRemoteDataset',
+    'CompressedSingleDataset',
     'TarFileSingleDataset',
+    'ZipSingleDataset',
     'TabbedDataset',
     'SingleTabbedDataset',
     'dataset_similarity',
@@ -628,8 +630,8 @@ class PackedZipRemoteDataset(LazyDataset):
                 )
 
 
-class TarFileSingleDataset(LazyDataset):
-    """Loads a dataset that's a single file inside a tar.gz archive."""
+class CompressedSingleDataset(LazyDataset):
+    """Loads a dataset that's a single file inside an archive."""
 
     ratios = (0.8, 0.1, 0.1)
 
@@ -677,6 +679,47 @@ class TarFileSingleDataset(LazyDataset):
         return self.cache_root.joinpath(self.name)
 
     def _load(self) -> None:
+        df = self._get_df()
+        tf_path = self._get_path()
+        tf = TriplesFactory.from_labeled_triples(
+            triples=df.values,
+            create_inverse_triples=self.create_inverse_triples,
+            metadata={'path': tf_path},
+        )
+        self._training, self._testing, self._validation = cast(
+            Tuple[TriplesFactory, TriplesFactory, TriplesFactory],
+            tf.split(
+                ratios=self.ratios,
+                random_state=self.random_state,
+            ),
+        )
+        logger.info('[%s] done splitting data from %s', self.__class__.__name__, tf_path)
+
+    def _get_df(self) -> pd.DataFrame:
+        raise NotImplementedError
+
+    def _load_validation(self) -> None:
+        pass  # already loaded by _load()
+
+
+class ZipSingleDataset(CompressedSingleDataset):
+    """Loads a dataset that's a single file inside a zip archive."""
+
+    def _get_df(self) -> pd.DataFrame:
+        path = self._get_path()
+        if not path.is_file():
+            download(self.url, self._get_path())  # noqa:S310
+
+        with zipfile.ZipFile(path) as zip_file:
+            with zip_file.open(self._relative_path.as_posix()) as file:
+                df = pd.read_csv(file, sep=self.delimiter)
+        return df
+
+
+class TarFileSingleDataset(CompressedSingleDataset):
+    """Loads a dataset that's a single file inside a tar.gz archive."""
+
+    def _get_df(self) -> pd.DataFrame:
         if not self._get_path().is_file():
             download(self.url, self._get_path())  # noqa:S310
 
@@ -694,23 +737,7 @@ class TarFileSingleDataset(LazyDataset):
                 tar_file.extract(str(self._relative_path), self.cache_root)
 
         df = pd.read_csv(_actual_path, sep=self.delimiter)
-        tf_path = self._get_path()
-        tf = TriplesFactory.from_labeled_triples(
-            triples=df.values,
-            create_inverse_triples=self.create_inverse_triples,
-            metadata={'path': tf_path},
-        )
-        self._training, self._testing, self._validation = cast(
-            Tuple[TriplesFactory, TriplesFactory, TriplesFactory],
-            tf.split(
-                ratios=self.ratios,
-                random_state=self.random_state,
-            ),
-        )
-        logger.info('[%s] done splitting data from %s', self.__class__.__name__, tf_path)
-
-    def _load_validation(self) -> None:
-        pass  # already loaded by _load()
+        return df
 
 
 class TabbedDataset(LazyDataset):
