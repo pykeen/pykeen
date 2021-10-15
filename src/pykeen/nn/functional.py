@@ -679,7 +679,7 @@ def structured_embedding_interaction(
     :param t: shape: (batch_size, 1, 1, num_tails, dim)
         The tail representations.
     :param p:
-        The p for the norm. cf. torch.norm.
+        The p for the norm. cf. :func:`torch.linalg.vector_norm`.
     :param power_norm:
         Whether to return the powered norm.
 
@@ -836,7 +836,7 @@ def transh_interaction(
     :param t: shape: (batch_size, 1, 1, num_tails, dim)
         The tail representations.
     :param p:
-        The p for the norm. cf. torch.norm.
+        The p for the norm. cf. :func:`torch.linalg.vector_norm`.
     :param power_norm:
         Whether to return $|x-y|_p^p$.
 
@@ -988,7 +988,7 @@ def mure_interaction(
     :param b_t: shape: (batch_size, 1, 1, num_tails)
         The tail entity bias.
     :param p:
-        The parameter p for selecting the norm, cf. torch.norm.
+        The parameter p for selecting the norm, cf. :func:`torch.linalg.vector_norm`.
     :param power_norm:
         Whether to return the powered norm instead.
 

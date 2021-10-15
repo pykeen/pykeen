@@ -661,7 +661,7 @@ def negative_norm_of_sum(
     :param x: shape: (batch_size, num_heads, num_relations, num_tails, dim)
         The representations.
     :param p:
-        The p for the norm. cf. torch.norm.
+        The p for the norm. cf. :func:`torch.linalg.vector_norm`.
     :param power_norm:
         Whether to return $|x-y|_p^p$, cf. https://github.com/pytorch/pytorch/issues/28119
 
@@ -681,7 +681,7 @@ def negative_norm(
     :param x: shape: (batch_size, num_heads, num_relations, num_tails, dim)
         The vectors.
     :param p:
-        The p for the norm. cf. torch.norm.
+        The p for the norm. cf. :func:`torch.linalg.vector_norm`.
     :param power_norm:
         Whether to return $|x-y|_p^p$, cf. https://github.com/pytorch/pytorch/issues/28119
 

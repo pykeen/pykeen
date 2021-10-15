@@ -4,12 +4,13 @@
 
 import dataclasses
 import ftplib
+import inspect
 import json
 import logging
 import os
 import pathlib
 from dataclasses import dataclass
-from typing import Any, Callable, Collection, Dict, Mapping, Optional, Type, Union, cast
+from typing import Any, Callable, Collection, Dict, Iterable, Mapping, Optional, Type, Union, cast
 
 import torch
 from optuna import Study, Trial, create_study
@@ -51,6 +52,16 @@ logger = logging.getLogger(__name__)
 STOPPED_EPOCH_KEY = 'stopped_epoch'
 
 
+class ExtraKeysError(ValueError):
+    """Raised on extra keys being used."""
+
+    def __init__(self, keys: Iterable[str]):
+        super().__init__(sorted(keys))
+
+    def __str__(self) -> str:
+        return f"Invalid keys: {self.args[0]}"
+
+
 @dataclass
 class Objective:
     """A dataclass containing all of the information to make an objective function."""
@@ -62,7 +73,7 @@ class Objective:
     training_loop: Type[TrainingLoop]  # 6.
     stopper: Type[Stopper]  # 7.
     evaluator: Type[Evaluator]  # 8.
-    result_tracker: Type[ResultTracker]  # 9.
+    result_tracker: Union[ResultTracker, Type[ResultTracker]]  # 9.
     metric: str
 
     # 1. Dataset
@@ -189,11 +200,24 @@ class Objective:
         _negative_sampler_kwargs: Mapping[str, Any]
         if self.training_loop is not SLCWATrainingLoop:
             _negative_sampler_kwargs = {}
+        elif self.negative_sampler is None:
+            raise ValueError("Negative sampler class must be made explicit when training under sLCWA")
         else:
+            # TODO this fixes the issue for negative samplers, but does not generally address it.
+            #  For example, some of them obscure their arguments with **kwargs, so should we look
+            #  at the parent class? Sounds like something to put in class resolver by using the
+            #  inspect module. For now, this solution will rely on the fact that the sampler is a
+            #  direct descendent of a parent NegativeSampler
+            direct_params = inspect.signature(self.negative_sampler).parameters
+            parent_params = inspect.signature(self.negative_sampler.__bases__[0]).parameters
+            valid_keys = set(direct_params).union(parent_params) - {"kwargs"}
+            invalid_keys = set(self.negative_sampler_kwargs_ranges or []) - valid_keys
+            if invalid_keys:
+                raise ExtraKeysError(invalid_keys)
             _negative_sampler_kwargs = _get_kwargs(
                 trial=trial,
                 prefix='negative_sampler',
-                default_kwargs_ranges={} if self.negative_sampler is None else self.negative_sampler.hpo_default,
+                default_kwargs_ranges=self.negative_sampler.hpo_default,
                 kwargs=self.negative_sampler_kwargs,
                 kwargs_ranges=self.negative_sampler_kwargs_ranges,
             )
@@ -209,6 +233,9 @@ class Objective:
         _stopper_kwargs = dict(self.stopper_kwargs or {})
         if self.stopper is not None and issubclass(self.stopper, EarlyStopper):
             self._update_stopper_callbacks(_stopper_kwargs, trial)
+
+        # create result tracker to allow to gracefully close failed trials
+        result_tracker = tracker_resolver.make(query=self.result_tracker, pos_kwargs=self.result_tracker_kwargs)
 
         try:
             result = pipeline(
@@ -251,13 +278,16 @@ class Objective:
                 evaluation_kwargs=self.evaluation_kwargs,
                 filter_validation_when_testing=self.filter_validation_when_testing,
                 # 9. Tracker
-                result_tracker=self.result_tracker,
-                result_tracker_kwargs=self.result_tracker_kwargs,
+                result_tracker=result_tracker,
+                result_tracker_kwargs=None,
                 # Misc.
                 use_testing_data=False,  # use validation set during HPO!
                 device=self.device,
             )
         except (MemoryError, RuntimeError) as e:
+            # close run in result tracker
+            result_tracker.end_run(success=False)
+
             trial.set_user_attr('failure', str(e))
             # Will trigger Optuna to set the state of the trial as failed
             return None
@@ -709,7 +739,8 @@ def hpo_pipeline(
     logger.info('Filter validation triples when testing: %s', filter_validation_when_testing)
 
     # 9. Tracking
-    result_tracker_cls: Type[ResultTracker] = tracker_resolver.lookup(result_tracker)
+    if not isinstance(result_tracker, ResultTracker):
+        result_tracker = tracker_resolver.lookup(result_tracker)
 
     objective = Objective(
         # 1. Dataset
@@ -757,7 +788,7 @@ def hpo_pipeline(
         evaluation_kwargs=evaluation_kwargs,
         filter_validation_when_testing=filter_validation_when_testing,
         # 9. Tracker
-        result_tracker=result_tracker_cls,
+        result_tracker=result_tracker,
         result_tracker_kwargs=result_tracker_kwargs,
         # Optuna Misc.
         metric=metric,

@@ -4,9 +4,10 @@
 
 import logging
 import typing
-from typing import Optional, Sequence, Tuple, Union
+from typing import Collection, Optional, Sequence, Set, Tuple, Union
 
 import numpy
+import pandas
 import torch
 
 from ..typing import MappedTriples, TorchRandomHint
@@ -63,9 +64,26 @@ def _split_triples(
     return triples_groups
 
 
+def _get_cover_for_column(df: pandas.DataFrame, column: str, index_column: str = "index") -> Set[int]:
+    return set(df.groupby(by=column).agg({index_column: "min"})[index_column].values)
+
+
+def _get_covered_entities(df: pandas.DataFrame, chosen: Collection[int]) -> Set[int]:
+    return set(numpy.unique(df.loc[df["index"].isin(chosen), ["h", "t"]]))
+
+
 def _get_cover_deterministic(triples: MappedTriples) -> torch.BoolTensor:
     """
     Get a coverage mask for all entities and relations.
+
+    The implementation uses a greedy coverage algorithm for selecting triples. If there are multiple triples to
+    choose, the smaller ID is preferred.
+
+    1. Select one triple for each relation.
+    2. Select one triple for each head entity, which is not yet covered.
+    3. Select one triple for each tail entity, which is not yet covered.
+
+    The cover is guaranteed to contain at most $num_relations + num_unique_heads + num_unique_tails$ triples.
 
     :param triples: shape: (n, 3)
         The triples (ID-based).
@@ -73,26 +91,26 @@ def _get_cover_deterministic(triples: MappedTriples) -> torch.BoolTensor:
     :return: shape: (n,)
         A boolean mask indicating whether the triple is part of the cover.
     """
-    num_entities = triples[:, [0, 2]].max() + 1
-    num_relations = triples[:, 1].max() + 1
+    df = pandas.DataFrame(
+        data=triples.numpy(),
+        columns=["h", "r", "t"],
+    ).reset_index()
+
+    # select one triple per relation
+    chosen = _get_cover_for_column(df=df, column="r")
+
+    # maintain set of covered entities
+    covered = _get_covered_entities(df=df, chosen=chosen)
+
+    # Select one triple for each head/tail entity, which is not yet covered.
+    for column in "ht":
+        covered = _get_covered_entities(df=df, chosen=chosen)
+        chosen |= _get_cover_for_column(df=df[~df[column].isin(covered)], column=column)
+
+    # create mask
     num_triples = triples.shape[0]
-
-    # index
-    entities = torch.full(size=(num_entities,), fill_value=-1, dtype=torch.long)
-    relations = torch.full(size=(num_relations,), fill_value=-1, dtype=torch.long)
-    h, r, t = triples.T
-    triple_id = torch.arange(num_triples)
-    entities[h] = relations[r] = entities[t] = triple_id
-
-    if entities.min() < 0:
-        raise TripleCoverageError(arr=entities, name="entities")
-    if relations.min() < 0:
-        raise TripleCoverageError(arr=relations, name="relations")
-
-    # select
     seed_mask = torch.zeros(num_triples, dtype=torch.bool)
-    seed_mask[entities] = True
-    seed_mask[relations] = True
+    seed_mask[list(chosen)] = True
     return seed_mask
 
 
