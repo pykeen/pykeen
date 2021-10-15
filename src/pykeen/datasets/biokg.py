@@ -21,7 +21,7 @@ URL = 'https://github.com/dsi-bdi/biokg/releases/download/v1.0.0/biokg.zip'
 
 @parse_docdata
 class BioKG(ZipSingleDataset):
-    """The BioKG dataset.
+    """The BioKG dataset from [walsh2020]_.
 
     ---
     name: BioKG

@@ -37,7 +37,7 @@ could be used as in:
 >>> pipeline_result.save_to_directory('nations_transe')
 
 In this example, the dataset was given as a string. A list of available datasets can be found in
-:mod:`pykeen.datasets`. Alternatively, the instance of the :class:`pykeen.datasets.Dataset` could be
+:mod:`pykeen.datasets`. Alternatively, a subclass of :class:`pykeen.datasets.base.Dataset` could be
 used as in:
 
 >>> from pykeen.pipeline import pipeline
@@ -50,8 +50,8 @@ used as in:
 >>> pipeline_result.save_to_directory('nations_transe')
 
 In each of the previous three examples, the training approach, optimizer, and evaluation scheme
-were omitted. By default, the stochastic local closed world assumption (sLCWA) training approach is used in training.
-This can be explicitly given as a string:
+were omitted. By default, the model is trained under the stochastic local closed world assumption (sLCWA;
+:class:`pykeen.training.SLCWATrainingLoop`). This can be explicitly given as a string:
 
 >>> from pykeen.pipeline import pipeline
 >>> pipeline_result = pipeline(
@@ -61,9 +61,10 @@ This can be explicitly given as a string:
 ... )
 >>> pipeline_result.save_to_directory('nations_transe')
 
-Alternatively, the local closed world assumption (LCWA) training approach can be given with ``'LCWA'``.
+Alternatively, the model can be trained under the  local closed world assumption (LCWA;
+:class:`pykeen.training.LCWATrainingLoop`) by giving ``'LCWA'``.
 No additional configuration is necessary, but it's worth reading up on the differences between these training
-approaches.
+approaches. A list of available training assumptions can be found in :mod:`pykeen.training`.
 
 >>> from pykeen.pipeline import pipeline
 >>> pipeline_result = pipeline(

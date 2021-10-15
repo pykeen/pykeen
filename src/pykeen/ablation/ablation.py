@@ -10,7 +10,7 @@ import time
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple, Union
 from uuid import uuid4
 
-from ..training import _TRAINING_LOOP_SUFFIX
+from ..training import training_loop_resolver
 from ..utils import normalize_string
 
 __all__ = [
@@ -574,7 +574,7 @@ def prepare_ablation(  # noqa:C901
         )
         logger.info(f"Training loop: {training_loop}")
 
-        if normalize_string(training_loop, suffix=_TRAINING_LOOP_SUFFIX) == 'slcwa':
+        if training_loop_resolver.normalize_string(training_loop) == 'slcwa':
             negative_sampler = negative_sampler or 'basic'  # default to basic
             _set_arguments(
                 config=model_to_neg_sampler_to_neg_sampler_kwargs,

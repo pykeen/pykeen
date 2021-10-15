@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Sample datasets for use with PyKEEN, borrowed from https://github.com/ZhenfengLei/KGDatasets.
+"""Built-in datasets for PyKEEN.
 
 New datasets (inheriting from :class:`pykeen.datasets.base.Dataset`) can be registered with PyKEEN using the
 :mod:`pykeen.datasets` group in Python entrypoints in your own `setup.py` or `setup.cfg` package configuration.
@@ -106,7 +106,7 @@ def get_dataset(
     testing: Union[None, str, pathlib.Path, CoreTriplesFactory] = None,
     validation: Union[None, str, pathlib.Path, CoreTriplesFactory] = None,
 ) -> Dataset:
-    """Get the dataset.
+    """Get a dataset.
 
     :param dataset: The name of a dataset, an instance of a dataset, or the class for a dataset.
     :param dataset_kwargs: The keyword arguments, only to be used when a class for a dataset is used for

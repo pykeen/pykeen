@@ -1,16 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Training loops for KGE models using multi-modal information.
-
-======  ==========================================
-Name    Reference
-======  ==========================================
-lcwa    :class:`pykeen.training.LCWATrainingLoop`
-slcwa   :class:`pykeen.training.SLCWATrainingLoop`
-======  ==========================================
-
-.. note:: This table can be re-generated with ``pykeen ls trainers -f rst``
-"""
+"""Training loops for KGE models using multi-modal information."""
 
 from typing import Set, Type
 
@@ -30,14 +20,7 @@ __all__ = [
     'TrainingCallback',
 ]
 
-_TRAINING_LOOP_SUFFIX = 'TrainingLoop'
-_TRAINING_LOOPS: Set[Type[TrainingLoop]] = {
-    LCWATrainingLoop,
-    SLCWATrainingLoop,
-}
-training_loop_resolver = Resolver(
-    _TRAINING_LOOPS,
-    base=TrainingLoop,  # type: ignore
+training_loop_resolver = Resolver.from_subclasses(
+    TrainingLoop,
     default=SLCWATrainingLoop,
-    suffix=_TRAINING_LOOP_SUFFIX,
 )
