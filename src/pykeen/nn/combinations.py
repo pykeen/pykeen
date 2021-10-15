@@ -167,7 +167,7 @@ class ComplExLiteralCombination(ParameterizedComplexCombination):
         entity_embedding_dim: int,
         literal_embedding_dim: int,
         input_dropout: float = 0.0,
-        activation: HintOrType[nn.Module] = 'tanh',
+        activation: HintOrType[nn.Module] = nn.Tanh,
     ) -> None:
         """Instantiate the :class:`ParameterizedComplexCombination` with a :class:`LinearDropout` for real and complex.
 
@@ -210,9 +210,9 @@ class GatedCombination(Combination):
         entity_embedding_dim: int,
         literal_embedding_dim: int,
         input_dropout: float = 0.0,
-        gate_activation: HintOrType[nn.Module] = 'sigmoid',
+        gate_activation: HintOrType[nn.Module] = nn.Sigmoid,
         gate_activation_kwargs: Optional[Mapping[str, Any]] = None,
-        linlayer_activation: HintOrType[nn.Module] = 'tanh',
+        linlayer_activation: HintOrType[nn.Module] = nn.Tanh,
         linlayer_activation_kwargs: Optional[Mapping[str, Any]] = None,
     ) -> None:
         """Instantiate the :class:`torch.nn.Module`.
@@ -220,31 +220,32 @@ class GatedCombination(Combination):
         :param entity_embedding_dim: The dimension of the entity representations.
         :param literal_embedding_dim: The dimension of the literals.
         :param gate_activation: An optional, pre-instantiated activation module,
-            like :class:`torch.nn.sigmoid`, used on the gate output.
+            like :class:`torch.nn.Sigmoid`, used on the gate output.
         :param linlayer_activation_kwargs: An optional, pre-instantiated activation module,
-            like :class:`torch.nn.sigmoid`, used on the linear layer output.
+            like :class:`torch.nn.Tanh`, used on the linear layer output.
         """
         super().__init__()
         self.gate_activation = activation_resolver.make(gate_activation, gate_activation_kwargs)
         self.combination_linear_layer = nn.Linear(
-            entity_embedding_dim + literal_embedding_dim, entity_embedding_dim,
+            entity_embedding_dim + literal_embedding_dim,
+            entity_embedding_dim,
         )
         self.gate_entity_layer = nn.Linear(
-            entity_embedding_dim, entity_embedding_dim,
-            bias=False
+            entity_embedding_dim,
+            entity_embedding_dim,
+            bias=False,
         )
         self.gate_literal_layer = nn.Linear(
-            literal_embedding_dim, entity_embedding_dim,
-            bias=False
+            literal_embedding_dim,
+            entity_embedding_dim,
+            bias=False,
         )
         self.bias = nn.Parameter(torch.zeros(entity_embedding_dim))
-
         self.linlayer_activation = activation_resolver.make(linlayer_activation, linlayer_activation_kwargs)
-
         self.dropout = nn.Dropout(input_dropout)
 
     def forward(self, x: torch.FloatTensor, literal: torch.FloatTensor) -> torch.FloatTensor:
-        """Given the entity and literal representations calucaltes a new embedding that contains information of both."""
+        """Given the entity and literal representations, calculates a new embedding that contains information of both."""
         combination = torch.cat([x, literal], -1)
         z = self.gate_activation(self.gate_entity_layer(x) + self.gate_literal_layer(literal) + self.bias)
         h = self.linlayer_activation(self.combination_linear_layer(combination))
