@@ -53,11 +53,14 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
             Additional keyword-based parameters passed to TrainingLoop.__init__
         """
         super().__init__(**kwargs)
+
+        # normalize target column
         if target is None:
             target = 2
         if isinstance(target.str):
             target = name_to_index[target]
         self.target = target
+
         # The type inference is so confusing between the function switching
         # and polymorphism introduced by slicability that these need to be ignored
         if self.target == 0:
@@ -68,6 +71,7 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
             self.score_method = self.model.score_t  # type: ignore
         else:
             raise ValueError(f"Invalid target column: {self.target}. Must be from {{0, 1, 2}}.")
+
         self.num_targets = self.model.num_relations if self.target == 1 else self.model.num_entities
 
     def _create_instances(self, triples_factory: CoreTriplesFactory) -> Instances:  # noqa: D102
