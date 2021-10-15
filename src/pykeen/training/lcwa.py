@@ -4,7 +4,7 @@
 
 import logging
 from math import ceil
-from typing import Callable, Optional, Union
+from typing import Optional, Union
 
 import torch
 
@@ -36,12 +36,6 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
     head entity. In particular the second, i.e., predicting the relation, is commonly encountered in visual relation
     prediction.
     """
-
-    #: The score method, one of model.score_{h,r,t}
-    score_method: Union[
-        Callable[[torch.LongTensor], torch.FloatTensor],  # without slicing
-        Callable[[torch.LongTensor, int], torch.FloatTensor],  # with slicing
-    ]
 
     def __init__(
         self,
