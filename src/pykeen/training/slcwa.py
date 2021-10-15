@@ -26,7 +26,10 @@ logger = logging.getLogger(__name__)
 
 
 class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
-    """A training loop that uses the stochastic local closed world assumption training approach."""
+    """A training loop that uses the stochastic local closed world assumption training approach.
+
+    [ruffinelli2020]_ call the sLCWA ``NegSamp`` in their work.
+    """
 
     negative_sampler: NegativeSampler
     loss_blacklist = [CrossEntropyLoss]

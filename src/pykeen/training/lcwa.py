@@ -20,7 +20,10 @@ logger = logging.getLogger(__name__)
 
 
 class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
-    """A training loop that uses the local closed world assumption training approach."""
+    """A training loop that uses the local closed world assumption training approach.
+
+    [ruffinelli2020]_ call the LCWA ``KvsAll`` in their work.
+    """
 
     def _create_instances(self, triples_factory: CoreTriplesFactory) -> Instances:  # noqa: D102
         return triples_factory.create_lcwa_instances()
