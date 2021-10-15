@@ -57,7 +57,7 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
         # normalize target column
         if target is None:
             target = 2
-        if isinstance(target.str):
+        if isinstance(target, str):
             target = name_to_index[target]
         self.target = target
 
