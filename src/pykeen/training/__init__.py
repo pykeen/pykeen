@@ -21,8 +21,11 @@ training under the sLCWA as OWA.
 .. image:: ../img/training_approaches.png
   :alt: Troubleshooting Image 2
 
+Assumptions
+-----------
+
 Open World Assumption
----------------------
+~~~~~~~~~~~~~~~~~~~~~
 When training under the open world assumption (OWA), all triples that are not part of the
 knowledge graph are considered unknown (e.g., neither positive nor negative).
 This leads to under-fitting (i.e., over-generalization) and is therefore usually a poor choice for
@@ -35,14 +38,14 @@ with the OWA.
     local closed world assumption (sLCWA). See below for an explanation.
 
 Closed World Assumption
------------------------
+~~~~~~~~~~~~~~~~~~~~~~~
 When training under the close world assumption (CWA), all triples that are not part of the
 knowledge graph are considered as negative. As most knowledge graphs are inherently incomplete,
 this leads to over-fitting and is therefore usually a poor choice for training knowledge
 graph embedding models. PyKEEN does *not* implement a training loop with the CWA.
 
 Local Closed World Assumption
------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 When training under the local closed world assumption (LCWA; introduced in [dong2014]_),
 a particular subset of triples that are not part of the knowledge graph are considered as
 negative.
@@ -63,7 +66,7 @@ the set of negatives examples when speaking about LCWA.
 
 
 Stochastic Local Closed World Assumption
-----------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Under the \acf{slcwa}, instead of considering all possible triples
 $(h,r,t_i) \notin \mathcal{K}$, $(h_i,r,t) \notin \mathcal{K}$ or $(h,r_i,t) \notin \mathcal{K}$ as false,
 we randomly take samples of these sets.
@@ -88,7 +91,6 @@ false negative is rather low.
 Therefore, the additional filter step is often omitted to lower computational cost.
 It should be taken into account that a corrupted triple that is \textit{not part }of the \ac{kg} can
 represent a true fact.
-
 """
 
 from class_resolver import Resolver
