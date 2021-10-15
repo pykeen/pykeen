@@ -20,7 +20,17 @@ logger = logging.getLogger(__name__)
 
 
 class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
-    """A training loop that uses the local closed world assumption training approach."""
+    r"""
+    A training loop that uses the a training approach based upon the local closed world assumption (LCWA).
+
+    Under the LCWA, for a given true training triple $(h, r, t) \in \mathcal{T}_{train}$, all triples
+    $(h, r, t') \notin \mathcal{T}_{train}$ are assumed to be false. The training approach thus uses a 1-n scoring,
+    where it efficiently computes scores for all triples $(h, r, t')$, i.e., sharing the same (head, relation)-pair.
+
+    This implementation slightly generalizes the original LCWA, and allows to make the same assumption for relation, or
+    head entity. In particular the second, i.e., predicting the relation, is commonly encountered in visual relation
+    prediction.
+    """
 
     def __init__(
         self,
@@ -32,7 +42,7 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
         Initialize the training loop.
 
         :param target:
-            The target column. From {0, 1, 2} for head/relation/tail prediction. Defaults to 2
+            The target column. From {0, 1, 2} for head/relation/tail prediction. Defaults to 2, i.e., tail prediction.
         :param kwargs:
             Additional keyword-based parameters passed to TrainingLoop.__init__
         """
