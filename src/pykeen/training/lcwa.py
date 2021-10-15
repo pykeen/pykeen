@@ -4,7 +4,7 @@
 
 import logging
 from math import ceil
-from typing import Optional
+from typing import Optional, Union
 
 import torch
 
@@ -18,15 +18,65 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
+name_to_index = {
+    name: index
+    for index, name in enumerate("hrt")
+}
+
 
 class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
-    """A training loop that uses the local closed world assumption training approach.
+    r"""A training loop that is based upon the local closed world assumption (LCWA).
+
+    Under the LCWA, for a given true training triple $(h, r, t) \in \mathcal{T}_{train}$, all triples
+    $(h, r, t') \notin \mathcal{T}_{train}$ are assumed to be false. The training approach thus uses a 1-n scoring,
+    where it efficiently computes scores for all triples $(h, r, t')$ for $t' \in \mathcal{E}$, i.e., sharing the
+    same (head, relation)-pair.
+
+    This implementation slightly generalizes the original LCWA, and allows to make the same assumption for relation, or
+    head entity. In particular the second, i.e., predicting the relation, is commonly encountered in visual relation
+    prediction.
 
     [ruffinelli2020]_ call the LCWA ``KvsAll`` in their work.
     """
 
+    def __init__(
+        self,
+        *,
+        target: Union[None, str, int] = None,
+        **kwargs,
+    ):
+        """
+        Initialize the training loop.
+
+        :param target:
+            The target column. From {0, 1, 2} for head/relation/tail prediction. Defaults to 2, i.e., tail prediction.
+        :param kwargs:
+            Additional keyword-based parameters passed to TrainingLoop.__init__
+        """
+        super().__init__(**kwargs)
+
+        # normalize target column
+        if target is None:
+            target = 2
+        if isinstance(target, str):
+            target = name_to_index[target]
+        self.target = target
+
+        # The type inference is so confusing between the function switching
+        # and polymorphism introduced by slicability that these need to be ignored
+        if self.target == 0:
+            self.score_method = self.model.score_h  # type: ignore
+        elif self.target == 1:
+            self.score_method = self.model.score_r  # type: ignore
+        elif self.target == 2:
+            self.score_method = self.model.score_t  # type: ignore
+        else:
+            raise ValueError(f"Invalid target column: {self.target}. Must be from {{0, 1, 2}}.")
+
+        self.num_targets = self.model.num_relations if self.target == 1 else self.model.num_entities
+
     def _create_instances(self, triples_factory: CoreTriplesFactory) -> Instances:  # noqa: D102
-        return triples_factory.create_lcwa_instances()
+        return triples_factory.create_lcwa_instances(target=self.target)
 
     @staticmethod
     def _get_batch_size(batch: LCWABatchType) -> int:  # noqa: D102
@@ -48,15 +98,15 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
         batch_labels_full = batch_labels_full[start:stop].to(device=self.device)
 
         if slice_size is None:
-            predictions = self.model.score_t(hr_batch=batch_pairs)
+            predictions = self.score_method(batch_pairs)
         else:
-            predictions = self.model.score_t(hr_batch=batch_pairs, slice_size=slice_size)  # type: ignore
+            predictions = self.score_method(batch_pairs, slice_size=slice_size)  # type: ignore
 
         return self.loss.process_lcwa_scores(
             predictions=predictions,
             labels=batch_labels_full,
             label_smoothing=label_smoothing,
-            num_entities=self.model.num_entities,
+            num_entities=self.num_targets,
         ) + self.model.collect_regularization_term()
 
     def _slice_size_search(
@@ -117,7 +167,11 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
         return slice_size
 
     def _check_slicing_availability(self, supports_sub_batching: bool):
-        if self.model.can_slice_t:
+        if self.target == 0 and self.model.can_slice_h:
+            return
+        if self.target == 1 and self.model.can_slice_r:
+            return
+        if self.target == 2 and self.model.can_slice_t:
             return
         elif supports_sub_batching:
             report = (

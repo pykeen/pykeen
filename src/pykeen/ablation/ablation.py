@@ -10,7 +10,7 @@ import time
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple, Union
 from uuid import uuid4
 
-from ..training import training_loop_resolver, SLCWATrainingLoop
+from ..training import SLCWATrainingLoop, training_loop_resolver
 from ..utils import normalize_string
 
 __all__ = [

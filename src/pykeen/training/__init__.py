@@ -91,8 +91,6 @@ represent a true fact.
 
 """
 
-from typing import Set, Type
-
 from class_resolver import Resolver
 
 from .callbacks import TrainingCallback  # noqa: F401
@@ -110,6 +108,6 @@ __all__ = [
 ]
 
 training_loop_resolver = Resolver.from_subclasses(
-    TrainingLoop,
+    base=TrainingLoop,  # type: ignore
     default=SLCWATrainingLoop,
 )
