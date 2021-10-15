@@ -18,14 +18,20 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
+name_to_index = {
+    name: index
+    for index, name in enumerate("hrt")
+}
+
 
 class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
     r"""
-    A training loop that uses a training approach based upon the local closed world assumption (LCWA).
+    A training loop that is based upon the local closed world assumption (LCWA).
 
     Under the LCWA, for a given true training triple $(h, r, t) \in \mathcal{T}_{train}$, all triples
     $(h, r, t') \notin \mathcal{T}_{train}$ are assumed to be false. The training approach thus uses a 1-n scoring,
-    where it efficiently computes scores for all triples $(h, r, t')$, i.e., sharing the same (head, relation)-pair.
+    where it efficiently computes scores for all triples $(h, r, t')$ for $t' \in \mathcal{E}$, i.e., sharing the
+    same (head, relation)-pair.
 
     This implementation slightly generalizes the original LCWA, and allows to make the same assumption for relation, or
     head entity. In particular the second, i.e., predicting the relation, is commonly encountered in visual relation
@@ -35,7 +41,7 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
     def __init__(
         self,
         *,
-        target: Optional[int] = None,
+        target: Union[None, str, int] = None,
         **kwargs,
     ):
         """
@@ -47,7 +53,11 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
             Additional keyword-based parameters passed to TrainingLoop.__init__
         """
         super().__init__(**kwargs)
-        self.target = 2 if target is None else target
+        if target is None:
+            target = 2
+        if isinstance(target.str):
+            target = name_to_index[target]
+        self.target = target
         # The type inference is so confusing between the function switching
         # and polymorphism introduced by slicability that these need to be ignored
         if self.target == 0:
