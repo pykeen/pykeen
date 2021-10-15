@@ -4,7 +4,7 @@
 
 import logging
 from math import ceil
-from typing import Optional
+from typing import Optional, Union
 
 import torch
 
