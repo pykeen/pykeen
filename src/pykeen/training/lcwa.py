@@ -25,8 +25,7 @@ name_to_index = {
 
 
 class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
-    r"""
-    A training loop that is based upon the local closed world assumption (LCWA).
+    r"""A training loop that is based upon the local closed world assumption (LCWA).
 
     Under the LCWA, for a given true training triple $(h, r, t) \in \mathcal{T}_{train}$, all triples
     $(h, r, t') \notin \mathcal{T}_{train}$ are assumed to be false. The training approach thus uses a 1-n scoring,

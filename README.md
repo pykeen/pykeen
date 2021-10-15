@@ -217,7 +217,7 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 
 | Name   | Reference                                                                                                                                | Description                                                                               |
 |--------|------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------|
-| lcwa   | [`pykeen.training.LCWATrainingLoop`](https://pykeen.readthedocs.io/en/latest/reference/training.html#pykeen.training.LCWATrainingLoop)   | A training loop that uses the local closed world assumption training approach.            |
+| lcwa   | [`pykeen.training.LCWATrainingLoop`](https://pykeen.readthedocs.io/en/latest/reference/training.html#pykeen.training.LCWATrainingLoop)   | A training loop that is based upon the local closed world assumption (LCWA).              |
 | slcwa  | [`pykeen.training.SLCWATrainingLoop`](https://pykeen.readthedocs.io/en/latest/reference/training.html#pykeen.training.SLCWATrainingLoop) | A training loop that uses the stochastic local closed world assumption training approach. |
 
 ### Negative Samplers (3)
