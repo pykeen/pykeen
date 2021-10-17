@@ -6,20 +6,13 @@ Throughout the following explanations of training loops, we will assume the
 set of entities $\mathcal{E}$, set of relations $\mathcal{R}$,
 set of possible triples $\mathcal{T} = \mathcal{E} \times \mathcal{R} \times \mathcal{E}$.
 We stratify $\mathcal{T}$ into the `disjoint union <https://en.wikipedia.org/wiki/Disjoint_union>`_
-of positive triples $\mathcal{K} \subseteq \mathcal{T}$ and
-negative triples $\mathcal{\bar{K}} \subseteq \mathcal{T}$
-such that $\mathcal{K} \cap \mathcal{\bar{K}} = \emptyset$
-and $\mathcal{K} \cup \mathcal{\bar{K}} = \mathcal{T}$.
+of positive triples $\mathcal{T^{+}} \subseteq \mathcal{T}$ and
+negative triples $\mathcal{T^{-}} \subseteq \mathcal{T}$
+such that $\mathcal{T^{+}} \cap \mathcal{T^{-}} = \emptyset$
+and $\mathcal{T^{+}} \cup \mathcal{T^{-}} = \mathcal{T}$.
 
-Most knowledge graphs are built under the open world assumption (OWA)
-and do not contain negative triples. If you trained strictly under the OWA,
-then the model would overgeneralize [nickel2016review]_. Therefore, it makes
-sense to sample some negative triples., which is the stochastic local closed world
-assumption (sLCWA). Many other publications and software packages mistakenly call
-training under the sLCWA as OWA.
-
-.. image:: ../img/training_approaches.png
-  :alt: Troubleshooting Image 2
+A knowledge graph $\mathcal{K}$ constructed under the open world assumption contains a subset
+of all possible positive triples such that $\mathcal{K} \subseteq \mathcal{T^{+}}$.
 
 Assumptions
 -----------
@@ -29,7 +22,7 @@ Open World Assumption
 When training under the open world assumption (OWA), all triples that are not part of the
 knowledge graph are considered unknown (e.g., neither positive nor negative).
 This leads to under-fitting (i.e., over-generalization) and is therefore usually a poor choice for
-training knowledge graph embedding models [nickel2016review]_. PyKEEN does _not_ implement a training loop
+training knowledge graph embedding models [nickel2016review]_. PyKEEN does *not* implement a training loop
 with the OWA.
 
 .. warning::
@@ -50,47 +43,33 @@ When training under the local closed world assumption (LCWA; introduced in [dong
 a particular subset of triples that are not part of the knowledge graph are considered as
 negative.
 
-In this setting, for any triple $(h,r,t) \in \mathcal{K}$ that has been observed, a set
-$\mathcal{T}^-(h,r)$ of negative examples is created by considering all triples
-$(h, r, t_i) \notin \mathcal{K}$ as false. Therefore, for our exemplary
-\ac{kg} (Figure~\ref{fig:exemplary_kg}) for the pair \textit{(Peter, works\_at)}, the triple
-\textit{(Peter, works\_at, DHL)} is a false fact since for this pair only the triple
-\textit{(Peter, works\_at, Deutsche Bank)} is part of the \ac{kg}.
-Similarly, we can construct $\mathcal{H}^-(r,t)$ based on all triples
-$(h_i, r, t) \notin \mathcal{K}$, or $\mathcal{R}^-(h,t)$ based on the
-triples $(h, r_i, t) \notin \mathcal{K}$. Constructing $\mathcal{R}^-(h,t)$ is a
-popular choice in visual relation detection domain~\cite{zhang2017visual,sharifzadeh2019improving}.
-However, most of the works in knowledge graph modeling construct only $\mathcal{T}^-(h, r)$ as
-the set of negative examples, and in the context of this work refer to $\mathcal{T}^-(h, r)$ as
-the set of negatives examples when speaking about LCWA.
+===========  =================================================================================================  ================================================================
+Strategy     Local Generator                                                                                    Global Generator
+===========  =================================================================================================  ================================================================
+Head         $\mathcal{T}_h^-(r,t)=\{(h,r,t) \mid h \in \mathcal{E} \land (h,r,t) \notin \mathcal{K} \}$        $\bigcup\limits_{(\_,r,t) \in \mathcal{K}} \mathcal{T}_h^-(r,t)$
+Relation     $\mathcal{T}_r^-(h,t)=\{(h,r,t) \mid r \in \mathcal{R} \land (h,r,t) \notin \mathcal{K} \}$        $\bigcup\limits_{(h,\_,t) \in \mathcal{K}} \mathcal{T}_r^-(h,t)$
+Tail         $\mathcal{T}_t^-(h,r)=\{(h,r,t) \mid t \in \mathcal{E} \land (h,r,t) \notin \mathcal{K} \}$        $\bigcup\limits_{(h,r,\_) \in \mathcal{K}} \mathcal{T}_t^-(h,r)$
+===========  =================================================================================================  ================================================================
 
+Most articles refer exclusively to the tail generation strategy when discussing LCWA. However, the relation
+generation strategy is a popular choice in visual relation detection domain (see [zhang2017]_ and
+[sharifzadeh2019vrd]_). However, PyKEEN additionally implements head generation since
+`PR #602 <https://github.com/pykeen/pykeen/pull/602>`_.
 
 Stochastic Local Closed World Assumption
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Under the \acf{slcwa}, instead of considering all possible triples
-$(h,r,t_i) \notin \mathcal{K}$, $(h_i,r,t) \notin \mathcal{K}$ or $(h,r_i,t) \notin \mathcal{K}$ as false,
-we randomly take samples of these sets.
+When training under the stochastic local closed world assumption (SLCWA), a random subset of the union of
+the head and tail generation strategies from LCWA are considered as negative triples.
 
-Two common approaches for generating negative samples are \ac{uns}~\cite{Bordes2013} and \ac{bns}~\cite{Wang2014} in
-which negative triples are created by corrupting a positive triple $(h,r,t) \in \mathcal{K}$
-by replacing either $h$ or $t$.
-We use $\mathcal{N}$ to denote the set of all potential negative triples:
+.. todo:: why is it good to take sampling? just because of computational efficiency?
 
-.. math::
+There are two other major considerations when randomly sampling negative triples: the random sampling
+strategy and the filtering of positive triples. A full guide on negative sampling with the SLCWA can be
+found in :mod:`pykeen.sampling`. The following chart from [ali2020a]_ demonstrates the different potential
+triples considered in LCWA vs. sLCWA based on the given true triples (in red):
 
-    \mathcal{T}(h, r) &=& \{(h, r, t') \mid t' \in \mathcal{E} \land t' \neq t\}\\
-    \mathcal{H}(r, t) &=& \{(h', r, t) \mid h' \in \mathcal{E} \land h' \neq h\}\\
-    %\mathcal{N}(h, r, t) &=& \mathcal{T}(h, r) \cup \mathcal{H}(r, t)\\
-    \mathcal{N} &=& \bigcup_{(h,r,t) \in \mathcal{K}} \mathcal{T}(h, r) \cup \mathcal{H}(r, t)
-     \enspace.
-
-Theoretically, we would need to exclude all positive triples from this set of candidates for negative
-triples, i.e., $\mathcal{N}^- = \mathcal{N} \setminus \mathcal{K}$.
-In practice, however, since usually $|\mathcal{N}| \gg |\mathcal{K}|$, the likelihood of generating a
-false negative is rather low.
-Therefore, the additional filter step is often omitted to lower computational cost.
-It should be taken into account that a corrupted triple that is \textit{not part }of the \ac{kg} can
-represent a true fact.
+.. image:: ../img/training_approaches.png
+  :alt: Troubleshooting Image 2
 """
 
 from class_resolver import Resolver

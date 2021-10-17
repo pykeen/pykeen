@@ -77,3 +77,9 @@ References
 .. [ruffinelli2020] Ruffinelli, D., Broscheit, S., & Gemulla, R. (2020). `You CAN Teach an Old Dog New Tricks! On
    Training Knowledge Graph Embeddings <https://openreview.net/forum?id=BkxSmlBFvr>`_. *International Conference on
    Learning Representations*.
+
+.. [zhang2017] Zhang, H., *et al*. (2017). `Visual Translation Embedding Network for Visual Relation
+   Detection <http://arxiv.org/abs/1702.08319>`_. *arXiv*, 1702.08319.
+
+.. [sharifzadeh2019vrd] Sharifzadeh, S., *et al*. (2019). `Improving Visual Relation Detection using Depth
+   Maps <http://arxiv.org/abs/1905.00966>`_. *arXiv*, 1905.00966.
