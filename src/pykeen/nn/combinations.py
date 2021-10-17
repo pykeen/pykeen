@@ -245,7 +245,7 @@ class GatedCombination(Combination):
         self.dropout = nn.Dropout(input_dropout)
 
     def forward(self, x: torch.FloatTensor, literal: torch.FloatTensor) -> torch.FloatTensor:
-        """Given the entity and literal representations, calculates a new embedding that contains information of both."""
+        """Calculate a combined embedding given the entity and literal representations."""
         combination = torch.cat([x, literal], -1)
         z = self.gate_activation(self.gate_entity_layer(x) + self.gate_literal_layer(literal) + self.bias)
         h = self.linlayer_activation(self.combination_linear_layer(combination))

@@ -15,5 +15,5 @@ __all__ = [
     'LiteralModel',
     'ComplExLiteral',
     'DistMultLiteral',
-    'DistMultLiteralGated'
+    'DistMultLiteralGated',
 ]
