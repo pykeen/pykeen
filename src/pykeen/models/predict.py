@@ -308,7 +308,7 @@ def predict(model: Model, *, k: Optional[int] = None, batch_size: int = 1) -> Sc
     return _predict_all(model=model, batch_size=batch_size)
 
 
-@torch.no_grad()
+@torch.inference_mode()
 def _predict_all(model: Model, *, batch_size: int = 1) -> ScorePack:
     """Compute and store scores for all triples.
 
@@ -344,7 +344,7 @@ def _predict_all(model: Model, *, batch_size: int = 1) -> ScorePack:
     return _build_pack(result=result, scores=scores, flatten=True)
 
 
-@torch.no_grad()
+@torch.inference_mode()
 def _predict_k(model: Model, *, k: int, batch_size: int = 1) -> ScorePack:
     """Compute and store scores for the top k-scoring triples.
 
@@ -517,7 +517,7 @@ def _process_remove_known(df: pd.DataFrame, remove_known: bool, testing: Optiona
     return df
 
 
-@torch.no_grad()
+@torch.inference_mode()
 def _predict_triples(
     model: Model,
     mapped_triples: MappedTriples,

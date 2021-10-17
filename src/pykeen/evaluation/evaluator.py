@@ -618,7 +618,7 @@ def evaluate(
     )
     if tqdm_kwargs:
         _tqdm_kwargs.update(tqdm_kwargs)
-    with optional_context_manager(use_tqdm, tqdm(**_tqdm_kwargs)) as progress_bar, torch.no_grad():
+    with optional_context_manager(use_tqdm, tqdm(**_tqdm_kwargs)) as progress_bar, torch.inference_mode():
         # batch-wise processing
         for batch in batches:
             batch_size = batch.shape[0]
