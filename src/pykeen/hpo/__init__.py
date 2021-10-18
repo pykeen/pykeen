@@ -44,7 +44,9 @@ Each component's hyper-parameters have a reasonable default values. For example,
 default for its hyper-parameters chosen from the best-reported values in each model's
 original paper unless otherwise stated on the model's reference page. In case hyper-parameters for a model for a
 specific dataset were not available, we choose the hyper-parameters based on the findings in our
-large-scale benchmarking [ali2020a]_.
+large-scale benchmarking [ali2020a]_. For most components (e.g., models, losses, regularizers, negative
+samples, training loops), these values are stored in the default valeues of the respective classes'
+`__init__()` functions. They can be viewed in the corresponding reference section of the docs.
 
 Some components contain strategies for doing hyper-parameter optimization. When you call the
 :func:`pykeen.hpo.hpo_pipeline`, the following steps are taken to determine what happens for each hyper-parameter
@@ -153,7 +155,7 @@ within the bounds specified by the ``low`` and ``high`` arguments. This applies 
 ...     model='TransE',
 ...     training_loop='sLCWA',
 ...     negative_sampler_kwargs_ranges=dict(
-...         num_negs_per_positive=dict(type=int, low=1, high=100),
+...         num_negs_per_pos=dict(type=int, low=1, high=100),
 ...     ),
 ... )
 
@@ -170,7 +172,7 @@ the number of negatives per positive ratio using `base=10`:
 ...     model='TransE',
 ...     training_loop='sLCWA',
 ...     negative_sampler_kwargs_ranges=dict(
-...         num_negs_per_positive=dict(type=int, scale='power', base=10, low=0, high=2),
+...         num_negs_per_pos=dict(type=int, scale='power', base=10, low=0, high=2),
 ...     ),
 ... )
 
@@ -191,7 +193,7 @@ accomplished with:
 ...     model='TransE',
 ...     training_loop='sLCWA',
 ...     negative_sampler_kwargs_ranges=dict(
-...         num_negs_per_positive=dict(type=int, low=1, high=100, log=True),
+...         num_negs_per_pos=dict(type=int, low=1, high=100, log=True),
 ...     ),
 ... )
 
@@ -208,7 +210,7 @@ so if you want to pick from $10, 20, ... 100$, you can do:
 ...     model='TransE',
 ...     training_loop='sLCWA',
 ...     negative_sampler_kwargs_ranges=dict(
-...         num_negs_per_positive=dict(type=int, low=10, high=100, step=10),
+...         num_negs_per_pos=dict(type=int, low=10, high=100, step=10),
 ...     ),
 ... )
 
@@ -222,7 +224,7 @@ with the same probability
 ...     model='TransE',
 ...     training_loop='sLCWA',
 ...     negative_sampler_kwargs_ranges=dict(
-...         num_negs_per_positive=dict(type=int, low=10, high=100, step=10, log=True),
+...         num_negs_per_pos=dict(type=int, low=10, high=100, step=10, log=True),
 ...     ),
 ... )
 

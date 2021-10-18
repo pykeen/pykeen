@@ -53,6 +53,9 @@ References
    <https://doi.org/10.18653/v1/2020.emnlp-main.596>`_. Proceedings of the 2020 Conference on Empirical
    Methods in Natural Language Processing (EMNLP), 7346–7359.
 
+.. [wang2019] Wang, X., *et al* (2019). `KEPLER: A Unified Model for Knowledge Embedding and Pre-trained Language
+   Representation <https://arxiv.org/pdf/1911.06136.pdf>`_. *arXiv*, 1911.06136.
+
 .. [sun2018] Sun, Z., *et al.* (2018). `Bootstrapping Entity Alignment with Knowledge Graph Embedding.
    <https://dl.acm.org/doi/10.5555/3304222.3304381>`_
    *Proceedings of the 27th International Joint Conference on Artificial Intelligence*, 4396–4402.
@@ -63,3 +66,20 @@ References
 
 .. [mukhoti2020] Mukhoti, J., *et al*. (2020). `Calibrating Deep Neural Networks using Focal Loss
    <http://arxiv.org/abs/2002.09437>`_.
+
+.. [walsh2020] Walsh, B., *et al*. (2020). `BioKG: A Knowledge Graph for Relational Learning On Biological Data
+   <https://doi.org/10.1145/3340531.3412776>`_. *Proceedings of the 29th ACM International Conference on Information &
+   Knowledge Management*, 3173–3180.
+
+.. [nickel2016review] Nickel, M., *et al*. (2016). `A Review of Relational Machine Learning for Knowledge Graphs
+   <https://doi.org/10.1109/JPROC.2015.2483592>`_. *Proceedings of the IEEE*, 104(1), 11–33.
+
+.. [ruffinelli2020] Ruffinelli, D., Broscheit, S., & Gemulla, R. (2020). `You CAN Teach an Old Dog New Tricks! On
+   Training Knowledge Graph Embeddings <https://openreview.net/forum?id=BkxSmlBFvr>`_. *International Conference on
+   Learning Representations*.
+
+.. [zhang2017] Zhang, H., *et al*. (2017). `Visual Translation Embedding Network for Visual Relation
+   Detection <http://arxiv.org/abs/1702.08319>`_. *arXiv*, 1702.08319.
+
+.. [sharifzadeh2019vrd] Sharifzadeh, S., *et al*. (2019). `Improving Visual Relation Detection using Depth
+   Maps <http://arxiv.org/abs/1905.00966>`_. *arXiv*, 1905.00966.

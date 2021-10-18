@@ -9,11 +9,7 @@ import torch
 import unittest_templates
 
 import pykeen.losses
-from pykeen.losses import (
-    BCEAfterSigmoidLoss, BCEWithLogitsLoss, CrossEntropyLoss, DoubleMarginLoss, Loss, MSELoss, MarginRankingLoss,
-    NSSALoss, PairwiseLoss, PointwiseLoss, SetwiseLoss, SoftplusLoss, UnsupportedLabelSmoothingError,
-    apply_label_smoothing,
-)
+from pykeen.losses import Loss, NSSALoss, PairwiseLoss, PointwiseLoss, SetwiseLoss, apply_label_smoothing
 from pykeen.pipeline import PipelineResult, pipeline
 from tests import cases
 
@@ -21,19 +17,19 @@ from tests import cases
 class CrossEntropyLossTests(cases.SetwiseLossTestCase):
     """Unit test for CrossEntropyLoss."""
 
-    cls = CrossEntropyLoss
+    cls = pykeen.losses.CrossEntropyLoss
 
 
 class BCEAfterSigmoidLossTests(cases.PointwiseLossTestCase):
     """Unit test for BCEAfterSigmoidLoss."""
 
-    cls = BCEAfterSigmoidLoss
+    cls = pykeen.losses.BCEAfterSigmoidLoss
 
 
 class DoubleMarginLossTests(cases.PointwiseLossTestCase):
     """Unit test for DoubleMarginLoss."""
 
-    cls = DoubleMarginLoss
+    cls = pykeen.losses.DoubleMarginLoss
 
 
 class FocalLossTests(cases.PointwiseLossTestCase):
@@ -45,13 +41,25 @@ class FocalLossTests(cases.PointwiseLossTestCase):
 class SoftplusLossTests(cases.PointwiseLossTestCase):
     """Unit test for SoftplusLoss."""
 
-    cls = SoftplusLoss
+    cls = pykeen.losses.SoftplusLoss
+
+
+class PointwiseHingeLossTests(cases.PointwiseLossTestCase):
+    """Unit test for the pointwise hinge loss."""
+
+    cls = pykeen.losses.PointwiseHingeLoss
+
+
+class SoftPointwiseHingeLossTests(cases.PointwiseLossTestCase):
+    """Unit test for the soft pointwise hinge loss."""
+
+    cls = pykeen.losses.SoftPointwiseHingeLoss
 
 
 class NSSALossTests(cases.SetwiseLossTestCase):
     """Unit test for NSSALoss."""
 
-    cls = NSSALoss
+    cls = pykeen.losses.NSSALoss
     kwargs = {
         'margin': 1.,
         'adversarial_temperature': 1.,
@@ -113,26 +121,31 @@ class TestCustomLossFunctions(unittest.TestCase):
 class BCEWithLogitsLossTestCase(cases.PointwiseLossTestCase):
     """Tests for binary cross entropy (stable) loss."""
 
-    cls = BCEWithLogitsLoss
+    cls = pykeen.losses.BCEWithLogitsLoss
 
 
 class MSELossTestCase(cases.PointwiseLossTestCase):
     """Tests for mean square error loss."""
 
-    cls = MSELoss
+    cls = pykeen.losses.MSELoss
 
 
-class MarginRankingLossTestCase(cases.PairwiseLossTestCase):
+class MarginRankingLossTestCase(cases.GMRLTestCase):
     """Tests for margin ranking loss."""
 
-    cls = MarginRankingLoss
+    cls = pykeen.losses.MarginRankingLoss
 
-    def test_label_smoothing_raise(self):
-        """Test errors are raised if label smoothing is given."""
-        with self.assertRaises(UnsupportedLabelSmoothingError):
-            self.instance.process_lcwa_scores(..., ..., label_smoothing=5)
-        with self.assertRaises(UnsupportedLabelSmoothingError):
-            self.instance.process_lcwa_scores(..., ..., label_smoothing=5)
+
+class SoftMarginrankingLossTestCase(cases.GMRLTestCase):
+    """Tests for the soft margin ranking loss."""
+
+    cls = pykeen.losses.SoftMarginRankingLoss
+
+
+class PairwiseLogisticLossTestCase(cases.GMRLTestCase):
+    """Tests for the pairwise logistic loss."""
+
+    cls = pykeen.losses.PairwiseLogisticLoss
 
 
 class TestLosses(unittest_templates.MetaTestCase[Loss]):
@@ -144,6 +157,8 @@ class TestLosses(unittest_templates.MetaTestCase[Loss]):
         PairwiseLoss,
         PointwiseLoss,
         SetwiseLoss,
+        pykeen.losses.DeltaPointwiseLoss,
+        pykeen.losses.MarginPairwiseLoss,
     }
 
 

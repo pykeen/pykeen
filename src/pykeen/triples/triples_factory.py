@@ -360,14 +360,16 @@ class CoreTriplesFactory:
         """Create sLCWA instances for this factory's triples."""
         return self._create_instances(SLCWAInstances)
 
-    def create_lcwa_instances(self, use_tqdm: Optional[bool] = None) -> Instances:
+    def create_lcwa_instances(self, use_tqdm: Optional[bool] = None, target: Optional[int] = None) -> Instances:
         """Create LCWA instances for this factory's triples."""
-        return self._create_instances(LCWAInstances)
+        return self._create_instances(LCWAInstances, target=target)
 
-    def _create_instances(self, instances_cls: Type[Instances]) -> Instances:
+    def _create_instances(self, instances_cls: Type[Instances], **kwargs) -> Instances:
         return instances_cls.from_triples(
             mapped_triples=self._add_inverse_triples_if_necessary(mapped_triples=self.mapped_triples),
             num_entities=self.num_entities,
+            num_relations=self.num_relations,
+            **kwargs,
         )
 
     def get_most_frequent_relations(self, n: Union[int, float]) -> Set[int]:
@@ -554,7 +556,7 @@ class CoreTriplesFactory:
             A new triples factory, which has only a subset of the triples containing the entities and relations of
             interest. The label-to-ID mapping is *not* modified.
         """
-        keep_mask = None
+        keep_mask: Optional[torch.BoolTensor] = None
 
         extra_metadata = {}
         # Filter for entities
@@ -582,7 +584,7 @@ class CoreTriplesFactory:
         if keep_mask is None:
             return self
 
-        num_triples = keep_mask.sum()
+        num_triples = keep_mask.sum().item()
         logger.info(f"keeping {format_relative_comparison(num_triples, self.num_triples)} triples.")
         return self.clone_and_exchange_triples(
             mapped_triples=self.mapped_triples[keep_mask],

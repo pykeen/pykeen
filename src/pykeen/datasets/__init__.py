@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Sample datasets for use with PyKEEN, borrowed from https://github.com/ZhenfengLei/KGDatasets.
+"""Built-in datasets for PyKEEN.
 
 New datasets (inheriting from :class:`pykeen.datasets.base.Dataset`) can be registered with PyKEEN using the
 :mod:`pykeen.datasets` group in Python entrypoints in your own `setup.py` or `setup.cfg` package configuration.
@@ -18,6 +18,7 @@ from .base import (  # noqa:F401
     Dataset, EagerDataset, LazyDataset, PackedZipRemoteDataset, PathDataset, RemoteDataset, SingleTabbedDataset,
     TarFileRemoteDataset, UnpackedRemoteDataset,
 )
+from .biokg import BioKG
 from .ckg import CKG
 from .codex import CoDExLarge, CoDExMedium, CoDExSmall
 from .conceptnet import ConceptNet
@@ -34,6 +35,7 @@ from .ogb import OGBBioKG, OGBWikiKG
 from .openbiolink import OpenBioLink, OpenBioLinkLQ
 from .umls import UMLS
 from .wd50k import WD50KT
+from .wikidata5m import Wikidata5M
 from .wk3l import WK3l15k
 from .wordnet import WN18, WN18RR
 from .yago import YAGO310
@@ -59,6 +61,7 @@ __all__ = [
     'WN18RR',
     'YAGO310',
     'DRKG',
+    'BioKG',
     'ConceptNet',
     'CKG',
     'CSKG',
@@ -66,6 +69,7 @@ __all__ = [
     'DB100K',
     'Countries',
     'WD50KT',
+    'Wikidata5M',
     # Utilities
     'dataset_resolver',
     'get_dataset',
@@ -102,7 +106,7 @@ def get_dataset(
     testing: Union[None, str, pathlib.Path, CoreTriplesFactory] = None,
     validation: Union[None, str, pathlib.Path, CoreTriplesFactory] = None,
 ) -> Dataset:
-    """Get the dataset.
+    """Get a dataset.
 
     :param dataset: The name of a dataset, an instance of a dataset, or the class for a dataset.
     :param dataset_kwargs: The keyword arguments, only to be used when a class for a dataset is used for
