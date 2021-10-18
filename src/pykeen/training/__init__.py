@@ -59,9 +59,12 @@ generation strategy is a popular choice in visual relation detection domain (see
 Stochastic Local Closed World Assumption
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 When training under the stochastic local closed world assumption (SLCWA), a random subset of the union of
-the head and tail generation strategies from LCWA are considered as negative triples.
+the head and tail generation strategies from LCWA are considered as negative triples. There are a few
+benefits from doing this:
 
-.. todo:: why is it good to take sampling? just because of computational efficiency?
+1. Reduce computational workload
+2. Spare updates (i.e., only a few rows of the embedding are affected)
+3. Ability to integrate new negative sampling strategies
 
 There are two other major considerations when randomly sampling negative triples: the random sampling
 strategy and the filtering of positive triples. A full guide on negative sampling with the SLCWA can be
@@ -70,7 +73,7 @@ triples considered in LCWA vs. sLCWA based on the given true triples (in red):
 
 .. image:: ../img/training_approaches.png
   :alt: Troubleshooting Image 2
-"""
+"""  # noqa:E501
 
 from class_resolver import Resolver
 
