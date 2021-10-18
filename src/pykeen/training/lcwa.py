@@ -35,6 +35,8 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
     This implementation slightly generalizes the original LCWA, and allows to make the same assumption for relation, or
     head entity. In particular the second, i.e., predicting the relation, is commonly encountered in visual relation
     prediction.
+
+    [ruffinelli2020]_ call the LCWA ``KvsAll`` in their work.
     """
 
     def __init__(

@@ -37,7 +37,7 @@ could be used as in:
 >>> pipeline_result.save_to_directory('nations_transe')
 
 In this example, the dataset was given as a string. A list of available datasets can be found in
-:mod:`pykeen.datasets`. Alternatively, the instance of the :class:`pykeen.datasets.Dataset` could be
+:mod:`pykeen.datasets`. Alternatively, a subclass of :class:`pykeen.datasets.base.Dataset` could be
 used as in:
 
 >>> from pykeen.pipeline import pipeline
@@ -50,8 +50,8 @@ used as in:
 >>> pipeline_result.save_to_directory('nations_transe')
 
 In each of the previous three examples, the training approach, optimizer, and evaluation scheme
-were omitted. By default, the stochastic local closed world assumption (sLCWA) training approach is used in training.
-This can be explicitly given as a string:
+were omitted. By default, the model is trained under the stochastic local closed world assumption (sLCWA;
+:class:`pykeen.training.SLCWATrainingLoop`). This can be explicitly given as a string:
 
 >>> from pykeen.pipeline import pipeline
 >>> pipeline_result = pipeline(
@@ -61,9 +61,10 @@ This can be explicitly given as a string:
 ... )
 >>> pipeline_result.save_to_directory('nations_transe')
 
-Alternatively, the local closed world assumption (LCWA) training approach can be given with ``'LCWA'``.
+Alternatively, the model can be trained under the  local closed world assumption (LCWA;
+:class:`pykeen.training.LCWATrainingLoop`) by giving ``'LCWA'``.
 No additional configuration is necessary, but it's worth reading up on the differences between these training
-approaches.
+approaches. A list of available training assumptions can be found in :mod:`pykeen.training`.
 
 >>> from pykeen.pipeline import pipeline
 >>> pipeline_result = pipeline(
@@ -281,7 +282,7 @@ class PipelineResult(Result):
     def plot_losses(self, **kwargs):
         """Plot the losses per epoch.
 
-        :param kwargs: The keyword arguments passed to :func:`pykeen.pipeline_plot.plot_losses`.
+        :param kwargs: The keyword arguments passed to :func:`pykeen.pipeline.plot_utils.plot_losses`.
         :returns: The axis
         """
         from .plot_utils import plot_losses
@@ -290,7 +291,7 @@ class PipelineResult(Result):
     def plot_early_stopping(self, **kwargs):
         """Plot the evaluations during early stopping.
 
-        :param kwargs: The keyword arguments passed to :func:`pykeen.pipeline_plot.plot_early_stopping`
+        :param kwargs: The keyword arguments passed to :func:`pykeen.pipeline.plot_utils.plot_early_stopping`
         :returns: The axis
         """
         from .plot_utils import plot_early_stopping
@@ -299,7 +300,7 @@ class PipelineResult(Result):
     def plot_er(self, **kwargs):
         """Plot the reduced entities and relation vectors in 2D.
 
-        :param kwargs: The keyword arguments passed to :func:`pykeen.pipeline_plot.plot_er`
+        :param kwargs: The keyword arguments passed to :func:`pykeen.pipeline.plot_utils.plot_er`
         :returns: The axis
 
         .. warning::

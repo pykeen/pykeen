@@ -21,7 +21,7 @@ URL = 'https://github.com/hetio/hetionet/raw/master/hetnet/tsv/hetionet-v1.0-edg
 
 @parse_docdata
 class Hetionet(SingleTabbedDataset):
-    """The Hetionet dataset is a large biological network.
+    """The Hetionet dataset from [himmelstein2017]_.
 
     In its publication [himmelstein2017]_, it is demonstrated to be useful for link prediction in drug repositioning
     and made publicly available through its `GitHub repository <https://github.com/hetio/hetionet>`_ in several formats.
