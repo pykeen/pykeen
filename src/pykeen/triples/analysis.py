@@ -6,18 +6,7 @@ import hashlib
 import itertools as itt
 import logging
 from collections import defaultdict
-from typing import (
-    Collection,
-    DefaultDict,
-    Iterable,
-    Mapping,
-    NamedTuple,
-    Optional,
-    Sequence,
-    Set,
-    Tuple,
-    Union,
-)
+from typing import Collection, DefaultDict, Iterable, Mapping, NamedTuple, Optional, Sequence, Set, Tuple, Union
 
 import numpy
 import pandas as pd

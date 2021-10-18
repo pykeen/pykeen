@@ -11,30 +11,14 @@ novel triples.
 
 import logging
 from collections import defaultdict
-from typing import (
-    Collection,
-    Dict,
-    Iterable,
-    List,
-    Mapping,
-    Optional,
-    Set,
-    Tuple,
-    TypeVar,
-    Union,
-    cast,
-)
+from typing import Collection, Dict, Iterable, List, Mapping, Optional, Set, Tuple, TypeVar, Union, cast
 
 import numpy
 import scipy.sparse
 import torch
 
 from pykeen.datasets.base import EagerDataset
-from pykeen.triples.triples_factory import (
-    CoreTriplesFactory,
-    TriplesFactory,
-    cat_triples,
-)
+from pykeen.triples.triples_factory import CoreTriplesFactory, TriplesFactory, cat_triples
 from pykeen.typing import MappedTriples
 from pykeen.utils import compact_mapping
 

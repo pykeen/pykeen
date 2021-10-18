@@ -10,12 +10,7 @@ from class_resolver import Resolver, get_subclasses
 
 from .base import EntityRelationEmbeddingModel, Model, _OldAbstractModel
 from .baseline import EvaluationOnlyModel, MarginalDistributionBaseline
-from .multimodal import (
-    ComplExLiteral,
-    DistMultLiteral,
-    DistMultLiteralGated,
-    LiteralModel,
-)
+from .multimodal import ComplExLiteral, DistMultLiteral, DistMultLiteralGated, LiteralModel
 from .nbase import ERModel, _NewAbstractModel
 from .resolve import make_model, make_model_cls
 from .unimodal import (

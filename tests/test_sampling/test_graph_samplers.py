@@ -7,10 +7,7 @@ import unittest
 import torch
 
 from pykeen.datasets import Nations
-from pykeen.training.schlichtkrull_sampler import (
-    GraphSampler,
-    _compute_compressed_adjacency_list,
-)
+from pykeen.training.schlichtkrull_sampler import GraphSampler, _compute_compressed_adjacency_list
 
 
 class GraphSamplerTest(unittest.TestCase):

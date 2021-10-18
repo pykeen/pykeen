@@ -4,11 +4,7 @@
 
 from typing import Sequence, Union
 
-from ...nn.emb import (
-    EmbeddingSpecification,
-    LiteralRepresentation,
-    RepresentationModule,
-)
+from ...nn.emb import EmbeddingSpecification, LiteralRepresentation, RepresentationModule
 from ...nn.modules import LiteralInteraction
 from ...triples import TriplesNumericLiteralsFactory
 from ...typing import HeadRepresentation, RelationRepresentation, TailRepresentation

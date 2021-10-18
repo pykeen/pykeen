@@ -198,10 +198,7 @@ def ablation(
 
     A sample file can be run with ``pykeen experiments ablation tests/resources/hpo_complex_nations.json``.
     """
-    from ..ablation.ablation import (
-        _run_ablation_experiments,
-        prepare_ablation_from_path,
-    )
+    from ..ablation.ablation import _run_ablation_experiments, prepare_ablation_from_path
 
     directories = prepare_ablation_from_path(path=path, directory=directory, save_artifacts=save_artifacts)
 

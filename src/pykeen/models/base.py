@@ -22,13 +22,7 @@ from ..nn.emb import Embedding, EmbeddingSpecification, RepresentationModule
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import CoreTriplesFactory
 from ..typing import DeviceHint, ScorePack
-from ..utils import (
-    NoRandomSeedNecessary,
-    _can_slice,
-    extend_batch,
-    resolve_device,
-    set_random_seed,
-)
+from ..utils import NoRandomSeedNecessary, _can_slice, extend_batch, resolve_device, set_random_seed
 
 __all__ = [
     "Model",

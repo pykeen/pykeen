@@ -42,13 +42,7 @@ from pykeen.datasets import Nations
 from pykeen.datasets.base import LazyDataset
 from pykeen.datasets.kinships import KINSHIPS_TRAIN_PATH
 from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH
-from pykeen.losses import (
-    Loss,
-    PairwiseLoss,
-    PointwiseLoss,
-    SetwiseLoss,
-    UnsupportedLabelSmoothingError,
-)
+from pykeen.losses import Loss, PairwiseLoss, PointwiseLoss, SetwiseLoss, UnsupportedLabelSmoothingError
 from pykeen.models import RESCAL, EntityRelationEmbeddingModel, Model
 from pykeen.models.cli import build_cli_from_cls
 from pykeen.nn.emb import RepresentationModule
@@ -59,19 +53,8 @@ from pykeen.regularizers import LpRegularizer, Regularizer
 from pykeen.trackers import ResultTracker
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
 from pykeen.triples import TriplesFactory
-from pykeen.typing import (
-    HeadRepresentation,
-    MappedTriples,
-    RelationRepresentation,
-    TailRepresentation,
-)
-from pykeen.utils import (
-    all_in_bounds,
-    get_batchnorm_modules,
-    resolve_device,
-    set_random_seed,
-    unpack_singletons,
-)
+from pykeen.typing import HeadRepresentation, MappedTriples, RelationRepresentation, TailRepresentation
+from pykeen.utils import all_in_bounds, get_batchnorm_modules, resolve_device, set_random_seed, unpack_singletons
 from tests.constants import EPSILON
 from tests.mocks import CustomRepresentations
 from tests.utils import rand

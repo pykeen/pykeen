@@ -8,10 +8,7 @@ import torch
 import torch.autograd
 from torch import nn
 
-from ...constants import (
-    DEFAULT_DROPOUT_HPO_RANGE,
-    DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
-)
+from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import BCEAfterSigmoidLoss, Loss
 from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_normal_

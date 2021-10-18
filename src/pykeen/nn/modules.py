@@ -8,30 +8,13 @@ import itertools as itt
 import logging
 import math
 from abc import ABC, abstractmethod
-from typing import (
-    Any,
-    Callable,
-    Generic,
-    Mapping,
-    MutableMapping,
-    Optional,
-    Sequence,
-    Set,
-    Tuple,
-    Union,
-    cast,
-)
+from typing import Any, Callable, Generic, Mapping, MutableMapping, Optional, Sequence, Set, Tuple, Union, cast
 
 import torch
 from class_resolver import Resolver
 from torch import FloatTensor, nn
 
-from ..typing import (
-    HeadRepresentation,
-    HintOrType,
-    RelationRepresentation,
-    TailRepresentation,
-)
+from ..typing import HeadRepresentation, HintOrType, RelationRepresentation, TailRepresentation
 from ..utils import (
     CANONICAL_DIMENSIONS,
     activation_resolver,

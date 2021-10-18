@@ -9,14 +9,7 @@ import torch
 import unittest_templates
 
 import pykeen.losses
-from pykeen.losses import (
-    Loss,
-    NSSALoss,
-    PairwiseLoss,
-    PointwiseLoss,
-    SetwiseLoss,
-    apply_label_smoothing,
-)
+from pykeen.losses import Loss, NSSALoss, PairwiseLoss, PointwiseLoss, SetwiseLoss, apply_label_smoothing
 from pykeen.pipeline import PipelineResult, pipeline
 from tests import cases
 

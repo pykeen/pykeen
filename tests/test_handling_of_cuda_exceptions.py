@@ -4,12 +4,7 @@
 
 import unittest
 
-from pykeen.utils import (
-    _CUDA_OOM_ERROR,
-    _CUDNN_ERROR,
-    is_cuda_oom_error,
-    is_cudnn_error,
-)
+from pykeen.utils import _CUDA_OOM_ERROR, _CUDNN_ERROR, is_cuda_oom_error, is_cudnn_error
 
 
 class TestCudaExceptionsHandling(unittest.TestCase):

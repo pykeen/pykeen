@@ -5,13 +5,7 @@
 from typing import Set, Type
 
 from class_resolver import Resolver
-from optuna.pruners import (
-    BasePruner,
-    MedianPruner,
-    NopPruner,
-    PercentilePruner,
-    SuccessiveHalvingPruner,
-)
+from optuna.pruners import BasePruner, MedianPruner, NopPruner, PercentilePruner, SuccessiveHalvingPruner
 
 __all__ = [
     "pruner_resolver",

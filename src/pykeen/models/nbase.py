@@ -8,20 +8,7 @@ import logging
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from operator import itemgetter
-from typing import (
-    Any,
-    ClassVar,
-    Generic,
-    Iterable,
-    List,
-    Mapping,
-    Optional,
-    Sequence,
-    Tuple,
-    Type,
-    Union,
-    cast,
-)
+from typing import Any, ClassVar, Generic, Iterable, List, Mapping, Optional, Sequence, Tuple, Type, Union, cast
 
 import torch
 from torch import nn
@@ -31,12 +18,7 @@ from ..nn.emb import EmbeddingSpecification, RepresentationModule
 from ..nn.modules import Interaction, interaction_resolver
 from ..regularizers import Regularizer
 from ..triples import CoreTriplesFactory
-from ..typing import (
-    DeviceHint,
-    HeadRepresentation,
-    RelationRepresentation,
-    TailRepresentation,
-)
+from ..typing import DeviceHint, HeadRepresentation, RelationRepresentation, TailRepresentation
 from ..utils import check_shapes
 from .base import Model
 

@@ -8,10 +8,7 @@ import torch
 from torch import nn
 from torch.nn.init import uniform_
 
-from ...constants import (
-    DEFAULT_DROPOUT_HPO_RANGE,
-    DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
-)
+from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import BCEAfterSigmoidLoss, Loss
 from ...nn.emb import EmbeddingSpecification
 from ...typing import Hint, Initializer

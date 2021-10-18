@@ -2,11 +2,7 @@
 
 """Test that samplers can be executed."""
 
-from pykeen.sampling import (
-    BasicNegativeSampler,
-    BernoulliNegativeSampler,
-    PseudoTypedNegativeSampler,
-)
+from pykeen.sampling import BasicNegativeSampler, BernoulliNegativeSampler, PseudoTypedNegativeSampler
 from pykeen.sampling.pseudo_type import create_index
 from tests.test_sampling import cases
 
