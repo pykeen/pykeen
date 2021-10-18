@@ -7,11 +7,11 @@ from typing import Any, Mapping, Optional
 import torch
 from class_resolver import Hint
 
-from ..nbase import ERModel
 from ...nn.emb import CombinedCompGCNRepresentations, EmbeddingSpecification
 from ...nn.modules import DistMultInteraction, Interaction
 from ...triples import CoreTriplesFactory
 from ...typing import RelationRepresentation
+from ..nbase import ERModel
 
 __all__ = [
     "CompGCN",

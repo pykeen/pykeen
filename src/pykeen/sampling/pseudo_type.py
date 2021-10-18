@@ -8,9 +8,9 @@ from typing import Tuple
 
 import torch
 
-from .negative_sampler import NegativeSampler
 from ..triples import CoreTriplesFactory
 from ..triples.analysis import create_relation_to_entity_set_mapping
+from .negative_sampler import NegativeSampler
 
 __all__ = [
     "PseudoTypedNegativeSampler",

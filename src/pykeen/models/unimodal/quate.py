@@ -7,7 +7,6 @@ from typing import Any, ClassVar, Mapping, Optional, Type
 import torch
 from torch.nn import functional
 
-from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import BCEWithLogitsLoss, Loss
 from ...nn.emb import EmbeddingSpecification
@@ -16,6 +15,7 @@ from ...nn.modules import QuatEInteraction
 from ...regularizers import LpRegularizer, Regularizer
 from ...typing import Constrainer, Hint, Initializer
 from ...utils import get_expected_norm
+from ..nbase import ERModel
 
 __all__ = [
     "QuatE",

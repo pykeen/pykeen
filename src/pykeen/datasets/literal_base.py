@@ -5,8 +5,8 @@
 import pathlib
 from typing import TextIO, Union
 
-from .base import LazyDataset
 from ..triples import TriplesNumericLiteralsFactory
+from .base import LazyDataset
 
 __all__ = [
     "NumericPathDataset",

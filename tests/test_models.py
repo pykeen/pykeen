@@ -14,8 +14,8 @@ import unittest_templates
 import pykeen.experiments
 import pykeen.models
 from pykeen.models import (
-    ERModel,
     EntityRelationEmbeddingModel,
+    ERModel,
     EvaluationOnlyModel,
     Model,
     _NewAbstractModel,

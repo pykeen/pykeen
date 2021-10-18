@@ -4,8 +4,8 @@
 
 from typing import Any, Dict, Mapping, Optional
 
-from .base import ResultTracker
 from ..utils import flatten_dictionary
+from .base import ResultTracker
 
 __all__ = [
     "MLFlowResultTracker",

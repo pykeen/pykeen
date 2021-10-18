@@ -33,7 +33,7 @@ import unittest_templates
 from click.testing import CliRunner, Result
 from torch import optim
 from torch.nn import functional
-from torch.optim import Adagrad, SGD
+from torch.optim import SGD, Adagrad
 
 import pykeen.models
 import pykeen.nn.message_passing
@@ -42,8 +42,14 @@ from pykeen.datasets import Nations
 from pykeen.datasets.base import LazyDataset
 from pykeen.datasets.kinships import KINSHIPS_TRAIN_PATH
 from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH
-from pykeen.losses import Loss, PairwiseLoss, PointwiseLoss, SetwiseLoss, UnsupportedLabelSmoothingError
-from pykeen.models import EntityRelationEmbeddingModel, Model, RESCAL
+from pykeen.losses import (
+    Loss,
+    PairwiseLoss,
+    PointwiseLoss,
+    SetwiseLoss,
+    UnsupportedLabelSmoothingError,
+)
+from pykeen.models import RESCAL, EntityRelationEmbeddingModel, Model
 from pykeen.models.cli import build_cli_from_cls
 from pykeen.nn.emb import RepresentationModule
 from pykeen.nn.modules import FunctionalInteraction, Interaction, LiteralInteraction
@@ -53,8 +59,19 @@ from pykeen.regularizers import LpRegularizer, Regularizer
 from pykeen.trackers import ResultTracker
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
 from pykeen.triples import TriplesFactory
-from pykeen.typing import HeadRepresentation, MappedTriples, RelationRepresentation, TailRepresentation
-from pykeen.utils import all_in_bounds, get_batchnorm_modules, resolve_device, set_random_seed, unpack_singletons
+from pykeen.typing import (
+    HeadRepresentation,
+    MappedTriples,
+    RelationRepresentation,
+    TailRepresentation,
+)
+from pykeen.utils import (
+    all_in_bounds,
+    get_batchnorm_modules,
+    resolve_device,
+    set_random_seed,
+    unpack_singletons,
+)
 from tests.constants import EPSILON
 from tests.mocks import CustomRepresentations
 from tests.utils import rand

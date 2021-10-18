@@ -10,7 +10,17 @@ import logging
 import warnings
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Callable, Mapping, Optional, Sequence, Tuple, TypeVar, Union, cast
+from typing import (
+    Any,
+    Callable,
+    Mapping,
+    Optional,
+    Sequence,
+    Tuple,
+    TypeVar,
+    Union,
+    cast,
+)
 
 import numpy as np
 import torch
@@ -18,6 +28,16 @@ import torch.nn
 from torch import nn
 from torch.nn import functional
 
+from ..regularizers import Regularizer, regularizer_resolver
+from ..triples import CoreTriplesFactory
+from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer
+from ..utils import (
+    Bias,
+    activation_resolver,
+    clamp_norm,
+    complex_normalize,
+    convert_to_canonical_shape,
+)
 from .compositions import CompositionModule, composition_resolver
 from .init import (
     init_phases,
@@ -30,10 +50,6 @@ from .init import (
 )
 from .message_passing import Decomposition, decomposition_resolver
 from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolver
-from ..regularizers import Regularizer, regularizer_resolver
-from ..triples import CoreTriplesFactory
-from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer
-from ..utils import Bias, activation_resolver, clamp_norm, complex_normalize, convert_to_canonical_shape
 
 __all__ = [
     "RepresentationModule",

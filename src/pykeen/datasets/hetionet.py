@@ -9,8 +9,8 @@ import click
 from docdata import parse_docdata
 from more_click import verbose_option
 
-from .base import SingleTabbedDataset
 from ..typing import TorchRandomHint
+from .base import SingleTabbedDataset
 
 __all__ = [
     "Hetionet",

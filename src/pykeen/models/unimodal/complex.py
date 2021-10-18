@@ -7,13 +7,13 @@ from typing import Any, ClassVar, Mapping, Optional, Type
 import torch
 from torch.nn.init import normal_
 
-from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss, SoftplusLoss
 from ...nn.emb import EmbeddingSpecification
 from ...regularizers import LpRegularizer, Regularizer
 from ...typing import Hint, Initializer
 from ...utils import split_complex
+from ..base import EntityRelationEmbeddingModel
 
 __all__ = [
     "ComplEx",

@@ -9,8 +9,8 @@ import click
 from docdata import parse_docdata
 from more_click import verbose_option
 
-from .base import ZipSingleDataset
 from ..typing import TorchRandomHint
+from .base import ZipSingleDataset
 
 __all__ = [
     "BioKG",

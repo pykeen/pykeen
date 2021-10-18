@@ -478,7 +478,7 @@ def readme(check: bool):
 
 def get_readme() -> str:
     """Get the readme."""
-    from jinja2 import FileSystemLoader, Environment
+    from jinja2 import Environment, FileSystemLoader
 
     loader = FileSystemLoader(HERE.joinpath("templates"))
     environment = Environment(

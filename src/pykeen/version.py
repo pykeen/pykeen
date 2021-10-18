@@ -71,10 +71,11 @@ def get_version(with_git_hash: bool = False) -> str:
 
 def env_table(tablefmt: str = "github", headers: Tuple[str, str] = ("Key", "Value")) -> str:
     """Generate a table describing the environment in which PyKEEN is being run."""
-    import torch
     import platform
-    from tabulate import tabulate
     import time
+
+    import torch
+    from tabulate import tabulate
 
     rows = [
         ("OS", os.name),

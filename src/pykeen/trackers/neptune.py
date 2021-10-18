@@ -2,10 +2,10 @@
 
 """An adapter for Neptune.ai."""
 
-from typing import Any, Collection, Mapping, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Collection, Mapping, Optional
 
-from .base import ResultTracker
 from ..utils import flatten_dictionary
+from .base import ResultTracker
 
 if TYPE_CHECKING:
     import neptune  # noqa

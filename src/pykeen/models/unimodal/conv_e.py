@@ -10,7 +10,6 @@ import torch
 from torch import nn
 from torch.nn import functional as F  # noqa: N812
 
-from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE
 from ...losses import BCEAfterSigmoidLoss, Loss
 from ...nn.emb import Embedding, EmbeddingSpecification
@@ -19,6 +18,7 @@ from ...nn.modules import _calculate_missing_shape_information
 from ...triples import CoreTriplesFactory
 from ...typing import Hint, Initializer
 from ...utils import is_cudnn_error
+from ..base import EntityRelationEmbeddingModel
 
 __all__ = [
     "ConvE",

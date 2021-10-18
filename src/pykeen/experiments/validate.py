@@ -11,7 +11,6 @@ import torch
 from class_resolver import Hint
 from torch import nn
 
-from .cli import HERE
 from ..datasets import dataset_resolver
 from ..losses import loss_resolver
 from ..models import Model, model_resolver
@@ -20,6 +19,7 @@ from ..regularizers import regularizer_resolver
 from ..sampling import negative_sampler_resolver
 from ..training import training_loop_resolver
 from ..utils import normalize_string
+from .cli import HERE
 
 _SKIP_NAMES = {
     "loss",

@@ -9,7 +9,8 @@ from typing import Iterable, Mapping
 import numpy as np
 import pandas
 
-from pykeen.datasets import Dataset, Nations, analysis as dataset_analysis
+from pykeen.datasets import Dataset, Nations
+from pykeen.datasets import analysis as dataset_analysis
 from pykeen.triples import analysis as triple_analysis
 
 

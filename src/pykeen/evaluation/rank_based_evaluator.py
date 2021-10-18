@@ -14,9 +14,9 @@ import torch
 from dataclasses_json import dataclass_json
 from scipy import stats
 
-from .evaluator import Evaluator, MetricResults
 from ..typing import MappedTriples
 from ..utils import fix_dataclass_init_docs
+from .evaluator import Evaluator, MetricResults
 
 __all__ = [
     "compute_rank_from_scores",

@@ -7,12 +7,12 @@ from typing import Any, ClassVar, Mapping, Optional
 from class_resolver import Hint
 from torch.nn import functional
 
-from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn import EmbeddingSpecification
 from ...nn.init import xavier_uniform_, xavier_uniform_norm_
 from ...nn.modules import StructuredEmbeddingInteraction
 from ...typing import Constrainer, Initializer
+from ..nbase import ERModel
 
 __all__ = [
     "StructuredEmbedding",

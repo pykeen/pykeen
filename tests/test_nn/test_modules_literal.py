@@ -7,7 +7,9 @@ from typing import Any, MutableMapping
 from pykeen.datasets.nations import NationsLiteral
 from pykeen.nn.combinations import ComplExLiteralCombination, DistMultCombination
 from pykeen.nn.modules import ComplExInteraction, DistMultInteraction
-from pykeen.triples.triples_numeric_literals_factory import TriplesNumericLiteralsFactory
+from pykeen.triples.triples_numeric_literals_factory import (
+    TriplesNumericLiteralsFactory,
+)
 from tests import cases
 
 

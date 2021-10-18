@@ -7,9 +7,9 @@ import math
 
 import torch
 
-from .compute_kernel import batched_dot
 from ..typing import GaussianDistribution
 from ..utils import calculate_broadcasted_elementwise_result_shape, tensor_sum
+from .compute_kernel import batched_dot
 
 __all__ = [
     "expected_likelihood",

@@ -8,11 +8,11 @@ import torch.autograd
 from torch import linalg
 from torch.nn import functional
 
-from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_uniform_, xavier_uniform_norm_
 from ...typing import Constrainer, Hint, Initializer
+from ..base import EntityRelationEmbeddingModel
 
 __all__ = [
     "TransE",

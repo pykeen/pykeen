@@ -8,15 +8,30 @@ import itertools as itt
 import logging
 import math
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Generic, Mapping, MutableMapping, Optional, Sequence, Set, Tuple, Union, cast
+from typing import (
+    Any,
+    Callable,
+    Generic,
+    Mapping,
+    MutableMapping,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    Union,
+    cast,
+)
 
 import torch
 from class_resolver import Resolver
 from torch import FloatTensor, nn
 
-from . import functional as pkf
-from .combinations import Combination
-from ..typing import HeadRepresentation, HintOrType, RelationRepresentation, TailRepresentation
+from ..typing import (
+    HeadRepresentation,
+    HintOrType,
+    RelationRepresentation,
+    TailRepresentation,
+)
 from ..utils import (
     CANONICAL_DIMENSIONS,
     activation_resolver,
@@ -24,6 +39,8 @@ from ..utils import (
     ensure_tuple,
     upgrade_to_sequence,
 )
+from . import functional as pkf
+from .combinations import Combination
 
 __all__ = [
     "interaction_resolver",

@@ -15,7 +15,11 @@ from pykeen.datasets.base import (
     TarFileSingleDataset,
     UnpackedRemoteDataset,
 )
-from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH, NATIONS_VALIDATE_PATH
+from pykeen.datasets.nations import (
+    NATIONS_TEST_PATH,
+    NATIONS_TRAIN_PATH,
+    NATIONS_VALIDATE_PATH,
+)
 from tests import cases, constants
 
 

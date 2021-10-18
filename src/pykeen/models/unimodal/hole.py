@@ -6,13 +6,13 @@ from typing import Any, ClassVar, Mapping, Optional
 
 import torch
 
-from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...moves import irfft, rfft
 from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_uniform_
 from ...typing import Constrainer, Hint, Initializer
 from ...utils import clamp_norm
+from ..base import EntityRelationEmbeddingModel
 
 __all__ = [
     "HolE",

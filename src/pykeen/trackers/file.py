@@ -9,9 +9,9 @@ import logging
 import pathlib
 from typing import Any, ClassVar, Mapping, Optional, TextIO, Union
 
-from .base import ResultTracker
 from ..constants import PYKEEN_LOGS
 from ..utils import flatten_dictionary
+from .base import ResultTracker
 
 __all__ = [
     "FileResultTracker",

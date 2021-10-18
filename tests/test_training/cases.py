@@ -14,7 +14,10 @@ from pykeen.losses import CrossEntropyLoss, Loss
 from pykeen.models import ConvE, Model, TransE
 from pykeen.sampling.filtering import Filterer
 from pykeen.training import TrainingLoop
-from pykeen.training.training_loop import NonFiniteLossError, TrainingApproachLossMismatchError
+from pykeen.training.training_loop import (
+    NonFiniteLossError,
+    TrainingApproachLossMismatchError,
+)
 from pykeen.triples import TriplesFactory
 
 __all__ = [

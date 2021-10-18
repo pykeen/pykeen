@@ -4,11 +4,11 @@
 
 import pathlib
 import time
-from typing import Any, Mapping, Optional, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Any, Mapping, Optional, Union
 
-from .base import ResultTracker
 from ..constants import PYKEEN_LOGS
 from ..utils import flatten_dictionary
+from .base import ResultTracker
 
 if TYPE_CHECKING:
     import torch.utils.tensorboard

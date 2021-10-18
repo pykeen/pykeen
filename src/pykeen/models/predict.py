@@ -11,11 +11,11 @@ import numpy as np
 import pandas as pd
 import torch
 
-from .base import Model
 from ..triples import CoreTriplesFactory, TriplesFactory
 from ..triples.utils import tensor_to_df
 from ..typing import LabeledTriples, MappedTriples, ScorePack
 from ..utils import is_cuda_oom_error
+from .base import Model
 
 __all__ = [
     "predict",

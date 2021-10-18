@@ -50,10 +50,12 @@ def _get_ratios(*triples_factories: CoreTriplesFactory) -> Sequence[float]:
 
 
 def _main(trials: int = 15):
-    from pykeen.datasets import get_dataset
-    import numpy as np
     import itertools as itt
+
+    import numpy as np
     from tqdm import tqdm
+
+    from pykeen.datasets import get_dataset
 
     n_comb = trials * (trials - 1) // 2
     print(f"Number of combinations: {trials} n Choose 2 = {n_comb}")

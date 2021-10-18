@@ -9,8 +9,8 @@ import click
 from docdata import parse_docdata
 from more_click import verbose_option
 
-from .base import SingleTabbedDataset
 from ..typing import TorchRandomHint
+from .base import SingleTabbedDataset
 
 URL = "https://s3.amazonaws.com/conceptnet/downloads/2019/edges/conceptnet-assertions-5.7.0.csv.gz"
 

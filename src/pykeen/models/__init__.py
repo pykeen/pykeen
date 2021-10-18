@@ -10,10 +10,21 @@ from class_resolver import Resolver, get_subclasses
 
 from .base import EntityRelationEmbeddingModel, Model, _OldAbstractModel
 from .baseline import EvaluationOnlyModel, MarginalDistributionBaseline
-from .multimodal import ComplExLiteral, DistMultLiteral, DistMultLiteralGated, LiteralModel
+from .multimodal import (
+    ComplExLiteral,
+    DistMultLiteral,
+    DistMultLiteralGated,
+    LiteralModel,
+)
 from .nbase import ERModel, _NewAbstractModel
 from .resolve import make_model, make_model_cls
 from .unimodal import (
+    ERMLP,
+    ERMLPE,
+    KG2E,
+    NTN,
+    RESCAL,
+    RGCN,
     CompGCN,
     ComplEx,
     ConvE,
@@ -21,17 +32,11 @@ from .unimodal import (
     CrossE,
     DistMA,
     DistMult,
-    ERMLP,
-    ERMLPE,
     HolE,
-    KG2E,
     MuRE,
-    NTN,
     PairRE,
     ProjE,
     QuatE,
-    RESCAL,
-    RGCN,
     RotatE,
     SimplE,
     StructuredEmbedding,

@@ -10,7 +10,17 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from math import ceil
 from textwrap import dedent
-from typing import Any, Collection, Iterable, List, Mapping, Optional, Tuple, Union, cast
+from typing import (
+    Any,
+    Collection,
+    Iterable,
+    List,
+    Mapping,
+    Optional,
+    Tuple,
+    Union,
+    cast,
+)
 
 import numpy as np
 import torch

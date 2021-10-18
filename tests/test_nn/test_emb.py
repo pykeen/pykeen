@@ -12,7 +12,12 @@ import unittest_templates
 
 import pykeen.nn.emb
 from pykeen.datasets.nations import NationsLiteral
-from pykeen.nn.emb import Embedding, EmbeddingSpecification, LiteralRepresentation, RepresentationModule
+from pykeen.nn.emb import (
+    Embedding,
+    EmbeddingSpecification,
+    LiteralRepresentation,
+    RepresentationModule,
+)
 from pykeen.triples.generation import generate_triples_factory
 from tests import cases, mocks
 

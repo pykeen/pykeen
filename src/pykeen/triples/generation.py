@@ -4,10 +4,10 @@
 
 import torch
 
-from .triples_factory import CoreTriplesFactory
-from .utils import get_entities, get_relations
 from ..typing import TorchRandomHint
 from ..utils import ensure_torch_random_state
+from .triples_factory import CoreTriplesFactory
+from .utils import get_entities, get_relations
 
 __all__ = [
     "generate_triples",

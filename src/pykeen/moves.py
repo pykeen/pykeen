@@ -7,10 +7,11 @@ from typing import Optional
 import torch
 
 try:
-    from torch.fft import rfft, irfft  # works on pytorch >= 1.7
+    from torch.fft import irfft, rfft  # works on pytorch >= 1.7
 
 except ImportError:
-    from torch import rfft as old_rfft, irfft as old_irfft  # works on pytorch < 1.7
+    from torch import irfft as old_irfft
+    from torch import rfft as old_rfft  # works on pytorch < 1.7
 
     def _resolve_normalized_option(norm: Optional[str]) -> bool:
         """Convert PyTorch >= 1.7 "norm" option to <1.7 "normalized" option."""

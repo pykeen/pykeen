@@ -4,8 +4,8 @@
 
 import torch
 
-from .negative_sampler import NegativeSampler
 from ..triples import CoreTriplesFactory
+from .negative_sampler import NegativeSampler
 
 __all__ = [
     "BernoulliNegativeSampler",

@@ -12,8 +12,8 @@ import numpy as np
 from docdata import parse_docdata
 from more_click import verbose_option
 
-from .base import LazyDataset
 from ..triples import TriplesFactory
+from .base import LazyDataset
 
 __all__ = [
     "OGBLoader",

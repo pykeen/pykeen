@@ -71,13 +71,14 @@ def deteriorate(
 @more_click.verbose_option
 @click.option("--trials", type=int, default=15, show_default=True)
 def _main(trials: int):
-    from pykeen.datasets import get_dataset
-    from pykeen.constants import PYKEEN_EXPERIMENTS
+    import matplotlib.pyplot as plt
     import numpy as np
-    from tabulate import tabulate
     import pandas as pd
     import seaborn as sns
-    import matplotlib.pyplot as plt
+    from tabulate import tabulate
+
+    from pykeen.constants import PYKEEN_EXPERIMENTS
+    from pykeen.datasets import get_dataset
 
     n_comb = trials * (trials - 1) // 2
     logger.info(f"Number of combinations: {trials} n Choose 2 = {n_comb}")

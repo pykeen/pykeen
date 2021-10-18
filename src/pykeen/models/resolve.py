@@ -60,10 +60,10 @@ argument of :func:`pykeen.pipeline.pipeline`.
 import logging
 from typing import Any, Mapping, Optional, Sequence, Tuple, Type, Union
 
-from .nbase import ERModel, EmbeddingSpecificationHint
 from ..nn.emb import EmbeddingSpecification, RepresentationModule
 from ..nn.modules import Interaction, interaction_resolver
 from ..typing import HeadRepresentation, RelationRepresentation, TailRepresentation
+from .nbase import EmbeddingSpecificationHint, ERModel
 
 __all__ = [
     "make_model",

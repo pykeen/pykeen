@@ -11,8 +11,8 @@ import logging
 
 from docdata import parse_docdata
 
-from .base import SingleTabbedDataset
 from ..typing import TorchRandomHint
+from .base import SingleTabbedDataset
 
 __all__ = [
     "CSKG",
