@@ -9,12 +9,14 @@ import sys
 from typing import Any, Mapping, Optional, Type, Union
 
 import click
+from class_resolver import HintOrType
 from torch import nn
 
 from . import options
 from .options import CLI_OPTIONS
 from ..base import Model
 from ...nn.message_passing import Decomposition
+from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import Constrainer, Hint, Initializer, Normalizer
 
@@ -44,6 +46,14 @@ _SKIP_ANNOTATIONS = {
     Optional[Mapping[str, Any]],
     Union[None, str, nn.Module],
     Union[None, str, Decomposition],
+
+}
+_SKIP_HINTS = {
+    Hint[Initializer],
+    Hint[Constrainer],
+    Hint[Normalizer],
+    Hint[Regularizer],
+    HintOrType[nn.Module],
 }
 
 
@@ -68,7 +78,7 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
 
             else:
                 parameter = signature.parameters[name]
-                if annotation in {Hint[Initializer], Hint[Constrainer], Hint[Normalizer]}:  # type: ignore
+                if annotation in _SKIP_HINTS:
                     logger.debug('Unhandled hint: %s', annotation)
                     continue
                 if parameter.default is None:

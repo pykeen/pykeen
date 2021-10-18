@@ -9,14 +9,16 @@ They are loaded automatically with :func:`pkg_resources.iter_entry_points`.
 
 import logging
 import pathlib
-from typing import Any, Mapping, Optional, Set, Type, Union
+from textwrap import dedent
+from typing import Any, Mapping, Optional, Type, Union
 
-from pkg_resources import iter_entry_points
+from class_resolver import Resolver
 
 from .base import (  # noqa:F401
     Dataset, EagerDataset, LazyDataset, PackedZipRemoteDataset, PathDataset, RemoteDataset, SingleTabbedDataset,
     TarFileRemoteDataset, UnpackedRemoteDataset,
 )
+from .biokg import BioKG
 from .ckg import CKG
 from .codex import CoDExLarge, CoDExMedium, CoDExSmall
 from .conceptnet import ConceptNet
@@ -32,13 +34,15 @@ from .nations import Nations
 from .ogb import OGBBioKG, OGBWikiKG
 from .openbiolink import OpenBioLink, OpenBioLinkLQ
 from .umls import UMLS
+from .wd50k import WD50KT
+from .wikidata5m import Wikidata5M
 from .wk3l import WK3l15k
 from .wordnet import WN18, WN18RR
 from .yago import YAGO310
 from ..triples import CoreTriplesFactory
-from ..utils import normalize_string
 
 __all__ = [
+    # Concrete Classes
     'Hetionet',
     'Kinships',
     'Nations',
@@ -57,44 +61,41 @@ __all__ = [
     'WN18RR',
     'YAGO310',
     'DRKG',
+    'BioKG',
     'ConceptNet',
     'CKG',
     'CSKG',
     'DBpedia50',
     'DB100K',
     'Countries',
+    'WD50KT',
+    'Wikidata5M',
+    # Utilities
+    'dataset_resolver',
     'get_dataset',
     'has_dataset',
 ]
 
 logger = logging.getLogger(__name__)
 
+dataset_resolver = Resolver.from_entrypoint(group='pykeen.datasets', base=Dataset)
+if not dataset_resolver.lookup_dict:
+    raise RuntimeError(dedent('''\
+    Datasets have been loaded with entrypoints since PyKEEN v1.0.5, which is now a
+    very old version of PyKEEN.
 
-def _load_datasets() -> Set[Type[Dataset]]:
-    rv = set()
-    for entry in iter_entry_points(group='pykeen.datasets'):
-        try:
-            cls = entry.load()
-        except ImportError:
-            logger.warning(
-                'PyKEEN was unable to load dataset %s. Try uninstalling PyKEEN with ``pip uninstall pykeen`` '
-                'then reinstalling', entry.name,
-            )
-            continue
-        else:
-            rv.add(cls)
-    return rv
+    If you simply use `python3 -m pip install --upgrade pykeen`, the entrypoints will
+    not be reloaded. Instead, please reinstall PyKEEN using the following commands:
 
+    $ python3 -m pip uninstall pykeen
+    $ python3 -m pip install pykeen
 
-_DATASETS = _load_datasets()
-if not _DATASETS:
-    raise RuntimeError('Datasets have been loaded with entrypoints since PyKEEN v1.0.5. Please reinstall.')
+    If you are on Kaggle or Google Colab, please follow these instructions:
+    https://pykeen.readthedocs.io/en/stable/installation.html#google-colab-and-kaggle-users
 
-#: A mapping of datasets' names to their classes
-datasets: Mapping[str, Type[Dataset]] = {
-    normalize_string(cls.__name__): cls
-    for cls in _DATASETS
-}
+    If issues with Kaggle or Colab persist, please join the conversation at
+    https://github.com/pykeen/pykeen/issues/373
+    '''))
 
 
 def get_dataset(
@@ -131,20 +132,15 @@ def get_dataset(
             logger.warning('dataset_kwargs not used since a pre-instantiated dataset was given')
         return dataset
 
+    if isinstance(dataset, pathlib.Path):
+        return Dataset.from_path(dataset)
+
     if isinstance(dataset, str):
         if has_dataset(dataset):
-            dataset: Type[Dataset] = datasets[normalize_string(dataset)]  # type: ignore
+            return dataset_resolver.make(dataset, dataset_kwargs)
         else:
-            dataset = pathlib.Path(dataset)
-
-    if isinstance(dataset, pathlib.Path):
-        dataset_path = dataset.resolve()
-        if not dataset_path.is_file():
-            raise ValueError(
-                f'dataset is neither a pre-defined dataset string nor a filepath: {dataset_path.as_uri()}',
-            )
-        else:
-            return Dataset.from_path(dataset_path)
+            # Assume it's a file path
+            return Dataset.from_path(dataset)
 
     if isinstance(dataset, type) and issubclass(dataset, Dataset):
         return dataset(**(dataset_kwargs or {}))  # type: ignore
@@ -184,4 +180,4 @@ def get_dataset(
 
 def has_dataset(key: str) -> bool:
     """Return if the dataset is registered in PyKEEN."""
-    return normalize_string(key) in datasets
+    return dataset_resolver.lookup(key) is not None

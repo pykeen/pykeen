@@ -84,6 +84,10 @@ CLI_OPTIONS = {
         '--clamp-score',
         type=float,
     ),
+    'combination_dropout': click.option(
+        '--combination-dropout',
+        type=float,
+    ),
 }
 
 device_option = click.option(

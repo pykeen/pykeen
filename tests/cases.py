@@ -10,7 +10,9 @@ import timeit
 import traceback
 import unittest
 from abc import ABC, abstractmethod
-from typing import Any, ClassVar, Collection, Dict, Mapping, MutableMapping, Optional, Sequence, Tuple, Type, TypeVar
+from typing import (
+    Any, ClassVar, Collection, Dict, Iterable, Mapping, MutableMapping, Optional, Sequence, Tuple, Type, TypeVar,
+)
 from unittest.case import SkipTest
 from unittest.mock import patch
 
@@ -30,17 +32,18 @@ from pykeen.datasets.base import LazyDataset
 from pykeen.datasets.kinships import KINSHIPS_TRAIN_PATH
 from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH
 from pykeen.losses import Loss, PairwiseLoss, PointwiseLoss, SetwiseLoss, UnsupportedLabelSmoothingError
-from pykeen.models import EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, RESCAL
+from pykeen.models import EntityRelationEmbeddingModel, Model, RESCAL
 from pykeen.models.cli import build_cli_from_cls
 from pykeen.nn.emb import RepresentationModule
 from pykeen.nn.modules import FunctionalInteraction, Interaction, LiteralInteraction
 from pykeen.optimizers import optimizer_resolver
+from pykeen.pipeline import pipeline
 from pykeen.regularizers import LpRegularizer, Regularizer
 from pykeen.trackers import ResultTracker
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
 from pykeen.triples import TriplesFactory
 from pykeen.typing import HeadRepresentation, MappedTriples, RelationRepresentation, TailRepresentation
-from pykeen.utils import all_in_bounds, resolve_device, set_random_seed, unpack_singletons
+from pykeen.utils import all_in_bounds, get_batchnorm_modules, resolve_device, set_random_seed, unpack_singletons
 from tests.constants import EPSILON
 from tests.mocks import CustomRepresentations
 from tests.utils import rand
@@ -322,6 +325,17 @@ class PairwiseLossTestCase(LossTestCase):
         self._check_loss_value(loss_value)
 
 
+class GMRLTestCase(PairwiseLossTestCase):
+    """Tests for generalized margin ranking loss."""
+
+    def test_label_smoothing_raise(self):
+        """Test errors are raised if label smoothing is given."""
+        with self.assertRaises(UnsupportedLabelSmoothingError):
+            self.instance.process_lcwa_scores(..., ..., label_smoothing=5)
+        with self.assertRaises(UnsupportedLabelSmoothingError):
+            self.instance.process_lcwa_scores(..., ..., label_smoothing=5)
+
+
 class SetwiseLossTestCase(LossTestCase):
     """Unit tests for setwise losses."""
 
@@ -380,25 +394,34 @@ class InteractionTestCase(
     def _additional_score_checks(self, scores):
         """Additional checks for scores."""
 
+    @property
+    def _score_batch_sizes(self) -> Iterable[int]:
+        """Return the list of batch sizes to test."""
+        if get_batchnorm_modules(self.instance):
+            return [self.batch_size]
+        return [1, self.batch_size]
+
     def test_score_hrt(self):
         """Test score_hrt."""
-        h, r, t = self._get_hrt(
-            (self.batch_size,),
-            (self.batch_size,),
-            (self.batch_size,),
-        )
-        scores = self.instance.score_hrt(h=h, r=r, t=t)
-        self._check_scores(scores=scores, exp_shape=(self.batch_size, 1))
+        for batch_size in self._score_batch_sizes:
+            h, r, t = self._get_hrt(
+                (batch_size,),
+                (batch_size,),
+                (batch_size,),
+            )
+            scores = self.instance.score_hrt(h=h, r=r, t=t)
+            self._check_scores(scores=scores, exp_shape=(batch_size, 1))
 
     def test_score_h(self):
         """Test score_h."""
-        h, r, t = self._get_hrt(
-            (self.num_entities,),
-            (self.batch_size,),
-            (self.batch_size,),
-        )
-        scores = self.instance.score_h(all_entities=h, r=r, t=t)
-        self._check_scores(scores=scores, exp_shape=(self.batch_size, self.num_entities))
+        for batch_size in self._score_batch_sizes:
+            h, r, t = self._get_hrt(
+                (self.num_entities,),
+                (batch_size,),
+                (batch_size,),
+            )
+            scores = self.instance.score_h(all_entities=h, r=r, t=t)
+            self._check_scores(scores=scores, exp_shape=(batch_size, self.num_entities))
 
     def test_score_h_slicing(self):
         """Test score_h with slicing."""
@@ -415,17 +438,18 @@ class InteractionTestCase(
 
     def test_score_r(self):
         """Test score_r."""
-        h, r, t = self._get_hrt(
-            (self.batch_size,),
-            (self.num_relations,),
-            (self.batch_size,),
-        )
-        scores = self.instance.score_r(h=h, all_relations=r, t=t)
-        if len(self.cls.relation_shape) == 0:
-            exp_shape = (self.batch_size, 1)
-        else:
-            exp_shape = (self.batch_size, self.num_relations)
-        self._check_scores(scores=scores, exp_shape=exp_shape)
+        for batch_size in self._score_batch_sizes:
+            h, r, t = self._get_hrt(
+                (batch_size,),
+                (self.num_relations,),
+                (batch_size,),
+            )
+            scores = self.instance.score_r(h=h, all_relations=r, t=t)
+            if len(self.cls.relation_shape) == 0:
+                exp_shape = (batch_size, 1)
+            else:
+                exp_shape = (batch_size, self.num_relations)
+            self._check_scores(scores=scores, exp_shape=exp_shape)
 
     def test_score_r_slicing(self):
         """Test score_r with slicing."""
@@ -444,13 +468,14 @@ class InteractionTestCase(
 
     def test_score_t(self):
         """Test score_t."""
-        h, r, t = self._get_hrt(
-            (self.batch_size,),
-            (self.batch_size,),
-            (self.num_entities,),
-        )
-        scores = self.instance.score_t(h=h, r=r, all_entities=t)
-        self._check_scores(scores=scores, exp_shape=(self.batch_size, self.num_entities))
+        for batch_size in self._score_batch_sizes:
+            h, r, t = self._get_hrt(
+                (batch_size,),
+                (batch_size,),
+                (self.num_entities,),
+            )
+            scores = self.instance.score_t(h=h, r=r, all_entities=t)
+            self._check_scores(scores=scores, exp_shape=(batch_size, self.num_entities))
 
     def test_score_t_slicing(self):
         """Test score_t with slicing."""
@@ -999,8 +1024,6 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
             """Test whether two embeddings are equal."""
             return (a(indices=None) == b(indices=None)).all()
 
-        if isinstance(original_model, EntityEmbeddingModel):
-            assert not _equal_embeddings(original_model.entity_embeddings, loaded_model.entity_embeddings)
         if isinstance(original_model, EntityRelationEmbeddingModel):
             assert not _equal_embeddings(original_model.relation_embeddings, loaded_model.relation_embeddings)
 
@@ -1008,8 +1031,6 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
             file_path = os.path.join(tmpdirname, 'test.pt')
             original_model.save_state(path=file_path)
             loaded_model.load_state(path=file_path)
-        if isinstance(original_model, EntityEmbeddingModel):
-            assert _equal_embeddings(original_model.entity_embeddings, loaded_model.entity_embeddings)
         if isinstance(original_model, EntityRelationEmbeddingModel):
             assert _equal_embeddings(original_model.relation_embeddings, loaded_model.relation_embeddings)
 
@@ -1047,6 +1068,26 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
     def test_cli_training_nations(self):
         """Test running the pipeline on almost all models with only training data."""
         self._help_test_cli(['-t', NATIONS_TRAIN_PATH] + self._cli_extras)
+
+    @pytest.mark.slow
+    def test_pipeline_nations_early_stopper(self):
+        """Test running the pipeline with early stopping."""
+        model_kwargs = dict(self.instance_kwargs)
+        # triples factory is added by the pipeline
+        model_kwargs.pop("triples_factory")
+        pipeline(
+            model=self.cls,
+            model_kwargs=model_kwargs,
+            dataset="nations",
+            dataset_kwargs=dict(create_inverse_triples=self.create_inverse_triples),
+            stopper="early",
+            training_loop_kwargs=self.training_loop_kwargs,
+            stopper_kwargs=dict(frequency=1),
+            training_kwargs=dict(
+                batch_size=self.train_batch_size,
+                num_epochs=self.train_num_epochs,
+            ),
+        )
 
     @pytest.mark.slow
     def test_cli_training_kinships(self):
@@ -1206,19 +1247,7 @@ Traceback
 
     def test_custom_representations(self):
         """Tests whether we can provide custom representations."""
-        if isinstance(self.instance, EntityEmbeddingModel):
-            old_embeddings = self.instance.entity_embeddings
-            self.instance.entity_embeddings = CustomRepresentations(
-                num_entities=self.factory.num_entities,
-                shape=old_embeddings.shape,
-            )
-            # call some functions
-            self.instance.reset_parameters_()
-            self.test_score_hrt()
-            self.test_score_t()
-            # reset to old state
-            self.instance.entity_embeddings = old_embeddings
-        elif isinstance(self.instance, EntityRelationEmbeddingModel):
+        if isinstance(self.instance, EntityRelationEmbeddingModel):
             old_embeddings = self.instance.relation_embeddings
             self.instance.relation_embeddings = CustomRepresentations(
                 num_entities=self.factory.num_relations,
@@ -1258,18 +1287,6 @@ class BaseKG2ETest(ModelTestCase):
             assert all_in_bounds(embedding(indices=None).norm(p=2, dim=-1), high=1., a_tol=EPSILON)
         for cov in (self.instance.entity_covariances, self.instance.relation_covariances):
             assert all_in_bounds(cov(indices=None), low=self.instance.c_min, high=self.instance.c_max)
-
-
-class BaseNTNTest(ModelTestCase):
-    """Test the NTN model."""
-
-    cls = pykeen.models.NTN
-
-    def test_can_slice(self):
-        """Test that the slicing properties are calculated correctly."""
-        self.assertTrue(self.instance.can_slice_h)
-        self.assertFalse(self.instance.can_slice_r)
-        self.assertTrue(self.instance.can_slice_t)
 
 
 class BaseRGCNTest(ModelTestCase):

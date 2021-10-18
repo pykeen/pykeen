@@ -17,6 +17,10 @@
                 Thirty-Second AAAI Conference on Artificial Intelligence.
 .. [dong2014] Dong, X., *et al.* (2014) `Knowledge vault: A web-scale approach to probabilistic knowledge fusion
               <https://dl.acm.org/citation.cfm?id=2623623>`_. ACM.
+.. [ebisu2018] Ebisu, T., *et al.* (2018) `https://www.aaai.org/ocs/index.php/AAAI/AAAI18/paper/view/16227
+               <https://www.aaai.org/ocs/index.php/AAAI/AAAI18/paper/view/16227>`_. AAAI'18.
+.. [feng2016] Feng, J. *et al.* (2016) `Knowledge Graph Embedding by Flexible Translation
+              <https://www.aaai.org/ocs/index.php/KR/KR16/paper/view/12887>`_. KR'16.
 .. [ji2015] Ji, G., *et al.* (2015). `Knowledge graph embedding via dynamic mapping matrix
             <http://www.aclweb.org/anthology/P15-1067>`_. ACL.
 .. [kazemi2018] Kazemi, S.M. and Poole, D. (2018). `SimplE Embedding for Link Prediction in Knowledge Graphs
@@ -49,16 +53,23 @@
 .. [socher2013] Socher, R., *et al.* (2013) `Reasoning with neural tensor networks for knowledge base completion.
                 <https://papers.nips.cc/paper/5028-reasoning-with-neural-tensor-networks-for-knowledge-base-completion>`_.
                 NIPS. 2013.
+.. [shi2019] Shi, X. *et al.* (2019). `Modeling Multi-mapping Relations for Precise Cross-lingual Entity Alignment
+             <https://www.aclweb.org/anthology/D19-1075>`_. EMNLP-IJCNLP 2019.
 .. [vashishth2020] Vashishth, S., *et al.* (2020). `Composition-based multi-relational graph convolutional
    networks <https://arxiv.org/abs/1911.03082>`_. *arXiv*, 1–15.
 .. [zhang2019] Zhang, Shuai, *et al.* (2019). `Quaternion knowledge graph embeddings
                 <https://openreview.net/forum?id=cZbk98eY_WwC>`_ NeurIPS'19.
+.. [zhang2019b] Zhang, W., *et al.* (2019). `Interaction Embeddings for Prediction and Explanation in Knowledge
+   Graphs <https://doi.org/10.1145/3289600.3291014>`. WSDM '19: Proceedings of the Twelfth ACM International
+   Conference on Web Search and Data Mining.
 """
 
 from .compgcn import CompGCN
 from .complex import ComplEx
 from .conv_e import ConvE
 from .conv_kb import ConvKB
+from .crosse import CrossE
+from .distma import DistMA
 from .distmult import DistMult
 from .ermlp import ERMLP
 from .ermlpe import ERMLPE
@@ -74,8 +85,10 @@ from .rgcn import RGCN
 from .rotate import RotatE
 from .simple import SimplE
 from .structured_embedding import StructuredEmbedding
+from .toruse import TorusE
 from .trans_d import TransD
 from .trans_e import TransE
+from .trans_f import TransF
 from .trans_h import TransH
 from .trans_r import TransR
 from .tucker import TuckER
@@ -86,6 +99,8 @@ __all__ = [
     'ComplEx',
     'ConvE',
     'ConvKB',
+    'CrossE',
+    'DistMA',
     'DistMult',
     'ERMLP',
     'ERMLPE',
@@ -101,8 +116,10 @@ __all__ = [
     'RotatE',
     'SimplE',
     'StructuredEmbedding',
+    'TorusE',
     'TransD',
     'TransE',
+    'TransF',
     'TransH',
     'TransR',
     'TuckER',

@@ -23,12 +23,13 @@ import click
 from click_default_group import DefaultGroup
 from tabulate import tabulate
 
-from .datasets import datasets as datasets_dict
+from .datasets import dataset_resolver
 from .evaluation import evaluator_resolver, get_metric_list, metric_resolver
 from .experiments.cli import experiments
 from .hpo.cli import optimize
 from .hpo.samplers import sampler_resolver
 from .losses import loss_resolver
+from .lr_schedulers import lr_scheduler_resolver
 from .models import model_resolver
 from .models.cli import build_cli_from_cls
 from .optimizers import optimizer_resolver
@@ -90,9 +91,10 @@ def _get_model_lines(tablefmt: str, link_fmt: Optional[str] = None):
                 reference = f'[`{reference}`]({link_fmt.format(reference)})'
             else:
                 reference = f'`{reference}`'
+            name = docdata.get('name', model.__name__)
             citation = docdata['citation']
             citation_str = f"[{citation['author']} *et al.*, {citation['year']}]({citation['link']})"
-            yield model.__name__, reference, citation_str
+            yield name, reference, citation_str
         else:
             line = str(model.__doc__.splitlines()[0])
             l, r = line.find('['), line.find(']')
@@ -236,6 +238,25 @@ def _help_optimizers(tablefmt: str, link_fmt: Optional[str] = None):
 
 @ls.command()
 @tablefmt_option
+def lr_schedulers(tablefmt: str):
+    """List optimizers."""
+    click.echo(_help_lr_schedulers(tablefmt))
+
+
+def _help_lr_schedulers(tablefmt: str, link_fmt: Optional[str] = None):
+    lines = _get_lines_alternative(
+        tablefmt, lr_scheduler_resolver.lookup_dict, 'torch.optim.lr_scheduler', 'pykeen.lr_schedulers',
+        link_fmt=link_fmt,
+    )
+    return tabulate(
+        lines,
+        headers=['Name', 'Reference', 'Description'],
+        tablefmt=tablefmt,
+    )
+
+
+@ls.command()
+@tablefmt_option
 def regularizers(tablefmt: str):
     """List regularizers."""
     click.echo(_help_regularizers(tablefmt))
@@ -251,19 +272,23 @@ def _help_regularizers(tablefmt, link_fmt: Optional[str] = None):
 
 
 def _get_lines_alternative(tablefmt, d, torch_prefix, pykeen_prefix, link_fmt: Optional[str] = None):
-    for name, submodule in sorted(d.items()):
+    for name, cls in sorted(d.items()):
         if any(
-            submodule.__module__.startswith(_prefix)
+            cls.__module__.startswith(_prefix)
             for _prefix in ('torch', 'optuna')
         ):
-            path = f'{torch_prefix}.{submodule.__qualname__}'
+            path = f'{torch_prefix}.{cls.__qualname__}'
         else:  # from pykeen
-            path = f'{pykeen_prefix}.{submodule.__qualname__}'
+            path = f'{pykeen_prefix}.{cls.__qualname__}'
+
+        docdata = getattr(cls, '__docdata__', None)
+        if docdata is not None:
+            name = docdata.get('name', name)
 
         if tablefmt == 'rst':
             yield name, f':class:`{path}`'
         elif tablefmt == 'github':
-            doc = submodule.__doc__
+            doc = cls.__doc__
             if link_fmt:
                 reference = f'[`{path}`]({link_fmt.format(path)})'
             else:
@@ -271,7 +296,7 @@ def _get_lines_alternative(tablefmt, d, torch_prefix, pykeen_prefix, link_fmt: O
 
             yield name, reference, get_until_first_blank(doc)
         else:
-            doc = submodule.__doc__
+            doc = cls.__doc__
             yield name, path, get_until_first_blank(doc)
 
 
@@ -371,7 +396,7 @@ def _get_lines(d, tablefmt, submodule, link_fmt: Optional[str] = None):
 
 
 def _get_dataset_lines(tablefmt, link_fmt: Optional[str] = None):
-    for name, value in sorted(datasets_dict.items()):
+    for name, value in sorted(dataset_resolver.lookup_dict.items()):
         reference = f'pykeen.datasets.{value.__name__}'
         if tablefmt == 'rst':
             reference = f':class:`{reference}`'
@@ -460,7 +485,7 @@ def get_readme() -> str:
         losses=_help_losses(tablefmt, link_fmt='https://pykeen.readthedocs.io/en/latest/api/{}.html'),
         n_losses=len(loss_resolver.lookup_dict),
         datasets=_help_datasets(tablefmt, link_fmt='https://pykeen.readthedocs.io/en/latest/api/{}.html'),
-        n_datasets=len(datasets_dict),
+        n_datasets=len(dataset_resolver.lookup_dict),
         training_loops=_help_training(
             tablefmt, link_fmt='https://pykeen.readthedocs.io/en/latest/reference/training.html#{}',
         ),

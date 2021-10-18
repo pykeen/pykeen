@@ -4,12 +4,13 @@
 
 import dataclasses
 import ftplib
+import inspect
 import json
 import logging
 import os
 import pathlib
 from dataclasses import dataclass
-from typing import Any, Collection, Dict, Mapping, Optional, Type, Union
+from typing import Any, Callable, Collection, Dict, Iterable, Mapping, Optional, Type, Union, cast
 
 import torch
 from optuna import Study, Trial, create_study
@@ -25,6 +26,7 @@ from ..datasets.base import Dataset
 from ..evaluation import Evaluator, evaluator_resolver
 from ..evaluation.rank_based_evaluator import ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX
 from ..losses import Loss, loss_resolver
+from ..lr_schedulers import LRScheduler, lr_scheduler_resolver, lr_schedulers_hpo_defaults
 from ..models import Model, model_resolver
 from ..optimizers import Optimizer, optimizer_resolver, optimizers_hpo_defaults
 from ..pipeline import pipeline, replicate_pipeline_from_config
@@ -50,6 +52,16 @@ logger = logging.getLogger(__name__)
 STOPPED_EPOCH_KEY = 'stopped_epoch'
 
 
+class ExtraKeysError(ValueError):
+    """Raised on extra keys being used."""
+
+    def __init__(self, keys: Iterable[str]):
+        super().__init__(sorted(keys))
+
+    def __str__(self) -> str:
+        return f"Invalid keys: {self.args[0]}"
+
+
 @dataclass
 class Objective:
     """A dataclass containing all of the information to make an objective function."""
@@ -61,7 +73,7 @@ class Objective:
     training_loop: Type[TrainingLoop]  # 6.
     stopper: Type[Stopper]  # 7.
     evaluator: Type[Evaluator]  # 8.
-    result_tracker: Type[ResultTracker]  # 9.
+    result_tracker: Union[ResultTracker, Type[ResultTracker]]  # 9.
     metric: str
 
     # 1. Dataset
@@ -84,6 +96,10 @@ class Objective:
     # 5. Optimizer
     optimizer_kwargs: Optional[Mapping[str, Any]] = None
     optimizer_kwargs_ranges: Optional[Mapping[str, Any]] = None
+    # 5.1 Learning Rate Scheduler
+    lr_scheduler: Optional[Type[LRScheduler]] = None
+    lr_scheduler_kwargs: Optional[Mapping[str, Any]] = None
+    lr_scheduler_kwargs_ranges: Optional[Mapping[str, Any]] = None
     # 6. Training Loop
     training_loop_kwargs: Optional[Mapping[str, Any]] = None
     negative_sampler: Optional[Type[NegativeSampler]] = None
@@ -121,7 +137,7 @@ class Objective:
         if self.model_kwargs is not None:
             problems = [
                 x
-                for x in ('loss', 'regularizer', 'optimizer', 'training', 'negative_sampler', 'stopper')
+                for x in ('loss', 'regularizer', 'optimizer', 'lr_scheduler', 'training', 'negative_sampler', 'stopper')
                 if x in self.model_kwargs
             ]
             if problems:
@@ -170,15 +186,38 @@ class Objective:
             kwargs=self.optimizer_kwargs,
             kwargs_ranges=self.optimizer_kwargs_ranges,
         )
+        # 5.1 Learning Rate Scheduler
+        _lr_scheduler_kwargs: Optional[Mapping[str, Any]] = None
+        if self.lr_scheduler is not None:
+            _lr_scheduler_kwargs = _get_kwargs(
+                trial=trial,
+                prefix='lr_scheduler',
+                default_kwargs_ranges=lr_schedulers_hpo_defaults[self.lr_scheduler],
+                kwargs=self.lr_scheduler_kwargs,
+                kwargs_ranges=self.lr_scheduler_kwargs_ranges,
+            )
 
         _negative_sampler_kwargs: Mapping[str, Any]
         if self.training_loop is not SLCWATrainingLoop:
             _negative_sampler_kwargs = {}
+        elif self.negative_sampler is None:
+            raise ValueError("Negative sampler class must be made explicit when training under sLCWA")
         else:
+            # TODO this fixes the issue for negative samplers, but does not generally address it.
+            #  For example, some of them obscure their arguments with **kwargs, so should we look
+            #  at the parent class? Sounds like something to put in class resolver by using the
+            #  inspect module. For now, this solution will rely on the fact that the sampler is a
+            #  direct descendent of a parent NegativeSampler
+            direct_params = inspect.signature(self.negative_sampler).parameters
+            parent_params = inspect.signature(self.negative_sampler.__bases__[0]).parameters
+            valid_keys = set(direct_params).union(parent_params) - {"kwargs"}
+            invalid_keys = set(self.negative_sampler_kwargs_ranges or []) - valid_keys
+            if invalid_keys:
+                raise ExtraKeysError(invalid_keys)
             _negative_sampler_kwargs = _get_kwargs(
                 trial=trial,
                 prefix='negative_sampler',
-                default_kwargs_ranges={} if self.negative_sampler is None else self.negative_sampler.hpo_default,
+                default_kwargs_ranges=self.negative_sampler.hpo_default,
                 kwargs=self.negative_sampler_kwargs,
                 kwargs_ranges=self.negative_sampler_kwargs_ranges,
             )
@@ -194,6 +233,9 @@ class Objective:
         _stopper_kwargs = dict(self.stopper_kwargs or {})
         if self.stopper is not None and issubclass(self.stopper, EarlyStopper):
             self._update_stopper_callbacks(_stopper_kwargs, trial)
+
+        # create result tracker to allow to gracefully close failed trials
+        result_tracker = tracker_resolver.make(query=self.result_tracker, pos_kwargs=self.result_tracker_kwargs)
 
         try:
             result = pipeline(
@@ -214,10 +256,13 @@ class Objective:
                 # 4. Regularizer
                 regularizer=self.regularizer,
                 regularizer_kwargs=_regularizer_kwargs,
-                clear_optimizer=True,
                 # 5. Optimizer
                 optimizer=self.optimizer,
                 optimizer_kwargs=_optimizer_kwargs,
+                clear_optimizer=True,
+                # 5.1 Learning Rate Scheduler
+                lr_scheduler=self.lr_scheduler,
+                lr_scheduler_kwargs=_lr_scheduler_kwargs,
                 # 6. Training Loop
                 training_loop=self.training_loop,
                 negative_sampler=self.negative_sampler,
@@ -233,13 +278,16 @@ class Objective:
                 evaluation_kwargs=self.evaluation_kwargs,
                 filter_validation_when_testing=self.filter_validation_when_testing,
                 # 9. Tracker
-                result_tracker=self.result_tracker,
-                result_tracker_kwargs=self.result_tracker_kwargs,
+                result_tracker=result_tracker,
+                result_tracker_kwargs=None,
                 # Misc.
                 use_testing_data=False,  # use validation set during HPO!
                 device=self.device,
             )
         except (MemoryError, RuntimeError) as e:
+            # close run in result tracker
+            result_tracker.end_run(success=False)
+
             trial.set_user_attr('failure', str(e))
             # Will trigger Optuna to set the state of the trial as failed
             return None
@@ -447,6 +495,10 @@ def hpo_pipeline(
     optimizer: HintType[Optimizer] = None,
     optimizer_kwargs: Optional[Mapping[str, Any]] = None,
     optimizer_kwargs_ranges: Optional[Mapping[str, Any]] = None,
+    # 5.1 Learning Rate Scheduler
+    lr_scheduler: HintType[LRScheduler] = None,
+    lr_scheduler_kwargs: Optional[Mapping[str, Any]] = None,
+    lr_scheduler_kwargs_ranges: Optional[Mapping[str, Any]] = None,
     # 6. Training Loop
     training_loop: HintType[TrainingLoop] = None,
     training_loop_kwargs: Optional[Mapping[str, Any]] = None,
@@ -454,6 +506,7 @@ def hpo_pipeline(
     negative_sampler_kwargs: Optional[Mapping[str, Any]] = None,
     negative_sampler_kwargs_ranges: Optional[Mapping[str, Any]] = None,
     # 7. Training
+    epochs: Optional[int] = None,
     training_kwargs: Optional[Mapping[str, Any]] = None,
     training_kwargs_ranges: Optional[Mapping[str, Any]] = None,
     stopper: HintType[Stopper] = None,
@@ -487,9 +540,9 @@ def hpo_pipeline(
     """Train a model on the given dataset.
 
     :param dataset:
-        The name of the dataset (a key from :data:`pykeen.datasets.datasets`) or the :class:`pykeen.datasets.Dataset`
-        instance. Alternatively, the training triples factory (``training``), testing triples factory (``testing``),
-        and validation triples factory (``validation``; optional) can be specified.
+        The name of the dataset (a key for the :data:`pykeen.datasets.dataset_resolver`) or the
+        :class:`pykeen.datasets.Dataset` instance. Alternatively, the training triples factory (``training``), testing
+        triples factory (``testing``), and validation triples factory (``validation``; optional) can be specified.
     :param dataset_kwargs:
         The keyword arguments passed to the dataset upon instantiation
     :param training:
@@ -539,6 +592,13 @@ def hpo_pipeline(
         Strategies for optimizing the optimizers' hyper-parameters to override
         the defaults
 
+    :param lr_scheduler:
+        The name of the lr_scheduler or the lr_scheduler class.
+    :param lr_scheduler_kwargs:
+        Keyword arguments to pass to the lr_scheduler on instantiation
+    :param lr_scheduler_kwargs_ranges:
+        Strategies for optimizing the lr_schedulers' hyper-parameters to override the defaults
+
     :param training_loop:
         The name of the training approach (``'slcwa'`` or ``'lcwa'``) or the training loop class
         to pass to :func:`pykeen.pipeline.pipeline`
@@ -551,6 +611,8 @@ def hpo_pipeline(
         Strategies for optimizing the negative samplers' hyper-parameters to override
         the defaults
 
+    :param epochs:
+        A shortcut for setting the ``num_epochs`` key in the ``training_kwargs`` dict.
     :param training_kwargs:
         Keyword arguments to pass to the training loop's train function on call
     :param training_kwargs_ranges:
@@ -629,7 +691,7 @@ def hpo_pipeline(
     if regularizer is not None:
         regularizer_cls = regularizer_resolver.lookup(regularizer)
     elif getattr(model_cls, 'regularizer_default', None):
-        regularizer_cls = model_cls.regularizer_default
+        regularizer_cls = model_cls.regularizer_default  # type:ignore
     else:
         regularizer_cls = None
     if regularizer_cls:
@@ -639,6 +701,12 @@ def hpo_pipeline(
     optimizer_cls: Type[Optimizer] = optimizer_resolver.lookup(optimizer)
     study.set_user_attr('optimizer', optimizer_resolver.normalize_cls(optimizer_cls))
     logger.info(f'Using optimizer: {optimizer_cls}')
+    # 5.1 Learning Rate Scheduler
+    lr_scheduler_cls: Optional[Type[LRScheduler]] = None
+    if lr_scheduler is not None:
+        lr_scheduler_cls = lr_scheduler_resolver.lookup(lr_scheduler)
+        study.set_user_attr('lr_scheduler', lr_scheduler_resolver.normalize_cls(lr_scheduler_cls))
+        logger.info(f'Using lr_scheduler: {lr_scheduler_cls}')
     # 6. Training Loop
     training_loop_cls: Type[TrainingLoop] = training_loop_resolver.lookup(training_loop)
     study.set_user_attr('training_loop', training_loop_cls.get_normalized_name())
@@ -652,6 +720,9 @@ def hpo_pipeline(
     else:
         negative_sampler_cls = None
     # 7. Training
+    if epochs is not None:
+        training_kwargs = {} if training_kwargs is None else dict(training_kwargs)
+        training_kwargs['num_epochs'] = epochs
     stopper_cls: Type[Stopper] = stopper_resolver.lookup(stopper)
     if stopper_cls is EarlyStopper and training_kwargs_ranges and 'epochs' in training_kwargs_ranges:
         raise ValueError('can not use early stopping while optimizing epochs')
@@ -668,7 +739,8 @@ def hpo_pipeline(
     logger.info('Filter validation triples when testing: %s', filter_validation_when_testing)
 
     # 9. Tracking
-    result_tracker_cls: Type[ResultTracker] = tracker_resolver.lookup(result_tracker)
+    if not isinstance(result_tracker, ResultTracker):
+        result_tracker = tracker_resolver.lookup(result_tracker)
 
     objective = Objective(
         # 1. Dataset
@@ -695,6 +767,10 @@ def hpo_pipeline(
         optimizer=optimizer_cls,
         optimizer_kwargs=optimizer_kwargs,
         optimizer_kwargs_ranges=optimizer_kwargs_ranges,
+        # 5.1 Learning Rate Scheduler
+        lr_scheduler=lr_scheduler_cls,
+        lr_scheduler_kwargs=lr_scheduler_kwargs,
+        lr_scheduler_kwargs_ranges=lr_scheduler_kwargs_ranges,
         # 6. Training Loop
         training_loop=training_loop_cls,
         training_loop_kwargs=training_loop_kwargs,
@@ -712,7 +788,7 @@ def hpo_pipeline(
         evaluation_kwargs=evaluation_kwargs,
         filter_validation_when_testing=filter_validation_when_testing,
         # 9. Tracker
-        result_tracker=result_tracker_cls,
+        result_tracker=result_tracker,
         result_tracker_kwargs=result_tracker_kwargs,
         # Optuna Misc.
         metric=metric,
@@ -723,7 +799,7 @@ def hpo_pipeline(
 
     # Invoke optimization of the objective function.
     study.optimize(
-        objective,
+        cast(Callable[[Trial], float], objective),
         n_trials=n_trials,
         timeout=timeout,
         n_jobs=n_jobs or 1,
@@ -769,7 +845,13 @@ def suggest_kwargs(
             continue  # has been set by default, won't be suggested
 
         prefixed_name = f'{prefix}.{name}'
+
+        # TODO: make it even easier to specify categorical strategies just as lists
+        # if isinstance(info, (tuple, list, set)):
+        #     info = dict(type='categorical', choices=list(info))
+
         dtype, low, high = info['type'], info.get('low'), info.get('high')
+        log = info.get('log') in {True, 'TRUE', 'True', 'true', 't', 'YES', 'Yes', 'yes', 'y'}
         if dtype in {int, 'int'}:
             scale = info.get('scale')
             if scale in {'power_two', 'power'}:
@@ -782,7 +864,6 @@ def suggest_kwargs(
                 )
             elif scale is None or scale == 'linear':
                 # get log from info - could either be a boolean or string
-                log = info.get('log') in {True, 'TRUE', 'True', 'true', 't', 'YES', 'Yes', 'yes', 'y'}
                 _kwargs[name] = trial.suggest_int(
                     name=prefixed_name,
                     low=low,
@@ -794,10 +875,13 @@ def suggest_kwargs(
                 logger.warning(f'Unhandled scale {scale} for parameter {name} of data type {dtype}')
 
         elif dtype in {float, 'float'}:
-            if info.get('scale') == 'log':
-                _kwargs[name] = trial.suggest_loguniform(name=prefixed_name, low=low, high=high)
-            else:
-                _kwargs[name] = trial.suggest_uniform(name=prefixed_name, low=low, high=high)
+            _kwargs[name] = trial.suggest_float(
+                name=prefixed_name,
+                low=low,
+                high=high,
+                step=info.get('q') or info.get('step'),
+                log=log,
+            )
         elif dtype == 'categorical':
             choices = info['choices']
             _kwargs[name] = trial.suggest_categorical(name=prefixed_name, choices=choices)
@@ -814,7 +898,7 @@ def suggest_discrete_power_int(trial: Trial, name: str, low: int, high: int, bas
     if high <= low:
         raise Exception(f"Upper bound {high} is not greater than lower bound {low}.")
     choices = [base ** i for i in range(low, high + 1)]
-    return trial.suggest_categorical(name=name, choices=choices)
+    return cast(int, trial.suggest_categorical(name=name, choices=choices))
 
 
 def _set_study_dataset(

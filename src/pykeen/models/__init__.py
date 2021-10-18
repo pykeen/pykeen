@@ -6,10 +6,11 @@ entities and relations. In general, a larger score indicates a higher plausibili
 score value is model-dependent, and usually it cannot be directly interpreted as a probability.
 """  # noqa: D205, D400
 
-from class_resolver import Resolver
+from class_resolver import Resolver, get_subclasses
 
-from .base import EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, _OldAbstractModel
-from .multimodal import ComplExLiteral, DistMultLiteral, LiteralModel
+from .base import EntityRelationEmbeddingModel, Model, _OldAbstractModel
+from .baseline import EvaluationOnlyModel, MarginalDistributionBaseline
+from .multimodal import ComplExLiteral, DistMultLiteral, DistMultLiteralGated, LiteralModel
 from .nbase import ERModel, _NewAbstractModel
 from .resolve import make_model, make_model_cls
 from .unimodal import (
@@ -17,6 +18,8 @@ from .unimodal import (
     ComplEx,
     ConvE,
     ConvKB,
+    CrossE,
+    DistMA,
     DistMult,
     ERMLP,
     ERMLPE,
@@ -32,8 +35,10 @@ from .unimodal import (
     RotatE,
     SimplE,
     StructuredEmbedding,
+    TorusE,
     TransD,
     TransE,
+    TransF,
     TransH,
     TransR,
     TuckER,
@@ -44,19 +49,22 @@ __all__ = [
     # Base Models
     'Model',
     '_OldAbstractModel',
-    'EntityEmbeddingModel',
     'EntityRelationEmbeddingModel',
     '_NewAbstractModel',
     'ERModel',
     'LiteralModel',
+    'EvaluationOnlyModel',
     # Concrete Models
     'CompGCN',
     'ComplEx',
     'ComplExLiteral',
     'ConvE',
     'ConvKB',
+    'CrossE',
+    'DistMA',
     'DistMult',
     'DistMultLiteral',
+    'DistMultLiteralGated',
     'ERMLP',
     'ERMLPE',
     'HolE',
@@ -71,12 +79,16 @@ __all__ = [
     'RotatE',
     'SimplE',
     'StructuredEmbedding',
+    'TorusE',
     'TransD',
     'TransE',
+    'TransF',
     'TransH',
     'TransR',
     'TuckER',
     'UnstructuredModel',
+    # Evaluation-only models
+    'MarginalDistributionBaseline',
     # Utils
     'model_resolver',
     'make_model',
@@ -86,13 +98,16 @@ __all__ = [
 model_resolver = Resolver.from_subclasses(
     base=Model,
     skip={
+        # Abstract Models
         _NewAbstractModel,
         # We might be able to relax this later
         ERModel,
         LiteralModel,
+        # baseline models behave differently
+        EvaluationOnlyModel,
+        *get_subclasses(EvaluationOnlyModel),
         # Old style models should never be looked up
         _OldAbstractModel,
-        EntityEmbeddingModel,
         EntityRelationEmbeddingModel,
     },
 )

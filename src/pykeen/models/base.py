@@ -10,7 +10,7 @@ import logging
 import pickle
 import warnings
 from abc import ABC, abstractmethod
-from typing import Any, ClassVar, Iterable, Mapping, Optional, Type, Union
+from typing import Any, ClassVar, Iterable, Mapping, Optional, Sequence, Type, Union
 
 import pandas as pd
 import torch
@@ -18,7 +18,7 @@ from docdata import parse_docdata
 from torch import nn
 
 from ..losses import Loss, MarginRankingLoss
-from ..nn.emb import Embedding, EmbeddingSpecification
+from ..nn.emb import Embedding, EmbeddingSpecification, RepresentationModule
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import CoreTriplesFactory
 from ..typing import DeviceHint, ScorePack
@@ -27,7 +27,6 @@ from ..utils import NoRandomSeedNecessary, _can_slice, extend_batch, resolve_dev
 __all__ = [
     'Model',
     '_OldAbstractModel',
-    'EntityEmbeddingModel',
     'EntityRelationEmbeddingModel',
 ]
 
@@ -680,60 +679,13 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
         self.regularizer.reset()
 
 
-class EntityEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
-    """A base module for most KGE models that have one embedding for entities."""
-
-    entity_embedding: Embedding
-
-    def __init__(
-        self,
-        *,
-        triples_factory: CoreTriplesFactory,
-        entity_representations: EmbeddingSpecification,
-        loss: Optional[Loss] = None,
-        predict_with_sigmoid: bool = False,
-        preferred_device: DeviceHint = None,
-        random_seed: Optional[int] = None,
-        regularizer: Optional[Regularizer] = None,
-    ) -> None:
-        """Initialize the entity embedding model.
-
-        .. seealso:: Constructor of the base class :class:`pykeen.models.Model`
-        """
-        super().__init__(
-            triples_factory=triples_factory,
-            loss=loss,
-            preferred_device=preferred_device,
-            random_seed=random_seed,
-            regularizer=regularizer,
-            predict_with_sigmoid=predict_with_sigmoid,
-        )
-        self.entity_embeddings = entity_representations.make(
-            num_embeddings=triples_factory.num_entities,
-            device=self.device,
-        )
-
-    @property
-    def embedding_dim(self) -> int:  # noqa:D401
-        """The entity embedding dimension."""
-        return self.entity_embeddings.embedding_dim
-
-    def _reset_parameters_(self):  # noqa: D102
-        self.entity_embeddings.reset_parameters()
-
-    def post_parameter_update(self) -> None:  # noqa: D102
-        # make sure to call this first, to reset regularizer state!
-        super().post_parameter_update()
-        self.entity_embeddings.post_parameter_update()
-
-
 class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
     """A base module for KGE models that have different embeddings for entities and relations."""
 
     #: Primary embeddings for entities
-    entity_embedding: Embedding
+    entity_embeddings: Embedding
     #: Primary embeddings for relations
-    relation_embedding: Embedding
+    relation_embeddings: Embedding
 
     def __init__(
         self,
@@ -774,9 +726,25 @@ class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
         return self.entity_embeddings.embedding_dim
 
     @property
-    def relation_dim(self):  # noqa:D401
+    def relation_dim(self) -> int:  # noqa:D401
         """The relation embedding dimension."""
         return self.relation_embeddings.embedding_dim
+
+    @property
+    def entity_representations(self) -> Sequence[RepresentationModule]:  # noqa:D401
+        """The entity representations.
+
+        This property provides forward compatibility with the new-style :class:`pykeen.models.ERModel`.
+        """
+        return [self.entity_embeddings]
+
+    @property
+    def relation_representations(self) -> Sequence[RepresentationModule]:  # noqa:D401
+        """The relation representations.
+
+        This property provides forward compatibility with the new-style :class:`pykeen.models.ERModel`.
+        """
+        return [self.relation_embeddings]
 
     def _reset_parameters_(self):  # noqa: D102
         self.entity_embeddings.reset_parameters()

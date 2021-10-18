@@ -24,11 +24,12 @@ from tqdm.autonotebook import tqdm, trange
 from .callbacks import MultiTrainingCallback, TrackerCallback, TrainingCallbackHint
 from ..constants import PYKEEN_CHECKPOINTS, PYKEEN_DEFAULT_CHECKPOINT
 from ..losses import Loss
+from ..lr_schedulers import LRScheduler
 from ..models import Model, RGCN
 from ..stoppers import Stopper
 from ..trackers import ResultTracker
 from ..training.schlichtkrull_sampler import GraphSampler
-from ..triples import CoreTriplesFactory, Instances
+from ..triples import CoreTriplesFactory, Instances, TriplesFactory
 from ..utils import (
     format_relative_comparison, get_batchnorm_modules, is_cuda_oom_error, is_cudnn_error,
     normalize_string,
@@ -78,14 +79,25 @@ def _get_optimizer_kwargs(optimizer: Optimizer) -> Mapping[str, Any]:
     optimizer_kwargs = {
         key: value
         for key, value in optimizer_kwargs['param_groups'][0].items()
-        if key != 'params'
+        if key not in ['params', 'initial_lr']
     }
     return optimizer_kwargs
+
+
+def _get_lr_scheduler_kwargs(lr_scheduler: LRScheduler) -> Mapping[str, Any]:
+    lr_scheduler_kwargs = lr_scheduler.state_dict()
+    lr_scheduler_kwargs = {
+        key: value
+        for key, value in lr_scheduler_kwargs.items()
+        if not key.startswith('_') and key not in ['base_lrs', 'last_epoch']
+    }
+    return lr_scheduler_kwargs
 
 
 class TrainingLoop(Generic[SampleType, BatchType], ABC):
     """A training loop."""
 
+    lr_scheduler: Optional[LRScheduler]
     model: Model
     optimizer: Optimizer
 
@@ -102,6 +114,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         model: Model,
         triples_factory: CoreTriplesFactory,
         optimizer: Optional[Optimizer] = None,
+        lr_scheduler: Optional[LRScheduler] = None,
         automatic_memory_optimization: bool = True,
     ) -> None:
         """Initialize the training loop.
@@ -109,12 +122,14 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         :param model: The model to train
         :param triples_factory: The training triples factory
         :param optimizer: The optimizer to use while training the model
+        :param lr_scheduler: The learning rate scheduler you want to use while training the model
         :param automatic_memory_optimization: bool
             Whether to automatically optimize the sub-batch size during
             training and batch size during evaluation with regards to the hardware at hand.
         """
         self.model = model
         self.optimizer = optimizer
+        self.lr_scheduler = lr_scheduler
         self.losses_per_epochs = []
         self.automatic_memory_optimization = automatic_memory_optimization
 
@@ -262,7 +277,10 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         if checkpoint_name:
             checkpoint_path = checkpoint_directory.joinpath(checkpoint_name)
             if checkpoint_path.is_file():
-                best_epoch_model_file_path, last_best_epoch = self._load_state(path=checkpoint_path)
+                best_epoch_model_file_path, last_best_epoch = self._load_state(
+                    path=checkpoint_path,
+                    triples_factory=triples_factory,
+                )
                 if stopper is not None:
                     stopper_dict = stopper.load_summary_dict_from_training_loop_checkpoint(path=checkpoint_path)
                     # If the stopper dict has any keys, those are written back to the stopper
@@ -331,6 +349,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         # Clear optimizer
         if clear_optimizer:
             self.optimizer = None
+            self.lr_scheduler = None
 
         return result
 
@@ -506,6 +525,11 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                 params=self.model.get_grad_params(),
                 **optimizer_kwargs,
             )
+
+            if self.lr_scheduler is not None:
+                # Create a new lr scheduler and add the optimizer
+                lr_scheduler_kwargs = _get_lr_scheduler_kwargs(self.lr_scheduler)
+                self.lr_scheduler = self.lr_scheduler.__class__(self.optimizer, **lr_scheduler_kwargs)
         elif not self.optimizer.state:
             raise ValueError('Cannot continue_training without being trained once.')
 
@@ -634,6 +658,10 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                 if only_size_probing:
                     return None
 
+                # Update learning rate scheduler
+                if self.lr_scheduler is not None:
+                    self.lr_scheduler.step(epoch=epoch)
+
                 # Track epoch loss
                 epoch_loss = current_epoch_loss / num_training_instances
                 self.losses_per_epochs.append(epoch_loss)
@@ -660,7 +688,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                     and stopper.best_epoch != last_best_epoch
                     and best_epoch_model_file_path is not None
                 ):
-                    self._save_state(path=best_epoch_model_file_path)
+                    self._save_state(path=best_epoch_model_file_path, triples_factory=triples_factory)
                     last_best_epoch = epoch
             # When the training loop failed, a fallback checkpoint is created to resume training.
             except (MemoryError, RuntimeError) as e:
@@ -677,6 +705,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                         path=checkpoint_on_failure_file_path,
                         stopper=stopper,
                         best_epoch_model_checkpoint_file_path=best_epoch_model_checkpoint_file_path,
+                        triples_factory=triples_factory,
                     )
                     logger.warning(
                         "However, don't worry we got you covered. PyKEEN just saved a checkpoint when this "
@@ -708,6 +737,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                         path=checkpoint_path,
                         stopper=stopper,
                         best_epoch_model_checkpoint_file_path=best_epoch_model_checkpoint_file_path,
+                        triples_factory=triples_factory,
                     )  # type: ignore
                     last_checkpoint = time.time()
 
@@ -1023,6 +1053,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         path: Union[IO[bytes], str, pathlib.Path],
         stopper: Optional[Stopper] = None,
         best_epoch_model_checkpoint_file_path: Optional[pathlib.Path] = None,
+        triples_factory: Optional[CoreTriplesFactory] = None,
     ) -> None:
         """Save the state of the training loop.
 
@@ -1033,6 +1064,8 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             if training should stop early
         :param best_epoch_model_checkpoint_file_path:
             The file path for the checkpoint of the best epoch model when using early stopping.
+        :param triples_factory:
+            The triples factory being used in the current training loop.
         """
         if self.optimizer is None:
             raise ValueError
@@ -1055,12 +1088,24 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         else:
             best_epoch_model_checkpoint = None
 
+        if self.lr_scheduler is None:
+            lr_scheduler_state_dict = None
+        else:
+            lr_scheduler_state_dict = self.lr_scheduler.state_dict()
+
+        relation_to_id_dict = None
+        entity_to_id_dict = None
+        if triples_factory is not None and isinstance(triples_factory, TriplesFactory):
+            relation_to_id_dict = triples_factory.relation_to_id
+            entity_to_id_dict = triples_factory.entity_to_id
+
         torch.save(
             {
                 'epoch': self._epoch,
                 'loss': self.losses_per_epochs,
                 'model_state_dict': self.model.state_dict(),
                 'optimizer_state_dict': self.optimizer.state_dict(),
+                'lr_scheduler_state_dict': lr_scheduler_state_dict,
                 'checksum': self.checksum,
                 'random_seed': self.model._random_seed,
                 'stopper_dict': stopper_dict,
@@ -1070,6 +1115,9 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                 'torch_cuda_random_state': torch_cuda_random_state,
                 # This is an entire checkpoint for the optional best model when using early stopping
                 'best_epoch_model_checkpoint': best_epoch_model_checkpoint,
+                # Saving triples factory related states
+                'relation_to_id_dict': relation_to_id_dict,
+                'entity_to_id_dict': entity_to_id_dict,
             },
             path,
             pickle_protocol=pickle.HIGHEST_PROTOCOL,
@@ -1079,11 +1127,16 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
     def _load_state(
         self,
         path: Union[str, pathlib.Path],
+        triples_factory: Optional[CoreTriplesFactory] = None,
     ) -> Tuple[Optional[pathlib.Path], Optional[int]]:
         """Load the state of the training loop from a checkpoint.
 
         :param path:
             Path of the file where to load the state from.
+        :param triples_factory:
+            The triples factory being used in the current training loop. This is being used to check whether the
+            entity and relation to id mappings from the checkpoint match those provided by the current triples
+            factory.
 
         :return:
             Temporary file path of the best epoch model and the best epoch when using early stoppers, None otherwise.
@@ -1130,10 +1183,36 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                 pickle_protocol=pickle.HIGHEST_PROTOCOL,
             )
 
+        # Check whether the triples factory mappings match those from the checkpoints
+        relation_to_id_dict = checkpoint.get('relation_to_id_dict')
+        entity_to_id_dict = checkpoint.get('entity_to_id_dict')
+        if (
+            relation_to_id_dict is not None
+            and entity_to_id_dict is not None
+            and triples_factory is not None
+            and isinstance(triples_factory, TriplesFactory)
+        ):
+            if relation_to_id_dict != triples_factory.relation_to_id:
+                logger.warning(
+                    'The model provided by the checkpoint was trained on different relation_to_id mappings than the '
+                    'ones provided by the current triples factory. This will most likely render the current learning '
+                    'state of your model useless. This is usually caused by using a completely different dataset '
+                    'or sampling a sub-dataset from a bigger dataset before handing it to the PyKEEN triples factory.',
+                )
+            if entity_to_id_dict != triples_factory.entity_to_id:
+                logger.warning(
+                    'The model provided by the checkpoint was trained on different entity_to_id mappings than the '
+                    'ones provided by the current triples factory. This will most likely render the current learning '
+                    'state of your model useless. This is usually caused by using a completely different dataset '
+                    'or sampling a sub-dataset from a bigger dataset before handing it to the PyKEEN triples factory.',
+                )
+
         self._epoch = checkpoint['epoch']
         self.losses_per_epochs = checkpoint['loss']
         self.model.load_state_dict(checkpoint['model_state_dict'])
         self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        if self.lr_scheduler is not None:
+            self.lr_scheduler.load_state_dict(checkpoint['lr_scheduler_state_dict'])
         random.setstate(checkpoint['random_state'])
         np.random.set_state(checkpoint['np_random_state'])
         torch.random.set_rng_state(checkpoint['torch_random_state'])

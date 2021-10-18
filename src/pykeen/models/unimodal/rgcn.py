@@ -5,7 +5,7 @@
 from typing import Any, Mapping, Optional
 
 import torch
-from class_resolver import Hint
+from class_resolver import Hint, HintOrType
 from torch import nn
 
 from ..nbase import ERModel, EmbeddingSpecificationHint
@@ -24,17 +24,36 @@ __all__ = [
 class RGCN(
     ERModel[torch.FloatTensor, RelationRepresentation, torch.FloatTensor],
 ):
-    """An implementation of R-GCN from [schlichtkrull2018]_.
+    r"""An implementation of R-GCN from [schlichtkrull2018]_.
 
-    This model uses graph convolutions with relation-specific weights.
+    The Relational Graph Convolutional Network (R-GCN) comprises three parts:
+
+    1. A GCN-based entity encoder that computes enriched representations for entities, cf.
+       :class:`pykeen.nn.emb.RGCNRepresentations`. The representation for entity $i$ at level $l \in (1,\dots,L)$
+       is denoted as $\textbf{e}_i^l$.
+       The GCN is modified to use different weights depending on the type of the relation.
+    2. Relation representations $\textbf{R}_{r} \in \mathbb{R}^{d \times d}$ is a diagonal matrix that are learned
+       independently from the GCN-based encoder.
+    3. An arbitrary interaction model which computes the plausibility of facts given the enriched representations,
+       cf. :class:`pykeen.nn.modules.Interaction`.
+
+    Scores for each triple $(h,r,t) \in \mathcal{K}$ are calculated by using the representations in the final level
+    of the GCN-based encoder $\textbf{e}_h^L$ and $\textbf{e}_t^L$ along with relation representation $\textbf{R}_{r}$.
+    While the original implementation of R-GCN used the DistMult model and we use it as a default, this implementation
+    allows the specification of an arbitrary interaction model.
+
+    .. math::
+
+        f(h,r,t) = \textbf{e}_h^L \textbf{R}_{r} \textbf{e}_t^L
 
     .. seealso::
 
-       - `Pytorch Geometric"s implementation of R-GCN
+       - `PyTorch Geometric's implementation of R-GCN
          <https://github.com/rusty1s/pytorch_geometric/blob/1.3.2/examples/rgcn.py>`_
-       - `DGL"s implementation of R-GCN
+       - `DGL's implementation of R-GCN
          <https://github.com/dmlc/dgl/tree/v0.4.0/examples/pytorch/rgcn>`_
     ---
+    name: R-GCN
     citation:
         author: Schlichtkrull
         year: 2018
@@ -70,7 +89,7 @@ class RGCN(
         relation_initializer: Hint[Initializer] = nn.init.xavier_uniform_,
         relation_initializer_kwargs: Optional[Mapping[str, Any]] = None,
         relation_representations: EmbeddingSpecificationHint = None,
-        interaction: Interaction[torch.FloatTensor, RelationRepresentation, torch.FloatTensor],
+        interaction: HintOrType[Interaction[torch.FloatTensor, RelationRepresentation, torch.FloatTensor]] = 'DistMult',
         interaction_kwargs: Optional[Mapping[str, Any]] = None,
         use_bias: bool = True,
         use_batch_norm: bool = False,
