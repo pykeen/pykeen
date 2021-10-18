@@ -15,7 +15,7 @@ from ...typing import Constrainer, Hint, Initializer
 from ...utils import complex_normalize
 
 __all__ = [
-    'RotatE',
+    "RotatE",
 ]
 
 

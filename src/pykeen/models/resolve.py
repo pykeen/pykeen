@@ -66,8 +66,8 @@ from ..nn.modules import Interaction, interaction_resolver
 from ..typing import HeadRepresentation, RelationRepresentation, TailRepresentation
 
 __all__ = [
-    'make_model',
-    'make_model_cls',
+    "make_model",
+    "make_model_cls",
 ]
 
 logger = logging.getLogger(__name__)
@@ -104,13 +104,14 @@ class DimensionError(ValueError):
         self.expected = expected
 
     def __str__(self):
-        return f'Expected dimensions dictionary with keys {self.expected} but got keys {self.given}'
+        return f"Expected dimensions dictionary with keys {self.expected} but got keys {self.given}"
 
 
 def make_model_cls(
     dimensions: Union[int, Mapping[str, int]],
     interaction: Union[
-        str, Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation],
+        str,
+        Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation],
         Type[Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]],
     ],
     interaction_kwargs: Optional[Mapping[str, Any]] = None,
@@ -158,7 +159,7 @@ def _normalize_entity_representations(
     Sequence[Union[EmbeddingSpecification, RepresentationModule]],
 ]:
     if isinstance(dimensions, int):
-        dimensions = {'d': dimensions}
+        dimensions = {"d": dimensions}
     assert isinstance(dimensions, dict)
     if set(dimensions) < interaction.get_dimensions():
         raise DimensionError(set(dimensions), interaction.get_dimensions())
@@ -167,21 +168,13 @@ def _normalize_entity_representations(
         if interaction.tail_entity_shape is not None:
             raise NotImplementedError
         entity_representations = [
-            EmbeddingSpecification(shape=tuple(
-                dimensions[d]
-                for d in shape
-            ))
-            for shape in interaction.entity_shape
+            EmbeddingSpecification(shape=tuple(dimensions[d] for d in shape)) for shape in interaction.entity_shape
         ]
     elif not isinstance(entity_representations, Sequence):
         entity_representations = [entity_representations]
     if relation_representations is None:
         relation_representations = [
-            EmbeddingSpecification(shape=tuple(
-                dimensions[d]
-                for d in shape
-            ))
-            for shape in interaction.relation_shape
+            EmbeddingSpecification(shape=tuple(dimensions[d] for d in shape)) for shape in interaction.relation_shape
         ]
     elif not isinstance(relation_representations, Sequence):
         relation_representations = [relation_representations]

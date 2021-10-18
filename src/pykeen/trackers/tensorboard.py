@@ -14,14 +14,14 @@ if TYPE_CHECKING:
     import torch.utils.tensorboard
 
 __all__ = [
-    'TensorBoardResultTracker',
+    "TensorBoardResultTracker",
 ]
 
 
 class TensorBoardResultTracker(ResultTracker):
     """A tracker for TensorBoard."""
 
-    summary_writer: 'torch.utils.tensorboard.SummaryWriter'
+    summary_writer: "torch.utils.tensorboard.SummaryWriter"
     path: pathlib.Path
 
     def __init__(
@@ -46,7 +46,7 @@ class TensorBoardResultTracker(ResultTracker):
             path = experiment_path
         else:
             if experiment_name is None:
-                experiment_name = time.strftime('%Y-%m-%d-%H-%M-%S')
+                experiment_name = time.strftime("%Y-%m-%d-%H-%M-%S")
             path = PYKEEN_LOGS.joinpath("tensorboard", experiment_name)
 
         # if we really need access to the path later, we can expose it as a property

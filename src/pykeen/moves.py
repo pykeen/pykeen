@@ -19,7 +19,7 @@ except ImportError:
         elif norm == "ortho":
             normalized = True
         else:
-            raise NotImplementedError("In PyTorch < 1.7, there is no \"forward\" option.")
+            raise NotImplementedError('In PyTorch < 1.7, there is no "forward" option.')
         return normalized
 
     def rfft(
@@ -54,7 +54,8 @@ except ImportError:
         normalized = _resolve_normalized_option(norm)
         return old_irfft(input, signal_ndim=1, normalized=normalized, onesided=True, signal_sizes=(n,))
 
+
 __all__ = [
-    'rfft',
-    'irfft',
+    "rfft",
+    "irfft",
 ]

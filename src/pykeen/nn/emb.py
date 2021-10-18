@@ -20,7 +20,12 @@ from torch.nn import functional
 
 from .compositions import CompositionModule, composition_resolver
 from .init import (
-    init_phases, normal_norm_, uniform_norm_, xavier_normal_, xavier_normal_norm_, xavier_uniform_,
+    init_phases,
+    normal_norm_,
+    uniform_norm_,
+    xavier_normal_,
+    xavier_normal_norm_,
+    xavier_uniform_,
     xavier_uniform_norm_,
 )
 from .message_passing import Decomposition, decomposition_resolver
@@ -31,17 +36,17 @@ from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer
 from ..utils import Bias, activation_resolver, clamp_norm, complex_normalize, convert_to_canonical_shape
 
 __all__ = [
-    'RepresentationModule',
-    'Embedding',
-    'LiteralRepresentation',
-    'EmbeddingSpecification',
-    'RGCNRepresentations',
-    'CompGCNLayer',
-    'CombinedCompGCNRepresentations',
-    'SingleCompGCNRepresentation',
-    'constrainers',
-    'initializers',
-    'normalizers',
+    "RepresentationModule",
+    "Embedding",
+    "LiteralRepresentation",
+    "EmbeddingSpecification",
+    "RGCNRepresentations",
+    "CompGCNLayer",
+    "CombinedCompGCNRepresentations",
+    "SingleCompGCNRepresentation",
+    "constrainers",
+    "initializers",
+    "normalizers",
 ]
 
 logger = logging.getLogger(__name__)
@@ -315,11 +320,18 @@ class Embedding(RepresentationModule):
             shape=shape,
         )
 
-        self.initializer = cast(Initializer, _handle(
-            initializer, initializers, initializer_kwargs, default=nn.init.normal_, label='initializer',
-        ))
-        self.normalizer = _handle(normalizer, normalizers, normalizer_kwargs, label='normalizer')
-        self.constrainer = _handle(constrainer, constrainers, constrainer_kwargs, label='constrainer')
+        self.initializer = cast(
+            Initializer,
+            _handle(
+                initializer,
+                initializers,
+                initializer_kwargs,
+                default=nn.init.normal_,
+                label="initializer",
+            ),
+        )
+        self.normalizer = _handle(normalizer, normalizers, normalizer_kwargs, label="normalizer")
+        self.constrainer = _handle(constrainer, constrainers, constrainer_kwargs, label="constrainer")
         if regularizer is not None:
             regularizer = regularizer_resolver.make(regularizer, pos_kwargs=regularizer_kwargs)
         self.regularizer = regularizer
@@ -343,7 +355,7 @@ class Embedding(RepresentationModule):
         normalizer_kwargs: Optional[Mapping[str, Any]] = None,
         constrainer: Optional[Constrainer] = None,
         constrainer_kwargs: Optional[Mapping[str, Any]] = None,
-    ) -> 'Embedding':  # noqa:E501
+    ) -> "Embedding":  # noqa:E501
         """Create an embedding object on the given device by wrapping :func:`__init__`.
 
         This method is a hotfix for not being able to pass a device during initialization of
@@ -485,9 +497,9 @@ def process_shape(
 ) -> Tuple[int, Sequence[int]]:
     """Make a shape pack."""
     if shape is None and dim is None:
-        raise ValueError('Missing both, shape and embedding_dim')
+        raise ValueError("Missing both, shape and embedding_dim")
     elif shape is not None and dim is not None:
-        raise ValueError('Provided both, shape and embedding_dim')
+        raise ValueError("Provided both, shape and embedding_dim")
     elif shape is None and dim is not None:
         shape = (dim,)
     elif isinstance(shape, int) and dim is None:
@@ -497,40 +509,41 @@ def process_shape(
         shape = tuple(shape)
         dim = int(np.prod(shape))
     else:
-        raise TypeError(f'Invalid type for shape: ({type(shape)}) {shape}')
+        raise TypeError(f"Invalid type for shape: ({type(shape)}) {shape}")
     return dim, shape
 
 
 initializers = {
-    'xavier_uniform': xavier_uniform_,
-    'xavier_uniform_norm': xavier_uniform_norm_,
-    'xavier_normal': xavier_normal_,
-    'xavier_normal_norm': xavier_normal_norm_,
-    'normal': torch.nn.init.normal_,
-    'normal_norm': normal_norm_,
-    'uniform': torch.nn.init.uniform_,
-    'uniform_norm': uniform_norm_,
-    'phases': init_phases,
-    'init_phases': init_phases,
+    "xavier_uniform": xavier_uniform_,
+    "xavier_uniform_norm": xavier_uniform_norm_,
+    "xavier_normal": xavier_normal_,
+    "xavier_normal_norm": xavier_normal_norm_,
+    "normal": torch.nn.init.normal_,
+    "normal_norm": normal_norm_,
+    "uniform": torch.nn.init.uniform_,
+    "uniform_norm": uniform_norm_,
+    "phases": init_phases,
+    "init_phases": init_phases,
 }
 
 constrainers = {
-    'normalize': functional.normalize,
-    'complex_normalize': complex_normalize,
-    'clamp': torch.clamp,
-    'clamp_norm': clamp_norm,
+    "normalize": functional.normalize,
+    "complex_normalize": complex_normalize,
+    "clamp": torch.clamp,
+    "clamp_norm": clamp_norm,
 }
 
 # TODO add normalization functions
 normalizers: Mapping[str, Normalizer] = {}
 
-X = TypeVar('X', bound=Callable)
+X = TypeVar("X", bound=Callable)
 
 
 def _handle(
     value: Hint[X],
     lookup: Mapping[str, X],
-    kwargs, default: Optional[X] = None,
+    kwargs,
+    default: Optional[X] = None,
     label: Optional[str] = None,
 ) -> Optional[X]:
     if value is None:
@@ -539,7 +552,7 @@ def _handle(
         try:
             value = lookup[value]
         except KeyError:
-            raise KeyError(f'{value} is an invalid {label}. Try one of: {sorted(lookup)}')
+            raise KeyError(f"{value} is an invalid {label}. Try one of: {sorted(lookup)}")
     if kwargs:
         rv = functools.partial(value, **kwargs)  # type: ignore
         return cast(X, rv)
@@ -970,11 +983,13 @@ class CombinedCompGCNRepresentations(nn.Module):
         # Create message passing layers
         layers = []
         for input_dim, output_dim in zip(itertools.chain([input_dim], dims), dims):
-            layers.append(CompGCNLayer(
-                input_dim=input_dim,
-                output_dim=output_dim,
-                **(layer_kwargs or {}),
-            ))
+            layers.append(
+                CompGCNLayer(
+                    input_dim=input_dim,
+                    output_dim=output_dim,
+                    **(layer_kwargs or {}),
+                )
+            )
         self.layers = nn.ModuleList(layers)
 
         # register buffers for adjacency matrix; we use the same format as PyTorch Geometric

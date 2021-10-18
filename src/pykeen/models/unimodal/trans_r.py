@@ -18,7 +18,7 @@ from ...typing import Constrainer, Hint, Initializer
 from ...utils import clamp_norm
 
 __all__ = [
-    'TransR',
+    "TransR",
 ]
 
 
@@ -93,13 +93,13 @@ class TransR(EntityRelationEmbeddingModel):
                 embedding_dim=embedding_dim,
                 initializer=entity_initializer,
                 constrainer=entity_constrainer,
-                constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
+                constrainer_kwargs=dict(maxnorm=1.0, p=2, dim=-1),
             ),
             relation_representations=EmbeddingSpecification(
                 embedding_dim=relation_dim,
                 initializer=relation_initializer,
                 constrainer=relation_constrainer,
-                constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
+                constrainer_kwargs=dict(maxnorm=1.0, p=2, dim=-1),
             ),
             **kwargs,
         )
@@ -151,8 +151,8 @@ class TransR(EntityRelationEmbeddingModel):
         h_bot = h @ m_r
         t_bot = t @ m_r
         # ensure constraints
-        h_bot = clamp_norm(h_bot, p=2, dim=-1, maxnorm=1.)
-        t_bot = clamp_norm(t_bot, p=2, dim=-1, maxnorm=1.)
+        h_bot = clamp_norm(h_bot, p=2, dim=-1, maxnorm=1.0)
+        t_bot = clamp_norm(t_bot, p=2, dim=-1, maxnorm=1.0)
 
         # evaluate score function, shape: (b, e)
         return -linalg.vector_norm(h_bot + r - t_bot, dim=-1) ** 2

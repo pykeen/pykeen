@@ -12,9 +12,9 @@ from ..typing import GaussianDistribution
 from ..utils import calculate_broadcasted_elementwise_result_shape, tensor_sum
 
 __all__ = [
-    'expected_likelihood',
-    'kullback_leibler_similarity',
-    'KG2E_SIMILARITIES',
+    "expected_likelihood",
+    "kullback_leibler_similarity",
+    "KG2E_SIMILARITIES",
 ]
 
 
@@ -70,7 +70,7 @@ def expected_likelihood(
     #: b = \log \det \Sigma
     sim = sim + safe_sigma.log().sum(dim=-1)
     if exact:
-        sim = sim + sim.shape[-1] * math.log(2. * math.pi)
+        sim = sim + sim.shape[-1] * math.log(2.0 * math.pi)
     return sim
 
 
@@ -178,7 +178,7 @@ def _vectorized_kl_divergence(
     :return: torch.Tensor, shape: (s_1, ..., s_k)
         The KL-divergence.
     """
-    e_var = (h.diagonal_covariance + t.diagonal_covariance)
+    e_var = h.diagonal_covariance + t.diagonal_covariance
     r_var_safe = r.diagonal_covariance.clamp_min(min=epsilon)
     terms = []
     # 1. Component
@@ -203,10 +203,12 @@ def _vectorized_kl_divergence(
     # = ln prod Sigma_1[ii] - ln prod Sigma_0[ii]
     # = sum ln Sigma_1[ii] - sum ln Sigma_0[ii]
     e_var_safe = e_var.clamp_min(min=epsilon)
-    terms.extend((
-        r_var_safe.log().sum(dim=-1),
-        -e_var_safe.log().sum(dim=-1),
-    ))
+    terms.extend(
+        (
+            r_var_safe.log().sum(dim=-1),
+            -e_var_safe.log().sum(dim=-1),
+        )
+    )
     result = tensor_sum(*terms)
     if exact:
         result = 0.5 * result
@@ -256,6 +258,6 @@ def _torch_kl_similarity(
 
 
 KG2E_SIMILARITIES = {
-    'KL': kullback_leibler_similarity,
-    'EL': expected_likelihood,
+    "KL": kullback_leibler_similarity,
+    "EL": expected_likelihood,
 }

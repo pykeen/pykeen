@@ -22,25 +22,29 @@ class LossTensorTest(unittest.TestCase):
         """Set up the loss tensor tests."""
         self.triples = np.array(
             [
-                ['peter', 'likes', 'chocolate_cake'],
-                ['chocolate_cake', 'isA', 'dish'],
-                ['susan', 'likes', 'pizza'],
-                ['peter', 'likes', 'susan'],
+                ["peter", "likes", "chocolate_cake"],
+                ["chocolate_cake", "isA", "dish"],
+                ["susan", "likes", "pizza"],
+                ["peter", "likes", "susan"],
             ],
             dtype=str,
         )
 
-        self.labels = torch.tensor([
-            [0., 1., 0., 0., 0.],
-            [0., 0., 0., 1., 0.],
-            [1., 0., 0., 0., 1.],
-        ])
+        self.labels = torch.tensor(
+            [
+                [0.0, 1.0, 0.0, 0.0, 0.0],
+                [0.0, 0.0, 0.0, 1.0, 0.0],
+                [1.0, 0.0, 0.0, 0.0, 1.0],
+            ]
+        )
 
-        self.predictions = torch.tensor([
-            [1., 0., 1., 1., 1.],
-            [1., 1., 1., 0., 1.],
-            [0., 1., 1., 1., 0.],
-        ])
+        self.predictions = torch.tensor(
+            [
+                [1.0, 0.0, 1.0, 1.0, 1.0],
+                [1.0, 1.0, 1.0, 0.0, 1.0],
+                [0.0, 1.0, 1.0, 1.0, 0.0],
+            ]
+        )
 
 
 class BatchCompilationTest(unittest.TestCase):

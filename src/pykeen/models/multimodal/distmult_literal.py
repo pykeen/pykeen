@@ -14,7 +14,7 @@ from ...nn.modules import DistMultInteraction, LiteralInteraction
 from ...triples import TriplesNumericLiteralsFactory
 
 __all__ = [
-    'DistMultLiteral',
+    "DistMultLiteral",
 ]
 
 

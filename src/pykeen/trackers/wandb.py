@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     import wandb.wandb_run
 
 __all__ = [
-    'WANDBResultTracker',
+    "WANDBResultTracker",
 ]
 
 
@@ -23,7 +23,7 @@ class WANDBResultTracker(ResultTracker):
     """
 
     #: The WANDB run
-    run: 'wandb.wandb_run.Run'
+    run: "wandb.wandb_run.Run"
 
     def __init__(
         self,
@@ -40,13 +40,14 @@ class WANDBResultTracker(ResultTracker):
             The experiment name to appear on the website. If not given, WANDB will generate a random name.
         """
         import wandb as _wandb
+
         self.wandb = _wandb
         if project is None:
-            raise ValueError('Weights & Biases requires a project name.')
+            raise ValueError("Weights & Biases requires a project name.")
         self.project = project
 
         if offline:
-            os.environ[self.wandb.env.MODE] = 'dryrun'
+            os.environ[self.wandb.env.MODE] = "dryrun"
 
         self.run = self.wandb.init(project=self.project, name=experiment, **kwargs)
 

@@ -11,7 +11,7 @@ from ...triples import TriplesNumericLiteralsFactory
 from ...typing import HeadRepresentation, RelationRepresentation, TailRepresentation
 
 __all__ = [
-    'LiteralModel',
+    "LiteralModel",
 ]
 
 

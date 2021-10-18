@@ -605,8 +605,8 @@ If you have a configuration (in the same format) in a JSON file:
 from .hpo import HpoPipelineResult, hpo_pipeline, hpo_pipeline_from_config, hpo_pipeline_from_path  # noqa: F401
 
 __all__ = [
-    'HpoPipelineResult',
-    'hpo_pipeline_from_path',
-    'hpo_pipeline_from_config',
-    'hpo_pipeline',
+    "HpoPipelineResult",
+    "hpo_pipeline_from_path",
+    "hpo_pipeline_from_config",
+    "hpo_pipeline",
 ]

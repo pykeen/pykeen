@@ -6,20 +6,24 @@ from typing import Any, Mapping, Type
 
 from class_resolver import Resolver
 from torch.optim.lr_scheduler import (
-    CosineAnnealingLR, CosineAnnealingWarmRestarts, CyclicLR, ExponentialLR, LambdaLR, MultiStepLR, MultiplicativeLR,
-    OneCycleLR, StepLR, _LRScheduler,
+    CosineAnnealingLR,
+    CosineAnnealingWarmRestarts,
+    CyclicLR,
+    ExponentialLR,
+    LambdaLR,
+    MultiStepLR,
+    MultiplicativeLR,
+    OneCycleLR,
+    StepLR,
+    _LRScheduler,
 )
 
 __all__ = [
-    'LRScheduler',
-    'lr_schedulers_hpo_defaults',
-    'lr_scheduler_resolver',
+    "LRScheduler",
+    "lr_schedulers_hpo_defaults",
+    "lr_scheduler_resolver",
 ]
-__all__.extend((
-    subcls.__name__
-    for subcls in _LRScheduler.__subclasses__()
-    if subcls.__name__ != 'SWALR'
-))
+__all__.extend((subcls.__name__ for subcls in _LRScheduler.__subclasses__() if subcls.__name__ != "SWALR"))
 
 #: A wrapper around the hidden scheduler base class
 LRScheduler = _LRScheduler
@@ -33,24 +37,24 @@ lr_schedulers_hpo_defaults: Mapping[Type[_LRScheduler], Mapping[str, Any]] = {
         T_0=dict(type=int, low=10, high=200, step=50),
     ),
     CyclicLR: dict(
-        base_lr=dict(type=float, low=0.001, high=0.1, scale='log'),
-        max_lr=dict(type=float, low=0.1, high=0.3, scale='log'),
+        base_lr=dict(type=float, low=0.001, high=0.1, scale="log"),
+        max_lr=dict(type=float, low=0.1, high=0.3, scale="log"),
     ),
     ExponentialLR: dict(
         gamma=dict(type=float, low=0.8, high=1.0, step=0.025),
     ),
     LambdaLR: dict(
-        lr_lambda=dict(type='categorical', choices=[lambda epoch: epoch // 30, lambda epoch: 0.95 ** epoch]),
+        lr_lambda=dict(type="categorical", choices=[lambda epoch: epoch // 30, lambda epoch: 0.95 ** epoch]),
     ),
     MultiplicativeLR: dict(
-        lr_lambda=dict(type='categorical', choices=[lambda epoch: 0.85, lambda epoch: 0.9, lambda epoch: 0.95]),
+        lr_lambda=dict(type="categorical", choices=[lambda epoch: 0.85, lambda epoch: 0.9, lambda epoch: 0.95]),
     ),
     MultiStepLR: dict(
         gamma=dict(type=float, low=0.1, high=0.9, step=0.1),
-        milestones=dict(type='categorical', choices=[75, 130, 190, 240, 370]),
+        milestones=dict(type="categorical", choices=[75, 130, 190, 240, 370]),
     ),
     OneCycleLR: dict(
-        max_lr=dict(type=float, low=0.1, high=0.3, scale='log'),
+        max_lr=dict(type=float, low=0.1, high=0.3, scale="log"),
     ),
     StepLR: dict(
         gamma=dict(type=float, low=0.1, high=0.9, step=0.1),

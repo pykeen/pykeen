@@ -30,10 +30,7 @@ SUBSET_COLUMN_NAME = "subset"
 
 
 def _get_mapped_triples(dataset: Dataset, parts: Collection[str]) -> Collection[Tuple[int, int, int]]:
-    return torch.cat([
-        dataset.factory_dict[part].mapped_triples
-        for part in parts
-    ], dim=0).tolist()
+    return torch.cat([dataset.factory_dict[part].mapped_triples for part in parts], dim=0).tolist()
 
 
 def _normalize_parts(dataset: Dataset, parts: Union[None, str, Collection[str]]) -> Collection[str]:
@@ -263,10 +260,7 @@ def get_relation_pattern_types_df(
     # re-use cached file if possible
     if not cache_path.is_file() or force:
         # select triples
-        mapped_triples = torch.cat([
-            dataset.factory_dict[part].mapped_triples
-            for part in parts
-        ], dim=0).tolist()
+        mapped_triples = torch.cat([dataset.factory_dict[part].mapped_triples for part in parts], dim=0).tolist()
 
         df = triple_analysis.relation_pattern_types(mapped_triples=mapped_triples)
 
@@ -279,8 +273,8 @@ def get_relation_pattern_types_df(
         logger.info(f"Loaded {len(df)} precomputed relational patterns from {cache_path.as_uri()}")
 
     # Prune by support and confidence
-    sufficient_support = (df[triple_analysis.SUPPORT_COLUMN_NAME] >= min_support)
-    sufficient_confidence = (df[triple_analysis.CONFIDENCE_COLUMN_NAME] >= min_confidence)
+    sufficient_support = df[triple_analysis.SUPPORT_COLUMN_NAME] >= min_support
+    sufficient_confidence = df[triple_analysis.CONFIDENCE_COLUMN_NAME] >= min_confidence
     df = df[sufficient_support & sufficient_confidence]
 
     if drop_confidence:

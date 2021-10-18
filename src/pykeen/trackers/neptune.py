@@ -12,16 +12,16 @@ if TYPE_CHECKING:
     import neptune.experiments  # noqa
 
 __all__ = [
-    'NeptuneResultTracker',
+    "NeptuneResultTracker",
 ]
 
 
 class NeptuneResultTracker(ResultTracker):
     """A tracker for Neptune.ai."""
 
-    project: 'neptune.Project'
-    session: 'neptune.Session'
-    experiment: 'neptune.experiments.Experiment'
+    project: "neptune.Project"
+    session: "neptune.Session"
+    experiment: "neptune.experiments.Experiment"
 
     def __init__(
         self,
@@ -65,7 +65,7 @@ class NeptuneResultTracker(ResultTracker):
         self.project = self.session.get_project(project_qualified_name)
 
         if experiment_id is None and experiment_name is None:
-            raise ValueError('need experiment_name if no experiment_id is given')
+            raise ValueError("need experiment_name if no experiment_id is given")
         if experiment_id is None:
             self.experiment = self.project.create_experiment(name=experiment_name)
         else:
