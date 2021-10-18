@@ -7,11 +7,11 @@ from typing import Any, ClassVar, Mapping, Optional
 from class_resolver import Hint, HintOrType
 from torch import nn
 
+from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn import EmbeddingSpecification
 from ...nn.modules import NTNInteraction
 from ...typing import Initializer
-from ..nbase import ERModel
 
 __all__ = [
     "NTN",

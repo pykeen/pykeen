@@ -9,9 +9,9 @@ from typing import Sequence, cast
 import click
 import numpy as np
 
+from .base import PathDataset
 from ..triples import TriplesFactory
 from ..utils import random_non_negative_int
-from .base import PathDataset
 
 LABELS = ["train", "test", "valid"]
 

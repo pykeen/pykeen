@@ -8,8 +8,8 @@ from typing import Any, ClassVar, Mapping, Optional, Tuple
 import torch
 from class_resolver import HintOrType, normalize_string
 
-from ..triples import CoreTriplesFactory
 from .filtering import Filterer, filterer_resolver
+from ..triples import CoreTriplesFactory
 
 __all__ = [
     "NegativeSampler",

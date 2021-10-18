@@ -14,8 +14,8 @@ import pandas as pd
 from more_click import verbose_option
 from tqdm import tqdm
 
-from ..constants import PYKEEN_DATASETS
 from . import dataset_resolver, get_dataset
+from ..constants import PYKEEN_DATASETS
 
 
 @click.group()

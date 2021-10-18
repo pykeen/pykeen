@@ -21,6 +21,7 @@ from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
 from tqdm.autonotebook import tqdm, trange
 
+from .callbacks import MultiTrainingCallback, TrackerCallback, TrainingCallbackHint
 from ..constants import PYKEEN_CHECKPOINTS, PYKEEN_DEFAULT_CHECKPOINT
 from ..losses import Loss
 from ..lr_schedulers import LRScheduler
@@ -36,7 +37,6 @@ from ..utils import (
     is_cudnn_error,
     normalize_string,
 )
-from .callbacks import MultiTrainingCallback, TrackerCallback, TrainingCallbackHint
 
 __all__ = [
     "TrainingLoop",

@@ -9,8 +9,8 @@ import click
 from docdata import parse_docdata
 from more_click import verbose_option
 
-from ..typing import TorchRandomHint
 from .base import TarFileSingleDataset
+from ..typing import TorchRandomHint
 
 __all__ = [
     "DRKG",

@@ -14,6 +14,8 @@ import torch
 from class_resolver import Resolver
 from torch import FloatTensor, nn
 
+from . import functional as pkf
+from .combinations import Combination
 from ..typing import HeadRepresentation, HintOrType, RelationRepresentation, TailRepresentation
 from ..utils import (
     CANONICAL_DIMENSIONS,
@@ -22,8 +24,6 @@ from ..utils import (
     ensure_tuple,
     upgrade_to_sequence,
 )
-from . import functional as pkf
-from .combinations import Combination
 
 __all__ = [
     "interaction_resolver",

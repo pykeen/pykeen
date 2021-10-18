@@ -18,6 +18,8 @@ from optuna.pruners import BasePruner
 from optuna.samplers import BaseSampler
 from optuna.storages import BaseStorage
 
+from .pruners import pruner_resolver
+from .samplers import sampler_resolver
 from ..constants import USER_DEFINED_CODE
 from ..datasets import get_dataset, has_dataset
 from ..datasets.base import Dataset
@@ -37,8 +39,6 @@ from ..triples import CoreTriplesFactory
 from ..typing import Hint, HintType
 from ..utils import Result, ensure_ftp_directory, fix_dataclass_init_docs, get_df_io, get_json_bytes_io
 from ..version import get_git_hash, get_version
-from .pruners import pruner_resolver
-from .samplers import sampler_resolver
 
 __all__ = [
     "hpo_pipeline_from_path",

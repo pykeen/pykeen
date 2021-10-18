@@ -7,13 +7,13 @@ from typing import Any, ClassVar, Mapping, Type
 import torch
 import torch.nn as nn
 
+from .base import LiteralModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import BCEWithLogitsLoss, Loss
 from ...nn.combinations import ComplExLiteralCombination
 from ...nn.emb import EmbeddingSpecification
 from ...nn.modules import ComplExInteraction, LiteralInteraction
 from ...triples import TriplesNumericLiteralsFactory
-from .base import LiteralModel
 
 __all__ = [
     "ComplExLiteral",

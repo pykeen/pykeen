@@ -8,10 +8,10 @@ from typing import Callable, Collection, Optional, Tuple, Union
 import pandas as pd
 import torch
 
+from .base import Dataset
 from ..constants import PYKEEN_DATASETS
 from ..triples import analysis as triple_analysis
 from ..typing import MappedTriples
-from .base import Dataset
 
 logger = logging.getLogger(__name__)
 

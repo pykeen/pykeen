@@ -12,8 +12,8 @@ import numpy
 import pandas as pd
 from tqdm.auto import tqdm
 
-from ..typing import MappedTriples
 from . import TriplesFactory
+from ..typing import MappedTriples
 
 logger = logging.getLogger(__name__)
 

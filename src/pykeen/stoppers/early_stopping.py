@@ -7,12 +7,12 @@ import logging
 from dataclasses import dataclass
 from typing import Any, Callable, List, Mapping, Optional, Union
 
+from .stopper import Stopper
 from ..evaluation import Evaluator
 from ..models import Model
 from ..trackers import ResultTracker
 from ..triples import CoreTriplesFactory
 from ..utils import fix_dataclass_init_docs
-from .stopper import Stopper
 
 __all__ = [
     "is_improvement",

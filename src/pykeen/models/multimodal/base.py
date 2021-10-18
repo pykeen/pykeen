@@ -4,11 +4,11 @@
 
 from typing import Sequence, Union
 
+from ..nbase import EmbeddingSpecificationHint, ERModel
 from ...nn.emb import EmbeddingSpecification, LiteralRepresentation, RepresentationModule
 from ...nn.modules import LiteralInteraction
 from ...triples import TriplesNumericLiteralsFactory
 from ...typing import HeadRepresentation, RelationRepresentation, TailRepresentation
-from ..nbase import EmbeddingSpecificationHint, ERModel
 
 __all__ = [
     "LiteralModel",

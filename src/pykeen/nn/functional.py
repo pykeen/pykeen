@@ -17,6 +17,8 @@ import numpy
 import torch
 from torch import nn
 
+from .compute_kernel import _complex_native_complex, batched_dot
+from .sim import KG2E_SIMILARITIES
 from ..moves import irfft, rfft
 from ..typing import GaussianDistribution
 from ..utils import (
@@ -32,8 +34,6 @@ from ..utils import (
     tensor_sum,
     view_complex,
 )
-from .compute_kernel import _complex_native_complex, batched_dot
-from .sim import KG2E_SIMILARITIES
 
 __all__ = [
     "complex_interaction",

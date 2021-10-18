@@ -8,13 +8,13 @@ import torch
 from class_resolver import Hint, HintOrType
 from torch import nn
 
+from ..nbase import EmbeddingSpecificationHint, ERModel
 from ...nn.emb import EmbeddingSpecification, RGCNRepresentations
 from ...nn.message_passing import Decomposition
 from ...nn.modules import Interaction, interaction_resolver
 from ...nn.weighting import EdgeWeighting
 from ...triples import CoreTriplesFactory
 from ...typing import Initializer, RelationRepresentation
-from ..nbase import EmbeddingSpecificationHint, ERModel
 
 __all__ = [
     "RGCN",

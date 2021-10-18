@@ -14,7 +14,6 @@ from typing import Any, Mapping, Optional, Type, Union
 
 from class_resolver import Resolver
 
-from ..triples import CoreTriplesFactory
 from .base import (  # noqa:F401
     Dataset,
     EagerDataset,
@@ -47,6 +46,7 @@ from .wikidata5m import Wikidata5M
 from .wk3l import WK3l15k
 from .wordnet import WN18, WN18RR
 from .yago import YAGO310
+from ..triples import CoreTriplesFactory
 
 __all__ = [
     # Concrete Classes

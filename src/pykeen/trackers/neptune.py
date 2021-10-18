@@ -4,8 +4,8 @@
 
 from typing import TYPE_CHECKING, Any, Collection, Mapping, Optional
 
-from ..utils import flatten_dictionary
 from .base import ResultTracker
+from ..utils import flatten_dictionary
 
 if TYPE_CHECKING:
     import neptune  # noqa

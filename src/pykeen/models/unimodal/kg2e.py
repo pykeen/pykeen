@@ -9,11 +9,11 @@ import torch
 import torch.autograd
 from torch.nn.init import uniform_
 
+from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.emb import Embedding, EmbeddingSpecification
 from ...typing import Constrainer, Hint, Initializer
 from ...utils import clamp_norm
-from ..base import EntityRelationEmbeddingModel
 
 __all__ = [
     "KG2E",

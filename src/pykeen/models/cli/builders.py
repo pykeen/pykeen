@@ -12,13 +12,13 @@ import click
 from class_resolver import HintOrType
 from torch import nn
 
+from . import options
+from .options import CLI_OPTIONS
+from ..base import Model
 from ...nn.message_passing import Decomposition
 from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import Constrainer, Hint, Initializer, Normalizer
-from ..base import Model
-from . import options
-from .options import CLI_OPTIONS
 
 __all__ = [
     "build_cli_from_cls",

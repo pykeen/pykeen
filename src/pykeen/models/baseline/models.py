@@ -7,9 +7,9 @@ from abc import ABC
 import numpy
 import torch
 
-from ...triples import CoreTriplesFactory
-from ..base import Model
 from .utils import get_csr_matrix, marginal_score
+from ..base import Model
+from ...triples import CoreTriplesFactory
 
 __all__ = [
     "EvaluationOnlyModel",

@@ -9,6 +9,7 @@ import torch
 from class_resolver import HintOrType
 from torch.optim.optimizer import Optimizer
 
+from .training_loop import TrainingLoop
 from ..losses import CrossEntropyLoss
 from ..lr_schedulers import LRScheduler
 from ..models import Model
@@ -16,7 +17,6 @@ from ..sampling import NegativeSampler, negative_sampler_resolver
 from ..triples import CoreTriplesFactory, Instances
 from ..triples.instances import SLCWABatchType, SLCWASampleType
 from ..typing import MappedTriples
-from .training_loop import TrainingLoop
 
 __all__ = [
     "SLCWATrainingLoop",

@@ -4,13 +4,13 @@
 
 import click
 
+from .. import model_resolver
 from ...evaluation import evaluator_resolver
 from ...losses import loss_resolver
 from ...optimizers import optimizer_resolver
 from ...stoppers import stopper_resolver
 from ...training import training_loop_resolver
 from ...utils import random_non_negative_int, resolve_device
-from .. import model_resolver
 
 
 def _make_callback(f):

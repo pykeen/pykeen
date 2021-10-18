@@ -7,9 +7,9 @@ from typing import Optional
 
 import click
 
-from ..losses import loss_resolver
 from .hpo import hpo_pipeline
 from .samplers import sampler_resolver
+from ..losses import loss_resolver
 
 
 @click.command()

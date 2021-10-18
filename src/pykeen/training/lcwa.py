@@ -8,9 +8,9 @@ from typing import Optional, Union
 
 import torch
 
+from .training_loop import TrainingLoop
 from ..triples import CoreTriplesFactory, Instances
 from ..triples.instances import LCWABatchType, LCWASampleType
-from .training_loop import TrainingLoop
 
 __all__ = [
     "LCWATrainingLoop",

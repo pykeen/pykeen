@@ -13,11 +13,11 @@ import numpy as np
 import pandas as pd
 import torch
 
-from ..typing import EntityMapping, LabeledTriples, MappedTriples, RelationMapping, TorchRandomHint
-from ..utils import compact_mapping, format_relative_comparison, invert_mapping, torch_is_in_1d
 from .instances import Instances, LCWAInstances, SLCWAInstances
 from .splitting import split
 from .utils import TRIPLES_DF_COLUMNS, get_entities, get_relations, load_triples, tensor_to_df
+from ..typing import EntityMapping, LabeledTriples, MappedTriples, RelationMapping, TorchRandomHint
+from ..utils import compact_mapping, format_relative_comparison, invert_mapping, torch_is_in_1d
 
 __all__ = [
     "CoreTriplesFactory",

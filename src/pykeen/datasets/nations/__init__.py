@@ -6,9 +6,9 @@ import pathlib
 
 from docdata import parse_docdata
 
-from ...triples import TriplesNumericLiteralsFactory
 from ..base import PathDataset
 from ..literal_base import NumericPathDataset
+from ...triples import TriplesNumericLiteralsFactory
 
 __all__ = [
     "NATIONS_TRAIN_PATH",

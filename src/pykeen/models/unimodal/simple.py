@@ -6,12 +6,12 @@ from typing import Any, ClassVar, Mapping, Optional, Tuple, Type, Union
 
 import torch.autograd
 
+from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss, SoftplusLoss
 from ...nn.emb import Embedding, EmbeddingSpecification
 from ...regularizers import PowerSumRegularizer, Regularizer
 from ...typing import Hint, Initializer
-from ..base import EntityRelationEmbeddingModel
 
 __all__ = [
     "SimplE",

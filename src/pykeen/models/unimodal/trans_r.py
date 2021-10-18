@@ -10,12 +10,12 @@ import torch.autograd
 import torch.nn.init
 from torch import linalg
 
+from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.emb import Embedding, EmbeddingSpecification
 from ...nn.init import xavier_uniform_, xavier_uniform_norm_
 from ...typing import Constrainer, Hint, Initializer
 from ...utils import clamp_norm
-from ..base import EntityRelationEmbeddingModel
 
 __all__ = [
     "TransR",

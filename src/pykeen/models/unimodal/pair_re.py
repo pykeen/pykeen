@@ -7,11 +7,11 @@ from typing import Any, ClassVar, Mapping, Optional
 from torch.nn import functional
 from torch.nn.init import uniform_
 
+from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.emb import EmbeddingSpecification
 from ...nn.modules import PairREInteraction
 from ...typing import Hint, Initializer, Normalizer
-from ..nbase import ERModel
 
 __all__ = [
     "PairRE",

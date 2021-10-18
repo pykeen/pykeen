@@ -7,12 +7,12 @@ from typing import Any, ClassVar, Mapping, Optional, Tuple
 from class_resolver import HintOrType
 from torch import FloatTensor, nn
 
+from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_uniform_
 from ...nn.modules import CrossEInteraction
 from ...typing import Hint, Initializer
-from ..nbase import ERModel
 
 __all__ = [
     "CrossE",

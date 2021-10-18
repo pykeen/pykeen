@@ -13,8 +13,8 @@ import pandas as pd
 from docdata import parse_docdata
 from more_click import verbose_option
 
-from ..typing import TorchRandomHint
 from .base import TabbedDataset
+from ..typing import TorchRandomHint
 
 __all__ = [
     "CKG",

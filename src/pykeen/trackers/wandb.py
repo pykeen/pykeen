@@ -5,8 +5,8 @@
 import os
 from typing import TYPE_CHECKING, Any, Mapping, Optional
 
-from ..utils import flatten_dictionary
 from .base import ResultTracker
+from ..utils import flatten_dictionary
 
 if TYPE_CHECKING:
     import wandb.wandb_run
