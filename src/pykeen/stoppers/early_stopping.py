@@ -11,7 +11,7 @@ from .stopper import Stopper
 from ..evaluation import Evaluator
 from ..models import Model
 from ..trackers import ResultTracker
-from ..triples import TriplesFactory
+from ..triples import CoreTriplesFactory
 from ..utils import fix_dataclass_init_docs
 
 __all__ = [
@@ -134,7 +134,7 @@ class EarlyStopper(Stopper):
     #: The evaluator
     evaluator: Evaluator
     #: The triples to use for evaluation
-    evaluation_triples_factory: TriplesFactory
+    evaluation_triples_factory: CoreTriplesFactory
     #: Size of the evaluation batches
     evaluation_batch_size: Optional[int] = None
     #: Slice size of the evaluation batches
