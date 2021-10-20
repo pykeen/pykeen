@@ -37,7 +37,7 @@ could be used as in:
 >>> pipeline_result.save_to_directory('nations_transe')
 
 In this example, the dataset was given as a string. A list of available datasets can be found in
-:mod:`pykeen.datasets`. Alternatively, the instance of the :class:`pykeen.datasets.Dataset` could be
+:mod:`pykeen.datasets`. Alternatively, a subclass of :class:`pykeen.datasets.base.Dataset` could be
 used as in:
 
 >>> from pykeen.pipeline import pipeline
@@ -50,8 +50,8 @@ used as in:
 >>> pipeline_result.save_to_directory('nations_transe')
 
 In each of the previous three examples, the training approach, optimizer, and evaluation scheme
-were omitted. By default, the stochastic local closed world assumption (sLCWA) training approach is used in training.
-This can be explicitly given as a string:
+were omitted. By default, the model is trained under the stochastic local closed world assumption (sLCWA;
+:class:`pykeen.training.SLCWATrainingLoop`). This can be explicitly given as a string:
 
 >>> from pykeen.pipeline import pipeline
 >>> pipeline_result = pipeline(
@@ -61,9 +61,10 @@ This can be explicitly given as a string:
 ... )
 >>> pipeline_result.save_to_directory('nations_transe')
 
-Alternatively, the local closed world assumption (LCWA) training approach can be given with ``'LCWA'``.
+Alternatively, the model can be trained under the  local closed world assumption (LCWA;
+:class:`pykeen.training.LCWATrainingLoop`) by giving ``'LCWA'``.
 No additional configuration is necessary, but it's worth reading up on the differences between these training
-approaches.
+approaches. A list of available training assumptions can be found in :mod:`pykeen.training`.
 
 >>> from pykeen.pipeline import pipeline
 >>> pipeline_result = pipeline(
@@ -139,6 +140,21 @@ argument as in:
 ... )
 >>> pipeline_result.save_to_directory('nations_transe')
 
+In PyKEEN you can also use the learning rate schedulers provided by PyTorch, which can be
+turned on with the ``lr_scheduler`` keyword argument together with the ``lr_scheduler_kwargs``
+keyword argument to specify arguments for the learning rate scheduler as in:
+
+>>> from pykeen.pipeline import pipeline
+>>> pipeline_result = pipeline(
+...     dataset='Nations',
+...     model='TransE',
+...     lr_scheduler='ExponentialLR',
+...     lr_scheduler_kwargs=dict(
+...         gamma=0.99,
+...     ),
+... )
+>>> pipeline_result.save_to_directory('nations_transe')
+
 Deeper Configuration
 ~~~~~~~~~~~~~~~~~~~~
 Arguments for the model can be given as a dictionary using ``model_kwargs``.
@@ -175,8 +191,7 @@ import pathlib
 import pickle
 import time
 from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Any, Collection, Dict, Iterable, List, Mapping, MutableMapping, Optional, Type, Union
+from typing import Any, Collection, Dict, Iterable, List, Mapping, MutableMapping, Optional, Type, Union, cast
 
 import pandas as pd
 import torch
@@ -187,6 +202,7 @@ from ..datasets import get_dataset
 from ..datasets.base import Dataset
 from ..evaluation import Evaluator, MetricResults, evaluator_resolver
 from ..losses import Loss, loss_resolver
+from ..lr_schedulers import LRScheduler, lr_scheduler_resolver
 from ..models import Model, make_model_cls, model_resolver
 from ..nn.modules import Interaction
 from ..optimizers import optimizer_resolver
@@ -195,21 +211,27 @@ from ..sampling import NegativeSampler, negative_sampler_resolver
 from ..stoppers import EarlyStopper, Stopper, stopper_resolver
 from ..trackers import ResultTracker, tracker_resolver
 from ..training import SLCWATrainingLoop, TrainingLoop, training_loop_resolver
-from ..triples import TriplesFactory
-from ..typing import Hint, HintType
+from ..triples import CoreTriplesFactory
+from ..typing import Hint, HintType, MappedTriples
 from ..utils import (
-    Result, ensure_ftp_directory, fix_dataclass_init_docs, get_json_bytes_io, get_model_io, random_non_negative_int,
-    resolve_device, set_random_seed,
+    Result,
+    ensure_ftp_directory,
+    fix_dataclass_init_docs,
+    get_json_bytes_io,
+    get_model_io,
+    random_non_negative_int,
+    resolve_device,
+    set_random_seed,
 )
 from ..version import get_git_hash, get_version
 
 __all__ = [
-    'PipelineResult',
-    'pipeline_from_path',
-    'pipeline_from_config',
-    'replicate_pipeline_from_config',
-    'replicate_pipeline_from_path',
-    'pipeline',
+    "PipelineResult",
+    "pipeline_from_path",
+    "pipeline_from_config",
+    "replicate_pipeline_from_config",
+    "replicate_pipeline_from_path",
+    "pipeline",
 ]
 
 logger = logging.getLogger(__name__)
@@ -225,6 +247,9 @@ class PipelineResult(Result):
 
     #: The model trained by the pipeline
     model: Model
+
+    #: The training triples
+    training: CoreTriplesFactory
 
     #: The training loop used by the pipeline
     training_loop: TrainingLoop
@@ -258,30 +283,32 @@ class PipelineResult(Result):
         """The title of the experiment."""
         if self.metadata is None:
             return None
-        return self.metadata.get('title')
+        return self.metadata.get("title")
 
     def plot_losses(self, **kwargs):
         """Plot the losses per epoch.
 
-        :param kwargs: The keyword arguments passed to :func:`pykeen.pipeline_plot.plot_losses`.
+        :param kwargs: The keyword arguments passed to :func:`pykeen.pipeline.plot_utils.plot_losses`.
         :returns: The axis
         """
         from .plot_utils import plot_losses
+
         return plot_losses(self, **kwargs)
 
     def plot_early_stopping(self, **kwargs):
         """Plot the evaluations during early stopping.
 
-        :param kwargs: The keyword arguments passed to :func:`pykeen.pipeline_plot.plot_early_stopping`
+        :param kwargs: The keyword arguments passed to :func:`pykeen.pipeline.plot_utils.plot_early_stopping`
         :returns: The axis
         """
         from .plot_utils import plot_early_stopping
+
         return plot_early_stopping(self, **kwargs)
 
     def plot_er(self, **kwargs):
         """Plot the reduced entities and relation vectors in 2D.
 
-        :param kwargs: The keyword arguments passed to :func:`pykeen.pipeline_plot.plot_er`
+        :param kwargs: The keyword arguments passed to :func:`pykeen.pipeline.plot_utils.plot_er`
         :returns: The axis
 
         .. warning::
@@ -290,6 +317,7 @@ class PipelineResult(Result):
             meaningful for translational distance models like TransE.
         """
         from .plot_utils import plot_er
+
         return plot_er(self, **kwargs)
 
     def plot(self, **kwargs):
@@ -299,9 +327,10 @@ class PipelineResult(Result):
         :returns: The axis
         """
         from .plot_utils import plot
+
         return plot(self, **kwargs)
 
-    def save_model(self, path: str) -> None:
+    def save_model(self, path: Union[str, pathlib.Path]) -> None:
         """Save the trained model to the given path using :func:`torch.save`.
 
         :param path: The path to which the model is saved. Should have an extension appropriate for a pickle,
@@ -325,26 +354,28 @@ class PipelineResult(Result):
             losses=self.losses,
         )
         if self.stopper is not None and isinstance(self.stopper, EarlyStopper):
-            results['stopper'] = self.stopper.get_summary_dict()
+            results["stopper"] = self.stopper.get_summary_dict()
         return results
 
     def save_to_directory(
         self,
-        directory: Union[str, Path],
+        directory: Union[str, pathlib.Path],
         *,
         save_metadata: bool = True,
         save_replicates: bool = True,
         **_kwargs,
     ) -> None:
         """Save all artifacts in the given directory."""
-        os.makedirs(directory, exist_ok=True)
+        if isinstance(directory, str):
+            directory = pathlib.Path(directory).resolve()
+        directory.mkdir(exist_ok=True, parents=True)
 
-        with open(os.path.join(directory, 'metadata.json'), 'w') as file:
+        with directory.joinpath("metadata.json").open("w") as file:
             json.dump(self.metadata, file, indent=2, sort_keys=True)
-        with open(os.path.join(directory, 'results.json'), 'w') as file:
+        with directory.joinpath("results.json").open("w") as file:
             json.dump(self._get_results(), file, indent=2, sort_keys=True)
         if save_replicates:
-            self.save_model(os.path.join(directory, 'trained_model.pkl'))
+            self.save_model(directory.joinpath("trained_model.pkl"))
 
     def save_to_ftp(self, directory: str, ftp: ftplib.FTP) -> None:
         """Save all artifacts to the given directory in the FTP server.
@@ -389,16 +420,17 @@ class PipelineResult(Result):
             server = FTPServer(address, handler)
             server.serve_forever()
         """
+        # TODO use pathlib here
         ensure_ftp_directory(ftp=ftp, directory=directory)
 
-        metadata_path = os.path.join(directory, 'metadata.json')
-        ftp.storbinary(f'STOR {metadata_path}', get_json_bytes_io(self.metadata))
+        metadata_path = os.path.join(directory, "metadata.json")
+        ftp.storbinary(f"STOR {metadata_path}", get_json_bytes_io(self.metadata))
 
-        results_path = os.path.join(directory, 'results.json')
-        ftp.storbinary(f'STOR {results_path}', get_json_bytes_io(self._get_results()))
+        results_path = os.path.join(directory, "results.json")
+        ftp.storbinary(f"STOR {results_path}", get_json_bytes_io(self._get_results()))
 
-        model_path = os.path.join(directory, 'trained_model.pkl')
-        ftp.storbinary(f'STOR {model_path}', get_model_io(self.model))
+        model_path = os.path.join(directory, "trained_model.pkl")
+        ftp.storbinary(f"STOR {model_path}", get_model_io(self.model))
 
     def save_to_s3(self, directory: str, bucket: str, s3=None) -> None:
         """Save all artifacts to the given directory in an S3 Bucket.
@@ -425,21 +457,22 @@ class PipelineResult(Result):
         """
         if s3 is None:
             import boto3
-            s3 = boto3.client('s3')
 
-        metadata_path = os.path.join(directory, 'metadata.json')
+            s3 = boto3.client("s3")
+
+        metadata_path = os.path.join(directory, "metadata.json")
         s3.upload_fileobj(get_json_bytes_io(self.metadata), bucket, metadata_path)
 
-        results_path = os.path.join(directory, 'results.json')
+        results_path = os.path.join(directory, "results.json")
         s3.upload_fileobj(get_json_bytes_io(self._get_results()), bucket, results_path)
 
-        model_path = os.path.join(directory, 'trained_model.pkl')
+        model_path = os.path.join(directory, "trained_model.pkl")
         s3.upload_fileobj(get_model_io(self.model), bucket, model_path)
 
 
 def replicate_pipeline_from_path(
-    path: str,
-    directory: str,
+    path: Union[str, pathlib.Path],
+    directory: Union[str, pathlib.Path],
     replicates: int,
     move_to_cpu: bool = False,
     save_replicates: bool = True,
@@ -454,10 +487,7 @@ def replicate_pipeline_from_path(
     :param save_replicates: Should the artifacts of the replicates be saved?
     :param kwargs: Keyword arguments to be passed through to :func:`pipeline_from_path`.
     """
-    pipeline_results = (
-        pipeline_from_path(path, **kwargs)
-        for _ in range(replicates)
-    )
+    pipeline_results = (pipeline_from_path(path, **kwargs) for _ in range(replicates))
     save_pipeline_results_to_directory(
         directory=directory,
         pipeline_results=pipeline_results,
@@ -468,7 +498,7 @@ def replicate_pipeline_from_path(
 
 def replicate_pipeline_from_config(
     config: Mapping[str, Any],
-    directory: str,
+    directory: Union[str, pathlib.Path],
     replicates: int,
     move_to_cpu: bool = False,
     save_replicates: bool = True,
@@ -483,10 +513,7 @@ def replicate_pipeline_from_config(
     :param save_replicates: Should the artifacts of the replicates be saved?
     :param kwargs: Keyword arguments to be passed through to :func:`pipeline_from_config`.
     """
-    pipeline_results = (
-        pipeline_from_config(config, **kwargs)
-        for _ in range(replicates)
-    )
+    pipeline_results = (pipeline_from_config(config, **kwargs) for _ in range(replicates))
     save_pipeline_results_to_directory(
         directory=directory,
         pipeline_results=pipeline_results,
@@ -497,14 +524,14 @@ def replicate_pipeline_from_config(
 
 def _iterate_moved(pipeline_results: Iterable[PipelineResult]):
     for pipeline_result in pipeline_results:
-        pipeline_result.model.device = resolve_device('cpu')
+        pipeline_result.model.device = resolve_device("cpu")
         pipeline_result.model.to_device_()
         yield pipeline_result
 
 
 def save_pipeline_results_to_directory(
     *,
-    directory: str,
+    directory: Union[str, pathlib.Path],
     pipeline_results: Iterable[PipelineResult],
     move_to_cpu: bool = False,
     save_metadata: bool = False,
@@ -521,25 +548,31 @@ def save_pipeline_results_to_directory(
     :param save_replicates: Should the artifacts of the replicates be saved?
     :param width: How many leading zeros should be put in the replicate names?
     """
-    replicates_directory = os.path.join(directory, 'replicates')
+    if isinstance(directory, str):
+        directory = pathlib.Path(directory).resolve()
+    replicates_directory = directory.joinpath("replicates")
     losses_rows = []
 
     if move_to_cpu:
         pipeline_results = _iterate_moved(pipeline_results)
 
     for i, pipeline_result in enumerate(pipeline_results):
-        sd = os.path.join(replicates_directory, f'replicate-{i:0{width}}')
-        os.makedirs(sd, exist_ok=True)
-        pipeline_result.save_to_directory(sd, save_metadata=save_metadata, save_replicates=save_replicates)
+        replicate_directory = replicates_directory.joinpath(f"replicate-{i:0{width}}")
+        replicate_directory.mkdir(exist_ok=True, parents=True)
+        pipeline_result.save_to_directory(
+            replicate_directory,
+            save_metadata=save_metadata,
+            save_replicates=save_replicates,
+        )
         for epoch, loss in enumerate(pipeline_result.losses):
             losses_rows.append((i, epoch, loss))
 
-    losses_df = pd.DataFrame(losses_rows, columns=['Replicate', 'Epoch', 'Loss'])
-    losses_df.to_csv(os.path.join(directory, 'all_replicates_losses.tsv'), sep='\t', index=False)
+    losses_df = pd.DataFrame(losses_rows, columns=["Replicate", "Epoch", "Loss"])
+    losses_df.to_csv(directory.joinpath("all_replicates_losses.tsv"), sep="\t", index=False)
 
 
 def pipeline_from_path(
-    path: str,
+    path: Union[str, pathlib.Path],
     **kwargs,
 ) -> PipelineResult:
     """Run the pipeline with configuration in a JSON file at the given path.
@@ -568,10 +601,10 @@ def pipeline_from_config(
     :param kwargs: Additional kwargs to forward to :func:`pipeline`.
     :return: The results of running the pipeline on the given configuration.
     """
-    metadata, pipeline_kwargs = config['metadata'], config['pipeline']
-    title = metadata.get('title')
+    metadata, pipeline_kwargs = config["metadata"], config["pipeline"]
+    title = metadata.get("title")
     if title is not None:
-        logger.info(f'Running: {title}')
+        logger.info(f"Running: {title}")
 
     return pipeline(
         metadata=metadata,
@@ -582,33 +615,40 @@ def pipeline_from_config(
 
 def _build_model_helper(
     *,
-    model, model_kwargs, loss, loss_kwargs, _device, _random_seed, regularizer, regularizer_kwargs,
-    training,
+    model,
+    model_kwargs,
+    loss,
+    loss_kwargs,
+    _device,
+    _random_seed,
+    regularizer,
+    regularizer_kwargs,
+    training_triples_factory,
 ) -> Model:
     if model_kwargs is None:
         model_kwargs = {}
     model_kwargs = dict(model_kwargs)
     model_kwargs.update(preferred_device=_device)
-    model_kwargs.setdefault('random_seed', _random_seed)
+    model_kwargs.setdefault("random_seed", _random_seed)
 
     if regularizer is not None:
         # FIXME this should never happen.
-        if 'regularizer' in model_kwargs:
-            logger.warning('Can not specify regularizer in kwargs and model_kwargs. removing from model_kwargs')
-            del model_kwargs['regularizer']
-        model_kwargs['regularizer'] = regularizer_resolver.make(regularizer, regularizer_kwargs)
+        if "regularizer" in model_kwargs:
+            logger.warning("Can not specify regularizer in kwargs and model_kwargs. removing from model_kwargs")
+            del model_kwargs["regularizer"]
+        model_kwargs["regularizer"] = regularizer_resolver.make(regularizer, regularizer_kwargs)
 
-    if 'loss' in model_kwargs:
+    if "loss" in model_kwargs:
         if loss is None:
-            loss = model_kwargs.pop('loss')
+            loss = model_kwargs.pop("loss")
         else:
-            logger.warning('duplicate loss in kwargs and model_kwargs. removing from model_kwargs')
-            del model_kwargs['loss']
+            logger.warning("duplicate loss in kwargs and model_kwargs. removing from model_kwargs")
+            del model_kwargs["loss"]
     loss_instance = loss_resolver.make(loss, loss_kwargs)
 
     return model_resolver.make(
         model,
-        triples_factory=training,
+        triples_factory=training_triples_factory,
         loss=loss_instance,
         **model_kwargs,
     )
@@ -619,9 +659,9 @@ def pipeline(  # noqa: C901
     # 1. Dataset
     dataset: Union[None, str, Dataset, Type[Dataset]] = None,
     dataset_kwargs: Optional[Mapping[str, Any]] = None,
-    training: Hint[TriplesFactory] = None,
-    testing: Hint[TriplesFactory] = None,
-    validation: Hint[TriplesFactory] = None,
+    training: Hint[CoreTriplesFactory] = None,
+    testing: Hint[CoreTriplesFactory] = None,
+    validation: Hint[CoreTriplesFactory] = None,
     evaluation_entity_whitelist: Optional[Collection[str]] = None,
     evaluation_relation_whitelist: Optional[Collection[str]] = None,
     # 2. Model
@@ -640,11 +680,16 @@ def pipeline(  # noqa: C901
     optimizer: HintType[Optimizer] = None,
     optimizer_kwargs: Optional[Mapping[str, Any]] = None,
     clear_optimizer: bool = True,
+    # 5.1 Learning Rate Scheduler
+    lr_scheduler: HintType[LRScheduler] = None,
+    lr_scheduler_kwargs: Optional[Mapping[str, Any]] = None,
     # 6. Training Loop
     training_loop: HintType[TrainingLoop] = None,
+    training_loop_kwargs: Optional[Mapping[str, Any]] = None,
     negative_sampler: HintType[NegativeSampler] = None,
     negative_sampler_kwargs: Optional[Mapping[str, Any]] = None,
     # 7. Training (ronaldo style)
+    epochs: Optional[int] = None,
     training_kwargs: Optional[Mapping[str, Any]] = None,
     stopper: HintType[Stopper] = None,
     stopper_kwargs: Optional[Mapping[str, Any]] = None,
@@ -656,18 +701,20 @@ def pipeline(  # noqa: C901
     result_tracker: HintType[ResultTracker] = None,
     result_tracker_kwargs: Optional[Mapping[str, Any]] = None,
     # Misc
-    automatic_memory_optimization: bool = True,
     metadata: Optional[Dict[str, Any]] = None,
     device: Hint[torch.device] = None,
     random_seed: Optional[int] = None,
     use_testing_data: bool = True,
+    evaluation_fallback: bool = False,
+    filter_validation_when_testing: bool = True,
+    use_tqdm: Optional[bool] = None,
 ) -> PipelineResult:
     """Train and evaluate a model.
 
     :param dataset:
-        The name of the dataset (a key from :data:`pykeen.datasets.datasets`) or the :class:`pykeen.datasets.Dataset`
-        instance. Alternatively, the training triples factory (``training``), testing triples factory (``testing``),
-        and validation triples factory (``validation``; optional) can be specified.
+        The name of the dataset (a key for the :data:`pykeen.datasets.dataset_resolver`) or the
+        :class:`pykeen.datasets.Dataset` instance. Alternatively, the training triples factory (``training``), testing
+        triples factory (``testing``), and validation triples factory (``validation``; optional) can be specified.
     :param dataset_kwargs:
         The keyword arguments passed to the dataset upon instantiation
     :param training:
@@ -716,9 +763,17 @@ def pipeline(  # noqa: C901
         consumption due to e.g. moments in Adam, this is the default option. If you want to continue training, you
         should set it to False, as the optimizer's internal parameter will get lost otherwise.
 
+    :param lr_scheduler:
+        The name of the lr_scheduler or the lr_scheduler class.
+        Defaults to :class:`torch.optim.lr_scheduler.ExponentialLR`.
+    :param lr_scheduler_kwargs:
+        Keyword arguments to pass to the lr_scheduler on instantiation
+
     :param training_loop:
         The name of the training loop's training approach (``'slcwa'`` or ``'lcwa'``) or the training loop class.
         Defaults to :class:`pykeen.training.SLCWATrainingLoop`.
+    :param training_loop_kwargs:
+        Keyword arguments to pass to the training loop on instantiation
     :param negative_sampler:
         The name of the negative sampler (``'basic'`` or ``'bernoulli'``) or the negative sampler class.
         Only allowed when training with sLCWA.
@@ -726,6 +781,8 @@ def pipeline(  # noqa: C901
     :param negative_sampler_kwargs:
         Keyword arguments to pass to the negative sampler class on instantiation
 
+    :param epochs:
+        A shortcut for setting the ``num_epochs`` key in the ``training_kwargs`` dict.
     :param training_kwargs:
         Keyword arguments to pass to the training loop's train function on call
     :param stopper:
@@ -749,18 +806,31 @@ def pipeline(  # noqa: C901
         A JSON dictionary to store with the experiment
     :param use_testing_data:
         If true, use the testing triples. Otherwise, use the validation triples. Defaults to true - use testing triples.
-    :param automatic_memory_optimization: Should automatic memory optimization be performed during training and
-        evaluation? See arguments to :class:`pykeen.training_loop.TrainingLoop`
-        and :class:`pykeen.evaluation.Evaluator`.
     :param device: The device or device name to run on. If none is given, the device will be looked up with
         :func:`pykeen.utils.resolve_device`.
     :param random_seed: The random seed to use. If none is specified, one will be assigned before any code
         is run for reproducibility purposes. In the returned :class:`PipelineResult` instance, it can be accessed
         through :data:`PipelineResult.random_seed`.
+    :param evaluation_fallback:
+        If true, in cases where the evaluation failed using the GPU it will fall back to using a smaller batch size or
+        in the last instance evaluate on the CPU, if even the smallest possible batch size is too big for the GPU.
+    :param filter_validation_when_testing:
+        If true, during the evaluating of the test dataset, validation triples are added to the set of known positive
+        triples, which are filtered out when performing filtered evaluation following the approach described by
+        [bordes2013]_. This should be explicitly set to false only in the scenario that you are training a single
+        model using the pipeline and evaluating with the testing set, but never using the validation set for
+        optimization at all. This is a very atypical scenario, so it is left as true by default to promote
+        comparability to previous publications.
+    :param use_tqdm:
+        Globally set the usage of tqdm progress bars. Typically more useful to set to false, since the training
+        loop and evaluation have it turned on by default.
 
     :returns: A pipeline result package.
 
-    :raises ValueError: if a negative sampler is specified with LCWA
+    :raises ValueError:
+        If a negative sampler is specified with LCWA
+    :raises TypeError:
+        If an invalid argument type is given for ``evaluation_kwargs["additional_filter_triples"]``
     """
     if training_kwargs is None:
         training_kwargs = {}
@@ -768,27 +838,27 @@ def pipeline(  # noqa: C901
 
     # To allow resuming training from a checkpoint when using a pipeline, the pipeline needs to obtain the
     # used random_seed to ensure reproducible results
-    checkpoint_name = training_kwargs.get('checkpoint_name')
+    checkpoint_name = training_kwargs.get("checkpoint_name")
     if checkpoint_name is not None:
-        checkpoint_directory = pathlib.Path(training_kwargs.get('checkpoint_directory', PYKEEN_CHECKPOINTS))
+        checkpoint_directory = pathlib.Path(training_kwargs.get("checkpoint_directory", PYKEEN_CHECKPOINTS))
         checkpoint_directory.mkdir(parents=True, exist_ok=True)
         checkpoint_path = checkpoint_directory / checkpoint_name
         if checkpoint_path.is_file():
             checkpoint_dict = torch.load(checkpoint_path)
-            _random_seed = checkpoint_dict['random_seed']
-            logger.info('loaded random seed %s from checkpoint.', _random_seed)
+            _random_seed = checkpoint_dict["random_seed"]
+            logger.info("loaded random seed %s from checkpoint.", _random_seed)
             # We have to set clear optimizer to False since training should be continued
             clear_optimizer = False
         else:
             logger.info(f"=> no training loop checkpoint file found at '{checkpoint_path}'. Creating a new file.")
             if random_seed is None:
                 _random_seed = random_non_negative_int()
-                logger.warning(f'No random seed is specified. Setting to {_random_seed}.')
+                logger.warning(f"No random seed is specified. Setting to {_random_seed}.")
             else:
                 _random_seed = random_seed
     elif random_seed is None:
         _random_seed = random_non_negative_int()
-        logger.warning(f'No random seed is specified. Setting to {_random_seed}.')
+        logger.warning(f"No random seed is specified. Setting to {_random_seed}.")
     else:
         _random_seed = random_seed  # random seed given successfully
     set_random_seed(_random_seed)
@@ -797,7 +867,7 @@ def pipeline(  # noqa: C901
 
     if not metadata:
         metadata = {}
-    title = metadata.get('title')
+    title = metadata.get("title")
 
     # Start tracking
     _result_tracker.start_run(run_name=title)
@@ -814,12 +884,14 @@ def pipeline(  # noqa: C901
     if dataset is not None:
         _result_tracker.log_params(dict(dataset=dataset_instance.get_normalized_name()))
     else:  # means that dataset was defined by triples factories
-        _result_tracker.log_params(dict(
-            dataset=USER_DEFINED_CODE,
-            training=training if isinstance(training, str) else USER_DEFINED_CODE,
-            testing=testing if isinstance(training, str) else USER_DEFINED_CODE,
-            validation=validation if isinstance(training, str) else USER_DEFINED_CODE,
-        ))
+        _result_tracker.log_params(
+            dict(
+                dataset=USER_DEFINED_CODE,
+                training=training if isinstance(training, str) else USER_DEFINED_CODE,
+                testing=testing if isinstance(training, str) else USER_DEFINED_CODE,
+                validation=validation if isinstance(training, str) else USER_DEFINED_CODE,
+            )
+        )
 
     training, testing, validation = dataset_instance.training, dataset_instance.testing, dataset_instance.validation
     # evaluation restriction to a subset of entities/relations
@@ -836,12 +908,12 @@ def pipeline(  # noqa: C901
 
     model_instance: Model
     if model is not None and interaction is not None:
-        raise ValueError('can not pass both a model and interaction')
+        raise ValueError("can not pass both a model and interaction")
     elif model is None and interaction is None:
-        raise ValueError('must pass one of model or interaction')
+        raise ValueError("must pass one of model or interaction")
     elif interaction is not None:
         if dimensions is None:
-            raise ValueError('missing dimensions')
+            raise ValueError("missing dimensions")
         model = make_model_cls(
             interaction=interaction,
             dimensions=dimensions,
@@ -849,10 +921,9 @@ def pipeline(  # noqa: C901
         )
 
     if isinstance(model, Model):
-        model_instance = model
+        model_instance = cast(Model, model)
         # TODO should training be reset?
         # TODO should kwargs for loss and regularizer be checked and raised for?
-        model_instance.triples_factory = training
     else:
         model_instance = _build_model_helper(
             model=model,
@@ -863,13 +934,13 @@ def pipeline(  # noqa: C901
             regularizer_kwargs=regularizer_kwargs,
             _device=_device,
             _random_seed=_random_seed,
-            training=training,
+            training_triples_factory=training,
         )
 
     # Log model parameters
     _result_tracker.log_params(
         params=dict(cls=model_instance.__class__.__name__, kwargs=model_kwargs),
-        prefix='model',
+        prefix="model",
     )
 
     optimizer_instance = optimizer_resolver.make(
@@ -879,42 +950,60 @@ def pipeline(  # noqa: C901
     )
     _result_tracker.log_params(
         params=dict(cls=optimizer_instance.__class__.__name__, kwargs=optimizer_kwargs),
-        prefix='optimizer',
+        prefix="optimizer",
     )
 
+    lr_scheduler_instance: Optional[LRScheduler]
+    if lr_scheduler is None:
+        lr_scheduler_instance = None
+    else:
+        lr_scheduler_instance = lr_scheduler_resolver.make(
+            lr_scheduler,
+            lr_scheduler_kwargs,
+            optimizer=optimizer_instance,
+        )
+        _result_tracker.log_params(
+            params=dict(cls=lr_scheduler_instance.__class__.__name__, kwargs=lr_scheduler_kwargs),
+            prefix="lr_scheduler",
+        )
+
     training_loop_cls = training_loop_resolver.lookup(training_loop)
-    training_loop_instance: TrainingLoop
+    if training_loop_kwargs is None:
+        training_loop_kwargs = {}
+
     if negative_sampler is None:
         negative_sampler_cls = None
         training_loop_instance = training_loop_cls(
             model=model_instance,
+            triples_factory=training,
             optimizer=optimizer_instance,
-            automatic_memory_optimization=automatic_memory_optimization,
+            lr_scheduler=lr_scheduler_instance,
+            **training_loop_kwargs,
         )
     elif not issubclass(training_loop_cls, SLCWATrainingLoop):
-        raise ValueError('Can not specify negative sampler with LCWA')
+        raise ValueError("Can not specify negative sampler with LCWA")
     else:
         negative_sampler_cls = negative_sampler_resolver.lookup(negative_sampler)
         _result_tracker.log_params(
             params=dict(cls=negative_sampler_cls.__name__, kwargs=negative_sampler_kwargs),
-            prefix='negative_sampler',
+            prefix="negative_sampler",
         )
         training_loop_instance = SLCWATrainingLoop(
             model=model_instance,
+            triples_factory=training,
             optimizer=optimizer_instance,
-            automatic_memory_optimization=automatic_memory_optimization,
-            negative_sampler_cls=negative_sampler_cls,
+            negative_sampler=negative_sampler_cls,
             negative_sampler_kwargs=negative_sampler_kwargs,
+            **training_loop_kwargs,
         )
     _result_tracker.log_params(
         params=dict(cls=training_loop_instance.__class__.__name__),
-        prefix='training_loop',
+        prefix="training_loop",
     )
 
     if evaluator_kwargs is None:
         evaluator_kwargs = {}
     evaluator_kwargs = dict(evaluator_kwargs)
-    evaluator_kwargs.setdefault('automatic_memory_optimization', automatic_memory_optimization)
     evaluator_instance: Evaluator = evaluator_resolver.make(evaluator, evaluator_kwargs)
 
     if evaluation_kwargs is None:
@@ -922,31 +1011,36 @@ def pipeline(  # noqa: C901
     evaluation_kwargs = dict(evaluation_kwargs)
 
     # Stopping
-    if 'stopper' in training_kwargs and stopper is not None:
-        raise ValueError('Specified stopper in training_kwargs and as stopper')
-    if 'stopper' in training_kwargs:
-        stopper = training_kwargs.pop('stopper')
+    if "stopper" in training_kwargs and stopper is not None:
+        raise ValueError("Specified stopper in training_kwargs and as stopper")
+    if "stopper" in training_kwargs:
+        stopper = training_kwargs.pop("stopper")
     if stopper_kwargs is None:
         stopper_kwargs = {}
     stopper_kwargs = dict(stopper_kwargs)
 
     # Load the evaluation batch size for the stopper, if it has been set
-    _evaluation_batch_size = evaluation_kwargs.get('batch_size')
+    _evaluation_batch_size = evaluation_kwargs.get("batch_size")
     if _evaluation_batch_size is not None:
-        stopper_kwargs.setdefault('evaluation_batch_size', _evaluation_batch_size)
+        stopper_kwargs.setdefault("evaluation_batch_size", _evaluation_batch_size)
 
     stopper_instance: Stopper = stopper_resolver.make(
         stopper,
         model=model_instance,
         evaluator=evaluator_instance,
+        training_triples_factory=training,
         evaluation_triples_factory=validation,
         result_tracker=_result_tracker,
         **stopper_kwargs,
     )
 
-    training_kwargs.setdefault('num_epochs', 5)
-    training_kwargs.setdefault('batch_size', 256)
-    _result_tracker.log_params(params=training_kwargs, prefix='training')
+    if epochs is not None:
+        training_kwargs["num_epochs"] = epochs
+    if use_tqdm is not None:
+        training_kwargs["use_tqdm"] = use_tqdm
+    training_kwargs.setdefault("num_epochs", 5)
+    training_kwargs.setdefault("batch_size", 256)
+    _result_tracker.log_params(params=training_kwargs, prefix="training")
 
     # Add logging for debugging
     logging.debug("Run Pipeline based on following config:")
@@ -954,10 +1048,10 @@ def pipeline(  # noqa: C901
         logging.debug(f"dataset: {dataset}")
         logging.debug(f"dataset_kwargs: {dataset_kwargs}")
     else:
-        logging.debug('training: %s', training)
-        logging.debug('testing: %s', testing)
+        logging.debug("training: %s", training)
+        logging.debug("testing: %s", testing)
         if validation:
-            logging.debug('validation: %s', validation)
+            logging.debug("validation: %s", validation)
     logging.debug(f"model: {model_instance}")
     logging.debug(f"model_kwargs: {model_kwargs}")
     logging.debug(f"loss: {model_instance.loss}")
@@ -979,6 +1073,7 @@ def pipeline(  # noqa: C901
     # Train like Cristiano Ronaldo
     training_start_time = time.time()
     losses = training_loop_instance.train(
+        triples_factory=training,
         stopper=stopper_instance,
         result_tracker=_result_tracker,
         clear_optimizer=clear_optimizer,
@@ -990,34 +1085,76 @@ def pipeline(  # noqa: C901
     if use_testing_data:
         mapped_triples = testing.mapped_triples
     elif validation is None:
-        raise ValueError('no validation triples available')
+        raise ValueError("no validation triples available")
     else:
         mapped_triples = validation.mapped_triples
 
+    # Build up a list of triples if we want to be in the filtered setting
+    if evaluator_instance.filtered:
+        additional_filter_triples: List[MappedTriples] = [
+            training.mapped_triples,
+        ]
+
+        # If the user gave custom "additional_filter_triples"
+        popped_additional_filter_triples = evaluation_kwargs.pop("additional_filter_triples", [])
+        if isinstance(popped_additional_filter_triples, (list, tuple)):
+            additional_filter_triples.extend(popped_additional_filter_triples)
+        elif torch.is_tensor(popped_additional_filter_triples):  # a single MappedTriple
+            additional_filter_triples.append(popped_additional_filter_triples)
+        else:
+            raise TypeError(
+                f'Invalid type for `evaluation_kwargs["additional_filter_triples"]`:'
+                f" {type(popped_additional_filter_triples)}",
+            )
+
+        # Determine whether the validation triples should also be filtered while performing test evaluation
+        if use_testing_data and filter_validation_when_testing and validation is not None:
+            if isinstance(stopper, EarlyStopper):
+                logging.info(
+                    "When evaluating the test dataset after running the pipeline with early stopping, the validation"
+                    " triples are added to the set of known positive triples which are filtered out when performing"
+                    " filtered evaluation following the approach described by (Bordes et al., 2013).",
+                )
+            else:
+                logging.info(
+                    "When evaluating the test dataset, validation triples are added to the set of known positive"
+                    " triples which are filtered out when performing filtered evaluation following the approach"
+                    " described by (Bordes et al., 2013).",
+                )
+            additional_filter_triples.append(validation.mapped_triples)
+
+        # TODO consider implications of duplicates
+        evaluation_kwargs["additional_filter_triples"] = additional_filter_triples
+
     # Evaluate
-    # Reuse optimal evaluation parameters from training if available
-    if evaluator_instance.batch_size is not None or evaluator_instance.slice_size is not None:
-        evaluation_kwargs['batch_size'] = evaluator_instance.batch_size
-        evaluation_kwargs['slice_size'] = evaluator_instance.slice_size
+    # Reuse optimal evaluation parameters from training if available, only if the validation triples are used again
+    if evaluator_instance.batch_size is not None or evaluator_instance.slice_size is not None and not use_testing_data:
+        evaluation_kwargs["batch_size"] = evaluator_instance.batch_size
+        evaluation_kwargs["slice_size"] = evaluator_instance.slice_size
+    if use_tqdm is not None:
+        evaluation_kwargs["use_tqdm"] = use_tqdm
     # Add logging about evaluator for debugging
     logging.debug("Evaluation will be run with following parameters:")
     logging.debug(f"evaluation_kwargs: {evaluation_kwargs}")
     evaluate_start_time = time.time()
-    metric_results: MetricResults = evaluator_instance.evaluate(
+    metric_results: MetricResults = _safe_evaluate(
         model=model_instance,
         mapped_triples=mapped_triples,
-        **evaluation_kwargs,
+        evaluator=evaluator_instance,
+        evaluation_kwargs=evaluation_kwargs,
+        evaluation_fallback=evaluation_fallback,
     )
     evaluate_end_time = time.time() - evaluate_start_time
     _result_tracker.log_metrics(
         metrics=metric_results.to_dict(),
-        step=training_kwargs.get('num_epochs'),
+        step=training_kwargs.get("num_epochs"),
     )
     _result_tracker.end_run()
 
     return PipelineResult(
         random_seed=_random_seed,
         model=model_instance,
+        training=training,
         training_loop=training_loop_instance,
         losses=losses,
         stopper=stopper_instance,
@@ -1026,3 +1163,70 @@ def pipeline(  # noqa: C901
         train_seconds=training_end_time,
         evaluate_seconds=evaluate_end_time,
     )
+
+
+def _safe_evaluate(
+    model: Model,
+    mapped_triples: MappedTriples,
+    evaluator: Evaluator,
+    evaluation_kwargs: Dict[str, Any],
+    evaluation_fallback: bool = False,
+) -> MetricResults:
+    """Evaluate with a potentially safe fallback to CPU.
+
+    :param model: The model
+    :param mapped_triples: Mapped triples from the evaluation set (test or valid)
+    :param evaluator: An evaluator
+    :param evaluation_kwargs: Kwargs for the evaluator (might get modified in place)
+    :param evaluation_fallback:
+        If true, in cases where the evaluation failed using the GPU it will fall back to using a smaller batch size or
+        in the last instance evaluate on the CPU, if even the smallest possible batch size is too big for the GPU.
+    :return: A metric result
+
+    :raises MemoryError:
+        If it is not possible to evaluate the model on the hardware at hand with the given parameters.
+    :raises RuntimeError:
+        If CUDA ran into OOM issues trying to evaluate the model on the hardware at hand with the given parameters.
+    """
+    while True:
+        try:
+            metric_results: MetricResults = evaluator.evaluate(
+                model=model,
+                mapped_triples=mapped_triples,
+                **evaluation_kwargs,
+            )
+        except (MemoryError, RuntimeError) as e:
+            # If the evaluation still fail using the CPU, the error is raised
+            if model.device.type != "cuda" or not evaluation_fallback:
+                raise e
+
+            # When the evaluation failed due to OOM on the GPU due to a batch size set too high, the evaluation is
+            # restarted with PyKEEN's automatic memory optimization
+            elif "batch_size" in evaluation_kwargs:
+                logging.warning(
+                    "You tried to evaluate the current model on %s with batch_size=%d which was too big for %s.",
+                    model.device,
+                    evaluation_kwargs["batch_size"],
+                    model.device,
+                )
+                logging.warning("Will activate the built-in PyKEEN memory optimization to find a suitable batch size.")
+                del evaluation_kwargs["batch_size"]
+
+            # When the evaluation failed due to OOM on the GPU even with automatic memory optimization, the evaluation
+            # is restarted using the cpu
+            else:  # 'batch_size' not in evaluation_kwargs
+                logging.warning(
+                    "Tried to evaluate the current model on %s, but the model and the dataset are too big for the "
+                    "%s memory currently available.",
+                    model.device,
+                    model.device,
+                )
+                logging.warning(
+                    "Will revert to using the CPU for evaluation, which will increase the evaluation time "
+                    "significantly.",
+                )
+                model.to_cpu_()
+        else:
+            break  # evaluation was successful, don't continue the ``while True`` loop
+
+    return metric_results

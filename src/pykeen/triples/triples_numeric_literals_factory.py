@@ -3,7 +3,8 @@
 """Implementation of factory that create instances containing of triples and numeric literals.tsv."""
 
 import logging
-from typing import Dict, Optional, TextIO, Tuple, Union
+import pathlib
+from typing import Any, Dict, Optional, TextIO, Tuple, Union
 
 import numpy as np
 import torch
@@ -11,10 +12,10 @@ import torch
 from .instances import MultimodalLCWAInstances, MultimodalSLCWAInstances
 from .triples_factory import TriplesFactory
 from .utils import load_triples
-from ..typing import EntityMapping, LabeledTriples
+from ..typing import EntityMapping, LabeledTriples, MappedTriples
 
 __all__ = [
-    'TriplesNumericLiteralsFactory',
+    "TriplesNumericLiteralsFactory",
 ]
 
 logger = logging.getLogger(__name__)
@@ -26,10 +27,7 @@ def create_matrix_of_literals(
 ) -> Tuple[np.ndarray, Dict[str, int]]:
     """Create matrix of literals where each row corresponds to an entity and each column to a literal."""
     data_relations = np.unique(np.ndarray.flatten(numeric_triples[:, 1:2]))
-    data_rel_to_id: Dict[str, int] = {
-        value: key
-        for key, value in enumerate(data_relations)
-    }
+    data_rel_to_id: Dict[str, int] = {value: key for key, value in enumerate(data_relations)}
     # Prepare literal matrix, set every literal to zero, and afterwards fill in the corresponding value if available
     num_literals = np.zeros([len(entity_to_id), len(data_rel_to_id)], dtype=np.float32)
 
@@ -51,9 +49,9 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
     def __init__(
         self,
         *,
-        path: Union[None, str, TextIO] = None,
+        path: Union[None, str, pathlib.Path, TextIO] = None,
         triples: Optional[LabeledTriples] = None,
-        path_to_numeric_triples: Union[None, str, TextIO] = None,
+        path_to_numeric_triples: Union[None, str, pathlib.Path, TextIO] = None,
         numeric_triples: Optional[np.ndarray] = None,
         **kwargs,
     ) -> None:
@@ -68,10 +66,12 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         :param numeric_triples:  A 3-column numpy array with numeric triples in it. If not
          specified, you should specify ``path_to_numeric_triples``.
         """
-        if path is None:
-            base = TriplesFactory.from_labeled_triples(triples=triples, **kwargs)
-        else:
+        if path is not None:
             base = TriplesFactory.from_path(path=path, **kwargs)
+        elif triples is None:
+            base = TriplesFactory(**kwargs)
+        else:
+            base = TriplesFactory.from_labeled_triples(triples=triples, **kwargs)
         super().__init__(
             entity_to_id=base.entity_to_id,
             relation_to_id=base.relation_to_id,
@@ -80,22 +80,26 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         )
 
         if path_to_numeric_triples is None and numeric_triples is None:
-            raise ValueError('Must specify one of path_to_numeric_triples or numeric_triples')
+            raise ValueError("Must specify one of path_to_numeric_triples or numeric_triples")
         elif path_to_numeric_triples is not None and numeric_triples is not None:
-            raise ValueError('Must not specify both path_to_numeric_triples and numeric_triples')
+            raise ValueError("Must not specify both path_to_numeric_triples and numeric_triples")
         elif path_to_numeric_triples is not None:
-            numeric_triples = load_triples(path_to_numeric_triples)
+            self.numeric_triples = load_triples(path_to_numeric_triples)
+        else:
+            self.numeric_triples = numeric_triples
 
         assert self.entity_to_id is not None
         self.numeric_literals, self.literals_to_id = create_matrix_of_literals(
-            numeric_triples=numeric_triples,
+            numeric_triples=self.numeric_triples,
             entity_to_id=self.entity_to_id,
         )
 
+    def get_numeric_literals_tensor(self) -> torch.FloatTensor:
+        """Return the numeric literals as a tensor."""
+        return torch.as_tensor(self.numeric_literals, dtype=torch.float32)
+
     def extra_repr(self) -> str:  # noqa: D102
-        return super().extra_repr() + (
-            f"num_literals={len(self.literals_to_id)}"
-        )
+        return super().extra_repr() + (f"num_literals={len(self.literals_to_id)}")
 
     def create_slcwa_instances(self) -> MultimodalSLCWAInstances:
         """Create multi-modal sLCWA instances for this factory's triples."""
@@ -106,9 +110,13 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
             literals_to_id=self.literals_to_id,
         )
 
-    def create_lcwa_instances(self, use_tqdm: Optional[bool] = None) -> MultimodalLCWAInstances:
+    def create_lcwa_instances(
+        self,
+        use_tqdm: Optional[bool] = None,
+        target: Optional[int] = None,
+    ) -> MultimodalLCWAInstances:
         """Create multi-modal LCWA instances for this factory's triples."""
-        lcwa_instances = super().create_lcwa_instances(use_tqdm=use_tqdm)
+        lcwa_instances = super().create_lcwa_instances(use_tqdm=use_tqdm, target=target)
         return MultimodalLCWAInstances(
             pairs=lcwa_instances.pairs,
             compressed=lcwa_instances.compressed,
@@ -116,6 +124,23 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
             literals_to_id=self.literals_to_id,
         )
 
-    def literal_initializer(self, _) -> torch.FloatTensor:
-        """Initialize an embedding, for use as the ``initializer`` kwarg for :class:`pykeen.nn.Embedding`."""
-        return torch.as_tensor(self.numeric_literals, dtype=torch.float)
+    def clone_and_exchange_triples(
+        self,
+        mapped_triples: MappedTriples,
+        extra_metadata: Optional[Dict[str, Any]] = None,
+        keep_metadata: bool = True,
+        create_inverse_triples: Optional[bool] = None,
+    ) -> "TriplesNumericLiteralsFactory":  # noqa: D102
+        if create_inverse_triples is None:
+            create_inverse_triples = self.create_inverse_triples
+        return TriplesNumericLiteralsFactory(
+            numeric_triples=self.numeric_triples,
+            mapped_triples=mapped_triples,
+            entity_to_id=self.entity_to_id,
+            relation_to_id=self.relation_to_id,
+            create_inverse_triples=create_inverse_triples,
+            metadata={
+                **(extra_metadata or {}),
+                **(self.metadata if keep_metadata else {}),  # type: ignore
+            },
+        )

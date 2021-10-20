@@ -2,15 +2,15 @@
 
 """WordNet datasets."""
 
-import os
+import pathlib
 
 from docdata import parse_docdata
 
 from .base import TarFileRemoteDataset
 
 __all__ = [
-    'WN18',
-    'WN18RR',
+    "WN18",
+    "WN18RR",
 ]
 
 
@@ -42,10 +42,10 @@ class WN18(TarFileRemoteDataset):
         .. warning:: This dataset contains testing leakage. Use :class:`WN18RR` instead.
         """
         super().__init__(
-            url='https://everest.hds.utc.fr/lib/exe/fetch.php?media=en:wordnet-mlj12.tar.gz',
-            relative_training_path=os.path.join('wordnet-mlj12', 'wordnet-mlj12-train.txt'),
-            relative_testing_path=os.path.join('wordnet-mlj12', 'wordnet-mlj12-test.txt'),
-            relative_validation_path=os.path.join('wordnet-mlj12', 'wordnet-mlj12-valid.txt'),
+            url="https://everest.hds.utc.fr/lib/exe/fetch.php?media=en:wordnet-mlj12.tar.gz",
+            relative_training_path=pathlib.PurePath("wordnet-mlj12", "wordnet-mlj12-train.txt"),
+            relative_testing_path=pathlib.PurePath("wordnet-mlj12", "wordnet-mlj12-test.txt"),
+            relative_validation_path=pathlib.PurePath("wordnet-mlj12", "wordnet-mlj12-valid.txt"),
             create_inverse_triples=create_inverse_triples,
             **kwargs,
         )
@@ -77,10 +77,10 @@ class WN18RR(TarFileRemoteDataset):
         :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.TarFileRemoteDataset`.
         """
         super().__init__(
-            url='https://github.com/TimDettmers/ConvE/raw/master/WN18RR.tar.gz',
-            relative_training_path='train.txt',
-            relative_testing_path='test.txt',
-            relative_validation_path='valid.txt',
+            url="https://github.com/TimDettmers/ConvE/raw/master/WN18RR.tar.gz",
+            relative_training_path="train.txt",
+            relative_testing_path="test.txt",
+            relative_validation_path="valid.txt",
             create_inverse_triples=create_inverse_triples,
             **kwargs,
         )
@@ -91,5 +91,5 @@ def _main():
         cls().summarize()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     _main()

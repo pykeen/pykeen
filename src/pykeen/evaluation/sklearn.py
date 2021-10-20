@@ -15,8 +15,8 @@ from ..typing import MappedTriples
 from ..utils import fix_dataclass_init_docs
 
 __all__ = [
-    'SklearnEvaluator',
-    'SklearnMetricResults',
+    "SklearnEvaluator",
+    "SklearnMetricResults",
 ]
 
 
@@ -27,17 +27,21 @@ class SklearnMetricResults(MetricResults):
     """Results from computing metrics."""
 
     #: The area under the ROC curve
-    roc_auc_score: float = field(metadata=dict(
-        name="AUC-ROC",
-        doc='The area under the ROC curve, on [0, 1]. Higher is better.',
-        f=metrics.roc_auc_score,
-    ))
+    roc_auc_score: float = field(
+        metadata=dict(
+            name="AUC-ROC",
+            doc="The area under the ROC curve, on [0, 1]. Higher is better.",
+            f=metrics.roc_auc_score,
+        )
+    )
     #: The area under the precision-recall curve
-    average_precision_score: float = field(metadata=dict(
-        name="Average Precision",
-        doc='The area under the precision-recall curve, on [0, 1]. Higher is better.',
-        f=metrics.average_precision_score,
-    ))
+    average_precision_score: float = field(
+        metadata=dict(
+            name="Average Precision",
+            doc="The area under the precision-recall curve, on [0, 1]. Higher is better.",
+            f=metrics.average_precision_score,
+        )
+    )
 
     #: The coverage error
     # coverage_error: float = field(metadata=dict(
@@ -58,10 +62,7 @@ class SklearnMetricResults(MetricResults):
     @classmethod
     def from_scores(cls, y_true, y_score):
         """Return an instance of these metrics from a given set of true and scores."""
-        return SklearnMetricResults(**{
-            f.name: f.metadata['f'](y_true, y_score)
-            for f in fields(cls)
-        })
+        return SklearnMetricResults(**{f.name: f.metadata["f"](y_true, y_score) for f in fields(cls)})
 
     def get_metric(self, name: str) -> float:  # noqa: D102
         return getattr(self, name)
@@ -73,11 +74,10 @@ class SklearnEvaluator(Evaluator):
     all_scores: Dict[Tuple[Any, ...], np.ndarray]
     all_positives: Dict[Tuple[Any, ...], np.ndarray]
 
-    def __init__(self, automatic_memory_optimization: bool = True, **kwargs):
+    def __init__(self, **kwargs):
         super().__init__(
             filtered=False,
             requires_positive_mask=True,
-            automatic_memory_optimization=automatic_memory_optimization,
             **kwargs,
         )
         self.all_scores = {}
@@ -110,7 +110,7 @@ class SklearnEvaluator(Evaluator):
         dense_positive_mask: Optional[torch.FloatTensor] = None,
     ) -> None:  # noqa: D102
         if dense_positive_mask is None:
-            raise KeyError('Sklearn evaluators need the positive mask!')
+            raise KeyError("Sklearn evaluators need the positive mask!")
 
         self._process_scores(keys=hrt_batch[:, :2], scores=scores, positive_mask=dense_positive_mask, head_side=False)
 
@@ -122,7 +122,7 @@ class SklearnEvaluator(Evaluator):
         dense_positive_mask: Optional[torch.FloatTensor] = None,
     ) -> None:  # noqa: D102
         if dense_positive_mask is None:
-            raise KeyError('Sklearn evaluators need the positive mask!')
+            raise KeyError("Sklearn evaluators need the positive mask!")
 
         self._process_scores(keys=hrt_batch[:, 1:], scores=scores, positive_mask=dense_positive_mask, head_side=True)
 

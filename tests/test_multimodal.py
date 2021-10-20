@@ -6,6 +6,7 @@ import tempfile
 import unittest
 
 from pykeen.datasets.nations import NationsLiteral
+from pykeen.models import ComplExLiteral, DistMultLiteral
 from pykeen.pipeline import pipeline
 
 
@@ -18,7 +19,7 @@ class TestLiteralModel(unittest.TestCase):
             model=model,
             training_kwargs=dict(num_epochs=5, use_tqdm=False),
             evaluation_kwargs=dict(use_tqdm=False),
-            training_loop='lcwa',
+            training_loop="lcwa",
         )
         self.assertIsNotNone(rv)
         with tempfile.TemporaryDirectory() as d:
@@ -26,8 +27,8 @@ class TestLiteralModel(unittest.TestCase):
 
     def test_complex(self):
         """Test running on ComplEx."""
-        self._help('ComplExLiteral')
+        self._help(ComplExLiteral)
 
     def test_distmult(self):
         """Test running on DistMult."""
-        self._help('DistMultLiteral')
+        self._help(DistMultLiteral)

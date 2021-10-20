@@ -2,29 +2,24 @@
 
 """Run landmark experiments."""
 
-import json
 import logging
 import os
+import pathlib
 import shutil
 import sys
 import time
-from typing import Optional
+from typing import Optional, Union
 from uuid import uuid4
 
 import click
+from more_click import verbose_option
 
 __all__ = [
-    'experiments',
+    "experiments",
 ]
 
 logger = logging.getLogger(__name__)
-HERE = os.path.abspath(os.path.dirname(__file__))
-
-
-def _turn_on_debugging(_ctx, _param, value):
-    if value:
-        logging.basicConfig(level=logging.INFO)
-        logger.setLevel(logging.INFO)
+HERE = pathlib.Path(__file__).parent.resolve()
 
 
 def _make_dir(_ctx, _param, value):
@@ -32,26 +27,26 @@ def _make_dir(_ctx, _param, value):
     return value
 
 
-verbose_option = click.option(
-    '-v', '--verbose',
-    is_flag=True,
-    expose_value=False,
-    callback=_turn_on_debugging,
-)
 directory_option = click.option(
-    '-d', '--directory',
+    "-d",
+    "--directory",
     type=click.Path(dir_okay=True, file_okay=False),
     callback=_make_dir,
     default=os.getcwd(),
 )
 replicates_option = click.option(
-    '-r', '--replicates', type=int, default=1, show_default=True,
-    help='Number of times to retrain the model.',
+    "-r",
+    "--replicates",
+    type=int,
+    default=1,
+    show_default=True,
+    help="Number of times to retrain the model.",
 )
-move_to_cpu_option = click.option('--move-to-cpu', is_flag=True, help='Move trained model(s) to CPU after training.')
+move_to_cpu_option = click.option("--move-to-cpu", is_flag=True, help="Move trained model(s) to CPU after training.")
 discard_replicates_option = click.option(
-    '--discard-replicates', is_flag=True,
-    help='Discard trained models after training.',
+    "--discard-replicates",
+    is_flag=True,
+    help="Discard trained models after training.",
 )
 
 
@@ -61,13 +56,14 @@ def experiments():
 
 
 @experiments.command()
-@click.argument('model')
-@click.argument('reference')
-@click.argument('dataset')
+@click.argument("model")
+@click.argument("reference")
+@click.argument("dataset")
 @replicates_option
 @move_to_cpu_option
 @discard_replicates_option
 @directory_option
+@verbose_option
 def reproduce(
     model: str,
     reference: str,
@@ -81,8 +77,8 @@ def reproduce(
 
     Example: $ pykeen experiments reproduce tucker balazevic2019 fb15k
     """
-    file_name = f'{reference}_{model}_{dataset}'
-    path = os.path.join(HERE, model, f'{file_name}.json')
+    file_name = f"{reference}_{model}_{dataset}"
+    path = HERE.joinpath(model, file_name).with_suffix(".json")
     _help_reproduce(
         directory=directory,
         path=path,
@@ -94,7 +90,7 @@ def reproduce(
 
 
 @experiments.command()
-@click.argument('path')
+@click.argument("path")
 @replicates_option
 @move_to_cpu_option
 @discard_replicates_option
@@ -118,8 +114,8 @@ def run(
 
 def _help_reproduce(
     *,
-    directory: str,
-    path: str,
+    directory: Union[str, pathlib.Path],
+    path: Union[str, pathlib.Path],
     replicates: int,
     move_to_cpu: bool = False,
     save_replicates: bool = True,
@@ -137,20 +133,25 @@ def _help_reproduce(
     """
     from pykeen.pipeline import replicate_pipeline_from_path
 
-    if not os.path.exists(path):
-        click.secho(f'Could not find configuration at {path}', fg='red')
-        return sys.exit(1)
-    click.echo(f'Running configuration at {path}')
+    if isinstance(path, str):
+        path = pathlib.Path(path).resolve()
+
+    if not path.is_file():
+        click.secho(f"Could not find configuration at {path}", fg="red")
+        sys.exit(1)
+    click.echo(f"Running configuration at {path}")
 
     # Create directory in which all experimental artifacts are saved
-    datetime = time.strftime('%Y-%m-%d-%H-%M-%S')
+    datetime = time.strftime("%Y-%m-%d-%H-%M-%S")
     if file_name is not None:
-        experiment_id = f'{datetime}_{uuid4()}_{file_name}'
+        experiment_id = f"{datetime}_{uuid4()}_{file_name}"
     else:
-        experiment_id = f'{datetime}_{uuid4()}'
-    output_directory = os.path.join(directory, experiment_id)
+        experiment_id = f"{datetime}_{uuid4()}"
 
-    os.makedirs(output_directory, exist_ok=True)
+    if isinstance(directory, str):
+        directory = pathlib.Path(directory).resolve()
+    output_directory = directory.joinpath(experiment_id)
+    output_directory.mkdir(exist_ok=True, parents=True)
 
     replicate_pipeline_from_path(
         path=path,
@@ -160,32 +161,33 @@ def _help_reproduce(
         move_to_cpu=move_to_cpu,
         save_replicates=save_replicates,
     )
-    shutil.copyfile(path, os.path.join(output_directory, 'configuration_copied.json'))
+    shutil.copyfile(path, os.path.join(output_directory, "configuration_copied.json"))
 
 
 @experiments.command()
-@click.argument('path')
+@click.argument("path")
 @verbose_option
-@click.option('-d', '--directory', type=click.Path(file_okay=False, dir_okay=True))
+@click.option("-d", "--directory", type=click.Path(file_okay=False, dir_okay=True))
 def optimize(path: str, directory: str):
     """Run a single HPO experiment."""
     from pykeen.hpo import hpo_pipeline_from_path
+
     hpo_pipeline_result = hpo_pipeline_from_path(path)
     hpo_pipeline_result.save_to_directory(directory)
 
 
 @experiments.command()
-@click.argument('path', type=click.Path(file_okay=True, dir_okay=False, exists=True))
+@click.argument("path", type=click.Path(file_okay=True, dir_okay=False, exists=True))
 @directory_option
-@click.option('--dry-run', is_flag=True)
-@click.option('-r', '--best-replicates', type=int, help='Number of times to retrain the best model.')
+@click.option("--dry-run", is_flag=True)
+@click.option("-r", "--best-replicates", type=int, help="Number of times to retrain the best model.")
 @move_to_cpu_option
 @discard_replicates_option
-@click.option('-s', '--save-artifacts', is_flag=True)
+@click.option("-s", "--save-artifacts", is_flag=True)
 @verbose_option
 def ablation(
     path: str,
-    directory: Optional[str],
+    directory: str,
     dry_run: bool,
     best_replicates: int,
     save_artifacts: bool,
@@ -194,23 +196,20 @@ def ablation(
 ) -> None:
     """Generate a set of HPO configurations.
 
-    A sample file can be run with ``pykeen experiment ablation tests/resources/hpo_complex_nations.json``.
+    A sample file can be run with ``pykeen experiments ablation tests/resources/hpo_complex_nations.json``.
     """
-    from pykeen.ablation import ablation_pipeline
+    from ..ablation.ablation import _run_ablation_experiments, prepare_ablation_from_path
 
-    with open(path) as file:
-        config = json.load(file)
+    directories = prepare_ablation_from_path(path=path, directory=directory, save_artifacts=save_artifacts)
 
-    ablation_pipeline(
-        config=config,
-        directory=directory,
-        dry_run=dry_run,
+    _run_ablation_experiments(
+        directories=directories,
         best_replicates=best_replicates,
-        save_artifacts=save_artifacts,
+        dry_run=dry_run,
         move_to_cpu=move_to_cpu,
         discard_replicates=discard_replicates,
     )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     experiments()

@@ -13,15 +13,17 @@ from torch.nn import functional
 from ..utils import compose
 
 __all__ = [
-    'xavier_uniform_',
-    'xavier_uniform_norm_',
-    'xavier_normal_',
-    'xavier_normal_norm_',
-    'init_phases',
+    "xavier_uniform_",
+    "xavier_uniform_norm_",
+    "xavier_normal_",
+    "xavier_normal_norm_",
+    "uniform_norm_",
+    "normal_norm_",
+    "init_phases",
 ]
 
 
-def xavier_uniform_(tensor, gain: float = 1.):
+def xavier_uniform_(tensor, gain: float = 1.0):
     r"""Initialize weights of the tensor similarly to Glorot/Xavier initialization.
 
     Proceed as if it was a linear layer with fan_in of zero and Xavier uniform
@@ -57,13 +59,13 @@ def xavier_normal_(tensor: torch.Tensor, gain: float = 1.0) -> torch.Tensor:
     :return: Embedding with weights by the Xavier normal initializer.
     """
     std = gain * 2 / math.sqrt(tensor.shape[-1])
-    torch.nn.init.normal_(tensor, mean=0., std=std)
+    torch.nn.init.normal_(tensor, mean=0.0, std=std)
     return tensor
 
 
 def init_phases(x: torch.Tensor) -> torch.Tensor:
     r"""Generate random phases between 0 and :math:`2\pi`."""
-    phases = 2 * np.pi * torch.rand_like(x[..., :x.shape[-1] // 2])
+    phases = 2 * np.pi * torch.rand_like(x[..., : x.shape[-1] // 2])
     return torch.cat([torch.cos(phases), torch.sin(phases)], dim=-1).detach()
 
 
@@ -73,6 +75,14 @@ xavier_uniform_norm_ = compose(
 )
 xavier_normal_norm_ = compose(
     torch.nn.init.xavier_normal_,
+    functional.normalize,
+)
+uniform_norm_ = compose(
+    torch.nn.init.uniform_,
+    functional.normalize,
+)
+normal_norm_ = compose(
+    torch.nn.init.normal_,
     functional.normalize,
 )
 
@@ -86,7 +96,7 @@ def init_quaternions(
         raise ValueError("Quaternions have four components, but dimension {dim} is not divisible by four.")
     dim //= 4
     # scaling factor
-    s = 1. / math.sqrt(2 * num_elements)
+    s = 1.0 / math.sqrt(2 * num_elements)
     # modulus ~ Uniform[-s, s]
     modulus = 2 * s * torch.rand(num_elements, dim) - s
     # phase ~ Uniform[0, 2*pi]

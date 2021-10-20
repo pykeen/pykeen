@@ -26,15 +26,16 @@ The only implementation we have to provide is of the `score_hrt` member function
     class ModifiedDistMult(EntityRelationEmbeddingModel):
         def score_hrt(self, hrt_batch):
             # Get embeddings
-            h = self.entity_embeddings(hrt_batch[:, 0])
-            r = self.relation_embeddings(hrt_batch[:, 1])
-            t = self.entity_embeddings(hrt_batch[:, 2])
+            h = self.entity_representations[0](hrt_batch[:, 0])
+            r = self.relation_representations[0](hrt_batch[:, 1])
+            t = self.entity_representations[0](hrt_batch[:, 2])
             # evaluate interaction function
             return h * r.sigmoid() * t
 
-The ``entity_embeddings`` and ``relation_embeddings`` are available for all
-:class:`pykeen.models.base.EntityRelationEmbeddingModel` and are instances of
-:class:`torch.nn.Embedding`.
+The ``entity_representations`` and ``relation_representations`` sequences are available for all
+:class:`pykeen.models.base.EntityRelationEmbeddingModel` and are lists of length one containing
+a single instances of a :class:`pykeen.nn.Embedding`. This may seem like a strange data structure, but
+it prepares for the much more powerful usages covered by the new-style :class:`pykeen.models.ERModel`.
 
 The ``hrt_batch`` is a long tensor representing the internal indices of the edges.
 The above example shows a very common way of slicing it to get separate lists of
@@ -74,9 +75,9 @@ where the value is the loss class.
         loss_default = NSSALoss
 
         def score_hrt(self, hrt_batch):
-            h = self.entity_embeddings(hrt_batch[:, 0])
-            r = self.relation_embeddings(hrt_batch[:, 1])
-            t = self.entity_embeddings(hrt_batch[:, 2])
+            h = self.entity_representations[0](hrt_batch[:, 0])
+            r = self.relation_representations[0](hrt_batch[:, 1])
+            t = self.entity_representations[0](hrt_batch[:, 2])
             return h * r.sigmoid() * t
 
 Now, when using the pipeline, the :class:`pykeen.losses.NSSALoss`. loss is used by default
@@ -140,9 +141,9 @@ consider:
             self.linear2 = torch.nn.Linear(self.hidden_dim, self.embedding_dim)
 
         def score_hrt(self, hrt_batch):
-            h = self.entity_embeddings(hrt_batch[:, 0])
-            r = self.relation_embeddings(hrt_batch[:, 1])
-            t = self.entity_embeddings(hrt_batch[:, 2])
+            h = self.entity_representations[0](hrt_batch[:, 0])
+            r = self.relation_representations[0](hrt_batch[:, 1])
+            t = self.entity_representations[0](hrt_batch[:, 2])
 
             # add more transformations
             h = self.linear2(self.linear1(h))

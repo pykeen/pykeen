@@ -8,17 +8,14 @@ import torch
 
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...losses import Loss
 from ...moves import irfft, rfft
 from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_uniform_
-from ...regularizers import Regularizer
-from ...triples import TriplesFactory
-from ...typing import Constrainer, DeviceHint, Hint, Initializer
+from ...typing import Constrainer, Hint, Initializer
 from ...utils import clamp_norm
 
 __all__ = [
-    'HolE',
+    "HolE",
 ]
 
 
@@ -62,28 +59,20 @@ class HolE(EntityRelationEmbeddingModel):
     )
 
     #: The default settings for the entity constrainer
-    entity_constrainer_default_kwargs = dict(maxnorm=1., p=2, dim=-1)
+    entity_constrainer_default_kwargs = dict(maxnorm=1.0, p=2, dim=-1)
 
     def __init__(
         self,
-        triples_factory: TriplesFactory,
+        *,
         embedding_dim: int = 200,
-        loss: Optional[Loss] = None,
-        preferred_device: DeviceHint = None,
-        random_seed: Optional[int] = None,
-        regularizer: Optional[Regularizer] = None,
         entity_initializer: Hint[Initializer] = xavier_uniform_,
         entity_constrainer: Hint[Constrainer] = clamp_norm,  # type: ignore
         entity_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
         relation_initializer: Hint[Constrainer] = xavier_uniform_,
+        **kwargs,
     ) -> None:
         """Initialize the model."""
         super().__init__(
-            triples_factory=triples_factory,
-            loss=loss,
-            preferred_device=preferred_device,
-            random_seed=random_seed,
-            regularizer=regularizer,
             entity_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
                 # Initialisation, cf. https://github.com/mnick/scikit-kge/blob/master/skge/param.py#L18-L27
@@ -95,6 +84,7 @@ class HolE(EntityRelationEmbeddingModel):
                 embedding_dim=embedding_dim,
                 initializer=relation_initializer,
             ),
+            **kwargs,
         )
 
     @staticmethod

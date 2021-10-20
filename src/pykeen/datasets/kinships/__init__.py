@@ -2,24 +2,24 @@
 
 """Get triples from the Kinships dataset."""
 
-import os
+import pathlib
 
 from docdata import parse_docdata
 
 from ..base import PathDataset
 
 __all__ = [
-    'KINSHIPS_TRAIN_PATH',
-    'KINSHIPS_TEST_PATH',
-    'KINSHIPS_VALIDATE_PATH',
-    'Kinships',
+    "KINSHIPS_TRAIN_PATH",
+    "KINSHIPS_TEST_PATH",
+    "KINSHIPS_VALIDATE_PATH",
+    "Kinships",
 ]
 
-HERE = os.path.abspath(os.path.dirname(__file__))
+HERE = pathlib.Path(__file__).resolve().parent
 
-KINSHIPS_TRAIN_PATH = os.path.join(HERE, 'train.txt')
-KINSHIPS_TEST_PATH = os.path.join(HERE, 'test.txt')
-KINSHIPS_VALIDATE_PATH = os.path.join(HERE, 'valid.txt')
+KINSHIPS_TRAIN_PATH = HERE.joinpath("train.txt")
+KINSHIPS_TEST_PATH = HERE.joinpath("test.txt")
+KINSHIPS_VALIDATE_PATH = HERE.joinpath("valid.txt")
 
 
 @parse_docdata
@@ -56,5 +56,5 @@ class Kinships(PathDataset):
         )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     Kinships().summarize()

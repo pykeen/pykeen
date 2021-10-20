@@ -8,11 +8,11 @@ from typing import List, Optional, Tuple
 import torch
 from torch.utils.data.sampler import Sampler
 
-from ..triples import TriplesFactory
+from ..triples import CoreTriplesFactory
 
 
 def _compute_compressed_adjacency_list(
-    triples_factory: TriplesFactory,
+    triples_factory: CoreTriplesFactory,
 ) -> Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor]:
     """Compute compressed undirected adjacency list representation for efficient sampling.
 
@@ -27,10 +27,7 @@ def _compute_compressed_adjacency_list(
         with
             adj_list[i] = compressed_adj_list[offsets[i]:offsets[i+1]]
     """
-    adj_lists: List[List[Tuple[int, float]]] = [
-        []
-        for _ in range(triples_factory.num_entities)
-    ]
+    adj_lists: List[List[Tuple[int, float]]] = [[] for _ in range(triples_factory.num_entities)]
     for i, (s, _, o) in enumerate(triples_factory.mapped_triples):
         adj_lists[s].append((i, o.item()))
         adj_lists[o].append((i, s.item()))
@@ -54,7 +51,7 @@ class GraphSampler(Sampler):
 
     def __init__(
         self,
-        triples_factory: TriplesFactory,
+        triples_factory: CoreTriplesFactory,
         num_samples: Optional[int] = None,
     ):
         mapped_triples = triples_factory.mapped_triples
@@ -63,11 +60,11 @@ class GraphSampler(Sampler):
 
         if num_samples is None:
             num_samples = triples_factory.num_triples // 10
-            logging.info(f'Did not specify number of samples. Using {num_samples}.')
+            logging.info(f"Did not specify number of samples. Using {num_samples}.")
         elif num_samples > triples_factory.num_triples:
             raise ValueError(
-                'num_samples cannot be larger than the number of triples, but '
-                f'{num_samples} > {triples_factory.num_triples}.',
+                "num_samples cannot be larger than the number of triples, but "
+                f"{num_samples} > {triples_factory.num_triples}.",
             )
         if not isinstance(num_samples, int) or num_samples <= 0:
             raise ValueError(f"num_samples should be a positive integer value, but got num_samples={num_samples}")

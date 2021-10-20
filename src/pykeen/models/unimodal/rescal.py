@@ -2,21 +2,19 @@
 
 """Implementation of RESCAL."""
 
-from typing import Any, ClassVar, Mapping, Optional, Type
+from typing import Any, ClassVar, Mapping, Type
 
 import torch
 from torch.nn.init import uniform_
 
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...losses import Loss
 from ...nn.emb import EmbeddingSpecification
 from ...regularizers import LpRegularizer, Regularizer
-from ...triples import TriplesFactory
-from ...typing import DeviceHint, Hint, Initializer
+from ...typing import Hint, Initializer
 
 __all__ = [
-    'RESCAL',
+    "RESCAL",
 ]
 
 
@@ -54,35 +52,31 @@ class RESCAL(EntityRelationEmbeddingModel):
     #: The LP settings used by [nickel2011]_ for for RESCAL
     regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = dict(
         weight=10,
-        p=2.,
+        p=2.0,
         normalize=True,
     )
 
     def __init__(
         self,
-        triples_factory: TriplesFactory,
+        *,
         embedding_dim: int = 50,
-        loss: Optional[Loss] = None,
-        preferred_device: DeviceHint = None,
-        random_seed: Optional[int] = None,
-        regularizer: Optional[Regularizer] = None,
         entity_initializer: Hint[Initializer] = uniform_,
         relation_initializer: Hint[Initializer] = uniform_,
+        **kwargs,
     ) -> None:
         r"""Initialize RESCAL.
 
         :param embedding_dim: The entity embedding dimension $d$. Is usually $d \in [50, 300]$.
+        :param entity_initializer: Entity initializer function. Defaults to :func:`torch.nn.init.uniform_`
+        :param relation_initializer: Relation initializer function. Defaults to :func:`torch.nn.init.uniform_`
+        :param kwargs:
+            Remaining keyword arguments to forward to :class:`pykeen.models.EntityRelationEmbeddingModel`
 
         .. seealso::
 
             - OpenKE `implementation of RESCAL <https://github.com/thunlp/OpenKE/blob/master/models/RESCAL.py>`_
         """
         super().__init__(
-            triples_factory=triples_factory,
-            loss=loss,
-            preferred_device=preferred_device,
-            random_seed=random_seed,
-            regularizer=regularizer,
             entity_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
                 initializer=entity_initializer,
@@ -91,6 +85,7 @@ class RESCAL(EntityRelationEmbeddingModel):
                 shape=(embedding_dim, embedding_dim),  # d x d matrices
                 initializer=relation_initializer,
             ),
+            **kwargs,
         )
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102

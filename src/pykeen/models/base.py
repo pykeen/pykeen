@@ -5,11 +5,12 @@
 from __future__ import annotations
 
 import functools
+import inspect
 import logging
 import pickle
 import warnings
 from abc import ABC, abstractmethod
-from typing import Any, ClassVar, Iterable, Mapping, Optional, Type, Union
+from typing import Any, ClassVar, Iterable, Mapping, Optional, Sequence, Type, Union
 
 import pandas as pd
 import torch
@@ -17,18 +18,16 @@ from docdata import parse_docdata
 from torch import nn
 
 from ..losses import Loss, MarginRankingLoss
-from ..nn.emb import Embedding, EmbeddingSpecification
+from ..nn.emb import Embedding, EmbeddingSpecification, RepresentationModule
 from ..regularizers import NoRegularizer, Regularizer
-from ..triples import TriplesFactory
+from ..triples import CoreTriplesFactory
 from ..typing import DeviceHint, ScorePack
 from ..utils import NoRandomSeedNecessary, _can_slice, extend_batch, resolve_device, set_random_seed
 
 __all__ = [
-    'Model',
-    '_OldAbstractModel',
-    'EntityEmbeddingModel',
-    'EntityRelationEmbeddingModel',
-    'MultimodalModel',
+    "Model",
+    "_OldAbstractModel",
+    "EntityRelationEmbeddingModel",
 ]
 
 logger = logging.getLogger(__name__)
@@ -43,14 +42,8 @@ class Model(nn.Module, ABC):
     and relation representations in the form of :class:`pykeen.nn.Embedding`.
     """
 
-    #: Keep track of if this is a base model
-    _is_base_model: ClassVar[bool]
-
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]]
-
-    #: A triples factory with the training triples
-    triples_factory: TriplesFactory
 
     #: The device on which this model and its submodules are stored
     device: torch.device
@@ -60,13 +53,17 @@ class Model(nn.Module, ABC):
     #: The default loss function class
     loss_default: ClassVar[Type[Loss]] = MarginRankingLoss
     #: The default parameters for the default loss function class
-    loss_default_kwargs: ClassVar[Optional[Mapping[str, Any]]] = dict(margin=1.0, reduction='mean')
+    loss_default_kwargs: ClassVar[Optional[Mapping[str, Any]]] = dict(margin=1.0, reduction="mean")
     #: The instance of the loss
     loss: Loss
 
+    num_entities: int
+    num_relations: int
+    use_inverse_triples: bool
+
     def __init__(
         self,
-        triples_factory: TriplesFactory,
+        triples_factory: CoreTriplesFactory,
         loss: Optional[Loss] = None,
         predict_with_sigmoid: bool = False,
         preferred_device: DeviceHint = None,
@@ -86,8 +83,6 @@ class Model(nn.Module, ABC):
             The preferred device for model training and inference.
         :param random_seed:
             A random seed to use for initialising the model's weights. **Should** be set when aiming at reproducibility.
-        :param regularizer:
-            A regularizer to use for training.
         """
         super().__init__()
 
@@ -96,7 +91,7 @@ class Model(nn.Module, ABC):
 
         # Random seeds have to set before the embeddings are initialized
         if random_seed is None:
-            logger.warning('No random seed is specified. This may lead to non-reproducible results.')
+            logger.warning("No random seed is specified. This may lead to non-reproducible results.")
             self._random_seed = None
         elif random_seed is not NoRandomSeedNecessary:
             set_random_seed(random_seed)
@@ -108,19 +103,25 @@ class Model(nn.Module, ABC):
         else:
             self.loss = loss
 
-        # The triples factory facilitates access to the dataset.
-        self.triples_factory = triples_factory
+        self.use_inverse_triples = triples_factory.create_inverse_triples
+        self.num_entities = triples_factory.num_entities
+        self.num_relations = triples_factory.num_relations
 
-        '''
+        """
         When predict_with_sigmoid is set to True, the sigmoid function is applied to the logits during evaluation and
         also for predictions after training, but has no effect on the training.
-        '''
+        """
         self.predict_with_sigmoid = predict_with_sigmoid
 
-    def __init_subclass__(cls, autoreset: bool = True, **kwargs):  # noqa:D105
-        cls._is_base_model = not autoreset
-        if not cls._is_base_model:
-            _add_post_reset_parameters(cls)
+    def __init_subclass__(cls, **kwargs):
+        """Initialize the subclass.
+
+        This checks for all subclasses if they are tagged with :class:`abc.ABC` with :func:`inspect.isabstract`.
+        All non-abstract deriving models should have citation information. Subclasses can further override
+        ``__init_subclass__``, but need to remember to call ``super().__init_subclass__`` as well so this
+        gets run.
+        """
+        if not inspect.isabstract(cls):
             parse_docdata(cls)
 
     """Properties"""
@@ -146,16 +147,6 @@ class Model(nn.Module, ABC):
         self.to_device_()
         self.post_parameter_update()
         return self
-
-    @property
-    def num_entities(self) -> int:  # noqa: D401
-        """The number of entities in the knowledge graph."""
-        return self.triples_factory.num_entities
-
-    @property
-    def num_relations(self) -> int:  # noqa: D401
-        """The number of unique relation types in the knowledge graph."""
-        return self.triples_factory.num_relations
 
     """Base methods"""
 
@@ -232,22 +223,8 @@ class Model(nn.Module, ABC):
         """
 
     @abstractmethod
-    def compute_loss(
-        self,
-        tensor_1: torch.FloatTensor,
-        tensor_2: torch.FloatTensor,
-    ) -> torch.FloatTensor:
-        """Compute the loss for functions requiring two separate tensors as input.
-
-        :param tensor_1: shape: s
-            The tensor containing predictions or positive scores.
-        :param tensor_2: shape: s
-            The tensor containing target values or the negative scores.
-        :return: dtype: float, scalar
-            The label loss value.
-
-        .. note:: generally the two tensors do not need to have the same shape, but only one which is broadcastable.
-        """
+    def collect_regularization_term(self) -> torch.FloatTensor:
+        """Get the regularization term for the loss function."""
 
     """Concrete methods"""
 
@@ -265,10 +242,7 @@ class Model(nn.Module, ABC):
     @property
     def num_parameter_bytes(self) -> int:
         """Calculate the number of bytes used for all parameters of the model."""
-        return sum(
-            param.numel() * param.element_size()
-            for param in self.parameters(recurse=True)
-        )
+        return sum(param.numel() * param.element_size() for param in self.parameters(recurse=True))
 
     def save_state(self, path: str) -> None:
         """Save the state of the model.
@@ -333,7 +307,7 @@ class Model(nn.Module, ABC):
             For each r-t pair, the scores for all possible heads.
         """
         self.eval()  # Enforce evaluation mode
-        if self.triples_factory.create_inverse_triples:
+        if self.use_inverse_triples:
             scores = self.score_h_inverse(rt_batch=rt_batch, slice_size=slice_size)
         elif slice_size is None:
             scores = self.score_h(rt_batch)
@@ -429,7 +403,8 @@ class Model(nn.Module, ABC):
             A tensor containing the k highest scoring triples, or all possible triples if k=None.
         """
         from .predict import get_all_prediction_df
-        warnings.warn('Use pykeen.models.predict.get_all_prediction_df', DeprecationWarning)
+
+        warnings.warn("Use pykeen.models.predict.get_all_prediction_df", DeprecationWarning)
         return get_all_prediction_df(model=self, k=k, batch_size=batch_size, **kwargs)
 
     def get_head_prediction_df(
@@ -452,10 +427,11 @@ class Model(nn.Module, ABC):
         ...     dataset='Nations',
         ...     model='RotatE',
         ... )
-        >>> df = result.model.get_head_prediction_df('accusation', 'brazil')
+        >>> df = result.model.get_head_prediction_df('accusation', 'brazil', triples_factory=result.training)
         """
         from .predict import get_head_prediction_df
-        warnings.warn('Use pykeen.models.predict.get_head_prediction_df', DeprecationWarning)
+
+        warnings.warn("Use pykeen.models.predict.get_head_prediction_df", DeprecationWarning)
         return get_head_prediction_df(self, relation_label=relation_label, tail_label=tail_label, **kwargs)
 
     def get_relation_prediction_df(
@@ -471,7 +447,8 @@ class Model(nn.Module, ABC):
         :param kwargs: Keyword arguments passed to :func:`pykeen.models.predict.get_relation_prediction_df`
         """
         from .predict import get_relation_prediction_df
-        warnings.warn('Use pykeen.models.predict.get_relation_prediction_df', DeprecationWarning)
+
+        warnings.warn("Use pykeen.models.predict.get_relation_prediction_df", DeprecationWarning)
         return get_relation_prediction_df(self, head_label=head_label, tail_label=tail_label, **kwargs)
 
     def get_tail_prediction_df(
@@ -494,16 +471,17 @@ class Model(nn.Module, ABC):
         ...     dataset='Nations',
         ...     model='RotatE',
         ... )
-        >>> df = result.model.get_tail_prediction_df('brazil', 'accusation')
+        >>> df = result.model.get_tail_prediction_df('brazil', 'accusation', triples_factory=result.training)
         """
         from .predict import get_tail_prediction_df
-        warnings.warn('Use pykeen.models.predict.get_tail_prediction_df', DeprecationWarning)
+
+        warnings.warn("Use pykeen.models.predict.get_tail_prediction_df", DeprecationWarning)
         return get_tail_prediction_df(self, head_label=head_label, relation_label=relation_label, **kwargs)
 
     """Inverse scoring"""
 
     def _prepare_inverse_batch(self, batch: torch.LongTensor, index_relation: int) -> torch.LongTensor:
-        if not self.triples_factory.create_inverse_triples:
+        if not self.use_inverse_triples:
             raise ValueError(
                 "Your model is not configured to predict with inverse relations."
                 " Set ``create_inverse_triples=True`` when creating the dataset/triples factory"
@@ -561,7 +539,7 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
 
     def __init__(
         self,
-        triples_factory: TriplesFactory,
+        triples_factory: CoreTriplesFactory,
         loss: Optional[Loss] = None,
         predict_with_sigmoid: bool = False,
         preferred_device: DeviceHint = None,
@@ -602,6 +580,14 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
         else:
             self.regularizer = NoRegularizer()
 
+        self._entity_ids = triples_factory.entity_ids
+        self._relation_ids = triples_factory.relation_ids
+
+    def __init_subclass__(cls, autoreset: bool = True, **kwargs):  # noqa:D105
+        super().__init_subclass__(**kwargs)
+        if autoreset:
+            _add_post_reset_parameters(cls)
+
     def post_parameter_update(self) -> None:
         """Has to be called after each parameter update."""
         self.regularizer.reset()
@@ -626,11 +612,11 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
             For each h-r pair, the scores for all possible tails.
         """
         logger.warning(
-            'Calculations will fall back to using the score_hrt method, since this model does not have a specific '
-            'score_t function. This might cause the calculations to take longer than necessary.',
+            "Calculations will fall back to using the score_hrt method, since this model does not have a specific "
+            "score_t function. This might cause the calculations to take longer than necessary.",
         )
         # Extend the hr_batch such that each (h, r) pair is combined with all possible tails
-        hrt_batch = extend_batch(batch=hr_batch, all_ids=list(self.triples_factory.get_entity_ids()), dim=2)
+        hrt_batch = extend_batch(batch=hr_batch, all_ids=list(self._entity_ids), dim=2)
         # Calculate the scores for each (h, r, t) triple using the generic interaction function
         expanded_scores = self.score_hrt(hrt_batch=hrt_batch)
         # Reshape the scores to match the pre-defined output shape of the score_t function.
@@ -649,11 +635,11 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
             For each r-t pair, the scores for all possible heads.
         """
         logger.warning(
-            'Calculations will fall back to using the score_hrt method, since this model does not have a specific '
-            'score_h function. This might cause the calculations to take longer than necessary.',
+            "Calculations will fall back to using the score_hrt method, since this model does not have a specific "
+            "score_h function. This might cause the calculations to take longer than necessary.",
         )
         # Extend the rt_batch such that each (r, t) pair is combined with all possible heads
-        hrt_batch = extend_batch(batch=rt_batch, all_ids=list(self.triples_factory.get_entity_ids()), dim=0)
+        hrt_batch = extend_batch(batch=rt_batch, all_ids=list(self._entity_ids), dim=0)
         # Calculate the scores for each (h, r, t) triple using the generic interaction function
         expanded_scores = self.score_hrt(hrt_batch=hrt_batch)
         # Reshape the scores to match the pre-defined output shape of the score_h function.
@@ -672,34 +658,19 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
             For each h-t pair, the scores for all possible relations.
         """
         logger.warning(
-            'Calculations will fall back to using the score_hrt method, since this model does not have a specific '
-            'score_r function. This might cause the calculations to take longer than necessary.',
+            "Calculations will fall back to using the score_hrt method, since this model does not have a specific "
+            "score_r function. This might cause the calculations to take longer than necessary.",
         )
         # Extend the ht_batch such that each (h, t) pair is combined with all possible relations
-        hrt_batch = extend_batch(batch=ht_batch, all_ids=list(self.triples_factory.get_relation_ids()), dim=1)
+        hrt_batch = extend_batch(batch=ht_batch, all_ids=list(self._relation_ids), dim=1)
         # Calculate the scores for each (h, r, t) triple using the generic interaction function
         expanded_scores = self.score_hrt(hrt_batch=hrt_batch)
         # Reshape the scores to match the pre-defined output shape of the score_r function.
         scores = expanded_scores.view(ht_batch.shape[0], -1)
         return scores
 
-    def compute_loss(
-        self,
-        tensor_1: torch.FloatTensor,
-        tensor_2: torch.FloatTensor,
-    ) -> torch.FloatTensor:
-        """Compute the loss for functions requiring two separate tensors as input.
-
-        :param tensor_1: shape: s
-            The tensor containing predictions or positive scores.
-        :param tensor_2: shape: s
-            The tensor containing target values or the negative scores.
-        :return: dtype: float, scalar
-            The label loss value.
-
-        .. note:: generally the two tensors do not need to have the same shape, but only one which is broadcastable.
-        """
-        return self.loss(tensor_1, tensor_2) + self.regularizer.term
+    def collect_regularization_term(self) -> torch.FloatTensor:  # noqa: D102
+        return self.regularizer.term
 
     def post_forward_pass(self):
         """Run after calculating the forward loss."""
@@ -709,63 +680,18 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
         self.regularizer.reset()
 
 
-class EntityEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
-    """A base module for most KGE models that have one embedding for entities."""
-
-    entity_embedding: Embedding
-
-    def __init__(
-        self,
-        triples_factory: TriplesFactory,
-        entity_representations: EmbeddingSpecification,
-        loss: Optional[Loss] = None,
-        predict_with_sigmoid: bool = False,
-        preferred_device: DeviceHint = None,
-        random_seed: Optional[int] = None,
-        regularizer: Optional[Regularizer] = None,
-    ) -> None:
-        """Initialize the entity embedding model.
-
-        .. seealso:: Constructor of the base class :class:`pykeen.models.Model`
-        """
-        super().__init__(
-            triples_factory=triples_factory,
-            loss=loss,
-            preferred_device=preferred_device,
-            random_seed=random_seed,
-            regularizer=regularizer,
-            predict_with_sigmoid=predict_with_sigmoid,
-        )
-        self.entity_embeddings = entity_representations.make(
-            num_embeddings=triples_factory.num_entities,
-            device=self.device,
-        )
-
-    @property
-    def embedding_dim(self) -> int:  # noqa:D401
-        """The entity embedding dimension."""
-        return self.entity_embeddings.embedding_dim
-
-    def _reset_parameters_(self):  # noqa: D102
-        self.entity_embeddings.reset_parameters()
-
-    def post_parameter_update(self) -> None:  # noqa: D102
-        # make sure to call this first, to reset regularizer state!
-        super().post_parameter_update()
-        self.entity_embeddings.post_parameter_update()
-
-
 class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
     """A base module for KGE models that have different embeddings for entities and relations."""
 
     #: Primary embeddings for entities
-    entity_embedding: Embedding
+    entity_embeddings: Embedding
     #: Primary embeddings for relations
-    relation_embedding: Embedding
+    relation_embeddings: Embedding
 
     def __init__(
         self,
-        triples_factory: TriplesFactory,
+        *,
+        triples_factory: CoreTriplesFactory,
         entity_representations: EmbeddingSpecification,
         relation_representations: EmbeddingSpecification,
         loss: Optional[Loss] = None,
@@ -801,9 +727,25 @@ class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
         return self.entity_embeddings.embedding_dim
 
     @property
-    def relation_dim(self):  # noqa:D401
+    def relation_dim(self) -> int:  # noqa:D401
         """The relation embedding dimension."""
         return self.relation_embeddings.embedding_dim
+
+    @property
+    def entity_representations(self) -> Sequence[RepresentationModule]:  # noqa:D401
+        """The entity representations.
+
+        This property provides forward compatibility with the new-style :class:`pykeen.models.ERModel`.
+        """
+        return [self.entity_embeddings]
+
+    @property
+    def relation_representations(self) -> Sequence[RepresentationModule]:  # noqa:D401
+        """The relation representations.
+
+        This property provides forward compatibility with the new-style :class:`pykeen.models.ERModel`.
+        """
+        return [self.relation_embeddings]
 
     def _reset_parameters_(self):  # noqa: D102
         self.entity_embeddings.reset_parameters()
@@ -814,22 +756,6 @@ class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
         super().post_parameter_update()
         self.entity_embeddings.post_parameter_update()
         self.relation_embeddings.post_parameter_update()
-
-
-class MultimodalModel(_OldAbstractModel, ABC, autoreset=False):
-    """A base module for multimodal KGE models."""
-
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self(h_indices=hrt_batch[:, 0], r_indices=hrt_batch[:, 1], t_indices=hrt_batch[:, 2]).view(-1, 1)
-
-    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self(h_indices=hr_batch[:, 0], r_indices=hr_batch[:, 1], t_indices=None)
-
-    def score_r(self, ht_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self(h_indices=ht_batch[:, 0], r_indices=None, t_indices=ht_batch[:, 1])
-
-    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self(h_indices=None, r_indices=rt_batch[:, 0], t_indices=rt_batch[:, 1])
 
 
 def _add_post_reset_parameters(cls: Type[Model]) -> None:

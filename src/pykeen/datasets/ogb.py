@@ -16,9 +16,9 @@ from .base import LazyDataset
 from ..triples import TriplesFactory
 
 __all__ = [
-    'OGBLoader',
-    'OGBBioKG',
-    'OGBWikiKG',
+    "OGBLoader",
+    "OGBBioKG",
+    "OGBWikiKG",
 ]
 
 
@@ -43,7 +43,7 @@ class OGBLoader(LazyDataset):
             from ogb.linkproppred import LinkPropPredDataset
         except ImportError as e:
             raise ModuleNotFoundError(
-                f'Need to `pip install ogb` to use pykeen.datasets.{self.__class__.__name__}.',
+                f"Need to `pip install ogb` to use pykeen.datasets.{self.__class__.__name__}.",
             ) from e
 
         dataset = LinkPropPredDataset(name=self.name, root=self.cache_root)
@@ -68,7 +68,7 @@ class OGBLoader(LazyDataset):
         pass
 
     def _make_tf(self, x, entity_to_id=None, relation_to_id=None):
-        triples = np.stack([x['head'], x['relation'], x['tail']], axis=1)
+        triples = np.stack([x["head"], x["relation"], x["tail"]], axis=1)
 
         # FIXME these are already identifiers
         triples = triples.astype(np.str)
@@ -102,12 +102,12 @@ class OGBBioKG(OGBLoader):
         triples: 5088433
     """
 
-    name = 'ogbl-biokg'
+    name = "ogbl-biokg"
 
     def _make_tf(self, x, entity_to_id=None, relation_to_id=None):
-        head_triples = _array(x, 'head_type', 'head')
-        tail_triples = _array(x, 'tail_type', 'tail')
-        triples = np.stack([head_triples, x['relation'], tail_triples], axis=1).astype(np.str)
+        head_triples = _array(x, "head_type", "head")
+        tail_triples = _array(x, "tail_type", "tail")
+        triples = np.stack([head_triples, x["relation"], tail_triples], axis=1).astype(np.str)
 
         return TriplesFactory.from_labeled_triples(
             triples=triples,
@@ -119,7 +119,7 @@ class OGBBioKG(OGBLoader):
 
 def _array(df, entity_type_label, entity_label):
     return np.array(
-        [f'{entity_type}:{entity}' for entity_type, entity in zip(df[entity_type_label], df[entity_label])],
+        [f"{entity_type}:{entity}" for entity_type, entity in zip(df[entity_type_label], df[entity_label])],
         dtype=np.str,
     )
 
@@ -146,7 +146,7 @@ class OGBWikiKG(OGBLoader):
         triples: 17137181
     """
 
-    name = 'ogbl-wikikg'
+    name = "ogbl-wikikg"
 
 
 @click.command()
@@ -156,5 +156,5 @@ def _main():
         _cls().summarize()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     _main()

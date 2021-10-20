@@ -77,29 +77,6 @@ the mean rank lies on the interval $[1, \infty)$ where lower is better.
     A mean rank of 10 might indicate strong performance for a candidate set size of 1,000,000,
     but incredibly poor performance for a candidate set size of 20.
 
-Adjusted Mean Rank
-******************
-The adjusted mean rank (AMR) was introduced by [berrendorf2020]_. It is defined as
-
-.. math::
-
-    \text{score} = \frac{MR}{\mathbb{E}\left[MR\right]} = \frac{2 \sum_{i=1}^{n} r_{i}}{\sum_{i=1}^{n} (|\mathcal{S}_i|+1)}
-
-The derivations of $\mathbb{E}\left[MR\right]$ and $\mathcal{S}_i$ are contained within the original manuscript.
-
-It lies on the open interval $(0, 2)$ where lower is better.
-
-Adjusted Mean Rank Index
-************************
-The adjusted mean rank index (AMRI) was introduced by [berrendorf2020]_ to make the AMR
-more intuitive.
-
-.. math::
-
-    \text{score} = 1 - \frac{MR - 1}{\mathbb{E}\left[MR - 1\right]} = \frac{2 \sum_{i=1}^{n} (r_{i} - 1)}{\sum_{i=1}^{n} (|\mathcal{S}_i|)}
-
-The AMR has a bounded value range of $[-1, 1]$ where closer to 1 is better.
-
 Mean Reciprocal Rank
 ********************
 The mean reciprocal rank (MRR) is the arithmetic mean of reciprocal ranks, and thus the inverse of the harmonic mean
@@ -133,6 +110,65 @@ Therefore, the inverse geometric mean rank (IGMR) is defined as:
     \text{score} = \sqrt[\|\mathcal{I}\|]{\prod \limits_{r \in \mathcal{I}} r}
 
 .. note:: This metric is novel as of its implementation in PyKEEN and was proposed by Max Berrendorf
+
+Adjusted Rank-Based Metrics
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Typical rank-based metrics are affected by the number of entities in knowledge graphs, therefore
+making results not comparable. The following adjustments were proposed or inspired by [berrendorf2020]_
+in order to make the metrics invariant to number of entities.
+
+The expectation and variance of a discrete uniform variable $X \sim \mathcal{U}(a, b)$ are respectively
+$\mathbb{E}\left[X\right] = \frac{b+a}{2}$ and $\text{Var}\left[X\right] = \frac{\left( b-a+1\right)^2}{12}$.
+We assume discrete uniform distribution over the ranks such that
+$r_i \sim \mathcal{U}(1, N_i) \in [1,\ldots,N_i]$.
+While the upper bound $N_i$ *may* vary by ranking task $i$, e.g., due to filtered evaluation, we assume
+it remains constant throughout the following derivations such that $\forall i: N_i = n$.
+We use $\doteq$ to denote equivalences asserted under this assumption.
+
+Adjusted Mean Rank
+******************
+The expectation of an inverse-uniform distributed variable $\frac{1}{X} \sim \mathcal{U}(\frac{1}{a},\frac{1}{b})$
+is $\mathbb{E}\left[\frac{1}{X}\right] = \frac{\ln b - \ln a}{b - a}$.
+Given our uniformly distributed variable $r_i$  with parameters $a=1$ and $b=N_i$ and its corresponding
+inverse-uniform distributed variable $r_i^{-1}$, we get:
+
+.. math::
+
+    \mathbb{E}\left[r_i^{-1}\right]
+    = \frac{\ln 1 - \ln N_i}{N_i - 1}
+    = \frac{\ln N_i}{N_i - 1}
+    \doteq \frac{\ln n}{n - 1}
+
+
+The expected value of the mean rank is then derived like:
+
+.. math::
+
+    \mathbb{E}\left[\text{MRR}\right]
+    = \mathbb{E}\left[\frac{1}{n} \sum \limits_{i=1}^n r_i^{-1}\right]
+    = \frac{1}{n} \sum \limits_{i=1}^n \mathbb{E}\left[r_i^{-1}\right]
+    = \mathbb{E}\left[r_i^{-1}\right]
+    \doteq \frac{\ln n}{n - 1}
+
+The adjusted mean rank (AMR) was introduced by [berrendorf2020]_. It is defined as the ratio
+of the mean rank to the expected mean rank
+
+.. math::
+
+    \text{MRR}^{*}(r_1,\ldots,r_n) = \frac{\text{MRR}(r_1,\ldots,r_n)}{\mathbb{E}\left[\text{MRR}\right] }
+
+It lies on the open interval $(0, 2)$ where lower is better.
+
+Adjusted Mean Rank Index
+************************
+The adjusted mean rank index (AMRI) was introduced by [berrendorf2020]_ to make the AMR
+more intuitive.
+
+.. math::
+
+    \text{score} = 1 - \frac{MR - 1}{\mathbb{E}\left[MR - 1\right]} = \frac{2 \sum_{i=1}^{n} (r_{i} - 1)}{\sum_{i=1}^{n} (|\mathcal{S}_i|)}
+
+The AMR has a bounded value range of $[-1, 1]$ where closer to 1 is better.
 
 Ranking Types
 ~~~~~~~~~~~~~
@@ -172,13 +208,84 @@ incapability to solve of one the tasks.
 
 Filtering
 ~~~~~~~~~
-The rank-based evaluation allows using the "filtered setting", which is enabled by default. When evaluating
-the tail prediction for a triple :math:`(h, r, t)`, i.e. scoring all triples :math:`(h, r, e)`, there may be
-additional known triples :math:`(h, r, t')` for :math:`t \neq t'`. If the model predicts a higher score for
+The rank-based evaluation allows using the "filtered setting", proposed by [bordes2013]_, which is enabled by default.
+When evaluating the tail prediction for a triple :math:`(h, r, t)`, i.e. scoring all triples :math:`(h, r, e)`, there
+may be additional known triples :math:`(h, r, t')` for :math:`t \neq t'`. If the model predicts a higher score for
 :math:`(h, r, t')`, the rank will increase, and hence the measured model performance will decrease. However, giving
 :math:`(h, r, t')` a high score (and thus a low rank) is desirable since it is a true triple as well. Thus, the
 filtered evaluation setting ignores for a given triple :math:`(h, r, t)` the scores of all other *known* true triples
 :math:`(h, r, t')`.
+
+Below, we present the philosophy from [bordes2013]_ and how it is implemented in PyKEEN:
+
+HPO Scenario
+************
+During training/optimization with :func:`pykeen.hpo.hpo_pipeline`, the set of known positive triples comprises the
+training and validation sets. After optimization is finished and the final evaluation is done, the set of known
+positive triples comprises the training, validation, and testing set. PyKEEN explicitly does not use test triples
+for filtering during HPO to avoid any test leakage.
+
+Early Stopper Scenario
+**********************
+When early stopping is used during training, it periodically uses the validation set for calculating the loss
+and evaluation metrics. During this evaluation, the set of known positive triples comprises the training and
+validation sets. When final evaluation is done with the testing set, the set of known positive triples comprises the
+training, validation, and testing set. PyKEEN explicitly does not use test triples for filtering when early stopping
+is being used to avoid any test leakage.
+
+Pipeline Scenario
+*****************
+During vanilla training with the :func:`pykeen.pipeline.pipeline` that has no optimization, no early stopping, nor
+any *post-hoc* choices using the validation set, the set of known positive triples comprises the training and
+testing sets. This scenario is very atypical, and regardless, should be augmented with the validation triples
+to make more comparable to other published results that do not consider this scenario.
+
+Custom Training Loops
+*********************
+In case the validation triples should *not* be filtered when evaluating the test dataset, the argument
+``filter_validation_when_testing=False`` can be passed to either the :func:`pykeen.hpo.hpo_pipeline` or
+:func:`pykeen.pipeline.pipeline`.
+
+If you're rolling your own pipeline, you should keep the following in mind: the :class:`pykeen.evaluation.Evaluator`
+when in the filtered setting with ``filtered=True`` will always use the evaluation set (regardless of whether it is the
+testing set or validation set) for filtering. Any other triples that should be filtered should be passed to
+``additional_filter_triples`` in :func:`pykeen.evaluation.Evaluator.evaluate`. Typically, this minimally includes
+the training triples. With the [bordes2013]_ technique where the testing set is used for evaluation, the
+``additional_filter_triples`` should include both the training triples and validation triples as in the following
+example:
+
+.. code-block:: python
+
+    from pykeen.datasets import FB15k237
+    from pykeen.evaluation import RankBasedEvaluator
+    from pykeen.models import TransE
+
+    # Get FB15k-237 dataset
+    dataset = FB15k237()
+
+    # Define model
+    model = TransE(
+        triples_factory=dataset.training,
+    )
+
+    # Train your model (code is omitted for brevity)
+    ...
+
+    # Define evaluator
+    evaluator = RankBasedEvaluator(
+        filtered=True,  # Note: this is True by default; we're just being explicit
+    )
+
+    # Evaluate your model with not only testing triples,
+    # but also filter on validation triples
+    results = evaluator.evaluate(
+        model=model,
+        mapped_triples=dataset.testing.mapped_triples,
+        additional_filter_triples=[
+            dataset.training.mapped_triples,
+            dataset.validation.mapped_triples,
+        ],
+    )
 
 Entity and Relation Restriction
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

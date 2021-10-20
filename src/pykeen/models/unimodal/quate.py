@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Implementation of the QuatE model."""
+
 from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
@@ -13,11 +14,11 @@ from ...nn.emb import EmbeddingSpecification
 from ...nn.init import init_quaternions
 from ...nn.modules import QuatEInteraction
 from ...regularizers import LpRegularizer, Regularizer
-from ...triples import TriplesFactory
-from ...typing import DeviceHint, Hint, Initializer
+from ...typing import Constrainer, Hint, Initializer
+from ...utils import get_expected_norm
 
 __all__ = [
-    'QuatE',
+    "QuatE",
 ]
 
 
@@ -75,57 +76,74 @@ class QuatE(ERModel):
     #: The default loss function class
     loss_default: ClassVar[Type[Loss]] = BCEWithLogitsLoss
     #: The default parameters for the default loss function class
-    loss_default_kwargs: ClassVar[Mapping[str, Any]] = dict(reduction='mean')
-    #: The regularizer used by [zhang2019]_ for QuatE.
-    regularizer_default: ClassVar[Type[Regularizer]] = LpRegularizer
+    loss_default_kwargs: ClassVar[Mapping[str, Any]] = dict(reduction="mean")
     #: The LP settings used by [zhang2019]_ for QuatE.
     regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = dict(
-        weight=0.0025,
-        p=3.0,
+        weight=0.3 / get_expected_norm(p=2, d=100),
+        p=2.0,
         normalize=True,
     )
 
     def __init__(
         self,
-        triples_factory: TriplesFactory,
+        *,
         embedding_dim: int = 100,
-        normalize_relations: bool = True,
-        loss: Optional[Loss] = None,
-        preferred_device: DeviceHint = None,
-        random_seed: Optional[int] = None,
         entity_initializer: Hint[Initializer] = init_quaternions,
+        entity_regularizer: Hint[Regularizer] = LpRegularizer,
+        entity_regularizer_kwargs: Optional[Mapping[str, Any]] = None,
         relation_initializer: Hint[Initializer] = init_quaternions,
+        relation_regularizer: Hint[Regularizer] = LpRegularizer,
+        relation_regularizer_kwargs: Optional[Mapping[str, Any]] = None,
+        relation_constrainer: Hint[Constrainer] = quaternion_normalizer,
+        **kwargs,
     ) -> None:
         """Initialize QuatE.
 
-        :param triples_factory:
-            The triple factory connected to the model.
+        .. note ::
+            The default parameters correspond to the first setting for FB15k-237 described from [zhang2019]_.
+
         :param embedding_dim:
             The embedding dimensionality of the entity embeddings.
-        :param loss:
-            The loss to use. Defaults to BCEWithLogitsLoss.
-        :param preferred_device:
-            The default device where to model is located.
-        :param random_seed:
-            An optional random seed to set before the initialization of weights.
+
+            .. note ::
+                The number of parameter per entity is `4 * embedding_dim`, since quaternion are used.
+
+        :param entity_initializer:
+            The initializer to use for the entity embeddings.
+        :param entity_regularizer:
+            The regularizer to use for the entity embeddings.
+        :param entity_regularizer_kwargs:
+            The keyword arguments passed to the entity regularizer. Defaults to
+            :data:`QuatE.regularizer_default_kwargs` if not specified.
+        :param relation_initializer:
+            The initializer to use for the relation embeddings.
+        :param relation_regularizer:
+            The regularizer to use for the relation embeddings.
+        :param relation_regularizer_kwargs:
+            The keyword arguments passed to the relation regularizer. Defaults to
+            :data:`QuatE.regularizer_default_kwargs` if not specified.
+        :param relation_constrainer:
+            The constrainer to use for the relation embeddings.
+        :param kwargs:
+            Additional keyword based arguments passed to :class:`pykeen.models.ERModel`. Must not contain
+            "interaction", "entity_representations", or "relation_representations".
         """
         super().__init__(
-            triples_factory=triples_factory,
             interaction=QuatEInteraction,
             entity_representations=EmbeddingSpecification(
                 embedding_dim=4 * embedding_dim,
                 initializer=entity_initializer,
                 dtype=torch.float,
+                regularizer=entity_regularizer,
+                regularizer_kwargs=entity_regularizer_kwargs or self.regularizer_default_kwargs,
             ),
             relation_representations=EmbeddingSpecification(
                 embedding_dim=4 * embedding_dim,
                 initializer=relation_initializer,
-                constrainer=quaternion_normalizer if normalize_relations else None,
+                constrainer=relation_constrainer,
                 dtype=torch.float,
+                regularizer=relation_regularizer,
+                regularizer_kwargs=relation_regularizer_kwargs or self.regularizer_default_kwargs,
             ),
-            loss=loss,
-            preferred_device=preferred_device,
-            random_seed=random_seed,
+            **kwargs,
         )
-        self.normalize_relations = normalize_relations
-        self.real_embedding_dim = embedding_dim

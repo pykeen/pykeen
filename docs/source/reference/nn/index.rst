@@ -13,3 +13,4 @@
    init
    message_passing
    weighting
+   combinations

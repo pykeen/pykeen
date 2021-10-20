@@ -13,15 +13,15 @@ from .base import SingleTabbedDataset
 from ..typing import TorchRandomHint
 
 __all__ = [
-    'Hetionet',
+    "Hetionet",
 ]
 
-URL = 'https://github.com/hetio/hetionet/raw/master/hetnet/tsv/hetionet-v1.0-edges.sif.gz'
+URL = "https://github.com/hetio/hetionet/raw/master/hetnet/tsv/hetionet-v1.0-edges.sif.gz"
 
 
 @parse_docdata
 class Hetionet(SingleTabbedDataset):
-    """The Hetionet dataset is a large biological network.
+    """The Hetionet dataset from [himmelstein2017]_.
 
     In its publication [himmelstein2017]_, it is demonstrated to be useful for link prediction in drug repositioning
     and made publicly available through its `GitHub repository <https://github.com/hetio/hetionet>`_ in several formats.
@@ -68,5 +68,5 @@ def _main():
     ds.summarize()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     _main()

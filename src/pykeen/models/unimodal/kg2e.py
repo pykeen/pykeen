@@ -11,18 +11,15 @@ from torch.nn.init import uniform_
 
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...losses import Loss
 from ...nn.emb import Embedding, EmbeddingSpecification
-from ...regularizers import Regularizer
-from ...triples import TriplesFactory
-from ...typing import Constrainer, DeviceHint, Hint, Initializer
+from ...typing import Constrainer, Hint, Initializer
 from ...utils import clamp_norm
 
 __all__ = [
-    'KG2E',
+    "KG2E",
 ]
 
-_LOG_2_PI = math.log(2. * math.pi)
+_LOG_2_PI = math.log(2.0 * math.pi)
 
 
 class KG2E(EntityRelationEmbeddingModel):
@@ -60,44 +57,46 @@ class KG2E(EntityRelationEmbeddingModel):
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]] = dict(
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
-        c_min=dict(type=float, low=0.01, high=0.1, scale='log'),
+        c_min=dict(type=float, low=0.01, high=0.1, scale="log"),
         c_max=dict(type=float, low=1.0, high=10.0),
     )
 
     #: The default settings for the entity constrainer
-    constrainer_default_kwargs = dict(maxnorm=1., p=2, dim=-1)
+    constrainer_default_kwargs = dict(maxnorm=1.0, p=2, dim=-1)
 
     def __init__(
         self,
-        triples_factory: TriplesFactory,
+        *,
         embedding_dim: int = 50,
-        loss: Optional[Loss] = None,
-        preferred_device: DeviceHint = None,
-        random_seed: Optional[int] = None,
         dist_similarity: Optional[str] = None,
         c_min: float = 0.05,
-        c_max: float = 5.,
-        regularizer: Optional[Regularizer] = None,
+        c_max: float = 5.0,
         entity_initializer: Hint[Initializer] = uniform_,
         entity_constrainer: Hint[Constrainer] = clamp_norm,  # type: ignore
         entity_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
         relation_initializer: Hint[Initializer] = uniform_,
         relation_constrainer: Hint[Constrainer] = clamp_norm,  # type: ignore
         relation_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
+        **kwargs,
     ) -> None:
         r"""Initialize KG2E.
 
         :param embedding_dim: The entity embedding dimension $d$. Is usually $d \in [50, 350]$.
         :param dist_similarity: Either 'KL' for Kullback-Leibler or 'EL' for expected likelihood. Defaults to KL.
-        :param c_min:
-        :param c_max:
+        :param c_min: covariance clamp minimum bound
+        :param c_max: covariance clamp maximum bound
+        :param entity_initializer: Entity initializer function. Defaults to :func:`torch.nn.init.uniform_`
+        :param entity_constrainer: Entity constrainer function. Defaults to :func:`pykeen.utils.clamp_norm`
+        :param entity_constrainer_kwargs: Keyword arguments to be used when calling the entity constrainer
+        :param relation_initializer: Relation initializer function. Defaults to :func:`torch.nn.init.uniform_`
+        :param relation_constrainer: Relation constrainer function. Defaults to :func:`pykeen.utils.clamp_norm`
+        :param relation_constrainer_kwargs: Keyword arguments to be used when calling the relation constrainer
+        :param kwargs:
+            Remaining keyword arguments to forward to :class:`pykeen.models.EntityRelationEmbeddingModel`
+
+        :raises ValueError: if an illegal ``dist_similarity`` is given
         """
         super().__init__(
-            triples_factory=triples_factory,
-            loss=loss,
-            preferred_device=preferred_device,
-            random_seed=random_seed,
-            regularizer=regularizer,
             entity_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
                 initializer=entity_initializer,
@@ -110,12 +109,13 @@ class KG2E(EntityRelationEmbeddingModel):
                 constrainer=relation_constrainer,
                 constrainer_kwargs=relation_constrainer_kwargs or self.constrainer_default_kwargs,
             ),
+            **kwargs,
         )
 
         # Similarity function used for distributions
-        if dist_similarity is None or dist_similarity.upper() == 'KL':
+        if dist_similarity is None or dist_similarity.upper() == "KL":
             self.similarity = self.kullback_leibler_similarity
-        elif dist_similarity.upper() == 'EL':
+        elif dist_similarity.upper() == "EL":
             self.similarity = self.expected_likelihood
         else:
             raise ValueError(f'Unknown distribution similarity: "{dist_similarity}".')
@@ -126,7 +126,7 @@ class KG2E(EntityRelationEmbeddingModel):
 
         # Additional covariance embeddings
         self.entity_covariances = Embedding.init_with_device(
-            num_embeddings=triples_factory.num_entities,
+            num_embeddings=self.num_entities,
             embedding_dim=embedding_dim,
             device=self.device,
             # Ensure positive definite covariances matrices and appropriate size by clamping
@@ -134,7 +134,7 @@ class KG2E(EntityRelationEmbeddingModel):
             constrainer_kwargs=dict(min=self.c_min, max=self.c_max),
         )
         self.relation_covariances = Embedding.init_with_device(
-            num_embeddings=triples_factory.num_relations,
+            num_embeddings=self.num_relations,
             embedding_dim=embedding_dim,
             device=self.device,
             # Ensure positive definite covariances matrices and appropriate size by clamping

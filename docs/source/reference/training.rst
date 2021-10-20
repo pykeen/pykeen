@@ -1,20 +1,19 @@
 Training
 ========
-.. automodule:::: pykeen.training
+.. automodapi:: pykeen.training
+    :no-heading:
+    :no-inheritance-diagram:
+    :headings: --
+    :skip: TrainingCallback
 
-Stochastic Local Closed World Assumption
-----------------------------------------
-.. autoclass:: pykeen.training.SLCWATrainingLoop
-   :members:
-   :inherited-members:
+Callbacks
+---------
+.. automodapi:: pykeen.training.callbacks
+    :no-heading:
+    :headings: ~~
 
-Local Closed World Assumption
------------------------------
-.. autoclass:: pykeen.training.LCWATrainingLoop
-   :members:
-   :inherited-members:
-
-Base Classes
-------------
-.. autoclass:: pykeen.training.TrainingLoop
-   :members:
+Learning Rate Schedulers
+------------------------
+.. automodapi:: pykeen.lr_schedulers
+    :no-heading:
+    :headings: ~~
