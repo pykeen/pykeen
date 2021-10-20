@@ -13,8 +13,8 @@ from torch.nn import functional
 
 __all__ = [
     "Decomposition",
-    'BasesDecomposition',
-    'BlockDecomposition',
+    "BasesDecomposition",
+    "BlockDecomposition",
     "decomposition_resolver",
 ]
 
@@ -175,11 +175,11 @@ class BasesDecomposition(Decomposition):
 
         # Heuristic for default value
         if num_bases is None:
-            logging.info('No num_bases was provided. Falling back to 2.')
+            logging.info("No num_bases was provided. Falling back to 2.")
             num_bases = 2
 
         if num_bases > num_relations:
-            raise ValueError('The number of bases should not exceed the number of relations.')
+            raise ValueError("The number of bases should not exceed the number of relations.")
 
         # weights
         self.bases = nn.Parameter(
@@ -187,12 +187,16 @@ class BasesDecomposition(Decomposition):
                 num_bases,
                 self.input_dim,
                 self.output_dim,
-            ), requires_grad=True)
+            ),
+            requires_grad=True,
+        )
         self.relation_base_weights = nn.Parameter(
             torch.empty(
                 num_relations + 1,
                 num_bases,
-            ), requires_grad=True)
+            ),
+            requires_grad=True,
+        )
 
         self.memory_intense = memory_intense
 
@@ -213,7 +217,7 @@ class BasesDecomposition(Decomposition):
         :return:
             A 2-D matrix.
         """
-        return torch.einsum('bij,b->ij', self.bases, self.relation_base_weights[relation_id])
+        return torch.einsum("bij,b->ij", self.bases, self.relation_base_weights[relation_id])
 
     def _forward_memory_intense(
         self,
@@ -226,7 +230,7 @@ class BasesDecomposition(Decomposition):
     ) -> torch.FloatTensor:
         # other relations
         m = torch.einsum(
-            'mi,mb,bij->mj',
+            "mi,mb,bij->mj",
             x.index_select(dim=0, index=source),
             self.relation_base_weights.index_select(dim=0, index=edge_type),
             self.bases,
@@ -355,14 +359,14 @@ class BlockDecomposition(Decomposition):
         )
 
         if num_blocks is None:
-            logging.info('Using a heuristic to determine the number of blocks.')
+            logging.info("Using a heuristic to determine the number of blocks.")
             num_blocks = min(i for i in range(2, input_dim + 1) if input_dim % i == 0)
 
         block_size, remainder = divmod(input_dim, num_blocks)
         if remainder != 0:
             raise NotImplementedError(
-                'With block decomposition, the embedding dimension has to be divisible by the number of'
-                f' blocks, but {input_dim} % {num_blocks} != 0.',
+                "With block decomposition, the embedding dimension has to be divisible by the number of"
+                f" blocks, but {input_dim} % {num_blocks} != 0.",
             )
 
         self.blocks = nn.Parameter(
@@ -371,14 +375,16 @@ class BlockDecomposition(Decomposition):
                 num_blocks,
                 block_size,
                 block_size,
-            ), requires_grad=True)
+            ),
+            requires_grad=True,
+        )
         self.num_blocks = num_blocks
         self.block_size = block_size
 
     def reset_parameters(self):  # noqa: D102
         block_size = self.blocks.shape[-1]
         # Xavier Glorot initialization of each block
-        std = torch.sqrt(torch.as_tensor(2.)) / (2 * block_size)
+        std = torch.sqrt(torch.as_tensor(2.0)) / (2 * block_size)
         nn.init.normal_(self.blocks, std=std)
 
     def forward(
@@ -397,9 +403,9 @@ class BlockDecomposition(Decomposition):
         out = torch.zeros_like(x)
         w = self.blocks[-1]
         if node_keep_mask is not None:
-            out[node_keep_mask] = torch.einsum('nbi,bij->nbj', x[node_keep_mask], w)
+            out[node_keep_mask] = torch.einsum("nbi,bij->nbj", x[node_keep_mask], w)
         else:
-            out = torch.einsum('nbi,bij->nbj', x, w)
+            out = torch.einsum("nbi,bij->nbj", x, w)
 
         # other relations
         for r in range(self.num_relations):
@@ -418,7 +424,7 @@ class BlockDecomposition(Decomposition):
             # compute message, shape: (num_edges_of_type, num_blocks, block_size)
             uniq_source_r, inv_source_r = source_r.unique(return_inverse=True)
             w_r = self.blocks[r]
-            m = torch.einsum('nbi,bij->nbj', x[uniq_source_r], w_r).index_select(dim=0, index=inv_source_r)
+            m = torch.einsum("nbi,bij->nbj", x[uniq_source_r], w_r).index_select(dim=0, index=inv_source_r)
 
             # optional message weighting
             if weights_r is not None:

@@ -12,9 +12,9 @@ from sklearn.preprocessing import normalize as sklearn_normalize
 from ...triples import CoreTriplesFactory
 
 __all__ = [
-    'get_csr_matrix',
-    'marginal_score',
-    'get_relation_similarity',
+    "get_csr_matrix",
+    "marginal_score",
+    "get_relation_similarity",
 ]
 
 

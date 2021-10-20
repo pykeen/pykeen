@@ -17,7 +17,7 @@ from ...regularizers import LpRegularizer, Regularizer
 from ...typing import Hint, Initializer
 
 __all__ = [
-    'ConvKB',
+    "ConvKB",
 ]
 
 logger = logging.getLogger(__name__)
@@ -66,7 +66,7 @@ class ConvKB(EntityRelationEmbeddingModel):
     hpo_default: ClassVar[Mapping[str, Any]] = dict(
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
         hidden_dropout_rate=DEFAULT_DROPOUT_HPO_RANGE,
-        num_filters=dict(type=int, low=7, high=9, scale='power_two'),
+        num_filters=dict(type=int, low=7, high=9, scale="power_two"),
     )
     #: The regularizer used by [nguyen2018]_ for ConvKB.
     regularizer_default: ClassVar[Type[Regularizer]] = LpRegularizer
@@ -82,7 +82,7 @@ class ConvKB(EntityRelationEmbeddingModel):
         self,
         *,
         embedding_dim: int = 200,
-        hidden_dropout_rate: float = 0.,
+        hidden_dropout_rate: float = 0.0,
         num_filters: int = 400,
         entity_initializer: Hint[Initializer] = uniform_,
         relation_initializer: Hint[Initializer] = uniform_,
@@ -122,11 +122,11 @@ class ConvKB(EntityRelationEmbeddingModel):
 
     def _reset_parameters_(self):  # noqa: D102
         # embeddings
-        logger.warning('To be consistent with the paper, initialize entity and relation embeddings from TransE.')
+        logger.warning("To be consistent with the paper, initialize entity and relation embeddings from TransE.")
         super()._reset_parameters_()
 
         # Use Xavier initialization for weight; bias to zero
-        nn.init.xavier_uniform_(self.linear.weight, gain=nn.init.calculate_gain('relu'))
+        nn.init.xavier_uniform_(self.linear.weight, gain=nn.init.calculate_gain("relu"))
         nn.init.zeros_(self.linear.bias)
 
         # Initialize all filters to [0.1, 0.1, -0.1],

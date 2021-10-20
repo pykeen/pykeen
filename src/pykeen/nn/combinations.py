@@ -12,16 +12,16 @@ from torch import nn
 from ..utils import activation_resolver, combine_complex, split_complex
 
 __all__ = [
-    'Combination',
-    'RealCombination',
-    'ParameterizedRealCombination',
-    'ComplexCombination',
-    'ParameterizedComplexCombination',
+    "Combination",
+    "RealCombination",
+    "ParameterizedRealCombination",
+    "ComplexCombination",
+    "ParameterizedComplexCombination",
     # Concrete classes
-    'LinearDropout',
-    'DistMultCombination',
-    'ComplExLiteralCombination',
-    'GatedCombination',
+    "LinearDropout",
+    "DistMultCombination",
+    "ComplExLiteralCombination",
+    "GatedCombination",
 ]
 
 
@@ -152,11 +152,13 @@ class DistMultCombination(ParameterizedRealCombination):
         This class does not use an activation in the :class:`LinearDropout` as
         described by [kristiadi2018]_.
         """
-        super().__init__(LinearDropout(
-            entity_embedding_dim=entity_embedding_dim,
-            literal_embedding_dim=literal_embedding_dim,
-            input_dropout=input_dropout,
-        ))
+        super().__init__(
+            LinearDropout(
+                entity_embedding_dim=entity_embedding_dim,
+                literal_embedding_dim=literal_embedding_dim,
+                input_dropout=input_dropout,
+            )
+        )
 
 
 class ComplExLiteralCombination(ParameterizedComplexCombination):

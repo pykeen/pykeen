@@ -18,7 +18,7 @@ from ...typing import Constrainer, Hint, Initializer
 from ...utils import get_expected_norm
 
 __all__ = [
-    'QuatE',
+    "QuatE",
 ]
 
 
@@ -76,7 +76,7 @@ class QuatE(ERModel):
     #: The default loss function class
     loss_default: ClassVar[Type[Loss]] = BCEWithLogitsLoss
     #: The default parameters for the default loss function class
-    loss_default_kwargs: ClassVar[Mapping[str, Any]] = dict(reduction='mean')
+    loss_default_kwargs: ClassVar[Mapping[str, Any]] = dict(reduction="mean")
     #: The LP settings used by [zhang2019]_ for QuatE.
     regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = dict(
         weight=0.3 / get_expected_norm(p=2, d=100),

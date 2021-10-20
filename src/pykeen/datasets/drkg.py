@@ -13,10 +13,10 @@ from .base import TarFileSingleDataset
 from ..typing import TorchRandomHint
 
 __all__ = [
-    'DRKG',
+    "DRKG",
 ]
 
-URL = 'https://dgl-data.s3-us-west-2.amazonaws.com/dataset/DRKG/drkg.tar.gz'
+URL = "https://dgl-data.s3-us-west-2.amazonaws.com/dataset/DRKG/drkg.tar.gz"
 
 
 @parse_docdata
@@ -49,7 +49,7 @@ class DRKG(TarFileSingleDataset):
         """
         super().__init__(
             url=URL,
-            relative_path='drkg.tsv',
+            relative_path="drkg.tsv",
             create_inverse_triples=create_inverse_triples,
             random_state=random_state,
             **kwargs,
@@ -63,5 +63,5 @@ def _main():
     ds.summarize()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     _main()

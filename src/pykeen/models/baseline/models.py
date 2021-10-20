@@ -14,9 +14,9 @@ from ..base import Model
 from ...triples import CoreTriplesFactory
 
 __all__ = [
-    'EvaluationOnlyModel',
-    'MarginalDistributionBaseline',
-    'SoftInverseTripleBaseline',
+    "EvaluationOnlyModel",
+    "MarginalDistributionBaseline",
+    "SoftInverseTripleBaseline",
 ]
 
 
@@ -35,7 +35,7 @@ class EvaluationOnlyModel(Model, ABC):
             # just to avoid warnings
             random_seed=0,
             # These operations do not need to be performed on a GPU
-            preferred_device='cpu',
+            preferred_device="cpu",
         )
 
     def _reset_parameters_(self):

@@ -15,7 +15,7 @@ from ...nn.init import xavier_uniform_, xavier_uniform_norm_
 from ...typing import Constrainer, Hint, Initializer
 
 __all__ = [
-    'TransE',
+    "TransE",
 ]
 
 

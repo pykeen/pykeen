@@ -173,15 +173,15 @@ class EmbeddingSpecificationTests(unittest.TestCase):
         with self.assertRaises(KeyError):
             EmbeddingSpecification(
                 shape=(1, 1),
-                initializer='garbage',
+                initializer="garbage",
             ).make(num_embeddings=1)
         with self.assertRaises(KeyError):
             EmbeddingSpecification(
                 shape=(1, 1),
-                constrainer='garbage',
+                constrainer="garbage",
             ).make(num_embeddings=1)
         with self.assertRaises(KeyError):
             EmbeddingSpecification(
                 shape=(1, 1),
-                normalizer='garbage',
+                normalizer="garbage",
             ).make(num_embeddings=1)

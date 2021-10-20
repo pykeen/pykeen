@@ -18,12 +18,12 @@ class TestAblation(unittest.TestCase):
         """
         with tempfile.TemporaryDirectory() as directory:
             ablation_pipeline(
-                datasets=['nations'],
-                models=['quate'],
+                datasets=["nations"],
+                models=["quate"],
                 directory=directory,
-                training_loops=['lcwa', 'slcwa'],
-                losses=['marginranking'],
-                optimizers=['adam'],
+                training_loops=["lcwa", "slcwa"],
+                losses=["marginranking"],
+                optimizers=["adam"],
                 epochs=1,
                 n_trials=1,
             )

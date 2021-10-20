@@ -20,12 +20,12 @@ from docdata import parse_docdata
 from .base import TarFileRemoteDataset
 
 __all__ = [
-    'Wikidata5M',
+    "Wikidata5M",
 ]
 
 
-TRANSDUCTIVE_URL = 'https://zenodo.org/record/5546383/files/wikidata5m_transductive.tar.gz'
-INDUCTIVE_URL = 'https://zenodo.org/record/5546387/files/wikidata5m_inductive.tar.gz'
+TRANSDUCTIVE_URL = "https://zenodo.org/record/5546383/files/wikidata5m_transductive.tar.gz"
+INDUCTIVE_URL = "https://zenodo.org/record/5546387/files/wikidata5m_inductive.tar.gz"
 
 
 @parse_docdata
@@ -56,9 +56,9 @@ class Wikidata5M(TarFileRemoteDataset):
         """
         super().__init__(
             url=TRANSDUCTIVE_URL,
-            relative_training_path=pathlib.PurePath('wikidata5m_transductive_train.txt'),
-            relative_testing_path=pathlib.PurePath('wikidata5m_transductive_test.txt'),
-            relative_validation_path=pathlib.PurePath('wikidata5m_transductive_valid.txt'),
+            relative_training_path=pathlib.PurePath("wikidata5m_transductive_train.txt"),
+            relative_testing_path=pathlib.PurePath("wikidata5m_transductive_test.txt"),
+            relative_validation_path=pathlib.PurePath("wikidata5m_transductive_valid.txt"),
             create_inverse_triples=create_inverse_triples,
             **kwargs,
         )

@@ -13,31 +13,31 @@ from pkg_resources import iter_entry_points
 from ..typing import LabeledTriples
 
 __all__ = [
-    'load_triples',
-    'get_entities',
-    'get_relations',
-    'tensor_to_df',
+    "load_triples",
+    "get_entities",
+    "get_relations",
+    "tensor_to_df",
 ]
 
-TRIPLES_DF_COLUMNS = ('head_id', 'head_label', 'relation_id', 'relation_label', 'tail_id', 'tail_label')
+TRIPLES_DF_COLUMNS = ("head_id", "head_label", "relation_id", "relation_label", "tail_id", "tail_label")
 
 
 def _load_importers(group_subname: str) -> Mapping[str, Callable[[str], LabeledTriples]]:
     return {
         entry_point.name: entry_point.load()
-        for entry_point in iter_entry_points(group=f'pykeen.triples.{group_subname}')
+        for entry_point in iter_entry_points(group=f"pykeen.triples.{group_subname}")
     }
 
 
 #: Functions for specifying exotic resources with a given prefix
-PREFIX_IMPORTERS: Mapping[str, Callable[[str], LabeledTriples]] = _load_importers('prefix_importer')
+PREFIX_IMPORTERS: Mapping[str, Callable[[str], LabeledTriples]] = _load_importers("prefix_importer")
 #: Functions for specifying exotic resources based on their file extension
-EXTENSION_IMPORTERS: Mapping[str, Callable[[str], LabeledTriples]] = _load_importers('extension_importer')
+EXTENSION_IMPORTERS: Mapping[str, Callable[[str], LabeledTriples]] = _load_importers("extension_importer")
 
 
 def load_triples(
     path: Union[str, pathlib.Path, TextIO],
-    delimiter: str = '\t',
+    delimiter: str = "\t",
     encoding: Optional[str] = None,
     column_remapping: Optional[Sequence[int]] = None,
 ) -> LabeledTriples:
@@ -62,26 +62,26 @@ def load_triples(
     if isinstance(path, (str, pathlib.Path)):
         path = str(path)
         for extension, handler in EXTENSION_IMPORTERS.items():
-            if path.endswith(f'.{extension}'):
+            if path.endswith(f".{extension}"):
                 return handler(path)
 
         for prefix, handler in PREFIX_IMPORTERS.items():
-            if path.startswith(f'{prefix}:'):
-                return handler(path[len(f'{prefix}:'):])
+            if path.startswith(f"{prefix}:"):
+                return handler(path[len(f"{prefix}:") :])
 
     if encoding is None:
-        encoding = 'utf-8'
+        encoding = "utf-8"
 
     rv = np.loadtxt(
         fname=path,
         dtype=str,
-        comments='@Comment@ Head Relation Tail',
+        comments="@Comment@ Head Relation Tail",
         delimiter=delimiter,
         encoding=encoding,
     )
     if column_remapping is not None:
         if len(column_remapping) != 3:
-            raise ValueError('remapping must have length of three')
+            raise ValueError("remapping must have length of three")
         rv = rv[:, column_remapping]
     return rv
 
@@ -119,13 +119,13 @@ def tensor_to_df(
     forbidden = additional_columns.intersection(TRIPLES_DF_COLUMNS)
     if len(forbidden) > 0:
         raise ValueError(
-            f'The key-words for additional arguments must not be in {TRIPLES_DF_COLUMNS}, but {forbidden} were '
-            f'used.',
+            f"The key-words for additional arguments must not be in {TRIPLES_DF_COLUMNS}, but {forbidden} were "
+            f"used.",
         )
 
     # convert to numpy
     tensor = tensor.cpu().numpy()
-    data = dict(zip(['head_id', 'relation_id', 'tail_id'], tensor.T))
+    data = dict(zip(["head_id", "relation_id", "tail_id"], tensor.T))
 
     # Additional columns
     for key, values in kwargs.items():
