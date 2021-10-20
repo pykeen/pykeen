@@ -99,7 +99,7 @@ class EarlyStoppingLogic:
 
     @property
     def stopped(self) -> bool:
-        """Stop if there is no more patience."""
+        """Stop if the result did not improve more than delta for patience evaluations."""
         return self.remaining_patience <= 0
 
     def report_result(self, metric: float, epoch: int) -> bool:
@@ -112,7 +112,7 @@ class EarlyStoppingLogic:
             The epoch.
 
         :return:
-            Whether to stop the training.
+            If the result did not improve more than delta for patience evaluations
         """
         # check for improvement
         if self.is_improvement(metric):
@@ -122,15 +122,7 @@ class EarlyStoppingLogic:
         else:
             self.remaining_patience -= 1
 
-        # Stop if the result did not improve more than delta for patience evaluations
-        if self.stopped:
-            logger.info(
-                f"Stopping early at epoch {epoch}. The best result {self.best_metric} occurred at "
-                f"epoch {self.best_epoch}.",
-            )
-            return True
-
-        return False
+        return self.stopped
 
 
 @fix_dataclass_init_docs
@@ -244,6 +236,10 @@ class EarlyStopper(Stopper):
 
         self.stopped = self._stopper.report_result(metric=result, epoch=epoch)
         if self.stopped:
+            logger.info(
+                f"Stopping early at epoch {epoch}. The best result {self.best_metric} occurred at "
+                f"epoch {self.best_epoch}.",
+            )
             for stopped_callback in self.stopped_callbacks:
                 stopped_callback(self, result, epoch)
             return True
