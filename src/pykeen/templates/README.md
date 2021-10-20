@@ -23,6 +23,10 @@
   <a href="https://optuna.org">
     <img src="https://img.shields.io/badge/Optuna-integrated-blue" alt="Optuna integrated" height="20">
   </a>
+
+  <a href="https://github.com/psf/black">
+    <img src="https://img.shields.io/badge/code%20style-black-000000.svg" alt="Code style: black">
+  </a>
 </p>
 
 <p align="center">

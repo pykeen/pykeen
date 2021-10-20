@@ -145,7 +145,7 @@ class Dataset:
 
     def summarize(self, title: Optional[str] = None, show_examples: Optional[int] = 5, file=None) -> None:
         """Print a summary of the dataset."""
-        print(self.summary_str(title=title, show_examples=show_examples), file=file)
+        print(self.summary_str(title=title, show_examples=show_examples), file=file)  # noqa:T001
 
     def __str__(self) -> str:  # noqa: D105
         return f"{self.__class__.__name__}(num_entities={self.num_entities}, num_relations={self.num_relations})"

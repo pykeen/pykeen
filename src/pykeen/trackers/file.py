@@ -146,7 +146,7 @@ class JSONResultTracker(FileResultTracker):
         params: Mapping[str, Any],
         prefix: Optional[str] = None,
     ) -> None:  # noqa: D102
-        print(json.dumps({"params": params, "prefix": prefix}), file=self.file)
+        print(json.dumps({"params": params, "prefix": prefix}), file=self.file)  # noqa:T001
 
     def log_metrics(
         self,
@@ -154,4 +154,4 @@ class JSONResultTracker(FileResultTracker):
         step: Optional[int] = None,
         prefix: Optional[str] = None,
     ) -> None:  # noqa: D102
-        print(json.dumps({"metrics": metrics, "prefix": prefix, "step": step}), file=self.file)
+        print(json.dumps({"metrics": metrics, "prefix": prefix, "step": step}), file=self.file)  # noqa:T001
