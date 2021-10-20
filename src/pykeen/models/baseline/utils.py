@@ -102,7 +102,10 @@ def get_relation_similarity(
 
 
 def _help_get_relation_similarity(
-    r, r2, cardinality, threshold: Optional[float] = None,
+    r,
+    r2,
+    cardinality,
+    threshold: Optional[float] = None,
 ) -> scipy.sparse.csr_matrix:
     intersection = numpy.asarray((r @ r2.T).todense())
     union = cardinality[:, None] + cardinality[None, :] - intersection
