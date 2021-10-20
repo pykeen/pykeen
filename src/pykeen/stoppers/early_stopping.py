@@ -88,6 +88,15 @@ class EarlyStoppingLogic:
         self.best_epoch = -1
         self.best_metric = float("-inf") if larger_is_better else float("+inf")
 
+    def is_improvement(self, metric: float) -> bool:
+        """Return if the given metric would cause an improvement."""
+        return is_improvement(
+            best_value=self.best_metric,
+            current_value=metric,
+            larger_is_better=self.larger_is_better,
+            relative_delta=self.relative_delta,
+        )
+
     def report_result(self, metric: float, epoch: int) -> bool:
         """
         Report a result at the given epoch.
@@ -101,12 +110,7 @@ class EarlyStoppingLogic:
             Whether to stop the training.
         """
         # check for improvement
-        if self.best_metric is None or is_improvement(
-            best_value=self.best_metric,
-            current_value=metric,
-            larger_is_better=self.larger_is_better,
-            relative_delta=self.relative_delta,
-        ):
+        if self.best_metric is None or self.is_improvement(metric):
             self.best_epoch = epoch
             self.best_metric = metric
             self.remaining_patience = self.patience
@@ -166,6 +170,9 @@ class EarlyStopper(Stopper):
     stopped_callbacks: List[StopperCallback] = dataclasses.field(default_factory=list, repr=False)
     #: Did the stopper ever decide to stop?
     stopped: bool = False
+
+    _stopper: EarlyStoppingLogic = dataclasses.field(init=False, repr=False)
+
 
     def __post_init__(self):
         """Run after initialization and check the metric is valid."""
