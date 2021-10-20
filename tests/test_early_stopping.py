@@ -8,6 +8,7 @@ from typing import List
 import numpy
 import pytest
 import torch
+import unittest_templates
 from torch.optim import Adam
 
 from pykeen.datasets import Nations
@@ -16,7 +17,6 @@ from pykeen.models import Model, TransE
 from pykeen.stoppers.early_stopping import EarlyStopper, EarlyStoppingLogic, is_improvement
 from pykeen.trackers import MLFlowResultTracker
 from pykeen.training import SLCWATrainingLoop
-from tests import cases
 from tests.mocks import MockEvaluator, MockModel
 
 try:
@@ -146,7 +146,7 @@ class TestEarlyStopping(unittest.TestCase):
         assert wrapper.was_called(real_log_metrics)
 
 
-class EarlyStoppingTests(cases.GenericTestCase[EarlyStoppingLogic]):
+class EarlyStoppingTests(unittest_templates.GenericTestCase[EarlyStoppingLogic]):
     """Tests for early stopping logic."""
 
     cls = EarlyStoppingLogic

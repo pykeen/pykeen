@@ -159,10 +159,6 @@ class EarlyStopper(Stopper):
     metric: str = "hits_at_k"
     #: The minimum relative improvement necessary to consider it an improved result
     relative_delta: float = 0.01
-    #: The best result so far
-    best_metric: Optional[float] = None
-    #: The epoch at which the best result occurred
-    best_epoch: Optional[int] = None
     #: The metric results from all evaluations
     results: List[float] = dataclasses.field(default_factory=list, repr=False)
     #: Whether a larger value is better, or a smaller
@@ -192,9 +188,19 @@ class EarlyStopper(Stopper):
         )
 
     @property
-    def remaining_patience(self):
+    def remaining_patience(self) -> int:
         """Return the remaining patience."""
         return self._stopper.remaining_patience
+
+    @property
+    def best_metric(self) -> float:
+        """Return the best result so far."""
+        return self._stopper.best_metric
+
+    @property
+    def best_epoch(self) -> int:
+        """Return the epoch at which the best result occurred."""
+        return self._stopper.best_epoch
 
     def should_evaluate(self, epoch: int) -> bool:
         """Decide if evaluation should be done based on the current epoch and the internal frequency."""
@@ -280,5 +286,11 @@ class EarlyStopper(Stopper):
         self.larger_is_better = larger_is_better
         self.results = results
         self.stopped = stopped
-        self.best_epoch = best_epoch
-        self.best_metric = best_metric
+        # TODO need a test that this all re-instantiates properly
+        self._stopper = EarlyStoppingLogic(
+            patience=patience,
+            relative_delta=relative_delta,
+            larger_is_better=larger_is_better,
+        )
+        self._stopper.best_epoch = best_epoch
+        self._stopper.best_metric = best_metric
