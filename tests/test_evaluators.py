@@ -13,8 +13,13 @@ from pykeen.datasets import Nations
 from pykeen.evaluation import Evaluator, MetricResults, RankBasedEvaluator, RankBasedMetricResults
 from pykeen.evaluation.evaluator import create_dense_positive_mask_, create_sparse_positive_filter_, filter_scores_
 from pykeen.evaluation.rank_based_evaluator import (
-    RANK_EXPECTED_REALISTIC, RANK_OPTIMISTIC, RANK_PESSIMISTIC,
-    RANK_REALISTIC, RANK_TYPES, SIDES, compute_rank_from_scores,
+    RANK_EXPECTED_REALISTIC,
+    RANK_OPTIMISTIC,
+    RANK_PESSIMISTIC,
+    RANK_REALISTIC,
+    RANK_TYPES,
+    SIDES,
+    compute_rank_from_scores,
 )
 from pykeen.evaluation.sklearn import SklearnEvaluator, SklearnMetricResults
 from pykeen.models import Model, TransE
@@ -63,7 +68,7 @@ class _AbstractEvaluatorTests:
         inverse: bool = False,
     ) -> Tuple[torch.LongTensor, torch.FloatTensor, Optional[torch.BoolTensor]]:
         # Get batch
-        hrt_batch = self.factory.mapped_triples[:self.batch_size].to(self.model.device)
+        hrt_batch = self.factory.mapped_triples[: self.batch_size].to(self.model.device)
 
         # Compute scores
         if inverse:
@@ -132,7 +137,7 @@ class _AbstractEvaluatorTests:
 
         self._validate_result(
             result=result,
-            data={'batch': hrt_batch, 'scores': scores, 'mask': mask},
+            data={"batch": hrt_batch, "scores": scores, "mask": mask},
         )
 
     def _validate_result(
@@ -140,7 +145,7 @@ class _AbstractEvaluatorTests:
         result: MetricResults,
         data: Dict[str, torch.Tensor],
     ):
-        logger.warning(f'{self.__class__.__name__} did not overwrite _validate_result.')
+        logger.warning(f"{self.__class__.__name__} did not overwrite _validate_result.")
 
 
 class RankBasedEvaluatorTests(_AbstractEvaluatorTests, unittest.TestCase):
@@ -216,12 +221,12 @@ class SklearnEvaluatorTest(_AbstractEvaluatorTests, unittest.TestCase):
         assert isinstance(result, SklearnMetricResults)
 
         # check value
-        scores = data['scores'].detach().cpu().numpy()
-        mask = data['mask'].detach().cpu().float().numpy()
+        scores = data["scores"].detach().cpu().numpy()
+        mask = data["mask"].detach().cpu().float().numpy()
 
         # filtering
         uniq = dict()
-        batch = data['batch'].detach().cpu().numpy()
+        batch = data["batch"].detach().cpu().numpy()
         for i, (h, r) in enumerate(batch[:, :2]):
             uniq[int(h), int(r)] = i
         indices = sorted(uniq.values())
@@ -229,7 +234,7 @@ class SklearnEvaluatorTest(_AbstractEvaluatorTests, unittest.TestCase):
         scores = scores[indices]
 
         for field in dataclasses.fields(SklearnMetricResults):
-            f = field.metadata['f']
+            f = field.metadata["f"]
             exp_score = f(mask.flat, scores.flat)
             self.assertAlmostEqual(result.get_metric(field.name), exp_score)
 
@@ -244,15 +249,17 @@ class EvaluatorUtilsTests(unittest.TestCase):
     def test_compute_rank_from_scores(self):
         """Test the _compute_rank_from_scores() function."""
         batch_size = 3
-        all_scores = torch.tensor([
-            [2., 2., 1., 3., 5.],
-            [1., 1., 3., 4., 0.],
-            [1., 1., 3., float('nan'), 0],
-        ])
+        all_scores = torch.tensor(
+            [
+                [2.0, 2.0, 1.0, 3.0, 5.0],
+                [1.0, 1.0, 3.0, 4.0, 0.0],
+                [1.0, 1.0, 3.0, float("nan"), 0],
+            ]
+        )
         # true_score: (2, 3, 3)
-        true_score = torch.as_tensor([2., 3., 3.]).view(batch_size, 1)
-        exp_best_rank = torch.as_tensor([3., 2., 1.])
-        exp_worst_rank = torch.as_tensor([4., 2., 1.])
+        true_score = torch.as_tensor([2.0, 3.0, 3.0]).view(batch_size, 1)
+        exp_best_rank = torch.as_tensor([3.0, 2.0, 1.0])
+        exp_worst_rank = torch.as_tensor([4.0, 2.0, 1.0])
         exp_avg_rank = 0.5 * (exp_best_rank + exp_worst_rank)
         exp_exp_rank = torch.as_tensor([(5 + 1) / 2, (5 + 1) / 2, (4 + 1) / 2])
         ranks = compute_rank_from_scores(true_score=true_score, all_scores=all_scores)
@@ -334,37 +341,43 @@ class EvaluatorUtilsTests(unittest.TestCase):
                 [0, 2, 2],
                 [3, 1, 2],
                 [1, 2, 0],
-            ], dtype=torch.long,
+            ],
+            dtype=torch.long,
         )
         batch = torch.tensor(
             [
                 [0, 1, 2],
                 [1, 2, 3],
-            ], dtype=torch.long,
+            ],
+            dtype=torch.long,
         )
         head_filter_mask = torch.tensor(
             [
                 [True, False, False, False],
                 [False, True, False, False],
-            ], dtype=torch.bool,
+            ],
+            dtype=torch.bool,
         )
         tail_filter_mask = torch.tensor(
             [
                 [False, False, True, False],
                 [False, False, False, True],
-            ], dtype=torch.bool,
+            ],
+            dtype=torch.bool,
         )
         exp_head_filter_mask = torch.tensor(
             [
                 [True, False, False, True],
                 [False, True, False, False],
-            ], dtype=torch.bool,
+            ],
+            dtype=torch.bool,
         )
         exp_tail_filter_mask = torch.tensor(
             [
                 [False, False, True, False],
                 [True, False, False, True],
-            ], dtype=torch.bool,
+            ],
+            dtype=torch.bool,
         )
         assert batch.shape == (batch_size, 3)
         assert head_filter_mask.shape == (batch_size, num_entities)
@@ -459,7 +472,7 @@ class DummyEvaluator(Evaluator):
         )
 
     def __repr__(self):  # noqa: D105
-        return f'{self.__class__.__name__}(losses={self.losses})'
+        return f"{self.__class__.__name__}(losses={self.losses})"
 
 
 class TestEvaluationStructure(unittest.TestCase):
@@ -482,7 +495,7 @@ class TestEvaluationStructure(unittest.TestCase):
             use_tqdm=False,
         )
         self.assertIsInstance(eval_results, RankBasedMetricResults)
-        assert eval_results.arithmetic_mean_rank == self.counter, 'Should end at the same value as it started'
+        assert eval_results.arithmetic_mean_rank == self.counter, "Should end at the same value as it started"
 
 
 class TestEvaluationFiltering(unittest.TestCase):
@@ -528,7 +541,7 @@ class TestEvaluationFiltering(unittest.TestCase):
             batch_size=1,
             use_tqdm=False,
         )
-        assert eval_results.arithmetic_mean_rank['both']['realistic'] == 2, 'The rank should equal 2'
+        assert eval_results.arithmetic_mean_rank["both"]["realistic"] == 2, "The rank should equal 2"
 
     def test_evaluation_filtering_with_validation_triples(self):
         """Test if the evaluator's triple filtering works as expected when including additional filter triples."""
@@ -542,4 +555,4 @@ class TestEvaluationFiltering(unittest.TestCase):
             batch_size=1,
             use_tqdm=False,
         )
-        assert eval_results.arithmetic_mean_rank['both']['realistic'] == 1, 'The rank should equal 1'
+        assert eval_results.arithmetic_mean_rank["both"]["realistic"] == 1, "The rank should equal 1"

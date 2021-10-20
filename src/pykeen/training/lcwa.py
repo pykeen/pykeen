@@ -13,15 +13,12 @@ from ..triples import CoreTriplesFactory, Instances
 from ..triples.instances import LCWABatchType, LCWASampleType
 
 __all__ = [
-    'LCWATrainingLoop',
+    "LCWATrainingLoop",
 ]
 
 logger = logging.getLogger(__name__)
 
-name_to_index = {
-    name: index
-    for index, name in enumerate("hrt")
-}
+name_to_index = {name: index for index, name in enumerate("hrt")}
 
 
 class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
@@ -102,12 +99,15 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
         else:
             predictions = self.score_method(batch_pairs, slice_size=slice_size)  # type: ignore
 
-        return self.loss.process_lcwa_scores(
-            predictions=predictions,
-            labels=batch_labels_full,
-            label_smoothing=label_smoothing,
-            num_entities=self.num_targets,
-        ) + self.model.collect_regularization_term()
+        return (
+            self.loss.process_lcwa_scores(
+                predictions=predictions,
+                labels=batch_labels_full,
+                label_smoothing=label_smoothing,
+                num_entities=self.num_targets,
+            )
+            + self.model.collect_regularization_term()
+        )
 
     def _slice_size_search(
         self,
@@ -127,7 +127,7 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
         slice_size = ceil(self.model.num_entities / 2)
         while True:
             try:
-                logger.debug(f'Trying slice size {slice_size} now.')
+                logger.debug(f"Trying slice size {slice_size} now.")
                 self._train(
                     triples_factory=triples_factory,
                     training_instances=training_instances,
@@ -139,27 +139,26 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
                 )
             except RuntimeError as e:
                 self._free_graph_and_cache()
-                if 'CUDA out of memory.' not in e.args[0]:
+                if "CUDA out of memory." not in e.args[0]:
                     raise e
                 if evaluated_once:
                     slice_size //= 2
-                    logger.info(f'Concluded search with slice_size {slice_size}.')
+                    logger.info(f"Concluded search with slice_size {slice_size}.")
                     break
                 if slice_size == 1:
                     raise MemoryError(
-                        f"Even slice_size={slice_size} doesn't fit into your memory with these"
-                        f" parameters.",
+                        f"Even slice_size={slice_size} doesn't fit into your memory with these" f" parameters.",
                     ) from e
 
                 logger.debug(
-                    f'The slice_size {slice_size} was too big, trying less now.',
+                    f"The slice_size {slice_size} was too big, trying less now.",
                 )
                 slice_size //= 2
                 reached_max = True
             else:
                 self._free_graph_and_cache()
                 if reached_max:
-                    logger.info(f'Concluded search with slice_size {slice_size}.')
+                    logger.info(f"Concluded search with slice_size {slice_size}.")
                     break
                 slice_size *= 2
                 evaluated_once = True
@@ -179,9 +178,6 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
                 " which is not implemented for this model yet."
             )
         else:
-            report = (
-                "This model doesn't support sub-batching and slicing is not"
-                " implemented for this model yet."
-            )
+            report = "This model doesn't support sub-batching and slicing is not" " implemented for this model yet."
         logger.warning(report)
         raise MemoryError("The current model can't be trained on this hardware with these parameters.")

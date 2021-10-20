@@ -12,19 +12,19 @@ from .rank_based_evaluator import RankBasedEvaluator, RankBasedMetricResults
 from .sklearn import SklearnEvaluator, SklearnMetricResults
 
 __all__ = [
-    'evaluate',
-    'Evaluator',
-    'MetricResults',
-    'RankBasedEvaluator',
-    'RankBasedMetricResults',
-    'SklearnEvaluator',
-    'SklearnMetricResults',
-    'evaluator_resolver',
-    'metric_resolver',
-    'get_metric_list',
+    "evaluate",
+    "Evaluator",
+    "MetricResults",
+    "RankBasedEvaluator",
+    "RankBasedMetricResults",
+    "SklearnEvaluator",
+    "SklearnMetricResults",
+    "evaluator_resolver",
+    "metric_resolver",
+    "get_metric_list",
 ]
 
-_EVALUATOR_SUFFIX = 'Evaluator'
+_EVALUATOR_SUFFIX = "Evaluator"
 _EVALUATORS: Set[Type[Evaluator]] = {
     RankBasedEvaluator,
     SklearnEvaluator,
@@ -36,7 +36,7 @@ evaluator_resolver = Resolver(
     default=RankBasedEvaluator,
 )
 
-_METRICS_SUFFIX = 'MetricResults'
+_METRICS_SUFFIX = "MetricResults"
 _METRICS: Set[Type[MetricResults]] = {
     RankBasedMetricResults,
     SklearnMetricResults,

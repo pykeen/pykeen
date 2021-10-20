@@ -83,12 +83,12 @@ from .slcwa import SLCWATrainingLoop  # noqa: F401
 from .training_loop import NonFiniteLossError, TrainingLoop  # noqa: F401
 
 __all__ = [
-    'TrainingLoop',
-    'SLCWATrainingLoop',
-    'LCWATrainingLoop',
-    'NonFiniteLossError',
-    'training_loop_resolver',
-    'TrainingCallback',
+    "TrainingLoop",
+    "SLCWATrainingLoop",
+    "LCWATrainingLoop",
+    "NonFiniteLossError",
+    "training_loop_resolver",
+    "TrainingCallback",
 ]
 
 training_loop_resolver = Resolver.from_subclasses(

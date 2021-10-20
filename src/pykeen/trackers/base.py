@@ -11,8 +11,8 @@ from tqdm.auto import tqdm
 from ..utils import flatten_dictionary
 
 __all__ = [
-    'ResultTracker',
-    'ConsoleResultTracker',
+    "ResultTracker",
+    "ConsoleResultTracker",
 ]
 
 
@@ -59,7 +59,7 @@ class ConsoleResultTracker(ResultTracker):
         track_metrics: bool = True,
         metric_filter: Union[None, str, Pattern[str]] = None,
         start_end_run: bool = False,
-        writer: str = 'tqdm',
+        writer: str = "tqdm",
     ):
         """
         Initialize the tracker.
@@ -89,12 +89,12 @@ class ConsoleResultTracker(ResultTracker):
             metric_filter = re.compile(metric_filter)
         self.metric_filter = metric_filter
 
-        if writer == 'tqdm':
+        if writer == "tqdm":
             self.write = tqdm.write
-        elif writer == 'builtin':
+        elif writer == "builtin":
             self.write = print
-        elif writer == 'logging':
-            self.write = logging.getLogger('pykeen').info
+        elif writer == "logging":
+            self.write = logging.getLogger("pykeen").info
 
     def start_run(self, run_name: Optional[str] = None) -> None:  # noqa: D102
         if run_name is not None and self.start_end_run:

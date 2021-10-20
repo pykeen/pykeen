@@ -15,10 +15,10 @@ from .base import SingleTabbedDataset
 from ..typing import TorchRandomHint
 
 __all__ = [
-    'CSKG',
+    "CSKG",
 ]
 
-URL = 'https://zenodo.org/record/4331372/files/cskg.tsv.gz'
+URL = "https://zenodo.org/record/4331372/files/cskg.tsv.gz"
 
 
 @parse_docdata
@@ -52,7 +52,7 @@ class CSKG(SingleTabbedDataset):
             create_inverse_triples=create_inverse_triples,
             random_state=random_state,
             read_csv_kwargs=dict(
-                usecols=['node1', 'relation', 'node2'],
+                usecols=["node1", "relation", "node2"],
             ),
             **kwargs,
         )
@@ -63,6 +63,6 @@ def _main():
     ds.summarize()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     _main()

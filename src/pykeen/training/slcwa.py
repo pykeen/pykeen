@@ -19,7 +19,7 @@ from ..triples.instances import SLCWABatchType, SLCWASampleType
 from ..typing import MappedTriples
 
 __all__ = [
-    'SLCWATrainingLoop',
+    "SLCWATrainingLoop",
 ]
 
 logger = logging.getLogger(__name__)
@@ -87,7 +87,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
     ) -> torch.FloatTensor:  # noqa: D102
         # Slicing is not possible in sLCWA training loops
         if slice_size is not None:
-            raise AttributeError('Slicing is not possible for sLCWA training loops.')
+            raise AttributeError("Slicing is not possible for sLCWA training loops.")
 
         # Send positive batch to device
         positive_batch = batch[start:stop].to(device=self.device)
@@ -109,13 +109,16 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
         positive_scores = self.model.score_hrt(positive_batch)
         negative_scores = self.model.score_hrt(negative_batch).view(*negative_batch.shape[:-1])
 
-        return self.loss.process_slcwa_scores(
-            positive_scores=positive_scores,
-            negative_scores=negative_scores,
-            label_smoothing=label_smoothing,
-            batch_filter=positive_filter,
-            num_entities=self.model.num_entities,
-        ) + self.model.collect_regularization_term()
+        return (
+            self.loss.process_slcwa_scores(
+                positive_scores=positive_scores,
+                negative_scores=negative_scores,
+                label_smoothing=label_smoothing,
+                batch_filter=positive_filter,
+                num_entities=self.model.num_entities,
+            )
+            + self.model.collect_regularization_term()
+        )
 
     def _slice_size_search(
         self,

@@ -8,7 +8,7 @@ from .negative_sampler import NegativeSampler
 from ..triples import CoreTriplesFactory
 
 __all__ = [
-    'BernoulliNegativeSampler',
+    "BernoulliNegativeSampler",
 ]
 
 
@@ -60,11 +60,11 @@ class BernoulliNegativeSampler(NegativeSampler):
 
         for r in range(triples_factory.num_relations):
             # compute tph, i.e. the average number of tail entities per head
-            mask = (head_rel_uniq[:, 1] == r)
+            mask = head_rel_uniq[:, 1] == r
             tph = tail_count[mask].float().mean()
 
             # compute hpt, i.e. the average number of head entities per tail
-            mask = (rel_tail_uniq[:, 0] == r)
+            mask = rel_tail_uniq[:, 0] == r
             hpt = head_count[mask].float().mean()
 
             # Set parameter for Bernoulli distribution

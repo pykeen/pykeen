@@ -13,7 +13,7 @@ from ...nn.modules import MuREInteraction
 from ...typing import Hint, Initializer
 
 __all__ = [
-    'MuRE',
+    "MuRE",
 ]
 
 
@@ -74,7 +74,8 @@ class MuRE(ERModel):
                 EmbeddingSpecification(
                     embedding_dim=embedding_dim,
                     initializer=entity_initializer,
-                    initializer_kwargs=entity_initializer_kwargs or dict(
+                    initializer_kwargs=entity_initializer_kwargs
+                    or dict(
                         std=1.0e-03,
                     ),
                 ),
@@ -94,7 +95,8 @@ class MuRE(ERModel):
                 EmbeddingSpecification(
                     embedding_dim=embedding_dim,
                     initializer=relation_initializer,
-                    initializer_kwargs=relation_initializer_kwargs or dict(
+                    initializer_kwargs=relation_initializer_kwargs
+                    or dict(
                         std=1.0e-03,
                     ),
                 ),
@@ -102,7 +104,8 @@ class MuRE(ERModel):
                 EmbeddingSpecification(
                     shape=(embedding_dim,),
                     initializer=relation_matrix_initializer,
-                    initializer_kwargs=relation_matrix_initializer_kwargs or dict(
+                    initializer_kwargs=relation_matrix_initializer_kwargs
+                    or dict(
                         a=-1,
                         b=1,
                     ),

@@ -15,26 +15,34 @@ class TestRemix(unittest.TestCase):
 
     def test_splits_similarity(self):
         """Test the similarity calculation."""
-        a_train = torch.as_tensor([
-            [1, 1, 2],
-            [2, 1, 3],
-            [1, 2, 3],
-            [4, 1, 5],
-            [5, 1, 6],
-        ])
-        a_test = torch.as_tensor([
-            [4, 2, 6],
-        ])
-        b_train = torch.as_tensor([
-            [1, 1, 2],
-            [2, 1, 3],
-            [1, 2, 3],
-            [4, 1, 5],
-            [4, 2, 6],
-        ])
-        b_test = torch.as_tensor([
-            [5, 1, 6],
-        ])
+        a_train = torch.as_tensor(
+            [
+                [1, 1, 2],
+                [2, 1, 3],
+                [1, 2, 3],
+                [4, 1, 5],
+                [5, 1, 6],
+            ]
+        )
+        a_test = torch.as_tensor(
+            [
+                [4, 2, 6],
+            ]
+        )
+        b_train = torch.as_tensor(
+            [
+                [1, 1, 2],
+                [2, 1, 3],
+                [1, 2, 3],
+                [4, 1, 5],
+                [4, 2, 6],
+            ]
+        )
+        b_test = torch.as_tensor(
+            [
+                [5, 1, 6],
+            ]
+        )
 
         a_train_tf = CoreTriplesFactory.create(a_train)
         a_test_tf = CoreTriplesFactory.create(a_test)

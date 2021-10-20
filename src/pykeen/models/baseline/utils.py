@@ -10,8 +10,8 @@ import torch
 from sklearn.preprocessing import normalize as sklearn_normalize
 
 __all__ = [
-    'get_csr_matrix',
-    'marginal_score',
+    "get_csr_matrix",
+    "marginal_score",
 ]
 
 

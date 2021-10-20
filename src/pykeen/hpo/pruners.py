@@ -8,10 +8,10 @@ from class_resolver import Resolver
 from optuna.pruners import BasePruner, MedianPruner, NopPruner, PercentilePruner, SuccessiveHalvingPruner
 
 __all__ = [
-    'pruner_resolver',
+    "pruner_resolver",
 ]
 
-_PRUNER_SUFFIX = 'Pruner'
+_PRUNER_SUFFIX = "Pruner"
 _PRUNERS: Set[Type[BasePruner]] = {
     MedianPruner,
     NopPruner,

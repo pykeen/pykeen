@@ -13,10 +13,10 @@ from .base import SingleTabbedDataset
 from ..typing import TorchRandomHint
 
 __all__ = [
-    'Hetionet',
+    "Hetionet",
 ]
 
-URL = 'https://github.com/hetio/hetionet/raw/master/hetnet/tsv/hetionet-v1.0-edges.sif.gz'
+URL = "https://github.com/hetio/hetionet/raw/master/hetnet/tsv/hetionet-v1.0-edges.sif.gz"
 
 
 @parse_docdata
@@ -68,5 +68,5 @@ def _main():
     ds.summarize()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     _main()

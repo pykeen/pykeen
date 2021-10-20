@@ -16,7 +16,7 @@ from ...typing import Constrainer, Hint, Initializer
 from ...utils import clamp_norm
 
 __all__ = [
-    'TransD',
+    "TransD",
 ]
 
 
@@ -131,13 +131,13 @@ class TransD(EntityRelationEmbeddingModel):
                 embedding_dim=embedding_dim,
                 initializer=entity_initializer,
                 constrainer=entity_constrainer,
-                constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
+                constrainer_kwargs=dict(maxnorm=1.0, p=2, dim=-1),
             ),
             relation_representations=EmbeddingSpecification(
                 embedding_dim=relation_dim,
                 initializer=relation_initializer,
                 constrainer=relation_constrainer,
-                constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
+                constrainer_kwargs=dict(maxnorm=1.0, p=2, dim=-1),
             ),
             **kwargs,
         )

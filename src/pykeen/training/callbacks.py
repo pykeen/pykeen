@@ -26,10 +26,10 @@ from typing import Any, Collection, List, Union
 from ..trackers import ResultTracker
 
 __all__ = [
-    'TrainingCallbackHint',
-    'TrainingCallback',
-    'TrackerCallback',
-    'MultiTrainingCallback',
+    "TrainingCallbackHint",
+    "TrainingCallback",
+    "TrackerCallback",
+    "MultiTrainingCallback",
 ]
 
 
@@ -44,7 +44,7 @@ class TrainingCallback:
     def training_loop(self):  # noqa:D401
         """The training loop."""
         if self._training_loop is None:
-            raise ValueError('Callback was never initialized')
+            raise ValueError("Callback was never initialized")
         return self._training_loop
 
     @property
@@ -88,7 +88,7 @@ class TrackerCallback(TrainingCallback):
 
     def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:
         """Log the epoch and loss."""
-        self.result_tracker.log_metrics({'loss': epoch_loss}, step=epoch)
+        self.result_tracker.log_metrics({"loss": epoch_loss}, step=epoch)
 
 
 #: A hint for constructing a :class:`MultiTrainingCallback`
