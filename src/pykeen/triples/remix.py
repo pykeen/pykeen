@@ -13,6 +13,8 @@ relationship between datasets' splits' distances and their maximum performance.
 
 from typing import List, Sequence
 
+import click
+
 from .splitting import normalize_ratios, split
 from .triples_factory import CoreTriplesFactory, cat_triples
 
@@ -49,7 +51,9 @@ def _get_ratios(*triples_factories: CoreTriplesFactory) -> Sequence[float]:
     return ratios
 
 
-def _main(trials: int = 15):
+@click.command()
+@click.option("--trails", type=int, default=15, show_default=True)
+def _main(trials):
     import itertools as itt
 
     import numpy as np
@@ -58,7 +62,7 @@ def _main(trials: int = 15):
     from pykeen.datasets import get_dataset
 
     n_comb = trials * (trials - 1) // 2
-    print(f"Number of combinations: {trials} n Choose 2 = {n_comb}")
+    click.echo(f"Number of combinations: {trials} n Choose 2 = {n_comb}")
 
     for dataset_name in [
         "nations",
@@ -77,9 +81,9 @@ def _main(trials: int = 15):
                 desc=dataset_name,
             )
         ]
-        print(f"[{dataset_name}] Similarities Mean: {np.mean(similarities):.3f}")
-        print(f"[{dataset_name}] Similarities Std.: {np.std(similarities):.3f}")
-        print(f"[{dataset_name}] Relative Std.: {np.std(similarities) / np.mean(similarities):.3%}")
+        click.echo(f"[{dataset_name}] Similarities Mean: {np.mean(similarities):.3f}")
+        click.echo(f"[{dataset_name}] Similarities Std.: {np.std(similarities):.3f}")
+        click.echo(f"[{dataset_name}] Relative Std.: {np.std(similarities) / np.mean(similarities):.3%}")
 
 
 if __name__ == "__main__":

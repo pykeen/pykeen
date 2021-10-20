@@ -13,6 +13,7 @@ import logging
 from collections import defaultdict
 from typing import Collection, Dict, Iterable, List, Mapping, Optional, Set, Tuple, TypeVar, Union, cast
 
+import click
 import numpy
 import scipy.sparse
 import torch
@@ -405,6 +406,7 @@ def reindex(*triples_factories: CoreTriplesFactory) -> List[CoreTriplesFactory]:
     ]
 
 
+@click.command()
 def _main():
     """Test unleaking FB15K.
 
@@ -415,16 +417,16 @@ def _main():
     logging.basicConfig(format="pykeen: %(message)s", level=logging.INFO)
 
     fb15k = get_dataset(dataset="fb15k")
-    fb15k.summarize()
+    click.echo(fb15k.summary_str())
 
     n = 401  # magic 401 from the paper
     train, test, validate = unleak(fb15k.training, fb15k.testing, fb15k.validation, n=n)
-    print()
-    EagerDataset(train, test, validate).summarize(title="FB15k (cleaned)")
+    click.echo("")
+    click.echo(EagerDataset(train, test, validate).summary_str(title="FB15k (cleaned)"))
 
     fb15k237 = get_dataset(dataset="fb15k237")
-    print("\nSummary FB15K-237")
-    fb15k237.summarize()
+    click.echo("\nSummary FB15K-237")
+    click.echo(fb15k237.summary_str())
 
 
 if __name__ == "__main__":
