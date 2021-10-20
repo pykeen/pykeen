@@ -13,24 +13,20 @@ from .wandb import WANDBResultTracker
 
 __all__ = [
     # Base classes
-    'ResultTracker',
-    'FileResultTracker',
+    "ResultTracker",
+    "FileResultTracker",
     # Concrete classes
-    'MLFlowResultTracker',
-    'NeptuneResultTracker',
-    'WANDBResultTracker',
-    'JSONResultTracker',
-    'CSVResultTracker',
-    'TensorBoardResultTracker',
-    'ConsoleResultTracker',
+    "MLFlowResultTracker",
+    "NeptuneResultTracker",
+    "WANDBResultTracker",
+    "JSONResultTracker",
+    "CSVResultTracker",
+    "TensorBoardResultTracker",
+    "ConsoleResultTracker",
     # Utilities
-    'tracker_resolver',
+    "tracker_resolver",
 ]
 
-_RESULT_TRACKER_SUFFIX = 'ResultTracker'
-_TRACKERS = [
-    tracker
-    for tracker in get_subclasses(ResultTracker)
-    if tracker not in {FileResultTracker}
-]
+_RESULT_TRACKER_SUFFIX = "ResultTracker"
+_TRACKERS = [tracker for tracker in get_subclasses(ResultTracker) if tracker not in {FileResultTracker}]
 tracker_resolver = Resolver(_TRACKERS, base=ResultTracker, default=ResultTracker, suffix=_RESULT_TRACKER_SUFFIX)

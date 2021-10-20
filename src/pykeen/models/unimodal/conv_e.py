@@ -21,7 +21,7 @@ from ...typing import Hint, Initializer
 from ...utils import is_cudnn_error
 
 __all__ = [
-    'ConvE',
+    "ConvE",
 ]
 
 logger = logging.getLogger(__name__)
@@ -108,7 +108,7 @@ class ConvE(EntityRelationEmbeddingModel):
 
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        output_channels=dict(type=int, low=4, high=6, scale='power_two'),
+        output_channels=dict(type=int, low=4, high=6, scale="power_two"),
         input_dropout=DEFAULT_DROPOUT_HPO_RANGE,
         output_dropout=DEFAULT_DROPOUT_HPO_RANGE,
         feature_map_dropout=DEFAULT_DROPOUT_HPO_RANGE,
@@ -146,9 +146,9 @@ class ConvE(EntityRelationEmbeddingModel):
         # ConvE should be trained with inverse triples
         if not triples_factory.create_inverse_triples:
             logger.warning(
-                '\nThe ConvE model should be trained with inverse triples.\n'
-                'This can be done by defining the TriplesFactory class with the _create_inverse_triples_ parameter set '
-                'to true.',
+                "\nThe ConvE model should be trained with inverse triples.\n"
+                "This can be done by defining the TriplesFactory class with the _create_inverse_triples_ parameter set "
+                "to true.",
             )
 
         super().__init__(
@@ -173,7 +173,7 @@ class ConvE(EntityRelationEmbeddingModel):
         )
 
         # Automatic calculation of remaining dimensions
-        logger.info(f'Resolving {input_channels} * {embedding_width} * {embedding_height} = {embedding_dim}.')
+        logger.info(f"Resolving {input_channels} * {embedding_width} * {embedding_height} = {embedding_dim}.")
         if embedding_dim is None:
             embedding_dim = input_channels * embedding_width * embedding_height
 
@@ -185,15 +185,15 @@ class ConvE(EntityRelationEmbeddingModel):
             width=embedding_width,
             height=embedding_height,
         )
-        logger.info(f'Resolved to {input_channels} * {embedding_width} * {embedding_height} = {embedding_dim}.')
+        logger.info(f"Resolved to {input_channels} * {embedding_width} * {embedding_height} = {embedding_dim}.")
         self.embedding_height = embedding_height
         self.embedding_width = embedding_width
         self.input_channels = input_channels
 
         if self.input_channels * self.embedding_height * self.embedding_width != self.embedding_dim:
             raise ValueError(
-                f'Product of input channels ({self.input_channels}), height ({self.embedding_height}), and width '
-                f'({self.embedding_width}) does not equal target embedding dimension ({self.embedding_dim})',
+                f"Product of input channels ({self.input_channels}), height ({self.embedding_height}), and width "
+                f"({self.embedding_width}) does not equal target embedding dimension ({self.embedding_dim})",
             )
 
         self.inp_drop = nn.Dropout(input_dropout)
@@ -275,11 +275,11 @@ class ConvE(EntityRelationEmbeddingModel):
             if not is_cudnn_error(e):
                 raise e
             logger.warning(
-                '\nThis code crash might have been caused by a CUDA bug, see '
-                'https://github.com/allenai/allennlp/issues/2888, '
-                'which causes the code to crash during evaluation mode.\n'
-                'To avoid this error, the batch size has to be reduced.\n'
-                f'The original error message: \n{e.args[0]}',
+                "\nThis code crash might have been caused by a CUDA bug, see "
+                "https://github.com/allenai/allennlp/issues/2888, "
+                "which causes the code to crash during evaluation mode.\n"
+                "To avoid this error, the batch size has to be reduced.\n"
+                f"The original error message: \n{e.args[0]}",
             )
             sys.exit(1)
 
@@ -358,25 +358,29 @@ class ConvE(EntityRelationEmbeddingModel):
         # Embedding Regularization
         self.regularize_if_necessary(h, r, t)
 
-        '''
+        """
         Every head has to be convolved with every relation in the rt_batch. Hence we repeat the
         relation _num_entities_ times and the head _rt_batch_size_ times.
-        '''
+        """
         r = r.repeat(h.shape[0], 1, 1, 1)
         # Code to repeat each item successively instead of the entire tensor
-        h = h.unsqueeze(1).repeat(1, rt_batch_size, 1).view(
-            -1,
-            self.input_channels,
-            self.embedding_height,
-            self.embedding_width,
+        h = (
+            h.unsqueeze(1)
+            .repeat(1, rt_batch_size, 1)
+            .view(
+                -1,
+                self.input_channels,
+                self.embedding_height,
+                self.embedding_width,
+            )
         )
 
         x = self._convolve_entity_relation(h, r)
 
-        '''
+        """
         For efficient computation, each convolved [h, r] pair has only to be multiplied with the corresponding t
         embedding found in the rt_batch with [r, t] pairs.
-        '''
+        """
         x = (x.view(self.num_entities, rt_batch_size, self.embedding_dim) * t[None, :, :]).sum(2).transpose(1, 0)
 
         """

@@ -11,13 +11,13 @@ from docdata import parse_docdata
 from .base import UnpackedRemoteDataset
 
 __all__ = [
-    'DBpedia50',
+    "DBpedia50",
 ]
 
-BASE = 'https://raw.githubusercontent.com/ZhenfengLei/KGDatasets/master/DBpedia50'
-TEST_URL = f'{BASE}/test.txt'
-TRAIN_URL = f'{BASE}/train.txt'
-VALID_URL = f'{BASE}/valid.txt'
+BASE = "https://raw.githubusercontent.com/ZhenfengLei/KGDatasets/master/DBpedia50"
+TEST_URL = f"{BASE}/test.txt"
+TRAIN_URL = f"{BASE}/train.txt"
+VALID_URL = f"{BASE}/valid.txt"
 
 
 @parse_docdata
@@ -53,11 +53,11 @@ class DBpedia50(UnpackedRemoteDataset):
             load_triples_kwargs={
                 # as pointed out in https://github.com/pykeen/pykeen/issues/275#issuecomment-776412294,
                 # the columns are not ordered properly.
-                'column_remapping': [0, 2, 1],
+                "column_remapping": [0, 2, 1],
             },
             **kwargs,
         )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     DBpedia50.cli()

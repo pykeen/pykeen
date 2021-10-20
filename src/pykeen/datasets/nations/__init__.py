@@ -11,20 +11,20 @@ from ..literal_base import NumericPathDataset
 from ...triples import TriplesNumericLiteralsFactory
 
 __all__ = [
-    'NATIONS_TRAIN_PATH',
-    'NATIONS_TEST_PATH',
-    'NATIONS_VALIDATE_PATH',
-    'NATIONS_LITERALS_PATH',
-    'Nations',
-    'NationsLiteral',
+    "NATIONS_TRAIN_PATH",
+    "NATIONS_TEST_PATH",
+    "NATIONS_VALIDATE_PATH",
+    "NATIONS_LITERALS_PATH",
+    "Nations",
+    "NationsLiteral",
 ]
 
 HERE = pathlib.Path(__file__).resolve().parent
 
-NATIONS_TRAIN_PATH = HERE.joinpath('train.txt')
-NATIONS_TEST_PATH = HERE.joinpath('test.txt')
-NATIONS_VALIDATE_PATH = HERE.joinpath('valid.txt')
-NATIONS_LITERALS_PATH = HERE.joinpath('literals.txt')
+NATIONS_TRAIN_PATH = HERE.joinpath("train.txt")
+NATIONS_TEST_PATH = HERE.joinpath("test.txt")
+NATIONS_VALIDATE_PATH = HERE.joinpath("valid.txt")
+NATIONS_LITERALS_PATH = HERE.joinpath("literals.txt")
 
 
 @parse_docdata
@@ -82,5 +82,5 @@ class NationsLiteral(NumericPathDataset):
         )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     Nations().summarize()

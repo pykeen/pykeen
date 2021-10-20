@@ -13,18 +13,18 @@ from torch.utils import data
 from ..typing import MappedTriples
 
 __all__ = [
-    'Instances',
-    'SLCWAInstances',
-    'LCWAInstances',
-    'MultimodalInstances',
-    'MultimodalSLCWAInstances',
-    'MultimodalLCWAInstances',
+    "Instances",
+    "SLCWAInstances",
+    "LCWAInstances",
+    "MultimodalInstances",
+    "MultimodalSLCWAInstances",
+    "MultimodalLCWAInstances",
 ]
 
 BatchType = TypeVar("BatchType")
 LCWASampleType = Tuple[MappedTriples, torch.FloatTensor]
 LCWABatchType = Tuple[MappedTriples, torch.FloatTensor]
-SLCWASampleType = TypeVar('SLCWASampleType', bound=MappedTriples)
+SLCWASampleType = TypeVar("SLCWASampleType", bound=MappedTriples)
 SLCWABatchType = Tuple[MappedTriples, MappedTriples, Optional[torch.BoolTensor]]
 
 
@@ -43,7 +43,7 @@ class Instances(data.Dataset[BatchType], Generic[BatchType], ABC):
         num_entities: int,
         num_relations: int,
         **kwargs,
-    ) -> 'Instances':
+    ) -> "Instances":
         """Create instances from mapped triples.
 
         :param mapped_triples: shape: (num_triples, 3)

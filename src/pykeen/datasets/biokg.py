@@ -13,15 +13,15 @@ from .base import ZipSingleDataset
 from ..typing import TorchRandomHint
 
 __all__ = [
-    'BioKG',
+    "BioKG",
 ]
 
-URL = 'https://github.com/dsi-bdi/biokg/releases/download/v1.0.0/biokg.zip'
+URL = "https://github.com/dsi-bdi/biokg/releases/download/v1.0.0/biokg.zip"
 
 
 @parse_docdata
 class BioKG(ZipSingleDataset):
-    """The BioKG dataset.
+    """The BioKG dataset from [walsh2020]_.
 
     ---
     name: BioKG
@@ -66,5 +66,5 @@ def _main():
     ds.summarize()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     _main()

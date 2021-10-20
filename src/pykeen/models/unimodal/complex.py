@@ -16,7 +16,7 @@ from ...typing import Hint, Initializer
 from ...utils import split_complex
 
 __all__ = [
-    'ComplEx',
+    "ComplEx",
 ]
 
 
@@ -63,7 +63,7 @@ class ComplEx(EntityRelationEmbeddingModel):
     #: The default loss function class
     loss_default: ClassVar[Type[Loss]] = SoftplusLoss
     #: The default parameters for the default loss function class
-    loss_default_kwargs: ClassVar[Mapping[str, Any]] = dict(reduction='mean')
+    loss_default_kwargs: ClassVar[Mapping[str, Any]] = dict(reduction="mean")
     #: The regularizer used by [trouillon2016]_ for ComplEx.
     regularizer_default: ClassVar[Type[Regularizer]] = LpRegularizer
     #: The LP settings used by [trouillon2016]_ for ComplEx.

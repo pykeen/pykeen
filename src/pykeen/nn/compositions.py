@@ -12,12 +12,12 @@ from torch import nn
 from .functional import circular_correlation
 
 __all__ = [
-    'CompositionModule',
-    'FunctionalCompositionModule',
-    'SubtractionCompositionModule',
-    'MultiplicationCompositionModule',
-    'CircularCorrelationCompositionModule',
-    'composition_resolver',
+    "CompositionModule",
+    "FunctionalCompositionModule",
+    "SubtractionCompositionModule",
+    "MultiplicationCompositionModule",
+    "CircularCorrelationCompositionModule",
+    "composition_resolver",
 ]
 
 

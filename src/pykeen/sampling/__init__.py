@@ -119,15 +119,15 @@ from .negative_sampler import NegativeSampler
 from .pseudo_type import PseudoTypedNegativeSampler
 
 __all__ = [
-    'NegativeSampler',
-    'BasicNegativeSampler',
-    'BernoulliNegativeSampler',
-    'PseudoTypedNegativeSampler',
+    "NegativeSampler",
+    "BasicNegativeSampler",
+    "BernoulliNegativeSampler",
+    "PseudoTypedNegativeSampler",
     # Utils
-    'negative_sampler_resolver',
+    "negative_sampler_resolver",
 ]
 
-_NEGATIVE_SAMPLER_SUFFIX = 'NegativeSampler'
+_NEGATIVE_SAMPLER_SUFFIX = "NegativeSampler"
 _NEGATIVE_SAMPLERS: Set[Type[NegativeSampler]] = set(get_subclasses(NegativeSampler))  # type: ignore
 negative_sampler_resolver = Resolver(
     _NEGATIVE_SAMPLERS,

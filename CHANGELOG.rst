@@ -5,11 +5,58 @@ All notable changes to this project will be documented in this file.
 The format is based on `Keep a Changelog <http://keepachangelog.com/>`_
 and this project adheres to `Semantic Versioning <http://semver.org/>`_
 
-`Unreleased <https://github.com/pykeen/pykeen/compare/v1.5.0...HEAD>`_
------------------------------------------------------------------------
+`1.6.0 <https://github.com/pykeen/pykeen/compare/v1.5.0...v1.6.0>`_
+-------------------------------------------------------------------
+This release is only compatible with PyTorch 1.9+. Because of some changes,
+it's now pretty non-trivial to support both, so moving forwards PyKEEN will
+continue to support the latest version of PyTorch and try its best to keep
+backwards compatibility.
+
+New Models
+~~~~~~~~~~
+- DistMA (https://github.com/pykeen/pykeen/pull/507)
+- TorusE (https://github.com/pykeen/pykeen/pull/510)
+- Frequency Baselines (https://github.com/pykeen/pykeen/pull/514)
+- Gated Distmult Literal (https://github.com/pykeen/pykeen/pull/591, thanks @Rodrigo-A-Pereira)
+
+New Datasets
+~~~~~~~~~~~~
+- WD50K (https://github.com/pykeen/pykeen/pull/511)
+- Wikidata5M (https://github.com/pykeen/pykeen/pull/528)
+- BioKG (https://github.com/pykeen/pykeen/pull/585, thanks @sbonner0)
+
+New Losses
+~~~~~~~~~~
+- Double Margin Loss (https://github.com/pykeen/pykeen/pull/539)
+- Focal Loss (https://github.com/pykeen/pykeen/pull/542)
+- Pointwise Hinge Loss (https://github.com/pykeen/pykeen/pull/540)
+- Soft Pointwise Hinge Loss (https://github.com/pykeen/pykeen/pull/540)
+- Pairwise Logistic Loss (https://github.com/pykeen/pykeen/pull/540)
+
 Added
 ~~~~~
 - Tutorial in using checkpoints when bringing your own data (https://github.com/pykeen/pykeen/pull/498)
+- Learning rate scheduling (https://github.com/pykeen/pykeen/pull/492)
+- Checkpoints include entity/relation maps (https://github.com/pykeen/pykeen/pull/498)
+- QuatE reproducibility configurations (https://github.com/pykeen/pykeen/pull/486)
+
+Changed
+~~~~~~~
+- Reimplment SE (https://github.com/pykeen/pykeen/pull/521)
+  and NTN (https://github.com/pykeen/pykeen/pull/522) with new-style models
+- Generalize pairwise loss and pointwise loss hierarchies (https://github.com/pykeen/pykeen/pull/540)
+- Update to use PyTorch 1.9 functionality (https://github.com/pykeen/pykeen/pull/489)
+- Generalize generator strategies in LCWA (https://github.com/pykeen/pykeen/pull/602)
+
+Fixed
+~~~~~
+- FileNotFoundError on Windows/Anaconda (https://github.com/pykeen/pykeen/pull/503, thanks @Hao-666)
+- Fixed docstring for ComplEx interaction (https://github.com/pykeen/pykeen/pull/504)
+- Make DistMult the default interaction function for R-GCN (https://github.com/pykeen/pykeen/pull/548)
+- Fix gradient error in CompGCN buffering (https://github.com/pykeen/pykeen/pull/573)
+- Fix splitting of numeric triples factories (https://github.com/pykeen/pykeen/pull/594, thanks @Rodrigo-A-Pereira)
+- Fix determinism in spitting of triples factory (https://github.com/pykeen/pykeen/pull/500)
+- Fix documentation and improve HPO suggestion (https://github.com/pykeen/pykeen/pull/524, thanks @kdutia)
 
 `1.5.0 <https://github.com/pykeen/pykeen/compare/v1.4.0...v1.5.0>`_ - 2021-06-13
 --------------------------------------------------------------------------------

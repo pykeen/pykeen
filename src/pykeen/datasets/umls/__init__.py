@@ -9,17 +9,17 @@ from docdata import parse_docdata
 from ..base import PathDataset
 
 __all__ = [
-    'UMLS_TRAIN_PATH',
-    'UMLS_TEST_PATH',
-    'UMLS_VALIDATE_PATH',
-    'UMLS',
+    "UMLS_TRAIN_PATH",
+    "UMLS_TEST_PATH",
+    "UMLS_VALIDATE_PATH",
+    "UMLS",
 ]
 
 HERE = pathlib.Path(__file__).resolve().parent
 
-UMLS_TRAIN_PATH = HERE.joinpath('train.txt')
-UMLS_TEST_PATH = HERE.joinpath('test.txt')
-UMLS_VALIDATE_PATH = HERE.joinpath('valid.txt')
+UMLS_TRAIN_PATH = HERE.joinpath("train.txt")
+UMLS_TEST_PATH = HERE.joinpath("test.txt")
+UMLS_VALIDATE_PATH = HERE.joinpath("valid.txt")
 
 
 @parse_docdata
@@ -56,5 +56,5 @@ class UMLS(PathDataset):
         )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     UMLS().summarize()
