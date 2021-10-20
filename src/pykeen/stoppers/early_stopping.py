@@ -115,7 +115,7 @@ class EarlyStoppingLogic:
             Whether to stop the training.
         """
         # check for improvement
-        if self.best_metric is None or self.is_improvement(metric):
+        if self.is_improvement(metric):
             self.best_epoch = epoch
             self.best_metric = metric
             self.remaining_patience = self.patience
