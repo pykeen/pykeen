@@ -10,8 +10,8 @@ from typing import Any, List, Mapping, Union
 import torch
 
 __all__ = [
-    'Stopper',
-    'NopStopper',
+    "Stopper",
+    "NopStopper",
 ]
 
 logger = logging.getLogger(__name__)
@@ -65,7 +65,7 @@ class Stopper(ABC):
         logger.info(f"=> loading stopper summary dict from training loop checkpoint in '{path}'")
         checkpoint = torch.load(path)
         logger.info(f"=> loaded stopper summary dictionary from checkpoint in '{path}'")
-        return checkpoint['stopper_dict']
+        return checkpoint["stopper_dict"]
 
 
 class NopStopper(Stopper):

@@ -15,9 +15,9 @@ from ..triples import CoreTriplesFactory
 from ..utils import fix_dataclass_init_docs
 
 __all__ = [
-    'is_improvement',
-    'EarlyStopper',
-    'StopperCallback',
+    "is_improvement",
+    "EarlyStopper",
+    "StopperCallback",
 ]
 
 logger = logging.getLogger(__name__)
@@ -76,7 +76,7 @@ class EarlyStopper(Stopper):
     #: with no improvement after which training will be stopped.
     patience: int = 2
     #: The name of the metric to use
-    metric: str = 'hits_at_k'
+    metric: str = "hits_at_k"
     #: The minimum relative improvement necessary to consider it an improved result
     relative_delta: float = 0.01
     #: The best result so far
@@ -138,7 +138,7 @@ class EarlyStopper(Stopper):
             self.result_tracker.log_metrics(
                 metrics=metric_results.to_flat_dict(),
                 step=epoch,
-                prefix='validation',
+                prefix="validation",
             )
         result = metric_results.get_metric(self.metric)
 
@@ -164,8 +164,8 @@ class EarlyStopper(Stopper):
         # Stop if the result did not improve more than delta for patience evaluations
         if self.remaining_patience <= 0:
             logger.info(
-                f'Stopping early after {self.number_results} evaluations at epoch {epoch}. The best result '
-                f'{self.metric}={self.best_metric} occurred at epoch {self.best_epoch}.',
+                f"Stopping early after {self.number_results} evaluations at epoch {epoch}. The best result "
+                f"{self.metric}={self.best_metric} occurred at epoch {self.best_epoch}.",
             )
             for stopped_callback in self.stopped_callbacks:
                 stopped_callback(self, result, epoch)

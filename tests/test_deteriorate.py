@@ -31,8 +31,8 @@ class TestDeterioration(unittest.TestCase):
                 derived = self.reference.deteriorate(n=n, random_state=self.generator)
                 self._help_check(derived)
                 self.assertEqual(n, splits_steps(self.reference._tup(), derived._tup()))
-                self.assertEqual(1 - n / self.num_triples, self.reference.similarity(derived), msg='similarity')
-                self.assertEqual(1 - n / self.num_triples, derived.similarity(self.reference), msg='similarity')
+                self.assertEqual(1 - n / self.num_triples, self.reference.similarity(derived), msg="similarity")
+                self.assertEqual(1 - n / self.num_triples, derived.similarity(self.reference), msg="similarity")
 
     def test_deteriorate_frac(self):
         """Test deterioration on fractional values for ``n``."""
@@ -51,21 +51,23 @@ class TestDeterioration(unittest.TestCase):
                 self.assertEqual(
                     n,
                     splits_steps(self.reference._tup(), derived._tup()),
-                    msg='steps',
+                    msg="steps",
                 )
-                self.assertEqual(1 - n / self.num_triples, self.reference.similarity(derived), msg='similarity')
-                self.assertEqual(1 - n / self.num_triples, derived.similarity(self.reference), msg='similarity')
+                self.assertEqual(1 - n / self.num_triples, self.reference.similarity(derived), msg="similarity")
+                self.assertEqual(1 - n / self.num_triples, derived.similarity(self.reference), msg="similarity")
 
     def _help_check(self, derived: Dataset):
         self.assertIsNotNone(derived.validation)
         self.assertEqual(self.num_training_triples, self.reference.training.num_triples)
         self.assertEqual(
             self.num_triples,
-            sum((
-                derived.training.num_triples,
-                derived.testing.num_triples,
-                derived.validation.num_triples,
-            )),
-            msg='different number of total triples',
+            sum(
+                (
+                    derived.training.num_triples,
+                    derived.testing.num_triples,
+                    derived.validation.num_triples,
+                )
+            ),
+            msg="different number of total triples",
         )
         self.assertLess(derived.training.num_triples, self.reference.training.num_triples)

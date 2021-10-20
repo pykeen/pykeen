@@ -22,36 +22,45 @@ from .sim import KG2E_SIMILARITIES
 from ..moves import irfft, rfft
 from ..typing import GaussianDistribution
 from ..utils import (
-    broadcast_cat, clamp_norm, estimate_cost_of_sequence, extended_einsum, is_cudnn_error, negative_norm,
-    negative_norm_of_sum, project_entity, tensor_product, tensor_sum, view_complex,
+    broadcast_cat,
+    clamp_norm,
+    estimate_cost_of_sequence,
+    extended_einsum,
+    is_cudnn_error,
+    negative_norm,
+    negative_norm_of_sum,
+    project_entity,
+    tensor_product,
+    tensor_sum,
+    view_complex,
 )
 
 __all__ = [
-    'complex_interaction',
-    'conve_interaction',
-    'convkb_interaction',
-    'cross_e_interaction',
-    'dist_ma_interaction',
-    'distmult_interaction',
-    'ermlp_interaction',
-    'ermlpe_interaction',
-    'hole_interaction',
-    'kg2e_interaction',
-    'mure_interaction',
-    'ntn_interaction',
-    'pair_re_interaction',
-    'proje_interaction',
-    'rescal_interaction',
-    'rotate_interaction',
-    'simple_interaction',
-    'structured_embedding_interaction',
-    'transd_interaction',
-    'transe_interaction',
-    'transf_interaction',
-    'transh_interaction',
-    'transr_interaction',
-    'tucker_interaction',
-    'unstructured_model_interaction',
+    "complex_interaction",
+    "conve_interaction",
+    "convkb_interaction",
+    "cross_e_interaction",
+    "dist_ma_interaction",
+    "distmult_interaction",
+    "ermlp_interaction",
+    "ermlpe_interaction",
+    "hole_interaction",
+    "kg2e_interaction",
+    "mure_interaction",
+    "ntn_interaction",
+    "pair_re_interaction",
+    "proje_interaction",
+    "rescal_interaction",
+    "rotate_interaction",
+    "simple_interaction",
+    "structured_embedding_interaction",
+    "transd_interaction",
+    "transe_interaction",
+    "transf_interaction",
+    "transh_interaction",
+    "transr_interaction",
+    "tucker_interaction",
+    "unstructured_model_interaction",
 ]
 
 
@@ -90,10 +99,10 @@ def _add_cuda_warning(func):
             if not is_cudnn_error(e):
                 raise e
             raise RuntimeError(
-                '\nThis code crash might have been caused by a CUDA bug, see '
-                'https://github.com/allenai/allennlp/issues/2888, '
-                'which causes the code to crash during evaluation mode.\n'
-                'To avoid this error, the batch size has to be reduced.',
+                "\nThis code crash might have been caused by a CUDA bug, see "
+                "https://github.com/allenai/allennlp/issues/2888, "
+                "which causes the code to crash during evaluation mode.\n"
+                "To avoid this error, the batch size has to be reduced.",
             ) from e
 
     return wrapped
@@ -235,8 +244,7 @@ def convkb_interaction(
     # -> conv_head, conv_rel, conv_tail shapes: (num_filters,)
     # reshape to (1, 1, 1, 1, f, 1)
     conv_head, conv_rel, conv_tail, conv_bias = [
-        c.view(1, 1, 1, 1, num_filters, 1)
-        for c in list(conv.weight[:, 0, 0, :].t()) + [conv.bias]
+        c.view(1, 1, 1, 1, num_filters, 1) for c in list(conv.weight[:, 0, 0, :].t()) + [conv.bias]
     ]
 
     # convolve -> output.shape: (*, embedding_dim, num_filters)
@@ -327,8 +335,8 @@ def ermlp_interaction(
     """
     # same shape
     if h.shape == r.shape and h.shape == t.shape:
-        return final(activation(
-            hidden(torch.cat([h, r, t], dim=-1).view(-1, 3 * h.shape[-1]))),
+        return final(
+            activation(hidden(torch.cat([h, r, t], dim=-1).view(-1, 3 * h.shape[-1]))),
         ).view(*h.shape[:-1])
 
     hidden_dim = hidden.weight.shape[0]
@@ -507,12 +515,14 @@ def ntn_interaction(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    x = activation(tensor_sum(
-        extended_einsum("bhrtd,bhrtkde,bhrte->bhrtk", h, w, t),
-        (vh @ h.unsqueeze(dim=-1)).squeeze(dim=-1),
-        (vt @ t.unsqueeze(dim=-1)).squeeze(dim=-1),
-        b,
-    ))
+    x = activation(
+        tensor_sum(
+            extended_einsum("bhrtd,bhrtkde,bhrte->bhrtk", h, w, t),
+            (vh @ h.unsqueeze(dim=-1)).squeeze(dim=-1),
+            (vt @ t.unsqueeze(dim=-1)).squeeze(dim=-1),
+            b,
+        )
+    )
     u = u.transpose(-2, -1)
     return (x @ u).squeeze(dim=-1)
 
@@ -884,8 +894,8 @@ def transr_interaction(
         The scores.
     """
     # project to relation specific subspace and ensure constraints
-    h_bot = clamp_norm((h.unsqueeze(dim=-2) @ m_r), p=2, dim=-1, maxnorm=1.).squeeze(dim=-2)
-    t_bot = clamp_norm((t.unsqueeze(dim=-2) @ m_r), p=2, dim=-1, maxnorm=1.).squeeze(dim=-2)
+    h_bot = clamp_norm((h.unsqueeze(dim=-2) @ m_r), p=2, dim=-1, maxnorm=1.0).squeeze(dim=-2)
+    t_bot = clamp_norm((t.unsqueeze(dim=-2) @ m_r), p=2, dim=-1, maxnorm=1.0).squeeze(dim=-2)
     return negative_norm_of_sum(h_bot, r, -t_bot, p=p, power_norm=power_norm)
 
 
@@ -952,7 +962,8 @@ def tucker_interaction(
                     x=h,
                     batch_norm=bn_h,
                     output_dropout=do_h,
-                )),
+                ),
+            ),
             batch_norm=bn_hr,
             output_dropout=do_hr,
         ),
@@ -995,13 +1006,17 @@ def mure_interaction(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    return negative_norm_of_sum(
-        h * r_mat,
-        r_vec,
-        -t,
-        p=p,
-        power_norm=power_norm,
-    ) + b_h + b_t
+    return (
+        negative_norm_of_sum(
+            h * r_mat,
+            r_vec,
+            -t,
+            p=p,
+            power_norm=power_norm,
+        )
+        + b_h
+        + b_t
+    )
 
 
 def unstructured_model_interaction(
@@ -1108,7 +1123,8 @@ def quat_e_interaction(
         _rotate_quaternion(
             _split_quaternion(h),
             _split_quaternion(r),
-        ) * t
+        )
+        * t
     ).sum(dim=-1)
 
 

@@ -73,7 +73,7 @@ you can proceed with the normal installation (or the installation from GitHub as
 
 If you're having trouble with ``pip`` or ``sqlite``, you might also have to use
 ``conda install pip setuptools wheel sqlite``. See our
-`AppVeyor configuration <https://github.com/pykeen/pykeen/blob/master/.appveyor.yml>`_
+`GitHub Actions configuration <https://github.com/pykeen/pykeen/blob/master/.github/workflows/tests.yml>`_
 on GitHub for inspiration.
 
 If you know better ways to install on Windows or would like to share some references,
@@ -81,8 +81,7 @@ we'd really appreciate it.
 
 Development
 -----------
-Alternatively, the latest code can be installed in development mode
-with:
+The latest code can be installed in development mode with:
 
 .. code-block:: bash
 

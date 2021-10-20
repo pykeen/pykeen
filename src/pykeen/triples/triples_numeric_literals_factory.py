@@ -15,7 +15,7 @@ from .utils import load_triples
 from ..typing import EntityMapping, LabeledTriples, MappedTriples
 
 __all__ = [
-    'TriplesNumericLiteralsFactory',
+    "TriplesNumericLiteralsFactory",
 ]
 
 logger = logging.getLogger(__name__)
@@ -27,10 +27,7 @@ def create_matrix_of_literals(
 ) -> Tuple[np.ndarray, Dict[str, int]]:
     """Create matrix of literals where each row corresponds to an entity and each column to a literal."""
     data_relations = np.unique(np.ndarray.flatten(numeric_triples[:, 1:2]))
-    data_rel_to_id: Dict[str, int] = {
-        value: key
-        for key, value in enumerate(data_relations)
-    }
+    data_rel_to_id: Dict[str, int] = {value: key for key, value in enumerate(data_relations)}
     # Prepare literal matrix, set every literal to zero, and afterwards fill in the corresponding value if available
     num_literals = np.zeros([len(entity_to_id), len(data_rel_to_id)], dtype=np.float32)
 
@@ -83,9 +80,9 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         )
 
         if path_to_numeric_triples is None and numeric_triples is None:
-            raise ValueError('Must specify one of path_to_numeric_triples or numeric_triples')
+            raise ValueError("Must specify one of path_to_numeric_triples or numeric_triples")
         elif path_to_numeric_triples is not None and numeric_triples is not None:
-            raise ValueError('Must not specify both path_to_numeric_triples and numeric_triples')
+            raise ValueError("Must not specify both path_to_numeric_triples and numeric_triples")
         elif path_to_numeric_triples is not None:
             self.numeric_triples = load_triples(path_to_numeric_triples)
         else:
@@ -102,9 +99,7 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         return torch.as_tensor(self.numeric_literals, dtype=torch.float32)
 
     def extra_repr(self) -> str:  # noqa: D102
-        return super().extra_repr() + (
-            f"num_literals={len(self.literals_to_id)}"
-        )
+        return super().extra_repr() + (f"num_literals={len(self.literals_to_id)}")
 
     def create_slcwa_instances(self) -> MultimodalSLCWAInstances:
         """Create multi-modal sLCWA instances for this factory's triples."""

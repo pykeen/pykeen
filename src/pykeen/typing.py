@@ -10,34 +10,34 @@ from class_resolver import Hint, HintOrType, HintType
 
 __all__ = [
     # General types
-    'Hint',
-    'HintType',
-    'HintOrType',
-    'Mutation',
-    'OneOrSequence',
+    "Hint",
+    "HintType",
+    "HintOrType",
+    "Mutation",
+    "OneOrSequence",
     # Triples
-    'LabeledTriples',
-    'MappedTriples',
-    'EntityMapping',
-    'RelationMapping',
+    "LabeledTriples",
+    "MappedTriples",
+    "EntityMapping",
+    "RelationMapping",
     # Others
-    'DeviceHint',
-    'TorchRandomHint',
+    "DeviceHint",
+    "TorchRandomHint",
     # Tensor Functions
-    'Initializer',
-    'Normalizer',
-    'Constrainer',
-    'cast_constrainer',
+    "Initializer",
+    "Normalizer",
+    "Constrainer",
+    "cast_constrainer",
     # Tensors
-    'HeadRepresentation',
-    'RelationRepresentation',
-    'TailRepresentation',
+    "HeadRepresentation",
+    "RelationRepresentation",
+    "TailRepresentation",
     # Dataclasses
-    'GaussianDistribution',
-    'ScorePack',
+    "GaussianDistribution",
+    "ScorePack",
 ]
 
-X = TypeVar('X')
+X = TypeVar("X")
 
 #: A function that mutates the input and returns a new object of the same type as output
 Mutation = Callable[[X], X]

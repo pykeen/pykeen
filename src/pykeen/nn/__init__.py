@@ -6,8 +6,8 @@ from . import init
 from .emb import Embedding, EmbeddingSpecification, RepresentationModule
 
 __all__ = [
-    'Embedding',
-    'EmbeddingSpecification',
-    'RepresentationModule',
-    'init',
+    "Embedding",
+    "EmbeddingSpecification",
+    "RepresentationModule",
+    "init",
 ]

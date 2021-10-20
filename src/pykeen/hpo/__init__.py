@@ -44,7 +44,9 @@ Each component's hyper-parameters have a reasonable default values. For example,
 default for its hyper-parameters chosen from the best-reported values in each model's
 original paper unless otherwise stated on the model's reference page. In case hyper-parameters for a model for a
 specific dataset were not available, we choose the hyper-parameters based on the findings in our
-large-scale benchmarking [ali2020a]_.
+large-scale benchmarking [ali2020a]_. For most components (e.g., models, losses, regularizers, negative
+samples, training loops), these values are stored in the default valeues of the respective classes'
+`__init__()` functions. They can be viewed in the corresponding reference section of the docs.
 
 Some components contain strategies for doing hyper-parameter optimization. When you call the
 :func:`pykeen.hpo.hpo_pipeline`, the following steps are taken to determine what happens for each hyper-parameter
@@ -603,8 +605,8 @@ If you have a configuration (in the same format) in a JSON file:
 from .hpo import HpoPipelineResult, hpo_pipeline, hpo_pipeline_from_config, hpo_pipeline_from_path  # noqa: F401
 
 __all__ = [
-    'HpoPipelineResult',
-    'hpo_pipeline_from_path',
-    'hpo_pipeline_from_config',
-    'hpo_pipeline',
+    "HpoPipelineResult",
+    "hpo_pipeline_from_path",
+    "hpo_pipeline_from_config",
+    "hpo_pipeline",
 ]

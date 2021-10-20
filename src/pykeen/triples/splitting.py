@@ -20,8 +20,8 @@ __all__ = [
 ]
 
 SPLIT_METHODS = (
-    'cleanup',
-    'coverage',
+    "cleanup",
+    "coverage",
 )
 
 
@@ -52,12 +52,9 @@ def _split_triples(
     idx_groups = idx.split(split_size=sizes, dim=0)
 
     # Split triples
-    triples_groups = [
-        mapped_triples[idx]
-        for idx in idx_groups
-    ]
+    triples_groups = [mapped_triples[idx] for idx in idx_groups]
     logger.info(
-        'done splitting triples to groups of sizes %s',
+        "done splitting triples to groups of sizes %s",
         [triples.shape[0] for triples in triples_groups],
     )
 
@@ -150,7 +147,7 @@ def normalize_ratios(
     if ratio_sum < 1.0 - epsilon:
         ratios = ratios + (1.0 - ratio_sum,)
     elif ratio_sum > 1.0 + epsilon:
-        raise ValueError(f'ratios sum to more than 1.0: {ratios} (sum={ratio_sum})')
+        raise ValueError(f"ratios sum to more than 1.0: {ratios} (sum={ratio_sum})")
     return ratios
 
 
@@ -224,14 +221,14 @@ def _tf_cleanup_randomized(
     # While there are still triples that should be moved to the training set
     while move_id_mask.any():
         # Pick a random triple to move over to the training triples
-        candidates, = move_id_mask.nonzero(as_tuple=True)
+        (candidates,) = move_id_mask.nonzero(as_tuple=True)
         idx = torch.randint(candidates.shape[0], size=(1,), generator=generator)
         idx = candidates[idx]
 
         # add to training
         training = torch.cat([training, testing[idx].view(1, -1)], dim=0)
         # remove from testing
-        testing = torch.cat([testing[:idx], testing[idx + 1:]], dim=0)
+        testing = torch.cat([testing[:idx], testing[idx + 1 :]], dim=0)
         # Recalculate the move_id_mask
         move_id_mask = _prepare_cleanup(training, testing)
 
@@ -263,10 +260,10 @@ def _prepare_cleanup(
     columns = [[0, 2], [1]]
     to_move_mask = torch.zeros(1, dtype=torch.bool)
     if max_ids is None:
-        max_ids = typing.cast(Tuple[int, int], tuple(
-            max(training[:, col].max().item(), testing[:, col].max().item()) + 1
-            for col in columns
-        ))
+        max_ids = typing.cast(
+            Tuple[int, int],
+            tuple(max(training[:, col].max().item(), testing[:, col].max().item()) + 1 for col in columns),
+        )
     for col, max_id in zip(columns, max_ids):
         # IDs not in training
         not_in_training_mask = torch.ones(max_id, dtype=torch.bool)
@@ -323,23 +320,23 @@ def split(
     if method is None:
         method = "coverage"
     if method not in SPLIT_METHODS:
-        raise ValueError(f"Invalid split method: \"{method}\". Allowed are {SPLIT_METHODS}")
+        raise ValueError(f'Invalid split method: "{method}". Allowed are {SPLIT_METHODS}')
 
     random_state = ensure_torch_random_state(random_state)
     ratios = normalize_ratios(ratios=ratios)
     sizes = get_absolute_split_sizes(n_total=mapped_triples.shape[0], ratios=ratios)
 
-    if method == 'cleanup':
+    if method == "cleanup":
         triples_groups = _split_triples(
             mapped_triples,
             sizes=sizes,
             random_state=random_state,
         )
         # Make sure that the first element has all the right stuff in it
-        logger.debug('cleaning up groups')
+        logger.debug("cleaning up groups")
         triples_groups = _tf_cleanup_all(triples_groups, random_state=random_state if randomize_cleanup else None)
-        logger.debug('done cleaning up groups')
-    elif method == 'coverage' or method is None:
+        logger.debug("done cleaning up groups")
+    elif method == "coverage" or method is None:
         seed_mask = _get_cover_deterministic(triples=mapped_triples)
         train_seed = mapped_triples[seed_mask]
         remaining_triples = mapped_triples[~seed_mask]
@@ -353,15 +350,15 @@ def split(
         )
         triples_groups = [torch.cat([train_seed, train], dim=0), *rest]
     else:
-        raise ValueError(f'invalid method: {method}')
+        raise ValueError(f"invalid method: {method}")
 
     for i, (triples, exp_size, exp_ratio) in enumerate(zip(triples_groups, sizes, ratios)):
         actual_size = triples.shape[0]
         actual_ratio = actual_size / exp_size * exp_ratio
         if actual_size != exp_size:
             logger.warning(
-                f'Requested ratio[{i}]={exp_ratio:.3f} (equal to size {exp_size}), but got {actual_ratio:.3f} '
-                f'(equal to size {actual_size}) to ensure that all entities/relations occur in train.',
+                f"Requested ratio[{i}]={exp_ratio:.3f} (equal to size {exp_size}), but got {actual_ratio:.3f} "
+                f"(equal to size {actual_size}) to ensure that all entities/relations occur in train.",
             )
 
     return triples_groups

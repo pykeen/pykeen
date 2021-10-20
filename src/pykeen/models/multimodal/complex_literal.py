@@ -16,7 +16,7 @@ from ...nn.modules import ComplExInteraction, LiteralInteraction
 from ...triples import TriplesNumericLiteralsFactory
 
 __all__ = [
-    'ComplExLiteral',
+    "ComplExLiteral",
 ]
 
 
