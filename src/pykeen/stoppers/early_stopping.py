@@ -113,6 +113,8 @@ class EarlyStoppingLogic:
 
         :return:
             If the result did not improve more than delta for patience evaluations
+
+        .. warning:: This class assumes that only one metric is reported for each epoch
         """
         # check for improvement
         if self.is_improvement(metric):
