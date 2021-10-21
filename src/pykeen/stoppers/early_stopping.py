@@ -97,11 +97,6 @@ class EarlyStoppingLogic:
             relative_delta=self.relative_delta,
         )
 
-    @property
-    def stopped(self) -> bool:
-        """Stop if the result did not improve more than delta for patience evaluations."""
-        return self.remaining_patience <= 0
-
     def report_result(self, metric: float, epoch: int) -> bool:
         """
         Report a result at the given epoch.
@@ -124,7 +119,8 @@ class EarlyStoppingLogic:
         else:
             self.remaining_patience -= 1
 
-        return self.stopped
+        # Stop if the result did not improve more than delta for patience evaluations
+        return self.remaining_patience <= 0
 
 
 @fix_dataclass_init_docs
