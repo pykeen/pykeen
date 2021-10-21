@@ -251,6 +251,7 @@ class EarlyStopper(Stopper):
         return dict(
             frequency=self.frequency,
             patience=self.patience,
+            remaining_patience=self.remaining_patience,
             relative_delta=self.relative_delta,
             metric=self.metric,
             larger_is_better=self.larger_is_better,
@@ -262,8 +263,10 @@ class EarlyStopper(Stopper):
 
     def _write_from_summary_dict(
         self,
+        *,
         frequency: int,
         patience: int,
+        remaining_patience: int,
         relative_delta: float,
         metric: str,
         larger_is_better: bool,
@@ -288,3 +291,4 @@ class EarlyStopper(Stopper):
         )
         self._stopper.best_epoch = best_epoch
         self._stopper.best_metric = best_metric
+        self._stopper.remaining_patience = remaining_patience
