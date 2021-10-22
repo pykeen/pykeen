@@ -21,7 +21,13 @@ from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
 from tqdm.autonotebook import tqdm, trange
 
-from .callbacks import GradientClippingCallback, MultiTrainingCallback, TrackerCallback, TrainingCallbackHint
+from .callbacks import (
+    GradientAbsClippingCallback,
+    GradientNormClippingCallback,
+    MultiTrainingCallback,
+    TrackerCallback,
+    TrainingCallbackHint,
+)
 from ..constants import PYKEEN_CHECKPOINTS, PYKEEN_DEFAULT_CHECKPOINT
 from ..losses import Loss
 from ..lr_schedulers import LRScheduler
@@ -477,17 +483,17 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         # Register a callback for the result tracker, if given
         if result_tracker is not None:
             callback.register_callback(TrackerCallback(result_tracker))
-
-        callback.register_training_loop(self)
-
         if self.gradient_clipping_max_norm is not None:
             callback.register_callback(
-                GradientClippingCallback(
+                GradientNormClippingCallback(
                     max_norm=self.gradient_clipping_max_norm,
                     norm_type=self.gradient_clipping_norm_type,
-                    max_abs_value=self.gradient_clipping_max_abs_value,
                 )
             )
+        if self.gradient_clipping_max_abs_value is not None:
+            callback.register_callback(GradientAbsClippingCallback(clip_value=self.gradient_clipping_max_abs_value))
+
+        callback.register_training_loop(self)
 
         # Take the biggest possible training batch_size, if batch_size not set
         batch_size_sufficient = False

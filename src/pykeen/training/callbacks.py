@@ -176,6 +176,44 @@ class TrackerCallback(TrainingCallback):
         self.result_tracker.log_metrics({"loss": epoch_loss}, step=epoch)
 
 
+class GradientNormClippingCallback(TrainingCallback):
+    def __init__(self, max_norm, norm_type: Optional[float] = None):
+        """
+        Initialize the callback.
+
+        :param max_norm:
+            The maximum gradient norm for use with gradient clipping. If None, no gradient norm clipping is used.
+        param norm_type:
+            The gradient norm type to use for maximum gradient norm, cf. :method:`torch.nn.utils.clip_grad_norm_`
+        """
+        super().__init__()
+        self.max_norm = max_norm
+        self.norm_type = norm_type or 2.0
+
+    def pre_step(self, **kwargs: Any):  # noqa: D102
+        clip_grad_norm_(
+            parameters=self.model.get_grad_params(),
+            max_norm=self.max_norm,
+            norm_type=self.norm_type,
+            error_if_nonfinite=True,
+        )
+
+
+class GradientAbsClippingCallback(TrainingCallback):
+    def __init__(self, clip_value: float):
+        """
+        Initialize the callback.
+        :param clip_value:
+            The maximum absolute value in gradients, cf. :method:`torch.nn.utils.clip_grad_value_`. If None, no
+            gradient clipping will be used.
+        """
+        super().__init__()
+        self.clip_value = clip_value
+
+    def pre_step(self, **kwargs: Any):  # noqA: D102
+        clip_grad_value_(self.model.parameters(), clip_value=self.clip_value)
+
+
 #: A hint for constructing a :class:`MultiTrainingCallback`
 TrainingCallbackHint = Union[None, TrainingCallback, Collection[TrainingCallback]]
 
