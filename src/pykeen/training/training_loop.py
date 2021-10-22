@@ -140,9 +140,9 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         :param gradient_clipping_max_norm:
             The maximum gradient norm for use with gradient clipping. If None, no gradient norm clipping is used.
         :param gradient_clipping_norm_type:
-            The gradient norm type to use for maximum gradient norm, cf. :method:`torch.nn.utils.clip_grad_norm_`
+            The gradient norm type to use for maximum gradient norm, cf. :func:`torch.nn.utils.clip_grad_norm_`
         :param gradient_clipping_max_abs_value:
-            The maximum absolute value in gradients, cf. :method:`torch.nn.utils.clip_grad_value_`. If None, no
+            The maximum absolute value in gradients, cf. :func:`torch.nn.utils.clip_grad_value_`. If None, no
             gradient clipping will be used.
         :param automatic_memory_optimization: bool
             Whether to automatically optimize the sub-batch size during
