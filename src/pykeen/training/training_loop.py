@@ -633,6 +633,8 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
 
                     # when called by batch_size_search(), the parameter update should not be applied.
                     if not only_size_probing:
+                        callback.pre_step()
+
                         # update parameters according to optimizer
                         self.optimizer.step()
 
