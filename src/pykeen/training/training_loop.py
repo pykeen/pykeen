@@ -116,6 +116,9 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         triples_factory: CoreTriplesFactory,
         optimizer: Optional[Optimizer] = None,
         lr_scheduler: Optional[LRScheduler] = None,
+        gradient_clipping_max_norm: Optional[float] = None,
+        gradient_clipping_norm_type: Union[float] = None,
+        gradient_clipping_max_abs_value: Optional[float] = None,
         automatic_memory_optimization: bool = True,
     ) -> None:
         """Initialize the training loop.
@@ -124,6 +127,12 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         :param triples_factory: The training triples factory
         :param optimizer: The optimizer to use while training the model
         :param lr_scheduler: The learning rate scheduler you want to use while training the model
+        :param gradient_clipping_max_norm:
+            The maximum gradient norm for use with gradient clipping. If None, no gradient norm clipping is used.
+        :param gradient_clipping_norm_type:
+            The gradient norm type to use for maximum gradient norm, cf. :method:`torch.nn.utils.clip_grad_norm_`
+        :param gradient_clipping_max_abs_value:
+            The maximum absolute value in gradients, cf. :method:`torch.nn.utils.clip_grad_value_`. If None, no gradient clipping will be used.
         :param automatic_memory_optimization: bool
             Whether to automatically optimize the sub-batch size during
             training and batch size during evaluation with regards to the hardware at hand.
@@ -133,6 +142,9 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         self.lr_scheduler = lr_scheduler
         self.losses_per_epochs = []
         self.automatic_memory_optimization = automatic_memory_optimization
+        self.gradient_clipping_max_norm = gradient_clipping_max_norm
+        self.gradient_clipping_norm_type = gradient_clipping_norm_type
+        self.gradient_clipping_max_abs_value = gradient_clipping_max_abs_value
 
         logger.debug("we don't really need the triples factory: %s", triples_factory)
 
@@ -515,6 +527,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                     format_relative_comparison(part=1, total=len(training_instances)),
                 )
 
+        trainable_parameters = self.model.get_grad_params()
         # Force weight initialization if training continuation is not explicitly requested.
         if not continue_training:
             # Reset the weights
@@ -523,7 +536,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             # Create new optimizer
             optimizer_kwargs = _get_optimizer_kwargs(self.optimizer)
             self.optimizer = self.optimizer.__class__(
-                params=self.model.get_grad_params(),
+                params=trainable_parameters,
                 **optimizer_kwargs,
             )
 
@@ -633,6 +646,18 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
 
                     # when called by batch_size_search(), the parameter update should not be applied.
                     if not only_size_probing:
+                        # Gradient clipping
+                        # ... by norm
+                        if self.gradient_clipping_max_norm is not None:
+                            kwargs = {}
+                            if self.gradient_clipping_norm_type is not None:
+                                kwargs["norm_type"] = self.gradient_clipping_norm_type
+                            torch.nn.utils.clip_grad_norm_(parameters=trainable_parameters, max_norm=self.gradient_clipping_max_norm, error_if_nonfinite=True, **kwargs)
+                        
+                        # ... by value
+                        if self.gradient_clipping_max_abs_value is not None:
+                            torch.nn.utils.clip_grad_value_(parameters=trainable_parameters, clip_value=self.gradient_clipping_max_abs_value)
+
                         # update parameters according to optimizer
                         self.optimizer.step()
 
