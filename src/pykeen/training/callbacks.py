@@ -28,7 +28,8 @@ be useful to log all batch losses. This could be accomplished with the following
 
 Implementing Gradient Clipping
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-`Gradient clipping <https://neptune.ai/blog/understanding-gradient-clipping-and-how-it-can-fix-exploding-gradients-problem>`_
+`Gradient
+clipping <https://neptune.ai/blog/understanding-gradient-clipping-and-how-it-can-fix-exploding-gradients-problem>`_
 is one technique used to avoid the exploding gradient problem. Despite it being a very simple, it has several
 `theoretical implications <https://openreview.net/forum?id=BJgnXpVYwS>`_.
 
