@@ -51,7 +51,8 @@ to implement a gradient clipping callback:
             clip_grad_value_(self.model.parameters(), clip_value=self.clip_value)
 """
 
-from typing import Any, Collection, List, Union
+from typing import Any, Collection, List, Optional, Union
+from torch.nn.utils import clip_grad_norm_, clip_grad_value_
 
 from ..trackers import ResultTracker
 
@@ -110,6 +111,48 @@ class TrainingCallback:
 
     def post_train(self, losses: List[float], **kwargs: Any) -> None:
         """Call after training."""
+
+
+class GradientClippingCallback(TrainingCallback):
+    """A callback for gradient clipping."""
+
+    def __init__(
+        self,
+        max_norm: Optional[float] = None,
+        norm_type: Union[None, float, str] = None,
+        max_abs_value: Optional[float] = None,
+    ):
+        """
+        Initialize the callback.
+
+        :param max_norm:
+            The maximum gradient norm for use with gradient clipping. If None, no gradient norm clipping is used.
+        param norm_type:
+            The gradient norm type to use for maximum gradient norm, cf. :method:`torch.nn.utils.clip_grad_norm_`
+        :param max_abs_value:
+            The maximum absolute value in gradients, cf. :method:`torch.nn.utils.clip_grad_value_`. If None, no
+            gradient clipping will be used.
+
+        .. note ::
+            You cannot provide both, `max_norm` and `max_abs_value`.
+        """
+        super().__init__()
+        if max_norm is not None and max_abs_value is not None:
+            raise ValueError("max_norm and max_abs_value cannot be given both!")
+        self.max_norm = max_norm
+        self.norm_type = norm_type
+        self.max_abs_value = max_abs_value
+
+    def pre_step(self, **kwargs: Any) -> None:  # noqa: D102
+        parameters = self.model.get_grad_params()
+        if self.max_norm is not None:
+            clip_grad_norm_(
+                parameters=parameters, max_norm=self.max_norm, norm_type=self.norm_type, error_if_nonfinite=True
+            )
+        elif self.max_abs_value is not None:
+            clip_grad_value_(parameters=parameters, clip_value=self.max_abs_value)
+        else:
+            raise AssertionError
 
 
 class TrackerCallback(TrainingCallback):
