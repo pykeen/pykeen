@@ -51,7 +51,9 @@ to implement a gradient clipping callback:
             clip_grad_value_(self.model.parameters(), clip_value=self.clip_value)
 """
 
-from typing import Any, Collection, List, Union
+from typing import Any, Collection, List, Optional, Union
+
+from torch.nn.utils import clip_grad_norm_, clip_grad_value_
 
 from ..trackers import ResultTracker
 
@@ -131,6 +133,30 @@ class TrackerCallback(TrainingCallback):
 
     def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
         self.result_tracker.log_metrics({"loss": epoch_loss}, step=epoch)
+
+
+class GradientNormClippingCallback(TrainingCallback):
+    def __init__(self, max_norm, norm_type: Optional[float] = None):
+        super().__init__()
+        self.max_norm = max_norm
+        self.norm_type = norm_type or 2.0
+
+    def pre_step(self, **kwargs: Any):
+        clip_grad_norm_(
+            parameters=self.model.get_grad_params(),
+            max_norm=self.max_norm,
+            norm_type=self.norm_type,
+            error_if_nonfinite=True,
+        )
+
+
+class GradientAbsClippingCallback(TrainingCallback):
+    def __init__(self, clip_value: float):
+        super().__init__()
+        self.clip_value = clip_value
+
+    def pre_step(self, **kwargs: Any):
+        clip_grad_value_(self.model.parameters(), clip_value=self.clip_value)
 
 
 #: A hint for constructing a :class:`MultiTrainingCallback`

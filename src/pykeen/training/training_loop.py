@@ -21,7 +21,13 @@ from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
 from tqdm.autonotebook import tqdm, trange
 
-from .callbacks import MultiTrainingCallback, TrackerCallback, TrainingCallbackHint
+from .callbacks import (
+    GradientAbsClippingCallback,
+    GradientNormClippingCallback,
+    MultiTrainingCallback,
+    TrackerCallback,
+    TrainingCallbackHint,
+)
 from ..constants import PYKEEN_CHECKPOINTS, PYKEEN_DEFAULT_CHECKPOINT
 from ..losses import Loss
 from ..lr_schedulers import LRScheduler
@@ -477,6 +483,15 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         # Register a callback for the result tracker, if given
         if result_tracker is not None:
             callback.register_callback(TrackerCallback(result_tracker))
+        if self.gradient_clipping_max_norm is not None:
+            callback.register_callback(
+                GradientNormClippingCallback(
+                    max_norm=self.gradient_clipping_max_norm,
+                    norm_type=self.gradient_clipping_norm_type,
+                )
+            )
+        if self.gradient_clipping_max_abs_value is not None:
+            callback.register_callback(GradientAbsClippingCallback(clip_value=self.gradient_clipping_max_abs_value))
 
         callback.register_training_loop(self)
 
@@ -651,23 +666,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                     # when called by batch_size_search(), the parameter update should not be applied.
                     if not only_size_probing:
                         callback.pre_step()
-
-                        # Gradient clipping
-                        # ... by norm
-                        if self.gradient_clipping_max_norm is not None:
-                            torch.nn.utils.clip_grad_norm_(
-                                parameters=self.model.get_grad_params(),
-                                max_norm=self.gradient_clipping_max_norm,
-                                norm_type=self.gradient_clipping_norm_type or 2.0,
-                                error_if_nonfinite=True,
-                            )
-
-                        # ... by value
-                        if self.gradient_clipping_max_abs_value is not None:
-                            torch.nn.utils.clip_grad_value_(
-                                parameters=self.model.get_grad_params(), clip_value=self.gradient_clipping_max_abs_value
-                            )
-
 
                         # update parameters according to optimizer
                         self.optimizer.step()
