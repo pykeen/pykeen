@@ -7,14 +7,16 @@
     "dataset": "fb15k",
     "model": "R-GCN",
     "model_kwargs": {
-      "embedding_dim": 500,
-      "decomposition": "block",
+      "embedding_dim": 200,
+      "decomposition": "bases",
       "decomposition_kwargs": {
-        "num_blocks": 100
+        "num_bases": 2
       },
       "base_entity_initializer": "xavier_uniform",
       "relation_initializer": "xavier_uniform",
-      "interaction": "distmult"
+      "interaction": "distmult",
+      "edge_dropout": 0.4,
+      "self_loop_dropout": 0.2
     },
     "optimizer": "Adagrad",
     "optimizer_kwargs": {
@@ -30,7 +32,7 @@
     },
     "negative_sampler": "basic",
     "negative_sampler_kwargs": {
-      "num_negs_per_pos": 10
+      "num_negs_per_pos": 1
     },
     "training_kwargs": {
       "num_epochs": 500,
@@ -39,6 +41,14 @@
     },
     "evaluator_kwargs": {
       "filtered": true
+    },
+    "regularizer": "Lp",
+    "regularizer_kwargs": {
+      "apply_only_once": false,
+      "weight": 0.01,
+      "p": 2.0,
+      "dim": null,
+      "normalize": false
     }
   }
 }
