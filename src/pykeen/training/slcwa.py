@@ -36,34 +36,22 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
 
     def __init__(
         self,
-        model: Model,
+        *,
         triples_factory: CoreTriplesFactory,
-        optimizer: Optional[Optimizer] = None,
-        lr_scheduler: Optional[LRScheduler] = None,
         negative_sampler: HintOrType[NegativeSampler] = None,
         negative_sampler_kwargs: Optional[Mapping[str, Any]] = None,
-        automatic_memory_optimization: bool = True,
+        **kwargs,
     ):
         """Initialize the training loop.
 
-        :param model: The model to train
-        :param triples_factory: The triples factory to train over
-        :param optimizer: The optimizer to use while training the model
-        :param lr_scheduler: The learning rate scheduler you want to use while training the model
+        :param triples_factory: The training triples factory. Also passed to TrainingLoop.__init__
         :param negative_sampler: The class, instance, or name of the negative sampler
         :param negative_sampler_kwargs: Keyword arguments to pass to the negative sampler class on instantiation
             for every positive one
-        :param automatic_memory_optimization:
-            Whether to automatically optimize the sub-batch size during
-            training and batch size during evaluation with regards to the hardware at hand.
+        :param kwargs:
+            Additional keyword-based parameters passed to TrainingLoop.__init__
         """
-        super().__init__(
-            model=model,
-            triples_factory=triples_factory,
-            optimizer=optimizer,
-            lr_scheduler=lr_scheduler,
-            automatic_memory_optimization=automatic_memory_optimization,
-        )
+        super().__init__(triples_factory=triples_factory, **kwargs)
         self.negative_sampler = negative_sampler_resolver.make(
             query=negative_sampler,
             pos_kwargs=negative_sampler_kwargs,
