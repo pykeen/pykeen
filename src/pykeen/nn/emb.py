@@ -599,6 +599,8 @@ class RGCNRepresentations(RepresentationModule):
         edge_weighting: Hint[EdgeWeighting] = None,
         decomposition: Hint[Decomposition] = None,
         decomposition_kwargs: Optional[Mapping[str, Any]] = None,
+        regularizer: Hint[Regularizer] = None,
+        regularizer_kwargs: Optional[Mapping[str, Any]] = None,
     ):
         """Instantiate the R-GCN encoder.
 
@@ -626,6 +628,10 @@ class RGCNRepresentations(RepresentationModule):
             The decomposition, cf. :class:`pykeen.nn.message_passing.Decomposition`.
         :param decomposition_kwargs:
             Additional keyword based arguments passed to the decomposition upon instantiation.
+        :param regularizer:
+            A regularizer, which is applied to the selected embeddings in forward pass
+        :param regularizer_kwargs:
+            Additional keyword arguments passed to the regularizer
         """
         base_embeddings = embedding_specification.make(num_embeddings=triples_factory.num_entities)
         super().__init__(max_id=triples_factory.num_entities, shape=base_embeddings.shape)
@@ -670,6 +676,10 @@ class RGCNRepresentations(RepresentationModule):
 
         # buffering of enriched representations
         self.enriched_embeddings = None
+
+        if regularizer is not None:
+            regularizer = regularizer_resolver.make(regularizer, pos_kwargs=regularizer_kwargs)
+        self.regularizer = regularizer
 
     def post_parameter_update(self) -> None:  # noqa: D102
         super().post_parameter_update()
@@ -749,6 +759,8 @@ class RGCNRepresentations(RepresentationModule):
         x = self._real_forward()
         if indices is not None:
             x = x[indices]
+        if self.regularizer is not None:
+            self.regularizer.update(x)
         return x
 
 
