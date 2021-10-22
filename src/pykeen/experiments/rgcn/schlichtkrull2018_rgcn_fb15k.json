@@ -42,7 +42,7 @@
     "evaluator_kwargs": {
       "filtered": true
     },
-    "regularizer": "PowerMean",
+    "regularizer": "Lp",
     "regularizer_kwargs": {
       "apply_only_once": false,
       "weight": 0.01,
