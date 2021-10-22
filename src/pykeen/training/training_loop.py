@@ -650,21 +650,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
 
                     # when called by batch_size_search(), the parameter update should not be applied.
                     if not only_size_probing:
-                        # Gradient clipping
-                        # ... by norm
-                        if self.gradient_clipping_max_norm is not None:
-                            torch.nn.utils.clip_grad_norm_(
-                                parameters=self.model.get_grad_params(),
-                                max_norm=self.gradient_clipping_max_norm,
-                                norm_type=self.gradient_clipping_norm_type or 2.0,
-                                error_if_nonfinite=True,
-                            )
-
-                        # ... by value
-                        if self.gradient_clipping_max_abs_value is not None:
-                            torch.nn.utils.clip_grad_value_(
-                                parameters=self.model.get_grad_params(), clip_value=self.gradient_clipping_max_abs_value
-                            )
+                        callback.pre_step()
 
                         # update parameters according to optimizer
                         self.optimizer.step()
