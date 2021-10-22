@@ -69,6 +69,9 @@ class TrainingCallback:
     def on_batch(self, epoch: int, batch, batch_loss: float, **kwargs: Any) -> None:
         """Call for training batches."""
 
+    def pre_step(self, **kwargs: Any) -> None:
+        """Call before the optimizer's step."""
+
     def post_batch(self, epoch: int, batch, **kwargs: Any) -> None:
         """Call for training batches."""
 
@@ -132,6 +135,11 @@ class MultiTrainingCallback(TrainingCallback):
         """Call after each batch."""
         for callback in self.callbacks:
             callback.post_batch(epoch=epoch, batch=batch)
+    
+    def pre_step(self, **kwargs: Any) -> None:
+        """Call before the optimizer's step."""
+        for callback in self.callbacks:
+            callback.pre_step(**kwargs)
 
     def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:
         """Call after epoch."""
