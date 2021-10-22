@@ -147,7 +147,7 @@ class GradientClippingCallback(TrainingCallback):
         parameters = self.model.get_grad_params()
         if self.max_norm is not None:
             clip_grad_norm_(
-                parameters=parameters, max_norm=self.max_norm, norm_type=self.norm_type, error_if_nonfinite=True
+                parameters=parameters, max_norm=self.max_norm, norm_type=self.norm_type or 2.0, error_if_nonfinite=True
             )
         elif self.max_abs_value is not None:
             clip_grad_value_(parameters=parameters, clip_value=self.max_abs_value)
