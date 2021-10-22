@@ -9,6 +9,12 @@ loop and all of its attributes, including the model. The interaction points are 
 
 Examples
 --------
+The following are vignettes showing how PyKEEN's training loop can be arbitrarily extended
+using callbacks. If you find that none of the hooks in the :class:`TrainingCallback`
+help do what you want, feel free to open an issue.
+
+Reporting Batch Loss
+~~~~~~~~~~~~~~~~~~~~
 It was suggested in `Issue #333 <https://github.com/pykeen/pykeen/issues/333>`_ that it might
 be useful to log all batch losses. This could be accomplished with the following:
 
@@ -19,6 +25,30 @@ be useful to log all batch losses. This could be accomplished with the following
     class BatchLossReportCallback(TrainingCallback):
         def on_batch(self, epoch: int, batch, batch_loss: float):
             print(epoch, batch_loss)
+
+Implementing Gradient Clipping
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+`Gradient
+clipping <https://neptune.ai/blog/understanding-gradient-clipping-and-how-it-can-fix-exploding-gradients-problem>`_
+is one technique used to avoid the exploding gradient problem. Despite it being a very simple, it has several
+`theoretical implications <https://openreview.net/forum?id=BJgnXpVYwS>`_.
+
+In order to reproduce the reference experiments on R-GCN performed by [schlichtkrull2018]_,
+gradient clipping must be used before each step of the optimizer. The following example shows how
+to implement a gradient clipping callback:
+
+.. code-block:: python
+
+    from pykeen.training import TrainingCallback
+    from pykeen.nn.utils import clip_grad_value_
+
+    class GradientClippingCallback(TrainingCallback):
+        def __init__(self, clip_value: float = 1.0):
+            super().__init__()
+            self.clip_value = clip_value
+
+        def pre_step(self, **kwargs: Any):
+            clip_grad_value_(self.model.parameters(), clip_value=self.clip_value)
 """
 
 from typing import Any, Collection, List, Union
