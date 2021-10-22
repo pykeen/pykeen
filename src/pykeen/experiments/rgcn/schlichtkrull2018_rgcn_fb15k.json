@@ -16,7 +16,7 @@
       "relation_initializer": "xavier_uniform",
       "interaction": "distmult",
       "edge_dropout": 0.4,
-      "self_loop_dropout": 0.2,
+      "self_loop_dropout": 0.2
     },
     "optimizer": "Adagrad",
     "optimizer_kwargs": {
