@@ -83,14 +83,23 @@ class TrainingCallback:
 
 
 class TrackerCallback(TrainingCallback):
-    """An adapter for the :class:`pykeen.trackers.ResultTracker`."""
+    """
+    An adapter for the :class:`pykeen.trackers.ResultTracker`.
+
+    It logs the loss after each epoch to the given result tracker,
+    """
 
     def __init__(self, result_tracker: ResultTracker):
+        """
+        Initialize the callback.
+
+        :param result_tracker:
+            The result tracker to which the loss is logged.
+        """
         super().__init__()
         self.result_tracker = result_tracker
 
-    def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:
-        """Log the epoch and loss."""
+    def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
         self.result_tracker.log_metrics({"loss": epoch_loss}, step=epoch)
 
 
@@ -114,8 +123,7 @@ class MultiTrainingCallback(TrainingCallback):
         else:
             self.callbacks = list(callbacks)
 
-    def register_training_loop(self, loop) -> None:
-        """Register the training loop."""
+    def register_training_loop(self, loop) -> None:  # noqa: D102
         super().register_training_loop(training_loop=loop)
         for callback in self.callbacks:
             callback.register_training_loop(training_loop=loop)
@@ -126,27 +134,22 @@ class MultiTrainingCallback(TrainingCallback):
         if self._training_loop is not None:
             callback.register_training_loop(self._training_loop)
 
-    def on_batch(self, epoch: int, batch, batch_loss: float, **kwargs: Any) -> None:
-        """Call for each batch."""
+    def on_batch(self, epoch: int, batch, batch_loss: float, **kwargs: Any) -> None:  # noqa: D102
         for callback in self.callbacks:
             callback.on_batch(epoch=epoch, batch=batch, batch_loss=batch_loss)
 
-    def post_batch(self, epoch: int, batch, **kwargs: Any) -> None:
-        """Call after each batch."""
+    def post_batch(self, epoch: int, batch, **kwargs: Any) -> None:  # noqa: D102
         for callback in self.callbacks:
             callback.post_batch(epoch=epoch, batch=batch)
-    
-    def pre_step(self, **kwargs: Any) -> None:
-        """Call before the optimizer's step."""
+
+    def pre_step(self, **kwargs: Any) -> None:  # noqa: D102
         for callback in self.callbacks:
             callback.pre_step(**kwargs)
 
-    def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:
-        """Call after epoch."""
+    def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
         for callback in self.callbacks:
             callback.post_epoch(epoch=epoch, epoch_loss=epoch_loss)
 
-    def post_train(self, losses: List[float], **kwargs: Any) -> None:
-        """Call after training."""
+    def post_train(self, losses: List[float], **kwargs: Any) -> None:  # noqa: D102
         for callback in self.callbacks:
             callback.post_train(losses=losses)
