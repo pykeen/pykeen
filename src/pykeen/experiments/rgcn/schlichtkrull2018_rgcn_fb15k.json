@@ -10,7 +10,7 @@
       "embedding_dim": 200,
       "decomposition": "bases",
       "decomposition_kwargs": {
-        "num_cases": 2
+        "num_bases": 2
       },
       "base_entity_initializer": "xavier_uniform",
       "relation_initializer": "xavier_uniform",
