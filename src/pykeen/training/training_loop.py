@@ -650,14 +650,11 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                         # Gradient clipping
                         # ... by norm
                         if self.gradient_clipping_max_norm is not None:
-                            kwargs = {}
-                            if self.gradient_clipping_norm_type is not None:
-                                kwargs["norm_type"] = self.gradient_clipping_norm_type
                             torch.nn.utils.clip_grad_norm_(
                                 parameters=trainable_parameters,
                                 max_norm=self.gradient_clipping_max_norm,
+                                norm_type=self.gradient_clipping_norm_type or 2.0,
                                 error_if_nonfinite=True,
-                                **kwargs,
                             )
 
                         # ... by value
