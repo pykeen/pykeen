@@ -132,7 +132,8 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         :param gradient_clipping_norm_type:
             The gradient norm type to use for maximum gradient norm, cf. :method:`torch.nn.utils.clip_grad_norm_`
         :param gradient_clipping_max_abs_value:
-            The maximum absolute value in gradients, cf. :method:`torch.nn.utils.clip_grad_value_`. If None, no gradient clipping will be used.
+            The maximum absolute value in gradients, cf. :method:`torch.nn.utils.clip_grad_value_`. If None, no 
+            gradient clipping will be used.
         :param automatic_memory_optimization: bool
             Whether to automatically optimize the sub-batch size during
             training and batch size during evaluation with regards to the hardware at hand.
@@ -652,11 +653,18 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                             kwargs = {}
                             if self.gradient_clipping_norm_type is not None:
                                 kwargs["norm_type"] = self.gradient_clipping_norm_type
-                            torch.nn.utils.clip_grad_norm_(parameters=trainable_parameters, max_norm=self.gradient_clipping_max_norm, error_if_nonfinite=True, **kwargs)
-                        
+                            torch.nn.utils.clip_grad_norm_(
+                                parameters=trainable_parameters,
+                                max_norm=self.gradient_clipping_max_norm,
+                                error_if_nonfinite=True,
+                                **kwargs,
+                            )
+
                         # ... by value
                         if self.gradient_clipping_max_abs_value is not None:
-                            torch.nn.utils.clip_grad_value_(parameters=trainable_parameters, clip_value=self.gradient_clipping_max_abs_value)
+                            torch.nn.utils.clip_grad_value_(
+                                parameters=trainable_parameters, clip_value=self.gradient_clipping_max_abs_value
+                            )
 
                         # update parameters according to optimizer
                         self.optimizer.step()
