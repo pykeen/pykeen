@@ -532,7 +532,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                     format_relative_comparison(part=1, total=len(training_instances)),
                 )
 
-        trainable_parameters = self.model.get_grad_params()
         # Force weight initialization if training continuation is not explicitly requested.
         if not continue_training:
             # Reset the weights
@@ -541,7 +540,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             # Create new optimizer
             optimizer_kwargs = _get_optimizer_kwargs(self.optimizer)
             self.optimizer = self.optimizer.__class__(
-                params=trainable_parameters,
+                params=self.model.get_grad_params(),
                 **optimizer_kwargs,
             )
 
@@ -655,7 +654,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                         # ... by norm
                         if self.gradient_clipping_max_norm is not None:
                             torch.nn.utils.clip_grad_norm_(
-                                parameters=trainable_parameters,
+                                parameters=self.model.get_grad_params(),
                                 max_norm=self.gradient_clipping_max_norm,
                                 norm_type=self.gradient_clipping_norm_type or 2.0,
                                 error_if_nonfinite=True,
@@ -664,7 +663,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                         # ... by value
                         if self.gradient_clipping_max_abs_value is not None:
                             torch.nn.utils.clip_grad_value_(
-                                parameters=trainable_parameters, clip_value=self.gradient_clipping_max_abs_value
+                                parameters=self.model.get_grad_params(), clip_value=self.gradient_clipping_max_abs_value
                             )
 
                         # update parameters according to optimizer
