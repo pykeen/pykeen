@@ -8,7 +8,7 @@
     "model": "R-GCN",
     "model_kwargs": {
       "embedding_dim": 200,
-      "decomposition": "basis",
+      "decomposition": "bases",
       "decomposition_kwargs": {
         "num_cases": 2
       },
