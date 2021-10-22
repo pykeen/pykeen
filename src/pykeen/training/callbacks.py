@@ -164,7 +164,7 @@ class MultiTrainingCallback(TrainingCallback):
         """Call after each batch."""
         for callback in self.callbacks:
             callback.post_batch(epoch=epoch, batch=batch)
-    
+
     def pre_step(self, **kwargs: Any) -> None:
         """Call before the optimizer's step."""
         for callback in self.callbacks:
