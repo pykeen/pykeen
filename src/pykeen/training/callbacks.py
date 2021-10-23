@@ -140,12 +140,12 @@ class TrackerCallback(TrainingCallback):
 class GradientNormClippingCallback(TrainingCallback):
     """A callback for gradient clipping before stepping the optimizer with :func:`torch.nn.utils.clip_grad_norm_`."""
 
-    def __init__(self, max_norm, norm_type: Optional[float] = None):
+    def __init__(self, max_norm: float, norm_type: Optional[float] = None):
         """
         Initialize the callback.
 
         :param max_norm:
-            The maximum gradient norm for use with gradient clipping. If None, no gradient norm clipping is used.
+            The maximum gradient norm for use with gradient clipping.
         :param norm_type:
             The gradient norm type to use for maximum gradient norm, cf. :func:`torch.nn.utils.clip_grad_norm_`
         """
@@ -158,7 +158,7 @@ class GradientNormClippingCallback(TrainingCallback):
             parameters=self.model.get_grad_params(),
             max_norm=self.max_norm,
             norm_type=self.norm_type,
-            error_if_nonfinite=True,
+            error_if_nonfinite=True,  # this will become default in future releases of pytorch
         )
 
 
