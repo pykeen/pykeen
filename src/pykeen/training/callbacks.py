@@ -51,7 +51,9 @@ to implement a gradient clipping callback:
             clip_grad_value_(self.model.parameters(), clip_value=self.clip_value)
 """
 
-from typing import Any, Collection, List, Union
+from typing import Any, Collection, List, Optional, Union
+
+from torch.nn.utils import clip_grad_norm_, clip_grad_value_
 
 from ..trackers import ResultTracker
 
@@ -60,6 +62,8 @@ __all__ = [
     "TrainingCallback",
     "TrackerCallback",
     "MultiTrainingCallback",
+    "GradientNormClippingCallback",
+    "GradientAbsClippingCallback",
 ]
 
 
@@ -131,6 +135,49 @@ class TrackerCallback(TrainingCallback):
 
     def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
         self.result_tracker.log_metrics({"loss": epoch_loss}, step=epoch)
+
+
+class GradientNormClippingCallback(TrainingCallback):
+    """A callback for gradient clipping before stepping the optimizer with :func:`torch.nn.utils.clip_grad_norm_`."""
+
+    def __init__(self, max_norm: float, norm_type: Optional[float] = None):
+        """
+        Initialize the callback.
+
+        :param max_norm:
+            The maximum gradient norm for use with gradient clipping.
+        :param norm_type:
+            The gradient norm type to use for maximum gradient norm, cf. :func:`torch.nn.utils.clip_grad_norm_`
+        """
+        super().__init__()
+        self.max_norm = max_norm
+        self.norm_type = norm_type or 2.0
+
+    def pre_step(self, **kwargs: Any) -> None:  # noqa: D102
+        clip_grad_norm_(
+            parameters=self.model.get_grad_params(),
+            max_norm=self.max_norm,
+            norm_type=self.norm_type,
+            error_if_nonfinite=True,  # this will become default in future releases of pytorch
+        )
+
+
+class GradientAbsClippingCallback(TrainingCallback):
+    """A callback for gradient clipping before stepping the optimizer with :func:`torch.nn.utils.clip_grad_value_`."""
+
+    def __init__(self, clip_value: float):
+        """
+        Initialize the callback.
+
+        :param clip_value:
+            The maximum absolute value in gradients, cf. :func:`torch.nn.utils.clip_grad_value_`. If None, no
+            gradient clipping will be used.
+        """
+        super().__init__()
+        self.clip_value = clip_value
+
+    def pre_step(self, **kwargs: Any) -> None:  # noqa: D102
+        clip_grad_value_(self.model.get_grad_params(), clip_value=self.clip_value)
 
 
 #: A hint for constructing a :class:`MultiTrainingCallback`
