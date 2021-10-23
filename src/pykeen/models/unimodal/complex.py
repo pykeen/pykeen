@@ -126,8 +126,9 @@ class ComplEx(EntityRelationEmbeddingModel):
         :return: shape: (...)
             The scores.
         """
-        # split into real and imaginary part
-        (h_re, h_im), (r_re, r_im), (t_re, t_im) = [split_complex(x=x) for x in (h, r, t)]
+        h_re, h_im = h.real, h.imag
+        r_re, r_im = r.real, r.imag
+        t_re, t_im = t.real, t.imag
 
         # ComplEx space bilinear product
         # *: Elementwise multiplication

@@ -102,11 +102,8 @@ class RotatE(EntityRelationEmbeddingModel):
         :return: shape: (...)
             The scores.
         """
-        # Decompose into real and imaginary part
-        h_re = h[..., 0]
-        h_im = h[..., 1]
-        r_re = r[..., 0]
-        r_im = r[..., 1]
+        h_re, h_im = h.real, h.imag
+        r_re, r_im = r.real, r.imag
 
         # Rotate (=Hadamard product in complex space).
         rot_h = torch.stack(

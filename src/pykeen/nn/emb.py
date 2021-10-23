@@ -309,12 +309,6 @@ class Embedding(RepresentationModule):
         if dtype is None:
             dtype = torch.get_default_dtype()
 
-        # work-around until full complex support
-        # TODO: verify that this is our understanding of complex!
-        if dtype.is_complex:
-            shape = tuple(shape[:-1]) + (2 * shape[-1],)
-            _embedding_dim = _embedding_dim * 2
-
         super().__init__(
             max_id=num_embeddings,
             shape=shape,
@@ -339,6 +333,7 @@ class Embedding(RepresentationModule):
         self._embeddings = torch.nn.Embedding(
             num_embeddings=num_embeddings,
             embedding_dim=_embedding_dim,
+            dtype=dtype,
         )
         self._embeddings.requires_grad_(trainable)
         self.dropout = None if dropout is None else nn.Dropout(dropout)
