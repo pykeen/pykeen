@@ -126,10 +126,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
     ) -> None:
         """Initialize the training loop.
 
-        .. note ::
-            Gradient clipping is a technique to avoid the exploding gradient problem. Clip by norm and clip by value
-            are two alternative implementations.
-
         :param model: The model to train
         :param triples_factory: The training triples factory
         :param optimizer: The optimizer to use while training the model
@@ -208,6 +204,11 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         gradient_clipping_max_abs_value: Optional[float] = None,
     ) -> Optional[List[float]]:
         """Train the KGE model.
+
+        .. note ::
+            Gradient clipping is a technique to avoid the exploding gradient problem. Clip by norm and clip by value
+            are two alternative implementations.
+
 
         :param triples_factory:
             The training triples.
