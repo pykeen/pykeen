@@ -13,11 +13,13 @@ relationship between datasets' splits' distances and their maximum performance.
 
 from typing import List, Sequence
 
+import click
+
 from .splitting import normalize_ratios, split
 from .triples_factory import CoreTriplesFactory, cat_triples
 
 __all__ = [
-    'remix',
+    "remix",
 ]
 
 
@@ -32,7 +34,7 @@ def remix(*triples_factories: CoreTriplesFactory, **kwargs) -> List[CoreTriplesF
     """
     for tf in triples_factories:
         if tf.create_inverse_triples:
-            raise NotImplementedError('The remix algorithm is not implemented for datasets with inverse triples')
+            raise NotImplementedError("The remix algorithm is not implemented for datasets with inverse triples")
 
     all_triples = cat_triples(*triples_factories)
     ratios = _get_ratios(*triples_factories)
@@ -49,23 +51,28 @@ def _get_ratios(*triples_factories: CoreTriplesFactory) -> Sequence[float]:
     return ratios
 
 
-def _main(trials: int = 15):
-    from pykeen.datasets import get_dataset
-    import numpy as np
+@click.command()
+@click.option("--trails", type=int, default=15, show_default=True)
+def _main(trials):
     import itertools as itt
+
+    import numpy as np
     from tqdm import tqdm
 
+    from pykeen.datasets import get_dataset
+
     n_comb = trials * (trials - 1) // 2
-    print(f'Number of combinations: {trials} n Choose 2 = {n_comb}')
+    click.echo(f"Number of combinations: {trials} n Choose 2 = {n_comb}")
 
     for dataset_name in [
-        'nations', 'umls', 'kinships', 'codexsmall', 'wn18',
+        "nations",
+        "umls",
+        "kinships",
+        "codexsmall",
+        "wn18",
     ]:
         reference_dataset = get_dataset(dataset=dataset_name)
-        remixed_datasets = [
-            reference_dataset.remix(random_state=random_state)
-            for random_state in range(trials)
-        ]
+        remixed_datasets = [reference_dataset.remix(random_state=random_state) for random_state in range(trials)]
         similarities = [
             a.similarity(b)
             for a, b in tqdm(
@@ -74,10 +81,10 @@ def _main(trials: int = 15):
                 desc=dataset_name,
             )
         ]
-        print(f'[{dataset_name}] Similarities Mean: {np.mean(similarities):.3f}')
-        print(f'[{dataset_name}] Similarities Std.: {np.std(similarities):.3f}')
-        print(f'[{dataset_name}] Relative Std.: {np.std(similarities) / np.mean(similarities):.3%}')
+        click.echo(f"[{dataset_name}] Similarities Mean: {np.mean(similarities):.3f}")
+        click.echo(f"[{dataset_name}] Similarities Std.: {np.std(similarities):.3f}")
+        click.echo(f"[{dataset_name}] Relative Std.: {np.std(similarities) / np.mean(similarities):.3%}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     _main()

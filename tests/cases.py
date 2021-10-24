@@ -10,7 +10,20 @@ import timeit
 import traceback
 import unittest
 from abc import ABC, abstractmethod
-from typing import Any, ClassVar, Collection, Dict, Mapping, MutableMapping, Optional, Sequence, Tuple, Type, TypeVar
+from typing import (
+    Any,
+    ClassVar,
+    Collection,
+    Dict,
+    Iterable,
+    Mapping,
+    MutableMapping,
+    Optional,
+    Sequence,
+    Tuple,
+    Type,
+    TypeVar,
+)
 from unittest.case import SkipTest
 from unittest.mock import patch
 
@@ -20,7 +33,7 @@ import unittest_templates
 from click.testing import CliRunner, Result
 from torch import optim
 from torch.nn import functional
-from torch.optim import Adagrad, SGD
+from torch.optim import SGD, Adagrad
 
 import pykeen.models
 import pykeen.nn.message_passing
@@ -30,17 +43,18 @@ from pykeen.datasets.base import LazyDataset
 from pykeen.datasets.kinships import KINSHIPS_TRAIN_PATH
 from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH
 from pykeen.losses import Loss, PairwiseLoss, PointwiseLoss, SetwiseLoss, UnsupportedLabelSmoothingError
-from pykeen.models import EntityEmbeddingModel, EntityRelationEmbeddingModel, Model, RESCAL
+from pykeen.models import RESCAL, EntityRelationEmbeddingModel, Model
 from pykeen.models.cli import build_cli_from_cls
 from pykeen.nn.emb import RepresentationModule
 from pykeen.nn.modules import FunctionalInteraction, Interaction, LiteralInteraction
 from pykeen.optimizers import optimizer_resolver
+from pykeen.pipeline import pipeline
 from pykeen.regularizers import LpRegularizer, Regularizer
 from pykeen.trackers import ResultTracker
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
 from pykeen.triples import TriplesFactory
 from pykeen.typing import HeadRepresentation, MappedTriples, RelationRepresentation, TailRepresentation
-from pykeen.utils import all_in_bounds, resolve_device, set_random_seed, unpack_singletons
+from pykeen.utils import all_in_bounds, get_batchnorm_modules, resolve_device, set_random_seed, unpack_singletons
 from tests.constants import EPSILON
 from tests.mocks import CustomRepresentations
 from tests.utils import rand
@@ -116,8 +130,8 @@ class DatasetTestCase(unittest.TestCase):
         self.assertEqual(self.dataset.num_relations, self.exp_num_relations)
 
         num_triples = sum(
-            triples_factory.num_triples for
-            triples_factory in (self.dataset._training, self.dataset._testing, self.dataset._validation)
+            triples_factory.num_triples
+            for triples_factory in (self.dataset._training, self.dataset._testing, self.dataset._validation)
         )
         if self.exp_num_triples_tolerance is None:
             self.assertEqual(self.exp_num_triples, num_triples)
@@ -129,7 +143,7 @@ class DatasetTestCase(unittest.TestCase):
         _ = self.dataset.training
         end = timeit.default_timer()
         # assert (end - start) < 1.0e-02
-        self.assertAlmostEqual(start, end, delta=1.0e-02, msg='Caching should have made this operation fast')
+        self.assertAlmostEqual(start, end, delta=1.0e-02, msg="Caching should have made this operation fast")
 
         # Test consistency of training / validation / testing mapping
         training = self.dataset.training
@@ -322,6 +336,17 @@ class PairwiseLossTestCase(LossTestCase):
         self._check_loss_value(loss_value)
 
 
+class GMRLTestCase(PairwiseLossTestCase):
+    """Tests for generalized margin ranking loss."""
+
+    def test_label_smoothing_raise(self):
+        """Test errors are raised if label smoothing is given."""
+        with self.assertRaises(UnsupportedLabelSmoothingError):
+            self.instance.process_lcwa_scores(..., ..., label_smoothing=5)
+        with self.assertRaises(UnsupportedLabelSmoothingError):
+            self.instance.process_lcwa_scores(..., ..., label_smoothing=5)
+
+
 class SetwiseLossTestCase(LossTestCase):
     """Unit tests for setwise losses."""
 
@@ -380,25 +405,34 @@ class InteractionTestCase(
     def _additional_score_checks(self, scores):
         """Additional checks for scores."""
 
+    @property
+    def _score_batch_sizes(self) -> Iterable[int]:
+        """Return the list of batch sizes to test."""
+        if get_batchnorm_modules(self.instance):
+            return [self.batch_size]
+        return [1, self.batch_size]
+
     def test_score_hrt(self):
         """Test score_hrt."""
-        h, r, t = self._get_hrt(
-            (self.batch_size,),
-            (self.batch_size,),
-            (self.batch_size,),
-        )
-        scores = self.instance.score_hrt(h=h, r=r, t=t)
-        self._check_scores(scores=scores, exp_shape=(self.batch_size, 1))
+        for batch_size in self._score_batch_sizes:
+            h, r, t = self._get_hrt(
+                (batch_size,),
+                (batch_size,),
+                (batch_size,),
+            )
+            scores = self.instance.score_hrt(h=h, r=r, t=t)
+            self._check_scores(scores=scores, exp_shape=(batch_size, 1))
 
     def test_score_h(self):
         """Test score_h."""
-        h, r, t = self._get_hrt(
-            (self.num_entities,),
-            (self.batch_size,),
-            (self.batch_size,),
-        )
-        scores = self.instance.score_h(all_entities=h, r=r, t=t)
-        self._check_scores(scores=scores, exp_shape=(self.batch_size, self.num_entities))
+        for batch_size in self._score_batch_sizes:
+            h, r, t = self._get_hrt(
+                (self.num_entities,),
+                (batch_size,),
+                (batch_size,),
+            )
+            scores = self.instance.score_h(all_entities=h, r=r, t=t)
+            self._check_scores(scores=scores, exp_shape=(batch_size, self.num_entities))
 
     def test_score_h_slicing(self):
         """Test score_h with slicing."""
@@ -415,17 +449,18 @@ class InteractionTestCase(
 
     def test_score_r(self):
         """Test score_r."""
-        h, r, t = self._get_hrt(
-            (self.batch_size,),
-            (self.num_relations,),
-            (self.batch_size,),
-        )
-        scores = self.instance.score_r(h=h, all_relations=r, t=t)
-        if len(self.cls.relation_shape) == 0:
-            exp_shape = (self.batch_size, 1)
-        else:
-            exp_shape = (self.batch_size, self.num_relations)
-        self._check_scores(scores=scores, exp_shape=exp_shape)
+        for batch_size in self._score_batch_sizes:
+            h, r, t = self._get_hrt(
+                (batch_size,),
+                (self.num_relations,),
+                (batch_size,),
+            )
+            scores = self.instance.score_r(h=h, all_relations=r, t=t)
+            if len(self.cls.relation_shape) == 0:
+                exp_shape = (batch_size, 1)
+            else:
+                exp_shape = (batch_size, self.num_relations)
+            self._check_scores(scores=scores, exp_shape=exp_shape)
 
     def test_score_r_slicing(self):
         """Test score_r with slicing."""
@@ -444,13 +479,14 @@ class InteractionTestCase(
 
     def test_score_t(self):
         """Test score_t."""
-        h, r, t = self._get_hrt(
-            (self.batch_size,),
-            (self.batch_size,),
-            (self.num_entities,),
-        )
-        scores = self.instance.score_t(h=h, r=r, all_entities=t)
-        self._check_scores(scores=scores, exp_shape=(self.batch_size, self.num_entities))
+        for batch_size in self._score_batch_sizes:
+            h, r, t = self._get_hrt(
+                (batch_size,),
+                (batch_size,),
+                (self.num_entities,),
+            )
+            scores = self.instance.score_t(h=h, r=r, all_entities=t)
+            self._check_scores(scores=scores, exp_shape=(batch_size, self.num_entities))
 
     def test_score_t_slicing(self):
         """Test score_t with slicing."""
@@ -466,15 +502,13 @@ class InteractionTestCase(
         self._check_close_scores(scores=scores, scores_no_slice=scores_no_slice)
 
     def _check_close_scores(self, scores, scores_no_slice):
-        self.assertTrue(torch.isfinite(scores).all(), msg=f'Normal scores had nan:\n\t{scores}')
-        self.assertTrue(torch.isfinite(scores_no_slice).all(), msg=f'Slice scores had nan\n\t{scores}')
-        self.assertTrue(torch.allclose(scores, scores_no_slice), msg=f'Differences: {scores - scores_no_slice}')
+        self.assertTrue(torch.isfinite(scores).all(), msg=f"Normal scores had nan:\n\t{scores}")
+        self.assertTrue(torch.isfinite(scores_no_slice).all(), msg=f"Slice scores had nan\n\t{scores}")
+        self.assertTrue(torch.allclose(scores, scores_no_slice), msg=f"Differences: {scores - scores_no_slice}")
 
-    def _get_test_shapes(self) -> Collection[Tuple[
-        Tuple[int, int, int, int],
-        Tuple[int, int, int, int],
-        Tuple[int, int, int, int],
-    ]]:
+    def _get_test_shapes(
+        self,
+    ) -> Collection[Tuple[Tuple[int, int, int, int], Tuple[int, int, int, int], Tuple[int, int, int, int]]]:
         """Return a set of test shapes for (h, r, t)."""
         return (
             (  # single score
@@ -524,8 +558,7 @@ class InteractionTestCase(
                 # check whether the error originates from batch norm for single element batches
                 small_batch_size = any(s[0] == 1 for s in (hs, rs, ts))
                 has_batch_norm = any(
-                    isinstance(m, (torch.nn.BatchNorm1d, torch.nn.BatchNorm2d))
-                    for m in self.instance.modules()
+                    isinstance(m, (torch.nn.BatchNorm1d, torch.nn.BatchNorm2d)) for m in self.instance.modules()
                 )
                 if small_batch_size and has_batch_norm:
                     logger.warning(
@@ -537,7 +570,7 @@ class InteractionTestCase(
     def test_forward_consistency_with_functional(self):
         """Test forward's consistency with functional."""
         if not isinstance(self.instance, FunctionalInteraction):
-            self.skipTest('Not a functional interaction')
+            self.skipTest("Not a functional interaction")
 
         # set in eval mode (otherwise there are non-deterministic factors like Dropout
         self.instance.eval()
@@ -567,7 +600,7 @@ class InteractionTestCase(
 
             # calculate manually
             scores_f_manual = self._exp_score(**kwargs).view(-1)
-            assert torch.allclose(scores_f_manual, scores_f), f'Diff: {scores_f_manual - scores_f}'
+            assert torch.allclose(scores_f_manual, scores_f), f"Diff: {scores_f_manual - scores_f}"
 
     @abstractmethod
     def _exp_score(self, **kwargs) -> torch.FloatTensor:
@@ -678,7 +711,7 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
         self.device = resolve_device()
         self.triples_factory = Nations().training
         self.batch_size = 16
-        self.positive_batch = self.triples_factory.mapped_triples[:self.batch_size, :].to(device=self.device)
+        self.positive_batch = self.triples_factory.mapped_triples[: self.batch_size, :].to(device=self.device)
         super().setUp()
         # move test instance to device
         self.instance = self.instance.to(self.device)
@@ -701,14 +734,14 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
         model.post_parameter_update()
 
         # Check if regularization term is reset
-        self.assertEqual(0., model.regularizer.term)
+        self.assertEqual(0.0, model.regularizer.term)
 
     def test_reset(self) -> None:
         """Test method `reset`."""
         # Call method
         self.instance.reset()
 
-        self.assertEqual(0., self.instance.regularization_term)
+        self.assertEqual(0.0, self.instance.regularization_term)
 
     def test_update(self) -> None:
         """Test method `update`."""
@@ -743,7 +776,7 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
         # check value
         expected_penalty = self._expected_penalty(x=x)
         if expected_penalty is None:
-            logging.warning(f'{self.__class__.__name__} did not override `_expected_penalty`.')
+            logging.warning(f"{self.__class__.__name__} did not override `_expected_penalty`.")
         else:
             assert (expected_penalty == penalty).all()
 
@@ -761,9 +794,9 @@ class LpRegularizerTest(RegularizerTestCase):
         kwargs = self.kwargs
         if kwargs is None:
             kwargs = {}
-        p = kwargs.get('p', self.instance.p)
+        p = kwargs.get("p", self.instance.p)
         value = x.norm(p=p, dim=-1).mean()
-        if kwargs.get('normalize', False):
+        if kwargs.get("normalize", False):
             dim = torch.as_tensor(x.shape[-1], dtype=torch.float, device=x.device)
             # FIXME isn't any finite number allowed now?
             if p == 2:
@@ -794,7 +827,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
     create_inverse_triples: bool = False
 
     #: The sampler to use for sLCWA (different e.g. for R-GCN)
-    sampler = 'default'
+    sampler = "default"
 
     #: The batch size for use when testing training procedures
     train_batch_size = 400
@@ -846,10 +879,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         """Test :func:`Model.reset_parameters_`."""
         # get model parameters
         params = list(self.instance.parameters())
-        old_content = {
-            id(p): p.data.detach().clone()
-            for p in params
-        }
+        old_content = {id(p): p.data.detach().clone() for p in params}
 
         # re-initialize
         self.instance.reset_parameters_()
@@ -859,19 +889,16 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         assert set(id(np) for np in new_params) == set(id(p) for p in params)
 
         # check that the parameters where modified
-        num_equal_weights_after_re_init = sum(
-            1
-            for np in new_params
-            if (np.data == old_content[id(np)]).all()
-        )
+        num_equal_weights_after_re_init = sum(1 for np in new_params if (np.data == old_content[id(np)]).all())
         assert num_equal_weights_after_re_init == self.num_constant_init, (
-            num_equal_weights_after_re_init, self.num_constant_init,
+            num_equal_weights_after_re_init,
+            self.num_constant_init,
         )
 
     def _check_scores(self, batch, scores) -> None:
         """Check the scores produced by a forward function."""
         # check for finite values by default
-        self.assertTrue(torch.all(torch.isfinite(scores)).item(), f'Some scores were not finite:\n{scores}')
+        self.assertTrue(torch.all(torch.isfinite(scores)).item(), f"Some scores were not finite:\n{scores}")
 
         # check whether a gradient can be back-propgated
         scores.mean().backward()
@@ -879,15 +906,15 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
     def test_save(self) -> None:
         """Test that the model can be saved properly."""
         with tempfile.TemporaryDirectory() as temp_directory:
-            torch.save(self.instance, os.path.join(temp_directory, 'model.pickle'))
+            torch.save(self.instance, os.path.join(temp_directory, "model.pickle"))
 
     def test_score_hrt(self) -> None:
         """Test the model's ``score_hrt()`` function."""
-        batch = self.factory.mapped_triples[:self.batch_size, :].to(self.instance.device)
+        batch = self.factory.mapped_triples[: self.batch_size, :].to(self.instance.device)
         try:
             scores = self.instance.score_hrt(batch)
         except RuntimeError as e:
-            if str(e) == 'fft: ATen not compiled with MKL support':
+            if str(e) == "fft: ATen not compiled with MKL support":
                 self.skipTest(str(e))
             else:
                 raise e
@@ -896,7 +923,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
 
     def test_score_t(self) -> None:
         """Test the model's ``score_t()`` function."""
-        batch = self.factory.mapped_triples[:self.batch_size, :2].to(self.instance.device)
+        batch = self.factory.mapped_triples[: self.batch_size, :2].to(self.instance.device)
         # assert batch comprises (head, relation) pairs
         assert batch.shape == (self.batch_size, 2)
         assert (batch[:, 0] < self.factory.num_entities).all()
@@ -904,9 +931,9 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         try:
             scores = self.instance.score_t(batch)
         except NotImplementedError:
-            self.fail(msg='Score_o not yet implemented')
+            self.fail(msg="Score_o not yet implemented")
         except RuntimeError as e:
-            if str(e) == 'fft: ATen not compiled with MKL support':
+            if str(e) == "fft: ATen not compiled with MKL support":
                 self.skipTest(str(e))
             else:
                 raise e
@@ -915,7 +942,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
 
     def test_score_h(self) -> None:
         """Test the model's ``score_h()`` function."""
-        batch = self.factory.mapped_triples[:self.batch_size, 1:].to(self.instance.device)
+        batch = self.factory.mapped_triples[: self.batch_size, 1:].to(self.instance.device)
         # assert batch comprises (relation, tail) pairs
         assert batch.shape == (self.batch_size, 2)
         assert (batch[:, 0] < self.factory.num_relations).all()
@@ -923,9 +950,9 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         try:
             scores = self.instance.score_h(batch)
         except NotImplementedError:
-            self.fail(msg='Score_s not yet implemented')
+            self.fail(msg="Score_s not yet implemented")
         except RuntimeError as e:
-            if str(e) == 'fft: ATen not compiled with MKL support':
+            if str(e) == "fft: ATen not compiled with MKL support":
                 self.skipTest(str(e))
             else:
                 raise e
@@ -962,7 +989,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
             loop,
             num_epochs=self.train_num_epochs,
             batch_size=self.train_batch_size,
-            sampler='default',
+            sampler="default",
         )
         self.assertIsInstance(losses, list)
 
@@ -976,7 +1003,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
                 use_tqdm=False,
             )
         except RuntimeError as e:
-            if str(e) == 'fft: ATen not compiled with MKL support':
+            if str(e) == "fft: ATen not compiled with MKL support":
                 self.skipTest(str(e))
             else:
                 raise e
@@ -999,17 +1026,13 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
             """Test whether two embeddings are equal."""
             return (a(indices=None) == b(indices=None)).all()
 
-        if isinstance(original_model, EntityEmbeddingModel):
-            assert not _equal_embeddings(original_model.entity_embeddings, loaded_model.entity_embeddings)
         if isinstance(original_model, EntityRelationEmbeddingModel):
             assert not _equal_embeddings(original_model.relation_embeddings, loaded_model.relation_embeddings)
 
         with tempfile.TemporaryDirectory() as tmpdirname:
-            file_path = os.path.join(tmpdirname, 'test.pt')
+            file_path = os.path.join(tmpdirname, "test.pt")
             original_model.save_state(path=file_path)
             loaded_model.load_state(path=file_path)
-        if isinstance(original_model, EntityEmbeddingModel):
-            assert _equal_embeddings(original_model.entity_embeddings, loaded_model.entity_embeddings)
         if isinstance(original_model, EntityRelationEmbeddingModel):
             assert _equal_embeddings(original_model.relation_embeddings, loaded_model.relation_embeddings)
 
@@ -1018,25 +1041,28 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         """Return a list of extra flags for the CLI."""
         kwargs = self.kwargs or {}
         extras = [
-            '--silent',
+            "--silent",
         ]
         for k, v in kwargs.items():
-            extras.append('--' + k.replace('_', '-'))
+            extras.append("--" + k.replace("_", "-"))
             extras.append(str(v))
 
         # For the high/low memory test cases of NTN, SE, etc.
-        if self.training_loop_kwargs and 'automatic_memory_optimization' in self.training_loop_kwargs:
-            automatic_memory_optimization = self.training_loop_kwargs.get('automatic_memory_optimization')
+        if self.training_loop_kwargs and "automatic_memory_optimization" in self.training_loop_kwargs:
+            automatic_memory_optimization = self.training_loop_kwargs.get("automatic_memory_optimization")
             if automatic_memory_optimization is True:
-                extras.append('--automatic-memory-optimization')
+                extras.append("--automatic-memory-optimization")
             elif automatic_memory_optimization is False:
-                extras.append('--no-automatic-memory-optimization')
+                extras.append("--no-automatic-memory-optimization")
             # else, leave to default
 
         extras += [
-            '--number-epochs', self.train_num_epochs,
-            '--embedding-dim', self.embedding_dim,
-            '--batch-size', self.train_batch_size,
+            "--number-epochs",
+            self.train_num_epochs,
+            "--embedding-dim",
+            self.embedding_dim,
+            "--batch-size",
+            self.train_batch_size,
         ]
         extras.extend(self.cli_extras)
         # TODO: Make sure that inverse triples are created if create_inverse_triples=True
@@ -1046,17 +1072,37 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
     @pytest.mark.slow
     def test_cli_training_nations(self):
         """Test running the pipeline on almost all models with only training data."""
-        self._help_test_cli(['-t', NATIONS_TRAIN_PATH] + self._cli_extras)
+        self._help_test_cli(["-t", NATIONS_TRAIN_PATH] + self._cli_extras)
+
+    @pytest.mark.slow
+    def test_pipeline_nations_early_stopper(self):
+        """Test running the pipeline with early stopping."""
+        model_kwargs = dict(self.instance_kwargs)
+        # triples factory is added by the pipeline
+        model_kwargs.pop("triples_factory")
+        pipeline(
+            model=self.cls,
+            model_kwargs=model_kwargs,
+            dataset="nations",
+            dataset_kwargs=dict(create_inverse_triples=self.create_inverse_triples),
+            stopper="early",
+            training_loop_kwargs=self.training_loop_kwargs,
+            stopper_kwargs=dict(frequency=1),
+            training_kwargs=dict(
+                batch_size=self.train_batch_size,
+                num_epochs=self.train_num_epochs,
+            ),
+        )
 
     @pytest.mark.slow
     def test_cli_training_kinships(self):
         """Test running the pipeline on almost all models with only training data."""
-        self._help_test_cli(['-t', KINSHIPS_TRAIN_PATH] + self._cli_extras)
+        self._help_test_cli(["-t", KINSHIPS_TRAIN_PATH] + self._cli_extras)
 
     @pytest.mark.slow
     def test_cli_training_nations_testing(self):
         """Test running the pipeline on almost all models with only training data."""
-        self._help_test_cli(['-t', NATIONS_TRAIN_PATH, '-q', NATIONS_TEST_PATH] + self._cli_extras)
+        self._help_test_cli(["-t", NATIONS_TRAIN_PATH, "-q", NATIONS_TEST_PATH] + self._cli_extras)
 
     def _help_test_cli(self, args):
         """Test running the pipeline on all models."""
@@ -1070,7 +1116,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         self.assertEqual(
             0,
             result.exit_code,
-            msg=f'''
+            msg=f"""
 Command
 =======
 $ pykeen train {self.cls.__name__.lower()} {' '.join(map(str, args))}
@@ -1086,7 +1132,7 @@ Exception
 Traceback
 =========
 {''.join(traceback.format_tb(result.exc_info[2]))}
-            ''',
+            """,
         )
 
     def test_has_hpo_defaults(self):
@@ -1094,14 +1140,14 @@ Traceback
         try:
             d = self.cls.hpo_default
         except AttributeError:
-            self.fail(msg=f'{self.cls.__name__} is missing hpo_default class attribute')
+            self.fail(msg=f"{self.cls.__name__} is missing hpo_default class attribute")
         else:
             self.assertIsInstance(d, dict)
 
     def test_post_parameter_update_regularizer(self):
         """Test whether post_parameter_update resets the regularization term."""
-        if not hasattr(self.instance, 'regularizer'):
-            self.skipTest('no regularizer')
+        if not hasattr(self.instance, "regularizer"):
+            self.skipTest("no regularizer")
 
         # set regularizer term to something that isn't zero
         self.instance.regularizer.regularization_term = torch.ones(1, dtype=torch.float, device=self.instance.device)
@@ -1116,8 +1162,8 @@ Traceback
     def test_post_parameter_update(self):
         """Test whether post_parameter_update correctly enforces model constraints."""
         # do one optimization step
-        opt = optim.SGD(params=self.instance.parameters(), lr=1.)
-        batch = self.factory.mapped_triples[:self.batch_size, :].to(self.instance.device)
+        opt = optim.SGD(params=self.instance.parameters(), lr=1.0)
+        batch = self.factory.mapped_triples[: self.batch_size, :].to(self.instance.device)
         scores = self.instance.score_hrt(hrt_batch=batch)
         fake_loss = scores.mean()
         fake_loss.backward()
@@ -1134,7 +1180,7 @@ Traceback
 
     def test_score_h_with_score_hrt_equality(self) -> None:
         """Test the equality of the model's  ``score_h()`` and ``score_hrt()`` function."""
-        batch = self.factory.mapped_triples[:self.batch_size, 1:].to(self.instance.device)
+        batch = self.factory.mapped_triples[: self.batch_size, 1:].to(self.instance.device)
         self.instance.eval()
         # assert batch comprises (relation, tail) pairs
         assert batch.shape == (self.batch_size, 2)
@@ -1144,9 +1190,9 @@ Traceback
             scores_h = self.instance.score_h(batch)
             scores_hrt = super(self.instance.__class__, self.instance).score_h(batch)
         except NotImplementedError:
-            self.fail(msg='Score_h not yet implemented')
+            self.fail(msg="Score_h not yet implemented")
         except RuntimeError as e:
-            if str(e) == 'fft: ATen not compiled with MKL support':
+            if str(e) == "fft: ATen not compiled with MKL support":
                 self.skipTest(str(e))
             else:
                 raise e
@@ -1155,7 +1201,7 @@ Traceback
 
     def test_score_r_with_score_hrt_equality(self) -> None:
         """Test the equality of the model's  ``score_r()`` and ``score_hrt()`` function."""
-        batch = self.factory.mapped_triples[:self.batch_size, [0, 2]].to(self.instance.device)
+        batch = self.factory.mapped_triples[: self.batch_size, [0, 2]].to(self.instance.device)
         self.instance.eval()
         # assert batch comprises (relation, tail) pairs
         assert batch.shape == (self.batch_size, 2)
@@ -1165,9 +1211,9 @@ Traceback
             scores_r = self.instance.score_r(batch)
             scores_hrt = super(self.instance.__class__, self.instance).score_r(batch)
         except NotImplementedError:
-            self.fail(msg='Score_h not yet implemented')
+            self.fail(msg="Score_h not yet implemented")
         except RuntimeError as e:
-            if str(e) == 'fft: ATen not compiled with MKL support':
+            if str(e) == "fft: ATen not compiled with MKL support":
                 self.skipTest(str(e))
             else:
                 raise e
@@ -1176,7 +1222,7 @@ Traceback
 
     def test_score_t_with_score_hrt_equality(self) -> None:
         """Test the equality of the model's  ``score_t()`` and ``score_hrt()`` function."""
-        batch = self.factory.mapped_triples[:self.batch_size, :-1].to(self.instance.device)
+        batch = self.factory.mapped_triples[: self.batch_size, :-1].to(self.instance.device)
         self.instance.eval()
         # assert batch comprises (relation, tail) pairs
         assert batch.shape == (self.batch_size, 2)
@@ -1186,9 +1232,9 @@ Traceback
             scores_t = self.instance.score_t(batch)
             scores_hrt = super(self.instance.__class__, self.instance).score_t(batch)
         except NotImplementedError:
-            self.fail(msg='Score_h not yet implemented')
+            self.fail(msg="Score_h not yet implemented")
         except RuntimeError as e:
-            if str(e) == 'fft: ATen not compiled with MKL support':
+            if str(e) == "fft: ATen not compiled with MKL support":
                 self.skipTest(str(e))
             else:
                 raise e
@@ -1197,7 +1243,7 @@ Traceback
 
     def test_reset_parameters_constructor_call(self):
         """Tests whether reset_parameters is called in the constructor."""
-        with patch.object(self.cls, 'reset_parameters_', return_value=None) as mock_method:
+        with patch.object(self.cls, "reset_parameters_", return_value=None) as mock_method:
             try:
                 self.cls(**self.instance_kwargs)
             except TypeError as error:
@@ -1206,19 +1252,7 @@ Traceback
 
     def test_custom_representations(self):
         """Tests whether we can provide custom representations."""
-        if isinstance(self.instance, EntityEmbeddingModel):
-            old_embeddings = self.instance.entity_embeddings
-            self.instance.entity_embeddings = CustomRepresentations(
-                num_entities=self.factory.num_entities,
-                shape=old_embeddings.shape,
-            )
-            # call some functions
-            self.instance.reset_parameters_()
-            self.test_score_hrt()
-            self.test_score_t()
-            # reset to old state
-            self.instance.entity_embeddings = old_embeddings
-        elif isinstance(self.instance, EntityRelationEmbeddingModel):
+        if isinstance(self.instance, EntityRelationEmbeddingModel):
             old_embeddings = self.instance.relation_embeddings
             self.instance.relation_embeddings = CustomRepresentations(
                 num_entities=self.factory.num_relations,
@@ -1231,7 +1265,7 @@ Traceback
             # reset to old state
             self.instance.relation_embeddings = old_embeddings
         else:
-            self.skipTest(f'Not testing custom representations for model: {self.instance.__class__.__name__}')
+            self.skipTest(f"Not testing custom representations for model: {self.instance.__class__.__name__}")
 
 
 class DistanceModelTestCase(ModelTestCase):
@@ -1255,28 +1289,16 @@ class BaseKG2ETest(ModelTestCase):
         * Covariances have to have values between c_min and c_max
         """
         for embedding in (self.instance.entity_embeddings, self.instance.relation_embeddings):
-            assert all_in_bounds(embedding(indices=None).norm(p=2, dim=-1), high=1., a_tol=EPSILON)
+            assert all_in_bounds(embedding(indices=None).norm(p=2, dim=-1), high=1.0, a_tol=EPSILON)
         for cov in (self.instance.entity_covariances, self.instance.relation_covariances):
             assert all_in_bounds(cov(indices=None), low=self.instance.c_min, high=self.instance.c_max)
-
-
-class BaseNTNTest(ModelTestCase):
-    """Test the NTN model."""
-
-    cls = pykeen.models.NTN
-
-    def test_can_slice(self):
-        """Test that the slicing properties are calculated correctly."""
-        self.assertTrue(self.instance.can_slice_h)
-        self.assertFalse(self.instance.can_slice_r)
-        self.assertTrue(self.instance.can_slice_t)
 
 
 class BaseRGCNTest(ModelTestCase):
     """Test the R-GCN model."""
 
     cls = pykeen.models.RGCN
-    sampler = 'schlichtkrull'
+    sampler = "schlichtkrull"
 
     def _check_constraints(self):
         """Check model constraints.
@@ -1386,7 +1408,7 @@ class EdgeWeightingTestCase(GenericTestCase[pykeen.nn.weighting.EdgeWeighting]):
         assert torch.isfinite(weights).all()
 
         # check non-negativity
-        assert (weights >= 0.).all()
+        assert (weights >= 0.0).all()
 
 
 class DecompositionTestCase(GenericTestCase[pykeen.nn.message_passing.Decomposition]):

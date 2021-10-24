@@ -12,7 +12,7 @@ from more_click import verbose_option
 from .base import SingleTabbedDataset
 from ..typing import TorchRandomHint
 
-URL = 'https://s3.amazonaws.com/conceptnet/downloads/2019/edges/conceptnet-assertions-5.7.0.csv.gz'
+URL = "https://s3.amazonaws.com/conceptnet/downloads/2019/edges/conceptnet-assertions-5.7.0.csv.gz"
 
 
 @parse_docdata
@@ -67,5 +67,5 @@ def _main():
     ds.summarize()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     _main()

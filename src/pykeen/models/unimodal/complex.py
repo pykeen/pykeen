@@ -16,7 +16,7 @@ from ...typing import Hint, Initializer
 from ...utils import split_complex
 
 __all__ = [
-    'ComplEx',
+    "ComplEx",
 ]
 
 
@@ -30,7 +30,7 @@ class ComplEx(EntityRelationEmbeddingModel):
 
     .. math::
 
-        f(h,r,t) =  Re(\mathbf{e}_h\odot\mathbf{r}_r\odot\mathbf{e}_t)
+        f(h,r,t) =  Re(\mathbf{e}_h\odot\mathbf{r}_r\odot\bar{\mathbf{e}}_t)
 
     Which expands to:
 
@@ -38,8 +38,8 @@ class ComplEx(EntityRelationEmbeddingModel):
 
         f(h,r,t) = \left\langle Re(\mathbf{e}_h),Re(\mathbf{r}_r),Re(\mathbf{e}_t)\right\rangle
         + \left\langle Im(\mathbf{e}_h),Re(\mathbf{r}_r),Im(\mathbf{e}_t)\right\rangle
-        + \left\langle Re(\mathbf{e}_h),Re(\mathbf{r}_r),Im(\mathbf{e}_t)\right\rangle
-        - \left\langle Im(\mathbf{e}_h),Im(\mathbf{r}_r),Im(\mathbf{e}_t)\right\rangle
+        + \left\langle Re(\mathbf{e}_h),Im(\mathbf{r}_r),Im(\mathbf{e}_t)\right\rangle
+        - \left\langle Im(\mathbf{e}_h),Im(\mathbf{r}_r),Re(\mathbf{e}_t)\right\rangle
 
     where $Re(\textbf{x})$ and $Im(\textbf{x})$ denote the real and imaginary parts of the complex valued vector
     $\textbf{x}$. Because the Hadamard product is not commutative in the complex space, ComplEx can model
@@ -63,7 +63,7 @@ class ComplEx(EntityRelationEmbeddingModel):
     #: The default loss function class
     loss_default: ClassVar[Type[Loss]] = SoftplusLoss
     #: The default parameters for the default loss function class
-    loss_default_kwargs: ClassVar[Mapping[str, Any]] = dict(reduction='mean')
+    loss_default_kwargs: ClassVar[Mapping[str, Any]] = dict(reduction="mean")
     #: The regularizer used by [trouillon2016]_ for ComplEx.
     regularizer_default: ClassVar[Type[Regularizer]] = LpRegularizer
     #: The LP settings used by [trouillon2016]_ for ComplEx.

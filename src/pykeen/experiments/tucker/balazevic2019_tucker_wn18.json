@@ -21,8 +21,11 @@
     },
     "optimizer": "Adam",
     "optimizer_kwargs": {
-      "lr": 0.005,
-      "weight_decay": 0.995
+      "lr": 0.005
+    },
+    "lr_scheduler": "ExponentialLR",
+    "lr_scheduler_kwargs": {
+      "gamma": 0.995
     },
     "loss": "BCEAfterSigmoid",
     "loss_kwargs": {

@@ -9,7 +9,7 @@ from docdata import parse_docdata
 from .base import TarFileRemoteDataset
 
 __all__ = [
-    'YAGO310',
+    "YAGO310",
 ]
 
 
@@ -39,14 +39,14 @@ class YAGO310(TarFileRemoteDataset):
         :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.TarFileRemoteDataset`.
         """
         super().__init__(
-            url='https://github.com/TimDettmers/ConvE/raw/master/YAGO3-10.tar.gz',
-            relative_training_path=pathlib.PurePath('train.txt'),
-            relative_testing_path=pathlib.PurePath('test.txt'),
-            relative_validation_path=pathlib.PurePath('valid.txt'),
+            url="https://github.com/TimDettmers/ConvE/raw/master/YAGO3-10.tar.gz",
+            relative_training_path=pathlib.PurePath("train.txt"),
+            relative_testing_path=pathlib.PurePath("test.txt"),
+            relative_validation_path=pathlib.PurePath("valid.txt"),
             create_inverse_triples=create_inverse_triples,
             **kwargs,
         )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     YAGO310().summarize()

@@ -14,7 +14,7 @@ from pykeen.sampling.filtering import BloomFilterer, PythonSetFilterer
 from pykeen.triples import Instances, TriplesFactory
 
 __all__ = [
-    'NegativeSamplerGenericTestCase',
+    "NegativeSamplerGenericTestCase",
 ]
 
 
@@ -42,7 +42,7 @@ class NegativeSamplerGenericTestCase(unittest_templates.GenericTestCase[Negative
     positive_batch: torch.LongTensor
     #: Kwargs
     kwargs = {
-        'num_negs_per_pos': 10,
+        "num_negs_per_pos": 10,
     }
 
     def pre_setup_hook(self) -> None:
@@ -55,7 +55,7 @@ class NegativeSamplerGenericTestCase(unittest_templates.GenericTestCase[Negative
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
-        kwargs['triples_factory'] = self.triples_factory
+        kwargs["triples_factory"] = self.triples_factory
         return kwargs
 
     def check_sample(self, instance: NegativeSampler) -> None:

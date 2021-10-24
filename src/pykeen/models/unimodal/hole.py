@@ -15,7 +15,7 @@ from ...typing import Constrainer, Hint, Initializer
 from ...utils import clamp_norm
 
 __all__ = [
-    'HolE',
+    "HolE",
 ]
 
 
@@ -59,7 +59,7 @@ class HolE(EntityRelationEmbeddingModel):
     )
 
     #: The default settings for the entity constrainer
-    entity_constrainer_default_kwargs = dict(maxnorm=1., p=2, dim=-1)
+    entity_constrainer_default_kwargs = dict(maxnorm=1.0, p=2, dim=-1)
 
     def __init__(
         self,

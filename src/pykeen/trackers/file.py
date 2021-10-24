@@ -14,9 +14,9 @@ from ..constants import PYKEEN_LOGS
 from ..utils import flatten_dictionary
 
 __all__ = [
-    'FileResultTracker',
-    'CSVResultTracker',
-    'JSONResultTracker',
+    "FileResultTracker",
+    "CSVResultTracker",
+    "JSONResultTracker",
 ]
 
 logger = logging.getLogger(__name__)
@@ -72,7 +72,7 @@ class FileResultTracker(ResultTracker):
         path.parent.mkdir(exist_ok=True, parents=True)
         self.file = path.open(mode="w", newline="", encoding="utf8")
 
-    def end_run(self) -> None:  # noqa: D102
+    def end_run(self, success: bool = True) -> None:  # noqa: D102
         self.file.close()
 
 
@@ -86,7 +86,7 @@ class CSVResultTracker(FileResultTracker):
         tail -f results.txt | grep "hits_at_10"
     """
 
-    extension = 'csv'
+    extension = "csv"
 
     #: The column names
     HEADER = "type", "step", "key", "value"
@@ -115,10 +115,7 @@ class CSVResultTracker(FileResultTracker):
         prefix: Optional[str] = None,
     ) -> None:  # noqa: D102
         params = flatten_dictionary(dictionary=params, prefix=prefix)
-        self.csv_writer.writerows(
-            ("parameter", 0, key, value)
-            for key, value in params.items()
-        )
+        self.csv_writer.writerows(("parameter", 0, key, value) for key, value in params.items())
         self.file.flush()
 
     def log_metrics(
@@ -128,10 +125,7 @@ class CSVResultTracker(FileResultTracker):
         prefix: Optional[str] = None,
     ) -> None:  # noqa: D102
         metrics = flatten_dictionary(dictionary=metrics, prefix=prefix)
-        self.csv_writer.writerows(
-            ("metric", step, key, value)
-            for key, value in metrics.items()
-        )
+        self.csv_writer.writerows(("metric", step, key, value) for key, value in metrics.items())
         self.file.flush()
 
 
@@ -145,14 +139,14 @@ class JSONResultTracker(FileResultTracker):
         tail -f results.txt | grep "hits_at_10"
     """
 
-    extension = 'jsonl'
+    extension = "jsonl"
 
     def log_params(
         self,
         params: Mapping[str, Any],
         prefix: Optional[str] = None,
     ) -> None:  # noqa: D102
-        print(json.dumps({'params': params, 'prefix': prefix}), file=self.file)
+        print(json.dumps({"params": params, "prefix": prefix}), file=self.file)  # noqa:T001
 
     def log_metrics(
         self,
@@ -160,4 +154,4 @@ class JSONResultTracker(FileResultTracker):
         step: Optional[int] = None,
         prefix: Optional[str] = None,
     ) -> None:  # noqa: D102
-        print(json.dumps({'metrics': metrics, 'prefix': prefix, 'step': step}), file=self.file)
+        print(json.dumps({"metrics": metrics, "prefix": prefix, "step": step}), file=self.file)  # noqa:T001

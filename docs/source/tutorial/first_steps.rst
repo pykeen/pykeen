@@ -22,6 +22,39 @@ that you can use :func:`torch.load` to load a model like:
 More information on PyTorch's model persistence can be found at:
 https://pytorch.org/tutorials/beginner/saving_loading_models.html.
 
+Mapping Entity and Relation Identifiers to their Names
+------------------------------------------------------
+While PyKEEN internally maps entities and relations to
+contiguous identifiers, it's still useful to be able to interact
+with datasets, triples factories, and models using the labels
+of the entities and relations.
+
+We can map a triples factory's entities to identifiers using
+:data:`TriplesFactory.entity_to_ids` like in the following
+example:
+
+.. code-block:: python
+
+    from pykeen.datasets import Nations
+
+    triples_factory = Nations().training
+
+    # Get tensor of entity identifiers
+    entity_ids = torch.as_tensor(triples_factory.entity_to_ids(["china", "egypt"]))
+
+Similarly, we can map a triples factory's relations to identifiers
+using :data:`TriplesFactory.relation_to_ids` like in the following
+example:
+
+.. code-block:: python
+
+    relation_ids = torch.as_tensor(triples_factory.relation_to_ids(["independence", "embassy"]))
+
+.. warning::
+
+    It's important to notice that we should use a triples factory with the same mapping
+    that was used to train the model - otherwise we might end up with incorrect IDs.
+
 Using Learned Embeddings
 ------------------------
 The embeddings learned for entities and relations are not only useful for link
@@ -107,33 +140,49 @@ executed with one of the previous examples.
 
 .. code-block:: python
 
-    # Get a training dataset
-    from pykeen.datasets import Nations
-    dataset = Nations()
-    training_triples_factory = dataset.training
+    >>> # Get a training dataset
+    >>> from pykeen.datasets import Nations
+    >>> dataset = Nations()
+    >>> training_triples_factory = dataset.training
 
-    # Pick a model
-    from pykeen.models import TransE
-    model = TransE(triples_factory=training_triples_factory)
+    >>> # Pick a model
+    >>> from pykeen.models import TransE
+    >>> model = TransE(triples_factory=training_triples_factory)
 
-    # Pick an optimizer from Torch
-    from torch.optim import Adam
-    optimizer = Adam(params=model.get_grad_params())
+    >>> # Pick an optimizer from Torch
+    >>> from torch.optim import Adam
+    >>> optimizer = Adam(params=model.get_grad_params())
 
-    # Pick a training approach (sLCWA or LCWA)
-    from pykeen.training import SLCWATrainingLoop
-    training_loop = SLCWATrainingLoop(model=model, optimizer=optimizer)
+    >>> # Pick a training approach (sLCWA or LCWA)
+    >>> from pykeen.training import SLCWATrainingLoop
+    >>> training_loop = SLCWATrainingLoop(
+    ...     model=model,
+    ...     triples_factory=training_triples_factory,
+    ...     optimizer=optimizer,
+    ... )
 
-    # Train like Cristiano Ronaldo
-    training_loop.train(num_epochs=5, batch_size=256)
+    >>> # Train like Cristiano Ronaldo
+    >>> _ = training_loop.train(
+    ...     triples_factory=training_triples_factory,
+    ...     num_epochs=5,
+    ...     batch_size=256,
+    ... )
 
-    # Pick an evaluator
-    from pykeen.evaluation import RankBasedEvaluator
-    evaluator = RankBasedEvaluator()
+    >>> # Pick an evaluator
+    >>> from pykeen.evaluation import RankBasedEvaluator
+    >>> evaluator = RankBasedEvaluator()
 
-    # Get triples to test
-    mapped_triples = dataset.testing.mapped_triples
+    >>> # Get triples to test
+    >>> mapped_triples = dataset.testing.mapped_triples
 
-    # Evaluate
-    results = evaluator.evaluate(model, mapped_triples, batch_size=1024)
-    print(results)
+    >>> # Evaluate
+    >>> results = evaluator.evaluate(
+    ...     model=model,
+    ...     mapped_triples=mapped_triples,
+    ...     batch_size=1024,
+    ...     additional_filter_triples=[
+    ...         dataset.training.mapped_triples,
+    ...         dataset.validation.mapped_triples,
+    ...     ],
+    ... )
+    >>> # print(results)

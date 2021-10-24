@@ -9,7 +9,7 @@ from .base import LazyDataset
 from ..triples import TriplesNumericLiteralsFactory
 
 __all__ = [
-    'NumericPathDataset',
+    "NumericPathDataset",
 ]
 
 
@@ -79,5 +79,5 @@ class NumericPathDataset(LazyDataset):
         rv = super()._summary_rows()
         n_relations = len(self.training.literals_to_id)
         n_triples = n_relations * self.training.num_entities
-        rv.append(('Literals', '-', n_relations, n_triples))
+        rv.append(("Literals", "-", n_relations, n_triples))
         return rv

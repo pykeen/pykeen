@@ -15,7 +15,19 @@ from abc import ABC, abstractmethod
 from io import BytesIO
 from pathlib import Path
 from typing import (
-    Any, Callable, Collection, Dict, Generic, Iterable, List, Mapping, Optional, Sequence, Tuple, Type, TypeVar,
+    Any,
+    Callable,
+    Collection,
+    Dict,
+    Generic,
+    Iterable,
+    List,
+    Mapping,
+    Optional,
+    Sequence,
+    Tuple,
+    Type,
+    TypeVar,
     Union,
 )
 
@@ -33,112 +45,106 @@ from .typing import DeviceHint, MappedTriples, TorchRandomHint
 from .version import get_git_hash
 
 __all__ = [
-    'compose',
-    'clamp_norm',
-    'compact_mapping',
-    'ensure_torch_random_state',
-    'format_relative_comparison',
-    'invert_mapping',
-    'is_cuda_oom_error',
-    'random_non_negative_int',
-    'resolve_device',
-    'split_complex',
-    'split_list_in_batches_iter',
-    'torch_is_in_1d',
-    'normalize_string',
-    'get_until_first_blank',
-    'flatten_dictionary',
-    'set_random_seed',
-    'NoRandomSeedNecessary',
-    'Result',
-    'fix_dataclass_init_docs',
-    'get_benchmark',
-    'extended_einsum',
-    'strip_dim',
-    'upgrade_to_sequence',
-    'ensure_tuple',
-    'unpack_singletons',
-    'extend_batch',
-    'check_shapes',
-    'all_in_bounds',
-    'is_cudnn_error',
-    'view_complex',
-    'combine_complex',
-    'get_model_io',
-    'get_json_bytes_io',
-    'get_df_io',
-    'ensure_ftp_directory',
-    'broadcast_cat',
-    'get_batchnorm_modules',
-    'calculate_broadcasted_elementwise_result_shape',
-    'estimate_cost_of_sequence',
-    'get_optimal_sequence',
-    'tensor_sum',
-    'tensor_product',
-    'negative_norm_of_sum',
-    'negative_norm',
-    'project_entity',
-    'CANONICAL_DIMENSIONS',
-    'convert_to_canonical_shape',
-    'get_expected_norm',
-    'Bias',
-    'activation_resolver',
-    'complex_normalize',
-    'lp_norm',
-    'powersum_norm',
+    "compose",
+    "clamp_norm",
+    "compact_mapping",
+    "ensure_torch_random_state",
+    "format_relative_comparison",
+    "invert_mapping",
+    "is_cuda_oom_error",
+    "random_non_negative_int",
+    "resolve_device",
+    "split_complex",
+    "split_list_in_batches_iter",
+    "torch_is_in_1d",
+    "normalize_string",
+    "get_until_first_blank",
+    "flatten_dictionary",
+    "set_random_seed",
+    "NoRandomSeedNecessary",
+    "Result",
+    "fix_dataclass_init_docs",
+    "get_benchmark",
+    "extended_einsum",
+    "strip_dim",
+    "upgrade_to_sequence",
+    "ensure_tuple",
+    "unpack_singletons",
+    "extend_batch",
+    "check_shapes",
+    "all_in_bounds",
+    "is_cudnn_error",
+    "view_complex",
+    "combine_complex",
+    "get_model_io",
+    "get_json_bytes_io",
+    "get_df_io",
+    "ensure_ftp_directory",
+    "broadcast_cat",
+    "get_batchnorm_modules",
+    "calculate_broadcasted_elementwise_result_shape",
+    "estimate_cost_of_sequence",
+    "get_optimal_sequence",
+    "tensor_sum",
+    "tensor_product",
+    "negative_norm_of_sum",
+    "negative_norm",
+    "project_entity",
+    "CANONICAL_DIMENSIONS",
+    "convert_to_canonical_shape",
+    "get_expected_norm",
+    "Bias",
+    "activation_resolver",
+    "complex_normalize",
+    "lp_norm",
+    "powersum_norm",
 ]
 
 logger = logging.getLogger(__name__)
 
 #: An error that occurs because the input in CUDA is too big. See ConvE for an example.
-_CUDNN_ERROR = 'cuDNN error: CUDNN_STATUS_NOT_SUPPORTED. This error may appear if you passed in a non-contiguous input.'
+_CUDNN_ERROR = "cuDNN error: CUDNN_STATUS_NOT_SUPPORTED. This error may appear if you passed in a non-contiguous input."
 
-_CUDA_OOM_ERROR = 'CUDA out of memory.'
+_CUDA_OOM_ERROR = "CUDA out of memory."
 
 _CUDA_NONZERO_ERROR = "nonzero is not supported for tensors with more than INT_MAX elements"
 
 
 def resolve_device(device: DeviceHint = None) -> torch.device:
     """Resolve a torch.device given a desired device (string)."""
-    if device is None or device == 'gpu':
-        device = 'cuda'
+    if device is None or device == "gpu":
+        device = "cuda"
     if isinstance(device, str):
         device = torch.device(device)
-    if not torch.cuda.is_available() and device.type == 'cuda':
-        device = torch.device('cpu')
-        logger.warning('No cuda devices were available. The model runs on CPU')
+    if not torch.cuda.is_available() and device.type == "cuda":
+        device = torch.device("cpu")
+        logger.warning("No cuda devices were available. The model runs on CPU")
     return device
 
 
-X = TypeVar('X')
+X = TypeVar("X")
 
 
 def split_list_in_batches_iter(input_list: List[X], batch_size: int) -> Iterable[List[X]]:
     """Split a list of instances in batches of size batch_size."""
-    return (
-        input_list[i:i + batch_size]
-        for i in range(0, len(input_list), batch_size)
-    )
+    return (input_list[i : i + batch_size] for i in range(0, len(input_list), batch_size))
 
 
 def get_until_first_blank(s: str) -> str:
     """Recapitulate all lines in the string until the first blank line."""
     lines = list(s.splitlines())
     try:
-        m, _ = min(enumerate(lines), key=lambda line: line == '')
+        m, _ = min(enumerate(lines), key=lambda line: line == "")
     except ValueError:
         return s
     else:
-        return ' '.join(
-            line.lstrip()
-            for line in lines[:m + 2]
-        )
+        return " ".join(line.lstrip() for line in lines[: m + 2])
 
 
 def flatten_dictionary(
     dictionary: Mapping[str, Any],
     prefix: Optional[str] = None,
-    sep: str = '.',
+    sep: str = ".",
 ) -> Dict[str, Any]:
     """Flatten a nested dictionary."""
     real_prefix = tuple() if prefix is None else (prefix,)
@@ -164,7 +170,7 @@ def _flatten_dictionary(
 def clamp_norm(
     x: torch.Tensor,
     maxnorm: float,
-    p: Union[str, int] = 'fro',
+    p: Union[str, int] = "fro",
     dim: Union[None, int, Iterable[int]] = None,
     eps: float = 1.0e-08,
 ) -> torch.Tensor:
@@ -227,7 +233,7 @@ def all_in_bounds(
     x: torch.Tensor,
     low: Optional[float] = None,
     high: Optional[float] = None,
-    a_tol: float = 0.,
+    a_tol: float = 0.0,
 ) -> bool:
     """Check if tensor values respect lower and upper bound.
 
@@ -286,14 +292,8 @@ def compact_mapping(
     :return: A pair (translated, translation)
         where translated is the updated mapping, and translation a dictionary from old to new ids.
     """
-    translation = {
-        old_id: new_id
-        for new_id, old_id in enumerate(sorted(mapping.values()))
-    }
-    translated = {
-        k: translation[v]
-        for k, v in mapping.items()
-    }
+    translation = {old_id: new_id for new_id, old_id in enumerate(sorted(mapping.values()))}
+    translated = {k: translation[v] for k, v in mapping.items()}
     return translated, translation
 
 
@@ -348,7 +348,7 @@ def fix_dataclass_init_docs(cls: Type) -> Type:
 
     .. seealso:: https://github.com/agronholm/sphinx-autodoc-typehints/issues/123
     """
-    cls.__init__.__qualname__ = f'{cls.__name__}.__init__'
+    cls.__init__.__qualname__ = f"{cls.__name__}.__init__"
     return cls
 
 
@@ -370,14 +370,14 @@ def get_model_io(model) -> BytesIO:
 def get_json_bytes_io(obj) -> BytesIO:
     """Get the JSON as bytes."""
     obj_str = json.dumps(obj, indent=2)
-    obj_bytes = obj_str.encode('utf-8')
+    obj_bytes = obj_str.encode("utf-8")
     return BytesIO(obj_bytes)
 
 
 def get_df_io(df: pd.DataFrame) -> BytesIO:
     """Get the dataframe as bytes."""
     df_io = BytesIO()
-    df.to_csv(df_io, sep='\t', index=False)
+    df.to_csv(df_io, sep="\t", index=False)
     df_io.seek(0)
     return df_io
 
@@ -409,11 +409,8 @@ def invert_mapping(mapping: Mapping[K, V]) -> Mapping[V, K]:
     num_unique_values = len(set(mapping.values()))
     num_keys = len(mapping)
     if num_unique_values < num_keys:
-        raise ValueError(f'Mapping is not bijective! Only {num_unique_values}/{num_keys} are unique.')
-    return {
-        value: key
-        for key, value in mapping.items()
-    }
+        raise ValueError(f"Mapping is not bijective! Only {num_unique_values}/{num_keys} are unique.")
+    return {value: key for key, value in mapping.items()}
 
 
 def random_non_negative_int() -> int:
@@ -426,7 +423,7 @@ def ensure_torch_random_state(random_state: TorchRandomHint) -> torch.Generator:
     """Prepare a random state for PyTorch."""
     if random_state is None:
         random_state = random_non_negative_int()
-        logger.warning(f'using automatically assigned random_state={random_state}')
+        logger.warning(f"using automatically assigned random_state={random_state}")
     if isinstance(random_state, int):
         random_state = torch.manual_seed(seed=random_state)
     if not isinstance(random_state, torch.Generator):
@@ -513,10 +510,7 @@ def broadcast_cat(
         dim = tensors[0].ndimension() + dim
 
     # calculate repeats for each tensor
-    repeats = [
-        [1 for _ in t.shape]
-        for t in tensors
-    ]
+    repeats = [[1 for _ in t.shape] for t in tensors]
     for i, dims in enumerate(zip(*(t.shape for t in tensors))):
         # dimensions along concatenation axis do not need to match
         if i == dim:
@@ -532,10 +526,7 @@ def broadcast_cat(
                 repeats[j][i] = d_max
 
     # repeat tensors along axes if necessary
-    tensors = [
-        t.repeat(*r)
-        for t, r in zip(tensors, repeats)
-    ]
+    tensors = [t.repeat(*r) for t, r in zip(tensors, repeats)]
 
     # concatenate
     return torch.cat(tensors, dim=dim)
@@ -543,11 +534,7 @@ def broadcast_cat(
 
 def get_batchnorm_modules(module: torch.nn.Module) -> List[torch.nn.Module]:
     """Return all submodules which are batch normalization layers."""
-    return [
-        submodule
-        for submodule in module.modules()
-        if isinstance(submodule, torch.nn.modules.batchnorm._BatchNorm)
-    ]
+    return [submodule for submodule in module.modules() if isinstance(submodule, torch.nn.modules.batchnorm._BatchNorm)]
 
 
 def calculate_broadcasted_elementwise_result_shape(
@@ -563,17 +550,19 @@ def estimate_cost_of_sequence(
     *other_shapes: Tuple[int, ...],
 ) -> int:
     """Cost of a sequence of broadcasted element-wise operations of tensors, given their shapes."""
-    return sum(map(
-        np.prod,
-        itt.islice(
-            itt.accumulate(
-                (shape,) + other_shapes,
-                calculate_broadcasted_elementwise_result_shape,
+    return sum(
+        map(
+            np.prod,
+            itt.islice(
+                itt.accumulate(
+                    (shape,) + other_shapes,
+                    calculate_broadcasted_elementwise_result_shape,
+                ),
+                1,
+                None,
             ),
-            1,
-            None,
-        ),
-    ))
+        )
+    )
 
 
 @functools.lru_cache(maxsize=32)
@@ -661,7 +650,7 @@ def negative_norm_of_sum(
     :param x: shape: (batch_size, num_heads, num_relations, num_tails, dim)
         The representations.
     :param p:
-        The p for the norm. cf. torch.norm.
+        The p for the norm. cf. :func:`torch.linalg.vector_norm`.
     :param power_norm:
         Whether to return $|x-y|_p^p$, cf. https://github.com/pytorch/pytorch/issues/28119
 
@@ -681,7 +670,7 @@ def negative_norm(
     :param x: shape: (batch_size, num_heads, num_relations, num_tails, dim)
         The vectors.
     :param p:
-        The p for the norm. cf. torch.norm.
+        The p for the norm. cf. :func:`torch.linalg.vector_norm`.
     :param power_norm:
         Whether to return $|x-y|_p^p$, cf. https://github.com/pytorch/pytorch/issues/28119
 
@@ -711,7 +700,7 @@ def extended_einsum(
     for op, t in zip(lhs.split(","), tensors):
         mod_op = ""
         if len(op) != len(t.shape):
-            raise ValueError(f'Shapes not equal: op={op} and t.shape={t.shape}')
+            raise ValueError(f"Shapes not equal: op={op} and t.shape={t.shape}")
         # TODO: t_shape = list(t.shape); del t_shape[i]; t.view(*shape) -> only one reshape operation
         for i, c in reversed(list(enumerate(op))):
             if t.shape[i] == 1:
@@ -863,15 +852,12 @@ def unpack_singletons(*xs: Tuple[X]) -> Sequence[Union[X, Tuple[X]]]:
     >>> unpack_singletons((1,), (1, 2), (1, 2, 3))
     (1, (1, 2), (1, 2, 3))
     """
-    return tuple(
-        x[0] if len(x) == 1 else x
-        for x in xs
-    )
+    return tuple(x[0] if len(x) == 1 else x for x in xs)
 
 
 def _can_slice(fn) -> bool:
     """Check if a model's score_X function can slice."""
-    return 'slice_size' in inspect.getfullargspec(fn).args
+    return "slice_size" in inspect.getfullargspec(fn).args
 
 
 def extend_batch(
@@ -947,7 +933,7 @@ def check_shapes(
                 errors.append(f"{name}: {dim} vs. {exp_dim}")
             dims[name] = dim
     if raise_on_errors and errors:
-        raise ValueError("Shape verification failed:\n" + '\n'.join(errors))
+        raise ValueError("Shape verification failed:\n" + "\n".join(errors))
     return len(errors) == 0
 
 
@@ -1083,7 +1069,7 @@ def complex_normalize(x: torch.Tensor) -> torch.Tensor:
     return y.view(*x.shape)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import doctest
 
     doctest.testmod()

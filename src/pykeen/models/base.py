@@ -25,10 +25,9 @@ from ..typing import DeviceHint, ScorePack
 from ..utils import NoRandomSeedNecessary, _can_slice, extend_batch, resolve_device, set_random_seed
 
 __all__ = [
-    'Model',
-    '_OldAbstractModel',
-    'EntityEmbeddingModel',
-    'EntityRelationEmbeddingModel',
+    "Model",
+    "_OldAbstractModel",
+    "EntityRelationEmbeddingModel",
 ]
 
 logger = logging.getLogger(__name__)
@@ -54,7 +53,7 @@ class Model(nn.Module, ABC):
     #: The default loss function class
     loss_default: ClassVar[Type[Loss]] = MarginRankingLoss
     #: The default parameters for the default loss function class
-    loss_default_kwargs: ClassVar[Optional[Mapping[str, Any]]] = dict(margin=1.0, reduction='mean')
+    loss_default_kwargs: ClassVar[Optional[Mapping[str, Any]]] = dict(margin=1.0, reduction="mean")
     #: The instance of the loss
     loss: Loss
 
@@ -92,7 +91,7 @@ class Model(nn.Module, ABC):
 
         # Random seeds have to set before the embeddings are initialized
         if random_seed is None:
-            logger.warning('No random seed is specified. This may lead to non-reproducible results.')
+            logger.warning("No random seed is specified. This may lead to non-reproducible results.")
             self._random_seed = None
         elif random_seed is not NoRandomSeedNecessary:
             set_random_seed(random_seed)
@@ -108,10 +107,10 @@ class Model(nn.Module, ABC):
         self.num_entities = triples_factory.num_entities
         self.num_relations = triples_factory.num_relations
 
-        '''
+        """
         When predict_with_sigmoid is set to True, the sigmoid function is applied to the logits during evaluation and
         also for predictions after training, but has no effect on the training.
-        '''
+        """
         self.predict_with_sigmoid = predict_with_sigmoid
 
     def __init_subclass__(cls, **kwargs):
@@ -243,10 +242,7 @@ class Model(nn.Module, ABC):
     @property
     def num_parameter_bytes(self) -> int:
         """Calculate the number of bytes used for all parameters of the model."""
-        return sum(
-            param.numel() * param.element_size()
-            for param in self.parameters(recurse=True)
-        )
+        return sum(param.numel() * param.element_size() for param in self.parameters(recurse=True))
 
     def save_state(self, path: str) -> None:
         """Save the state of the model.
@@ -407,7 +403,8 @@ class Model(nn.Module, ABC):
             A tensor containing the k highest scoring triples, or all possible triples if k=None.
         """
         from .predict import get_all_prediction_df
-        warnings.warn('Use pykeen.models.predict.get_all_prediction_df', DeprecationWarning)
+
+        warnings.warn("Use pykeen.models.predict.get_all_prediction_df", DeprecationWarning)
         return get_all_prediction_df(model=self, k=k, batch_size=batch_size, **kwargs)
 
     def get_head_prediction_df(
@@ -433,7 +430,8 @@ class Model(nn.Module, ABC):
         >>> df = result.model.get_head_prediction_df('accusation', 'brazil', triples_factory=result.training)
         """
         from .predict import get_head_prediction_df
-        warnings.warn('Use pykeen.models.predict.get_head_prediction_df', DeprecationWarning)
+
+        warnings.warn("Use pykeen.models.predict.get_head_prediction_df", DeprecationWarning)
         return get_head_prediction_df(self, relation_label=relation_label, tail_label=tail_label, **kwargs)
 
     def get_relation_prediction_df(
@@ -449,7 +447,8 @@ class Model(nn.Module, ABC):
         :param kwargs: Keyword arguments passed to :func:`pykeen.models.predict.get_relation_prediction_df`
         """
         from .predict import get_relation_prediction_df
-        warnings.warn('Use pykeen.models.predict.get_relation_prediction_df', DeprecationWarning)
+
+        warnings.warn("Use pykeen.models.predict.get_relation_prediction_df", DeprecationWarning)
         return get_relation_prediction_df(self, head_label=head_label, tail_label=tail_label, **kwargs)
 
     def get_tail_prediction_df(
@@ -475,7 +474,8 @@ class Model(nn.Module, ABC):
         >>> df = result.model.get_tail_prediction_df('brazil', 'accusation', triples_factory=result.training)
         """
         from .predict import get_tail_prediction_df
-        warnings.warn('Use pykeen.models.predict.get_tail_prediction_df', DeprecationWarning)
+
+        warnings.warn("Use pykeen.models.predict.get_tail_prediction_df", DeprecationWarning)
         return get_tail_prediction_df(self, head_label=head_label, relation_label=relation_label, **kwargs)
 
     """Inverse scoring"""
@@ -612,8 +612,8 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
             For each h-r pair, the scores for all possible tails.
         """
         logger.warning(
-            'Calculations will fall back to using the score_hrt method, since this model does not have a specific '
-            'score_t function. This might cause the calculations to take longer than necessary.',
+            "Calculations will fall back to using the score_hrt method, since this model does not have a specific "
+            "score_t function. This might cause the calculations to take longer than necessary.",
         )
         # Extend the hr_batch such that each (h, r) pair is combined with all possible tails
         hrt_batch = extend_batch(batch=hr_batch, all_ids=list(self._entity_ids), dim=2)
@@ -635,8 +635,8 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
             For each r-t pair, the scores for all possible heads.
         """
         logger.warning(
-            'Calculations will fall back to using the score_hrt method, since this model does not have a specific '
-            'score_h function. This might cause the calculations to take longer than necessary.',
+            "Calculations will fall back to using the score_hrt method, since this model does not have a specific "
+            "score_h function. This might cause the calculations to take longer than necessary.",
         )
         # Extend the rt_batch such that each (r, t) pair is combined with all possible heads
         hrt_batch = extend_batch(batch=rt_batch, all_ids=list(self._entity_ids), dim=0)
@@ -658,8 +658,8 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
             For each h-t pair, the scores for all possible relations.
         """
         logger.warning(
-            'Calculations will fall back to using the score_hrt method, since this model does not have a specific '
-            'score_r function. This might cause the calculations to take longer than necessary.',
+            "Calculations will fall back to using the score_hrt method, since this model does not have a specific "
+            "score_r function. This might cause the calculations to take longer than necessary.",
         )
         # Extend the ht_batch such that each (h, t) pair is combined with all possible relations
         hrt_batch = extend_batch(batch=ht_batch, all_ids=list(self._relation_ids), dim=1)
@@ -678,61 +678,6 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
 
     def _free_graph_and_cache(self):
         self.regularizer.reset()
-
-
-class EntityEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
-    """A base module for most KGE models that have one embedding for entities."""
-
-    entity_embeddings: Embedding
-
-    def __init__(
-        self,
-        *,
-        triples_factory: CoreTriplesFactory,
-        entity_representations: EmbeddingSpecification,
-        loss: Optional[Loss] = None,
-        predict_with_sigmoid: bool = False,
-        preferred_device: DeviceHint = None,
-        random_seed: Optional[int] = None,
-        regularizer: Optional[Regularizer] = None,
-    ) -> None:
-        """Initialize the entity embedding model.
-
-        .. seealso:: Constructor of the base class :class:`pykeen.models.Model`
-        """
-        super().__init__(
-            triples_factory=triples_factory,
-            loss=loss,
-            preferred_device=preferred_device,
-            random_seed=random_seed,
-            regularizer=regularizer,
-            predict_with_sigmoid=predict_with_sigmoid,
-        )
-        self.entity_embeddings = entity_representations.make(
-            num_embeddings=triples_factory.num_entities,
-            device=self.device,
-        )
-
-    @property
-    def embedding_dim(self) -> int:  # noqa:D401
-        """The entity embedding dimension."""
-        return self.entity_embeddings.embedding_dim
-
-    @property
-    def entity_representations(self) -> Sequence[RepresentationModule]:  # noqa:D401
-        """The entity representations.
-
-        This property provides forward compatibility with the new-style :class:`pykeen.models.ERModel`.
-        """
-        return [self.entity_embeddings]
-
-    def _reset_parameters_(self):  # noqa: D102
-        self.entity_embeddings.reset_parameters()
-
-    def post_parameter_update(self) -> None:  # noqa: D102
-        # make sure to call this first, to reset regularizer state!
-        super().post_parameter_update()
-        self.entity_embeddings.post_parameter_update()
 
 
 class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):

@@ -20,7 +20,12 @@ from torch.nn import functional
 
 from .compositions import CompositionModule, composition_resolver
 from .init import (
-    init_phases, normal_norm_, uniform_norm_, xavier_normal_, xavier_normal_norm_, xavier_uniform_,
+    init_phases,
+    normal_norm_,
+    uniform_norm_,
+    xavier_normal_,
+    xavier_normal_norm_,
+    xavier_uniform_,
     xavier_uniform_norm_,
 )
 from .message_passing import Decomposition, decomposition_resolver
@@ -31,13 +36,17 @@ from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer
 from ..utils import Bias, activation_resolver, clamp_norm, complex_normalize, convert_to_canonical_shape
 
 __all__ = [
-    'RepresentationModule',
-    'Embedding',
-    'LiteralRepresentation',
-    'EmbeddingSpecification',
-    'constrainers',
-    'initializers',
-    'normalizers',
+    "RepresentationModule",
+    "Embedding",
+    "LiteralRepresentation",
+    "EmbeddingSpecification",
+    "RGCNRepresentations",
+    "CompGCNLayer",
+    "CombinedCompGCNRepresentations",
+    "SingleCompGCNRepresentation",
+    "constrainers",
+    "initializers",
+    "normalizers",
 ]
 
 logger = logging.getLogger(__name__)
@@ -311,11 +320,18 @@ class Embedding(RepresentationModule):
             shape=shape,
         )
 
-        self.initializer = cast(Initializer, _handle(
-            initializer, initializers, initializer_kwargs, default=nn.init.normal_, label='initializer',
-        ))
-        self.normalizer = _handle(normalizer, normalizers, normalizer_kwargs, label='normalizer')
-        self.constrainer = _handle(constrainer, constrainers, constrainer_kwargs, label='constrainer')
+        self.initializer = cast(
+            Initializer,
+            _handle(
+                initializer,
+                initializers,
+                initializer_kwargs,
+                default=nn.init.normal_,
+                label="initializer",
+            ),
+        )
+        self.normalizer = _handle(normalizer, normalizers, normalizer_kwargs, label="normalizer")
+        self.constrainer = _handle(constrainer, constrainers, constrainer_kwargs, label="constrainer")
         if regularizer is not None:
             regularizer = regularizer_resolver.make(regularizer, pos_kwargs=regularizer_kwargs)
         self.regularizer = regularizer
@@ -339,7 +355,7 @@ class Embedding(RepresentationModule):
         normalizer_kwargs: Optional[Mapping[str, Any]] = None,
         constrainer: Optional[Constrainer] = None,
         constrainer_kwargs: Optional[Mapping[str, Any]] = None,
-    ) -> 'Embedding':  # noqa:E501
+    ) -> "Embedding":  # noqa:E501
         """Create an embedding object on the given device by wrapping :func:`__init__`.
 
         This method is a hotfix for not being able to pass a device during initialization of
@@ -481,9 +497,9 @@ def process_shape(
 ) -> Tuple[int, Sequence[int]]:
     """Make a shape pack."""
     if shape is None and dim is None:
-        raise ValueError('Missing both, shape and embedding_dim')
+        raise ValueError("Missing both, shape and embedding_dim")
     elif shape is not None and dim is not None:
-        raise ValueError('Provided both, shape and embedding_dim')
+        raise ValueError("Provided both, shape and embedding_dim")
     elif shape is None and dim is not None:
         shape = (dim,)
     elif isinstance(shape, int) and dim is None:
@@ -493,40 +509,41 @@ def process_shape(
         shape = tuple(shape)
         dim = int(np.prod(shape))
     else:
-        raise TypeError(f'Invalid type for shape: ({type(shape)}) {shape}')
+        raise TypeError(f"Invalid type for shape: ({type(shape)}) {shape}")
     return dim, shape
 
 
 initializers = {
-    'xavier_uniform': xavier_uniform_,
-    'xavier_uniform_norm': xavier_uniform_norm_,
-    'xavier_normal': xavier_normal_,
-    'xavier_normal_norm': xavier_normal_norm_,
-    'normal': torch.nn.init.normal_,
-    'normal_norm': normal_norm_,
-    'uniform': torch.nn.init.uniform_,
-    'uniform_norm': uniform_norm_,
-    'phases': init_phases,
-    'init_phases': init_phases,
+    "xavier_uniform": xavier_uniform_,
+    "xavier_uniform_norm": xavier_uniform_norm_,
+    "xavier_normal": xavier_normal_,
+    "xavier_normal_norm": xavier_normal_norm_,
+    "normal": torch.nn.init.normal_,
+    "normal_norm": normal_norm_,
+    "uniform": torch.nn.init.uniform_,
+    "uniform_norm": uniform_norm_,
+    "phases": init_phases,
+    "init_phases": init_phases,
 }
 
 constrainers = {
-    'normalize': functional.normalize,
-    'complex_normalize': complex_normalize,
-    'clamp': torch.clamp,
-    'clamp_norm': clamp_norm,
+    "normalize": functional.normalize,
+    "complex_normalize": complex_normalize,
+    "clamp": torch.clamp,
+    "clamp_norm": clamp_norm,
 }
 
 # TODO add normalization functions
 normalizers: Mapping[str, Normalizer] = {}
 
-X = TypeVar('X', bound=Callable)
+X = TypeVar("X", bound=Callable)
 
 
 def _handle(
     value: Hint[X],
     lookup: Mapping[str, X],
-    kwargs, default: Optional[X] = None,
+    kwargs,
+    default: Optional[X] = None,
     label: Optional[str] = None,
 ) -> Optional[X]:
     if value is None:
@@ -535,7 +552,7 @@ def _handle(
         try:
             value = lookup[value]
         except KeyError:
-            raise KeyError(f'{value} is an invalid {label}. Try one of: {sorted(lookup)}')
+            raise KeyError(f"{value} is an invalid {label}. Try one of: {sorted(lookup)}")
     if kwargs:
         rv = functools.partial(value, **kwargs)  # type: ignore
         return cast(X, rv)
@@ -543,7 +560,30 @@ def _handle(
 
 
 class RGCNRepresentations(RepresentationModule):
-    """Entity representations enriched by R-GCN."""
+    r"""Entity representations enriched by R-GCN.
+
+    The GCN employed by the entity encoder is adapted to include typed edges.
+    The forward pass of the GCN is defined by:
+
+     .. math::
+
+        \textbf{e}_{i}^{l+1} = \sigma \left( \sum_{r \in \mathcal{R}}\sum_{j\in \mathcal{N}_{i}^{r}}
+        \frac{1}{c_{i,r}} \textbf{W}_{r}^{l} \textbf{e}_{j}^{l} + \textbf{W}_{0}^{l} \textbf{e}_{i}^{l}\right)
+
+    where $\mathcal{N}_{i}^{r}$ is the set of neighbors of node $i$ that are connected to
+    $i$ by relation $r$, $c_{i,r}$ is a fixed normalization constant (but it can also be introduced as an additional
+    parameter), and $\textbf{W}_{r}^{l} \in \mathbb{R}^{d^{(l)} \times d^{(l)}}$ and
+    $\textbf{W}_{0}^{l} \in \mathbb{R}^{d^{(l)} \times d^{(l)}}$ are weight matrices of the `l`-th layer of the
+    R-GCN.
+
+    The encoder aggregates for each node $e_i$ the latent representations of its neighbors and its
+    own latent representation $e_{i}^{l}$ into a new latent representation $e_{i}^{l+1}$.
+    In contrast to standard GCN, R-GCN defines relation specific transformations
+    $\textbf{W}_{r}^{l}$ which depend on the type and direction of an edge.
+
+    Since having one matrix for each relation introduces a large number of additional parameters, the authors instead
+    propose to use a decomposition, cf. :class:`pykeen.nn.message_passing.Decomposition`.
+    """
 
     def __init__(
         self,
@@ -560,6 +600,33 @@ class RGCNRepresentations(RepresentationModule):
         decomposition: Hint[Decomposition] = None,
         decomposition_kwargs: Optional[Mapping[str, Any]] = None,
     ):
+        """Instantiate the R-GCN encoder.
+
+        :param triples_factory:
+            The triples factory holding the training triples used for message passing.
+        :param embedding_specification:
+            The base embedding specification.
+        :param num_layers:
+            The number of layers.
+        :param use_bias:
+            Whether to use a bias.
+        :param use_batch_norm:
+            Whether to use batch normalization.
+        :param activation:
+            The activation.
+        :param activation_kwargs:
+            Additional keyword based arguments passed if the activation is not pre-instantiated. Ignored otherwise.
+        :param edge_dropout:
+            The edge dropout to use. Does not apply to self-loops.
+        :param self_loop_dropout:
+            The self-loop dropout to use.
+        :param edge_weighting:
+            The edge weighting mechanism.
+        :param decomposition:
+            The decomposition, cf. :class:`pykeen.nn.message_passing.Decomposition`.
+        :param decomposition_kwargs:
+            Additional keyword based arguments passed to the decomposition upon instantiation.
+        """
         base_embeddings = embedding_specification.make(num_embeddings=triples_factory.num_entities)
         super().__init__(max_id=triples_factory.num_entities, shape=base_embeddings.shape)
         self.entity_embeddings = base_embeddings
@@ -916,11 +983,13 @@ class CombinedCompGCNRepresentations(nn.Module):
         # Create message passing layers
         layers = []
         for input_dim, output_dim in zip(itertools.chain([input_dim], dims), dims):
-            layers.append(CompGCNLayer(
-                input_dim=input_dim,
-                output_dim=output_dim,
-                **(layer_kwargs or {}),
-            ))
+            layers.append(
+                CompGCNLayer(
+                    input_dim=input_dim,
+                    output_dim=output_dim,
+                    **(layer_kwargs or {}),
+                )
+            )
         self.layers = nn.ModuleList(layers)
 
         # register buffers for adjacency matrix; we use the same format as PyTorch Geometric
@@ -934,6 +1003,14 @@ class CombinedCompGCNRepresentations(nn.Module):
     def post_parameter_update(self) -> None:  # noqa: D102
         # invalidate enriched embeddings
         self.enriched_representations = None
+
+    def train(self, mode: bool = True):  # noqa: D102
+        # when changing from evaluation to training mode, the buffered representations have been computed without
+        # gradient tracking. hence, we need to invalidate them.
+        # note: this occurs in practice when continuing training after evaluation.
+        if mode and not self.training:
+            self.enriched_representations = None
+        return super().train(mode=mode)
 
     def forward(
         self,

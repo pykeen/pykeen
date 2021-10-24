@@ -18,45 +18,52 @@ from . import functional as pkf
 from .combinations import Combination
 from ..typing import HeadRepresentation, HintOrType, RelationRepresentation, TailRepresentation
 from ..utils import (
-    CANONICAL_DIMENSIONS, activation_resolver, convert_to_canonical_shape, ensure_tuple, upgrade_to_sequence,
+    CANONICAL_DIMENSIONS,
+    activation_resolver,
+    convert_to_canonical_shape,
+    ensure_tuple,
+    upgrade_to_sequence,
 )
 
 __all__ = [
-    'interaction_resolver',
+    "interaction_resolver",
     # Base Classes
-    'Interaction',
-    'FunctionalInteraction',
-    'LiteralInteraction',
-    'TranslationalInteraction',
+    "Interaction",
+    "FunctionalInteraction",
+    "LiteralInteraction",
+    "TranslationalInteraction",
     # Adapter classes
-    'MonotonicAffineTransformationInteraction',
+    "MonotonicAffineTransformationInteraction",
     # Concrete Classes
-    'ComplExInteraction',
-    'ConvEInteraction',
-    'ConvKBInteraction',
-    'CrossEInteraction',
-    'DistMultInteraction',
-    'ERMLPInteraction',
-    'ERMLPEInteraction',
-    'HAKEInteraction',
-    'HolEInteraction',
-    'KG2EInteraction',
-    'ModEInteraction',
-    'MuREInteraction',
-    'NTNInteraction',
-    'PairREInteraction',
-    'ProjEInteraction',
-    'PRotatEInteration',
-    'RESCALInteraction',
-    'RotatEInteraction',
-    'SimplEInteraction',
-    'StructuredEmbeddingInteraction',
-    'TransDInteraction',
-    'TransEInteraction',
-    'TransHInteraction',
-    'TransRInteraction',
-    'TuckerInteraction',
-    'UnstructuredModelInteraction',
+    "HAKEInteraction",
+    "ModEInteraction",
+    "PRotatEInteration",
+    "ComplExInteraction",
+    "ConvEInteraction",
+    "ConvKBInteraction",
+    "CrossEInteraction",
+    "DistMultInteraction",
+    "DistMAInteraction",
+    "ERMLPInteraction",
+    "ERMLPEInteraction",
+    "HolEInteraction",
+    "KG2EInteraction",
+    "MuREInteraction",
+    "NTNInteraction",
+    "PairREInteraction",
+    "ProjEInteraction",
+    "RESCALInteraction",
+    "RotatEInteraction",
+    "SimplEInteraction",
+    "StructuredEmbeddingInteraction",
+    "TorusEInteraction",
+    "TransDInteraction",
+    "TransEInteraction",
+    "TransFInteraction",
+    "TransHInteraction",
+    "TransRInteraction",
+    "TuckerInteraction",
+    "UnstructuredModelInteraction",
 ]
 
 logger = logging.getLogger(__name__)
@@ -218,22 +225,22 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         if slice_size is None:
             scores = self(h=h, r=r, t=t)
         elif slice_dim == "h":
-            scores = torch.cat([
-                self(h=h_batch, r=r, t=t)
-                for h_batch in _get_batches(h, slice_size)
-            ], dim=CANONICAL_DIMENSIONS[slice_dim])
+            scores = torch.cat(
+                [self(h=h_batch, r=r, t=t) for h_batch in _get_batches(h, slice_size)],
+                dim=CANONICAL_DIMENSIONS[slice_dim],
+            )
         elif slice_dim == "r":
-            scores = torch.cat([
-                self(h=h, r=r_batch, t=t)
-                for r_batch in _get_batches(r, slice_size)
-            ], dim=CANONICAL_DIMENSIONS[slice_dim])
+            scores = torch.cat(
+                [self(h=h, r=r_batch, t=t) for r_batch in _get_batches(r, slice_size)],
+                dim=CANONICAL_DIMENSIONS[slice_dim],
+            )
         elif slice_dim == "t":
-            scores = torch.cat([
-                self(h=h, r=r, t=t_batch)
-                for t_batch in _get_batches(t, slice_size)
-            ], dim=CANONICAL_DIMENSIONS[slice_dim])
+            scores = torch.cat(
+                [self(h=h, r=r, t=t_batch) for t_batch in _get_batches(t, slice_size)],
+                dim=CANONICAL_DIMENSIONS[slice_dim],
+            )
         else:
-            raise ValueError(f'Invalid slice_dim: {slice_dim}')
+            raise ValueError(f"Invalid slice_dim: {slice_dim}")
         return scores
 
     def score_hrt(
@@ -330,7 +337,7 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         for mod in self.modules():
             if mod is self:
                 continue
-            if hasattr(mod, 'reset_parameters'):
+            if hasattr(mod, "reset_parameters"):
                 mod.reset_parameters()
 
 
@@ -451,7 +458,7 @@ class TranslationalInteraction(
         """Initialize the translational interaction function.
 
         :param p:
-            The norm used with :func:`torch.norm`. Typically is 1 or 2.
+            The norm used with :func:`torch.linalg.vector_norm`. Typically is 1 or 2.
         :param power_norm:
             Whether to use the p-th power of the $L_p$ norm. It has the advantage of being differentiable around 0,
             and numerically more stable.
@@ -471,6 +478,15 @@ class TransEInteraction(TranslationalInteraction[FloatTensor, FloatTensor, Float
     """
 
     func = pkf.transe_interaction
+
+
+class TransFInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
+    """A stateless module for the TransF interaction function.
+
+    .. seealso:: :func:`pykeen.nn.functional.transf_interaction`
+    """
+
+    func = pkf.transf_interaction
 
 
 class ComplExInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
@@ -533,7 +549,7 @@ def _calculate_missing_shape_information(
         width = embedding_dim // height
 
     if input_channels * width * height != embedding_dim:  # type: ignore
-        raise ValueError(f'Could not resolve {original} to a valid factorization of {embedding_dim}.')
+        raise ValueError(f"Could not resolve {original} to a valid factorization of {embedding_dim}.")
 
     return input_channels, width, height  # type: ignore
 
@@ -574,7 +590,7 @@ class ConvEInteraction(
         super().__init__()
 
         # Automatic calculation of remaining dimensions
-        logger.info(f'Resolving {input_channels} * {embedding_width} * {embedding_height} = {embedding_dim}.')
+        logger.info(f"Resolving {input_channels} * {embedding_width} * {embedding_height} = {embedding_dim}.")
         if embedding_dim is None:
             embedding_dim = input_channels * embedding_width * embedding_height
 
@@ -586,12 +602,12 @@ class ConvEInteraction(
             width=embedding_width,
             height=embedding_height,
         )
-        logger.info(f'Resolved to {input_channels} * {embedding_width} * {embedding_height} = {embedding_dim}.')
+        logger.info(f"Resolved to {input_channels} * {embedding_width} * {embedding_height} = {embedding_dim}.")
 
         if input_channels * embedding_height * embedding_width != embedding_dim:
             raise ValueError(
-                f'Product of input channels ({input_channels}), height ({embedding_height}), and width '
-                f'({embedding_width}) does not equal target embedding dimension ({embedding_dim})',
+                f"Product of input channels ({input_channels}), height ({embedding_height}), and width "
+                f"({embedding_width}) does not equal target embedding dimension ({embedding_dim})",
             )
 
         # encoders
@@ -615,9 +631,7 @@ class ConvEInteraction(
 
         # 2: 1D encoder: FC, DO, BN?, Act
         num_in_features = (
-            output_channels
-            * (2 * embedding_height - kernel_height + 1)
-            * (embedding_width - kernel_width + 1)
+            output_channels * (2 * embedding_height - kernel_height + 1) * (embedding_width - kernel_width + 1)
         )
         hr1d_layers = [
             nn.Linear(num_in_features, embedding_dim),
@@ -660,7 +674,7 @@ class ConvKBInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
 
     def __init__(
         self,
-        hidden_dropout_rate: float = 0.,
+        hidden_dropout_rate: float = 0.0,
         embedding_dim: int = 200,
         num_filters: int = 400,
     ):
@@ -676,7 +690,7 @@ class ConvKBInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
 
     def reset_parameters(self):  # noqa: D102
         # Use Xavier initialization for weight; bias to zero
-        nn.init.xavier_uniform_(self.linear.weight, gain=nn.init.calculate_gain('relu'))
+        nn.init.xavier_uniform_(self.linear.weight, gain=nn.init.calculate_gain("relu"))
         nn.init.zeros_(self.linear.bias)
 
         # Initialize all filters to [0.1, 0.1, -0.1],
@@ -701,6 +715,15 @@ class DistMultInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatT
     """
 
     func = pkf.distmult_interaction
+
+
+class DistMAInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
+    """A module wrapper for the stateless DistMA interaction function.
+
+    .. seealso:: :func:`pykeen.nn.functional.dist_ma_interaction`
+    """
+
+    func = pkf.dist_ma_interaction
 
 
 class ERMLPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
@@ -963,7 +986,7 @@ class TuckerInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
 
     def reset_parameters(self):  # noqa:D102
         # Initialize core tensor, cf. https://github.com/ibalazevic/TuckER/blob/master/model.py#L12
-        nn.init.uniform_(self.core_tensor, -1., 1.)
+        nn.init.uniform_(self.core_tensor, -1.0, 1.0)
         # batch norm gets reset automatically, since it defines reset_parameters
 
     def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:
@@ -1000,6 +1023,18 @@ class UnstructuredModelInteraction(
         t: TailRepresentation,
     ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
         return dict(h=h, t=t)
+
+
+class TorusEInteraction(TranslationalInteraction[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]):
+    """A stateful module for the TorusE interaction function.
+
+    .. seealso:: :func:`pykeen.nn.functional.toruse_interaction`
+    """
+
+    func = pkf.toruse_interaction
+
+    def __init__(self, p: int = 2, power_norm: bool = False):
+        super().__init__(p=p, power_norm=power_norm)
 
 
 class TransDInteraction(
@@ -1048,11 +1083,24 @@ class NTNInteraction(
     relation_shape = ("kdd", "kd", "kd", "k", "k")
     func = pkf.ntn_interaction
 
-    def __init__(self, non_linearity: Optional[nn.Module] = None):
+    def __init__(
+        self,
+        activation: HintOrType[nn.Module] = None,
+        activation_kwargs: Optional[Mapping[str, Any]] = None,
+    ):
+        """Initialize NTN with the given non-linear activation function.
+
+        :param activation: A non-linear activation function. Defaults to the hyperbolic
+            tangent :class:`torch.nn.Tanh` if none, otherwise uses the :data:`pykeen.utils.activation_resolver`
+            for lookup.
+        :param activation_kwargs: If the ``activation`` is passed as a class, these keyword arguments
+            are used during its instantiation.
+        """
         super().__init__()
-        if non_linearity is None:
-            non_linearity = nn.Tanh()
-        self.non_linearity = non_linearity
+        if activation is None:
+            self.non_linearity = nn.Tanh()
+        else:
+            self.non_linearity = activation_resolver.make(activation, activation_kwargs)
 
     @staticmethod
     def _prepare_hrt_for_functional(
@@ -1088,7 +1136,7 @@ class KG2EInteraction(
     def __init__(self, similarity: Optional[str] = None, exact: bool = True):
         super().__init__()
         if similarity is None:
-            similarity = 'KL'
+            similarity = "KL"
         self.similarity = similarity
         self.exact = exact
 

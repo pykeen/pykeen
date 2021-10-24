@@ -33,7 +33,7 @@ class ConsoleResultTrackerTests(cases.ResultTrackerTests):
     cls = ConsoleResultTracker
 
 
-@unittest.skipIf(tensorboard is None, reason='TensorBoard is not installed')
+@unittest.skipIf(tensorboard is None, reason="TensorBoard is not installed")
 class TensorboardTrackerTests(cases.ResultTrackerTests):
     """Tests for TensorBoard tracker."""
 
