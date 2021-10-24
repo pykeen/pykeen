@@ -98,9 +98,6 @@ from .tucker import TuckER
 from .unstructured_model import UnstructuredModel
 
 __all__ = [
-    "HAKE",
-    "ModE",
-    "PRotatE",
     "CompGCN",
     "ComplEx",
     "ConvE",
@@ -110,12 +107,15 @@ __all__ = [
     "DistMult",
     "ERMLP",
     "ERMLPE",
+    "HAKE",
     "HolE",
     "KG2E",
+    "ModE",
     "MuRE",
     "NTN",
     "PairRE",
     "ProjE",
+    "PRotatE",
     "QuatE",
     "RESCAL",
     "RGCN",

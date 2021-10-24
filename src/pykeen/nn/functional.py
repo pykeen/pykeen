@@ -36,9 +36,6 @@ from ..utils import (
 )
 
 __all__ = [
-    "hake_interaction",
-    "mode_interaction",
-    "p_rotate_interaction",
     "complex_interaction",
     "conve_interaction",
     "convkb_interaction",
@@ -47,12 +44,15 @@ __all__ = [
     "distmult_interaction",
     "ermlp_interaction",
     "ermlpe_interaction",
+    "hake_interaction",
     "hole_interaction",
     "kg2e_interaction",
+    "mode_interaction",
     "mure_interaction",
     "ntn_interaction",
     "pair_re_interaction",
     "proje_interaction",
+    "p_rotate_interaction",
     "rescal_interaction",
     "rotate_interaction",
     "simple_interaction",
