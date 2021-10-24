@@ -14,8 +14,8 @@ from ...nn.modules import HAKEInteraction, ModEInteraction
 from ...typing import Hint, Initializer
 
 __all__ = [
-    'HAKE',
-    'ModE',
+    "HAKE",
+    "ModE",
 ]
 
 
