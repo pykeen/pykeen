@@ -25,9 +25,6 @@
       "reduction": "mean"
     },
     "training_loop": "SLCWA",
-    "training_loop_kwargs": {
-      "gradient_clipping_max_norm": 1.0
-    },
     "negative_sampler": "basic",
     "negative_sampler_kwargs": {
       "num_negs_per_pos": 1
@@ -35,7 +32,8 @@
     "training_kwargs": {
       "num_epochs": 500,
       "batch_size": 30000,
-      "sampler": "schlichtkrull"
+      "sampler": "schlichtkrull",
+      "gradient_clipping_max_norm": 1.0
     },
     "evaluator_kwargs": {
       "filtered": true

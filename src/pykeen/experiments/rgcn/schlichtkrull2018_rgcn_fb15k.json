@@ -34,7 +34,8 @@
     "training_kwargs": {
       "num_epochs": 500,
       "batch_size": 30000,
-      "sampler": "schlichtkrull"
+      "sampler": "schlichtkrull",
+      "gradient_clipping_max_norm": 1.0
     },
     "evaluator_kwargs": {
       "filtered": true
