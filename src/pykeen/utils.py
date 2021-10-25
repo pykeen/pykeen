@@ -1072,10 +1072,10 @@ def complex_normalize(x: torch.Tensor) -> torch.Tensor:
     return y.view(*x.shape)
 
 
-CONFIGURATION_FILE_FORMATS = {".json", ".yaml"}
+CONFIGURATION_FILE_FORMATS = {".json", ".yaml", ".yml"}
 
 
-def load_configuration(path: os.PathLike) -> Mapping[str, Any]:
+def load_configuration(path: Union[str, pathlib.Path, os.PathLike]) -> Mapping[str, Any]:
     """Load a configuration from a JSON or YAML file."""
     # ensure pathlib
     path = pathlib.Path(path)
@@ -1084,7 +1084,7 @@ def load_configuration(path: os.PathLike) -> Mapping[str, Any]:
         with path.open() as file:
             return json.load(file)
 
-    if path.suffix == ".yaml":
+    if path.suffix in {".yaml", ".yml"}:
         with path.open() as file:
             return yaml.safe_load(file)
 
