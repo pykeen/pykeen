@@ -14,11 +14,12 @@ from uuid import uuid4
 import click
 from more_click import verbose_option
 
+from pykeen.utils import CONFIGURATION_FILE_FORMATS
+
 __all__ = [
     "experiments",
 ]
 
-from pykeen.utils import CONFIGURATION_FILE_FORMATS
 
 logger = logging.getLogger(__name__)
 HERE = pathlib.Path(__file__).parent.resolve()
