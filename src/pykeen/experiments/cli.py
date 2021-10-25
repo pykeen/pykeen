@@ -18,6 +18,8 @@ __all__ = [
     "experiments",
 ]
 
+from pykeen.utils import CONFIGURATION_FILE_FORMATS
+
 logger = logging.getLogger(__name__)
 HERE = pathlib.Path(__file__).parent.resolve()
 
@@ -78,7 +80,17 @@ def reproduce(
     Example: $ pykeen experiments reproduce tucker balazevic2019 fb15k
     """
     file_name = f"{reference}_{model}_{dataset}"
-    path = HERE.joinpath(model, file_name).with_suffix(".yaml")
+    path = HERE.joinpath(model, file_name)
+    paths = {
+        full_path
+        for full_path in map(path.with_suffix, CONFIGURATION_FILE_FORMATS)
+        if full_path.is_file()
+    }
+    if len(paths) == 0:
+        raise FileNotFoundError("Could not find a configuration file.")
+    elif len(paths) > 1:
+        raise ValueError(f"Found multiple configuration files: {paths}")
+    path = next(iter(paths))
     _help_reproduce(
         directory=directory,
         path=path,
