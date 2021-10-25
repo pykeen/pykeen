@@ -196,6 +196,7 @@ from typing import Any, Collection, Dict, Iterable, List, Mapping, MutableMappin
 import pandas as pd
 import torch
 import yaml
+from torch._C import Value
 from torch.optim.optimizer import Optimizer
 
 from ..constants import PYKEEN_CHECKPOINTS, USER_DEFINED_CODE
@@ -572,6 +573,22 @@ def save_pipeline_results_to_directory(
     losses_df.to_csv(directory.joinpath("all_replicates_losses.tsv"), sep="\t", index=False)
 
 
+def _load_configuration(path: Union[str, pathlib.Path]) -> Mapping[str, Any]:
+    """Load a configuration from a JSON or YAML file."""
+    # ensure pathlib
+    path = pathlib.Path(path)
+
+    if path.suffix == ".json":
+        with path.open() as file:
+            return json.load(file)
+
+    if path.suffix == ".yaml":
+        with path.open() as file:
+            return yaml.safe_load(file)
+
+    raise ValueError(f"Unknown configuration file format: {path.suffix}")
+
+
 def pipeline_from_path(
     path: Union[str, pathlib.Path],
     **kwargs,
@@ -582,6 +599,7 @@ def pipeline_from_path(
     :param kwargs: Additional kwargs to forward to :func:`pipeline`.
     :return: The results of running the pipeline on the given configuration.
     """
+    config = _load_configuration(path)
     with open(path) as file:
         config = yaml.safe_load(file)
     return pipeline_from_config(
