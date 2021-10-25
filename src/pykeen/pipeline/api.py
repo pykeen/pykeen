@@ -195,6 +195,7 @@ from typing import Any, Collection, Dict, Iterable, List, Mapping, MutableMappin
 
 import pandas as pd
 import torch
+import yaml
 from torch.optim.optimizer import Optimizer
 
 from ..constants import PYKEEN_CHECKPOINTS, USER_DEFINED_CODE
@@ -575,14 +576,14 @@ def pipeline_from_path(
     path: Union[str, pathlib.Path],
     **kwargs,
 ) -> PipelineResult:
-    """Run the pipeline with configuration in a JSON file at the given path.
+    """Run the pipeline with configuration in a YAML file at the given path.
 
-    :param path: The path to an experiment JSON file. The loaded JSON is passed to :func:`pipeline_from_config`.
+    :param path: The path to an experiment YAML file. The loaded YAML is passed to :func:`pipeline_from_config`.
     :param kwargs: Additional kwargs to forward to :func:`pipeline`.
     :return: The results of running the pipeline on the given configuration.
     """
     with open(path) as file:
-        config = json.load(file)
+        config = yaml.safe_load(file)
     return pipeline_from_config(
         config=config,
         **kwargs,

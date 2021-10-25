@@ -80,7 +80,7 @@ def _should_skip_because_type(x):
 def get_configuration_errors(path: Union[str, pathlib.Path]):  # noqa: C901
     """Get a list of errors with a given experimental configuration JSON file."""
     with open(path) as file:
-        configuration = yaml.load(file)
+        configuration = yaml.safe_load(file)
 
     pipeline = configuration.get("pipeline")
     if pipeline is None:
