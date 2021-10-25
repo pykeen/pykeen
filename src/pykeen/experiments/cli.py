@@ -81,11 +81,7 @@ def reproduce(
     """
     file_name = f"{reference}_{model}_{dataset}"
     path = HERE.joinpath(model, file_name)
-    paths = {
-        full_path
-        for full_path in map(path.with_suffix, CONFIGURATION_FILE_FORMATS)
-        if full_path.is_file()
-    }
+    paths = {full_path for full_path in map(path.with_suffix, CONFIGURATION_FILE_FORMATS) if full_path.is_file()}
     if len(paths) == 0:
         raise FileNotFoundError("Could not find a configuration file.")
     elif len(paths) > 1:
