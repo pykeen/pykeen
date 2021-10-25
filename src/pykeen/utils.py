@@ -10,6 +10,8 @@ import json
 import logging
 import math
 import operator
+import os
+import pathlib
 import random
 from abc import ABC, abstractmethod
 from io import BytesIO
@@ -36,6 +38,7 @@ import pandas as pd
 import torch
 import torch.nn
 import torch.nn.modules.batchnorm
+import yaml
 from class_resolver import Resolver, normalize_string
 from torch import nn
 from torch.nn import functional
@@ -1067,6 +1070,25 @@ def complex_normalize(x: torch.Tensor) -> torch.Tensor:
     y = x.view(*x.shape[:-1], x.shape[-1] // 2, 2)
     y = functional.normalize(y, p=2, dim=-1)
     return y.view(*x.shape)
+
+
+CONFIGURATION_FILE_FORMATS = {".json", ".yaml", ".yml"}
+
+
+def load_configuration(path: Union[str, pathlib.Path, os.PathLike]) -> Mapping[str, Any]:
+    """Load a configuration from a JSON or YAML file."""
+    # ensure pathlib
+    path = pathlib.Path(path)
+
+    if path.suffix == ".json":
+        with path.open() as file:
+            return json.load(file)
+
+    if path.suffix in {".yaml", ".yml"}:
+        with path.open() as file:
+            return yaml.safe_load(file)
+
+    raise ValueError(f"Unknown configuration file format: {path.suffix}. Valid formats: {CONFIGURATION_FILE_FORMATS}")
 
 
 if __name__ == "__main__":
