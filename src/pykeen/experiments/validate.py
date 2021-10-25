@@ -5,9 +5,9 @@
 import inspect
 import pathlib
 from typing import Callable, Iterable, Optional, Set, Tuple, Type, Union
-import yaml
 
 import torch
+import yaml
 from class_resolver import Hint
 from torch import nn
 
