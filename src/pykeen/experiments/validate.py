@@ -7,7 +7,6 @@ import pathlib
 from typing import Callable, Iterable, Optional, Set, Tuple, Type, Union
 
 import torch
-import yaml
 from class_resolver import Hint
 from torch import nn
 
@@ -19,7 +18,7 @@ from ..optimizers import optimizer_resolver
 from ..regularizers import regularizer_resolver
 from ..sampling import negative_sampler_resolver
 from ..training import training_loop_resolver
-from ..utils import normalize_string
+from ..utils import CONFIGURATION_FILE_FORMATS, load_configuration, normalize_string
 
 _SKIP_NAMES = {
     "loss",
@@ -63,7 +62,7 @@ def iterate_config_paths() -> Iterable[Tuple[str, pathlib.Path, pathlib.Path]]:
             if config.name.startswith("hpo"):
                 continue
             path = model_directory.joinpath(config)
-            if not path.is_file() or not path.suffix == ".yaml":
+            if not path.is_file() or path.suffix not in CONFIGURATION_FILE_FORMATS:
                 continue
             yield model_directory.name, config, path
 
@@ -79,8 +78,7 @@ def _should_skip_because_type(x):
 
 def get_configuration_errors(path: Union[str, pathlib.Path]):  # noqa: C901
     """Get a list of errors with a given experimental configuration JSON file."""
-    with open(path) as file:
-        configuration = yaml.safe_load(file)
+    configuration = load_configuration(path)
 
     pipeline = configuration.get("pipeline")
     if pipeline is None:
