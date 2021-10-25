@@ -14,6 +14,8 @@ from uuid import uuid4
 import click
 from more_click import verbose_option
 
+from pykeen.utils import CONFIGURATION_FILE_FORMATS
+
 __all__ = [
     "experiments",
 ]
@@ -78,7 +80,13 @@ def reproduce(
     Example: $ pykeen experiments reproduce tucker balazevic2019 fb15k
     """
     file_name = f"{reference}_{model}_{dataset}"
-    path = HERE.joinpath(model, file_name).with_suffix(".json")
+    path = HERE.joinpath(model, file_name)
+    paths = {full_path for full_path in map(path.with_suffix, CONFIGURATION_FILE_FORMATS) if full_path.is_file()}
+    if len(paths) == 0:
+        raise FileNotFoundError("Could not find a configuration file.")
+    elif len(paths) > 1:
+        raise ValueError(f"Found multiple configuration files: {paths}")
+    path = next(iter(paths))
     _help_reproduce(
         directory=directory,
         path=path,
@@ -124,12 +132,11 @@ def _help_reproduce(
     """Help run the configuration at a given path.
 
     :param directory: Output directory
-    :param path: Path to configuration JSON file
+    :param path: Path to configuration JSON/YAML file
     :param replicates: How many times the experiment should be run
     :param move_to_cpu: Should the model be moved back to the CPU? Only relevant if training on GPU.
     :param save_replicates: Should the artifacts of the replicates be saved?
-    :param file_name: Name of JSON file (optional)
-    :return: None
+    :param file_name: Name of JSON/YAML file (optional)
     """
     from pykeen.pipeline import replicate_pipeline_from_path
 
@@ -161,7 +168,7 @@ def _help_reproduce(
         move_to_cpu=move_to_cpu,
         save_replicates=save_replicates,
     )
-    shutil.copyfile(path, os.path.join(output_directory, "configuration_copied.json"))
+    shutil.copyfile(path, output_directory.joinpath("configuration_copied").with_suffix(path.suffix))
 
 
 @experiments.command()
