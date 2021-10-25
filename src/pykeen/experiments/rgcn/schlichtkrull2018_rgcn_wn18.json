@@ -7,16 +7,23 @@
     "dataset": "wn18",
     "model": "R-GCN",
     "model_kwargs": {
-      "embedding_dim": 500,
-      "decomposition": "block",
+      "embedding_dim": 200,
+      "decomposition": "bases",
       "decomposition_kwargs": {
-        "num_blocks": 100
+        "num_bases": 2
       },
       "base_entity_initializer": "xavier_uniform",
       "relation_initializer": "xavier_uniform",
-      "interaction": "distmult"
+      "interaction": "distmult",
+      "num_layers": 1,
+      "self_loop_dropout": 0.2,
+      "edge_dropout": 0.4,
+      "regularizer": "Lp",
+      "regularizer_kwargs": {
+        "weight": 0.01
+      }
     },
-    "optimizer": "Adagrad",
+    "optimizer": "Adam",
     "optimizer_kwargs": {
       "lr": 0.1
     },
@@ -37,6 +44,18 @@
     },
     "evaluator_kwargs": {
       "filtered": true
+    }
+  },
+  "results": {
+    "mean_reciprocal_rank": {
+      "worst": 0.814
+    },
+    "hits_at_k": {
+      "worst": {
+        "1": 0.686,
+        "3": 0.928,
+        "10": 0.955
+      }
     }
   }
 }
