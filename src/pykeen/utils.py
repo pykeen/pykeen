@@ -38,10 +38,10 @@ import pandas as pd
 import torch
 import torch.nn
 import torch.nn.modules.batchnorm
+import yaml
 from class_resolver import Resolver, normalize_string
 from torch import nn
 from torch.nn import functional
-import yaml
 
 from .constants import PYKEEN_BENCHMARKS
 from .typing import DeviceHint, MappedTriples, TorchRandomHint
