@@ -173,7 +173,7 @@ def _help_reproduce(
         move_to_cpu=move_to_cpu,
         save_replicates=save_replicates,
     )
-    shutil.copyfile(path, os.path.join(output_directory, "configuration_copied.yaml"))
+    shutil.copyfile(path, output_directory.joinpath("configuration_copied").with_suffix(path.suffix))
 
 
 @experiments.command()
