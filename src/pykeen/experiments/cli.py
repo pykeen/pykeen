@@ -133,12 +133,11 @@ def _help_reproduce(
     """Help run the configuration at a given path.
 
     :param directory: Output directory
-    :param path: Path to configuration YAML file
+    :param path: Path to configuration JSON/YAML file
     :param replicates: How many times the experiment should be run
     :param move_to_cpu: Should the model be moved back to the CPU? Only relevant if training on GPU.
     :param save_replicates: Should the artifacts of the replicates be saved?
-    :param file_name: Name of YAML file (optional)
-    :return: None
+    :param file_name: Name of JSON/YAML file (optional)
     """
     from pykeen.pipeline import replicate_pipeline_from_path
 
