@@ -15,7 +15,13 @@
       "base_entity_initializer": "xavier_uniform",
       "relation_initializer": "xavier_uniform",
       "interaction": "distmult",
-      "num_layers": 2
+      "num_layers": 2,
+      "self_loop_dropout": 0.2,
+      "edge_dropout": 0.4,
+      "regularizer": "Lp",
+      "regularizer_kwargs": {
+        "weight": 0.01
+      }
     },
     "optimizer": "Adam",
     "optimizer_kwargs": {
