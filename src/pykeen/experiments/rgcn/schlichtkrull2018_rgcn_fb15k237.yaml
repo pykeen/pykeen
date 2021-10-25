@@ -1,0 +1,46 @@
+metadata:
+  comments: ''
+  title: Learn FB15k-237 Dataset with R-GCN as described by Schlichtkrull et al.,
+    2018
+pipeline:
+  dataset: fb15k237
+  evaluator_kwargs:
+    filtered: true
+  loss: BCEWithLogits
+  loss_kwargs:
+    reduction: mean
+  model: R-GCN
+  model_kwargs:
+    base_entity_initializer: xavier_uniform
+    decomposition: block
+    decomposition_kwargs:
+      num_blocks: 100
+    edge_dropout: 0.4
+    embedding_dim: 500
+    interaction: distmult
+    num_layers: 2
+    regularizer: Lp
+    regularizer_kwargs:
+      weight: 0.01
+    relation_initializer: xavier_uniform
+    self_loop_dropout: 0.2
+  negative_sampler: basic
+  negative_sampler_kwargs:
+    num_negs_per_pos: 1
+  optimizer: Adam
+  optimizer_kwargs:
+    lr: 0.1
+  training_kwargs:
+    batch_size: 30000
+    gradient_clipping_max_norm: 1.0
+    num_epochs: 500
+    sampler: schlichtkrull
+  training_loop: SLCWA
+results:
+  hits_at_k:
+    worst:
+      '1': 0.153
+      '10': 0.414
+      '3': 0.258
+  mean_reciprocal_rank:
+    worst: 0.248
