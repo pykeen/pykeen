@@ -1,0 +1,60 @@
+{
+  "metadata": {
+    "title": "Learn WN18 Dataset with ConvE as described by Dettmers et al., 2018",
+    "comment": "For evaluation, the non-deterministic rank definition is used, cf. https://github.com/TimDettmers/ConvE/blob/5feb358eb7dbd1f534978cdc4c20ee0bf919148a/evaluation.py#L67."
+  },
+  "pipeline": {
+    "dataset": "wn18",
+    "dataset_kwargs": {
+      "create_inverse_triples": true
+    },
+    "model": "ConvE",
+    "model_kwargs": {
+      "embedding_dim": 200,
+      "input_channels": 1,
+      "output_channels": 32,
+      "embedding_height": 10,
+      "embedding_width": 20,
+      "kernel_height": 3,
+      "kernel_width": 3,
+      "input_dropout": 0.2,
+      "feature_map_dropout": 0.2,
+      "output_dropout": 0.3,
+      "apply_batch_normalization": true,
+      "entity_initializer": "xavier_normal",
+      "relation_initializer": "xavier_normal"
+    },
+    "optimizer": "Adam",
+    "optimizer_kwargs": {
+      "lr": 0.001
+    },
+    "loss": "BCEAfterSigmoidLoss",
+    "loss_kwargs": {
+      "reduction": "mean"
+    },
+    "training_loop": "LCWA",
+    "training_kwargs": {
+      "num_epochs": 1000,
+      "batch_size": 128,
+      "label_smoothing": 0.1
+    },
+    "evaluator_kwargs": {
+      "filtered": true
+    }
+  },
+  "results": {
+    "mean_rank": {
+      "nondeterministic": 374
+    },
+    "hits_at_k": {
+      "nondeterministic": {
+        "1": 0.935,
+        "3": 0.946,
+        "10": 0.956
+      }
+    },
+    "mean_reciprocal_rank": {
+      "nondeterministic": 0.943
+    }
+  }
+}

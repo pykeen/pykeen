@@ -1,0 +1,49 @@
+{
+  "metadata": {
+    "title": "Learn WN18 Dataset with TransR as described by Li et al., 2015. For evaluation, the non-deterministic rank is used, cf. https://github.com/Mrlyk423/Relation_Extraction/blob/9f311285abd7e29273be7e4fd8c680dd761f40eb/TransR/Test_TransR.cpp#L177-L206."
+  },
+  "pipeline": {
+    "dataset": "wn18",
+    "model": "TransR",
+    "model_kwargs": {
+      "embedding_dim": 50,
+      "relation_dim": 50,
+      "scoring_fct_norm": 1,
+      "entity_initializer": "xavier_uniform",
+      "entity_constrainer": "clamp_norm",
+      "relation_initializer": "xavier_uniform_norm",
+      "relation_constrainer": "clamp_norm"
+    },
+    "optimizer": "SGD",
+    "optimizer_kwargs": {
+      "lr": 0.001
+    },
+    "loss": "MarginRankingLoss",
+    "loss_kwargs": {
+      "reduction": "mean",
+      "margin": 4
+    },
+    "training_loop": "SLCWA",
+    "negative_sampler": "bernoulli",
+    "negative_sampler_kwargs": {
+      "num_negs_per_pos": 1
+    },
+    "training_kwargs": {
+      "num_epochs": 500,
+      "batch_size": 1440
+    },
+    "evaluator_kwargs": {
+      "filtered": true
+    }
+  },
+  "results": {
+    "mean_rank": {
+      "nondeterministic": 225
+    },
+    "hits_at_k": {
+      "nondeterministic": {
+        "10": 0.920
+      }
+    }
+  }
+}

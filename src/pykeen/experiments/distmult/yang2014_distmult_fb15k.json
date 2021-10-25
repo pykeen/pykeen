@@ -1,0 +1,54 @@
+{
+  "metadata": {
+    "title": "Learn FB15K Dataset with DistMult as described by Yang et al., 2014",
+    "comments": "For each positive triple, DistMult creates two negatives where head and tail are corrupted"
+  },
+  "pipeline": {
+    "dataset": "fb15k",
+    "model": "DistMult",
+    "model_kwargs": {
+      "embedding_dim": 100,
+      "entity_initializer": "xavier_uniform",
+      "relation_initializer": "xavier_uniform",
+      "entity_constrainer": "normalize"
+    },
+    "regularizer": "Lp",
+    "regularizer_kwargs": {
+      "apply_only_once": false,
+      "weight": 0.0001,
+      "p": 2.0,
+      "normalize": false
+    },
+    "optimizer": "Adagrad",
+    "optimizer_kwargs": {
+      "lr": 0.1
+    },
+    "loss": "MarginRankingLoss",
+    "loss_kwargs": {
+      "reduction": "mean",
+      "margin": 1
+    },
+    "training_loop": "SLCWA",
+    "negative_sampler": "basic",
+    "negative_sampler_kwargs": {
+      "num_negs_per_pos": 2
+    },
+    "training_kwargs": {
+      "num_epochs": 100,
+      "batch_size": 48310
+    },
+    "evaluator_kwargs": {
+      "filtered": true
+    }
+  },
+  "results": {
+    "hits_at_k": {
+      "unknown": {
+        "10": 0.577
+      }
+    },
+    "mean_reciprocal_rank": {
+      "unknown": 0.35
+    }
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "metadata": {
+    "title": "Learn WN18 Dataset with R-GCN as described by Schlichtkrull et al., 2018",
+    "comments": ""
+  },
+  "pipeline": {
+    "dataset": "wn18",
+    "model": "R-GCN",
+    "model_kwargs": {
+      "embedding_dim": 500,
+      "decomposition": "block",
+      "decomposition_kwargs": {
+        "num_blocks": 100
+      },
+      "base_entity_initializer": "xavier_uniform",
+      "relation_initializer": "xavier_uniform",
+      "interaction": "distmult"
+    },
+    "optimizer": "Adagrad",
+    "optimizer_kwargs": {
+      "lr": 0.1
+    },
+    "loss": "SoftplusLoss",
+    "loss_kwargs": {
+      "reduction": "mean"
+    },
+    "training_loop": "SLCWA",
+    "negative_sampler": "basic",
+    "negative_sampler_kwargs": {
+      "num_negs_per_pos": 1
+    },
+    "training_kwargs": {
+      "num_epochs": 500,
+      "batch_size": 30000,
+      "sampler": "schlichtkrull"
+    },
+    "evaluator_kwargs": {
+      "filtered": true
+    }
+  }
+}

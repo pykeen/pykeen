@@ -1,0 +1,38 @@
+{
+  "metadata": {
+    "title": "Learn FB15k-237 Dataset with TransE as described by Nguyen et al., 2018",
+    "commenrs": "TransE was used to initialize the emebddings. Could not find batch size and number of epochs."
+  },
+  "pipeline": {
+    "dataset": "wn18rr",
+    "model": "TransE",
+    "model_kwargs": {
+      "embedding_dim": 50,
+      "scoring_fct_norm": 1,
+      "entity_initializer": "xavier_uniform",
+      "relation_initializer": "xavier_uniform",
+      "entity_constrainer": "normalize"
+    },
+    "optimizer": "SGD",
+    "optimizer_kwargs": {
+      "lr": 0.0005
+    },
+    "loss": "MarginRankingLoss",
+    "loss_kwargs": {
+      "reduction": "mean",
+      "margin": 5
+    },
+    "training_loop": "SLCWA",
+    "negative_sampler_cls": "bernoulli",
+    "negative_sampler_kwargs": {
+      "num_negs_per_pos": 1
+    },
+    "training_kwargs": {
+      "num_epochs": 3000,
+      "batch_size": 256
+    },
+    "evaluator_kwargs": {
+      "filtered": true
+    }
+  }
+}

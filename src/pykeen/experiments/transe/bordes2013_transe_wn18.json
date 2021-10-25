@@ -1,0 +1,48 @@
+{
+  "metadata": {
+    "title": "Learn WordNet Dataset with TransE as described by Bordes et al., 2013",
+    "comments": "Num_epochs varies from the value reported in the paper, and batch_size is not mentioned in the paper. We found out that these values work."
+  },
+  "pipeline": {
+    "dataset": "wn18",
+    "model": "TransE",
+    "model_kwargs": {
+      "embedding_dim": 20,
+      "scoring_fct_norm": 1,
+      "entity_initializer": "xavier_uniform",
+      "relation_initializer": "xavier_uniform",
+      "entity_constrainer": "normalize","entity_constrainer": "normalize"
+    },
+    "optimizer": "SGD",
+    "optimizer_kwargs": {
+      "lr": 0.01
+    },
+    "loss": "MarginRankingLoss",
+    "loss_kwargs": {
+      "reduction": "mean",
+      "margin": 2
+    },
+    "training_loop": "SLCWA",
+    "negative_sampler": "basic",
+    "negative_sampler_kwargs": {
+      "num_negs_per_pos": 1
+    },
+    "training_kwargs": {
+      "num_epochs": 4000,
+      "batch_size": 32
+    },
+    "evaluator_kwargs": {
+      "filtered": true
+    }
+  },
+  "results": {
+    "hits_at_k": {
+      "unknown": {
+        "10": 0.892
+      }
+    },
+    "mean_rank": {
+      "unknown": 251
+    }
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "metadata": {
+    "title": "Learn FB15k-237 Dataset with ConvKB as described by Nguyen et al., 2018",
+    "comments": "TransE was used to initialize the emebddigns. Could not find batch size and number of epochs."
+  },
+  "pipeline": {
+    "dataset": "fb15k237",
+    "model": "TransE",
+    "model_kwargs": {
+      "embedding_dim": 100,
+      "scoring_fct_norm": 1,
+      "entity_initializer": "xavier_uniform",
+      "relation_initializer": "xavier_uniform",
+      "entity_constrainer": "normalize"
+    },
+    "optimizer": "SGD",
+    "optimizer_kwargs": {
+      "lr": 0.0005
+    },
+    "loss": "MarginRankingLoss",
+    "loss_kwargs": {
+      "reduction": "mean",
+      "margin": 1
+    },
+    "training_loop": "SLCWA",
+    "negative_sampler": "bernoulli",
+    "negative_sampler_kwargs": {
+      "num_negs_per_pos": 1
+    },
+    "training_kwargs": {
+      "num_epochs": 3000,
+      "batch_size": 256
+    },
+    "evaluator_kwargs": {
+      "filtered": true
+    }
+  }
+}

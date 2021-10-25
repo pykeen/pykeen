@@ -1,0 +1,54 @@
+{
+  "metadata": {
+    "title": "Learn WN18 Dataset with RotatE as described by Sun et al., 2019;",
+    "comments": "Could not find number of epochs; https://github.com/DeepGraphLearning/KnowledgeGraphEmbedding/blob/master/best_config.sh. The evaluation uses the non-deterministic rank, cf. https://github.com/DeepGraphLearning/KnowledgeGraphEmbedding/blob/a0a3cf75e8e324ef113472489a16927c39c997b2/codes/model.py#L406 ."
+  },
+  "pipeline": {
+    "dataset": "wn18",
+    "model": "RotatE",
+    "model_kwargs": {
+      "embedding_dim": 500,
+      "entity_initializer": "uniform",
+      "relation_initializer": "init_phases",
+      "relation_constrainer": "complex_normalize"
+    },
+    "optimizer": "Adam",
+    "optimizer_kwargs": {
+      "lr": 0.0001
+    },
+    "loss": "nssa",
+    "loss_kwargs": {
+      "reduction": "mean",
+      "adversarial_temperature": 0.5,
+      "margin": 12
+    },
+    "training_loop": "SLCWA",
+    "negative_sampler": "basic",
+    "negative_sampler_kwargs": {
+      "num_negs_per_pos": 1024
+    },
+    "training_kwargs": {
+      "num_epochs": 1000,
+      "batch_size": 512,
+      "sub_batch_size": 256
+    },
+    "evaluator_kwargs": {
+      "filtered": true
+    }
+  },
+  "results": {
+    "mean_rank": {
+      "nondeterministic": 309
+    },
+    "hits_at_k": {
+      "nondeterministic": {
+        "1": 0.944,
+        "3": 0.952,
+        "10": 0.959
+      }
+    },
+    "mean_reciprocal_rank": {
+      "nondeterministic": 0.949
+    }
+  }
+}
