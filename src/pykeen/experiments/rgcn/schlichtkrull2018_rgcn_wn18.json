@@ -27,7 +27,7 @@
     "optimizer_kwargs": {
       "lr": 0.1
     },
-    "loss": "SoftplusLoss",
+    "loss": "BCEWithLogits",
     "loss_kwargs": {
       "reduction": "mean"
     },
