@@ -1,0 +1,43 @@
+metadata:
+  comments: regularization weight is set to 0.0005, because in the paper the regularization
+    term is multiplied with (regularization weight)/2. The evaluation is done with
+    the optimistic rank, cf. https://github.com/daiquocnguyen/ConvKB/blob/ba02c0665a80751676289a8d5570dc420465a9ff/eval.py#L207-L236.
+  title: Learn WN18RR Dataset with ConvKB as described by Nguyen et al., 2018
+pipeline:
+  dataset: wn18rr
+  evaluator_kwargs:
+    filtered: true
+  loss: SoftplusLoss
+  loss_kwargs:
+    reduction: mean
+  model: ConvKB
+  model_kwargs:
+    embedding_dim: 50
+    entity_initializer: xavier_uniform
+    hidden_dropout_rate: 0.0
+    num_filters: 500
+    relation_initializer: xavier_uniform
+  negative_sampler: bernoulli
+  negative_sampler_kwargs:
+    num_negs_per_pos: 1
+  optimizer: Adam
+  optimizer_kwargs:
+    lr: 0.0001
+  regularizer: PowerSum
+  regularizer_kwargs:
+    apply_only_once: true
+    normalize: false
+    p: 2.0
+    weight: 0.0005
+  training_kwargs:
+    batch_size: 256
+    num_epochs: 200
+  training_loop: SLCWA
+results:
+  hits_at_k:
+    best:
+      '10': 0.525
+  mean_rank:
+    best: 2554
+  mean_reciprocal_rank:
+    best: 0.248

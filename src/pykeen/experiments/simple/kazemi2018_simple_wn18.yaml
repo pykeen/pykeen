@@ -1,0 +1,42 @@
+metadata:
+  comments: They make use of inverse relations. Normalization argument of regularizer
+    is set to false. SimplE uses the optimistic rank definition for evaluation, cf.
+    https://github.com/Mehran-k/SimplE/blob/29108230b63920afa38067b1aff8b8d53d07ed01/reader.py#L148.
+  title: Learn WN18 Dataset with SimplE as described by Kazemi et al., 2018
+pipeline:
+  dataset: wn18
+  evaluator_kwargs:
+    filtered: true
+  loss: SoftplusLoss
+  loss_kwargs:
+    reduction: mean
+  model: SimplE
+  model_kwargs:
+    clamp_score: 20.0
+    embedding_dim: 200
+    entity_initializer: uniform
+    relation_initializer: uniform
+  negative_sampler: basic
+  negative_sampler_kwargs:
+    num_negs_per_pos: 1
+  optimizer: Adagrad
+  optimizer_kwargs:
+    lr: 0.1
+  regularizer: PowerSum
+  regularizer_kwargs:
+    apply_only_once: false
+    normalize: false
+    p: 2.0
+    weight: 0.03
+  training_kwargs:
+    batch_size: 1415
+    num_epochs: 1000
+  training_loop: SLCWA
+results:
+  hits_at_k:
+    best:
+      '1': 0.939
+      '10': 0.947
+      '3': 0.944
+  mean_reciprocal_rank:
+    best: 0.942

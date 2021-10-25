@@ -1,0 +1,29 @@
+metadata:
+  comments: TransE was used to initialize the emebddigns. Could not find batch size
+    and number of epochs.
+  title: Learn FB15k-237 Dataset with ConvKB as described by Nguyen et al., 2018
+pipeline:
+  dataset: fb15k237
+  evaluator_kwargs:
+    filtered: true
+  loss: MarginRankingLoss
+  loss_kwargs:
+    margin: 1
+    reduction: mean
+  model: TransE
+  model_kwargs:
+    embedding_dim: 100
+    entity_constrainer: normalize
+    entity_initializer: xavier_uniform
+    relation_initializer: xavier_uniform
+    scoring_fct_norm: 1
+  negative_sampler: bernoulli
+  negative_sampler_kwargs:
+    num_negs_per_pos: 1
+  optimizer: SGD
+  optimizer_kwargs:
+    lr: 0.0005
+  training_kwargs:
+    batch_size: 256
+    num_epochs: 3000
+  training_loop: SLCWA

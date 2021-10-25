@@ -1,0 +1,36 @@
+metadata:
+  comments: We assumed the learning rate for Adadelta as the default from PyTorch
+    since it was not explicitly stated in the original paper
+  title: Learn WN18 Dataset with TransD as described by Ji et al., 2015
+pipeline:
+  dataset: wn18
+  evaluator_kwargs:
+    filtered: true
+  loss: MarginRankingLoss
+  loss_kwargs:
+    margin: 1
+    reduction: mean
+  model: TransD
+  model_kwargs:
+    embedding_dim: 50
+    entity_constrainer: clamp_norm
+    entity_initializer: xavier_uniform
+    relation_constrainer: clamp_norm
+    relation_dim: 50
+    relation_initializer: xavier_uniform
+  negative_sampler: bernoulli
+  negative_sampler_kwargs:
+    num_negs_per_pos: 1
+  optimizer: Adadelta
+  optimizer_kwargs:
+    lr: 1.0
+  training_kwargs:
+    batch_size: 200
+    num_epochs: 1000
+  training_loop: SLCWA
+results:
+  hits_at_k:
+    unknown:
+      '10': 0.922
+  mean_rank:
+    unknown: 212

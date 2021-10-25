@@ -1,0 +1,43 @@
+metadata:
+  title: Learn WN18RR Data Set with QuatE^1 as described by Zhang et al., 2019.
+pipeline:
+  dataset: wn18rr
+  evaluator_kwargs:
+    filtered: true
+  loss: BCEWithLogitsLoss
+  loss_kwargs:
+    reduction: mean
+  model: QuatE
+  model_kwargs:
+    embedding_dim: 100
+    entity_regularizer: Lp
+    entity_regularizer_kwargs:
+      apply_only_once: false
+      normalize: false
+      p: 2.0
+      weight: 0.1
+    relation_regularizer: Lp
+    relation_regularizer_kwargs:
+      apply_only_once: false
+      normalize: false
+      p: 2.0
+      weight: 0.1
+  negative_sampler_kwargs:
+    num_negs_per_pos: 1
+  optimizer: Adagrad
+  optimizer_kwargs:
+    lr: 0.1
+  training_kwargs:
+    batch_size: 9300
+    num_epochs: 40000
+  training_loop: SLCWA
+results:
+  hits_at_k:
+    best:
+      '1': 0.436
+      '10': 0.564
+      '3': 0.5
+  mean_rank:
+    best: 3472
+  mean_reciprocal_rank:
+    best: 0.481
