@@ -78,7 +78,7 @@ def reproduce(
     Example: $ pykeen experiments reproduce tucker balazevic2019 fb15k
     """
     file_name = f"{reference}_{model}_{dataset}"
-    path = HERE.joinpath(model, file_name).with_suffix(".json")
+    path = HERE.joinpath(model, file_name).with_suffix(".yaml")
     _help_reproduce(
         directory=directory,
         path=path,
@@ -124,11 +124,11 @@ def _help_reproduce(
     """Help run the configuration at a given path.
 
     :param directory: Output directory
-    :param path: Path to configuration JSON file
+    :param path: Path to configuration YAML file
     :param replicates: How many times the experiment should be run
     :param move_to_cpu: Should the model be moved back to the CPU? Only relevant if training on GPU.
     :param save_replicates: Should the artifacts of the replicates be saved?
-    :param file_name: Name of JSON file (optional)
+    :param file_name: Name of YAML file (optional)
     :return: None
     """
     from pykeen.pipeline import replicate_pipeline_from_path
@@ -161,7 +161,7 @@ def _help_reproduce(
         move_to_cpu=move_to_cpu,
         save_replicates=save_replicates,
     )
-    shutil.copyfile(path, os.path.join(output_directory, "configuration_copied.json"))
+    shutil.copyfile(path, os.path.join(output_directory, "configuration_copied.yaml"))
 
 
 @experiments.command()
