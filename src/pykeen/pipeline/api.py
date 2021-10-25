@@ -578,7 +578,9 @@ def pipeline_from_path(
 ) -> PipelineResult:
     """Run the pipeline with configuration in a JSON/YAML file at the given path.
 
-    :param path: The path to an experiment configuration file. The loaded configuration is passed to :func:`pipeline_from_config`.
+    :param path:
+        The path to an experiment configuration file. The loaded configuration is passed to
+        :func:`pipeline_from_config`.
     :param kwargs: Additional kwargs to forward to :func:`pipeline`.
     :return: The results of running the pipeline on the given configuration.
     """
