@@ -28,7 +28,7 @@ from .init import (
     xavier_uniform_,
     xavier_uniform_norm_,
 )
-from .message_passing import Decomposition, decomposition_resolver
+from .message_passing import Decomposition, RGCNLayer, decomposition_resolver
 from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolver
 from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import CoreTriplesFactory
@@ -591,7 +591,6 @@ class RGCNRepresentations(RepresentationModule):
         embedding_specification: EmbeddingSpecification,
         num_layers: int = 2,
         use_bias: bool = True,
-        use_batch_norm: bool = False,
         activation: Hint[nn.Module] = None,
         activation_kwargs: Optional[Mapping[str, Any]] = None,
         edge_dropout: float = 0.4,
@@ -642,14 +641,7 @@ class RGCNRepresentations(RepresentationModule):
 
         # dropout
         self.edge_dropout = edge_dropout
-        self.self_loop_dropout = self_loop_dropout or edge_dropout
-
-        # batch norm and bias
-        use_batch_norm = use_batch_norm
-        if use_batch_norm:
-            if use_bias:
-                logger.warning("Disabling bias because batch normalization is used.")
-            use_bias = False
+        self_loop_dropout = self_loop_dropout or edge_dropout
 
         # Save graph using buffers, such that the tensors are moved together with the model
         h, r, t = triples_factory.mapped_triples.t()
@@ -657,22 +649,23 @@ class RGCNRepresentations(RepresentationModule):
         self.register_buffer("targets", t)
         self.register_buffer("edge_types", r)
 
-        layers = []
-        for _ in range(num_layers):
-            layers.append(
-                decomposition_resolver.make(
-                    query=decomposition,
-                    pos_kwargs=decomposition_kwargs,
-                    input_dim=base_embeddings.embedding_dim,
+        dim = base_embeddings.embedding_dim
+        self.layers = nn.ModuleList(
+            [
+                RGCNLayer(
+                    input_dim=dim,
                     num_relations=triples_factory.num_relations,
-                ),
-            )
-            if use_bias:
-                layers.append(Bias(dim=base_embeddings.embedding_dim))
-            if use_batch_norm:
-                layers.append(nn.BatchNorm1d(num_features=base_embeddings.embedding_dim))
-            layers.append(activation_resolver.make(query=activation, pos_kwargs=activation_kwargs))
-        self.layers = nn.ModuleList(layers)
+                    output_dim=dim,
+                    use_bias=use_bias,
+                    activation=activation,
+                    activation_kwargs=activation_kwargs,
+                    self_loop_dropout=self_loop_dropout,
+                    decomposition=decomposition,
+                    decomposition_kwargs=decomposition_kwargs,
+                )
+                for _ in range(num_layers)
+            ]
+        )
 
         # buffering of enriched representations
         self.enriched_embeddings = None
@@ -717,12 +710,6 @@ class RGCNRepresentations(RepresentationModule):
             targets = targets[edge_keep_mask]
             edge_types = edge_types[edge_keep_mask]
 
-        # Different dropout for self-loops (only in training mode)
-        if self.training and self.self_loop_dropout is not None:
-            node_keep_mask = torch.rand(x.shape[0], device=x.device) > self.self_loop_dropout
-        else:
-            node_keep_mask = None
-
         # fixed edges -> pre-compute weights
         if self.edge_weighting is not None and sources.numel() > 0:
             edge_weights = torch.empty_like(sources, dtype=torch.float32)
@@ -734,17 +721,13 @@ class RGCNRepresentations(RepresentationModule):
             edge_weights = None
 
         for layer in self.layers:
-            if isinstance(layer, Decomposition):
-                kwargs = dict(
-                    node_keep_mask=node_keep_mask,
-                    source=sources,
-                    target=targets,
-                    edge_type=edge_types,
-                    edge_weights=edge_weights,
-                )
-            else:
-                kwargs = dict()
-            x = layer(x, **kwargs)
+            x = layer(
+                x=x,
+                source=sources,
+                target=targets,
+                edge_type=edge_types,
+                edge_weights=edge_weights,
+            )
 
         # Cache enriched representations
         self.enriched_embeddings = x

@@ -4,12 +4,15 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Optional, Tuple, Union
+from typing import Any, Mapping, Optional, Tuple, Union
 
 import torch
 from class_resolver import Resolver
+from class_resolver.api import Hint
 from torch import nn
 from torch.nn import functional
+
+from pykeen.utils import activation_resolver
 
 __all__ = [
     "Decomposition",
@@ -183,30 +186,31 @@ class BasesDecomposition(Decomposition):
 
         # weights
         self.bases = nn.Parameter(
-            torch.empty(
-                num_bases,
-                self.input_dim,
-                self.output_dim,
+            nn.init.xavier_normal_(
+                torch.empty(
+                    num_bases,
+                    self.input_dim,
+                    self.output_dim,
+                )
             ),
             requires_grad=True,
         )
-        self.relation_base_weights = nn.Parameter(
-            torch.empty(
-                num_relations + 1,
-                num_bases,
-            ),
-            requires_grad=True,
-        )
-
-        self.memory_intense = memory_intense
-
-    def reset_parameters(self):  # noqa: D102
-        nn.init.xavier_normal_(self.bases)
         # Random convex-combination of bases for initialization (guarantees that initial weight matrices are
         # initialized properly)
-        # We have one additional relation for self-loops
-        nn.init.uniform_(self.relation_base_weights)
-        functional.normalize(self.relation_base_weights.data, p=1, dim=1, out=self.relation_base_weights.data)
+        self.relation_base_weights = nn.Parameter(
+            functional.normalize(
+                nn.init.uniform_(
+                    torch.empty(
+                        num_relations,
+                        num_bases,
+                    )
+                ),
+                p=1,
+                dim=1,
+            ),
+            requires_grad=True,
+        )
+        self.memory_intense = memory_intense
 
     def _get_weight(self, relation_id: int) -> torch.FloatTensor:
         """Construct weight matrix for a specific relation ID.
@@ -290,28 +294,16 @@ class BasesDecomposition(Decomposition):
     def forward(
         self,
         x: torch.FloatTensor,
-        node_keep_mask: Optional[torch.BoolTensor],
         source: torch.LongTensor,
         target: torch.LongTensor,
         edge_type: torch.LongTensor,
         edge_weights: Optional[torch.FloatTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
-        # self-loops first
-        # the last relation_id refers to the self-loop
-        w = self._get_weight(relation_id=self.num_relations)
-        if node_keep_mask is not None:
-            assert node_keep_mask.shape == x.shape[:1]
-            out = torch.empty_like(x)
-            out[node_keep_mask] = x[node_keep_mask] @ w
-            out[~node_keep_mask] = 0.0
-        else:
-            out = x @ w
-
+        out = torch.zeros_like(x)
         if self.memory_intense:
             _forward = self._forward_memory_intense
         else:
             _forward = self._forward_memory_light
-
         return _forward(
             x=x,
             source=source,
@@ -390,7 +382,6 @@ class BlockDecomposition(Decomposition):
     def forward(
         self,
         x: torch.FloatTensor,
-        node_keep_mask: Optional[torch.BoolTensor],
         source: torch.LongTensor,
         target: torch.LongTensor,
         edge_type: torch.LongTensor,
@@ -399,13 +390,9 @@ class BlockDecomposition(Decomposition):
         # view as blocks
         x = x.view(-1, self.num_blocks, self.block_size)
 
-        # self-loop first
+        # accumulator
+        # TODO: pass from outside?
         out = torch.zeros_like(x)
-        w = self.blocks[-1]
-        if node_keep_mask is not None:
-            out[node_keep_mask] = torch.einsum("nbi,bij->nbj", x[node_keep_mask], w)
-        else:
-            out = torch.einsum("nbi,bij->nbj", x, w)
 
         # other relations
         for r in range(self.num_relations):
@@ -434,6 +421,94 @@ class BlockDecomposition(Decomposition):
             out.index_add_(dim=0, index=target_r, source=m)
 
         return out.reshape(-1, self.output_dim)
+
+
+class RGCNLayer(nn.Module):
+    """One RGCN layer."""
+
+    def __init__(
+        self,
+        input_dim: int,
+        num_relations: int,
+        output_dim: Optional[int] = None,
+        use_bias: bool = True,
+        activation: Hint[nn.Module] = None,
+        activation_kwargs: Optional[Mapping[str, Any]] = None,
+        self_loop_dropout: float = 0.2,
+        decomposition: Hint[Decomposition] = None,
+        decomposition_kwargs: Optional[Mapping[str, Any]] = None,
+    ):
+        super().__init__()
+        # cf. https://github.com/MichSchli/RelationPrediction/blob/c77b094fe5c17685ed138dae9ae49b304e0d8d89/code/encoders/message_gcns/gcn_basis.py#L22-L24
+        # there are separate decompositions for forward and backward relations.
+        # the self-loop weight is not decomposed.
+        self.fwd = decomposition_resolver.make(
+            query=decomposition,
+            pos_kwargs=decomposition_kwargs,
+            input_dim=input_dim,
+            num_relations=num_relations,
+        )
+        output_dim = self.fwd.output_dim
+        self.bwd = decomposition_resolver.make(
+            query=decomposition,
+            pos_kwargs=decomposition_kwargs,
+            input_dim=input_dim,
+            num_relations=num_relations,
+        )
+        self.w_self_loop = nn.Parameter(nn.init.xavier_normal_(torch.empty(input_dim, output_dim)))
+        self.bias = nn.Parameter(torch.zeros(output_dim)) if use_bias else None
+        self.dropout = nn.Dropout(p=self_loop_dropout)
+        if activation is not None:
+            activation = activation_resolver.make(query=activation, pos_kwargs=activation_kwargs)
+        self.activation = activation
+
+    def forward(
+        self,
+        x: torch.FloatTensor,
+        source: torch.LongTensor,
+        target: torch.LongTensor,
+        edge_type: torch.LongTensor,
+        edge_weights: Optional[torch.FloatTensor] = None,
+    ):
+        """
+        Calculate enriched entity representations.
+
+        :param x: shape: (num_entities, input_dim)
+            The input entity representations.
+        :param source: shape: (num_triples,)
+            The indices of the source entity per triple.
+        :param target: shape: (num_triples,)
+            The indices of the target entity per triple.
+        :param edge_type: shape: (num_triples,)
+            The relation type per triple.
+        :param edge_weights: shape: (num_triples,)
+            Scalar edge weights per triple.
+
+        :return: shape: (num_entities, output_dim)
+            Enriched entity representations.
+        """
+        # self-loop
+        y = self.dropout(x @ self.w_self_loop)
+        # forward messages
+        y = y + self.fwd(
+            x=x,
+            source=source,
+            target=target,
+            edge_type=edge_type,
+            edge_weights=edge_weights,
+        )
+        # backward messages
+        y = y + self.bwd(
+            x=x,
+            source=target,
+            target=source,
+            edge_type=edge_type,
+            edge_weights=edge_weights,
+        )
+        # activation
+        if self.activation is not None:
+            y = self.activation(y)
+        return y
 
 
 decomposition_resolver = Resolver.from_subclasses(base=Decomposition, default=BasesDecomposition)
