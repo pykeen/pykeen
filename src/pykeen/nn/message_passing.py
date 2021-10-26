@@ -207,7 +207,7 @@ class BasesDecomposition(Decomposition):
         # Random convex-combination of bases for initialization (guarantees that initial weight matrices are
         # initialized properly)
         nn.init.uniform_(self.relation_base_weights)
-        functional.normalize(self.relation_base_weights, p=1, dim=1, out=self.relation_base_weights)
+        functional.normalize(self.relation_base_weights.data, p=1, dim=1, out=self.relation_base_weights.data)
 
     def _get_weight(self, relation_id: int) -> torch.FloatTensor:
         """Construct weight matrix for a specific relation ID.
