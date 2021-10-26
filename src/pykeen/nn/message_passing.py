@@ -186,31 +186,28 @@ class BasesDecomposition(Decomposition):
 
         # weights
         self.bases = nn.Parameter(
-            nn.init.xavier_normal_(
-                torch.empty(
-                    num_bases,
-                    self.input_dim,
-                    self.output_dim,
-                )
+            torch.empty(
+                num_bases,
+                self.input_dim,
+                self.output_dim,
             ),
             requires_grad=True,
         )
-        # Random convex-combination of bases for initialization (guarantees that initial weight matrices are
-        # initialized properly)
         self.relation_base_weights = nn.Parameter(
-            functional.normalize(
-                nn.init.uniform_(
-                    torch.empty(
-                        num_relations,
-                        num_bases,
-                    )
-                ),
-                p=1,
-                dim=1,
+            torch.empty(
+                num_relations,
+                num_bases,
             ),
             requires_grad=True,
         )
         self.memory_intense = memory_intense
+
+    def reset_parameters(self):  # noqa: D102
+        nn.init.xavier_normal_(self.bases)
+        # Random convex-combination of bases for initialization (guarantees that initial weight matrices are
+        # initialized properly)
+        nn.init.uniform_(self.relation_base_weights)
+        functional.normalize(self.relation_base_weights, p=1, dim=1, out=self.relation_base_weights)
 
     def _get_weight(self, relation_id: int) -> torch.FloatTensor:
         """Construct weight matrix for a specific relation ID.
@@ -455,12 +452,17 @@ class RGCNLayer(nn.Module):
             input_dim=input_dim,
             num_relations=num_relations,
         )
-        self.w_self_loop = nn.Parameter(nn.init.xavier_normal_(torch.empty(input_dim, output_dim)))
-        self.bias = nn.Parameter(torch.zeros(output_dim)) if use_bias else None
+        self.w_self_loop = nn.Parameter(torch.empty(input_dim, output_dim))
+        self.bias = nn.Parameter(torch.empty(output_dim)) if use_bias else None
         self.dropout = nn.Dropout(p=self_loop_dropout)
         if activation is not None:
             activation = activation_resolver.make(query=activation, pos_kwargs=activation_kwargs)
         self.activation = activation
+
+    def reset_parameters(self):  # noqa: D102
+        if self.bias is not None:
+            nn.init.zeros_(self.bias)
+        nn.init.xavier_normal_(self.w_self_loop)
 
     def forward(
         self,
