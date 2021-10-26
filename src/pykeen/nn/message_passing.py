@@ -507,6 +507,8 @@ class RGCNLayer(nn.Module):
             edge_type=edge_type,
             edge_weights=edge_weights,
         )
+        if self.bias is not None:
+            y = y + self.bias
         # activation
         if self.activation is not None:
             y = self.activation(y)
