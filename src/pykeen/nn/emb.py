@@ -636,6 +636,11 @@ class RGCNRepresentations(RepresentationModule):
         super().__init__(max_id=triples_factory.num_entities, shape=base_embeddings.shape)
         self.entity_embeddings = base_embeddings
 
+        if triples_factory.create_inverse_triples:
+            raise ValueError(
+                "RGCN internally creates inverse triples. It thus expects a triples factory without them.",
+            )
+
         # Resolve edge weighting
         self.edge_weighting = edge_weight_resolver.make(query=edge_weighting)
 
