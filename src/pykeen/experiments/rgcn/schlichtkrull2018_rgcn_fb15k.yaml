@@ -13,6 +13,8 @@ pipeline:
   loss_kwargs:
     reduction: mean
   model: R-GCN
+  # >  For FB15k and WN18, we report results using basis decomposition (Eq. 3) with two basis
+  # > functions, and a single encoding layer with 200-dimensional embeddings.
   # > We regularize the encoder through edge dropout applied before normalization, with dropout
   # > rate 0.2 for self-loops and 0.4 for other edges. 
   # > We apply l2 regularization to the decoder with a penalty of 0.01.
