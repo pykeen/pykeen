@@ -35,15 +35,22 @@ pipeline:
       p: 2.0
       weight: 0.01
   # > we maintain the same number of negative samples (i.e. ω = 1).
+  # https://github.com/MichSchli/RelationPrediction/blob/c77b094fe5c17685ed138dae9ae49b304e0d8d89/settings/gcn_basis.exp#L37
+  # => configuration in repository has num_negs_per_pos = 10
   negative_sampler: basic
   negative_sampler_kwargs:
     num_negs_per_pos: 1
   # > We use the Adam optimizer (Kingma and Ba 2014) with a learning rate of 0.01.
+  # https://github.com/MichSchli/RelationPrediction/blob/c77b094fe5c17685ed138dae9ae49b304e0d8d89/settings/gcn_basis.exp#L32
   optimizer: Adam
   optimizer_kwargs:
     lr: 0.01
   training_kwargs:
+    # > We use full-batch optimization for both the baselines and our model
+    # https://github.com/MichSchli/RelationPrediction/blob/c77b094fe5c17685ed138dae9ae49b304e0d8d89/settings/gcn_basis.exp#L40
+    # => code has a batch-size
     batch_size: 30000
+    # https://github.com/MichSchli/RelationPrediction/blob/c77b094fe5c17685ed138dae9ae49b304e0d8d89/settings/gcn_basis.exp#L25
     gradient_clipping_max_norm: 1.0
     num_epochs: 500
     sampler: schlichtkrull
