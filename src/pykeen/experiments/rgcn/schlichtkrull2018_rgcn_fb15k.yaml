@@ -1,3 +1,6 @@
+# Official code: https://github.com/MichSchli/RelationPrediction
+# Arxiv: https://arxiv.org/abs/1703.06103, last update: Thu, 26 Oct 2017
+# Conference Proceddings: https://link.springer.com/chapter/10.1007/978-3-319-93417-4_38
 metadata:
   comments: ''
   title: Learn FB15k Dataset with R-GCN as described by Schlichtkrull et al., 2018
@@ -5,10 +8,14 @@ pipeline:
   dataset: fb15k
   evaluator_kwargs:
     filtered: true
+  # > We optimize for cross-entropy loss 
   loss: BCEWithLogits
   loss_kwargs:
     reduction: mean
   model: R-GCN
+  # > We regularize the encoder through edge dropout applied before normalization, with dropout
+  # > rate 0.2 for self-loops and 0.4 for other edges. 
+  # > We apply l2 regularization to the decoder with a penalty of 0.01.
   model_kwargs:
     base_entity_initializer: xavier_uniform
     decomposition: bases
@@ -27,12 +34,14 @@ pipeline:
       normalize: false
       p: 2.0
       weight: 0.01
+  # > we maintain the same number of negative samples (i.e. ω = 1).
   negative_sampler: basic
   negative_sampler_kwargs:
     num_negs_per_pos: 1
+  # > We use the Adam optimizer (Kingma and Ba 2014) with a learning rate of 0.01.
   optimizer: Adam
   optimizer_kwargs:
-    lr: 0.1
+    lr: 0.01
   training_kwargs:
     batch_size: 30000
     gradient_clipping_max_norm: 1.0
