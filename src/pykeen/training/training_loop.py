@@ -200,7 +200,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         drop_last: Optional[bool] = None,
         callbacks: TrainingCallbackHint = None,
         gradient_clipping_max_norm: Optional[float] = None,
-        gradient_clipping_norm_type: Union[float] = None,
+        gradient_clipping_norm_type: Optional[float] = None,
         gradient_clipping_max_abs_value: Optional[float] = None,
     ) -> Optional[List[float]]:
         """Train the KGE model.
@@ -405,7 +405,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         drop_last: Optional[bool] = None,
         callbacks: TrainingCallbackHint = None,
         gradient_clipping_max_norm: Optional[float] = None,
-        gradient_clipping_norm_type: Union[float] = None,
+        gradient_clipping_norm_type: Optional[float] = None,
         gradient_clipping_max_abs_value: Optional[float] = None,
     ) -> Optional[List[float]]:
         """Train the KGE model, see docstring for :func:`TrainingLoop.train`."""
