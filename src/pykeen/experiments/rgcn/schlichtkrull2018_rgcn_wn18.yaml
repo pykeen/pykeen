@@ -29,7 +29,7 @@ pipeline:
     num_negs_per_pos: 1
   optimizer: Adam
   optimizer_kwargs:
-    lr: 0.1
+    lr: 0.01
   training_kwargs:
     batch_size: 30000
     gradient_clipping_max_norm: 1.0
