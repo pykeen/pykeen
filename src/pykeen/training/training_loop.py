@@ -524,11 +524,16 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         if sampler == "schlichtkrull":
             if triples_factory is None:
                 raise ValueError("need to pass triples_factory when using graph sampling")
-            sampler = GraphSampler(triples_factory, num_samples=sub_batch_size)
-            shuffle = False
+            data_loader_kwargs = dict(
+                batch_sampler=GraphSampler(triples_factory, num_samples=batch_size),
+                shuffle=False,
+            )
         else:
-            sampler = None
-            shuffle = True
+            data_loader_kwargs = dict(
+                batch_size=sub_batch_size,
+                shuffle=True,
+                drop_last=drop_last,
+            )
 
         if num_workers is None:
             num_workers = 0
@@ -554,12 +559,9 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         logger.debug(f"using stopper: {stopper}")
 
         train_data_loader = DataLoader(
-            sampler=sampler,
             dataset=training_instances,
-            batch_size=batch_size,
-            shuffle=shuffle,
             num_workers=num_workers,
-            drop_last=drop_last,
+            **data_loader_kwargs,
         )
 
         # Save the time to track when the saved point was available
