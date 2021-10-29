@@ -132,9 +132,9 @@ class GraphSampler(Sampler):
 
         # return chosen edges
         return chosen_edges
-    
+
     def __iter__(self):  # noqa: D105
-        for i in range(self.num_batches_per_epoch):
+        for _ in range(self.num_batches_per_epoch):
             yield self._sample_batch()
 
     def __len__(self):  # noqa: D105
