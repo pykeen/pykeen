@@ -47,6 +47,8 @@ class GraphSampler(Sampler):
     .. seealso::
 
         https://github.com/MichSchli/RelationPrediction/blob/2560e4ea7ccae5cb4f877ac7cb1dc3924f553827/code/train.py#L161-L247
+
+    To be used as a *batch* sampler.
     """
 
     def __init__(
@@ -75,7 +77,8 @@ class GraphSampler(Sampler):
         # preprocessing
         self.degrees, self.offset, self.neighbors = _compute_compressed_adjacency_list(triples_factory=triples_factory)
 
-    def __iter__(self):  # noqa: D105
+    def _sample_batch(self) -> List[int]:
+        """Sample one batch."""
         # initialize
         chosen_edges = torch.empty(self.num_samples, dtype=torch.long)
         node_weights = self.degrees.detach().clone()
@@ -128,7 +131,11 @@ class GraphSampler(Sampler):
             node_weights[other_vertex] -= 1
 
         # return chosen edges
-        return iter(chosen_edges)
+        return chosen_edges
+    
+    def __iter__(self):  # noqa: D105
+        for i in range(self.num_batches_per_epoch):
+            yield self._sample_batch()
 
     def __len__(self):  # noqa: D105
         return self.num_batches_per_epoch
