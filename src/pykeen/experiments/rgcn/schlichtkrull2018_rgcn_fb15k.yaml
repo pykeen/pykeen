@@ -24,6 +24,7 @@ pipeline:
     decomposition_kwargs:
       num_bases: 2
     edge_dropout: 0.4
+    edge_weighting: InverseInDegree
     embedding_dim: 200
     interaction: distmult
     num_layers: 1
