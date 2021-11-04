@@ -660,6 +660,7 @@ class RGCNRepresentations(RepresentationModule):
                 output_dim=dim,
                 use_bias=use_bias,
                 # no activation on last layer
+                # cf. https://github.com/MichSchli/RelationPrediction/blob/c77b094fe5c17685ed138dae9ae49b304e0d8d89/code/common/model_builder.py#L275  # noqa: E501
                 activation=activation if i < num_layers - 1 else None,
                 activation_kwargs=activation_kwargs,
                 self_loop_dropout=self_loop_dropout,
