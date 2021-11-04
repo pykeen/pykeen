@@ -426,7 +426,28 @@ class BlockDecomposition(Decomposition):
 
 
 class RGCNLayer(nn.Module):
-    """One RGCN layer."""
+    r"""
+    An RGCN layer from [schlichtkrull2018]_ updated to match the official implementation.
+
+    This layer uses separate decompositions for forward and backward edges (i.e., "normal" and implicitly created
+    inverse relations), as well as a separate transformation for self-loops.
+
+    Ignoring dropouts, decomposition and normalization, it can be written as
+
+    .. math ::
+        y_i = \sigma(
+            W^s x_i
+            + \sum_{(e_j, r, e_i) \in \mathcal{T}} W^f_r x_j
+            + \sum_{(e_i, r, e_j) \in \mathcal{T}} W^b_r x_j
+            + b
+        )
+
+    where $b, W^s, W^f_r, W^b_r$ are trainable weights. $W^f_r, W^b_r$ are relation-specific, and commonly enmploy a
+    weight-sharing mechanism, cf. Decomposition. $\sigma$ is an activation function. The individual terms in both sums
+    are typically weighted. This is implemented by EdgeWeighting. Moreover, RGCN employs an edge-dropout, however,
+    this needs to be done outside of an individual layer, since the same edges are dropped across all layers. In
+    contrast, the self-loop dropout is layer-specific.
+    """
 
     def __init__(
         self,
