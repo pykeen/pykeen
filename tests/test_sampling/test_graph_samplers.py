@@ -16,9 +16,9 @@ class GraphSamplerTest(unittest.TestCase):
     def setUp(self) -> None:
         """Set up the test case with a triples factory."""
         self.triples_factory = Nations().training
-        self.num_samples = 20
+        self.batch_size = 20
         self.num_epochs = 10
-        self.graph_sampler = GraphSampler(triples_factory=self.triples_factory, num_samples=self.num_samples)
+        self.graph_sampler = GraphSampler(triples_factory=self.triples_factory, batch_size=self.batch_size)
 
     def test_sample(self) -> None:
         """Test drawing samples from GraphSampler."""
@@ -30,7 +30,7 @@ class GraphSamplerTest(unittest.TestCase):
             batch = torch.stack(batch_indices)
 
             # check shape
-            assert batch.shape == (self.num_samples,)
+            assert batch.shape == (self.batch_size,)
 
             # get triples
             triples_batch = self.triples_factory.mapped_triples[batch]

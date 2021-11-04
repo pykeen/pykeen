@@ -525,7 +525,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             if triples_factory is None:
                 raise ValueError("need to pass triples_factory when using graph sampling")
             data_loader_kwargs = dict(
-                batch_sampler=GraphSampler(triples_factory, num_samples=batch_size),
+                batch_sampler=GraphSampler(triples_factory, batch_size=batch_size),
                 shuffle=False,
             )
         else:
