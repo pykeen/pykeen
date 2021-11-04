@@ -461,6 +461,28 @@ class RGCNLayer(nn.Module):
         decomposition: Hint[Decomposition] = None,
         decomposition_kwargs: Optional[Mapping[str, Any]] = None,
     ):
+        """
+        Initialize the layer.
+
+        :param input_dim: >0
+            the input dimension
+        :param num_relations:
+            the number of relations
+        :param output_dim: >0
+            the output dimension. If none is given, use the input dimension.
+        :param use_bias:
+            whether to use a trainable bias
+        :param activation:
+            the activation function to use. Defaults to None, i.e., the identity function serves as activation.
+        :param activation_kwargs:
+            additional keyword-based arguments passed to the activation function for instantiation
+        :param self_loop_dropout: 0 <= self_loop_dropout <= 1
+            the dropout to use for self-loops
+        :param decomposition:
+            the decomposition to use, cf. Decomposition and decomposition_resolver
+        :param decomposition_kwargs:
+            the keyword-based arguments passed to the decomposition for instantiation
+        """
         super().__init__()
         # cf. https://github.com/MichSchli/RelationPrediction/blob/c77b094fe5c17685ed138dae9ae49b304e0d8d89/code/encoders/message_gcns/gcn_basis.py#L22-L24  # noqa: E501
         # there are separate decompositions for forward and backward relations.
