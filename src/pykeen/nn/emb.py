@@ -28,7 +28,7 @@ from .init import (
     xavier_uniform_,
     xavier_uniform_norm_,
 )
-from .message_passing import Decomposition, RGCNLayer, decomposition_resolver
+from .message_passing import Decomposition, RGCNLayer
 from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolver
 from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import CoreTriplesFactory

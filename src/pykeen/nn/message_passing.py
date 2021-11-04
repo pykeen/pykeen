@@ -444,7 +444,7 @@ class RGCNLayer(nn.Module):
         decomposition_kwargs: Optional[Mapping[str, Any]] = None,
     ):
         super().__init__()
-        # cf. https://github.com/MichSchli/RelationPrediction/blob/c77b094fe5c17685ed138dae9ae49b304e0d8d89/code/encoders/message_gcns/gcn_basis.py#L22-L24
+        # cf. https://github.com/MichSchli/RelationPrediction/blob/c77b094fe5c17685ed138dae9ae49b304e0d8d89/code/encoders/message_gcns/gcn_basis.py#L22-L24  # noqa: E501
         # there are separate decompositions for forward and backward relations.
         # the self-loop weight is not decomposed.
         self.fwd = decomposition_resolver.make(
