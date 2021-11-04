@@ -659,13 +659,14 @@ class RGCNRepresentations(RepresentationModule):
                 num_relations=triples_factory.num_relations,
                 output_dim=dim,
                 use_bias=use_bias,
-                activation=activation,
+                # no activation on last layer
+                activation=activation if i < num_layers - 1 else None,
                 activation_kwargs=activation_kwargs,
                 self_loop_dropout=self_loop_dropout,
                 decomposition=decomposition,
                 decomposition_kwargs=decomposition_kwargs,
             )
-            for _ in range(num_layers)
+            for i in range(num_layers)
         )
 
         # buffering of enriched representations
