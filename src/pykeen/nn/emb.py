@@ -654,20 +654,18 @@ class RGCNRepresentations(RepresentationModule):
 
         dim = base_embeddings.embedding_dim
         self.layers = nn.ModuleList(
-            [
-                RGCNLayer(
-                    input_dim=dim,
-                    num_relations=triples_factory.num_relations,
-                    output_dim=dim,
-                    use_bias=use_bias,
-                    activation=activation,
-                    activation_kwargs=activation_kwargs,
-                    self_loop_dropout=self_loop_dropout,
-                    decomposition=decomposition,
-                    decomposition_kwargs=decomposition_kwargs,
-                )
-                for _ in range(num_layers)
-            ]
+            RGCNLayer(
+                input_dim=dim,
+                num_relations=triples_factory.num_relations,
+                output_dim=dim,
+                use_bias=use_bias,
+                activation=activation,
+                activation_kwargs=activation_kwargs,
+                self_loop_dropout=self_loop_dropout,
+                decomposition=decomposition,
+                decomposition_kwargs=decomposition_kwargs,
+            )
+            for _ in range(num_layers)
         )
 
         # buffering of enriched representations
