@@ -22,10 +22,7 @@ class GraphSamplerTest(unittest.TestCase):
 
     def test_sample(self) -> None:
         """Test drawing samples from GraphSampler."""
-        for e in range(self.num_epochs):
-            # sample a batch
-            batch = next(iter(self.graph_sampler))
-
+        for batch in self.graph_sampler:
             # check shape
             assert batch.shape == (self.batch_size,)
 
