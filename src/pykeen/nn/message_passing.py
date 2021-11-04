@@ -110,6 +110,7 @@ class Decomposition(nn.Module, ABC):
         target: torch.LongTensor,
         edge_type: torch.LongTensor,
         edge_weights: Optional[torch.FloatTensor] = None,
+        accumulator: Optional[torch.FloatTensor] = None,
     ) -> torch.FloatTensor:
         """Relation-specific message passing from source to target.
 
@@ -125,6 +126,9 @@ class Decomposition(nn.Module, ABC):
             The edge types.
         :param edge_weights: shape: (num_edges,)
             Precomputed edge weights.
+        :param accumulator: shape: (num_nodes, output_dim)
+            a pre-allocated output accumulator. may be used if multiple different message passing steps are performed
+            and accumulated by sum.
 
         :return: shape: (num_nodes, output_dim)
             The enriched node embeddings.
@@ -295,8 +299,10 @@ class BasesDecomposition(Decomposition):
         target: torch.LongTensor,
         edge_type: torch.LongTensor,
         edge_weights: Optional[torch.FloatTensor] = None,
+        accumulator: Optional[torch.FloatTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
-        out = torch.zeros_like(x)
+        if accumulator is None:
+            accumulator = torch.zeros_like(x)
         if self.memory_intense:
             _forward = self._forward_memory_intense
         else:
@@ -306,7 +312,7 @@ class BasesDecomposition(Decomposition):
             source=source,
             target=target,
             edge_type=edge_type,
-            out=out,
+            out=accumulator,
             edge_weights=edge_weights,
         )
 
@@ -383,13 +389,15 @@ class BlockDecomposition(Decomposition):
         target: torch.LongTensor,
         edge_type: torch.LongTensor,
         edge_weights: Optional[torch.FloatTensor] = None,
+        accumulator: Optional[torch.FloatTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
+        # accumulator
+        if accumulator is None:
+            accumulator = torch.zeros_like(x)
+
         # view as blocks
         x = x.view(-1, self.num_blocks, self.block_size)
-
-        # accumulator
-        # TODO: pass from outside?
-        out = torch.zeros_like(x)
+        accumulator = accumulator.view(-1, self.num_blocks, self.block_size)
 
         # other relations
         for r in range(self.num_relations):
@@ -415,9 +423,9 @@ class BlockDecomposition(Decomposition):
                 m = m * weights_r.unsqueeze(dim=1).unsqueeze(dim=2)
 
             # message aggregation
-            out.index_add_(dim=0, index=target_r, source=m)
+            accumulator.index_add_(dim=0, index=target_r, source=m)
 
-        return out.reshape(-1, self.output_dim)
+        return accumulator.view(-1, self.output_dim)
 
 
 class RGCNLayer(nn.Module):
@@ -492,20 +500,22 @@ class RGCNLayer(nn.Module):
         # self-loop
         y = self.dropout(x @ self.w_self_loop)
         # forward messages
-        y = y + self.fwd(
+        y = self.fwd(
             x=x,
             source=source,
             target=target,
             edge_type=edge_type,
             edge_weights=edge_weights,
+            accumulator=y,
         )
         # backward messages
-        y = y + self.bwd(
+        y = self.bwd(
             x=x,
             source=target,
             target=source,
             edge_type=edge_type,
             edge_weights=edge_weights,
+            accumulator=y,
         )
         if self.bias is not None:
             y = y + self.bias
