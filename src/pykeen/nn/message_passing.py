@@ -105,7 +105,6 @@ class Decomposition(nn.Module, ABC):
     def forward(
         self,
         x: torch.FloatTensor,
-        node_keep_mask: Optional[torch.BoolTensor],
         source: torch.LongTensor,
         target: torch.LongTensor,
         edge_type: torch.LongTensor,
@@ -116,8 +115,6 @@ class Decomposition(nn.Module, ABC):
 
         :param x: shape: (num_nodes, input_dim)
             The node representations.
-        :param node_keep_mask: shape: (num_nodes,)
-            The node-keep mask for self-loop dropout.
         :param source: shape: (num_edges,)
             The source indices.
         :param target: shape: (num_edges,)
@@ -128,7 +125,7 @@ class Decomposition(nn.Module, ABC):
             Precomputed edge weights.
         :param accumulator: shape: (num_nodes, output_dim)
             a pre-allocated output accumulator. may be used if multiple different message passing steps are performed
-            and accumulated by sum.
+            and accumulated by sum. If none is given, create an accumulator filled with zeroes.
 
         :return: shape: (num_nodes, output_dim)
             The enriched node embeddings.
