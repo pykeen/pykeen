@@ -3,7 +3,7 @@
 """Schlichtkrull Sampler Class."""
 
 import logging
-from typing import List, Optional, Tuple
+from typing import Iterator, List, Optional, Tuple
 
 import torch
 from torch.utils.data.sampler import Sampler
@@ -133,7 +133,7 @@ class GraphSampler(Sampler):
         # return chosen edges
         return chosen_edges
 
-    def __iter__(self):  # noqa: D105
+    def __iter__(self) -> Iterator[List[int]]:  # noqa: D105
         for _ in range(self.num_batches_per_epoch):
             yield self._sample_batch()
 
