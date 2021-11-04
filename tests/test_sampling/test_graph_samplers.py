@@ -24,10 +24,7 @@ class GraphSamplerTest(unittest.TestCase):
         """Test drawing samples from GraphSampler."""
         for e in range(self.num_epochs):
             # sample a batch
-            batch_indices = []
-            for j in self.graph_sampler:
-                batch_indices.append(torch.as_tensor(j))
-            batch = torch.stack(batch_indices)
+            batch = next(iter(self.graph_sampler))
 
             # check shape
             assert batch.shape == (self.batch_size,)
