@@ -611,8 +611,6 @@ class RGCNRepresentations(RepresentationModule):
             The number of layers.
         :param use_bias:
             Whether to use a bias.
-        :param use_batch_norm:
-            Whether to use batch normalization.
         :param activation:
             The activation.
         :param activation_kwargs:
