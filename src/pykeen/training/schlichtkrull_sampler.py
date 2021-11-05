@@ -3,12 +3,10 @@
 """Schlichtkrull Sampler Class."""
 
 import logging
-from typing import Iterator, List, Optional, Tuple
 from abc import ABC
-from typing import List, Optional, Tuple
+from typing import Iterable, List, Optional, Tuple
 
 import torch
-from torch.utils.data.sampler import Sampler
 
 from ..triples.instances import BatchType, Instances, SLCWABatchType, SLCWAInstances
 from ..typing import MappedTriples
@@ -51,14 +49,12 @@ def _compute_compressed_adjacency_list(
     return degrees, offset, compressed_adj_lists
 
 
-class GraphSampler(Sampler):
+class GraphSampler:
     r"""Samples edges based on the proposed method in Schlichtkrull et al.
 
     .. seealso::
 
         https://github.com/MichSchli/RelationPrediction/blob/2560e4ea7ccae5cb4f877ac7cb1dc3924f553827/code/train.py#L161-L247
-
-    To be used as a *batch* sampler.
     """
 
     def __init__(
@@ -66,7 +62,6 @@ class GraphSampler(Sampler):
         mapped_triples: MappedTriples,
         batch_size: Optional[int] = None,
     ):
-        super().__init__(data_source=mapped_triples)
         self.num_triples = num_triples = mapped_triples.shape[0]
 
         if batch_size is None:
@@ -85,16 +80,15 @@ class GraphSampler(Sampler):
         # preprocessing
         self.degrees, self.offset, self.neighbors = _compute_compressed_adjacency_list(mapped_triples=mapped_triples)
 
-    def _sample_batch(self) -> List[int]:
+    def sample_batch(self) -> Iterable[int]:
         """Sample one batch."""
         # initialize
-        chosen_edges = torch.empty(self.num_samples, dtype=torch.long)
         node_weights = self.degrees.detach().clone()
         edge_picked = torch.zeros(self.num_triples, dtype=torch.bool)
         node_picked = torch.zeros(self.degrees.shape[0], dtype=torch.bool)
 
         # sample iteratively
-        for i in range(self.num_samples):
+        for _ in range(self.num_samples):
             # determine weights
             weights = node_weights * node_picked
 
@@ -124,7 +118,8 @@ class GraphSampler(Sampler):
                 chosen_edge_index = torch.randint(chosen_node_degree, size=(1,))[0]
                 chosen_edge = adj_list[chosen_edge_index]
                 edge_number = chosen_edge[0]
-            chosen_edges[i] = edge_number
+            yield edge_number
+
             edge_picked[edge_number] = True
 
             # visit target node
@@ -134,16 +129,6 @@ class GraphSampler(Sampler):
             # decrease sample counts
             node_weights[chosen_vertex] -= 1
             node_weights[other_vertex] -= 1
-
-        # return chosen edges
-        return chosen_edges
-
-    def __iter__(self) -> Iterator[List[int]]:  # noqa: D105
-        for _ in range(self.num_batches_per_epoch):
-            yield self._sample_batch()
-
-    def __len__(self):  # noqa: D105
-        return self.num_batches_per_epoch
 
 
 class SubGraphInstances(Instances[BatchType], ABC):
@@ -169,7 +154,7 @@ class SubGraphInstances(Instances[BatchType], ABC):
         super().__init__(**kwargs)
         self.graph_sampler = GraphSampler(
             mapped_triples=mapped_triples,
-            num_samples=sub_graph_size,
+            batch_size=sub_graph_size,
         )
 
 
@@ -198,4 +183,4 @@ class SLCWASubGraphInstances(SLCWAInstances, SubGraphInstances[SLCWABatchType]):
         return super().__len__() // self.graph_sampler.num_samples
 
     def __getitem__(self, item: int) -> MappedTriples:  # noqa: D105
-        return torch.stack([SLCWAInstances.__getitem__(self, idx) for idx in self.graph_sampler], dim=0)
+        return torch.stack([SLCWAInstances.__getitem__(self, idx) for idx in self.graph_sampler.sample_batch()], dim=0)
