@@ -1,8 +1,8 @@
-from src.pykeen.pipeline import pipeline
-from src.pykeen.evaluation import RankBasedEvaluator
-import src.pykeen.losses
-from src.pykeen.datasets import WN18RR
-from src.pykeen.models.unimodal.boxe_kg import BoxEKG
+from pykeen.pipeline import pipeline
+from pykeen.evaluation import RankBasedEvaluator
+import pykeen.losses
+from pykeen.datasets import WN18RR
+from pykeen.models.unimodal.boxe_kg import BoxEKG
 import numpy as np
 import torch
 
@@ -23,8 +23,8 @@ if __name__ == "__main__":
     results = pipeline(random_seed=1000000, dataset="WN18RR", model=BoxE,
                        training_kwargs=dict(num_epochs=300, batch_size=512, checkpoint_name='trial.pt',
                                              checkpoint_frequency=100)
-                       , loss=src.pykeen.losses.NSSALoss(margin=3, adversarial_temperature=2.0, reduction='sum')
+                       , loss=pykeen.losses.NSSALoss(margin=3, adversarial_temperature=2.0, reduction='sum')
                        , training_loop='sLCWA', negative_sampler='basic',  negative_sampler_kwargs=dict(num_negs_per_pos=150),
                        result_tracker='json', result_tracker_kwargs=dict(name='test.json'),
                        evaluation_kwargs=dict(batch_size=16), optimizer=torch.optim.Adam)
-    print(results)
+

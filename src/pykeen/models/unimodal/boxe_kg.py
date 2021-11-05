@@ -1,6 +1,7 @@
 from typing import Any, ClassVar, Mapping, Optional
 
 from torch.nn.init import normal_, uniform_, zeros_
+from ...nn.init import uniform_norm_
 from ...nn.modules import Interaction
 from ...losses import NSSALoss
 import torch
@@ -17,29 +18,56 @@ __all__ = [
 SANITY_EPSILON = 10 ** -8
 
 
-def product_normalise(input_tensor):   # Geometric normalize
-    step1_tensor = torch.abs(input_tensor)
-    step2_tensor = step1_tensor + SANITY_EPSILON    # Prevent zero values
-    log_norm_tensor = torch.log(step2_tensor)
+def product_normalise(input_tensor: torch.FloatTensor) -> torch.FloatTensor:
+    r"""Normalise the input tensor along its embedding dimension so that the geometric mean is 1
+
+            :param input_tensor: An input tensor with final dimension $d$.
+    """
+    step1_tensor = torch.abs(input_tensor)  # Compute absolute value of all entries
+    step2_tensor = step1_tensor + SANITY_EPSILON    # Prevent zero values by adding a sanity epsilon
+    log_norm_tensor = torch.log(step2_tensor)   # Compute the log prior to computing the geom. mean
     step3_tensor = torch.mean(log_norm_tensor, dim=-1, keepdim=True)
     norm_volume = torch.exp(step3_tensor)
     pre_norm_out = input_tensor / norm_volume
     return pre_norm_out
 
 
-def compute_box(base, delta, size):  # Compute box representations from embeddings
-    size_pos = torch.nn.functional.elu(size) + 1  # Enforce that sizes are strictly positive
-    delta_norm = product_normalise(delta)   # Shape vector is normalized
-    delta_final = torch.multiply(size_pos, delta_norm)   # Size is learned separately and applied
+def compute_box(base: torch.FloatTensor, delta: torch.FloatTensor, size: torch.FloatTensor) \
+        -> (torch.FloatTensor, torch.FloatTensor):
+    r"""Given sets of embeddings of base position, shape, and size, compute the lower and upper corners of
+    the resulting box
+            :param base: The base position (box center) of the input relation embeddings.
+            :param delta: The base shape of the input relation embeddings.
+            :param size: The size scalar vectors of the input relation embeddings.
+    """
+    size_pos = torch.nn.functional.elu(size) + 1  # Enforce that sizes are strictly positive by passing through ELU
+    delta_norm = product_normalise(delta)   # Shape vector is normalized using the above helper function
+    delta_final = torch.multiply(size_pos, delta_norm)   # Size is learned separately and applied to normalized shape
     # Product normalize the delta
-    first_bound = base - 0.5 * delta_final
-    second_bound = base + 0.5 * delta_final
-    box_low = torch.minimum(first_bound, second_bound)
+    first_bound = base - 0.5 * delta_final    # Compute potential boundaries by applying the shape in substraction
+    second_bound = base + 0.5 * delta_final   # and in addition
+    box_low = torch.minimum(first_bound, second_bound)    # Compute box upper bounds using min and max respectively.
     box_high = torch.maximum(first_bound, second_bound)
     return box_low, box_high
 
 
-def dist(points, box_lows, box_highs):   # The dist function from the paper
+def point_to_box_distance(points: torch.FloatTensor, box_lows: torch.FloatTensor, box_highs: torch.FloatTensor) \
+        -> torch.FloatTensor:
+    r"""Computes the point to box distance function proposed in the BoxE paper in an element-wise fashion.
+                :param points: the positions of the points being scored against boxes
+                :param box_lows: the lower corners of the boxes
+                :param box_highs: the upper corners of the boxes.
+
+         .. math::
+            points: p
+            box_lows: l
+            box_highs: h
+
+            w = h - l . Width is the difference between the upper and lower box bound
+            c = (h + l) / 2. Box centers (the mean of the box bounds)
+
+            dist(p,l,h) = |p-c|/(w+1) if l <= p <+ h, |p-c|*(w+1) - 0.5*w*((w+1)-1/(w+1)) otherwise.
+    """
     widths = box_highs - box_lows
     widths_p1 = widths + 1  # Compute width plus 1
     centres = 0.5 * (box_lows + box_highs)  # Compute box midpoints
@@ -53,7 +81,22 @@ class BoxEKGInteraction(Interaction):
     relation_shape = ('d', 'd', 's', 'd', 'd', 's')  # Boxes are 2xd (size) each, x 2 sets of boxes: head and tail
     entity_shape = ('d', 'd')   # Base position and bump
 
-    def __init__(self, tanh_map=True, norm_order=2):
+    def __init__(self, tanh_map: bool = True, norm_order: int = 2):
+        r"""Implements the basic BoxE-KG interaction
+            :param tanh_map: A Boolean value specifying whether a hyperbolic tangent applies to all representations
+            prior to model scoring (default: True)
+            :param norm_order: An integer specifying the normalization order (default 2)
+
+                 .. math::
+                    points: p
+                    box_lows: l
+                    box_highs: h
+
+                    w = h - l . Width is the difference between the upper and lower box bound
+                    c = (h + l) / 2. Box centers (the mean of the box bounds)
+
+                    dist(p,l,h) = |p-c|/(w+1) if l <= p <+ h, |p-c|*(w+1) - 0.5*w*((w+1)-1/(w+1)) otherwise.
+        """
         super().__init__()
         self.tanh_map = tanh_map  # Map the tanh map
         self.norm_order = norm_order
@@ -79,8 +122,8 @@ class BoxEKGInteraction(Interaction):
             points_h = torch.tanh(points_h)
             points_t = torch.tanh(points_t)
         # Fourth, compute the dist function output
-        dist_h = dist(points_h, rh_low, rh_high)
-        dist_t = dist(points_t, rt_low, rt_high)
+        dist_h = point_to_box_distance(points_h, rh_low, rh_high)
+        dist_t = point_to_box_distance(points_t, rt_low, rt_high)
         # Fifth, compute the norm
         score_h = dist_h.norm(p=self.norm_order, dim=-1)
         score_t = dist_t.norm(p=self.norm_order, dim=-1)
@@ -116,9 +159,9 @@ class BoxEKG(ERModel):
         embedding_dim: int = 200,
         tanh_map: bool = True,
         norm_order: int = 2,
-        entity_initializer: Hint[Initializer] = uniform_,
+        entity_initializer: Hint[Initializer] = uniform_norm_,
         entity_initializer_kwargs: Optional[Mapping[str, Any]] = None,
-        relation_initializer: Hint[Initializer] = uniform_,    # Has to be scaled as well
+        relation_initializer: Hint[Initializer] = uniform_norm_,    # Has to be scaled as well
         relation_initializer_kwargs: Optional[Mapping[str, Any]] = None,
         relation_size_initializer: Hint[Initializer] = uniform_,  # Has to be scaled as well
         relation_size_initializer_kwargs: Optional[Mapping[str, Any]] = None,
@@ -127,18 +170,16 @@ class BoxEKG(ERModel):
         r"""Initialize BoxE-KG
 
         :param embedding_dim: The entity embedding dimension $d$. Defaults to 200. Is usually $d \in [50, 300]$.
-        :param tanh_map: Whether to use tanh mapping after BoxE computation. Default - true
-        :param power_norm: Should the power norm be used? Defaults to true.
-        :param entity_initializer: Entity initializer function. Defaults to :func:`torch.nn.init.normal_`
+        :param tanh_map: Whether to use tanh mapping after BoxE computation. Default - True
+        :param norm_order: Norm Order in score computation (Int): Default - 2
+        :param entity_initializer: Entity initializer function. Defaults to :func:`pykeen.nn.init.uniform_norm_`
         :param entity_initializer_kwargs: Keyword arguments to be used when calling the entity initializer
-        :param entity_bias_initializer: Entity bias initializer function. Defaults to :func:`torch.nn.init.zeros_`
-        :param relation_initializer: Relation initializer function. Defaults to :func:`torch.nn.init.normal_`
+        :param relation_initializer: Relation initializer function. Defaults to :func:`pykeen.nn.init.uniform_norm_`
         :param relation_initializer_kwargs: Keyword arguments to be used when calling the relation initializer
-        :param relation_matrix_initializer: Relation matrix initializer function.
+        :param relation_size_initializer: Relation initializer function. Defaults to :func:`torch.nn.init.uniform_`
             Defaults to :func:`torch.nn.init.uniform_`
-        :param relation_matrix_initializer_kwargs: Keyword arguments to be used when calling the
+        :param relation_size_initializer_kwargs: Keyword arguments to be used when calling the
             relation matrix initializer
-        :param kwargs: Remaining keyword arguments passed through to :class:`pykeen.models.ERModel`.
         """
 
         super().__init__(

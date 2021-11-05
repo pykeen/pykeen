@@ -611,6 +611,10 @@ class TestCrossE(cases.ModelTestCase):
     num_constant_init = 1
 
 
+class TestBoxE(cases.ModelTestCase):
+    """"Test the BoxE Model"""
+    cls = pykeen.models.BoxEKG
+
 class TestTesting(unittest_templates.MetaTestCase[Model]):
     """Yo dawg, I heard you like testing, so I wrote a test to test the tests so you can test while you're testing."""
 
