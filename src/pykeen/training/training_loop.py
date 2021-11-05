@@ -526,7 +526,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             if triples_factory is None:
                 raise ValueError("need to pass triples_factory when using graph sampling")
             if not isinstance(training_instances, SLCWAInstances):
-                raise NotImplementedError
+                raise NotImplementedError("Subgraph sampling is currently only supported for SLCWA training.")
             # wrap training instances
             training_instances = SLCWASubGraphInstances(
                 mapped_triples=triples_factory.mapped_triples,
