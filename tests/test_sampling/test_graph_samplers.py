@@ -19,7 +19,8 @@ class GraphSamplerTest(unittest.TestCase):
         self.num_samples = 20
         self.num_epochs = 10
         self.graph_sampler = GraphSampler(
-            mapped_triples=self.triples_factory.mapped_triples, num_samples=self.num_samples
+            mapped_triples=self.triples_factory.mapped_triples,
+            num_samples=self.num_samples,
         )
 
     def test_sample(self) -> None:
