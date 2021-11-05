@@ -123,7 +123,7 @@ class ConvKB(ERModel):
         # c.f. https://github.com/daiquocnguyen/ConvKB/blob/73a22bfa672f690e217b5c18536647c7cf5667f1/model.py#L60-L66
         if regularizer is not None:
             self.append_weight_regularizer(
-                parameter=self.interaction.parameters(),
+                parameter=self.interaction.linear,
                 regularizer=regularizer,
             )
         logger.warning("To be consistent with the paper, initialize entity and relation embeddings from TransE.")
