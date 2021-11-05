@@ -32,7 +32,7 @@ def _compute_compressed_adjacency_list(
         with
             adj_list[i] = compressed_adj_list[offsets[i]:offsets[i+1]]
     """
-    num_entities = num_entities or mapped_triples[:, [0, 2]].max().item()
+    num_entities = num_entities or mapped_triples[:, [0, 2]].max().item() + 1
     num_triples = mapped_triples.shape[0]
     adj_lists: List[List[Tuple[int, float]]] = [[] for _ in range(num_entities)]
     for i, (s, _, o) in enumerate(mapped_triples):
