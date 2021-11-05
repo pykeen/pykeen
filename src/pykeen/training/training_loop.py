@@ -538,6 +538,8 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             sub_batch_size = None
             sampler = None
             shuffle = False
+            # this is already done
+            drop_last = False
         else:
             sampler = None
             shuffle = True
