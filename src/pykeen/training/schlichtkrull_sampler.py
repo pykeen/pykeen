@@ -194,4 +194,4 @@ class SLCWASubGraphInstances(SLCWAInstances, SubGraphInstances[SLCWABatchType]):
         return super().__len__() // self.graph_sampler.num_samples
 
     def __getitem__(self, item: int) -> MappedTriples:  # noqa: D105
-        return torch.stack([SLCWAInstances.__getitem__(self, idx) for idx in list(self.graph_sampler)], dim=0)
+        return torch.stack([SLCWAInstances.__getitem__(self, idx) for idx in self.graph_sampler], dim=0)
