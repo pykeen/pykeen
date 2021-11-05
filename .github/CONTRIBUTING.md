@@ -23,8 +23,8 @@ We track bugs for this software as [GitHub Issues](https://guides.github.com/fea
 To file a bug report, please [submit an issue](#https://github.com/pykeen/pykeen/issues/new?assignees=&labels=&template=bug_report.md&title=)
 and provide the therein requested information.
 
-In case you don't have a GitHub account, you can use [this template](ISSUE_TEMPLATE/bug_report.md)
-and send it via e-mail to the [project team.](project_team.md)
+In case you don't have a GitHub account, you can use [this template](./ISSUE_TEMPLATE/bug_report.md)
+and send it via e-mail to the [project team.](./project_team.md)
 
 
 ### Feature request
@@ -33,8 +33,8 @@ We track feature requests for this software as [GitHub Issues](https://guides.gi
 To file a feature request, please [submit an issue](#https://github.com/pykeen/pykeen/issues/new?assignees=&labels=&template=feature_request.md&title=)
 and provide the therein requested information.
 
-In case you don't have a GitHub account, you can use [this template](ISSUE_TEMPLATE/feature_request.md)
-and send it via e-mail to the [project team.](project_team.md)
+In case you don't have a GitHub account, you can use [this template](./ISSUE_TEMPLATE/feature_request.md)
+and send it via e-mail to the [project team.](./project_team.md)
 
 
 ## Pull request
@@ -48,7 +48,7 @@ is not the case, please make sure to first create these as described in
 [Issues and Feature Requests](#issues-and-feature-requests).
 
 When submitting pull requests, we encourage you to comply with these points:
- - Follow all instructions within the [pull request template](pull_request_template.md)
+ - Follow all instructions within the [pull request template](./pull_request_template.md)
  - Make sure that you create or adjust all documentation that is affected by your code changes
  - Create test scripts for non-trivial code changes, if these are not covered by existing tests.
  See also [CI & unit tests](#CI-&-unit-tests)
@@ -85,12 +85,12 @@ no issues with merging in case you forgot to pull while working on a specific br
 ## Support
 
 In case you just want to ask a question or need support for this software, you can reach out to the project team
-via e-mail to the [project team.](project_team.md)
+via e-mail to the [project team.](./project_team.md)
 
 
 ## Code of Conduct
 
 This project and everyone contributing to it is governed by
-[our Code of Conduct](CODE_OF_CONDUCT.md).
+[our Code of Conduct](./CODE_OF_CONDUCT.md).
 By participating, you are expected to comply with this code. Please report unacceptable behavior to the
-[project team.](project_team.md)
+[project team.](./project_team.md)
