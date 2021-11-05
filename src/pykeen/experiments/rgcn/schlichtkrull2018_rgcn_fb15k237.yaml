@@ -1,7 +1,5 @@
 metadata:
-  comments: ''
-  title: Learn FB15k-237 Dataset with R-GCN as described by Schlichtkrull et al.,
-    2018
+  title: Learn FB15k-237 Dataset with R-GCN as described by Schlichtkrull et al., 2018
 pipeline:
   dataset: fb15k237
   evaluator_kwargs:

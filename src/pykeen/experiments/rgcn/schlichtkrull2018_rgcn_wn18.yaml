@@ -1,5 +1,4 @@
 metadata:
-  comments: ''
   title: Learn WN18 Dataset with R-GCN as described by Schlichtkrull et al., 2018
 pipeline:
   dataset: wn18

@@ -2,7 +2,6 @@
 # Arxiv: https://arxiv.org/abs/1703.06103, last update: Thu, 26 Oct 2017
 # Conference Proceddings: https://link.springer.com/chapter/10.1007/978-3-319-93417-4_38
 metadata:
-  comments: ''
   title: Learn FB15k Dataset with R-GCN as described by Schlichtkrull et al., 2018
 pipeline:
   dataset: fb15k
@@ -59,6 +58,8 @@ pipeline:
     sampler: schlichtkrull
   training_loop: SLCWA
 results:
+  # results are computed using pessimistic aka worst rank definition, cf.
+  # https://github.com/MichSchli/RelationPrediction/blob/c77b094fe5c17685ed138dae9ae49b304e0d8d89/code/common/evaluation.py#L151-L152
   hits_at_k:
     worst:
       '1': 0.541
