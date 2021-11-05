@@ -15,7 +15,7 @@ from ...regularizers import LpRegularizer, Regularizer
 from ...typing import Hint, Initializer
 
 __all__ = [
-    'ConvKB',
+    "ConvKB",
 ]
 
 logger = logging.getLogger(__name__)
@@ -64,7 +64,7 @@ class ConvKB(ERModel):
     hpo_default: ClassVar[Mapping[str, Any]] = dict(
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
         hidden_dropout_rate=DEFAULT_DROPOUT_HPO_RANGE,
-        num_filters=dict(type=int, low=7, high=9, scale='power_two'),
+        num_filters=dict(type=int, low=7, high=9, scale="power_two"),
     )
     #: The regularizer used by [nguyen2018]_ for ConvKB.
     regularizer_default: ClassVar[Type[Regularizer]] = LpRegularizer
@@ -78,7 +78,7 @@ class ConvKB(ERModel):
 
     def __init__(
         self,
-        hidden_dropout_rate: float = 0.,
+        hidden_dropout_rate: float = 0.0,
         embedding_dim: int = 200,
         num_filters: int = 400,
         regularizer: Optional[Regularizer] = None,
@@ -116,4 +116,4 @@ class ConvKB(ERModel):
                 parameter=self.interaction.parameters(),
                 regularizer=regularizer,
             )
-        logger.warning('To be consistent with the paper, initialize entity and relation embeddings from TransE.')
+        logger.warning("To be consistent with the paper, initialize entity and relation embeddings from TransE.")
