@@ -13,7 +13,7 @@ from ...nn.modules import MuREInteraction
 from ...typing import Hint, Initializer
 
 __all__ = [
-    'MuRE',
+    "MuRE",
 ]
 
 
@@ -53,6 +53,15 @@ class MuRE(ERModel):
         :param embedding_dim: The entity embedding dimension $d$. Defaults to 200. Is usually $d \in [50, 300]$.
         :param p: The $l_p$ norm. Defaults to 2.
         :param power_norm: Should the power norm be used? Defaults to true.
+        :param entity_initializer: Entity initializer function. Defaults to :func:`torch.nn.init.normal_`
+        :param entity_initializer_kwargs: Keyword arguments to be used when calling the entity initializer
+        :param entity_bias_initializer: Entity bias initializer function. Defaults to :func:`torch.nn.init.zeros_`
+        :param relation_initializer: Relation initializer function. Defaults to :func:`torch.nn.init.normal_`
+        :param relation_initializer_kwargs: Keyword arguments to be used when calling the relation initializer
+        :param relation_matrix_initializer: Relation matrix initializer function.
+            Defaults to :func:`torch.nn.init.uniform_`
+        :param relation_matrix_initializer_kwargs: Keyword arguments to be used when calling the
+            relation matrix initializer
         :param kwargs: Remaining keyword arguments passed through to :class:`pykeen.models.ERModel`.
         """
         # comment:
@@ -65,7 +74,8 @@ class MuRE(ERModel):
                 EmbeddingSpecification(
                     embedding_dim=embedding_dim,
                     initializer=entity_initializer,
-                    initializer_kwargs=entity_initializer_kwargs or dict(
+                    initializer_kwargs=entity_initializer_kwargs
+                    or dict(
                         std=1.0e-03,
                     ),
                 ),
@@ -85,7 +95,8 @@ class MuRE(ERModel):
                 EmbeddingSpecification(
                     embedding_dim=embedding_dim,
                     initializer=relation_initializer,
-                    initializer_kwargs=relation_initializer_kwargs or dict(
+                    initializer_kwargs=relation_initializer_kwargs
+                    or dict(
                         std=1.0e-03,
                     ),
                 ),
@@ -93,7 +104,8 @@ class MuRE(ERModel):
                 EmbeddingSpecification(
                     shape=(embedding_dim,),
                     initializer=relation_matrix_initializer,
-                    initializer_kwargs=relation_matrix_initializer_kwargs or dict(
+                    initializer_kwargs=relation_matrix_initializer_kwargs
+                    or dict(
                         a=-1,
                         b=1,
                     ),

@@ -6,10 +6,10 @@ from docdata import parse_docdata
 
 from .base import UnpackedRemoteDataset
 
-BASE_URL = 'https://raw.githubusercontent.com/iieir-km/ComplEx-NNE_AER/master/datasets/DB100K'
+BASE_URL = "https://raw.githubusercontent.com/iieir-km/ComplEx-NNE_AER/master/datasets/DB100K"
 
 __all__ = [
-    'DB100K',
+    "DB100K",
 ]
 
 
@@ -40,13 +40,13 @@ class DB100K(UnpackedRemoteDataset):
         :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.UnpackedRemoteDataset`.
         """
         super().__init__(
-            training_url=f'{BASE_URL}/_train.txt',
-            testing_url=f'{BASE_URL}/_test.txt',
-            validation_url=f'{BASE_URL}/_valid.txt',
+            training_url=f"{BASE_URL}/_train.txt",
+            testing_url=f"{BASE_URL}/_test.txt",
+            validation_url=f"{BASE_URL}/_valid.txt",
             create_inverse_triples=create_inverse_triples,
             **kwargs,
         )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     DB100K.cli()

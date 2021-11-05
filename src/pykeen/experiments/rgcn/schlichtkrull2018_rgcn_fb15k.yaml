@@ -1,0 +1,30 @@
+metadata:
+  comments: ''
+  title: Learn FB15k Dataset with R-GCN as described by Schlichtkrull et al., 2018
+pipeline:
+  dataset: fb15k
+  evaluator_kwargs:
+    filtered: true
+  loss: SoftplusLoss
+  loss_kwargs:
+    reduction: mean
+  model: R-GCN
+  model_kwargs:
+    base_entity_initializer: xavier_uniform
+    decomposition: block
+    decomposition_kwargs:
+      num_blocks: 100
+    embedding_dim: 500
+    interaction: distmult
+    relation_initializer: xavier_uniform
+  negative_sampler: basic
+  negative_sampler_kwargs:
+    num_negs_per_pos: 10
+  optimizer: Adagrad
+  optimizer_kwargs:
+    lr: 0.1
+  training_kwargs:
+    batch_size: 30000
+    num_epochs: 500
+    sampler: schlichtkrull
+  training_loop: SLCWA

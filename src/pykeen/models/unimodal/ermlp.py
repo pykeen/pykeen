@@ -5,20 +5,16 @@
 from typing import Any, ClassVar, Mapping, Optional
 
 import torch
-import torch.autograd
 from torch import nn
 from torch.nn.init import uniform_
 
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...losses import Loss
 from ...nn.emb import EmbeddingSpecification
-from ...regularizers import Regularizer
-from ...triples import CoreTriplesFactory
-from ...typing import DeviceHint, Hint, Initializer
+from ...typing import Hint, Initializer
 
 __all__ = [
-    'ERMLP',
+    "ERMLP",
 ]
 
 
@@ -38,6 +34,7 @@ class ERMLP(EntityRelationEmbeddingModel):
     $\textbf{w} \in \mathbb{R}^{k}$, the weights of the output layer, and $g$ denotes an activation function such
     as the hyperbolic tangent.
     ---
+    name: ER-MLP
     citation:
         author: Dong
         year: 2014
@@ -51,23 +48,15 @@ class ERMLP(EntityRelationEmbeddingModel):
 
     def __init__(
         self,
-        triples_factory: CoreTriplesFactory,
+        *,
         embedding_dim: int = 50,
-        loss: Optional[Loss] = None,
-        preferred_device: DeviceHint = None,
-        random_seed: Optional[int] = None,
         hidden_dim: Optional[int] = None,
-        regularizer: Optional[Regularizer] = None,
         entity_initializer: Hint[Initializer] = uniform_,
         relation_initializer: Hint[Initializer] = uniform_,
+        **kwargs,
     ) -> None:
         """Initialize the model."""
         super().__init__(
-            triples_factory=triples_factory,
-            loss=loss,
-            preferred_device=preferred_device,
-            random_seed=random_seed,
-            regularizer=regularizer,
             entity_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
                 initializer=entity_initializer,
@@ -76,6 +65,7 @@ class ERMLP(EntityRelationEmbeddingModel):
                 embedding_dim=embedding_dim,
                 initializer=relation_initializer,
             ),
+            **kwargs,
         )
 
         if hidden_dim is None:
@@ -101,7 +91,7 @@ class ERMLP(EntityRelationEmbeddingModel):
         nn.init.zeros_(self.linear1.bias)
         nn.init.xavier_uniform_(self.linear1.weight)
         nn.init.zeros_(self.linear2.bias)
-        nn.init.xavier_uniform_(self.linear2.weight, gain=nn.init.calculate_gain('relu'))
+        nn.init.xavier_uniform_(self.linear2.weight, gain=nn.init.calculate_gain("relu"))
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings

@@ -1,0 +1,60 @@
+{
+  "metadata": {
+    "title": "Learn WN18 Data Set with QuatE^1 as described by Zhang et al., 2019."
+  },
+  "pipeline": {
+    "dataset": "wn18",
+    "model": "QuatE",
+    "model_kwargs": {
+      "embedding_dim": 300,
+      "entity_regularizer": "Lp",
+      "entity_regularizer_kwargs": {
+        "apply_only_once": false,
+        "weight": 0.05,
+        "p": 2.0,
+        "normalize": false
+      },
+      "relation_regularizer": "Lp",
+      "relation_regularizer_kwargs": {
+        "apply_only_once": false,
+        "weight": 0.05,
+        "p": 2.0,
+        "normalize": false
+      }
+    },
+    "optimizer": "Adagrad",
+    "optimizer_kwargs": {
+      "lr": 0.1
+    },
+    "loss": "BCEWithLogitsLoss",
+    "loss_kwargs": {
+      "reduction": "mean"
+    },
+    "training_loop": "SLCWA",
+    "training_kwargs": {
+      "num_epochs": 3000,
+      "batch_size": 9300
+    },
+    "negative_sampler_kwargs": {
+      "num_negs_per_pos": 10
+    },
+    "evaluator_kwargs": {
+      "filtered": true
+    }
+  },
+  "results": {
+    "mean_rank": {
+      "best": 388
+    },
+    "hits_at_k": {
+      "best": {
+        "1": 0.941,
+        "3": 0.954,
+        "10": 0.960
+      }
+    },
+    "mean_reciprocal_rank": {
+      "best": 0.949
+    }
+  }
+}

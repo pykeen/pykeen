@@ -11,7 +11,6 @@ from operator import itemgetter
 from typing import Any, ClassVar, Generic, Iterable, List, Mapping, Optional, Sequence, Tuple, Type, Union, cast
 
 import torch
-from class_resolver import Hint
 from torch import nn
 
 from .base import Model
@@ -24,8 +23,8 @@ from ..typing import DeviceHint, HeadRepresentation, RelationRepresentation, Tai
 from ..utils import check_shapes
 
 __all__ = [
-    '_NewAbstractModel',
-    'ERModel',
+    "_NewAbstractModel",
+    "ERModel",
 ]
 
 logger = logging.getLogger(__name__)
@@ -38,7 +37,7 @@ EmbeddingSpecificationHint = Union[
 ]
 
 
-class _NewAbstractModel(Model, ABC, autoreset=False):
+class _NewAbstractModel(Model, ABC):
     """An abstract class for knowledge graph embedding models (KGEMs).
 
     The only function that needs to be implemented for a given subclass is
@@ -79,8 +78,8 @@ class _NewAbstractModel(Model, ABC, autoreset=False):
                 parents[id(p)].append(module)
 
             # call reset_parameters if possible
-            if hasattr(module, 'reset_parameters'):
-                task_list.append((name.count('.'), module))
+            if hasattr(module, "reset_parameters"):
+                task_list.append((name.count("."), module))
 
         # initialize from bottom to top
         # This ensures that specialized initializations will take priority over the default ones of its components.
@@ -91,14 +90,14 @@ class _NewAbstractModel(Model, ABC, autoreset=False):
         # emit warning if there where parameters which were not initialised by reset_parameters.
         if len(uninitialized_parameters) > 0:
             logger.warning(
-                'reset_parameters() not found for all modules containing parameters. '
-                '%d parameters where likely not initialized.',
+                "reset_parameters() not found for all modules containing parameters. "
+                "%d parameters where likely not initialized.",
                 len(uninitialized_parameters),
             )
 
             # Additional debug information
             for i, p_id in enumerate(uninitialized_parameters, start=1):
-                logger.debug('[%3d] Parents to blame: %s', i, parents.get(p_id))
+                logger.debug("[%3d] Parents to blame: %s", i, parents.get(p_id))
 
     def _instantiate_default_regularizer(self, **kwargs) -> Optional[Regularizer]:
         """Instantiate the regularizer from this class's default settings.
@@ -123,27 +122,7 @@ class _NewAbstractModel(Model, ABC, autoreset=False):
             if hasattr(module, "post_parameter_update"):
                 module.post_parameter_update()
 
-    def compute_loss(
-        self,
-        tensor_1: torch.FloatTensor,
-        tensor_2: torch.FloatTensor,
-    ) -> torch.FloatTensor:
-        """Compute the loss for functions requiring two separate tensors as input.
-
-        :param tensor_1: shape: s
-            The tensor containing predictions or positive scores.
-        :param tensor_2: shape: s'
-            The tensor containing target values or the negative scores.
-
-        .. note ::
-            `s` and `s'` need to be broadcastable.
-
-        :return: dtype: float, scalar
-            The label loss value.
-        """
-        return self.loss(tensor_1, tensor_2) + self._collect_regularization_term()
-
-    def _collect_regularization_term(self):
+    def collect_regularization_term(self):  # noqa: D102
         return sum(
             regularizer.pop_regularization_term()
             for regularizer in self.modules()
@@ -301,19 +280,36 @@ def _prepare_representation_module_list(
             )
         modules.append(r)
     if not skip_checks:
-        check_shapes(*zip(
-            (r.shape for r in modules),
-            shapes,
-        ), raise_on_errors=True)
+        check_shapes(
+            *zip(
+                (r.shape for r in modules),
+                shapes,
+            ),
+            raise_on_errors=True,
+        )
     return nn.ModuleList(modules)
 
 
 class ERModel(
     Generic[HeadRepresentation, RelationRepresentation, TailRepresentation],
     _NewAbstractModel,
-    autoreset=False,
 ):
-    """A commonly useful base for KGEMs using embeddings and interaction modules."""
+    """A commonly useful base for KGEMs using embeddings and interaction modules.
+
+    This model does not use post-init hooks to automatically initialize all of its
+    parameters. Rather, the call to :func:`Model.reset_parameters_` happens at the end of
+    ``ERModel.__init__``. This is possible because all trainable parameters should necessarily
+    be passed through the ``super().__init__()`` in subclasses of :class:`ERModel`.
+
+    Other code can still be put after the call to ``super().__init__()`` in subclasses, such as
+    registering regularizers (as done in :class:`pykeen.models.ConvKB` and :class:`pykeen.models.TransH`).
+    ---
+    citation:
+        author: Ali
+        year: 2021
+        link: https://jmlr.org/papers/v22/20-825.html
+        github: pykeen/pykeen
+    """
 
     #: The entity representations
     entity_representations: Sequence[RepresentationModule]
@@ -328,7 +324,11 @@ class ERModel(
         self,
         *,
         triples_factory: CoreTriplesFactory,
-        interaction: Hint[Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]],
+        interaction: Union[
+            str,
+            Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation],
+            Type[Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]],
+        ],
         interaction_kwargs: Optional[Mapping[str, Any]] = None,
         entity_representations: EmbeddingSpecificationHint = None,
         relation_representations: EmbeddingSpecificationHint = None,
@@ -365,23 +365,25 @@ class ERModel(
             random_seed=random_seed,
             predict_with_sigmoid=predict_with_sigmoid,
         )
+        self.interaction = interaction_resolver.make(interaction, pos_kwargs=interaction_kwargs)
         self.entity_representations = _prepare_representation_module_list(
             representations=entity_representations,
             num_embeddings=triples_factory.num_entities,
-            shapes=interaction.entity_shape,
+            shapes=self.interaction.entity_shape,
             label="entity",
-            skip_checks=interaction.tail_entity_shape is not None,
+            skip_checks=self.interaction.tail_entity_shape is not None,
         )
         self.relation_representations = _prepare_representation_module_list(
             representations=relation_representations,
             num_embeddings=triples_factory.num_relations,
-            shapes=interaction.relation_shape,
+            shapes=self.interaction.relation_shape,
             label="relation",
         )
-        self.interaction = interaction_resolver.make(interaction, pos_kwargs=interaction_kwargs)
         # Comment: it is important that the regularizers are stored in a module list, in order to appear in
         # model.modules(). Thereby, we can collect them automatically.
         self.weight_regularizers = nn.ModuleList()
+        # Explicitly call reset_parameters to trigger initialization
+        self.reset_parameters_()
 
     def append_weight_regularizer(
         self,
@@ -441,7 +443,10 @@ class ERModel(
         h, r, t = self._get_representations(h_indices=h_indices, r_indices=r_indices, t_indices=t_indices)
         scores = self.interaction.score(h=h, r=r, t=t, slice_size=slice_size, slice_dim=slice_dim)
         return self._repeat_scores_if_necessary(
-            scores=scores, h_indices=h_indices, r_indices=r_indices, t_indices=t_indices,
+            scores=scores,
+            h_indices=h_indices,
+            r_indices=r_indices,
+            t_indices=t_indices,
         )
 
     def _repeat_scores_if_necessary(
@@ -460,11 +465,14 @@ class ERModel(
 
         repeats = [1, 1, 1, 1]
 
-        for i, (flag, ind, num) in enumerate((
-            (repeat_entities, h_indices, self.num_entities),
-            (repeat_relations, r_indices, self.num_relations),
-            (repeat_entities, t_indices, self.num_entities),
-        ), start=1):
+        for i, (flag, ind, num) in enumerate(
+            (
+                (repeat_entities, h_indices, self.num_entities),
+                (repeat_relations, r_indices, self.num_relations),
+                (repeat_entities, t_indices, self.num_entities),
+            ),
+            start=1,
+        ):
             if flag:
                 if ind is None:
                     repeats[i] = num
@@ -483,10 +491,7 @@ class ERModel(
     ) -> Tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]:
         """Get representations for head, relation and tails, in canonical shape."""
         h, r, t = [
-            [
-                representation.get_in_more_canonical_shape(dim=dim, indices=indices)
-                for representation in representations
-            ]
+            [representation.get_in_more_canonical_shape(dim=dim, indices=indices) for representation in representations]
             for dim, indices, representations in (
                 ("h", h_indices, self.entity_representations),
                 ("r", r_indices, self.relation_representations),

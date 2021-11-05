@@ -5,20 +5,20 @@
 import itertools as itt
 import json
 import logging
-import os
+import pathlib
 import time
-from typing import Any, Dict, List, Mapping, Optional, Tuple, Union
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple, Union
 from uuid import uuid4
 
-from ..training import _TRAINING_LOOP_SUFFIX
+from ..training import SLCWATrainingLoop, training_loop_resolver
 from ..utils import normalize_string
 
 __all__ = [
-    'ablation_pipeline',
-    'ablation_pipeline_from_config',
-    'prepare_ablation_from_config',
-    'prepare_ablation_from_path',
-    'prepare_ablation',
+    "ablation_pipeline",
+    "ablation_pipeline_from_config",
+    "prepare_ablation_from_config",
+    "prepare_ablation_from_path",
+    "prepare_ablation",
 ]
 
 logger = logging.getLogger(__name__)
@@ -29,7 +29,7 @@ Mapping3D = Mapping[str, Mapping[str, Mapping[str, Any]]]
 
 def ablation_pipeline(
     datasets: Union[str, List[str]],
-    directory: str,
+    directory: Union[str, pathlib.Path],
     models: Union[str, List[str]],
     losses: Union[str, List[str]],
     optimizers: Union[str, List[str]],
@@ -40,7 +40,7 @@ def ablation_pipeline(
     regularizers: Union[None, str, List[str]] = None,
     negative_sampler: Union[str, None] = None,
     evaluator: Optional[str] = None,
-    stopper: Optional[str] = 'NopStopper',
+    stopper: Optional[str] = "NopStopper",
     model_to_model_kwargs: Optional[Mapping2D] = None,
     model_to_model_kwargs_ranges: Optional[Mapping2D] = None,
     model_to_loss_to_loss_kwargs: Optional[Mapping3D] = None,
@@ -59,10 +59,10 @@ def ablation_pipeline(
     stopper_kwargs: Optional[Mapping[str, Any]] = None,
     n_trials: Optional[int] = 5,
     timeout: Optional[int] = 3600,
-    metric: Optional[str] = 'hits@10',
-    direction: Optional[str] = 'maximize',
-    sampler: Optional[str] = 'random',
-    pruner: Optional[str] = 'nop',
+    metric: Optional[str] = "hits@10",
+    direction: Optional[str] = "maximize",
+    sampler: Optional[str] = "random",
+    pruner: Optional[str] = "nop",
     metadata: Optional[Mapping] = None,
     save_artifacts: bool = True,
     move_to_cpu: bool = True,
@@ -140,6 +140,8 @@ def ablation_pipeline(
     :param create_unique_subdir: Defines, whether a unique sub-directory for the experimental artifacts should
         be created. The sub-directory name is defined  by the  current  data + a unique id.
     """
+    if isinstance(directory, str):
+        directory = pathlib.Path(directory).resolve()
     if create_unique_subdir:
         directory = _create_path_with_id(directory=directory)
 
@@ -192,12 +194,12 @@ def ablation_pipeline(
 
 
 def _run_ablation_experiments(
-    directories: List[Tuple[str, str]],
+    directories: Sequence[Tuple[Union[str, pathlib.Path], Union[str, pathlib.Path]]],
     best_replicates: Optional[int] = None,
     dry_run: bool = False,
     move_to_cpu: bool = True,
     discard_replicates: bool = False,
-):
+) -> None:
     """Run ablation experiments."""
     if dry_run:
         return
@@ -205,15 +207,17 @@ def _run_ablation_experiments(
     from pykeen.hpo import hpo_pipeline_from_path
 
     for output_directory, rv_config_path in directories:
+        if isinstance(output_directory, str):
+            output_directory = pathlib.Path(output_directory).resolve()
         hpo_pipeline_result = hpo_pipeline_from_path(rv_config_path)
         hpo_pipeline_result.save_to_directory(output_directory)
 
         if not best_replicates:
             continue
 
-        best_pipeline_dir = os.path.join(output_directory, 'best_pipeline')
-        os.makedirs(best_pipeline_dir, exist_ok=True)
-        logger.info('Re-training best pipeline and saving artifacts in %s', best_pipeline_dir)
+        best_pipeline_dir = output_directory.joinpath("best_pipeline")
+        best_pipeline_dir.mkdir(exist_ok=True, parents=True)
+        logger.info("Re-training best pipeline and saving artifacts in %s", best_pipeline_dir)
         hpo_pipeline_result.replicate_best_pipeline(
             replicates=best_replicates,
             move_to_cpu=move_to_cpu,
@@ -222,10 +226,10 @@ def _run_ablation_experiments(
         )
 
 
-def _create_path_with_id(directory: str) -> str:
+def _create_path_with_id(directory: pathlib.Path) -> pathlib.Path:
     """Add unique id to path."""
-    datetime = time.strftime('%Y-%m-%d-%H-%M')
-    return os.path.join(directory, f'{datetime}_{uuid4()}')
+    datetime = time.strftime("%Y-%m-%d-%H-%M")
+    return directory.joinpath(f"{datetime}_{uuid4()}")
 
 
 def ablation_pipeline_from_config(
@@ -265,7 +269,11 @@ def ablation_pipeline_from_config(
     )
 
 
-def prepare_ablation_from_path(path: str, directory: str, save_artifacts: bool) -> List[Tuple[str, str]]:
+def prepare_ablation_from_path(
+    path: Union[str, pathlib.Path],
+    directory: Union[str, pathlib.Path],
+    save_artifacts: bool,
+) -> List[Tuple[pathlib.Path, pathlib.Path]]:
     """Prepare a set of ablation study directories.
 
     :param path: Path to configuration file defining the ablation studies.
@@ -275,6 +283,8 @@ def prepare_ablation_from_path(path: str, directory: str, save_artifacts: bool) 
         created.
     :return: pairs of output directories and HPO config paths inside those directories
     """
+    if isinstance(directory, str):
+        directory = pathlib.Path(directory).resolve()
     directory = _create_path_with_id(directory=directory)
     with open(path) as file:
         config = json.load(file)
@@ -283,9 +293,9 @@ def prepare_ablation_from_path(path: str, directory: str, save_artifacts: bool) 
 
 def prepare_ablation_from_config(
     config: Mapping[str, Any],
-    directory: str,
+    directory: Union[str, pathlib.Path],
     save_artifacts: bool,
-) -> List[Tuple[str, str]]:
+) -> List[Tuple[pathlib.Path, pathlib.Path]]:
     """Prepare a set of ablation study directories.
 
     :param config: Dictionary defining the ablation studies.
@@ -296,9 +306,9 @@ def prepare_ablation_from_config(
 
     :return: pairs of output directories and HPO config paths inside those directories
     """
-    metadata = config['metadata']
-    optuna_config = config['optuna']
-    ablation_config = config['ablation']
+    metadata = config["metadata"]
+    optuna_config = config["optuna"]
+    ablation_config = config["ablation"]
 
     return prepare_ablation(
         **ablation_config,
@@ -315,11 +325,11 @@ def prepare_ablation(  # noqa:C901
     losses: Union[str, List[str]],
     optimizers: Union[str, List[str]],
     training_loops: Union[str, List[str]],
-    directory: str,
+    directory: Union[str, pathlib.Path],
     *,
     epochs: Optional[int] = None,
     create_inverse_triples: Union[bool, List[bool]] = False,
-    regularizers: Union[None, str, List[str]] = None,
+    regularizers: Union[None, str, List[str], List[None]] = None,
     negative_sampler: Optional[str] = None,
     evaluator: Optional[str] = None,
     model_to_model_kwargs: Optional[Mapping2D] = None,
@@ -337,17 +347,17 @@ def prepare_ablation(  # noqa:C901
     model_to_regularizer_to_regularizer_kwargs_ranges: Optional[Mapping3D] = None,
     n_trials: Optional[int] = 5,
     timeout: Optional[int] = 3600,
-    metric: Optional[str] = 'hits@10',
-    direction: Optional[str] = 'maximize',
-    sampler: Optional[str] = 'random',
-    pruner: Optional[str] = 'nop',
+    metric: Optional[str] = "hits@10",
+    direction: Optional[str] = "maximize",
+    sampler: Optional[str] = "random",
+    pruner: Optional[str] = "nop",
     evaluator_kwargs: Optional[Mapping[str, Any]] = None,
     evaluation_kwargs: Optional[Mapping[str, Any]] = None,
-    stopper: Optional[str] = 'NopStopper',
+    stopper: Optional[str] = "NopStopper",
     stopper_kwargs: Optional[Mapping[str, Any]] = None,
     metadata: Optional[Mapping] = None,
     save_artifacts: bool = True,
-) -> List[Tuple[str, str]]:
+) -> List[Tuple[pathlib.Path, pathlib.Path]]:
     """Prepare an ablation directory.
 
     :param datasets: A dataset name or list of dataset names.
@@ -414,6 +424,8 @@ def prepare_ablation(  # noqa:C901
             If the dataset is not specified correctly, i.e., dataset is not of type str, or a dictionary containing
             the paths to the training, testing, and validation data.
     """
+    if isinstance(directory, str):
+        directory = pathlib.Path(directory).resolve()
     if isinstance(datasets, str):
         datasets = [datasets]
     if isinstance(create_inverse_triples, bool):
@@ -429,7 +441,7 @@ def prepare_ablation(  # noqa:C901
     if isinstance(regularizers, str):
         regularizers = [regularizers]
     elif regularizers is None:
-        regularizers = ["NoRegularizer"]
+        regularizers = [None]
 
     it = itt.product(
         datasets,
@@ -456,31 +468,31 @@ def prepare_ablation(  # noqa:C901
         optimizer,
         training_loop,
     ) in enumerate(it):
-        dataset_name = normalize_string(dataset) if isinstance(dataset, str) else 'user_data'
-        experiment_name = f'{counter:04d}_{dataset_name}_{normalize_string(model)}'
-        output_directory = os.path.join(directory, experiment_name)
-        os.makedirs(output_directory, exist_ok=True)
+        dataset_name = normalize_string(dataset) if isinstance(dataset, str) else "user_data"
+        experiment_name = f"{counter:04d}_{dataset_name}_{normalize_string(model)}"
+        output_directory = directory.joinpath(experiment_name)
+        output_directory.mkdir(exist_ok=True, parents=True)
         # TODO what happens if already exists?
 
         _experiment_optuna_config = {
-            'n_trials': n_trials,
-            'timeout': timeout,
-            'metric': metric,
-            'direction': direction,
-            'sampler': sampler,
-            'pruner': pruner,
+            "n_trials": n_trials,
+            "timeout": timeout,
+            "metric": metric,
+            "direction": direction,
+            "sampler": sampler,
+            "pruner": pruner,
         }
-        _experiment_optuna_config['storage'] = f'sqlite:///{output_directory}/optuna_results.db'
+        _experiment_optuna_config["storage"] = f"sqlite:///{output_directory.as_posix()}/optuna_results.db"
         if save_artifacts:
-            save_model_directory = os.path.join(output_directory, 'artifacts')
-            os.makedirs(save_model_directory, exist_ok=True)
-            _experiment_optuna_config['save_model_directory'] = save_model_directory
+            save_model_directory = output_directory.joinpath("artifacts")
+            save_model_directory.mkdir(exist_ok=True, parents=True)
+            _experiment_optuna_config["save_model_directory"] = save_model_directory.as_posix()
 
         hpo_config: Dict[str, Any] = dict()
-        hpo_config['stopper'] = stopper
+        hpo_config["stopper"] = stopper
 
         if stopper_kwargs is not None:
-            hpo_config['stopper_kwargs'] = stopper_kwargs
+            hpo_config["stopper_kwargs"] = stopper_kwargs
 
         # TODO incorporate setting of random seed
         # pipeline_kwargs=dict(
@@ -496,100 +508,105 @@ def prepare_ablation(  # noqa:C901
 
         # Add dataset to current_pipeline
         if isinstance(dataset, str):
-            hpo_config['dataset'] = dataset
+            hpo_config["dataset"] = dataset
         elif isinstance(dataset, dict):
             # Training, test, and validation paths are provided
-            hpo_config['training'] = dataset['training']
-            hpo_config['testing'] = dataset['testing']
-            hpo_config['validation'] = dataset['validation']
+            hpo_config["training"] = dataset["training"]
+            hpo_config["testing"] = dataset["testing"]
+            hpo_config["validation"] = dataset["validation"]
         else:
             raise ValueError(
                 "Dataset must be either the dataset name, i.e., of type str, or a dictionary containing\n"
                 "the paths to the training, testing, and validation data.",
             )
         logger.info(f"Dataset: {dataset}")
-        hpo_config['dataset_kwargs'] = dict(create_inverse_triples=create_inverse_triples)
+        hpo_config["dataset_kwargs"] = dict(create_inverse_triples=create_inverse_triples)
         logger.info(f"Add inverse triples: {create_inverse_triples}")
 
-        hpo_config['model'] = model
-        hpo_config['model_kwargs'] = model_to_model_kwargs.get(model, {})
-        hpo_config['model_kwargs_ranges'] = model_to_model_kwargs_ranges.get(model, {})
+        hpo_config["model"] = model
+        hpo_config["model_kwargs"] = model_to_model_kwargs.get(model, {})
+        hpo_config["model_kwargs_ranges"] = model_to_model_kwargs_ranges.get(model, {})
         logger.info(f"Model: {model}")
 
         # Add loss function to current_pipeline
-        hpo_config['loss'] = loss
-        _set_arguments(config=model_to_loss_to_loss_kwargs, key='loss_kwargs', value=loss)
-        _set_arguments(config=model_to_loss_to_loss_kwargs_ranges, key='loss_kwargs_ranges', value=loss)
+        hpo_config["loss"] = loss
+        _set_arguments(config=model_to_loss_to_loss_kwargs, key="loss_kwargs", value=loss)
+        _set_arguments(config=model_to_loss_to_loss_kwargs_ranges, key="loss_kwargs_ranges", value=loss)
         logger.info(f"Loss functions: {loss}")
 
         # Add regularizer to current_pipeline
-        hpo_config['regularizer'] = regularizer
-        _set_arguments(config=model_to_regularizer_to_regularizer_kwargs, key='regularizer_kwargs', value=regularizer)
-        _set_arguments(
-            config=model_to_regularizer_to_regularizer_kwargs_ranges,
-            key='regularizer_kwargs_ranges',
-            value=regularizer,
-        )
-        logger.info(f"Regularizer: {regularizer}")
+        if regularizer is not None:
+            hpo_config["regularizer"] = regularizer
+            _set_arguments(
+                config=model_to_regularizer_to_regularizer_kwargs,
+                key="regularizer_kwargs",
+                value=regularizer,
+            )
+            _set_arguments(
+                config=model_to_regularizer_to_regularizer_kwargs_ranges,
+                key="regularizer_kwargs_ranges",
+                value=regularizer,
+            )
+            logger.info(f"Regularizer: {regularizer}")
 
         # Add optimizer to current_pipeline
-        hpo_config['optimizer'] = optimizer
-        _set_arguments(config=model_to_optimizer_to_optimizer_kwargs, key='optimizer_kwargs', value=optimizer)
+        hpo_config["optimizer"] = optimizer
+        _set_arguments(config=model_to_optimizer_to_optimizer_kwargs, key="optimizer_kwargs", value=optimizer)
         _set_arguments(
             config=model_to_optimizer_to_optimizer_kwargs_ranges,
-            key='optimizer_kwargs_ranges',
+            key="optimizer_kwargs_ranges",
             value=optimizer,
         )
         logger.info(f"Optimizer: {optimizer}")
 
         # Add training approach to current_pipeline
-        hpo_config['training_loop'] = training_loop
+        hpo_config["training_loop"] = training_loop
         _set_arguments(
             config=model_to_training_loop_to_training_loop_kwargs,
-            key='training_loop_kwargs',
+            key="training_loop_kwargs",
             value=training_loop,
         )
-        _set_arguments(config=model_to_training_loop_to_training_kwargs, key='training_kwargs', value=training_loop)
+        _set_arguments(config=model_to_training_loop_to_training_kwargs, key="training_kwargs", value=training_loop)
         _set_arguments(
             config=model_to_training_loop_to_training_kwargs_ranges,
-            key='training_kwargs_ranges',
+            key="training_kwargs_ranges",
             value=training_loop,
         )
         logger.info(f"Training loop: {training_loop}")
 
-        if normalize_string(training_loop, suffix=_TRAINING_LOOP_SUFFIX) == 'slcwa':
-            negative_sampler = negative_sampler or 'basic'  # default to basic
+        if issubclass(training_loop_resolver.lookup(training_loop), SLCWATrainingLoop):
+            negative_sampler = negative_sampler or "basic"  # default to basic
             _set_arguments(
                 config=model_to_neg_sampler_to_neg_sampler_kwargs,
-                key='negative_sampler_kwargs',
+                key="negative_sampler_kwargs",
                 value=negative_sampler,
             )
             _set_arguments(
                 config=model_to_neg_sampler_to_neg_sampler_kwargs_ranges,
-                key='negative_sampler_kwargs_ranges',
+                key="negative_sampler_kwargs_ranges",
                 value=negative_sampler,
             )
             logger.info(f"Negative sampler: {negative_sampler}")
 
         # Add evaluation
-        hpo_config['evaluator'] = evaluator
+        hpo_config["evaluator"] = evaluator
         if evaluator_kwargs:
-            hpo_config['evaluator_kwargs'] = evaluator_kwargs
-        hpo_config['evaluation_kwargs'] = evaluation_kwargs or {}
+            hpo_config["evaluator_kwargs"] = evaluator_kwargs
+        hpo_config["evaluation_kwargs"] = evaluation_kwargs or {}
         logger.info(f"Evaluator: {evaluator}")
 
         if epochs is not None:
-            hpo_config.setdefault('training_kwargs', {}).setdefault('num_epochs', epochs)
+            hpo_config.setdefault("training_kwargs", {}).setdefault("num_epochs", epochs)
 
         rv_config = dict(
-            type='hpo',
+            type="hpo",
             metadata=metadata or {},
             pipeline=hpo_config,
             optuna=_experiment_optuna_config,
         )
 
-        rv_config_path = os.path.join(output_directory, 'hpo_config.json')
-        with open(rv_config_path, 'w') as file:
+        rv_config_path = output_directory.joinpath("hpo_config.json")
+        with rv_config_path.open("w") as file:
             json.dump(rv_config, file, indent=2, ensure_ascii=True)
 
         directories.append((output_directory, rv_config_path))

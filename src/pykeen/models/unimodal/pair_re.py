@@ -14,7 +14,7 @@ from ...nn.modules import PairREInteraction
 from ...typing import Hint, Initializer, Normalizer
 
 __all__ = [
-    'PairRE',
+    "PairRE",
 ]
 
 
@@ -61,6 +61,12 @@ class PairRE(ERModel):
         :param embedding_dim: The entity embedding dimension $d$.
         :param p: The $l_p$ norm.
         :param power_norm: Should the power norm be used?
+        :param entity_initializer: Entity initializer function. Defaults to :func:`torch.nn.init.uniform_`
+        :param entity_initializer_kwargs: Keyword arguments to be used when calling the entity initializer
+        :param entity_normalizer: Entity normalizer function. Defaults to :func:`torch.nn.functional.normalize`
+        :param entity_normalizer_kwargs: Keyword arguments to be used when calling the entity normalizer
+        :param relation_initializer: Relation initializer function. Defaults to :func:`torch.nn.init.uniform_`
+        :param relation_initializer_kwargs: Keyword arguments to be used when calling the relation initializer
         :param kwargs: Remaining keyword arguments passed through to :class:`pykeen.models.ERModel`.
         """
         entity_normalizer_kwargs = _resolve_kwargs(

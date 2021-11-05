@@ -19,42 +19,42 @@ from ..typing import MappedTriples
 from ..utils import fix_dataclass_init_docs
 
 __all__ = [
-    'compute_rank_from_scores',
-    'RankBasedEvaluator',
-    'RankBasedMetricResults',
+    "compute_rank_from_scores",
+    "RankBasedEvaluator",
+    "RankBasedMetricResults",
 ]
 
 logger = logging.getLogger(__name__)
 
-SIDE_HEAD = 'head'
-SIDE_TAIL = 'tail'
-SIDE_BOTH = 'both'
+SIDE_HEAD = "head"
+SIDE_TAIL = "tail"
+SIDE_BOTH = "both"
 SIDES = {SIDE_HEAD, SIDE_TAIL, SIDE_BOTH}
 
-RANK_OPTIMISTIC = 'optimistic'
-RANK_PESSIMISTIC = 'pessimistic'
-RANK_REALISTIC = 'realistic'
+RANK_OPTIMISTIC = "optimistic"
+RANK_PESSIMISTIC = "pessimistic"
+RANK_REALISTIC = "realistic"
 RANK_TYPES = {RANK_OPTIMISTIC, RANK_PESSIMISTIC, RANK_REALISTIC}
 
-RANK_EXPECTED_REALISTIC = 'expected_realistic'
+RANK_EXPECTED_REALISTIC = "expected_realistic"
 EXPECTED_RANKS = {
     RANK_REALISTIC: RANK_EXPECTED_REALISTIC,
     RANK_OPTIMISTIC: None,  # TODO - research problem
     RANK_PESSIMISTIC: None,  # TODO - research problem
 }
 
-ARITHMETIC_MEAN_RANK = 'arithmetic_mean_rank'  # also known as mean rank (MR)
-GEOMETRIC_MEAN_RANK = 'geometric_mean_rank'
-HARMONIC_MEAN_RANK = 'harmonic_mean_rank'
-MEDIAN_RANK = 'median_rank'
-INVERSE_ARITHMETIC_MEAN_RANK = 'inverse_arithmetic_mean_rank'
-INVERSE_GEOMETRIC_MEAN_RANK = 'inverse_geometric_mean_rank'
-INVERSE_HARMONIC_MEAN_RANK = 'inverse_harmonic_mean_rank'  # also known as mean reciprocal rank (MRR)
-INVERSE_MEDIAN_RANK = 'inverse_median_rank'
+ARITHMETIC_MEAN_RANK = "arithmetic_mean_rank"  # also known as mean rank (MR)
+GEOMETRIC_MEAN_RANK = "geometric_mean_rank"
+HARMONIC_MEAN_RANK = "harmonic_mean_rank"
+MEDIAN_RANK = "median_rank"
+INVERSE_ARITHMETIC_MEAN_RANK = "inverse_arithmetic_mean_rank"
+INVERSE_GEOMETRIC_MEAN_RANK = "inverse_geometric_mean_rank"
+INVERSE_HARMONIC_MEAN_RANK = "inverse_harmonic_mean_rank"  # also known as mean reciprocal rank (MRR)
+INVERSE_MEDIAN_RANK = "inverse_median_rank"
 
-RANK_STD = 'rank_std'
-RANK_VARIANCE = 'rank_var'
-RANK_MAD = 'rank_mad'
+RANK_STD = "rank_std"
+RANK_VARIANCE = "rank_var"
+RANK_MAD = "rank_mad"
 
 all_type_funcs = {
     ARITHMETIC_MEAN_RANK: np.mean,  # This is MR
@@ -71,18 +71,21 @@ all_type_funcs = {
     RANK_MAD: stats.median_abs_deviation,
 }
 
-ADJUSTED_ARITHMETIC_MEAN_RANK = 'adjusted_arithmetic_mean_rank'
-ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX = 'adjusted_arithmetic_mean_rank_index'
+ADJUSTED_ARITHMETIC_MEAN_RANK = "adjusted_arithmetic_mean_rank"
+ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX = "adjusted_arithmetic_mean_rank_index"
 TYPES_REALISTIC_ONLY = {ADJUSTED_ARITHMETIC_MEAN_RANK, ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX}
 
 METRIC_SYNONYMS = {
-    'adjusted_mean_rank': ADJUSTED_ARITHMETIC_MEAN_RANK,
-    'adjusted_mean_rank_index': ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX,
-    'igmr': INVERSE_GEOMETRIC_MEAN_RANK,
-    'mr': ARITHMETIC_MEAN_RANK,
-    'mean_rank': ARITHMETIC_MEAN_RANK,
-    'mrr': INVERSE_HARMONIC_MEAN_RANK,
-    'mean_reciprocal_rank': INVERSE_HARMONIC_MEAN_RANK,
+    "adjusted_mean_rank": ADJUSTED_ARITHMETIC_MEAN_RANK,
+    "adjusted_mean_rank_index": ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX,
+    "aamr": ADJUSTED_ARITHMETIC_MEAN_RANK,
+    "aamri": ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX,
+    "igmr": INVERSE_GEOMETRIC_MEAN_RANK,
+    "iamr": INVERSE_ARITHMETIC_MEAN_RANK,
+    "mr": ARITHMETIC_MEAN_RANK,
+    "mean_rank": ARITHMETIC_MEAN_RANK,
+    "mrr": INVERSE_HARMONIC_MEAN_RANK,
+    "mean_reciprocal_rank": INVERSE_HARMONIC_MEAN_RANK,
 }
 
 
@@ -152,75 +155,103 @@ def compute_rank_from_scores(
 class RankBasedMetricResults(MetricResults):
     """Results from computing metrics."""
 
-    arithmetic_mean_rank: Dict[str, Dict[str, float]] = field(metadata=dict(
-        name="Mean Rank (MR)",
-        doc='The arithmetic mean over all ranks on, [1, inf). Lower is better.',
-    ))
+    arithmetic_mean_rank: Dict[str, Dict[str, float]] = field(
+        metadata=dict(
+            name="Mean Rank (MR)",
+            doc="The arithmetic mean over all ranks on, [1, inf). Lower is better.",
+        )
+    )
 
-    geometric_mean_rank: Dict[str, Dict[str, float]] = field(metadata=dict(
-        name="Geometric Mean Rank (GMR)",
-        doc='The geometric mean over all ranks, on [1, inf). Lower is better.',
-    ))
+    geometric_mean_rank: Dict[str, Dict[str, float]] = field(
+        metadata=dict(
+            name="Geometric Mean Rank (GMR)",
+            doc="The geometric mean over all ranks, on [1, inf). Lower is better.",
+        )
+    )
 
-    median_rank: Dict[str, Dict[str, float]] = field(metadata=dict(
-        name="Median Rank",
-        doc='The median over all ranks, on [1, inf). Lower is better.',
-    ))
+    median_rank: Dict[str, Dict[str, float]] = field(
+        metadata=dict(
+            name="Median Rank",
+            doc="The median over all ranks, on [1, inf). Lower is better.",
+        )
+    )
 
-    harmonic_mean_rank: Dict[str, Dict[str, float]] = field(metadata=dict(
-        name="Harmonic Mean Rank (HMR)",
-        doc='The harmonic mean over all ranks, on [1, inf). Lower is better.',
-    ))
+    harmonic_mean_rank: Dict[str, Dict[str, float]] = field(
+        metadata=dict(
+            name="Harmonic Mean Rank (HMR)",
+            doc="The harmonic mean over all ranks, on [1, inf). Lower is better.",
+        )
+    )
 
-    inverse_arithmetic_mean_rank: Dict[str, Dict[str, float]] = field(metadata=dict(
-        name="Inverse Arithmetic Mean Rank (IAMR)",
-        doc='The inverse of the arithmetic mean over all ranks, on (0, 1]. Higher is better.',
-    ))
+    inverse_arithmetic_mean_rank: Dict[str, Dict[str, float]] = field(
+        metadata=dict(
+            name="Inverse Arithmetic Mean Rank (IAMR)",
+            doc="The inverse of the arithmetic mean over all ranks, on (0, 1]. Higher is better.",
+        )
+    )
 
-    inverse_geometric_mean_rank: Dict[str, Dict[str, float]] = field(metadata=dict(
-        name="Inverse Geometric Mean Rank (IGMR)",
-        doc='The inverse of the geometric mean over all ranks, on (0, 1]. Higher is better.',
-    ))
+    inverse_geometric_mean_rank: Dict[str, Dict[str, float]] = field(
+        metadata=dict(
+            name="Inverse Geometric Mean Rank (IGMR)",
+            doc="The inverse of the geometric mean over all ranks, on (0, 1]. Higher is better.",
+        )
+    )
 
-    inverse_harmonic_mean_rank: Dict[str, Dict[str, float]] = field(metadata=dict(
-        name="Mean Reciprocal Rank (MRR)",
-        doc='The inverse of the harmonic mean over all ranks, on (0, 1]. Higher is better.',
-    ))
+    inverse_harmonic_mean_rank: Dict[str, Dict[str, float]] = field(
+        metadata=dict(
+            name="Mean Reciprocal Rank (MRR)",
+            doc="The inverse of the harmonic mean over all ranks, on (0, 1]. Higher is better.",
+        )
+    )
 
-    inverse_median_rank: Dict[str, Dict[str, float]] = field(metadata=dict(
-        name="Inverse Median Rank",
-        doc='The inverse of the median over all ranks, on (0, 1]. Higher is better.',
-    ))
+    inverse_median_rank: Dict[str, Dict[str, float]] = field(
+        metadata=dict(
+            name="Inverse Median Rank",
+            doc="The inverse of the median over all ranks, on (0, 1]. Higher is better.",
+        )
+    )
 
-    rank_std: Dict[str, Dict[str, float]] = field(metadata=dict(
-        name="Rank Standard Deviation",
-        doc='The standard deviation over all ranks on, [0, inf). Lower is better.',
-    ))
+    rank_std: Dict[str, Dict[str, float]] = field(
+        metadata=dict(
+            name="Rank Standard Deviation",
+            doc="The standard deviation over all ranks on, [0, inf). Lower is better.",
+        )
+    )
 
-    rank_var: Dict[str, Dict[str, float]] = field(metadata=dict(
-        name="Rank Variance",
-        doc='The variance over all ranks on, [0, inf). Lower is better.',
-    ))
+    rank_var: Dict[str, Dict[str, float]] = field(
+        metadata=dict(
+            name="Rank Variance",
+            doc="The variance over all ranks on, [0, inf). Lower is better.",
+        )
+    )
 
-    rank_mad: Dict[str, Dict[str, float]] = field(metadata=dict(
-        name="Rank Median Absolute Deviation",
-        doc='The median absolute deviation over all ranks on, [0, inf). Lower is better.',
-    ))
+    rank_mad: Dict[str, Dict[str, float]] = field(
+        metadata=dict(
+            name="Rank Median Absolute Deviation",
+            doc="The median absolute deviation over all ranks on, [0, inf). Lower is better.",
+        )
+    )
 
-    hits_at_k: Dict[str, Dict[str, Dict[Union[int, float], float]]] = field(metadata=dict(
-        name='Hits @ K',
-        doc='The relative frequency of ranks not larger than a given k, on [0, 1]. Higher is better',
-    ))
+    hits_at_k: Dict[str, Dict[str, Dict[Union[int, float], float]]] = field(
+        metadata=dict(
+            name="Hits @ K",
+            doc="The relative frequency of ranks not larger than a given k, on [0, 1]. Higher is better",
+        )
+    )
 
-    adjusted_arithmetic_mean_rank: Dict[str, Dict[str, float]] = field(metadata=dict(
-        name='Adjusted Arithmetic Mean Rank (AAMR)',
-        doc='The mean over all chance-adjusted ranks, on (0, 2). Lower is better.',
-    ))
+    adjusted_arithmetic_mean_rank: Dict[str, Dict[str, float]] = field(
+        metadata=dict(
+            name="Adjusted Arithmetic Mean Rank (AAMR)",
+            doc="The mean over all chance-adjusted ranks, on (0, 2). Lower is better.",
+        )
+    )
 
-    adjusted_arithmetic_mean_rank_index: Dict[str, Dict[str, float]] = field(metadata=dict(
-        name='Adjusted Arithmetic Mean Rank Index (AAMRI)',
-        doc='The re-indexed adjusted mean rank (AAMR), on [-1, 1]. Higher is better.',
-    ))
+    adjusted_arithmetic_mean_rank_index: Dict[str, Dict[str, float]] = field(
+        metadata=dict(
+            name="Adjusted Arithmetic Mean Rank Index (AAMRI)",
+            doc="The re-indexed adjusted mean rank (AAMR), on [-1, 1]. Higher is better.",
+        )
+    )
 
     def get_metric(self, name: str) -> float:
         """Get the rank-based metric.
@@ -264,12 +295,12 @@ class RankBasedMetricResults(MetricResults):
 
         >>> metric_results.get('hits@5')
         """
-        dot_count = name.count('.')
+        dot_count = name.count(".")
         if 0 == dot_count:  # assume average by default
             side, rank_type, metric = SIDE_BOTH, RANK_REALISTIC, name
         elif 1 == dot_count:
             # Check if it a side or rank type
-            side_or_ranktype, metric = name.split('.')
+            side_or_ranktype, metric = name.split(".")
             if side_or_ranktype in SIDES:
                 side = side_or_ranktype
                 rank_type = RANK_REALISTIC
@@ -277,51 +308,48 @@ class RankBasedMetricResults(MetricResults):
                 side = SIDE_BOTH
                 rank_type = side_or_ranktype
         elif 2 == dot_count:
-            side, rank_type, metric = name.split('.')
+            side, rank_type, metric = name.split(".")
         else:
-            raise ValueError(f'Malformed metric name: {name}')
+            raise ValueError(f"Malformed metric name: {name}")
 
         # update old names for metrics and handle spaces
-        metric = metric.lower().replace(' ', '_')
+        metric = metric.lower().replace(" ", "_")
         metric = METRIC_SYNONYMS.get(metric, metric)
 
         if side not in SIDES:
-            raise ValueError(f'Invalid side: {side}. Allowed sides: {SIDES}')
+            raise ValueError(f"Invalid side: {side}. Allowed sides: {SIDES}")
         if rank_type not in RANK_REALISTIC and metric in TYPES_REALISTIC_ONLY:
-            raise ValueError(f'Invalid rank type for {metric}: {rank_type}. Allowed type: {RANK_REALISTIC}')
+            raise ValueError(f"Invalid rank type for {metric}: {rank_type}. Allowed type: {RANK_REALISTIC}")
         elif rank_type not in RANK_TYPES:
-            raise ValueError(f'Invalid rank type: {rank_type}. Allowed types: {RANK_TYPES}')
+            raise ValueError(f"Invalid rank type: {rank_type}. Allowed types: {RANK_TYPES}")
 
-        if not metric.startswith('hits'):
+        if not metric.startswith("hits"):
             return getattr(self, metric)[side][rank_type]
 
         # otherwise, assume is hits@k, which is handled differently
         rank_type_hits_at_k = self.hits_at_k[side][rank_type]
-        for prefix in ('hits_at_', 'hits@'):
+        for prefix in ("hits_at_", "hits@"):
             if not metric.startswith(prefix):
                 continue
-            k = metric[len(prefix):]
-            k_int = 10 if k == 'k' else int(k)
+            k = metric[len(prefix) :]
+            k_int = 10 if k == "k" else int(k)
             return rank_type_hits_at_k[k_int]
 
-        raise ValueError(f'Invalid metric name: {name}')
+        raise ValueError(f"Invalid metric name: {name}")
 
     def to_flat_dict(self):  # noqa: D102
-        return {
-            f'{side}.{rank_type}.{metric_name}': value
-            for side, rank_type, metric_name, value in self._iter_rows()
-        }
+        return {f"{side}.{rank_type}.{metric_name}": value for side, rank_type, metric_name, value in self._iter_rows()}
 
     def to_df(self) -> pd.DataFrame:
         """Output the metrics as a pandas dataframe."""
-        return pd.DataFrame(list(self._iter_rows()), columns=['Side', 'Type', 'Metric', 'Value'])
+        return pd.DataFrame(list(self._iter_rows()), columns=["Side", "Type", "Metric", "Value"])
 
     def _iter_rows(self) -> Iterable[Tuple[str, str, str, float]]:
         for side, rank_type in itt.product(SIDES, RANK_TYPES):
             for k, v in self.hits_at_k[side][rank_type].items():
-                yield side, rank_type, f'hits_at_{k}', v
+                yield side, rank_type, f"hits_at_{k}", v
             for f in fields(self):
-                if f.name == 'hits_at_k':
+                if f.name == "hits_at_k":
                     continue
                 side_data = getattr(self, f.name)[side]
                 if rank_type in side_data:
@@ -370,7 +398,7 @@ class RankBasedEvaluator(Evaluator):
         for k in self.ks:
             if isinstance(k, float) and not (0 < k < 1):
                 raise ValueError(
-                    'If k is a float, it should represent a relative rank, i.e. a value between 0 and 1 (excl.)',
+                    "If k is a float, it should represent a relative rank, i.e. a value between 0 and 1 (excl.)",
                 )
         self.ranks: Dict[Tuple[str, str], List[float]] = defaultdict(list)
         self.num_entities = None
@@ -431,11 +459,10 @@ class RankBasedEvaluator(Evaluator):
             if len(ranks) < 1:
                 continue
             hits_at_k[side][rank_type] = {
-                k: np.mean(ranks <= (k if isinstance(k, int) else int(self.num_entities * k)))
-                for k in self.ks
+                k: np.mean(ranks <= (k if isinstance(k, int) else int(self.num_entities * k))).item() for k in self.ks
             }
             for metric_name, metric_func in all_type_funcs.items():
-                asr[metric_name][side][rank_type] = metric_func(ranks)
+                asr[metric_name][side][rank_type] = metric_func(ranks).item()
 
             expected_rank_type = EXPECTED_RANKS.get(rank_type)
             if expected_rank_type:
@@ -446,9 +473,9 @@ class RankBasedEvaluator(Evaluator):
                     asr[ADJUSTED_ARITHMETIC_MEAN_RANK][side][rank_type] = (
                         asr[ARITHMETIC_MEAN_RANK][side][rank_type] / expected_mean_rank
                     )
-                    asr[ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX][side][rank_type] = (
-                        1.0 - (asr[ARITHMETIC_MEAN_RANK][side][rank_type] - 1) / (expected_mean_rank - 1)
-                    )
+                    asr[ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX][side][rank_type] = 1.0 - (
+                        asr[ARITHMETIC_MEAN_RANK][side][rank_type] - 1
+                    ) / (expected_mean_rank - 1)
 
         # Clear buffers
         self.ranks.clear()

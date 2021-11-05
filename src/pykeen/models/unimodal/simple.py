@@ -11,11 +11,10 @@ from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss, SoftplusLoss
 from ...nn.emb import Embedding, EmbeddingSpecification
 from ...regularizers import PowerSumRegularizer, Regularizer
-from ...triples import CoreTriplesFactory
-from ...typing import DeviceHint, Hint, Initializer
+from ...typing import Hint, Initializer
 
 __all__ = [
-    'SimplE',
+    "SimplE",
 ]
 
 
@@ -71,22 +70,14 @@ class SimplE(EntityRelationEmbeddingModel):
 
     def __init__(
         self,
-        triples_factory: CoreTriplesFactory,
+        *,
         embedding_dim: int = 200,
-        loss: Optional[Loss] = None,
-        preferred_device: DeviceHint = None,
-        random_seed: Optional[int] = None,
-        regularizer: Optional[Regularizer] = None,
         clamp_score: Optional[Union[float, Tuple[float, float]]] = None,
         entity_initializer: Hint[Initializer] = None,
         relation_initializer: Hint[Initializer] = None,
+        **kwargs,
     ) -> None:
         super().__init__(
-            triples_factory=triples_factory,
-            loss=loss,
-            preferred_device=preferred_device,
-            random_seed=random_seed,
-            regularizer=regularizer,
             entity_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
                 initializer=entity_initializer,
@@ -95,16 +86,17 @@ class SimplE(EntityRelationEmbeddingModel):
                 embedding_dim=embedding_dim,
                 initializer=relation_initializer,
             ),
+            **kwargs,
         )
 
         # extra embeddings
         self.tail_entity_embeddings = Embedding.init_with_device(
-            num_embeddings=triples_factory.num_entities,
+            num_embeddings=self.num_entities,
             embedding_dim=embedding_dim,
             device=self.device,
         )
         self.inverse_relation_embeddings = Embedding.init_with_device(
-            num_embeddings=triples_factory.num_relations,
+            num_embeddings=self.num_relations,
             embedding_dim=embedding_dim,
             device=self.device,
         )

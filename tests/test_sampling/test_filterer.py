@@ -22,27 +22,29 @@ class FiltererTest(unittest_templates.GenericTestCase[Filterer]):
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         self.generator = set_random_seed(seed=self.seed)[1]
-        kwargs["triples_factory"] = self.triples_factory = Nations().training
+        self.triples_factory = Nations().training
+        kwargs["mapped_triples"] = self.mapped_triples = self.triples_factory.mapped_triples
         return kwargs
 
     def post_instantiation_hook(self) -> None:  # noqa: D102
-        self.slcwa_instances = self.triples_factory.create_slcwa_instances()
-        self.positive_batch = self.slcwa_instances.mapped_triples[torch.randint(
-            low=0,
-            high=len(self.slcwa_instances),
-            size=(self.batch_size,),
-            generator=self.generator,
-        )]
+        self.positive_batch = self.mapped_triples[
+            torch.randint(
+                low=0,
+                high=self.mapped_triples.shape[0],
+                size=(self.batch_size,),
+                generator=self.generator,
+            )
+        ]
 
     def test_filter(self):
         """Test the filter method."""
         # Check whether filtering works correctly
         # First giving an example where all triples have to be filtered
-        _, batch_filter = self.instance(negative_batch=self.positive_batch)
+        batch_filter = self.instance(negative_batch=self.positive_batch)
         # The filter should remove all triples
         assert batch_filter.sum() == 0
         # Create an example where no triples will be filtered
-        _, batch_filter = self.instance(
+        batch_filter = self.instance(
             negative_batch=(self.positive_batch + self.triples_factory.num_entities),
         )
         # The filter should not remove any triple

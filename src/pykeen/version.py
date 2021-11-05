@@ -4,36 +4,59 @@
 
 import os
 import sys
+from functools import lru_cache
 from subprocess import CalledProcessError, check_output  # noqa: S404
+from typing import Optional, Tuple
 
 __all__ = [
-    'VERSION',
-    'get_version',
-    'get_git_hash',
-    'env',
+    "VERSION",
+    "get_version",
+    "get_git_hash",
+    "get_git_branch",
+    "env",
 ]
 
-VERSION = '1.4.1-dev'
+VERSION = "1.6.1-dev"
 
 
-def get_git_hash() -> str:
+@lru_cache(maxsize=2)
+def get_git_hash(terse: bool = True) -> str:
     """Get the PyKEEN git hash.
 
     :return:
         The git hash, equals 'UNHASHED' if encountered CalledProcessError, signifying that the
         code is not installed in development mode.
     """
-    with open(os.devnull, 'w') as devnull:
+    rv = _run("git", "rev-parse", "HEAD")
+    if rv is None:
+        return "UNHASHED"
+    if terse:
+        return rv[:8]
+    return rv
+
+
+@lru_cache(maxsize=1)
+def get_git_branch() -> Optional[str]:
+    """Get the PyKEEN branch, if installed from git in editable mode.
+
+    :return:
+        Returns the name of the current branch, or None if not installed in development mode.
+    """
+    return _run("git", "branch", "--show-current")
+
+
+def _run(*args: str) -> Optional[str]:
+    with open(os.devnull, "w") as devnull:
         try:
             ret = check_output(  # noqa: S603,S607
-                ['git', 'rev-parse', 'HEAD'],
+                args,
                 cwd=os.path.dirname(__file__),
                 stderr=devnull,
             )
-        except CalledProcessError:
-            return 'UNHASHED'
+        except (CalledProcessError, FileNotFoundError):
+            return None
         else:
-            return ret.strip().decode('utf-8')[:8]
+            return ret.strip().decode("utf-8")
 
 
 def get_version(with_git_hash: bool = False) -> str:
@@ -43,28 +66,30 @@ def get_version(with_git_hash: bool = False) -> str:
         If set to True, the git hash will be appended to the version.
     :return: The PyKEEN version as well as the git hash, if the parameter with_git_hash was set to true.
     """
-    return f'{VERSION}-{get_git_hash()}' if with_git_hash else VERSION
+    return f"{VERSION}-{get_git_hash(terse=True)}" if with_git_hash else VERSION
 
 
-def env_table(tablefmt='github', headers=('Key', 'Value')) -> str:
+def env_table(tablefmt: str = "github", headers: Tuple[str, str] = ("Key", "Value")) -> str:
     """Generate a table describing the environment in which PyKEEN is being run."""
-    import torch
     import platform
-    from tabulate import tabulate
-    import getpass
     import time
+
+    import torch
+    from tabulate import tabulate
+
     rows = [
-        ('OS', os.name),
-        ('Platform', platform.system()),
-        ('Release', platform.release()),
-        ('User', getpass.getuser()),
-        ('Time', str(time.asctime())),
-        ('Python', f'{sys.version_info[0]}.{sys.version_info[1]}.{sys.version_info[2]}'),
-        ('PyKEEN', get_version(with_git_hash=True)),
-        ('PyTorch', torch.__version__),
-        ('CUDA Available?', str(torch.cuda.is_available()).lower()),
-        ('CUDA Version', torch.version.cuda or 'N/A'),
-        ('cuDNN Version', torch.backends.cudnn.version() or 'N/A'),
+        ("OS", os.name),
+        ("Platform", platform.system()),
+        ("Release", platform.release()),
+        ("Time", str(time.asctime())),
+        ("Python", f"{sys.version_info[0]}.{sys.version_info[1]}.{sys.version_info[2]}"),
+        ("PyKEEN", get_version()),
+        ("PyKEEN Hash", get_git_hash()),
+        ("PyKEEN Branch", get_git_branch()),
+        ("PyTorch", torch.__version__),
+        ("CUDA Available?", str(torch.cuda.is_available()).lower()),
+        ("CUDA Version", torch.version.cuda or "N/A"),
+        ("cuDNN Version", torch.backends.cudnn.version() or "N/A"),
     ]
     return tabulate(rows, tablefmt=tablefmt, headers=headers)
 
@@ -72,7 +97,8 @@ def env_table(tablefmt='github', headers=('Key', 'Value')) -> str:
 def env_html():
     """Output the environment table as HTML for usage in Jupyter."""
     from IPython.display import HTML
-    return HTML(env_table(tablefmt='html'))
+
+    return HTML(env_table(tablefmt="html"))
 
 
 def env(file=None):
@@ -84,15 +110,15 @@ def env(file=None):
     if _in_jupyter():
         return env_html()
     else:
-        print(env_table(), file=file)
+        print(env_table(), file=file)  # noqa:T001
 
 
 def _in_jupyter() -> bool:
     try:
-        get_ipython = sys.modules['IPython'].get_ipython  # type: ignore
-        if 'IPKernelApp' not in get_ipython().config:
+        get_ipython = sys.modules["IPython"].get_ipython  # type: ignore
+        if "IPKernelApp" not in get_ipython().config:
             raise ImportError("console")
-        if 'VSCODE_PID' in os.environ:
+        if "VSCODE_PID" in os.environ:
             raise ImportError("vscode")
     except Exception:
         return False
@@ -100,5 +126,5 @@ def _in_jupyter() -> bool:
         return True
 
 
-if __name__ == '__main__':
-    print(get_version(with_git_hash=True))
+if __name__ == "__main__":
+    print(get_version(with_git_hash=True))  # noqa:T001
