@@ -152,6 +152,16 @@ class SubGraphInstances(Instances[BatchType], ABC):
         sub_graph_size: int,
         **kwargs,
     ) -> None:
+        """
+        Initialize the subgraph dataset.
+
+        :param mapped_triples:
+            the ID-based triples
+        :param sub_graph_size:
+            the size (=number of triples) of the individual subgraph samples
+        :param kwargs:
+            additional keyword based arguments passed to super.__init__
+        """
         super().__init__(**kwargs)
         self.graph_sampler = GraphSampler(
             mapped_triples=mapped_triples,
@@ -168,6 +178,14 @@ class SLCWASubGraphInstances(SLCWAInstances, SubGraphInstances[SLCWABatchType]):
         mapped_triples: MappedTriples,
         sub_graph_size: int,
     ):
+        """
+        Initialize the subgraph dataset for SLCWA instances.
+
+        :param mapped_triples:
+            the ID-based triples.
+        :param sub_graph_size:
+            the size (=number of triples) of the individual subgraph samples
+        """
         SLCWAInstances.__init__(self, mapped_triples=mapped_triples)
         SubGraphInstances.__init__(self, mapped_triples=mapped_triples, sub_graph_size=sub_graph_size)
 
