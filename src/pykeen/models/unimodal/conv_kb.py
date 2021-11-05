@@ -89,6 +89,15 @@ class ConvKB(ERModel):
     ) -> None:
         """Initialize the model.
 
+        :param embedding_dim: The entity embedding dimension $d$.
+        :param hidden_dropout_rate: The hidden dropout rate
+        :param num_filters: The number of convolutional filters to use
+        :param regularizer: The regularizer to use. Defaults to $L_p$
+        :param entity_initializer: Entity initializer function. Defaults to :func:`torch.nn.init.uniform_`
+        :param relation_initializer: Relation initializer function. Defaults to :func:`torch.nn.init.uniform_`
+        :param kwargs:
+            Remaining keyword arguments passed through to :class:`pykeen.models.EntityRelationEmbeddingModel`.
+
         To be consistent with the paper, pass entity and relation embeddings pre-trained from TransE.
         """
         super().__init__(
