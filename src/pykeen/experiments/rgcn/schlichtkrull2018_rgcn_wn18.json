@@ -8,8 +8,13 @@
     "model": "R-GCN",
     "model_kwargs": {
       "embedding_dim": 500,
-      "num_bases_or_blocks": 5,
-      "decomposition": "basis"
+      "decomposition": "block",
+      "decomposition_kwargs": {
+        "num_blocks": 100
+      },
+      "base_entity_initializer": "xavier_uniform",
+      "relation_initializer": "xavier_uniform",
+      "interaction": "distmult"
     },
     "optimizer": "Adagrad",
     "optimizer_kwargs": {
@@ -27,7 +32,7 @@
     "training_kwargs": {
       "num_epochs": 500,
       "batch_size": 30000,
-      "sub_batch_size": 1000
+      "sampler": "schlichtkrull"
     },
     "evaluator_kwargs": {
       "filtered": true

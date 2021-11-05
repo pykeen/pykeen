@@ -2,13 +2,14 @@
 
 """Base classes for literal datasets."""
 
+import pathlib
 from typing import TextIO, Union
 
 from .base import LazyDataset
 from ..triples import TriplesNumericLiteralsFactory
 
 __all__ = [
-    'NumericPathDataset',
+    "NumericPathDataset",
 ]
 
 
@@ -17,10 +18,10 @@ class NumericPathDataset(LazyDataset):
 
     def __init__(
         self,
-        training_path: Union[str, TextIO],
-        testing_path: Union[str, TextIO],
-        validation_path: Union[str, TextIO],
-        literals_path: Union[str, TextIO],
+        training_path: Union[str, pathlib.Path, TextIO],
+        testing_path: Union[str, pathlib.Path, TextIO],
+        validation_path: Union[str, pathlib.Path, TextIO],
+        literals_path: Union[str, pathlib.Path, TextIO],
         eager: bool = False,
         create_inverse_triples: bool = False,
     ) -> None:
@@ -29,6 +30,7 @@ class NumericPathDataset(LazyDataset):
         :param training_path: Path to the training triples file or training triples file.
         :param testing_path: Path to the testing triples file or testing triples file.
         :param validation_path: Path to the validation triples file or validation triples file.
+        :param literals_path: Path to the literals triples file or literal triples file
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         """
@@ -59,6 +61,7 @@ class NumericPathDataset(LazyDataset):
     def _load_validation(self) -> None:
         # don't call this function by itself. assumes called through the `validation`
         # property and the _training factory has already been loaded
+        assert self._training is not None
         self._validation = TriplesNumericLiteralsFactory(
             path=self.validation_path,
             path_to_numeric_triples=self.literals_path,
@@ -76,5 +79,5 @@ class NumericPathDataset(LazyDataset):
         rv = super()._summary_rows()
         n_relations = len(self.training.literals_to_id)
         n_triples = n_relations * self.training.num_entities
-        rv.append(('Literals', '-', n_relations, n_triples))
+        rv.append(("Literals", "-", n_relations, n_triples))
         return rv

@@ -5,13 +5,13 @@
 import logging
 import pathlib
 from abc import ABC, abstractmethod
-from typing import Any, Mapping, Union
+from typing import Any, List, Mapping, Union
 
 import torch
 
 __all__ = [
-    'Stopper',
-    'NopStopper',
+    "Stopper",
+    "NopStopper",
 ]
 
 logger = logging.getLogger(__name__)
@@ -21,7 +21,8 @@ class Stopper(ABC):
     """A harness for stopping training."""
 
     def __init__(self, *args, **kwargs):
-        pass
+        # To make MyPy happy
+        self.best_epoch = None
 
     def should_evaluate(self, epoch: int) -> bool:
         """Check if the stopper should be evaluated on the given epoch."""
@@ -37,7 +38,18 @@ class Stopper(ABC):
         """Get a summary dict."""
         raise NotImplementedError
 
-    def _write_from_summary_dict(self, **kwargs):
+    def _write_from_summary_dict(
+        self,
+        frequency: int,
+        patience: int,
+        relative_delta: float,
+        metric: str,
+        larger_is_better: bool,
+        results: List[float],
+        stopped: bool,
+        best_epoch: int,
+        best_metric: float,
+    ):
         pass
 
     @staticmethod
@@ -53,7 +65,7 @@ class Stopper(ABC):
         logger.info(f"=> loading stopper summary dict from training loop checkpoint in '{path}'")
         checkpoint = torch.load(path)
         logger.info(f"=> loaded stopper summary dictionary from checkpoint in '{path}'")
-        return checkpoint['stopper_dict']
+        return checkpoint["stopper_dict"]
 
 
 class NopStopper(Stopper):

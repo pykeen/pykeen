@@ -16,6 +16,41 @@ source on `GitHub <https://github.com/pykeen/pykeen>`_ with:
 
     $ pip install git+https://github.com/pykeen/pykeen.git
 
+Google Colab and Kaggle Users
+-----------------------------
+`Google Colab <https://colab.research.google.com>`_ and `Kaggle <https://www.kaggle.com>`_ both provide
+a hosted version of Google's custom Jupyter notebook environment that work similarly. After opening
+a new notebook on one of these service, start your notebook with the following two lines:
+
+.. code-block::
+
+    ! pip install git+https://github.com/pykeen/pykeen.git
+    pykeen.env()
+
+This will install the latest code, then output relevant system and environment information with :func:`pykeen.env`.
+It works because Jupyter interprets any line beginning with a bang ``!`` that the remainder of the
+line should be interpreted as a bash command. If you want to make your notebook compatible on both
+hosted and local installations, change it slightly to check if PyKEEN is already installed:
+
+.. code-block::
+
+    ! python -c "import pykeen" || pip install git+https://github.com/pykeen/pykeen.git
+    pykeen.env()
+
+If you're having trouble with imports related to the plugin systems, try adding the following lines:
+
+.. code-block:: python
+
+    from pkg_resources import require
+    require('pykeen')
+
+.. seealso::
+
+    `PyKEEN issue #373 <https://github.com/pykeen/pykeen/issues/373>`_ for more information or if you
+    would like to discuss further
+
+To enable GPU usage, go to the Runtime -> Change runtime type menu to enable a GPU with your notebook.
+
 Windows Users
 -------------
 We've added experimental support for Windows as of `!95 <https://github.com/pykeen/pykeen/pull/95>`_.
@@ -38,7 +73,7 @@ you can proceed with the normal installation (or the installation from GitHub as
 
 If you're having trouble with ``pip`` or ``sqlite``, you might also have to use
 ``conda install pip setuptools wheel sqlite``. See our
-`AppVeyor configuration <https://github.com/pykeen/pykeen/blob/master/.appveyor.yml>`_
+`GitHub Actions configuration <https://github.com/pykeen/pykeen/blob/master/.github/workflows/tests.yml>`_
 on GitHub for inspiration.
 
 If you know better ways to install on Windows or would like to share some references,
@@ -46,8 +81,7 @@ we'd really appreciate it.
 
 Development
 -----------
-Alternatively, the latest code can be installed in development mode
-with:
+The latest code can be installed in development mode with:
 
 .. code-block:: bash
 
@@ -73,12 +107,13 @@ of the ``setup.cfg``. They can be included with installation using the bracket n
 ``pip install pykeen[docs]`` or ``pip install -e .[docs]``. Several can be listed, comma-delimited like in
 ``pip install pykeen[docs,plotting]``.
 
-==============  =======================================================
-Name            Description
-==============  =======================================================
-``plotting``    Plotting with ``seaborn`` and generation of word clouds
-``mlflow``      Tracking of results with ``mlflow``
-``wandb``       Tracking of results with ``wandb``
-``docs``        Building of the documentation
-``templating``  Building of templated documentation, like the README
-==============  =======================================================
+===============  ==============================================================================
+Name             Description
+===============  ==============================================================================
+``plotting``     Plotting with ``seaborn`` and generation of word clouds
+``mlflow``       Tracking of results with ``mlflow``
+``wandb``        Tracking of results with ``wandb``
+``tensorboard``  Tracking of results with :mod:`tensorboard` via :mod:`torch.utils.tensorboard`
+``docs``         Building of the documentation
+``templating``   Building of templated documentation, like the README
+===============  ==============================================================================

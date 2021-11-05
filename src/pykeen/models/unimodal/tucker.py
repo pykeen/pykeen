@@ -2,7 +2,7 @@
 
 """Implementation of TuckEr."""
 
-from typing import Optional
+from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
 import torch.autograd
@@ -11,13 +11,12 @@ from torch import nn
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import BCEAfterSigmoidLoss, Loss
+from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_normal_
-from ...regularizers import Regularizer
-from ...triples import TriplesFactory
-from ...typing import DeviceHint
+from ...typing import Hint, Initializer
 
 __all__ = [
-    'TuckER',
+    "TuckER",
 ]
 
 
@@ -58,14 +57,29 @@ class TuckER(EntityRelationEmbeddingModel):
 
     where $\textbf{h},\textbf{t}$ correspond to rows of $\textbf{E}$ and $\textbf{r}$ to a row of $\textbf{R}$.
 
+    The dropout values correspond to the following dropouts in the model's score function:
+
+    .. math::
+
+        \text{Dropout}_2(BN(\text{Dropout}_0(BN(h)) \times_1 \text{Dropout}_1(W \times_2 r))) \times_3 t
+
+    where h,r,t are the head, relation, and tail embedding, W is the core tensor, \times_i denotes the tensor
+    product along the i-th mode, BN denotes batch normalization, and :math:`\text{Dropout}` dropout.
+
     .. seealso::
 
        - Official implementation: https://github.com/ibalazevic/TuckER
        - pykg2vec implementation of TuckEr https://github.com/Sujit-O/pykg2vec/blob/master/pykg2vec/core/TuckER.py
+    ---
+    citation:
+        author: Balažević
+        year: 2019
+        link: https://arxiv.org/abs/1901.09590
+        github: ibalazevic/TuckER
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default = dict(
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
         relation_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
         dropout_0=DEFAULT_DROPOUT_HPO_RANGE,
@@ -73,43 +87,33 @@ class TuckER(EntityRelationEmbeddingModel):
         dropout_2=DEFAULT_DROPOUT_HPO_RANGE,
     )
     #: The default loss function class
-    loss_default = BCEAfterSigmoidLoss
+    loss_default: ClassVar[Type[Loss]] = BCEAfterSigmoidLoss
     #: The default parameters for the default loss function class
-    loss_default_kwargs = {}
+    loss_default_kwargs: ClassVar[Mapping[str, Any]] = {}
 
     def __init__(
         self,
-        triples_factory: TriplesFactory,
+        *,
         embedding_dim: int = 200,
         relation_dim: Optional[int] = None,
-        loss: Optional[Loss] = None,
-        preferred_device: DeviceHint = None,
-        random_seed: Optional[int] = None,
         dropout_0: float = 0.3,
         dropout_1: float = 0.4,
         dropout_2: float = 0.5,
-        regularizer: Optional[Regularizer] = None,
         apply_batch_normalization: bool = True,
+        entity_initializer: Hint[Initializer] = xavier_normal_,
+        relation_initializer: Hint[Initializer] = xavier_normal_,
+        **kwargs,
     ) -> None:
-        """Initialize the model.
-
-        The dropout values correspond to the following dropouts in the model's score function:
-
-            DO_2(BN(DO_0(BN(h)) x_1 DO_1(W x_2 r))) x_3 t
-
-        where h,r,t are the head, relation, and tail embedding, W is the core tensor, x_i denotes the tensor
-        product along the i-th mode, BN denotes batch normalization, and DO dropout.
-        """
         super().__init__(
-            triples_factory=triples_factory,
-            embedding_dim=embedding_dim,
-            relation_dim=relation_dim,
-            loss=loss,
-            preferred_device=preferred_device,
-            random_seed=random_seed,
-            regularizer=regularizer,
-            entity_initializer=xavier_normal_,
-            relation_initializer=xavier_normal_,
+            entity_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=entity_initializer,
+            ),
+            relation_representations=EmbeddingSpecification(
+                embedding_dim=relation_dim or embedding_dim,
+                initializer=relation_initializer,
+            ),
+            **kwargs,
         )
 
         # Core tensor
@@ -133,7 +137,7 @@ class TuckER(EntityRelationEmbeddingModel):
     def _reset_parameters_(self):  # noqa: D102
         super()._reset_parameters_()
         # Initialize core tensor, cf. https://github.com/ibalazevic/TuckER/blob/master/model.py#L12
-        nn.init.uniform_(self.core_tensor, -1., 1.)
+        nn.init.uniform_(self.core_tensor, -1.0, 1.0)
 
     def _scoring_function(
         self,
@@ -143,12 +147,6 @@ class TuckER(EntityRelationEmbeddingModel):
     ) -> torch.FloatTensor:
         """
         Evaluate the scoring function.
-
-        Compute scoring function W x_1 h x_2 r x_3 t as in the official implementation, i.e. as
-
-            DO(BN(DO(BN(h)) x_1 DO(W x_2 r))) x_3 t
-
-        where BN denotes BatchNorm and DO denotes Dropout
 
         :param h: shape: (batch_size, 1, embedding_dim) or (1, num_entities, embedding_dim)
         :param r: shape: (batch_size, relation_dim)
@@ -174,7 +172,7 @@ class TuckER(EntityRelationEmbeddingModel):
 
         # compute whr = DO(BN(h_n x_1 wr))
         wr = wr.view(-1, d_e, d_e)
-        whr = (h @ wr)
+        whr = h @ wr
         if self.apply_batch_normalization:
             whr = _apply_bn_to_tensor(batch_norm=self.bn_1, tensor=whr)
         whr = self.hidden_dropout_2(whr)

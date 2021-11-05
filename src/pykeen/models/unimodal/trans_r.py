@@ -3,25 +3,22 @@
 """Implementation of TransR."""
 
 from functools import partial
-from typing import Optional
+from typing import Any, ClassVar, Mapping
 
 import torch
 import torch.autograd
 import torch.nn.init
-from torch.nn import functional
+from torch import linalg
 
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...losses import Loss
-from ...nn import Embedding
-from ...nn.init import xavier_uniform_
-from ...regularizers import Regularizer
-from ...triples import TriplesFactory
-from ...typing import DeviceHint
-from ...utils import clamp_norm, compose
+from ...nn.emb import Embedding, EmbeddingSpecification
+from ...nn.init import xavier_uniform_, xavier_uniform_norm_
+from ...typing import Constrainer, Hint, Initializer
+from ...utils import clamp_norm
 
 __all__ = [
-    'TransR',
+    "TransR",
 ]
 
 
@@ -64,10 +61,15 @@ class TransR(EntityRelationEmbeddingModel):
          <https://github.com/thunlp/OpenKE/blob/master/models/TransR.py>`_
        - OpenKE `PyTorch implementation of TransR
          <https://github.com/thunlp/OpenKE/blob/OpenKE-PyTorch/models/TransR.py>`_
+    ---
+    citation:
+        author: Lin
+        year: 2015
+        link: http://www.aaai.org/ocs/index.php/AAAI/AAAI15/paper/download/9571/9523/
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default = dict(
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
         relation_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
         scoring_fct_norm=dict(type=int, low=1, high=2),
@@ -75,33 +77,31 @@ class TransR(EntityRelationEmbeddingModel):
 
     def __init__(
         self,
-        triples_factory: TriplesFactory,
+        *,
         embedding_dim: int = 50,
         relation_dim: int = 30,
         scoring_fct_norm: int = 1,
-        loss: Optional[Loss] = None,
-        preferred_device: DeviceHint = None,
-        random_seed: Optional[int] = None,
-        regularizer: Optional[Regularizer] = None,
+        entity_initializer: Hint[Initializer] = xavier_uniform_,
+        entity_constrainer: Hint[Constrainer] = clamp_norm,  # type: ignore
+        relation_initializer: Hint[Initializer] = xavier_uniform_norm_,
+        relation_constrainer: Hint[Constrainer] = clamp_norm,  # type: ignore
+        **kwargs,
     ) -> None:
         """Initialize the model."""
         super().__init__(
-            triples_factory=triples_factory,
-            embedding_dim=embedding_dim,
-            relation_dim=relation_dim,
-            loss=loss,
-            preferred_device=preferred_device,
-            random_seed=random_seed,
-            regularizer=regularizer,
-            entity_initializer=xavier_uniform_,
-            entity_constrainer=clamp_norm,
-            entity_constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
-            relation_initializer=compose(
-                xavier_uniform_,
-                functional.normalize,
+            entity_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=entity_initializer,
+                constrainer=entity_constrainer,
+                constrainer_kwargs=dict(maxnorm=1.0, p=2, dim=-1),
             ),
-            relation_constrainer=clamp_norm,
-            relation_constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
+            relation_representations=EmbeddingSpecification(
+                embedding_dim=relation_dim,
+                initializer=relation_initializer,
+                constrainer=relation_constrainer,
+                constrainer_kwargs=dict(maxnorm=1.0, p=2, dim=-1),
+            ),
+            **kwargs,
         )
         self.scoring_fct_norm = scoring_fct_norm
 
@@ -109,7 +109,7 @@ class TransR(EntityRelationEmbeddingModel):
 
         # embeddings
         self.relation_projections = Embedding.init_with_device(
-            num_embeddings=triples_factory.num_relations,
+            num_embeddings=self.num_relations,
             embedding_dim=relation_dim * embedding_dim,
             device=self.device,
             initializer=partial(
@@ -151,11 +151,11 @@ class TransR(EntityRelationEmbeddingModel):
         h_bot = h @ m_r
         t_bot = t @ m_r
         # ensure constraints
-        h_bot = clamp_norm(h_bot, p=2, dim=-1, maxnorm=1.)
-        t_bot = clamp_norm(t_bot, p=2, dim=-1, maxnorm=1.)
+        h_bot = clamp_norm(h_bot, p=2, dim=-1, maxnorm=1.0)
+        t_bot = clamp_norm(t_bot, p=2, dim=-1, maxnorm=1.0)
 
         # evaluate score function, shape: (b, e)
-        return -torch.norm(h_bot + r - t_bot, dim=-1) ** 2
+        return -linalg.vector_norm(h_bot + r - t_bot, dim=-1) ** 2
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings

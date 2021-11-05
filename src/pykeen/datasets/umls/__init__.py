@@ -2,31 +2,59 @@
 
 """Get triples from the UMLS dataset."""
 
-import os
+import pathlib
+
+from docdata import parse_docdata
 
 from ..base import PathDataset
 
 __all__ = [
-    'UMLS_TRAIN_PATH',
-    'UMLS_TEST_PATH',
-    'UMLS_VALIDATE_PATH',
-    'UMLS',
+    "UMLS_TRAIN_PATH",
+    "UMLS_TEST_PATH",
+    "UMLS_VALIDATE_PATH",
+    "UMLS",
 ]
 
-HERE = os.path.abspath(os.path.dirname(__file__))
+HERE = pathlib.Path(__file__).resolve().parent
 
-UMLS_TRAIN_PATH = os.path.join(HERE, 'train.txt')
-UMLS_TEST_PATH = os.path.join(HERE, 'test.txt')
-UMLS_VALIDATE_PATH = os.path.join(HERE, 'valid.txt')
+UMLS_TRAIN_PATH = HERE.joinpath("train.txt")
+UMLS_TEST_PATH = HERE.joinpath("test.txt")
+UMLS_VALIDATE_PATH = HERE.joinpath("valid.txt")
 
 
+@parse_docdata
 class UMLS(PathDataset):
-    """The UMLS dataset."""
+    """The UMLS dataset.
 
-    def __init__(self, **kwargs):
+    ---
+    name: Unified Medical Language System
+    statistics:
+        entities: 135
+        relations: 46
+        training: 5216
+        testing: 661
+        validation: 652
+        triples: 6529
+    citation:
+        author: Zhenfeng Lei
+        year: 2017
+        github: ZhenfengLei/KGDatasets
+    """
+
+    def __init__(self, create_inverse_triples: bool = False, **kwargs):
+        """Initialize the UMLS dataset.
+
+        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
+        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.PathDataset`.
+        """
         super().__init__(
             training_path=UMLS_TRAIN_PATH,
             testing_path=UMLS_TEST_PATH,
             validation_path=UMLS_VALIDATE_PATH,
+            create_inverse_triples=create_inverse_triples,
             **kwargs,
         )
+
+
+if __name__ == "__main__":
+    UMLS().summarize()

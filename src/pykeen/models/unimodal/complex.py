@@ -2,21 +2,21 @@
 
 """Implementation of the ComplEx model."""
 
-from typing import Optional
+from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
-import torch.nn as nn
+from torch.nn.init import normal_
 
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss, SoftplusLoss
+from ...nn.emb import EmbeddingSpecification
 from ...regularizers import LpRegularizer, Regularizer
-from ...triples import TriplesFactory
-from ...typing import DeviceHint
+from ...typing import Hint, Initializer
 from ...utils import split_complex
 
 __all__ = [
-    'ComplEx',
+    "ComplEx",
 ]
 
 
@@ -30,7 +30,7 @@ class ComplEx(EntityRelationEmbeddingModel):
 
     .. math::
 
-        f(h,r,t) =  Re(\mathbf{e}_h\odot\mathbf{r}_r\odot\mathbf{e}_t)
+        f(h,r,t) =  Re(\mathbf{e}_h\odot\mathbf{r}_r\odot\bar{\mathbf{e}}_t)
 
     Which expands to:
 
@@ -38,8 +38,8 @@ class ComplEx(EntityRelationEmbeddingModel):
 
         f(h,r,t) = \left\langle Re(\mathbf{e}_h),Re(\mathbf{r}_r),Re(\mathbf{e}_t)\right\rangle
         + \left\langle Im(\mathbf{e}_h),Re(\mathbf{r}_r),Im(\mathbf{e}_t)\right\rangle
-        + \left\langle Re(\mathbf{e}_h),Re(\mathbf{r}_r),Im(\mathbf{e}_t)\right\rangle
-        - \left\langle Im(\mathbf{e}_h),Im(\mathbf{r}_r),Im(\mathbf{e}_t)\right\rangle
+        + \left\langle Re(\mathbf{e}_h),Im(\mathbf{r}_r),Im(\mathbf{e}_t)\right\rangle
+        - \left\langle Im(\mathbf{e}_h),Im(\mathbf{r}_r),Re(\mathbf{e}_t)\right\rangle
 
     where $Re(\textbf{x})$ and $Im(\textbf{x})$ denote the real and imaginary parts of the complex valued vector
     $\textbf{x}$. Because the Hadamard product is not commutative in the complex space, ComplEx can model
@@ -48,20 +48,26 @@ class ComplEx(EntityRelationEmbeddingModel):
     .. seealso ::
 
         Official implementation: https://github.com/ttrouill/complex/
+    ---
+    citation:
+        author: Trouillon
+        year: 2016
+        link: https://arxiv.org/abs/1606.06357
+        github: ttrouill/complex
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default = dict(
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
     )
     #: The default loss function class
-    loss_default = SoftplusLoss
+    loss_default: ClassVar[Type[Loss]] = SoftplusLoss
     #: The default parameters for the default loss function class
-    loss_default_kwargs = dict(reduction='mean')
+    loss_default_kwargs: ClassVar[Mapping[str, Any]] = dict(reduction="mean")
     #: The regularizer used by [trouillon2016]_ for ComplEx.
-    regularizer_default = LpRegularizer
+    regularizer_default: ClassVar[Type[Regularizer]] = LpRegularizer
     #: The LP settings used by [trouillon2016]_ for ComplEx.
-    regularizer_default_kwargs = dict(
+    regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = dict(
         weight=0.01,
         p=2.0,
         normalize=True,
@@ -69,41 +75,35 @@ class ComplEx(EntityRelationEmbeddingModel):
 
     def __init__(
         self,
-        triples_factory: TriplesFactory,
+        *,
         embedding_dim: int = 200,
-        loss: Optional[Loss] = None,
-        preferred_device: DeviceHint = None,
-        random_seed: Optional[int] = None,
-        regularizer: Optional[Regularizer] = None,
-        entity_initializer=nn.init.normal_,
-        relation_initializer=nn.init.normal_,
+        # initialize with entity and relation embeddings with standard normal distribution, cf.
+        # https://github.com/ttrouill/complex/blob/dc4eb93408d9a5288c986695b58488ac80b1cc17/efe/models.py#L481-L487
+        entity_initializer: Hint[Initializer] = normal_,
+        relation_initializer: Hint[Initializer] = normal_,
+        **kwargs,
     ) -> None:
         """Initialize ComplEx.
 
-        :param triples_factory: TriplesFactory
-            The triple factory connected to the model.
         :param embedding_dim:
             The embedding dimensionality of the entity embeddings.
-        :param loss: OptionalLoss (optional)
-            The loss to use. Defaults to SoftplusLoss.
-        :param preferred_device: str (optional)
-            The default device where to model is located.
-        :param random_seed: int (optional)
-            An optional random seed to set before the initialization of weights.
-        :param regularizer: BaseRegularizer
-            The regularizer to use.
+        :param entity_initializer: Entity initializer function. Defaults to :func:`torch.nn.init.normal_`
+        :param relation_initializer: Relation initializer function. Defaults to :func:`torch.nn.init.normal_`
+        :param kwargs:
+            Remaining keyword arguments to forward to :class:`pykeen.models.EntityRelationEmbeddingModel`
         """
         super().__init__(
-            triples_factory=triples_factory,
-            embedding_dim=2 * embedding_dim,  # complex embeddings
-            loss=loss,
-            preferred_device=preferred_device,
-            random_seed=random_seed,
-            regularizer=regularizer,
-            # initialize with entity and relation embeddings with standard normal distribution, cf.
-            # https://github.com/ttrouill/complex/blob/dc4eb93408d9a5288c986695b58488ac80b1cc17/efe/models.py#L481-L487
-            entity_initializer=entity_initializer,
-            relation_initializer=relation_initializer,
+            entity_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=entity_initializer,
+                dtype=torch.cfloat,
+            ),
+            relation_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=relation_initializer,
+                dtype=torch.cfloat,
+            ),
+            **kwargs,
         )
 
     @staticmethod
@@ -137,7 +137,7 @@ class ComplEx(EntityRelationEmbeddingModel):
                 (h_re, r_re, t_re),
                 (h_re, r_im, t_im),
                 (h_im, r_re, t_im),
-                (h_im, r_im, t_re),
+                (-h_im, r_im, t_re),
             ]
         )
 

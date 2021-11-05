@@ -26,42 +26,26 @@ The following code will create a scenario in which training will stop
 ... )
 """
 
-from typing import Collection, Mapping, Type, Union
+from typing import Collection, Type
+
+from class_resolver import Resolver, get_subclasses
 
 from .early_stopping import EarlyStopper, StopperCallback  # noqa: F401
 from .stopper import NopStopper, Stopper
-from ..utils import get_cls, normalize_string
 
 __all__ = [
-    'Stopper',
-    'NopStopper',
-    'EarlyStopper',
-    'get_stopper_cls',
+    "Stopper",
+    "NopStopper",
+    "EarlyStopper",
+    # Utils
+    "stopper_resolver",
 ]
 
-_STOPPER_SUFFIX = 'Stopper'
-_STOPPERS: Collection[Type[Stopper]] = {
-    NopStopper,
-    EarlyStopper,
-}
-
-#: A mapping of stoppers' names to their implementations
-stoppers: Mapping[str, Type[Stopper]] = {
-    normalize_string(cls.__name__, suffix=_STOPPER_SUFFIX): cls
-    for cls in _STOPPERS
-}
-
-
-def get_stopper_cls(query: Union[None, str, Type[Stopper]]) -> Type[Stopper]:
-    """Look up a stopper class by name (case/punctuation insensitive) in :data:`pykeen.stoppers.stoppers`.
-
-    :param query: The name of the stopper (case insensitive, punctuation insensitive).
-    :return: The stopper class
-    """
-    return get_cls(
-        query,
-        base=Stopper,
-        lookup_dict=stoppers,
-        default=NopStopper,
-        suffix=_STOPPER_SUFFIX,
-    )
+_STOPPER_SUFFIX = "Stopper"
+_STOPPERS: Collection[Type[Stopper]] = set(get_subclasses(Stopper))  # type: ignore
+stopper_resolver = Resolver(
+    _STOPPERS,
+    default=NopStopper,
+    suffix=_STOPPER_SUFFIX,
+    base=Stopper,  # type: ignore
+)

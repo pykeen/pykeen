@@ -1,5 +1,5 @@
-Toy Example with Translational Distance Models
-==============================================
+A Toy Example with Translational Distance Models
+================================================
 The following tutorial is based on a question originally posed by
 Heiko Paulheim on the PyKEEN Issue Tracker
 `#97 <https://github.com/pykeen/pykeen/issues/97>`_.
@@ -39,8 +39,7 @@ First, check if the model is converging using ``results.plot_losses``.
 Qualitatively, this means that the loss is smoothly decreasing and
 eventually evening out. If the model does not decrease, you might
 need to tune some parameters with the ``optimizer_kwargs`` and
-``training_kwargs`` to the ``pipeline()`` function. The following
-image, generated from the
+``training_kwargs`` to the ``pipeline()`` function.
 
 For example, you can decrease the optimizer's learning rate to
 make the loss curve less bumpy. Second, you can increase the

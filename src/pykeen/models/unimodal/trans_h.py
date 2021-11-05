@@ -2,21 +2,21 @@
 
 """An implementation of TransH."""
 
-from typing import Optional
+from typing import Any, ClassVar, Mapping, Type
 
 import torch
+from torch import linalg
 from torch.nn import functional
+from torch.nn.init import uniform_
 
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...losses import Loss
-from ...nn import Embedding
+from ...nn.emb import Embedding, EmbeddingSpecification
 from ...regularizers import Regularizer, TransHRegularizer
-from ...triples import TriplesFactory
-from ...typing import DeviceHint
+from ...typing import Hint, Initializer
 
 __all__ = [
-    'TransH',
+    "TransH",
 ]
 
 
@@ -48,50 +48,61 @@ class TransH(EntityRelationEmbeddingModel):
     .. seealso::
 
        - OpenKE `implementation of TransH <https://github.com/thunlp/OpenKE/blob/master/models/TransH.py>`_
+    ---
+    citation:
+        author: Wang
+        year: 2014
+        link: https://www.aaai.org/ocs/index.php/AAAI/AAAI14/paper/viewFile/8531/8546
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default = dict(
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
         scoring_fct_norm=dict(type=int, low=1, high=2),
     )
     #: The custom regularizer used by [wang2014]_ for TransH
-    regularizer_default = TransHRegularizer
+    regularizer_default: ClassVar[Type[Regularizer]] = TransHRegularizer
     #: The settings used by [wang2014]_ for TransH
-    regularizer_default_kwargs = dict(
+    regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = dict(
         weight=0.05,
         epsilon=1e-5,
     )
 
     def __init__(
         self,
-        triples_factory: TriplesFactory,
+        *,
         embedding_dim: int = 50,
-        scoring_fct_norm: int = 1,
-        loss: Optional[Loss] = None,
-        preferred_device: DeviceHint = None,
-        random_seed: Optional[int] = None,
-        regularizer: Optional[Regularizer] = None,
+        scoring_fct_norm: int = 2,
+        entity_initializer: Hint[Initializer] = uniform_,
+        relation_initializer: Hint[Initializer] = uniform_,
+        **kwargs,
     ) -> None:
         r"""Initialize TransH.
 
         :param embedding_dim: The entity embedding dimension $d$. Is usually $d \in [50, 300]$.
         :param scoring_fct_norm: The :math:`l_p` norm applied in the interaction function. Is usually ``1`` or ``2.``.
+        :param entity_initializer: Entity initializer function. Defaults to :func:`torch.nn.init.uniform_`
+        :param relation_initializer: Relation initializer function. Defaults to :func:`torch.nn.init.uniform_`
+        :param kwargs:
+            Remaining keyword arguments to forward to :class:`pykeen.models.EntityRelationEmbeddingModel`
         """
         super().__init__(
-            triples_factory=triples_factory,
-            embedding_dim=embedding_dim,
-            loss=loss,
-            preferred_device=preferred_device,
-            random_seed=random_seed,
-            regularizer=regularizer,
+            entity_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=entity_initializer,
+            ),
+            relation_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=relation_initializer,
+            ),
+            **kwargs,
         )
 
         self.scoring_fct_norm = scoring_fct_norm
 
         # embeddings
         self.normal_vector_embeddings = Embedding.init_with_device(
-            num_embeddings=triples_factory.num_relations,
+            num_embeddings=self.num_relations,
             embedding_dim=embedding_dim,
             device=self.device,
             # Normalise the normal vectors by their l2 norms
@@ -107,8 +118,10 @@ class TransH(EntityRelationEmbeddingModel):
         self.normal_vector_embeddings.reset_parameters()
         # TODO: Add initialization
 
-    def regularize_if_necessary(self) -> None:
+    def regularize_if_necessary(self, *tensors: torch.FloatTensor) -> None:
         """Update the regularizer's term given some tensors, if regularization is requested."""
+        if tensors:
+            raise ValueError("no tensors should be passed to TransH.regularize_if_necessary")
         # As described in [wang2014], all entities and relations are used to compute the regularization term
         # which enforces the defined soft constraints.
         super().regularize_if_necessary(
@@ -131,7 +144,7 @@ class TransH(EntityRelationEmbeddingModel):
         # Regularization term
         self.regularize_if_necessary()
 
-        return -torch.norm(ph + d_r - pt, p=2, dim=-1, keepdim=True)
+        return -linalg.vector_norm(ph + d_r - pt, ord=2, dim=-1, keepdim=True)
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
@@ -147,7 +160,7 @@ class TransH(EntityRelationEmbeddingModel):
         # Regularization term
         self.regularize_if_necessary()
 
-        return -torch.norm(ph[:, None, :] + d_r[:, None, :] - pt, p=2, dim=-1)
+        return -linalg.vector_norm(ph[:, None, :] + d_r[:, None, :] - pt, ord=2, dim=-1)
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
@@ -164,4 +177,4 @@ class TransH(EntityRelationEmbeddingModel):
         # Regularization term
         self.regularize_if_necessary()
 
-        return -torch.norm(ph + d_r[:, None, :] - pt[:, None, :], p=2, dim=-1)
+        return -linalg.vector_norm(ph + (d_r[:, None, :] - pt[:, None, :]), ord=2, dim=-1)

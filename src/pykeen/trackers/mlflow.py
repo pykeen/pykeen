@@ -2,13 +2,13 @@
 
 """An adapter for MLflow."""
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Mapping, Optional
 
 from .base import ResultTracker
 from ..utils import flatten_dictionary
 
 __all__ = [
-    'MLFlowResultTracker',
+    "MLFlowResultTracker",
 ]
 
 
@@ -37,6 +37,7 @@ class MLFlowResultTracker(ResultTracker):
             The additional run details which are presented as tags to be logged
         """
         import mlflow as _mlflow
+
         self.mlflow = _mlflow
         self.tags = tags
 
@@ -54,16 +55,17 @@ class MLFlowResultTracker(ResultTracker):
 
     def log_metrics(
         self,
-        metrics: Dict[str, float],
+        metrics: Mapping[str, float],
         step: Optional[int] = None,
         prefix: Optional[str] = None,
     ) -> None:  # noqa: D102
         metrics = flatten_dictionary(dictionary=metrics, prefix=prefix)
         self.mlflow.log_metrics(metrics=metrics, step=step)
 
-    def log_params(self, params: Dict[str, Any], prefix: Optional[str] = None) -> None:  # noqa: D102
+    def log_params(self, params: Mapping[str, Any], prefix: Optional[str] = None) -> None:  # noqa: D102
         params = flatten_dictionary(dictionary=params, prefix=prefix)
         self.mlflow.log_params(params=params)
 
-    def end_run(self) -> None:  # noqa: D102
-        self.mlflow.end_run()
+    def end_run(self, success: bool = True) -> None:  # noqa: D102
+        status = self.mlflow.entities.RunStatus.FINISHED if success else self.mlflow.entities.RunStatus.FAILED
+        self.mlflow.end_run(status=self.mlflow.entities.RunStatus.to_string(status))

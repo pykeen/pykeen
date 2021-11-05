@@ -2,25 +2,21 @@
 
 """Implementation of UM."""
 
-from typing import Optional
+from typing import Any, ClassVar, Mapping
 
-import torch
-import torch.autograd
-
-from ..base import EntityEmbeddingModel
+from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...losses import Loss
+from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_normal_
-from ...regularizers import Regularizer
-from ...triples import TriplesFactory
-from ...typing import DeviceHint
+from ...nn.modules import UnstructuredModelInteraction
+from ...typing import Hint, Initializer
 
 __all__ = [
-    'UnstructuredModel',
+    "UnstructuredModel",
 ]
 
 
-class UnstructuredModel(EntityEmbeddingModel):
+class UnstructuredModel(ERModel):
     r"""An implementation of the Unstructured Model (UM) published by [bordes2014]_.
 
     UM computes the distance between head and tail entities then applies the $l_p$ norm.
@@ -36,51 +32,42 @@ class UnstructuredModel(EntityEmbeddingModel):
 
         In UM, neither the relations nor the directionality are considered, so it can't distinguish between them.
         However, it may serve as a baseline for comparison against relation-aware models.
+    ---
+    name: Unstructured Model
+    citation:
+        author: Bordes
+        year: 2014
+        link: https://link.springer.com/content/pdf/10.1007%2Fs10994-013-5363-6.pdf
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default = dict(
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
         scoring_fct_norm=dict(type=int, low=1, high=2),
     )
 
     def __init__(
         self,
-        triples_factory: TriplesFactory,
+        *,
         embedding_dim: int = 50,
         scoring_fct_norm: int = 1,
-        loss: Optional[Loss] = None,
-        preferred_device: DeviceHint = None,
-        random_seed: Optional[int] = None,
-        regularizer: Optional[Regularizer] = None,
+        entity_initializer: Hint[Initializer] = xavier_normal_,
+        **kwargs,
     ) -> None:
         r"""Initialize UM.
 
         :param embedding_dim: The entity embedding dimension $d$. Is usually $d \in [50, 300]$.
         :param scoring_fct_norm: The $l_p$ norm. Usually 1 for UM.
+        :param entity_initializer: The initializer for the entity embeddings.
+            Defaults to the xavier normal distribution.
+        :param kwargs: Remaining keyword arguments passed through to :class:`pykeen.models.ERModel`.
         """
         super().__init__(
-            triples_factory=triples_factory,
-            embedding_dim=embedding_dim,
-            loss=loss,
-            preferred_device=preferred_device,
-            random_seed=random_seed,
-            regularizer=regularizer,
-            entity_initializer=xavier_normal_,
+            interaction=UnstructuredModelInteraction,
+            interaction_kwargs=dict(p=scoring_fct_norm),
+            entity_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=entity_initializer,
+            ),
+            **kwargs,
         )
-        self.scoring_fct_norm = scoring_fct_norm
-
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(indices=hrt_batch[:, 0])
-        t = self.entity_embeddings(indices=hrt_batch[:, 2])
-        return -torch.norm(h - t, dim=-1, p=self.scoring_fct_norm, keepdim=True) ** 2
-
-    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(indices=hr_batch[:, 0]).view(-1, 1, self.embedding_dim)
-        t = self.entity_embeddings(indices=None).view(1, -1, self.embedding_dim)
-        return -torch.norm(h - t, dim=-1, p=self.scoring_fct_norm) ** 2
-
-    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(indices=None).view(1, -1, self.embedding_dim)
-        t = self.entity_embeddings(indices=rt_batch[:, 1]).view(-1, 1, self.embedding_dim)
-        return -torch.norm(h - t, dim=-1, p=self.scoring_fct_norm) ** 2

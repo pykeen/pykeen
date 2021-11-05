@@ -3,21 +3,21 @@
 """Implementation of the ConvKB model."""
 
 import logging
-from typing import Optional
+from typing import Any, ClassVar, Mapping, Type
 
 import torch
 import torch.autograd
 from torch import nn
+from torch.nn.init import uniform_
 
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...losses import Loss
+from ...nn.emb import EmbeddingSpecification
 from ...regularizers import LpRegularizer, Regularizer
-from ...triples import TriplesFactory
-from ...typing import DeviceHint
+from ...typing import Hint, Initializer
 
 __all__ = [
-    'ConvKB',
+    "ConvKB",
 ]
 
 logger = logging.getLogger(__name__)
@@ -53,19 +53,25 @@ class ConvKB(EntityRelationEmbeddingModel):
 
     .. seealso::
 
-       - Authors' `implementation of ConvKB <https://github.com/daiquocnguyen/ConvKBsE.py>`_
+       - Authors' `implementation of ConvKB <https://github.com/daiquocnguyen/ConvKB>`_
+    ---
+    citation:
+        author: Nguyen
+        year: 2018
+        link: https://www.aclweb.org/anthology/N18-2053
+        github: daiquocnguyen/ConvKB
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default = dict(
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
         hidden_dropout_rate=DEFAULT_DROPOUT_HPO_RANGE,
-        num_filters=dict(type=int, low=7, high=9, scale='power_two'),
+        num_filters=dict(type=int, low=7, high=9, scale="power_two"),
     )
     #: The regularizer used by [nguyen2018]_ for ConvKB.
-    regularizer_default = LpRegularizer
+    regularizer_default: ClassVar[Type[Regularizer]] = LpRegularizer
     #: The LP settings used by [nguyen2018]_ for ConvKB.
-    regularizer_default_kwargs = dict(
+    regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = dict(
         weight=0.001 / 2,
         p=2.0,
         normalize=True,
@@ -74,26 +80,36 @@ class ConvKB(EntityRelationEmbeddingModel):
 
     def __init__(
         self,
-        triples_factory: TriplesFactory,
-        hidden_dropout_rate: float = 0.,
+        *,
         embedding_dim: int = 200,
-        loss: Optional[Loss] = None,
-        preferred_device: DeviceHint = None,
+        hidden_dropout_rate: float = 0.0,
         num_filters: int = 400,
-        random_seed: Optional[int] = None,
-        regularizer: Optional[Regularizer] = None,
+        entity_initializer: Hint[Initializer] = uniform_,
+        relation_initializer: Hint[Initializer] = uniform_,
+        **kwargs,
     ) -> None:
         """Initialize the model.
+
+        :param embedding_dim: The entity embedding dimension $d$.
+        :param hidden_dropout_rate: The hidden dropout rate
+        :param num_filters: The number of convolutional filters to use
+        :param entity_initializer: Entity initializer function. Defaults to :func:`torch.nn.init.uniform_`
+        :param relation_initializer: Relation initializer function. Defaults to :func:`torch.nn.init.uniform_`
+        :param kwargs:
+            Remaining keyword arguments passed through to :class:`pykeen.models.EntityRelationEmbeddingModel`.
 
         To be consistent with the paper, pass entity and relation embeddings pre-trained from TransE.
         """
         super().__init__(
-            triples_factory=triples_factory,
-            embedding_dim=embedding_dim,
-            loss=loss,
-            preferred_device=preferred_device,
-            random_seed=random_seed,
-            regularizer=regularizer,
+            entity_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=entity_initializer,
+            ),
+            relation_representations=EmbeddingSpecification(
+                embedding_dim=embedding_dim,
+                initializer=relation_initializer,
+            ),
+            **kwargs,
         )
 
         self.num_filters = num_filters
@@ -106,11 +122,11 @@ class ConvKB(EntityRelationEmbeddingModel):
 
     def _reset_parameters_(self):  # noqa: D102
         # embeddings
-        logger.warning('To be consistent with the paper, initialize entity and relation embeddings from TransE.')
+        logger.warning("To be consistent with the paper, initialize entity and relation embeddings from TransE.")
         super()._reset_parameters_()
 
         # Use Xavier initialization for weight; bias to zero
-        nn.init.xavier_uniform_(self.linear.weight, gain=nn.init.calculate_gain('relu'))
+        nn.init.xavier_uniform_(self.linear.weight, gain=nn.init.calculate_gain("relu"))
         nn.init.zeros_(self.linear.bias)
 
         # Initialize all filters to [0.1, 0.1, -0.1],
