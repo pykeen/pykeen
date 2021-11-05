@@ -8,17 +8,22 @@ from typing import List, Optional, Tuple
 import torch
 from torch.utils.data.sampler import Sampler
 
-from ..triples import CoreTriplesFactory
+from ..typing import MappedTriples
 
 
 def _compute_compressed_adjacency_list(
-    triples_factory: CoreTriplesFactory,
+    mapped_triples: MappedTriples,
+    num_entities: Optional[int] = None,
 ) -> Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor]:
     """Compute compressed undirected adjacency list representation for efficient sampling.
 
     The compressed adjacency list format is inspired by CSR sparse matrix format.
 
-    :param triples_factory: The triples factory.
+    :param mapped_triples:
+        the ID-based triples
+    :param num_entities:
+        the number of entities.
+
     :return: a tuple (degrees, offsets, compressed_adj_lists)
         where
             degrees: shape: (num_entities,)
@@ -27,14 +32,16 @@ def _compute_compressed_adjacency_list(
         with
             adj_list[i] = compressed_adj_list[offsets[i]:offsets[i+1]]
     """
-    adj_lists: List[List[Tuple[int, float]]] = [[] for _ in range(triples_factory.num_entities)]
-    for i, (s, _, o) in enumerate(triples_factory.mapped_triples):
+    num_entities = num_entities or mapped_triples[:, [0, 2]].max().item()
+    num_triples = mapped_triples.shape[0]
+    adj_lists: List[List[Tuple[int, float]]] = [[] for _ in range(num_entities)]
+    for i, (s, _, o) in enumerate(mapped_triples):
         adj_lists[s].append((i, o.item()))
         adj_lists[o].append((i, s.item()))
     degrees = torch.tensor([len(a) for a in adj_lists], dtype=torch.long)
-    assert torch.sum(degrees) == 2 * triples_factory.num_triples
+    assert torch.sum(degrees) == 2 * num_triples
 
-    offset = torch.empty(triples_factory.num_entities, dtype=torch.long)
+    offset = torch.empty(num_entities, dtype=torch.long)
     offset[0] = 0
     offset[1:] = torch.cumsum(degrees, dim=0)[:-1]
     compressed_adj_lists = torch.cat([torch.as_tensor(adj_list, dtype=torch.long) for adj_list in adj_lists], dim=0)
@@ -51,36 +58,35 @@ class GraphSampler(Sampler):
 
     def __init__(
         self,
-        triples_factory: CoreTriplesFactory,
+        *,
+        mapped_triples: MappedTriples,
         num_samples: Optional[int] = None,
     ):
-        mapped_triples = triples_factory.mapped_triples
         super().__init__(data_source=mapped_triples)
-        self.triples_factory = triples_factory
+        self.num_triples = num_triples = mapped_triples.shape[0]
 
         if num_samples is None:
-            num_samples = triples_factory.num_triples // 10
+            num_samples = num_triples // 10
             logging.info(f"Did not specify number of samples. Using {num_samples}.")
-        elif num_samples > triples_factory.num_triples:
+        elif num_samples > num_triples:
             raise ValueError(
-                "num_samples cannot be larger than the number of triples, but "
-                f"{num_samples} > {triples_factory.num_triples}.",
+                "num_samples cannot be larger than the number of triples, but " f"{num_samples} > {num_triples}.",
             )
         if not isinstance(num_samples, int) or num_samples <= 0:
             raise ValueError(f"num_samples should be a positive integer value, but got num_samples={num_samples}")
 
         self.num_samples = num_samples
-        self.num_batches_per_epoch = triples_factory.num_triples // self.num_samples
+        self.num_batches_per_epoch = num_triples // self.num_samples
 
         # preprocessing
-        self.degrees, self.offset, self.neighbors = _compute_compressed_adjacency_list(triples_factory=triples_factory)
+        self.degrees, self.offset, self.neighbors = _compute_compressed_adjacency_list(mapped_triples=mapped_triples)
 
     def __iter__(self):  # noqa: D105
         # initialize
         chosen_edges = torch.empty(self.num_samples, dtype=torch.long)
         node_weights = self.degrees.detach().clone()
-        edge_picked = torch.zeros(self.triples_factory.num_triples, dtype=torch.bool)
-        node_picked = torch.zeros(self.triples_factory.num_entities, dtype=torch.bool)
+        edge_picked = torch.zeros(self.num_triples, dtype=torch.bool)
+        node_picked = torch.zeros(self.degrees.shape[0], dtype=torch.bool)
 
         # sample iteratively
         for i in range(0, self.num_samples):
