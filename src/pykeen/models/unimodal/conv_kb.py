@@ -78,8 +78,9 @@ class ConvKB(ERModel):
 
     def __init__(
         self,
-        hidden_dropout_rate: float = 0.0,
+        *,
         embedding_dim: int = 200,
+        hidden_dropout_rate: float = 0.0,
         num_filters: int = 400,
         regularizer: Optional[Regularizer] = None,
         entity_initializer: Hint[Initializer] = uniform_,
