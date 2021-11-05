@@ -74,8 +74,8 @@ class GraphSampler:
         if not isinstance(batch_size, int) or batch_size <= 0:
             raise ValueError(f"num_samples should be a positive integer value, but got num_samples={batch_size}")
 
-        self.num_samples = batch_size
-        self.num_batches_per_epoch = num_triples // self.num_samples
+        self.subgraph_size = batch_size
+        self.num_batches_per_epoch = num_triples // self.subgraph_size
 
         # preprocessing
         self.degrees, self.offset, self.neighbors = _compute_compressed_adjacency_list(mapped_triples=mapped_triples)
@@ -88,7 +88,7 @@ class GraphSampler:
         node_picked = torch.zeros(self.degrees.shape[0], dtype=torch.bool)
 
         # sample iteratively
-        for _ in range(self.num_samples):
+        for _ in range(self.subgraph_size):
             # determine weights
             weights = node_weights * node_picked
 
@@ -106,7 +106,7 @@ class GraphSampler:
 
             # get list of neighbors
             start = self.offset[chosen_vertex]
-            chosen_node_degree = self.degrees[chosen_vertex]
+            chosen_node_degree = self.degrees[chosen_vertex].item()
             stop = start + chosen_node_degree
             adj_list = self.neighbors[start:stop, :]
 
@@ -180,7 +180,7 @@ class SLCWASubGraphInstances(SLCWAInstances, SubGraphInstances[SLCWABatchType]):
 
     def __len__(self) -> int:  # noqa: D105
         # is already batched!
-        return super().__len__() // self.graph_sampler.num_samples
+        return super().__len__() // self.graph_sampler.subgraph_size
 
     def __getitem__(self, item: int) -> MappedTriples:  # noqa: D105
         return torch.stack([SLCWAInstances.__getitem__(self, idx) for idx in self.graph_sampler.sample_batch()], dim=0)

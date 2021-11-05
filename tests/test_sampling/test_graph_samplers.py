@@ -20,42 +20,43 @@ class GraphSamplerTest(unittest.TestCase):
         self.num_epochs = 10
         self.graph_sampler = GraphSampler(
             mapped_triples=self.triples_factory.mapped_triples,
-            num_samples=self.num_samples,
+            batch_size=self.batch_size,
         )
 
     def test_sample(self) -> None:
         """Test drawing samples from GraphSampler."""
-        for batch in self.graph_sampler:
-            # check shape
-            assert batch.shape == (self.batch_size,)
+        batch = torch.as_tensor(list(self.graph_sampler.sample_batch()))
 
-            # get triples
-            triples_batch = self.triples_factory.mapped_triples[batch]
+        # check shape
+        assert batch.shape == (self.batch_size,)
 
-            # check connected components
-            # super inefficient
-            components = [{int(e)} for e in torch.cat([triples_batch[:, i] for i in (0, 2)]).unique()]
-            for h, _, t in triples_batch:
-                h, t = int(h), int(t)
+        # get triples
+        triples_batch = self.triples_factory.mapped_triples[batch]
 
-                s_comp_ind = [i for i, c in enumerate(components) if h in c][0]
-                o_comp_ind = [i for i, c in enumerate(components) if t in c][0]
+        # check connected components
+        # super inefficient
+        components = [{int(e)} for e in torch.cat([triples_batch[:, i] for i in (0, 2)]).unique()]
+        for h, _, t in triples_batch:
+            h, t = int(h), int(t)
 
-                # join
-                if s_comp_ind != o_comp_ind:
-                    s_comp = components.pop(max(s_comp_ind, o_comp_ind))
-                    o_comp = components.pop(min(s_comp_ind, o_comp_ind))
-                    so_comp = s_comp.union(o_comp)
-                    components.append(so_comp)
-                else:
-                    pass
-                    # already joined
+            s_comp_ind = [i for i, c in enumerate(components) if h in c][0]
+            o_comp_ind = [i for i, c in enumerate(components) if t in c][0]
 
-                if len(components) < 2:
-                    break
+            # join
+            if s_comp_ind != o_comp_ind:
+                s_comp = components.pop(max(s_comp_ind, o_comp_ind))
+                o_comp = components.pop(min(s_comp_ind, o_comp_ind))
+                so_comp = s_comp.union(o_comp)
+                components.append(so_comp)
+            else:
+                pass
+                # already joined
 
-            # check that there is only a single component
-            assert len(components) == 1
+            if len(components) < 2:
+                break
+
+        # check that there is only a single component
+        assert len(components) == 1
 
 
 class AdjacencyListCompressionTest(unittest.TestCase):
