@@ -90,19 +90,16 @@ class GraphSampler(Sampler):
             # determine weights
             weights = node_weights * node_picked
 
-            # only happens at first iteration
             if torch.sum(weights) == 0:
-                weights = torch.ones_like(weights)
-                weights[node_weights == 0] = 0
-                assert i == 0
+                # randomly choose a vertex which has not been chosen yet
+                pool = (~node_picked).nonzero()
+                chosen_vertex = pool[torch.randint(pool.numel(), size=tuple())]
             else:
-                assert i > 0
-
-            # normalize to probabilities
-            probabilities = weights.float() / weights.sum().float()
+                # normalize to probabilities
+                probabilities = weights.float() / weights.sum().float()
+                chosen_vertex = torch.multinomial(probabilities, num_samples=1)[0]
 
             # sample a start node
-            chosen_vertex = torch.multinomial(probabilities, num_samples=1)[0]
             node_picked[chosen_vertex] = True
 
             # get list of neighbors
