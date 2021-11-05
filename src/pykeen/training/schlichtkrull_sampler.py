@@ -3,11 +3,13 @@
 """Schlichtkrull Sampler Class."""
 
 import logging
+from abc import ABC
 from typing import List, Optional, Tuple
 
 import torch
 from torch.utils.data.sampler import Sampler
 
+from ..triples.instances import BatchType, Instances, SLCWABatchType, SLCWAInstances
 from ..typing import MappedTriples
 
 
@@ -138,3 +140,40 @@ class GraphSampler(Sampler):
 
     def __len__(self):  # noqa: D105
         return self.num_batches_per_epoch
+
+
+class SubGraphInstances(Instances[BatchType], ABC):
+    """A dataset of subgraph samples."""
+
+    def __init__(
+        self,
+        *,
+        mapped_triples: MappedTriples,
+        sub_graph_size: int,
+        **kwargs,
+    ) -> None:
+        super().__init__(**kwargs)
+        self.graph_sampler = GraphSampler(
+            mapped_triples=mapped_triples,
+            num_samples=sub_graph_size,
+        )
+
+
+class SLCWASubGraphInstances(SLCWAInstances, SubGraphInstances[SLCWABatchType]):
+    """SLCWA subgraph instances."""
+
+    def __init__(
+        self,
+        *,
+        mapped_triples: MappedTriples,
+        sub_graph_size: int,
+    ):
+        SLCWAInstances.__init__(self, mapped_triples=mapped_triples)
+        SubGraphInstances.__init__(self, mapped_triples=mapped_triples, sub_graph_size=sub_graph_size)
+
+    def __len__(self) -> int:  # noqa: D105
+        # is already batched!
+        return super().__len__() // self.graph_sampler.num_samples
+
+    def __getitem__(self, item: int) -> MappedTriples:  # noqa: D105
+        return torch.stack([SLCWAInstances.__getitem__(self, idx) for idx in list(self.graph_sampler)], dim=0)

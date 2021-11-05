@@ -34,8 +34,9 @@ from ..lr_schedulers import LRScheduler
 from ..models import RGCN, Model
 from ..stoppers import Stopper
 from ..trackers import ResultTracker
-from ..training.schlichtkrull_sampler import GraphSampler
+from ..training.schlichtkrull_sampler import SLCWASubGraphInstances
 from ..triples import CoreTriplesFactory, Instances, TriplesFactory
+from ..triples.instances import SLCWAInstances
 from ..utils import (
     format_relative_comparison,
     get_batchnorm_modules,
@@ -524,10 +525,18 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         if sampler == "schlichtkrull":
             if triples_factory is None:
                 raise ValueError("need to pass triples_factory when using graph sampling")
-            sampler = GraphSampler(
+            if not isinstance(training_instances, SLCWAInstances):
+                raise NotImplementedError
+            # wrap training instances
+            training_instances = SLCWASubGraphInstances(
                 mapped_triples=triples_factory.mapped_triples,
-                num_samples=sub_batch_size,
+                sub_graph_size=sub_batch_size,
             )
+            # disable automatic batching
+            batch_size = None
+            # no support for sub-batching
+            sub_batch_size = None
+            sampler = None
             shuffle = False
         else:
             sampler = None
@@ -600,10 +609,11 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
 
                     # Get batch size of current batch (last batch may be incomplete)
                     current_batch_size = self._get_batch_size(batch)
+                    _sub_batch_size = sub_batch_size or current_batch_size
 
                     # accumulate gradients for whole batch
-                    for start in range(0, current_batch_size, sub_batch_size):
-                        stop = min(start + sub_batch_size, current_batch_size)
+                    for start in range(0, current_batch_size, _sub_batch_size):
+                        stop = min(start + _sub_batch_size, current_batch_size)
 
                         # forward pass call
                         batch_loss = self._forward_pass(
