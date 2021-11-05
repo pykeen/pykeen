@@ -18,7 +18,9 @@ class GraphSamplerTest(unittest.TestCase):
         self.triples_factory = Nations().training
         self.num_samples = 20
         self.num_epochs = 10
-        self.graph_sampler = GraphSampler(triples_factory=self.triples_factory, num_samples=self.num_samples)
+        self.graph_sampler = GraphSampler(
+            mapped_triples=self.triples_factory.mapped_triples, num_samples=self.num_samples
+        )
 
     def test_sample(self) -> None:
         """Test drawing samples from GraphSampler."""
@@ -70,7 +72,9 @@ class AdjacencyListCompressionTest(unittest.TestCase):
 
     def test_compute_compressed_adjacency_list(self):
         """Test method _compute_compressed_adjacency_list ."""
-        degrees, offsets, comp_adj_lists = _compute_compressed_adjacency_list(triples_factory=self.triples_factory)
+        degrees, offsets, comp_adj_lists = _compute_compressed_adjacency_list(
+            mapped_triples=self.triples_factory.mapped_triples,
+        )
         triples = self.triples_factory.mapped_triples
         uniq, cnt = torch.unique(torch.cat([triples[:, i] for i in (0, 2)]), return_counts=True)
         assert (degrees == cnt).all()
