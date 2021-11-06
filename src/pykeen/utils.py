@@ -1143,15 +1143,19 @@ def point_to_box_distance(
     :param box_lows: the lower corners of the boxes
     :param box_highs: the upper corners of the boxes.
 
+    points: p
+    box_lows: l
+    box_highs: h
+
+    w = h - l . Width is the difference between the upper and lower box bound
+    c = (h + l) / 2. Box centers (the mean of the box bounds)
+
     .. math::
-       points: p
-       box_lows: l
-       box_highs: h
 
-       w = h - l . Width is the difference between the upper and lower box bound
-       c = (h + l) / 2. Box centers (the mean of the box bounds)
-
-       dist(p,l,h) = |p-c|/(w+1) if l <= p <+ h, |p-c|*(w+1) - 0.5*w*((w+1)-1/(w+1)) otherwise.
+        dist(p,l,h) = \begin{cases}
+            |p-c|/(w+1) & l <= p <+ h \\
+            |p-c|*(w+1) - 0.5*w*((w+1)-1/(w+1)) & otherwise \\
+        \end{cases}
     """
     widths = box_highs - box_lows
     widths_p1 = widths + 1  # Compute width plus 1
