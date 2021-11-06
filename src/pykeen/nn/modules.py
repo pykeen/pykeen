@@ -20,8 +20,10 @@ from ..typing import HeadRepresentation, HintOrType, RelationRepresentation, Tai
 from ..utils import (
     CANONICAL_DIMENSIONS,
     activation_resolver,
+    compute_box,
     convert_to_canonical_shape,
     ensure_tuple,
+    point_to_box_distance,
     upgrade_to_sequence,
 )
 
@@ -1418,3 +1420,66 @@ interaction_resolver = Resolver.from_subclasses(
     skip={TranslationalInteraction, FunctionalInteraction, MonotonicAffineTransformationInteraction},
     suffix=Interaction.__name__,
 )
+
+
+class BoxEKGInteraction(Interaction):
+    """An implementation of BoxE."""
+
+    relation_shape = ("d", "d", "s", "d", "d", "s")  # Boxes are 2xd (size) each, x 2 sets of boxes: head and tail
+    entity_shape = ("d", "d")  # Base position and bump
+
+    def __init__(self, tanh_map: bool = True, norm_order: int = 2):
+        r"""Implements the basic BoxE-KG interaction.
+
+        :param tanh_map: A Boolean value specifying whether a hyperbolic tangent applies to all representations
+            prior to model scoring (default: True)
+        :param norm_order: An integer specifying the normalization order (default 2)
+
+        .. math::
+            points: p
+            box_lows: l
+            box_highs: h
+
+            w = h - l . Width is the difference between the upper and lower box bound
+            c = (h + l) / 2. Box centers (the mean of the box bounds)
+
+            dist(p,l,h) = |p-c|/(w+1) if l <= p <+ h, |p-c|*(w+1) - 0.5*w*((w+1)-1/(w+1)) otherwise.
+        """
+        super().__init__()
+        self.tanh_map = tanh_map  # Map the tanh map
+        self.norm_order = norm_order
+
+    def forward(self, h, r, t):
+        rh_base, rh_delta, rh_size, rt_base, rt_delta, rt_size = r
+        h_pos, h_bump = h
+        t_pos, t_bump = t
+        # First, compute the boxes
+        rh_low, rh_high = compute_box(rh_base, rh_delta, rh_size)
+        rt_low, rt_high = compute_box(rt_base, rt_delta, rt_size)
+        # Second, compute bumped entity representations
+        # Normalization
+        points_h = h_pos + t_bump
+        points_t = t_pos + h_bump
+        # Third, optionally apply the tanh transformation
+        if self.tanh_map:
+            rh_low = torch.tanh(rh_low)
+            rh_high = torch.tanh(rh_high)
+            rt_low = torch.tanh(rt_low)
+            rt_high = torch.tanh(rt_high)
+
+            points_h = torch.tanh(points_h)
+            points_t = torch.tanh(points_t)
+        # Fourth, compute the dist function output
+        dist_h = point_to_box_distance(points_h, rh_low, rh_high)
+        dist_t = point_to_box_distance(points_t, rt_low, rt_high)
+        # Fifth, compute the norm
+        score_h = dist_h.norm(p=self.norm_order, dim=-1)
+        score_t = dist_t.norm(p=self.norm_order, dim=-1)
+        total_score = score_h + score_t
+        # NSSA = NSSALoss(margin=5, adversarial_temperature=0.0, reduction='sum')
+        # if total_score.shape[0] == 512:  # Positive facts hard code
+        # print("I'm getting the correct loss here!")
+        # print(NSSA.forward(pos_scores=-total_score, neg_scores=-100*total_score,
+        #                  neg_weights=torch.ones_like(total_score)))
+        # print("That's just a test")
+        return -total_score  # Because this is inverted in NSSALoss (higher is better)

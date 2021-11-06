@@ -112,6 +112,8 @@ _CUDA_OOM_ERROR = "CUDA out of memory."
 
 _CUDA_NONZERO_ERROR = "nonzero is not supported for tensors with more than INT_MAX elements"
 
+SANITY_EPSILON = 10 ** -8
+
 
 def resolve_device(device: DeviceHint = None) -> torch.device:
     """Resolve a torch.device given a desired device (string)."""
@@ -1095,3 +1097,68 @@ if __name__ == "__main__":
     import doctest
 
     doctest.testmod()
+
+
+def product_normalise(input_tensor: torch.FloatTensor) -> torch.FloatTensor:
+    r"""Normalise the input tensor along its embedding dimension so that the geometric mean is 1.
+
+    :param input_tensor: An input tensor with final dimension $d$.
+    """
+    step1_tensor = torch.abs(input_tensor)  # Compute absolute value of all entries
+    step2_tensor = step1_tensor + SANITY_EPSILON  # Prevent zero values by adding a sanity epsilon
+    log_norm_tensor = torch.log(step2_tensor)  # Compute the log prior to computing the geom. mean
+    step3_tensor = torch.mean(log_norm_tensor, dim=-1, keepdim=True)
+    norm_volume = torch.exp(step3_tensor)
+    pre_norm_out = input_tensor / norm_volume
+    return pre_norm_out
+
+
+def compute_box(
+    base: torch.FloatTensor, delta: torch.FloatTensor, size: torch.FloatTensor
+) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
+    r"""Given sets of embeddings of base position, shape, and size, compute the lower and upper corners of
+    the resulting box
+
+    :param base: The base position (box center) of the input relation embeddings.
+    :param delta: The base shape of the input relation embeddings.
+    :param size: The size scalar vectors of the input relation embeddings.
+    """
+    size_pos = torch.nn.functional.elu(size) + 1  # Enforce that sizes are strictly positive by passing through ELU
+    delta_norm = product_normalise(delta)  # Shape vector is normalized using the above helper function
+    delta_final = torch.multiply(size_pos, delta_norm)  # Size is learned separately and applied to normalized shape
+    # Product normalize the delta
+    first_bound = base - 0.5 * delta_final  # Compute potential boundaries by applying the shape in substraction
+    second_bound = base + 0.5 * delta_final  # and in addition
+    box_low = torch.minimum(first_bound, second_bound)  # Compute box upper bounds using min and max respectively.
+    box_high = torch.maximum(first_bound, second_bound)
+    return box_low, box_high
+
+
+def point_to_box_distance(
+    points: torch.FloatTensor, box_lows: torch.FloatTensor, box_highs: torch.FloatTensor
+) -> torch.FloatTensor:
+    r"""Computes the point to box distance function proposed in the BoxE paper in an element-wise fashion.
+
+    :param points: the positions of the points being scored against boxes
+    :param box_lows: the lower corners of the boxes
+    :param box_highs: the upper corners of the boxes.
+
+    .. math::
+       points: p
+       box_lows: l
+       box_highs: h
+
+       w = h - l . Width is the difference between the upper and lower box bound
+       c = (h + l) / 2. Box centers (the mean of the box bounds)
+
+       dist(p,l,h) = |p-c|/(w+1) if l <= p <+ h, |p-c|*(w+1) - 0.5*w*((w+1)-1/(w+1)) otherwise.
+    """
+    widths = box_highs - box_lows
+    widths_p1 = widths + 1  # Compute width plus 1
+    centres = 0.5 * (box_lows + box_highs)  # Compute box midpoints
+    rv = torch.where(
+        torch.logical_and(points >= box_lows, points <= box_highs),
+        torch.abs(points - centres) / widths_p1,  # If true (inside the box)
+        widths_p1 * torch.abs(points - centres) - (0.5 * widths) * (widths_p1 - 1 / widths_p1),
+    )
+    return rv
