@@ -47,7 +47,9 @@ class BoxEKG(ERModel):
         r"""Initialize BoxE-KG
 
         :param embedding_dim: The entity embedding dimension $d$. Defaults to 200. Is usually $d \in [50, 300]$.
-        :param tanh_map: Whether to use tanh mapping after BoxE computation. Default - True
+        :param tanh_map: Whether to use tanh mapping after BoxE computation.
+        tanh mapping restricts the embedding space to the range [-1, 1], and thus this map implicitly
+        regularizes the space to prevent loss reduction by growing boxes arbitrarily large. Default - True
         :param norm_order: Norm Order in score computation (Int): Default - 2
         :param entity_initializer: Entity initializer function. Defaults to :func:`pykeen.nn.init.uniform_norm_`
         :param entity_initializer_kwargs: Keyword arguments to be used when calling the entity initializer
