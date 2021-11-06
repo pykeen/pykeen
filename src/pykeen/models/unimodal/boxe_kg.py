@@ -1,10 +1,9 @@
-from typing import Any, ClassVar, Mapping, Optional
+from typing import Any, ClassVar, Mapping, Optional, Tuple
 
 import torch
-from torch.nn.init import normal_, uniform_, zeros_
-
+from torch.nn.init import uniform_
+import torch.nn.functional
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...losses import NSSALoss
 from ...models import ERModel
 from ...nn.emb import EmbeddingSpecification
 from ...nn.init import uniform_norm_
@@ -15,12 +14,11 @@ __all__ = [
     "BoxEKG",
 ]
 
-
 SANITY_EPSILON = 10 ** -8
 
 
 def product_normalise(input_tensor: torch.FloatTensor) -> torch.FloatTensor:
-    r"""Normalise the input tensor along its embedding dimension so that the geometric mean is 1
+    r"""Normalise the input tensor along its embedding dimension so that the geometric mean is 1.
 
     :param input_tensor: An input tensor with final dimension $d$.
     """
@@ -35,12 +33,13 @@ def product_normalise(input_tensor: torch.FloatTensor) -> torch.FloatTensor:
 
 def compute_box(
     base: torch.FloatTensor, delta: torch.FloatTensor, size: torch.FloatTensor
-) -> (torch.FloatTensor, torch.FloatTensor):
+) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
     r"""Given sets of embeddings of base position, shape, and size, compute the lower and upper corners of
     the resulting box
-            :param base: The base position (box center) of the input relation embeddings.
-            :param delta: The base shape of the input relation embeddings.
-            :param size: The size scalar vectors of the input relation embeddings.
+
+    :param base: The base position (box center) of the input relation embeddings.
+    :param delta: The base shape of the input relation embeddings.
+    :param size: The size scalar vectors of the input relation embeddings.
     """
     size_pos = torch.nn.functional.elu(size) + 1  # Enforce that sizes are strictly positive by passing through ELU
     delta_norm = product_normalise(delta)  # Shape vector is normalized using the above helper function
@@ -57,9 +56,10 @@ def point_to_box_distance(
     points: torch.FloatTensor, box_lows: torch.FloatTensor, box_highs: torch.FloatTensor
 ) -> torch.FloatTensor:
     r"""Computes the point to box distance function proposed in the BoxE paper in an element-wise fashion.
-           :param points: the positions of the points being scored against boxes
-           :param box_lows: the lower corners of the boxes
-           :param box_highs: the upper corners of the boxes.
+
+    :param points: the positions of the points being scored against boxes
+    :param box_lows: the lower corners of the boxes
+    :param box_highs: the upper corners of the boxes.
 
     .. math::
        points: p
@@ -74,33 +74,36 @@ def point_to_box_distance(
     widths = box_highs - box_lows
     widths_p1 = widths + 1  # Compute width plus 1
     centres = 0.5 * (box_lows + box_highs)  # Compute box midpoints
-    dist = torch.where(
+    rv = torch.where(
         torch.logical_and(points >= box_lows, points <= box_highs),
         torch.abs(points - centres) / widths_p1,  # If true (inside the box)
         widths_p1 * torch.abs(points - centres) - (0.5 * widths) * (widths_p1 - 1 / widths_p1),
     )
-    return dist
+    return rv
 
 
 class BoxEKGInteraction(Interaction):
+    """An implementation of BoxE."""
+
     relation_shape = ("d", "d", "s", "d", "d", "s")  # Boxes are 2xd (size) each, x 2 sets of boxes: head and tail
     entity_shape = ("d", "d")  # Base position and bump
 
     def __init__(self, tanh_map: bool = True, norm_order: int = 2):
-        r"""Implements the basic BoxE-KG interaction
+        r"""Implements the basic BoxE-KG interaction.
+
         :param tanh_map: A Boolean value specifying whether a hyperbolic tangent applies to all representations
-        prior to model scoring (default: True)
+            prior to model scoring (default: True)
         :param norm_order: An integer specifying the normalization order (default 2)
 
-             .. math::
-                points: p
-                box_lows: l
-                box_highs: h
+        .. math::
+            points: p
+            box_lows: l
+            box_highs: h
 
-                w = h - l . Width is the difference between the upper and lower box bound
-                c = (h + l) / 2. Box centers (the mean of the box bounds)
+            w = h - l . Width is the difference between the upper and lower box bound
+            c = (h + l) / 2. Box centers (the mean of the box bounds)
 
-                dist(p,l,h) = |p-c|/(w+1) if l <= p <+ h, |p-c|*(w+1) - 0.5*w*((w+1)-1/(w+1)) otherwise.
+            dist(p,l,h) = |p-c|/(w+1) if l <= p <+ h, |p-c|*(w+1) - 0.5*w*((w+1)-1/(w+1)) otherwise.
         """
         super().__init__()
         self.tanh_map = tanh_map  # Map the tanh map
@@ -143,7 +146,7 @@ class BoxEKGInteraction(Interaction):
 
 
 class BoxEKG(ERModel):
-    r"""An implementation of BoxE
+    r"""An implementation of BoxE.
 
     ---
     citation:
