@@ -101,6 +101,9 @@ __all__ = [
     "complex_normalize",
     "lp_norm",
     "powersum_norm",
+    "product_normalise",
+    "compute_box",
+    "point_to_box_distance",
 ]
 
 logger = logging.getLogger(__name__)
