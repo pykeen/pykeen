@@ -1,22 +1,24 @@
-from pykeen.pipeline import pipeline
-from pykeen.evaluation import RankBasedEvaluator
+import numpy as np
+import torch
+
 import pykeen.losses
 from pykeen.datasets import WN18RR
 from pykeen.models.unimodal.boxe_kg import BoxEKG
-import numpy as np
-import torch
+from pykeen.pipeline import pipeline
+
 
 # TODO: Align optimizations: NSSALoss is printing invalid values here, but is sensible in the forward loop
 # TODO: Align optimizer settings: Constant LR
 
 
-if __name__ == "__main__":
+def main():
     embedding_dim = 500
     unif_init_bound = 2 * np.sqrt(embedding_dim)
     init_kw = dict(a=-1 / unif_init_bound, b=1 / unif_init_bound)
     size_init_kw = dict(a=-1, b=1)
-    triples_factory = WN18RR().training
-    BoxE = BoxEKG(
+    dataset = WN18RR()
+    triples_factory = dataset.training
+    model = BoxEKG(
         triples_factory=triples_factory,
         embedding_dim=500,
         norm_order=2,
@@ -28,8 +30,8 @@ if __name__ == "__main__":
 
     results = pipeline(
         random_seed=1000000,
-        dataset="WN18RR",
-        model=BoxE,
+        dataset=dataset,
+        model=model,
         training_kwargs=dict(num_epochs=300, batch_size=512, checkpoint_name="trial.pt", checkpoint_frequency=100),
         loss=pykeen.losses.NSSALoss(margin=3, adversarial_temperature=2.0, reduction="sum"),
         training_loop="sLCWA",
@@ -40,3 +42,7 @@ if __name__ == "__main__":
         evaluation_kwargs=dict(batch_size=16),
         optimizer=torch.optim.Adam,
     )
+
+
+if __name__ == '__main__':
+    main()
