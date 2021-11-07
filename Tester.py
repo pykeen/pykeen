@@ -23,8 +23,11 @@ def main():
         embedding_dim=500,
         norm_order=2,
         tanh_map=True,
+        entity_initializer=torch.nn.init.uniform_,
         entity_initializer_kwargs=init_kw,
+        relation_initializer=torch.nn.init.uniform_,
         relation_initializer_kwargs=init_kw,
+        relation_size_initializer=torch.nn.init.uniform_,
         relation_size_initializer_kwargs=size_init_kw,
     )
 
@@ -33,7 +36,7 @@ def main():
         dataset=dataset,
         model=model,
         training_kwargs=dict(num_epochs=300, batch_size=512, checkpoint_name="trial.pt", checkpoint_frequency=100),
-        loss=pykeen.losses.NSSALoss(margin=3, adversarial_temperature=2.0, reduction="sum"),
+        loss=pykeen.losses.NSSALoss(margin=5, adversarial_temperature=0.0, reduction="sum"),
         training_loop="sLCWA",
         negative_sampler="basic",
         negative_sampler_kwargs=dict(num_negs_per_pos=150),

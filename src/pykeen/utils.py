@@ -1175,3 +1175,32 @@ def point_to_box_distance(
         widths_p1 * torch.abs(points - centres) - (0.5 * widths) * (widths_p1 - 1 / widths_p1),
     )
     return rv
+
+def boxe_kg_arity_position_computation(entity_pos: torch.FloatTensor, other_entity_bump: torch.FloatTensor,
+                                       relation_box_low: torch.FloatTensor, relation_box_high: torch.FloatTensor,
+                                       tanh_map: bool, norm_order: int) -> torch.FloatTensor:
+    r"""Performs the BoxE computation at a single arity position
+    (this computation is parallelizable across all positions)
+
+        :param entity_pos: This is the base entity position of the entity appearing in the target position. For example,
+        for a fact r(h,t) and the head arity position, entity_pos is the base position of h
+        :param other_entity_bump: This is the bump of the entity at the other position in the fact. For example, given a
+        fact r(h,t) and the head arity position, other_entity_bump is the bump of t.
+        :param relation_box_low: The lower corner of the relation box at the target arity position.
+        :param relation_box_high: The upper corner of the relation box at the target arity position.
+        :param tanh_map: A Boolean value specifying whether to apply the tanh map regularizer.
+        :param norm_order: The norm order to apply across dimensions to compute overall position score.
+
+        :returns: Arity-position score for the entity relative to the target relation box.
+        """
+    bumped_representation = entity_pos + other_entity_bump  # Step 1: Apply the other entity bump
+    if tanh_map:
+        relation_box_low = torch.tanh(relation_box_low)   # Step 2: Apply tanh if tanh_map is set to True.
+        relation_box_high = torch.tanh(relation_box_high)
+        bumped_representation = torch.tanh(bumped_representation)
+    #Compute the distance function output element-wise
+    element_wise_distance = point_to_box_distance(points=bumped_representation, box_lows=relation_box_low,
+                                                  box_highs=relation_box_high)
+    # Finally, compute the norm
+    overall_score = element_wise_distance.norm(p=norm_order, dim=-1)
+    return overall_score

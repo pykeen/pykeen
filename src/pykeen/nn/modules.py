@@ -9,7 +9,6 @@ import logging
 import math
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Generic, Mapping, MutableMapping, Optional, Sequence, Set, Tuple, Union, cast
-
 import torch
 from class_resolver import Resolver
 from torch import FloatTensor, nn
@@ -24,6 +23,7 @@ from ..utils import (
     convert_to_canonical_shape,
     ensure_tuple,
     point_to_box_distance,
+    boxe_kg_arity_position_computation,
     upgrade_to_sequence,
 )
 
@@ -1456,30 +1456,19 @@ class BoxEKGInteraction(Interaction):
         # First, compute the boxes
         rh_low, rh_high = compute_box(rh_base, rh_delta, rh_size)
         rt_low, rt_high = compute_box(rt_base, rt_delta, rt_size)
-        # Second, compute bumped entity representations
-        # Normalization
-        points_h = h_pos + t_bump
-        points_t = t_pos + h_bump
-        # Third, optionally apply the tanh transformation
-        if self.tanh_map:
-            rh_low = torch.tanh(rh_low)
-            rh_high = torch.tanh(rh_high)
-            rt_low = torch.tanh(rt_low)
-            rt_high = torch.tanh(rt_high)
 
-            points_h = torch.tanh(points_h)
-            points_t = torch.tanh(points_t)
-        # Fourth, compute the dist function output
-        dist_h = point_to_box_distance(points_h, rh_low, rh_high)
-        dist_t = point_to_box_distance(points_t, rt_low, rt_high)
-        # Fifth, compute the norm
-        score_h = dist_h.norm(p=self.norm_order, dim=-1)
-        score_t = dist_t.norm(p=self.norm_order, dim=-1)
+        score_h = boxe_kg_arity_position_computation(entity_pos=h_pos, other_entity_bump=t_bump,
+                                                     relation_box_low=rh_low, relation_box_high=rh_high,
+                                                     tanh_map=self.tanh_map, norm_order=self.norm_order)
+
+        score_t = boxe_kg_arity_position_computation(entity_pos=t_pos, other_entity_bump=h_bump,
+                                                     relation_box_low=rt_low, relation_box_high=rt_high,
+                                                     tanh_map=self.tanh_map, norm_order=self.norm_order)
         total_score = score_h + score_t
-        # NSSA = NSSALoss(margin=5, adversarial_temperature=0.0, reduction='sum')
-        # if total_score.shape[0] == 512:  # Positive facts hard code
-        # print("I'm getting the correct loss here!")
-        # print(NSSA.forward(pos_scores=-total_score, neg_scores=-100*total_score,
-        #                  neg_weights=torch.ones_like(total_score)))
-        # print("That's just a test")
+        '''NSSA = NSSALoss(margin=5, adversarial_temperature=0.0, reduction='sum')  # Import NSSALoss before running
+        if total_score.shape[0] == 512:  # Positive facts hard code
+            print("I'm getting the correct loss here!")
+            print(NSSA.forward(pos_scores=-total_score, neg_scores=-100*total_score,
+                           neg_weights=torch.ones_like(total_score)))
+            print("That's just a test")'''
         return -total_score  # Because this is inverted in NSSALoss (higher is better)
