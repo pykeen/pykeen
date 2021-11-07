@@ -425,6 +425,34 @@ class BlockDecomposition(Decomposition):
         return accumulator.view(-1, self.output_dim)
 
 
+class Layer(nn.Module):
+    """A base class for layers."""
+
+    def forward(
+        self,
+        x: torch.FloatTensor,
+        edge_index: Tuple[torch.LongTensor, torch.LongTensor],
+        edge_type: torch.LongTensor,
+        edge_weights: Optional[torch.FloatTensor] = None,
+    ):
+        """
+        Calculate enriched entity representations.
+
+        :param x: shape: (num_entities, input_dim)
+            The input entity representations.
+        :param edge_index:
+            A tuple of the source and target indices,both with shape (num_triples,)
+        :param edge_type: shape: (num_triples,)
+            The relation type per triple.
+        :param edge_weights: shape: (num_triples,)
+            Scalar edge weights per triple.
+
+        :return: shape: (num_entities, output_dim)
+            Enriched entity representations.
+        """
+        raise NotImplementedError
+
+
 class RGCNLayer(nn.Module):
     r"""
     An RGCN layer from [schlichtkrull2018]_ updated to match the official implementation.
@@ -453,7 +481,7 @@ class RGCNLayer(nn.Module):
         self,
         input_dim: int,
         num_relations: int,
-        output_dim: Optional[int] = None,
+        output_dim: Optional[int] = None,  # FIXME unused
         use_bias: bool = True,
         activation: Hint[nn.Module] = None,
         activation_kwargs: Optional[Mapping[str, Any]] = None,
@@ -515,28 +543,12 @@ class RGCNLayer(nn.Module):
     def forward(
         self,
         x: torch.FloatTensor,
-        source: torch.LongTensor,
-        target: torch.LongTensor,
+        edge_index: Tuple[torch.LongTensor, torch.LongTensor],
         edge_type: torch.LongTensor,
         edge_weights: Optional[torch.FloatTensor] = None,
-    ):
-        """
-        Calculate enriched entity representations.
+    ):  # noqa: D102
+        source, target = edge_index
 
-        :param x: shape: (num_entities, input_dim)
-            The input entity representations.
-        :param source: shape: (num_triples,)
-            The indices of the source entity per triple.
-        :param target: shape: (num_triples,)
-            The indices of the target entity per triple.
-        :param edge_type: shape: (num_triples,)
-            The relation type per triple.
-        :param edge_weights: shape: (num_triples,)
-            Scalar edge weights per triple.
-
-        :return: shape: (num_entities, output_dim)
-            Enriched entity representations.
-        """
         # self-loop
         y = self.dropout(x @ self.w_self_loop)
         # forward messages
