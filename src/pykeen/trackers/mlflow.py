@@ -8,7 +8,7 @@ from .base import ResultTracker
 from ..utils import flatten_dictionary
 
 __all__ = [
-    'MLFlowResultTracker',
+    "MLFlowResultTracker",
 ]
 
 
@@ -37,6 +37,7 @@ class MLFlowResultTracker(ResultTracker):
             The additional run details which are presented as tags to be logged
         """
         import mlflow as _mlflow
+
         self.mlflow = _mlflow
         self.tags = tags
 

@@ -86,7 +86,7 @@ class KullbackLeiblerTests(unittest.TestCase):
         h, r, t = [self._get(name=name) for name in "hrt"]
         sim = kullback_leibler_similarity(h=h, r=r, t=t, exact=True)
         sim2 = _torch_kl_similarity(h=h, r=r, t=t)
-        self.assertTrue(torch.allclose(sim, sim2), msg=f'Difference: {(sim - sim2).abs()}')
+        self.assertTrue(torch.allclose(sim, sim2), msg=f"Difference: {(sim - sim2).abs()}")
 
     def test_self_similarity(self):
         """Check value of similarity to self."""
@@ -98,7 +98,7 @@ class KullbackLeiblerTests(unittest.TestCase):
         h = GaussianDistribution(mean=2 * r.mean, diagonal_covariance=0.5 * r.diagonal_covariance)
         t = GaussianDistribution(mean=r.mean, diagonal_covariance=0.5 * r.diagonal_covariance)
         sim = kullback_leibler_similarity(h=h, r=r, t=t, exact=True)
-        self.assertTrue(torch.allclose(sim, torch.zeros_like(sim)), msg=f'Sim: {sim}')
+        self.assertTrue(torch.allclose(sim, torch.zeros_like(sim)), msg=f"Sim: {sim}")
 
     def test_value_range(self):
         """Check the value range."""

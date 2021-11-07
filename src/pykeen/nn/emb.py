@@ -20,10 +20,15 @@ from torch.nn import functional
 
 from .compositions import CompositionModule, composition_resolver
 from .init import (
-    init_phases, normal_norm_, uniform_norm_, xavier_normal_, xavier_normal_norm_, xavier_uniform_,
+    init_phases,
+    normal_norm_,
+    uniform_norm_,
+    xavier_normal_,
+    xavier_normal_norm_,
+    xavier_uniform_,
     xavier_uniform_norm_,
 )
-from .message_passing import Decomposition, decomposition_resolver
+from .message_passing import Decomposition, RGCNLayer
 from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolver
 from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import CoreTriplesFactory
@@ -31,17 +36,17 @@ from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer
 from ..utils import Bias, activation_resolver, clamp_norm, complex_normalize, convert_to_canonical_shape
 
 __all__ = [
-    'RepresentationModule',
-    'Embedding',
-    'LiteralRepresentation',
-    'EmbeddingSpecification',
-    'RGCNRepresentations',
-    'CompGCNLayer',
-    'CombinedCompGCNRepresentations',
-    'SingleCompGCNRepresentation',
-    'constrainers',
-    'initializers',
-    'normalizers',
+    "RepresentationModule",
+    "Embedding",
+    "LiteralRepresentation",
+    "EmbeddingSpecification",
+    "RGCNRepresentations",
+    "CompGCNLayer",
+    "CombinedCompGCNRepresentations",
+    "SingleCompGCNRepresentation",
+    "constrainers",
+    "initializers",
+    "normalizers",
 ]
 
 logger = logging.getLogger(__name__)
@@ -315,11 +320,18 @@ class Embedding(RepresentationModule):
             shape=shape,
         )
 
-        self.initializer = cast(Initializer, _handle(
-            initializer, initializers, initializer_kwargs, default=nn.init.normal_, label='initializer',
-        ))
-        self.normalizer = _handle(normalizer, normalizers, normalizer_kwargs, label='normalizer')
-        self.constrainer = _handle(constrainer, constrainers, constrainer_kwargs, label='constrainer')
+        self.initializer = cast(
+            Initializer,
+            _handle(
+                initializer,
+                initializers,
+                initializer_kwargs,
+                default=nn.init.normal_,
+                label="initializer",
+            ),
+        )
+        self.normalizer = _handle(normalizer, normalizers, normalizer_kwargs, label="normalizer")
+        self.constrainer = _handle(constrainer, constrainers, constrainer_kwargs, label="constrainer")
         if regularizer is not None:
             regularizer = regularizer_resolver.make(regularizer, pos_kwargs=regularizer_kwargs)
         self.regularizer = regularizer
@@ -343,7 +355,7 @@ class Embedding(RepresentationModule):
         normalizer_kwargs: Optional[Mapping[str, Any]] = None,
         constrainer: Optional[Constrainer] = None,
         constrainer_kwargs: Optional[Mapping[str, Any]] = None,
-    ) -> 'Embedding':  # noqa:E501
+    ) -> "Embedding":  # noqa:E501
         """Create an embedding object on the given device by wrapping :func:`__init__`.
 
         This method is a hotfix for not being able to pass a device during initialization of
@@ -485,9 +497,9 @@ def process_shape(
 ) -> Tuple[int, Sequence[int]]:
     """Make a shape pack."""
     if shape is None and dim is None:
-        raise ValueError('Missing both, shape and embedding_dim')
+        raise ValueError("Missing both, shape and embedding_dim")
     elif shape is not None and dim is not None:
-        raise ValueError('Provided both, shape and embedding_dim')
+        raise ValueError("Provided both, shape and embedding_dim")
     elif shape is None and dim is not None:
         shape = (dim,)
     elif isinstance(shape, int) and dim is None:
@@ -497,40 +509,41 @@ def process_shape(
         shape = tuple(shape)
         dim = int(np.prod(shape))
     else:
-        raise TypeError(f'Invalid type for shape: ({type(shape)}) {shape}')
+        raise TypeError(f"Invalid type for shape: ({type(shape)}) {shape}")
     return dim, shape
 
 
 initializers = {
-    'xavier_uniform': xavier_uniform_,
-    'xavier_uniform_norm': xavier_uniform_norm_,
-    'xavier_normal': xavier_normal_,
-    'xavier_normal_norm': xavier_normal_norm_,
-    'normal': torch.nn.init.normal_,
-    'normal_norm': normal_norm_,
-    'uniform': torch.nn.init.uniform_,
-    'uniform_norm': uniform_norm_,
-    'phases': init_phases,
-    'init_phases': init_phases,
+    "xavier_uniform": xavier_uniform_,
+    "xavier_uniform_norm": xavier_uniform_norm_,
+    "xavier_normal": xavier_normal_,
+    "xavier_normal_norm": xavier_normal_norm_,
+    "normal": torch.nn.init.normal_,
+    "normal_norm": normal_norm_,
+    "uniform": torch.nn.init.uniform_,
+    "uniform_norm": uniform_norm_,
+    "phases": init_phases,
+    "init_phases": init_phases,
 }
 
 constrainers = {
-    'normalize': functional.normalize,
-    'complex_normalize': complex_normalize,
-    'clamp': torch.clamp,
-    'clamp_norm': clamp_norm,
+    "normalize": functional.normalize,
+    "complex_normalize": complex_normalize,
+    "clamp": torch.clamp,
+    "clamp_norm": clamp_norm,
 }
 
 # TODO add normalization functions
 normalizers: Mapping[str, Normalizer] = {}
 
-X = TypeVar('X', bound=Callable)
+X = TypeVar("X", bound=Callable)
 
 
 def _handle(
     value: Hint[X],
     lookup: Mapping[str, X],
-    kwargs, default: Optional[X] = None,
+    kwargs,
+    default: Optional[X] = None,
     label: Optional[str] = None,
 ) -> Optional[X]:
     if value is None:
@@ -539,7 +552,7 @@ def _handle(
         try:
             value = lookup[value]
         except KeyError:
-            raise KeyError(f'{value} is an invalid {label}. Try one of: {sorted(lookup)}')
+            raise KeyError(f"{value} is an invalid {label}. Try one of: {sorted(lookup)}")
     if kwargs:
         rv = functools.partial(value, **kwargs)  # type: ignore
         return cast(X, rv)
@@ -578,7 +591,6 @@ class RGCNRepresentations(RepresentationModule):
         embedding_specification: EmbeddingSpecification,
         num_layers: int = 2,
         use_bias: bool = True,
-        use_batch_norm: bool = False,
         activation: Hint[nn.Module] = None,
         activation_kwargs: Optional[Mapping[str, Any]] = None,
         edge_dropout: float = 0.4,
@@ -586,6 +598,8 @@ class RGCNRepresentations(RepresentationModule):
         edge_weighting: Hint[EdgeWeighting] = None,
         decomposition: Hint[Decomposition] = None,
         decomposition_kwargs: Optional[Mapping[str, Any]] = None,
+        regularizer: Hint[Regularizer] = None,
+        regularizer_kwargs: Optional[Mapping[str, Any]] = None,
     ):
         """Instantiate the R-GCN encoder.
 
@@ -597,8 +611,6 @@ class RGCNRepresentations(RepresentationModule):
             The number of layers.
         :param use_bias:
             Whether to use a bias.
-        :param use_batch_norm:
-            Whether to use batch normalization.
         :param activation:
             The activation.
         :param activation_kwargs:
@@ -613,24 +625,26 @@ class RGCNRepresentations(RepresentationModule):
             The decomposition, cf. :class:`pykeen.nn.message_passing.Decomposition`.
         :param decomposition_kwargs:
             Additional keyword based arguments passed to the decomposition upon instantiation.
+        :param regularizer:
+            A regularizer, which is applied to the selected embeddings in forward pass
+        :param regularizer_kwargs:
+            Additional keyword arguments passed to the regularizer
         """
         base_embeddings = embedding_specification.make(num_embeddings=triples_factory.num_entities)
         super().__init__(max_id=triples_factory.num_entities, shape=base_embeddings.shape)
         self.entity_embeddings = base_embeddings
+
+        if triples_factory.create_inverse_triples:
+            raise ValueError(
+                "RGCN internally creates inverse triples. It thus expects a triples factory without them.",
+            )
 
         # Resolve edge weighting
         self.edge_weighting = edge_weight_resolver.make(query=edge_weighting)
 
         # dropout
         self.edge_dropout = edge_dropout
-        self.self_loop_dropout = self_loop_dropout or edge_dropout
-
-        # batch norm and bias
-        use_batch_norm = use_batch_norm
-        if use_batch_norm:
-            if use_bias:
-                logger.warning("Disabling bias because batch normalization is used.")
-            use_bias = False
+        self_loop_dropout = self_loop_dropout or edge_dropout
 
         # Save graph using buffers, such that the tensors are moved together with the model
         h, r, t = triples_factory.mapped_triples.t()
@@ -638,25 +652,30 @@ class RGCNRepresentations(RepresentationModule):
         self.register_buffer("targets", t)
         self.register_buffer("edge_types", r)
 
-        layers = []
-        for _ in range(num_layers):
-            layers.append(
-                decomposition_resolver.make(
-                    query=decomposition,
-                    pos_kwargs=decomposition_kwargs,
-                    input_dim=base_embeddings.embedding_dim,
-                    num_relations=triples_factory.num_relations,
-                ),
+        dim = base_embeddings.embedding_dim
+        self.layers = nn.ModuleList(
+            RGCNLayer(
+                input_dim=dim,
+                num_relations=triples_factory.num_relations,
+                output_dim=dim,
+                use_bias=use_bias,
+                # no activation on last layer
+                # cf. https://github.com/MichSchli/RelationPrediction/blob/c77b094fe5c17685ed138dae9ae49b304e0d8d89/code/common/model_builder.py#L275  # noqa: E501
+                activation=activation if i < num_layers - 1 else None,
+                activation_kwargs=activation_kwargs,
+                self_loop_dropout=self_loop_dropout,
+                decomposition=decomposition,
+                decomposition_kwargs=decomposition_kwargs,
             )
-            if use_bias:
-                layers.append(Bias(dim=base_embeddings.embedding_dim))
-            if use_batch_norm:
-                layers.append(nn.BatchNorm1d(num_features=base_embeddings.embedding_dim))
-            layers.append(activation_resolver.make(query=activation, pos_kwargs=activation_kwargs))
-        self.layers = nn.ModuleList(layers)
+            for i in range(num_layers)
+        )
 
         # buffering of enriched representations
         self.enriched_embeddings = None
+
+        if regularizer is not None:
+            regularizer = regularizer_resolver.make(regularizer, pos_kwargs=regularizer_kwargs)
+        self.regularizer = regularizer
 
     def post_parameter_update(self) -> None:  # noqa: D102
         super().post_parameter_update()
@@ -694,12 +713,6 @@ class RGCNRepresentations(RepresentationModule):
             targets = targets[edge_keep_mask]
             edge_types = edge_types[edge_keep_mask]
 
-        # Different dropout for self-loops (only in training mode)
-        if self.training and self.self_loop_dropout is not None:
-            node_keep_mask = torch.rand(x.shape[0], device=x.device) > self.self_loop_dropout
-        else:
-            node_keep_mask = None
-
         # fixed edges -> pre-compute weights
         if self.edge_weighting is not None and sources.numel() > 0:
             edge_weights = torch.empty_like(sources, dtype=torch.float32)
@@ -711,17 +724,13 @@ class RGCNRepresentations(RepresentationModule):
             edge_weights = None
 
         for layer in self.layers:
-            if isinstance(layer, Decomposition):
-                kwargs = dict(
-                    node_keep_mask=node_keep_mask,
-                    source=sources,
-                    target=targets,
-                    edge_type=edge_types,
-                    edge_weights=edge_weights,
-                )
-            else:
-                kwargs = dict()
-            x = layer(x, **kwargs)
+            x = layer(
+                x=x,
+                source=sources,
+                target=targets,
+                edge_type=edge_types,
+                edge_weights=edge_weights,
+            )
 
         # Cache enriched representations
         self.enriched_embeddings = x
@@ -736,6 +745,8 @@ class RGCNRepresentations(RepresentationModule):
         x = self._real_forward()
         if indices is not None:
             x = x[indices]
+        if self.regularizer is not None:
+            self.regularizer.update(x)
         return x
 
 
@@ -970,11 +981,13 @@ class CombinedCompGCNRepresentations(nn.Module):
         # Create message passing layers
         layers = []
         for input_dim, output_dim in zip(itertools.chain([input_dim], dims), dims):
-            layers.append(CompGCNLayer(
-                input_dim=input_dim,
-                output_dim=output_dim,
-                **(layer_kwargs or {}),
-            ))
+            layers.append(
+                CompGCNLayer(
+                    input_dim=input_dim,
+                    output_dim=output_dim,
+                    **(layer_kwargs or {}),
+                )
+            )
         self.layers = nn.ModuleList(layers)
 
         # register buffers for adjacency matrix; we use the same format as PyTorch Geometric

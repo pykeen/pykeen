@@ -8,11 +8,12 @@ import torch
 from class_resolver import Hint, HintOrType
 from torch import nn
 
-from ..nbase import ERModel, EmbeddingSpecificationHint
+from ..nbase import EmbeddingSpecificationHint, ERModel
 from ...nn.emb import EmbeddingSpecification, RGCNRepresentations
 from ...nn.message_passing import Decomposition
 from ...nn.modules import Interaction, interaction_resolver
 from ...nn.weighting import EdgeWeighting
+from ...regularizers import Regularizer
 from ...triples import CoreTriplesFactory
 from ...typing import Initializer, RelationRepresentation
 
@@ -68,8 +69,8 @@ class RGCN(
         use_batch_norm=dict(type="bool"),
         activation_cls=dict(type="categorical", choices=[nn.ReLU, nn.LeakyReLU]),
         interaction=dict(type="categorical", choices=["distmult", "complex", "ermlp"]),
-        edge_dropout=dict(type=float, low=0.0, high=.9),
-        self_loop_dropout=dict(type=float, low=0.0, high=.9),
+        edge_dropout=dict(type=float, low=0.0, high=0.9),
+        self_loop_dropout=dict(type=float, low=0.0, high=0.9),
         edge_weighting=dict(type="categorical", choices=["inverse_in_degree", "inverse_out_degree", "symmetric"]),
         decomposition=dict(type="categorical", choices=["bases", "blocks"]),
         # TODO: Decomposition kwargs
@@ -89,10 +90,9 @@ class RGCN(
         relation_initializer: Hint[Initializer] = nn.init.xavier_uniform_,
         relation_initializer_kwargs: Optional[Mapping[str, Any]] = None,
         relation_representations: EmbeddingSpecificationHint = None,
-        interaction: HintOrType[Interaction[torch.FloatTensor, RelationRepresentation, torch.FloatTensor]] = 'DistMult',
+        interaction: HintOrType[Interaction[torch.FloatTensor, RelationRepresentation, torch.FloatTensor]] = "DistMult",
         interaction_kwargs: Optional[Mapping[str, Any]] = None,
         use_bias: bool = True,
-        use_batch_norm: bool = False,
         activation: Hint[nn.Module] = None,
         activation_kwargs: Optional[Mapping[str, Any]] = None,
         edge_dropout: float = 0.4,
@@ -100,6 +100,8 @@ class RGCN(
         edge_weighting: Hint[EdgeWeighting] = None,
         decomposition: Hint[Decomposition] = None,
         decomposition_kwargs: Optional[Mapping[str, Any]] = None,
+        regularizer: Hint[Regularizer] = None,
+        regularizer_kwargs: Optional[Mapping[str, Any]] = None,
         **kwargs,
     ):
         # create enriched entity representations
@@ -112,7 +114,6 @@ class RGCN(
             ),
             num_layers=num_layers,
             use_bias=use_bias,
-            use_batch_norm=use_batch_norm,
             activation=activation,
             activation_kwargs=activation_kwargs,
             edge_dropout=edge_dropout,
@@ -120,6 +121,9 @@ class RGCN(
             edge_weighting=edge_weighting,
             decomposition=decomposition,
             decomposition_kwargs=decomposition_kwargs,
+            # cf. https://github.com/MichSchli/RelationPrediction/blob/c77b094fe5c17685ed138dae9ae49b304e0d8d89/code/decoders/bilinear_diag.py#L64-L67  # noqa: E501
+            regularizer=regularizer,
+            regularizer_kwargs=regularizer_kwargs,
         )
 
         # Resolve interaction function
@@ -131,6 +135,9 @@ class RGCN(
                 shape=entity_representations.shape,
                 initializer=relation_initializer,
                 initializer_kwargs=relation_initializer_kwargs,
+                # cf. https://github.com/MichSchli/RelationPrediction/blob/c77b094fe5c17685ed138dae9ae49b304e0d8d89/code/decoders/bilinear_diag.py#L64-L67  # noqa: E501
+                regularizer=regularizer,
+                regularizer_kwargs=regularizer_kwargs,
             )
         super().__init__(
             entity_representations=entity_representations,

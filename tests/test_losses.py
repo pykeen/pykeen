@@ -61,8 +61,8 @@ class NSSALossTests(cases.SetwiseLossTestCase):
 
     cls = pykeen.losses.NSSALoss
     kwargs = {
-        'margin': 1.,
-        'adversarial_temperature': 1.,
+        "margin": 1.0,
+        "adversarial_temperature": 1.0,
     }
 
 
@@ -71,11 +71,11 @@ class TestCustomLossFunctions(unittest.TestCase):
 
     def test_negative_sampling_self_adversarial_loss(self):
         """Test the negative sampling self adversarial loss function."""
-        loss_fct = NSSALoss(margin=1., adversarial_temperature=1.)
+        loss_fct = NSSALoss(margin=1.0, adversarial_temperature=1.0)
         self.assertIs(loss_fct._reduction_method, torch.mean)
 
-        pos_scores = torch.tensor([0., 0., -0.5, -0.5])
-        neg_scores = torch.tensor([0., 0., -1., -1.])
+        pos_scores = torch.tensor([0.0, 0.0, -0.5, -0.5])
+        neg_scores = torch.tensor([0.0, 0.0, -1.0, -1.0])
 
         # ≈ result of softmax
         weights = torch.tensor([0.37, 0.37, 0.13, 0.13])
@@ -94,7 +94,7 @@ class TestCustomLossFunctions(unittest.TestCase):
         pos_loss = torch.mean(log_sigmoids)
 
         # expected_loss ≈ 0.34
-        expected_loss = (-pos_loss - neg_loss) / 2.
+        expected_loss = (-pos_loss - neg_loss) / 2.0
 
         loss = loss_fct(pos_scores, neg_scores, weights).item()
 
@@ -104,18 +104,18 @@ class TestCustomLossFunctions(unittest.TestCase):
     def test_pipeline(self):
         """Test the pipeline on RotatE with negative sampling self adversarial loss and nations."""
         loss = NSSALoss
-        loss_kwargs = {"margin": 1., "adversarial_temperature": 1.}
+        loss_kwargs = {"margin": 1.0, "adversarial_temperature": 1.0}
         pipeline_results = pipeline(
-            model='RotatE',
-            dataset='nations',
+            model="RotatE",
+            dataset="nations",
             loss=loss,
             loss_kwargs=loss_kwargs,
             training_kwargs=dict(use_tqdm=False),
         )
         self.assertIsInstance(pipeline_results, PipelineResult)
         self.assertIsInstance(pipeline_results.model.loss, loss)
-        self.assertEqual(pipeline_results.model.loss.margin, 1.)
-        self.assertEqual(pipeline_results.model.loss.inverse_softmax_temperature, 1.)
+        self.assertEqual(pipeline_results.model.loss.margin, 1.0)
+        self.assertEqual(pipeline_results.model.loss.inverse_softmax_temperature, 1.0)
 
 
 class BCEWithLogitsLossTestCase(cases.PointwiseLossTestCase):
@@ -168,7 +168,7 @@ class LabelSmoothingTest(unittest.TestCase):
     batch_size: int = 16
     num_entities: int = 32
     epsilon: float = 0.1
-    relative_tolerance: float = 1.e-4  # larger tolerance for float32
+    relative_tolerance: float = 1.0e-4  # larger tolerance for float32
 
     def setUp(self) -> None:
         """Set up the test case with a fixed random seed."""
@@ -198,6 +198,6 @@ class LabelSmoothingTest(unittest.TestCase):
         # Apply label smoothing
         smooth_labels = apply_label_smoothing(labels=labels, epsilon=self.epsilon, num_classes=self.num_entities)
         exp_true = 1.0 - self.epsilon
-        np.testing.assert_allclose(smooth_labels[:self.batch_size], exp_true, rtol=self.relative_tolerance)
-        exp_false = self.epsilon / (self.num_entities - 1.)
-        np.testing.assert_allclose(smooth_labels[self.batch_size:], exp_false, rtol=self.relative_tolerance)
+        np.testing.assert_allclose(smooth_labels[: self.batch_size], exp_true, rtol=self.relative_tolerance)
+        exp_false = self.epsilon / (self.num_entities - 1.0)
+        np.testing.assert_allclose(smooth_labels[self.batch_size :], exp_false, rtol=self.relative_tolerance)

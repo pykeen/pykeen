@@ -18,12 +18,12 @@ from ..typing import LabeledTriples, MappedTriples, ScorePack
 from ..utils import is_cuda_oom_error
 
 __all__ = [
-    'predict',
-    'predict_triples_df',
-    'get_all_prediction_df',
-    'get_head_prediction_df',
-    'get_relation_prediction_df',
-    'get_tail_prediction_df',
+    "predict",
+    "predict_triples_df",
+    "get_all_prediction_df",
+    "get_head_prediction_df",
+    "get_relation_prediction_df",
+    "get_tail_prediction_df",
 ]
 
 logger = logging.getLogger(__name__)
@@ -78,8 +78,8 @@ def get_head_prediction_df(
             (entity_id, entity_label, scores[entity_id])
             for entity_label, entity_id in triples_factory.entity_to_id.items()
         ],
-        columns=['head_id', 'head_label', 'score'],
-    ).sort_values('score', ascending=False)
+        columns=["head_id", "head_label", "score"],
+    ).sort_values("score", ascending=False)
 
     return _postprocess_prediction_df(
         df=rv,
@@ -87,7 +87,7 @@ def get_head_prediction_df(
         remove_known=remove_known,
         training=triples_factory.mapped_triples,
         testing=testing,
-        query_ids_key='head_id',
+        query_ids_key="head_id",
         col=0,
         other_col_ids=(relation_id, tail_id),
     )
@@ -142,8 +142,8 @@ def get_tail_prediction_df(
             (entity_id, entity_label, scores[entity_id])
             for entity_label, entity_id in triples_factory.entity_to_id.items()
         ],
-        columns=['tail_id', 'tail_label', 'score'],
-    ).sort_values('score', ascending=False)
+        columns=["tail_id", "tail_label", "score"],
+    ).sort_values("score", ascending=False)
 
     return _postprocess_prediction_df(
         rv,
@@ -151,7 +151,7 @@ def get_tail_prediction_df(
         remove_known=remove_known,
         testing=testing,
         training=triples_factory.mapped_triples,
-        query_ids_key='tail_id',
+        query_ids_key="tail_id",
         col=2,
         other_col_ids=(head_id, relation_id),
     )
@@ -206,8 +206,8 @@ def get_relation_prediction_df(
             (relation_id, relation_label, scores[relation_id])
             for relation_label, relation_id in triples_factory.relation_to_id.items()
         ],
-        columns=['relation_id', 'relation_label', 'score'],
-    ).sort_values('score', ascending=False)
+        columns=["relation_id", "relation_label", "score"],
+    ).sort_values("score", ascending=False)
 
     return _postprocess_prediction_df(
         rv,
@@ -215,7 +215,7 @@ def get_relation_prediction_df(
         remove_known=remove_known,
         testing=testing,
         training=triples_factory.mapped_triples,
-        query_ids_key='relation_id',
+        query_ids_key="relation_id",
         col=1,
         other_col_ids=(head_id, tail_id),
     )
@@ -294,16 +294,16 @@ def predict(model: Model, *, k: Optional[int] = None, batch_size: int = 1) -> Sc
     :return: A score pack of parallel triples and scores
     """
     logger.warning(
-        f'_predict is an expensive operation, involving {model.num_entities ** 2 * model.num_relations} '
-        f'score evaluations.',
+        f"_predict is an expensive operation, involving {model.num_entities ** 2 * model.num_relations} "
+        f"score evaluations.",
     )
 
     if k is not None:
         return _predict_k(model=model, k=k, batch_size=batch_size)
 
     logger.warning(
-        'Not providing k to score_all_triples entails huge memory requirements for reasonably-sized '
-        'knowledge graphs.',
+        "Not providing k to score_all_triples entails huge memory requirements for reasonably-sized "
+        "knowledge graphs.",
     )
     return _predict_all(model=model, batch_size=batch_size)
 
@@ -328,18 +328,24 @@ def _predict_all(model: Model, *, batch_size: int = 1) -> ScorePack:
     ):
         # calculate batch scores
         hs = torch.arange(e, min(e + batch_size, model.num_entities), device=model.device)
-        hr_batch = torch.stack([
-            hs,
-            hs.new_empty(1).fill_(value=r).repeat(hs.shape[0]),
-        ], dim=-1)
-        scores[r, e:e + batch_size, :] = model.predict_t(hr_batch=hr_batch).to(scores.device)
+        hr_batch = torch.stack(
+            [
+                hs,
+                hs.new_empty(1).fill_(value=r).repeat(hs.shape[0]),
+            ],
+            dim=-1,
+        )
+        scores[r, e : e + batch_size, :] = model.predict_t(hr_batch=hr_batch).to(scores.device)
 
     # Explicitly create triples
-    result = torch.stack([
-        torch.arange(model.num_relations).view(-1, 1, 1).repeat(1, model.num_entities, model.num_entities),
-        torch.arange(model.num_entities).view(1, -1, 1).repeat(model.num_relations, 1, model.num_entities),
-        torch.arange(model.num_entities).view(1, 1, -1).repeat(model.num_relations, model.num_entities, 1),
-    ], dim=-1).view(-1, 3)[:, [1, 0, 2]]
+    result = torch.stack(
+        [
+            torch.arange(model.num_relations).view(-1, 1, 1).repeat(1, model.num_entities, model.num_entities),
+            torch.arange(model.num_entities).view(1, -1, 1).repeat(model.num_relations, 1, model.num_entities),
+            torch.arange(model.num_entities).view(1, 1, -1).repeat(model.num_relations, model.num_entities, 1),
+        ],
+        dim=-1,
+    ).view(-1, 3)[:, [1, 0, 2]]
 
     return _build_pack(result=result, scores=scores, flatten=True)
 
@@ -366,10 +372,13 @@ def _predict_k(model: Model, *, k: int, batch_size: int = 1) -> ScorePack:
         # calculate batch scores
         hs = torch.arange(e, min(e + batch_size, model.num_entities), device=model.device)
         real_batch_size = hs.shape[0]
-        hr_batch = torch.stack([
-            hs,
-            hs.new_empty(1).fill_(value=r).repeat(real_batch_size),
-        ], dim=-1)
+        hr_batch = torch.stack(
+            [
+                hs,
+                hs.new_empty(1).fill_(value=r).repeat(real_batch_size),
+            ],
+            dim=-1,
+        )
         top_scores = model.predict_t(hr_batch=hr_batch).view(-1)
 
         # get top scores within batch
@@ -378,14 +387,18 @@ def _predict_k(model: Model, *, k: int, batch_size: int = 1) -> ScorePack:
             top_heads, top_tails = top_indices // model.num_entities, top_indices % model.num_entities
         else:
             top_heads = hs.view(-1, 1).repeat(1, model.num_entities).view(-1)
-            top_tails = torch.arange(model.num_entities, device=hs.device).view(1, -1).repeat(
-                real_batch_size, 1).view(-1)
+            top_tails = (
+                torch.arange(model.num_entities, device=hs.device).view(1, -1).repeat(real_batch_size, 1).view(-1)
+            )
 
-        top_triples = torch.stack([
-            top_heads,
-            top_heads.new_empty(top_heads.shape).fill_(value=r),
-            top_tails,
-        ], dim=-1)
+        top_triples = torch.stack(
+            [
+                top_heads,
+                top_heads.new_empty(top_heads.shape).fill_(value=r),
+                top_tails,
+            ],
+            dim=-1,
+        )
 
         # append to global top scores
         scores = torch.cat([scores, top_scores])
@@ -418,14 +431,14 @@ def _postprocess_prediction_df(
     other_col_ids: Tuple[int, int],
 ) -> pd.DataFrame:
     if add_novelties or remove_known:
-        df['in_training'] = ~get_novelty_mask(
+        df["in_training"] = ~get_novelty_mask(
             mapped_triples=training,
             query_ids=df[query_ids_key],
             col=col,
             other_col_ids=other_col_ids,
         )
     if add_novelties and testing is not None:
-        df['in_testing'] = ~get_novelty_mask(
+        df["in_testing"] = ~get_novelty_mask(
             mapped_triples=testing,
             query_ids=df[query_ids_key],
             col=col,
@@ -444,15 +457,15 @@ def _postprocess_prediction_all_df(
 ) -> pd.DataFrame:
     if add_novelties or remove_known:
         assert training is not None
-        df['in_training'] = ~get_novelty_all_mask(
+        df["in_training"] = ~get_novelty_all_mask(
             mapped_triples=training,
-            query=df[['head_id', 'relation_id', 'tail_id']].values,
+            query=df[["head_id", "relation_id", "tail_id"]].values,
         )
     if add_novelties and testing is not None:
         assert testing is not None
-        df['in_testing'] = ~get_novelty_all_mask(
+        df["in_testing"] = ~get_novelty_all_mask(
             mapped_triples=testing,
-            query=df[['head_id', 'relation_id', 'tail_id']].values,
+            query=df[["head_id", "relation_id", "tail_id"]].values,
         )
     return _process_remove_known(df, remove_known, testing)
 
@@ -507,13 +520,13 @@ def _process_remove_known(df: pd.DataFrame, remove_known: bool, testing: Optiona
     if not remove_known:
         return df
 
-    df = df[~df['in_training']]
-    del df['in_training']
+    df = df[~df["in_training"]]
+    del df["in_training"]
     if testing is None:
         return df
 
-    df = df[~df['in_testing']]
-    del df['in_testing']
+    df = df[~df["in_testing"]]
+    del df["in_testing"]
     return df
 
 
@@ -537,10 +550,13 @@ def _predict_triples(
         raise ValueError("batch_size must be positive.")
 
     try:
-        return torch.cat([
-            model.predict_hrt(hrt_batch=hrt_batch)
-            for hrt_batch in mapped_triples.split(split_size=batch_size, dim=0)
-        ], dim=0)
+        return torch.cat(
+            [
+                model.predict_hrt(hrt_batch=hrt_batch)
+                for hrt_batch in mapped_triples.split(split_size=batch_size, dim=0)
+            ],
+            dim=0,
+        )
     except RuntimeError as error:
         # TODO: Can we make AMO code re-usable? e.g. like https://gist.github.com/mberr/c37a8068b38cabc98228db2cbe358043
         if is_cuda_oom_error(error):

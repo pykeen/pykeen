@@ -12,7 +12,7 @@ from ...nn.modules import UnstructuredModelInteraction
 from ...typing import Hint, Initializer
 
 __all__ = [
-    'UnstructuredModel',
+    "UnstructuredModel",
 ]
 
 

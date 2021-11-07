@@ -174,28 +174,28 @@ from torch.nn.modules.loss import _Loss
 
 __all__ = [
     # Base Classes
-    'Loss',
-    'PointwiseLoss',
-    'DeltaPointwiseLoss',
-    'MarginPairwiseLoss',
-    'PairwiseLoss',
-    'SetwiseLoss',
+    "Loss",
+    "PointwiseLoss",
+    "DeltaPointwiseLoss",
+    "MarginPairwiseLoss",
+    "PairwiseLoss",
+    "SetwiseLoss",
     # Concrete Classes
-    'BCEAfterSigmoidLoss',
-    'BCEWithLogitsLoss',
-    'CrossEntropyLoss',
-    'FocalLoss',
-    'MarginRankingLoss',
-    'MSELoss',
-    'NSSALoss',
-    'SoftplusLoss',
-    'SoftPointwiseHingeLoss',
-    'PointwiseHingeLoss',
-    'DoubleMarginLoss',
-    'SoftMarginRankingLoss',
-    'PairwiseLogisticLoss',
+    "BCEAfterSigmoidLoss",
+    "BCEWithLogitsLoss",
+    "CrossEntropyLoss",
+    "FocalLoss",
+    "MarginRankingLoss",
+    "MSELoss",
+    "NSSALoss",
+    "SoftplusLoss",
+    "SoftPointwiseHingeLoss",
+    "PointwiseHingeLoss",
+    "DoubleMarginLoss",
+    "SoftMarginRankingLoss",
+    "PairwiseLogisticLoss",
     # Utils
-    'loss_resolver',
+    "loss_resolver",
 ]
 
 logger = logging.getLogger(__name__)
@@ -234,7 +234,7 @@ def apply_label_smoothing(
     if num_classes is None:
         raise ValueError("must pass num_classes to perform label smoothing")
 
-    new_label_true = (1.0 - epsilon)
+    new_label_true = 1.0 - epsilon
     new_label_false = epsilon / (num_classes - 1)
     return new_label_true * labels + new_label_false * (1.0 - labels)
 
@@ -264,7 +264,7 @@ class Loss(_Loss):
     #: The default strategy for optimizing the loss's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]] = {}
 
-    def __init__(self, size_average=None, reduce=None, reduction: str = 'mean'):
+    def __init__(self, size_average=None, reduce=None, reduction: str = "mean"):
         super().__init__(size_average=size_average, reduce=reduce, reduction=reduction)
         self._reduction_method = _REDUCTION_METHODS[reduction]
 
@@ -396,7 +396,7 @@ class BCEWithLogitsLoss(PointwiseLoss):
     name: Binary cross entropy (with logits)
     """
 
-    synonyms = {'Negative Log Likelihood Loss'}
+    synonyms = {"Negative Log Likelihood Loss"}
 
     def forward(
         self,
@@ -418,7 +418,7 @@ class MSELoss(PointwiseLoss):
     name: Mean square error
     """
 
-    synonyms = {'Mean Square Error Loss', 'Mean Squared Error Loss'}
+    synonyms = {"Mean Square Error Loss", "Mean Squared Error Loss"}
 
     def forward(
         self,
@@ -457,7 +457,7 @@ class MarginPairwiseLoss(PairwiseLoss):
         self,
         margin: float,
         margin_activation: Hint[nn.Module],
-        reduction: str = 'mean',
+        reduction: str = "mean",
     ):
         r"""Initialize the margin loss instance.
 
@@ -546,9 +546,11 @@ class MarginPairwiseLoss(PairwiseLoss):
         :return:
             A scalar loss term.
         """
-        return self._reduction_method(self.margin_activation(
-            neg_scores - pos_scores + self.margin,
-        ))
+        return self._reduction_method(
+            self.margin_activation(
+                neg_scores - pos_scores + self.margin,
+            )
+        )
 
 
 @parse_docdata
@@ -583,7 +585,7 @@ class MarginRankingLoss(MarginPairwiseLoss):
         margin=DEFAULT_MARGIN_HPO_STRATEGY,
     )
 
-    def __init__(self, margin: float = 1.0, reduction: str = 'mean'):
+    def __init__(self, margin: float = 1.0, reduction: str = "mean"):
         r"""Initialize the margin loss instance.
 
         :param margin:
@@ -592,7 +594,7 @@ class MarginRankingLoss(MarginPairwiseLoss):
             The name of the reduction operation to aggregate the individual loss values from a batch to a scalar loss
             value. From {'mean', 'sum'}.
         """
-        super().__init__(margin=margin, margin_activation='relu', reduction=reduction)
+        super().__init__(margin=margin, margin_activation="relu", reduction=reduction)
 
 
 @parse_docdata
@@ -619,8 +621,8 @@ class SoftMarginRankingLoss(MarginPairwiseLoss):
         margin=DEFAULT_MARGIN_HPO_STRATEGY,
     )
 
-    def __init__(self, margin: float = 1.0, reduction: str = 'mean'):
-        super().__init__(margin=margin, margin_activation='softplus', reduction=reduction)
+    def __init__(self, margin: float = 1.0, reduction: str = "mean"):
+        super().__init__(margin=margin, margin_activation="softplus", reduction=reduction)
 
 
 @parse_docdata
@@ -642,7 +644,7 @@ class PairwiseLogisticLoss(SoftMarginRankingLoss):
     name: Pairwise logistic
     """
 
-    def __init__(self, reduction: str = 'mean'):
+    def __init__(self, reduction: str = "mean"):
         super().__init__(margin=0.0, reduction=reduction)
 
 
@@ -669,7 +671,7 @@ class DoubleMarginLoss(PointwiseLoss):
         offset=dict(type=float, low=0, high=1),
         positive_negative_balance=dict(type=float, low=1.0e-03, high=1.0 - 1.0e-03),
         margin_activation=dict(
-            type='categorical',
+            type="categorical",
             choices=margin_activation_resolver.options,
         ),
     )
@@ -730,7 +732,9 @@ class DoubleMarginLoss(PointwiseLoss):
                 raise ValueError(f"The offset must not be negative, but it is: {offset}")
             return positive_margin, positive_margin - offset
 
-        raise ValueError(dedent(f"""\
+        raise ValueError(
+            dedent(
+                f"""\
             Invalid combination of margins and offset:
 
                 positive_margin={positive_margin}
@@ -741,7 +745,9 @@ class DoubleMarginLoss(PointwiseLoss):
                 1. positive & negative margin
                 2. negative margin & offset
                 3. positive margin & offset
-        """))
+        """
+            )
+        )
 
     def __init__(
         self,
@@ -750,8 +756,8 @@ class DoubleMarginLoss(PointwiseLoss):
         negative_margin: Optional[float] = 0.0,
         offset: Optional[float] = None,
         positive_negative_balance: float = 0.5,
-        margin_activation: Hint[nn.Module] = 'relu',
-        reduction: str = 'mean',
+        margin_activation: Hint[nn.Module] = "relu",
+        reduction: str = "mean",
     ):
         r"""Initialize the double margin loss.
 
@@ -881,8 +887,8 @@ class DeltaPointwiseLoss(PointwiseLoss):
     def __init__(
         self,
         margin: Optional[float] = 0.0,
-        margin_activation: Hint[nn.Module] = 'softplus',
-        reduction: str = 'mean',
+        margin_activation: Hint[nn.Module] = "softplus",
+        reduction: str = "mean",
     ) -> None:
         super().__init__(reduction=reduction)
         self.margin = margin
@@ -894,7 +900,7 @@ class DeltaPointwiseLoss(PointwiseLoss):
         labels: torch.FloatTensor,
     ) -> torch.FloatTensor:
         """Calculate the loss for the given scores and labels."""
-        assert 0. <= labels.min() and labels.max() <= 1.
+        assert 0.0 <= labels.min() and labels.max() <= 1.0
         # scale labels from [0, 1] to [-1, 1]
         labels = 2 * labels - 1
         loss = self.margin_activation(self.margin - labels * logits)
@@ -919,8 +925,8 @@ class PointwiseHingeLoss(DeltaPointwiseLoss):
         margin=DEFAULT_MARGIN_HPO_STRATEGY,
     )
 
-    def __init__(self, margin: float = 1.0, reduction: str = 'mean') -> None:
-        super().__init__(margin=margin, margin_activation='relu', reduction=reduction)
+    def __init__(self, margin: float = 1.0, reduction: str = "mean") -> None:
+        super().__init__(margin=margin, margin_activation="relu", reduction=reduction)
 
 
 @parse_docdata
@@ -943,8 +949,8 @@ class SoftPointwiseHingeLoss(DeltaPointwiseLoss):
         margin=DEFAULT_MARGIN_HPO_STRATEGY,
     )
 
-    def __init__(self, margin: float = 1.0, reduction: str = 'mean') -> None:
-        super().__init__(margin=margin, margin_activation='softplus', reduction=reduction)
+    def __init__(self, margin: float = 1.0, reduction: str = "mean") -> None:
+        super().__init__(margin=margin, margin_activation="softplus", reduction=reduction)
 
 
 @parse_docdata
@@ -964,7 +970,7 @@ class SoftplusLoss(SoftPointwiseHingeLoss):
     name: Softplus
     """
 
-    def __init__(self, reduction: str = 'mean') -> None:
+    def __init__(self, reduction: str = "mean") -> None:
         super().__init__(margin=0.0, reduction=reduction)
 
 
@@ -1023,14 +1029,14 @@ class NSSALoss(SetwiseLoss):
     name: Self-adversarial negative sampling
     """
 
-    synonyms = {'Self-Adversarial Negative Sampling Loss', 'Negative Sampling Self-Adversarial Loss'}
+    synonyms = {"Self-Adversarial Negative Sampling Loss", "Negative Sampling Self-Adversarial Loss"}
 
     hpo_default: ClassVar[Mapping[str, Any]] = dict(
         margin=dict(type=int, low=3, high=30, q=3),
         adversarial_temperature=dict(type=float, low=0.5, high=1.0),
     )
 
-    def __init__(self, margin: float = 9.0, adversarial_temperature: float = 1.0, reduction: str = 'mean') -> None:
+    def __init__(self, margin: float = 9.0, adversarial_temperature: float = 1.0, reduction: str = "mean") -> None:
         """Initialize the NSSA loss.
 
         :param margin: The loss's margin (also written as gamma in the reference paper)
@@ -1141,7 +1147,7 @@ class NSSALoss(SetwiseLoss):
         loss = -pos_loss - neg_loss
 
         if self._reduction_method is torch.mean:
-            loss = loss / 2.
+            loss = loss / 2.0
 
         return loss
 

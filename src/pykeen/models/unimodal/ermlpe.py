@@ -15,7 +15,7 @@ from ...nn.emb import EmbeddingSpecification
 from ...typing import Hint, Initializer
 
 __all__ = [
-    'ERMLPE',
+    "ERMLPE",
 ]
 
 
@@ -51,7 +51,7 @@ class ERMLPE(EntityRelationEmbeddingModel):
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]] = dict(
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
-        hidden_dim=dict(type=int, low=5, high=9, scale='power_two'),
+        hidden_dim=dict(type=int, low=5, high=9, scale="power_two"),
         input_dropout=DEFAULT_DROPOUT_HPO_RANGE,
         hidden_dropout=DEFAULT_DROPOUT_HPO_RANGE,
     )

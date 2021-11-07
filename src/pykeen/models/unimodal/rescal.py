@@ -14,7 +14,7 @@ from ...regularizers import LpRegularizer, Regularizer
 from ...typing import Hint, Initializer
 
 __all__ = [
-    'RESCAL',
+    "RESCAL",
 ]
 
 
@@ -52,7 +52,7 @@ class RESCAL(EntityRelationEmbeddingModel):
     #: The LP settings used by [nickel2011]_ for for RESCAL
     regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = dict(
         weight=10,
-        p=2.,
+        p=2.0,
         normalize=True,
     )
 

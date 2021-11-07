@@ -15,7 +15,7 @@ from ...nn.modules import StructuredEmbeddingInteraction
 from ...typing import Constrainer, Initializer
 
 __all__ = [
-    'StructuredEmbedding',
+    "StructuredEmbedding",
 ]
 
 

@@ -9,21 +9,14 @@ from typing import Iterable, Mapping
 import numpy as np
 import pandas
 
-from pykeen.datasets import Dataset, Nations, analysis as dataset_analysis
+from pykeen.datasets import Dataset, Nations
+from pykeen.datasets import analysis as dataset_analysis
 from pykeen.triples import analysis as triple_analysis
 
 
 def _old_skyline(xs):
     # naive implementation, O(n2)
-    return {
-        (s, c)
-        for s, c in xs
-        if not any(
-            s2 >= s and c2 >= c
-            for s2, c2 in xs
-            if (s, c) != (s2, c2)
-        )
-    }
+    return {(s, c) for s, c in xs if not any(s2 >= s and c2 >= c for s2, c2 in xs if (s, c) != (s2, c2))}
 
 
 class TestUtils(unittest.TestCase):
@@ -32,10 +25,12 @@ class TestUtils(unittest.TestCase):
     def test_skyline(self):
         """Test the skyline function."""
         n = 500
-        pairs = list(zip(
-            np.random.randint(low=0, high=200, size=n, dtype=int),
-            np.random.uniform(0, 6, size=n),
-        ))
+        pairs = list(
+            zip(
+                np.random.randint(low=0, high=200, size=n, dtype=int),
+                np.random.uniform(0, 6, size=n),
+            )
+        )
         self.assertEqual(set(_old_skyline(pairs)), set(triple_analysis._get_skyline(pairs)))
 
 
@@ -51,20 +46,24 @@ def _test_count_dataframe(
     assert isinstance(df, pandas.DataFrame)
 
     expected_columns = {triple_analysis.COUNT_COLUMN_NAME}
-    expected_columns.update(_check_labels(
-        df=df,
-        labels=labels,
-        id_column_name=triple_analysis.ENTITY_ID_COLUMN_NAME,
-        label_column_name=triple_analysis.ENTITY_LABEL_COLUMN_NAME,
-        label_to_id=dataset.entity_to_id,
-    ))
-    expected_columns.update(_check_labels(
-        df=df,
-        labels=labels,
-        id_column_name=triple_analysis.RELATION_ID_COLUMN_NAME,
-        label_column_name=triple_analysis.RELATION_LABEL_COLUMN_NAME,
-        label_to_id=dataset.relation_to_id,
-    ))
+    expected_columns.update(
+        _check_labels(
+            df=df,
+            labels=labels,
+            id_column_name=triple_analysis.ENTITY_ID_COLUMN_NAME,
+            label_column_name=triple_analysis.ENTITY_LABEL_COLUMN_NAME,
+            label_to_id=dataset.entity_to_id,
+        )
+    )
+    expected_columns.update(
+        _check_labels(
+            df=df,
+            labels=labels,
+            id_column_name=triple_analysis.RELATION_ID_COLUMN_NAME,
+            label_column_name=triple_analysis.RELATION_LABEL_COLUMN_NAME,
+            label_to_id=dataset.relation_to_id,
+        )
+    )
 
     if not merge_subsets:
         expected_columns.add(dataset_analysis.SUBSET_COLUMN_NAME)
@@ -76,10 +75,16 @@ def _test_count_dataframe(
         expected_columns.add(triple_analysis.ENTITY_POSITION_COLUMN_NAME)
 
         # check value range side
-        assert df[triple_analysis.ENTITY_POSITION_COLUMN_NAME].isin({
-            triple_analysis.POSITION_HEAD,
-            triple_analysis.POSITION_TAIL,
-        }).all()
+        assert (
+            df[triple_analysis.ENTITY_POSITION_COLUMN_NAME]
+            .isin(
+                {
+                    triple_analysis.POSITION_HEAD,
+                    triple_analysis.POSITION_TAIL,
+                }
+            )
+            .all()
+        )
 
     # check columns
     assert expected_columns == set(df.columns)

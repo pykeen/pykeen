@@ -46,12 +46,15 @@ class TestRandom(unittest.TestCase):
                 relative_delta=relative_delta,
                 is_better=is_better,
             ):
-                self.assertEqual(is_better, is_improvement(
-                    best_value=best_value,
-                    current_value=current_value,
-                    larger_is_better=larger_is_better,
-                    relative_delta=relative_delta,
-                ))
+                self.assertEqual(
+                    is_better,
+                    is_improvement(
+                        best_value=best_value,
+                        current_value=current_value,
+                        larger_is_better=larger_is_better,
+                        relative_delta=relative_delta,
+                    ),
+                )
 
 
 class LogCallWrapper:
@@ -119,7 +122,7 @@ class TestEarlyStopping(unittest.TestCase):
 
             if not should_stop:
                 # check storing of results
-                assert self.stopper.results == self.mock_losses[:epoch + 1]
+                assert self.stopper.results == self.mock_losses[: epoch + 1]
 
                 # check ring buffer
                 if epoch >= self.patience:
@@ -131,7 +134,7 @@ class TestEarlyStopping(unittest.TestCase):
             self.assertFalse(self.stopper.should_stop(epoch=epoch))
         self.assertTrue(self.stopper.should_stop(epoch=epoch))
 
-    @unittest.skipUnless(mlflow is not None, reason='MLFlow not installed')
+    @unittest.skipUnless(mlflow is not None, reason="MLFlow not installed")
     def test_result_logging_with_mlflow(self):
         """Test whether the MLFLow result logger works."""
         self.stopper.result_tracker = MLFlowResultTracker()
@@ -189,7 +192,7 @@ class TestEarlyStoppingRealWorld(unittest.TestCase):
             evaluation_triples_factory=nations.validation,
             patience=self.patience,
             relative_delta=self.relative_delta,
-            metric='mean_rank',
+            metric="mean_rank",
         )
         training_loop = SLCWATrainingLoop(
             model=model,
@@ -208,5 +211,5 @@ class TestEarlyStoppingRealWorld(unittest.TestCase):
         self.assertEqual(
             self.stop_epoch,
             (len(losses) + 2 * stopper.frequency),
-            msg='Did not stop early like it should have',
+            msg="Did not stop early like it should have",
         )

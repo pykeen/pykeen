@@ -9,8 +9,11 @@ from urllib.request import urlopen
 
 from pykeen.datasets import Kinships, Nations, dataset_resolver
 from pykeen.datasets.base import (
-    PackedZipRemoteDataset, SingleTabbedDataset, TarFileRemoteDataset,
-    TarFileSingleDataset, UnpackedRemoteDataset,
+    PackedZipRemoteDataset,
+    SingleTabbedDataset,
+    TarFileRemoteDataset,
+    TarFileSingleDataset,
+    UnpackedRemoteDataset,
 )
 from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH, NATIONS_VALIDATE_PATH
 from tests import cases, constants
@@ -26,28 +29,27 @@ class TestAnnotated(unittest.TestCase):
                 try:
                     docdata = cls.__docdata__
                 except AttributeError:
-                    self.fail('missing __docdata__')
-                self.assertIn('name', docdata)
-                self.assertIsInstance(docdata['name'], str)
-                self.assertIn('statistics', docdata)
-                self.assertIn('citation', docdata)
+                    self.fail("missing __docdata__")
+                self.assertIn("name", docdata)
+                self.assertIsInstance(docdata["name"], str)
+                self.assertIn("statistics", docdata)
+                self.assertIn("citation", docdata)
 
                 # Check minimal statistics
-                for k in ('entities', 'relations', 'triples'):
-                    self.assertIn(k, docdata['statistics'], msg=f'statistics are missing {k}')
-                    self.assertIsInstance(docdata['statistics'][k], int)
+                for k in ("entities", "relations", "triples"):
+                    self.assertIn(k, docdata["statistics"], msg=f"statistics are missing {k}")
+                    self.assertIsInstance(docdata["statistics"][k], int)
 
                 # Check statistics for pre-stratified datasets
-                if not docdata.get('single'):
-                    for k in ('training', 'testing', 'validation'):
-                        self.assertIn(k, docdata['statistics'])
-                        self.assertIsInstance(docdata['statistics'][k], int)
+                if not docdata.get("single"):
+                    for k in ("training", "testing", "validation"):
+                        self.assertIn(k, docdata["statistics"])
+                        self.assertIsInstance(docdata["statistics"][k], int)
 
                 # Check either a github link or author/publication information is given
-                citation = docdata['citation']
+                citation = docdata["citation"]
                 self.assertTrue(
-                    ('author' in citation and 'link' in citation and 'year' in citation)
-                    or 'github' in citation,
+                    ("author" in citation and "link" in citation and "year" in citation) or "github" in citation,
                 )
 
 
@@ -68,12 +70,12 @@ class MockTarFileSingleDataset(TarFileSingleDataset):
         super().__init__(
             url=...,
             name=...,
-            relative_path='nations/train.txt',
+            relative_path="nations/train.txt",
             cache_root=cache_root,
         )
 
     def _get_path(self) -> str:
-        return constants.RESOURCES.joinpath('nations.tar.gz')
+        return constants.RESOURCES.joinpath("nations.tar.gz")
 
 
 class MockTarFileRemoteDataset(TarFileRemoteDataset):
@@ -81,11 +83,11 @@ class MockTarFileRemoteDataset(TarFileRemoteDataset):
 
     def __init__(self, cache_root: str):
         super().__init__(
-            url=constants.RESOURCES.joinpath('nations.tar.gz').as_uri(),
+            url=constants.RESOURCES.joinpath("nations.tar.gz").as_uri(),
             cache_root=cache_root,
-            relative_testing_path=pathlib.PurePath('nations', 'test.txt'),
-            relative_training_path=pathlib.PurePath('nations', 'train.txt'),
-            relative_validation_path=pathlib.PurePath('nations', 'valid.txt'),
+            relative_testing_path=pathlib.PurePath("nations", "test.txt"),
+            relative_training_path=pathlib.PurePath("nations", "train.txt"),
+            relative_validation_path=pathlib.PurePath("nations", "valid.txt"),
         )
 
     def _get_bytes(self) -> BytesIO:
@@ -108,11 +110,11 @@ class MockZipFileRemoteDataset(PackedZipRemoteDataset):
 
     def __init__(self, cache_root: str):
         super().__init__(
-            url=constants.RESOURCES.joinpath('nations.zip').as_uri(),
+            url=constants.RESOURCES.joinpath("nations.zip").as_uri(),
             cache_root=cache_root,
-            relative_testing_path=pathlib.PurePath('nations', 'test.txt'),
-            relative_training_path=pathlib.PurePath('nations', 'train.txt'),
-            relative_validation_path=pathlib.PurePath('nations', 'valid.txt'),
+            relative_testing_path=pathlib.PurePath("nations", "test.txt"),
+            relative_training_path=pathlib.PurePath("nations", "train.txt"),
+            relative_validation_path=pathlib.PurePath("nations", "valid.txt"),
         )
 
 
