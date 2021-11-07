@@ -32,9 +32,7 @@ class BoxEKG(ERModel):
     )
 
     loss_default = NSSALoss
-    loss_default_kwargs = dict(
-        margin=3, adversarial_temperature=2.0, reduction="sum"
-    )
+    loss_default_kwargs = dict(margin=3, adversarial_temperature=2.0, reduction="sum")
 
     def __init__(
         self,
