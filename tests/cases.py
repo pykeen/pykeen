@@ -1429,17 +1429,15 @@ class DecompositionTestCase(GenericTestCase[pykeen.nn.message_passing.Decomposit
 
     def test_forward(self):
         """Test the :meth:`Decomposition.forward` function."""
-        for node_keep_mask in [None, torch.rand(size=(self.factory.num_entities,)) < 0.5]:
-            for edge_weights in [None, torch.rand_like(self.source, dtype=torch.get_default_dtype())]:
-                y = self.instance(
-                    x=self.x,
-                    node_keep_mask=node_keep_mask,
-                    source=self.source,
-                    target=self.target,
-                    edge_type=self.edge_type,
-                    edge_weights=edge_weights,
-                )
-                assert y.shape == (self.x.shape[0], self.output_dim)
+        for edge_weights in [None, torch.rand_like(self.source, dtype=torch.get_default_dtype())]:
+            y = self.instance(
+                x=self.x,
+                source=self.source,
+                target=self.target,
+                edge_type=self.edge_type,
+                edge_weights=edge_weights,
+            )
+            assert y.shape == (self.x.shape[0], self.output_dim)
 
 
 class BasesDecompositionTestCase(DecompositionTestCase):
