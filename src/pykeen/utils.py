@@ -1106,6 +1106,8 @@ def product_normalise(input_tensor: torch.FloatTensor) -> torch.FloatTensor:
     r"""Normalise the input tensor along its embedding dimension so that the geometric mean is 1.
 
     :param input_tensor: An input tensor with final dimension $d$.
+
+    :returns: An output tensor whose last order is normalized to have a geometric mean of 1.
     """
     step1_tensor = torch.abs(input_tensor)  # Compute absolute value of all entries
     step2_tensor = step1_tensor + SANITY_EPSILON  # Prevent zero values by adding a sanity epsilon
@@ -1125,6 +1127,8 @@ def compute_box(
     :param base: The base position (box center) of the input relation embeddings.
     :param delta: The base shape of the input relation embeddings.
     :param size: The size scalar vectors of the input relation embeddings.
+
+    :returns: Lower and upper bounds of the box whose embeddings are provided as input.
     """
     size_pos = torch.nn.functional.elu(size) + 1  # Enforce that sizes are strictly positive by passing through ELU
     delta_norm = product_normalise(delta)  # Shape vector is normalized using the above helper function
@@ -1159,6 +1163,8 @@ def point_to_box_distance(
             |p-c|/(w+1) & l <= p <+ h \\
             |p-c|*(w+1) - 0.5*w*((w+1)-1/(w+1)) & otherwise \\
         \end{cases}
+
+    :returns: Element-wise distance function scores as per the definition above
     """
     widths = box_highs - box_lows
     widths_p1 = widths + 1  # Compute width plus 1
