@@ -1,0 +1,10 @@
+metadata:
+  title: Learn YAGO3-10 Dataset with BoxE as described by Abboud et al., 2020
+results:
+  hits_at_k:
+    FIXME:
+      '10': 0.691
+  mean_rank:
+    FIXME: 1022
+  mean_reciprocal_rank:
+    FIXME: 0.560
