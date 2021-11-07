@@ -726,8 +726,7 @@ class RGCNRepresentations(RepresentationModule):
         for layer in self.layers:
             x = layer(
                 x=x,
-                source=sources,
-                target=targets,
+                edge_index=(sources, targets),
                 edge_type=edge_types,
                 edge_weights=edge_weights,
             )
