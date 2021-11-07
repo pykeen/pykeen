@@ -288,10 +288,9 @@ class TestRGCNBlock(cases.BaseRGCNTest):
             num_blocks=3,
         ),
         "edge_weighting": "symmetric",
-        "use_batch_norm": True,
     }
-    #: (scale & bias for BN) * layers
-    num_constant_init = 4
+    #: one bias per layer
+    num_constant_init = 2
 
 
 class TestRotatE(cases.ModelTestCase):

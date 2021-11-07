@@ -4,12 +4,15 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Optional, Tuple, Union
+from typing import Any, Mapping, Optional, Tuple, Union
 
 import torch
 from class_resolver import Resolver
+from class_resolver.api import Hint
 from torch import nn
 from torch.nn import functional
+
+from pykeen.utils import activation_resolver
 
 __all__ = [
     "Decomposition",
@@ -102,18 +105,16 @@ class Decomposition(nn.Module, ABC):
     def forward(
         self,
         x: torch.FloatTensor,
-        node_keep_mask: Optional[torch.BoolTensor],
         source: torch.LongTensor,
         target: torch.LongTensor,
         edge_type: torch.LongTensor,
         edge_weights: Optional[torch.FloatTensor] = None,
+        accumulator: Optional[torch.FloatTensor] = None,
     ) -> torch.FloatTensor:
         """Relation-specific message passing from source to target.
 
         :param x: shape: (num_nodes, input_dim)
             The node representations.
-        :param node_keep_mask: shape: (num_nodes,)
-            The node-keep mask for self-loop dropout.
         :param source: shape: (num_edges,)
             The source indices.
         :param target: shape: (num_edges,)
@@ -122,6 +123,9 @@ class Decomposition(nn.Module, ABC):
             The edge types.
         :param edge_weights: shape: (num_edges,)
             Precomputed edge weights.
+        :param accumulator: shape: (num_nodes, output_dim)
+            a pre-allocated output accumulator. may be used if multiple different message passing steps are performed
+            and accumulated by sum. If none is given, create an accumulator filled with zeroes.
 
         :return: shape: (num_nodes, output_dim)
             The enriched node embeddings.
@@ -192,19 +196,17 @@ class BasesDecomposition(Decomposition):
         )
         self.relation_base_weights = nn.Parameter(
             torch.empty(
-                num_relations + 1,
+                num_relations,
                 num_bases,
             ),
             requires_grad=True,
         )
-
         self.memory_intense = memory_intense
 
     def reset_parameters(self):  # noqa: D102
         nn.init.xavier_normal_(self.bases)
         # Random convex-combination of bases for initialization (guarantees that initial weight matrices are
         # initialized properly)
-        # We have one additional relation for self-loops
         nn.init.uniform_(self.relation_base_weights)
         functional.normalize(self.relation_base_weights.data, p=1, dim=1, out=self.relation_base_weights.data)
 
@@ -290,34 +292,24 @@ class BasesDecomposition(Decomposition):
     def forward(
         self,
         x: torch.FloatTensor,
-        node_keep_mask: Optional[torch.BoolTensor],
         source: torch.LongTensor,
         target: torch.LongTensor,
         edge_type: torch.LongTensor,
         edge_weights: Optional[torch.FloatTensor] = None,
+        accumulator: Optional[torch.FloatTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
-        # self-loops first
-        # the last relation_id refers to the self-loop
-        w = self._get_weight(relation_id=self.num_relations)
-        if node_keep_mask is not None:
-            assert node_keep_mask.shape == x.shape[:1]
-            out = torch.empty_like(x)
-            out[node_keep_mask] = x[node_keep_mask] @ w
-            out[~node_keep_mask] = 0.0
-        else:
-            out = x @ w
-
+        if accumulator is None:
+            accumulator = torch.zeros_like(x)
         if self.memory_intense:
             _forward = self._forward_memory_intense
         else:
             _forward = self._forward_memory_light
-
         return _forward(
             x=x,
             source=source,
             target=target,
             edge_type=edge_type,
-            out=out,
+            out=accumulator,
             edge_weights=edge_weights,
         )
 
@@ -390,22 +382,19 @@ class BlockDecomposition(Decomposition):
     def forward(
         self,
         x: torch.FloatTensor,
-        node_keep_mask: Optional[torch.BoolTensor],
         source: torch.LongTensor,
         target: torch.LongTensor,
         edge_type: torch.LongTensor,
         edge_weights: Optional[torch.FloatTensor] = None,
+        accumulator: Optional[torch.FloatTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
+        # accumulator
+        if accumulator is None:
+            accumulator = torch.zeros_like(x)
+
         # view as blocks
         x = x.view(-1, self.num_blocks, self.block_size)
-
-        # self-loop first
-        out = torch.zeros_like(x)
-        w = self.blocks[-1]
-        if node_keep_mask is not None:
-            out[node_keep_mask] = torch.einsum("nbi,bij->nbj", x[node_keep_mask], w)
-        else:
-            out = torch.einsum("nbi,bij->nbj", x, w)
+        accumulator = accumulator.view(-1, self.num_blocks, self.block_size)
 
         # other relations
         for r in range(self.num_relations):
@@ -431,9 +420,149 @@ class BlockDecomposition(Decomposition):
                 m = m * weights_r.unsqueeze(dim=1).unsqueeze(dim=2)
 
             # message aggregation
-            out.index_add_(dim=0, index=target_r, source=m)
+            accumulator.index_add_(dim=0, index=target_r, source=m)
 
-        return out.reshape(-1, self.output_dim)
+        return accumulator.view(-1, self.output_dim)
+
+
+class RGCNLayer(nn.Module):
+    r"""
+    An RGCN layer from [schlichtkrull2018]_ updated to match the official implementation.
+
+    This layer uses separate decompositions for forward and backward edges (i.e., "normal" and implicitly created
+    inverse relations), as well as a separate transformation for self-loops.
+
+    Ignoring dropouts, decomposition and normalization, it can be written as
+
+    .. math ::
+        y_i = \sigma(
+            W^s x_i
+            + \sum_{(e_j, r, e_i) \in \mathcal{T}} W^f_r x_j
+            + \sum_{(e_i, r, e_j) \in \mathcal{T}} W^b_r x_j
+            + b
+        )
+
+    where $b, W^s, W^f_r, W^b_r$ are trainable weights. $W^f_r, W^b_r$ are relation-specific, and commonly enmploy a
+    weight-sharing mechanism, cf. Decomposition. $\sigma$ is an activation function. The individual terms in both sums
+    are typically weighted. This is implemented by EdgeWeighting. Moreover, RGCN employs an edge-dropout, however,
+    this needs to be done outside of an individual layer, since the same edges are dropped across all layers. In
+    contrast, the self-loop dropout is layer-specific.
+    """
+
+    def __init__(
+        self,
+        input_dim: int,
+        num_relations: int,
+        output_dim: Optional[int] = None,
+        use_bias: bool = True,
+        activation: Hint[nn.Module] = None,
+        activation_kwargs: Optional[Mapping[str, Any]] = None,
+        self_loop_dropout: float = 0.2,
+        decomposition: Hint[Decomposition] = None,
+        decomposition_kwargs: Optional[Mapping[str, Any]] = None,
+    ):
+        """
+        Initialize the layer.
+
+        :param input_dim: >0
+            the input dimension
+        :param num_relations:
+            the number of relations
+        :param output_dim: >0
+            the output dimension. If none is given, use the input dimension.
+        :param use_bias:
+            whether to use a trainable bias
+        :param activation:
+            the activation function to use. Defaults to None, i.e., the identity function serves as activation.
+        :param activation_kwargs:
+            additional keyword-based arguments passed to the activation function for instantiation
+        :param self_loop_dropout: 0 <= self_loop_dropout <= 1
+            the dropout to use for self-loops
+        :param decomposition:
+            the decomposition to use, cf. Decomposition and decomposition_resolver
+        :param decomposition_kwargs:
+            the keyword-based arguments passed to the decomposition for instantiation
+        """
+        super().__init__()
+        # cf. https://github.com/MichSchli/RelationPrediction/blob/c77b094fe5c17685ed138dae9ae49b304e0d8d89/code/encoders/message_gcns/gcn_basis.py#L22-L24  # noqa: E501
+        # there are separate decompositions for forward and backward relations.
+        # the self-loop weight is not decomposed.
+        self.fwd = decomposition_resolver.make(
+            query=decomposition,
+            pos_kwargs=decomposition_kwargs,
+            input_dim=input_dim,
+            num_relations=num_relations,
+        )
+        output_dim = self.fwd.output_dim
+        self.bwd = decomposition_resolver.make(
+            query=decomposition,
+            pos_kwargs=decomposition_kwargs,
+            input_dim=input_dim,
+            num_relations=num_relations,
+        )
+        self.w_self_loop = nn.Parameter(torch.empty(input_dim, output_dim))
+        self.bias = nn.Parameter(torch.empty(output_dim)) if use_bias else None
+        self.dropout = nn.Dropout(p=self_loop_dropout)
+        if activation is not None:
+            activation = activation_resolver.make(query=activation, pos_kwargs=activation_kwargs)
+        self.activation = activation
+
+    def reset_parameters(self):  # noqa: D102
+        if self.bias is not None:
+            nn.init.zeros_(self.bias)
+        nn.init.xavier_normal_(self.w_self_loop)
+
+    def forward(
+        self,
+        x: torch.FloatTensor,
+        source: torch.LongTensor,
+        target: torch.LongTensor,
+        edge_type: torch.LongTensor,
+        edge_weights: Optional[torch.FloatTensor] = None,
+    ):
+        """
+        Calculate enriched entity representations.
+
+        :param x: shape: (num_entities, input_dim)
+            The input entity representations.
+        :param source: shape: (num_triples,)
+            The indices of the source entity per triple.
+        :param target: shape: (num_triples,)
+            The indices of the target entity per triple.
+        :param edge_type: shape: (num_triples,)
+            The relation type per triple.
+        :param edge_weights: shape: (num_triples,)
+            Scalar edge weights per triple.
+
+        :return: shape: (num_entities, output_dim)
+            Enriched entity representations.
+        """
+        # self-loop
+        y = self.dropout(x @ self.w_self_loop)
+        # forward messages
+        y = self.fwd(
+            x=x,
+            source=source,
+            target=target,
+            edge_type=edge_type,
+            edge_weights=edge_weights,
+            accumulator=y,
+        )
+        # backward messages
+        y = self.bwd(
+            x=x,
+            source=target,
+            target=source,
+            edge_type=edge_type,
+            edge_weights=edge_weights,
+            accumulator=y,
+        )
+        if self.bias is not None:
+            y = y + self.bias
+        # activation
+        if self.activation is not None:
+            y = self.activation(y)
+        return y
 
 
 decomposition_resolver = Resolver.from_subclasses(base=Decomposition, default=BasesDecomposition)

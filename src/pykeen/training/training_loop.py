@@ -201,7 +201,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         drop_last: Optional[bool] = None,
         callbacks: TrainingCallbackHint = None,
         gradient_clipping_max_norm: Optional[float] = None,
-        gradient_clipping_norm_type: Union[float] = None,
+        gradient_clipping_norm_type: Optional[float] = None,
         gradient_clipping_max_abs_value: Optional[float] = None,
     ) -> Optional[List[float]]:
         """Train the KGE model.
@@ -406,7 +406,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         drop_last: Optional[bool] = None,
         callbacks: TrainingCallbackHint = None,
         gradient_clipping_max_norm: Optional[float] = None,
-        gradient_clipping_norm_type: Union[float] = None,
+        gradient_clipping_norm_type: Optional[float] = None,
         gradient_clipping_max_abs_value: Optional[float] = None,
     ) -> Optional[List[float]]:
         """Train the KGE model, see docstring for :func:`TrainingLoop.train`."""
@@ -541,7 +541,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             # this is already done
             drop_last = False
         else:
-            sampler = None
             shuffle = True
 
         if num_workers is None:
@@ -568,12 +567,11 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         logger.debug(f"using stopper: {stopper}")
 
         train_data_loader = DataLoader(
-            sampler=sampler,
             dataset=training_instances,
-            batch_size=batch_size,
-            shuffle=shuffle,
             num_workers=num_workers,
+            batch_size=batch_size,
             drop_last=drop_last,
+            shuffle=shuffle,
         )
 
         # Save the time to track when the saved point was available
