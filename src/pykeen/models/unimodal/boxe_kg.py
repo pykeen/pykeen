@@ -3,6 +3,7 @@ from typing import Any, ClassVar, Mapping, Optional
 from torch.nn.init import uniform_
 
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
+from ...losses import NSSALoss
 from ...models import ERModel
 from ...nn.emb import EmbeddingSpecification
 from ...nn.init import uniform_norm_
@@ -28,6 +29,11 @@ class BoxEKG(ERModel):
     hpo_default: ClassVar[Mapping[str, Any]] = dict(
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
         p=dict(type=int, low=1, high=2),
+    )
+
+    loss_default = NSSALoss
+    loss_default_kwargs = dict(
+        margin=3, adversarial_temperature=2.0, reduction="sum"
     )
 
     def __init__(
