@@ -577,4 +577,40 @@ class RGCNLayer(nn.Module):
         return y
 
 
+class PygRGCNLayer(Layer):
+    """An alternate implementation of the R-GCN layer using PyG."""
+
+    def __init__(
+        self,
+        input_dim: int,
+        num_relations: int,
+        output_dim: Optional[int] = None,
+        use_bias: bool = True,
+    ):
+        """Initialize the PyG convolution."""
+        from torch_geometric.nn import RGCNConv
+
+        super().__init__()
+        self.conv = RGCNConv(
+            in_channels=input_dim,
+            out_channels=output_dim,
+            num_relations=num_relations,
+            bias=use_bias,
+        )
+
+    def reset_parameters(self):  # noqa: D102
+        self.conv.reset_parameters()
+
+    def forward(
+        self,
+        x: torch.FloatTensor,
+        edge_index: Tuple[torch.LongTensor, torch.LongTensor],
+        edge_type: torch.LongTensor,
+        edge_weights: Optional[torch.FloatTensor] = None,
+    ):  # noqa: D102
+        if edge_weights is not None:
+            raise NotImplementedError
+        return self.conv(x, edge_index, edge_type)
+
+
 decomposition_resolver = Resolver.from_subclasses(base=Decomposition, default=BasesDecomposition)
