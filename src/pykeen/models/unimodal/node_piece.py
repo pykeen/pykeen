@@ -120,7 +120,7 @@ class NodePiece(ERModel):
             # parameters
             node_piece_kwargs["aggregation"] = self.mlp = _ConcatMLP(
                 num_tokens=num_tokens,
-                embedding_dim=embedding_specification.embedding_dim,
+                embedding_dim=embedding_dim,
             )
         entity_representations = NodePieceRepresentation(
             triples_factory=triples_factory,
