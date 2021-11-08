@@ -226,6 +226,12 @@ class TestKG2EWithEL(cases.BaseKG2ETest):
     }
 
 
+class TestNodePiece(cases.ModelTestCase):
+    """Test the NodePiece model."""
+
+    cls = pykeen.models.NodePiece
+
+
 class TestNTN(cases.ModelTestCase):
     """Test the NTN model."""
 
