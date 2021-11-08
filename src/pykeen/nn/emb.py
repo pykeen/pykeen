@@ -1072,8 +1072,10 @@ class SingleCompGCNRepresentation(RepresentationModule):
         return x
 
 
+# This is for conveniently choosing a configuration similar to the paper. For more complex aggregation mechanisms, 
+# pass an arbitrary callable instead.
 class ConcatMLP(nn.Sequential):
-    """An MLP applied to the concatenation of token representations."""
+    """A 2-layer MLP with ReLU activation and dropout applied to the concatenation of token representations."""
 
     def __init__(
         self,
@@ -1081,6 +1083,16 @@ class ConcatMLP(nn.Sequential):
         embedding_dim: int,
         dropout: float = 0.1,
     ):
+        """
+        Initialize the module.
+
+        :param num_tokens:
+            the number of tokens
+        :param embedding_dim:
+            the embedding dimension for a single token
+        :param dropout:
+            the dropout value on the hidden layer
+        """
         super().__init__(
             nn.Linear(num_tokens * embedding_dim, 2 * embedding_dim),
             nn.Dropout(dropout),
