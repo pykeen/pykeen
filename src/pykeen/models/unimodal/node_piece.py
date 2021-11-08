@@ -1,14 +1,56 @@
 """A wrapper which combines an interaction function with NodePiece entity representations."""
 
-from typing import Any, ClassVar, Mapping, Optional
+from typing import Any, Callable, ClassVar, Mapping, Optional, Union
 
+import torch
 from class_resolver.api import HintOrType
+from torch import nn
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.emb import EmbeddingSpecification, NodePieceRepresentation
 from ...nn.modules import DistMultInteraction, Interaction
 from ...triples.triples_factory import CoreTriplesFactory
+
+__all__ = [
+    "NodePiece",
+]
+
+
+# This is for conveniently choosing a configuration similar to the paper. For more complex aggregation mechanisms,
+# pass an arbitrary callable instead.
+# cf. https://github.com/migalkin/NodePiece/blob/d731c9990cdd7835f01f129f6134c3bff576821f/lp_rp/pykeen105/nodepiece_rotate.py#L57-L65
+class ConcatMLP(nn.Sequential):
+    """A 2-layer MLP with ReLU activation and dropout applied to the concatenation of token representations."""
+
+    def __init__(
+        self,
+        num_tokens: int,
+        embedding_dim: int,
+        dropout: float = 0.1,
+    ):
+        """
+        Initialize the module.
+
+        :param num_tokens:
+            the number of tokens
+        :param embedding_dim:
+            the embedding dimension for a single token
+        :param dropout:
+            the dropout value on the hidden layer
+        """
+        super().__init__(
+            nn.Linear(num_tokens * embedding_dim, 2 * embedding_dim),
+            nn.Dropout(dropout),
+            nn.ReLU(),
+            nn.Linear(2 * embedding_dim, embedding_dim),
+        )
+
+    def forward(self, xs: torch.FloatTensor, dim: int) -> torch.FloatTensor:  # noqa: D102
+        # dim is only a parameter to match the signature of torch.mean / torch.sum
+        # this class is not thought to be usable from outside
+        assert dim == -2
+        return super().forward(xs.view(*xs.shape[:-2], -1))
 
 
 class NodePiece(ERModel):
@@ -32,10 +74,12 @@ class NodePiece(ERModel):
         self,
         *,
         triples_factory: CoreTriplesFactory,
+        num_tokens: int,
         embedding_dim: int = 64,
         embedding_specification: Optional[EmbeddingSpecification] = None,
         relation_representations: Optional[EmbeddingSpecification] = None,
         interaction: HintOrType[Interaction] = DistMultInteraction,
+        aggregation: Union[str, Callable[[torch.Tensor, int], torch.Tensor]] = None,
         node_piece_kwargs: Optional[Mapping[str, Any]] = None,
         **kwargs,
     ) -> None:
@@ -60,10 +104,21 @@ class NodePiece(ERModel):
         embedding_specification = embedding_specification or EmbeddingSpecification(
             shape=(embedding_dim,),
         )
+        node_piece_kwargs = node_piece_kwargs or {}
+        node_piece_kwargs["k"] = num_tokens
+        if aggregation == "mlp":
+            # needs to be assigned to attribute to make sure that the trainable parameters are part of the model
+            # parameters
+            self.mlp = ConcatMLP(
+                num_tokens=num_tokens,
+                embedding_dim=embedding_specification.embedding_dim,
+            )
+            aggregation = self.mlp.forward
+            node_piece_kwargs["aggregation"] = aggregation
         entity_representations = NodePieceRepresentation(
             triples_factory=triples_factory,
             token_representation=embedding_specification,
-            **(node_piece_kwargs or {}),
+            **node_piece_kwargs,
         )
         super().__init__(
             triples_factory=triples_factory,
