@@ -64,6 +64,9 @@
    Conference on Web Search and Data Mining.
 .. [galkin2021] Galkin, M., *et al.* (2021) `NodePiece: Compositional and Parameter-Efficient Representations
    of Large Knowledge Graphs <https://arxiv.org/abs/2106.12144>`_. *arXiv*, 2106.12144.
+.. [zaheer2017] Zaheer, M., *et al.* (2017). `Deep sets
+   <https://papers.nips.cc/paper/2017/hash/f22e4747da1aa27e363d86d40ff442fe-Abstract.html>`_.
+   *Advances in Neural Information Processing Systems*, 2017-December(ii), 3392–3402.
 """
 
 from .compgcn import CompGCN

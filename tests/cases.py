@@ -1311,8 +1311,8 @@ class BaseRGCNTest(ModelTestCase):
 class RepresentationTestCase(GenericTestCase[RepresentationModule]):
     """Common tests for representation modules."""
 
-    batch_size: int = 2
-    num_negatives: int = 3
+    batch_size: ClassVar[int] = 2
+    num_negatives: ClassVar[int] = 3
 
     def _check_result(self, x: torch.FloatTensor, prefix_shape: Tuple[int, ...]):
         """Check the result."""
