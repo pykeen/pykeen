@@ -1072,7 +1072,7 @@ class SingleCompGCNRepresentation(RepresentationModule):
         return x
 
 
-# This is for conveniently choosing a configuration similar to the paper. For more complex aggregation mechanisms, 
+# This is for conveniently choosing a configuration similar to the paper. For more complex aggregation mechanisms,
 # pass an arbitrary callable instead.
 class ConcatMLP(nn.Sequential):
     """A 2-layer MLP with ReLU activation and dropout applied to the concatenation of token representations."""
