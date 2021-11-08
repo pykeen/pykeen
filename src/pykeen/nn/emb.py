@@ -20,8 +20,6 @@ import torch.nn
 from torch import nn
 from torch.nn import functional
 
-from pykeen import triples
-
 from .compositions import CompositionModule, composition_resolver
 from .init import (
     init_phases,
