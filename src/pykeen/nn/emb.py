@@ -1072,6 +1072,27 @@ class SingleCompGCNRepresentation(RepresentationModule):
         return x
 
 
+class ConcatMLP(nn.Sequential):
+    """An MLP applied to the concatenation of token representations."""
+
+    def __init__(
+        self,
+        num_tokens: int,
+        embedding_dim: int,
+        dropout: float = 0.1,
+    ):
+        super().__init__(
+            nn.Linear(num_tokens * embedding_dim, 2 * embedding_dim),
+            nn.Dropout(dropout),
+            nn.ReLU(),
+            nn.Linear(2 * embedding_dim, embedding_dim),
+        )
+
+    def forward(xs: torch.FloatTensor, dim: int) -> torch.FloatTensor:  # noqa: D102
+        assert dim == -2
+        return super().forward(xs.view(*xs.shape[:-2], -1))
+
+
 class NodePieceRepresentation(RepresentationModule):
     r"""
     Basic implementation of node piece decomposition [galkin2021]_.
@@ -1097,7 +1118,7 @@ class NodePieceRepresentation(RepresentationModule):
         *,
         triples_factory: CoreTriplesFactory,
         token_representation: Union[EmbeddingSpecification, RepresentationModule],
-        aggregation: Callable[[torch.Tensor, int], torch.Tensor] = None,
+        aggregation: Union[str, Callable[[torch.Tensor, int], torch.Tensor]] = None,
         shape: Optional[Sequence[int]] = None,
         k: int = 1,
     ):
@@ -1147,6 +1168,13 @@ class NodePieceRepresentation(RepresentationModule):
         # normalize aggregation
         if aggregation is None:
             aggregation = torch.mean
+        elif aggregation == "mlp":
+            # cf. https://github.com/migalkin/NodePiece/blob/d731c9990cdd7835f01f129f6134c3bff576821f/lp_rp/pykeen105/nodepiece_rotate.py#L57-L65
+            self.mlp = ConcatMLP(
+                num_tokens=k,
+                embedding_dim=token_representation.embedding_dim,
+            )
+            aggregation = self.mlp.forward
         self.aggregation = aggregation
 
         # assign module
