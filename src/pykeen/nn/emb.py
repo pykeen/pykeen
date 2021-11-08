@@ -1151,7 +1151,8 @@ class NodePieceRepresentation(RepresentationModule):
             fill_value=2 * triples_factory.num_relations,  # padding ID
         )
         for e, rs in e2r.items():
-            assignment[e] = torch.as_tensor(data=random.choices(population=list(rs), k=k), dtype=torch.long)
+            rs = torch.as_tensor(data=list(rs), dtype=torch.long)
+            assignment[e] = rs[torch.randint(high=rs.numel(), size=(k,))]
         self.register_buffer(name="assignment", tensor=assignment)
 
     def forward(
