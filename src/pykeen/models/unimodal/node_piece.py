@@ -118,10 +118,11 @@ class NodePiece(ERModel):
         if aggregation == "mlp":
             # needs to be assigned to attribute to make sure that the trainable parameters are part of the model
             # parameters
-            node_piece_kwargs["aggregation"] = _ConcatMLP(
+            self.mlp _ConcatMLP(
                 num_tokens=num_tokens,
                 embedding_dim=embedding_dim,
             )
+            node_piece_kwargs["aggregation"] = self.mlp
         entity_representations = NodePieceRepresentation(
             triples_factory=triples_factory,
             token_representation=embedding_specification,
