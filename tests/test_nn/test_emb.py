@@ -66,6 +66,11 @@ class TensorEmbeddingTests(cases.RepresentationTestCase):
         shape=(3, 7),
     )
 
+# TODO consider making subclass of cases.RepresentationTestCase
+# that has num_entities, num_relations, num_triples, and
+# create_inverse_triples as well as a generate_triples_factory()
+# wrapper
+
 
 class RGCNRepresentationTests(cases.RepresentationTestCase):
     """Test RGCN representations."""
