@@ -1153,6 +1153,6 @@ class NodePiecesRepresentation(RepresentationModule):
 
         # aggregate
         # TODO: configurable aggregation
-        x = x.mean(dim=1)
+        x = x.mean(dim=-2)
 
         return x
