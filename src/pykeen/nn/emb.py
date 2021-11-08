@@ -42,6 +42,7 @@ __all__ = [
     "LiteralRepresentation",
     "EmbeddingSpecification",
     "RGCNRepresentations",
+    "NodePieceRepresentation",
     "CompGCNLayer",
     "CombinedCompGCNRepresentations",
     "SingleCompGCNRepresentation",
