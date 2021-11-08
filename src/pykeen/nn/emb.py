@@ -1072,9 +1072,9 @@ class SingleCompGCNRepresentation(RepresentationModule):
         return x
 
 
-class NodePiecesRepresentation(RepresentationModule):
+class NodePieceRepresentation(RepresentationModule):
     """
-    Basic implementation of node pieces decomposition.
+    Basic implementation of node piece decomposition [galkin2021]_.
 
     .. note ::
         This implementation currently only supports representation of entities by bag-of-relations.

@@ -113,10 +113,10 @@ class TestSingleCompGCNRepresentationTests(cases.RepresentationTestCase):
         return kwargs
 
 
-class NodePiecesTests(cases.RepresentationTestCase):
-    """Tests for node pieces representation."""
+class NodePieceTests(cases.RepresentationTestCase):
+    """Tests for node piece representation."""
 
-    cls = pykeen.nn.emb.NodePiecesRepresentation
+    cls = pykeen.nn.emb.NodePieceRepresentation
     num_entities: int = 8
     num_relations: int = 7
     num_triples: int = 31
