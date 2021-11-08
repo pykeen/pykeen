@@ -121,7 +121,9 @@ class NodePieceTests(cases.RepresentationTestCase):
     num_relations: int = 7
     num_triples: int = 31
     kwargs = dict(
-        shape=(3,),
+        token_representation=pykeen.nn.emb.EmbeddingSpecification(
+            shape=(3,),
+        )
     )
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
@@ -130,7 +132,7 @@ class NodePieceTests(cases.RepresentationTestCase):
             num_entities=self.num_entities,
             num_relations=self.num_relations,
             num_triples=self.num_triples,
-            create_inverse_triples=True,
+            create_inverse_triples=False,
         )
         return kwargs
 

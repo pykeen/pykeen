@@ -1088,25 +1088,43 @@ class NodePieceRepresentation(RepresentationModule):
 
     def __init__(
         self,
+        *,
         triples_factory: CoreTriplesFactory,
-        shape: Sequence[int],
+        token_representation: EmbeddingSpecification,
+        aggregation: Callable[[torch.Tensor, int], torch.Tensor] = None,
         k: int = 1,
+        **kwargs,
     ):
         """
         Initialize the representation.
 
         :param triples_factory:
             the triples factory
-        :param shape:
-            the shape of an individual representation
+        :param token_representation:
+            the token representation specification
+        :param aggregation:
+            aggregation of multiple token representations to a single entity representation
         :param k:
             the number of tokens for each entity.
         """
-        super().__init__(max_id=triples_factory.num_entities, shape=shape)
+        if triples_factory.create_inverse_triples:
+            raise NotImplementedError("Triples factories with inverse triples are currently not supported.")
 
-        # trainable token representations
-        # TODO: configurable initialization
-        self.tokens = nn.Parameter(data=torch.randn(size=(2 * triples_factory.num_relations + 1, *shape)))
+        # create token representations
+        tokens = token_representation.make(
+            num_embeddings=2 * triples_factory.num_relations + 1,  # normal relations + inverse relations + padding
+        )
+
+        # super init; has to happen *before* any parameter or buffer is assigned
+        super().__init__(max_id=triples_factory.num_entities, shape=tokens.shape, **kwargs)
+
+        # normalize aggregation
+        if aggregation is None:
+            aggregation = torch.mean
+        self.aggregation = aggregation
+
+        # assign module
+        self.tokens = tokens
 
         # tokenize: represent entities by bag of relations
         h, r, t = triples_factory.mapped_triples.t()
@@ -1134,7 +1152,6 @@ class NodePieceRepresentation(RepresentationModule):
         )
         for e, rs in e2r.items():
             assignment[e] = torch.as_tensor(data=random.choices(population=list(rs), k=k), dtype=torch.long)
-
         self.register_buffer(name="assignment", tensor=assignment)
 
     def forward(
@@ -1147,10 +1164,9 @@ class NodePieceRepresentation(RepresentationModule):
             token_ids = token_ids[indices]
 
         # lookup token representations, shape: (*, k, d)
-        x = self.tokens[token_ids]
+        x = self.tokens(token_ids)
 
         # aggregate
-        # TODO: configurable aggregation
-        x = x.mean(dim=-2)
+        x = self.aggregation(x, -2)
 
         return x
