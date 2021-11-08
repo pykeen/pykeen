@@ -105,16 +105,15 @@ class NodePiece(ERModel):
             shape=(embedding_dim,),
         )
         node_piece_kwargs = node_piece_kwargs or {}
-        node_piece_kwargs["k"] = num_tokens
+        # If it's already set, don't override
+        node_piece_kwargs.setdefault("k", num_tokens)
         if aggregation == "mlp":
             # needs to be assigned to attribute to make sure that the trainable parameters are part of the model
             # parameters
-            self.mlp = ConcatMLP(
+            node_piece_kwargs["aggregation"] = self.mlp = ConcatMLP(
                 num_tokens=num_tokens,
                 embedding_dim=embedding_specification.embedding_dim,
             )
-            aggregation = self.mlp.forward
-            node_piece_kwargs["aggregation"] = aggregation
         entity_representations = NodePieceRepresentation(
             triples_factory=triples_factory,
             token_representation=embedding_specification,
