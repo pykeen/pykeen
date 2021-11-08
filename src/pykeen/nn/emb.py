@@ -1171,9 +1171,12 @@ class NodePieceRepresentation(RepresentationModule):
             fill_value=2 * triples_factory.num_relations,  # padding ID
         )
         for e, rs in e2r.items():
-            rs = torch.as_tensor(data=list(rs), dtype=torch.long)
-            assignment[e] = rs[torch.randint(high=rs.numel(), size=(k,))]
+            assignment[e] = self._sample(torch.as_tensor(data=list(rs), dtype=torch.long), k)
         self.register_buffer(name="assignment", tensor=assignment)
+
+    @staticmethod
+    def _sample(rs: torch.LongTensor, k: int) -> torch.LongTensor:
+        return rs[torch.randint(high=rs.numel(), size=(k,))]
 
     def forward(
         self,
