@@ -14,12 +14,17 @@ import unittest_templates
 import pykeen.experiments
 import pykeen.models
 from pykeen.models import (
-    ERModel, EntityRelationEmbeddingModel, EvaluationOnlyModel, Model, _NewAbstractModel, _OldAbstractModel,
+    EntityRelationEmbeddingModel,
+    ERModel,
+    EvaluationOnlyModel,
+    Model,
+    _NewAbstractModel,
+    _OldAbstractModel,
     model_resolver,
 )
 from pykeen.models.multimodal.base import LiteralModel
-from pykeen.models.unimodal.node_piece import _ConcatMLP
 from pykeen.models.predict import get_novelty_mask, predict
+from pykeen.models.unimodal.node_piece import _ConcatMLP
 from pykeen.models.unimodal.trans_d import _project_entity
 from pykeen.nn import EmbeddingSpecification
 from pykeen.nn.emb import Embedding, NodePieceRepresentation

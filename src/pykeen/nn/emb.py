@@ -1087,7 +1087,7 @@ class NodePieceRepresentation(RepresentationModule):
     """
 
     #: the token representations
-    tokens: torch.FloatTensor
+    tokens: RepresentationModule
 
     #: the entity-to-token mapping
     assignment: torch.LongTensor

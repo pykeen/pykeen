@@ -2,7 +2,7 @@
 
 """A wrapper which combines an interaction function with NodePiece entity representations."""
 
-from typing import Any, Callable, ClassVar, Mapping, Optional, Union
+from typing import Any, Callable, ClassVar, Mapping, MutableMapping, Optional, Union
 
 import torch
 from class_resolver.api import HintOrType
@@ -88,7 +88,7 @@ class NodePiece(ERModel):
         relation_representations: Optional[EmbeddingSpecification] = None,
         interaction: HintOrType[Interaction] = DistMultInteraction,
         aggregation: Union[str, Callable[[torch.Tensor, int], torch.Tensor]] = None,
-        node_piece_kwargs: Optional[Mapping[str, Any]] = None,
+        node_piece_kwargs: Optional[MutableMapping[str, Any]] = None,
         **kwargs,
     ) -> None:
         """
