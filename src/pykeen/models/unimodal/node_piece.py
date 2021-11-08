@@ -19,11 +19,14 @@ __all__ = [
 ]
 
 
-# This is for conveniently choosing a configuration similar to the paper. For more complex aggregation mechanisms,
-# pass an arbitrary callable instead.
-# cf. https://github.com/migalkin/NodePiece/blob/d731c9990cdd7835f01f129f6134c3bff576821f/lp_rp/pykeen105/nodepiece_rotate.py#L57-L65
-class ConcatMLP(nn.Sequential):
-    """A 2-layer MLP with ReLU activation and dropout applied to the concatenation of token representations."""
+class _ConcatMLP(nn.Sequential):
+    """A 2-layer MLP with ReLU activation and dropout applied to the concatenation of token representations.
+
+    This is for conveniently choosing a configuration similar to the paper. For more complex aggregation mechanisms,
+    pass an arbitrary callable instead.
+
+    .. seealso:: https://github.com/migalkin/NodePiece/blob/d731c9990/lp_rp/pykeen105/nodepiece_rotate.py#L57-L65
+    """
 
     def __init__(
         self,
@@ -115,7 +118,7 @@ class NodePiece(ERModel):
         if aggregation == "mlp":
             # needs to be assigned to attribute to make sure that the trainable parameters are part of the model
             # parameters
-            node_piece_kwargs["aggregation"] = self.mlp = ConcatMLP(
+            node_piece_kwargs["aggregation"] = self.mlp = _ConcatMLP(
                 num_tokens=num_tokens,
                 embedding_dim=embedding_specification.embedding_dim,
             )
