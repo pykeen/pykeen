@@ -1073,8 +1073,14 @@ class SingleCompGCNRepresentation(RepresentationModule):
 
 
 class NodePieceRepresentation(RepresentationModule):
-    """
+    r"""
     Basic implementation of node piece decomposition [galkin2021]_.
+
+    .. math ::
+        x_e = agg(\{T[t] \mid t \in tokens(e) \})
+
+    where $T$ are token representations, $tokens$ selects a fixed number of $k$ tokens for each entity, and $agg$ is
+    an aggregation function, which aggregates the individual token representations to a single entity representation.
 
     .. note ::
         This implementation currently only supports representation of entities by bag-of-relations.
