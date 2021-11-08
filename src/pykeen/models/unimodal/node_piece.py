@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 """A wrapper which combines an interaction function with NodePiece entity representations."""
 
 from typing import Any, Callable, ClassVar, Mapping, Optional, Union
