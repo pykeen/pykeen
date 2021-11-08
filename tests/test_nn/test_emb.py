@@ -113,6 +113,28 @@ class TestSingleCompGCNRepresentationTests(cases.RepresentationTestCase):
         return kwargs
 
 
+class NodePiecesTests(cases.RepresentationTestCase):
+    """Tests for node pieces representation."""
+
+    cls = pykeen.nn.emb.NodePiecesRepresentation
+    num_entities: int = 8
+    num_relations: int = 7
+    num_triples: int = 31
+    kwargs = dict(
+        shape=(3,),
+    )
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        kwargs = super()._pre_instantiation_hook(kwargs)
+        kwargs["triples_factory"] = generate_triples_factory(
+            num_entities=self.num_entities,
+            num_relations=self.num_relations,
+            num_triples=self.num_triples,
+            create_inverse_triples=True,
+        )
+        return kwargs
+
+
 class RepresentationModuleTestsTestCase(unittest_templates.MetaTestCase[RepresentationModule]):
     """Test that there are tests for all representation modules."""
 
