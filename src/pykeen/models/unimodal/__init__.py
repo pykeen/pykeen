@@ -62,6 +62,8 @@
 .. [zhang2019b] Zhang, W., *et al.* (2019). `Interaction Embeddings for Prediction and Explanation in Knowledge
    Graphs <https://doi.org/10.1145/3289600.3291014>`. WSDM '19: Proceedings of the Twelfth ACM International
    Conference on Web Search and Data Mining.
+.. [galkin2021] Galkin, M., *et al.* (2021) `NodePiece: Compositional and Parameter-Efficient Representations
+   of Large Knowledge Graphs <https://arxiv.org/abs/2106.12144>`_. *arXiv*, 2106.12144.
 """
 
 from .compgcn import CompGCN

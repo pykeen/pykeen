@@ -12,7 +12,15 @@ from ...triples.triples_factory import CoreTriplesFactory
 
 
 class NodePiece(ERModel):
-    """A wrapper which combines an interaction function with NodePiece entity representations."""
+    """A wrapper which combines an interaction function with NodePiece entity representations from [galkin2021]_.
+
+    ---
+    citation:
+        author: Galkin
+        year: 2021
+        link: https://arxiv.org/abs/2106.12144
+        github: https://github.com/migalkin/NodePiece
+    """
 
     hpo_default: ClassVar[Mapping[str, Any]] = dict(
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
