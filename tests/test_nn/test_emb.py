@@ -3,7 +3,7 @@
 """Test embeddings."""
 
 import unittest
-from typing import Any, MutableMapping
+from typing import Any, ClassVar, MutableMapping
 from unittest.mock import Mock
 
 import numpy
@@ -71,18 +71,18 @@ class RGCNRepresentationTests(cases.RepresentationTestCase):
     """Test RGCN representations."""
 
     cls = pykeen.nn.emb.RGCNRepresentations
-    num = 8
+    num_entities: ClassVar[int] = 8
+    num_relations: ClassVar[int] = 7
+    num_triples: ClassVar[int] = 31
+    num_bases: ClassVar[int] = 2
     kwargs = dict(
-        embedding_specification=EmbeddingSpecification(embedding_dim=num),
+        embedding_specification=EmbeddingSpecification(embedding_dim=num_entities),
     )
-    num_relations: int = 7
-    num_triples: int = 31
-    num_bases: int = 2
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         kwargs["triples_factory"] = generate_triples_factory(
-            num_entities=self.num,
+            num_entities=self.num_entities,
             num_relations=self.num_relations,
             num_triples=self.num_triples,
         )
@@ -93,10 +93,10 @@ class TestSingleCompGCNRepresentationTests(cases.RepresentationTestCase):
     """Test single CompGCN representations."""
 
     cls = pykeen.nn.emb.SingleCompGCNRepresentation
-    num_entities: int = 8
-    num_relations: int = 7
-    num_triples: int = 31
-    dim: int = 3
+    num_entities: ClassVar[int] = 8
+    num_relations: ClassVar[int] = 7
+    num_triples: ClassVar[int] = 31
+    dim: ClassVar[int] = 3
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
@@ -117,9 +117,9 @@ class NodePieceTests(cases.RepresentationTestCase):
     """Tests for node piece representation."""
 
     cls = pykeen.nn.emb.NodePieceRepresentation
-    num_entities: int = 8
-    num_relations: int = 7
-    num_triples: int = 31
+    num_entities: ClassVar[int] = 8
+    num_relations: ClassVar[int] = 7
+    num_triples: ClassVar[int] = 31
     kwargs = dict(
         token_representation=pykeen.nn.emb.EmbeddingSpecification(
             shape=(3,),
@@ -149,7 +149,7 @@ class EmbeddingSpecificationTests(unittest.TestCase):
     """Tests for EmbeddingSpecification."""
 
     #: The number of embeddings
-    num: int = 3
+    num: ClassVar[int] = 3
 
     def test_make(self):
         """Test make."""
