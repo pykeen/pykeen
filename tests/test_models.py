@@ -232,6 +232,16 @@ class TestNodePiece(cases.ModelTestCase):
     cls = pykeen.models.NodePiece
 
 
+class TestNodePieceMLP(cases.ModelTestCase):
+    """Test the NodePiece model."""
+
+    cls = pykeen.models.NodePiece
+    kwargs = dict(
+        num_tokens=64,
+        aggregation="mlp",
+    )
+
+
 class TestNTN(cases.ModelTestCase):
     """Test the NTN model."""
 
