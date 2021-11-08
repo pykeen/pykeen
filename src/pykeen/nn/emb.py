@@ -1094,7 +1094,6 @@ class NodePieceRepresentation(RepresentationModule):
         aggregation: Callable[[torch.Tensor, int], torch.Tensor] = None,
         shape: Optional[Sequence[int]] = None,
         k: int = 1,
-        **kwargs,
     ):
         """
         Initialize the representation.
@@ -1137,7 +1136,7 @@ class NodePieceRepresentation(RepresentationModule):
                 )
 
         # super init; has to happen *before* any parameter or buffer is assigned
-        super().__init__(max_id=triples_factory.num_entities, shape=shape or token_representation.shape, **kwargs)
+        super().__init__(max_id=triples_factory.num_entities, shape=shape or token_representation.shape)
 
         # normalize aggregation
         if aggregation is None:
