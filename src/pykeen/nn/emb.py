@@ -1100,7 +1100,7 @@ class ConcatMLP(nn.Sequential):
             nn.Linear(2 * embedding_dim, embedding_dim),
         )
 
-    def forward(xs: torch.FloatTensor, dim: int) -> torch.FloatTensor:  # noqa: D102
+    def forward(self, xs: torch.FloatTensor, dim: int) -> torch.FloatTensor:  # noqa: D102
         assert dim == -2
         return super().forward(xs.view(*xs.shape[:-2], -1))
 
@@ -1180,13 +1180,17 @@ class NodePieceRepresentation(RepresentationModule):
         # normalize aggregation
         if aggregation is None:
             aggregation = torch.mean
-        elif aggregation == "mlp":
-            # cf. https://github.com/migalkin/NodePiece/blob/d731c9990cdd7835f01f129f6134c3bff576821f/lp_rp/pykeen105/nodepiece_rotate.py#L57-L65
-            self.mlp = ConcatMLP(
-                num_tokens=k,
-                embedding_dim=token_representation.embedding_dim,
-            )
-            aggregation = self.mlp.forward
+        elif isinstance(aggregation, str):
+            if aggregation == "mlp":
+                # cf. https://github.com/migalkin/NodePiece/blob/d731c9990cdd7835f01f129f6134c3bff576821f/lp_rp/pykeen105/nodepiece_rotate.py#L57-L65
+                self.mlp = ConcatMLP(
+                    num_tokens=k,
+                    embedding_dim=token_representation.embedding_dim,
+                )
+                aggregation = self.mlp.forward
+            else:
+                raise ValueError(f"Unknown aggregation: {aggregation}")
+        assert not isinstance(aggregation, str)
         self.aggregation = aggregation
 
         # assign module
