@@ -7,8 +7,10 @@ from __future__ import annotations
 import functools
 import itertools
 import logging
+import random
 import warnings
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from dataclasses import dataclass
 from typing import Any, Callable, Mapping, Optional, Sequence, Tuple, TypeVar, Union, cast
 
@@ -17,6 +19,8 @@ import torch
 import torch.nn
 from torch import nn
 from torch.nn import functional
+
+from pykeen import triples
 
 from .compositions import CompositionModule, composition_resolver
 from .init import (
@@ -1067,4 +1071,88 @@ class SingleCompGCNRepresentation(RepresentationModule):
         x = self.combined()[self.position]
         if indices is not None:
             x = x[indices]
+        return x
+
+
+class NodePiecesRepresentation(RepresentationModule):
+    """
+    Basic implementation of node pieces decomposition.
+
+    .. note ::
+        This implementation currently only supports representation of entities by bag-of-relations.
+    """
+
+    #: the token representations
+    tokens: torch.FloatTensor
+
+    #: the entity-to-token mapping
+    assignment: torch.LongTensor
+
+    def __init__(
+        self,
+        triples_factory: CoreTriplesFactory,
+        shape: Sequence[int],
+        k: int = 1,
+    ):
+        """
+        Initialize the representation.
+
+        :param triples_factory:
+            the triples factory
+        :param shape:
+            the shape of an individual representation
+        :param k:
+            the number of tokens for each entity.
+        """
+        super().__init__(max_id=triples_factory.num_entities, shape=shape)
+
+        # trainable token representations
+        # TODO: configurable initialization
+        self.tokens = nn.Parameter(data=torch.randn(size=(2 * triples_factory.num_relations + 1, *shape)))
+
+        # tokenize: represent entities by bag of relations
+        h, r, t = triples_factory.mapped_triples.t()
+
+        # collect candidates
+        e2r = defaultdict(set)
+        for e, r in (
+            torch.cat(
+                [
+                    torch.stack([h, r], dim=1),
+                    torch.stack([t, r + triples_factory.num_relations], dim=1),
+                ],
+                dim=0,
+            )
+            .unique(dim=0)
+            .tolist()
+        ):
+            e2r[e].add(r)
+
+        # randomly sample with replacement k relations for each entity
+        assignment = torch.full(
+            size=(triples_factory.num_entities, k),
+            dtype=torch.long,
+            fill_value=2 * triples_factory.num_relations,  # padding ID
+        )
+        for e, rs in e2r.items():
+            assignment[e] = torch.as_tensor(data=random.choices(population=list(rs), k=k), dtype=torch.long)
+
+        self.register_buffer(name="assignment", tensor=assignment)
+
+    def forward(
+        self,
+        indices: Optional[int] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        # get token IDs, shape: (*, k)
+        token_ids = self.assignment
+        if indices is not None:
+            token_ids = token_ids[indices]
+
+        # lookup token representations, shape: (*, k, d)
+        x = self.tokens[token_ids]
+
+        # aggregate
+        # TODO: configurable aggregation
+        x = x.mean(dim=1)
+
         return x
