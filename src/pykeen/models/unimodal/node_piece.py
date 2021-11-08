@@ -116,8 +116,6 @@ class NodePiece(ERModel):
         # If it's already set, don't override
         node_piece_kwargs.setdefault("k", num_tokens)
         if aggregation == "mlp":
-            # needs to be assigned to attribute to make sure that the trainable parameters are part of the model
-            # parameters
             node_piece_kwargs["aggregation"] = _ConcatMLP(
                 num_tokens=num_tokens,
                 embedding_dim=embedding_dim,
