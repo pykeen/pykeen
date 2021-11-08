@@ -1090,7 +1090,7 @@ class NodePieceRepresentation(RepresentationModule):
         self,
         *,
         triples_factory: CoreTriplesFactory,
-        token_representation: EmbeddingSpecification,
+        token_representation: Union[EmbeddingSpecification, RepresentationModule],
         aggregation: Callable[[torch.Tensor, int], torch.Tensor] = None,
         shape: Optional[Sequence[int]] = None,
         k: int = 1,
@@ -1102,7 +1102,8 @@ class NodePieceRepresentation(RepresentationModule):
         :param triples_factory:
             the triples factory
         :param token_representation:
-            the token representation specification
+            the token representation specification, or pre-instantiated representation module. For the latter, the
+            number of representations must be $2 * num_relations + 1$.
         :param aggregation:
             aggregation of multiple token representations to a single entity representation
         :param shape:
@@ -1114,12 +1115,20 @@ class NodePieceRepresentation(RepresentationModule):
             raise NotImplementedError("Triples factories with inverse triples are currently not supported.")
 
         # create token representations
-        tokens = token_representation.make(
-            num_embeddings=2 * triples_factory.num_relations + 1,  # normal relations + inverse relations + padding
-        )
+        num_tokens = 2 * triples_factory.num_relations + 1
+        if isinstance(token_representation, EmbeddingSpecification):
+            token_representation = token_representation.make(
+                num_embeddings=num_tokens,  # normal relations + inverse relations + padding
+            )
+        else:
+            if token_representation.max_id != num_tokens:
+                raise ValueError(
+                    f"If a pre-instantiated representation is provided, it has to have 2 * num_relations + 1 = "
+                    f"{num_tokens} representations, but has {token_representation.max_id}",
+                )
 
         # super init; has to happen *before* any parameter or buffer is assigned
-        super().__init__(max_id=triples_factory.num_entities, shape=shape or tokens.shape, **kwargs)
+        super().__init__(max_id=triples_factory.num_entities, shape=shape or token_representation.shape, **kwargs)
 
         # normalize aggregation
         if aggregation is None:
@@ -1127,7 +1136,7 @@ class NodePieceRepresentation(RepresentationModule):
         self.aggregation = aggregation
 
         # assign module
-        self.tokens = tokens
+        self.tokens = token_representation
 
         # tokenize: represent entities by bag of relations
         h, r, t = triples_factory.mapped_triples.t()
