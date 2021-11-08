@@ -28,6 +28,7 @@ class ConcatMLP(nn.Sequential):
         num_tokens: int,
         embedding_dim: int,
         dropout: float = 0.1,
+        ratio: int = 2,
     ):
         """
         Initialize the module.
@@ -38,12 +39,14 @@ class ConcatMLP(nn.Sequential):
             the embedding dimension for a single token
         :param dropout:
             the dropout value on the hidden layer
+        :param ratio:
+            the ratio of the embedding dimension to the hidden layer size.
         """
         super().__init__(
-            nn.Linear(num_tokens * embedding_dim, 2 * embedding_dim),
+            nn.Linear(num_tokens * embedding_dim, ratio * embedding_dim),
             nn.Dropout(dropout),
             nn.ReLU(),
-            nn.Linear(2 * embedding_dim, embedding_dim),
+            nn.Linear(ratio * embedding_dim, embedding_dim),
         )
 
     def forward(self, xs: torch.FloatTensor, dim: int) -> torch.FloatTensor:  # noqa: D102
