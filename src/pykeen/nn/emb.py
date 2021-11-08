@@ -1103,7 +1103,15 @@ class NodePieceRepresentation(RepresentationModule):
         :param token_representation:
             the token representation specification
         :param aggregation:
-            aggregation of multiple token representations to a single entity representation
+            aggregation of multiple token representations to a single entity representation. By default,
+            this uses :func:`torch.mean`. It could also use other aggregations like :func:`torch.sum`,
+            :func:`torch.max`, or even trainable aggregations e.g., ``MLP(mean(MLP(tokens)))``
+            (cf. DeepSets).
+
+            In theory, we could also have aggregations which result in differently shapes output, e.g.
+            a concatenation of all token embeddings resulting in shape ``(k * d,)``, but we would
+            need to adjust the code for this.
+
         :param k:
             the number of tokens for each entity.
         """
