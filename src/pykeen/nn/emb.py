@@ -1092,6 +1092,7 @@ class NodePieceRepresentation(RepresentationModule):
         triples_factory: CoreTriplesFactory,
         token_representation: EmbeddingSpecification,
         aggregation: Callable[[torch.Tensor, int], torch.Tensor] = None,
+        shape: Optional[Sequence[int]] = None,
         k: int = 1,
         **kwargs,
     ):
@@ -1104,6 +1105,8 @@ class NodePieceRepresentation(RepresentationModule):
             the token representation specification
         :param aggregation:
             aggregation of multiple token representations to a single entity representation
+        :param shape:
+            the shape of an individual representation. Only necessary, if aggregation results in a change of dimensions.
         :param k:
             the number of tokens for each entity.
         """
@@ -1116,7 +1119,7 @@ class NodePieceRepresentation(RepresentationModule):
         )
 
         # super init; has to happen *before* any parameter or buffer is assigned
-        super().__init__(max_id=triples_factory.num_entities, shape=tokens.shape, **kwargs)
+        super().__init__(max_id=triples_factory.num_entities, shape=shape or tokens.shape, **kwargs)
 
         # normalize aggregation
         if aggregation is None:
