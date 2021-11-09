@@ -1216,5 +1216,4 @@ def boxe_kg_arity_position_computation(
         points=bumped_representation, box_lows=relation_box_low, box_highs=relation_box_high
     )
     # Finally, compute the norm
-    overall_score = element_wise_distance.norm(p=norm_order, dim=-1)
-    return overall_score
+    return element_wise_distance.norm(p=norm_order, dim=-1)
