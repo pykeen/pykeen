@@ -116,8 +116,6 @@ _CUDA_OOM_ERROR = "CUDA out of memory."
 
 _CUDA_NONZERO_ERROR = "nonzero is not supported for tensors with more than INT_MAX elements"
 
-SANITY_EPSILON = 10 ** -8
-
 
 def at_least_eps(x: torch.FloatTensor) -> torch.FloatTensor:
     """Make sure a tensor is greater than zero."""
@@ -1113,7 +1111,7 @@ def product_normalize(x: torch.FloatTensor, dim: int = -1) -> torch.FloatTensor:
     :return: shape: s
         An output tensor where the given dimension is normalized to have a geometric mean of 1.0.
     """
-    return x / (x.abs().clamp(min=SANITY_EPSILON).log().mean(dim=dim, keepdim=True).exp().clamp(min=SANITY_EPSILON))
+    return x / at_least_eps(at_least_eps(x.abs()).log().mean(dim=dim, keepdim=True).exp())
 
 
 def compute_box(
