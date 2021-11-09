@@ -1162,36 +1162,49 @@ def point_to_box_distance(
 ) -> torch.FloatTensor:
     r"""Compute the point to box distance function proposed by [abboud2020]_ in an element-wise fashion.
 
-    :param points: the positions of the points being scored against boxes
-    :param box_lows: the lower corners of the boxes
-    :param box_highs: the upper corners of the boxes.
-    :returns: Element-wise distance function scores as per the definition above
+    :param points: shape: (*, d)
+        the positions of the points being scored against boxes
+    :param box_lows: shape: (*, d)
+        the lower corners of the boxes
+    :param box_highs: shape: (*, d)
+        the upper corners of the boxes
+    
+    :returns:
+        Element-wise distance function scores as per the definition above
 
-    Given points $p$, box_lows $l$, and box_highs $h$, the following quantities are
-    defined:
+        Given points $p$, box_lows $l$, and box_highs $h$, the following quantities are
+        defined:
 
-    - Width $w$ is the difference between the upper and lower box bound: $w = h - l$
-    - Box centers $c$ are the mean of the box bounds: $c = (h + l) / 2$
+        - Width $w$ is the difference between the upper and lower box bound: $w = h - l$
+        - Box centers $c$ are the mean of the box bounds: $c = (h + l) / 2$
 
-    Finally, the point to box distance $dist(p,l,h)$ is defined as
-    the following piecewise function:
+        Finally, the point to box distance $dist(p,l,h)$ is defined as
+        the following piecewise function:
 
-    .. math::
+        .. math::
 
-        dist(p,l,h) = \begin{cases}
-            |p-c|/(w+1) & l <= p <+ h \\
-            |p-c|*(w+1) - 0.5*w*((w+1)-1/(w+1)) & otherwise \\
-        \end{cases}
+            dist(p,l,h) = \begin{cases}
+                |p-c|/(w+1) & l <= p <+ h \\
+                |p-c|*(w+1) - 0.5*w*((w+1)-1/(w+1)) & otherwise \\
+            \end{cases}
     """
     widths = box_highs - box_lows
-    widths_p1 = widths + 1  # Compute width plus 1
-    centres = 0.5 * (box_lows + box_highs)  # Compute box midpoints
-    rv = torch.where(
+
+    # compute width plus 1
+    widths_p1 = widths + 1
+
+    # compute box midpoints
+    # TODO: we already had this before, as `base`
+    centres = 0.5 * (box_lows + box_highs)
+
+    return torch.where(
+        # inside box?
         torch.logical_and(points >= box_lows, points <= box_highs),
-        torch.abs(points - centres) / widths_p1,  # If true (inside the box)
+        # yes: |p - c| / (w + 1)
+        torch.abs(points - centres) / widths_p1,
+        # no: (w + 1) * |p - c| - 0.5 * w * (w - 1/(w + 1))
         widths_p1 * torch.abs(points - centres) - (0.5 * widths) * (widths_p1 - 1 / widths_p1),
     )
-    return rv
 
 
 def boxe_kg_arity_position_computation(
