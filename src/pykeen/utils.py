@@ -1110,7 +1110,7 @@ def product_normalise(input_tensor: torch.FloatTensor) -> torch.FloatTensor:
     :returns: An output tensor whose last order is normalized to have a geometric mean of 1.
     """
     step1_tensor = torch.abs(input_tensor)  # Compute absolute value of all entries
-    step2_tensor = step1_tensor + SANITY_EPSILON  # Prevent zero values by adding a sanity epsilon
+    step2_tensor = step1_tensor.clamp(min=SANITY_EPSILON)  # Prevent zero values by adding a sanity epsilon
     log_norm_tensor = torch.log(step2_tensor)  # Compute the log prior to computing the geom. mean
     step3_tensor = torch.mean(log_norm_tensor, dim=-1, keepdim=True)
     norm_volume = torch.exp(step3_tensor)
