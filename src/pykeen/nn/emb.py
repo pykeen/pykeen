@@ -35,6 +35,7 @@ from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import CoreTriplesFactory
 from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer
 from ..utils import Bias, activation_resolver, clamp_norm, complex_normalize, convert_to_canonical_shape
+from pykeen import triples
 
 __all__ = [
     "RepresentationModule",
@@ -1119,25 +1120,31 @@ class NodePieceRepresentation(RepresentationModule):
             We could also have aggregations which result in differently shapes output, e.g. a concatenation of all
             token embeddings resulting in shape ``(k * d,)``. In this case, `shape` must be provided.
 
+            The aggregation takes two arguments: the (batched) tensor of token representations, in shape (*, k, *dt),
+            and the index along which to aggregate.
+
         :param shape:
             the shape of an individual representation. Only necessary, if aggregation results in a change of dimensions.
 
         :param k:
             the number of tokens for each entity.
         """
+        mapped_triples = triples_factory.mapped_triples
         if triples_factory.create_inverse_triples:
-            raise NotImplementedError("Triples factories with inverse triples are currently not supported.")
+            # inverse triples are created afterwards implicitly
+            mapped_triples = mapped_triples[mapped_triples[:, 1] >= triples_factory.real_num_relations]
 
         # create token representations
-        num_tokens = 2 * triples_factory.num_relations + 1
+        # normal relations + inverse relations
+        num_tokens = 2 * triples_factory.real_num_relations
         if isinstance(token_representation, EmbeddingSpecification):
             token_representation = token_representation.make(
-                num_embeddings=num_tokens,  # normal relations + inverse relations + padding
+                num_embeddings=num_tokens,
             )
         else:
             if token_representation.max_id != num_tokens:
                 raise ValueError(
-                    f"If a pre-instantiated representation is provided, it has to have 2 * num_relations + 1 = "
+                    f"If a pre-instantiated representation is provided, it has to have 2 * num_relations = "
                     f"{num_tokens} representations, but has {token_representation.max_id}",
                 )
 
@@ -1151,9 +1158,10 @@ class NodePieceRepresentation(RepresentationModule):
 
         # assign module
         self.tokens = token_representation
+        self.aggregation_index = -(1 + len(token_representation.shape))
 
         # tokenize: represent entities by bag of relations
-        h, r, t = triples_factory.mapped_triples.t()
+        h, r, t = mapped_triples.t()
 
         # collect candidates
         e2r = defaultdict(set)
@@ -1161,7 +1169,7 @@ class NodePieceRepresentation(RepresentationModule):
             torch.cat(
                 [
                     torch.stack([h, r], dim=1),
-                    torch.stack([t, r + triples_factory.num_relations], dim=1),
+                    torch.stack([t, r + triples_factory.real_num_relations], dim=1),
                 ],
                 dim=0,
             )
@@ -1171,12 +1179,12 @@ class NodePieceRepresentation(RepresentationModule):
             e2r[e].add(r)
 
         # randomly sample with replacement k relations for each entity
-        assignment = torch.full(
+        assignment = torch.empty(
             size=(triples_factory.num_entities, k),
             dtype=torch.long,
-            fill_value=2 * triples_factory.num_relations,  # padding ID
         )
         for e, rs in e2r.items():
+            # we sample *with* replacement
             assignment[e] = self._sample(torch.as_tensor(data=list(rs), dtype=torch.long), k)
         self.register_buffer(name="assignment", tensor=assignment)
 
@@ -1197,6 +1205,6 @@ class NodePieceRepresentation(RepresentationModule):
         x = self.tokens(token_ids)
 
         # aggregate
-        x = self.aggregation(x, -2)
+        x = self.aggregation(x, self.aggregation_index)
 
         return x
