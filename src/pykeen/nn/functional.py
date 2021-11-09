@@ -1214,13 +1214,16 @@ def boxe_interaction(
     """
     The BoxE interaction function from [abboud2021]_.
 
+    Entities are described via position and bump. Relations are described as a pair of boxes, where each box is
+    parametrized as triple (base, delta, size), where # TODO
+
     .. note ::
         this interaction relies on Abboud's point-to-box distance
         :func:`pykeen.utils.point_to_box_distance`.
 
     :param h_pos: shape: (batch_size, num_heads, 1, 1, d)
         the head entity position
-    :param h_pos: shape: (batch_size, num_heads, 1, 1, d)
+    :param h_bump: shape: (batch_size, num_heads, 1, 1, d)
         the head entity bump
 
     :param rh_base: shape: (batch_size, 1, num_relations, 1, d)
@@ -1238,7 +1241,7 @@ def boxe_interaction(
 
     :param t_pos: shape: (batch_size, 1, 1, num_tails, d)
         the tail entity position
-    :param t_pos: shape: (batch_size, 1, 1, num_tails, d)
+    :param t_bump: shape: (batch_size, 1, 1, num_tails, d)
         the tail entity bump
 
     :param tanh_map:
