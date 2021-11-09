@@ -101,7 +101,7 @@ __all__ = [
     "complex_normalize",
     "lp_norm",
     "powersum_norm",
-    "product_normalise",
+    "product_normalize",
     "compute_box",
     "point_to_box_distance",
 ]
@@ -1102,19 +1102,20 @@ if __name__ == "__main__":
     doctest.testmod()
 
 
-def product_normalise(input_tensor: torch.FloatTensor) -> torch.FloatTensor:
-    r"""Normalise the input tensor along its embedding dimension so that the geometric mean is 1.
+def product_normalize(x: torch.FloatTensor) -> torch.FloatTensor:
+    r"""Normalize a tensor along its embedding dimension so that the geometric mean is 1.0.
 
-    :param input_tensor: An input tensor with final dimension $d$.
-
-    :returns: An output tensor whose last order is normalized to have a geometric mean of 1.
+    :param x:
+        An input tensor with final dimension $d$.
+    :return:
+        An output tensor whose last order is normalized to have a geometric mean of 1.0.
     """
-    step1_tensor = torch.abs(input_tensor)  # Compute absolute value of all entries
+    step1_tensor = torch.abs(x)  # Compute absolute value of all entries
     step2_tensor = step1_tensor.clamp(min=SANITY_EPSILON)  # Prevent zero values by adding a sanity epsilon
     log_norm_tensor = torch.log(step2_tensor)  # Compute the log prior to computing the geom. mean
     step3_tensor = torch.mean(log_norm_tensor, dim=-1, keepdim=True)
     norm_volume = torch.exp(step3_tensor)
-    pre_norm_out = input_tensor / norm_volume
+    pre_norm_out = x / norm_volume
     return pre_norm_out
 
 
@@ -1129,7 +1130,7 @@ def compute_box(
     :return: Lower and upper bounds of the box whose embeddings are provided as input.
     """
     size_pos = torch.nn.functional.elu(size) + 1  # Enforce that sizes are strictly positive by passing through ELU
-    delta_norm = product_normalise(delta)  # Shape vector is normalized using the above helper function
+    delta_norm = product_normalize(delta)  # Shape vector is normalized using the above helper function
     delta_final = size_pos * delta_norm  # Size is learned separately and applied to normalized shape
     # Product normalize the delta
     first_bound = base - 0.5 * delta_final  # Compute potential boundaries by applying the shape in substraction
