@@ -1166,7 +1166,7 @@ def point_to_box_distance(
         the lower corners of the boxes
     :param box_highs: shape: (*, d)
         the upper corners of the boxes
-    
+
     :returns:
         Element-wise distance function scores as per the definition above
 
