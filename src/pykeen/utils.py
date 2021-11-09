@@ -1132,7 +1132,7 @@ def compute_box(
     """
     size_pos = torch.nn.functional.elu(size) + 1  # Enforce that sizes are strictly positive by passing through ELU
     delta_norm = product_normalise(delta)  # Shape vector is normalized using the above helper function
-    delta_final = torch.multiply(size_pos, delta_norm)  # Size is learned separately and applied to normalized shape
+    delta_final = size_pos * delta_norm  # Size is learned separately and applied to normalized shape
     # Product normalize the delta
     first_bound = base - 0.5 * delta_final  # Compute potential boundaries by applying the shape in substraction
     second_bound = base + 0.5 * delta_final  # and in addition
