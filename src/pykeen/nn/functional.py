@@ -1229,13 +1229,13 @@ def boxe_interaction(
     :param rh_base: shape: (batch_size, 1, num_relations, 1, d)
         the relation-specific head box base position
     :param rh_delta: shape: (batch_size, 1, num_relations, 1, d)
-        # TODO:
-    :param rh_size: shape: (batch_size, 1, num_relations, 1, d)
-        the relation-specific head box size
+        # the relation-specific head box base shape (normalized to have a volume of 1):
+    :param rh_size: shape: (batch_size, 1, num_relations, 1, 1)
+        the relation-specific head box size (a scalar)
     :param rt_base: shape: (batch_size, 1, num_relations, 1, d)
         the relation-specific tail box base position
     :param rt_delta: shape: (batch_size, 1, num_relations, 1, d)
-        # TODO:
+        # the relation-specific tail box base shape (normalized to have a volume of 1):
     :param rt_size: shape: (batch_size, 1, num_relations, 1, d)
         the relation-specific tail box size
 

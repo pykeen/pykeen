@@ -1,17 +1,15 @@
 metadata:
-  title: Learn YAGO3-10 Dataset with BoxE as described by Abboud et al., 2020
+  title: Learn FB15k-237 Dataset with BoxE as described by Abboud et al., 2020
 pipeline:
-  dataset: yago310
-  dataset_kwargs:
-    create_inverse_triples: True  # Introduce inverse relations and reciprocal facts
+  dataset: fb15k237
   evaluator_kwargs:
       filtered: true
     # > We optimize for cross-entropy loss
     loss: NSSALoss
     loss_kwargs:
       reduction: sum
-      margin: 6.0
-      adversarial_temperature: 2.0
+      margin: 3.0
+      adversarial_temperature: 4.0
     model: BoxE
     model_kwargs:
       entity_initializer: uniform_norm   # This has to be a uniform distribution between -0.5/sqrt(emb_dim)
@@ -21,27 +19,26 @@ pipeline:
       relation_size_initializer_kwargs:
         a: -1
         b: 1
-      embedding_dim: 200   # 200-dimensional embeddings for parity with other models in the literature
+      embedding_dim: 1000   # 1000-dimensional embeddings for parity with other compared models in the paper.
       norm_order: 2   # Standard L2 norm
       tanh_map: True  # Apply hyperbolic tangent mapping regularizer
 
     negative_sampler: basic
     negative_sampler_kwargs:
-      num_negs_per_pos: 150
+      num_negs_per_pos: 100
 
     optimizer: Adam
     optimizer_kwargs:
-      lr: 0.001
+      lr: 0.00005
     training_kwargs:
-      batch_size: 4096
-      num_epochs: 400
+      batch_size: 1024
+      num_epochs: 1000
     training_loop: SLCWA
-
 results:
   hits_at_k:
     best:
-      '10': 0.691
+      '10': 0.538
   mean_rank:
-    best: 1022
+    best: 163
   mean_reciprocal_rank:
-    best: 0.560
+    best: 0.337
