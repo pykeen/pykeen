@@ -15,11 +15,11 @@ from ...nn.modules import BoxEInteraction
 from ...typing import Hint, Initializer
 
 __all__ = [
-    "BoxEKG",
+    "BoxE",
 ]
 
 
-class BoxEKG(ERModel):
+class BoxE(ERModel):
     r"""An implementation of BoxE from [abboud2020]_.
 
     ---

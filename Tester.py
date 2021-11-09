@@ -3,7 +3,7 @@ import torch
 
 from pykeen.losses import NSSALoss
 from pykeen.datasets import WN18RR
-from pykeen.models.unimodal.boxe_kg import BoxEKG
+from pykeen.models.unimodal.boxe_kg import BoxE
 from pykeen.pipeline import pipeline
 
 from torch.nn import functional
@@ -44,7 +44,7 @@ def main():
     size_init_kw = dict(a=-1, b=1)
     dataset = WN18RR()
     triples_factory = dataset.training
-    model = BoxEKG(
+    model = BoxE(
         triples_factory=triples_factory,
         embedding_dim=500,
         norm_order=2,

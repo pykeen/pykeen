@@ -67,7 +67,7 @@
    *Advances in Neural Information Processing Systems*, 2020-December(NeurIPS), 1–13.
 """
 
-from .boxe_kg import BoxEKG
+from .boxe import BoxE
 from .compgcn import CompGCN
 from .complex import ComplEx
 from .conv_e import ConvE
@@ -99,7 +99,7 @@ from .tucker import TuckER
 from .unstructured_model import UnstructuredModel
 
 __all__ = [
-    "BoxEKG",
+    "BoxE",
     "CompGCN",
     "ComplEx",
     "ConvE",
