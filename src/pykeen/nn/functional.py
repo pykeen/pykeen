@@ -1212,7 +1212,7 @@ def boxe_interaction(
     power_norm: bool = False,
 ) -> torch.FloatTensor:
     """
-    Evalute the BoxE interaction function from [abboud2021]_.
+    Evalute the BoxE interaction function from [abboud2020]_.
 
     Entities are described via position and bump. Relations are described as a pair of boxes, where each box is
     parametrized as triple (base, delta, size), where # TODO

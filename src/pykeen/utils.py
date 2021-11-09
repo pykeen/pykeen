@@ -1121,14 +1121,14 @@ def compute_box(
 ) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
     r"""Compute the lower and upper corners of a resulting box.
 
-    :param base: shape: (*, d)
+    :param base: shape: ``(*, d)``
         the base position (box center) of the input relation embeddings
-    :param delta:  shape: (*, d)
+    :param delta:  shape: ``(*, d)``
         the base shape of the input relation embeddings
-    :param size: shape: (*, d)
+    :param size: shape: ``(*, d)``
         the size scalar vectors of the input relation embeddings
 
-    :return: shape: (*, d) each
+    :return: shape: ``(*, d)`` each
         lower and upper bounds of the box whose embeddings are provided as input.
     """
     # Enforce that sizes are strictly positive by passing through ELU
@@ -1160,11 +1160,11 @@ def point_to_box_distance(
 ) -> torch.FloatTensor:
     r"""Compute the point to box distance function proposed by [abboud2020]_ in an element-wise fashion.
 
-    :param points: shape: (*, d)
+    :param points: shape: ``(*, d)``
         the positions of the points being scored against boxes
-    :param box_lows: shape: (*, d)
+    :param box_lows: shape: ``(*, d)``
         the lower corners of the boxes
-    :param box_highs: shape: (*, d)
+    :param box_highs: shape: ``(*, d)``
         the upper corners of the boxes
 
     :returns:
