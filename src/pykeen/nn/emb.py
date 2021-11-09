@@ -35,7 +35,6 @@ from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import CoreTriplesFactory
 from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer
 from ..utils import Bias, activation_resolver, clamp_norm, complex_normalize, convert_to_canonical_shape
-from pykeen import triples
 
 __all__ = [
     "RepresentationModule",
