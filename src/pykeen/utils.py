@@ -1114,7 +1114,9 @@ def product_normalize(x: torch.FloatTensor) -> torch.FloatTensor:
 
 
 def compute_box(
-    base: torch.FloatTensor, delta: torch.FloatTensor, size: torch.FloatTensor
+    base: torch.FloatTensor,
+    delta: torch.FloatTensor,
+    size: torch.FloatTensor,
 ) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
     r"""Compute the lower and upper corners of a resulting box.
 
@@ -1135,7 +1137,9 @@ def compute_box(
 
 
 def point_to_box_distance(
-    points: torch.FloatTensor, box_lows: torch.FloatTensor, box_highs: torch.FloatTensor
+    points: torch.FloatTensor,
+    box_lows: torch.FloatTensor,
+    box_highs: torch.FloatTensor,
 ) -> torch.FloatTensor:
     r"""Compute the point to box distance function proposed by [abboud2020]_ in an element-wise fashion.
 
