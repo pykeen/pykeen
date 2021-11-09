@@ -1109,7 +1109,7 @@ def product_normalize(x: torch.FloatTensor, dim: int = -1) -> torch.FloatTensor:
         An input tensor
     :param dim:
         the dimension along which to normalize the tensor
-    
+
     :return: shape: s
         An output tensor where the given dimension is normalized to have a geometric mean of 1.0.
     """
@@ -1123,19 +1123,35 @@ def compute_box(
 ) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
     r"""Compute the lower and upper corners of a resulting box.
 
-    :param base: The base position (box center) of the input relation embeddings.
-    :param delta: The base shape of the input relation embeddings.
-    :param size: The size scalar vectors of the input relation embeddings.
-    :return: Lower and upper bounds of the box whose embeddings are provided as input.
+    :param base: shape: (*, d)
+        the base position (box center) of the input relation embeddings
+    :param delta:  shape: (*, d)
+        the base shape of the input relation embeddings
+    :param size: shape: (*, d)
+        the size scalar vectors of the input relation embeddings
+
+    :return: shape: (*, d) each
+        lower and upper bounds of the box whose embeddings are provided as input.
     """
-    size_pos = torch.nn.functional.elu(size) + 1  # Enforce that sizes are strictly positive by passing through ELU
-    delta_norm = product_normalize(delta)  # Shape vector is normalized using the above helper function
-    delta_final = size_pos * delta_norm  # Size is learned separately and applied to normalized shape
-    # Product normalize the delta
-    first_bound = base - 0.5 * delta_final  # Compute potential boundaries by applying the shape in substraction
-    second_bound = base + 0.5 * delta_final  # and in addition
-    box_low = torch.minimum(first_bound, second_bound)  # Compute box upper bounds using min and max respectively.
+    # Enforce that sizes are strictly positive by passing through ELU
+    size_pos = torch.nn.functional.elu(size) + 1
+
+    # Shape vector is normalized using the above helper function
+    delta_norm = product_normalize(delta)
+
+    # Size is learned separately and applied to normalized shape
+    delta_final = size_pos * delta_norm
+
+    # Compute potential boundaries by applying the shape in substraction
+    first_bound = base - 0.5 * delta_final
+
+    # and in addition
+    second_bound = base + 0.5 * delta_final
+
+    # Compute box upper bounds using min and max respectively
+    box_low = torch.minimum(first_bound, second_bound)
     box_high = torch.maximum(first_bound, second_bound)
+
     return box_low, box_high
 
 
