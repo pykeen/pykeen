@@ -22,7 +22,7 @@ __all__ = [
 class BoxE(ERModel):
     r"""An implementation of BoxE from [abboud2020]_.
 
-    .. note:: 
+    .. note::
 
         This implementation only currently supports unimodal knowledge graphs consisting only of binary facts,
         whereas the original BoxE applies to arbitrary facts of any arity, i.e., unary facts, binary facts,
@@ -86,6 +86,8 @@ class BoxE(ERModel):
             Defaults to :func:`torch.nn.init.uniform_`
         :param relation_size_initializer_kwargs: Keyword arguments to be used when calling the
             relation matrix initializer
+        :param kwargs:
+            Remaining keyword arguments passed through to :class:`pykeen.models.ERModel`.
 
         This interaction relies on Abboud's point-to-box distance
         :func:`pykeen.utils.point_to_box_distance`.
