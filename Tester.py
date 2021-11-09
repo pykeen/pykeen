@@ -1,14 +1,40 @@
 import numpy as np
 import torch
 
-import pykeen.losses
+from pykeen.losses import NSSALoss
 from pykeen.datasets import WN18RR
 from pykeen.models.unimodal.boxe_kg import BoxEKG
 from pykeen.pipeline import pipeline
 
+from torch.nn import functional
 
-# TODO: Align optimizations: NSSALoss is printing invalid values here, but is sensible in the forward loop
+
 # TODO: Align optimizer settings: Constant LR
+
+class NSSALossLogging(NSSALoss):
+    def forward(
+        self,
+        pos_scores: torch.FloatTensor,
+        neg_scores: torch.FloatTensor,
+        neg_weights: torch.FloatTensor,
+    ) -> torch.FloatTensor:
+        # copy of NSSALoss.forward
+        neg_loss = functional.logsigmoid(-neg_scores - self.margin)
+        neg_loss = neg_weights * neg_loss
+        neg_loss = self._reduction_method(neg_loss)
+        print("-", -neg_loss.item())
+
+        pos_loss = functional.logsigmoid(self.margin + pos_scores)
+        pos_loss = self._reduction_method(pos_loss)
+        print("+", -pos_loss.item())
+
+        loss = -pos_loss - neg_loss
+
+        if self._reduction_method is torch.mean:
+            loss = loss / 2.0
+
+        return loss
+
 
 
 def main():
@@ -35,8 +61,10 @@ def main():
         random_seed=1000000,
         dataset=dataset,
         model=model,
-        training_kwargs=dict(num_epochs=300, batch_size=512, checkpoint_name="trial.pt", checkpoint_frequency=100),
-        loss=pykeen.losses.NSSALoss(margin=5, adversarial_temperature=0.0, reduction="sum"),
+        training_kwargs=dict(num_epochs=300, batch_size=512, checkpoint_name="tria.pt", checkpoint_frequency=100),
+        loss=NSSALossLogging(margin=5, adversarial_temperature=0.0, reduction="sum"),
+        lr_scheduler=torch.optim.lr_scheduler.ConstantLR,
+        lr_scheduler_kwargs=dict(total_iters=0),
         training_loop="sLCWA",
         negative_sampler="basic",
         negative_sampler_kwargs=dict(num_negs_per_pos=150),
@@ -44,8 +72,8 @@ def main():
         result_tracker_kwargs=dict(name="test.json"),
         evaluation_kwargs=dict(batch_size=16),
         optimizer=torch.optim.Adam,
+        optimizer_kwargs=dict(lr=0.001)   # Cancel out the thing
     )
-
 
 if __name__ == '__main__':
     main()

@@ -1465,10 +1465,4 @@ class BoxEKGInteraction(Interaction):
                                                      relation_box_low=rt_low, relation_box_high=rt_high,
                                                      tanh_map=self.tanh_map, norm_order=self.norm_order)
         total_score = score_h + score_t
-        '''NSSA = NSSALoss(margin=5, adversarial_temperature=0.0, reduction='sum')  # Import NSSALoss before running
-        if total_score.shape[0] == 512:  # Positive facts hard code
-            print("I'm getting the correct loss here!")
-            print(NSSA.forward(pos_scores=-total_score, neg_scores=-100*total_score,
-                           neg_weights=torch.ones_like(total_score)))
-            print("That's just a test")'''
         return -total_score  # Because this is inverted in NSSALoss (higher is better)
