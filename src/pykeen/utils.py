@@ -48,6 +48,7 @@ from .typing import DeviceHint, MappedTriples, TorchRandomHint
 from .version import get_git_hash
 
 __all__ = [
+    "at_least_eps",
     "compose",
     "clamp_norm",
     "compact_mapping",
@@ -111,6 +112,14 @@ _CUDNN_ERROR = "cuDNN error: CUDNN_STATUS_NOT_SUPPORTED. This error may appear i
 _CUDA_OOM_ERROR = "CUDA out of memory."
 
 _CUDA_NONZERO_ERROR = "nonzero is not supported for tensors with more than INT_MAX elements"
+
+
+def at_least_eps(x: torch.FloatTensor) -> torch.FloatTensor:
+    """Make sure a tensor is greater than zero."""
+    # get datatype specific epsilon
+    eps = torch.finfo(dtype=x.dtype).eps
+    # clamp minimum value
+    return x.clamp(min=eps)
 
 
 def resolve_device(device: DeviceHint = None) -> torch.device:
