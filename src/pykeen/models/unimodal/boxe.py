@@ -22,10 +22,12 @@ __all__ = [
 class BoxE(ERModel):
     r"""An implementation of BoxE from [abboud2020]_.
 
-    NOTE: This implementation only currently supports unimodal knowledge graphs consisting only of binary facts,
-    whereas the original BoxE applies to arbitrary facts of any arity, i.e., unary facts, binary facts,
-    ternary facts, etc. For use on higher-arity knowledge bases, please refer to the original implementation at
-    https://www.github.com/ralphabb/BoxE.
+    .. note:: 
+
+        This implementation only currently supports unimodal knowledge graphs consisting only of binary facts,
+        whereas the original BoxE applies to arbitrary facts of any arity, i.e., unary facts, binary facts,
+        ternary facts, etc. For use on higher-arity knowledge bases, please refer to the original implementation at
+        https://www.github.com/ralphabb/BoxE.
 
     ---
     citation:
