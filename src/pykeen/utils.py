@@ -48,6 +48,7 @@ from .typing import DeviceHint, MappedTriples, TorchRandomHint
 from .version import get_git_hash
 
 __all__ = [
+    "at_least_eps",
     "compose",
     "clamp_norm",
     "compact_mapping",
@@ -113,6 +114,14 @@ _CUDA_OOM_ERROR = "CUDA out of memory."
 _CUDA_NONZERO_ERROR = "nonzero is not supported for tensors with more than INT_MAX elements"
 
 
+def at_least_eps(x: torch.FloatTensor) -> torch.FloatTensor:
+    """Make sure a tensor is greater than zero."""
+    # get datatype specific epsilon
+    eps = torch.finfo(x.dtype).eps
+    # clamp minimum value
+    return x.clamp(min=eps)
+
+
 def resolve_device(device: DeviceHint = None) -> torch.device:
     """Resolve a torch.device given a desired device (string)."""
     if device is None or device == "gpu":
@@ -175,7 +184,6 @@ def clamp_norm(
     maxnorm: float,
     p: Union[str, int] = "fro",
     dim: Union[None, int, Iterable[int]] = None,
-    eps: float = 1.0e-08,
 ) -> torch.Tensor:
     """Ensure that a tensor's norm does not exceeds some threshold.
 
@@ -187,15 +195,13 @@ def clamp_norm(
         The norm type.
     :param dim:
         The dimension(s).
-    :param eps:
-        A small value to avoid division by zero.
 
     :return:
         A vector with $|x| <= maxnorm$.
     """
     norm = x.norm(p=p, dim=dim, keepdim=True)
     mask = (norm < maxnorm).type_as(x)
-    return mask * x + (1 - mask) * (x / norm.clamp_min(eps) * maxnorm)
+    return mask * x + (1 - mask) * (x / at_least_eps(norm) * maxnorm)
 
 
 class compose(Generic[X]):  # noqa:N801
