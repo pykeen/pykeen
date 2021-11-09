@@ -20,6 +20,7 @@ from .unimodal import (
     NTN,
     RESCAL,
     RGCN,
+    BoxE,
     CompGCN,
     ComplEx,
     ConvE,
@@ -55,6 +56,7 @@ __all__ = [
     "LiteralModel",
     "EvaluationOnlyModel",
     # Concrete Models
+    "BoxE",
     "CompGCN",
     "ComplEx",
     "ComplExLiteral",

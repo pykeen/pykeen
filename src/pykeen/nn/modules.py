@@ -35,6 +35,7 @@ __all__ = [
     # Adapter classes
     "MonotonicAffineTransformationInteraction",
     # Concrete Classes
+    "BoxEInteraction",
     "ComplExInteraction",
     "ConvEInteraction",
     "ConvKBInteraction",
@@ -1411,6 +1412,65 @@ class CrossEInteraction(FunctionalInteraction[FloatTensor, Tuple[FloatTensor, Fl
     ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
         r, c_r = r
         return dict(h=h, r=r, c_r=c_r, t=t)
+
+
+class BoxEInteraction(
+    TranslationalInteraction[
+        Tuple[FloatTensor, FloatTensor],
+        Tuple[FloatTensor, FloatTensor, FloatTensor, FloatTensor, FloatTensor, FloatTensor],
+        Tuple[FloatTensor, FloatTensor],
+    ]
+):
+    """An implementation of the BoxE interaction from [abboud2020]_."""
+
+    func = pkf.boxe_interaction
+
+    relation_shape = ("d", "d", "s", "d", "d", "s")  # Boxes are 2xd (size) each, x 2 sets of boxes: head and tail
+    entity_shape = ("d", "d")  # Base position and bump
+
+    def __init__(self, tanh_map: bool = True, p: int = 2, power_norm: bool = False):
+        r"""
+        Instantiate the interaction module.
+
+        :param tanh_map:
+            Should the hyperbolic tangent be applied to all representations prior to model scoring?
+        :param p:
+            the order of the norm
+        :param power_norm:
+            whether to use the p-th power of the norm instead
+        """
+        super().__init__(p=p, power_norm=power_norm)
+        self.tanh_map = tanh_map
+
+    def _prepare_for_functional(
+        self,
+        h: Tuple[FloatTensor, FloatTensor],
+        r: Tuple[FloatTensor, FloatTensor, FloatTensor, FloatTensor, FloatTensor, FloatTensor],
+        t: Tuple[FloatTensor, FloatTensor],
+    ) -> Mapping[str, torch.FloatTensor]:
+        rh_base, rh_delta, rh_size, rt_base, rt_delta, rt_size = r
+        h_pos, h_bump = h
+        t_pos, t_bump = t
+        return dict(
+            # relation box: head
+            rh_base=rh_base,
+            rh_delta=rh_delta,
+            rh_size=rh_size,
+            # relation box: tail
+            rt_base=rt_base,
+            rt_delta=rt_delta,
+            rt_size=rt_size,
+            #
+            h_pos=h_pos,
+            h_bump=h_bump,
+            t_pos=t_pos,
+            t_bump=t_bump,
+        )
+
+    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
+        state = super()._prepare_state_for_functional()
+        state["tanh_map"] = self.tanh_map
+        return state
 
 
 interaction_resolver = Resolver.from_subclasses(
