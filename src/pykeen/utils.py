@@ -117,7 +117,7 @@ _CUDA_NONZERO_ERROR = "nonzero is not supported for tensors with more than INT_M
 def at_least_eps(x: torch.FloatTensor) -> torch.FloatTensor:
     """Make sure a tensor is greater than zero."""
     # get datatype specific epsilon
-    eps = torch.finfo(dtype=x.dtype).eps
+    eps = torch.finfo(x.dtype).eps
     # clamp minimum value
     return x.clamp(min=eps)
 
