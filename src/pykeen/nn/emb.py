@@ -1097,9 +1097,10 @@ class NodePieceRepresentation(RepresentationModule):
         *,
         triples_factory: CoreTriplesFactory,
         token_representation: Union[EmbeddingSpecification, RepresentationModule],
-        aggregation: Callable[[torch.Tensor, int], torch.Tensor] = None,
+        aggregation: Hint[Callable[[torch.Tensor, int], torch.Tensor]] = None,
+        # TODO delete shape, this is unused and not possible to pass from NodePiece model
         shape: Optional[Sequence[int]] = None,
-        k: int = 1,
+        k: int = 2,
     ):
         """
         Initialize the representation.
@@ -1108,9 +1109,8 @@ class NodePieceRepresentation(RepresentationModule):
             the triples factory
         :param token_representation:
             the token representation specification, or pre-instantiated representation module. For the latter, the
-            number of representations must be $2 * num_relations + 1$.
+            number of representations must be $2 * num_relations$.
         :param aggregation:
-            aggregation of multiple token representations to a single entity representation
             aggregation of multiple token representations to a single entity representation. By default,
             this uses :func:`torch.mean`. It could also use other aggregations like :func:`torch.sum`,
             :func:`torch.max`, or even trainable aggregations e.g., ``MLP(mean(MLP(tokens)))``
@@ -1135,25 +1135,27 @@ class NodePieceRepresentation(RepresentationModule):
 
         # create token representations
         # normal relations + inverse relations
+        # TODO why are num_tokens and k different things? can we make better names at least
         num_tokens = 2 * triples_factory.real_num_relations
         if isinstance(token_representation, EmbeddingSpecification):
             token_representation = token_representation.make(
                 num_embeddings=num_tokens,
             )
-        else:
-            if token_representation.max_id != num_tokens:
-                raise ValueError(
-                    f"If a pre-instantiated representation is provided, it has to have 2 * num_relations = "
-                    f"{num_tokens} representations, but has {token_representation.max_id}",
-                )
+        if token_representation.max_id != num_tokens:
+            raise ValueError(
+                f"If a pre-instantiated representation is provided, it has to have 2 * num_relations = "
+                f"{num_tokens} representations, but has {token_representation.max_id}",
+            )
 
         # super init; has to happen *before* any parameter or buffer is assigned
         super().__init__(max_id=triples_factory.num_entities, shape=shape or token_representation.shape)
 
-        # normalize aggregation
         if aggregation is None:
-            aggregation = torch.mean
-        self.aggregation = aggregation
+            self.aggregation = torch.mean
+        elif aggregation == "mlp":
+            raise NotImplementedError
+        else:
+            self.aggregation = aggregation
 
         # assign module
         self.tokens = token_representation

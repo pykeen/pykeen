@@ -3,10 +3,10 @@
 """A wrapper which combines an interaction function with NodePiece entity representations."""
 
 import logging
-from typing import Any, Callable, ClassVar, Mapping, MutableMapping, Optional, Union
+from typing import Any, Callable, ClassVar, Mapping, Optional, Sequence
 
 import torch
-from class_resolver.api import HintOrType
+from class_resolver import Hint, HintOrType
 from torch import nn
 
 from ..nbase import ERModel
@@ -89,8 +89,8 @@ class NodePiece(ERModel):
         embedding_dim: int = 64,
         embedding_specification: Optional[EmbeddingSpecification] = None,
         interaction: HintOrType[Interaction] = DistMultInteraction,
-        aggregation: Union[str, Callable[[torch.Tensor, int], torch.Tensor]] = None,
-        node_piece_kwargs: Optional[MutableMapping[str, Any]] = None,
+        aggregation: Hint[Callable[[torch.Tensor, int], torch.Tensor]] = None,
+        shape: Optional[Sequence[int]] = None,
         **kwargs,
     ) -> None:
         """
@@ -104,10 +104,13 @@ class NodePiece(ERModel):
             the embedding specification.
         :param interaction:
             the interaction module, or a hint for it.
-        :param node_piece_kwargs:
-            additional keyword-based arguments passed to the NodePieceRepresentation
+        :param aggregation:
+            aggregation of multiple token representations to a single entity representation.
+        :param shape:
+            the shape of an individual representation. Only necessary, if aggregation results in a change of dimensions.
+            this will only be necessary if the aggregation is an *ad hoc* function.
         :param kwargs:
-            additional keyword-based arguments passed to ERModel.__init__
+            additional keyword-based arguments passed to :meth:`ERModel.__init__`
         """
         if not triples_factory.create_inverse_triples:
             logger.warning(
@@ -118,14 +121,14 @@ class NodePiece(ERModel):
         embedding_specification = embedding_specification or EmbeddingSpecification(
             shape=(embedding_dim,),
         )
-        node_piece_kwargs = node_piece_kwargs or {}
-        # If it's already set, don't override
-        node_piece_kwargs.setdefault("k", num_tokens)
+
+        # TODO put this inside :meth:`NodePieceRepresentation.__init__()`
         if aggregation == "mlp":
-            node_piece_kwargs["aggregation"] = _ConcatMLP(
+            aggregation = _ConcatMLP(
                 num_tokens=num_tokens,
                 embedding_dim=embedding_dim,
             )
+
         # always create representations for normal and inverse relations
         relation_representations = embedding_specification.make(
             num_embeddings=2 * triples_factory.real_num_relations,
@@ -133,7 +136,9 @@ class NodePiece(ERModel):
         entity_representations = NodePieceRepresentation(
             triples_factory=triples_factory,
             token_representation=relation_representations,
-            **node_piece_kwargs,
+            aggregation=aggregation,
+            shape=shape,
+            k=num_tokens,
         )
         super().__init__(
             triples_factory=triples_factory,
