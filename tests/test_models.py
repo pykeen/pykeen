@@ -613,7 +613,7 @@ class TestCrossE(cases.ModelTestCase):
 class TestBoxE(cases.ModelTestCase):
     """Test the BoxE model."""
 
-    cls = pykeen.models.BoxEKG
+    cls = pykeen.models.BoxE
 
 
 class TestTesting(unittest_templates.MetaTestCase[Model]):

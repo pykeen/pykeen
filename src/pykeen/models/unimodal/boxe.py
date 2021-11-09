@@ -1,3 +1,7 @@
+# -*- coding: utf-8 -*-
+
+"""Implementation of the BoxE model."""
+
 from typing import Any, ClassVar, Mapping, Optional
 
 from torch.nn.init import uniform_
@@ -7,22 +11,23 @@ from ...losses import NSSALoss
 from ...models import ERModel
 from ...nn.emb import EmbeddingSpecification
 from ...nn.init import uniform_norm_
-from ...nn.modules import BoxEKGInteraction
+from ...nn.modules import BoxEInteraction
 from ...typing import Hint, Initializer
 
 __all__ = [
-    "BoxEKG",
+    "BoxE",
 ]
 
 
-class BoxEKG(ERModel):
-    r"""An implementation of BoxE.
+class BoxE(ERModel):
+    r"""An implementation of BoxE from [abboud2020]_.
 
     ---
     citation:
         author: Abboud
         year: 2020
         link: https://arxiv.org/abs/2007.06267
+        github: ralphabb/BoxE
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
@@ -48,25 +53,35 @@ class BoxEKG(ERModel):
         relation_size_initializer_kwargs: Optional[Mapping[str, Any]] = None,
         **kwargs,
     ) -> None:
-        r"""Initialize BoxE-KG
+        r"""Initialize BoxE.
 
-        :param embedding_dim: The entity embedding dimension $d$. Defaults to 200. Is usually $d \in [50, 300]$.
-        :param tanh_map: Whether to use tanh mapping after BoxE computation.
-        tanh mapping restricts the embedding space to the range [-1, 1], and thus this map implicitly
-        regularizes the space to prevent loss reduction by growing boxes arbitrarily large. Default - True
-        :param norm_order: Norm Order in score computation (Int): Default - 2
-        :param entity_initializer: Entity initializer function. Defaults to :func:`pykeen.nn.init.uniform_norm_`
-        :param entity_initializer_kwargs: Keyword arguments to be used when calling the entity initializer
-        :param relation_initializer: Relation initializer function. Defaults to :func:`pykeen.nn.init.uniform_norm_`
-        :param relation_initializer_kwargs: Keyword arguments to be used when calling the relation initializer
-        :param relation_size_initializer: Relation initializer function. Defaults to :func:`torch.nn.init.uniform_`
+        :param embedding_dim:
+            The entity embedding dimension $d$. Defaults to 200. Is usually $d \in [50, 300]$.
+        :param tanh_map:
+            Whether to use tanh mapping after BoxE computation (defaults to true). The hyperbolic tangent mapping
+            restricts the embedding space to the range [-1, 1], and thus this map implicitly
+            regularizes the space to prevent loss reduction by growing boxes arbitrarily large.
+        :param norm_order:
+            Norm Order in score computation (Int): Default - 2
+        :param entity_initializer:
+            Entity initializer function. Defaults to :func:`pykeen.nn.init.uniform_norm_`
+        :param entity_initializer_kwargs:
+            Keyword arguments to be used when calling the entity initializer
+        :param relation_initializer:
+            Relation initializer function. Defaults to :func:`pykeen.nn.init.uniform_norm_`
+        :param relation_initializer_kwargs:
+            Keyword arguments to be used when calling the relation initializer
+        :param relation_size_initializer:
+            Relation initializer function. Defaults to :func:`torch.nn.init.uniform_`
             Defaults to :func:`torch.nn.init.uniform_`
         :param relation_size_initializer_kwargs: Keyword arguments to be used when calling the
             relation matrix initializer
-        """
 
+        This interaction relies on Abboud's point-to-box distance
+        :func:`pykeen.utils.point_to_box_distance`.
+        """
         super().__init__(
-            interaction=BoxEKGInteraction,
+            interaction=BoxEInteraction,
             interaction_kwargs=dict(norm_order=norm_order, tanh_map=tanh_map),
             entity_representations=[  # Base position
                 EmbeddingSpecification(
