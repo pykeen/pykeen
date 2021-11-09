@@ -48,6 +48,7 @@ from .typing import DeviceHint, MappedTriples, TorchRandomHint
 from .version import get_git_hash
 
 __all__ = [
+    "at_least_eps",
     "compose",
     "clamp_norm",
     "compact_mapping",
@@ -115,7 +116,13 @@ _CUDA_OOM_ERROR = "CUDA out of memory."
 
 _CUDA_NONZERO_ERROR = "nonzero is not supported for tensors with more than INT_MAX elements"
 
-SANITY_EPSILON = 10 ** -8
+
+def at_least_eps(x: torch.FloatTensor) -> torch.FloatTensor:
+    """Make sure a tensor is greater than zero."""
+    # get datatype specific epsilon
+    eps = torch.finfo(x.dtype).eps
+    # clamp minimum value
+    return x.clamp(min=eps)
 
 
 def resolve_device(device: DeviceHint = None) -> torch.device:
@@ -180,7 +187,6 @@ def clamp_norm(
     maxnorm: float,
     p: Union[str, int] = "fro",
     dim: Union[None, int, Iterable[int]] = None,
-    eps: float = 1.0e-08,
 ) -> torch.Tensor:
     """Ensure that a tensor's norm does not exceeds some threshold.
 
@@ -192,15 +198,13 @@ def clamp_norm(
         The norm type.
     :param dim:
         The dimension(s).
-    :param eps:
-        A small value to avoid division by zero.
 
     :return:
         A vector with $|x| <= maxnorm$.
     """
     norm = x.norm(p=p, dim=dim, keepdim=True)
     mask = (norm < maxnorm).type_as(x)
-    return mask * x + (1 - mask) * (x / norm.clamp_min(eps) * maxnorm)
+    return mask * x + (1 - mask) * (x / at_least_eps(norm) * maxnorm)
 
 
 class compose(Generic[X]):  # noqa:N801
@@ -1096,124 +1100,170 @@ def load_configuration(path: Union[str, pathlib.Path, os.PathLike]) -> Mapping[s
     raise ValueError(f"Unknown configuration file format: {path.suffix}. Valid formats: {CONFIGURATION_FILE_FORMATS}")
 
 
-if __name__ == "__main__":
-    import doctest
+def product_normalize(x: torch.FloatTensor, dim: int = -1) -> torch.FloatTensor:
+    r"""Normalize a tensor along a given dimension so that the geometric mean is 1.0.
 
-    doctest.testmod()
+    :param x: shape: s
+        An input tensor
+    :param dim:
+        the dimension along which to normalize the tensor
 
-
-def product_normalize(x: torch.FloatTensor) -> torch.FloatTensor:
-    r"""Normalize a tensor along its embedding dimension so that the geometric mean is 1.0.
-
-    :param x:
-        An input tensor with final dimension $d$.
-    :return:
-        An output tensor whose last order is normalized to have a geometric mean of 1.0.
+    :return: shape: s
+        An output tensor where the given dimension is normalized to have a geometric mean of 1.0.
     """
-    step1_tensor = torch.abs(x)  # Compute absolute value of all entries
-    step2_tensor = step1_tensor.clamp(min=SANITY_EPSILON)  # Prevent zero values by adding a sanity epsilon
-    log_norm_tensor = torch.log(step2_tensor)  # Compute the log prior to computing the geom. mean
-    step3_tensor = torch.mean(log_norm_tensor, dim=-1, keepdim=True)
-    norm_volume = torch.exp(step3_tensor)
-    pre_norm_out = x / norm_volume
-    return pre_norm_out
+    return x / at_least_eps(at_least_eps(x.abs()).log().mean(dim=dim, keepdim=True).exp())
 
 
 def compute_box(
-    base: torch.FloatTensor, delta: torch.FloatTensor, size: torch.FloatTensor
+    base: torch.FloatTensor,
+    delta: torch.FloatTensor,
+    size: torch.FloatTensor,
 ) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
     r"""Compute the lower and upper corners of a resulting box.
 
-    :param base: The base position (box center) of the input relation embeddings.
-    :param delta: The base shape of the input relation embeddings.
-    :param size: The size scalar vectors of the input relation embeddings.
-    :return: Lower and upper bounds of the box whose embeddings are provided as input.
+    :param base: shape: (*, d)
+        the base position (box center) of the input relation embeddings
+    :param delta:  shape: (*, d)
+        the base shape of the input relation embeddings
+    :param size: shape: (*, d)
+        the size scalar vectors of the input relation embeddings
+
+    :return: shape: (*, d) each
+        lower and upper bounds of the box whose embeddings are provided as input.
     """
-    size_pos = torch.nn.functional.elu(size) + 1  # Enforce that sizes are strictly positive by passing through ELU
-    delta_norm = product_normalize(delta)  # Shape vector is normalized using the above helper function
-    delta_final = size_pos * delta_norm  # Size is learned separately and applied to normalized shape
-    # Product normalize the delta
-    first_bound = base - 0.5 * delta_final  # Compute potential boundaries by applying the shape in substraction
-    second_bound = base + 0.5 * delta_final  # and in addition
-    box_low = torch.minimum(first_bound, second_bound)  # Compute box upper bounds using min and max respectively.
+    # Enforce that sizes are strictly positive by passing through ELU
+    size_pos = torch.nn.functional.elu(size) + 1
+
+    # Shape vector is normalized using the above helper function
+    delta_norm = product_normalize(delta)
+
+    # Size is learned separately and applied to normalized shape
+    delta_final = size_pos * delta_norm
+
+    # Compute potential boundaries by applying the shape in substraction
+    first_bound = base - 0.5 * delta_final
+
+    # and in addition
+    second_bound = base + 0.5 * delta_final
+
+    # Compute box upper bounds using min and max respectively
+    box_low = torch.minimum(first_bound, second_bound)
     box_high = torch.maximum(first_bound, second_bound)
+
     return box_low, box_high
 
 
 def point_to_box_distance(
-    points: torch.FloatTensor, box_lows: torch.FloatTensor, box_highs: torch.FloatTensor
+    points: torch.FloatTensor,
+    box_lows: torch.FloatTensor,
+    box_highs: torch.FloatTensor,
 ) -> torch.FloatTensor:
     r"""Compute the point to box distance function proposed by [abboud2020]_ in an element-wise fashion.
 
-    :param points: the positions of the points being scored against boxes
-    :param box_lows: the lower corners of the boxes
-    :param box_highs: the upper corners of the boxes.
-    :returns: Element-wise distance function scores as per the definition above
+    :param points: shape: (*, d)
+        the positions of the points being scored against boxes
+    :param box_lows: shape: (*, d)
+        the lower corners of the boxes
+    :param box_highs: shape: (*, d)
+        the upper corners of the boxes
+    
+    :returns:
+        Element-wise distance function scores as per the definition above
 
-    Given points $p$, box_lows $l$, and box_highs $h$, the following quantities are
-    defined:
+        Given points $p$, box_lows $l$, and box_highs $h$, the following quantities are
+        defined:
 
-    - Width $w$ is the difference between the upper and lower box bound: $w = h - l$
-    - Box centers $c$ are the mean of the box bounds: $c = (h + l) / 2$
+        - Width $w$ is the difference between the upper and lower box bound: $w = h - l$
+        - Box centers $c$ are the mean of the box bounds: $c = (h + l) / 2$
 
-    Finally, the point to box distance $dist(p,l,h)$ is defined as
-    the following piecewise function:
+        Finally, the point to box distance $dist(p,l,h)$ is defined as
+        the following piecewise function:
 
-    .. math::
+        .. math::
 
-        dist(p,l,h) = \begin{cases}
-            |p-c|/(w+1) & l <= p <+ h \\
-            |p-c|*(w+1) - 0.5*w*((w+1)-1/(w+1)) & otherwise \\
-        \end{cases}
+            dist(p,l,h) = \begin{cases}
+                |p-c|/(w+1) & l <= p <+ h \\
+                |p-c|*(w+1) - 0.5*w*((w+1)-1/(w+1)) & otherwise \\
+            \end{cases}
     """
     widths = box_highs - box_lows
-    widths_p1 = widths + 1  # Compute width plus 1
-    centres = 0.5 * (box_lows + box_highs)  # Compute box midpoints
-    rv = torch.where(
+
+    # compute width plus 1
+    widths_p1 = widths + 1
+
+    # compute box midpoints
+    # TODO: we already had this before, as `base`
+    centres = 0.5 * (box_lows + box_highs)
+
+    return torch.where(
+        # inside box?
         torch.logical_and(points >= box_lows, points <= box_highs),
-        torch.abs(points - centres) / widths_p1,  # If true (inside the box)
+        # yes: |p - c| / (w + 1)
+        torch.abs(points - centres) / widths_p1,
+        # no: (w + 1) * |p - c| - 0.5 * w * (w - 1/(w + 1))
         widths_p1 * torch.abs(points - centres) - (0.5 * widths) * (widths_p1 - 1 / widths_p1),
     )
-    return rv
 
 
-def boxe_kg_arity_position_computation(
+def boxe_kg_arity_position_score(
     entity_pos: torch.FloatTensor,
     other_entity_bump: torch.FloatTensor,
-    relation_box_low: torch.FloatTensor,
-    relation_box_high: torch.FloatTensor,
+    relation_box: Tuple[torch.FloatTensor, torch.FloatTensor],
     tanh_map: bool,
-    norm_order: int,
+    p: int,
+    power_norm: bool,
 ) -> torch.FloatTensor:
     r"""Perform the BoxE computation at a single arity position.
 
-    :param entity_pos:
-        This is the base entity position of the entity appearing in the target position. For example,
-        for a fact $r(h,t)$ and the head arity position, entity_pos is the base position of $h$.
-    :param other_entity_bump:
-        This is the bump of the entity at the other position in the fact. For example, given a
-        fact $r(h,t)$ and the head arity position, other_entity_bump is the bump of $t$.
-    :param relation_box_low:
-        The lower corner of the relation box at the target arity position.
-    :param relation_box_high:
-        The upper corner of the relation box at the target arity position.
-    :param tanh_map:
-        A Boolean value specifying whether to apply the tanh map regularizer.
-    :param norm_order:
-        The norm order to apply across dimensions to compute overall position score.
-    :return:
-        Arity-position score for the entity relative to the target relation box.
+    .. note::
+        this computation is parallelizable across all positions
 
-    .. note:: this computation is parallelizable across all positions
+    .. note ::
+        `entity_pos`, `other_entity_bump`, `relation_box_low` and `relation_box_high` have to be in broadcastable
+        shape.
+
+    :param entity_pos: shape: (*s_p, d)
+        This is the base entity position of the entity appearing in the target position. For example,
+        for a fact $r(h, t)$ and the head arity position, `entity_pos` is the base position of $h$.
+    :param other_entity_bump: shape: (*s_b, d)
+        This is the bump of the entity at the other position in the fact. For example, given a
+        fact $r(h, t)$ and the head arity position, `other_entity_bump` is the bump of $t$.
+    :param relation_box: shape: (*s_r, d)
+        The lower/upper corner of the relation box at the target arity position.
+    :param tanh_map:
+        whether to apply the tanh map regularizer
+    :param p:
+        The norm order to apply across dimensions to compute overall position score.
+    :param power_norm:
+        whether to use the powered norm instead
+
+    :return: shape: s
+        Arity-position score for the entity relative to the target relation box. Larger is better. the shape is the
+        broadcasted shape from position, bump and box, where the last dimension has been removed.
     """
-    bumped_representation = entity_pos + other_entity_bump  # Step 1: Apply the other entity bump
+    # Step 1: Apply the other entity bump
+    bumped_representation = entity_pos + other_entity_bump
+
+    relation_box_low, relation_box_high = relation_box
+
+    # Step 2: Apply tanh if tanh_map is set to True.
     if tanh_map:
-        relation_box_low = torch.tanh(relation_box_low)  # Step 2: Apply tanh if tanh_map is set to True.
+        relation_box_low = torch.tanh(relation_box_low)
         relation_box_high = torch.tanh(relation_box_high)
         bumped_representation = torch.tanh(bumped_representation)
+
     # Compute the distance function output element-wise
     element_wise_distance = point_to_box_distance(
-        points=bumped_representation, box_lows=relation_box_low, box_highs=relation_box_high
+        points=bumped_representation,
+        box_lows=relation_box_low,
+        box_highs=relation_box_high,
     )
+
     # Finally, compute the norm
-    return element_wise_distance.norm(p=norm_order, dim=-1)
+    return negative_norm(element_wise_distance, p=p, power_norm=power_norm)
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()

@@ -20,8 +20,6 @@ from ..typing import HeadRepresentation, HintOrType, RelationRepresentation, Tai
 from ..utils import (
     CANONICAL_DIMENSIONS,
     activation_resolver,
-    boxe_kg_arity_position_computation,
-    compute_box,
     convert_to_canonical_shape,
     ensure_tuple,
     upgrade_to_sequence,
@@ -1417,7 +1415,7 @@ class CrossEInteraction(FunctionalInteraction[FloatTensor, Tuple[FloatTensor, Fl
 
 
 class BoxEInteraction(
-    Interaction[
+    TranslationalInteraction[
         Tuple[FloatTensor, FloatTensor],
         Tuple[FloatTensor, FloatTensor, FloatTensor, FloatTensor, FloatTensor, FloatTensor],
         Tuple[FloatTensor, FloatTensor],
@@ -1425,57 +1423,54 @@ class BoxEInteraction(
 ):
     """An implementation of the BoxE interaction from [abboud2020]_."""
 
+    func = pkf.boxe_interaction
+
     relation_shape = ("d", "d", "s", "d", "d", "s")  # Boxes are 2xd (size) each, x 2 sets of boxes: head and tail
     entity_shape = ("d", "d")  # Base position and bump
 
-    def __init__(self, tanh_map: bool = True, norm_order: int = 2):
+    def __init__(self, tanh_map: bool = True, p: int = 2, power_norm: bool = False):
         r"""
         Instantiate the interaction module.
 
         :param tanh_map:
             Should the hyperbolic tangent be applied to all representations prior to model scoring?
-        :param norm_order:
-            The normalization order (default 2)
-
-        This interaction relies on Abboud's point-to-box distance
-        :func:`pykeen.utils.point_to_box_distance`.
+        :param p:
+            the order of the norm
+        :param power_norm:
+            whether to use the p-th power of the norm instead
         """
-        super().__init__()
-        self.tanh_map = tanh_map  # Map the tanh map
-        self.norm_order = norm_order
+        super().__init__(p=p, power_norm=power_norm)
+        self.tanh_map = tanh_map
 
-    def forward(
+    def _prepare_for_functional(
         self,
         h: Tuple[FloatTensor, FloatTensor],
         r: Tuple[FloatTensor, FloatTensor, FloatTensor, FloatTensor, FloatTensor, FloatTensor],
         t: Tuple[FloatTensor, FloatTensor],
-    ) -> torch.FloatTensor:  # noqa: D102
+    ) -> Mapping[str, torch.FloatTensor]:
         rh_base, rh_delta, rh_size, rt_base, rt_delta, rt_size = r
         h_pos, h_bump = h
         t_pos, t_bump = t
-        # First, compute the boxes
-        rh_low, rh_high = compute_box(rh_base, rh_delta, rh_size)
-        rt_low, rt_high = compute_box(rt_base, rt_delta, rt_size)
-
-        score_h = boxe_kg_arity_position_computation(
-            entity_pos=h_pos,
-            other_entity_bump=t_bump,
-            relation_box_low=rh_low,
-            relation_box_high=rh_high,
-            tanh_map=self.tanh_map,
-            norm_order=self.norm_order,
+        return dict(
+            # relation box: head
+            rh_base=rh_base,
+            rh_delta=rh_delta,
+            rh_size=rh_size,
+            # relation box: tail
+            rt_base=rt_base,
+            rt_delta=rt_delta,
+            rt_size=rt_size,
+            #
+            h_pos=h_pos,
+            h_bump=h_bump,
+            t_pos=t_pos,
+            t_bump=t_bump,
         )
 
-        score_t = boxe_kg_arity_position_computation(
-            entity_pos=t_pos,
-            other_entity_bump=h_bump,
-            relation_box_low=rt_low,
-            relation_box_high=rt_high,
-            tanh_map=self.tanh_map,
-            norm_order=self.norm_order,
-        )
-        total_score = score_h + score_t
-        return -total_score  # Because this is inverted in NSSALoss (higher is better)
+    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
+        state = super()._prepare_state_for_functional()
+        state["tanh_map"] = self.tanh_map
+        return state
 
 
 interaction_resolver = Resolver.from_subclasses(
