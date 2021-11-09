@@ -1204,8 +1204,7 @@ def point_to_box_distance(
 def boxe_kg_arity_position_score(
     entity_pos: torch.FloatTensor,
     other_entity_bump: torch.FloatTensor,
-    relation_box_low: torch.FloatTensor,
-    relation_box_high: torch.FloatTensor,
+    relation_box: Tuple[torch.FloatTensor, torch.FloatTensor],
     tanh_map: bool,
     p: int,
     power_norm: bool,
@@ -1225,10 +1224,8 @@ def boxe_kg_arity_position_score(
     :param other_entity_bump: shape: (*s_b, d)
         This is the bump of the entity at the other position in the fact. For example, given a
         fact $r(h, t)$ and the head arity position, `other_entity_bump` is the bump of $t$.
-    :param relation_box_low: shape: (*s_r, d)
-        The lower corner of the relation box at the target arity position.
-    :param relation_box_high: shape: (*s_r, d)
-        The upper corner of the relation box at the target arity position.
+    :param relation_box: shape: (*s_r, d)
+        The lower/upper corner of the relation box at the target arity position.
     :param tanh_map:
         whether to apply the tanh map regularizer
     :param p:
@@ -1242,6 +1239,8 @@ def boxe_kg_arity_position_score(
     """
     # Step 1: Apply the other entity bump
     bumped_representation = entity_pos + other_entity_bump
+
+    relation_box_low, relation_box_high = relation_box
 
     # Step 2: Apply tanh if tanh_map is set to True.
     if tanh_map:

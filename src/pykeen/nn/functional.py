@@ -1251,22 +1251,17 @@ def boxe_interaction(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    # First, compute the boxes
-    rh_low, rh_high = compute_box(rh_base, rh_delta, rh_size)
-    rt_low, rt_high = compute_box(rt_base, rt_delta, rt_size)
-
     return sum(
         boxe_kg_arity_position_score(
             entity_pos=entity_pos,
             other_entity_bump=other_entity_pos,
-            relation_box_low=relation_box_low,
-            relation_box_high=relation_box_high,
+            relation_box=compute_box(base=base, delta=delta, size=size),
             tanh_map=tanh_map,
             p=p,
             power_norm=power_norm,
         )
-        for entity_pos, other_entity_pos, relation_box_low, relation_box_high in (
-            (h_pos, t_bump, rh_low, rh_high),
-            (t_pos, h_bump, rt_low, rt_high),
+        for entity_pos, other_entity_pos, base, delta, size in (
+            (h_pos, t_bump, rh_base, rh_delta, rh_size),
+            (t_pos, h_bump, rt_base, rt_delta, rt_size),
         )
     )
