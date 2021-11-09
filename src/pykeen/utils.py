@@ -1221,18 +1221,22 @@ def boxe_kg_arity_position_computation(
     .. note::
         this computation is parallelizable across all positions
 
+    .. note ::
+        `entity_pos`, `other_entity_bump`, `relation_box_low` and `relation_box_high` have to be in broadcastable
+        shape.
+
     :param entity_pos:
         This is the base entity position of the entity appearing in the target position. For example,
-        for a fact $r(h,t)$ and the head arity position, entity_pos is the base position of $h$.
+        for a fact $r(h, t)$ and the head arity position, `entity_pos` is the base position of $h$.
     :param other_entity_bump:
         This is the bump of the entity at the other position in the fact. For example, given a
-        fact $r(h,t)$ and the head arity position, other_entity_bump is the bump of $t$.
+        fact $r(h, t)$ and the head arity position, `other_entity_bump` is the bump of $t$.
     :param relation_box_low:
         The lower corner of the relation box at the target arity position.
     :param relation_box_high:
         The upper corner of the relation box at the target arity position.
     :param tanh_map:
-        A Boolean value specifying whether to apply the tanh map regularizer.
+        whether to apply the tanh map regularizer
     :param p:
         The norm order to apply across dimensions to compute overall position score.
     :param power_norm:
@@ -1241,16 +1245,21 @@ def boxe_kg_arity_position_computation(
     :return:
         Arity-position score for the entity relative to the target relation box.
     """
-    bumped_representation = entity_pos + other_entity_bump  # Step 1: Apply the other entity bump
+    # Step 1: Apply the other entity bump
+    bumped_representation = entity_pos + other_entity_bump
+
+    # Step 2: Apply tanh if tanh_map is set to True.
     if tanh_map:
-        relation_box_low = torch.tanh(relation_box_low)  # Step 2: Apply tanh if tanh_map is set to True.
+        relation_box_low = torch.tanh(relation_box_low)
         relation_box_high = torch.tanh(relation_box_high)
         bumped_representation = torch.tanh(bumped_representation)
+
     # Compute the distance function output element-wise
     element_wise_distance = point_to_box_distance(
         points=bumped_representation,
         box_lows=relation_box_low,
         box_highs=relation_box_high,
     )
+
     # Finally, compute the norm
     return negative_norm(element_wise_distance, p=p, power_norm=power_norm)
