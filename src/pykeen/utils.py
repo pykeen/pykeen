@@ -1102,15 +1102,18 @@ if __name__ == "__main__":
     doctest.testmod()
 
 
-def product_normalize(x: torch.FloatTensor) -> torch.FloatTensor:
-    r"""Normalize a tensor along its embedding dimension so that the geometric mean is 1.0.
+def product_normalize(x: torch.FloatTensor, dim: int = -1) -> torch.FloatTensor:
+    r"""Normalize a tensor along a given dimension so that the geometric mean is 1.0.
 
-    :param x:
-        An input tensor with final dimension $d$.
-    :return:
-        An output tensor whose last order is normalized to have a geometric mean of 1.0.
+    :param x: shape: s
+        An input tensor
+    :param dim:
+        the dimension along which to normalize the tensor
+    
+    :return: shape: s
+        An output tensor where the given dimension is normalized to have a geometric mean of 1.0.
     """
-    return x / (x.abs().clamp(min=SANITY_EPSILON).log().mean(dim=1, keepdim=True).exp().clamp(min=SANITY_EPSILON))
+    return x / (x.abs().clamp(min=SANITY_EPSILON).log().mean(dim=dim, keepdim=True).exp().clamp(min=SANITY_EPSILON))
 
 
 def compute_box(
