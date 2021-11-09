@@ -22,6 +22,7 @@ pipeline:
     embedding_dim: 500
     p: 2   # Standard L2 norm
     tanh_map: True  # Apply hyperbolic tangent mapping regularizer
+    power_norm: False
 
   negative_sampler: basic
   negative_sampler_kwargs:
