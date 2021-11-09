@@ -672,7 +672,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                     epochs.set_postfix(
                         {
                             "loss": self.losses_per_epochs[-1],
-                            "prev_loss": self.losses_per_epochs[-2] if epoch > 2 else float("nan"),
+                            "prev_loss": self.losses_per_epochs[-2] if epoch > 1 else float("nan"),
                         }
                     )
 

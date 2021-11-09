@@ -22,6 +22,7 @@ pipeline:
     embedding_dim: 1000   # 1000-dimensional embeddings for parity with other compared models in the paper.
     p: 2   # Standard L2 norm
     tanh_map: True  # Apply hyperbolic tangent mapping regularizer
+    power_norm: False
 
   negative_sampler: basic
   negative_sampler_kwargs:
