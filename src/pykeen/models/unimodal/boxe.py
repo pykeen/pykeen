@@ -42,7 +42,7 @@ class BoxE(ERModel):
     def __init__(
         self,
         *,
-        embedding_dim: int = 200,
+        embedding_dim: int = 256,
         tanh_map: bool = True,
         norm_order: int = 2,
         entity_initializer: Hint[Initializer] = uniform_norm_,
