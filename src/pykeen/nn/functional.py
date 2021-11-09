@@ -22,7 +22,7 @@ from .sim import KG2E_SIMILARITIES
 from ..moves import irfft, rfft
 from ..typing import GaussianDistribution
 from ..utils import (
-    boxe_kg_arity_position_computation,
+    boxe_kg_arity_position_score,
     broadcast_cat,
     clamp_norm,
     compute_box,
@@ -1256,7 +1256,7 @@ def boxe_interaction(
     rt_low, rt_high = compute_box(rt_base, rt_delta, rt_size)
 
     return sum(
-        boxe_kg_arity_position_computation(  # ~ negative distance
+        boxe_kg_arity_position_score(
             entity_pos=entity_pos,
             other_entity_bump=other_entity_pos,
             relation_box_low=relation_box_low,
