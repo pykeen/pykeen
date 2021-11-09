@@ -60,7 +60,6 @@ class TensorEmbeddingTests(cases.RepresentationTestCase):
     """Tests for Embedding with 2-dimensional shape."""
 
     cls = Embedding
-    exp_shape = (3, 7)
     kwargs = dict(
         num_embeddings=10,
         shape=(3, 7),
