@@ -47,8 +47,6 @@ def expected_likelihood(
         The relation Gaussian distribution.
     :param t: shape: (batch_size, 1, 1, num_tails, d)
         The tail entity Gaussian distribution.
-    :param epsilon: float (default=1.0)
-        Small constant used to avoid numerical issues when dividing.
     :param exact:
         Whether to return the exact similarity, or leave out constant offsets.
 
