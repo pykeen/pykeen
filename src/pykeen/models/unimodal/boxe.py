@@ -44,7 +44,8 @@ class BoxE(ERModel):
         *,
         embedding_dim: int = 256,
         tanh_map: bool = True,
-        norm_order: int = 2,
+        p: int = 2,
+        power_norm: bool = False,
         entity_initializer: Hint[Initializer] = uniform_norm_,
         entity_initializer_kwargs: Optional[Mapping[str, Any]] = None,
         relation_initializer: Hint[Initializer] = uniform_norm_,  # Has to be scaled as well
@@ -61,8 +62,10 @@ class BoxE(ERModel):
             Whether to use tanh mapping after BoxE computation (defaults to true). The hyperbolic tangent mapping
             restricts the embedding space to the range [-1, 1], and thus this map implicitly
             regularizes the space to prevent loss reduction by growing boxes arbitrarily large.
-        :param norm_order:
-            Norm Order in score computation
+        :param p:
+            order of norm in score computation
+        :param power_norm:
+            whether to use the p-th power of the norm instead
         :param entity_initializer:
             Entity initializer function. Defaults to :func:`pykeen.nn.init.uniform_norm_`
         :param entity_initializer_kwargs:
@@ -82,7 +85,11 @@ class BoxE(ERModel):
         """
         super().__init__(
             interaction=BoxEInteraction,
-            interaction_kwargs=dict(norm_order=norm_order, tanh_map=tanh_map),
+            interaction_kwargs=dict(
+                p=p,
+                power_norm=power_norm,
+                tanh_map=tanh_map,
+            ),
             entity_representations=[  # Base position
                 EmbeddingSpecification(
                     embedding_dim=embedding_dim,
