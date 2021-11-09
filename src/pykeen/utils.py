@@ -1183,9 +1183,13 @@ def boxe_kg_arity_position_computation(
     relation_box_low: torch.FloatTensor,
     relation_box_high: torch.FloatTensor,
     tanh_map: bool,
-    norm_order: int,
+    p: int,
+    power_norm: bool,
 ) -> torch.FloatTensor:
     r"""Perform the BoxE computation at a single arity position.
+
+    .. note::
+        this computation is parallelizable across all positions
 
     :param entity_pos:
         This is the base entity position of the entity appearing in the target position. For example,
@@ -1199,12 +1203,13 @@ def boxe_kg_arity_position_computation(
         The upper corner of the relation box at the target arity position.
     :param tanh_map:
         A Boolean value specifying whether to apply the tanh map regularizer.
-    :param norm_order:
+    :param p:
         The norm order to apply across dimensions to compute overall position score.
+    :param power_norm:
+        whether to use the powered norm instead
+
     :return:
         Arity-position score for the entity relative to the target relation box.
-
-    .. note:: this computation is parallelizable across all positions
     """
     bumped_representation = entity_pos + other_entity_bump  # Step 1: Apply the other entity bump
     if tanh_map:
@@ -1213,7 +1218,9 @@ def boxe_kg_arity_position_computation(
         bumped_representation = torch.tanh(bumped_representation)
     # Compute the distance function output element-wise
     element_wise_distance = point_to_box_distance(
-        points=bumped_representation, box_lows=relation_box_low, box_highs=relation_box_high
+        points=bumped_representation,
+        box_lows=relation_box_low,
+        box_highs=relation_box_high,
     )
     # Finally, compute the norm
-    return element_wise_distance.norm(p=norm_order, dim=-1)
+    return negative_norm(element_wise_distance, p=p, power_norm=power_norm)

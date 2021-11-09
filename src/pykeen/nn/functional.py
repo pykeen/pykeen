@@ -22,8 +22,10 @@ from .sim import KG2E_SIMILARITIES
 from ..moves import irfft, rfft
 from ..typing import GaussianDistribution
 from ..utils import (
+    boxe_kg_arity_position_computation,
     broadcast_cat,
     clamp_norm,
+    compute_box,
     estimate_cost_of_sequence,
     extended_einsum,
     is_cudnn_error,
@@ -36,6 +38,7 @@ from ..utils import (
 )
 
 __all__ = [
+    "boxe_interaction",
     "complex_interaction",
     "conve_interaction",
     "convkb_interaction",
@@ -1186,3 +1189,49 @@ def cross_e_interaction(
         x = dropout(x)
     # similarity
     return (x * t).sum(dim=-1)
+
+
+def boxe_interaction(
+    # head
+    h_pos: torch.FloatTensor,
+    h_bump: torch.FloatTensor,
+    # relation box: head
+    rh_base: torch.FloatTensor,
+    rh_delta: torch.FloatTensor,
+    rh_size: torch.FloatTensor,
+    # relation box: tail
+    rt_base: torch.FloatTensor,
+    rt_delta: torch.FloatTensor,
+    rt_size: torch.FloatTensor,
+    # tail
+    t_pos: torch.FloatTensor,
+    t_bump: torch.FloatTensor,
+    # power norm
+    tanh_map: bool = False,
+    p: int = 2,
+    power_norm: bool = False,
+) -> torch.FloatTensor:
+    """
+    This interaction relies on Abboud's point-to-box distance
+    :func:`pykeen.utils.point_to_box_distance`.
+    """
+    # TODO: Docstring
+    # First, compute the boxes
+    rh_low, rh_high = compute_box(rh_base, rh_delta, rh_size)
+    rt_low, rt_high = compute_box(rt_base, rt_delta, rt_size)
+
+    return sum(
+        boxe_kg_arity_position_computation(  # ~ negative distance
+            entity_pos=entity_pos,
+            other_entity_bump=other_entity_pos,
+            relation_box_low=relation_box_low,
+            relation_box_high=relation_box_high,
+            tanh_map=tanh_map,
+            p=p,
+            power_norm=power_norm,
+        )
+        for entity_pos, other_entity_pos, relation_box_low, relation_box_high in (
+            (h_pos, t_bump, rh_low, rh_high),
+            (t_pos, h_bump, rt_low, rt_high),
+        )
+    )
