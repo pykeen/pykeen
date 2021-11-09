@@ -1110,6 +1110,7 @@ class NSSALoss(SetwiseLoss):
             negative_scores = negative_scores_
 
         # compute weights (without gradient tracking)
+        assert negative_scores.ndimension() == 2
         weights = negative_scores.detach().mul(self.inverse_softmax_temperature).softmax(dim=-1)
 
         return self(
