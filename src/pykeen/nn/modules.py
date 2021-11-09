@@ -9,6 +9,7 @@ import logging
 import math
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Generic, Mapping, MutableMapping, Optional, Sequence, Set, Tuple, Union, cast
+
 import torch
 from class_resolver import Resolver
 from torch import FloatTensor, nn
@@ -19,11 +20,11 @@ from ..typing import HeadRepresentation, HintOrType, RelationRepresentation, Tai
 from ..utils import (
     CANONICAL_DIMENSIONS,
     activation_resolver,
+    boxe_kg_arity_position_computation,
     compute_box,
     convert_to_canonical_shape,
     ensure_tuple,
     point_to_box_distance,
-    boxe_kg_arity_position_computation,
     upgrade_to_sequence,
 )
 
@@ -1457,12 +1458,22 @@ class BoxEKGInteraction(Interaction):
         rh_low, rh_high = compute_box(rh_base, rh_delta, rh_size)
         rt_low, rt_high = compute_box(rt_base, rt_delta, rt_size)
 
-        score_h = boxe_kg_arity_position_computation(entity_pos=h_pos, other_entity_bump=t_bump,
-                                                     relation_box_low=rh_low, relation_box_high=rh_high,
-                                                     tanh_map=self.tanh_map, norm_order=self.norm_order)
+        score_h = boxe_kg_arity_position_computation(
+            entity_pos=h_pos,
+            other_entity_bump=t_bump,
+            relation_box_low=rh_low,
+            relation_box_high=rh_high,
+            tanh_map=self.tanh_map,
+            norm_order=self.norm_order,
+        )
 
-        score_t = boxe_kg_arity_position_computation(entity_pos=t_pos, other_entity_bump=h_bump,
-                                                     relation_box_low=rt_low, relation_box_high=rt_high,
-                                                     tanh_map=self.tanh_map, norm_order=self.norm_order)
+        score_t = boxe_kg_arity_position_computation(
+            entity_pos=t_pos,
+            other_entity_bump=h_bump,
+            relation_box_low=rt_low,
+            relation_box_high=rt_high,
+            tanh_map=self.tanh_map,
+            norm_order=self.norm_order,
+        )
         total_score = score_h + score_t
         return -total_score  # Because this is inverted in NSSALoss (higher is better)

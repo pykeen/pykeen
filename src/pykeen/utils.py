@@ -1176,9 +1176,15 @@ def point_to_box_distance(
     )
     return rv
 
-def boxe_kg_arity_position_computation(entity_pos: torch.FloatTensor, other_entity_bump: torch.FloatTensor,
-                                       relation_box_low: torch.FloatTensor, relation_box_high: torch.FloatTensor,
-                                       tanh_map: bool, norm_order: int) -> torch.FloatTensor:
+
+def boxe_kg_arity_position_computation(
+    entity_pos: torch.FloatTensor,
+    other_entity_bump: torch.FloatTensor,
+    relation_box_low: torch.FloatTensor,
+    relation_box_high: torch.FloatTensor,
+    tanh_map: bool,
+    norm_order: int,
+) -> torch.FloatTensor:
     r"""Performs the BoxE computation at a single arity position
     (this computation is parallelizable across all positions)
 
@@ -1192,15 +1198,16 @@ def boxe_kg_arity_position_computation(entity_pos: torch.FloatTensor, other_enti
         :param norm_order: The norm order to apply across dimensions to compute overall position score.
 
         :returns: Arity-position score for the entity relative to the target relation box.
-        """
+    """
     bumped_representation = entity_pos + other_entity_bump  # Step 1: Apply the other entity bump
     if tanh_map:
-        relation_box_low = torch.tanh(relation_box_low)   # Step 2: Apply tanh if tanh_map is set to True.
+        relation_box_low = torch.tanh(relation_box_low)  # Step 2: Apply tanh if tanh_map is set to True.
         relation_box_high = torch.tanh(relation_box_high)
         bumped_representation = torch.tanh(bumped_representation)
-    #Compute the distance function output element-wise
-    element_wise_distance = point_to_box_distance(points=bumped_representation, box_lows=relation_box_low,
-                                                  box_highs=relation_box_high)
+    # Compute the distance function output element-wise
+    element_wise_distance = point_to_box_distance(
+        points=bumped_representation, box_lows=relation_box_low, box_highs=relation_box_high
+    )
     # Finally, compute the norm
     overall_score = element_wise_distance.norm(p=norm_order, dim=-1)
     return overall_score
