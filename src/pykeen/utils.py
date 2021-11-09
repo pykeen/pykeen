@@ -1121,14 +1121,12 @@ def product_normalise(input_tensor: torch.FloatTensor) -> torch.FloatTensor:
 def compute_box(
     base: torch.FloatTensor, delta: torch.FloatTensor, size: torch.FloatTensor
 ) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
-    r"""Given sets of embeddings of base position, shape, and size, compute the lower and upper corners of
-    the resulting box
+    r"""Compute the lower and upper corners of a resulting box.
 
     :param base: The base position (box center) of the input relation embeddings.
     :param delta: The base shape of the input relation embeddings.
     :param size: The size scalar vectors of the input relation embeddings.
-
-    :returns: Lower and upper bounds of the box whose embeddings are provided as input.
+    :return: Lower and upper bounds of the box whose embeddings are provided as input.
     """
     size_pos = torch.nn.functional.elu(size) + 1  # Enforce that sizes are strictly positive by passing through ELU
     delta_norm = product_normalise(delta)  # Shape vector is normalized using the above helper function
@@ -1144,11 +1142,12 @@ def compute_box(
 def point_to_box_distance(
     points: torch.FloatTensor, box_lows: torch.FloatTensor, box_highs: torch.FloatTensor
 ) -> torch.FloatTensor:
-    r"""Computes the point to box distance function proposed in the BoxE paper in an element-wise fashion.
+    r"""Compute the point to box distance function proposed by [abboud2020]_ in an element-wise fashion.
 
     :param points: the positions of the points being scored against boxes
     :param box_lows: the lower corners of the boxes
     :param box_highs: the upper corners of the boxes.
+    :returns: Element-wise distance function scores as per the definition above
 
     points: p
     box_lows: l
@@ -1163,8 +1162,6 @@ def point_to_box_distance(
             |p-c|/(w+1) & l <= p <+ h \\
             |p-c|*(w+1) - 0.5*w*((w+1)-1/(w+1)) & otherwise \\
         \end{cases}
-
-    :returns: Element-wise distance function scores as per the definition above
     """
     widths = box_highs - box_lows
     widths_p1 = widths + 1  # Compute width plus 1
@@ -1185,19 +1182,26 @@ def boxe_kg_arity_position_computation(
     tanh_map: bool,
     norm_order: int,
 ) -> torch.FloatTensor:
-    r"""Performs the BoxE computation at a single arity position
-    (this computation is parallelizable across all positions)
+    r"""Perform the BoxE computation at a single arity position.
 
-        :param entity_pos: This is the base entity position of the entity appearing in the target position. For example,
-        for a fact r(h,t) and the head arity position, entity_pos is the base position of h
-        :param other_entity_bump: This is the bump of the entity at the other position in the fact. For example, given a
-        fact r(h,t) and the head arity position, other_entity_bump is the bump of t.
-        :param relation_box_low: The lower corner of the relation box at the target arity position.
-        :param relation_box_high: The upper corner of the relation box at the target arity position.
-        :param tanh_map: A Boolean value specifying whether to apply the tanh map regularizer.
-        :param norm_order: The norm order to apply across dimensions to compute overall position score.
+    :param entity_pos:
+        This is the base entity position of the entity appearing in the target position. For example,
+        for a fact $r(h,t)$ and the head arity position, entity_pos is the base position of $h$.
+    :param other_entity_bump:
+        This is the bump of the entity at the other position in the fact. For example, given a
+        fact $r(h,t)$ and the head arity position, other_entity_bump is the bump of $t$.
+    :param relation_box_low:
+        The lower corner of the relation box at the target arity position.
+    :param relation_box_high:
+        The upper corner of the relation box at the target arity position.
+    :param tanh_map:
+        A Boolean value specifying whether to apply the tanh map regularizer.
+    :param norm_order:
+        The norm order to apply across dimensions to compute overall position score.
+    :return:
+        Arity-position score for the entity relative to the target relation box.
 
-        :returns: Arity-position score for the entity relative to the target relation box.
+    .. note:: this computation is parallelizable across all positions
     """
     bumped_representation = entity_pos + other_entity_bump  # Step 1: Apply the other entity bump
     if tanh_map:
