@@ -1430,16 +1430,6 @@ class BoxEInteraction(Interaction):
             Should the hyperbolic tangent be applied to all representations prior to model scoring?
         :param norm_order:
             The normalization order (default 2)
-
-        .. math::
-            points: p
-            box_lows: l
-            box_highs: h
-
-            w = h - l . Width is the difference between the upper and lower box bound
-            c = (h + l) / 2. Box centers (the mean of the box bounds)
-
-            dist(p,l,h) = |p-c|/(w+1) if l <= p <+ h, |p-c|*(w+1) - 0.5*w*((w+1)-1/(w+1)) otherwise.
         """
         super().__init__()
         self.tanh_map = tanh_map  # Map the tanh map
