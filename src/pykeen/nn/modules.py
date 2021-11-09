@@ -24,7 +24,6 @@ from ..utils import (
     compute_box,
     convert_to_canonical_shape,
     ensure_tuple,
-    point_to_box_distance,
     upgrade_to_sequence,
 )
 
@@ -38,6 +37,7 @@ __all__ = [
     # Adapter classes
     "MonotonicAffineTransformationInteraction",
     # Concrete Classes
+    "BoxEInteraction",
     "ComplExInteraction",
     "ConvEInteraction",
     "ConvKBInteraction",
@@ -1416,14 +1416,7 @@ class CrossEInteraction(FunctionalInteraction[FloatTensor, Tuple[FloatTensor, Fl
         return dict(h=h, r=r, c_r=c_r, t=t)
 
 
-interaction_resolver = Resolver.from_subclasses(
-    Interaction,  # type: ignore
-    skip={TranslationalInteraction, FunctionalInteraction, MonotonicAffineTransformationInteraction},
-    suffix=Interaction.__name__,
-)
-
-
-class BoxEKGInteraction(Interaction):
+class BoxEInteraction(Interaction):
     """An implementation of the BoxE interaction from [abboud2020]_."""
 
     relation_shape = ("d", "d", "s", "d", "d", "s")  # Boxes are 2xd (size) each, x 2 sets of boxes: head and tail
@@ -1477,3 +1470,10 @@ class BoxEKGInteraction(Interaction):
         )
         total_score = score_h + score_t
         return -total_score  # Because this is inverted in NSSALoss (higher is better)
+
+
+interaction_resolver = Resolver.from_subclasses(
+    Interaction,  # type: ignore
+    skip={TranslationalInteraction, FunctionalInteraction, MonotonicAffineTransformationInteraction},
+    suffix=Interaction.__name__,
+)

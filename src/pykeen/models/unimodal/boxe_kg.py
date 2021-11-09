@@ -11,7 +11,7 @@ from ...losses import NSSALoss
 from ...models import ERModel
 from ...nn.emb import EmbeddingSpecification
 from ...nn.init import uniform_norm_
-from ...nn.modules import BoxEKGInteraction
+from ...nn.modules import BoxEInteraction
 from ...typing import Hint, Initializer
 
 __all__ = [
@@ -71,7 +71,7 @@ class BoxEKG(ERModel):
         """
 
         super().__init__(
-            interaction=BoxEKGInteraction,
+            interaction=BoxEInteraction,
             interaction_kwargs=dict(norm_order=norm_order, tanh_map=tanh_map),
             entity_representations=[  # Base position
                 EmbeddingSpecification(
