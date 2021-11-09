@@ -1114,17 +1114,15 @@ class NodePieceRepresentation(RepresentationModule):
             aggregation of multiple token representations to a single entity representation. By default,
             this uses :func:`torch.mean`. It could also use other aggregations like :func:`torch.sum`,
             :func:`torch.max`, or even trainable aggregations e.g., ``MLP(mean(MLP(tokens)))``
-            (cf. DeepSets from [zaheer2017]_).
+            (cf. DeepSets from [zaheer2017]_) if given value ``"mlp"``.
 
             We could also have aggregations which result in differently shapes output, e.g. a concatenation of all
             token embeddings resulting in shape ``(k * d,)``. In this case, `shape` must be provided.
 
-            The aggregation takes two arguments: the (batched) tensor of token representations, in shape (*, k, *dt),
-            and the index along which to aggregate.
-
+            The aggregation takes two arguments: the (batched) tensor of token representations, in shape
+            ``(*, k, *dt)``, and the index along which to aggregate.
         :param shape:
             the shape of an individual representation. Only necessary, if aggregation results in a change of dimensions.
-
         :param k:
             the number of tokens for each entity.
         """
