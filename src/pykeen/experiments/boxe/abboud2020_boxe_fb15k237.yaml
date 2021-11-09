@@ -3,7 +3,7 @@ metadata:
 pipeline:
   dataset: fb15k237
   evaluator_kwargs:
-      filtered: true
+    filtered: true
     # > We optimize for cross-entropy loss
     loss: NSSALoss
     loss_kwargs:

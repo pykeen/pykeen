@@ -5,7 +5,7 @@ pipeline:
   dataset_kwargs:
     create_inverse_triples: True  # Introduce inverse relations and reciprocal facts
   evaluator_kwargs:
-      filtered: true
+    filtered: true
     # > We optimize for cross-entropy loss
     loss: NSSALoss
     loss_kwargs:
