@@ -22,7 +22,7 @@ pipeline:
         a: -1
         b: 1
       embedding_dim: 200   # 200-dimensional embeddings for parity with other models in the literature
-      norm_order: 2   # Standard L2 norm
+      p: 2   # Standard L2 norm
       tanh_map: True  # Apply hyperbolic tangent mapping regularizer
 
     negative_sampler: basic
