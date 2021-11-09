@@ -20,6 +20,7 @@ from .unimodal import (
     NTN,
     RESCAL,
     RGCN,
+    BoxEKG,
     CompGCN,
     ComplEx,
     ConvE,

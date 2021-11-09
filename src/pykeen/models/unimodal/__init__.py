@@ -64,6 +64,7 @@
    Conference on Web Search and Data Mining.
 """
 
+from .boxe_kg import BoxEKG
 from .compgcn import CompGCN
 from .complex import ComplEx
 from .conv_e import ConvE
@@ -95,6 +96,7 @@ from .tucker import TuckER
 from .unstructured_model import UnstructuredModel
 
 __all__ = [
+    "BoxEKG",
     "CompGCN",
     "ComplEx",
     "ConvE",
