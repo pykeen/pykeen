@@ -1150,12 +1150,14 @@ def point_to_box_distance(
     :param box_highs: the upper corners of the boxes.
     :returns: Element-wise distance function scores as per the definition above
 
-    points: p
-    box_lows: l
-    box_highs: h
+    Given points $p$, box_lows $l$, and box_highs $h$, the following quantities are
+    defined:
 
-    w = h - l . Width is the difference between the upper and lower box bound
-    c = (h + l) / 2. Box centers (the mean of the box bounds)
+    - Width $w$ is the difference between the upper and lower box bound: $w = h - l$
+    - Box centers $c$ are the mean of the box bounds: $c = (h + l) / 2$
+
+    Finally, the point to box distance $dist(p,l,h)$ is defined as
+    the following piecewise function:
 
     .. math::
 

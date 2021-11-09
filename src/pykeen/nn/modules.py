@@ -1436,6 +1436,9 @@ class BoxEInteraction(
             Should the hyperbolic tangent be applied to all representations prior to model scoring?
         :param norm_order:
             The normalization order (default 2)
+
+        This interaction relies on Abboud's point-to-box distance
+        :func:`pykeen.utils.point_to_box_distance`.
         """
         super().__init__()
         self.tanh_map = tanh_map  # Map the tanh map

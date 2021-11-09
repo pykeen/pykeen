@@ -53,7 +53,7 @@ class BoxE(ERModel):
         relation_size_initializer_kwargs: Optional[Mapping[str, Any]] = None,
         **kwargs,
     ) -> None:
-        r"""Initialize BoxE-KG.
+        r"""Initialize BoxE.
 
         :param embedding_dim:
             The entity embedding dimension $d$. Defaults to 200. Is usually $d \in [50, 300]$.
@@ -76,6 +76,9 @@ class BoxE(ERModel):
             Defaults to :func:`torch.nn.init.uniform_`
         :param relation_size_initializer_kwargs: Keyword arguments to be used when calling the
             relation matrix initializer
+
+        This interaction relies on Abboud's point-to-box distance
+        :func:`pykeen.utils.point_to_box_distance`.
         """
         super().__init__(
             interaction=BoxEInteraction,
