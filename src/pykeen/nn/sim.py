@@ -23,7 +23,6 @@ def expected_likelihood(
     h: GaussianDistribution,
     r: GaussianDistribution,
     t: GaussianDistribution,
-    epsilon: float = 1.0e-10,
     exact: bool = True,
 ) -> torch.FloatTensor:
     r"""Compute the similarity based on expected likelihood.
