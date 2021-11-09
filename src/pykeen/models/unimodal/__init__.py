@@ -62,6 +62,9 @@
 .. [zhang2019b] Zhang, W., *et al.* (2019). `Interaction Embeddings for Prediction and Explanation in Knowledge
    Graphs <https://doi.org/10.1145/3289600.3291014>`. WSDM '19: Proceedings of the Twelfth ACM International
    Conference on Web Search and Data Mining.
+.. [abboud2020] Abboud, R., *et al.* (2020). `BoxE: A box embedding model for knowledge base completion
+   <https://proceedings.neurips.cc/paper/2020/file/6dbbe6abe5f14af882ff977fc3f35501-Paper.pdf>`_.
+   *Advances in Neural Information Processing Systems*, 2020-December(NeurIPS), 1–13.
 """
 
 from .boxe_kg import BoxEKG

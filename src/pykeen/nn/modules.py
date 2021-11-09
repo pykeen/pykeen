@@ -1423,7 +1423,7 @@ interaction_resolver = Resolver.from_subclasses(
 
 
 class BoxEKGInteraction(Interaction):
-    """An implementation of BoxE."""
+    """An implementation of the BoxE interaction from [abboud2020]_."""
 
     relation_shape = ("d", "d", "s", "d", "d", "s")  # Boxes are 2xd (size) each, x 2 sets of boxes: head and tail
     entity_shape = ("d", "d")  # Base position and bump

@@ -1,3 +1,7 @@
+# -*- coding: utf-8 -*-
+
+"""Implementation of the BoxE model."""
+
 from typing import Any, ClassVar, Mapping, Optional
 
 from torch.nn.init import uniform_
@@ -16,13 +20,14 @@ __all__ = [
 
 
 class BoxEKG(ERModel):
-    r"""An implementation of BoxE.
+    r"""An implementation of BoxE from [abboud2020]_.
 
     ---
     citation:
         author: Abboud
         year: 2020
         link: https://arxiv.org/abs/2007.06267
+        github: ralphabb/BoxE
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
