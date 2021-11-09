@@ -1132,7 +1132,7 @@ class NodePieceRepresentation(RepresentationModule):
         mapped_triples = triples_factory.mapped_triples
         if triples_factory.create_inverse_triples:
             # inverse triples are created afterwards implicitly
-            mapped_triples = mapped_triples[mapped_triples[:, 1] >= triples_factory.real_num_relations]
+            mapped_triples = mapped_triples[mapped_triples[:, 1] < triples_factory.real_num_relations]
 
         # create token representations
         # normal relations + inverse relations
@@ -1179,13 +1179,16 @@ class NodePieceRepresentation(RepresentationModule):
             e2r[e].add(r)
 
         # randomly sample with replacement k relations for each entity
-        assignment = torch.empty(
+        assignment = torch.full(
             size=(triples_factory.num_entities, k),
             dtype=torch.long,
+            fill_value=-1,
         )
         for e, rs in e2r.items():
             # we sample *with* replacement
             assignment[e] = self._sample(torch.as_tensor(data=list(rs), dtype=torch.long), k)
+        if assignment.min() < 0:
+            raise ValueError("Invalid assignment.")
         self.register_buffer(name="assignment", tensor=assignment)
 
     @staticmethod
