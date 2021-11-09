@@ -82,10 +82,9 @@ class NodePiece(ERModel):
         self,
         *,
         triples_factory: CoreTriplesFactory,
-        num_tokens: int,
+        num_tokens: int = 2,
         embedding_dim: int = 64,
         embedding_specification: Optional[EmbeddingSpecification] = None,
-        relation_representations: Optional[EmbeddingSpecification] = None,
         interaction: HintOrType[Interaction] = DistMultInteraction,
         aggregation: Union[str, Callable[[torch.Tensor, int], torch.Tensor]] = None,
         node_piece_kwargs: Optional[MutableMapping[str, Any]] = None,
@@ -100,8 +99,6 @@ class NodePiece(ERModel):
             the embedding dimension. Only used if embedding_specification is not given.
         :param embedding_specification:
             the embedding specification.
-        :param relation_representations:
-            the relation representations. Defaults to embedding_specification.
         :param interaction:
             the interaction module, or a hint for it.
         :param node_piece_kwargs:
@@ -120,15 +117,19 @@ class NodePiece(ERModel):
                 num_tokens=num_tokens,
                 embedding_dim=embedding_dim,
             )
+        # always create representations for normal and inverse relations
+        relation_representations = embedding_specification.make(
+            num_embeddings=2 * triples_factory.real_num_relations,
+        )
         entity_representations = NodePieceRepresentation(
             triples_factory=triples_factory,
-            token_representation=embedding_specification,
+            token_representation=relation_representations,
             **node_piece_kwargs,
         )
         super().__init__(
             triples_factory=triples_factory,
             interaction=interaction,
             entity_representations=entity_representations,
-            relation_representations=relation_representations or embedding_specification,
+            relation_representations=relation_representations,
             **kwargs,
         )
