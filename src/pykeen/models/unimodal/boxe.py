@@ -62,7 +62,7 @@ class BoxE(ERModel):
             restricts the embedding space to the range [-1, 1], and thus this map implicitly
             regularizes the space to prevent loss reduction by growing boxes arbitrarily large.
         :param norm_order:
-            Norm Order in score computation (Int): Default - 2
+            Norm Order in score computation
         :param entity_initializer:
             Entity initializer function. Defaults to :func:`pykeen.nn.init.uniform_norm_`
         :param entity_initializer_kwargs:
