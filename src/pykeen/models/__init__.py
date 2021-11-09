@@ -56,6 +56,7 @@ __all__ = [
     "LiteralModel",
     "EvaluationOnlyModel",
     # Concrete Models
+    "BoxEKG",
     "CompGCN",
     "ComplEx",
     "ComplExLiteral",

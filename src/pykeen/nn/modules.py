@@ -1423,11 +1423,13 @@ class BoxEInteraction(Interaction):
     entity_shape = ("d", "d")  # Base position and bump
 
     def __init__(self, tanh_map: bool = True, norm_order: int = 2):
-        r"""Implements the basic BoxE-KG interaction.
+        r"""
+        Instantiate the interaction module.
 
-        :param tanh_map: A Boolean value specifying whether a hyperbolic tangent applies to all representations
-            prior to model scoring (default: True)
-        :param norm_order: An integer specifying the normalization order (default 2)
+        :param tanh_map:
+            Should the hyperbolic tangent be applied to all representations prior to model scoring?
+        :param norm_order:
+            The normalization order (default 2)
 
         .. math::
             points: p
