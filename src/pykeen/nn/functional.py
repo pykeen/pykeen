@@ -1212,10 +1212,45 @@ def boxe_interaction(
     power_norm: bool = False,
 ) -> torch.FloatTensor:
     """
-    This interaction relies on Abboud's point-to-box distance
-    :func:`pykeen.utils.point_to_box_distance`.
+    The BoxE interaction function from [abboud2021]_.
+
+    .. note ::
+        this interaction relies on Abboud's point-to-box distance
+        :func:`pykeen.utils.point_to_box_distance`.
+
+    :param h_pos: shape: (batch_size, num_heads, 1, 1, d)
+        the head entity position
+    :param h_pos: shape: (batch_size, num_heads, 1, 1, d)
+        the head entity bump
+
+    :param rh_base: shape: (batch_size, 1, num_relations, 1, d)
+        the relation-specific head box base position
+    :param rh_delta: shape: (batch_size, 1, num_relations, 1, d)
+        # TODO:
+    :param rh_size: shape: (batch_size, 1, num_relations, 1, d)
+        the relation-specific head box size
+    :param rt_base: shape: (batch_size, 1, num_relations, 1, d)
+        the relation-specific tail box base position
+    :param rt_delta: shape: (batch_size, 1, num_relations, 1, d)
+        # TODO:
+    :param rt_size: shape: (batch_size, 1, num_relations, 1, d)
+        the relation-specific tail box size
+
+    :param t_pos: shape: (batch_size, 1, 1, num_tails, d)
+        the tail entity position
+    :param t_pos: shape: (batch_size, 1, 1, num_tails, d)
+        the tail entity bump
+
+    :param tanh_map:
+        whether to apply the tanh mapping
+    :param p:
+        the order of the norm to apply
+    :param power_norm:
+        whether to use the p-th power of the p-norm instead
+
+    :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        The scores.
     """
-    # TODO: Docstring
     # First, compute the boxes
     rh_low, rh_high = compute_box(rh_base, rh_delta, rh_size)
     rt_low, rt_high = compute_box(rt_base, rt_delta, rt_size)
