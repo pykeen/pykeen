@@ -116,13 +116,13 @@ class NodePiece(ERModel):
             logger.warning(
                 "The provided triples factory does not create inverse triples. However, for the node piece"
                 "representations inverse relation representations are required. Thus, the implicitly created inverse "
-                "relations are only trained via the node piece mechanism, but not as part of the 'normal' training.",
+                "relations are only trained via the NodePiece mechanism, but not as part of the 'normal' training.",
             )
         embedding_specification = embedding_specification or EmbeddingSpecification(
             shape=(embedding_dim,),
         )
 
-        # TODO put this inside :meth:`NodePieceRepresentation.__init__()`
+        # Create an MLP for string aggregation
         if aggregation == "mlp":
             aggregation = _ConcatMLP(
                 num_tokens=num_tokens,
@@ -138,7 +138,7 @@ class NodePiece(ERModel):
             token_representation=relation_representations,
             aggregation=aggregation,
             shape=shape,
-            k=num_tokens,
+            k=num_tokens,  # TODO rename k
         )
         super().__init__(
             triples_factory=triples_factory,

@@ -1097,7 +1097,7 @@ class NodePieceRepresentation(RepresentationModule):
         *,
         triples_factory: CoreTriplesFactory,
         token_representation: Union[EmbeddingSpecification, RepresentationModule],
-        aggregation: Hint[Callable[[torch.Tensor, int], torch.Tensor]] = None,
+        aggregation: Optional[Callable[[torch.Tensor, int], torch.Tensor]] = None,
         # TODO delete shape, this is unused and not possible to pass from NodePiece model
         shape: Optional[Sequence[int]] = None,
         k: int = 2,
@@ -1150,12 +1150,8 @@ class NodePieceRepresentation(RepresentationModule):
         # super init; has to happen *before* any parameter or buffer is assigned
         super().__init__(max_id=triples_factory.num_entities, shape=shape or token_representation.shape)
 
-        if aggregation is None:
-            self.aggregation = torch.mean
-        elif aggregation == "mlp":
-            raise NotImplementedError
-        else:
-            self.aggregation = aggregation
+        # Assign default aggregation
+        self.aggregation = torch.mean if aggregation is None else aggregation
 
         # assign module
         self.tokens = token_representation
