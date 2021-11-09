@@ -1416,7 +1416,13 @@ class CrossEInteraction(FunctionalInteraction[FloatTensor, Tuple[FloatTensor, Fl
         return dict(h=h, r=r, c_r=c_r, t=t)
 
 
-class BoxEInteraction(Interaction):
+class BoxEInteraction(
+    Interaction[
+        Tuple[FloatTensor, FloatTensor],
+        Tuple[FloatTensor, FloatTensor, FloatTensor, FloatTensor, FloatTensor, FloatTensor],
+        Tuple[FloatTensor, FloatTensor],
+    ]
+):
     """An implementation of the BoxE interaction from [abboud2020]_."""
 
     relation_shape = ("d", "d", "s", "d", "d", "s")  # Boxes are 2xd (size) each, x 2 sets of boxes: head and tail
@@ -1435,7 +1441,12 @@ class BoxEInteraction(Interaction):
         self.tanh_map = tanh_map  # Map the tanh map
         self.norm_order = norm_order
 
-    def forward(self, h, r, t):
+    def forward(
+        self,
+        h: Tuple[FloatTensor, FloatTensor],
+        r: Tuple[FloatTensor, FloatTensor, FloatTensor, FloatTensor, FloatTensor, FloatTensor],
+        t: Tuple[FloatTensor, FloatTensor],
+    ) -> torch.FloatTensor:  # noqa: D102
         rh_base, rh_delta, rh_size, rt_base, rt_delta, rt_size = r
         h_pos, h_bump = h
         t_pos, t_bump = t
