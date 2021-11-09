@@ -1096,12 +1096,6 @@ def load_configuration(path: Union[str, pathlib.Path, os.PathLike]) -> Mapping[s
     raise ValueError(f"Unknown configuration file format: {path.suffix}. Valid formats: {CONFIGURATION_FILE_FORMATS}")
 
 
-if __name__ == "__main__":
-    import doctest
-
-    doctest.testmod()
-
-
 def product_normalize(x: torch.FloatTensor, dim: int = -1) -> torch.FloatTensor:
     r"""Normalize a tensor along a given dimension so that the geometric mean is 1.0.
 
@@ -1263,3 +1257,9 @@ def boxe_kg_arity_position_computation(
 
     # Finally, compute the norm
     return negative_norm(element_wise_distance, p=p, power_norm=power_norm)
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()
