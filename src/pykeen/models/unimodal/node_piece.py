@@ -2,6 +2,7 @@
 
 """A wrapper which combines an interaction function with NodePiece entity representations."""
 
+import logging
 from typing import Any, Callable, ClassVar, Mapping, MutableMapping, Optional, Union
 
 import torch
@@ -17,6 +18,8 @@ from ...triples.triples_factory import CoreTriplesFactory
 __all__ = [
     "NodePiece",
 ]
+
+logger = logging.getLogger(__name__)
 
 
 class _ConcatMLP(nn.Sequential):
@@ -106,6 +109,12 @@ class NodePiece(ERModel):
         :param kwargs:
             additional keyword-based arguments passed to ERModel.__init__
         """
+        if not triples_factory.create_inverse_triples:
+            logger.warning(
+                "The provided triples factory does not create inverse triples. However, for the node piece"
+                "representations inverse relation representations are required. Thus, the implicitly created inverse "
+                "relations are only trained via the node piece mechanism, but not as part of the 'normal' training.",
+            )
         embedding_specification = embedding_specification or EmbeddingSpecification(
             shape=(embedding_dim,),
         )
