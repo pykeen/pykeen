@@ -1447,7 +1447,7 @@ class BoxEInteraction(
         h: Tuple[FloatTensor, FloatTensor],
         r: Tuple[FloatTensor, FloatTensor, FloatTensor, FloatTensor, FloatTensor, FloatTensor],
         t: Tuple[FloatTensor, FloatTensor],
-    ) -> Mapping[str, torch.FloatTensor]:  # noqa:D102
+    ) -> MutableMapping[str, torch.FloatTensor]:  # noqa:D102
         rh_base, rh_delta, rh_size, rt_base, rt_delta, rt_size = r
         h_pos, h_bump = h
         t_pos, t_bump = t
