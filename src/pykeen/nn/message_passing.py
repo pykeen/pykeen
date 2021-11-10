@@ -546,7 +546,20 @@ class RGCNLayer(nn.Module):
         x: torch.FloatTensor,
         edge_index: Tuple[torch.LongTensor, torch.LongTensor],
         edge_type: torch.LongTensor,
-    ):  # noqa: D102
+    ):
+        """
+        Calculate enriched entity representations.
+
+        :param x: shape: (num_entities, input_dim)
+            The input entity representations.
+        :param edge_index:
+            A tuple of the source and target indices,both with shape (num_triples,)
+        :param edge_type: shape: (num_triples,)
+            The relation type per triple.
+
+        :return: shape: (num_entities, output_dim)
+            Enriched entity representations.
+        """
         source, target = edge_index
 
         if self.edge_weighting is not None and source.numel() > 0:
