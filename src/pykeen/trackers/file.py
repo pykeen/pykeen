@@ -98,6 +98,8 @@ class CSVResultTracker(FileResultTracker):
 
         :param path:
             The path of the log file.
+        :param name: The default file name for a file if no path is given. If no default is given,
+            the current time is used.
         :param kwargs:
             Additional keyword based arguments forwarded to csv.writer.
         """
