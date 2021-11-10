@@ -661,7 +661,10 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                     self.lr_scheduler.step(epoch=epoch)
 
                 # Track epoch loss
-                epoch_loss = current_epoch_loss / num_training_instances
+                if self.model.loss.reduction == "mean":
+                    epoch_loss = current_epoch_loss / num_training_instances
+                else:
+                    epoch_loss = current_epoch_loss / len(train_data_loader)
                 self.losses_per_epochs.append(epoch_loss)
 
                 # Print loss information to console
@@ -669,7 +672,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                     epochs.set_postfix(
                         {
                             "loss": self.losses_per_epochs[-1],
-                            "prev_loss": self.losses_per_epochs[-2] if epoch > 2 else float("nan"),
+                            "prev_loss": self.losses_per_epochs[-2] if epoch > 1 else float("nan"),
                         }
                     )
 
