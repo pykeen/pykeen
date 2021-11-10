@@ -14,6 +14,8 @@ from torch.nn import functional
 
 from pykeen.utils import activation_resolver
 
+from .weighting import EdgeWeighting
+
 __all__ = [
     "Decomposition",
     "BasesDecomposition",
@@ -433,7 +435,6 @@ class Layer(nn.Module):
         x: torch.FloatTensor,
         edge_index: Tuple[torch.LongTensor, torch.LongTensor],
         edge_type: torch.LongTensor,
-        edge_weights: Optional[torch.FloatTensor] = None,
     ):
         """
         Calculate enriched entity representations.
@@ -444,8 +445,6 @@ class Layer(nn.Module):
             A tuple of the source and target indices,both with shape (num_triples,)
         :param edge_type: shape: (num_triples,)
             The relation type per triple.
-        :param edge_weights: shape: (num_triples,)
-            Scalar edge weights per triple.
 
         :return: shape: (num_entities, output_dim)
             Enriched entity representations.
@@ -488,6 +487,7 @@ class RGCNLayer(nn.Module):
         self_loop_dropout: float = 0.2,
         decomposition: Hint[Decomposition] = None,
         decomposition_kwargs: Optional[Mapping[str, Any]] = None,
+        edge_weighting: Hint[EdgeWeighting] = None,
     ):
         """
         Initialize the layer.
@@ -534,6 +534,7 @@ class RGCNLayer(nn.Module):
         if activation is not None:
             activation = activation_resolver.make(query=activation, pos_kwargs=activation_kwargs)
         self.activation = activation
+        self.edge_weighting = edge_weighting
 
     def reset_parameters(self):  # noqa: D102
         if self.bias is not None:
@@ -545,9 +546,17 @@ class RGCNLayer(nn.Module):
         x: torch.FloatTensor,
         edge_index: Tuple[torch.LongTensor, torch.LongTensor],
         edge_type: torch.LongTensor,
-        edge_weights: Optional[torch.FloatTensor] = None,
     ):  # noqa: D102
         source, target = edge_index
+
+        if self.edge_weighting is not None and source.numel() > 0:
+            edge_weights = torch.empty_like(source, dtype=torch.float32)
+            for r in range(edge_type.max().item() + 1):
+                mask = edge_type == r
+                if mask.any():
+                    edge_weights[mask] = self.edge_weighting(source[mask], target[mask])
+        else:
+            edge_weights = None
 
         # self-loop
         y = self.dropout(x @ self.w_self_loop)
@@ -606,10 +615,7 @@ class PygRGCNLayer(Layer):
         x: torch.FloatTensor,
         edge_index: Tuple[torch.LongTensor, torch.LongTensor],
         edge_type: torch.LongTensor,
-        edge_weights: Optional[torch.FloatTensor] = None,
     ):  # noqa: D102
-        if edge_weights is not None:
-            raise NotImplementedError
         return self.conv(x, edge_index, edge_type)
 
 

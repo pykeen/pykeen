@@ -640,7 +640,7 @@ class RGCNRepresentations(RepresentationModule):
             )
 
         # Resolve edge weighting
-        self.edge_weighting = edge_weight_resolver.make(query=edge_weighting)
+        edge_weighting = edge_weight_resolver.make(query=edge_weighting)
 
         # dropout
         self.edge_dropout = edge_dropout
@@ -666,6 +666,7 @@ class RGCNRepresentations(RepresentationModule):
                 self_loop_dropout=self_loop_dropout,
                 decomposition=decomposition,
                 decomposition_kwargs=decomposition_kwargs,
+                edge_weighting=edge_weighting,
             )
             for i in range(num_layers)
         )
@@ -713,22 +714,11 @@ class RGCNRepresentations(RepresentationModule):
             targets = targets[edge_keep_mask]
             edge_types = edge_types[edge_keep_mask]
 
-        # fixed edges -> pre-compute weights
-        if self.edge_weighting is not None and sources.numel() > 0:
-            edge_weights = torch.empty_like(sources, dtype=torch.float32)
-            for r in range(edge_types.max().item() + 1):
-                mask = edge_types == r
-                if mask.any():
-                    edge_weights[mask] = self.edge_weighting(sources[mask], targets[mask])
-        else:
-            edge_weights = None
-
         for layer in self.layers:
             x = layer(
                 x=x,
                 edge_index=(sources, targets),
                 edge_type=edge_types,
-                edge_weights=edge_weights,
             )
 
         # Cache enriched representations
