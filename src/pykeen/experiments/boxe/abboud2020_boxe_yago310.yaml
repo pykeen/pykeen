@@ -5,7 +5,7 @@ pipeline:
   dataset_kwargs:
     create_inverse_triples: True  # Introduce inverse relations and reciprocal facts
   evaluator_kwargs:
-  filtered: true
+    filtered: true
   # > Optimization is using negative sampling self-adversarial loss.
   loss: NSSALoss
   loss_kwargs:
@@ -17,7 +17,7 @@ pipeline:
     entity_initializer: uniform_norm   # This has to be a uniform distribution between -0.5/sqrt(emb_dim)
     #and 0.5/sqrt(emb_dim)
     relation_initializer: uniform_norm     # This is also between -0.5/sqrt(emb_dim) and 0.5/sqrt(emb_dim)
-    relation_size_initializer: uniform_    # This is a uniform distribution between -1 and 1
+    relation_size_initializer: uniform    # This is a uniform distribution between -1 and 1
     relation_size_initializer_kwargs:
       a: -1
       b: 1
