@@ -28,6 +28,12 @@ pipeline:
   negative_sampler_kwargs:
     num_negs_per_pos: 100
 
+  stopper: early
+  stopper_kwargs:
+    frequency: 100
+    metric: "inverse_harmonic_mean_rank"
+    patience: 1000  # big enough to run until the end
+
   optimizer: Adam
   optimizer_kwargs:
     lr: 0.001

@@ -26,6 +26,12 @@ pipeline:
     tanh_map: True  # Apply hyperbolic tangent mapping regularizer
     power_norm: False
 
+  stopper: early
+  stopper_kwargs:
+    frequency: 100
+    metric: "inverse_harmonic_mean_rank"
+    patience: 400  # big enough to run until the end
+  
   negative_sampler: basic
   negative_sampler_kwargs:
     num_negs_per_pos: 150
