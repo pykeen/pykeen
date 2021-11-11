@@ -549,4 +549,6 @@ class InteractionTestsTestCase(unittest_templates.MetaTestCase[Interaction]):
         FunctionalInteraction,
         TranslationalInteraction,
         LiteralInteraction,
+        # FIXME
+        pykeen.nn.modules.BoxEInteraction,
     }

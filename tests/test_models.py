@@ -288,10 +288,9 @@ class TestRGCNBlock(cases.BaseRGCNTest):
             num_blocks=3,
         ),
         "edge_weighting": "symmetric",
-        "use_batch_norm": True,
     }
-    #: (scale & bias for BN) * layers
-    num_constant_init = 4
+    #: one bias per layer
+    num_constant_init = 2
 
 
 class TestRotatE(cases.ModelTestCase):
@@ -627,6 +626,12 @@ class TestPRotatE(cases.ModelTestCase):
     """Test the pRotatE model."""
 
     cls = pykeen.models.PRotatE
+
+
+class TestBoxE(cases.ModelTestCase):
+    """Test the BoxE model."""
+
+    cls = pykeen.models.BoxE
 
 
 class TestTesting(unittest_templates.MetaTestCase[Model]):

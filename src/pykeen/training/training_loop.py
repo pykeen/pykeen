@@ -34,8 +34,9 @@ from ..lr_schedulers import LRScheduler
 from ..models import RGCN, Model
 from ..stoppers import Stopper
 from ..trackers import ResultTracker
-from ..training.schlichtkrull_sampler import GraphSampler
+from ..training.schlichtkrull_sampler import SLCWASubGraphInstances
 from ..triples import CoreTriplesFactory, Instances, TriplesFactory
+from ..triples.instances import SLCWAInstances
 from ..utils import (
     format_relative_comparison,
     get_batchnorm_modules,
@@ -200,7 +201,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         drop_last: Optional[bool] = None,
         callbacks: TrainingCallbackHint = None,
         gradient_clipping_max_norm: Optional[float] = None,
-        gradient_clipping_norm_type: Union[float] = None,
+        gradient_clipping_norm_type: Optional[float] = None,
         gradient_clipping_max_abs_value: Optional[float] = None,
     ) -> Optional[List[float]]:
         """Train the KGE model.
@@ -405,7 +406,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         drop_last: Optional[bool] = None,
         callbacks: TrainingCallbackHint = None,
         gradient_clipping_max_norm: Optional[float] = None,
-        gradient_clipping_norm_type: Union[float] = None,
+        gradient_clipping_norm_type: Optional[float] = None,
         gradient_clipping_max_abs_value: Optional[float] = None,
     ) -> Optional[List[float]]:
         """Train the KGE model, see docstring for :func:`TrainingLoop.train`."""
@@ -524,10 +525,22 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         if sampler == "schlichtkrull":
             if triples_factory is None:
                 raise ValueError("need to pass triples_factory when using graph sampling")
-            sampler = GraphSampler(triples_factory, num_samples=sub_batch_size)
-            shuffle = False
-        else:
+            if not isinstance(training_instances, SLCWAInstances):
+                raise NotImplementedError("Subgraph sampling is currently only supported for SLCWA training.")
+            # wrap training instances
+            training_instances = SLCWASubGraphInstances(
+                mapped_triples=triples_factory.mapped_triples,
+                sub_graph_size=sub_batch_size,
+            )
+            # disable automatic batching
+            batch_size = None
+            # no support for sub-batching
+            sub_batch_size = None
             sampler = None
+            shuffle = False
+            # this is already done
+            drop_last = False
+        else:
             shuffle = True
 
         if num_workers is None:
@@ -554,12 +567,11 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         logger.debug(f"using stopper: {stopper}")
 
         train_data_loader = DataLoader(
-            sampler=sampler,
             dataset=training_instances,
-            batch_size=batch_size,
-            shuffle=shuffle,
             num_workers=num_workers,
+            batch_size=batch_size,
             drop_last=drop_last,
+            shuffle=shuffle,
         )
 
         # Save the time to track when the saved point was available
@@ -597,10 +609,11 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
 
                     # Get batch size of current batch (last batch may be incomplete)
                     current_batch_size = self._get_batch_size(batch)
+                    _sub_batch_size = sub_batch_size or current_batch_size
 
                     # accumulate gradients for whole batch
-                    for start in range(0, current_batch_size, sub_batch_size):
-                        stop = min(start + sub_batch_size, current_batch_size)
+                    for start in range(0, current_batch_size, _sub_batch_size):
+                        stop = min(start + _sub_batch_size, current_batch_size)
 
                         # forward pass call
                         batch_loss = self._forward_pass(
@@ -648,7 +661,10 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                     self.lr_scheduler.step(epoch=epoch)
 
                 # Track epoch loss
-                epoch_loss = current_epoch_loss / num_training_instances
+                if self.model.loss.reduction == "mean":
+                    epoch_loss = current_epoch_loss / num_training_instances
+                else:
+                    epoch_loss = current_epoch_loss / len(train_data_loader)
                 self.losses_per_epochs.append(epoch_loss)
 
                 # Print loss information to console
@@ -656,7 +672,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                     epochs.set_postfix(
                         {
                             "loss": self.losses_per_epochs[-1],
-                            "prev_loss": self.losses_per_epochs[-2] if epoch > 2 else float("nan"),
+                            "prev_loss": self.losses_per_epochs[-2] if epoch > 1 else float("nan"),
                         }
                     )
 
