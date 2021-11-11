@@ -82,12 +82,9 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
         # send to device
         positive_batch = positive_batch[start:stop].to(device=self.device)
         negative_batch = negative_batch[start:stop]
-        if positive_filter is None:
-            negative_score_shape = ...
-        else:
+        if positive_filter is not None:
             positive_filter = positive_filter[start:stop]
             negative_batch = negative_batch[positive_filter]
-            negative_score_shape = ...
         # Make it negative batch broadcastable (required for num_negs_per_pos > 1).
         negative_batch = negative_batch.view(-1, 3)
 
