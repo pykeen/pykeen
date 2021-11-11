@@ -70,7 +70,7 @@ def main(
             validation_path=directory.joinpath("valid.txt"),
             eager=True,
         )
-        print(d)
+        click.echo(d)
 
 
 if __name__ == "__main__":

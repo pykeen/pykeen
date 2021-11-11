@@ -13,7 +13,7 @@ from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.emb import Embedding, EmbeddingSpecification
 from ...typing import Constrainer, Hint, Initializer
-from ...utils import clamp_norm
+from ...utils import at_least_eps, clamp_norm
 
 __all__ = [
     "KG2E",
@@ -203,7 +203,6 @@ class KG2E(EntityRelationEmbeddingModel):
         mu_r: torch.FloatTensor,
         sigma_e: torch.FloatTensor,
         sigma_r: torch.FloatTensor,
-        epsilon: float = 1.0e-10,
     ) -> torch.FloatTensor:
         r"""Compute the similarity based on expected likelihood.
 
@@ -227,8 +226,6 @@ class KG2E(EntityRelationEmbeddingModel):
             The diagonal covariance matrix of the first Gaussian.
         :param sigma_r: torch.Tensor, shape: (s_1, ..., s_k, d)
             The diagonal covariance matrix of the second Gaussian.
-        :param epsilon: float (default=1.0)
-            Small constant used to avoid numerical issues when dividing.
 
         :return: torch.Tensor, shape: (s_1, ..., s_k)
             The similarity.
@@ -238,7 +235,7 @@ class KG2E(EntityRelationEmbeddingModel):
         mu = mu_e - mu_r
 
         #: a = \mu^T\Sigma^{-1}\mu
-        safe_sigma = torch.clamp_min(sigma, min=epsilon)
+        safe_sigma = at_least_eps(sigma)
         sigma_inv = torch.reciprocal(safe_sigma)
         a = torch.sum(sigma_inv * mu ** 2, dim=-1)
 
@@ -252,7 +249,6 @@ class KG2E(EntityRelationEmbeddingModel):
         mu_r: torch.FloatTensor,
         sigma_e: torch.FloatTensor,
         sigma_r: torch.FloatTensor,
-        epsilon: float = 1.0e-10,
     ) -> torch.FloatTensor:
         r"""Compute the similarity based on KL divergence.
 
@@ -278,14 +274,12 @@ class KG2E(EntityRelationEmbeddingModel):
             The diagonal covariance matrix of the first Gaussian.
         :param sigma_r: torch.Tensor, shape: (s_1, ..., s_k, d)
             The diagonal covariance matrix of the second Gaussian.
-        :param epsilon: float (default=1.0)
-            Small constant used to avoid numerical issues when dividing.
 
         :return: torch.Tensor, shape: (s_1, ..., s_k)
             The similarity.
         """
         d = mu_e.shape[-1]
-        safe_sigma_r = torch.clamp_min(sigma_r, min=epsilon)
+        safe_sigma_r = at_least_eps(sigma_r)
         sigma_r_inv = torch.reciprocal(safe_sigma_r)
 
         #: a = tr(\Sigma_r^{-1}\Sigma_e)
@@ -297,5 +291,5 @@ class KG2E(EntityRelationEmbeddingModel):
 
         #: c = \log \frac{det(\Sigma_e)}{det(\Sigma_r)}
         # = sum log (sigma_e)_i - sum log (sigma_r)_i
-        c = sigma_e.clamp_min(min=epsilon).log().sum(dim=-1) - safe_sigma_r.log().sum(dim=-1)
+        c = at_least_eps(sigma_e).log().sum(dim=-1) - safe_sigma_r.log().sum(dim=-1)
         return -0.5 * (a + b - c - d)

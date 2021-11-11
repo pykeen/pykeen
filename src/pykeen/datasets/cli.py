@@ -202,7 +202,7 @@ def verify(dataset: str):
         else:
             valid = valid & this_valid
     df["valid"] = valid
-    print(df.to_markdown())
+    click.echo(df.to_markdown())
 
 
 if __name__ == "__main__":

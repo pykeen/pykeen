@@ -21,15 +21,22 @@ from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
 from tqdm.autonotebook import tqdm, trange
 
-from .callbacks import MultiTrainingCallback, TrackerCallback, TrainingCallbackHint
+from .callbacks import (
+    GradientAbsClippingCallback,
+    GradientNormClippingCallback,
+    MultiTrainingCallback,
+    TrackerCallback,
+    TrainingCallbackHint,
+)
 from ..constants import PYKEEN_CHECKPOINTS, PYKEEN_DEFAULT_CHECKPOINT
 from ..losses import Loss
 from ..lr_schedulers import LRScheduler
 from ..models import RGCN, Model
 from ..stoppers import Stopper
 from ..trackers import ResultTracker
-from ..training.schlichtkrull_sampler import GraphSampler
+from ..training.schlichtkrull_sampler import SLCWASubGraphInstances
 from ..triples import CoreTriplesFactory, Instances, TriplesFactory
+from ..triples.instances import SLCWAInstances
 from ..utils import (
     format_relative_comparison,
     get_batchnorm_modules,
@@ -193,8 +200,16 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         checkpoint_on_failure: bool = False,
         drop_last: Optional[bool] = None,
         callbacks: TrainingCallbackHint = None,
+        gradient_clipping_max_norm: Optional[float] = None,
+        gradient_clipping_norm_type: Optional[float] = None,
+        gradient_clipping_max_abs_value: Optional[float] = None,
     ) -> Optional[List[float]]:
         """Train the KGE model.
+
+        .. note ::
+            Gradient clipping is a technique to avoid the exploding gradient problem. Clip by norm and clip by value
+            are two alternative implementations.
+
 
         :param triples_factory:
             The training triples.
@@ -252,6 +267,13 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         :param callbacks:
             An optional :class:`pykeen.training.TrainingCallback` or collection of callback instances that define
             one of several functionalities. Their interface was inspired by Keras.
+        :param gradient_clipping_max_norm:
+            The maximum gradient norm for use with gradient clipping. If None, no gradient norm clipping is used.
+        :param gradient_clipping_norm_type:
+            The gradient norm type to use for maximum gradient norm, cf. :func:`torch.nn.utils.clip_grad_norm_`
+        :param gradient_clipping_max_abs_value:
+            The maximum absolute value in gradients, cf. :func:`torch.nn.utils.clip_grad_value_`. If None, no
+            gradient clipping will be used.
 
         :return:
             The losses per epoch.
@@ -340,6 +362,9 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                 last_best_epoch=last_best_epoch,
                 drop_last=drop_last,
                 callbacks=callbacks,
+                gradient_clipping_max_norm=gradient_clipping_max_norm,
+                gradient_clipping_norm_type=gradient_clipping_norm_type,
+                gradient_clipping_max_abs_value=gradient_clipping_max_abs_value,
                 triples_factory=triples_factory,
                 training_instances=training_instances,
             )
@@ -380,61 +405,11 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         last_best_epoch: Optional[int] = None,
         drop_last: Optional[bool] = None,
         callbacks: TrainingCallbackHint = None,
+        gradient_clipping_max_norm: Optional[float] = None,
+        gradient_clipping_norm_type: Optional[float] = None,
+        gradient_clipping_max_abs_value: Optional[float] = None,
     ) -> Optional[List[float]]:
-        """Train the KGE model.
-
-        :param triples_factory:
-            The training triples factory
-        :param num_epochs:
-            The number of epochs to train the model.
-        :param batch_size:
-            If set the batch size to use for mini-batch training. Otherwise find the largest possible batch_size
-            automatically.
-        :param slice_size: >0
-            The divisor for the scoring function when using slicing. This is only possible for LCWA training loops in
-            general and only for models that have the slicing capability implemented.
-        :param label_smoothing: (0 <= label_smoothing < 1)
-            If larger than zero, use label smoothing.
-        :param sampler: (None or 'schlichtkrull')
-            The type of sampler to use. At the moment sLCWA in R-GCN is the only user of schlichtkrull sampling.
-        :param continue_training:
-            If set to False, (re-)initialize the model's weights. Otherwise continue training.
-        :param only_size_probing:
-            The evaluation is only performed for two batches to test the memory footprint, especially on GPUs.
-        :param use_tqdm:
-            Turn on the progress bar for epochs
-        :param use_tqdm_batch:
-            Turn on the progress bar for batches (sub-progress bar for epochs)
-        :param tqdm_kwargs:
-            Keyword arguments passed to :mod:`tqdm` managing the progress bar.
-        :param stopper:
-            An instance of :class:`pykeen.stopper.Stopper` with settings for checking
-            if training should stop early
-        :param result_tracker:
-            The result tracker.
-        :param sub_batch_size:
-            If provided split each batch into sub-batches to avoid memory issues for large models / small GPUs.
-        :param num_workers:
-            The number of child CPU workers used for loading data. If None, data are loaded in the main process.
-        :param save_checkpoints:
-            Activate saving checkpoints.
-        :param checkpoint_path:
-            The full filepath for saving checkpoints.
-        :param checkpoint_frequency:
-            The frequency of saving checkpoints in minutes. Setting it to 0 will save a checkpoint after every epoch.
-        :param checkpoint_on_failure_file_path:
-            The full filepath for saving checkpoints on failure.
-        :param best_epoch_model_file_path:
-            The file path for the best epoch model when using early stoppers and resuming training.
-        :param last_best_epoch:
-            The last best epoch that the early stopper saved when resuming training.
-        :param drop_last:
-            Whether to drop the last batch in each epoch to prevent smaller batches. Defaults to False, except if the
-            model contains batch normalization layers. Can be provided explicitly to override.
-
-        :return:
-            The losses per epoch.
-        """
+        """Train the KGE model, see docstring for :func:`TrainingLoop.train`."""
         if self.optimizer is None:
             raise ValueError("optimizer must be set before running _train()")
         # When using early stopping models have to be saved separately at the best epoch, since the training loop will
@@ -460,6 +435,15 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         # Register a callback for the result tracker, if given
         if result_tracker is not None:
             callback.register_callback(TrackerCallback(result_tracker))
+        if gradient_clipping_max_norm is not None:
+            callback.register_callback(
+                GradientNormClippingCallback(
+                    max_norm=gradient_clipping_max_norm,
+                    norm_type=gradient_clipping_norm_type,
+                )
+            )
+        if gradient_clipping_max_abs_value is not None:
+            callback.register_callback(GradientAbsClippingCallback(clip_value=gradient_clipping_max_abs_value))
 
         callback.register_training_loop(self)
 
@@ -541,10 +525,22 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         if sampler == "schlichtkrull":
             if triples_factory is None:
                 raise ValueError("need to pass triples_factory when using graph sampling")
-            sampler = GraphSampler(triples_factory, num_samples=sub_batch_size)
-            shuffle = False
-        else:
+            if not isinstance(training_instances, SLCWAInstances):
+                raise NotImplementedError("Subgraph sampling is currently only supported for SLCWA training.")
+            # wrap training instances
+            training_instances = SLCWASubGraphInstances(
+                mapped_triples=triples_factory.mapped_triples,
+                sub_graph_size=sub_batch_size,
+            )
+            # disable automatic batching
+            batch_size = None
+            # no support for sub-batching
+            sub_batch_size = None
             sampler = None
+            shuffle = False
+            # this is already done
+            drop_last = False
+        else:
             shuffle = True
 
         if num_workers is None:
@@ -571,12 +567,11 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         logger.debug(f"using stopper: {stopper}")
 
         train_data_loader = DataLoader(
-            sampler=sampler,
             dataset=training_instances,
-            batch_size=batch_size,
-            shuffle=shuffle,
             num_workers=num_workers,
+            batch_size=batch_size,
             drop_last=drop_last,
+            shuffle=shuffle,
             collate_fn=self.get_collator(),
         )
 
@@ -615,10 +610,11 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
 
                     # Get batch size of current batch (last batch may be incomplete)
                     current_batch_size = self._get_batch_size(batch)
+                    _sub_batch_size = sub_batch_size or current_batch_size
 
                     # accumulate gradients for whole batch
-                    for start in range(0, current_batch_size, sub_batch_size):
-                        stop = min(start + sub_batch_size, current_batch_size)
+                    for start in range(0, current_batch_size, _sub_batch_size):
+                        stop = min(start + _sub_batch_size, current_batch_size)
 
                         # forward pass call
                         batch_loss = self._forward_pass(
@@ -634,6 +630,8 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
 
                     # when called by batch_size_search(), the parameter update should not be applied.
                     if not only_size_probing:
+                        callback.pre_step()
+
                         # update parameters according to optimizer
                         self.optimizer.step()
 
@@ -664,7 +662,10 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                     self.lr_scheduler.step(epoch=epoch)
 
                 # Track epoch loss
-                epoch_loss = current_epoch_loss / num_training_instances
+                if self.model.loss.reduction == "mean":
+                    epoch_loss = current_epoch_loss / num_training_instances
+                else:
+                    epoch_loss = current_epoch_loss / len(train_data_loader)
                 self.losses_per_epochs.append(epoch_loss)
 
                 # Print loss information to console
@@ -672,7 +673,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                     epochs.set_postfix(
                         {
                             "loss": self.losses_per_epochs[-1],
-                            "prev_loss": self.losses_per_epochs[-2] if epoch > 2 else float("nan"),
+                            "prev_loss": self.losses_per_epochs[-2] if epoch > 1 else float("nan"),
                         }
                     )
 
