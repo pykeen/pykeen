@@ -1442,16 +1442,19 @@ class BoxEInteraction(
         super().__init__(p=p, power_norm=power_norm)
         self.tanh_map = tanh_map
 
-    def _prepare_for_functional(
-        self,
+    @staticmethod
+    def _prepare_hrt_for_functional(
         h: Tuple[FloatTensor, FloatTensor],
         r: Tuple[FloatTensor, FloatTensor, FloatTensor, FloatTensor, FloatTensor, FloatTensor],
         t: Tuple[FloatTensor, FloatTensor],
-    ) -> Mapping[str, torch.FloatTensor]:
+    ) -> MutableMapping[str, torch.FloatTensor]:  # noqa:D102
         rh_base, rh_delta, rh_size, rt_base, rt_delta, rt_size = r
         h_pos, h_bump = h
         t_pos, t_bump = t
         return dict(
+            # head position and bump
+            h_pos=h_pos,
+            h_bump=h_bump,
             # relation box: head
             rh_base=rh_base,
             rh_delta=rh_delta,
@@ -1460,9 +1463,7 @@ class BoxEInteraction(
             rt_base=rt_base,
             rt_delta=rt_delta,
             rt_size=rt_size,
-            #
-            h_pos=h_pos,
-            h_bump=h_bump,
+            # tail position and bump
             t_pos=t_pos,
             t_bump=t_bump,
         )
