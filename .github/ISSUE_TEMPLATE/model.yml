@@ -11,7 +11,7 @@ body:
     attributes:
       label: Publication Link
       description: Link to the pre-print (preferrable), conference proceedings, journal article, or other academic text of record where the model was first proposed (e.g., from _arXiv_)
-      placeholder: https://arxiv.org/abs/1911.00219
+      placeholder: e.g., https://arxiv.org/abs/1911.00219
     validations:
       required: true
   - type: input
@@ -19,7 +19,7 @@ body:
     attributes:
       label: Reference Implementation
       description: Link to the publicly available reference implementation, preferrably from the authors of the publication
-      placeholder: https://arxiv.org/abs/1911.00219
+      placeholder: e.g., https://github.com/ibalazevic/multirelational-poincare
     validations:
       required: false
   - type: textarea
