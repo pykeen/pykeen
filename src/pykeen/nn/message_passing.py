@@ -431,14 +431,13 @@ class EfficientBasesDecomposition(BasesDecomposition):
             edge_weights=edge_weights,
             horizontal_stacking=self.horizontal_stacking,
         )
-        weights = torch.einsum("rb, bio -> rio", self.relation_base_weights, self.bases)
         if self.horizontal_stacking:
-            x = torch.einsum("ni, rio -> rno", x, weights)
-            x = adj @ x.view(-1, self.output_dim)
+            x = torch.einsum("ni, rb, bio -> rno", x, self.relation_base_weights, self.bases)
+            x = torch.spmm(adj, x.view(-1, self.output_dim))
         else:
-            x = adj @ x
+            x = torch.spmm(adj, x)
             x = x.view(self.num_relations, -1, self.input_dim)
-            x = torch.einsum("rio, rni -> no", weights, x)
+            x = torch.einsum("rb, bio, rni -> no", self.relation_base_weights, self.bases, x)
         if accumulator is not None:
             x = accumulator + x
         return x
@@ -627,9 +626,9 @@ class EfficientBlockDecomposition(BlockDecomposition):
         # weights = torch.einsum("rb, bio -> rio", self.relation_base_weights, self.bases)
         if self.horizontal_stacking:
             x = torch.einsum("nbi, rbio -> rnbo", x.view(-1, self.num_blocks, self.block_size), self.blocks)
-            x = adj @ x.view(-1, self.output_dim)
+            x = torch.spmm(adj, x.view(-1, self.output_dim))
         else:
-            x = adj @ x
+            x = torch.spmm(adj, x)
             x = x.view(self.num_relations, -1, self.num_blocks, self.block_size)
             x = torch.einsum("rbio, rnbi -> nbo", self.blocks, x).view(-1, self.output_dim)
         if accumulator is not None:
