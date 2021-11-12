@@ -10,6 +10,7 @@ import torch
 from class_resolver import Resolver
 from class_resolver.api import Hint
 from torch import nn
+from torch.functional import block_diag
 from torch.nn import functional
 
 from pykeen.utils import activation_resolver
@@ -100,6 +101,9 @@ class Decomposition(nn.Module, ABC):
         if output_dim is None:
             output_dim = input_dim
         self.output_dim = output_dim
+
+    def extra_repr(self) -> str:  # noqa: D102
+        return f"input_dim={self.input_dim}, " f"output_dim={self.output_dim}, " f"num_relations={self.num_relations}"
 
     @abstractmethod
     def forward(
@@ -313,6 +317,9 @@ class BasesDecomposition(Decomposition):
             edge_weights=edge_weights,
         )
 
+    def extra_repr(self) -> str:  # noqa: D102
+        return super().extra_repr() + f", num_bases={self.num_bases}"
+
 
 def _stack_matrices(
     num_relations: int,
@@ -403,6 +410,9 @@ class EfficientBasesDecomposition(BasesDecomposition):
         # > for high dimensional input and low dimensional output as the projection to high dimension is done last.
         self.horizontal_stacking = input_dim > self.output_dim
 
+    def extra_repr(self) -> str:  # noqa: D102
+        return super().extra_repr() + f", horizontal_stacking={self.horizontal_stacking}"
+
     def forward(
         self,
         x: torch.FloatTensor,
@@ -492,6 +502,9 @@ class BlockDecomposition(Decomposition):
         )
         self.num_blocks = num_blocks
         self.block_size = block_size
+
+    def extra_repr(self) -> str:  # noqa: D102
+        return super().extra_repr() + f", num_blocks={self.num_blocks}, block_size={self.block_size}"
 
     def reset_parameters(self):  # noqa: D102
         block_size = self.blocks.shape[-1]
@@ -588,6 +601,9 @@ class EfficientBlockDecomposition(BlockDecomposition):
 
         # TODO: We do not want to have a block for the self-loop
         self.blocks = nn.Parameter(self.blocks[:-1, ...])
+
+    def extra_repr(self) -> str:  # noqa: D102
+        return super().extra_repr() + f", horizontal_stacking={self.horizontal_stacking}"
 
     def forward(
         self,
