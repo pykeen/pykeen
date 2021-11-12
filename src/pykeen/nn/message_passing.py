@@ -314,6 +314,126 @@ class BasesDecomposition(Decomposition):
         )
 
 
+def _stack_matrices(
+    num_relations: int,
+    num_entities: int,
+    source: torch.LongTensor,
+    target: torch.LongTensor,
+    edge_type: torch.LongTensor,
+    edge_weights: Optional[torch.FloatTensor] = None,
+    horizontal_stacking: bool = True,
+) -> torch.Tensor:
+    """
+    Stack adjacency matrices as described in [thanapalasingam2021]_.
+
+    :param num_relations:
+        the number of relations
+    :param num_entities:
+        the number of entities
+    :param source: shape: (num_triples,)
+        the source entity indices
+    :param target: shape: (num_triples,)
+        the target entity indices
+    :param edge_type: shape: (num_triples,)
+        the edge type, i.e., relation ID
+    :param edge_weights: shape: (num_triples,)
+        scalar edge weights
+    :param horizontal_stacking:
+        whether to use horizontal or vertical stacking
+
+    :return: shape: (num_entities * num_relations, num_entities) / (num_entities, num_entities * num_relations)
+        the stacked adjacency matrix
+    """
+    offset = edge_type * num_entities
+    if horizontal_stacking:
+        size = (num_entities, num_relations * num_entities)
+        target = offset + target
+    else:
+        size = (num_relations * num_entities, num_entities)
+        source = offset + source
+    indices = torch.stack([source, target], dim=0)
+    if edge_weights is None:
+        edge_weights = torch.ones_like(source, dtype=torch.get_default_dtype())
+    return torch.sparse_coo_tensor(
+        indices=indices,
+        values=edge_weights,
+        size=size,
+    )
+
+
+class EfficientBasesDecomposition(BasesDecomposition):
+    """
+    An efficient implementation of the basis decomposition based on [thanapalasingam2021]_.
+
+    The implementation uses a reshaping of the adjacency tensor into a sparse matrix to support message passing by a
+    single sparse matrix multiplication.
+
+    .. seealso ::
+        https://github.com/thiviyanT/torch-rgcn/blob/267faffd09a441d902c483a8c130410c72910e90/torch_rgcn/layers.py#L450-L565
+    """
+
+    def __init__(
+        self,
+        input_dim: int,
+        num_relations: int,
+        num_bases: Optional[int] = None,
+        output_dim: Optional[int] = None,
+    ):
+        """
+        Initialize the layer.
+
+        :param input_dim: >0
+            The input dimension.
+        :param num_relations: >0
+            The number of relations.
+        :param num_bases: >0
+            The number of bases to use.
+        :param output_dim: >0
+            The output dimension. If None is given, defaults to input_dim.
+        """
+        super().__init__(
+            input_dim=input_dim,
+            num_relations=num_relations,
+            output_dim=output_dim,
+            num_bases=num_bases,
+            memory_intense=None,
+        )
+        # > The vertical stacking approach is suitable for low dimensional input and high dimensional output,
+        # > because the projection to low dimensions is done first. While the horizontal stacking approach is good
+        # > for high dimensional input and low dimensional output as the projection to high dimension is done last.
+        self.horizontal_stacking = input_dim > self.output_dim
+
+    def forward(
+        self,
+        x: torch.FloatTensor,
+        source: torch.LongTensor,
+        target: torch.LongTensor,
+        edge_type: torch.LongTensor,
+        edge_weights: Optional[torch.FloatTensor] = None,
+        accumulator: Optional[torch.FloatTensor] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        adj = _stack_matrices(
+            num_relations=self.num_relations,
+            num_entities=x.shape[0],
+            source=source,
+            target=target,
+            edge_type=edge_type,
+            edge_weights=edge_weights,
+            horizontal_stacking=self.horizontal_stacking,
+        )
+        weights = torch.einsum("rb, bio -> rio", self.relation_base_weights, self.bases)
+        if self.horizontal_stacking:
+            x = torch.einsum("ni, rio -> rno", x, weights)
+            x = adj @ x.view(-1, self.output_dim)
+        else:
+            x = adj @ x
+            x = x.view(self.num_relations, -1, self.input_dim)
+            x = torch.einsum("rio, rni -> no", weights, x)
+        if accumulator is not None:
+            x = accumulator + x
+        return x
+
+
 class BlockDecomposition(Decomposition):
     r"""Represent relation-specific weight matrices via block-diagonal matrices.
 
