@@ -545,6 +545,82 @@ class BlockDecomposition(Decomposition):
         return accumulator.view(-1, self.output_dim)
 
 
+class EfficientBlockDecomposition(BlockDecomposition):
+    """
+    An efficient implementation of the block decomposition based on [thanapalasingam2021]_.
+
+    The implementation uses a reshaping of the adjacency tensor into a sparse matrix to support message passing by a
+    single sparse matrix multiplication.
+
+    .. seealso ::
+        https://github.com/thiviyanT/torch-rgcn/blob/267faffd09a441d902c483a8c130410c72910e90/torch_rgcn/layers.py#L450-L565
+    """
+
+    def __init__(
+        self,
+        input_dim: int,
+        num_relations: int,
+        num_blocks: Optional[int] = None,
+        output_dim: Optional[int] = None,
+    ):
+        """
+        Initialize the layer.
+
+        :param input_dim: >0
+            The input dimension.
+        :param num_relations: >0
+            The number of relations.
+        :param num_bases: >0
+            The number of bases to use.
+        :param output_dim: >0
+            The output dimension. If None is given, defaults to input_dim.
+        """
+        super().__init__(
+            input_dim=input_dim,
+            num_relations=num_relations,
+            output_dim=output_dim,
+            num_blocks=num_blocks,
+        )
+        # > The vertical stacking approach is suitable for low dimensional input and high dimensional output,
+        # > because the projection to low dimensions is done first. While the horizontal stacking approach is good
+        # > for high dimensional input and low dimensional output as the projection to high dimension is done last.
+        self.horizontal_stacking = input_dim > self.output_dim
+
+        # TODO: We do not want to have a block for the self-loop
+        self.blocks = nn.Parameter(self.blocks[:-1, ...])
+
+    def forward(
+        self,
+        x: torch.FloatTensor,
+        source: torch.LongTensor,
+        target: torch.LongTensor,
+        edge_type: torch.LongTensor,
+        edge_weights: Optional[torch.FloatTensor] = None,
+        accumulator: Optional[torch.FloatTensor] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        adj = _stack_matrices(
+            num_relations=self.num_relations,
+            num_entities=x.shape[0],
+            source=source,
+            target=target,
+            edge_type=edge_type,
+            edge_weights=edge_weights,
+            horizontal_stacking=self.horizontal_stacking,
+        )
+        # shape: (R x nb x bs x bs)
+        # weights = torch.einsum("rb, bio -> rio", self.relation_base_weights, self.bases)
+        if self.horizontal_stacking:
+            x = torch.einsum("nbi, rbio -> rnbo", x.view(-1, self.num_blocks, self.block_size), self.blocks)
+            x = adj @ x.view(-1, self.output_dim)
+        else:
+            x = adj @ x
+            x = x.view(self.num_relations, -1, self.num_blocks, self.block_size)
+            x = torch.einsum("rbio, rnbi -> nbo", self.blocks, x).view(-1, self.output_dim)
+        if accumulator is not None:
+            x = accumulator + x
+        return x
+
+
 class RGCNLayer(nn.Module):
     r"""
     An RGCN layer from [schlichtkrull2018]_ updated to match the official implementation.

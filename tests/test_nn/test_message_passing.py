@@ -18,6 +18,12 @@ class EfficientBasesDecompositionTestCase(cases.BasesDecompositionTestCase):
     cls = pykeen.nn.message_passing.EfficientBasesDecomposition
 
 
+class EfficientBlockDecompositionTestCase(cases.DecompositionTestCase):
+    """Tests for efficient block decomposition."""
+
+    cls = pykeen.nn.message_passing.EfficientBlockDecomposition
+
+
 class LowMemoryBasesDecompositionTestCase(cases.BasesDecompositionTestCase):
     """Tests for BasesDecomposition with low memory requirement."""
 
