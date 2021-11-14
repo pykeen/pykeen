@@ -98,7 +98,7 @@ class NodePiece(ERModel):
         Initialize the model.
 
         :param triples_factory:
-            the triples factory used for tokenization
+            the triples factory. Must have create_inverse_triples set to True.
         :param num_tokens:
             the number of relations to use to represent each entity, cf.
             :class:`pykeen.nn.emb.NodePieceRepresentation`.
@@ -126,10 +126,9 @@ class NodePiece(ERModel):
             additional keyword-based arguments passed to :meth:`ERModel.__init__`
         """
         if not triples_factory.create_inverse_triples:
-            logger.warning(
-                "The provided triples factory does not create inverse triples. However, for the node piece"
-                "representations inverse relation representations are required. Thus, the implicitly created inverse "
-                "relations are only trained via the NodePiece mechanism, but not as part of the 'normal' training.",
+            raise ValueError(
+                "The provided triples factory does not create inverse triples. However, for the node piece "
+                "representations inverse relation representations are required.",
             )
         embedding_specification = embedding_specification or EmbeddingSpecification(
             shape=(embedding_dim,),
