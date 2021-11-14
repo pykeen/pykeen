@@ -1132,24 +1132,25 @@ def tokenize(
 def resolve_aggregation(
     aggregation: Union[None, str, Callable[[torch.FloatTensor, int], torch.FloatTensor]],
 ) -> Callable[[torch.FloatTensor, int], torch.FloatTensor]:
-    """Resolve the aggregation function."""
+    """
+    Resolve the aggregation function.
+
+    .. warning ::
+        This function does *not* check whether torch.<aggregation> is a method which is a valid aggregation.
+    
+    :param aggregation:
+        the aggregation choice. Can be either
+        1. None, in which case the torch.mean is returned
+        2. a string, in which case torch.<aggregation> is returned
+        3. a callable, which is returned without change
+    
+    :return:
+        the chosen aggregation function.
+    """
     if aggregation is None:
         return torch.mean
 
     if isinstance(aggregation, str):
-        if aggregation == "mean":
-            return torch.mean
-        if aggregation == "sum":
-            return torch.sum
-        if aggregation == "max":
-            return torch.max
-
-        logger.warning(
-            "aggregation=%s is none of the predefined ones. Proceed with torch.%s, which may not be a suitable aggregation.",
-            aggregation,
-            aggregation,
-        )
-
         return getattr(torch, aggregation)
 
     return aggregation
