@@ -1098,9 +1098,7 @@ class NodePieceRepresentation(RepresentationModule):
         triples_factory: CoreTriplesFactory,
         token_representation: Union[EmbeddingSpecification, RepresentationModule],
         aggregation: Optional[Callable[[torch.Tensor, int], torch.Tensor]] = None,
-        # TODO delete shape, this is unused and not possible to pass from NodePiece model
-        shape: Optional[Sequence[int]] = None,
-        k: int = 2,
+        num_tokens: int = 2,
     ):
         """
         Initialize the representation.
@@ -1109,7 +1107,7 @@ class NodePieceRepresentation(RepresentationModule):
             the triples factory
         :param token_representation:
             the token representation specification, or pre-instantiated representation module. For the latter, the
-            number of representations must be $2 * num_relations$.
+            number of representations must be $2 * num_relations + 1$.
         :param aggregation:
             aggregation of multiple token representations to a single entity representation. By default,
             this uses :func:`torch.mean`. It could also use other aggregations like :func:`torch.sum`,
@@ -1117,13 +1115,13 @@ class NodePieceRepresentation(RepresentationModule):
             (cf. DeepSets from [zaheer2017]_) if given value ``"mlp"``.
 
             We could also have aggregations which result in differently shapes output, e.g. a concatenation of all
-            token embeddings resulting in shape ``(k * d,)``. In this case, `shape` must be provided.
+            token embeddings resulting in shape ``(num_tokens * d,)``. In this case, `shape` must be provided.
 
             The aggregation takes two arguments: the (batched) tensor of token representations, in shape
-            ``(*, k, *dt)``, and the index along which to aggregate.
+            ``(*, num_tokens, *dt)``, and the index along which to aggregate.
         :param shape:
             the shape of an individual representation. Only necessary, if aggregation results in a change of dimensions.
-        :param k:
+        :param num_tokens:
             the number of tokens for each entity.
         """
         mapped_triples = triples_factory.mapped_triples
@@ -1132,21 +1130,20 @@ class NodePieceRepresentation(RepresentationModule):
             mapped_triples = mapped_triples[mapped_triples[:, 1] < triples_factory.real_num_relations]
 
         # create token representations
-        # normal relations + inverse relations
-        # TODO why are num_tokens and k different things? can we make better names at least
-        num_tokens = 2 * triples_factory.real_num_relations
+        # normal relations + inverse relations + padding
+        total_num_tokens = 2 * triples_factory.real_num_relations + 1
         if isinstance(token_representation, EmbeddingSpecification):
             token_representation = token_representation.make(
                 num_embeddings=num_tokens,
             )
         if token_representation.max_id != num_tokens:
             raise ValueError(
-                f"If a pre-instantiated representation is provided, it has to have 2 * num_relations = "
+                f"If a pre-instantiated representation is provided, it has to have 2 * num_relations + 1= "
                 f"{num_tokens} representations, but has {token_representation.max_id}",
             )
 
         # super init; has to happen *before* any parameter or buffer is assigned
-        super().__init__(max_id=triples_factory.num_entities, shape=shape or token_representation.shape)
+        super().__init__(max_id=triples_factory.num_entities, shape=token_representation.shape)
 
         # Assign default aggregation
         self.aggregation = torch.mean if aggregation is None else aggregation
@@ -1173,22 +1170,22 @@ class NodePieceRepresentation(RepresentationModule):
         ):
             e2r[e].add(r)
 
-        # randomly sample with replacement k relations for each entity
+        # randomly sample with replacement num_tokens relations for each entity
         assignment = torch.full(
-            size=(triples_factory.num_entities, k),
+            size=(triples_factory.num_entities, num_tokens),
             dtype=torch.long,
             fill_value=-1,
         )
         for e, rs in e2r.items():
-            # we sample *with* replacement
-            assignment[e] = self._sample(torch.as_tensor(data=list(rs), dtype=torch.long), k)
-        if assignment.min() < 0:
-            raise ValueError("Invalid assignment.")
+            rs = torch.as_tensor(data=list(rs), dtype=torch.long)
+            rs = self._sample(rs=rs, k=num_tokens)
+            assignment[e, :len(rs)] = rs
         self.register_buffer(name="assignment", tensor=assignment)
 
     @staticmethod
     def _sample(rs: torch.LongTensor, k: int) -> torch.LongTensor:
-        return rs[torch.randint(high=rs.numel(), size=(k,))]
+        """Sample without replacement."""
+        return rs[torch.randperm(rs.shape[0])[:k]]
 
     def forward(
         self,

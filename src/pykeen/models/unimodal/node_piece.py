@@ -138,9 +138,9 @@ class NodePiece(ERModel):
                 embedding_dim=embedding_dim,
             )
 
-        # always create representations for normal and inverse relations
+        # always create representations for normal and inverse relations and padding
         relation_representations = embedding_specification.make(
-            num_embeddings=2 * triples_factory.real_num_relations,
+            num_embeddings=2 * triples_factory.real_num_relations + 1,
         )
         entity_representations = NodePieceRepresentation(
             triples_factory=triples_factory,
