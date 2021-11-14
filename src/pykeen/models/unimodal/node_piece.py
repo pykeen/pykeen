@@ -3,7 +3,7 @@
 """A wrapper which combines an interaction function with NodePiece entity representations."""
 
 import logging
-from typing import Any, Callable, ClassVar, Mapping, Optional, Sequence
+from typing import Any, Callable, ClassVar, Mapping, Optional, Sequence, Union
 
 import torch
 from class_resolver import Hint, HintOrType
@@ -36,7 +36,7 @@ class _ConcatMLP(nn.Sequential):
         num_tokens: int,
         embedding_dim: int,
         dropout: float = 0.1,
-        ratio: int = 2,
+        ratio: Union[int, float] = 2,
     ):
         """
         Initialize the module.
@@ -50,11 +50,12 @@ class _ConcatMLP(nn.Sequential):
         :param ratio:
             the ratio of the embedding dimension to the hidden layer size.
         """
+        hidden_dim = int(ratio * embedding_dim)
         super().__init__(
-            nn.Linear(num_tokens * embedding_dim, ratio * embedding_dim),
+            nn.Linear(num_tokens * embedding_dim, hidden_dim),
             nn.Dropout(dropout),
             nn.ReLU(),
-            nn.Linear(ratio * embedding_dim, embedding_dim),
+            nn.Linear(hidden_dim, embedding_dim),
         )
 
     def forward(self, xs: torch.FloatTensor, dim: int) -> torch.FloatTensor:  # noqa: D102
