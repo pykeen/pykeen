@@ -1072,6 +1072,49 @@ class SingleCompGCNRepresentation(RepresentationModule):
         return x
 
 
+def _sample(rs: torch.LongTensor, k: int) -> torch.LongTensor:
+    """Sample without replacement."""
+    return rs[torch.randperm(rs.shape[0])[:k]]
+
+
+def tokenize(triples_factory: CoreTriplesFactory, num_tokens: int) -> torch.LongTensor:
+    mapped_triples = triples_factory.mapped_triples
+    if triples_factory.create_inverse_triples:
+        # inverse triples are created afterwards implicitly
+        mapped_triples = mapped_triples[mapped_triples[:, 1] < triples_factory.real_num_relations]
+
+    # tokenize: represent entities by bag of relations
+    h, r, t = mapped_triples.t()
+
+    # collect candidates
+    e2r = defaultdict(set)
+    for e, r in (
+        torch.cat(
+            [
+                torch.stack([h, r], dim=1),
+                torch.stack([t, r + triples_factory.real_num_relations], dim=1),
+            ],
+            dim=0,
+        )
+        .unique(dim=0)
+        .tolist()
+    ):
+        e2r[e].add(r)
+
+    # randomly sample without replacement num_tokens relations for each entity
+    assignment = torch.full(
+        size=(triples_factory.num_entities, num_tokens),
+        dtype=torch.long,
+        fill_value=-1,
+    )
+    for e, rs in e2r.items():
+        rs = torch.as_tensor(data=list(rs), dtype=torch.long)
+        rs = _sample(rs=rs, k=num_tokens)
+        assignment[e, : len(rs)] = rs
+
+    return assignment
+
+
 class NodePieceRepresentation(RepresentationModule):
     r"""
     Basic implementation of node piece decomposition [galkin2021]_.
@@ -1147,46 +1190,10 @@ class NodePieceRepresentation(RepresentationModule):
         # assign module
         self.tokens = token_representation
         self.aggregation_index = -(1 + len(token_representation.shape))
-
-        mapped_triples = triples_factory.mapped_triples
-        if triples_factory.create_inverse_triples:
-            # inverse triples are created afterwards implicitly
-            mapped_triples = mapped_triples[mapped_triples[:, 1] < triples_factory.real_num_relations]
-        
-        # tokenize: represent entities by bag of relations
-        h, r, t = mapped_triples.t()
-
-        # collect candidates
-        e2r = defaultdict(set)
-        for e, r in (
-            torch.cat(
-                [
-                    torch.stack([h, r], dim=1),
-                    torch.stack([t, r + triples_factory.real_num_relations], dim=1),
-                ],
-                dim=0,
-            )
-            .unique(dim=0)
-            .tolist()
-        ):
-            e2r[e].add(r)
-
-        # randomly sample with replacement num_tokens relations for each entity
-        assignment = torch.full(
-            size=(triples_factory.num_entities, num_tokens),
-            dtype=torch.long,
-            fill_value=-1,
+        self.register_buffer(
+            name="assignment",
+            tensor=tokenize(triples_factory=triples_factory, num_tokens=num_tokens),
         )
-        for e, rs in e2r.items():
-            rs = torch.as_tensor(data=list(rs), dtype=torch.long)
-            rs = self._sample(rs=rs, k=num_tokens)
-            assignment[e, :len(rs)] = rs
-        self.register_buffer(name="assignment", tensor=assignment)
-
-    @staticmethod
-    def _sample(rs: torch.LongTensor, k: int) -> torch.LongTensor:
-        """Sample without replacement."""
-        return rs[torch.randperm(rs.shape[0])[:k]]
 
     def forward(
         self,
