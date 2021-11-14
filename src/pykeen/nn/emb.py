@@ -1123,6 +1123,19 @@ def resolve_aggregation(
         return torch.mean
 
     if isinstance(aggregation, str):
+        if aggregation == "mean":
+            return torch.mean
+        if aggregation == "sum":
+            return torch.sum
+        if aggregation == "max":
+            return torch.max
+
+        logger.warning(
+            "aggregation=%s is none of the predefined ones. Proceed with torch.%s, which may not be a suitable aggregation.",
+            aggregation,
+            aggregation,
+        )
+
         return getattr(torch, aggregation)
 
     return aggregation
