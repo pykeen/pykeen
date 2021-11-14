@@ -1125,11 +1125,6 @@ class NodePieceRepresentation(RepresentationModule):
         :param num_tokens:
             the number of tokens for each entity.
         """
-        mapped_triples = triples_factory.mapped_triples
-        if triples_factory.create_inverse_triples:
-            # inverse triples are created afterwards implicitly
-            mapped_triples = mapped_triples[mapped_triples[:, 1] < triples_factory.real_num_relations]
-
         # create token representations
         # normal relations + inverse relations + padding
         total_num_tokens = 2 * triples_factory.real_num_relations + 1
@@ -1137,7 +1132,7 @@ class NodePieceRepresentation(RepresentationModule):
             token_representation = token_representation.make(
                 num_embeddings=total_num_tokens,
             )
-        if token_representation.max_id != num_tokens:
+        if token_representation.max_id != total_num_tokens:
             raise ValueError(
                 f"If a pre-instantiated representation is provided, it has to have 2 * num_relations + 1= "
                 f"{total_num_tokens} representations, but has {token_representation.max_id}",
@@ -1153,6 +1148,11 @@ class NodePieceRepresentation(RepresentationModule):
         self.tokens = token_representation
         self.aggregation_index = -(1 + len(token_representation.shape))
 
+        mapped_triples = triples_factory.mapped_triples
+        if triples_factory.create_inverse_triples:
+            # inverse triples are created afterwards implicitly
+            mapped_triples = mapped_triples[mapped_triples[:, 1] < triples_factory.real_num_relations]
+        
         # tokenize: represent entities by bag of relations
         h, r, t = mapped_triples.t()
 
