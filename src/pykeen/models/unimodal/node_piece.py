@@ -99,6 +99,9 @@ class NodePiece(ERModel):
 
         :param triples_factory:
             the triples factory used for tokenization
+        :param num_tokens:
+            the number of relations to use to represent each entity, cf. 
+            :class:`pykeen.nn.emb.NodePieceRepresentation`.
         :param embedding_dim:
             the embedding dimension. Only used if embedding_specification is not given.
         :param embedding_specification:
