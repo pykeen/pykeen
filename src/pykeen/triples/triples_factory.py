@@ -17,7 +17,7 @@ from .instances import Instances, LCWAInstances, SLCWAInstances
 from .splitting import split
 from .utils import TRIPLES_DF_COLUMNS, get_entities, get_relations, load_triples, tensor_to_df
 from ..typing import EntityMapping, LabeledTriples, MappedTriples, RelationMapping, TorchRandomHint
-from ..utils import compact_mapping, format_relative_comparison, invert_mapping, torch_is_in_1d
+from ..utils import compact_mapping, format_relative_comparison, invert_mapping
 
 __all__ = [
     "CoreTriplesFactory",
@@ -120,10 +120,10 @@ def _get_triple_mask(
     triples = triples[:, columns]
     if isinstance(columns, int):
         columns = [columns]
-    mask = torch_is_in_1d(
-        query_tensor=triples,
-        test_tensor=ids,
-        max_id=max_id,
+    mask = torch.isin(
+        elements=triples,
+        test_elements=torch.as_tensor(list(ids), dtype=torch.long),
+        assume_unique=False,
         invert=invert,
     )
     if len(columns) > 1:
@@ -483,7 +483,7 @@ class CoreTriplesFactory:
 
     def get_mask_for_entities(
         self,
-        entities: Union[Collection[int]],
+        entities: Collection[int],
         invert: bool = False,
     ) -> torch.BoolTensor:
         """Get a boolean mask for triples with the given entities."""
