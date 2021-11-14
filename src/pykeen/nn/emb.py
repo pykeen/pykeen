@@ -1077,7 +1077,21 @@ def _sample(rs: torch.LongTensor, k: int) -> torch.LongTensor:
     return rs[torch.randperm(rs.shape[0])[:k]]
 
 
-def tokenize(triples_factory: CoreTriplesFactory, num_tokens: int) -> torch.LongTensor:
+def tokenize(
+    triples_factory: CoreTriplesFactory,
+    num_tokens: int,
+) -> torch.LongTensor:
+    """
+    Tokenize entities by representing them as a bag of relations.
+    
+    :param triples_factory:
+        the triples factory containing the ID-based triples.
+    :param num_tokens:
+        the number of relation IDs to select for each entity
+    
+    :return: shape: (num_entities, num_tokens), -1 <= res < 2 * num_relations
+        the selected relation IDs for each entity. -1 is used as a padding token.
+    """
     mapped_triples = triples_factory.mapped_triples
     if triples_factory.create_inverse_triples:
         # inverse triples are created afterwards implicitly
