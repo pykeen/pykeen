@@ -31,7 +31,6 @@ from pykeen.utils import (
     split_complex,
     tensor_product,
     tensor_sum,
-    torch_is_in_1d,
 )
 
 
@@ -216,11 +215,10 @@ class TestUtils(unittest.TestCase):
         for query_size in query_sizes:
             # generate random query tensor
             query_tensor = torch.randint(max_id, size=query_size)
-            for invert, provide_max_id, as_collection in itertools.product((False, True), repeat=3):
-                result = torch_is_in_1d(
-                    query_tensor=query_tensor,
-                    test_tensor=test_tensor.tolist() if as_collection else test_tensor,
-                    max_id=max_id if provide_max_id else None,
+            for invert in (False, True):
+                result = torch.isin(
+                    elements=query_tensor,
+                    test_elements=test_tensor,
                     invert=invert,
                 )
                 expected_result = _get_torch_is_in_1d_result_naive(
