@@ -1099,6 +1099,7 @@ class NodePieceRepresentation(RepresentationModule):
         token_representation: Union[EmbeddingSpecification, RepresentationModule],
         aggregation: Optional[Callable[[torch.Tensor, int], torch.Tensor]] = None,
         num_tokens: int = 2,
+        shape: Optional[Sequence[int]] = None,
     ):
         """
         Initialize the representation.
@@ -1143,7 +1144,7 @@ class NodePieceRepresentation(RepresentationModule):
             )
 
         # super init; has to happen *before* any parameter or buffer is assigned
-        super().__init__(max_id=triples_factory.num_entities, shape=token_representation.shape)
+        super().__init__(max_id=triples_factory.num_entities, shape=shape or token_representation.shape)
 
         # Assign default aggregation
         self.aggregation = torch.mean if aggregation is None else aggregation
