@@ -11,7 +11,7 @@ from torch import nn
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...nn.emb import EmbeddingSpecification, NodePieceRepresentation
+from ...nn.emb import EmbeddingSpecification, NodePieceRepresentation, SubsetRepresentationModule
 from ...nn.modules import DistMultInteraction, Interaction
 from ...triples.triples_factory import CoreTriplesFactory
 
@@ -156,6 +156,9 @@ class NodePiece(ERModel):
             triples_factory=triples_factory,
             interaction=interaction,
             entity_representations=entity_representations,
-            relation_representations=relation_representations,
+            relation_representations=SubsetRepresentationModule(  # hide padding relation
+                relation_representations,
+                max_id=triples_factory.num_relations,
+            ),
             **kwargs,
         )

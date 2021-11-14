@@ -204,6 +204,36 @@ class RepresentationModule(nn.Module, ABC):
         return int(np.prod(self.shape))
 
 
+class SubsetRepresentationModule(RepresentationModule):
+    """A representation module, which only exposes a subset of representations of its base."""
+
+    def __init__(
+        self,
+        base: RepresentationModule,
+        max_id: int,
+    ):
+        """
+        Initialize the representations.
+
+        :param base:
+            the base representations. have to have a sufficient number of representations, i.e., at least max_id.
+        :param max_id:
+            the maximum number of relations.
+        """
+        if max_id > base.max_id:
+            raise ValueError(f"Base representations comprise only {base.max_id} representations.")
+        super().__init__(max_id, base.shape)
+        self.base = base
+
+    def forward(
+        self,
+        indices: Optional[torch.LongTensor] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        if indices is None:
+            indices = torch.arange(self.max_id)
+        return self.base.forward(indices=indices)
+
+
 class Embedding(RepresentationModule):
     """Trainable embeddings.
 

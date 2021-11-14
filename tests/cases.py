@@ -1083,11 +1083,11 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
             self.train_batch_size,
         ]
         extras.extend(self.cli_extras)
-        
+
         # Make sure that inverse triples are created if create_inverse_triples=True
         if self.create_inverse_triples:
             extras.append("--create-inverse-triples")
-        
+
         extras = [str(e) for e in extras]
         return extras
 
@@ -1335,12 +1335,6 @@ class BaseNodePieceTest(ModelTestCase):
 
     cls = pykeen.models.NodePiece
     create_inverse_triples = True
-
-    def test_score_r(self) -> None:  # noqa: D102
-        raise SkipTest("NodePiece contains a padding relation - this is currently not supported for score_r")
-
-    def test_score_r_with_score_hrt_equality(self) -> None:  # noqa: D102
-        raise SkipTest("NodePiece contains a padding relation - this is currently not supported for score_r")
 
 
 class RepresentationTestCase(GenericTestCase[RepresentationModule]):
