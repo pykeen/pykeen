@@ -124,6 +124,9 @@ class NodePiece(ERModel):
             this will only be necessary if the aggregation is an *ad hoc* function.
         :param kwargs:
             additional keyword-based arguments passed to :meth:`ERModel.__init__`
+
+        :raises ValueError:
+            if the triples factory does not create inverse triples
         """
         if not triples_factory.create_inverse_triples:
             raise ValueError(
