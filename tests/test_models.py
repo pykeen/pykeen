@@ -227,16 +227,13 @@ class TestKG2EWithEL(cases.BaseKG2ETest):
     }
 
 
-class TestNodePiece(cases.ModelTestCase):
+class TestNodePiece(cases.BaseNodePieceTest):
     """Test the NodePiece model."""
 
-    cls = pykeen.models.NodePiece
 
+class TestNodePieceMLP(cases.BaseNodePieceTest):
+    """Test the NodePiece model with MLP aggregation."""
 
-class TestNodePieceMLP(cases.ModelTestCase):
-    """Test the NodePiece model."""
-
-    cls = pykeen.models.NodePiece
     kwargs = dict(
         num_tokens=64,
         aggregation="mlp",
