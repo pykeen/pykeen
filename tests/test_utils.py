@@ -138,18 +138,6 @@ class TestGetUntilFirstBlank(unittest.TestCase):
         self.assertEqual("Broken line.", r)
 
 
-def _get_torch_is_in_1d_result_naive(
-    query_tensor: torch.LongTensor,
-    test_tensor: torch.LongTensor,
-    invert: bool = False,
-) -> torch.BoolTensor:
-    """Compute the result of torch_is_in_1d naively."""
-    mask = (test_tensor.view(-1, *(1 for _ in query_tensor.shape)) == query_tensor.unsqueeze(dim=0)).any(dim=0)
-    if invert:
-        mask = ~mask
-    return mask
-
-
 def _generate_shapes(
     n_dim: int = 5,
     n_terms: int = 4,
@@ -205,28 +193,6 @@ class TestUtils(unittest.TestCase):
                     norm = x.norm(p=p, dim=dim)
                     mask = torch.stack([(norm < max_norm)] * x.shape[dim], dim=dim)
                     assert (x_c[mask] == x[mask]).all()
-
-    def test_torch_is_in_1d(self):
-        """Test torch_is_in_1d."""
-        max_id = 33
-        num_tests = 5
-        test_tensor = torch.randint(max_id, size=(num_tests,))
-        query_sizes = [(7,), (2, 3)]
-        for query_size in query_sizes:
-            # generate random query tensor
-            query_tensor = torch.randint(max_id, size=query_size)
-            for invert in (False, True):
-                result = torch.isin(
-                    elements=query_tensor,
-                    test_elements=test_tensor,
-                    invert=invert,
-                )
-                expected_result = _get_torch_is_in_1d_result_naive(
-                    query_tensor=query_tensor,
-                    test_tensor=test_tensor,
-                    invert=invert,
-                )
-                assert (result == expected_result).all()
 
     def test_complex_utils(self):
         """Test complex tensor utilities."""
