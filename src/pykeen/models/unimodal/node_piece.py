@@ -147,7 +147,7 @@ class NodePiece(ERModel):
             token_representation=relation_representations,
             aggregation=aggregation,
             shape=shape,
-            k=num_tokens,  # TODO rename k
+            num_tokens=num_tokens,
         )
         super().__init__(
             triples_factory=triples_factory,
