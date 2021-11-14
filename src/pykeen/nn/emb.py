@@ -1194,19 +1194,20 @@ class NodePieceRepresentation(RepresentationModule):
             number of representations must be $2 * num_relations + 1$.
         :param aggregation:
             aggregation of multiple token representations to a single entity representation. By default,
-            this uses :func:`torch.mean`. It could also use other aggregations like :func:`torch.sum`,
-            :func:`torch.max`, or even trainable aggregations e.g., ``MLP(mean(MLP(tokens)))``
-            (cf. DeepSets from [zaheer2017]_) if given value ``"mlp"``.
+            this uses :func:`torch.mean`. If a string is provided, the module assumes that this refers to a top-level
+            torch function, e.g. "mean" for :func:`torch.mean`, or "sum" for func:`torch.sum`. An aggregation can
+            also have trainable parameters, .e.g., ``MLP(mean(MLP(tokens)))`` (cf. DeepSets from [zaheer2017]_). In
+            this case, the module has to be created outside of this component.
 
             We could also have aggregations which result in differently shapes output, e.g. a concatenation of all
             token embeddings resulting in shape ``(num_tokens * d,)``. In this case, `shape` must be provided.
 
             The aggregation takes two arguments: the (batched) tensor of token representations, in shape
             ``(*, num_tokens, *dt)``, and the index along which to aggregate.
-        :param shape:
-            the shape of an individual representation. Only necessary, if aggregation results in a change of dimensions.
         :param num_tokens:
             the number of tokens for each entity.
+        :param shape:
+            the shape of an individual representation. Only necessary, if aggregation results in a change of dimensions.
         """
         # create token representations
         # normal relations + inverse relations + padding
