@@ -1207,7 +1207,7 @@ def boxe_interaction(
     t_pos: torch.FloatTensor,
     t_bump: torch.FloatTensor,
     # power norm
-    tanh_map: bool = False,
+    tanh_map: bool = True,
     p: int = 2,
     power_norm: bool = False,
 ) -> torch.FloatTensor:
