@@ -931,13 +931,31 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         try:
             scores = self.instance.score_t(batch)
         except NotImplementedError:
-            self.fail(msg="Score_o not yet implemented")
+            self.fail(msg="score_t not yet implemented")
         except RuntimeError as e:
             if str(e) == "fft: ATen not compiled with MKL support":
                 self.skipTest(str(e))
             else:
                 raise e
         assert scores.shape == (self.batch_size, self.instance.num_entities)
+        self._check_scores(batch, scores)
+
+    def test_score_r(self) -> None:
+        """Test the model's ``score_r()`` function."""
+        batch = self.factory.mapped_triples[: self.batch_size, [0, 2]].to(self.instance.device)
+        # assert batch comprises (head, tail) pairs
+        assert batch.shape == (self.batch_size, 2)
+        assert (batch < self.factory.num_entities).all()
+        try:
+            scores = self.instance.score_r(batch)
+        except NotImplementedError:
+            self.fail(msg="score_r not yet implemented")
+        except RuntimeError as e:
+            if str(e) == "fft: ATen not compiled with MKL support":
+                self.skipTest(str(e))
+            else:
+                raise e
+        assert scores.shape == (self.batch_size, self.instance.num_relations)
         self._check_scores(batch, scores)
 
     def test_score_h(self) -> None:
@@ -950,7 +968,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         try:
             scores = self.instance.score_h(batch)
         except NotImplementedError:
-            self.fail(msg="Score_s not yet implemented")
+            self.fail(msg="score_h not yet implemented")
         except RuntimeError as e:
             if str(e) == "fft: ATen not compiled with MKL support":
                 self.skipTest(str(e))
@@ -1306,6 +1324,18 @@ class BaseRGCNTest(ModelTestCase):
         Enriched embeddings have to be reset.
         """
         assert self.instance.entity_representations[0].enriched_embeddings is None
+
+
+class BaseNodePieceTest(ModelTestCase):
+    """Test the NodePiece model."""
+
+    cls = pykeen.models.NodePiece
+
+    def test_score_r(self) -> None:  # noqa: D102
+        raise SkipTest("NodePiece contains a padding relation - this is currently not supported for score_r")
+
+    def test_score_r_with_score_hrt_equality(self) -> None:  # noqa: D102
+        raise SkipTest("NodePiece contains a padding relation - this is currently not supported for score_r")
 
 
 class RepresentationTestCase(GenericTestCase[RepresentationModule]):
