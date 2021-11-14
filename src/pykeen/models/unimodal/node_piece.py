@@ -10,7 +10,7 @@ from class_resolver import Hint, HintOrType
 from torch import nn
 
 from ..nbase import ERModel
-from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
+from ...constants import AGGREGATIONS, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.emb import EmbeddingSpecification, NodePieceRepresentation
 from ...nn.modules import DistMultInteraction, Interaction
 from ...triples.triples_factory import CoreTriplesFactory
@@ -131,18 +131,20 @@ class NodePiece(ERModel):
             shape=(embedding_dim,),
         )
 
-        # Create an MLP for string aggregation
-        if aggregation == "mlp":
-            aggregation = _ConcatMLP(
-                num_tokens=num_tokens,
-                embedding_dim=embedding_dim,
-            )
-        elif aggregation == "mean":
-            aggregation = torch.mean
-        elif aggregation == "sum":
-            aggregation = torch.sum
-        elif aggregation == "max":
-            aggregation = torch.max
+        if isinstance(aggregation, str):
+            # Create an MLP for string aggregation
+            if aggregation == "mlp":
+                aggregation = _ConcatMLP(
+                    num_tokens=num_tokens,
+                    embedding_dim=embedding_dim,
+                )
+            elif aggregation in AGGREGATIONS:
+                aggregation = AGGREGATIONS[aggregation]
+            else:
+                raise ValueError(
+                    f"Invalid aggregation given as string: {aggregation}. "
+                    f"Should be mlp or one of {AGGREGATIONS.keys()}"
+                )
 
         # always create representations for normal and inverse relations and padding
         relation_representations = embedding_specification.make(

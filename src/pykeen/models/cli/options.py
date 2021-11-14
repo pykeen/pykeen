@@ -5,6 +5,7 @@
 import click
 
 from .. import model_resolver
+from ...constants import AGGREGATIONS
 from ...evaluation import evaluator_resolver
 from ...losses import loss_resolver
 from ...optimizers import optimizer_resolver
@@ -90,7 +91,7 @@ CLI_OPTIONS = {
     ),
     "aggregation": click.option(
         "--aggregation",
-        type=click.Choice(["mean", "max", "mlp", "sum"]),
+        type=click.Choice(["mlp", *AGGREGATIONS]),
     ),
 }
 

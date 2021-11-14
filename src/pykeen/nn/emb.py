@@ -1179,7 +1179,7 @@ class NodePieceRepresentation(RepresentationModule):
         for e, rs in e2r.items():
             rs = torch.as_tensor(data=list(rs), dtype=torch.long)
             rs = self._sample(rs=rs, k=num_tokens)
-            assignment[e, :len(rs)] = rs
+            assignment[e, : len(rs)] = rs
         self.register_buffer(name="assignment", tensor=assignment)
 
     @staticmethod
