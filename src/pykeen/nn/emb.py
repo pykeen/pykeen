@@ -1115,6 +1115,19 @@ def tokenize(triples_factory: CoreTriplesFactory, num_tokens: int) -> torch.Long
     return assignment
 
 
+def resolve_aggregation(
+    aggregation: Union[None, str, Callable[[torch.FloatTensor, int], torch.FloatTensor]],
+) -> Callable[[torch.FloatTensor, int], torch.FloatTensor]:
+    """Resolve the aggregation function."""
+    if aggregation is None:
+        return torch.mean
+
+    if isinstance(aggregation, str):
+        return getattr(torch, aggregation)
+
+    return aggregation
+
+
 class NodePieceRepresentation(RepresentationModule):
     r"""
     Basic implementation of node piece decomposition [galkin2021]_.
@@ -1140,7 +1153,7 @@ class NodePieceRepresentation(RepresentationModule):
         *,
         triples_factory: CoreTriplesFactory,
         token_representation: Union[EmbeddingSpecification, RepresentationModule],
-        aggregation: Optional[Callable[[torch.Tensor, int], torch.Tensor]] = None,
+        aggregation: Union[None, str, Callable[[torch.FloatTensor, int], torch.FloatTensor]] = None,
         num_tokens: int = 2,
         shape: Optional[Sequence[int]] = None,
     ):
@@ -1185,7 +1198,7 @@ class NodePieceRepresentation(RepresentationModule):
         super().__init__(max_id=triples_factory.num_entities, shape=shape or token_representation.shape)
 
         # Assign default aggregation
-        self.aggregation = torch.mean if aggregation is None else aggregation
+        self.aggregation = resolve_aggregation(aggregation=aggregation)
 
         # assign module
         self.tokens = token_representation
