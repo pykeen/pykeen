@@ -1149,7 +1149,7 @@ def tokenize(
     assignment = torch.full(
         size=(triples_factory.num_entities, num_tokens),
         dtype=torch.long,
-        fill_value=-1,
+        fill_value=2 * triples_factory.real_num_relations,
     )
     for e, rs in e2r.items():
         rs = torch.as_tensor(data=list(rs), dtype=torch.long)
