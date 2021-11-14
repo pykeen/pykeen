@@ -137,6 +137,12 @@ class NodePiece(ERModel):
                 num_tokens=num_tokens,
                 embedding_dim=embedding_dim,
             )
+        elif aggregation == "mean":
+            aggregation = torch.mean
+        elif aggregation == "sum":
+            aggregation = torch.sum
+        elif aggregation == "max":
+            aggregation = torch.max
 
         # always create representations for normal and inverse relations and padding
         relation_representations = embedding_specification.make(

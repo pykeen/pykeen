@@ -88,6 +88,10 @@ CLI_OPTIONS = {
         "--combination-dropout",
         type=float,
     ),
+    "aggregation": click.option(
+        "--aggregation",
+        type=click.Choice(["mean", "max", "mlp", "sum"]),
+    ),
 }
 
 device_option = click.option(
