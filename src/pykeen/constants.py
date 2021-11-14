@@ -20,7 +20,6 @@ __all__ = [
 #: A manager around the PyKEEN data folder. It defaults to ``~/.data/pykeen``.
 #  This can be overridden with the envvar ``PYKEEN_HOME``.
 #: For more information, see https://github.com/cthoyt/pystow
-
 PYKEEN_MODULE: pystow.Module = pystow.module("pykeen")
 #: A path representing the PyKEEN data folder
 PYKEEN_HOME: Path = PYKEEN_MODULE.base
