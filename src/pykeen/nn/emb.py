@@ -1083,12 +1083,12 @@ def tokenize(
 ) -> torch.LongTensor:
     """
     Tokenize entities by representing them as a bag of relations.
-    
+
     :param triples_factory:
         the triples factory containing the ID-based triples.
     :param num_tokens:
         the number of relation IDs to select for each entity
-    
+
     :return: shape: (num_entities, num_tokens), -1 <= res < 2 * num_relations
         the selected relation IDs for each entity. -1 is used as a padding token.
     """
@@ -1137,13 +1137,13 @@ def resolve_aggregation(
 
     .. warning ::
         This function does *not* check whether torch.<aggregation> is a method which is a valid aggregation.
-    
+
     :param aggregation:
         the aggregation choice. Can be either
         1. None, in which case the torch.mean is returned
         2. a string, in which case torch.<aggregation> is returned
         3. a callable, which is returned without change
-    
+
     :return:
         the chosen aggregation function.
     """
