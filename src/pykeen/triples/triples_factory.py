@@ -122,7 +122,7 @@ def _get_triple_mask(
         columns = [columns]
     mask = torch.isin(
         elements=triples,
-        test_elements=torch.as_tensor(ids, dtype=torch.long),
+        test_elements=torch.as_tensor(list(ids), dtype=torch.long),
         assume_unique=False,
         invert=invert,
     )
