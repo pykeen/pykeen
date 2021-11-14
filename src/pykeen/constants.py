@@ -5,6 +5,7 @@
 from pathlib import Path
 
 import pystow
+import torch
 
 __all__ = [
     "PYKEEN_HOME",
@@ -13,11 +14,13 @@ __all__ = [
     "PYKEEN_EXPERIMENTS",
     "PYKEEN_CHECKPOINTS",
     "PYKEEN_LOGS",
+    "AGGREGATIONS",
 ]
 
 #: A manager around the PyKEEN data folder. It defaults to ``~/.data/pykeen``.
 #  This can be overridden with the envvar ``PYKEEN_HOME``.
 #: For more information, see https://github.com/cthoyt/pystow
+
 PYKEEN_MODULE: pystow.Module = pystow.module("pykeen")
 #: A path representing the PyKEEN data folder
 PYKEEN_HOME: Path = PYKEEN_MODULE.base
@@ -40,3 +43,5 @@ DEFAULT_DROPOUT_HPO_RANGE = dict(type=float, low=0.0, high=0.5, q=0.1)
 DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE = dict(type=int, low=16, high=256, q=16)
 
 USER_DEFINED_CODE = "<user defined>"
+
+AGGREGATIONS = {func.__name__: func for func in [torch.sum, torch.max, torch.mean, torch.logsumexp]}
