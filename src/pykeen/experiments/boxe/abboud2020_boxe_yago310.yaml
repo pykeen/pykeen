@@ -29,7 +29,7 @@ pipeline:
   stopper: early
   stopper_kwargs:
     frequency: 100
-    metric: "inverse_harmonic_mean_rank"
+    metric: "inverse_harmonic_mean_rank"  # = mean reciprocal rank
     patience: 400  # big enough to run until the end
   
   negative_sampler: basic
