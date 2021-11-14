@@ -1135,12 +1135,12 @@ class NodePieceRepresentation(RepresentationModule):
         total_num_tokens = 2 * triples_factory.real_num_relations + 1
         if isinstance(token_representation, EmbeddingSpecification):
             token_representation = token_representation.make(
-                num_embeddings=num_tokens,
+                num_embeddings=total_num_tokens,
             )
         if token_representation.max_id != num_tokens:
             raise ValueError(
                 f"If a pre-instantiated representation is provided, it has to have 2 * num_relations + 1= "
-                f"{num_tokens} representations, but has {token_representation.max_id}",
+                f"{total_num_tokens} representations, but has {token_representation.max_id}",
             )
 
         # super init; has to happen *before* any parameter or buffer is assigned
