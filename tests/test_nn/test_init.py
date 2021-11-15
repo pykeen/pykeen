@@ -1,4 +1,7 @@
+# -*- coding: utf-8 -*-
+
 """Tests for initializers."""
+
 import torch
 
 import pykeen.nn.init
