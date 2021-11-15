@@ -5,6 +5,7 @@
 import click
 
 from .. import model_resolver
+from ...constants import AGGREGATIONS
 from ...evaluation import evaluator_resolver
 from ...losses import loss_resolver
 from ...optimizers import optimizer_resolver
@@ -87,6 +88,10 @@ CLI_OPTIONS = {
     "combination_dropout": click.option(
         "--combination-dropout",
         type=float,
+    ),
+    "aggregation": click.option(
+        "--aggregation",
+        type=click.Choice(["mlp", *AGGREGATIONS]),
     ),
 }
 
