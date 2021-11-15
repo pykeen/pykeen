@@ -7,12 +7,11 @@ import torch
 
 from ..utils import extended_einsum, split_complex, tensor_product, view_complex, view_complex_native
 
-
-
 __all__ = [
     "batched_dot",
     "batched_complex",
 ]
+
 
 def _batched_dot_manual(
     a: torch.FloatTensor,
