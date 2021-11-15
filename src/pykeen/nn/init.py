@@ -10,9 +10,11 @@ import torch.nn
 import torch.nn.init
 from torch.nn import functional
 
+from ..typing import Initializer
 from ..utils import compose
 
 __all__ = [
+    "create_init_from_pretrained",
     "xavier_uniform_",
     "xavier_uniform_norm_",
     "xavier_normal_",
@@ -93,7 +95,7 @@ def init_quaternions(
     """Initialize quaternion."""
     num_elements, dim = x.shape
     if dim % 4 != 0:
-        raise ValueError("Quaternions have four components, but dimension {dim} is not divisible by four.")
+        raise ValueError(f"Quaternions have four components, but dimension {dim} is not divisible by four.")
     dim //= 4
     # scaling factor
     s = 1.0 / math.sqrt(2 * num_elements)
@@ -109,3 +111,46 @@ def init_quaternions(
     imag = imag * (modulus * phase.sin()).unsqueeze(dim=-1)
     x = torch.cat([real, imag], dim=-1)
     return x.view(num_elements, 4 * dim)
+
+
+def create_init_from_pretrained(pretrained: torch.FloatTensor) -> Initializer:
+    """
+    Create an initializer via a constant vector.
+
+    :param pretrained:
+        the tensor of pretrained embeddings.
+
+    :return:
+        an initializer, which fills a tensor with the given weights.
+
+    Added in https://github.com/pykeen/pykeen/pull/638.
+
+    Example usage:
+
+    .. code-block::
+
+        import torch
+        from pykeen.pipeline import pipeline
+        from pykeen.nn.init import create_init_from_pretrained
+
+        # this is usually loaded from somewhere else
+        # the shape must match, as well as the entity-to-id mapping
+        pretrained_embedding_tensor = torch.rand(14, 128)
+
+        result = pipeline(
+            dataset="nations",
+            model="transe",
+            model_kwargs=dict(
+                embedding_dim=pretrained_embedding_tensor.shape[-1],
+                entity_initializer=create_init_from_pretrained(pretrained_embedding_tensor),
+            ),
+        )
+    """
+
+    def init_from_pretrained(x: torch.FloatTensor) -> torch.FloatTensor:
+        """Initialize tensor with pretrained weights."""
+        if x.shape != pretrained.shape:
+            raise ValueError(f"shape of pretrained {pretrained.shape} does not match shape of tensor {x.shape}")
+        return pretrained
+
+    return init_from_pretrained

@@ -52,8 +52,8 @@ from pykeen.pipeline import pipeline
 from pykeen.regularizers import LpRegularizer, Regularizer
 from pykeen.trackers import ResultTracker
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
-from pykeen.triples import TriplesFactory
-from pykeen.typing import HeadRepresentation, MappedTriples, RelationRepresentation, TailRepresentation
+from pykeen.triples import TriplesFactory, generation
+from pykeen.typing import HeadRepresentation, Initializer, MappedTriples, RelationRepresentation, TailRepresentation
 from pykeen.utils import all_in_bounds, get_batchnorm_modules, resolve_device, set_random_seed, unpack_singletons
 from tests.constants import EPSILON
 from tests.mocks import CustomRepresentations
@@ -1488,3 +1488,44 @@ class LiteralTestCase(InteractionTestCase):
         h_proj = self.instance.combination(*h)
         t_proj = self.instance.combination(*t)
         return self.instance.base(h_proj, r, t_proj)
+
+
+class InitializerTestCase(unittest.TestCase):
+    """A test case for initializers."""
+
+    #: the shape of the tensor to initialize
+    shape: Tuple[int, ...] = (3, 4)
+
+    #: to be initialized / set in subclass
+    initializer: Initializer
+
+    def test_initialization(self):
+        """Test whether the initializer returns a modified tensor."""
+        x = torch.rand(*self.shape)
+        # initializers *may* work in-place => clone
+        y = self.initializer(x.clone())
+        assert not (x == y).all()
+        self._verify_initialization(y)
+
+    def _verify_initialization(self, x: torch.FloatTensor) -> None:
+        """Verify properties of initialization."""
+        pass
+
+    def test_model(self):
+        """Test whether initializer can be used for a model."""
+        triples_factory = generation.generate_triples_factory(
+            num_entities=self.shape[0],
+        )
+        model = pykeen.models.TransE(
+            triples_factory=triples_factory,
+            embedding_dim=self.shape[1],
+            entity_initializer=self.initializer,
+            random_seed=0,
+            preferred_device="cpu",
+        )
+        model.reset_parameters_()
+
+        with tempfile.TemporaryDirectory() as d:
+            path = pathlib.Path(d) / "test.pkl"
+            model.save_state(path)
+            model.load_state(path)
