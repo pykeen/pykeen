@@ -101,7 +101,7 @@ def _complex_einsum(
     x[1, 0, 1] = 1
     x[1, 1, 0] = -1
     return extended_einsum(
-        "ijk,bhdi,brdj,btdk->bhrt",
+        "ijk,bhrtdi,bhrtdj,bhrtdk->bhrt",
         x,
         h.view(*h.shape[:-1], -1, 2),
         r.view(*r.shape[:-1], -1, 2),
