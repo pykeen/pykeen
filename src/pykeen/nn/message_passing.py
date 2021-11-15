@@ -622,15 +622,24 @@ class EfficientBlockDecomposition(BlockDecomposition):
             edge_weights=edge_weights,
             horizontal_stacking=self.horizontal_stacking,
         )
-        # shape: (R x nb x bs x bs)
-        # weights = torch.einsum("rb, bio -> rio", self.relation_base_weights, self.bases)
         if self.horizontal_stacking:
-            x = torch.einsum("nbi, rbio -> rnbo", x.view(-1, self.num_blocks, self.block_size), self.blocks)
-            x = torch.spmm(adj, x.view(-1, self.output_dim))
-        else:
-            x = torch.spmm(adj, x)
+            # (n, di) -> (n, nb, bs)
+            x = x.view(x.shape[0], self.num_blocks, self.block_size)
+            # (n, nb, bs), (R, nb, bs, bs) -> (R, n, nb, bs)
+            x = torch.einsum("nbi, rbio -> rnbo", x, self.blocks)
+            # (R, n, nb, bs) -> (R * n, do)
+            x = x.view(-1, self.output_dim)
+            # (n, R * n), (R * n, do) -> (n, do)
+            x = torch.sparse.mm(adj, x)
+        else:  # vertical stacking
+            # (R * n, n), (n, di) -> (R * n, di)
+            x = torch.sparse.mm(adj, x)
+            # (R * n, di) -> (R, n, nb, bs)
             x = x.view(self.num_relations, -1, self.num_blocks, self.block_size)
-            x = torch.einsum("rbio, rnbi -> nbo", self.blocks, x).view(-1, self.output_dim)
+            # (R, nb, bs, bs), (R, n, nb, bs) -> (n, nb, bs)
+            x = torch.einsum("rbio, rnbi -> nbo", self.blocks, x)
+            # (n, nb, bs) -> (n, do)
+            x = x.view(-1, self.output_dim)
         if accumulator is not None:
             x = accumulator + x
         return x
