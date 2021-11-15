@@ -955,7 +955,10 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
                 self.skipTest(str(e))
             else:
                 raise e
-        assert scores.shape == (self.batch_size, self.instance.num_relations)
+        if self.create_inverse_triples:
+            logger.warning("score_r's shape is not clear yet for models with inverse relations")
+        else:
+            assert scores.shape == (self.batch_size, self.instance.num_relations)
         self._check_scores(batch, scores)
 
     def test_score_h(self) -> None:
