@@ -95,7 +95,7 @@ def init_quaternions(
     """Initialize quaternion."""
     num_elements, dim = x.shape
     if dim % 4 != 0:
-        raise ValueError("Quaternions have four components, but dimension {dim} is not divisible by four.")
+        raise ValueError(f"Quaternions have four components, but dimension {dim} is not divisible by four.")
     dim //= 4
     # scaling factor
     s = 1.0 / math.sqrt(2 * num_elements)
