@@ -1461,7 +1461,7 @@ class InitializerTestCase(unittest.TestCase):
     """A test case for initializers."""
 
     #: the shape of the tensor to initialize
-    shape: Tuple[int, ...] = (3, 2)
+    shape: Tuple[int, ...] = (3, 4)
 
     #: to be initialized / set in subclass
     initializer: Initializer
@@ -1469,7 +1469,8 @@ class InitializerTestCase(unittest.TestCase):
     def test_initialization(self):
         """Test whether the initializer returns a modified tensor."""
         x = torch.rand(*self.shape)
-        y = self.initializer(x)
+        # initializers *may* work in-place => clone
+        y = self.initializer(x.clone())
         assert not (x == y).all()
         self._verify_initialization(y)
 
