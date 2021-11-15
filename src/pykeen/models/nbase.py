@@ -220,7 +220,7 @@ class _NewAbstractModel(Model, ABC):
             r_indices=rt_batch[:, 0],
             t_indices=rt_batch[:, 1],
             slice_size=slice_size,
-            slice_dim="r",
+            slice_dim="t",
         ).view(rt_batch.shape[0], self.num_entities)
 
     def score_r(self, ht_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:
@@ -241,7 +241,7 @@ class _NewAbstractModel(Model, ABC):
             r_indices=None,
             t_indices=ht_batch[:, 1],
             slice_size=slice_size,
-            slice_dim="t",
+            slice_dim="r",
         ).view(ht_batch.shape[0], self.num_relations)
 
 
