@@ -9,7 +9,7 @@ class PretrainedInitializerTestCase(cases.InitializerTestCase):
     """Tests for initialization from pretrained embedding."""
 
     def setUp(self) -> None:
-        """Setup test case."""
+        """Prepare for test."""
         self.pretrained = torch.rand(*self.shape)
         self.initializer = pykeen.nn.init.create_init_from_pretrained(pretrained=self.pretrained)
 
