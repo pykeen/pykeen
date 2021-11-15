@@ -1488,7 +1488,7 @@ class InitializerTestCase(unittest.TestCase):
             embedding_dim=self.shape[1],
             entity_initializer=self.initializer,
             random_seed=0,
-            preferred_device='cpu',
+            preferred_device="cpu",
         )
         model.reset_parameters_()
 
