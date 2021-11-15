@@ -3,7 +3,7 @@
 """Test embeddings."""
 
 import unittest
-from typing import Any, ClassVar, MutableMapping
+from typing import Any, ClassVar, MutableMapping, Tuple
 from unittest.mock import Mock
 
 import numpy
@@ -12,7 +12,13 @@ import unittest_templates
 
 import pykeen.nn.emb
 from pykeen.datasets.nations import NationsLiteral
-from pykeen.nn.emb import Embedding, EmbeddingSpecification, LiteralRepresentation, RepresentationModule
+from pykeen.nn.emb import (
+    Embedding,
+    EmbeddingSpecification,
+    LiteralRepresentation,
+    RepresentationModule,
+    SubsetRepresentationModule,
+)
 from pykeen.triples.generation import generate_triples_factory
 from tests import cases, mocks
 
@@ -138,6 +144,24 @@ class NodePieceTests(cases.RepresentationTestCase):
             num_relations=self.num_relations,
             num_triples=self.num_triples,
             create_inverse_triples=False,
+        )
+        return kwargs
+
+
+class SubsetRepresentationTests(cases.RepresentationTestCase):
+    """Tests for subset representations."""
+
+    cls = SubsetRepresentationModule
+    kwargs = dict(
+        max_id=7,
+    )
+    shape: Tuple[int, ...] = (13,)
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        kwargs["base"] = Embedding(
+            num_embeddings=2 * kwargs["max_id"],
+            shape=self.shape,
         )
         return kwargs
 
