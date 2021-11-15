@@ -1487,5 +1487,12 @@ class InitializerTestCase(unittest.TestCase):
             triples_factory=triples_factory,
             embedding_dim=self.shape[1],
             entity_initializer=self.initializer,
+            random_seed=0,
+            preferred_device='cpu',
         )
         model.reset_parameters_()
+
+        with tempfile.TemporaryDirectory() as d:
+            path = pathlib.Path(d) / "test.pkl"
+            model.save_state(path)
+            model.load_state(path)
