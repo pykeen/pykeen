@@ -7,6 +7,7 @@ from __future__ import annotations
 import functools
 import inspect
 import logging
+import os
 import pickle
 import warnings
 from abc import ABC, abstractmethod
@@ -244,7 +245,7 @@ class Model(nn.Module, ABC):
         """Calculate the number of bytes used for all parameters of the model."""
         return sum(param.numel() * param.element_size() for param in self.parameters(recurse=True))
 
-    def save_state(self, path: str) -> None:
+    def save_state(self, path: Union[str, os.PathLike]) -> None:
         """Save the state of the model.
 
         :param path:
@@ -252,7 +253,7 @@ class Model(nn.Module, ABC):
         """
         torch.save(self.state_dict(), path, pickle_protocol=pickle.HIGHEST_PROTOCOL)
 
-    def load_state(self, path: str) -> None:
+    def load_state(self, path: Union[str, os.PathLike]) -> None:
         """Load the state of the model.
 
         :param path:
