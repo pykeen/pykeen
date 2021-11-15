@@ -31,6 +31,7 @@ from .init import (
 )
 from .message_passing import Decomposition, RGCNLayer
 from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolver
+from ..constants import AGGREGATIONS
 from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import CoreTriplesFactory
 from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer
@@ -1181,6 +1182,10 @@ def resolve_aggregation(
         return torch.mean
 
     if isinstance(aggregation, str):
+        if aggregation not in AGGREGATIONS:
+            logger.warning(
+                f"aggregation={aggregation} is not one of the predefined ones ({sorted(AGGREGATIONS.keys())}).",
+            )
         return getattr(torch, aggregation)
 
     return aggregation
