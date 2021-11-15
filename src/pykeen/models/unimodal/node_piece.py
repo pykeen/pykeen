@@ -110,15 +110,18 @@ class NodePiece(ERModel):
             the interaction module, or a hint for it.
         :param aggregation:
             aggregation of multiple token representations to a single entity representation. By default,
-            this uses :func:`torch.mean`. It could also use other aggregations like :func:`torch.sum`,
-            :func:`torch.max`, or even trainable aggregations e.g., ``MLP(mean(MLP(tokens)))``
-            (cf. DeepSets from [zaheer2017]_) if given value ``"mlp"``.
+            this uses :func:`torch.mean`. If a string is provided, the module assumes that this refers to a top-level
+            torch function, e.g. "mean" for :func:`torch.mean`, or "sum" for func:`torch.sum`. An aggregation can
+            also have trainable parameters, .e.g., ``MLP(mean(MLP(tokens)))`` (cf. DeepSets from [zaheer2017]_). In
+            this case, the module has to be created outside of this component.
+
+            Moreover, we support providing "mlp" as a shortcut to use the MLP aggregation version from [galkin2021]_.
 
             We could also have aggregations which result in differently shapes output, e.g. a concatenation of all
-            token embeddings resulting in shape ``(k * d,)``. In this case, `shape` must be provided.
+            token embeddings resulting in shape ``(num_tokens * d,)``. In this case, `shape` must be provided.
 
             The aggregation takes two arguments: the (batched) tensor of token representations, in shape
-            ``(*, k, *dt)``, and the index along which to aggregate.
+            ``(*, num_tokens, *dt)``, and the index along which to aggregate.
         :param shape:
             the shape of an individual representation. Only necessary, if aggregation results in a change of dimensions.
             this will only be necessary if the aggregation is an *ad hoc* function.
