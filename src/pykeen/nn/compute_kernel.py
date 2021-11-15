@@ -44,14 +44,6 @@ def batched_dot(
     return _batched_dot_manual(a, b)
 
 
-def batched_complex(
-    h: torch.FloatTensor,
-    r: torch.FloatTensor,
-    t: torch.FloatTensor,
-) -> torch.FloatTensor:
-    return _complex_native_complex(h=h, r=r, t=t)
-
-
 # TODO benchmark
 def _complex_broadcast_optimized(
     h: torch.FloatTensor,
@@ -188,3 +180,12 @@ def _complex_stacked_select(
     else:
         t = r * t
     return h @ t.transpose(-2, -1)
+
+
+def batched_complex(
+    h: torch.FloatTensor,
+    r: torch.FloatTensor,
+    t: torch.FloatTensor,
+) -> torch.FloatTensor:
+    """Compute real part of tri-linear complex dot product."""
+    return _complex_native_complex(h=h, r=r, t=t)
