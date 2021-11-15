@@ -956,6 +956,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
             else:
                 raise e
         if self.create_inverse_triples:
+            # TODO: look into score_r for inverse relations
             logger.warning("score_r's shape is not clear yet for models with inverse relations")
         else:
             assert scores.shape == (self.batch_size, self.instance.num_relations)
