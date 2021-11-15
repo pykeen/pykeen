@@ -9,6 +9,7 @@ import itertools
 import logging
 import warnings
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from dataclasses import dataclass
 from typing import Any, Callable, Mapping, Optional, Sequence, Tuple, TypeVar, Union, cast
 
@@ -30,6 +31,7 @@ from .init import (
 )
 from .message_passing import Decomposition, RGCNLayer
 from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolver
+from ..constants import AGGREGATIONS
 from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import CoreTriplesFactory
 from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer
@@ -41,6 +43,7 @@ __all__ = [
     "LiteralRepresentation",
     "EmbeddingSpecification",
     "RGCNRepresentations",
+    "NodePieceRepresentation",
     "CompGCNLayer",
     "CombinedCompGCNRepresentations",
     "SingleCompGCNRepresentation",
@@ -200,6 +203,36 @@ class RepresentationModule(nn.Module, ABC):
         # TODO: Remove this property and update code to use shape instead
         warnings.warn("The embedding_dim property is deprecated. Use .shape instead.", DeprecationWarning)
         return int(np.prod(self.shape))
+
+
+class SubsetRepresentationModule(RepresentationModule):
+    """A representation module, which only exposes a subset of representations of its base."""
+
+    def __init__(
+        self,
+        base: RepresentationModule,
+        max_id: int,
+    ):
+        """
+        Initialize the representations.
+
+        :param base:
+            the base representations. have to have a sufficient number of representations, i.e., at least max_id.
+        :param max_id:
+            the maximum number of relations.
+        """
+        if max_id > base.max_id:
+            raise ValueError(f"Base representations comprise only {base.max_id} representations.")
+        super().__init__(max_id, base.shape)
+        self.base = base
+
+    def forward(
+        self,
+        indices: Optional[torch.LongTensor] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        if indices is None:
+            indices = torch.arange(self.max_id)
+        return self.base.forward(indices=indices)
 
 
 class Embedding(RepresentationModule):
@@ -1067,4 +1100,191 @@ class SingleCompGCNRepresentation(RepresentationModule):
         x = self.combined()[self.position]
         if indices is not None:
             x = x[indices]
+        return x
+
+
+def _sample(rs: torch.LongTensor, k: int) -> torch.LongTensor:
+    """Sample without replacement."""
+    return rs[torch.randperm(rs.shape[0])[:k]]
+
+
+def tokenize(
+    triples_factory: CoreTriplesFactory,
+    num_tokens: int,
+) -> torch.LongTensor:
+    """
+    Tokenize entities by representing them as a bag of relations.
+
+    :param triples_factory:
+        the triples factory containing the ID-based triples.
+    :param num_tokens:
+        the number of relation IDs to select for each entity
+
+    :return: shape: (num_entities, num_tokens), -1 <= res < 2 * num_relations
+        the selected relation IDs for each entity. -1 is used as a padding token.
+    """
+    mapped_triples = triples_factory.mapped_triples
+    if triples_factory.create_inverse_triples:
+        # inverse triples are created afterwards implicitly
+        mapped_triples = mapped_triples[mapped_triples[:, 1] < triples_factory.real_num_relations]
+
+    # tokenize: represent entities by bag of relations
+    h, r, t = mapped_triples.t()
+
+    # collect candidates
+    e2r = defaultdict(set)
+    for e, r in (
+        torch.cat(
+            [
+                torch.stack([h, r], dim=1),
+                torch.stack([t, r + triples_factory.real_num_relations], dim=1),
+            ],
+            dim=0,
+        )
+        .unique(dim=0)
+        .tolist()
+    ):
+        e2r[e].add(r)
+
+    # randomly sample without replacement num_tokens relations for each entity
+    assignment = torch.full(
+        size=(triples_factory.num_entities, num_tokens),
+        dtype=torch.long,
+        fill_value=2 * triples_factory.real_num_relations,
+    )
+    for e, rs in e2r.items():
+        rs = torch.as_tensor(data=list(rs), dtype=torch.long)
+        rs = _sample(rs=rs, k=num_tokens)
+        assignment[e, : len(rs)] = rs
+
+    return assignment
+
+
+def resolve_aggregation(
+    aggregation: Union[None, str, Callable[[torch.FloatTensor, int], torch.FloatTensor]],
+) -> Callable[[torch.FloatTensor, int], torch.FloatTensor]:
+    """
+    Resolve the aggregation function.
+
+    .. warning ::
+        This function does *not* check whether torch.<aggregation> is a method which is a valid aggregation.
+
+    :param aggregation:
+        the aggregation choice. Can be either
+        1. None, in which case the torch.mean is returned
+        2. a string, in which case torch.<aggregation> is returned
+        3. a callable, which is returned without change
+
+    :return:
+        the chosen aggregation function.
+    """
+    if aggregation is None:
+        return torch.mean
+
+    if isinstance(aggregation, str):
+        if aggregation not in AGGREGATIONS:
+            logger.warning(
+                f"aggregation={aggregation} is not one of the predefined ones ({sorted(AGGREGATIONS.keys())}).",
+            )
+        return getattr(torch, aggregation)
+
+    return aggregation
+
+
+class NodePieceRepresentation(RepresentationModule):
+    r"""
+    Basic implementation of node piece decomposition [galkin2021]_.
+
+    .. math ::
+        x_e = agg(\{T[t] \mid t \in tokens(e) \})
+
+    where $T$ are token representations, $tokens$ selects a fixed number of $k$ tokens for each entity, and $agg$ is
+    an aggregation function, which aggregates the individual token representations to a single entity representation.
+
+    .. note ::
+        This implementation currently only supports representation of entities by bag-of-relations.
+    """
+
+    #: the token representations
+    tokens: RepresentationModule
+
+    #: the entity-to-token mapping
+    assignment: torch.LongTensor
+
+    def __init__(
+        self,
+        *,
+        triples_factory: CoreTriplesFactory,
+        token_representation: Union[EmbeddingSpecification, RepresentationModule],
+        aggregation: Union[None, str, Callable[[torch.FloatTensor, int], torch.FloatTensor]] = None,
+        num_tokens: int = 2,
+        shape: Optional[Sequence[int]] = None,
+    ):
+        """
+        Initialize the representation.
+
+        :param triples_factory:
+            the triples factory
+        :param token_representation:
+            the token representation specification, or pre-instantiated representation module. For the latter, the
+            number of representations must be $2 * num_relations + 1$.
+        :param aggregation:
+            aggregation of multiple token representations to a single entity representation. By default,
+            this uses :func:`torch.mean`. If a string is provided, the module assumes that this refers to a top-level
+            torch function, e.g. "mean" for :func:`torch.mean`, or "sum" for func:`torch.sum`. An aggregation can
+            also have trainable parameters, .e.g., ``MLP(mean(MLP(tokens)))`` (cf. DeepSets from [zaheer2017]_). In
+            this case, the module has to be created outside of this component.
+
+            We could also have aggregations which result in differently shapes output, e.g. a concatenation of all
+            token embeddings resulting in shape ``(num_tokens * d,)``. In this case, `shape` must be provided.
+
+            The aggregation takes two arguments: the (batched) tensor of token representations, in shape
+            ``(*, num_tokens, *dt)``, and the index along which to aggregate.
+        :param num_tokens:
+            the number of tokens for each entity.
+        :param shape:
+            the shape of an individual representation. Only necessary, if aggregation results in a change of dimensions.
+        """
+        # create token representations
+        # normal relations + inverse relations + padding
+        total_num_tokens = 2 * triples_factory.real_num_relations + 1
+        if isinstance(token_representation, EmbeddingSpecification):
+            token_representation = token_representation.make(
+                num_embeddings=total_num_tokens,
+            )
+        if token_representation.max_id != total_num_tokens:
+            raise ValueError(
+                f"If a pre-instantiated representation is provided, it has to have 2 * num_relations + 1= "
+                f"{total_num_tokens} representations, but has {token_representation.max_id}",
+            )
+
+        # super init; has to happen *before* any parameter or buffer is assigned
+        super().__init__(max_id=triples_factory.num_entities, shape=shape or token_representation.shape)
+
+        # Assign default aggregation
+        self.aggregation = resolve_aggregation(aggregation=aggregation)
+
+        # assign module
+        self.tokens = token_representation
+        self.aggregation_index = -(1 + len(token_representation.shape))
+        self.register_buffer(
+            name="assignment",
+            tensor=tokenize(triples_factory=triples_factory, num_tokens=num_tokens),
+        )
+
+    def forward(
+        self,
+        indices: Optional[int] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        # get token IDs, shape: (*, k)
+        token_ids = self.assignment
+        if indices is not None:
+            token_ids = token_ids[indices]
+
+        # lookup token representations, shape: (*, k, d)
+        x = self.tokens(token_ids)
+
+        # aggregate
+        x = self.aggregation(x, self.aggregation_index)
+
         return x

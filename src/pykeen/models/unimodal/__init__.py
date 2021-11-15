@@ -67,6 +67,11 @@
 .. [abboud2020] Abboud, R., *et al.* (2020). `BoxE: A box embedding model for knowledge base completion
    <https://proceedings.neurips.cc/paper/2020/file/6dbbe6abe5f14af882ff977fc3f35501-Paper.pdf>`_.
    *Advances in Neural Information Processing Systems*, 2020-December(NeurIPS), 1–13.
+.. [galkin2021] Galkin, M., *et al.* (2021) `NodePiece: Compositional and Parameter-Efficient Representations
+   of Large Knowledge Graphs <https://arxiv.org/abs/2106.12144>`_. *arXiv*, 2106.12144.
+.. [zaheer2017] Zaheer, M., *et al.* (2017). `Deep sets
+   <https://papers.nips.cc/paper/2017/hash/f22e4747da1aa27e363d86d40ff442fe-Abstract.html>`_.
+   *Advances in Neural Information Processing Systems*, 2017-December(ii), 3392–3402.
 """
 
 from .boxe import BoxE
@@ -83,6 +88,7 @@ from .hake import HAKE, ModE
 from .hole import HolE
 from .kg2e import KG2E
 from .mure import MuRE
+from .node_piece import NodePiece
 from .ntn import NTN
 from .pair_re import PairRE
 from .proj_e import ProjE
@@ -118,6 +124,7 @@ __all__ = [
     "ModE",
     "MuRE",
     "NTN",
+    "NodePiece",
     "PairRE",
     "ProjE",
     "PRotatE",
