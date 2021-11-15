@@ -343,6 +343,7 @@ def view_complex(x: torch.FloatTensor) -> torch.Tensor:
 
 
 def view_complex_native(x: torch.FloatTensor) -> torch.Tensor:
+    """Convert a PyKEEN complex tensor representation into a torch one using :func:`torch.view_as_complex`."""
     return torch.view_as_complex(x.view(*x.shape[:-1], -1, 2))
 
 
