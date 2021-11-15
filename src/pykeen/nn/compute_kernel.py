@@ -5,8 +5,14 @@
 import numpy
 import torch
 
-from ..utils import extended_einsum, split_complex, tensor_product, view_complex
+from ..utils import extended_einsum, split_complex, tensor_product, view_complex, view_complex_native
 
+
+
+__all__ = [
+    "batched_dot",
+    "batched_complex",
+]
 
 def _batched_dot_manual(
     a: torch.FloatTensor,
@@ -37,6 +43,14 @@ def batched_dot(
 ) -> torch.FloatTensor:
     """Compute "element-wise" dot-product between batched vectors."""
     return _batched_dot_manual(a, b)
+
+
+def batched_complex(
+    h: torch.FloatTensor,
+    r: torch.FloatTensor,
+    t: torch.FloatTensor,
+) -> torch.FloatTensor:
+    return _complex_native_complex(h=h, r=r, t=t)
 
 
 # TODO benchmark
@@ -101,7 +115,7 @@ def _complex_native_complex(
     t: torch.FloatTensor,
 ) -> torch.FloatTensor:
     """Use torch built-ins for computation with complex numbers."""
-    h, r, t = [view_complex(x=x) for x in (h, r, t)]
+    h, r, t = [view_complex_native(x=x) for x in (h, r, t)]
     return torch.real(tensor_product(h, r, torch.conj(t)).sum(dim=-1))
 
 

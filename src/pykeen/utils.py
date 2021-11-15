@@ -342,6 +342,10 @@ def view_complex(x: torch.FloatTensor) -> torch.Tensor:
     return torch.complex(real=real, imag=imag)
 
 
+def view_complex_native(x: torch.FloatTensor) -> torch.Tensor:
+    return torch.view_as_complex(x.view(*x.shape[:-1], -1, 2))
+
+
 def combine_complex(
     x_re: torch.FloatTensor,
     x_im: torch.FloatTensor,
