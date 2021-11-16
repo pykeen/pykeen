@@ -17,7 +17,7 @@ import numpy
 import torch
 from torch import nn
 
-from .compute_kernel import _complex_native_complex, batched_dot
+from .compute_kernel import batched_complex, batched_dot
 from .sim import KG2E_SIMILARITIES
 from ..moves import irfft, rfft
 from ..typing import GaussianDistribution
@@ -134,7 +134,7 @@ def complex_interaction(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    return _complex_native_complex(h, r, t)
+    return batched_complex(h, r, t)
 
 
 @_add_cuda_warning

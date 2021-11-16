@@ -342,7 +342,7 @@ class Embedding(RepresentationModule):
         if dtype is None:
             dtype = torch.get_default_dtype()
 
-        # work-around until full complex support
+        # work-around until full complex support (torch==1.10 still does not work)
         # TODO: verify that this is our understanding of complex!
         if dtype.is_complex:
             shape = tuple(shape[:-1]) + (2 * shape[-1],)
