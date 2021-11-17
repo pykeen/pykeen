@@ -191,7 +191,7 @@ import pathlib
 import pickle
 import time
 from dataclasses import dataclass, field
-from typing import Any, Collection, Dict, Iterable, List, Mapping, MutableMapping, Optional, Type, Union, cast
+from typing import Any, Collection, Dict, Iterable, List, Mapping, MutableMapping, Optional, Tuple, Type, Union, cast
 
 import pandas as pd
 import torch
@@ -517,6 +517,17 @@ def _iterate_moved(pipeline_results: Iterable[PipelineResult]):
         yield pipeline_result
 
 
+def _extract_metrics(result_dict: Mapping[str, Any], prefix: Optional[List[str]] = None) -> Iterable[Tuple[str, float]]:
+    """Extract metric names & values from a result dictionary from a (reproducibility) configuration."""
+    if prefix is None:
+        prefix = []
+    for k, v in result_dict.items():
+        if isinstance(v, dict):
+            yield from _extract_metrics(v, prefix=prefix + [k])
+        else:
+            yield ".".join(prefix + [k]), v
+
+
 def save_pipeline_results_to_directory(
     *,
     config: Mapping[str, Any],
@@ -549,9 +560,10 @@ def save_pipeline_results_to_directory(
     metric_names = []
     metric_values = []
     if "results" in config:
-        # TODO: parse key + values
-        metric_names, values = ...  # config["results"]
-        metric_values.append(["original"] + values)
+        pair = tuple(zip(*_extract_metrics(config["results"])))
+        if pair:
+            metric_names, values = pair
+            metric_values.append(("original",) + values)
     for i, pipeline_result in enumerate(pipeline_results):
         replicate_directory = replicates_directory.joinpath(f"replicate-{i:0{width}}")
         replicate_directory.mkdir(exist_ok=True, parents=True)
@@ -562,6 +574,7 @@ def save_pipeline_results_to_directory(
         )
         for epoch, loss in enumerate(pipeline_result.losses):
             losses_rows.append((i, epoch, loss))
+        # TODO: get_metric does not support "hits_at_k.best.10" as found, e.g., in BoxE configuration
         metric_values.append([str(i)] + [pipeline_result.get_metric(key=metric_name) for metric_name in metric_names])
 
     losses_df = pd.DataFrame(losses_rows, columns=["Replicate", "Epoch", "Loss"])
