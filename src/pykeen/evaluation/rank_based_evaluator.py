@@ -4,6 +4,7 @@
 
 import itertools as itt
 import logging
+import re
 from collections import defaultdict
 from dataclasses import dataclass, field, fields
 from typing import DefaultDict, Dict, Iterable, List, Optional, Sequence, Tuple, Union
@@ -147,6 +148,70 @@ def compute_rank_from_scores(
         RANK_REALISTIC: realistic_rank,
         RANK_EXPECTED_REALISTIC: expected_realistic_rank,
     }
+
+
+RANK_TYPE_SYNONYMS = {
+    "best": RANK_OPTIMISTIC,
+    "worst": RANK_PESSIMISTIC,
+    "avg": RANK_REALISTIC,
+    "average": RANK_REALISTIC,
+}
+
+_SIDE_PATTERN = "|".join(SIDES)
+_TYPE_PATTERN = "|".join(itt.chain(RANK_TYPES, RANK_TYPE_SYNONYMS.keys()))
+METRIC_PATTERN = re.compile(rf"(?P<name>\w+)(.(?P<side>{_SIDE_PATTERN}))?(.(?P<type>{_TYPE_PATTERN}))?(.(?P<k>\d+))?")
+HITS_PATTERN = re.compile(r"(hits_at_|hits@|h@)(?P<k>\d+)")
+
+
+def resolve_metric_name(
+    name: str,
+) -> Tuple[str, str, str, Optional[int]]:
+    """Functional metric name normalization."""
+    match = METRIC_PATTERN.match(name)
+    if not match:
+        raise ValueError(f"Invalid metric name: {name}")
+    name, side, rank_type, k = [match.group(key) for key in ("name", "side", "type", "k")]
+
+    # normalize metric name
+    if not name:
+        raise ValueError("A metric name must be provided.")
+    # handle spaces and case
+    name = name.lower().replace(" ", "_")
+
+    # special case for hits_at_k
+    match = HITS_PATTERN.match()
+    if match:
+        name = "hits_at_k"
+        k = match.group("k")
+    if name == "hits_at_k":
+        k = k or 10
+        # TODO: Fractional?
+        try:
+            k = int(k)
+        except ValueError as error:
+            raise ValueError(f"Invalid k={k} for hits_at_k") from error
+        if k < 0:
+            raise ValueError(f"For hits_at_k, you must provide a positive value of k, but found {k}.")
+
+    # synonym normalization
+    name = METRIC_SYNONYMS.get(name, name)
+
+    # normalize side
+    side = side or SIDE_BOTH
+    side = side.lower()
+    if side not in SIDES:
+        raise ValueError(f"Invalid side: {side}. Allowed are {SIDES}.")
+
+    # normalize rank type
+    rank_type = rank_type or RANK_REALISTIC
+    rank_type = rank_type.lower()
+    rank_type = RANK_TYPE_SYNONYMS.get(rank_type, rank_type)
+    if rank_type not in RANK_TYPES:
+        raise ValueError(f"Invalid rank type: {rank_type}. Allowed are {RANK_TYPES}.")
+    elif rank_type != RANK_REALISTIC and name in TYPES_REALISTIC_ONLY:
+        raise ValueError(f"Invalid rank type for {name}: {rank_type}. Allowed type: {RANK_REALISTIC}")
+
+    return name, side, rank_type, k
 
 
 @fix_dataclass_init_docs
@@ -295,47 +360,10 @@ class RankBasedMetricResults(MetricResults):
 
         >>> metric_results.get('hits@5')
         """
-        dot_count = name.count(".")
-        if 0 == dot_count:  # assume average by default
-            side, rank_type, metric = SIDE_BOTH, RANK_REALISTIC, name
-        elif 1 == dot_count:
-            # Check if it a side or rank type
-            side_or_ranktype, metric = name.split(".")
-            if side_or_ranktype in SIDES:
-                side = side_or_ranktype
-                rank_type = RANK_REALISTIC
-            else:
-                side = SIDE_BOTH
-                rank_type = side_or_ranktype
-        elif 2 == dot_count:
-            side, rank_type, metric = name.split(".")
-        else:
-            raise ValueError(f"Malformed metric name: {name}")
-
-        # update old names for metrics and handle spaces
-        metric = metric.lower().replace(" ", "_")
-        metric = METRIC_SYNONYMS.get(metric, metric)
-
-        if side not in SIDES:
-            raise ValueError(f"Invalid side: {side}. Allowed sides: {SIDES}")
-        if rank_type not in RANK_REALISTIC and metric in TYPES_REALISTIC_ONLY:
-            raise ValueError(f"Invalid rank type for {metric}: {rank_type}. Allowed type: {RANK_REALISTIC}")
-        elif rank_type not in RANK_TYPES:
-            raise ValueError(f"Invalid rank type: {rank_type}. Allowed types: {RANK_TYPES}")
-
+        metric, side, rank_type, k = resolve_metric_name(name)
         if not metric.startswith("hits"):
             return getattr(self, metric)[side][rank_type]
-
-        # otherwise, assume is hits@k, which is handled differently
-        rank_type_hits_at_k = self.hits_at_k[side][rank_type]
-        for prefix in ("hits_at_", "hits@"):
-            if not metric.startswith(prefix):
-                continue
-            k = metric[len(prefix) :]
-            k_int = 10 if k == "k" else int(k)
-            return rank_type_hits_at_k[k_int]
-
-        raise ValueError(f"Invalid metric name: {name}")
+        return self.hits_at_k[side][rank_type][k]
 
     def to_flat_dict(self):  # noqa: D102
         return {f"{side}.{rank_type}.{metric_name}": value for side, rank_type, metric_name, value in self._iter_rows()}
