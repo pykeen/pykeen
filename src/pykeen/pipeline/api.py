@@ -217,6 +217,7 @@ from ..utils import (
     Result,
     ensure_ftp_directory,
     fix_dataclass_init_docs,
+    flatten_dictionary,
     get_json_bytes_io,
     get_model_io,
     load_configuration,
