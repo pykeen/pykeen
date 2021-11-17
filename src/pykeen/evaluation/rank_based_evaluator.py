@@ -181,7 +181,7 @@ def resolve_metric_name(name: str) -> MetricKey:
     match = METRIC_PATTERN.match(name)
     if not match:
         raise ValueError(f"Invalid metric name: {name}")
-    k: Union[int, str]
+    k: Union[None, str, int]
     name, side, rank_type, k = [match.group(key) for key in ("name", "side", "type", "k")]
 
     # normalize metric name
@@ -196,7 +196,8 @@ def resolve_metric_name(name: str) -> MetricKey:
         name = "hits_at_k"
         k = match.group("k")
     if name == "hits_at_k":
-        k = k or 10
+        if k is None:
+            k = 10
         # TODO: Fractional?
         try:
             k = int(k)
@@ -204,6 +205,7 @@ def resolve_metric_name(name: str) -> MetricKey:
             raise ValueError(f"Invalid k={k} for hits_at_k") from error
         if k < 0:
             raise ValueError(f"For hits_at_k, you must provide a positive value of k, but found {k}.")
+    assert k is None or isinstance(k, int)
 
     # synonym normalization
     name = METRIC_SYNONYMS.get(name, name)
@@ -223,7 +225,7 @@ def resolve_metric_name(name: str) -> MetricKey:
     elif rank_type != RANK_REALISTIC and name in TYPES_REALISTIC_ONLY:
         raise ValueError(f"Invalid rank type for {name}: {rank_type}. Allowed type: {RANK_REALISTIC}")
 
-    return MetricKey(name, side, rank_type, int(k))
+    return MetricKey(name, side, rank_type, k)
 
 
 @fix_dataclass_init_docs
