@@ -179,7 +179,7 @@ def resolve_metric_name(
     name = name.lower().replace(" ", "_")
 
     # special case for hits_at_k
-    match = HITS_PATTERN.match()
+    match = HITS_PATTERN.match(name)
     if match:
         name = "hits_at_k"
         k = match.group("k")
