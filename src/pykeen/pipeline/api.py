@@ -217,6 +217,7 @@ from ..utils import (
     Result,
     ensure_ftp_directory,
     fix_dataclass_init_docs,
+    flatten_dictionary,
     get_json_bytes_io,
     get_model_io,
     load_configuration,
@@ -559,11 +560,9 @@ def save_pipeline_results_to_directory(
 
     metric_names = []
     metric_values = []
-    if "results" in config:
-        pair = tuple(zip(*_extract_metrics(config["results"])))
-        if pair:
-            metric_names, values = pair
-            metric_values.append(("original",) + values)
+    if "results" in config and config["results"]:
+        metric_names, values = tuple(zip(*flatten_dictionary(config["results"]).items()))
+        metric_values.append(("original",) + values)
     for i, pipeline_result in enumerate(pipeline_results):
         replicate_directory = replicates_directory.joinpath(f"replicate-{i:0{width}}")
         replicate_directory.mkdir(exist_ok=True, parents=True)
