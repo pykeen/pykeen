@@ -52,8 +52,8 @@ from pykeen.pipeline import pipeline
 from pykeen.regularizers import LpRegularizer, Regularizer
 from pykeen.trackers import ResultTracker
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
-from pykeen.triples import TriplesFactory
-from pykeen.typing import HeadRepresentation, MappedTriples, RelationRepresentation, TailRepresentation
+from pykeen.triples import TriplesFactory, generation
+from pykeen.typing import HeadRepresentation, Initializer, MappedTriples, RelationRepresentation, TailRepresentation
 from pykeen.utils import all_in_bounds, get_batchnorm_modules, resolve_device, set_random_seed, unpack_singletons
 from tests.constants import EPSILON
 from tests.mocks import CustomRepresentations
@@ -931,13 +931,35 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         try:
             scores = self.instance.score_t(batch)
         except NotImplementedError:
-            self.fail(msg="Score_o not yet implemented")
+            self.fail(msg="score_t not yet implemented")
         except RuntimeError as e:
             if str(e) == "fft: ATen not compiled with MKL support":
                 self.skipTest(str(e))
             else:
                 raise e
         assert scores.shape == (self.batch_size, self.instance.num_entities)
+        self._check_scores(batch, scores)
+
+    def test_score_r(self) -> None:
+        """Test the model's ``score_r()`` function."""
+        batch = self.factory.mapped_triples[: self.batch_size, [0, 2]].to(self.instance.device)
+        # assert batch comprises (head, tail) pairs
+        assert batch.shape == (self.batch_size, 2)
+        assert (batch < self.factory.num_entities).all()
+        try:
+            scores = self.instance.score_r(batch)
+        except NotImplementedError:
+            self.fail(msg="score_r not yet implemented")
+        except RuntimeError as e:
+            if str(e) == "fft: ATen not compiled with MKL support":
+                self.skipTest(str(e))
+            else:
+                raise e
+        if self.create_inverse_triples:
+            # TODO: look into score_r for inverse relations
+            logger.warning("score_r's shape is not clear yet for models with inverse relations")
+        else:
+            assert scores.shape == (self.batch_size, self.instance.num_relations)
         self._check_scores(batch, scores)
 
     def test_score_h(self) -> None:
@@ -950,7 +972,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         try:
             scores = self.instance.score_h(batch)
         except NotImplementedError:
-            self.fail(msg="Score_s not yet implemented")
+            self.fail(msg="score_h not yet implemented")
         except RuntimeError as e:
             if str(e) == "fft: ATen not compiled with MKL support":
                 self.skipTest(str(e))
@@ -1065,7 +1087,11 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
             self.train_batch_size,
         ]
         extras.extend(self.cli_extras)
-        # TODO: Make sure that inverse triples are created if create_inverse_triples=True
+
+        # Make sure that inverse triples are created if create_inverse_triples=True
+        if self.create_inverse_triples:
+            extras.append("--create-inverse-triples")
+
         extras = [str(e) for e in extras]
         return extras
 
@@ -1308,11 +1334,18 @@ class BaseRGCNTest(ModelTestCase):
         assert self.instance.entity_representations[0].enriched_embeddings is None
 
 
+class BaseNodePieceTest(ModelTestCase):
+    """Test the NodePiece model."""
+
+    cls = pykeen.models.NodePiece
+    create_inverse_triples = True
+
+
 class RepresentationTestCase(GenericTestCase[RepresentationModule]):
     """Common tests for representation modules."""
 
-    batch_size: int = 2
-    num_negatives: int = 3
+    batch_size: ClassVar[int] = 2
+    num_negatives: ClassVar[int] = 3
 
     def _check_result(self, x: torch.FloatTensor, prefix_shape: Tuple[int, ...]):
         """Check the result."""
@@ -1455,3 +1488,44 @@ class LiteralTestCase(InteractionTestCase):
         h_proj = self.instance.combination(*h)
         t_proj = self.instance.combination(*t)
         return self.instance.base(h_proj, r, t_proj)
+
+
+class InitializerTestCase(unittest.TestCase):
+    """A test case for initializers."""
+
+    #: the shape of the tensor to initialize
+    shape: Tuple[int, ...] = (3, 4)
+
+    #: to be initialized / set in subclass
+    initializer: Initializer
+
+    def test_initialization(self):
+        """Test whether the initializer returns a modified tensor."""
+        x = torch.rand(*self.shape)
+        # initializers *may* work in-place => clone
+        y = self.initializer(x.clone())
+        assert not (x == y).all()
+        self._verify_initialization(y)
+
+    def _verify_initialization(self, x: torch.FloatTensor) -> None:
+        """Verify properties of initialization."""
+        pass
+
+    def test_model(self):
+        """Test whether initializer can be used for a model."""
+        triples_factory = generation.generate_triples_factory(
+            num_entities=self.shape[0],
+        )
+        model = pykeen.models.TransE(
+            triples_factory=triples_factory,
+            embedding_dim=self.shape[1],
+            entity_initializer=self.initializer,
+            random_seed=0,
+            preferred_device="cpu",
+        )
+        model.reset_parameters_()
+
+        with tempfile.TemporaryDirectory() as d:
+            path = pathlib.Path(d) / "test.pkl"
+            model.save_state(path)
+            model.load_state(path)
