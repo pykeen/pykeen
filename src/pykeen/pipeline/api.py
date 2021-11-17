@@ -495,6 +495,7 @@ def replicate_pipeline_from_path(
         move_to_cpu=move_to_cpu,
         save_replicates=save_replicates,
     )
+    # TODO: compare obtained results against the ones from the configuration
 
 
 def replicate_pipeline_from_config(
