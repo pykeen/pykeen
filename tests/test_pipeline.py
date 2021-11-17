@@ -23,7 +23,7 @@ from pykeen.models.predict import (
 from pykeen.models.resolve import DimensionError, make_model, make_model_cls
 from pykeen.nn.modules import TransEInteraction
 from pykeen.pipeline import PipelineResult, pipeline
-from pykeen.pipeline.api import pipeline_from_path, replicate_pipeline_from_config, replicate_pipeline_from_path
+from pykeen.pipeline.api import replicate_pipeline_from_config
 from pykeen.regularizers import NoRegularizer
 from pykeen.training import SLCWATrainingLoop
 from pykeen.triples.generation import generate_triples_factory
