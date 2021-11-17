@@ -48,6 +48,8 @@ results:
   hits_at_k:
     best:
       '10': 0.691
+      '1': 0.484
+      '3': 0.608
   mean_rank:
     best: 1022
   mean_reciprocal_rank:
