@@ -191,26 +191,10 @@ import pathlib
 import pickle
 import time
 from dataclasses import dataclass, field
-from typing import (
-    Any,
-    Collection,
-    Dict,
-    Iterable,
-    List,
-    Mapping,
-    MutableMapping,
-    Optional,
-    Sequence,
-    SupportsFloat,
-    Tuple,
-    Type,
-    Union,
-    cast,
-)
+from typing import Any, Collection, Dict, Iterable, List, Mapping, MutableMapping, Optional, Type, Union, cast
 
 import pandas as pd
 import torch
-from numpy import extract
 from torch.optim.optimizer import Optimizer
 
 from ..constants import PYKEEN_CHECKPOINTS, USER_DEFINED_CODE
@@ -233,7 +217,6 @@ from ..utils import (
     Result,
     ensure_ftp_directory,
     fix_dataclass_init_docs,
-    flatten_dictionary,
     get_json_bytes_io,
     get_model_io,
     load_configuration,
