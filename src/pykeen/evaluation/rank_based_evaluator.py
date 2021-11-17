@@ -161,7 +161,9 @@ RANK_TYPE_SYNONYMS = {
 
 _SIDE_PATTERN = "|".join(SIDES)
 _TYPE_PATTERN = "|".join(itt.chain(RANK_TYPES, RANK_TYPE_SYNONYMS.keys()))
-METRIC_PATTERN = re.compile(rf"(?P<name>\w+)(.(?P<side>{_SIDE_PATTERN}))?(.(?P<type>{_TYPE_PATTERN}))?(.(?P<k>\d+))?")
+METRIC_PATTERN = re.compile(
+    rf"(?P<name>[\w@]+)(\.(?P<side>{_SIDE_PATTERN}))?(\.(?P<type>{_TYPE_PATTERN}))?(\.(?P<k>\d+))?",
+)
 HITS_PATTERN = re.compile(r"(hits_at_|hits@|h@)(?P<k>\d+)")
 
 
