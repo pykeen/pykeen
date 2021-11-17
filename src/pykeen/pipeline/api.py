@@ -502,12 +502,12 @@ def replicate_pipeline_from_config(
     """
     pipeline_results = (pipeline_from_config(config, **kwargs) for _ in range(replicates))
     save_pipeline_results_to_directory(
+        config=config,
         directory=directory,
         pipeline_results=pipeline_results,
         move_to_cpu=move_to_cpu,
         save_replicates=save_replicates,
     )
-    # TODO: compare obtained results against the ones from the configuration
 
 
 def _iterate_moved(pipeline_results: Iterable[PipelineResult]):
@@ -519,6 +519,7 @@ def _iterate_moved(pipeline_results: Iterable[PipelineResult]):
 
 def save_pipeline_results_to_directory(
     *,
+    config: Mapping[str, Any],
     directory: Union[str, pathlib.Path],
     pipeline_results: Iterable[PipelineResult],
     move_to_cpu: bool = False,
@@ -528,6 +529,7 @@ def save_pipeline_results_to_directory(
 ) -> None:
     """Save the result set to the directory.
 
+    :param config: The configuration.
     :param directory: The directory in which the replicates will be saved
     :param pipeline_results: An iterable over results from training and evaluation
     :param move_to_cpu: Should the model be moved back to the CPU? Only relevant if training on GPU.
@@ -542,9 +544,14 @@ def save_pipeline_results_to_directory(
     losses_rows = []
 
     if move_to_cpu:
-        # TODO: this keeps all model replicates on GPU until the very end!
         pipeline_results = _iterate_moved(pipeline_results)
 
+    metric_names = []
+    metric_values = []
+    if "results" in config:
+        # TODO: parse key + values
+        metric_names, values = ...  # config["results"]
+        metric_values.append(["original"] + values)
     for i, pipeline_result in enumerate(pipeline_results):
         replicate_directory = replicates_directory.joinpath(f"replicate-{i:0{width}}")
         replicate_directory.mkdir(exist_ok=True, parents=True)
@@ -555,9 +562,14 @@ def save_pipeline_results_to_directory(
         )
         for epoch, loss in enumerate(pipeline_result.losses):
             losses_rows.append((i, epoch, loss))
+        metric_values.append([str(i)] + [pipeline_result.get_metric(key=metric_name) for metric_name in metric_names])
 
     losses_df = pd.DataFrame(losses_rows, columns=["Replicate", "Epoch", "Loss"])
     losses_df.to_csv(directory.joinpath("all_replicates_losses.tsv"), sep="\t", index=False)
+
+    if metric_names:
+        metric_df = pd.DataFrame(data=metric_values, columns=["replicate"] + metric_names)
+        metric_df.to_csv(directory.joinpath("all_replicates_metrics.tsv", sep="\t", index=False))
 
 
 def pipeline_from_path(
