@@ -565,7 +565,7 @@ def save_pipeline_results_to_directory(
         pipeline_results = _iterate_moved(pipeline_results)
 
     metric_names, metric_values = extract_metrics(config.get("results", {}))
-    metric_values = [("original",), metric_values]
+    metric_values = [("original",) + metric_values]
     for i, pipeline_result in enumerate(pipeline_results):
         replicate_directory = replicates_directory.joinpath(f"replicate-{i:0{width}}")
         replicate_directory.mkdir(exist_ok=True, parents=True)
@@ -583,8 +583,9 @@ def save_pipeline_results_to_directory(
     losses_df.to_csv(directory.joinpath("all_replicates_losses.tsv"), sep="\t", index=False)
 
     if metric_names:
-        metric_df = pd.DataFrame(data=metric_values, columns=["replicate"] + metric_names)
-        metric_df.to_csv(directory.joinpath("all_replicates_metrics.tsv", sep="\t", index=False))
+        metric_df = pd.DataFrame(data=metric_values, columns=["replicate"] + list(metric_names))
+        metric_df.to_csv(directory.joinpath("all_replicates_metrics.tsv"), sep="\t", index=False)
+        logger.debug(f"metric results: {metric_df}")
 
 
 def pipeline_from_path(
