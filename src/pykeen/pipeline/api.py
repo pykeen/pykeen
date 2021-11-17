@@ -576,7 +576,6 @@ def save_pipeline_results_to_directory(
         )
         for epoch, loss in enumerate(pipeline_result.losses):
             losses_rows.append((i, epoch, loss))
-        # TODO: get_metric does not support "hits_at_k.best.10" as found, e.g., in BoxE configuration
         metric_values.append([str(i)] + [pipeline_result.get_metric(key=metric_name) for metric_name in metric_names])
 
     losses_df = pd.DataFrame(losses_rows, columns=["Replicate", "Epoch", "Loss"])
