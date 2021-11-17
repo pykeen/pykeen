@@ -564,8 +564,7 @@ def save_pipeline_results_to_directory(
     if move_to_cpu:
         pipeline_results = _iterate_moved(pipeline_results)
 
-    metric_names, metric_values = extract_metrics(config.get("results", {}))
-    metric_values = [("original", *metric_values)]
+    metrics = [flatten_dictionary(config.get("results", {}))]
     for i, pipeline_result in enumerate(pipeline_results):
         replicate_directory = replicates_directory.joinpath(f"replicate-{i:0{width}}")
         replicate_directory.mkdir(exist_ok=True, parents=True)
@@ -576,13 +575,13 @@ def save_pipeline_results_to_directory(
         )
         for epoch, loss in enumerate(pipeline_result.losses):
             losses_rows.append((i, epoch, loss))
-        metric_values.append([str(i)] + [pipeline_result.get_metric(key=metric_name) for metric_name in metric_names])
+        metrics.append({k: pipeline_result.get_metric(key=k) for k in metrics[0].keys()})
 
     losses_df = pd.DataFrame(losses_rows, columns=["Replicate", "Epoch", "Loss"])
     losses_df.to_csv(directory.joinpath("all_replicates_losses.tsv"), sep="\t", index=False)
 
-    if metric_names:
-        metric_df = pd.DataFrame(data=metric_values, columns=["replicate"] + list(metric_names))
+    if metrics[0]:
+        metric_df = pd.DataFrame(data=metrics, index=["original"] + [f"replicate-{r}" for r in range(len(metrics) - 1)])
         metric_df.to_csv(directory.joinpath("all_replicates_metrics.tsv"), sep="\t", index=False)
         logger.debug(f"metric results: {metric_df}")
 
