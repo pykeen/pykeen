@@ -26,6 +26,7 @@ from typing import (
     Mapping,
     Optional,
     Sequence,
+    SupportsFloat,
     Tuple,
     Type,
     TypeVar,
@@ -52,6 +53,7 @@ __all__ = [
     "clamp_norm",
     "compact_mapping",
     "ensure_torch_random_state",
+    "extract_metrics",
     "format_relative_comparison",
     "invert_mapping",
     "is_cuda_oom_error",
@@ -1228,6 +1230,14 @@ def boxe_kg_arity_position_score(
 
     # Finally, compute the norm
     return negative_norm(element_wise_distance, p=p, power_norm=power_norm)
+
+
+def extract_metrics(result_dict: Mapping[str, Any]) -> Tuple[Sequence[str], Sequence[SupportsFloat]]:
+    """Extract metric names & values from a result dictionary from a (reproducibility) configuration."""
+    names, values = [], []
+    if not result_dict:
+        return names, values
+    return tuple(zip(*flatten_dictionary(result_dict).items()))
 
 
 if __name__ == "__main__":

@@ -191,10 +191,26 @@ import pathlib
 import pickle
 import time
 from dataclasses import dataclass, field
-from typing import Any, Collection, Dict, Iterable, List, Mapping, MutableMapping, Optional, Tuple, Type, Union, cast
+from typing import (
+    Any,
+    Collection,
+    Dict,
+    Iterable,
+    List,
+    Mapping,
+    MutableMapping,
+    Optional,
+    Sequence,
+    SupportsFloat,
+    Tuple,
+    Type,
+    Union,
+    cast,
+)
 
 import pandas as pd
 import torch
+from numpy import extract
 from torch.optim.optimizer import Optimizer
 
 from ..constants import PYKEEN_CHECKPOINTS, USER_DEFINED_CODE
@@ -216,6 +232,7 @@ from ..typing import Hint, HintType, MappedTriples
 from ..utils import (
     Result,
     ensure_ftp_directory,
+    extract_metrics,
     fix_dataclass_init_docs,
     flatten_dictionary,
     get_json_bytes_io,
@@ -518,17 +535,6 @@ def _iterate_moved(pipeline_results: Iterable[PipelineResult]):
         yield pipeline_result
 
 
-def _extract_metrics(result_dict: Mapping[str, Any], prefix: Optional[List[str]] = None) -> Iterable[Tuple[str, float]]:
-    """Extract metric names & values from a result dictionary from a (reproducibility) configuration."""
-    if prefix is None:
-        prefix = []
-    for k, v in result_dict.items():
-        if isinstance(v, dict):
-            yield from _extract_metrics(v, prefix=prefix + [k])
-        else:
-            yield ".".join(prefix + [k]), v
-
-
 def save_pipeline_results_to_directory(
     *,
     config: Mapping[str, Any],
@@ -558,11 +564,8 @@ def save_pipeline_results_to_directory(
     if move_to_cpu:
         pipeline_results = _iterate_moved(pipeline_results)
 
-    metric_names = []
-    metric_values = []
-    if "results" in config and config["results"]:
-        metric_names, values = tuple(zip(*flatten_dictionary(config["results"]).items()))
-        metric_values.append(("original",) + values)
+    metric_names, metric_values = extract_metrics(config.get("results", {}))
+    metric_values = [("original",), metric_values]
     for i, pipeline_result in enumerate(pipeline_results):
         replicate_directory = replicates_directory.joinpath(f"replicate-{i:0{width}}")
         replicate_directory.mkdir(exist_ok=True, parents=True)
