@@ -1,3 +1,5 @@
+# cf. https://arxiv.org/abs/2007.06267, Table 6 (hparam), Table 8 (results)
+# this setting corresponds to BoxE(a)
 metadata:
   title: Learn YAGO3-10 Dataset with BoxE as described by Abboud et al., 2020
 pipeline:
