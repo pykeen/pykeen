@@ -473,29 +473,14 @@ class PipelineResult(Result):
 
 def replicate_pipeline_from_path(
     path: Union[str, pathlib.Path],
-    directory: Union[str, pathlib.Path],
-    replicates: int,
-    move_to_cpu: bool = False,
-    save_replicates: bool = True,
     **kwargs,
 ) -> None:
     """Run the same pipeline several times from a configuration file by path.
 
     :param path: The path to the JSON/YAML configuration for the experiment.
-    :param directory: The output directory
-    :param replicates: The number of replicates to run.
-    :param move_to_cpu: Should the model be moved back to the CPU? Only relevant if training on GPU.
-    :param save_replicates: Should the artifacts of the replicates be saved?
-    :param kwargs: Keyword arguments to be passed through to :func:`pipeline_from_path`.
+    :param kwargs: Keyword arguments to be passed through to :func:`replicate_pipeline_from_config`.
     """
-    pipeline_results = (pipeline_from_path(path, **kwargs) for _ in range(replicates))
-    save_pipeline_results_to_directory(
-        directory=directory,
-        pipeline_results=pipeline_results,
-        move_to_cpu=move_to_cpu,
-        save_replicates=save_replicates,
-    )
-    # TODO: compare obtained results against the ones from the configuration
+    replicate_pipeline_from_config(config=load_configuration(path), **kwargs)
 
 
 def replicate_pipeline_from_config(
@@ -522,6 +507,7 @@ def replicate_pipeline_from_config(
         move_to_cpu=move_to_cpu,
         save_replicates=save_replicates,
     )
+    # TODO: compare obtained results against the ones from the configuration
 
 
 def _iterate_moved(pipeline_results: Iterable[PipelineResult]):
@@ -556,6 +542,7 @@ def save_pipeline_results_to_directory(
     losses_rows = []
 
     if move_to_cpu:
+        # TODO: this keeps all model replicates on GPU until the very end!
         pipeline_results = _iterate_moved(pipeline_results)
 
     for i, pipeline_result in enumerate(pipeline_results):
