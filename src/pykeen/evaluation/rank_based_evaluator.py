@@ -7,7 +7,7 @@ import logging
 import re
 from collections import defaultdict
 from dataclasses import dataclass, field, fields
-from typing import DefaultDict, Dict, Iterable, List, Optional, Sequence, Tuple, Union
+from typing import DefaultDict, Dict, Iterable, List, Literal, NamedTuple, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -92,6 +92,15 @@ METRIC_SYNONYMS = {
 }
 
 
+class MetricKey(NamedTuple):
+    """A key for the kind of metric to resolve."""
+
+    name: str
+    side: str
+    rank_type: str
+    k: Optional[int]
+
+
 def compute_rank_from_scores(
     true_score: torch.FloatTensor,
     all_scores: torch.FloatTensor,
@@ -167,9 +176,7 @@ METRIC_PATTERN = re.compile(
 HITS_PATTERN = re.compile(r"(hits_at_|hits@|h@)(?P<k>\d+)")
 
 
-def resolve_metric_name(
-    name: str,
-) -> Tuple[str, str, str, Optional[int]]:
+def resolve_metric_name(name: str) -> MetricKey:
     """Functional metric name normalization."""
     match = METRIC_PATTERN.match(name)
     if not match:
@@ -216,7 +223,7 @@ def resolve_metric_name(
     elif rank_type != RANK_REALISTIC and name in TYPES_REALISTIC_ONLY:
         raise ValueError(f"Invalid rank type for {name}: {rank_type}. Allowed type: {RANK_REALISTIC}")
 
-    return name, side, rank_type, int(k)
+    return MetricKey(name, side, rank_type, int(k))
 
 
 @fix_dataclass_init_docs
