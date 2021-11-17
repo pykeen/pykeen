@@ -174,6 +174,7 @@ def resolve_metric_name(
     match = METRIC_PATTERN.match(name)
     if not match:
         raise ValueError(f"Invalid metric name: {name}")
+    k: Union[int, str]
     name, side, rank_type, k = [match.group(key) for key in ("name", "side", "type", "k")]
 
     # normalize metric name
@@ -215,7 +216,7 @@ def resolve_metric_name(
     elif rank_type != RANK_REALISTIC and name in TYPES_REALISTIC_ONLY:
         raise ValueError(f"Invalid rank type for {name}: {rank_type}. Allowed type: {RANK_REALISTIC}")
 
-    return name, side, rank_type, k
+    return name, side, rank_type, int(k)
 
 
 @fix_dataclass_init_docs
@@ -367,6 +368,7 @@ class RankBasedMetricResults(MetricResults):
         metric, side, rank_type, k = resolve_metric_name(name)
         if not metric.startswith("hits"):
             return getattr(self, metric)[side][rank_type]
+        assert k is not None
         return self.hits_at_k[side][rank_type][k]
 
     def to_flat_dict(self):  # noqa: D102

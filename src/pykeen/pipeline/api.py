@@ -232,7 +232,6 @@ from ..typing import Hint, HintType, MappedTriples
 from ..utils import (
     Result,
     ensure_ftp_directory,
-    extract_metrics,
     fix_dataclass_init_docs,
     flatten_dictionary,
     get_json_bytes_io,
