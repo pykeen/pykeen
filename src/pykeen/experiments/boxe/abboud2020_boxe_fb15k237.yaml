@@ -44,7 +44,9 @@ pipeline:
 results:
   hits_at_k:
     best:
+      '1': 0.238
       '10': 0.538
+      '3': 0.374
   mean_rank:
     best: 163
   mean_reciprocal_rank:
