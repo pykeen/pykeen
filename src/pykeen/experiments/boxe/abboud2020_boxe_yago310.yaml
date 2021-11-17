@@ -43,7 +43,7 @@ pipeline:
     lr: 0.001
   training_kwargs:
     batch_size: 4096
-    num_epochs: 400
+    num_epochs: 1000 # was 400 before; why?
   training_loop: SLCWA
 
 results:
