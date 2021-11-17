@@ -565,7 +565,7 @@ def save_pipeline_results_to_directory(
         pipeline_results = _iterate_moved(pipeline_results)
 
     metric_names, metric_values = extract_metrics(config.get("results", {}))
-    metric_values = [("original",) + metric_values]
+    metric_values = [("original", *metric_values)]
     for i, pipeline_result in enumerate(pipeline_results):
         replicate_directory = replicates_directory.joinpath(f"replicate-{i:0{width}}")
         replicate_directory.mkdir(exist_ok=True, parents=True)
