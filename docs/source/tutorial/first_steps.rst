@@ -22,6 +22,39 @@ that you can use :func:`torch.load` to load a model like:
 More information on PyTorch's model persistence can be found at:
 https://pytorch.org/tutorials/beginner/saving_loading_models.html.
 
+Mapping Entity and Relation Identifiers to their Names
+------------------------------------------------------
+While PyKEEN internally maps entities and relations to
+contiguous identifiers, it's still useful to be able to interact
+with datasets, triples factories, and models using the labels
+of the entities and relations.
+
+We can map a triples factory's entities to identifiers using
+:data:`TriplesFactory.entity_to_ids` like in the following
+example:
+
+.. code-block:: python
+
+    from pykeen.datasets import Nations
+
+    triples_factory = Nations().training
+
+    # Get tensor of entity identifiers
+    entity_ids = torch.as_tensor(triples_factory.entity_to_ids(["china", "egypt"]))
+
+Similarly, we can map a triples factory's relations to identifiers
+using :data:`TriplesFactory.relation_to_ids` like in the following
+example:
+
+.. code-block:: python
+
+    relation_ids = torch.as_tensor(triples_factory.relation_to_ids(["independence", "embassy"]))
+
+.. warning::
+
+    It's important to notice that we should use a triples factory with the same mapping
+    that was used to train the model - otherwise we might end up with incorrect IDs.
+
 Using Learned Embeddings
 ------------------------
 The embeddings learned for entities and relations are not only useful for link

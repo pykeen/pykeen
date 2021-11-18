@@ -30,7 +30,4 @@ def _count_two_columns(triples: np.ndarray, c1_slice: slice, c2_slice: slice) ->
 
 def _get_sorted_dict_from_counter(counter: Counter) -> Mapping[str, int]:
     """Return sorted dict for Counter tail."""
-    return {
-        f'{c1_label} {c2_label}': count
-        for (c1_label, c2_label), count in counter.most_common()
-    }
+    return {f"{c1_label} {c2_label}": count for (c1_label, c2_label), count in counter.most_common()}

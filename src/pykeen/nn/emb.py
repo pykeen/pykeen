@@ -9,6 +9,7 @@ import itertools
 import logging
 import warnings
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from dataclasses import dataclass
 from typing import Any, Callable, Mapping, Optional, Sequence, Tuple, TypeVar, Union, cast
 
@@ -20,24 +21,35 @@ from torch.nn import functional
 
 from .compositions import CompositionModule, composition_resolver
 from .init import (
-    init_phases, normal_norm_, uniform_norm_, xavier_normal_, xavier_normal_norm_, xavier_uniform_,
+    init_phases,
+    normal_norm_,
+    uniform_norm_,
+    xavier_normal_,
+    xavier_normal_norm_,
+    xavier_uniform_,
     xavier_uniform_norm_,
 )
-from .message_passing import Decomposition, decomposition_resolver
+from .message_passing import Decomposition, RGCNLayer
 from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolver
+from ..constants import AGGREGATIONS
 from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import CoreTriplesFactory
 from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer
 from ..utils import Bias, activation_resolver, clamp_norm, complex_normalize, convert_to_canonical_shape
 
 __all__ = [
-    'RepresentationModule',
-    'Embedding',
-    'LiteralRepresentation',
-    'EmbeddingSpecification',
-    'constrainers',
-    'initializers',
-    'normalizers',
+    "RepresentationModule",
+    "Embedding",
+    "LiteralRepresentation",
+    "EmbeddingSpecification",
+    "RGCNRepresentations",
+    "NodePieceRepresentation",
+    "CompGCNLayer",
+    "CombinedCompGCNRepresentations",
+    "SingleCompGCNRepresentation",
+    "constrainers",
+    "initializers",
+    "normalizers",
 ]
 
 logger = logging.getLogger(__name__)
@@ -193,6 +205,36 @@ class RepresentationModule(nn.Module, ABC):
         return int(np.prod(self.shape))
 
 
+class SubsetRepresentationModule(RepresentationModule):
+    """A representation module, which only exposes a subset of representations of its base."""
+
+    def __init__(
+        self,
+        base: RepresentationModule,
+        max_id: int,
+    ):
+        """
+        Initialize the representations.
+
+        :param base:
+            the base representations. have to have a sufficient number of representations, i.e., at least max_id.
+        :param max_id:
+            the maximum number of relations.
+        """
+        if max_id > base.max_id:
+            raise ValueError(f"Base representations comprise only {base.max_id} representations.")
+        super().__init__(max_id, base.shape)
+        self.base = base
+
+    def forward(
+        self,
+        indices: Optional[torch.LongTensor] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        if indices is None:
+            indices = torch.arange(self.max_id)
+        return self.base.forward(indices=indices)
+
+
 class Embedding(RepresentationModule):
     """Trainable embeddings.
 
@@ -300,7 +342,7 @@ class Embedding(RepresentationModule):
         if dtype is None:
             dtype = torch.get_default_dtype()
 
-        # work-around until full complex support
+        # work-around until full complex support (torch==1.10 still does not work)
         # TODO: verify that this is our understanding of complex!
         if dtype.is_complex:
             shape = tuple(shape[:-1]) + (2 * shape[-1],)
@@ -311,11 +353,18 @@ class Embedding(RepresentationModule):
             shape=shape,
         )
 
-        self.initializer = cast(Initializer, _handle(
-            initializer, initializers, initializer_kwargs, default=nn.init.normal_, label='initializer',
-        ))
-        self.normalizer = _handle(normalizer, normalizers, normalizer_kwargs, label='normalizer')
-        self.constrainer = _handle(constrainer, constrainers, constrainer_kwargs, label='constrainer')
+        self.initializer = cast(
+            Initializer,
+            _handle(
+                initializer,
+                initializers,
+                initializer_kwargs,
+                default=nn.init.normal_,
+                label="initializer",
+            ),
+        )
+        self.normalizer = _handle(normalizer, normalizers, normalizer_kwargs, label="normalizer")
+        self.constrainer = _handle(constrainer, constrainers, constrainer_kwargs, label="constrainer")
         if regularizer is not None:
             regularizer = regularizer_resolver.make(regularizer, pos_kwargs=regularizer_kwargs)
         self.regularizer = regularizer
@@ -339,7 +388,7 @@ class Embedding(RepresentationModule):
         normalizer_kwargs: Optional[Mapping[str, Any]] = None,
         constrainer: Optional[Constrainer] = None,
         constrainer_kwargs: Optional[Mapping[str, Any]] = None,
-    ) -> 'Embedding':  # noqa:E501
+    ) -> "Embedding":  # noqa:E501
         """Create an embedding object on the given device by wrapping :func:`__init__`.
 
         This method is a hotfix for not being able to pass a device during initialization of
@@ -481,9 +530,9 @@ def process_shape(
 ) -> Tuple[int, Sequence[int]]:
     """Make a shape pack."""
     if shape is None and dim is None:
-        raise ValueError('Missing both, shape and embedding_dim')
+        raise ValueError("Missing both, shape and embedding_dim")
     elif shape is not None and dim is not None:
-        raise ValueError('Provided both, shape and embedding_dim')
+        raise ValueError("Provided both, shape and embedding_dim")
     elif shape is None and dim is not None:
         shape = (dim,)
     elif isinstance(shape, int) and dim is None:
@@ -493,40 +542,41 @@ def process_shape(
         shape = tuple(shape)
         dim = int(np.prod(shape))
     else:
-        raise TypeError(f'Invalid type for shape: ({type(shape)}) {shape}')
+        raise TypeError(f"Invalid type for shape: ({type(shape)}) {shape}")
     return dim, shape
 
 
 initializers = {
-    'xavier_uniform': xavier_uniform_,
-    'xavier_uniform_norm': xavier_uniform_norm_,
-    'xavier_normal': xavier_normal_,
-    'xavier_normal_norm': xavier_normal_norm_,
-    'normal': torch.nn.init.normal_,
-    'normal_norm': normal_norm_,
-    'uniform': torch.nn.init.uniform_,
-    'uniform_norm': uniform_norm_,
-    'phases': init_phases,
-    'init_phases': init_phases,
+    "xavier_uniform": xavier_uniform_,
+    "xavier_uniform_norm": xavier_uniform_norm_,
+    "xavier_normal": xavier_normal_,
+    "xavier_normal_norm": xavier_normal_norm_,
+    "normal": torch.nn.init.normal_,
+    "normal_norm": normal_norm_,
+    "uniform": torch.nn.init.uniform_,
+    "uniform_norm": uniform_norm_,
+    "phases": init_phases,
+    "init_phases": init_phases,
 }
 
 constrainers = {
-    'normalize': functional.normalize,
-    'complex_normalize': complex_normalize,
-    'clamp': torch.clamp,
-    'clamp_norm': clamp_norm,
+    "normalize": functional.normalize,
+    "complex_normalize": complex_normalize,
+    "clamp": torch.clamp,
+    "clamp_norm": clamp_norm,
 }
 
 # TODO add normalization functions
 normalizers: Mapping[str, Normalizer] = {}
 
-X = TypeVar('X', bound=Callable)
+X = TypeVar("X", bound=Callable)
 
 
 def _handle(
     value: Hint[X],
     lookup: Mapping[str, X],
-    kwargs, default: Optional[X] = None,
+    kwargs,
+    default: Optional[X] = None,
     label: Optional[str] = None,
 ) -> Optional[X]:
     if value is None:
@@ -535,7 +585,7 @@ def _handle(
         try:
             value = lookup[value]
         except KeyError:
-            raise KeyError(f'{value} is an invalid {label}. Try one of: {sorted(lookup)}')
+            raise KeyError(f"{value} is an invalid {label}. Try one of: {sorted(lookup)}")
     if kwargs:
         rv = functools.partial(value, **kwargs)  # type: ignore
         return cast(X, rv)
@@ -543,7 +593,30 @@ def _handle(
 
 
 class RGCNRepresentations(RepresentationModule):
-    """Entity representations enriched by R-GCN."""
+    r"""Entity representations enriched by R-GCN.
+
+    The GCN employed by the entity encoder is adapted to include typed edges.
+    The forward pass of the GCN is defined by:
+
+     .. math::
+
+        \textbf{e}_{i}^{l+1} = \sigma \left( \sum_{r \in \mathcal{R}}\sum_{j\in \mathcal{N}_{i}^{r}}
+        \frac{1}{c_{i,r}} \textbf{W}_{r}^{l} \textbf{e}_{j}^{l} + \textbf{W}_{0}^{l} \textbf{e}_{i}^{l}\right)
+
+    where $\mathcal{N}_{i}^{r}$ is the set of neighbors of node $i$ that are connected to
+    $i$ by relation $r$, $c_{i,r}$ is a fixed normalization constant (but it can also be introduced as an additional
+    parameter), and $\textbf{W}_{r}^{l} \in \mathbb{R}^{d^{(l)} \times d^{(l)}}$ and
+    $\textbf{W}_{0}^{l} \in \mathbb{R}^{d^{(l)} \times d^{(l)}}$ are weight matrices of the `l`-th layer of the
+    R-GCN.
+
+    The encoder aggregates for each node $e_i$ the latent representations of its neighbors and its
+    own latent representation $e_{i}^{l}$ into a new latent representation $e_{i}^{l+1}$.
+    In contrast to standard GCN, R-GCN defines relation specific transformations
+    $\textbf{W}_{r}^{l}$ which depend on the type and direction of an edge.
+
+    Since having one matrix for each relation introduces a large number of additional parameters, the authors instead
+    propose to use a decomposition, cf. :class:`pykeen.nn.message_passing.Decomposition`.
+    """
 
     def __init__(
         self,
@@ -551,7 +624,6 @@ class RGCNRepresentations(RepresentationModule):
         embedding_specification: EmbeddingSpecification,
         num_layers: int = 2,
         use_bias: bool = True,
-        use_batch_norm: bool = False,
         activation: Hint[nn.Module] = None,
         activation_kwargs: Optional[Mapping[str, Any]] = None,
         edge_dropout: float = 0.4,
@@ -559,24 +631,53 @@ class RGCNRepresentations(RepresentationModule):
         edge_weighting: Hint[EdgeWeighting] = None,
         decomposition: Hint[Decomposition] = None,
         decomposition_kwargs: Optional[Mapping[str, Any]] = None,
+        regularizer: Hint[Regularizer] = None,
+        regularizer_kwargs: Optional[Mapping[str, Any]] = None,
     ):
+        """Instantiate the R-GCN encoder.
+
+        :param triples_factory:
+            The triples factory holding the training triples used for message passing.
+        :param embedding_specification:
+            The base embedding specification.
+        :param num_layers:
+            The number of layers.
+        :param use_bias:
+            Whether to use a bias.
+        :param activation:
+            The activation.
+        :param activation_kwargs:
+            Additional keyword based arguments passed if the activation is not pre-instantiated. Ignored otherwise.
+        :param edge_dropout:
+            The edge dropout to use. Does not apply to self-loops.
+        :param self_loop_dropout:
+            The self-loop dropout to use.
+        :param edge_weighting:
+            The edge weighting mechanism.
+        :param decomposition:
+            The decomposition, cf. :class:`pykeen.nn.message_passing.Decomposition`.
+        :param decomposition_kwargs:
+            Additional keyword based arguments passed to the decomposition upon instantiation.
+        :param regularizer:
+            A regularizer, which is applied to the selected embeddings in forward pass
+        :param regularizer_kwargs:
+            Additional keyword arguments passed to the regularizer
+        """
         base_embeddings = embedding_specification.make(num_embeddings=triples_factory.num_entities)
         super().__init__(max_id=triples_factory.num_entities, shape=base_embeddings.shape)
         self.entity_embeddings = base_embeddings
+
+        if triples_factory.create_inverse_triples:
+            raise ValueError(
+                "RGCN internally creates inverse triples. It thus expects a triples factory without them.",
+            )
 
         # Resolve edge weighting
         self.edge_weighting = edge_weight_resolver.make(query=edge_weighting)
 
         # dropout
         self.edge_dropout = edge_dropout
-        self.self_loop_dropout = self_loop_dropout or edge_dropout
-
-        # batch norm and bias
-        use_batch_norm = use_batch_norm
-        if use_batch_norm:
-            if use_bias:
-                logger.warning("Disabling bias because batch normalization is used.")
-            use_bias = False
+        self_loop_dropout = self_loop_dropout or edge_dropout
 
         # Save graph using buffers, such that the tensors are moved together with the model
         h, r, t = triples_factory.mapped_triples.t()
@@ -584,25 +685,30 @@ class RGCNRepresentations(RepresentationModule):
         self.register_buffer("targets", t)
         self.register_buffer("edge_types", r)
 
-        layers = []
-        for _ in range(num_layers):
-            layers.append(
-                decomposition_resolver.make(
-                    query=decomposition,
-                    pos_kwargs=decomposition_kwargs,
-                    input_dim=base_embeddings.embedding_dim,
-                    num_relations=triples_factory.num_relations,
-                ),
+        dim = base_embeddings.embedding_dim
+        self.layers = nn.ModuleList(
+            RGCNLayer(
+                input_dim=dim,
+                num_relations=triples_factory.num_relations,
+                output_dim=dim,
+                use_bias=use_bias,
+                # no activation on last layer
+                # cf. https://github.com/MichSchli/RelationPrediction/blob/c77b094fe5c17685ed138dae9ae49b304e0d8d89/code/common/model_builder.py#L275  # noqa: E501
+                activation=activation if i < num_layers - 1 else None,
+                activation_kwargs=activation_kwargs,
+                self_loop_dropout=self_loop_dropout,
+                decomposition=decomposition,
+                decomposition_kwargs=decomposition_kwargs,
             )
-            if use_bias:
-                layers.append(Bias(dim=base_embeddings.embedding_dim))
-            if use_batch_norm:
-                layers.append(nn.BatchNorm1d(num_features=base_embeddings.embedding_dim))
-            layers.append(activation_resolver.make(query=activation, pos_kwargs=activation_kwargs))
-        self.layers = nn.ModuleList(layers)
+            for i in range(num_layers)
+        )
 
         # buffering of enriched representations
         self.enriched_embeddings = None
+
+        if regularizer is not None:
+            regularizer = regularizer_resolver.make(regularizer, pos_kwargs=regularizer_kwargs)
+        self.regularizer = regularizer
 
     def post_parameter_update(self) -> None:  # noqa: D102
         super().post_parameter_update()
@@ -640,12 +746,6 @@ class RGCNRepresentations(RepresentationModule):
             targets = targets[edge_keep_mask]
             edge_types = edge_types[edge_keep_mask]
 
-        # Different dropout for self-loops (only in training mode)
-        if self.training and self.self_loop_dropout is not None:
-            node_keep_mask = torch.rand(x.shape[0], device=x.device) > self.self_loop_dropout
-        else:
-            node_keep_mask = None
-
         # fixed edges -> pre-compute weights
         if self.edge_weighting is not None and sources.numel() > 0:
             edge_weights = torch.empty_like(sources, dtype=torch.float32)
@@ -657,17 +757,13 @@ class RGCNRepresentations(RepresentationModule):
             edge_weights = None
 
         for layer in self.layers:
-            if isinstance(layer, Decomposition):
-                kwargs = dict(
-                    node_keep_mask=node_keep_mask,
-                    source=sources,
-                    target=targets,
-                    edge_type=edge_types,
-                    edge_weights=edge_weights,
-                )
-            else:
-                kwargs = dict()
-            x = layer(x, **kwargs)
+            x = layer(
+                x=x,
+                source=sources,
+                target=targets,
+                edge_type=edge_types,
+                edge_weights=edge_weights,
+            )
 
         # Cache enriched representations
         self.enriched_embeddings = x
@@ -682,6 +778,8 @@ class RGCNRepresentations(RepresentationModule):
         x = self._real_forward()
         if indices is not None:
             x = x[indices]
+        if self.regularizer is not None:
+            self.regularizer.update(x)
         return x
 
 
@@ -916,11 +1014,13 @@ class CombinedCompGCNRepresentations(nn.Module):
         # Create message passing layers
         layers = []
         for input_dim, output_dim in zip(itertools.chain([input_dim], dims), dims):
-            layers.append(CompGCNLayer(
-                input_dim=input_dim,
-                output_dim=output_dim,
-                **(layer_kwargs or {}),
-            ))
+            layers.append(
+                CompGCNLayer(
+                    input_dim=input_dim,
+                    output_dim=output_dim,
+                    **(layer_kwargs or {}),
+                )
+            )
         self.layers = nn.ModuleList(layers)
 
         # register buffers for adjacency matrix; we use the same format as PyTorch Geometric
@@ -934,6 +1034,14 @@ class CombinedCompGCNRepresentations(nn.Module):
     def post_parameter_update(self) -> None:  # noqa: D102
         # invalidate enriched embeddings
         self.enriched_representations = None
+
+    def train(self, mode: bool = True):  # noqa: D102
+        # when changing from evaluation to training mode, the buffered representations have been computed without
+        # gradient tracking. hence, we need to invalidate them.
+        # note: this occurs in practice when continuing training after evaluation.
+        if mode and not self.training:
+            self.enriched_representations = None
+        return super().train(mode=mode)
 
     def forward(
         self,
@@ -992,4 +1100,191 @@ class SingleCompGCNRepresentation(RepresentationModule):
         x = self.combined()[self.position]
         if indices is not None:
             x = x[indices]
+        return x
+
+
+def _sample(rs: torch.LongTensor, k: int) -> torch.LongTensor:
+    """Sample without replacement."""
+    return rs[torch.randperm(rs.shape[0])[:k]]
+
+
+def tokenize(
+    triples_factory: CoreTriplesFactory,
+    num_tokens: int,
+) -> torch.LongTensor:
+    """
+    Tokenize entities by representing them as a bag of relations.
+
+    :param triples_factory:
+        the triples factory containing the ID-based triples.
+    :param num_tokens:
+        the number of relation IDs to select for each entity
+
+    :return: shape: (num_entities, num_tokens), -1 <= res < 2 * num_relations
+        the selected relation IDs for each entity. -1 is used as a padding token.
+    """
+    mapped_triples = triples_factory.mapped_triples
+    if triples_factory.create_inverse_triples:
+        # inverse triples are created afterwards implicitly
+        mapped_triples = mapped_triples[mapped_triples[:, 1] < triples_factory.real_num_relations]
+
+    # tokenize: represent entities by bag of relations
+    h, r, t = mapped_triples.t()
+
+    # collect candidates
+    e2r = defaultdict(set)
+    for e, r in (
+        torch.cat(
+            [
+                torch.stack([h, r], dim=1),
+                torch.stack([t, r + triples_factory.real_num_relations], dim=1),
+            ],
+            dim=0,
+        )
+        .unique(dim=0)
+        .tolist()
+    ):
+        e2r[e].add(r)
+
+    # randomly sample without replacement num_tokens relations for each entity
+    assignment = torch.full(
+        size=(triples_factory.num_entities, num_tokens),
+        dtype=torch.long,
+        fill_value=2 * triples_factory.real_num_relations,
+    )
+    for e, rs in e2r.items():
+        rs = torch.as_tensor(data=list(rs), dtype=torch.long)
+        rs = _sample(rs=rs, k=num_tokens)
+        assignment[e, : len(rs)] = rs
+
+    return assignment
+
+
+def resolve_aggregation(
+    aggregation: Union[None, str, Callable[[torch.FloatTensor, int], torch.FloatTensor]],
+) -> Callable[[torch.FloatTensor, int], torch.FloatTensor]:
+    """
+    Resolve the aggregation function.
+
+    .. warning ::
+        This function does *not* check whether torch.<aggregation> is a method which is a valid aggregation.
+
+    :param aggregation:
+        the aggregation choice. Can be either
+        1. None, in which case the torch.mean is returned
+        2. a string, in which case torch.<aggregation> is returned
+        3. a callable, which is returned without change
+
+    :return:
+        the chosen aggregation function.
+    """
+    if aggregation is None:
+        return torch.mean
+
+    if isinstance(aggregation, str):
+        if aggregation not in AGGREGATIONS:
+            logger.warning(
+                f"aggregation={aggregation} is not one of the predefined ones ({sorted(AGGREGATIONS.keys())}).",
+            )
+        return getattr(torch, aggregation)
+
+    return aggregation
+
+
+class NodePieceRepresentation(RepresentationModule):
+    r"""
+    Basic implementation of node piece decomposition [galkin2021]_.
+
+    .. math ::
+        x_e = agg(\{T[t] \mid t \in tokens(e) \})
+
+    where $T$ are token representations, $tokens$ selects a fixed number of $k$ tokens for each entity, and $agg$ is
+    an aggregation function, which aggregates the individual token representations to a single entity representation.
+
+    .. note ::
+        This implementation currently only supports representation of entities by bag-of-relations.
+    """
+
+    #: the token representations
+    tokens: RepresentationModule
+
+    #: the entity-to-token mapping
+    assignment: torch.LongTensor
+
+    def __init__(
+        self,
+        *,
+        triples_factory: CoreTriplesFactory,
+        token_representation: Union[EmbeddingSpecification, RepresentationModule],
+        aggregation: Union[None, str, Callable[[torch.FloatTensor, int], torch.FloatTensor]] = None,
+        num_tokens: int = 2,
+        shape: Optional[Sequence[int]] = None,
+    ):
+        """
+        Initialize the representation.
+
+        :param triples_factory:
+            the triples factory
+        :param token_representation:
+            the token representation specification, or pre-instantiated representation module. For the latter, the
+            number of representations must be $2 * num_relations + 1$.
+        :param aggregation:
+            aggregation of multiple token representations to a single entity representation. By default,
+            this uses :func:`torch.mean`. If a string is provided, the module assumes that this refers to a top-level
+            torch function, e.g. "mean" for :func:`torch.mean`, or "sum" for func:`torch.sum`. An aggregation can
+            also have trainable parameters, .e.g., ``MLP(mean(MLP(tokens)))`` (cf. DeepSets from [zaheer2017]_). In
+            this case, the module has to be created outside of this component.
+
+            We could also have aggregations which result in differently shapes output, e.g. a concatenation of all
+            token embeddings resulting in shape ``(num_tokens * d,)``. In this case, `shape` must be provided.
+
+            The aggregation takes two arguments: the (batched) tensor of token representations, in shape
+            ``(*, num_tokens, *dt)``, and the index along which to aggregate.
+        :param num_tokens:
+            the number of tokens for each entity.
+        :param shape:
+            the shape of an individual representation. Only necessary, if aggregation results in a change of dimensions.
+        """
+        # create token representations
+        # normal relations + inverse relations + padding
+        total_num_tokens = 2 * triples_factory.real_num_relations + 1
+        if isinstance(token_representation, EmbeddingSpecification):
+            token_representation = token_representation.make(
+                num_embeddings=total_num_tokens,
+            )
+        if token_representation.max_id != total_num_tokens:
+            raise ValueError(
+                f"If a pre-instantiated representation is provided, it has to have 2 * num_relations + 1= "
+                f"{total_num_tokens} representations, but has {token_representation.max_id}",
+            )
+
+        # super init; has to happen *before* any parameter or buffer is assigned
+        super().__init__(max_id=triples_factory.num_entities, shape=shape or token_representation.shape)
+
+        # Assign default aggregation
+        self.aggregation = resolve_aggregation(aggregation=aggregation)
+
+        # assign module
+        self.tokens = token_representation
+        self.aggregation_index = -(1 + len(token_representation.shape))
+        self.register_buffer(
+            name="assignment",
+            tensor=tokenize(triples_factory=triples_factory, num_tokens=num_tokens),
+        )
+
+    def forward(
+        self,
+        indices: Optional[int] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        # get token IDs, shape: (*, k)
+        token_ids = self.assignment
+        if indices is not None:
+            token_ids = token_ids[indices]
+
+        # lookup token representations, shape: (*, k, d)
+        x = self.tokens(token_ids)
+
+        # aggregate
+        x = self.aggregation(x, self.aggregation_index)
+
         return x

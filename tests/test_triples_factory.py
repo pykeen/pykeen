@@ -11,14 +11,18 @@ import numpy as np
 import pytest
 import torch
 
-from pykeen.datasets import Nations
+from pykeen.datasets import Hetionet, Nations, SingleTabbedDataset
 from pykeen.datasets.nations import NATIONS_TRAIN_PATH
 from pykeen.triples import LCWAInstances, TriplesFactory, TriplesNumericLiteralsFactory
 from pykeen.triples.generation import generate_triples
 from pykeen.triples.splitting import (
-    SPLIT_METHODS, _get_cover_deterministic, _tf_cleanup_all, _tf_cleanup_deterministic,
+    SPLIT_METHODS,
+    _get_cover_deterministic,
+    _tf_cleanup_all,
+    _tf_cleanup_deterministic,
     _tf_cleanup_randomized,
-    get_absolute_split_sizes, normalize_ratios,
+    get_absolute_split_sizes,
+    normalize_ratios,
 )
 from pykeen.triples.triples_factory import INVERSE_SUFFIX, _map_triples_elements_to_ids
 from pykeen.triples.utils import TRIPLES_DF_COLUMNS, get_entities, get_relations, load_triples
@@ -26,10 +30,10 @@ from tests.constants import RESOURCES
 
 triples = np.array(
     [
-        ['peter', 'likes', 'chocolate_cake'],
-        ['chocolate_cake', 'isA', 'dish'],
-        ['susan', 'likes', 'pizza'],
-        ['peter', 'likes', 'susan'],
+        ["peter", "likes", "chocolate_cake"],
+        ["chocolate_cake", "isA", "dish"],
+        ["susan", "likes", "pizza"],
+        ["peter", "likes", "susan"],
     ],
     dtype=str,
 )
@@ -53,11 +57,11 @@ instance_labels = np.array(
 
 numeric_triples = np.array(
     [
-        ['peter', '/lit/hasAge', '30'],
-        ['peter', '/lit/hasHeight', '185'],
-        ['peter', '/lit/hasChildren', '2'],
-        ['susan', '/lit/hasAge', '28'],
-        ['susan', '/lit/hasHeight', '170'],
+        ["peter", "/lit/hasAge", "30"],
+        ["peter", "/lit/hasHeight", "185"],
+        ["peter", "/lit/hasChildren", "2"],
+        ["susan", "/lit/hasAge", "28"],
+        ["susan", "/lit/hasHeight", "170"],
     ],
     dtype=str,
 )
@@ -73,8 +77,8 @@ class TestTriplesFactory(unittest.TestCase):
     def test_correct_inverse_creation(self):
         """Test if the triples and the corresponding inverses are created."""
         t = [
-            ['e1', 'a.', 'e5'],
-            ['e1', 'a', 'e2'],
+            ["e1", "a.", "e5"],
+            ["e1", "a", "e2"],
         ]
         t = np.array(t, dtype=str)
         factory = TriplesFactory.from_labeled_triples(triples=t, create_inverse_triples=True)
@@ -87,9 +91,9 @@ class TestTriplesFactory(unittest.TestCase):
         # inverse relations, although the triples contained in it are not the same we would have when removing the
         # first triple, and passing create_inverse_triples=True.
         t = [
-            ['e3', f'a.{INVERSE_SUFFIX}', 'e10'],
-            ['e1', 'a', 'e2'],
-            ['e1', 'a.', 'e5'],
+            ["e3", f"a.{INVERSE_SUFFIX}", "e10"],
+            ["e1", "a", "e2"],
+            ["e1", "a.", "e5"],
         ]
         t = np.array(t, dtype=str)
         for create_inverse_triples in (False, True):
@@ -121,24 +125,23 @@ class TestTriplesFactory(unittest.TestCase):
         scores = torch.rand(tensor.shape[0])
         df = self.factory.tensor_to_df(tensor=tensor, scores=scores)
         re_labeled_triples = set(
-            tuple(row)
-            for row in df[['head_label', 'relation_label', 'tail_label']].values.tolist()
+            tuple(row) for row in df[["head_label", "relation_label", "tail_label"]].values.tolist()
         )
         assert labeled_triples == re_labeled_triples
 
         # check column order
-        assert tuple(df.columns) == TRIPLES_DF_COLUMNS + ('scores',)
+        assert tuple(df.columns) == TRIPLES_DF_COLUMNS + ("scores",)
 
     def test_new_with_restriction(self):
         """Test new_with_restriction()."""
         example_relation_restriction = {
-            'economicaid',
-            'dependent',
+            "economicaid",
+            "dependent",
         }
         example_entity_restriction = {
-            'brazil',
-            'burma',
-            'china',
+            "brazil",
+            "burma",
+            "china",
         }
         for inverse_triples in (True, False):
             original_triples_factory = Nations(
@@ -152,8 +155,8 @@ class TestTriplesFactory(unittest.TestCase):
                         relations=relation_restriction,
                     )
                     # check that the triples factory is returned as is, if and only if no restriction is to apply
-                    no_restriction_to_apply = (entity_restriction is None and relation_restriction is None)
-                    equal_factory_object = (id(restricted_triples_factory) == id(original_triples_factory))
+                    no_restriction_to_apply = entity_restriction is None and relation_restriction is None
+                    equal_factory_object = id(restricted_triples_factory) == id(original_triples_factory)
                     assert no_restriction_to_apply == equal_factory_object
 
                     # check that inverse_triples is correctly carried over
@@ -169,7 +172,8 @@ class TestTriplesFactory(unittest.TestCase):
                     # verify that triples have been filtered
                     if entity_restriction is not None:
                         present_entities = set(restricted_triples_factory.triples[:, 0]).union(
-                            restricted_triples_factory.triples[:, 2])
+                            restricted_triples_factory.triples[:, 2]
+                        )
                         assert set(entity_restriction).issuperset(present_entities)
 
                     if relation_restriction is not None:
@@ -189,14 +193,8 @@ class TestTriplesFactory(unittest.TestCase):
         for hr, row_id in zip(instances.pairs, range(instances.compressed.shape[0])):
             h, r = hr.tolist()
             _, tails = instances.compressed[row_id].nonzero()
-            reconstructed_triples.update(
-                (h, r, t)
-                for t in tails.tolist()
-            )
-        original_triples = {
-            tuple(hrt)
-            for hrt in factory.mapped_triples.tolist()
-        }
+            reconstructed_triples.update((h, r, t) for t in tails.tolist())
+        original_triples = {tuple(hrt) for hrt in factory.mapped_triples.tolist()}
         assert original_triples == reconstructed_triples
 
         # check data loader
@@ -229,7 +227,8 @@ class TestSplit(unittest.TestCase):
 
     def setUp(self) -> None:
         """Set up the tests."""
-        self.triples_factory = Nations().training
+        self.dataset = Nations()
+        self.triples_factory = self.dataset.training
         self.assertEqual(1592, self.triples_factory.num_triples)
 
     def _test_invariants(self, training_triples_factory: TriplesFactory, *other_factories: TriplesFactory) -> None:
@@ -244,20 +243,20 @@ class TestSplit(unittest.TestCase):
         self.assertEqual(sum(t.num_triples for t in all_factories), self.triples_factory.num_triples)
 
         # verify that the label-to-id mappings match
-        self.assertSetEqual({
-            id(factory.entity_to_id)
-            for factory in all_factories
-        }, {
-            id(self.triples_factory.entity_to_id),
-        })
-        self.assertSetEqual({
-            id(factory.relation_to_id)
-            for factory in all_factories
-        }, {
-            id(self.triples_factory.relation_to_id),
-        })
+        self.assertSetEqual(
+            {id(factory.entity_to_id) for factory in all_factories},
+            {
+                id(self.triples_factory.entity_to_id),
+            },
+        )
+        self.assertSetEqual(
+            {id(factory.relation_to_id) for factory in all_factories},
+            {
+                id(self.triples_factory.relation_to_id),
+            },
+        )
 
-    def test_split(self):
+    def test_split_tf(self):
         """Test splitting a factory."""
         cases = [
             (2, 0.8),
@@ -265,32 +264,83 @@ class TestSplit(unittest.TestCase):
             (3, [0.80, 0.10]),
             (3, [0.80, 0.10, 0.10]),
         ]
-        for method, (n, ratios), in itt.product(SPLIT_METHODS, cases):
+        for (
+            method,
+            (n, ratios),
+        ) in itt.product(SPLIT_METHODS, cases):
             with self.subTest(method=method, ratios=ratios):
-                factories = self.triples_factory.split(ratios, method=method)
-                self.assertEqual(n, len(factories))
-                self._test_invariants(*factories)
+                factories_1 = self.triples_factory.split(ratios, method=method, random_state=0)
+                self.assertEqual(n, len(factories_1))
+                self._test_invariants(*factories_1)
+
+                factories_2 = self.triples_factory.split(ratios, method=method, random_state=0)
+                self.assertEqual(n, len(factories_2))
+                self._test_invariants(*factories_2)
+
+                self._compare_factories(factories_1, factories_2)
+
+    def test_load_model(self):
+        """Test splitting a tabbed dataset."""
+
+        class MockSingleTabbedDataset(SingleTabbedDataset):
+            def __init__(self, random_state=0, **kwargs):
+                super().__init__(url=NATIONS_TRAIN_PATH.as_uri(), random_state=random_state, **kwargs)
+
+        dataset_classes = [MockSingleTabbedDataset]
+        if Hetionet(eager=False)._get_path().is_file():
+            dataset_classes.append(Hetionet)
+
+        for cls in dataset_classes:
+            with self.subTest(name=cls.__name__):
+                self._test_random_dataset(cls)
+
+    def _test_random_dataset(self, cls) -> None:
+        ds1 = cls(random_state=0)
+        ds2 = cls(random_state=0)
+        self._compare_factories(
+            (ds1.training, ds1.testing, ds1.validation),
+            (ds2.training, ds2.testing, ds2.validation),
+            msg=f"Failed on {ds1.__class__.__name__}",
+        )
+
+    def _compare_factories(self, factories_1, factories_2, msg=None) -> None:
+        for factory_1, factory_2 in zip(factories_1, factories_2):
+            triples_1 = factory_1.mapped_triples.detach().cpu().numpy()
+            triples_2 = factory_2.mapped_triples.detach().cpu().numpy()
+            self.assertTrue((triples_1 == triples_2).all(), msg=msg)
 
     def test_cleanup_deterministic(self):
         """Test that triples in a test set can get moved properly to the training set."""
-        training = torch.as_tensor(data=[
-            [1, 1000, 2],
-            [1, 1000, 3],
-            [1, 1001, 3],
-        ], dtype=torch.long)
-        testing = torch.as_tensor(data=[
-            [2, 1001, 3],
-            [1, 1002, 4],
-        ], dtype=torch.long)
-        expected_training = torch.as_tensor(data=[
-            [1, 1000, 2],
-            [1, 1000, 3],
-            [1, 1001, 3],
-            [1, 1002, 4],
-        ], dtype=torch.long)
-        expected_testing = torch.as_tensor(data=[
-            [2, 1001, 3],
-        ], dtype=torch.long)
+        training = torch.as_tensor(
+            data=[
+                [1, 1000, 2],
+                [1, 1000, 3],
+                [1, 1001, 3],
+            ],
+            dtype=torch.long,
+        )
+        testing = torch.as_tensor(
+            data=[
+                [2, 1001, 3],
+                [1, 1002, 4],
+            ],
+            dtype=torch.long,
+        )
+        expected_training = torch.as_tensor(
+            data=[
+                [1, 1000, 2],
+                [1, 1000, 3],
+                [1, 1001, 3],
+                [1, 1002, 4],
+            ],
+            dtype=torch.long,
+        )
+        expected_testing = torch.as_tensor(
+            data=[
+                [2, 1001, 3],
+            ],
+            dtype=torch.long,
+        )
 
         new_training, new_testing = _tf_cleanup_deterministic(training, testing)
         assert (expected_training == new_training).all()
@@ -302,16 +352,22 @@ class TestSplit(unittest.TestCase):
 
     def test_cleanup_randomized(self):
         """Test that triples in a test set can get moved properly to the training set."""
-        training = torch.as_tensor(data=[
-            [1, 1000, 2],
-            [1, 1000, 3],
-        ], dtype=torch.long)
-        testing = torch.as_tensor(data=[
-            [2, 1000, 3],
-            [1, 1000, 4],
-            [2, 1000, 4],
-            [1, 1001, 3],
-        ], dtype=torch.long)
+        training = torch.as_tensor(
+            data=[
+                [1, 1000, 2],
+                [1, 1000, 3],
+            ],
+            dtype=torch.long,
+        )
+        testing = torch.as_tensor(
+            data=[
+                [2, 1000, 3],
+                [1, 1000, 4],
+                [2, 1000, 4],
+                [1, 1001, 3],
+            ],
+            dtype=torch.long,
+        )
         expected_training_1 = {
             (1, 1000, 2),
             (1, 1000, 3),
@@ -335,8 +391,7 @@ class TestSplit(unittest.TestCase):
         }
 
         new_training, new_testing = [
-            set(tuple(row) for row in arr.tolist())
-            for arr in _tf_cleanup_randomized(training, testing)
+            set(tuple(row) for row in arr.tolist()) for arr in _tf_cleanup_randomized(training, testing)
         ]
 
         if expected_training_1 == new_training:
@@ -344,7 +399,7 @@ class TestSplit(unittest.TestCase):
         elif expected_training_2 == new_training:
             self.assertEqual(expected_testing_2, new_testing)
         else:
-            self.fail('training was not correct')
+            self.fail("training was not correct")
 
     def test_get_cover_deterministic(self):
         """Test _get_cover_deterministic."""
@@ -361,12 +416,12 @@ class TestSplit(unittest.TestCase):
         self.assertEqual(
             get_entities(generated_triples),
             get_entities(generated_triples[cover]),
-            msg='entity coverage is not full',
+            msg="entity coverage is not full",
         )
         self.assertEqual(
             get_relations(generated_triples),
             get_relations(generated_triples[cover]),
-            msg='relation coverage is not full',
+            msg="relation coverage is not full",
         )
 
 
@@ -378,28 +433,28 @@ class TestLiterals(unittest.TestCase):
         factory = TriplesNumericLiteralsFactory(triples=triples, numeric_triples=numeric_triples)
         instances = factory.create_lcwa_instances()
 
-        id_peter = factory.entity_to_id['peter']
-        id_age = instances.literals_to_id['/lit/hasAge']
-        id_height = instances.literals_to_id['/lit/hasHeight']
-        id_num_children = instances.literals_to_id['/lit/hasChildren']
+        id_peter = factory.entity_to_id["peter"]
+        id_age = instances.literals_to_id["/lit/hasAge"]
+        id_height = instances.literals_to_id["/lit/hasHeight"]
+        id_num_children = instances.literals_to_id["/lit/hasChildren"]
 
         self.assertEqual(instances.numeric_literals[id_peter, id_age], 30)
         self.assertEqual(instances.numeric_literals[id_peter, id_height], 185)
         self.assertEqual(instances.numeric_literals[id_peter, id_num_children], 2)
 
-        id_susan = factory.entity_to_id['susan']
-        id_age = instances.literals_to_id['/lit/hasAge']
-        id_height = instances.literals_to_id['/lit/hasHeight']
-        id_num_children = instances.literals_to_id['/lit/hasChildren']
+        id_susan = factory.entity_to_id["susan"]
+        id_age = instances.literals_to_id["/lit/hasAge"]
+        id_height = instances.literals_to_id["/lit/hasHeight"]
+        id_num_children = instances.literals_to_id["/lit/hasChildren"]
 
         self.assertEqual(instances.numeric_literals[id_susan, id_age], 28)
         self.assertEqual(instances.numeric_literals[id_susan, id_height], 170)
         self.assertEqual(instances.numeric_literals[id_susan, id_num_children], 0)
 
-        id_chocolate_cake = factory.entity_to_id['chocolate_cake']
-        id_age = instances.literals_to_id['/lit/hasAge']
-        id_height = instances.literals_to_id['/lit/hasHeight']
-        id_num_children = instances.literals_to_id['/lit/hasChildren']
+        id_chocolate_cake = factory.entity_to_id["chocolate_cake"]
+        id_age = instances.literals_to_id["/lit/hasAge"]
+        id_height = instances.literals_to_id["/lit/hasHeight"]
+        id_num_children = instances.literals_to_id["/lit/hasChildren"]
 
         self.assertEqual(instances.numeric_literals[id_chocolate_cake, id_age], 0)
         self.assertEqual(instances.numeric_literals[id_chocolate_cake, id_height], 0)
@@ -415,11 +470,14 @@ class TestLiterals(unittest.TestCase):
         triples_factory = TriplesFactory.from_labeled_triples(triples=triples)
         self.assertEqual(set(range(triples_factory.num_entities)), set(triples_factory.entity_to_id.values()))
         self.assertEqual(set(range(triples_factory.num_relations)), set(triples_factory.relation_to_id.values()))
-        assert (_map_triples_elements_to_ids(
-            triples=triples,
-            entity_to_id=triples_factory.entity_to_id,
-            relation_to_id=triples_factory.relation_to_id,
-        ) == triples_factory.mapped_triples).all()
+        assert (
+            _map_triples_elements_to_ids(
+                triples=triples,
+                entity_to_id=triples_factory.entity_to_id,
+                relation_to_id=triples_factory.relation_to_id,
+            )
+            == triples_factory.mapped_triples
+        ).all()
 
     def test_inverse_triples(self):
         """Test that the right number of entities and triples exist after inverting them."""
@@ -428,55 +486,55 @@ class TestLiterals(unittest.TestCase):
         self.assertEqual(
             set(range(triples_factory.num_entities)),
             set(triples_factory.entity_to_id.values()),
-            msg='wrong number entities',
+            msg="wrong number entities",
         )
         self.assertEqual(
             set(range(triples_factory.real_num_relations)),
             set(triples_factory.relation_to_id.values()),
-            msg='wrong number relations',
+            msg="wrong number relations",
         )
 
         relations = set(triples[:, 1])
         entities = set(triples[:, 0]).union(triples[:, 2])
-        self.assertEqual(len(entities), triples_factory.num_entities, msg='wrong number entities')
-        self.assertEqual(2, len(relations), msg='Wrong number of relations in set')
+        self.assertEqual(len(entities), triples_factory.num_entities, msg="wrong number entities")
+        self.assertEqual(2, len(relations), msg="Wrong number of relations in set")
         self.assertEqual(
             2 * len(relations),
             triples_factory.num_relations,
-            msg='Wrong number of relations in factory',
+            msg="Wrong number of relations in factory",
         )
 
     def test_metadata(self):
         """Test metadata passing for triples factories."""
         t = Nations().training
-        self.assertEqual(NATIONS_TRAIN_PATH, t.metadata['path'])
+        self.assertEqual(NATIONS_TRAIN_PATH, t.metadata["path"])
         self.assertEqual(
             (
-                f'TriplesFactory(num_entities=14, num_relations=55, num_triples=1592,'
+                f"TriplesFactory(num_entities=14, num_relations=55, num_triples=1592,"
                 f' inverse_triples=False, path="{NATIONS_TRAIN_PATH}")'
             ),
             repr(t),
         )
 
-        entities = ['poland', 'ussr']
+        entities = ["poland", "ussr"]
         x = t.new_with_restriction(entities=entities)
         entities_ids = t.entities_to_ids(entities=entities)
-        self.assertEqual(NATIONS_TRAIN_PATH, x.metadata['path'])
+        self.assertEqual(NATIONS_TRAIN_PATH, x.metadata["path"])
         self.assertEqual(
             (
-                f'TriplesFactory(num_entities=14, num_relations=55, num_triples=37,'
+                f"TriplesFactory(num_entities=14, num_relations=55, num_triples=37,"
                 f' inverse_triples=False, entity_restriction={repr(entities_ids)}, path="{NATIONS_TRAIN_PATH}")'
             ),
             repr(x),
         )
 
-        relations = ['negativebehavior']
+        relations = ["negativebehavior"]
         v = t.new_with_restriction(relations=relations)
         relations_ids = t.relations_to_ids(relations=relations)
-        self.assertEqual(NATIONS_TRAIN_PATH, x.metadata['path'])
+        self.assertEqual(NATIONS_TRAIN_PATH, x.metadata["path"])
         self.assertEqual(
             (
-                f'TriplesFactory(num_entities=14, num_relations=55, num_triples=29,'
+                f"TriplesFactory(num_entities=14, num_relations=55, num_triples=29,"
                 f' inverse_triples=False, path="{NATIONS_TRAIN_PATH}", relation_restriction={repr(relations_ids)})'
             ),
             repr(v),
@@ -484,15 +542,44 @@ class TestLiterals(unittest.TestCase):
 
         w = t.clone_and_exchange_triples(t.triples[0:5], keep_metadata=False)
         self.assertIsInstance(w, TriplesFactory)
-        self.assertNotIn('path', w.metadata)
+        self.assertNotIn("path", w.metadata)
         self.assertEqual(
-            'TriplesFactory(num_entities=14, num_relations=55, num_triples=5, inverse_triples=False)',
+            "TriplesFactory(num_entities=14, num_relations=55, num_triples=5, inverse_triples=False)",
             repr(w),
         )
 
         y, z = t.split()
-        self.assertEqual(NATIONS_TRAIN_PATH, y.metadata['path'])
-        self.assertEqual(NATIONS_TRAIN_PATH, z.metadata['path'])
+        self.assertEqual(NATIONS_TRAIN_PATH, y.metadata["path"])
+        self.assertEqual(NATIONS_TRAIN_PATH, z.metadata["path"])
+
+    def test_triples_numeric_literals_factory_split(self):
+        """Test splitting a TriplesNumericLiteralsFactory object."""
+        # Slightly larger number of triples to guarantee split can find coverage of all entities and relations.
+        triples_larger = np.array(
+            [
+                ["peter", "likes", "chocolate_cake"],
+                ["chocolate_cake", "isA", "dish"],
+                ["susan", "likes", "chocolate_cake"],
+                ["susan", "likes", "pizza"],
+                ["peter", "likes", "susan"],
+                ["peter", "isA", "person"],
+                ["susan", "isA", "person"],
+            ],
+            dtype=str,
+        )
+
+        triples_numeric_literal_factory = TriplesNumericLiteralsFactory(
+            triples=triples_larger,
+            numeric_triples=numeric_triples,
+        )
+
+        left, right = triples_numeric_literal_factory.split()
+
+        self.assertIsInstance(left, TriplesNumericLiteralsFactory)
+        self.assertIsInstance(right, TriplesNumericLiteralsFactory)
+
+        assert (left.numeric_literals == triples_numeric_literal_factory.numeric_literals).all()
+        assert (right.numeric_literals == triples_numeric_literal_factory.numeric_literals).all()
 
 
 class TestUtils(unittest.TestCase):
@@ -500,7 +587,7 @@ class TestUtils(unittest.TestCase):
 
     def test_load_triples_remapped(self):
         """Test loading a triples file where the columns must be remapped."""
-        path = os.path.join(RESOURCES, 'test_remap.tsv')
+        path = os.path.join(RESOURCES, "test_remap.tsv")
 
         with self.assertRaises(ValueError):
             load_triples(path, column_remapping=[1, 2])
@@ -508,8 +595,8 @@ class TestUtils(unittest.TestCase):
         _triples = load_triples(path, column_remapping=[0, 2, 1])
         self.assertEqual(
             [
-                ['a', 'r1', 'b'],
-                ['b', 'r2', 'c'],
+                ["a", "r1", "b"],
+                ["b", "r2", "c"],
             ],
             _triples.tolist(),
         )

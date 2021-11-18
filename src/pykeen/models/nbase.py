@@ -23,8 +23,8 @@ from ..typing import DeviceHint, HeadRepresentation, RelationRepresentation, Tai
 from ..utils import check_shapes
 
 __all__ = [
-    '_NewAbstractModel',
-    'ERModel',
+    "_NewAbstractModel",
+    "ERModel",
 ]
 
 logger = logging.getLogger(__name__)
@@ -78,8 +78,8 @@ class _NewAbstractModel(Model, ABC):
                 parents[id(p)].append(module)
 
             # call reset_parameters if possible
-            if hasattr(module, 'reset_parameters'):
-                task_list.append((name.count('.'), module))
+            if hasattr(module, "reset_parameters"):
+                task_list.append((name.count("."), module))
 
         # initialize from bottom to top
         # This ensures that specialized initializations will take priority over the default ones of its components.
@@ -90,14 +90,14 @@ class _NewAbstractModel(Model, ABC):
         # emit warning if there where parameters which were not initialised by reset_parameters.
         if len(uninitialized_parameters) > 0:
             logger.warning(
-                'reset_parameters() not found for all modules containing parameters. '
-                '%d parameters where likely not initialized.',
+                "reset_parameters() not found for all modules containing parameters. "
+                "%d parameters where likely not initialized.",
                 len(uninitialized_parameters),
             )
 
             # Additional debug information
             for i, p_id in enumerate(uninitialized_parameters, start=1):
-                logger.debug('[%3d] Parents to blame: %s', i, parents.get(p_id))
+                logger.debug("[%3d] Parents to blame: %s", i, parents.get(p_id))
 
     def _instantiate_default_regularizer(self, **kwargs) -> Optional[Regularizer]:
         """Instantiate the regularizer from this class's default settings.
@@ -220,7 +220,7 @@ class _NewAbstractModel(Model, ABC):
             r_indices=rt_batch[:, 0],
             t_indices=rt_batch[:, 1],
             slice_size=slice_size,
-            slice_dim="r",
+            slice_dim="t",
         ).view(rt_batch.shape[0], self.num_entities)
 
     def score_r(self, ht_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:
@@ -241,7 +241,7 @@ class _NewAbstractModel(Model, ABC):
             r_indices=None,
             t_indices=ht_batch[:, 1],
             slice_size=slice_size,
-            slice_dim="t",
+            slice_dim="r",
         ).view(ht_batch.shape[0], self.num_relations)
 
 
@@ -280,10 +280,13 @@ def _prepare_representation_module_list(
             )
         modules.append(r)
     if not skip_checks:
-        check_shapes(*zip(
-            (r.shape for r in modules),
-            shapes,
-        ), raise_on_errors=True)
+        check_shapes(
+            *zip(
+                (r.shape for r in modules),
+                shapes,
+            ),
+            raise_on_errors=True,
+        )
     return nn.ModuleList(modules)
 
 
@@ -440,7 +443,10 @@ class ERModel(
         h, r, t = self._get_representations(h_indices=h_indices, r_indices=r_indices, t_indices=t_indices)
         scores = self.interaction.score(h=h, r=r, t=t, slice_size=slice_size, slice_dim=slice_dim)
         return self._repeat_scores_if_necessary(
-            scores=scores, h_indices=h_indices, r_indices=r_indices, t_indices=t_indices,
+            scores=scores,
+            h_indices=h_indices,
+            r_indices=r_indices,
+            t_indices=t_indices,
         )
 
     def _repeat_scores_if_necessary(
@@ -459,11 +465,14 @@ class ERModel(
 
         repeats = [1, 1, 1, 1]
 
-        for i, (flag, ind, num) in enumerate((
-            (repeat_entities, h_indices, self.num_entities),
-            (repeat_relations, r_indices, self.num_relations),
-            (repeat_entities, t_indices, self.num_entities),
-        ), start=1):
+        for i, (flag, ind, num) in enumerate(
+            (
+                (repeat_entities, h_indices, self.num_entities),
+                (repeat_relations, r_indices, self.num_relations),
+                (repeat_entities, t_indices, self.num_entities),
+            ),
+            start=1,
+        ):
             if flag:
                 if ind is None:
                     repeats[i] = num
@@ -482,10 +491,7 @@ class ERModel(
     ) -> Tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]:
         """Get representations for head, relation and tails, in canonical shape."""
         h, r, t = [
-            [
-                representation.get_in_more_canonical_shape(dim=dim, indices=indices)
-                for representation in representations
-            ]
+            [representation.get_in_more_canonical_shape(dim=dim, indices=indices) for representation in representations]
             for dim, indices, representations in (
                 ("h", h_indices, self.entity_representations),
                 ("r", r_indices, self.relation_representations),

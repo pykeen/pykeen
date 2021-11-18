@@ -17,7 +17,7 @@ from ...nn.init import xavier_uniform_
 from ...typing import Hint, Initializer
 
 __all__ = [
-    'ProjE',
+    "ProjE",
 ]
 
 
@@ -59,7 +59,7 @@ class ProjE(EntityRelationEmbeddingModel):
     #: The default loss function class
     loss_default: ClassVar[Type[Loss]] = BCEWithLogitsLoss
     #: The default parameters for the default loss function class
-    loss_default_kwargs = dict(reduction='mean')
+    loss_default_kwargs = dict(reduction="mean")
 
     def __init__(
         self,

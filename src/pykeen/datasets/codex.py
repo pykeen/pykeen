@@ -12,22 +12,23 @@ from more_click import verbose_option
 
 from .base import UnpackedRemoteDataset
 
-BASE_URL = 'https://raw.githubusercontent.com/tsafavi/codex/master/data/triples/'
-SMALL_VALID_URL = f'{BASE_URL}/codex-s/valid.txt'
-SMALL_TEST_URL = f'{BASE_URL}/codex-s/test.txt'
-SMALL_TRAIN_URL = f'{BASE_URL}/codex-s/train.txt'
+BASE_URL = "https://raw.githubusercontent.com/tsafavi/codex/master/data/triples/"
+SMALL_VALID_URL = f"{BASE_URL}/codex-s/valid.txt"
+SMALL_TEST_URL = f"{BASE_URL}/codex-s/test.txt"
+SMALL_TRAIN_URL = f"{BASE_URL}/codex-s/train.txt"
 
-MEDIUM_VALID_URL = f'{BASE_URL}/codex-m/valid.txt'
-MEDIUM_TEST_URL = f'{BASE_URL}/codex-m/test.txt'
-MEDIUM_TRAIN_URL = f'{BASE_URL}/codex-m/train.txt'
+MEDIUM_VALID_URL = f"{BASE_URL}/codex-m/valid.txt"
+MEDIUM_TEST_URL = f"{BASE_URL}/codex-m/test.txt"
+MEDIUM_TRAIN_URL = f"{BASE_URL}/codex-m/train.txt"
 
-LARGE_VALID_URL = f'{BASE_URL}/codex-l/valid.txt'
-LARGE_TEST_URL = f'{BASE_URL}/codex-l/test.txt'
-LARGE_TRAIN_URL = f'{BASE_URL}/codex-l/train.txt'
+LARGE_VALID_URL = f"{BASE_URL}/codex-l/valid.txt"
+LARGE_TEST_URL = f"{BASE_URL}/codex-l/test.txt"
+LARGE_TRAIN_URL = f"{BASE_URL}/codex-l/train.txt"
 
 
 # If GitHub ever gets upset from too many downloads, we can switch to
 # the data posted at https://github.com/pykeen/pykeen/pull/154#issuecomment-730462039
+
 
 @parse_docdata
 class CoDExSmall(UnpackedRemoteDataset):
@@ -138,10 +139,10 @@ class CoDExLarge(UnpackedRemoteDataset):
 @verbose_option
 def _main():
     for cls in [CoDExSmall, CoDExMedium, CoDExLarge]:
-        click.secho(f'Loading {cls.__name__}', fg='green', bold=True)
+        click.secho(f"Loading {cls.__name__}", fg="green", bold=True)
         d = cls()
         d.summarize()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     _main()

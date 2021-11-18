@@ -14,9 +14,9 @@ from ..constants import PYKEEN_LOGS
 from ..utils import flatten_dictionary
 
 __all__ = [
-    'FileResultTracker',
-    'CSVResultTracker',
-    'JSONResultTracker',
+    "FileResultTracker",
+    "CSVResultTracker",
+    "JSONResultTracker",
 ]
 
 logger = logging.getLogger(__name__)
@@ -49,7 +49,6 @@ class FileResultTracker(ResultTracker):
         self,
         path: Union[None, str, pathlib.Path] = None,
         name: Optional[str] = None,
-        **kwargs,
     ):
         """Initialize the tracker.
 
@@ -57,8 +56,6 @@ class FileResultTracker(ResultTracker):
             The path of the log file.
         :param name: The default file name for a file if no path is given. If no default is given,
             the current time is used.
-        :param kwargs:
-            Additional keyword based arguments forwarded to csv.writer.
         """
         if path is None:
             if name is None:
@@ -86,7 +83,7 @@ class CSVResultTracker(FileResultTracker):
         tail -f results.txt | grep "hits_at_10"
     """
 
-    extension = 'csv'
+    extension = "csv"
 
     #: The column names
     HEADER = "type", "step", "key", "value"
@@ -94,16 +91,19 @@ class CSVResultTracker(FileResultTracker):
     def __init__(
         self,
         path: Union[None, str, pathlib.Path] = None,
+        name: Optional[str] = None,
         **kwargs,
     ):
         """Initialize the tracker.
 
         :param path:
             The path of the log file.
+        :param name: The default file name for a file if no path is given. If no default is given,
+            the current time is used.
         :param kwargs:
             Additional keyword based arguments forwarded to csv.writer.
         """
-        super().__init__(path=path)
+        super().__init__(path=path, name=name)
         self.csv_writer = csv.writer(self.file, **kwargs)
 
     def start_run(self, run_name: Optional[str] = None) -> None:  # noqa: D102
@@ -115,10 +115,7 @@ class CSVResultTracker(FileResultTracker):
         prefix: Optional[str] = None,
     ) -> None:  # noqa: D102
         params = flatten_dictionary(dictionary=params, prefix=prefix)
-        self.csv_writer.writerows(
-            ("parameter", 0, key, value)
-            for key, value in params.items()
-        )
+        self.csv_writer.writerows(("parameter", 0, key, value) for key, value in params.items())
         self.file.flush()
 
     def log_metrics(
@@ -128,10 +125,7 @@ class CSVResultTracker(FileResultTracker):
         prefix: Optional[str] = None,
     ) -> None:  # noqa: D102
         metrics = flatten_dictionary(dictionary=metrics, prefix=prefix)
-        self.csv_writer.writerows(
-            ("metric", step, key, value)
-            for key, value in metrics.items()
-        )
+        self.csv_writer.writerows(("metric", step, key, value) for key, value in metrics.items())
         self.file.flush()
 
 
@@ -145,14 +139,17 @@ class JSONResultTracker(FileResultTracker):
         tail -f results.txt | grep "hits_at_10"
     """
 
-    extension = 'jsonl'
+    extension = "jsonl"
+
+    def _write(self, obj) -> None:
+        print(json.dumps(obj), file=self.file, flush=True)  # noqa:T001
 
     def log_params(
         self,
         params: Mapping[str, Any],
         prefix: Optional[str] = None,
     ) -> None:  # noqa: D102
-        print(json.dumps({'params': params, 'prefix': prefix}), file=self.file)
+        self._write({"params": params, "prefix": prefix})
 
     def log_metrics(
         self,
@@ -160,4 +157,4 @@ class JSONResultTracker(FileResultTracker):
         step: Optional[int] = None,
         prefix: Optional[str] = None,
     ) -> None:  # noqa: D102
-        print(json.dumps({'metrics': metrics, 'prefix': prefix, 'step': step}), file=self.file)
+        self._write({"metrics": metrics, "prefix": prefix, "step": step})

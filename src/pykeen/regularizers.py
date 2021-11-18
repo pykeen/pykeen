@@ -9,25 +9,25 @@ from typing import Any, ClassVar, Iterable, Mapping, Optional
 
 import torch
 from class_resolver import Resolver, normalize_string
-from torch import nn
+from torch import linalg, nn
 from torch.nn import functional
 
 from .utils import lp_norm, powersum_norm
 
 __all__ = [
     # Base Class
-    'Regularizer',
+    "Regularizer",
     # Child classes
-    'LpRegularizer',
-    'NoRegularizer',
-    'CombinedRegularizer',
-    'PowerSumRegularizer',
-    'TransHRegularizer',
+    "LpRegularizer",
+    "NoRegularizer",
+    "CombinedRegularizer",
+    "PowerSumRegularizer",
+    "TransHRegularizer",
     # Utils
-    'regularizer_resolver',
+    "regularizer_resolver",
 ]
 
-_REGULARIZER_SUFFIX = 'Regularizer'
+_REGULARIZER_SUFFIX = "Regularizer"
 
 
 class Regularizer(nn.Module, ABC):
@@ -63,7 +63,7 @@ class Regularizer(nn.Module, ABC):
         """
         super().__init__()
         self.tracked_parameters = list(parameters) if parameters else []
-        self.register_buffer(name='weight', tensor=torch.as_tensor(weight))
+        self.register_buffer(name="weight", tensor=torch.as_tensor(weight))
         self.apply_only_once = apply_only_once
         self.register_buffer(name="regularization_term", tensor=torch.zeros(1, dtype=torch.float))
         self.updated = False
@@ -141,7 +141,7 @@ class LpRegularizer(Regularizer):
 
     #: The default strategy for optimizing the LP regularizer's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        weight=dict(type=float, low=0.01, high=1.0, scale='log'),
+        weight=dict(type=float, low=0.01, high=1.0, scale="log"),
     )
 
     def __init__(
@@ -149,7 +149,7 @@ class LpRegularizer(Regularizer):
         weight: float = 1.0,
         dim: Optional[int] = -1,
         normalize: bool = False,
-        p: float = 2.,
+        p: float = 2.0,
         apply_only_once: bool = False,
         parameters: Optional[Iterable[nn.Parameter]] = None,
     ):
@@ -170,7 +170,7 @@ class PowerSumRegularizer(Regularizer):
 
     #: The default strategy for optimizing the power sum regularizer's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        weight=dict(type=float, low=0.01, high=1.0, scale='log'),
+        weight=dict(type=float, low=0.01, high=1.0, scale="log"),
     )
 
     def __init__(
@@ -178,7 +178,7 @@ class PowerSumRegularizer(Regularizer):
         weight: float = 1.0,
         dim: Optional[int] = -1,
         normalize: bool = False,
-        p: float = 2.,
+        p: float = 2.0,
         apply_only_once: bool = False,
         parameters: Optional[Iterable[nn.Parameter]] = None,
     ):
@@ -196,7 +196,7 @@ class TransHRegularizer(Regularizer):
 
     #: The default strategy for optimizing the TransH regularizer's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        weight=dict(type=float, low=0.01, high=1.0, scale='log'),
+        weight=dict(type=float, low=0.01, high=1.0, scale="log"),
     )
 
     def __init__(
@@ -211,16 +211,16 @@ class TransHRegularizer(Regularizer):
         self.epsilon = epsilon
 
     def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
-        raise NotImplementedError('TransH regularizer is order-sensitive!')
+        raise NotImplementedError("TransH regularizer is order-sensitive!")
 
     def update(self, *tensors: torch.FloatTensor) -> None:  # noqa: D102
         if len(tensors) != 3:
-            raise KeyError('Expects exactly three tensors')
+            raise KeyError("Expects exactly three tensors")
         if self.apply_only_once and self.updated:
             return
         entity_embeddings, normal_vector_embeddings, relation_embeddings = tensors
         # Entity soft constraint
-        self.regularization_term += torch.sum(functional.relu(torch.norm(entity_embeddings, dim=-1) ** 2 - 1.0))
+        self.regularization_term += torch.sum(functional.relu(linalg.vector_norm(entity_embeddings, dim=-1) ** 2 - 1.0))
 
         # Orthogonality soft constraint
         d_r_n = functional.normalize(relation_embeddings, dim=-1)
@@ -247,10 +247,13 @@ class CombinedRegularizer(Regularizer):
         self.regularizers = nn.ModuleList(regularizers)
         for r in self.regularizers:
             if isinstance(r, NoRegularizer):
-                raise TypeError('Can not combine a no-op regularizer')
-        self.register_buffer(name='normalization_factor', tensor=torch.as_tensor(
-            sum(r.weight for r in self.regularizers),
-        ).reciprocal())
+                raise TypeError("Can not combine a no-op regularizer")
+        self.register_buffer(
+            name="normalization_factor",
+            tensor=torch.as_tensor(
+                sum(r.weight for r in self.regularizers),
+            ).reciprocal(),
+        )
 
     @property
     def normalize(self):  # noqa: D102

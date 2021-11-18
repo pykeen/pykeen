@@ -5,7 +5,12 @@
 import numpy
 import torch
 
-from ..utils import extended_einsum, split_complex, tensor_product, view_complex
+from ..utils import extended_einsum, split_complex, tensor_product, view_complex, view_complex_native
+
+__all__ = [
+    "batched_dot",
+    "batched_complex",
+]
 
 
 def _batched_dot_manual(
@@ -87,7 +92,7 @@ def _complex_einsum(
     x[1, 0, 1] = 1
     x[1, 1, 0] = -1
     return extended_einsum(
-        "ijk,bhdi,brdj,btdk->bhrt",
+        "ijk,bhrtdi,bhrtdj,bhrtdk->bhrt",
         x,
         h.view(*h.shape[:-1], -1, 2),
         r.view(*r.shape[:-1], -1, 2),
@@ -101,7 +106,7 @@ def _complex_native_complex(
     t: torch.FloatTensor,
 ) -> torch.FloatTensor:
     """Use torch built-ins for computation with complex numbers."""
-    h, r, t = [view_complex(x=x) for x in (h, r, t)]
+    h, r, t = [view_complex_native(x=x) for x in (h, r, t)]
     return torch.real(tensor_product(h, r, torch.conj(t)).sum(dim=-1))
 
 
@@ -175,3 +180,12 @@ def _complex_stacked_select(
     else:
         t = r * t
     return h @ t.transpose(-2, -1)
+
+
+def batched_complex(
+    h: torch.FloatTensor,
+    r: torch.FloatTensor,
+    t: torch.FloatTensor,
+) -> torch.FloatTensor:
+    """Compute real part of tri-linear complex dot product."""
+    return _complex_native_complex(h=h, r=r, t=t)

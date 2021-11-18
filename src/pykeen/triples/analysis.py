@@ -316,11 +316,7 @@ def iter_ternary_patterns(
         unit="pattern",
         unit_scale=True,
     ):
-        lhs = {
-            (x, z)
-            for x, y in pairs[r1]
-            for z in adj[r2][y]
-        }
+        lhs = {(x, z) for x, y in pairs[r1] for z in adj[r2][y]}
         support = len(lhs)
         # skip empty support
         # TODO: Can this happen after pre-filtering?
@@ -402,16 +398,28 @@ def iter_relation_cardinality_types(
     it = _help_iter_relation_cardinality_types(mapped_triples)
     for relation, support, head_injective_conf, tail_injective_conf in it:
         yield PatternMatch(
-            relation, CARDINALITY_TYPE_ONE_TO_ONE, support, head_injective_conf * tail_injective_conf,
+            relation,
+            CARDINALITY_TYPE_ONE_TO_ONE,
+            support,
+            head_injective_conf * tail_injective_conf,
         )
         yield PatternMatch(
-            relation, CARDINALITY_TYPE_ONE_TO_MANY, support, (1 - head_injective_conf) * tail_injective_conf,
+            relation,
+            CARDINALITY_TYPE_ONE_TO_MANY,
+            support,
+            (1 - head_injective_conf) * tail_injective_conf,
         )
         yield PatternMatch(
-            relation, CARDINALITY_TYPE_MANY_TO_ONE, support, head_injective_conf * (1 - tail_injective_conf),
+            relation,
+            CARDINALITY_TYPE_MANY_TO_ONE,
+            support,
+            head_injective_conf * (1 - tail_injective_conf),
         )
         yield PatternMatch(
-            relation, CARDINALITY_TYPE_MANY_TO_MANY, support, (1 - head_injective_conf) * (1 - tail_injective_conf),
+            relation,
+            CARDINALITY_TYPE_MANY_TO_MANY,
+            support,
+            (1 - head_injective_conf) * (1 - tail_injective_conf),
         )
 
 
@@ -489,10 +497,12 @@ def get_entity_counts(
         (POSITION_TAIL, 2),
     ):
         unique, counts = _get_counts(mapped_triples=mapped_triples, column=col)
-        df = pd.DataFrame({
-            ENTITY_ID_COLUMN_NAME: unique,
-            COUNT_COLUMN_NAME: counts,
-        })
+        df = pd.DataFrame(
+            {
+                ENTITY_ID_COLUMN_NAME: unique,
+                COUNT_COLUMN_NAME: counts,
+            }
+        )
         df[ENTITY_POSITION_COLUMN_NAME] = label
         data.append(df)
     return pd.concat(data, ignore_index=True)
@@ -510,10 +520,14 @@ def get_relation_counts(
     :return:
         A dataframe with columns ( relation_id | count )
     """
-    return pd.DataFrame(data=dict(zip(
-        [RELATION_ID_COLUMN_NAME, COUNT_COLUMN_NAME],
-        _get_counts(mapped_triples=mapped_triples, column=1),
-    )))
+    return pd.DataFrame(
+        data=dict(
+            zip(
+                [RELATION_ID_COLUMN_NAME, COUNT_COLUMN_NAME],
+                _get_counts(mapped_triples=mapped_triples, column=1),
+            )
+        )
+    )
 
 
 def relation_pattern_types(
@@ -546,11 +560,7 @@ def relation_pattern_types(
     base = iter_patterns(mapped_triples=mapped_triples)
 
     # drop zero-confidence
-    base = (
-        pattern
-        for pattern in base
-        if pattern.confidence > 0
-    )
+    base = (pattern for pattern in base if pattern.confidence > 0)
 
     # keep only skyline
     base = skyline(base)
@@ -621,11 +631,7 @@ def relation_cardinality_types(
     base = iter_relation_cardinality_types(mapped_triples=mapped_triples)
 
     # drop zero-confidence
-    base = (
-        pattern
-        for pattern in base
-        if pattern.confidence > 0
-    )
+    base = (pattern for pattern in base if pattern.confidence > 0)
 
     # keep only skyline
     # does not make much sense, since there is always exactly one entry per (relation, pattern) pair
@@ -691,10 +697,12 @@ def get_relation_functionality(
         A dataframe with columns ( functionality | inverse_functionality )
     """
     df = pd.DataFrame(data=mapped_triples, columns=["h", "r", "t"])
-    df = df.groupby(by="r").agg(dict(
-        h=["nunique", COUNT_COLUMN_NAME],
-        t="nunique",
-    ))
+    df = df.groupby(by="r").agg(
+        dict(
+            h=["nunique", COUNT_COLUMN_NAME],
+            t="nunique",
+        )
+    )
     df[FUNCTIONALITY_COLUMN_NAME] = df[("h", "nunique")] / df[("h", COUNT_COLUMN_NAME)]
     df[INVERSE_FUNCTIONALITY_COLUMN_NAME] = df[("t", "nunique")] / df[("h", COUNT_COLUMN_NAME)]
     df = df[[FUNCTIONALITY_COLUMN_NAME, INVERSE_FUNCTIONALITY_COLUMN_NAME]]

@@ -5,22 +5,23 @@
 from typing import Any, ClassVar, Mapping, Optional, Type
 
 import torch
+from class_resolver.api import HintOrType
 from torch.nn.init import normal_
 
-from ..base import EntityRelationEmbeddingModel
+from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss, SoftplusLoss
 from ...nn.emb import EmbeddingSpecification
+from ...nn.modules import ComplExInteraction
 from ...regularizers import LpRegularizer, Regularizer
 from ...typing import Hint, Initializer
-from ...utils import split_complex
 
 __all__ = [
-    'ComplEx',
+    "ComplEx",
 ]
 
 
-class ComplEx(EntityRelationEmbeddingModel):
+class ComplEx(ERModel):
     r"""An implementation of ComplEx [trouillon2016]_.
 
     ComplEx is an extension of :class:`pykeen.models.DistMult` that uses complex valued representations for the
@@ -63,9 +64,7 @@ class ComplEx(EntityRelationEmbeddingModel):
     #: The default loss function class
     loss_default: ClassVar[Type[Loss]] = SoftplusLoss
     #: The default parameters for the default loss function class
-    loss_default_kwargs: ClassVar[Mapping[str, Any]] = dict(reduction='mean')
-    #: The regularizer used by [trouillon2016]_ for ComplEx.
-    regularizer_default: ClassVar[Type[Regularizer]] = LpRegularizer
+    loss_default_kwargs: ClassVar[Mapping[str, Any]] = dict(reduction="mean")
     #: The LP settings used by [trouillon2016]_ for ComplEx.
     regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = dict(
         weight=0.01,
@@ -81,6 +80,8 @@ class ComplEx(EntityRelationEmbeddingModel):
         # https://github.com/ttrouill/complex/blob/dc4eb93408d9a5288c986695b58488ac80b1cc17/efe/models.py#L481-L487
         entity_initializer: Hint[Initializer] = normal_,
         relation_initializer: Hint[Initializer] = normal_,
+        regularizer: HintOrType[Regularizer] = LpRegularizer,
+        regularizer_kwargs: Optional[Mapping[str, Any]] = None,
         **kwargs,
     ) -> None:
         """Initialize ComplEx.
@@ -89,84 +90,31 @@ class ComplEx(EntityRelationEmbeddingModel):
             The embedding dimensionality of the entity embeddings.
         :param entity_initializer: Entity initializer function. Defaults to :func:`torch.nn.init.normal_`
         :param relation_initializer: Relation initializer function. Defaults to :func:`torch.nn.init.normal_`
+        :param regularizer:
+            the regularizer to apply.
+        :param regularizer_kwargs:
+            additional keyword arguments passed to the regularizer. Defaults to `ComplEx.regularizer_default_kwargs`.
         :param kwargs:
             Remaining keyword arguments to forward to :class:`pykeen.models.EntityRelationEmbeddingModel`
         """
+        regularizer_kwargs = regularizer_kwargs or ComplEx.regularizer_default_kwargs
         super().__init__(
+            interaction=ComplExInteraction,
             entity_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
                 initializer=entity_initializer,
+                # use torch's native complex data type
                 dtype=torch.cfloat,
+                regularizer=regularizer,
+                regularizer_kwargs=regularizer_kwargs,
             ),
             relation_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
                 initializer=relation_initializer,
+                # use torch's native complex data type
                 dtype=torch.cfloat,
+                regularizer=regularizer,
+                regularizer_kwargs=regularizer_kwargs,
             ),
             **kwargs,
         )
-
-    @staticmethod
-    def interaction_function(
-        h: torch.FloatTensor,
-        r: torch.FloatTensor,
-        t: torch.FloatTensor,
-    ) -> torch.FloatTensor:
-        """Evaluate the interaction function of ComplEx for given embeddings.
-
-        The embeddings have to be in a broadcastable shape.
-
-        :param h:
-            Head embeddings.
-        :param r:
-            Relation embeddings.
-        :param t:
-            Tail embeddings.
-
-        :return: shape: (...)
-            The scores.
-        """
-        # split into real and imaginary part
-        (h_re, h_im), (r_re, r_im), (t_re, t_im) = [split_complex(x=x) for x in (h, r, t)]
-
-        # ComplEx space bilinear product
-        # *: Elementwise multiplication
-        return sum(
-            (hh * rr * tt).sum(dim=-1)
-            for hh, rr, tt in [
-                (h_re, r_re, t_re),
-                (h_re, r_im, t_im),
-                (h_im, r_re, t_im),
-                (-h_im, r_im, t_re),
-            ]
-        )
-
-    def forward(
-        self,
-        h_indices: Optional[torch.LongTensor],
-        r_indices: Optional[torch.LongTensor],
-        t_indices: Optional[torch.LongTensor],
-    ) -> torch.FloatTensor:
-        """Unified score function."""
-        # get embeddings
-        h = self.entity_embeddings.get_in_canonical_shape(indices=h_indices)
-        r = self.relation_embeddings.get_in_canonical_shape(indices=r_indices)
-        t = self.entity_embeddings.get_in_canonical_shape(indices=t_indices)
-
-        # Regularization
-        self.regularize_if_necessary(h, r, t)
-
-        # Compute scores
-        return self.interaction_function(h=h, r=r, t=t)
-
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self(h_indices=hrt_batch[:, 0], r_indices=hrt_batch[:, 1], t_indices=hrt_batch[:, 2]).view(-1, 1)
-
-    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self(h_indices=hr_batch[:, 0], r_indices=hr_batch[:, 1], t_indices=None)
-
-    def score_r(self, ht_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self(h_indices=ht_batch[:, 0], r_indices=None, t_indices=ht_batch[:, 1])
-
-    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self(h_indices=None, r_indices=rt_batch[:, 0], t_indices=rt_batch[:, 1])

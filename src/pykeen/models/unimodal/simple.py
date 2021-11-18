@@ -14,7 +14,7 @@ from ...regularizers import PowerSumRegularizer, Regularizer
 from ...typing import Hint, Initializer
 
 __all__ = [
-    'SimplE',
+    "SimplE",
 ]
 
 

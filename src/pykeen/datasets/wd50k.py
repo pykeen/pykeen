@@ -14,10 +14,10 @@ from more_click import verbose_option
 
 from .base import UnpackedRemoteDataset
 
-BASE_URL = 'https://raw.githubusercontent.com/migalkin/StarE/master/data/clean/wd50k/'
-TRIPLES_VALID_URL = f'{BASE_URL}/triples/valid.txt'
-TRIPLES_TEST_URL = f'{BASE_URL}/triples/test.txt'
-TRIPLES_TRAIN_URL = f'{BASE_URL}/triples/train.txt'
+BASE_URL = "https://raw.githubusercontent.com/migalkin/StarE/master/data/clean/wd50k/"
+TRIPLES_VALID_URL = f"{BASE_URL}/triples/valid.txt"
+TRIPLES_TEST_URL = f"{BASE_URL}/triples/test.txt"
+TRIPLES_TRAIN_URL = f"{BASE_URL}/triples/train.txt"
 
 
 @parse_docdata
@@ -52,7 +52,7 @@ class WD50KT(UnpackedRemoteDataset):
             testing_url=TRIPLES_TEST_URL,
             validation_url=TRIPLES_VALID_URL,
             create_inverse_triples=create_inverse_triples,
-            load_triples_kwargs={'delimiter': ','},
+            load_triples_kwargs={"delimiter": ","},
             **kwargs,
         )
 
@@ -61,10 +61,10 @@ class WD50KT(UnpackedRemoteDataset):
 @verbose_option
 def _main():
     for cls in [WD50KT]:
-        click.secho(f'Loading {cls.__name__}', fg='green', bold=True)
+        click.secho(f"Loading {cls.__name__}", fg="green", bold=True)
         d = cls()
         d.summarize()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     _main()

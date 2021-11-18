@@ -15,7 +15,7 @@ from ...nn.modules import CrossEInteraction
 from ...typing import Hint, Initializer
 
 __all__ = [
-    'CrossE',
+    "CrossE",
 ]
 
 
