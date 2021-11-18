@@ -100,6 +100,12 @@ class MetricKey(NamedTuple):
     rank_type: str
     k: Optional[int]
 
+    def __str__(self) -> str:
+        components = [self.name, self.side, self.rank_type]
+        if self.k:
+            components.append(self.k)
+        return ".".join(map(str, components))
+
 
 def compute_rank_from_scores(
     true_score: torch.FloatTensor,
