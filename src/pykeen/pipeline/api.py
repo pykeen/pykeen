@@ -518,6 +518,50 @@ def _iterate_moved(pipeline_results: Iterable[PipelineResult]):
         yield pipeline_result
 
 
+class _ResultAccumulator:
+    """Private class to simplify result collection code."""
+
+    def __init__(self) -> None:
+        """Initialize the accumulator."""
+        self.data = []
+        self.keys = []
+
+    def add_original_result(self, result: Mapping[str, Any]) -> None:
+        """Add an "original" result, i.e., one stored in the reproducibility configuration."""
+        result = flatten_dictionary(result)
+        # TODO: Normalize keys
+        self.keys = sorted(result.keys())
+        self.data.append([True] + [result[k] for k in self.keys])
+
+    def parse_from_result(self, result: PipelineResult) -> None:
+        """
+        Parse a replicated result from a pipeline result.
+        
+        .. note ::
+            Make sure to call add_original_result at least once before to initialize the metrics to collect.
+        """
+        self.data.append([False] + [result.get_metric(key=key) for key in self.keys])
+
+    def is_non_empty(self) -> bool:
+        """Return whether there are keys."""
+        return len(self.keys) > 0
+
+    def get_df(self) -> pd.DataFrame:
+        """
+        Create dataframe of results.
+
+        Example:
+
+        original | hits_at_10 |
+        True     | 0.85       |
+        False    | 0.87       |
+        False    | 0.83       |
+
+        The example uses abbreviated metric names, while the actual dataframe uses the long canonical version.
+        """
+        return pd.DataFrame(data=self.data, columns=["original"] + self.keys)
+
+
 def save_pipeline_results_to_directory(
     *,
     config: Mapping[str, Any],
@@ -548,7 +592,9 @@ def save_pipeline_results_to_directory(
         pipeline_results = _iterate_moved(pipeline_results)
 
     # metrics accumulates rows for a dataframe for comparison against the original reported results (if any)
-    metrics = [flatten_dictionary(config.get("results", {}))]
+    result_comparator = _ResultAccumulator()
+    # TODO: we could have multiple results, if we get access to the raw results (e.g. in the pykeen benchmarking paper)
+    result_comparator.add_original_result(result=config.get("results", {}))
     for i, pipeline_result in enumerate(pipeline_results):
         replicate_directory = replicates_directory.joinpath(f"replicate-{i:0{width}}")
         replicate_directory.mkdir(exist_ok=True, parents=True)
@@ -559,13 +605,13 @@ def save_pipeline_results_to_directory(
         )
         for epoch, loss in enumerate(pipeline_result.losses):
             losses_rows.append((i, epoch, loss))
-        metrics.append({k: pipeline_result.get_metric(key=k) for k in metrics[0].keys()})
+        result_comparator.parse_from_result(result=pipeline_result)
 
     losses_df = pd.DataFrame(losses_rows, columns=["Replicate", "Epoch", "Loss"])
     losses_df.to_csv(directory.joinpath("all_replicates_losses.tsv"), sep="\t", index=False)
 
-    if metrics[0]:
-        metric_df = pd.DataFrame(data=metrics, index=["original"] + [f"replicate-{r}" for r in range(len(metrics) - 1)])
+    if result_comparator.is_non_empty():
+        metric_df = result_comparator.get_df()
         metric_df.to_csv(directory.joinpath("all_replicates_metrics.tsv"), sep="\t", index=False)
         logger.debug(f"metric results: {metric_df}")
 
