@@ -194,6 +194,7 @@ from dataclasses import dataclass, field
 from typing import Any, Collection, Dict, Iterable, List, Mapping, MutableMapping, Optional, Type, Union, cast
 
 import pandas as pd
+import scipy.stats
 import torch
 from torch.optim.optimizer import Optimizer
 
@@ -566,12 +567,28 @@ class _ResultAccumulator:
         return pd.DataFrame(data=self.data, columns=["original"] + self.keys)
 
 
-def compare_results(df: pd.DataFrame) -> pd.DataFrame:
+def compare_results(df: pd.DataFrame, significance_level: float = 0.01) -> pd.DataFrame:
     """Compare original and replicated results."""
+    metrics = sorted(set(df.columns).difference(["original"]))
     mean_result = df.groupby(by="original").agg("mean")
-    difference = mean_result.loc[False] - mean_result.loc[True]
-    # TODO: significance?
-    return pd.DataFrame(data=dict(difference=difference))
+    difference = mean_result.loc[False, metrics] - mean_result.loc[True, metrics]
+    original_mask = df["original"]
+    # TODO: use scipy.stats.ttest_1samp if only one original value (=mean)
+    p_values = [
+        scipy.stats.ttest_ind(
+            a=df.loc[original_mask, metric],
+            b=df.loc[~original_mask, metric],
+            equal_var=False,
+        ).pvalue
+        for metric in metrics
+    ]
+    return pd.DataFrame(
+        data=dict(
+            difference=difference,
+            p=p_values,
+            significant=[p < significance_level for p in p_values],
+        )
+    )
 
 
 def save_pipeline_results_to_directory(
