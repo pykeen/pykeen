@@ -4,12 +4,13 @@
 
 import dataclasses
 import ftplib
+import inspect
 import json
 import logging
 import os
 import pathlib
 from dataclasses import dataclass
-from typing import Any, Callable, Collection, Dict, Mapping, Optional, Type, Union, cast
+from typing import Any, Callable, Collection, Dict, Iterable, Mapping, Optional, Type, Union, cast
 
 import torch
 from optuna import Study, Trial, create_study
@@ -40,15 +41,25 @@ from ..utils import Result, ensure_ftp_directory, fix_dataclass_init_docs, get_d
 from ..version import get_git_hash, get_version
 
 __all__ = [
-    'hpo_pipeline_from_path',
-    'hpo_pipeline_from_config',
-    'hpo_pipeline',
-    'HpoPipelineResult',
+    "hpo_pipeline_from_path",
+    "hpo_pipeline_from_config",
+    "hpo_pipeline",
+    "HpoPipelineResult",
 ]
 
 logger = logging.getLogger(__name__)
 
-STOPPED_EPOCH_KEY = 'stopped_epoch'
+STOPPED_EPOCH_KEY = "stopped_epoch"
+
+
+class ExtraKeysError(ValueError):
+    """Raised on extra keys being used."""
+
+    def __init__(self, keys: Iterable[str]):
+        super().__init__(sorted(keys))
+
+    def __str__(self) -> str:
+        return f"Invalid keys: {self.args[0]}"
 
 
 @dataclass
@@ -118,7 +129,7 @@ class Objective:
         def _stopped_callback(_early_stopper: EarlyStopper, _result: Union[float, int], epoch: int) -> None:
             trial.set_user_attr(STOPPED_EPOCH_KEY, epoch)
 
-        for key, callback in zip(('result_callbacks', 'stopped_callbacks'), (_result_callback, _stopped_callback)):
+        for key, callback in zip(("result_callbacks", "stopped_callbacks"), (_result_callback, _stopped_callback)):
             stopper_kwargs.setdefault(key, []).append(callback)
 
     def __call__(self, trial: Trial) -> Optional[float]:
@@ -126,16 +137,16 @@ class Objective:
         if self.model_kwargs is not None:
             problems = [
                 x
-                for x in ('loss', 'regularizer', 'optimizer', 'lr_scheduler', 'training', 'negative_sampler', 'stopper')
+                for x in ("loss", "regularizer", "optimizer", "lr_scheduler", "training", "negative_sampler", "stopper")
                 if x in self.model_kwargs
             ]
             if problems:
-                raise ValueError(f'model_kwargs should not have: {problems}. {self}')
+                raise ValueError(f"model_kwargs should not have: {problems}. {self}")
 
         # 2. Model
         _model_kwargs = _get_kwargs(
             trial=trial,
-            prefix='model',
+            prefix="model",
             default_kwargs_ranges=self.model.hpo_default,
             kwargs=self.model_kwargs,
             kwargs_ranges=self.model_kwargs_ranges,
@@ -144,13 +155,13 @@ class Objective:
         try:
             loss_default_kwargs_ranges = self.loss.hpo_default
         except AttributeError:
-            logger.warning('using a loss function with no hpo_default field: %s', self.loss)
+            logger.warning("using a loss function with no hpo_default field: %s", self.loss)
             loss_default_kwargs_ranges = {}
 
         # 3. Loss
         _loss_kwargs = _get_kwargs(
             trial=trial,
-            prefix='loss',
+            prefix="loss",
             default_kwargs_ranges=loss_default_kwargs_ranges,
             kwargs=self.loss_kwargs,
             kwargs_ranges=self.loss_kwargs_ranges,
@@ -162,7 +173,7 @@ class Objective:
         else:
             _regularizer_kwargs = _get_kwargs(
                 trial=trial,
-                prefix='regularizer',
+                prefix="regularizer",
                 default_kwargs_ranges=self.regularizer.hpo_default,
                 kwargs=self.regularizer_kwargs,
                 kwargs_ranges=self.regularizer_kwargs_ranges,
@@ -170,7 +181,7 @@ class Objective:
         # 5. Optimizer
         _optimizer_kwargs = _get_kwargs(
             trial=trial,
-            prefix='optimizer',
+            prefix="optimizer",
             default_kwargs_ranges=optimizers_hpo_defaults[self.optimizer],
             kwargs=self.optimizer_kwargs,
             kwargs_ranges=self.optimizer_kwargs_ranges,
@@ -180,7 +191,7 @@ class Objective:
         if self.lr_scheduler is not None:
             _lr_scheduler_kwargs = _get_kwargs(
                 trial=trial,
-                prefix='lr_scheduler',
+                prefix="lr_scheduler",
                 default_kwargs_ranges=lr_schedulers_hpo_defaults[self.lr_scheduler],
                 kwargs=self.lr_scheduler_kwargs,
                 kwargs_ranges=self.lr_scheduler_kwargs_ranges,
@@ -189,18 +200,31 @@ class Objective:
         _negative_sampler_kwargs: Mapping[str, Any]
         if self.training_loop is not SLCWATrainingLoop:
             _negative_sampler_kwargs = {}
+        elif self.negative_sampler is None:
+            raise ValueError("Negative sampler class must be made explicit when training under sLCWA")
         else:
+            # TODO this fixes the issue for negative samplers, but does not generally address it.
+            #  For example, some of them obscure their arguments with **kwargs, so should we look
+            #  at the parent class? Sounds like something to put in class resolver by using the
+            #  inspect module. For now, this solution will rely on the fact that the sampler is a
+            #  direct descendent of a parent NegativeSampler
+            direct_params = inspect.signature(self.negative_sampler).parameters
+            parent_params = inspect.signature(self.negative_sampler.__bases__[0]).parameters
+            valid_keys = set(direct_params).union(parent_params) - {"kwargs"}
+            invalid_keys = set(self.negative_sampler_kwargs_ranges or []) - valid_keys
+            if invalid_keys:
+                raise ExtraKeysError(invalid_keys)
             _negative_sampler_kwargs = _get_kwargs(
                 trial=trial,
-                prefix='negative_sampler',
-                default_kwargs_ranges={} if self.negative_sampler is None else self.negative_sampler.hpo_default,
+                prefix="negative_sampler",
+                default_kwargs_ranges=self.negative_sampler.hpo_default,
                 kwargs=self.negative_sampler_kwargs,
                 kwargs_ranges=self.negative_sampler_kwargs_ranges,
             )
 
         _training_kwargs = _get_kwargs(
             trial=trial,
-            prefix='training',
+            prefix="training",
             default_kwargs_ranges=self.training_loop.hpo_default,
             kwargs=self.training_kwargs,
             kwargs_ranges=self.training_kwargs_ranges,
@@ -264,7 +288,7 @@ class Objective:
             # close run in result tracker
             result_tracker.end_run(success=False)
 
-            trial.set_user_attr('failure', str(e))
+            trial.set_user_attr("failure", str(e))
             # Will trigger Optuna to set the state of the trial as failed
             return None
         else:
@@ -273,7 +297,7 @@ class Objective:
                 os.makedirs(model_directory, exist_ok=True)
                 result.save_to_directory(model_directory)
 
-            trial.set_user_attr('random_seed', result.random_seed)
+            trial.set_user_attr("random_seed", result.random_seed)
 
             for k, v in result.metric_results.to_flat_dict().items():
                 trial.set_user_attr(k, v)
@@ -293,15 +317,15 @@ class HpoPipelineResult(Result):
 
     def _get_best_study_config(self):
         metadata = {
-            'best_trial_number': self.study.best_trial.number,
-            'best_trial_evaluation': self.study.best_value,
+            "best_trial_number": self.study.best_trial.number,
+            "best_trial_evaluation": self.study.best_value,
         }
 
         pipeline_config = dict()
         for k, v in self.study.user_attrs.items():
-            if k.startswith('pykeen_'):
-                metadata[k[len('pykeen_'):]] = v
-            elif k in {'metric'}:
+            if k.startswith("pykeen_"):
+                metadata[k[len("pykeen_") :]] = v
+            elif k in {"metric"}:
                 continue
             else:
                 pipeline_config[k] = v
@@ -310,33 +334,33 @@ class HpoPipelineResult(Result):
             field_value = getattr(self.objective, field.name)
             if not field_value:
                 continue
-            if field.name.endswith('_kwargs'):
-                logger.debug(f'saving pre-specified field in pipeline config: {field.name}={field_value}')
+            if field.name.endswith("_kwargs"):
+                logger.debug(f"saving pre-specified field in pipeline config: {field.name}={field_value}")
                 pipeline_config[field.name] = field_value
-            elif field.name in {'training', 'testing', 'validation'}:
+            elif field.name in {"training", "testing", "validation"}:
                 pipeline_config[field.name] = field_value if isinstance(field_value, str) else USER_DEFINED_CODE
 
         for k, v in self.study.best_params.items():
-            sk, ssk = k.split('.')
-            sk = f'{sk}_kwargs'
+            sk, ssk = k.split(".")
+            sk = f"{sk}_kwargs"
             if sk not in pipeline_config:
                 pipeline_config[sk] = {}
-            logger.debug(f'saving optimized field in pipeline config: {sk}.{ssk}={v}')
+            logger.debug(f"saving optimized field in pipeline config: {sk}.{ssk}={v}")
             pipeline_config[sk][ssk] = v
 
-        for k in ('stopper', 'stopper_kwargs'):
+        for k in ("stopper", "stopper_kwargs"):
             if k in pipeline_config:
                 v = pipeline_config.pop(k)
-                metadata[f'_{k}_removed_comment'] = f'{k} config removed after HPO: {v}'
+                metadata[f"_{k}_removed_comment"] = f"{k} config removed after HPO: {v}"
 
         stopped_epoch = self.study.best_trial.user_attrs.get(STOPPED_EPOCH_KEY)
         if stopped_epoch is not None:
-            old_num_epochs = pipeline_config['training_kwargs']['num_epochs']
-            metadata['_stopper_comment'] = (
-                f'While the original config had {old_num_epochs},'
-                f' early stopping will now switch it to {int(stopped_epoch)}'
+            old_num_epochs = pipeline_config["training_kwargs"]["num_epochs"]
+            metadata["_stopper_comment"] = (
+                f"While the original config had {old_num_epochs},"
+                f" early stopping will now switch it to {int(stopped_epoch)}"
             )
-            pipeline_config['training_kwargs']['num_epochs'] = int(stopped_epoch)
+            pipeline_config["training_kwargs"]["num_epochs"] = int(stopped_epoch)
         return dict(metadata=metadata, pipeline=pipeline_config)
 
     def save_to_directory(self, directory: Union[str, pathlib.Path], **kwargs) -> None:
@@ -346,17 +370,17 @@ class HpoPipelineResult(Result):
         directory.mkdir(exist_ok=True, parents=True)
 
         # Output study information
-        with directory.joinpath('study.json').open('w') as file:
+        with directory.joinpath("study.json").open("w") as file:
             json.dump(self.study.user_attrs, file, indent=2, sort_keys=True)
 
         # Output all trials
         df = self.study.trials_dataframe()
-        df.to_csv(directory.joinpath('trials.tsv'), sep='\t', index=False)
+        df.to_csv(directory.joinpath("trials.tsv"), sep="\t", index=False)
 
-        best_pipeline_directory = directory.joinpath('best_pipeline')
+        best_pipeline_directory = directory.joinpath("best_pipeline")
         best_pipeline_directory.mkdir(exist_ok=True, parents=True)
         # Output best trial as pipeline configuration file
-        with best_pipeline_directory.joinpath('pipeline_config.json').open('w') as file:
+        with best_pipeline_directory.joinpath("pipeline_config.json").open("w") as file:
             json.dump(self._get_best_study_config(), file, indent=2, sort_keys=True)
 
     def save_to_ftp(self, directory: str, ftp: ftplib.FTP):
@@ -367,17 +391,17 @@ class HpoPipelineResult(Result):
         """
         ensure_ftp_directory(ftp=ftp, directory=directory)
 
-        study_path = os.path.join(directory, 'study.json')
-        ftp.storbinary(f'STOR {study_path}', get_json_bytes_io(self.study.user_attrs))
+        study_path = os.path.join(directory, "study.json")
+        ftp.storbinary(f"STOR {study_path}", get_json_bytes_io(self.study.user_attrs))
 
-        trials_path = os.path.join(directory, 'trials.tsv')
-        ftp.storbinary(f'STOR {trials_path}', get_df_io(self.study.trials_dataframe()))
+        trials_path = os.path.join(directory, "trials.tsv")
+        ftp.storbinary(f"STOR {trials_path}", get_df_io(self.study.trials_dataframe()))
 
-        best_pipeline_directory = os.path.join(directory, 'best_pipeline')
+        best_pipeline_directory = os.path.join(directory, "best_pipeline")
         ensure_ftp_directory(ftp=ftp, directory=best_pipeline_directory)
 
-        best_config_path = os.path.join(best_pipeline_directory, 'pipeline_config.json')
-        ftp.storbinary(f'STOR {best_config_path}', get_json_bytes_io(self._get_best_study_config()))
+        best_config_path = os.path.join(best_pipeline_directory, "pipeline_config.json")
+        ftp.storbinary(f"STOR {best_config_path}", get_json_bytes_io(self._get_best_study_config()))
 
     def save_to_s3(self, directory: str, bucket: str, s3=None) -> None:
         """Save all artifacts to the given directory in an S3 Bucket.
@@ -388,15 +412,16 @@ class HpoPipelineResult(Result):
         """
         if s3 is None:
             import boto3
-            s3 = boto3.client('s3')
 
-        study_path = os.path.join(directory, 'study.json')
+            s3 = boto3.client("s3")
+
+        study_path = os.path.join(directory, "study.json")
         s3.upload_fileobj(get_json_bytes_io(self.study.user_attrs), bucket, study_path)
 
-        trials_path = os.path.join(directory, 'trials.tsv')
+        trials_path = os.path.join(directory, "trials.tsv")
         s3.upload_fileobj(get_df_io(self.study.trials_dataframe()), bucket, trials_path)
 
-        best_config_path = os.path.join(directory, 'best_pipeline', 'pipeline_config.json')
+        best_config_path = os.path.join(directory, "best_pipeline", "pipeline_config.json")
         s3.upload_fileobj(get_json_bytes_io(self._get_best_study_config()), bucket, best_config_path)
 
     def replicate_best_pipeline(
@@ -416,8 +441,8 @@ class HpoPipelineResult(Result):
         """
         config = self._get_best_study_config()
 
-        if 'use_testing_data' in config:
-            raise ValueError('use_testing_data not be set in the configuration at at all!')
+        if "use_testing_data" in config:
+            raise ValueError("use_testing_data not be set in the configuration at at all!")
 
         replicate_pipeline_from_config(
             config=config,
@@ -439,8 +464,8 @@ def hpo_pipeline_from_path(path: Union[str, pathlib.Path], **kwargs) -> HpoPipel
 def hpo_pipeline_from_config(config: Mapping[str, Any], **kwargs) -> HpoPipelineResult:
     """Run the HPO pipeline using a properly formatted configuration dictionary."""
     return hpo_pipeline(
-        **config['pipeline'],
-        **config['optuna'],
+        **config["pipeline"],
+        **config["optuna"],
         **kwargs,
     )
 
@@ -631,7 +656,7 @@ def hpo_pipeline(
         or :meth:`optuna.study.Study.optimize`.
     """
     if direction is None:
-        direction = 'maximize'
+        direction = "maximize"
 
     study = create_study(
         storage=storage,
@@ -643,8 +668,8 @@ def hpo_pipeline(
     )
 
     # 0. Metadata/Provenance
-    study.set_user_attr('pykeen_version', get_version())
-    study.set_user_attr('pykeen_git_hash', get_git_hash())
+    study.set_user_attr("pykeen_version", get_version())
+    study.set_user_attr("pykeen_git_hash", get_git_hash())
     # 1. Dataset
     _set_study_dataset(
         study=study,
@@ -656,63 +681,63 @@ def hpo_pipeline(
 
     # 2. Model
     model_cls: Type[Model] = model_resolver.lookup(model)
-    study.set_user_attr('model', model_resolver.normalize_cls(model_cls))
-    logger.info(f'Using model: {model_cls}')
+    study.set_user_attr("model", model_resolver.normalize_cls(model_cls))
+    logger.info(f"Using model: {model_cls}")
     # 3. Loss
     loss_cls: Type[Loss] = model_cls.loss_default if loss is None else loss_resolver.lookup(loss)
-    study.set_user_attr('loss', loss_resolver.normalize_cls(loss_cls))
-    logger.info(f'Using loss: {loss_cls}')
+    study.set_user_attr("loss", loss_resolver.normalize_cls(loss_cls))
+    logger.info(f"Using loss: {loss_cls}")
     # 4. Regularizer
     regularizer_cls: Optional[Type[Regularizer]]
     if regularizer is not None:
         regularizer_cls = regularizer_resolver.lookup(regularizer)
-    elif getattr(model_cls, 'regularizer_default', None):
+    elif getattr(model_cls, "regularizer_default", None):
         regularizer_cls = model_cls.regularizer_default  # type:ignore
     else:
         regularizer_cls = None
     if regularizer_cls:
-        study.set_user_attr('regularizer', regularizer_cls.get_normalized_name())
-        logger.info(f'Using regularizer: {regularizer_cls}')
+        study.set_user_attr("regularizer", regularizer_cls.get_normalized_name())
+        logger.info(f"Using regularizer: {regularizer_cls}")
     # 5. Optimizer
     optimizer_cls: Type[Optimizer] = optimizer_resolver.lookup(optimizer)
-    study.set_user_attr('optimizer', optimizer_resolver.normalize_cls(optimizer_cls))
-    logger.info(f'Using optimizer: {optimizer_cls}')
+    study.set_user_attr("optimizer", optimizer_resolver.normalize_cls(optimizer_cls))
+    logger.info(f"Using optimizer: {optimizer_cls}")
     # 5.1 Learning Rate Scheduler
     lr_scheduler_cls: Optional[Type[LRScheduler]] = None
     if lr_scheduler is not None:
         lr_scheduler_cls = lr_scheduler_resolver.lookup(lr_scheduler)
-        study.set_user_attr('lr_scheduler', lr_scheduler_resolver.normalize_cls(lr_scheduler_cls))
-        logger.info(f'Using lr_scheduler: {lr_scheduler_cls}')
+        study.set_user_attr("lr_scheduler", lr_scheduler_resolver.normalize_cls(lr_scheduler_cls))
+        logger.info(f"Using lr_scheduler: {lr_scheduler_cls}")
     # 6. Training Loop
     training_loop_cls: Type[TrainingLoop] = training_loop_resolver.lookup(training_loop)
-    study.set_user_attr('training_loop', training_loop_cls.get_normalized_name())
-    logger.info(f'Using training loop: {training_loop_cls}')
+    study.set_user_attr("training_loop", training_loop_cls.get_normalized_name())
+    logger.info(f"Using training loop: {training_loop_cls}")
     negative_sampler_cls: Optional[Type[NegativeSampler]]
     if training_loop_cls is SLCWATrainingLoop:
         negative_sampler_cls = negative_sampler_resolver.lookup(negative_sampler)
         assert negative_sampler_cls is not None
-        study.set_user_attr('negative_sampler', negative_sampler_cls.get_normalized_name())
-        logger.info(f'Using negative sampler: {negative_sampler_cls}')
+        study.set_user_attr("negative_sampler", negative_sampler_cls.get_normalized_name())
+        logger.info(f"Using negative sampler: {negative_sampler_cls}")
     else:
         negative_sampler_cls = None
     # 7. Training
     if epochs is not None:
         training_kwargs = {} if training_kwargs is None else dict(training_kwargs)
-        training_kwargs['num_epochs'] = epochs
+        training_kwargs["num_epochs"] = epochs
     stopper_cls: Type[Stopper] = stopper_resolver.lookup(stopper)
-    if stopper_cls is EarlyStopper and training_kwargs_ranges and 'epochs' in training_kwargs_ranges:
-        raise ValueError('can not use early stopping while optimizing epochs')
+    if stopper_cls is EarlyStopper and training_kwargs_ranges and "epochs" in training_kwargs_ranges:
+        raise ValueError("can not use early stopping while optimizing epochs")
 
     # 8. Evaluation
     evaluator_cls: Type[Evaluator] = evaluator_resolver.lookup(evaluator)
-    study.set_user_attr('evaluator', evaluator_cls.get_normalized_name())
-    logger.info(f'Using evaluator: {evaluator_cls}')
+    study.set_user_attr("evaluator", evaluator_cls.get_normalized_name())
+    logger.info(f"Using evaluator: {evaluator_cls}")
     if metric is None:
         metric = ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX
-    study.set_user_attr('metric', metric)
-    logger.info(f'Attempting to {direction} {metric}')
-    study.set_user_attr('filter_validation_when_testing', filter_validation_when_testing)
-    logger.info('Filter validation triples when testing: %s', filter_validation_when_testing)
+    study.set_user_attr("metric", metric)
+    logger.info(f"Attempting to {direction} {metric}")
+    study.set_user_attr("filter_validation_when_testing", filter_validation_when_testing)
+    logger.info("Filter validation triples when testing: %s", filter_validation_when_testing)
 
     # 9. Tracking
     if not isinstance(result_tracker, ResultTracker):
@@ -820,51 +845,51 @@ def suggest_kwargs(
         if name in _kwargs:
             continue  # has been set by default, won't be suggested
 
-        prefixed_name = f'{prefix}.{name}'
+        prefixed_name = f"{prefix}.{name}"
 
         # TODO: make it even easier to specify categorical strategies just as lists
         # if isinstance(info, (tuple, list, set)):
         #     info = dict(type='categorical', choices=list(info))
 
-        dtype, low, high = info['type'], info.get('low'), info.get('high')
-        log = info.get('log') in {True, 'TRUE', 'True', 'true', 't', 'YES', 'Yes', 'yes', 'y'}
-        if dtype in {int, 'int'}:
-            scale = info.get('scale')
-            if scale in {'power_two', 'power'}:
+        dtype, low, high = info["type"], info.get("low"), info.get("high")
+        log = info.get("log") in {True, "TRUE", "True", "true", "t", "YES", "Yes", "yes", "y"}
+        if dtype in {int, "int"}:
+            scale = info.get("scale")
+            if scale in {"power_two", "power"}:
                 _kwargs[name] = suggest_discrete_power_int(
                     trial=trial,
                     name=prefixed_name,
                     low=low,
                     high=high,
-                    base=info.get('q') or info.get('base') or 2,
+                    base=info.get("q") or info.get("base") or 2,
                 )
-            elif scale is None or scale == 'linear':
+            elif scale is None or scale == "linear":
                 # get log from info - could either be a boolean or string
                 _kwargs[name] = trial.suggest_int(
                     name=prefixed_name,
                     low=low,
                     high=high,
-                    step=info.get('q') or info.get('step') or 1,
+                    step=info.get("q") or info.get("step") or 1,
                     log=log,
                 )
             else:
-                logger.warning(f'Unhandled scale {scale} for parameter {name} of data type {dtype}')
+                logger.warning(f"Unhandled scale {scale} for parameter {name} of data type {dtype}")
 
-        elif dtype in {float, 'float'}:
+        elif dtype in {float, "float"}:
             _kwargs[name] = trial.suggest_float(
                 name=prefixed_name,
                 low=low,
                 high=high,
-                step=info.get('q') or info.get('step'),
+                step=info.get("q") or info.get("step"),
                 log=log,
             )
-        elif dtype == 'categorical':
-            choices = info['choices']
+        elif dtype == "categorical":
+            choices = info["choices"]
             _kwargs[name] = trial.suggest_categorical(name=prefixed_name, choices=choices)
-        elif dtype in {bool, 'bool'}:
+        elif dtype in {bool, "bool"}:
             _kwargs[name] = trial.suggest_categorical(name=prefixed_name, choices=[True, False])
         else:
-            logger.warning(f'Unhandled data type ({dtype}) for parameter {name}')
+            logger.warning(f"Unhandled data type ({dtype}) for parameter {name}")
 
     return _kwargs
 
@@ -890,14 +915,11 @@ def _set_study_dataset(
             raise ValueError("Cannot specify dataset and training, testing and validation")
         elif isinstance(dataset, (str, pathlib.Path)):
             if isinstance(dataset, str) and has_dataset(dataset):
-                study.set_user_attr('dataset', get_dataset(dataset=dataset).get_normalized_name())
+                study.set_user_attr("dataset", get_dataset(dataset=dataset).get_normalized_name())
             else:
                 # otherwise, dataset refers to a file that should be automatically split
-                study.set_user_attr('dataset', str(dataset))
-        elif (
-            isinstance(dataset, Dataset)
-            or (isinstance(dataset, type) and issubclass(dataset, Dataset))
-        ):
+                study.set_user_attr("dataset", str(dataset))
+        elif isinstance(dataset, Dataset) or (isinstance(dataset, type) and issubclass(dataset, Dataset)):
             # this could be custom data, so don't store anything. However, it's possible to check if this
             # was a pre-registered dataset. If that's the desired functionality, we can uncomment the following:
             # dataset_name = dataset.get_normalized_name()  # this works both on instances and classes
@@ -905,11 +927,11 @@ def _set_study_dataset(
             #     study.set_user_attr('dataset', dataset_name)
             pass
         else:
-            raise TypeError(f'Dataset is invalid type: ({type(dataset)}) {dataset}')
+            raise TypeError(f"Dataset is invalid type: ({type(dataset)}) {dataset}")
     else:
         if isinstance(training, (str, pathlib.Path)):
-            study.set_user_attr('training', str(training))
+            study.set_user_attr("training", str(training))
         if isinstance(testing, (str, pathlib.Path)):
-            study.set_user_attr('testing', str(testing))
+            study.set_user_attr("testing", str(testing))
         if isinstance(validation, (str, pathlib.Path)):
-            study.set_user_attr('validation', str(validation))
+            study.set_user_attr("validation", str(validation))

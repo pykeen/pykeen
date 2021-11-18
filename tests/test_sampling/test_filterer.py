@@ -27,12 +27,14 @@ class FiltererTest(unittest_templates.GenericTestCase[Filterer]):
         return kwargs
 
     def post_instantiation_hook(self) -> None:  # noqa: D102
-        self.positive_batch = self.mapped_triples[torch.randint(
-            low=0,
-            high=self.mapped_triples.shape[0],
-            size=(self.batch_size,),
-            generator=self.generator,
-        )]
+        self.positive_batch = self.mapped_triples[
+            torch.randint(
+                low=0,
+                high=self.mapped_triples.shape[0],
+                size=(self.batch_size,),
+                generator=self.generator,
+            )
+        ]
 
     def test_filter(self):
         """Test the filter method."""

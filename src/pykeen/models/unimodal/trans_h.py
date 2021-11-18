@@ -5,6 +5,7 @@
 from typing import Any, ClassVar, Mapping, Type
 
 import torch
+from torch import linalg
 from torch.nn import functional
 from torch.nn.init import uniform_
 
@@ -15,7 +16,7 @@ from ...regularizers import Regularizer, TransHRegularizer
 from ...typing import Hint, Initializer
 
 __all__ = [
-    'TransH',
+    "TransH",
 ]
 
 
@@ -120,7 +121,7 @@ class TransH(EntityRelationEmbeddingModel):
     def regularize_if_necessary(self, *tensors: torch.FloatTensor) -> None:
         """Update the regularizer's term given some tensors, if regularization is requested."""
         if tensors:
-            raise ValueError('no tensors should be passed to TransH.regularize_if_necessary')
+            raise ValueError("no tensors should be passed to TransH.regularize_if_necessary")
         # As described in [wang2014], all entities and relations are used to compute the regularization term
         # which enforces the defined soft constraints.
         super().regularize_if_necessary(
@@ -143,7 +144,7 @@ class TransH(EntityRelationEmbeddingModel):
         # Regularization term
         self.regularize_if_necessary()
 
-        return -torch.norm(ph + d_r - pt, p=2, dim=-1, keepdim=True)
+        return -linalg.vector_norm(ph + d_r - pt, ord=2, dim=-1, keepdim=True)
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
@@ -159,7 +160,7 @@ class TransH(EntityRelationEmbeddingModel):
         # Regularization term
         self.regularize_if_necessary()
 
-        return -torch.norm(ph[:, None, :] + d_r[:, None, :] - pt, p=2, dim=-1)
+        return -linalg.vector_norm(ph[:, None, :] + d_r[:, None, :] - pt, ord=2, dim=-1)
 
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
@@ -176,4 +177,4 @@ class TransH(EntityRelationEmbeddingModel):
         # Regularization term
         self.regularize_if_necessary()
 
-        return -torch.norm(ph + d_r[:, None, :] - pt[:, None, :], p=2, dim=-1)
+        return -linalg.vector_norm(ph + (d_r[:, None, :] - pt[:, None, :]), ord=2, dim=-1)

@@ -6,6 +6,7 @@ from typing import Any, ClassVar, Mapping
 
 import torch
 import torch.autograd
+from torch import linalg
 
 from ..base import EntityRelationEmbeddingModel
 from ...nn.emb import EmbeddingSpecification
@@ -14,7 +15,7 @@ from ...typing import Constrainer, Hint, Initializer
 from ...utils import complex_normalize
 
 __all__ = [
-    'RotatE',
+    "RotatE",
 ]
 
 
@@ -117,7 +118,7 @@ class RotatE(EntityRelationEmbeddingModel):
         )
         # Workaround until https://github.com/pytorch/pytorch/issues/30704 is fixed
         diff = rot_h - t
-        scores = -torch.norm(diff.view(diff.shape[:-2] + (-1,)), dim=-1)
+        scores = -linalg.vector_norm(diff, dim=(-2, -1))
 
         return scores
 

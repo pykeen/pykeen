@@ -62,8 +62,17 @@
 .. [zhang2019b] Zhang, W., *et al.* (2019). `Interaction Embeddings for Prediction and Explanation in Knowledge
    Graphs <https://doi.org/10.1145/3289600.3291014>`. WSDM '19: Proceedings of the Twelfth ACM International
    Conference on Web Search and Data Mining.
+.. [abboud2020] Abboud, R., *et al.* (2020). `BoxE: A box embedding model for knowledge base completion
+   <https://proceedings.neurips.cc/paper/2020/file/6dbbe6abe5f14af882ff977fc3f35501-Paper.pdf>`_.
+   *Advances in Neural Information Processing Systems*, 2020-December(NeurIPS), 1–13.
+.. [galkin2021] Galkin, M., *et al.* (2021) `NodePiece: Compositional and Parameter-Efficient Representations
+   of Large Knowledge Graphs <https://arxiv.org/abs/2106.12144>`_. *arXiv*, 2106.12144.
+.. [zaheer2017] Zaheer, M., *et al.* (2017). `Deep sets
+   <https://papers.nips.cc/paper/2017/hash/f22e4747da1aa27e363d86d40ff442fe-Abstract.html>`_.
+   *Advances in Neural Information Processing Systems*, 2017-December(ii), 3392–3402.
 """
 
+from .boxe import BoxE
 from .compgcn import CompGCN
 from .complex import ComplEx
 from .conv_e import ConvE
@@ -76,6 +85,7 @@ from .ermlpe import ERMLPE
 from .hole import HolE
 from .kg2e import KG2E
 from .mure import MuRE
+from .node_piece import NodePiece
 from .ntn import NTN
 from .pair_re import PairRE
 from .proj_e import ProjE
@@ -95,33 +105,35 @@ from .tucker import TuckER
 from .unstructured_model import UnstructuredModel
 
 __all__ = [
-    'CompGCN',
-    'ComplEx',
-    'ConvE',
-    'ConvKB',
-    'CrossE',
-    'DistMA',
-    'DistMult',
-    'ERMLP',
-    'ERMLPE',
-    'HolE',
-    'KG2E',
-    'MuRE',
-    'NTN',
-    'PairRE',
-    'ProjE',
-    'QuatE',
-    'RESCAL',
-    'RGCN',
-    'RotatE',
-    'SimplE',
-    'StructuredEmbedding',
-    'TorusE',
-    'TransD',
-    'TransE',
-    'TransF',
-    'TransH',
-    'TransR',
-    'TuckER',
-    'UnstructuredModel',
+    "BoxE",
+    "CompGCN",
+    "ComplEx",
+    "ConvE",
+    "ConvKB",
+    "CrossE",
+    "DistMA",
+    "DistMult",
+    "ERMLP",
+    "ERMLPE",
+    "HolE",
+    "KG2E",
+    "MuRE",
+    "NTN",
+    "NodePiece",
+    "PairRE",
+    "ProjE",
+    "QuatE",
+    "RESCAL",
+    "RGCN",
+    "RotatE",
+    "SimplE",
+    "StructuredEmbedding",
+    "TorusE",
+    "TransD",
+    "TransE",
+    "TransF",
+    "TransH",
+    "TransR",
+    "TuckER",
+    "UnstructuredModel",
 ]

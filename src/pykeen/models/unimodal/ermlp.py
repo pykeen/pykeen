@@ -14,7 +14,7 @@ from ...nn.emb import EmbeddingSpecification
 from ...typing import Hint, Initializer
 
 __all__ = [
-    'ERMLP',
+    "ERMLP",
 ]
 
 
@@ -91,7 +91,7 @@ class ERMLP(EntityRelationEmbeddingModel):
         nn.init.zeros_(self.linear1.bias)
         nn.init.xavier_uniform_(self.linear1.weight)
         nn.init.zeros_(self.linear2.bias)
-        nn.init.xavier_uniform_(self.linear2.weight, gain=nn.init.calculate_gain('relu'))
+        nn.init.xavier_uniform_(self.linear2.weight, gain=nn.init.calculate_gain("relu"))
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings

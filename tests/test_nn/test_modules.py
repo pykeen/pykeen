@@ -51,12 +51,24 @@ class ConvETests(cases.InteractionTestCase):
         return h, r, (t, t_bias)
 
     def _exp_score(
-        self, embedding_height, embedding_width, h, hr1d, hr2d, input_channels, r, t, t_bias,
+        self,
+        embedding_height,
+        embedding_width,
+        h,
+        hr1d,
+        hr2d,
+        input_channels,
+        r,
+        t,
+        t_bias,
     ) -> torch.FloatTensor:
-        x = torch.cat([
-            h.view(1, input_channels, embedding_height, embedding_width),
-            r.view(1, input_channels, embedding_height, embedding_width),
-        ], dim=2)
+        x = torch.cat(
+            [
+                h.view(1, input_channels, embedding_height, embedding_width),
+                r.view(1, input_channels, embedding_height, embedding_width),
+            ],
+            dim=2,
+        )
         x = hr2d(x)
         x = x.view(-1, numpy.prod(x.shape[-3:]))
         x = hr1d(x)
@@ -167,7 +179,7 @@ class NTNTests(cases.InteractionTestCase):
         # shapes: w: (k, dim, dim), vh/vt: (k, dim), b/u: (k,), h/t: (dim,)
         # remove batch/num dimension
         h, t, w, vt, vh, b, u = strip_dim(h, t, w, vt, vh, b, u)
-        score = 0.
+        score = 0.0
         for i in range(u.shape[-1]):
             first_part = h.view(1, self.dim) @ w[i] @ t.view(self.dim, 1)
             second_part = (vh[i] * h.view(-1)).sum()
@@ -276,12 +288,12 @@ class TransDTests(cases.TranslationalInteractionTests):
     def test_manual_small_relation_dim(self):
         """Manually test the value of the interaction function."""
         # entity embeddings
-        h = t = torch.as_tensor(data=[2., 2.], dtype=torch.float).view(1, 2)
-        h_p = t_p = torch.as_tensor(data=[3., 3.], dtype=torch.float).view(1, 2)
+        h = t = torch.as_tensor(data=[2.0, 2.0], dtype=torch.float).view(1, 2)
+        h_p = t_p = torch.as_tensor(data=[3.0, 3.0], dtype=torch.float).view(1, 2)
 
         # relation embeddings
-        r = torch.as_tensor(data=[4.], dtype=torch.float).view(1, 1)
-        r_p = torch.as_tensor(data=[5.], dtype=torch.float).view(1, 1)
+        r = torch.as_tensor(data=[4.0], dtype=torch.float).view(1, 1)
+        r_p = torch.as_tensor(data=[5.0], dtype=torch.float).view(1, 1)
 
         # Compute Scores
         scores = self.instance.score_hrt(h=(h, h_p), r=(r, r_p), t=(t, t_p))
@@ -291,12 +303,12 @@ class TransDTests(cases.TranslationalInteractionTests):
     def test_manual_big_relation_dim(self):
         """Manually test the value of the interaction function."""
         # entity embeddings
-        h = t = torch.as_tensor(data=[2., 2.], dtype=torch.float).view(1, 2)
-        h_p = t_p = torch.as_tensor(data=[3., 3.], dtype=torch.float).view(1, 2)
+        h = t = torch.as_tensor(data=[2.0, 2.0], dtype=torch.float).view(1, 2)
+        h_p = t_p = torch.as_tensor(data=[3.0, 3.0], dtype=torch.float).view(1, 2)
 
         # relation embeddings
-        r = torch.as_tensor(data=[3., 3., 3.], dtype=torch.float).view(1, 3)
-        r_p = torch.as_tensor(data=[4., 4., 4.], dtype=torch.float).view(1, 3)
+        r = torch.as_tensor(data=[3.0, 3.0, 3.0], dtype=torch.float).view(1, 3)
+        r_p = torch.as_tensor(data=[4.0, 4.0, 4.0], dtype=torch.float).view(1, 3)
 
         # Compute Scores
         scores = self.instance.score_hrt(h=(h, h_p), r=(r, r_p), t=(t, t_p))
@@ -353,7 +365,7 @@ class TransRTests(cases.TranslationalInteractionTests):
     def _exp_score(self, h, r, m_r, t, p, power_norm) -> torch.FloatTensor:
         assert power_norm
         h, r, m_r, t = strip_dim(h, r, m_r, t)
-        h_bot, t_bot = [clamp_norm(x.unsqueeze(dim=0) @ m_r, p=2, dim=-1, maxnorm=1.) for x in (h, t)]
+        h_bot, t_bot = [clamp_norm(x.unsqueeze(dim=0) @ m_r, p=2, dim=-1, maxnorm=1.0) for x in (h, t)]
         return -((h_bot + r - t_bot) ** p).sum()
 
 
@@ -439,7 +451,7 @@ class TorusETests(cases.TranslationalInteractionTests):
         power_norm: bool = False,
     ) -> torch.FloatTensor:
         assert not power_norm
-        d = (h + r - t)
+        d = h + r - t
         d = d - torch.floor(d)
         d = torch.minimum(d, 1.0 - d)
         return -d.norm(p=p)
@@ -483,8 +495,8 @@ class MonotonicAffineTransformationInteractionTests(cases.InteractionTestCase):
             s_t = self.instance(h=h, r=r, t=t).view(-1)
             s_o = self.instance.base(h=h, r=r, t=t).view(-1)
             # intra-interaction comparison
-            c_t = (s_t.unsqueeze(dim=0) > s_t.unsqueeze(dim=1))
-            c_o = (s_o.unsqueeze(dim=0) > s_o.unsqueeze(dim=1))
+            c_t = s_t.unsqueeze(dim=0) > s_t.unsqueeze(dim=1)
+            c_o = s_o.unsqueeze(dim=0) > s_o.unsqueeze(dim=1)
             assert (c_t == c_o).all()
 
 
@@ -498,4 +510,6 @@ class InteractionTestsTestCase(unittest_templates.MetaTestCase[Interaction]):
         FunctionalInteraction,
         TranslationalInteraction,
         LiteralInteraction,
+        # FIXME
+        pykeen.nn.modules.BoxEInteraction,
     }

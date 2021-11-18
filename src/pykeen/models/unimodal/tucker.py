@@ -16,7 +16,7 @@ from ...nn.init import xavier_normal_
 from ...typing import Hint, Initializer
 
 __all__ = [
-    'TuckER',
+    "TuckER",
 ]
 
 
@@ -137,7 +137,7 @@ class TuckER(EntityRelationEmbeddingModel):
     def _reset_parameters_(self):  # noqa: D102
         super()._reset_parameters_()
         # Initialize core tensor, cf. https://github.com/ibalazevic/TuckER/blob/master/model.py#L12
-        nn.init.uniform_(self.core_tensor, -1., 1.)
+        nn.init.uniform_(self.core_tensor, -1.0, 1.0)
 
     def _scoring_function(
         self,
@@ -172,7 +172,7 @@ class TuckER(EntityRelationEmbeddingModel):
 
         # compute whr = DO(BN(h_n x_1 wr))
         wr = wr.view(-1, d_e, d_e)
-        whr = (h @ wr)
+        whr = h @ wr
         if self.apply_batch_normalization:
             whr = _apply_bn_to_tensor(batch_norm=self.bn_1, tensor=whr)
         whr = self.hidden_dropout_2(whr)

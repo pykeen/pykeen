@@ -15,7 +15,7 @@ from ...regularizers import LpRegularizer, Regularizer
 from ...typing import Constrainer, Hint, Initializer
 
 __all__ = [
-    'DistMult',
+    "DistMult",
 ]
 
 

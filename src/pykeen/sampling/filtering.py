@@ -204,10 +204,7 @@ class PythonSetFilterer(Filterer):
 
     def contains(self, batch: MappedTriples) -> torch.BoolTensor:  # noqa: D102
         return torch.as_tensor(
-            data=[
-                tuple(triple) in self.triples
-                for triple in batch.view(-1, 3).tolist()
-            ],
+            data=[tuple(triple) in self.triples for triple in batch.view(-1, 3).tolist()],
             dtype=torch.bool,
             device=batch.device,
         ).view(*batch.shape[:-1])
@@ -324,9 +321,9 @@ class BloomFilterer(Filterer):
         for _ in range(self.rounds):
             # cf. https://github.com/skeeto/hash-prospector#two-round-functions
             x = x ^ (x >> 16)
-            x = x * 0x7feb352d
+            x = x * 0x7FEB352D
             x = x ^ (x >> 15)
-            x = x * 0x846ca68b
+            x = x * 0x846CA68B
             x = x ^ (x >> 16)
             yield x % self.bit_array.shape[0]
 

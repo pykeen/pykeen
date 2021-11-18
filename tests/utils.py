@@ -5,7 +5,7 @@
 import torch
 
 __all__ = [
-    'rand',
+    "rand",
 ]
 
 

@@ -19,7 +19,7 @@ class TestLiteralModel(unittest.TestCase):
             model=model,
             training_kwargs=dict(num_epochs=5, use_tqdm=False),
             evaluation_kwargs=dict(use_tqdm=False),
-            training_loop='lcwa',
+            training_loop="lcwa",
         )
         self.assertIsNotNone(rv)
         with tempfile.TemporaryDirectory() as d:

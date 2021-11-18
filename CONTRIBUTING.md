@@ -18,69 +18,110 @@ the problems the KGE community is currently facing, and has a lot of excited peo
 
 Same drill! Submit an issue and we'll have a nice conversation in the thread.
 
-## Want to Contribute Code?
+## Code Contribution
 
-1. Get the code. Fork the repository from GitHub using the big green button in the top-right corner of
-   https://github.com/pykeen/pykeen
-2. Clone your directory with
+This project uses the [GitHub Flow](https://guides.github.com/introduction/flow)
+model for code contributions. Follow these steps:
 
-    ```shell
-    $ git clone https://github.com/<YourUsername>/pykeen
-    ```
-3. Install with `pip`. The flag, `-e`, makes your installation editable, so your changes will be reflected
-   automatically in your installation.
+1. [Create a fork](https://help.github.com/articles/fork-a-repo) of the upstream
+   repository
+   at [`pykeen/pykeen`](https://github.com/pykeen/pykeen)
+   on your GitHub account (or in one of your organizations)
+2. [Clone your fork](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository)
+   with `git clone https://github.com/<your namespace here>/pykeen.git`
+3. Make and commit changes to your fork with `git commit`
+4. Push changes to your fork with `git push`
+5. Repeat steps 3 and 4 as needed
+6. Submit a pull request back to the upstream repository
 
-    ```shell
-    $ cd pykeen
-    $ python3 -m pip install -e .
-    ```
-4. Make a branch off of the master branch, then make contributions! This line makes a new branch and checks it out
+### Merge Model
 
-    ```shell
-    $ git checkout -b feature/<YourFeatureName>
-    ```
-5. This project should be well tested, so write unit tests in the `tests/` directory
-6. Check that all tests are passing and code coverage is good with `tox` before committing.
+This project
+uses [squash merges](https://docs.github.com/en/github/collaborating-with-pull-requests/incorporating-changes-from-a-pull-request/about-pull-request-merges#squash-and-merge-your-pull-request-commits)
+to group all related commits in a given pull request into a single commit upon
+acceptance and merge into the main branch. This has several benefits:
 
-    ```shell
-    $ tox
-    ```
-## Pull Requests
+1. Keeps the commit history on the main branch focused on high-level narrative
+2. Enables people to make lots of small commits without worrying about muddying
+   up the commit history
+3. Commits correspond 1-to-1 with pull requests
 
-Once you've got your feature or bugfix finished (or if its in a partially complete state but you want to publish it
-for comment), push it to your fork of the repository and open a pull request against the master branch on GitHub.
+### Code Style
 
-Make a descriptive comment about your pull request, perhaps referencing the issue it is meant to fix (something along
-the lines of "fixes issue #10" will cause GitHub to automatically link to that issue). The maintainers will review your
-pull request and perhaps make comments about it, request changes, or may pull it in to the master branch! If you need
-to make changes to your pull request, simply push more commits to the feature branch in your fork to GitHub and they
-will automatically be added to the pull. You do not need to close and reissue your pull request to make changes!
+This project encourages the use of optional static typing. It
+uses [`mypy`](http://mypy-lang.org/) as a type checker
+and [`sphinx_autodoc_typehints`](https://github.com/agronholm/sphinx-autodoc-typehints)
+to automatically generate documentation based on type hints. You can check if
+your code passes `mypy` with `tox -e mypy`.
 
-If you spend a while working on your changes, further commits may be made to the main `pykeen` repository (called
-"upstream") before you can make your pull request. In keep your fork up to date with upstream by pulling the
-changes--if your fork has diverged too much, it becomes difficult to properly merge pull requests without conflicts.
+This project uses [`black`](https://github.com/psf/black) to automatically
+enforce a consistent code style. You can apply `black` and other pre-configured
+linters with `tox -e lint`.
 
-To pull in upstream changes::
+This project uses [`flake8`](https://flake8.pycqa.org) and several plugins for
+additional checks of documentation style, security issues, good variable
+nomenclature, and more (
+see [`tox.ini`](tox.ini) for a list of flake8 plugins). You can check if your
+code passes `flake8` with `tox -e flake8`.
 
-    ```shell
-    $ git remote add upstream https://github.com/pykeen
-    $ git fetch upstream maser
-    ```
+Each of these checks are run on each commit using GitHub Actions as a continuous
+integration service. Passing all of them is required for accepting a
+contribution. If you're unsure how to address the feedback from one of these
+tools, please say so either in the description of your pull request or in a
+comment, and we will help you.
 
-Check the log to make sure the upstream changes don't affect your work too much::
+### Logging
 
-    ```shell
-    $ git log upstream/master
-    ```
+Python's builtin `print()` should not be used (except when writing to files),
+it's checked by the
+[`flake8-print`](https://github.com/jbkahn/flake8-print) plugin to `flake8`. If
+you're in a command line setting or `main()` function for a module, you can use
+`click.echo()`. Otherwise, you can use the builtin `logging` module by adding
+`logger = logging.getLogger(__name__)` below the imports at the top of your
+file.
 
-Then merge in the new changes::
+### Documentation
 
-    ```shell
-    $ git merge upstream/master
-    ```
+All public functions (i.e., not starting with an underscore `_`) should be
+documented using
+the [sphinx documentation format](https://sphinx-rtd-tutorial.readthedocs.io/en/latest/docstrings.html#the-sphinx-docstring-format).
+The [`darglint`](https://github.com/terrencepreilly/darglint) plugin to `flake8`
+reports on functions that are not fully documented.
 
-More information about this whole fork-pull-merge process can be found `here on Github's
-website <https://help.github.com/articles/fork-a-repo/>`_.
+This project uses [`sphinx`](https://www.sphinx-doc.org) to automatically build
+documentation into a narrative structure. You can check that the documentation
+properly builds with `tox -e docs`.
+
+### Testing
+
+Functions in this repository should be unit tested. These can either be written
+using the `unittest` framework in the `tests/` directory or as embedded
+doctests. You can check that the unit tests pass with `tox -e py` and that the
+doctests pass with `tox -e doctests`. These tests are required to pass for
+accepting a contribution.
+
+### Syncing your fork
+
+If other code is updated before your contribution gets merged, you might need to
+resolve conflicts against the main branch. After cloning, you should add the
+upstream repository with
+
+```shell
+$ git remote add pykeen https://github.com/pykeen/pykeen.git
+```
+
+Then, you can merge upstream code into your branch. You can also use the GitHub
+UI to do this by following [this tutorial](https://docs.github.com/en/github/collaborating-with-pull-requests/working-with-forks/syncing-a-fork).
+
+### Python Version Compatibility
+
+This project aims to support all versions of Python that have not passed their
+end-of-life dates. After end-of-life, the version will be removed from the Trove
+qualifiers in the [`setup.cfg`](setup.cfg) and from the GitHub Actions testing
+configuration.
+
+See https://endoflife.date/python for a timeline of Python release and
+end-of-life dates.
 
 ## Making a Release
 
@@ -100,7 +141,7 @@ ready to make a release, do the following:
    made before making a tag/release was the bump commit, click it, click "Recent Commits"
    then click the commit with the text `Bump version: X.Y.Z-dev -> X.Y.Z`.
 
-## Upload to PyPI
+### Upload to PyPI
 
 Directly after making a release, you can easily upload to PyPI using another `tox`
 command:

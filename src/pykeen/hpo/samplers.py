@@ -21,10 +21,10 @@ from class_resolver import Resolver
 from optuna.samplers import BaseSampler, GridSampler, RandomSampler, TPESampler
 
 __all__ = [
-    'sampler_resolver',
+    "sampler_resolver",
 ]
 
-_SAMPLER_SUFFIX = 'Sampler'
+_SAMPLER_SUFFIX = "Sampler"
 _SAMPLERS: Set[Type[BaseSampler]] = {
     RandomSampler,
     TPESampler,

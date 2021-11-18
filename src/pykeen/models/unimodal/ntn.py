@@ -14,7 +14,7 @@ from ...nn.modules import NTNInteraction
 from ...typing import Initializer
 
 __all__ = [
-    'NTN',
+    "NTN",
 ]
 
 
