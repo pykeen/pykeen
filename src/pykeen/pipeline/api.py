@@ -521,6 +521,9 @@ def _iterate_moved(pipeline_results: Iterable[PipelineResult]):
 class _ResultAccumulator:
     """Private class to simplify result collection code."""
 
+    data: List[List[Any]]
+    keys: List[str]
+
     def __init__(self) -> None:
         """Initialize the accumulator."""
         self.data = []
@@ -540,7 +543,8 @@ class _ResultAccumulator:
         .. note ::
             Make sure to call add_original_result at least once before to initialize the metrics to collect.
         """
-        self.data.append([False] + [result.get_metric(key=key) for key in self.keys])
+        row: List[Any] = [result.get_metric(key=key) for key in self.keys]
+        self.data.append([False] + row)
 
     def is_non_empty(self) -> bool:
         """Return whether there are keys."""
@@ -551,15 +555,23 @@ class _ResultAccumulator:
         Create dataframe of results.
 
         Example:
-
-        original | hits_at_10 |
-        True     | 0.85       |
-        False    | 0.87       |
-        False    | 0.83       |
+            | original | hits_at_10 |
+            | -------- | ---------- |
+            | True     | 0.85       |
+            | False    | 0.87       |
+            | False    | 0.83       |
 
         The example uses abbreviated metric names, while the actual dataframe uses the long canonical version.
         """
         return pd.DataFrame(data=self.data, columns=["original"] + self.keys)
+
+
+def compare_results(df: pd.DataFrame) -> pd.DataFrame:
+    """Compare original and replicated results."""
+    mean_result = df.groupby(by="original").agg("mean")
+    difference = mean_result.loc[False] - mean_result.loc[True]
+    # TODO: significance?
+    return pd.DataFrame(data=dict(difference=difference))
 
 
 def save_pipeline_results_to_directory(
@@ -614,6 +626,9 @@ def save_pipeline_results_to_directory(
         metric_df = result_comparator.get_df()
         metric_df.to_csv(directory.joinpath("all_replicates_metrics.tsv"), sep="\t", index=False)
         logger.debug(f"metric results: {metric_df}")
+
+        # summarize
+        logger.info(compare_results(metric_df).to_string())
 
 
 def pipeline_from_path(
