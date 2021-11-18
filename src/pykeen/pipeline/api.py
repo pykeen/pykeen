@@ -536,7 +536,7 @@ class _ResultAccumulator:
     def parse_from_result(self, result: PipelineResult) -> None:
         """
         Parse a replicated result from a pipeline result.
-        
+
         .. note ::
             Make sure to call add_original_result at least once before to initialize the metrics to collect.
         """
