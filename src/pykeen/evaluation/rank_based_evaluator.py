@@ -103,8 +103,8 @@ class MetricKey(NamedTuple):
     def __str__(self) -> str:
         components = [self.name, self.side, self.rank_type]
         if self.k:
-            components.append(self.k)
-        return ".".join(map(str, components))
+            components.append(str(self.k))
+        return ".".join(components)
 
 
 def compute_rank_from_scores(
