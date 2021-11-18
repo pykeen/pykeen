@@ -545,6 +545,9 @@ class _ResultAccumulator:
 
         .. note ::
             Make sure to call add_original_result at least once before to initialize the metrics to collect.
+
+        :param result:
+            the pipeline result
         """
         row: List[Any] = [result.get_metric(key=key) for key in self.keys]
         self.data.append([False] + row)
@@ -565,6 +568,9 @@ class _ResultAccumulator:
             | False    | 0.83       |
 
         The example uses abbreviated metric names, while the actual dataframe uses the long canonical version.
+
+        :return: original | metric1 | metric2 ...
+            a dataframe with the results of the original model and each replicate
         """
         return pd.DataFrame(data=self.data, columns=["original"] + self.keys)
 
