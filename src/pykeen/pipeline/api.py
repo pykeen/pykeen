@@ -202,6 +202,7 @@ from ..constants import PYKEEN_CHECKPOINTS, USER_DEFINED_CODE
 from ..datasets import get_dataset
 from ..datasets.base import Dataset
 from ..evaluation import Evaluator, MetricResults, evaluator_resolver
+from ..evaluation.rank_based_evaluator import resolve_metric_name
 from ..losses import Loss, loss_resolver
 from ..lr_schedulers import LRScheduler, lr_scheduler_resolver
 from ..models import Model, make_model_cls, model_resolver
@@ -532,8 +533,9 @@ class _ResultAccumulator:
 
     def add_original_result(self, result: Mapping[str, Any]) -> None:
         """Add an "original" result, i.e., one stored in the reproducibility configuration."""
-        result = flatten_dictionary(result)
-        # TODO: Normalize keys
+        # normalize keys
+        # TODO: this can only normalize rank-based metrics!
+        result = {str(resolve_metric_name(k)): v for k, v in flatten_dictionary(result).items()}
         self.keys = sorted(result.keys())
         self.data.append([True] + [result[k] for k in self.keys])
 
