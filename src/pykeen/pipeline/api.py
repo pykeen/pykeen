@@ -573,15 +573,19 @@ def compare_results(df: pd.DataFrame, significance_level: float = 0.01) -> pd.Da
     mean_result = df.groupby(by="original").agg("mean")
     difference = mean_result.loc[False, metrics] - mean_result.loc[True, metrics]
     original_mask = df["original"]
-    # TODO: use scipy.stats.ttest_1samp if only one original value (=mean)
-    p_values = [
-        scipy.stats.ttest_ind(
-            a=df.loc[original_mask, metric],
-            b=df.loc[~original_mask, metric],
+    if original_mask.sum() == 1:
+        # only one original value => assume this to be the mean
+        test = scipy.stats.ttest_1samp
+        original = df.loc[original_mask].iloc[0]
+        kwargs = {}
+    else:
+        # multiple values => assume they correspond to individual trials
+        test = scipy.stats.ttest_ind
+        original = df.loc[original_mask]
+        kwargs = dict(
             equal_var=False,
-        ).pvalue
-        for metric in metrics
-    ]
+        )
+    p_values = [test(df.loc[~original_mask, metric], original[metric], **kwargs).pvalue for metric in metrics]
     return pd.DataFrame(
         data=dict(
             difference=difference,
