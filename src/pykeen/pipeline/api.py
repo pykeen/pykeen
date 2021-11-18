@@ -547,6 +547,7 @@ def save_pipeline_results_to_directory(
     if move_to_cpu:
         pipeline_results = _iterate_moved(pipeline_results)
 
+    # metrics accumulates rows for a dataframe for comparison against the original reported results (if any)
     metrics = [flatten_dictionary(config.get("results", {}))]
     for i, pipeline_result in enumerate(pipeline_results):
         replicate_directory = replicates_directory.joinpath(f"replicate-{i:0{width}}")
