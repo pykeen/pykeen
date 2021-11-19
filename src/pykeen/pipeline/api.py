@@ -656,8 +656,10 @@ def save_pipeline_results_to_directory(
         metric_df.to_csv(directory.joinpath("all_replicates_metrics.tsv"), sep="\t", index=False)
         logger.debug(f"metric results: {metric_df}")
 
+        compare_df = compare_results(metric_df)
+        compare_df.to_csv(directory.joinpath("comparison.tsv"), sep="\t", index=False)
         # summarize
-        logger.info(compare_results(metric_df).to_string())
+        logger.info(compare_df.to_string())
 
 
 def pipeline_from_path(
