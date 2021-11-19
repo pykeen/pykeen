@@ -23,6 +23,8 @@ __all__ = [
     "compute_rank_from_scores",
     "RankBasedEvaluator",
     "RankBasedMetricResults",
+    "MetricKey",
+    "resolve_metric_name",
 ]
 
 logger = logging.getLogger(__name__)
