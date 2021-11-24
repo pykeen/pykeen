@@ -194,6 +194,7 @@ from dataclasses import dataclass, field
 from typing import Any, Collection, Dict, Iterable, List, Mapping, MutableMapping, Optional, Type, Union, cast
 
 import pandas as pd
+import scipy.stats
 import torch
 from torch.optim.optimizer import Optimizer
 
@@ -201,6 +202,7 @@ from ..constants import PYKEEN_CHECKPOINTS, USER_DEFINED_CODE
 from ..datasets import get_dataset
 from ..datasets.base import Dataset
 from ..evaluation import Evaluator, MetricResults, evaluator_resolver
+from ..evaluation.rank_based_evaluator import resolve_metric_name
 from ..losses import Loss, loss_resolver
 from ..lr_schedulers import LRScheduler, lr_scheduler_resolver
 from ..models import Model, make_model_cls, model_resolver
@@ -217,6 +219,7 @@ from ..utils import (
     Result,
     ensure_ftp_directory,
     fix_dataclass_init_docs,
+    flatten_dictionary,
     get_json_bytes_io,
     get_model_io,
     load_configuration,
@@ -473,28 +476,14 @@ class PipelineResult(Result):
 
 def replicate_pipeline_from_path(
     path: Union[str, pathlib.Path],
-    directory: Union[str, pathlib.Path],
-    replicates: int,
-    move_to_cpu: bool = False,
-    save_replicates: bool = True,
     **kwargs,
 ) -> None:
     """Run the same pipeline several times from a configuration file by path.
 
     :param path: The path to the JSON/YAML configuration for the experiment.
-    :param directory: The output directory
-    :param replicates: The number of replicates to run.
-    :param move_to_cpu: Should the model be moved back to the CPU? Only relevant if training on GPU.
-    :param save_replicates: Should the artifacts of the replicates be saved?
-    :param kwargs: Keyword arguments to be passed through to :func:`pipeline_from_path`.
+    :param kwargs: Keyword arguments to be passed through to :func:`replicate_pipeline_from_config`.
     """
-    pipeline_results = (pipeline_from_path(path, **kwargs) for _ in range(replicates))
-    save_pipeline_results_to_directory(
-        directory=directory,
-        pipeline_results=pipeline_results,
-        move_to_cpu=move_to_cpu,
-        save_replicates=save_replicates,
-    )
+    replicate_pipeline_from_config(config=load_configuration(path), **kwargs)
 
 
 def replicate_pipeline_from_config(
@@ -516,6 +505,7 @@ def replicate_pipeline_from_config(
     """
     pipeline_results = (pipeline_from_config(config, **kwargs) for _ in range(replicates))
     save_pipeline_results_to_directory(
+        config=config,
         directory=directory,
         pipeline_results=pipeline_results,
         move_to_cpu=move_to_cpu,
@@ -530,8 +520,92 @@ def _iterate_moved(pipeline_results: Iterable[PipelineResult]):
         yield pipeline_result
 
 
+class _ResultAccumulator:
+    """Private class to simplify result collection code."""
+
+    data: List[List[Any]]
+    keys: List[str]
+
+    def __init__(self) -> None:
+        """Initialize the accumulator."""
+        self.data = []
+        self.keys = []
+
+    def add_original_result(self, result: Mapping[str, Any]) -> None:
+        """Add an "original" result, i.e., one stored in the reproducibility configuration."""
+        # normalize keys
+        # TODO: this can only normalize rank-based metrics!
+        result = {str(resolve_metric_name(k)): v for k, v in flatten_dictionary(result).items()}
+        self.keys = sorted(result.keys())
+        self.data.append([True] + [result[k] for k in self.keys])
+
+    def parse_from_result(self, result: PipelineResult) -> None:
+        """
+        Parse a replicated result from a pipeline result.
+
+        .. note ::
+            Make sure to call add_original_result at least once before to initialize the metrics to collect.
+
+        :param result:
+            the pipeline result
+        """
+        row: List[Any] = [result.get_metric(key=key) for key in self.keys]
+        self.data.append([False] + row)
+
+    def is_non_empty(self) -> bool:
+        """Return whether there are keys."""
+        return len(self.keys) > 0
+
+    def get_df(self) -> pd.DataFrame:
+        """
+        Create dataframe of results.
+
+        Example:
+            | original | hits_at_10 |
+            | -------- | ---------- |
+            | True     | 0.85       |
+            | False    | 0.87       |
+            | False    | 0.83       |
+
+        The example uses abbreviated metric names, while the actual dataframe uses the long canonical version.
+
+        :return: original | metric1 | metric2 ...
+            a dataframe with the results of the original model and each replicate
+        """
+        return pd.DataFrame(data=self.data, columns=["original"] + self.keys)
+
+
+def compare_results(df: pd.DataFrame, significance_level: float = 0.01) -> pd.DataFrame:
+    """Compare original and replicated results."""
+    metrics = sorted(set(df.columns).difference(["original"]))
+    mean_result = df.groupby(by="original").agg("mean")
+    difference = mean_result.loc[False, metrics] - mean_result.loc[True, metrics]
+    original_mask = df["original"]
+    if original_mask.sum() == 1:
+        # only one original value => assume this to be the mean
+        test = scipy.stats.ttest_1samp
+        original = df.loc[original_mask].iloc[0]
+        kwargs = {}
+    else:
+        # multiple values => assume they correspond to individual trials
+        test = scipy.stats.ttest_ind
+        original = df.loc[original_mask]
+        kwargs = dict(
+            equal_var=False,
+        )
+    p_values = [test(df.loc[~original_mask, metric], original[metric], **kwargs).pvalue for metric in metrics]
+    return pd.DataFrame(
+        data=dict(
+            difference=difference,
+            p=p_values,
+            significant=[p < significance_level for p in p_values],
+        )
+    )
+
+
 def save_pipeline_results_to_directory(
     *,
+    config: Mapping[str, Any],
     directory: Union[str, pathlib.Path],
     pipeline_results: Iterable[PipelineResult],
     move_to_cpu: bool = False,
@@ -541,6 +615,7 @@ def save_pipeline_results_to_directory(
 ) -> None:
     """Save the result set to the directory.
 
+    :param config: The configuration.
     :param directory: The directory in which the replicates will be saved
     :param pipeline_results: An iterable over results from training and evaluation
     :param move_to_cpu: Should the model be moved back to the CPU? Only relevant if training on GPU.
@@ -557,6 +632,10 @@ def save_pipeline_results_to_directory(
     if move_to_cpu:
         pipeline_results = _iterate_moved(pipeline_results)
 
+    # metrics accumulates rows for a dataframe for comparison against the original reported results (if any)
+    result_comparator = _ResultAccumulator()
+    # TODO: we could have multiple results, if we get access to the raw results (e.g. in the pykeen benchmarking paper)
+    result_comparator.add_original_result(result=config.get("results", {}))
     for i, pipeline_result in enumerate(pipeline_results):
         replicate_directory = replicates_directory.joinpath(f"replicate-{i:0{width}}")
         replicate_directory.mkdir(exist_ok=True, parents=True)
@@ -567,9 +646,20 @@ def save_pipeline_results_to_directory(
         )
         for epoch, loss in enumerate(pipeline_result.losses):
             losses_rows.append((i, epoch, loss))
+        result_comparator.parse_from_result(result=pipeline_result)
 
     losses_df = pd.DataFrame(losses_rows, columns=["Replicate", "Epoch", "Loss"])
     losses_df.to_csv(directory.joinpath("all_replicates_losses.tsv"), sep="\t", index=False)
+
+    if result_comparator.is_non_empty():
+        metric_df = result_comparator.get_df()
+        metric_df.to_csv(directory.joinpath("all_replicates_metrics.tsv"), sep="\t", index=False)
+        logger.debug(f"metric results: {metric_df}")
+
+        compare_df = compare_results(metric_df)
+        compare_df.to_csv(directory.joinpath("comparison.tsv"), sep="\t", index=False)
+        # summarize
+        logger.info(compare_df.to_string())
 
 
 def pipeline_from_path(
