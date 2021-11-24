@@ -157,7 +157,7 @@ class Dataset:
         return cls.from_tf(tf=tf, ratios=ratios)
 
     @classmethod
-    def from_directory_binary(cls, path: Union[str, pathlib.Path]) -> 'Dataset':
+    def from_directory_binary(cls, path: Union[str, pathlib.Path]) -> "Dataset":
         """Load a dataset from a directory."""
         path = pathlib.Path(path)
 

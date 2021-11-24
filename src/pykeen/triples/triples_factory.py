@@ -594,15 +594,18 @@ class CoreTriplesFactory:
             The path to store the triples factory to.
         """
         path = normalize_path(path)
-        torch.save(dict(
-            mapped_triples=self.mapped_triples,
-            num_entities=self.num_entities,
-            num_relations=self.num_relations,
-            entity_ids=self.entity_ids,
-            relation_ids=self.relation_ids,
-            create_inverse_triples=self.create_inverse_triples,
-            metadata=self.metadata,
-        ), path)
+        torch.save(
+            dict(
+                mapped_triples=self.mapped_triples,
+                num_entities=self.num_entities,
+                num_relations=self.num_relations,
+                entity_ids=self.entity_ids,
+                relation_ids=self.relation_ids,
+                create_inverse_triples=self.create_inverse_triples,
+                metadata=self.metadata,
+            ),
+            path,
+        )
         logger.info(f"Stored {self} to {path.as_uri()}")
 
     @classmethod
@@ -1040,13 +1043,16 @@ class TriplesFactory(CoreTriplesFactory):
             The path to store the triples factory to.
         """
         path = normalize_path(path)
-        torch.save(dict(
-            mapped_triples=self.mapped_triples,
-            entity_to_id=self.entity_to_id,
-            relation_to_id=self.relation_to_id,
-            create_inverse_triples=self.create_inverse_triples,
-            metadata=self.metadata,
-        ), path)
+        torch.save(
+            dict(
+                mapped_triples=self.mapped_triples,
+                entity_to_id=self.entity_to_id,
+                relation_to_id=self.relation_to_id,
+                create_inverse_triples=self.create_inverse_triples,
+                metadata=self.metadata,
+            ),
+            path,
+        )
         logger.info(f"Stored {self} to {path.as_uri()}")
 
 
