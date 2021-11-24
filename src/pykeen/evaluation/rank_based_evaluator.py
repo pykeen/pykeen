@@ -102,7 +102,7 @@ class MetricKey(NamedTuple):
     rank_type: str
     k: Optional[int]
 
-    def __str__(self) -> str:
+    def __str__(self) -> str:  # noqa: D105
         components = [self.name, self.side, self.rank_type]
         if self.k:
             components.append(str(self.k))
