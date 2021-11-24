@@ -150,10 +150,10 @@ class Labeling:
     id_to_label: Mapping[int, str] = dataclasses.field(init=False)
 
     #: A vectorized version of entity_label_to_id; initialized automatically
-    _vectorized_mapper: Callable[..., np.ndarray] = dataclasses.field(init=False)
+    _vectorized_mapper: Callable[..., np.ndarray] = dataclasses.field(init=False, compare=False)
 
     #: A vectorized version of entity_id_to_label; initialized automatically
-    _vectorized_labeler: Callable[..., np.ndarray] = dataclasses.field(init=False)
+    _vectorized_labeler: Callable[..., np.ndarray] = dataclasses.field(init=False, compare=False)
 
     def __post_init__(self):
         """Precompute inverse mappings."""
