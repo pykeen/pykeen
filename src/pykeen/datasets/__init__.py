@@ -6,6 +6,7 @@ New datasets (inheriting from :class:`pykeen.datasets.base.Dataset`) can be regi
 :mod:`pykeen.datasets` group in Python entrypoints in your own `setup.py` or `setup.cfg` package configuration.
 They are loaded automatically with :func:`pkg_resources.iter_entry_points`.
 """
+
 import hashlib
 import logging
 import pathlib
