@@ -20,6 +20,7 @@ from pykeen.evaluation.rank_based_evaluator import (
     RANK_TYPES,
     SIDES,
     compute_rank_from_scores,
+    resolve_metric_name,
 )
 from pykeen.evaluation.sklearn import SklearnEvaluator, SklearnMetricResults
 from pykeen.models import Model, TransE
@@ -556,3 +557,20 @@ class TestEvaluationFiltering(unittest.TestCase):
             use_tqdm=False,
         )
         assert eval_results.arithmetic_mean_rank["both"]["realistic"] == 1, "The rank should equal 1"
+
+
+def test_resolve_metric_name():
+    """Test metric name resolution."""
+    for name, expected in (
+        ("mrr", ("inverse_harmonic_mean_rank", "both", "realistic", None)),
+        ("mean_rank.both", ("arithmetic_mean_rank", "both", "realistic", None)),
+        ("mean_rank.avg", ("arithmetic_mean_rank", "both", "realistic", None)),
+        ("mean_rank.tail.worst", ("arithmetic_mean_rank", "tail", "pessimistic", None)),
+        ("amri.avg", ("adjusted_arithmetic_mean_rank_index", "both", "realistic", None)),
+        ("hits_at_k", ("hits_at_k", "both", "realistic", 10)),
+        ("hits_at_k.head.best.3", ("hits_at_k", "head", "optimistic", 3)),
+        ("hits_at_1", ("hits_at_k", "both", "realistic", 1)),
+        ("H@10", ("hits_at_k", "both", "realistic", 10)),
+    ):
+        result = resolve_metric_name(name=name)
+        assert result == expected, name
