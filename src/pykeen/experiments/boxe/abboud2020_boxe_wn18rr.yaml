@@ -42,9 +42,13 @@ pipeline:
     num_epochs: 1000
   training_loop: SLCWA
 
+# from https://arxiv.org/pdf/2007.06267v2.pdf, Table 7
+# best/optimistic rank, cf. https://github.com/ralphabb/BoxE/blob/584c83bb42817c67df0f70c52898aacfc916af19/BoxEModel.py#L916-L917
 results:
   hits_at_k:
     best:
+      '1': 0.400
+      '3': 0.472
       '10': 0.541
   mean_rank:
     best: 3207
