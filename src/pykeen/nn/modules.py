@@ -31,7 +31,7 @@ __all__ = [
     "Interaction",
     "FunctionalInteraction",
     "LiteralInteraction",
-    "TranslationalInteraction",
+    "NormBasedInteraction",
     # Adapter classes
     "MonotonicAffineTransformationInteraction",
     # Concrete Classes
@@ -445,15 +445,15 @@ class FunctionalInteraction(Interaction, Generic[HeadRepresentation, RelationRep
         return dict()
 
 
-class TranslationalInteraction(
+class NormBasedInteraction(
     FunctionalInteraction,
     Generic[HeadRepresentation, RelationRepresentation, TailRepresentation],
     ABC,
 ):
-    """The translational interaction function shared by the TransE, TransR, TransH, and other Trans<X> models."""
+    """Norm-based interactions utilize a (powered) p-norm in their scoring function."""
 
     def __init__(self, p: int, power_norm: bool = False):
-        """Initialize the translational interaction function.
+        """Initialize the norm-based interaction function.
 
         :param p:
             The norm used with :func:`torch.linalg.vector_norm`. Typically is 1 or 2.
@@ -469,7 +469,7 @@ class TranslationalInteraction(
         return dict(p=self.p, power_norm=self.power_norm)
 
 
-class TransEInteraction(TranslationalInteraction[FloatTensor, FloatTensor, FloatTensor]):
+class TransEInteraction(NormBasedInteraction[FloatTensor, FloatTensor, FloatTensor]):
     """A stateful module for the TransE interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.transe_interaction`
@@ -808,7 +808,7 @@ class ERMLPEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
 
 
 class TransRInteraction(
-    TranslationalInteraction[
+    NormBasedInteraction[
         torch.FloatTensor,
         Tuple[torch.FloatTensor, torch.FloatTensor],
         torch.FloatTensor,
@@ -904,7 +904,7 @@ class RESCALInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
 
 
 class StructuredEmbeddingInteraction(
-    TranslationalInteraction[
+    NormBasedInteraction[
         torch.FloatTensor,
         Tuple[torch.FloatTensor, torch.FloatTensor],
         torch.FloatTensor,
@@ -999,7 +999,7 @@ class TuckerInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
 
 
 class UnstructuredModelInteraction(
-    TranslationalInteraction[torch.FloatTensor, None, torch.FloatTensor],
+    NormBasedInteraction[torch.FloatTensor, None, torch.FloatTensor],
 ):
     """A stateful module for the UnstructuredModel interaction function.
 
@@ -1023,7 +1023,7 @@ class UnstructuredModelInteraction(
         return dict(h=h, t=t)
 
 
-class TorusEInteraction(TranslationalInteraction[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]):
+class TorusEInteraction(NormBasedInteraction[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]):
     """A stateful module for the TorusE interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.toruse_interaction`
@@ -1036,7 +1036,7 @@ class TorusEInteraction(TranslationalInteraction[torch.FloatTensor, torch.FloatT
 
 
 class TransDInteraction(
-    TranslationalInteraction[
+    NormBasedInteraction[
         Tuple[torch.FloatTensor, torch.FloatTensor],
         Tuple[torch.FloatTensor, torch.FloatTensor],
         Tuple[torch.FloatTensor, torch.FloatTensor],
@@ -1163,7 +1163,7 @@ class KG2EInteraction(
         )
 
 
-class TransHInteraction(TranslationalInteraction[FloatTensor, Tuple[FloatTensor, FloatTensor], FloatTensor]):
+class TransHInteraction(NormBasedInteraction[FloatTensor, Tuple[FloatTensor, FloatTensor], FloatTensor]):
     """A stateful module for the TransH interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.transh_interaction`
@@ -1182,7 +1182,7 @@ class TransHInteraction(TranslationalInteraction[FloatTensor, Tuple[FloatTensor,
 
 
 class MuREInteraction(
-    TranslationalInteraction[
+    NormBasedInteraction[
         Tuple[FloatTensor, FloatTensor, FloatTensor],
         Tuple[FloatTensor, FloatTensor],
         Tuple[FloatTensor, FloatTensor, FloatTensor],
@@ -1244,7 +1244,7 @@ class SimplEInteraction(
         return dict(h=h[0], h_inv=h[1], r=r[0], r_inv=r[1], t=t[0], t_inv=t[1])
 
 
-class PairREInteraction(TranslationalInteraction[FloatTensor, Tuple[FloatTensor, FloatTensor], FloatTensor]):
+class PairREInteraction(NormBasedInteraction[FloatTensor, Tuple[FloatTensor, FloatTensor], FloatTensor]):
     """A stateful module for the PairRE interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.pair_re_interaction`
@@ -1415,7 +1415,7 @@ class CrossEInteraction(FunctionalInteraction[FloatTensor, Tuple[FloatTensor, Fl
 
 
 class BoxEInteraction(
-    TranslationalInteraction[
+    NormBasedInteraction[
         Tuple[FloatTensor, FloatTensor],
         Tuple[FloatTensor, FloatTensor, FloatTensor, FloatTensor, FloatTensor, FloatTensor],
         Tuple[FloatTensor, FloatTensor],
@@ -1476,6 +1476,6 @@ class BoxEInteraction(
 
 interaction_resolver = Resolver.from_subclasses(
     Interaction,  # type: ignore
-    skip={TranslationalInteraction, FunctionalInteraction, MonotonicAffineTransformationInteraction},
+    skip={NormBasedInteraction, FunctionalInteraction, MonotonicAffineTransformationInteraction},
     suffix=Interaction.__name__,
 )
