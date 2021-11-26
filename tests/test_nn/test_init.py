@@ -12,7 +12,7 @@ from tests import cases
 
 try:
     import transformers
-except:
+except ImportError:
     transformers = None
 
 
