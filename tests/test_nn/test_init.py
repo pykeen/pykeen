@@ -3,6 +3,7 @@
 """Tests for initializers."""
 
 from unittest.case import SkipTest
+
 import torch
 
 import pykeen.nn.init

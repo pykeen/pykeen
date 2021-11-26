@@ -10,11 +10,10 @@ import numpy as np
 import torch
 import torch.nn
 import torch.nn.init
-from torch.nn import functional
 import tqdm
+from torch.nn import functional
 
 from ..triples.triples_factory import TriplesFactory
-
 from ..typing import Initializer
 from ..utils import compose
 
@@ -163,7 +162,7 @@ def create_init_from_pretrained(pretrained: torch.FloatTensor) -> Initializer:
     return init_from_pretrained
 
 
-class LabelBasedInitializer(Initializer):
+class LabelBasedInitializer:
     """An initializer using pretrained models from the `transformers` library to encode labels."""
 
     def __init__(
@@ -203,11 +202,11 @@ class LabelBasedInitializer(Initializer):
         batch_size: int,
         max_length: int,
     ) -> torch.FloatTensor:
-        """The actual encoding."""
+        """Encode labels."""
         try:
             from transformers import AutoModel, AutoTokenizer
-        except (ImportError, ModuleNotFoundError) as error:
-            raise ImportError(f"LabelBasedInitializer requires the `transformers` library to be installed") from error
+        except ImportError as error:
+            raise ImportError("LabelBasedInitializer requires the `transformers` library to be installed") from error
 
         tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path=pretrained_model_name_or_path)
         model = AutoModel.from_pretrained(pretrained_model_name_or_path=pretrained_model_name_or_path)
