@@ -10,7 +10,6 @@ import numpy as np
 import torch
 import torch.nn
 import torch.nn.init
-import tqdm
 from torch.nn import functional
 
 from .utils import TransformerEncoder
@@ -171,7 +170,7 @@ class LabelBasedInitializer:
         labels: Sequence[str],
         pretrained_model_name_or_path: str = "bert-base-cased",
         batch_size: int = 32,
-        max_length: int = 512,
+        max_length: Optional[int] = None,
     ):
         """
         Initialize the initializer.
@@ -188,34 +187,13 @@ class LabelBasedInitializer:
         :raise ImportError:
             if the transformers library could not be imported
         """
-        self.tensor = self._encode(
+        self.tensor = TransformerEncoder(
+            pretrained_model_name_or_path=pretrained_model_name_or_path,
+            max_length=max_length,
+        ).encode_all(
             labels=labels,
-            pretrained_model_name_or_path=pretrained_model_name_or_path,
             batch_size=batch_size,
-            max_length=max_length,
         )
-
-    @staticmethod
-    @torch.inference_mode()
-    def _encode(
-        labels: Sequence[str],
-        pretrained_model_name_or_path: str,
-        batch_size: int,
-        max_length: Optional[int] = None,
-    ) -> torch.FloatTensor:
-        """Encode labels."""
-        encoder = TransformerEncoder(
-            pretrained_model_name_or_path=pretrained_model_name_or_path,
-            max_length=max_length,
-        )
-        x = None
-        max_id = len(labels)
-        for i in tqdm.trange(0, max_id, batch_size):
-            output = encoder(labels[i : i + batch_size])
-            if x is None:  # lazy init for shape
-                x = torch.empty(max_id, output.shape[-1])
-            x[i : i + batch_size] = output
-        return x
 
     @classmethod
     def from_triples_factory(

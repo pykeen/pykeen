@@ -1313,22 +1313,15 @@ class LabelBasedTransformerRepresentation(RepresentationModule):
         :raise ImportError:
             if the transformers library could not be imported
         """
-        try:
-            from transformers import AutoModel, AutoTokenizer
-        except ImportError as error:
-            raise ImportError(
-                "LabelBasedTransformerRepresentation requires the `transformers` library to be installed",
-            ) from error
-
-        self.labels = labels
         encoder = TransformerEncoder(
             pretrained_model_name_or_path=pretrained_model_name_or_path,
             max_length=max_length,
         )
         # infer shape
-        shape = encoder(labels[0]).shape[1:]
+        shape = encoder.encode_all(labels[0:1]).shape[1:]
         super().__init__(max_id=len(labels), shape=shape)
 
+        self.labels = labels
         # assign after super, since they should be properly registered as submodules
         self.encoder = encoder
 
