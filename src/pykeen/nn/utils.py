@@ -35,11 +35,9 @@ class TransformerEncoder(nn.Module):
         except ImportError as error:
             raise ImportError("Please install the `transformers` library") from error
 
-        max_length = max_length or 512
         self.tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path=pretrained_model_name_or_path)
         self.model = AutoModel.from_pretrained(pretrained_model_name_or_path=pretrained_model_name_or_path)
-
-        self.max_length = max_length
+        self.max_length = max_length or 512
 
     def forward(self, labels: Union[str, Sequence[str]]) -> torch.FloatTensor:
         """Encode labels via the provided model & tokenizer."""
