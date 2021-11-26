@@ -35,6 +35,7 @@ from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolv
 from ..constants import AGGREGATIONS
 from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import CoreTriplesFactory
+from ..triples.triples_factory import TriplesFactory
 from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer
 from ..utils import Bias, activation_resolver, clamp_norm, complex_normalize, convert_to_canonical_shape
 
@@ -1324,6 +1325,32 @@ class LabelBasedTransformerRepresentation(RepresentationModule):
         self.labels = labels
         # assign after super, since they should be properly registered as submodules
         self.encoder = encoder
+
+    @classmethod
+    def from_triples_factory(
+        cls,
+        triples_factory: TriplesFactory,
+        for_entities: bool = True,
+        **kwargs,
+    ) -> "LabelBasedTransformerRepresentation":
+        """
+        Prepare a label-based transformer representations with labels from a triples factory.
+
+        :param triples_factory:
+            the triples factory
+        :param for_entities:
+            whether to create the initializer for entities (or relations)
+        :param kwargs:
+            additional keyword-based arguments passed to :func:`LabelBasedTransformerRepresentation.__init__`
+
+        :raise ImportError:
+            if the transformers library could not be imported
+        """
+        id_to_label = triples_factory.entity_id_to_label if for_entities else triples_factory.relation_id_to_label
+        return cls(
+            labels=[id_to_label[i] for i in range(len(id_to_label))],
+            **kwargs,
+        )
 
     def forward(
         self,
