@@ -2,13 +2,18 @@
 
 """Embedding weight initialization routines."""
 
+import logging
 import math
+from typing import Sequence
 
 import numpy as np
 import torch
 import torch.nn
 import torch.nn.init
 from torch.nn import functional
+import tqdm
+
+from ..triples.triples_factory import TriplesFactory
 
 from ..typing import Initializer
 from ..utils import compose
@@ -23,6 +28,8 @@ __all__ = [
     "normal_norm_",
     "init_phases",
 ]
+
+logger = logging.getLogger(__name__)
 
 
 def xavier_uniform_(tensor, gain: float = 1.0):
@@ -154,3 +161,102 @@ def create_init_from_pretrained(pretrained: torch.FloatTensor) -> Initializer:
         return pretrained
 
     return init_from_pretrained
+
+
+class LabelBasedInitializer(Initializer):
+    """An initializer using pretrained models from the `transformers` library to encode labels."""
+
+    def __init__(
+        self,
+        labels: Sequence[str],
+        pretrained_model_name_or_path: str = "bert-base-cased",
+        batch_size: int = 32,
+        max_length: int = 512,
+    ):
+        """
+        Initialize the initializer.
+
+        :param labels:
+            the labels
+        :param pretrained_model_name_or_path:
+            the name of the pretrained model, or a path, cf. AutoModel.from_pretrained
+        :param batch_size: >0
+            the batch size to use while encoding.
+        :param max_length: >0
+            the maximum number of tokens to pad/trim the labels to
+
+        :raise ImportError:
+            if the transformers library could not be imported
+        """
+        self.tensor = self._encode(
+            labels=labels,
+            pretrained_model_name_or_path=pretrained_model_name_or_path,
+            batch_size=batch_size,
+            max_length=max_length,
+        )
+
+    @staticmethod
+    @torch.inference_mode()
+    def _encode(
+        labels: Sequence[str],
+        pretrained_model_name_or_path: str,
+        batch_size: int,
+        max_length: int,
+    ) -> torch.FloatTensor:
+        """The actual encoding."""
+        try:
+            from transformers import AutoModel, AutoTokenizer
+        except (ImportError, ModuleNotFoundError) as error:
+            raise ImportError(f"LabelBasedInitializer requires the `transformers` library to be installed") from error
+
+        tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path=pretrained_model_name_or_path)
+        model = AutoModel.from_pretrained(pretrained_model_name_or_path=pretrained_model_name_or_path)
+        x = None
+        max_id = len(labels)
+        for i in tqdm.trange(0, max_id, batch_size):
+            output = model(
+                **tokenizer(
+                    labels[i : i + batch_size],
+                    return_tensors="pt",
+                    padding=True,
+                    truncation=True,
+                    max_length=max_length,
+                )
+            ).pooler_output
+            if x is None:  # lazy init for shape
+                x = torch.empty(max_id, output.shape[-1])
+            x[i : i + batch_size] = output
+        return x
+
+    @classmethod
+    def from_triples_factory(
+        cls,
+        triples_factory: TriplesFactory,
+        for_entities: bool = True,
+        **kwargs,
+    ) -> "LabelBasedInitializer":
+        """
+        Prepare a label-based initializer with labels from a triples factory.
+
+        :param triples_factory:
+            the triples factory
+        :param for_entities:
+            whether to create the initializer for entities (or relations)
+        :param kwargs:
+            additional keyword-based arguments passed to LabelBasedInitializer.__init__
+
+        :raise ImportError:
+            if the transformers library could not be imported
+        """
+        id_to_label = triples_factory.entity_id_to_label if for_entities else triples_factory.relation_id_to_label
+        labels = [id_to_label[i] for i in sorted(id_to_label.keys())]
+        return cls(
+            labels=labels,
+            **kwargs,
+        )
+
+    def __call__(self, x: torch.Tensor) -> torch.Tensor:
+        """Initialize the tensor from the encoded labels."""
+        if x.shape != self.tensor.shape:
+            raise ValueError(f"shape does not match: expected {self.tensor.shape} but got {x.shape}")
+        return self.tensor.to(device=x.device, dtype=x.dtype)

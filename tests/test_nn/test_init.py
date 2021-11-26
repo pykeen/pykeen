@@ -2,6 +2,7 @@
 
 """Tests for initializers."""
 
+from unittest.case import SkipTest
 import torch
 
 import pykeen.nn.init
@@ -86,3 +87,21 @@ class XavierUniformNormTestCase(NormalizationMixin, cases.InitializerTestCase):
     """Tests for Xavier Glorot uniform initialization + normalization."""
 
     initializer = staticmethod(pykeen.nn.init.xavier_uniform_norm_)
+
+
+class LabelBasedInitializerTestCase(cases.InitializerTestCase):
+    """Tests for label-based initialization."""
+
+    def setUp(self) -> None:
+        """Prepare for test."""
+        from pykeen.datasets import get_dataset
+
+        dataset = get_dataset(dataset="nations")
+        try:
+            self.initializer = pykeen.nn.init.LabelBasedInitializer.from_triples_factory(
+                triples_factory=dataset.training,
+                for_entities=True,
+            )
+        except ImportError as error:
+            raise SkipTest from error
+        self.shape = self.initializer.tensor.shape
