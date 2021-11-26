@@ -13,8 +13,7 @@ import torch.nn.init
 import tqdm
 from torch.nn import functional
 
-from pykeen.nn.utils import TransformerEncoder
-
+from .utils import TransformerEncoder
 from ..triples.triples_factory import TriplesFactory
 from ..typing import Initializer
 from ..utils import compose
