@@ -4,7 +4,7 @@
 
 import logging
 import math
-from typing import Sequence
+from typing import Optional, Sequence
 
 import numpy as np
 import torch
@@ -12,6 +12,8 @@ import torch.nn
 import torch.nn.init
 import tqdm
 from torch.nn import functional
+
+from pykeen.nn.utils import TransformerEncoder
 
 from ..triples.triples_factory import TriplesFactory
 from ..typing import Initializer
@@ -200,28 +202,17 @@ class LabelBasedInitializer:
         labels: Sequence[str],
         pretrained_model_name_or_path: str,
         batch_size: int,
-        max_length: int,
+        max_length: Optional[int] = None,
     ) -> torch.FloatTensor:
         """Encode labels."""
-        try:
-            from transformers import AutoModel, AutoTokenizer
-        except ImportError as error:
-            raise ImportError("LabelBasedInitializer requires the `transformers` library to be installed") from error
-
-        tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path=pretrained_model_name_or_path)
-        model = AutoModel.from_pretrained(pretrained_model_name_or_path=pretrained_model_name_or_path)
+        encoder = TransformerEncoder(
+            pretrained_model_name_or_path=pretrained_model_name_or_path,
+            max_length=max_length,
+        )
         x = None
         max_id = len(labels)
         for i in tqdm.trange(0, max_id, batch_size):
-            output = model(
-                **tokenizer(
-                    labels[i : i + batch_size],
-                    return_tensors="pt",
-                    padding=True,
-                    truncation=True,
-                    max_length=max_length,
-                )
-            ).pooler_output
+            output = encoder(labels[i : i + batch_size])
             if x is None:  # lazy init for shape
                 x = torch.empty(max_id, output.shape[-1])
             x[i : i + batch_size] = output

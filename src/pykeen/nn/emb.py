@@ -19,6 +19,8 @@ import torch.nn
 from torch import nn
 from torch.nn import functional
 
+from pykeen.nn.utils import TransformerEncoder
+
 from .compositions import CompositionModule, composition_resolver
 from .init import (
     init_phases,
@@ -1274,7 +1276,7 @@ class NodePieceRepresentation(RepresentationModule):
 
     def forward(
         self,
-        indices: Optional[int] = None,
+        indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         # get token IDs, shape: (*, k)
         token_ids = self.assignment
@@ -1320,48 +1322,25 @@ class LabelBasedTransformerRepresentation(RepresentationModule):
             ) from error
 
         self.labels = labels
-        self.max_length = max_length
-        tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path=pretrained_model_name_or_path)
-        model = AutoModel.from_pretrained(pretrained_model_name_or_path=pretrained_model_name_or_path)
-
-        # infer shape
-        shape = self._encode(
-            labels=labels[0],
-            model=model,
-            tokenizer=tokenizer,
+        encoder = TransformerEncoder(
+            pretrained_model_name_or_path=pretrained_model_name_or_path,
             max_length=max_length,
-        ).shape[1:]
+        )
+        # infer shape
+        shape = encoder(labels[0]).shape[1:]
         super().__init__(max_id=len(labels), shape=shape)
 
         # assign after super, since they should be properly registered as submodules
-        self.tokenizer = tokenizer
-        self.model = model
-
-    @staticmethod
-    def _encode(labels: Union[str, Sequence[str]], model, tokenizer, max_length: int) -> torch.FloatTensor:
-        """Encode labels via the provided model & tokenizer."""
-        return model(
-            **tokenizer(
-                labels,
-                return_tensors="pt",
-                padding=True,
-                truncation=True,
-                max_length=max_length,
-            )
-        ).pooler_output
+        self.encoder = encoder
 
     def forward(
         self,
-        indices: Optional[int] = None,
+        indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         if indices is None:
             indices = torch.arange(self.max_id)
-        assert isinstance(indices, torch.Tensor)
         uniq, inverse = indices.unique(return_inverse=True)
-        x = self._encode(
+        x = self.encoder(
             labels=[self.labels[i] for i in uniq.tolist()],
-            model=self.model,
-            tokenizer=self.tokenizer,
-            max_length=self.max_length,
         )
         return x[inverse]
