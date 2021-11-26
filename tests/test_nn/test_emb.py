@@ -4,6 +4,7 @@
 
 import unittest
 from typing import Any, ClassVar, MutableMapping, Tuple
+from unittest.case import SkipTest
 from unittest.mock import Mock
 
 import numpy
@@ -11,6 +12,7 @@ import torch
 import unittest_templates
 
 import pykeen.nn.emb
+from pykeen.datasets import get_dataset
 from pykeen.datasets.nations import NationsLiteral
 from pykeen.nn.emb import (
     Embedding,
@@ -164,6 +166,24 @@ class SubsetRepresentationTests(cases.RepresentationTestCase):
             shape=self.shape,
         )
         return kwargs
+
+
+class LabelBasedTransformerRepresentationTests(cases.RepresentationTestCase):
+    """Test the label based Transformer representations."""
+
+    cls = pykeen.nn.emb.LabelBasedTransformerRepresentation
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        kwargs["labels"] = sorted(get_dataset(dataset="nations").entity_to_id.keys())
+        return kwargs
+
+    def setUp(self) -> None:  # noqa: D102
+        # skip if transformers is not installed
+        try:
+            return super().setUp()
+        except ImportError as error:
+            raise SkipTest from error
 
 
 class RepresentationModuleTestsTestCase(unittest_templates.MetaTestCase[RepresentationModule]):

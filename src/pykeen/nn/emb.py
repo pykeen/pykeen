@@ -1288,3 +1288,80 @@ class NodePieceRepresentation(RepresentationModule):
         x = self.aggregation(x, self.aggregation_index)
 
         return x
+
+
+class LabelBasedTransformerRepresentation(RepresentationModule):
+    """Label-based representations using a transformer encoder."""
+
+    def __init__(
+        self,
+        labels: Sequence[str],
+        pretrained_model_name_or_path: str = "bert-base-cased",
+        max_length: int = 512,
+    ):
+        """
+        Initialize the representation.
+
+        :param labels:
+            the labels
+        :param pretrained_model_name_or_path:
+            the name of the pretrained model, or a path, cf. AutoModel.from_pretrained
+        :param max_length: >0
+            the maximum number of tokens to pad/trim the labels to
+
+        :raise ImportError:
+            if the transformers library could not be imported
+        """
+        try:
+            from transformers import AutoModel, AutoTokenizer
+        except ImportError as error:
+            raise ImportError(
+                "LabelBasedTransformerRepresentation requires the `transformers` library to be installed",
+            ) from error
+
+        self.labels = labels
+        self.max_length = max_length
+        tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path=pretrained_model_name_or_path)
+        model = AutoModel.from_pretrained(pretrained_model_name_or_path=pretrained_model_name_or_path)
+
+        # infer shape
+        shape = self._encode(
+            labels=labels[0],
+            model=model,
+            tokenizer=tokenizer,
+            max_length=max_length,
+        ).shape[1:]
+        super().__init__(max_id=len(labels), shape=shape)
+
+        # assign after super, since they should be properly registered as submodules
+        self.tokenizer = tokenizer
+        self.model = model
+
+    @staticmethod
+    def _encode(labels: Union[str, Sequence[str]], model, tokenizer, max_length: int) -> torch.FloatTensor:
+        """Encode labels via the provided model & tokenizer."""
+        return model(
+            **tokenizer(
+                labels,
+                return_tensors="pt",
+                padding=True,
+                truncation=True,
+                max_length=max_length,
+            )
+        ).pooler_output
+
+    def forward(
+        self,
+        indices: Optional[int] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        if indices is None:
+            indices = torch.arange(self.max_id)
+        assert isinstance(indices, torch.Tensor)
+        uniq, inverse = indices.unique(return_inverse=True)
+        x = self._encode(
+            labels=[self.labels[i] for i in uniq.tolist()],
+            model=self.model,
+            tokenizer=self.tokenizer,
+            max_length=self.max_length,
+        )
+        return x[inverse]
