@@ -1,8 +1,15 @@
+# -*- coding: utf-8 -*-
+
 """Utilities for neural network components."""
+
 from typing import Optional, Sequence, Union
 
 import torch
 from torch import nn
+
+__all__ = [
+    "TransformerEncoder",
+]
 
 
 class TransformerEncoder(nn.Module):
@@ -17,7 +24,7 @@ class TransformerEncoder(nn.Module):
         Initialize the encoder.
 
         :param pretrained_model_name_or_path:
-            the name of the pretrained model, or a path, cf. AutoModel.from_pretrained
+            the name of the pretrained model, or a path, cf. :func:`transformers.AutoModel.from_pretrained`
         :param max_length: >0
             the maximum number of tokens to pad/trim the labels to
         """

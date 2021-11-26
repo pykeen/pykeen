@@ -179,7 +179,7 @@ class LabelBasedInitializer:
         :param labels:
             the labels
         :param pretrained_model_name_or_path:
-            the name of the pretrained model, or a path, cf. AutoModel.from_pretrained
+            the name of the pretrained model, or a path, cf. :func:`transformers.AutoModel.from_pretrained`
         :param batch_size: >0
             the batch size to use while encoding.
         :param max_length: >0
@@ -232,7 +232,7 @@ class LabelBasedInitializer:
         :param for_entities:
             whether to create the initializer for entities (or relations)
         :param kwargs:
-            additional keyword-based arguments passed to LabelBasedInitializer.__init__
+            additional keyword-based arguments passed to :func:`LabelBasedInitializer.__init__`
 
         :raise ImportError:
             if the transformers library could not be imported
