@@ -4,7 +4,6 @@
 
 import unittest
 from typing import Any, ClassVar, MutableMapping, Tuple
-from unittest.case import SkipTest
 from unittest.mock import Mock
 
 import numpy
@@ -23,6 +22,11 @@ from pykeen.nn.emb import (
 )
 from pykeen.triples.generation import generate_triples_factory
 from tests import cases, mocks
+
+try:
+    import transformers
+except ImportError:
+    transformers = None
 
 
 class EmbeddingTests(cases.RepresentationTestCase):
@@ -168,6 +172,7 @@ class SubsetRepresentationTests(cases.RepresentationTestCase):
         return kwargs
 
 
+@unittest.skipIf(transformers is None, "Need to install `transformers`")
 class LabelBasedTransformerRepresentationTests(cases.RepresentationTestCase):
     """Test the label based Transformer representations."""
 
@@ -177,13 +182,6 @@ class LabelBasedTransformerRepresentationTests(cases.RepresentationTestCase):
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         kwargs["labels"] = sorted(get_dataset(dataset="nations").entity_to_id.keys())
         return kwargs
-
-    def setUp(self) -> None:  # noqa: D102
-        # skip if transformers is not installed
-        try:
-            return super().setUp()
-        except ImportError as error:
-            raise SkipTest from error
 
 
 class RepresentationModuleTestsTestCase(unittest_templates.MetaTestCase[RepresentationModule]):
