@@ -19,8 +19,6 @@ import torch.nn
 from torch import nn
 from torch.nn import functional
 
-from pykeen.nn.utils import TransformerEncoder
-
 from .compositions import CompositionModule, composition_resolver
 from .init import (
     init_phases,
@@ -32,6 +30,7 @@ from .init import (
     xavier_uniform_norm_,
 )
 from .message_passing import Decomposition, RGCNLayer
+from .utils import TransformerEncoder
 from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolver
 from ..constants import AGGREGATIONS
 from ..regularizers import Regularizer, regularizer_resolver
