@@ -4,7 +4,6 @@
 
 import unittest
 from typing import Any, ClassVar, MutableMapping, Tuple
-from unittest.case import SkipTest
 from unittest.mock import Mock
 
 import numpy
