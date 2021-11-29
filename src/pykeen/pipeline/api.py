@@ -380,6 +380,8 @@ class PipelineResult(Result):
             json.dump(self._get_results(), file, indent=2, sort_keys=True)
         if save_replicates:
             self.save_model(directory.joinpath("trained_model.pkl"))
+            with open(directory.joinpath('training_factory.pkl'), 'wb') as f:
+                pickle.dump(self.training, f)
 
     def save_to_ftp(self, directory: str, ftp: ftplib.FTP) -> None:
         """Save all artifacts to the given directory in the FTP server.
