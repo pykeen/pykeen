@@ -4,7 +4,6 @@
 
 import logging
 from typing import Tuple, Union
-from unittest import SkipTest
 
 import numpy
 import torch
