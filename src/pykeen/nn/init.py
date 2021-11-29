@@ -13,7 +13,7 @@ import torch.nn.init
 from torch.nn import functional
 
 from .utils import TransformerEncoder
-from ..triples.triples_factory import TriplesFactory
+from ..triples import TriplesFactory
 from ..typing import Initializer
 from ..utils import compose
 
