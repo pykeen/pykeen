@@ -3,11 +3,12 @@
 """Tests for initializers."""
 
 import unittest
-from unittest.case import SkipTest
 
 import torch
 
 import pykeen.nn.init
+from pykeen.datasets import get_dataset
+from pykeen.triples import TriplesFactory
 from tests import cases
 
 try:
@@ -102,9 +103,8 @@ class LabelBasedInitializerTestCase(cases.InitializerTestCase):
 
     def setUp(self) -> None:
         """Prepare for test."""
-        from pykeen.datasets import get_dataset
-
         dataset = get_dataset(dataset="nations")
+        self.assertIsInstance(dataset.training, TriplesFactory)
         self.initializer = pykeen.nn.init.LabelBasedInitializer.from_triples_factory(
             triples_factory=dataset.training,
             for_entities=True,
