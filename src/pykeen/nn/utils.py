@@ -28,6 +28,9 @@ class TransformerEncoder(nn.Module):
             the name of the pretrained model, or a path, cf. :func:`transformers.AutoModel.from_pretrained`
         :param max_length: >0, default: 512
             the maximum number of tokens to pad/trim the labels to
+
+        :raise ImportError:
+            if the transformers library could not be imported
         """
         super().__init__()
         try:
@@ -40,7 +43,7 @@ class TransformerEncoder(nn.Module):
         self.max_length = max_length or 512
 
     def forward(self, labels: Union[str, Sequence[str]]) -> torch.FloatTensor:
-        """Encode labels via the provided model & tokenizer."""
+        """Encode labels via the provided model and tokenizer."""
         if isinstance(labels, str):
             labels = [labels]
         return self.model(

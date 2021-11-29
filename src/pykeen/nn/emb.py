@@ -34,8 +34,7 @@ from .utils import TransformerEncoder
 from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolver
 from ..constants import AGGREGATIONS
 from ..regularizers import Regularizer, regularizer_resolver
-from ..triples import CoreTriplesFactory
-from ..triples.triples_factory import TriplesFactory
+from ..triples import CoreTriplesFactory, TriplesFactory
 from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer
 from ..utils import Bias, activation_resolver, clamp_norm, complex_normalize, convert_to_canonical_shape
 
@@ -1310,9 +1309,6 @@ class LabelBasedTransformerRepresentation(RepresentationModule):
             the name of the pretrained model, or a path, cf. AutoModel.from_pretrained
         :param max_length: >0
             the maximum number of tokens to pad/trim the labels to
-
-        :raise ImportError:
-            if the transformers library could not be imported
         """
         encoder = TransformerEncoder(
             pretrained_model_name_or_path=pretrained_model_name_or_path,
