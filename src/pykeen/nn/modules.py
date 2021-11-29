@@ -450,7 +450,7 @@ class NormBasedInteraction(
     Generic[HeadRepresentation, RelationRepresentation, TailRepresentation],
     ABC,
 ):
-    """Norm-based interactions utilize a (powered) p-norm in their scoring function."""
+    """Norm-based interactions use a (powered) $p$-norm in their scoring function."""
 
     def __init__(self, p: int, power_norm: bool = False):
         """Initialize the norm-based interaction function.
