@@ -12,7 +12,7 @@ import unittest_templates
 import pykeen.nn.modules
 import pykeen.utils
 from pykeen.nn.functional import _rotate_quaternion, _split_quaternion, distmult_interaction
-from pykeen.nn.modules import FunctionalInteraction, Interaction, LiteralInteraction, TranslationalInteraction
+from pykeen.nn.modules import FunctionalInteraction, Interaction, LiteralInteraction, NormBasedInteraction
 from pykeen.utils import clamp_norm, project_entity, strip_dim, view_complex
 from tests import cases
 
@@ -507,7 +507,7 @@ class InteractionTestsTestCase(unittest_templates.MetaTestCase[Interaction]):
     skip_cls = {
         Interaction,
         FunctionalInteraction,
-        TranslationalInteraction,
+        NormBasedInteraction,
         LiteralInteraction,
         # FIXME
         pykeen.nn.modules.BoxEInteraction,
