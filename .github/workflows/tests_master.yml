@@ -86,8 +86,6 @@ jobs:
         run: tox -e integration
       - name: Run doctests
         run: tox -e doctests
-      - name: Run notebooks
-        run: tox -e treon
   windows:
     if: "!contains(github.event.head_commit.message, 'skip ci')"
     name: Windows
