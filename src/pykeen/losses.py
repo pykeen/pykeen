@@ -970,6 +970,8 @@ class SoftplusLoss(SoftPointwiseHingeLoss):
     name: Softplus
     """
 
+    hpo_default: ClassVar[Mapping[str, Any]] = dict()
+
     def __init__(self, reduction: str = "mean") -> None:
         super().__init__(margin=0.0, reduction=reduction)
 
