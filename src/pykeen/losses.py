@@ -644,6 +644,8 @@ class PairwiseLogisticLoss(SoftMarginRankingLoss):
     name: Pairwise logistic
     """
 
+    hpo_default: ClassVar[Mapping[str, Any]] = dict()
+
     def __init__(self, reduction: str = "mean"):
         super().__init__(margin=0.0, reduction=reduction)
 
