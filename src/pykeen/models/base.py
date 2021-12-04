@@ -277,7 +277,7 @@ class Model(nn.Module, ABC):
             The score for each triple.
         """
         self.eval()  # Enforce evaluation mode
-        scores = self.score_hrt(hrt_batch)
+        scores = self.score_hrt(hrt_batch.to(self.device))
         if self.predict_with_sigmoid:
             scores = torch.sigmoid(scores)
         return scores
@@ -308,6 +308,7 @@ class Model(nn.Module, ABC):
             For each r-t pair, the scores for all possible heads.
         """
         self.eval()  # Enforce evaluation mode
+        rt_batch = rt_batch.to(self.device)
         if self.use_inverse_triples:
             scores = self.score_h_inverse(rt_batch=rt_batch, slice_size=slice_size)
         elif slice_size is None:
@@ -347,6 +348,7 @@ class Model(nn.Module, ABC):
             behavior regardless of the use of inverse triples.
         """
         self.eval()  # Enforce evaluation mode
+        hr_batch = hr_batch.to(self.device)
         if slice_size is None:
             scores = self.score_t(hr_batch)
         else:
@@ -375,6 +377,7 @@ class Model(nn.Module, ABC):
             For each h-t pair, the scores for all possible relations.
         """
         self.eval()  # Enforce evaluation mode
+        ht_batch = ht_batch.to(self.device)
         if slice_size is None:
             scores = self.score_r(ht_batch)
         else:
