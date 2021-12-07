@@ -191,6 +191,14 @@ def get_dataset(
     )
 
 
+def _digest_kwargs(dataset_kwargs) -> str:
+    digester = hashlib.sha256()
+    for key in sorted(dataset_kwargs.keys()):
+        digester.update(key.encode(encoding="utf8"))
+        digester.update(str(dataset_kwargs[key]).encode(encoding="utf8"))
+    return digester.hexdigest()[:32]
+
+
 def _cached_get_dataset(
     dataset: str,
     dataset_kwargs: Optional[Mapping[str, Any]],
@@ -199,11 +207,7 @@ def _cached_get_dataset(
     """Get dataset by name, potentially using file-based cache."""
     # hash kwargs
     dataset_kwargs = dataset_kwargs or {}
-    digester = hashlib.sha256()
-    for key in sorted(dataset_kwargs.keys()):
-        digester.update(key.encode(encoding="utf8"))
-        digester.update(str(dataset_kwargs[key]).encode(encoding="utf8"))
-    digest = digester.hexdigest()[:32]
+    digest = _digest_kwargs(dataset_kwargs)
 
     # normalize dataset name
     dataset = dataset_resolver.normalize(dataset)
