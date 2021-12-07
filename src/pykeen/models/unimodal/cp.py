@@ -44,7 +44,7 @@ class CP(ERModel):
         relation_initializer_kwargs: Optional[Mapping[str, Any]] = None,
         **kwargs,
     ) -> None:
-        r"""Initialize DistMA via the :class:`pykeen.nn.modules.DistMAInteraction` interaction.
+        r"""Initialize CP via the :class:`pykeen.nn.modules.CPInteraction` interaction.
 
         :param embedding_dim: The entity embedding dimension $d$.
         :param rank: The tensor decomposition rank $k$.
