@@ -93,6 +93,18 @@ class ConvKBTests(cases.InteractionTestCase):
         return linear(x.view(1, -1))
 
 
+class CPInteractionTests(cases.InteractionTestCase):
+    """Test for the canonical tensor decomposition interaction."""
+
+    cls = pykeen.nn.modules.CPInteraction
+    shape_kwargs = dict(
+        k=3,
+    )
+
+    def _exp_score(self, h, r, t) -> torch.FloatTensor:  # noqa: D102
+        return (h * r * t).sum(dim=(-2, -1))
+
+
 class CrossETests(cases.InteractionTestCase):
     """Tests for CrossE interaction function."""
 

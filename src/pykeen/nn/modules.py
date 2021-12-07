@@ -1474,6 +1474,23 @@ class BoxEInteraction(
         return state
 
 
+class CPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
+    """
+    An implementation of the CP interaction as described [lacroix2018]_ (originally from [hitchcock1927]_).
+
+    .. note ::
+        For $k=1$, this interaction is the same as DistMult (but consider the node below).
+
+    .. note ::
+        For equivalence to CP, entities should have different representations for head & tail role. This is different
+        to DistMult.
+    """
+
+    func = pkf.cp_interaction
+    entity_shape = ("kd",)
+    relation_shape = ("kd",)
+
+
 interaction_resolver = Resolver.from_subclasses(
     Interaction,  # type: ignore
     skip={NormBasedInteraction, FunctionalInteraction, MonotonicAffineTransformationInteraction},
