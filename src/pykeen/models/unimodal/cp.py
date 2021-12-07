@@ -85,6 +85,9 @@ class CP(ERModel):
                 initializer=relation_initializer,
                 initializer_kwargs=relation_initializer_kwargs,
             ),
+            # Since CP uses different representations for entities in head / tail role,
+            # the current solution is a bit hacky, and may be improved. See discussion
+            # on https://github.com/pykeen/pykeen/pull/663.
             skip_checks=True,
             **kwargs,
         )
