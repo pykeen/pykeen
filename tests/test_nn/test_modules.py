@@ -13,13 +13,7 @@ import unittest_templates
 import pykeen.nn.modules
 import pykeen.utils
 from pykeen.nn.functional import _rotate_quaternion, _split_quaternion, distmult_interaction
-from pykeen.nn.modules import (
-    CPInteraction,
-    FunctionalInteraction,
-    Interaction,
-    LiteralInteraction,
-    NormBasedInteraction,
-)
+from pykeen.nn.modules import FunctionalInteraction, Interaction, LiteralInteraction, NormBasedInteraction
 from pykeen.utils import clamp_norm, project_entity, strip_dim, view_complex
 from tests import cases
 
@@ -102,7 +96,7 @@ class ConvKBTests(cases.InteractionTestCase):
 class CPInteractionTests(cases.InteractionTestCase):
     """Test for the canonical tensor decomposition interaction."""
 
-    cls = CPInteraction
+    cls = pykeen.nn.modules.CPInteraction
     shape_kwargs = dict(
         k=3,
     )
