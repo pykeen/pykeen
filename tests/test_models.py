@@ -24,9 +24,10 @@ from pykeen.models import (
 )
 from pykeen.models.multimodal.base import LiteralModel
 from pykeen.models.predict import get_novelty_mask, predict
+from pykeen.models.unimodal.node_piece import _ConcatMLP
 from pykeen.models.unimodal.trans_d import _project_entity
 from pykeen.nn import EmbeddingSpecification
-from pykeen.nn.emb import Embedding
+from pykeen.nn.emb import Embedding, NodePieceRepresentation
 from pykeen.utils import all_in_bounds, clamp_norm, extend_batch
 from tests import cases
 from tests.constants import EPSILON
@@ -224,6 +225,39 @@ class TestKG2EWithEL(cases.BaseKG2ETest):
     kwargs = {
         "dist_similarity": "EL",
     }
+
+
+class TestNodePiece(cases.BaseNodePieceTest):
+    """Test the NodePiece model."""
+
+
+class TestNodePieceMLP(cases.BaseNodePieceTest):
+    """Test the NodePiece model with MLP aggregation."""
+
+    kwargs = dict(
+        num_tokens=64,
+        aggregation="mlp",
+    )
+
+    def test_aggregation(self):
+        """Test that the MLP gets registered properly and is trainable."""
+        self.assertIsInstance(self.instance, pykeen.models.NodePiece)
+        self.assertIsInstance(self.instance.entity_representations[0], NodePieceRepresentation)
+        self.assertIsInstance(self.instance.entity_representations[0].aggregation, _ConcatMLP)
+
+        # Test that the weight in the MLP is trainable (i.e. requires grad)
+        keys = [
+            "entity_representations.0.aggregation.0.weight",
+            "entity_representations.0.aggregation.0.bias",
+            "entity_representations.0.aggregation.3.weight",
+            "entity_representations.0.aggregation.3.bias",
+        ]
+        for key in keys:
+            params = dict(self.instance.named_parameters())
+            self.assertIn(key, set(params))
+            tensor = params[key]
+            self.assertIsInstance(tensor, torch.Tensor)
+            self.assertTrue(tensor.requires_grad)
 
 
 class TestNTN(cases.ModelTestCase):
@@ -614,6 +648,12 @@ class TestBoxE(cases.ModelTestCase):
     """Test the BoxE model."""
 
     cls = pykeen.models.BoxE
+
+
+class TestCP(cases.ModelTestCase):
+    """Test the CP model."""
+
+    cls = pykeen.models.CP
 
 
 class TestTesting(unittest_templates.MetaTestCase[Model]):

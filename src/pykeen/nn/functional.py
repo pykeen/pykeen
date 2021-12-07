@@ -17,7 +17,7 @@ import numpy
 import torch
 from torch import nn
 
-from .compute_kernel import _complex_native_complex, batched_dot
+from .compute_kernel import batched_complex, batched_dot
 from .sim import KG2E_SIMILARITIES
 from ..moves import irfft, rfft
 from ..typing import GaussianDistribution
@@ -42,6 +42,7 @@ __all__ = [
     "complex_interaction",
     "conve_interaction",
     "convkb_interaction",
+    "cp_interaction",
     "cross_e_interaction",
     "dist_ma_interaction",
     "distmult_interaction",
@@ -131,7 +132,7 @@ def complex_interaction(
     :return: shape: (batch_size, num_heads, num_relations, num_tails)
         The scores.
     """
-    return _complex_native_complex(h, r, t)
+    return batched_complex(h, r, t)
 
 
 @_add_cuda_warning
@@ -1267,4 +1268,29 @@ def boxe_interaction(
             (h_pos, t_bump, rh_base, rh_delta, rh_size),
             (t_pos, h_bump, rt_base, rt_delta, rt_size),
         )
+    )
+
+
+def cp_interaction(
+    h: torch.FloatTensor,
+    r: torch.FloatTensor,
+    t: torch.FloatTensor,
+) -> torch.FloatTensor:
+    """Evaluate the Canonical Tensor Decomposition interaction function.
+
+    :param h: shape: (batch_size, num_heads, 1, 1, rank, dim)
+        The head representations.
+    :param r: shape: (batch_size, 1, num_relations, 1, rank, dim)
+        The relation representations.
+    :param t: shape: (batch_size, 1, 1, num_tails, rank, dim)
+        The tail representations.
+
+    :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        The scores.
+    """
+    return extended_einsum(
+        "bhrtkd,bhrtkd,bhrtkd->bhrt",
+        h,
+        r,
+        t,
     )

@@ -19,7 +19,6 @@ from pathlib import Path
 from typing import (
     Any,
     Callable,
-    Collection,
     Dict,
     Generic,
     Iterable,
@@ -60,7 +59,6 @@ __all__ = [
     "resolve_device",
     "split_complex",
     "split_list_in_batches_iter",
-    "torch_is_in_1d",
     "normalize_string",
     "get_until_first_blank",
     "flatten_dictionary",
@@ -344,6 +342,11 @@ def view_complex(x: torch.FloatTensor) -> torch.Tensor:
     return torch.complex(real=real, imag=imag)
 
 
+def view_complex_native(x: torch.FloatTensor) -> torch.Tensor:
+    """Convert a PyKEEN complex tensor representation into a torch one using :func:`torch.view_as_complex`."""
+    return torch.view_as_complex(x.view(*x.shape[:-1], -1, 2))
+
+
 def combine_complex(
     x_re: torch.FloatTensor,
     x_im: torch.FloatTensor,
@@ -441,42 +444,6 @@ def ensure_torch_random_state(random_state: TorchRandomHint) -> torch.Generator:
     if not isinstance(random_state, torch.Generator):
         raise TypeError
     return random_state
-
-
-def torch_is_in_1d(
-    query_tensor: torch.LongTensor,
-    test_tensor: Union[Collection[int], torch.LongTensor],
-    max_id: Optional[int] = None,
-    invert: bool = False,
-) -> torch.BoolTensor:
-    """
-    Return a boolean mask with ``Q[i]`` in T.
-
-    The method guarantees memory complexity of ``max(size(Q), size(T))`` and is thus, memory-wise, superior to naive
-    broadcasting.
-
-    :param query_tensor: shape: S
-        The query Q.
-    :param test_tensor:
-        The test set T.
-    :param max_id:
-        A maximum ID. If not given, will be inferred.
-    :param invert:
-        Whether to invert the result.
-
-    :return: shape: S
-        A boolean mask.
-    """
-    # normalize input
-    if not isinstance(test_tensor, torch.Tensor):
-        test_tensor = torch.as_tensor(data=list(test_tensor), dtype=torch.long)
-    if max_id is None:
-        max_id = max(query_tensor.max(), test_tensor.max()) + 1
-    mask = torch.zeros(max_id, dtype=torch.bool)
-    mask[test_tensor] = True
-    if invert:
-        mask = ~mask
-    return mask[query_tensor.view(-1)].view(*query_tensor.shape)
 
 
 def format_relative_comparison(

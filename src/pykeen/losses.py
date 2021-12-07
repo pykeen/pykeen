@@ -644,6 +644,10 @@ class PairwiseLogisticLoss(SoftMarginRankingLoss):
     name: Pairwise logistic
     """
 
+    # Ensures that for this class incompatible hyper-parameter "margin" of superclass is not used
+    # within the ablation pipeline.
+    hpo_default: ClassVar[Mapping[str, Any]] = dict()
+
     def __init__(self, reduction: str = "mean"):
         super().__init__(margin=0.0, reduction=reduction)
 
@@ -969,6 +973,10 @@ class SoftplusLoss(SoftPointwiseHingeLoss):
     ---
     name: Softplus
     """
+
+    # Ensures that for this class incompatible hyper-parameter "margin" of superclass is not used
+    # within the ablation pipeline.
+    hpo_default: ClassVar[Mapping[str, Any]] = dict()
 
     def __init__(self, reduction: str = "mean") -> None:
         super().__init__(margin=0.0, reduction=reduction)

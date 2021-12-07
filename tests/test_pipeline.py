@@ -2,6 +2,7 @@
 
 """Test the PyKEEN pipeline function."""
 
+import pathlib
 import tempfile
 import unittest
 
@@ -22,6 +23,7 @@ from pykeen.models.predict import (
 from pykeen.models.resolve import DimensionError, make_model, make_model_cls
 from pykeen.nn.modules import TransEInteraction
 from pykeen.pipeline import PipelineResult, pipeline
+from pykeen.pipeline.api import replicate_pipeline_from_config
 from pykeen.regularizers import NoRegularizer
 from pykeen.training import SLCWATrainingLoop
 from pykeen.triples.generation import generate_triples_factory
@@ -341,6 +343,35 @@ class TestPipelineTriples(unittest.TestCase):
 
         # empty lists are falsy
         self.assertTrue(losses)
+
+
+class TestPipelineReplicate(unittest.TestCase):
+    """Test the replication with pipeline."""
+
+    def setUp(self) -> None:  # noqa: D102
+        self.tmp_dir = tempfile.TemporaryDirectory()
+        self.tmp_dir_path = pathlib.Path(self.tmp_dir.name)
+
+    def tearDown(self) -> None:  # noqa: D102
+        self.tmp_dir.cleanup()
+
+    def test_replicate_pipeline_from_config(self):
+        """Test replication from config."""
+        replicate_pipeline_from_config(
+            config=dict(
+                metadata=dict(),
+                pipeline=dict(
+                    dataset="nations",
+                    model="transe",
+                ),
+                results={
+                    "hits_at_k": {"best": {"10": 0.538}},
+                    "mean_rank": {"best": 163},
+                },
+            ),
+            directory=self.tmp_dir_path,
+            replicates=1,
+        )
 
 
 class TestPipelineCheckpoints(unittest.TestCase):
