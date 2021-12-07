@@ -610,16 +610,7 @@ class TestUtils(unittest.TestCase):
 
     def test_core_binary(self):
         """Test binary i/o on core triples factory."""
-        _tf1 = Nations().training
-        tf1 = CoreTriplesFactory(
-            mapped_triples=_tf1.mapped_triples,
-            num_entities=_tf1.num_entities,
-            num_relations=_tf1.num_relations,
-            entity_ids=_tf1.entity_ids,
-            relation_ids=_tf1.relation_ids,
-            create_inverse_triples=_tf1.create_inverse_triples,
-            metadata=_tf1.metadata,
-        )
+        tf1 = Nations().training.to_core_triples_factory()
         self.assert_binary_io(tf1, CoreTriplesFactory)
 
     def assert_binary_io(self, tf, tf_cls):

@@ -794,6 +794,18 @@ class TriplesFactory(CoreTriplesFactory):
             },
         )
 
+    def to_core_triples_factory(self) -> CoreTriplesFactory:
+        """Return this factory as a core factory."""
+        return CoreTriplesFactory(
+            mapped_triples=self.mapped_triples,
+            num_entities=self.num_entities,
+            num_relations=self.num_relations,
+            entity_ids=self.entity_ids,
+            relation_ids=self.relation_ids,
+            create_inverse_triples=self.create_inverse_triples,
+            metadata=self.metadata,
+        )
+
     def clone_and_exchange_triples(
         self,
         mapped_triples: MappedTriples,
