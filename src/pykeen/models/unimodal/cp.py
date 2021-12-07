@@ -18,9 +18,10 @@ __all__ = [
 
 
 class CP(ERModel):
-    r"""An implementation of CP as described in [lacroix2018]_ (but originally from [hitchcock1927]_).
+    r"""An implementation of CP as described in [lacroix2018]_ based on [hitchcock1927]_.
 
     ---
+    name: Canonical Tensor Decomposition
     citation:
         author: Lacroix
         year: 2018
