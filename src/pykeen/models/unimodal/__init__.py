@@ -77,6 +77,7 @@ from .compgcn import CompGCN
 from .complex import ComplEx
 from .conv_e import ConvE
 from .conv_kb import ConvKB
+from .cp import CP
 from .crosse import CrossE
 from .distma import DistMA
 from .distmult import DistMult
@@ -110,6 +111,7 @@ __all__ = [
     "ComplEx",
     "ConvE",
     "ConvKB",
+    "CP",
     "CrossE",
     "DistMA",
     "DistMult",
