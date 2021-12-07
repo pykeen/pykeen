@@ -25,6 +25,8 @@ class CP(ERModel):
         author: Lacroix
         year: 2018
         arxiv: 1806.07297
+        link: https://arxiv.org/abs/1806.07297
+        github: facebookresearch/kbc
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
