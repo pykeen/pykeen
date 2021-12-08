@@ -254,7 +254,7 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 | rankbased | [`pykeen.evaluation.RankBasedEvaluator`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.RankBasedEvaluator.html) | A rank-based evaluator for KGE models.        |
 | sklearn   | [`pykeen.evaluation.SklearnEvaluator`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.SklearnEvaluator.html)     | An evaluator that uses a Scikit-learn metric. |
 
-### Metrics (16)
+### Metrics (20)
 
 | Name                                        | Description                                                                            |
 |---------------------------------------------|----------------------------------------------------------------------------------------|
@@ -262,15 +262,19 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 | Adjusted Arithmetic Mean Rank (AAMR)        | The mean over all chance-adjusted ranks, on (0, 2). Lower is better.                   |
 | Adjusted Arithmetic Mean Rank Index (AAMRI) | The re-indexed adjusted mean rank (AAMR), on [-1, 1]. Higher is better.                |
 | Average Precision                           | The area under the precision-recall curve, on [0, 1]. Higher is better.                |
+| F1 Score                                    | A weighted average of the precision and recall, on [0, 1]. Higher is better.           |
 | Geometric Mean Rank (GMR)                   | The geometric mean over all ranks, on [1, inf). Lower is better.                       |
 | Harmonic Mean Rank (HMR)                    | The harmonic mean over all ranks, on [1, inf). Lower is better.                        |
 | Hits @ K                                    | The relative frequency of ranks not larger than a given k, on [0, 1]. Higher is better |
 | Inverse Arithmetic Mean Rank (IAMR)         | The inverse of the arithmetic mean over all ranks, on (0, 1]. Higher is better.        |
 | Inverse Geometric Mean Rank (IGMR)          | The inverse of the geometric mean over all ranks, on (0, 1]. Higher is better.         |
 | Inverse Median Rank                         | The inverse of the median over all ranks, on (0, 1]. Higher is better.                 |
+| Matthews Correlation Coefficient            | A balanced measure applicable even with class imbalance, on [-1, 1]. Higher is better. |
 | Mean Rank (MR)                              | The arithmetic mean over all ranks on, [1, inf). Lower is better.                      |
 | Mean Reciprocal Rank (MRR)                  | The inverse of the harmonic mean over all ranks, on (0, 1]. Higher is better.          |
 | Median Rank                                 | The median over all ranks, on [1, inf). Lower is better.                               |
+| Precision                                   | The ability to not label a negative as positive, on [0, 1]. Higher is better.          |
+| Recall                                      | The ability to find positive samples, on [0, 1]. Higher is better.                     |
 
 ### Trackers (7)
 

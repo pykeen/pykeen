@@ -2,10 +2,11 @@
 
 """Implementation of wrapper around sklearn metrics."""
 
-from dataclasses import dataclass, field, fields
+from dataclasses import dataclass, field, fields, make_dataclass
 from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
+import rexmex.metrics.classification as rmc
 import torch
 from dataclasses_json import dataclass_json
 from sklearn import metrics
@@ -19,45 +20,66 @@ __all__ = [
     "SklearnMetricResults",
 ]
 
+_funcs = [
+    (metrics.roc_auc_score, "AUC-ROC", "The area under the ROC curve, on [0, 1].", True),
+    (
+        metrics.average_precision_score,
+        "Average Precision",
+        "The area under the precision-recall curve, on [0, 1].",
+        True,
+    ),
+    (
+        rmc.matthews_correlation_coefficient,
+        "Matthews Correlation Coefficient",
+        "A balanced measure applicable even with class imbalance, on [-1, 1].",
+        True,
+    ),
+    (
+        rmc.f1_score,
+        "F1 Score",
+        "A weighted average of the precision and recall, on [0, 1].",
+        True,
+    ),
+    (
+        rmc.recall_score,
+        "Recall",
+        "The ability to find positive samples, on [0, 1].",
+        True,
+    ),
+    (
+        rmc.precision_score,
+        "Precision",
+        "The ability to not label a negative as positive, on [0, 1].",
+        True,
+    ),
+]
+_fields = [
+    (
+        func.__name__,
+        float,
+        field(
+            metadata=dict(
+                name=name,
+                doc=doc + (" Higher is better." if higher_is_better else " Lower is better."),
+                f=func,
+            )
+        ),
+    )
+    for func, name, doc, higher_is_better in _funcs
+]
+
+SklearnMetricResultsBase = make_dataclass(
+    "SklearnMetricResultsBase",
+    _fields,
+    bases=(MetricResults,),
+)
+
 
 @fix_dataclass_init_docs
 @dataclass_json
 @dataclass
-class SklearnMetricResults(MetricResults):
+class SklearnMetricResults(SklearnMetricResultsBase):
     """Results from computing metrics."""
-
-    #: The area under the ROC curve
-    roc_auc_score: float = field(
-        metadata=dict(
-            name="AUC-ROC",
-            doc="The area under the ROC curve, on [0, 1]. Higher is better.",
-            f=metrics.roc_auc_score,
-        )
-    )
-    #: The area under the precision-recall curve
-    average_precision_score: float = field(
-        metadata=dict(
-            name="Average Precision",
-            doc="The area under the precision-recall curve, on [0, 1]. Higher is better.",
-            f=metrics.average_precision_score,
-        )
-    )
-
-    #: The coverage error
-    # coverage_error: float = field(metadata=dict(
-    #     doc='The coverage error',
-    #     f=metrics.coverage_error,
-    # ))
-    #: The label ranking loss (APS)
-    # label_ranking_average_precision_score: float = field(metadata=dict(
-    #     doc='The label ranking loss (APS)',
-    #     f=metrics.label_ranking_average_precision_score,
-    # ))
-    # #: The label ranking loss
-    # label_ranking_loss: float = field(metadata=dict(
-    #     doc='The label ranking loss',
-    #     f=metrics.label_ranking_loss,
-    # ))
 
     @classmethod
     def from_scores(cls, y_true, y_score):
