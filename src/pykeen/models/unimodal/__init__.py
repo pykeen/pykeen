@@ -70,6 +70,10 @@
 .. [zaheer2017] Zaheer, M., *et al.* (2017). `Deep sets
    <https://papers.nips.cc/paper/2017/hash/f22e4747da1aa27e363d86d40ff442fe-Abstract.html>`_.
    *Advances in Neural Information Processing Systems*, 2017-December(ii), 3392–3402.
+.. [lacroix2018] Lacroix, T., Usunier, N., & Obozinski, G. (2018). `Canonical Tensor Decomposition for Knowledge Base
+   Completion <http://arxiv.org/abs/1806.07297>`_. *arXiv*, 1806.07297.
+.. [hitchcock1927] Hitchcock, F. L. `The expression of a tensor or a polyadic as a sum of
+   products <https://doi.org/10.1002/sapm192761164>`_. Studies in Applied Mathematics, 6 (1-4):164–189, 1927.
 """
 
 from .boxe import BoxE
@@ -77,6 +81,7 @@ from .compgcn import CompGCN
 from .complex import ComplEx
 from .conv_e import ConvE
 from .conv_kb import ConvKB
+from .cp import CP
 from .crosse import CrossE
 from .distma import DistMA
 from .distmult import DistMult
@@ -110,6 +115,7 @@ __all__ = [
     "ComplEx",
     "ConvE",
     "ConvKB",
+    "CP",
     "CrossE",
     "DistMA",
     "DistMult",
