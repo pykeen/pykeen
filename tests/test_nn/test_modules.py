@@ -13,7 +13,7 @@ import unittest_templates
 import pykeen.nn.modules
 import pykeen.utils
 from pykeen.nn.functional import _rotate_quaternion, _split_quaternion, distmult_interaction
-from pykeen.nn.modules import FunctionalInteraction, Interaction, LiteralInteraction, TranslationalInteraction
+from pykeen.nn.modules import FunctionalInteraction, Interaction, LiteralInteraction, NormBasedInteraction
 from pykeen.utils import clamp_norm, project_entity, strip_dim, view_complex
 from tests import cases
 
@@ -91,6 +91,18 @@ class ConvKBTests(cases.InteractionTestCase):
         x = conv(x)
         x = hidden_dropout(activation(x))
         return linear(x.view(1, -1))
+
+
+class CPInteractionTests(cases.InteractionTestCase):
+    """Test for the canonical tensor decomposition interaction."""
+
+    cls = pykeen.nn.modules.CPInteraction
+    shape_kwargs = dict(
+        k=3,
+    )
+
+    def _exp_score(self, h, r, t) -> torch.FloatTensor:  # noqa: D102
+        return (h * r * t).sum(dim=(-2, -1))
 
 
 class CrossETests(cases.InteractionTestCase):
@@ -508,7 +520,7 @@ class InteractionTestsTestCase(unittest_templates.MetaTestCase[Interaction]):
     skip_cls = {
         Interaction,
         FunctionalInteraction,
-        TranslationalInteraction,
+        NormBasedInteraction,
         LiteralInteraction,
         # FIXME
         pykeen.nn.modules.BoxEInteraction,

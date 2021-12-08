@@ -14,6 +14,7 @@ from .multimodal import ComplExLiteral, DistMultLiteral, DistMultLiteralGated, L
 from .nbase import ERModel, _NewAbstractModel
 from .resolve import make_model, make_model_cls
 from .unimodal import (
+    CP,
     ERMLP,
     ERMLPE,
     KG2E,
@@ -63,6 +64,7 @@ __all__ = [
     "ComplExLiteral",
     "ConvE",
     "ConvKB",
+    "CP",
     "CrossE",
     "DistMA",
     "DistMult",

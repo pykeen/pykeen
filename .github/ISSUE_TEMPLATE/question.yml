@@ -1,0 +1,31 @@
+name: Question or documentation request
+description: Is something unclear? Tell us how to make PyKEEN easier to understand.
+labels: [ "question" ]
+body:
+  - type: markdown
+    attributes:
+      value: We care about feedback from the community and are trying to make PyKEEN as easy to use as possible. Thanks for your feedback!
+  - type: textarea
+    id: question
+    attributes:
+      label: What is your question
+      description: This issue template is pretty freeform, so tell us what you're thinking. Please see the "bug" issue template for any unexpected/erroneous behavior and "feature request" issue template for suggestions about adding new (or changing) how things work in PyKEEN.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Please copy the exact output of running `python -m pykeen version` in your shell. Alternatively, you can run `python -m pykeen version | pbcopy` to make the text automatically go to the clipboard. This command lets us know information about your system and installation of PyKEEN. If you do not include this table correctly, we will dismiss your issue.
+    validations:
+      required: true
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Issue Template Checks
+      description: By submitting this issue, you declare that you checked the following things
+      options:
+        - label: This is not a bug report (use a different issue template if it is)
+          required: true
+        - label: This is not a feature request (use a different issue template if it is)
+          required: true
