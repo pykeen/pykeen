@@ -431,6 +431,7 @@ class HpoPipelineResult(Result):
         replicates: int,
         move_to_cpu: bool = False,
         save_replicates: bool = True,
+        save_training: bool = False,
     ) -> None:
         """Run the pipeline on the best configuration, but this time on the "test" set instead of "evaluation" set.
 
@@ -438,6 +439,7 @@ class HpoPipelineResult(Result):
         :param replicates: The number of times to retrain the model
         :param move_to_cpu: Should the model be moved back to the CPU? Only relevant if training on GPU.
         :param save_replicates: Should the artifacts of the replicates be saved?
+        :param save_training: Should the training triples be saved?
         """
         config = self._get_best_study_config()
 
@@ -451,6 +453,7 @@ class HpoPipelineResult(Result):
             use_testing_data=True,
             move_to_cpu=move_to_cpu,
             save_replicates=save_replicates,
+            save_training=save_training,
         )
 
 

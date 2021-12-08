@@ -495,6 +495,7 @@ def replicate_pipeline_from_config(
     replicates: int,
     move_to_cpu: bool = False,
     save_replicates: bool = True,
+    save_training: bool = False,
     **kwargs,
 ) -> None:
     """Run the same pipeline several times from a configuration dictionary.
@@ -513,6 +514,7 @@ def replicate_pipeline_from_config(
         pipeline_results=pipeline_results,
         move_to_cpu=move_to_cpu,
         save_replicates=save_replicates,
+        save_training=save_training,
     )
 
 
@@ -614,6 +616,7 @@ def save_pipeline_results_to_directory(
     move_to_cpu: bool = False,
     save_metadata: bool = False,
     save_replicates: bool = True,
+    save_training: bool = False,
     width: int = 5,
 ) -> None:
     """Save the result set to the directory.
@@ -625,6 +628,7 @@ def save_pipeline_results_to_directory(
     :param save_metadata: Should the metadata be saved? Might be redundant in a scenario when you're
         using this function, so defaults to false.
     :param save_replicates: Should the artifacts of the replicates be saved?
+    :param save_training: Should the training triples be saved?
     :param width: How many leading zeros should be put in the replicate names?
     """
     if isinstance(directory, str):
@@ -646,6 +650,7 @@ def save_pipeline_results_to_directory(
             replicate_directory,
             save_metadata=save_metadata,
             save_replicates=save_replicates,
+            save_training=save_training,
         )
         for epoch, loss in enumerate(pipeline_result.losses):
             losses_rows.append((i, epoch, loss))
