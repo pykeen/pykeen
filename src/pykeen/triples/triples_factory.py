@@ -150,10 +150,10 @@ class Labeling:
     id_to_label: Mapping[int, str] = dataclasses.field(init=False)
 
     #: A vectorized version of entity_label_to_id; initialized automatically
-    _vectorized_mapper: Callable[..., np.ndarray] = dataclasses.field(init=False)
+    _vectorized_mapper: Callable[..., np.ndarray] = dataclasses.field(init=False, compare=False)
 
     #: A vectorized version of entity_id_to_label; initialized automatically
-    _vectorized_labeler: Callable[..., np.ndarray] = dataclasses.field(init=False)
+    _vectorized_labeler: Callable[..., np.ndarray] = dataclasses.field(init=False, compare=False)
 
     def __post_init__(self):
         """Precompute inverse mappings."""
@@ -583,6 +583,50 @@ class CoreTriplesFactory:
             extra_metadata=extra_metadata,
         )
 
+    @classmethod
+    def from_path_binary(
+        cls,
+        path: Union[str, pathlib.Path, TextIO],
+    ) -> "CoreTriplesFactory":  # noqa: D102
+        """
+        Load triples factory from a binary file.
+
+        :param path:
+            The path, pointing to an existing PyTorch .pt file.
+
+        :return:
+            The loaded triples factory.
+        """
+        path = normalize_path(path)
+        logger.info(f"Loading from {path.as_uri()}")
+        data = torch.load(path)
+        return cls(**data)
+
+    def to_path_binary(
+        self,
+        path: Union[str, pathlib.Path, TextIO],
+    ) -> None:
+        """
+        Save triples factory to path in (PyTorch's .pt) binary format.
+
+        :param path:
+            The path to store the triples factory to.
+        """
+        path = normalize_path(path)
+        torch.save(self._get_binary_state(), path)
+        logger.info(f"Stored {self} to {path.as_uri()}")
+
+    def _get_binary_state(self):
+        return dict(
+            mapped_triples=self.mapped_triples,
+            num_entities=self.num_entities,
+            num_relations=self.num_relations,
+            entity_ids=self.entity_ids,
+            relation_ids=self.relation_ids,
+            create_inverse_triples=self.create_inverse_triples,
+            metadata=self.metadata,
+        )
+
 
 class TriplesFactory(CoreTriplesFactory):
     """Create instances given the path to triples."""
@@ -748,6 +792,27 @@ class TriplesFactory(CoreTriplesFactory):
                 "path": path,
                 **(metadata or {}),
             },
+        )
+
+    def to_core_triples_factory(self) -> CoreTriplesFactory:
+        """Return this factory as a core factory."""
+        return CoreTriplesFactory(
+            mapped_triples=self.mapped_triples,
+            num_entities=self.num_entities,
+            num_relations=self.num_relations,
+            entity_ids=self.entity_ids,
+            relation_ids=self.relation_ids,
+            create_inverse_triples=self.create_inverse_triples,
+            metadata=self.metadata,
+        )
+
+    def _get_binary_state(self):
+        return dict(
+            mapped_triples=self.mapped_triples,
+            entity_to_id=self.entity_to_id,
+            relation_to_id=self.relation_to_id,
+            create_inverse_triples=self.create_inverse_triples,
+            metadata=self.metadata,
         )
 
     def clone_and_exchange_triples(
