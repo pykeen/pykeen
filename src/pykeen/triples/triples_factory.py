@@ -583,31 +583,6 @@ class CoreTriplesFactory:
             extra_metadata=extra_metadata,
         )
 
-    def to_path_binary(
-        self,
-        path: Union[str, pathlib.Path, TextIO],
-    ) -> None:
-        """
-        Save triples factory to path in (PyTorch's .pt) binary format.
-
-        :param path:
-            The path to store the triples factory to.
-        """
-        path = normalize_path(path)
-        torch.save(
-            dict(
-                mapped_triples=self.mapped_triples,
-                num_entities=self.num_entities,
-                num_relations=self.num_relations,
-                entity_ids=self.entity_ids,
-                relation_ids=self.relation_ids,
-                create_inverse_triples=self.create_inverse_triples,
-                metadata=self.metadata,
-            ),
-            path,
-        )
-        logger.info(f"Stored {self} to {path.as_uri()}")
-
     @classmethod
     def from_path_binary(
         cls,
@@ -626,6 +601,31 @@ class CoreTriplesFactory:
         logger.info(f"Loading from {path.as_uri()}")
         data = torch.load(path)
         return cls(**data)
+
+    def to_path_binary(
+        self,
+        path: Union[str, pathlib.Path, TextIO],
+    ) -> None:
+        """
+        Save triples factory to path in (PyTorch's .pt) binary format.
+
+        :param path:
+            The path to store the triples factory to.
+        """
+        path = normalize_path(path)
+        torch.save(self._get_binary_state(), path)
+        logger.info(f"Stored {self} to {path.as_uri()}")
+
+    def _get_binary_state(self):
+        return dict(
+            mapped_triples=self.mapped_triples,
+            num_entities=self.num_entities,
+            num_relations=self.num_relations,
+            entity_ids=self.entity_ids,
+            relation_ids=self.relation_ids,
+            create_inverse_triples=self.create_inverse_triples,
+            metadata=self.metadata,
+        )
 
 
 class TriplesFactory(CoreTriplesFactory):
@@ -792,6 +792,27 @@ class TriplesFactory(CoreTriplesFactory):
                 "path": path,
                 **(metadata or {}),
             },
+        )
+
+    def to_core_triples_factory(self) -> CoreTriplesFactory:
+        """Return this factory as a core factory."""
+        return CoreTriplesFactory(
+            mapped_triples=self.mapped_triples,
+            num_entities=self.num_entities,
+            num_relations=self.num_relations,
+            entity_ids=self.entity_ids,
+            relation_ids=self.relation_ids,
+            create_inverse_triples=self.create_inverse_triples,
+            metadata=self.metadata,
+        )
+
+    def _get_binary_state(self):
+        return dict(
+            mapped_triples=self.mapped_triples,
+            entity_to_id=self.entity_to_id,
+            relation_to_id=self.relation_to_id,
+            create_inverse_triples=self.create_inverse_triples,
+            metadata=self.metadata,
         )
 
     def clone_and_exchange_triples(
@@ -1031,29 +1052,6 @@ class TriplesFactory(CoreTriplesFactory):
             entity_to_id=self.entity_to_id,
             relation_to_id=self.relation_to_id,
         )
-
-    def to_path_binary(
-        self,
-        path: Union[str, pathlib.Path, TextIO],
-    ) -> None:
-        """
-        Save triples factory to path in (PyTorch's .pt) binary format.
-
-        :param path:
-            The path to store the triples factory to.
-        """
-        path = normalize_path(path)
-        torch.save(
-            dict(
-                mapped_triples=self.mapped_triples,
-                entity_to_id=self.entity_to_id,
-                relation_to_id=self.relation_to_id,
-                create_inverse_triples=self.create_inverse_triples,
-                metadata=self.metadata,
-            ),
-            path,
-        )
-        logger.info(f"Stored {self} to {path.as_uri()}")
 
 
 def cat_triples(*triples_factories: CoreTriplesFactory) -> MappedTriples:
