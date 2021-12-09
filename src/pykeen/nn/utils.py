@@ -63,8 +63,14 @@ class TransformerEncoder(nn.Module):
         labels: Sequence[str],
         batch_size: int = 1,
     ) -> torch.FloatTensor:
-        """Encode all labels (inference mode & batched)."""
-        max_id = len(labels)
+        """Encode all labels (inference mode & batched).
+
+        :param labels: A sequence of strings to encode
+        :param batch_size: ``batch_size=1`` means that the labels are encoded one-by-one,
+            and not all at once (this would be ``batch_size=len(labels)``).
+        :returns: A tensor representing the encodings for all labels
+        """
+        max_id = len(labels)  # FIXME unused
         return torch.cat(
             [self(batch) for batch in chunked(tqdm(labels), batch_size)],
             dim=0,
