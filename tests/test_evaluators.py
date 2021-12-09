@@ -470,6 +470,7 @@ class DummyEvaluator(Evaluator):
             rank_std=None,
             rank_var=None,
             rank_mad=None,
+            rank_count=None,
             adjusted_arithmetic_mean_rank=None,
             adjusted_arithmetic_mean_rank_index=None,
             hits_at_k=dict(),
