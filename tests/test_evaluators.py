@@ -204,6 +204,9 @@ class RankBasedEvaluatorTests(_AbstractEvaluatorTests, unittest.TestCase):
             assert RANK_REALISTIC in adjusted_mean_rank_index
             assert isinstance(adjusted_mean_rank_index[RANK_REALISTIC], float)
             assert -1 <= adjusted_mean_rank_index[RANK_REALISTIC] <= 1
+        
+        # the test only considered a single batch, and only tail scores
+        assert result.rank_count == self.batch_size
 
         # TODO: Validate with data?
 
