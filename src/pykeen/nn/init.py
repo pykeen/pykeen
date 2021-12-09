@@ -168,6 +168,10 @@ class LabelBasedInitializer:
     
     Example Usage:
     
+    Initialize entity representations as Transformer encodings of their labels. Afterwards,
+    the parameters are detached from the labels, and trained on the KGE task without any
+    further connection to the Transformer model.
+    
     .. code-block ::
         dataset = get_dataset(dataset="nations")
         model = ERMMLP(
