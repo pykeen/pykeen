@@ -65,6 +65,6 @@ class TransformerEncoder(nn.Module):
         """Encode all labels (inference mode & batched)."""
         max_id = len(labels)
         return torch.cat(
-            [self(labels[i : i + batch_size]) for i in tqdm.trange(0, max_id, batch_size)],
+            [self(batch) for batch in chunked(tqdm(labels), batch_size)],
             dim=0,
         )
