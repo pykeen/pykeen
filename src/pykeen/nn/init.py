@@ -163,7 +163,20 @@ def create_init_from_pretrained(pretrained: torch.FloatTensor) -> Initializer:
 
 
 class LabelBasedInitializer:
-    """An initializer using pretrained models from the `transformers` library to encode labels."""
+    """
+    An initializer using pretrained models from the `transformers` library to encode labels.
+    
+    Example Usage:
+    
+    .. code-block ::
+        dataset = get_dataset(dataset="nations")
+        model = ERMMLP(
+            embedding_dim=768,  # for BERT base
+            entity_initializer=LabelBasedInitializer.from_triples_factory(
+                triples_factory=dataset.training,
+            ),
+        )
+    """
 
     def __init__(
         self,
