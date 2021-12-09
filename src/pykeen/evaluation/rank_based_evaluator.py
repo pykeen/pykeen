@@ -73,7 +73,7 @@ all_type_funcs = {
     RANK_STD: np.std,
     RANK_VARIANCE: np.var,
     RANK_MAD: stats.median_abs_deviation,
-    RANK_COUNT: lambda x: x.numel(),
+    RANK_COUNT: lambda x: np.asarray(x.size),
 }
 
 ADJUSTED_ARITHMETIC_MEAN_RANK = "adjusted_arithmetic_mean_rank"
