@@ -1292,7 +1292,22 @@ class NodePieceRepresentation(RepresentationModule):
 
 
 class LabelBasedTransformerRepresentation(RepresentationModule):
-    """Label-based representations using a transformer encoder."""
+    """
+    Label-based representations using a transformer encoder.
+    
+    Example Usage:
+    
+    .. code-block ::
+        dataset = get_dataset(dataset="nations")
+        entity_representations = LabelBasedTransformerRepresentation.from_triples_factory(
+            triples_factory=dataset.training,
+        )
+        model = ERModel(
+            interaction="ermlp",
+            entity_representations=entity_representations,
+            relation_representations=EmbeddingSpecification(shape=entity_representations.shape),
+        )
+    """
 
     def __init__(
         self,
