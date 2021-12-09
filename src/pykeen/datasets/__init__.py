@@ -7,6 +7,7 @@ New datasets (inheriting from :class:`pykeen.datasets.base.Dataset`) can be regi
 They are loaded automatically with :func:`pkg_resources.iter_entry_points`.
 """
 
+import base64
 import hashlib
 import logging
 import pathlib
@@ -191,12 +192,12 @@ def get_dataset(
     )
 
 
-def _digest_kwargs(dataset_kwargs) -> str:
+def _digest_kwargs(dataset_kwargs: Mapping[str, Any]) -> str:
     digester = hashlib.sha256()
     for key in sorted(dataset_kwargs.keys()):
         digester.update(key.encode(encoding="utf8"))
         digester.update(str(dataset_kwargs[key]).encode(encoding="utf8"))
-    return digester.hexdigest()[:32]
+    return base64.urlsafe_b64encode(digester.digest()).decode("utf8")[:32]
 
 
 def _cached_get_dataset(
