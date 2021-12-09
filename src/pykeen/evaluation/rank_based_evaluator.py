@@ -300,6 +300,13 @@ class RankBasedMetricResults(MetricResults):
         )
     )
 
+    rank_count: Dict[str, Dict[str, float]] = field(
+        metadata=dict(
+            name="Rank Count",
+            doc="The number of considered ranks, a non-negative number. Low numbers may indicate unreliable results.",
+        )
+    )
+
     rank_std: Dict[str, Dict[str, float]] = field(
         metadata=dict(
             name="Rank Standard Deviation",
