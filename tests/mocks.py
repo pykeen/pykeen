@@ -111,6 +111,7 @@ class MockEvaluator(Evaluator):
                 }
                 for side in SIDES
             },
+            rank_count=1,
             rank_std=dummy_1,
             rank_var=dummy_1,
             rank_mad=dummy_1,
