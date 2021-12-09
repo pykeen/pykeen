@@ -58,6 +58,7 @@ INVERSE_MEDIAN_RANK = "inverse_median_rank"
 RANK_STD = "rank_std"
 RANK_VARIANCE = "rank_var"
 RANK_MAD = "rank_mad"
+RANK_COUNT = "rank_count"
 
 all_type_funcs = {
     ARITHMETIC_MEAN_RANK: np.mean,  # This is MR
@@ -72,6 +73,7 @@ all_type_funcs = {
     RANK_STD: np.std,
     RANK_VARIANCE: np.var,
     RANK_MAD: stats.median_abs_deviation,
+    RANK_COUNT: lambda x: x.numel(),
 }
 
 ADJUSTED_ARITHMETIC_MEAN_RANK = "adjusted_arithmetic_mean_rank"
