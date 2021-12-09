@@ -48,6 +48,7 @@ __all__ = [
     "CompGCNLayer",
     "CombinedCompGCNRepresentations",
     "SingleCompGCNRepresentation",
+    "LabelBasedTransformerRepresentation",
     "constrainers",
     "initializers",
     "normalizers",

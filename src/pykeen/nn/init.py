@@ -26,6 +26,7 @@ __all__ = [
     "uniform_norm_",
     "normal_norm_",
     "init_phases",
+    "LabelBasedInitializer",
 ]
 
 logger = logging.getLogger(__name__)
