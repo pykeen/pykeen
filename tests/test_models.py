@@ -650,6 +650,12 @@ class TestBoxE(cases.ModelTestCase):
     cls = pykeen.models.BoxE
 
 
+class TestCP(cases.ModelTestCase):
+    """Test the CP model."""
+
+    cls = pykeen.models.CP
+
+
 class TestTesting(unittest_templates.MetaTestCase[Model]):
     """Yo dawg, I heard you like testing, so I wrote a test to test the tests so you can test while you're testing."""
 

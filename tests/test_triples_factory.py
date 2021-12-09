@@ -4,7 +4,9 @@
 
 import itertools as itt
 import os
+import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 import numpy as np
@@ -13,7 +15,7 @@ import torch
 
 from pykeen.datasets import Hetionet, Nations, SingleTabbedDataset
 from pykeen.datasets.nations import NATIONS_TRAIN_PATH
-from pykeen.triples import LCWAInstances, TriplesFactory, TriplesNumericLiteralsFactory
+from pykeen.triples import CoreTriplesFactory, LCWAInstances, TriplesFactory, TriplesNumericLiteralsFactory
 from pykeen.triples.generation import generate_triples
 from pykeen.triples.splitting import (
     SPLIT_METHODS,
@@ -599,6 +601,44 @@ class TestUtils(unittest.TestCase):
                 ["b", "r2", "c"],
             ],
             _triples.tolist(),
+        )
+
+    def test_labeled_binary(self):
+        """Test binary i/o on labeled triples factory."""
+        tf1 = Nations().training
+        self.assert_binary_io(tf1, TriplesFactory)
+
+    def test_core_binary(self):
+        """Test binary i/o on core triples factory."""
+        tf1 = Nations().training.to_core_triples_factory()
+        self.assert_binary_io(tf1, CoreTriplesFactory)
+
+    def assert_binary_io(self, tf, tf_cls):
+        """Check the triples factory can be written and reloaded properly."""
+        self.assertIsInstance(tf, tf_cls)
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "training.pt"
+            self.assertFalse(path.is_file())
+            tf.to_path_binary(path)
+            self.assertTrue(path.is_file())
+
+            tf2 = tf_cls.from_path_binary(path)
+            self.assert_tf_equal(tf, tf2)
+
+    def assert_tf_equal(self, tf1, tf2) -> None:
+        """Check two triples factories have all of the same stuff."""
+        self.assertEqual(type(tf1), type(tf2))
+        self.assertEqual(tf1.entity_ids, tf2.entity_ids)
+        self.assertEqual(tf1.relation_ids, tf2.relation_ids)
+        self.assertEqual(tf1.relation_ids, tf2.relation_ids)
+        if isinstance(tf1, TriplesFactory):
+            self.assertEqual(tf1.entity_labeling, tf2.entity_labeling)
+            self.assertEqual(tf1.relation_labeling, tf2.relation_labeling)
+        self.assertEqual(tf1.metadata, tf2.metadata)
+        self.assertEqual(tf1.create_inverse_triples, tf2.create_inverse_triples)
+        self.assertEqual(
+            tf1.mapped_triples.detach().cpu().numpy().tolist(),
+            tf2.mapped_triples.detach().cpu().numpy().tolist(),
         )
 
 
