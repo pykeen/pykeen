@@ -254,23 +254,24 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 | rankbased | [`pykeen.evaluation.RankBasedEvaluator`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.RankBasedEvaluator.html) | A rank-based evaluator for KGE models.        |
 | sklearn   | [`pykeen.evaluation.SklearnEvaluator`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.SklearnEvaluator.html)     | An evaluator that uses a Scikit-learn metric. |
 
-### Metrics (16)
+### Metrics (17)
 
-| Name                                        | Description                                                                            |
-|---------------------------------------------|----------------------------------------------------------------------------------------|
-| AUC-ROC                                     | The area under the ROC curve, on [0, 1]. Higher is better.                             |
-| Adjusted Arithmetic Mean Rank (AAMR)        | The mean over all chance-adjusted ranks, on (0, 2). Lower is better.                   |
-| Adjusted Arithmetic Mean Rank Index (AAMRI) | The re-indexed adjusted mean rank (AAMR), on [-1, 1]. Higher is better.                |
-| Average Precision                           | The area under the precision-recall curve, on [0, 1]. Higher is better.                |
-| Geometric Mean Rank (GMR)                   | The geometric mean over all ranks, on [1, inf). Lower is better.                       |
-| Harmonic Mean Rank (HMR)                    | The harmonic mean over all ranks, on [1, inf). Lower is better.                        |
-| Hits @ K                                    | The relative frequency of ranks not larger than a given k, on [0, 1]. Higher is better |
-| Inverse Arithmetic Mean Rank (IAMR)         | The inverse of the arithmetic mean over all ranks, on (0, 1]. Higher is better.        |
-| Inverse Geometric Mean Rank (IGMR)          | The inverse of the geometric mean over all ranks, on (0, 1]. Higher is better.         |
-| Inverse Median Rank                         | The inverse of the median over all ranks, on (0, 1]. Higher is better.                 |
-| Mean Rank (MR)                              | The arithmetic mean over all ranks on, [1, inf). Lower is better.                      |
-| Mean Reciprocal Rank (MRR)                  | The inverse of the harmonic mean over all ranks, on (0, 1]. Higher is better.          |
-| Median Rank                                 | The median over all ranks, on [1, inf). Lower is better.                               |
+| Name                                        | Description                                                                                         |
+|---------------------------------------------|-----------------------------------------------------------------------------------------------------|
+| AUC-ROC                                     | The area under the ROC curve, on [0, 1]. Higher is better.                                          |
+| Adjusted Arithmetic Mean Rank (AAMR)        | The mean over all chance-adjusted ranks, on (0, 2). Lower is better.                                |
+| Adjusted Arithmetic Mean Rank Index (AAMRI) | The re-indexed adjusted mean rank (AAMR), on [-1, 1]. Higher is better.                             |
+| Average Precision                           | The area under the precision-recall curve, on [0, 1]. Higher is better.                             |
+| Geometric Mean Rank (GMR)                   | The geometric mean over all ranks, on [1, inf). Lower is better.                                    |
+| Harmonic Mean Rank (HMR)                    | The harmonic mean over all ranks, on [1, inf). Lower is better.                                     |
+| Hits @ K                                    | The relative frequency of ranks not larger than a given k, on [0, 1]. Higher is better              |
+| Inverse Arithmetic Mean Rank (IAMR)         | The inverse of the arithmetic mean over all ranks, on (0, 1]. Higher is better.                     |
+| Inverse Geometric Mean Rank (IGMR)          | The inverse of the geometric mean over all ranks, on (0, 1]. Higher is better.                      |
+| Inverse Median Rank                         | The inverse of the median over all ranks, on (0, 1]. Higher is better.                              |
+| Mean Rank (MR)                              | The arithmetic mean over all ranks on, [1, inf). Lower is better.                                   |
+| Mean Reciprocal Rank (MRR)                  | The inverse of the harmonic mean over all ranks, on (0, 1]. Higher is better.                       |
+| Median Rank                                 | The median over all ranks, on [1, inf). Lower is better.                                            |
+| Rank Count                                  | The number of considered ranks, a non-negative number. Low numbers may indicate unreliable results. |
 
 ### Trackers (7)
 
