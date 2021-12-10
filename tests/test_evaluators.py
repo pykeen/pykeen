@@ -7,6 +7,7 @@ import logging
 import unittest
 from typing import Any, ClassVar, Dict, Mapping, Optional, Tuple, Type
 
+import numpy
 import torch
 
 from pykeen.datasets import Nations
@@ -237,15 +238,19 @@ class SklearnEvaluatorTest(_AbstractEvaluatorTests, unittest.TestCase):
         # check value
         scores = data["scores"].detach().cpu().numpy()
         mask = data["mask"].detach().cpu().float().numpy()
+        batch = data["batch"].detach().cpu().numpy()
 
         # filtering
-        uniq = dict()
-        batch = data["batch"].detach().cpu().numpy()
-        for i, (h, r) in enumerate(batch[:, :2]):
-            uniq[int(h), int(r)] = i
-        indices = sorted(uniq.values())
-        mask = mask[indices]
-        scores = scores[indices]
+        mask_filtered, scores_filtered = [], []
+        for group_indices in [(0, 1), (1, 2)]:
+            uniq = dict()
+            for i, key in enumerate(batch[:, group_indices].tolist()):
+                uniq[tuple(key)] = i
+            indices = sorted(uniq.values())
+            mask_filtered.append(mask[indices])
+            scores_filtered.append(scores[indices])
+        mask = numpy.concatenate(mask_filtered, axis=0)
+        scores = numpy.concatenate(scores_filtered, axis=0)
 
         for field in dataclasses.fields(SklearnMetricResults):
             f = field.metadata["f"]
