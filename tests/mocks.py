@@ -111,7 +111,7 @@ class MockEvaluator(Evaluator):
                 }
                 for side in SIDES
             },
-            rank_count=1,
+            rank_count={side: {rank_type: 1 for rank_type in RANK_TYPES} for side in SIDES},
             rank_std=dummy_1,
             rank_var=dummy_1,
             rank_mad=dummy_1,
