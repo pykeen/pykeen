@@ -6,7 +6,7 @@ from typing import Optional, Sequence, Union
 
 from more_itertools import chunked
 import torch
-import tqdm
+from tqdm.auto import tqdm
 from torch import nn
 
 __all__ = [
@@ -70,7 +70,6 @@ class TransformerEncoder(nn.Module):
             and not all at once (this would be ``batch_size=len(labels)``).
         :returns: A tensor representing the encodings for all labels
         """
-        max_id = len(labels)  # FIXME unused
         return torch.cat(
             [self(batch) for batch in chunked(tqdm(labels), batch_size)],
             dim=0,
