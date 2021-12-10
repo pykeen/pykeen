@@ -18,6 +18,7 @@ from pykeen.evaluation.rank_based_evaluator import (
     RANK_PESSIMISTIC,
     RANK_REALISTIC,
     RANK_TYPES,
+    SIDE_BOTH,
     SIDES,
     compute_rank_from_scores,
     resolve_metric_name,
@@ -132,6 +133,12 @@ class _AbstractEvaluatorTests:
             scores=scores,
             dense_positive_mask=mask,
         )
+        self.evaluator.process_head_scores_(
+            hrt_batch=hrt_batch,
+            true_scores=true_scores,
+            scores=scores,
+            dense_positive_mask=mask,
+        )
 
         result = self.evaluator.finalize()
         assert isinstance(result, MetricResults)
@@ -205,8 +212,11 @@ class RankBasedEvaluatorTests(_AbstractEvaluatorTests, unittest.TestCase):
             assert isinstance(adjusted_mean_rank_index[RANK_REALISTIC], float)
             assert -1 <= adjusted_mean_rank_index[RANK_REALISTIC] <= 1
 
-        # the test only considered a single batch, and only tail scores
-        assert result.rank_count == self.batch_size
+        # the test only considered a single batch
+        for side, all_type_rank_counts in result.rank_count.items():
+            expected_size = 2 * self.batch_size if side == SIDE_BOTH else self.batch_size
+            # all rank types have the same count
+            assert set(all_type_rank_counts.values()) == {expected_size}
 
         # TODO: Validate with data?
 
