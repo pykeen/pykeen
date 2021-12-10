@@ -1301,7 +1301,12 @@ class LabelBasedTransformerRepresentation(RepresentationModule):
     Entity representations are obtained by encoding the labels with a Transformer model. The transformer
     model becomes part of the KGE model, and its parameters are trained jointly.
 
-    .. code-block ::
+    .. code-block:: python
+
+        from pykeen.datasets import get_dataset
+        from pykeen.nn.emb import EmbeddingSpecification, LabelBasedTransformerRepresentation
+        from pykeen.models import ERModel
+
         dataset = get_dataset(dataset="nations")
         entity_representations = LabelBasedTransformerRepresentation.from_triples_factory(
             triples_factory=dataset.training,

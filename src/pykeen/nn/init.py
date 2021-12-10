@@ -173,9 +173,14 @@ class LabelBasedInitializer:
     the parameters are detached from the labels, and trained on the KGE task without any
     further connection to the Transformer model.
 
-    .. code-block ::
+    .. code-block :: python
+
+        from pykeen.datasets import get_dataset
+        from pykeen.nn.init import LabelBasedInitializer
+        from pykeen.models import ERMLPE
+
         dataset = get_dataset(dataset="nations")
-        model = ERMMLP(
+        model = ERMLPE(
             embedding_dim=768,  # for BERT base
             entity_initializer=LabelBasedInitializer.from_triples_factory(
                 triples_factory=dataset.training,
