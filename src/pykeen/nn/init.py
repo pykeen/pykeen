@@ -166,13 +166,13 @@ def create_init_from_pretrained(pretrained: torch.FloatTensor) -> Initializer:
 class LabelBasedInitializer:
     """
     An initializer using pretrained models from the `transformers` library to encode labels.
-    
+
     Example Usage:
-    
+
     Initialize entity representations as Transformer encodings of their labels. Afterwards,
     the parameters are detached from the labels, and trained on the KGE task without any
     further connection to the Transformer model.
-    
+
     .. code-block ::
         dataset = get_dataset(dataset="nations")
         model = ERMMLP(

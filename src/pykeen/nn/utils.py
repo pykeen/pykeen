@@ -4,10 +4,10 @@
 
 from typing import Optional, Sequence, Union
 
-from more_itertools import chunked
 import torch
-from tqdm.auto import tqdm
+from more_itertools import chunked
 from torch import nn
+from tqdm.auto import tqdm
 
 __all__ = [
     "TransformerEncoder",

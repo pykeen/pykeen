@@ -1295,12 +1295,12 @@ class NodePieceRepresentation(RepresentationModule):
 class LabelBasedTransformerRepresentation(RepresentationModule):
     """
     Label-based representations using a transformer encoder.
-    
+
     Example Usage:
-    
+
     Entity representations are obtained by encoding the labels with a Transformer model. The transformer
     model becomes part of the KGE model, and its parameters are trained jointly.
-    
+
     .. code-block ::
         dataset = get_dataset(dataset="nations")
         entity_representations = LabelBasedTransformerRepresentation.from_triples_factory(
