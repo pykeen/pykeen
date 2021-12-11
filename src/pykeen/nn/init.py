@@ -234,6 +234,8 @@ class LabelBasedInitializer:
             whether to create the initializer for entities (or relations)
         :param kwargs:
             additional keyword-based arguments passed to :func:`LabelBasedInitializer.__init__`
+        :returns:
+            A label-based initializer
 
         :raise ImportError:
             if the transformers library could not be imported

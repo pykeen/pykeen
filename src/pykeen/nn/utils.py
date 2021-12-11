@@ -30,14 +30,19 @@ class TransformerEncoder(nn.Module):
         :param max_length: >0, default: 512
             the maximum number of tokens to pad/trim the labels to
 
-        :raise ImportError:
-            if the transformers library could not be imported
+        :raises ImportError:
+            if the :mod:`transformers` library could not be imported
         """
         super().__init__()
         try:
             from transformers import AutoModel, AutoTokenizer
         except ImportError as error:
-            raise ImportError("Please install the `transformers` library") from error
+            raise ImportError(
+                "Please install the `transformers` library, use the _transformers_ extra"
+                " for PyKEEN iwth `pip install pykeen[transformers] when installing, or "
+                " see the PyKEEN installation docs at https://pykeen.readthedocs.io/en/stable/installation.html"
+                " for more information."
+            ) from error
 
         self.tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path=pretrained_model_name_or_path)
         self.model = AutoModel.from_pretrained(pretrained_model_name_or_path=pretrained_model_name_or_path)
@@ -67,13 +72,13 @@ class TransformerEncoder(nn.Module):
 
         :param labels:
             a sequence of strings to encode
-        :param batch_size: 
+        :param batch_size:
             the batch size to use for encoding the labels. ``batch_size=1``
             means that the labels are encoded one-by-one, while ``batch_size=len(labels)``
             would correspond to encoding all at once.
             Larger batch sizes increase memory requirements, but may be computationally
             more efficient.
-            
+
         :returns: shape: (len(labels), dim)
             a tensor representing the encodings for all labels
         """
