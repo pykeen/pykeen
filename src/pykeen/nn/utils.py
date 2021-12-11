@@ -65,10 +65,17 @@ class TransformerEncoder(nn.Module):
     ) -> torch.FloatTensor:
         """Encode all labels (inference mode & batched).
 
-        :param labels: A sequence of strings to encode
-        :param batch_size: ``batch_size=1`` means that the labels are encoded one-by-one,
-            and not all at once (this would be ``batch_size=len(labels)``).
-        :returns: A tensor representing the encodings for all labels
+        :param labels:
+            a sequence of strings to encode
+        :param batch_size: 
+            the batch size to use for encoding the labels. ``batch_size=1``
+            means that the labels are encoded one-by-one, while ``batch_size=len(labels)``
+            would correspond to encoding all at once.
+            Larger batch sizes increase memory requirements, but may be computationally
+            more efficient.
+            
+        :returns: shape: (len(labels), dim)
+            a tensor representing the encodings for all labels
         """
         return torch.cat(
             [self(batch) for batch in chunked(tqdm(labels), batch_size)],
