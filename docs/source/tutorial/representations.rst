@@ -9,7 +9,7 @@ Message Passing
 ---------------
 Message passing representation modules enrich the representations of
 entities by aggregating the information from their graph neighborhood.
-Example implementations from PyKEEN include 
+Example implementations from PyKEEN include
 :class:`pykeen.nn.emb.RGCNRepresentations` which uses RGCN layers for
 enrichment, or :class:`pykeen.nn.emb.SingleCompGCNRepresentations`,
 which enrich via CompGCN layers.
@@ -22,9 +22,9 @@ excessive amount of trainable parameters. Therefore, methods have been
 developed, which do not learn independent representations, but rather
 have a set of base representations, and create individual representations
 by combining them. An example is NodePiece, which takes inspiration
-from tokenization we encounter in, e.g.. NLP, and represents each entity 
-as a set of tokens. The implementation in PyKEEN, 
-:class:`pykeen.nn.emb.NodePieceRepresentation`, implements a simple yet 
+from tokenization we encounter in, e.g.. NLP, and represents each entity
+as a set of tokens. The implementation in PyKEEN,
+:class:`pykeen.nn.emb.NodePieceRepresentation`, implements a simple yet
 effective variant thereof, which uses a set of randomly chosen incident
 relations (including inverse relations) as tokens.
 
@@ -32,17 +32,17 @@ relations (including inverse relations) as tokens.
 
 Label-based
 -----------
-Label-based representations use the entities' (or relations') labels to 
-derive representations. To this end, 
-:class:`pykeen.nn.emb.LabelBasedTransformerRepresentation` uses a 
+Label-based representations use the entities' (or relations') labels to
+derive representations. To this end,
+:class:`pykeen.nn.emb.LabelBasedTransformerRepresentation` uses a
 (pre-trained) transformer model from the :mod:`transformers` library to encode
 the labels. Since the transformer models have been trained on huge corpora
 of text, their text encodings often contain semantic information, i.e.,
 labels with similar semantic meaning get similar representations. While we
 can also benefit from these strong features by just initializing an
-:class:`pykeen.nn.emb.Embedding` with the vectors, e.g., using 
+:class:`pykeen.nn.emb.Embedding` with the vectors, e.g., using
 :class:`pykeen.nn.init.LabelBasedInitializer`, the
-:class:`pykeen.nn.emb.LabelBasedTransformerRepresentation` include the 
+:class:`pykeen.nn.emb.LabelBasedTransformerRepresentation` include the
 transformer model as part of the KGE model, and thus allow fine-tuning
 the language model for the KGE task. This is beneficial, e.g., since it
 allows a simple form of obtaining an inductive model, which can make
@@ -79,7 +79,7 @@ predictions for entities not seen during training.
     model = result.model
 
 We can use the label-encoder part to generate representations for
-unknown entities with labels. For instance, `"uk"` is an entity in 
+unknown entities with labels. For instance, `"uk"` is an entity in
 `nations`, but we can also put in `"united kingdom"`, and get a
 roughly equivalent vector representations
 
@@ -111,5 +111,5 @@ function, we would get similar scores
     )
     print(scores)
 
-As a downside, this will usually substantially increase the 
+As a downside, this will usually substantially increase the
 computational cost of computing triple scores.
