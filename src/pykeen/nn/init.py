@@ -2,7 +2,9 @@
 
 """Embedding weight initialization routines."""
 
+import logging
 import math
+from typing import Optional, Sequence
 
 import numpy as np
 import torch
@@ -10,6 +12,8 @@ import torch.nn
 import torch.nn.init
 from torch.nn import functional
 
+from .utils import TransformerEncoder
+from ..triples import TriplesFactory
 from ..typing import Initializer
 from ..utils import compose
 
@@ -22,7 +26,10 @@ __all__ = [
     "uniform_norm_",
     "normal_norm_",
     "init_phases",
+    "LabelBasedInitializer",
 ]
+
+logger = logging.getLogger(__name__)
 
 
 def xavier_uniform_(tensor, gain: float = 1.0):
@@ -154,3 +161,94 @@ def create_init_from_pretrained(pretrained: torch.FloatTensor) -> Initializer:
         return pretrained
 
     return init_from_pretrained
+
+
+class LabelBasedInitializer:
+    """
+    An initializer using pretrained models from the `transformers` library to encode labels.
+
+    Example Usage:
+
+    Initialize entity representations as Transformer encodings of their labels. Afterwards,
+    the parameters are detached from the labels, and trained on the KGE task without any
+    further connection to the Transformer model.
+
+    .. code-block :: python
+
+        from pykeen.datasets import get_dataset
+        from pykeen.nn.init import LabelBasedInitializer
+        from pykeen.models import ERMLPE
+
+        dataset = get_dataset(dataset="nations")
+        model = ERMLPE(
+            embedding_dim=768,  # for BERT base
+            entity_initializer=LabelBasedInitializer.from_triples_factory(
+                triples_factory=dataset.training,
+            ),
+        )
+    """
+
+    def __init__(
+        self,
+        labels: Sequence[str],
+        pretrained_model_name_or_path: str = "bert-base-cased",
+        batch_size: int = 32,
+        max_length: Optional[int] = None,
+    ):
+        """
+        Initialize the initializer.
+
+        :param labels:
+            the labels
+        :param pretrained_model_name_or_path:
+            the name of the pretrained model, or a path, cf. :func:`transformers.AutoModel.from_pretrained`
+        :param batch_size: >0
+            the batch size to use while encoding.
+        :param max_length: >0
+            the maximum number of tokens to pad/trim the labels to
+
+        :raise ImportError:
+            if the transformers library could not be imported
+        """
+        self.tensor = TransformerEncoder(
+            pretrained_model_name_or_path=pretrained_model_name_or_path,
+            max_length=max_length,
+        ).encode_all(
+            labels=labels,
+            batch_size=batch_size,
+        )
+
+    @classmethod
+    def from_triples_factory(
+        cls,
+        triples_factory: TriplesFactory,
+        for_entities: bool = True,
+        **kwargs,
+    ) -> "LabelBasedInitializer":
+        """
+        Prepare a label-based initializer with labels from a triples factory.
+
+        :param triples_factory:
+            the triples factory
+        :param for_entities:
+            whether to create the initializer for entities (or relations)
+        :param kwargs:
+            additional keyword-based arguments passed to :func:`LabelBasedInitializer.__init__`
+        :returns:
+            A label-based initializer
+
+        :raise ImportError:
+            if the transformers library could not be imported
+        """
+        id_to_label = triples_factory.entity_id_to_label if for_entities else triples_factory.relation_id_to_label
+        labels = [id_to_label[i] for i in sorted(id_to_label.keys())]
+        return cls(
+            labels=labels,
+            **kwargs,
+        )
+
+    def __call__(self, x: torch.Tensor) -> torch.Tensor:
+        """Initialize the tensor from the encoded labels."""
+        if x.shape != self.tensor.shape:
+            raise ValueError(f"shape does not match: expected {self.tensor.shape} but got {x.shape}")
+        return self.tensor.to(device=x.device, dtype=x.dtype)

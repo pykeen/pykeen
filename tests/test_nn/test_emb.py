@@ -11,6 +11,7 @@ import torch
 import unittest_templates
 
 import pykeen.nn.emb
+from pykeen.datasets import get_dataset
 from pykeen.datasets.nations import NationsLiteral
 from pykeen.nn.emb import (
     Embedding,
@@ -21,6 +22,11 @@ from pykeen.nn.emb import (
 )
 from pykeen.triples.generation import generate_triples_factory
 from tests import cases, mocks
+
+try:
+    import transformers
+except ImportError:
+    transformers = None
 
 
 class EmbeddingTests(cases.RepresentationTestCase):
@@ -163,6 +169,18 @@ class SubsetRepresentationTests(cases.RepresentationTestCase):
             num_embeddings=2 * kwargs["max_id"],
             shape=self.shape,
         )
+        return kwargs
+
+
+@unittest.skipIf(transformers is None, "Need to install `transformers`")
+class LabelBasedTransformerRepresentationTests(cases.RepresentationTestCase):
+    """Test the label based Transformer representations."""
+
+    cls = pykeen.nn.emb.LabelBasedTransformerRepresentation
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        kwargs["labels"] = sorted(get_dataset(dataset="nations").entity_to_id.keys())
         return kwargs
 
 

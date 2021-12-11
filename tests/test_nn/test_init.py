@@ -2,10 +2,18 @@
 
 """Tests for initializers."""
 
+import unittest
+
 import torch
 
 import pykeen.nn.init
+from pykeen.datasets import Nations
 from tests import cases
+
+try:
+    import transformers
+except ImportError:
+    transformers = None
 
 
 class NormalizationMixin:
@@ -86,3 +94,17 @@ class XavierUniformNormTestCase(NormalizationMixin, cases.InitializerTestCase):
     """Tests for Xavier Glorot uniform initialization + normalization."""
 
     initializer = staticmethod(pykeen.nn.init.xavier_uniform_norm_)
+
+
+@unittest.skipIf(transformers is None, "Need to install `transformers`")
+class LabelBasedInitializerTestCase(cases.InitializerTestCase):
+    """Tests for label-based initialization."""
+
+    def setUp(self) -> None:
+        """Prepare for test."""
+        dataset = Nations()
+        self.initializer = pykeen.nn.init.LabelBasedInitializer.from_triples_factory(
+            triples_factory=dataset.training,
+            for_entities=True,
+        )
+        self.shape = self.initializer.tensor.shape
