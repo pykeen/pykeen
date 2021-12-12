@@ -31,5 +31,6 @@ __all__ = [
 
 tracker_resolver = Resolver.from_subclasses(
     base=ResultTracker,
+    default=ResultTracker,
     skip={FileResultTracker, MultiResultTracker},
 )
