@@ -256,44 +256,44 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 
 ### Metrics (40)
 
-| Name                                        | Description                                                                            |
-|---------------------------------------------|----------------------------------------------------------------------------------------|
-| Accuracy                                    | On [0, 1], higher is better.                                                           |
-| Adjusted Arithmetic Mean Rank (AAMR)        | The mean over all chance-adjusted ranks, on (0, 2). Lower is better.                   |
-| Adjusted Arithmetic Mean Rank Index (AAMRI) | The re-indexed adjusted mean rank (AAMR), on [-1, 1]. Higher is better.                |
-| Area Under the Precision-Recall Curve       | On [0, 1], higher is better.                                                           |
-| Area Under the ROC Curve                    | On [0, 1], higher is better.                                                           |
-| Average Precision                           | On [0, 1], higher is better.                                                           |
-| Balanced Accuracy                           | On [0, 1], higher is better.                                                           |
-| Diagnostic Odds Ratio                       | On [0, inf], higher is better.                                                         |
-| F1 Score                                    | On [0, 1], higher is better.                                                           |
-| False Discovery Rate                        | On [0, 1], lower is better.                                                            |
-| False Negative Rate                         | On [0, 1], lower is better.                                                            |
-| False Omission Rate                         | On [0, 1], lower is better.                                                            |
-| False Positive Rate                         | On [0, 1], lower is better.                                                            |
-| Fowlkes Mallows Index                       | On [0, 1], higher is better.                                                           |
-| Geometric Mean Rank (GMR)                   | The geometric mean over all ranks, on [1, inf). Lower is better.                       |
-| Harmonic Mean Rank (HMR)                    | The harmonic mean over all ranks, on [1, inf). Lower is better.                        |
-| Hits @ K                                    | The relative frequency of ranks not larger than a given k, on [0, 1]. Higher is better |
-| Informedness                                | On [0, 1], higher is better.                                                           |
-| Inverse Arithmetic Mean Rank (IAMR)         | The inverse of the arithmetic mean over all ranks, on (0, 1]. Higher is better.        |
-| Inverse Geometric Mean Rank (IGMR)          | The inverse of the geometric mean over all ranks, on (0, 1]. Higher is better.         |
-| Inverse Median Rank                         | The inverse of the median over all ranks, on (0, 1]. Higher is better.                 |
-| Markedness                                  | On [0, 1], higher is better.                                                           |
-| Matthews Correlation Coefficient            | A balanced measure applicable even with class imbalance  On [-1, 1], higher is better. |
-| Mean Rank (MR)                              | The arithmetic mean over all ranks on, [1, inf). Lower is better.                      |
-| Mean Reciprocal Rank (MRR)                  | The inverse of the harmonic mean over all ranks, on (0, 1]. Higher is better.          |
-| Median Rank                                 | The median over all ranks, on [1, inf). Lower is better.                               |
-| Negative Likelihood Ratio                   | On [0, inf], lower is better.                                                          |
-| Negative Predictive Value                   | On [0, 1], higher is better.                                                           |
-| Positive Likelihood Ratio                   | On [0, inf], higher is better.                                                         |
-| Positive Predictive Value                   | On [0, 1], higher is better.                                                           |
-| Precision                                   | On [0, 1], higher is better.                                                           |
-| Prevalence Threshold                        | On [0, 1], lower is better.                                                            |
-| Recall                                      | On [0, 1], higher is better.                                                           |
-| Threat Score                                | On [0, 1], higher is better.                                                           |
-| True Negative Rate                          | On [0, 1], higher is better.                                                           |
-| True Positive Rate                          | On [0, 1], higher is better.                                                           |
+| Name                                        | Description                                                                            | Type           |
+|---------------------------------------------|----------------------------------------------------------------------------------------|----------------|
+| Accuracy                                    | On [0, 1], higher is better.                                                           | Classification |
+| Area Under the Precision-Recall Curve       | On [0, 1], higher is better.                                                           | Classification |
+| Area Under the ROC Curve                    | On [0, 1], higher is better.                                                           | Classification |
+| Average Precision                           | On [0, 1], higher is better.                                                           | Classification |
+| Balanced Accuracy                           | On [0, 1], higher is better.                                                           | Classification |
+| Diagnostic Odds Ratio                       | On [0, inf], higher is better.                                                         | Classification |
+| F1 Score                                    | On [0, 1], higher is better.                                                           | Classification |
+| False Discovery Rate                        | On [0, 1], lower is better.                                                            | Classification |
+| False Negative Rate                         | On [0, 1], lower is better.                                                            | Classification |
+| False Omission Rate                         | On [0, 1], lower is better.                                                            | Classification |
+| False Positive Rate                         | On [0, 1], lower is better.                                                            | Classification |
+| Fowlkes Mallows Index                       | On [0, 1], higher is better.                                                           | Classification |
+| Informedness                                | On [0, 1], higher is better.                                                           | Classification |
+| Markedness                                  | On [0, 1], higher is better.                                                           | Classification |
+| Matthews Correlation Coefficient            | A balanced measure applicable even with class imbalance  On [-1, 1], higher is better. | Classification |
+| Negative Likelihood Ratio                   | On [0, inf], lower is better.                                                          | Classification |
+| Negative Predictive Value                   | On [0, 1], higher is better.                                                           | Classification |
+| Positive Likelihood Ratio                   | On [0, inf], higher is better.                                                         | Classification |
+| Positive Predictive Value                   | On [0, 1], higher is better.                                                           | Classification |
+| Precision                                   | On [0, 1], higher is better.                                                           | Classification |
+| Prevalence Threshold                        | On [0, 1], lower is better.                                                            | Classification |
+| Recall                                      | On [0, 1], higher is better.                                                           | Classification |
+| Threat Score                                | On [0, 1], higher is better.                                                           | Classification |
+| True Negative Rate                          | On [0, 1], higher is better.                                                           | Classification |
+| True Positive Rate                          | On [0, 1], higher is better.                                                           | Classification |
+| Adjusted Arithmetic Mean Rank (AAMR)        | The mean over all chance-adjusted ranks, on (0, 2). Lower is better.                   | Ranking        |
+| Adjusted Arithmetic Mean Rank Index (AAMRI) | The re-indexed adjusted mean rank (AAMR), on [-1, 1]. Higher is better.                | Ranking        |
+| Geometric Mean Rank (GMR)                   | The geometric mean over all ranks, on [1, inf). Lower is better.                       | Ranking        |
+| Harmonic Mean Rank (HMR)                    | The harmonic mean over all ranks, on [1, inf). Lower is better.                        | Ranking        |
+| Hits @ K                                    | The relative frequency of ranks not larger than a given k, on [0, 1]. Higher is better | Ranking        |
+| Inverse Arithmetic Mean Rank (IAMR)         | The inverse of the arithmetic mean over all ranks, on (0, 1]. Higher is better.        | Ranking        |
+| Inverse Geometric Mean Rank (IGMR)          | The inverse of the geometric mean over all ranks, on (0, 1]. Higher is better.         | Ranking        |
+| Inverse Median Rank                         | The inverse of the median over all ranks, on (0, 1]. Higher is better.                 | Ranking        |
+| Mean Rank (MR)                              | The arithmetic mean over all ranks on, [1, inf). Lower is better.                      | Ranking        |
+| Mean Reciprocal Rank (MRR)                  | The inverse of the harmonic mean over all ranks, on (0, 1]. Higher is better.          | Ranking        |
+| Median Rank                                 | The median over all ranks, on [1, inf). Lower is better.                               | Ranking        |
 
 ### Trackers (8)
 
