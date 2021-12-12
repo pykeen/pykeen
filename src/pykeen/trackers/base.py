@@ -4,7 +4,7 @@
 
 import logging
 import re
-from typing import Any, Collection, Iterable, List, Mapping, Optional, Pattern, Union
+from typing import Any, Iterable, List, Mapping, Optional, Pattern, Union
 
 from tqdm.auto import tqdm
 
