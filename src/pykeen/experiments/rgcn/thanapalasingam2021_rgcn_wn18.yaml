@@ -1,0 +1,45 @@
+metadata:
+  title: Learn WN18 Dataset with R-GCN as described by Thanapalasingam et al., 2020
+pipeline:
+  dataset: wn18
+  evaluator_kwargs:
+    filtered: true
+  loss: BCEWithLogits
+  loss_kwargs:
+    reduction: mean
+  model: R-GCN
+  model_kwargs:
+    base_entity_initializer: xavier_uniform
+    decomposition: efficientbases
+    decomposition_kwargs:
+      num_bases: 2
+    edge_dropout: 0.4
+    edge_weighting: InverseInDegree
+    embedding_dim: 200
+    interaction: distmult
+    num_layers: 1
+    regularizer: Lp
+    regularizer_kwargs:
+      weight: 0.01
+    relation_initializer: xavier_uniform
+    self_loop_dropout: 0.2
+  negative_sampler: basic
+  negative_sampler_kwargs:
+    num_negs_per_pos: 1
+  optimizer: Adam
+  optimizer_kwargs:
+    lr: 0.01
+  training_kwargs:
+    batch_size: 30000
+    gradient_clipping_max_norm: 1.0
+    num_epochs: 500
+    sampler: schlichtkrull
+  training_loop: SLCWA
+results:
+  hits_at_k:
+    worst:
+      '1': 0.686
+      '10': 0.955
+      '3': 0.928
+  mean_reciprocal_rank:
+    worst: 0.814
