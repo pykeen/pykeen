@@ -200,7 +200,7 @@ class BasesDecomposition(Decomposition):
         )
         self.memory_intense = memory_intense
 
-    def reset_parameters(self):
+    def reset_parameters(self):  # noqa: D102
         self.relation_representations.reset_parameters()
 
     def _get_weight(self, relation_id: int) -> torch.FloatTensor:
