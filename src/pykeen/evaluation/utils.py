@@ -73,6 +73,7 @@ class MetricAnnotator:
         lower_inclusive: bool = True,
         upper: float = 1.0,
         upper_inclusive: bool = True,
+        link: Optional[str] = None,
     ):
         """Annotate a function."""
         self.metrics[func] = MetricAnnotation(
@@ -84,5 +85,5 @@ class MetricAnnotator:
             upper=upper,
             upper_inclusive=upper_inclusive,
             higher_is_better=higher_is_better,
-            description=description,
+            description=description or link,
         )
