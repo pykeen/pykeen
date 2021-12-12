@@ -33,19 +33,13 @@ class MetricAnnotation(NamedTuple):
             lower = int(self.lower)
         except OverflowError:
             lower = self.lower
+            left = "("
         try:
             upper = int(self.upper)
         except OverflowError:
             upper = self.upper
+            right = ")"
         return f"{left}{lower}, {upper}{right}"
-
-    def get_doc(self) -> str:
-        """Get the documentation string for this metric."""
-        rv = ""
-        if self.description:
-            rv += self.description + " "
-        rv += f" On {self.range_str()}, "
-        return rv
 
 
 class MetricAnnotator:

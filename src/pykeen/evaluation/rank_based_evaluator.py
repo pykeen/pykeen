@@ -248,7 +248,8 @@ class RankBasedMetricResults(MetricResults):
         metadata=dict(
             name="Mean Rank (MR)",
             increasing=False,
-            doc="The arithmetic mean over all ranks on, [1, inf). Lower is better.",
+            range="[1, inf)",
+            doc="The arithmetic mean over all ranks.",
         )
     )
 
@@ -256,7 +257,8 @@ class RankBasedMetricResults(MetricResults):
         metadata=dict(
             name="Geometric Mean Rank (GMR)",
             increasing=False,
-            doc="The geometric mean over all ranks, on [1, inf). Lower is better.",
+            range="[1, inf)",
+            doc="The geometric mean over all ranks.",
         )
     )
 
@@ -264,7 +266,8 @@ class RankBasedMetricResults(MetricResults):
         metadata=dict(
             name="Median Rank",
             increasing=False,
-            doc="The median over all ranks, on [1, inf). Lower is better.",
+            range="[1, inf)",
+            doc="The median over all ranks.",
         )
     )
 
@@ -272,7 +275,8 @@ class RankBasedMetricResults(MetricResults):
         metadata=dict(
             name="Harmonic Mean Rank (HMR)",
             increasing=False,
-            doc="The harmonic mean over all ranks, on [1, inf). Lower is better.",
+            range="[1, inf)",
+            doc="The harmonic mean over all ranks.",
         )
     )
 
@@ -280,7 +284,8 @@ class RankBasedMetricResults(MetricResults):
         metadata=dict(
             name="Inverse Arithmetic Mean Rank (IAMR)",
             increasing=True,
-            doc="The inverse of the arithmetic mean over all ranks, on (0, 1]. Higher is better.",
+            range="(0, 1]",
+            doc="The inverse of the arithmetic mean over all ranks.",
         )
     )
 
@@ -288,7 +293,8 @@ class RankBasedMetricResults(MetricResults):
         metadata=dict(
             name="Inverse Geometric Mean Rank (IGMR)",
             increasing=True,
-            doc="The inverse of the geometric mean over all ranks, on (0, 1]. Higher is better.",
+            range="(0, 1]",
+            doc="The inverse of the geometric mean over all ranks.",
         )
     )
 
@@ -296,7 +302,8 @@ class RankBasedMetricResults(MetricResults):
         metadata=dict(
             name="Mean Reciprocal Rank (MRR)",
             increasing=True,
-            doc="The inverse of the harmonic mean over all ranks, on (0, 1]. Higher is better.",
+            range="(0, 1]",
+            doc="The inverse of the harmonic mean over all ranks.",
         )
     )
 
@@ -304,7 +311,8 @@ class RankBasedMetricResults(MetricResults):
         metadata=dict(
             name="Inverse Median Rank",
             increasing=True,
-            doc="The inverse of the median over all ranks, on (0, 1]. Higher is better.",
+            range="(0, 1]",
+            doc="The inverse of the median over all ranks.",
         )
     )
 
@@ -318,29 +326,35 @@ class RankBasedMetricResults(MetricResults):
     rank_std: Dict[str, Dict[str, float]] = field(
         metadata=dict(
             name="Rank Standard Deviation",
-            doc="The standard deviation over all ranks on, [0, inf). Lower is better.",
+            range="[0, inf)",
+            increasing=False,
+            doc="The standard deviation over all ranks.",
         )
     )
 
     rank_var: Dict[str, Dict[str, float]] = field(
         metadata=dict(
             name="Rank Variance",
-            doc="The variance over all ranks on, [0, inf). Lower is better.",
+            range="[0, inf)",
+            increasing=False,
+            doc="The variance over all ranks.",
         )
     )
 
     rank_mad: Dict[str, Dict[str, float]] = field(
         metadata=dict(
             name="Rank Median Absolute Deviation",
-            doc="The median absolute deviation over all ranks on, [0, inf). Lower is better.",
+            range="[0, inf)",
+            doc="The median absolute deviation over all ranks.",
         )
     )
 
     hits_at_k: Dict[str, Dict[str, Dict[Union[int, float], float]]] = field(
         metadata=dict(
             name="Hits @ K",
+            range="[0, 1]",
             increasing=True,
-            doc="The relative frequency of ranks not larger than a given k, on [0, 1]. Higher is better",
+            doc="The relative frequency of ranks not larger than a given k.",
         )
     )
 
@@ -348,7 +362,8 @@ class RankBasedMetricResults(MetricResults):
         metadata=dict(
             name="Adjusted Arithmetic Mean Rank (AAMR)",
             increasing=False,
-            doc="The mean over all chance-adjusted ranks, on (0, 2). Lower is better.",
+            range="(0, 2)",
+            doc="The mean over all chance-adjusted ranks.",
         )
     )
 
@@ -356,7 +371,8 @@ class RankBasedMetricResults(MetricResults):
         metadata=dict(
             name="Adjusted Arithmetic Mean Rank Index (AAMRI)",
             increasing=True,
-            doc="The re-indexed adjusted mean rank (AAMR), on [-1, 1]. Higher is better.",
+            range="[-1, 1]",
+            doc="The re-indexed adjusted mean rank (AAMR)",
         )
     )
 

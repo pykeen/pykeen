@@ -316,12 +316,13 @@ def _help_metrics(tablefmt):
         headers=(
             [
                 "Name",
-                "Inc.",
+                "Range",
+                "Direction",
                 "Description",
                 "Type",
             ]
             if tablefmt == "github"
-            else ["Metric", "Inc.", "Description", "Type", "Reference"]
+            else ["Metric", "Range", "Direction", "Description", "Type", "Reference"]
         ),
         tablefmt=tablefmt,
     )
@@ -377,6 +378,7 @@ def _get_metrics_lines(tablefmt: str):
             continue
         yv = [
             field.metadata["name"],
+            field.metadata["range"],
             "📈" if field.metadata["increasing"] else "📉",
             field.metadata["doc"],
             METRIC_NAMES[name],
