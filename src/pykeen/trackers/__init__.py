@@ -4,7 +4,7 @@
 
 from class_resolver import Resolver
 
-from .base import ConsoleResultTracker, PythonResultTracker, ResultTracker
+from .base import ConsoleResultTracker, MultiResultTracker, PythonResultTracker, ResultTracker, TrackerHint
 from .file import CSVResultTracker, FileResultTracker, JSONResultTracker
 from .mlflow import MLFlowResultTracker
 from .neptune import NeptuneResultTracker
@@ -15,6 +15,7 @@ __all__ = [
     # Base classes
     "ResultTracker",
     "FileResultTracker",
+    "MultiResultTracker",
     # Concrete classes
     "MLFlowResultTracker",
     "NeptuneResultTracker",
@@ -26,10 +27,11 @@ __all__ = [
     "ConsoleResultTracker",
     # Utilities
     "tracker_resolver",
+    "TrackerHint",
 ]
 
 tracker_resolver = Resolver.from_subclasses(
     base=ResultTracker,
     default=ResultTracker,
-    skip={FileResultTracker},
+    skip={FileResultTracker, MultiResultTracker},
 )
