@@ -4,7 +4,7 @@
 
 import logging
 import re
-from typing import Any, Collection, Mapping, Optional, Pattern, Union
+from typing import Any, Collection, Iterable, List, Mapping, Optional, Pattern, Union
 
 from tqdm.auto import tqdm
 
@@ -130,20 +130,28 @@ class ConsoleResultTracker(ResultTracker):
             self.write("Finished run.")
 
 
+#: A hint for constructing a :class:`MultiResultTracker`
+TrackerHint = Union[None, ResultTracker, Iterable[ResultTracker]]
+
+
 class MultiResultTracker(ResultTracker):
     """A result tracker which delegates to multiple different result trackers."""
 
     trackers: List[ResultTracker]
-    
-    def __init__(self, trackers: Iterable[ResultTracker]) -> None:
+
+    def __init__(self, trackers: TrackerHint = None) -> None:
         """
         Initialize the tracker.
 
         :param trackers:
-            the base trackers.
+            the base tracker(s).
         """
-        super().__init__()
-        self.trackers = list(trackers)
+        if trackers is None:
+            self.trackers = []
+        elif isinstance(trackers, ResultTracker):
+            self.trackers = [trackers]
+        else:
+            self.trackers = list(trackers)
 
     def start_run(self, run_name: Optional[str] = None) -> None:  # noqa: D102
         for tracker in self.trackers:
