@@ -2,7 +2,7 @@
 
 """Result trackers in PyKEEN."""
 
-from class_resolver import Resolver, get_subclasses
+from class_resolver import Resolver
 
 from .base import ConsoleResultTracker, PythonResultTracker, ResultTracker
 from .file import CSVResultTracker, FileResultTracker, JSONResultTracker
