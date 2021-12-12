@@ -13,6 +13,7 @@ from ..utils import flatten_dictionary
 __all__ = [
     "ResultTracker",
     "ConsoleResultTracker",
+    "PythonResultTracker",
 ]
 
 
@@ -46,6 +47,35 @@ class ResultTracker:
         :param success:
             Can be used to signal failed runs. May be ignored.
         """
+
+
+class PythonResultTracker(ResultTracker):
+    """A tracker which stores everything in Python dictionaries."""
+
+    def __init__(self) -> None:
+        """Initialize the tracker."""
+        super().__init__()
+        self.configuration = dict()
+        self.metrics = dict()
+        self.run_name = None
+
+    def start_run(self, run_name: Optional[str] = None) -> None:  # noqa: D102
+        self.run_name = run_name
+
+    def log_params(self, params: Mapping[str, Any], prefix: Optional[str] = None) -> None:  # noqa: D102
+        if prefix is not None:
+            params = {f"{prefix}.{key}": value for key, value in params.items()}
+        self.configuration.update(params)
+
+    def log_metrics(
+        self,
+        metrics: Mapping[str, float],
+        step: Optional[int] = None,
+        prefix: Optional[str] = None,
+    ) -> None:  # noqa: D102
+        if prefix is not None:
+            metrics = {f"{prefix}.{key}": value for key, value in metrics.items()}
+        self.metrics[step] = metrics
 
 
 class ConsoleResultTracker(ResultTracker):
