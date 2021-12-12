@@ -312,7 +312,7 @@ def metrics(tablefmt: str):
 
 def _help_metrics(tablefmt):
     return tabulate(
-        sorted(_get_metrics_lines(tablefmt), key=lambda t: (t[2], t[0])),
+        sorted(_get_metrics_lines(tablefmt), key=lambda t: (t[4], t[0])),
         headers=(
             [
                 "Name",
