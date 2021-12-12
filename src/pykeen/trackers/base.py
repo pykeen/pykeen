@@ -4,7 +4,7 @@
 
 import logging
 import re
-from typing import Any, Mapping, Optional, Pattern, Union
+from typing import Any, Dict, Mapping, MutableMapping, Optional, Pattern, Union
 
 from tqdm.auto import tqdm
 
@@ -51,6 +51,9 @@ class ResultTracker:
 
 class PythonResultTracker(ResultTracker):
     """A tracker which stores everything in Python dictionaries."""
+
+    configuration: MutableMapping[str, Any]
+    metrics: MutableMapping[int, Mapping[str, Any]]
 
     def __init__(self) -> None:
         """Initialize the tracker."""
