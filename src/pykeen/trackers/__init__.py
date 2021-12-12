@@ -2,9 +2,8 @@
 
 """Result trackers in PyKEEN."""
 
-from class_resolver import Resolver, get_subclasses
-
-from .base import ConsoleResultTracker, ResultTracker
+from class_resolver import Resolver
+from .base import ConsoleResultTracker, MultiResultTracker, ResultTracker
 from .file import CSVResultTracker, FileResultTracker, JSONResultTracker
 from .mlflow import MLFlowResultTracker
 from .neptune import NeptuneResultTracker
@@ -15,6 +14,7 @@ __all__ = [
     # Base classes
     "ResultTracker",
     "FileResultTracker",
+    "MultiResultTracker",
     # Concrete classes
     "MLFlowResultTracker",
     "NeptuneResultTracker",
@@ -27,6 +27,7 @@ __all__ = [
     "tracker_resolver",
 ]
 
-_RESULT_TRACKER_SUFFIX = "ResultTracker"
-_TRACKERS = [tracker for tracker in get_subclasses(ResultTracker) if tracker not in {FileResultTracker}]
-tracker_resolver = Resolver(_TRACKERS, base=ResultTracker, default=ResultTracker, suffix=_RESULT_TRACKER_SUFFIX)
+tracker_resolver = Resolver.from_subclasses(
+    base=ResultTracker,
+    skip={FileResultTracker, MultiResultTracker},
+)
