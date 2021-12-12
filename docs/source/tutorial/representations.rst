@@ -16,7 +16,6 @@ which enrich via CompGCN layers.
 
 Decomposition
 -------------
-
 Since knowledge graphs may contain a large number of entities, having
 independent trainable embeddings for each of them may result in an
 excessive amount of trainable parameters. Therefore, methods have been
