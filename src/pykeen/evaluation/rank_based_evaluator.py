@@ -9,6 +9,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field, fields
 from typing import DefaultDict, Dict, Iterable, List, Mapping, NamedTuple, Optional, Sequence, Tuple, Union
 
+import numpy
 import numpy as np
 import pandas
 import pandas as pd
@@ -23,6 +24,7 @@ from ..utils import fix_dataclass_init_docs
 __all__ = [
     "compute_rank_from_scores",
     "RankBasedEvaluator",
+    "RawRankBasedEvaluator",
     "RankBasedMetricResults",
     "MetricKey",
     "resolve_metric_name",
@@ -558,6 +560,115 @@ class RankBasedEvaluator(Evaluator):
             adjusted_arithmetic_mean_rank_index=dict(asr[ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX]),
             hits_at_k=dict(hits_at_k),
         )
+
+
+class RawRankBasedEvaluator(Evaluator):
+    """
+    A rank-based evaluator, which gives access to the ranks, and also keeps track of the triples.
+
+    Example Usage: compute mean-rank for each relation type
+
+    .. code-block :: python
+        from pykeen.pipeline import pipeline
+
+        result = pipeline(
+            model="transe",
+            dataset="nations",
+            evaluator="rawrankbased",
+        )
+        df = result.metric_results
+        mean_rank_per_relation = df.loc[
+            df["rank_type"] == "realistic",
+        ].groupby(by="relation_id").agg({"rank": "mean"}).sort_values(by="rank")
+
+    """
+
+    COLUMN_HEAD_ID = "head_id"
+    COLUMN_RELATION_ID = "relation_id"
+    COLUMN_TAIL_ID = "tail_id"
+    COLUMN_SIDE = "side"
+    COLUMN_RANK_TYPE = "rank_type"
+    COLUMN_RANK = "rank"
+
+    def __init__(
+        self,
+        filtered: bool = True,
+        batch_size: Optional[int] = None,
+        slice_size: Optional[int] = None,
+        automatic_memory_optimization: bool = True,
+    ):
+        super().__init__(
+            filtered=filtered,
+            requires_positive_mask=False,
+            batch_size=batch_size,
+            slice_size=slice_size,
+            automatic_memory_optimization=automatic_memory_optimization,
+        )
+        self.keys = [
+            self.COLUMN_HEAD_ID,
+            self.COLUMN_RELATION_ID,
+            self.COLUMN_TAIL_ID,
+            self.COLUMN_SIDE,
+            self.COLUMN_RANK_TYPE,
+            self.COLUMN_RANK,
+        ]
+        self.rank_data: Mapping[str, List[Union[numpy.ndarray, List[str]]]] = {key: [] for key in self.keys}
+
+    def _update_ranks_(
+        self,
+        hrt_batch: torch.LongTensor,
+        true_scores: torch.FloatTensor,
+        all_scores: torch.FloatTensor,
+        side: str,
+    ) -> None:  # noqa: D102
+        # only needed once
+        self.num_entities = all_scores.shape[1]
+        # compute ranks, mapping str -> shape: (batch_size,)
+        batch_ranks = compute_rank_from_scores(
+            true_score=true_scores,
+            all_scores=all_scores,
+        )
+        hrt_batch = hrt_batch.cpu().numpy()
+        for rank_type, v in batch_ranks.items():
+            batch_size = len(v)
+            for column, indices in zip(
+                (self.COLUMN_HEAD_ID, self.COLUMN_RELATION_ID, self.COLUMN_TAIL_ID), hrt_batch.T
+            ):
+                assert indices.shape == (batch_size,)
+                self.rank_data[column].append(indices)
+            self.rank_data[self.COLUMN_SIDE].append(numpy.full(shape=(batch_size,), fill_value=side))
+            self.rank_data[self.COLUMN_RANK_TYPE].append(numpy.full(shape=(batch_size,), fill_value=rank_type))
+            self.rank_data[self.COLUMN_RANK].append(v.detach().cpu())
+
+    def process_tail_scores_(
+        self,
+        hrt_batch: MappedTriples,
+        true_scores: torch.FloatTensor,
+        scores: torch.FloatTensor,
+        dense_positive_mask: Optional[torch.FloatTensor] = None,
+    ) -> None:  # noqa: D102
+        self._update_ranks_(hrt_batch=hrt_batch, true_scores=true_scores, all_scores=scores, side=SIDE_TAIL)
+
+    def process_head_scores_(
+        self,
+        hrt_batch: MappedTriples,
+        true_scores: torch.FloatTensor,
+        scores: torch.FloatTensor,
+        dense_positive_mask: Optional[torch.FloatTensor] = None,
+    ) -> None:  # noqa: D102
+        self._update_ranks_(hrt_batch=hrt_batch, true_scores=true_scores, all_scores=scores, side=SIDE_HEAD)
+
+    def finalize(self) -> MetricResults:  # noqa: D102
+        # TODO: this is not really a metric result
+        df = pandas.DataFrame(
+            data={key: numpy.concatenate(self.rank_data[key], axis=0) for key in self.keys},
+        )
+        for key, categories in [
+            (self.COLUMN_RANK_TYPE, sorted(RANK_TYPES.union({RANK_EXPECTED_REALISTIC}))),
+            (self.COLUMN_SIDE, [SIDE_HEAD, SIDE_TAIL]),
+        ]:
+            df[key] = pandas.Categorical(values=df[key], categories=categories)
+        return df
 
 
 def prepare_triple_rank_df(
