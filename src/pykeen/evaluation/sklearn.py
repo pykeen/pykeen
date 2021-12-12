@@ -6,12 +6,11 @@ from dataclasses import dataclass, field, fields, make_dataclass
 from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
-import rexmex.metrics.classification as rmc
 import torch
 from dataclasses_json import dataclass_json
-from sklearn import metrics
 
 from .evaluator import Evaluator, MetricResults
+from .rexmex_compat import classifier_annotator
 from ..typing import MappedTriples
 from ..utils import fix_dataclass_init_docs
 
@@ -20,52 +19,19 @@ __all__ = [
     "SklearnMetricResults",
 ]
 
-_funcs = [
-    (metrics.roc_auc_score, "AUC-ROC", "The area under the ROC curve, on [0, 1].", True),
-    (
-        metrics.average_precision_score,
-        "Average Precision",
-        "The area under the precision-recall curve, on [0, 1].",
-        True,
-    ),
-    (
-        rmc.matthews_correlation_coefficient,
-        "Matthews Correlation Coefficient",
-        "A balanced measure applicable even with class imbalance, on [-1, 1].",
-        True,
-    ),
-    (
-        rmc.f1_score,
-        "F1 Score",
-        "A weighted average of the precision and recall, on [0, 1].",
-        True,
-    ),
-    (
-        rmc.recall_score,
-        "Recall",
-        "The ability to find positive samples, on [0, 1].",
-        True,
-    ),
-    (
-        rmc.precision_score,
-        "Precision",
-        "The ability to not label a negative as positive, on [0, 1].",
-        True,
-    ),
-]
 _fields = [
     (
-        func.__name__,
+        metadata.func.__name__,
         float,
         field(
             metadata=dict(
-                name=name,
-                doc=doc + (" Higher is better." if higher_is_better else " Lower is better."),
-                f=func,
+                name=metadata.name,
+                doc=metadata.get_doc(),
+                f=metadata.func,
             )
         ),
     )
-    for func, name, doc, higher_is_better in _funcs
+    for metadata in classifier_annotator.metrics.values()
 ]
 
 SklearnMetricResultsBase = make_dataclass(

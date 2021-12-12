@@ -254,27 +254,46 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 | rankbased | [`pykeen.evaluation.RankBasedEvaluator`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.RankBasedEvaluator.html) | A rank-based evaluator for KGE models.        |
 | sklearn   | [`pykeen.evaluation.SklearnEvaluator`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.SklearnEvaluator.html)     | An evaluator that uses a Scikit-learn metric. |
 
-### Metrics (20)
+### Metrics (39)
 
 | Name                                        | Description                                                                            |
 |---------------------------------------------|----------------------------------------------------------------------------------------|
-| AUC-ROC                                     | The area under the ROC curve, on [0, 1]. Higher is better.                             |
+| Accuracy                                    | On [0, 1], higher is better.                                                           |
 | Adjusted Arithmetic Mean Rank (AAMR)        | The mean over all chance-adjusted ranks, on (0, 2). Lower is better.                   |
 | Adjusted Arithmetic Mean Rank Index (AAMRI) | The re-indexed adjusted mean rank (AAMR), on [-1, 1]. Higher is better.                |
-| Average Precision                           | The area under the precision-recall curve, on [0, 1]. Higher is better.                |
-| F1 Score                                    | A weighted average of the precision and recall, on [0, 1]. Higher is better.           |
+| Area Under the Precision-Recall Curve       | On [0, 1], higher is better.                                                           |
+| Area Under the ROC Curve                    | On [0, 1], higher is better.                                                           |
+| Average Precision                           | On [0, 1], higher is better.                                                           |
+| Balanced Accuracy                           | On [0, 1], higher is better.                                                           |
+| Diagnostic Odds Ratio                       | On [0, inf], higher is better.                                                         |
+| F1 Score                                    | On [0, 1], higher is better.                                                           |
+| False Discovery Rate                        | On [0, 1], lower is better.                                                            |
+| False Negative Rate                         | On [0, 1], lower is better.                                                            |
+| False Omission Rate                         | On [0, 1], lower is better.                                                            |
+| False Positive Rate                         | On [0, 1], lower is better.                                                            |
+| Fowlkes Mallows Index                       | On [0, 1], higher is better.                                                           |
 | Geometric Mean Rank (GMR)                   | The geometric mean over all ranks, on [1, inf). Lower is better.                       |
 | Harmonic Mean Rank (HMR)                    | The harmonic mean over all ranks, on [1, inf). Lower is better.                        |
 | Hits @ K                                    | The relative frequency of ranks not larger than a given k, on [0, 1]. Higher is better |
+| Informedness                                | On [0, 1], higher is better.                                                           |
 | Inverse Arithmetic Mean Rank (IAMR)         | The inverse of the arithmetic mean over all ranks, on (0, 1]. Higher is better.        |
 | Inverse Geometric Mean Rank (IGMR)          | The inverse of the geometric mean over all ranks, on (0, 1]. Higher is better.         |
 | Inverse Median Rank                         | The inverse of the median over all ranks, on (0, 1]. Higher is better.                 |
-| Matthews Correlation Coefficient            | A balanced measure applicable even with class imbalance, on [-1, 1]. Higher is better. |
+| Markedness                                  | On [0, 1], higher is better.                                                           |
+| Matthews Correlation Coefficient            | A balanced measure applicable even with class imbalance  On [-1, 1], higher is better. |
 | Mean Rank (MR)                              | The arithmetic mean over all ranks on, [1, inf). Lower is better.                      |
 | Mean Reciprocal Rank (MRR)                  | The inverse of the harmonic mean over all ranks, on (0, 1]. Higher is better.          |
 | Median Rank                                 | The median over all ranks, on [1, inf). Lower is better.                               |
-| Precision                                   | The ability to not label a negative as positive, on [0, 1]. Higher is better.          |
-| Recall                                      | The ability to find positive samples, on [0, 1]. Higher is better.                     |
+| Negative Likelihood Ratio                   | On [0, inf], lower is better.                                                          |
+| Negative Predictive Value                   | On [0, 1], higher is better.                                                           |
+| Positive Likelihood Ratio                   | On [0, inf], higher is better.                                                         |
+| Positive Predictive Value                   | On [0, 1], higher is better.                                                           |
+| Precision                                   | On [0, 1], higher is better.                                                           |
+| Prevalence Threshold                        | On [0, 1], lower is better.                                                            |
+| Recall                                      | On [0, 1], higher is better.                                                           |
+| Threat Score                                | On [0, 1], higher is better.                                                           |
+| True Negative Rate                          | On [0, 1], higher is better.                                                           |
+| True Positive Rate                          | On [0, 1], higher is better.                                                           |
 
 ### Trackers (7)
 
