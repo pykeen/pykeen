@@ -377,7 +377,7 @@ def _get_metrics_lines(tablefmt: str):
             continue
         yv = [
             field.metadata["name"],
-            "⬆️" if field.metadata["increasing"] else "⬇️",  # 📈  📉
+            "📈" if field.metadata["increasing"] else "📉",
             field.metadata["doc"],
             METRIC_NAMES[name],
         ]
