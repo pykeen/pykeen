@@ -12,12 +12,7 @@ import unittest_templates
 
 import pykeen.nn.emb
 from pykeen.datasets import get_dataset
-from pykeen.nn.emb import (
-    Embedding,
-    EmbeddingSpecification,
-    RepresentationModule,
-    SubsetRepresentationModule,
-)
+from pykeen.nn.emb import Embedding, EmbeddingSpecification, RepresentationModule, SubsetRepresentationModule
 from pykeen.triples.generation import generate_triples_factory
 from tests import cases, mocks
 
