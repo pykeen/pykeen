@@ -58,6 +58,7 @@ INVERSE_MEDIAN_RANK = "inverse_median_rank"
 RANK_STD = "rank_std"
 RANK_VARIANCE = "rank_var"
 RANK_MAD = "rank_mad"
+RANK_COUNT = "rank_count"
 
 all_type_funcs = {
     ARITHMETIC_MEAN_RANK: np.mean,  # This is MR
@@ -72,6 +73,7 @@ all_type_funcs = {
     RANK_STD: np.std,
     RANK_VARIANCE: np.var,
     RANK_MAD: stats.median_abs_deviation,
+    RANK_COUNT: lambda x: np.asarray(x.size),
 }
 
 ADJUSTED_ARITHMETIC_MEAN_RANK = "adjusted_arithmetic_mean_rank"
@@ -295,6 +297,13 @@ class RankBasedMetricResults(MetricResults):
         metadata=dict(
             name="Inverse Median Rank",
             doc="The inverse of the median over all ranks, on (0, 1]. Higher is better.",
+        )
+    )
+
+    rank_count: Dict[str, int] = field(
+        metadata=dict(
+            name="Rank Count",
+            doc="The number of considered ranks, a non-negative number. Low numbers may indicate unreliable results.",
         )
     )
 
@@ -540,6 +549,7 @@ class RankBasedEvaluator(Evaluator):
             inverse_geometric_mean_rank=dict(asr[INVERSE_GEOMETRIC_MEAN_RANK]),
             inverse_harmonic_mean_rank=dict(asr[INVERSE_HARMONIC_MEAN_RANK]),
             inverse_median_rank=dict(asr[INVERSE_MEDIAN_RANK]),
+            rank_count=dict(asr[RANK_COUNT]),
             rank_std=dict(asr[RANK_STD]),
             rank_mad=dict(asr[RANK_MAD]),
             rank_var=dict(asr[RANK_VARIANCE]),
