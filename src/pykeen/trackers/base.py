@@ -52,8 +52,14 @@ class ResultTracker:
 class PythonResultTracker(ResultTracker):
     """A tracker which stores everything in Python dictionaries."""
 
+    #: The name of the run
+    run_name: Optional[str]
+
+    #: The configuration dictionary, a mapping from name -> value
     configuration: MutableMapping[str, Any]
-    metrics: MutableMapping[int, Mapping[str, Any]]
+
+    #: The metrics, a mapping from step -> (name -> value)
+    metrics: MutableMapping[Optional[int], Mapping[str, float]]
 
     def __init__(self) -> None:
         """Initialize the tracker."""
