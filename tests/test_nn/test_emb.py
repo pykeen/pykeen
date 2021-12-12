@@ -12,11 +12,9 @@ import unittest_templates
 
 import pykeen.nn.emb
 from pykeen.datasets import get_dataset
-from pykeen.datasets.nations import NationsLiteral
 from pykeen.nn.emb import (
     Embedding,
     EmbeddingSpecification,
-    LiteralRepresentation,
     RepresentationModule,
     SubsetRepresentationModule,
 )
@@ -57,15 +55,6 @@ class EmbeddingTests(cases.RepresentationTestCase):
         first = dropout_instance(indices)
         second = dropout_instance(indices)
         assert not torch.allclose(first, second)
-
-
-class LiteralEmbeddingTests(cases.RepresentationTestCase):
-    """Tests for literal embeddings."""
-
-    cls = LiteralRepresentation
-    kwargs = dict(
-        numeric_literals=NationsLiteral().training.numeric_literals,
-    )
 
 
 class TensorEmbeddingTests(cases.RepresentationTestCase):
