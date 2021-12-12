@@ -49,6 +49,7 @@ __all__ = [
     "CombinedCompGCNRepresentations",
     "SingleCompGCNRepresentation",
     "LabelBasedTransformerRepresentation",
+    "SubsetRepresentationModule",
     "constrainers",
     "initializers",
     "normalizers",

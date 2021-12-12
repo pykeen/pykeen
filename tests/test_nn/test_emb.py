@@ -18,7 +18,6 @@ from pykeen.nn.emb import (
     Embedding,
     EmbeddingSpecification,
     LiteralRepresentation,
-    LowRankEmbeddingRepresentation,
     RepresentationModule,
     SubsetRepresentationModule,
 )
@@ -64,7 +63,7 @@ class EmbeddingTests(cases.RepresentationTestCase):
 class LowRankEmbeddingRepresentationTests(cases.RepresentationTestCase):
     """Tests for low-rank embedding representations."""
 
-    cls = LowRankEmbeddingRepresentation
+    cls = pykeen.nn.emb.LowRankEmbeddingRepresentation
     kwargs = dict(
         max_id=10,
         shape=(3, 7),
