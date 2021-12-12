@@ -49,7 +49,7 @@ class PretrainedInitializerTestCase(cases.InitializerTestCase):
     def setUp(self) -> None:
         """Prepare for test."""
         self.pretrained = torch.rand(*self.shape)
-        self.initializer = pykeen.nn.init.create_init_from_pretrained(pretrained=self.pretrained)
+        self.initializer = pykeen.nn.init.PretrainedInitializer(tensor=self.pretrained)
 
     def _verify_initialization(self, x: torch.FloatTensor) -> None:  # noqa: D102
         assert (x == self.pretrained).all()
