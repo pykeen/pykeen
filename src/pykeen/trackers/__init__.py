@@ -4,7 +4,7 @@
 
 from class_resolver import Resolver, get_subclasses
 
-from .base import ConsoleResultTracker, ResultTracker
+from .base import ConsoleResultTracker, PythonResultTracker, ResultTracker
 from .file import CSVResultTracker, FileResultTracker, JSONResultTracker
 from .mlflow import MLFlowResultTracker
 from .neptune import NeptuneResultTracker
