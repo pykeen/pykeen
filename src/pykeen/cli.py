@@ -24,7 +24,7 @@ from click_default_group import DefaultGroup
 from tabulate import tabulate
 
 from .datasets import dataset_resolver
-from .evaluation import evaluator_resolver, get_metric_list, metric_resolver
+from .evaluation import evaluator_resolver, get_metric_list
 from .experiments.cli import experiments
 from .hpo.cli import optimize
 from .hpo.samplers import sampler_resolver
@@ -314,7 +314,14 @@ def _help_metrics(tablefmt):
     return tabulate(
         sorted(_get_metrics_lines(tablefmt), key=lambda t: (t[2], t[0])),
         headers=(
-            ["Name", "Description", "Type"] if tablefmt == "github" else ["Metric", "Description", "Type", "Reference"]
+            [
+                "Name",
+                "Inc.",
+                "Description",
+                "Type",
+            ]
+            if tablefmt == "github"
+            else ["Metric", "Inc.", "Description", "Type", "Reference"]
         ),
         tablefmt=tablefmt,
     )
@@ -368,10 +375,15 @@ def _get_metrics_lines(tablefmt: str):
     for field, name, value in get_metric_list():
         if field.name in {"rank_std", "rank_var", "rank_mad", "rank_count"}:
             continue
-        if tablefmt == "github":
-            yield field.metadata["name"], field.metadata["doc"], METRIC_NAMES[name]
-        else:
-            yield field.metadata["name"], field.metadata["doc"], name, f"pykeen.evaluation.{value.__name__}"
+        yv = [
+            field.metadata["name"],
+            "⬆️" if field.metadata["increasing"] else "⬇️",  # 📈  📉
+            field.metadata["doc"],
+            METRIC_NAMES[name],
+        ]
+        if tablefmt != "github":
+            yv.append(f"pykeen.evaluation.{value.__name__}")
+        yield tuple(yv)
 
 
 def _get_lines(d, tablefmt, submodule, link_fmt: Optional[str] = None):

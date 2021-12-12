@@ -247,6 +247,7 @@ class RankBasedMetricResults(MetricResults):
     arithmetic_mean_rank: Dict[str, Dict[str, float]] = field(
         metadata=dict(
             name="Mean Rank (MR)",
+            increasing=False,
             doc="The arithmetic mean over all ranks on, [1, inf). Lower is better.",
         )
     )
@@ -254,6 +255,7 @@ class RankBasedMetricResults(MetricResults):
     geometric_mean_rank: Dict[str, Dict[str, float]] = field(
         metadata=dict(
             name="Geometric Mean Rank (GMR)",
+            increasing=False,
             doc="The geometric mean over all ranks, on [1, inf). Lower is better.",
         )
     )
@@ -261,6 +263,7 @@ class RankBasedMetricResults(MetricResults):
     median_rank: Dict[str, Dict[str, float]] = field(
         metadata=dict(
             name="Median Rank",
+            increasing=False,
             doc="The median over all ranks, on [1, inf). Lower is better.",
         )
     )
@@ -268,6 +271,7 @@ class RankBasedMetricResults(MetricResults):
     harmonic_mean_rank: Dict[str, Dict[str, float]] = field(
         metadata=dict(
             name="Harmonic Mean Rank (HMR)",
+            increasing=False,
             doc="The harmonic mean over all ranks, on [1, inf). Lower is better.",
         )
     )
@@ -275,6 +279,7 @@ class RankBasedMetricResults(MetricResults):
     inverse_arithmetic_mean_rank: Dict[str, Dict[str, float]] = field(
         metadata=dict(
             name="Inverse Arithmetic Mean Rank (IAMR)",
+            increasing=True,
             doc="The inverse of the arithmetic mean over all ranks, on (0, 1]. Higher is better.",
         )
     )
@@ -282,6 +287,7 @@ class RankBasedMetricResults(MetricResults):
     inverse_geometric_mean_rank: Dict[str, Dict[str, float]] = field(
         metadata=dict(
             name="Inverse Geometric Mean Rank (IGMR)",
+            increasing=True,
             doc="The inverse of the geometric mean over all ranks, on (0, 1]. Higher is better.",
         )
     )
@@ -289,6 +295,7 @@ class RankBasedMetricResults(MetricResults):
     inverse_harmonic_mean_rank: Dict[str, Dict[str, float]] = field(
         metadata=dict(
             name="Mean Reciprocal Rank (MRR)",
+            increasing=True,
             doc="The inverse of the harmonic mean over all ranks, on (0, 1]. Higher is better.",
         )
     )
@@ -296,6 +303,7 @@ class RankBasedMetricResults(MetricResults):
     inverse_median_rank: Dict[str, Dict[str, float]] = field(
         metadata=dict(
             name="Inverse Median Rank",
+            increasing=True,
             doc="The inverse of the median over all ranks, on (0, 1]. Higher is better.",
         )
     )
@@ -331,6 +339,7 @@ class RankBasedMetricResults(MetricResults):
     hits_at_k: Dict[str, Dict[str, Dict[Union[int, float], float]]] = field(
         metadata=dict(
             name="Hits @ K",
+            increasing=True,
             doc="The relative frequency of ranks not larger than a given k, on [0, 1]. Higher is better",
         )
     )
@@ -338,6 +347,7 @@ class RankBasedMetricResults(MetricResults):
     adjusted_arithmetic_mean_rank: Dict[str, Dict[str, float]] = field(
         metadata=dict(
             name="Adjusted Arithmetic Mean Rank (AAMR)",
+            increasing=False,
             doc="The mean over all chance-adjusted ranks, on (0, 2). Lower is better.",
         )
     )
@@ -345,6 +355,7 @@ class RankBasedMetricResults(MetricResults):
     adjusted_arithmetic_mean_rank_index: Dict[str, Dict[str, float]] = field(
         metadata=dict(
             name="Adjusted Arithmetic Mean Rank Index (AAMRI)",
+            increasing=True,
             doc="The re-indexed adjusted mean rank (AAMR), on [-1, 1]. Higher is better.",
         )
     )

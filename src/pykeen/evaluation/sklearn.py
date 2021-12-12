@@ -27,6 +27,7 @@ _fields = [
             metadata=dict(
                 name=metadata.name,
                 doc=metadata.get_doc(),
+                increasing=metadata.higher_is_better,
                 f=metadata.func,
             )
         ),

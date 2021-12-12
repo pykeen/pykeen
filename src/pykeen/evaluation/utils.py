@@ -45,8 +45,6 @@ class MetricAnnotation(NamedTuple):
         if self.description:
             rv += self.description + " "
         rv += f" On {self.range_str()}, "
-        rv += "higher" if self.higher_is_better else "lower"
-        rv += " is better."
         return rv
 
 
