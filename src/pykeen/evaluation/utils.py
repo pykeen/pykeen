@@ -39,7 +39,7 @@ class MetricAnnotation(NamedTuple):
         except OverflowError:
             upper = self.upper
             right = ")"
-        return f"{left}{lower}, {upper}{right}"
+        return f"{left}{lower},{upper}{right}"
 
 
 class MetricAnnotator:

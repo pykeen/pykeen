@@ -39,28 +39,59 @@ DUPLICATE_CLASSIFIERS = {
 }
 
 classifier_annotator = MetricAnnotator("classification")
-classifier_annotator.higher(rmc.true_negative_rate)
-classifier_annotator.higher(rmc.true_positive_rate)
-classifier_annotator.higher(rmc.positive_predictive_value)
-classifier_annotator.higher(rmc.negative_predictive_value)
-classifier_annotator.lower(rmc.false_negative_rate)
-classifier_annotator.lower(rmc.false_positive_rate)
-classifier_annotator.lower(rmc.false_discovery_rate)
-classifier_annotator.lower(rmc.false_omission_rate)
-classifier_annotator.higher(rmc.positive_likelihood_ratio, lower=0.0, upper=float("inf"))
-classifier_annotator.lower(rmc.negative_likelihood_ratio, lower=0.0, upper=float("inf"))
-classifier_annotator.lower(rmc.prevalence_threshold)
+classifier_annotator.higher(rmc.true_negative_rate, link="https://en.wikipedia.org/wiki/Specificity_(tests)")
+classifier_annotator.higher(rmc.true_positive_rate, link="https://en.wikipedia.org/wiki/Sensitivity_(test)")
+classifier_annotator.higher(
+    rmc.positive_predictive_value, link="https://en.wikipedia.org/wiki/Positive_predictive_value"
+)
+classifier_annotator.higher(
+    rmc.negative_predictive_value, link="https://en.wikipedia.org/wiki/Negative_predictive_value"
+)
+classifier_annotator.higher(
+    rmc.precision_score, name="Precision", description="Percentage of observed positives that are correct"
+)
+classifier_annotator.higher(
+    rmc.recall_score, name="Recall", description="Percentage of correct positives that are observed"
+)
+classifier_annotator.lower(
+    rmc.false_negative_rate,
+    link="https://en.wikipedia.org/wiki/Type_I_and_type_II_errors#False_positive_and_false_negative_rates",
+)
+classifier_annotator.lower(rmc.false_positive_rate, link="https://en.wikipedia.org/wiki/False_positive_rate")
+classifier_annotator.lower(rmc.false_discovery_rate, link="https://en.wikipedia.org/wiki/False_discovery_rate")
+classifier_annotator.lower(
+    rmc.false_omission_rate, link="https://en.wikipedia.org/wiki/Positive_and_negative_predictive_values"
+)
+classifier_annotator.higher(
+    rmc.positive_likelihood_ratio,
+    lower=0.0,
+    upper=float("inf"),
+    link="https://en.wikipedia.org/wiki/Positive_likelihood_ratio",
+)
+classifier_annotator.lower(
+    rmc.negative_likelihood_ratio,
+    lower=0.0,
+    upper=float("inf"),
+    link="https://en.wikipedia.org/wiki/Negative_likelihood_ratio",
+)
+classifier_annotator.lower(rmc.prevalence_threshold, link="https://en.wikipedia.org/wiki/Prevalence_threshold")
 classifier_annotator.higher(rmc.threat_score)
-classifier_annotator.higher(rmc.fowlkes_mallows_index, link="https://en.wikipedia.org/wiki/Fowlkes%E2%80%93Mallows_index")
+classifier_annotator.higher(
+    rmc.fowlkes_mallows_index, link="https://en.wikipedia.org/wiki/Fowlkes%E2%80%93Mallows_index"
+)
 classifier_annotator.higher(rmc.informedness, link="https://en.wikipedia.org/wiki/Informedness")
 classifier_annotator.higher(rmc.markedness, link="https://en.wikipedia.org/wiki/Markedness")
-classifier_annotator.higher(rmc.diagnostic_odds_ratio, lower=0.0, upper=float("inf"))
-classifier_annotator.higher(rmc.roc_auc_score, name="Area Under the ROC Curve")
+classifier_annotator.higher(
+    rmc.diagnostic_odds_ratio, lower=0.0, upper=float("inf"), link="https://en.wikipedia.org/wiki/Diagnostic_odds_ratio"
+)
+classifier_annotator.higher(
+    rmc.roc_auc_score,
+    name="Area Under the ROC Curve",
+    link="https://en.wikipedia.org/wiki/Receiver_operating_characteristic",
+)
 classifier_annotator.higher(rmc.accuracy_score, name="Accuracy", link="https://en.wikipedia.org/wiki/Accuracy")
 classifier_annotator.higher(rmc.balanced_accuracy_score, name="Balanced Accuracy")
-classifier_annotator.higher(rmc.f1_score, name="F1 Score")
-classifier_annotator.higher(rmc.precision_score, name="Precision")
-classifier_annotator.higher(rmc.recall_score, name="Recall")
+classifier_annotator.higher(rmc.f1_score, name="F1 Score", link="https://en.wikipedia.org/wiki/F1_score")
 classifier_annotator.higher(rmc.average_precision_score, name="Average Precision")
 classifier_annotator.higher(
     rmc.matthews_correlation_coefficient,
