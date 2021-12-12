@@ -11,6 +11,7 @@ import torch
 import unittest_templates
 
 import pykeen.nn.emb
+import pykeen.nn.message_passing
 from pykeen.datasets import get_dataset
 from pykeen.datasets.nations import NationsLiteral
 from pykeen.nn.emb import (
@@ -98,7 +99,7 @@ class TensorEmbeddingTests(cases.RepresentationTestCase):
 class RGCNRepresentationTests(cases.RepresentationTestCase):
     """Test RGCN representations."""
 
-    cls = pykeen.nn.emb.RGCNRepresentations
+    cls = pykeen.nn.message_passing.RGCNRepresentations
     num_entities: ClassVar[int] = 8
     num_relations: ClassVar[int] = 7
     num_triples: ClassVar[int] = 31
