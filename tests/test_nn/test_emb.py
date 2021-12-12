@@ -17,6 +17,7 @@ from pykeen.nn.emb import (
     Embedding,
     EmbeddingSpecification,
     LiteralRepresentation,
+    LowRankEmbeddingRepresentation,
     RepresentationModule,
     SubsetRepresentationModule,
 )
@@ -57,6 +58,16 @@ class EmbeddingTests(cases.RepresentationTestCase):
         first = dropout_instance(indices)
         second = dropout_instance(indices)
         assert not torch.allclose(first, second)
+
+
+class LowRankEmbeddingRepresentationTests(cases.RepresentationTestCase):
+    """Tests for low-rank embedding representations."""
+
+    cls = LowRankEmbeddingRepresentation
+    kwargs = dict(
+        max_id=10,
+        shape=(3, 7),
+    )
 
 
 class LiteralEmbeddingTests(cases.RepresentationTestCase):

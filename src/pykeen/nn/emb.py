@@ -460,6 +460,24 @@ class Embedding(RepresentationModule):
         return x
 
 
+class LowRankEmbeddingRepresentation(RepresentationModule):
+    """Low-rank embeddings."""
+
+    def __init__(self, max_id: int, shape: Sequence[int], num_bases: int = 3):
+        super().__init__(max_id=max_id, shape=shape)
+        self.weight = nn.Parameter(torch.rand(max_id, num_bases))
+        self.bases = nn.Parameter(torch.randn(num_bases, *shape))
+
+    def forward(
+        self,
+        indices: Optional[torch.LongTensor] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        weight = self.weight
+        if indices is not None:
+            weight = weight[indices]
+        return torch.tensordot(weight, self.bases, dims=([-1], [-(len(self.shape) + 1)]))
+
+
 class LiteralRepresentation(Embedding):
     """Literal representations."""
 
