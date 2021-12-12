@@ -5,7 +5,7 @@
 import unittest
 
 from pykeen.trackers import TensorBoardResultTracker
-from pykeen.trackers.base import ConsoleResultTracker, MultiResultTracker
+from pykeen.trackers.base import ConsoleResultTracker, MultiResultTracker, PythonResultTracker
 from pykeen.trackers.file import CSVResultTracker, JSONResultTracker
 from tests import cases
 
@@ -13,6 +13,12 @@ try:
     import tensorboard
 except ImportError:
     tensorboard = None
+
+
+class PythonResultTrackerTests(cases.ResultTrackerTests):
+    """Tests for Python result tracker."""
+
+    cls = PythonResultTracker
 
 
 class CSVResultTrackerTests(cases.FileResultTrackerTests):

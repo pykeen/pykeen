@@ -4,7 +4,7 @@
 
 from class_resolver import Resolver
 
-from .base import ConsoleResultTracker, MultiResultTracker, ResultTracker, TrackerHint
+from .base import ConsoleResultTracker, MultiResultTracker, PythonResultTracker, ResultTracker, TrackerHint
 from .file import CSVResultTracker, FileResultTracker, JSONResultTracker
 from .mlflow import MLFlowResultTracker
 from .neptune import NeptuneResultTracker
@@ -22,6 +22,7 @@ __all__ = [
     "WANDBResultTracker",
     "JSONResultTracker",
     "CSVResultTracker",
+    "PythonResultTracker",
     "TensorBoardResultTracker",
     "ConsoleResultTracker",
     # Utilities
