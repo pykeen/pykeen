@@ -50,7 +50,26 @@ class ResultTracker:
 
 
 class PythonResultTracker(ResultTracker):
-    """A tracker which stores everything in Python dictionaries."""
+    """
+    A tracker which stores everything in Python dictionaries.
+
+    Example Usage: get default configuration
+
+    .. code-block :: python
+        from pykeen.pipeline import pipeline
+        from pykeen.trackers import PythonResultTracker
+
+        tracker = PythonResultTracker()
+        result = pipeline(
+            dataset="nations",
+            model="PairRE",
+            result_tracker=tracker,
+        )
+        print("Default configuration:")
+        for k, v in tracker.configuration.items():
+            print(f"{k:20} = {v}")
+
+    """
 
     #: The name of the run
     run_name: Optional[str]
