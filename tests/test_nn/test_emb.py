@@ -13,14 +13,7 @@ import unittest_templates
 import pykeen.nn.emb
 import pykeen.nn.message_passing
 from pykeen.datasets import get_dataset
-from pykeen.datasets.nations import NationsLiteral
-from pykeen.nn.emb import (
-    Embedding,
-    EmbeddingSpecification,
-    LiteralRepresentation,
-    RepresentationModule,
-    SubsetRepresentationModule,
-)
+from pykeen.nn.emb import Embedding, EmbeddingSpecification, RepresentationModule, SubsetRepresentationModule
 from pykeen.triples.generation import generate_triples_factory
 from tests import cases, mocks
 
@@ -67,15 +60,6 @@ class LowRankEmbeddingRepresentationTests(cases.RepresentationTestCase):
     kwargs = dict(
         max_id=10,
         shape=(3, 7),
-    )
-
-
-class LiteralEmbeddingTests(cases.RepresentationTestCase):
-    """Tests for literal embeddings."""
-
-    cls = LiteralRepresentation
-    kwargs = dict(
-        numeric_literals=NationsLiteral().training.numeric_literals,
     )
 
 

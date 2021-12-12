@@ -42,7 +42,6 @@ __all__ = [
     "RepresentationModule",
     "Embedding",
     "LowRankEmbeddingRepresentation",
-    "LiteralRepresentation",
     "EmbeddingSpecification",
     "NodePieceRepresentation",
     "CompGCNLayer",
@@ -519,28 +518,6 @@ class LowRankEmbeddingRepresentation(RepresentationModule):
             weight = weight[indices]
         # weighted linear combination of bases, shape: (*batch_dims, *shape)
         return torch.tensordot(weight, bases, dims=([-1], [0]))
-
-
-class LiteralRepresentation(Embedding):
-    """Literal representations."""
-
-    def __init__(
-        self,
-        numeric_literals: torch.FloatTensor,
-    ):
-        self._numeric_literals = numeric_literals
-        num_embeddings, embedding_dim = numeric_literals.shape
-        super().__init__(
-            num_embeddings=num_embeddings,
-            embedding_dim=embedding_dim,
-            initializer=self._initialize_literals,
-        )
-        # freeze
-        self._embeddings.requires_grad_(False)
-
-    # use this instead of a lambda to make sure that it can be pickled
-    def _initialize_literals(self, _) -> torch.FloatTensor:
-        return self._numeric_literals
 
 
 @dataclass
