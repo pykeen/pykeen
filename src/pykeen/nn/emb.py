@@ -461,21 +461,47 @@ class Embedding(RepresentationModule):
 
 
 class LowRankEmbeddingRepresentation(RepresentationModule):
-    """Low-rank embeddings."""
+    r"""
+    Low-rank embedding factorization.
 
-    def __init__(self, max_id: int, shape: Sequence[int], num_bases: int = 3):
+    This representation reduces the number of trainable parameters by not learning independent weights for each index,
+    but rather having shared bases among all indices, and only learn the weights of the linear combination.
+
+    .. math ::
+        E[i] = \sum B[i, k] * W[k]
+    """
+
+    def __init__(self, *, max_id: int, shape: Sequence[int], num_bases: int = 3, **kwargs):
+        """
+        Initialize the representations.
+
+        :param max_id:
+            the maximum ID (exclusively). Valid Ids reach from 0, ..., max_id-1
+        :param shape:
+            the shape of an individual base representation.
+        :param num_bases:
+            the number of bases. More bases increase expressivity, but also increase the number of trainable parameters.
+        :param kwargs:
+            additional keyword based arguments passed to :class:`pykeen.nn.emb.Embedding`, which is used for the base
+            representations.
+        """
         super().__init__(max_id=max_id, shape=shape)
-        self.weight = nn.Parameter(torch.rand(max_id, num_bases))
-        self.bases = nn.Parameter(torch.randn(num_bases, *shape))
+        self.bases = Embedding(num_embeddings=num_bases, shape=shape, **kwargs)
+        # initialize as random convex combination
+        self.weight = nn.Parameter(functional.normalize(torch.rand(max_id, num_bases), p=1, dim=-1))
 
     def forward(
         self,
         indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
+        # get all base representations, shape: (num_bases, *shape)
+        bases = self.bases(indices=None)
+        # get base weights, shape: (*, num_bases)
         weight = self.weight
         if indices is not None:
             weight = weight[indices]
-        return torch.tensordot(weight, self.bases, dims=([-1], [-(len(self.shape) + 1)]))
+        # weighted linear combination of bases
+        return torch.tensordot(weight, bases, dims=([-1], [1]))
 
 
 class LiteralRepresentation(Embedding):
