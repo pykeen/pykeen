@@ -4,7 +4,7 @@
 
 import logging
 import re
-from typing import Any, Mapping, Optional, Pattern, Union
+from typing import Any, Iterable, List, Mapping, Optional, Pattern, Union
 
 from tqdm.auto import tqdm
 
@@ -13,6 +13,7 @@ from ..utils import flatten_dictionary
 __all__ = [
     "ResultTracker",
     "ConsoleResultTracker",
+    "MultiResultTracker",
 ]
 
 
@@ -127,3 +128,48 @@ class ConsoleResultTracker(ResultTracker):
             self.write("Run failed.")
         if self.start_end_run:
             self.write("Finished run.")
+
+
+#: A hint for constructing a :class:`MultiResultTracker`
+TrackerHint = Union[None, ResultTracker, Iterable[ResultTracker]]
+
+
+class MultiResultTracker(ResultTracker):
+    """A result tracker which delegates to multiple different result trackers."""
+
+    trackers: List[ResultTracker]
+
+    def __init__(self, trackers: TrackerHint = None) -> None:
+        """
+        Initialize the tracker.
+
+        :param trackers:
+            the base tracker(s).
+        """
+        if trackers is None:
+            self.trackers = []
+        elif isinstance(trackers, ResultTracker):
+            self.trackers = [trackers]
+        else:
+            self.trackers = list(trackers)
+
+    def start_run(self, run_name: Optional[str] = None) -> None:  # noqa: D102
+        for tracker in self.trackers:
+            tracker.start_run(run_name=run_name)
+
+    def log_params(self, params: Mapping[str, Any], prefix: Optional[str] = None) -> None:  # noqa: D102
+        for tracker in self.trackers:
+            tracker.log_params(params=params, prefix=prefix)
+
+    def log_metrics(
+        self,
+        metrics: Mapping[str, float],
+        step: Optional[int] = None,
+        prefix: Optional[str] = None,
+    ) -> None:  # noqa: D102
+        for tracker in self.trackers:
+            tracker.log_metrics(metrics=metrics, step=step, prefix=prefix)
+
+    def end_run(self, success: bool = True) -> None:  # noqa: D102
+        for tracker in self.trackers:
+            tracker.end_run(success=success)
