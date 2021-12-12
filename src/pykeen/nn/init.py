@@ -120,7 +120,7 @@ def init_quaternions(
     return x.view(num_elements, 4 * dim)
 
 
-class PretrainedInitializer(Initializer):
+class PretrainedInitializer:
     """
     Initialize tensor with pretrained weights.
 
