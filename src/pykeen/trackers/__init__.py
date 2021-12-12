@@ -3,7 +3,8 @@
 """Result trackers in PyKEEN."""
 
 from class_resolver import Resolver
-from .base import ConsoleResultTracker, MultiResultTracker, ResultTracker
+
+from .base import ConsoleResultTracker, MultiResultTracker, ResultTracker, TrackerHint
 from .file import CSVResultTracker, FileResultTracker, JSONResultTracker
 from .mlflow import MLFlowResultTracker
 from .neptune import NeptuneResultTracker
@@ -25,6 +26,7 @@ __all__ = [
     "ConsoleResultTracker",
     # Utilities
     "tracker_resolver",
+    "TrackerHint",
 ]
 
 tracker_resolver = Resolver.from_subclasses(
