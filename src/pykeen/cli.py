@@ -310,9 +310,9 @@ def metrics(tablefmt: str):
     click.echo(_help_metrics(tablefmt))
 
 
-def _help_metrics(tablefmt, link_fmt=None):
+def _help_metrics(tablefmt):
     return tabulate(
-        sorted(_get_metrics_lines(tablefmt, link_fmt=link_fmt)),
+        sorted(_get_metrics_lines(tablefmt)),
         headers=(
             ["Name", "Reference"]
             if tablefmt == "rst"
@@ -362,13 +362,13 @@ def _help_hpo_samplers(tablefmt: str, link_fmt: Optional[str] = None):
     )
 
 
-def _get_metrics_lines(tablefmt: str, link_fmt=None):
+def _get_metrics_lines(tablefmt: str):
     if tablefmt == "rst":
         for name, value in metric_resolver.lookup_dict.items():
             yield name, f":class:`pykeen.evaluation.{value.__name__}`"
     else:
         for field, name, value in get_metric_list():
-            if field.name in {"rank_std", "rank_var", "rank_mad"}:
+            if field.name in {"rank_std", "rank_var", "rank_mad", "rank_count"}:
                 continue
             if tablefmt == "github":
                 yield field.metadata["name"], field.metadata["doc"]
