@@ -133,7 +133,9 @@ class ConsoleResultTracker(ResultTracker):
 class MultiResultTracker(ResultTracker):
     """A result tracker which delegates to multiple different result trackers."""
 
-    def __init__(self, trackers: Collection[ResultTracker]) -> None:
+    trackers: List[ResultTracker]
+    
+    def __init__(self, trackers: Iterable[ResultTracker]) -> None:
         """
         Initialize the tracker.
 
@@ -141,7 +143,7 @@ class MultiResultTracker(ResultTracker):
             the base trackers.
         """
         super().__init__()
-        self.trackers = trackers
+        self.trackers = list(trackers)
 
     def start_run(self, run_name: Optional[str] = None) -> None:  # noqa: D102
         for tracker in self.trackers:
