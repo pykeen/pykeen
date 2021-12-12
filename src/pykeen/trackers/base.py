@@ -13,6 +13,7 @@ from ..utils import flatten_dictionary
 __all__ = [
     "ResultTracker",
     "ConsoleResultTracker",
+    "MultiResultTracker",
 ]
 
 
@@ -129,7 +130,7 @@ class ConsoleResultTracker(ResultTracker):
             self.write("Finished run.")
 
 
-class MultiTracker(ResultTracker):
+class MultiResultTracker(ResultTracker):
     """A result tracker which delegates to multiple different result trackers."""
 
     def __init__(self, trackers: Collection[ResultTracker]) -> None:
