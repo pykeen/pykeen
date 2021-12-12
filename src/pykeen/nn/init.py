@@ -4,7 +4,6 @@
 
 import logging
 import math
-import warnings
 from typing import Optional, Sequence
 
 import numpy as np
@@ -121,7 +120,7 @@ def init_quaternions(
     return x.view(num_elements, 4 * dim)
 
 
-class PretrainedInitializer:
+class PretrainedInitializer(Initializer):
     """
     Initialize tensor with pretrained weights.
 
