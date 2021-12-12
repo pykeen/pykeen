@@ -469,7 +469,7 @@ class LowRankEmbeddingRepresentation(RepresentationModule):
     but rather having shared bases among all indices, and only learn the weights of the linear combination.
 
     .. math ::
-        E[i] = \sum B[i, k] * W[k]
+        E[i] = \sum_k B[i, k] * W[k]
     """
 
     def __init__(
