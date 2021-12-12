@@ -50,8 +50,7 @@ class ResultTracker:
 
 
 class PythonResultTracker(ResultTracker):
-    """
-    A tracker which stores everything in Python dictionaries.
+    """A tracker which stores everything in Python dictionaries.
 
     Example Usage: get default configuration
 
