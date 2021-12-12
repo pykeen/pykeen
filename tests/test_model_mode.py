@@ -10,7 +10,7 @@ from torch import nn
 
 from pykeen.datasets import Nations
 from pykeen.models import EntityRelationEmbeddingModel, Model, TransE
-from pykeen.nn import EmbeddingSpecification
+from pykeen.nn.emb import EmbeddingSpecification
 from pykeen.triples import TriplesFactory
 from pykeen.utils import resolve_device
 
@@ -28,7 +28,7 @@ class TestBaseModel(unittest.TestCase):
         self.batch_size = 16
         self.embedding_dim = 8
         self.factory = Nations().training
-        self.model = TransE(self.factory, embedding_dim=self.embedding_dim).to_device_()
+        self.model = TransE(triples_factory=self.factory, embedding_dim=self.embedding_dim).to_device_()
 
     def _check_scores(self, scores) -> None:
         """Check the scores produced by a forward function."""
@@ -161,7 +161,7 @@ class TestBaseModelScoringFunctions(unittest.TestCase):
 class SimpleInteractionModel(EntityRelationEmbeddingModel):
     """A model with a simple interaction function for testing the base model."""
 
-    def __init__(self, triples_factory: TriplesFactory):
+    def __init__(self, *, triples_factory: TriplesFactory):
         super().__init__(
             triples_factory=triples_factory,
             entity_representations=EmbeddingSpecification(embedding_dim=50),
@@ -186,21 +186,8 @@ class SimpleInteractionModel(EntityRelationEmbeddingModel):
 class MinimalTriplesFactory:
     """A triples factory with minial attributes to allow the model to initiate."""
 
-    relation_to_id = {
-        "0": 0,
-        "1": 1,
-    }
-    entity_to_id = {
-        "0": 0,
-        "1": 1,
-    }
     num_entities = 2
     num_relations = 2
-
-    @classmethod
-    def get_entity_ids(cls):  # noqa:D102
-        return cls.entity_to_id.values()
-
-    @classmethod
-    def get_relation_ids(cls):  # noqa:D102
-        return cls.relation_to_id.values()
+    entity_ids = list(range(num_entities))
+    relation_ids = list(range(num_relations))
+    create_inverse_triples: bool = False

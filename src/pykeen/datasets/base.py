@@ -2,65 +2,105 @@
 
 """Utility classes for constructing datasets."""
 
+from __future__ import annotations
+
 import logging
-import os
 import pathlib
-import shutil
 import tarfile
 import zipfile
 from abc import abstractmethod
 from io import BytesIO
-from typing import Any, Dict, List, Mapping, Optional, TextIO, Tuple, Union, cast
-from urllib.request import urlretrieve
+from typing import Any, ClassVar, Dict, List, Mapping, Optional, Sequence, Tuple, Type, Union, cast
 
+import click
+import docdata
 import pandas as pd
 import requests
-from pystow.utils import name_from_url
+from more_click import verbose_option
+from pystow.utils import download, name_from_url
 from tabulate import tabulate
 
 from ..constants import PYKEEN_DATASETS
-from ..triples import TriplesFactory
+from ..triples import CoreTriplesFactory, TriplesFactory
+from ..triples.deteriorate import deteriorate
+from ..triples.remix import remix
+from ..triples.triples_factory import splits_similarity
 from ..typing import TorchRandomHint
 from ..utils import normalize_string
 
 __all__ = [
-    'Dataset',
-    'EagerDataset',
-    'LazyDataset',
-    'PathDataset',
-    'RemoteDataset',
-    'UnpackedRemoteDataset',
-    'TarFileRemoteDataset',
-    'ZipFileRemoteDataset',
-    'PackedZipRemoteDataset',
-    'TarFileSingleDataset',
-    'TabbedDataset',
-    'SingleTabbedDataset',
+    "Dataset",
+    "EagerDataset",
+    "LazyDataset",
+    "PathDataset",
+    "RemoteDataset",
+    "UnpackedRemoteDataset",
+    "TarFileRemoteDataset",
+    "PackedZipRemoteDataset",
+    "CompressedSingleDataset",
+    "TarFileSingleDataset",
+    "ZipSingleDataset",
+    "TabbedDataset",
+    "SingleTabbedDataset",
+    "dataset_similarity",
 ]
 
 logger = logging.getLogger(__name__)
+
+
+def dataset_similarity(a: Dataset, b: Dataset, metric: Optional[str] = None) -> float:
+    """Calculate the similarity between two datasets.
+
+    :param a: The reference dataset
+    :param b: The target dataset
+    :param metric: The similarity metric to use. Defaults to `tanimoto`. Could either be a symmetric
+        or asymmetric metric.
+    :returns: A scalar value between 0 and 1 where closer to 1 means the datasets are more
+        similar based on the metric.
+
+    :raises ValueError: if an invalid metric type is passed. Right now, there's only `tanimoto`,
+        but this could change in later.
+    """
+    if metric == "tanimoto" or metric is None:
+        return splits_similarity(a._tup(), b._tup())
+    raise ValueError(f"invalid metric: {metric}")
 
 
 class Dataset:
     """Contains a lazy reference to a training, testing, and validation dataset."""
 
     #: A factory wrapping the training triples
-    training: TriplesFactory
+    training: CoreTriplesFactory
     #: A factory wrapping the testing triples, that share indices with the training triples
-    testing: TriplesFactory
+    testing: CoreTriplesFactory
     #: A factory wrapping the validation triples, that share indices with the training triples
-    validation: Optional[TriplesFactory]
+    validation: Optional[CoreTriplesFactory]
     #: All datasets should take care of inverse triple creation
     create_inverse_triples: bool
 
     @property
+    def factory_dict(self) -> Mapping[str, CoreTriplesFactory]:
+        """Return a dictionary of the three factories."""
+        rv = dict(
+            training=self.training,
+            testing=self.testing,
+        )
+        if self.validation:
+            rv["validation"] = self.validation
+        return rv
+
+    @property
     def entity_to_id(self):  # noqa: D401
         """The mapping of entity labels to IDs."""
+        if not isinstance(self.training, TriplesFactory):
+            raise AttributeError(f"{self.training.__class__} does not have labeling information.")
         return self.training.entity_to_id
 
     @property
     def relation_to_id(self):  # noqa: D401
         """The mapping of relation labels to IDs."""
+        if not isinstance(self.training, TriplesFactory):
+            raise AttributeError(f"{self.training.__class__} does not have labeling information.")
         return self.training.relation_to_id
 
     @property
@@ -73,36 +113,51 @@ class Dataset:
         """The number of relations."""
         return self.training.num_relations
 
+    @staticmethod
+    def triples_sort_key(cls: Type[Dataset]) -> int:
+        """Get the number of triples for sorting."""
+        return docdata.get_docdata(cls)["statistics"]["triples"]
+
     def _summary_rows(self):
         return [
             (label, triples_factory.num_entities, triples_factory.num_relations, triples_factory.num_triples)
-            for label, triples_factory in
-            zip(('Training', 'Testing', 'Validation'), (self.training, self.testing, self.validation))
+            for label, triples_factory in zip(
+                ("Training", "Testing", "Validation"), (self.training, self.testing, self.validation)
+            )
         ]
 
-    def summary_str(self, title: Optional[str] = None, end='\n') -> str:
+    def summary_str(self, title: Optional[str] = None, show_examples: Optional[int] = 5, end="\n") -> str:
         """Make a summary string of all of the factories."""
         rows = self._summary_rows()
         n_triples = sum(count for *_, count in rows)
-        rows.append(('Total', '-', '-', n_triples))
-        t = tabulate(rows, headers=['Name', 'Entities', 'Relations', 'Triples'])
-        return f'{title or self.__class__.__name__} (create_inverse_triples={self.create_inverse_triples})\n{t}{end}'
+        rows.append(("Total", "-", "-", n_triples))
+        t = tabulate(rows, headers=["Name", "Entities", "Relations", "Triples"])
+        rv = f"{title or self.__class__.__name__} (create_inverse_triples={self.create_inverse_triples})\n{t}"
+        if show_examples:
+            if not isinstance(self.training, TriplesFactory):
+                raise AttributeError(f"{self.training.__class__} does not have labeling information.")
+            examples = tabulate(
+                self.training.label_triples(self.training.mapped_triples[:show_examples]),
+                headers=["Head", "Relation", "tail"],
+            )
+            rv += "\n" + examples
+        return rv + end
 
-    def summarize(self, title: Optional[str] = None, file=None) -> None:
+    def summarize(self, title: Optional[str] = None, show_examples: Optional[int] = 5, file=None) -> None:
         """Print a summary of the dataset."""
-        print(self.summary_str(title=title), file=file)
+        print(self.summary_str(title=title, show_examples=show_examples), file=file)  # noqa:T001
 
     def __str__(self) -> str:  # noqa: D105
-        return f'{self.__class__.__name__}(num_entities={self.num_entities}, num_relations={self.num_relations})'
+        return f"{self.__class__.__name__}(num_entities={self.num_entities}, num_relations={self.num_relations})"
 
     @classmethod
-    def from_path(cls, path: str, ratios: Optional[List[float]] = None) -> 'Dataset':
+    def from_path(cls, path: Union[str, pathlib.Path], ratios: Optional[List[float]] = None) -> "Dataset":
         """Create a dataset from a single triples factory by splitting it in 3."""
         tf = TriplesFactory.from_path(path=path)
         return cls.from_tf(tf=tf, ratios=ratios)
 
     @staticmethod
-    def from_tf(tf: TriplesFactory, ratios: Optional[List[float]] = None) -> 'Dataset':
+    def from_tf(tf: TriplesFactory, ratios: Optional[List[float]] = None) -> "Dataset":
         """Create a dataset from a single triples factory by splitting it in 3."""
         training, testing, validation = cast(
             Tuple[TriplesFactory, TriplesFactory, TriplesFactory],
@@ -111,9 +166,58 @@ class Dataset:
         return EagerDataset(training=training, testing=testing, validation=validation)
 
     @classmethod
+    def cli(cls) -> None:
+        """Run the CLI."""
+
+        @click.command(help=f"{cls.__name__} Dataset CLI.")
+        @verbose_option
+        def main():
+            """Run the dataset CLI."""
+            click.secho(f"Loading {cls.__name__}", fg="green", bold=True)
+            click.echo(cls().summary_str())
+
+        main()
+
+    @classmethod
     def get_normalized_name(cls) -> str:
         """Get the normalized name of the dataset."""
         return normalize_string(cls.__name__)
+
+    def remix(self, random_state: TorchRandomHint = None, **kwargs) -> Dataset:
+        """Remix a dataset using :func:`pykeen.triples.remix.remix`."""
+        return EagerDataset(
+            *remix(
+                *self._tup(),
+                random_state=random_state,
+                **kwargs,
+            )
+        )
+
+    def deteriorate(self, n: Union[int, float], random_state: TorchRandomHint = None) -> Dataset:
+        """Deteriorate n triples from the dataset's training with :func:`pykeen.triples.deteriorate.deteriorate`."""
+        return EagerDataset(
+            *deteriorate(
+                *self._tup(),
+                n=n,
+                random_state=random_state,
+            )
+        )
+
+    def similarity(self, other: Dataset, metric: Optional[str] = None) -> float:
+        """Compute the similarity between two shuffles of the same dataset.
+
+        :param other: The other shuffling of the dataset
+        :param metric: The metric to use. Defaults to `tanimoto`.
+        :return: A float of the similarity
+
+        .. seealso:: :func:`pykeen.triples.triples_factory.splits_similarity`.
+        """
+        return dataset_similarity(self, other, metric=metric)
+
+    def _tup(self):
+        if self.validation is None:
+            return self.training, self.testing
+        return self.training, self.testing, self.validation
 
 
 class EagerDataset(Dataset):
@@ -121,9 +225,9 @@ class EagerDataset(Dataset):
 
     def __init__(
         self,
-        training: TriplesFactory,
-        testing: TriplesFactory,
-        validation: Optional[TriplesFactory] = None,
+        training: CoreTriplesFactory,
+        testing: CoreTriplesFactory,
+        validation: Optional[CoreTriplesFactory] = None,
     ) -> None:
         """Initialize the eager dataset.
 
@@ -170,13 +274,12 @@ class LazyDataset(Dataset):
         return self._testing
 
     @property
-    def validation(self) -> TriplesFactory:  # type:ignore # noqa: D401
+    def validation(self) -> Optional[TriplesFactory]:  # type:ignore # noqa: D401
         """The validation triples factory that shares indices with the training triples factory."""
         if not self._loaded:
             self._load()
         if not self._loaded_validation:
             self._load_validation()
-        assert self._validation is not None
         return self._validation
 
     @property
@@ -204,10 +307,15 @@ class LazyDataset(Dataset):
         """
         if cache_root is None:
             cache_root = PYKEEN_DATASETS
-        cache_root = pathlib.Path(cache_root) / self.__class__.__name__.lower()
+        cache_root = pathlib.Path(cache_root).resolve()
+        cache_root = self._extend_cache_root(cache_root=cache_root)
         cache_root.mkdir(parents=True, exist_ok=True)
-        logger.debug('using cache root at %s', cache_root)
+        logger.debug("using cache root at %s", cache_root.as_uri())
         return cache_root
+
+    def _extend_cache_root(self, cache_root: pathlib.Path) -> pathlib.Path:
+        """Get appropriate cache sub-directory."""
+        return cache_root.joinpath(self.__class__.__name__.lower())
 
 
 class PathDataset(LazyDataset):
@@ -215,9 +323,9 @@ class PathDataset(LazyDataset):
 
     def __init__(
         self,
-        training_path: Union[str, TextIO],
-        testing_path: Union[str, TextIO],
-        validation_path: Union[str, TextIO],
+        training_path: Union[str, pathlib.Path],
+        testing_path: Union[str, pathlib.Path],
+        validation_path: Union[None, str, pathlib.Path],
         eager: bool = False,
         create_inverse_triples: bool = False,
         load_triples_kwargs: Optional[Mapping[str, Any]] = None,
@@ -232,9 +340,9 @@ class PathDataset(LazyDataset):
         :param load_triples_kwargs: Arguments to pass through to :func:`TriplesFactory.from_path`
             and ultimately through to :func:`pykeen.triples.utils.load_triples`.
         """
-        self.training_path = training_path
-        self.testing_path = testing_path
-        self.validation_path = validation_path
+        self.training_path = pathlib.Path(training_path)
+        self.testing_path = pathlib.Path(testing_path)
+        self.validation_path = pathlib.Path(validation_path) if validation_path else None
 
         self.create_inverse_triples = create_inverse_triples
         self.load_triples_kwargs = load_triples_kwargs
@@ -262,48 +370,23 @@ class PathDataset(LazyDataset):
         # don't call this function by itself. assumes called through the `validation`
         # property and the _training factory has already been loaded
         assert self._training is not None
-        self._validation = TriplesFactory.from_path(
-            path=self.validation_path,
-            entity_to_id=self._training.entity_to_id,  # share entity index with training
-            relation_to_id=self._training.relation_to_id,  # share relation index with training
-            # do not explicitly create inverse triples for testing; this is handled by the evaluation code
-            create_inverse_triples=False,
-            load_triples_kwargs=self.load_triples_kwargs,
-        )
+        if self.validation_path is None:
+            self._validation = None
+        else:
+            self._validation = TriplesFactory.from_path(
+                path=self.validation_path,
+                entity_to_id=self._training.entity_to_id,  # share entity index with training
+                relation_to_id=self._training.relation_to_id,  # share relation index with training
+                # do not explicitly create inverse triples for testing; this is handled by the evaluation code
+                create_inverse_triples=False,
+                load_triples_kwargs=self.load_triples_kwargs,
+            )
 
     def __repr__(self) -> str:  # noqa: D105
         return (
             f'{self.__class__.__name__}(training_path="{self.training_path}", testing_path="{self.testing_path}",'
             f' validation_path="{self.validation_path}")'
         )
-
-
-def _urlretrieve(url: str, path: str, clean_on_failure: bool = True, stream: bool = True) -> None:
-    """Download a file from a given URL.
-
-    :param url: URL to download
-    :param path: Path to download the file to
-    :param clean_on_failure: If true, will delete the file on any exception raised during download
-    :param stream: If true, use :func:`requests.get`. By default, use ``urlretrieve``.
-
-    :raises Exception: If there's a problem wih downloading via :func:`requests.get` or copying
-        the data with :func:`shutil.copyfileobj`
-    :raises KeyboardInterrupt: If the user quits during download
-    """
-    if not stream:
-        logger.info('downloading from %s to %s', url, path)
-        urlretrieve(url, path)  # noqa:S310
-    else:
-        # see https://requests.readthedocs.io/en/master/user/quickstart/#raw-response-content
-        # pattern from https://stackoverflow.com/a/39217788/5775947
-        try:
-            with requests.get(url, stream=True) as response, open(path, 'wb') as file:
-                logger.info('downloading (streaming) from %s to %s', url, path)
-                shutil.copyfileobj(response.raw, file)
-        except (Exception, KeyboardInterrupt):
-            if clean_on_failure:
-                os.remove(path)
-            raise
 
 
 class UnpackedRemoteDataset(PathDataset):
@@ -315,11 +398,11 @@ class UnpackedRemoteDataset(PathDataset):
         testing_url: str,
         validation_url: str,
         cache_root: Optional[str] = None,
-        stream: bool = True,
         force: bool = False,
         eager: bool = False,
         create_inverse_triples: bool = False,
         load_triples_kwargs: Optional[Mapping[str, Any]] = None,
+        download_kwargs: Optional[Mapping[str, Any]] = None,
     ):
         """Initialize dataset.
 
@@ -328,13 +411,13 @@ class UnpackedRemoteDataset(PathDataset):
         :param validation_url: The URL of the validation file
         :param cache_root:
             An optional directory to store the extracted files. Is none is given, the default PyKEEN directory is used.
-            This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.pykeen``.
-        :param stream: Use :mod:`requests` be used for download if true otherwise use :mod:`urllib`
+            This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.data/pykeen``.
         :param force: If true, redownload any cached files
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param load_triples_kwargs: Arguments to pass through to :func:`TriplesFactory.from_path`
             and ultimately through to :func:`pykeen.triples.utils.load_triples`.
+        :param download_kwargs: Keyword arguments to pass to :func:`pystow.utils.download`
         """
         self.cache_root = self._help_cache(cache_root)
 
@@ -342,18 +425,20 @@ class UnpackedRemoteDataset(PathDataset):
         self.testing_url = testing_url
         self.validation_url = validation_url
 
-        training_path = os.path.join(self.cache_root, name_from_url(self.training_url))
-        testing_path = os.path.join(self.cache_root, name_from_url(self.testing_url))
-        validation_path = os.path.join(self.cache_root, name_from_url(self.validation_url))
+        training_path = self.cache_root.joinpath(name_from_url(self.training_url))
+        testing_path = self.cache_root.joinpath(name_from_url(self.testing_url))
+        validation_path = self.cache_root.joinpath(name_from_url(self.validation_url))
+
+        download_kwargs = {} if download_kwargs is None else dict(download_kwargs)
+        download_kwargs.setdefault("backend", "urllib")
 
         for url, path in [
             (self.training_url, training_path),
             (self.testing_url, testing_path),
             (self.validation_url, validation_path),
         ]:
-            if os.path.exists(path) and not force:
-                continue
-            _urlretrieve(url, path, stream=stream)
+            if force or not path.is_file():
+                download(url, path, **download_kwargs)
 
         super().__init__(
             training_path=training_path,
@@ -371,9 +456,9 @@ class RemoteDataset(PathDataset):
     def __init__(
         self,
         url: str,
-        relative_training_path: str,
-        relative_testing_path: str,
-        relative_validation_path: str,
+        relative_training_path: Union[str, pathlib.PurePath],
+        relative_testing_path: Union[str, pathlib.PurePath],
+        relative_validation_path: Union[str, pathlib.PurePath],
         cache_root: Optional[str] = None,
         eager: bool = False,
         create_inverse_triples: bool = False,
@@ -387,16 +472,16 @@ class RemoteDataset(PathDataset):
         :param relative_validation_path: The path inside the cache root where the validation path gets extracted
         :param cache_root:
             An optional directory to store the extracted files. Is none is given, the default PyKEEN directory is used.
-            This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.pykeen``.
+            This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.data/pykeen``.
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         """
         self.cache_root = self._help_cache(cache_root)
 
         self.url = url
-        self._relative_training_path = relative_training_path
-        self._relative_testing_path = relative_testing_path
-        self._relative_validation_path = relative_validation_path
+        self._relative_training_path = pathlib.PurePath(relative_training_path)
+        self._relative_testing_path = pathlib.PurePath(relative_testing_path)
+        self._relative_validation_path = pathlib.PurePath(relative_validation_path)
 
         training_path, testing_path, validation_path = self._get_paths()
         super().__init__(
@@ -407,12 +492,12 @@ class RemoteDataset(PathDataset):
             create_inverse_triples=create_inverse_triples,
         )
 
-    def _get_paths(self) -> Tuple[str, str, str]:  # noqa: D401
+    def _get_paths(self) -> Tuple[pathlib.Path, pathlib.Path, pathlib.Path]:  # noqa: D401
         """The paths where the extracted files can be found."""
         return (
-            os.path.join(self.cache_root, self._relative_training_path),
-            os.path.join(self.cache_root, self._relative_testing_path),
-            os.path.join(self.cache_root, self._relative_validation_path),
+            self.cache_root.joinpath(self._relative_training_path),
+            self.cache_root.joinpath(self._relative_testing_path),
+            self.cache_root.joinpath(self._relative_validation_path),
         )
 
     @abstractmethod
@@ -421,21 +506,18 @@ class RemoteDataset(PathDataset):
         raise NotImplementedError
 
     def _get_bytes(self) -> BytesIO:
-        logger.info(f'Requesting dataset from {self.url}')
+        logger.info(f"Requesting dataset from {self.url}")
         res = requests.get(url=self.url)
         res.raise_for_status()
         return BytesIO(res.content)
 
     def _load(self) -> None:  # noqa: D102
-        all_unpacked = all(
-            os.path.exists(path) and os.path.isfile(path)
-            for path in self._get_paths()
-        )
+        all_unpacked = all(path.is_file() for path in self._get_paths())
 
         if not all_unpacked:
             archive_file = self._get_bytes()
             self._extract(archive_file=archive_file)
-            logger.info(f'Extracted to {self.cache_root}.')
+            logger.info(f"Extracted to {self.cache_root}.")
 
         super()._load()
 
@@ -448,29 +530,20 @@ class TarFileRemoteDataset(RemoteDataset):
             tf.extractall(path=self.cache_root)
 
 
-# TODO replace this with the new zip remote dataset class
-class ZipFileRemoteDataset(RemoteDataset):
-    """A remote dataset stored as a zip file."""
-
-    def _extract(self, archive_file: BytesIO) -> None:  # noqa: D102
-        with zipfile.ZipFile(file=archive_file) as zf:
-            zf.extractall(path=self.cache_root)
-
-
 class PackedZipRemoteDataset(LazyDataset):
     """Contains a lazy reference to a remote dataset that is loaded if needed."""
 
     head_column: int = 0
     relation_column: int = 1
     tail_column: int = 2
-    sep = '\t'
+    sep = "\t"
     header = None
 
     def __init__(
         self,
-        relative_training_path: str,
-        relative_testing_path: str,
-        relative_validation_path: str,
+        relative_training_path: Union[str, pathlib.PurePath],
+        relative_testing_path: Union[str, pathlib.PurePath],
+        relative_validation_path: Union[str, pathlib.PurePath],
         url: Optional[str] = None,
         name: Optional[str] = None,
         cache_root: Optional[str] = None,
@@ -497,16 +570,16 @@ class PackedZipRemoteDataset(LazyDataset):
         self.cache_root = self._help_cache(cache_root)
 
         self.name = name or name_from_url(url)
-        self.path = os.path.join(self.cache_root, self.name)
-        logger.debug('file path at %s', self.path)
+        self.path = self.cache_root.joinpath(self.name)
+        logger.debug("file path at %s", self.path)
 
         self.url = url
-        if not os.path.exists(self.path) and not self.url:
-            raise ValueError(f'must specify url to download from since path does not exist: {self.path}')
+        if not self.path.is_file() and not self.url:
+            raise ValueError(f"must specify url to download from since path does not exist: {self.path}")
 
-        self.relative_training_path = relative_training_path
-        self.relative_testing_path = relative_testing_path
-        self.relative_validation_path = relative_validation_path
+        self.relative_training_path = pathlib.PurePath(relative_training_path)
+        self.relative_testing_path = pathlib.PurePath(relative_testing_path)
+        self.relative_validation_path = pathlib.PurePath(relative_validation_path)
         self.create_inverse_triples = create_inverse_triples
         if eager:
             self._load()
@@ -514,21 +587,36 @@ class PackedZipRemoteDataset(LazyDataset):
 
     def _load(self) -> None:  # noqa: D102
         self._training = self._load_helper(self.relative_training_path)
-        self._testing = self._load_helper(self.relative_testing_path)
+        self._testing = self._load_helper(
+            self.relative_testing_path,
+            entity_to_id=self._training.entity_to_id,
+            relation_to_id=self._training.relation_to_id,
+        )
 
     def _load_validation(self) -> None:
-        self._validation = self._load_helper(self.relative_validation_path)
+        assert self._training is not None
+        self._validation = self._load_helper(
+            self.relative_validation_path,
+            entity_to_id=self._training.entity_to_id,
+            relation_to_id=self._training.relation_to_id,
+        )
 
-    def _load_helper(self, relative_path: str) -> TriplesFactory:
-        if not os.path.exists(self.path):
+    def _load_helper(
+        self,
+        relative_path: pathlib.PurePath,
+        entity_to_id: Optional[Mapping[str, Any]] = None,
+        relation_to_id: Optional[Mapping[str, Any]] = None,
+    ) -> TriplesFactory:
+        if not self.path.is_file():
             if self.url is None:
-                raise ValueError('url should be set')
-            logger.info('downloading data from %s to %s', self.url, self.path)
-            _urlretrieve(self.url, self.path)  # noqa:S310
+                raise ValueError("url should be set")
+            logger.info("downloading data from %s to %s", self.url, self.path)
+            download(url=self.url, path=self.path)
 
         with zipfile.ZipFile(file=self.path) as zf:
-            with zf.open(relative_path) as file:
-                logger.debug('loading %s', relative_path)
+            # relative paths within zip file's always follow Posix path, even on Windows
+            with zf.open(relative_path.as_posix()) as file:
+                logger.debug("loading %s", relative_path)
                 df = pd.read_csv(
                     file,
                     usecols=[self.head_column, self.relation_column, self.tail_column],
@@ -538,20 +626,21 @@ class PackedZipRemoteDataset(LazyDataset):
                 return TriplesFactory.from_labeled_triples(
                     triples=df.values,
                     create_inverse_triples=self.create_inverse_triples,
-                    metadata={'path': relative_path},
+                    metadata={"path": relative_path},
+                    entity_to_id=entity_to_id,
+                    relation_to_id=relation_to_id,
                 )
 
 
-class TarFileSingleDataset(LazyDataset):
-    """Loads a dataset that's a single file inside a tar.gz archive."""
+class CompressedSingleDataset(LazyDataset):
+    """Loads a dataset that's a single file inside an archive."""
 
     ratios = (0.8, 0.1, 0.1)
-    _triples_factory: Optional[TriplesFactory]
 
     def __init__(
         self,
         url: str,
-        relative_path: str,
+        relative_path: Union[str, pathlib.PurePosixPath],
         name: Optional[str] = None,
         cache_root: Optional[str] = None,
         eager: bool = False,
@@ -580,39 +669,24 @@ class TarFileSingleDataset(LazyDataset):
 
         self.name = name or name_from_url(url)
         self.random_state = random_state
-        self.delimiter = delimiter or '\t'
+        self.delimiter = delimiter or "\t"
         self.url = url
         self.create_inverse_triples = create_inverse_triples
-        self._relative_path = relative_path
+        self._relative_path = pathlib.PurePosixPath(relative_path)
 
         if eager:
             self._load()
 
-    def _get_path(self) -> str:
-        return os.path.join(self.cache_root, self.name)
+    def _get_path(self) -> pathlib.Path:
+        return self.cache_root.joinpath(self.name)
 
     def _load(self) -> None:
-        if not os.path.exists(self._get_path()):
-            _urlretrieve(self.url, self._get_path())  # noqa:S310
-
-        _actual_path = os.path.join(self.cache_root, self._relative_path)
-        if not os.path.exists(_actual_path):
-            logger.error(
-                '[%s] untaring from %s (%s) to %s',
-                self.__class__.__name__,
-                self._get_path(),
-                self._relative_path,
-                _actual_path,
-            )
-            with tarfile.open(self._get_path()) as tar_file:
-                tar_file.extract(self._relative_path, self.cache_root)
-
-        df = pd.read_csv(_actual_path, sep=self.delimiter)
+        df = self._get_df()
         tf_path = self._get_path()
         tf = TriplesFactory.from_labeled_triples(
             triples=df.values,
             create_inverse_triples=self.create_inverse_triples,
-            metadata={'path': tf_path},
+            metadata={"path": tf_path},
         )
         self._training, self._testing, self._validation = cast(
             Tuple[TriplesFactory, TriplesFactory, TriplesFactory],
@@ -621,16 +695,57 @@ class TarFileSingleDataset(LazyDataset):
                 random_state=self.random_state,
             ),
         )
-        logger.info('[%s] done splitting data from %s', self.__class__.__name__, tf_path)
+        logger.info("[%s] done splitting data from %s", self.__class__.__name__, tf_path)
+
+    def _get_df(self) -> pd.DataFrame:
+        raise NotImplementedError
 
     def _load_validation(self) -> None:
         pass  # already loaded by _load()
 
 
+class ZipSingleDataset(CompressedSingleDataset):
+    """Loads a dataset that's a single file inside a zip archive."""
+
+    def _get_df(self) -> pd.DataFrame:
+        path = self._get_path()
+        if not path.is_file():
+            download(self.url, self._get_path())  # noqa:S310
+
+        with zipfile.ZipFile(path) as zip_file:
+            with zip_file.open(self._relative_path.as_posix()) as file:
+                df = pd.read_csv(file, sep=self.delimiter)
+        return df
+
+
+class TarFileSingleDataset(CompressedSingleDataset):
+    """Loads a dataset that's a single file inside a tar.gz archive."""
+
+    def _get_df(self) -> pd.DataFrame:
+        if not self._get_path().is_file():
+            download(self.url, self._get_path())  # noqa:S310
+
+        _actual_path = self.cache_root.joinpath(self._relative_path)
+        if not _actual_path.is_file():
+            logger.error(
+                "[%s] untaring from %s (%s) to %s",
+                self.__class__.__name__,
+                self._get_path(),
+                self._relative_path,
+                _actual_path,
+            )
+            with tarfile.open(self._get_path()) as tar_file:
+                # tarfile does not like pathlib
+                tar_file.extract(str(self._relative_path), self.cache_root)
+
+        df = pd.read_csv(_actual_path, sep=self.delimiter)
+        return df
+
+
 class TabbedDataset(LazyDataset):
     """This class is for when you've got a single TSV of edges and want them to get auto-split."""
 
-    ratios = (0.8, 0.1, 0.1)
+    ratios: ClassVar[Sequence[float]] = (0.8, 0.1, 0.1)
     _triples_factory: Optional[TriplesFactory]
 
     def __init__(
@@ -661,7 +776,7 @@ class TabbedDataset(LazyDataset):
         if eager:
             self._load()
 
-    def _get_path(self) -> Optional[str]:
+    def _get_path(self) -> Optional[pathlib.Path]:
         """Get the path of the data if there's a single file."""
 
     def _get_df(self) -> pd.DataFrame:
@@ -690,8 +805,11 @@ class TabbedDataset(LazyDataset):
 class SingleTabbedDataset(TabbedDataset):
     """This class is for when you've got a single TSV of edges and want them to get auto-split."""
 
-    ratios = (0.8, 0.1, 0.1)
+    ratios: ClassVar[Sequence[float]] = (0.8, 0.1, 0.1)
     _triples_factory: Optional[TriplesFactory]
+
+    #: URL to the data to download
+    url: str
 
     def __init__(
         self,
@@ -729,21 +847,27 @@ class SingleTabbedDataset(TabbedDataset):
         self.name = name or name_from_url(url)
 
         self.read_csv_kwargs = read_csv_kwargs or {}
-        self.read_csv_kwargs.setdefault('sep', '\t')
+        self.read_csv_kwargs.setdefault("sep", "\t")
 
         self.url = url
-        if not os.path.exists(self._get_path()) and not self.url:
-            raise ValueError(f'must specify url to download from since path does not exist: {self._get_path()}')
+        if not self._get_path().is_file() and not self.url:
+            raise ValueError(f"must specify url to download from since path does not exist: {self._get_path()}")
 
         if eager:
             self._load()
 
-    def _get_path(self) -> str:
-        return os.path.join(self.cache_root, self.name)
+    def _get_path(self) -> pathlib.Path:
+        return self.cache_root.joinpath(self.name)
 
     def _get_df(self) -> pd.DataFrame:
-        if not os.path.exists(self._get_path()):
-            logger.info('downloading data from %s to %s', self.url, self._get_path())
-            _urlretrieve(self.url, self._get_path())  # noqa:S310
+        if not self._get_path().is_file():
+            logger.info("downloading data from %s to %s", self.url, self._get_path())
+            download(url=self.url, path=self._get_path())  # noqa:S310
         df = pd.read_csv(self._get_path(), **self.read_csv_kwargs)
+
+        usecols = self.read_csv_kwargs.get("usecols")
+        if usecols is not None:
+            logger.info("reordering columns: %s", usecols)
+            df = df[usecols]
+
         return df

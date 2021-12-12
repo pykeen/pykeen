@@ -10,12 +10,25 @@ import json
 import logging
 import math
 import operator
+import os
+import pathlib
 import random
 from abc import ABC, abstractmethod
 from io import BytesIO
 from pathlib import Path
 from typing import (
-    Any, Callable, Collection, Dict, Generic, Iterable, List, Mapping, Optional, Sequence, Tuple, Type, TypeVar,
+    Any,
+    Callable,
+    Dict,
+    Generic,
+    Iterable,
+    List,
+    Mapping,
+    Optional,
+    Sequence,
+    Tuple,
+    Type,
+    TypeVar,
     Union,
 )
 
@@ -24,158 +37,127 @@ import pandas as pd
 import torch
 import torch.nn
 import torch.nn.modules.batchnorm
+import yaml
+from class_resolver import Resolver, normalize_string
+from torch import nn
+from torch.nn import functional
 
 from .constants import PYKEEN_BENCHMARKS
 from .typing import DeviceHint, MappedTriples, TorchRandomHint
 from .version import get_git_hash
 
 __all__ = [
-    'compose',
-    'clamp_norm',
-    'compact_mapping',
-    'ensure_torch_random_state',
-    'format_relative_comparison',
-    'invert_mapping',
-    'is_cuda_oom_error',
-    'random_non_negative_int',
-    'resolve_device',
-    'split_complex',
-    'split_list_in_batches_iter',
-    'torch_is_in_1d',
-    'normalize_string',
-    'normalized_lookup',
-    'get_cls',
-    'get_until_first_blank',
-    'flatten_dictionary',
-    'set_random_seed',
-    'NoRandomSeedNecessary',
-    'Result',
-    'fix_dataclass_init_docs',
-    'get_benchmark',
-    'extended_einsum',
-    'strip_dim',
-    'upgrade_to_sequence',
-    'ensure_tuple',
-    'unpack_singletons',
-    'get_subclasses',
-    'extend_batch',
-    'all_in_bounds',
-    'is_cudnn_error',
-    'view_complex',
-    'combine_complex',
-    'get_model_io',
-    'get_json_bytes_io',
-    'get_df_io',
-    'ensure_ftp_directory',
-    'broadcast_cat',
-    'get_batchnorm_modules',
-    'calculate_broadcasted_elementwise_result_shape',
-    'estimate_cost_of_sequence',
-    'get_optimal_sequence',
-    'tensor_sum',
-    'tensor_product',
-    'negative_norm_of_sum',
-    'negative_norm',
-    'project_entity',
-    'CANONICAL_DIMENSIONS',
-    'convert_to_canonical_shape',
-    'get_expected_norm',
+    "at_least_eps",
+    "compose",
+    "clamp_norm",
+    "compact_mapping",
+    "ensure_torch_random_state",
+    "format_relative_comparison",
+    "invert_mapping",
+    "is_cuda_oom_error",
+    "random_non_negative_int",
+    "resolve_device",
+    "split_complex",
+    "split_list_in_batches_iter",
+    "normalize_string",
+    "get_until_first_blank",
+    "flatten_dictionary",
+    "set_random_seed",
+    "NoRandomSeedNecessary",
+    "Result",
+    "fix_dataclass_init_docs",
+    "get_benchmark",
+    "extended_einsum",
+    "strip_dim",
+    "upgrade_to_sequence",
+    "ensure_tuple",
+    "unpack_singletons",
+    "extend_batch",
+    "check_shapes",
+    "all_in_bounds",
+    "is_cudnn_error",
+    "view_complex",
+    "combine_complex",
+    "get_model_io",
+    "get_json_bytes_io",
+    "get_df_io",
+    "ensure_ftp_directory",
+    "broadcast_cat",
+    "get_batchnorm_modules",
+    "calculate_broadcasted_elementwise_result_shape",
+    "estimate_cost_of_sequence",
+    "get_optimal_sequence",
+    "tensor_sum",
+    "tensor_product",
+    "negative_norm_of_sum",
+    "negative_norm",
+    "project_entity",
+    "CANONICAL_DIMENSIONS",
+    "convert_to_canonical_shape",
+    "get_expected_norm",
+    "Bias",
+    "activation_resolver",
+    "complex_normalize",
+    "lp_norm",
+    "powersum_norm",
+    "product_normalize",
+    "compute_box",
+    "point_to_box_distance",
 ]
 
 logger = logging.getLogger(__name__)
 
 #: An error that occurs because the input in CUDA is too big. See ConvE for an example.
-_CUDNN_ERROR = 'cuDNN error: CUDNN_STATUS_NOT_SUPPORTED. This error may appear if you passed in a non-contiguous input.'
+_CUDNN_ERROR = "cuDNN error: CUDNN_STATUS_NOT_SUPPORTED. This error may appear if you passed in a non-contiguous input."
 
-_CUDA_OOM_ERROR = 'CUDA out of memory.'
+_CUDA_OOM_ERROR = "CUDA out of memory."
 
 _CUDA_NONZERO_ERROR = "nonzero is not supported for tensors with more than INT_MAX elements"
 
 
+def at_least_eps(x: torch.FloatTensor) -> torch.FloatTensor:
+    """Make sure a tensor is greater than zero."""
+    # get datatype specific epsilon
+    eps = torch.finfo(x.dtype).eps
+    # clamp minimum value
+    return x.clamp(min=eps)
+
+
 def resolve_device(device: DeviceHint = None) -> torch.device:
     """Resolve a torch.device given a desired device (string)."""
-    if device is None or device == 'gpu':
-        device = 'cuda'
+    if device is None or device == "gpu":
+        device = "cuda"
     if isinstance(device, str):
         device = torch.device(device)
-    if not torch.cuda.is_available() and device.type == 'cuda':
-        device = torch.device('cpu')
-        logger.warning('No cuda devices were available. The model runs on CPU')
+    if not torch.cuda.is_available() and device.type == "cuda":
+        device = torch.device("cpu")
+        logger.warning("No cuda devices were available. The model runs on CPU")
     return device
 
 
-X = TypeVar('X')
+X = TypeVar("X")
 
 
 def split_list_in_batches_iter(input_list: List[X], batch_size: int) -> Iterable[List[X]]:
     """Split a list of instances in batches of size batch_size."""
-    return (
-        input_list[i:i + batch_size]
-        for i in range(0, len(input_list), batch_size)
-    )
-
-
-def normalize_string(s: str, *, suffix: Optional[str] = None) -> str:
-    """Normalize a string for lookup."""
-    s = s.lower().replace('-', '').replace('_', '').replace(' ', '')
-    if suffix is not None and s.endswith(suffix.lower()):
-        return s[:-len(suffix)]
-    return s
-
-
-def normalized_lookup(classes: Iterable[Type[X]]) -> Mapping[str, Type[X]]:
-    """Make a normalized lookup dict."""
-    return {
-        normalize_string(cls.__name__): cls
-        for cls in classes
-    }
-
-
-def get_cls(
-    query: Union[None, str, Type[X]],
-    base: Type[X],
-    lookup_dict: Mapping[str, Type[X]],
-    lookup_dict_synonyms: Optional[Mapping[str, Type[X]]] = None,
-    default: Optional[Type[X]] = None,
-    suffix: Optional[str] = None,
-) -> Type[X]:
-    """Get a class by string, default, or implementation."""
-    if query is None:
-        if default is None:
-            raise ValueError(f'No default {base.__name__} set')
-        return default
-    elif not isinstance(query, (str, type)):
-        raise TypeError(f'Invalid {base.__name__} type: {type(query)} - {query}')
-    elif isinstance(query, str):
-        key = normalize_string(query, suffix=suffix)
-        if key in lookup_dict:
-            return lookup_dict[key]
-        if lookup_dict_synonyms is not None and key in lookup_dict_synonyms:
-            return lookup_dict_synonyms[key]
-        raise ValueError(f'Invalid {base.__name__} name: {query}')
-    elif issubclass(query, base):
-        return query
-    raise TypeError(f'Not subclass of {base.__name__}: {query}')
+    return (input_list[i : i + batch_size] for i in range(0, len(input_list), batch_size))
 
 
 def get_until_first_blank(s: str) -> str:
     """Recapitulate all lines in the string until the first blank line."""
     lines = list(s.splitlines())
     try:
-        m, _ = min(enumerate(lines), key=lambda line: line == '')
+        m, _ = min(enumerate(lines), key=lambda line: line == "")
     except ValueError:
         return s
     else:
-        return ' '.join(
-            line.lstrip()
-            for line in lines[:m + 2]
-        )
+        return " ".join(line.lstrip() for line in lines[: m + 2])
 
 
 def flatten_dictionary(
     dictionary: Mapping[str, Any],
     prefix: Optional[str] = None,
-    sep: str = '.',
+    sep: str = ".",
 ) -> Dict[str, Any]:
     """Flatten a nested dictionary."""
     real_prefix = tuple() if prefix is None else (prefix,)
@@ -201,9 +183,8 @@ def _flatten_dictionary(
 def clamp_norm(
     x: torch.Tensor,
     maxnorm: float,
-    p: Union[str, int] = 'fro',
+    p: Union[str, int] = "fro",
     dim: Union[None, int, Iterable[int]] = None,
-    eps: float = 1.0e-08,
 ) -> torch.Tensor:
     """Ensure that a tensor's norm does not exceeds some threshold.
 
@@ -215,15 +196,13 @@ def clamp_norm(
         The norm type.
     :param dim:
         The dimension(s).
-    :param eps:
-        A small value to avoid division by zero.
 
     :return:
         A vector with $|x| <= maxnorm$.
     """
     norm = x.norm(p=p, dim=dim, keepdim=True)
     mask = (norm < maxnorm).type_as(x)
-    return mask * x + (1 - mask) * (x / norm.clamp_min(eps) * maxnorm)
+    return mask * x + (1 - mask) * (x / at_least_eps(norm) * maxnorm)
 
 
 class compose(Generic[X]):  # noqa:N801
@@ -264,7 +243,7 @@ def all_in_bounds(
     x: torch.Tensor,
     low: Optional[float] = None,
     high: Optional[float] = None,
-    a_tol: float = 0.,
+    a_tol: float = 0.0,
 ) -> bool:
     """Check if tensor values respect lower and upper bound.
 
@@ -323,14 +302,8 @@ def compact_mapping(
     :return: A pair (translated, translation)
         where translated is the updated mapping, and translation a dictionary from old to new ids.
     """
-    translation = {
-        old_id: new_id
-        for new_id, old_id in enumerate(sorted(mapping.values()))
-    }
-    translated = {
-        k: translation[v]
-        for k, v in mapping.items()
-    }
+    translation = {old_id: new_id for new_id, old_id in enumerate(sorted(mapping.values()))}
+    translated = {k: translation[v] for k, v in mapping.items()}
     return translated, translation
 
 
@@ -369,6 +342,11 @@ def view_complex(x: torch.FloatTensor) -> torch.Tensor:
     return torch.complex(real=real, imag=imag)
 
 
+def view_complex_native(x: torch.FloatTensor) -> torch.Tensor:
+    """Convert a PyKEEN complex tensor representation into a torch one using :func:`torch.view_as_complex`."""
+    return torch.view_as_complex(x.view(*x.shape[:-1], -1, 2))
+
+
 def combine_complex(
     x_re: torch.FloatTensor,
     x_im: torch.FloatTensor,
@@ -385,7 +363,7 @@ def fix_dataclass_init_docs(cls: Type) -> Type:
 
     .. seealso:: https://github.com/agronholm/sphinx-autodoc-typehints/issues/123
     """
-    cls.__init__.__qualname__ = f'{cls.__name__}.__init__'
+    cls.__init__.__qualname__ = f"{cls.__name__}.__init__"
     return cls
 
 
@@ -407,14 +385,14 @@ def get_model_io(model) -> BytesIO:
 def get_json_bytes_io(obj) -> BytesIO:
     """Get the JSON as bytes."""
     obj_str = json.dumps(obj, indent=2)
-    obj_bytes = obj_str.encode('utf-8')
+    obj_bytes = obj_str.encode("utf-8")
     return BytesIO(obj_bytes)
 
 
 def get_df_io(df: pd.DataFrame) -> BytesIO:
     """Get the dataframe as bytes."""
     df_io = BytesIO()
-    df.to_csv(df_io, sep='\t', index=False)
+    df.to_csv(df_io, sep="\t", index=False)
     df_io.seek(0)
     return df_io
 
@@ -446,11 +424,8 @@ def invert_mapping(mapping: Mapping[K, V]) -> Mapping[V, K]:
     num_unique_values = len(set(mapping.values()))
     num_keys = len(mapping)
     if num_unique_values < num_keys:
-        raise ValueError(f'Mapping is not bijective! Only {num_unique_values}/{num_keys} are unique.')
-    return {
-        value: key
-        for key, value in mapping.items()
-    }
+        raise ValueError(f"Mapping is not bijective! Only {num_unique_values}/{num_keys} are unique.")
+    return {value: key for key, value in mapping.items()}
 
 
 def random_non_negative_int() -> int:
@@ -463,48 +438,12 @@ def ensure_torch_random_state(random_state: TorchRandomHint) -> torch.Generator:
     """Prepare a random state for PyTorch."""
     if random_state is None:
         random_state = random_non_negative_int()
-        logger.warning(f'using automatically assigned random_state={random_state}')
+        logger.warning(f"using automatically assigned random_state={random_state}")
     if isinstance(random_state, int):
         random_state = torch.manual_seed(seed=random_state)
     if not isinstance(random_state, torch.Generator):
         raise TypeError
     return random_state
-
-
-def torch_is_in_1d(
-    query_tensor: torch.LongTensor,
-    test_tensor: Union[Collection[int], torch.LongTensor],
-    max_id: Optional[int] = None,
-    invert: bool = False,
-) -> torch.BoolTensor:
-    """
-    Return a boolean mask with ``Q[i]`` in T.
-
-    The method guarantees memory complexity of ``max(size(Q), size(T))`` and is thus, memory-wise, superior to naive
-    broadcasting.
-
-    :param query_tensor: shape: S
-        The query Q.
-    :param test_tensor:
-        The test set T.
-    :param max_id:
-        A maximum ID. If not given, will be inferred.
-    :param invert:
-        Whether to invert the result.
-
-    :return: shape: S
-        A boolean mask.
-    """
-    # normalize input
-    if not isinstance(test_tensor, torch.Tensor):
-        test_tensor = torch.as_tensor(data=list(test_tensor), dtype=torch.long)
-    if max_id is None:
-        max_id = max(query_tensor.max(), test_tensor.max()) + 1
-    mask = torch.zeros(max_id, dtype=torch.bool)
-    mask[test_tensor] = True
-    if invert:
-        mask = ~mask
-    return mask[query_tensor.view(-1)].view(*query_tensor.shape)
 
 
 def format_relative_comparison(
@@ -516,50 +455,65 @@ def format_relative_comparison(
 
 
 def broadcast_cat(
-    x: torch.FloatTensor,
-    y: torch.FloatTensor,
+    tensors: Sequence[torch.FloatTensor],
     dim: int,
 ) -> torch.FloatTensor:
-    """Concatenate with broadcasting.
+    """Concatenate tensors with broadcasting support.
 
-    :param x:
-        The first tensor.
-    :param y:
-        The second tensor.
+    :param tensors:
+        The tensors. Each of the tensors is require to have the same number of dimensions.
+        For each dimension not equal to dim, the extent has to match the other tensors', or be one.
+        If it is one, the tensor is repeated to match the extent of the othe tensors.
     :param dim:
         The concat dimension.
 
-    :return: A concatenated, broadcasted
+    :return: A concatenated, broadcasted tensor.
 
     :raises ValueError: if the x and y dimensions are not the same
     :raises ValueError: if broadcasting is not possible
     """
-    if x.ndimension() != y.ndimension():
-        raise ValueError
+    # input validation
+    if len(tensors) == 0:
+        raise ValueError("Must pass at least one tensor.")
+    if len({x.ndimension() for x in tensors}) != 1:
+        raise ValueError(
+            f"The number of dimensions has to be the same for all tensors, but is {set(t.shape for t in tensors)}",
+        )
+
+    # base case
+    if len(tensors) == 1:
+        return tensors[0]
+
+    # normalize dim
     if dim < 0:
-        dim = x.ndimension() + dim
-    x_rep, y_rep = [], []
-    for d, (xd, yd) in enumerate(zip(x.shape, y.shape)):
-        xr = yr = 1
-        if d != dim and xd != yd:
-            if xd == 1:
-                xr = yd
-            elif yd == 1:
-                yr = xd
-            else:
-                raise ValueError
-        x_rep.append(xr)
-        y_rep.append(yr)
-    return torch.cat([x.repeat(*x_rep), y.repeat(*y_rep)], dim=dim)
+        dim = tensors[0].ndimension() + dim
+
+    # calculate repeats for each tensor
+    repeats = [[1 for _ in t.shape] for t in tensors]
+    for i, dims in enumerate(zip(*(t.shape for t in tensors))):
+        # dimensions along concatenation axis do not need to match
+        if i == dim:
+            continue
+
+        # get desired extent along dimension
+        d_max = max(dims)
+        if not {1, d_max}.issuperset(dims):
+            raise ValueError(f"Tensors have invalid shape along {i} dimension: {set(dims)}")
+
+        for j, td in enumerate(dims):
+            if td != d_max:
+                repeats[j][i] = d_max
+
+    # repeat tensors along axes if necessary
+    tensors = [t.repeat(*r) for t, r in zip(tensors, repeats)]
+
+    # concatenate
+    return torch.cat(tensors, dim=dim)
 
 
 def get_batchnorm_modules(module: torch.nn.Module) -> List[torch.nn.Module]:
     """Return all submodules which are batch normalization layers."""
-    return [
-        submodule
-        for submodule in module.modules()
-        if isinstance(submodule, torch.nn.modules.batchnorm._BatchNorm)
-    ]
+    return [submodule for submodule in module.modules() if isinstance(submodule, torch.nn.modules.batchnorm._BatchNorm)]
 
 
 def calculate_broadcasted_elementwise_result_shape(
@@ -575,17 +529,19 @@ def estimate_cost_of_sequence(
     *other_shapes: Tuple[int, ...],
 ) -> int:
     """Cost of a sequence of broadcasted element-wise operations of tensors, given their shapes."""
-    return sum(map(
-        np.prod,
-        itt.islice(
-            itt.accumulate(
-                (shape,) + other_shapes,
-                calculate_broadcasted_elementwise_result_shape,
+    return sum(
+        map(
+            np.prod,
+            itt.islice(
+                itt.accumulate(
+                    (shape,) + other_shapes,
+                    calculate_broadcasted_elementwise_result_shape,
+                ),
+                1,
+                None,
             ),
-            1,
-            None,
-        ),
-    ))
+        )
+    )
 
 
 @functools.lru_cache(maxsize=32)
@@ -665,7 +621,7 @@ def tensor_product(*tensors: torch.FloatTensor) -> torch.FloatTensor:
 
 def negative_norm_of_sum(
     *x: torch.FloatTensor,
-    p: Union[str, int] = 2,
+    p: Union[str, int, float] = 2,
     power_norm: bool = False,
 ) -> torch.FloatTensor:
     """Evaluate negative norm of a sum of vectors on already broadcasted representations.
@@ -673,7 +629,7 @@ def negative_norm_of_sum(
     :param x: shape: (batch_size, num_heads, num_relations, num_tails, dim)
         The representations.
     :param p:
-        The p for the norm. cf. torch.norm.
+        The p for the norm. cf. :func:`torch.linalg.vector_norm`.
     :param power_norm:
         Whether to return $|x-y|_p^p$, cf. https://github.com/pytorch/pytorch/issues/28119
 
@@ -685,7 +641,7 @@ def negative_norm_of_sum(
 
 def negative_norm(
     x: torch.FloatTensor,
-    p: Union[str, int] = 2,
+    p: Union[str, int, float] = 2,
     power_norm: bool = False,
 ) -> torch.FloatTensor:
     """Evaluate negative norm of a vector.
@@ -693,7 +649,7 @@ def negative_norm(
     :param x: shape: (batch_size, num_heads, num_relations, num_tails, dim)
         The vectors.
     :param p:
-        The p for the norm. cf. torch.norm.
+        The p for the norm. cf. :func:`torch.linalg.vector_norm`.
     :param power_norm:
         Whether to return $|x-y|_p^p$, cf. https://github.com/pytorch/pytorch/issues/28119
 
@@ -723,7 +679,7 @@ def extended_einsum(
     for op, t in zip(lhs.split(","), tensors):
         mod_op = ""
         if len(op) != len(t.shape):
-            raise ValueError(f'Shapes not equal: op={op} and t.shape={t.shape}')
+            raise ValueError(f"Shapes not equal: op={op} and t.shape={t.shape}")
         # TODO: t_shape = list(t.shape); del t_shape[i]; t.view(*shape) -> only one reshape operation
         for i, c in reversed(list(enumerate(op))):
             if t.shape[i] == 1:
@@ -875,26 +831,12 @@ def unpack_singletons(*xs: Tuple[X]) -> Sequence[Union[X, Tuple[X]]]:
     >>> unpack_singletons((1,), (1, 2), (1, 2, 3))
     (1, (1, 2), (1, 2, 3))
     """
-    return tuple(
-        x[0] if len(x) == 1 else x
-        for x in xs
-    )
-
-
-def get_subclasses(cls: Type[X]) -> Iterable[Type[X]]:
-    """Get all subclasses.
-
-    :param cls: The ancestor class
-    :yields: Descendant classes of the ancestor class
-    """
-    for subclass in cls.__subclasses__():
-        yield from get_subclasses(subclass)
-        yield subclass
+    return tuple(x[0] if len(x) == 1 else x for x in xs)
 
 
 def _can_slice(fn) -> bool:
     """Check if a model's score_X function can slice."""
-    return 'slice_size' in inspect.getfullargspec(fn).args
+    return "slice_size" in inspect.getfullargspec(fn).args
 
 
 def extend_batch(
@@ -929,6 +871,49 @@ def extend_batch(
     hrt_batch = torch.stack(columns, dim=-1)
 
     return hrt_batch
+
+
+def check_shapes(
+    *x: Tuple[Union[torch.Tensor, Tuple[int, ...]], str],
+    raise_on_errors: bool = True,
+) -> bool:
+    """Verify that a sequence of tensors are of matching shapes.
+
+    :param x:
+        A tuple (t, s), where `t` is a tensor, or an actual shape of a tensor (a tuple of integers), and `s` is a
+        string, where each character corresponds to a (named) dimension. If the shapes of different tensors share a
+        character, the corresponding dimensions are expected to be of equal size.
+    :param raise_on_errors:
+        Whether to raise an exception in case of a mismatch.
+
+    :return:
+        Whether the shapes matched.
+
+    :raises ValueError:
+        If the shapes mismatch and raise_on_error is True.
+
+    Examples:
+    >>> check_shapes(((10, 20), "bd"), ((10, 20, 20), "bdd"))
+    True
+    >>> check_shapes(((10, 20), "bd"), ((10, 30, 20), "bdd"), raise_on_errors=False)
+    False
+    """
+    dims: Dict[str, Tuple[int, ...]] = dict()
+    errors = []
+    for actual_shape, shape in x:
+        if isinstance(actual_shape, torch.Tensor):
+            actual_shape = actual_shape.shape
+        if len(actual_shape) != len(shape):
+            errors.append(f"Invalid number of dimensions: {actual_shape} vs. {shape}")
+            continue
+        for dim, name in zip(actual_shape, shape):
+            exp_dim = dims.get(name)
+            if exp_dim is not None and exp_dim != dim:
+                errors.append(f"{name}: {dim} vs. {exp_dim}")
+            dims[name] = dim
+    if raise_on_errors and errors:
+        raise ValueError("Shape verification failed:\n" + "\n".join(errors))
+    return len(errors) == 0
 
 
 @functools.lru_cache(maxsize=1)
@@ -977,7 +962,275 @@ def get_expected_norm(
         raise TypeError(f"norm not implemented for {type(p)}: {p}")
 
 
-if __name__ == '__main__':
+activation_resolver = Resolver(
+    classes=(
+        nn.LeakyReLU,
+        nn.PReLU,
+        nn.ReLU,
+        nn.Softplus,
+        nn.Sigmoid,
+        nn.Tanh,
+    ),
+    base=nn.Module,  # type: ignore
+    default=nn.ReLU,
+)
+
+
+class Bias(nn.Module):
+    """A module wrapper for adding a bias."""
+
+    def __init__(self, dim: int):
+        """Initialize the module.
+
+        :param dim: >0
+            The dimension of the input.
+        """
+        super().__init__()
+        self.bias = nn.Parameter(torch.empty(dim), requires_grad=True)
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        """Reset the layer's parameters."""
+        nn.init.zeros_(self.bias)
+
+    def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:
+        """Add the learned bias to the input.
+
+        :param x: shape: (n, d)
+            The input.
+
+        :return:
+            x + b[None, :]
+        """
+        return x + self.bias.unsqueeze(dim=0)
+
+
+def lp_norm(x: torch.FloatTensor, p: float, dim: Optional[int], normalize: bool) -> torch.FloatTensor:
+    """Return the $L_p$ norm."""
+    value = x.norm(p=p, dim=dim)
+    if not normalize:
+        return value
+    return value / get_expected_norm(p=p, d=x.shape[-1])
+
+
+def powersum_norm(x: torch.FloatTensor, p: float, dim: Optional[int], normalize: bool) -> torch.FloatTensor:
+    """Return the power sum norm."""
+    value = x.abs().pow(p).sum(dim=dim)
+    if not normalize:
+        return value
+    dim = torch.as_tensor(x.shape[-1], dtype=torch.float, device=x.device)
+    return value / dim
+
+
+def complex_normalize(x: torch.Tensor) -> torch.Tensor:
+    r"""Normalize a vector of complex numbers such that each element is of unit-length.
+
+    :param x: A tensor formulating complex numbers
+    :returns: A normalized version accoring to the following definition.
+
+    The `modulus of complex number <https://en.wikipedia.org/wiki/Absolute_value#Complex_numbers>`_ is given as:
+
+    .. math::
+
+        |a + ib| = \sqrt{a^2 + b^2}
+
+    $l_2$ norm of complex vector $x \in \mathbb{C}^d$:
+
+    .. math::
+        \|x\|^2 = \sum_{i=1}^d |x_i|^2
+                 = \sum_{i=1}^d \left(\operatorname{Re}(x_i)^2 + \operatorname{Im}(x_i)^2\right)
+                 = \left(\sum_{i=1}^d \operatorname{Re}(x_i)^2) + (\sum_{i=1}^d \operatorname{Im}(x_i)^2\right)
+                 = \|\operatorname{Re}(x)\|^2 + \|\operatorname{Im}(x)\|^2
+                 = \| [\operatorname{Re}(x); \operatorname{Im}(x)] \|^2
+    """
+    y = x.view(*x.shape[:-1], x.shape[-1] // 2, 2)
+    y = functional.normalize(y, p=2, dim=-1)
+    return y.view(*x.shape)
+
+
+CONFIGURATION_FILE_FORMATS = {".json", ".yaml", ".yml"}
+
+
+def load_configuration(path: Union[str, pathlib.Path, os.PathLike]) -> Mapping[str, Any]:
+    """Load a configuration from a JSON or YAML file."""
+    # ensure pathlib
+    path = pathlib.Path(path)
+
+    if path.suffix == ".json":
+        with path.open() as file:
+            return json.load(file)
+
+    if path.suffix in {".yaml", ".yml"}:
+        with path.open() as file:
+            return yaml.safe_load(file)
+
+    raise ValueError(f"Unknown configuration file format: {path.suffix}. Valid formats: {CONFIGURATION_FILE_FORMATS}")
+
+
+def product_normalize(x: torch.FloatTensor, dim: int = -1) -> torch.FloatTensor:
+    r"""Normalize a tensor along a given dimension so that the geometric mean is 1.0.
+
+    :param x: shape: s
+        An input tensor
+    :param dim:
+        the dimension along which to normalize the tensor
+
+    :return: shape: s
+        An output tensor where the given dimension is normalized to have a geometric mean of 1.0.
+    """
+    return x / at_least_eps(at_least_eps(x.abs()).log().mean(dim=dim, keepdim=True).exp())
+
+
+def compute_box(
+    base: torch.FloatTensor,
+    delta: torch.FloatTensor,
+    size: torch.FloatTensor,
+) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
+    r"""Compute the lower and upper corners of a resulting box.
+
+    :param base: shape: ``(*, d)``
+        the base position (box center) of the input relation embeddings
+    :param delta:  shape: ``(*, d)``
+        the base shape of the input relation embeddings
+    :param size: shape: ``(*, d)``
+        the size scalar vectors of the input relation embeddings
+
+    :return: shape: ``(*, d)`` each
+        lower and upper bounds of the box whose embeddings are provided as input.
+    """
+    # Enforce that sizes are strictly positive by passing through ELU
+    size_pos = torch.nn.functional.elu(size) + 1
+
+    # Shape vector is normalized using the above helper function
+    delta_norm = product_normalize(delta)
+
+    # Size is learned separately and applied to normalized shape
+    delta_final = size_pos * delta_norm
+
+    # Compute potential boundaries by applying the shape in substraction
+    first_bound = base - 0.5 * delta_final
+
+    # and in addition
+    second_bound = base + 0.5 * delta_final
+
+    # Compute box upper bounds using min and max respectively
+    box_low = torch.minimum(first_bound, second_bound)
+    box_high = torch.maximum(first_bound, second_bound)
+
+    return box_low, box_high
+
+
+def point_to_box_distance(
+    points: torch.FloatTensor,
+    box_lows: torch.FloatTensor,
+    box_highs: torch.FloatTensor,
+) -> torch.FloatTensor:
+    r"""Compute the point to box distance function proposed by [abboud2020]_ in an element-wise fashion.
+
+    :param points: shape: ``(*, d)``
+        the positions of the points being scored against boxes
+    :param box_lows: shape: ``(*, d)``
+        the lower corners of the boxes
+    :param box_highs: shape: ``(*, d)``
+        the upper corners of the boxes
+
+    :returns:
+        Element-wise distance function scores as per the definition above
+
+        Given points $p$, box_lows $l$, and box_highs $h$, the following quantities are
+        defined:
+
+        - Width $w$ is the difference between the upper and lower box bound: $w = h - l$
+        - Box centers $c$ are the mean of the box bounds: $c = (h + l) / 2$
+
+        Finally, the point to box distance $dist(p,l,h)$ is defined as
+        the following piecewise function:
+
+        .. math::
+
+            dist(p,l,h) = \begin{cases}
+                |p-c|/(w+1) & l <= p <+ h \\
+                |p-c|*(w+1) - 0.5*w*((w+1)-1/(w+1)) & otherwise \\
+            \end{cases}
+    """
+    widths = box_highs - box_lows
+
+    # compute width plus 1
+    widths_p1 = widths + 1
+
+    # compute box midpoints
+    # TODO: we already had this before, as `base`
+    centres = 0.5 * (box_lows + box_highs)
+
+    return torch.where(
+        # inside box?
+        torch.logical_and(points >= box_lows, points <= box_highs),
+        # yes: |p - c| / (w + 1)
+        torch.abs(points - centres) / widths_p1,
+        # no: (w + 1) * |p - c| - 0.5 * w * (w - 1/(w + 1))
+        widths_p1 * torch.abs(points - centres) - (0.5 * widths) * (widths_p1 - 1 / widths_p1),
+    )
+
+
+def boxe_kg_arity_position_score(
+    entity_pos: torch.FloatTensor,
+    other_entity_bump: torch.FloatTensor,
+    relation_box: Tuple[torch.FloatTensor, torch.FloatTensor],
+    tanh_map: bool,
+    p: int,
+    power_norm: bool,
+) -> torch.FloatTensor:
+    r"""Perform the BoxE computation at a single arity position.
+
+    .. note::
+        this computation is parallelizable across all positions
+
+    .. note ::
+        `entity_pos`, `other_entity_bump`, `relation_box_low` and `relation_box_high` have to be in broadcastable
+        shape.
+
+    :param entity_pos: shape: (*s_p, d)
+        This is the base entity position of the entity appearing in the target position. For example,
+        for a fact $r(h, t)$ and the head arity position, `entity_pos` is the base position of $h$.
+    :param other_entity_bump: shape: (*s_b, d)
+        This is the bump of the entity at the other position in the fact. For example, given a
+        fact $r(h, t)$ and the head arity position, `other_entity_bump` is the bump of $t$.
+    :param relation_box: shape: (*s_r, d)
+        The lower/upper corner of the relation box at the target arity position.
+    :param tanh_map:
+        whether to apply the tanh map regularizer
+    :param p:
+        The norm order to apply across dimensions to compute overall position score.
+    :param power_norm:
+        whether to use the powered norm instead
+
+    :return: shape: s
+        Arity-position score for the entity relative to the target relation box. Larger is better. the shape is the
+        broadcasted shape from position, bump and box, where the last dimension has been removed.
+    """
+    # Step 1: Apply the other entity bump
+    bumped_representation = entity_pos + other_entity_bump
+
+    relation_box_low, relation_box_high = relation_box
+
+    # Step 2: Apply tanh if tanh_map is set to True.
+    if tanh_map:
+        relation_box_low = torch.tanh(relation_box_low)
+        relation_box_high = torch.tanh(relation_box_high)
+        bumped_representation = torch.tanh(bumped_representation)
+
+    # Compute the distance function output element-wise
+    element_wise_distance = point_to_box_distance(
+        points=bumped_representation,
+        box_lows=relation_box_low,
+        box_highs=relation_box_high,
+    )
+
+    # Finally, compute the norm
+    return negative_norm(element_wise_distance, p=p, power_norm=power_norm)
+
+
+if __name__ == "__main__":
     import doctest
 
     doctest.testmod()

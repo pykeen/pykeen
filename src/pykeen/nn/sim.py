@@ -9,12 +9,12 @@ import torch
 
 from .compute_kernel import batched_dot
 from ..typing import GaussianDistribution
-from ..utils import calculate_broadcasted_elementwise_result_shape, tensor_sum
+from ..utils import at_least_eps, calculate_broadcasted_elementwise_result_shape, tensor_sum
 
 __all__ = [
-    'expected_likelihood',
-    'kullback_leibler_similarity',
-    'KG2E_SIMILARITIES',
+    "expected_likelihood",
+    "kullback_leibler_similarity",
+    "KG2E_SIMILARITIES",
 ]
 
 
@@ -23,7 +23,6 @@ def expected_likelihood(
     h: GaussianDistribution,
     r: GaussianDistribution,
     t: GaussianDistribution,
-    epsilon: float = 1.0e-10,
     exact: bool = True,
 ) -> torch.FloatTensor:
     r"""Compute the similarity based on expected likelihood.
@@ -48,8 +47,6 @@ def expected_likelihood(
         The relation Gaussian distribution.
     :param t: shape: (batch_size, 1, 1, num_tails, d)
         The tail entity Gaussian distribution.
-    :param epsilon: float (default=1.0)
-        Small constant used to avoid numerical issues when dividing.
     :param exact:
         Whether to return the exact similarity, or leave out constant offsets.
 
@@ -61,7 +58,7 @@ def expected_likelihood(
     mean = tensor_sum(h.mean, -t.mean, -r.mean)
 
     #: a = \mu^T\Sigma^{-1}\mu
-    safe_sigma = torch.clamp_min(var, min=epsilon)
+    safe_sigma = at_least_eps(var)
     sim = batched_dot(
         a=safe_sigma.reciprocal(),
         b=(mean ** 2),
@@ -70,7 +67,7 @@ def expected_likelihood(
     #: b = \log \det \Sigma
     sim = sim + safe_sigma.log().sum(dim=-1)
     if exact:
-        sim = sim + sim.shape[-1] * math.log(2. * math.pi)
+        sim = sim + sim.shape[-1] * math.log(2.0 * math.pi)
     return sim
 
 
@@ -78,7 +75,6 @@ def kullback_leibler_similarity(
     h: GaussianDistribution,
     r: GaussianDistribution,
     t: GaussianDistribution,
-    epsilon: float = 1.0e-10,
     exact: bool = True,
 ) -> torch.FloatTensor:
     r"""Compute the negative KL divergence.
@@ -108,8 +104,6 @@ def kullback_leibler_similarity(
         The relation Gaussian distribution.
     :param t: shape: (batch_size, 1, 1, num_tails, d)
         The tail entity Gaussian distribution.
-    :param epsilon: float (default=1.0)
-        Small constant used to avoid numerical issues when dividing.
     :param exact:
         Whether to return the exact similarity, or leave out constant offsets.
 
@@ -121,7 +115,6 @@ def kullback_leibler_similarity(
         h=h,
         r=r,
         t=t,
-        epsilon=epsilon,
         exact=exact,
     )
 
@@ -130,7 +123,6 @@ def _vectorized_kl_divergence(
     h: GaussianDistribution,
     r: GaussianDistribution,
     t: GaussianDistribution,
-    epsilon: float = 1.0e-10,
     exact: bool = True,
 ) -> torch.FloatTensor:
     r"""Vectorized implementation of KL-divergence.
@@ -170,16 +162,14 @@ def _vectorized_kl_divergence(
         The relation Gaussian distribution.
     :param t: shape: (batch_size, 1, 1, num_tails, d)
         The tail entity Gaussian distribution.
-    :param epsilon: float (default=1.0)
-        Small constant used to avoid numerical issues when dividing.
     :param exact:
         Whether to return the exact similarity, or leave out constant offsets.
 
     :return: torch.Tensor, shape: (s_1, ..., s_k)
         The KL-divergence.
     """
-    e_var = (h.diagonal_covariance + t.diagonal_covariance)
-    r_var_safe = r.diagonal_covariance.clamp_min(min=epsilon)
+    e_var = h.diagonal_covariance + t.diagonal_covariance
+    r_var_safe = at_least_eps(r.diagonal_covariance)
     terms = []
     # 1. Component
     # \sum_i \Sigma_e[i] / Sigma_r[i]
@@ -202,11 +192,13 @@ def _vectorized_kl_divergence(
     # since Sigma is diagonal, we have det Sigma = prod Sigma[ii]
     # = ln prod Sigma_1[ii] - ln prod Sigma_0[ii]
     # = sum ln Sigma_1[ii] - sum ln Sigma_0[ii]
-    e_var_safe = e_var.clamp_min(min=epsilon)
-    terms.extend((
-        r_var_safe.log().sum(dim=-1),
-        -e_var_safe.log().sum(dim=-1),
-    ))
+    e_var_safe = at_least_eps(e_var)
+    terms.extend(
+        (
+            r_var_safe.log().sum(dim=-1),
+            -e_var_safe.log().sum(dim=-1),
+        )
+    )
     result = tensor_sum(*terms)
     if exact:
         result = 0.5 * result
@@ -256,6 +248,6 @@ def _torch_kl_similarity(
 
 
 KG2E_SIMILARITIES = {
-    'KL': kullback_leibler_similarity,
-    'EL': expected_likelihood,
+    "KL": kullback_leibler_similarity,
+    "EL": expected_likelihood,
 }

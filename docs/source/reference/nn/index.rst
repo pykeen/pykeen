@@ -9,4 +9,9 @@
    functional
    modules
    similarity
+   representation
    init
+   message_passing
+   weighting
+   combinations
+   utils

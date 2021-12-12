@@ -1,3 +1,5 @@
+.. _making_predictions:
+
 Novel Link Prediction
 =====================
 After training, the interaction model (e.g., TransE, ConvE, RotatE) can assign a score to an arbitrary triple,
@@ -16,6 +18,7 @@ After training a model, there are four high-level interfaces for making predicti
 2. :func:`pykeen.models.predict.get_relation_prediction_df` for a given head/tail pair
 3. :func:`pykeen.models.predict.get_head_prediction_df` for a given relation/tail pair
 4. :func:`pykeen.models.predict.get_all_prediction_df` for prioritizing links
+5. :func:`pykeen.models.predict.predict_triples` for computing scores for explicitly provided triples
 
 Scientifically, :func:`pykeen.models.predict.get_all_prediction_df` is the most interesting in a scenario where
 predictions could be tested and validated experimentally.
@@ -26,30 +29,33 @@ This example shows using the :func:`pykeen.pipeline.pipeline` to train a model
 which will already be in memory. Each of the high-level interfaces are exposed through the
 model:
 
-.. code-block:: python
-
-    from pykeen.pipeline import pipeline
-
-    pipeline_result = pipeline(dataset='Nations', model='RotatE')
-    model = pipeline_result.model
-
-    # Predict tails
-    predicted_tails_df = model.get_tail_prediction_df('brazil', 'intergovorgs')
-
-    # Predict relations
-    predicted_relations_df = model.get_relation_prediction_df('brazil', 'uk')
-
-    # Predict heads
-    predicted_heads_df = model.get_head_prediction_df('conferences', 'brazil')
-
-    # Score all triples (memory intensive)
-    predictions_df = model.get_all_prediction_df()
-
-    # Score top K triples
-    predictions_df = model.get_all_prediction_df(k=150)
-
-    # save the model
-    pipeline_result.save_to_directory('nations_rotate')
+>>> from pykeen.pipeline import pipeline
+>>> from pykeen.models import predict
+>>> # Run the pipeline
+>>> result = pipeline(dataset='Nations', model='RotatE')
+>>> # save the model
+>>> result.save_to_directory('doctests/nations_rotate')
+>>> model = result.model
+>>> # Predict tails
+>>> predicted_tails_df = predict.get_tail_prediction_df(
+...     model, 'brazil', 'intergovorgs', triples_factory=result.training,
+... )
+>>> # Predict relations
+>>> predicted_relations_df = predict.get_relation_prediction_df(
+...     model, 'brazil', 'uk', triples_factory=result.training,
+... )
+>>> # Predict heads
+>>> predicted_heads_df = predict.get_head_prediction_df(model, 'conferences', 'brazil', triples_factory=result.training)
+>>> # Score all triples (memory intensive)
+>>> predictions_df = predict.get_all_prediction_df(model, triples_factory=result.training)
+>>> # Score top K triples
+>>> top_k_predictions_df = predict.get_all_prediction_df(model, k=150, triples_factory=result.training)
+>>> # Score a given list of triples
+>>> score_df = predict.predict_triples_df(
+...     model=model,
+...     triples=[('brazil', 'conferences', 'uk'), ('brazil', 'intergovorgs', 'uk')],
+...     triples_factory=result.training,
+... )
 
 Loading a Model
 ~~~~~~~~~~~~~~~
@@ -58,16 +64,13 @@ This example shows how to reload a previously trained model. The
 a file named ``trained_model.pkl``, so we will use the one from the
 previous example.
 
-.. code-block:: python
-
-    import torch
-
-    model = torch.load('nations_rotate/trained_model.pkl')
-
-    # Predict tails
-    predicted_tails_df = model.get_tail_prediction_df('brazil', 'intergovorgs')
-
-    # everything else is the same as above
+>>> import torch
+>>> from pykeen.datasets import get_dataset
+>>> model = torch.load('doctests/nations_rotate/trained_model.pkl')
+>>> training = get_dataset(dataset="nations").training
+>>> # Predict tails
+>>> predicted_tails_df = model.get_tail_prediction_df('brazil', 'intergovorgs', triples_factory=training)
+>>> # everything else is the same as above
 
 There's an example model available at
 https://github.com/pykeen/pykeen/blob/master/notebooks/hello_world/nations_transe/trained_model.pkl

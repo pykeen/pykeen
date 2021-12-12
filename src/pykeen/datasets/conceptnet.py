@@ -6,23 +6,34 @@ Get a summary with ``python -m pykeen.datasets.conceptnet``
 """
 
 import click
+from docdata import parse_docdata
 from more_click import verbose_option
 
 from .base import SingleTabbedDataset
 from ..typing import TorchRandomHint
 
-URL = 'https://s3.amazonaws.com/conceptnet/downloads/2019/edges/conceptnet-assertions-5.7.0.csv.gz'
+URL = "https://s3.amazonaws.com/conceptnet/downloads/2019/edges/conceptnet-assertions-5.7.0.csv.gz"
 
 
+@parse_docdata
 class ConceptNet(SingleTabbedDataset):
     """The ConceptNet dataset from [speer2017]_.
 
     The dataset is structured into 5 columns (see https://github.com/commonsense/conceptnet5/wiki/Downloads#assertions):
     edge URL, relation, head, tail, metadata.
 
-    .. [speer2017] Robyn Speer, Joshua Chin, and Catherine Havasi. (2017)
-       `ConceptNet 5.5: An Open Multilingual Graph of General Knowledge <https://arxiv.org/abs/1612.03975>`_.
-       *In proceedings of AAAI 31*.
+    ---
+    name: ConceptNet
+    citation:
+        author: Speer
+        year: 2017
+        link: https://arxiv.org/abs/1612.03975
+        github: commonsense/conceptnet5
+    single: true
+    statistics:
+        entities: 28370083
+        relations: 50
+        triples: 34074917
     """
 
     def __init__(
@@ -42,7 +53,7 @@ class ConceptNet(SingleTabbedDataset):
             create_inverse_triples=create_inverse_triples,
             random_state=random_state,
             read_csv_kwargs=dict(
-                usecols=[1, 2, 3],
+                usecols=[2, 1, 3],
                 header=None,
             ),
             **kwargs,
@@ -56,5 +67,5 @@ def _main():
     ds.summarize()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     _main()

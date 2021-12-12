@@ -5,26 +5,23 @@
 import logging
 from typing import Any, ClassVar, Mapping, Optional, Type
 
-import torch
-import torch.autograd
-from torch import nn
+from torch.nn.init import uniform_
 
-from ..base import EntityRelationEmbeddingModel
+from ..nbase import ERModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...losses import Loss
 from ...nn import EmbeddingSpecification
+from ...nn.modules import ConvKBInteraction
 from ...regularizers import LpRegularizer, Regularizer
-from ...triples import TriplesFactory
-from ...typing import DeviceHint
+from ...typing import Hint, Initializer
 
 __all__ = [
-    'ConvKB',
+    "ConvKB",
 ]
 
 logger = logging.getLogger(__name__)
 
 
-class ConvKB(EntityRelationEmbeddingModel):
+class ConvKB(ERModel):
     r"""An implementation of ConvKB from [nguyen2018]_.
 
     ConvKB uses a convolutional neural network (CNN) whose feature maps capture global interactions of the input.
@@ -54,14 +51,20 @@ class ConvKB(EntityRelationEmbeddingModel):
 
     .. seealso::
 
-       - Authors' `implementation of ConvKB <https://github.com/daiquocnguyen/ConvKBsE.py>`_
+       - Authors' `implementation of ConvKB <https://github.com/daiquocnguyen/ConvKB>`_
+    ---
+    citation:
+        author: Nguyen
+        year: 2018
+        link: https://www.aclweb.org/anthology/N18-2053
+        github: daiquocnguyen/ConvKB
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]] = dict(
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
         hidden_dropout_rate=DEFAULT_DROPOUT_HPO_RANGE,
-        num_filters=dict(type=int, low=7, high=9, scale='power_two'),
+        num_filters=dict(type=int, low=7, high=9, scale="power_two"),
     )
     #: The regularizer used by [nguyen2018]_ for ConvKB.
     regularizer_default: ClassVar[Type[Regularizer]] = LpRegularizer
@@ -75,77 +78,52 @@ class ConvKB(EntityRelationEmbeddingModel):
 
     def __init__(
         self,
-        triples_factory: TriplesFactory,
-        hidden_dropout_rate: float = 0.,
+        *,
         embedding_dim: int = 200,
-        loss: Optional[Loss] = None,
-        preferred_device: DeviceHint = None,
+        hidden_dropout_rate: float = 0.0,
         num_filters: int = 400,
-        random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
+        entity_initializer: Hint[Initializer] = uniform_,
+        relation_initializer: Hint[Initializer] = uniform_,
+        **kwargs,
     ) -> None:
         """Initialize the model.
+
+        :param embedding_dim: The entity embedding dimension $d$.
+        :param hidden_dropout_rate: The hidden dropout rate
+        :param num_filters: The number of convolutional filters to use
+        :param regularizer: The regularizer to use. Defaults to $L_p$
+        :param entity_initializer: Entity initializer function. Defaults to :func:`torch.nn.init.uniform_`
+        :param relation_initializer: Relation initializer function. Defaults to :func:`torch.nn.init.uniform_`
+        :param kwargs:
+            Remaining keyword arguments passed through to :class:`pykeen.models.EntityRelationEmbeddingModel`.
 
         To be consistent with the paper, pass entity and relation embeddings pre-trained from TransE.
         """
         super().__init__(
-            triples_factory=triples_factory,
-            loss=loss,
-            preferred_device=preferred_device,
-            random_seed=random_seed,
-            regularizer=regularizer,
+            interaction=ConvKBInteraction,
+            interaction_kwargs=dict(
+                hidden_dropout_rate=hidden_dropout_rate,
+                embedding_dim=embedding_dim,
+                num_filters=num_filters,
+            ),
             entity_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
+                initializer=entity_initializer,
             ),
             relation_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
+                initializer=relation_initializer,
             ),
+            **kwargs,
         )
-
-        self.num_filters = num_filters
-
-        # The interaction model
-        self.conv = nn.Conv2d(in_channels=1, out_channels=num_filters, kernel_size=(1, 3), bias=True)
-        self.relu = nn.ReLU()
-        self.hidden_dropout = nn.Dropout(p=hidden_dropout_rate)
-        self.linear = nn.Linear(embedding_dim * num_filters, 1, bias=True)
-
-    def _reset_parameters_(self):  # noqa: D102
-        # embeddings
-        logger.warning('To be consistent with the paper, initialize entity and relation embeddings from TransE.')
-        super()._reset_parameters_()
-
-        # Use Xavier initialization for weight; bias to zero
-        nn.init.xavier_uniform_(self.linear.weight, gain=nn.init.calculate_gain('relu'))
-        nn.init.zeros_(self.linear.bias)
-
-        # Initialize all filters to [0.1, 0.1, -0.1],
-        #  c.f. https://github.com/daiquocnguyen/ConvKB/blob/master/model.py#L34-L36
-        nn.init.constant_(self.conv.weight[..., :2], 0.1)
-        nn.init.constant_(self.conv.weight[..., 2], -0.1)
-        nn.init.zeros_(self.conv.bias)
-
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        h = self.entity_embeddings(indices=hrt_batch[:, 0])
-        r = self.relation_embeddings(indices=hrt_batch[:, 1])
-        t = self.entity_embeddings(indices=hrt_batch[:, 2])
-
-        # Output layer regularization
+        if regularizer is None:
+            regularizer = self._instantiate_default_regularizer()
         # In the code base only the weights of the output layer are used for regularization
         # c.f. https://github.com/daiquocnguyen/ConvKB/blob/73a22bfa672f690e217b5c18536647c7cf5667f1/model.py#L60-L66
-        self.regularize_if_necessary(self.linear.weight, self.linear.bias)
-
-        # Stack to convolution input
-        conv_inp = torch.stack([h, r, t], dim=-1).view(-1, 1, self.embedding_dim, 3)
-
-        # Convolution
-        conv_out = self.conv(conv_inp).view(-1, self.embedding_dim * self.num_filters)
-        hidden = self.relu(conv_out)
-
-        # Apply dropout, cf. https://github.com/daiquocnguyen/ConvKB/blob/master/model.py#L54-L56
-        hidden = self.hidden_dropout(hidden)
-
-        # Linear layer for final scores
-        scores = self.linear(hidden)
-
-        return scores
+        if regularizer is not None:
+            self.append_weight_regularizer(
+                parameter=self.interaction.linear.parameters(),
+                regularizer=regularizer,
+            )
+        logger.warning("To be consistent with the paper, initialize entity and relation embeddings from TransE.")

@@ -7,12 +7,23 @@ import logging
 import unittest
 from typing import Any, ClassVar, Dict, Mapping, Optional, Tuple, Type
 
+import numpy
 import torch
 
 from pykeen.datasets import Nations
 from pykeen.evaluation import Evaluator, MetricResults, RankBasedEvaluator, RankBasedMetricResults
 from pykeen.evaluation.evaluator import create_dense_positive_mask_, create_sparse_positive_filter_, filter_scores_
-from pykeen.evaluation.rank_based_evaluator import RANK_TYPES, SIDES, compute_rank_from_scores
+from pykeen.evaluation.rank_based_evaluator import (
+    RANK_EXPECTED_REALISTIC,
+    RANK_OPTIMISTIC,
+    RANK_PESSIMISTIC,
+    RANK_REALISTIC,
+    RANK_TYPES,
+    SIDE_BOTH,
+    SIDES,
+    compute_rank_from_scores,
+    resolve_metric_name,
+)
 from pykeen.evaluation.sklearn import SklearnEvaluator, SklearnMetricResults
 from pykeen.models import Model, TransE
 from pykeen.triples import TriplesFactory
@@ -60,7 +71,7 @@ class _AbstractEvaluatorTests:
         inverse: bool = False,
     ) -> Tuple[torch.LongTensor, torch.FloatTensor, Optional[torch.BoolTensor]]:
         # Get batch
-        hrt_batch = self.factory.mapped_triples[:self.batch_size].to(self.model.device)
+        hrt_batch = self.factory.mapped_triples[: self.batch_size].to(self.model.device)
 
         # Compute scores
         if inverse:
@@ -123,13 +134,19 @@ class _AbstractEvaluatorTests:
             scores=scores,
             dense_positive_mask=mask,
         )
+        self.evaluator.process_head_scores_(
+            hrt_batch=hrt_batch,
+            true_scores=true_scores,
+            scores=scores,
+            dense_positive_mask=mask,
+        )
 
         result = self.evaluator.finalize()
         assert isinstance(result, MetricResults)
 
         self._validate_result(
             result=result,
-            data={'batch': hrt_batch, 'scores': scores, 'mask': mask},
+            data={"batch": hrt_batch, "scores": scores, "mask": mask},
         )
 
     def _validate_result(
@@ -137,7 +154,7 @@ class _AbstractEvaluatorTests:
         result: MetricResults,
         data: Dict[str, torch.Tensor],
     ):
-        logger.warning(f'{self.__class__.__name__} did not overwrite _validate_result.')
+        logger.warning(f"{self.__class__.__name__} did not overwrite _validate_result.")
 
 
 class RankBasedEvaluatorTests(_AbstractEvaluatorTests, unittest.TestCase):
@@ -152,20 +169,26 @@ class RankBasedEvaluatorTests(_AbstractEvaluatorTests, unittest.TestCase):
     ):
         # Check for correct class
         assert isinstance(result, RankBasedMetricResults)
+        result: RankBasedMetricResults
 
         # Check value ranges
-        for side, all_type_mr in result.mean_rank.items():
+        # check mean rank (MR)
+        for side, all_type_mr in result.arithmetic_mean_rank.items():
             assert side in SIDES
             for rank_type, mr in all_type_mr.items():
                 assert rank_type in RANK_TYPES
                 assert isinstance(mr, float)
                 assert 1 <= mr <= self.factory.num_entities
-        for side, all_type_mrr in result.mean_reciprocal_rank.items():
+
+        # check mean reciprocal rank (MRR)
+        for side, all_type_mrr in result.inverse_harmonic_mean_rank.items():
             assert side in SIDES
             for rank_type, mrr in all_type_mrr.items():
                 assert rank_type in RANK_TYPES
                 assert isinstance(mrr, float)
                 assert 0 < mrr <= 1
+
+        # check hits at k (H@k)
         for side, all_type_hits_at_k in result.hits_at_k.items():
             assert side in SIDES
             for rank_type, hits_at_k in all_type_hits_at_k.items():
@@ -175,6 +198,26 @@ class RankBasedEvaluatorTests(_AbstractEvaluatorTests, unittest.TestCase):
                     assert 0 < k < self.factory.num_entities
                     assert isinstance(h, float)
                     assert 0 <= h <= 1
+
+        # check adjusted mean rank (AMR)
+        for side, adjusted_mean_rank in result.adjusted_arithmetic_mean_rank.items():
+            assert side in SIDES
+            assert RANK_REALISTIC in adjusted_mean_rank
+            assert isinstance(adjusted_mean_rank[RANK_REALISTIC], float)
+            assert 0 < adjusted_mean_rank[RANK_REALISTIC] < 2
+
+        # check adjusted mean rank index (AMRI)
+        for side, adjusted_mean_rank_index in result.adjusted_arithmetic_mean_rank_index.items():
+            assert side in SIDES
+            assert RANK_REALISTIC in adjusted_mean_rank_index
+            assert isinstance(adjusted_mean_rank_index[RANK_REALISTIC], float)
+            assert -1 <= adjusted_mean_rank_index[RANK_REALISTIC] <= 1
+
+        # the test only considered a single batch
+        for side, all_type_rank_counts in result.rank_count.items():
+            expected_size = 2 * self.batch_size if side == SIDE_BOTH else self.batch_size
+            # all rank types have the same count
+            assert set(all_type_rank_counts.values()) == {expected_size}
 
         # TODO: Validate with data?
 
@@ -193,20 +236,24 @@ class SklearnEvaluatorTest(_AbstractEvaluatorTests, unittest.TestCase):
         assert isinstance(result, SklearnMetricResults)
 
         # check value
-        scores = data['scores'].detach().cpu().numpy()
-        mask = data['mask'].detach().cpu().float().numpy()
+        scores = data["scores"].detach().cpu().numpy()
+        mask = data["mask"].detach().cpu().float().numpy()
+        batch = data["batch"].detach().cpu().numpy()
 
         # filtering
-        uniq = dict()
-        batch = data['batch'].detach().cpu().numpy()
-        for i, (h, r) in enumerate(batch[:, :2]):
-            uniq[int(h), int(r)] = i
-        indices = sorted(uniq.values())
-        mask = mask[indices]
-        scores = scores[indices]
+        mask_filtered, scores_filtered = [], []
+        for group_indices in [(0, 1), (1, 2)]:
+            uniq = dict()
+            for i, key in enumerate(batch[:, group_indices].tolist()):
+                uniq[tuple(key)] = i
+            indices = sorted(uniq.values())
+            mask_filtered.append(mask[indices])
+            scores_filtered.append(scores[indices])
+        mask = numpy.concatenate(mask_filtered, axis=0)
+        scores = numpy.concatenate(scores_filtered, axis=0)
 
         for field in dataclasses.fields(SklearnMetricResults):
-            f = field.metadata['f']
+            f = field.metadata["f"]
             exp_score = f(mask.flat, scores.flat)
             self.assertAlmostEqual(result.get_metric(field.name), exp_score)
 
@@ -221,34 +268,37 @@ class EvaluatorUtilsTests(unittest.TestCase):
     def test_compute_rank_from_scores(self):
         """Test the _compute_rank_from_scores() function."""
         batch_size = 3
-        all_scores = torch.tensor([
-            [2., 2., 1., 3., 5.],
-            [1., 1., 3., 4., 0.],
-            [1., 1., 3., float('nan'), 0],
-        ])
+        all_scores = torch.tensor(
+            [
+                [2.0, 2.0, 1.0, 3.0, 5.0],
+                [1.0, 1.0, 3.0, 4.0, 0.0],
+                [1.0, 1.0, 3.0, float("nan"), 0],
+            ]
+        )
         # true_score: (2, 3, 3)
-        true_score = torch.tensor([2., 3., 3.]).view(batch_size, 1)
-        exp_best_rank = torch.tensor([3., 2., 1.])
-        exp_worst_rank = torch.tensor([4., 2., 1.])
+        true_score = torch.as_tensor([2.0, 3.0, 3.0]).view(batch_size, 1)
+        exp_best_rank = torch.as_tensor([3.0, 2.0, 1.0])
+        exp_worst_rank = torch.as_tensor([4.0, 2.0, 1.0])
         exp_avg_rank = 0.5 * (exp_best_rank + exp_worst_rank)
-        exp_adj_rank = exp_avg_rank / torch.tensor([(5 + 1) / 2, (5 + 1) / 2, (4 + 1) / 2])
+        exp_exp_rank = torch.as_tensor([(5 + 1) / 2, (5 + 1) / 2, (4 + 1) / 2])
         ranks = compute_rank_from_scores(true_score=true_score, all_scores=all_scores)
 
-        best_rank = ranks.get('best')
-        assert best_rank.shape == (batch_size,)
-        assert (best_rank == exp_best_rank).all()
+        optimistic_rank = ranks.get(RANK_OPTIMISTIC)
+        assert optimistic_rank.shape == (batch_size,)
+        assert (optimistic_rank == exp_best_rank).all()
 
-        worst_rank = ranks.get('worst')
-        assert worst_rank.shape == (batch_size,)
-        assert (worst_rank == exp_worst_rank).all()
+        pessimistic_rank = ranks.get(RANK_PESSIMISTIC)
+        assert pessimistic_rank.shape == (batch_size,)
+        assert (pessimistic_rank == exp_worst_rank).all()
 
-        avg_rank = ranks.get('avg')
-        assert avg_rank.shape == (batch_size,)
-        assert (avg_rank == exp_avg_rank).all(), (avg_rank, exp_avg_rank)
+        realistic_rank = ranks.get(RANK_REALISTIC)
+        assert realistic_rank.shape == (batch_size,)
+        assert (realistic_rank == exp_avg_rank).all(), (realistic_rank, exp_avg_rank)
 
-        adj_rank = ranks.get('adj')
-        assert adj_rank.shape == (batch_size,)
-        assert (adj_rank == exp_adj_rank).all(), (adj_rank, exp_adj_rank)
+        expected_realistic_rank = ranks.get(RANK_EXPECTED_REALISTIC)
+        assert expected_realistic_rank is not None
+        assert expected_realistic_rank.shape == (batch_size,)
+        assert (expected_realistic_rank == exp_exp_rank).all(), (expected_realistic_rank, exp_exp_rank)
 
     def test_create_sparse_positive_filter_(self):
         """Test method create_sparse_positive_filter_."""
@@ -310,37 +360,43 @@ class EvaluatorUtilsTests(unittest.TestCase):
                 [0, 2, 2],
                 [3, 1, 2],
                 [1, 2, 0],
-            ], dtype=torch.long,
+            ],
+            dtype=torch.long,
         )
         batch = torch.tensor(
             [
                 [0, 1, 2],
                 [1, 2, 3],
-            ], dtype=torch.long,
+            ],
+            dtype=torch.long,
         )
         head_filter_mask = torch.tensor(
             [
                 [True, False, False, False],
                 [False, True, False, False],
-            ], dtype=torch.bool,
+            ],
+            dtype=torch.bool,
         )
         tail_filter_mask = torch.tensor(
             [
                 [False, False, True, False],
                 [False, False, False, True],
-            ], dtype=torch.bool,
+            ],
+            dtype=torch.bool,
         )
         exp_head_filter_mask = torch.tensor(
             [
                 [True, False, False, True],
                 [False, True, False, False],
-            ], dtype=torch.bool,
+            ],
+            dtype=torch.bool,
         )
         exp_tail_filter_mask = torch.tensor(
             [
                 [False, False, True, False],
                 [True, False, False, True],
-            ], dtype=torch.bool,
+            ],
+            dtype=torch.bool,
         )
         assert batch.shape == (batch_size, 3)
         assert head_filter_mask.shape == (batch_size, num_entities)
@@ -418,14 +474,25 @@ class DummyEvaluator(Evaluator):
 
     def finalize(self) -> MetricResults:  # noqa: D102
         return RankBasedMetricResults(
-            mean_rank=self.counter,
-            mean_reciprocal_rank=None,
-            adjusted_mean_rank=None,
+            arithmetic_mean_rank=self.counter,
+            geometric_mean_rank=None,
+            harmonic_mean_rank=None,
+            median_rank=None,
+            inverse_arithmetic_mean_rank=None,
+            inverse_geometric_mean_rank=None,
+            inverse_harmonic_mean_rank=None,
+            inverse_median_rank=None,
+            rank_std=None,
+            rank_var=None,
+            rank_mad=None,
+            rank_count=None,
+            adjusted_arithmetic_mean_rank=None,
+            adjusted_arithmetic_mean_rank_index=None,
             hits_at_k=dict(),
         )
 
     def __repr__(self):  # noqa: D105
-        return f'{self.__class__.__name__}(losses={self.losses})'
+        return f"{self.__class__.__name__}(losses={self.losses})"
 
 
 class TestEvaluationStructure(unittest.TestCase):
@@ -435,15 +502,94 @@ class TestEvaluationStructure(unittest.TestCase):
         """Prepare for testing the evaluation structure."""
         self.counter = 1337
         self.evaluator = DummyEvaluator(counter=self.counter, filtered=True, automatic_memory_optimization=False)
-        self.triples_factory = Nations().training
-        self.model = MockModel(triples_factory=self.triples_factory)
+        self.dataset = Nations()
+        self.model = MockModel(triples_factory=self.dataset.training)
 
     def test_evaluation_structure(self):
         """Test if the evaluator has a balanced call of head and tail processors."""
         eval_results = self.evaluator.evaluate(
             model=self.model,
-            mapped_triples=self.triples_factory.mapped_triples,
+            additional_filter_triples=self.dataset.training.mapped_triples,
+            mapped_triples=self.dataset.testing.mapped_triples,
             batch_size=1,
             use_tqdm=False,
         )
-        assert eval_results.mean_rank == self.counter, 'Should end at the same value as it started'
+        self.assertIsInstance(eval_results, RankBasedMetricResults)
+        assert eval_results.arithmetic_mean_rank == self.counter, "Should end at the same value as it started"
+
+
+class TestEvaluationFiltering(unittest.TestCase):
+    """Tests for testing the correct filtering of positive triples of the evaluation procedure."""
+
+    def setUp(self):
+        """Prepare for testing the evaluation filtering."""
+        self.evaluator = RankBasedEvaluator(filtered=True, automatic_memory_optimization=False)
+        self.triples_factory = Nations().training
+        self.model = MockModel(triples_factory=self.triples_factory)
+
+        # The MockModel gives the highest score to the highest entity id
+        max_score = self.triples_factory.num_entities - 1
+
+        # The test triples are created to yield the third highest score on both head and tail prediction
+        self.test_triples = torch.tensor([[max_score - 2, 0, max_score - 2]])
+
+        # Write new mapped triples to the model, since the model's triples will be used to filter
+        # These triples are created to yield the highest score on both head and tail prediction for the
+        # test triple at hand
+        self.training_triples = torch.tensor(
+            [
+                [max_score - 2, 0, max_score],
+                [max_score, 0, max_score - 2],
+            ],
+        )
+
+        # The validation triples are created to yield the second highest score on both head and tail prediction for the
+        # test triple at hand
+        self.validation_triples = torch.tensor(
+            [
+                [max_score - 2, 0, max_score - 1],
+                [max_score - 1, 0, max_score - 2],
+            ],
+        )
+
+    def test_evaluation_filtering_without_validation_triples(self):
+        """Test if the evaluator's triple filtering works as expected."""
+        eval_results = self.evaluator.evaluate(
+            model=self.model,
+            mapped_triples=self.test_triples,
+            additional_filter_triples=self.training_triples,
+            batch_size=1,
+            use_tqdm=False,
+        )
+        assert eval_results.arithmetic_mean_rank["both"]["realistic"] == 2, "The rank should equal 2"
+
+    def test_evaluation_filtering_with_validation_triples(self):
+        """Test if the evaluator's triple filtering works as expected when including additional filter triples."""
+        eval_results = self.evaluator.evaluate(
+            model=self.model,
+            mapped_triples=self.test_triples,
+            additional_filter_triples=[
+                self.training_triples,
+                self.validation_triples,
+            ],
+            batch_size=1,
+            use_tqdm=False,
+        )
+        assert eval_results.arithmetic_mean_rank["both"]["realistic"] == 1, "The rank should equal 1"
+
+
+def test_resolve_metric_name():
+    """Test metric name resolution."""
+    for name, expected in (
+        ("mrr", ("inverse_harmonic_mean_rank", "both", "realistic", None)),
+        ("mean_rank.both", ("arithmetic_mean_rank", "both", "realistic", None)),
+        ("mean_rank.avg", ("arithmetic_mean_rank", "both", "realistic", None)),
+        ("mean_rank.tail.worst", ("arithmetic_mean_rank", "tail", "pessimistic", None)),
+        ("amri.avg", ("adjusted_arithmetic_mean_rank_index", "both", "realistic", None)),
+        ("hits_at_k", ("hits_at_k", "both", "realistic", 10)),
+        ("hits_at_k.head.best.3", ("hits_at_k", "head", "optimistic", 3)),
+        ("hits_at_1", ("hits_at_k", "both", "realistic", 1)),
+        ("H@10", ("hits_at_k", "both", "realistic", 10)),
+    ):
+        result = resolve_metric_name(name=name)
+        assert result == expected, name

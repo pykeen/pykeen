@@ -3,7 +3,7 @@
 """Tests of early stopping."""
 
 import unittest
-from typing import Iterable, List, Optional
+from typing import List
 
 import numpy
 import pytest
@@ -11,14 +11,17 @@ import torch
 from torch.optim import Adam
 
 from pykeen.datasets import Nations
-from pykeen.evaluation import Evaluator, MetricResults, RankBasedEvaluator, RankBasedMetricResults
-from pykeen.evaluation.rank_based_evaluator import RANK_TYPES, SIDES
+from pykeen.evaluation import RankBasedEvaluator
 from pykeen.models import Model, TransE
 from pykeen.stoppers.early_stopping import EarlyStopper, is_improvement
 from pykeen.trackers import MLFlowResultTracker
 from pykeen.training import SLCWATrainingLoop
-from pykeen.typing import MappedTriples
-from tests.mocks import MockModel
+from tests.mocks import MockEvaluator, MockModel
+
+try:
+    import mlflow
+except ImportError:
+    mlflow = None
 
 
 class TestRandom(unittest.TestCase):
@@ -43,73 +46,15 @@ class TestRandom(unittest.TestCase):
                 relative_delta=relative_delta,
                 is_better=is_better,
             ):
-                self.assertEqual(is_better, is_improvement(
-                    best_value=best_value,
-                    current_value=current_value,
-                    larger_is_better=larger_is_better,
-                    relative_delta=relative_delta,
-                ))
-
-
-class MockEvaluator(Evaluator):
-    """A mock evaluator for testing early stopping."""
-
-    def __init__(self, losses: Iterable[float], automatic_memory_optimization: bool = True) -> None:
-        super().__init__(automatic_memory_optimization=automatic_memory_optimization)
-        self.losses = tuple(losses)
-        self.losses_iter = iter(self.losses)
-
-    def process_tail_scores_(
-        self,
-        hrt_batch: MappedTriples,
-        true_scores: torch.FloatTensor,
-        scores: torch.FloatTensor,
-        dense_positive_mask: Optional[torch.FloatTensor] = None,
-    ) -> None:  # noqa: D102
-        pass
-
-    def process_head_scores_(
-        self,
-        hrt_batch: MappedTriples,
-        true_scores: torch.FloatTensor,
-        scores: torch.FloatTensor,
-        dense_positive_mask: Optional[torch.FloatTensor] = None,
-    ) -> None:  # noqa: D102
-        pass
-
-    def finalize(self) -> MetricResults:  # noqa: D102
-        hits = next(self.losses_iter)
-        return RankBasedMetricResults(
-            mean_rank={
-                side: {
-                    rank_type: 10
-                    for rank_type in RANK_TYPES
-                }
-                for side in SIDES
-            },
-            mean_reciprocal_rank={
-                side: {
-                    rank_type: 1.0
-                    for rank_type in RANK_TYPES
-                }
-                for side in SIDES
-            },
-            adjusted_mean_rank={
-                side: 1.0
-                for side in SIDES
-            },
-            hits_at_k={
-                side: {
-                    rank_type: {
-                        10: hits,
-                    } for rank_type in RANK_TYPES
-                }
-                for side in SIDES
-            },
-        )
-
-    def __repr__(self):  # noqa: D105
-        return f'{self.__class__.__name__}(losses={self.losses})'
+                self.assertEqual(
+                    is_better,
+                    is_improvement(
+                        best_value=best_value,
+                        current_value=current_value,
+                        larger_is_better=larger_is_better,
+                        relative_delta=relative_delta,
+                    ),
+                )
 
 
 class LogCallWrapper:
@@ -156,6 +101,7 @@ class TestEarlyStopping(unittest.TestCase):
         self.stopper = EarlyStopper(
             model=self.model,
             evaluator=self.mock_evaluator,
+            training_triples_factory=nations.training,
             evaluation_triples_factory=nations.validation,
             patience=self.patience,
             relative_delta=self.delta,
@@ -176,7 +122,7 @@ class TestEarlyStopping(unittest.TestCase):
 
             if not should_stop:
                 # check storing of results
-                assert self.stopper.results == self.mock_losses[:epoch + 1]
+                assert self.stopper.results == self.mock_losses[: epoch + 1]
 
                 # check ring buffer
                 if epoch >= self.patience:
@@ -188,6 +134,7 @@ class TestEarlyStopping(unittest.TestCase):
             self.assertFalse(self.stopper.should_stop(epoch=epoch))
         self.assertTrue(self.stopper.should_stop(epoch=epoch))
 
+    @unittest.skipUnless(mlflow is not None, reason="MLFlow not installed")
     def test_result_logging_with_mlflow(self):
         """Test whether the MLFLow result logger works."""
         self.stopper.result_tracker = MLFlowResultTracker()
@@ -241,21 +188,28 @@ class TestEarlyStoppingRealWorld(unittest.TestCase):
         stopper = EarlyStopper(
             model=model,
             evaluator=evaluator,
+            training_triples_factory=nations.training,
             evaluation_triples_factory=nations.validation,
             patience=self.patience,
             relative_delta=self.relative_delta,
-            metric='mean_rank',
+            metric="mean_rank",
         )
         training_loop = SLCWATrainingLoop(
             model=model,
+            triples_factory=nations.training,
             optimizer=Adam(params=model.get_grad_params()),
             automatic_memory_optimization=False,
         )
         losses = training_loop.train(
+            triples_factory=nations.training,
             num_epochs=self.max_num_epochs,
             batch_size=self.batch_size,
             stopper=stopper,
             use_tqdm=False,
         )
-        self.assertEqual(stopper.number_results, len(losses) // stopper.frequency)
-        self.assertEqual(self.stop_epoch, len(losses), msg='Did not stop early like it should have')
+        self.assertEqual(stopper.number_results, (len(losses) + self.patience * stopper.frequency) // stopper.frequency)
+        self.assertEqual(
+            self.stop_epoch,
+            (len(losses) + 2 * stopper.frequency),
+            msg="Did not stop early like it should have",
+        )

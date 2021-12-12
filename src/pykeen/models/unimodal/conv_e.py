@@ -13,16 +13,15 @@ from torch.nn import functional as F  # noqa: N812
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE
 from ...losses import BCEAfterSigmoidLoss, Loss
-from ...nn import Embedding, EmbeddingSpecification
+from ...nn.emb import Embedding, EmbeddingSpecification
 from ...nn.init import xavier_normal_
 from ...nn.modules import _calculate_missing_shape_information
-from ...regularizers import Regularizer
-from ...triples import TriplesFactory
-from ...typing import DeviceHint
+from ...triples import CoreTriplesFactory
+from ...typing import Hint, Initializer
 from ...utils import is_cudnn_error
 
 __all__ = [
-    'ConvE',
+    "ConvE",
 ]
 
 logger = logging.getLogger(__name__)
@@ -59,11 +58,9 @@ class ConvE(EntityRelationEmbeddingModel):
 
     The default setting uses batch normalization. Batch normalization normalizes the output of the activation functions,
     in order to ensure that the weights of the NN don't become imbalanced and to speed up training.
-    However, batch normalization is not the only way to achieve more robust and effective training [1]. Therefore,
-    we added the flag 'apply_batch_normalization' to turn batch normalization on/off (it's turned on as default).
-
-    [1]: Santurkar, Shibani, et al. "How does batch normalization help optimization?."
-    Advances in Neural Information Processing Systems. 2018.
+    However, batch normalization is not the only way to achieve more robust and effective training [santurkar2018]_.
+    Therefore, we added the flag 'apply_batch_normalization' to turn batch normalization on/off (it's turned on as
+    default).
 
     Example usage:
 
@@ -95,12 +92,23 @@ class ConvE(EntityRelationEmbeddingModel):
     >>> # Step 5: Evaluate the model
     >>> from pykeen.evaluation import RankBasedEvaluator
     >>> evaluator = RankBasedEvaluator()
-    >>> metric_result = evaluator.evaluate(model=model, mapped_triples=dataset.testing.mapped_triples, batch_size=8192)
+    >>> metric_result = evaluator.evaluate(
+    ...     model=model,
+    ...     mapped_triples=dataset.testing.mapped_triples,
+    ...     additional_filter_triples=dataset.training.mapped_triples,
+    ...     batch_size=8192,
+    ... )
+    ---
+    citation:
+        author: Dettmers
+        year: 2018
+        link: https://www.aaai.org/ocs/index.php/AAAI/AAAI18/paper/view/17366
+        github: TimDettmers/ConvE
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        output_channels=dict(type=int, low=4, high=6, scale='power_two'),
+        output_channels=dict(type=int, low=4, high=6, scale="power_two"),
         input_dropout=DEFAULT_DROPOUT_HPO_RANGE,
         output_dropout=DEFAULT_DROPOUT_HPO_RANGE,
         feature_map_dropout=DEFAULT_DROPOUT_HPO_RANGE,
@@ -118,7 +126,7 @@ class ConvE(EntityRelationEmbeddingModel):
 
     def __init__(
         self,
-        triples_factory: TriplesFactory,
+        triples_factory: CoreTriplesFactory,
         input_channels: Optional[int] = None,
         output_channels: int = 32,
         embedding_height: Optional[int] = None,
@@ -129,47 +137,43 @@ class ConvE(EntityRelationEmbeddingModel):
         output_dropout: float = 0.3,
         feature_map_dropout: float = 0.2,
         embedding_dim: int = 200,
-        loss: Optional[Loss] = None,
-        preferred_device: DeviceHint = None,
-        random_seed: Optional[int] = None,
-        regularizer: Optional[Regularizer] = None,
         apply_batch_normalization: bool = True,
+        entity_initializer: Hint[Initializer] = xavier_normal_,
+        relation_initializer: Hint[Initializer] = xavier_normal_,
+        **kwargs,
     ) -> None:
         """Initialize the model."""
         # ConvE should be trained with inverse triples
         if not triples_factory.create_inverse_triples:
             logger.warning(
-                '\nThe ConvE model should be trained with inverse triples.\n'
-                'This can be done by defining the TriplesFactory class with the _create_inverse_triples_ parameter set '
-                'to true.',
+                "\nThe ConvE model should be trained with inverse triples.\n"
+                "This can be done by defining the TriplesFactory class with the _create_inverse_triples_ parameter set "
+                "to true.",
             )
 
         super().__init__(
             triples_factory=triples_factory,
-            loss=loss,
-            preferred_device=preferred_device,
-            random_seed=random_seed,
-            regularizer=regularizer,
             entity_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
-                initializer=xavier_normal_,
+                initializer=entity_initializer,
             ),
             relation_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,
-                initializer=xavier_normal_,
+                initializer=relation_initializer,
             ),
+            **kwargs,
         )
 
         # ConvE uses one bias for each entity
         self.bias_term = Embedding.init_with_device(
-            num_embeddings=triples_factory.num_entities,
+            num_embeddings=self.num_entities,
             embedding_dim=1,
             device=self.device,
             initializer=nn.init.zeros_,
         )
 
         # Automatic calculation of remaining dimensions
-        logger.info(f'Resolving {input_channels} * {embedding_width} * {embedding_height} = {embedding_dim}.')
+        logger.info(f"Resolving {input_channels} * {embedding_width} * {embedding_height} = {embedding_dim}.")
         if embedding_dim is None:
             embedding_dim = input_channels * embedding_width * embedding_height
 
@@ -181,15 +185,15 @@ class ConvE(EntityRelationEmbeddingModel):
             width=embedding_width,
             height=embedding_height,
         )
-        logger.info(f'Resolved to {input_channels} * {embedding_width} * {embedding_height} = {embedding_dim}.')
+        logger.info(f"Resolved to {input_channels} * {embedding_width} * {embedding_height} = {embedding_dim}.")
         self.embedding_height = embedding_height
         self.embedding_width = embedding_width
         self.input_channels = input_channels
 
         if self.input_channels * self.embedding_height * self.embedding_width != self.embedding_dim:
             raise ValueError(
-                f'Product of input channels ({self.input_channels}), height ({self.embedding_height}), and width '
-                f'({self.embedding_width}) does not equal target embedding dimension ({self.embedding_dim})',
+                f"Product of input channels ({self.input_channels}), height ({self.embedding_height}), and width "
+                f"({self.embedding_width}) does not equal target embedding dimension ({self.embedding_dim})",
             )
 
         self.inp_drop = nn.Dropout(input_dropout)
@@ -271,11 +275,11 @@ class ConvE(EntityRelationEmbeddingModel):
             if not is_cudnn_error(e):
                 raise e
             logger.warning(
-                '\nThis code crash might have been caused by a CUDA bug, see '
-                'https://github.com/allenai/allennlp/issues/2888, '
-                'which causes the code to crash during evaluation mode.\n'
-                'To avoid this error, the batch size has to be reduced.\n'
-                f'The original error message: \n{e.args[0]}',
+                "\nThis code crash might have been caused by a CUDA bug, see "
+                "https://github.com/allenai/allennlp/issues/2888, "
+                "which causes the code to crash during evaluation mode.\n"
+                "To avoid this error, the batch size has to be reduced.\n"
+                f"The original error message: \n{e.args[0]}",
             )
             sys.exit(1)
 
@@ -354,25 +358,29 @@ class ConvE(EntityRelationEmbeddingModel):
         # Embedding Regularization
         self.regularize_if_necessary(h, r, t)
 
-        '''
+        """
         Every head has to be convolved with every relation in the rt_batch. Hence we repeat the
         relation _num_entities_ times and the head _rt_batch_size_ times.
-        '''
+        """
         r = r.repeat(h.shape[0], 1, 1, 1)
         # Code to repeat each item successively instead of the entire tensor
-        h = h.unsqueeze(1).repeat(1, rt_batch_size, 1).view(
-            -1,
-            self.input_channels,
-            self.embedding_height,
-            self.embedding_width,
+        h = (
+            h.unsqueeze(1)
+            .repeat(1, rt_batch_size, 1)
+            .view(
+                -1,
+                self.input_channels,
+                self.embedding_height,
+                self.embedding_width,
+            )
         )
 
         x = self._convolve_entity_relation(h, r)
 
-        '''
+        """
         For efficient computation, each convolved [h, r] pair has only to be multiplied with the corresponding t
         embedding found in the rt_batch with [r, t] pairs.
-        '''
+        """
         x = (x.view(self.num_entities, rt_batch_size, self.embedding_dim) * t[None, :, :]).sum(2).transpose(1, 0)
 
         """
