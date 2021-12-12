@@ -4,6 +4,7 @@
 
 import logging
 import math
+import warnings
 from typing import Optional, Sequence
 
 import numpy as np
@@ -120,6 +121,48 @@ def init_quaternions(
     return x.view(num_elements, 4 * dim)
 
 
+class PretrainedInitializer:
+    """
+    Initialize tensor with pretrained weights.
+
+    Example usage:
+
+    .. code-block::
+
+        import torch
+        from pykeen.pipeline import pipeline
+        from pykeen.nn.init import create_init_from_pretrained
+
+        # this is usually loaded from somewhere else
+        # the shape must match, as well as the entity-to-id mapping
+        pretrained_embedding_tensor = torch.rand(14, 128)
+
+        result = pipeline(
+            dataset="nations",
+            model="transe",
+            model_kwargs=dict(
+                embedding_dim=pretrained_embedding_tensor.shape[-1],
+                entity_initializer=PretrainedInitializer(tensor=pretrained_embedding_tensor),
+            ),
+        )
+    """
+
+    def __init__(self, tensor: torch.FloatTensor) -> None:
+        """
+        Initialize the initializer.
+
+        :param tensor:
+            the tensor of pretrained embeddings.
+        """
+        self.tensor = tensor
+
+    def __call__(self, x: torch.Tensor) -> torch.Tensor:
+        """Initialize the tensor with the given tensor."""
+        if x.shape != self.tensor.shape:
+            raise ValueError(f"shape does not match: expected {self.tensor.shape} but got {x.shape}")
+        return self.tensor.to(device=x.device, dtype=x.dtype)
+
+
 def create_init_from_pretrained(pretrained: torch.FloatTensor) -> Initializer:
     """
     Create an initializer via a constant vector.
@@ -153,17 +196,11 @@ def create_init_from_pretrained(pretrained: torch.FloatTensor) -> Initializer:
             ),
         )
     """
-
-    def init_from_pretrained(x: torch.FloatTensor) -> torch.FloatTensor:
-        """Initialize tensor with pretrained weights."""
-        if x.shape != pretrained.shape:
-            raise ValueError(f"shape of pretrained {pretrained.shape} does not match shape of tensor {x.shape}")
-        return pretrained
-
-    return init_from_pretrained
+    warnings.warn(message="Please directly use `PretrainedInitializer`.", category=DeprecationWarning)
+    return PretrainedInitializer(tensor=pretrained)
 
 
-class LabelBasedInitializer:
+class LabelBasedInitializer(PretrainedInitializer):
     """
     An initializer using pretrained models from the `transformers` library to encode labels.
 
@@ -210,12 +247,14 @@ class LabelBasedInitializer:
         :raise ImportError:
             if the transformers library could not be imported
         """
-        self.tensor = TransformerEncoder(
-            pretrained_model_name_or_path=pretrained_model_name_or_path,
-            max_length=max_length,
-        ).encode_all(
-            labels=labels,
-            batch_size=batch_size,
+        super().__init__(
+            tensor=TransformerEncoder(
+                pretrained_model_name_or_path=pretrained_model_name_or_path,
+                max_length=max_length,
+            ).encode_all(
+                labels=labels,
+                batch_size=batch_size,
+            ),
         )
 
     @classmethod
@@ -246,9 +285,3 @@ class LabelBasedInitializer:
             labels=labels,
             **kwargs,
         )
-
-    def __call__(self, x: torch.Tensor) -> torch.Tensor:
-        """Initialize the tensor from the encoded labels."""
-        if x.shape != self.tensor.shape:
-            raise ValueError(f"shape does not match: expected {self.tensor.shape} but got {x.shape}")
-        return self.tensor.to(device=x.device, dtype=x.dtype)
