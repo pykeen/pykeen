@@ -16,6 +16,8 @@ which enrich via CompGCN layers.
 
 Decomposition
 -------------
+NodePiece
+~~~~~~~~~
 Since knowledge graphs may contain a large number of entities, having
 independent trainable embeddings for each of them may result in an
 excessive amount of trainable parameters. Therefore, methods have been
@@ -29,6 +31,10 @@ effective variant thereof, which uses a set of randomly chosen incident
 relations (including inverse relations) as tokens.
 
 .. seealso:: https://towardsdatascience.com/nodepiece-tokenizing-knowledge-graphs-6dd2b91847aa
+
+Bases
+~~~~~
+.. todo:: write something about :class:`pykeen.nn.emb.LowRankEmbeddingRepresentation`
 
 Label-based
 -----------
