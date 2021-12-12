@@ -91,5 +91,5 @@ def _check():
             raise ValueError(f"missing rexmex classifier: {func.__name__}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     _check()

@@ -312,13 +312,9 @@ def metrics(tablefmt: str):
 
 def _help_metrics(tablefmt):
     return tabulate(
-        sorted(_get_metrics_lines(tablefmt)),
+        sorted(_get_metrics_lines(tablefmt), key=lambda t: (t[2], t[0])),
         headers=(
-            ["Name", "Reference"]
-            if tablefmt == "rst"
-            else ["Name", "Description"]
-            if tablefmt == "github"
-            else ["Metric", "Description", "Reference"]
+            ["Name", "Description", "Type"] if tablefmt == "github" else ["Metric", "Description", "Type", "Reference"]
         ),
         tablefmt=tablefmt,
     )
@@ -362,18 +358,20 @@ def _help_hpo_samplers(tablefmt: str, link_fmt: Optional[str] = None):
     )
 
 
+METRIC_NAMES = {
+    "sklearn": "Classification",
+    "rankbased": "Ranking",
+}
+
+
 def _get_metrics_lines(tablefmt: str):
-    if tablefmt == "rst":
-        for name, value in metric_resolver.lookup_dict.items():
-            yield name, f":class:`pykeen.evaluation.{value.__name__}`"
-    else:
-        for field, name, value in get_metric_list():
-            if field.name in {"rank_std", "rank_var", "rank_mad", "rank_count"}:
-                continue
-            if tablefmt == "github":
-                yield field.metadata["name"], field.metadata["doc"]
-            else:
-                yield field.metadata["name"], field.metadata["doc"], name, f"pykeen.evaluation.{value.__name__}"
+    for field, name, value in get_metric_list():
+        if field.name in {"rank_std", "rank_var", "rank_mad", "rank_count"}:
+            continue
+        if tablefmt == "github":
+            yield field.metadata["name"], field.metadata["doc"], METRIC_NAMES[name]
+        else:
+            yield field.metadata["name"], field.metadata["doc"], name, f"pykeen.evaluation.{value.__name__}"
 
 
 def _get_lines(d, tablefmt, submodule, link_fmt: Optional[str] = None):
@@ -516,7 +514,7 @@ def get_readme() -> str:
         n_stoppers=len(stopper_resolver.lookup_dict),
         evaluators=_help_evaluators(tablefmt, link_fmt="https://pykeen.readthedocs.io/en/latest/api/{}.html"),
         n_evaluators=len(evaluator_resolver.lookup_dict),
-        metrics=_help_metrics(tablefmt, link_fmt="https://pykeen.readthedocs.io/en/latest/api/{}.html"),
+        metrics=_help_metrics(tablefmt),
         n_metrics=len(get_metric_list()),
         trackers=_help_trackers(tablefmt, link_fmt="https://pykeen.readthedocs.io/en/latest/api/{}.html"),
         n_trackers=len(tracker_resolver.lookup_dict),
