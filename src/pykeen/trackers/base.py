@@ -55,7 +55,8 @@ class PythonResultTracker(ResultTracker):
 
     Example Usage: get default configuration
 
-    .. code-block :: python
+    .. code-block:: python
+
         from pykeen.pipeline import pipeline
         from pykeen.trackers import PythonResultTracker
 
