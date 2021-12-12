@@ -14,7 +14,6 @@ from torch.nn import functional
 
 from .utils import TransformerEncoder
 from ..triples import TriplesFactory
-from ..typing import Initializer
 from ..utils import compose
 
 __all__ = [
