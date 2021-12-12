@@ -5,7 +5,8 @@
 from typing import Sequence, Union
 
 from ..nbase import EmbeddingSpecificationHint, ERModel
-from ...nn.emb import EmbeddingSpecification, LiteralRepresentation, RepresentationModule
+from ...nn.emb import Embedding, EmbeddingSpecification, RepresentationModule
+from ...nn.init import create_init_from_pretrained
 from ...nn.modules import LiteralInteraction
 from ...triples import TriplesNumericLiteralsFactory
 from ...typing import HeadRepresentation, RelationRepresentation, TailRepresentation
@@ -26,8 +27,13 @@ class LiteralModel(ERModel[HeadRepresentation, RelationRepresentation, TailRepre
         relation_representations: EmbeddingSpecificationHint = None,
         **kwargs,
     ):
-        literal_representation = LiteralRepresentation(
-            numeric_literals=triples_factory.get_numeric_literals_tensor(),
+        literals = triples_factory.get_numeric_literals_tensor()
+        num_embeddings, *shape = literals.shape
+        literal_representation = Embedding(
+            num_embeddings=num_embeddings,
+            shape=shape,
+            initializer=create_init_from_pretrained(pretrained=literals),
+            trainable=False,
         )
         super().__init__(
             triples_factory=triples_factory,
