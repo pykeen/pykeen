@@ -6,7 +6,7 @@ from typing import Sequence, Union
 
 from ..nbase import EmbeddingSpecificationHint, ERModel
 from ...nn.emb import Embedding, EmbeddingSpecification, RepresentationModule
-from ...nn.init import create_init_from_pretrained
+from ...nn.init import PretrainedInitializer
 from ...nn.modules import LiteralInteraction
 from ...triples import TriplesNumericLiteralsFactory
 from ...typing import HeadRepresentation, RelationRepresentation, TailRepresentation
@@ -32,7 +32,7 @@ class LiteralModel(ERModel[HeadRepresentation, RelationRepresentation, TailRepre
         literal_representation = Embedding(
             num_embeddings=num_embeddings,
             shape=shape,
-            initializer=create_init_from_pretrained(pretrained=literals),
+            initializer=PretrainedInitializer(tensor=literals),
             trainable=False,
         )
         super().__init__(
