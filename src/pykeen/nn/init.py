@@ -2,6 +2,7 @@
 
 """Embedding weight initialization routines."""
 
+import functools
 import logging
 import math
 from typing import Optional, Sequence
@@ -22,6 +23,7 @@ __all__ = [
     "xavier_normal_",
     "xavier_normal_norm_",
     "uniform_norm_",
+    "uniform_norm_p1_",
     "normal_norm_",
     "init_phases",
     "PretrainedInitializer",
@@ -92,6 +94,10 @@ uniform_norm_ = compose(
 normal_norm_ = compose(
     torch.nn.init.normal_,
     functional.normalize,
+)
+uniform_norm_p1_ = compose(
+    torch.nn.init.uniform_,
+    functools.partial(functional.normalize, p=1),
 )
 
 

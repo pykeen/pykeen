@@ -24,12 +24,12 @@ from .init import (
     init_phases,
     normal_norm_,
     uniform_norm_,
+    uniform_norm_p1_,
     xavier_normal_,
     xavier_normal_norm_,
     xavier_uniform_,
     xavier_uniform_norm_,
 )
-from .message_passing import Decomposition, RGCNLayer
 from .utils import TransformerEncoder
 from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolver
 from ..constants import AGGREGATIONS
@@ -41,13 +41,15 @@ from ..utils import Bias, activation_resolver, clamp_norm, complex_normalize, co
 __all__ = [
     "RepresentationModule",
     "Embedding",
+    "LowRankEmbeddingRepresentation",
     "EmbeddingSpecification",
-    "RGCNRepresentations",
     "NodePieceRepresentation",
     "CompGCNLayer",
     "CombinedCompGCNRepresentations",
     "SingleCompGCNRepresentation",
     "LabelBasedTransformerRepresentation",
+    "SubsetRepresentationModule",
+    # Utils
     "constrainers",
     "initializers",
     "normalizers",
@@ -459,6 +461,65 @@ class Embedding(RepresentationModule):
         return x
 
 
+class LowRankEmbeddingRepresentation(RepresentationModule):
+    r"""
+    Low-rank embedding factorization.
+
+    This representation reduces the number of trainable parameters by not learning independent weights for each index,
+    but rather having shared bases among all indices, and only learn the weights of the linear combination.
+
+    .. math ::
+        E[i] = \sum_k B[i, k] * W[k]
+    """
+
+    def __init__(
+        self,
+        *,
+        max_id: int,
+        shape: Sequence[int],
+        num_bases: int = 3,
+        weight_initializer: Initializer = uniform_norm_p1_,
+        **kwargs,
+    ):
+        """
+        Initialize the representations.
+
+        :param max_id:
+            the maximum ID (exclusively). Valid Ids reach from 0, ..., max_id-1
+        :param shape:
+            the shape of an individual base representation.
+        :param num_bases:
+            the number of bases. More bases increase expressivity, but also increase the number of trainable parameters.
+        :param weight_initializer:
+            the initializer for basis weights
+        :param kwargs:
+            additional keyword based arguments passed to :class:`pykeen.nn.emb.Embedding`, which is used for the base
+            representations.
+        """
+        super().__init__(max_id=max_id, shape=shape)
+        self.bases = Embedding(num_embeddings=num_bases, shape=shape, **kwargs)
+        self.weight_initializer = weight_initializer
+        self.weight = nn.Parameter(torch.empty(max_id, num_bases))
+        self.reset_parameters()
+
+    def reset_parameters(self) -> None:  # noqa: D102
+        self.bases.reset_parameters()
+        self.weight.data = self.weight_initializer(self.weight)
+
+    def forward(
+        self,
+        indices: Optional[torch.LongTensor] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        # get all base representations, shape: (num_bases, *shape)
+        bases = self.bases(indices=None)
+        # get base weights, shape: (*batch_dims, num_bases)
+        weight = self.weight
+        if indices is not None:
+            weight = weight[indices]
+        # weighted linear combination of bases, shape: (*batch_dims, *shape)
+        return torch.tensordot(weight, bases, dims=([-1], [0]))
+
+
 @dataclass
 class EmbeddingSpecification:
     """An embedding specification."""
@@ -525,6 +586,7 @@ def process_shape(
     return dim, shape
 
 
+#: Initializers
 initializers = {
     "xavier_uniform": xavier_uniform_,
     "xavier_uniform_norm": xavier_uniform_norm_,
@@ -538,6 +600,7 @@ initializers = {
     "init_phases": init_phases,
 }
 
+#: Constrainers
 constrainers = {
     "normalize": functional.normalize,
     "complex_normalize": complex_normalize,
@@ -569,197 +632,6 @@ def _handle(
         rv = functools.partial(value, **kwargs)  # type: ignore
         return cast(X, rv)
     return value
-
-
-class RGCNRepresentations(RepresentationModule):
-    r"""Entity representations enriched by R-GCN.
-
-    The GCN employed by the entity encoder is adapted to include typed edges.
-    The forward pass of the GCN is defined by:
-
-     .. math::
-
-        \textbf{e}_{i}^{l+1} = \sigma \left( \sum_{r \in \mathcal{R}}\sum_{j\in \mathcal{N}_{i}^{r}}
-        \frac{1}{c_{i,r}} \textbf{W}_{r}^{l} \textbf{e}_{j}^{l} + \textbf{W}_{0}^{l} \textbf{e}_{i}^{l}\right)
-
-    where $\mathcal{N}_{i}^{r}$ is the set of neighbors of node $i$ that are connected to
-    $i$ by relation $r$, $c_{i,r}$ is a fixed normalization constant (but it can also be introduced as an additional
-    parameter), and $\textbf{W}_{r}^{l} \in \mathbb{R}^{d^{(l)} \times d^{(l)}}$ and
-    $\textbf{W}_{0}^{l} \in \mathbb{R}^{d^{(l)} \times d^{(l)}}$ are weight matrices of the `l`-th layer of the
-    R-GCN.
-
-    The encoder aggregates for each node $e_i$ the latent representations of its neighbors and its
-    own latent representation $e_{i}^{l}$ into a new latent representation $e_{i}^{l+1}$.
-    In contrast to standard GCN, R-GCN defines relation specific transformations
-    $\textbf{W}_{r}^{l}$ which depend on the type and direction of an edge.
-
-    Since having one matrix for each relation introduces a large number of additional parameters, the authors instead
-    propose to use a decomposition, cf. :class:`pykeen.nn.message_passing.Decomposition`.
-    """
-
-    def __init__(
-        self,
-        triples_factory: CoreTriplesFactory,
-        embedding_specification: EmbeddingSpecification,
-        num_layers: int = 2,
-        use_bias: bool = True,
-        activation: Hint[nn.Module] = None,
-        activation_kwargs: Optional[Mapping[str, Any]] = None,
-        edge_dropout: float = 0.4,
-        self_loop_dropout: float = 0.2,
-        edge_weighting: Hint[EdgeWeighting] = None,
-        decomposition: Hint[Decomposition] = None,
-        decomposition_kwargs: Optional[Mapping[str, Any]] = None,
-        regularizer: Hint[Regularizer] = None,
-        regularizer_kwargs: Optional[Mapping[str, Any]] = None,
-    ):
-        """Instantiate the R-GCN encoder.
-
-        :param triples_factory:
-            The triples factory holding the training triples used for message passing.
-        :param embedding_specification:
-            The base embedding specification.
-        :param num_layers:
-            The number of layers.
-        :param use_bias:
-            Whether to use a bias.
-        :param activation:
-            The activation.
-        :param activation_kwargs:
-            Additional keyword based arguments passed if the activation is not pre-instantiated. Ignored otherwise.
-        :param edge_dropout:
-            The edge dropout to use. Does not apply to self-loops.
-        :param self_loop_dropout:
-            The self-loop dropout to use.
-        :param edge_weighting:
-            The edge weighting mechanism.
-        :param decomposition:
-            The decomposition, cf. :class:`pykeen.nn.message_passing.Decomposition`.
-        :param decomposition_kwargs:
-            Additional keyword based arguments passed to the decomposition upon instantiation.
-        :param regularizer:
-            A regularizer, which is applied to the selected embeddings in forward pass
-        :param regularizer_kwargs:
-            Additional keyword arguments passed to the regularizer
-        """
-        base_embeddings = embedding_specification.make(num_embeddings=triples_factory.num_entities)
-        super().__init__(max_id=triples_factory.num_entities, shape=base_embeddings.shape)
-        self.entity_embeddings = base_embeddings
-
-        if triples_factory.create_inverse_triples:
-            raise ValueError(
-                "RGCN internally creates inverse triples. It thus expects a triples factory without them.",
-            )
-
-        # Resolve edge weighting
-        self.edge_weighting = edge_weight_resolver.make(query=edge_weighting)
-
-        # dropout
-        self.edge_dropout = edge_dropout
-        self_loop_dropout = self_loop_dropout or edge_dropout
-
-        # Save graph using buffers, such that the tensors are moved together with the model
-        h, r, t = triples_factory.mapped_triples.t()
-        self.register_buffer("sources", h)
-        self.register_buffer("targets", t)
-        self.register_buffer("edge_types", r)
-
-        dim = base_embeddings.embedding_dim
-        self.layers = nn.ModuleList(
-            RGCNLayer(
-                input_dim=dim,
-                num_relations=triples_factory.num_relations,
-                output_dim=dim,
-                use_bias=use_bias,
-                # no activation on last layer
-                # cf. https://github.com/MichSchli/RelationPrediction/blob/c77b094fe5c17685ed138dae9ae49b304e0d8d89/code/common/model_builder.py#L275  # noqa: E501
-                activation=activation if i < num_layers - 1 else None,
-                activation_kwargs=activation_kwargs,
-                self_loop_dropout=self_loop_dropout,
-                decomposition=decomposition,
-                decomposition_kwargs=decomposition_kwargs,
-            )
-            for i in range(num_layers)
-        )
-
-        # buffering of enriched representations
-        self.enriched_embeddings = None
-
-        if regularizer is not None:
-            regularizer = regularizer_resolver.make(regularizer, pos_kwargs=regularizer_kwargs)
-        self.regularizer = regularizer
-
-    def post_parameter_update(self) -> None:  # noqa: D102
-        super().post_parameter_update()
-
-        # invalidate enriched embeddings
-        self.enriched_embeddings = None
-
-    def reset_parameters(self):  # noqa: D102
-        self.entity_embeddings.reset_parameters()
-
-        for m in self.layers:
-            if hasattr(m, "reset_parameters"):
-                m.reset_parameters()
-            elif any(p.requires_grad for p in m.parameters()):
-                logger.warning("Layers %s has parameters, but no reset_parameters.", m)
-
-    def _real_forward(self) -> torch.FloatTensor:
-        if self.enriched_embeddings is not None:
-            return self.enriched_embeddings
-
-        # Bind fields
-        # shape: (num_entities, embedding_dim)
-        x = self.entity_embeddings(indices=None)
-        sources = self.sources
-        targets = self.targets
-        edge_types = self.edge_types
-
-        # Edge dropout: drop the same edges on all layers (only in training mode)
-        if self.training and self.edge_dropout is not None:
-            # Get random dropout mask
-            edge_keep_mask = torch.rand(self.sources.shape[0], device=x.device) > self.edge_dropout
-
-            # Apply to edges
-            sources = sources[edge_keep_mask]
-            targets = targets[edge_keep_mask]
-            edge_types = edge_types[edge_keep_mask]
-
-        # fixed edges -> pre-compute weights
-        if self.edge_weighting is not None and sources.numel() > 0:
-            edge_weights = torch.empty_like(sources, dtype=torch.float32)
-            for r in range(edge_types.max().item() + 1):
-                mask = edge_types == r
-                if mask.any():
-                    edge_weights[mask] = self.edge_weighting(sources[mask], targets[mask])
-        else:
-            edge_weights = None
-
-        for layer in self.layers:
-            x = layer(
-                x=x,
-                source=sources,
-                target=targets,
-                edge_type=edge_types,
-                edge_weights=edge_weights,
-            )
-
-        # Cache enriched representations
-        self.enriched_embeddings = x
-
-        return x
-
-    def forward(
-        self,
-        indices: Optional[torch.LongTensor] = None,
-    ) -> torch.FloatTensor:
-        """Enrich the entity embeddings of the decoder using R-GCN message propagation."""
-        x = self._real_forward()
-        if indices is not None:
-            x = x[indices]
-        if self.regularizer is not None:
-            self.regularizer.update(x)
-        return x
 
 
 class CompGCNLayer(nn.Module):
