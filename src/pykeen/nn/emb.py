@@ -50,6 +50,7 @@ __all__ = [
     "SingleCompGCNRepresentation",
     "LabelBasedTransformerRepresentation",
     "SubsetRepresentationModule",
+    # Utils
     "constrainers",
     "initializers",
     "normalizers",
@@ -608,6 +609,7 @@ def process_shape(
     return dim, shape
 
 
+#: Initializers
 initializers = {
     "xavier_uniform": xavier_uniform_,
     "xavier_uniform_norm": xavier_uniform_norm_,
@@ -621,6 +623,7 @@ initializers = {
     "init_phases": init_phases,
 }
 
+#: Constrainers
 constrainers = {
     "normalize": functional.normalize,
     "complex_normalize": complex_normalize,
