@@ -16,14 +16,26 @@ which enrich via CompGCN layers.
 
 Decomposition
 -------------
-NodePiece
-~~~~~~~~~
+
 Since knowledge graphs may contain a large number of entities, having
 independent trainable embeddings for each of them may result in an
 excessive amount of trainable parameters. Therefore, methods have been
 developed, which do not learn independent representations, but rather
 have a set of base representations, and create individual representations
-by combining them. An example is NodePiece, which takes inspiration
+by combining them. 
+
+Low-Rank Factorization
+~~~~~~~~~~~~~~~~~~~~~~
+A simple method to reduce the number of parameters is to use a low-rank
+decomposition of the embedding matrix, as implemented in 
+:class:`pykeen.nn.emb.LowRankEmbeddingRepresentation`. Here, each
+representation is a linear combination of shared base representations.
+Typically, the number of bases is chosen smaller than the dimension of 
+each base representation.
+
+NodePiece
+~~~~~~~~~
+Another example is NodePiece, which takes inspiration
 from tokenization we encounter in, e.g.. NLP, and represents each entity
 as a set of tokens. The implementation in PyKEEN,
 :class:`pykeen.nn.emb.NodePieceRepresentation`, implements a simple yet
@@ -31,10 +43,6 @@ effective variant thereof, which uses a set of randomly chosen incident
 relations (including inverse relations) as tokens.
 
 .. seealso:: https://towardsdatascience.com/nodepiece-tokenizing-knowledge-graphs-6dd2b91847aa
-
-Bases
-~~~~~
-.. todo:: write something about :class:`pykeen.nn.emb.LowRankEmbeddingRepresentation`
 
 Label-based
 -----------
