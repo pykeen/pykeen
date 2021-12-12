@@ -24,15 +24,8 @@ __all__ = [
     "get_metric_list",
 ]
 
-_EVALUATOR_SUFFIX = "Evaluator"
-_EVALUATORS: Set[Type[Evaluator]] = {
-    RankBasedEvaluator,
-    SklearnEvaluator,
-}
-evaluator_resolver = Resolver(
-    _EVALUATORS,
-    base=Evaluator,  # type: ignore
-    suffix=_EVALUATOR_SUFFIX,
+evaluator_resolver = Resolver.from_subclasses(
+    base=Evaluator,
     default=RankBasedEvaluator,
 )
 
