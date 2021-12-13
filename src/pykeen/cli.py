@@ -379,10 +379,10 @@ def _get_metrics_lines(tablefmt: str):
         label = field.metadata["name"]
         link = field.metadata.get("link")
         if link:
-            label = f'[{label}]({link})'
+            label = f"[{label}]({link})"
         yv = [
             label,
-            field.metadata['range'],
+            field.metadata["range"],
             "📈" if field.metadata["increasing"] else "📉",
             field.metadata["doc"],
             METRIC_NAMES[name],

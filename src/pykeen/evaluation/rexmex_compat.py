@@ -101,6 +101,7 @@ classifier_annotator.lower(
 classifier_annotator.higher(
     rmc.threat_score,
     description="TP / (TP + FN + FP)",
+    link="https://rexmex.readthedocs.io/en/latest/modules/root.html#rexmex.metrics.classification.threat_score",
 )
 classifier_annotator.higher(
     rmc.fowlkes_mallows_index,
@@ -136,6 +137,7 @@ classifier_annotator.higher(
     rmc.balanced_accuracy_score,
     name="Balanced Accuracy",
     description="An adjusted version of the accuracy for imbalanced datasets",
+    link="https://scikit-learn.org/stable/modules/generated/sklearn.metrics.balanced_accuracy_score.html",
 )
 classifier_annotator.higher(
     rmc.f1_score, name="F1 Score", description="2TP / (2TP + FP + FN)", link="https://en.wikipedia.org/wiki/F1_score"
@@ -144,17 +146,20 @@ classifier_annotator.higher(
     rmc.average_precision_score,
     name="Average Precision",
     description="A summary statistic over the precision-recall curve",
+    link="https://scikit-learn.org/stable/modules/generated/sklearn.metrics.average_precision_score.html?highlight=average_precision_score",
 )
 classifier_annotator.higher(
     rmc.matthews_correlation_coefficient,
     lower=-1.0,
     upper=1.0,
     description="A balanced measure applicable even with class imbalance",
+    link="https://en.wikipedia.org/wiki/Phi_coefficient",
 )
 classifier_annotator.higher(
     rmc.pr_auc_score,
     name="AUC-PR",
     description="Area Under the Precision-Recall Curve",
+    link="https://rexmex.readthedocs.io/en/latest/modules/root.html#rexmex.metrics.classification.pr_auc_score",
 )
 
 

@@ -21,10 +21,10 @@ class MetricAnnotation(NamedTuple):
     lower: float
     upper: float
     higher_is_better: bool
+    description: str
+    link: str
     lower_inclusive: bool = True
     upper_inclusive: bool = True
-    description: Optional[str] = None
-    link: Optional[str] = None
 
     def interval(self) -> str:
         """Get the math notation for the range of this metric."""
@@ -71,12 +71,12 @@ class MetricAnnotator:
         *,
         higher_is_better: bool,
         description: str,
+        link: str,
         name: Optional[str] = None,
         lower: float = 0.0,
         lower_inclusive: bool = True,
         upper: float = 1.0,
         upper_inclusive: bool = True,
-        link: Optional[str] = None,
     ):
         """Annotate a function."""
         self.metrics[func] = MetricAnnotation(
