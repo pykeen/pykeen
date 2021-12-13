@@ -254,46 +254,44 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 | rankbased | [`pykeen.evaluation.RankBasedEvaluator`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.RankBasedEvaluator.html) | A rank-based evaluator for KGE models.        |
 | sklearn   | [`pykeen.evaluation.SklearnEvaluator`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.SklearnEvaluator.html)     | An evaluator that uses a Scikit-learn metric. |
 
-### Metrics (40)
+### Metrics (38)
 
-| Name                                        | Range      | Direction   | Description                                                                                     | Type           |
-|---------------------------------------------|------------|-------------|-------------------------------------------------------------------------------------------------|----------------|
-| Accuracy                                    | `[0,1]`    | 📈          | https://en.wikipedia.org/wiki/Accuracy                                                          | Classification |
-| Area Under the Precision-Recall Curve       | `[0,1]`    | 📈          |                                                                                                 | Classification |
-| Area Under the ROC Curve                    | `[0,1]`    | 📈          | https://en.wikipedia.org/wiki/Receiver_operating_characteristic                                 | Classification |
-| Average Precision                           | `[0,1]`    | 📈          |                                                                                                 | Classification |
-| Balanced Accuracy                           | `[0,1]`    | 📈          |                                                                                                 | Classification |
-| Diagnostic Odds Ratio                       | `[0,inf)`  | 📈          | https://en.wikipedia.org/wiki/Diagnostic_odds_ratio                                             | Classification |
-| F1 Score                                    | `[0,1]`    | 📈          | https://en.wikipedia.org/wiki/F1_score                                                          | Classification |
-| False Discovery Rate                        | `[0,1]`    | 📉          | https://en.wikipedia.org/wiki/False_discovery_rate                                              | Classification |
-| False Negative Rate                         | `[0,1]`    | 📉          | https://en.wikipedia.org/wiki/Type_I_and_type_II_errors#False_positive_and_false_negative_rates | Classification |
-| False Omission Rate                         | `[0,1]`    | 📉          | https://en.wikipedia.org/wiki/Positive_and_negative_predictive_values                           | Classification |
-| False Positive Rate                         | `[0,1]`    | 📉          | https://en.wikipedia.org/wiki/False_positive_rate                                               | Classification |
-| Fowlkes Mallows Index                       | `[0,1]`    | 📈          | https://en.wikipedia.org/wiki/Fowlkes%E2%80%93Mallows_index                                     | Classification |
-| Informedness                                | `[0,1]`    | 📈          | https://en.wikipedia.org/wiki/Informedness                                                      | Classification |
-| Markedness                                  | `[0,1]`    | 📈          | https://en.wikipedia.org/wiki/Markedness                                                        | Classification |
-| Matthews Correlation Coefficient            | `[-1,1]`   | 📈          | A balanced measure applicable even with class imbalance                                         | Classification |
-| Negative Likelihood Ratio                   | `[0,inf)`  | 📉          | https://en.wikipedia.org/wiki/Negative_likelihood_ratio                                         | Classification |
-| Negative Predictive Value                   | `[0,1]`    | 📈          | https://en.wikipedia.org/wiki/Negative_predictive_value                                         | Classification |
-| Positive Likelihood Ratio                   | `[0,inf)`  | 📈          | https://en.wikipedia.org/wiki/Positive_likelihood_ratio                                         | Classification |
-| Positive Predictive Value                   | `[0,1]`    | 📈          | https://en.wikipedia.org/wiki/Positive_predictive_value                                         | Classification |
-| Precision                                   | `[0,1]`    | 📈          | Percentage of observed positives that are correct                                               | Classification |
-| Prevalence Threshold                        | `[0,1]`    | 📉          | https://en.wikipedia.org/wiki/Prevalence_threshold                                              | Classification |
-| Recall                                      | `[0,1]`    | 📈          | Percentage of correct positives that are observed                                               | Classification |
-| Threat Score                                | `[0,1]`    | 📈          |                                                                                                 | Classification |
-| True Negative Rate                          | `[0,1]`    | 📈          | https://en.wikipedia.org/wiki/Specificity_(tests)                                               | Classification |
-| True Positive Rate                          | `[0,1]`    | 📈          | https://en.wikipedia.org/wiki/Sensitivity_(test)                                                | Classification |
-| Adjusted Arithmetic Mean Rank (AAMR)        | `(0, 2)`   | 📉          | The mean over all chance-adjusted ranks.                                                        | Ranking        |
-| Adjusted Arithmetic Mean Rank Index (AAMRI) | `[-1, 1]`  | 📈          | The re-indexed adjusted mean rank (AAMR)                                                        | Ranking        |
-| Geometric Mean Rank (GMR)                   | `[1, inf)` | 📉          | The geometric mean over all ranks.                                                              | Ranking        |
-| Harmonic Mean Rank (HMR)                    | `[1, inf)` | 📉          | The harmonic mean over all ranks.                                                               | Ranking        |
-| Hits @ K                                    | `[0, 1]`   | 📈          | The relative frequency of ranks not larger than a given k.                                      | Ranking        |
-| Inverse Arithmetic Mean Rank (IAMR)         | `(0, 1]`   | 📈          | The inverse of the arithmetic mean over all ranks.                                              | Ranking        |
-| Inverse Geometric Mean Rank (IGMR)          | `(0, 1]`   | 📈          | The inverse of the geometric mean over all ranks.                                               | Ranking        |
-| Inverse Median Rank                         | `(0, 1]`   | 📈          | The inverse of the median over all ranks.                                                       | Ranking        |
-| Mean Rank (MR)                              | `[1, inf)` | 📉          | The arithmetic mean over all ranks.                                                             | Ranking        |
-| Mean Reciprocal Rank (MRR)                  | `(0, 1]`   | 📈          | The inverse of the harmonic mean over all ranks.                                                | Ranking        |
-| Median Rank                                 | `[1, inf)` | 📉          | The median over all ranks.                                                                      | Ranking        |
+| Name                                        | Range    | Direction   | Description                                                 | Type           |
+|---------------------------------------------|----------|-------------|-------------------------------------------------------------|----------------|
+| AUC-PR                                      | [0,1]    | 📈          | Area Under the Precision-Recall Curve                       | Classification |
+| AUC-ROC                                     | [0,1]    | 📈          | Area Under the ROC Curve                                    | Classification |
+| Accuracy                                    | [0,1]    | 📈          | (TP + TN) / (TP + TN + FP + FN)                             | Classification |
+| Average Precision                           | [0,1]    | 📈          | A summary statistic over the precision-recall curve         | Classification |
+| Balanced Accuracy                           | [0,1]    | 📈          | An adjusted version of the accuracy for imbalanced datasets | Classification |
+| Diagnostic Odds Ratio                       | [0,inf)  | 📈          | LR+/LR-                                                     | Classification |
+| F1 Score                                    | [0,1]    | 📈          | 2TP / (2TP + FP + FN)                                       | Classification |
+| False Discovery Rate                        | [0,1]    | 📉          | FP / (FP + TP)                                              | Classification |
+| False Negative Rate                         | [0,1]    | 📉          | FN / (FN + TP)                                              | Classification |
+| False Omission Rate                         | [0,1]    | 📉          | FN / (FN + TN)                                              | Classification |
+| False Positive Rate                         | [0,1]    | 📉          | FP / (FP + TN)                                              | Classification |
+| Fowlkes Mallows Index                       | [0,1]    | 📈          | √PPV x √TPR                                                 | Classification |
+| Informedness                                | [0,1]    | 📈          | TPR + TNR - 1                                               | Classification |
+| Markedness                                  | [0,1]    | 📈          | PPV + NPV - 1                                               | Classification |
+| Matthews Correlation Coefficient            | [-1,1]   | 📈          | A balanced measure applicable even with class imbalance     | Classification |
+| Negative Likelihood Ratio                   | [0,inf)  | 📉          | FNR / TNR                                                   | Classification |
+| Negative Predictive Value                   | [0,1]    | 📈          | TN / (TN + FN)                                              | Classification |
+| Positive Likelihood Ratio                   | [0,inf)  | 📈          | TPR / FPR                                                   | Classification |
+| Positive Predictive Value                   | [0,1]    | 📈          | TP / (TP + FP)                                              | Classification |
+| Prevalence Threshold                        | [0,1]    | 📉          | √FPR / (√TPR + √FPR)                                        | Classification |
+| Threat Score                                | [0,1]    | 📈          | TP / (TP + FN + FP)                                         | Classification |
+| True Negative Rate                          | [0,1]    | 📈          | TN / (TN + FP)                                              | Classification |
+| True Positive Rate                          | [0,1]    | 📈          | TP / (TP + FN)                                              | Classification |
+| Adjusted Arithmetic Mean Rank (AAMR)        | (0, 2)   | 📉          | The mean over all chance-adjusted ranks.                    | Ranking        |
+| Adjusted Arithmetic Mean Rank Index (AAMRI) | [-1, 1]  | 📈          | The re-indexed adjusted mean rank (AAMR)                    | Ranking        |
+| Geometric Mean Rank (GMR)                   | [1, inf) | 📉          | The geometric mean over all ranks.                          | Ranking        |
+| Harmonic Mean Rank (HMR)                    | [1, inf) | 📉          | The harmonic mean over all ranks.                           | Ranking        |
+| Hits @ K                                    | [0, 1]   | 📈          | The relative frequency of ranks not larger than a given k.  | Ranking        |
+| Inverse Arithmetic Mean Rank (IAMR)         | (0, 1]   | 📈          | The inverse of the arithmetic mean over all ranks.          | Ranking        |
+| Inverse Geometric Mean Rank (IGMR)          | (0, 1]   | 📈          | The inverse of the geometric mean over all ranks.           | Ranking        |
+| Inverse Median Rank                         | (0, 1]   | 📈          | The inverse of the median over all ranks.                   | Ranking        |
+| Mean Rank (MR)                              | [1, inf) | 📉          | The arithmetic mean over all ranks.                         | Ranking        |
+| Mean Reciprocal Rank (MRR)                  | (0, 1]   | 📈          | The inverse of the harmonic mean over all ranks.            | Ranking        |
+| Median Rank                                 | [1, inf) | 📉          | The median over all ranks.                                  | Ranking        |
 
 ### Trackers (8)
 

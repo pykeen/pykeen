@@ -36,70 +36,126 @@ DUPLICATE_CLASSIFIERS = {
     rmc.hit_rate: rmc.true_positive_rate,
     rmc.sensitivity: rmc.true_positive_rate,
     rmc.critical_success_index: rmc.threat_score,
+    rmc.precision_score: rmc.positive_predictive_value,
+    rmc.recall_score: rmc.true_positive_rate,
 }
 
 classifier_annotator = MetricAnnotator("classification")
-classifier_annotator.higher(rmc.true_negative_rate, link="https://en.wikipedia.org/wiki/Specificity_(tests)")
-classifier_annotator.higher(rmc.true_positive_rate, link="https://en.wikipedia.org/wiki/Sensitivity_(test)")
 classifier_annotator.higher(
-    rmc.positive_predictive_value, link="https://en.wikipedia.org/wiki/Positive_predictive_value"
+    rmc.true_negative_rate,
+    description="TN / (TN + FP)",
+    link="https://en.wikipedia.org/wiki/Specificity_(tests)",
 )
 classifier_annotator.higher(
-    rmc.negative_predictive_value, link="https://en.wikipedia.org/wiki/Negative_predictive_value"
+    rmc.true_positive_rate, description="TP / (TP + FN)", link="https://en.wikipedia.org/wiki/Sensitivity_(test)"
 )
 classifier_annotator.higher(
-    rmc.precision_score, name="Precision", description="Percentage of observed positives that are correct"
+    rmc.positive_predictive_value,
+    description="TP / (TP + FP)",
+    link="https://en.wikipedia.org/wiki/Positive_predictive_value",
 )
 classifier_annotator.higher(
-    rmc.recall_score, name="Recall", description="Percentage of correct positives that are observed"
+    rmc.negative_predictive_value,
+    description="TN / (TN + FN)",
+    link="https://en.wikipedia.org/wiki/Negative_predictive_value",
 )
 classifier_annotator.lower(
     rmc.false_negative_rate,
+    description="FN / (FN + TP)",
     link="https://en.wikipedia.org/wiki/Type_I_and_type_II_errors#False_positive_and_false_negative_rates",
 )
-classifier_annotator.lower(rmc.false_positive_rate, link="https://en.wikipedia.org/wiki/False_positive_rate")
-classifier_annotator.lower(rmc.false_discovery_rate, link="https://en.wikipedia.org/wiki/False_discovery_rate")
 classifier_annotator.lower(
-    rmc.false_omission_rate, link="https://en.wikipedia.org/wiki/Positive_and_negative_predictive_values"
+    rmc.false_positive_rate,
+    description="FP / (FP + TN)",
+    link="https://en.wikipedia.org/wiki/False_positive_rate",
+)
+classifier_annotator.lower(
+    rmc.false_discovery_rate,
+    description="FP / (FP + TP)",
+    link="https://en.wikipedia.org/wiki/False_discovery_rate",
+)
+classifier_annotator.lower(
+    rmc.false_omission_rate,
+    description="FN / (FN + TN)",
+    link="https://en.wikipedia.org/wiki/Positive_and_negative_predictive_values",
 )
 classifier_annotator.higher(
     rmc.positive_likelihood_ratio,
     lower=0.0,
     upper=float("inf"),
+    description="TPR / FPR",
     link="https://en.wikipedia.org/wiki/Positive_likelihood_ratio",
 )
 classifier_annotator.lower(
     rmc.negative_likelihood_ratio,
     lower=0.0,
     upper=float("inf"),
+    description="FNR / TNR",
     link="https://en.wikipedia.org/wiki/Negative_likelihood_ratio",
 )
-classifier_annotator.lower(rmc.prevalence_threshold, link="https://en.wikipedia.org/wiki/Prevalence_threshold")
-classifier_annotator.higher(rmc.threat_score)
-classifier_annotator.higher(
-    rmc.fowlkes_mallows_index, link="https://en.wikipedia.org/wiki/Fowlkes%E2%80%93Mallows_index"
+classifier_annotator.lower(
+    rmc.prevalence_threshold,
+    description="√FPR / (√TPR + √FPR)",
+    link="https://en.wikipedia.org/wiki/Prevalence_threshold",
 )
-classifier_annotator.higher(rmc.informedness, link="https://en.wikipedia.org/wiki/Informedness")
-classifier_annotator.higher(rmc.markedness, link="https://en.wikipedia.org/wiki/Markedness")
 classifier_annotator.higher(
-    rmc.diagnostic_odds_ratio, lower=0.0, upper=float("inf"), link="https://en.wikipedia.org/wiki/Diagnostic_odds_ratio"
+    rmc.threat_score,
+    description="TP / (TP + FN + FP)",
+)
+classifier_annotator.higher(
+    rmc.fowlkes_mallows_index,
+    description="√PPV x √TPR",
+    link="https://en.wikipedia.org/wiki/Fowlkes%E2%80%93Mallows_index",
+)
+classifier_annotator.higher(
+    rmc.informedness, description="TPR + TNR - 1", link="https://en.wikipedia.org/wiki/Informedness"
+)
+classifier_annotator.higher(
+    rmc.markedness, description="PPV + NPV - 1", link="https://en.wikipedia.org/wiki/Markedness"
+)
+classifier_annotator.higher(
+    rmc.diagnostic_odds_ratio,
+    lower=0.0,
+    upper=float("inf"),
+    description="LR+/LR-",
+    link="https://en.wikipedia.org/wiki/Diagnostic_odds_ratio",
 )
 classifier_annotator.higher(
     rmc.roc_auc_score,
-    name="Area Under the ROC Curve",
+    name="AUC-ROC",
+    description="Area Under the ROC Curve",
     link="https://en.wikipedia.org/wiki/Receiver_operating_characteristic",
 )
-classifier_annotator.higher(rmc.accuracy_score, name="Accuracy", link="https://en.wikipedia.org/wiki/Accuracy")
-classifier_annotator.higher(rmc.balanced_accuracy_score, name="Balanced Accuracy")
-classifier_annotator.higher(rmc.f1_score, name="F1 Score", link="https://en.wikipedia.org/wiki/F1_score")
-classifier_annotator.higher(rmc.average_precision_score, name="Average Precision")
+classifier_annotator.higher(
+    rmc.accuracy_score,
+    name="Accuracy",
+    description="(TP + TN) / (TP + TN + FP + FN)",
+    link="https://en.wikipedia.org/wiki/Accuracy",
+)
+classifier_annotator.higher(
+    rmc.balanced_accuracy_score,
+    name="Balanced Accuracy",
+    description="An adjusted version of the accuracy for imbalanced datasets",
+)
+classifier_annotator.higher(
+    rmc.f1_score, name="F1 Score", description="2TP / (2TP + FP + FN)", link="https://en.wikipedia.org/wiki/F1_score"
+)
+classifier_annotator.higher(
+    rmc.average_precision_score,
+    name="Average Precision",
+    description="A summary statistic over the precision-recall curve",
+)
 classifier_annotator.higher(
     rmc.matthews_correlation_coefficient,
     lower=-1.0,
     upper=1.0,
     description="A balanced measure applicable even with class imbalance",
 )
-classifier_annotator.higher(rmc.pr_auc_score, name="Area Under the Precision-Recall Curve")
+classifier_annotator.higher(
+    rmc.pr_auc_score,
+    name="AUC-PR",
+    description="Area Under the Precision-Recall Curve",
+)
 
 
 def _check():
