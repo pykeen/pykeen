@@ -249,10 +249,10 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 
 ### Evaluators (2)
 
-| Name      | Reference                                                                                                                       | Description                                   |
-|-----------|---------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------|
-| rankbased | [`pykeen.evaluation.RankBasedEvaluator`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.RankBasedEvaluator.html) | A rank-based evaluator for KGE models.        |
-| sklearn   | [`pykeen.evaluation.SklearnEvaluator`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.SklearnEvaluator.html)     | An evaluator that uses a Scikit-learn metric. |
+| Name           | Reference                                                                                                                                 | Description                                      |
+|----------------|-------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------|
+| classification | [`pykeen.evaluation.ClassificationEvaluator`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.ClassificationEvaluator.html) | An evaluator that uses a classification metrics. |
+| rankbased      | [`pykeen.evaluation.RankBasedEvaluator`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.RankBasedEvaluator.html)           | A rank-based evaluator for KGE models.           |
 
 ### Metrics (37)
 

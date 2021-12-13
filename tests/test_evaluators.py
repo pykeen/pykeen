@@ -12,7 +12,14 @@ import numpy
 import torch
 
 from pykeen.datasets import Nations
-from pykeen.evaluation import Evaluator, MetricResults, RankBasedEvaluator, RankBasedMetricResults
+from pykeen.evaluation import (
+    ClassificationEvaluator,
+    ClassificationMetricResults,
+    Evaluator,
+    MetricResults,
+    RankBasedEvaluator,
+    RankBasedMetricResults,
+)
 from pykeen.evaluation.evaluator import create_dense_positive_mask_, create_sparse_positive_filter_, filter_scores_
 from pykeen.evaluation.rank_based_evaluator import (
     RANK_EXPECTED_REALISTIC,
@@ -25,7 +32,6 @@ from pykeen.evaluation.rank_based_evaluator import (
     compute_rank_from_scores,
     resolve_metric_name,
 )
-from pykeen.evaluation.sklearn import SklearnEvaluator, SklearnMetricResults
 from pykeen.models import Model, TransE
 from pykeen.triples import TriplesFactory
 from pykeen.typing import MappedTriples
@@ -223,10 +229,10 @@ class RankBasedEvaluatorTests(_AbstractEvaluatorTests, unittest.TestCase):
         # TODO: Validate with data?
 
 
-class SklearnEvaluatorTest(_AbstractEvaluatorTests, unittest.TestCase):
-    """Unittest for the SklearnEvaluator."""
+class ClassificationEvaluatorTest(_AbstractEvaluatorTests, unittest.TestCase):
+    """Unittest for the ClassificationEvaluator."""
 
-    evaluator_cls = SklearnEvaluator
+    evaluator_cls = ClassificationEvaluator
 
     def _validate_result(
         self,
@@ -234,7 +240,7 @@ class SklearnEvaluatorTest(_AbstractEvaluatorTests, unittest.TestCase):
         data: Dict[str, torch.Tensor],
     ):
         # Check for correct class
-        assert isinstance(result, SklearnMetricResults)
+        assert isinstance(result, ClassificationMetricResults)
 
         # check value
         scores = data["scores"].detach().cpu().numpy()
@@ -253,7 +259,7 @@ class SklearnEvaluatorTest(_AbstractEvaluatorTests, unittest.TestCase):
         mask = numpy.concatenate(mask_filtered, axis=0)
         scores = numpy.concatenate(scores_filtered, axis=0)
 
-        for field in sorted(dataclasses.fields(SklearnMetricResults), key=attrgetter("name")):
+        for field in sorted(dataclasses.fields(ClassificationMetricResults), key=attrgetter("name")):
             with self.subTest(metric=field.name):
                 f = field.metadata["f"]
                 exp_score = f(numpy.array(mask.flat), numpy.array(scores.flat))
