@@ -1001,7 +1001,12 @@ def pipeline(  # noqa: C901
         validation=validation,
     )
     if dataset is not None:
-        _result_tracker.log_params(dict(dataset=dataset_instance.get_normalized_name()))
+        _result_tracker.log_params(
+            dict(
+                dataset=dataset_instance.get_normalized_name(),
+                dataset_kwargs=dataset_kwargs,
+            )
+        )
     else:  # means that dataset was defined by triples factories
         _result_tracker.log_params(
             dict(
@@ -1162,32 +1167,12 @@ def pipeline(  # noqa: C901
     _result_tracker.log_params(params=training_kwargs, prefix="training")
 
     # Add logging for debugging
+    configuration_tracker = _result_tracker.trackers[-1]
+    assert isinstance(configuration_tracker, PythonResultTracker)
+    configuration = configuration_tracker.configuration
     logging.debug("Run Pipeline based on following config:")
-    if dataset is not None:
-        logging.debug(f"dataset: {dataset}")
-        logging.debug(f"dataset_kwargs: {dataset_kwargs}")
-    else:
-        logging.debug("training: %s", training)
-        logging.debug("testing: %s", testing)
-        if validation:
-            logging.debug("validation: %s", validation)
-    logging.debug(f"model: {model_instance}")
-    logging.debug(f"model_kwargs: {model_kwargs}")
-    logging.debug(f"loss: {model_instance.loss}")
-    logging.debug(f"loss_kwargs: {loss_kwargs}")
-    logging.debug(f"regularizer: {regularizer}")
-    logging.debug(f"regularizer_kwargs: {regularizer_kwargs}")
-    logging.debug(f"optimizer: {optimizer}")
-    logging.debug(f"optimizer_kwargs: {optimizer_kwargs}")
-    logging.debug(f"training_loop: {training_loop_instance}")
-    if negative_sampler_cls is not None:
-        logging.debug(f"negative_sampler: {negative_sampler_cls}")
-        logging.debug(f"_negative_sampler_kwargs: {negative_sampler_kwargs}")
-    logging.debug(f"_training_kwargs: {training_kwargs}")
-    logging.debug(f"stopper: {stopper_instance}")
-    logging.debug(f"stopper_kwargs: {stopper_kwargs}")
-    logging.debug(f"evaluator: {evaluator}")
-    logging.debug(f"evaluator_kwargs: {evaluator_kwargs}")
+    for key, value in configuration.items():
+        logging.debug(f"{key}: {value}")
 
     # Train like Cristiano Ronaldo
     training_start_time = time.time()
@@ -1255,6 +1240,8 @@ def pipeline(  # noqa: C901
     # Add logging about evaluator for debugging
     logging.debug("Evaluation will be run with following parameters:")
     logging.debug(f"evaluation_kwargs: {evaluation_kwargs}")
+    # TODO: log this?
+    # configuration_tracker.log_params(...)
     evaluate_start_time = time.time()
     metric_results: MetricResults = _safe_evaluate(
         model=model_instance,
@@ -1277,13 +1264,7 @@ def pipeline(  # noqa: C901
         training_loop=training_loop_instance,
         losses=losses,
         stopper=stopper_instance,
-        configuration=next(
-            iter(
-                tracker.configuration
-                for tracker in _result_tracker.trackers
-                if isinstance(tracker, PythonResultTracker)
-            )
-        ),
+        configuration=configuration,
         metric_results=metric_results,
         metadata=metadata,
         train_seconds=training_end_time,
