@@ -254,11 +254,10 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 | rankbased | [`pykeen.evaluation.RankBasedEvaluator`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.RankBasedEvaluator.html) | A rank-based evaluator for KGE models.        |
 | sklearn   | [`pykeen.evaluation.SklearnEvaluator`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.SklearnEvaluator.html)     | An evaluator that uses a Scikit-learn metric. |
 
-### Metrics (38)
+### Metrics (37)
 
 | Name                                                                                                                   | Interval   | Direction   | Description                                                 | Type           |
 |------------------------------------------------------------------------------------------------------------------------|------------|-------------|-------------------------------------------------------------|----------------|
-| [AUC-PR](https://rexmex.readthedocs.io/en/latest/modules/root.html#rexmex.metrics.classification.pr_auc_score)         | [0, 1]     | 📈          | Area Under the Precision-Recall Curve                       | Classification |
 | [AUC-ROC](https://en.wikipedia.org/wiki/Receiver_operating_characteristic)                                             | [0, 1]     | 📈          | Area Under the ROC Curve                                    | Classification |
 | [Accuracy](https://en.wikipedia.org/wiki/Accuracy)                                                                     | [0, 1]     | 📈          | (TP + TN) / (TP + TN + FP + FN)                             | Classification |
 | [Average Precision](https://scikit-learn.org/stable/modules/generated/sklearn.metrics.average_precision_score.html)    | [0, 1]     | 📈          | A summary statistic over the precision-recall curve         | Classification |

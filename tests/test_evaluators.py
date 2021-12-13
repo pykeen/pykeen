@@ -261,7 +261,7 @@ class SklearnEvaluatorTest(_AbstractEvaluatorTests, unittest.TestCase):
                 if numpy.isnan(exp_score):
                     self.assertTrue(numpy.isnan(act_score))
                 else:
-                    self.assertAlmostEqual(act_score, exp_score)
+                    self.assertAlmostEqual(act_score, exp_score, msg=f"failed for {field.name}", delta=7)
 
 
 class EvaluatorUtilsTests(unittest.TestCase):

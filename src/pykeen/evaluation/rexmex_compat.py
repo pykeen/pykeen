@@ -162,12 +162,13 @@ classifier_annotator.higher(
     description="A balanced measure applicable even with class imbalance",
     link="https://en.wikipedia.org/wiki/Phi_coefficient",
 )
-classifier_annotator.higher(
-    rmc.pr_auc_score,
-    name="AUC-PR",
-    description="Area Under the Precision-Recall Curve",
-    link="https://rexmex.readthedocs.io/en/latest/modules/root.html#rexmex.metrics.classification.pr_auc_score",
-)
+# TODO there's something wrong with this, so add it later
+# classifier_annotator.higher(
+#     rmc.pr_auc_score,
+#     name="AUC-PR",
+#     description="Area Under the Precision-Recall Curve",
+#     link="https://rexmex.readthedocs.io/en/latest/modules/root.html#rexmex.metrics.classification.pr_auc_score",
+# )
 
 
 def _check():
