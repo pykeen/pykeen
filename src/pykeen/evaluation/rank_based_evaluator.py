@@ -250,6 +250,7 @@ class RankBasedMetricResults(MetricResults):
             increasing=False,
             range="[1, inf)",
             doc="The arithmetic mean over all ranks.",
+            link="https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#mean-rank",
         )
     )
 
@@ -259,6 +260,7 @@ class RankBasedMetricResults(MetricResults):
             increasing=False,
             range="[1, inf)",
             doc="The geometric mean over all ranks.",
+            link="https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html",
         )
     )
 
@@ -277,6 +279,7 @@ class RankBasedMetricResults(MetricResults):
             increasing=False,
             range="[1, inf)",
             doc="The harmonic mean over all ranks.",
+            link="https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html",
         )
     )
 
@@ -286,6 +289,7 @@ class RankBasedMetricResults(MetricResults):
             increasing=True,
             range="(0, 1]",
             doc="The inverse of the arithmetic mean over all ranks.",
+            link="https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html",
         )
     )
 
@@ -295,6 +299,7 @@ class RankBasedMetricResults(MetricResults):
             increasing=True,
             range="(0, 1]",
             doc="The inverse of the geometric mean over all ranks.",
+            link="https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html",
         )
     )
 
@@ -304,6 +309,7 @@ class RankBasedMetricResults(MetricResults):
             increasing=True,
             range="(0, 1]",
             doc="The inverse of the harmonic mean over all ranks.",
+            link="https://en.wikipedia.org/wiki/Mean_reciprocal_rank",
         )
     )
 
@@ -355,6 +361,7 @@ class RankBasedMetricResults(MetricResults):
             range="[0, 1]",
             increasing=True,
             doc="The relative frequency of ranks not larger than a given k.",
+            link="https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#hits-k"
         )
     )
 
@@ -364,6 +371,7 @@ class RankBasedMetricResults(MetricResults):
             increasing=False,
             range="(0, 2)",
             doc="The mean over all chance-adjusted ranks.",
+            link="https://arxiv.org/abs/2002.06914",
         )
     )
 
@@ -373,6 +381,7 @@ class RankBasedMetricResults(MetricResults):
             increasing=True,
             range="[-1, 1]",
             doc="The re-indexed adjusted mean rank (AAMR)",
+            link="https://arxiv.org/abs/2002.06914",
         )
     )
 
