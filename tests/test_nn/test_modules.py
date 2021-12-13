@@ -14,13 +14,6 @@ import unittest_templates
 import pykeen.nn.modules
 import pykeen.utils
 from pykeen.nn.functional import _rotate_quaternion, _split_quaternion, distmult_interaction
-from pykeen.nn.modules import (
-    FunctionalInteraction,
-    Interaction,
-    LiteralInteraction,
-    NormBasedInteraction,
-    parallel_slice_batches,
-)
 from pykeen.utils import clamp_norm, project_entity, strip_dim, view_complex
 from tests import cases
 
@@ -519,16 +512,16 @@ class MonotonicAffineTransformationInteractionTests(cases.InteractionTestCase):
             assert (c_t == c_o).all()
 
 
-class InteractionTestsTestCase(unittest_templates.MetaTestCase[Interaction]):
+class InteractionTestsTestCase(unittest_templates.MetaTestCase[pykeen.nn.modules.Interaction]):
     """Test for tests for all interaction functions."""
 
-    base_cls = Interaction
+    base_cls = pykeen.nn.modules.Interaction
     base_test = cases.InteractionTestCase
     skip_cls = {
-        Interaction,
-        FunctionalInteraction,
-        NormBasedInteraction,
-        LiteralInteraction,
+        pykeen.nn.modules.Interaction,
+        pykeen.nn.modules.FunctionalInteraction,
+        pykeen.nn.modules.NormBasedInteraction,
+        pykeen.nn.modules.LiteralInteraction,
         # FIXME
         pykeen.nn.modules.BoxEInteraction,
     }
@@ -560,7 +553,7 @@ class ParallelSliceBatchesTest(unittest.TestCase):
         """Test parallel_slice_batches with a single representation."""
         shape = (2, 3)
         z = torch.empty(size=(self.batch_size, 1, self.num_relations, 1, *shape), device="meta")
-        for z_sliced in parallel_slice_batches(
+        for z_sliced in pykeen.nn.modules.parallel_slice_batches(
             z=z,
             slice_size=self.slice_size,
             dim=self.slice_dim,
@@ -573,7 +566,7 @@ class ParallelSliceBatchesTest(unittest.TestCase):
         zs = tuple(
             torch.empty(size=(self.batch_size, 1, self.num_relations, 1, *shape), device="meta") for shape in shapes
         )
-        for z_sliced in parallel_slice_batches(
+        for z_sliced in pykeen.nn.modules.parallel_slice_batches(
             z=zs,
             slice_size=self.slice_size,
             dim=self.slice_dim,
