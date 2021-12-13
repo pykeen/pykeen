@@ -8,7 +8,20 @@ import itertools as itt
 import logging
 import math
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Generic, Mapping, MutableMapping, Optional, Sequence, Set, Tuple, Union, cast
+from typing import (
+    Any,
+    Callable,
+    Generic,
+    Iterable,
+    Mapping,
+    MutableMapping,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    Union,
+    cast,
+)
 
 import torch
 from class_resolver import Resolver
@@ -22,6 +35,7 @@ from ..utils import (
     activation_resolver,
     convert_to_canonical_shape,
     ensure_tuple,
+    unpack_singletons,
     upgrade_to_sequence,
 )
 
@@ -67,11 +81,26 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-def _get_batches(z, slice_size):
-    for batch in zip(*(hh.split(slice_size, dim=1) for hh in ensure_tuple(z)[0])):
-        if len(batch) == 1:
-            batch = batch[0]
-        yield batch
+def parallel_slice_batches(
+    z: Union[FloatTensor, Tuple[FloatTensor, ...]],
+    slice_size: int,
+    dim: int,
+) -> Iterable[Union[FloatTensor, Tuple[FloatTensor, ...]]]:
+    # input normalization -> Tuple[Tensor]
+    # shape: (num_representations,)
+    z_tup: Iterable[FloatTensor] = ensure_tuple(z)[0]
+
+    # split each representation along the given dimension
+    # shape: (num_representations,)
+    tuple_of_batches: Iterable[Sequence[FloatTensor]] = (zz.split(slice_size, dim=dim) for zz in z_tup)
+
+    # create batches, shape: (num_slices,), each being a tuple of shape (num_representations,)
+    batch_of_tuples: Iterable[Tuple[FloatTensor]] = zip(*tuple_of_batches)
+
+    # unpack_singletons
+    batch_of_unpacked_tuples = unpack_singletons(*batch_of_tuples)
+
+    yield from batch_of_unpacked_tuples
 
 
 class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailRepresentation], ABC):
@@ -223,19 +252,43 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         if slice_size is None:
             scores = self(h=h, r=r, t=t)
         elif slice_dim == "h":
+            dim = CANONICAL_DIMENSIONS[slice_dim]
             scores = torch.cat(
-                [self(h=h_batch, r=r, t=t) for h_batch in _get_batches(h, slice_size)],
-                dim=CANONICAL_DIMENSIONS[slice_dim],
+                [
+                    self(h=h_batch, r=r, t=t)
+                    for h_batch in parallel_slice_batches(
+                        z=h,
+                        slice_size=slice_size,
+                        dim=dim,
+                    )
+                ],
+                dim=dim,
             )
         elif slice_dim == "r":
+            dim = CANONICAL_DIMENSIONS[slice_dim]
             scores = torch.cat(
-                [self(h=h, r=r_batch, t=t) for r_batch in _get_batches(r, slice_size)],
-                dim=CANONICAL_DIMENSIONS[slice_dim],
+                [
+                    self(h=h, r=r_batch, t=t)
+                    for r_batch in parallel_slice_batches(
+                        z=r,
+                        slice_size=slice_size,
+                        dim=dim,
+                    )
+                ],
+                dim=dim,
             )
         elif slice_dim == "t":
+            dim = CANONICAL_DIMENSIONS[slice_dim]
             scores = torch.cat(
-                [self(h=h, r=r, t=t_batch) for t_batch in _get_batches(t, slice_size)],
-                dim=CANONICAL_DIMENSIONS[slice_dim],
+                [
+                    self(h=h, r=r, t=t_batch)
+                    for t_batch in parallel_slice_batches(
+                        z=t,
+                        slice_size=slice_size,
+                        dim=dim,
+                    )
+                ],
+                dim=dim,
             )
         else:
             raise ValueError(f"Invalid slice_dim: {slice_dim}")
