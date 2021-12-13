@@ -253,9 +253,10 @@ class SklearnEvaluatorTest(_AbstractEvaluatorTests, unittest.TestCase):
         scores = numpy.concatenate(scores_filtered, axis=0)
 
         for field in dataclasses.fields(SklearnMetricResults):
-            f = field.metadata["f"]
-            exp_score = f(mask.flat, scores.flat)
-            self.assertAlmostEqual(result.get_metric(field.name), exp_score)
+            with self.subTest(metric=field.name):
+                f = field.metadata["f"]
+                exp_score = f(mask.flat, scores.flat)
+                self.assertAlmostEqual(result.get_metric(field.name), exp_score)
 
 
 class EvaluatorUtilsTests(unittest.TestCase):
