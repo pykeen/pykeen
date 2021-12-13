@@ -256,8 +256,12 @@ class SklearnEvaluatorTest(_AbstractEvaluatorTests, unittest.TestCase):
         for field in sorted(dataclasses.fields(SklearnMetricResults), key=attrgetter("name")):
             with self.subTest(metric=field.name):
                 f = field.metadata["f"]
-                exp_score = f(mask.flat, scores.flat)
-                self.assertAlmostEqual(result.get_metric(field.name), exp_score)
+                exp_score = f(numpy.array(mask.flat), numpy.array(scores.flat))
+                act_score = result.get_metric(field.name)
+                if numpy.isnan(exp_score):
+                    self.assertTrue(numpy.isnan(act_score))
+                else:
+                    self.assertAlmostEqual(act_score, exp_score)
 
 
 class EvaluatorUtilsTests(unittest.TestCase):
