@@ -10,17 +10,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from math import ceil
 from textwrap import dedent
-from typing import (
-    Any,
-    Collection,
-    Iterable,
-    List,
-    Mapping,
-    Optional,
-    Tuple,
-    Union,
-    cast,
-)
+from typing import Any, Collection, Iterable, List, Mapping, Optional, Tuple, Union, cast
 
 import numpy as np
 import torch
@@ -164,9 +154,7 @@ class Evaluator(ABC):
         tqdm_kwargs: Optional[Mapping[str, str]] = None,
         restrict_entities_to: Optional[torch.LongTensor] = None,
         do_time_consuming_checks: bool = True,
-        additional_filter_triples: Union[
-            None, MappedTriples, List[MappedTriples]
-        ] = None,
+        additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
     ) -> MetricResults:
         """Run :func:`pykeen.evaluation.evaluate` with this evaluator."""
         if batch_size is None and self.automatic_memory_optimization:
@@ -220,9 +208,7 @@ class Evaluator(ABC):
         use_tqdm: bool = False,
         restrict_entities_to: Optional[torch.LongTensor] = None,
         do_time_consuming_checks: bool = True,
-        additional_filter_triples: Union[
-            None, MappedTriples, List[MappedTriples]
-        ] = None,
+        additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
     ) -> Tuple[int, Optional[int]]:
         """Find the maximum possible batch_size and slice_size for evaluation with the current setting.
 
@@ -286,9 +272,7 @@ class Evaluator(ABC):
             do_time_consuming_checks=False,
         )
         if not evaluated_once:
-            raise MemoryError(
-                "The current model can't be trained on this hardware with these parameters."
-            )
+            raise MemoryError("The current model can't be trained on this hardware with these parameters.")
 
         return batch_size, slice_size
 
@@ -302,9 +286,7 @@ class Evaluator(ABC):
         use_tqdm: bool = False,
         restrict_entities_to: Optional[torch.LongTensor] = None,
         do_time_consuming_checks: bool = True,
-        additional_filter_triples: Union[
-            None, MappedTriples, List[MappedTriples]
-        ] = None,
+        additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
     ) -> Tuple[int, bool]:
         values_dict = {}
         maximum_triples = mapped_triples.shape[0]
@@ -598,9 +580,7 @@ def evaluate(
                 )
 
     # Filter triples if necessary
-    if not pre_filtered_triples and (
-        restrict_entities_to is not None or restrict_relations_to is not None
-    ):
+    if not pre_filtered_triples and (restrict_entities_to is not None or restrict_relations_to is not None):
         old_num_triples = mapped_triples.shape[0]
         mapped_triples = restrict_triples(
             mapped_triples=mapped_triples,
@@ -628,9 +608,7 @@ def evaluate(
 
     # Check whether an evaluator needs access to the masks
     # This can only be an unfiltered evaluator.
-    positive_masks_required = any(
-        e.requires_positive_mask for e in unfiltered_evaluators,
-    )
+    positive_masks_required = any(e.requires_positive_mask for e in unfiltered_evaluators)
 
     # Prepare for result filtering
     if filtering_necessary or positive_masks_required:
@@ -668,9 +646,7 @@ def evaluate(
     if batch_size is None:
         # This should be a reasonable default size that works on most setups while being faster than batch_size=1
         batch_size = 32
-        logger.info(
-            f"No evaluation batch_size provided. Setting batch_size to '{batch_size}'."
-        )
+        logger.info(f"No evaluation batch_size provided. Setting batch_size to '{batch_size}'.")
     batches = cast(
         Iterable[np.ndarray],
         split_list_in_batches_iter(input_list=mapped_triples, batch_size=batch_size),
@@ -784,13 +760,9 @@ def _evaluate_batch(
 
     # Predict scores once
     if column == 2:  # tail scores
-        batch_scores_of_corrupted = model.predict_t(
-            batch[:, 0:2], slice_size=slice_size
-        )
+        batch_scores_of_corrupted = model.predict_t(batch[:, 0:2], slice_size=slice_size)
     else:
-        batch_scores_of_corrupted = model.predict_h(
-            batch[:, 1:3], slice_size=slice_size
-        )
+        batch_scores_of_corrupted = model.predict_h(batch[:, 1:3], slice_size=slice_size)
 
     # Select scores of true
     batch_scores_of_true = batch_scores_of_corrupted[
@@ -859,9 +831,7 @@ def _evaluate_batch(
 
         # Restrict to entities of interest
         if restrict_entities_to is not None:
-            batch_filtered_scores_of_corrupted = batch_filtered_scores_of_corrupted[
-                :, restrict_entities_to
-            ]
+            batch_filtered_scores_of_corrupted = batch_filtered_scores_of_corrupted[:, restrict_entities_to]
 
         # Evaluate metrics on these *filtered* scores
         for filtered_evaluator in filtered_evaluators:
