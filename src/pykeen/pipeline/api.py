@@ -184,6 +184,7 @@ the :class:`pykeen.datasets.Nations`
 """
 
 import ftplib
+import inspect
 import json
 import logging
 import os
@@ -191,7 +192,7 @@ import pathlib
 import pickle
 import time
 from dataclasses import dataclass, field
-from typing import Any, Collection, Dict, Iterable, List, Mapping, MutableMapping, Optional, Type, Union, cast
+from typing import Any, Collection, Dict, Iterable, List, Mapping, MutableMapping, Optional, Tuple, Type, Union, cast
 
 import pandas as pd
 import scipy.stats
@@ -719,7 +720,7 @@ def _build_model_helper(
     regularizer,
     regularizer_kwargs,
     training_triples_factory,
-) -> Model:
+) -> Tuple[Model, Mapping[str, Any]]:
     if model_kwargs is None:
         model_kwargs = {}
     model_kwargs = dict(model_kwargs)
@@ -741,12 +742,22 @@ def _build_model_helper(
             del model_kwargs["loss"]
     loss_instance = loss_resolver.make(loss, loss_kwargs)
 
+    if not isinstance(model, Model):
+        model_cls = model_resolver.lookup(query=model)
+        signature = inspect.signature(model_cls.__init__)
+        for name, param in signature.parameters.items():
+            # skip special parameters
+            if name == "self" or param.kind in {param.VAR_POSITIONAL, param.VAR_KEYWORD}:
+                continue
+            # copy default value
+            model_kwargs.setdefault(name, param.default)
+
     return model_resolver.make(
         model,
         triples_factory=training_triples_factory,
         loss=loss_instance,
         **model_kwargs,
-    )
+    ), model_kwargs
 
 
 def _resolve_result_trackers(
@@ -1048,7 +1059,7 @@ def pipeline(  # noqa: C901
         # TODO should training be reset?
         # TODO should kwargs for loss and regularizer be checked and raised for?
     else:
-        model_instance = _build_model_helper(
+        model_instance, model_kwargs = _build_model_helper(
             model=model,
             model_kwargs=model_kwargs,
             loss=loss,
