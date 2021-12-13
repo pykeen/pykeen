@@ -2,7 +2,7 @@
 name: Dataset request
 about: Suggest a new benchmark dataset
 title: Add [DATASET NAME]
-labels: New Dataset
+labels: "\U0001F4BE Dataset, \U0001F48E New Component"
 assignees: cthoyt
 
 ---

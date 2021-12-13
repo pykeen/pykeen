@@ -3,7 +3,6 @@
 """A validator for experimental settings."""
 
 import inspect
-import json
 import pathlib
 from typing import Callable, Iterable, Optional, Set, Tuple, Type, Union
 
@@ -12,28 +11,45 @@ from class_resolver import Hint
 from torch import nn
 
 from .cli import HERE
-from ..datasets import datasets as datasets_dict
+from ..datasets import dataset_resolver
 from ..losses import loss_resolver
 from ..models import Model, model_resolver
 from ..optimizers import optimizer_resolver
 from ..regularizers import regularizer_resolver
 from ..sampling import negative_sampler_resolver
 from ..training import training_loop_resolver
-from ..utils import normalize_string
+from ..utils import CONFIGURATION_FILE_FORMATS, load_configuration, normalize_string
 
 _SKIP_NAMES = {
-    'loss', 'entity_embeddings', 'init', 'preferred_device', 'random_seed',
-    'regularizer', 'relation_embeddings', 'return', 'triples_factory', 'device',
+    "loss",
+    "entity_embeddings",
+    "init",
+    "preferred_device",
+    "random_seed",
+    "regularizer",
+    "relation_embeddings",
+    "return",
+    "triples_factory",
+    "device",
 }
 _SKIP_ANNOTATIONS = {
-    nn.Embedding, Optional[nn.Embedding], Type[nn.Embedding], Optional[Type[nn.Embedding]],
-    nn.Module, Optional[nn.Module], Type[nn.Module], Optional[Type[nn.Module]],
-    Model, Optional[Model], Type[Model], Optional[Type[Model]],
+    nn.Embedding,
+    Optional[nn.Embedding],
+    Type[nn.Embedding],
+    Optional[Type[nn.Embedding]],
+    nn.Module,
+    Optional[nn.Module],
+    Type[nn.Module],
+    Optional[Type[nn.Module]],
+    Model,
+    Optional[Model],
+    Type[Model],
+    Optional[Type[Model]],
     Union[str, Callable[[torch.FloatTensor], torch.FloatTensor]],
     Hint[nn.Module],
 }
 _SKIP_EXTRANEOUS = {
-    'predict_with_sigmoid',
+    "predict_with_sigmoid",
 }
 
 
@@ -43,10 +59,10 @@ def iterate_config_paths() -> Iterable[Tuple[str, pathlib.Path, pathlib.Path]]:
         if model_directory.name not in model_resolver.lookup_dict:
             continue
         for config in model_directory.iterdir():
-            if config.name.startswith('hpo'):
+            if config.name.startswith("hpo"):
                 continue
             path = model_directory.joinpath(config)
-            if not path.is_file() or not path.suffix == '.json':
+            if not path.is_file() or path.suffix not in CONFIGURATION_FILE_FORMATS:
                 continue
             yield model_directory.name, config, path
 
@@ -62,12 +78,11 @@ def _should_skip_because_type(x):
 
 def get_configuration_errors(path: Union[str, pathlib.Path]):  # noqa: C901
     """Get a list of errors with a given experimental configuration JSON file."""
-    with open(path) as file:
-        configuration = json.load(file)
+    configuration = load_configuration(path)
 
-    pipeline = configuration.get('pipeline')
+    pipeline = configuration.get("pipeline")
     if pipeline is None:
-        raise ValueError('No pipeline')
+        raise ValueError("No pipeline")
 
     errors = []
 
@@ -87,18 +102,18 @@ def get_configuration_errors(path: Union[str, pathlib.Path]):  # noqa: C901
         if value is None:
             if not required:
                 return
-            errors.append(f'No key: {key}')
+            errors.append(f"No key: {key}")
             return
         if normalize:
             value = normalize_string(value, suffix=suffix)
         if value not in choices:
-            errors.append(f'Invalid {key}: {value}. Should be one of {sorted(choices)}')
+            errors.append(f"Invalid {key}: {value}. Should be one of {sorted(choices)}")
             return
 
         if not check_kwargs:
             return
 
-        kwargs_key = f'{key}_kwargs'
+        kwargs_key = f"{key}_kwargs"
         kwargs_value = test_dict.get(kwargs_key)
         if kwargs_value is None:
             errors.append(f'Missing "{kwargs_key}" entry for {value}')
@@ -109,21 +124,18 @@ def get_configuration_errors(path: Union[str, pathlib.Path]):  # noqa: C901
 
         extraneous_kwargs = []
         for name in kwargs_value:
-            if name == 'self':
+            if name == "self":
                 continue
             if name not in signature.parameters and name not in _SKIP_EXTRANEOUS:
                 extraneous_kwargs.append(name)
         if extraneous_kwargs:
-            _x = '\n'.join(
-                f'    {name}'
-                for name in extraneous_kwargs
-            )
+            _x = "\n".join(f"    {name}" for name in extraneous_kwargs)
             errors.append(
-                f'''Extraneous keys in {kwargs_key} for {choice}:\n{_x}''',
+                f"""Extraneous keys in {kwargs_key} for {choice}:\n{_x}""",
             )
 
         if allowed_missing_kwargs and required_kwargs:
-            raise ValueError('can not specify both allowed and required')
+            raise ValueError("can not specify both allowed and required")
 
         if allowed_missing_kwargs is None:
             allowed_missing_kwargs = set()
@@ -131,7 +143,7 @@ def get_configuration_errors(path: Union[str, pathlib.Path]):  # noqa: C901
         missing_kwargs = []
         for name, parameter in signature.parameters.items():
             if (
-                name == 'self'
+                name == "self"
                 or parameter.default is inspect._empty  # type:ignore
                 or parameter.default is None
             ):
@@ -149,11 +161,10 @@ def get_configuration_errors(path: Union[str, pathlib.Path]):  # noqa: C901
             if name not in kwargs_value and name not in allowed_missing_kwargs:
                 missing_kwargs.append((name, annotation, parameter.default))
         if missing_kwargs:
-            _x = '\n'.join(
-                f'    {name}: default: {default}, type: {annotation}'
-                for name, annotation, default in missing_kwargs
+            _x = "\n".join(
+                f"    {name}: default: {default}, type: {annotation}" for name, annotation, default in missing_kwargs
             )
-            errors.append(f'Missing {kwargs_key} for {choice}:\n{_x}')
+            errors.append(f"Missing {kwargs_key} for {choice}:\n{_x}")
 
         if extraneous_kwargs or missing_kwargs:
             return
@@ -161,37 +172,63 @@ def get_configuration_errors(path: Union[str, pathlib.Path]):  # noqa: C901
         return value
 
     _check(
-        pipeline, 'model', model_resolver.lookup_dict,
-        normalize=True, check_kwargs=True,
+        pipeline,
+        "model",
+        model_resolver.lookup_dict,
+        normalize=True,
+        check_kwargs=True,
     )
     _check(
-        pipeline, 'dataset', datasets_dict,
-        normalize=False, check_kwargs=False,
+        pipeline,
+        "dataset",
+        dataset_resolver.lookup_dict,
+        normalize=False,
+        check_kwargs=False,
     )
     _check(
-        pipeline, 'optimizer', optimizer_resolver.lookup_dict,
-        normalize=True, check_kwargs=True,
-        required_kwargs={'lr'},
+        pipeline,
+        "optimizer",
+        optimizer_resolver.lookup_dict,
+        normalize=True,
+        check_kwargs=True,
+        required_kwargs={"lr"},
     )
     _check(
-        pipeline, 'loss', loss_resolver.lookup_dict,
-        normalize=True, suffix=loss_resolver.suffix, check_kwargs=True,
+        pipeline,
+        "loss",
+        loss_resolver.lookup_dict,
+        normalize=True,
+        suffix=loss_resolver.suffix,
+        check_kwargs=True,
     )
     _check(
-        pipeline, 'regularizer', regularizer_resolver.lookup_dict,
-        normalize=True, suffix=regularizer_resolver.suffix, check_kwargs=True, required=False,
-        allowed_missing_kwargs={'dim'},
+        pipeline,
+        "regularizer",
+        regularizer_resolver.lookup_dict,
+        normalize=True,
+        suffix=regularizer_resolver.suffix,
+        check_kwargs=True,
+        required=False,
+        allowed_missing_kwargs={"dim"},
     )
 
     training_loop = _check(
-        pipeline, 'training_loop', training_loop_resolver.lookup_dict,
-        normalize=True, suffix=training_loop_resolver.suffix, check_kwargs=False,
+        pipeline,
+        "training_loop",
+        training_loop_resolver.lookup_dict,
+        normalize=True,
+        suffix=training_loop_resolver.suffix,
+        check_kwargs=False,
     )
 
-    if training_loop == 'slcwa':
+    if training_loop == "slcwa":
         _check(
-            pipeline, 'negative_sampler', negative_sampler_resolver.lookup_dict,
-            normalize=True, suffix=negative_sampler_resolver.suffix, check_kwargs=True,
+            pipeline,
+            "negative_sampler",
+            negative_sampler_resolver.lookup_dict,
+            normalize=True,
+            suffix=negative_sampler_resolver.suffix,
+            check_kwargs=True,
         )
 
     return errors

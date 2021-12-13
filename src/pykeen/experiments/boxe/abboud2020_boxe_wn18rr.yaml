@@ -1,0 +1,46 @@
+metadata:
+  title: Learn WN18-RR Dataset with BoxE as described by Abboud et al., 2020
+pipeline:
+  dataset: wn18rr
+  evaluator_kwargs:
+  filtered: true
+  # > Optimization is using negative sampling self-adversarial loss.
+  loss: NSSALoss
+  loss_kwargs:
+    reduction: sum
+    margin: 3.0
+    adversarial_temperature: 2.0
+  model: BoxE
+  model_kwargs:
+    entity_initializer: uniform_norm   # This has to be a uniform distribution between -0.5/sqrt(emb_dim)
+    #and 0.5/sqrt(emb_dim)
+    relation_initializer: uniform_norm     # This is also between -0.5/sqrt(emb_dim) and 0.5/sqrt(emb_dim)
+    relation_size_initializer: uniform_    # This is a uniform distribution between -1 and 1
+    relation_size_initializer_kwargs:
+      a: -1
+      b: 1
+    embedding_dim: 500
+    p: 2   # Standard L2 norm
+    tanh_map: True  # Apply hyperbolic tangent mapping regularizer
+    power_norm: False
+
+  negative_sampler: basic
+  negative_sampler_kwargs:
+    num_negs_per_pos: 100
+
+  optimizer: Adam
+  optimizer_kwargs:
+    lr: 0.001
+  training_kwargs:
+    batch_size: 512
+    num_epochs: 1000
+  training_loop: SLCWA
+
+results:
+  hits_at_k:
+    best:
+      '10': 0.541
+  mean_rank:
+    best: 3207
+  mean_reciprocal_rank:
+    best: 0.451

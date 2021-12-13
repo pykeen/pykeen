@@ -1,0 +1,35 @@
+name: Report a bug
+description: Let us know about unexpected or erroneous behavior of PyKEEN
+labels: [ "bug" ]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for taking the time to fill out a bug report. With your help, PyKEEN continues to improve!
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the bug
+      description: Please provide a clear and concise description of the unexpected or erroneous behavior in PyKEEN that you experienced and what you expected to happen instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: How to reproduce
+      description: Please provide a example of the code or CLI commands that you ran to encounter the bug. Without this, others probably won't be able to reproduce the error, provide advice, nor a solution.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Please copy the exact output of running `python -m pykeen version` in your shell. Alternatively, you can run `python -m pykeen version | pbcopy` to make the text automatically go to the clipboard. This command lets us know information about your system and installation of PyKEEN. If you do not include this table correctly, we will dismiss your issue.
+    validations:
+      required: true
+  - type: textarea
+    id: extras
+    attributes:
+      label: Additional information
+      description: Add any other information about the problem here.
+    validations:
+      required: false

@@ -5,8 +5,61 @@ All notable changes to this project will be documented in this file.
 The format is based on `Keep a Changelog <http://keepachangelog.com/>`_
 and this project adheres to `Semantic Versioning <http://semver.org/>`_
 
-`Unreleased <https://github.com/pykeen/pykeen/compare/v1.4.0...HEAD>`_
------------------------------------------------------------------------
+`1.6.0 <https://github.com/pykeen/pykeen/compare/v1.5.0...v1.6.0>`_
+-------------------------------------------------------------------
+This release is only compatible with PyTorch 1.9+. Because of some changes,
+it's now pretty non-trivial to support both, so moving forwards PyKEEN will
+continue to support the latest version of PyTorch and try its best to keep
+backwards compatibility.
+
+New Models
+~~~~~~~~~~
+- DistMA (https://github.com/pykeen/pykeen/pull/507)
+- TorusE (https://github.com/pykeen/pykeen/pull/510)
+- Frequency Baselines (https://github.com/pykeen/pykeen/pull/514)
+- Gated Distmult Literal (https://github.com/pykeen/pykeen/pull/591, thanks @Rodrigo-A-Pereira)
+
+New Datasets
+~~~~~~~~~~~~
+- WD50K (https://github.com/pykeen/pykeen/pull/511)
+- Wikidata5M (https://github.com/pykeen/pykeen/pull/528)
+- BioKG (https://github.com/pykeen/pykeen/pull/585, thanks @sbonner0)
+
+New Losses
+~~~~~~~~~~
+- Double Margin Loss (https://github.com/pykeen/pykeen/pull/539)
+- Focal Loss (https://github.com/pykeen/pykeen/pull/542)
+- Pointwise Hinge Loss (https://github.com/pykeen/pykeen/pull/540)
+- Soft Pointwise Hinge Loss (https://github.com/pykeen/pykeen/pull/540)
+- Pairwise Logistic Loss (https://github.com/pykeen/pykeen/pull/540)
+
+Added
+~~~~~
+- Tutorial in using checkpoints when bringing your own data (https://github.com/pykeen/pykeen/pull/498)
+- Learning rate scheduling (https://github.com/pykeen/pykeen/pull/492)
+- Checkpoints include entity/relation maps (https://github.com/pykeen/pykeen/pull/498)
+- QuatE reproducibility configurations (https://github.com/pykeen/pykeen/pull/486)
+
+Changed
+~~~~~~~
+- Reimplment SE (https://github.com/pykeen/pykeen/pull/521)
+  and NTN (https://github.com/pykeen/pykeen/pull/522) with new-style models
+- Generalize pairwise loss and pointwise loss hierarchies (https://github.com/pykeen/pykeen/pull/540)
+- Update to use PyTorch 1.9 functionality (https://github.com/pykeen/pykeen/pull/489)
+- Generalize generator strategies in LCWA (https://github.com/pykeen/pykeen/pull/602)
+
+Fixed
+~~~~~
+- FileNotFoundError on Windows/Anaconda (https://github.com/pykeen/pykeen/pull/503, thanks @Hao-666)
+- Fixed docstring for ComplEx interaction (https://github.com/pykeen/pykeen/pull/504)
+- Make DistMult the default interaction function for R-GCN (https://github.com/pykeen/pykeen/pull/548)
+- Fix gradient error in CompGCN buffering (https://github.com/pykeen/pykeen/pull/573)
+- Fix splitting of numeric triples factories (https://github.com/pykeen/pykeen/pull/594, thanks @Rodrigo-A-Pereira)
+- Fix determinism in spitting of triples factory (https://github.com/pykeen/pykeen/pull/500)
+- Fix documentation and improve HPO suggestion (https://github.com/pykeen/pykeen/pull/524, thanks @kdutia)
+
+`1.5.0 <https://github.com/pykeen/pykeen/compare/v1.4.0...v1.5.0>`_ - 2021-06-13
+--------------------------------------------------------------------------------
 New Metrics
 ~~~~~~~~~~~
 - Adjusted Arithmetic Mean Rank Index (https://github.com/pykeen/pykeen/pull/378)
@@ -15,38 +68,67 @@ New Metrics
 New Trackers
 ~~~~~~~~~~~~
 - Console Tracker (https://github.com/pykeen/pykeen/pull/440)
+- Tensorboard Tracker (https://github.com/pykeen/pykeen/pull/416; thanks @sbonner0)
 
 New Models
 ~~~~~~~~~~
 - QuatE (https://github.com/pykeen/pykeen/pull/367)
 - CompGCN (https://github.com/pykeen/pykeen/pull/382)
 - CrossE (https://github.com/pykeen/pykeen/pull/467)
+- Reimplementation of LiteralE with arbitrary combination (g) function (https://github.com/pykeen/pykeen/pull/245)
+
+New Negative Samplers
+~~~~~~~~~~~~~~~~~~~~~
+- Pseudo-typed Negative Sampler (https://github.com/pykeen/pykeen/pull/412)
 
 Datasets
 ~~~~~~~~
-- Removed invalid datasets (OpenBioLink filtered sets; https://github.com/pykeen/pykeen/pull/#439)
+- Removed invalid datasets (OpenBioLink filtered sets; https://github.com/pykeen/pykeen/pull/https://github.com/pykeen/pykeen/pull/439)
+- Added WK3k-15K (https://github.com/pykeen/pykeen/pull/403)
+- Added WK3l-120K (https://github.com/pykeen/pykeen/pull/403)
+- Added CN3l (https://github.com/pykeen/pykeen/pull/403)
 
 Added
 ~~~~~
 - Documentation on using PyKEEN in Google Colab and Kaggle (https://github.com/pykeen/pykeen/pull/379,
   thanks `@jerryIsHere <https://github.com/jerryIsHere>`_)
-- Documentation on
 - Pass custom training loops to pipeline (https://github.com/pykeen/pykeen/pull/334)
 - Compatibility later for the fft module (https://github.com/pykeen/pykeen/pull/288)
 - Official Python 3.9 support, now that PyTorch has it (https://github.com/pykeen/pykeen/pull/223)
 - Utilities for dataset analysis (https://github.com/pykeen/pykeen/pull/16, https://github.com/pykeen/pykeen/pull/392)
+- Filtering of negative sampling now uses a bloom filter by default (https://github.com/pykeen/pykeen/pull/401)
+- Optional embedding dropout (https://github.com/pykeen/pykeen/pull/422)
+- Added more HPO suggestion methods and docs (https://github.com/pykeen/pykeen/pull/446)
+- Training callbacks (https://github.com/pykeen/pykeen/pull/429)
+- Class resolver for datasets (https://github.com/pykeen/pykeen/pull/473)
+
 Updated
 ~~~~~~~
 - R-GCN implementation now uses new-style models and is super idiomatic (https://github.com/pykeen/pykeen/pull/110)
-
-Changed
-~~~~~~~
+- Enable passing of interaction function by string in base model class (https://github.com/pykeen/pykeen/pull/384,
+  https://github.com/pykeen/pykeen/pull/387)
+- Bump scipy requirement to 1.5.0+
 - Updated interfaces of models and negative samplers to enforce kwargs (https://github.com/pykeen/pykeen/pull/445)
+- Reorganize filtering, negative sampling, and remove triples factory from most objects (
+  https://github.com/pykeen/pykeen/pull/400, https://github.com/pykeen/pykeen/pull/405,
+  https://github.com/pykeen/pykeen/pull/406, https://github.com/pykeen/pykeen/pull/409,
+  https://github.com/pykeen/pykeen/pull/420)
+- Update automatic memory optimization (https://github.com/pykeen/pykeen/pull/404)
+- Flexibly define positive triples for filtering (https://github.com/pykeen/pykeen/pull/398)
+- Completely reimplemented negative sampling interface in training loops (https://github.com/pykeen/pykeen/pull/427)
+- Completely reimplemented loss function in training loops (https://github.com/pykeen/pykeen/pull/448)
+- Forward-compatibility of embeddings in old-style models and updated docs on
+  how to use embeddings (https://github.com/pykeen/pykeen/pull/474)
 
 Fixed
 ~~~~~
 - Regularizer passing in the pipeline and HPO (https://github.com/pykeen/pykeen/pull/345)
 - Saving results when using multimodal models (https://github.com/pykeen/pykeen/pull/349)
+- Add missing diagonal constraint on MuRE Model (https://github.com/pykeen/pykeen/pull/353)
+- Fix early stopper handling (https://github.com/pykeen/pykeen/pull/419)
+- Fixed saving results from pipeline (https://github.com/pykeen/pykeen/pull/428, thanks @kantholtz)
+- Fix OOM issues with early stopper and AMO (https://github.com/pykeen/pykeen/pull/433)
+- Fix ER-MLP functional form (https://github.com/pykeen/pykeen/pull/444)
 
 `1.4.0 <https://github.com/pykeen/pykeen/compare/v1.3.0...v1.4.0>`_ - 2021-03-04
 --------------------------------------------------------------------------------

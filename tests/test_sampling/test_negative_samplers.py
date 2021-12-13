@@ -60,6 +60,6 @@ class PseudoTypedNegativeSamplerTest(cases.NegativeSamplerGenericTestCase):
         for r in range(self.triples_factory.num_relations):
             triples_with_r = triples[triples[:, 1] == r]
             for i, entity_pos in enumerate((0, 2)):
-                index_entities = set(data[offsets[2 * r + i]: offsets[2 * r + i + 1]].tolist())
+                index_entities = set(data[offsets[2 * r + i] : offsets[2 * r + i + 1]].tolist())
                 triple_entities = set(triples_with_r[:, entity_pos].tolist())
                 assert index_entities == triple_entities

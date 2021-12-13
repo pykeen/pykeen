@@ -15,8 +15,8 @@ from pykeen.triples import CoreTriplesFactory
 from pykeen.typing import MappedTriples
 
 __all__ = [
-    'CustomRepresentations',
-    'MockModel',
+    "CustomRepresentations",
+    "MockModel",
 ]
 
 
@@ -93,20 +93,8 @@ class MockEvaluator(Evaluator):
 
     def finalize(self) -> MetricResults:  # noqa: D102
         hits = next(self.losses_iter)
-        dummy_1 = {
-            side: {
-                rank_type: 10.0
-                for rank_type in RANK_TYPES
-            }
-            for side in SIDES
-        }
-        dummy_2 = {
-            side: {
-                rank_type: 1.0
-                for rank_type in RANK_TYPES
-            }
-            for side in SIDES
-        }
+        dummy_1 = {side: {rank_type: 10.0 for rank_type in RANK_TYPES} for side in SIDES}
+        dummy_2 = {side: {rank_type: 1.0 for rank_type in RANK_TYPES} for side in SIDES}
         return RankBasedMetricResults(
             arithmetic_mean_rank=dummy_1,
             geometric_mean_rank=dummy_1,
@@ -123,6 +111,7 @@ class MockEvaluator(Evaluator):
                 }
                 for side in SIDES
             },
+            rank_count={side: {rank_type: 1 for rank_type in RANK_TYPES} for side in SIDES},
             rank_std=dummy_1,
             rank_var=dummy_1,
             rank_mad=dummy_1,
@@ -130,11 +119,12 @@ class MockEvaluator(Evaluator):
                 side: {
                     rank_type: {
                         10: hits,
-                    } for rank_type in RANK_TYPES
+                    }
+                    for rank_type in RANK_TYPES
                 }
                 for side in SIDES
             },
         )
 
     def __repr__(self):  # noqa: D105
-        return f'{self.__class__.__name__}(losses={self.losses})'
+        return f"{self.__class__.__name__}(losses={self.losses})"

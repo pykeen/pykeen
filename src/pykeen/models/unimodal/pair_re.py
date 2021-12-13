@@ -14,7 +14,7 @@ from ...nn.modules import PairREInteraction
 from ...typing import Hint, Initializer, Normalizer
 
 __all__ = [
-    'PairRE',
+    "PairRE",
 ]
 
 

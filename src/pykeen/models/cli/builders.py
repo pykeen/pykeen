@@ -9,33 +9,35 @@ import sys
 from typing import Any, Mapping, Optional, Type, Union
 
 import click
+from class_resolver import HintOrType
 from torch import nn
 
 from . import options
 from .options import CLI_OPTIONS
 from ..base import Model
 from ...nn.message_passing import Decomposition
+from ...regularizers import Regularizer
 from ...triples import TriplesFactory
 from ...typing import Constrainer, Hint, Initializer, Normalizer
 
 __all__ = [
-    'build_cli_from_cls',
+    "build_cli_from_cls",
 ]
 
 logger = logging.getLogger(__name__)
 
 _OPTIONAL_MAP = {Optional[int]: int, Optional[str]: str}
 _SKIP_ARGS = {
-    'return',
-    'triples_factory',
-    'preferred_device',
-    'regularizer',
+    "return",
+    "triples_factory",
+    "preferred_device",
+    "regularizer",
     # TODO rethink after RGCN update
-    'interaction',
-    'activation_cls',
-    'activation_kwargs',
-    'edge_weighting',
-    'relation_representations',
+    "interaction",
+    "activation_cls",
+    "activation_kwargs",
+    "edge_weighting",
+    "relation_representations",
 }
 _SKIP_ANNOTATIONS = {
     Optional[nn.Embedding],
@@ -44,6 +46,13 @@ _SKIP_ANNOTATIONS = {
     Optional[Mapping[str, Any]],
     Union[None, str, nn.Module],
     Union[None, str, Decomposition],
+}
+_SKIP_HINTS = {
+    Hint[Initializer],
+    Hint[Constrainer],
+    Hint[Normalizer],
+    Hint[Regularizer],
+    HintOrType[nn.Module],
 }
 
 
@@ -68,13 +77,13 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
 
             else:
                 parameter = signature.parameters[name]
-                if annotation in {Hint[Initializer], Hint[Constrainer], Hint[Normalizer]}:  # type: ignore
-                    logger.debug('Unhandled hint: %s', annotation)
+                if annotation in _SKIP_HINTS:
+                    logger.debug("Unhandled hint: %s", annotation)
                     continue
                 if parameter.default is None:
                     logger.warning(
-                        f'Missing handler in {model.__name__} for {name}: '
-                        f'type={annotation} default={parameter.default}',
+                        f"Missing handler in {model.__name__} for {name}: "
+                        f"type={annotation} default={parameter.default}",
                     )
                     continue
 
@@ -83,12 +92,12 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
             try:
                 command = option(command)
             except AttributeError:
-                logger.warning(f'Unable to handle parameter in {model.__name__}: {name}')
+                logger.warning(f"Unable to handle parameter in {model.__name__}: {name}")
                 continue
 
         return command
 
-    @click.command(help=f'CLI for {model.__name__}', name=model.__name__.lower())  # type: ignore
+    @click.command(help=f"CLI for {model.__name__}", name=model.__name__.lower())  # type: ignore
     @options.device_option
     @options.dataset_option
     @options.training_option
@@ -107,9 +116,9 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
     @options.num_workers_option
     @options.random_seed_option
     @_decorate_model_kwargs
-    @click.option('-I', '--create-inverse-triples', is_flag=True, help='Model inverse triples')
-    @click.option('--silent', is_flag=True)
-    @click.option('--output', type=click.File('w'), default=sys.stdout, help='Where to dump the metric results')
+    @click.option("-I", "--create-inverse-triples", is_flag=True, help="Model inverse triples")
+    @click.option("--silent", is_flag=True)
+    @click.option("--output", type=click.File("w"), default=sys.stdout, help="Where to dump the metric results")
     def main(
         *,
         device,
@@ -136,18 +145,18 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
     ):
         """CLI for PyKEEN."""
         click.echo(
-            f'Training {model.__name__} with '
+            f"Training {model.__name__} with "
             f'{training_loop.__name__[:-len("TrainingLoop")]} using '
-            f'{optimizer.__name__} and {evaluator.__name__}',
+            f"{optimizer.__name__} and {evaluator.__name__}",
         )
         from ...pipeline import pipeline
 
         result_tracker: Optional[str]
         result_tracker_kwargs: Optional[Mapping[str, Any]]
         if mlflow_tracking_uri:
-            result_tracker = 'mlflow'
+            result_tracker = "mlflow"
             result_tracker_kwargs = {
-                'tracking_uri': mlflow_tracking_uri,
+                "tracking_uri": mlflow_tracking_uri,
             }
         else:
             result_tracker = None
@@ -199,7 +208,7 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
 
         if not silent:
             json.dump(pipeline_result.metric_results.to_dict(), output, indent=2)
-            click.echo('')
+            click.echo("")
         return sys.exit(0)
 
     return main

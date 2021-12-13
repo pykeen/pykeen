@@ -10,10 +10,10 @@ import torch
 from .negative_sampler import NegativeSampler
 
 __all__ = [
-    'BasicNegativeSampler',
+    "BasicNegativeSampler",
 ]
 
-LOOKUP = {'h': 0, 'r': 1, 't': 2}
+LOOKUP = {"h": 0, "r": 1, "t": 2}
 
 
 class BasicNegativeSampler(NegativeSampler):
@@ -50,7 +50,7 @@ class BasicNegativeSampler(NegativeSampler):
             Additional keyword based arguments passed to :class:`pykeen.sampling.NegativeSampler`.
         """
         super().__init__(**kwargs)
-        self.corruption_scheme = corruption_scheme or ('h', 't')
+        self.corruption_scheme = corruption_scheme or ("h", "t")
         # Set the indices
         self._corruption_indices = [LOOKUP[side] for side in self.corruption_scheme]
 

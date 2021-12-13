@@ -23,9 +23,9 @@ as many trials as possible will be run in 60 seconds.
 
 >>> from pykeen.hpo import hpo_pipeline
 >>> hpo_pipeline_result = hpo_pipeline(
-...    timeout=60,
-...    dataset='Nations',
-...    model='TransE',
+...     timeout=60,
+...     dataset='Nations',
+...     model='TransE',
 ... )
 
 The hyper-parameter optimization pipeline has the ability to optimize hyper-parameters for the corresponding
@@ -44,7 +44,9 @@ Each component's hyper-parameters have a reasonable default values. For example,
 default for its hyper-parameters chosen from the best-reported values in each model's
 original paper unless otherwise stated on the model's reference page. In case hyper-parameters for a model for a
 specific dataset were not available, we choose the hyper-parameters based on the findings in our
-large-scale benchmarking [ali2020a]_.
+large-scale benchmarking [ali2020a]_. For most components (e.g., models, losses, regularizers, negative
+samples, training loops), these values are stored in the default valeues of the respective classes'
+`__init__()` functions. They can be viewed in the corresponding reference section of the docs.
 
 Some components contain strategies for doing hyper-parameter optimization. When you call the
 :func:`pykeen.hpo.hpo_pipeline`, the following steps are taken to determine what happens for each hyper-parameter
@@ -153,7 +155,7 @@ within the bounds specified by the ``low`` and ``high`` arguments. This applies 
 ...     model='TransE',
 ...     training_loop='sLCWA',
 ...     negative_sampler_kwargs_ranges=dict(
-...         num_negs_per_positive=dict(type=int, low=1, high=100),
+...         num_negs_per_pos=dict(type=int, low=1, high=100),
 ...     ),
 ... )
 
@@ -170,7 +172,7 @@ the number of negatives per positive ratio using `base=10`:
 ...     model='TransE',
 ...     training_loop='sLCWA',
 ...     negative_sampler_kwargs_ranges=dict(
-...         num_negs_per_positive=dict(type=int, scale='power', base=10, low=0, high=2),
+...         num_negs_per_pos=dict(type=int, scale='power', base=10, low=0, high=2),
 ...     ),
 ... )
 
@@ -191,7 +193,7 @@ accomplished with:
 ...     model='TransE',
 ...     training_loop='sLCWA',
 ...     negative_sampler_kwargs_ranges=dict(
-...         num_negs_per_positive=dict(type=int, low=1, high=100, log=True),
+...         num_negs_per_pos=dict(type=int, low=1, high=100, log=True),
 ...     ),
 ... )
 
@@ -208,7 +210,7 @@ so if you want to pick from $10, 20, ... 100$, you can do:
 ...     model='TransE',
 ...     training_loop='sLCWA',
 ...     negative_sampler_kwargs_ranges=dict(
-...         num_negs_per_positive=dict(type=int, low=10, high=100, step=10),
+...         num_negs_per_pos=dict(type=int, low=10, high=100, step=10),
 ...     ),
 ... )
 
@@ -222,7 +224,7 @@ with the same probability
 ...     model='TransE',
 ...     training_loop='sLCWA',
 ...     negative_sampler_kwargs_ranges=dict(
-...         num_negs_per_positive=dict(type=int, low=10, high=100, step=10, log=True),
+...         num_negs_per_pos=dict(type=int, low=10, high=100, step=10, log=True),
 ...     ),
 ... )
 
@@ -251,12 +253,12 @@ as 1 or 2.
 
 >>> from pykeen.hpo import hpo_pipeline
 >>> hpo_pipeline_result = hpo_pipeline(
-...    model='TransE',
-...    model_kwargs=dict(
-...        embedding_dim=200,
-...    ),
-...    dataset='Nations',
-...    n_trials=30,
+...     model='TransE',
+...     model_kwargs=dict(
+...         embedding_dim=200,
+...     ),
+...     dataset='Nations',
+...     n_trials=30,
 ... )
 
 If you would like to set your own HPO strategy for the model's hyperparameters, you can do so with the
@@ -317,10 +319,10 @@ the same way as in :func:`pykeen.pipeline.pipeline`.
 
 >>> from pykeen.hpo import hpo_pipeline
 >>> hpo_pipeline_result = hpo_pipeline(
-...    n_trials=30,
-...    dataset='Nations',
-...    model='TransE',
-...    loss='MarginRankingLoss',
+...     n_trials=30,
+...     dataset='Nations',
+...     model='TransE',
+...     loss='MarginRankingLoss',
 ... )
 
 As stated in the documentation for :func:`pykeen.pipeline.pipeline`, each model
@@ -341,13 +343,13 @@ specify the ``loss_kwargs_ranges`` explicitly, as in the following example.
 
 >>> from pykeen.hpo import hpo_pipeline
 >>> hpo_pipeline_result = hpo_pipeline(
-...    n_trials=30,
-...    dataset='Nations',
-...    model='TransE',
-...    loss='MarginRankingLoss',
-...    loss_kwargs_ranges=dict(
-...        margin=dict(type=float, low=1.0, high=2.0),
-...    ),
+...     n_trials=30,
+...     dataset='Nations',
+...     model='TransE',
+...     loss='MarginRankingLoss',
+...     loss_kwargs_ranges=dict(
+...         margin=dict(type=float, low=1.0, high=2.0),
+...     ),
 ... )
 
 Optimizing the Negative Sampler
@@ -367,6 +369,40 @@ in PyKEEN come from the PyTorch implementations, they obviously do not have
 ``hpo_defaults`` class variables. Instead, every optimizer has a default
 optimization strategy stored in :py:attr:`pykeen.optimizers.optimizers_hpo_defaults`
 the same way that the default strategies for losses are stored externally.
+
+Optimizing the Optimized Optimizer - a.k.a. Learning Rate Schedulers
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+If optimizing your optimizer doesn't cut it for you, you can turn it up a notch and use learning
+rate schedulers (lr_scheduler) that will vary the learning rate of the optimizer. This can e.g.
+be useful to have a more aggressive learning rate in the beginning to quickly make progress
+while lowering the learning rate over time to allow the model to smoothly converge to the optimum.
+
+PyKEEN allows you to use the learning rate schedulers provided by PyTorch, which you can
+simply specify as you would in the :func:`pykeen.pipeline.pipeline`.
+
+>>> from pykeen.hpo import hpo_pipeline
+>>> hpo_pipeline_result = hpo_pipeline(
+...     dataset='Nations',
+...     model='TransE',
+...     lr_scheduler='ExponentialLR',
+... )
+>>> pipeline_result.save_to_directory('nations_transe')
+
+The same way as the optimizers don't come with ``hpo_defaults`` class variables, lr_schedulers rely
+on their own optimization strategies provided in :py:attr:`pykeen.lr_schedulers.lr_schedulers_hpo_defaults`
+In case you are ready to explore even more you can of course also set your own ranges with the
+``lr_scheduler_kwargs_ranges`` keyword argument as in:
+
+>>> from pykeen.hpo import hpo_pipeline
+>>> hpo_pipeline_result = hpo_pipeline(
+...     dataset='Nations',
+...     model='TransE',
+...     lr_scheduler='ExponentialLR',
+...     lr_scheduler_kwargs_ranges=dict(
+...         gamma=dict(type=float, low=0.8, high=1.0),
+...     ),
+... )
+>>> pipeline_result.save_to_directory('nations_transe')
 
 Optimizing Everything Else
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -412,10 +448,10 @@ a probabilistic search algorithm. You can explicitly set the sampler using the `
 >>> from pykeen.hpo import hpo_pipeline
 >>> from optuna.samplers import TPESampler
 >>> hpo_pipeline_result = hpo_pipeline(
-...    n_trials=30,
-...    sampler=TPESampler,
-...    dataset='Nations',
-...    model='TransE',
+...     n_trials=30,
+...     sampler=TPESampler,
+...     dataset='Nations',
+...     model='TransE',
 ... )
 
 You can alternatively pass a string so you don't have to worry about importing Optuna. PyKEEN knows that sampler
@@ -423,10 +459,10 @@ classes always end in "Sampler" so you can pass either "TPE" or "TPESampler" as 
 
 >>> from pykeen.hpo import hpo_pipeline
 >>> hpo_pipeline_result = hpo_pipeline(
-...    n_trials=30,
-...    sampler="tpe",
-...    dataset='Nations',
-...    model='TransE',
+...     n_trials=30,
+...     sampler="tpe",
+...     dataset='Nations',
+...     model='TransE',
 ... )
 
 It's also possible to pass a sampler instance directly:
@@ -435,10 +471,10 @@ It's also possible to pass a sampler instance directly:
 >>> from optuna.samplers import TPESampler
 >>> sampler = TPESampler(prior_weight=1.1)
 >>> hpo_pipeline_result = hpo_pipeline(
-...    n_trials=30,
-...    sampler=sampler,
-...    dataset='Nations',
-...    model='TransE',
+...     n_trials=30,
+...     sampler=sampler,
+...     dataset='Nations',
+...     model='TransE',
 ... )
 
 If you're working in a JSON-based configuration setting, you won't be able to instantiate the sampler
@@ -447,11 +483,11 @@ with your desired settings like this. As a solution, you can pass the keyword ar
 
 >>> from pykeen.hpo import hpo_pipeline
 >>> hpo_pipeline_result = hpo_pipeline(
-...    n_trials=30,
-...    sampler="tpe",
-...    sampler_kwargs=dict(prior_weight=1.1),
-...    dataset='Nations',
-...    model='TransE',
+...     n_trials=30,
+...     sampler="tpe",
+...     sampler_kwargs=dict(prior_weight=1.1),
+...     dataset='Nations',
+...     model='TransE',
 ... )
 
 To emulate most hyper-parameter optimizations that have used random
@@ -460,10 +496,10 @@ sampling, use :class:`optuna.samplers.RandomSampler` like in:
 >>> from pykeen.hpo import hpo_pipeline
 >>> from optuna.samplers import RandomSampler
 >>> hpo_pipeline_result = hpo_pipeline(
-...    n_trials=30,
-...    sampler=RandomSampler,
-...    dataset='Nations',
-...    model='TransE',
+...     n_trials=30,
+...     sampler=RandomSampler,
+...     dataset='Nations',
+...     model='TransE',
 ... )
 
 Grid search can be performed using :class:`optuna.samplers.GridSampler` like in:
@@ -471,10 +507,10 @@ Grid search can be performed using :class:`optuna.samplers.GridSampler` like in:
 >>> from pykeen.hpo import hpo_pipeline
 >>> from optuna.samplers import GridSampler
 >>> hpo_pipeline_result = hpo_pipeline(
-...    n_trials=30,
-...    sampler=GridSampler,
-...    dataset='Nations',
-...    model='TransE',
+...     n_trials=30,
+...     sampler=GridSampler,
+...     dataset='Nations',
+...     model='TransE',
 ... )
 
 Full Examples
@@ -558,7 +594,7 @@ If you have a configuration (in the same format) in a JSON file:
 ...     )
 ... }
 ... with open('config.json', 'w') as file:
-...    json.dump(config, file, indent=2)
+...     json.dump(config, file, indent=2)
 ... hpo_pipeline_result = hpo_pipeline_from_path('config.json')
 
 .. seealso::
@@ -569,8 +605,8 @@ If you have a configuration (in the same format) in a JSON file:
 from .hpo import HpoPipelineResult, hpo_pipeline, hpo_pipeline_from_config, hpo_pipeline_from_path  # noqa: F401
 
 __all__ = [
-    'HpoPipelineResult',
-    'hpo_pipeline_from_path',
-    'hpo_pipeline_from_config',
-    'hpo_pipeline',
+    "HpoPipelineResult",
+    "hpo_pipeline_from_path",
+    "hpo_pipeline_from_config",
+    "hpo_pipeline",
 ]

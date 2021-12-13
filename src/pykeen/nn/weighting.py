@@ -10,9 +10,9 @@ from torch import nn
 
 __all__ = [
     "EdgeWeighting",
-    'InverseInDegreeEdgeWeighting',
-    'InverseOutDegreeEdgeWeighting',
-    'SymmetricEdgeWeighting',
+    "InverseInDegreeEdgeWeighting",
+    "InverseOutDegreeEdgeWeighting",
+    "SymmetricEdgeWeighting",
     "edge_weight_resolver",
 ]
 

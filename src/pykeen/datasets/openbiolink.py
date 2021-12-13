@@ -12,12 +12,12 @@ from more_click import verbose_option
 from .base import PackedZipRemoteDataset
 
 __all__ = [
-    'OpenBioLink',
-    'OpenBioLinkLQ',
+    "OpenBioLink",
+    "OpenBioLinkLQ",
 ]
 
-HQ_URL = 'https://samwald.info/res/OpenBioLink_2020_final/HQ_DIR.zip'
-LQ_URL = 'https://samwald.info/res/OpenBioLink_2020_final/ALL_DIR.zip'
+HQ_URL = "https://samwald.info/res/OpenBioLink_2020_final/HQ_DIR.zip"
+LQ_URL = "https://samwald.info/res/OpenBioLink_2020_final/ALL_DIR.zip"
 
 
 @parse_docdata
@@ -53,10 +53,10 @@ class OpenBioLink(PackedZipRemoteDataset):
         """
         super().__init__(
             url=HQ_URL,
-            name='HQ_DIR.zip',
-            relative_training_path='HQ_DIR/train_test_data/train_sample.csv',
-            relative_testing_path='HQ_DIR/train_test_data/test_sample.csv',
-            relative_validation_path='HQ_DIR/train_test_data/val_sample.csv',
+            name="HQ_DIR.zip",
+            relative_training_path="HQ_DIR/train_test_data/train_sample.csv",
+            relative_testing_path="HQ_DIR/train_test_data/test_sample.csv",
+            relative_validation_path="HQ_DIR/train_test_data/val_sample.csv",
             create_inverse_triples=create_inverse_triples,
             **kwargs,
         )
@@ -90,10 +90,10 @@ class OpenBioLinkLQ(PackedZipRemoteDataset):
         """
         super().__init__(
             url=LQ_URL,
-            name='ALL_DIR.zip',
-            relative_training_path='ALL_DIR/train_test_data/train_sample.csv',
-            relative_testing_path='ALL_DIR/train_test_data/test_sample.csv',
-            relative_validation_path='ALL_DIR/train_test_data/val_sample.csv',
+            name="ALL_DIR.zip",
+            relative_training_path="ALL_DIR/train_test_data/train_sample.csv",
+            relative_testing_path="ALL_DIR/train_test_data/test_sample.csv",
+            relative_validation_path="ALL_DIR/train_test_data/val_sample.csv",
             create_inverse_triples=create_inverse_triples,
             **kwargs,
         )
@@ -106,5 +106,5 @@ def _main():
         cls().summarize()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     _main()

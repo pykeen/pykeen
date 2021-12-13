@@ -196,7 +196,7 @@ class Evaluator(ABC):
 
         rv = evaluate(
             model=model,
-            additional_filtered_triples=additional_filter_triples,
+            additional_filter_triples=additional_filter_triples,
             mapped_triples=mapped_triples,
             evaluators=self,
             batch_size=batch_size,
@@ -335,7 +335,7 @@ class Evaluator(ABC):
                 torch.cuda.empty_cache()
                 evaluate(
                     model=model,
-                    additional_filtered_triples=additional_filter_triples,
+                    additional_filter_triples=additional_filter_triples,
                     mapped_triples=mapped_triples,
                     evaluators=self,
                     only_size_probing=True,
@@ -372,14 +372,10 @@ class Evaluator(ABC):
                 values_dict[key] //= 2  # type: ignore
                 reached_max = True
                 if evaluated_once:
-                    logger.info(
-                        f"Concluded {key} search with batch_size={values_dict[key]}."
-                    )
+                    logger.info(f"Concluded {key} search with batch_size={values_dict[key]}.")
                     break
                 else:
-                    logger.debug(
-                        f"The {key} {values_dict[key]} was too big, trying less now"
-                    )
+                    logger.debug(f"The {key} {values_dict[key]} was too big, trying less now")
             else:
                 # The cache of the previous run has to be freed to allow accurate memory availability estimates
                 gc.collect()
@@ -387,9 +383,7 @@ class Evaluator(ABC):
                 if not reached_max and values_dict["batch_size"] < maximum_triples:
                     values_dict[key] *= 2  # type: ignore
                 else:
-                    logger.info(
-                        f"Concluded {key} search with batch_size={values_dict[key]}."
-                    )
+                    logger.info(f"Concluded {key} search with batch_size={values_dict[key]}.")
                     break
 
         return cast(Tuple[int, bool], (values_dict[key], evaluated_once))
@@ -455,13 +449,9 @@ def create_sparse_positive_filter_(
     other_col = 2 - filter_col
     entities = hrt_batch[:, other_col : other_col + 1]
 
-    entity_filter_test = (all_pos_triples[:, other_col : other_col + 1]).view(
-        1, -1
-    ) == entities
+    entity_filter_test = (all_pos_triples[:, other_col : other_col + 1]).view(1, -1) == entities
     filter_batch = (entity_filter_test & relation_filter).nonzero(as_tuple=False)
-    filter_batch[:, 1] = all_pos_triples[:, filter_col : filter_col + 1].view(1, -1)[
-        :, filter_batch[:, 1]
-    ]
+    filter_batch[:, 1] = all_pos_triples[:, filter_col : filter_col + 1].view(1, -1)[:, filter_batch[:, 1]]
 
     return filter_batch, relation_filter
 
@@ -508,8 +498,7 @@ def filter_scores_(
     # (scores != scores) yields true for all NaN instances (IEEE 754), thus allowing to count the filtered triples.
     if ((scores != scores).sum(dim=1) == num_entities).any():
         logger.warning(
-            "User selected filtered metric computation, but all corrupted triples exists also as positive "
-            "triples",
+            "User selected filtered metric computation, but all corrupted triples exists also as positive " "triples",
         )
 
     return scores
@@ -529,8 +518,8 @@ def evaluate(
     restrict_entities_to: Optional[Collection[int]] = None,
     restrict_relations_to: Optional[Collection[int]] = None,
     do_time_consuming_checks: bool = True,
+    additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
     pre_filtered_triples: bool = True,
-    additional_filtered_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
 ) -> Union[MetricResults, List[MetricResults]]:
     """Evaluate metrics for model on mapped triples.
 
@@ -645,18 +634,18 @@ def evaluate(
 
     # Prepare for result filtering
     if filtering_necessary or positive_masks_required:
-        if additional_filtered_triples is None:
+        if additional_filter_triples is None:
             logger.warning(
                 dedent(
                     """\
-                The filtered setting was enabled, but there were no `additional_filtered_triples`
+                The filtered setting was enabled, but there were no `additional_filter_triples`
                 given. This means you probably forgot to pass (at least) the training triples. Try:
 
-                    additional_filtered_triples=[dataset.training.mapped_triples]
+                    additional_filter_triples=[dataset.training.mapped_triples]
 
                 Or if you want to use the Bordes et al. (2013) approach to filtering, do:
 
-                    additional_filtered_triples=[
+                    additional_filter_triples=[
                         dataset.training.mapped_triples,
                         dataset.validation.mapped_triples,
                     ]
@@ -664,31 +653,10 @@ def evaluate(
                 )
             )
             all_pos_triples = mapped_triples
-        elif isinstance(additional_filtered_triples, (list, tuple)):
-            all_pos_triples = torch.cat(
-                [*additional_filtered_triples, mapped_triples],
-                dim=0,
-            )
+        elif isinstance(additional_filter_triples, (list, tuple)):
+            all_pos_triples = torch.cat([*additional_filter_triples, mapped_triples], dim=0)
         else:
-            all_pos_triples = torch.cat(
-                [additional_filtered_triples, mapped_triples],
-                dim=0,
-            )
-
-        # also restrict filter triples, which may improve performance
-        if not pre_filtered_triples and (
-            restrict_entities_to is not None or restrict_relations_to is not None
-        ):
-            old_num_triples = all_pos_triples.shape[0]
-            all_pos_triples = restrict_triples(
-                mapped_triples=all_pos_triples,
-                entities=restrict_entities_to,
-                relations=restrict_relations_to,
-            )
-            logger.info(
-                f"keeping {format_relative_comparison(all_pos_triples.shape[0], old_num_triples)} filter triples.",
-            )
-
+            all_pos_triples = torch.cat([additional_filter_triples, mapped_triples], dim=0)
         all_pos_triples = all_pos_triples.to(device=device)
     else:
         all_pos_triples = None
@@ -725,9 +693,7 @@ def evaluate(
     )
     if tqdm_kwargs:
         _tqdm_kwargs.update(tqdm_kwargs)
-    with optional_context_manager(
-        use_tqdm, tqdm(**_tqdm_kwargs)
-    ) as progress_bar, torch.no_grad():
+    with optional_context_manager(use_tqdm, tqdm(**_tqdm_kwargs)) as progress_bar, torch.inference_mode():
         # batch-wise processing
         for batch in batches:
             batch_size = batch.shape[0]
