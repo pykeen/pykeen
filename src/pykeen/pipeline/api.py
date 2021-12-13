@@ -274,6 +274,9 @@ class PipelineResult(Result):
     #: An early stopper
     stopper: Optional[Stopper] = None
 
+    #: The configuration
+    configuration: Mapping[str, Any] = field(default_factory=dict)
+
     #: Any additional metadata as a dictionary
     metadata: MutableMapping[str, Any] = field(default_factory=dict)
 
@@ -749,7 +752,7 @@ def _build_model_helper(
 def _resolve_result_trackers(
     result_tracker: Union[None, OneOrSequence[HintType[ResultTracker]]] = None,
     result_tracker_kwargs: Optional[OneOrSequence[Optional[Mapping[str, Any]]]] = None,
-) -> ResultTracker:
+) -> MultiResultTracker:
     """Resolve and compose result trackers."""
     if result_tracker is None:
         result_tracker = [ResultTracker]
@@ -765,7 +768,7 @@ def _resolve_result_trackers(
             tracker_resolver.make(query=_result_tracker, pos_kwargs=_result_tracker_kwargs)
             for _result_tracker, _result_tracker_kwargs in zip(result_tracker, result_tracker_kwargs)
         ]
-        + [PythonResultTracker()]  # always add a Python result tracker
+        + [PythonResultTracker(store_metrics=False)]  # always add a Python result tracker for storing the configuration
     )
 
 
@@ -1274,6 +1277,13 @@ def pipeline(  # noqa: C901
         training_loop=training_loop_instance,
         losses=losses,
         stopper=stopper_instance,
+        configuration=next(
+            iter(
+                tracker.configuration
+                for tracker in _result_tracker.trackers
+                if isinstance(tracker, PythonResultTracker)
+            )
+        ),
         metric_results=metric_results,
         metadata=metadata,
         train_seconds=training_end_time,
