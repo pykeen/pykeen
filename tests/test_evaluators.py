@@ -5,6 +5,7 @@
 import dataclasses
 import logging
 import unittest
+from operator import attrgetter
 from typing import Any, ClassVar, Dict, Mapping, Optional, Tuple, Type
 
 import numpy
@@ -252,7 +253,7 @@ class SklearnEvaluatorTest(_AbstractEvaluatorTests, unittest.TestCase):
         mask = numpy.concatenate(mask_filtered, axis=0)
         scores = numpy.concatenate(scores_filtered, axis=0)
 
-        for field in dataclasses.fields(SklearnMetricResults):
+        for field in sorted(dataclasses.fields(SklearnMetricResults), key=attrgetter("name")):
             with self.subTest(metric=field.name):
                 f = field.metadata["f"]
                 exp_score = f(mask.flat, scores.flat)
