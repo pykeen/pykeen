@@ -3,6 +3,7 @@
 """Tests for interaction functions."""
 
 import logging
+import unittest
 from typing import Tuple, Union
 from unittest import SkipTest
 
@@ -13,7 +14,13 @@ import unittest_templates
 import pykeen.nn.modules
 import pykeen.utils
 from pykeen.nn.functional import _rotate_quaternion, _split_quaternion, distmult_interaction
-from pykeen.nn.modules import FunctionalInteraction, Interaction, LiteralInteraction, NormBasedInteraction
+from pykeen.nn.modules import (
+    FunctionalInteraction,
+    Interaction,
+    LiteralInteraction,
+    NormBasedInteraction,
+    parallel_slice_batches,
+)
 from pykeen.utils import clamp_norm, project_entity, strip_dim, view_complex
 from tests import cases
 
@@ -525,3 +532,53 @@ class InteractionTestsTestCase(unittest_templates.MetaTestCase[Interaction]):
         # FIXME
         pykeen.nn.modules.BoxEInteraction,
     }
+
+
+class ParallelSliceBatchesTest(unittest.TestCase):
+    """Tests for parallel_slice_batches."""
+
+    slice_size = 15
+    slice_dim = 2
+    batch_size = 2
+    num_relations = 35
+
+    def _verify(
+        self,
+        z_sliced: torch.FloatTensor,
+        z_shape: Tuple[int, ...],
+    ):
+        """Verify a single sliced tensor."""
+        assert isinstance(z_sliced, torch.Tensor)
+        for dim, (z_dim, z_sliced_dim) in enumerate(zip(z_shape, z_sliced.shape)):
+            if dim != self.slice_dim:
+                assert z_dim == z_sliced_dim
+            else:
+                assert z_sliced_dim <= z_dim
+                assert z_sliced_dim <= self.slice_size
+
+    def test_single(self):
+        """Test parallel_slice_batches with a single representation."""
+        shape = (2, 3)
+        z = torch.empty(size=(self.batch_size, 1, self.num_relations, 1, *shape), device="meta")
+        for z_sliced in parallel_slice_batches(
+            z=z,
+            slice_size=self.slice_size,
+            dim=self.slice_dim,
+        ):
+            self._verify(z_sliced=z_sliced, z_shape=z.shape)
+
+    def test_multiple(self):
+        """Test parallel_slice_batches with a multiple representations."""
+        shapes = [(2, 3), (5,)]
+        zs = tuple(
+            torch.empty(size=(self.batch_size, 1, self.num_relations, 1, *shape), device="meta") for shape in shapes
+        )
+        for z_sliced in parallel_slice_batches(
+            z=zs,
+            slice_size=self.slice_size,
+            dim=self.slice_dim,
+        ):
+            assert isinstance(z_sliced, tuple)
+            assert len(z_sliced) == len(zs)
+            for z_sliced_single, z in zip(z_sliced, zs):
+                self._verify(z_sliced=z_sliced_single, z_shape=z.shape)
