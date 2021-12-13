@@ -587,9 +587,7 @@ def evaluate(
             entities=restrict_entities_to,
             relations=restrict_relations_to,
         )
-        logger.info(
-            f"keeping {format_relative_comparison(mapped_triples.shape[0], old_num_triples)} triples.",
-        )
+        logger.info(f"keeping {format_relative_comparison(mapped_triples.shape[0], old_num_triples)} triples.")
 
     # Send to device
     if device is not None:
