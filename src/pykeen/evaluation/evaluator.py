@@ -581,7 +581,6 @@ def evaluate(
             relations=restrict_relations_to,
         )
         logger.info(f"keeping {format_relative_comparison(mapped_triples.shape[0], old_num_triples)} triples.")
-        # TODO: Also restrict filter triples? This should not affect correctness, but might improve performance.
 
     # Send to device
     if device is not None:
@@ -623,6 +622,19 @@ def evaluate(
             all_pos_triples = torch.cat([*additional_filtered_triples, mapped_triples], dim=0)
         else:
             all_pos_triples = torch.cat([additional_filtered_triples, mapped_triples], dim=0)
+
+        # also restrict filter triples, which may improve performance
+        if not pre_filtered_triples and (restrict_entities_to is not None or restrict_relations_to is not None):
+            old_num_triples = all_pos_triples.shape[0]
+            all_pos_triples = restrict_triples(
+                mapped_triples=all_pos_triples,
+                entities=restrict_entities_to,
+                relations=restrict_relations_to,
+            )
+            logger.info(
+                f"keeping {format_relative_comparison(all_pos_triples.shape[0], old_num_triples)} filter triples.",
+            )
+
         all_pos_triples = all_pos_triples.to(device=device)
     else:
         all_pos_triples = None
