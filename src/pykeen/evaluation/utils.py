@@ -5,6 +5,7 @@
 from typing import Callable, MutableMapping, NamedTuple, Optional, Union
 
 import numpy as np
+from rexmex.utils import binarize as binarize_func
 
 __all__ = [
     "MetricAnnotation",
@@ -77,10 +78,11 @@ class MetricAnnotator:
         lower_inclusive: bool = True,
         upper: float = 1.0,
         upper_inclusive: bool = True,
+        binarize: bool = False,
     ):
         """Annotate a function."""
         self.metrics[func] = MetricAnnotation(
-            func=func,
+            func=binarize_func(func) if binarize else func,
             type=self.type,
             name=name or func.__name__.replace("_", " ").title(),
             lower=lower,

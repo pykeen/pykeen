@@ -129,18 +129,24 @@ classifier_annotator.higher(
 )
 classifier_annotator.higher(
     rmc.accuracy_score,
+    binarize=True,
     name="Accuracy",
     description="(TP + TN) / (TP + TN + FP + FN)",
     link="https://en.wikipedia.org/wiki/Accuracy",
 )
 classifier_annotator.higher(
     rmc.balanced_accuracy_score,
+    binarize=True,
     name="Balanced Accuracy",
     description="An adjusted version of the accuracy for imbalanced datasets",
     link="https://scikit-learn.org/stable/modules/generated/sklearn.metrics.balanced_accuracy_score.html",
 )
 classifier_annotator.higher(
-    rmc.f1_score, name="F1 Score", description="2TP / (2TP + FP + FN)", link="https://en.wikipedia.org/wiki/F1_score"
+    rmc.f1_score,
+    name="F1 Score",
+    binarize=True,
+    description="2TP / (2TP + FP + FN)",
+    link="https://en.wikipedia.org/wiki/F1_score",
 )
 classifier_annotator.higher(
     rmc.average_precision_score,
@@ -150,6 +156,7 @@ classifier_annotator.higher(
 )
 classifier_annotator.higher(
     rmc.matthews_correlation_coefficient,
+    binarize=True,
     lower=-1.0,
     upper=1.0,
     description="A balanced measure applicable even with class imbalance",
