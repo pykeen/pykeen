@@ -521,8 +521,6 @@ def get_readme() -> str:
             link_fmt="https://pykeen.readthedocs.io/en/latest/api/{}.html",
         ),
         n_negative_samplers=len(negative_sampler_resolver.lookup_dict),
-        optimizers=_help_optimizers(tablefmt, link_fmt="https://pytorch.org/docs/stable/optim.html#{}"),
-        n_optimizers=len(optimizer_resolver.lookup_dict),
         stoppers=_help_stoppers(
             tablefmt,
             link_fmt="https://pykeen.readthedocs.io/en/latest/reference/stoppers.html#{}",
@@ -534,11 +532,6 @@ def get_readme() -> str:
         n_metrics=len(get_metric_list()),
         trackers=_help_trackers(tablefmt, link_fmt="https://pykeen.readthedocs.io/en/latest/api/{}.html"),
         n_trackers=len(tracker_resolver.lookup_dict),
-        hpo_samplers=_help_hpo_samplers(
-            tablefmt,
-            link_fmt="https://optuna.readthedocs.io/en/stable/reference/generated/{}.html",
-        ),
-        n_hpo_samplers=len(sampler_resolver.lookup_dict),
     )
 
 
