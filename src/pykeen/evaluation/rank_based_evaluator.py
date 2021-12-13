@@ -270,6 +270,7 @@ class RankBasedMetricResults(MetricResults):
             increasing=False,
             range="[1, inf)",
             doc="The median over all ranks.",
+            link="https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html",
         )
     )
 
@@ -319,6 +320,7 @@ class RankBasedMetricResults(MetricResults):
             increasing=True,
             range="(0, 1]",
             doc="The inverse of the median over all ranks.",
+            link="https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html",
         )
     )
 
@@ -361,7 +363,7 @@ class RankBasedMetricResults(MetricResults):
             range="[0, 1]",
             increasing=True,
             doc="The relative frequency of ranks not larger than a given k.",
-            link="https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#hits-k"
+            link="https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#hits-k",
         )
     )
 
