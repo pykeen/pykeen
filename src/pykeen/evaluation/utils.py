@@ -2,7 +2,7 @@
 
 """Utilities for evaluation."""
 
-from typing import Callable, MutableMapping, NamedTuple, Optional
+from typing import Callable, MutableMapping, NamedTuple, Optional, Union
 
 import numpy as np
 
@@ -29,6 +29,8 @@ class MetricAnnotation(NamedTuple):
         """Get the math notation for the range of this metric."""
         left = "[" if self.lower_inclusive else "("
         right = "]" if self.upper_inclusive else ")"
+        lower: Union[int, float]
+        upper: Union[int, float]
         try:
             lower = int(self.lower)
         except OverflowError:

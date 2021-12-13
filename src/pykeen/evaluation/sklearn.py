@@ -46,7 +46,7 @@ SklearnMetricResultsBase = make_dataclass(
 @fix_dataclass_init_docs
 @dataclass_json
 @dataclass
-class SklearnMetricResults(SklearnMetricResultsBase):
+class SklearnMetricResults(SklearnMetricResultsBase):  # type: ignore
     """Results from computing metrics."""
 
     @classmethod
