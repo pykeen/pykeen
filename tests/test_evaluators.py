@@ -5,6 +5,7 @@
 import dataclasses
 import logging
 import unittest
+from operator import attrgetter
 from typing import Any, ClassVar, Dict, Mapping, Optional, Tuple, Type
 
 import numpy
@@ -252,10 +253,15 @@ class SklearnEvaluatorTest(_AbstractEvaluatorTests, unittest.TestCase):
         mask = numpy.concatenate(mask_filtered, axis=0)
         scores = numpy.concatenate(scores_filtered, axis=0)
 
-        for field in dataclasses.fields(SklearnMetricResults):
-            f = field.metadata["f"]
-            exp_score = f(mask.flat, scores.flat)
-            self.assertAlmostEqual(result.get_metric(field.name), exp_score)
+        for field in sorted(dataclasses.fields(SklearnMetricResults), key=attrgetter("name")):
+            with self.subTest(metric=field.name):
+                f = field.metadata["f"]
+                exp_score = f(numpy.array(mask.flat), numpy.array(scores.flat))
+                act_score = result.get_metric(field.name)
+                if numpy.isnan(exp_score):
+                    self.assertTrue(numpy.isnan(act_score))
+                else:
+                    self.assertAlmostEqual(act_score, exp_score, msg=f"failed for {field.name}", delta=7)
 
 
 class EvaluatorUtilsTests(unittest.TestCase):
