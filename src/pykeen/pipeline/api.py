@@ -755,8 +755,7 @@ def _resolve_result_trackers(
 ) -> MultiResultTracker:
     """Resolve and compose result trackers."""
     if result_tracker is None:
-        result_tracker = [ResultTracker]
-        result_tracker_kwargs = [None]
+        result_tracker = []
     result_tracker = upgrade_to_sequence(result_tracker)
     if result_tracker_kwargs is None:
         result_tracker_kwargs = [None] * len(result_tracker)
