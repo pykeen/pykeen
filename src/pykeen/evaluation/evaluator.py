@@ -647,10 +647,7 @@ def evaluate(
         # This should be a reasonable default size that works on most setups while being faster than batch_size=1
         batch_size = 32
         logger.info(f"No evaluation batch_size provided. Setting batch_size to '{batch_size}'.")
-    batches = cast(
-        Iterable[np.ndarray],
-        split_list_in_batches_iter(input_list=mapped_triples, batch_size=batch_size),
-    )
+    batches = cast(Iterable[np.ndarray], split_list_in_batches_iter(input_list=mapped_triples, batch_size=batch_size))
 
     # Show progressbar
     num_triples = mapped_triples.shape[0]
