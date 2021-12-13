@@ -316,13 +316,13 @@ def _help_metrics(tablefmt):
         headers=(
             [
                 "Name",
-                "Range",
+                "Interval",
                 "Direction",
                 "Description",
                 "Type",
             ]
             if tablefmt == "github"
-            else ["Metric", "Range", "Direction", "Description", "Type", "Reference"]
+            else ["Metric", "Interval", "Direction", "Description", "Type", "Reference"]
         ),
         tablefmt=tablefmt,
     )

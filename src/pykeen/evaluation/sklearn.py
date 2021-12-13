@@ -27,7 +27,7 @@ _fields = [
             metadata=dict(
                 name=metadata.name,
                 doc=metadata.description or "",
-                range=metadata.range_str(),
+                range=metadata.interval(),
                 increasing=metadata.higher_is_better,
                 f=metadata.func,
             )

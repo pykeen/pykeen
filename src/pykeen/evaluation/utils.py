@@ -25,7 +25,7 @@ class MetricAnnotation(NamedTuple):
     upper_inclusive: bool = True
     description: Optional[str] = None
 
-    def range_str(self) -> str:
+    def interval(self) -> str:
         """Get the math notation for the range of this metric."""
         left = "[" if self.lower_inclusive else "("
         right = "]" if self.upper_inclusive else ")"
@@ -39,7 +39,7 @@ class MetricAnnotation(NamedTuple):
         except OverflowError:
             upper = self.upper
             right = ")"
-        return f"{left}{lower},{upper}{right}"
+        return f"{left}{lower}, {upper}{right}"
 
 
 class MetricAnnotator:
