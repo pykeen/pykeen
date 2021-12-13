@@ -146,7 +146,7 @@ classifier_annotator.higher(
     rmc.average_precision_score,
     name="Average Precision",
     description="A summary statistic over the precision-recall curve",
-    link="https://scikit-learn.org/stable/modules/generated/sklearn.metrics.average_precision_score.html?highlight=average_precision_score",
+    link="https://scikit-learn.org/stable/modules/generated/sklearn.metrics.average_precision_score.html",
 )
 classifier_annotator.higher(
     rmc.matthews_correlation_coefficient,

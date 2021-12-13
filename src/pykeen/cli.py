@@ -377,11 +377,9 @@ def _get_metrics_lines(tablefmt: str):
         if field.name in {"rank_std", "rank_var", "rank_mad", "rank_count"}:
             continue
         label = field.metadata["name"]
-        link = field.metadata.get("link")
-        if link:
-            label = f"[{label}]({link})"
+        link = field.metadata["link"]
         yv = [
-            label,
+            f"[{label}]({link})",
             field.metadata["range"],
             "📈" if field.metadata["increasing"] else "📉",
             field.metadata["doc"],
