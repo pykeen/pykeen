@@ -40,6 +40,7 @@ from .kinships import Kinships
 from .nations import Nations
 from .ogb import OGBBioKG, OGBWikiKG
 from .openbiolink import OpenBioLink, OpenBioLinkLQ
+from .tbfy import TBFY
 from .umls import UMLS
 from .wd50k import WD50KT
 from .wikidata5m import Wikidata5M
@@ -60,6 +61,7 @@ __all__ = [
     "CoDExLarge",
     "OGBBioKG",
     "OGBWikiKG",
+    "TBFY",
     "UMLS",
     "FB15k",
     "FB15k237",
