@@ -58,6 +58,7 @@ INVERSE_MEDIAN_RANK = "inverse_median_rank"
 RANK_STD = "rank_std"
 RANK_VARIANCE = "rank_var"
 RANK_MAD = "rank_mad"
+RANK_COUNT = "rank_count"
 
 all_type_funcs = {
     ARITHMETIC_MEAN_RANK: np.mean,  # This is MR
@@ -72,6 +73,7 @@ all_type_funcs = {
     RANK_STD: np.std,
     RANK_VARIANCE: np.var,
     RANK_MAD: stats.median_abs_deviation,
+    RANK_COUNT: lambda x: np.asarray(x.size),
 }
 
 ADJUSTED_ARITHMETIC_MEAN_RANK = "adjusted_arithmetic_mean_rank"
@@ -245,98 +247,143 @@ class RankBasedMetricResults(MetricResults):
     arithmetic_mean_rank: Dict[str, Dict[str, float]] = field(
         metadata=dict(
             name="Mean Rank (MR)",
-            doc="The arithmetic mean over all ranks on, [1, inf). Lower is better.",
+            increasing=False,
+            range="[1, inf)",
+            doc="The arithmetic mean over all ranks.",
+            link="https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#mean-rank",
         )
     )
 
     geometric_mean_rank: Dict[str, Dict[str, float]] = field(
         metadata=dict(
             name="Geometric Mean Rank (GMR)",
-            doc="The geometric mean over all ranks, on [1, inf). Lower is better.",
+            increasing=False,
+            range="[1, inf)",
+            doc="The geometric mean over all ranks.",
+            link="https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html",
         )
     )
 
     median_rank: Dict[str, Dict[str, float]] = field(
         metadata=dict(
             name="Median Rank",
-            doc="The median over all ranks, on [1, inf). Lower is better.",
+            increasing=False,
+            range="[1, inf)",
+            doc="The median over all ranks.",
+            link="https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html",
         )
     )
 
     harmonic_mean_rank: Dict[str, Dict[str, float]] = field(
         metadata=dict(
             name="Harmonic Mean Rank (HMR)",
-            doc="The harmonic mean over all ranks, on [1, inf). Lower is better.",
+            increasing=False,
+            range="[1, inf)",
+            doc="The harmonic mean over all ranks.",
+            link="https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html",
         )
     )
 
     inverse_arithmetic_mean_rank: Dict[str, Dict[str, float]] = field(
         metadata=dict(
             name="Inverse Arithmetic Mean Rank (IAMR)",
-            doc="The inverse of the arithmetic mean over all ranks, on (0, 1]. Higher is better.",
+            increasing=True,
+            range="(0, 1]",
+            doc="The inverse of the arithmetic mean over all ranks.",
+            link="https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html",
         )
     )
 
     inverse_geometric_mean_rank: Dict[str, Dict[str, float]] = field(
         metadata=dict(
             name="Inverse Geometric Mean Rank (IGMR)",
-            doc="The inverse of the geometric mean over all ranks, on (0, 1]. Higher is better.",
+            increasing=True,
+            range="(0, 1]",
+            doc="The inverse of the geometric mean over all ranks.",
+            link="https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html",
         )
     )
 
     inverse_harmonic_mean_rank: Dict[str, Dict[str, float]] = field(
         metadata=dict(
             name="Mean Reciprocal Rank (MRR)",
-            doc="The inverse of the harmonic mean over all ranks, on (0, 1]. Higher is better.",
+            increasing=True,
+            range="(0, 1]",
+            doc="The inverse of the harmonic mean over all ranks.",
+            link="https://en.wikipedia.org/wiki/Mean_reciprocal_rank",
         )
     )
 
     inverse_median_rank: Dict[str, Dict[str, float]] = field(
         metadata=dict(
             name="Inverse Median Rank",
-            doc="The inverse of the median over all ranks, on (0, 1]. Higher is better.",
+            increasing=True,
+            range="(0, 1]",
+            doc="The inverse of the median over all ranks.",
+            link="https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html",
+        )
+    )
+
+    rank_count: Dict[str, int] = field(
+        metadata=dict(
+            name="Rank Count",
+            doc="The number of considered ranks, a non-negative number. Low numbers may indicate unreliable results.",
         )
     )
 
     rank_std: Dict[str, Dict[str, float]] = field(
         metadata=dict(
             name="Rank Standard Deviation",
-            doc="The standard deviation over all ranks on, [0, inf). Lower is better.",
+            range="[0, inf)",
+            increasing=False,
+            doc="The standard deviation over all ranks.",
         )
     )
 
     rank_var: Dict[str, Dict[str, float]] = field(
         metadata=dict(
             name="Rank Variance",
-            doc="The variance over all ranks on, [0, inf). Lower is better.",
+            range="[0, inf)",
+            increasing=False,
+            doc="The variance over all ranks.",
         )
     )
 
     rank_mad: Dict[str, Dict[str, float]] = field(
         metadata=dict(
             name="Rank Median Absolute Deviation",
-            doc="The median absolute deviation over all ranks on, [0, inf). Lower is better.",
+            range="[0, inf)",
+            doc="The median absolute deviation over all ranks.",
         )
     )
 
     hits_at_k: Dict[str, Dict[str, Dict[Union[int, float], float]]] = field(
         metadata=dict(
             name="Hits @ K",
-            doc="The relative frequency of ranks not larger than a given k, on [0, 1]. Higher is better",
+            range="[0, 1]",
+            increasing=True,
+            doc="The relative frequency of ranks not larger than a given k.",
+            link="https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#hits-k",
         )
     )
 
     adjusted_arithmetic_mean_rank: Dict[str, Dict[str, float]] = field(
         metadata=dict(
             name="Adjusted Arithmetic Mean Rank (AAMR)",
-            doc="The mean over all chance-adjusted ranks, on (0, 2). Lower is better.",
+            increasing=False,
+            range="(0, 2)",
+            doc="The mean over all chance-adjusted ranks.",
+            link="https://arxiv.org/abs/2002.06914",
         )
     )
 
     adjusted_arithmetic_mean_rank_index: Dict[str, Dict[str, float]] = field(
         metadata=dict(
             name="Adjusted Arithmetic Mean Rank Index (AAMRI)",
-            doc="The re-indexed adjusted mean rank (AAMR), on [-1, 1]. Higher is better.",
+            increasing=True,
+            range="[-1, 1]",
+            doc="The re-indexed adjusted mean rank (AAMR)",
+            link="https://arxiv.org/abs/2002.06914",
         )
     )
 
@@ -540,6 +587,7 @@ class RankBasedEvaluator(Evaluator):
             inverse_geometric_mean_rank=dict(asr[INVERSE_GEOMETRIC_MEAN_RANK]),
             inverse_harmonic_mean_rank=dict(asr[INVERSE_HARMONIC_MEAN_RANK]),
             inverse_median_rank=dict(asr[INVERSE_MEDIAN_RANK]),
+            rank_count=dict(asr[RANK_COUNT]),
             rank_std=dict(asr[RANK_STD]),
             rank_mad=dict(asr[RANK_MAD]),
             rank_var=dict(asr[RANK_VARIANCE]),

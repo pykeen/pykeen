@@ -24,7 +24,7 @@ from click_default_group import DefaultGroup
 from tabulate import tabulate
 
 from .datasets import dataset_resolver
-from .evaluation import evaluator_resolver, get_metric_list, metric_resolver
+from .evaluation import evaluator_resolver, get_metric_list
 from .experiments.cli import experiments
 from .hpo.cli import optimize
 from .hpo.samplers import sampler_resolver
@@ -310,15 +310,19 @@ def metrics(tablefmt: str):
     click.echo(_help_metrics(tablefmt))
 
 
-def _help_metrics(tablefmt, link_fmt=None):
+def _help_metrics(tablefmt):
     return tabulate(
-        sorted(_get_metrics_lines(tablefmt, link_fmt=link_fmt)),
+        sorted(_get_metrics_lines(tablefmt), key=lambda t: (t[4], t[0])),
         headers=(
-            ["Name", "Reference"]
-            if tablefmt == "rst"
-            else ["Name", "Description"]
+            [
+                "Name",
+                "Interval",
+                "Direction",
+                "Description",
+                "Type",
+            ]
             if tablefmt == "github"
-            else ["Metric", "Description", "Reference"]
+            else ["Metric", "Interval", "Direction", "Description", "Type", "Reference"]
         ),
         tablefmt=tablefmt,
     )
@@ -362,18 +366,28 @@ def _help_hpo_samplers(tablefmt: str, link_fmt: Optional[str] = None):
     )
 
 
-def _get_metrics_lines(tablefmt: str, link_fmt=None):
-    if tablefmt == "rst":
-        for name, value in metric_resolver.lookup_dict.items():
-            yield name, f":class:`pykeen.evaluation.{value.__name__}`"
-    else:
-        for field, name, value in get_metric_list():
-            if field.name in {"rank_std", "rank_var", "rank_mad"}:
-                continue
-            if tablefmt == "github":
-                yield field.metadata["name"], field.metadata["doc"]
-            else:
-                yield field.metadata["name"], field.metadata["doc"], name, f"pykeen.evaluation.{value.__name__}"
+METRIC_NAMES = {
+    "sklearn": "Classification",
+    "rankbased": "Ranking",
+}
+
+
+def _get_metrics_lines(tablefmt: str):
+    for field, name, value in get_metric_list():
+        if field.name in {"rank_std", "rank_var", "rank_mad", "rank_count"}:
+            continue
+        label = field.metadata["name"]
+        link = field.metadata["link"]
+        yv = [
+            f"[{label}]({link})",
+            field.metadata["range"],
+            "📈" if field.metadata["increasing"] else "📉",
+            field.metadata["doc"],
+            METRIC_NAMES[name],
+        ]
+        if tablefmt != "github":
+            yv.append(f"pykeen.evaluation.{value.__name__}")
+        yield tuple(yv)
 
 
 def _get_lines(d, tablefmt, submodule, link_fmt: Optional[str] = None):
@@ -507,8 +521,6 @@ def get_readme() -> str:
             link_fmt="https://pykeen.readthedocs.io/en/latest/api/{}.html",
         ),
         n_negative_samplers=len(negative_sampler_resolver.lookup_dict),
-        optimizers=_help_optimizers(tablefmt, link_fmt="https://pytorch.org/docs/stable/optim.html#{}"),
-        n_optimizers=len(optimizer_resolver.lookup_dict),
         stoppers=_help_stoppers(
             tablefmt,
             link_fmt="https://pykeen.readthedocs.io/en/latest/reference/stoppers.html#{}",
@@ -516,15 +528,10 @@ def get_readme() -> str:
         n_stoppers=len(stopper_resolver.lookup_dict),
         evaluators=_help_evaluators(tablefmt, link_fmt="https://pykeen.readthedocs.io/en/latest/api/{}.html"),
         n_evaluators=len(evaluator_resolver.lookup_dict),
-        metrics=_help_metrics(tablefmt, link_fmt="https://pykeen.readthedocs.io/en/latest/api/{}.html"),
+        metrics=_help_metrics(tablefmt),
         n_metrics=len(get_metric_list()),
         trackers=_help_trackers(tablefmt, link_fmt="https://pykeen.readthedocs.io/en/latest/api/{}.html"),
         n_trackers=len(tracker_resolver.lookup_dict),
-        hpo_samplers=_help_hpo_samplers(
-            tablefmt,
-            link_fmt="https://optuna.readthedocs.io/en/stable/reference/generated/{}.html",
-        ),
-        n_hpo_samplers=len(sampler_resolver.lookup_dict),
     )
 
 
