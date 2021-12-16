@@ -43,19 +43,19 @@ tracker_resolver = Resolver.from_subclasses(
 
 
 def resolve_result_trackers(
-    result_tracker_: Optional[OneOrSequence[HintType[ResultTracker]]] = None,
-    result_tracker_kwargs_: Optional[OneOrSequence[Optional[Mapping[str, Any]]]] = None,
+    result_tracker: Optional[OneOrSequence[HintType[ResultTracker]]] = None,
+    result_tracker_kwargs: Optional[OneOrSequence[Optional[Mapping[str, Any]]]] = None,
 ) -> MultiResultTracker:
     """Resolve and compose result trackers."""
-    if result_tracker_ is None:
+    if result_tracker is None:
         result_trackers = []
     else:
-        result_trackers = upgrade_to_sequence(result_tracker_)
+        result_trackers = upgrade_to_sequence(result_tracker)
 
-    if result_tracker_kwargs_ is None:
+    if result_tracker_kwargs is None:
         result_tracker_kwargses = [None] * len(result_trackers)
     else:
-        result_tracker_kwargses = upgrade_to_sequence(result_tracker_kwargs_)
+        result_tracker_kwargses = upgrade_to_sequence(result_tracker_kwargs)
 
     if len(result_tracker_kwargses) == 1 and len(result_trackers) == 0:
         raise ValueError
