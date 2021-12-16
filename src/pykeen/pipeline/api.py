@@ -184,7 +184,6 @@ the :class:`pykeen.datasets.Nations`
 """
 
 import ftplib
-import inspect
 import json
 import logging
 import os
@@ -212,7 +211,7 @@ from ..optimizers import optimizer_resolver
 from ..regularizers import Regularizer, regularizer_resolver
 from ..sampling import NegativeSampler, negative_sampler_resolver
 from ..stoppers import EarlyStopper, Stopper, stopper_resolver
-from ..trackers import PythonResultTracker, ResultTracker, resolve_result_trackers
+from ..trackers import ResultTracker, resolve_result_trackers
 from ..training import SLCWATrainingLoop, TrainingLoop, training_loop_resolver
 from ..triples import CoreTriplesFactory
 from ..typing import Hint, HintType, MappedTriples, OneOrSequence
@@ -1162,9 +1161,7 @@ def pipeline(  # noqa: C901
     _result_tracker.log_params(params=training_kwargs, prefix="training")
 
     # Add logging for debugging
-    configuration_tracker = _result_tracker.trackers[-1]
-    assert isinstance(configuration_tracker, PythonResultTracker)
-    configuration = configuration_tracker.configuration
+    configuration = result_tracker.get_configuration()
     logging.debug("Run Pipeline based on following config:")
     for key, value in configuration.items():
         logging.debug(f"{key}: {value}")

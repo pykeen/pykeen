@@ -238,3 +238,8 @@ class MultiResultTracker(ResultTracker):
     def end_run(self, success: bool = True) -> None:  # noqa: D102
         for tracker in self.trackers:
             tracker.end_run(success=success)
+
+    def get_configuration(self):
+        """Get the configuration from a Python result tracker."""
+        tracker = next(_tracker for _tracker in self.trackers if isinstance(_tracker, PythonResultTracker))
+        return tracker.configuration
