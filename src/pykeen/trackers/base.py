@@ -78,14 +78,18 @@ class PythonResultTracker(ResultTracker):
     #: The configuration dictionary, a mapping from name -> value
     configuration: MutableMapping[str, Any]
 
+    #: Should metrics be stored when running ``log_metrics()``?
+    store_metrics: bool
+
     #: The metrics, a mapping from step -> (name -> value)
-    metrics: Optional[MutableMapping[Optional[int], Mapping[str, float]]]
+    metrics: MutableMapping[Optional[int], Mapping[str, float]]
 
     def __init__(self, store_metrics: bool = True) -> None:
         """Initialize the tracker."""
         super().__init__()
+        self.store_metrics = store_metrics
         self.configuration = dict()
-        self.metrics = dict() if store_metrics else None
+        self.metrics = dict()
         self.run_name = None
 
     def start_run(self, run_name: Optional[str] = None) -> None:  # noqa: D102
@@ -102,7 +106,7 @@ class PythonResultTracker(ResultTracker):
         step: Optional[int] = None,
         prefix: Optional[str] = None,
     ) -> None:  # noqa: D102
-        if self.metrics is None:
+        if not self.store_metrics:
             return
 
         if prefix is not None:
