@@ -14,7 +14,7 @@ from uuid import uuid4
 import click
 from more_click import verbose_option
 
-from pykeen.utils import CONFIGURATION_FILE_FORMATS
+from pykeen.utils import CONFIGURATION_FILE_FORMATS, load_configuration
 
 __all__ = [
     "experiments",
@@ -50,6 +50,11 @@ discard_replicates_option = click.option(
     is_flag=True,
     help="Discard trained models after training.",
 )
+extra_config_option = click.option(
+    "--extra-config",
+    type=pathlib.Path,
+    default=None,
+)
 
 
 @click.group()
@@ -66,6 +71,7 @@ def experiments():
 @discard_replicates_option
 @directory_option
 @verbose_option
+@extra_config_option
 def reproduce(
     model: str,
     reference: str,
@@ -74,6 +80,7 @@ def reproduce(
     directory: str,
     move_to_cpu: bool,
     discard_replicates: bool,
+    extra_config: Optional[pathlib.Path],
 ):
     """Reproduce a pre-defined experiment included in PyKEEN.
 
@@ -94,6 +101,7 @@ def reproduce(
         move_to_cpu=move_to_cpu,
         save_replicates=not discard_replicates,
         file_name=file_name,
+        extra_config=extra_config,
     )
 
 
@@ -103,12 +111,14 @@ def reproduce(
 @move_to_cpu_option
 @discard_replicates_option
 @directory_option
+@extra_config_option
 def run(
     path: str,
     replicates: int,
     directory: str,
     move_to_cpu: bool,
     discard_replicates: bool,
+    extra_config: Optional[pathlib.Path],
 ):
     """Run a single reproduction experiment."""
     _help_reproduce(
@@ -117,6 +127,7 @@ def run(
         directory=directory,
         move_to_cpu=move_to_cpu,
         save_replicates=not discard_replicates,
+        extra_config=extra_config,
     )
 
 
@@ -128,6 +139,7 @@ def _help_reproduce(
     move_to_cpu: bool = False,
     save_replicates: bool = True,
     file_name: Optional[str] = None,
+    extra_config: Optional[pathlib.Path] = None,
 ) -> None:
     """Help run the configuration at a given path.
 
@@ -160,6 +172,8 @@ def _help_reproduce(
     output_directory = directory.joinpath(experiment_id)
     output_directory.mkdir(exist_ok=True, parents=True)
 
+    extra_kwargs = {} if extra_config is None else load_configuration(path=extra_config)
+
     replicate_pipeline_from_path(
         path=path,
         directory=output_directory,
@@ -167,6 +181,7 @@ def _help_reproduce(
         use_testing_data=True,
         move_to_cpu=move_to_cpu,
         save_replicates=save_replicates,
+        **extra_kwargs,
     )
     shutil.copyfile(path, output_directory.joinpath("configuration_copied").with_suffix(path.suffix))
 
