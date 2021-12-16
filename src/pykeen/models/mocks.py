@@ -7,9 +7,9 @@ These are useful for baselines.
 
 import torch
 
-from pykeen.models import EntityRelationEmbeddingModel, Model
-from pykeen.nn import EmbeddingSpecification
-from pykeen.triples import CoreTriplesFactory
+from .base import EntityRelationEmbeddingModel, Model
+from ..nn import EmbeddingSpecification
+from ..triples import CoreTriplesFactory
 
 __all__ = [
     "MockModel",
