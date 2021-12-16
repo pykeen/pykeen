@@ -1161,7 +1161,7 @@ def pipeline(  # noqa: C901
     _result_tracker.log_params(params=training_kwargs, prefix="training")
 
     # Add logging for debugging
-    configuration = result_tracker.get_configuration()
+    configuration = _result_tracker.get_configuration()
     logging.debug("Run Pipeline based on following config:")
     for key, value in configuration.items():
         logging.debug(f"{key}: {value}")
