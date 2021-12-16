@@ -1057,8 +1057,10 @@ def pipeline(  # noqa: C901
 
     # Log model parameters
     _result_tracker.log_params(
-        params=dict(cls=model_instance.__class__.__name__, kwargs=model_kwargs),
-        prefix="model",
+        params=dict(
+            model=model_instance.__class__.__name__,
+            model_kwargs=model_kwargs,
+        ),
     )
 
     optimizer_kwargs = dict(optimizer_kwargs or {})
@@ -1070,8 +1072,10 @@ def pipeline(  # noqa: C901
     for key, value in optimizer_instance.defaults.items():
         optimizer_kwargs.setdefault(key, value)
     _result_tracker.log_params(
-        params=dict(cls=optimizer_instance.__class__.__name__, kwargs=optimizer_kwargs),
-        prefix="optimizer",
+        params=dict(
+            optimizer=optimizer_instance.__class__.__name__,
+            optimizer_kwargs=optimizer_kwargs,
+        ),
     )
 
     lr_scheduler_instance: Optional[LRScheduler]
@@ -1084,8 +1088,10 @@ def pipeline(  # noqa: C901
             optimizer=optimizer_instance,
         )
         _result_tracker.log_params(
-            params=dict(cls=lr_scheduler_instance.__class__.__name__, kwargs=lr_scheduler_kwargs),
-            prefix="lr_scheduler",
+            params=dict(
+                lr_scheduler=lr_scheduler_instance.__class__.__name__,
+                lr_scheduler_kwargs=lr_scheduler_kwargs,
+            ),
         )
 
     training_loop_cls = training_loop_resolver.lookup(training_loop)
@@ -1105,27 +1111,40 @@ def pipeline(  # noqa: C901
         raise ValueError("Can not specify negative sampler with LCWA")
     else:
         negative_sampler_cls = negative_sampler_resolver.lookup(negative_sampler)
-        _result_tracker.log_params(
-            params=dict(cls=negative_sampler_cls.__name__, kwargs=negative_sampler_kwargs),
-            prefix="negative_sampler",
-        )
-        training_loop_instance = SLCWATrainingLoop(
-            model=model_instance,
-            triples_factory=training,
-            optimizer=optimizer_instance,
+        training_loop_kwargs.update(
             negative_sampler=negative_sampler_cls,
             negative_sampler_kwargs=negative_sampler_kwargs,
-            **training_loop_kwargs,
         )
+        _result_tracker.log_params(
+            params=dict(
+                negative_sampler=negative_sampler_cls.__name__,
+                negative_sampler_kwargs=negative_sampler_kwargs,
+            ),
+        )
+    training_loop_instance = training_loop_cls(
+        model=model_instance,
+        triples_factory=training,
+        optimizer=optimizer_instance,
+        lr_scheduler=lr_scheduler_instance,
+        **training_loop_kwargs,
+    )
     _result_tracker.log_params(
-        params=dict(cls=training_loop_instance.__class__.__name__),
-        prefix="training_loop",
+        params=dict(
+            training_loop=training_loop_instance.__class__.__name__,
+            training_loop_kwargs=training_loop_kwargs,
+        ),
     )
 
     if evaluator_kwargs is None:
         evaluator_kwargs = {}
     evaluator_kwargs = dict(evaluator_kwargs)
     evaluator_instance: Evaluator = evaluator_resolver.make(evaluator, evaluator_kwargs)
+    _result_tracker.log_params(
+        params=dict(
+            evaluator=evaluator_instance.__class__.__name__,
+            evaluator_kwargs=evaluator_kwargs,
+        ),
+    )
 
     if evaluation_kwargs is None:
         evaluation_kwargs = {}
@@ -1161,7 +1180,7 @@ def pipeline(  # noqa: C901
         training_kwargs["use_tqdm"] = use_tqdm
     training_kwargs.setdefault("num_epochs", 5)
     training_kwargs.setdefault("batch_size", 256)
-    _result_tracker.log_params(params=training_kwargs, prefix="training")
+    _result_tracker.log_params(params=training_kwargs)
 
     # Add logging for debugging
     configuration = _result_tracker.get_configuration()
@@ -1235,7 +1254,7 @@ def pipeline(  # noqa: C901
     if use_tqdm is not None:
         evaluation_kwargs["use_tqdm"] = use_tqdm
     # Add logging about evaluator for debugging
-    _result_tracker.log_params(params=evaluator_kwargs, prefix="evaluation_kwargs")
+    _result_tracker.log_params(params=dict(evaluation_kwargs=evaluation_kwargs))
     evaluate_start_time = time.time()
     metric_results: MetricResults = _safe_evaluate(
         model=model_instance,
