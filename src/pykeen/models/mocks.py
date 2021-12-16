@@ -19,11 +19,13 @@ __all__ = [
 class MockModel(EntityRelationEmbeddingModel):
     """A mock model returning fake scores."""
 
-    def __init__(self, *, triples_factory: CoreTriplesFactory):
+    hpo_default = {}
+
+    def __init__(self, *, triples_factory: CoreTriplesFactory, embedding_dim: int = 50, **_kwargs):
         super().__init__(
             triples_factory=triples_factory,
-            entity_representations=EmbeddingSpecification(embedding_dim=50),
-            relation_representations=EmbeddingSpecification(embedding_dim=50),
+            entity_representations=EmbeddingSpecification(embedding_dim=embedding_dim),
+            relation_representations=EmbeddingSpecification(embedding_dim=embedding_dim),
         )
         num_entities = self.num_entities
         self.scores = torch.arange(num_entities, dtype=torch.float, requires_grad=True)

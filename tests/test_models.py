@@ -50,6 +50,12 @@ SKIP_MODULES.update(LiteralModel.__subclasses__())
 SKIP_MODULES.update(EvaluationOnlyModel.__subclasses__())
 
 
+class TestMock(cases.ModelTestCase):
+    """Test the mock model."""
+
+    cls = pykeen.models.MockModel
+
+
 class TestCompGCN(cases.ModelTestCase):
     """Test the CompGCN model."""
 

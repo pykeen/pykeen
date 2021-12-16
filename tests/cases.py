@@ -890,10 +890,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
 
         # check that the parameters where modified
         num_equal_weights_after_re_init = sum(1 for np in new_params if (np.data == old_content[id(np)]).all())
-        assert num_equal_weights_after_re_init == self.num_constant_init, (
-            num_equal_weights_after_re_init,
-            self.num_constant_init,
-        )
+        self.assertEqual(num_equal_weights_after_re_init, self.num_constant_init)
 
     def _check_scores(self, batch, scores) -> None:
         """Check the scores produced by a forward function."""
@@ -918,7 +915,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
                 self.skipTest(str(e))
             else:
                 raise e
-        assert scores.shape == (self.batch_size, 1)
+        self.assertEqual(scores.shape, (self.batch_size, 1))
         self._check_scores(batch, scores)
 
     def test_score_t(self) -> None:
