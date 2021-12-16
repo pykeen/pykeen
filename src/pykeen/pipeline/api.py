@@ -719,7 +719,9 @@ def _get_model_defaults(model: Model) -> Mapping[str, Any]:
         name: param.default
         for name, param in model_resolver.signature(model).parameters.items()
         # skip special parameters
-        if name != "self" and param.kind not in {param.VAR_POSITIONAL, param.VAR_KEYWORD}
+        if name != "self"
+        and param.kind not in {param.VAR_POSITIONAL, param.VAR_KEYWORD}
+        and param.default != param.empty
     }
 
 
