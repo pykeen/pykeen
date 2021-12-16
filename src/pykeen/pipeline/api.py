@@ -752,12 +752,15 @@ def _build_model_helper(
             # copy default value
             model_kwargs.setdefault(name, param.default)
 
-    return model_resolver.make(
-        model,
-        triples_factory=training_triples_factory,
-        loss=loss_instance,
-        **model_kwargs,
-    ), model_kwargs
+    return (
+        model_resolver.make(
+            model,
+            triples_factory=training_triples_factory,
+            loss=loss_instance,
+            **model_kwargs,
+        ),
+        model_kwargs,
+    )
 
 
 def _resolve_result_trackers(
