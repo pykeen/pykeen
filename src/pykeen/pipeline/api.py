@@ -1230,10 +1230,7 @@ def pipeline(  # noqa: C901
     if use_tqdm is not None:
         evaluation_kwargs["use_tqdm"] = use_tqdm
     # Add logging about evaluator for debugging
-    logging.debug("Evaluation will be run with following parameters:")
-    logging.debug(f"evaluation_kwargs: {evaluation_kwargs}")
-    # TODO: log this?
-    # configuration_tracker.log_params(...)
+    _result_tracker.log_params(params=evaluator_kwargs, prefix="evaluation_kwargs")
     evaluate_start_time = time.time()
     metric_results: MetricResults = _safe_evaluate(
         model=model_instance,
