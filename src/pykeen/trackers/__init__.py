@@ -57,12 +57,12 @@ def resolve_result_trackers(
     else:
         result_tracker_kwargses = upgrade_to_sequence(result_tracker_kwargs)
 
-    if len(result_tracker_kwargses) == 1 and len(result_trackers) == 0:
-        raise ValueError
-    elif len(result_tracker_kwargses) == 1 and len(result_trackers) > 1:
+    if 0 < len(result_tracker_kwargses) and 0 == len(result_trackers):
+        raise ValueError("Kwargs were given but no result trackers")
+    elif 1 == len(result_tracker_kwargses) == 1 and 1 < len(result_trackers):
         result_tracker_kwargses = list(result_tracker_kwargses) * len(result_trackers)
     elif len(result_tracker_kwargses) != len(result_trackers):
-        raise ValueError("Mismatch in number number of trackers and kwarg")
+        raise ValueError("Mismatch in number number of trackers and kwargs")
 
     trackers = [
         tracker_resolver.make(query=_result_tracker, pos_kwargs=_result_tracker_kwargs)
