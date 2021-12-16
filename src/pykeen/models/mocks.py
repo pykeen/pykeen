@@ -39,7 +39,7 @@ class MockModel(EntityRelationEmbeddingModel):
         return batch_scores
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self.scores[torch.randint(high=self.num_entities, size=hrt_batch.shape[:-1])]
+        return self.scores[torch.randint(high=self.num_entities, size=hrt_batch.shape[:-1])].view(-1, 1)
 
     def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         return self._generate_fake_scores(batch=hr_batch)
