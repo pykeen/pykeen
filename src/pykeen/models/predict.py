@@ -383,7 +383,11 @@ def _predict_k(model: Model, *, k: int, batch_size: int = 1) -> ScorePack:
 
         # get top scores within batch
         if top_scores.numel() >= k:
-            top_scores, top_indices = top_scores.topk(k=min(k, batch_size), largest=True, sorted=False)
+            top_scores, top_indices = top_scores.topk(
+                k=min(k, top_scores.numel()),
+                largest=True,
+                sorted=False,
+            )
             top_heads, top_tails = top_indices // model.num_entities, top_indices % model.num_entities
         else:
             top_heads = hs.view(-1, 1).repeat(1, model.num_entities).view(-1)
