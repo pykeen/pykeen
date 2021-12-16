@@ -43,22 +43,32 @@ tracker_resolver = Resolver.from_subclasses(
 
 
 def resolve_result_trackers(
-    result_tracker: Optional[OneOrSequence[HintType[ResultTracker]]] = None,
-    result_tracker_kwargs: Optional[OneOrSequence[Optional[Mapping[str, Any]]]] = None,
+    result_tracker_: Optional[OneOrSequence[HintType[ResultTracker]]] = None,
+    result_tracker_kwargs_: Optional[OneOrSequence[Optional[Mapping[str, Any]]]] = None,
 ) -> MultiResultTracker:
     """Resolve and compose result trackers."""
-    if result_tracker is None:
-        result_tracker = []
-    result_tracker = upgrade_to_sequence(result_tracker)
-    if result_tracker_kwargs is None:
-        result_tracker_kwargs = [None] * len(result_tracker)
-    result_tracker_kwargs = upgrade_to_sequence(result_tracker_kwargs)
-    if len(result_tracker_kwargs) == 1 and len(result_tracker) > 1:
-        result_tracker_kwargs = list(result_tracker_kwargs) * len(result_tracker)
-    return MultiResultTracker(
-        trackers=[
-            tracker_resolver.make(query=_result_tracker, pos_kwargs=_result_tracker_kwargs)
-            for _result_tracker, _result_tracker_kwargs in zip(result_tracker, result_tracker_kwargs)
-        ]
-        + [PythonResultTracker(store_metrics=False)]  # always add a Python result tracker for storing the configuration
-    )
+    if result_tracker_ is None:
+        result_trackers = []
+    else:
+        result_trackers = upgrade_to_sequence(result_tracker_)
+
+    if result_tracker_kwargs_ is None:
+        result_tracker_kwargses = [None] * len(result_trackers)
+    else:
+        result_tracker_kwargses = upgrade_to_sequence(result_tracker_kwargs_)
+
+    if len(result_tracker_kwargses) == 1 and len(result_trackers) == 0:
+        raise ValueError
+    elif len(result_tracker_kwargses) == 1 and len(result_trackers) > 1:
+        result_tracker_kwargses = list(result_tracker_kwargses) * len(result_trackers)
+    elif len(result_tracker_kwargses) != len(result_trackers):
+        raise ValueError("Mismatch in number number of trackers and kwarg")
+
+    trackers = [
+        tracker_resolver.make(query=_result_tracker, pos_kwargs=_result_tracker_kwargs)
+        for _result_tracker, _result_tracker_kwargs in zip(result_trackers, result_tracker_kwargses)
+    ]
+    # always add a Python result tracker for storing the configuration
+    trackers.append(PythonResultTracker(store_metrics=False))
+
+    return MultiResultTracker(trackers=trackers)
