@@ -10,11 +10,12 @@ from torch import optim
 
 from pykeen.datasets import Nations
 from pykeen.models import Model
+from pykeen.models.mocks import MockModel
 from pykeen.stoppers.early_stopping import EarlyStopper
 from pykeen.training import SLCWATrainingLoop
 from pykeen.triples import TriplesFactory
 from pykeen.typing import MappedTriples
-from tests.mocks import MockEvaluator, MockModel
+from tests.mocks import MockEvaluator
 
 
 class DummyTrainingLoop(SLCWATrainingLoop):

@@ -12,11 +12,11 @@ from torch.optim import Adam
 
 from pykeen.datasets import Nations
 from pykeen.evaluation import RankBasedEvaluator
-from pykeen.models import Model, TransE
+from pykeen.models import MockModel, Model, TransE
 from pykeen.stoppers.early_stopping import EarlyStopper, is_improvement
 from pykeen.trackers import MLFlowResultTracker
 from pykeen.training import SLCWATrainingLoop
-from tests.mocks import MockEvaluator, MockModel
+from tests.mocks import MockEvaluator
 
 try:
     import mlflow

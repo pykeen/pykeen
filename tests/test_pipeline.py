@@ -12,7 +12,7 @@ import torch
 
 import pykeen.regularizers
 from pykeen.datasets import EagerDataset, Nations
-from pykeen.models import ERModel, Model
+from pykeen.models import ERModel, MockModel, Model
 from pykeen.models.predict import (
     get_all_prediction_df,
     get_head_prediction_df,
@@ -28,7 +28,6 @@ from pykeen.regularizers import NoRegularizer
 from pykeen.training import SLCWATrainingLoop
 from pykeen.triples.generation import generate_triples_factory
 from pykeen.utils import resolve_device
-from tests.mocks import MockModel
 
 
 class TestPipeline(unittest.TestCase):

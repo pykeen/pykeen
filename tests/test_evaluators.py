@@ -26,10 +26,9 @@ from pykeen.evaluation.rank_based_evaluator import (
     resolve_metric_name,
 )
 from pykeen.evaluation.sklearn import SklearnEvaluator, SklearnMetricResults
-from pykeen.models import Model, TransE
+from pykeen.models import MockModel, Model, TransE
 from pykeen.triples import TriplesFactory
 from pykeen.typing import MappedTriples
-from tests.mocks import MockModel
 
 logger = logging.getLogger(__name__)
 

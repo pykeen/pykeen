@@ -17,6 +17,7 @@ from pykeen.models import (
     EntityRelationEmbeddingModel,
     ERModel,
     EvaluationOnlyModel,
+    MockModel,
     Model,
     _NewAbstractModel,
     _OldAbstractModel,
@@ -31,7 +32,6 @@ from pykeen.nn.emb import Embedding, NodePieceRepresentation
 from pykeen.utils import all_in_bounds, clamp_norm, extend_batch
 from tests import cases
 from tests.constants import EPSILON
-from tests.mocks import MockModel
 from tests.test_model_mode import SimpleInteractionModel
 
 SKIP_MODULES = {
@@ -45,6 +45,7 @@ SKIP_MODULES = {
     MockModel,
     SimpleInteractionModel,
     EvaluationOnlyModel,
+    pykeen.models.MockModel,
 }
 SKIP_MODULES.update(LiteralModel.__subclasses__())
 SKIP_MODULES.update(EvaluationOnlyModel.__subclasses__())
