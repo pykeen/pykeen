@@ -329,6 +329,7 @@ class _ScoreConsumer:
         raise NotImplementedError
 
     def finalize(self) -> ScorePack:
+        """Finalize the result to build a score pack."""
         return _build_pack(result=self.result, scores=self.scores, flatten=self.flatten)
 
 
@@ -441,8 +442,8 @@ def _consume_scores(model: Model, *consumers: _ScoreConsumer, batch_size: int = 
 
     :param model:
         the model, will be set to evaluation mode
-    :param consumer:
-        the consumer's of score batches
+    :param consumers:
+        the consumers of score batches
     :param batch_size:
         the batch size to use  # TODO: automatic batch size maximization
     """
