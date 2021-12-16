@@ -184,6 +184,7 @@ the :class:`pykeen.datasets.Nations`
 """
 
 import ftplib
+import hashlib
 import json
 import logging
 import os
@@ -239,6 +240,11 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
+
+
+def triple_hash(*triples: MappedTriples) -> Mapping[str, str]:
+    """Slow triple hash using sha512 and conversion to Python."""
+    return dict(sha512=hashlib.sha512(str(sorted(sum((t.tolist() for t in triples), []))).encode("utf8")).hexdigest())
 
 
 @fix_dataclass_init_docs
@@ -1100,17 +1106,11 @@ def pipeline(  # noqa: C901
 
     if negative_sampler is None:
         negative_sampler_cls = None
-        training_loop_instance = training_loop_cls(
-            model=model_instance,
-            triples_factory=training,
-            optimizer=optimizer_instance,
-            lr_scheduler=lr_scheduler_instance,
-            **training_loop_kwargs,
-        )
     elif not issubclass(training_loop_cls, SLCWATrainingLoop):
         raise ValueError("Can not specify negative sampler with LCWA")
     else:
         negative_sampler_cls = negative_sampler_resolver.lookup(negative_sampler)
+        training_loop_kwargs = dict(training_loop_kwargs)
         training_loop_kwargs.update(
             negative_sampler=negative_sampler_cls,
             negative_sampler_kwargs=negative_sampler_kwargs,
@@ -1210,13 +1210,17 @@ def pipeline(  # noqa: C901
         mapped_triples = validation.mapped_triples
 
     # Build up a list of triples if we want to be in the filtered setting
+    additional_filter_triples_names = dict()
     if evaluator_instance.filtered:
         additional_filter_triples: List[MappedTriples] = [
             training.mapped_triples,
         ]
+        additional_filter_triples_names["training"] = triple_hash(training.mapped_triples)
 
         # If the user gave custom "additional_filter_triples"
         popped_additional_filter_triples = evaluation_kwargs.pop("additional_filter_triples", [])
+        if popped_additional_filter_triples:
+            additional_filter_triples_names["custom"] = triple_hash(*popped_additional_filter_triples)
         if isinstance(popped_additional_filter_triples, (list, tuple)):
             additional_filter_triples.extend(popped_additional_filter_triples)
         elif torch.is_tensor(popped_additional_filter_triples):  # a single MappedTriple
@@ -1242,6 +1246,7 @@ def pipeline(  # noqa: C901
                     " described by (Bordes et al., 2013).",
                 )
             additional_filter_triples.append(validation.mapped_triples)
+            additional_filter_triples_names["validation"] = triple_hash(validation.mapped_triples)
 
         # TODO consider implications of duplicates
         evaluation_kwargs["additional_filter_triples"] = additional_filter_triples
@@ -1254,7 +1259,14 @@ def pipeline(  # noqa: C901
     if use_tqdm is not None:
         evaluation_kwargs["use_tqdm"] = use_tqdm
     # Add logging about evaluator for debugging
-    _result_tracker.log_params(params=dict(evaluation_kwargs=evaluation_kwargs))
+    _result_tracker.log_params(
+        params=dict(
+            evaluation_kwargs={
+                k: (additional_filter_triples_names if k == "additional_filter_triples" else v)
+                for k, v in evaluation_kwargs.items()
+            }
+        )
+    )
     evaluate_start_time = time.time()
     metric_results: MetricResults = _safe_evaluate(
         model=model_instance,
