@@ -54,6 +54,7 @@ extra_config_option = click.option(
     "--extra-config",
     type=pathlib.Path,
     default=None,
+    help="Path to a file with additional configuration, e.g., to add a result tracker.",
 )
 
 
