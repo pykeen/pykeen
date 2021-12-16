@@ -806,7 +806,7 @@ def pipeline(  # noqa: C901
     evaluator_kwargs: Optional[Mapping[str, Any]] = None,
     evaluation_kwargs: Optional[Mapping[str, Any]] = None,
     # 9. Tracking
-    result_tracker: Union[None, OneOrSequence[HintType[ResultTracker]]] = None,
+    result_tracker: Optional[OneOrSequence[HintType[ResultTracker]]] = None,
     result_tracker_kwargs: Optional[OneOrSequence[Optional[Mapping[str, Any]]]] = None,
     # Misc
     metadata: Optional[Dict[str, Any]] = None,
