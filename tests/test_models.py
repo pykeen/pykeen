@@ -116,20 +116,6 @@ class TestDistMult(cases.ModelTestCase):
         entity_norms = self.instance.entity_embeddings(indices=None).norm(p=2, dim=-1)
         assert torch.allclose(entity_norms, torch.ones_like(entity_norms))
 
-    def test_get_all_prediction_df(self):
-        """Test consistency of top-k scoring."""
-        df1, df2 = [
-            get_all_prediction_df(
-                model=self.instance,
-                triples_factory=self.factory,
-                batch_size=16,
-                k=k,
-            )
-            for k in (5, 10)
-        ]
-        df1_top = df1.nlargest(n=5, columns="score").reset_index()
-        assert (df1_top == df2).all()
-
     def _test_score_all_triples(self, k: Optional[int], batch_size: int = 16):
         """Test score_all_triples.
 
@@ -554,6 +540,24 @@ class TestTransE(cases.DistanceModelTestCase):
         """
         entity_norms = self.instance.entity_embeddings(indices=None).norm(p=2, dim=-1)
         assert torch.allclose(entity_norms, torch.ones_like(entity_norms))
+
+    def test_get_all_prediction_df(self):
+        """Test consistency of top-k scoring."""
+        ks = [5, 10]
+        dfs = [
+            get_all_prediction_df(
+                model=self.instance,
+                triples_factory=self.factory,
+                batch_size=16,
+                k=k,
+            )
+            .nlargest(n=min(ks), columns="score")
+            .reset_index(drop=True)
+            for k in ks
+        ]
+        assert set(dfs[0].columns) == set(dfs[0].columns)
+        for column in dfs[0].columns:
+            numpy.testing.assert_equal(dfs[0][column].values, dfs[1][column].values)
 
 
 class TestTransF(cases.ModelTestCase):
