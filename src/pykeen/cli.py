@@ -43,6 +43,7 @@ from .utils import get_until_first_blank
 from .version import env_table
 
 HERE = Path(__file__).resolve().parent
+SKIP_MODELS = {MockModel}
 
 
 @click.group()
@@ -84,7 +85,7 @@ def _help_models(tablefmt: str, link_fmt: Optional[str] = None):
 
 def _get_model_lines(tablefmt: str, link_fmt: Optional[str] = None):
     for _, model in sorted(model_resolver.lookup_dict.items()):
-        if model in {MockModel}:
+        if model in SKIP_MODELS:
             continue
         reference = f"pykeen.models.{model.__name__}"
         docdata = getattr(model, "__docdata__", None)
@@ -506,7 +507,7 @@ def get_readme() -> str:
     tablefmt = "github"
     return readme_template.render(
         models=_help_models(tablefmt, link_fmt="https://pykeen.readthedocs.io/en/latest/api/{}.html"),
-        n_models=len(model_resolver.lookup_dict),
+        n_models=len(model_resolver.lookup_dict) - len(SKIP_MODELS),
         regularizers=_help_regularizers(tablefmt, link_fmt="https://pykeen.readthedocs.io/en/latest/api/{}.html"),
         n_regularizers=len(regularizer_resolver.lookup_dict),
         losses=_help_losses(tablefmt, link_fmt="https://pykeen.readthedocs.io/en/latest/api/{}.html"),

@@ -45,7 +45,6 @@ SKIP_MODULES = {
     MockModel,
     SimpleInteractionModel,
     EvaluationOnlyModel,
-    pykeen.models.MockModel,
 }
 SKIP_MODULES.update(LiteralModel.__subclasses__())
 SKIP_MODULES.update(EvaluationOnlyModel.__subclasses__())
