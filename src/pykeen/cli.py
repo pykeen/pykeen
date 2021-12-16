@@ -30,7 +30,7 @@ from .hpo.cli import optimize
 from .hpo.samplers import sampler_resolver
 from .losses import loss_resolver
 from .lr_schedulers import lr_scheduler_resolver
-from .models import model_resolver
+from .models import MockModel, model_resolver
 from .models.cli import build_cli_from_cls
 from .optimizers import optimizer_resolver
 from .regularizers import regularizer_resolver
@@ -84,6 +84,8 @@ def _help_models(tablefmt: str, link_fmt: Optional[str] = None):
 
 def _get_model_lines(tablefmt: str, link_fmt: Optional[str] = None):
     for _, model in sorted(model_resolver.lookup_dict.items()):
+        if model in {MockModel}:
+            continue
         reference = f"pykeen.models.{model.__name__}"
         docdata = getattr(model, "__docdata__", None)
         if docdata is not None:
