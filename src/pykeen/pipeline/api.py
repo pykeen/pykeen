@@ -1061,11 +1061,14 @@ def pipeline(  # noqa: C901
         prefix="model",
     )
 
+    optimizer_kwargs = dict(optimizer_kwargs or {})
     optimizer_instance = optimizer_resolver.make(
         optimizer,
         optimizer_kwargs,
         params=model_instance.get_grad_params(),
     )
+    for key, value in optimizer_instance.defaults.items():
+        optimizer_kwargs.setdefault(key, value)
     _result_tracker.log_params(
         params=dict(cls=optimizer_instance.__class__.__name__, kwargs=optimizer_kwargs),
         prefix="optimizer",
