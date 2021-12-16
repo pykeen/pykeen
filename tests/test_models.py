@@ -23,7 +23,7 @@ from pykeen.models import (
     model_resolver,
 )
 from pykeen.models.multimodal.base import LiteralModel
-from pykeen.models.predict import get_novelty_mask, predict
+from pykeen.models.predict import get_all_prediction_df, get_novelty_mask, predict
 from pykeen.models.unimodal.node_piece import _ConcatMLP
 from pykeen.models.unimodal.trans_d import _project_entity
 from pykeen.nn import EmbeddingSpecification
@@ -115,6 +115,20 @@ class TestDistMult(cases.ModelTestCase):
         """
         entity_norms = self.instance.entity_embeddings(indices=None).norm(p=2, dim=-1)
         assert torch.allclose(entity_norms, torch.ones_like(entity_norms))
+
+    def test_get_all_prediction_df(self):
+        """Test consistency of top-k scoring."""
+        df1, df2 = [
+            get_all_prediction_df(
+                model=self.instance,
+                triples_factory=self.factory,
+                batch_size=16,
+                k=k,
+            )
+            for k in (5, 10)
+        ]
+        df1_top = df1.nlargest(n=5, columns="score").reset_index()
+        assert (df1_top == df2).all()
 
     def _test_score_all_triples(self, k: Optional[int], batch_size: int = 16):
         """Test score_all_triples.
