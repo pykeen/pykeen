@@ -905,11 +905,12 @@ def pipeline(  # noqa: C901
     :param evaluation_kwargs:
         Keyword arguments to pass to the evaluator's evaluate function on call
 
-    :param result_tracker:
-        The ResultsTracker class or name
-        # TODO
-    :param result_tracker_kwargs:
-        The keyword arguments passed to the results tracker on instantiation
+    :param result_tracker: Either none (will result in a Python result tracker),
+        a single tracker (as either a class, instance, or string for class name), or a list
+        of trackers (as either a class, instance, or string for class name
+    :param result_tracker_kwargs: Either none (will use all defaults), a single dictionary
+        (will be used for all trackers), or a list of dictionaries with the same length
+        as the result trackers
 
     :param metadata:
         A JSON dictionary to store with the experiment
