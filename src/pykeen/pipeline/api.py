@@ -1177,6 +1177,8 @@ def pipeline(  # noqa: C901
     )
     assert losses is not None  # losses is only none if it's doing search mode
     training_end_time = time.time() - training_start_time
+    step = training_kwargs.get("num_epochs")
+    _result_tracker.log_metrics(metrics=dict(total_training=training_end_time), step=step, prefix="times")
 
     if use_testing_data:
         mapped_triples = testing.mapped_triples
@@ -1240,9 +1242,10 @@ def pipeline(  # noqa: C901
         evaluation_fallback=evaluation_fallback,
     )
     evaluate_end_time = time.time() - evaluate_start_time
+    _result_tracker.log_metrics(metrics=dict(final_evaluation=evaluate_end_time), step=step, prefix="times")
     _result_tracker.log_metrics(
         metrics=metric_results.to_dict(),
-        step=training_kwargs.get("num_epochs"),
+        step=step,
     )
     _result_tracker.end_run()
 
