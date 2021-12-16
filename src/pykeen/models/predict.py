@@ -365,12 +365,12 @@ def _predict_k(model: Model, *, k: int, batch_size: int = 1) -> ScorePack:
     result = torch.ones(0, 3, dtype=torch.long, device=model.device)
     scores = torch.empty(0, dtype=torch.float32, device=model.device)
 
-    for r, e in itt.product(
+    for r, e_start in itt.product(
         range(model.num_relations),
         range(0, model.num_entities, batch_size),
     ):
         # calculate batch scores
-        hs = torch.arange(e, min(e + batch_size, model.num_entities), device=model.device)
+        hs = torch.arange(e_start, min(e_start + batch_size, model.num_entities), device=model.device)
         real_batch_size = hs.shape[0]
 
         # create h-r batch on device, shape: (batch_size, 2)
@@ -402,7 +402,7 @@ def _predict_k(model: Model, *, k: int, batch_size: int = 1) -> ScorePack:
         top_triples = torch.stack(
             [
                 top_heads,
-                top_heads.new_empty(top_heads.shape).fill_(value=r),
+                top_heads.new_full(size=top_heads.shape, fill_value=r, dtype=top_heads.dtype),
                 top_tails,
             ],
             dim=-1,
