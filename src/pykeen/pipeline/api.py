@@ -708,6 +708,16 @@ def pipeline_from_config(
     )
 
 
+def _get_model_defaults(model: Model) -> Mapping[str, Any]:
+    """Get the model's default parameters."""
+    return {
+        name: param.default
+        for name, param in model_resolver.signature(model).parameters.items()
+        # skip special parameters
+        if name != "self" and param.kind not in {param.VAR_POSITIONAL, param.VAR_KEYWORD}
+    }
+
+
 def _build_model_helper(
     *,
     model,
@@ -742,14 +752,8 @@ def _build_model_helper(
     loss_instance = loss_resolver.make(loss, loss_kwargs)
 
     if not isinstance(model, Model):
-        model_cls = model_resolver.lookup(query=model)
-        signature = inspect.signature(model_cls.__init__)
-        for name, param in signature.parameters.items():
-            # skip special parameters
-            if name == "self" or param.kind in {param.VAR_POSITIONAL, param.VAR_KEYWORD}:
-                continue
-            # copy default value
-            model_kwargs.setdefault(name, param.default)
+        for param_name, param_default in _get_model_defaults(model).items():
+            model_kwargs.setdefault(param_name, param_default)
 
     return (
         model_resolver.make(
