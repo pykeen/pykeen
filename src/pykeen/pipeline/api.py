@@ -212,7 +212,7 @@ from ..optimizers import optimizer_resolver
 from ..regularizers import Regularizer, regularizer_resolver
 from ..sampling import NegativeSampler, negative_sampler_resolver
 from ..stoppers import EarlyStopper, Stopper, stopper_resolver
-from ..trackers import MultiResultTracker, PythonResultTracker, ResultTracker, tracker_resolver
+from ..trackers import PythonResultTracker, ResultTracker, resolve_result_trackers
 from ..training import SLCWATrainingLoop, TrainingLoop, training_loop_resolver
 from ..triples import CoreTriplesFactory
 from ..typing import Hint, HintType, MappedTriples, OneOrSequence
@@ -227,7 +227,6 @@ from ..utils import (
     random_non_negative_int,
     resolve_device,
     set_random_seed,
-    upgrade_to_sequence,
 )
 from ..version import get_git_hash, get_version
 
@@ -763,28 +762,6 @@ def _build_model_helper(
     )
 
 
-def _resolve_result_trackers(
-    result_tracker: Union[None, OneOrSequence[HintType[ResultTracker]]] = None,
-    result_tracker_kwargs: Optional[OneOrSequence[Optional[Mapping[str, Any]]]] = None,
-) -> MultiResultTracker:
-    """Resolve and compose result trackers."""
-    if result_tracker is None:
-        result_tracker = []
-    result_tracker = upgrade_to_sequence(result_tracker)
-    if result_tracker_kwargs is None:
-        result_tracker_kwargs = [None] * len(result_tracker)
-    result_tracker_kwargs = upgrade_to_sequence(result_tracker_kwargs)
-    if len(result_tracker_kwargs) == 1 and len(result_tracker) > 1:
-        result_tracker_kwargs = list(result_tracker_kwargs) * len(result_tracker)
-    return MultiResultTracker(
-        trackers=[
-            tracker_resolver.make(query=_result_tracker, pos_kwargs=_result_tracker_kwargs)
-            for _result_tracker, _result_tracker_kwargs in zip(result_tracker, result_tracker_kwargs)
-        ]
-        + [PythonResultTracker(store_metrics=False)]  # always add a Python result tracker for storing the configuration
-    )
-
-
 def pipeline(  # noqa: C901
     *,
     # 1. Dataset
@@ -995,7 +972,7 @@ def pipeline(  # noqa: C901
         _random_seed = random_seed  # random seed given successfully
     set_random_seed(_random_seed)
 
-    _result_tracker = _resolve_result_trackers(result_tracker, result_tracker_kwargs)
+    _result_tracker = resolve_result_trackers(result_tracker, result_tracker_kwargs)
 
     if not metadata:
         metadata = {}
