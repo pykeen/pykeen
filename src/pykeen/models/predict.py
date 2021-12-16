@@ -372,6 +372,8 @@ def _predict_k(model: Model, *, k: int, batch_size: int = 1) -> ScorePack:
         # calculate batch scores
         hs = torch.arange(e, min(e + batch_size, model.num_entities), device=model.device)
         real_batch_size = hs.shape[0]
+
+        # create h-r batch on device, shape: (batch_size, 2)
         hr_batch = torch.stack(
             [
                 hs,
@@ -379,6 +381,7 @@ def _predict_k(model: Model, *, k: int, batch_size: int = 1) -> ScorePack:
             ],
             dim=-1,
         )
+        # predict scores, shape: (batch_size * num_entities,)
         top_scores = model.predict_t(hr_batch=hr_batch).view(-1)
 
         # get top scores within batch
