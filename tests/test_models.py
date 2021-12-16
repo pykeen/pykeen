@@ -548,7 +548,7 @@ class TestTransE(cases.DistanceModelTestCase):
             get_all_prediction_df(
                 model=self.instance,
                 triples_factory=self.factory,
-                batch_size=16,
+                batch_size=1,
                 k=k,
             )
             .nlargest(n=min(ks), columns="score")
