@@ -377,7 +377,7 @@ def _predict_k(model: Model, *, k: int, batch_size: int = 1) -> ScorePack:
         hr_batch = torch.stack(
             [
                 hs,
-                hs.new_empty(1).fill_(value=r).repeat(real_batch_size),
+                hs.new_full(size=(real_batch_size,), fill_value=r),
             ],
             dim=-1,
         )
