@@ -2,9 +2,9 @@
 
 """Prediction workflows."""
 
-from abc import abstractmethod
 import itertools as itt
 import logging
+from abc import abstractmethod
 from typing import Optional, Sequence, Tuple, Union
 
 import numpy
@@ -326,7 +326,7 @@ class _ScoreConsumer:
         scores: torch.FloatTensor,
     ) -> None:
         """Consume scores for the given hr_batch."""
-        raise NotImplemented
+        raise NotImplementedError
 
     def finalize(self) -> ScorePack:
         return _build_pack(result=self.result, scores=self.scores, flatten=self.flatten)
