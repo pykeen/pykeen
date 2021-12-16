@@ -2,7 +2,7 @@
 
 """Result trackers in PyKEEN."""
 
-from typing import Any, List, Mapping, Optional, Sequence
+from typing import Any, Mapping, Optional, Sequence
 
 from class_resolver import HintType, Resolver
 
