@@ -391,7 +391,7 @@ def _predict_k(model: Model, *, k: int, batch_size: int = 1) -> ScorePack:
                 largest=True,
                 sorted=False,
             )
-            top_heads = torch.div(top_indices, model.num_entities, rounding_mode="trunc")
+            top_heads = e_start + torch.div(top_indices, model.num_entities, rounding_mode="trunc")
             top_tails = top_indices % model.num_entities
         else:
             top_heads = hs.view(-1, 1).repeat(1, model.num_entities).view(-1)
