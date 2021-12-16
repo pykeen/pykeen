@@ -10,6 +10,7 @@ import numpy
 import numpy as np
 import pandas as pd
 import torch
+from tqdm.auto import tqdm
 
 from .base import Model
 from ..triples import CoreTriplesFactory, TriplesFactory
@@ -365,9 +366,15 @@ def _predict_k(model: Model, *, k: int, batch_size: int = 1) -> ScorePack:
     result = torch.ones(0, 3, dtype=torch.long, device=model.device)
     scores = torch.empty(0, dtype=torch.float32, device=model.device)
 
-    for r, e_start in itt.product(
-        range(model.num_relations),
-        range(0, model.num_entities, batch_size),
+    for r, e_start in tqdm(
+        itt.product(
+            range(model.num_relations),
+            range(0, model.num_entities, batch_size),
+        ),
+        desc="scoring",
+        unit="batch",
+        unit_scale=True,
+        total=model.num_relations * model.num_entities // batch_size,
     ):
         # calculate batch scores
         hs = torch.arange(e_start, min(e_start + batch_size, model.num_entities), device=model.device)
