@@ -323,20 +323,27 @@ def _predict_all(model: Model, *, batch_size: int = 1) -> ScorePack:
     scores = torch.empty(model.num_relations, model.num_entities, model.num_entities, dtype=torch.float32)
     assert model.num_entities ** 2 * model.num_relations < (2 ** 63 - 1)
 
-    for r, e in itt.product(
-        range(model.num_relations),
-        range(0, model.num_entities, batch_size),
+    for r, h_start in tqdm(
+        itt.product(
+            range(model.num_relations),
+            range(0, model.num_entities, batch_size),
+        ),
+        desc="scoring",
+        unit="batch",
+        unit_scale=True,
+        total=model.num_relations * model.num_entities // batch_size,
     ):
         # calculate batch scores
-        hs = torch.arange(e, min(e + batch_size, model.num_entities), device=model.device)
+        h_stop = min(h_start + batch_size, model.num_entities)
+        hs = torch.arange(h_start, h_stop, device=model.device)
         hr_batch = torch.stack(
             [
                 hs,
-                hs.new_empty(1).fill_(value=r).repeat(hs.shape[0]),
+                hs.new_full(size=(hs.shape[0],), fill_value=r),
             ],
             dim=-1,
         )
-        scores[r, e : e + batch_size, :] = model.predict_t(hr_batch=hr_batch).to(scores.device)
+        scores[r, h_start : h_start + batch_size, :] = model.predict_t(hr_batch=hr_batch).to(scores.device)
 
     # Explicitly create triples
     result = torch.stack(
@@ -366,7 +373,7 @@ def _predict_k(model: Model, *, k: int, batch_size: int = 1) -> ScorePack:
     result = torch.ones(0, 3, dtype=torch.long, device=model.device)
     scores = torch.empty(0, dtype=torch.float32, device=model.device)
 
-    for r, e_start in tqdm(
+    for r, h_start in tqdm(
         itt.product(
             range(model.num_relations),
             range(0, model.num_entities, batch_size),
@@ -377,7 +384,8 @@ def _predict_k(model: Model, *, k: int, batch_size: int = 1) -> ScorePack:
         total=model.num_relations * model.num_entities // batch_size,
     ):
         # calculate batch scores
-        hs = torch.arange(e_start, min(e_start + batch_size, model.num_entities), device=model.device)
+        h_stop = min(h_start + batch_size, model.num_entities)
+        hs = torch.arange(h_start, h_stop, device=model.device)
         real_batch_size = hs.shape[0]
 
         # create h-r batch on device, shape: (batch_size, 2)
@@ -398,7 +406,7 @@ def _predict_k(model: Model, *, k: int, batch_size: int = 1) -> ScorePack:
                 largest=True,
                 sorted=False,
             )
-            top_heads = e_start + torch.div(top_indices, model.num_entities, rounding_mode="trunc")
+            top_heads = h_start + torch.div(top_indices, model.num_entities, rounding_mode="trunc")
             top_tails = top_indices % model.num_entities
         else:
             top_heads = hs.view(-1, 1).repeat(1, model.num_entities).view(-1)
