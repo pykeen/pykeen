@@ -2,7 +2,7 @@
 
 """Result trackers in PyKEEN."""
 
-from typing import Any, Mapping, Optional, Union
+from typing import Any, List, Mapping, Optional, Sequence
 
 from class_resolver import HintType, Resolver
 
@@ -56,11 +56,13 @@ def resolve_result_trackers(
         as the result trackers
     :returns: A multi-result trackers that offloads to all contained result trackers
     """
+    result_trackers: Sequence[HintType[ResultTracker]]
     if result_tracker is None:
         result_trackers = []
     else:
         result_trackers = upgrade_to_sequence(result_tracker)
 
+    result_tracker_kwargses: Sequence[Optional[Mapping[str, Any]]]
     if result_tracker_kwargs is None:
         result_tracker_kwargses = [None] * len(result_trackers)
     else:
