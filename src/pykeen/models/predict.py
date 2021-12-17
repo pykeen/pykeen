@@ -771,7 +771,7 @@ def predict_h_uncertain(
     )
 
 
-def predict_r(
+def predict_r_uncertain(
     model: Model,
     ht_batch: torch.LongTensor,
     num_samples: int = 5,
