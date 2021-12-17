@@ -7,7 +7,7 @@ These are useful for baselines.
 
 import torch
 
-from .base import EntityRelationEmbeddingModel, Model
+from .base import Model
 from ..triples import CoreTriplesFactory
 
 __all__ = [
@@ -15,19 +15,23 @@ __all__ = [
 ]
 
 
-class MockModel(EntityRelationEmbeddingModel):
+class MockModel(Model):
     """A mock model returning fake scores."""
 
     hpo_default = {}
 
-    def __init__(self, *, triples_factory: CoreTriplesFactory, **_kwargs):
+    def __init__(self, *, triples_factory: CoreTriplesFactory, embedding_dim: int, **_kwargs):
         super().__init__(
             triples_factory=triples_factory,
-            entity_representations=[],
-            relation_representations=[],
         )
         self.num_entities = triples_factory.num_entities
         self.num_relations = triples_factory.num_relations
+
+    def collect_regularization_term(self):
+        pass  # Not needed for mock model
+
+    def _reset_parameters_(self):
+        pass  # Not needed for mock model
 
     def _generate_fake_scores(
         self,
@@ -48,12 +52,16 @@ class MockModel(EntityRelationEmbeddingModel):
             t=torch.arange(self.num_entities).unsqueeze(dim=0),
         )
 
+    def score_r(self, ht_batch: torch.LongTensor) -> torch.FloatTensor:
+        return self._generate_fake_scores(
+            h=ht_batch[:, 0:1],
+            r=torch.arange(self.num_relations).unsqueeze(dim=0),
+            t=ht_batch[:, 1:2],
+        )
+
     def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         return self._generate_fake_scores(
             h=torch.arange(self.num_entities).unsqueeze(dim=0),
             r=rt_batch[:, 0:1],
             t=rt_batch[:, 1:2],
         )
-
-    def reset_parameters_(self) -> Model:  # noqa: D102
-        pass  # Not needed for unittest
