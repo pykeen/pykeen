@@ -2,6 +2,7 @@
 
 """Test cases for PyKEEN."""
 
+import inspect
 import logging
 import os
 import pathlib
@@ -864,8 +865,9 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
 
     def test_get_grad_parameters(self):
         """Test the model's ``get_grad_params()`` method."""
-        # assert there is at least one trainable parameter
-        assert len(list(self.instance.get_grad_params())) > 0
+        self.assertLess(
+            0, len(list(self.instance.get_grad_params())), msg="There is not at least one trainable parameter"
+        )
 
         # Check that all the parameters actually require a gradient
         for parameter in self.instance.get_grad_params():
@@ -1075,11 +1077,16 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
                 extras.append("--no-automatic-memory-optimization")
             # else, leave to default
 
+        if "embedding_dim" in inspect.signature(self.instance.__init__).parameters:
+            extras.extend(
+                [
+                    "--embedding-dim",
+                    self.embedding_dim,
+                ]
+            )
         extras += [
             "--number-epochs",
             self.train_num_epochs,
-            "--embedding-dim",
-            self.embedding_dim,
             "--batch-size",
             self.train_batch_size,
         ]
@@ -1220,6 +1227,7 @@ Traceback
             else:
                 raise e
 
+        self.assertIsNotNone(scores_hrt)
         assert torch.allclose(scores_h, scores_hrt, atol=1e-06)
 
     def test_score_r_with_score_hrt_equality(self) -> None:
@@ -1241,6 +1249,7 @@ Traceback
             else:
                 raise e
 
+        self.assertIsNotNone(scores_hrt)
         assert torch.allclose(scores_r, scores_hrt, atol=1e-06)
 
     def test_score_t_with_score_hrt_equality(self) -> None:
@@ -1262,6 +1271,7 @@ Traceback
             else:
                 raise e
 
+        self.assertIsNotNone(scores_hrt)
         assert torch.allclose(scores_t, scores_hrt, atol=1e-06)
 
     def test_reset_parameters_constructor_call(self):
