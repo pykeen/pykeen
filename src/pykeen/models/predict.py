@@ -728,6 +728,86 @@ def predict_hrt_uncertain(
     )
 
 
+def predict_h_uncertain(
+    model: Model,
+    rt_batch: torch.LongTensor,
+    num_samples: int = 5,
+    slice_size: Optional[int] = None,
+) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
+    """Forward pass using left side (head) prediction for obtaining scores of all possible heads.
+
+    This method calculates the score for all possible heads for each (relation, tail) pair, as well as an uncertainty
+    quantification.
+
+    Additionally, the model is set to evaluation mode.
+
+    .. note::
+
+        If the model has been trained with inverse relations, the task of predicting
+        the head entities becomes the task of predicting the tail entities of the
+        inverse triples, i.e., $f(*,r,t)$ is predicted by means of $f(t,r_{inv},*)$.
+
+    .. note ::
+        this method requires the model to have at least one dropout layer.
+
+    :param model:
+        the model used for predicting scores
+    :param rt_batch: shape: (batch_size, 2), dtype: long
+        The indices of (relation, tail) pairs.
+    :param slice_size: >0
+        The divisor for the scoring function when using slicing.
+    :param num_samples: >1
+        the number of samples to draw
+
+    :return: shape: (batch_size, num_entities), dtype: float
+        For each r-t pair, the scores for all possible heads.
+    """
+    return _predict_uncertain(
+        model=model,
+        batch=rt_batch,
+        score_method=model.score_h_inverse if model.use_inverse_triples else model.score_h,
+        num_samples=num_samples,
+        slice_size=slice_size,
+    )
+
+
+def predict_r(
+    model: Model,
+    ht_batch: torch.LongTensor,
+    num_samples: int = 5,
+    slice_size: Optional[int] = None,
+) -> torch.FloatTensor:
+    """Forward pass using middle (relation) prediction for obtaining scores of all possible relations.
+
+    This method calculates the score for all possible relations for each (head, tail) pair, as well as an uncertainty
+    quantification.
+
+    Additionally, the model is set to evaluation mode.
+
+    .. note ::
+        this method requires the model to have at least one dropout layer.
+
+    :param model:
+        the model used for predicting scores
+    :param ht_batch: shape: (batch_size, 2), dtype: long
+        The indices of (head, tail) pairs.
+    :param slice_size: >0
+        The divisor for the scoring function when using slicing.
+    :param num_samples: >1
+        the number of samples to draw
+
+    :return: shape: (batch_size, num_relations), dtype: float
+        For each h-t pair, the scores for all possible relations.
+    """
+    return _predict_uncertain(
+        model=model,
+        batch=ht_batch,
+        score_method=model.score_r,
+        num_samples=num_samples,
+        slice_size=slice_size,
+    )
+
+
 def predict_t_uncertain(
     model: Model,
     hr_batch: torch.LongTensor,
@@ -736,9 +816,22 @@ def predict_t_uncertain(
 ) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
     """Forward pass using right side (tail) prediction for obtaining scores of all possible tails.
 
-    This method calculates the score for all possible tails for each (head, relation) pair, as well as an uncertainty quantification.
+    This method calculates the score for all possible tails for each (head, relation) pair, as well as an uncertainty
+    quantification.
 
     Additionally, the model is set to evaluation mode.
+
+    .. note::
+
+        We only expect the right side-side predictions, i.e., $(h,r,*)$ to change its
+        default behavior when the model has been trained with inverse relations
+        (mainly because of the behavior of the LCWA training approach). This is why
+        the :func:`predict_scores_all_heads()` has different behavior depending on
+        if inverse triples were used in training, and why this function has the same
+        behavior regardless of the use of inverse triples.
+
+    .. note ::
+        this method requires the model to have at least one dropout layer.
 
     :param model:
         the model used for predicting scores
@@ -751,15 +844,6 @@ def predict_t_uncertain(
 
     :return: shape: (batch_size, num_entities), dtype: float
         For each h-r pair, the scores for all possible tails.
-
-    .. note::
-
-        We only expect the right side-side predictions, i.e., $(h,r,*)$ to change its
-        default behavior when the model has been trained with inverse relations
-        (mainly because of the behavior of the LCWA training approach). This is why
-        the :func:`predict_scores_all_heads()` has different behavior depending on
-        if inverse triples were used in training, and why this function has the same
-        behavior regardless of the use of inverse triples.
     """
     return _predict_uncertain(
         model=model,
