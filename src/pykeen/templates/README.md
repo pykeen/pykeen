@@ -128,10 +128,6 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 
 {{ regularizers }}
 
-### Optimizers ({{ n_optimizers }})
-
-{{ optimizers }}
-
 ### Training Loops ({{ n_training_loops }})
 
 {{ training_loops }}
@@ -155,16 +151,6 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 ### Trackers ({{ n_trackers }})
 
 {{ trackers }}
-
-## Hyper-parameter Optimization
-
-### Samplers ({{ n_hpo_samplers }})
-
-{{ hpo_samplers }}
-
-Any sampler class extending the [optuna.samplers.BaseSampler](https://optuna.readthedocs.io/en/stable/reference/generated/optuna.samplers.BaseSampler.html#optuna.samplers.BaseSampler),
-such as their sampler implementing the [CMA-ES](https://optuna.readthedocs.io/en/stable/reference/generated/optuna.samplers.CmaEsSampler.html#optuna.samplers.CmaEsSampler)
-algorithm, can also be used.
 
 ## Experimentation
 
