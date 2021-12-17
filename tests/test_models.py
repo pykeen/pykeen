@@ -26,6 +26,7 @@ from pykeen.models.multimodal.base import LiteralModel
 from pykeen.models.predict import get_all_prediction_df, get_novelty_mask, predict
 from pykeen.models.unimodal.node_piece import _ConcatMLP
 from pykeen.models.unimodal.trans_d import _project_entity
+from pykeen.models.mocks import MockModel
 from pykeen.nn import EmbeddingSpecification
 from pykeen.nn.emb import Embedding, NodePieceRepresentation
 from pykeen.utils import all_in_bounds, clamp_norm, extend_batch
@@ -41,6 +42,7 @@ SKIP_MODULES = {
     LiteralModel,
     EntityRelationEmbeddingModel,
     ERModel,
+    MockModel,
     SimpleInteractionModel,
     EvaluationOnlyModel,
 }
@@ -670,27 +672,6 @@ class TestCP(cases.ModelTestCase):
     """Test the CP model."""
 
     cls = pykeen.models.CP
-
-
-class TestMock(cases.ModelTestCase):
-    """Test the mock model."""
-
-    cls = pykeen.models.MockModel
-
-    def test_reset_parameters_(self):
-        """Skip test because there are no parameters to reset."""
-
-    def test_reset_parameters_constructor_call(self):
-        """Skip test because there are no parameters to reset."""
-
-    def test_score_h_with_score_hrt_equality(self) -> None:
-        """Skip test because scores are random."""
-
-    def test_score_r_with_score_hrt_equality(self) -> None:
-        """Skip test because scores are random."""
-
-    def test_score_t_with_score_hrt_equality(self) -> None:
-        """Skip test because scores are random."""
 
 
 class TestTesting(unittest_templates.MetaTestCase[Model]):
