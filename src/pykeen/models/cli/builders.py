@@ -212,7 +212,7 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
                 # TODO: other parameters?
             )
         elif not silent:
-            json.dump(pipeline_result.metric_results.to_dict(), sys.out, indent=2)
+            json.dump(pipeline_result.metric_results.to_dict(), sys.stdout, indent=2)
             click.echo("")
 
         return sys.exit(0)
