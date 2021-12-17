@@ -642,7 +642,7 @@ def predict_triples_df(
 def _predict_uncertain(
     model: Model,
     batch: torch.LongTensor,
-    score_method: Callable[[torch.LongTensor], torch.FloatTensor],
+    score_method: Callable[..., torch.FloatTensor],
     num_samples: int,
     slice_size: Optional[int] = None,
 ) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
@@ -662,7 +662,8 @@ def _predict_uncertain(
     :param score_method:
         the base score method to use (from `score_{hrt,h,r,t}`)
     :param num_samples: > 1
-        The number of samples to use. More samples lead to better estimates, but increase memory requirements and runtime.
+        The number of samples to use. More samples lead to better estimates, but increase memory requirements and
+        runtime.
 
     :return:
         A tuple (score_mean, score_std) of the mean and std of the scores sampled from the dropout distribution.
