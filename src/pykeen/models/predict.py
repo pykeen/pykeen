@@ -644,6 +644,7 @@ def _predict_uncertain(
     batch: torch.LongTensor,
     score_method: Callable[[torch.LongTensor], torch.FloatTensor],
     num_samples: int,
+    slice_size: Optional[int] = None,
 ) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
     """
     Predict with uncertainty estimates via Monte-Carlo dropout.
@@ -680,9 +681,13 @@ def _predict_uncertain(
     for module in dropout_modules:
         module.train()
 
+    kwargs = dict()
+    if slice_size is not None:
+        kwargs["slice_size"] = slice_size
+
     # draw samples
     batch = batch.to(model.device)
-    scores = torch.stack([score_method(batch) for _ in range(num_samples)], dim=0)
+    scores = torch.stack([score_method(batch, **kwargs) for _ in range(num_samples)], dim=0)
     if model.predict_with_sigmoid:
         scores = torch.sigmoid(scores)
 
@@ -699,11 +704,13 @@ def predict_hrt_uncertain(
     Calculate the scores for triples and add an uncertainty quantification via Monto-Carlo dropout.
 
     .. seealso ::
-        score_hrt
+        score_hrt, _predict_uncertain
 
     .. note ::
         this method requires the model to have at least one dropout layer.
 
+    :param model:
+        the model used for predicting scores
     :param hrt_batch: shape: (number of triples, 3), dtype: long
         The indices of (head, relation, tail) triples.
     :param num_samples: >1
@@ -713,4 +720,51 @@ def predict_hrt_uncertain(
         The score for each triple, and an uncertainty score, where larger scores correspond to less certain
         predictions.
     """
-    return _predict_uncertain(batch=hrt_batch, score_method=model.score_hrt, num_samples=num_samples)
+    return _predict_uncertain(
+        model=model,
+        batch=hrt_batch,
+        score_method=model.score_hrt,
+        num_samples=num_samples,
+    )
+
+
+def predict_t_uncertain(
+    model: Model,
+    hr_batch: torch.LongTensor,
+    num_samples: int = 5,
+    slice_size: Optional[int] = None,
+) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
+    """Forward pass using right side (tail) prediction for obtaining scores of all possible tails.
+
+    This method calculates the score for all possible tails for each (head, relation) pair, as well as an uncertainty quantification.
+
+    Additionally, the model is set to evaluation mode.
+
+    :param model:
+        the model used for predicting scores
+    :param hr_batch: shape: (batch_size, 2), dtype: long
+        The indices of (head, relation) pairs.
+    :param slice_size: >0
+        The divisor for the scoring function when using slicing.
+    :param num_samples: >1
+        the number of samples to draw
+
+    :return: shape: (batch_size, num_entities), dtype: float
+        For each h-r pair, the scores for all possible tails.
+
+    .. note::
+
+        We only expect the right side-side predictions, i.e., $(h,r,*)$ to change its
+        default behavior when the model has been trained with inverse relations
+        (mainly because of the behavior of the LCWA training approach). This is why
+        the :func:`predict_scores_all_heads()` has different behavior depending on
+        if inverse triples were used in training, and why this function has the same
+        behavior regardless of the use of inverse triples.
+    """
+    return _predict_uncertain(
+        model=model,
+        batch=hr_batch,
+        score_method=model.score_t,
+        num_samples=num_samples,
+        slice_size=slice_size,
+    )
