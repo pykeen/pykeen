@@ -737,6 +737,7 @@ def _build_model_helper(
     regularizer_kwargs,
     training_triples_factory,
 ) -> Tuple[Model, Mapping[str, Any]]:
+    """Collate model-specific parameters and initialize the model from it."""
     if model_kwargs is None:
         model_kwargs = {}
     model_kwargs = dict(model_kwargs)
@@ -746,17 +747,22 @@ def _build_model_helper(
     if regularizer is not None:
         # FIXME this should never happen.
         if "regularizer" in model_kwargs:
-            logger.warning("Can not specify regularizer in kwargs and model_kwargs. removing from model_kwargs")
-            del model_kwargs["regularizer"]
+            _regularizer = model_kwargs.pop("regularizer")
+            logger.warning(
+                f"Cannot specify regularizer in kwargs ({regularizer}) and model_kwargs ({_regularizer})."
+                "removing from model_kwargs",
+            )
         model_kwargs["regularizer"] = regularizer_resolver.make(regularizer, regularizer_kwargs)
 
     if "loss" in model_kwargs:
+        _loss = model_kwargs.pop("loss")
         if loss is None:
-            loss = model_kwargs.pop("loss")
+            loss = _loss
         else:
-            logger.warning("duplicate loss in kwargs and model_kwargs. removing from model_kwargs")
-            del model_kwargs["loss"]
-    loss_instance = loss_resolver.make(loss, loss_kwargs)
+            logger.warning(
+                f"Cannot specify loss in kwargs ({loss}) and model_kwargs ({_loss}). removing from model_kwargs.",
+            )
+    model_kwargs["loss"] = loss_resolver.make(loss, loss_kwargs)
 
     if not isinstance(model, Model):
         for param_name, param_default in _get_model_defaults(model).items():
@@ -766,7 +772,6 @@ def _build_model_helper(
         model_resolver.make(
             model,
             triples_factory=training_triples_factory,
-            loss=loss_instance,
             **model_kwargs,
         ),
         model_kwargs,
