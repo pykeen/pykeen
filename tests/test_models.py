@@ -680,6 +680,9 @@ class TestMock(cases.ModelTestCase):
     def test_reset_parameters_(self):
         """Skip test because there are no parameters to reset."""
 
+    def test_reset_parameters_constructor_call(self):
+        """Skip test because there are no parameters to reset."""
+
     def test_score_h_with_score_hrt_equality(self) -> None:
         """Skip test because scores are random."""
 
