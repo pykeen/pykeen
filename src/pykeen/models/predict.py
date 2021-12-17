@@ -769,10 +769,15 @@ def _predict_uncertain(
     :param num_samples: > 1
         The number of samples to use. More samples lead to better estimates, but increase memory requirements and
         runtime.
+    :param slice_size: >0
+        The divisor for the scoring function when using slicing.
 
     :return:
         A tuple (score_mean, score_std) of the mean and std of the scores sampled from the dropout distribution.
         The std may be interpreted as a measure of uncertainty.
+
+    :raises ValueError:
+        if the model does not contain dropout layers.
     """
     dropout_modules = get_dropout_modules(model)
     if not dropout_modules:
