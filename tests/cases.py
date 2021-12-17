@@ -36,6 +36,7 @@ from torch.nn import functional
 from torch.optim import SGD, Adagrad
 
 import pykeen.models
+from pykeen.models.unimodal.ermlpe import ERMLPE
 import pykeen.nn.message_passing
 import pykeen.nn.weighting
 from pykeen.datasets import Nations
@@ -43,7 +44,7 @@ from pykeen.datasets.base import LazyDataset
 from pykeen.datasets.kinships import KINSHIPS_TRAIN_PATH
 from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH
 from pykeen.losses import Loss, PairwiseLoss, PointwiseLoss, SetwiseLoss, UnsupportedLabelSmoothingError
-from pykeen.models import RESCAL, EntityRelationEmbeddingModel, Model
+from pykeen.models import RESCAL, EntityRelationEmbeddingModel, Model, DistMult
 from pykeen.models.cli import build_cli_from_cls
 from pykeen.nn.emb import RepresentationModule
 from pykeen.nn.modules import FunctionalInteraction, Interaction, LiteralInteraction
@@ -52,7 +53,7 @@ from pykeen.pipeline import pipeline
 from pykeen.regularizers import LpRegularizer, Regularizer
 from pykeen.trackers import ResultTracker
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
-from pykeen.triples import TriplesFactory, generation
+from pykeen.triples import TriplesFactory, generation, triples_factory
 from pykeen.typing import HeadRepresentation, Initializer, MappedTriples, RelationRepresentation, TailRepresentation
 from pykeen.utils import all_in_bounds, get_batchnorm_modules, resolve_device, set_random_seed, unpack_singletons
 from tests.constants import EPSILON
@@ -1529,3 +1530,21 @@ class InitializerTestCase(unittest.TestCase):
             path = pathlib.Path(d) / "test.pkl"
             model.save_state(path)
             model.load_state(path)
+
+
+class PredictBaseTestCase(unittest.TestCase):
+    """Base test for prediction workflows."""
+
+    batch_size: int = 2
+    batch: MappedTriples
+    model: Model
+
+    def setUp(self) -> None:
+        """Prepare model."""
+        self.factory = Nations().training
+        self.batch = self.factory.mapped_triples[: self.batch_size, :]
+        self.model = ERMLPE(
+            embedding_dim=2,
+            hidden_dim=3,
+            triples_factory=self.factory,
+        )
