@@ -815,6 +815,18 @@ def predict_hrt_uncertain(
     .. note ::
         this method requires the model to have at least one dropout layer.
 
+    Example Usage:
+
+    .. code-block:: python
+        from pykeen.pipeline import pipeline
+        from pykeen.models.predict import predict_hrt_uncertain
+
+        result = pipeline(dataset="nations", model="ERMLPE")
+        prediction_with_uncertainty = predict_hrt_uncertain(
+            model=result.model,
+            hrt_batch=result.training.mapped_triples[0:8],
+        )
+
     :param model:
         the model used for predicting scores
     :param hrt_batch: shape: (number of triples, 3), dtype: long
