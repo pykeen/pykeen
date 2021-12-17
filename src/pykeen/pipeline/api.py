@@ -365,7 +365,7 @@ class PipelineResult(Result):
         self,
         directory: Union[str, pathlib.Path],
         *,
-        save_metadata: bool = True,  # TODO: not used
+        save_metadata: bool = True,
         save_replicates: bool = True,
         save_training: bool = True,
         **_kwargs,
@@ -375,14 +375,16 @@ class PipelineResult(Result):
             directory = pathlib.Path(directory).resolve()
         directory.mkdir(exist_ok=True, parents=True)
 
-        with directory.joinpath("metadata.json").open("w") as file:
-            json.dump(self.metadata, file, indent=2, sort_keys=True)
         with directory.joinpath("results.json").open("w") as file:
             json.dump(self._get_results(), file, indent=2, sort_keys=True)
+        if save_metadata:
+            with directory.joinpath("metadata.json").open("w") as file:
+                json.dump(self.metadata, file, indent=2, sort_keys=True)
         if save_replicates:
             self.save_model(directory.joinpath("trained_model.pkl"))
         if save_training:
             self.training.to_path_binary(directory.joinpath("training_factory.pkl"))
+        logger.info(f"Saved to directory: {directory.as_uri()}")
 
     def save_to_ftp(self, directory: str, ftp: ftplib.FTP) -> None:
         """Save all artifacts to the given directory in the FTP server.
