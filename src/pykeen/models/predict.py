@@ -4,7 +4,7 @@
 
 import itertools as itt
 import logging
-from typing import Optional, Sequence, Tuple, Union
+from typing import Callable, Optional, Sequence, Tuple, Union
 
 import numpy
 import numpy as np
@@ -15,7 +15,7 @@ from .base import Model
 from ..triples import CoreTriplesFactory, TriplesFactory
 from ..triples.utils import tensor_to_df
 from ..typing import LabeledTriples, MappedTriples, ScorePack
-from ..utils import is_cuda_oom_error
+from ..utils import get_dropout_modules, is_cuda_oom_error
 
 __all__ = [
     "predict",
@@ -636,3 +636,81 @@ def predict_triples_df(
         return tensor_to_df(tensor=triples, score=scores)
 
     return triples_factory.tensor_to_df(tensor=triples, score=scores)
+
+
+@torch.inference_mode()
+def _predict_uncertain(
+    model: Model,
+    batch: torch.LongTensor,
+    score_method: Callable[[torch.LongTensor], torch.FloatTensor],
+    num_samples: int,
+) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
+    """
+    Predict with uncertainty estimates via Monte-Carlo dropout.
+
+    .. note ::
+        the model has to contain at least one dropout layer.
+
+    .. note ::
+        the model will be set to evaluation mode, and all dropout layers will be set to training mode
+
+    :param model:
+        the model used for predicting scores
+    :param batch:
+        the batch on which to predict. Its shape and content has to match what the `score_method` requires.
+    :param score_method:
+        the base score method to use (from `score_{hrt,h,r,t}`)
+    :param num_samples: > 1
+        The number of samples to use. More samples lead to better estimates, but increase memory requirements and runtime.
+
+    :return:
+        A tuple (score_mean, score_std) of the mean and std of the scores sampled from the dropout distribution.
+        The std may be interpreted as a measure of uncertainty.
+    """
+    dropout_modules = get_dropout_modules(model)
+    if not dropout_modules:
+        raise ValueError(
+            "Model needs to contain at least one dropout layer to use the Monte-Carlo Dropout technique.",
+        )
+
+    # Enforce evaluation mode
+    model.eval()
+
+    # set dropout layers to training mode
+    for module in dropout_modules:
+        module.train()
+
+    # draw samples
+    batch = batch.to(model.device)
+    scores = torch.stack([score_method(batch) for _ in range(num_samples)], dim=0)
+    if model.predict_with_sigmoid:
+        scores = torch.sigmoid(scores)
+
+    # compute mean and std
+    return scores.mean(dim=0), scores.std(dim=0)
+
+
+def predict_hrt_uncertain(
+    model: Model,
+    hrt_batch: torch.LongTensor,
+    num_samples: int = 5,
+) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
+    """
+    Calculate the scores for triples and add an uncertainty quantification via Monto-Carlo dropout.
+
+    .. seealso ::
+        score_hrt
+
+    .. note ::
+        this method requires the model to have at least one dropout layer.
+
+    :param hrt_batch: shape: (number of triples, 3), dtype: long
+        The indices of (head, relation, tail) triples.
+    :param num_samples: >1
+        the number of samples to draw
+
+    :return: shape: (number of triples, 1), dtype: float
+        The score for each triple, and an uncertainty score, where larger scores correspond to less certain
+        predictions.
+    """
+    return _predict_uncertain(batch=hrt_batch, score_method=model.score_hrt, num_samples=num_samples)

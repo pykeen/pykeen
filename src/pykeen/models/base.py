@@ -11,7 +11,7 @@ import os
 import pickle
 import warnings
 from abc import ABC, abstractmethod
-from typing import Any, Callable, ClassVar, Iterable, Mapping, Optional, Sequence, Tuple, Type, Union
+from typing import Any, ClassVar, Iterable, Mapping, Optional, Sequence, Type, Union
 
 import pandas as pd
 import torch
@@ -27,7 +27,6 @@ from ..utils import (
     NoRandomSeedNecessary,
     _can_slice,
     extend_batch,
-    get_dropout_modules,
     resolve_device,
     set_random_seed,
 )
@@ -392,61 +391,6 @@ class Model(nn.Module, ABC):
         if self.predict_with_sigmoid:
             scores = torch.sigmoid(scores)
         return scores
-
-    @torch.inference_mode()
-    def _predict_uncertain(
-        self,
-        batch: torch.LongTensor,
-        score_method: Callable[[torch.LongTensor], torch.FloatTensor],
-        num_samples: int,
-    ) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
-        """Predict with uncertainty estimates via Monte-Carlo dropout."""
-        dropout_modules = get_dropout_modules(self)
-        if not dropout_modules:
-            raise ValueError(
-                "Model needs to contain at least one dropout layer to use the Monte-Carlo Dropout technique.",
-            )
-
-        # Enforce evaluation mode
-        self.eval()
-
-        # set dropout layers to training mode
-        for module in dropout_modules:
-            module.train()
-
-        # draw samples
-        batch = batch.to(self.device)
-        scores = torch.stack([score_method(batch) for _ in range(num_samples)], dim=0)
-        if self.predict_with_sigmoid:
-            scores = torch.sigmoid(scores)
-
-        # compute mean and std
-        return scores.mean(dim=0), scores.std(dim=0)
-
-    def predict_hrt_uncertain(
-        self,
-        hrt_batch: torch.LongTensor,
-        num_samples: int = 5,
-    ) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
-        """
-        Calculate the scores for triples and add an uncertainty quantification via Monto-Carlo dropout.
-
-        .. seealso ::
-            predict_hrt
-
-        .. note ::
-            this method requires the model to have at least one dropout layer.
-
-        :param hrt_batch: shape: (number of triples, 3), dtype: long
-            The indices of (head, relation, tail) triples.
-        :param num_samples: >1
-            the number of samples to draw
-
-        :return: shape: (number of triples, 1), dtype: float
-            The score for each triple, and an uncertainty score, where larger scores correspond to less certain
-            predictions.
-        """
-        return self._predict_uncertain(batch=hrt_batch, score_method=self.score_hrt, num_samples=num_samples)
 
     def get_all_prediction_df(
         self,
