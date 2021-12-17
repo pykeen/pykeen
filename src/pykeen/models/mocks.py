@@ -36,7 +36,7 @@ class MockModel(EntityRelationEmbeddingModel):
         t: torch.FloatTensor,
     ) -> torch.FloatTensor:
         """Generate fake scores."""
-        return (h * (self.num_entities * self.num_relations) + r * self.num_entities + t).requires_grad_(True)
+        return (h * (self.num_entities * self.num_relations) + r * self.num_entities + t).float().requires_grad_(True)
 
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         return self._generate_fake_scores(*hrt_batch.t()).unsqueeze(dim=-1)
