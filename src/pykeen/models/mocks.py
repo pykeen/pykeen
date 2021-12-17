@@ -20,7 +20,7 @@ class MockModel(Model):
 
     hpo_default = {}
 
-    def __init__(self, *, triples_factory: CoreTriplesFactory, embedding_dim: int, **_kwargs):
+    def __init__(self, *, triples_factory: CoreTriplesFactory, **_kwargs):
         super().__init__(
             triples_factory=triples_factory,
         )
