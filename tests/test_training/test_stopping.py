@@ -10,7 +10,7 @@ from torch import optim
 
 from pykeen.datasets import Nations
 from pykeen.models import Model
-from pykeen.models.mocks import MockModel
+from pykeen.models.mocks import HashModel
 from pykeen.stoppers.early_stopping import EarlyStopper
 from pykeen.training import SLCWATrainingLoop
 from pykeen.triples import TriplesFactory
@@ -79,7 +79,7 @@ class TestTrainingEarlyStopping(unittest.TestCase):
         # Set automatic_memory_optimization to false for tests
         self.mock_evaluator = MockEvaluator(self.mock_losses, automatic_memory_optimization=False)
         self.triples_factory = Nations()
-        self.model = MockModel(triples_factory=self.triples_factory.training)
+        self.model = HashModel(triples_factory=self.triples_factory.training)
         self.stopper = EarlyStopper(
             model=self.model,
             evaluator=self.mock_evaluator,

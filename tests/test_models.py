@@ -22,11 +22,11 @@ from pykeen.models import (
     _OldAbstractModel,
     model_resolver,
 )
+from pykeen.models.mocks import HashModel
 from pykeen.models.multimodal.base import LiteralModel
 from pykeen.models.predict import get_all_prediction_df, get_novelty_mask, predict
 from pykeen.models.unimodal.node_piece import _ConcatMLP
 from pykeen.models.unimodal.trans_d import _project_entity
-from pykeen.models.mocks import MockModel
 from pykeen.nn import EmbeddingSpecification
 from pykeen.nn.emb import Embedding, NodePieceRepresentation
 from pykeen.utils import all_in_bounds, clamp_norm, extend_batch
@@ -42,7 +42,7 @@ SKIP_MODULES = {
     LiteralModel,
     EntityRelationEmbeddingModel,
     ERModel,
-    MockModel,
+    HashModel,
     SimpleInteractionModel,
     EvaluationOnlyModel,
 }

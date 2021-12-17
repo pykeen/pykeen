@@ -30,7 +30,7 @@ from .hpo.cli import optimize
 from .hpo.samplers import sampler_resolver
 from .losses import loss_resolver
 from .lr_schedulers import lr_scheduler_resolver
-from .models import MockModel, model_resolver
+from .models import HashModel, model_resolver
 from .models.cli import build_cli_from_cls
 from .optimizers import optimizer_resolver
 from .regularizers import regularizer_resolver
@@ -43,7 +43,7 @@ from .utils import get_until_first_blank
 from .version import env_table
 
 HERE = Path(__file__).resolve().parent
-SKIP_MODELS = {MockModel}
+SKIP_MODELS = {HashModel}
 
 
 @click.group()

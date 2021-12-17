@@ -26,7 +26,7 @@ from pykeen.evaluation.rank_based_evaluator import (
     resolve_metric_name,
 )
 from pykeen.evaluation.sklearn import SklearnEvaluator, SklearnMetricResults
-from pykeen.models import MockModel, Model, TransE
+from pykeen.models import HashModel, Model, TransE
 from pykeen.triples import TriplesFactory
 from pykeen.typing import MappedTriples
 
@@ -508,7 +508,7 @@ class TestEvaluationStructure(unittest.TestCase):
         self.counter = 1337
         self.evaluator = DummyEvaluator(counter=self.counter, filtered=True, automatic_memory_optimization=False)
         self.dataset = Nations()
-        self.model = MockModel(triples_factory=self.dataset.training)
+        self.model = HashModel(triples_factory=self.dataset.training)
 
     def test_evaluation_structure(self):
         """Test if the evaluator has a balanced call of head and tail processors."""
@@ -530,7 +530,7 @@ class TestEvaluationFiltering(unittest.TestCase):
         """Prepare for testing the evaluation filtering."""
         self.evaluator = RankBasedEvaluator(filtered=True, automatic_memory_optimization=False)
         self.triples_factory = Nations().training
-        self.model = MockModel(triples_factory=self.triples_factory)
+        self.model = HashModel(triples_factory=self.triples_factory)
 
         # The MockModel gives the highest score to the highest entity id
         max_score = self.triples_factory.num_entities - 1

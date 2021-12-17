@@ -11,12 +11,12 @@ from .base import Model
 from ..triples import CoreTriplesFactory
 
 __all__ = [
-    "MockModel",
+    "HashModel",
 ]
 
 
-class MockModel(Model):
-    """A mock model returning fake scores."""
+class HashModel(Model):
+    """A mock model returning deterministic scores."""
 
     hpo_default = {}
 
