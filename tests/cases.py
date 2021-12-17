@@ -2,7 +2,6 @@
 
 """Test cases for PyKEEN."""
 
-import inspect
 import logging
 import os
 import pathlib
@@ -1077,16 +1076,11 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
                 extras.append("--no-automatic-memory-optimization")
             # else, leave to default
 
-        if "embedding_dim" in inspect.signature(self.instance.__init__).parameters:
-            extras.extend(
-                [
-                    "--embedding-dim",
-                    self.embedding_dim,
-                ]
-            )
         extras += [
             "--number-epochs",
             self.train_num_epochs,
+            "--embedding-dim",
+            self.embedding_dim,
             "--batch-size",
             self.train_batch_size,
         ]
