@@ -365,7 +365,7 @@ class PipelineResult(Result):
         self,
         directory: Union[str, pathlib.Path],
         *,
-        save_metadata: bool = True,
+        save_metadata: bool = True,  # TODO: not used
         save_replicates: bool = True,
         save_training: bool = True,
         **_kwargs,
