@@ -39,10 +39,26 @@ class UncertaintyPredictionTestCase(tests.cases.PredictBaseTestCase):
             hrt_batch=self.batch,
         )
 
+    def test_predict_h_uncertain(self):
+        """Test predict_h_uncertain."""
+        self._test_predict_uncertain(
+            method=pykeen.models.predict.predict_h_uncertain,
+            expected_shape=(self.batch_size, self.factory.num_entities),
+            rt_batch=self.batch[:, 1:],
+        )
+
+    def test_predict_r_uncertain(self):
+        """Test predict_r_uncertain."""
+        self._test_predict_uncertain(
+            method=pykeen.models.predict.predict_r_uncertain,
+            expected_shape=(self.batch_size, self.factory.num_relations),
+            ht_batch=self.batch[:, [0, 2]],
+        )
+
     def test_predict_t_uncertain(self):
         """Test predict_t_uncertain."""
         self._test_predict_uncertain(
             method=pykeen.models.predict.predict_t_uncertain,
             expected_shape=(self.batch_size, self.factory.num_entities),
-            hrt_batch=self.batch[:, :2],
+            hr_batch=self.batch[:, :2],
         )
