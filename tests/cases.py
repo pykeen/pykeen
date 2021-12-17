@@ -36,7 +36,6 @@ from torch.nn import functional
 from torch.optim import SGD, Adagrad
 
 import pykeen.models
-from pykeen.models.unimodal.ermlpe import ERMLPE
 import pykeen.nn.message_passing
 import pykeen.nn.weighting
 from pykeen.datasets import Nations
@@ -44,8 +43,9 @@ from pykeen.datasets.base import LazyDataset
 from pykeen.datasets.kinships import KINSHIPS_TRAIN_PATH
 from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH
 from pykeen.losses import Loss, PairwiseLoss, PointwiseLoss, SetwiseLoss, UnsupportedLabelSmoothingError
-from pykeen.models import RESCAL, EntityRelationEmbeddingModel, Model, DistMult
+from pykeen.models import RESCAL, DistMult, EntityRelationEmbeddingModel, Model
 from pykeen.models.cli import build_cli_from_cls
+from pykeen.models.unimodal.ermlpe import ERMLPE
 from pykeen.nn.emb import RepresentationModule
 from pykeen.nn.modules import FunctionalInteraction, Interaction, LiteralInteraction
 from pykeen.optimizers import optimizer_resolver
