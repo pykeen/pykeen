@@ -27,10 +27,10 @@ class HashModel(Model):
         self.num_entities = triples_factory.num_entities
         self.num_relations = triples_factory.num_relations
 
-    def collect_regularization_term(self):
+    def collect_regularization_term(self):  # noqa: D102
         pass  # Not needed for mock model
 
-    def _reset_parameters_(self):
+    def _reset_parameters_(self):  # noqa: D102
         pass  # Not needed for mock model
 
     def _generate_fake_scores(
