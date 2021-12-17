@@ -5,6 +5,7 @@
 import inspect
 import json
 import logging
+import pathlib
 import sys
 from typing import Any, Mapping, Optional, Type, Union
 
@@ -118,7 +119,7 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
     @_decorate_model_kwargs
     @click.option("-I", "--create-inverse-triples", is_flag=True, help="Model inverse triples")
     @click.option("--silent", is_flag=True)
-    @click.option("--output", type=click.File("w"), default=sys.stdout, help="Where to dump the metric results")
+    @click.option("--output-directory", type=pathlib.Path, default=None, help="Where to dump the results")
     def main(
         *,
         device,
@@ -129,7 +130,7 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
         learning_rate,
         evaluator,
         stopper,
-        output,
+        output_directory: Optional[pathlib.Path],
         mlflow_tracking_uri,
         title,
         dataset,
@@ -205,10 +206,15 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
             ),
             random_seed=random_seed,
         )
-
-        if not silent:
-            json.dump(pipeline_result.metric_results.to_dict(), output, indent=2)
+        if output_directory:
+            pipeline_result.save_to_directory(
+                directory=output_directory,
+                # TODO: other parameters?
+            )
+        elif not silent:
+            json.dump(pipeline_result.metric_results.to_dict(), sys.out, indent=2)
             click.echo("")
+
         return sys.exit(0)
 
     return main
