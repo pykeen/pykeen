@@ -24,12 +24,10 @@ class UncertaintyPredictionTestCase(tests.cases.PredictBaseTestCase):
             num_samples=self.num_samples,
             **kwargs,
         )
-        assert isinstance(result, tuple)
-        assert len(result) == 2
-        mean, std = result
-        assert (std >= 0).all()
-        assert mean.shape == expected_shape
-        assert std.shape == expected_shape
+        assert isinstance(result, pykeen.models.predict.UncertainPrediction)
+        assert (result.uncertainty >= 0).all()
+        assert result.score.shape == expected_shape
+        assert result.uncertainty.shape == expected_shape
 
     def test_predict_hrt_uncertain(self):
         """Test predict_hrt_uncertain."""

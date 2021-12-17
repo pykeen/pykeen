@@ -5,7 +5,7 @@
 import itertools as itt
 import logging
 from abc import abstractmethod
-from typing import Callable, Optional, Sequence, Tuple, Union
+from typing import Callable, NamedTuple, Optional, Sequence, Tuple, Union
 
 import numpy
 import numpy as np
@@ -733,6 +733,16 @@ def predict_triples_df(
     return triples_factory.tensor_to_df(tensor=triples, score=scores)
 
 
+class UncertainPrediction(NamedTuple):
+    """A pair of predicted scores and corresponding uncertainty."""
+
+    #: The scores
+    score: torch.FloatTensor
+
+    #: The uncertainty, in the same shape as scores
+    uncertainty: torch.FloatTensor
+
+
 @torch.inference_mode()
 def _predict_uncertain(
     model: Model,
@@ -740,7 +750,7 @@ def _predict_uncertain(
     score_method: Callable[..., torch.FloatTensor],
     num_samples: int,
     slice_size: Optional[int] = None,
-) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
+) -> UncertainPrediction:
     """
     Predict with uncertainty estimates via Monte-Carlo dropout.
 
@@ -788,14 +798,14 @@ def _predict_uncertain(
         scores = torch.sigmoid(scores)
 
     # compute mean and std
-    return scores.mean(dim=0), scores.std(dim=0)
+    return UncertainPrediction(score=scores.mean(dim=0), uncertainty=scores.std(dim=0))
 
 
 def predict_hrt_uncertain(
     model: Model,
     hrt_batch: torch.LongTensor,
     num_samples: int = 5,
-) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
+) -> UncertainPrediction:
     """
     Calculate the scores for triples and add an uncertainty quantification via Monto-Carlo dropout.
 
@@ -829,7 +839,7 @@ def predict_h_uncertain(
     rt_batch: torch.LongTensor,
     num_samples: int = 5,
     slice_size: Optional[int] = None,
-) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
+) -> UncertainPrediction:
     """Forward pass using left side (head) prediction for obtaining scores of all possible heads.
 
     This method calculates the score for all possible heads for each (relation, tail) pair, as well as an uncertainty
@@ -872,7 +882,7 @@ def predict_r_uncertain(
     ht_batch: torch.LongTensor,
     num_samples: int = 5,
     slice_size: Optional[int] = None,
-) -> torch.FloatTensor:
+) -> UncertainPrediction:
     """Forward pass using middle (relation) prediction for obtaining scores of all possible relations.
 
     This method calculates the score for all possible relations for each (head, tail) pair, as well as an uncertainty
@@ -909,7 +919,7 @@ def predict_t_uncertain(
     hr_batch: torch.LongTensor,
     num_samples: int = 5,
     slice_size: Optional[int] = None,
-) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
+) -> UncertainPrediction:
     """Forward pass using right side (tail) prediction for obtaining scores of all possible tails.
 
     This method calculates the score for all possible tails for each (head, relation) pair, as well as an uncertainty
