@@ -5,6 +5,8 @@
 These are useful for baselines.
 """
 
+from typing import Any, ClassVar, Mapping
+
 import torch
 
 from .base import Model
@@ -27,7 +29,7 @@ class FixedModel(Model):
         github: pykeen/pykeen
     """
 
-    hpo_default = {}
+    hpo_default: ClassVar[Mapping[str, Any]] = {}
 
     def __init__(self, *, triples_factory: CoreTriplesFactory, **_kwargs):
         super().__init__(
@@ -61,7 +63,7 @@ class FixedModel(Model):
             t=torch.arange(self.num_entities).unsqueeze(dim=0),
         )
 
-    def score_r(self, ht_batch: torch.LongTensor) -> torch.FloatTensor:
+    def score_r(self, ht_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         return self._generate_fake_scores(
             h=ht_batch[:, 0:1],
             r=torch.arange(self.num_relations).unsqueeze(dim=0),
