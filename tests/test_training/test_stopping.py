@@ -9,8 +9,7 @@ import torch
 from torch import optim
 
 from pykeen.datasets import Nations
-from pykeen.models import Model
-from pykeen.models.mocks import FixedModel
+from pykeen.models import FixedModel, Model
 from pykeen.stoppers.early_stopping import EarlyStopper
 from pykeen.training import SLCWATrainingLoop
 from pykeen.triples import TriplesFactory

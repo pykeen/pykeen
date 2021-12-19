@@ -17,12 +17,12 @@ from pykeen.models import (
     EntityRelationEmbeddingModel,
     ERModel,
     EvaluationOnlyModel,
+    FixedModel,
     Model,
     _NewAbstractModel,
     _OldAbstractModel,
     model_resolver,
 )
-from pykeen.models.mocks import FixedModel
 from pykeen.models.multimodal.base import LiteralModel
 from pykeen.models.predict import get_all_prediction_df, get_novelty_mask, predict
 from pykeen.models.unimodal.node_piece import _ConcatMLP
