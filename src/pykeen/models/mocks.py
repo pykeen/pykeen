@@ -11,12 +11,21 @@ from .base import Model
 from ..triples import CoreTriplesFactory
 
 __all__ = [
-    "HashModel",
+    "FixedModel",
 ]
 
 
-class HashModel(Model):
-    """A mock model returning deterministic scores."""
+class FixedModel(Model):
+    """A mock model returning fixed scores.
+
+    ---
+    name: Fixed Model
+    citation:
+        author: Berrendorf
+        year: 2021
+        link: https://github.com/pykeen/pykeen/pull/691
+        github: pykeen/pykeen
+    """
 
     hpo_default = {}
 

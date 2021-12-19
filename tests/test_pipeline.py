@@ -12,7 +12,7 @@ import torch
 
 import pykeen.regularizers
 from pykeen.datasets import EagerDataset, Nations
-from pykeen.models import ERModel, HashModel, Model
+from pykeen.models import ERModel, FixedModel, Model
 from pykeen.models.predict import (
     get_all_prediction_df,
     get_head_prediction_df,
@@ -476,7 +476,7 @@ class TestPipelineEvaluationFiltering(unittest.TestCase):
         cls.device = resolve_device("cuda")
         cls.dataset = Nations()
 
-        cls.model = HashModel(triples_factory=cls.dataset.training)
+        cls.model = FixedModel(triples_factory=cls.dataset.training)
 
         # The MockModel gives the highest score to the highest entity id
         max_score = cls.dataset.num_entities - 1

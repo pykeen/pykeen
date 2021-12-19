@@ -30,7 +30,7 @@ from .hpo.cli import optimize
 from .hpo.samplers import sampler_resolver
 from .losses import loss_resolver
 from .lr_schedulers import lr_scheduler_resolver
-from .models import HashModel, model_resolver
+from .models import model_resolver
 from .models.cli import build_cli_from_cls
 from .optimizers import optimizer_resolver
 from .regularizers import regularizer_resolver
@@ -43,7 +43,6 @@ from .utils import get_until_first_blank
 from .version import env_table
 
 HERE = Path(__file__).resolve().parent
-SKIP_MODELS = {HashModel}
 
 
 @click.group()
@@ -85,34 +84,18 @@ def _help_models(tablefmt: str, link_fmt: Optional[str] = None):
 
 def _get_model_lines(tablefmt: str, link_fmt: Optional[str] = None):
     for _, model in sorted(model_resolver.lookup_dict.items()):
-        if model in SKIP_MODELS:
-            continue
         reference = f"pykeen.models.{model.__name__}"
         docdata = getattr(model, "__docdata__", None)
-        if docdata is not None:
-            if link_fmt:
-                reference = f"[`{reference}`]({link_fmt.format(reference)})"
-            else:
-                reference = f"`{reference}`"
-            name = docdata.get("name", model.__name__)
-            citation = docdata["citation"]
-            citation_str = f"[{citation['author']} *et al.*, {citation['year']}]({citation['link']})"
-            yield name, reference, citation_str
+        if docdata is None:
+            raise ValueError("All models must have docdata")
+        if link_fmt:
+            reference = f"[`{reference}`]({link_fmt.format(reference)})"
         else:
-            line = str(model.__doc__.splitlines()[0])
-            l, r = line.find("["), line.find("]")
-            if tablefmt == "rst":
-                yield model.__name__, f":class:`{reference}`", line[l : r + 2]
-            elif tablefmt == "github":
-                author, year = line[1 + l : r - 4], line[r - 4 : r]
-                if link_fmt:
-                    reference = f"[`{reference}`]({link_fmt.format(reference)})"
-                else:
-                    reference = f"`{reference}`"
-                yield model.__name__, reference, f"{author.capitalize()} *et al.*, {year}"
-            else:
-                author, year = line[1 + l : r - 4], line[r - 4 : r]
-                yield model.__name__, f"{author.capitalize()}, {year}"
+            reference = f"`{reference}`"
+        name = docdata.get("name", model.__name__)
+        citation = docdata["citation"]
+        citation_str = f"[{citation['author']} *et al.*, {citation['year']}]({citation['link']})"
+        yield name, reference, citation_str
 
 
 @ls.command()
@@ -507,7 +490,7 @@ def get_readme() -> str:
     tablefmt = "github"
     return readme_template.render(
         models=_help_models(tablefmt, link_fmt="https://pykeen.readthedocs.io/en/latest/api/{}.html"),
-        n_models=len(model_resolver.lookup_dict) - len(SKIP_MODELS),
+        n_models=len(model_resolver.lookup_dict),
         regularizers=_help_regularizers(tablefmt, link_fmt="https://pykeen.readthedocs.io/en/latest/api/{}.html"),
         n_regularizers=len(regularizer_resolver.lookup_dict),
         losses=_help_losses(tablefmt, link_fmt="https://pykeen.readthedocs.io/en/latest/api/{}.html"),
