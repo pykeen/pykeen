@@ -38,8 +38,13 @@ class FixedModel(Model):
         self.num_entities = triples_factory.num_entities
         self.num_relations = triples_factory.num_relations
 
+        # This empty 1-element tensor doesn't actually do anything,
+        # but is necessary since models with no grad params blow
+        # up the optimizer
+        self.dummy = torch.nn.Parameter(torch.empty(1), requires_grad=True)
+
     def collect_regularization_term(self):  # noqa: D102
-        pass  # Not needed for mock model
+        return 0.0
 
     def _reset_parameters_(self):  # noqa: D102
         pass  # Not needed for mock model
