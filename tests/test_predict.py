@@ -1,13 +1,16 @@
+# -*- coding: utf-8 -*-
+
 """Tests for prediction workflows."""
+
 from typing import Callable, Tuple
 
 import torch
 
 import pykeen.models.predict
-import tests.cases
+from tests import cases
 
 
-class UncertaintyPredictionTestCase(tests.cases.PredictBaseTestCase):
+class UncertaintyPredictionTestCase(cases.PredictBaseTestCase):
     """Tests for uncertainty prediction."""
 
     num_samples: int = 3
@@ -17,7 +20,7 @@ class UncertaintyPredictionTestCase(tests.cases.PredictBaseTestCase):
         method: Callable[..., Tuple[torch.FloatTensor, torch.FloatTensor]],
         expected_shape: Tuple[int, ...],
         **kwargs,
-    ) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
+    ):
         """General testing of uncertainty prediction."""
         result = method(
             model=self.model,

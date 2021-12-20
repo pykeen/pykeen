@@ -21,15 +21,17 @@ from ..utils import get_dropout_modules, is_cuda_oom_error
 
 __all__ = [
     "predict",
-    "predict_hrt_uncertain",
-    "predict_h_uncertain",
-    "predict_r_uncertain",
-    "predict_t_uncertain",
     "predict_triples_df",
     "get_all_prediction_df",
     "get_head_prediction_df",
     "get_relation_prediction_df",
     "get_tail_prediction_df",
+    # Uncertainty prediction
+    "UncertainPrediction",
+    "predict_hrt_uncertain",
+    "predict_h_uncertain",
+    "predict_r_uncertain",
+    "predict_t_uncertain",
 ]
 
 logger = logging.getLogger(__name__)
