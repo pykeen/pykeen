@@ -42,7 +42,7 @@
   <a href="#installation">Installation</a> •
   <a href="#quickstart">Quickstart</a> •
   <a href="#datasets-29">Datasets</a> •
-  <a href="#models-35">Models</a> •
+  <a href="#models-36">Models</a> •
   <a href="#supporters">Support</a> •
   <a href="#citation">Citation</a>
 </p>
@@ -146,7 +146,7 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 | WordNet-18 (RR)                    | [`pykeen.datasets.WN18RR`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.WN18RR.html)               | [Toutanova *et al*., 2015](https://www.aclweb.org/anthology/W15-4007/)                                                  |      40559 |          11 |     92583 |
 | YAGO3-10                           | [`pykeen.datasets.YAGO310`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.YAGO310.html)             | [Mahdisoltani *et al*., 2015](http://service.tsi.telecom-paristech.fr/cgi-bin//valipub_download.cgi?dId=284)            |     123143 |          37 |   1089000 |
 
-### Models (35)
+### Models (36)
 
 | Name                           | Reference                                                                                                                   | Citation                                                                                                                |
 |--------------------------------|-----------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|
@@ -164,6 +164,7 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 | DistMult Literal (Gated)       | [`pykeen.models.DistMultLiteralGated`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.DistMultLiteralGated.html) | [Kristiadi *et al.*, 2018](https://arxiv.org/abs/1802.00934)                                                            |
 | ER-MLP                         | [`pykeen.models.ERMLP`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.ERMLP.html)                               | [Dong *et al.*, 2014](https://dl.acm.org/citation.cfm?id=2623623)                                                       |
 | ER-MLP (E)                     | [`pykeen.models.ERMLPE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.ERMLPE.html)                             | [Sharifzadeh *et al.*, 2019](https://github.com/pykeen/pykeen)                                                          |
+| Fixed Model                    | [`pykeen.models.FixedModel`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.FixedModel.html)                     | [Berrendorf *et al.*, 2021](https://github.com/pykeen/pykeen/pull/691)                                                  |
 | HolE                           | [`pykeen.models.HolE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.HolE.html)                                 | [Nickel *et al.*, 2016](https://www.aaai.org/ocs/index.php/AAAI/AAAI16/paper/viewFile/12484/11828)                      |
 | KG2E                           | [`pykeen.models.KG2E`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.KG2E.html)                                 | [He *et al.*, 2015](https://dl.acm.org/doi/10.1145/2806416.2806502)                                                     |
 | MuRE                           | [`pykeen.models.MuRE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.MuRE.html)                                 | [Balažević *et al.*, 2019](https://arxiv.org/abs/1905.09791)                                                            |
