@@ -74,16 +74,14 @@ def load_triples(
     if column_remapping is not None:
         if len(column_remapping) != 3:
             raise ValueError("remapping must have length of three")
-    rv = pandas.read_csv(
+    return pandas.read_csv(
         path,
         sep=delimiter,
         encoding=encoding,
         dtype=str,
         header=None,
         usecols=column_remapping,
-    ).values
-
-    return rv
+    ).to_numpy()
 
 
 def get_entities(triples: torch.LongTensor) -> Set[int]:
