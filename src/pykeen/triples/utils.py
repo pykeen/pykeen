@@ -71,19 +71,18 @@ def load_triples(
 
     if encoding is None:
         encoding = "utf-8"
+    if column_remapping is not None:
+        if len(column_remapping) != 3:
+            raise ValueError("remapping must have length of three")
     rv = pandas.read_csv(
         path,
         sep=delimiter,
         encoding=encoding,
         dtype=str,
         header=None,
-        # comments="@Comment@ Head Relation Tail", # TODO: do we need this?
+        usecols=column_remapping,
     ).values
 
-    if column_remapping is not None:
-        if len(column_remapping) != 3:
-            raise ValueError("remapping must have length of three")
-        rv = rv[:, column_remapping]
     return rv
 
 
