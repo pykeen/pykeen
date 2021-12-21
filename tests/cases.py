@@ -43,7 +43,7 @@ from pykeen.datasets.base import LazyDataset
 from pykeen.datasets.kinships import KINSHIPS_TRAIN_PATH
 from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH
 from pykeen.losses import Loss, PairwiseLoss, PointwiseLoss, SetwiseLoss, UnsupportedLabelSmoothingError
-from pykeen.models import ERMLPE, RESCAL, EntityRelationEmbeddingModel, Model
+from pykeen.models import RESCAL, EntityRelationEmbeddingModel, Model
 from pykeen.models.cli import build_cli_from_cls
 from pykeen.nn.emb import RepresentationModule
 from pykeen.nn.modules import FunctionalInteraction, Interaction, LiteralInteraction
@@ -1535,7 +1535,11 @@ class InitializerTestCase(unittest.TestCase):
 class PredictBaseTestCase(unittest.TestCase):
     """Base test for prediction workflows."""
 
-    batch_size: int = 2
+    batch_size: ClassVar[int] = 2
+    model_cls: ClassVar[Type[Model]]
+    model_kwargs: ClassVar[Mapping[str, Any]]
+
+    factory: TriplesFactory
     batch: MappedTriples
     model: Model
 
@@ -1543,8 +1547,7 @@ class PredictBaseTestCase(unittest.TestCase):
         """Prepare model."""
         self.factory = Nations().training
         self.batch = self.factory.mapped_triples[: self.batch_size, :]
-        self.model = ERMLPE(
-            embedding_dim=2,
-            hidden_dim=3,
+        self.model = self.model_cls(
             triples_factory=self.factory,
+            **self.model_kwargs,
         )

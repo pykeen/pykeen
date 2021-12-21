@@ -6,13 +6,37 @@ from typing import Callable, Tuple
 
 import torch
 
-import pykeen.models.predict
+from pykeen.models import ERMLPE, TransE
+from pykeen.models.predict import (
+    UncertainPrediction,
+    predict_h_uncertain,
+    predict_hrt_uncertain,
+    predict_r_uncertain,
+    predict_t_uncertain,
+)
 from tests import cases
+
+
+class UncertaintyFailureTest(cases.PredictBaseTestCase):
+    """Test for when uncertainty can't be assessed with MC method."""
+
+    model_cls = TransE
+    model_kwargs = {}
+
+    def test_missing_dropout(self):
+        """Test that a value error is run if the model has no dropout."""
+        with self.assertRaises(ValueError):
+            predict_hrt_uncertain(model=self.model, hrt_batch=self.batch)
 
 
 class UncertaintyPredictionTestCase(cases.PredictBaseTestCase):
     """Tests for uncertainty prediction."""
 
+    model_cls = ERMLPE  # this model does indeed have dropouts!
+    model_kwargs = {
+        "embedding_dim": 2,
+        "hidden_dim": 3,
+    }
     num_samples: int = 3
 
     def _test_predict_uncertain(
@@ -27,7 +51,7 @@ class UncertaintyPredictionTestCase(cases.PredictBaseTestCase):
             num_samples=self.num_samples,
             **kwargs,
         )
-        assert isinstance(result, pykeen.models.predict.UncertainPrediction)
+        assert isinstance(result, UncertainPrediction)
         assert (result.uncertainty >= 0).all()
         assert result.score.shape == expected_shape
         assert result.uncertainty.shape == expected_shape
@@ -35,7 +59,7 @@ class UncertaintyPredictionTestCase(cases.PredictBaseTestCase):
     def test_predict_hrt_uncertain(self):
         """Test predict_hrt_uncertain."""
         self._test_predict_uncertain(
-            method=pykeen.models.predict.predict_hrt_uncertain,
+            method=predict_hrt_uncertain,
             expected_shape=(self.batch_size, 1),
             hrt_batch=self.batch,
         )
@@ -43,7 +67,7 @@ class UncertaintyPredictionTestCase(cases.PredictBaseTestCase):
     def test_predict_h_uncertain(self):
         """Test predict_h_uncertain."""
         self._test_predict_uncertain(
-            method=pykeen.models.predict.predict_h_uncertain,
+            method=predict_h_uncertain,
             expected_shape=(self.batch_size, self.factory.num_entities),
             rt_batch=self.batch[:, 1:],
         )
@@ -51,7 +75,7 @@ class UncertaintyPredictionTestCase(cases.PredictBaseTestCase):
     def test_predict_r_uncertain(self):
         """Test predict_r_uncertain."""
         self._test_predict_uncertain(
-            method=pykeen.models.predict.predict_r_uncertain,
+            method=predict_r_uncertain,
             expected_shape=(self.batch_size, self.factory.num_relations),
             ht_batch=self.batch[:, [0, 2]],
         )
@@ -59,7 +83,7 @@ class UncertaintyPredictionTestCase(cases.PredictBaseTestCase):
     def test_predict_t_uncertain(self):
         """Test predict_t_uncertain."""
         self._test_predict_uncertain(
-            method=pykeen.models.predict.predict_t_uncertain,
+            method=predict_t_uncertain,
             expected_shape=(self.batch_size, self.factory.num_entities),
             hr_batch=self.batch[:, :2],
         )
