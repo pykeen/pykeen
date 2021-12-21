@@ -264,7 +264,7 @@ def get_all_prediction_df(
 
     Example usage:
 
-    .. code-block:: python
+    .. code-block::
 
         from pykeen.pipeline import pipeline
         from pykeen.models.predict import get_all_prediction_df
@@ -674,6 +674,7 @@ def predict_triples_df(
     Predict on labeled or mapped triples.
 
     Example:
+
     >>> from pykeen.pipeline import pipeline
     >>> result = pipeline(dataset="nations", model="TransE")
     >>> from pykeen.models.predict import predict_triples_df
@@ -756,10 +757,10 @@ def _predict_uncertain(
     """
     Predict with uncertainty estimates via Monte-Carlo dropout.
 
-    .. note ::
+    .. note::
         the model has to contain at least one dropout layer.
 
-    .. note ::
+    .. note::
         the model will be set to evaluation mode, and all dropout layers will be set to training mode
 
     :param model:
@@ -814,17 +815,18 @@ def predict_hrt_uncertain(
     num_samples: int = 5,
 ) -> UncertainPrediction:
     """
-    Calculate the scores for triples and add an uncertainty quantification via Monto-Carlo dropout.
+    Calculate the scores with uncertainty quantification via Monto-Carlo dropout as proposed in [berrendorf2021]_.
 
-    .. seealso ::
-        score_hrt, _predict_uncertain
+    .. seealso::
+        :func:`pykeen.models.Model.score_hrt`, :func:`_predict_uncertain`
 
-    .. note ::
+    .. note::
         this method requires the model to have at least one dropout layer.
 
     Example Usage:
 
-    .. code-block:: python
+    .. code-block::
+
         from pykeen.pipeline import pipeline
         from pykeen.models.predict import predict_hrt_uncertain
 
@@ -872,7 +874,7 @@ def predict_h_uncertain(
         the head entities becomes the task of predicting the tail entities of the
         inverse triples, i.e., $f(*,r,t)$ is predicted by means of $f(t,r_{inv},*)$.
 
-    .. note ::
+    .. note::
         this method requires the model to have at least one dropout layer.
 
     :param model:
@@ -909,7 +911,7 @@ def predict_r_uncertain(
 
     Additionally, the model is set to evaluation mode.
 
-    .. note ::
+    .. note::
         this method requires the model to have at least one dropout layer.
 
     :param model:
@@ -951,11 +953,11 @@ def predict_t_uncertain(
         We only expect the right side-side predictions, i.e., $(h,r,*)$ to change its
         default behavior when the model has been trained with inverse relations
         (mainly because of the behavior of the LCWA training approach). This is why
-        the :func:`predict_scores_all_heads()` has different behavior depending on
+        the :func:`predict_scores_all_heads` has different behavior depending on
         if inverse triples were used in training, and why this function has the same
         behavior regardless of the use of inverse triples.
 
-    .. note ::
+    .. note::
         this method requires the model to have at least one dropout layer.
 
     :param model:

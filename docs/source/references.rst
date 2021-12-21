@@ -83,3 +83,6 @@ References
 
 .. [sharifzadeh2019vrd] Sharifzadeh, S., *et al*. (2019). `Improving Visual Relation Detection using Depth
    Maps <http://arxiv.org/abs/1905.00966>`_. *arXiv*, 1905.00966.
+
+.. [berrendorf2021] Berrendorf, M., Faerman, E., & Tresp, V. (2021). `Active Learning for Entity
+   Alignment <https://doi.org/10.1007/978-3-030-72113-8_4>`_. ECIR 2021.
