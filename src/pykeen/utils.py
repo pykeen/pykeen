@@ -799,6 +799,19 @@ def strip_dim(*tensors: torch.FloatTensor, n: int = 4) -> Sequence[torch.FloatTe
 def upgrade_to_sequence(x: Union[X, Sequence[X]]) -> Sequence[X]:
     """Ensure that the input is a sequence.
 
+    .. note ::
+        While strings are technically also a sequence, i.e.,
+
+        .. code-block:: python
+            isinstance("test", Sequence) is True
+
+        this may lead to unexpected behaviour when calling `upgrade_to_sequence("test")`.
+        We thus handle strings as non-sequences. To recover the other behaviour, the following may be used:
+
+        .. code-block:: python
+            upgrade_to_sequence(list("test"))
+
+
     :param x: A literal or sequence of literals
     :return: If a literal was given, a one element tuple with it in it. Otherwise, return the given value.
 
@@ -806,6 +819,10 @@ def upgrade_to_sequence(x: Union[X, Sequence[X]]) -> Sequence[X]:
     (1,)
     >>> upgrade_to_sequence((1, 2, 3))
     (1, 2, 3)
+    >>> upgrade_to_sequence("test")
+    ("test",)
+    >>> upgrade_to_sequence(list("test"))
+    ("t", "e", "s", "t")
     """
     return x if (isinstance(x, Sequence) and not isinstance(x, str)) else (x,)
 
