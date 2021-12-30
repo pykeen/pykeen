@@ -18,7 +18,10 @@ __all__ = [
 
 
 class FixedModel(Model):
-    """A mock model returning fixed scores.
+    r"""A mock model returning fixed scores.
+
+    .. math ::
+        score(h, r, t) = h \cdot |\mathcal{E}| \cdot |\mathcal{R}| + r \cdot |\mathcal{E}| + t
 
     ---
     name: Fixed Model
