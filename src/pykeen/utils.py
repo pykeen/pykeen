@@ -809,7 +809,7 @@ def upgrade_to_sequence(x: Union[X, Sequence[X]]) -> Sequence[X]:
         this may lead to unexpected behaviour when calling `upgrade_to_sequence("test")`.
         We thus handle strings as non-sequences. To recover the other behavior, the following may be used:
 
-        .. code-block:: python
+        .. code-block::
             upgrade_to_sequence(list("test"))
 
 
