@@ -3,6 +3,7 @@
 """Test that models can be executed."""
 
 import importlib
+import itertools
 import os
 import unittest
 from typing import Any, MutableMapping, Optional
@@ -10,11 +11,10 @@ from typing import Any, MutableMapping, Optional
 import numpy
 import torch
 import unittest_templates
-from pykeen.datasets.nations import Nations
-import itertools
 
 import pykeen.experiments
 import pykeen.models
+from pykeen.datasets.nations import Nations
 from pykeen.models import (
     EntityRelationEmbeddingModel,
     ERModel,
