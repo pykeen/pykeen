@@ -807,7 +807,7 @@ def upgrade_to_sequence(x: Union[X, Sequence[X]]) -> Sequence[X]:
             isinstance("test", Sequence) is True
 
         this may lead to unexpected behaviour when calling `upgrade_to_sequence("test")`.
-        We thus handle strings as non-sequences. To recover the other behaviour, the following may be used:
+        We thus handle strings as non-sequences. To recover the other behavior, the following may be used:
 
         .. code-block:: python
             upgrade_to_sequence(list("test"))
