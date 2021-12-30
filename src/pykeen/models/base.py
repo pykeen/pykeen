@@ -21,7 +21,7 @@ from torch import nn
 from ..losses import Loss, MarginRankingLoss
 from ..nn.emb import Embedding, EmbeddingSpecification, RepresentationModule
 from ..regularizers import NoRegularizer, Regularizer
-from ..triples import CoreTriplesFactory
+from ..triples import CoreTriplesFactory, relation_inverter
 from ..typing import DeviceHint, ScorePack
 from ..utils import NoRandomSeedNecessary, _can_slice, extend_batch, resolve_device, set_random_seed
 
@@ -271,11 +271,8 @@ class Model(nn.Module, ABC):
         if not self.use_inverse_triples:
             return batch
 
-        # when trained on invers relations, the internal relation ID is twice the original relation ID
-        batch = batch.clone()
-        batch[:, index_relation] *= 2
-
-        return batch
+        # when trained on inverse relations, the internal relation ID is twice the original relation ID
+        return relation_inverter.map(batch=batch, index=index_relation, invert=False)
 
     def predict_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:
         """Calculate the scores for triples.
@@ -505,13 +502,7 @@ class Model(nn.Module, ABC):
                 " Set ``create_inverse_triples=True`` when creating the dataset/triples factory"
                 " or using the pipeline().",
             )
-        batch_cloned = batch.clone()
-
-        # The number of relations stored in the triples factory includes the number of inverse relations
-        # Id of inverse relation: relation + 1
-        batch_cloned[:, index_relation] = batch_cloned[:, index_relation] + 1
-
-        return batch_cloned.flip(1)
+        return relation_inverter.invert_(batch=batch, index=index_relation).flip(1)
 
     def score_hrt_inverse(
         self,
