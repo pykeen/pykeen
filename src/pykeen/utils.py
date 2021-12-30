@@ -30,6 +30,7 @@ from typing import (
     Type,
     TypeVar,
     Union,
+    cast,
 )
 
 import numpy as np
@@ -820,11 +821,15 @@ def upgrade_to_sequence(x: Union[X, Sequence[X]]) -> Sequence[X]:
     >>> upgrade_to_sequence((1, 2, 3))
     (1, 2, 3)
     >>> upgrade_to_sequence("test")
-    ("test",)
+    ('test',)
     >>> upgrade_to_sequence(list("test"))
-    ("t", "e", "s", "t")
+    ('t', 'e', 's', 't')
     """
-    return x if (isinstance(x, Sequence) and not isinstance(x, str)) else (x,)
+    if isinstance(x, str):
+        return cast(Sequence[X], (x,))
+    if isinstance(x, Sequence):
+        return x
+    return (x,)
 
 
 def ensure_tuple(*x: Union[X, Sequence[X]]) -> Sequence[Sequence[X]]:
