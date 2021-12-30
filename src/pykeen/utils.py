@@ -802,7 +802,7 @@ def upgrade_to_sequence(x: Union[X, Sequence[X]]) -> Sequence[X]:
     .. note ::
         While strings are technically also a sequence, i.e.,
 
-        .. code-block:: python
+        .. code-block::
             isinstance("test", Sequence) is True
 
         this may lead to unexpected behaviour when calling `upgrade_to_sequence("test")`.
