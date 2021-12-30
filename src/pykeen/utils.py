@@ -809,7 +809,7 @@ def upgrade_to_sequence(x: Union[X, Sequence[X]]) -> Sequence[X]:
         We thus handle strings as non-sequences. To recover the other behavior, the following may be used:
 
         .. code-block::
-            upgrade_to_sequence(list("test"))
+            upgrade_to_sequence(tuple("test"))
 
 
     :param x: A literal or sequence of literals
@@ -821,7 +821,7 @@ def upgrade_to_sequence(x: Union[X, Sequence[X]]) -> Sequence[X]:
     (1, 2, 3)
     >>> upgrade_to_sequence("test")
     ('test',)
-    >>> upgrade_to_sequence(list("test"))
+    >>> upgrade_to_sequence(tuple("test"))
     ('t', 'e', 's', 't')
     """
     return x if (isinstance(x, Sequence) and not isinstance(x, str)) else (x,)  # type: ignore
