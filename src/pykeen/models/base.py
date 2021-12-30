@@ -263,6 +263,20 @@ class Model(nn.Module, ABC):
 
     """Prediction methods"""
 
+    def _prepare_batch(self, batch: torch.LongTensor, index_relation: int) -> torch.LongTensor:
+        # send to device
+        batch = batch.to(self.device)
+
+        # special handling of inverse relations
+        if not self.use_inverse_triples:
+            return batch
+
+        # when trained on invers relations, the internal relation ID is twice the original relation ID
+        batch = batch.clone()
+        batch[:, index_relation] *= 2
+
+        return batch
+
     def predict_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:
         """Calculate the scores for triples.
 
@@ -277,7 +291,7 @@ class Model(nn.Module, ABC):
             The score for each triple.
         """
         self.eval()  # Enforce evaluation mode
-        scores = self.score_hrt(hrt_batch.to(self.device))
+        scores = self.score_hrt(self._prepare_batch(batch=hrt_batch, index_relation=1))
         if self.predict_with_sigmoid:
             scores = torch.sigmoid(scores)
         return scores
@@ -308,7 +322,7 @@ class Model(nn.Module, ABC):
             For each r-t pair, the scores for all possible heads.
         """
         self.eval()  # Enforce evaluation mode
-        rt_batch = rt_batch.to(self.device)
+        rt_batch = self._prepare_batch(batch=rt_batch, index_relation=0)
         if self.use_inverse_triples:
             scores = self.score_h_inverse(rt_batch=rt_batch, slice_size=slice_size)
         elif slice_size is None:
@@ -348,7 +362,7 @@ class Model(nn.Module, ABC):
             behavior regardless of the use of inverse triples.
         """
         self.eval()  # Enforce evaluation mode
-        hr_batch = hr_batch.to(self.device)
+        hr_batch = self._prepare_batch(batch=hr_batch, index_relation=1)
         if slice_size is None:
             scores = self.score_t(hr_batch)
         else:
