@@ -2,12 +2,12 @@
 
 """Implementation of basic instance factory which creates just instances based on standard KG triples."""
 
-from abc import abstractmethod
 import dataclasses
 import itertools
 import logging
 import pathlib
 import re
+from abc import abstractmethod
 from typing import (
     Any,
     Callable,
