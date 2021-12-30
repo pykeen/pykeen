@@ -10,6 +10,8 @@ from typing import Any, MutableMapping, Optional
 import numpy
 import torch
 import unittest_templates
+from pykeen.datasets.nations import Nations
+import itertools
 
 import pykeen.experiments
 import pykeen.models
@@ -824,3 +826,68 @@ class ERModelTests(cases.ModelTestCase):
 
     def test_has_hpo_defaults(self):  # noqa: D102
         raise unittest.SkipTest(f"Base class {self.cls} does not provide HPO defaults.")
+
+
+class InverseRelationPredictionTests(unittest_templates.GenericTestCase[pykeen.models.FixedModel]):
+    """Test for prediction with inverse relations."""
+
+    cls = pykeen.models.FixedModel
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        # create triples factory with inverse relations
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        kwargs["triples_factory"] = self.factory = Nations(create_inverse_triples=True).training
+        return kwargs
+
+    def _combination_batch(
+        self,
+        heads: bool = True,
+        relations: bool = True,
+        tails: bool = True,
+    ) -> torch.LongTensor:
+        """Generate a batch with all combinations."""
+        factors = []
+        if heads:
+            factors.append(range(self.factory.num_entities))
+        if relations:
+            factors.append(range(self.factory.real_num_relations))
+        if tails:
+            factors.append(range(self.factory.num_entities))
+        return torch.as_tensor(
+            data=list(itertools.product(*factors)),
+            dtype=torch.long,
+        )
+
+    def test_predict_hrt(self):
+        """Test predict_hrt."""
+        hrt_batch = self._combination_batch()
+        expected_scores = self.instance._generate_fake_scores(
+            h=hrt_batch[:, 0],
+            r=2 * hrt_batch[:, 1],
+            t=hrt_batch[:, 2],
+        ).unsqueeze(dim=-1)
+        scores = self.instance.predict_hrt(hrt_batch=hrt_batch)
+        assert torch.allclose(scores, expected_scores)
+
+    def test_predict_h(self):
+        """Test predict_h."""
+        rt_batch = self._combination_batch(heads=False)
+        # head prediction via inverse tail prediction
+        expected_scores = self.instance._generate_fake_scores(
+            h=rt_batch[:, 1, None],
+            r=2 * rt_batch[:, 0, None] + 1,
+            t=torch.arange(self.factory.num_entities).unsqueeze(dim=0),
+        )
+        scores = self.instance.predict_h(rt_batch=rt_batch)
+        assert torch.allclose(scores, expected_scores)
+
+    def test_predict_t(self):
+        """Test predict_t."""
+        hr_batch = self._combination_batch(tails=False)
+        expected_scores = self.instance._generate_fake_scores(
+            h=hr_batch[:, 0, None],
+            r=2 * hr_batch[:, 1, None],
+            t=torch.arange(self.factory.num_entities).unsqueeze(dim=0),
+        )
+        scores = self.instance.predict_t(hr_batch=hr_batch)
+        assert torch.allclose(scores, expected_scores)
