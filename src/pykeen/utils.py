@@ -825,11 +825,7 @@ def upgrade_to_sequence(x: Union[X, Sequence[X]]) -> Sequence[X]:
     >>> upgrade_to_sequence(list("test"))
     ('t', 'e', 's', 't')
     """
-    if isinstance(x, str):
-        return cast(Sequence[X], (x,))
-    if isinstance(x, Sequence):
-        return x
-    return (x,)
+    return x if (isinstance(x, Sequence) and not isinstance(x, str)) else (x,)  # type: ignore
 
 
 def ensure_tuple(*x: Union[X, Sequence[X]]) -> Sequence[Sequence[X]]:
