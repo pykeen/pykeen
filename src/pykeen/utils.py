@@ -802,14 +802,15 @@ def upgrade_to_sequence(x: Union[X, Sequence[X]]) -> Sequence[X]:
     .. note ::
         While strings are technically also a sequence, i.e.,
 
-        .. code-block::
-            import typing
+        .. code-block:: python
+
             isinstance("test", typing.Sequence) is True
 
         this may lead to unexpected behaviour when calling `upgrade_to_sequence("test")`.
         We thus handle strings as non-sequences. To recover the other behavior, the following may be used:
 
-        .. code-block::
+        .. code-block:: python
+
             upgrade_to_sequence(tuple("test"))
 
 
