@@ -131,13 +131,14 @@ class TestEarlyStopper(unittest.TestCase):
         """Test whether result logger is called properly."""
         self.stopper.result_tracker = mock_tracker = Mock()
         self.stopper.should_stop(epoch=0)
-        log_metrics: Mock = mock_tracker.log_metrics
+        log_metrics = mock_tracker.log_metrics
+        self.assertIsInstance(log_metrics, Mock)
         log_metrics.assert_called_once()
         call_args = log_metrics.call_args_list[0].kwargs
-        assert "step" in call_args
-        assert call_args["step"] == 0
-        assert "prefix" in call_args
-        assert call_args["prefix"] == "validation"
+        self.assertIn("step", call_args)
+        self.assertEqual(0, call_args["step"])
+        self.assertIn("prefix", call_args)
+        self.assertEqual("validation", call_args["prefix"])
 
     def test_serialization(self):
         """Test for serialization."""
