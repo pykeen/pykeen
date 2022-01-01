@@ -85,7 +85,7 @@ class TestEarlyStopping(unittest.TestCase):
     #: The window size used by the early stopper
     patience: int = 2
     #: The mock losses the mock evaluator will return
-    mock_losses: List[float] = [10.0, 9.0, 8.0, 8.0, 8.0, 8.0]
+    mock_losses: List[float] = [10.0, 9.0, 8.0, 9.0, 8.0, 8.0]
     #: The (zeroed) index  - 1 at which stopping will occur
     stop_constant: int = 4
     #: The minimum improvement
@@ -124,16 +124,13 @@ class TestEarlyStopping(unittest.TestCase):
             if not should_stop:
                 # check storing of results
                 assert self.stopper.results == self.mock_losses[: epoch + 1]
-
-                # check ring buffer
-                if epoch >= self.patience:
-                    assert self.stopper.best_metric == self.best_results[epoch]
+                assert self.stopper.best_metric == self.best_results[epoch]
 
     def test_should_stop(self):
         """Test that the stopper knows when to stop."""
         for epoch in range(self.stop_constant):
             self.assertFalse(self.stopper.should_stop(epoch=epoch))
-        self.assertTrue(self.stopper.should_stop(epoch=epoch))
+        self.assertTrue(self.stopper.should_stop(epoch=self.stop_constant))
 
     @unittest.skipUnless(mlflow is not None, reason="MLFlow not installed")
     def test_result_logging_with_mlflow(self):
@@ -179,7 +176,7 @@ class TestDeltaEarlyStopping(TestEarlyStopping):
 
     mock_losses: List[float] = [10.0, 9.0, 8.0, 7.99, 7.98, 7.97]
     stop_constant: int = 4
-    delta: float = 0.1
+    delta: float = 0.05
     best_results: List[float] = [10.0, 9.0, 8.0, 8.0, 8.0]
 
 
