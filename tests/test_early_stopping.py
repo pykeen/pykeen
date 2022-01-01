@@ -163,6 +163,10 @@ class EarlyStoppingTests(unittest_templates.GenericTestCase[EarlyStoppingLogic])
         stop = self.instance.report_result(metric=metric, epoch=epoch)
         assert isinstance(stop, bool)
 
+        # assert that reporting another metric for this epoch raises an error
+        with self.assertRaises(ValueError):
+            self.instance.report_result(metric=..., epoch=epoch)
+
     def test_early_stopping(self):
         """Test early stopping."""
         for epoch, value in enumerate([10.0, 9.0, 8.0, 7.99, 7.98, 7.97]):
