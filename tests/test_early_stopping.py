@@ -79,7 +79,7 @@ class LogCallWrapper:
         return id(func) in self.called
 
 
-class TestEarlyStopping(unittest.TestCase):
+class TestEarlyStopper(unittest.TestCase):
     """Tests for early stopping."""
 
     #: The window size used by the early stopper
@@ -143,7 +143,7 @@ class TestEarlyStopping(unittest.TestCase):
         assert wrapper.was_called(real_log_metrics)
 
 
-class EarlyStoppingTests(unittest_templates.GenericTestCase[EarlyStoppingLogic]):
+class TestEarlyStoppingLogic(unittest_templates.GenericTestCase[EarlyStoppingLogic]):
     """Tests for early stopping logic."""
 
     cls = EarlyStoppingLogic
@@ -171,7 +171,7 @@ class EarlyStoppingTests(unittest_templates.GenericTestCase[EarlyStoppingLogic])
             self.assertEqual(stop, epoch >= 4)
 
 
-class TestDeltaEarlyStopping(TestEarlyStopping):
+class TestEarlyStopperDelta(TestEarlyStopper):
     """Test early stopping with a tiny delta."""
 
     mock_losses: List[float] = [10.0, 9.0, 8.0, 7.99, 7.98, 7.97]
@@ -180,7 +180,7 @@ class TestDeltaEarlyStopping(TestEarlyStopping):
     best_results: List[float] = [10.0, 9.0, 8.0, 8.0, 8.0]
 
 
-class TestEarlyStoppingRealWorld(unittest.TestCase):
+class TestEarlyStopperRealWorld(unittest.TestCase):
     """Test early stopping on a real-world use case of training TransE with Adam."""
 
     #: The window size used by the early stopper
