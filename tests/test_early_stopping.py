@@ -4,6 +4,7 @@
 
 import unittest
 from typing import List
+from unittest.mock import Mock
 
 import numpy
 import pytest
@@ -15,14 +16,8 @@ from pykeen.datasets import Nations
 from pykeen.evaluation import RankBasedEvaluator
 from pykeen.models import FixedModel, Model, TransE
 from pykeen.stoppers.early_stopping import EarlyStopper, EarlyStoppingLogic, is_improvement
-from pykeen.trackers import MLFlowResultTracker
 from pykeen.training import SLCWATrainingLoop
 from tests.mocks import MockEvaluator
-
-try:
-    import mlflow
-except ImportError:
-    mlflow = None
 
 
 class TestRandom(unittest.TestCase):
@@ -132,15 +127,17 @@ class TestEarlyStopper(unittest.TestCase):
             self.assertFalse(self.stopper.should_stop(epoch=epoch))
         self.assertTrue(self.stopper.should_stop(epoch=self.stop_constant))
 
-    @unittest.skipUnless(mlflow is not None, reason="MLFlow not installed")
-    def test_result_logging_with_mlflow(self):
-        """Test whether the MLFLow result logger works."""
-        self.stopper.result_tracker = MLFlowResultTracker()
-        wrapper = LogCallWrapper()
-        real_log_metrics = self.stopper.result_tracker.mlflow.log_metrics
-        self.stopper.result_tracker.mlflow.log_metrics = wrapper.wrap(real_log_metrics)
+    def test_result_logging(self):
+        """Test whether result logger is called properly."""
+        self.stopper.result_tracker = mock_tracker = Mock()
         self.stopper.should_stop(epoch=0)
-        assert wrapper.was_called(real_log_metrics)
+        log_metrics: Mock = mock_tracker.log_metrics
+        log_metrics.assert_called_once()
+        call_args = log_metrics.call_args_list[0].kwargs
+        assert "step" in call_args
+        assert call_args["step"] == 0
+        assert "prefix" in call_args
+        assert call_args["prefix"] == "validation"
 
     def test_serialization(self):
         """Test for serialization."""
@@ -191,7 +188,7 @@ class TestEarlyStopperDelta(TestEarlyStopper):
     mock_losses: List[float] = [10.0, 9.0, 8.0, 7.99, 7.98, 7.97]
     stop_constant: int = 4
     delta: float = 0.1
-    best_results: List[float] = [10.0, 9.0, 8.0, 8.0, 8.0]
+    best_results: List[float] = [10.0, 10.0, 8.0, 8.0, 8.0]
 
 
 class TestEarlyStopperRealWorld(unittest.TestCase):
