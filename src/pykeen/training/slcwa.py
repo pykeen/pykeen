@@ -82,9 +82,11 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
 
         # apply filter mask
         if positive_filter is None:
+            negative_score_shape = negative_batch.shape[:2]
             negative_batch = negative_batch.view(-1, 3)
         else:
             negative_batch = negative_batch[positive_filter]
+            negative_score_shape = negative_batch.shape[:-1]
 
         # Ensure they reside on the device (should hold already for most simple negative samplers, e.g.
         # BasicNegativeSampler, BernoulliNegativeSampler
@@ -92,7 +94,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
 
         # Compute negative and positive scores
         positive_scores = self.model.score_hrt(positive_batch)
-        negative_scores = self.model.score_hrt(negative_batch).view(*negative_batch.shape[:-1])
+        negative_scores = self.model.score_hrt(negative_batch).view(*negative_score_shape)
 
         return (
             self.loss.process_slcwa_scores(

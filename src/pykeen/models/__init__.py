@@ -10,16 +10,19 @@ from class_resolver import Resolver, get_subclasses
 
 from .base import EntityRelationEmbeddingModel, Model, _OldAbstractModel
 from .baseline import EvaluationOnlyModel, MarginalDistributionBaseline
+from .mocks import FixedModel
 from .multimodal import ComplExLiteral, DistMultLiteral, DistMultLiteralGated, LiteralModel
 from .nbase import ERModel, _NewAbstractModel
 from .resolve import make_model, make_model_cls
 from .unimodal import (
+    CP,
     ERMLP,
     ERMLPE,
     KG2E,
     NTN,
     RESCAL,
     RGCN,
+    BoxE,
     CompGCN,
     ComplEx,
     ConvE,
@@ -29,6 +32,7 @@ from .unimodal import (
     DistMult,
     HolE,
     MuRE,
+    NodePiece,
     PairRE,
     ProjE,
     QuatE,
@@ -55,11 +59,13 @@ __all__ = [
     "LiteralModel",
     "EvaluationOnlyModel",
     # Concrete Models
+    "BoxE",
     "CompGCN",
     "ComplEx",
     "ComplExLiteral",
     "ConvE",
     "ConvKB",
+    "CP",
     "CrossE",
     "DistMA",
     "DistMult",
@@ -69,7 +75,9 @@ __all__ = [
     "ERMLPE",
     "HolE",
     "KG2E",
+    "FixedModel",
     "MuRE",
+    "NodePiece",
     "NTN",
     "PairRE",
     "ProjE",

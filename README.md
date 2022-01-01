@@ -27,6 +27,10 @@
   <a href="https://github.com/psf/black">
     <img src="https://img.shields.io/badge/code%20style-black-000000.svg" alt="Code style: black">
   </a>
+
+  <a href=".github/CODE_OF_CONDUCT.md">
+    <img src="https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg" alt="Contributor Covenant">
+  </a>
 </p>
 
 <p align="center">
@@ -38,7 +42,7 @@
   <a href="#installation">Installation</a> •
   <a href="#quickstart">Quickstart</a> •
   <a href="#datasets-29">Datasets</a> •
-  <a href="#models-32">Models</a> •
+  <a href="#models-36">Models</a> •
   <a href="#supporters">Support</a> •
   <a href="#citation">Citation</a>
 </p>
@@ -142,42 +146,46 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 | WordNet-18 (RR)                    | [`pykeen.datasets.WN18RR`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.WN18RR.html)               | [Toutanova *et al*., 2015](https://www.aclweb.org/anthology/W15-4007/)                                                  |      40559 |          11 |     92583 |
 | YAGO3-10                           | [`pykeen.datasets.YAGO310`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.YAGO310.html)             | [Mahdisoltani *et al*., 2015](http://service.tsi.telecom-paristech.fr/cgi-bin//valipub_download.cgi?dId=284)            |     123143 |          37 |   1089000 |
 
-### Models (32)
+### Models (36)
 
-| Name                     | Reference                                                                                                                   | Citation                                                                                                                |
-|--------------------------|-----------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|
-| CompGCN                  | [`pykeen.models.CompGCN`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.CompGCN.html)                           | [Vashishth *et al.*, 2020](https://arxiv.org/pdf/1911.03082)                                                            |
-| ComplEx                  | [`pykeen.models.ComplEx`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.ComplEx.html)                           | [Trouillon *et al.*, 2016](https://arxiv.org/abs/1606.06357)                                                            |
-| ComplEx Literal          | [`pykeen.models.ComplExLiteral`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.ComplExLiteral.html)             | [Kristiadi *et al.*, 2018](https://arxiv.org/abs/1802.00934)                                                            |
-| ConvE                    | [`pykeen.models.ConvE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.ConvE.html)                               | [Dettmers *et al.*, 2018](https://www.aaai.org/ocs/index.php/AAAI/AAAI18/paper/view/17366)                              |
-| ConvKB                   | [`pykeen.models.ConvKB`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.ConvKB.html)                             | [Nguyen *et al.*, 2018](https://www.aclweb.org/anthology/N18-2053)                                                      |
-| CrossE                   | [`pykeen.models.CrossE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.CrossE.html)                             | [Zhang *et al.*, 2019](https://arxiv.org/abs/1903.04750)                                                                |
-| DistMA                   | [`pykeen.models.DistMA`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.DistMA.html)                             | [Shi *et al.*, 2019](https://www.aclweb.org/anthology/D19-1075.pdf)                                                     |
-| DistMult                 | [`pykeen.models.DistMult`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.DistMult.html)                         | [Yang *et al.*, 2014](https://arxiv.org/abs/1412.6575)                                                                  |
-| DistMult Literal         | [`pykeen.models.DistMultLiteral`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.DistMultLiteral.html)           | [Kristiadi *et al.*, 2018](https://arxiv.org/abs/1802.00934)                                                            |
-| DistMult Literal (Gated) | [`pykeen.models.DistMultLiteralGated`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.DistMultLiteralGated.html) | [Kristiadi *et al.*, 2018](https://arxiv.org/abs/1802.00934)                                                            |
-| ER-MLP                   | [`pykeen.models.ERMLP`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.ERMLP.html)                               | [Dong *et al.*, 2014](https://dl.acm.org/citation.cfm?id=2623623)                                                       |
-| ER-MLP (E)               | [`pykeen.models.ERMLPE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.ERMLPE.html)                             | [Sharifzadeh *et al.*, 2019](https://github.com/pykeen/pykeen)                                                          |
-| HolE                     | [`pykeen.models.HolE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.HolE.html)                                 | [Nickel *et al.*, 2016](https://www.aaai.org/ocs/index.php/AAAI/AAAI16/paper/viewFile/12484/11828)                      |
-| KG2E                     | [`pykeen.models.KG2E`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.KG2E.html)                                 | [He *et al.*, 2015](https://dl.acm.org/doi/10.1145/2806416.2806502)                                                     |
-| MuRE                     | [`pykeen.models.MuRE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.MuRE.html)                                 | [Balažević *et al.*, 2019](https://arxiv.org/abs/1905.09791)                                                            |
-| NTN                      | [`pykeen.models.NTN`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.NTN.html)                                   | [Socher *et al.*, 2013](https://dl.acm.org/doi/10.5555/2999611.2999715)                                                 |
-| PairRE                   | [`pykeen.models.PairRE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.PairRE.html)                             | [Chao *et al.*, 2020](http://arxiv.org/abs/2011.03798)                                                                  |
-| ProjE                    | [`pykeen.models.ProjE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.ProjE.html)                               | [Shi *et al.*, 2017](https://www.aaai.org/ocs/index.php/AAAI/AAAI17/paper/view/14279)                                   |
-| QuatE                    | [`pykeen.models.QuatE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.QuatE.html)                               | [Zhang *et al.*, 2019](https://arxiv.org/abs/1904.10281)                                                                |
-| RESCAL                   | [`pykeen.models.RESCAL`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.RESCAL.html)                             | [Nickel *et al.*, 2011](http://www.cip.ifi.lmu.de/~nickel/data/paper-icml2011.pdf)                                      |
-| R-GCN                    | [`pykeen.models.RGCN`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.RGCN.html)                                 | [Schlichtkrull *et al.*, 2018](https://arxiv.org/pdf/1703.06103)                                                        |
-| RotatE                   | [`pykeen.models.RotatE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.RotatE.html)                             | [Sun *et al.*, 2019](https://arxiv.org/abs/1902.10197v1)                                                                |
-| SimplE                   | [`pykeen.models.SimplE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.SimplE.html)                             | [Kazemi *et al.*, 2018](https://papers.nips.cc/paper/7682-simple-embedding-for-link-prediction-in-knowledge-graphs)     |
-| Structured Embedding     | [`pykeen.models.StructuredEmbedding`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.StructuredEmbedding.html)   | [Bordes *et al.*, 2011](https://www.aaai.org/ocs/index.php/AAAI/AAAI11/paper/download/3659/3898)                        |
-| TorusE                   | [`pykeen.models.TorusE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.TorusE.html)                             | [Ebisu *et al.*, 2018](https://www.aaai.org/ocs/index.php/AAAI/AAAI18/paper/view/16227)                                 |
-| TransD                   | [`pykeen.models.TransD`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.TransD.html)                             | [Ji *et al.*, 2015](http://www.aclweb.org/anthology/P15-1067)                                                           |
-| TransE                   | [`pykeen.models.TransE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.TransE.html)                             | [Bordes *et al.*, 2013](http://papers.nips.cc/paper/5071-translating-embeddings-for-modeling-multi-relational-data.pdf) |
-| TransF                   | [`pykeen.models.TransF`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.TransF.html)                             | [Feng *et al.*, 2016](https://www.aaai.org/ocs/index.php/KR/KR16/paper/view/12887)                                      |
-| TransH                   | [`pykeen.models.TransH`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.TransH.html)                             | [Wang *et al.*, 2014](https://www.aaai.org/ocs/index.php/AAAI/AAAI14/paper/viewFile/8531/8546)                          |
-| TransR                   | [`pykeen.models.TransR`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.TransR.html)                             | [Lin *et al.*, 2015](http://www.aaai.org/ocs/index.php/AAAI/AAAI15/paper/download/9571/9523/)                           |
-| TuckER                   | [`pykeen.models.TuckER`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.TuckER.html)                             | [Balažević *et al.*, 2019](https://arxiv.org/abs/1901.09590)                                                            |
-| Unstructured Model       | [`pykeen.models.UnstructuredModel`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.UnstructuredModel.html)       | [Bordes *et al.*, 2014](https://link.springer.com/content/pdf/10.1007%2Fs10994-013-5363-6.pdf)                          |
+| Name                           | Reference                                                                                                                   | Citation                                                                                                                |
+|--------------------------------|-----------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|
+| BoxE                           | [`pykeen.models.BoxE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.BoxE.html)                                 | [Abboud *et al.*, 2020](https://arxiv.org/abs/2007.06267)                                                               |
+| CompGCN                        | [`pykeen.models.CompGCN`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.CompGCN.html)                           | [Vashishth *et al.*, 2020](https://arxiv.org/pdf/1911.03082)                                                            |
+| ComplEx                        | [`pykeen.models.ComplEx`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.ComplEx.html)                           | [Trouillon *et al.*, 2016](https://arxiv.org/abs/1606.06357)                                                            |
+| ComplEx Literal                | [`pykeen.models.ComplExLiteral`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.ComplExLiteral.html)             | [Kristiadi *et al.*, 2018](https://arxiv.org/abs/1802.00934)                                                            |
+| ConvE                          | [`pykeen.models.ConvE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.ConvE.html)                               | [Dettmers *et al.*, 2018](https://www.aaai.org/ocs/index.php/AAAI/AAAI18/paper/view/17366)                              |
+| ConvKB                         | [`pykeen.models.ConvKB`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.ConvKB.html)                             | [Nguyen *et al.*, 2018](https://www.aclweb.org/anthology/N18-2053)                                                      |
+| Canonical Tensor Decomposition | [`pykeen.models.CP`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.CP.html)                                     | [Lacroix *et al.*, 2018](https://arxiv.org/abs/1806.07297)                                                              |
+| CrossE                         | [`pykeen.models.CrossE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.CrossE.html)                             | [Zhang *et al.*, 2019](https://arxiv.org/abs/1903.04750)                                                                |
+| DistMA                         | [`pykeen.models.DistMA`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.DistMA.html)                             | [Shi *et al.*, 2019](https://www.aclweb.org/anthology/D19-1075.pdf)                                                     |
+| DistMult                       | [`pykeen.models.DistMult`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.DistMult.html)                         | [Yang *et al.*, 2014](https://arxiv.org/abs/1412.6575)                                                                  |
+| DistMult Literal               | [`pykeen.models.DistMultLiteral`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.DistMultLiteral.html)           | [Kristiadi *et al.*, 2018](https://arxiv.org/abs/1802.00934)                                                            |
+| DistMult Literal (Gated)       | [`pykeen.models.DistMultLiteralGated`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.DistMultLiteralGated.html) | [Kristiadi *et al.*, 2018](https://arxiv.org/abs/1802.00934)                                                            |
+| ER-MLP                         | [`pykeen.models.ERMLP`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.ERMLP.html)                               | [Dong *et al.*, 2014](https://dl.acm.org/citation.cfm?id=2623623)                                                       |
+| ER-MLP (E)                     | [`pykeen.models.ERMLPE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.ERMLPE.html)                             | [Sharifzadeh *et al.*, 2019](https://github.com/pykeen/pykeen)                                                          |
+| Fixed Model                    | [`pykeen.models.FixedModel`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.FixedModel.html)                     | [Berrendorf *et al.*, 2021](https://github.com/pykeen/pykeen/pull/691)                                                  |
+| HolE                           | [`pykeen.models.HolE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.HolE.html)                                 | [Nickel *et al.*, 2016](https://www.aaai.org/ocs/index.php/AAAI/AAAI16/paper/viewFile/12484/11828)                      |
+| KG2E                           | [`pykeen.models.KG2E`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.KG2E.html)                                 | [He *et al.*, 2015](https://dl.acm.org/doi/10.1145/2806416.2806502)                                                     |
+| MuRE                           | [`pykeen.models.MuRE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.MuRE.html)                                 | [Balažević *et al.*, 2019](https://arxiv.org/abs/1905.09791)                                                            |
+| NodePiece                      | [`pykeen.models.NodePiece`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.NodePiece.html)                       | [Galkin *et al.*, 2021](https://arxiv.org/abs/2106.12144)                                                               |
+| NTN                            | [`pykeen.models.NTN`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.NTN.html)                                   | [Socher *et al.*, 2013](https://dl.acm.org/doi/10.5555/2999611.2999715)                                                 |
+| PairRE                         | [`pykeen.models.PairRE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.PairRE.html)                             | [Chao *et al.*, 2020](http://arxiv.org/abs/2011.03798)                                                                  |
+| ProjE                          | [`pykeen.models.ProjE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.ProjE.html)                               | [Shi *et al.*, 2017](https://www.aaai.org/ocs/index.php/AAAI/AAAI17/paper/view/14279)                                   |
+| QuatE                          | [`pykeen.models.QuatE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.QuatE.html)                               | [Zhang *et al.*, 2019](https://arxiv.org/abs/1904.10281)                                                                |
+| RESCAL                         | [`pykeen.models.RESCAL`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.RESCAL.html)                             | [Nickel *et al.*, 2011](http://www.cip.ifi.lmu.de/~nickel/data/paper-icml2011.pdf)                                      |
+| R-GCN                          | [`pykeen.models.RGCN`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.RGCN.html)                                 | [Schlichtkrull *et al.*, 2018](https://arxiv.org/pdf/1703.06103)                                                        |
+| RotatE                         | [`pykeen.models.RotatE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.RotatE.html)                             | [Sun *et al.*, 2019](https://arxiv.org/abs/1902.10197v1)                                                                |
+| SimplE                         | [`pykeen.models.SimplE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.SimplE.html)                             | [Kazemi *et al.*, 2018](https://papers.nips.cc/paper/7682-simple-embedding-for-link-prediction-in-knowledge-graphs)     |
+| Structured Embedding           | [`pykeen.models.StructuredEmbedding`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.StructuredEmbedding.html)   | [Bordes *et al.*, 2011](https://www.aaai.org/ocs/index.php/AAAI/AAAI11/paper/download/3659/3898)                        |
+| TorusE                         | [`pykeen.models.TorusE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.TorusE.html)                             | [Ebisu *et al.*, 2018](https://www.aaai.org/ocs/index.php/AAAI/AAAI18/paper/view/16227)                                 |
+| TransD                         | [`pykeen.models.TransD`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.TransD.html)                             | [Ji *et al.*, 2015](http://www.aclweb.org/anthology/P15-1067)                                                           |
+| TransE                         | [`pykeen.models.TransE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.TransE.html)                             | [Bordes *et al.*, 2013](http://papers.nips.cc/paper/5071-translating-embeddings-for-modeling-multi-relational-data.pdf) |
+| TransF                         | [`pykeen.models.TransF`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.TransF.html)                             | [Feng *et al.*, 2016](https://www.aaai.org/ocs/index.php/KR/KR16/paper/view/12887)                                      |
+| TransH                         | [`pykeen.models.TransH`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.TransH.html)                             | [Wang *et al.*, 2014](https://www.aaai.org/ocs/index.php/AAAI/AAAI14/paper/viewFile/8531/8546)                          |
+| TransR                         | [`pykeen.models.TransR`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.TransR.html)                             | [Lin *et al.*, 2015](http://www.aaai.org/ocs/index.php/AAAI/AAAI15/paper/download/9571/9523/)                           |
+| TuckER                         | [`pykeen.models.TuckER`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.TuckER.html)                             | [Balažević *et al.*, 2019](https://arxiv.org/abs/1901.09590)                                                            |
+| Unstructured Model             | [`pykeen.models.UnstructuredModel`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.UnstructuredModel.html)       | [Bordes *et al.*, 2014](https://link.springer.com/content/pdf/10.1007%2Fs10994-013-5363-6.pdf)                          |
 
 ### Losses (13)
 
@@ -206,17 +214,6 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 | no       | [`pykeen.regularizers.NoRegularizer`](https://pykeen.readthedocs.io/en/latest/api/pykeen.regularizers.NoRegularizer.html)             | A regularizer which does not perform any regularization. |
 | powersum | [`pykeen.regularizers.PowerSumRegularizer`](https://pykeen.readthedocs.io/en/latest/api/pykeen.regularizers.PowerSumRegularizer.html) | A simple x^p based regularizer.                          |
 | transh   | [`pykeen.regularizers.TransHRegularizer`](https://pykeen.readthedocs.io/en/latest/api/pykeen.regularizers.TransHRegularizer.html)     | A regularizer for the soft constraints in TransH.        |
-
-### Optimizers (6)
-
-| Name     | Reference                                                                                 | Description                                                             |
-|----------|-------------------------------------------------------------------------------------------|-------------------------------------------------------------------------|
-| adadelta | [`torch.optim.Adadelta`](https://pytorch.org/docs/stable/optim.html#torch.optim.Adadelta) | Implements Adadelta algorithm.                                          |
-| adagrad  | [`torch.optim.Adagrad`](https://pytorch.org/docs/stable/optim.html#torch.optim.Adagrad)   | Implements Adagrad algorithm.                                           |
-| adam     | [`torch.optim.Adam`](https://pytorch.org/docs/stable/optim.html#torch.optim.Adam)         | Implements Adam algorithm.                                              |
-| adamax   | [`torch.optim.Adamax`](https://pytorch.org/docs/stable/optim.html#torch.optim.Adamax)     | Implements Adamax algorithm (a variant of Adam based on infinity norm). |
-| adamw    | [`torch.optim.AdamW`](https://pytorch.org/docs/stable/optim.html#torch.optim.AdamW)       | Implements AdamW algorithm.                                             |
-| sgd      | [`torch.optim.SGD`](https://pytorch.org/docs/stable/optim.html#torch.optim.SGD)           | Implements stochastic gradient descent (optionally with momentum).      |
 
 ### Training Loops (2)
 
@@ -247,49 +244,56 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 | rankbased | [`pykeen.evaluation.RankBasedEvaluator`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.RankBasedEvaluator.html) | A rank-based evaluator for KGE models.        |
 | sklearn   | [`pykeen.evaluation.SklearnEvaluator`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.SklearnEvaluator.html)     | An evaluator that uses a Scikit-learn metric. |
 
-### Metrics (16)
+### Metrics (37)
 
-| Name                                        | Description                                                                            |
-|---------------------------------------------|----------------------------------------------------------------------------------------|
-| AUC-ROC                                     | The area under the ROC curve, on [0, 1]. Higher is better.                             |
-| Adjusted Arithmetic Mean Rank (AAMR)        | The mean over all chance-adjusted ranks, on (0, 2). Lower is better.                   |
-| Adjusted Arithmetic Mean Rank Index (AAMRI) | The re-indexed adjusted mean rank (AAMR), on [-1, 1]. Higher is better.                |
-| Average Precision                           | The area under the precision-recall curve, on [0, 1]. Higher is better.                |
-| Geometric Mean Rank (GMR)                   | The geometric mean over all ranks, on [1, inf). Lower is better.                       |
-| Harmonic Mean Rank (HMR)                    | The harmonic mean over all ranks, on [1, inf). Lower is better.                        |
-| Hits @ K                                    | The relative frequency of ranks not larger than a given k, on [0, 1]. Higher is better |
-| Inverse Arithmetic Mean Rank (IAMR)         | The inverse of the arithmetic mean over all ranks, on (0, 1]. Higher is better.        |
-| Inverse Geometric Mean Rank (IGMR)          | The inverse of the geometric mean over all ranks, on (0, 1]. Higher is better.         |
-| Inverse Median Rank                         | The inverse of the median over all ranks, on (0, 1]. Higher is better.                 |
-| Mean Rank (MR)                              | The arithmetic mean over all ranks on, [1, inf). Lower is better.                      |
-| Mean Reciprocal Rank (MRR)                  | The inverse of the harmonic mean over all ranks, on (0, 1]. Higher is better.          |
-| Median Rank                                 | The median over all ranks, on [1, inf). Lower is better.                               |
+| Name                                                                                                                   | Interval   | Direction   | Description                                                 | Type           |
+|------------------------------------------------------------------------------------------------------------------------|------------|-------------|-------------------------------------------------------------|----------------|
+| [AUC-ROC](https://en.wikipedia.org/wiki/Receiver_operating_characteristic)                                             | [0, 1]     | 📈          | Area Under the ROC Curve                                    | Classification |
+| [Accuracy](https://en.wikipedia.org/wiki/Accuracy)                                                                     | [0, 1]     | 📈          | (TP + TN) / (TP + TN + FP + FN)                             | Classification |
+| [Average Precision](https://scikit-learn.org/stable/modules/generated/sklearn.metrics.average_precision_score.html)    | [0, 1]     | 📈          | A summary statistic over the precision-recall curve         | Classification |
+| [Balanced Accuracy](https://scikit-learn.org/stable/modules/generated/sklearn.metrics.balanced_accuracy_score.html)    | [0, 1]     | 📈          | An adjusted version of the accuracy for imbalanced datasets | Classification |
+| [Diagnostic Odds Ratio](https://en.wikipedia.org/wiki/Diagnostic_odds_ratio)                                           | [0, inf)   | 📈          | LR+/LR-                                                     | Classification |
+| [F1 Score](https://en.wikipedia.org/wiki/F1_score)                                                                     | [0, 1]     | 📈          | 2TP / (2TP + FP + FN)                                       | Classification |
+| [False Discovery Rate](https://en.wikipedia.org/wiki/False_discovery_rate)                                             | [0, 1]     | 📉          | FP / (FP + TP)                                              | Classification |
+| [False Negative Rate](https://en.wikipedia.org/wiki/Type_I_and_type_II_errors#False_positive_and_false_negative_rates) | [0, 1]     | 📉          | FN / (FN + TP)                                              | Classification |
+| [False Omission Rate](https://en.wikipedia.org/wiki/Positive_and_negative_predictive_values)                           | [0, 1]     | 📉          | FN / (FN + TN)                                              | Classification |
+| [False Positive Rate](https://en.wikipedia.org/wiki/False_positive_rate)                                               | [0, 1]     | 📉          | FP / (FP + TN)                                              | Classification |
+| [Fowlkes Mallows Index](https://en.wikipedia.org/wiki/Fowlkes%E2%80%93Mallows_index)                                   | [0, 1]     | 📈          | √PPV x √TPR                                                 | Classification |
+| [Informedness](https://en.wikipedia.org/wiki/Informedness)                                                             | [0, 1]     | 📈          | TPR + TNR - 1                                               | Classification |
+| [Markedness](https://en.wikipedia.org/wiki/Markedness)                                                                 | [0, 1]     | 📈          | PPV + NPV - 1                                               | Classification |
+| [Matthews Correlation Coefficient](https://en.wikipedia.org/wiki/Phi_coefficient)                                      | [-1, 1]    | 📈          | A balanced measure applicable even with class imbalance     | Classification |
+| [Negative Likelihood Ratio](https://en.wikipedia.org/wiki/Negative_likelihood_ratio)                                   | [0, inf)   | 📉          | FNR / TNR                                                   | Classification |
+| [Negative Predictive Value](https://en.wikipedia.org/wiki/Negative_predictive_value)                                   | [0, 1]     | 📈          | TN / (TN + FN)                                              | Classification |
+| [Positive Likelihood Ratio](https://en.wikipedia.org/wiki/Positive_likelihood_ratio)                                   | [0, inf)   | 📈          | TPR / FPR                                                   | Classification |
+| [Positive Predictive Value](https://en.wikipedia.org/wiki/Positive_predictive_value)                                   | [0, 1]     | 📈          | TP / (TP + FP)                                              | Classification |
+| [Prevalence Threshold](https://en.wikipedia.org/wiki/Prevalence_threshold)                                             | [0, 1]     | 📉          | √FPR / (√TPR + √FPR)                                        | Classification |
+| [Threat Score](https://rexmex.readthedocs.io/en/latest/modules/root.html#rexmex.metrics.classification.threat_score)   | [0, 1]     | 📈          | TP / (TP + FN + FP)                                         | Classification |
+| [True Negative Rate](https://en.wikipedia.org/wiki/Specificity_(tests))                                                | [0, 1]     | 📈          | TN / (TN + FP)                                              | Classification |
+| [True Positive Rate](https://en.wikipedia.org/wiki/Sensitivity_(test))                                                 | [0, 1]     | 📈          | TP / (TP + FN)                                              | Classification |
+| [Adjusted Arithmetic Mean Rank (AAMR)](https://arxiv.org/abs/2002.06914)                                               | (0, 2)     | 📉          | The mean over all chance-adjusted ranks.                    | Ranking        |
+| [Adjusted Arithmetic Mean Rank Index (AAMRI)](https://arxiv.org/abs/2002.06914)                                        | [-1, 1]    | 📈          | The re-indexed adjusted mean rank (AAMR)                    | Ranking        |
+| [Geometric Mean Rank (GMR)](https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html)                                 | [1, inf)   | 📉          | The geometric mean over all ranks.                          | Ranking        |
+| [Harmonic Mean Rank (HMR)](https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html)                                  | [1, inf)   | 📉          | The harmonic mean over all ranks.                           | Ranking        |
+| [Hits @ K](https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#hits-k)                      | [0, 1]     | 📈          | The relative frequency of ranks not larger than a given k.  | Ranking        |
+| [Inverse Arithmetic Mean Rank (IAMR)](https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html)                       | (0, 1]     | 📈          | The inverse of the arithmetic mean over all ranks.          | Ranking        |
+| [Inverse Geometric Mean Rank (IGMR)](https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html)                        | (0, 1]     | 📈          | The inverse of the geometric mean over all ranks.           | Ranking        |
+| [Inverse Median Rank](https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html)                                       | (0, 1]     | 📈          | The inverse of the median over all ranks.                   | Ranking        |
+| [Mean Rank (MR)](https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#mean-rank)             | [1, inf)   | 📉          | The arithmetic mean over all ranks.                         | Ranking        |
+| [Mean Reciprocal Rank (MRR)](https://en.wikipedia.org/wiki/Mean_reciprocal_rank)                                       | (0, 1]     | 📈          | The inverse of the harmonic mean over all ranks.            | Ranking        |
+| [Median Rank](https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html)                                               | [1, inf)   | 📉          | The median over all ranks.                                  | Ranking        |
 
-### Trackers (7)
+### Trackers (8)
 
-| Name        | Reference                                                                                                                               | Description                              |
-|-------------|-----------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------|
-| console     | [`pykeen.trackers.ConsoleResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.ConsoleResultTracker.html)         | A class that directly prints to console. |
-| csv         | [`pykeen.trackers.CSVResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.CSVResultTracker.html)                 | Tracking results to a CSV file.          |
-| json        | [`pykeen.trackers.JSONResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.JSONResultTracker.html)               | Tracking results to a JSON lines file.   |
-| mlflow      | [`pykeen.trackers.MLFlowResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.MLFlowResultTracker.html)           | A tracker for MLflow.                    |
-| neptune     | [`pykeen.trackers.NeptuneResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.NeptuneResultTracker.html)         | A tracker for Neptune.ai.                |
-| tensorboard | [`pykeen.trackers.TensorBoardResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.TensorBoardResultTracker.html) | A tracker for TensorBoard.               |
-| wandb       | [`pykeen.trackers.WANDBResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.WANDBResultTracker.html)             | A tracker for Weights and Biases.        |
-
-## Hyper-parameter Optimization
-
-### Samplers (3)
-
-| Name   | Reference                                                                                                                         | Description                                                     |
-|--------|-----------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------|
-| grid   | [`optuna.samplers.GridSampler`](https://optuna.readthedocs.io/en/stable/reference/generated/optuna.samplers.GridSampler.html)     | Sampler using grid search.                                      |
-| random | [`optuna.samplers.RandomSampler`](https://optuna.readthedocs.io/en/stable/reference/generated/optuna.samplers.RandomSampler.html) | Sampler using random sampling.                                  |
-| tpe    | [`optuna.samplers.TPESampler`](https://optuna.readthedocs.io/en/stable/reference/generated/optuna.samplers.TPESampler.html)       | Sampler using TPE (Tree-structured Parzen Estimator) algorithm. |
-
-Any sampler class extending the [optuna.samplers.BaseSampler](https://optuna.readthedocs.io/en/stable/reference/generated/optuna.samplers.BaseSampler.html#optuna.samplers.BaseSampler),
-such as their sampler implementing the [CMA-ES](https://optuna.readthedocs.io/en/stable/reference/generated/optuna.samplers.CmaEsSampler.html#optuna.samplers.CmaEsSampler)
-algorithm, can also be used.
+| Name        | Reference                                                                                                                               | Description                                               |
+|-------------|-----------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------|
+| console     | [`pykeen.trackers.ConsoleResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.ConsoleResultTracker.html)         | A class that directly prints to console.                  |
+| csv         | [`pykeen.trackers.CSVResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.CSVResultTracker.html)                 | Tracking results to a CSV file.                           |
+| json        | [`pykeen.trackers.JSONResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.JSONResultTracker.html)               | Tracking results to a JSON lines file.                    |
+| mlflow      | [`pykeen.trackers.MLFlowResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.MLFlowResultTracker.html)           | A tracker for MLflow.                                     |
+| neptune     | [`pykeen.trackers.NeptuneResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.NeptuneResultTracker.html)         | A tracker for Neptune.ai.                                 |
+| python      | [`pykeen.trackers.PythonResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.PythonResultTracker.html)           | A tracker which stores everything in Python dictionaries. |
+| tensorboard | [`pykeen.trackers.TensorBoardResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.TensorBoardResultTracker.html) | A tracker for TensorBoard.                                |
+| wandb       | [`pykeen.trackers.WANDBResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.WANDBResultTracker.html)             | A tracker for Weights and Biases.                         |
 
 ## Experimentation
 

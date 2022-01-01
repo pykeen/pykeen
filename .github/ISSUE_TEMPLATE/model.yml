@@ -1,0 +1,45 @@
+name: Add a new model
+description: Suggest a new knowledge graph embedding to implement in PyKEEN
+title: Add [X]
+labels: [ "💃 Model", "💎 New Component" ]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for taking the time suggest a new knowledge graph embedding model
+  - type: input
+    id: arxiv
+    attributes:
+      label: Publication Link
+      description: Link to the pre-print (preferrable), conference proceedings, journal article, or other academic text of record where the model was first proposed (e.g., from _arXiv_)
+      placeholder: e.g., https://arxiv.org/abs/1911.00219
+    validations:
+      required: true
+  - type: input
+    id: reference_implementation
+    attributes:
+      label: Reference Implementation
+      description: Link to the publicly available reference implementation, preferrably from the authors of the publication
+      placeholder: e.g., https://github.com/ibalazevic/multirelational-poincare
+    validations:
+      required: false
+  - type: textarea
+    id: additional_implementations
+    attributes:
+      label: Additional Implementations
+      description: Links to any additional publicly available implementations
+    validations:
+      required: false
+  - type: textarea
+    id: relevance
+    attributes:
+      label: Relevance
+      description: Reasons why this model should be implemented, e.g. interesting for your research, a specific research topic or business.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Your background and ability to help with the implementation of the model.
+    validations:
+        required: false

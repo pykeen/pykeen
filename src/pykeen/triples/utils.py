@@ -71,19 +71,20 @@ def load_triples(
 
     if encoding is None:
         encoding = "utf-8"
-
-    rv = np.loadtxt(
-        fname=path,
-        dtype=str,
-        comments="@Comment@ Head Relation Tail",
-        delimiter=delimiter,
-        encoding=encoding,
-    )
     if column_remapping is not None:
         if len(column_remapping) != 3:
             raise ValueError("remapping must have length of three")
-        rv = rv[:, column_remapping]
-    return rv
+    df = pandas.read_csv(
+        path,
+        sep=delimiter,
+        encoding=encoding,
+        dtype=str,
+        header=None,
+        usecols=column_remapping,
+    )
+    if column_remapping is not None:
+        df = df[[df.columns[c] for c in column_remapping]]
+    return df.to_numpy()
 
 
 def get_entities(triples: torch.LongTensor) -> Set[int]:

@@ -10,6 +10,8 @@ import json
 import logging
 import math
 import operator
+import os
+import pathlib
 import random
 from abc import ABC, abstractmethod
 from io import BytesIO
@@ -17,7 +19,6 @@ from pathlib import Path
 from typing import (
     Any,
     Callable,
-    Collection,
     Dict,
     Generic,
     Iterable,
@@ -36,6 +37,7 @@ import pandas as pd
 import torch
 import torch.nn
 import torch.nn.modules.batchnorm
+import yaml
 from class_resolver import Resolver, normalize_string
 from torch import nn
 from torch.nn import functional
@@ -45,6 +47,7 @@ from .typing import DeviceHint, MappedTriples, TorchRandomHint
 from .version import get_git_hash
 
 __all__ = [
+    "at_least_eps",
     "compose",
     "clamp_norm",
     "compact_mapping",
@@ -56,7 +59,6 @@ __all__ = [
     "resolve_device",
     "split_complex",
     "split_list_in_batches_iter",
-    "torch_is_in_1d",
     "normalize_string",
     "get_until_first_blank",
     "flatten_dictionary",
@@ -98,6 +100,9 @@ __all__ = [
     "complex_normalize",
     "lp_norm",
     "powersum_norm",
+    "product_normalize",
+    "compute_box",
+    "point_to_box_distance",
 ]
 
 logger = logging.getLogger(__name__)
@@ -108,6 +113,14 @@ _CUDNN_ERROR = "cuDNN error: CUDNN_STATUS_NOT_SUPPORTED. This error may appear i
 _CUDA_OOM_ERROR = "CUDA out of memory."
 
 _CUDA_NONZERO_ERROR = "nonzero is not supported for tensors with more than INT_MAX elements"
+
+
+def at_least_eps(x: torch.FloatTensor) -> torch.FloatTensor:
+    """Make sure a tensor is greater than zero."""
+    # get datatype specific epsilon
+    eps = torch.finfo(x.dtype).eps
+    # clamp minimum value
+    return x.clamp(min=eps)
 
 
 def resolve_device(device: DeviceHint = None) -> torch.device:
@@ -172,7 +185,6 @@ def clamp_norm(
     maxnorm: float,
     p: Union[str, int] = "fro",
     dim: Union[None, int, Iterable[int]] = None,
-    eps: float = 1.0e-08,
 ) -> torch.Tensor:
     """Ensure that a tensor's norm does not exceeds some threshold.
 
@@ -184,15 +196,13 @@ def clamp_norm(
         The norm type.
     :param dim:
         The dimension(s).
-    :param eps:
-        A small value to avoid division by zero.
 
     :return:
         A vector with $|x| <= maxnorm$.
     """
     norm = x.norm(p=p, dim=dim, keepdim=True)
     mask = (norm < maxnorm).type_as(x)
-    return mask * x + (1 - mask) * (x / norm.clamp_min(eps) * maxnorm)
+    return mask * x + (1 - mask) * (x / at_least_eps(norm) * maxnorm)
 
 
 class compose(Generic[X]):  # noqa:N801
@@ -332,6 +342,11 @@ def view_complex(x: torch.FloatTensor) -> torch.Tensor:
     return torch.complex(real=real, imag=imag)
 
 
+def view_complex_native(x: torch.FloatTensor) -> torch.Tensor:
+    """Convert a PyKEEN complex tensor representation into a torch one using :func:`torch.view_as_complex`."""
+    return torch.view_as_complex(x.view(*x.shape[:-1], -1, 2))
+
+
 def combine_complex(
     x_re: torch.FloatTensor,
     x_im: torch.FloatTensor,
@@ -429,42 +444,6 @@ def ensure_torch_random_state(random_state: TorchRandomHint) -> torch.Generator:
     if not isinstance(random_state, torch.Generator):
         raise TypeError
     return random_state
-
-
-def torch_is_in_1d(
-    query_tensor: torch.LongTensor,
-    test_tensor: Union[Collection[int], torch.LongTensor],
-    max_id: Optional[int] = None,
-    invert: bool = False,
-) -> torch.BoolTensor:
-    """
-    Return a boolean mask with ``Q[i]`` in T.
-
-    The method guarantees memory complexity of ``max(size(Q), size(T))`` and is thus, memory-wise, superior to naive
-    broadcasting.
-
-    :param query_tensor: shape: S
-        The query Q.
-    :param test_tensor:
-        The test set T.
-    :param max_id:
-        A maximum ID. If not given, will be inferred.
-    :param invert:
-        Whether to invert the result.
-
-    :return: shape: S
-        A boolean mask.
-    """
-    # normalize input
-    if not isinstance(test_tensor, torch.Tensor):
-        test_tensor = torch.as_tensor(data=list(test_tensor), dtype=torch.long)
-    if max_id is None:
-        max_id = max(query_tensor.max(), test_tensor.max()) + 1
-    mask = torch.zeros(max_id, dtype=torch.bool)
-    mask[test_tensor] = True
-    if invert:
-        mask = ~mask
-    return mask[query_tensor.view(-1)].view(*query_tensor.shape)
 
 
 def format_relative_comparison(
@@ -820,6 +799,21 @@ def strip_dim(*tensors: torch.FloatTensor, n: int = 4) -> Sequence[torch.FloatTe
 def upgrade_to_sequence(x: Union[X, Sequence[X]]) -> Sequence[X]:
     """Ensure that the input is a sequence.
 
+    .. note ::
+        While strings are technically also a sequence, i.e.,
+
+        .. code-block:: python
+
+            isinstance("test", typing.Sequence) is True
+
+        this may lead to unexpected behaviour when calling `upgrade_to_sequence("test")`.
+        We thus handle strings as non-sequences. To recover the other behavior, the following may be used:
+
+        .. code-block:: python
+
+            upgrade_to_sequence(tuple("test"))
+
+
     :param x: A literal or sequence of literals
     :return: If a literal was given, a one element tuple with it in it. Otherwise, return the given value.
 
@@ -827,8 +821,12 @@ def upgrade_to_sequence(x: Union[X, Sequence[X]]) -> Sequence[X]:
     (1,)
     >>> upgrade_to_sequence((1, 2, 3))
     (1, 2, 3)
+    >>> upgrade_to_sequence("test")
+    ('test',)
+    >>> upgrade_to_sequence(tuple("test"))
+    ('t', 'e', 's', 't')
     """
-    return x if isinstance(x, Sequence) else (x,)
+    return x if (isinstance(x, Sequence) and not isinstance(x, str)) else (x,)  # type: ignore
 
 
 def ensure_tuple(*x: Union[X, Sequence[X]]) -> Sequence[Sequence[X]]:
@@ -1067,6 +1065,188 @@ def complex_normalize(x: torch.Tensor) -> torch.Tensor:
     y = x.view(*x.shape[:-1], x.shape[-1] // 2, 2)
     y = functional.normalize(y, p=2, dim=-1)
     return y.view(*x.shape)
+
+
+CONFIGURATION_FILE_FORMATS = {".json", ".yaml", ".yml"}
+
+
+def load_configuration(path: Union[str, pathlib.Path, os.PathLike]) -> Mapping[str, Any]:
+    """Load a configuration from a JSON or YAML file."""
+    # ensure pathlib
+    path = pathlib.Path(path)
+
+    if path.suffix == ".json":
+        with path.open() as file:
+            return json.load(file)
+
+    if path.suffix in {".yaml", ".yml"}:
+        with path.open() as file:
+            return yaml.safe_load(file)
+
+    raise ValueError(f"Unknown configuration file format: {path.suffix}. Valid formats: {CONFIGURATION_FILE_FORMATS}")
+
+
+def product_normalize(x: torch.FloatTensor, dim: int = -1) -> torch.FloatTensor:
+    r"""Normalize a tensor along a given dimension so that the geometric mean is 1.0.
+
+    :param x: shape: s
+        An input tensor
+    :param dim:
+        the dimension along which to normalize the tensor
+
+    :return: shape: s
+        An output tensor where the given dimension is normalized to have a geometric mean of 1.0.
+    """
+    return x / at_least_eps(at_least_eps(x.abs()).log().mean(dim=dim, keepdim=True).exp())
+
+
+def compute_box(
+    base: torch.FloatTensor,
+    delta: torch.FloatTensor,
+    size: torch.FloatTensor,
+) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
+    r"""Compute the lower and upper corners of a resulting box.
+
+    :param base: shape: ``(*, d)``
+        the base position (box center) of the input relation embeddings
+    :param delta:  shape: ``(*, d)``
+        the base shape of the input relation embeddings
+    :param size: shape: ``(*, d)``
+        the size scalar vectors of the input relation embeddings
+
+    :return: shape: ``(*, d)`` each
+        lower and upper bounds of the box whose embeddings are provided as input.
+    """
+    # Enforce that sizes are strictly positive by passing through ELU
+    size_pos = torch.nn.functional.elu(size) + 1
+
+    # Shape vector is normalized using the above helper function
+    delta_norm = product_normalize(delta)
+
+    # Size is learned separately and applied to normalized shape
+    delta_final = size_pos * delta_norm
+
+    # Compute potential boundaries by applying the shape in substraction
+    first_bound = base - 0.5 * delta_final
+
+    # and in addition
+    second_bound = base + 0.5 * delta_final
+
+    # Compute box upper bounds using min and max respectively
+    box_low = torch.minimum(first_bound, second_bound)
+    box_high = torch.maximum(first_bound, second_bound)
+
+    return box_low, box_high
+
+
+def point_to_box_distance(
+    points: torch.FloatTensor,
+    box_lows: torch.FloatTensor,
+    box_highs: torch.FloatTensor,
+) -> torch.FloatTensor:
+    r"""Compute the point to box distance function proposed by [abboud2020]_ in an element-wise fashion.
+
+    :param points: shape: ``(*, d)``
+        the positions of the points being scored against boxes
+    :param box_lows: shape: ``(*, d)``
+        the lower corners of the boxes
+    :param box_highs: shape: ``(*, d)``
+        the upper corners of the boxes
+
+    :returns:
+        Element-wise distance function scores as per the definition above
+
+        Given points $p$, box_lows $l$, and box_highs $h$, the following quantities are
+        defined:
+
+        - Width $w$ is the difference between the upper and lower box bound: $w = h - l$
+        - Box centers $c$ are the mean of the box bounds: $c = (h + l) / 2$
+
+        Finally, the point to box distance $dist(p,l,h)$ is defined as
+        the following piecewise function:
+
+        .. math::
+
+            dist(p,l,h) = \begin{cases}
+                |p-c|/(w+1) & l <= p <+ h \\
+                |p-c|*(w+1) - 0.5*w*((w+1)-1/(w+1)) & otherwise \\
+            \end{cases}
+    """
+    widths = box_highs - box_lows
+
+    # compute width plus 1
+    widths_p1 = widths + 1
+
+    # compute box midpoints
+    # TODO: we already had this before, as `base`
+    centres = 0.5 * (box_lows + box_highs)
+
+    return torch.where(
+        # inside box?
+        torch.logical_and(points >= box_lows, points <= box_highs),
+        # yes: |p - c| / (w + 1)
+        torch.abs(points - centres) / widths_p1,
+        # no: (w + 1) * |p - c| - 0.5 * w * (w - 1/(w + 1))
+        widths_p1 * torch.abs(points - centres) - (0.5 * widths) * (widths_p1 - 1 / widths_p1),
+    )
+
+
+def boxe_kg_arity_position_score(
+    entity_pos: torch.FloatTensor,
+    other_entity_bump: torch.FloatTensor,
+    relation_box: Tuple[torch.FloatTensor, torch.FloatTensor],
+    tanh_map: bool,
+    p: int,
+    power_norm: bool,
+) -> torch.FloatTensor:
+    r"""Perform the BoxE computation at a single arity position.
+
+    .. note::
+        this computation is parallelizable across all positions
+
+    .. note ::
+        `entity_pos`, `other_entity_bump`, `relation_box_low` and `relation_box_high` have to be in broadcastable
+        shape.
+
+    :param entity_pos: shape: (*s_p, d)
+        This is the base entity position of the entity appearing in the target position. For example,
+        for a fact $r(h, t)$ and the head arity position, `entity_pos` is the base position of $h$.
+    :param other_entity_bump: shape: (*s_b, d)
+        This is the bump of the entity at the other position in the fact. For example, given a
+        fact $r(h, t)$ and the head arity position, `other_entity_bump` is the bump of $t$.
+    :param relation_box: shape: (*s_r, d)
+        The lower/upper corner of the relation box at the target arity position.
+    :param tanh_map:
+        whether to apply the tanh map regularizer
+    :param p:
+        The norm order to apply across dimensions to compute overall position score.
+    :param power_norm:
+        whether to use the powered norm instead
+
+    :return: shape: s
+        Arity-position score for the entity relative to the target relation box. Larger is better. the shape is the
+        broadcasted shape from position, bump and box, where the last dimension has been removed.
+    """
+    # Step 1: Apply the other entity bump
+    bumped_representation = entity_pos + other_entity_bump
+
+    relation_box_low, relation_box_high = relation_box
+
+    # Step 2: Apply tanh if tanh_map is set to True.
+    if tanh_map:
+        relation_box_low = torch.tanh(relation_box_low)
+        relation_box_high = torch.tanh(relation_box_high)
+        bumped_representation = torch.tanh(bumped_representation)
+
+    # Compute the distance function output element-wise
+    element_wise_distance = point_to_box_distance(
+        points=bumped_representation,
+        box_lows=relation_box_low,
+        box_highs=relation_box_high,
+    )
+
+    # Finally, compute the norm
+    return negative_norm(element_wise_distance, p=p, power_norm=power_norm)
 
 
 if __name__ == "__main__":

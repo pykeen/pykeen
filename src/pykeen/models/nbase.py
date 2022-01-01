@@ -220,7 +220,7 @@ class _NewAbstractModel(Model, ABC):
             r_indices=rt_batch[:, 0],
             t_indices=rt_batch[:, 1],
             slice_size=slice_size,
-            slice_dim="r",
+            slice_dim="t",
         ).view(rt_batch.shape[0], self.num_entities)
 
     def score_r(self, ht_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:
@@ -241,7 +241,7 @@ class _NewAbstractModel(Model, ABC):
             r_indices=None,
             t_indices=ht_batch[:, 1],
             slice_size=slice_size,
-            slice_dim="t",
+            slice_dim="r",
         ).view(ht_batch.shape[0], self.num_relations)
 
 
@@ -336,6 +336,7 @@ class ERModel(
         predict_with_sigmoid: bool = False,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
+        skip_checks: bool = False,
     ) -> None:
         """Initialize the module.
 
@@ -357,6 +358,8 @@ class ERModel(
             The preferred device for model training and inference.
         :param random_seed:
             A random seed to use for initialising the model's weights. **Should** be set when aiming at reproducibility.
+        :param skip_checks:
+            whether to skip entity representation checks.
         """
         super().__init__(
             triples_factory=triples_factory,
@@ -371,7 +374,7 @@ class ERModel(
             num_embeddings=triples_factory.num_entities,
             shapes=self.interaction.entity_shape,
             label="entity",
-            skip_checks=self.interaction.tail_entity_shape is not None,
+            skip_checks=self.interaction.tail_entity_shape is not None or skip_checks,
         )
         self.relation_representations = _prepare_representation_module_list(
             representations=relation_representations,

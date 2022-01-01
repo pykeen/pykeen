@@ -27,6 +27,10 @@
   <a href="https://github.com/psf/black">
     <img src="https://img.shields.io/badge/code%20style-black-000000.svg" alt="Code style: black">
   </a>
+
+  <a href=".github/CODE_OF_CONDUCT.md">
+    <img src="https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg" alt="Contributor Covenant">
+  </a>
 </p>
 
 <p align="center">
@@ -124,10 +128,6 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 
 {{ regularizers }}
 
-### Optimizers ({{ n_optimizers }})
-
-{{ optimizers }}
-
 ### Training Loops ({{ n_training_loops }})
 
 {{ training_loops }}
@@ -151,16 +151,6 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 ### Trackers ({{ n_trackers }})
 
 {{ trackers }}
-
-## Hyper-parameter Optimization
-
-### Samplers ({{ n_hpo_samplers }})
-
-{{ hpo_samplers }}
-
-Any sampler class extending the [optuna.samplers.BaseSampler](https://optuna.readthedocs.io/en/stable/reference/generated/optuna.samplers.BaseSampler.html#optuna.samplers.BaseSampler),
-such as their sampler implementing the [CMA-ES](https://optuna.readthedocs.io/en/stable/reference/generated/optuna.samplers.CmaEsSampler.html#optuna.samplers.CmaEsSampler)
-algorithm, can also be used.
 
 ## Experimentation
 
