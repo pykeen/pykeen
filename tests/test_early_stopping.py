@@ -190,7 +190,7 @@ class TestEarlyStopperDelta(TestEarlyStopper):
 
     mock_losses: List[float] = [10.0, 9.0, 8.0, 7.99, 7.98, 7.97]
     stop_constant: int = 4
-    delta: float = 0.05
+    delta: float = 0.1
     best_results: List[float] = [10.0, 9.0, 8.0, 8.0, 8.0]
 
 
