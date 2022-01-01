@@ -142,6 +142,20 @@ class TestEarlyStopper(unittest.TestCase):
         self.stopper.should_stop(epoch=0)
         assert wrapper.was_called(real_log_metrics)
 
+    def test_serialization(self):
+        """Test for serialization."""
+        summary = self.stopper.get_summary_dict()
+        new_stopper = EarlyStopper(
+            # not needed for test
+            model=...,
+            evaluator=...,
+            training_triples_factory=...,
+            evaluation_triples_factory=...,
+        )
+        new_stopper._write_from_summary_dict(**summary)
+        for key in summary.keys():
+            assert getattr(self.stopper, key) == getattr(new_stopper, key)
+
 
 class TestEarlyStoppingLogic(unittest_templates.GenericTestCase[EarlyStoppingLogic]):
     """Tests for early stopping logic."""
