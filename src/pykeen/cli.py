@@ -86,30 +86,16 @@ def _get_model_lines(tablefmt: str, link_fmt: Optional[str] = None):
     for _, model in sorted(model_resolver.lookup_dict.items()):
         reference = f"pykeen.models.{model.__name__}"
         docdata = getattr(model, "__docdata__", None)
-        if docdata is not None:
-            if link_fmt:
-                reference = f"[`{reference}`]({link_fmt.format(reference)})"
-            else:
-                reference = f"`{reference}`"
-            name = docdata.get("name", model.__name__)
-            citation = docdata["citation"]
-            citation_str = f"[{citation['author']} *et al.*, {citation['year']}]({citation['link']})"
-            yield name, reference, citation_str
+        if docdata is None:
+            raise ValueError("All models must have docdata")
+        if link_fmt:
+            reference = f"[`{reference}`]({link_fmt.format(reference)})"
         else:
-            line = str(model.__doc__.splitlines()[0])
-            l, r = line.find("["), line.find("]")
-            if tablefmt == "rst":
-                yield model.__name__, f":class:`{reference}`", line[l : r + 2]
-            elif tablefmt == "github":
-                author, year = line[1 + l : r - 4], line[r - 4 : r]
-                if link_fmt:
-                    reference = f"[`{reference}`]({link_fmt.format(reference)})"
-                else:
-                    reference = f"`{reference}`"
-                yield model.__name__, reference, f"{author.capitalize()} *et al.*, {year}"
-            else:
-                author, year = line[1 + l : r - 4], line[r - 4 : r]
-                yield model.__name__, f"{author.capitalize()}, {year}"
+            reference = f"`{reference}`"
+        name = docdata.get("name", model.__name__)
+        citation = docdata["citation"]
+        citation_str = f"[{citation['author']} *et al.*, {citation['year']}]({citation['link']})"
+        yield name, reference, citation_str
 
 
 @ls.command()
@@ -521,8 +507,6 @@ def get_readme() -> str:
             link_fmt="https://pykeen.readthedocs.io/en/latest/api/{}.html",
         ),
         n_negative_samplers=len(negative_sampler_resolver.lookup_dict),
-        optimizers=_help_optimizers(tablefmt, link_fmt="https://pytorch.org/docs/stable/optim.html#{}"),
-        n_optimizers=len(optimizer_resolver.lookup_dict),
         stoppers=_help_stoppers(
             tablefmt,
             link_fmt="https://pykeen.readthedocs.io/en/latest/reference/stoppers.html#{}",
@@ -534,11 +518,6 @@ def get_readme() -> str:
         n_metrics=len(get_metric_list()),
         trackers=_help_trackers(tablefmt, link_fmt="https://pykeen.readthedocs.io/en/latest/api/{}.html"),
         n_trackers=len(tracker_resolver.lookup_dict),
-        hpo_samplers=_help_hpo_samplers(
-            tablefmt,
-            link_fmt="https://optuna.readthedocs.io/en/stable/reference/generated/{}.html",
-        ),
-        n_hpo_samplers=len(sampler_resolver.lookup_dict),
     )
 
 
