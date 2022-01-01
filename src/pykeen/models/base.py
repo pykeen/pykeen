@@ -21,7 +21,7 @@ from torch import nn
 from ..losses import Loss, MarginRankingLoss
 from ..nn.emb import Embedding, EmbeddingSpecification, RepresentationModule
 from ..regularizers import NoRegularizer, Regularizer
-from ..triples import CoreTriplesFactory
+from ..triples import CoreTriplesFactory, relation_inverter
 from ..typing import DeviceHint, ScorePack
 from ..utils import NoRandomSeedNecessary, _can_slice, extend_batch, resolve_device, set_random_seed
 
@@ -263,6 +263,17 @@ class Model(nn.Module, ABC):
 
     """Prediction methods"""
 
+    def _prepare_batch(self, batch: torch.LongTensor, index_relation: int) -> torch.LongTensor:
+        # send to device
+        batch = batch.to(self.device)
+
+        # special handling of inverse relations
+        if not self.use_inverse_triples:
+            return batch
+
+        # when trained on inverse relations, the internal relation ID is twice the original relation ID
+        return relation_inverter.map(batch=batch, index=index_relation, invert=False)
+
     def predict_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:
         """Calculate the scores for triples.
 
@@ -277,7 +288,7 @@ class Model(nn.Module, ABC):
             The score for each triple.
         """
         self.eval()  # Enforce evaluation mode
-        scores = self.score_hrt(hrt_batch)
+        scores = self.score_hrt(self._prepare_batch(batch=hrt_batch, index_relation=1))
         if self.predict_with_sigmoid:
             scores = torch.sigmoid(scores)
         return scores
@@ -308,6 +319,7 @@ class Model(nn.Module, ABC):
             For each r-t pair, the scores for all possible heads.
         """
         self.eval()  # Enforce evaluation mode
+        rt_batch = self._prepare_batch(batch=rt_batch, index_relation=0)
         if self.use_inverse_triples:
             scores = self.score_h_inverse(rt_batch=rt_batch, slice_size=slice_size)
         elif slice_size is None:
@@ -347,6 +359,7 @@ class Model(nn.Module, ABC):
             behavior regardless of the use of inverse triples.
         """
         self.eval()  # Enforce evaluation mode
+        hr_batch = self._prepare_batch(batch=hr_batch, index_relation=1)
         if slice_size is None:
             scores = self.score_t(hr_batch)
         else:
@@ -375,6 +388,7 @@ class Model(nn.Module, ABC):
             For each h-t pair, the scores for all possible relations.
         """
         self.eval()  # Enforce evaluation mode
+        ht_batch = ht_batch.to(self.device)
         if slice_size is None:
             scores = self.score_r(ht_batch)
         else:
@@ -488,13 +502,7 @@ class Model(nn.Module, ABC):
                 " Set ``create_inverse_triples=True`` when creating the dataset/triples factory"
                 " or using the pipeline().",
             )
-        batch_cloned = batch.clone()
-
-        # The number of relations stored in the triples factory includes the number of inverse relations
-        # Id of inverse relation: relation + 1
-        batch_cloned[:, index_relation] = batch_cloned[:, index_relation] + 1
-
-        return batch_cloned.flip(1)
+        return relation_inverter.invert_(batch=batch, index=index_relation).flip(1)
 
     def score_hrt_inverse(
         self,

@@ -8,7 +8,20 @@ import itertools as itt
 import logging
 import math
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Generic, Mapping, MutableMapping, Optional, Sequence, Set, Tuple, Union, cast
+from typing import (
+    Any,
+    Callable,
+    Generic,
+    Iterable,
+    Mapping,
+    MutableMapping,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    Union,
+    cast,
+)
 
 import torch
 from class_resolver import Resolver
@@ -22,6 +35,7 @@ from ..utils import (
     activation_resolver,
     convert_to_canonical_shape,
     ensure_tuple,
+    unpack_singletons,
     upgrade_to_sequence,
 )
 
@@ -31,7 +45,7 @@ __all__ = [
     "Interaction",
     "FunctionalInteraction",
     "LiteralInteraction",
-    "TranslationalInteraction",
+    "NormBasedInteraction",
     # Adapter classes
     "MonotonicAffineTransformationInteraction",
     # Concrete Classes
@@ -70,11 +84,26 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-def _get_batches(z, slice_size):
-    for batch in zip(*(hh.split(slice_size, dim=1) for hh in ensure_tuple(z)[0])):
-        if len(batch) == 1:
-            batch = batch[0]
-        yield batch
+def parallel_slice_batches(
+    z: Union[FloatTensor, Tuple[FloatTensor, ...]],
+    slice_size: int,
+    dim: int,
+) -> Iterable[Union[FloatTensor, Tuple[FloatTensor, ...]]]:
+    # input normalization -> Tuple[Tensor]
+    # shape: (num_representations,)
+    z_tup: Iterable[FloatTensor] = ensure_tuple(z)[0]
+
+    # split each representation along the given dimension
+    # shape: (num_representations,)
+    tuple_of_batches: Iterable[Sequence[FloatTensor]] = (zz.split(slice_size, dim=dim) for zz in z_tup)
+
+    # create batches, shape: (num_slices,), each being a tuple of shape (num_representations,)
+    batch_of_tuples: Iterable[Tuple[FloatTensor]] = zip(*tuple_of_batches)
+
+    # unpack_singletons
+    batch_of_unpacked_tuples = unpack_singletons(*batch_of_tuples)
+
+    yield from batch_of_unpacked_tuples
 
 
 class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailRepresentation], ABC):
@@ -226,19 +255,43 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         if slice_size is None:
             scores = self(h=h, r=r, t=t)
         elif slice_dim == "h":
+            dim = CANONICAL_DIMENSIONS[slice_dim]
             scores = torch.cat(
-                [self(h=h_batch, r=r, t=t) for h_batch in _get_batches(h, slice_size)],
-                dim=CANONICAL_DIMENSIONS[slice_dim],
+                [
+                    self(h=h_batch, r=r, t=t)
+                    for h_batch in parallel_slice_batches(
+                        z=h,
+                        slice_size=slice_size,
+                        dim=dim,
+                    )
+                ],
+                dim=dim,
             )
         elif slice_dim == "r":
+            dim = CANONICAL_DIMENSIONS[slice_dim]
             scores = torch.cat(
-                [self(h=h, r=r_batch, t=t) for r_batch in _get_batches(r, slice_size)],
-                dim=CANONICAL_DIMENSIONS[slice_dim],
+                [
+                    self(h=h, r=r_batch, t=t)
+                    for r_batch in parallel_slice_batches(
+                        z=r,
+                        slice_size=slice_size,
+                        dim=dim,
+                    )
+                ],
+                dim=dim,
             )
         elif slice_dim == "t":
+            dim = CANONICAL_DIMENSIONS[slice_dim]
             scores = torch.cat(
-                [self(h=h, r=r, t=t_batch) for t_batch in _get_batches(t, slice_size)],
-                dim=CANONICAL_DIMENSIONS[slice_dim],
+                [
+                    self(h=h, r=r, t=t_batch)
+                    for t_batch in parallel_slice_batches(
+                        z=t,
+                        slice_size=slice_size,
+                        dim=dim,
+                    )
+                ],
+                dim=dim,
             )
         else:
             raise ValueError(f"Invalid slice_dim: {slice_dim}")
@@ -448,15 +501,15 @@ class FunctionalInteraction(Interaction, Generic[HeadRepresentation, RelationRep
         return dict()
 
 
-class TranslationalInteraction(
+class NormBasedInteraction(
     FunctionalInteraction,
     Generic[HeadRepresentation, RelationRepresentation, TailRepresentation],
     ABC,
 ):
-    """The translational interaction function shared by the TransE, TransR, TransH, and other Trans<X> models."""
+    """Norm-based interactions use a (powered) $p$-norm in their scoring function."""
 
     def __init__(self, p: int, power_norm: bool = False):
-        """Initialize the translational interaction function.
+        """Initialize the norm-based interaction function.
 
         :param p:
             The norm used with :func:`torch.linalg.vector_norm`. Typically is 1 or 2.
@@ -472,7 +525,7 @@ class TranslationalInteraction(
         return dict(p=self.p, power_norm=self.power_norm)
 
 
-class TransEInteraction(TranslationalInteraction[FloatTensor, FloatTensor, FloatTensor]):
+class TransEInteraction(NormBasedInteraction[FloatTensor, FloatTensor, FloatTensor]):
     """A stateful module for the TransE interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.transe_interaction`
@@ -811,7 +864,7 @@ class ERMLPEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
 
 
 class TransRInteraction(
-    TranslationalInteraction[
+    NormBasedInteraction[
         torch.FloatTensor,
         Tuple[torch.FloatTensor, torch.FloatTensor],
         torch.FloatTensor,
@@ -907,7 +960,7 @@ class RESCALInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
 
 
 class StructuredEmbeddingInteraction(
-    TranslationalInteraction[
+    NormBasedInteraction[
         torch.FloatTensor,
         Tuple[torch.FloatTensor, torch.FloatTensor],
         torch.FloatTensor,
@@ -1002,7 +1055,7 @@ class TuckerInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
 
 
 class UnstructuredModelInteraction(
-    TranslationalInteraction[torch.FloatTensor, None, torch.FloatTensor],
+    NormBasedInteraction[torch.FloatTensor, None, torch.FloatTensor],
 ):
     """A stateful module for the UnstructuredModel interaction function.
 
@@ -1026,7 +1079,7 @@ class UnstructuredModelInteraction(
         return dict(h=h, t=t)
 
 
-class TorusEInteraction(TranslationalInteraction[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]):
+class TorusEInteraction(NormBasedInteraction[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]):
     """A stateful module for the TorusE interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.toruse_interaction`
@@ -1039,7 +1092,7 @@ class TorusEInteraction(TranslationalInteraction[torch.FloatTensor, torch.FloatT
 
 
 class TransDInteraction(
-    TranslationalInteraction[
+    NormBasedInteraction[
         Tuple[torch.FloatTensor, torch.FloatTensor],
         Tuple[torch.FloatTensor, torch.FloatTensor],
         Tuple[torch.FloatTensor, torch.FloatTensor],
@@ -1166,7 +1219,7 @@ class KG2EInteraction(
         )
 
 
-class TransHInteraction(TranslationalInteraction[FloatTensor, Tuple[FloatTensor, FloatTensor], FloatTensor]):
+class TransHInteraction(NormBasedInteraction[FloatTensor, Tuple[FloatTensor, FloatTensor], FloatTensor]):
     """A stateful module for the TransH interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.transh_interaction`
@@ -1185,7 +1238,7 @@ class TransHInteraction(TranslationalInteraction[FloatTensor, Tuple[FloatTensor,
 
 
 class MuREInteraction(
-    TranslationalInteraction[
+    NormBasedInteraction[
         Tuple[FloatTensor, FloatTensor, FloatTensor],
         Tuple[FloatTensor, FloatTensor],
         Tuple[FloatTensor, FloatTensor, FloatTensor],
@@ -1247,7 +1300,7 @@ class SimplEInteraction(
         return dict(h=h[0], h_inv=h[1], r=r[0], r_inv=r[1], t=t[0], t_inv=t[1])
 
 
-class PairREInteraction(TranslationalInteraction[FloatTensor, Tuple[FloatTensor, FloatTensor], FloatTensor]):
+class PairREInteraction(NormBasedInteraction[FloatTensor, Tuple[FloatTensor, FloatTensor], FloatTensor]):
     """A stateful module for the PairRE interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.pair_re_interaction`
@@ -1499,7 +1552,7 @@ class CrossEInteraction(FunctionalInteraction[FloatTensor, Tuple[FloatTensor, Fl
 
 
 class BoxEInteraction(
-    TranslationalInteraction[
+    NormBasedInteraction[
         Tuple[FloatTensor, FloatTensor],
         Tuple[FloatTensor, FloatTensor, FloatTensor, FloatTensor, FloatTensor, FloatTensor],
         Tuple[FloatTensor, FloatTensor],
@@ -1558,8 +1611,25 @@ class BoxEInteraction(
         return state
 
 
+class CPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
+    """
+    An implementation of the CP interaction as described [lacroix2018]_ (originally from [hitchcock1927]_).
+
+    .. note ::
+        For $k=1$, this interaction is the same as DistMult (but consider the node below).
+
+    .. note ::
+        For equivalence to CP, entities should have different representations for head & tail role. This is different
+        to DistMult.
+    """
+
+    func = pkf.cp_interaction
+    entity_shape = ("kd",)
+    relation_shape = ("kd",)
+
+
 interaction_resolver = Resolver.from_subclasses(
     Interaction,  # type: ignore
-    skip={TranslationalInteraction, FunctionalInteraction, MonotonicAffineTransformationInteraction},
+    skip={NormBasedInteraction, FunctionalInteraction, MonotonicAffineTransformationInteraction},
     suffix=Interaction.__name__,
 )

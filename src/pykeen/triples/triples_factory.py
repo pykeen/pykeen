@@ -7,7 +7,23 @@ import itertools
 import logging
 import pathlib
 import re
-from typing import Any, Callable, Collection, Dict, List, Mapping, Optional, Sequence, Set, TextIO, Type, Union, cast
+from abc import abstractmethod
+from typing import (
+    Any,
+    Callable,
+    Collection,
+    Dict,
+    List,
+    Mapping,
+    Optional,
+    Sequence,
+    Set,
+    TextIO,
+    Type,
+    TypeVar,
+    Union,
+    cast,
+)
 
 import numpy as np
 import pandas as pd
@@ -28,6 +44,8 @@ __all__ = [
     "cat_triples",
     "splits_steps",
     "splits_similarity",
+    "RelationInverter",
+    "relation_inverter",
 ]
 
 logger = logging.getLogger(__name__)
@@ -139,6 +157,56 @@ def _ensure_ids(
     return [label_to_id[l_or_i] if isinstance(l_or_i, str) else l_or_i for l_or_i in labels_or_ids]
 
 
+RelationID = TypeVar("RelationID", int, torch.LongTensor)
+
+
+class RelationInverter:
+    """An interface for inverse-relation ID mapping."""
+
+    # TODO: method is_inverse?
+
+    @abstractmethod
+    def get_inverse_id(self, relation_id: RelationID) -> RelationID:
+        """Get the inverse ID for a given relation."""
+        # TODO: inverse of inverse?
+        raise NotImplementedError
+
+    @abstractmethod
+    def _map(self, batch: torch.LongTensor, index: int = 1) -> torch.LongTensor:
+        raise NotImplementedError
+
+    @abstractmethod
+    def invert_(self, batch: torch.LongTensor, index: int = 1) -> torch.LongTensor:
+        """Invert relations in a batch (in-place)."""
+        raise NotImplementedError
+
+    def map(self, batch: torch.LongTensor, index: int = 1, invert: bool = False) -> torch.LongTensor:
+        """Map relations of batch, optionally also inverting them."""
+        batch = self._map(batch=batch, index=index)
+        return self.invert_(batch=batch, index=index) if invert else batch
+
+
+class DefaultRelationInverter(RelationInverter):
+    """Maps normal relations to even IDs, and the corresponding inverse to the next odd ID."""
+
+    def get_inverse_id(self, relation_id: RelationID) -> RelationID:  # noqa: D102
+        return relation_id + 1
+
+    def _map(self, batch: torch.LongTensor, index: int = 1, invert: bool = False) -> torch.LongTensor:  # noqa: D102
+        batch = batch.clone()
+        batch[:, index] *= 2
+        return batch
+
+    def invert_(self, batch: torch.LongTensor, index: int = 1) -> torch.LongTensor:  # noqa: D102
+        # The number of relations stored in the triples factory includes the number of inverse relations
+        # Id of inverse relation: relation + 1
+        batch[:, index] += 1
+        return batch
+
+
+relation_inverter = DefaultRelationInverter()
+
+
 @dataclasses.dataclass
 class Labeling:
     """A mapping between labels and IDs."""
@@ -150,10 +218,10 @@ class Labeling:
     id_to_label: Mapping[int, str] = dataclasses.field(init=False)
 
     #: A vectorized version of entity_label_to_id; initialized automatically
-    _vectorized_mapper: Callable[..., np.ndarray] = dataclasses.field(init=False)
+    _vectorized_mapper: Callable[..., np.ndarray] = dataclasses.field(init=False, compare=False)
 
     #: A vectorized version of entity_id_to_label; initialized automatically
-    _vectorized_labeler: Callable[..., np.ndarray] = dataclasses.field(init=False)
+    _vectorized_labeler: Callable[..., np.ndarray] = dataclasses.field(init=False, compare=False)
 
     def __post_init__(self):
         """Precompute inverse mappings."""
@@ -325,11 +393,7 @@ class CoreTriplesFactory:
         """Get the inverse relation identifier for the given relation."""
         if not self.create_inverse_triples:
             raise ValueError("Can not get inverse triple, they have not been created.")
-        return self._get_inverse_relation_id(relation)
-
-    @staticmethod
-    def _get_inverse_relation_id(relation_id: Union[int, torch.LongTensor]) -> Union[int, torch.LongTensor]:
-        return relation_id + 1
+        return relation_inverter.get_inverse_id(relation_id=relation)
 
     def _add_inverse_triples_if_necessary(self, mapped_triples: MappedTriples) -> MappedTriples:
         """Add inverse triples if they shall be created."""
@@ -337,12 +401,10 @@ class CoreTriplesFactory:
             return mapped_triples
 
         logger.info("Creating inverse triples.")
-        h, r, t = mapped_triples.t()
-        r = 2 * r
         return torch.cat(
             [
-                torch.stack([h, r, t], dim=-1),
-                torch.stack([t, self._get_inverse_relation_id(r), h], dim=-1),
+                relation_inverter.map(batch=mapped_triples),
+                relation_inverter.map(batch=mapped_triples, invert=True).flip(1),
             ]
         )
 
@@ -583,6 +645,50 @@ class CoreTriplesFactory:
             extra_metadata=extra_metadata,
         )
 
+    @classmethod
+    def from_path_binary(
+        cls,
+        path: Union[str, pathlib.Path, TextIO],
+    ) -> "CoreTriplesFactory":  # noqa: D102
+        """
+        Load triples factory from a binary file.
+
+        :param path:
+            The path, pointing to an existing PyTorch .pt file.
+
+        :return:
+            The loaded triples factory.
+        """
+        path = normalize_path(path)
+        logger.info(f"Loading from {path.as_uri()}")
+        data = torch.load(path)
+        return cls(**data)
+
+    def to_path_binary(
+        self,
+        path: Union[str, pathlib.Path, TextIO],
+    ) -> None:
+        """
+        Save triples factory to path in (PyTorch's .pt) binary format.
+
+        :param path:
+            The path to store the triples factory to.
+        """
+        path = normalize_path(path)
+        torch.save(self._get_binary_state(), path)
+        logger.info(f"Stored {self} to {path.as_uri()}")
+
+    def _get_binary_state(self):
+        return dict(
+            mapped_triples=self.mapped_triples,
+            num_entities=self.num_entities,
+            num_relations=self.num_relations,
+            entity_ids=self.entity_ids,
+            relation_ids=self.relation_ids,
+            create_inverse_triples=self.create_inverse_triples,
+            metadata=self.metadata,
+        )
+
 
 class TriplesFactory(CoreTriplesFactory):
     """Create instances given the path to triples."""
@@ -748,6 +854,27 @@ class TriplesFactory(CoreTriplesFactory):
                 "path": path,
                 **(metadata or {}),
             },
+        )
+
+    def to_core_triples_factory(self) -> CoreTriplesFactory:
+        """Return this factory as a core factory."""
+        return CoreTriplesFactory(
+            mapped_triples=self.mapped_triples,
+            num_entities=self.num_entities,
+            num_relations=self.num_relations,
+            entity_ids=self.entity_ids,
+            relation_ids=self.relation_ids,
+            create_inverse_triples=self.create_inverse_triples,
+            metadata=self.metadata,
+        )
+
+    def _get_binary_state(self):
+        return dict(
+            mapped_triples=self.mapped_triples,
+            entity_to_id=self.entity_to_id,
+            relation_to_id=self.relation_to_id,
+            create_inverse_triples=self.create_inverse_triples,
+            metadata=self.metadata,
         )
 
     def clone_and_exchange_triples(

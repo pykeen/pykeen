@@ -5,8 +5,10 @@
 import dataclasses
 import logging
 import unittest
+from operator import attrgetter
 from typing import Any, ClassVar, Dict, Mapping, Optional, Tuple, Type
 
+import numpy
 import torch
 
 from pykeen.datasets import Nations
@@ -18,14 +20,15 @@ from pykeen.evaluation.rank_based_evaluator import (
     RANK_PESSIMISTIC,
     RANK_REALISTIC,
     RANK_TYPES,
+    SIDE_BOTH,
     SIDES,
     compute_rank_from_scores,
+    resolve_metric_name,
 )
 from pykeen.evaluation.sklearn import SklearnEvaluator, SklearnMetricResults
-from pykeen.models import Model, TransE
+from pykeen.models import FixedModel, Model, TransE
 from pykeen.triples import TriplesFactory
 from pykeen.typing import MappedTriples
-from tests.mocks import MockModel
 
 logger = logging.getLogger(__name__)
 
@@ -131,6 +134,12 @@ class _AbstractEvaluatorTests:
             scores=scores,
             dense_positive_mask=mask,
         )
+        self.evaluator.process_head_scores_(
+            hrt_batch=hrt_batch,
+            true_scores=true_scores,
+            scores=scores,
+            dense_positive_mask=mask,
+        )
 
         result = self.evaluator.finalize()
         assert isinstance(result, MetricResults)
@@ -204,6 +213,12 @@ class RankBasedEvaluatorTests(_AbstractEvaluatorTests, unittest.TestCase):
             assert isinstance(adjusted_mean_rank_index[RANK_REALISTIC], float)
             assert -1 <= adjusted_mean_rank_index[RANK_REALISTIC] <= 1
 
+        # the test only considered a single batch
+        for side, all_type_rank_counts in result.rank_count.items():
+            expected_size = 2 * self.batch_size if side == SIDE_BOTH else self.batch_size
+            # all rank types have the same count
+            assert set(all_type_rank_counts.values()) == {expected_size}
+
         # TODO: Validate with data?
 
 
@@ -223,20 +238,29 @@ class SklearnEvaluatorTest(_AbstractEvaluatorTests, unittest.TestCase):
         # check value
         scores = data["scores"].detach().cpu().numpy()
         mask = data["mask"].detach().cpu().float().numpy()
+        batch = data["batch"].detach().cpu().numpy()
 
         # filtering
-        uniq = dict()
-        batch = data["batch"].detach().cpu().numpy()
-        for i, (h, r) in enumerate(batch[:, :2]):
-            uniq[int(h), int(r)] = i
-        indices = sorted(uniq.values())
-        mask = mask[indices]
-        scores = scores[indices]
+        mask_filtered, scores_filtered = [], []
+        for group_indices in [(0, 1), (1, 2)]:
+            uniq = dict()
+            for i, key in enumerate(batch[:, group_indices].tolist()):
+                uniq[tuple(key)] = i
+            indices = sorted(uniq.values())
+            mask_filtered.append(mask[indices])
+            scores_filtered.append(scores[indices])
+        mask = numpy.concatenate(mask_filtered, axis=0)
+        scores = numpy.concatenate(scores_filtered, axis=0)
 
-        for field in dataclasses.fields(SklearnMetricResults):
-            f = field.metadata["f"]
-            exp_score = f(mask.flat, scores.flat)
-            self.assertAlmostEqual(result.get_metric(field.name), exp_score)
+        for field in sorted(dataclasses.fields(SklearnMetricResults), key=attrgetter("name")):
+            with self.subTest(metric=field.name):
+                f = field.metadata["f"]
+                exp_score = f(numpy.array(mask.flat), numpy.array(scores.flat))
+                act_score = result.get_metric(field.name)
+                if numpy.isnan(exp_score):
+                    self.assertTrue(numpy.isnan(act_score))
+                else:
+                    self.assertAlmostEqual(act_score, exp_score, msg=f"failed for {field.name}", delta=7)
 
 
 class EvaluatorUtilsTests(unittest.TestCase):
@@ -466,6 +490,7 @@ class DummyEvaluator(Evaluator):
             rank_std=None,
             rank_var=None,
             rank_mad=None,
+            rank_count=None,
             adjusted_arithmetic_mean_rank=None,
             adjusted_arithmetic_mean_rank_index=None,
             hits_at_k=dict(),
@@ -483,7 +508,7 @@ class TestEvaluationStructure(unittest.TestCase):
         self.counter = 1337
         self.evaluator = DummyEvaluator(counter=self.counter, filtered=True, automatic_memory_optimization=False)
         self.dataset = Nations()
-        self.model = MockModel(triples_factory=self.dataset.training)
+        self.model = FixedModel(triples_factory=self.dataset.training)
 
     def test_evaluation_structure(self):
         """Test if the evaluator has a balanced call of head and tail processors."""
@@ -505,7 +530,7 @@ class TestEvaluationFiltering(unittest.TestCase):
         """Prepare for testing the evaluation filtering."""
         self.evaluator = RankBasedEvaluator(filtered=True, automatic_memory_optimization=False)
         self.triples_factory = Nations().training
-        self.model = MockModel(triples_factory=self.triples_factory)
+        self.model = FixedModel(triples_factory=self.triples_factory)
 
         # The MockModel gives the highest score to the highest entity id
         max_score = self.triples_factory.num_entities - 1
@@ -556,3 +581,20 @@ class TestEvaluationFiltering(unittest.TestCase):
             use_tqdm=False,
         )
         assert eval_results.arithmetic_mean_rank["both"]["realistic"] == 1, "The rank should equal 1"
+
+
+def test_resolve_metric_name():
+    """Test metric name resolution."""
+    for name, expected in (
+        ("mrr", ("inverse_harmonic_mean_rank", "both", "realistic", None)),
+        ("mean_rank.both", ("arithmetic_mean_rank", "both", "realistic", None)),
+        ("mean_rank.avg", ("arithmetic_mean_rank", "both", "realistic", None)),
+        ("mean_rank.tail.worst", ("arithmetic_mean_rank", "tail", "pessimistic", None)),
+        ("amri.avg", ("adjusted_arithmetic_mean_rank_index", "both", "realistic", None)),
+        ("hits_at_k", ("hits_at_k", "both", "realistic", 10)),
+        ("hits_at_k.head.best.3", ("hits_at_k", "head", "optimistic", 3)),
+        ("hits_at_1", ("hits_at_k", "both", "realistic", 1)),
+        ("H@10", ("hits_at_k", "both", "realistic", 10)),
+    ):
+        result = resolve_metric_name(name=name)
+        assert result == expected, name

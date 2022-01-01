@@ -3,6 +3,7 @@
 """Test that models can be executed."""
 
 import importlib
+import itertools
 import os
 import unittest
 from typing import Any, MutableMapping, Optional
@@ -13,17 +14,19 @@ import unittest_templates
 
 import pykeen.experiments
 import pykeen.models
+from pykeen.datasets.nations import Nations
 from pykeen.models import (
     EntityRelationEmbeddingModel,
     ERModel,
     EvaluationOnlyModel,
+    FixedModel,
     Model,
     _NewAbstractModel,
     _OldAbstractModel,
     model_resolver,
 )
 from pykeen.models.multimodal.base import LiteralModel
-from pykeen.models.predict import get_novelty_mask, predict
+from pykeen.models.predict import get_all_prediction_df, get_novelty_mask, predict
 from pykeen.models.unimodal.node_piece import _ConcatMLP
 from pykeen.models.unimodal.trans_d import _project_entity
 from pykeen.nn import EmbeddingSpecification
@@ -31,7 +34,6 @@ from pykeen.nn.emb import Embedding, NodePieceRepresentation
 from pykeen.utils import all_in_bounds, clamp_norm, extend_batch
 from tests import cases
 from tests.constants import EPSILON
-from tests.mocks import MockModel
 from tests.test_model_mode import SimpleInteractionModel
 
 SKIP_MODULES = {
@@ -42,7 +44,7 @@ SKIP_MODULES = {
     LiteralModel,
     EntityRelationEmbeddingModel,
     ERModel,
-    MockModel,
+    FixedModel,
     SimpleInteractionModel,
     EvaluationOnlyModel,
 }
@@ -541,6 +543,24 @@ class TestTransE(cases.DistanceModelTestCase):
         entity_norms = self.instance.entity_embeddings(indices=None).norm(p=2, dim=-1)
         assert torch.allclose(entity_norms, torch.ones_like(entity_norms))
 
+    def test_get_all_prediction_df(self):
+        """Test consistency of top-k scoring."""
+        ks = [5, 10]
+        dfs = [
+            get_all_prediction_df(
+                model=self.instance,
+                triples_factory=self.factory,
+                batch_size=1,
+                k=k,
+            )
+            .nlargest(n=min(ks), columns="score")
+            .reset_index(drop=True)
+            for k in ks
+        ]
+        assert set(dfs[0].columns) == set(dfs[0].columns)
+        for column in dfs[0].columns:
+            numpy.testing.assert_equal(dfs[0][column].values, dfs[1][column].values)
+
 
 class TestTransF(cases.ModelTestCase):
     """Test the TransF model."""
@@ -666,6 +686,12 @@ class TestBoxE(cases.ModelTestCase):
     """Test the BoxE model."""
 
     cls = pykeen.models.BoxE
+
+
+class TestCP(cases.ModelTestCase):
+    """Test the CP model."""
+
+    cls = pykeen.models.CP
 
 
 class TestTesting(unittest_templates.MetaTestCase[Model]):
@@ -818,3 +844,68 @@ class ERModelTests(cases.ModelTestCase):
 
     def test_has_hpo_defaults(self):  # noqa: D102
         raise unittest.SkipTest(f"Base class {self.cls} does not provide HPO defaults.")
+
+
+class InverseRelationPredictionTests(unittest_templates.GenericTestCase[pykeen.models.FixedModel]):
+    """Test for prediction with inverse relations."""
+
+    cls = pykeen.models.FixedModel
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        # create triples factory with inverse relations
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        kwargs["triples_factory"] = self.factory = Nations(create_inverse_triples=True).training
+        return kwargs
+
+    def _combination_batch(
+        self,
+        heads: bool = True,
+        relations: bool = True,
+        tails: bool = True,
+    ) -> torch.LongTensor:
+        """Generate a batch with all combinations."""
+        factors = []
+        if heads:
+            factors.append(range(self.factory.num_entities))
+        if relations:
+            factors.append(range(self.factory.real_num_relations))
+        if tails:
+            factors.append(range(self.factory.num_entities))
+        return torch.as_tensor(
+            data=list(itertools.product(*factors)),
+            dtype=torch.long,
+        )
+
+    def test_predict_hrt(self):
+        """Test predict_hrt."""
+        hrt_batch = self._combination_batch()
+        expected_scores = self.instance._generate_fake_scores(
+            h=hrt_batch[:, 0],
+            r=2 * hrt_batch[:, 1],
+            t=hrt_batch[:, 2],
+        ).unsqueeze(dim=-1)
+        scores = self.instance.predict_hrt(hrt_batch=hrt_batch)
+        assert torch.allclose(scores, expected_scores)
+
+    def test_predict_h(self):
+        """Test predict_h."""
+        rt_batch = self._combination_batch(heads=False)
+        # head prediction via inverse tail prediction
+        expected_scores = self.instance._generate_fake_scores(
+            h=rt_batch[:, 1, None],
+            r=2 * rt_batch[:, 0, None] + 1,
+            t=torch.arange(self.factory.num_entities).unsqueeze(dim=0),
+        )
+        scores = self.instance.predict_h(rt_batch=rt_batch)
+        assert torch.allclose(scores, expected_scores)
+
+    def test_predict_t(self):
+        """Test predict_t."""
+        hr_batch = self._combination_batch(tails=False)
+        expected_scores = self.instance._generate_fake_scores(
+            h=hr_batch[:, 0, None],
+            r=2 * hr_batch[:, 1, None],
+            t=torch.arange(self.factory.num_entities).unsqueeze(dim=0),
+        )
+        scores = self.instance.predict_t(hr_batch=hr_batch)
+        assert torch.allclose(scores, expected_scores)
