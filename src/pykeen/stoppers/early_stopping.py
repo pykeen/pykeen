@@ -54,39 +54,32 @@ def is_improvement(
     return current_value < (1.0 - relative_delta) * best_value
 
 
+@dataclasses.dataclass
 class EarlyStoppingLogic:
     """The early stopping logic."""
 
-    #: The best result so far
-    best_metric: float
+    #: the number of reported results with no improvement after which training will be stopped
+    patience: int = 2
+
+    # the minimum relative improvement necessary to consider it an improved result
+    relative_delta: float = 0.0
+
+    # whether a larger value is better, or a smaller.
+    larger_is_better: bool = True
 
     #: The epoch at which the best result occurred
-    best_epoch: int
+    best_epoch: int = -1
+
+    #: The best result so far
+    best_metric: float = dataclasses.field(init=False)
 
     #: The remaining patience
-    remaining_patience: int
+    remaining_patience: int = dataclasses.field(init=False)
 
-    def __init__(
-        self,
-        patience: int = 2,
-        relative_delta: float = 0.0,
-        larger_is_better: bool = True,
-    ):
-        """
-        Initialize the stopper.
-
-        :param patience:
-            The number of reported results with no improvement after which training will be stopped.
-        :param relative_delta:
-            The minimum relative improvement necessary to consider it an improved result
-        :param larger_is_better:
-            Whether a larger value is better, or a smaller.
-        """
-        self.patience = self.remaining_patience = patience
-        self.relative_delta = relative_delta
-        self.larger_is_better = larger_is_better
-        self.best_epoch = -1
-        self.best_metric = float("-inf") if larger_is_better else float("+inf")
+    def __post_init__(self):
+        """Infer remaining default values."""
+        self.remaining_patience = self.patience
+        self.best_metric = float("-inf") if self.larger_is_better else float("+inf")
 
     def is_improvement(self, metric: float) -> bool:
         """Return if the given metric would cause an improvement."""
@@ -109,8 +102,12 @@ class EarlyStoppingLogic:
         :return:
             If the result did not improve more than delta for patience evaluations
 
-        .. warning:: This class assumes that only one metric is reported for each epoch
+        :raises ValueError:
+            if more than one metric is reported for a single epoch
         """
+        if epoch <= self.best_epoch:
+            raise ValueError("Cannot report more than one metric for one epoch")
+
         # check for improvement
         if self.is_improvement(metric):
             self.best_epoch = epoch
@@ -119,7 +116,7 @@ class EarlyStoppingLogic:
         else:
             self.remaining_patience -= 1
 
-        # Stop if the result did not improve more than delta for patience evaluations
+        # stop if the result did not improve more than delta for patience evaluations
         return self.remaining_patience <= 0
 
 
