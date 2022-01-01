@@ -670,7 +670,7 @@ class CoreTriplesFactory:
         if relations is not None:
             extra_metadata["relation_restriction"] = relations
             relations = self.relations_to_ids(relations=relations)
-            remaining_relations = (self.num_relations - len(relations)) if invert_entity_selection else len(relations)
+            remaining_relations = (self.num_relations - len(relations)) if invert_relation_selection else len(relations)
             logger.info(f"keeping {format_relative_comparison(remaining_relations, self.num_relations)} relations.")
 
         # Delegate to function
