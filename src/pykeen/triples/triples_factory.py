@@ -682,7 +682,7 @@ class CoreTriplesFactory:
             invert_relation_selection=invert_relation_selection,
         )
 
-        # No filtering happened
+        # restrict triples can only remove triples; thus, if the new size equals the old one, nothing has changed
         if mapped_triples.shape[0] == self.num_triples:
             return self
 
