@@ -18,9 +18,11 @@ from dataclasses_json import DataClassJsonMixin
 from tqdm.autonotebook import tqdm
 
 from ..models import Model
-from ..triples.utils import get_entities
+from ..triples.triples_factory import restrict_triples
+from ..triples.utils import get_entities, get_relations
 from ..typing import MappedTriples
 from ..utils import (
+    format_relative_comparison,
     is_cuda_oom_error,
     is_cudnn_error,
     is_nonzero_larger_than_maxint_error,
@@ -495,9 +497,11 @@ def evaluate(
     squeeze: bool = True,
     use_tqdm: bool = True,
     tqdm_kwargs: Optional[Mapping[str, str]] = None,
-    restrict_entities_to: Optional[torch.LongTensor] = None,
+    restrict_entities_to: Optional[Collection[int]] = None,
+    restrict_relations_to: Optional[Collection[int]] = None,
     do_time_consuming_checks: bool = True,
     additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
+    pre_filtered_triples: bool = True,
 ) -> Union[MetricResults, List[MetricResults]]:
     """Evaluate metrics for model on mapped triples.
 
@@ -526,18 +530,29 @@ def evaluate(
         Return a single instance of :class:`MetricResults` if only one evaluator was given.
     :param use_tqdm:
         Should a progress bar be displayed?
+    :param tqdm_kwargs:
+        Additional keyword based arguments passed to the progress bar.
     :param restrict_entities_to:
         Optionally restrict the evaluation to the given entity IDs. This may be useful if one is only interested in a
         part of the entities, e.g. due to type constraints, but wants to train on all available data. For ranking the
         entities, we still compute all scores for all possible replacement entities to avoid irregular access patterns
-        which might decrease performance, but the scores with afterwards be filtered to only keep those of interest.
-        If provided, we assume that the triples are already filtered, such that it only contains the entities of
-        interest.
+        which might decrease performance, but the scores will afterwards be filtered to only keep those of interest.
+        If provided, we assume by default that the triples are already filtered, such that it only contains the
+        entities of interest. To explicitly filter within this method, pass `pre_filtered_triples=False`.
+    :param restrict_relations_to:
+        Optionally restrict the evaluation to the given relation IDs. This may be useful if one is only interested in a
+        part of the relations, e.g. due to relation types, but wants to train on all available data. If provided, we
+        assume by default that the triples are already filtered, such that it only contains the relations of interest.
+        To explicitly filter within this method, pass `pre_filtered_triples=False`.
     :param do_time_consuming_checks:
         Whether to perform some time consuming checks on the provided arguments. Currently, this encompasses:
-        - If restrict_entities_to is not None, check whether the triples have been filtered.
-        Disabling this option can accelerate the method.
-    :param additional_filter_triples:
+        - If restrict_entities_to or restrict_relations_to is not None, check whether the triples have been filtered.
+        Disabling this option can accelerate the method. Only effective if pre_filtered_triples is set to True.
+    :param pre_filtered_triples:
+        Whether the triples have been pre-filtered to adhere to restrict_entities_to / restrict_relations_to. When set
+        to True, and the triples have *not* been filtered, the results may be invalid. Pre-filtering the triples
+        accelerates this method, and is recommended when evaluating multiple times on the same set of triples.
+    :param additional_filtered_triples:
         Additional true triples to filter out during filtered evaluation.
     """
     if isinstance(evaluators, Evaluator):  # upgrade a single evaluator to a list
@@ -546,14 +561,33 @@ def evaluate(
     start = timeit.default_timer()
 
     # verify that the triples have been filtered
-    if restrict_entities_to is not None and do_time_consuming_checks:
-        present_entity_ids = get_entities(triples=mapped_triples)
-        unwanted = present_entity_ids.difference(restrict_entities_to.tolist())
-        if len(unwanted) > 0:
-            raise ValueError(
-                f"mapped_triples contains IDs of entities which are not contained in restrict_entities_to:"
-                f"{unwanted}. This will invalidate the evaluation results."
-            )
+    if pre_filtered_triples and do_time_consuming_checks:
+        if restrict_entities_to is not None:
+            present_entity_ids = get_entities(triples=mapped_triples)
+            unwanted = present_entity_ids.difference(restrict_entities_to)
+            if len(unwanted) > 0:
+                raise ValueError(
+                    f"mapped_triples contains IDs of entities which are not contained in restrict_entities_to:"
+                    f"{unwanted}. This will invalidate the evaluation results.",
+                )
+        if restrict_relations_to is not None:
+            present_relation_ids = get_relations(triples=mapped_triples)
+            unwanted = present_relation_ids.difference(restrict_relations_to)
+            if len(unwanted):
+                raise ValueError(
+                    f"mapped_triples contains IDs of relations which are not contained in restrict_relations_to:"
+                    f"{unwanted}. This will invalidate the evaluation results.",
+                )
+
+    # Filter triples if necessary
+    if not pre_filtered_triples and (restrict_entities_to is not None or restrict_relations_to is not None):
+        old_num_triples = mapped_triples.shape[0]
+        mapped_triples = restrict_triples(
+            mapped_triples=mapped_triples,
+            entities=restrict_entities_to,
+            relations=restrict_relations_to,
+        )
+        logger.info(f"keeping {format_relative_comparison(mapped_triples.shape[0], old_num_triples)} triples.")
 
     # Send to device
     if device is not None:
