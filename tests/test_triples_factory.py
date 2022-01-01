@@ -5,6 +5,7 @@
 import itertools as itt
 import os
 import tempfile
+from typing import Collection, Optional
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -134,13 +135,63 @@ class TestTriplesFactory(unittest.TestCase):
         # check column order
         assert tuple(df.columns) == TRIPLES_DF_COLUMNS + ("scores",)
 
+    def _test_restriction(
+        self,
+        original_triples_factory: TriplesFactory,
+        entity_restriction: Optional[Collection[str]],
+        invert_entity_selection: bool,
+        relation_restriction: Optional[Collection[str]],
+        invert_relation_selection: bool,
+    ):
+        """Run the actual test for new_with_restriction."""
+        # apply restriction
+        restricted_triples_factory = original_triples_factory.new_with_restriction(
+            entities=entity_restriction,
+            relations=relation_restriction,
+            invert_entity_selection=invert_entity_selection,
+            invert_relation_selection=invert_relation_selection,
+        )
+
+        # check that the triples factory is returned as is, if and only if no restriction is to apply
+        no_restriction_to_apply = entity_restriction is None and relation_restriction is None
+        equal_factory_object = id(restricted_triples_factory) == id(original_triples_factory)
+        assert no_restriction_to_apply == equal_factory_object
+
+        # check that inverse_triples is correctly carried over
+        assert original_triples_factory.create_inverse_triples == restricted_triples_factory.create_inverse_triples
+
+        # verify that the label-to-ID mapping has not been changed
+        assert original_triples_factory.entity_to_id == restricted_triples_factory.entity_to_id
+        assert original_triples_factory.relation_to_id == restricted_triples_factory.relation_to_id
+
+        # verify that triples have been filtered
+        if entity_restriction is not None:
+            present_entities = set(restricted_triples_factory.triples[:, 0]).union(
+                restricted_triples_factory.triples[:, 2]
+            )
+            expected_entities = (
+                set(original_triples_factory.entity_id_to_label.values()).difference(entity_restriction)
+                if invert_entity_selection
+                else entity_restriction
+            )
+            assert expected_entities.issuperset(present_entities)
+
+        if relation_restriction is not None:
+            present_relations = set(restricted_triples_factory.triples[:, 1])
+            expected_relations = (
+                set(original_triples_factory.relation_id_to_label.values())
+                if invert_relation_selection
+                else set(relation_restriction)
+            )
+            assert expected_relations.issuperset(present_relations)
+
     def test_new_with_restriction(self):
         """Test new_with_restriction()."""
-        example_relation_restriction = {
+        relation_restriction = {
             "economicaid",
             "dependent",
         }
-        example_entity_restriction = {
+        entity_restriction = {
             "brazil",
             "burma",
             "china",
@@ -149,40 +200,27 @@ class TestTriplesFactory(unittest.TestCase):
             original_triples_factory = Nations(
                 create_inverse_triples=inverse_triples,
             ).training
-            # TODO: test inverts
-            for entity_restriction in (None, example_entity_restriction):
-                for relation_restriction in (None, example_relation_restriction):
-                    # apply restriction
-                    restricted_triples_factory = original_triples_factory.new_with_restriction(
-                        entities=entity_restriction,
-                        relations=relation_restriction,
+            # Test different combinations of restrictions
+            for (
+                (entity_restriction, invert_entity_selection),
+                (relation_restriction, invert_relation_selection),
+            ) in itt.product(
+                ((None, None), (entity_restriction, False), (entity_restriction, True)),
+                ((None, None), (relation_restriction, False), (relation_restriction, True)),
+            ):
+                with self.subTest(
+                    entity_restriction=entity_restriction,
+                    invert_entity_selection=invert_entity_selection,
+                    relation_restriction=relation_restriction,
+                    invert_relation_selection=invert_relation_selection,
+                ):
+                    self._test_restriction(
+                        original_triples_factory=original_triples_factory,
+                        entity_restriction=entity_restriction,
+                        invert_entity_selection=invert_entity_selection,
+                        relation_restriction=relation_restriction,
+                        invert_relation_selection=invert_relation_selection,
                     )
-                    # check that the triples factory is returned as is, if and only if no restriction is to apply
-                    no_restriction_to_apply = entity_restriction is None and relation_restriction is None
-                    equal_factory_object = id(restricted_triples_factory) == id(original_triples_factory)
-                    assert no_restriction_to_apply == equal_factory_object
-
-                    # check that inverse_triples is correctly carried over
-                    assert (
-                        original_triples_factory.create_inverse_triples
-                        == restricted_triples_factory.create_inverse_triples
-                    )
-
-                    # verify that the label-to-ID mapping has not been changed
-                    assert original_triples_factory.entity_to_id == restricted_triples_factory.entity_to_id
-                    assert original_triples_factory.relation_to_id == restricted_triples_factory.relation_to_id
-
-                    # verify that triples have been filtered
-                    if entity_restriction is not None:
-                        present_entities = set(restricted_triples_factory.triples[:, 0]).union(
-                            restricted_triples_factory.triples[:, 2]
-                        )
-                        assert set(entity_restriction).issuperset(present_entities)
-
-                    if relation_restriction is not None:
-                        present_relations = set(restricted_triples_factory.triples[:, 1])
-                        exp_relations = set(relation_restriction)
-                        assert exp_relations.issuperset(present_relations)
 
     def test_create_lcwa_instances(self):
         """Test create_lcwa_instances."""
