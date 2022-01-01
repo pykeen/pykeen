@@ -4,12 +4,14 @@
 
 import itertools as itt
 import logging
+from abc import abstractmethod
 from typing import Optional, Sequence, Tuple, Union
 
 import numpy
 import numpy as np
 import pandas as pd
 import torch
+from tqdm.auto import tqdm
 
 from .base import Model
 from ..triples import CoreTriplesFactory, TriplesFactory
@@ -308,6 +310,172 @@ def predict(model: Model, *, k: Optional[int] = None, batch_size: int = 1) -> Sc
     return _predict_all(model=model, batch_size=batch_size)
 
 
+class _ScoreConsumer:
+    """A consumer of scores for visitor pattern."""
+
+    result: torch.LongTensor
+    scores: torch.FloatTensor
+    flatten: bool
+
+    @abstractmethod
+    def __call__(
+        self,
+        head_id_range: Tuple[int, int],
+        relation_id: int,
+        hr_batch: torch.LongTensor,
+        scores: torch.FloatTensor,
+    ) -> None:
+        """Consume scores for the given hr_batch."""
+        raise NotImplementedError
+
+    def finalize(self) -> ScorePack:
+        """Finalize the result to build a score pack."""
+        return _build_pack(result=self.result, scores=self.scores, flatten=self.flatten)
+
+
+class _TopKScoreConsumer(_ScoreConsumer):
+    """Collect top-k triples & scores."""
+
+    flatten = False
+
+    def __init__(self, k: int, device: torch.device) -> None:
+        """
+        Initialize the consumer.
+
+        :param k:
+            the number of top-scored triples to collect
+        :param device:
+            the model's device
+        """
+        self.k = k
+        # initialize buffer on device
+        self.result = torch.empty(0, 3, dtype=torch.long, device=device)
+        self.scores = torch.empty(0, device=device)
+
+    def __call__(
+        self,
+        head_id_range: Tuple[int, int],
+        relation_id: int,
+        hr_batch: torch.LongTensor,
+        scores: torch.FloatTensor,
+    ) -> None:  # noqa: D102
+        batch_size, num_entities = scores.shape
+
+        # reshape, shape: (batch_size * num_entities,)
+        top_scores = scores.view(-1)
+
+        # get top scores within batch
+        if top_scores.numel() >= self.k:
+            top_scores, top_indices = top_scores.topk(
+                k=min(self.k, top_scores.numel()),
+                largest=True,
+                sorted=False,
+            )
+            h_start = head_id_range[0]
+            top_heads = h_start + torch.div(top_indices, num_entities, rounding_mode="trunc")
+            top_tails = top_indices % num_entities
+        else:
+            top_heads = hr_batch[:, 0].view(-1, 1).repeat(1, num_entities).view(-1)
+            top_tails = torch.arange(num_entities, device=hr_batch.device).view(1, -1).repeat(batch_size, 1).view(-1)
+
+        top_triples = torch.stack(
+            [
+                top_heads,
+                top_heads.new_full(size=top_heads.shape, fill_value=relation_id, dtype=top_heads.dtype),
+                top_tails,
+            ],
+            dim=-1,
+        )
+
+        # append to global top scores
+        self.scores = torch.cat([self.scores, top_scores])
+        self.result = torch.cat([self.result, top_triples])
+
+        # reduce size if necessary
+        if self.result.shape[0] > self.k:
+            self.scores, indices = self.scores.topk(k=self.k, largest=True, sorted=False)
+            self.result = self.result[indices]
+
+
+class _AllConsumer(_ScoreConsumer):
+    """Collect scores for all triples."""
+
+    flatten = True
+
+    def __init__(self, num_entities: int, num_relations: int) -> None:
+        """
+        Initialize the consumer.
+
+        :param num_entities:
+            the number of entities
+        :param num_relations:
+            the number of relations
+        """
+        assert num_entities ** 2 * num_relations < (2 ** 63 - 1)
+        # initialize buffer on cpu
+        self.scores = torch.empty(num_relations, num_entities, num_entities, device="cpu")
+        # Explicitly create triples
+        self.result = torch.stack(
+            [
+                torch.arange(num_relations).view(-1, 1, 1).repeat(1, num_entities, num_entities),
+                torch.arange(num_entities).view(1, -1, 1).repeat(num_relations, 1, num_entities),
+                torch.arange(num_entities).view(1, 1, -1).repeat(num_relations, num_entities, 1),
+            ],
+            dim=-1,
+        ).view(-1, 3)[:, [1, 0, 2]]
+
+    def __call__(
+        self,
+        head_id_range: Tuple[int, int],
+        relation_id: int,
+        hr_batch: torch.LongTensor,
+        scores: torch.FloatTensor,
+    ) -> None:  # noqa: D102
+        h_start, h_stop = head_id_range
+        self.scores[relation_id, h_start:h_stop, :] = scores.to(self.scores.device)
+
+
+@torch.inference_mode()
+def _consume_scores(model: Model, *consumers: _ScoreConsumer, batch_size: int = 1) -> None:
+    """
+    Batch-wise calculation of all triple scores and consumption.
+
+    :param model:
+        the model, will be set to evaluation mode
+    :param consumers:
+        the consumers of score batches
+    :param batch_size:
+        the batch size to use  # TODO: automatic batch size maximization
+    """
+    # TODO: in the future, we may want to expose this method
+    # set model to evaluation mode
+    model.eval()
+
+    for r, h_start in tqdm(
+        itt.product(
+            range(model.num_relations),
+            range(0, model.num_entities, batch_size),
+        ),
+        desc="scoring",
+        unit="batch",
+        unit_scale=True,
+        total=model.num_relations * model.num_entities // batch_size,
+    ):
+        # calculate batch scores
+        h_stop = min(h_start + batch_size, model.num_entities)
+        hs = torch.arange(h_start, h_stop, device=model.device)
+        hr_batch = torch.stack(
+            [
+                hs,
+                hs.new_full(size=(hs.shape[0],), fill_value=r),
+            ],
+            dim=-1,
+        )
+        scores = model.predict_t(hr_batch=hr_batch)
+        for consumer in consumers:
+            consumer(head_id_range=(h_start, h_stop), relation_id=r, hr_batch=hr_batch, scores=scores)
+
+
 @torch.inference_mode()
 def _predict_all(model: Model, *, batch_size: int = 1) -> ScorePack:
     """Compute and store scores for all triples.
@@ -316,38 +484,9 @@ def _predict_all(model: Model, *, batch_size: int = 1) -> ScorePack:
     :param batch_size: The batch size to use for calculating scores
     :return: A score pack of parallel triples and scores
     """
-    model.eval()  # set model to evaluation mode
-
-    # initialize buffer on cpu
-    scores = torch.empty(model.num_relations, model.num_entities, model.num_entities, dtype=torch.float32)
-    assert model.num_entities ** 2 * model.num_relations < (2 ** 63 - 1)
-
-    for r, e in itt.product(
-        range(model.num_relations),
-        range(0, model.num_entities, batch_size),
-    ):
-        # calculate batch scores
-        hs = torch.arange(e, min(e + batch_size, model.num_entities), device=model.device)
-        hr_batch = torch.stack(
-            [
-                hs,
-                hs.new_empty(1).fill_(value=r).repeat(hs.shape[0]),
-            ],
-            dim=-1,
-        )
-        scores[r, e : e + batch_size, :] = model.predict_t(hr_batch=hr_batch).to(scores.device)
-
-    # Explicitly create triples
-    result = torch.stack(
-        [
-            torch.arange(model.num_relations).view(-1, 1, 1).repeat(1, model.num_entities, model.num_entities),
-            torch.arange(model.num_entities).view(1, -1, 1).repeat(model.num_relations, 1, model.num_entities),
-            torch.arange(model.num_entities).view(1, 1, -1).repeat(model.num_relations, model.num_entities, 1),
-        ],
-        dim=-1,
-    ).view(-1, 3)[:, [1, 0, 2]]
-
-    return _build_pack(result=result, scores=scores, flatten=True)
+    consumer = _AllConsumer(num_entities=model.num_entities, num_relations=model.num_relations)
+    _consume_scores(model, consumer, batch_size=batch_size)
+    return consumer.finalize()
 
 
 @torch.inference_mode()
@@ -359,57 +498,9 @@ def _predict_k(model: Model, *, k: int, batch_size: int = 1) -> ScorePack:
     :param batch_size: The batch size to use for calculating scores
     :return: A score pack of parallel triples and scores
     """
-    model.eval()  # set model to evaluation mode
-
-    # initialize buffer on device
-    result = torch.ones(0, 3, dtype=torch.long, device=model.device)
-    scores = torch.empty(0, dtype=torch.float32, device=model.device)
-
-    for r, e in itt.product(
-        range(model.num_relations),
-        range(0, model.num_entities, batch_size),
-    ):
-        # calculate batch scores
-        hs = torch.arange(e, min(e + batch_size, model.num_entities), device=model.device)
-        real_batch_size = hs.shape[0]
-        hr_batch = torch.stack(
-            [
-                hs,
-                hs.new_empty(1).fill_(value=r).repeat(real_batch_size),
-            ],
-            dim=-1,
-        )
-        top_scores = model.predict_t(hr_batch=hr_batch).view(-1)
-
-        # get top scores within batch
-        if top_scores.numel() >= k:
-            top_scores, top_indices = top_scores.topk(k=min(k, batch_size), largest=True, sorted=False)
-            top_heads, top_tails = top_indices // model.num_entities, top_indices % model.num_entities
-        else:
-            top_heads = hs.view(-1, 1).repeat(1, model.num_entities).view(-1)
-            top_tails = (
-                torch.arange(model.num_entities, device=hs.device).view(1, -1).repeat(real_batch_size, 1).view(-1)
-            )
-
-        top_triples = torch.stack(
-            [
-                top_heads,
-                top_heads.new_empty(top_heads.shape).fill_(value=r),
-                top_tails,
-            ],
-            dim=-1,
-        )
-
-        # append to global top scores
-        scores = torch.cat([scores, top_scores])
-        result = torch.cat([result, top_triples])
-
-        # reduce size if necessary
-        if result.shape[0] > k:
-            scores, indices = scores.topk(k=k, largest=True, sorted=False)
-            result = result[indices]
-
-    return _build_pack(result=result, scores=scores)
+    consumer = _TopKScoreConsumer(k=k, device=model.device)
+    _consume_scores(model, consumer, batch_size=batch_size)
+    return consumer.finalize()
 
 
 def _build_pack(result: torch.LongTensor, scores: torch.FloatTensor, flatten: bool = False) -> ScorePack:

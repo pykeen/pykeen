@@ -12,11 +12,11 @@ from torch.optim import Adam
 
 from pykeen.datasets import Nations
 from pykeen.evaluation import RankBasedEvaluator
-from pykeen.models import Model, TransE
+from pykeen.models import FixedModel, Model, TransE
 from pykeen.stoppers.early_stopping import EarlyStopper, is_improvement
 from pykeen.trackers import MLFlowResultTracker
 from pykeen.training import SLCWATrainingLoop
-from tests.mocks import MockEvaluator, MockModel
+from tests.mocks import MockEvaluator
 
 try:
     import mlflow
@@ -97,7 +97,7 @@ class TestEarlyStopping(unittest.TestCase):
         # Set automatic_memory_optimization to false for tests
         self.mock_evaluator = MockEvaluator(self.mock_losses, automatic_memory_optimization=False)
         nations = Nations()
-        self.model = MockModel(triples_factory=nations.training)
+        self.model = FixedModel(triples_factory=nations.training)
         self.stopper = EarlyStopper(
             model=self.model,
             evaluator=self.mock_evaluator,

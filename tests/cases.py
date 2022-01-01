@@ -864,8 +864,9 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
 
     def test_get_grad_parameters(self):
         """Test the model's ``get_grad_params()`` method."""
-        # assert there is at least one trainable parameter
-        assert len(list(self.instance.get_grad_params())) > 0
+        self.assertLess(
+            0, len(list(self.instance.get_grad_params())), msg="There is not at least one trainable parameter"
+        )
 
         # Check that all the parameters actually require a gradient
         for parameter in self.instance.get_grad_params():
@@ -890,10 +891,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
 
         # check that the parameters where modified
         num_equal_weights_after_re_init = sum(1 for np in new_params if (np.data == old_content[id(np)]).all())
-        assert num_equal_weights_after_re_init == self.num_constant_init, (
-            num_equal_weights_after_re_init,
-            self.num_constant_init,
-        )
+        self.assertEqual(num_equal_weights_after_re_init, self.num_constant_init)
 
     def _check_scores(self, batch, scores) -> None:
         """Check the scores produced by a forward function."""
@@ -918,7 +916,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
                 self.skipTest(str(e))
             else:
                 raise e
-        assert scores.shape == (self.batch_size, 1)
+        self.assertEqual(scores.shape, (self.batch_size, 1))
         self._check_scores(batch, scores)
 
     def test_score_t(self) -> None:
@@ -1223,6 +1221,7 @@ Traceback
             else:
                 raise e
 
+        self.assertIsNotNone(scores_hrt)
         assert torch.allclose(scores_h, scores_hrt, atol=1e-06)
 
     def test_score_r_with_score_hrt_equality(self) -> None:
@@ -1244,6 +1243,7 @@ Traceback
             else:
                 raise e
 
+        self.assertIsNotNone(scores_hrt)
         assert torch.allclose(scores_r, scores_hrt, atol=1e-06)
 
     def test_score_t_with_score_hrt_equality(self) -> None:
@@ -1265,6 +1265,7 @@ Traceback
             else:
                 raise e
 
+        self.assertIsNotNone(scores_hrt)
         assert torch.allclose(scores_t, scores_hrt, atol=1e-06)
 
     def test_reset_parameters_constructor_call(self):

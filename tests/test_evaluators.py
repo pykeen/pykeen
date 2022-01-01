@@ -5,6 +5,7 @@
 import dataclasses
 import logging
 import unittest
+from operator import attrgetter
 from typing import Any, ClassVar, Dict, Mapping, Optional, Tuple, Type
 
 import numpy
@@ -25,10 +26,9 @@ from pykeen.evaluation.rank_based_evaluator import (
     resolve_metric_name,
 )
 from pykeen.evaluation.sklearn import SklearnEvaluator, SklearnMetricResults
-from pykeen.models import Model, TransE
+from pykeen.models import FixedModel, Model, TransE
 from pykeen.triples import TriplesFactory
 from pykeen.typing import MappedTriples
-from tests.mocks import MockModel
 
 logger = logging.getLogger(__name__)
 
@@ -252,10 +252,15 @@ class SklearnEvaluatorTest(_AbstractEvaluatorTests, unittest.TestCase):
         mask = numpy.concatenate(mask_filtered, axis=0)
         scores = numpy.concatenate(scores_filtered, axis=0)
 
-        for field in dataclasses.fields(SklearnMetricResults):
-            f = field.metadata["f"]
-            exp_score = f(mask.flat, scores.flat)
-            self.assertAlmostEqual(result.get_metric(field.name), exp_score)
+        for field in sorted(dataclasses.fields(SklearnMetricResults), key=attrgetter("name")):
+            with self.subTest(metric=field.name):
+                f = field.metadata["f"]
+                exp_score = f(numpy.array(mask.flat), numpy.array(scores.flat))
+                act_score = result.get_metric(field.name)
+                if numpy.isnan(exp_score):
+                    self.assertTrue(numpy.isnan(act_score))
+                else:
+                    self.assertAlmostEqual(act_score, exp_score, msg=f"failed for {field.name}", delta=7)
 
 
 class EvaluatorUtilsTests(unittest.TestCase):
@@ -503,7 +508,7 @@ class TestEvaluationStructure(unittest.TestCase):
         self.counter = 1337
         self.evaluator = DummyEvaluator(counter=self.counter, filtered=True, automatic_memory_optimization=False)
         self.dataset = Nations()
-        self.model = MockModel(triples_factory=self.dataset.training)
+        self.model = FixedModel(triples_factory=self.dataset.training)
 
     def test_evaluation_structure(self):
         """Test if the evaluator has a balanced call of head and tail processors."""
@@ -525,7 +530,7 @@ class TestEvaluationFiltering(unittest.TestCase):
         """Prepare for testing the evaluation filtering."""
         self.evaluator = RankBasedEvaluator(filtered=True, automatic_memory_optimization=False)
         self.triples_factory = Nations().training
-        self.model = MockModel(triples_factory=self.triples_factory)
+        self.model = FixedModel(triples_factory=self.triples_factory)
 
         # The MockModel gives the highest score to the highest entity id
         max_score = self.triples_factory.num_entities - 1

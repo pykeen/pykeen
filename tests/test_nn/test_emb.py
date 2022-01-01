@@ -11,15 +11,9 @@ import torch
 import unittest_templates
 
 import pykeen.nn.emb
+import pykeen.nn.message_passing
 from pykeen.datasets import get_dataset
-from pykeen.datasets.nations import NationsLiteral
-from pykeen.nn.emb import (
-    Embedding,
-    EmbeddingSpecification,
-    LiteralRepresentation,
-    RepresentationModule,
-    SubsetRepresentationModule,
-)
+from pykeen.nn.emb import Embedding, EmbeddingSpecification, RepresentationModule, SubsetRepresentationModule
 from pykeen.triples.generation import generate_triples_factory
 from tests import cases, mocks
 
@@ -59,12 +53,13 @@ class EmbeddingTests(cases.RepresentationTestCase):
         assert not torch.allclose(first, second)
 
 
-class LiteralEmbeddingTests(cases.RepresentationTestCase):
-    """Tests for literal embeddings."""
+class LowRankEmbeddingRepresentationTests(cases.RepresentationTestCase):
+    """Tests for low-rank embedding representations."""
 
-    cls = LiteralRepresentation
+    cls = pykeen.nn.emb.LowRankEmbeddingRepresentation
     kwargs = dict(
-        numeric_literals=NationsLiteral().training.numeric_literals,
+        max_id=10,
+        shape=(3, 7),
     )
 
 
@@ -87,7 +82,7 @@ class TensorEmbeddingTests(cases.RepresentationTestCase):
 class RGCNRepresentationTests(cases.RepresentationTestCase):
     """Test RGCN representations."""
 
-    cls = pykeen.nn.emb.RGCNRepresentations
+    cls = pykeen.nn.message_passing.RGCNRepresentations
     num_entities: ClassVar[int] = 8
     num_relations: ClassVar[int] = 7
     num_triples: ClassVar[int] = 31

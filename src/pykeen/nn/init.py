@@ -2,6 +2,7 @@
 
 """Embedding weight initialization routines."""
 
+import functools
 import logging
 import math
 from typing import Optional, Sequence
@@ -14,18 +15,18 @@ from torch.nn import functional
 
 from .utils import TransformerEncoder
 from ..triples import TriplesFactory
-from ..typing import Initializer
 from ..utils import compose
 
 __all__ = [
-    "create_init_from_pretrained",
     "xavier_uniform_",
     "xavier_uniform_norm_",
     "xavier_normal_",
     "xavier_normal_norm_",
     "uniform_norm_",
+    "uniform_norm_p1_",
     "normal_norm_",
     "init_phases",
+    "PretrainedInitializer",
     "LabelBasedInitializer",
 ]
 
@@ -94,6 +95,10 @@ normal_norm_ = compose(
     torch.nn.init.normal_,
     functional.normalize,
 )
+uniform_norm_p1_ = compose(
+    torch.nn.init.uniform_,
+    functools.partial(functional.normalize, p=1),
+)
 
 
 def init_quaternions(
@@ -120,17 +125,9 @@ def init_quaternions(
     return x.view(num_elements, 4 * dim)
 
 
-def create_init_from_pretrained(pretrained: torch.FloatTensor) -> Initializer:
+class PretrainedInitializer:
     """
-    Create an initializer via a constant vector.
-
-    :param pretrained:
-        the tensor of pretrained embeddings.
-
-    :return:
-        an initializer, which fills a tensor with the given weights.
-
-    Added in https://github.com/pykeen/pykeen/pull/638.
+    Initialize tensor with pretrained weights.
 
     Example usage:
 
@@ -149,21 +146,28 @@ def create_init_from_pretrained(pretrained: torch.FloatTensor) -> Initializer:
             model="transe",
             model_kwargs=dict(
                 embedding_dim=pretrained_embedding_tensor.shape[-1],
-                entity_initializer=create_init_from_pretrained(pretrained_embedding_tensor),
+                entity_initializer=PretrainedInitializer(tensor=pretrained_embedding_tensor),
             ),
         )
     """
 
-    def init_from_pretrained(x: torch.FloatTensor) -> torch.FloatTensor:
-        """Initialize tensor with pretrained weights."""
-        if x.shape != pretrained.shape:
-            raise ValueError(f"shape of pretrained {pretrained.shape} does not match shape of tensor {x.shape}")
-        return pretrained
+    def __init__(self, tensor: torch.FloatTensor) -> None:
+        """
+        Initialize the initializer.
 
-    return init_from_pretrained
+        :param tensor:
+            the tensor of pretrained embeddings.
+        """
+        self.tensor = tensor
+
+    def __call__(self, x: torch.Tensor) -> torch.Tensor:
+        """Initialize the tensor with the given tensor."""
+        if x.shape != self.tensor.shape:
+            raise ValueError(f"shape does not match: expected {self.tensor.shape} but got {x.shape}")
+        return self.tensor.to(device=x.device, dtype=x.dtype)
 
 
-class LabelBasedInitializer:
+class LabelBasedInitializer(PretrainedInitializer):
     """
     An initializer using pretrained models from the `transformers` library to encode labels.
 
@@ -210,12 +214,14 @@ class LabelBasedInitializer:
         :raise ImportError:
             if the transformers library could not be imported
         """
-        self.tensor = TransformerEncoder(
-            pretrained_model_name_or_path=pretrained_model_name_or_path,
-            max_length=max_length,
-        ).encode_all(
-            labels=labels,
-            batch_size=batch_size,
+        super().__init__(
+            tensor=TransformerEncoder(
+                pretrained_model_name_or_path=pretrained_model_name_or_path,
+                max_length=max_length,
+            ).encode_all(
+                labels=labels,
+                batch_size=batch_size,
+            ),
         )
 
     @classmethod
@@ -246,9 +252,3 @@ class LabelBasedInitializer:
             labels=labels,
             **kwargs,
         )
-
-    def __call__(self, x: torch.Tensor) -> torch.Tensor:
-        """Initialize the tensor from the encoded labels."""
-        if x.shape != self.tensor.shape:
-            raise ValueError(f"shape does not match: expected {self.tensor.shape} but got {x.shape}")
-        return self.tensor.to(device=x.device, dtype=x.dtype)

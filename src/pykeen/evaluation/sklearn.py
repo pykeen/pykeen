@@ -2,15 +2,15 @@
 
 """Implementation of wrapper around sklearn metrics."""
 
-from dataclasses import dataclass, field, fields
+from dataclasses import dataclass, field, fields, make_dataclass
 from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 import torch
 from dataclasses_json import dataclass_json
-from sklearn import metrics
 
 from .evaluator import Evaluator, MetricResults
+from .rexmex_compat import classifier_annotator
 from ..typing import MappedTriples
 from ..utils import fix_dataclass_init_docs
 
@@ -19,45 +19,36 @@ __all__ = [
     "SklearnMetricResults",
 ]
 
+_fields = [
+    (
+        metadata.func.__name__,
+        float,
+        field(
+            metadata=dict(
+                name=metadata.name,
+                doc=metadata.description or "",
+                link=metadata.link,
+                range=metadata.interval(),
+                increasing=metadata.higher_is_better,
+                f=metadata.func,
+            )
+        ),
+    )
+    for metadata in classifier_annotator.metrics.values()
+]
+
+SklearnMetricResultsBase = make_dataclass(
+    "SklearnMetricResultsBase",
+    _fields,
+    bases=(MetricResults,),
+)
+
 
 @fix_dataclass_init_docs
 @dataclass_json
 @dataclass
-class SklearnMetricResults(MetricResults):
+class SklearnMetricResults(SklearnMetricResultsBase):  # type: ignore
     """Results from computing metrics."""
-
-    #: The area under the ROC curve
-    roc_auc_score: float = field(
-        metadata=dict(
-            name="AUC-ROC",
-            doc="The area under the ROC curve, on [0, 1]. Higher is better.",
-            f=metrics.roc_auc_score,
-        )
-    )
-    #: The area under the precision-recall curve
-    average_precision_score: float = field(
-        metadata=dict(
-            name="Average Precision",
-            doc="The area under the precision-recall curve, on [0, 1]. Higher is better.",
-            f=metrics.average_precision_score,
-        )
-    )
-
-    #: The coverage error
-    # coverage_error: float = field(metadata=dict(
-    #     doc='The coverage error',
-    #     f=metrics.coverage_error,
-    # ))
-    #: The label ranking loss (APS)
-    # label_ranking_average_precision_score: float = field(metadata=dict(
-    #     doc='The label ranking loss (APS)',
-    #     f=metrics.label_ranking_average_precision_score,
-    # ))
-    # #: The label ranking loss
-    # label_ranking_loss: float = field(metadata=dict(
-    #     doc='The label ranking loss',
-    #     f=metrics.label_ranking_loss,
-    # ))
 
     @classmethod
     def from_scores(cls, y_true, y_score):

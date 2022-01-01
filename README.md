@@ -42,7 +42,7 @@
   <a href="#installation">Installation</a> •
   <a href="#quickstart">Quickstart</a> •
   <a href="#datasets-29">Datasets</a> •
-  <a href="#models-35">Models</a> •
+  <a href="#models-36">Models</a> •
   <a href="#supporters">Support</a> •
   <a href="#citation">Citation</a>
 </p>
@@ -146,7 +146,7 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 | WordNet-18 (RR)                    | [`pykeen.datasets.WN18RR`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.WN18RR.html)               | [Toutanova *et al*., 2015](https://www.aclweb.org/anthology/W15-4007/)                                                  |      40559 |          11 |     92583 |
 | YAGO3-10                           | [`pykeen.datasets.YAGO310`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.YAGO310.html)             | [Mahdisoltani *et al*., 2015](http://service.tsi.telecom-paristech.fr/cgi-bin//valipub_download.cgi?dId=284)            |     123143 |          37 |   1089000 |
 
-### Models (35)
+### Models (36)
 
 | Name                           | Reference                                                                                                                   | Citation                                                                                                                |
 |--------------------------------|-----------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|
@@ -164,6 +164,7 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 | DistMult Literal (Gated)       | [`pykeen.models.DistMultLiteralGated`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.DistMultLiteralGated.html) | [Kristiadi *et al.*, 2018](https://arxiv.org/abs/1802.00934)                                                            |
 | ER-MLP                         | [`pykeen.models.ERMLP`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.ERMLP.html)                               | [Dong *et al.*, 2014](https://dl.acm.org/citation.cfm?id=2623623)                                                       |
 | ER-MLP (E)                     | [`pykeen.models.ERMLPE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.ERMLPE.html)                             | [Sharifzadeh *et al.*, 2019](https://github.com/pykeen/pykeen)                                                          |
+| Fixed Model                    | [`pykeen.models.FixedModel`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.FixedModel.html)                     | [Berrendorf *et al.*, 2021](https://github.com/pykeen/pykeen/pull/691)                                                  |
 | HolE                           | [`pykeen.models.HolE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.HolE.html)                                 | [Nickel *et al.*, 2016](https://www.aaai.org/ocs/index.php/AAAI/AAAI16/paper/viewFile/12484/11828)                      |
 | KG2E                           | [`pykeen.models.KG2E`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.KG2E.html)                                 | [He *et al.*, 2015](https://dl.acm.org/doi/10.1145/2806416.2806502)                                                     |
 | MuRE                           | [`pykeen.models.MuRE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.MuRE.html)                                 | [Balažević *et al.*, 2019](https://arxiv.org/abs/1905.09791)                                                            |
@@ -214,17 +215,6 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 | powersum | [`pykeen.regularizers.PowerSumRegularizer`](https://pykeen.readthedocs.io/en/latest/api/pykeen.regularizers.PowerSumRegularizer.html) | A simple x^p based regularizer.                          |
 | transh   | [`pykeen.regularizers.TransHRegularizer`](https://pykeen.readthedocs.io/en/latest/api/pykeen.regularizers.TransHRegularizer.html)     | A regularizer for the soft constraints in TransH.        |
 
-### Optimizers (6)
-
-| Name     | Reference                                                                                 | Description                                                             |
-|----------|-------------------------------------------------------------------------------------------|-------------------------------------------------------------------------|
-| adadelta | [`torch.optim.Adadelta`](https://pytorch.org/docs/stable/optim.html#torch.optim.Adadelta) | Implements Adadelta algorithm.                                          |
-| adagrad  | [`torch.optim.Adagrad`](https://pytorch.org/docs/stable/optim.html#torch.optim.Adagrad)   | Implements Adagrad algorithm.                                           |
-| adam     | [`torch.optim.Adam`](https://pytorch.org/docs/stable/optim.html#torch.optim.Adam)         | Implements Adam algorithm.                                              |
-| adamax   | [`torch.optim.Adamax`](https://pytorch.org/docs/stable/optim.html#torch.optim.Adamax)     | Implements Adamax algorithm (a variant of Adam based on infinity norm). |
-| adamw    | [`torch.optim.AdamW`](https://pytorch.org/docs/stable/optim.html#torch.optim.AdamW)       | Implements AdamW algorithm.                                             |
-| sgd      | [`torch.optim.SGD`](https://pytorch.org/docs/stable/optim.html#torch.optim.SGD)           | Implements stochastic gradient descent (optionally with momentum).      |
-
 ### Training Loops (2)
 
 | Name   | Reference                                                                                                                                | Description                                                                               |
@@ -254,50 +244,56 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 | rankbased | [`pykeen.evaluation.RankBasedEvaluator`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.RankBasedEvaluator.html) | A rank-based evaluator for KGE models.        |
 | sklearn   | [`pykeen.evaluation.SklearnEvaluator`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.SklearnEvaluator.html)     | An evaluator that uses a Scikit-learn metric. |
 
-### Metrics (17)
+### Metrics (37)
 
-| Name                                        | Description                                                                                         |
-|---------------------------------------------|-----------------------------------------------------------------------------------------------------|
-| AUC-ROC                                     | The area under the ROC curve, on [0, 1]. Higher is better.                                          |
-| Adjusted Arithmetic Mean Rank (AAMR)        | The mean over all chance-adjusted ranks, on (0, 2). Lower is better.                                |
-| Adjusted Arithmetic Mean Rank Index (AAMRI) | The re-indexed adjusted mean rank (AAMR), on [-1, 1]. Higher is better.                             |
-| Average Precision                           | The area under the precision-recall curve, on [0, 1]. Higher is better.                             |
-| Geometric Mean Rank (GMR)                   | The geometric mean over all ranks, on [1, inf). Lower is better.                                    |
-| Harmonic Mean Rank (HMR)                    | The harmonic mean over all ranks, on [1, inf). Lower is better.                                     |
-| Hits @ K                                    | The relative frequency of ranks not larger than a given k, on [0, 1]. Higher is better              |
-| Inverse Arithmetic Mean Rank (IAMR)         | The inverse of the arithmetic mean over all ranks, on (0, 1]. Higher is better.                     |
-| Inverse Geometric Mean Rank (IGMR)          | The inverse of the geometric mean over all ranks, on (0, 1]. Higher is better.                      |
-| Inverse Median Rank                         | The inverse of the median over all ranks, on (0, 1]. Higher is better.                              |
-| Mean Rank (MR)                              | The arithmetic mean over all ranks on, [1, inf). Lower is better.                                   |
-| Mean Reciprocal Rank (MRR)                  | The inverse of the harmonic mean over all ranks, on (0, 1]. Higher is better.                       |
-| Median Rank                                 | The median over all ranks, on [1, inf). Lower is better.                                            |
-| Rank Count                                  | The number of considered ranks, a non-negative number. Low numbers may indicate unreliable results. |
+| Name                                                                                                                   | Interval   | Direction   | Description                                                 | Type           |
+|------------------------------------------------------------------------------------------------------------------------|------------|-------------|-------------------------------------------------------------|----------------|
+| [AUC-ROC](https://en.wikipedia.org/wiki/Receiver_operating_characteristic)                                             | [0, 1]     | 📈          | Area Under the ROC Curve                                    | Classification |
+| [Accuracy](https://en.wikipedia.org/wiki/Accuracy)                                                                     | [0, 1]     | 📈          | (TP + TN) / (TP + TN + FP + FN)                             | Classification |
+| [Average Precision](https://scikit-learn.org/stable/modules/generated/sklearn.metrics.average_precision_score.html)    | [0, 1]     | 📈          | A summary statistic over the precision-recall curve         | Classification |
+| [Balanced Accuracy](https://scikit-learn.org/stable/modules/generated/sklearn.metrics.balanced_accuracy_score.html)    | [0, 1]     | 📈          | An adjusted version of the accuracy for imbalanced datasets | Classification |
+| [Diagnostic Odds Ratio](https://en.wikipedia.org/wiki/Diagnostic_odds_ratio)                                           | [0, inf)   | 📈          | LR+/LR-                                                     | Classification |
+| [F1 Score](https://en.wikipedia.org/wiki/F1_score)                                                                     | [0, 1]     | 📈          | 2TP / (2TP + FP + FN)                                       | Classification |
+| [False Discovery Rate](https://en.wikipedia.org/wiki/False_discovery_rate)                                             | [0, 1]     | 📉          | FP / (FP + TP)                                              | Classification |
+| [False Negative Rate](https://en.wikipedia.org/wiki/Type_I_and_type_II_errors#False_positive_and_false_negative_rates) | [0, 1]     | 📉          | FN / (FN + TP)                                              | Classification |
+| [False Omission Rate](https://en.wikipedia.org/wiki/Positive_and_negative_predictive_values)                           | [0, 1]     | 📉          | FN / (FN + TN)                                              | Classification |
+| [False Positive Rate](https://en.wikipedia.org/wiki/False_positive_rate)                                               | [0, 1]     | 📉          | FP / (FP + TN)                                              | Classification |
+| [Fowlkes Mallows Index](https://en.wikipedia.org/wiki/Fowlkes%E2%80%93Mallows_index)                                   | [0, 1]     | 📈          | √PPV x √TPR                                                 | Classification |
+| [Informedness](https://en.wikipedia.org/wiki/Informedness)                                                             | [0, 1]     | 📈          | TPR + TNR - 1                                               | Classification |
+| [Markedness](https://en.wikipedia.org/wiki/Markedness)                                                                 | [0, 1]     | 📈          | PPV + NPV - 1                                               | Classification |
+| [Matthews Correlation Coefficient](https://en.wikipedia.org/wiki/Phi_coefficient)                                      | [-1, 1]    | 📈          | A balanced measure applicable even with class imbalance     | Classification |
+| [Negative Likelihood Ratio](https://en.wikipedia.org/wiki/Negative_likelihood_ratio)                                   | [0, inf)   | 📉          | FNR / TNR                                                   | Classification |
+| [Negative Predictive Value](https://en.wikipedia.org/wiki/Negative_predictive_value)                                   | [0, 1]     | 📈          | TN / (TN + FN)                                              | Classification |
+| [Positive Likelihood Ratio](https://en.wikipedia.org/wiki/Positive_likelihood_ratio)                                   | [0, inf)   | 📈          | TPR / FPR                                                   | Classification |
+| [Positive Predictive Value](https://en.wikipedia.org/wiki/Positive_predictive_value)                                   | [0, 1]     | 📈          | TP / (TP + FP)                                              | Classification |
+| [Prevalence Threshold](https://en.wikipedia.org/wiki/Prevalence_threshold)                                             | [0, 1]     | 📉          | √FPR / (√TPR + √FPR)                                        | Classification |
+| [Threat Score](https://rexmex.readthedocs.io/en/latest/modules/root.html#rexmex.metrics.classification.threat_score)   | [0, 1]     | 📈          | TP / (TP + FN + FP)                                         | Classification |
+| [True Negative Rate](https://en.wikipedia.org/wiki/Specificity_(tests))                                                | [0, 1]     | 📈          | TN / (TN + FP)                                              | Classification |
+| [True Positive Rate](https://en.wikipedia.org/wiki/Sensitivity_(test))                                                 | [0, 1]     | 📈          | TP / (TP + FN)                                              | Classification |
+| [Adjusted Arithmetic Mean Rank (AAMR)](https://arxiv.org/abs/2002.06914)                                               | (0, 2)     | 📉          | The mean over all chance-adjusted ranks.                    | Ranking        |
+| [Adjusted Arithmetic Mean Rank Index (AAMRI)](https://arxiv.org/abs/2002.06914)                                        | [-1, 1]    | 📈          | The re-indexed adjusted mean rank (AAMR)                    | Ranking        |
+| [Geometric Mean Rank (GMR)](https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html)                                 | [1, inf)   | 📉          | The geometric mean over all ranks.                          | Ranking        |
+| [Harmonic Mean Rank (HMR)](https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html)                                  | [1, inf)   | 📉          | The harmonic mean over all ranks.                           | Ranking        |
+| [Hits @ K](https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#hits-k)                      | [0, 1]     | 📈          | The relative frequency of ranks not larger than a given k.  | Ranking        |
+| [Inverse Arithmetic Mean Rank (IAMR)](https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html)                       | (0, 1]     | 📈          | The inverse of the arithmetic mean over all ranks.          | Ranking        |
+| [Inverse Geometric Mean Rank (IGMR)](https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html)                        | (0, 1]     | 📈          | The inverse of the geometric mean over all ranks.           | Ranking        |
+| [Inverse Median Rank](https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html)                                       | (0, 1]     | 📈          | The inverse of the median over all ranks.                   | Ranking        |
+| [Mean Rank (MR)](https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#mean-rank)             | [1, inf)   | 📉          | The arithmetic mean over all ranks.                         | Ranking        |
+| [Mean Reciprocal Rank (MRR)](https://en.wikipedia.org/wiki/Mean_reciprocal_rank)                                       | (0, 1]     | 📈          | The inverse of the harmonic mean over all ranks.            | Ranking        |
+| [Median Rank](https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html)                                               | [1, inf)   | 📉          | The median over all ranks.                                  | Ranking        |
 
-### Trackers (7)
+### Trackers (8)
 
-| Name        | Reference                                                                                                                               | Description                              |
-|-------------|-----------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------|
-| console     | [`pykeen.trackers.ConsoleResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.ConsoleResultTracker.html)         | A class that directly prints to console. |
-| csv         | [`pykeen.trackers.CSVResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.CSVResultTracker.html)                 | Tracking results to a CSV file.          |
-| json        | [`pykeen.trackers.JSONResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.JSONResultTracker.html)               | Tracking results to a JSON lines file.   |
-| mlflow      | [`pykeen.trackers.MLFlowResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.MLFlowResultTracker.html)           | A tracker for MLflow.                    |
-| neptune     | [`pykeen.trackers.NeptuneResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.NeptuneResultTracker.html)         | A tracker for Neptune.ai.                |
-| tensorboard | [`pykeen.trackers.TensorBoardResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.TensorBoardResultTracker.html) | A tracker for TensorBoard.               |
-| wandb       | [`pykeen.trackers.WANDBResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.WANDBResultTracker.html)             | A tracker for Weights and Biases.        |
-
-## Hyper-parameter Optimization
-
-### Samplers (3)
-
-| Name   | Reference                                                                                                                         | Description                                                     |
-|--------|-----------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------|
-| grid   | [`optuna.samplers.GridSampler`](https://optuna.readthedocs.io/en/stable/reference/generated/optuna.samplers.GridSampler.html)     | Sampler using grid search.                                      |
-| random | [`optuna.samplers.RandomSampler`](https://optuna.readthedocs.io/en/stable/reference/generated/optuna.samplers.RandomSampler.html) | Sampler using random sampling.                                  |
-| tpe    | [`optuna.samplers.TPESampler`](https://optuna.readthedocs.io/en/stable/reference/generated/optuna.samplers.TPESampler.html)       | Sampler using TPE (Tree-structured Parzen Estimator) algorithm. |
-
-Any sampler class extending the [optuna.samplers.BaseSampler](https://optuna.readthedocs.io/en/stable/reference/generated/optuna.samplers.BaseSampler.html#optuna.samplers.BaseSampler),
-such as their sampler implementing the [CMA-ES](https://optuna.readthedocs.io/en/stable/reference/generated/optuna.samplers.CmaEsSampler.html#optuna.samplers.CmaEsSampler)
-algorithm, can also be used.
+| Name        | Reference                                                                                                                               | Description                                               |
+|-------------|-----------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------|
+| console     | [`pykeen.trackers.ConsoleResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.ConsoleResultTracker.html)         | A class that directly prints to console.                  |
+| csv         | [`pykeen.trackers.CSVResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.CSVResultTracker.html)                 | Tracking results to a CSV file.                           |
+| json        | [`pykeen.trackers.JSONResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.JSONResultTracker.html)               | Tracking results to a JSON lines file.                    |
+| mlflow      | [`pykeen.trackers.MLFlowResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.MLFlowResultTracker.html)           | A tracker for MLflow.                                     |
+| neptune     | [`pykeen.trackers.NeptuneResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.NeptuneResultTracker.html)         | A tracker for Neptune.ai.                                 |
+| python      | [`pykeen.trackers.PythonResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.PythonResultTracker.html)           | A tracker which stores everything in Python dictionaries. |
+| tensorboard | [`pykeen.trackers.TensorBoardResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.TensorBoardResultTracker.html) | A tracker for TensorBoard.                                |
+| wandb       | [`pykeen.trackers.WANDBResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.WANDBResultTracker.html)             | A tracker for Weights and Biases.                         |
 
 ## Experimentation
 
