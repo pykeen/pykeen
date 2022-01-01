@@ -5,9 +5,9 @@
 import itertools as itt
 import os
 import tempfile
-from typing import Collection, Optional
 import unittest
 from pathlib import Path
+from typing import Collection, Optional
 from unittest.mock import patch
 
 import numpy as np
