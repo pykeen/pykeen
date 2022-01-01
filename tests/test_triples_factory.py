@@ -149,6 +149,7 @@ class TestTriplesFactory(unittest.TestCase):
             original_triples_factory = Nations(
                 create_inverse_triples=inverse_triples,
             ).training
+            # TODO: test inverts
             for entity_restriction in (None, example_entity_restriction):
                 for relation_restriction in (None, example_relation_restriction):
                     # apply restriction
