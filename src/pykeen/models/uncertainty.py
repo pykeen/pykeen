@@ -1,13 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Analyze uncertainty.
-
-.. todo::
-
-    @mberr please give a bit of narrative on why you would want to use the uncertainty predictions,
-    how to interpret the results (e.g., what's good/bad, what actions could be taken to make improvements),
-    relevant citations, etc.
-"""
+"""Analyze uncertainty."""
 
 from typing import Callable, NamedTuple, Optional
 
@@ -17,13 +10,13 @@ from .base import Model
 from ..utils import get_dropout_modules
 
 __all__ = [
-    "MissingDropoutError",
-    "UncertainPrediction",
     "predict_hrt_uncertain",
     "predict_h_uncertain",
-    "predict_r_uncertain",
     "predict_t_uncertain",
+    "predict_r_uncertain",
     "predict_uncertain_helper",
+    "MissingDropoutError",
+    "UncertainPrediction",
 ]
 
 
@@ -171,9 +164,6 @@ def predict_h_uncertain(
         the head entities becomes the task of predicting the tail entities of the
         inverse triples, i.e., $f(*,r,t)$ is predicted by means of $f(t,r_{inv},*)$.
 
-    This function delegates to :func:`predict_uncertain_helper` by using
-    :func:`pykeen.models.Model.score_hrt` as the ``score_method``.
-
     :param model:
         the model used for predicting scores
     :param rt_batch: shape: (batch_size, 2)
@@ -255,12 +245,12 @@ def predict_t_uncertain(
 
     .. note::
 
-        We only expect the right side-side predictions, i.e., $(h,r,*)$ to change its
+        We only expect the right side predictions, i.e., $(h,r,*)$ to change its
         default behavior when the model has been trained with inverse relations
         (mainly because of the behavior of the LCWA training approach). This is why
-        the :func:`predict_scores_all_heads` has different behavior depending on
-        if inverse triples were used in training, and why this function has the same
-        behavior regardless of the use of inverse triples.
+        the :func:`predict_h_uncertain` has different
+        behavior depending on if inverse triples were used in training, and why
+        this function has the same behavior regardless of the use of inverse triples.
 
     :param model:
         the model used for predicting scores

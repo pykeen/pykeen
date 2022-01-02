@@ -340,10 +340,10 @@ class Model(nn.Module, ABC):
 
         .. note::
 
-            We only expect the right side-side predictions, i.e., $(h,r,*)$ to change its
+            We only expect the right side-predictions, i.e., $(h,r,*)$ to change its
             default behavior when the model has been trained with inverse relations
             (mainly because of the behavior of the LCWA training approach). This is why
-            the :func:`predict_scores_all_heads()` has different behavior depending on
+            the :func:`predict_h` has different behavior depending on
             if inverse triples were used in training, and why this function has the same
             behavior regardless of the use of inverse triples.
         """
