@@ -26,8 +26,6 @@ __all__ = [
     "predict_uncertain_helper",
 ]
 
-DEFAULT_TRIALS = 5
-
 
 class MissingDropoutError(ValueError):
     """Raised during uncertainty analysis if no dropout modules are present."""
