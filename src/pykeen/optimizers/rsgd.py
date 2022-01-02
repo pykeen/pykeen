@@ -58,7 +58,7 @@ def euclidean_update(p, d_p, lr):
 
 
 def poincare_grad(p, d_p):
-    p_sqnorm = torch.clamp(torch.sum(p.data ** 2, dim=-1, keepdim=True), 0, 1 - 1e-5)
+    p_sqnorm = p.data.pow(2).sum(dim=-1, keepdim=True).clamp(min=0, max=1 - 1.0e-05)
     d_p = d_p * ((1 - p_sqnorm) ** 2 / 4).expand_as(d_p)
     return d_p
 
