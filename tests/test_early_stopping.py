@@ -134,7 +134,7 @@ class TestEarlyStopper(unittest.TestCase):
         log_metrics = mock_tracker.log_metrics
         self.assertIsInstance(log_metrics, Mock)
         log_metrics.assert_called_once()
-        call_args = log_metrics.call_args_list[0].kwargs
+        _, call_args = log_metrics.call_args_list[0]
         self.assertIn("step", call_args)
         self.assertEqual(0, call_args["step"])
         self.assertIn("prefix", call_args)
