@@ -40,6 +40,11 @@ class UncertainPrediction(NamedTuple):
     #: The uncertainty, in the same shape as scores
     uncertainty: torch.FloatTensor
 
+    @classmethod
+    def from_scores(cls, scores: torch.Tensor):
+        """Make an instance from scores."""
+        return cls(score=scores.mean(dim=0), uncertainty=scores.std(dim=0))
+
 
 @torch.inference_mode()
 def predict_uncertain_helper(
@@ -52,9 +57,6 @@ def predict_uncertain_helper(
     """
     Predict with uncertainty estimates via Monte-Carlo dropout.
 
-    .. note::
-        the model will be set to evaluation mode, and all dropout layers will be set to training mode
-
     :param model:
         the model used for predicting scores
     :param batch:
@@ -62,7 +64,7 @@ def predict_uncertain_helper(
         the `score_method` requires.
     :param score_method:
         the base score method to use (from `score_{hrt,h,r,t}`)
-    :param num_samples: > 1
+    :param num_samples: >1
         The number of samples to use. More samples lead to better estimates, but
         increase memory requirements and runtime.
     :param slice_size: >0
@@ -75,6 +77,10 @@ def predict_uncertain_helper(
 
     :raises MissingDropoutError:
         if the model does not contain dropout layers.
+
+    .. warning::
+        This function sets the model to evaluation mode and all dropout layers to
+        training mode.
     """
     dropout_modules = get_dropout_modules(model)
     if not dropout_modules:
@@ -100,7 +106,7 @@ def predict_uncertain_helper(
         scores = torch.sigmoid(scores)
 
     # compute mean and std
-    return UncertainPrediction(score=scores.mean(dim=0), uncertainty=scores.std(dim=0))
+    return UncertainPrediction.from_scores(scores)
 
 
 def predict_hrt_uncertain(
@@ -109,7 +115,7 @@ def predict_hrt_uncertain(
     num_samples: int = 5,
 ) -> UncertainPrediction:
     """
-    Calculate the scores with uncertainty quantification via Monto-Carlo dropout as proposed in [berrendorf2021]_.
+    Calculate the scores with uncertainty quantification via Monte-Carlo dropout as proposed in [berrendorf2021]_.
 
     :param model:
         the model used for predicting scores
@@ -122,8 +128,12 @@ def predict_hrt_uncertain(
         The score for each triple, and an uncertainty score, where larger scores
         correspond to less certain predictions.
 
-    .. seealso::
-        :func:`pykeen.models.Model.score_hrt`, :func:`predict_uncertain_helper`
+        This function delegates to :func:`predict_uncertain_helper` by using
+        :func:`pykeen.models.Model.score_hrt` as the ``score_method``.
+
+    .. warning::
+        This function sets the model to evaluation mode and all dropout layers
+        to training mode.
 
     Example Usage::
 
@@ -155,25 +165,34 @@ def predict_h_uncertain(
     This method calculates the score for all possible heads for each (relation, tail)
     pair, as well as an uncertainty quantification.
 
-    Additionally, the model is set to evaluation mode.
-
     .. note::
 
         If the model has been trained with inverse relations, the task of predicting
         the head entities becomes the task of predicting the tail entities of the
         inverse triples, i.e., $f(*,r,t)$ is predicted by means of $f(t,r_{inv},*)$.
 
+    This function delegates to :func:`predict_uncertain_helper` by using
+    :func:`pykeen.models.Model.score_hrt` as the ``score_method``.
+
     :param model:
         the model used for predicting scores
-    :param rt_batch: shape: (batch_size, 2), dtype: long
+    :param rt_batch: shape: (batch_size, 2)
         The indices of (relation, tail) pairs.
     :param slice_size: >0
         The divisor for the scoring function when using slicing.
     :param num_samples: >1
         the number of samples to draw
 
-    :return: shape: (batch_size, num_entities), dtype: float
+    :return: shape: (batch_size, num_entities)
         For each r-t pair, the scores for all possible heads.
+
+        This function delegates to :func:`predict_uncertain_helper` by using
+        :func:`pykeen.models.Model.score_h` (or :func:`pykeen.models.Model.score_h_inverse`
+        if the model uses inverse triples) as the ``score_method``.
+
+    .. warning::
+        This function sets the model to evaluation mode and all dropout layers
+        to training mode.
     """
     return predict_uncertain_helper(
         model=model,
@@ -195,19 +214,24 @@ def predict_r_uncertain(
     This method calculates the score for all possible relations for each (head, tail)
     pair, as well as an uncertainty quantification.
 
-    Additionally, the model is set to evaluation mode.
-
     :param model:
         the model used for predicting scores
-    :param ht_batch: shape: (batch_size, 2), dtype: long
+    :param ht_batch: shape: (batch_size, 2)
         The indices of (head, tail) pairs.
     :param slice_size: >0
         The divisor for the scoring function when using slicing.
     :param num_samples: >1
         the number of samples to draw
 
-    :return: shape: (batch_size, num_relations), dtype: float
+    :return: shape: (batch_size, num_relations)
         For each h-t pair, the scores for all possible relations.
+
+        This function delegates to :func:`predict_uncertain_helper` by using
+        :func:`pykeen.models.Model.score_r` as the ``score_method``.
+
+    .. warning::
+        This function sets the model to evaluation mode and all dropout layers
+        to training mode.
     """
     return predict_uncertain_helper(
         model=model,
@@ -229,8 +253,6 @@ def predict_t_uncertain(
     This method calculates the score for all possible tails for each (head, relation)
     pair, as well as an uncertainty quantification.
 
-    Additionally, the model is set to evaluation mode.
-
     .. note::
 
         We only expect the right side-side predictions, i.e., $(h,r,*)$ to change its
@@ -242,15 +264,22 @@ def predict_t_uncertain(
 
     :param model:
         the model used for predicting scores
-    :param hr_batch: shape: (batch_size, 2), dtype: long
+    :param hr_batch: shape: (batch_size, 2)
         The indices of (head, relation) pairs.
     :param slice_size: >0
         The divisor for the scoring function when using slicing.
     :param num_samples: >1
         the number of samples to draw
 
-    :return: shape: (batch_size, num_entities), dtype: float
+    :return: shape: (batch_size, num_entities)
         For each h-r pair, the scores for all possible tails.
+
+        This function delegates to :func:`predict_uncertain_helper` by using
+        :func:`pykeen.models.Model.score_t` as the ``score_method``.
+
+    .. warning::
+        This function sets the model to evaluation mode and all dropout layers
+        to training mode.
     """
     return predict_uncertain_helper(
         model=model,
