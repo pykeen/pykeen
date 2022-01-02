@@ -13,13 +13,14 @@ from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.emb import EmbeddingSpecification
 from ...nn.init import init_phases, xavier_uniform_
-from ...nn.modules import PRotatEInteration
+from ...nn.modules import BRotatEInteration, PRotatEInteration
 from ...typing import Constrainer, Hint, Initializer
 from ...utils import complex_normalize
 
 __all__ = [
     "RotatE",
     "PRotatE",
+    "BRotatE",
 ]
 
 
@@ -180,6 +181,8 @@ class RotatE(EntityRelationEmbeddingModel):
         return scores
 
 
+# TODO consider base class for RotatE-style models?
+
 class PRotatE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     r"""An implementation of pRotatE from [sun2019]_.
 
@@ -219,6 +222,59 @@ class PRotatE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
         """
         super().__init__(
             interaction=PRotatEInteration,
+            interaction_kwargs=dict(
+                p=p,
+                power_norm=power_norm,
+            ),
+            entity_representations=[
+                EmbeddingSpecification(
+                    embedding_dim=embedding_dim,
+                    initializer=entity_initializer,
+                ),
+            ],
+            relation_representations=[
+                EmbeddingSpecification(
+                    embedding_dim=embedding_dim,
+                    initializer=relation_initializer,
+                ),
+            ],
+            **kwargs,
+        )
+
+
+# TODO check everything
+class BRotatE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
+    """Alternate formulation of RotatE."""
+
+    #: The default strategy for optimizing the model's hyper-parameters
+    hpo_default: ClassVar[Mapping[str, Any]] = dict(
+        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+    )
+
+    def __init__(
+        self,
+        *,
+        embedding_dim: int = 50,  # TODO check
+        p: Union[str, int, float] = 2,  # TODO check
+        power_norm: bool = False,  # TODO check
+        entity_initializer: Hint[Initializer] = xavier_uniform_,  # TODO check
+        relation_initializer: Hint[Initializer] = xavier_uniform_,  # TODO check
+        **kwargs,
+    ) -> None:
+        r"""Initialize bRotatE via the :class:`pykeen.nn.modules.BRotatEInteraction` interaction.
+
+        :param embedding_dim: The entity embedding dimension $d$. Defaults to 50.
+        :param p:
+            The norm used with :func:`torch.norm`. Typically is 1 or 2.
+        :param power_norm:
+            Whether to use the p-th power of the $L_p$ norm. It has the advantage of being differentiable around 0,
+            and numerically more stable.
+        :param entity_initializer: Entity initializer function. Defaults to :func:`pykeen.nn.init.xavier_uniform_`
+        :param relation_initializer: Relation initializer function. Defaults to :func:`pykeen.nn.init.xavier_uniform_`
+        :param kwargs: Remaining keyword arguments passed through to :class:`pykeen.models.ERModel`.
+        """
+        super().__init__(
+            interaction=BRotatEInteration,
             interaction_kwargs=dict(
                 p=p,
                 power_norm=power_norm,

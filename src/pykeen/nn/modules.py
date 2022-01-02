@@ -50,6 +50,7 @@ __all__ = [
     "MonotonicAffineTransformationInteraction",
     # Concrete Classes
     "BoxEInteraction",
+    "BRotatEInteration",
     "ComplExInteraction",
     "ConvEInteraction",
     "ConvKBInteraction",
@@ -1396,22 +1397,22 @@ class ModEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTenso
     func = pkf.mode_interaction
 
 
-# TODO is this a TranslationalInteraction? Can it share that base class?
-class PRotatEInteration(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
+class PRotatEInteration(NormBasedInteraction[FloatTensor, FloatTensor, FloatTensor]):
     """A module wrapper for the pRotatE interaction function from [sun2019]_.
 
     .. seealso :: :func:`pykeen.nn.functional.p_rotate_interaction`
     """
 
-    def __init__(self, p: Union[str, int, float] = 2, power_norm: bool = False):
-        super().__init__()
-        self.p = p
-        self.power_norm = power_norm
-
-    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
-        return dict(p=self.p, power_norm=self.power_norm)
-
     func = pkf.p_rotate_interaction
+
+
+class BRotatEInteration(NormBasedInteraction[FloatTensor, FloatTensor, FloatTensor]):
+    """A module wrapper for the BRotatE interaction function.
+
+    .. seealso :: :func:`pykeen.nn.functional.b_rotate_interaction`
+    """
+
+    func = pkf.b_rotate_interaction
 
 
 class MonotonicAffineTransformationInteraction(

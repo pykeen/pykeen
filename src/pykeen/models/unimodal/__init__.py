@@ -100,7 +100,7 @@ from .proj_e import ProjE
 from .quate import QuatE
 from .rescal import RESCAL
 from .rgcn import RGCN
-from .rotate import PRotatE, RotatE
+from .rotate import BRotatE, PRotatE, RotatE
 from .simple import SimplE
 from .structured_embedding import StructuredEmbedding
 from .toruse import TorusE
@@ -114,6 +114,7 @@ from .unstructured_model import UnstructuredModel
 
 __all__ = [
     "BoxE",
+    "BRotatE",
     "CompGCN",
     "ComplEx",
     "ConvE",

@@ -39,6 +39,7 @@ from ..utils import (
 
 __all__ = [
     "boxe_interaction",
+    "b_rotate_interaction",
     "complex_interaction",
     "conve_interaction",
     "convkb_interaction",
@@ -1176,6 +1177,17 @@ def p_rotate_interaction(
         Whether to return the powered norm instead.
     """
     return negative_norm((0.5 * (h + r - t)).sin(), p=p, power_norm=power_norm)
+
+
+def b_rotate_interaction(
+    h: torch.FloatTensor,
+    r: torch.FloatTensor,
+    t: torch.FloatTensor,
+    p: Union[str, int, float] = 2,
+    power_norm: bool = False,
+):
+    """The BRotatE scoring function."""
+    raise NotImplemented
 
 
 def hake_interaction(
