@@ -4,4 +4,3 @@ Uncertainty
     :no-heading:
     :headings: --
     :no-inheritance-diagram:
-
