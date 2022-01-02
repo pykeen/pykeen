@@ -7,7 +7,7 @@ from typing import Callable, Tuple
 import torch
 
 from pykeen.models import ERMLPE, TransE
-from pykeen.models.predict import (
+from pykeen.models.uncertainty import (
     UncertainPrediction,
     predict_h_uncertain,
     predict_hrt_uncertain,
