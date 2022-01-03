@@ -4,14 +4,13 @@
 Analyze uncertainty.
 
 Currently, all implemented approaches are based on Monte-Carlo dropout [gal2016]_.
-
-Monte-Carlo dropout relies on the model having dropout layers. While dropout usually is 
-turned off for inference / evaluation mode, MC dropout leaves dropout enabled. Thereby, 
+Monte-Carlo dropout relies on the model having dropout layers. While dropout usually is
+turned off for inference / evaluation mode, MC dropout leaves dropout enabled. Thereby,
 if we run the same prediction method $k$ times, we get $k$ different predictions.
 The variance of these predictions can be used as an approximation of uncertainty, where
 larger variance indicates higher uncertainty.
 
-Example:
+The following code-block sketches an example use case:
 
 .. code-block:: python
 
@@ -19,7 +18,7 @@ Example:
     from pykeen.models.predict import predict_hrt_uncertain
 
     # train model
-    # note: as this is an example, the model is only trained for a few epochs, 
+    # note: as this is an example, the model is only trained for a few epochs,
     #       but not until convergence. In practice, you would usually first verify that
     #       the model is sufficiently good in prediction, before looking at uncertainty scores
     result = pipeline(dataset="nations", model="ERMLPE")
