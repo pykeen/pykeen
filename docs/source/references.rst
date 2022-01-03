@@ -86,3 +86,6 @@ References
 
 .. [berrendorf2021] Berrendorf, M., Faerman, E., & Tresp, V. (2021). `Active Learning for Entity
    Alignment <https://doi.org/10.1007/978-3-030-72113-8_4>`_. ECIR 2021.
+
+.. [gal2016] Gal, Y., & Ghahramani, Z. (2016). `Dropout as a Bayesian Approximation: Representing Model Uncertainty in
+   Deep Learning <https://dl.acm.org/doi/10.5555/3045390.3045502>`_. ICML 2016.
