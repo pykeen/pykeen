@@ -10,12 +10,6 @@ turned off for inference / evaluation mode, MC dropout leaves dropout enabled. T
 if we run the same prediction method $k$ times, we get $k$ different predictions.
 The variance of these predictions can be used as an approximation of uncertainty, where
 larger variance indicates higher uncertainty.
-
-[gal2016] 
-  Dropout as a Bayesian Approximation: Representing Model Uncertainty in Deep Learning
-  Yarin Gal, Zoubin Ghahramani
-  Proceedings of The 33rd International Conference on Machine Learning, PMLR 48:1050-1059, 2016.
-  http://proceedings.mlr.press/v48/gal16.html
 """
 
 from typing import Callable, NamedTuple, Optional
