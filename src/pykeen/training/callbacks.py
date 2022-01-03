@@ -199,10 +199,7 @@ class StopperCallback(TrainingCallback):
             # Since the model is also used within the stopper, its graph and cache have to be cleared
             self.model._free_graph_and_cache()
             # When the stopper obtained a new best epoch, this model has to be saved for reconstruction
-        if (
-            self.stopper.best_epoch != self.last_best_epoch
-            and self.best_epoch_model_file_path is not None
-        ):
+        if self.stopper.best_epoch != self.last_best_epoch and self.best_epoch_model_file_path is not None:
             self.model._save_state(path=self.best_epoch_model_file_path, triples_factory=self.triples_factory)
             self.last_best_epoch = epoch
 

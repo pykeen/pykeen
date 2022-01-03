@@ -21,11 +21,11 @@ from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
 from tqdm.autonotebook import tqdm, trange
 
-from .callbacks import MultiTrainingCallback, StopperCallback, TrackerCallback, TrainingCallbackHint
 from .callbacks import (
     GradientAbsClippingCallback,
     GradientNormClippingCallback,
     MultiTrainingCallback,
+    StopperCallback,
     TrackerCallback,
     TrainingCallbackHint,
 )
@@ -441,12 +441,14 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             callback.register_callback(TrackerCallback(result_tracker))
         # Register a callback for the early stopper, if given
         if stopper is not None:
-            callback.register_callback(StopperCallback(
-                stopper,
-                triples_factory=triples_factory,
-                last_best_epoch=last_best_epoch,
-                best_epoch_model_file_path=best_epoch_model_file_path,
-            ))
+            callback.register_callback(
+                StopperCallback(
+                    stopper,
+                    triples_factory=triples_factory,
+                    last_best_epoch=last_best_epoch,
+                    best_epoch_model_file_path=best_epoch_model_file_path,
+                )
+            )
         if gradient_clipping_max_norm is not None:
             callback.register_callback(
                 GradientNormClippingCallback(
