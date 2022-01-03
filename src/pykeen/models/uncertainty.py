@@ -24,7 +24,7 @@ __all__ = [
     "predict_h_uncertain",
     "predict_t_uncertain",
     "predict_r_uncertain",
-    # "predict_uncertain_helper", # TODO: this is a helper method; should we make it public?
+    "predict_uncertain_helper",
     "MissingDropoutError",
     "UncertainPrediction",
 ]
