@@ -50,13 +50,6 @@ Example:
     )
     print(df.nlargest(5, columns="uncertainty"))
     print(df.nsmallest(5, columns="uncertainty"))
-
-
-[gal2016] 
-  Dropout as a Bayesian Approximation: Representing Model Uncertainty in Deep Learning
-  Yarin Gal, Zoubin Ghahramani
-  Proceedings of The 33rd International Conference on Machine Learning, PMLR 48:1050-1059, 2016.
-  http://proceedings.mlr.press/v48/gal16.html
 """
 
 from typing import Callable, NamedTuple, Optional
