@@ -18,8 +18,8 @@ from pykeen.training.training_loop import NonFiniteLossError, TrainingApproachLo
 from pykeen.triples import TriplesFactory
 
 __all__ = [
-    'TrainingLoopTestCase',
-    'SLCWATrainingLoopTestCase',
+    "TrainingLoopTestCase",
+    "SLCWATrainingLoopTestCase",
 ]
 
 
@@ -103,7 +103,7 @@ class TrainingLoopTestCase(unittest_templates.GenericTestCase[TrainingLoop]):
                 loss = super()._process_batch(*args, **kwargs)
                 self.patience -= 1
                 if self.patience < 0:
-                    return torch.as_tensor([float('nan')], device=loss.device, dtype=torch.float32)
+                    return torch.as_tensor([float("nan")], device=loss.device, dtype=torch.float32)
                 return loss
 
         training_loop = NaNTrainingLoop(
@@ -135,7 +135,7 @@ class TrainingLoopTestCase(unittest_templates.GenericTestCase[TrainingLoop]):
         )
 
         with tempfile.TemporaryDirectory() as directory:
-            name = 'checkpoint.pt'
+            name = "checkpoint.pt"
 
             # Train a model for the first half
             model = TransE(

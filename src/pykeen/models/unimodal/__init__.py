@@ -19,6 +19,8 @@
               <https://dl.acm.org/citation.cfm?id=2623623>`_. ACM.
 .. [ebisu2018] Ebisu, T., *et al.* (2018) `https://www.aaai.org/ocs/index.php/AAAI/AAAI18/paper/view/16227
                <https://www.aaai.org/ocs/index.php/AAAI/AAAI18/paper/view/16227>`_. AAAI'18.
+.. [feng2016] Feng, J. *et al.* (2016) `Knowledge Graph Embedding by Flexible Translation
+              <https://www.aaai.org/ocs/index.php/KR/KR16/paper/view/12887>`_. KR'16.
 .. [ji2015] Ji, G., *et al.* (2015). `Knowledge graph embedding via dynamic mapping matrix
             <http://www.aclweb.org/anthology/P15-1067>`_. ACL.
 .. [kazemi2018] Kazemi, S.M. and Poole, D. (2018). `SimplE Embedding for Link Prediction in Knowledge Graphs
@@ -60,12 +62,26 @@
 .. [zhang2019b] Zhang, W., *et al.* (2019). `Interaction Embeddings for Prediction and Explanation in Knowledge
    Graphs <https://doi.org/10.1145/3289600.3291014>`. WSDM '19: Proceedings of the Twelfth ACM International
    Conference on Web Search and Data Mining.
+.. [abboud2020] Abboud, R., *et al.* (2020). `BoxE: A box embedding model for knowledge base completion
+   <https://proceedings.neurips.cc/paper/2020/file/6dbbe6abe5f14af882ff977fc3f35501-Paper.pdf>`_.
+   *Advances in Neural Information Processing Systems*, 2020-December(NeurIPS), 1–13.
+.. [galkin2021] Galkin, M., *et al.* (2021) `NodePiece: Compositional and Parameter-Efficient Representations
+   of Large Knowledge Graphs <https://arxiv.org/abs/2106.12144>`_. *arXiv*, 2106.12144.
+.. [zaheer2017] Zaheer, M., *et al.* (2017). `Deep sets
+   <https://papers.nips.cc/paper/2017/hash/f22e4747da1aa27e363d86d40ff442fe-Abstract.html>`_.
+   *Advances in Neural Information Processing Systems*, 2017-December(ii), 3392–3402.
+.. [lacroix2018] Lacroix, T., Usunier, N., & Obozinski, G. (2018). `Canonical Tensor Decomposition for Knowledge Base
+   Completion <http://arxiv.org/abs/1806.07297>`_. *arXiv*, 1806.07297.
+.. [hitchcock1927] Hitchcock, F. L. `The expression of a tensor or a polyadic as a sum of
+   products <https://doi.org/10.1002/sapm192761164>`_. Studies in Applied Mathematics, 6 (1-4):164–189, 1927.
 """
 
+from .boxe import BoxE
 from .compgcn import CompGCN
 from .complex import ComplEx
 from .conv_e import ConvE
 from .conv_kb import ConvKB
+from .cp import CP
 from .crosse import CrossE
 from .distma import DistMA
 from .distmult import DistMult
@@ -74,6 +90,7 @@ from .ermlpe import ERMLPE
 from .hole import HolE
 from .kg2e import KG2E
 from .mure import MuRE
+from .node_piece import NodePiece
 from .ntn import NTN
 from .pair_re import PairRE
 from .proj_e import ProjE
@@ -86,38 +103,43 @@ from .structured_embedding import StructuredEmbedding
 from .toruse import TorusE
 from .trans_d import TransD
 from .trans_e import TransE
+from .trans_f import TransF
 from .trans_h import TransH
 from .trans_r import TransR
 from .tucker import TuckER
 from .unstructured_model import UnstructuredModel
 
 __all__ = [
-    'CompGCN',
-    'ComplEx',
-    'ConvE',
-    'ConvKB',
-    'CrossE',
-    'DistMA',
-    'DistMult',
-    'ERMLP',
-    'ERMLPE',
-    'HolE',
-    'KG2E',
-    'MuRE',
-    'NTN',
-    'PairRE',
-    'ProjE',
-    'QuatE',
-    'RESCAL',
-    'RGCN',
-    'RotatE',
-    'SimplE',
-    'StructuredEmbedding',
-    'TorusE',
-    'TransD',
-    'TransE',
-    'TransH',
-    'TransR',
-    'TuckER',
-    'UnstructuredModel',
+    "BoxE",
+    "CompGCN",
+    "ComplEx",
+    "ConvE",
+    "ConvKB",
+    "CP",
+    "CrossE",
+    "DistMA",
+    "DistMult",
+    "ERMLP",
+    "ERMLPE",
+    "HolE",
+    "KG2E",
+    "MuRE",
+    "NTN",
+    "NodePiece",
+    "PairRE",
+    "ProjE",
+    "QuatE",
+    "RESCAL",
+    "RGCN",
+    "RotatE",
+    "SimplE",
+    "StructuredEmbedding",
+    "TorusE",
+    "TransD",
+    "TransE",
+    "TransF",
+    "TransH",
+    "TransR",
+    "TuckER",
+    "UnstructuredModel",
 ]

@@ -73,7 +73,7 @@ you can proceed with the normal installation (or the installation from GitHub as
 
 If you're having trouble with ``pip`` or ``sqlite``, you might also have to use
 ``conda install pip setuptools wheel sqlite``. See our
-`AppVeyor configuration <https://github.com/pykeen/pykeen/blob/master/.appveyor.yml>`_
+`GitHub Actions configuration <https://github.com/pykeen/pykeen/blob/master/.github/workflows/tests.yml>`_
 on GitHub for inspiration.
 
 If you know better ways to install on Windows or would like to share some references,
@@ -81,8 +81,7 @@ we'd really appreciate it.
 
 Development
 -----------
-Alternatively, the latest code can be installed in development mode
-with:
+The latest code can be installed in development mode with:
 
 .. code-block:: bash
 
@@ -108,13 +107,16 @@ of the ``setup.cfg``. They can be included with installation using the bracket n
 ``pip install pykeen[docs]`` or ``pip install -e .[docs]``. Several can be listed, comma-delimited like in
 ``pip install pykeen[docs,plotting]``.
 
-===============  ==============================================================================
-Name             Description
-===============  ==============================================================================
-``plotting``     Plotting with ``seaborn`` and generation of word clouds
-``mlflow``       Tracking of results with ``mlflow``
-``wandb``        Tracking of results with ``wandb``
-``tensorboard``  Tracking of results with :mod:`tensorboard` via :mod:`torch.utils.tensorboard`
-``docs``         Building of the documentation
-``templating``   Building of templated documentation, like the README
-===============  ==============================================================================
+================  ==============================================================================
+Name              Description
+================  ==============================================================================
+``templating``    Building of templated documentation, like the README
+``plotting``      Plotting with ``seaborn`` and generation of word clouds
+``mlflow``        Tracking of results with ``mlflow``
+``wandb``         Tracking of results with ``wandb``
+``neptune``       Tracking of results with ``neptune``
+``tensorboard``   Tracking of results with :mod:`tensorboard` via :mod:`torch.utils.tensorboard`
+``transformers``  Label-based initialization with ``transformers``.
+``tests``         Code needed to run tests. Typically handled with ``tox -e py``
+``docs``          Building of the documentation
+================  ==============================================================================

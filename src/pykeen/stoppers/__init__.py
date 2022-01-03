@@ -34,14 +34,14 @@ from .early_stopping import EarlyStopper, StopperCallback  # noqa: F401
 from .stopper import NopStopper, Stopper
 
 __all__ = [
-    'Stopper',
-    'NopStopper',
-    'EarlyStopper',
+    "Stopper",
+    "NopStopper",
+    "EarlyStopper",
     # Utils
-    'stopper_resolver',
+    "stopper_resolver",
 ]
 
-_STOPPER_SUFFIX = 'Stopper'
+_STOPPER_SUFFIX = "Stopper"
 _STOPPERS: Collection[Type[Stopper]] = set(get_subclasses(Stopper))  # type: ignore
 stopper_resolver = Resolver(
     _STOPPERS,

@@ -13,13 +13,13 @@ from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.emb import Embedding, EmbeddingSpecification
 from ...typing import Constrainer, Hint, Initializer
-from ...utils import clamp_norm
+from ...utils import at_least_eps, clamp_norm
 
 __all__ = [
-    'KG2E',
+    "KG2E",
 ]
 
-_LOG_2_PI = math.log(2. * math.pi)
+_LOG_2_PI = math.log(2.0 * math.pi)
 
 
 class KG2E(EntityRelationEmbeddingModel):
@@ -57,12 +57,12 @@ class KG2E(EntityRelationEmbeddingModel):
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]] = dict(
         embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
-        c_min=dict(type=float, low=0.01, high=0.1, scale='log'),
+        c_min=dict(type=float, low=0.01, high=0.1, scale="log"),
         c_max=dict(type=float, low=1.0, high=10.0),
     )
 
     #: The default settings for the entity constrainer
-    constrainer_default_kwargs = dict(maxnorm=1., p=2, dim=-1)
+    constrainer_default_kwargs = dict(maxnorm=1.0, p=2, dim=-1)
 
     def __init__(
         self,
@@ -70,7 +70,7 @@ class KG2E(EntityRelationEmbeddingModel):
         embedding_dim: int = 50,
         dist_similarity: Optional[str] = None,
         c_min: float = 0.05,
-        c_max: float = 5.,
+        c_max: float = 5.0,
         entity_initializer: Hint[Initializer] = uniform_,
         entity_constrainer: Hint[Constrainer] = clamp_norm,  # type: ignore
         entity_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
@@ -113,9 +113,9 @@ class KG2E(EntityRelationEmbeddingModel):
         )
 
         # Similarity function used for distributions
-        if dist_similarity is None or dist_similarity.upper() == 'KL':
+        if dist_similarity is None or dist_similarity.upper() == "KL":
             self.similarity = self.kullback_leibler_similarity
-        elif dist_similarity.upper() == 'EL':
+        elif dist_similarity.upper() == "EL":
             self.similarity = self.expected_likelihood
         else:
             raise ValueError(f'Unknown distribution similarity: "{dist_similarity}".')
@@ -203,7 +203,6 @@ class KG2E(EntityRelationEmbeddingModel):
         mu_r: torch.FloatTensor,
         sigma_e: torch.FloatTensor,
         sigma_r: torch.FloatTensor,
-        epsilon: float = 1.0e-10,
     ) -> torch.FloatTensor:
         r"""Compute the similarity based on expected likelihood.
 
@@ -227,8 +226,6 @@ class KG2E(EntityRelationEmbeddingModel):
             The diagonal covariance matrix of the first Gaussian.
         :param sigma_r: torch.Tensor, shape: (s_1, ..., s_k, d)
             The diagonal covariance matrix of the second Gaussian.
-        :param epsilon: float (default=1.0)
-            Small constant used to avoid numerical issues when dividing.
 
         :return: torch.Tensor, shape: (s_1, ..., s_k)
             The similarity.
@@ -238,7 +235,7 @@ class KG2E(EntityRelationEmbeddingModel):
         mu = mu_e - mu_r
 
         #: a = \mu^T\Sigma^{-1}\mu
-        safe_sigma = torch.clamp_min(sigma, min=epsilon)
+        safe_sigma = at_least_eps(sigma)
         sigma_inv = torch.reciprocal(safe_sigma)
         a = torch.sum(sigma_inv * mu ** 2, dim=-1)
 
@@ -252,7 +249,6 @@ class KG2E(EntityRelationEmbeddingModel):
         mu_r: torch.FloatTensor,
         sigma_e: torch.FloatTensor,
         sigma_r: torch.FloatTensor,
-        epsilon: float = 1.0e-10,
     ) -> torch.FloatTensor:
         r"""Compute the similarity based on KL divergence.
 
@@ -278,14 +274,12 @@ class KG2E(EntityRelationEmbeddingModel):
             The diagonal covariance matrix of the first Gaussian.
         :param sigma_r: torch.Tensor, shape: (s_1, ..., s_k, d)
             The diagonal covariance matrix of the second Gaussian.
-        :param epsilon: float (default=1.0)
-            Small constant used to avoid numerical issues when dividing.
 
         :return: torch.Tensor, shape: (s_1, ..., s_k)
             The similarity.
         """
         d = mu_e.shape[-1]
-        safe_sigma_r = torch.clamp_min(sigma_r, min=epsilon)
+        safe_sigma_r = at_least_eps(sigma_r)
         sigma_r_inv = torch.reciprocal(safe_sigma_r)
 
         #: a = tr(\Sigma_r^{-1}\Sigma_e)
@@ -297,5 +291,5 @@ class KG2E(EntityRelationEmbeddingModel):
 
         #: c = \log \frac{det(\Sigma_e)}{det(\Sigma_r)}
         # = sum log (sigma_e)_i - sum log (sigma_r)_i
-        c = sigma_e.clamp_min(min=epsilon).log().sum(dim=-1) - safe_sigma_r.log().sum(dim=-1)
+        c = at_least_eps(sigma_e).log().sum(dim=-1) - safe_sigma_r.log().sum(dim=-1)
         return -0.5 * (a + b - c - d)

@@ -12,7 +12,7 @@ from .filtering import Filterer, filterer_resolver
 from ..triples import CoreTriplesFactory
 
 __all__ = [
-    'NegativeSampler',
+    "NegativeSampler",
 ]
 
 
@@ -54,11 +54,15 @@ class NegativeSampler(ABC):
         self.num_entities = triples_factory.num_entities
         self.num_relations = triples_factory.num_relations
         self.num_negs_per_pos = num_negs_per_pos if num_negs_per_pos is not None else 1
-        self.filterer = filterer_resolver.make(
-            filterer,
-            pos_kwargs=filterer_kwargs,
-            mapped_triples=triples_factory.mapped_triples,
-        ) if filterer is not None or filtered else None
+        self.filterer = (
+            filterer_resolver.make(
+                filterer,
+                pos_kwargs=filterer_kwargs,
+                mapped_triples=triples_factory.mapped_triples,
+            )
+            if filterer is not None or filtered
+            else None
+        )
 
     @classmethod
     def get_normalized_name(cls) -> str:

@@ -8,7 +8,7 @@ from .base import ResultTracker
 from ..utils import flatten_dictionary
 
 __all__ = [
-    'MLFlowResultTracker',
+    "MLFlowResultTracker",
 ]
 
 
@@ -37,6 +37,7 @@ class MLFlowResultTracker(ResultTracker):
             The additional run details which are presented as tags to be logged
         """
         import mlflow as _mlflow
+
         self.mlflow = _mlflow
         self.tags = tags
 
@@ -65,5 +66,6 @@ class MLFlowResultTracker(ResultTracker):
         params = flatten_dictionary(dictionary=params, prefix=prefix)
         self.mlflow.log_params(params=params)
 
-    def end_run(self) -> None:  # noqa: D102
-        self.mlflow.end_run()
+    def end_run(self, success: bool = True) -> None:  # noqa: D102
+        status = self.mlflow.entities.RunStatus.FINISHED if success else self.mlflow.entities.RunStatus.FAILED
+        self.mlflow.end_run(status=self.mlflow.entities.RunStatus.to_string(status))

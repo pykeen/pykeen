@@ -2,27 +2,32 @@
 
 """Test the PyKEEN pipeline function."""
 
+import pathlib
 import tempfile
 import unittest
 
+import pandas
 import pandas as pd
 import torch
 
 import pykeen.regularizers
 from pykeen.datasets import EagerDataset, Nations
-from pykeen.models import ERModel, Model
+from pykeen.models import ERModel, FixedModel, Model
 from pykeen.models.predict import (
-    get_all_prediction_df, get_head_prediction_df, get_relation_prediction_df,
+    get_all_prediction_df,
+    get_head_prediction_df,
+    get_relation_prediction_df,
     get_tail_prediction_df,
+    predict_triples_df,
 )
 from pykeen.models.resolve import DimensionError, make_model, make_model_cls
 from pykeen.nn.modules import TransEInteraction
 from pykeen.pipeline import PipelineResult, pipeline
+from pykeen.pipeline.api import replicate_pipeline_from_config
 from pykeen.regularizers import NoRegularizer
 from pykeen.training import SLCWATrainingLoop
 from pykeen.triples.generation import generate_triples_factory
 from pykeen.utils import resolve_device
-from tests.mocks import MockModel
 
 
 class TestPipeline(unittest.TestCase):
@@ -31,10 +36,10 @@ class TestPipeline(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         """Set up a shared result."""
-        cls.device = resolve_device('cuda')
+        cls.device = resolve_device("cuda")
         cls.dataset = Nations()
         cls.result = pipeline(
-            model='TransE',
+            model="TransE",
             dataset=cls.dataset,
             training_kwargs=dict(num_epochs=5, use_tqdm=False),
             evaluation_kwargs=dict(use_tqdm=False),
@@ -48,72 +53,95 @@ class TestPipeline(unittest.TestCase):
         """Test scoring tails without labeling as novel w.r.t. training and testing."""
         tails_df = get_tail_prediction_df(
             self.model,
-            'brazil', 'intergovorgs', testing=self.testing_mapped_triples,
+            "brazil",
+            "intergovorgs",
+            testing=self.testing_mapped_triples,
             triples_factory=self.dataset.training,
             add_novelties=False,
         )
-        self.assertEqual(['tail_id', 'tail_label', 'score'], list(tails_df.columns))
+        self.assertEqual(["tail_id", "tail_label", "score"], list(tails_df.columns))
         self.assertEqual(len(self.dataset.training.entity_to_id), len(tails_df.index))
 
     def test_predict_tails_remove_known(self):
         """Test scoring tails while removing non-novel triples w.r.t. training and testing."""
         tails_df = get_tail_prediction_df(
             self.model,
-            'brazil', 'intergovorgs', testing=self.testing_mapped_triples,
+            "brazil",
+            "intergovorgs",
+            testing=self.testing_mapped_triples,
             remove_known=True,
             triples_factory=self.dataset.training,
         )
-        self.assertEqual(['tail_id', 'tail_label', 'score'], list(tails_df.columns))
-        self.assertEqual({'jordan', 'brazil', 'ussr', 'burma', 'china'}, set(tails_df['tail_label']))
+        self.assertEqual(["tail_id", "tail_label", "score"], list(tails_df.columns))
+        self.assertEqual({"jordan", "brazil", "ussr", "burma", "china"}, set(tails_df["tail_label"]))
 
     def test_predict_tails_with_novelties(self):
         """Test scoring tails with labeling as novel w.r.t. training and testing."""
         tails_df = get_tail_prediction_df(
-            self.model, 'brazil', 'intergovorgs',
+            self.model,
+            "brazil",
+            "intergovorgs",
             triples_factory=self.dataset.training,
             testing=self.testing_mapped_triples,
         )
-        self.assertEqual(['tail_id', 'tail_label', 'score', 'in_training', 'in_testing'], list(tails_df.columns))
+        self.assertEqual(["tail_id", "tail_label", "score", "in_training", "in_testing"], list(tails_df.columns))
         self.assertEqual(self.model.num_entities, len(tails_df.index))
-        training_tails = set(tails_df.loc[tails_df['in_training'], 'tail_label'])
-        self.assertEqual({'usa', 'uk', 'netherlands', 'egypt', 'india', 'israel', 'indonesia'}, training_tails)
-        testing_tails = set(tails_df.loc[tails_df['in_testing'], 'tail_label'])
-        self.assertEqual({'poland', 'cuba'}, testing_tails)
+        training_tails = set(tails_df.loc[tails_df["in_training"], "tail_label"])
+        self.assertEqual({"usa", "uk", "netherlands", "egypt", "india", "israel", "indonesia"}, training_tails)
+        testing_tails = set(tails_df.loc[tails_df["in_testing"], "tail_label"])
+        self.assertEqual({"poland", "cuba"}, testing_tails)
 
     def test_predict_relations_with_novelties(self):
         """Test scoring relations with labeling as novel w.r.t. training and testing."""
         rel_df = get_relation_prediction_df(
-            self.model, 'brazil', 'uk',
+            self.model,
+            "brazil",
+            "uk",
             triples_factory=self.dataset.training,
             testing=self.testing_mapped_triples,
         )
-        self.assertEqual(['relation_id', 'relation_label', 'score', 'in_training', 'in_testing'], list(rel_df.columns))
+        self.assertEqual(["relation_id", "relation_label", "score", "in_training", "in_testing"], list(rel_df.columns))
         self.assertEqual(self.model.num_relations, len(rel_df.index))
-        training_rels = set(rel_df.loc[rel_df['in_training'], 'relation_label'])
+        training_rels = set(rel_df.loc[rel_df["in_training"], "relation_label"])
         self.assertEqual(
             {
-                'weightedunvote', 'relexports', 'intergovorgs', 'timesinceally', 'exports3', 'booktranslations',
-                'relbooktranslations', 'reldiplomacy', 'ngoorgs3', 'ngo', 'relngo', 'reltreaties', 'independence',
-                'intergovorgs3', 'unweightedunvote', 'commonbloc2', 'relintergovorgs',
+                "weightedunvote",
+                "relexports",
+                "intergovorgs",
+                "timesinceally",
+                "exports3",
+                "booktranslations",
+                "relbooktranslations",
+                "reldiplomacy",
+                "ngoorgs3",
+                "ngo",
+                "relngo",
+                "reltreaties",
+                "independence",
+                "intergovorgs3",
+                "unweightedunvote",
+                "commonbloc2",
+                "relintergovorgs",
             },
             training_rels,
         )
-        testing_heads = set(rel_df.loc[rel_df['in_testing'], 'relation_label'])
-        self.assertEqual({'embassy'}, testing_heads)
+        testing_heads = set(rel_df.loc[rel_df["in_testing"], "relation_label"])
+        self.assertEqual({"embassy"}, testing_heads)
 
     def test_predict_heads_with_novelties(self):
         """Test scoring heads with labeling as novel w.r.t. training and testing."""
         heads_df = get_head_prediction_df(
             self.model,
-            'conferences', 'brazil',
+            "conferences",
+            "brazil",
             triples_factory=self.dataset.training,
             testing=self.testing_mapped_triples,
         )
-        self.assertEqual(['head_id', 'head_label', 'score', 'in_training', 'in_testing'], list(heads_df.columns))
+        self.assertEqual(["head_id", "head_label", "score", "in_training", "in_testing"], list(heads_df.columns))
         self.assertEqual(self.model.num_entities, len(heads_df.index))
-        training_heads = set(heads_df.loc[heads_df['in_training'], 'head_label'])
-        self.assertEqual({'usa', 'india', 'ussr', 'poland', 'cuba'}, training_heads)
-        testing_heads = set(heads_df.loc[heads_df['in_testing'], 'head_label'])
+        training_heads = set(heads_df.loc[heads_df["in_training"], "head_label"])
+        self.assertEqual({"usa", "india", "ussr", "poland", "cuba"}, training_heads)
+        testing_heads = set(heads_df.loc[heads_df["in_testing"], "head_label"])
         self.assertEqual(set(), testing_heads)
 
     def test_predict_all_no_novelties(self):
@@ -126,7 +154,7 @@ class TestPipeline(unittest.TestCase):
         )
         self.assertIsInstance(all_df, pd.DataFrame)
         self.assertEqual(
-            ['head_id', 'head_label', 'relation_id', 'relation_label', 'tail_id', 'tail_label', 'score'],
+            ["head_id", "head_label", "relation_id", "relation_label", "tail_id", "tail_label", "score"],
             list(all_df.columns),
         )
         possible = self.dataset.training.num_relations * self.model.num_entities ** 2
@@ -142,12 +170,12 @@ class TestPipeline(unittest.TestCase):
         )
         self.assertIsInstance(all_df, pd.DataFrame)
         self.assertEqual(
-            ['head_id', 'head_label', 'relation_id', 'relation_label', 'tail_id', 'tail_label', 'score'],
+            ["head_id", "head_label", "relation_id", "relation_label", "tail_id", "tail_label", "score"],
             list(all_df.columns),
         )
         possible = self.dataset.training.num_relations * self.model.num_entities ** 2
         known = self.dataset.training.num_triples + self.testing_mapped_triples.shape[0]
-        self.assertNotEqual(possible, known, msg='testing and training triples cover all possible triples')
+        self.assertNotEqual(possible, known, msg="testing and training triples cover all possible triples")
         self.assertEqual(possible - known, len(all_df.index))
 
     def test_predict_all_with_novelties(self):
@@ -160,15 +188,34 @@ class TestPipeline(unittest.TestCase):
         self.assertIsInstance(all_df, pd.DataFrame)
         self.assertEqual(
             [
-                'head_id', 'head_label', 'relation_id', 'relation_label',
-                'tail_id', 'tail_label', 'score', 'in_training', 'in_testing',
+                "head_id",
+                "head_label",
+                "relation_id",
+                "relation_label",
+                "tail_id",
+                "tail_label",
+                "score",
+                "in_training",
+                "in_testing",
             ],
             list(all_df.columns),
         )
         possible = self.dataset.training.num_relations * self.model.num_entities ** 2
         self.assertEqual(possible, len(all_df.index))
-        self.assertEqual(self.dataset.training.num_triples, all_df['in_training'].sum())
-        self.assertEqual(self.testing_mapped_triples.shape[0], all_df['in_testing'].sum())
+        self.assertEqual(self.dataset.training.num_triples, all_df["in_training"].sum())
+        self.assertEqual(self.testing_mapped_triples.shape[0], all_df["in_testing"].sum())
+
+    def test_predict_triples(self):
+        """Test scoring explicitly provided triples."""
+        for triples_factory in (None, self.dataset.training):
+            df = predict_triples_df(
+                model=self.model,
+                triples=self.testing_mapped_triples,
+                triples_factory=triples_factory,
+            )
+            assert isinstance(df, pandas.DataFrame)
+            assert df.shape[0] == self.testing_mapped_triples.shape[0]
+            assert {"head_id", "relation_id", "tail_id", "score"}.issubset(df.columns)
 
 
 class TestPipelineTriples(unittest.TestCase):
@@ -189,7 +236,7 @@ class TestPipelineTriples(unittest.TestCase):
             training=self.training,
             testing=self.testing,
             validation=self.validation,
-            model='TransE',
+            model="TransE",
             training_kwargs=dict(num_epochs=1, use_tqdm=False),
             evaluation_kwargs=dict(use_tqdm=False),
         )
@@ -203,7 +250,7 @@ class TestPipelineTriples(unittest.TestCase):
         )
         _ = pipeline(
             dataset=dataset,
-            model='TransE',
+            model="TransE",
             training_kwargs=dict(num_epochs=1, use_tqdm=False),
             evaluation_kwargs=dict(use_tqdm=False),
         )
@@ -216,7 +263,7 @@ class TestPipelineTriples(unittest.TestCase):
                 interaction=TransEInteraction(p=2),
             )
         self.assertIsInstance(exc.exception, DimensionError)
-        self.assertEqual({'d'}, exc.exception.expected)
+        self.assertEqual({"d"}, exc.exception.expected)
         self.assertEqual(set(), exc.exception.given)
         self.assertEqual("Expected dimensions dictionary with keys {'d'} but got keys set()", str(exc.exception))
 
@@ -248,12 +295,12 @@ class TestPipelineTriples(unittest.TestCase):
 
     def test_interaction_resolver_cls(self):
         """Test resolving the interaction function."""
-        model_cls = make_model_cls({"d": 3}, TransEInteraction, {'p': 2})
+        model_cls = make_model_cls({"d": 3}, TransEInteraction, {"p": 2})
         self._help_test_interaction_resolver(model_cls)
 
     def test_interaction_resolver_lookup(self):
         """Test resolving the interaction function."""
-        model_cls = make_model_cls({"d": 3}, 'TransE', {'p': 2})
+        model_cls = make_model_cls({"d": 3}, "TransE", {"p": 2})
         self._help_test_interaction_resolver(model_cls)
 
     def _help_test_interaction_resolver(self, model_cls):
@@ -287,7 +334,7 @@ class TestPipelineTriples(unittest.TestCase):
             testing=self.testing,
             validation=self.validation,
             training_loop=ModifiedTrainingLoop,
-            model='TransE',
+            model="TransE",
             training_kwargs=dict(num_epochs=1, use_tqdm=False),
             evaluation_kwargs=dict(use_tqdm=False),
             random_seed=0,
@@ -297,14 +344,43 @@ class TestPipelineTriples(unittest.TestCase):
         self.assertTrue(losses)
 
 
+class TestPipelineReplicate(unittest.TestCase):
+    """Test the replication with pipeline."""
+
+    def setUp(self) -> None:  # noqa: D102
+        self.tmp_dir = tempfile.TemporaryDirectory()
+        self.tmp_dir_path = pathlib.Path(self.tmp_dir.name)
+
+    def tearDown(self) -> None:  # noqa: D102
+        self.tmp_dir.cleanup()
+
+    def test_replicate_pipeline_from_config(self):
+        """Test replication from config."""
+        replicate_pipeline_from_config(
+            config=dict(
+                metadata=dict(),
+                pipeline=dict(
+                    dataset="nations",
+                    model="transe",
+                ),
+                results={
+                    "hits_at_k": {"best": {"10": 0.538}},
+                    "mean_rank": {"best": 163},
+                },
+            ),
+            directory=self.tmp_dir_path,
+            replicates=1,
+        )
+
+
 class TestPipelineCheckpoints(unittest.TestCase):
     """Test the pipeline with checkpoints."""
 
     def setUp(self) -> None:
         """Set up a shared result as standard to compare to."""
         self.random_seed = 123
-        self.model = 'TransE'
-        self.dataset = 'nations'
+        self.model = "TransE"
+        self.dataset = "nations"
         self.checkpoint_name = "PyKEEN_training_loop_test_checkpoint.pt"
         self.temporary_directory = tempfile.TemporaryDirectory()
 
@@ -314,11 +390,11 @@ class TestPipelineCheckpoints(unittest.TestCase):
 
     def test_pipeline_resumption(self):
         """Test whether the resumed LCWA pipeline creates the same results as the one shot pipeline."""
-        self._test_pipeline_x_resumption(training_loop_type='LCWA')
+        self._test_pipeline_x_resumption(training_loop_type="LCWA")
 
     def test_pipeline_slcwa_resumption(self):
         """Test whether the resumed sLCWA pipeline creates the same results as the one shot pipeline."""
-        self._test_pipeline_x_resumption(training_loop_type='sLCWA')
+        self._test_pipeline_x_resumption(training_loop_type="sLCWA")
 
     def _test_pipeline_x_resumption(self, training_loop_type: str):
         """Test whether the resumed pipeline creates the same results as the one shot pipeline."""
@@ -374,15 +450,15 @@ class TestAttributes(unittest.TestCase):
         """Test a pipeline that uses a regularizer."""
         for regularizer, cls in [
             (None, pykeen.regularizers.NoRegularizer),
-            ('no', pykeen.regularizers.NoRegularizer),
+            ("no", pykeen.regularizers.NoRegularizer),
             (NoRegularizer, pykeen.regularizers.NoRegularizer),
-            ('powersum', pykeen.regularizers.PowerSumRegularizer),
-            ('lp', pykeen.regularizers.LpRegularizer),
+            ("powersum", pykeen.regularizers.PowerSumRegularizer),
+            ("lp", pykeen.regularizers.LpRegularizer),
         ]:
             with self.subTest(regularizer=regularizer):
                 pipeline_result = pipeline(
-                    model='TransE',
-                    dataset='Nations',
+                    model="TransE",
+                    dataset="Nations",
                     regularizer=regularizer,
                     training_kwargs=dict(num_epochs=1),
                 )
@@ -397,10 +473,10 @@ class TestPipelineEvaluationFiltering(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         """Set up a shared result."""
-        cls.device = resolve_device('cuda')
+        cls.device = resolve_device("cuda")
         cls.dataset = Nations()
 
-        cls.model = MockModel(triples_factory=cls.dataset.training)
+        cls.model = FixedModel(triples_factory=cls.dataset.training)
 
         # The MockModel gives the highest score to the highest entity id
         max_score = cls.dataset.num_entities - 1
@@ -440,7 +516,7 @@ class TestPipelineEvaluationFiltering(unittest.TestCase):
             random_seed=42,
             filter_validation_when_testing=False,
         )
-        assert results.metric_results.arithmetic_mean_rank['both']['realistic'] == 2, 'The rank should equal 2'
+        assert results.metric_results.arithmetic_mean_rank["both"]["realistic"] == 2, "The rank should equal 2"
 
     def test_pipeline_evaluation_filtering_with_validation_triples(self):
         """Test if the evaluator's triple filtering with validation triples works as expected using the pipeline."""
@@ -455,4 +531,4 @@ class TestPipelineEvaluationFiltering(unittest.TestCase):
             random_seed=42,
             filter_validation_when_testing=True,
         )
-        assert results.metric_results.arithmetic_mean_rank['both']['realistic'] == 1, 'The rank should equal 1'
+        assert results.metric_results.arithmetic_mean_rank["both"]["realistic"] == 1, "The rank should equal 1"

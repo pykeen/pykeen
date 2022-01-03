@@ -6,6 +6,7 @@ from typing import Any, ClassVar, Mapping, Optional
 
 import torch
 import torch.autograd
+from torch import linalg
 
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
@@ -15,7 +16,7 @@ from ...typing import Constrainer, Hint, Initializer
 from ...utils import clamp_norm
 
 __all__ = [
-    'TransD',
+    "TransD",
 ]
 
 
@@ -130,13 +131,13 @@ class TransD(EntityRelationEmbeddingModel):
                 embedding_dim=embedding_dim,
                 initializer=entity_initializer,
                 constrainer=entity_constrainer,
-                constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
+                constrainer_kwargs=dict(maxnorm=1.0, p=2, dim=-1),
             ),
             relation_representations=EmbeddingSpecification(
                 embedding_dim=relation_dim,
                 initializer=relation_initializer,
                 constrainer=relation_constrainer,
-                constrainer_kwargs=dict(maxnorm=1., p=2, dim=-1),
+                constrainer_kwargs=dict(maxnorm=1.0, p=2, dim=-1),
             ),
             **kwargs,
         )
@@ -193,7 +194,7 @@ class TransD(EntityRelationEmbeddingModel):
         t_bot = _project_entity(e=t, e_p=t_p, r=r, r_p=r_p)
 
         # score = -||h_bot + r - t_bot||_2^2
-        return -torch.norm(h_bot + r - t_bot, dim=-1, p=2) ** 2
+        return -linalg.vector_norm(h_bot + r - t_bot, dim=-1, ord=2) ** 2
 
     def _score(
         self,

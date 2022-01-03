@@ -9,10 +9,10 @@ import numpy
 from ..utils import split_list_in_batches_iter
 
 __all__ = [
-    'lazy_compile_random_batches',
+    "lazy_compile_random_batches",
 ]
 
-X = TypeVar('X')
+X = TypeVar("X")
 
 
 def lazy_compile_random_batches(

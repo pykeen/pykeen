@@ -4,15 +4,17 @@
 
 import logging
 import re
-from typing import Any, Mapping, Optional, Pattern, Union
+from typing import Any, Iterable, List, Mapping, MutableMapping, Optional, Pattern, Union
 
 from tqdm.auto import tqdm
 
 from ..utils import flatten_dictionary
 
 __all__ = [
-    'ResultTracker',
-    'ConsoleResultTracker',
+    "ResultTracker",
+    "ConsoleResultTracker",
+    "MultiResultTracker",
+    "PythonResultTracker",
 ]
 
 
@@ -38,11 +40,78 @@ class ResultTracker:
         :param prefix: An optional prefix to prepend to every key in metrics.
         """
 
-    def end_run(self) -> None:
+    def end_run(self, success: bool = True) -> None:
         """End a run.
 
         HAS to be called after the experiment is finished.
+
+        :param success:
+            Can be used to signal failed runs. May be ignored.
         """
+
+
+class PythonResultTracker(ResultTracker):
+    """A tracker which stores everything in Python dictionaries.
+
+    Example Usage: get default configuration
+
+    .. code-block:: python
+
+        from pykeen.pipeline import pipeline
+        from pykeen.trackers import PythonResultTracker
+
+        tracker = PythonResultTracker()
+        result = pipeline(
+            dataset="nations",
+            model="PairRE",
+            result_tracker=tracker,
+        )
+        print("Default configuration:")
+        for k, v in tracker.configuration.items():
+            print(f"{k:20} = {v}")
+
+    """
+
+    #: The name of the run
+    run_name: Optional[str]
+
+    #: The configuration dictionary, a mapping from name -> value
+    configuration: MutableMapping[str, Any]
+
+    #: Should metrics be stored when running ``log_metrics()``?
+    store_metrics: bool
+
+    #: The metrics, a mapping from step -> (name -> value)
+    metrics: MutableMapping[Optional[int], Mapping[str, float]]
+
+    def __init__(self, store_metrics: bool = True) -> None:
+        """Initialize the tracker."""
+        super().__init__()
+        self.store_metrics = store_metrics
+        self.configuration = dict()
+        self.metrics = dict()
+        self.run_name = None
+
+    def start_run(self, run_name: Optional[str] = None) -> None:  # noqa: D102
+        self.run_name = run_name
+
+    def log_params(self, params: Mapping[str, Any], prefix: Optional[str] = None) -> None:  # noqa: D102
+        if prefix is not None:
+            params = {f"{prefix}.{key}": value for key, value in params.items()}
+        self.configuration.update(params)
+
+    def log_metrics(
+        self,
+        metrics: Mapping[str, float],
+        step: Optional[int] = None,
+        prefix: Optional[str] = None,
+    ) -> None:  # noqa: D102
+        if not self.store_metrics:
+            return
+
+        if prefix is not None:
+            metrics = {f"{prefix}.{key}": value for key, value in metrics.items()}
+        self.metrics[step] = metrics
 
 
 class ConsoleResultTracker(ResultTracker):
@@ -56,7 +125,7 @@ class ConsoleResultTracker(ResultTracker):
         track_metrics: bool = True,
         metric_filter: Union[None, str, Pattern[str]] = None,
         start_end_run: bool = False,
-        writer: str = 'tqdm',
+        writer: str = "tqdm",
     ):
         """
         Initialize the tracker.
@@ -86,12 +155,12 @@ class ConsoleResultTracker(ResultTracker):
             metric_filter = re.compile(metric_filter)
         self.metric_filter = metric_filter
 
-        if writer == 'tqdm':
+        if writer == "tqdm":
             self.write = tqdm.write
-        elif writer == 'builtin':
-            self.write = print
-        elif writer == 'logging':
-            self.write = logging.getLogger('pykeen').info
+        elif writer == "builtin":
+            self.write = print  # noqa:T002
+        elif writer == "logging":
+            self.write = logging.getLogger("pykeen").info
 
     def start_run(self, run_name: Optional[str] = None) -> None:  # noqa: D102
         if run_name is not None and self.start_end_run:
@@ -119,6 +188,58 @@ class ConsoleResultTracker(ResultTracker):
             if not self.metric_filter or self.metric_filter.match(key):
                 self.write(f"Parameter: {key} = {value}")
 
-    def end_run(self) -> None:  # noqa: D102
+    def end_run(self, success: bool = True) -> None:  # noqa: D102
+        if not success:
+            self.write("Run failed.")
         if self.start_end_run:
             self.write("Finished run.")
+
+
+#: A hint for constructing a :class:`MultiResultTracker`
+TrackerHint = Union[None, ResultTracker, Iterable[ResultTracker]]
+
+
+class MultiResultTracker(ResultTracker):
+    """A result tracker which delegates to multiple different result trackers."""
+
+    trackers: List[ResultTracker]
+
+    def __init__(self, trackers: TrackerHint = None) -> None:
+        """
+        Initialize the tracker.
+
+        :param trackers:
+            the base tracker(s).
+        """
+        if trackers is None:
+            self.trackers = []
+        elif isinstance(trackers, ResultTracker):
+            self.trackers = [trackers]
+        else:
+            self.trackers = list(trackers)
+
+    def start_run(self, run_name: Optional[str] = None) -> None:  # noqa: D102
+        for tracker in self.trackers:
+            tracker.start_run(run_name=run_name)
+
+    def log_params(self, params: Mapping[str, Any], prefix: Optional[str] = None) -> None:  # noqa: D102
+        for tracker in self.trackers:
+            tracker.log_params(params=params, prefix=prefix)
+
+    def log_metrics(
+        self,
+        metrics: Mapping[str, float],
+        step: Optional[int] = None,
+        prefix: Optional[str] = None,
+    ) -> None:  # noqa: D102
+        for tracker in self.trackers:
+            tracker.log_metrics(metrics=metrics, step=step, prefix=prefix)
+
+    def end_run(self, success: bool = True) -> None:  # noqa: D102
+        for tracker in self.trackers:
+            tracker.end_run(success=success)
+
+    def get_configuration(self):
+        """Get the configuration from a Python result tracker."""
+        tracker = next(_tracker for _tracker in self.trackers if isinstance(_tracker, PythonResultTracker))
+        return tracker.configuration
