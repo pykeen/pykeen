@@ -464,7 +464,12 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             callback.register_callback(TrackerCallback(result_tracker))
         # Register a callback for the early stopper, if given
         if stopper is not None:
-            callback.register_callback(StopperCallback(stopper))
+            callback.register_callback(StopperCallback(
+                stopper,
+                triples_factory=triples_factory,
+                last_best_epoch=last_best_epoch,
+                best_epoch_model_file_path=best_epoch_model_file_path,
+            ))
 
         callback.register_training_loop(self)
 
@@ -681,24 +686,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                 # Save the last successful finished epoch
                 self._epoch = epoch
 
-                # TODO: do not evaluate every epoch
-                # evaluation_data_loader = ...
-                # for evaluation_batch in evaluation_data_loader:
-                #     for callback in callbacks:
-                #         callback.on_evaluation_batch(batch=evaluation_batch)
-                if stopper is not None and stopper.should_evaluate(epoch):
-                    if stopper.should_stop(epoch):
-                        self._should_stop = True
-                    # Since the model is also used within the stopper, its graph and cache have to be cleared
-                    self._free_graph_and_cache()
-                # When the stopper obtained a new best epoch, this model has to be saved for reconstruction
-                if (
-                    stopper is not None
-                    and stopper.best_epoch != last_best_epoch
-                    and best_epoch_model_file_path is not None
-                ):
-                    self._save_state(path=best_epoch_model_file_path, triples_factory=triples_factory)
-                    last_best_epoch = epoch
             # When the training loop failed, a fallback checkpoint is created to resume training.
             except (MemoryError, RuntimeError) as e:
                 # During automatic memory optimization only the error message is of interest

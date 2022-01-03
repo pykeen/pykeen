@@ -96,12 +96,26 @@ class TrackerCallback(TrainingCallback):
 class StopperCallback(TrainingCallback):
     """An adapter for the :class:`pykeen.stopper.Stopper`."""
 
-    def __init__(self, stopper: Stopper):
+    def __init__(self, stopper: Stopper, *, triples_factory, last_best_epoch, best_epoch_model_file_path):
         super().__init__()
         self.stopper = stopper
+        self.triples_factory = triples_factory
+        self.last_best_epoch = last_best_epoch
+        self.best_epoch_model_file_path = best_epoch_model_file_path
 
     def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:
-        raise NotImplementedError
+        if self.stopper.should_evaluate(epoch):
+            if self.stopper.should_stop(epoch):
+                self.training_loop._should_stop = True
+            # Since the model is also used within the stopper, its graph and cache have to be cleared
+            self.model._free_graph_and_cache()
+            # When the stopper obtained a new best epoch, this model has to be saved for reconstruction
+        if (
+            self.stopper.best_epoch != self.last_best_epoch
+            and self.best_epoch_model_file_path is not None
+        ):
+            self.model._save_state(path=self.best_epoch_model_file_path, triples_factory=self.triples_factory)
+            self.last_best_epoch = epoch
 
 
 #: A hint for constructing a :class:`MultiTrainingCallback`
