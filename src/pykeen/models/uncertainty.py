@@ -1,6 +1,16 @@
 # -*- coding: utf-8 -*-
 
-"""Analyze uncertainty."""
+"""
+Analyze uncertainty.
+
+Currently, all implemented approaches are based on Monte-Carlo dropout [gal2016]_.
+
+[gal2016] 
+  Dropout as a Bayesian Approximation: Representing Model Uncertainty in Deep Learning
+  Yarin Gal, Zoubin Ghahramani
+  Proceedings of The 33rd International Conference on Machine Learning, PMLR 48:1050-1059, 2016.
+  http://proceedings.mlr.press/v48/gal16.html
+"""
 
 from typing import Callable, NamedTuple, Optional
 
@@ -14,7 +24,7 @@ __all__ = [
     "predict_h_uncertain",
     "predict_t_uncertain",
     "predict_r_uncertain",
-    "predict_uncertain_helper",
+    # "predict_uncertain_helper", # TODO: this is a helper method; should we make it public?
     "MissingDropoutError",
     "UncertainPrediction",
 ]
@@ -25,7 +35,12 @@ class MissingDropoutError(ValueError):
 
 
 class UncertainPrediction(NamedTuple):
-    """A pair of predicted scores and corresponding uncertainty."""
+    """
+    A pair of predicted scores and corresponding uncertainty.
+
+    Since the uncertainty scores come from Monte-Carlo dropout, they are guaranteed to be non-negative
+    with larger scores indicating higher uncertainty.
+    """
 
     #: The scores
     score: torch.FloatTensor
@@ -108,7 +123,7 @@ def predict_hrt_uncertain(
     num_samples: int = 5,
 ) -> UncertainPrediction:
     """
-    Calculate the scores with uncertainty quantification via Monte-Carlo dropout as proposed in [berrendorf2021]_.
+    Calculate the scores with uncertainty quantification via Monte-Carlo dropout.
 
     :param model:
         the model used for predicting scores
