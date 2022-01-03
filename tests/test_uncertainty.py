@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Tests for prediction workflows."""
+"""Tests for uncertainty workflows."""
 
 from typing import Callable, Tuple
 
