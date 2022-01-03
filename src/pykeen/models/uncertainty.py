@@ -5,6 +5,12 @@ Analyze uncertainty.
 
 Currently, all implemented approaches are based on Monte-Carlo dropout [gal2016]_.
 
+Monte-Carlo dropout relies on the model having dropout layers. While dropout usually is 
+turned off for inference / evaluation mode, MC dropout leaves dropout enabled. Thereby, 
+if we run the same prediction method $k$ times, we get $k$ different predictions.
+The variance of these predictions can be used as an approximation of uncertainty, where
+larger variance indicates higher uncertainty.
+
 [gal2016] 
   Dropout as a Bayesian Approximation: Representing Model Uncertainty in Deep Learning
   Yarin Gal, Zoubin Ghahramani
@@ -51,7 +57,7 @@ class UncertainPrediction(NamedTuple):
     @classmethod
     def from_scores(cls, scores: torch.Tensor):
         """Make an instance from scores."""
-        return cls(score=scores.mean(dim=0), uncertainty=scores.std(dim=0))
+        return cls(score=scores.mean(dim=0), uncertainty=scores.var(dim=0))
 
 
 @torch.inference_mode()
