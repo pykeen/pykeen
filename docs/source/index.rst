@@ -18,7 +18,6 @@ PyKEEN
    tutorial/running_ablation
    tutorial/performance
    tutorial/representations
-   tutorial/uncertainty
 
 .. toctree::
    :caption: Bring Your Own
