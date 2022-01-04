@@ -110,6 +110,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
     optimizer: Optimizer
 
     losses_per_epochs: List[float]
+    # TODO: this is always None
     loss_blacklist: ClassVar[Optional[List[Type[Loss]]]] = None
 
     hpo_default = dict(

@@ -29,7 +29,6 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
     """
 
     negative_sampler: NegativeSampler
-    loss_blacklist = [CrossEntropyLoss]
 
     def __init__(
         self,
