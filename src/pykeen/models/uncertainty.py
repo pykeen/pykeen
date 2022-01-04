@@ -25,7 +25,7 @@ classification loss, i.e., on the triple classification task.
     # note: as this is an example, the model is only trained for a few epochs,
     #       but not until convergence. In practice, you would usually first verify that
     #       the model is sufficiently good in prediction, before looking at uncertainty scores
-    result = pipeline(dataset="nations", model="ERMLPE", loss="BCE")
+    result = pipeline(dataset="nations", model="ERMLPE", loss="bcewithlogits")
 
     # predict triple scores with uncertainty
     prediction_with_uncertainty = predict_hrt_uncertain(
