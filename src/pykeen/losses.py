@@ -1003,10 +1003,29 @@ class BCEAfterSigmoidLoss(PointwiseLoss):
         return functional.binary_cross_entropy(logits.sigmoid(), labels, **kwargs)
 
 
-def _unfilter_negative_scores(
+def prepare_negative_scores_for_softmax(
     batch_filter: Optional[torch.LongTensor],
     negative_scores: torch.FloatTensor,
+    no_inf_rows: bool,
 ) -> torch.FloatTensor:
+    """
+    Prepare negative scores for softmax.
+
+    To compute a softmax over negative scores, we may need to invert the filtering procedure
+    to get a dense regularly shaped tensor of shape `(batch_size, num_negatives)`.
+
+    :param negative_scores: shape: (batch_size, num_negatives) | (num_batch_negatives,)
+        the negative scores, which may have been filtered
+    :param batch_filter: shape: (batch_size, num_negatives)
+        the binary mask of corresponding to the non-filtered negative scores. If None, no
+        filtering did take place, and nothing has to be done.
+    :param no_inf_rows:
+        whether to avoid `-inf` rows (if a complete row has been filtered)
+
+    :return: shape: (batch_size, num_negatives)
+        a dense view of the negative scores, where previously filtered scores have been
+        re-filled as -inf.
+    """
     if batch_filter is None:
         return negative_scores
 
@@ -1017,7 +1036,8 @@ def _unfilter_negative_scores(
     # we need to fill the scores with -inf for all filtered negative examples
     # EXCEPT if all negative samples are filtered (since softmax over only -inf yields nan)
     fill_mask = ~batch_filter
-    fill_mask = fill_mask & ~(fill_mask.all(dim=1, keepdim=True))
+    if no_inf_rows:
+        fill_mask = fill_mask & ~(fill_mask.all(dim=1, keepdim=True))
     negative_scores_[fill_mask] = float("-inf")
     # use filled negatives scores
     return negative_scores_
@@ -1044,9 +1064,11 @@ class CrossEntropyLoss(SetwiseLoss):
         num_entities: Optional[int] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         # we need dense negative scores => unfilter if necessary
-        negative_scores = _unfilter_negative_scores(
+        negative_scores = prepare_negative_scores_for_softmax(
             batch_filter=batch_filter,
             negative_scores=negative_scores,
+            # we may have inf rows, since there will be one additional finite positive score per row
+            no_inf_rows=False,
         )
         # combine scores: shape: (batch_size, num_negatives + 1)
         scores = torch.cat(
@@ -1154,7 +1176,12 @@ class NSSALoss(SetwiseLoss):
         if label_smoothing:
             raise UnsupportedLabelSmoothingError(self)
 
-        negative_scores = _unfilter_negative_scores(batch_filter=batch_filter, negative_scores=negative_scores)
+        negative_scores = prepare_negative_scores_for_softmax(
+            batch_filter=batch_filter,
+            negative_scores=negative_scores,
+            # we do not allow full -inf rows, since we compute the softmax over this tensor
+            no_inf_rows=True,
+        )
 
         # compute weights (without gradient tracking)
         assert negative_scores.ndimension() == 2
