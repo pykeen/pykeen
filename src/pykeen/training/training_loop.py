@@ -48,7 +48,6 @@ from ..utils import (
 __all__ = [
     "TrainingLoop",
     "NonFiniteLossError",
-    "TrainingApproachLossMismatchError",
     "SubBatchingNotSupportedError",
 ]
 
@@ -60,10 +59,6 @@ BatchType = TypeVar("BatchType")
 
 class NonFiniteLossError(RuntimeError):
     """An exception raised for non-finite loss values."""
-
-
-class TrainingApproachLossMismatchError(TypeError):
-    """An exception when an illegal loss function is used with a given training approach."""
 
 
 class CheckpointMismatchError(RuntimeError):
