@@ -30,7 +30,7 @@ from .callbacks import (
 )
 from ..constants import PYKEEN_CHECKPOINTS, PYKEEN_DEFAULT_CHECKPOINT
 from ..losses import Loss
-from ..lr_schedulers import LRScheduler
+from ..lr_schedulers import LRScheduler, LRSchedulerWrapper
 from ..models import RGCN, Model
 from ..stoppers import Stopper
 from ..trackers import ResultTracker
@@ -105,7 +105,7 @@ def _get_lr_scheduler_kwargs(lr_scheduler: LRScheduler) -> Mapping[str, Any]:
 class TrainingLoop(Generic[SampleType, BatchType], ABC):
     """A training loop."""
 
-    lr_scheduler: Optional[LRScheduler]
+    lr_scheduler: Optional[LRSchedulerWrapper]
     model: Model
     optimizer: Optimizer
 
@@ -122,7 +122,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         model: Model,
         triples_factory: CoreTriplesFactory,
         optimizer: Optional[Optimizer] = None,
-        lr_scheduler: Optional[LRScheduler] = None,
+        lr_scheduler: Optional[LRSchedulerWrapper] = None,
         automatic_memory_optimization: bool = True,
     ) -> None:
         """Initialize the training loop.
@@ -137,7 +137,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         """
         self.model = model
         self.optimizer = optimizer
-        self.lr_scheduler = lr_scheduler
+        self.lr_scheduler = lr_scheduler or LRSchedulerWrapper.create()
         self.losses_per_epochs = []
         self.automatic_memory_optimization = automatic_memory_optimization
 
@@ -513,8 +513,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
 
             if self.lr_scheduler is not None:
                 # Create a new lr scheduler and add the optimizer
-                lr_scheduler_kwargs = _get_lr_scheduler_kwargs(self.lr_scheduler)
-                self.lr_scheduler = self.lr_scheduler.__class__(self.optimizer, **lr_scheduler_kwargs)
+                self.lr_scheduler = self.lr_scheduler.recreate_with_optimizer(optimizer=self.optimizer)
         elif not self.optimizer.state:
             raise ValueError("Cannot continue_training without being trained once.")
 
@@ -656,16 +655,18 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                 if only_size_probing:
                     return None
 
-                # Update learning rate scheduler
-                if self.lr_scheduler is not None:
-                    self.lr_scheduler.step(epoch=epoch)
-
                 # Track epoch loss
                 if self.model.loss.reduction == "mean":
                     epoch_loss = current_epoch_loss / num_training_instances
                 else:
                     epoch_loss = current_epoch_loss / len(train_data_loader)
                 self.losses_per_epochs.append(epoch_loss)
+
+                # Update learning rate scheduler
+                if self.lr_scheduler is not None:
+                    if self.lr_scheduler.needs_metrics:
+                        raise NotImplementedError
+                    self.lr_scheduler.step(epoch=epoch, epoch_loss=epoch_loss)
 
                 # Print loss information to console
                 if _use_outer_tqdm:

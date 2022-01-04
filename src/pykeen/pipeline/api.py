@@ -205,7 +205,7 @@ from ..datasets.base import Dataset
 from ..evaluation import Evaluator, MetricResults, evaluator_resolver
 from ..evaluation.rank_based_evaluator import resolve_metric_name
 from ..losses import Loss, loss_resolver
-from ..lr_schedulers import LRScheduler, lr_scheduler_resolver
+from ..lr_schedulers import LRScheduler, LRSchedulerWrapper, lr_scheduler_resolver
 from ..models import Model, make_model_cls, model_resolver
 from ..nn.modules import Interaction
 from ..optimizers import optimizer_resolver
@@ -1091,18 +1091,13 @@ def pipeline(  # noqa: C901
         ),
     )
 
-    lr_scheduler_instance: Optional[LRScheduler]
-    if lr_scheduler is None:
-        lr_scheduler_instance = None
-    else:
-        lr_scheduler_instance = lr_scheduler_resolver.make(
-            lr_scheduler,
-            lr_scheduler_kwargs,
-            optimizer=optimizer_instance,
-        )
+    lr_scheduler_instance: Optional[LRSchedulerWrapper] = None
+    if lr_scheduler is not None:
+        lr_scheduler_instance = LRSchedulerWrapper.create(base=lr_scheduler)
+    if lr_scheduler_instance is not None:
         _result_tracker.log_params(
             params=dict(
-                lr_scheduler=lr_scheduler_instance.__class__.__name__,
+                lr_scheduler=lr_scheduler_instance.base.__class__.__name__,
                 lr_scheduler_kwargs=lr_scheduler_kwargs,
             ),
         )
