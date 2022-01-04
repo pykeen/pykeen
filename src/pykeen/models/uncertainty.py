@@ -8,9 +8,13 @@ Monte-Carlo dropout relies on the model having dropout layers. While dropout usu
 turned off for inference / evaluation mode, MC dropout leaves dropout enabled. Thereby,
 if we run the same prediction method $k$ times, we get $k$ different predictions.
 The variance of these predictions can be used as an approximation of uncertainty, where
-larger variance indicates higher uncertainty.
+larger variance indicates higher uncertainty in the predicted score.
 
-The following code-block sketches an example use case:
+The absolute variance is usually hard to interpret, but comparing the variances with each
+other can help to identify which scores are more uncertain than others.
+
+The following code-block sketches an example use case, where we train a model with a 
+classification loss, i.e., on the triple classification task.
 
 .. code-block:: python
 
@@ -21,7 +25,7 @@ The following code-block sketches an example use case:
     # note: as this is an example, the model is only trained for a few epochs,
     #       but not until convergence. In practice, you would usually first verify that
     #       the model is sufficiently good in prediction, before looking at uncertainty scores
-    result = pipeline(dataset="nations", model="ERMLPE")
+    result = pipeline(dataset="nations", model="ERMLPE", loss="BCE")
 
     # predict triple scores with uncertainty
     prediction_with_uncertainty = predict_hrt_uncertain(
@@ -44,11 +48,15 @@ The following code-block sketches an example use case:
     )
     df = result.training.tensor_to_df(
         result.training.mapped_triples,
-        score=prediction_with_uncertainty.score[:, 0],
+        logits=prediction_with_uncertainty.score[:, 0],
+        probability=prediction_with_uncertainty.score[:, 0].sigmoid(),
         uncertainty=prediction_with_uncertainty.uncertainty[:, 0],
     )
     print(df.nlargest(5, columns="uncertainty"))
     print(df.nsmallest(5, columns="uncertainty"))
+    
+A collection of related work on uncertainty quantification can be found here:
+https://github.com/uncertainty-toolbox/uncertainty-toolbox/blob/master/docs/paper_list.md
 """
 
 from typing import Callable, NamedTuple, Optional
