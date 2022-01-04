@@ -19,7 +19,7 @@ classification loss, i.e., on the triple classification task.
 .. code-block:: python
 
     from pykeen.pipeline import pipeline
-    from pykeen.models.predict import predict_hrt_uncertain
+    from pykeen.models.uncertainty import predict_hrt_uncertain
 
     # train model
     # note: as this is an example, the model is only trained for a few epochs,
