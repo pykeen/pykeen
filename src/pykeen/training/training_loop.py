@@ -110,8 +110,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
     optimizer: Optimizer
 
     losses_per_epochs: List[float]
-    # TODO: this is always None
-    loss_blacklist: ClassVar[Optional[List[Type[Loss]]]] = None
 
     hpo_default = dict(
         num_epochs=dict(type=int, low=100, high=1000, q=100),
@@ -143,12 +141,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         self.automatic_memory_optimization = automatic_memory_optimization
 
         logger.debug("we don't really need the triples factory: %s", triples_factory)
-
-        if self.loss_blacklist and isinstance(self.model.loss, tuple(self.loss_blacklist)):
-            raise TrainingApproachLossMismatchError(
-                f"Can not use loss {self.model.loss.__class__.__name__}"
-                f" with training approach {self.__class__.__name__}",
-            )
 
         # The internal epoch state tracks the last finished epoch of the training loop to allow for
         # seamless loading and saving of training checkpoints
