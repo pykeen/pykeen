@@ -1003,6 +1003,26 @@ class BCEAfterSigmoidLoss(PointwiseLoss):
         return functional.binary_cross_entropy(logits.sigmoid(), labels, **kwargs)
 
 
+def _unfilter_negative_scores(
+    batch_filter: Optional[torch.LongTensor],
+    negative_scores: torch.FloatTensor,
+) -> torch.FloatTensor:
+    if batch_filter is None:
+        return negative_scores
+
+    # negative_scores have already been filtered in the sampler!
+    # (dense) softmax requires unfiltered scores / masking
+    negative_scores_ = torch.zeros_like(batch_filter, dtype=negative_scores.dtype)
+    negative_scores_[batch_filter] = negative_scores
+    # we need to fill the scores with -inf for all filtered negative examples
+    # EXCEPT if all negative samples are filtered (since softmax over only -inf yields nan)
+    fill_mask = ~batch_filter
+    fill_mask = fill_mask & ~(fill_mask.all(dim=1, keepdim=True))
+    negative_scores_[fill_mask] = float("-inf")
+    # use filled negatives scores
+    return negative_scores_
+
+
 @parse_docdata
 class CrossEntropyLoss(SetwiseLoss):
     """A module for the cross entropy loss that evaluates the cross entropy after softmax output.
@@ -1014,6 +1034,36 @@ class CrossEntropyLoss(SetwiseLoss):
     ---
     name: Cross entropy
     """
+
+    def process_slcwa_scores(
+        self,
+        positive_scores: torch.FloatTensor,
+        negative_scores: torch.FloatTensor,
+        label_smoothing: Optional[float] = None,
+        batch_filter: Optional[torch.BoolTensor] = None,
+        num_entities: Optional[int] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        # we need dense negative scores => unfilter if necessary
+        negative_scores = _unfilter_negative_scores(
+            batch_filter=batch_filter,
+            negative_scores=negative_scores,
+        )
+        # combine scores: shape: (batch_size, num_negatives + 1)
+        scores = torch.cat(
+            [
+                positive_scores,
+                negative_scores,
+            ],
+            dim=-1,
+        )
+        # use sparse version of cross entropy
+        true_indices = positive_scores.new_zeros(size=(positive_scores.shape[0],), dtype=torch.long)
+        return functional.cross_entropy(
+            input=scores,
+            target=true_indices,
+            label_smoothing=label_smoothing,
+            reduction=self.reduction,
+        )
 
     def forward(
         self,
@@ -1104,18 +1154,7 @@ class NSSALoss(SetwiseLoss):
         if label_smoothing:
             raise UnsupportedLabelSmoothingError(self)
 
-        if batch_filter is not None:
-            # negative_scores have already been filtered in the sampler!
-            # (dense) softmax requires unfiltered scores / masking
-            negative_scores_ = torch.zeros_like(batch_filter, dtype=positive_scores.dtype)
-            negative_scores_[batch_filter] = negative_scores
-            # we need to fill the scores with -inf for all filtered negative examples
-            # EXCEPT if all negative samples are filtered (since softmax over only -inf yields nan)
-            fill_mask = ~batch_filter
-            fill_mask = fill_mask & ~(fill_mask.all(dim=1, keepdim=True))
-            negative_scores_[fill_mask] = float("-inf")
-            # use filled negatives scores
-            negative_scores = negative_scores_
+        negative_scores = _unfilter_negative_scores(batch_filter=batch_filter, negative_scores=negative_scores)
 
         # compute weights (without gradient tracking)
         assert negative_scores.ndimension() == 2
