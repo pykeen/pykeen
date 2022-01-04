@@ -13,7 +13,7 @@ larger variance indicates higher uncertainty in the predicted score.
 The absolute variance is usually hard to interpret, but comparing the variances with each
 other can help to identify which scores are more uncertain than others.
 
-The following code-block sketches an example use case, where we train a model with a 
+The following code-block sketches an example use case, where we train a model with a
 classification loss, i.e., on the triple classification task.
 
 .. code-block:: python
@@ -54,7 +54,7 @@ classification loss, i.e., on the triple classification task.
     )
     print(df.nlargest(5, columns="uncertainty"))
     print(df.nsmallest(5, columns="uncertainty"))
-    
+
 A collection of related work on uncertainty quantification can be found here:
 https://github.com/uncertainty-toolbox/uncertainty-toolbox/blob/master/docs/paper_list.md
 """
