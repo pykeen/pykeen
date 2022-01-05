@@ -10,6 +10,7 @@ import torch
 from dataclasses_json import dataclass_json
 
 import rexmex.metrics.classification as rmc
+from rexmex.utils import binarize
 from .evaluator import Evaluator, MetricResults
 from .rexmex_compat import DUPLICATE_CLASSIFIERS, EXCLUDE_CLASSIFIERS, interval
 from ..typing import MappedTriples
@@ -31,7 +32,7 @@ _fields = [
                 link=func.link,
                 range=interval(func),
                 increasing=func.higher_is_better,
-                f=func,
+                f=binarize(func) if func.binarize,
             )
         ),
     )
