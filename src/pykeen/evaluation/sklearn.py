@@ -9,8 +9,9 @@ import numpy as np
 import torch
 from dataclasses_json import dataclass_json
 
+import rexmex.metrics.classification as rmc
 from .evaluator import Evaluator, MetricResults
-from .rexmex_compat import classifier_annotator
+from .rexmex_compat import DUPLICATE_CLASSIFIERS, EXCLUDE_CLASSIFIERS, interval
 from ..typing import MappedTriples
 from ..utils import fix_dataclass_init_docs
 
@@ -21,20 +22,21 @@ __all__ = [
 
 _fields = [
     (
-        metadata.func.__name__,
+        func.__name__,
         float,
         field(
             metadata=dict(
-                name=metadata.name,
-                doc=metadata.description or "",
-                link=metadata.link,
-                range=metadata.interval(),
-                increasing=metadata.higher_is_better,
-                f=metadata.func,
+                name=func.name,
+                doc=func.description or "",
+                link=func.link,
+                range=interval(func),
+                increasing=func.higher_is_better,
+                f=func,
             )
         ),
     )
-    for metadata in classifier_annotator.metrics.values()
+    for func in rmc.classifications
+    if func not in EXCLUDE_CLASSIFIERS and func not in DUPLICATE_CLASSIFIERS
 ]
 
 SklearnMetricResultsBase = make_dataclass(
