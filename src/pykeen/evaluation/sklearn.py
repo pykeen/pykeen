@@ -3,16 +3,15 @@
 """Implementation of wrapper around sklearn metrics."""
 
 from dataclasses import dataclass, field, fields, make_dataclass
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple, Union
 
 import numpy as np
+import rexmex.metrics.classification as rmc
 import torch
 from dataclasses_json import dataclass_json
-
-import rexmex.metrics.classification as rmc
 from rexmex.utils import binarize
+
 from .evaluator import Evaluator, MetricResults
-from .rexmex_compat import DUPLICATE_CLASSIFIERS, EXCLUDE_CLASSIFIERS, interval
 from ..typing import MappedTriples
 from ..utils import fix_dataclass_init_docs
 
@@ -20,6 +19,44 @@ __all__ = [
     "SklearnEvaluator",
     "SklearnMetricResults",
 ]
+
+
+def interval(func) -> str:
+    """Get the math notation for the range of this metric."""
+    left = "[" if func.lower_inclusive else "("
+    right = "]" if func.upper_inclusive else ")"
+    lower: Union[int, float]
+    upper: Union[int, float]
+    try:
+        lower = int(func.lower)
+    except OverflowError:
+        lower = func.lower
+        left = "("
+    try:
+        upper = int(func.upper)
+    except OverflowError:
+        upper = func.upper
+        right = ")"
+    return f"{left}{lower}, {upper}{right}"
+
+
+#: Functions with the right signature in the :mod:`rexmex.metrics.classification` that are not themselves metrics
+EXCLUDE_CLASSIFIERS = {
+    rmc.pr_auc_score,
+}
+
+#: This dictionary maps from duplicate functions to the canonical function in :mod:`rexmex.metrics.classification`
+DUPLICATE_CLASSIFIERS = {
+    rmc.miss_rate: rmc.false_negative_rate,
+    rmc.fall_out: rmc.false_positive_rate,
+    rmc.selectivity: rmc.true_negative_rate,
+    rmc.specificity: rmc.true_negative_rate,
+    rmc.hit_rate: rmc.true_positive_rate,
+    rmc.sensitivity: rmc.true_positive_rate,
+    rmc.critical_success_index: rmc.threat_score,
+    rmc.precision_score: rmc.positive_predictive_value,
+    rmc.recall_score: rmc.true_positive_rate,
+}
 
 _fields = [
     (
@@ -32,7 +69,7 @@ _fields = [
                 link=func.link,
                 range=interval(func),
                 increasing=func.higher_is_better,
-                f=binarize(func) if func.binarize,
+                f=binarize(func) if func.binarize else func,
             )
         ),
     )
