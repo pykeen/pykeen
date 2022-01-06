@@ -2,9 +2,11 @@
 
 """Implementation of triples splitting functions."""
 
+from abc import abstractmethod
 import logging
 import typing
 from typing import Collection, Optional, Sequence, Set, Tuple, Union
+from class_resolver.api import Resolver
 
 import numpy
 import pandas
@@ -275,6 +277,124 @@ def _prepare_cleanup(
     return to_move_mask
 
 
+class Splitter:
+    """A method for splitting triples."""
+
+    @abstractmethod
+    def split_absolute_size(
+        self,
+        mapped_triples: MappedTriples,
+        sizes: Sequence[int],
+        random_state: torch.Generator,
+    ) -> Sequence[MappedTriples]:
+        """Split triples into clean groups.
+
+        This method partitions the triples, i.e., each triple is in exactly one group. Moreover, it ensures that
+        the first group contains all entities at least once.
+
+        :param mapped_triples: shape: (n, 3)
+            the ID-based triples
+        :param sizes:
+            the absolute number of triples for each split part.
+        :param random_state:
+            the random state used for splitting
+
+        :return:
+            a sequence of ID-based triples for each split part. the absolute may be different to ensure the constraint.
+        """
+        raise NotImplementedError
+
+    def split(
+        self,
+        *,
+        mapped_triples: MappedTriples,
+        ratios: Union[float, Sequence[float]] = 0.8,
+        random_state: TorchRandomHint = None,
+    ) -> Sequence[MappedTriples]:
+        """Split triples into clean groups.
+
+        :param mapped_triples: shape: (n, 3)
+            the ID-based triples
+        :param random_state:
+            the random state used to shuffle and split the triples
+        :param ratios:
+            There are three options for this argument.
+            First, a float can be given between 0 and 1.0, non-inclusive. The first set of triples will get this ratio and
+            the second will get the rest.
+            Second, a list of ratios can be given for which set in which order should get what ratios as in ``[0.8, 0.1]``.
+            The final ratio can be omitted because that can be calculated.
+            Third, all ratios can be explicitly set in order such as in ``[0.8, 0.1, 0.1]`` where the sum of all ratios is
+            1.0.
+
+        :return:
+            A partition of triples, which are split (approximately) according to the ratios.
+        """
+        random_state = ensure_torch_random_state(random_state)
+        ratios = normalize_ratios(ratios=ratios)
+        sizes = get_absolute_split_sizes(n_total=mapped_triples.shape[0], ratios=ratios)
+        triples_groups = self.split_absolute_size(
+            mapped_triples=mapped_triples,
+            sizes=sizes,
+            random_state=random_state,
+        )
+        for i, (triples, exp_size, exp_ratio) in enumerate(zip(triples_groups, sizes, ratios)):
+            actual_size = triples.shape[0]
+            actual_ratio = actual_size / exp_size * exp_ratio
+            if actual_size != exp_size:
+                logger.warning(
+                    f"Requested ratio[{i}]={exp_ratio:.3f} (equal to size {exp_size}), but got {actual_ratio:.3f} "
+                    f"(equal to size {actual_size}) to ensure that all entities/relations occur in train.",
+                )
+        return triples_groups
+
+
+class CleanupSplitter(Splitter):
+    """TODO"""
+
+    def split_absolute_size(
+        self,
+        mapped_triples: MappedTriples,
+        sizes: Sequence[int],
+        random_state: torch.Generator,
+    ) -> Sequence[MappedTriples]:  # noqa: D102
+        triples_groups = _split_triples(
+            mapped_triples,
+            sizes=sizes,
+            random_state=random_state,
+        )
+        # Make sure that the first element has all the right stuff in it
+        logger.debug("cleaning up groups")
+        triples_groups = _tf_cleanup_all(triples_groups, random_state=random_state if randomize_cleanup else None)
+        logger.debug("done cleaning up groups")
+        return triples_groups
+
+
+class CoverageSplitter(Splitter):
+    """TODO"""
+
+    def split_absolute_size(
+        self,
+        mapped_triples: MappedTriples,
+        sizes: Sequence[int],
+        random_state: torch.Generator,
+    ) -> Sequence[MappedTriples]:  # noqa: D102
+        seed_mask = _get_cover_deterministic(triples=mapped_triples)
+        train_seed = mapped_triples[seed_mask]
+        remaining_triples = mapped_triples[~seed_mask]
+        if train_seed.shape[0] > sizes[0]:
+            raise ValueError(f"Could not find a coverage of all entities and relation with only {sizes[0]} triples.")
+        remaining_sizes = (sizes[0] - train_seed.shape[0],) + tuple(sizes[1:])
+        train, *rest = _split_triples(
+            mapped_triples=remaining_triples,
+            sizes=remaining_sizes,
+            random_state=random_state,
+        )
+        return [torch.cat([train_seed, train], dim=0), *rest]
+
+
+splitter_resolver = Resolver.from_subclasses(base=Splitter, default=CoverageSplitter)
+
+
 def split(
     mapped_triples: MappedTriples,
     ratios: Union[float, Sequence[float]] = 0.8,
@@ -317,48 +437,8 @@ def split(
         ratios = [0.8, 0.1, 0.1]  # also makes a [0.8, 0.1, 0.1] split
         train, test, val = split(triples, ratios)
     """
-    if method is None:
-        method = "coverage"
-    if method not in SPLIT_METHODS:
-        raise ValueError(f'Invalid split method: "{method}". Allowed are {SPLIT_METHODS}')
-
-    random_state = ensure_torch_random_state(random_state)
-    ratios = normalize_ratios(ratios=ratios)
-    sizes = get_absolute_split_sizes(n_total=mapped_triples.shape[0], ratios=ratios)
-
-    if method == "cleanup":
-        triples_groups = _split_triples(
-            mapped_triples,
-            sizes=sizes,
-            random_state=random_state,
-        )
-        # Make sure that the first element has all the right stuff in it
-        logger.debug("cleaning up groups")
-        triples_groups = _tf_cleanup_all(triples_groups, random_state=random_state if randomize_cleanup else None)
-        logger.debug("done cleaning up groups")
-    elif method == "coverage" or method is None:
-        seed_mask = _get_cover_deterministic(triples=mapped_triples)
-        train_seed = mapped_triples[seed_mask]
-        remaining_triples = mapped_triples[~seed_mask]
-        if train_seed.shape[0] > sizes[0]:
-            raise ValueError(f"Could not find a coverage of all entities and relation with only {sizes[0]} triples.")
-        remaining_sizes = (sizes[0] - train_seed.shape[0],) + tuple(sizes[1:])
-        train, *rest = _split_triples(
-            mapped_triples=remaining_triples,
-            sizes=remaining_sizes,
-            random_state=random_state,
-        )
-        triples_groups = [torch.cat([train_seed, train], dim=0), *rest]
-    else:
-        raise ValueError(f"invalid method: {method}")
-
-    for i, (triples, exp_size, exp_ratio) in enumerate(zip(triples_groups, sizes, ratios)):
-        actual_size = triples.shape[0]
-        actual_ratio = actual_size / exp_size * exp_ratio
-        if actual_size != exp_size:
-            logger.warning(
-                f"Requested ratio[{i}]={exp_ratio:.3f} (equal to size {exp_size}), but got {actual_ratio:.3f} "
-                f"(equal to size {actual_size}) to ensure that all entities/relations occur in train.",
-            )
-
-    return triples_groups
+    return splitter_resolver.make(method).split(
+        mapped_triples=mapped_triples,
+        ratios=ratios,
+        random_state=random_state,
+    )
