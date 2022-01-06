@@ -1530,3 +1530,24 @@ class InitializerTestCase(unittest.TestCase):
             path = pathlib.Path(d) / "test.pkl"
             model.save_state(path)
             model.load_state(path)
+
+
+class PredictBaseTestCase(unittest.TestCase):
+    """Base test for prediction workflows."""
+
+    batch_size: ClassVar[int] = 2
+    model_cls: ClassVar[Type[Model]]
+    model_kwargs: ClassVar[Mapping[str, Any]]
+
+    factory: TriplesFactory
+    batch: MappedTriples
+    model: Model
+
+    def setUp(self) -> None:
+        """Prepare model."""
+        self.factory = Nations().training
+        self.batch = self.factory.mapped_triples[: self.batch_size, :]
+        self.model = self.model_cls(
+            triples_factory=self.factory,
+            **self.model_kwargs,
+        )

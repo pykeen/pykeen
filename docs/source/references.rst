@@ -83,3 +83,6 @@ References
 
 .. [sharifzadeh2019vrd] Sharifzadeh, S., *et al*. (2019). `Improving Visual Relation Detection using Depth
    Maps <http://arxiv.org/abs/1905.00966>`_. *arXiv*, 1905.00966.
+
+.. [gal2016] Gal, Y., & Ghahramani, Z. (2016). `Dropout as a Bayesian Approximation: Representing Model Uncertainty in
+   Deep Learning <https://dl.acm.org/doi/10.5555/3045390.3045502>`_. ICML 2016.

@@ -84,6 +84,7 @@ __all__ = [
     "ensure_ftp_directory",
     "broadcast_cat",
     "get_batchnorm_modules",
+    "get_dropout_modules",
     "calculate_broadcasted_elementwise_result_shape",
     "estimate_cost_of_sequence",
     "get_optimal_sequence",
@@ -514,6 +515,11 @@ def broadcast_cat(
 def get_batchnorm_modules(module: torch.nn.Module) -> List[torch.nn.Module]:
     """Return all submodules which are batch normalization layers."""
     return [submodule for submodule in module.modules() if isinstance(submodule, torch.nn.modules.batchnorm._BatchNorm)]
+
+
+def get_dropout_modules(module: torch.nn.Module) -> List[torch.nn.Module]:
+    """Return all submodules which are dropout layers."""
+    return [submodule for submodule in module.modules() if isinstance(submodule, torch.nn.modules.dropout._DropoutNd)]
 
 
 def calculate_broadcasted_elementwise_result_shape(
