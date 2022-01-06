@@ -6,7 +6,7 @@ from abc import abstractmethod
 import logging
 import typing
 from typing import Collection, Optional, Sequence, Set, Tuple, Union
-from class_resolver.api import Resolver
+from class_resolver.api import HintOrType, Resolver
 
 import numpy
 import pandas
@@ -180,61 +180,30 @@ def get_absolute_split_sizes(
     return tuple(sizes)
 
 
-def _tf_cleanup_all(
-    triples_groups: Sequence[MappedTriples],
-    *,
-    random_state: TorchRandomHint = None,
-) -> Sequence[MappedTriples]:
-    """Cleanup a list of triples array with respect to the first array."""
-    reference, *others = triples_groups
-    rv = []
-    for other in others:
-        if random_state is not None:
-            reference, other = _tf_cleanup_randomized(reference, other, random_state)
-        else:
-            reference, other = _tf_cleanup_deterministic(reference, other)
-        rv.append(other)
-    # [...] is necessary for Python 3.7 compatibility
-    return [reference, *rv]
+class Cleaner:
+    """A cleanup method for ensuring that all entities are contained in the triples of the first split part."""
 
+    @abstractmethod
+    def cleanup_pair(
+        self,
+        reference: MappedTriples,
+        other: MappedTriples,
+        random_state: torch.Generator,
+    ) -> Tuple[MappedTriples, MappedTriples]:
+        raise NotImplementedError
 
-def _tf_cleanup_deterministic(training: MappedTriples, testing: MappedTriples) -> Tuple[MappedTriples, MappedTriples]:
-    """Cleanup a triples array (testing) with respect to another (training)."""
-    move_id_mask = _prepare_cleanup(training, testing)
-    training = torch.cat([training, testing[move_id_mask]])
-    testing = testing[~move_id_mask]
-    return training, testing
-
-
-def _tf_cleanup_randomized(
-    training: MappedTriples,
-    testing: MappedTriples,
-    random_state: TorchRandomHint = None,
-) -> Tuple[MappedTriples, MappedTriples]:
-    """Cleanup a triples array, but randomly select testing triples and recalculate to minimize moves.
-
-    1. Calculate ``move_id_mask`` as in :func:`_tf_cleanup_deterministic`
-    2. Choose a triple to move, recalculate move_id_mask
-    3. Continue until move_id_mask has no true bits
-    """
-    generator = ensure_torch_random_state(random_state)
-    move_id_mask = _prepare_cleanup(training, testing)
-
-    # While there are still triples that should be moved to the training set
-    while move_id_mask.any():
-        # Pick a random triple to move over to the training triples
-        (candidates,) = move_id_mask.nonzero(as_tuple=True)
-        idx = torch.randint(candidates.shape[0], size=(1,), generator=generator)
-        idx = candidates[idx]
-
-        # add to training
-        training = torch.cat([training, testing[idx].view(1, -1)], dim=0)
-        # remove from testing
-        testing = torch.cat([testing[:idx], testing[idx + 1 :]], dim=0)
-        # Recalculate the move_id_mask
-        move_id_mask = _prepare_cleanup(training, testing)
-
-    return training, testing
+    def __call__(
+        self,
+        triples_groups: Sequence[MappedTriples],
+        random_state: torch.Generator,
+    ) -> Sequence[MappedTriples]:
+        """Cleanup a list of triples array with respect to the first array."""
+        reference, *others = triples_groups
+        # [...] is necessary for Python 3.7 compatibility
+        return [
+            reference,
+            *(self.cleanup_pair(reference=reference, other=other, random_state=random_state) for other in others),
+        ]
 
 
 def _prepare_cleanup(
@@ -275,6 +244,55 @@ def _prepare_cleanup(
         exclusive_triples = not_in_training_mask[testing[:, col].view(-1)].view(-1, len(col)).any(dim=-1)
         to_move_mask = to_move_mask | exclusive_triples
     return to_move_mask
+
+
+class RandomizedCleaner(Cleaner):
+    """Cleanup a triples array, but randomly select testing triples and recalculate to minimize moves.
+
+    1. Calculate ``move_id_mask`` as in :func:`_tf_cleanup_deterministic`
+    2. Choose a triple to move, recalculate move_id_mask
+    3. Continue until move_id_mask has no true bits
+    """
+
+    def cleanup_pair(
+        self,
+        reference: MappedTriples,
+        other: MappedTriples,
+        random_state: torch.Generator,
+    ) -> Tuple[MappedTriples, MappedTriples]:  # noqa: D102
+        generator = ensure_torch_random_state(random_state)
+        move_id_mask = _prepare_cleanup(reference, other)
+
+        # While there are still triples that should be moved to the training set
+        while move_id_mask.any():
+            # Pick a random triple to move over to the training triples
+            (candidates,) = move_id_mask.nonzero(as_tuple=True)
+            idx = torch.randint(candidates.shape[0], size=(1,), generator=generator)
+            idx = candidates[idx]
+
+            # add to training
+            reference = torch.cat([reference, other[idx].view(1, -1)], dim=0)
+            # remove from testing
+            other = torch.cat([other[:idx], other[idx + 1 :]], dim=0)
+            # Recalculate the move_id_mask
+            move_id_mask = _prepare_cleanup(reference, other)
+
+        return reference, other
+
+
+class DeterministicCleaner(Cleaner):
+    """Cleanup a triples array (testing) with respect to another (training)."""
+
+    def cleanup_pair(
+        self,
+        reference: MappedTriples,
+        other: MappedTriples,
+        random_state: torch.Generator,
+    ) -> Tuple[MappedTriples, MappedTriples]:  # noqa: D102
+        move_id_mask = _prepare_cleanup(reference, other)
+        reference = torch.cat([reference, other[move_id_mask]])
+        other = other[~move_id_mask]
+        return reference, other
 
 
 class Splitter:
@@ -348,8 +366,22 @@ class Splitter:
         return triples_groups
 
 
+cleaner_resolver = Resolver.from_subclasses(base=Cleaner, default=DeterministicCleaner)
+
+
 class CleanupSplitter(Splitter):
     """TODO"""
+
+    def __init__(self, cleaner: HintOrType[Cleaner] = None) -> None:
+        """
+        Initialize the splitter.
+        
+        :param cleaner:
+            the cleanup method to use. Defaults to the fast deterministic cleaner,
+            which may lead to larger deviances between desired and actual triple count.
+        """
+        super().__init__()
+        self.cleaner = cleaner_resolver.make(cleaner)
 
     def split_absolute_size(
         self,
@@ -364,7 +396,7 @@ class CleanupSplitter(Splitter):
         )
         # Make sure that the first element has all the right stuff in it
         logger.debug("cleaning up groups")
-        triples_groups = _tf_cleanup_all(triples_groups, random_state=random_state if randomize_cleanup else None)
+        triples_groups = self.cleaner(triples_groups, random_state=random_state)
         logger.debug("done cleaning up groups")
         return triples_groups
 
