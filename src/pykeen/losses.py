@@ -1087,18 +1087,19 @@ class CrossEntropyLoss(SetwiseLoss):
             reduction=self.reduction,
         )
 
-    def forward(
+    def process_lcwa_scores(
         self,
-        logits: torch.FloatTensor,
+        predictions: torch.FloatTensor,
         labels: torch.FloatTensor,
-    ) -> torch.FloatTensor:  # noqa: D102
-        # cross entropy expects a proper probability distribution -> normalize labels
-        p_true = functional.normalize(labels, p=1, dim=-1)
-        # Use numerically stable variant to compute log(softmax)
-        log_p_pred = logits.log_softmax(dim=-1)
-        # compute cross entropy: ce(b) = sum_i p_true(b, i) * log p_pred(b, i)
-        sample_wise_cross_entropy = -(p_true * log_p_pred).sum(dim=-1)
-        return self._reduction_method(sample_wise_cross_entropy)
+        label_smoothing: Optional[float] = None,
+        num_entities: Optional[int] = None,
+    ) -> torch.FloatTensor:
+        return functional.cross_entropy(
+            input=predictions,
+            target=labels,
+            label_smoothing=label_smoothing or 0.0,
+            reduction=self.reduction,
+        )
 
 
 @parse_docdata
