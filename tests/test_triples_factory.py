@@ -21,9 +21,9 @@ from pykeen.triples.generation import generate_triples
 from pykeen.triples.splitting import (
     SPLIT_METHODS,
     _get_cover_deterministic,
-    _tf_cleanup_all,
-    _tf_cleanup_deterministic,
-    _tf_cleanup_randomized,
+    #_tf_cleanup_all,
+    #_tf_cleanup_deterministic,
+    #_tf_cleanup_randomized,
     get_absolute_split_sizes,
     normalize_ratios,
 )
@@ -349,121 +349,6 @@ class TestSplit(unittest.TestCase):
             triples_1 = factory_1.mapped_triples.detach().cpu().numpy()
             triples_2 = factory_2.mapped_triples.detach().cpu().numpy()
             self.assertTrue((triples_1 == triples_2).all(), msg=msg)
-
-    def test_cleanup_deterministic(self):
-        """Test that triples in a test set can get moved properly to the training set."""
-        training = torch.as_tensor(
-            data=[
-                [1, 1000, 2],
-                [1, 1000, 3],
-                [1, 1001, 3],
-            ],
-            dtype=torch.long,
-        )
-        testing = torch.as_tensor(
-            data=[
-                [2, 1001, 3],
-                [1, 1002, 4],
-            ],
-            dtype=torch.long,
-        )
-        expected_training = torch.as_tensor(
-            data=[
-                [1, 1000, 2],
-                [1, 1000, 3],
-                [1, 1001, 3],
-                [1, 1002, 4],
-            ],
-            dtype=torch.long,
-        )
-        expected_testing = torch.as_tensor(
-            data=[
-                [2, 1001, 3],
-            ],
-            dtype=torch.long,
-        )
-
-        new_training, new_testing = _tf_cleanup_deterministic(training, testing)
-        assert (expected_training == new_training).all()
-        assert (expected_testing == new_testing).all()
-
-        new_testing, new_testing = _tf_cleanup_all([training, testing])
-        assert (expected_training == new_training).all()
-        assert (expected_testing == new_testing).all()
-
-    def test_cleanup_randomized(self):
-        """Test that triples in a test set can get moved properly to the training set."""
-        training = torch.as_tensor(
-            data=[
-                [1, 1000, 2],
-                [1, 1000, 3],
-            ],
-            dtype=torch.long,
-        )
-        testing = torch.as_tensor(
-            data=[
-                [2, 1000, 3],
-                [1, 1000, 4],
-                [2, 1000, 4],
-                [1, 1001, 3],
-            ],
-            dtype=torch.long,
-        )
-        expected_training_1 = {
-            (1, 1000, 2),
-            (1, 1000, 3),
-            (1, 1000, 4),
-            (1, 1001, 3),
-        }
-        expected_testing_1 = {
-            (2, 1000, 3),
-            (2, 1000, 4),
-        }
-
-        expected_training_2 = {
-            (1, 1000, 2),
-            (1, 1000, 3),
-            (2, 1000, 4),
-            (1, 1001, 3),
-        }
-        expected_testing_2 = {
-            (2, 1000, 3),
-            (1, 1000, 4),
-        }
-
-        new_training, new_testing = [
-            set(tuple(row) for row in arr.tolist()) for arr in _tf_cleanup_randomized(training, testing)
-        ]
-
-        if expected_training_1 == new_training:
-            self.assertEqual(expected_testing_1, new_testing)
-        elif expected_training_2 == new_training:
-            self.assertEqual(expected_testing_2, new_testing)
-        else:
-            self.fail("training was not correct")
-
-    def test_get_cover_deterministic(self):
-        """Test _get_cover_deterministic."""
-        generated_triples = generate_triples()
-        cover = _get_cover_deterministic(triples=generated_triples)
-
-        # check type
-        assert torch.is_tensor(cover)
-        assert cover.dtype == torch.bool
-        # check format
-        assert cover.shape == (generated_triples.shape[0],)
-
-        # check coverage
-        self.assertEqual(
-            get_entities(generated_triples),
-            get_entities(generated_triples[cover]),
-            msg="entity coverage is not full",
-        )
-        self.assertEqual(
-            get_relations(generated_triples),
-            get_relations(generated_triples[cover]),
-            msg="relation coverage is not full",
-        )
 
 
 class TestLiterals(unittest.TestCase):

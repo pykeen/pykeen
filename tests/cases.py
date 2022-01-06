@@ -20,6 +20,7 @@ from typing import (
     MutableMapping,
     Optional,
     Sequence,
+    Set,
     Tuple,
     Type,
     TypeVar,
@@ -53,6 +54,8 @@ from pykeen.regularizers import LpRegularizer, Regularizer
 from pykeen.trackers import ResultTracker
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
 from pykeen.triples import TriplesFactory, generation
+from pykeen.triples.splitting import Cleaner
+from pykeen.triples.utils import get_entities
 from pykeen.typing import HeadRepresentation, Initializer, MappedTriples, RelationRepresentation, TailRepresentation
 from pykeen.utils import all_in_bounds, get_batchnorm_modules, resolve_device, set_random_seed, unpack_singletons
 from tests.constants import EPSILON
@@ -1551,3 +1554,56 @@ class PredictBaseTestCase(unittest.TestCase):
             triples_factory=self.factory,
             **self.model_kwargs,
         )
+
+
+def tensor_to_set(tensor: torch.LongTensor) -> Set[Tuple[int, ...]]:
+    return set(map(tuple, tensor.tolist()))
+
+
+def tensor_subset(a: torch.LongTensor, b: torch.LongTensor) -> bool:
+    return tensor_to_set(a).issubset(tensor_to_set(b))
+
+
+def get_entities(mapped_triples: MappedTriples) -> Set[int]:
+    return set(mapped_triples[:, 0].tolist()).union(mapped_triples[:, 2].tolist())
+
+
+class CleanerTestCase(GenericTestCase[Cleaner]):
+    """Test cases for cleaner."""
+
+    def post_instantiation_hook(self) -> None:
+        """Prepare triples."""
+        self.dataset = Nations()
+        self.all_entities = set(range(self.dataset.num_entities))
+        self.mapped_triples = self.dataset.training.mapped_triples
+        # unfavourable split to ensure that cleanup is necessary
+        self.reference, self.other = torch.split(
+            self.mapped_triples,
+            split_size_or_sections=[24, 1592 - 24],
+            dim=0,
+        )
+        # check for unclean split
+        assert get_entities(self.reference) != self.all_entities
+
+    def test_cleanup_pair(self):
+        """Test cleanup_pair."""
+        reference_clean, other_clean = self.instance.cleanup_pair(
+            reference=self.reference,
+            other=self.other,
+            random_state=42,
+        )
+        # check that no triple got lost
+        assert tensor_to_set(self.mapped_triples) == tensor_to_set(
+            torch.cat(
+                [
+                    reference_clean,
+                    other_clean,
+                ],
+                dim=0,
+            )
+        )
+        # check that triples where only moved from other to reference
+        assert tensor_subset(self.reference, reference_clean)
+        assert tensor_subset(other_clean, self.other)
+        # check that all entities occur in reference
+        assert get_entities(reference_clean) == self.all_entities
