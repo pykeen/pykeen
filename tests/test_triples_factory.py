@@ -17,7 +17,7 @@ import torch
 from pykeen.datasets import Hetionet, Nations, SingleTabbedDataset
 from pykeen.datasets.nations import NATIONS_TRAIN_PATH
 from pykeen.triples import CoreTriplesFactory, LCWAInstances, TriplesFactory, TriplesNumericLiteralsFactory
-from pykeen.triples.splitting import SPLIT_METHODS, get_absolute_split_sizes, normalize_ratios
+from pykeen.triples.splitting import get_absolute_split_sizes, normalize_ratios, splitter_resolver
 from pykeen.triples.triples_factory import INVERSE_SUFFIX, _map_triples_elements_to_ids
 from pykeen.triples.utils import TRIPLES_DF_COLUMNS, load_triples
 from tests.constants import RESOURCES
@@ -299,7 +299,7 @@ class TestSplit(unittest.TestCase):
         for (
             method,
             (n, ratios),
-        ) in itt.product(SPLIT_METHODS, cases):
+        ) in itt.product(splitter_resolver.options, cases):
             with self.subTest(method=method, ratios=ratios):
                 factories_1 = self.triples_factory.split(ratios, method=method, random_state=0)
                 self.assertEqual(n, len(factories_1))

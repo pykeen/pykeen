@@ -21,11 +21,6 @@ __all__ = [
     "split",
 ]
 
-SPLIT_METHODS = (
-    "cleanup",
-    "coverage",
-)
-
 
 def _split_triples(
     mapped_triples: MappedTriples,
