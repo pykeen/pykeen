@@ -353,12 +353,13 @@ class Splitter:
             the random state used to shuffle and split the triples
         :param ratios:
             There are three options for this argument.
-            First, a float can be given between 0 and 1.0, non-inclusive. The first set of triples will get this ratio and
-            the second will get the rest.
-            Second, a list of ratios can be given for which set in which order should get what ratios as in ``[0.8, 0.1]``.
+            First, a float can be given between 0 and 1.0, non-inclusive. The first set of triples will get this
+            ratio and the second will get the rest.
+            Second, a list of ratios can be given for which set in which order should get what ratios as
+            in ``[0.8, 0.1]``.
             The final ratio can be omitted because that can be calculated.
-            Third, all ratios can be explicitly set in order such as in ``[0.8, 0.1, 0.1]`` where the sum of all ratios is
-            1.0.
+            Third, all ratios can be explicitly set in order such as in ``[0.8, 0.1, 0.1]`` where the sum of
+            all ratios is 1.0.
 
         :return:
             A partition of triples, which are split (approximately) according to the ratios.
@@ -383,7 +384,13 @@ class Splitter:
 
 
 class CleanupSplitter(Splitter):
-    """TODO"""
+    """
+    The cleanup splitter first randomly splits the triples and then cleans up.
+
+    In the cleanup process, triples are moved into the train part until all entities occur at least once in train.
+
+    The splitter supports two variants of cleanup.
+    """
 
     def __init__(self, cleaner: HintOrType[Cleaner] = None) -> None:
         """
@@ -415,7 +422,7 @@ class CleanupSplitter(Splitter):
 
 
 class CoverageSplitter(Splitter):
-    """TODO"""
+    """This splitter greedily selects training triples such that each entity is covered and then splits the rest."""
 
     def split_absolute_size(
         self,
