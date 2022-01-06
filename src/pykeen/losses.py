@@ -1083,7 +1083,7 @@ class CrossEntropyLoss(SetwiseLoss):
         return functional.cross_entropy(
             input=scores,
             target=true_indices,
-            label_smoothing=label_smoothing,
+            label_smoothing=label_smoothing or 0.0,
             reduction=self.reduction,
         )
 
