@@ -5,7 +5,7 @@
 import logging
 import typing
 from abc import abstractmethod
-from typing import Collection, Optional, Sequence, Set, Tuple, Union
+from typing import Collection, Optional, Sequence, Set, Tuple, Type, Union
 
 import numpy
 import pandas
@@ -255,11 +255,11 @@ def _prepare_cleanup(
 
 
 class RandomizedCleaner(Cleaner):
-    """Cleanup a triples array, but randomly select testing triples and recalculate to minimize moves.
+    """Cleanup a triples array by randomly selecting testing triples and recalculate to minimize moves.
 
-    1. Calculate ``move_id_mask`` as in :func:`_tf_cleanup_deterministic`
-    2. Choose a triple to move, recalculate move_id_mask
-    3. Continue until move_id_mask has no true bits
+    1. Calculate ``move_id_mask`` as in :func:`_prepare_cleanup`
+    2. Choose a triple to move, recalculate ``move_id_mask``
+    3. Continue until ``move_id_mask`` has no true bits
     """
 
     def cleanup_pair(
@@ -384,7 +384,7 @@ class CleanupSplitter(Splitter):
 
     In the cleanup process, triples are moved into the train part until all entities occur at least once in train.
 
-    The splitter supports two variants of cleanup.
+    The splitter supports two variants of cleanup, cf. ``cleaner_resolver``.
     """
 
     def __init__(self, cleaner: HintOrType[Cleaner] = None) -> None:
@@ -484,6 +484,12 @@ def split(
         ratios = [0.8, 0.1, 0.1]  # also makes a [0.8, 0.1, 0.1] split
         train, test, val = split(triples, ratios)
     """
+    # backwards compatibility
+    method: Type[Splitter] = splitter_resolver.lookup(method)
+    kwargs = dict()
+    if method is CleanupSplitter:
+        cleaner = RandomizedCleaner if randomize_cleanup else DeterministicCleaner
+        kwargs["cleaner"] = cleaner_resolver.normalize_cls(cleaner)
     return splitter_resolver.make(method).split(
         mapped_triples=mapped_triples,
         ratios=ratios,
