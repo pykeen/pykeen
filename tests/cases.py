@@ -63,7 +63,7 @@ from pykeen.utils import (
     get_batchnorm_modules,
     resolve_device,
     set_random_seed,
-    tensor_subset,
+    is_tensor_subset,
     tensor_to_set,
     unpack_singletons,
 )
@@ -1600,8 +1600,8 @@ class CleanerTestCase(GenericTestCase[Cleaner]):
             )
         )
         # check that triples where only moved from other to reference
-        assert tensor_subset(self.reference, reference_clean)
-        assert tensor_subset(other_clean, self.other)
+        assert is_tensor_subset(self.reference, reference_clean)
+        assert is_tensor_subset(other_clean, self.other)
         # check that all entities occur in reference
         assert get_entities(reference_clean) == self.all_entities
 

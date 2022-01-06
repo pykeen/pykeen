@@ -1261,7 +1261,7 @@ def tensor_to_set(tensor: torch.LongTensor) -> Set[Tuple[int, ...]]:
     return set(map(tuple, tensor.tolist()))
 
 
-def tensor_subset(a: torch.LongTensor, b: torch.LongTensor) -> bool:
+def is_tensor_subset(a: torch.LongTensor, b: torch.LongTensor) -> bool:
     """Check whether one tensor of triples is a subset of another one."""
     return tensor_to_set(a).issubset(tensor_to_set(b))
 
