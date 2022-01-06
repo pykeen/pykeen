@@ -9,6 +9,7 @@ from pykeen.triples.splitting import (
     _get_cover_deterministic,
 )
 from pykeen.triples.utils import get_entities, get_relations
+from pykeen.utils import tensor_to_set
 from tests.cases import CleanerTestCase, SplitterTestCase
 
 
@@ -101,8 +102,7 @@ class RandomizedCleanerTests(CleanerTestCase):
         }
 
         new_training, new_testing = [
-            set(tuple(row) for row in arr.tolist())
-            for arr in self.instance.cleanup_pair(training, testing, random_state=None)
+            tensor_to_set(arr) for arr in self.instance.cleanup_pair(training, testing, random_state=None)
         ]
 
         if expected_training_1 == new_training:
