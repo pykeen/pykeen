@@ -1093,7 +1093,7 @@ class CrossEntropyLoss(SetwiseLoss):
         labels: torch.FloatTensor,
         label_smoothing: Optional[float] = None,
         num_entities: Optional[int] = None,
-    ) -> torch.FloatTensor:
+    ) -> torch.FloatTensor:  # noqa: D102
         return functional.cross_entropy(
             input=predictions,
             target=labels,
