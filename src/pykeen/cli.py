@@ -353,7 +353,7 @@ def _help_hpo_samplers(tablefmt: str, link_fmt: Optional[str] = None):
 
 
 METRIC_NAMES = {
-    "sklearn": "Classification",
+    "classification": "Classification",
     "rankbased": "Ranking",
 }
 
