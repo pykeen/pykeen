@@ -20,7 +20,6 @@ from typing import (
     MutableMapping,
     Optional,
     Sequence,
-    Set,
     Tuple,
     Type,
     TypeVar,
@@ -1610,7 +1609,7 @@ class SplitterTestCase(GenericTestCase[Splitter]):
     """Test cases for triples splitter."""
 
     def post_instantiation_hook(self) -> None:
-        """Setup data."""
+        """Prepare data."""
         dataset = Nations()
         self.all_entities = set(range(dataset.num_entities))
         self.mapped_triples = dataset.training.mapped_triples
