@@ -164,6 +164,33 @@ class ERMLPETests(cases.InteractionTestCase):
         return mlp(x).view(1, -1) @ t.view(-1, 1)
 
 
+class HAKETests(cases.InteractionTestCase):
+    """Tests for HAKE interaction."""
+
+    cls = pykeen.nn.modules.HAKEInteraction
+
+    def _exp_score(
+        self,
+        h_phase: torch.FloatTensor,
+        h_modulus: torch.FloatTensor,
+        r_phase: torch.FloatTensor,
+        r_modulus: torch.FloatTensor,
+        t_phase: torch.FloatTensor,
+        t_modulus: torch.FloatTensor,
+        modulus_weight: torch.FloatTensor,
+        phase_weight: torch.FloatTensor,
+    ) -> torch.FloatTensor:  # noqa: D102
+        # remove batch/num dimension
+        h_phase, h_modulus, r_phase, r_modulus, t_phase, t_modulus = strip_dim(
+            h_phase, h_modulus, r_phase, r_modulus, t_phase, t_modulus
+        )
+        phase = h_phase + r_phase - t_phase
+        phase_score = (0.5 * phase).sin().norm(p=1, dim=-1)
+        modulus = h_modulus * r_modulus.abs() - t_modulus
+        modulus_score = modulus.norm(p=2, dim=-1)
+        return -(phase_weight * phase_score + modulus_weight * modulus_score)
+
+
 class HolETests(cases.InteractionTestCase):
     """Tests for HolE interaction function."""
 
@@ -483,6 +510,18 @@ class TransFTests(cases.InteractionTestCase):
         left = ((h + r) * t).sum(dim=-1)
         right = (h * (t - r)).sum(dim=-1)
         return left + right
+
+
+class ModETests(cases.InteractionTestCase):
+    """Tests for ModE interaction function."""
+
+    cls = pykeen.nn.modules.ModEInteraction
+
+
+class PRotatE(cases.InteractionTestCase):
+    """Tests for PRotatE interaction function."""
+
+    cls = pykeen.nn.modules.PRotatEInteration
 
 
 class MonotonicAffineTransformationInteractionTests(cases.InteractionTestCase):

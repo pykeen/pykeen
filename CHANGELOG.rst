@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on `Keep a Changelog <http://keepachangelog.com/>`_
 and this project adheres to `Semantic Versioning <http://semver.org/>`_
 
+Unreleased
+----------
+New Models
+~~~~~~~~~~
+- HAKE (https://github.com/pykeen/pykeen/pull/442)
+- pRotatE (https://github.com/pykeen/pykeen/pull/442)
+- ModE (https://github.com/pykeen/pykeen/pull/442)
+
 `1.6.0 <https://github.com/pykeen/pykeen/compare/v1.5.0...v1.6.0>`_
 -------------------------------------------------------------------
 This release is only compatible with PyTorch 1.9+. Because of some changes,

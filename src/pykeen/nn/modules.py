@@ -50,6 +50,7 @@ __all__ = [
     "MonotonicAffineTransformationInteraction",
     # Concrete Classes
     "BoxEInteraction",
+    "BRotatEInteration",
     "ComplExInteraction",
     "ConvEInteraction",
     "ConvKBInteraction",
@@ -58,12 +59,15 @@ __all__ = [
     "DistMAInteraction",
     "ERMLPInteraction",
     "ERMLPEInteraction",
+    "HAKEInteraction",
     "HolEInteraction",
     "KG2EInteraction",
+    "ModEInteraction",
     "MuREInteraction",
     "NTNInteraction",
     "PairREInteraction",
     "ProjEInteraction",
+    "PRotatEInteration",
     "RESCALInteraction",
     "RotatEInteraction",
     "SimplEInteraction",
@@ -1328,6 +1332,87 @@ class QuatEInteraction(
     """
 
     func = pkf.quat_e_interaction
+
+
+class HAKEInteraction(
+    FunctionalInteraction[
+        Tuple[torch.FloatTensor, torch.FloatTensor],
+        Tuple[torch.FloatTensor, torch.FloatTensor],
+        Tuple[torch.FloatTensor, torch.FloatTensor],
+    ],
+):
+    """A module wrapper for the HAKE interaction function from [zhang2020]_.
+
+    .. seealso :: :func:`pykeen.nn.functional.hake_interaction`
+    """
+
+    func = pkf.hake_interaction
+
+    #: phase + modulus
+    entity_shape = ("d", "d")
+    relation_shape = ("d", "d")
+
+    def __init__(
+        self,
+        modulus_weight: float = 1.0,
+        phase_weight: float = 0.5,
+    ):
+        """
+        Initialize the interaction module.
+
+        :param modulus_weight:
+            The initial weight for the modulus term.
+        :param phase_weight:
+            The initial weight for the phase term.
+        """
+        super().__init__()
+        self.modulus_weight = nn.Parameter(data=torch.as_tensor(data=modulus_weight))
+        self.phase_weight = nn.Parameter(data=torch.as_tensor(data=phase_weight))
+
+    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
+        return dict(modulus_weight=self.modulus_weight, phase_weight=self.phase_weight)
+
+    @staticmethod
+    def _prepare_hrt_for_functional(
+        h: HeadRepresentation,
+        r: RelationRepresentation,
+        t: TailRepresentation,
+    ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
+        return dict(
+            h_phase=h[0],
+            h_modulus=h[1],
+            r_phase=r[0],
+            r_modulus=r[1],
+            t_phase=t[0],
+            t_modulus=t[1],
+        )
+
+
+class ModEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]):
+    """A module wrapper for the ModE interaction function from [zhang2020]_.
+
+    .. seealso :: :func:`pykeen.nn.functional.mode_interaction`
+    """
+
+    func = pkf.mode_interaction
+
+
+class PRotatEInteration(NormBasedInteraction[FloatTensor, FloatTensor, FloatTensor]):
+    """A module wrapper for the pRotatE interaction function from [sun2019]_.
+
+    .. seealso :: :func:`pykeen.nn.functional.p_rotate_interaction`
+    """
+
+    func = pkf.p_rotate_interaction
+
+
+class BRotatEInteration(NormBasedInteraction[FloatTensor, FloatTensor, FloatTensor]):
+    """A module wrapper for the BRotatE interaction function.
+
+    .. seealso :: :func:`pykeen.nn.functional.b_rotate_interaction`
+    """
+
+    func = pkf.b_rotate_interaction
 
 
 class MonotonicAffineTransformationInteraction(

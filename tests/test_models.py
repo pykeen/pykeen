@@ -664,6 +664,24 @@ class TestCrossE(cases.ModelTestCase):
     num_constant_init = 1
 
 
+class TestHAKE(cases.ModelTestCase):
+    """Test the HAKE model."""
+
+    cls = pykeen.models.HAKE
+
+
+class TestModE(cases.ModelTestCase):
+    """Test the ModE model."""
+
+    cls = pykeen.models.ModE
+
+
+class TestPRotatE(cases.ModelTestCase):
+    """Test the pRotatE model."""
+
+    cls = pykeen.models.PRotatE
+
+
 class TestBoxE(cases.ModelTestCase):
     """Test the BoxE model."""
 

@@ -42,7 +42,7 @@
   <a href="#installation">Installation</a> •
   <a href="#quickstart">Quickstart</a> •
   <a href="#datasets-29">Datasets</a> •
-  <a href="#models-36">Models</a> •
+  <a href="#models-40">Models</a> •
   <a href="#supporters">Support</a> •
   <a href="#citation">Citation</a>
 </p>
@@ -146,11 +146,12 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 | WordNet-18 (RR)                    | [`pykeen.datasets.WN18RR`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.WN18RR.html)               | [Toutanova *et al*., 2015](https://www.aclweb.org/anthology/W15-4007/)                                                  |      40559 |          11 |     92583 |
 | YAGO3-10                           | [`pykeen.datasets.YAGO310`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.YAGO310.html)             | [Mahdisoltani *et al*., 2015](http://service.tsi.telecom-paristech.fr/cgi-bin//valipub_download.cgi?dId=284)            |     123143 |          37 |   1089000 |
 
-### Models (36)
+### Models (40)
 
 | Name                           | Reference                                                                                                                   | Citation                                                                                                                |
 |--------------------------------|-----------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|
 | BoxE                           | [`pykeen.models.BoxE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.BoxE.html)                                 | [Abboud *et al.*, 2020](https://arxiv.org/abs/2007.06267)                                                               |
+| BRotatE                        | [`pykeen.models.BRotatE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.BRotatE.html)                           | [Ali *et al.*, 2021](https://jmlr.org/papers/v22/20-825.html)                                                           |
 | CompGCN                        | [`pykeen.models.CompGCN`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.CompGCN.html)                           | [Vashishth *et al.*, 2020](https://arxiv.org/pdf/1911.03082)                                                            |
 | ComplEx                        | [`pykeen.models.ComplEx`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.ComplEx.html)                           | [Trouillon *et al.*, 2016](https://arxiv.org/abs/1606.06357)                                                            |
 | ComplEx Literal                | [`pykeen.models.ComplExLiteral`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.ComplExLiteral.html)             | [Kristiadi *et al.*, 2018](https://arxiv.org/abs/1802.00934)                                                            |
@@ -165,13 +166,16 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 | ER-MLP                         | [`pykeen.models.ERMLP`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.ERMLP.html)                               | [Dong *et al.*, 2014](https://dl.acm.org/citation.cfm?id=2623623)                                                       |
 | ER-MLP (E)                     | [`pykeen.models.ERMLPE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.ERMLPE.html)                             | [Sharifzadeh *et al.*, 2019](https://github.com/pykeen/pykeen)                                                          |
 | Fixed Model                    | [`pykeen.models.FixedModel`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.FixedModel.html)                     | [Berrendorf *et al.*, 2021](https://github.com/pykeen/pykeen/pull/691)                                                  |
+| HAKE                           | [`pykeen.models.HAKE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.HAKE.html)                                 | [Zhang *et al.*, 2020](https://arxiv.org/abs/1911.09419)                                                                |
 | HolE                           | [`pykeen.models.HolE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.HolE.html)                                 | [Nickel *et al.*, 2016](https://www.aaai.org/ocs/index.php/AAAI/AAAI16/paper/viewFile/12484/11828)                      |
 | KG2E                           | [`pykeen.models.KG2E`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.KG2E.html)                                 | [He *et al.*, 2015](https://dl.acm.org/doi/10.1145/2806416.2806502)                                                     |
+| ModE                           | [`pykeen.models.ModE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.ModE.html)                                 | [Zhang *et al.*, 2020](https://arxiv.org/abs/1911.09419)                                                                |
 | MuRE                           | [`pykeen.models.MuRE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.MuRE.html)                                 | [Balažević *et al.*, 2019](https://arxiv.org/abs/1905.09791)                                                            |
 | NodePiece                      | [`pykeen.models.NodePiece`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.NodePiece.html)                       | [Galkin *et al.*, 2021](https://arxiv.org/abs/2106.12144)                                                               |
 | NTN                            | [`pykeen.models.NTN`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.NTN.html)                                   | [Socher *et al.*, 2013](https://dl.acm.org/doi/10.5555/2999611.2999715)                                                 |
 | PairRE                         | [`pykeen.models.PairRE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.PairRE.html)                             | [Chao *et al.*, 2020](http://arxiv.org/abs/2011.03798)                                                                  |
 | ProjE                          | [`pykeen.models.ProjE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.ProjE.html)                               | [Shi *et al.*, 2017](https://www.aaai.org/ocs/index.php/AAAI/AAAI17/paper/view/14279)                                   |
+| PRotatE                        | [`pykeen.models.PRotatE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.PRotatE.html)                           | [Sun *et al.*, 2019](https://arxiv.org/abs/1902.10197v1)                                                                |
 | QuatE                          | [`pykeen.models.QuatE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.QuatE.html)                               | [Zhang *et al.*, 2019](https://arxiv.org/abs/1904.10281)                                                                |
 | RESCAL                         | [`pykeen.models.RESCAL`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.RESCAL.html)                             | [Nickel *et al.*, 2011](http://www.cip.ifi.lmu.de/~nickel/data/paper-icml2011.pdf)                                      |
 | R-GCN                          | [`pykeen.models.RGCN`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.RGCN.html)                                 | [Schlichtkrull *et al.*, 2018](https://arxiv.org/pdf/1703.06103)                                                        |

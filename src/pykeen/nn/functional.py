@@ -39,6 +39,7 @@ from ..utils import (
 
 __all__ = [
     "boxe_interaction",
+    "b_rotate_interaction",
     "complex_interaction",
     "conve_interaction",
     "convkb_interaction",
@@ -48,12 +49,15 @@ __all__ = [
     "distmult_interaction",
     "ermlp_interaction",
     "ermlpe_interaction",
+    "hake_interaction",
     "hole_interaction",
     "kg2e_interaction",
+    "mode_interaction",
     "mure_interaction",
     "ntn_interaction",
     "pair_re_interaction",
     "proje_interaction",
+    "p_rotate_interaction",
     "rescal_interaction",
     "rotate_interaction",
     "simple_interaction",
@@ -1130,6 +1134,129 @@ def quat_e_interaction(
         )
         * t
     ).sum(dim=-1)
+
+
+def mode_interaction(
+    h: torch.FloatTensor,
+    r: torch.FloatTensor,
+    t: torch.FloatTensor,
+) -> torch.FloatTensor:
+    r"""
+    Evaluate the ModE scoring function from [zhang2020]_.
+
+    It is a simplification of :func:`hake_interaction` using only a modulus part.
+
+    The score function is given as
+
+    .. math ::
+        \|h \odot r - t\|
+
+    # TODO: this is like a real RotatE.
+    """
+    return negative_norm_of_sum(h * r, -t, p=2, power_norm=False)
+
+
+def p_rotate_interaction(
+    h: torch.FloatTensor,
+    r: torch.FloatTensor,
+    t: torch.FloatTensor,
+    p: Union[str, int, float] = 2,
+    power_norm: bool = False,
+) -> torch.FloatTensor:
+    r"""
+    Evaluate the pRotatE scoring function from [sun2019]_.
+
+    The score function is given as
+
+    .. math ::
+        \|\sin \Big(\frac{h + r - t}{2}\Big)\|_p
+
+    :param p:
+        The parameter p for selecting the norm, cf. torch.norm.
+    :param power_norm:
+        Whether to return the powered norm instead.
+    """
+    return negative_norm((0.5 * (h + r - t)).sin(), p=p, power_norm=power_norm)
+
+
+def b_rotate_interaction(
+    h: torch.FloatTensor,
+    r: torch.FloatTensor,
+    t: torch.FloatTensor,
+    p: Union[str, int, float] = 2,
+    power_norm: bool = False,
+):
+    """The BRotatE scoring function."""
+    raise NotImplemented
+
+
+def hake_interaction(
+    h_phase: torch.FloatTensor,
+    h_modulus: torch.FloatTensor,
+    r_phase: torch.FloatTensor,
+    r_modulus: torch.FloatTensor,
+    t_phase: torch.FloatTensor,
+    t_modulus: torch.FloatTensor,
+    modulus_weight: torch.FloatTensor,
+    phase_weight: torch.FloatTensor,
+) -> torch.FloatTensor:
+    r"""
+    Evaluate the HAKE scoring function from [zhang2020]_.
+
+    HAKE models entities in polar coordinate system with a modulus and a phase part,
+    where the modulus aims to capture a hierarchy level, and the phase enables distinction
+    on the same level of hierarchy.
+
+    The score function is given as a combination of a modulus distance and a phase distance
+
+    .. math ::
+        -\lambda_m d_{r, m}(h_m, t_m) - \lambda_p d_{r, p}(h_p, t_p)
+
+    with
+
+    .. math ::
+        d_{r, m} = \|h_m \odot r_m - t_m\|_2
+
+        d_{r, p} = \|\sin \Big(\frac{h_p + r_p - t_p}{2}\Big) \|_1
+
+    and trainable scalar weights :math:`\lambda_m, \lambda_p`.
+
+    .. note ::
+        In the paper, a second version is mentioned where a different relation modulus
+        parametrization is used.
+
+    .. note ::
+        The paper mentions a single trainable weight parameter :math:`\lambda`.
+        The implementation uses two, one for modulus and one for phase.
+
+    .. seealso ::
+        official implementation: https://github.com/MIRALab-USTC/KGE-HAKE/blob/6a82e17/codes/models.py#L295-L365
+
+    :param h_phase: shape: (batch_size, num_heads, 1, 1, dim)
+        The phases for the head entities.
+    :param h_modulus: shape: (batch_size, num_heads, 1, 1, dim)
+        The modulus for the head entities.
+    :param r_phase: (batch_size, 1, num_relations, 1, dim)
+        The phases for the relations.
+    :param r_modulus: (batch_size, 1, num_relations, 1, dim)
+        The modulus for the relations.
+    :param t_phase: shape: (batch_size, 1, 1, num_tails, dim)
+        The phases for the tail entities.
+    :param t_modulus: shape: (batch_size, 1, 1, num_tails, dim)
+        The modulus for the tail entities.
+    :param phase_weight:
+        A (trainable) scalar weight for the phase term.
+    :param modulus_weight:
+        A (trainable) scalar weight for the modulus term.
+
+    :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        A score tensor.
+    """
+    # compute phase score: pRotatE
+    score = phase_weight * p_rotate_interaction(h=h_phase, r=r_phase, t=t_phase, p=1)
+
+    # compute modulus score
+    return score + modulus_weight * negative_norm_of_sum(h_modulus * r_modulus.abs(), -t_modulus, p=2)
 
 
 def cross_e_interaction(

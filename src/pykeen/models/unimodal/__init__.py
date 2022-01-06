@@ -59,6 +59,8 @@
    networks <https://arxiv.org/abs/1911.03082>`_. *arXiv*, 1–15.
 .. [zhang2019] Zhang, Shuai, *et al.* (2019). `Quaternion knowledge graph embeddings
                 <https://openreview.net/forum?id=cZbk98eY_WwC>`_ NeurIPS'19.
+.. [zhang2020] Z. Zhang, *et al.* (2020) `Learning Hierarchy-Aware Knowledge Graph Embeddings for Link Prediction.
+   <https://arxiv.org/abs/1911.09419>`_. AAAI. 2020.
 .. [zhang2019b] Zhang, W., *et al.* (2019). `Interaction Embeddings for Prediction and Explanation in Knowledge
    Graphs <https://doi.org/10.1145/3289600.3291014>`. WSDM '19: Proceedings of the Twelfth ACM International
    Conference on Web Search and Data Mining.
@@ -87,6 +89,7 @@ from .distma import DistMA
 from .distmult import DistMult
 from .ermlp import ERMLP
 from .ermlpe import ERMLPE
+from .hake import HAKE, ModE
 from .hole import HolE
 from .kg2e import KG2E
 from .mure import MuRE
@@ -97,7 +100,7 @@ from .proj_e import ProjE
 from .quate import QuatE
 from .rescal import RESCAL
 from .rgcn import RGCN
-from .rotate import RotatE
+from .rotate import BRotatE, PRotatE, RotatE
 from .simple import SimplE
 from .structured_embedding import StructuredEmbedding
 from .toruse import TorusE
@@ -111,6 +114,7 @@ from .unstructured_model import UnstructuredModel
 
 __all__ = [
     "BoxE",
+    "BRotatE",
     "CompGCN",
     "ComplEx",
     "ConvE",
@@ -121,13 +125,16 @@ __all__ = [
     "DistMult",
     "ERMLP",
     "ERMLPE",
+    "HAKE",
     "HolE",
     "KG2E",
+    "ModE",
     "MuRE",
     "NTN",
     "NodePiece",
     "PairRE",
     "ProjE",
+    "PRotatE",
     "QuatE",
     "RESCAL",
     "RGCN",
