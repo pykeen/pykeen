@@ -1576,7 +1576,7 @@ class CleanerTestCase(GenericTestCase[Cleaner]):
         # unfavourable split to ensure that cleanup is necessary
         self.reference, self.other = torch.split(
             self.mapped_triples,
-            split_size_or_sections=[24, 1592 - 24],
+            split_size_or_sections=[24, self.mapped_triples.shape[0] - 24],
             dim=0,
         )
         # check for unclean split
