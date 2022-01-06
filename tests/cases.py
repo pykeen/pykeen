@@ -43,8 +43,9 @@ from pykeen.datasets import Nations
 from pykeen.datasets.base import LazyDataset
 from pykeen.datasets.kinships import KINSHIPS_TRAIN_PATH
 from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH
+from pykeen.evaluation import Evaluator, MetricResults
 from pykeen.losses import Loss, PairwiseLoss, PointwiseLoss, SetwiseLoss, UnsupportedLabelSmoothingError
-from pykeen.models import RESCAL, EntityRelationEmbeddingModel, Model
+from pykeen.models import RESCAL, EntityRelationEmbeddingModel, Model, TransE
 from pykeen.models.cli import build_cli_from_cls
 from pykeen.nn.emb import RepresentationModule
 from pykeen.nn.modules import FunctionalInteraction, Interaction, LiteralInteraction
@@ -1626,3 +1627,128 @@ class SplitterTestCase(GenericTestCase[Splitter]):
         assert tensor_to_set(self.mapped_triples) == set().union(*(tensor_to_set(triples) for triples in splitted))
         # check that all entities are covered in first part
         assert tensor_to_set(splitted[0]) == self.all_entities
+
+
+class EvaluatorTestCase(unittest.TestCase):
+    """A test case for quickly defining common tests for evaluators models."""
+
+    # The triples factory and model
+    factory: TriplesFactory
+    model: Model
+
+    #: The evaluator to be tested
+    evaluator_cls: ClassVar[Type[Evaluator]]
+    evaluator_kwargs: ClassVar[Optional[Mapping[str, Any]]] = None
+
+    # Settings
+    batch_size: int
+    embedding_dim: int
+
+    #: The evaluator instantiation
+    evaluator: Evaluator
+
+    def setUp(self) -> None:
+        """Set up the test case."""
+        # Settings
+        self.batch_size = 8
+        self.embedding_dim = 7
+
+        # Initialize evaluator
+        self.evaluator = self.evaluator_cls(**(self.evaluator_kwargs or {}))
+
+        # Use small test dataset
+        self.factory = Nations().training
+
+        # Use small model (untrained)
+        self.model = TransE(triples_factory=self.factory, embedding_dim=self.embedding_dim)
+
+    def _get_input(
+        self,
+        inverse: bool = False,
+    ) -> Tuple[torch.LongTensor, torch.FloatTensor, Optional[torch.BoolTensor]]:
+        # Get batch
+        hrt_batch = self.factory.mapped_triples[: self.batch_size].to(self.model.device)
+
+        # Compute scores
+        if inverse:
+            scores = self.model.score_h(rt_batch=hrt_batch[:, 1:])
+        else:
+            scores = self.model.score_t(hr_batch=hrt_batch[:, :2])
+
+        # Compute mask only if required
+        if self.evaluator.requires_positive_mask:
+            # TODO: Re-use filtering code
+            triples = self.factory.mapped_triples.to(self.model.device)
+            if inverse:
+                sel_col, start_col = 0, 1
+            else:
+                sel_col, start_col = 2, 0
+            stop_col = start_col + 2
+
+            # shape: (batch_size, num_triples)
+            triple_mask = (triples[None, :, start_col:stop_col] == hrt_batch[:, None, start_col:stop_col]).all(dim=-1)
+            batch_indices, triple_indices = triple_mask.nonzero(as_tuple=True)
+            entity_indices = triples[triple_indices, sel_col]
+
+            # shape: (batch_size, num_entities)
+            mask = torch.zeros_like(scores, dtype=torch.bool)
+            mask[batch_indices, entity_indices] = True
+        else:
+            mask = None
+
+        return hrt_batch, scores, mask
+
+    def test_process_tail_scores_(self) -> None:
+        """Test the evaluator's ``process_tail_scores_()`` function."""
+        hrt_batch, scores, mask = self._get_input()
+        true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, 2]][:, None]
+        self.evaluator.process_tail_scores_(
+            hrt_batch=hrt_batch,
+            true_scores=true_scores,
+            scores=scores,
+            dense_positive_mask=mask,
+        )
+
+    def test_process_head_scores_(self) -> None:
+        """Test the evaluator's ``process_head_scores_()`` function."""
+        hrt_batch, scores, mask = self._get_input(inverse=True)
+        true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, 0]][:, None]
+        self.evaluator.process_head_scores_(
+            hrt_batch=hrt_batch,
+            true_scores=true_scores,
+            scores=scores,
+            dense_positive_mask=mask,
+        )
+
+    def test_finalize(self) -> None:
+        """Test the finalize() function."""
+        # Process one batch
+        hrt_batch, scores, mask = self._get_input()
+        true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, 2]][:, None]
+        self.evaluator.process_tail_scores_(
+            hrt_batch=hrt_batch,
+            true_scores=true_scores,
+            scores=scores,
+            dense_positive_mask=mask,
+        )
+        self.evaluator.process_head_scores_(
+            hrt_batch=hrt_batch,
+            true_scores=true_scores,
+            scores=scores,
+            dense_positive_mask=mask,
+        )
+
+        result = self.evaluator.finalize()
+        assert isinstance(result, MetricResults)
+
+        self._validate_result(
+            result=result,
+            data={"batch": hrt_batch, "scores": scores, "mask": mask},
+        )
+
+    def _validate_result(
+        self,
+        result: MetricResults,
+        data: Dict[str, torch.Tensor],
+    ):
+        logger.warning(f"{self.__class__.__name__} did not overwrite _validate_result.")
