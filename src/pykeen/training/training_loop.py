@@ -13,7 +13,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from hashlib import md5
 from tempfile import NamedTemporaryFile
-from typing import IO, Any, ClassVar, Generic, List, Mapping, Optional, Tuple, Type, TypeVar, Union
+from typing import IO, Any, Generic, List, Mapping, Optional, Tuple, TypeVar, Union
 
 import numpy as np
 import torch
@@ -29,7 +29,6 @@ from .callbacks import (
     TrainingCallbackHint,
 )
 from ..constants import PYKEEN_CHECKPOINTS, PYKEEN_DEFAULT_CHECKPOINT
-from ..losses import Loss
 from ..lr_schedulers import LRScheduler
 from ..models import RGCN, Model
 from ..stoppers import Stopper
