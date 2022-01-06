@@ -1,7 +1,15 @@
 """Tests for splitting of triples."""
 import torch
-from pykeen.triples.splitting import DeterministicCleaner, RandomizedCleaner
-from tests.cases import CleanerTestCase
+
+from pykeen.triples.splitting import (
+    CleanupSplitter,
+    CoverageSplitter,
+    DeterministicCleaner,
+    RandomizedCleaner,
+    _get_cover_deterministic,
+)
+from pykeen.triples.utils import get_entities, get_relations
+from tests.cases import CleanerTestCase, SplitterTestCase
 
 
 class DeterministicCleanerTests(CleanerTestCase):
@@ -105,25 +113,36 @@ class RandomizedCleanerTests(CleanerTestCase):
             self.fail("training was not correct")
 
 
-#     def test_get_cover_deterministic(self):
-#         """Test _get_cover_deterministic."""
-#         generated_triples = generate_triples()
-#         cover = _get_cover_deterministic(triples=generated_triples)
+class CleanupSplitterTest(SplitterTestCase):
+    """Tests for cleanup splitter."""
 
-#         # check type
-#         assert torch.is_tensor(cover)
-#         assert cover.dtype == torch.bool
-#         # check format
-#         assert cover.shape == (generated_triples.shape[0],)
+    cls = CleanupSplitter
 
-#         # check coverage
-#         self.assertEqual(
-#             get_entities(generated_triples),
-#             get_entities(generated_triples[cover]),
-#             msg="entity coverage is not full",
-#         )
-#         self.assertEqual(
-#             get_relations(generated_triples),
-#             get_relations(generated_triples[cover]),
-#             msg="relation coverage is not full",
-#         )
+
+class CoverageSplitterTest(SplitterTestCase):
+    """Tests for coverage splitter."""
+
+    cls = CoverageSplitter
+
+    def test_get_cover_deterministic(self):
+        """Test _get_cover_deterministic."""
+        # generated_triples = generate_triples()
+        cover = _get_cover_deterministic(triples=self.mapped_triples)
+
+        # check type
+        assert torch.is_tensor(cover)
+        assert cover.dtype == torch.bool
+        # check format
+        assert cover.shape == (self.mapped_triples.shape[0],)
+
+        # check coverage
+        self.assertEqual(
+            get_entities(self.mapped_triples),
+            get_entities(self.mapped_triples[cover]),
+            msg="entity coverage is not full",
+        )
+        self.assertEqual(
+            get_relations(self.mapped_triples),
+            get_relations(self.mapped_triples[cover]),
+            msg="relation coverage is not full",
+        )

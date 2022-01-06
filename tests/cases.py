@@ -24,6 +24,7 @@ from typing import (
     Tuple,
     Type,
     TypeVar,
+    Union,
 )
 from unittest.case import SkipTest
 from unittest.mock import patch
@@ -54,10 +55,18 @@ from pykeen.regularizers import LpRegularizer, Regularizer
 from pykeen.trackers import ResultTracker
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
 from pykeen.triples import TriplesFactory, generation
-from pykeen.triples.splitting import Cleaner
+from pykeen.triples.splitting import Cleaner, Splitter
 from pykeen.triples.utils import get_entities
 from pykeen.typing import HeadRepresentation, Initializer, MappedTriples, RelationRepresentation, TailRepresentation
-from pykeen.utils import all_in_bounds, get_batchnorm_modules, resolve_device, set_random_seed, unpack_singletons
+from pykeen.utils import (
+    all_in_bounds,
+    get_batchnorm_modules,
+    resolve_device,
+    set_random_seed,
+    tensor_subset,
+    tensor_to_set,
+    unpack_singletons,
+)
 from tests.constants import EPSILON
 from tests.mocks import CustomRepresentations
 from tests.utils import rand
@@ -1556,18 +1565,6 @@ class PredictBaseTestCase(unittest.TestCase):
         )
 
 
-def tensor_to_set(tensor: torch.LongTensor) -> Set[Tuple[int, ...]]:
-    return set(map(tuple, tensor.tolist()))
-
-
-def tensor_subset(a: torch.LongTensor, b: torch.LongTensor) -> bool:
-    return tensor_to_set(a).issubset(tensor_to_set(b))
-
-
-def get_entities(mapped_triples: MappedTriples) -> Set[int]:
-    return set(mapped_triples[:, 0].tolist()).union(mapped_triples[:, 2].tolist())
-
-
 class CleanerTestCase(GenericTestCase[Cleaner]):
     """Test cases for cleaner."""
 
@@ -1607,3 +1604,26 @@ class CleanerTestCase(GenericTestCase[Cleaner]):
         assert tensor_subset(other_clean, self.other)
         # check that all entities occur in reference
         assert get_entities(reference_clean) == self.all_entities
+
+
+class SplitterTestCase(GenericTestCase[Splitter]):
+    """Test cases for triples splitter."""
+
+    def post_instantiation_hook(self) -> None:
+        """Setup data."""
+        dataset = Nations()
+        self.all_entities = set(range(dataset.num_entities))
+        self.mapped_triples = dataset.training.mapped_triples
+
+    def _test_split(self, ratios: Union[float, Sequence[float]], exp_parts: int):
+        """Test splitting."""
+        splitted = self.instance.split(
+            mapped_triples=self.mapped_triples,
+            ratios=ratios,
+            random_state=None,
+        )
+        assert len(splitted) == exp_parts
+        # check that no triple got lost
+        assert tensor_to_set(self.mapped_triples) == set().union(*(tensor_to_set(triples) for triples in splitted))
+        # check that all entities are covered in first part
+        assert tensor_to_set(splitted[0]) == self.all_entities
