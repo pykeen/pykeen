@@ -56,7 +56,7 @@ class DeterministicCleanerTests(CleanerTestCase):
 
 
 class RandomizedCleanerTests(CleanerTestCase):
-    """Tests for deterministic cleaner."""
+    """Tests for randomized cleaner."""
 
     cls = RandomizedCleaner
 
