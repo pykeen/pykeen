@@ -190,6 +190,19 @@ class Cleaner:
         other: MappedTriples,
         random_state: torch.Generator,
     ) -> Tuple[MappedTriples, MappedTriples]:
+        """
+        Clean up one set of triples with respect to a reference set.
+
+        :param reference:
+            the reference set of triples, which shall contain triples for all entities
+        :param other:
+            the other set of triples
+        :param random_state:
+            the random state to use, if any randomized operations take place
+
+        :return:
+            a pair (reference, other), where some triples of other may have been moved into reference
+        """
         raise NotImplementedError
 
     def __call__(
@@ -295,6 +308,9 @@ class DeterministicCleaner(Cleaner):
         return reference, other
 
 
+cleaner_resolver = Resolver.from_subclasses(base=Cleaner, default=DeterministicCleaner)
+
+
 class Splitter:
     """A method for splitting triples."""
 
@@ -366,16 +382,13 @@ class Splitter:
         return triples_groups
 
 
-cleaner_resolver = Resolver.from_subclasses(base=Cleaner, default=DeterministicCleaner)
-
-
 class CleanupSplitter(Splitter):
     """TODO"""
 
     def __init__(self, cleaner: HintOrType[Cleaner] = None) -> None:
         """
         Initialize the splitter.
-        
+
         :param cleaner:
             the cleanup method to use. Defaults to the fast deterministic cleaner,
             which may lead to larger deviances between desired and actual triple count.
