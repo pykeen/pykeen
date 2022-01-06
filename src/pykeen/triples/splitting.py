@@ -2,15 +2,15 @@
 
 """Implementation of triples splitting functions."""
 
-from abc import abstractmethod
 import logging
 import typing
+from abc import abstractmethod
 from typing import Collection, Optional, Sequence, Set, Tuple, Union
-from class_resolver.api import HintOrType, Resolver
 
 import numpy
 import pandas
 import torch
+from class_resolver.api import HintOrType, Resolver
 
 from ..typing import MappedTriples, TorchRandomHint
 from ..utils import ensure_torch_random_state
