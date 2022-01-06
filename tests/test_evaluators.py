@@ -6,13 +6,14 @@ import dataclasses
 import logging
 import unittest
 from operator import attrgetter
-from typing import Any, ClassVar, Dict, Mapping, Optional, Tuple, Type
+from typing import Dict, Optional
 
 import numpy
 import torch
 
 from pykeen.datasets import Nations
 from pykeen.evaluation import Evaluator, MetricResults, RankBasedEvaluator, RankBasedMetricResults
+from pykeen.evaluation.classification_evaluator import ClassificationEvaluator, ClassificationMetricResults
 from pykeen.evaluation.evaluator import create_dense_positive_mask_, create_sparse_positive_filter_, filter_scores_
 from pykeen.evaluation.rank_based_evaluator import (
     RANK_EXPECTED_REALISTIC,
@@ -25,139 +26,14 @@ from pykeen.evaluation.rank_based_evaluator import (
     compute_rank_from_scores,
     resolve_metric_name,
 )
-from pykeen.evaluation.sklearn import SklearnEvaluator, SklearnMetricResults
-from pykeen.models import FixedModel, Model, TransE
-from pykeen.triples import TriplesFactory
+from pykeen.models import FixedModel
 from pykeen.typing import MappedTriples
+from tests import cases
 
 logger = logging.getLogger(__name__)
 
 
-class _AbstractEvaluatorTests:
-    """A test case for quickly defining common tests for evaluators models."""
-
-    # The triples factory and model
-    factory: TriplesFactory
-    model: Model
-
-    #: The evaluator to be tested
-    evaluator_cls: ClassVar[Type[Evaluator]]
-    evaluator_kwargs: ClassVar[Optional[Mapping[str, Any]]] = None
-
-    # Settings
-    batch_size: int
-    embedding_dim: int
-
-    #: The evaluator instantiation
-    evaluator: Evaluator
-
-    def setUp(self) -> None:
-        """Set up the test case."""
-        # Settings
-        self.batch_size = 8
-        self.embedding_dim = 7
-
-        # Initialize evaluator
-        self.evaluator = self.evaluator_cls(**(self.evaluator_kwargs or {}))
-
-        # Use small test dataset
-        self.factory = Nations().training
-
-        # Use small model (untrained)
-        self.model = TransE(triples_factory=self.factory, embedding_dim=self.embedding_dim)
-
-    def _get_input(
-        self,
-        inverse: bool = False,
-    ) -> Tuple[torch.LongTensor, torch.FloatTensor, Optional[torch.BoolTensor]]:
-        # Get batch
-        hrt_batch = self.factory.mapped_triples[: self.batch_size].to(self.model.device)
-
-        # Compute scores
-        if inverse:
-            scores = self.model.score_h(rt_batch=hrt_batch[:, 1:])
-        else:
-            scores = self.model.score_t(hr_batch=hrt_batch[:, :2])
-
-        # Compute mask only if required
-        if self.evaluator.requires_positive_mask:
-            # TODO: Re-use filtering code
-            triples = self.factory.mapped_triples.to(self.model.device)
-            if inverse:
-                sel_col, start_col = 0, 1
-            else:
-                sel_col, start_col = 2, 0
-            stop_col = start_col + 2
-
-            # shape: (batch_size, num_triples)
-            triple_mask = (triples[None, :, start_col:stop_col] == hrt_batch[:, None, start_col:stop_col]).all(dim=-1)
-            batch_indices, triple_indices = triple_mask.nonzero(as_tuple=True)
-            entity_indices = triples[triple_indices, sel_col]
-
-            # shape: (batch_size, num_entities)
-            mask = torch.zeros_like(scores, dtype=torch.bool)
-            mask[batch_indices, entity_indices] = True
-        else:
-            mask = None
-
-        return hrt_batch, scores, mask
-
-    def test_process_tail_scores_(self) -> None:
-        """Test the evaluator's ``process_tail_scores_()`` function."""
-        hrt_batch, scores, mask = self._get_input()
-        true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, 2]][:, None]
-        self.evaluator.process_tail_scores_(
-            hrt_batch=hrt_batch,
-            true_scores=true_scores,
-            scores=scores,
-            dense_positive_mask=mask,
-        )
-
-    def test_process_head_scores_(self) -> None:
-        """Test the evaluator's ``process_head_scores_()`` function."""
-        hrt_batch, scores, mask = self._get_input(inverse=True)
-        true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, 0]][:, None]
-        self.evaluator.process_head_scores_(
-            hrt_batch=hrt_batch,
-            true_scores=true_scores,
-            scores=scores,
-            dense_positive_mask=mask,
-        )
-
-    def test_finalize(self) -> None:
-        # Process one batch
-        hrt_batch, scores, mask = self._get_input()
-        true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, 2]][:, None]
-        self.evaluator.process_tail_scores_(
-            hrt_batch=hrt_batch,
-            true_scores=true_scores,
-            scores=scores,
-            dense_positive_mask=mask,
-        )
-        self.evaluator.process_head_scores_(
-            hrt_batch=hrt_batch,
-            true_scores=true_scores,
-            scores=scores,
-            dense_positive_mask=mask,
-        )
-
-        result = self.evaluator.finalize()
-        assert isinstance(result, MetricResults)
-
-        self._validate_result(
-            result=result,
-            data={"batch": hrt_batch, "scores": scores, "mask": mask},
-        )
-
-    def _validate_result(
-        self,
-        result: MetricResults,
-        data: Dict[str, torch.Tensor],
-    ):
-        logger.warning(f"{self.__class__.__name__} did not overwrite _validate_result.")
-
-
-class RankBasedEvaluatorTests(_AbstractEvaluatorTests, unittest.TestCase):
+class RankBasedEvaluatorTests(cases.EvaluatorTestCase):
     """unittest for the RankBasedEvaluator."""
 
     evaluator_cls = RankBasedEvaluator
@@ -222,10 +98,10 @@ class RankBasedEvaluatorTests(_AbstractEvaluatorTests, unittest.TestCase):
         # TODO: Validate with data?
 
 
-class SklearnEvaluatorTest(_AbstractEvaluatorTests, unittest.TestCase):
-    """Unittest for the SklearnEvaluator."""
+class ClassificationEvaluatorTest(cases.EvaluatorTestCase):
+    """Unittest for the ClassificationEvaluator."""
 
-    evaluator_cls = SklearnEvaluator
+    evaluator_cls = ClassificationEvaluator
 
     def _validate_result(
         self,
@@ -233,7 +109,7 @@ class SklearnEvaluatorTest(_AbstractEvaluatorTests, unittest.TestCase):
         data: Dict[str, torch.Tensor],
     ):
         # Check for correct class
-        assert isinstance(result, SklearnMetricResults)
+        assert isinstance(result, ClassificationMetricResults)
 
         # check value
         scores = data["scores"].detach().cpu().numpy()
@@ -252,7 +128,7 @@ class SklearnEvaluatorTest(_AbstractEvaluatorTests, unittest.TestCase):
         mask = numpy.concatenate(mask_filtered, axis=0)
         scores = numpy.concatenate(scores_filtered, axis=0)
 
-        for field in sorted(dataclasses.fields(SklearnMetricResults), key=attrgetter("name")):
+        for field in sorted(dataclasses.fields(ClassificationMetricResults), key=attrgetter("name")):
             with self.subTest(metric=field.name):
                 f = field.metadata["f"]
                 exp_score = f(numpy.array(mask.flat), numpy.array(scores.flat))

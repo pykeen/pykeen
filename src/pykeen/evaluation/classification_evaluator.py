@@ -15,8 +15,8 @@ from ..typing import MappedTriples
 from ..utils import fix_dataclass_init_docs
 
 __all__ = [
-    "SklearnEvaluator",
-    "SklearnMetricResults",
+    "ClassificationEvaluator",
+    "ClassificationMetricResults",
 ]
 
 _fields = [
@@ -37,8 +37,8 @@ _fields = [
     for metadata in classifier_annotator.metrics.values()
 ]
 
-SklearnMetricResultsBase = make_dataclass(
-    "SklearnMetricResultsBase",
+ClassificationMetricResultsBase = make_dataclass(
+    "ClassificationMetricResultsBase",
     _fields,
     bases=(MetricResults,),
 )
@@ -47,20 +47,20 @@ SklearnMetricResultsBase = make_dataclass(
 @fix_dataclass_init_docs
 @dataclass_json
 @dataclass
-class SklearnMetricResults(SklearnMetricResultsBase):  # type: ignore
+class ClassificationMetricResults(ClassificationMetricResultsBase):  # type: ignore
     """Results from computing metrics."""
 
     @classmethod
     def from_scores(cls, y_true, y_score):
         """Return an instance of these metrics from a given set of true and scores."""
-        return SklearnMetricResults(**{f.name: f.metadata["f"](y_true, y_score) for f in fields(cls)})
+        return ClassificationMetricResults(**{f.name: f.metadata["f"](y_true, y_score) for f in fields(cls)})
 
     def get_metric(self, name: str) -> float:  # noqa: D102
         return getattr(self, name)
 
 
-class SklearnEvaluator(Evaluator):
-    """An evaluator that uses a Scikit-learn metric."""
+class ClassificationEvaluator(Evaluator):
+    """An evaluator that uses a classification metrics."""
 
     all_scores: Dict[Tuple[Any, ...], np.ndarray]
     all_positives: Dict[Tuple[Any, ...], np.ndarray]
@@ -117,7 +117,7 @@ class SklearnEvaluator(Evaluator):
 
         self._process_scores(keys=hrt_batch[:, 1:], scores=scores, positive_mask=dense_positive_mask, head_side=True)
 
-    def finalize(self) -> SklearnMetricResults:  # noqa: D102
+    def finalize(self) -> ClassificationMetricResults:  # noqa: D102
         # Important: The order of the values of an dictionary is not guaranteed. Hence, we need to retrieve scores and
         # masks using the exact same key order.
         all_keys = list(self.all_scores.keys())
@@ -130,4 +130,4 @@ class SklearnEvaluator(Evaluator):
         self.all_positives.clear()
         self.all_scores.clear()
 
-        return SklearnMetricResults.from_scores(y_true, y_score)
+        return ClassificationMetricResults.from_scores(y_true, y_score)
