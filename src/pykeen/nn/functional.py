@@ -1312,11 +1312,8 @@ def triple_re_interaction(
     p: int = 2,
     power_norm: bool = False,
 ) -> torch.FloatTensor:
+    # note: normalization should be done from the representations
     # cf. https://github.com/LongYu-360/TripleRE-Add-NodePiece/blob/994216dcb1d718318384368dd0135477f852c6a4/TripleRE%2BNodepiece/ogb_wikikg2/model.py#L317-L328  # noqa: E501
-    # normalize head & tail
-    h = functional.normalize(h, dim=-1, p=2)
-    t = functional.normalize(t, dim=-1, p=2)
-
     # version 2
     if u is not None:
         # r_head = r_head + u * torch.ones_like(r_head)
