@@ -1297,19 +1297,19 @@ def cp_interaction(
 
 
 def auto_sf_interaction(
-    hs: Sequence[torch.FloatTensor],
-    rs: Sequence[torch.FloatTensor],
-    ts: Sequence[torch.FloatTensor],
+    h: Sequence[torch.FloatTensor],
+    r: Sequence[torch.FloatTensor],
+    t: Sequence[torch.FloatTensor],
     coefficients: Sequence[Tuple[int, int, int, Literal[-1, 1]]],
 ) -> torch.FloatTensor:
     """Evaluate an AutoSF-style interaction function.
 
-    :param hs: each shape: (batch_size, num_heads, 1, 1, rank, dim)
-        The head representations.
-    :param rs: each shape: (batch_size, 1, num_relations, 1, rank, dim)
-        The relation representations.
-    :param ts: each shape: (batch_size, 1, 1, num_tails, rank, dim)
-        The tail representations.
+    :param h: each shape: (batch_size, num_heads, 1, 1, rank, dim)
+        The list of head representations.
+    :param r: each shape: (batch_size, 1, num_relations, 1, rank, dim)
+        The list of relation representations.
+    :param t: each shape: (batch_size, 1, 1, num_tails, rank, dim)
+        The list of tail representations.
     :param coefficients:
         the coefficients, in format:
         (
@@ -1319,4 +1319,4 @@ def auto_sf_interaction(
             sign,
         )
     """
-    return sum(sign * extended_einsum(hs[hi] * rs[ri] * ts[ti]) for hi, ri, ti, sign in coefficients)
+    return sum(sign * (h[hi] * r[ri] * t[ti]).sum(dim=-1) for hi, ri, ti, sign in coefficients)
