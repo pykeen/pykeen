@@ -45,19 +45,6 @@ EXCLUDE_CLASSIFIERS = {
     rmc.pr_auc_score,
 }
 
-#: This dictionary maps from duplicate functions to the canonical function in :mod:`rexmex.metrics.classification`
-DUPLICATE_CLASSIFIERS = {
-    rmc.miss_rate: rmc.false_negative_rate,
-    rmc.fall_out: rmc.false_positive_rate,
-    rmc.selectivity: rmc.true_negative_rate,
-    rmc.specificity: rmc.true_negative_rate,
-    rmc.hit_rate: rmc.true_positive_rate,
-    rmc.sensitivity: rmc.true_positive_rate,
-    rmc.critical_success_index: rmc.threat_score,
-    rmc.precision_score: rmc.positive_predictive_value,
-    rmc.recall_score: rmc.true_positive_rate,
-}
-
 _fields = [
     (
         func.__name__,
@@ -74,7 +61,7 @@ _fields = [
         ),
     )
     for func in rmc.classifications
-    if func not in EXCLUDE_CLASSIFIERS and func not in DUPLICATE_CLASSIFIERS
+    if func not in EXCLUDE_CLASSIFIERS and func.duplicate_of is None
 ]
 
 SklearnMetricResultsBase = make_dataclass(
