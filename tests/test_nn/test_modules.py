@@ -4,7 +4,7 @@
 
 import logging
 import unittest
-from typing import Tuple, Union
+from typing import Literal, Sequence, Tuple, Union
 from unittest import SkipTest
 
 import numpy
@@ -14,7 +14,7 @@ import unittest_templates
 import pykeen.nn.modules
 import pykeen.utils
 from pykeen.nn.functional import _rotate_quaternion, _split_quaternion, distmult_interaction
-from pykeen.utils import clamp_norm, project_entity, strip_dim, view_complex
+from pykeen.utils import clamp_norm, ensure_tuple, project_entity, strip_dim, view_complex
 from tests import cases
 
 logger = logging.getLogger(__name__)
@@ -575,3 +575,28 @@ class ParallelSliceBatchesTest(unittest.TestCase):
             assert len(z_sliced) == len(zs)
             for z_sliced_single, z in zip(z_sliced, zs):
                 self._verify(z_sliced=z_sliced_single, z_shape=z.shape)
+
+
+class AutoSFTests(cases.InteractionTestCase):
+    """Tests for the AutoSF interaction function."""
+
+    cls = pykeen.nn.modules.AutoSFInteraction
+    kwargs = dict(
+        coefficients=(
+            (0, 0, 0, 1),
+            (1, 1, 1, -1),
+        ),
+    )
+
+    def _exp_score(
+        self,
+        h: Sequence[torch.FloatTensor],
+        r: Sequence[torch.FloatTensor],
+        t: Sequence[torch.FloatTensor],
+        coefficients: Sequence[Tuple[int, int, int, Literal[-1, 1]]],
+    ) -> torch.FloatTensor:  # noqa: D102
+        h, r, t = ensure_tuple(h, r, t)
+        h = strip_dim(*h)
+        r = strip_dim(*r)
+        t = strip_dim(*t)
+        return sum(s * (h[i] * r[j] * t[k]).sum(dim=-1) for i, j, k, s in coefficients)
