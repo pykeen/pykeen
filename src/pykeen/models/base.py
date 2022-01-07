@@ -13,9 +13,10 @@ import warnings
 from abc import ABC, abstractmethod
 from typing import Any, ClassVar, Iterable, Mapping, Optional, Sequence, Type, Union
 
+from class_resolver import HintOrType
+from docdata import parse_docdata
 import pandas as pd
 import torch
-from docdata import parse_docdata
 from torch import nn
 
 from ..losses import Loss, MarginRankingLoss, loss_resolver
