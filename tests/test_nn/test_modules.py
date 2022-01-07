@@ -578,6 +578,22 @@ class ParallelSliceBatchesTest(unittest.TestCase):
                 self._verify(z_sliced=z_sliced_single, z_shape=z.shape)
 
 
+class TripleRETests(cases.TranslationalInteractionTests):
+    """Tests for TripleRE interaction function."""
+
+    cls = pykeen.nn.modules.TripleREInteraction
+
+    def _exp_score(self, h, r_head, r_mid, r_tail, t, u, p, power_norm) -> torch.FloatTensor:  # noqa: D102
+        assert not power_norm
+        if u is None:
+            u = 0.0
+        #  head * (re_head + self.u * e_h) - tail * (re_tail + self.u * e_t) + re_mid
+        h, r_head, r_mid, r_tail, t = strip_dim(h, r_head, r_mid, r_tail, t)
+        return -(h * (r_head + u * torch.ones_like(r_head)) - t * (r_tail + u * torch.ones_like(r_tail)) + r_mid).norm(
+            p=p,
+        )
+
+
 class AutoSFTests(cases.InteractionTestCase):
     """Tests for the AutoSF interaction function."""
 
