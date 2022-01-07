@@ -1547,7 +1547,7 @@ class CPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]
 
 
 class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepresentation, TailRepresentation]):
-    """An implementation of the AutoSF interaction."""
+    """An implementation of the AutoSF interaction as described by [zhang2020]_."""
 
     func = pkf.auto_sf_interaction
     coefficients: Tuple[Tuple[int, int, int, Sign], ...]

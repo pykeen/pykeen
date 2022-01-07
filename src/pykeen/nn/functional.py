@@ -1303,7 +1303,7 @@ def auto_sf_interaction(
     t: Sequence[torch.FloatTensor],
     coefficients: Sequence[Tuple[int, int, int, Sign]],
 ) -> torch.FloatTensor:
-    """Evaluate an AutoSF-style interaction function.
+    """Evaluate an AutoSF-style interaction function as described by [zhang2020]_.
 
     :param h: each shape: (batch_size, num_heads, 1, 1, rank, dim)
         The list of head representations.
