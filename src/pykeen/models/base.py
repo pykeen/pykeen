@@ -18,7 +18,7 @@ import torch
 from docdata import parse_docdata
 from torch import nn
 
-from ..losses import Loss, MarginRankingLoss
+from ..losses import Loss, MarginRankingLoss, loss_resolver
 from ..nn.emb import Embedding, EmbeddingSpecification, RepresentationModule
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import CoreTriplesFactory, relation_inverter
@@ -65,7 +65,8 @@ class Model(nn.Module, ABC):
     def __init__(
         self,
         triples_factory: CoreTriplesFactory,
-        loss: Optional[Loss] = None,
+        loss: HintOrType[Loss] = None,
+        loss_kwargs: Optional[Mapping[str, Any]] = None,
         predict_with_sigmoid: bool = False,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
@@ -102,7 +103,7 @@ class Model(nn.Module, ABC):
         if loss is None:
             self.loss = self.loss_default(**(self.loss_default_kwargs or {}))
         else:
-            self.loss = loss
+            self.loss = loss_resolver.make(loss, pos_kwargs=loss_kwargs)
 
         self.use_inverse_triples = triples_factory.create_inverse_triples
         self.num_entities = triples_factory.num_entities
