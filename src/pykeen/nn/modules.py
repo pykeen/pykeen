@@ -1570,7 +1570,8 @@ class TransformerInteraction(FunctionalInteraction[torch.FloatTensor, torch.Floa
         :param dropout:
             the dropout rate on each transformer encoder layer, cf. :class:`nn.TransformerEncoderLayer`
         :param dim_feedforward:
-            the hidden dimension of the feed-forward layers of the transformer encoder layer, cf. :class:`nn.TransformerEncoderLayer`
+            the hidden dimension of the feed-forward layers of the transformer encoder layer,
+            cf. :class:`nn.TransformerEncoderLayer`
         """
         super().__init__()
         self.transformer = nn.TransformerEncoder(
