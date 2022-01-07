@@ -26,7 +26,6 @@ from typing import (
     Mapping,
     Optional,
     Sequence,
-    Set,
     Tuple,
     Type,
     TypeVar,
@@ -1254,16 +1253,6 @@ def boxe_kg_arity_position_score(
 
     # Finally, compute the norm
     return negative_norm(element_wise_distance, p=p, power_norm=power_norm)
-
-
-def tensor_to_set(tensor: torch.LongTensor) -> Set[Tuple[int, ...]]:
-    """Convert a tensor of triples to a set of int-tuples."""
-    return set(map(tuple, tensor.tolist()))
-
-
-def is_tensor_subset(a: torch.LongTensor, b: torch.LongTensor) -> bool:
-    """Check whether one tensor of triples is a subset of another one."""
-    return tensor_to_set(a).issubset(tensor_to_set(b))
 
 
 if __name__ == "__main__":
