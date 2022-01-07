@@ -4,7 +4,7 @@
 
 import logging
 import unittest
-from typing import Literal, Sequence, Tuple, Union
+from typing import Sequence, Tuple, Union
 from unittest import SkipTest
 
 import numpy
@@ -14,6 +14,7 @@ import unittest_templates
 import pykeen.nn.modules
 import pykeen.utils
 from pykeen.nn.functional import _rotate_quaternion, _split_quaternion, distmult_interaction
+from pykeen.typing import Sign
 from pykeen.utils import clamp_norm, ensure_tuple, project_entity, strip_dim, view_complex
 from tests import cases
 
@@ -593,7 +594,7 @@ class AutoSFTests(cases.InteractionTestCase):
         h: Sequence[torch.FloatTensor],
         r: Sequence[torch.FloatTensor],
         t: Sequence[torch.FloatTensor],
-        coefficients: Sequence[Tuple[int, int, int, Literal[-1, 1]]],
+        coefficients: Sequence[Tuple[int, int, int, Sign]],
     ) -> torch.FloatTensor:  # noqa: D102
         h, r, t = ensure_tuple(h, r, t)
         h = strip_dim(*h)

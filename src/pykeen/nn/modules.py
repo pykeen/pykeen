@@ -14,7 +14,6 @@ from typing import (
     Callable,
     Generic,
     Iterable,
-    Literal,
     Mapping,
     MutableMapping,
     Optional,
@@ -31,7 +30,7 @@ from torch import FloatTensor, nn
 
 from . import functional as pkf
 from .combinations import Combination
-from ..typing import HeadRepresentation, HintOrType, RelationRepresentation, TailRepresentation
+from ..typing import HeadRepresentation, HintOrType, RelationRepresentation, Sign, TailRepresentation
 from ..utils import (
     CANONICAL_DIMENSIONS,
     activation_resolver,
@@ -1550,9 +1549,9 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
     """An implementation of the AutoSF interaction."""
 
     func = pkf.auto_sf_interaction
-    coefficients: Tuple[Tuple[int, int, int, Literal[-1, 1]], ...]
+    coefficients: Tuple[Tuple[int, int, int, Sign], ...]
 
-    def __init__(self, coefficients: Sequence[Tuple[int, int, int, Literal[-1, 1]]]) -> None:
+    def __init__(self, coefficients: Sequence[Tuple[int, int, int, Sign]]) -> None:
         """Initialize the interaction function."""
         super().__init__()
         self.coefficients = tuple(coefficients)
@@ -1574,7 +1573,7 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
     ) -> MutableMapping[str, torch.FloatTensor]:
         return dict(zip("hrt", ensure_tuple(h, r, t)))
 
-    def extend(self, *new_coefficients: Tuple[int, int, int, Literal[-1, 1]]) -> "AutoSFInteraction":
+    def extend(self, *new_coefficients: Tuple[int, int, int, Sign]) -> "AutoSFInteraction":
         """Extend AutoSF function, as described in the greedy search algorithm in the paper."""
         return AutoSFInteraction(coefficients=self.coefficients + tuple(new_coefficients))
 

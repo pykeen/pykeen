@@ -2,7 +2,7 @@
 
 """Type hints for PyKEEN."""
 
-from typing import Callable, Mapping, NamedTuple, Sequence, TypeVar, Union, cast
+from typing import Callable, Literal, Mapping, NamedTuple, Sequence, TypeVar, Union, cast
 
 import numpy as np
 import torch
@@ -89,3 +89,6 @@ class ScorePack(NamedTuple):
 
     result: torch.LongTensor
     scores: torch.FloatTensor
+
+
+Sign = Literal[-1, 1]

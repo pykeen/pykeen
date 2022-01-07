@@ -11,7 +11,7 @@ and (batch_size, 1, 1, num_tails, ``*``), and return a score tensor of shape
 from __future__ import annotations
 
 import functools
-from typing import Literal, Optional, Sequence, Tuple, Union
+from typing import Optional, Sequence, Tuple, Union
 
 import numpy
 import torch
@@ -20,7 +20,7 @@ from torch import nn
 from .compute_kernel import batched_complex, batched_dot
 from .sim import KG2E_SIMILARITIES
 from ..moves import irfft, rfft
-from ..typing import GaussianDistribution
+from ..typing import GaussianDistribution, Sign
 from ..utils import (
     boxe_kg_arity_position_score,
     broadcast_cat,
@@ -1300,7 +1300,7 @@ def auto_sf_interaction(
     h: Sequence[torch.FloatTensor],
     r: Sequence[torch.FloatTensor],
     t: Sequence[torch.FloatTensor],
-    coefficients: Sequence[Tuple[int, int, int, Literal[-1, 1]]],
+    coefficients: Sequence[Tuple[int, int, int, Sign]],
 ) -> torch.FloatTensor:
     """Evaluate an AutoSF-style interaction function.
 
