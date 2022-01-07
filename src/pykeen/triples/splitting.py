@@ -396,7 +396,6 @@ class CleanupSplitter(Splitter):
             the cleanup method to use. Defaults to the fast deterministic cleaner,
             which may lead to larger deviances between desired and actual triple count.
         """
-        super().__init__()
         self.cleaner = cleaner_resolver.make(cleaner)
 
     def split_absolute_size(
@@ -488,10 +487,9 @@ def split(
     # backwards compatibility
     splitter_cls: Type[Splitter] = splitter_resolver.lookup(method)
     kwargs = dict()
-    if splitter_cls is CleanupSplitter:
-        cleaner = RandomizedCleaner if randomize_cleanup else DeterministicCleaner
-        kwargs["cleaner"] = cleaner_resolver.normalize_cls(cleaner)
-    return splitter_resolver.make(splitter_cls).split(
+    if splitter_cls is CleanupSplitter and randomize_cleanup:
+        kwargs["cleaner"] = cleaner_resolver.normalize_cls(RandomizedCleaner)
+    return splitter_resolver.make(splitter_cls, pos_kwargs=kwargs).split(
         mapped_triples=mapped_triples,
         ratios=ratios,
         random_state=random_state,
