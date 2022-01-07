@@ -290,7 +290,7 @@ class LossTestCase(GenericTestCase[Loss]):
 
     def test_optimization_direction_slcwa(self):
         """Test whether the loss leads to increasing positive scores, and decreasing negative scores."""
-        positive_scores = torch.zeros(self.batch_size, requires_grad=True)
+        positive_scores = torch.zeros(self.batch_size, 1, requires_grad=True)
         negative_scores = torch.zeros(self.batch_size, self.num_neg_per_pos, requires_grad=True)
         optimizer = optimizer_resolver.make(query=None, params=[positive_scores, negative_scores])
         for _ in range(10):
