@@ -58,7 +58,10 @@ class AutoSF(ERModel):
 
         :param embedding_dim: The entity embedding dimension $d$.
         :param num_components: the number of components.
-        :param coefficients: the coefficients determining the structure.
+        :param coefficients:
+            the coefficients determining the structure. The coefficients describe which head/relation/tail
+            component get combined with each other. While in theory, we can have up to `num_components**3`
+            unique triples, usually, a smaller number is preferrable to have some sparsity.
         :param embedding_kwargs: keyword arguments passed to :class:`pykeen.nn.emb.EmbeddingSpecification`.
         :param kwargs: Remaining keyword arguments passed through to :class:`pykeen.models.ERModel`.
         """
