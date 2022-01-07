@@ -1544,7 +1544,13 @@ class CPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]
     relation_shape = ("kd",)
 
 
-class TripleREInteraction(NormBasedInteraction[FloatTensor, FloatTensor, FloatTensor]):
+class TripleREInteraction(
+    NormBasedInteraction[
+        FloatTensor,
+        Tuple[FloatTensor, FloatTensor, FloatTensor],
+        FloatTensor,
+    ]
+):
     """A stateful module for the TripleRE interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.triple_re_interaction`
@@ -1574,10 +1580,10 @@ class TripleREInteraction(NormBasedInteraction[FloatTensor, FloatTensor, FloatTe
 
     @staticmethod
     def _prepare_hrt_for_functional(
-        h: HeadRepresentation,
-        r: RelationRepresentation,
-        t: TailRepresentation,
-    ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
+        h: FloatTensor,
+        r: Tuple[FloatTensor, FloatTensor, FloatTensor],
+        t: FloatTensor,
+    ) -> MutableMapping[str, FloatTensor]:  # noqa: D102
         r_head, r_mid, r_tail = r
         return dict(
             h=h,
