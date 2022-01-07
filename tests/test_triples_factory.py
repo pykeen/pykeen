@@ -11,13 +11,12 @@ from typing import Collection, Optional
 from unittest.mock import patch
 
 import numpy as np
-import pytest
 import torch
 
 from pykeen.datasets import Hetionet, Nations, SingleTabbedDataset
 from pykeen.datasets.nations import NATIONS_TRAIN_PATH
 from pykeen.triples import CoreTriplesFactory, LCWAInstances, TriplesFactory, TriplesNumericLiteralsFactory
-from pykeen.triples.splitting import get_absolute_split_sizes, normalize_ratios, splitter_resolver
+from pykeen.triples.splitting import splitter_resolver
 from pykeen.triples.triples_factory import INVERSE_SUFFIX, _map_triples_elements_to_ids
 from pykeen.triples.utils import TRIPLES_DF_COLUMNS, load_triples
 from tests.constants import RESOURCES
@@ -555,62 +554,3 @@ class TestUtils(unittest.TestCase):
             tf1.mapped_triples.detach().cpu().numpy().tolist(),
             tf2.mapped_triples.detach().cpu().numpy().tolist(),
         )
-
-
-def test_get_absolute_split_sizes():
-    """Test get_absolute_split_sizes."""
-    for num_splits, n_total in zip(
-        (2, 3, 4),
-        (100, 200, 10412),
-    ):
-        # generate random ratios
-        ratios = np.random.uniform(size=(num_splits,))
-        ratios = ratios / ratios.sum()
-        sizes = get_absolute_split_sizes(n_total=n_total, ratios=ratios)
-        # check size
-        assert len(sizes) == len(ratios)
-
-        # check value range
-        assert all(0 <= size <= n_total for size in sizes)
-
-        # check total split
-        assert sum(sizes) == n_total
-
-        # check consistency with ratios
-        rel_size = np.asarray(sizes) / n_total
-        # the number of decimal digits equivalent to 1 / n_total
-        decimal = np.floor(np.log10(n_total))
-        np.testing.assert_almost_equal(rel_size, ratios, decimal=decimal)
-
-
-def test_normalize_ratios():
-    """Test normalize_ratios."""
-    for ratios, exp_output in (
-        (0.5, (0.5, 0.5)),
-        ((0.3, 0.2, 0.4), (0.3, 0.2, 0.4, 0.1)),
-        ((0.3, 0.3, 0.4), (0.3, 0.3, 0.4)),
-    ):
-        output = normalize_ratios(ratios=ratios)
-        # check type
-        assert isinstance(output, tuple)
-        assert all(isinstance(ratio, float) for ratio in output)
-        # check values
-        assert len(output) >= 2
-        assert all(0 <= ratio <= 1 for ratio in output)
-        output_np = np.asarray(output)
-        np.testing.assert_almost_equal(output_np.sum(), np.ones(1))
-        # compare against expected
-        np.testing.assert_almost_equal(output_np, np.asarray(exp_output))
-
-
-def test_normalize_invalid_ratio():
-    """Test invalid ratios."""
-    cases = [
-        1.1,
-        [1.1],
-        [0.8, 0.3],
-        [0.8, 0.1, 0.2],
-    ]
-    for ratios in cases:
-        with pytest.raises(ValueError):
-            _ = normalize_ratios(ratios=ratios)
