@@ -1572,6 +1572,7 @@ class TransformerInteraction(FunctionalInteraction[torch.FloatTensor, torch.Floa
         :param dim_feedforward:
             the hidden dimension of the feed-forward layers of the transformer encoder layer, cf. :class:`nn.TransformerEncoderLayer`
         """
+        super().__init__()
         self.transformer = nn.TransformerEncoder(
             encoder_layer=nn.TransformerEncoderLayer(
                 d_model=input_dim,
