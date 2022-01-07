@@ -63,6 +63,7 @@ __all__ = [
     "transf_interaction",
     "transh_interaction",
     "transr_interaction",
+    "triple_re_interaction",
     "tucker_interaction",
     "unstructured_model_interaction",
 ]
@@ -1293,4 +1294,67 @@ def cp_interaction(
         h,
         r,
         t,
+    )
+
+
+def triple_re_interaction(
+    # head
+    h: torch.FloatTensor,
+    # relation
+    r_head: torch.FloatTensor,
+    r_mid: torch.FloatTensor,
+    r_tail: torch.FloatTensor,
+    # tail
+    t: torch.FloatTensor,
+    # version 2: relation factor offset
+    u: Optional[float] = None,
+    # extension: negative (power) norm
+    p: int = 2,
+    power_norm: bool = False,
+) -> torch.FloatTensor:
+    r"""Evaluate the TripleRE interaction function.
+
+    .. math ::
+        score(h, (r_h, r, r_t), t) = h * (r_h + u) - t * (r_t + u) + r
+
+    .. note ::
+
+        For equivalence to the paper version, `h` and `t` should be normalized to unit
+        Euclidean length, and `p` and `power_norm` be kept at their default values.
+
+    :param h: shape: (batch_size, num_heads, 1, 1, rank, dim)
+        The head representations.
+    :param r_head: shape: (batch_size, 1, num_relations, 1, rank, dim)
+        The relation-specific head multiplicator representations.
+    :param r_mid: shape: (batch_size, 1, num_relations, 1, rank, dim)
+        The relation representations.
+    :param r_tail: shape: (batch_size, 1, num_relations, 1, rank, dim)
+        The relation-specific tail multiplicator representations.
+    :param t: shape: (batch_size, 1, 1, num_tails, rank, dim)
+        The tail representations.
+    :param u:
+        the relation factor offset. If u is not None or 0, this corresponds to TripleREv2.
+    :param p:
+        The p for the norm. cf. :func:`torch.linalg.vector_norm`.
+    :param power_norm:
+        Whether to return the powered norm.
+
+    :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        The scores.
+    """
+    # note: normalization should be done from the representations
+    # cf. https://github.com/LongYu-360/TripleRE-Add-NodePiece/blob/994216dcb1d718318384368dd0135477f852c6a4/TripleRE%2BNodepiece/ogb_wikikg2/model.py#L317-L328  # noqa: E501
+    # version 2
+    if u is not None:
+        # r_head = r_head + u * torch.ones_like(r_head)
+        # r_tail = r_tail + u * torch.ones_like(r_tail)
+        r_head = r_head + u
+        r_tail = r_tail + u
+
+    return negative_norm_of_sum(
+        h * r_head,
+        -t * r_tail,
+        r_mid,
+        p=p,
+        power_norm=power_norm,
     )
