@@ -1572,6 +1572,21 @@ class TripleREInteraction(NormBasedInteraction[FloatTensor, FloatTensor, FloatTe
         kwargs["u"] = self.u
         return kwargs
 
+    @staticmethod
+    def _prepare_hrt_for_functional(
+        h: HeadRepresentation,
+        r: RelationRepresentation,
+        t: TailRepresentation,
+    ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
+        r_head, r_mid, r_tail = r
+        return dict(
+            h=h,
+            r_head=r_head,
+            r_mid=r_mid,
+            r_tail=r_tail,
+            t=t,
+        )
+
 
 interaction_resolver = Resolver.from_subclasses(
     Interaction,  # type: ignore
