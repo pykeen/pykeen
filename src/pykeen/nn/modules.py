@@ -1561,16 +1561,16 @@ class TripleREInteraction(
 
     func = pkf.triple_re_interaction
 
-    def __init__(self, u: Optional[float] = None, **kwargs):
+    def __init__(self, u: Optional[float] = 1.0, p: int = 1, power_norm: bool = False):
         """
         Initialize the module.
 
         :param u:
-            the relation factor offset.
+            the relation factor offset. can be set to None to disable it.
         :param kwargs:
             additional keyword-based arguments passed to :class:`NormBasedInteraction`
         """
-        super().__init__(**kwargs)
+        super().__init__(p=p, power_norm=power_norm)
         self.u = u
 
     def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
