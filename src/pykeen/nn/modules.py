@@ -8,6 +8,7 @@ import itertools as itt
 import logging
 import math
 from abc import ABC, abstractmethod
+from collections import Counter
 from operator import itemgetter
 from typing import (
     Any,
@@ -1604,8 +1605,25 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
     coefficients: Tuple[Tuple[int, int, int, Sign], ...]
 
     def __init__(self, coefficients: Sequence[Tuple[int, int, int, Sign]]) -> None:
-        """Initialize the interaction function."""
+        """
+        Initialize the interaction function.
+
+        :param coefficients:
+            the coefficients, each of form (
+                head_repr_index,
+                relation_repr_index,
+                tail_repr_index,
+                sign
+            )
+
+        :raise ValueError:
+            if there are duplicate coefficients
+        """
         super().__init__()
+        counter = Counter((hi, ri, ti) for hi, ri, ti, _ in coefficients)
+        duplicates = {k for k, v in counter.items() if v > 0}
+        if duplicates:
+            raise ValueError(f"Cannot have duplicates in coefficients! Duplicate entries for {duplicates}")
         self.coefficients = tuple(coefficients)
         num_entity_representations = 1 + max(
             itt.chain.from_iterable((map(itemgetter(i), coefficients) for i in (0, 2)))
