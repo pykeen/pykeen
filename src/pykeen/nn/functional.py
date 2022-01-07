@@ -1303,7 +1303,26 @@ def auto_sf_interaction(
     t: Sequence[torch.FloatTensor],
     coefficients: Sequence[Tuple[int, int, int, Sign]],
 ) -> torch.FloatTensor:
-    """Evaluate an AutoSF-style interaction function as described by [zhang2020]_.
+    r"""Evaluate an AutoSF-style interaction function as described by [zhang2020]_.
+
+    This interaction functions are a parametrized way to express bi-linear models
+    with block structure. It divides the entity and relation representations into blocks,
+    and expresse the interaction as a sequence of 4-tuples $(i_h, i_r, i_t, s)$,
+    where $i_h, i_r, i_t$ index a _block_ of the head, relation, or tail representation,
+    and $s \in {-1, 1}$ is the sign.
+
+    The interaction function is then given as
+
+    .. math ::
+        \sum_{(i_h, i_r, i_t, s) \in \mathcal{C}} s \cdot \langle h[i_h], r[i_r], t[i_t] \rangle
+
+    where $\langle \cdot, \cdot, \cdot \rangle$ denotes the tri-linear dot product.
+
+    This parametrization allows to express several well-known interaction functions, e.g.
+
+    - DistMult: one block, $\mathcal{C} = \{(0, 0, 0, 1)\}$
+    - ComplEx: two blocks, $\mathcal{C} = \{(0, 0, 0, 1), (0, 1, 1, 1), (1, 0, 1, -1), (1, 0, 1, 1)\}$
+    - SimplE: two blocks: $\mathcal{C} = \{(0, 0, 1, 1), (1, 1, 0, 1)\}$
 
     :param h: each shape: (batch_size, num_heads, 1, 1, rank, dim)
         The list of head representations.
