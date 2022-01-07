@@ -2,6 +2,7 @@
 
 """Implementation of TripleRE."""
 
+from collections import ChainMap
 from typing import Any, ClassVar, Mapping, Optional
 
 from torch.nn import functional
@@ -14,7 +15,7 @@ from ...nn.modules import TripleREInteraction
 from ...typing import Hint, Initializer, Normalizer
 
 __all__ = [
-    "PairRE",
+    "TripleRE",
 ]
 
 
@@ -72,10 +73,7 @@ class TripleRE(ERModel):
         :param kwargs: Remaining keyword arguments passed through to :class:`pykeen.models.ERModel`.
         """
         # TODO: the published code uses NodePiece representations instead
-        entity_normalizer_kwargs = _resolve_kwargs(
-            kwargs=entity_normalizer_kwargs,
-            default_kwargs=self.default_entity_normalizer_kwargs,
-        )
+        entity_normalizer_kwargs = ChainMap(entity_normalizer_kwargs, self.default_entity_normalizer_kwargs)
         super().__init__(
             interaction=TripleREInteraction,
             interaction_kwargs=dict(p=p, power_norm=power_norm),
@@ -105,11 +103,3 @@ class TripleRE(ERModel):
             ],
             **kwargs,
         )
-
-
-def _resolve_kwargs(kwargs: Optional[Mapping[str, Any]], default_kwargs: Mapping[str, Any]) -> Mapping[str, Any]:
-    # TODO: move to utils
-    kwargs = dict(kwargs or {})
-    for k, v in default_kwargs.items():
-        kwargs.setdefault(k, v)
-    return kwargs
