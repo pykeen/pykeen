@@ -486,12 +486,12 @@ def split(
         train, test, val = split(triples, ratios)
     """
     # backwards compatibility
-    method: Type[Splitter] = splitter_resolver.lookup(method)
+    splitter_cls: Type[Splitter] = splitter_resolver.lookup(method)
     kwargs = dict()
-    if method is CleanupSplitter:
+    if splitter_cls is CleanupSplitter:
         cleaner = RandomizedCleaner if randomize_cleanup else DeterministicCleaner
         kwargs["cleaner"] = cleaner_resolver.normalize_cls(cleaner)
-    return splitter_resolver.make(method).split(
+    return splitter_resolver.make(splitter_cls).split(
         mapped_triples=mapped_triples,
         ratios=ratios,
         random_state=random_state,
