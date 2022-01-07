@@ -16,7 +16,6 @@ from typing import Optional, Tuple, Union
 import numpy
 import torch
 from torch import nn
-from torch.nn import functional
 
 from .compute_kernel import batched_complex, batched_dot
 from .sim import KG2E_SIMILARITIES
