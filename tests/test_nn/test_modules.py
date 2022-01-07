@@ -10,7 +10,6 @@ from unittest import SkipTest
 import numpy
 import torch
 import unittest_templates
-from torch.nn import functional
 
 import pykeen.nn.modules
 import pykeen.utils
@@ -589,7 +588,6 @@ class TripleRETests(cases.TranslationalInteractionTests):
             u = 0.0
         #  head * (re_head + self.u * e_h) - tail * (re_tail + self.u * e_t) + re_mid
         h, r_head, r_mid, r_tail, t = strip_dim(h, r_head, r_mid, r_tail, t)
-        h, t = [functional.normalize(x, p=2, dim=-1) for x in (h, t)]
         return -(h * (r_head + u * torch.ones_like(r_head)) - t * (r_tail + u * torch.ones_like(r_tail)) + r_mid).norm(
             p=p,
         )
