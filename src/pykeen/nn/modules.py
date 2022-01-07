@@ -1550,11 +1550,12 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
     """An implementation of the AutoSF interaction."""
 
     func = pkf.auto_sf_interaction
+    coefficients: Tuple[Tuple[int, int, int, Literal[-1, 1]], ...]
 
     def __init__(self, coefficients: Sequence[Tuple[int, int, int, Literal[-1, 1]]]) -> None:
         """Initialize the interaction function."""
         super().__init__()
-        self.coefficients = coefficients
+        self.coefficients = tuple(coefficients)
         num_entity_representations = 1 + max(
             itt.chain.from_iterable((map(itemgetter(i), coefficients) for i in (0, 2)))
         )
@@ -1572,6 +1573,10 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
         t: TailRepresentation,
     ) -> MutableMapping[str, torch.FloatTensor]:
         return dict(zip("hrt", ensure_tuple(h, r, t)))
+
+    def extend(self, *new_coefficients: Tuple[int, int, int, Literal[-1, 1]]) -> "AutoSFInteraction":
+        """Extend AutoSF function, as described in the greedy search algorithm in the paper."""
+        return AutoSFInteraction(coefficients=self.coefficients + tuple(new_coefficients))
 
 
 interaction_resolver = Resolver.from_subclasses(
