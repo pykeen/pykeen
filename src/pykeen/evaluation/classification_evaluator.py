@@ -47,7 +47,7 @@ EXCLUDE_CLASSIFIERS = {
 
 _fields = [
     (
-        func.__name__,
+        key,
         float,
         field(
             metadata=dict(
@@ -60,7 +60,7 @@ _fields = [
             )
         ),
     )
-    for func in rmc.classifications
+    for key, func in rmc.classifications.funcs.items()
     if func not in EXCLUDE_CLASSIFIERS and func.duplicate_of is None
 ]
 
