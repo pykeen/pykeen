@@ -7,9 +7,9 @@ from typing import Set, Type
 
 from class_resolver import Resolver
 
+from .classification_evaluator import ClassificationEvaluator, ClassificationMetricResults
 from .evaluator import Evaluator, MetricResults, evaluate
 from .rank_based_evaluator import RankBasedEvaluator, RankBasedMetricResults
-from .sklearn import SklearnEvaluator, SklearnMetricResults
 
 __all__ = [
     "evaluate",
@@ -17,29 +17,22 @@ __all__ = [
     "MetricResults",
     "RankBasedEvaluator",
     "RankBasedMetricResults",
-    "SklearnEvaluator",
-    "SklearnMetricResults",
+    "ClassificationEvaluator",
+    "ClassificationMetricResults",
     "evaluator_resolver",
     "metric_resolver",
     "get_metric_list",
 ]
 
-_EVALUATOR_SUFFIX = "Evaluator"
-_EVALUATORS: Set[Type[Evaluator]] = {
-    RankBasedEvaluator,
-    SklearnEvaluator,
-}
-evaluator_resolver = Resolver(
-    _EVALUATORS,
+evaluator_resolver = Resolver.from_subclasses(
     base=Evaluator,  # type: ignore
-    suffix=_EVALUATOR_SUFFIX,
     default=RankBasedEvaluator,
 )
 
 _METRICS_SUFFIX = "MetricResults"
 _METRICS: Set[Type[MetricResults]] = {
     RankBasedMetricResults,
-    SklearnMetricResults,
+    ClassificationMetricResults,
 }
 metric_resolver = Resolver(
     _METRICS,

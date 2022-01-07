@@ -13,7 +13,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from hashlib import md5
 from tempfile import NamedTemporaryFile
-from typing import IO, Any, ClassVar, Generic, List, Mapping, Optional, Tuple, Type, TypeVar, Union
+from typing import IO, Any, Generic, List, Mapping, Optional, Tuple, TypeVar, Union
 
 import numpy as np
 import torch
@@ -29,7 +29,6 @@ from .callbacks import (
     TrainingCallbackHint,
 )
 from ..constants import PYKEEN_CHECKPOINTS, PYKEEN_DEFAULT_CHECKPOINT
-from ..losses import Loss
 from ..lr_schedulers import LRScheduler
 from ..models import RGCN, Model
 from ..stoppers import Stopper
@@ -48,7 +47,6 @@ from ..utils import (
 __all__ = [
     "TrainingLoop",
     "NonFiniteLossError",
-    "TrainingApproachLossMismatchError",
     "SubBatchingNotSupportedError",
 ]
 
@@ -60,10 +58,6 @@ BatchType = TypeVar("BatchType")
 
 class NonFiniteLossError(RuntimeError):
     """An exception raised for non-finite loss values."""
-
-
-class TrainingApproachLossMismatchError(TypeError):
-    """An exception when an illegal loss function is used with a given training approach."""
 
 
 class CheckpointMismatchError(RuntimeError):
@@ -110,7 +104,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
     optimizer: Optimizer
 
     losses_per_epochs: List[float]
-    loss_blacklist: ClassVar[Optional[List[Type[Loss]]]] = None
 
     hpo_default = dict(
         num_epochs=dict(type=int, low=100, high=1000, q=100),
@@ -142,12 +135,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         self.automatic_memory_optimization = automatic_memory_optimization
 
         logger.debug("we don't really need the triples factory: %s", triples_factory)
-
-        if self.loss_blacklist and isinstance(self.model.loss, tuple(self.loss_blacklist)):
-            raise TrainingApproachLossMismatchError(
-                f"Can not use loss {self.model.loss.__class__.__name__}"
-                f" with training approach {self.__class__.__name__}",
-            )
 
         # The internal epoch state tracks the last finished epoch of the training loop to allow for
         # seamless loading and saving of training checkpoints
