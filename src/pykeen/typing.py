@@ -2,11 +2,12 @@
 
 """Type hints for PyKEEN."""
 
-from typing import Callable, Literal, Mapping, NamedTuple, Sequence, TypeVar, Union, cast
+from typing import Callable, Mapping, NamedTuple, Sequence, TypeVar, Union, cast
 
 import numpy as np
 import torch
 from class_resolver import Hint, HintOrType, HintType
+from typing_extensions import Literal
 
 __all__ = [
     # General types

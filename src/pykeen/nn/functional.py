@@ -38,6 +38,7 @@ from ..utils import (
 )
 
 __all__ = [
+    "auto_sf_interaction",
     "boxe_interaction",
     "complex_interaction",
     "conve_interaction",

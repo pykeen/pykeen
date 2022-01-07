@@ -50,6 +50,7 @@ __all__ = [
     # Adapter classes
     "MonotonicAffineTransformationInteraction",
     # Concrete Classes
+    "AutoSFInteraction",
     "BoxEInteraction",
     "ComplExInteraction",
     "ConvEInteraction",
