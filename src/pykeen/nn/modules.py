@@ -8,6 +8,7 @@ import itertools as itt
 import logging
 import math
 from abc import ABC, abstractmethod
+from operator import itemgetter
 from typing import (
     Any,
     Callable,
@@ -23,7 +24,6 @@ from typing import (
     Union,
     cast,
 )
-from operator import itemgetter
 
 import torch
 from class_resolver import Resolver
@@ -1551,7 +1551,7 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
 
     func = pkf.auto_sf_interaction
 
-    def __init__(self, coefficients: Sequence[int, int, int, Literal[-1, 1]]) -> None:
+    def __init__(self, coefficients: Sequence[Tuple[int, int, int, Literal[-1, 1]]]) -> None:
         """Initialize the interaction function."""
         super().__init__()
         self.coefficients = coefficients
@@ -1565,11 +1565,13 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
     def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:
         return dict(coefficients=self.coefficients)
 
+    @staticmethod
     def _prepare_hrt_for_functional(
-        self, h: HeadRepresentation, r: RelationRepresentation, t: TailRepresentation
-    ) -> Mapping[str, torch.FloatTensor]:
-        h, r, t = ensure_tuple(h, r, t)
-        return dict(h=h, r=r, t=t)
+        h: HeadRepresentation,
+        r: RelationRepresentation,
+        t: TailRepresentation,
+    ) -> MutableMapping[str, torch.FloatTensor]:
+        return dict(zip("hrt", ensure_tuple(h, r, t)))
 
 
 interaction_resolver = Resolver.from_subclasses(
