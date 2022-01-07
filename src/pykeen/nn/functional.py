@@ -1371,7 +1371,7 @@ def auto_sf_interaction(
 
     This interaction functions are a parametrized way to express bi-linear models
     with block structure. It divides the entity and relation representations into blocks,
-    and expresse the interaction as a sequence of 4-tuples $(i_h, i_r, i_t, s)$,
+    and express the interaction as a sequence of 4-tuples $(i_h, i_r, i_t, s)$,
     where $i_h, i_r, i_t$ index a _block_ of the head, relation, or tail representation,
     and $s \in {-1, 1}$ is the sign.
 
@@ -1384,9 +1384,10 @@ def auto_sf_interaction(
 
     This parametrization allows to express several well-known interaction functions, e.g.
 
-    - DistMult: one block, $\mathcal{C} = \{(0, 0, 0, 1)\}$
-    - ComplEx: two blocks, $\mathcal{C} = \{(0, 0, 0, 1), (0, 1, 1, 1), (1, 0, 1, -1), (1, 0, 1, 1)\}$
-    - SimplE: two blocks: $\mathcal{C} = \{(0, 0, 1, 1), (1, 1, 0, 1)\}$
+    - :class:`pykeen.models.DistMult`: one block, $\mathcal{C} = \{(0, 0, 0, 1)\}$
+    - :class:`pykeen.models.ComplEx`: two blocks,
+      $\mathcal{C} = \{(0, 0, 0, 1), (0, 1, 1, 1), (1, 0, 1, -1), (1, 0, 1, 1)\}$
+    - :class:`pykeen.models.SimplE`: two blocks: $\mathcal{C} = \{(0, 0, 1, 1), (1, 1, 0, 1)\}$
 
     :param h: each shape: (batch_size, num_heads, 1, 1, rank, dim)
         The list of head representations.
