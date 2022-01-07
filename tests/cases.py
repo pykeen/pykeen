@@ -56,17 +56,9 @@ from pykeen.trackers import ResultTracker
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
 from pykeen.triples import TriplesFactory, generation
 from pykeen.triples.splitting import Cleaner, Splitter
-from pykeen.triples.utils import get_entities
+from pykeen.triples.utils import get_entities, is_tensor_subset, triple_tensor_to_set
 from pykeen.typing import HeadRepresentation, Initializer, MappedTriples, RelationRepresentation, TailRepresentation
-from pykeen.utils import (
-    all_in_bounds,
-    get_batchnorm_modules,
-    is_tensor_subset,
-    resolve_device,
-    set_random_seed,
-    tensor_to_set,
-    unpack_singletons,
-)
+from pykeen.utils import all_in_bounds, get_batchnorm_modules, resolve_device, set_random_seed, unpack_singletons
 from tests.constants import EPSILON
 from tests.mocks import CustomRepresentations
 from tests.utils import rand
@@ -1590,7 +1582,7 @@ class CleanerTestCase(GenericTestCase[Cleaner]):
             random_state=42,
         )
         # check that no triple got lost
-        assert tensor_to_set(self.mapped_triples) == tensor_to_set(
+        assert triple_tensor_to_set(self.mapped_triples) == triple_tensor_to_set(
             torch.cat(
                 [
                     reference_clean,
@@ -1630,9 +1622,11 @@ class SplitterTestCase(GenericTestCase[Splitter]):
         )
         assert len(splitted) == exp_parts
         # check that no triple got lost
-        assert tensor_to_set(self.mapped_triples) == set().union(*(tensor_to_set(triples) for triples in splitted))
+        assert triple_tensor_to_set(self.mapped_triples) == set().union(
+            *(triple_tensor_to_set(triples) for triples in splitted)
+        )
         # check that all entities are covered in first part
-        assert tensor_to_set(splitted[0]) == self.all_entities
+        assert triple_tensor_to_set(splitted[0]) == self.all_entities
 
 
 class EvaluatorTestCase(unittest.TestCase):
