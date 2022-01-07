@@ -61,9 +61,9 @@ from pykeen.typing import HeadRepresentation, Initializer, MappedTriples, Relati
 from pykeen.utils import (
     all_in_bounds,
     get_batchnorm_modules,
+    is_tensor_subset,
     resolve_device,
     set_random_seed,
-    is_tensor_subset,
     tensor_to_set,
     unpack_singletons,
 )
