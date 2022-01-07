@@ -11,7 +11,7 @@ from operator import itemgetter
 from typing import Any, ClassVar, Generic, Iterable, List, Mapping, Optional, Sequence, Tuple, Type, Union, cast
 
 import torch
-from class_resolver import HintOrType
+from class_resolver import HintOrType, OptionalKwargs
 from torch import nn
 
 from .base import Model
@@ -334,7 +334,7 @@ class ERModel(
         entity_representations: EmbeddingSpecificationHint = None,
         relation_representations: EmbeddingSpecificationHint = None,
         loss: HintOrType[Loss] = None,
-        loss_kwargs: Optional[Mapping[str, Any]] = None,
+        loss_kwargs: OptionalKwargs = None,
         predict_with_sigmoid: bool = False,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
