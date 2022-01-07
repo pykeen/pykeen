@@ -469,7 +469,7 @@ def split(
         it does not necessarily have to move all of them, but it might be significantly slower since it moves one
         triple at a time.
     :param method:
-        The name of the method to use, cf. `splitter_resolver`. Defaults to "coverage".
+        The name of the method to use, cf. :data:`splitter_resolver`. Defaults to "coverage".
 
     :return:
         A partition of triples, which are split (approximately) according to the ratios.
