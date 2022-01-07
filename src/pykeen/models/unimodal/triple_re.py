@@ -19,7 +19,9 @@ __all__ = [
 
 
 class TripleRE(ERModel):
-    r"""An implementation of TripleRE from [yu2021]_.
+    r"""An implementation of TripleRE related to [yu2021]_.
+
+    This implementation does not use NodePieceRepresentations so far.
 
     ---
     citation:
