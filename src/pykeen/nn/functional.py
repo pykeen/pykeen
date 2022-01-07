@@ -63,6 +63,7 @@ __all__ = [
     "transf_interaction",
     "transh_interaction",
     "transr_interaction",
+    "triple_re_interaction",
     "tucker_interaction",
     "unstructured_model_interaction",
 ]
