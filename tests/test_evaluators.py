@@ -131,12 +131,18 @@ class ClassificationEvaluatorTest(cases.EvaluatorTestCase):
         for field in sorted(dataclasses.fields(ClassificationMetricResults), key=attrgetter("name")):
             with self.subTest(metric=field.name):
                 f = field.metadata["f"]
-                exp_score = f(numpy.array(mask.flat), numpy.array(scores.flat))
+                left, right = numpy.array(mask.flat), numpy.array(scores.flat)
+                exp_score = f(left, right)
                 act_score = result.get_metric(field.name)
                 if numpy.isnan(exp_score):
                     self.assertTrue(numpy.isnan(act_score))
                 else:
-                    self.assertAlmostEqual(act_score, exp_score, msg=f"failed for {field.name}", delta=7)
+                    self.assertAlmostEqual(
+                        act_score,
+                        exp_score,
+                        msg=f"failed for {field.name}\nMask: {left}\nScores:{right}",
+                        delta=7,
+                    )
 
 
 class EvaluatorUtilsTests(unittest.TestCase):
