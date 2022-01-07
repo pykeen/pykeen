@@ -74,6 +74,7 @@ __all__ = [
     "TransFInteraction",
     "TransHInteraction",
     "TransRInteraction",
+    "TransformerInteraction",
     "TuckerInteraction",
     "UnstructuredModelInteraction",
 ]

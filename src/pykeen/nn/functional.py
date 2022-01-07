@@ -64,6 +64,7 @@ __all__ = [
     "transf_interaction",
     "transh_interaction",
     "transr_interaction",
+    "transformer_interaction",
     "tucker_interaction",
     "unstructured_model_interaction",
 ]
@@ -1305,7 +1306,7 @@ def transformer_interaction(
     position_embeddings: torch.FloatTensor,
     final: nn.Module,
 ) -> torch.FloatTensor:
-    """Evaluate the Transformer interaction function.
+    """Evaluate the Transformer interaction function, as described in [galkin2020]_..
 
     :param h: shape: (batch_size, num_heads, 1, 1, dim)
         The head representations.
