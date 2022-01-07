@@ -1544,6 +1544,54 @@ class CPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]
     relation_shape = ("kd",)
 
 
+class TransformerInteraction(FunctionalInteraction[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]):
+    """Transformer-based interaction, as described in [galkin2020]_."""
+
+    func = pkf.transformer_interaction
+
+    def __init__(
+        self,
+        input_dim: int = 512,
+        num_layers: int = 2,
+        num_heads: int = 8,
+        dropout: float = 0.1,
+        dim_feedforward: int = 2048,
+    ):
+        """
+        Initialize the module.
+
+        :param input_dim: >0
+            the input dimension
+        :param num_layers: >0
+            the number of Transformer layers, cf. :class:`nn.TransformerEncoder`.
+        :param num_heads: >0
+            the number of self-attention heads inside each transformer encoder layer,
+            cf. :class:`nn.TransformerEncoderLayer`
+        :param dropout:
+            the dropout rate on each transformer encoder layer, cf. :class:`nn.TransformerEncoderLayer`
+        :param dim_feedforward:
+            the hidden dimension of the feed-forward layers of the transformer encoder layer, cf. :class:`nn.TransformerEncoderLayer`
+        """
+        self.transformer = nn.TransformerEncoder(
+            encoder_layer=nn.TransformerEncoderLayer(
+                d_model=input_dim,
+                nhead=num_heads,
+                dim_feedforward=dim_feedforward,
+                dropout=dropout,
+            ),
+            num_layers=num_layers,
+        )
+        self.position_embeddings = nn.Parameter(torch.rand(2, input_dim))
+        self.final = nn.Linear(input_dim, input_dim, bias=True)
+
+    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
+        return dict(
+            transformer=self.transformer,
+            position_embeddings=self.position_embeddings,
+            final=self.final,
+        )
+
+
 interaction_resolver = Resolver.from_subclasses(
     Interaction,  # type: ignore
     skip={NormBasedInteraction, FunctionalInteraction, MonotonicAffineTransformationInteraction},

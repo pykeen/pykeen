@@ -16,6 +16,7 @@ from typing import Optional, Tuple, Union
 import numpy
 import torch
 from torch import nn
+from torch.functional import broadcast_tensors
 
 from .compute_kernel import batched_complex, batched_dot
 from .sim import KG2E_SIMILARITIES
@@ -1294,3 +1295,55 @@ def cp_interaction(
         r,
         t,
     )
+
+
+def transformer_interaction(
+    h: torch.FloatTensor,
+    r: torch.FloatTensor,
+    t: torch.FloatTensor,
+    transformer: nn.TransformerEncoder,
+    position_embeddings: torch.FloatTensor,
+    final: nn.Module,
+) -> torch.FloatTensor:
+    """Evaluate the Transformer interaction function.
+
+    :param h: shape: (batch_size, num_heads, 1, 1, dim)
+        The head representations.
+    :param r: shape: (batch_size, 1, num_relations, 1, dim)
+        The relation representations.
+    :param t: shape: (batch_size, 1, 1, num_tails, dim)
+        The tail representations.
+    :param transformer:
+        the transformer encoder
+    :param position_embeddings: shape: (2, dim)
+        the positional embeddings, one for head and one for relation
+    :param final:
+        the final (linear) transformation
+
+    :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        The scores.
+    """
+    # stack h & r (+ broadcast) => shape: (2, batch_size', num_heads, num_relations, 1, *dims)
+    x = torch.stack(broadcast_tensors(h, r), dim=0)
+
+    # remember shape for output, but reshape for transformer
+    hr_shape = x.shape
+    x = x.view(2, -1, *hr_shape[5:])
+
+    # get position embeddings, shape: (seq_len, dim)
+    # Now we are position-dependent w.r.t qualifier pairs.
+    x = x + position_embeddings.unsqueeze(dim=1)
+
+    # seq_length, batch_size, dim
+    x = transformer(src=x)
+
+    # Pool output
+    x = x.sum(dim=0)
+
+    # output shape: (batch_size, dim)
+    x = final(x)
+
+    # reshape
+    x = x.view(*hr_shape[1:5], x.shape[-1])
+
+    return (x @ t.transpose(-1, -2)).squeeze(dim=-2)
