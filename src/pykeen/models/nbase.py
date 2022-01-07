@@ -10,8 +10,8 @@ from collections import defaultdict
 from operator import itemgetter
 from typing import Any, ClassVar, Generic, Iterable, List, Mapping, Optional, Sequence, Tuple, Type, Union, cast
 
-from class_resolver import HintOrType
 import torch
+from class_resolver import HintOrType
 from torch import nn
 
 from .base import Model
