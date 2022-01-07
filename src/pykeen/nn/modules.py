@@ -1544,6 +1544,32 @@ class CPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]
     relation_shape = ("kd",)
 
 
+class TripleREInteraction(NormBasedInteraction[FloatTensor, FloatTensor, FloatTensor]):
+    """A stateful module for the TripleRE interaction function.
+
+    .. seealso:: :func:`pykeen.nn.functional.triple_re_interaction`
+    """
+
+    func = pkf.triple_re_interaction
+
+    def __init__(self, u: Optional[float] = None, **kwargs):
+        """
+        Initialize the module.
+
+        :param u:
+            the relation factor offset.
+        :param kwargs:
+            additional keyword-based arguments passed to :class:`NormBasedInteraction`
+        """
+        super().__init__(**kwargs)
+        self.u = u
+
+    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._prepare_state_for_functional()
+        kwargs["u"] = self.u
+        return kwargs
+
+
 interaction_resolver = Resolver.from_subclasses(
     Interaction,  # type: ignore
     skip={NormBasedInteraction, FunctionalInteraction, MonotonicAffineTransformationInteraction},
