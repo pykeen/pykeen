@@ -73,7 +73,7 @@ class TripleRE(ERModel):
         :param kwargs: Remaining keyword arguments passed through to :class:`pykeen.models.ERModel`.
         """
         # TODO: the published code uses NodePiece representations instead
-        entity_normalizer_kwargs = ChainMap(entity_normalizer_kwargs, self.default_entity_normalizer_kwargs)
+        entity_normalizer_kwargs = ChainMap(entity_normalizer_kwargs or {}, self.default_entity_normalizer_kwargs)
         super().__init__(
             interaction=TripleREInteraction,
             interaction_kwargs=dict(p=p, power_norm=power_norm),
