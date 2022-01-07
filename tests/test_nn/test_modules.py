@@ -10,7 +10,7 @@ from unittest import SkipTest
 import numpy
 import torch
 import unittest_templates
-from pykeen.nn import functional
+from torch.nn import functional
 
 import pykeen.nn.modules
 import pykeen.utils
@@ -586,9 +586,10 @@ class TripleRETests(cases.TranslationalInteractionTests):
     def _exp_score(self, h, r_head, r_mid, r_tail, t, u, p, power_norm) -> torch.FloatTensor:  # noqa: D102
         assert not power_norm
         if u is None:
-            u = 1.0
+            u = 0.0
+        #  head * (re_head + self.u * e_h) - tail * (re_tail + self.u * e_t) + re_mid
         h, r_head, r_mid, r_tail, t = strip_dim(h, r_head, r_mid, r_tail, t)
         h, t = [functional.normalize(x, p=2, dim=-1) for x in (h, t)]
-        return -(h * (r_head + torch.ones_like(r_head) * u) - t * (r_tail + torch.ones_like(r_tail) * u) + r_mid).norm(
+        return -(h * (r_head + u * torch.ones_like(r_head)) - t * (r_tail + u * torch.ones_like(r_tail)) + r_mid).norm(
             p=p,
         )
