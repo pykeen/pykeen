@@ -23,6 +23,7 @@ from typing import (
     Union,
     cast,
 )
+from operator import itemgetter
 
 import torch
 from class_resolver import Resolver
@@ -1554,13 +1555,21 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
         """Initialize the interaction function."""
         super().__init__()
         self.coefficients = coefficients
-        num_entity_representations = max(max(coef[0] for coef in coefficients), max(coef[2] for coef in coefficients))
-        num_relation_representations = max(coef[1] for coef in coefficients)
+        num_entity_representations = 1 + max(
+            itt.chain.from_iterable((map(itemgetter(i), coefficients) for i in (0, 2)))
+        )
+        num_relation_representations = 1 + max(map(itemgetter(1), coefficients))
         self.entity_shape = tuple(["d"] * num_entity_representations)
         self.relation_shape = tuple(["d"] * num_relation_representations)
 
     def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:
         return dict(coefficients=self.coefficients)
+
+    def _prepare_hrt_for_functional(
+        self, h: HeadRepresentation, r: RelationRepresentation, t: TailRepresentation
+    ) -> Mapping[str, torch.FloatTensor]:
+        h, r, t = ensure_tuple(h, r, t)
+        return dict(h=h, r=r, t=t)
 
 
 interaction_resolver = Resolver.from_subclasses(
