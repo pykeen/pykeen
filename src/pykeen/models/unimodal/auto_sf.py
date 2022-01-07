@@ -1,20 +1,18 @@
+# -*- coding: utf-8 -*-
+
 """A simple AutoSF-based model."""
 
-from typing import Any, ClassVar, Mapping, Optional
-
-from torch.nn import functional
-from torch.nn.init import uniform_
+from typing import Any, ClassVar, Mapping, Optional, Sequence, Tuple
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.emb import EmbeddingSpecification
-from ...nn.modules import PairREInteraction
-from ...typing import Hint, Initializer, Normalizer
+from ...nn.modules import AutoSFInteraction
+from ...typing import Sign
 
 __all__ = [
     "AutoSF",
 ]
-
 
 YAGO310_COEFFICIENTS = (
     (0, 0, 0, 1),
@@ -25,14 +23,17 @@ YAGO310_COEFFICIENTS = (
     (3, 4, 3, 1),
 )
 
+
 class AutoSF(ERModel):
     r"""An implementation of AutoSF from [zhang2020]_.
 
     ---
+    name: AutoSF
     citation:
         author: Zhang
         year: 2020
         arxiv: 1904.11682
+        link: https://arxiv.org/abs/1904.11682
         github: AutoML-Research/AutoSF
     """
 
@@ -45,13 +46,13 @@ class AutoSF(ERModel):
         self,
         embedding_dim: int = 256,
         num_components: int = 4,
-        coefficients: Sequence[Tuple[]] = YAGO310_COEFFICIENTS,
+        coefficients: Sequence[Tuple[int, int, int, Sign]] = YAGO310_COEFFICIENTS,
         embedding_kwargs: Optional[Mapping[str, Any]] = None,
         **kwargs,
     ) -> None:
         r"""Initialize AutoSF via the :class:`pykeen.nn.modules.AutoSFInteraction` interaction.
 
-        .. note ::
+        .. note::
             this variant uses `num_components` entity and relation representations with shared configuration.
             The coefficients should only be in $[0, num_components)$.
 
@@ -69,13 +70,15 @@ class AutoSF(ERModel):
                 EmbeddingSpecification(
                     embedding_dim=embedding_dim,
                     **embedding_kwargs,
-                ) * num_components
+                )
+                for _ in range(num_components)
             ],
             relation_representations=[
                 EmbeddingSpecification(
                     embedding_dim=embedding_dim,
                     **embedding_kwargs,
-                ) * num_components
+                )
+                for _ in range(num_components)
             ],
             **kwargs,
         )
