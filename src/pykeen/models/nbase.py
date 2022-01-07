@@ -10,6 +10,7 @@ from collections import defaultdict
 from operator import itemgetter
 from typing import Any, ClassVar, Generic, Iterable, List, Mapping, Optional, Sequence, Tuple, Type, Union, cast
 
+from class_resolver import HintOrType
 import torch
 from torch import nn
 
@@ -332,7 +333,8 @@ class ERModel(
         interaction_kwargs: Optional[Mapping[str, Any]] = None,
         entity_representations: EmbeddingSpecificationHint = None,
         relation_representations: EmbeddingSpecificationHint = None,
-        loss: Optional[Loss] = None,
+        loss: HintOrType[Loss] = None,
+        loss_kwargs: Optional[Mapping[str, Any]] = None,
         predict_with_sigmoid: bool = False,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
@@ -364,6 +366,7 @@ class ERModel(
         super().__init__(
             triples_factory=triples_factory,
             loss=loss,
+            loss_kwargs=loss_kwargs,
             preferred_device=preferred_device,
             random_seed=random_seed,
             predict_with_sigmoid=predict_with_sigmoid,
