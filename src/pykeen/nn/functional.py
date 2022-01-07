@@ -1369,9 +1369,9 @@ def auto_sf_interaction(
 ) -> torch.FloatTensor:
     r"""Evaluate an AutoSF-style interaction function as described by [zhang2020]_.
 
-    This interaction functions are a parametrized way to express bi-linear models
+    This interaction function is a parametrized way to express bi-linear models
     with block structure. It divides the entity and relation representations into blocks,
-    and express the interaction as a sequence of 4-tuples $(i_h, i_r, i_t, s)$,
+    and expresses the interaction as a sequence of 4-tuples $(i_h, i_r, i_t, s)$,
     where $i_h, i_r, i_t$ index a _block_ of the head, relation, or tail representation,
     and $s \in {-1, 1}$ is the sign.
 
