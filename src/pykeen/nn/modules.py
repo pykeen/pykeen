@@ -13,6 +13,7 @@ from typing import (
     Callable,
     Generic,
     Iterable,
+    Literal,
     Mapping,
     MutableMapping,
     Optional,
@@ -1542,6 +1543,24 @@ class CPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]
     func = pkf.cp_interaction
     entity_shape = ("kd",)
     relation_shape = ("kd",)
+
+
+class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepresentation, TailRepresentation]):
+    """An implementation of the AutoSF interaction."""
+
+    func = pkf.auto_sf_interaction
+
+    def __init__(self, coefficients: Sequence[int, int, int, Literal[-1, 1]]) -> None:
+        """Initialize the interaction function."""
+        super().__init__()
+        self.coefficients = coefficients
+        num_entity_representations = max(max(coef[0] for coef in coefficients), max(coef[2] for coef in coefficients))
+        num_relation_representations = max(coef[1] for coef in coefficients)
+        self.entity_shape = tuple(["d"] * num_entity_representations)
+        self.relation_shape = tuple(["d"] * num_relation_representations)
+
+    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:
+        return dict(coefficients=self.coefficients)
 
 
 interaction_resolver = Resolver.from_subclasses(
