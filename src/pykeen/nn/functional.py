@@ -1306,7 +1306,12 @@ def transformer_interaction(
     position_embeddings: torch.FloatTensor,
     final: nn.Module,
 ) -> torch.FloatTensor:
-    """Evaluate the Transformer interaction function, as described in [galkin2020]_..
+    r"""Evaluate the Transformer interaction function, as described in [galkin2020]_..
+
+    .. math ::
+
+        \textit{score}(h, r, t) =
+            \textit{Linear}(\textit{SumPooling}(\textit{Transformer}([h + pe[0]; r + pe[1]])))^T t
 
     :param h: shape: (batch_size, num_heads, 1, 1, dim)
         The head representations.
