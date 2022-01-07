@@ -1605,6 +1605,12 @@ class CleanerTestCase(GenericTestCase[Cleaner]):
         # check that all entities occur in reference
         assert get_entities(reference_clean) == self.all_entities
 
+    def test_call(self):
+        """Test call."""
+        triples_groups = [self.reference] + list(torch.split(self.other, split_size_or_sections=3, dim=0))
+        clean_groups = self.instance(triples_groups=triples_groups, random_state=42)
+        assert all(torch.is_tensor(triples) and triples.dtype for triples in clean_groups)
+
 
 class SplitterTestCase(GenericTestCase[Splitter]):
     """Test cases for triples splitter."""
