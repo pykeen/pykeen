@@ -4,12 +4,13 @@
 
 import logging
 import unittest
-from typing import Tuple, Union
+from typing import Any, MutableMapping, Tuple, Union
 from unittest import SkipTest
 
 import numpy
 import torch
 import unittest_templates
+from torch import nn
 
 import pykeen.nn.modules
 import pykeen.utils
@@ -510,6 +511,40 @@ class MonotonicAffineTransformationInteractionTests(cases.InteractionTestCase):
             c_t = s_t.unsqueeze(dim=0) > s_t.unsqueeze(dim=1)
             c_o = s_o.unsqueeze(dim=0) > s_o.unsqueeze(dim=1)
             assert (c_t == c_o).all()
+
+
+class TransformerTests(cases.InteractionTestCase):
+    """Tests for the Transformer interaction function."""
+
+    cls = pykeen.nn.modules.TransformerInteraction
+    # dimension needs to be divisible by num_heads
+    dim = 8
+    kwargs = dict(
+        num_heads=2,
+        dim_feedforward=7,
+    )
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        kwargs["input_dim"] = self.dim
+        assert self.dim % kwargs["num_heads"] == 0
+        return kwargs
+
+    def _exp_score(
+        self,
+        h: torch.FloatTensor,
+        r: torch.FloatTensor,
+        t: torch.FloatTensor,
+        transformer: nn.TransformerEncoder,
+        position_embeddings: torch.FloatTensor,
+        final: nn.Module,
+    ) -> torch.FloatTensor:  # noqa: D102
+        h, r, t = strip_dim(h, r, t)
+        x = torch.stack([h, r], dim=0) + position_embeddings
+        x = transformer(src=x.unsqueeze(dim=1))
+        x = x.sum(dim=0)
+        x = final(x).squeeze(dim=0)
+        return (x * t).sum()
 
 
 class InteractionTestsTestCase(unittest_templates.MetaTestCase[pykeen.nn.modules.Interaction]):
