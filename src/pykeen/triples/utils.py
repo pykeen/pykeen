@@ -3,7 +3,7 @@
 """Instance creation utilities."""
 
 import pathlib
-from typing import Callable, Mapping, Optional, Sequence, Set, TextIO, Union
+from typing import Callable, Mapping, Optional, Sequence, Set, TextIO, Tuple, Union
 
 import numpy as np
 import pandas
@@ -16,6 +16,8 @@ __all__ = [
     "load_triples",
     "get_entities",
     "get_relations",
+    "triple_tensor_to_set",
+    "is_triple_tensor_subset",
     "tensor_to_df",
 ]
 
@@ -85,6 +87,16 @@ def load_triples(
     if column_remapping is not None:
         df = df[[df.columns[c] for c in column_remapping]]
     return df.to_numpy()
+
+
+def triple_tensor_to_set(tensor: torch.LongTensor) -> Set[Tuple[int, ...]]:
+    """Convert a tensor of triples to a set of int-tuples."""
+    return set(map(tuple, tensor.tolist()))
+
+
+def is_triple_tensor_subset(a: torch.LongTensor, b: torch.LongTensor) -> bool:
+    """Check whether one tensor of triples is a subset of another one."""
+    return triple_tensor_to_set(a).issubset(triple_tensor_to_set(b))
 
 
 def get_entities(triples: torch.LongTensor) -> Set[int]:

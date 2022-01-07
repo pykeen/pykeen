@@ -4,11 +4,13 @@
 
 import logging
 import typing
-from typing import Collection, Optional, Sequence, Set, Tuple, Union
+from abc import abstractmethod
+from typing import Collection, Optional, Sequence, Set, Tuple, Type, Union
 
 import numpy
 import pandas
 import torch
+from class_resolver.api import HintOrType, Resolver
 
 from ..typing import MappedTriples, TorchRandomHint
 from ..utils import ensure_torch_random_state
@@ -18,11 +20,6 @@ logger = logging.getLogger(__name__)
 __all__ = [
     "split",
 ]
-
-SPLIT_METHODS = (
-    "cleanup",
-    "coverage",
-)
 
 
 def _split_triples(
@@ -178,61 +175,44 @@ def get_absolute_split_sizes(
     return tuple(sizes)
 
 
-def _tf_cleanup_all(
-    triples_groups: Sequence[MappedTriples],
-    *,
-    random_state: TorchRandomHint = None,
-) -> Sequence[MappedTriples]:
-    """Cleanup a list of triples array with respect to the first array."""
-    reference, *others = triples_groups
-    rv = []
-    for other in others:
-        if random_state is not None:
-            reference, other = _tf_cleanup_randomized(reference, other, random_state)
-        else:
-            reference, other = _tf_cleanup_deterministic(reference, other)
-        rv.append(other)
-    # [...] is necessary for Python 3.7 compatibility
-    return [reference, *rv]
+class Cleaner:
+    """A cleanup method for ensuring that all entities are contained in the triples of the first split part."""
 
+    @abstractmethod
+    def cleanup_pair(
+        self,
+        reference: MappedTriples,
+        other: MappedTriples,
+        random_state: TorchRandomHint,
+    ) -> Tuple[MappedTriples, MappedTriples]:
+        """
+        Clean up one set of triples with respect to a reference set.
 
-def _tf_cleanup_deterministic(training: MappedTriples, testing: MappedTriples) -> Tuple[MappedTriples, MappedTriples]:
-    """Cleanup a triples array (testing) with respect to another (training)."""
-    move_id_mask = _prepare_cleanup(training, testing)
-    training = torch.cat([training, testing[move_id_mask]])
-    testing = testing[~move_id_mask]
-    return training, testing
+        :param reference:
+            the reference set of triples, which shall contain triples for all entities
+        :param other:
+            the other set of triples
+        :param random_state:
+            the random state to use, if any randomized operations take place
 
+        :return:
+            a pair (reference, other), where some triples of other may have been moved into reference
+        """
+        raise NotImplementedError
 
-def _tf_cleanup_randomized(
-    training: MappedTriples,
-    testing: MappedTriples,
-    random_state: TorchRandomHint = None,
-) -> Tuple[MappedTriples, MappedTriples]:
-    """Cleanup a triples array, but randomly select testing triples and recalculate to minimize moves.
-
-    1. Calculate ``move_id_mask`` as in :func:`_tf_cleanup_deterministic`
-    2. Choose a triple to move, recalculate move_id_mask
-    3. Continue until move_id_mask has no true bits
-    """
-    generator = ensure_torch_random_state(random_state)
-    move_id_mask = _prepare_cleanup(training, testing)
-
-    # While there are still triples that should be moved to the training set
-    while move_id_mask.any():
-        # Pick a random triple to move over to the training triples
-        (candidates,) = move_id_mask.nonzero(as_tuple=True)
-        idx = torch.randint(candidates.shape[0], size=(1,), generator=generator)
-        idx = candidates[idx]
-
-        # add to training
-        training = torch.cat([training, testing[idx].view(1, -1)], dim=0)
-        # remove from testing
-        testing = torch.cat([testing[:idx], testing[idx + 1 :]], dim=0)
-        # Recalculate the move_id_mask
-        move_id_mask = _prepare_cleanup(training, testing)
-
-    return training, testing
+    def __call__(
+        self,
+        triples_groups: Sequence[MappedTriples],
+        random_state: TorchRandomHint,
+    ) -> Sequence[MappedTriples]:
+        """Cleanup a list of triples array with respect to the first array."""
+        reference, *others = triples_groups
+        # [...] is necessary for Python 3.7 compatibility
+        result = []
+        for other in others:
+            reference, other = self.cleanup_pair(reference=reference, other=other, random_state=random_state)
+            result.append(other)
+        return [reference, *result]
 
 
 def _prepare_cleanup(
@@ -275,6 +255,193 @@ def _prepare_cleanup(
     return to_move_mask
 
 
+class RandomizedCleaner(Cleaner):
+    """Cleanup a triples array by randomly selecting testing triples and recalculate to minimize moves.
+
+    1. Calculate ``move_id_mask`` as in :func:`_prepare_cleanup`
+    2. Choose a triple to move, recalculate ``move_id_mask``
+    3. Continue until ``move_id_mask`` has no true bits
+    """
+
+    def cleanup_pair(
+        self,
+        reference: MappedTriples,
+        other: MappedTriples,
+        random_state: TorchRandomHint,
+    ) -> Tuple[MappedTriples, MappedTriples]:  # noqa: D102
+        generator = ensure_torch_random_state(random_state)
+        move_id_mask = _prepare_cleanup(reference, other)
+
+        # While there are still triples that should be moved to the training set
+        while move_id_mask.any():
+            # Pick a random triple to move over to the training triples
+            (candidates,) = move_id_mask.nonzero(as_tuple=True)
+            idx = torch.randint(candidates.shape[0], size=(1,), generator=generator)
+            idx = candidates[idx]
+
+            # add to training
+            reference = torch.cat([reference, other[idx].view(1, -1)], dim=0)
+            # remove from testing
+            other = torch.cat([other[:idx], other[idx + 1 :]], dim=0)
+            # Recalculate the move_id_mask
+            move_id_mask = _prepare_cleanup(reference, other)
+
+        return reference, other
+
+
+class DeterministicCleaner(Cleaner):
+    """Cleanup a triples array (testing) with respect to another (training)."""
+
+    def cleanup_pair(
+        self,
+        reference: MappedTriples,
+        other: MappedTriples,
+        random_state: TorchRandomHint,
+    ) -> Tuple[MappedTriples, MappedTriples]:  # noqa: D102
+        move_id_mask = _prepare_cleanup(reference, other)
+        reference = torch.cat([reference, other[move_id_mask]])
+        other = other[~move_id_mask]
+        return reference, other
+
+
+cleaner_resolver = Resolver.from_subclasses(base=Cleaner, default=DeterministicCleaner)
+
+
+class Splitter:
+    """A method for splitting triples."""
+
+    @abstractmethod
+    def split_absolute_size(
+        self,
+        mapped_triples: MappedTriples,
+        sizes: Sequence[int],
+        random_state: torch.Generator,
+    ) -> Sequence[MappedTriples]:
+        """Split triples into clean groups.
+
+        This method partitions the triples, i.e., each triple is in exactly one group. Moreover, it ensures that
+        the first group contains all entities at least once.
+
+        :param mapped_triples: shape: (n, 3)
+            the ID-based triples
+        :param sizes:
+            the absolute number of triples for each split part.
+        :param random_state:
+            the random state used for splitting
+
+        :return:
+            a sequence of ID-based triples for each split part. the absolute may be different to ensure the constraint.
+        """
+        raise NotImplementedError
+
+    def split(
+        self,
+        *,
+        mapped_triples: MappedTriples,
+        ratios: Union[float, Sequence[float]] = 0.8,
+        random_state: TorchRandomHint = None,
+    ) -> Sequence[MappedTriples]:
+        """Split triples into clean groups.
+
+        :param mapped_triples: shape: (n, 3)
+            the ID-based triples
+        :param random_state:
+            the random state used to shuffle and split the triples
+        :param ratios:
+            There are three options for this argument.
+            First, a float can be given between 0 and 1.0, non-inclusive. The first set of triples will get this
+            ratio and the second will get the rest.
+            Second, a list of ratios can be given for which set in which order should get what ratios as
+            in ``[0.8, 0.1]``.
+            The final ratio can be omitted because that can be calculated.
+            Third, all ratios can be explicitly set in order such as in ``[0.8, 0.1, 0.1]`` where the sum of
+            all ratios is 1.0.
+
+        :return:
+            A partition of triples, which are split (approximately) according to the ratios.
+        """
+        random_state = ensure_torch_random_state(random_state)
+        ratios = normalize_ratios(ratios=ratios)
+        sizes = get_absolute_split_sizes(n_total=mapped_triples.shape[0], ratios=ratios)
+        triples_groups = self.split_absolute_size(
+            mapped_triples=mapped_triples,
+            sizes=sizes,
+            random_state=random_state,
+        )
+        for i, (triples, exp_size, exp_ratio) in enumerate(zip(triples_groups, sizes, ratios)):
+            actual_size = triples.shape[0]
+            actual_ratio = actual_size / exp_size * exp_ratio
+            if actual_size != exp_size:
+                logger.warning(
+                    f"Requested ratio[{i}]={exp_ratio:.3f} (equal to size {exp_size}), but got {actual_ratio:.3f} "
+                    f"(equal to size {actual_size}) to ensure that all entities/relations occur in train.",
+                )
+        return triples_groups
+
+
+class CleanupSplitter(Splitter):
+    """
+    The cleanup splitter first randomly splits the triples and then cleans up.
+
+    In the cleanup process, triples are moved into the train part until all entities occur at least once in train.
+
+    The splitter supports two variants of cleanup, cf. ``cleaner_resolver``.
+    """
+
+    def __init__(self, cleaner: HintOrType[Cleaner] = None) -> None:
+        """
+        Initialize the splitter.
+
+        :param cleaner:
+            the cleanup method to use. Defaults to the fast deterministic cleaner,
+            which may lead to larger deviances between desired and actual triple count.
+        """
+        self.cleaner = cleaner_resolver.make(cleaner)
+
+    def split_absolute_size(
+        self,
+        mapped_triples: MappedTriples,
+        sizes: Sequence[int],
+        random_state: torch.Generator,
+    ) -> Sequence[MappedTriples]:  # noqa: D102
+        triples_groups = _split_triples(
+            mapped_triples,
+            sizes=sizes,
+            random_state=random_state,
+        )
+        # Make sure that the first element has all the right stuff in it
+        logger.debug("cleaning up groups")
+        triples_groups = self.cleaner(triples_groups, random_state=random_state)
+        logger.debug("done cleaning up groups")
+        return triples_groups
+
+
+class CoverageSplitter(Splitter):
+    """This splitter greedily selects training triples such that each entity is covered and then splits the rest."""
+
+    def split_absolute_size(
+        self,
+        mapped_triples: MappedTriples,
+        sizes: Sequence[int],
+        random_state: torch.Generator,
+    ) -> Sequence[MappedTriples]:  # noqa: D102
+        seed_mask = _get_cover_deterministic(triples=mapped_triples)
+        train_seed = mapped_triples[seed_mask]
+        remaining_triples = mapped_triples[~seed_mask]
+        if train_seed.shape[0] > sizes[0]:
+            raise ValueError(f"Could not find a coverage of all entities and relation with only {sizes[0]} triples.")
+        remaining_sizes = (sizes[0] - train_seed.shape[0],) + tuple(sizes[1:])
+        train, *rest = _split_triples(
+            mapped_triples=remaining_triples,
+            sizes=remaining_sizes,
+            random_state=random_state,
+        )
+        return [torch.cat([train_seed, train], dim=0), *rest]
+
+
+splitter_resolver = Resolver.from_subclasses(base=Splitter, default=CoverageSplitter)
+
+
 def split(
     mapped_triples: MappedTriples,
     ratios: Union[float, Sequence[float]] = 0.8,
@@ -301,7 +468,7 @@ def split(
         it does not necessarily have to move all of them, but it might be significantly slower since it moves one
         triple at a time.
     :param method:
-        The name of the method to use, from SPLIT_METHODS. Defaults to "coverage".
+        The name of the method to use, cf. :data:`splitter_resolver`. Defaults to "coverage".
 
     :return:
         A partition of triples, which are split (approximately) according to the ratios.
@@ -317,48 +484,13 @@ def split(
         ratios = [0.8, 0.1, 0.1]  # also makes a [0.8, 0.1, 0.1] split
         train, test, val = split(triples, ratios)
     """
-    if method is None:
-        method = "coverage"
-    if method not in SPLIT_METHODS:
-        raise ValueError(f'Invalid split method: "{method}". Allowed are {SPLIT_METHODS}')
-
-    random_state = ensure_torch_random_state(random_state)
-    ratios = normalize_ratios(ratios=ratios)
-    sizes = get_absolute_split_sizes(n_total=mapped_triples.shape[0], ratios=ratios)
-
-    if method == "cleanup":
-        triples_groups = _split_triples(
-            mapped_triples,
-            sizes=sizes,
-            random_state=random_state,
-        )
-        # Make sure that the first element has all the right stuff in it
-        logger.debug("cleaning up groups")
-        triples_groups = _tf_cleanup_all(triples_groups, random_state=random_state if randomize_cleanup else None)
-        logger.debug("done cleaning up groups")
-    elif method == "coverage" or method is None:
-        seed_mask = _get_cover_deterministic(triples=mapped_triples)
-        train_seed = mapped_triples[seed_mask]
-        remaining_triples = mapped_triples[~seed_mask]
-        if train_seed.shape[0] > sizes[0]:
-            raise ValueError(f"Could not find a coverage of all entities and relation with only {sizes[0]} triples.")
-        remaining_sizes = (sizes[0] - train_seed.shape[0],) + tuple(sizes[1:])
-        train, *rest = _split_triples(
-            mapped_triples=remaining_triples,
-            sizes=remaining_sizes,
-            random_state=random_state,
-        )
-        triples_groups = [torch.cat([train_seed, train], dim=0), *rest]
-    else:
-        raise ValueError(f"invalid method: {method}")
-
-    for i, (triples, exp_size, exp_ratio) in enumerate(zip(triples_groups, sizes, ratios)):
-        actual_size = triples.shape[0]
-        actual_ratio = actual_size / exp_size * exp_ratio
-        if actual_size != exp_size:
-            logger.warning(
-                f"Requested ratio[{i}]={exp_ratio:.3f} (equal to size {exp_size}), but got {actual_ratio:.3f} "
-                f"(equal to size {actual_size}) to ensure that all entities/relations occur in train.",
-            )
-
-    return triples_groups
+    # backwards compatibility
+    splitter_cls: Type[Splitter] = splitter_resolver.lookup(method)
+    kwargs = dict()
+    if splitter_cls is CleanupSplitter and randomize_cleanup:
+        kwargs["cleaner"] = cleaner_resolver.normalize_cls(RandomizedCleaner)
+    return splitter_resolver.make(splitter_cls, pos_kwargs=kwargs).split(
+        mapped_triples=mapped_triples,
+        ratios=ratios,
+        random_state=random_state,
+    )

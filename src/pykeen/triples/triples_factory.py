@@ -31,7 +31,7 @@ import torch
 
 from .instances import Instances, LCWAInstances, SLCWAInstances
 from .splitting import split
-from .utils import TRIPLES_DF_COLUMNS, get_entities, get_relations, load_triples, tensor_to_df
+from .utils import TRIPLES_DF_COLUMNS, get_entities, get_relations, load_triples, tensor_to_df, triple_tensor_to_set
 from ..typing import EntityMapping, LabeledTriples, MappedTriples, RelationMapping, TorchRandomHint
 from ..utils import compact_mapping, format_relative_comparison, invert_mapping
 
@@ -1164,8 +1164,8 @@ def splits_steps(a: Sequence[CoreTriplesFactory], b: Sequence[CoreTriplesFactory
     if len(a) != len(b):
         raise ValueError("Must have same number of triples factories")
 
-    train_1 = _smt(a[0].mapped_triples)
-    train_2 = _smt(b[0].mapped_triples)
+    train_1 = triple_tensor_to_set(a[0].mapped_triples)
+    train_2 = triple_tensor_to_set(b[0].mapped_triples)
 
     # FIXME currently the implementation does not consider the non-training (i.e., second-last entries)
     #  for the number of steps. Consider more interesting way to discuss splits w/ valid
@@ -1181,10 +1181,6 @@ def splits_similarity(a: Sequence[CoreTriplesFactory], b: Sequence[CoreTriplesFa
     steps = splits_steps(a, b)
     n = sum(tf.num_triples for tf in a)
     return 1 - steps / n
-
-
-def _smt(x):
-    return set(tuple(xx.detach().numpy().tolist()) for xx in x)
 
 
 def normalize_path(path: Union[str, pathlib.Path, TextIO]) -> pathlib.Path:
