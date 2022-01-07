@@ -1550,6 +1550,9 @@ class TripleREInteraction(NormBasedInteraction[FloatTensor, FloatTensor, FloatTe
     .. seealso:: :func:`pykeen.nn.functional.triple_re_interaction`
     """
 
+    # r_head, r_mid, r_tail
+    relation_shape = ("d", "d", "d")
+
     func = pkf.triple_re_interaction
 
     def __init__(self, u: Optional[float] = None, **kwargs):
