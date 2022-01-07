@@ -183,7 +183,7 @@ class Cleaner:
         self,
         reference: MappedTriples,
         other: MappedTriples,
-        random_state: torch.Generator,
+        random_state: TorchRandomHint,
     ) -> Tuple[MappedTriples, MappedTriples]:
         """
         Clean up one set of triples with respect to a reference set.
@@ -203,7 +203,7 @@ class Cleaner:
     def __call__(
         self,
         triples_groups: Sequence[MappedTriples],
-        random_state: torch.Generator,
+        random_state: TorchRandomHint,
     ) -> Sequence[MappedTriples]:
         """Cleanup a list of triples array with respect to the first array."""
         reference, *others = triples_groups
@@ -267,7 +267,7 @@ class RandomizedCleaner(Cleaner):
         self,
         reference: MappedTriples,
         other: MappedTriples,
-        random_state: torch.Generator,
+        random_state: TorchRandomHint,
     ) -> Tuple[MappedTriples, MappedTriples]:  # noqa: D102
         generator = ensure_torch_random_state(random_state)
         move_id_mask = _prepare_cleanup(reference, other)
@@ -296,7 +296,7 @@ class DeterministicCleaner(Cleaner):
         self,
         reference: MappedTriples,
         other: MappedTriples,
-        random_state: torch.Generator,
+        random_state: TorchRandomHint,
     ) -> Tuple[MappedTriples, MappedTriples]:  # noqa: D102
         move_id_mask = _prepare_cleanup(reference, other)
         reference = torch.cat([reference, other[move_id_mask]])
