@@ -56,7 +56,7 @@ from pykeen.trackers import ResultTracker
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
 from pykeen.triples import TriplesFactory, generation
 from pykeen.triples.splitting import Cleaner, Splitter
-from pykeen.triples.utils import get_entities, is_tensor_subset, triple_tensor_to_set
+from pykeen.triples.utils import get_entities, is_triple_tensor_subset, triple_tensor_to_set
 from pykeen.typing import HeadRepresentation, Initializer, MappedTriples, RelationRepresentation, TailRepresentation
 from pykeen.utils import all_in_bounds, get_batchnorm_modules, resolve_device, set_random_seed, unpack_singletons
 from tests.constants import EPSILON
@@ -1592,8 +1592,8 @@ class CleanerTestCase(GenericTestCase[Cleaner]):
             )
         )
         # check that triples where only moved from other to reference
-        assert is_tensor_subset(self.reference, reference_clean)
-        assert is_tensor_subset(other_clean, self.other)
+        assert is_triple_tensor_subset(self.reference, reference_clean)
+        assert is_triple_tensor_subset(other_clean, self.other)
         # check that all entities occur in reference
         assert get_entities(reference_clean) == self.all_entities
 
