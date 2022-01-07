@@ -16,6 +16,7 @@ from typing import Optional, Tuple, Union
 import numpy
 import torch
 from torch import nn
+from torch.nn import functional
 
 from .compute_kernel import batched_complex, batched_dot
 from .sim import KG2E_SIMILARITIES
@@ -1293,4 +1294,40 @@ def cp_interaction(
         h,
         r,
         t,
+    )
+
+
+def triple_re_interaction(
+    # head
+    h: torch.FloatTensor,
+    # relation
+    r_head: torch.FloatTensor,
+    r_mid: torch.FloatTensor,
+    r_tail: torch.FloatTensor,
+    # tail
+    t: torch.FloatTensor,
+    # version 2: relation factor offset
+    u: Optional[float] = None,
+    # extension: negative (power) norm
+    p: int = 2,
+    power_norm: bool = False,
+) -> torch.FloatTensor:
+    # cf. https://github.com/LongYu-360/TripleRE-Add-NodePiece/blob/994216dcb1d718318384368dd0135477f852c6a4/TripleRE%2BNodepiece/ogb_wikikg2/model.py#L317-L328
+    # normalize head & tail
+    h = functional.normalize(h, dim=-1, p=2)
+    t = functional.normalize(t, dim=-1, p=2)
+
+    # version 2
+    if u is not None:
+        # r_head = r_head + u * torch.ones_like(r_head)
+        # r_tail = r_tail + u * torch.ones_like(r_tail)
+        r_head = r_head + u
+        r_tail = r_tail + u
+
+    return negative_norm_of_sum(
+        h * r_head,
+        -t * r_tail,
+        r_mid,
+        p=p,
+        power_norm=power_norm,
     )
