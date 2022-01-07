@@ -201,7 +201,7 @@ class PythonSetFilterer(Filterer):
         """
         super().__init__()
         # store set of triples
-        self.triples = triple_tensor_to_set(mapped_triples.tolist())
+        self.triples = triple_tensor_to_set(mapped_triples)
 
     def contains(self, batch: MappedTriples) -> torch.BoolTensor:  # noqa: D102
         return torch.as_tensor(
