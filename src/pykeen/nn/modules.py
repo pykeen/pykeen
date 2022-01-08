@@ -30,10 +30,11 @@ import torch
 from class_resolver import Resolver
 from docdata import parse_docdata
 from torch import FloatTensor, nn
+from torch.nn.init import xavier_normal_
 
 from . import functional as pkf
 from .combinations import Combination
-from ..typing import HeadRepresentation, HintOrType, RelationRepresentation, Sign, TailRepresentation
+from ..typing import HeadRepresentation, HintOrType, Initializer, RelationRepresentation, Sign, TailRepresentation
 from ..utils import (
     CANONICAL_DIMENSIONS,
     activation_resolver,
@@ -79,6 +80,7 @@ __all__ = [
     "TransFInteraction",
     "TransHInteraction",
     "TransRInteraction",
+    "TransformerInteraction",
     "TripleREInteraction",
     "TuckerInteraction",
     "UMInteraction",
@@ -1693,12 +1695,74 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
                 rf"\draw (0, 0) grid ({n}, {n});",
             ]
             + [
-                rf"\draw ({ti}.5, {hi}.5) node {{${'-' if s < 0 else ''}D^r_{{{ri+1}}}$}};"
+                rf"\draw ({ti}.5, {hi}.5) node {{${'-' if s < 0 else ''}D^r_{{{ri + 1}}}$}};"
                 for hi, ri, ti, s in self.coefficients
             ]
             + [
                 r"\end{tikzpicture}",
             ],
+        )
+
+
+@parse_docdata
+class TransformerInteraction(FunctionalInteraction[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]):
+    """Transformer-based interaction, as described in [galkin2020]_.
+
+    ---
+    name: Transformer
+    citation:
+        author: Galkin
+        year: 2020
+        link: https://doi.org/10.18653/v1/2020.emnlp-main.596
+    """
+
+    func = pkf.transformer_interaction
+
+    def __init__(
+        self,
+        input_dim: int = 512,
+        num_layers: int = 2,
+        num_heads: int = 8,
+        dropout: float = 0.1,
+        dim_feedforward: int = 2048,
+        position_initializer: HintOrType[Initializer] = xavier_normal_,
+    ):
+        """
+        Initialize the module.
+
+        :param input_dim: >0
+            the input dimension
+        :param num_layers: >0
+            the number of Transformer layers, cf. :class:`nn.TransformerEncoder`.
+        :param num_heads: >0
+            the number of self-attention heads inside each transformer encoder layer,
+            cf. :class:`nn.TransformerEncoderLayer`
+        :param dropout:
+            the dropout rate on each transformer encoder layer, cf. :class:`nn.TransformerEncoderLayer`
+        :param dim_feedforward:
+            the hidden dimension of the feed-forward layers of the transformer encoder layer,
+            cf. :class:`nn.TransformerEncoderLayer`
+        :param position_initializer:
+            the initializer to use for positional embeddings
+        """
+        super().__init__()
+        self.transformer = nn.TransformerEncoder(
+            encoder_layer=nn.TransformerEncoderLayer(
+                d_model=input_dim,
+                nhead=num_heads,
+                dim_feedforward=dim_feedforward,
+                dropout=dropout,
+            ),
+            num_layers=num_layers,
+        )
+        self.position_embeddings = nn.Parameter(position_initializer(torch.empty(2, input_dim)))
+        self.final = nn.Linear(input_dim, input_dim, bias=True)
+
+    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
+        return dict(
+            transformer=self.transformer,
+            position_embeddings=self.position_embeddings,
+            final=self.final,
         )
 
 
