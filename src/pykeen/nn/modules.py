@@ -1610,12 +1610,11 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
         Initialize the interaction function.
 
         :param coefficients:
-            the coefficients, each of form (
-                head_repr_index,
-                relation_repr_index,
-                tail_repr_index,
-                sign
-            )
+            the coefficients, in order:
+                1. head_representation_index,
+                2. relation_representation_index,
+                3. tail_representation_index,
+                4. sign
 
         :raise ValueError:
             if there are duplicate coefficients
