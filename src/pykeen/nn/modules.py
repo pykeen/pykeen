@@ -73,7 +73,7 @@ __all__ = [
     "RESCALInteraction",
     "RotatEInteraction",
     "SimplEInteraction",
-    "StructuredEmbeddingInteraction",
+    "SEInteraction",
     "TorusEInteraction",
     "TransDInteraction",
     "TransEInteraction",
@@ -973,7 +973,7 @@ class RESCALInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
     func = pkf.rescal_interaction
 
 
-class StructuredEmbeddingInteraction(
+class SEInteraction(
     NormBasedInteraction[
         torch.FloatTensor,
         Tuple[torch.FloatTensor, torch.FloatTensor],
@@ -986,7 +986,7 @@ class StructuredEmbeddingInteraction(
     """
 
     relation_shape = ("dd", "dd")
-    func = pkf.structured_embedding_interaction
+    func = pkf.se_interaction
 
     @staticmethod
     def _prepare_hrt_for_functional(
@@ -1079,7 +1079,7 @@ class UMInteraction(
     # shapes
     relation_shape: Sequence[str] = tuple()
 
-    func = pkf.unstructured_model_interaction
+    func = pkf.um_interaction
 
     def __init__(self, p: int, power_norm: bool = True):
         super().__init__(p=p, power_norm=power_norm)
