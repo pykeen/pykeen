@@ -26,10 +26,11 @@ from typing import (
 import torch
 from class_resolver import Resolver
 from torch import FloatTensor, nn
+from torch.nn.init import xavier_normal_
 
 from . import functional as pkf
 from .combinations import Combination
-from ..typing import HeadRepresentation, HintOrType, RelationRepresentation, TailRepresentation
+from ..typing import HeadRepresentation, HintOrType, Initializer, RelationRepresentation, TailRepresentation
 from ..utils import (
     CANONICAL_DIMENSIONS,
     activation_resolver,
@@ -1558,6 +1559,7 @@ class TransformerInteraction(FunctionalInteraction[torch.FloatTensor, torch.Floa
         num_heads: int = 8,
         dropout: float = 0.1,
         dim_feedforward: int = 2048,
+        position_initializer: HintOrType[Initializer] = xavier_normal_,
     ):
         """
         Initialize the module.
@@ -1574,6 +1576,8 @@ class TransformerInteraction(FunctionalInteraction[torch.FloatTensor, torch.Floa
         :param dim_feedforward:
             the hidden dimension of the feed-forward layers of the transformer encoder layer,
             cf. :class:`nn.TransformerEncoderLayer`
+        :param position_initializer:
+            the initializer to use for positional embeddings
         """
         super().__init__()
         self.transformer = nn.TransformerEncoder(
@@ -1585,7 +1589,7 @@ class TransformerInteraction(FunctionalInteraction[torch.FloatTensor, torch.Floa
             ),
             num_layers=num_layers,
         )
-        self.position_embeddings = nn.Parameter(nn.init.xavier_normal_(torch.empty(2, input_dim)))
+        self.position_embeddings = nn.Parameter(position_initializer(torch.empty(2, input_dim)))
         self.final = nn.Linear(input_dim, input_dim, bias=True)
 
     def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
