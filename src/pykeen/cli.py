@@ -107,9 +107,7 @@ def _get_model_lines(*, link_fmt: Optional[str] = None):
             interaction_reference = f"`{interaction_reference}`" if interaction_reference is not None else ""
 
         name = docdata.get("name", model_cls.__name__)
-        citation = docdata["citation"]
-        citation_str = f"[{citation['author']} *et al.*, {citation['year']}]({citation['link']})"
-        yield name, model_reference, interaction_reference, citation_str
+        yield name, model_reference, interaction_reference, _citation(docdata)
 
     for interaction_cls in set(interaction_resolver) - seen_interactions:
         docdata = getattr(interaction_cls, "__docdata__", None)
@@ -118,7 +116,12 @@ def _get_model_lines(*, link_fmt: Optional[str] = None):
         name = docdata.get("name")
         if name is None:
             raise ValueError(f"All unmodeled interactions must have a name: {interaction_cls}")
-        yield name, "", _fmt_ref(f"pykeen.nn.modules.{interaction_cls.__name__}", link_fmt), ""
+        yield name, "", _fmt_ref(f"pykeen.nn.modules.{interaction_cls.__name__}", link_fmt), _citation(docdata)
+
+
+def _citation(dd):
+    citation = dd["citation"]
+    return f"[{citation['author']} *et al.*, {citation['year']}]({citation['link']})"
 
 
 def _fmt_ref(model_reference: str, link_fmt: str) -> str:

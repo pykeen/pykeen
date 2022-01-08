@@ -403,6 +403,10 @@ class LiteralInteraction(
 
     ---
     name: LiteralE
+    citation:
+        author: Kristiadi
+        year: 2018
+        link: https://arxiv.org/abs/1802.00934
     """
 
     def __init__(
@@ -1563,8 +1567,13 @@ class TripleREInteraction(
 
     .. seealso:: :func:`pykeen.nn.functional.triple_re_interaction`
 
+    .. seealso:: https://github.com/LongYu-360/TripleRE-Add-NodePiece
     ---
     name: TripleRE
+    citation:
+        author: Yu
+        year: 2021
+        link: https://vixra.org/abs/2112.0095
     """
 
     # r_head, r_mid, r_tail
