@@ -1585,7 +1585,7 @@ class TransformerInteraction(FunctionalInteraction[torch.FloatTensor, torch.Floa
             ),
             num_layers=num_layers,
         )
-        self.position_embeddings = nn.Parameter(torch.rand(2, input_dim))
+        self.position_embeddings = nn.Parameter(nn.init.xavier_normal_(torch.empty(2, input_dim)))
         self.final = nn.Linear(input_dim, input_dim, bias=True)
 
     def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
