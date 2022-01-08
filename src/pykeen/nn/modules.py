@@ -8,6 +8,8 @@ import itertools as itt
 import logging
 import math
 from abc import ABC, abstractmethod
+from collections import Counter
+from operator import itemgetter
 from typing import (
     Any,
     Callable,
@@ -23,13 +25,14 @@ from typing import (
     cast,
 )
 
+import more_itertools
 import torch
 from class_resolver import Resolver
 from torch import FloatTensor, nn
 
 from . import functional as pkf
 from .combinations import Combination
-from ..typing import HeadRepresentation, HintOrType, RelationRepresentation, TailRepresentation
+from ..typing import HeadRepresentation, HintOrType, RelationRepresentation, Sign, TailRepresentation
 from ..utils import (
     CANONICAL_DIMENSIONS,
     activation_resolver,
@@ -49,6 +52,7 @@ __all__ = [
     # Adapter classes
     "MonotonicAffineTransformationInteraction",
     # Concrete Classes
+    "AutoSFInteraction",
     "BoxEInteraction",
     "ComplExInteraction",
     "ConvEInteraction",
@@ -74,6 +78,7 @@ __all__ = [
     "TransFInteraction",
     "TransHInteraction",
     "TransRInteraction",
+    "TripleREInteraction",
     "TuckerInteraction",
     "UnstructuredModelInteraction",
 ]
@@ -1591,6 +1596,90 @@ class TripleREInteraction(
             r_mid=r_mid,
             r_tail=r_tail,
             t=t,
+        )
+
+
+class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepresentation, TailRepresentation]):
+    """An implementation of the AutoSF interaction as described by [zhang2020]_."""
+
+    func = pkf.auto_sf_interaction
+    coefficients: Tuple[Tuple[int, int, int, Sign], ...]
+
+    def __init__(self, coefficients: Sequence[Tuple[int, int, int, Sign]]) -> None:
+        """
+        Initialize the interaction function.
+
+        :param coefficients:
+            the coefficients, in order:
+                1. head_representation_index,
+                2. relation_representation_index,
+                3. tail_representation_index,
+                4. sign
+
+        :raise ValueError:
+            if there are duplicate coefficients
+        """
+        super().__init__()
+        counter = Counter((hi, ri, ti) for hi, ri, ti, _ in coefficients)
+        duplicates = {k for k, v in counter.items() if v > 1}
+        if duplicates:
+            raise ValueError(f"Cannot have duplicates in coefficients! Duplicate entries for {duplicates}")
+        self.coefficients = tuple(coefficients)
+        num_entity_representations = 1 + max(
+            itt.chain.from_iterable((map(itemgetter(i), coefficients) for i in (0, 2)))
+        )
+        num_relation_representations = 1 + max(map(itemgetter(1), coefficients))
+        self.entity_shape = tuple(["d"] * num_entity_representations)
+        self.relation_shape = tuple(["d"] * num_relation_representations)
+
+    @classmethod
+    def from_searched_sf(cls, coefficients: Sequence[int]) -> "AutoSFInteraction":
+        """
+        Instantiate AutoSF interaction from the "official" serialization format.
+
+        > The first 4 values (a,b,c,d) represent h_1 * r_1 * t_a + h_2 * r_2 * t_b + h_3 * r_3 * t_c + h_4 * r_4 * t_d.
+        > For the others, every 4 values represent one adding block: index of r, index of h, index of t, the sign s.
+
+        :param coefficients:
+            the coefficients in the "official" serialization format.
+
+        cf. https://github.com/AutoML-Research/AutoSF/blob/07b7243ccf15e579176943c47d6e65392cd57af3/searched_SFs.txt
+        """
+        return cls(
+            coefficients=[(i, ri, i, 1) for i, ri in enumerate(coefficients[:4])]
+            + [(hi, ri, ti, s) for ri, hi, ti, s in more_itertools.chunked(coefficients[4:], 4)]
+        )
+
+    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:
+        return dict(coefficients=self.coefficients)
+
+    @staticmethod
+    def _prepare_hrt_for_functional(
+        h: HeadRepresentation,
+        r: RelationRepresentation,
+        t: TailRepresentation,
+    ) -> MutableMapping[str, torch.FloatTensor]:
+        return dict(zip("hrt", ensure_tuple(h, r, t)))
+
+    def extend(self, *new_coefficients: Tuple[int, int, int, Sign]) -> "AutoSFInteraction":
+        """Extend AutoSF function, as described in the greedy search algorithm in the paper."""
+        return AutoSFInteraction(coefficients=self.coefficients + tuple(new_coefficients))
+
+    def latex_visualize(self) -> str:
+        """Create the LaTeX + tikz visualization as shown in the paper."""
+        n = len(self.entity_shape)
+        return "\n".join(
+            [
+                r"\begin{tikzpicture}[yscale=-1]",
+                rf"\draw (0, 0) grid ({n}, {n});",
+            ]
+            + [
+                rf"\draw ({ti}.5, {hi}.5) node {{${'-' if s < 0 else ''}D^r_{{{ri+1}}}$}};"
+                for hi, ri, ti, s in self.coefficients
+            ]
+            + [
+                r"\end{tikzpicture}",
+            ],
         )
 
 

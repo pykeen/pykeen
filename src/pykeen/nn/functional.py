@@ -11,17 +11,16 @@ and (batch_size, 1, 1, num_tails, ``*``), and return a score tensor of shape
 from __future__ import annotations
 
 import functools
-from typing import Optional, Tuple, Union
+from typing import Optional, Sequence, Tuple, Union
 
 import numpy
 import torch
 from torch import nn
-from torch.nn import functional
 
 from .compute_kernel import batched_complex, batched_dot
 from .sim import KG2E_SIMILARITIES
 from ..moves import irfft, rfft
-from ..typing import GaussianDistribution
+from ..typing import GaussianDistribution, Sign
 from ..utils import (
     boxe_kg_arity_position_score,
     broadcast_cat,
@@ -39,6 +38,7 @@ from ..utils import (
 )
 
 __all__ = [
+    "auto_sf_interaction",
     "boxe_interaction",
     "complex_interaction",
     "conve_interaction",
@@ -64,6 +64,7 @@ __all__ = [
     "transf_interaction",
     "transh_interaction",
     "transr_interaction",
+    "triple_re_interaction",
     "tucker_interaction",
     "unstructured_model_interaction",
 ]
@@ -1312,6 +1313,36 @@ def triple_re_interaction(
     p: int = 2,
     power_norm: bool = False,
 ) -> torch.FloatTensor:
+    r"""Evaluate the TripleRE interaction function.
+
+    .. math ::
+        score(h, (r_h, r, r_t), t) = h * (r_h + u) - t * (r_t + u) + r
+
+    .. note ::
+
+        For equivalence to the paper version, `h` and `t` should be normalized to unit
+        Euclidean length, and `p` and `power_norm` be kept at their default values.
+
+    :param h: shape: (batch_size, num_heads, 1, 1, rank, dim)
+        The head representations.
+    :param r_head: shape: (batch_size, 1, num_relations, 1, rank, dim)
+        The relation-specific head multiplicator representations.
+    :param r_mid: shape: (batch_size, 1, num_relations, 1, rank, dim)
+        The relation representations.
+    :param r_tail: shape: (batch_size, 1, num_relations, 1, rank, dim)
+        The relation-specific tail multiplicator representations.
+    :param t: shape: (batch_size, 1, 1, num_tails, rank, dim)
+        The tail representations.
+    :param u:
+        the relation factor offset. If u is not None or 0, this corresponds to TripleREv2.
+    :param p:
+        The p for the norm. cf. :func:`torch.linalg.vector_norm`.
+    :param power_norm:
+        Whether to return the powered norm.
+
+    :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        The scores.
+    """
     # note: normalization should be done from the representations
     # cf. https://github.com/LongYu-360/TripleRE-Add-NodePiece/blob/994216dcb1d718318384368dd0135477f852c6a4/TripleRE%2BNodepiece/ogb_wikikg2/model.py#L317-L328  # noqa: E501
     # version 2
@@ -1328,3 +1359,48 @@ def triple_re_interaction(
         p=p,
         power_norm=power_norm,
     )
+
+
+def auto_sf_interaction(
+    h: Sequence[torch.FloatTensor],
+    r: Sequence[torch.FloatTensor],
+    t: Sequence[torch.FloatTensor],
+    coefficients: Sequence[Tuple[int, int, int, Sign]],
+) -> torch.FloatTensor:
+    r"""Evaluate an AutoSF-style interaction function as described by [zhang2020]_.
+
+    This interaction function is a parametrized way to express bi-linear models
+    with block structure. It divides the entity and relation representations into blocks,
+    and expresses the interaction as a sequence of 4-tuples $(i_h, i_r, i_t, s)$,
+    where $i_h, i_r, i_t$ index a _block_ of the head, relation, or tail representation,
+    and $s \in {-1, 1}$ is the sign.
+
+    The interaction function is then given as
+
+    .. math::
+        \sum_{(i_h, i_r, i_t, s) \in \mathcal{C}} s \cdot \langle h[i_h], r[i_r], t[i_t] \rangle
+
+    where $\langle \cdot, \cdot, \cdot \rangle$ denotes the tri-linear dot product.
+
+    This parametrization allows to express several well-known interaction functions, e.g.
+
+    - :class:`pykeen.models.DistMult`: one block, $\mathcal{C} = \{(0, 0, 0, 1)\}$
+    - :class:`pykeen.models.ComplEx`: two blocks,
+      $\mathcal{C} = \{(0, 0, 0, 1), (0, 1, 1, 1), (1, 0, 1, -1), (1, 0, 1, 1)\}$
+    - :class:`pykeen.models.SimplE`: two blocks: $\mathcal{C} = \{(0, 0, 1, 1), (1, 1, 0, 1)\}$
+
+    :param h: each shape: (batch_size, num_heads, 1, 1, rank, dim)
+        The list of head representations.
+    :param r: each shape: (batch_size, 1, num_relations, 1, rank, dim)
+        The list of relation representations.
+    :param t: each shape: (batch_size, 1, 1, num_tails, rank, dim)
+        The list of tail representations.
+    :param coefficients:
+        the coefficients, in order:
+
+        1. head_representation_index,
+        2. relation_representation_index,
+        3. tail_representation_index,
+        4. sign
+    """
+    return sum(sign * (h[hi] * r[ri] * t[ti]).sum(dim=-1) for hi, ri, ti, sign in coefficients)

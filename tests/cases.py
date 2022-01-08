@@ -23,6 +23,7 @@ from typing import (
     Tuple,
     Type,
     TypeVar,
+    Union,
 )
 from unittest.case import SkipTest
 from unittest.mock import patch
@@ -54,6 +55,8 @@ from pykeen.regularizers import LpRegularizer, Regularizer
 from pykeen.trackers import ResultTracker
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
 from pykeen.triples import TriplesFactory, generation
+from pykeen.triples.splitting import Cleaner, Splitter
+from pykeen.triples.utils import get_entities, is_triple_tensor_subset, triple_tensor_to_set
 from pykeen.typing import HeadRepresentation, Initializer, MappedTriples, RelationRepresentation, TailRepresentation
 from pykeen.utils import all_in_bounds, get_batchnorm_modules, resolve_device, set_random_seed, unpack_singletons
 from tests.constants import EPSILON
@@ -1552,6 +1555,78 @@ class PredictBaseTestCase(unittest.TestCase):
             triples_factory=self.factory,
             **self.model_kwargs,
         )
+
+
+class CleanerTestCase(GenericTestCase[Cleaner]):
+    """Test cases for cleaner."""
+
+    def post_instantiation_hook(self) -> None:
+        """Prepare triples."""
+        self.dataset = Nations()
+        self.all_entities = set(range(self.dataset.num_entities))
+        self.mapped_triples = self.dataset.training.mapped_triples
+        # unfavourable split to ensure that cleanup is necessary
+        self.reference, self.other = torch.split(
+            self.mapped_triples,
+            split_size_or_sections=[24, self.mapped_triples.shape[0] - 24],
+            dim=0,
+        )
+        # check for unclean split
+        assert get_entities(self.reference) != self.all_entities
+
+    def test_cleanup_pair(self):
+        """Test cleanup_pair."""
+        reference_clean, other_clean = self.instance.cleanup_pair(
+            reference=self.reference,
+            other=self.other,
+            random_state=42,
+        )
+        # check that no triple got lost
+        assert triple_tensor_to_set(self.mapped_triples) == triple_tensor_to_set(
+            torch.cat(
+                [
+                    reference_clean,
+                    other_clean,
+                ],
+                dim=0,
+            )
+        )
+        # check that triples where only moved from other to reference
+        assert is_triple_tensor_subset(self.reference, reference_clean)
+        assert is_triple_tensor_subset(other_clean, self.other)
+        # check that all entities occur in reference
+        assert get_entities(reference_clean) == self.all_entities
+
+    def test_call(self):
+        """Test call."""
+        triples_groups = [self.reference] + list(torch.split(self.other, split_size_or_sections=3, dim=0))
+        clean_groups = self.instance(triples_groups=triples_groups, random_state=42)
+        assert all(torch.is_tensor(triples) and triples.dtype for triples in clean_groups)
+
+
+class SplitterTestCase(GenericTestCase[Splitter]):
+    """Test cases for triples splitter."""
+
+    def post_instantiation_hook(self) -> None:
+        """Prepare data."""
+        dataset = Nations()
+        self.all_entities = set(range(dataset.num_entities))
+        self.mapped_triples = dataset.training.mapped_triples
+
+    def _test_split(self, ratios: Union[float, Sequence[float]], exp_parts: int):
+        """Test splitting."""
+        splitted = self.instance.split(
+            mapped_triples=self.mapped_triples,
+            ratios=ratios,
+            random_state=None,
+        )
+        assert len(splitted) == exp_parts
+        # check that no triple got lost
+        assert triple_tensor_to_set(self.mapped_triples) == set().union(
+            *(triple_tensor_to_set(triples) for triples in splitted)
+        )
+        # check that all entities are covered in first part
+        assert triple_tensor_to_set(splitted[0]) == self.all_entities
 
 
 class EvaluatorTestCase(unittest.TestCase):

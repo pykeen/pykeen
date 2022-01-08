@@ -15,7 +15,7 @@ from tqdm.auto import tqdm
 
 from .base import Model
 from ..triples import CoreTriplesFactory, TriplesFactory
-from ..triples.utils import tensor_to_df
+from ..triples.utils import tensor_to_df, triple_tensor_to_set
 from ..typing import LabeledTriples, MappedTriples, ScorePack
 from ..utils import is_cuda_oom_error
 
@@ -600,7 +600,7 @@ def get_novelty_all_mask(
     query: np.ndarray,
 ) -> np.ndarray:
     """Get novelty mask."""
-    known = {tuple(triple) for triple in mapped_triples.tolist()}
+    known = triple_tensor_to_set(mapped_triples)
     return np.asarray(
         [tuple(triple) not in known for triple in query],
         dtype=bool,

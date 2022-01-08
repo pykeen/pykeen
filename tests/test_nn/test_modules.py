@@ -4,18 +4,18 @@
 
 import logging
 import unittest
-from typing import Tuple, Union
+from typing import Sequence, Tuple, Union
 from unittest import SkipTest
 
 import numpy
 import torch
 import unittest_templates
-from torch.nn import functional
 
 import pykeen.nn.modules
 import pykeen.utils
 from pykeen.nn.functional import _rotate_quaternion, _split_quaternion, distmult_interaction
-from pykeen.utils import clamp_norm, project_entity, strip_dim, view_complex
+from pykeen.typing import Sign
+from pykeen.utils import clamp_norm, ensure_tuple, project_entity, strip_dim, view_complex
 from tests import cases
 
 logger = logging.getLogger(__name__)
@@ -589,7 +589,31 @@ class TripleRETests(cases.TranslationalInteractionTests):
             u = 0.0
         #  head * (re_head + self.u * e_h) - tail * (re_tail + self.u * e_t) + re_mid
         h, r_head, r_mid, r_tail, t = strip_dim(h, r_head, r_mid, r_tail, t)
-        h, t = [functional.normalize(x, p=2, dim=-1) for x in (h, t)]
         return -(h * (r_head + u * torch.ones_like(r_head)) - t * (r_tail + u * torch.ones_like(r_tail)) + r_mid).norm(
             p=p,
         )
+
+
+class AutoSFTests(cases.InteractionTestCase):
+    """Tests for the AutoSF interaction function."""
+
+    cls = pykeen.nn.modules.AutoSFInteraction
+    kwargs = dict(
+        coefficients=(
+            (0, 0, 0, 1),
+            (1, 1, 1, -1),
+        ),
+    )
+
+    def _exp_score(
+        self,
+        h: Sequence[torch.FloatTensor],
+        r: Sequence[torch.FloatTensor],
+        t: Sequence[torch.FloatTensor],
+        coefficients: Sequence[Tuple[int, int, int, Sign]],
+    ) -> torch.FloatTensor:  # noqa: D102
+        h, r, t = ensure_tuple(h, r, t)
+        h = strip_dim(*h)
+        r = strip_dim(*r)
+        t = strip_dim(*t)
+        return sum(s * (h[i] * r[j] * t[k]).sum(dim=-1) for i, j, k, s in coefficients)
