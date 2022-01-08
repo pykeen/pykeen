@@ -32,6 +32,7 @@ from .losses import loss_resolver
 from .lr_schedulers import lr_scheduler_resolver
 from .models import model_resolver
 from .models.cli import build_cli_from_cls
+from .nn.modules import interaction_resolver
 from .optimizers import optimizer_resolver
 from .regularizers import regularizer_resolver
 from .sampling import negative_sampler_resolver
@@ -69,12 +70,12 @@ def ls():
 @tablefmt_option
 def models(tablefmt: str):
     """List models."""
-    click.echo(_help_models(tablefmt))
+    click.echo(_help_models(tablefmt=tablefmt))
 
 
-def _help_models(tablefmt: str, link_fmt: Optional[str] = None):
-    lines = list(_get_model_lines(tablefmt=tablefmt, link_fmt=link_fmt))
-    headers = ["Name", "Reference", "Citation"] if tablefmt in {"rst", "github"} else ["Name", "Citation"]
+def _help_models(tablefmt: str = "github", *, link_fmt: Optional[str] = None):
+    lines = list(_get_model_lines(link_fmt=link_fmt))
+    headers = ["Name", "Model", "Interaction", "Citation"]
     return tabulate(
         lines,
         headers=headers,
@@ -82,20 +83,36 @@ def _help_models(tablefmt: str, link_fmt: Optional[str] = None):
     )
 
 
-def _get_model_lines(tablefmt: str, link_fmt: Optional[str] = None):
-    for _, model in sorted(model_resolver.lookup_dict.items()):
-        reference = f"pykeen.models.{model.__name__}"
-        docdata = getattr(model, "__docdata__", None)
+def _get_model_lines(*, link_fmt: Optional[str] = None):
+    for _, model_cls in sorted(model_resolver.lookup_dict.items()):
+        try:
+            interaction = interaction_resolver.lookup(model_resolver.normalize_cls(model_cls))
+            interaction_reference = f"pykeen.nn.modules.{interaction.__name__}"
+        except ValueError:
+            interaction = None
+            interaction_reference = None
+
+        model_reference = f"pykeen.models.{model_cls.__name__}"
+        docdata = getattr(model_cls, "__docdata__", None)
         if docdata is None:
             raise ValueError("All models must have docdata")
         if link_fmt:
-            reference = f"[`{reference}`]({link_fmt.format(reference)})"
+            model_reference = _fmt_ref(model_reference, link_fmt)
+            interaction_reference = _fmt_ref(interaction_reference, link_fmt)
         else:
-            reference = f"`{reference}`"
-        name = docdata.get("name", model.__name__)
+            model_reference = f"`{model_reference}`"
+            interaction_reference = f"`{interaction_reference}`" if interaction_reference is not None else ""
+
+        name = docdata.get("name", model_cls.__name__)
         citation = docdata["citation"]
         citation_str = f"[{citation['author']} *et al.*, {citation['year']}]({citation['link']})"
-        yield name, reference, citation_str
+        yield name, model_reference, interaction_reference, citation_str
+
+
+def _fmt_ref(model_reference: str, link_fmt: str) -> str:
+    if model_reference is None:
+        return ""
+    return f"[`{model_reference}`]({link_fmt.format(model_reference)})"
 
 
 @ls.command()
