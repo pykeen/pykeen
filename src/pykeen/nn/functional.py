@@ -11,17 +11,16 @@ and (batch_size, 1, 1, num_tails, ``*``), and return a score tensor of shape
 from __future__ import annotations
 
 import functools
-from typing import Optional, Tuple, Union
+from typing import Optional, Sequence, Tuple, Union
 
 import numpy
 import torch
-from torch import nn
-from torch.functional import broadcast_tensors
+from torch import broadcast_tensors, nn
 
 from .compute_kernel import batched_complex, batched_dot
 from .sim import KG2E_SIMILARITIES
 from ..moves import irfft, rfft
-from ..typing import GaussianDistribution
+from ..typing import GaussianDistribution, Sign
 from ..utils import (
     boxe_kg_arity_position_score,
     broadcast_cat,
@@ -39,6 +38,7 @@ from ..utils import (
 )
 
 __all__ = [
+    "auto_sf_interaction",
     "boxe_interaction",
     "complex_interaction",
     "conve_interaction",
@@ -1362,6 +1362,51 @@ def triple_re_interaction(
     )
 
 
+def auto_sf_interaction(
+    h: Sequence[torch.FloatTensor],
+    r: Sequence[torch.FloatTensor],
+    t: Sequence[torch.FloatTensor],
+    coefficients: Sequence[Tuple[int, int, int, Sign]],
+) -> torch.FloatTensor:
+    r"""Evaluate an AutoSF-style interaction function as described by [zhang2020]_.
+
+    This interaction function is a parametrized way to express bi-linear models
+    with block structure. It divides the entity and relation representations into blocks,
+    and expresses the interaction as a sequence of 4-tuples $(i_h, i_r, i_t, s)$,
+    where $i_h, i_r, i_t$ index a _block_ of the head, relation, or tail representation,
+    and $s \in {-1, 1}$ is the sign.
+
+    The interaction function is then given as
+
+    .. math::
+        \sum_{(i_h, i_r, i_t, s) \in \mathcal{C}} s \cdot \langle h[i_h], r[i_r], t[i_t] \rangle
+
+    where $\langle \cdot, \cdot, \cdot \rangle$ denotes the tri-linear dot product.
+
+    This parametrization allows to express several well-known interaction functions, e.g.
+
+    - :class:`pykeen.models.DistMult`: one block, $\mathcal{C} = \{(0, 0, 0, 1)\}$
+    - :class:`pykeen.models.ComplEx`: two blocks,
+      $\mathcal{C} = \{(0, 0, 0, 1), (0, 1, 1, 1), (1, 0, 1, -1), (1, 0, 1, 1)\}$
+    - :class:`pykeen.models.SimplE`: two blocks: $\mathcal{C} = \{(0, 0, 1, 1), (1, 1, 0, 1)\}$
+
+    :param h: each shape: (batch_size, num_heads, 1, 1, rank, dim)
+        The list of head representations.
+    :param r: each shape: (batch_size, 1, num_relations, 1, rank, dim)
+        The list of relation representations.
+    :param t: each shape: (batch_size, 1, 1, num_tails, rank, dim)
+        The list of tail representations.
+    :param coefficients:
+        the coefficients, in order:
+
+        1. head_representation_index,
+        2. relation_representation_index,
+        3. tail_representation_index,
+        4. sign
+    """
+    return sum(sign * (h[hi] * r[ri] * t[ti]).sum(dim=-1) for hi, ri, ti, sign in coefficients)
+
+
 def transformer_interaction(
     h: torch.FloatTensor,
     r: torch.FloatTensor,
@@ -1389,6 +1434,7 @@ def transformer_interaction(
         the positional embeddings, one for head and one for relation
     :param final:
         the final (linear) transformation
+    """
     # stack h & r (+ broadcast) => shape: (2, batch_size', num_heads, num_relations, 1, *dims)
     x = torch.stack(broadcast_tensors(h, r), dim=0)
 
