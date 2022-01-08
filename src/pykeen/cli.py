@@ -124,7 +124,7 @@ def _get_model_lines(*, link_fmt: Optional[str] = None):
 
 def _citation(dd):
     citation = dd["citation"]
-    return f"[{citation['author']} *et al.*, {citation['year']}]({citation['link']})"
+    return f"[{citation['author']}&nbsp;*et al.*,&nbsp;{citation['year']}]({citation['link']})"
 
 
 def _fmt_ref(model_reference: str, link_fmt: str) -> str:
