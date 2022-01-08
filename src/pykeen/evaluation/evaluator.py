@@ -10,7 +10,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from math import ceil
 from textwrap import dedent
-from typing import Any, Collection, Iterable, List, Mapping, Optional, Tuple, Union, cast
+from typing import Any, Collection, Generic, Iterable, List, Mapping, Optional, Tuple, TypeVar, Union, cast
 
 import numpy as np
 import torch
@@ -64,6 +64,31 @@ class MetricResults(DataClassJsonMixin):
     def to_flat_dict(self) -> Mapping[str, Any]:
         """Get the results as a flattened dictionary."""
         return self.to_dict()
+
+
+class EvaluationLoop:
+    """A base class for evaluation loops."""
+
+    # TODO: move evaluate(...)
+    # TODO: move AMO
+    # TODO: allow multiple evaluation datasets (e.g. validation and train)
+
+
+EvaluationBatchType = TypeVar("EvaluationBatchType")
+
+
+class BaseEvaluator(Generic[EvaluationBatchType], ABC):
+    """A base class for evaluators."""
+
+    @abstractmethod
+    def process_batch(self, model: Model, batch: EvaluationBatchType) -> None:
+        """Process a single evaluation batch and update internal aggregators."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def finalize(self) -> MetricResults:
+        """Finalize the metric result."""
+        raise NotImplementedError
 
 
 class Evaluator(ABC):
