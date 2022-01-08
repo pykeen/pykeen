@@ -25,6 +25,7 @@ from typing import (
     cast,
 )
 
+import more_itertools
 import torch
 from class_resolver import Resolver
 from torch import FloatTensor, nn
@@ -1631,6 +1632,24 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
         num_relation_representations = 1 + max(map(itemgetter(1), coefficients))
         self.entity_shape = tuple(["d"] * num_entity_representations)
         self.relation_shape = tuple(["d"] * num_relation_representations)
+
+    @classmethod
+    def from_searched_sf(cls, coefficients: Sequence[int]) -> "AutoSFInteraction":
+        """
+        Instantiate AutoSF interaction from the "official" serialization format.
+
+        > The first 4 values (a,b,c,d) represent h_1 * r_1 * t_a + h_2 * r_2 * t_b + h_3 * r_3 * t_c + h_4 * r_4 * t_d.
+        > For the others, every 4 values represent one adding block: index of r, index of h, index of t, the sign s.
+
+        :param coefficients:
+            the coefficients in the "official" serialization format.
+
+        cf. https://github.com/AutoML-Research/AutoSF/blob/07b7243ccf15e579176943c47d6e65392cd57af3/searched_SFs.txt
+        """
+        return cls(
+            coefficients=[(i, ri, i, 1) for i, ri in enumerate(coefficients[:4])]
+            + [(hi, ri, ti, s) for ri, hi, ti, s in more_itertools.chunked(coefficients[4:], 4)]
+        )
 
     def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:
         return dict(coefficients=self.coefficients)
