@@ -14,7 +14,7 @@ __all__ = [
     "AutoSF",
 ]
 
-YAGO310_COEFFICIENTS = (
+YAGO310_COEFFICIENTS: Sequence[Tuple[int, int, int, Sign]] = [
     # diagonal entries
     (0, 0, 0, 1),
     (1, 1, 1, 1),
@@ -23,7 +23,7 @@ YAGO310_COEFFICIENTS = (
     # off-diagonal
     (1, 2, 3, -1),
     (3, 1, 1, -1),
-)
+]
 
 
 class AutoSF(ERModel):
