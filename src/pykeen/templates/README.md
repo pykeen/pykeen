@@ -120,10 +120,6 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 
 {{ models }}
 
-### Interactions ({{ n_interactions }})
-
-{{ interactions }}
-
 ### Losses ({{ n_losses }})
 
 {{ losses }}

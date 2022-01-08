@@ -191,10 +191,6 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 | TuckER                         | [`pykeen.models.TuckER`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.TuckER.html)                             | [`pykeen.nn.TuckerInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.TuckerInteraction.html)           | [Balažević *et al.*, 2019](https://arxiv.org/abs/1901.09590)                                                            |
 | Unstructured Model             | [`pykeen.models.UM`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.UM.html)                                     | [`pykeen.nn.UMInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.UMInteraction.html)                   | [Bordes *et al.*, 2014](https://link.springer.com/content/pdf/10.1007%2Fs10994-013-5363-6.pdf)                          |
 
-### Interactions ()
-
-
-
 ### Losses (13)
 
 | Name                                 | Reference                                                                                                                       | Description                                                                                           |
