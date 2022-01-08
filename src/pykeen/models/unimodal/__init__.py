@@ -107,6 +107,7 @@ from .trans_e import TransE
 from .trans_f import TransF
 from .trans_h import TransH
 from .trans_r import TransR
+from .triple_re import TripleRE
 from .tucker import TuckER
 from .unstructured_model import UnstructuredModel
 
@@ -142,6 +143,7 @@ __all__ = [
     "TransF",
     "TransH",
     "TransR",
+    "TripleRE",
     "TuckER",
     "UnstructuredModel",
 ]

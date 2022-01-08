@@ -46,6 +46,7 @@ from .unimodal import (
     TransF,
     TransH,
     TransR,
+    TripleRE,
     TuckER,
     UnstructuredModel,
 )
@@ -95,6 +96,7 @@ __all__ = [
     "TransF",
     "TransH",
     "TransR",
+    "TripleRE",
     "TuckER",
     "UnstructuredModel",
     # Evaluation-only models
