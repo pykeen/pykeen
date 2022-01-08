@@ -1652,11 +1652,11 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
         n = len(self.entity_shape)
         return "\n".join(
             [
-                r"\begin{tikzpicture}",
+                r"\begin{tikzpicture}[yscale=-1]",
                 rf"\draw (0, 0) grid ({n}, {n});",
             ]
             + [
-                rf"\draw ({hi}.5, {ti}.5) node {{${'-' if s < 0 else ''}D^r_{{{ti+1}}}$}};"
+                rf"\draw ({ti}.5, {hi}.5) node {{${'-' if s < 0 else ''}D^r_{{{ri+1}}}$}};"
                 for hi, ri, ti, s in self.coefficients
             ]
             + [
