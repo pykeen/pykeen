@@ -652,7 +652,7 @@ class TestTuckEr(cases.ModelTestCase):
 class TestUM(cases.DistanceModelTestCase):
     """Test the Unstructured Model."""
 
-    cls = pykeen.models.UnstructuredModel
+    cls = pykeen.models.UM
 
 
 class TestCrossE(cases.ModelTestCase):

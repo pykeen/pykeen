@@ -398,7 +398,7 @@ class SETests(cases.TranslationalInteractionTests):
 class UMTests(cases.TranslationalInteractionTests):
     """Tests for UM interaction function."""
 
-    cls = pykeen.nn.modules.UnstructuredModelInteraction
+    cls = pykeen.nn.modules.UMInteraction
 
     def _exp_score(self, h, t, p, power_norm) -> torch.FloatTensor:
         assert power_norm

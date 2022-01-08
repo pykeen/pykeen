@@ -107,7 +107,7 @@ from .trans_f import TransF
 from .trans_h import TransH
 from .trans_r import TransR
 from .tucker import TuckER
-from .unstructured_model import UnstructuredModel
+from .unstructured_model import UM
 
 __all__ = [
     "BoxE",
@@ -141,5 +141,5 @@ __all__ = [
     "TransH",
     "TransR",
     "TuckER",
-    "UnstructuredModel",
+    "UM",
 ]

@@ -22,6 +22,7 @@ from .unimodal import (
     NTN,
     RESCAL,
     RGCN,
+    UM,
     BoxE,
     CompGCN,
     ComplEx,
@@ -46,7 +47,6 @@ from .unimodal import (
     TransH,
     TransR,
     TuckER,
-    UnstructuredModel,
 )
 
 __all__ = [
@@ -94,7 +94,7 @@ __all__ = [
     "TransH",
     "TransR",
     "TuckER",
-    "UnstructuredModel",
+    "UM",
     # Evaluation-only models
     "MarginalDistributionBaseline",
     # Utils

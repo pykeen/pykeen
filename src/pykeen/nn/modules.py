@@ -25,6 +25,7 @@ from typing import (
 
 import torch
 from class_resolver import Resolver
+from docdata import parse_docdata
 from torch import FloatTensor, nn
 
 from . import functional as pkf
@@ -76,7 +77,7 @@ __all__ = [
     "TransRInteraction",
     "TripleREInteraction",
     "TuckerInteraction",
-    "UnstructuredModelInteraction",
+    "UMInteraction",
 ]
 
 logger = logging.getLogger(__name__)
@@ -393,11 +394,16 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
                 mod.reset_parameters()
 
 
+@parse_docdata
 class LiteralInteraction(
     Interaction,
     Generic[HeadRepresentation, RelationRepresentation, TailRepresentation],
 ):
-    """The interaction function shared by literal-containing interactions."""
+    """The interaction function shared by literal-containing interactions.
+
+    ---
+    name: LiteralE
+    """
 
     def __init__(
         self,
@@ -1052,7 +1058,7 @@ class TuckerInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         )
 
 
-class UnstructuredModelInteraction(
+class UMInteraction(
     NormBasedInteraction[torch.FloatTensor, None, torch.FloatTensor],
 ):
     """A stateful module for the UnstructuredModel interaction function.
@@ -1545,6 +1551,7 @@ class CPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]
     relation_shape = ("kd",)
 
 
+@parse_docdata
 class TripleREInteraction(
     NormBasedInteraction[
         FloatTensor,
@@ -1555,6 +1562,9 @@ class TripleREInteraction(
     """A stateful module for the TripleRE interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.triple_re_interaction`
+
+    ---
+    name: TripleRE
     """
 
     # r_head, r_mid, r_tail
