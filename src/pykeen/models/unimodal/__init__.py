@@ -76,6 +76,7 @@
    products <https://doi.org/10.1002/sapm192761164>`_. Studies in Applied Mathematics, 6 (1-4):164–189, 1927.
 """
 
+from .auto_sf import AutoSF
 from .boxe import BoxE
 from .compgcn import CompGCN
 from .complex import ComplEx
@@ -110,6 +111,7 @@ from .tucker import TuckER
 from .unstructured_model import UM
 
 __all__ = [
+    "AutoSF",
     "BoxE",
     "CompGCN",
     "ComplEx",

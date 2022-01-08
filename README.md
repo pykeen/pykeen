@@ -42,7 +42,7 @@
   <a href="#installation">Installation</a> •
   <a href="#quickstart">Quickstart</a> •
   <a href="#datasets-29">Datasets</a> •
-  <a href="#models-36">Models</a> •
+  <a href="#models-37">Models</a> •
   <a href="#supporters">Support</a> •
   <a href="#citation">Citation</a>
 </p>
@@ -146,10 +146,11 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 | WordNet-18 (RR)                    | [`pykeen.datasets.WN18RR`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.WN18RR.html)               | [Toutanova *et al*., 2015](https://www.aclweb.org/anthology/W15-4007/)                                                  |      40559 |          11 |     92583 |
 | YAGO3-10                           | [`pykeen.datasets.YAGO310`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.YAGO310.html)             | [Mahdisoltani *et al*., 2015](http://service.tsi.telecom-paristech.fr/cgi-bin//valipub_download.cgi?dId=284)            |     123143 |          37 |   1089000 |
 
-### Models (36)
+### Models (37)
 
 | Name                           | Model                                                                                                                       | Interaction                                                                                                                                             | Citation                                                                                                                |
 |--------------------------------|-----------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|
+| AutoSF                         | [`pykeen.models.AutoSF`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.AutoSF.html)                             | [`pykeen.nn.modules.AutoSFInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.modules.AutoSFInteraction.html)                           | [Zhang *et al.*, 2020](https://arxiv.org/abs/1904.11682)                                                                |
 | BoxE                           | [`pykeen.models.BoxE`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.BoxE.html)                                 | [`pykeen.nn.modules.BoxEInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.modules.BoxEInteraction.html)                               | [Abboud *et al.*, 2020](https://arxiv.org/abs/2007.06267)                                                               |
 | Canonical Tensor Decomposition | [`pykeen.models.CP`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.CP.html)                                     | [`pykeen.nn.modules.CPInteraction`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.modules.CPInteraction.html)                                   | [Lacroix *et al.*, 2018](https://arxiv.org/abs/1806.07297)                                                              |
 | CompGCN                        | [`pykeen.models.CompGCN`](https://pykeen.readthedocs.io/en/latest/api/pykeen.models.CompGCN.html)                           |                                                                                                                                                         | [Vashishth *et al.*, 2020](https://arxiv.org/pdf/1911.03082)                                                            |
