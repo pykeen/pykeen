@@ -1621,7 +1621,7 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
         """
         super().__init__()
         counter = Counter((hi, ri, ti) for hi, ri, ti, _ in coefficients)
-        duplicates = {k for k, v in counter.items() if v > 0}
+        duplicates = {k for k, v in counter.items() if v > 1}
         if duplicates:
             raise ValueError(f"Cannot have duplicates in coefficients! Duplicate entries for {duplicates}")
         self.coefficients = tuple(coefficients)
