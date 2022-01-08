@@ -75,6 +75,7 @@ __all__ = [
     "TransHInteraction",
     "TransRInteraction",
     "TransformerInteraction",
+    "TripleREInteraction",
     "TuckerInteraction",
     "UnstructuredModelInteraction",
 ]
@@ -1592,6 +1593,56 @@ class TransformerInteraction(FunctionalInteraction[torch.FloatTensor, torch.Floa
             transformer=self.transformer,
             position_embeddings=self.position_embeddings,
             final=self.final,
+        )
+
+
+class TripleREInteraction(
+    NormBasedInteraction[
+        FloatTensor,
+        Tuple[FloatTensor, FloatTensor, FloatTensor],
+        FloatTensor,
+    ]
+):
+    """A stateful module for the TripleRE interaction function.
+
+    .. seealso:: :func:`pykeen.nn.functional.triple_re_interaction`
+    """
+
+    # r_head, r_mid, r_tail
+    relation_shape = ("d", "d", "d")
+
+    func = pkf.triple_re_interaction
+
+    def __init__(self, u: Optional[float] = 1.0, p: int = 1, power_norm: bool = False):
+        """
+        Initialize the module.
+
+        :param u:
+            the relation factor offset. can be set to None to disable it.
+        :param kwargs:
+            additional keyword-based arguments passed to :class:`NormBasedInteraction`
+        """
+        super().__init__(p=p, power_norm=power_norm)
+        self.u = u
+
+    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._prepare_state_for_functional()
+        kwargs["u"] = self.u
+        return kwargs
+
+    @staticmethod
+    def _prepare_hrt_for_functional(
+        h: FloatTensor,
+        r: Tuple[FloatTensor, FloatTensor, FloatTensor],
+        t: FloatTensor,
+    ) -> MutableMapping[str, FloatTensor]:  # noqa: D102
+        r_head, r_mid, r_tail = r
+        return dict(
+            h=h,
+            r_head=r_head,
+            r_mid=r_mid,
+            r_tail=r_tail,
+            t=t,
         )
 
 
