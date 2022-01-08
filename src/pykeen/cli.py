@@ -74,7 +74,7 @@ def models(tablefmt: str):
 
 
 def _help_models(tablefmt: str = "github", *, link_fmt: Optional[str] = None):
-    lines = list(_get_model_lines(link_fmt=link_fmt))
+    lines = sorted(_get_model_lines(link_fmt=link_fmt))
     headers = ["Name", "Model", "Interaction", "Citation"]
     return tabulate(
         lines,
@@ -84,13 +84,16 @@ def _help_models(tablefmt: str = "github", *, link_fmt: Optional[str] = None):
 
 
 def _get_model_lines(*, link_fmt: Optional[str] = None):
+    seen_interactions = set()
     for _, model_cls in sorted(model_resolver.lookup_dict.items()):
         try:
-            interaction = interaction_resolver.lookup(model_resolver.normalize_cls(model_cls))
-            interaction_reference = f"pykeen.nn.modules.{interaction.__name__}"
+            interaction_cls = interaction_resolver.lookup(model_resolver.normalize_cls(model_cls))
         except ValueError:
-            interaction = None
+            print("could not look up ", model_resolver.normalize_cls(model_cls))
             interaction_reference = None
+        else:
+            seen_interactions.add(interaction_cls)
+            interaction_reference = f"pykeen.nn.modules.{interaction_cls.__name__}"
 
         model_reference = f"pykeen.models.{model_cls.__name__}"
         docdata = getattr(model_cls, "__docdata__", None)
@@ -107,6 +110,15 @@ def _get_model_lines(*, link_fmt: Optional[str] = None):
         citation = docdata["citation"]
         citation_str = f"[{citation['author']} *et al.*, {citation['year']}]({citation['link']})"
         yield name, model_reference, interaction_reference, citation_str
+
+    for interaction_cls in set(interaction_resolver) - seen_interactions:
+        docdata = getattr(interaction_cls, "__docdata__", None)
+        if docdata is None:
+            raise ValueError(f"All unmodeled interactions must have docdata: {interaction_cls}")
+        name = docdata.get("name")
+        if name is None:
+            raise ValueError(f"All unmodeled interactions must have a name: {interaction_cls}")
+        yield name, "", _fmt_ref(f"pykeen.nn.modules.{interaction_cls.__name__}", link_fmt), ""
 
 
 def _fmt_ref(model_reference: str, link_fmt: str) -> str:
