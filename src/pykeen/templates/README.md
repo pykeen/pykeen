@@ -118,7 +118,7 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 
 ### Models ({{ n_models }})
 
-{{ models|safe }}
+{{ models }}
 
 ### Interactions ({{ n_interactions }})
 
