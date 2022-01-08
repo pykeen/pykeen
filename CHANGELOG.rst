@@ -5,6 +5,96 @@ All notable changes to this project will be documented in this file.
 The format is based on `Keep a Changelog <http://keepachangelog.com/>`_
 and this project adheres to `Semantic Versioning <http://semver.org/>`_
 
+`1.7.0 <https://github.com/pykeen/pykeen/compare/v1.6.0...v1.7.0>`_
+-------------------------------------------------------------------
+This release is only compatible with PyTorch 1.10+.
+
+New Models
+~~~~~~~~~~
+- Add BoxE by @ralphabb in https://github.com/pykeen/pykeen/pull/618
+- Add TripleRE by @mberr in https://github.com/pykeen/pykeen/pull/712
+- Add AutoSF by @mberr in https://github.com/pykeen/pykeen/pull/713
+- Add Transformer by @mberr in https://github.com/pykeen/pykeen/pull/714
+- Add Canonical Tensor Decomposition by @mberr in https://github.com/pykeen/pykeen/pull/663
+- Add (novel) Fixed Model by @cthoyt in https://github.com/pykeen/pykeen/pull/691
+- Add NodePiece model by @mberr in https://github.com/pykeen/pykeen/pull/621
+
+Updated Models
+~~~~~~~~~~~~~~
+- Update R-GCN configuration by @mberr in https://github.com/pykeen/pykeen/pull/610
+- Update ConvKB to ERModel by @cthoyt in https://github.com/pykeen/pykeen/pull/425
+- Update ComplEx to ERModel by @mberr in https://github.com/pykeen/pykeen/pull/639
+- Rename TranslationalInteraction to NormBasedInteraction by @mberr in https://github.com/pykeen/pykeen/pull/651
+- Fix generic slicing dimension by @mberr in https://github.com/pykeen/pykeen/pull/683
+
+Representations and Initialization
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+- Add low-rank embeddings by @mberr in https://github.com/pykeen/pykeen/pull/680
+- Add NodePiece representation by @mberr in https://github.com/pykeen/pykeen/pull/621
+- Add label-based initialization using a transformer (e.g., BERT) by @mberr in https://github.com/pykeen/pykeen/pull/638 and https://github.com/pykeen/pykeen/pull/652
+- Add label-based representation (e.g., to update language model using KGEM) by @mberr in https://github.com/pykeen/pykeen/pull/652
+- Remove literal representations (use label-based initialization instead) by @mberr in https://github.com/pykeen/pykeen/pull/679
+
+Training
+~~~~~~~~
+- Fix displaying previous epoch's loss by @mberr in https://github.com/pykeen/pykeen/pull/627
+- Fix kwargs transmission on MultiTrainingCallback by @Rodrigo-A-Pereira in https://github.com/pykeen/pykeen/pull/645
+- Extend Callbacks by @mberr in https://github.com/pykeen/pykeen/pull/609
+- Add gradient clipping by @mberr in https://github.com/pykeen/pykeen/pull/607
+- Fix negative score shape for SLCWA by @mberr in https://github.com/pykeen/pykeen/pull/624
+- Fix epoch loss for loss reduction != "mean" by @mberr in https://github.com/pykeen/pykeen/pull/623
+- Add sLCWA support for Cross Entropy Loss by @mberr in https://github.com/pykeen/pykeen/pull/704
+
+Inference
+~~~~~~~~~
+- Add uncertainty estimate functions via MC dropout by @mberr in https://github.com/pykeen/pykeen/pull/688
+- Fix predict top k by @mberr in https://github.com/pykeen/pykeen/pull/690
+- Fix indexing in `predict_*` methods when using inverse relations by @mberr in https://github.com/pykeen/pykeen/pull/699
+- Move tensors to device for `predict_*` methods by @mberr in https://github.com/pykeen/pykeen/pull/658
+
+Trackers
+~~~~~~~~
+- Fix wandb logging by @mberr in https://github.com/pykeen/pykeen/pull/647
+- Add multi-result tracker by @mberr in https://github.com/pykeen/pykeen/pull/682
+- Add Python result tracker by @mberr in https://github.com/pykeen/pykeen/pull/681
+- Update file trackers by @cthoyt in https://github.com/pykeen/pykeen/pull/629
+
+Evaluation
+~~~~~~~~~~
+- Store rank count by @mberr in https://github.com/pykeen/pykeen/pull/672
+- Extend `evaluate()` for easier relation filtering by @mberr in https://github.com/pykeen/pykeen/pull/391
+- Rename sklearn evaluator and refactor evaluator code by @cthoyt in https://github.com/pykeen/pykeen/pull/708
+- Add additional classification metrics via `rexmex` by @cthoyt in https://github.com/pykeen/pykeen/pull/668
+
+Triples and Datasets
+~~~~~~~~~~~~~~~~~~~~
+- Add helper dataset with internal batching for Schlichtkrull sampling by @mberr in https://github.com/pykeen/pykeen/pull/616
+- Refactor splitting code and improve documentation by @mberr in https://github.com/pykeen/pykeen/pull/709
+- Switch `np.loadtxt` to `pandas.read_csv` by @mberr in https://github.com/pykeen/pykeen/pull/695
+- Add binary I/O ti triples factories @cthoyt in https://github.com/pykeen/pykeen/pull/665
+
+Torch Usage
+~~~~~~~~~~~
+- Use `torch.finfo` to determine suitable epsilon values by @mberr in https://github.com/pykeen/pykeen/pull/626
+- Use `torch.isin` instead of own implementation by @mberr in https://github.com/pykeen/pykeen/pull/635
+- Switch to using `torch.inference_mode` instead of `torch.no_grad` by @sbonner0 in https://github.com/pykeen/pykeen/pull/604
+
+Miscellaneous
+~~~~~~~~~~~~~
+- Add YAML experiment format by @mberr in https://github.com/pykeen/pykeen/pull/612
+- Add comparison with reproduction results during replication, if available by @mberr in https://github.com/pykeen/pykeen/pull/642
+- Adapt hello_world notebook to API changes by @dobraczka in https://github.com/pykeen/pykeen/pull/649
+- Add testing configuration for Jupyter notebooks by @mberr in https://github.com/pykeen/pykeen/pull/650
+- Add empty default `loss_kwargs` by @mali-git in https://github.com/pykeen/pykeen/pull/656
+- Optional extra config for reproduce by @mberr in https://github.com/pykeen/pykeen/pull/692
+- Store pipeline configuration in pipeline result by @mberr in https://github.com/pykeen/pykeen/pull/685
+- Fix upgrade to sequence by @mberr in https://github.com/pykeen/pykeen/pull/697
+
+Housekeeping
+~~~~~~~~~~~~
+- Automatically lint with black by @cthoyt in https://github.com/pykeen/pykeen/pull/605
+- Documentation and style guide cleanup by @cthoyt in https://github.com/pykeen/pykeen/pull/606
+
 `1.6.0 <https://github.com/pykeen/pykeen/compare/v1.5.0...v1.6.0>`_
 -------------------------------------------------------------------
 This release is only compatible with PyTorch 1.9+. Because of some changes,
