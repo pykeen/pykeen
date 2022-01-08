@@ -1647,6 +1647,23 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
         """Extend AutoSF function, as described in the greedy search algorithm in the paper."""
         return AutoSFInteraction(coefficients=self.coefficients + tuple(new_coefficients))
 
+    def latex_visualize(self) -> str:
+        """Create the LaTeX + tikz visualization as shown in the paper."""
+        n = len(self.entity_shape)
+        return "\n".join(
+            [
+                r"\begin{tikzpicture}",
+                rf"\draw (0, 0) grid ({n}, {n});",
+            ]
+            + [
+                rf"\draw ({hi}.5, {ti}.5) node {{${'-' if s < 0 else ''}D^r_{{{ti+1}}}$}};"
+                for hi, ri, ti, s in self.coefficients
+            ]
+            + [
+                r"\end{tikzpicture}",
+            ],
+        )
+
 
 interaction_resolver = Resolver.from_subclasses(
     Interaction,  # type: ignore
