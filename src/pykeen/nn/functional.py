@@ -1377,7 +1377,7 @@ def auto_sf_interaction(
 
     The interaction function is then given as
 
-    .. math ::
+    .. math::
         \sum_{(i_h, i_r, i_t, s) \in \mathcal{C}} s \cdot \langle h[i_h], r[i_r], t[i_t] \rangle
 
     where $\langle \cdot, \cdot, \cdot \rangle$ denotes the tri-linear dot product.
@@ -1396,12 +1396,11 @@ def auto_sf_interaction(
     :param t: each shape: (batch_size, 1, 1, num_tails, rank, dim)
         The list of tail representations.
     :param coefficients:
-        the coefficients, in format:
-        (
-            head_representation_index,
-            relation_representation_index,
-            tail_representation_index,
-            sign,
-        )
+        the coefficients, in order:
+
+        1. head_representation_index,
+        2. relation_representation_index,
+        3. tail_representation_index,
+        4. sign
     """
     return sum(sign * (h[hi] * r[ri] * t[ti]).sum(dim=-1) for hi, ri, ti, sign in coefficients)
