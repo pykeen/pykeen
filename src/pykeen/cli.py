@@ -70,16 +70,19 @@ def ls():
 @tablefmt_option
 def models(tablefmt: str):
     """List models."""
-    click.echo(_help_models(tablefmt=tablefmt))
+    click.echo(_help_models(tablefmt=tablefmt)[0])
 
 
 def _help_models(tablefmt: str = "github", *, link_fmt: Optional[str] = None):
     lines = sorted(_get_model_lines(link_fmt=link_fmt))
     headers = ["Name", "Model", "Interaction", "Citation"]
-    return tabulate(
-        lines,
-        headers=headers,
-        tablefmt=tablefmt,
+    return (
+        tabulate(
+            lines,
+            headers=headers,
+            tablefmt=tablefmt,
+        ),
+        len(lines),
     )
 
 
@@ -520,14 +523,16 @@ def get_readme() -> str:
     )
     readme_template = environment.get_template("README.md")
     tablefmt = "github"
+    api_link_fmt = "https://pykeen.readthedocs.io/en/latest/api/{}.html"
+    models, n_models = _help_models(tablefmt, link_fmt=api_link_fmt)
     return readme_template.render(
-        models=_help_models(tablefmt, link_fmt="https://pykeen.readthedocs.io/en/latest/api/{}.html"),
-        n_models=len(model_resolver.lookup_dict),
-        regularizers=_help_regularizers(tablefmt, link_fmt="https://pykeen.readthedocs.io/en/latest/api/{}.html"),
+        models=models,
+        n_models=n_models,
+        regularizers=_help_regularizers(tablefmt, link_fmt=api_link_fmt),
         n_regularizers=len(regularizer_resolver.lookup_dict),
-        losses=_help_losses(tablefmt, link_fmt="https://pykeen.readthedocs.io/en/latest/api/{}.html"),
+        losses=_help_losses(tablefmt, link_fmt=api_link_fmt),
         n_losses=len(loss_resolver.lookup_dict),
-        datasets=_help_datasets(tablefmt, link_fmt="https://pykeen.readthedocs.io/en/latest/api/{}.html"),
+        datasets=_help_datasets(tablefmt, link_fmt=api_link_fmt),
         n_datasets=len(dataset_resolver.lookup_dict),
         training_loops=_help_training(
             tablefmt,
@@ -536,7 +541,7 @@ def get_readme() -> str:
         n_training_loops=len(training_loop_resolver.lookup_dict),
         negative_samplers=_help_negative_samplers(
             tablefmt,
-            link_fmt="https://pykeen.readthedocs.io/en/latest/api/{}.html",
+            link_fmt=api_link_fmt,
         ),
         n_negative_samplers=len(negative_sampler_resolver.lookup_dict),
         stoppers=_help_stoppers(
@@ -544,11 +549,11 @@ def get_readme() -> str:
             link_fmt="https://pykeen.readthedocs.io/en/latest/reference/stoppers.html#{}",
         ),
         n_stoppers=len(stopper_resolver.lookup_dict),
-        evaluators=_help_evaluators(tablefmt, link_fmt="https://pykeen.readthedocs.io/en/latest/api/{}.html"),
+        evaluators=_help_evaluators(tablefmt, link_fmt=api_link_fmt),
         n_evaluators=len(evaluator_resolver.lookup_dict),
         metrics=_help_metrics(tablefmt),
         n_metrics=len(get_metric_list()),
-        trackers=_help_trackers(tablefmt, link_fmt="https://pykeen.readthedocs.io/en/latest/api/{}.html"),
+        trackers=_help_trackers(tablefmt, link_fmt=api_link_fmt),
         n_trackers=len(tracker_resolver.lookup_dict),
     )
 
