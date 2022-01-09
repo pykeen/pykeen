@@ -41,7 +41,7 @@ Training
 - Fix kwargs transmission on MultiTrainingCallback by @Rodrigo-A-Pereira in https://github.com/pykeen/pykeen/pull/645
 - Extend Callbacks by @mberr in https://github.com/pykeen/pykeen/pull/609
 - Add gradient clipping by @mberr in https://github.com/pykeen/pykeen/pull/607
-- Fix negative score shape for SLCWA by @mberr in https://github.com/pykeen/pykeen/pull/624
+- Fix negative score shape for sLCWA by @mberr in https://github.com/pykeen/pykeen/pull/624
 - Fix epoch loss for loss reduction != "mean" by @mberr in https://github.com/pykeen/pykeen/pull/623
 - Add sLCWA support for Cross Entropy Loss by @mberr in https://github.com/pykeen/pykeen/pull/704
 
