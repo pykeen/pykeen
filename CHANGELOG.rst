@@ -71,7 +71,7 @@ Triples and Datasets
 - Add helper dataset with internal batching for Schlichtkrull sampling by @mberr in https://github.com/pykeen/pykeen/pull/616
 - Refactor splitting code and improve documentation by @mberr in https://github.com/pykeen/pykeen/pull/709
 - Switch `np.loadtxt` to `pandas.read_csv` by @mberr in https://github.com/pykeen/pykeen/pull/695
-- Add binary I/O ti triples factories @cthoyt in https://github.com/pykeen/pykeen/pull/665
+- Add binary I/O to triples factories @cthoyt in https://github.com/pykeen/pykeen/pull/665
 
 Torch Usage
 ~~~~~~~~~~~
