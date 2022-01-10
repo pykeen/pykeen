@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from typing import Any, Callable, Collection, Dict, Iterable, Mapping, Optional, Type, Union, cast
 
 import torch
-from optuna import Study, Trial, create_study
+from optuna import Study, Trial, TrialPruned, create_study
 from optuna.pruners import BasePruner
 from optuna.samplers import BaseSampler
 from optuna.storages import BaseStorage
@@ -120,11 +120,14 @@ class Objective:
     save_model_directory: Optional[str] = None
 
     @staticmethod
-    def _update_stopper_callbacks(stopper_kwargs: Dict[str, Any], trial: Trial) -> None:
+    def _update_stopper_callbacks(stopper_kwargs: Dict[str, Any], trial: Trial, metric: str) -> None:
         """Make a subclass of the EarlyStopper that reports to the trial."""
 
         def _result_callback(_early_stopper: EarlyStopper, result: Union[float, int], epoch: int) -> None:
             trial.report(result, step=epoch)
+            if trial.should_prune():
+                logger.info(f"Pruned trial: {trial} at epoch {epoch} due to {metric}={result}")
+                raise TrialPruned()
 
         def _stopped_callback(_early_stopper: EarlyStopper, _result: Union[float, int], epoch: int) -> None:
             trial.set_user_attr(STOPPED_EPOCH_KEY, epoch)
@@ -232,7 +235,7 @@ class Objective:
 
         _stopper_kwargs = dict(self.stopper_kwargs or {})
         if self.stopper is not None and issubclass(self.stopper, EarlyStopper):
-            self._update_stopper_callbacks(_stopper_kwargs, trial)
+            self._update_stopper_callbacks(_stopper_kwargs, trial, metric=self.metric)
 
         # create result tracker to allow to gracefully close failed trials
         result_tracker = tracker_resolver.make(query=self.result_tracker, pos_kwargs=self.result_tracker_kwargs)
