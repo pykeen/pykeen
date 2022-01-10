@@ -27,6 +27,7 @@ Updated Models
 - Rename TranslationalInteraction to NormBasedInteraction by @mberr in https://github.com/pykeen/pykeen/pull/651
 - Fix generic slicing dimension by @mberr in https://github.com/pykeen/pykeen/pull/683
 - Rename UnstructuredModel to UM and StructuredEmbedding to SE by @cthoyt in https://github.com/pykeen/pykeen/pull/721
+- Allow to pass unresolved loss to `ERModel`'s `__init__` by @mberr in https://github.com/pykeen/pykeen/pull/717
 
 Representations and Initialization
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -90,6 +91,7 @@ Miscellaneous
 - Optional extra config for reproduce by @mberr in https://github.com/pykeen/pykeen/pull/692
 - Store pipeline configuration in pipeline result by @mberr in https://github.com/pykeen/pykeen/pull/685
 - Fix upgrade to sequence by @mberr in https://github.com/pykeen/pykeen/pull/697
+- Fix pruner use in `hpo_pipeline` by @mberr in https://github.com/pykeen/pykeen/pull/724
 
 Housekeeping
 ~~~~~~~~~~~~
