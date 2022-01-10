@@ -352,6 +352,9 @@ class ERModel(
         :param relation_representations: The relation representation or sequence of representations
         :param loss:
             The loss to use. If None is given, use the loss default specific to the model subclass.
+        :param loss_kwargs:
+            Additional key-word based parameters given to the loss module's constructor, if not already
+            instantiated.
         :param predict_with_sigmoid:
             Whether to apply sigmoid onto the scores when predicting scores. Applying sigmoid at prediction time may
             lead to exactly equal scores for certain triples with very high, or very low score. When not trained with
