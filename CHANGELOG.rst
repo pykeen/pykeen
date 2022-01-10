@@ -26,6 +26,7 @@ Updated Models
 - Update ComplEx to ERModel by @mberr in https://github.com/pykeen/pykeen/pull/639
 - Rename TranslationalInteraction to NormBasedInteraction by @mberr in https://github.com/pykeen/pykeen/pull/651
 - Fix generic slicing dimension by @mberr in https://github.com/pykeen/pykeen/pull/683
+- Rename UnstructuredModel to UM and StructuredEmbedding to SE by @cthoyt in https://github.com/pykeen/pykeen/pull/721
 
 Representations and Initialization
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
