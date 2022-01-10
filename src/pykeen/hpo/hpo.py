@@ -243,12 +243,12 @@ class Objective:
             kwargs_ranges=self.training_kwargs_ranges,
         )
 
-        _stopper_kwargs = dict(self.stopper_kwargs or {})
-        if self.stopper is not None and issubclass(self.stopper, EarlyStopper):
-            self._update_stopper_callbacks(_stopper_kwargs, trial, metric=self.metric)
-
         # create result tracker to allow to gracefully close failed trials
         result_tracker = tracker_resolver.make(query=self.result_tracker, pos_kwargs=self.result_tracker_kwargs)
+
+        _stopper_kwargs = dict(self.stopper_kwargs or {})
+        if self.stopper is not None and issubclass(self.stopper, EarlyStopper):
+            self._update_stopper_callbacks(_stopper_kwargs, trial, metric=self.metric, result_tracker=result_tracker)
 
         try:
             result = pipeline(
