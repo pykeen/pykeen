@@ -92,7 +92,7 @@ def _get_model_lines(*, link_fmt: Optional[str] = None):
         try:
             interaction_cls = interaction_resolver.lookup(model_resolver.normalize_cls(model_cls))
         except ValueError:
-            print("could not look up ", model_resolver.normalize_cls(model_cls))
+            click.echo(f"could not look up {model_resolver.normalize_cls(model_cls)}")
             interaction_reference = None
         else:
             seen_interactions.add(interaction_cls)
