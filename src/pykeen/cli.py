@@ -30,9 +30,9 @@ from .hpo.cli import optimize
 from .hpo.samplers import sampler_resolver
 from .losses import loss_resolver
 from .lr_schedulers import lr_scheduler_resolver
-from .models import model_resolver
+from .models import ComplExLiteral, DistMultLiteral, DistMultLiteralGated, model_resolver
 from .models.cli import build_cli_from_cls
-from .nn.modules import interaction_resolver
+from .nn.modules import LiteralInteraction, interaction_resolver
 from .optimizers import optimizer_resolver
 from .regularizers import regularizer_resolver
 from .sampling import negative_sampler_resolver
@@ -86,11 +86,21 @@ def _help_models(tablefmt: str = "github", *, link_fmt: Optional[str] = None):
     )
 
 
+_MODEL_MAP = {
+    DistMultLiteralGated: LiteralInteraction,
+    DistMultLiteral: LiteralInteraction,
+    ComplExLiteral: LiteralInteraction,
+}
+
+
 def _get_model_lines(*, link_fmt: Optional[str] = None):
     seen_interactions = set()
     for _, model_cls in sorted(model_resolver.lookup_dict.items()):
         try:
-            interaction_cls = interaction_resolver.lookup(model_resolver.normalize_cls(model_cls))
+            if model_cls in _MODEL_MAP:
+                interaction_cls = _MODEL_MAP[model_cls]
+            else:
+                interaction_cls = interaction_resolver.lookup(model_resolver.normalize_cls(model_cls))
         except ValueError:
             click.echo(f"could not look up {model_resolver.normalize_cls(model_cls)}")
             interaction_reference = None
