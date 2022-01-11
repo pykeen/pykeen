@@ -12,6 +12,12 @@ from more_click import verbose_option
 
 from .base import UnpackedRemoteDisjointInductiveDataset
 
+__all__ = [
+    "InductiveFB15k237",
+    "InductiveWN18RR",
+    "InductiveNELL",
+]
+
 BASE_URL = "https://raw.githubusercontent.com/kkteru/grail/master/data"
 
 FB_TRAIN_URL = "{base_url}/fb237_{version}/train.txt"
@@ -30,13 +36,12 @@ NELL_INDUCTIVE_VALIDATION_URL = "{base_url}/nell_{version}_ind/valid.txt"
 NELL_INDUCTIVE_TEST_URL = "{base_url}/nell_{version}_ind/test.txt"
 
 
-
 # If GitHub ever gets upset from too many downloads, we can switch to
 # the data posted at https://github.com/pykeen/pykeen/pull/154#issuecomment-730462039
 
 
 @parse_docdata
-class Inductive_FB15k237(UnpackedRemoteDisjointInductiveDataset):
+class InductiveFB15k237(UnpackedRemoteDisjointInductiveDataset):
     """The inductive FB15k-237 dataset in 4 versions.
 
     ---
@@ -84,8 +89,6 @@ class Inductive_FB15k237(UnpackedRemoteDisjointInductiveDataset):
         inductive test triples: 1424
     """
 
-
-
     def __init__(self, version: str = "v1", create_inverse_triples: bool = False, **kwargs):
         """Initialize a particular version of a dataset (out of 4) from [teru2020]_.
 
@@ -106,7 +109,7 @@ class Inductive_FB15k237(UnpackedRemoteDisjointInductiveDataset):
 
 
 @parse_docdata
-class Inductive_WN18RR(UnpackedRemoteDisjointInductiveDataset):
+class InductiveWN18RR(UnpackedRemoteDisjointInductiveDataset):
     """The inductive WN18RR dataset in 4 versions.
 
     ---
@@ -174,7 +177,7 @@ class Inductive_WN18RR(UnpackedRemoteDisjointInductiveDataset):
 
 
 @parse_docdata
-class Inductive_NELL(UnpackedRemoteDisjointInductiveDataset):
+class InductiveNELL(UnpackedRemoteDisjointInductiveDataset):
     """The inductive NELL dataset in 4 versions.
 
     ---
@@ -244,7 +247,7 @@ class Inductive_NELL(UnpackedRemoteDisjointInductiveDataset):
 @click.command()
 @verbose_option
 def _main():
-    for cls in [Inductive_FB15k237, Inductive_WN18RR, Inductive_NELL]:
+    for cls in [InductiveFB15k237, InductiveWN18RR, InductiveNELL]:
         click.secho(f"Loading {cls.__name__}", fg="green", bold=True)
         d = cls()
         d.summarize()
