@@ -69,7 +69,7 @@ class InductiveSLCWATrainingLoop(SLCWATrainingLoop):
                 negative_scores=negative_scores,
                 label_smoothing=label_smoothing,
                 batch_filter=positive_filter,
-                num_entities=self.model.num_training_entities,
+                num_entities=self.model.num_train_entities,
             )
             + self.model.collect_regularization_term()
         )
