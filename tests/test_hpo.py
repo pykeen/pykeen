@@ -48,7 +48,7 @@ class TestInvalidConfigurations(unittest.TestCase):
 class TestHPOObjective(unittest.TestCase):
     """Test HPO objective."""
 
-    def _test_re_raise(self, MockTrial, exception: Type[Exception]):
+    def _test_re_raise(self, MockTrial, exception: Type[Exception]):  # noqa: N803
         """Test whether the given exception is raised when evaluating with the mocked trial."""
         objective = Objective(
             dataset=Nations,
@@ -66,13 +66,13 @@ class TestHPOObjective(unittest.TestCase):
 
     @patch("pykeen.pipeline.pipeline", side_effect=MemoryError)
     @patch("optuna.Trial")
-    def test_re_raise_memory_error(self, _mock_pipeline, MockTrial):
+    def test_re_raise_memory_error(self, _mock_pipeline, MockTrial):  # noqa: N803
         """Check that memory errors are re-raised (to be catched by study.optimize)."""
         self._test_re_raise(MockTrial=MockTrial, exception=MemoryError)
 
     @patch("pykeen.pipeline.pipeline", side_effect=RuntimeError)
     @patch("optuna.Trial")
-    def test_re_raise_runtime_error(self, _mock_pipeline, MockTrial):
+    def test_re_raise_runtime_error(self, _mock_pipeline, MockTrial):  # noqa: N803
         """Check that runtime errors are re-raised (to be catched by study.optimize)."""
         self._test_re_raise(MockTrial=MockTrial, exception=RuntimeError)
 
