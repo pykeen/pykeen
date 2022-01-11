@@ -102,7 +102,7 @@ def _get_model_lines(*, link_fmt: Optional[str] = None):
         docdata = getattr(model_cls, "__docdata__", None)
         if docdata is None:
             raise ValueError("All models must have docdata")
-        if link_fmt:
+        if link_fmt and interaction_reference:
             model_reference = _fmt_ref(model_reference, link_fmt)
             interaction_reference = _fmt_ref(interaction_reference, link_fmt)
         else:
@@ -129,9 +129,11 @@ def _citation(dd):
     return f"[{citation['author']} *et al.*, {citation['year']}]({citation['link']})"
 
 
-def _fmt_ref(model_reference: str, link_fmt: str, alt_reference: Optional[str] = None) -> str:
+def _fmt_ref(model_reference: str, link_fmt: Optional[str], alt_reference: Optional[str] = None) -> str:
     if model_reference is None:
         return ""
+    if link_fmt is None:
+        return f"`{model_reference}`"
     return f"[`{model_reference}`]({link_fmt.format(alt_reference or model_reference)})"
 
 
