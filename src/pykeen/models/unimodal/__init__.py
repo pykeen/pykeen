@@ -100,7 +100,7 @@ from .rescal import RESCAL
 from .rgcn import RGCN
 from .rotate import RotatE
 from .simple import SimplE
-from .structured_embedding import StructuredEmbedding
+from .structured_embedding import SE
 from .toruse import TorusE
 from .trans_d import TransD
 from .trans_e import TransE
@@ -108,7 +108,7 @@ from .trans_f import TransF
 from .trans_h import TransH
 from .trans_r import TransR
 from .tucker import TuckER
-from .unstructured_model import UnstructuredModel
+from .unstructured_model import UM
 
 __all__ = [
     "AutoSF",
@@ -135,7 +135,7 @@ __all__ = [
     "RGCN",
     "RotatE",
     "SimplE",
-    "StructuredEmbedding",
+    "SE",
     "TorusE",
     "TransD",
     "TransE",
@@ -143,5 +143,5 @@ __all__ = [
     "TransH",
     "TransR",
     "TuckER",
-    "UnstructuredModel",
+    "UM",
 ]

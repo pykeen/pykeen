@@ -354,7 +354,7 @@ class TestSimplE(cases.ModelTestCase):
 class TestSE(cases.ModelTestCase):
     """Test the Structured Embedding model."""
 
-    cls = pykeen.models.StructuredEmbedding
+    cls = pykeen.models.SE
 
     def _check_constraints(self):
         """Check model constraints.
@@ -652,7 +652,7 @@ class TestTuckEr(cases.ModelTestCase):
 class TestUM(cases.DistanceModelTestCase):
     """Test the Unstructured Model."""
 
-    cls = pykeen.models.UnstructuredModel
+    cls = pykeen.models.UM
 
 
 class TestCrossE(cases.ModelTestCase):

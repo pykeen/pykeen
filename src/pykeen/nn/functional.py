@@ -58,7 +58,7 @@ __all__ = [
     "rescal_interaction",
     "rotate_interaction",
     "simple_interaction",
-    "structured_embedding_interaction",
+    "se_interaction",
     "transd_interaction",
     "transe_interaction",
     "transf_interaction",
@@ -67,7 +67,7 @@ __all__ = [
     "transformer_interaction",
     "triple_re_interaction",
     "tucker_interaction",
-    "unstructured_model_interaction",
+    "um_interaction",
 ]
 
 
@@ -674,7 +674,7 @@ def simple_interaction(
     return scores
 
 
-def structured_embedding_interaction(
+def se_interaction(
     h: torch.FloatTensor,
     r_h: torch.FloatTensor,
     r_t: torch.FloatTensor,
@@ -1026,7 +1026,7 @@ def mure_interaction(
     )
 
 
-def unstructured_model_interaction(
+def um_interaction(
     h: torch.FloatTensor,
     t: torch.FloatTensor,
     p: int,
