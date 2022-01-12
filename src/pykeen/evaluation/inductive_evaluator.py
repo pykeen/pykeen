@@ -61,11 +61,10 @@ class InductiveEvaluator(RankBasedEvaluator):
     - Takes the mode argument which will be sent to the scoring function
     """
 
-    def __init__(self, eval_factory: TriplesFactory, mode: Mode, **kwargs):
+    def __init__(self, mode: Mode, **kwargs):
         super().__init__(**kwargs)
 
         self.mode = mode
-        self.eval_factory = eval_factory
 
     def evaluate(
         self,

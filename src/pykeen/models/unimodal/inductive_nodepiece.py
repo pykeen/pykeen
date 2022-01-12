@@ -232,7 +232,7 @@ class InductiveNodePiece(ERModel):
         ).view(hrt_batch.shape[0], 1)
 
     def score_t(
-        self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None, mode: Mod = "train"
+        self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None, mode: Mode = "train"
     ) -> torch.FloatTensor:
         return self(
             h_indices=hr_batch[:, 0],
