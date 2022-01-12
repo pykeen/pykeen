@@ -386,7 +386,7 @@ class TransRTests(cases.TranslationalInteractionTests):
 class SETests(cases.TranslationalInteractionTests):
     """Tests for SE interaction function."""
 
-    cls = pykeen.nn.modules.StructuredEmbeddingInteraction
+    cls = pykeen.nn.modules.SEInteraction
 
     def _exp_score(self, h, t, r_h, r_t, p, power_norm) -> torch.FloatTensor:
         assert not power_norm
@@ -400,7 +400,7 @@ class SETests(cases.TranslationalInteractionTests):
 class UMTests(cases.TranslationalInteractionTests):
     """Tests for UM interaction function."""
 
-    cls = pykeen.nn.modules.UnstructuredModelInteraction
+    cls = pykeen.nn.modules.UMInteraction
 
     def _exp_score(self, h, t, p, power_norm) -> torch.FloatTensor:
         assert power_norm

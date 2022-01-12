@@ -28,6 +28,7 @@ from typing import (
 import more_itertools
 import torch
 from class_resolver import Resolver
+from docdata import parse_docdata
 from torch import FloatTensor, nn
 from torch.nn.init import xavier_normal_
 
@@ -72,7 +73,7 @@ __all__ = [
     "RESCALInteraction",
     "RotatEInteraction",
     "SimplEInteraction",
-    "StructuredEmbeddingInteraction",
+    "SEInteraction",
     "TorusEInteraction",
     "TransDInteraction",
     "TransEInteraction",
@@ -82,7 +83,7 @@ __all__ = [
     "TransformerInteraction",
     "TripleREInteraction",
     "TuckerInteraction",
-    "UnstructuredModelInteraction",
+    "UMInteraction",
 ]
 
 logger = logging.getLogger(__name__)
@@ -399,11 +400,20 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
                 mod.reset_parameters()
 
 
+@parse_docdata
 class LiteralInteraction(
     Interaction,
     Generic[HeadRepresentation, RelationRepresentation, TailRepresentation],
 ):
-    """The interaction function shared by literal-containing interactions."""
+    """The interaction function shared by literal-containing interactions.
+
+    ---
+    name: LiteralE
+    citation:
+        author: Kristiadi
+        year: 2018
+        link: https://arxiv.org/abs/1802.00934
+    """
 
     def __init__(
         self,
@@ -963,7 +973,7 @@ class RESCALInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
     func = pkf.rescal_interaction
 
 
-class StructuredEmbeddingInteraction(
+class SEInteraction(
     NormBasedInteraction[
         torch.FloatTensor,
         Tuple[torch.FloatTensor, torch.FloatTensor],
@@ -976,7 +986,7 @@ class StructuredEmbeddingInteraction(
     """
 
     relation_shape = ("dd", "dd")
-    func = pkf.structured_embedding_interaction
+    func = pkf.se_interaction
 
     @staticmethod
     def _prepare_hrt_for_functional(
@@ -1058,7 +1068,7 @@ class TuckerInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         )
 
 
-class UnstructuredModelInteraction(
+class UMInteraction(
     NormBasedInteraction[torch.FloatTensor, None, torch.FloatTensor],
 ):
     """A stateful module for the UnstructuredModel interaction function.
@@ -1069,7 +1079,7 @@ class UnstructuredModelInteraction(
     # shapes
     relation_shape: Sequence[str] = tuple()
 
-    func = pkf.unstructured_model_interaction
+    func = pkf.um_interaction
 
     def __init__(self, p: int, power_norm: bool = True):
         super().__init__(p=p, power_norm=power_norm)
@@ -1551,8 +1561,17 @@ class CPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]
     relation_shape = ("kd",)
 
 
+@parse_docdata
 class TransformerInteraction(FunctionalInteraction[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]):
-    """Transformer-based interaction, as described in [galkin2020]_."""
+    """Transformer-based interaction, as described in [galkin2020]_.
+
+    ---
+    name: Transformer
+    citation:
+        author: Galkin
+        year: 2020
+        link: https://doi.org/10.18653/v1/2020.emnlp-main.596
+    """
 
     func = pkf.transformer_interaction
 
@@ -1604,6 +1623,7 @@ class TransformerInteraction(FunctionalInteraction[torch.FloatTensor, torch.Floa
         )
 
 
+@parse_docdata
 class TripleREInteraction(
     NormBasedInteraction[
         FloatTensor,
@@ -1614,6 +1634,14 @@ class TripleREInteraction(
     """A stateful module for the TripleRE interaction function.
 
     .. seealso:: :func:`pykeen.nn.functional.triple_re_interaction`
+
+    .. seealso:: https://github.com/LongYu-360/TripleRE-Add-NodePiece
+    ---
+    name: TripleRE
+    citation:
+        author: Yu
+        year: 2021
+        link: https://vixra.org/abs/2112.0095
     """
 
     # r_head, r_mid, r_tail
