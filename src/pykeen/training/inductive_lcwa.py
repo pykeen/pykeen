@@ -3,15 +3,12 @@
 """Training inductive KGE models based on the LCWA."""
 
 import logging
-from math import ceil
-from typing import Optional, Union
+from typing import Optional
 
 import torch
 
-from .training_loop import TrainingLoop
-from ..triples import CoreTriplesFactory, Instances
-from ..triples.instances import LCWABatchType, LCWASampleType
 from .lcwa import LCWATrainingLoop
+from ..triples.instances import LCWABatchType
 
 __all__ = [
     "InductiveLCWATrainingLoop",
@@ -20,6 +17,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 name_to_index = {name: index for index, name in enumerate("hrt")}
+
 
 class InductiveLCWATrainingLoop(LCWATrainingLoop):
     """
@@ -67,5 +65,3 @@ class InductiveLCWATrainingLoop(LCWATrainingLoop):
             )
             + self.model.collect_regularization_term()
         )
-
-

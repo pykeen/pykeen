@@ -17,8 +17,16 @@ import torch
 from dataclasses_json import DataClassJsonMixin
 from tqdm.autonotebook import tqdm
 
+from .evaluator import (
+    Evaluator,
+    MetricResults,
+    create_dense_positive_mask_,
+    create_sparse_positive_filter_,
+    filter_scores_,
+)
+from .rank_based_evaluator import RankBasedEvaluator
 from ..models import Model
-from ..triples.triples_factory import restrict_triples
+from ..triples.triples_factory import TriplesFactory, restrict_triples
 from ..triples.utils import get_entities, get_relations
 from ..typing import MappedTriples
 from ..utils import (
@@ -30,16 +38,12 @@ from ..utils import (
     split_list_in_batches_iter,
 )
 
-from .rank_based_evaluator import RankBasedEvaluator
-from .evaluator import MetricResults, \
-    Evaluator, create_sparse_positive_filter_, create_dense_positive_mask_, filter_scores_
-from ..triples.triples_factory import TriplesFactory
-
 __all__ = [
-    "InductiveEvaluator"
+    "InductiveEvaluator",
 ]
 
 logger = logging.getLogger(__name__)
+
 
 @contextmanager
 def optional_context_manager(condition, context_manager):
@@ -49,6 +53,7 @@ def optional_context_manager(condition, context_manager):
     else:
         yield
 
+
 class InductiveEvaluator(RankBasedEvaluator):
     """
     Inductive version of the evaluator. Main differences:
@@ -56,12 +61,7 @@ class InductiveEvaluator(RankBasedEvaluator):
     - Takes the mode argument which will be sent to the scoring function
     """
 
-    def __init__(
-        self,
-        eval_factory: TriplesFactory,
-        mode: str,
-        **kwargs
-    ):
+    def __init__(self, eval_factory: TriplesFactory, mode: str, **kwargs):
         super().__init__(**kwargs)
 
         self.mode = mode
@@ -83,7 +83,7 @@ class InductiveEvaluator(RankBasedEvaluator):
         """Run :func:`pykeen.evaluation.evaluate` with this evaluator."""
         if batch_size is None and self.automatic_memory_optimization:
             # Using automatic memory optimization on CPU may result in undocumented crashes due to OS' OOM killer.
-            if model.device.type == 'cpu':
+            if model.device.type == "cpu":
                 logger.info(
                     "Currently automatic memory optimization only supports GPUs, but you're using a CPU. "
                     "Therefore, the batch_size will be set to the default value.",

@@ -45,8 +45,11 @@ class InductiveDataset:
             for label, triples_factory in zip(
                 ("Transductive Training", "Inductive Inference", "Inductive Testing", "Inductive Validation"),
                 (
-                    self.transductive_training, self.inductive_inference, self.inductive_testing,
-                    self.inductive_validation)
+                    self.transductive_training,
+                    self.inductive_inference,
+                    self.inductive_testing,
+                    self.inductive_validation,
+                ),
             )
         ]
 
@@ -131,10 +134,9 @@ class LazyInductiveDataset(InductiveDataset):
     def _load_validation(self) -> None:
         raise NotImplementedError
 
-    def _help_cache(self,
-                    cache_root: Union[None, str, pathlib.Path],
-                    version: str = None,
-                    sep_train_inference: bool = False) -> pathlib.Path:
+    def _help_cache(
+        self, cache_root: Union[None, str, pathlib.Path], version: str = None, sep_train_inference: bool = False
+    ) -> pathlib.Path:
         """Get the appropriate cache root directory.
 
         :param cache_root: If none is passed, defaults to a subfolder of the
@@ -153,9 +155,9 @@ class LazyInductiveDataset(InductiveDataset):
         cache_root.mkdir(parents=True, exist_ok=True)
         if sep_train_inference:
             # generate subfolders 'training' and  'inference'
-            training = cache_root / 'training'
+            training = cache_root / "training"
             training.mkdir(parents=True, exist_ok=True)
-            inference = cache_root / 'inference'
+            inference = cache_root / "inference"
             inference.mkdir(parents=True, exist_ok=True)
         logger.debug("using cache root at %s", cache_root.as_uri())
         return cache_root
@@ -224,7 +226,7 @@ class DisjointInductivePathDataset(LazyInductiveDataset):
             relation_to_id=self._inductive_inference.relation_to_id,  # shares relation index with inductive inference
             # do not explicitly create inverse triples for testing; this is handled by the evaluation code
             create_inverse_triples=False,
-            load_triples_kwargs=self.load_triples_kwargs
+            load_triples_kwargs=self.load_triples_kwargs,
         )
 
         # inductive testing shares both ENTITIES and RELATIONS with the inductive inference graph
@@ -286,10 +288,10 @@ class UnpackedRemoteDisjointInductiveDataset(DisjointInductivePathDataset):
         self.inductive_testing_url = inductive_testing_url
         self.inductive_validation_url = inductive_validation_url
 
-        transductive_training_path = self.cache_root.joinpath('training', name_from_url(self.transductive_training_url))
-        inductive_inference_path = self.cache_root.joinpath('inference', name_from_url(self.inductive_inference_url))
-        inductive_testing_path = self.cache_root.joinpath('inference', name_from_url(self.inductive_testing_url))
-        inductive_validation_path = self.cache_root.joinpath('inference', name_from_url(self.inductive_validation_url))
+        transductive_training_path = self.cache_root.joinpath("training", name_from_url(self.transductive_training_url))
+        inductive_inference_path = self.cache_root.joinpath("inference", name_from_url(self.inductive_inference_url))
+        inductive_testing_path = self.cache_root.joinpath("inference", name_from_url(self.inductive_testing_url))
+        inductive_validation_path = self.cache_root.joinpath("inference", name_from_url(self.inductive_validation_url))
 
         download_kwargs = {} if download_kwargs is None else dict(download_kwargs)
         download_kwargs.setdefault("backend", "urllib")

@@ -8,18 +8,19 @@ from typing import Any, Mapping, Optional
 import torch
 from class_resolver import HintOrType
 
+from .slcwa import SLCWATrainingLoop
 from .training_loop import TrainingLoop
 from ..sampling import NegativeSampler, negative_sampler_resolver
 from ..triples import CoreTriplesFactory, Instances
 from ..triples.instances import SLCWABatchType, SLCWASampleType
 from ..typing import MappedTriples
-from .slcwa import SLCWATrainingLoop
 
 __all__ = [
     "InductiveSLCWATrainingLoop",
 ]
 
 logger = logging.getLogger(__name__)
+
 
 class InductiveSLCWATrainingLoop(SLCWATrainingLoop):
     """A training loop that uses the stochastic local closed world assumption training approach.

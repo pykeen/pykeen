@@ -3,19 +3,19 @@
 """A wrapper which combines an interaction function with NodePiece entity representations."""
 
 import logging
-from typing import Any, Callable, ClassVar, Mapping, Optional, Sequence, Union, Tuple
+from typing import Any, Callable, ClassVar, Mapping, Optional, Sequence, Tuple, Union
 
 import torch
 from class_resolver import Hint, HintOrType
 from torch import nn
 
 from .node_piece import _ConcatMLP
-from ...typing import HeadRepresentation, RelationRepresentation, TailRepresentation, cast
 from ..nbase import ERModel, _prepare_representation_module_list
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.emb import EmbeddingSpecification, NodePieceRepresentation, SubsetRepresentationModule
 from ...nn.modules import DistMultInteraction, Interaction
 from ...triples.triples_factory import CoreTriplesFactory
+from ...typing import HeadRepresentation, RelationRepresentation, TailRepresentation, cast
 
 __all__ = [
     "InductiveNodePiece",
@@ -147,8 +147,9 @@ class InductiveNodePiece(ERModel):
             num_embeddings=inference_factory.num_entities,
             shapes=self.interaction.entity_shape,
             label="entity",
-            skip_checks=self.interaction.tail_entity_shape is not None or kwargs[
-                'skip_checks'] if 'skip_checks' in kwargs else False,
+            skip_checks=self.interaction.tail_entity_shape is not None or kwargs["skip_checks"]
+            if "skip_checks" in kwargs
+            else False,
         )
 
         self.num_train_entities = triples_factory.num_entities
@@ -159,7 +160,6 @@ class InductiveNodePiece(ERModel):
         else:
             self.num_valid_entities = validation_factory.num_entities
             self.num_test_entities = test_factory.num_entities
-
 
     def forward(
         self,
@@ -207,7 +207,6 @@ class InductiveNodePiece(ERModel):
         mode: str,
     ) -> Tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]:
         """Get representations for head, relation and tails, in canonical shape."""
-
         entity_representations = self.entity_representations if mode == "train" else self.inference_representation
 
         h, r, t = [
@@ -232,7 +231,9 @@ class InductiveNodePiece(ERModel):
             mode=mode,
         ).view(hrt_batch.shape[0], 1)
 
-    def score_t(self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None, mode: str = "train") -> torch.FloatTensor:
+    def score_t(
+        self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None, mode: str = "train"
+    ) -> torch.FloatTensor:
         return self(
             h_indices=hr_batch[:, 0],
             r_indices=hr_batch[:, 1],
@@ -242,7 +243,7 @@ class InductiveNodePiece(ERModel):
             mode=mode,
         ).view(hr_batch.shape[0], getattr(self, f"num_{mode}_entities"))
 
-    def score_h_inverse(self, rt_batch: torch.LongTensor, mode:str, slice_size: Optional[int] = None):
+    def score_h_inverse(self, rt_batch: torch.LongTensor, mode: str, slice_size: Optional[int] = None):
         """Score all heads for a batch of (r,t)-pairs using the tail predictions for the inverses $(t,r_{inv},*)$."""
         t_r_inv = self._prepare_inverse_batch(batch=rt_batch, index_relation=0)
 
@@ -258,7 +259,6 @@ class InductiveNodePiece(ERModel):
         mode: str,
         slice_size: Optional[int] = None,
     ) -> torch.FloatTensor:
-
         self.eval()  # Enforce evaluation mode
         rt_batch = self._prepare_batch(batch=rt_batch, index_relation=0)
         if self.use_inverse_triples:
@@ -277,7 +277,6 @@ class InductiveNodePiece(ERModel):
         mode: str,
         slice_size: Optional[int] = None,
     ) -> torch.FloatTensor:
-
         self.eval()  # Enforce evaluation mode
         hr_batch = self._prepare_batch(batch=hr_batch, index_relation=1)
         if slice_size is None:
@@ -287,5 +286,3 @@ class InductiveNodePiece(ERModel):
         if self.predict_with_sigmoid:
             scores = torch.sigmoid(scores)
         return scores
-
-
