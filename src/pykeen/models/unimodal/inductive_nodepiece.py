@@ -15,7 +15,7 @@ from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.emb import EmbeddingSpecification, NodePieceRepresentation, SubsetRepresentationModule
 from ...nn.modules import DistMultInteraction, Interaction
 from ...triples.triples_factory import CoreTriplesFactory
-from ...typing import HeadRepresentation, RelationRepresentation, TailRepresentation, cast
+from ...typing import HeadRepresentation, Mode, RelationRepresentation, TailRepresentation, cast
 
 __all__ = [
     "InductiveNodePiece",
@@ -166,7 +166,7 @@ class InductiveNodePiece(ERModel):
         h_indices: Optional[torch.LongTensor],
         r_indices: Optional[torch.LongTensor],
         t_indices: Optional[torch.LongTensor],
-        mode: str,
+        mode: Mode,
         slice_size: Optional[int] = None,
         slice_dim: Optional[str] = None,
     ) -> torch.FloatTensor:
@@ -204,7 +204,7 @@ class InductiveNodePiece(ERModel):
         h_indices: Optional[torch.LongTensor],
         r_indices: Optional[torch.LongTensor],
         t_indices: Optional[torch.LongTensor],
-        mode: str,
+        mode: Mode,
     ) -> Tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]:
         """Get representations for head, relation and tails, in canonical shape."""
         entity_representations = self.entity_representations if mode == "train" else self.inference_representation
@@ -223,7 +223,7 @@ class InductiveNodePiece(ERModel):
             tuple(x[0] if len(x) == 1 else x for x in (h, r, t)),
         )
 
-    def score_hrt(self, hrt_batch: torch.LongTensor, mode: str = "train") -> torch.FloatTensor:
+    def score_hrt(self, hrt_batch: torch.LongTensor, mode: Mode = "train") -> torch.FloatTensor:
         return self(
             h_indices=hrt_batch[:, 0],
             r_indices=hrt_batch[:, 1],
@@ -232,7 +232,7 @@ class InductiveNodePiece(ERModel):
         ).view(hrt_batch.shape[0], 1)
 
     def score_t(
-        self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None, mode: str = "train"
+        self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None, mode: Mod = "train"
     ) -> torch.FloatTensor:
         return self(
             h_indices=hr_batch[:, 0],
@@ -243,7 +243,7 @@ class InductiveNodePiece(ERModel):
             mode=mode,
         ).view(hr_batch.shape[0], getattr(self, f"num_{mode}_entities"))
 
-    def score_h_inverse(self, rt_batch: torch.LongTensor, mode: str, slice_size: Optional[int] = None):
+    def score_h_inverse(self, rt_batch: torch.LongTensor, mode: Mode, slice_size: Optional[int] = None):
         """Score all heads for a batch of (r,t)-pairs using the tail predictions for the inverses $(t,r_{inv},*)$."""
         t_r_inv = self._prepare_inverse_batch(batch=rt_batch, index_relation=0)
 
@@ -256,7 +256,7 @@ class InductiveNodePiece(ERModel):
     def predict_h(
         self,
         rt_batch: torch.LongTensor,
-        mode: str,
+        mode: Mode,
         slice_size: Optional[int] = None,
     ) -> torch.FloatTensor:
         self.eval()  # Enforce evaluation mode
@@ -274,7 +274,7 @@ class InductiveNodePiece(ERModel):
     def predict_t(
         self,
         hr_batch: torch.LongTensor,
-        mode: str,
+        mode: Mode,
         slice_size: Optional[int] = None,
     ) -> torch.FloatTensor:
         self.eval()  # Enforce evaluation mode

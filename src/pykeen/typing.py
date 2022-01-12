@@ -2,7 +2,7 @@
 
 """Type hints for PyKEEN."""
 
-from typing import Callable, Mapping, NamedTuple, Sequence, TypeVar, Union, cast
+from typing import Callable, Mapping, NamedTuple, Optional, Sequence, TypeVar, Union, cast
 
 import numpy as np
 import torch
@@ -93,3 +93,4 @@ class ScorePack(NamedTuple):
 
 
 Sign = Literal[-1, 1]
+Mode = Optional[Literal["valid", "test"]]

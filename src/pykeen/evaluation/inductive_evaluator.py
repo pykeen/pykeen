@@ -28,7 +28,7 @@ from .rank_based_evaluator import RankBasedEvaluator
 from ..models import Model
 from ..triples.triples_factory import TriplesFactory, restrict_triples
 from ..triples.utils import get_entities, get_relations
-from ..typing import MappedTriples
+from ..typing import MappedTriples, Mode
 from ..utils import (
     format_relative_comparison,
     is_cuda_oom_error,
@@ -61,7 +61,7 @@ class InductiveEvaluator(RankBasedEvaluator):
     - Takes the mode argument which will be sent to the scoring function
     """
 
-    def __init__(self, eval_factory: TriplesFactory, mode: str, **kwargs):
+    def __init__(self, eval_factory: TriplesFactory, mode: Mode, **kwargs):
         super().__init__(**kwargs)
 
         self.mode = mode
@@ -129,7 +129,7 @@ def evaluate(
     model: Model,
     mapped_triples: MappedTriples,
     evaluators: Union[Evaluator, Collection[Evaluator]],
-    mode: str,  # new
+    mode: Mode,  # new
     only_size_probing: bool = False,
     batch_size: Optional[int] = None,
     slice_size: Optional[int] = None,
@@ -355,7 +355,7 @@ def _evaluate_batch(
     batch: MappedTriples,
     model: Model,
     column: int,
-    mode: str,
+    mode: Mode,  # new
     filtered_evaluators: Collection[Evaluator],
     unfiltered_evaluators: Collection[Evaluator],
     slice_size: Optional[int],
