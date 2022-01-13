@@ -2,7 +2,6 @@
 
 """Run dataset CLI."""
 
-from asyncio.log import logger
 import itertools as itt
 import json
 import logging
@@ -215,6 +214,7 @@ def verify(dataset: str):
 def expected_metrics(dataset: str):
     """Compute expected metrics for all datasets (matching the given pattern)."""
     directory = PYKEEN_DATASETS
+    df_data = []
     for _dataset_name, dataset_cls in _iter_datasets(regex_name_filter=dataset):
         dataset_instance = get_dataset(dataset=dataset_cls)
         dataset_name = dataset_instance.__class__.__name__.lower()
@@ -231,7 +231,7 @@ def expected_metrics(dataset: str):
                     dataset_instance.training.mapped_triples,
                 ]
                 if dataset_instance.validation is None:
-                    logger.warning(f"{dataset_name} does not have validation triples!")
+                    click.echo(f"WARNING: {dataset_name} does not have validation triples!")
                 else:
                     additional_filter_triples.append(dataset_instance.validation.mapped_triples)
             else:
@@ -258,6 +258,22 @@ def expected_metrics(dataset: str):
             expected_metrics[key] = this_metrics
         with d.joinpath("expected_metrics.json").open("w") as file:
             json.dump(expected_metrics, file, sort_keys=True, indent=4)
+
+        df_data.extend(
+            (dataset_name, metric, side, part, value)
+            for part, level1 in expected_metrics.items()
+            for side, level2 in level1.items()
+            for metric, value in level2.items()
+        )
+    df = (
+        pd.DataFrame(df_data, columns=["dataset", "metric", "side", "part", "value"])
+        .sort_values(
+            by=["dataset", "metric", "side", "part"],
+        )
+        .reset_index(drop=True)
+    )
+    df.to_csv(directory.joinpath("expected_metrics.tsv.gz"))
+    click.echo(df.to_markdown(index=False))
 
 
 if __name__ == "__main__":
