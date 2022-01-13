@@ -18,6 +18,7 @@ from tqdm import tqdm
 from . import dataset_resolver, get_dataset
 from ..constants import PYKEEN_DATASETS
 from ..evaluation.evaluator import get_candidate_set_size
+from ..evaluation.rank_based_evaluator import expected_hits_at_k, expected_mean_rank
 
 
 @click.group()
@@ -235,15 +236,19 @@ def expected_metrics(dataset: str):
             )
             output_path = d.joinpath(f"{key}_candidates.tsv.gz")
             df.to_csv(output_path, sep="\t", index=False)
-            # expected mean rank: 1/n sum_i (1 + #candidates(i))/2
-            this_metrics = {
-                "mean_rank": 0.5 + 0.5 * 0.5 * (df["head_candidates"].mean() + df["tail_candidates"].mean())
-            }
-            # expected hits@k: 1/n sum_i k/#candidates(i)
-            for k in (1, 3, 10):
-                this_metrics[f"hits_at_{k}"] = k * (
-                    0.5 * ((1 / df["head_candidates"]).mean() + (1 / df["tail_candidates"]).mean())
-                )
+
+            # expected metrics
+            this_metrics = dict()
+            for label, sides in dict(
+                head=["head"],
+                tail=["tail"],
+                both=["head", "tail"],
+            ).items():
+                candidate_set_sizes = df[[f"{side}_candidates" for side in sides]]
+                this_metrics[label] = {
+                    "mean_rank": expected_mean_rank(candidate_set_sizes),
+                    **{f"hits_at_{k}": expected_hits_at_k(candidate_set_sizes, k=k) for k in (1, 3, 5, 10)},
+                }
             expected_metrics[key] = this_metrics
         with d.joinpath("expected_metrics.json").open("w") as file:
             json.dump(expected_metrics, file, sort_keys=True, indent=4)
