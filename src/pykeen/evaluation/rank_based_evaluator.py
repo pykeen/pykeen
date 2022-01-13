@@ -595,3 +595,44 @@ class RankBasedEvaluator(Evaluator):
             adjusted_arithmetic_mean_rank_index=dict(asr[ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX]),
             hits_at_k=dict(hits_at_k),
         )
+
+
+def expected_mean_rank(
+    num_candidates: Union[Sequence[int], np.ndarray],
+) -> float:
+    r"""
+    Calculate the expected mean rank under random ordering.
+
+    .. math ::
+
+        E[MR] = \frac{1}{n} \sum \limits_{i=1}^{n} \frac{1 + CSS[i]}{2}
+              = \frac{1}{2}(1 + \frac{1}{n} \sum \limits_{i=1}^{n} CSS[i])
+
+    :param num_candidates:
+        the number of candidates for each individual rank computation
+
+    :return:
+        the expected mean rank
+    """
+    return 0.5 * (1 + np.mean(np.asanyarray(num_candidates)))
+
+
+def expected_hits_at_k(
+    num_candidates: Union[Sequence[int], np.ndarray],
+    k: int,
+) -> float:
+    r"""
+    Calculate the expected Hits@k under random ordering.
+
+    .. math ::
+
+        E[Hits@k] = \frac{1}{n} \sum \limits_{i=1}^{n} \frac{k}{CSS[i]}
+                  = k \cdot \frac{1}{n} \sum \limits_{i=1}^{n} CSS[i]^{-1}
+
+    :param num_candidates:
+        the number of candidates for each individual rank computation
+
+    :return:
+        the expected mean rank
+    """
+    return k * np.mean(np.reciprocal(np.asanyarray(num_candidates)))
