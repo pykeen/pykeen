@@ -2,6 +2,7 @@
 
 """Run dataset CLI."""
 
+from asyncio.log import logger
 import itertools as itt
 import json
 import logging
@@ -216,7 +217,8 @@ def expected_metrics(dataset: str):
     directory = PYKEEN_DATASETS
     for _dataset_name, dataset_cls in _iter_datasets(regex_name_filter=dataset):
         dataset_instance = get_dataset(dataset=dataset_cls)
-        d = directory.joinpath(dataset_instance.__class__.__name__.lower(), "analysis")
+        dataset_name = dataset_instance.__class__.__name__.lower()
+        d = directory.joinpath(dataset_name, "analysis")
         d.mkdir(parents=True, exist_ok=True)
         expected_metrics = dict()
         for key, factory in dataset_instance.factory_dict.items():
@@ -227,8 +229,11 @@ def expected_metrics(dataset: str):
             elif key == "testing":
                 additional_filter_triples = [
                     dataset_instance.training.mapped_triples,
-                    dataset_instance.validation.mapped_triples,
                 ]
+                if dataset_instance.validation is None:
+                    logger.warning(f"{dataset_name} does not have validation triples!")
+                else:
+                    additional_filter_triples.append(dataset_instance.validation.mapped_triples)
             else:
                 raise AssertionError(key)
             df = get_candidate_set_size(
