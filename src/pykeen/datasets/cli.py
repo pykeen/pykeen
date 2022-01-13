@@ -3,6 +3,7 @@
 """Run dataset CLI."""
 
 import itertools as itt
+import json
 import logging
 import pathlib
 from textwrap import dedent
@@ -16,6 +17,7 @@ from tqdm import tqdm
 
 from . import dataset_resolver, get_dataset
 from ..constants import PYKEEN_DATASETS
+from ..evaluation.evaluator import get_candidate_set_size
 
 
 @click.group()
@@ -203,6 +205,48 @@ def verify(dataset: str):
             valid = valid & this_valid
     df["valid"] = valid
     click.echo(df.to_markdown())
+
+
+@main.command()
+@verbose_option
+@click.option("--dataset", help="Regex for filtering datasets by name")
+def expected_metrics(dataset: str):
+    directory = PYKEEN_DATASETS
+    for _dataset_name, dataset_cls in _iter_datasets(regex_name_filter=dataset):
+        dataset_instance = get_dataset(dataset=dataset_cls)
+        d = directory.joinpath(dataset_instance.__class__.__name__.lower(), "analysis")
+        d.mkdir(parents=True, exist_ok=True)
+        expected_metrics = dict()
+        for key, factory in dataset_instance.factory_dict.items():
+            if key == "training":
+                additional_filter_triples = None
+            elif key == "validation":
+                additional_filter_triples = dataset_instance.training.mapped_triples
+            elif key == "testing":
+                additional_filter_triples = [
+                    dataset_instance.training.mapped_triples,
+                    dataset_instance.validation.mapped_triples,
+                ]
+            else:
+                raise AssertionError(key)
+            df = get_candidate_set_size(
+                mapped_triples=factory.mapped_triples,
+                additional_filter_triples=additional_filter_triples,
+            )
+            output_path = d.joinpath(f"{key}_candidates.tsv.gz")
+            df.to_csv(output_path, sep="\t", index=False)
+            # expected mean rank: 1/n sum_i (1 + #candidates(i))/2
+            this_metrics = {
+                "mean_rank": 0.5 + 0.5 * 0.5 * (df["head_candidates"].mean() + df["tail_candidates"].mean())
+            }
+            # expected hits@k: 1/n sum_i k/#candidates(i)
+            for k in (1, 3, 10):
+                this_metrics[f"hits_at_{k}"] = k * (
+                    0.5 * ((1 / df["head_candidates"]).mean() + (1 / df["tail_candidates"]).mean())
+                )
+            expected_metrics[key] = this_metrics
+        with d.joinpath("expected_metrics.json").open("w") as file:
+            json.dump(expected_metrics, file, sort_keys=True, indent=4)
 
 
 if __name__ == "__main__":
