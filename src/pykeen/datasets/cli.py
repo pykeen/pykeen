@@ -7,7 +7,7 @@ import json
 import logging
 import pathlib
 from textwrap import dedent
-from typing import List, Optional, Tuple, Type, Union
+from typing import Iterable, List, Optional, Tuple, Type, Union
 
 import click
 import docdata
@@ -41,7 +41,7 @@ def summarize():
             click.secho(str(e), fg="red", bold=True)
 
 
-def _iter_datasets(regex_name_filter=None, max_triples: Optional[int] = None):
+def _iter_datasets(regex_name_filter=None, max_triples: Optional[int] = None) -> Iterable[Tuple[str, Type[Dataset]]]:
     def _get_num_triples(pair: Tuple[str, Type[Dataset]]) -> int:
         return docdata.get_docdata(pair[1])["statistics"]["triples"]
 
