@@ -622,7 +622,6 @@ class ExpectedMetricsTests(unittest.TestCase):
 
     def test_expected_mean_rank(self):
         """Test expected_mean_rank."""
-        generator: numpy.random.Generator = numpy.random.default_rng(seed=42)
         # test different shapes
         for num_candidates, total in self._iter_num_candidates():
             emr = expected_mean_rank(num_candidates=num_candidates)
