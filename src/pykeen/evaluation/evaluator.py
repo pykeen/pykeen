@@ -486,6 +486,37 @@ def filter_scores_(
     return scores
 
 
+def _prepare_filter_triples(
+    mapped_triples: MappedTriples,
+    additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
+) -> MappedTriples:
+    """Prepare the filter triples from the evaluation triples, and additional filter triples."""
+    if additional_filter_triples is None:
+        logger.warning(
+            dedent(
+                """\
+            The filtered setting was enabled, but there were no `additional_filter_triples`
+            given. This means you probably forgot to pass (at least) the training triples. Try:
+
+                additional_filter_triples=[dataset.training.mapped_triples]
+
+            Or if you want to use the Bordes et al. (2013) approach to filtering, do:
+
+                additional_filter_triples=[
+                    dataset.training.mapped_triples,
+                    dataset.validation.mapped_triples,
+                ]
+        """
+            )
+        )
+        return mapped_triples
+
+    if torch.is_tensor(additional_filter_triples):
+        additional_filter_triples = [additional_filter_triples]
+
+    return torch.cat([*additional_filter_triples, mapped_triples], dim=0)
+
+
 def evaluate(
     model: Model,
     mapped_triples: MappedTriples,
@@ -610,30 +641,10 @@ def evaluate(
 
     # Prepare for result filtering
     if filtering_necessary or positive_masks_required:
-        if additional_filter_triples is None:
-            logger.warning(
-                dedent(
-                    """\
-                The filtered setting was enabled, but there were no `additional_filter_triples`
-                given. This means you probably forgot to pass (at least) the training triples. Try:
-
-                    additional_filter_triples=[dataset.training.mapped_triples]
-
-                Or if you want to use the Bordes et al. (2013) approach to filtering, do:
-
-                    additional_filter_triples=[
-                        dataset.training.mapped_triples,
-                        dataset.validation.mapped_triples,
-                    ]
-            """
-                )
-            )
-            all_pos_triples = mapped_triples
-        elif isinstance(additional_filter_triples, (list, tuple)):
-            all_pos_triples = torch.cat([*additional_filter_triples, mapped_triples], dim=0)
-        else:
-            all_pos_triples = torch.cat([additional_filter_triples, mapped_triples], dim=0)
-        all_pos_triples = all_pos_triples.to(device=device)
+        all_pos_triples = _prepare_filter_triples(
+            mapped_triples=mapped_triples,
+            additional_filter_triples=additional_filter_triples,
+        ).to(device=device)
     else:
         all_pos_triples = None
 
