@@ -7,7 +7,7 @@ import json
 import logging
 import pathlib
 from textwrap import dedent
-from typing import Union
+from typing import List, Tuple, Union
 
 import click
 import docdata
@@ -214,7 +214,7 @@ def verify(dataset: str):
 def expected_metrics(dataset: str):
     """Compute expected metrics for all datasets (matching the given pattern)."""
     directory = PYKEEN_DATASETS
-    df_data = []
+    df_data: List[Tuple[str, str, str, str, float]] = []
     for _dataset_name, dataset_cls in _iter_datasets(regex_name_filter=dataset):
         dataset_instance = get_dataset(dataset=dataset_cls)
         dataset_name = dataset_instance.__class__.__name__.lower()
