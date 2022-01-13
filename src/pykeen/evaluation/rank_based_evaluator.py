@@ -635,4 +635,4 @@ def expected_hits_at_k(
     :return:
         the expected mean rank
     """
-    return k * np.mean(np.reciprocal(np.asanyarray(num_candidates)))
+    return k * np.mean(np.reciprocal(np.asanyarray(num_candidates, dtype=float)))
