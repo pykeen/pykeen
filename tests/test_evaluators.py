@@ -6,15 +6,22 @@ import dataclasses
 import logging
 import unittest
 from operator import attrgetter
-from typing import Dict, Optional
+from typing import Collection, Dict, List, Optional, Union
 
 import numpy
+import numpy.testing
+import pandas
 import torch
 
 from pykeen.datasets import Nations
 from pykeen.evaluation import Evaluator, MetricResults, RankBasedEvaluator, RankBasedMetricResults
 from pykeen.evaluation.classification_evaluator import ClassificationEvaluator, ClassificationMetricResults
-from pykeen.evaluation.evaluator import create_dense_positive_mask_, create_sparse_positive_filter_, filter_scores_
+from pykeen.evaluation.evaluator import (
+    create_dense_positive_mask_,
+    create_sparse_positive_filter_,
+    filter_scores_,
+    get_candidate_set_size,
+)
 from pykeen.evaluation.rank_based_evaluator import (
     RANK_EXPECTED_REALISTIC,
     RANK_OPTIMISTIC,
@@ -474,3 +481,122 @@ def test_resolve_metric_name():
     ):
         result = resolve_metric_name(name=name)
         assert result == expected, name
+
+
+class CandidateSetSizeTests(unittest.TestCase):
+    """Tests for candidate set size calculation."""
+
+    def setUp(self) -> None:
+        """Prepare the test data."""
+        self.dataset = Nations()
+
+    def _test_get_candidate_set_size(
+        self,
+        mapped_triples: MappedTriples,
+        restrict_entities_to: Optional[Collection[int]],
+        restrict_relations_to: Optional[Collection[int]],
+        additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]],
+        num_entities: Optional[int],
+    ):
+        """Test get_candidate_set_size."""
+        df = get_candidate_set_size(
+            mapped_triples=mapped_triples,
+            restrict_entities_to=restrict_entities_to,
+            restrict_relations_to=restrict_relations_to,
+            additional_filter_triples=additional_filter_triples,
+            num_entities=num_entities,
+        )
+        # return type
+        assert isinstance(df, pandas.DataFrame)
+        # columns
+        assert set(df.columns) == {
+            "index",
+            "head",
+            "relation",
+            "tail",
+            "head_candidates",
+            "tail_candidates",
+        }
+        # value range
+        if not restrict_entities_to and not restrict_relations_to:
+            numpy.testing.assert_array_equal(df["index"], numpy.arange(mapped_triples.shape[0]))
+            numpy.testing.assert_array_equal(df[["head", "relation", "tail"]].values, mapped_triples.numpy())
+        for candidate_column in ("head_candidates", "tail_candidates"):
+            numpy.testing.assert_array_less(-1, df[candidate_column])
+            numpy.testing.assert_array_less(df[candidate_column], self.dataset.num_entities)
+
+    def test_simple(self):
+        """Test the simple case: nothing to restrict or filter or infer."""
+        self._test_get_candidate_set_size(
+            self.dataset.training.mapped_triples,
+            None,
+            None,
+            None,
+            self.dataset.num_entities,
+        )
+
+    def test_entity_restriction(self):
+        """Test with entity restriction."""
+        self._test_get_candidate_set_size(
+            self.dataset.training.mapped_triples,
+            {0, 1},
+            None,
+            None,
+            self.dataset.num_entities,
+        )
+
+    def test_relation_restriction(self):
+        """Test with relation restriction."""
+        self._test_get_candidate_set_size(
+            # relation restriction
+            self.dataset.training.mapped_triples,
+            None,
+            {0, 1},
+            None,
+            self.dataset.num_entities,
+        )
+
+    def test_single_filter(self):
+        """Test with additional filter triples."""
+        self._test_get_candidate_set_size(
+            self.dataset.training.mapped_triples,
+            None,
+            None,
+            self.dataset.validation.mapped_triples,
+            self.dataset.num_entities,
+        )
+
+    def test_multi_filter(self):
+        """Test with multiple additional filter triples."""
+        self._test_get_candidate_set_size(
+            self.dataset.training.mapped_triples,
+            None,
+            None,
+            (self.dataset.validation.mapped_triples, self.dataset.testing.mapped_triples),
+            self.dataset.num_entities,
+        )
+
+    def test_all(self):
+        """Test with filtering restriction and entity count inference."""
+        self._test_get_candidate_set_size(
+            self.dataset.training.mapped_triples,
+            {0, 1, 2},
+            {1, 2, 3},
+            (self.dataset.validation.mapped_triples, self.dataset.testing.mapped_triples),
+            None,
+        )
+
+    def test_entity_count_inference(self):
+        """Test inference of entity count."""
+        # with explicit num_entities
+        df = get_candidate_set_size(
+            mapped_triples=self.dataset.training.mapped_triples,
+            num_entities=self.dataset.num_entities,
+        )
+        # with inferred num_entities
+        df2 = get_candidate_set_size(
+            mapped_triples=self.dataset.training.mapped_triples,
+            num_entities=None,
+        )
+        for column in df.columns:
+            numpy.testing.assert_array_equal(df[column], df2[column])

@@ -13,6 +13,7 @@ from textwrap import dedent
 from typing import Any, Collection, Iterable, List, Mapping, Optional, Tuple, Union, cast
 
 import numpy as np
+import pandas
 import torch
 from dataclasses_json import DataClassJsonMixin
 from tqdm.autonotebook import tqdm
@@ -514,6 +515,7 @@ def _prepare_filter_triples(
     if torch.is_tensor(additional_filter_triples):
         additional_filter_triples = [additional_filter_triples]
 
+    # TODO: check for duplicates?
     return torch.cat([*additional_filter_triples, mapped_triples], dim=0)
 
 
@@ -852,3 +854,75 @@ def _evaluate_batch(
             )
 
     return relation_filter
+
+
+def get_candidate_set_size(
+    mapped_triples: MappedTriples,
+    restrict_entities_to: Optional[Collection[int]] = None,
+    restrict_relations_to: Optional[Collection[int]] = None,
+    additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
+    num_entities: Optional[int] = None,
+) -> pandas.DataFrame:
+    """
+    Calculate the candidate set sizes for head/tail prediction for the given triples.
+
+    :param mapped_triples: shape: (n, 3)
+        the evaluation triples
+    :param additional_filter_triples: shape: (n, 3)
+        additional filter triples besides the evaluation triples themselves. cf. `_prepare_filter_triples`.
+    :param num_entities:
+        the number of entities. If not given, this number is inferred from all triples
+
+    :return: columns: "index" | "head" | "relation" | "tail" | "head_candidates" | "tail_candidates"
+        a dataframe of all evaluation triples, with the number of head and tail candidates
+    """
+    # optinally restrict triples (nop if no restriction)
+    mapped_triples = restrict_triples(
+        mapped_triples=mapped_triples,
+        entities=restrict_entities_to,
+        relations=restrict_relations_to,
+    )
+
+    # evaluation triples as dataframe
+    columns = ["head", "relation", "tail"]
+    df_eval = pandas.DataFrame(
+        data=mapped_triples.numpy(),
+        columns=columns,
+    ).reset_index()
+
+    # determine filter triples
+    filter_triples = _prepare_filter_triples(
+        mapped_triples=mapped_triples,
+        additional_filter_triples=additional_filter_triples,
+    )
+
+    # infer num_entities if not given
+    if restrict_entities_to:
+        num_entities = len(restrict_entities_to)
+    else:
+        # TODO: unique, or max ID + 1?
+        num_entities = num_entities or filter_triples[:, [0, 2]].view(-1).unique().numel()
+
+    # optionally restrict triples
+    filter_triples = restrict_triples(
+        mapped_triples=filter_triples,
+        entities=restrict_entities_to,
+        relations=restrict_relations_to,
+    )
+    df_filter = pandas.DataFrame(
+        data=filter_triples.numpy(),
+        columns=columns,
+    )
+
+    # compute candidate set sizes for different targets
+    for target in ["head", "tail"]:
+        total = num_entities
+        group_keys = [c for c in columns if c != target]
+        df_count = df_filter.groupby(by=group_keys).agg({target: "count"})
+        column = f"{target}_candidates"
+        df_count[column] = total - df_count[target]
+        df_count = df_count.drop(columns=target)
+        df_eval = pandas.merge(df_eval, df_count, on=group_keys, how="left")
+        df_eval[column] = df_eval[column].fillna(value=total)
+
+    return df_eval
