@@ -3,12 +3,14 @@
 """Test the evaluators."""
 
 import dataclasses
+import itertools
 import logging
 import unittest
 from operator import attrgetter
-from typing import Collection, Dict, List, Optional, Union
+from typing import Collection, Dict, Iterable, List, Optional, Tuple, Union
 
 import numpy
+import numpy.random
 import numpy.testing
 import pandas
 import torch
@@ -31,6 +33,8 @@ from pykeen.evaluation.rank_based_evaluator import (
     SIDE_BOTH,
     SIDES,
     compute_rank_from_scores,
+    expected_hits_at_k,
+    expected_mean_rank,
     resolve_metric_name,
 )
 from pykeen.models import FixedModel
@@ -600,3 +604,41 @@ class CandidateSetSizeTests(unittest.TestCase):
         )
         for column in df.columns:
             numpy.testing.assert_array_equal(df[column], df2[column])
+
+
+class ExpectedMetricsTests(unittest.TestCase):
+    """Tests for expected metrics."""
+
+    def _iter_num_candidates(self) -> Iterable[Tuple[Tuple[int, ...], int]]:
+        """Generate number of ranking candidate arrays of different shapes."""
+        generator: numpy.random.Generator = numpy.random.default_rng(seed=42)
+        # test different shapes
+        for shape, total in (
+            (tuple(), 20),
+            ((10, 2), 275),
+            ((10_000,), 1237),
+        ):
+            yield generator.integers(low=1, high=total, size=shape), total
+
+    def test_expected_mean_rank(self):
+        """Test expected_mean_rank."""
+        generator: numpy.random.Generator = numpy.random.default_rng(seed=42)
+        # test different shapes
+        for num_candidates, total in self._iter_num_candidates():
+            emr = expected_mean_rank(num_candidates=num_candidates)
+            # value range
+            assert emr >= 0
+            assert emr <= total
+
+    def test_expected_hits_at_k(self):
+        """Test expected Hits@k."""
+        for k, (num_candidates, total) in itertools.product(
+            (1, 3, 100),
+            self._iter_num_candidates(),
+        ):
+            ehk = expected_hits_at_k(num_candidates=num_candidates, k=k)
+            # value range
+            assert ehk >= 0
+            assert ehk <= 1.0
+            if total <= k:
+                self.assertAlmostEqual(ehk, 1.0)
