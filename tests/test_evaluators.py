@@ -642,3 +642,7 @@ class ExpectedMetricsTests(unittest.TestCase):
             assert ehk <= 1.0
             if total <= k:
                 self.assertAlmostEqual(ehk, 1.0)
+
+    def test_expected_hits_at_k_manual(self):
+        """Test expected Hits@k, where some candidate set sizes are smaller than k, but not all."""
+        self.assertAlmostEqual(expected_hits_at_k([5, 20], k=10), (1 + 0.5) / 2)
