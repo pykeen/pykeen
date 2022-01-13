@@ -212,6 +212,7 @@ def verify(dataset: str):
 @verbose_option
 @click.option("--dataset", help="Regex for filtering datasets by name")
 def expected_metrics(dataset: str):
+    """Compute expected metrics for all datasets (matching the given pattern)."""
     directory = PYKEEN_DATASETS
     for _dataset_name, dataset_cls in _iter_datasets(regex_name_filter=dataset):
         dataset_instance = get_dataset(dataset=dataset_cls)
