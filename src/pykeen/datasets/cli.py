@@ -7,7 +7,7 @@ import json
 import logging
 import pathlib
 from textwrap import dedent
-from typing import List, Tuple, Union
+from typing import List, Optional, Tuple, Type, Union
 
 import click
 import docdata
@@ -17,6 +17,8 @@ from tqdm import tqdm
 
 from . import dataset_resolver, get_dataset
 from ..constants import PYKEEN_DATASETS
+from ..datasets.base import Dataset
+from ..datasets.ogb import OGBWikiKG
 from ..evaluation.evaluator import get_candidate_set_size
 from ..evaluation.rank_based_evaluator import expected_hits_at_k, expected_mean_rank
 
@@ -39,11 +41,16 @@ def summarize():
             click.secho(str(e), fg="red", bold=True)
 
 
-def _iter_datasets(regex_name_filter=None):
+def _iter_datasets(regex_name_filter=None, max_triples: Optional[int] = None):
+    def _get_num_triples(pair: Tuple[str, Type[Dataset]]) -> int:
+        return docdata.get_docdata(pair[1])["statistics"]["triples"]
+
     it = sorted(
         dataset_resolver.lookup_dict.items(),
-        key=lambda pair: docdata.get_docdata(pair[1])["statistics"]["triples"],
+        key=_get_num_triples,
     )
+    if max_triples is not None:
+        it = [pair for pair in it if _get_num_triples(pair) <= max_triples]
     if regex_name_filter is not None:
         if isinstance(regex_name_filter, str):
             import re
@@ -210,12 +217,16 @@ def verify(dataset: str):
 
 @main.command()
 @verbose_option
-@click.option("--dataset", help="Regex for filtering datasets by name")
-def expected_metrics(dataset: str):
+@click.option("-d", "--dataset", help="Regex for filtering datasets by name")
+@click.option("-m", "--max-triples", type=int, default=None)
+def expected_metrics(dataset: str, max_triples: Optional[int]):
     """Compute expected metrics for all datasets (matching the given pattern)."""
     directory = PYKEEN_DATASETS
     df_data: List[Tuple[str, str, str, str, float]] = []
-    for _dataset_name, dataset_cls in _iter_datasets(regex_name_filter=dataset):
+    for _dataset_name, dataset_cls in _iter_datasets(regex_name_filter=dataset, max_triples=max_triples):
+        if dataset_cls is OGBWikiKG:
+            click.echo("Skip OGB WikiKG")
+            continue
         dataset_instance = get_dataset(dataset=dataset_cls)
         dataset_name = dataset_instance.__class__.__name__.lower()
         d = directory.joinpath(dataset_name, "analysis")
