@@ -626,13 +626,12 @@ def expected_hits_at_k(
 
     .. math ::
 
-        E[Hits@k] = \frac{1}{n} \sum \limits_{i=1}^{n} \frac{k}{CSS[i]}
-                  = k \cdot \frac{1}{n} \sum \limits_{i=1}^{n} CSS[i]^{-1}
+        E[Hits@k] = \frac{1}{n} \sum \limits_{i=1}^{n} min(\frac{k}{CSS[i]}, 1.0)
 
     :param num_candidates:
         the number of candidates for each individual rank computation
 
     :return:
-        the expected mean rank
+        the expected Hits@k value
     """
-    return k * np.mean(np.reciprocal(np.asanyarray(num_candidates, dtype=float)))
+    return k * np.mean(np.reciprocal(np.asanyarray(num_candidates, dtype=float)).clip(min=None, max=1 / k))
