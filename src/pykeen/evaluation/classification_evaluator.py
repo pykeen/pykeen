@@ -9,7 +9,6 @@ import numpy as np
 import rexmex.metrics.classification as rmc
 import torch
 from dataclasses_json import dataclass_json
-from rexmex.utils import binarize
 
 from .evaluator import Evaluator, MetricResults
 from ..typing import MappedTriples
@@ -18,6 +17,7 @@ from ..utils import fix_dataclass_init_docs
 __all__ = [
     "ClassificationEvaluator",
     "ClassificationMetricResults",
+    "construct_indicator",
 ]
 
 
@@ -56,7 +56,7 @@ _fields = [
                 link=func.link,
                 range=interval(func),
                 increasing=func.higher_is_better,
-                f=binarize(func) if func.binarize else func,
+                f=func,
             )
         ),
     )
@@ -80,7 +80,15 @@ class ClassificationMetricResults(ClassificationMetricResultsBase):  # type: ign
     @classmethod
     def from_scores(cls, y_true, y_score):
         """Return an instance of these metrics from a given set of true and scores."""
-        return ClassificationMetricResults(**{f.name: f.metadata["f"](y_true, y_score) for f in fields(cls)})
+        y_indicator = construct_indicator(y_score=y_score, y_true=y_true)
+        kwargs = {}
+        for field_ in fields(cls):
+            func = field_.metadata["f"]
+            if func.binarize:
+                kwargs[field_.name] = func(y_true, y_indicator)
+            else:
+                kwargs[field_.name] = func(y_true, y_score)
+        return ClassificationMetricResults(**kwargs)
 
     def get_metric(self, name: str) -> float:  # noqa: D102
         return getattr(self, name)
@@ -158,3 +166,26 @@ class ClassificationEvaluator(Evaluator):
         self.all_scores.clear()
 
         return ClassificationMetricResults.from_scores(y_true, y_score)
+
+
+def construct_indicator(*, y_score: np.ndarray, y_true: np.ndarray) -> np.ndarray:
+    """Construct binary indicators from a list of scores.
+
+    :param y_score:
+        A 1-D array of the score values
+    :param y_true:
+        A 1-D array of binary values
+    :return:
+        A 1-D array of indicator values
+
+    .. seealso:: https://github.com/xptree/NetMF/blob/77286b826c4af149055237cef65e2a500e15631a/predict.py#L25-L33
+    """
+    y_score_m = y_score.reshape(1, -1)
+    y_true_m = y_true.reshape(1, -1)
+    num_label = np.sum(y_true_m, axis=1, dtype=int)
+    y_sort = np.fliplr(np.argsort(y_score_m, axis=1))
+    y_pred = np.zeros_like(y_true_m, dtype=int)
+    for i in range(y_true_m.shape[0]):
+        for j in range(num_label[i]):
+            y_pred[i, y_sort[i, j]] = 1
+    return y_pred.reshape(-1)

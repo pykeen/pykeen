@@ -13,7 +13,11 @@ import torch
 
 from pykeen.datasets import Nations
 from pykeen.evaluation import Evaluator, MetricResults, RankBasedEvaluator, RankBasedMetricResults
-from pykeen.evaluation.classification_evaluator import ClassificationEvaluator, ClassificationMetricResults
+from pykeen.evaluation.classification_evaluator import (
+    ClassificationEvaluator,
+    ClassificationMetricResults,
+    construct_indicator,
+)
 from pykeen.evaluation.evaluator import create_dense_positive_mask_, create_sparse_positive_filter_, filter_scores_
 from pykeen.evaluation.rank_based_evaluator import (
     RANK_EXPECTED_REALISTIC,
@@ -132,7 +136,10 @@ class ClassificationEvaluatorTest(cases.EvaluatorTestCase):
             with self.subTest(metric=field.name):
                 f = field.metadata["f"]
                 left, right = numpy.array(mask.flat), numpy.array(scores.flat)
-                exp_score = f(left, right)
+                if f.binarize:
+                    exp_score = f(left, construct_indicator(y_true=left, y_score=right))
+                else:
+                    exp_score = f(left, right)
                 act_score = result.get_metric(field.name)
                 if numpy.isnan(exp_score):
                     self.assertTrue(numpy.isnan(act_score))
