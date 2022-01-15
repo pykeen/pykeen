@@ -451,6 +451,7 @@ def _consume_scores(model: Model, *consumers: _ScoreConsumer, batch_size: int = 
     # set model to evaluation mode
     model.eval()
 
+    # TODO: fix code for inverse relations
     for r, h_start in tqdm(
         itt.product(
             range(model.num_relations),
