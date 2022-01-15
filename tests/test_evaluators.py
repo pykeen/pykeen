@@ -135,11 +135,11 @@ class ClassificationEvaluatorTest(cases.EvaluatorTestCase):
         for field in sorted(dataclasses.fields(ClassificationMetricResults), key=attrgetter("name")):
             with self.subTest(metric=field.name):
                 f = field.metadata["f"]
-                left, right = numpy.array(mask.flat), numpy.array(scores.flat)
+                y_true, y_score = numpy.array(mask.flat), numpy.array(scores.flat)
                 if f.binarize:
-                    exp_score = f(left, construct_indicator(y_true=left, y_score=right))
+                    exp_score = f(y_true, construct_indicator(y_true=y_true, y_score=y_score))
                 else:
-                    exp_score = f(left, right)
+                    exp_score = f(y_true, y_score)
                 act_score = result.get_metric(field.name)
                 if numpy.isnan(exp_score):
                     self.assertTrue(numpy.isnan(act_score))
@@ -147,7 +147,7 @@ class ClassificationEvaluatorTest(cases.EvaluatorTestCase):
                     self.assertAlmostEqual(
                         act_score,
                         exp_score,
-                        msg=f"failed for {field.name}\nMask: {left}\nScores:{right}",
+                        msg=f"failed for {field.name}\nMask: {y_true}\nScores:{y_score}",
                         delta=7,
                     )
 
