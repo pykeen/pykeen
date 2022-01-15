@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from typing import Any, Callable, Collection, Dict, Iterable, Mapping, Optional, Type, Union, cast
 
 import torch
-from optuna import Study, Trial, create_study
+from optuna import Study, Trial, TrialPruned, create_study
 from optuna.pruners import BasePruner
 from optuna.samplers import BaseSampler
 from optuna.storages import BaseStorage
@@ -120,11 +120,24 @@ class Objective:
     save_model_directory: Optional[str] = None
 
     @staticmethod
-    def _update_stopper_callbacks(stopper_kwargs: Dict[str, Any], trial: Trial) -> None:
+    def _update_stopper_callbacks(
+        stopper_kwargs: Dict[str, Any],
+        trial: Trial,
+        metric: str,
+        result_tracker: ResultTracker,
+    ) -> None:
         """Make a subclass of the EarlyStopper that reports to the trial."""
 
         def _result_callback(_early_stopper: EarlyStopper, result: Union[float, int], epoch: int) -> None:
             trial.report(result, step=epoch)
+            if trial.should_prune():
+                # log pruning
+                result_tracker.log_metrics(metrics=dict(pruned=1), step=epoch)
+                # trial was successful, but has to be ended
+                result_tracker.end_run(success=True)
+                # also show info
+                logger.info(f"Pruned trial: {trial} at epoch {epoch} due to {metric}={result}")
+                raise TrialPruned()
 
         def _stopped_callback(_early_stopper: EarlyStopper, _result: Union[float, int], epoch: int) -> None:
             trial.set_user_attr(STOPPED_EPOCH_KEY, epoch)
@@ -230,12 +243,12 @@ class Objective:
             kwargs_ranges=self.training_kwargs_ranges,
         )
 
-        _stopper_kwargs = dict(self.stopper_kwargs or {})
-        if self.stopper is not None and issubclass(self.stopper, EarlyStopper):
-            self._update_stopper_callbacks(_stopper_kwargs, trial)
-
         # create result tracker to allow to gracefully close failed trials
         result_tracker = tracker_resolver.make(query=self.result_tracker, pos_kwargs=self.result_tracker_kwargs)
+
+        _stopper_kwargs = dict(self.stopper_kwargs or {})
+        if self.stopper is not None and issubclass(self.stopper, EarlyStopper):
+            self._update_stopper_callbacks(_stopper_kwargs, trial, metric=self.metric, result_tracker=result_tracker)
 
         try:
             result = pipeline(
@@ -287,10 +300,8 @@ class Objective:
         except (MemoryError, RuntimeError) as e:
             # close run in result tracker
             result_tracker.end_run(success=False)
-
-            trial.set_user_attr("failure", str(e))
-            # Will trigger Optuna to set the state of the trial as failed
-            return None
+            # raise the error again (which will be catched in study.optimize)
+            raise e
         else:
             if self.save_model_directory:
                 model_directory = os.path.join(self.save_model_directory, str(trial.number))
@@ -804,6 +815,7 @@ def hpo_pipeline(
         n_trials=n_trials,
         timeout=timeout,
         n_jobs=n_jobs or 1,
+        catch=(MemoryError, RuntimeError),
     )
 
     return HpoPipelineResult(

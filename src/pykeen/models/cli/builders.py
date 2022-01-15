@@ -81,7 +81,7 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
                     logger.debug("Unhandled hint: %s", annotation)
                     continue
                 if parameter.default is None:
-                    logger.warning(
+                    logger.debug(
                         f"Missing handler in {model.__name__} for {name}: "
                         f"type={annotation} default={parameter.default}",
                     )

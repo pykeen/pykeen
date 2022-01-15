@@ -8,6 +8,8 @@ import itertools as itt
 import logging
 import math
 from abc import ABC, abstractmethod
+from collections import Counter
+from operator import itemgetter
 from typing import (
     Any,
     Callable,
@@ -23,13 +25,16 @@ from typing import (
     cast,
 )
 
+import more_itertools
 import torch
 from class_resolver import Resolver
+from docdata import parse_docdata
 from torch import FloatTensor, nn
+from torch.nn.init import xavier_normal_
 
 from . import functional as pkf
 from .combinations import Combination
-from ..typing import HeadRepresentation, HintOrType, RelationRepresentation, TailRepresentation
+from ..typing import HeadRepresentation, HintOrType, Initializer, RelationRepresentation, Sign, TailRepresentation
 from ..utils import (
     CANONICAL_DIMENSIONS,
     activation_resolver,
@@ -49,6 +54,7 @@ __all__ = [
     # Adapter classes
     "MonotonicAffineTransformationInteraction",
     # Concrete Classes
+    "AutoSFInteraction",
     "BoxEInteraction",
     "ComplExInteraction",
     "ConvEInteraction",
@@ -67,15 +73,17 @@ __all__ = [
     "RESCALInteraction",
     "RotatEInteraction",
     "SimplEInteraction",
-    "StructuredEmbeddingInteraction",
+    "SEInteraction",
     "TorusEInteraction",
     "TransDInteraction",
     "TransEInteraction",
     "TransFInteraction",
     "TransHInteraction",
     "TransRInteraction",
+    "TransformerInteraction",
+    "TripleREInteraction",
     "TuckerInteraction",
-    "UnstructuredModelInteraction",
+    "UMInteraction",
 ]
 
 logger = logging.getLogger(__name__)
@@ -392,11 +400,20 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
                 mod.reset_parameters()
 
 
+@parse_docdata
 class LiteralInteraction(
     Interaction,
     Generic[HeadRepresentation, RelationRepresentation, TailRepresentation],
 ):
-    """The interaction function shared by literal-containing interactions."""
+    """The interaction function shared by literal-containing interactions.
+
+    ---
+    name: LiteralE
+    citation:
+        author: Kristiadi
+        year: 2018
+        link: https://arxiv.org/abs/1802.00934
+    """
 
     def __init__(
         self,
@@ -956,7 +973,7 @@ class RESCALInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
     func = pkf.rescal_interaction
 
 
-class StructuredEmbeddingInteraction(
+class SEInteraction(
     NormBasedInteraction[
         torch.FloatTensor,
         Tuple[torch.FloatTensor, torch.FloatTensor],
@@ -969,7 +986,7 @@ class StructuredEmbeddingInteraction(
     """
 
     relation_shape = ("dd", "dd")
-    func = pkf.structured_embedding_interaction
+    func = pkf.se_interaction
 
     @staticmethod
     def _prepare_hrt_for_functional(
@@ -1051,7 +1068,7 @@ class TuckerInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTen
         )
 
 
-class UnstructuredModelInteraction(
+class UMInteraction(
     NormBasedInteraction[torch.FloatTensor, None, torch.FloatTensor],
 ):
     """A stateful module for the UnstructuredModel interaction function.
@@ -1062,7 +1079,7 @@ class UnstructuredModelInteraction(
     # shapes
     relation_shape: Sequence[str] = tuple()
 
-    func = pkf.unstructured_model_interaction
+    func = pkf.um_interaction
 
     def __init__(self, p: int, power_norm: bool = True):
         super().__init__(p=p, power_norm=power_norm)
@@ -1542,6 +1559,211 @@ class CPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]
     func = pkf.cp_interaction
     entity_shape = ("kd",)
     relation_shape = ("kd",)
+
+
+@parse_docdata
+class TransformerInteraction(FunctionalInteraction[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]):
+    """Transformer-based interaction, as described in [galkin2020]_.
+
+    ---
+    name: Transformer
+    citation:
+        author: Galkin
+        year: 2020
+        link: https://doi.org/10.18653/v1/2020.emnlp-main.596
+    """
+
+    func = pkf.transformer_interaction
+
+    def __init__(
+        self,
+        input_dim: int = 512,
+        num_layers: int = 2,
+        num_heads: int = 8,
+        dropout: float = 0.1,
+        dim_feedforward: int = 2048,
+        position_initializer: HintOrType[Initializer] = xavier_normal_,
+    ):
+        """
+        Initialize the module.
+
+        :param input_dim: >0
+            the input dimension
+        :param num_layers: >0
+            the number of Transformer layers, cf. :class:`nn.TransformerEncoder`.
+        :param num_heads: >0
+            the number of self-attention heads inside each transformer encoder layer,
+            cf. :class:`nn.TransformerEncoderLayer`
+        :param dropout:
+            the dropout rate on each transformer encoder layer, cf. :class:`nn.TransformerEncoderLayer`
+        :param dim_feedforward:
+            the hidden dimension of the feed-forward layers of the transformer encoder layer,
+            cf. :class:`nn.TransformerEncoderLayer`
+        :param position_initializer:
+            the initializer to use for positional embeddings
+        """
+        super().__init__()
+        self.transformer = nn.TransformerEncoder(
+            encoder_layer=nn.TransformerEncoderLayer(
+                d_model=input_dim,
+                nhead=num_heads,
+                dim_feedforward=dim_feedforward,
+                dropout=dropout,
+            ),
+            num_layers=num_layers,
+        )
+        self.position_embeddings = nn.Parameter(position_initializer(torch.empty(2, input_dim)))
+        self.final = nn.Linear(input_dim, input_dim, bias=True)
+
+    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
+        return dict(
+            transformer=self.transformer,
+            position_embeddings=self.position_embeddings,
+            final=self.final,
+        )
+
+
+@parse_docdata
+class TripleREInteraction(
+    NormBasedInteraction[
+        FloatTensor,
+        Tuple[FloatTensor, FloatTensor, FloatTensor],
+        FloatTensor,
+    ]
+):
+    """A stateful module for the TripleRE interaction function.
+
+    .. seealso:: :func:`pykeen.nn.functional.triple_re_interaction`
+
+    .. seealso:: https://github.com/LongYu-360/TripleRE-Add-NodePiece
+    ---
+    name: TripleRE
+    citation:
+        author: Yu
+        year: 2021
+        link: https://vixra.org/abs/2112.0095
+    """
+
+    # r_head, r_mid, r_tail
+    relation_shape = ("d", "d", "d")
+
+    func = pkf.triple_re_interaction
+
+    def __init__(self, u: Optional[float] = 1.0, p: int = 1, power_norm: bool = False):
+        """
+        Initialize the module.
+
+        :param u:
+            the relation factor offset. can be set to None to disable it.
+        :param kwargs:
+            additional keyword-based arguments passed to :class:`NormBasedInteraction`
+        """
+        super().__init__(p=p, power_norm=power_norm)
+        self.u = u
+
+    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._prepare_state_for_functional()
+        kwargs["u"] = self.u
+        return kwargs
+
+    @staticmethod
+    def _prepare_hrt_for_functional(
+        h: FloatTensor,
+        r: Tuple[FloatTensor, FloatTensor, FloatTensor],
+        t: FloatTensor,
+    ) -> MutableMapping[str, FloatTensor]:  # noqa: D102
+        r_head, r_mid, r_tail = r
+        return dict(
+            h=h,
+            r_head=r_head,
+            r_mid=r_mid,
+            r_tail=r_tail,
+            t=t,
+        )
+
+
+class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepresentation, TailRepresentation]):
+    """An implementation of the AutoSF interaction as described by [zhang2020]_."""
+
+    func = pkf.auto_sf_interaction
+    coefficients: Tuple[Tuple[int, int, int, Sign], ...]
+
+    def __init__(self, coefficients: Sequence[Tuple[int, int, int, Sign]]) -> None:
+        """
+        Initialize the interaction function.
+
+        :param coefficients:
+            the coefficients, in order:
+                1. head_representation_index,
+                2. relation_representation_index,
+                3. tail_representation_index,
+                4. sign
+
+        :raise ValueError:
+            if there are duplicate coefficients
+        """
+        super().__init__()
+        counter = Counter((hi, ri, ti) for hi, ri, ti, _ in coefficients)
+        duplicates = {k for k, v in counter.items() if v > 1}
+        if duplicates:
+            raise ValueError(f"Cannot have duplicates in coefficients! Duplicate entries for {duplicates}")
+        self.coefficients = tuple(coefficients)
+        num_entity_representations = 1 + max(
+            itt.chain.from_iterable((map(itemgetter(i), coefficients) for i in (0, 2)))
+        )
+        num_relation_representations = 1 + max(map(itemgetter(1), coefficients))
+        self.entity_shape = tuple(["d"] * num_entity_representations)
+        self.relation_shape = tuple(["d"] * num_relation_representations)
+
+    @classmethod
+    def from_searched_sf(cls, coefficients: Sequence[int]) -> "AutoSFInteraction":
+        """
+        Instantiate AutoSF interaction from the "official" serialization format.
+
+        > The first 4 values (a,b,c,d) represent h_1 * r_1 * t_a + h_2 * r_2 * t_b + h_3 * r_3 * t_c + h_4 * r_4 * t_d.
+        > For the others, every 4 values represent one adding block: index of r, index of h, index of t, the sign s.
+
+        :param coefficients:
+            the coefficients in the "official" serialization format.
+
+        cf. https://github.com/AutoML-Research/AutoSF/blob/07b7243ccf15e579176943c47d6e65392cd57af3/searched_SFs.txt
+        """
+        return cls(
+            coefficients=[(i, ri, i, 1) for i, ri in enumerate(coefficients[:4])]
+            + [(hi, ri, ti, s) for ri, hi, ti, s in more_itertools.chunked(coefficients[4:], 4)]
+        )
+
+    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:
+        return dict(coefficients=self.coefficients)
+
+    @staticmethod
+    def _prepare_hrt_for_functional(
+        h: HeadRepresentation,
+        r: RelationRepresentation,
+        t: TailRepresentation,
+    ) -> MutableMapping[str, torch.FloatTensor]:
+        return dict(zip("hrt", ensure_tuple(h, r, t)))
+
+    def extend(self, *new_coefficients: Tuple[int, int, int, Sign]) -> "AutoSFInteraction":
+        """Extend AutoSF function, as described in the greedy search algorithm in the paper."""
+        return AutoSFInteraction(coefficients=self.coefficients + tuple(new_coefficients))
+
+    def latex_visualize(self) -> str:
+        """Create the LaTeX + tikz visualization as shown in the paper."""
+        n = len(self.entity_shape)
+        return "\n".join(
+            [
+                r"\begin{tikzpicture}[yscale=-1]",
+                rf"\draw (0, 0) grid ({n}, {n});",
+            ]
+            + [
+                rf"\draw ({ti}.5, {hi}.5) node {{${'-' if s < 0 else ''}D^r_{{{ri + 1}}}$}};"
+                for hi, ri, ti, s in self.coefficients
+            ]
+            + [
+                r"\end{tikzpicture}",
+            ],
+        )
 
 
 interaction_resolver = Resolver.from_subclasses(
