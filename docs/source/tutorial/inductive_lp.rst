@@ -1,5 +1,5 @@
 Inductive Link Prediction
-===============
+=========================
 
 .. image:: ../img/ilp_1.png
   :alt: Transductive vs Inductive setup
@@ -20,11 +20,12 @@ the inductive setup is that at inference time we have a new graph
 against that new inference graph of unseen entities.
 
 In fact, there exist several variations of the inductive setup according to the taxonomy by [ali2021]_ :
+
 - An inference graph is totally disconnected from the training graph (disjoint), aka *fully-inductive* setup.
-Link prediction pattern between entities is therefore *unseen-to-unseen*.
+  Link prediction pattern between entities is therefore *unseen-to-unseen*.
 - An inference graph extends the training graph connecting new nodes to the seen graph aka *semi-inductive* setup.
-Link prediction patterns can be *unseen-to-unseen* when we predict links among newly added nodes
-or *unseen-to-seen* / *seen-to-unseen* when we predict links between known nodes and newly arrived.
+  Link prediction patterns can be *unseen-to-unseen* when we predict links among newly added nodes
+  or *unseen-to-seen* / *seen-to-unseen* when we predict links between known nodes and newly arrived.
 
 PyKEEN supports inductive link prediction providing interfaces to
 organize the datasets, build representations of unseen entities, and
@@ -88,7 +89,7 @@ relations (including inverse relations) as tokens.
 
 
 Label-based Transformer Representation
-~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 If entity descriptions are available, the universal featurizing mechanism can
 be a language model accessible via :class:`pykeen.nn.emb.LabelBasedTransformerRepresentation`.
@@ -99,7 +100,7 @@ TODO link to the Tutorial/Representations page
 
 
 Training & Evaluation
--------------
+---------------------
 Generally, training and evaluation of inductive models uses similar interfaces:
 sLCWA and LCWA training loops, and RankBasedEvaluator.
 The important addition of inductive interfaces is the `mode` argument. When set to `mode=train`,
