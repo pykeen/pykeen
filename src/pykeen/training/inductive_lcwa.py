@@ -51,10 +51,7 @@ class InductiveLCWATrainingLoop(LCWATrainingLoop):
         batch_pairs = batch_pairs[start:stop].to(device=self.device)
         batch_labels_full = batch_labels_full[start:stop].to(device=self.device)
 
-        if slice_size is None:
-            predictions = self.score_method(batch_pairs, mode="train")
-        else:
-            predictions = self.score_method(batch_pairs, slice_size=slice_size, mode="train")  # type: ignore
+        predictions = self.score_method(batch_pairs, slice_size=slice_size, mode="train")
 
         return (
             self.loss.process_lcwa_scores(
