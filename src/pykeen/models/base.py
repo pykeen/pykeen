@@ -154,7 +154,7 @@ class Model(nn.Module, ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def _get_entity_len(self):
+    def _get_entity_len(self, mode: Mode) -> int:
         """Select the number of entities depending on the mode parameters"""
         raise NotImplementedError
 

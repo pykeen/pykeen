@@ -26,16 +26,6 @@ class InductiveLCWATrainingLoop(LCWATrainingLoop):
     "mode" param, a model should invoke a proper inference graph
     """
 
-    def __init__(
-        self,
-        **kwargs,
-    ):
-        super().__init__(**kwargs)
-
-        # Explicit mentioning of num_transductive_entities since in the evaluation there will be a different number
-        # of total entities from another inductive inference factory
-        self.num_targets = self.model.num_relations if self.target == 1 else self.model.num_train_entities
-
     def _process_batch(
         self,
         batch: LCWABatchType,
