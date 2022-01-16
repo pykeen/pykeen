@@ -741,7 +741,6 @@ def _build_model_helper(
     if model_kwargs is None:
         model_kwargs = {}
     model_kwargs = dict(model_kwargs)
-    model_kwargs.update(preferred_device=_device)
     model_kwargs.setdefault("random_seed", _random_seed)
 
     if regularizer is not None:
@@ -1067,6 +1066,8 @@ def pipeline(  # noqa: C901
             _random_seed=_random_seed,
             training_triples_factory=training,
         )
+
+    model_instance = model_instance.to(device)
 
     # Log model parameters
     _result_tracker.log_params(

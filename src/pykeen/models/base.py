@@ -539,7 +539,6 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
         triples_factory: CoreTriplesFactory,
         loss: Optional[Loss] = None,
         predict_with_sigmoid: bool = False,
-        preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
     ) -> None:
@@ -553,8 +552,6 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
             Whether to apply sigmoid onto the scores when predicting scores. Applying sigmoid at prediction time may
             lead to exactly equal scores for certain triples with very high, or very low score. When not trained with
             applying sigmoid (or using BCEWithLogitsLoss), the scores are not calibrated to perform well with sigmoid.
-        :param preferred_device:
-            The preferred device for model training and inference.
         :param random_seed:
             A random seed to use for initialising the model's weights. **Should** be set when aiming at reproducibility.
         :param regularizer:
@@ -564,7 +561,6 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
             triples_factory=triples_factory,
             loss=loss,
             predict_with_sigmoid=predict_with_sigmoid,
-            preferred_device=preferred_device,
             random_seed=random_seed,
         )
         # Regularizer
@@ -699,7 +695,6 @@ class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
         relation_representations: EmbeddingSpecification,
         loss: Optional[Loss] = None,
         predict_with_sigmoid: bool = False,
-        preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
     ) -> None:
@@ -710,7 +705,6 @@ class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
         super().__init__(
             triples_factory=triples_factory,
             loss=loss,
-            preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
             predict_with_sigmoid=predict_with_sigmoid,

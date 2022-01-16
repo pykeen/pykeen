@@ -80,7 +80,6 @@ class ConvE(EntityRelationEmbeddingModel):
     ...     input_dropout       = 0.2,
     ...     feature_map_dropout = 0.2,
     ...     output_dropout      = 0.3,
-    ...     preferred_device    = 'gpu',
     ... )
     >>> # Step 3: Configure the loop
     >>> from torch.optim import Adam
