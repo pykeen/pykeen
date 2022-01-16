@@ -391,6 +391,9 @@ class Model(nn.Module, ABC):
         """
         self.eval()  # Enforce evaluation mode
         ht_batch = ht_batch.to(self.device)
+        # TODO is this applicable?
+        # if self.use_inverse_triples:
+        #     scores = self.score_r_inverse(ht_batch=ht_batch, slice_size=slice_size)
         if slice_size is None:
             scores = self.score_r(ht_batch)
         else:
@@ -527,6 +530,9 @@ class Model(nn.Module, ABC):
             return self.score_h(rt_batch=r_inv_h)
         else:
             return self.score_h(rt_batch=r_inv_h, slice_size=slice_size)  # type: ignore
+
+    def score_r_inverse(self, ht_batch: torch.LongTensor, slice_size: Optional[int] = None):
+        raise NotImplementedError
 
     def score_h_inverse(self, rt_batch: torch.LongTensor, slice_size: Optional[int] = None):
         """Score all heads for a batch of (r,t)-pairs using the tail predictions for the inverses $(t,r_{inv},*)$."""

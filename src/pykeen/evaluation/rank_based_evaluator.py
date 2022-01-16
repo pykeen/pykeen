@@ -15,7 +15,7 @@ import torch
 from dataclasses_json import dataclass_json
 from scipy import stats
 
-from .evaluator import Evaluator, MetricResults
+from .evaluator import SIDE_HEAD, SIDE_RELATION, SIDE_TAIL, Evaluator, MetricResults
 from ..typing import MappedTriples
 from ..utils import fix_dataclass_init_docs
 
@@ -29,8 +29,6 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-SIDE_HEAD = "head"
-SIDE_TAIL = "tail"
 SIDE_BOTH = "both"
 SIDES = {SIDE_HEAD, SIDE_TAIL, SIDE_BOTH}
 
@@ -536,7 +534,7 @@ class RankBasedEvaluator(Evaluator):
         scores: torch.FloatTensor,
         dense_positive_mask: Optional[torch.FloatTensor] = None,
     ) -> None:  # noqa: D102
-        raise NotImplementedError
+        self._update_ranks_(true_scores=true_scores, all_scores=scores, side=SIDE_RELATION)
 
     def process_head_scores_(
         self,

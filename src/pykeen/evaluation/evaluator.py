@@ -35,9 +35,16 @@ __all__ = [
     "MetricResults",
     "filter_scores_",
     "evaluate",
+    "SIDE_HEAD",
+    "SIDE_RELATION",
+    "SIDE_TAIL",
 ]
 
 logger = logging.getLogger(__name__)
+
+SIDE_HEAD = "head"
+SIDE_TAIL = "tail"
+SIDE_RELATION = "relation"
 
 
 @contextmanager
@@ -822,8 +829,10 @@ def _evaluate_batch(
             process = unfiltered_evaluator.process_tail_scores_
         elif column == 1:  # relation scores
             process = unfiltered_evaluator.process_relation_scores_
-        else:
+        elif column == 0:  # head scores
             process = unfiltered_evaluator.process_head_scores_
+        else:
+            raise ValueError
         process(
             hrt_batch=batch,
             true_scores=batch_scores_of_true[:, None],
@@ -854,8 +863,10 @@ def _evaluate_batch(
                 process = filtered_evaluator.process_tail_scores_
             elif column == 1:  # relation scores
                 process = filtered_evaluator.process_relation_scores_
-            else:
+            elif column == 0:  # head scores
                 process = filtered_evaluator.process_head_scores_
+            else:
+                raise ValueError
             process(
                 hrt_batch=batch,
                 true_scores=batch_scores_of_true[:, None],

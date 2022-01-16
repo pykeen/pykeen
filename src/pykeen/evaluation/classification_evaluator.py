@@ -9,7 +9,7 @@ import numpy as np
 import torch
 from dataclasses_json import dataclass_json
 
-from .evaluator import Evaluator, MetricResults
+from .evaluator import SIDE_HEAD, SIDE_RELATION, SIDE_TAIL, Evaluator, MetricResults
 from .rexmex_compat import classifier_annotator
 from ..typing import MappedTriples
 from ..utils import fix_dataclass_init_docs
@@ -79,7 +79,7 @@ class ClassificationEvaluator(Evaluator):
         keys: torch.LongTensor,
         scores: torch.FloatTensor,
         positive_mask: torch.FloatTensor,
-        head_side: bool,
+        side: str,
     ) -> None:
         # Transfer to cpu and convert to numpy
         scores = scores.detach().cpu().numpy()
@@ -89,7 +89,7 @@ class ClassificationEvaluator(Evaluator):
         # Ensure that each key gets counted only once
         for i in range(keys.shape[0]):
             # include head_side flag into key to differentiate between (h, r) and (r, t)
-            key = (head_side,) + tuple(map(int, keys[i]))
+            key = (side,) + tuple(map(int, keys[i]))
             self.all_scores[key] = scores[i]
             self.all_positives[key] = positive_mask[i]
 
@@ -103,7 +103,7 @@ class ClassificationEvaluator(Evaluator):
         if dense_positive_mask is None:
             raise KeyError("Sklearn evaluators need the positive mask!")
 
-        self._process_scores(keys=hrt_batch[:, :2], scores=scores, positive_mask=dense_positive_mask, head_side=False)
+        self._process_scores(keys=hrt_batch[:, :2], scores=scores, positive_mask=dense_positive_mask, side=SIDE_TAIL)
 
     def process_relation_scores_(
         self,
@@ -115,7 +115,9 @@ class ClassificationEvaluator(Evaluator):
         if dense_positive_mask is None:
             raise KeyError("Sklearn evaluators need the positive mask!")
 
-        raise NotImplementedError
+        self._process_scores(
+            keys=hrt_batch[:, [0, 2]], scores=scores, positive_mask=dense_positive_mask, side=SIDE_RELATION
+        )
 
     def process_head_scores_(
         self,
@@ -127,10 +129,10 @@ class ClassificationEvaluator(Evaluator):
         if dense_positive_mask is None:
             raise KeyError("Sklearn evaluators need the positive mask!")
 
-        self._process_scores(keys=hrt_batch[:, 1:], scores=scores, positive_mask=dense_positive_mask, head_side=True)
+        self._process_scores(keys=hrt_batch[:, 1:], scores=scores, positive_mask=dense_positive_mask, side=SIDE_HEAD)
 
     def finalize(self) -> ClassificationMetricResults:  # noqa: D102
-        # Important: The order of the values of an dictionary is not guaranteed. Hence, we need to retrieve scores and
+        # Important: The order of the values of a dictionary is not guaranteed. Hence, we need to retrieve scores and
         # masks using the exact same key order.
         all_keys = list(self.all_scores.keys())
         # TODO how to define a cutoff on y_scores to make binary?
