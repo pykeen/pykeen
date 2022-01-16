@@ -108,7 +108,7 @@ class ERMLP(EntityRelationEmbeddingModel):
         # Compute scores
         return self.mlp(x_s)
 
-    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_t(self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(indices=hr_batch[:, 0])
         r = self.relation_embeddings(indices=hr_batch[:, 1])
@@ -134,7 +134,7 @@ class ERMLP(EntityRelationEmbeddingModel):
         scores = scores.view(-1, self.num_entities)
         return scores
 
-    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_h(self, rt_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(indices=None)
         r = self.relation_embeddings(indices=rt_batch[:, 0])
