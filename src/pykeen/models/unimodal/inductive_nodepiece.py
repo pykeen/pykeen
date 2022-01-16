@@ -161,87 +161,21 @@ class InductiveNodePiece(ERModel):
             self.num_valid_entities = validation_factory.num_entities
             self.num_test_entities = test_factory.num_entities
 
-    def forward(
-        self,
-        h_indices: Optional[torch.LongTensor],
-        r_indices: Optional[torch.LongTensor],
-        t_indices: Optional[torch.LongTensor],
-        mode: Mode,
-        slice_size: Optional[int] = None,
-        slice_dim: Optional[str] = None,
-    ) -> torch.FloatTensor:
-        """Forward pass.
+    def _entity_representation_from_mode(self, mode: Mode = None):
+        if mode == "train":
+            return self.entity_representations
+        else:
+            return self.inference_representation
 
-        This method takes head, relation and tail indices and calculates the corresponding score.
-
-        All indices which are not None, have to be either 1-element or have the same shape, which is the batch size.
-
-        :param h_indices:
-            The head indices. None indicates to use all.
-        :param r_indices:
-            The relation indices. None indicates to use all.
-        :param t_indices:
-            The tail indices. None indicates to use all.
-        :param slice_size:
-            The slice size.
-        :param slice_dim:
-            The dimension along which to slice. From {"h", "r", "t"}
-
-        :return: shape: (batch_size, num_heads, num_relations, num_tails)
-            The score for each triple.
-        """
-        h, r, t = self._get_representations(h_indices=h_indices, r_indices=r_indices, t_indices=t_indices, mode=mode)
-        scores = self.interaction.score(h=h, r=r, t=t, slice_size=slice_size, slice_dim=slice_dim)
-        return self._repeat_scores_if_necessary(
-            scores=scores,
-            h_indices=h_indices,
-            r_indices=r_indices,
-            t_indices=t_indices,
-        )
-
-    def _get_representations(
-        self,
-        h_indices: Optional[torch.LongTensor],
-        r_indices: Optional[torch.LongTensor],
-        t_indices: Optional[torch.LongTensor],
-        mode: Mode,
-    ) -> Tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]:
-        """Get representations for head, relation and tails, in canonical shape."""
-        entity_representations = self.entity_representations if mode == "train" else self.inference_representation
-
-        h, r, t = [
-            [representation.get_in_more_canonical_shape(dim=dim, indices=indices) for representation in representations]
-            for dim, indices, representations in (
-                ("h", h_indices, entity_representations),
-                ("r", r_indices, self.relation_representations),
-                ("t", t_indices, entity_representations),
-            )
-        ]
-        # normalization
-        return cast(
-            Tuple[HeadRepresentation, RelationRepresentation, TailRepresentation],
-            tuple(x[0] if len(x) == 1 else x for x in (h, r, t)),
-        )
-
-    def score_hrt(self, hrt_batch: torch.LongTensor, mode: Mode = "train") -> torch.FloatTensor:
-        return self(
-            h_indices=hrt_batch[:, 0],
-            r_indices=hrt_batch[:, 1],
-            t_indices=hrt_batch[:, 2],
-            mode=mode,
-        ).view(hrt_batch.shape[0], 1)
-
-    def score_t(
-        self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None, mode: Mode = "train"
-    ) -> torch.FloatTensor:
-        return self(
-            h_indices=hr_batch[:, 0],
-            r_indices=hr_batch[:, 1],
-            t_indices=None,
-            slice_size=slice_size,
-            slice_dim="h",
-            mode=mode,
-        ).view(hr_batch.shape[0], getattr(self, f"num_{mode}_entities"))
+    def _get_entity_len(self, mode: Mode = None) -> int:
+        if mode == "train":
+            return self.num_train_entities
+        elif mode == "test":
+            return self.num_test_entities
+        elif mode == "valid":
+            return self.num_valid_entities
+        else:
+            raise ValueError
 
     def score_h_inverse(self, rt_batch: torch.LongTensor, mode: Mode, slice_size: Optional[int] = None):
         """Score all heads for a batch of (r,t)-pairs using the tail predictions for the inverses $(t,r_{inv},*)$."""

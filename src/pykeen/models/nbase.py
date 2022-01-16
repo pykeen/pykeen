@@ -20,7 +20,7 @@ from ..nn.emb import EmbeddingSpecification, RepresentationModule
 from ..nn.modules import Interaction, interaction_resolver
 from ..regularizers import Regularizer
 from ..triples import CoreTriplesFactory
-from ..typing import DeviceHint, HeadRepresentation, RelationRepresentation, TailRepresentation
+from ..typing import DeviceHint, HeadRepresentation, Mode, RelationRepresentation, TailRepresentation
 from ..utils import check_shapes
 
 __all__ = [
@@ -142,6 +142,7 @@ class _NewAbstractModel(Model, ABC):
         t_indices: Optional[torch.LongTensor],
         slice_size: Optional[int] = None,
         slice_dim: Optional[str] = None,
+        mode: Mode = None,
     ) -> torch.FloatTensor:
         """Forward pass.
 
@@ -164,12 +165,15 @@ class _NewAbstractModel(Model, ABC):
             The slice size.
         :param slice_dim:
             The dimension along which to slice. From {"h", "r", "t"}.
+        :param mode:
+            The pass mode. Is None for transductive and either "train" or
+            "eval" in inductive.
 
         :return: shape: (batch_size, num_heads, num_relations, num_tails)
             The score for each triple.
         """  # noqa: DAR202
 
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:
+    def score_hrt(self, hrt_batch: torch.LongTensor, mode: Mode = None) -> torch.FloatTensor:
         """Forward pass.
 
         This method takes head, relation and tail of each triple and calculates the corresponding score.
@@ -186,9 +190,15 @@ class _NewAbstractModel(Model, ABC):
             h_indices=hrt_batch[:, 0],
             r_indices=hrt_batch[:, 1],
             t_indices=hrt_batch[:, 2],
+            mode=mode,
         ).view(hrt_batch.shape[0], 1)
 
-    def score_t(self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:
+    def _get_entity_len(self, mode: Mode = None) -> int:
+        return self.num_entities
+
+    def score_t(
+        self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None, mode: Mode = None
+    ) -> torch.FloatTensor:
         """Forward pass using right side (tail) prediction.
 
         This method calculates the score for all possible tails for each (head, relation) pair.
@@ -207,9 +217,12 @@ class _NewAbstractModel(Model, ABC):
             t_indices=None,
             slice_size=slice_size,
             slice_dim="h",
-        ).view(hr_batch.shape[0], self.num_entities)
+            mode=mode,
+        ).view(hr_batch.shape[0], self._get_entity_len(mode=mode))
 
-    def score_h(self, rt_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:
+    def score_h(
+        self, rt_batch: torch.LongTensor, slice_size: Optional[int] = None, mode: Mode = None
+    ) -> torch.FloatTensor:
         """Forward pass using left side (head) prediction.
 
         This method calculates the score for all possible heads for each (relation, tail) pair.
@@ -228,9 +241,12 @@ class _NewAbstractModel(Model, ABC):
             t_indices=rt_batch[:, 1],
             slice_size=slice_size,
             slice_dim="t",
-        ).view(rt_batch.shape[0], self.num_entities)
+            mode=mode,
+        ).view(rt_batch.shape[0], self._get_entity_len(mode=mode))
 
-    def score_r(self, ht_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:
+    def score_r(
+        self, ht_batch: torch.LongTensor, slice_size: Optional[int] = None, mode: Mode = None
+    ) -> torch.FloatTensor:
         """Forward pass using middle (relation) prediction.
 
         This method calculates the score for all possible relations for each (head, tail) pair.
@@ -249,6 +265,7 @@ class _NewAbstractModel(Model, ABC):
             t_indices=ht_batch[:, 1],
             slice_size=slice_size,
             slice_dim="r",
+            mode=mode,
         ).view(ht_batch.shape[0], self.num_relations)
 
 
@@ -434,6 +451,7 @@ class ERModel(
         t_indices: Optional[torch.LongTensor],
         slice_size: Optional[int] = None,
         slice_dim: Optional[str] = None,
+        mode: Mode = None,
     ) -> torch.FloatTensor:
         """Forward pass.
 
@@ -451,11 +469,14 @@ class ERModel(
             The slice size.
         :param slice_dim:
             The dimension along which to slice. From {"h", "r", "t"}
+        :param mode:
+            The pass mode. Is None for transductive and either "train" or
+            "eval" in inductive.
 
         :return: shape: (batch_size, num_heads, num_relations, num_tails)
             The score for each triple.
         """
-        h, r, t = self._get_representations(h_indices=h_indices, r_indices=r_indices, t_indices=t_indices)
+        h, r, t = self._get_representations(h_indices=h_indices, r_indices=r_indices, t_indices=t_indices, mode=mode)
         scores = self.interaction.score(h=h, r=r, t=t, slice_size=slice_size, slice_dim=slice_dim)
         return self._repeat_scores_if_necessary(
             scores=scores,
@@ -498,19 +519,24 @@ class ERModel(
 
         return scores.repeat(*repeats)
 
+    def _entity_representation_from_mode(self, mode: Mode = None):
+        return self.entity_representations
+
     def _get_representations(
         self,
         h_indices: Optional[torch.LongTensor],
         r_indices: Optional[torch.LongTensor],
         t_indices: Optional[torch.LongTensor],
+        mode: Mode = None,
     ) -> Tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]:
         """Get representations for head, relation and tails, in canonical shape."""
+        entity_representations = self._entity_representation_from_mode(mode=mode)
         h, r, t = [
             [representation.get_in_more_canonical_shape(dim=dim, indices=indices) for representation in representations]
             for dim, indices, representations in (
-                ("h", h_indices, self.entity_representations),
+                ("h", h_indices, entity_representations),
                 ("r", r_indices, self.relation_representations),
-                ("t", t_indices, self.entity_representations),
+                ("t", t_indices, entity_representations),
             )
         ]
         # normalization
