@@ -539,15 +539,25 @@ class Model(nn.Module, ABC):
         t_r_inv_h = self._prepare_inverse_batch(batch=hrt_batch, index_relation=1)
         return self.score_hrt(hrt_batch=t_r_inv_h, mode=mode)
 
-    def score_t_inverse(self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None):
+    def score_t_inverse(
+        self,
+        hr_batch: torch.LongTensor,
+        slice_size: Optional[int] = None,
+        mode: Mode = None,
+    ):
         """Score all tails for a batch of (h,r)-pairs using the head predictions for the inverses $(*,r_{inv},h)$."""
         r_inv_h = self._prepare_inverse_batch(batch=hr_batch, index_relation=1)
-        return self.score_h(rt_batch=r_inv_h, slice_size=slice_size)
+        return self.score_h(rt_batch=r_inv_h, slice_size=slice_size, mode=mode)
 
-    def score_h_inverse(self, rt_batch: torch.LongTensor, slice_size: Optional[int] = None):
+    def score_h_inverse(
+        self,
+        rt_batch: torch.LongTensor,
+        slice_size: Optional[int] = None,
+        mode: Mode = None,
+    ):
         """Score all heads for a batch of (r,t)-pairs using the tail predictions for the inverses $(t,r_{inv},*)$."""
         t_r_inv = self._prepare_inverse_batch(batch=rt_batch, index_relation=0)
-        return self.score_t(hr_batch=t_r_inv, slice_size=slice_size)
+        return self.score_t(hr_batch=t_r_inv, slice_size=slice_size, mode=mode)
 
 
 class _OldAbstractModel(Model, ABC, autoreset=False):

@@ -176,8 +176,3 @@ class InductiveNodePiece(ERModel):
             return self.num_valid_entities
         else:
             raise ValueError
-
-    def score_h_inverse(self, rt_batch: torch.LongTensor, mode: Mode, slice_size: Optional[int] = None):
-        """Score all heads for a batch of (r,t)-pairs using the tail predictions for the inverses $(t,r_{inv},*)$."""
-        t_r_inv = self._prepare_inverse_batch(batch=rt_batch, index_relation=0)
-        return self.score_t(hr_batch=t_r_inv, mode=mode, slice_size=slice_size)
