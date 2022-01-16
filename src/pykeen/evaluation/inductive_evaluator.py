@@ -40,62 +40,8 @@ class InductiveEvaluator(RankBasedEvaluator):
     - Takes the mode argument which will be sent to the scoring function
     """
 
-    def evaluate(
-        self,
-        model: Model,
-        mapped_triples: MappedTriples,
-        batch_size: Optional[int] = None,
-        slice_size: Optional[int] = None,
-        device: Optional[torch.device] = None,
-        use_tqdm: bool = True,
-        tqdm_kwargs: Optional[Mapping[str, str]] = None,
-        restrict_entities_to: Optional[torch.LongTensor] = None,
-        do_time_consuming_checks: bool = True,
-        additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
-    ) -> MetricResults:
-        """Run :func:`pykeen.evaluation.evaluate` with this evaluator."""
-        if batch_size is None and self.automatic_memory_optimization:
-            # Using automatic memory optimization on CPU may result in undocumented crashes due to OS' OOM killer.
-            if model.device.type == "cpu":
-                logger.info(
-                    "Currently automatic memory optimization only supports GPUs, but you're using a CPU. "
-                    "Therefore, the batch_size will be set to the default value.",
-                )
-            else:
-                batch_size, slice_size = self.batch_and_slice(
-                    model=model,
-                    mapped_triples=mapped_triples,
-                    additional_filter_triples=additional_filter_triples,
-                    batch_size=batch_size,
-                    device=device,
-                    use_tqdm=False,
-                    restrict_entities_to=restrict_entities_to,
-                    do_time_consuming_checks=do_time_consuming_checks,
-                )
-                # The batch_size and slice_size should be accessible to outside objects for re-use, e.g. early stoppers.
-                self.batch_size = batch_size
-                self.slice_size = slice_size
-
-                # Clear the ranks from the current evaluator
-                self.finalize()
-
-        rv = evaluate(
-            model=model,
-            additional_filter_triples=additional_filter_triples,
-            mapped_triples=mapped_triples,
-            evaluators=self,
-            batch_size=batch_size,
-            slice_size=slice_size,
-            device=device,
-            squeeze=True,
-            use_tqdm=use_tqdm,
-            tqdm_kwargs=tqdm_kwargs,
-            restrict_entities_to=restrict_entities_to,
-            do_time_consuming_checks=do_time_consuming_checks,
-            mode=self.mode,  # NEW training mode
-        )
-        # Since squeeze is true, we can expect that evaluate returns a MetricResult, but we need to tell MyPy that
-        return cast(MetricResults, rv)
+    def __init__(self, **kwargs):
+        super().__init__(evaluate_func=evaluate, **kwargs)
 
 
 def evaluate(
