@@ -820,6 +820,8 @@ def _evaluate_batch(
     for unfiltered_evaluator in unfiltered_evaluators:
         if column == 2:  # tail scores
             process = unfiltered_evaluator.process_tail_scores_
+        elif column == 1:  # relation scores
+            process = unfiltered_evaluator.process_relation_scores_
         else:
             process = unfiltered_evaluator.process_head_scores_
         process(
@@ -850,6 +852,8 @@ def _evaluate_batch(
         for filtered_evaluator in filtered_evaluators:
             if column == 2:  # tail scores
                 process = filtered_evaluator.process_tail_scores_
+            elif column == 1:  # relation scores
+                process = filtered_evaluator.process_relation_scores_
             else:
                 process = filtered_evaluator.process_head_scores_
             process(
