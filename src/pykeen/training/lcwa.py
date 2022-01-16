@@ -94,10 +94,7 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
         batch_pairs = batch_pairs[start:stop].to(device=self.device)
         batch_labels_full = batch_labels_full[start:stop].to(device=self.device)
 
-        if slice_size is None:
-            predictions = self.score_method(batch_pairs)
-        else:
-            predictions = self.score_method(batch_pairs, slice_size=slice_size)  # type: ignore
+        predictions = self.score_method(batch_pairs, slice_size=slice_size)
 
         return (
             self.loss.process_lcwa_scores(
