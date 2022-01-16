@@ -1067,7 +1067,7 @@ def pipeline(  # noqa: C901
             training_triples_factory=training,
         )
 
-    model_instance = model_instance.to(device)
+    model_instance = model_instance.to(_device)
 
     # Log model parameters
     _result_tracker.log_params(
