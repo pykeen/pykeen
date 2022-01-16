@@ -630,6 +630,10 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
         if autoreset:
             _add_post_reset_parameters(cls)
 
+    def _get_entity_len(self, mode: Mode = None):
+        """Select the number of entities depending on the mode parameters"""
+        raise self.num_entities
+
     def post_parameter_update(self) -> None:
         """Has to be called after each parameter update."""
         self.regularizer.reset()
