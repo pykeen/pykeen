@@ -82,6 +82,7 @@ class Evaluator(ABC):
         slice_size: Optional[int] = None,
         automatic_memory_optimization: bool = True,
         mode: Mode = None,
+        evaluate_func=None,
     ):
         """Initialize the evaluator.
 
@@ -98,6 +99,7 @@ class Evaluator(ABC):
         self.slice_size = slice_size
         self.automatic_memory_optimization = automatic_memory_optimization
         self.mode = mode
+        self.evaluate_func = evaluate if evaluate_func is None else evaluate_func
 
     @classmethod
     def get_normalized_name(cls) -> str:
@@ -184,7 +186,7 @@ class Evaluator(ABC):
                 # Clear the ranks from the current evaluator
                 self.finalize()
 
-        rv = evaluate(
+        rv = self.evaluate_func(
             model=model,
             additional_filter_triples=additional_filter_triples,
             mapped_triples=mapped_triples,
@@ -197,6 +199,7 @@ class Evaluator(ABC):
             tqdm_kwargs=tqdm_kwargs,
             restrict_entities_to=restrict_entities_to,
             do_time_consuming_checks=do_time_consuming_checks,
+            mode=self.mode,
         )
         # Since squeeze is true, we can expect that evaluate returns a MetricResult, but we need to tell MyPy that
         return cast(MetricResults, rv)
@@ -317,7 +320,7 @@ class Evaluator(ABC):
                 # The cache of the previous run has to be freed to allow accurate memory availability estimates
                 gc.collect()
                 torch.cuda.empty_cache()
-                evaluate(
+                self.evaluate_func(
                     model=model,
                     additional_filter_triples=additional_filter_triples,
                     mapped_triples=mapped_triples,
@@ -330,6 +333,7 @@ class Evaluator(ABC):
                     do_time_consuming_checks=do_time_consuming_checks,
                     batch_size=values_dict.get("batch_size"),
                     slice_size=values_dict.get("slice_size"),
+                    mode=self.mode,
                 )
                 evaluated_once = True
             except RuntimeError as runtime_error:
@@ -504,6 +508,7 @@ def evaluate(
     do_time_consuming_checks: bool = True,
     additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
     pre_filtered_triples: bool = True,
+    mode: Mode = None,
 ) -> Union[MetricResults, List[MetricResults]]:
     """Evaluate metrics for model on mapped triples.
 
