@@ -60,6 +60,10 @@ class _NewAbstractModel(Model, ABC):
     #: The default parameters for the default regularizer class
     regularizer_default_kwargs: ClassVar[Optional[Mapping[str, Any]]] = None
 
+    can_slice_h = True
+    can_slice_r = True
+    can_slice_t = True
+
     def _reset_parameters_(self):  # noqa: D401
         """Reset all parameters of the model in-place."""
         # cf. https://github.com/mberr/ea-sota-comparison/blob/6debd076f93a329753d819ff4d01567a23053720/src/kgm/utils/torch_utils.py#L317-L372   # noqa:E501
@@ -176,6 +180,8 @@ class _NewAbstractModel(Model, ABC):
         :return: shape: (batch_size, 1), dtype: float
             The score for each triple.
         """
+        # Note: slicing cannot be used here: the indices for score_hrt only havea batch
+        # dimension, and slicing along this dimension is already considered by sub-batching.
         return self(
             h_indices=hrt_batch[:, 0],
             r_indices=hrt_batch[:, 1],

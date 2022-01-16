@@ -3,6 +3,7 @@
 """Non-parametric baseline models."""
 
 from abc import ABC
+from typing import Optional
 
 import numpy
 import torch
@@ -19,6 +20,10 @@ __all__ = [
 
 class EvaluationOnlyModel(Model, ABC):
     """A model which only implements the methods used for evaluation."""
+
+    can_slice_h = False
+    can_slice_r = False
+    can_slice_t = False
 
     def __init__(self, triples_factory: CoreTriplesFactory):
         """Non-parametric models take a minimal set of arguments.
@@ -47,7 +52,7 @@ class EvaluationOnlyModel(Model, ABC):
         """Non-parametric models do not implement :meth:`Model.score_hrt`."""
         raise RuntimeError
 
-    def score_r(self, ht_batch: torch.LongTensor):  # noqa:D102
+    def score_r(self, ht_batch: torch.LongTensor, slice_size: Optional[int] = None):  # noqa:D102
         """Non-parametric models do not implement :meth:`Model.score_r`."""
         raise RuntimeError
 
@@ -120,7 +125,7 @@ class MarginalDistributionBaseline(EvaluationOnlyModel):
         else:
             self.head_per_tail = self.tail_per_head = None
 
-    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa:D102
+    def score_t(self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:  # noqa:D102
         return marginal_score(
             entity_relation_batch=hr_batch,
             per_entity=self.tail_per_head,
@@ -128,7 +133,7 @@ class MarginalDistributionBaseline(EvaluationOnlyModel):
             num_entities=self.num_entities,
         )
 
-    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa:D102
+    def score_h(self, rt_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:  # noqa:D102
         return marginal_score(
             entity_relation_batch=rt_batch.flip(1),
             per_entity=self.head_per_tail,
