@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import functools
 import inspect
+import itertools
 import logging
 import os
 import pickle
@@ -47,9 +48,6 @@ class Model(nn.Module, ABC):
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]]
 
-    #: The device on which this model and its submodules are stored
-    device: torch.device
-
     _random_seed: Optional[int]
 
     #: The default loss function class
@@ -69,7 +67,6 @@ class Model(nn.Module, ABC):
         loss: HintOrType[Loss] = None,
         loss_kwargs: Optional[Mapping[str, Any]] = None,
         predict_with_sigmoid: bool = False,
-        preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
     ) -> None:
         """Initialize the module.
@@ -82,15 +79,10 @@ class Model(nn.Module, ABC):
             Whether to apply sigmoid onto the scores when predicting scores. Applying sigmoid at prediction time may
             lead to exactly equal scores for certain triples with very high, or very low score. When not trained with
             applying sigmoid (or using BCEWithLogitsLoss), the scores are not calibrated to perform well with sigmoid.
-        :param preferred_device:
-            The preferred device for model training and inference.
         :param random_seed:
             A random seed to use for initialising the model's weights. **Should** be set when aiming at reproducibility.
         """
         super().__init__()
-
-        # Initialize the device
-        self.device = resolve_device(device=preferred_device)
 
         # Random seeds have to set before the embeddings are initialized
         if random_seed is None:
@@ -126,6 +118,24 @@ class Model(nn.Module, ABC):
         """
         if not inspect.isabstract(cls):
             parse_docdata(cls)
+
+    @property
+    def device(self) -> torch.device:
+        """Return the model's device."""
+        devices = {
+            tensor.data.device
+            for tensor in itertools.chain(self.parameters(), self.buffers())
+        }
+        if len(devices) == 0:
+            raise ValueError('Could not infer device, since there are neither parameters nor buffers.')
+        elif len(devices) > 1:
+            device_info = dict(
+                parameters=dict(self.named_parameters()),
+                buffers=dict(self.named_buffers()),
+            )
+            raise ValueError(f'Ambiguous device! Found: {devices}\n\n{device_info}')
+        else:
+            return next(iter(devices))
 
     """Properties"""
 
@@ -233,6 +243,8 @@ class Model(nn.Module, ABC):
 
     def to_device_(self):
         """Transfer model to device."""
+        raise NotImplementedError
+        # need to replace all uses of this with what's in here.
         self.to(self.device)
         torch.cuda.empty_cache()
         return self
