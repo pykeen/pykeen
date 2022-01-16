@@ -600,6 +600,18 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
         if self.training:
             self.regularizer.update(*tensors)
 
+    @property
+    def can_slice_h(self) -> bool:  # noqa:D102
+        return False
+
+    @property
+    def can_slice_r(self) -> bool:  # noqa:D102
+        return False
+
+    @property
+    def can_slice_t(self) -> bool:  # noqa:D102
+        return False
+
     def score_t(self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:
         """Forward pass using right side (tail) prediction.
 
