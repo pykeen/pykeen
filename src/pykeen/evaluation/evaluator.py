@@ -20,7 +20,7 @@ from tqdm.autonotebook import tqdm
 from ..models import Model
 from ..triples.triples_factory import restrict_triples
 from ..triples.utils import get_entities, get_relations
-from ..typing import MappedTriples
+from ..typing import MappedTriples, Mode
 from ..utils import (
     format_relative_comparison,
     is_cuda_oom_error,
@@ -81,6 +81,7 @@ class Evaluator(ABC):
         batch_size: Optional[int] = None,
         slice_size: Optional[int] = None,
         automatic_memory_optimization: bool = True,
+        mode: Mode = None,
     ):
         """Initialize the evaluator.
 
@@ -96,6 +97,7 @@ class Evaluator(ABC):
         self.batch_size = batch_size
         self.slice_size = slice_size
         self.automatic_memory_optimization = automatic_memory_optimization
+        self.mode = mode
 
     @classmethod
     def get_normalized_name(cls) -> str:

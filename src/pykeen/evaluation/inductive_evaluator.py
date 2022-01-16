@@ -2,19 +2,13 @@
 
 """Inductive evaluator."""
 
-import gc
 import logging
 import timeit
-from abc import ABC, abstractmethod
-from contextlib import contextmanager
-from dataclasses import dataclass
-from math import ceil
 from textwrap import dedent
-from typing import Any, Collection, Iterable, List, Mapping, Optional, Tuple, Union, cast
+from typing import Collection, Iterable, List, Mapping, Optional, Union, cast
 
 import numpy as np
 import torch
-from dataclasses_json import DataClassJsonMixin
 from tqdm.autonotebook import tqdm
 
 from .evaluator import (
@@ -23,20 +17,14 @@ from .evaluator import (
     create_dense_positive_mask_,
     create_sparse_positive_filter_,
     filter_scores_,
+    optional_context_manager,
 )
 from .rank_based_evaluator import RankBasedEvaluator
 from ..models import Model
-from ..triples.triples_factory import TriplesFactory, restrict_triples
+from ..triples.triples_factory import restrict_triples
 from ..triples.utils import get_entities, get_relations
 from ..typing import MappedTriples, Mode
-from ..utils import (
-    format_relative_comparison,
-    is_cuda_oom_error,
-    is_cudnn_error,
-    is_nonzero_larger_than_maxint_error,
-    normalize_string,
-    split_list_in_batches_iter,
-)
+from ..utils import format_relative_comparison, split_list_in_batches_iter
 
 __all__ = [
     "InductiveEvaluator",
@@ -45,26 +33,12 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-@contextmanager
-def optional_context_manager(condition, context_manager):
-    if condition:
-        with context_manager:
-            yield context_manager
-    else:
-        yield
-
-
 class InductiveEvaluator(RankBasedEvaluator):
     """
     Inductive version of the evaluator. Main differences:
     - Takes the triple factory argument - on which the evaluation will be executed
     - Takes the mode argument which will be sent to the scoring function
     """
-
-    def __init__(self, mode: Mode, **kwargs):
-        super().__init__(**kwargs)
-
-        self.mode = mode
 
     def evaluate(
         self,

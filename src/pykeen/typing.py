@@ -36,6 +36,7 @@ __all__ = [
     # Dataclasses
     "GaussianDistribution",
     "ScorePack",
+    "Mode",
 ]
 
 X = TypeVar("X")
