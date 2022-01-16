@@ -180,6 +180,7 @@ class _NewAbstractModel(Model, ABC):
             h_indices=hrt_batch[:, 0],
             r_indices=hrt_batch[:, 1],
             t_indices=hrt_batch[:, 2],
+            # TODO can slices be used here?
         ).view(hrt_batch.shape[0], 1)
 
     def score_t(self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:
