@@ -180,11 +180,12 @@ class _NewAbstractModel(Model, ABC):
         :return: shape: (batch_size, 1), dtype: float
             The score for each triple.
         """
+        # Note: slicing cannot be used here: the indices for score_hrt only havea batch
+        # dimension, and slicing along this dimension is already considered by sub-batching.
         return self(
             h_indices=hrt_batch[:, 0],
             r_indices=hrt_batch[:, 1],
             t_indices=hrt_batch[:, 2],
-            # TODO can slices be used here?
         ).view(hrt_batch.shape[0], 1)
 
     def score_t(self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:
