@@ -157,7 +157,8 @@ class Model(nn.Module, ABC):
     def reset_parameters_(self):  # noqa: D401
         """Reset all parameters of the model and enforce model constraints."""
         self._reset_parameters_()
-        self.to_device_()
+        #  self.to(self.device)  # FIXME is this needed
+        torch.cuda.empty_cache()
         self.post_parameter_update()
         return self
 
@@ -240,14 +241,6 @@ class Model(nn.Module, ABC):
         """Get the regularization term for the loss function."""
 
     """Concrete methods"""
-
-    def to_device_(self):
-        """Transfer model to device."""
-        raise NotImplementedError
-        # need to replace all uses of this with what's in here.
-        self.to(self.device)
-        torch.cuda.empty_cache()
-        return self
 
     def get_grad_params(self) -> Iterable[nn.Parameter]:
         """Get the parameters that require gradients."""
