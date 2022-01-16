@@ -139,6 +139,24 @@ class Evaluator(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def process_relation_scores_(
+        self,
+        hrt_batch: MappedTriples,
+        true_scores: torch.FloatTensor,
+        scores: torch.FloatTensor,
+        dense_positive_mask: Optional[torch.FloatTensor] = None,
+    ) -> None:
+        """Process a batch of triples with their computed relation scores for all entities.
+
+        :param hrt_batch: shape: (batch_size, 3)
+        :param true_scores: shape: (batch_size)
+        :param scores: shape: (batch_size, num_entities)
+        :param dense_positive_mask: shape: (batch_size, num_entities)
+            An optional binary (0/1) tensor indicating other true entities.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     def finalize(self) -> MetricResults:
         """Compute the final results, and clear buffers."""
         raise NotImplementedError
