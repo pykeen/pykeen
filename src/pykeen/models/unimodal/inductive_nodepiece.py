@@ -246,11 +246,7 @@ class InductiveNodePiece(ERModel):
     def score_h_inverse(self, rt_batch: torch.LongTensor, mode: Mode, slice_size: Optional[int] = None):
         """Score all heads for a batch of (r,t)-pairs using the tail predictions for the inverses $(t,r_{inv},*)$."""
         t_r_inv = self._prepare_inverse_batch(batch=rt_batch, index_relation=0)
-
-        if slice_size is None:
-            return self.score_t(hr_batch=t_r_inv, mode=mode)
-        else:
-            return self.score_t(hr_batch=t_r_inv, mode=mode, slice_size=slice_size)  # type: ignore
+        return self.score_t(hr_batch=t_r_inv, mode=mode, slice_size=slice_size)
 
     # for evaluation
     def predict_h(
@@ -263,10 +259,8 @@ class InductiveNodePiece(ERModel):
         rt_batch = self._prepare_batch(batch=rt_batch, index_relation=0)
         if self.use_inverse_triples:
             scores = self.score_h_inverse(rt_batch=rt_batch, mode=mode, slice_size=slice_size)
-        elif slice_size is None:
-            scores = self.score_h(rt_batch, mode=mode)
         else:
-            scores = self.score_h(rt_batch, mode=mode, slice_size=slice_size)  # type: ignore
+            scores = self.score_h(rt_batch, mode=mode, slice_size=slice_size)
         if self.predict_with_sigmoid:
             scores = torch.sigmoid(scores)
         return scores
@@ -279,10 +273,7 @@ class InductiveNodePiece(ERModel):
     ) -> torch.FloatTensor:
         self.eval()  # Enforce evaluation mode
         hr_batch = self._prepare_batch(batch=hr_batch, index_relation=1)
-        if slice_size is None:
-            scores = self.score_t(hr_batch, mode=mode)
-        else:
-            scores = self.score_t(hr_batch, mode=mode, slice_size=slice_size)  # type: ignore
+        scores = self.score_t(hr_batch, mode=mode, slice_size=slice_size)
         if self.predict_with_sigmoid:
             scores = torch.sigmoid(scores)
         return scores
