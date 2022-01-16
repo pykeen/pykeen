@@ -70,7 +70,7 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
         else:
             raise ValueError(f"Invalid target column: {self.target}. Must be from {{0, 1, 2}}.")
 
-        self.num_targets = self.model.num_relations if self.target == 1 else self.model.num_entities
+        self.num_targets = self.model.num_relations if self.target == 1 else self.model._get_entity_len(mode="train")
 
     def _create_instances(self, triples_factory: CoreTriplesFactory) -> Instances:  # noqa: D102
         return triples_factory.create_lcwa_instances(target=self.target)
@@ -94,7 +94,7 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
         batch_pairs = batch_pairs[start:stop].to(device=self.device)
         batch_labels_full = batch_labels_full[start:stop].to(device=self.device)
 
-        predictions = self.score_method(batch_pairs, slice_size=slice_size)
+        predictions = self.score_method(batch_pairs, slice_size=slice_size, mode="train")
 
         return (
             self.loss.process_lcwa_scores(
