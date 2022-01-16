@@ -155,7 +155,7 @@ class Model(nn.Module, ABC):
 
     @abstractmethod
     def _get_entity_len(self, mode: Mode) -> int:
-        """Select the number of entities depending on the mode parameters"""
+        """Get the number of entities depending on the mode parameters."""
         raise NotImplementedError
 
     def post_parameter_update(self) -> None:
@@ -630,8 +630,7 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
         if autoreset:
             _add_post_reset_parameters(cls)
 
-    def _get_entity_len(self, mode: Mode = None) -> int:
-        """Select the number of entities depending on the mode parameters"""
+    def _get_entity_len(self, mode: Mode = None) -> int:  # noqa:D105
         return self.num_entities
 
     def post_parameter_update(self) -> None:
@@ -646,7 +645,9 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
         if self.training:
             self.regularizer.update(*tensors)
 
-    def score_t(self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None, mode: Mode = None) -> torch.FloatTensor:
+    def score_t(
+        self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None, mode: Mode = None
+    ) -> torch.FloatTensor:
         """Forward pass using right side (tail) prediction.
 
         This method calculates the score for all possible tails for each (head, relation) pair.
@@ -671,7 +672,9 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
         scores = expanded_scores.view(hr_batch.shape[0], -1)
         return scores
 
-    def score_h(self, rt_batch: torch.LongTensor, slice_size: Optional[int] = None, mode: Mode = None) -> torch.FloatTensor:
+    def score_h(
+        self, rt_batch: torch.LongTensor, slice_size: Optional[int] = None, mode: Mode = None
+    ) -> torch.FloatTensor:
         """Forward pass using left side (head) prediction.
 
         This method calculates the score for all possible heads for each (relation, tail) pair.
@@ -696,7 +699,9 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
         scores = expanded_scores.view(rt_batch.shape[0], -1)
         return scores
 
-    def score_r(self, ht_batch: torch.LongTensor, slice_size: Optional[int] = None,mode: Mode = None) -> torch.FloatTensor:
+    def score_r(
+        self, ht_batch: torch.LongTensor, slice_size: Optional[int] = None, mode: Mode = None
+    ) -> torch.FloatTensor:
         """Forward pass using middle (relation) prediction.
 
         This method calculates the score for all possible relations for each (head, tail) pair.

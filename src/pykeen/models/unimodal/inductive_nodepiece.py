@@ -3,11 +3,10 @@
 """A wrapper which combines an interaction function with NodePiece entity representations."""
 
 import logging
-from typing import Any, Callable, ClassVar, Mapping, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, ClassVar, Mapping, Optional, Sequence
 
 import torch
 from class_resolver import Hint, HintOrType
-from torch import nn
 
 from .node_piece import _ConcatMLP
 from ..nbase import ERModel, _prepare_representation_module_list
@@ -15,7 +14,7 @@ from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.emb import EmbeddingSpecification, NodePieceRepresentation, SubsetRepresentationModule
 from ...nn.modules import DistMultInteraction, Interaction
 from ...triples.triples_factory import CoreTriplesFactory
-from ...typing import HeadRepresentation, Mode, RelationRepresentation, TailRepresentation, cast
+from ...typing import Mode
 
 __all__ = [
     "InductiveNodePiece",
