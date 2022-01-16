@@ -82,7 +82,6 @@ class Evaluator(ABC):
         slice_size: Optional[int] = None,
         automatic_memory_optimization: bool = True,
         mode: Mode = None,
-        evaluate_func=None,
     ):
         """Initialize the evaluator.
 
@@ -99,7 +98,6 @@ class Evaluator(ABC):
         self.slice_size = slice_size
         self.automatic_memory_optimization = automatic_memory_optimization
         self.mode = mode
-        self.evaluate_func = evaluate if evaluate_func is None else evaluate_func
 
     @classmethod
     def get_normalized_name(cls) -> str:
@@ -186,7 +184,7 @@ class Evaluator(ABC):
                 # Clear the ranks from the current evaluator
                 self.finalize()
 
-        rv = self.evaluate_func(
+        rv = evaluate(
             model=model,
             additional_filter_triples=additional_filter_triples,
             mapped_triples=mapped_triples,
@@ -320,7 +318,7 @@ class Evaluator(ABC):
                 # The cache of the previous run has to be freed to allow accurate memory availability estimates
                 gc.collect()
                 torch.cuda.empty_cache()
-                self.evaluate_func(
+                evaluate(
                     model=model,
                     additional_filter_triples=additional_filter_triples,
                     mapped_triples=mapped_triples,
