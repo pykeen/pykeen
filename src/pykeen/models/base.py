@@ -518,11 +518,7 @@ class Model(nn.Module, ABC):
         # it's much more straightforwards since the inverse triples
         # are implicit here.
         th_batch = ht_batch[:, [1, 0]]
-
-        if slice_size is None:
-            return self.score_r(ht_batch=th_batch)
-        else:
-            return self.score_r(ht_batch=th_batch, slice_size=slice_size)  # type: ignore
+        return self.score_r(ht_batch=th_batch, slice_size=slice_size)
 
     def score_h_inverse(self, rt_batch: torch.LongTensor, slice_size: Optional[int] = None):
         """Score all heads for a batch of (r,t)-pairs using the tail predictions for the inverses $(t,r_{inv},*)$."""
