@@ -689,6 +689,7 @@ def evaluate(
                     restrict_entities_to=restrict_entities_to,
                     positive_masks_required=positive_masks_required,
                     filtering_necessary=filtering_necessary,
+                    mode=mode,
                 )
 
             # If we only probe sizes we do not need more than one batch
@@ -727,6 +728,7 @@ def _evaluate_batch(
     restrict_entities_to: Optional[torch.LongTensor],
     positive_masks_required: bool,
     filtering_necessary: bool,
+    mode: Mode = None,
 ) -> torch.BoolTensor:
     """
     Evaluate batch for all head predictions(column=0), or all tail predictions (column=2).
@@ -762,9 +764,9 @@ def _evaluate_batch(
 
     # Predict scores once
     if column == 2:  # tail scores
-        batch_scores_of_corrupted = model.predict_t(batch[:, 0:2], slice_size=slice_size)
+        batch_scores_of_corrupted = model.predict_t(batch[:, 0:2], slice_size=slice_size, mode=mode)
     else:
-        batch_scores_of_corrupted = model.predict_h(batch[:, 1:3], slice_size=slice_size)
+        batch_scores_of_corrupted = model.predict_h(batch[:, 1:3], slice_size=slice_size, mode=mode)
 
     # Select scores of true
     batch_scores_of_true = batch_scores_of_corrupted[
