@@ -4,7 +4,6 @@
 
 import ftplib
 import functools
-import inspect
 import itertools as itt
 import json
 import logging
@@ -857,11 +856,6 @@ def unpack_singletons(*xs: Tuple[X]) -> Sequence[Union[X, Tuple[X]]]:
     (1, (1, 2), (1, 2, 3))
     """
     return tuple(x[0] if len(x) == 1 else x for x in xs)
-
-
-def _can_slice(fn) -> bool:
-    """Check if a model's score_X function can slice."""
-    return "slice_size" in inspect.getfullargspec(fn).args
 
 
 def extend_batch(

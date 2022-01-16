@@ -60,6 +60,10 @@ class _NewAbstractModel(Model, ABC):
     #: The default parameters for the default regularizer class
     regularizer_default_kwargs: ClassVar[Optional[Mapping[str, Any]]] = None
 
+    can_slice_h = True
+    can_slice_r = True
+    can_slice_t = True
+
     def _reset_parameters_(self):  # noqa: D401
         """Reset all parameters of the model in-place."""
         # cf. https://github.com/mberr/ea-sota-comparison/blob/6debd076f93a329753d819ff4d01567a23053720/src/kgm/utils/torch_utils.py#L317-L372   # noqa:E501

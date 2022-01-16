@@ -24,7 +24,7 @@ from ..nn.emb import Embedding, EmbeddingSpecification, RepresentationModule
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import CoreTriplesFactory, relation_inverter
 from ..typing import DeviceHint, ScorePack
-from ..utils import NoRandomSeedNecessary, _can_slice, extend_batch, resolve_device, set_random_seed
+from ..utils import NoRandomSeedNecessary, extend_batch, resolve_device, set_random_seed
 
 __all__ = [
     "Model",
@@ -62,6 +62,10 @@ class Model(nn.Module, ABC):
     num_entities: int
     num_relations: int
     use_inverse_triples: bool
+
+    can_slice_h: ClassVar[bool]
+    can_slice_r: ClassVar[bool]
+    can_slice_t: ClassVar[bool]
 
     def __init__(
         self,
@@ -126,23 +130,6 @@ class Model(nn.Module, ABC):
         """
         if not inspect.isabstract(cls):
             parse_docdata(cls)
-
-    """Properties"""
-
-    @property
-    def can_slice_h(self) -> bool:
-        """Whether score_h supports slicing."""
-        return _can_slice(self.score_h)
-
-    @property
-    def can_slice_r(self) -> bool:
-        """Whether score_r supports slicing."""
-        return _can_slice(self.score_r)
-
-    @property
-    def can_slice_t(self) -> bool:
-        """Whether score_t supports slicing."""
-        return _can_slice(self.score_t)
 
     def reset_parameters_(self):  # noqa: D401
         """Reset all parameters of the model and enforce model constraints."""
@@ -537,6 +524,10 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
     #: The instance of the regularizer
     regularizer: Regularizer  # type: ignore
 
+    can_slice_h = False
+    can_slice_r = False
+    can_slice_t = False
+
     def __init__(
         self,
         triples_factory: CoreTriplesFactory,
@@ -599,18 +590,6 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
         """
         if self.training:
             self.regularizer.update(*tensors)
-
-    @property
-    def can_slice_h(self) -> bool:  # noqa:D102
-        return False
-
-    @property
-    def can_slice_r(self) -> bool:  # noqa:D102
-        return False
-
-    @property
-    def can_slice_t(self) -> bool:  # noqa:D102
-        return False
 
     def score_t(self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:
         """Forward pass using right side (tail) prediction.

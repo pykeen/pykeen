@@ -885,7 +885,7 @@ class InverseRelationPredictionTests(unittest_templates.GenericTestCase[pykeen.m
             t=torch.arange(self.factory.num_entities).unsqueeze(dim=0),
         )
         scores = self.instance.predict_h(rt_batch=rt_batch)
-        self.assertTrue(torch.allclose(scores, expected_scores))
+        assert torch.allclose(scores, expected_scores)
 
     def test_predict_r(self):
         """Test predict_r."""

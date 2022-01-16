@@ -21,6 +21,10 @@ __all__ = [
 class EvaluationOnlyModel(Model, ABC):
     """A model which only implements the methods used for evaluation."""
 
+    can_slice_h = False
+    can_slice_r = False
+    can_slice_t = False
+
     def __init__(self, triples_factory: CoreTriplesFactory):
         """Non-parametric models take a minimal set of arguments.
 
