@@ -288,7 +288,7 @@ class Model(nn.Module, ABC):
         # when trained on inverse relations, the internal relation ID is twice the original relation ID
         return relation_inverter.map(batch=batch, index=index_relation, invert=False)
 
-    def predict_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:
+    def predict_hrt(self, hrt_batch: torch.LongTensor, mode: Mode = None) -> torch.FloatTensor:
         """Calculate the scores for triples.
 
         This method takes head, relation and tail of each triple and calculates the corresponding score.
