@@ -533,8 +533,7 @@ class Model(nn.Module, ABC):
 
     def score_r_inverse(self, ht_batch: torch.LongTensor, slice_size: Optional[int] = None):
         """Score all rels for a batch of (h,t)-pairs using the rel predictions for the inverses $(t,*_{inv},h)$."""
-        # TODO how should inversion be done?
-        th_batch = ...
+        th_batch = ht_batch[:, [1, 0]]
 
         if slice_size is None:
             return self.score_r(ht_batch=th_batch)
