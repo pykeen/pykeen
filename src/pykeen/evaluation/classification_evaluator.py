@@ -105,6 +105,18 @@ class ClassificationEvaluator(Evaluator):
 
         self._process_scores(keys=hrt_batch[:, :2], scores=scores, positive_mask=dense_positive_mask, head_side=False)
 
+    def process_relation_scores_(
+        self,
+        hrt_batch: MappedTriples,
+        true_scores: torch.FloatTensor,
+        scores: torch.FloatTensor,
+        dense_positive_mask: Optional[torch.FloatTensor] = None,
+    ) -> None:  # noqa: D102
+        if dense_positive_mask is None:
+            raise KeyError("Sklearn evaluators need the positive mask!")
+
+        raise NotImplementedError
+
     def process_head_scores_(
         self,
         hrt_batch: MappedTriples,

@@ -529,6 +529,15 @@ class RankBasedEvaluator(Evaluator):
     ) -> None:  # noqa: D102
         self._update_ranks_(true_scores=true_scores, all_scores=scores, side=SIDE_TAIL)
 
+    def process_relation_scores_(
+        self,
+        hrt_batch: MappedTriples,
+        true_scores: torch.FloatTensor,
+        scores: torch.FloatTensor,
+        dense_positive_mask: Optional[torch.FloatTensor] = None,
+    ) -> None:  # noqa: D102
+        raise NotImplementedError
+
     def process_head_scores_(
         self,
         hrt_batch: MappedTriples,
