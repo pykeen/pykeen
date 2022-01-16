@@ -524,7 +524,7 @@ def replicate_pipeline_from_config(
 
 def _iterate_moved(pipeline_results: Iterable[PipelineResult]):
     for pipeline_result in pipeline_results:
-        pipeline_result.model.to(resolve_device("cpu"))  # FIXME make in-place
+        pipeline_result.model = pipeline_result.model.cpu()
         torch.cuda.empty_cache()
         yield pipeline_result
 
