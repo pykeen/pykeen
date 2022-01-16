@@ -317,7 +317,8 @@ class Model(nn.Module, ABC):
         rt_batch = self._prepare_batch(batch=rt_batch, index_relation=0)
         if self.use_inverse_triples:
             scores = self.score_h_inverse(rt_batch=rt_batch, slice_size=slice_size)
-        scores = self.score_h(rt_batch, slice_size=slice_size)
+        else:
+            scores = self.score_h(rt_batch, slice_size=slice_size)
         if self.predict_with_sigmoid:
             scores = torch.sigmoid(scores)
         return scores
