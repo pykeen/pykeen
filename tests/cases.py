@@ -1709,6 +1709,17 @@ class EvaluatorTestCase(unittest.TestCase):
             dense_positive_mask=mask,
         )
 
+    def test_process_relation_scores_(self) -> None:
+        """Test the evaluator's ``process_relation_scores_()`` function."""
+        hrt_batch, scores, mask = self._get_input()
+        true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, 1]][:, None]
+        self.evaluator.process_relation_scores_(
+            hrt_batch=hrt_batch,
+            true_scores=true_scores,
+            scores=scores,
+            dense_positive_mask=mask,
+        )
+
     def test_process_head_scores_(self) -> None:
         """Test the evaluator's ``process_head_scores_()`` function."""
         hrt_batch, scores, mask = self._get_input(inverse=True)
