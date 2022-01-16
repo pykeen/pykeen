@@ -391,9 +391,9 @@ class Model(nn.Module, ABC):
         """
         self.eval()  # Enforce evaluation mode
         ht_batch = ht_batch.to(self.device)
-        # TODO is this applicable?
-        # if self.use_inverse_triples:
-        #     scores = self.score_r_inverse(ht_batch=ht_batch, slice_size=slice_size)
+        # Checking for self.inverse is not necessary since we have score_h_inverse.
+        # Since we have inverse triples, where the order of entities is inverted,
+        # and the relation replaced by an inverse relation.
         if slice_size is None:
             scores = self.score_r(ht_batch)
         else:
