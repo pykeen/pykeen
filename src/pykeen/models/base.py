@@ -630,9 +630,9 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
         if autoreset:
             _add_post_reset_parameters(cls)
 
-    def _get_entity_len(self, mode: Mode = None):
+    def _get_entity_len(self, mode: Mode = None) -> int:
         """Select the number of entities depending on the mode parameters"""
-        raise self.num_entities
+        return self.num_entities
 
     def post_parameter_update(self) -> None:
         """Has to be called after each parameter update."""
@@ -646,7 +646,7 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
         if self.training:
             self.regularizer.update(*tensors)
 
-    def score_t(self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:
+    def score_t(self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None, mode: Mode = None) -> torch.FloatTensor:
         """Forward pass using right side (tail) prediction.
 
         This method calculates the score for all possible tails for each (head, relation) pair.
@@ -666,12 +666,12 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
         # Extend the hr_batch such that each (h, r) pair is combined with all possible tails
         hrt_batch = extend_batch(batch=hr_batch, all_ids=list(self._entity_ids), dim=2)
         # Calculate the scores for each (h, r, t) triple using the generic interaction function
-        expanded_scores = self.score_hrt(hrt_batch=hrt_batch)
+        expanded_scores = self.score_hrt(hrt_batch=hrt_batch, mode=mode)
         # Reshape the scores to match the pre-defined output shape of the score_t function.
         scores = expanded_scores.view(hr_batch.shape[0], -1)
         return scores
 
-    def score_h(self, rt_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:
+    def score_h(self, rt_batch: torch.LongTensor, slice_size: Optional[int] = None, mode: Mode = None) -> torch.FloatTensor:
         """Forward pass using left side (head) prediction.
 
         This method calculates the score for all possible heads for each (relation, tail) pair.
@@ -691,12 +691,12 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
         # Extend the rt_batch such that each (r, t) pair is combined with all possible heads
         hrt_batch = extend_batch(batch=rt_batch, all_ids=list(self._entity_ids), dim=0)
         # Calculate the scores for each (h, r, t) triple using the generic interaction function
-        expanded_scores = self.score_hrt(hrt_batch=hrt_batch)
+        expanded_scores = self.score_hrt(hrt_batch=hrt_batch, mode=mode)
         # Reshape the scores to match the pre-defined output shape of the score_h function.
         scores = expanded_scores.view(rt_batch.shape[0], -1)
         return scores
 
-    def score_r(self, ht_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:
+    def score_r(self, ht_batch: torch.LongTensor, slice_size: Optional[int] = None,mode: Mode = None) -> torch.FloatTensor:
         """Forward pass using middle (relation) prediction.
 
         This method calculates the score for all possible relations for each (head, tail) pair.
@@ -716,7 +716,7 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
         # Extend the ht_batch such that each (h, t) pair is combined with all possible relations
         hrt_batch = extend_batch(batch=ht_batch, all_ids=list(self._relation_ids), dim=1)
         # Calculate the scores for each (h, r, t) triple using the generic interaction function
-        expanded_scores = self.score_hrt(hrt_batch=hrt_batch)
+        expanded_scores = self.score_hrt(hrt_batch=hrt_batch, mode=mode)
         # Reshape the scores to match the pre-defined output shape of the score_r function.
         scores = expanded_scores.view(ht_batch.shape[0], -1)
         return scores
