@@ -180,6 +180,9 @@ class _NewAbstractModel(Model, ABC):
 
         :param hrt_batch: shape: (batch_size, 3), dtype: long
             The indices of (head, relation, tail) triples.
+        :param mode:
+            The pass mode. Is None for transductive and either "train" or
+            "eval" in inductive.
 
         :return: shape: (batch_size, 1), dtype: float
             The score for each triple.
