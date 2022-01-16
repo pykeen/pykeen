@@ -46,6 +46,15 @@ class MockEvaluator(Evaluator):
     ) -> None:  # noqa: D102
         pass
 
+    def process_relation_scores_(
+        self,
+        hrt_batch: MappedTriples,
+        true_scores: torch.FloatTensor,
+        scores: torch.FloatTensor,
+        dense_positive_mask: Optional[torch.FloatTensor] = None,
+    ) -> None:  # noqa: D102
+        pass
+
     def process_head_scores_(
         self,
         hrt_batch: MappedTriples,
