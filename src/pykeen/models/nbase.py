@@ -166,8 +166,7 @@ class _NewAbstractModel(Model, ABC):
         :param slice_dim:
             The dimension along which to slice. From {"h", "r", "t"}.
         :param mode:
-            The pass mode. Is None for transductive and either "train" or
-            "eval" in inductive.
+            The pass mode. Is None for transductive and "train" / "valid" / "test" in inductive.
 
         :return: shape: (batch_size, num_heads, num_relations, num_tails)
             The score for each triple.
@@ -181,8 +180,7 @@ class _NewAbstractModel(Model, ABC):
         :param hrt_batch: shape: (batch_size, 3), dtype: long
             The indices of (head, relation, tail) triples.
         :param mode:
-            The pass mode. Is None for transductive and either "train" or
-            "eval" in inductive.
+            The pass mode. Is None for transductive and "train" / "valid" / "test" in inductive.
 
         :return: shape: (batch_size, 1), dtype: float
             The score for each triple.
@@ -473,8 +471,7 @@ class ERModel(
         :param slice_dim:
             The dimension along which to slice. From {"h", "r", "t"}
         :param mode:
-            The pass mode. Is None for transductive and either "train" or
-            "eval" in inductive.
+            The pass mode. Is None for transductive and "train" / "valid" / "test" in inductive.
 
         :return: shape: (batch_size, num_heads, num_relations, num_tails)
             The score for each triple.
