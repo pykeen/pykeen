@@ -1,12 +1,13 @@
 """Sampled evaluator from [teru2020]_."""
 from collections import defaultdict
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Optional
 
 import numpy as np
 import torch
 
-from .rank_based_evaluator import RankBasedEvaluator, compute_rank_from_scores
+from .rank_based_evaluator import RankBasedEvaluator, compute_rank_from_scores, SIDE_HEAD, SIDE_TAIL
 from ..triples import CoreTriplesFactory
+from ..triples.triples_factory import MappedTriples
 
 
 def sample_negatives(
@@ -130,26 +131,50 @@ class RestrictedRankBasedEvaluator(RankBasedEvaluator):
                 valid_triples=validation_factory, all_pos=all_pos, num_samples=num_negatives
             )
 
-        # TODO an ugly hack for torch.gather and update_ranks
-        self.batch_size = validation_factory.mapped_triples.shape[0] + 1
 
     def _update_ranks_(
         self,
         true_scores: torch.FloatTensor,
         all_scores: torch.FloatTensor,
         side: str,
+        triples: MappedTriples = None,
     ) -> None:
         """Shared code for updating the stored ranks for head/tail scores.
 
         :param true_scores: shape: (batch_size,)
         :param all_scores: shape: (batch_size, num_entities)
+        :param side: head/tail
+        :param triples: actual triples in a batch on which we are evaluating, needed for dict lookup
         """
-        # TODO right now only works in the full-batch eval mode when eval batch size >= number of eval triples
-        sampled_entities = self.head_samples if side == "head" else self.tail_samples
+
+        # land on a cpu for dictionary lookup
+        triples = triples.cpu().tolist()
+        sampled_entities = torch.stack([
+            self.negs_dict[side][tuple(triple)] for triple in triples
+        ], dim=0).to(all_scores.device)
+
         batch_ranks = compute_rank_from_scores(
             true_score=true_scores,
-            all_scores=all_scores.gather(1, sampled_entities.to(all_scores.device)),
+            all_scores=all_scores.gather(1, sampled_entities),
         )
         self.num_entities = all_scores.shape[1]
         for k, v in batch_ranks.items():
             self.ranks[side, k].extend(v.detach().cpu().tolist())
+
+    def process_tail_scores_(
+        self,
+        hrt_batch: MappedTriples,
+        true_scores: torch.FloatTensor,
+        scores: torch.FloatTensor,
+        dense_positive_mask: Optional[torch.FloatTensor] = None,
+    ) -> None:  # noqa: D102
+        self._update_ranks_(true_scores=true_scores, all_scores=scores, side=SIDE_TAIL, triples=hrt_batch)
+
+    def process_head_scores_(
+        self,
+        hrt_batch: MappedTriples,
+        true_scores: torch.FloatTensor,
+        scores: torch.FloatTensor,
+        dense_positive_mask: Optional[torch.FloatTensor] = None,
+    ) -> None:  # noqa: D102
+        self._update_ranks_(true_scores=true_scores, all_scores=scores, side=SIDE_HEAD, triples=hrt_batch)
