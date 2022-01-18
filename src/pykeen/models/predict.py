@@ -296,7 +296,7 @@ def predict(model: Model, *, k: Optional[int] = None, batch_size: int = 1) -> Sc
     :return: A score pack of parallel triples and scores
     """
     logger.warning(
-        f"_predict is an expensive operation, involving {model.num_entities ** 2 * model.real_num_relations} "
+        f"_predict is an expensive operation, involving {model.num_entities ** 2 * model.num_real_relations} "
         f"score evaluations.",
     )
 
@@ -451,10 +451,9 @@ def _consume_scores(model: Model, *consumers: _ScoreConsumer, batch_size: int = 
     # set model to evaluation mode
     model.eval()
 
-    # TODO: fix code for inverse relations
     for r, h_start in tqdm(
         itt.product(
-            range(model.real_num_relations),
+            range(model.num_real_relations),
             range(0, model.num_entities, batch_size),
         ),
         desc="scoring",

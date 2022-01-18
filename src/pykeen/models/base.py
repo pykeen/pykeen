@@ -121,7 +121,7 @@ class Model(nn.Module, ABC):
         self.predict_with_sigmoid = predict_with_sigmoid
 
     @property
-    def real_num_relations(self) -> int:
+    def num_real_relations(self) -> int:
         """Return the real number of relations (without inverses)."""
         if self.use_inverse_triples:
             return self.num_relations // 2
