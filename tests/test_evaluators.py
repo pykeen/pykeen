@@ -9,6 +9,7 @@ from operator import attrgetter
 from typing import Dict, Optional
 
 import numpy
+import pandas
 import torch
 
 from pykeen.datasets import Nations
@@ -25,6 +26,7 @@ from pykeen.evaluation.rank_based_evaluator import (
     SIDES,
     compute_rank_from_scores,
     resolve_metric_name,
+    sample_negatives,
 )
 from pykeen.models import FixedModel
 from pykeen.typing import MappedTriples
@@ -474,3 +476,26 @@ def test_resolve_metric_name():
     ):
         result = resolve_metric_name(name=name)
         assert result == expected, name
+
+
+def test_sample_negatives():
+    """Test for sample_negatives."""
+    dataset = Nations()
+    num_negatives = 2
+    evaluation_triples = dataset.validation.mapped_triples
+    index_df, head_negatives, tail_negatives = sample_negatives(
+        evaluation_triples=evaluation_triples,
+        additional_filter_triples=dataset.training.mapped_triples,
+        num_entities=dataset.num_entities,
+        num_samples=num_negatives,
+    )
+    num_triples = evaluation_triples.shape[0]
+    assert isinstance(index_df, pandas.DataFrame)
+    assert set(index_df.columns) == {"index", "head", "relation", "tail"}
+    assert index_df.shape[0] == num_triples
+    for negatives in (head_negatives, tail_negatives):
+        assert torch.is_tensor(negatives)
+        assert negatives.dtype == torch.long
+        assert negatives.shape == (num_triples, num_negatives)
+        # TODO: check true filter triple
+        # TODO: check no repetitions (if possible)

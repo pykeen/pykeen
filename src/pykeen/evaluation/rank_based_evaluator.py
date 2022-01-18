@@ -624,26 +624,35 @@ def sample_negatives(
         - tail_negatives: shape: (n, num_negatives)
             the negatives for tail prediction
     """
-    df = pd.DataFrame(data=evaluation_triples.numpy(), columns=["head", "relation", "tail"])
+    columns = ["head", "relation", "tail"]
+    num_triples = evaluation_triples.shape[0]
+    df = pd.DataFrame(data=evaluation_triples.numpy(), columns=columns)
     id_df = df.reset_index()
     all_df = pd.concat(
         [
-            id_df,
-            pd.DataFrame(
-                data=additional_filter_triples.numpy(),
-                columns=["head", "relation", "tail"],
-            ),
+            df,
+            pd.DataFrame(data=additional_filter_triples.numpy(), columns=columns),
         ],
         ignore_index=True,
     )
-    num_triples = evaluation_triples.shape[0]
-    head_negatives, tail_negatives = [torch.empty(size=(num_triples, num_samples), dtype=torch.long) for _ in "ht"]
     all_ids = set(range(num_entities))
-    # tail samples
-    for _, group in pd.merge(id_df, all_df, on=["head", "relation"], suffixes=["eval", "all"]).groupby(
-        by=["head", "relation"],
-    ):
-        pool = list(all_ids.difference(set(group["tail"].unique().tolist())))
-        for i in group["index"].unique():
-            tail_negatives[i, :] = torch.as_tensor(data=random.sample(population=pool, k=num_samples), dtype=torch.long)
-    return id_df, head_negatives, tail_negatives
+    negatives = []
+    for side in ["head", "tail"]:
+        this_negatives = torch.empty(size=(num_triples, num_samples), dtype=torch.long)
+        other = [c for c in columns if c != side]
+        for _, group in pd.merge(id_df, all_df, on=other, suffixes=["_eval", "_all"]).groupby(
+            by=other,
+        ):
+            pool = list(all_ids.difference(group[f"{side}_all"].unique().tolist()))
+            if len(pool) < num_samples:
+                logger.warning(f"There are less than num_samples={num_samples} candidates.")
+                # repeat
+                while len(pool) < num_samples:
+                    pool = pool + pool
+            for i in group["index"].unique():
+                this_negatives[i, :] = torch.as_tensor(
+                    data=random.sample(population=pool, k=num_samples),
+                    dtype=torch.long,
+                )
+        negatives.append(this_negatives)
+    return [id_df, *negatives]
