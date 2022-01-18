@@ -78,13 +78,6 @@ This way, we can obtain representations of unseen entities.
 is the same as dimension of final node vectors. Alternative interactions can be integrated with custom
 initialization of the relation representation module.
 
-Another example is NodePiece, which takes inspiration
-from tokenization we encounter in, e.g.. NLP, and represents each entity
-as a set of tokens. The implementation in PyKEEN,
-:class:`pykeen.nn.emb.NodePieceRepresentation`, implements a simple yet
-effective variant thereof, which uses a set of randomly chosen incident
-relations (including inverse relations) as tokens.
-
 .. seealso:: Include link to the Tutorials/Representations page
 
 
