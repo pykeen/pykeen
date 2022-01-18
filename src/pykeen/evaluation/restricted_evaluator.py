@@ -1,16 +1,18 @@
+"""Sampled evaluator from [teru2020]_."""
 from collections import defaultdict
-from typing import Dict, Iterable, List, Optional, Tuple, Union
+from typing import Dict, Tuple
 
 import numpy as np
 import torch
 
-from pykeen.evaluation import RankBasedEvaluator
-from pykeen.evaluation.rank_based_evaluator import compute_rank_from_scores
-from pykeen.triples import TriplesFactory
+from .rank_based_evaluator import RankBasedEvaluator, compute_rank_from_scores
+from ..triples import CoreTriplesFactory
 
 
 def sample_negatives(
-    valid_triples: TriplesFactory, all_pos: TriplesFactory, num_samples: int = 50
+    valid_triples: CoreTriplesFactory,
+    all_pos: CoreTriplesFactory,
+    num_samples: int = 50,
 ) -> Tuple[torch.Tensor, torch.Tensor, Dict]:
 
     """
@@ -21,9 +23,9 @@ def sample_negatives(
 
     Currently, the code is not very efficient in favor of replicating the original behavior
 
-    :param valid_triples: TriplesFactory
+    :param valid_triples: CoreTriplesFactory
         Triples to be evaluated
-    :param all_pos: TriplesFactory
+    :param all_pos: CoreTriplesFactory
         The inference graph on which we run the valid_triples. Needed for filtering
     :param num_samples: int
         Number of random entities to sample
@@ -82,8 +84,8 @@ def sample_negatives(
 class RestrictedRankBasedEvaluator(RankBasedEvaluator):
     def __init__(
         self,
-        validation_factory: TriplesFactory,
-        all_pos: TriplesFactory,
+        validation_factory: CoreTriplesFactory,
+        all_pos: CoreTriplesFactory,
         num_negatives: int = 50,  # default for inductive lp by [teru2020]
         head_samples: torch.Tensor = None,  # shape: [num_valid_triples, n]
         tail_samples: torch.Tensor = None,  # shape: [num_valid_triples, n],
