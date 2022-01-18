@@ -126,9 +126,12 @@ class RestrictedRankBasedEvaluator(RankBasedEvaluator):
         super().__init__(**kwargs)
 
         if head_samples is None or tail_samples is None:
-            self.head_samples, self.tail_samples, self.negs_dict = sample_negatives(
-                valid_triples=validation_factory, all_pos=all_pos, num_samples=num_negatives
+            head_samples, tail_samples, self.negs_dict = sample_negatives(
+                valid_triples=validation_factory,
+                all_pos=all_pos,
+                num_samples=num_negatives,
             )
+        self.head_samples, self.tail_samples = head_samples, tail_samples
 
         # TODO an ugly hack for torch.gather and update_ranks
         self.batch_size = validation_factory.mapped_triples.shape[0] + 1
