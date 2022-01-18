@@ -1,17 +1,16 @@
-import torch
-import numpy as np
-
-from typing import Optional, Iterable, Union, Dict, Tuple, List
 from collections import defaultdict
+from typing import Dict, Iterable, List, Optional, Tuple, Union
+
+import numpy as np
+import torch
+
 from pykeen.evaluation import RankBasedEvaluator
 from pykeen.evaluation.rank_based_evaluator import compute_rank_from_scores
 from pykeen.triples import TriplesFactory
 
 
 def sample_negatives(
-        valid_triples: TriplesFactory,
-        all_pos: TriplesFactory,
-        num_samples: int = 50
+    valid_triples: TriplesFactory, all_pos: TriplesFactory, num_samples: int = 50
 ) -> Tuple[torch.Tensor, torch.Tensor, Dict]:
 
     """
@@ -79,8 +78,8 @@ def sample_negatives(
 
     return head_samples, tail_samples, negs_dict
 
-class RestrictedRankBasedEvaluator(RankBasedEvaluator):
 
+class RestrictedRankBasedEvaluator(RankBasedEvaluator):
     def __init__(
         self,
         validation_factory: TriplesFactory,
@@ -88,7 +87,7 @@ class RestrictedRankBasedEvaluator(RankBasedEvaluator):
         num_negatives: int = 50,  # default for inductive lp by [teru2020]
         head_samples: torch.Tensor = None,  # shape: [num_valid_triples, n]
         tail_samples: torch.Tensor = None,  # shape: [num_valid_triples, n],
-        **kwargs
+        **kwargs,
     ):
         """Restricted version of the rank-based evaluator.
         This evaluator can replicate the behavior of the inductive LP evaluator by [teru2020]
@@ -126,14 +125,11 @@ class RestrictedRankBasedEvaluator(RankBasedEvaluator):
 
         if head_samples is None or tail_samples is None:
             self.head_samples, self.tail_samples, self.negs_dict = sample_negatives(
-                valid_triples=validation_factory,
-                all_pos=all_pos,
-                num_samples=num_negatives
+                valid_triples=validation_factory, all_pos=all_pos, num_samples=num_negatives
             )
 
         # TODO an ugly hack for torch.gather and update_ranks
         self.batch_size = validation_factory.mapped_triples.shape[0] + 1
-
 
     def _update_ranks_(
         self,
