@@ -1,11 +1,13 @@
 """Sampled evaluator from [teru2020]_."""
 from collections import defaultdict
-from typing import Dict, Tuple
+from typing import Dict, Optional, Tuple
 
 import numpy as np
 import torch
 
-from .rank_based_evaluator import RankBasedEvaluator, compute_rank_from_scores
+from pykeen.typing import MappedTriples
+
+from .rank_based_evaluator import SIDE_HEAD, SIDE_TAIL, RankBasedEvaluator, compute_rank_from_scores
 from ..triples import CoreTriplesFactory
 
 
@@ -14,14 +16,14 @@ def sample_negatives(
     all_pos: CoreTriplesFactory,
     num_samples: int = 50,
 ) -> Tuple[torch.Tensor, torch.Tensor, Dict]:
-
     """
-    Samples num_samples _filtered_ negative entities, ie, we make sure
-    triples with sampled heads / tails do not exist in the input graph.
-    For the inductive LP setup, the input graph is supposed to be inductive_inference graph,
-    not transductive_training.
+    Samples num_samples _filtered_ negative entities.
 
-    Currently, the code is not very efficient in favor of replicating the original behavior
+    We make sure that triples with sampled heads / tails do not exist in the input graph.
+    For the inductive LP setup, the input graph is supposed to be inductive inference graph,
+    not transductive training.
+
+    Currently, the code is not very efficient in favor of replicating the original behavior.
 
     :param valid_triples: CoreTriplesFactory
         Triples to be evaluated
@@ -126,7 +128,7 @@ class RestrictedRankBasedEvaluator(RankBasedEvaluator):
         super().__init__(**kwargs)
 
         if head_samples is None or tail_samples is None:
-            head_samples, tail_samples, self.negs_dict = sample_negatives(
+            head_samples, tail_samples, _ = sample_negatives(
                 valid_triples=validation_factory,
                 all_pos=all_pos,
                 num_samples=num_negatives,
@@ -136,23 +138,28 @@ class RestrictedRankBasedEvaluator(RankBasedEvaluator):
         # TODO an ugly hack for torch.gather and update_ranks
         self.batch_size = validation_factory.mapped_triples.shape[0] + 1
 
-    def _update_ranks_(
+    def process_head_scores_(
         self,
+        hrt_batch: MappedTriples,
         true_scores: torch.FloatTensor,
-        all_scores: torch.FloatTensor,
-        side: str,
+        scores: torch.FloatTensor,
+        dense_positive_mask: Optional[torch.FloatTensor] = None,
     ) -> None:
-        """Shared code for updating the stored ranks for head/tail scores.
+        # TODO: do not require to compute all scores beforehand
+        # TODO: select negative sample scores from all scores
+        scores = ...
+        self._update_ranks_(true_scores=true_scores, all_scores=scores, side=SIDE_HEAD)
+        self.num_entities = scores.shape[1]
 
-        :param true_scores: shape: (batch_size,)
-        :param all_scores: shape: (batch_size, num_entities)
-        """
-        # TODO right now only works in the full-batch eval mode when eval batch size >= number of eval triples
-        sampled_entities = self.head_samples if side == "head" else self.tail_samples
-        batch_ranks = compute_rank_from_scores(
-            true_score=true_scores,
-            all_scores=all_scores.gather(1, sampled_entities.to(all_scores.device)),
-        )
-        self.num_entities = all_scores.shape[1]
-        for k, v in batch_ranks.items():
-            self.ranks[side, k].extend(v.detach().cpu().tolist())
+    def process_tail_scores_(
+        self,
+        hrt_batch: MappedTriples,
+        true_scores: torch.FloatTensor,
+        scores: torch.FloatTensor,
+        dense_positive_mask: Optional[torch.FloatTensor] = None,
+    ) -> None:
+        # TODO: do not require to compute all scores beforehand
+        # TODO: select negative sample scores from all scores
+        scores = ...
+        self._update_ranks_(true_scores=true_scores, all_scores=scores, side=SIDE_TAIL)
+        self.num_entities = scores.shape[1]
