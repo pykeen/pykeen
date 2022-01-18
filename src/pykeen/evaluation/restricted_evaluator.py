@@ -82,6 +82,23 @@ def sample_negatives(
     return head_samples, tail_samples, negs_dict
 
 
+def generate_dict(
+        valid_triples: CoreTriplesFactory,
+        head_samples: torch.Tensor,
+        tail_samples: torch.Tensor
+) -> Dict:
+    """
+    A small function to create a dictionary of triple -> negative entities for head and tail sides
+    """
+    val_triples = valid_triples.mapped_triples
+    negs_dict = {}
+    for triple, head_sample, tail_sample in zip(val_triples, head_samples, tail_samples):
+        negs_dict["head"][tuple(triple.tolsit())] = head_sample
+        negs_dict["tail"][tuple(triple.tolsit())] = tail_sample
+
+    return negs_dict
+
+
 class RestrictedRankBasedEvaluator(RankBasedEvaluator):
     def __init__(
         self,
@@ -130,6 +147,9 @@ class RestrictedRankBasedEvaluator(RankBasedEvaluator):
             self.head_samples, self.tail_samples, self.negs_dict = sample_negatives(
                 valid_triples=validation_factory, all_pos=all_pos, num_samples=num_negatives
             )
+        else:
+            self.head_samples, self.tail_samples = head_samples, tail_samples
+            self.negs_dict = generate_dict(validation_factory, head_samples, tail_samples)
 
 
     def _update_ranks_(
