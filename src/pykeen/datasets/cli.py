@@ -184,8 +184,8 @@ def verify(dataset: str):
     """Verify dataset integrity."""
     data = []
     keys = None
-    for name, dataset in _iter_datasets(regex_name_filter=dataset):
-        dataset_instance = get_dataset(dataset=dataset)
+    for name, dataset_cls in _iter_datasets(regex_name_filter=dataset):
+        dataset_instance = get_dataset(dataset=dataset_cls)
         data.append(
             list(
                 itt.chain(
