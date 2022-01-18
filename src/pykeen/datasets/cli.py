@@ -57,12 +57,12 @@ def _iter_datasets(regex_name_filter=None, max_triples: Optional[int] = None) ->
 
             regex_name_filter = re.compile(regex_name_filter)
         it = [(name, dataset) for name, dataset in it if regex_name_filter.match(name)]
-    it = tqdm(
+    it_tqdm = tqdm(
         it,
         desc="Datasets",
     )
-    for k, v in it:
-        it.set_postfix(name=k)
+    for k, v in it_tqdm:
+        it_tqdm.set_postfix(name=k)
         yield k, v
 
 
