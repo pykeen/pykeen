@@ -4,6 +4,7 @@
 
 import itertools as itt
 import logging
+import random
 import re
 from collections import defaultdict
 from dataclasses import dataclass, field, fields
@@ -595,3 +596,54 @@ class RankBasedEvaluator(Evaluator):
             adjusted_arithmetic_mean_rank_index=dict(asr[ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX]),
             hits_at_k=dict(hits_at_k),
         )
+
+
+def sample_negatives(
+    evaluation_triples: MappedTriples,
+    additional_filter_triples: MappedTriples,  # TODO: update to additional filter triples interface
+    num_entities: int,
+    num_samples: int = 50,
+) -> Tuple[pd.DataFrame, torch.Tensor, torch.Tensor]:
+    """
+    Sample true negatives for sampled evaluation.
+
+    :param evaluation_triples: shape: (n, 3)
+        the evaluation triples
+    :param additional_filter_triples:
+        additional true triples which are to be filtered
+    :param num_samples: >0
+        the number of samples
+
+    :return:
+        a tuple (id_df, head_negatives, tail_negatives) where
+
+        - id_df: head_id | relation_id | tail_id | index
+            a dataframe mapping evaluation triples to their index
+        - head_negatives: shape: (n, num_negatives)
+            the negatives for head prediction
+        - tail_negatives: shape: (n, num_negatives)
+            the negatives for tail prediction
+    """
+    df = pd.DataFrame(data=evaluation_triples.numpy(), columns=["head", "relation", "tail"])
+    id_df = df.reset_index()
+    all_df = pd.concat(
+        [
+            id_df,
+            pd.DataFrame(
+                data=additional_filter_triples.numpy(),
+                columns=["head", "relation", "tail"],
+            ),
+        ],
+        ignore_index=True,
+    )
+    num_triples = evaluation_triples.shape[0]
+    head_negatives, tail_negatives = [torch.empty(size=(num_triples, num_samples), dtype=torch.long) for _ in "ht"]
+    all_ids = set(range(num_entities))
+    # tail samples
+    for _, group in pd.merge(id_df, all_df, on=["head", "relation"], suffixes=["eval", "all"]).groupby(
+        by=["head", "relation"],
+    ):
+        pool = list(all_ids.difference(set(group["tail"].unique().tolist())))
+        for i in group["index"].unique():
+            tail_negatives[i, :] = torch.as_tensor(data=random.sample(population=pool, k=num_samples), dtype=torch.long)
+    return id_df, head_negatives, tail_negatives
