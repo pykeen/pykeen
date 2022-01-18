@@ -11,6 +11,7 @@ from operator import itemgetter
 from typing import Any, ClassVar, Generic, Iterable, List, Mapping, Optional, Sequence, Tuple, Type, Union, cast
 
 import torch
+from class_resolver import HintOrType, OptionalKwargs
 from torch import nn
 
 from .base import Model
@@ -58,6 +59,10 @@ class _NewAbstractModel(Model, ABC):
     regularizer_default: ClassVar[Optional[Type[Regularizer]]] = None
     #: The default parameters for the default regularizer class
     regularizer_default_kwargs: ClassVar[Optional[Mapping[str, Any]]] = None
+
+    can_slice_h = True
+    can_slice_r = True
+    can_slice_t = True
 
     def _reset_parameters_(self):  # noqa: D401
         """Reset all parameters of the model in-place."""
@@ -175,6 +180,8 @@ class _NewAbstractModel(Model, ABC):
         :return: shape: (batch_size, 1), dtype: float
             The score for each triple.
         """
+        # Note: slicing cannot be used here: the indices for score_hrt only havea batch
+        # dimension, and slicing along this dimension is already considered by sub-batching.
         return self(
             h_indices=hrt_batch[:, 0],
             r_indices=hrt_batch[:, 1],
@@ -332,7 +339,8 @@ class ERModel(
         interaction_kwargs: Optional[Mapping[str, Any]] = None,
         entity_representations: EmbeddingSpecificationHint = None,
         relation_representations: EmbeddingSpecificationHint = None,
-        loss: Optional[Loss] = None,
+        loss: HintOrType[Loss] = None,
+        loss_kwargs: OptionalKwargs = None,
         predict_with_sigmoid: bool = False,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
@@ -350,6 +358,9 @@ class ERModel(
         :param relation_representations: The relation representation or sequence of representations
         :param loss:
             The loss to use. If None is given, use the loss default specific to the model subclass.
+        :param loss_kwargs:
+            Additional key-word based parameters given to the loss module's constructor, if not already
+            instantiated.
         :param predict_with_sigmoid:
             Whether to apply sigmoid onto the scores when predicting scores. Applying sigmoid at prediction time may
             lead to exactly equal scores for certain triples with very high, or very low score. When not trained with
@@ -364,6 +375,7 @@ class ERModel(
         super().__init__(
             triples_factory=triples_factory,
             loss=loss,
+            loss_kwargs=loss_kwargs,
             preferred_device=preferred_device,
             random_seed=random_seed,
             predict_with_sigmoid=predict_with_sigmoid,

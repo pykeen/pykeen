@@ -15,7 +15,7 @@ from tqdm.auto import tqdm
 
 from .base import Model
 from ..triples import CoreTriplesFactory, TriplesFactory
-from ..triples.utils import tensor_to_df
+from ..triples.utils import tensor_to_df, triple_tensor_to_set
 from ..typing import LabeledTriples, MappedTriples, ScorePack
 from ..utils import is_cuda_oom_error
 
@@ -258,7 +258,7 @@ def get_all_prediction_df(
 
     Example usage:
 
-    .. code-block:: python
+    .. code-block::
 
         from pykeen.pipeline import pipeline
         from pykeen.models.predict import get_all_prediction_df
@@ -600,7 +600,7 @@ def get_novelty_all_mask(
     query: np.ndarray,
 ) -> np.ndarray:
     """Get novelty mask."""
-    known = {tuple(triple) for triple in mapped_triples.tolist()}
+    known = triple_tensor_to_set(mapped_triples)
     return np.asarray(
         [tuple(triple) not in known for triple in query],
         dtype=bool,
@@ -667,16 +667,6 @@ def predict_triples_df(
     """
     Predict on labeled or mapped triples.
 
-    Example:
-    >>> from pykeen.pipeline import pipeline
-    >>> result = pipeline(dataset="nations", model="TransE")
-    >>> from pykeen.models.predict import predict_triples_df
-    >>> df = predict_triples_df(
-    ...     model=result.model,
-    ...     triples=("uk", "conferences", "brazil"),
-    ...     triples_factory=result.training,
-    ... )
-
     :param model:
         The model.
     :param triples: shape: (num_triples, 3)
@@ -699,6 +689,17 @@ def predict_triples_df(
 
     :raises ValueError:
         If label-based triples have been provided, but the triples factory does not provide a mapping.
+
+    The TransE model can be trained and used to predict a given triple.
+
+    >>> from pykeen.pipeline import pipeline
+    >>> result = pipeline(dataset="nations", model="TransE")
+    >>> from pykeen.models.predict import predict_triples_df
+    >>> df = predict_triples_df(
+    ...     model=result.model,
+    ...     triples=("uk", "conferences", "brazil"),
+    ...     triples_factory=result.training,
+    ... )
     """
     if triples is None:
         if triples_factory is None:

@@ -4,17 +4,19 @@
 
 import logging
 import unittest
-from typing import Tuple, Union
+from typing import Any, MutableMapping, Sequence, Tuple, Union
 from unittest import SkipTest
 
 import numpy
 import torch
 import unittest_templates
+from torch import nn
 
 import pykeen.nn.modules
 import pykeen.utils
 from pykeen.nn.functional import _rotate_quaternion, _split_quaternion, distmult_interaction
-from pykeen.utils import clamp_norm, project_entity, strip_dim, view_complex
+from pykeen.typing import Sign
+from pykeen.utils import clamp_norm, ensure_tuple, project_entity, strip_dim, view_complex
 from tests import cases
 
 logger = logging.getLogger(__name__)
@@ -384,7 +386,7 @@ class TransRTests(cases.TranslationalInteractionTests):
 class SETests(cases.TranslationalInteractionTests):
     """Tests for SE interaction function."""
 
-    cls = pykeen.nn.modules.StructuredEmbeddingInteraction
+    cls = pykeen.nn.modules.SEInteraction
 
     def _exp_score(self, h, t, r_h, r_t, p, power_norm) -> torch.FloatTensor:
         assert not power_norm
@@ -398,7 +400,7 @@ class SETests(cases.TranslationalInteractionTests):
 class UMTests(cases.TranslationalInteractionTests):
     """Tests for UM interaction function."""
 
-    cls = pykeen.nn.modules.UnstructuredModelInteraction
+    cls = pykeen.nn.modules.UMInteraction
 
     def _exp_score(self, h, t, p, power_norm) -> torch.FloatTensor:
         assert power_norm
@@ -512,6 +514,40 @@ class MonotonicAffineTransformationInteractionTests(cases.InteractionTestCase):
             assert (c_t == c_o).all()
 
 
+class TransformerTests(cases.InteractionTestCase):
+    """Tests for the Transformer interaction function."""
+
+    cls = pykeen.nn.modules.TransformerInteraction
+    # dimension needs to be divisible by num_heads
+    dim = 8
+    kwargs = dict(
+        num_heads=2,
+        dim_feedforward=7,
+    )
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        kwargs["input_dim"] = self.dim
+        assert self.dim % kwargs["num_heads"] == 0
+        return kwargs
+
+    def _exp_score(
+        self,
+        h: torch.FloatTensor,
+        r: torch.FloatTensor,
+        t: torch.FloatTensor,
+        transformer: nn.TransformerEncoder,
+        position_embeddings: torch.FloatTensor,
+        final: nn.Module,
+    ) -> torch.FloatTensor:  # noqa: D102
+        h, r, t = strip_dim(h, r, t)
+        x = torch.stack([h, r], dim=0) + position_embeddings
+        x = transformer(src=x.unsqueeze(dim=1))
+        x = x.sum(dim=0)
+        x = final(x).squeeze(dim=0)
+        return (x * t).sum()
+
+
 class InteractionTestsTestCase(unittest_templates.MetaTestCase[pykeen.nn.modules.Interaction]):
     """Test for tests for all interaction functions."""
 
@@ -575,3 +611,44 @@ class ParallelSliceBatchesTest(unittest.TestCase):
             assert len(z_sliced) == len(zs)
             for z_sliced_single, z in zip(z_sliced, zs):
                 self._verify(z_sliced=z_sliced_single, z_shape=z.shape)
+
+
+class TripleRETests(cases.TranslationalInteractionTests):
+    """Tests for TripleRE interaction function."""
+
+    cls = pykeen.nn.modules.TripleREInteraction
+
+    def _exp_score(self, h, r_head, r_mid, r_tail, t, u, p, power_norm) -> torch.FloatTensor:  # noqa: D102
+        assert not power_norm
+        if u is None:
+            u = 0.0
+        #  head * (re_head + self.u * e_h) - tail * (re_tail + self.u * e_t) + re_mid
+        h, r_head, r_mid, r_tail, t = strip_dim(h, r_head, r_mid, r_tail, t)
+        return -(h * (r_head + u * torch.ones_like(r_head)) - t * (r_tail + u * torch.ones_like(r_tail)) + r_mid).norm(
+            p=p,
+        )
+
+
+class AutoSFTests(cases.InteractionTestCase):
+    """Tests for the AutoSF interaction function."""
+
+    cls = pykeen.nn.modules.AutoSFInteraction
+    kwargs = dict(
+        coefficients=(
+            (0, 0, 0, 1),
+            (1, 1, 1, -1),
+        ),
+    )
+
+    def _exp_score(
+        self,
+        h: Sequence[torch.FloatTensor],
+        r: Sequence[torch.FloatTensor],
+        t: Sequence[torch.FloatTensor],
+        coefficients: Sequence[Tuple[int, int, int, Sign]],
+    ) -> torch.FloatTensor:  # noqa: D102
+        h, r, t = ensure_tuple(h, r, t)
+        h = strip_dim(*h)
+        r = strip_dim(*r)
+        t = strip_dim(*t)
+        return sum(s * (h[i] * r[j] * t[k]).sum(dim=-1) for i, j, k, s in coefficients)

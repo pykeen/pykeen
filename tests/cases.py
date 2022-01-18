@@ -23,6 +23,7 @@ from typing import (
     Tuple,
     Type,
     TypeVar,
+    Union,
 )
 from unittest.case import SkipTest
 from unittest.mock import patch
@@ -42,8 +43,9 @@ from pykeen.datasets import Nations
 from pykeen.datasets.base import LazyDataset
 from pykeen.datasets.kinships import KINSHIPS_TRAIN_PATH
 from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH
+from pykeen.evaluation import Evaluator, MetricResults
 from pykeen.losses import Loss, PairwiseLoss, PointwiseLoss, SetwiseLoss, UnsupportedLabelSmoothingError
-from pykeen.models import RESCAL, EntityRelationEmbeddingModel, Model
+from pykeen.models import RESCAL, EntityRelationEmbeddingModel, Model, TransE
 from pykeen.models.cli import build_cli_from_cls
 from pykeen.nn.emb import RepresentationModule
 from pykeen.nn.modules import FunctionalInteraction, Interaction, LiteralInteraction
@@ -53,6 +55,8 @@ from pykeen.regularizers import LpRegularizer, Regularizer
 from pykeen.trackers import ResultTracker
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
 from pykeen.triples import TriplesFactory, generation
+from pykeen.triples.splitting import Cleaner, Splitter
+from pykeen.triples.utils import get_entities, is_triple_tensor_subset, triple_tensor_to_set
 from pykeen.typing import HeadRepresentation, Initializer, MappedTriples, RelationRepresentation, TailRepresentation
 from pykeen.utils import all_in_bounds, get_batchnorm_modules, resolve_device, set_random_seed, unpack_singletons
 from tests.constants import EPSILON
@@ -278,7 +282,7 @@ class LossTestCase(GenericTestCase[Loss]):
 
     def test_optimization_direction_slcwa(self):
         """Test whether the loss leads to increasing positive scores, and decreasing negative scores."""
-        positive_scores = torch.zeros(self.batch_size, requires_grad=True)
+        positive_scores = torch.zeros(self.batch_size, 1, requires_grad=True)
         negative_scores = torch.zeros(self.batch_size, self.num_neg_per_pos, requires_grad=True)
         optimizer = optimizer_resolver.make(query=None, params=[positive_scores, negative_scores])
         for _ in range(10):
@@ -1530,3 +1534,221 @@ class InitializerTestCase(unittest.TestCase):
             path = pathlib.Path(d) / "test.pkl"
             model.save_state(path)
             model.load_state(path)
+
+
+class PredictBaseTestCase(unittest.TestCase):
+    """Base test for prediction workflows."""
+
+    batch_size: ClassVar[int] = 2
+    model_cls: ClassVar[Type[Model]]
+    model_kwargs: ClassVar[Mapping[str, Any]]
+
+    factory: TriplesFactory
+    batch: MappedTriples
+    model: Model
+
+    def setUp(self) -> None:
+        """Prepare model."""
+        self.factory = Nations().training
+        self.batch = self.factory.mapped_triples[: self.batch_size, :]
+        self.model = self.model_cls(
+            triples_factory=self.factory,
+            **self.model_kwargs,
+        )
+
+
+class CleanerTestCase(GenericTestCase[Cleaner]):
+    """Test cases for cleaner."""
+
+    def post_instantiation_hook(self) -> None:
+        """Prepare triples."""
+        self.dataset = Nations()
+        self.all_entities = set(range(self.dataset.num_entities))
+        self.mapped_triples = self.dataset.training.mapped_triples
+        # unfavourable split to ensure that cleanup is necessary
+        self.reference, self.other = torch.split(
+            self.mapped_triples,
+            split_size_or_sections=[24, self.mapped_triples.shape[0] - 24],
+            dim=0,
+        )
+        # check for unclean split
+        assert get_entities(self.reference) != self.all_entities
+
+    def test_cleanup_pair(self):
+        """Test cleanup_pair."""
+        reference_clean, other_clean = self.instance.cleanup_pair(
+            reference=self.reference,
+            other=self.other,
+            random_state=42,
+        )
+        # check that no triple got lost
+        assert triple_tensor_to_set(self.mapped_triples) == triple_tensor_to_set(
+            torch.cat(
+                [
+                    reference_clean,
+                    other_clean,
+                ],
+                dim=0,
+            )
+        )
+        # check that triples where only moved from other to reference
+        assert is_triple_tensor_subset(self.reference, reference_clean)
+        assert is_triple_tensor_subset(other_clean, self.other)
+        # check that all entities occur in reference
+        assert get_entities(reference_clean) == self.all_entities
+
+    def test_call(self):
+        """Test call."""
+        triples_groups = [self.reference] + list(torch.split(self.other, split_size_or_sections=3, dim=0))
+        clean_groups = self.instance(triples_groups=triples_groups, random_state=42)
+        assert all(torch.is_tensor(triples) and triples.dtype for triples in clean_groups)
+
+
+class SplitterTestCase(GenericTestCase[Splitter]):
+    """Test cases for triples splitter."""
+
+    def post_instantiation_hook(self) -> None:
+        """Prepare data."""
+        dataset = Nations()
+        self.all_entities = set(range(dataset.num_entities))
+        self.mapped_triples = dataset.training.mapped_triples
+
+    def _test_split(self, ratios: Union[float, Sequence[float]], exp_parts: int):
+        """Test splitting."""
+        splitted = self.instance.split(
+            mapped_triples=self.mapped_triples,
+            ratios=ratios,
+            random_state=None,
+        )
+        assert len(splitted) == exp_parts
+        # check that no triple got lost
+        assert triple_tensor_to_set(self.mapped_triples) == set().union(
+            *(triple_tensor_to_set(triples) for triples in splitted)
+        )
+        # check that all entities are covered in first part
+        assert triple_tensor_to_set(splitted[0]) == self.all_entities
+
+
+class EvaluatorTestCase(unittest.TestCase):
+    """A test case for quickly defining common tests for evaluators models."""
+
+    # The triples factory and model
+    factory: TriplesFactory
+    model: Model
+
+    #: The evaluator to be tested
+    evaluator_cls: ClassVar[Type[Evaluator]]
+    evaluator_kwargs: ClassVar[Optional[Mapping[str, Any]]] = None
+
+    # Settings
+    batch_size: int
+    embedding_dim: int
+
+    #: The evaluator instantiation
+    evaluator: Evaluator
+
+    def setUp(self) -> None:
+        """Set up the test case."""
+        # Settings
+        self.batch_size = 8
+        self.embedding_dim = 7
+
+        # Initialize evaluator
+        self.evaluator = self.evaluator_cls(**(self.evaluator_kwargs or {}))
+
+        # Use small test dataset
+        self.factory = Nations().training
+
+        # Use small model (untrained)
+        self.model = TransE(triples_factory=self.factory, embedding_dim=self.embedding_dim)
+
+    def _get_input(
+        self,
+        inverse: bool = False,
+    ) -> Tuple[torch.LongTensor, torch.FloatTensor, Optional[torch.BoolTensor]]:
+        # Get batch
+        hrt_batch = self.factory.mapped_triples[: self.batch_size].to(self.model.device)
+
+        # Compute scores
+        if inverse:
+            scores = self.model.score_h(rt_batch=hrt_batch[:, 1:])
+        else:
+            scores = self.model.score_t(hr_batch=hrt_batch[:, :2])
+
+        # Compute mask only if required
+        if self.evaluator.requires_positive_mask:
+            # TODO: Re-use filtering code
+            triples = self.factory.mapped_triples.to(self.model.device)
+            if inverse:
+                sel_col, start_col = 0, 1
+            else:
+                sel_col, start_col = 2, 0
+            stop_col = start_col + 2
+
+            # shape: (batch_size, num_triples)
+            triple_mask = (triples[None, :, start_col:stop_col] == hrt_batch[:, None, start_col:stop_col]).all(dim=-1)
+            batch_indices, triple_indices = triple_mask.nonzero(as_tuple=True)
+            entity_indices = triples[triple_indices, sel_col]
+
+            # shape: (batch_size, num_entities)
+            mask = torch.zeros_like(scores, dtype=torch.bool)
+            mask[batch_indices, entity_indices] = True
+        else:
+            mask = None
+
+        return hrt_batch, scores, mask
+
+    def test_process_tail_scores_(self) -> None:
+        """Test the evaluator's ``process_tail_scores_()`` function."""
+        hrt_batch, scores, mask = self._get_input()
+        true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, 2]][:, None]
+        self.evaluator.process_tail_scores_(
+            hrt_batch=hrt_batch,
+            true_scores=true_scores,
+            scores=scores,
+            dense_positive_mask=mask,
+        )
+
+    def test_process_head_scores_(self) -> None:
+        """Test the evaluator's ``process_head_scores_()`` function."""
+        hrt_batch, scores, mask = self._get_input(inverse=True)
+        true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, 0]][:, None]
+        self.evaluator.process_head_scores_(
+            hrt_batch=hrt_batch,
+            true_scores=true_scores,
+            scores=scores,
+            dense_positive_mask=mask,
+        )
+
+    def test_finalize(self) -> None:
+        """Test the finalize() function."""
+        # Process one batch
+        hrt_batch, scores, mask = self._get_input()
+        true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, 2]][:, None]
+        self.evaluator.process_tail_scores_(
+            hrt_batch=hrt_batch,
+            true_scores=true_scores,
+            scores=scores,
+            dense_positive_mask=mask,
+        )
+        self.evaluator.process_head_scores_(
+            hrt_batch=hrt_batch,
+            true_scores=true_scores,
+            scores=scores,
+            dense_positive_mask=mask,
+        )
+
+        result = self.evaluator.finalize()
+        assert isinstance(result, MetricResults)
+
+        self._validate_result(
+            result=result,
+            data={"batch": hrt_batch, "scores": scores, "mask": mask},
+        )
+
+    def _validate_result(
+        self,
+        result: MetricResults,
+        data: Dict[str, torch.Tensor],
+    ):
+        logger.warning(f"{self.__class__.__name__} did not overwrite _validate_result.")
