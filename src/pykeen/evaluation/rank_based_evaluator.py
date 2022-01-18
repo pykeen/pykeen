@@ -17,6 +17,7 @@ from dataclasses_json import dataclass_json
 from scipy import stats
 
 from .evaluator import Evaluator, MetricResults
+from ..triples.triples_factory import CoreTriplesFactory
 from ..typing import MappedTriples
 from ..utils import fix_dataclass_init_docs
 
@@ -656,3 +657,76 @@ def sample_negatives(
                 )
         negatives.append(this_negatives)
     return [id_df, *negatives]
+
+
+class SampledRankBasedEvaluator(RankBasedEvaluator):
+    """A rank-based evaluator using sampled negatives instead of all negatives, cf. [teru2020]_."""
+
+    def __init__(
+        self,
+        evaluation_factory: CoreTriplesFactory,
+        additional_filter_triples: torch.LongTensor,  # TODO: update
+        num_negatives: int = 50,  # default for inductive lp by [teru2020]
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        self.id_frame, self.head_samples, self.tail_samples = sample_negatives(
+            valid_triples=evaluation_factory.mapped_triples,
+            all_pos=additional_filter_triples,
+            num_samples=num_negatives,
+        )
+
+    def _process_scores(
+        self,
+        hrt_batch: MappedTriples,
+        true_scores: torch.FloatTensor,
+        scores: torch.FloatTensor,
+        side: str,
+        dense_positive_mask: Optional[torch.FloatTensor] = None,
+    ) -> None:
+        columns = ["head", "relation", "tail"]
+        indices = torch.as_tensor(
+            pd.merge(
+                self.id_frame,
+                pd.DataFrame(data=hrt_batch.cpu().numpy(), columns=columns),
+                on=columns,
+            )["index"].to_numpy(),
+            dtype=torch.long,
+            device=hrt_batch.device,
+        )
+        samples = self.head_samples if side == SIDE_HEAD else self.tail_samples
+        negative_scores = scores[torch.arange(hrt_batch.shape[0], device=hrt_batch.device), samples[indices]]
+        self._update_ranks_(true_scores=true_scores, all_scores=negative_scores, side=side)
+        self.num_entities = scores.shape[1]
+
+    def process_head_scores_(
+        self,
+        hrt_batch: MappedTriples,
+        true_scores: torch.FloatTensor,
+        scores: torch.FloatTensor,
+        dense_positive_mask: Optional[torch.FloatTensor] = None,
+    ) -> None:
+        # TODO: do not require to compute all scores beforehand
+        self._process_scores(
+            hrt_batch=hrt_batch,
+            true_scores=true_scores,
+            scores=scores,
+            dense_positive_mask=dense_positive_mask,
+            side=SIDE_HEAD,
+        )
+
+    def process_tail_scores_(
+        self,
+        hrt_batch: MappedTriples,
+        true_scores: torch.FloatTensor,
+        scores: torch.FloatTensor,
+        dense_positive_mask: Optional[torch.FloatTensor] = None,
+    ) -> None:
+        # TODO: do not require to compute all scores beforehand
+        self._process_scores(
+            hrt_batch=hrt_batch,
+            true_scores=true_scores,
+            scores=scores,
+            dense_positive_mask=dense_positive_mask,
+            side=SIDE_TAIL,
+        )
