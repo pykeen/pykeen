@@ -120,6 +120,13 @@ class Model(nn.Module, ABC):
         """
         self.predict_with_sigmoid = predict_with_sigmoid
 
+    @property
+    def real_num_relations(self) -> int:
+        """Return the real number of relations (without inverses)."""
+        if self.use_inverse_triples:
+            return self.num_relations // 2
+        return self.num_relations
+
     def __init_subclass__(cls, **kwargs):
         """Initialize the subclass.
 
@@ -199,7 +206,7 @@ class Model(nn.Module, ABC):
         :param slice_size: >0
             The divisor for the scoring function when using slicing.
 
-        :return: shape: (batch_size, num_relations), dtype: float
+        :return: shape: (batch_size, num_real_relations), dtype: float
             For each h-t pair, the scores for all possible relations.
         """
 
