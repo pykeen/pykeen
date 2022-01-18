@@ -209,6 +209,8 @@ class Model(nn.Module, ABC):
         :return: shape: (batch_size, num_real_relations), dtype: float
             For each h-t pair, the scores for all possible relations.
         """
+        # TODO: this currently compute (batch_size, num_relations) instead,
+        # i.e., scores for normal and inverse relations
 
     @abstractmethod
     def score_h(self, rt_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:
@@ -381,7 +383,7 @@ class Model(nn.Module, ABC):
         :param slice_size: >0
             The divisor for the scoring function when using slicing.
 
-        :return: shape: (batch_size, num_relations), dtype: float
+        :return: shape: (batch_size, num_real_relations), dtype: float
             For each h-t pair, the scores for all possible relations.
         """
         self.eval()  # Enforce evaluation mode
