@@ -157,20 +157,19 @@ class RestrictedRankBasedEvaluator(RankBasedEvaluator):
         true_scores: torch.FloatTensor,
         all_scores: torch.FloatTensor,
         side: str,
-        triples: MappedTriples = None,
+        hrt_batch: MappedTriples,
     ) -> None:
         """Shared code for updating the stored ranks for head/tail scores.
 
         :param true_scores: shape: (batch_size,)
         :param all_scores: shape: (batch_size, num_entities)
         :param side: head/tail
-        :param triples: actual triples in a batch on which we are evaluating, needed for dict lookup
+        :param hrt_batch: actual triples in a batch on which we are evaluating, needed for dict lookup
         """
-
         # land on a cpu for dictionary lookup
-        triples = triples.cpu().tolist()
+        hrt_batch = hrt_batch.cpu().tolist()
         sampled_entities = torch.stack([
-            self.negs_dict[side][tuple(triple)] for triple in triples
+            self.negs_dict[side][tuple(triple)] for triple in hrt_batch
         ], dim=0).to(all_scores.device)
 
         batch_ranks = compute_rank_from_scores(
@@ -180,21 +179,3 @@ class RestrictedRankBasedEvaluator(RankBasedEvaluator):
         self.num_entities = all_scores.shape[1]
         for k, v in batch_ranks.items():
             self.ranks[side, k].extend(v.detach().cpu().tolist())
-
-    def process_tail_scores_(
-        self,
-        hrt_batch: MappedTriples,
-        true_scores: torch.FloatTensor,
-        scores: torch.FloatTensor,
-        dense_positive_mask: Optional[torch.FloatTensor] = None,
-    ) -> None:  # noqa: D102
-        self._update_ranks_(true_scores=true_scores, all_scores=scores, side=SIDE_TAIL, triples=hrt_batch)
-
-    def process_head_scores_(
-        self,
-        hrt_batch: MappedTriples,
-        true_scores: torch.FloatTensor,
-        scores: torch.FloatTensor,
-        dense_positive_mask: Optional[torch.FloatTensor] = None,
-    ) -> None:  # noqa: D102
-        self._update_ranks_(true_scores=true_scores, all_scores=scores, side=SIDE_HEAD, triples=hrt_batch)
