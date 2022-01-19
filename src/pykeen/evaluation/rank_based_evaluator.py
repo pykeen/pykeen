@@ -605,7 +605,7 @@ def sample_negatives(
     additional_filter_triples: MappedTriples,  # TODO: update to additional filter triples interface
     num_entities: int,
     num_samples: int = 50,
-) -> Tuple[Mapping[Tuple[int, int, int], int], torch.Tensor, torch.Tensor]:
+) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Sample true negatives for sampled evaluation.
 
@@ -630,9 +630,6 @@ def sample_negatives(
     num_triples = evaluation_triples.shape[0]
     df = pd.DataFrame(data=evaluation_triples.numpy(), columns=columns)
     id_df = df.reset_index()
-    # create index
-    triple_to_id = {(h, r, t): i for i, (h, r, t) in enumerate(evaluation_triples.tolist())}
-
     all_df = pd.concat(
         [
             df,
@@ -660,7 +657,7 @@ def sample_negatives(
                     dtype=torch.long,
                 )
         negatives.append(this_negatives)
-    return [triple_to_id, *negatives]
+    return negatives
 
 
 class SampledRankBasedEvaluator(RankBasedEvaluator):
@@ -669,18 +666,39 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
     def __init__(
         self,
         evaluation_factory: CoreTriplesFactory,
-        additional_filter_triples: torch.LongTensor,  # TODO: update
-        num_negatives: int = 50,  # default for inductive lp by [teru2020]
+        head_samples: torch.LongTensor,
+        tail_samples: torch.LongTensor,
         **kwargs,
     ):
         super().__init__(**kwargs)
+        self.triple_to_index = {(h, r, t): i for i, (h, r, t) in enumerate(evaluation_factory.mapped_triples.tolist())}
+        self.negative_samples = {
+            SIDE_HEAD: head_samples,
+            SIDE_TAIL: tail_samples,
+        }
+        self.num_entities = evaluation_factory.num_entities
+
+    @classmethod
+    def create_with_random_samples(
+        cls,
+        evaluation_factory: CoreTriplesFactory,
+        additional_filter_triples: torch.LongTensor,  # TODO: update
+        num_negatives: int = 50,  # default for inductive lp by [teru2020]
+        **kwargs,
+    ) -> "SampledRankBasedEvaluator":
         if num_negatives > evaluation_factory.num_entities:
             raise ValueError("Cannot use more negative samples than there are entities.")
-        self.triple_to_index, self.head_samples, self.tail_samples = sample_negatives(
+        head_samples, tail_samples = sample_negatives(
             evaluation_triples=evaluation_factory.mapped_triples,
             additional_filter_triples=additional_filter_triples,
             num_entities=evaluation_factory.num_entities,
             num_samples=num_negatives,
+        )
+        return cls(
+            evaluation_factory=evaluation_factory,
+            head_samples=head_samples,
+            tail_samples=tail_samples,
+            **kwargs,
         )
 
     def _update_ranks_(
@@ -691,14 +709,12 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
         hrt_batch: MappedTriples,
     ) -> None:  # noqa: D102
         # TODO: do not require to compute all scores beforehand
-        indices = [self.triple_to_index[h, r, t] for h, r, t in hrt_batch.cpu().tolist()]
-        samples = self.head_samples if side == SIDE_HEAD else self.tail_samples
-        samples = samples[indices]
+        triple_indices = [self.triple_to_index[h, r, t] for h, r, t in hrt_batch.cpu().tolist()]
+        negative_entity_ids = self.negative_samples[side][triple_indices]
         negative_scores = all_scores[
             torch.arange(hrt_batch.shape[0], device=hrt_batch.device).unsqueeze(dim=-1),
-            samples,
+            negative_entity_ids,
         ]
         # super.evaluation assumes that the true scores are part of all_scores
         scores = torch.cat([true_scores, negative_scores], dim=-1)
         super()._update_ranks_(true_scores=true_scores, all_scores=scores, side=side, hrt_batch=hrt_batch)
-        self.num_entities = all_scores.shape[1]
