@@ -445,7 +445,7 @@ class RankBasedMetricResults(MetricResults):
         """Output the metrics as a pandas dataframe."""
         return pd.DataFrame(list(self._iter_rows()), columns=["Side", "Type", "Metric", "Value"])
 
-    def _iter_rows(self) -> Iterable[Tuple[str, str, str, float]]:
+    def _iter_rows(self) -> Iterable[Tuple[str, str, str, Union[float, int]]]:
         for side, rank_type in itt.product(SIDES, RANK_TYPES):
             for k, v in self.hits_at_k[side][rank_type].items():
                 yield side, rank_type, f"hits_at_{k}", v
