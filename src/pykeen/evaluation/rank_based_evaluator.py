@@ -602,7 +602,7 @@ class RankBasedEvaluator(Evaluator):
 
 def sample_negatives(
     evaluation_triples: MappedTriples,
-    additional_filter_triples: MappedTriples,  # TODO: update to additional filter triples interface
+    additional_filter_triples: MappedTriples,  # TODO: update to additional filter triples interface, cf. _prepare_filter_triples, https://github.com/pykeen/pykeen/pull/732
     num_entities: int,
     num_samples: int = 50,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
