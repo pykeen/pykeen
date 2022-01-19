@@ -666,15 +666,15 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
     def __init__(
         self,
         evaluation_factory: CoreTriplesFactory,
-        head_samples: torch.LongTensor,
-        tail_samples: torch.LongTensor,
+        head_negatives: torch.LongTensor,
+        tail_negatives: torch.LongTensor,
         **kwargs,
     ):
         super().__init__(**kwargs)
         self.triple_to_index = {(h, r, t): i for i, (h, r, t) in enumerate(evaluation_factory.mapped_triples.tolist())}
         self.negative_samples = {
-            SIDE_HEAD: head_samples,
-            SIDE_TAIL: tail_samples,
+            SIDE_HEAD: head_negatives,
+            SIDE_TAIL: tail_negatives,
         }
         self.num_entities = evaluation_factory.num_entities
 
