@@ -42,10 +42,12 @@ def summarize():
             click.secho(str(e), fg="red", bold=True)
 
 
-def _iter_datasets(regex_name_filter=None, max_triples: Optional[int] = None) -> Iterable[Tuple[str, Type[Dataset]]]:
-    def _get_num_triples(pair: Tuple[str, Type[Dataset]]) -> int:
-        return docdata.get_docdata(pair[1])["statistics"]["triples"]
+def _get_num_triples(pair: Tuple[str, Type[Dataset]]) -> int:
+    """Extract the number of triples from docdata."""
+    return docdata.get_docdata(pair[1])["statistics"]["triples"]
 
+
+def _iter_datasets(regex_name_filter=None, max_triples: Optional[int] = None) -> Iterable[Tuple[str, Type[Dataset]]]:
     it = sorted(
         dataset_resolver.lookup_dict.items(),
         key=_get_num_triples,
