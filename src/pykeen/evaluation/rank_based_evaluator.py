@@ -602,10 +602,9 @@ class RankBasedEvaluator(Evaluator):
 
 def sample_negatives(
     evaluation_triples: MappedTriples,
-    num_entities: int,
     additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
-    # TODO: update to additional filter triples interface, cf. _prepare_filter_triples, https://github.com/pykeen/pykeen/pull/732
     num_samples: int = 50,
+    num_entities: Optional[int] = None,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Sample true negatives for sampled evaluation.
@@ -616,6 +615,8 @@ def sample_negatives(
         additional true triples which are to be filtered
     :param num_samples: >0
         the number of samples
+    :param num_entities:
+        the number of entities
 
     :return:
         a tuple (id_df, head_negatives, tail_negatives) where
@@ -631,6 +632,7 @@ def sample_negatives(
         mapped_triples=evaluation_triples,
         additional_filter_triples=additional_filter_triples,
     )
+    num_entities = num_entities or (additional_filter_triples[:, [0, 2]].max().item() + 1)
     columns = ["head", "relation", "tail"]
     num_triples = evaluation_triples.shape[0]
     df = pd.DataFrame(data=evaluation_triples.numpy(), columns=columns)
@@ -688,7 +690,7 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
         if head_negatives is None and tail_negatives is None:
             # default for inductive LP by [teru2020]
             num_negatives = num_negatives or 50
-            logger.info("Sampling negatives")
+            logger.info(f"Sampling {num_negatives} negatives per positive evaluation triple.")
             if num_negatives > evaluation_factory.num_entities:
                 raise ValueError("Cannot use more negative samples than there are entities.")
             head_negatives, tail_negatives = sample_negatives(
