@@ -306,7 +306,7 @@ class CoreTriplesFactory:
         num_relations: int,
         entity_ids: Collection[int],
         relation_ids: Collection[int],
-        create_inverse_triples: bool = False,
+        create_inverse_triples: bool = False,  # TODO: remove
         metadata: Optional[Mapping[str, Any]] = None,
     ):
         """
@@ -447,6 +447,7 @@ class CoreTriplesFactory:
 
     def _add_inverse_triples_if_necessary(self, mapped_triples: MappedTriples) -> MappedTriples:
         """Add inverse triples if they shall be created."""
+        # TODO: remove
         if not self.create_inverse_triples:
             return mapped_triples
 
