@@ -7,7 +7,6 @@ import itertools
 import logging
 import unittest
 from operator import attrgetter
-from types import MappingProxyType
 from typing import Collection, Dict, Iterable, List, Optional, Tuple, Union
 
 import numpy

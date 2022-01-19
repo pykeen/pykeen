@@ -605,7 +605,8 @@ def numeric_expected_value(
     """
     Compute expected metric value by summation.
 
-    Depending on the metric, the estimate may not be very accurate and converage slowly, cf. https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.rv_discrete.expect.html#scipy-stats-rv-discrete-expect
+    Depending on the metric, the estimate may not be very accurate and converage slowly, cf.
+    https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.rv_discrete.expect.html
     """
     metric_func = all_type_funcs[metric]
     num_candidates = np.asarray(num_candidates)
