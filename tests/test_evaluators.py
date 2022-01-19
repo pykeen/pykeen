@@ -5,9 +5,10 @@
 import dataclasses
 import itertools
 import logging
+import random
 import unittest
 from operator import attrgetter
-from typing import Collection, Dict, Iterable, List, Optional, Tuple, Union
+from typing import Any, Collection, Dict, Iterable, List, MutableMapping, Optional, Tuple, Union
 
 import numpy
 import numpy.random
@@ -33,10 +34,12 @@ from pykeen.evaluation.rank_based_evaluator import (
     RANK_TYPES,
     SIDE_BOTH,
     SIDES,
+    SampledRankBasedEvaluator,
     compute_rank_from_scores,
     expected_hits_at_k,
     expected_mean_rank,
     resolve_metric_name,
+    sample_negatives,
 )
 from pykeen.models import FixedModel
 from pykeen.typing import MappedTriples
@@ -48,7 +51,7 @@ logger = logging.getLogger(__name__)
 class RankBasedEvaluatorTests(cases.EvaluatorTestCase):
     """unittest for the RankBasedEvaluator."""
 
-    evaluator_cls = RankBasedEvaluator
+    cls = RankBasedEvaluator
 
     def _validate_result(
         self,
@@ -108,12 +111,28 @@ class RankBasedEvaluatorTests(cases.EvaluatorTestCase):
             assert set(all_type_rank_counts.values()) == {expected_size}
 
         # TODO: Validate with data?
+        # check correct num_entities
+        assert isinstance(self.instance, RankBasedEvaluator)
+        assert self.instance.num_entities == self.dataset.num_entities
+
+
+class SampledRankBasedEvaluatorTests(RankBasedEvaluatorTests):
+    """unittest for the SampledRankBasedEvaluator."""
+
+    cls = SampledRankBasedEvaluator
+    kwargs = dict(num_negatives=3)
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        kwargs["evaluation_factory"] = self.factory
+        kwargs["additional_filter_triples"] = self.dataset.training.mapped_triples
+        return kwargs
 
 
 class ClassificationEvaluatorTest(cases.EvaluatorTestCase):
     """Unittest for the ClassificationEvaluator."""
 
-    evaluator_cls = ClassificationEvaluator
+    cls = ClassificationEvaluator
 
     def _validate_result(
         self,
@@ -488,6 +507,42 @@ def test_resolve_metric_name():
         assert result == expected, name
 
 
+def test_sample_negatives():
+    """Test for sample_negatives."""
+    dataset = Nations()
+    num_negatives = 2
+    evaluation_triples = dataset.validation.mapped_triples
+    additional_filter_triples = dataset.training.mapped_triples
+    head_negatives, tail_negatives = sample_negatives(
+        evaluation_triples=evaluation_triples,
+        additional_filter_triples=additional_filter_triples,
+        num_entities=dataset.num_entities,
+        num_samples=num_negatives,
+    )
+    num_triples = evaluation_triples.shape[0]
+    true = set(
+        map(
+            tuple,
+            prepare_filter_triples(
+                mapped_triples=evaluation_triples,
+                additional_filter_triples=additional_filter_triples,
+            ).tolist(),
+        )
+    )
+    for i, negatives in zip((0, 2), (head_negatives, tail_negatives)):
+        assert torch.is_tensor(negatives)
+        assert negatives.dtype == torch.long
+        assert negatives.shape == (num_triples, num_negatives)
+        # check true negatives
+        full_negatives = torch.empty(num_triples, num_negatives, 3)
+        full_negatives[:, :, :] = evaluation_triples[:, None, :]
+        full_negatives[:, :, i] = negatives
+        full_negatives = full_negatives.view(-1, 3)
+        negative_set = set(map(tuple, full_negatives.tolist()))
+        assert negative_set.isdisjoint(true)
+        # TODO: check no repetitions (if possible)
+
+
 class CandidateSetSizeTests(unittest.TestCase):
     """Tests for candidate set size calculation."""
 
@@ -667,3 +722,25 @@ def test_prepare_filter_triples():
         assert filter_triples.shape[0] >= mapped_triples.shape[0]
         # check unique
         assert filter_triples.unique(dim=0).shape == filter_triples.shape
+
+
+class RankBasedMetricResultsTests(unittest.TestCase):
+    """Tests for rank-based metric results."""
+
+    num_entities: int = 7
+    num_triples: int = 13
+
+    def setUp(self) -> None:
+        """Prepare test instance."""
+        evaluator = RankBasedEvaluator()
+        evaluator.num_entities = self.num_entities
+        evaluator.ranks = {
+            (side, rank_type): [random.random() for _ in range(self.num_triples * (2 if side == SIDE_BOTH else 1))]
+            for side, rank_type in itertools.product(SIDES, RANK_TYPES | {RANK_EXPECTED_REALISTIC})
+        }
+        self.instance = evaluator.finalize()
+
+    def test_to_df(self):
+        """Test to_df."""
+        df = self.instance.to_df()
+        assert isinstance(df, pandas.DataFrame)

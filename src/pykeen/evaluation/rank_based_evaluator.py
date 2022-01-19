@@ -4,6 +4,8 @@
 
 import itertools as itt
 import logging
+import math
+import random
 import re
 from collections import defaultdict
 from dataclasses import dataclass, field, fields
@@ -15,7 +17,8 @@ import torch
 from dataclasses_json import dataclass_json
 from scipy import stats
 
-from .evaluator import Evaluator, MetricResults
+from .evaluator import Evaluator, MetricResults, prepare_filter_triples
+from ..triples.triples_factory import CoreTriplesFactory
 from ..typing import MappedTriples
 from ..utils import fix_dataclass_init_docs
 
@@ -324,7 +327,7 @@ class RankBasedMetricResults(MetricResults):
         )
     )
 
-    rank_count: Dict[str, int] = field(
+    rank_count: Dict[str, Dict[str, int]] = field(
         metadata=dict(
             name="Rank Count",
             doc="The number of considered ranks, a non-negative number. Low numbers may indicate unreliable results.",
@@ -442,7 +445,7 @@ class RankBasedMetricResults(MetricResults):
         """Output the metrics as a pandas dataframe."""
         return pd.DataFrame(list(self._iter_rows()), columns=["Side", "Type", "Metric", "Value"])
 
-    def _iter_rows(self) -> Iterable[Tuple[str, str, str, float]]:
+    def _iter_rows(self) -> Iterable[Tuple[str, str, str, Union[float, int]]]:
         for side, rank_type in itt.product(SIDES, RANK_TYPES):
             for k, v in self.hits_at_k[side][rank_type].items():
                 yield side, rank_type, f"hits_at_{k}", v
@@ -471,6 +474,7 @@ class RankBasedEvaluator(Evaluator):
     """
 
     ks: Sequence[Union[int, float]]
+    num_entities: Optional[int]
 
     def __init__(
         self,
@@ -506,6 +510,7 @@ class RankBasedEvaluator(Evaluator):
         true_scores: torch.FloatTensor,
         all_scores: torch.FloatTensor,
         side: str,
+        hrt_batch: MappedTriples,
     ) -> None:
         """Shared code for updating the stored ranks for head/tail scores.
 
@@ -527,7 +532,7 @@ class RankBasedEvaluator(Evaluator):
         scores: torch.FloatTensor,
         dense_positive_mask: Optional[torch.FloatTensor] = None,
     ) -> None:  # noqa: D102
-        self._update_ranks_(true_scores=true_scores, all_scores=scores, side=SIDE_TAIL)
+        self._update_ranks_(true_scores=true_scores, all_scores=scores, side=SIDE_TAIL, hrt_batch=hrt_batch)
 
     def process_head_scores_(
         self,
@@ -536,7 +541,7 @@ class RankBasedEvaluator(Evaluator):
         scores: torch.FloatTensor,
         dense_positive_mask: Optional[torch.FloatTensor] = None,
     ) -> None:  # noqa: D102
-        self._update_ranks_(true_scores=true_scores, all_scores=scores, side=SIDE_HEAD)
+        self._update_ranks_(true_scores=true_scores, all_scores=scores, side=SIDE_HEAD, hrt_batch=hrt_batch)
 
     def _get_ranks(self, side, rank_type) -> np.ndarray:
         if side == SIDE_BOTH:
@@ -578,6 +583,9 @@ class RankBasedEvaluator(Evaluator):
         # Clear buffers
         self.ranks.clear()
 
+        # for typing
+        rank_count: Dict[str, Dict[str, int]] = dict(asr[RANK_COUNT])  # type: ignore
+
         return RankBasedMetricResults(
             arithmetic_mean_rank=dict(asr[ARITHMETIC_MEAN_RANK]),
             geometric_mean_rank=dict(asr[GEOMETRIC_MEAN_RANK]),
@@ -587,7 +595,7 @@ class RankBasedEvaluator(Evaluator):
             inverse_geometric_mean_rank=dict(asr[INVERSE_GEOMETRIC_MEAN_RANK]),
             inverse_harmonic_mean_rank=dict(asr[INVERSE_HARMONIC_MEAN_RANK]),
             inverse_median_rank=dict(asr[INVERSE_MEDIAN_RANK]),
-            rank_count=dict(asr[RANK_COUNT]),
+            rank_count=rank_count,
             rank_std=dict(asr[RANK_STD]),
             rank_mad=dict(asr[RANK_MAD]),
             rank_var=dict(asr[RANK_VARIANCE]),
@@ -595,6 +603,150 @@ class RankBasedEvaluator(Evaluator):
             adjusted_arithmetic_mean_rank_index=dict(asr[ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX]),
             hits_at_k=dict(hits_at_k),
         )
+
+
+def sample_negatives(
+    evaluation_triples: MappedTriples,
+    additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
+    num_samples: int = 50,
+    num_entities: Optional[int] = None,
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    """
+    Sample true negatives for sampled evaluation.
+
+    :param evaluation_triples: shape: (n, 3)
+        the evaluation triples
+    :param additional_filter_triples:
+        additional true triples which are to be filtered
+    :param num_samples: >0
+        the number of samples
+    :param num_entities:
+        the number of entities
+
+    :return:
+        a tuple (id_df, head_negatives, tail_negatives) where
+
+        - id_df: head_id | relation_id | tail_id | index
+            a dataframe mapping evaluation triples to their index
+        - head_negatives: shape: (n, num_negatives)
+            the negatives for head prediction
+        - tail_negatives: shape: (n, num_negatives)
+            the negatives for tail prediction
+    """
+    additional_filter_triples = prepare_filter_triples(
+        mapped_triples=evaluation_triples,
+        additional_filter_triples=additional_filter_triples,
+    )
+    num_entities = num_entities or (additional_filter_triples[:, [0, 2]].max().item() + 1)
+    columns = ["head", "relation", "tail"]
+    num_triples = evaluation_triples.shape[0]
+    df = pd.DataFrame(data=evaluation_triples.numpy(), columns=columns)
+    all_df = pd.DataFrame(data=additional_filter_triples.numpy(), columns=columns)
+    id_df = df.reset_index()
+    all_ids = set(range(num_entities))
+    negatives = []
+    for side in ["head", "tail"]:
+        this_negatives = torch.empty(size=(num_triples, num_samples), dtype=torch.long)
+        other = [c for c in columns if c != side]
+        for _, group in pd.merge(id_df, all_df, on=other, suffixes=["_eval", "_all"]).groupby(
+            by=other,
+        ):
+            pool = list(all_ids.difference(group[f"{side}_all"].unique().tolist()))
+            if len(pool) < num_samples:
+                logger.warning(
+                    f"There are less than num_samples={num_samples} candidates for side={side}, triples={group}.",
+                )
+                # repeat
+                pool = int(math.ceil(num_samples / len(pool))) * pool
+            for i in group["index"].unique():
+                this_negatives[i, :] = torch.as_tensor(
+                    data=random.sample(population=pool, k=num_samples),
+                    dtype=torch.long,
+                )
+        negatives.append(this_negatives)
+    return negatives[0], negatives[1]
+
+
+class SampledRankBasedEvaluator(RankBasedEvaluator):
+    """
+    A rank-based evaluator using sampled negatives instead of all negatives, cf. [teru2020]_.
+
+    Notice that this evaluator yields optimistic estimations of the metrics evaluated on all entities,
+    cf. https://arxiv.org/abs/2106.06935.
+    """
+
+    def __init__(
+        self,
+        evaluation_factory: CoreTriplesFactory,
+        *,
+        additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
+        num_negatives: Optional[int] = None,
+        head_negatives: Optional[torch.LongTensor] = None,
+        tail_negatives: Optional[torch.LongTensor] = None,
+        **kwargs,
+    ):
+        """
+        Initialize the evaluator.
+
+        :param evaluation_factory:
+            the factory with evaluation triples
+        :param head_negatives: shape: (num_triples, num_negatives)
+            the entity IDs of negative samples for head prediction for each evaluation triple
+        :param tail_negatives: shape: (num_triples, num_negatives)
+            the entity IDs of negative samples for tail prediction for each evaluation triple
+        :param kwargs:
+            additional keyword-based arguments passed to RankBasedEvaluator.__init__
+        """
+        super().__init__(**kwargs)
+        if head_negatives is None and tail_negatives is None:
+            # default for inductive LP by [teru2020]
+            num_negatives = num_negatives or 50
+            logger.info(
+                f"Sampling {num_negatives} negatives for each of the "
+                f"{evaluation_factory.num_triples} evaluation triples.",
+            )
+            if num_negatives > evaluation_factory.num_entities:
+                raise ValueError("Cannot use more negative samples than there are entities.")
+            head_negatives, tail_negatives = sample_negatives(
+                evaluation_triples=evaluation_factory.mapped_triples,
+                additional_filter_triples=additional_filter_triples,
+                num_entities=evaluation_factory.num_entities,
+                num_samples=num_negatives,
+            )
+        elif head_negatives is None or tail_negatives is None:
+            raise ValueError("Either both, head and tail negatives must be provided, or none.")
+
+        # verify input
+        for negatives in (head_negatives, tail_negatives):
+            if negatives.shape[0] != evaluation_factory.num_triples:
+                raise ValueError(f"Negatives are in wrong shape: {negatives.shape}")
+        self.triple_to_index = {(h, r, t): i for i, (h, r, t) in enumerate(evaluation_factory.mapped_triples.tolist())}
+        self.negative_samples = {
+            SIDE_HEAD: head_negatives,
+            SIDE_TAIL: tail_negatives,
+        }
+        self.num_entities = evaluation_factory.num_entities
+
+    def _update_ranks_(
+        self,
+        true_scores: torch.FloatTensor,
+        all_scores: torch.FloatTensor,
+        side: str,
+        hrt_batch: MappedTriples,
+    ) -> None:  # noqa: D102
+        # TODO: do not require to compute all scores beforehand
+        triple_indices = [self.triple_to_index[h, r, t] for h, r, t in hrt_batch.cpu().tolist()]
+        negative_entity_ids = self.negative_samples[side][triple_indices]
+        negative_scores = all_scores[
+            torch.arange(hrt_batch.shape[0], device=hrt_batch.device).unsqueeze(dim=-1),
+            negative_entity_ids,
+        ]
+        # super.evaluation assumes that the true scores are part of all_scores
+        scores = torch.cat([true_scores, negative_scores], dim=-1)
+        super()._update_ranks_(true_scores=true_scores, all_scores=scores, side=side, hrt_batch=hrt_batch)
+        # write back correct num_entities
+        # TODO: should we give num_entities in the constructor instead of inferring it every time ranks are processed?
+        self.num_entities = all_scores.shape[1]
 
 
 def numeric_expected_value(
