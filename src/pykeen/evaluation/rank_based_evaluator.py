@@ -617,6 +617,9 @@ def numeric_expected_value(
     return expectation / num_samples
 
 
+# TODO: closed-forms for other metrics?
+
+
 def expected_mean_rank(
     num_candidates: Union[Sequence[int], np.ndarray],
 ) -> float:
