@@ -731,6 +731,9 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
         # super.evaluation assumes that the true scores are part of all_scores
         scores = torch.cat([true_scores, negative_scores], dim=-1)
         super()._update_ranks_(true_scores=true_scores, all_scores=scores, side=side, hrt_batch=hrt_batch)
+        # write back correct num_entities
+        # TODO: should we give num_entities in the constructor instead of inferring it every time ranks are processed?
+        self.num_entities = all_scores.shape[1]
 
 
 def numeric_expected_value(
