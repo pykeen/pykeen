@@ -61,7 +61,7 @@ class Model(nn.Module, ABC):
 
     num_entities: int
     num_relations: int
-    use_inverse_triples: bool
+    use_inverse_relations: bool
 
     can_slice_h: ClassVar[bool]
     can_slice_r: ClassVar[bool]
@@ -75,6 +75,7 @@ class Model(nn.Module, ABC):
         predict_with_sigmoid: bool = False,
         preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
+        use_inverse_relations: bool = False,
     ) -> None:
         """Initialize the module.
 
@@ -90,6 +91,8 @@ class Model(nn.Module, ABC):
             The preferred device for model training and inference.
         :param random_seed:
             A random seed to use for initialising the model's weights. **Should** be set when aiming at reproducibility.
+        :param use_inverse_relations:
+            whether to use the inverse relations modelling technique
         """
         super().__init__()
 
@@ -110,7 +113,8 @@ class Model(nn.Module, ABC):
         else:
             self.loss = loss_resolver.make(loss, pos_kwargs=loss_kwargs)
 
-        self.use_inverse_triples = triples_factory.create_inverse_triples
+        self.use_inverse_relations = use_inverse_relations
+        assert use_inverse_relations == triples_factory.create_inverse_triples
         self.num_entities = triples_factory.num_entities
         self.num_relations = triples_factory.num_relations
 
@@ -263,7 +267,7 @@ class Model(nn.Module, ABC):
         batch = batch.to(self.device)
 
         # special handling of inverse relations
-        if not self.use_inverse_triples:
+        if not self.use_inverse_relations:
             return batch
 
         # when trained on inverse relations, the internal relation ID is twice the original relation ID
@@ -315,7 +319,7 @@ class Model(nn.Module, ABC):
         """
         self.eval()  # Enforce evaluation mode
         rt_batch = self._prepare_batch(batch=rt_batch, index_relation=0)
-        if self.use_inverse_triples:
+        if self.use_inverse_relations:
             scores = self.score_h_inverse(rt_batch=rt_batch, slice_size=slice_size)
         else:
             scores = self.score_h(rt_batch, slice_size=slice_size)
@@ -483,7 +487,7 @@ class Model(nn.Module, ABC):
     """Inverse scoring"""
 
     def _prepare_inverse_batch(self, batch: torch.LongTensor, index_relation: int) -> torch.LongTensor:
-        if not self.use_inverse_triples:
+        if not self.use_inverse_relations:
             raise ValueError(
                 "Your model is not configured to predict with inverse relations."
                 " Set ``create_inverse_triples=True`` when creating the dataset/triples factory"

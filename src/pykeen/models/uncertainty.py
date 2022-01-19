@@ -249,7 +249,7 @@ def predict_h_uncertain(
     return predict_uncertain_helper(
         model=model,
         batch=rt_batch,
-        score_method=model.score_h_inverse if model.use_inverse_triples else model.score_h,
+        score_method=model.score_h_inverse if model.use_inverse_relations else model.score_h,
         num_samples=num_samples,
         slice_size=slice_size,
     )
