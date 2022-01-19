@@ -116,18 +116,12 @@ class SampledRankBasedEvaluatorTests(RankBasedEvaluatorTests):
     """unittest for the SampledRankBasedEvaluator."""
 
     cls = SampledRankBasedEvaluator
+    kwargs = dict(num_negatives=3)
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
-        head_negatives, tail_negatives = sample_negatives(
-            evaluation_triples=self.factory.mapped_triples,
-            additional_filter_triples=self.dataset.training.mapped_triples,
-            num_entities=self.dataset.num_entities,
-            num_samples=3,
-        )
-        kwargs["head_negatives"] = head_negatives
-        kwargs["tail_negatives"] = tail_negatives
         kwargs["evaluation_factory"] = self.factory
+        kwargs["additional_filter_triples"] = self.dataset.training.mapped_triples
         return kwargs
 
 

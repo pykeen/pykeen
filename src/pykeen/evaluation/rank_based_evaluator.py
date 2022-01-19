@@ -667,7 +667,7 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
         evaluation_factory: CoreTriplesFactory,
         *,
         additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
-        num_negatives: int = 50,  # default for inductive lp by [teru2020]
+        num_negatives: Optional[int] = None,
         head_negatives: Optional[torch.LongTensor] = None,
         tail_negatives: Optional[torch.LongTensor] = None,
         **kwargs,
@@ -686,6 +686,8 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
         """
         super().__init__(**kwargs)
         if head_negatives is None and tail_negatives is None:
+            # default for inductive LP by [teru2020]
+            num_negatives = num_negatives or 50
             logger.info("Sampling negatives")
             if num_negatives > evaluation_factory.num_entities:
                 raise ValueError("Cannot use more negative samples than there are entities.")
