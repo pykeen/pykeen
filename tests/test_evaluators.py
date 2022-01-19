@@ -5,6 +5,7 @@
 import dataclasses
 import itertools
 import logging
+from types import MappingProxyType
 import unittest
 from operator import attrgetter
 from typing import Collection, Dict, Iterable, List, Optional, Tuple, Union
@@ -23,6 +24,7 @@ from pykeen.evaluation.evaluator import (
     create_sparse_positive_filter_,
     filter_scores_,
     get_candidate_set_size,
+    prepare_filter_triples,
 )
 from pykeen.evaluation.rank_based_evaluator import (
     RANK_EXPECTED_REALISTIC,
@@ -645,3 +647,24 @@ class ExpectedMetricsTests(unittest.TestCase):
     def test_expected_hits_at_k_manual(self):
         """Test expected Hits@k, where some candidate set sizes are smaller than k, but not all."""
         self.assertAlmostEqual(expected_hits_at_k([5, 20], k=10), (1 + 0.5) / 2)
+
+
+def test_prepare_filter_triples():
+    """Tests for prepare_filter_triples."""
+    dataset = Nations()
+    mapped_triples = dataset.testing.mapped_triples
+    for additional_filter_triples in (
+        None,  # no additional
+        dataset.validation.mapped_triples,  # single tensor
+        [dataset.validation.mapped_triples, dataset.training.mapped_triples],  # multiple tensors
+    ):
+        filter_triples = prepare_filter_triples(
+            mapped_triples=mapped_triples,
+            additional_filter_triples=additional_filter_triples,
+        )
+        assert torch.is_tensor(filter_triples)
+        assert filter_triples.ndim == 2
+        assert filter_triples.shape[1] == 3
+        assert filter_triples.shape[0] >= mapped_triples.shape[0]
+        # check unique
+        assert filter_triples.unique(dim=0).shape == filter_triples.shape
