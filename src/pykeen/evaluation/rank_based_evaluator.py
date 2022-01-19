@@ -597,6 +597,26 @@ class RankBasedEvaluator(Evaluator):
         )
 
 
+def numeric_expected_value(
+    metric: str,
+    num_candidates: Union[Sequence[int], np.ndarray],
+    num_samples: int,
+) -> float:
+    """
+    Compute expected metric value by summation.
+
+    Depending on the metric, the estimate may not be very accurate and converage slowly, cf. https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.rv_discrete.expect.html#scipy-stats-rv-discrete-expect
+    """
+    metric = all_type_funcs[metric]
+    num_candidates = np.asarray(num_candidates)
+    generator = np.random.default_rng()
+    expectation = 0
+    for _ in range(num_samples):
+        ranks = generator.integers(low=0, high=num_candidates)
+        expectation += metric(ranks)
+    return expectation / num_samples
+
+
 def expected_mean_rank(
     num_candidates: Union[Sequence[int], np.ndarray],
 ) -> float:
