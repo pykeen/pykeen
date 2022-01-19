@@ -6,7 +6,7 @@ import dataclasses
 import logging
 import unittest
 from operator import attrgetter
-from typing import Dict, Optional
+from typing import Any, Dict, MutableMapping, Optional
 
 import numpy
 import pandas
@@ -24,6 +24,7 @@ from pykeen.evaluation.rank_based_evaluator import (
     RANK_TYPES,
     SIDE_BOTH,
     SIDES,
+    SampledRankBasedEvaluator,
     compute_rank_from_scores,
     resolve_metric_name,
     sample_negatives,
@@ -98,6 +99,12 @@ class RankBasedEvaluatorTests(cases.EvaluatorTestCase):
             assert set(all_type_rank_counts.values()) == {expected_size}
 
         # TODO: Validate with data?
+
+
+class SampledRankBasedEvaluatorTests(RankBasedEvaluatorTests):
+    """unittest for the SampledRankBasedEvaluator."""
+
+    cls = SampledRankBasedEvaluator
 
 
 class ClassificationEvaluatorTest(cases.EvaluatorTestCase):
