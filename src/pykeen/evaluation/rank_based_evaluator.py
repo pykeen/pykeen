@@ -698,5 +698,7 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
             torch.arange(hrt_batch.shape[0], device=hrt_batch.device).unsqueeze(dim=-1),
             samples,
         ]
-        super()._update_ranks_(true_scores=true_scores, all_scores=negative_scores, side=side, hrt_batch=hrt_batch)
+        # super.evaluation assumes that the true scores are part of all_scores
+        scores = torch.cat([true_scores, negative_scores], dim=-1)
+        super()._update_ranks_(true_scores=true_scores, all_scores=scores, side=side, hrt_batch=hrt_batch)
         self.num_entities = all_scores.shape[1]
