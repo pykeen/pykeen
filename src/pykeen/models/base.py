@@ -120,6 +120,13 @@ class Model(nn.Module, ABC):
         """
         self.predict_with_sigmoid = predict_with_sigmoid
 
+    @property
+    def num_real_relations(self) -> int:
+        """Return the real number of relations (without inverses)."""
+        if self.use_inverse_triples:
+            return self.num_relations // 2
+        return self.num_relations
+
     def __init_subclass__(cls, **kwargs):
         """Initialize the subclass.
 
@@ -215,9 +222,11 @@ class Model(nn.Module, ABC):
         :param mode:
             The pass mode. Is None for transductive and "train" / "valid" / "test" in inductive.
 
-        :return: shape: (batch_size, num_relations), dtype: float
+        :return: shape: (batch_size, num_real_relations), dtype: float
             For each h-t pair, the scores for all possible relations.
         """
+        # TODO: this currently compute (batch_size, num_relations) instead,
+        # i.e., scores for normal and inverse relations
 
     @abstractmethod
     def score_h(
@@ -405,7 +414,7 @@ class Model(nn.Module, ABC):
         :param mode:
             The pass mode. Is None for transductive and "train" / "valid" / "test" in inductive.
 
-        :return: shape: (batch_size, num_relations), dtype: float
+        :return: shape: (batch_size, num_real_relations), dtype: float
             For each h-t pair, the scores for all possible relations.
         """
         self.eval()  # Enforce evaluation mode
