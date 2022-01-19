@@ -645,6 +645,8 @@ class CompGCNLayer(nn.Module):
         use_bias: bool = True,
         use_relation_bias: bool = False,
         composition: Hint[CompositionModule] = None,
+        attention_heads: int = 4,
+        attention_dropout: float = 0.1,
         activation: Hint[nn.Module] = nn.Identity,
         activation_kwargs: Optional[Mapping[str, Any]] = None,
         edge_weighting: HintType[EdgeWeighting] = SymmetricEdgeWeighting,
@@ -664,6 +666,10 @@ class CompGCNLayer(nn.Module):
             Whether to use a bias for the relation transformation.
         :param composition:
             The composition function.
+        :param attention_heads:
+            Number of attention heads when using the attention weighting
+        :param attention_dropout:
+            Dropout for the attention message weighting
         :param activation:
             The activation to use.
         :param activation_kwargs:
@@ -678,7 +684,10 @@ class CompGCNLayer(nn.Module):
         self.composition = composition_resolver.make(composition)
 
         # edge weighting
-        self.edge_weighting: EdgeWeighting = edge_weight_resolver.make(edge_weighting)
+        self.edge_weighting: EdgeWeighting = edge_weight_resolver.make(
+            edge_weighting,
+            pos_kwargs=dict(output_dim=output_dim, attn_drop=attention_dropout, num_heads=attention_heads)
+        )
 
         # message passing weights
         self.w_loop = nn.Parameter(data=torch.empty(input_dim, output_dim))
@@ -747,7 +756,7 @@ class CompGCNLayer(nn.Module):
         m = m @ weight
 
         # normalization
-        m = m * self.edge_weighting(source=source, target=target).unsqueeze(dim=-1)
+        m = self.edge_weighting(source=source, target=target, message=m, x_e=x_e)
 
         # aggregate by sum
         x_e = x_e.new_zeros(x_e.shape[0], m.shape[1]).index_add(dim=0, index=target, source=m)
