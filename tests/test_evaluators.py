@@ -110,6 +110,9 @@ class RankBasedEvaluatorTests(cases.EvaluatorTestCase):
             assert set(all_type_rank_counts.values()) == {expected_size}
 
         # TODO: Validate with data?
+        # check correct num_entities
+        assert isinstance(self.instance, RankBasedEvaluator)
+        assert self.instance.num_entities == self.dataset.num_entities
 
 
 class SampledRankBasedEvaluatorTests(RankBasedEvaluatorTests):
