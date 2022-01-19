@@ -535,12 +535,10 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
 
     def __init__(
         self,
+        *,
         triples_factory: CoreTriplesFactory,
-        loss: Optional[Loss] = None,
-        predict_with_sigmoid: bool = False,
-        preferred_device: DeviceHint = None,
-        random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
+        **kwargs,
     ) -> None:
         """Initialize the module.
 
@@ -558,14 +556,10 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
             A random seed to use for initialising the model's weights. **Should** be set when aiming at reproducibility.
         :param regularizer:
             A regularizer to use for training.
+        :param kwargs:
+            additional keyword-based arguments passed to Model.__init__
         """
-        super().__init__(
-            triples_factory=triples_factory,
-            loss=loss,
-            predict_with_sigmoid=predict_with_sigmoid,
-            preferred_device=preferred_device,
-            random_seed=random_seed,
-        )
+        super().__init__(triples_factory=triples_factory, **kwargs)
         # Regularizer
         if regularizer is not None:
             self.regularizer = regularizer
