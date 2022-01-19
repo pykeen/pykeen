@@ -5,9 +5,9 @@
 import dataclasses
 import itertools
 import logging
-from types import MappingProxyType
 import unittest
 from operator import attrgetter
+from types import MappingProxyType
 from typing import Collection, Dict, Iterable, List, Optional, Tuple, Union
 
 import numpy

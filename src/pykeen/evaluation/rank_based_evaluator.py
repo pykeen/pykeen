@@ -607,13 +607,13 @@ def numeric_expected_value(
 
     Depending on the metric, the estimate may not be very accurate and converage slowly, cf. https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.rv_discrete.expect.html#scipy-stats-rv-discrete-expect
     """
-    metric = all_type_funcs[metric]
+    metric_func = all_type_funcs[metric]
     num_candidates = np.asarray(num_candidates)
     generator = np.random.default_rng()
     expectation = 0
     for _ in range(num_samples):
         ranks = generator.integers(low=0, high=num_candidates)
-        expectation += metric(ranks)
+        expectation += metric_func(ranks)
     return expectation / num_samples
 
 
