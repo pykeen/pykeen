@@ -593,7 +593,7 @@ class RankBasedEvaluator(Evaluator):
             inverse_geometric_mean_rank=dict(asr[INVERSE_GEOMETRIC_MEAN_RANK]),
             inverse_harmonic_mean_rank=dict(asr[INVERSE_HARMONIC_MEAN_RANK]),
             inverse_median_rank=dict(asr[INVERSE_MEDIAN_RANK]),
-            rank_count={k: int(v) for k, v in asr[RANK_COUNT][RANK_REALISTIC].items()},  # same for all rank types
+            rank_count={k: int(asr[RANK_COUNT][side][RANK_REALISTIC]) for k in SIDES},  # same for all rank types
             rank_std=dict(asr[RANK_STD]),
             rank_mad=dict(asr[RANK_MAD]),
             rank_var=dict(asr[RANK_VARIANCE]),
