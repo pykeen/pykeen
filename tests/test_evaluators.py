@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 class RankBasedEvaluatorTests(cases.EvaluatorTestCase):
     """unittest for the RankBasedEvaluator."""
 
-    evaluator_cls = RankBasedEvaluator
+    cls = RankBasedEvaluator
 
     def _validate_result(
         self,
@@ -103,7 +103,7 @@ class RankBasedEvaluatorTests(cases.EvaluatorTestCase):
 class ClassificationEvaluatorTest(cases.EvaluatorTestCase):
     """Unittest for the ClassificationEvaluator."""
 
-    evaluator_cls = ClassificationEvaluator
+    cls = ClassificationEvaluator
 
     def _validate_result(
         self,

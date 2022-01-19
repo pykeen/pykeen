@@ -1629,33 +1629,18 @@ class SplitterTestCase(GenericTestCase[Splitter]):
         assert triple_tensor_to_set(splitted[0]) == self.all_entities
 
 
-class EvaluatorTestCase(unittest.TestCase):
+class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
     """A test case for quickly defining common tests for evaluators models."""
 
     # The triples factory and model
     factory: TriplesFactory
     model: Model
 
-    #: The evaluator to be tested
-    evaluator_cls: ClassVar[Type[Evaluator]]
-    evaluator_kwargs: ClassVar[Optional[Mapping[str, Any]]] = None
-
     # Settings
-    batch_size: int
-    embedding_dim: int
+    batch_size: int = 8
+    embedding_dim: int = 7
 
-    #: The evaluator instantiation
-    evaluator: Evaluator
-
-    def setUp(self) -> None:
-        """Set up the test case."""
-        # Settings
-        self.batch_size = 8
-        self.embedding_dim = 7
-
-        # Initialize evaluator
-        self.evaluator = self.evaluator_cls(**(self.evaluator_kwargs or {}))
-
+    def post_instantiation_hook(self) -> None:
         # Use small test dataset
         self.factory = Nations().training
 
@@ -1676,7 +1661,7 @@ class EvaluatorTestCase(unittest.TestCase):
             scores = self.model.score_t(hr_batch=hrt_batch[:, :2])
 
         # Compute mask only if required
-        if self.evaluator.requires_positive_mask:
+        if self.instance.requires_positive_mask:
             # TODO: Re-use filtering code
             triples = self.factory.mapped_triples.to(self.model.device)
             if inverse:
@@ -1702,7 +1687,7 @@ class EvaluatorTestCase(unittest.TestCase):
         """Test the evaluator's ``process_tail_scores_()`` function."""
         hrt_batch, scores, mask = self._get_input()
         true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, 2]][:, None]
-        self.evaluator.process_tail_scores_(
+        self.instance.process_tail_scores_(
             hrt_batch=hrt_batch,
             true_scores=true_scores,
             scores=scores,
@@ -1713,7 +1698,7 @@ class EvaluatorTestCase(unittest.TestCase):
         """Test the evaluator's ``process_head_scores_()`` function."""
         hrt_batch, scores, mask = self._get_input(inverse=True)
         true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, 0]][:, None]
-        self.evaluator.process_head_scores_(
+        self.instance.process_head_scores_(
             hrt_batch=hrt_batch,
             true_scores=true_scores,
             scores=scores,
@@ -1725,20 +1710,20 @@ class EvaluatorTestCase(unittest.TestCase):
         # Process one batch
         hrt_batch, scores, mask = self._get_input()
         true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, 2]][:, None]
-        self.evaluator.process_tail_scores_(
+        self.instance.process_tail_scores_(
             hrt_batch=hrt_batch,
             true_scores=true_scores,
             scores=scores,
             dense_positive_mask=mask,
         )
-        self.evaluator.process_head_scores_(
+        self.instance.process_head_scores_(
             hrt_batch=hrt_batch,
             true_scores=true_scores,
             scores=scores,
             dense_positive_mask=mask,
         )
 
-        result = self.evaluator.finalize()
+        result = self.instance.finalize()
         assert isinstance(result, MetricResults)
 
         self._validate_result(
