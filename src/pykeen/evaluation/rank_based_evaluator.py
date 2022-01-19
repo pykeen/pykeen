@@ -4,6 +4,7 @@
 
 import itertools as itt
 import logging
+import math
 import random
 import re
 from collections import defaultdict
@@ -649,10 +650,11 @@ def sample_negatives(
         ):
             pool = list(all_ids.difference(group[f"{side}_all"].unique().tolist()))
             if len(pool) < num_samples:
-                logger.warning(f"There are less than num_samples={num_samples} candidates.")
+                logger.warning(
+                    f"There are less than num_samples={num_samples} candidates for side={side}, triples={group}.",
+                )
                 # repeat
-                while len(pool) < num_samples:
-                    pool = pool + pool
+                pool = int(math.ceil(num_samples / len(pool))) * pool
             for i in group["index"].unique():
                 this_negatives[i, :] = torch.as_tensor(
                     data=random.sample(population=pool, k=num_samples),
