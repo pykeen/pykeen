@@ -36,6 +36,7 @@ __all__ = [
     "MetricResults",
     "filter_scores_",
     "evaluate",
+    "prepare_filter_triples",
 ]
 
 logger = logging.getLogger(__name__)
@@ -487,7 +488,7 @@ def filter_scores_(
     return scores
 
 
-def _prepare_filter_triples(
+def prepare_filter_triples(
     mapped_triples: MappedTriples,
     additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
 ) -> MappedTriples:
@@ -515,8 +516,7 @@ def _prepare_filter_triples(
     if torch.is_tensor(additional_filter_triples):
         additional_filter_triples = [additional_filter_triples]
 
-    # TODO: check for duplicates?
-    return torch.cat([*additional_filter_triples, mapped_triples], dim=0)
+    return torch.cat([*additional_filter_triples, mapped_triples], dim=0).unique(dim=0)
 
 
 def evaluate(
@@ -643,7 +643,7 @@ def evaluate(
 
     # Prepare for result filtering
     if filtering_necessary or positive_masks_required:
-        all_pos_triples = _prepare_filter_triples(
+        all_pos_triples = prepare_filter_triples(
             mapped_triples=mapped_triples,
             additional_filter_triples=additional_filter_triples,
         ).to(device=device)
@@ -891,7 +891,7 @@ def get_candidate_set_size(
     ).reset_index()
 
     # determine filter triples
-    filter_triples = _prepare_filter_triples(
+    filter_triples = prepare_filter_triples(
         mapped_triples=mapped_triples,
         additional_filter_triples=additional_filter_triples,
     )
