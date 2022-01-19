@@ -3,19 +3,25 @@
 """Run dataset CLI."""
 
 import itertools as itt
+import json
 import logging
+import math
 import pathlib
 from textwrap import dedent
-from typing import Union
+from typing import Iterable, List, Optional, Tuple, Type, Union
 
 import click
 import docdata
 import pandas as pd
-from more_click import verbose_option
+from more_click import log_level_option, verbose_option
 from tqdm import tqdm
 
 from . import dataset_resolver, get_dataset
 from ..constants import PYKEEN_DATASETS
+from ..datasets.base import Dataset
+from ..datasets.ogb import OGBWikiKG
+from ..evaluation.evaluator import get_candidate_set_size
+from ..evaluation.rank_based_evaluator import expected_hits_at_k, expected_mean_rank
 
 
 @click.group()
@@ -36,23 +42,30 @@ def summarize():
             click.secho(str(e), fg="red", bold=True)
 
 
-def _iter_datasets(regex_name_filter=None):
+def _get_num_triples(pair: Tuple[str, Type[Dataset]]) -> int:
+    """Extract the number of triples from docdata."""
+    return docdata.get_docdata(pair[1])["statistics"]["triples"]
+
+
+def _iter_datasets(regex_name_filter=None, max_triples: Optional[int] = None) -> Iterable[Tuple[str, Type[Dataset]]]:
     it = sorted(
         dataset_resolver.lookup_dict.items(),
-        key=lambda pair: docdata.get_docdata(pair[1])["statistics"]["triples"],
+        key=_get_num_triples,
     )
+    if max_triples is not None:
+        it = [pair for pair in it if _get_num_triples(pair) <= max_triples]
     if regex_name_filter is not None:
         if isinstance(regex_name_filter, str):
             import re
 
             regex_name_filter = re.compile(regex_name_filter)
         it = [(name, dataset) for name, dataset in it if regex_name_filter.match(name)]
-    it = tqdm(
+    it_tqdm = tqdm(
         it,
         desc="Datasets",
     )
-    for k, v in it:
-        it.set_postfix(name=k)
+    for k, v in it_tqdm:
+        it_tqdm.set_postfix(name=k)
         yield k, v
 
 
@@ -174,8 +187,8 @@ def verify(dataset: str):
     """Verify dataset integrity."""
     data = []
     keys = None
-    for name, dataset in _iter_datasets(regex_name_filter=dataset):
-        dataset_instance = get_dataset(dataset=dataset)
+    for name, dataset_cls in _iter_datasets(regex_name_filter=dataset):
+        dataset_instance = get_dataset(dataset=dataset_cls)
         data.append(
             list(
                 itt.chain(
@@ -203,6 +216,83 @@ def verify(dataset: str):
             valid = valid & this_valid
     df["valid"] = valid
     click.echo(df.to_markdown())
+
+
+@main.command()
+@verbose_option
+@click.option("-d", "--dataset", help="Regex for filtering datasets by name")
+@click.option("-m", "--max-triples", type=int, default=None)
+@log_level_option(default=logging.ERROR)
+def expected_metrics(dataset: str, max_triples: Optional[int], log_level: str):
+    """Compute expected metrics for all datasets (matching the given pattern)."""
+    logging.getLogger("pykeen").setLevel(level=log_level)
+    directory = PYKEEN_DATASETS
+    df_data: List[Tuple[str, str, str, str, float]] = []
+    for _dataset_name, dataset_cls in _iter_datasets(regex_name_filter=dataset, max_triples=max_triples):
+        if dataset_cls is OGBWikiKG:
+            click.echo("Skip OGB WikiKG")
+            continue
+        dataset_instance = get_dataset(dataset=dataset_cls)
+        dataset_name = dataset_resolver.normalize_inst(dataset_instance)
+        d = directory.joinpath(dataset_name, "analysis")
+        d.mkdir(parents=True, exist_ok=True)
+        expected_metrics = dict()
+        for key, factory in dataset_instance.factory_dict.items():
+            if key == "training":
+                additional_filter_triples = None
+            elif key == "validation":
+                additional_filter_triples = dataset_instance.training.mapped_triples
+            elif key == "testing":
+                additional_filter_triples = [
+                    dataset_instance.training.mapped_triples,
+                ]
+                if dataset_instance.validation is None:
+                    click.echo(f"WARNING: {dataset_name} does not have validation triples!")
+                else:
+                    additional_filter_triples.append(dataset_instance.validation.mapped_triples)
+            else:
+                raise AssertionError(key)
+            df = get_candidate_set_size(
+                mapped_triples=factory.mapped_triples,
+                additional_filter_triples=additional_filter_triples,
+            )
+            output_path = d.joinpath(f"{key}_candidates.tsv.gz")
+            df.to_csv(output_path, sep="\t", index=False)
+
+            # expected metrics
+            ks = (1, 3, 5, 10) + tuple(
+                10 ** i for i in range(2, int(math.ceil(math.log(dataset_instance.num_entities))))
+            )
+            this_metrics = dict()
+            for label, sides in dict(
+                head=["head"],
+                tail=["tail"],
+                both=["head", "tail"],
+            ).items():
+                candidate_set_sizes = df[[f"{side}_candidates" for side in sides]]
+                this_metrics[label] = {
+                    "mean_rank": expected_mean_rank(candidate_set_sizes),
+                    **{f"hits_at_{k}": expected_hits_at_k(candidate_set_sizes, k=k) for k in ks},
+                }
+            expected_metrics[key] = this_metrics
+        with d.joinpath("expected_metrics.json").open("w") as file:
+            json.dump(expected_metrics, file, sort_keys=True, indent=4)
+
+        df_data.extend(
+            (dataset_name, metric, side, part, value)
+            for part, level1 in expected_metrics.items()
+            for side, level2 in level1.items()
+            for metric, value in level2.items()
+        )
+    df = (
+        pd.DataFrame(df_data, columns=["dataset", "metric", "side", "part", "value"])
+        .sort_values(
+            by=["dataset", "metric", "side", "part"],
+        )
+        .reset_index(drop=True)
+    )
+    df.to_csv(directory.joinpath("expected_metrics.tsv.gz"))
+    click.echo(df.to_markdown(index=False))
 
 
 if __name__ == "__main__":

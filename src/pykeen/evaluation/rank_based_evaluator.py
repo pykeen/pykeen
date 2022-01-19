@@ -8,7 +8,7 @@ import random
 import re
 from collections import defaultdict
 from dataclasses import dataclass, field, fields
-from typing import DefaultDict, Dict, Iterable, List, Mapping, NamedTuple, Optional, Sequence, Tuple, Union
+from typing import DefaultDict, Dict, Iterable, List, NamedTuple, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -602,7 +602,8 @@ class RankBasedEvaluator(Evaluator):
 
 def sample_negatives(
     evaluation_triples: MappedTriples,
-    additional_filter_triples: MappedTriples,  # TODO: update to additional filter triples interface, cf. _prepare_filter_triples, https://github.com/pykeen/pykeen/pull/732
+    additional_filter_triples: MappedTriples,
+    # TODO: update to additional filter triples interface, cf. _prepare_filter_triples, https://github.com/pykeen/pykeen/pull/732
     num_entities: int,
     num_samples: int = 50,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -734,3 +735,67 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
         # super.evaluation assumes that the true scores are part of all_scores
         scores = torch.cat([true_scores, negative_scores], dim=-1)
         super()._update_ranks_(true_scores=true_scores, all_scores=scores, side=side, hrt_batch=hrt_batch)
+
+
+def numeric_expected_value(
+    metric: str,
+    num_candidates: Union[Sequence[int], np.ndarray],
+    num_samples: int,
+) -> float:
+    """
+    Compute expected metric value by summation.
+
+    Depending on the metric, the estimate may not be very accurate and converage slowly, cf.
+    https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.rv_discrete.expect.html
+    """
+    metric_func = all_type_funcs[metric]
+    num_candidates = np.asarray(num_candidates)
+    generator = np.random.default_rng()
+    expectation = 0
+    for _ in range(num_samples):
+        ranks = generator.integers(low=0, high=num_candidates)
+        expectation += metric_func(ranks)
+    return expectation / num_samples
+
+
+# TODO: closed-forms for other metrics?
+
+
+def expected_mean_rank(
+    num_candidates: Union[Sequence[int], np.ndarray],
+) -> float:
+    r"""
+    Calculate the expected mean rank under random ordering.
+
+    .. math ::
+
+        E[MR] = \frac{1}{n} \sum \limits_{i=1}^{n} \frac{1 + CSS[i]}{2}
+              = \frac{1}{2}(1 + \frac{1}{n} \sum \limits_{i=1}^{n} CSS[i])
+
+    :param num_candidates:
+        the number of candidates for each individual rank computation
+
+    :return:
+        the expected mean rank
+    """
+    return 0.5 * (1 + np.mean(np.asanyarray(num_candidates)))
+
+
+def expected_hits_at_k(
+    num_candidates: Union[Sequence[int], np.ndarray],
+    k: int,
+) -> float:
+    r"""
+    Calculate the expected Hits@k under random ordering.
+
+    .. math ::
+
+        E[Hits@k] = \frac{1}{n} \sum \limits_{i=1}^{n} min(\frac{k}{CSS[i]}, 1.0)
+
+    :param num_candidates:
+        the number of candidates for each individual rank computation
+
+    :return:
+        the expected Hits@k value
+    """
+    return k * np.mean(np.reciprocal(np.asanyarray(num_candidates, dtype=float)).clip(min=None, max=1 / k))
