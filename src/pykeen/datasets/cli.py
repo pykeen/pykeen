@@ -5,6 +5,7 @@
 import itertools as itt
 import json
 import logging
+import math
 import pathlib
 from textwrap import dedent
 from typing import Iterable, List, Optional, Tuple, Type, Union
@@ -255,6 +256,9 @@ def expected_metrics(dataset: str, max_triples: Optional[int]):
             df.to_csv(output_path, sep="\t", index=False)
 
             # expected metrics
+            ks = (1, 3, 5, 10) + tuple(
+                10 ** i for i in range(2, int(math.ceil(math.log(dataset_instance.num_entities))))
+            )
             this_metrics = dict()
             for label, sides in dict(
                 head=["head"],
@@ -264,7 +268,7 @@ def expected_metrics(dataset: str, max_triples: Optional[int]):
                 candidate_set_sizes = df[[f"{side}_candidates" for side in sides]]
                 this_metrics[label] = {
                     "mean_rank": expected_mean_rank(candidate_set_sizes),
-                    **{f"hits_at_{k}": expected_hits_at_k(candidate_set_sizes, k=k) for k in (1, 3, 5, 10)},
+                    **{f"hits_at_{k}": expected_hits_at_k(candidate_set_sizes, k=k) for k in ks},
                 }
             expected_metrics[key] = this_metrics
         with d.joinpath("expected_metrics.json").open("w") as file:
