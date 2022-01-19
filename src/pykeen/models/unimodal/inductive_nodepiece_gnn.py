@@ -3,16 +3,11 @@
 """A wrapper which combines an interaction function with NodePiece entity representations."""
 
 import logging
-from typing import Any, Callable, ClassVar, Mapping, Optional, Sequence, Tuple
+from typing import Optional, Tuple
 
 import torch
-from class_resolver import Hint, HintOrType
 
 from ..nbase import cast
-from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...nn.emb import EmbeddingSpecification, NodePieceRepresentation, SubsetRepresentationModule
-from ...nn.modules import DistMultInteraction, Interaction
-from ...triples.triples_factory import CoreTriplesFactory
 from ...typing import Mode, HeadRepresentation, RelationRepresentation, TailRepresentation
 from .inductive_nodepiece import InductiveNodePiece
 from ...nn.emb import CompGCNLayer
@@ -33,10 +28,6 @@ class InductiveNodePieceGNN(InductiveNodePiece):
 
     As of now, message passing is expected to be over the full graph
     """
-
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
-    )
 
     def __init__(
         self,
@@ -60,7 +51,7 @@ class InductiveNodePieceGNN(InductiveNodePiece):
                                                                              kwargs.get('test_factory', None)
 
         if gnn_encoder is None:
-            # default composition if DistMult-style
+            # default composition is DistMult-style
             self.gnn_encoder = torch.nn.ModuleList([
                 CompGCNLayer(
                     input_dim=self.entity_representations[0].tokens.shape[0],
@@ -119,11 +110,6 @@ class InductiveNodePieceGNN(InductiveNodePiece):
             x_r.index_select(dim=0, index=r_indices).unsqueeze(1) if r_indices is not None else x_r.unsqueeze(0),
             x_e.index_select(dim=0, index=t_indices).unsqueeze(1) if t_indices is not None else x_e.unsqueeze(0),
         ]
-        # h, r, t = [
-        #     h.unsqueeze(1) if h_indices is not None else h.unsqueeze(0),
-        #     r.unsqueeze(1) if r_indices is not None else r.unsqueeze(0),
-        #     t.unsqueeze(1) if t_indices is not None else t.unsqueeze(0),
-        # ]
 
         # normalization
         return cast(
