@@ -1649,10 +1649,7 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
         """Return the evaluation factory."""
         return self.dataset.validation
 
-    def post_instantiation_hook(self) -> None:
-        # Use small test dataset
-        self.factory = Nations().training
-
+    def post_instantiation_hook(self) -> None:  # noqa: D102
         # Use small model (untrained)
         self.model = TransE(triples_factory=self.factory, embedding_dim=self.embedding_dim)
 
