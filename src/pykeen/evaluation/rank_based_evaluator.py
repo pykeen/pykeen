@@ -449,8 +449,9 @@ class RankBasedMetricResults(MetricResults):
         for side, rank_type in itt.product(SIDES, RANK_TYPES):
             for k, v in self.hits_at_k[side][rank_type].items():
                 yield side, rank_type, f"hits_at_{k}", v
+            yield side, rank_type, "rank_count", self.rank_count
             for f in fields(self):
-                if f.name == "hits_at_k":
+                if f.name in {"hits_at_k", "rank_count"}:
                     continue
                 side_data = getattr(self, f.name)[side]
                 if rank_type in side_data:

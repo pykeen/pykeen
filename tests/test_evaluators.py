@@ -5,6 +5,7 @@
 import dataclasses
 import itertools
 import logging
+import random
 import unittest
 from operator import attrgetter
 from typing import Any, Collection, Dict, Iterable, List, MutableMapping, Optional, Tuple, Union
@@ -721,3 +722,25 @@ def test_prepare_filter_triples():
         assert filter_triples.shape[0] >= mapped_triples.shape[0]
         # check unique
         assert filter_triples.unique(dim=0).shape == filter_triples.shape
+
+
+class RankBasedMetricResultsTests(unittest.TestCase):
+    """Tests for rank-based metric results."""
+
+    num_entities: int = 7
+    num_triples: int = 13
+
+    def setUp(self) -> None:
+        """Prepare test instance."""
+        evaluator = RankBasedEvaluator()
+        evaluator.num_entities = self.num_entities
+        evaluator.ranks = {
+            (side, rank_type): [random.random() for _ in range(self.num_triples * (2 if side == SIDE_BOTH else 1))]
+            for side, rank_type in itertools.product(SIDES, RANK_TYPES | {RANK_EXPECTED_REALISTIC})
+        }
+        self.instance = evaluator.finalize()
+
+    def test_to_df(self):
+        """Test to_df."""
+        df = self.instance.to_df()
+        assert isinstance(df, pandas.DataFrame)
