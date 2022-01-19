@@ -693,7 +693,10 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
         if head_negatives is None and tail_negatives is None:
             # default for inductive LP by [teru2020]
             num_negatives = num_negatives or 50
-            logger.info(f"Sampling {num_negatives} negatives per positive evaluation triple.")
+            logger.info(
+                f"Sampling {num_negatives} negatives for each of the "
+                f"{evaluation_factory.num_triples} evaluation triples.",
+            )
             if num_negatives > evaluation_factory.num_entities:
                 raise ValueError("Cannot use more negative samples than there are entities.")
             head_negatives, tail_negatives = sample_negatives(
