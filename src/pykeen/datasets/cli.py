@@ -13,7 +13,7 @@ from typing import Iterable, List, Optional, Tuple, Type, Union
 import click
 import docdata
 import pandas as pd
-from more_click import verbose_option
+from more_click import log_level_option, verbose_option
 from tqdm import tqdm
 
 from . import dataset_resolver, get_dataset
@@ -222,8 +222,10 @@ def verify(dataset: str):
 @verbose_option
 @click.option("-d", "--dataset", help="Regex for filtering datasets by name")
 @click.option("-m", "--max-triples", type=int, default=None)
-def expected_metrics(dataset: str, max_triples: Optional[int]):
+@log_level_option(default=logging.ERROR)
+def expected_metrics(dataset: str, max_triples: Optional[int], log_level: str):
     """Compute expected metrics for all datasets (matching the given pattern)."""
+    logging.getLogger("pykeen").setLevel(level=log_level)
     directory = PYKEEN_DATASETS
     df_data: List[Tuple[str, str, str, str, float]] = []
     for _dataset_name, dataset_cls in _iter_datasets(regex_name_filter=dataset, max_triples=max_triples):
