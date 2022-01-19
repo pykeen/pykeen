@@ -105,6 +105,7 @@ class SampledRankBasedEvaluatorTests(RankBasedEvaluatorTests):
     """unittest for the SampledRankBasedEvaluator."""
 
     cls = SampledRankBasedEvaluator
+    kwargs = dict(num_negatives=3)
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
