@@ -665,8 +665,11 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
     def __init__(
         self,
         evaluation_factory: CoreTriplesFactory,
-        head_negatives: torch.LongTensor,
-        tail_negatives: torch.LongTensor,
+        *,
+        additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
+        num_negatives: int = 50,  # default for inductive lp by [teru2020]
+        head_negatives: Optional[torch.LongTensor] = None,
+        tail_negatives: Optional[torch.LongTensor] = None,
         **kwargs,
     ):
         """
@@ -682,6 +685,19 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
             additional keyword-based arguments passed to RankBasedEvaluator.__init__
         """
         super().__init__(**kwargs)
+        if head_negatives is None and tail_negatives is None:
+            logger.info("Sampling negatives")
+            if num_negatives > evaluation_factory.num_entities:
+                raise ValueError("Cannot use more negative samples than there are entities.")
+            head_negatives, tail_negatives = sample_negatives(
+                evaluation_triples=evaluation_factory.mapped_triples,
+                additional_filter_triples=additional_filter_triples,
+                num_entities=evaluation_factory.num_entities,
+                num_samples=num_negatives,
+            )
+        elif head_negatives is None or tail_negatives is None:
+            raise ValueError("Either both, head and tail negatives must be provided, or none.")
+
         # verify input
         for negatives in (head_negatives, tail_negatives):
             if negatives.shape[0] != evaluation_factory.num_triples:
@@ -692,29 +708,6 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
             SIDE_TAIL: tail_negatives,
         }
         self.num_entities = evaluation_factory.num_entities
-
-    @classmethod
-    def create_with_random_samples(
-        cls,
-        evaluation_factory: CoreTriplesFactory,
-        additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
-        num_negatives: int = 50,  # default for inductive lp by [teru2020]
-        **kwargs,
-    ) -> "SampledRankBasedEvaluator":
-        if num_negatives > evaluation_factory.num_entities:
-            raise ValueError("Cannot use more negative samples than there are entities.")
-        head_negatives, tail_negatives = sample_negatives(
-            evaluation_triples=evaluation_factory.mapped_triples,
-            additional_filter_triples=additional_filter_triples,
-            num_entities=evaluation_factory.num_entities,
-            num_samples=num_negatives,
-        )
-        return cls(
-            evaluation_factory=evaluation_factory,
-            head_samples=head_negatives,
-            tail_samples=tail_negatives,
-            **kwargs,
-        )
 
     def _update_ranks_(
         self,
