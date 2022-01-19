@@ -16,7 +16,7 @@ import torch
 from dataclasses_json import dataclass_json
 from scipy import stats
 
-from .evaluator import Evaluator, MetricResults
+from .evaluator import Evaluator, MetricResults, prepare_filter_triples
 from ..triples.triples_factory import CoreTriplesFactory
 from ..typing import MappedTriples
 from ..utils import fix_dataclass_init_docs
@@ -602,9 +602,9 @@ class RankBasedEvaluator(Evaluator):
 
 def sample_negatives(
     evaluation_triples: MappedTriples,
-    additional_filter_triples: MappedTriples,
-    # TODO: update to additional filter triples interface, cf. _prepare_filter_triples, https://github.com/pykeen/pykeen/pull/732
     num_entities: int,
+    additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
+    # TODO: update to additional filter triples interface, cf. _prepare_filter_triples, https://github.com/pykeen/pykeen/pull/732
     num_samples: int = 50,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """
@@ -627,17 +627,15 @@ def sample_negatives(
         - tail_negatives: shape: (n, num_negatives)
             the negatives for tail prediction
     """
+    additional_filter_triples = prepare_filter_triples(
+        mapped_triples=evaluation_triples,
+        additional_filter_triples=additional_filter_triples,
+    )
     columns = ["head", "relation", "tail"]
     num_triples = evaluation_triples.shape[0]
     df = pd.DataFrame(data=evaluation_triples.numpy(), columns=columns)
+    all_df = pd.DataFrame(data=additional_filter_triples.numpy(), columns=columns)
     id_df = df.reset_index()
-    all_df = pd.concat(
-        [
-            df,
-            pd.DataFrame(data=additional_filter_triples.numpy(), columns=columns),
-        ],
-        ignore_index=True,
-    )
     all_ids = set(range(num_entities))
     negatives = []
     for side in ["head", "tail"]:
@@ -699,7 +697,7 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
     def create_with_random_samples(
         cls,
         evaluation_factory: CoreTriplesFactory,
-        additional_filter_triples: torch.LongTensor,  # TODO: update
+        additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
         num_negatives: int = 50,  # default for inductive lp by [teru2020]
         **kwargs,
     ) -> "SampledRankBasedEvaluator":
