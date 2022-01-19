@@ -672,8 +672,9 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
     ):
         super().__init__(**kwargs)
         self.id_frame, self.head_samples, self.tail_samples = sample_negatives(
-            valid_triples=evaluation_factory.mapped_triples,
-            all_pos=additional_filter_triples,
+            evaluation_triples=evaluation_factory.mapped_triples,
+            additional_filter_triples=additional_filter_triples,
+            num_entities=evaluation_factory.num_entities,
             num_samples=num_negatives,
         )
 
