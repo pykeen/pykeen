@@ -5,6 +5,7 @@
 import dataclasses
 import itertools
 import logging
+from multiprocessing.spawn import prepare
 import unittest
 from operator import attrgetter
 from typing import Any, Collection, Dict, Iterable, List, MutableMapping, Optional, Tuple, Union
@@ -511,21 +512,34 @@ def test_sample_negatives():
     dataset = Nations()
     num_negatives = 2
     evaluation_triples = dataset.validation.mapped_triples
-    index_df, head_negatives, tail_negatives = sample_negatives(
+    additional_filter_triples = dataset.training.mapped_triples
+    head_negatives, tail_negatives = sample_negatives(
         evaluation_triples=evaluation_triples,
-        additional_filter_triples=dataset.training.mapped_triples,
+        additional_filter_triples=additional_filter_triples,
         num_entities=dataset.num_entities,
         num_samples=num_negatives,
     )
     num_triples = evaluation_triples.shape[0]
-    assert isinstance(index_df, pandas.DataFrame)
-    assert set(index_df.columns) == {"index", "head", "relation", "tail"}
-    assert index_df.shape[0] == num_triples
-    for negatives in (head_negatives, tail_negatives):
+    true = set(
+        map(
+            tuple,
+            prepare_filter_triples(
+                mapped_triples=evaluation_triples,
+                additional_filter_triples=additional_filter_triples,
+            ).tolist(),
+        )
+    )
+    for i, negatives in zip((0, 2), (head_negatives, tail_negatives)):
         assert torch.is_tensor(negatives)
         assert negatives.dtype == torch.long
         assert negatives.shape == (num_triples, num_negatives)
-        # TODO: check true filter triple
+        # check true negatives
+        full_negatives = torch.empty(num_triples, num_negatives, 3)
+        full_negatives[:, :, :] = evaluation_triples[:, None, :]
+        full_negatives[:, :, i] = negatives
+        full_negatives = full_negatives.view(-1, 3)
+        negative_set = set(map(tuple, full_negatives.tolist()))
+        assert negative_set.isdisjoint(true)
         # TODO: check no repetitions (if possible)
 
 
