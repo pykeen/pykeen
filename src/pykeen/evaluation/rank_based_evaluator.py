@@ -666,7 +666,12 @@ def sample_negatives(
 
 
 class SampledRankBasedEvaluator(RankBasedEvaluator):
-    """A rank-based evaluator using sampled negatives instead of all negatives, cf. [teru2020]_."""
+    """
+    A rank-based evaluator using sampled negatives instead of all negatives, cf. [teru2020]_.
+
+    Notice that this evaluator yields optimistic estimations of the metrics evaluated on all entities,
+    cf. https://arxiv.org/abs/2106.06935.
+    """
 
     def __init__(
         self,
