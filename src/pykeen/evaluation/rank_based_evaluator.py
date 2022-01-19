@@ -670,7 +670,23 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
         tail_negatives: torch.LongTensor,
         **kwargs,
     ):
+        """
+        Initialize the evaluator.
+
+        :param evaluation_factory:
+            the factory with evaluation triples
+        :param head_negatives: shape: (num_triples, num_negatives)
+            the entity IDs of negative samples for head prediction for each evaluation triple
+        :param tail_negatives: shape: (num_triples, num_negatives)
+            the entity IDs of negative samples for tail prediction for each evaluation triple
+        :param kwargs:
+            additional keyword-based arguments passed to RankBasedEvaluator.__init__
+        """
         super().__init__(**kwargs)
+        # verify input
+        for negatives in (head_negatives, tail_negatives):
+            if negatives.shape[0] != evaluation_factory.num_triples:
+                raise ValueError(f"Negatives are in wrong shape: {negatives.shape}")
         self.triple_to_index = {(h, r, t): i for i, (h, r, t) in enumerate(evaluation_factory.mapped_triples.tolist())}
         self.negative_samples = {
             SIDE_HEAD: head_negatives,
@@ -688,7 +704,7 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
     ) -> "SampledRankBasedEvaluator":
         if num_negatives > evaluation_factory.num_entities:
             raise ValueError("Cannot use more negative samples than there are entities.")
-        head_samples, tail_samples = sample_negatives(
+        head_negatives, tail_negatives = sample_negatives(
             evaluation_triples=evaluation_factory.mapped_triples,
             additional_filter_triples=additional_filter_triples,
             num_entities=evaluation_factory.num_entities,
@@ -696,8 +712,8 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
         )
         return cls(
             evaluation_factory=evaluation_factory,
-            head_samples=head_samples,
-            tail_samples=tail_samples,
+            head_samples=head_negatives,
+            tail_samples=tail_negatives,
             **kwargs,
         )
 
