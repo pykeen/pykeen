@@ -228,7 +228,7 @@ def expected_metrics(dataset: str, max_triples: Optional[int]):
             click.echo("Skip OGB WikiKG")
             continue
         dataset_instance = get_dataset(dataset=dataset_cls)
-        dataset_name = dataset_instance.__class__.__name__.lower()
+        dataset_name = dataset_resolver.normalize_inst(dataset_instance)
         d = directory.joinpath(dataset_name, "analysis")
         d.mkdir(parents=True, exist_ok=True)
         expected_metrics = dict()
