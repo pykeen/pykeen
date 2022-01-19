@@ -327,7 +327,7 @@ class RankBasedMetricResults(MetricResults):
         )
     )
 
-    rank_count: Dict[str, int] = field(
+    rank_count: Dict[str, Dict[str, int]] = field(
         metadata=dict(
             name="Rank Count",
             doc="The number of considered ranks, a non-negative number. Low numbers may indicate unreliable results.",
@@ -449,9 +449,8 @@ class RankBasedMetricResults(MetricResults):
         for side, rank_type in itt.product(SIDES, RANK_TYPES):
             for k, v in self.hits_at_k[side][rank_type].items():
                 yield side, rank_type, f"hits_at_{k}", v
-            yield side, rank_type, "rank_count", self.rank_count[side]
             for f in fields(self):
-                if f.name in {"hits_at_k", "rank_count"}:
+                if f.name == "hits_at_k":
                     continue
                 side_data = getattr(self, f.name)[side]
                 if rank_type in side_data:
@@ -593,7 +592,7 @@ class RankBasedEvaluator(Evaluator):
             inverse_geometric_mean_rank=dict(asr[INVERSE_GEOMETRIC_MEAN_RANK]),
             inverse_harmonic_mean_rank=dict(asr[INVERSE_HARMONIC_MEAN_RANK]),
             inverse_median_rank=dict(asr[INVERSE_MEDIAN_RANK]),
-            rank_count={k: int(asr[RANK_COUNT][side][RANK_REALISTIC]) for k in SIDES},  # same for all rank types
+            rank_count=dict(asr[RANK_COUNT]),
             rank_std=dict(asr[RANK_STD]),
             rank_mad=dict(asr[RANK_MAD]),
             rank_var=dict(asr[RANK_VARIANCE]),
