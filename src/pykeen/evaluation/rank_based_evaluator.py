@@ -508,6 +508,7 @@ class RankBasedEvaluator(Evaluator):
         true_scores: torch.FloatTensor,
         all_scores: torch.FloatTensor,
         side: str,
+        hrt_batch: MappedTriples,
     ) -> None:
         """Shared code for updating the stored ranks for head/tail scores.
 
@@ -529,7 +530,7 @@ class RankBasedEvaluator(Evaluator):
         scores: torch.FloatTensor,
         dense_positive_mask: Optional[torch.FloatTensor] = None,
     ) -> None:  # noqa: D102
-        self._update_ranks_(true_scores=true_scores, all_scores=scores, side=SIDE_TAIL)
+        self._update_ranks_(true_scores=true_scores, all_scores=scores, side=SIDE_TAIL, hrt_batch=hrt_batch)
 
     def process_head_scores_(
         self,
@@ -538,7 +539,7 @@ class RankBasedEvaluator(Evaluator):
         scores: torch.FloatTensor,
         dense_positive_mask: Optional[torch.FloatTensor] = None,
     ) -> None:  # noqa: D102
-        self._update_ranks_(true_scores=true_scores, all_scores=scores, side=SIDE_HEAD)
+        self._update_ranks_(true_scores=true_scores, all_scores=scores, side=SIDE_HEAD, hrt_batch=hrt_batch)
 
     def _get_ranks(self, side, rank_type) -> np.ndarray:
         if side == SIDE_BOTH:
