@@ -1361,11 +1361,14 @@ class MonotonicAffineTransformationInteraction(
 
         # The parameters of the affine transformation: bias
         self.bias = nn.Parameter(torch.empty(size=tuple()), requires_grad=trainable_bias)
-        self.initial_bias = torch.as_tensor(data=[initial_bias], dtype=torch.get_default_dtype())
+        self.initial_bias = torch.as_tensor(data=[initial_bias], dtype=torch.get_default_dtype()).squeeze()
 
         # scale. We model this as log(scale) to ensure scale > 0, and thus monotonicity
         self.log_scale = nn.Parameter(torch.empty(size=tuple()), requires_grad=trainable_scale)
-        self.initial_log_scale = torch.as_tensor(data=[math.log(initial_scale)], dtype=torch.get_default_dtype())
+        self.initial_log_scale = torch.as_tensor(
+            data=[math.log(initial_scale)],
+            dtype=torch.get_default_dtype(),
+        ).squeeze()
 
     def reset_parameters(self):  # noqa: D102
         self.bias.data = self.initial_bias.to(device=self.bias.device)
