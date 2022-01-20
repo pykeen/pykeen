@@ -38,6 +38,7 @@ from torch.nn import functional
 from torch.optim import SGD, Adagrad
 
 import pykeen.models
+from pykeen.models.nbase import ERModel
 import pykeen.nn.message_passing
 import pykeen.nn.weighting
 from pykeen.datasets import Nations
@@ -1200,6 +1201,8 @@ Traceback
 
     def test_score_h_with_score_hrt_equality(self) -> None:
         """Test the equality of the model's  ``score_h()`` and ``score_hrt()`` function."""
+        if isinstance(self.instance, ERModel):
+            raise SkipTest("ERModel fulfils this by design.")
         batch = self.factory.mapped_triples[: self.batch_size, 1:].to(self.instance.device)
         self.instance.eval()
         # assert batch comprises (relation, tail) pairs
@@ -1222,6 +1225,8 @@ Traceback
 
     def test_score_r_with_score_hrt_equality(self) -> None:
         """Test the equality of the model's  ``score_r()`` and ``score_hrt()`` function."""
+        if isinstance(self.instance, ERModel):
+            raise SkipTest("ERModel fulfils this by design.")
         batch = self.factory.mapped_triples[: self.batch_size, [0, 2]].to(self.instance.device)
         self.instance.eval()
         # assert batch comprises (relation, tail) pairs
@@ -1244,6 +1249,8 @@ Traceback
 
     def test_score_t_with_score_hrt_equality(self) -> None:
         """Test the equality of the model's  ``score_t()`` and ``score_hrt()`` function."""
+        if isinstance(self.instance, ERModel):
+            raise SkipTest("ERModel fulfils this by design.")
         batch = self.factory.mapped_triples[: self.batch_size, :-1].to(self.instance.device)
         self.instance.eval()
         # assert batch comprises (relation, tail) pairs
