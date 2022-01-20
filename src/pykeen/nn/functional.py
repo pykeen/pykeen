@@ -1290,12 +1290,7 @@ def cp_interaction(
     :return: shape: batch_dims
         The scores.
     """
-    return extended_einsum(
-        "bhrtkd,bhrtkd,bhrtkd->bhrt",
-        h,
-        r,
-        t,
-    )
+    return (h * r * t).sum(dim=(-2, -1))
 
 
 def triple_re_interaction(
