@@ -606,7 +606,7 @@ def _reorder(
         return tensors
     # determine optimal processing order
     shapes = tuple(tuple(t.shape) for t in tensors)
-    if len(set(s[0] for s in shapes)) < 2:
+    if len(set(s[0] for s in shapes if s)) < 2:
         # heuristic
         return tensors
     order = get_optimal_sequence(*shapes)[1]
