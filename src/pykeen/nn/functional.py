@@ -403,14 +403,11 @@ def hole_interaction(
     :return: shape: batch_dims
         The scores.
     """
-    # composite: (b, h, 1, t, d)
+    # composite: (*batch_dims, d)
     composite = circular_correlation(h, t)
 
-    # transpose composite: (b, h, 1, d, t)
-    composite = composite.transpose(-2, -1)
-
     # inner product with relation embedding
-    return (r @ composite).squeeze(dim=-2)
+    return (r * composite).sum(dim=-1)
 
 
 def circular_correlation(
