@@ -242,7 +242,6 @@ class KG2ETests(cases.InteractionTestCase):
 
     def _exp_score(self, exact, h_mean, h_var, r_mean, r_var, similarity, t_mean, t_var):
         assert similarity == "KL"
-        h_mean, h_var, r_mean, r_var, t_mean, t_var = strip_dim(h_mean, h_var, r_mean, r_var, t_mean, t_var)
         e_mean, e_var = h_mean - t_mean, h_var + t_var
         p = torch.distributions.MultivariateNormal(loc=e_mean, covariance_matrix=torch.diag(e_var))
         q = torch.distributions.MultivariateNormal(loc=r_mean, covariance_matrix=torch.diag(r_var))
@@ -401,7 +400,7 @@ class UMTests(cases.TranslationalInteractionTests):
     def _exp_score(self, h, t, p, power_norm) -> torch.FloatTensor:
         assert power_norm
         # -\|h - t\|
-        h, t = strip_dim(h, t)
+        # h, t = strip_dim(h, t)
         return -(h - t).pow(p).sum()
 
 
@@ -643,7 +642,4 @@ class AutoSFTests(cases.InteractionTestCase):
         coefficients: Sequence[Tuple[int, int, int, Sign]],
     ) -> torch.FloatTensor:  # noqa: D102
         h, r, t = ensure_tuple(h, r, t)
-        h = strip_dim(*h)
-        r = strip_dim(*r)
-        t = strip_dim(*t)
         return sum(s * (h[i] * r[j] * t[k]).sum(dim=-1) for i, j, k, s in coefficients)

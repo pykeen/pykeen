@@ -27,6 +27,7 @@ from typing import (
 
 import more_itertools
 import torch
+import numpy
 from class_resolver import Resolver
 from docdata import parse_docdata
 from torch import FloatTensor, nn
@@ -38,6 +39,7 @@ from ..typing import (
     HeadRepresentation,
     HintOrType,
     Initializer,
+    OneOrSequence,
     RelationRepresentation,
     Representation,
     Sign,
@@ -96,6 +98,29 @@ logger = logging.getLogger(__name__)
 
 
 def parallel_slice_batches(
+    h: HeadRepresentation,
+    r: RelationRepresentation,
+    t: TailRepresentation,
+    slice_size: int,
+    slice_dim: int,
+) -> Iterable[Tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]]:
+    representations = ensure_tuple(h, r, t)
+    length = list(map(len, representations))
+    splits = numpy.cumsum([0] + length)
+    representations = sum(map(list, representations), [])
+    parts = [r.split(slice_size, dim=slice_dim) for r in representations]
+    n_parts = max(map(len, parts))
+    # broadcasting
+    parts = [r_parts if len(r_parts) == n_parts else r_parts * n_parts for r_parts in parts]
+    for batch in zip(*parts):
+        yield unpack_singletons(
+            batch[splits[0] : splits[1]],
+            batch[splits[1] : splits[2]],
+            batch[splits[2] : splits[3]],
+        )
+
+
+def _parallel_slice_batches(
     z: Union[FloatTensor, Tuple[FloatTensor, ...]],
     slice_size: int,
     dim: int,
@@ -172,7 +197,7 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         r: RelationRepresentation,
         t: TailRepresentation,
         slice_size: Optional[int] = None,
-        slice_dim: int = 0,
+        slice_dim: int = 1,
     ) -> torch.FloatTensor:
         """Compute broadcasted triple scores with optional slicing.
 
@@ -201,15 +226,12 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         return torch.cat(
             [
                 self(h=h_batch, r=r_batch, t=t_batch)
-                for h_batch, r_batch, t_batch in zip(
-                    *(
-                        parallel_slice_batches(
-                            z=z,
-                            slice_size=slice_size,
-                            dim=slice_dim,
-                        )
-                        for z in (h, r, t)
-                    )
+                for h_batch, r_batch, t_batch in parallel_slice_batches(
+                    h=h,
+                    r=r,
+                    t=t,
+                    slice_size=slice_size,
+                    slice_dim=slice_dim,
                 )
             ],
             dim=slice_dim,

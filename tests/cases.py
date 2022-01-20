@@ -543,13 +543,12 @@ class InteractionTestCase(
         rs: Tuple[int, ...],
         ts: Tuple[int, ...],
     ) -> Tuple[int, ...]:
-        return tuple(max(ds) for ds in zip(hs, rs, ts))
-        # # TODO:
-        # if len(self.instance.entity_shape) == 0:
-        #     result[1] = result[3] = 1
-        # if len(self.instance.relation_shape) == 0:
-        #     result[2] = 1
-        # return tuple(result)
+        components = []
+        if self.instance.entity_shape:
+            components.extend((hs, ts))
+        if self.instance.relation_shape:
+            components.append(rs)
+        return tuple(max(ds) for ds in zip(*components))
 
     def test_forward(self):
         """Test forward."""
