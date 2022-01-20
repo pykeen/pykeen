@@ -556,7 +556,7 @@ def proje_interaction(
         Global relation projection.
     :param b_c: shape: (dim,)
         Global combination bias.
-    :param b_p: shape: (1,)
+    :param b_p: shape: scalar
         Final score bias
     :param activation:
         The activation function.
@@ -564,16 +564,16 @@ def proje_interaction(
     :return: shape: batch_dims
         The scores.
     """
-    num_heads, num_relations, num_tails, dim, _ = _extract_sizes(h, r, t)
     # global projections
-    h = h * d_e.view(1, 1, 1, 1, dim)
-    r = r * d_r.view(1, 1, 1, 1, dim)
-    # combination, shape: (b, h, r, 1, d)
-    x = tensor_sum(h, r, b_c)
-    x = activation(x)  # shape: (b, h, r, 1, d)
-    # dot product with t, shape: (b, h, r, t)
-    t = t.transpose(-2, -1)  # shape: (b, 1, 1, d, t)
-    return (x @ t).squeeze(dim=-2) + b_p
+    prefix = [1 for _ in h.shape[:-1]]
+    h = h * d_e.view(*prefix, -1)
+    r = r * d_r.view(*prefix, -1)
+    
+    # combination, shape: (*batch_dims, d)
+    x = activation(tensor_sum(h, r, b_c))
+    
+    # dot product with t
+    return (x * t).sum(dim=-1) + b_p
 
 
 def rescal_interaction(

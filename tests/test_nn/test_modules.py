@@ -210,8 +210,7 @@ class ProjETests(cases.InteractionTestCase):
     )
 
     def _exp_score(self, h, r, t, d_e, d_r, b_c, b_p, activation) -> torch.FloatTensor:
-        # f(h, r, t) = g(t z(D_e h + D_r r + b_c) + b_p)
-        h, r, t = strip_dim(h, r, t)
+        # f(h, r, t) = g(t z(D_e h + D_r r + b_c) + b_p)        
         return (t * activation((d_e * h) + (d_r * r) + b_c)).sum() + b_p
 
 

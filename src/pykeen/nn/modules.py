@@ -875,7 +875,7 @@ class ProjEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTens
         self.b_c = nn.Parameter(torch.empty(embedding_dim), requires_grad=True)
 
         # Global combination bias
-        self.b_p = nn.Parameter(torch.empty(1), requires_grad=True)
+        self.b_p = nn.Parameter(torch.empty(tuple()), requires_grad=True)
 
         if inner_non_linearity is None:
             inner_non_linearity = nn.Tanh()
