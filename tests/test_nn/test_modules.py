@@ -116,7 +116,6 @@ class CrossETests(cases.InteractionTestCase):
     )
 
     def _exp_score(self, h, r, c_r, t, bias, activation, dropout) -> torch.FloatTensor:  # noqa: D102
-        h, r, c_r, t, bias = strip_dim(h, r, c_r, t, bias)
         return (dropout(activation(h * c_r + h * r * c_r + bias)) * t).sum()
 
 

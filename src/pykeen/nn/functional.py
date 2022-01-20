@@ -1170,7 +1170,7 @@ def cross_e_interaction(
         The relation-specific interaction vector.
     :param t: shape: (*batch_dims, dim)
         The tail representations.
-    :param bias: shape: (1, 1, 1, 1, dim)
+    :param bias: shape: (dim,)
         The combination bias.
     :param activation:
         The combination activation. Should be :class:`torch.nn.Tanh` for consistency with the CrossE paper.
@@ -1187,7 +1187,7 @@ def cross_e_interaction(
     # relation interaction (notice that h has been updated)
     r = h * r
     # combination
-    x = activation(h + r + bias)
+    x = activation(h + r + bias.view(*(1 for _ in h.shape[:-1]), -1))
     if dropout is not None:
         x = dropout(x)
     # similarity

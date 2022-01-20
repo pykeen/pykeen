@@ -1392,7 +1392,7 @@ class CrossEInteraction(FunctionalInteraction[FloatTensor, Tuple[FloatTensor, Fl
             combination_activation,
             pos_kwargs=combination_activation_kwargs,
         )
-        self.combination_bias = nn.Parameter(data=torch.zeros(1, 1, 1, 1, embedding_dim))
+        self.combination_bias = nn.Parameter(data=torch.zeros(embedding_dim))
         self.combination_dropout = nn.Dropout(combination_dropout) if combination_dropout else None
 
     def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
