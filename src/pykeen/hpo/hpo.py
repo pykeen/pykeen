@@ -220,8 +220,6 @@ class Objective:
             )
             if interaction_resolver.lookup(self.interaction) is TransformerInteraction:
                 assert 'embedding_dim' in _model_kwargs
-            if 'embedding_dim' in _interaction_kwargs:
-                logging.warning('\'embedding_dim\' in \'interaction_kwargs\' will be overwritten.')
             # The Transformer Interaction expects as input dimension the embedding dimension.
             _interaction_kwargs['input_dim'] = _model_kwargs['embedding_dim']
 
