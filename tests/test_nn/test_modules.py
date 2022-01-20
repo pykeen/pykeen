@@ -190,8 +190,6 @@ class NTNTests(cases.InteractionTestCase):
     def _exp_score(self, h, t, w, vt, vh, b, u, activation) -> torch.FloatTensor:
         # f(h,r,t) = u_r^T act(h W_r t + V_r h + V_r t + b_r)
         # shapes: w: (k, dim, dim), vh/vt: (k, dim), b/u: (k,), h/t: (dim,)
-        # remove batch/num dimension
-        # h, t, w, vt, vh, b, u = strip_dim(h, t, w, vt, vh, b, u)
         score = 0.0
         for i in range(u.shape[-1]):
             first_part = h.view(1, self.dim) @ w[i] @ t.view(self.dim, 1)
@@ -210,7 +208,7 @@ class ProjETests(cases.InteractionTestCase):
     )
 
     def _exp_score(self, h, r, t, d_e, d_r, b_c, b_p, activation) -> torch.FloatTensor:
-        # f(h, r, t) = g(t z(D_e h + D_r r + b_c) + b_p)        
+        # f(h, r, t) = g(t z(D_e h + D_r r + b_c) + b_p)
         return (t * activation((d_e * h) + (d_r * r) + b_c)).sum() + b_p
 
 
@@ -396,7 +394,6 @@ class UMTests(cases.TranslationalInteractionTests):
     def _exp_score(self, h, t, p, power_norm) -> torch.FloatTensor:
         assert power_norm
         # -\|h - t\|
-        # h, t = strip_dim(h, t)
         return -(h - t).pow(p).sum()
 
 
