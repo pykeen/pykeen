@@ -16,7 +16,7 @@ import pykeen.nn.modules
 import pykeen.utils
 from pykeen.nn.functional import _rotate_quaternion, _split_quaternion, distmult_interaction
 from pykeen.typing import Sign
-from pykeen.utils import clamp_norm, ensure_tuple, project_entity, strip_dim, view_complex
+from pykeen.utils import clamp_norm, ensure_tuple, project_entity, view_complex
 from tests import cases
 
 logger = logging.getLogger(__name__)
@@ -221,7 +221,6 @@ class QuatETests(cases.InteractionTestCase):
     dim = 4 * cases.InteractionTestCase.dim  # quaternions
 
     def _exp_score(self, h, r, t) -> torch.FloatTensor:  # noqa: D102
-        h, r, t = strip_dim(h, r, t)
         return -(_rotate_quaternion(*(_split_quaternion(x) for x in [h, r])) * t).sum()
 
 
@@ -279,7 +278,7 @@ class RotatETests(cases.InteractionTestCase):
         return h, r, t
 
     def _exp_score(self, h, r, t) -> torch.FloatTensor:  # noqa: D102
-        h, r, t = strip_dim(*(view_complex(x) for x in (h, r, t)))
+        h, r, t = tuple(view_complex(x) for x in (h, r, t))
         # check for unit length
         assert torch.allclose((r.abs() ** 2).sum(dim=-1).sqrt(), torch.ones(1))
         d = h * r - t
@@ -347,7 +346,6 @@ class TransHTests(cases.TranslationalInteractionTests):
 
     def _exp_score(self, h, w_r, d_r, t, p, power_norm) -> torch.FloatTensor:  # noqa: D102
         assert not power_norm
-        h, w_r, d_r, t = strip_dim(h, w_r, d_r, t)
         h, t = [x - (x * w_r).sum() * w_r for x in (h, t)]
         return -(h + d_r - t).norm(p=p)
 
@@ -373,7 +371,6 @@ class TransRTests(cases.TranslationalInteractionTests):
 
     def _exp_score(self, h, r, m_r, t, p, power_norm) -> torch.FloatTensor:
         assert power_norm
-        h, r, m_r, t = strip_dim(h, r, m_r, t)
         h_bot, t_bot = [clamp_norm(x.unsqueeze(dim=0) @ m_r, p=2, dim=-1, maxnorm=1.0) for x in (h, t)]
         return -((h_bot + r - t_bot) ** p).sum()
 
@@ -386,7 +383,6 @@ class SETests(cases.TranslationalInteractionTests):
     def _exp_score(self, h, t, r_h, r_t, p, power_norm) -> torch.FloatTensor:
         assert not power_norm
         # -\|R_h h - R_t t\|
-        h, t, r_h, r_t = strip_dim(h, t, r_h, r_t)
         h = r_h @ h.unsqueeze(dim=-1)
         t = r_t @ t.unsqueeze(dim=-1)
         return -(h - t).norm(p)
@@ -422,7 +418,6 @@ class SimplEInteractionTests(cases.InteractionTestCase):
     cls = pykeen.nn.modules.SimplEInteraction
 
     def _exp_score(self, h, r, t, h_inv, r_inv, t_inv, clamp) -> torch.FloatTensor:
-        h, r, t, h_inv, r_inv, t_inv = strip_dim(h, r, t, h_inv, r_inv, t_inv)
         assert clamp is None
         return 0.5 * distmult_interaction(h, r, t) + 0.5 * distmult_interaction(h_inv, r_inv, t_inv)
 
@@ -617,7 +612,6 @@ class TripleRETests(cases.TranslationalInteractionTests):
         if u is None:
             u = 0.0
         #  head * (re_head + self.u * e_h) - tail * (re_tail + self.u * e_t) + re_mid
-        h, r_head, r_mid, r_tail, t = strip_dim(h, r_head, r_mid, r_tail, t)
         return -(h * (r_head + u * torch.ones_like(r_head)) - t * (r_tail + u * torch.ones_like(r_tail)) + r_mid).norm(
             p=p,
         )

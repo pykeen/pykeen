@@ -67,7 +67,6 @@ __all__ = [
     "fix_dataclass_init_docs",
     "get_benchmark",
     "extended_einsum",
-    "strip_dim",
     "upgrade_to_sequence",
     "ensure_tuple",
     "unpack_singletons",
@@ -789,16 +788,6 @@ def convert_to_canonical_shape(
     dim = _normalize_dim(dim=dim)
     shape[dim] = num
     return x.view(*shape, *suffix_shape)
-
-
-def strip_dim(*tensors: torch.FloatTensor, n: int = 4) -> Sequence[torch.FloatTensor]:
-    """Strip the first dimensions.
-
-    :param tensors: The tensors whose first ``n`` dimensions should be independently stripped
-    :param n: The number of initial dimensions to strip
-    :return: A tuple of the reduced tensors
-    """
-    return tuple(tensor.view(tensor.shape[n:]) for tensor in tensors)
 
 
 def upgrade_to_sequence(x: Union[X, Sequence[X]]) -> Sequence[X]:
