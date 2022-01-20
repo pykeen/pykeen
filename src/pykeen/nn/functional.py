@@ -172,30 +172,31 @@ def conve_interaction(
     :return: shape: batch_dims
         The scores.
     """
-    # repeat if necessary, and concat head and relation, batch_size', num_input_channels, 2*height, width
-    # with batch_size' = batch_size * num_heads * num_relations
+    # repeat if necessary, and concat head and relation
+    # shape: -1, num_input_channels, 2*height, width
     x = broadcast_cat(
         [
             h.view(*h.shape[:-1], input_channels, embedding_height, embedding_width),
             r.view(*r.shape[:-1], input_channels, embedding_height, embedding_width),
         ],
         dim=-2,
-    ).view(-1, input_channels, 2 * embedding_height, embedding_width)
+    )
+    prefix_shape = x.shape[:-3]
+    x = x.view(-1, input_channels, 2 * embedding_height, embedding_width)
 
-    # batch_size', num_input_channels, 2*height, width
+    # shape: -1, num_input_channels, 2*height, width
     x = hr2d(x)
 
-    # batch_size', num_output_channels * (2 * height - kernel_height + 1) * (width - kernel_width + 1)
+    # -1, num_output_channels * (2 * height - kernel_height + 1) * (width - kernel_width + 1)
     x = x.view(-1, numpy.prod(x.shape[-3:]))
     x = hr1d(x)
 
-    # reshape: (batch_size', embedding_dim) -> (b, h, r, 1, d)
-    x = x.view(-1, h.shape[1], r.shape[2], 1, h.shape[-1])
+    # reshape: (-1, dim) -> (*batch_dims, dim)
+    x = x.view(*prefix_shape, h.shape[-1])
 
     # For efficient calculation, each of the convolved [h, r] rows has only to be multiplied with one t row
     # output_shape: batch_dims
-    t = t.transpose(-1, -2)
-    x = (x @ t).squeeze(dim=-2)
+    x = (x * t).sum(dim=-1)
 
     # add bias term
     return x + t_bias.squeeze(dim=-1)

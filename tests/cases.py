@@ -29,6 +29,7 @@ from unittest.case import SkipTest
 from unittest.mock import patch
 
 import pytest
+import numpy
 import torch
 import unittest_templates
 from click.testing import CliRunner, Result
@@ -511,66 +512,57 @@ class InteractionTestCase(
         self.assertTrue(torch.isfinite(scores_no_slice).all(), msg=f"Slice scores had nan\n\t{scores}")
         self.assertTrue(torch.allclose(scores, scores_no_slice), msg=f"Differences: {scores - scores_no_slice}")
 
-    def _get_test_shapes(
-        self,
-    ) -> Collection[Tuple[Tuple[int, int, int, int], Tuple[int, int, int, int], Tuple[int, int, int, int]]]:
+    def _get_test_shapes(self) -> Collection[Tuple[Tuple[int, ...], Tuple[int, ...], Tuple[int, ...]]]:
         """Return a set of test shapes for (h, r, t)."""
         return (
             (  # single score
-                (1, 1, 1, 1),
-                (1, 1, 1, 1),
-                (1, 1, 1, 1),
+                tuple(),
+                tuple(),
+                tuple(),
             ),
             (  # score_r with multi-t
-                (self.batch_size, 1, 1, 1),
-                (1, 1, self.num_relations, 1),
-                (self.batch_size, 1, 1, self.num_entities // 2 + 1),
+                (self.batch_size, 1, 1),
+                (1, self.num_relations, 1),
+                (self.batch_size, 1, self.num_entities // 2 + 1),
             ),
             (  # score_r with multi-t and broadcasted head
-                (1, 1, 1, 1),
-                (1, 1, self.num_relations, 1),
-                (self.batch_size, 1, 1, self.num_entities),
+                (1, 1, 1),
+                (1, self.num_relations, 1),
+                (self.batch_size, 1, self.num_entities),
             ),
             (  # full cwa
-                (1, self.num_entities, 1, 1),
-                (1, 1, self.num_relations, 1),
-                (1, 1, 1, self.num_entities),
+                (self.num_entities, 1, 1),
+                (1, self.num_relations, 1),
+                (1, 1, self.num_entities),
             ),
         )
 
     def _get_output_shape(
         self,
-        hs: Tuple[int, int, int, int],
-        rs: Tuple[int, int, int, int],
-        ts: Tuple[int, int, int, int],
-    ) -> Tuple[int, int, int, int]:
-        result = [max(ds) for ds in zip(hs, rs, ts)]
-        if len(self.instance.entity_shape) == 0:
-            result[1] = result[3] = 1
-        if len(self.instance.relation_shape) == 0:
-            result[2] = 1
-        return tuple(result)
+        hs: Tuple[int, ...],
+        rs: Tuple[int, ...],
+        ts: Tuple[int, ...],
+    ) -> Tuple[int, ...]:
+        return tuple(max(ds) for ds in zip(hs, rs, ts))
+        # # TODO: 
+        # if len(self.instance.entity_shape) == 0:
+        #     result[1] = result[3] = 1
+        # if len(self.instance.relation_shape) == 0:
+        #     result[2] = 1
+        # return tuple(result)
 
     def test_forward(self):
         """Test forward."""
         for hs, rs, ts in self._get_test_shapes():
-            try:
-                h, r, t = self._get_hrt(hs, rs, ts)
-                scores = self.instance(h=h, r=r, t=t)
-                expected_shape = self._get_output_shape(hs, rs, ts)
-                self._check_scores(scores=scores, exp_shape=expected_shape)
-            except ValueError as error:
-                # check whether the error originates from batch norm for single element batches
-                small_batch_size = any(s[0] == 1 for s in (hs, rs, ts))
-                has_batch_norm = any(
-                    isinstance(m, (torch.nn.BatchNorm1d, torch.nn.BatchNorm2d)) for m in self.instance.modules()
+            if get_batchnorm_modules(self.instance) and max(numpy.prod(s) for s in (hs, rs, ts)) == 1:
+                logger.warning(
+                    f"Skipping test for shapes {hs}, {rs}, {ts} because too small batch size for batch norm",
                 )
-                if small_batch_size and has_batch_norm:
-                    logger.warning(
-                        f"Skipping test for shapes {hs}, {rs}, {ts} because too small batch size for batch norm",
-                    )
-                    continue
-                raise error
+                continue
+            h, r, t = self._get_hrt(hs, rs, ts)
+            scores = self.instance(h=h, r=r, t=t)
+            expected_shape = self._get_output_shape(hs, rs, ts)
+            self._check_scores(scores=scores, exp_shape=expected_shape)
 
     def test_forward_consistency_with_functional(self):
         """Test forward's consistency with functional."""
@@ -593,7 +585,7 @@ class InteractionTestCase(
         for _ in range(10):
             # test multiple different initializations
             self.instance.reset_parameters()
-            h, r, t = self._get_hrt((1, 1, 1, 1), (1, 1, 1, 1), (1, 1, 1, 1))
+            h, r, t = self._get_hrt(tuple(), tuple(), tuple())
 
             if isinstance(self.instance, FunctionalInteraction):
                 kwargs = self.instance._prepare_for_functional(h=h, r=r, t=t)
