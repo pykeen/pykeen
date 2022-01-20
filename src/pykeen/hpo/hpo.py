@@ -176,8 +176,8 @@ class Objective:
             kwargs_ranges=self.model_kwargs_ranges,
         )
 
-        # 2.1 Entity representations
         if self.entity_representation_kwargs is not None:
+            # 2.1 Entity representations
             _entity_representation_kwargs = _get_kwargs(
                 trial=trial,
                 prefix='entity_representation',
