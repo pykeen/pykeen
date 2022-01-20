@@ -340,18 +340,18 @@ def ermlp_interaction(
         The scores.
     """
     # same shape
+    prefix = h.shape[:-1]
+    dim = h.shape[-1]
     if h.shape == r.shape and h.shape == t.shape:
-        return final(
-            activation(hidden(torch.cat([h, r, t], dim=-1).view(-1, 3 * h.shape[-1]))),
-        ).view(*h.shape[:-1])
+        return final(activation(hidden(torch.cat([h, r, t], dim=-1).view(-1, 3 * dim)))).view(prefix)
 
-    hidden_dim = hidden.weight.shape[0]
     # split, shape: (embedding_dim, hidden_dim)
-    head_to_hidden, rel_to_hidden, tail_to_hidden = hidden.weight.t().split(h.shape[-1])
-    bias = hidden.bias.view(1, 1, 1, 1, -1)
-    h = h @ head_to_hidden.view(1, 1, 1, h.shape[-1], hidden_dim)
-    r = r @ rel_to_hidden.view(1, 1, 1, r.shape[-1], hidden_dim)
-    t = t @ tail_to_hidden.view(1, 1, 1, t.shape[-1], hidden_dim)
+    head_to_hidden, rel_to_hidden, tail_to_hidden = hidden.weight.t().split(dim)
+    prefix = [1 for _ in prefix]
+    bias = hidden.bias.view(*prefix, -1)
+    h = torch.einsum("...i,ij->...j", h, head_to_hidden)
+    r = torch.einsum("...i,ij->...j", r, rel_to_hidden)
+    t = torch.einsum("...i,ij->...j", t, tail_to_hidden)
     return final(activation(tensor_sum(bias, h, r, t))).squeeze(dim=-1)
 
 
