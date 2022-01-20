@@ -232,7 +232,6 @@ class RESCALTests(cases.InteractionTestCase):
 
     def _exp_score(self, h, r, t) -> torch.FloatTensor:
         # f(h, r, t) = h @ r @ t
-        h, r, t = strip_dim(h, r, t)
         return h.view(1, -1) @ r @ t.view(-1, 1)
 
 

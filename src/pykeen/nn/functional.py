@@ -593,7 +593,7 @@ def rescal_interaction(
     :return: shape: batch_dims
         The scores.
     """
-    return extended_einsum("bhrtd,bhrtde,bhrte->bhrt", h, r, t)
+    return torch.einsum("...d,...de,...e->...", h, r, t)
 
 
 def rotate_interaction(
