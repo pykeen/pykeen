@@ -1424,12 +1424,12 @@ def transformer_interaction(
     :param final:
         the final (linear) transformation
     """
-    # stack h & r (+ broadcast) => shape: (2, batch_size', num_heads, num_relations, 1, *dims)
+    # stack h & r (+ broadcast) => shape: (2, *batch_dims, dim)
     x = torch.stack(broadcast_tensors(h, r), dim=0)
 
     # remember shape for output, but reshape for transformer
     hr_shape = x.shape
-    x = x.view(2, -1, *hr_shape[5:])
+    x = x.view(2, -1, hr_shape[-1])
 
     # get position embeddings, shape: (seq_len, dim)
     # Now we are position-dependent w.r.t qualifier pairs.
@@ -1445,6 +1445,6 @@ def transformer_interaction(
     x = final(x)
 
     # reshape
-    x = x.view(*hr_shape[1:5], x.shape[-1])
+    x = x.view(*hr_shape[1:-1], x.shape[-1])
 
-    return (x @ t.transpose(-1, -2)).squeeze(dim=-2)
+    return (x * t).sum(dim=-1)

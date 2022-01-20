@@ -537,7 +537,6 @@ class TransformerTests(cases.InteractionTestCase):
         position_embeddings: torch.FloatTensor,
         final: nn.Module,
     ) -> torch.FloatTensor:  # noqa: D102
-        h, r, t = strip_dim(h, r, t)
         x = torch.stack([h, r], dim=0) + position_embeddings
         x = transformer(src=x.unsqueeze(dim=1))
         x = x.sum(dim=0)
