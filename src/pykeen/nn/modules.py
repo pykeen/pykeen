@@ -183,83 +183,25 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         :return: shape: batch_dims
             The scores.
         """
-        return self._forward_slicing_wrapper(h=h, r=r, t=t, slice_size=slice_size, slice_dim=slice_dim)
-
-    def _forward_slicing_wrapper(
-        self,
-        h: Union[torch.FloatTensor, Tuple[torch.FloatTensor, ...]],
-        r: Union[torch.FloatTensor, Tuple[torch.FloatTensor, ...]],
-        t: Union[torch.FloatTensor, Tuple[torch.FloatTensor, ...]],
-        slice_size: Optional[int],
-        slice_dim: Optional[str],
-    ) -> torch.FloatTensor:
-        """Compute broadcasted triple scores with optional slicing for representations in canonical shape.
-
-        .. note ::
-            Depending on the interaction function, there may be more than one representation for h/r/t. In that case,
-            a tuple of at least two tensors is passed.
-
-        :param h: shape: (*batch_dims, *dims)
-            The head representations.
-        :param r: shape: (*batch_dims, *dims)
-            The relation representations.
-        :param t: shape: (*batch_dims, *dims)
-            The tail representations.
-        :param slice_size:
-            The slice size.
-        :param slice_dim:
-            The dimension along which to slice. From {"h", "r", "t"}
-
-        :return: shape: batch_dims
-            The scores.
-
-        :raises ValueError:
-            If slice_dim is invalid.
-        """
         if slice_size is None:
-            scores = self(h=h, r=r, t=t)
-        elif slice_dim == "h":
-            dim = CANONICAL_DIMENSIONS[slice_dim]
-            scores = torch.cat(
-                [
-                    self(h=h_batch, r=r, t=t)
-                    for h_batch in parallel_slice_batches(
-                        z=h,
-                        slice_size=slice_size,
-                        dim=dim,
+            return self(h=h, r=r, t=t)
+
+        return torch.cat(
+            [
+                self(h=h_batch, r=r_batch, t=t_batch)
+                for h_batch, r_batch, t_batch in zip(
+                    *(
+                        parallel_slice_batches(
+                            z=z,
+                            slice_size=slice_size,
+                            dim=slice_dim,
+                        )
+                        for z in (h, r, t)
                     )
-                ],
-                dim=dim,
-            )
-        elif slice_dim == "r":
-            dim = CANONICAL_DIMENSIONS[slice_dim]
-            scores = torch.cat(
-                [
-                    self(h=h, r=r_batch, t=t)
-                    for r_batch in parallel_slice_batches(
-                        z=r,
-                        slice_size=slice_size,
-                        dim=dim,
-                    )
-                ],
-                dim=dim,
-            )
-        elif slice_dim == "t":
-            dim = CANONICAL_DIMENSIONS[slice_dim]
-            scores = torch.cat(
-                [
-                    self(h=h, r=r, t=t_batch)
-                    for t_batch in parallel_slice_batches(
-                        z=t,
-                        slice_size=slice_size,
-                        dim=dim,
-                    )
-                ],
-                dim=dim,
-            )
-        else:
-            raise ValueError(f"Invalid slice_dim: {slice_dim}")
-        return scores
+                )
+            ],
+            dim=slice_dim,
+        )
 
     def score_hrt(
         self,
