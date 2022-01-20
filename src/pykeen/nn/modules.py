@@ -143,14 +143,14 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
     ) -> torch.FloatTensor:
         """Compute broadcasted triple scores given broadcasted representations for head, relation and tails.
 
-        :param h: shape: (batch_size, num_heads, 1, 1, ``*``)
+        :param h: shape: (*batch_dims, *dims)
             The head representations.
-        :param r: shape: (batch_size, 1, num_relations, 1, ``*``)
+        :param r: shape: (*batch_dims, *dims)
             The relation representations.
-        :param t: shape: (batch_size, 1, 1, num_tails, ``*``)
+        :param t: shape: (*batch_dims, *dims)
             The tail representations.
 
-        :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        :return: shape: batch_dims
             The scores.
         """
 
@@ -160,71 +160,30 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         r: RelationRepresentation,
         t: TailRepresentation,
         slice_size: Optional[int] = None,
-        slice_dim: Optional[str] = None,
+        slice_dim: int = 0,
     ) -> torch.FloatTensor:
         """Compute broadcasted triple scores with optional slicing.
 
         .. note ::
             At most one of the slice sizes may be not None.
 
-        :param h: shape: (batch_size, num_heads, `1, 1, `*``)
+        # TODO: we could change that to slicing along multiple dimensions, if necessary
+
+        :param h: shape: (*batch_dims, *dims)
             The head representations.
-        :param r: shape: (batch_size, 1, num_relations, 1, ``*``)
+        :param r: shape: (*batch_dims, *dims)
             The relation representations.
-        :param t: shape: (batch_size, 1, 1, num_tails, ``*``)
+        :param t: shape: (*batch_dims, *dims)
             The tail representations.
         :param slice_size:
             The slice size.
         :param slice_dim:
-            The dimension along which to slice. From {"h", "r", "t"}
+            The dimension along which to slice. From {0, ..., len(batch_dims)}
 
-        :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        :return: shape: batch_dims
             The scores.
         """
         return self._forward_slicing_wrapper(h=h, r=r, t=t, slice_size=slice_size, slice_dim=slice_dim)
-
-    def _score(
-        self,
-        h: HeadRepresentation,
-        r: RelationRepresentation,
-        t: TailRepresentation,
-        slice_size: Optional[int] = None,
-        slice_dim: str = None,
-    ) -> torch.FloatTensor:
-        """Compute scores for the score_* methods outside of models.
-
-        TODO: merge this with the Model utilities?
-
-        :param h: shape: (b, h, *)
-        :param r: shape: (b, r, *)
-        :param t: shape: (b, t, *)
-        :param slice_size:
-            The slice size.
-        :param slice_dim:
-            The dimension along which to slice. From {"h", "r", "t"}
-        :return: shape: (b, h, r, t)
-        """
-        args = []
-        for key, x in zip("hrt", (h, r, t)):
-            value = []
-            for xx in upgrade_to_sequence(x):  # type: torch.FloatTensor
-                # bring to (b, n, *)
-                xx = xx.unsqueeze(dim=1 if key != slice_dim else 0)
-                # bring to (b, h, r, t, *)
-                xx = convert_to_canonical_shape(
-                    x=xx,
-                    dim=key,
-                    num=xx.shape[1],
-                    batch_size=xx.shape[0],
-                    suffix_shape=xx.shape[2:],
-                )
-                value.append(xx)
-            # unpack singleton
-            if len(value) == 1:
-                value = value[0]
-            args.append(value)
-        h, r, t = cast(Tuple[HeadRepresentation, RelationRepresentation, TailRepresentation], args)
-        return self._forward_slicing_wrapper(h=h, r=r, t=t, slice_dim=slice_dim, slice_size=slice_size)
 
     def _forward_slicing_wrapper(
         self,
@@ -240,18 +199,18 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
             Depending on the interaction function, there may be more than one representation for h/r/t. In that case,
             a tuple of at least two tensors is passed.
 
-        :param h: shape: (batch_size, num_heads, 1, 1, ``*``)
+        :param h: shape: (*batch_dims, *dims)
             The head representations.
-        :param r: shape: (batch_size, 1, num_relations, 1, ``*``)
+        :param r: shape: (*batch_dims, *dims)
             The relation representations.
-        :param t: shape: (batch_size, 1, 1, num_tails, ``*``)
+        :param t: shape: (*batch_dims, *dims)
             The tail representations.
         :param slice_size:
             The slice size.
         :param slice_dim:
             The dimension along which to slice. From {"h", "r", "t"}
 
-        :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        :return: shape: batch_dims
             The scores.
 
         :raises ValueError:
@@ -320,7 +279,7 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         :return: shape: (batch_size, 1)
             The scores.
         """
-        return self._score(h=h, r=r, t=t)[:, 0, 0, 0, None]
+        return self.score(h=h, r=r, t=t).unsqueeze(dim=-1)
 
     def score_h(
         self,
@@ -343,7 +302,12 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         :return: shape: (batch_size, num_entities)
             The scores.
         """
-        return self._score(h=all_entities, r=r, t=t, slice_dim="h", slice_size=slice_size)[:, :, 0, 0]
+        return self.score(
+            h=all_entities.unsqueeze(dim=0),
+            r=r.unsqueeze(dim=1),
+            t=t.unsqueeze(dim=1),
+            slice_size=slice_size,
+        )
 
     def score_r(
         self,
@@ -366,7 +330,12 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         :return: shape: (batch_size, num_entities)
             The scores.
         """
-        return self._score(h=h, r=all_relations, t=t, slice_dim="r", slice_size=slice_size)[:, 0, :, 0]
+        return self.score(
+            h=h.unsqueeze(dim=1),
+            r=all_relations.unsqueeze(dim=0),
+            t=t.unsqueeze(dim=1),
+            slice_size=slice_size,
+        )
 
     def score_t(
         self,
@@ -389,7 +358,12 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         :return: shape: (batch_size, num_entities)
             The scores.
         """
-        return self._score(h=h, r=r, t=all_entities, slice_dim="t", slice_size=slice_size)[:, 0, 0, :]
+        return self.score(
+            h=h.unsqueeze(dim=1),
+            r=r.unsqueeze(dim=1),
+            t=all_entities.unsqueeze(dim=0),
+            slice_size=slice_size,
+        )
 
     def reset_parameters(self):
         """Reset parameters the interaction function may have."""
@@ -443,14 +417,14 @@ class LiteralInteraction(
     ) -> torch.FloatTensor:
         """Compute broadcasted triple scores given broadcasted representations for head, relation and tails.
 
-        :param h: shape: (batch_size, num_heads, 1, 1, ``*``)
+        :param h: shape: (*batch_dims, *dims)
             The head representations.
-        :param r: shape: (batch_size, 1, num_relations, 1, ``*``)
+        :param r: shape: (*batch_dims, *dims)
             The relation representations.
-        :param t: shape: (batch_size, 1, 1, num_tails, ``*``)
+        :param t: shape: (*batch_dims, *dims)
             The tail representations.
 
-        :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        :return: shape: batch_dims
             The scores.
         """
         # alternate way of combining entity embeddings + literals
@@ -477,14 +451,14 @@ class FunctionalInteraction(Interaction, Generic[HeadRepresentation, RelationRep
     ) -> torch.FloatTensor:
         """Compute broadcasted triple scores given broadcasted representations for head, relation and tails.
 
-        :param h: shape: (batch_size, num_heads, 1, 1, ``*``)
+        :param h: shape: (*batch_dims, *dims)
             The head representations.
-        :param r: shape: (batch_size, 1, num_relations, 1, ``*``)
+        :param r: shape: (*batch_dims, *dims)
             The relation representations.
-        :param t: shape: (batch_size, 1, 1, num_tails, ``*``)
+        :param t: shape: (*batch_dims, *dims)
             The tail representations.
 
-        :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        :return: shape: batch_dims
             The scores.
         """
         return self.__class__.func(**self._prepare_for_functional(h=h, r=r, t=t))
