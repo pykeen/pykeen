@@ -25,7 +25,6 @@ from ..utils import (
     clamp_norm,
     compute_box,
     estimate_cost_of_sequence,
-    extended_einsum,
     is_cudnn_error,
     negative_norm,
     negative_norm_of_sum,

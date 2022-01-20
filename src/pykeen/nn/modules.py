@@ -22,12 +22,11 @@ from typing import (
     Set,
     Tuple,
     Union,
-    cast,
 )
 
 import more_itertools
-import torch
 import numpy
+import torch
 from class_resolver import Resolver
 from docdata import parse_docdata
 from torch import FloatTensor, nn
@@ -39,18 +38,12 @@ from ..typing import (
     HeadRepresentation,
     HintOrType,
     Initializer,
-    OneOrSequence,
     RelationRepresentation,
     Representation,
     Sign,
     TailRepresentation,
 )
-from ..utils import (
-    activation_resolver,
-    ensure_tuple,
-    unpack_singletons,
-    upgrade_to_sequence,
-)
+from ..utils import activation_resolver, ensure_tuple, unpack_singletons, upgrade_to_sequence
 
 __all__ = [
     "interaction_resolver",
@@ -104,7 +97,7 @@ def parallel_slice_batches(
     slice_size: int,
     slice_dim: int,
 ) -> Iterable[Tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]]:
-    representations = ensure_tuple(h, r, t)
+    representations: Tuple[HeadRepresentation, RelationRepresentation, TailRepresentation] = ensure_tuple(h, r, t)
     length = list(map(len, representations))
     splits = numpy.cumsum([0] + length)
     representations = sum(map(list, representations), [])
@@ -120,32 +113,10 @@ def parallel_slice_batches(
         )
 
 
-def _parallel_slice_batches(
-    z: Union[FloatTensor, Tuple[FloatTensor, ...]],
-    slice_size: int,
-    dim: int,
-) -> Iterable[Union[FloatTensor, Tuple[FloatTensor, ...]]]:
-    # input normalization -> Tuple[Tensor]
-    # shape: (num_representations,)
-    z_tup: Iterable[FloatTensor] = ensure_tuple(z)[0]
-
-    # split each representation along the given dimension
-    # shape: (num_representations,)
-    tuple_of_batches: Iterable[Sequence[FloatTensor]] = (zz.split(slice_size, dim=dim) for zz in z_tup)
-
-    # create batches, shape: (num_slices,), each being a tuple of shape (num_representations,)
-    batch_of_tuples: Iterable[Tuple[FloatTensor]] = zip(*tuple_of_batches)
-
-    # unpack_singletons
-    batch_of_unpacked_tuples = unpack_singletons(*batch_of_tuples)
-
-    yield from batch_of_unpacked_tuples
-
-
-def unsqueeze(x: Representation, dim: int) -> Representation:
-    x = upgrade_to_sequence(x)
-    x = [xx.unsqueeze(dim=dim) for xx in x]
-    return x[0] if len(x) == 1 else x
+def parallel_unsqueeze(x: Representation, dim: int) -> Representation:
+    xs = upgrade_to_sequence(x)
+    xl = [xx.unsqueeze(dim=dim) for xx in xs]
+    return xl[0] if len(xl) == 1 else xl
 
 
 class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailRepresentation], ABC):
@@ -279,9 +250,9 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
             The scores.
         """
         return self.score(
-            h=unsqueeze(all_entities, dim=0),
-            r=unsqueeze(r, dim=1),
-            t=unsqueeze(t, dim=1),
+            h=parallel_unsqueeze(all_entities, dim=0),
+            r=parallel_unsqueeze(r, dim=1),
+            t=parallel_unsqueeze(t, dim=1),
             slice_size=slice_size,
         )
 
@@ -307,9 +278,9 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
             The scores.
         """
         return self.score(
-            h=unsqueeze(h, dim=1),
-            r=unsqueeze(all_relations, dim=0),
-            t=unsqueeze(t, dim=1),
+            h=parallel_unsqueeze(h, dim=1),
+            r=parallel_unsqueeze(all_relations, dim=0),
+            t=parallel_unsqueeze(t, dim=1),
             slice_size=slice_size,
         )
 
@@ -335,9 +306,9 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
             The scores.
         """
         return self.score(
-            h=unsqueeze(h, dim=1),
-            r=unsqueeze(r, dim=1),
-            t=unsqueeze(all_entities, dim=0),
+            h=parallel_unsqueeze(h, dim=1),
+            r=parallel_unsqueeze(r, dim=1),
+            t=parallel_unsqueeze(all_entities, dim=0),
             slice_size=slice_size,
         )
 

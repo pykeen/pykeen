@@ -28,8 +28,8 @@ from typing import (
 from unittest.case import SkipTest
 from unittest.mock import patch
 
-import pytest
 import numpy
+import pytest
 import torch
 import unittest_templates
 from click.testing import CliRunner, Result
@@ -38,7 +38,6 @@ from torch.nn import functional
 from torch.optim import SGD, Adagrad
 
 import pykeen.models
-from pykeen.models.nbase import ERModel
 import pykeen.nn.message_passing
 import pykeen.nn.weighting
 from pykeen.datasets import Nations
@@ -49,6 +48,7 @@ from pykeen.evaluation import Evaluator, MetricResults
 from pykeen.losses import Loss, PairwiseLoss, PointwiseLoss, SetwiseLoss, UnsupportedLabelSmoothingError
 from pykeen.models import RESCAL, EntityRelationEmbeddingModel, Model, TransE
 from pykeen.models.cli import build_cli_from_cls
+from pykeen.models.nbase import ERModel
 from pykeen.nn.emb import RepresentationModule
 from pykeen.nn.modules import FunctionalInteraction, Interaction, LiteralInteraction
 from pykeen.optimizers import optimizer_resolver
@@ -390,7 +390,9 @@ class InteractionTestCase(
         shape_kwargs.setdefault("d", self.dim)
         result = tuple(
             tuple(
-                torch.rand(size=tuple(prefix_shape) + tuple(shape_kwargs[dim] for dim in weight_shape), requires_grad=True)
+                torch.rand(
+                    size=tuple(prefix_shape) + tuple(shape_kwargs[dim] for dim in weight_shape), requires_grad=True
+                )
                 for weight_shape in weight_shapes
             )
             for prefix_shape, weight_shapes in zip(
