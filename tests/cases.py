@@ -544,7 +544,7 @@ class InteractionTestCase(
         ts: Tuple[int, ...],
     ) -> Tuple[int, ...]:
         return tuple(max(ds) for ds in zip(hs, rs, ts))
-        # # TODO: 
+        # # TODO:
         # if len(self.instance.entity_shape) == 0:
         #     result[1] = result[3] = 1
         # if len(self.instance.relation_shape) == 0:
@@ -554,7 +554,7 @@ class InteractionTestCase(
     def test_forward(self):
         """Test forward."""
         for hs, rs, ts in self._get_test_shapes():
-            if get_batchnorm_modules(self.instance) and max(numpy.prod(s) for s in (hs, rs, ts)) == 1:
+            if get_batchnorm_modules(self.instance) and any(numpy.prod(s) == 1 for s in (hs, rs, ts)):
                 logger.warning(
                     f"Skipping test for shapes {hs}, {rs}, {ts} because too small batch size for batch norm",
                 )

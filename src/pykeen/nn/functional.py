@@ -568,10 +568,10 @@ def proje_interaction(
     prefix = [1 for _ in h.shape[:-1]]
     h = h * d_e.view(*prefix, -1)
     r = r * d_r.view(*prefix, -1)
-    
+
     # combination, shape: (*batch_dims, d)
     x = activation(tensor_sum(h, r, b_c))
-    
+
     # dot product with t
     return (x * t).sum(dim=-1) + b_p
 
@@ -943,17 +943,15 @@ def tucker_interaction(
     :return: shape: batch_dims
         The scores.
     """
-    return extended_einsum(
-        # x_3 contraction
-        "bhrtk,bhrtk->bhrt",
+    return (
         _apply_optional_bn_to_tensor(
-            x=extended_einsum(
+            x=torch.einsum(
                 # x_1 contraction
-                "bhrtik,bhrti->bhrtk",
+                "...ik,...i->...k",
                 _apply_optional_bn_to_tensor(
-                    x=extended_einsum(
+                    x=torch.einsum(
                         # x_2 contraction
-                        "ijk,bhrtj->bhrtik",
+                        "ijk,...j->...ik",
                         core_tensor,
                         r,
                     ),
@@ -967,9 +965,9 @@ def tucker_interaction(
             ),
             batch_norm=bn_hr,
             output_dropout=do_hr,
-        ),
-        t,
-    )
+        )
+        * t
+    ).sum(dim=-1)
 
 
 def mure_interaction(
