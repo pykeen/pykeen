@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 import logging
-from abc import ABC, abstractmethod
+from abc import ABC
 from collections import defaultdict
 from operator import itemgetter
 from typing import Any, ClassVar, Generic, Iterable, List, Mapping, Optional, Sequence, Tuple, Type, Union, cast
@@ -134,123 +134,6 @@ class _NewAbstractModel(Model, ABC):
             if isinstance(regularizer, Regularizer)
         )
 
-    @abstractmethod
-    def forward(
-        self,
-        h_indices: Optional[torch.LongTensor],
-        r_indices: Optional[torch.LongTensor],
-        t_indices: Optional[torch.LongTensor],
-        slice_size: Optional[int] = None,
-        slice_dim: Optional[str] = None,
-    ) -> torch.FloatTensor:
-        """Forward pass.
-
-        This method takes head, relation and tail indices and calculates the corresponding score.
-
-        .. note ::
-            All indices which are not None, have to be either 1-element, be of shape `(batch_size,)` or
-            `(batch_size, n)`, where `batch_size` has to be the same for all tensors, but `n` may be different.
-
-        .. note ::
-            If slicing is requested, the corresponding indices have to be None.
-
-        :param h_indices:
-            The head indices. None indicates to use all.
-        :param r_indices:
-            The relation indices. None indicates to use all.
-        :param t_indices:
-            The tail indices. None indicates to use all.
-        :param slice_size:
-            The slice size.
-        :param slice_dim:
-            The dimension along which to slice. From {"h", "r", "t"}.
-
-        :return: shape: (batch_size, num_heads, num_relations, num_tails)
-            The score for each triple.
-        """  # noqa: DAR202
-
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:
-        """Forward pass.
-
-        This method takes head, relation and tail of each triple and calculates the corresponding score.
-
-        :param hrt_batch: shape: (batch_size, 3), dtype: long
-            The indices of (head, relation, tail) triples.
-
-        :return: shape: (batch_size, 1), dtype: float
-            The score for each triple.
-        """
-        # Note: slicing cannot be used here: the indices for score_hrt only havea batch
-        # dimension, and slicing along this dimension is already considered by sub-batching.
-        return self(
-            h_indices=hrt_batch[:, 0],
-            r_indices=hrt_batch[:, 1],
-            t_indices=hrt_batch[:, 2],
-        ).view(hrt_batch.shape[0], 1)
-
-    def score_t(self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:
-        """Forward pass using right side (tail) prediction.
-
-        This method calculates the score for all possible tails for each (head, relation) pair.
-
-        :param hr_batch: shape: (batch_size, 2), dtype: long
-            The indices of (head, relation) pairs.
-        :param slice_size:
-            The slice size.
-
-        :return: shape: (batch_size, num_entities), dtype: float
-            For each h-r pair, the scores for all possible tails.
-        """
-        return self(
-            h_indices=hr_batch[:, 0],
-            r_indices=hr_batch[:, 1],
-            t_indices=None,
-            slice_size=slice_size,
-            slice_dim="h",
-        ).view(hr_batch.shape[0], self.num_entities)
-
-    def score_h(self, rt_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:
-        """Forward pass using left side (head) prediction.
-
-        This method calculates the score for all possible heads for each (relation, tail) pair.
-
-        :param rt_batch: shape: (batch_size, 2), dtype: long
-            The indices of (relation, tail) pairs.
-        :param slice_size:
-            The slice size.
-
-        :return: shape: (batch_size, num_entities), dtype: float
-            For each r-t pair, the scores for all possible heads.
-        """
-        return self(
-            h_indices=None,
-            r_indices=rt_batch[:, 0],
-            t_indices=rt_batch[:, 1],
-            slice_size=slice_size,
-            slice_dim="t",
-        ).view(rt_batch.shape[0], self.num_entities)
-
-    def score_r(self, ht_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:
-        """Forward pass using middle (relation) prediction.
-
-        This method calculates the score for all possible relations for each (head, tail) pair.
-
-        :param ht_batch: shape: (batch_size, 2), dtype: long
-            The indices of (head, tail) pairs.
-        :param slice_size:
-            The slice size.
-
-        :return: shape: (batch_size, num_relations), dtype: float
-            For each h-t pair, the scores for all possible relations.
-        """
-        return self(
-            h_indices=ht_batch[:, 0],
-            r_indices=None,
-            t_indices=ht_batch[:, 1],
-            slice_size=slice_size,
-            slice_dim="r",
-        ).view(ht_batch.shape[0], self.num_relations)
-
 
 def _prepare_representation_module_list(
     representations: EmbeddingSpecificationHint,
@@ -326,6 +209,9 @@ class ERModel(
 
     #: The weight regularizers
     weight_regularizers: List[Regularizer]
+
+    #: The interaction function
+    interaction: Interaction
 
     def __init__(
         self,
@@ -427,76 +313,78 @@ class ERModel(
             regularizer.add_parameter(parameter=param)
         self.weight_regularizers.append(regularizer)
 
-    def forward(
-        self,
-        h_indices: Optional[torch.LongTensor],
-        r_indices: Optional[torch.LongTensor],
-        t_indices: Optional[torch.LongTensor],
-        slice_size: Optional[int] = None,
-        slice_dim: Optional[str] = None,
-    ) -> torch.FloatTensor:
+    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:
         """Forward pass.
 
-        This method takes head, relation and tail indices and calculates the corresponding score.
+        This method takes head, relation and tail of each triple and calculates the corresponding score.
 
-        All indices which are not None, have to be either 1-element or have the same shape, which is the batch size.
+        :param hrt_batch: shape: (batch_size, 3), dtype: long
+            The indices of (head, relation, tail) triples.
 
-        :param h_indices:
-            The head indices. None indicates to use all.
-        :param r_indices:
-            The relation indices. None indicates to use all.
-        :param t_indices:
-            The tail indices. None indicates to use all.
-        :param slice_size:
-            The slice size.
-        :param slice_dim:
-            The dimension along which to slice. From {"h", "r", "t"}
-
-        :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        :return: shape: (batch_size, 1), dtype: float
             The score for each triple.
         """
-        h, r, t = self._get_representations(h_indices=h_indices, r_indices=r_indices, t_indices=t_indices)
-        scores = self.interaction.score(h=h, r=r, t=t, slice_size=slice_size, slice_dim=slice_dim)
-        return self._repeat_scores_if_necessary(
-            scores=scores,
-            h_indices=h_indices,
-            r_indices=r_indices,
-            t_indices=t_indices,
-        )
+        # Note: slicing cannot be used here: the indices for score_hrt only have a batch
+        # dimension, and slicing along this dimension is already considered by sub-batching.
+        h, r, t = self._get_representations(h=hrt_batch[:, 0], r=hrt_batch[:, 1], t=hrt_batch[:, 2])
+        return self.interaction.score_hrt(h=h, r=r, t=t)
 
-    def _repeat_scores_if_necessary(
-        self,
-        scores: torch.FloatTensor,
-        h_indices: Optional[torch.LongTensor],
-        r_indices: Optional[torch.LongTensor],
-        t_indices: Optional[torch.LongTensor],
-    ) -> torch.FloatTensor:
-        """Repeat scores for entities/relations if the model does not have representations for one of them."""
-        repeat_relations = len(self.relation_representations) == 0
-        repeat_entities = len(self.entity_representations) == 0
+    def score_t(self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:
+        """Forward pass using right side (tail) prediction.
 
-        if not (repeat_entities or repeat_relations):
+        This method calculates the score for all possible tails for each (head, relation) pair.
+
+        :param hr_batch: shape: (batch_size, 2), dtype: long
+            The indices of (head, relation) pairs.
+        :param slice_size:
+            The slice size.
+
+        :return: shape: (batch_size, num_entities), dtype: float
+            For each h-r pair, the scores for all possible tails.
+        """
+        h, r, t = self._get_representations(h=hr_batch[:, 0], r=hr_batch[:, 1], t=None)
+        scores = self.interaction.score_t(h=h, r=r, t=t, slice_size=slice_size)
+        if self.entity_representations:
             return scores
+        return scores.repeat(1, self.num_entities)
 
-        repeats = [1, 1, 1, 1]
+    def score_h(self, rt_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:
+        """Forward pass using left side (head) prediction.
 
-        for i, (flag, ind, num) in enumerate(
-            (
-                (repeat_entities, h_indices, self.num_entities),
-                (repeat_relations, r_indices, self.num_relations),
-                (repeat_entities, t_indices, self.num_entities),
-            ),
-            start=1,
-        ):
-            if flag:
-                if ind is None:
-                    repeats[i] = num
-                else:
-                    batch_size = len(ind)
-                    if scores.shape[0] < batch_size:
-                        repeats[0] = batch_size
+        This method calculates the score for all possible heads for each (relation, tail) pair.
 
-        return scores.repeat(*repeats)
+        :param rt_batch: shape: (batch_size, 2), dtype: long
+            The indices of (relation, tail) pairs.
+        :param slice_size:
+            The slice size.
+
+        :return: shape: (batch_size, num_entities), dtype: float
+            For each r-t pair, the scores for all possible heads.
+        """
+        h, r, t = self._get_representations(h=None, r=rt_batch[:, 0], t=rt_batch[:, 1])
+        scores = self.interaction.score_h(h=h, r=r, t=t, slice_size=slice_size)
+        if self.entity_representations:
+            return scores
+        return scores.repeat(1, self.num_entities)
+
+    def score_r(self, ht_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:
+        """Forward pass using middle (relation) prediction.
+
+        This method calculates the score for all possible relations for each (head, tail) pair.
+
+        :param ht_batch: shape: (batch_size, 2), dtype: long
+            The indices of (head, tail) pairs.
+        :param slice_size:
+            The slice size.
+
+        :return: shape: (batch_size, num_relations), dtype: float
+            For each h-t pair, the scores for all possible relations.
+        """
+        h, r, t = self._get_representations(h=ht_batch[:, 0], r=None, t=ht_batch[:, 1])
+        scores = self.interaction.score_r(h=h, r=r, t=t, slice_size=slice_size)
+        if self.relation_representations:
+            return scores
+        return scores.repeat(1, self.num_entities)
 
     def _get_representations(
         self,
@@ -504,13 +392,13 @@ class ERModel(
         r_indices: Optional[torch.LongTensor],
         t_indices: Optional[torch.LongTensor],
     ) -> Tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]:
-        """Get representations for head, relation and tails, in canonical shape."""
+        """Get representations for head, relation and tails."""
         h, r, t = [
-            [representation.get_in_more_canonical_shape(dim=dim, indices=indices) for representation in representations]
-            for dim, indices, representations in (
-                ("h", h_indices, self.entity_representations),
-                ("r", r_indices, self.relation_representations),
-                ("t", t_indices, self.entity_representations),
+            [representation(indices=indices) for representation in representations]
+            for indices, representations in (
+                (h_indices, self.entity_representations),
+                (r_indices, self.relation_representations),
+                (t_indices, self.entity_representations),
             )
         ]
         # normalization

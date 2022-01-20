@@ -34,11 +34,17 @@ from torch.nn.init import xavier_normal_
 
 from . import functional as pkf
 from .combinations import Combination
-from ..typing import HeadRepresentation, HintOrType, Initializer, RelationRepresentation, Sign, TailRepresentation
+from ..typing import (
+    HeadRepresentation,
+    HintOrType,
+    Initializer,
+    RelationRepresentation,
+    Representation,
+    Sign,
+    TailRepresentation,
+)
 from ..utils import (
-    CANONICAL_DIMENSIONS,
     activation_resolver,
-    convert_to_canonical_shape,
     ensure_tuple,
     unpack_singletons,
     upgrade_to_sequence,
@@ -109,6 +115,12 @@ def parallel_slice_batches(
     batch_of_unpacked_tuples = unpack_singletons(*batch_of_tuples)
 
     yield from batch_of_unpacked_tuples
+
+
+def unsqueeze(x: Representation, dim: int) -> Representation:
+    x = upgrade_to_sequence(x)
+    x = [xx.unsqueeze(dim=dim) for xx in x]
+    return x[0] if len(x) == 1 else x
 
 
 class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailRepresentation], ABC):
@@ -245,9 +257,9 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
             The scores.
         """
         return self.score(
-            h=all_entities.unsqueeze(dim=0),
-            r=r.unsqueeze(dim=1),
-            t=t.unsqueeze(dim=1),
+            h=unsqueeze(all_entities, dim=0),
+            r=unsqueeze(r, dim=1),
+            t=unsqueeze(t, dim=1),
             slice_size=slice_size,
         )
 
@@ -273,9 +285,9 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
             The scores.
         """
         return self.score(
-            h=h.unsqueeze(dim=1),
-            r=all_relations.unsqueeze(dim=0),
-            t=t.unsqueeze(dim=1),
+            h=unsqueeze(h, dim=1),
+            r=unsqueeze(all_relations, dim=0),
+            t=unsqueeze(t, dim=1),
             slice_size=slice_size,
         )
 
@@ -301,9 +313,9 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
             The scores.
         """
         return self.score(
-            h=h.unsqueeze(dim=1),
-            r=r.unsqueeze(dim=1),
-            t=all_entities.unsqueeze(dim=0),
+            h=unsqueeze(h, dim=1),
+            r=unsqueeze(r, dim=1),
+            t=unsqueeze(all_entities, dim=0),
             slice_size=slice_size,
         )
 
