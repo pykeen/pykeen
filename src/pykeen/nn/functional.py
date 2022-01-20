@@ -378,15 +378,12 @@ def ermlpe_interaction(
     # repeat if necessary, and concat head and relation, (batch_size, num_heads, num_relations, 1, 2 * embedding_dim)
     x = broadcast_cat([h, r], dim=-1)
 
-    # Predict t embedding, shape: (b, h, r, 1, d)
+    # Predict t embedding, shape: (*batch_dims, d)
     shape = x.shape
     x = mlp(x.view(-1, shape[-1])).view(*shape[:-1], -1)
 
-    # transpose t, (b, 1, 1, d, t)
-    t = t.transpose(-2, -1)
-
-    # dot product, (b, h, r, 1, t)
-    return (x @ t).squeeze(dim=-2)
+    # dot product
+    return (x * t).sum(dim=-1)
 
 
 def hole_interaction(
