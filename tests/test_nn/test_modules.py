@@ -191,7 +191,7 @@ class NTNTests(cases.InteractionTestCase):
         # f(h,r,t) = u_r^T act(h W_r t + V_r h + V_r t + b_r)
         # shapes: w: (k, dim, dim), vh/vt: (k, dim), b/u: (k,), h/t: (dim,)
         # remove batch/num dimension
-        h, t, w, vt, vh, b, u = strip_dim(h, t, w, vt, vh, b, u)
+        # h, t, w, vt, vh, b, u = strip_dim(h, t, w, vt, vh, b, u)
         score = 0.0
         for i in range(u.shape[-1]):
             first_part = h.view(1, self.dim) @ w[i] @ t.view(self.dim, 1)

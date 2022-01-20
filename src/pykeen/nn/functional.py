@@ -515,16 +515,17 @@ def ntn_interaction(
     :return: shape: batch_dims
         The scores.
     """
-    x = activation(
-        tensor_sum(
-            extended_einsum("bhrtd,bhrtkde,bhrte->bhrtk", h, w, t),
-            (vh @ h.unsqueeze(dim=-1)).squeeze(dim=-1),
-            (vt @ t.unsqueeze(dim=-1)).squeeze(dim=-1),
-            b,
+    return (
+        u
+        * activation(
+            tensor_sum(
+                torch.einsum("...d,...kde,...e->...k", h, w, t),  # shape: (*batch_dims, k)
+                torch.einsum("...d, ...kd->...k", h, vh),
+                torch.einsum("...d, ...kd->...k", t, vt),
+                b,
+            )
         )
-    )
-    u = u.transpose(-2, -1)
-    return (x @ u).squeeze(dim=-1)
+    ).sum(dim=-1)
 
 
 def proje_interaction(
