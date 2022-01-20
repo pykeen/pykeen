@@ -3,7 +3,7 @@
 """Various edge weighting implementations for R-GCN."""
 
 from abc import abstractmethod
-from typing import Union
+from typing import Union, Optional
 
 import torch
 from class_resolver import Resolver
@@ -70,8 +70,8 @@ class EdgeWeighting(nn.Module):
             self,
             source: torch.LongTensor,
             target: torch.LongTensor,
-            message: torch.FloatTensor = None,
-            x_e: torch.FloatTensor = None,
+            message: Optional[torch.FloatTensor] = None,
+            x_e: Optional[torch.FloatTensor] = None,
     ) -> torch.FloatTensor:
         """Compute edge weights.
 
@@ -104,8 +104,8 @@ class InverseInDegreeEdgeWeighting(EdgeWeighting):
             self,
             source: torch.LongTensor,
             target: torch.LongTensor,
-            message: torch.FloatTensor = None,
-            x_e: torch.FloatTensor = None
+            message: Optional[torch.FloatTensor] = None,
+            x_e: Optional[torch.FloatTensor] = None
     ) -> torch.FloatTensor:  # noqa: D102
         weight = _inverse_frequency_weighting(idx=target)
         if message is not None:
@@ -122,8 +122,8 @@ class InverseOutDegreeEdgeWeighting(EdgeWeighting):
             self,
             source: torch.LongTensor,
             target: torch.LongTensor,
-            message: torch.FloatTensor = None,
-            x_e: torch.FloatTensor = None
+            message: Optional[torch.FloatTensor] = None,
+            x_e: Optional[torch.FloatTensor] = None
     ) -> torch.FloatTensor:  # noqa: D102
         weight = _inverse_frequency_weighting(idx=source)
         if message is not None:
@@ -139,8 +139,8 @@ class SymmetricEdgeWeighting(EdgeWeighting):
             self,
             source: torch.LongTensor,
             target: torch.LongTensor,
-            message: torch.FloatTensor = None,
-            x_e: torch.FloatTensor = None
+            message: Optional[torch.FloatTensor] = None,
+            x_e: Optional[torch.FloatTensor] = None
     ) -> torch.FloatTensor:  # noqa: D102
         weight = (_inverse_frequency_weighting(idx=source) * _inverse_frequency_weighting(idx=target)).sqrt()
         if message is not None:
@@ -176,8 +176,8 @@ class AttentionEdgeWeighting(EdgeWeighting):
         self,
         source: torch.LongTensor,
         target: torch.LongTensor,
-        message: torch.FloatTensor = None,
-        x_e: torch.FloatTensor = None,
+        message: Optional[torch.FloatTensor] = None,
+        x_e: Optional[torch.FloatTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
 
         message_ = message.view(message.shape[0], self.num_heads, -1)

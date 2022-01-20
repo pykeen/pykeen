@@ -685,8 +685,7 @@ class CompGCNLayer(nn.Module):
 
         # edge weighting
         self.edge_weighting: EdgeWeighting = edge_weight_resolver.make(
-            edge_weighting,
-            pos_kwargs=dict(output_dim=output_dim, attn_drop=attention_dropout, num_heads=attention_heads)
+            edge_weighting, output_dim=output_dim, attn_drop=attention_dropout, num_heads=attention_heads
         )
 
         # message passing weights
