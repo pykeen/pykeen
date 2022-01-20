@@ -28,6 +28,8 @@ from ..evaluation.rank_based_evaluator import ADJUSTED_ARITHMETIC_MEAN_RANK_INDE
 from ..losses import Loss, loss_resolver
 from ..lr_schedulers import LRScheduler, lr_scheduler_resolver, lr_schedulers_hpo_defaults
 from ..models import Model, model_resolver
+from ..nn import interaction_resolver
+from ..nn.modules import TransformerInteraction, Interaction
 from ..optimizers import Optimizer, optimizer_resolver, optimizers_hpo_defaults
 from ..pipeline import pipeline, replicate_pipeline_from_config
 from ..regularizers import Regularizer, regularizer_resolver
@@ -75,6 +77,7 @@ class Objective:
     evaluator: Type[Evaluator]  # 8.
     result_tracker: Union[ResultTracker, Type[ResultTracker]]  # 9.
     metric: str
+    interaction: Optional[Type[Interaction]] = None
 
     # 1. Dataset
     dataset_kwargs: Optional[Mapping[str, Any]] = None
@@ -86,6 +89,14 @@ class Objective:
     # 2. Model
     model_kwargs: Optional[Mapping[str, Any]] = None
     model_kwargs_ranges: Optional[Mapping[str, Any]] = None
+    entity_representation_kwargs: Optional[Mapping[str, Any]] = None
+    entity_representation_kwargs_ranges: Optional[Mapping[str, Any]] = None
+    relation_representation_kwargs: Optional[Mapping[str, Any]] = None
+    relation_representation_kwargs_ranges: Optional[Mapping[str, Any]] = None
+    encoder_kwargs: Optional[Mapping[str, Any]] = None
+    encoder_kwargs_ranges: Optional[Mapping[str, Any]] = None
+    interaction_kwargs: Optional[Mapping[str, Any]] = None
+    interaction_kwargs_ranges: Optional[Mapping[str, Any]] = None
     # 3. Loss
     loss_kwargs: Optional[Mapping[str, Any]] = None
     loss_kwargs_ranges: Optional[Mapping[str, Any]] = None
@@ -164,6 +175,57 @@ class Objective:
             kwargs=self.model_kwargs,
             kwargs_ranges=self.model_kwargs_ranges,
         )
+
+        # 2.1 Entity representations
+        if self.entity_representation_kwargs is not None:
+            _entity_representation_kwargs = _get_kwargs(
+                trial=trial,
+                prefix='entity_representation',
+                default_kwargs_ranges=dict(),
+                kwargs=self.entity_representation_kwargs,
+                kwargs_ranges=self.entity_representation_kwargs_ranges,
+            )
+            _model_kwargs['entity_representation_kwargs'] = _entity_representation_kwargs
+
+        if self.relation_representation_kwargs is not None:
+            # 2.2 Relation representations
+            _relation_representation_kwargs = _get_kwargs(
+                trial=trial,
+                prefix='relation_representation',
+                default_kwargs_ranges=dict(),
+                kwargs=self.relation_representation_kwargs,
+                kwargs_ranges=self.relation_representation_kwargs_ranges,
+            )
+            _model_kwargs['relation_representation_kwargs'] = _relation_representation_kwargs
+
+        if self.encoder_kwargs is not None:
+            # Encoders like CompGCN have additional parameters such  as the number of GCN layers.
+            _encoder_kwargs = _get_kwargs(
+                trial=trial,
+                prefix='encoder',
+                default_kwargs_ranges=dict(),
+                kwargs=self.encoder_kwargs,
+                kwargs_ranges=self.encoder_kwargs_ranges,
+            )
+            _model_kwargs['encoder_kwargs'] = _encoder_kwargs
+
+        if self.interaction_kwargs is not None:
+            # 2.3 Interaction model
+            _interaction_kwargs = _get_kwargs(
+                trial=trial,
+                prefix='interaction',
+                default_kwargs_ranges=dict(),
+                kwargs=self.interaction_kwargs,
+                kwargs_ranges=self.interaction_kwargs_ranges,
+            )
+            if interaction_resolver.lookup(self.interaction) is TransformerInteraction:
+                assert 'embedding_dim' in _model_kwargs
+            if 'embedding_dim' in _interaction_kwargs:
+                logging.warning('\'embedding_dim\' in \'interaction_kwargs\' will be overwritten.')
+            # The Transformer Interaction expects as input dimension the embedding dimension.
+            _interaction_kwargs['input_dim'] = _model_kwargs['embedding_dim']
+
+            _model_kwargs['interaction_kwargs'] = _interaction_kwargs
 
         try:
             loss_default_kwargs_ranges = self.loss.hpo_default
@@ -495,6 +557,15 @@ def hpo_pipeline(
     model: Union[str, Type[Model]],
     model_kwargs: Optional[Mapping[str, Any]] = None,
     model_kwargs_ranges: Optional[Mapping[str, Any]] = None,
+    entity_representation_kwargs: Optional[Mapping[str, Any]] = None,
+    entity_representation_kwargs_ranges: Optional[Mapping[str, Any]] = None,
+    relation_representation_kwargs: Optional[Mapping[str, Any]] = None,
+    relation_representation_kwargs_ranges: Optional[Mapping[str, Any]] = None,
+    encoder_kwargs: Optional[Mapping[str, Any]] = None,
+    encoder_kwargs_ranges: Optional[Mapping[str, Any]] = None,
+    interaction: Optional[Union[str,Type[Interaction]]] = None,
+    interaction_kwargs: Optional[Mapping[str, Any]] = None,
+    interaction_kwargs_ranges: Optional[Mapping[str, Any]] = None,
     # 3. Loss
     loss: HintType[Loss] = None,
     loss_kwargs: Optional[Mapping[str, Any]] = None,
@@ -767,6 +838,15 @@ def hpo_pipeline(
         model=model_cls,
         model_kwargs=model_kwargs,
         model_kwargs_ranges=model_kwargs_ranges,
+        entity_representation_kwargs=entity_representation_kwargs,
+        entity_representation_kwargs_ranges=entity_representation_kwargs_ranges,
+        relation_representation_kwargs=relation_representation_kwargs,
+        relation_representation_kwargs_ranges=relation_representation_kwargs_ranges,
+        encoder_kwargs=encoder_kwargs,
+        encoder_representation_kwargs_ranges=encoder_kwargs_ranges,
+        interaction=interaction,
+        interaction_kwargs=interaction_kwargs,
+        interaction_kwargs_ranges=interaction_kwargs_ranges,
         # 3. Loss
         loss=loss_cls,
         loss_kwargs=loss_kwargs,
