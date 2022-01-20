@@ -343,7 +343,7 @@ class ERModel(
             For each h-r pair, the scores for all possible tails.
         """
         h, r, t = self._get_representations(h=hr_batch[:, 0], r=hr_batch[:, 1], t=None)
-        scores = self.interaction.score_t(h=h, r=r, t=t, slice_size=slice_size)
+        scores = self.interaction.score_t(h=h, r=r, all_entities=t, slice_size=slice_size)
         if self.entity_representations:
             return scores
         return scores.repeat(1, self.num_entities)
@@ -362,7 +362,7 @@ class ERModel(
             For each r-t pair, the scores for all possible heads.
         """
         h, r, t = self._get_representations(h=None, r=rt_batch[:, 0], t=rt_batch[:, 1])
-        scores = self.interaction.score_h(h=h, r=r, t=t, slice_size=slice_size)
+        scores = self.interaction.score_h(all_entities=h, r=r, t=t, slice_size=slice_size)
         if self.entity_representations:
             return scores
         return scores.repeat(1, self.num_entities)
@@ -381,28 +381,28 @@ class ERModel(
             For each h-t pair, the scores for all possible relations.
         """
         h, r, t = self._get_representations(h=ht_batch[:, 0], r=None, t=ht_batch[:, 1])
-        scores = self.interaction.score_r(h=h, r=r, t=t, slice_size=slice_size)
+        scores = self.interaction.score_r(h=h, all_relations=r, t=t, slice_size=slice_size)
         if self.relation_representations:
             return scores
-        return scores.repeat(1, self.num_entities)
+        return scores.repeat(1, self.num_relations)
 
     def _get_representations(
         self,
-        h_indices: Optional[torch.LongTensor],
-        r_indices: Optional[torch.LongTensor],
-        t_indices: Optional[torch.LongTensor],
+        h: Optional[torch.LongTensor],
+        r: Optional[torch.LongTensor],
+        t: Optional[torch.LongTensor],
     ) -> Tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]:
         """Get representations for head, relation and tails."""
-        h, r, t = [
+        hr, rr, tr = [
             [representation(indices=indices) for representation in representations]
             for indices, representations in (
-                (h_indices, self.entity_representations),
-                (r_indices, self.relation_representations),
-                (t_indices, self.entity_representations),
+                (h, self.entity_representations),
+                (r, self.relation_representations),
+                (t, self.entity_representations),
             )
         ]
         # normalization
         return cast(
             Tuple[HeadRepresentation, RelationRepresentation, TailRepresentation],
-            tuple(x[0] if len(x) == 1 else x for x in (h, r, t)),
+            tuple(x[0] if len(x) == 1 else x for x in (hr, rr, tr)),
         )
