@@ -10,20 +10,7 @@ import math
 from abc import ABC, abstractmethod
 from collections import Counter
 from operator import itemgetter
-from typing import (
-    Any,
-    Callable,
-    Generic,
-    Iterable,
-    List,
-    Mapping,
-    MutableMapping,
-    Optional,
-    Sequence,
-    Set,
-    Tuple,
-    Union,
-)
+from typing import Any, Callable, Generic, Iterable, Mapping, MutableMapping, Optional, Sequence, Set, Tuple, Union
 
 import more_itertools
 import numpy
@@ -98,6 +85,16 @@ def parallel_slice_batches(
 ) -> Iterable[Sequence[Representation]]:
     """
     Slice representations along the given dimension.
+
+    :param representations:
+        the representations to slice
+    :param split_size:
+        the slice size
+    :param dim:
+        the dimension along which to slice
+
+    :yield:
+        batches of sliced representations
     """
     # normalize input
     rs: Sequence[Sequence[torch.FloatTensor]] = ensure_tuple(*representations)
