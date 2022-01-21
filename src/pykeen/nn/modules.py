@@ -153,11 +153,11 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
     ) -> torch.FloatTensor:
         """Compute broadcasted triple scores given broadcasted representations for head, relation and tails.
 
-        :param h: shape: (`*batch_dims`, *dims)
+        :param h: shape: (`*batch_dims`, `*dims`)
             The head representations.
-        :param r: shape: (`*batch_dims`, *dims)
+        :param r: shape: (`*batch_dims`, `*dims`)
             The relation representations.
-        :param t: shape: (`*batch_dims`, *dims)
+        :param t: shape: (`*batch_dims`, `*dims`)
             The tail representations.
 
         :return: shape: batch_dims
@@ -179,11 +179,11 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
 
         # TODO: we could change that to slicing along multiple dimensions, if necessary
 
-        :param h: shape: (`*batch_dims`, *dims)
+        :param h: shape: (`*batch_dims`, `*dims`)
             The head representations.
-        :param r: shape: (`*batch_dims`, *dims)
+        :param r: shape: (`*batch_dims`, `*dims`)
             The relation representations.
-        :param t: shape: (`*batch_dims`, *dims)
+        :param t: shape: (`*batch_dims`, `*dims`)
             The tail representations.
         :param slice_size:
             The slice size.
@@ -360,11 +360,11 @@ class LiteralInteraction(
     ) -> torch.FloatTensor:
         """Compute broadcasted triple scores given broadcasted representations for head, relation and tails.
 
-        :param h: shape: (`*batch_dims`, *dims)
+        :param h: shape: (`*batch_dims`, `*dims`)
             The head representations.
-        :param r: shape: (`*batch_dims`, *dims)
+        :param r: shape: (`*batch_dims`, `*dims`)
             The relation representations.
-        :param t: shape: (`*batch_dims`, *dims)
+        :param t: shape: (`*batch_dims`, `*dims`)
             The tail representations.
 
         :return: shape: batch_dims
@@ -394,11 +394,11 @@ class FunctionalInteraction(Interaction, Generic[HeadRepresentation, RelationRep
     ) -> torch.FloatTensor:
         """Compute broadcasted triple scores given broadcasted representations for head, relation and tails.
 
-        :param h: shape: (`*batch_dims`, *dims)
+        :param h: shape: (`*batch_dims`, `*dims`)
             The head representations.
-        :param r: shape: (`*batch_dims`, *dims)
+        :param r: shape: (`*batch_dims`, `*dims`)
             The relation representations.
-        :param t: shape: (`*batch_dims`, *dims)
+        :param t: shape: (`*batch_dims`, `*dims`)
             The tail representations.
 
         :return: shape: batch_dims
