@@ -1386,7 +1386,6 @@ class RepresentationTestCase(GenericTestCase[RepresentationModule]):
         """Test forward and canonical shape for indices."""
         self._test_forward(indices=indices)
         self._test_canonical_shape(indices=indices)
-        self._test_more_canonical_shape(indices=indices)
 
     def test_no_indices(self):
         """Test without indices."""
