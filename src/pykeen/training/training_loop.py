@@ -675,6 +675,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                 # When the stopper obtained a new best epoch, this model has to be saved for reconstruction
                 if (
                     stopper is not None
+                    and stopper.best_epoch > 0
                     and stopper.best_epoch != last_best_epoch
                     and best_epoch_model_file_path is not None
                 ):
