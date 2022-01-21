@@ -343,7 +343,6 @@ def ermlp_interaction(
         The scores.
     """
     # same shape
-    prefix = h.shape[:-1]
     *prefix, dim = h.shape
     if h.shape == r.shape and h.shape == t.shape:
         return final(activation(hidden(torch.cat([h, r, t], dim=-1).view(-1, 3 * dim)))).view(prefix)

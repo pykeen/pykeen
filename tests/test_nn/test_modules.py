@@ -552,13 +552,13 @@ class InteractionTestsTestCase(unittest_templates.MetaTestCase[pykeen.nn.modules
 class ParallelSliceBatchesTest(unittest.TestCase):
     """Tests for parallel_slice_batches."""
 
-    @staticmethod
     def _verify(
+        self,
         z: Representation,
         z_batch: Representation,
         dim: int,
         split_size: int,
-    ):
+    ) -> None:
         """Verify a sliced representations."""
         if torch.is_tensor(z):
             assert torch.is_tensor(z_batch)
@@ -573,10 +573,10 @@ class ParallelSliceBatchesTest(unittest.TestCase):
             assert not torch.is_tensor(z_batch)
             assert len(z) == len(z_batch)
             for y, y_batch in zip(z, z_batch):
-                ParallelSliceBatchesTest._verify(z=y, z_batch=y_batch, dim=dim, split_size=split_size)
+                self._verify(z=y, z_batch=y_batch, dim=dim, split_size=split_size)
 
-    @staticmethod
     def _generate(
+        self,
         shape: Union[Tuple[int, ...], Sequence[Tuple[int, ...]]],
     ) -> Representation:
         """Generate dummy representations for the given shape(s)."""
@@ -584,7 +584,7 @@ class ParallelSliceBatchesTest(unittest.TestCase):
             return []
         if isinstance(shape[0], tuple):
             # multiple
-            return [ParallelSliceBatchesTest._generate(s) for s in shape]
+            return [self._generate(s) for s in shape]
         # single
         return torch.empty(size=shape, device="meta")
 
