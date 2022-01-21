@@ -22,6 +22,7 @@ from torch.nn import functional
 from .compositions import CompositionModule, composition_resolver
 from .init import (
     init_phases,
+    initializer_resolver,
     normal_norm_,
     uniform_norm_,
     uniform_norm_p1_,
@@ -356,16 +357,7 @@ class Embedding(RepresentationModule):
             shape=shape,
         )
 
-        self.initializer = cast(
-            Initializer,
-            _handle(
-                initializer,
-                initializers,
-                initializer_kwargs,
-                default=nn.init.normal_,
-                label="initializer",
-            ),
-        )
+        self.initializer = initializer_resolver.make(query=initializer, pos_kwargs=initializer_kwargs)
         self.normalizer = _handle(normalizer, normalizers, normalizer_kwargs, label="normalizer")
         self.constrainer = _handle(constrainer, constrainers, constrainer_kwargs, label="constrainer")
         if regularizer is not None:
@@ -585,20 +577,6 @@ def process_shape(
         raise TypeError(f"Invalid type for shape: ({type(shape)}) {shape}")
     return dim, shape
 
-
-#: Initializers
-initializers = {
-    "xavier_uniform": xavier_uniform_,
-    "xavier_uniform_norm": xavier_uniform_norm_,
-    "xavier_normal": xavier_normal_,
-    "xavier_normal_norm": xavier_normal_norm_,
-    "normal": torch.nn.init.normal_,
-    "normal_norm": normal_norm_,
-    "uniform": torch.nn.init.uniform_,
-    "uniform_norm": uniform_norm_,
-    "phases": init_phases,
-    "init_phases": init_phases,
-}
 
 #: Constrainers
 constrainers = {
