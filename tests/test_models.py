@@ -93,6 +93,10 @@ class TestConvE(cases.ModelTestCase):
     #                                 7
     num_constant_init = 7
 
+    def test_predict(self):
+        """Test prediction workflow with inverse relations."""
+        predict(model=self.instance, k=10)
+
 
 class TestConvKB(cases.ModelTestCase):
     """Test the ConvKB model."""
