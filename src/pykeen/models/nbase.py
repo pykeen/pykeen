@@ -340,6 +340,32 @@ class ERModel(
             regularizer.add_parameter(parameter=param)
         self.weight_regularizers.append(regularizer)
 
+    def forward(
+        self,
+        h_indices: torch.LongTensor,
+        r_indices: torch.LongTensor,
+        t_indices: torch.LongTensor,
+        slice_size: Optional[int] = None,
+        slice_dim: Optional[int] = None,
+    ) -> torch.FloatTensor:
+        """Forward pass.
+
+        This method takes head, relation and tail indices and calculates the corresponding scores.
+        It supports broadcasting.
+
+        :param h_indices:
+            The head indices.
+        :param r_indices:
+            The relation indices.
+        :param t_indices:
+            The tail indices.
+
+        :return:
+            The scores
+        """
+        h, r, t = self._get_representations(h=h_indices, r=r_indices, t=t_indices)
+        return self.interaction.score(h=h, r=r, t=t, slice_size=slice_size, slice_dim=slice_dim)
+
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:
         """Forward pass.
 
