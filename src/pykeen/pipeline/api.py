@@ -1079,6 +1079,8 @@ def pipeline(  # noqa: C901
     # Log loss parameters
     _result_tracker.log_params(
         params=dict(
+            # the loss was already logged as part of the model kwargs
+            # loss=loss_resolver.normalize_inst(model_instance.loss),
             loss_kwargs=loss_kwargs
         ),
     )
