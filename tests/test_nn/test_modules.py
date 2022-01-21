@@ -15,8 +15,8 @@ from torch import nn
 import pykeen.nn.modules
 import pykeen.utils
 from pykeen.nn.functional import _rotate_quaternion, _split_quaternion, distmult_interaction
-from pykeen.typing import Sign
-from pykeen.utils import clamp_norm, ensure_tuple, project_entity, strip_dim, view_complex
+from pykeen.typing import Representation, Sign
+from pykeen.utils import clamp_norm, ensure_tuple, project_entity, view_complex
 from tests import cases
 
 logger = logging.getLogger(__name__)
@@ -116,7 +116,6 @@ class CrossETests(cases.InteractionTestCase):
     )
 
     def _exp_score(self, h, r, c_r, t, bias, activation, dropout) -> torch.FloatTensor:  # noqa: D102
-        h, r, c_r, t, bias = strip_dim(h, r, c_r, t, bias)
         return (dropout(activation(h * c_r + h * r * c_r + bias)) * t).sum()
 
 
@@ -191,8 +190,6 @@ class NTNTests(cases.InteractionTestCase):
     def _exp_score(self, h, t, w, vt, vh, b, u, activation) -> torch.FloatTensor:
         # f(h,r,t) = u_r^T act(h W_r t + V_r h + V_r t + b_r)
         # shapes: w: (k, dim, dim), vh/vt: (k, dim), b/u: (k,), h/t: (dim,)
-        # remove batch/num dimension
-        h, t, w, vt, vh, b, u = strip_dim(h, t, w, vt, vh, b, u)
         score = 0.0
         for i in range(u.shape[-1]):
             first_part = h.view(1, self.dim) @ w[i] @ t.view(self.dim, 1)
@@ -212,7 +209,6 @@ class ProjETests(cases.InteractionTestCase):
 
     def _exp_score(self, h, r, t, d_e, d_r, b_c, b_p, activation) -> torch.FloatTensor:
         # f(h, r, t) = g(t z(D_e h + D_r r + b_c) + b_p)
-        h, r, t = strip_dim(h, r, t)
         return (t * activation((d_e * h) + (d_r * r) + b_c)).sum() + b_p
 
 
@@ -223,7 +219,6 @@ class QuatETests(cases.InteractionTestCase):
     dim = 4 * cases.InteractionTestCase.dim  # quaternions
 
     def _exp_score(self, h, r, t) -> torch.FloatTensor:  # noqa: D102
-        h, r, t = strip_dim(h, r, t)
         return -(_rotate_quaternion(*(_split_quaternion(x) for x in [h, r])) * t).sum()
 
 
@@ -234,7 +229,6 @@ class RESCALTests(cases.InteractionTestCase):
 
     def _exp_score(self, h, r, t) -> torch.FloatTensor:
         # f(h, r, t) = h @ r @ t
-        h, r, t = strip_dim(h, r, t)
         return h.view(1, -1) @ r @ t.view(-1, 1)
 
 
@@ -245,7 +239,6 @@ class KG2ETests(cases.InteractionTestCase):
 
     def _exp_score(self, exact, h_mean, h_var, r_mean, r_var, similarity, t_mean, t_var):
         assert similarity == "KL"
-        h_mean, h_var, r_mean, r_var, t_mean, t_var = strip_dim(h_mean, h_var, r_mean, r_var, t_mean, t_var)
         e_mean, e_var = h_mean - t_mean, h_var + t_var
         p = torch.distributions.MultivariateNormal(loc=e_mean, covariance_matrix=torch.diag(e_var))
         q = torch.distributions.MultivariateNormal(loc=r_mean, covariance_matrix=torch.diag(r_var))
@@ -262,7 +255,6 @@ class TuckerTests(cases.InteractionTestCase):
 
     def _exp_score(self, bn_h, bn_hr, core_tensor, do_h, do_r, do_hr, h, r, t) -> torch.FloatTensor:
         # DO_{hr}(BN_{hr}(DO_h(BN_h(h)) x_1 DO_r(W x_2 r))) x_3 t
-        h, r, t = strip_dim(h, r, t)
         a = do_r((core_tensor * r[None, :, None]).sum(dim=1, keepdims=True))  # shape: (embedding_dim, 1, embedding_dim)
         b = do_h(bn_h(h.view(1, -1))).view(-1)  # shape: (embedding_dim)
         c = (b[:, None, None] * a).sum(dim=0, keepdims=True)  # shape: (1, 1, embedding_dim)
@@ -284,7 +276,7 @@ class RotatETests(cases.InteractionTestCase):
         return h, r, t
 
     def _exp_score(self, h, r, t) -> torch.FloatTensor:  # noqa: D102
-        h, r, t = strip_dim(*(view_complex(x) for x in (h, r, t)))
+        h, r, t = tuple(view_complex(x) for x in (h, r, t))
         # check for unit length
         assert torch.allclose((r.abs() ** 2).sum(dim=-1).sqrt(), torch.ones(1))
         d = h * r - t
@@ -352,7 +344,6 @@ class TransHTests(cases.TranslationalInteractionTests):
 
     def _exp_score(self, h, w_r, d_r, t, p, power_norm) -> torch.FloatTensor:  # noqa: D102
         assert not power_norm
-        h, w_r, d_r, t = strip_dim(h, w_r, d_r, t)
         h, t = [x - (x * w_r).sum() * w_r for x in (h, t)]
         return -(h + d_r - t).norm(p=p)
 
@@ -378,7 +369,6 @@ class TransRTests(cases.TranslationalInteractionTests):
 
     def _exp_score(self, h, r, m_r, t, p, power_norm) -> torch.FloatTensor:
         assert power_norm
-        h, r, m_r, t = strip_dim(h, r, m_r, t)
         h_bot, t_bot = [clamp_norm(x.unsqueeze(dim=0) @ m_r, p=2, dim=-1, maxnorm=1.0) for x in (h, t)]
         return -((h_bot + r - t_bot) ** p).sum()
 
@@ -391,7 +381,6 @@ class SETests(cases.TranslationalInteractionTests):
     def _exp_score(self, h, t, r_h, r_t, p, power_norm) -> torch.FloatTensor:
         assert not power_norm
         # -\|R_h h - R_t t\|
-        h, t, r_h, r_t = strip_dim(h, t, r_h, r_t)
         h = r_h @ h.unsqueeze(dim=-1)
         t = r_t @ t.unsqueeze(dim=-1)
         return -(h - t).norm(p)
@@ -405,7 +394,6 @@ class UMTests(cases.TranslationalInteractionTests):
     def _exp_score(self, h, t, p, power_norm) -> torch.FloatTensor:
         assert power_norm
         # -\|h - t\|
-        h, t = strip_dim(h, t)
         return -(h - t).pow(p).sum()
 
 
@@ -427,7 +415,6 @@ class SimplEInteractionTests(cases.InteractionTestCase):
     cls = pykeen.nn.modules.SimplEInteraction
 
     def _exp_score(self, h, r, t, h_inv, r_inv, t_inv, clamp) -> torch.FloatTensor:
-        h, r, t, h_inv, r_inv, t_inv = strip_dim(h, r, t, h_inv, r_inv, t_inv)
         assert clamp is None
         return 0.5 * distmult_interaction(h, r, t) + 0.5 * distmult_interaction(h_inv, r_inv, t_inv)
 
@@ -540,7 +527,6 @@ class TransformerTests(cases.InteractionTestCase):
         position_embeddings: torch.FloatTensor,
         final: nn.Module,
     ) -> torch.FloatTensor:  # noqa: D102
-        h, r, t = strip_dim(h, r, t)
         x = torch.stack([h, r], dim=0) + position_embeddings
         x = transformer(src=x.unsqueeze(dim=1))
         x = x.sum(dim=0)
@@ -566,51 +552,72 @@ class InteractionTestsTestCase(unittest_templates.MetaTestCase[pykeen.nn.modules
 class ParallelSliceBatchesTest(unittest.TestCase):
     """Tests for parallel_slice_batches."""
 
-    slice_size = 15
-    slice_dim = 2
-    batch_size = 2
-    num_relations = 35
-
     def _verify(
         self,
-        z_sliced: torch.FloatTensor,
-        z_shape: Tuple[int, ...],
-    ):
-        """Verify a single sliced tensor."""
-        assert isinstance(z_sliced, torch.Tensor)
-        for dim, (z_dim, z_sliced_dim) in enumerate(zip(z_shape, z_sliced.shape)):
-            if dim != self.slice_dim:
-                assert z_dim == z_sliced_dim
-            else:
-                assert z_sliced_dim <= z_dim
-                assert z_sliced_dim <= self.slice_size
+        z: Representation,
+        z_batch: Representation,
+        dim: int,
+        split_size: int,
+    ) -> None:
+        """Verify a sliced representations."""
+        if torch.is_tensor(z):
+            assert torch.is_tensor(z_batch)
+            assert z.ndim == z_batch.ndim
+            for i, (d, d_batch) in enumerate(zip(z.shape, z_batch.shape)):
+                if i == dim:
+                    assert d_batch <= split_size
+                    assert d_batch <= d
+                else:
+                    assert d_batch == d
+        else:
+            assert not torch.is_tensor(z_batch)
+            assert len(z) == len(z_batch)
+            for y, y_batch in zip(z, z_batch):
+                self._verify(z=y, z_batch=y_batch, dim=dim, split_size=split_size)
 
-    def test_single(self):
-        """Test parallel_slice_batches with a single representation."""
-        shape = (2, 3)
-        z = torch.empty(size=(self.batch_size, 1, self.num_relations, 1, *shape), device="meta")
-        for z_sliced in pykeen.nn.modules.parallel_slice_batches(
-            z=z,
-            slice_size=self.slice_size,
-            dim=self.slice_dim,
-        ):
-            self._verify(z_sliced=z_sliced, z_shape=z.shape)
+    def _generate(
+        self,
+        shape: Union[Tuple[int, ...], Sequence[Tuple[int, ...]]],
+    ) -> Representation:
+        """Generate dummy representations for the given shape(s)."""
+        if not shape:
+            return []
+        if isinstance(shape[0], tuple):
+            # multiple
+            return [self._generate(s) for s in shape]
+        # single
+        return torch.empty(size=shape, device="meta")
+
+    def _test(
+        self,
+        h_shape: Union[Tuple[int, ...], Sequence[Tuple[int, ...]]],
+        r_shape: Union[Tuple[int, ...], Sequence[Tuple[int, ...]]],
+        t_shape: Union[Tuple[int, ...], Sequence[Tuple[int, ...]]],
+        dim: int,
+        split_size: int,
+    ):
+        """Test slicing for given representation shapes."""
+        h, r, t = [self._generate(s) for s in (h_shape, r_shape, t_shape)]
+        for batch in pykeen.nn.modules.parallel_slice_batches(h, r, t, split_size=split_size, dim=dim):
+            assert len(batch) == 3
+            for old, new in zip((h, r, t), batch):
+                self._verify(old, new, dim, split_size)
+
+    def test_score_t(self):
+        """Test parallel_slice_batches with single representations."""
+        s, b, n, d = 2, 3, 7, 5
+        self._test(h_shape=(b, 1, d), r_shape=(b, 1, d), t_shape=(1, n, d), dim=1, split_size=s)
 
     def test_multiple(self):
         """Test parallel_slice_batches with a multiple representations."""
-        shapes = [(2, 3), (5,)]
-        zs = tuple(
-            torch.empty(size=(self.batch_size, 1, self.num_relations, 1, *shape), device="meta") for shape in shapes
-        )
-        for z_sliced in pykeen.nn.modules.parallel_slice_batches(
-            z=zs,
-            slice_size=self.slice_size,
-            dim=self.slice_dim,
-        ):
-            assert isinstance(z_sliced, tuple)
-            assert len(z_sliced) == len(zs)
-            for z_sliced_single, z in zip(z_sliced, zs):
-                self._verify(z_sliced=z_sliced_single, z_shape=z.shape)
+        s, b, n, d = 2, 3, 7, 5
+        self._test(h_shape=((b, 1, d), (b, 1, d, d)), r_shape=(b, 1, d), t_shape=(1, n, d), dim=1, split_size=s)
+        self._test(h_shape=(b, 1, d), r_shape=(b, 1, d), t_shape=((1, n, d), (1, n, 2 * d)), dim=1, split_size=s)
+
+    def test_empty(self):
+        """Test parallel_slice_batches with missing relation representations."""
+        s, b, n, d = 2, 3, 7, 5
+        self._test(h_shape=(b, 1, d), r_shape=[], t_shape=(1, n, d), dim=1, split_size=s)
 
 
 class TripleRETests(cases.TranslationalInteractionTests):
@@ -623,7 +630,6 @@ class TripleRETests(cases.TranslationalInteractionTests):
         if u is None:
             u = 0.0
         #  head * (re_head + self.u * e_h) - tail * (re_tail + self.u * e_t) + re_mid
-        h, r_head, r_mid, r_tail, t = strip_dim(h, r_head, r_mid, r_tail, t)
         return -(h * (r_head + u * torch.ones_like(r_head)) - t * (r_tail + u * torch.ones_like(r_tail)) + r_mid).norm(
             p=p,
         )
@@ -648,7 +654,4 @@ class AutoSFTests(cases.InteractionTestCase):
         coefficients: Sequence[Tuple[int, int, int, Sign]],
     ) -> torch.FloatTensor:  # noqa: D102
         h, r, t = ensure_tuple(h, r, t)
-        h = strip_dim(*h)
-        r = strip_dim(*r)
-        t = strip_dim(*t)
         return sum(s * (h[i] * r[j] * t[k]).sum(dim=-1) for i, j, k, s in coefficients)
