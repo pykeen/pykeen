@@ -380,8 +380,8 @@ def ermlpe_interaction(
     x = broadcast_cat([h, r], dim=-1)
 
     # Predict t embedding, shape: (*batch_dims, d)
-    shape = x.shape
-    x = mlp(x.view(-1, shape[-1])).view(*shape[:-1], -1)
+    *batch_dims, dim = x.shape
+    x = mlp(x.view(-1, dim)).view(*batch_dims, -1)
 
     # dot product
     return (x * t).sum(dim=-1)
