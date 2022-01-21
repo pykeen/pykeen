@@ -180,6 +180,23 @@ def _prepare_representation_module_list(
     return nn.ModuleList(modules)
 
 
+def repeat_if_necessary(
+    scores: torch.FloatTensor,
+    representations: Sequence[RepresentationModule],
+    num: int,
+) -> torch.FloatTensor:
+    """
+    Repeat score tensor if necessary.
+
+    If a model does not have entity/relation representations, the scores for
+    `score_{h,t}` / `score_r` are always the same. For efficiency, they are thus
+    only computed once, but to meet the API, they have to be brought into the correct shape afterwards.
+    """
+    if representations:
+        return scores
+    return scores.repeat(1, num)
+
+
 class ERModel(
     Generic[HeadRepresentation, RelationRepresentation, TailRepresentation],
     _NewAbstractModel,
@@ -343,10 +360,11 @@ class ERModel(
             For each h-r pair, the scores for all possible tails.
         """
         h, r, t = self._get_representations(h=hr_batch[:, 0], r=hr_batch[:, 1], t=None)
-        scores = self.interaction.score_t(h=h, r=r, all_entities=t, slice_size=slice_size)
-        if self.entity_representations:
-            return scores
-        return scores.repeat(1, self.num_entities)
+        return repeat_if_necessary(
+            scores=self.interaction.score_t(h=h, r=r, all_entities=t, slice_size=slice_size),
+            representations=self.entity_representations,
+            num=self.num_entities,
+        )
 
     def score_h(self, rt_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:
         """Forward pass using left side (head) prediction.
@@ -362,10 +380,11 @@ class ERModel(
             For each r-t pair, the scores for all possible heads.
         """
         h, r, t = self._get_representations(h=None, r=rt_batch[:, 0], t=rt_batch[:, 1])
-        scores = self.interaction.score_h(all_entities=h, r=r, t=t, slice_size=slice_size)
-        if self.entity_representations:
-            return scores
-        return scores.repeat(1, self.num_entities)
+        return repeat_if_necessary(
+            scores=self.interaction.score_h(all_entities=h, r=r, t=t, slice_size=slice_size),
+            representations=self.entity_representations,
+            num=self.num_entities,
+        )
 
     def score_r(self, ht_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:
         """Forward pass using middle (relation) prediction.
@@ -381,10 +400,11 @@ class ERModel(
             For each h-t pair, the scores for all possible relations.
         """
         h, r, t = self._get_representations(h=ht_batch[:, 0], r=None, t=ht_batch[:, 1])
-        scores = self.interaction.score_r(h=h, all_relations=r, t=t, slice_size=slice_size)
-        if self.relation_representations:
-            return scores
-        return scores.repeat(1, self.num_relations)
+        return repeat_if_necessary(
+            scores=self.interaction.score_r(h=h, all_relations=r, t=t, slice_size=slice_size),
+            representations=self.relation_representations,
+            num=self.num_relations,
+        )
 
     def _get_representations(
         self,
