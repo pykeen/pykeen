@@ -312,6 +312,10 @@ def dist_ma_interaction(
     return batched_dot(h, r) + batched_dot(r, t) + batched_dot(h, t)
 
 
+def _make_ones_like(prefix: Sequence) -> Sequence[int]:
+    return [1 for _ in prefix]
+
+
 def ermlp_interaction(
     h: torch.FloatTensor,
     r: torch.FloatTensor,
@@ -346,8 +350,7 @@ def ermlp_interaction(
 
     # split, shape: (embedding_dim, hidden_dim)
     head_to_hidden, rel_to_hidden, tail_to_hidden = hidden.weight.t().split(dim)
-    prefix = [1 for _ in prefix]
-    bias = hidden.bias.view(*prefix, -1)
+    bias = hidden.bias.view(*_make_ones_like(prefix), -1)
     h = torch.einsum("...i,ij->...j", h, head_to_hidden)
     r = torch.einsum("...i,ij->...j", r, rel_to_hidden)
     t = torch.einsum("...i,ij->...j", t, tail_to_hidden)
