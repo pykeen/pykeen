@@ -15,7 +15,7 @@ from torch import nn
 import pykeen.nn.modules
 import pykeen.utils
 from pykeen.nn.functional import _rotate_quaternion, _split_quaternion, distmult_interaction
-from pykeen.typing import Sign
+from pykeen.typing import Representation, Sign
 from pykeen.utils import clamp_norm, ensure_tuple, project_entity, view_complex
 from tests import cases
 
@@ -552,51 +552,72 @@ class InteractionTestsTestCase(unittest_templates.MetaTestCase[pykeen.nn.modules
 class ParallelSliceBatchesTest(unittest.TestCase):
     """Tests for parallel_slice_batches."""
 
-    slice_size = 15
-    slice_dim = 2
-    batch_size = 2
-    num_relations = 35
-
+    @staticmethod
     def _verify(
-        self,
-        z_sliced: torch.FloatTensor,
-        z_shape: Tuple[int, ...],
+        z: Representation,
+        z_batch: Representation,
+        dim: int,
+        split_size: int,
     ):
-        """Verify a single sliced tensor."""
-        assert isinstance(z_sliced, torch.Tensor)
-        for dim, (z_dim, z_sliced_dim) in enumerate(zip(z_shape, z_sliced.shape)):
-            if dim != self.slice_dim:
-                assert z_dim == z_sliced_dim
-            else:
-                assert z_sliced_dim <= z_dim
-                assert z_sliced_dim <= self.slice_size
+        """Verify a sliced representations."""
+        if torch.is_tensor(z):
+            assert torch.is_tensor(z_batch)
+            assert z.ndim == z_batch.ndim
+            for i, (d, d_batch) in enumerate(zip(z.shape, z_batch.shape)):
+                if i == dim:
+                    assert d_batch <= split_size
+                    assert d_batch <= d
+                else:
+                    assert d_batch == d
+        else:
+            assert not torch.is_tensor(z_batch)
+            assert len(z) == len(z_batch)
+            for y, y_batch in zip(z, z_batch):
+                ParallelSliceBatchesTest._verify(z=y, z_batch=y_batch, dim=dim, split_size=split_size)
 
-    def test_single(self):
-        """Test parallel_slice_batches with a single representation."""
-        shape = (2, 3)
-        z = torch.empty(size=(self.batch_size, 1, self.num_relations, 1, *shape), device="meta")
-        for z_sliced in pykeen.nn.modules.parallel_slice_batches(
-            z=z,
-            slice_size=self.slice_size,
-            dim=self.slice_dim,
-        ):
-            self._verify(z_sliced=z_sliced, z_shape=z.shape)
+    @staticmethod
+    def _generate(
+        shape: Union[Tuple[int, ...], Sequence[Tuple[int, ...]]],
+    ) -> Representation:
+        """Generate dummy representations for the given shape(s)."""
+        if not shape:
+            return []
+        if isinstance(shape[0], tuple):
+            # multiple
+            return [ParallelSliceBatchesTest._generate(s) for s in shape]
+        # single
+        return torch.empty(size=shape, device="meta")
+
+    def _test(
+        self,
+        h_shape: Union[Tuple[int, ...], Sequence[Tuple[int, ...]]],
+        r_shape: Union[Tuple[int, ...], Sequence[Tuple[int, ...]]],
+        t_shape: Union[Tuple[int, ...], Sequence[Tuple[int, ...]]],
+        dim: int,
+        split_size: int,
+    ):
+        """Test slicing for given representation shapes."""
+        h, r, t = [self._generate(s) for s in (h_shape, r_shape, t_shape)]
+        for batch in pykeen.nn.modules.parallel_slice_batches(h, r, t, split_size=split_size, dim=dim):
+            assert len(batch) == 3
+            for old, new in zip((h, r, t), batch):
+                self._verify(old, new, dim, split_size)
+
+    def test_score_t(self):
+        """Test parallel_slice_batches with single representations."""
+        s, b, n, d = 2, 3, 7, 5
+        self._test(h_shape=(b, 1, d), r_shape=(b, 1, d), t_shape=(1, n, d), dim=1, split_size=s)
 
     def test_multiple(self):
         """Test parallel_slice_batches with a multiple representations."""
-        shapes = [(2, 3), (5,)]
-        zs = tuple(
-            torch.empty(size=(self.batch_size, 1, self.num_relations, 1, *shape), device="meta") for shape in shapes
-        )
-        for z_sliced in pykeen.nn.modules.parallel_slice_batches(
-            z=zs,
-            slice_size=self.slice_size,
-            dim=self.slice_dim,
-        ):
-            assert isinstance(z_sliced, tuple)
-            assert len(z_sliced) == len(zs)
-            for z_sliced_single, z in zip(z_sliced, zs):
-                self._verify(z_sliced=z_sliced_single, z_shape=z.shape)
+        s, b, n, d = 2, 3, 7, 5
+        self._test(h_shape=((b, 1, d), (b, 1, d, d)), r_shape=(b, 1, d), t_shape=(1, n, d), dim=1, split_size=s)
+        self._test(h_shape=(b, 1, d), r_shape=(b, 1, d), t_shape=((1, n, d), (1, n, 2 * d)), dim=1, split_size=s)
+
+    def test_empty(self):
+        """Test parallel_slice_batches with missing relation representations."""
+        s, b, n, d = 2, 3, 7, 5
+        self._test(h_shape=(b, 1, d), r_shape=[], t_shape=(1, n, d), dim=1, split_size=s)
 
 
 class TripleRETests(cases.TranslationalInteractionTests):

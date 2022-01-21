@@ -15,6 +15,7 @@ from typing import (
     Callable,
     Generic,
     Iterable,
+    List,
     Mapping,
     MutableMapping,
     Optional,
@@ -91,32 +92,36 @@ logger = logging.getLogger(__name__)
 
 
 def parallel_slice_batches(
-    h: HeadRepresentation,
-    r: RelationRepresentation,
-    t: TailRepresentation,
-    slice_size: int,
-    slice_dim: int,
-) -> Iterable[Tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]]:
-    representations: Tuple[HeadRepresentation, RelationRepresentation, TailRepresentation] = ensure_tuple(h, r, t)
-    length = list(map(len, representations))
+    *representations: Representation,
+    split_size: int,
+    dim: int,
+) -> Iterable[Sequence[Representation]]:
+    """
+    Slice representations along the given dimension.
+    """
+    # normalize input
+    rs: Sequence[Sequence[torch.FloatTensor]] = ensure_tuple(*representations)
+    # get number of head/relation/tail representations
+    length = list(map(len, rs))
     splits = numpy.cumsum([0] + length)
-    representations = sum(map(list, representations), [])
-    parts = [r.split(slice_size, dim=slice_dim) for r in representations]
-    n_parts = max(map(len, parts))
+    # flatten list
+    rsl: Sequence[torch.FloatTensor] = sum(map(list, rs), [])
+    # split tensors
+    parts = [r.split(split_size, dim=dim) for r in rsl]
     # broadcasting
+    n_parts = max(map(len, parts))
     parts = [r_parts if len(r_parts) == n_parts else r_parts * n_parts for r_parts in parts]
+    # yield batches
     for batch in zip(*parts):
-        yield unpack_singletons(
-            batch[splits[0] : splits[1]],
-            batch[splits[1] : splits[2]],
-            batch[splits[2] : splits[3]],
-        )
+        # complex typing
+        yield unpack_singletons(*(batch[start:stop] for start, stop in zip(splits, splits[1:])))  # type: ignore
 
 
 def parallel_unsqueeze(x: Representation, dim: int) -> Representation:
-    xs = upgrade_to_sequence(x)
-    xl = [xx.unsqueeze(dim=dim) for xx in xs]
-    return xl[0] if len(xl) == 1 else xl
+    """Unsqueeze all representations along the given dimension."""
+    xs: Sequence[torch.FloatTensor] = upgrade_to_sequence(x)
+    xs = [xx.unsqueeze(dim=dim) for xx in xs]
+    return xs[0] if len(xs) == 1 else xs
 
 
 class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailRepresentation], ABC):
@@ -197,13 +202,7 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         return torch.cat(
             [
                 self(h=h_batch, r=r_batch, t=t_batch)
-                for h_batch, r_batch, t_batch in parallel_slice_batches(
-                    h=h,
-                    r=r,
-                    t=t,
-                    slice_size=slice_size,
-                    slice_dim=slice_dim,
-                )
+                for h_batch, r_batch, t_batch in parallel_slice_batches(h, r, t, split_size=slice_size, dim=slice_dim)
             ],
             dim=slice_dim,
         )
