@@ -346,7 +346,7 @@ class ERModel(
         r_indices: torch.LongTensor,
         t_indices: torch.LongTensor,
         slice_size: Optional[int] = None,
-        slice_dim: Optional[int] = None,
+        slice_dim: int = 0,
     ) -> torch.FloatTensor:
         """Forward pass.
 
