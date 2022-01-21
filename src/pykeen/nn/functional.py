@@ -201,6 +201,10 @@ def conve_interaction(
     return x + t_bias.squeeze(dim=-1)
 
 
+def _make_ones_like(prefix: Sequence) -> Sequence[int]:
+    return [1 for _ in prefix]
+
+
 def convkb_interaction(
     h: torch.FloatTensor,
     r: torch.FloatTensor,
@@ -249,7 +253,7 @@ def convkb_interaction(
     # -> conv_head, conv_rel, conv_tail shapes: (num_filters,)
     # reshape to (..., f, 1)
     conv_head, conv_rel, conv_tail, conv_bias = [
-        c.view(*(1 for _ in h.shape[:-2]), num_filters, 1) for c in list(conv.weight[:, 0, 0, :].t()) + [conv.bias]
+        c.view(*_make_ones_like(h.shape[:-2]), num_filters, 1) for c in list(conv.weight[:, 0, 0, :].t()) + [conv.bias]
     ]
 
     # convolve -> output.shape: (*, embedding_dim, num_filters)
@@ -310,10 +314,6 @@ def dist_ma_interaction(
         The scores.
     """
     return batched_dot(h, r) + batched_dot(r, t) + batched_dot(h, t)
-
-
-def _make_ones_like(prefix: Sequence) -> Sequence[int]:
-    return [1 for _ in prefix]
 
 
 def ermlp_interaction(
@@ -566,9 +566,8 @@ def proje_interaction(
         The scores.
     """
     # global projections
-    prefix = [1 for _ in h.shape[:-1]]
-    h = h * d_e.view(*prefix, -1)
-    r = r * d_r.view(*prefix, -1)
+    h = h * d_e.view(*_make_ones_like(h.shape[:-1]), -1)
+    r = r * d_r.view(*_make_ones_like(h.shape[:-1]), -1)
 
     # combination, shape: (*batch_dims, d)
     x = activation(tensor_sum(h, r, b_c))
@@ -1181,7 +1180,7 @@ def cross_e_interaction(
     # relation interaction (notice that h has been updated)
     r = h * r
     # combination
-    x = activation(h + r + bias.view(*(1 for _ in h.shape[:-1]), -1))
+    x = activation(h + r + bias.view(*_make_ones_like(h.shape[:-1]), -1))
     if dropout is not None:
         x = dropout(x)
     # similarity
