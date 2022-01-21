@@ -191,6 +191,16 @@ def repeat_if_necessary(
     If a model does not have entity/relation representations, the scores for
     `score_{h,t}` / `score_r` are always the same. For efficiency, they are thus
     only computed once, but to meet the API, they have to be brought into the correct shape afterwards.
+
+    :param scores: shape: (batch_size, ?)
+        the score tensor
+    :param representations:
+        the representations. If empty (i.e. no representations for this 1:n scoring), repetition needs to be applied
+    :param num:
+        the number of times to repeat, if necessary.
+
+    :return:
+        the score tensor, which has been repeated, if necessary
     """
     if representations:
         return scores
