@@ -1076,6 +1076,14 @@ def pipeline(  # noqa: C901
         ),
     )
 
+    # Log loss parameters
+    _result_tracker.log_params(
+        params=dict(
+            loss_kwargs=loss_kwargs
+        ),
+    )
+       
+
     optimizer_kwargs = dict(optimizer_kwargs or {})
     optimizer_instance = optimizer_resolver.make(
         optimizer,
