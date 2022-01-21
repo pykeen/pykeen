@@ -363,6 +363,8 @@ class ERModel(
         :return:
             The scores
         """
+        if not self.entity_representations or not self.relation_representations:
+            raise NotImplementedError("repeat scores not implemented for general case.")
         h, r, t = self._get_representations(h=h_indices, r=r_indices, t=t_indices)
         return self.interaction.score(h=h, r=r, t=t, slice_size=slice_size, slice_dim=slice_dim)
 
@@ -379,6 +381,8 @@ class ERModel(
         """
         # Note: slicing cannot be used here: the indices for score_hrt only have a batch
         # dimension, and slicing along this dimension is already considered by sub-batching.
+        # Note: we do not delegate to the general method for performance reasons
+        # Note: repetition is not necessary here
         h, r, t = self._get_representations(h=hrt_batch[:, 0], r=hrt_batch[:, 1], t=hrt_batch[:, 2])
         return self.interaction.score_hrt(h=h, r=r, t=t)
 
