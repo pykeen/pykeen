@@ -359,9 +359,16 @@ class ERModel(
             The relation indices.
         :param t_indices:
             The tail indices.
+        :param slice_size:
+            The slice size.
+        :param slice_dim:
+            The dimension along which to slice
 
         :return:
             The scores
+
+        :raises NotImplementedError:
+            if score repetition becomes necessary
         """
         if not self.entity_representations or not self.relation_representations:
             raise NotImplementedError("repeat scores not implemented for general case.")
