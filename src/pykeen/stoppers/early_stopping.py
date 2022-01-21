@@ -68,7 +68,7 @@ class EarlyStoppingLogic:
     larger_is_better: bool = True
 
     #: The epoch at which the best result occurred
-    best_epoch: int = -1
+    best_epoch: Optional[int] = None
 
     #: The best result so far
     best_metric: float = dataclasses.field(init=False)
@@ -105,7 +105,7 @@ class EarlyStoppingLogic:
         :raises ValueError:
             if more than one metric is reported for a single epoch
         """
-        if epoch <= self.best_epoch:
+        if self.best_epoch is not None and epoch <= self.best_epoch:
             raise ValueError("Cannot report more than one metric for one epoch")
 
         # check for improvement
@@ -185,7 +185,7 @@ class EarlyStopper(Stopper):
         return self._stopper.best_metric
 
     @property
-    def best_epoch(self) -> int:
+    def best_epoch(self) -> Optional[int]:
         """Return the epoch at which the best result occurred."""
         return self._stopper.best_epoch
 
