@@ -748,9 +748,11 @@ def project_entity(
     return e_bot
 
 
+# TODO delete when deleting _normalize_dim (below)
 CANONICAL_DIMENSIONS = dict(h=1, r=2, t=3)
 
 
+# TODO delete when deleting convert_to_canonical_shape (below)
 def _normalize_dim(dim: Union[int, str]) -> int:
     """Normalize the dimension selection."""
     if isinstance(dim, int):
@@ -758,6 +760,7 @@ def _normalize_dim(dim: Union[int, str]) -> int:
     return CANONICAL_DIMENSIONS[dim.lower()[0]]
 
 
+# TODO delete? See note in test_sim.py on its only usage
 def convert_to_canonical_shape(
     x: torch.FloatTensor,
     dim: Union[int, str],
