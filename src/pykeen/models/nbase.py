@@ -468,6 +468,9 @@ class ERModel(
         # TODO: assert mode is None?
         return self.entity_representations
 
+    def _get_entity_len(self, mode: Mode = None) -> int:  # noqa:D105
+        return self.num_entities
+
     def _get_representations(
         self,
         h: Optional[torch.LongTensor],
