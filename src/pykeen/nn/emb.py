@@ -346,12 +346,12 @@ class Embedding(RepresentationModule):
             shape=shape,
         )
 
-        self.initializer = initializer_resolver.make(query=initializer, pos_kwargs=initializer_kwargs)
-        self.normalizer = normalizer_resolver.make(normalizer, normalizer_kwargs)
-        self.constrainer = constrainer_resolver.make(constrainer, constrainer_kwargs)
-        if regularizer is not None:
-            regularizer = regularizer_resolver.make(regularizer, pos_kwargs=regularizer_kwargs)
-        self.regularizer = regularizer
+        # use make for initializer since there's a default, and make_safe
+        # for the others to pass through None values
+        self.initializer = initializer_resolver.make(initializer, initializer_kwargs)
+        self.normalizer = normalizer_resolver.make_safe(normalizer, normalizer_kwargs)
+        self.constrainer = constrainer_resolver.make_safe(constrainer, constrainer_kwargs)
+        self.regularizer = regularizer_resolver.make_safe(regularizer, regularizer_kwargs)
 
         self._embeddings = torch.nn.Embedding(
             num_embeddings=num_embeddings,
