@@ -208,12 +208,18 @@ def clamp_norm(
 class compose(Generic[X]):  # noqa:N801
     """A class representing the composition of several functions."""
 
-    def __init__(self, *operations: Callable[[X], X]):
+    def __init__(self, *operations: Callable[[X], X], name: str):
         """Initialize the composition with a sequence of operations.
 
         :param operations: unary operations that will be applied in succession
         """
         self.operations = operations
+        self.name = name
+
+    @property
+    def __name__(self) -> str:
+        """Get the name of this composition."""
+        return self.name
 
     def __call__(self, x: X) -> X:
         """Apply the operations in order to the given tensor."""

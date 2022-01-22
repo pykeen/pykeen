@@ -5,18 +5,17 @@
 import functools
 import logging
 import math
-from typing import Callable, Generic, Mapping, Optional, Sequence, Type, TypeVar
+from typing import Optional, Sequence
 
 import numpy as np
 import torch
 import torch.nn
 import torch.nn.init
-from class_resolver import Resolver, OptionalKwargs, Hint, normalize_string
+from class_resolver import FunctionResolver
 from torch.nn import functional
 
 from .utils import TransformerEncoder
 from ..triples import TriplesFactory
-from ..typing import Initializer
 from ..utils import compose
 
 __all__ = [
@@ -85,22 +84,27 @@ def init_phases(x: torch.Tensor) -> torch.Tensor:
 xavier_uniform_norm_ = compose(
     torch.nn.init.xavier_uniform_,
     functional.normalize,
+    name="xavier_uniform_norm_",
 )
 xavier_normal_norm_ = compose(
     torch.nn.init.xavier_normal_,
     functional.normalize,
+    name="xavier_normal_norm_",
 )
 uniform_norm_ = compose(
     torch.nn.init.uniform_,
     functional.normalize,
+    name="uniform_norm_",
 )
 normal_norm_ = compose(
     torch.nn.init.normal_,
     functional.normalize,
+    name="normal_norm_",
 )
 uniform_norm_p1_ = compose(
     torch.nn.init.uniform_,
     functools.partial(functional.normalize, p=1),
+    name="uniform_norm_p1_",
 )
 
 
@@ -257,64 +261,14 @@ class LabelBasedInitializer(PretrainedInitializer):
         )
 
 
-X = TypeVar("X", bound=Callable)
-
-
-class FunctionResolver(Generic[X]):
-    """A resolver for functions."""
-
-    def __init__(
-        self,
-        *,
-        default: Hint[X] = None,
-        label: str = None,
-    ) -> None:
-        """Initialize the resolver.
-
-        :param default: The default
-        """
-        self.default = default
-        self.lookup_dict = {}
-        self.label = "" if label is None else " " + label
-
-    def register(self, func: X) -> None:
-        if hasattr(func, "__name__"):
-            name = func.__name__
-        else:
-            name = str(func)
-        self.lookup_dict[normalize_string(name)] = func
-
-    def lookup(self, query: Hint[X]) -> X:
-        if query is None:
-            query = self.default
-        try:
-            query = self.lookup_dict[query]
-        except KeyError:
-            raise KeyError(f"{query} is an invalid. Try one of: {sorted(self.lookup_dict.keys())}")
-
-        if isinstance(query, str):
-            return self.lookup_dict[normalize_string(query)]
-        # cast(X, query)
-        return query
-
-    def make(self, query: Hint[X], pos_kwargs: OptionalKwargs = None, **kwargs) -> X:
-        if query is None or isinstance(query, str) or callable(query):
-            func = self.lookup(query)
-            if pos_kwargs is not None or kwargs:
-                func = functools.partial(func, **(pos_kwargs or {}), **kwargs)
-            return func
-        return query
-
-
-initializer_resolver: FunctionResolver[Initializer] = FunctionResolver(
+initializer_resolver = FunctionResolver(
+    [
+        getattr(torch.nn.init, func)
+        for func in dir(torch.nn.init)
+        if not func.startswith("_") and func.endswith("_") and func not in {"xavier_normal_", "xavier_uniform_"}
+    ],
     default=torch.nn.init.normal_,
-    label="initializer",
 )
-for func in dir(torch.nn.init):
-    if func.startswith("_") or not func.endswith("_"):
-        continue
-    initializer_resolver.register(getattr(torch.nn.init, func))
-# TODO: collisions with torch.nn.init, e.g., torch.nn.init.xavier_uniform_
 for func in [
     xavier_normal_,
     xavier_uniform_,
