@@ -68,6 +68,7 @@ DeviceHint = Hint[torch.device]
 #: A hint for a :class:`torch.Generator`
 TorchRandomHint = Union[None, int, torch.Generator]
 
+Representation = TypeVar("Representation", bound=OneOrSequence[torch.FloatTensor])
 #: A type variable for head representations used in :class:`pykeen.models.Model`,
 #: :class:`pykeen.nn.modules.Interaction`, etc.
 HeadRepresentation = TypeVar("HeadRepresentation", bound=OneOrSequence[torch.FloatTensor])
