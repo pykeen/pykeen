@@ -185,7 +185,7 @@ def _vectorized_kl_divergence(
     terms.append(batched_dot(mu.pow(2), r_var_safe_reciprocal))
     # 3. Component
     if exact:
-        terms.append(-torch.as_tensor(data=[h.mean.shape[-1]], device=mu.device))
+        terms.append(-torch.as_tensor(data=[h.mean.shape[-1]], device=mu.device).squeeze())
     # 4. Component
     # ln (det(\Sigma_1) / det(\Sigma_0))
     # = ln det Sigma_1 - ln det Sigma_0
