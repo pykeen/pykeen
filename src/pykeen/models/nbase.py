@@ -417,7 +417,7 @@ class ERModel(
         return repeat_if_necessary(
             scores=self.interaction.score_t(h=h, r=r, all_entities=t, slice_size=slice_size),
             representations=self.entity_representations,
-            num=self.num_entities,
+            num=self._get_entity_len(mode=mode),
         )
 
     def score_h(self, rt_batch: torch.LongTensor, slice_size: Optional[int] = None, mode: Mode = None) -> torch.FloatTensor:
@@ -439,7 +439,7 @@ class ERModel(
         return repeat_if_necessary(
             scores=self.interaction.score_h(all_entities=h, r=r, t=t, slice_size=slice_size),
             representations=self.entity_representations,
-            num=self.num_entities,
+            num=self._get_entity_len(mode=mode),
         )
 
     def score_r(self, ht_batch: torch.LongTensor, slice_size: Optional[int] = None, mode: Mode = None) -> torch.FloatTensor:
