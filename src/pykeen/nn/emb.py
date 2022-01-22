@@ -514,11 +514,9 @@ def process_shape(
     return dim, shape
 
 
-#: Constrainers
 constrainer_resolver = FunctionResolver([functional.normalize, complex_normalize, torch.clamp, clamp_norm])
 
-# TODO add normalization functions
-normalizer_resolver = FunctionResolver([])
+normalizer_resolver = FunctionResolver([functional.normalize])
 
 
 class CompGCNLayer(nn.Module):
