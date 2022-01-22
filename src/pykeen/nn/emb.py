@@ -4,33 +4,23 @@
 
 from __future__ import annotations
 
-import functools
 import itertools
 import logging
 import warnings
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Any, Callable, Mapping, Optional, Sequence, Tuple, TypeVar, Union, cast
+from typing import Any, Callable, Mapping, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import torch
 import torch.nn
+from class_resolver import FunctionResolver
 from torch import nn
 from torch.nn import functional
 
 from .compositions import CompositionModule, composition_resolver
-from .init import (
-    init_phases,
-    initializer_resolver,
-    normal_norm_,
-    uniform_norm_,
-    uniform_norm_p1_,
-    xavier_normal_,
-    xavier_normal_norm_,
-    xavier_uniform_,
-    xavier_uniform_norm_,
-)
+from .init import initializer_resolver, uniform_norm_p1_
 from .utils import TransformerEncoder
 from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolver
 from ..constants import AGGREGATIONS
@@ -51,9 +41,8 @@ __all__ = [
     "LabelBasedTransformerRepresentation",
     "SubsetRepresentationModule",
     # Utils
-    "constrainers",
-    "initializers",
-    "normalizers",
+    "constrainer_resolver",
+    "normalizer_resolver",
 ]
 
 logger = logging.getLogger(__name__)
@@ -358,8 +347,8 @@ class Embedding(RepresentationModule):
         )
 
         self.initializer = initializer_resolver.make(query=initializer, pos_kwargs=initializer_kwargs)
-        self.normalizer = _handle(normalizer, normalizers, normalizer_kwargs, label="normalizer")
-        self.constrainer = _handle(constrainer, constrainers, constrainer_kwargs, label="constrainer")
+        self.normalizer = normalizer_resolver.make(normalizer, normalizer_kwargs)
+        self.constrainer = constrainer_resolver.make(constrainer, constrainer_kwargs)
         if regularizer is not None:
             regularizer = regularizer_resolver.make(regularizer, pos_kwargs=regularizer_kwargs)
         self.regularizer = regularizer
@@ -579,37 +568,10 @@ def process_shape(
 
 
 #: Constrainers
-constrainers = {
-    "normalize": functional.normalize,
-    "complex_normalize": complex_normalize,
-    "clamp": torch.clamp,
-    "clamp_norm": clamp_norm,
-}
+constrainer_resolver = FunctionResolver([functional.normalize, complex_normalize, torch.clamp, clamp_norm])
 
 # TODO add normalization functions
-normalizers: Mapping[str, Normalizer] = {}
-
-X = TypeVar("X", bound=Callable)
-
-
-def _handle(
-    value: Hint[X],
-    lookup: Mapping[str, X],
-    kwargs,
-    default: Optional[X] = None,
-    label: Optional[str] = None,
-) -> Optional[X]:
-    if value is None:
-        return default
-    elif isinstance(value, str):
-        try:
-            value = lookup[value]
-        except KeyError:
-            raise KeyError(f"{value} is an invalid {label}. Try one of: {sorted(lookup)}")
-    if kwargs:
-        rv = functools.partial(value, **kwargs)  # type: ignore
-        return cast(X, rv)
-    return value
+normalizer_resolver = FunctionResolver([])
 
 
 class CompGCNLayer(nn.Module):
