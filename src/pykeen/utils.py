@@ -67,7 +67,6 @@ __all__ = [
     "fix_dataclass_init_docs",
     "get_benchmark",
     "extended_einsum",
-    "strip_dim",
     "upgrade_to_sequence",
     "ensure_tuple",
     "unpack_singletons",
@@ -606,7 +605,7 @@ def _reorder(
         return tensors
     # determine optimal processing order
     shapes = tuple(tuple(t.shape) for t in tensors)
-    if len(set(s[0] for s in shapes)) < 2:
+    if len(set(s[0] for s in shapes if s)) < 2:
         # heuristic
         return tensors
     order = get_optimal_sequence(*shapes)[1]
@@ -749,9 +748,11 @@ def project_entity(
     return e_bot
 
 
+# TODO delete when deleting _normalize_dim (below)
 CANONICAL_DIMENSIONS = dict(h=1, r=2, t=3)
 
 
+# TODO delete when deleting convert_to_canonical_shape (below)
 def _normalize_dim(dim: Union[int, str]) -> int:
     """Normalize the dimension selection."""
     if isinstance(dim, int):
@@ -759,6 +760,7 @@ def _normalize_dim(dim: Union[int, str]) -> int:
     return CANONICAL_DIMENSIONS[dim.lower()[0]]
 
 
+# TODO delete? See note in test_sim.py on its only usage
 def convert_to_canonical_shape(
     x: torch.FloatTensor,
     dim: Union[int, str],
@@ -789,16 +791,6 @@ def convert_to_canonical_shape(
     dim = _normalize_dim(dim=dim)
     shape[dim] = num
     return x.view(*shape, *suffix_shape)
-
-
-def strip_dim(*tensors: torch.FloatTensor, n: int = 4) -> Sequence[torch.FloatTensor]:
-    """Strip the first dimensions.
-
-    :param tensors: The tensors whose first ``n`` dimensions should be independently stripped
-    :param n: The number of initial dimensions to strip
-    :return: A tuple of the reduced tensors
-    """
-    return tuple(tensor.view(tensor.shape[n:]) for tensor in tensors)
 
 
 def upgrade_to_sequence(x: Union[X, Sequence[X]]) -> Sequence[X]:

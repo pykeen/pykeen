@@ -10,22 +10,10 @@ import math
 from abc import ABC, abstractmethod
 from collections import Counter
 from operator import itemgetter
-from typing import (
-    Any,
-    Callable,
-    Generic,
-    Iterable,
-    Mapping,
-    MutableMapping,
-    Optional,
-    Sequence,
-    Set,
-    Tuple,
-    Union,
-    cast,
-)
+from typing import Any, Callable, Generic, Iterable, Mapping, MutableMapping, Optional, Sequence, Set, Tuple, Union
 
 import more_itertools
+import numpy
 import torch
 from class_resolver import Resolver
 from docdata import parse_docdata
@@ -34,15 +22,16 @@ from torch.nn.init import xavier_normal_
 
 from . import functional as pkf
 from .combinations import Combination
-from ..typing import HeadRepresentation, HintOrType, Initializer, RelationRepresentation, Sign, TailRepresentation
-from ..utils import (
-    CANONICAL_DIMENSIONS,
-    activation_resolver,
-    convert_to_canonical_shape,
-    ensure_tuple,
-    unpack_singletons,
-    upgrade_to_sequence,
+from ..typing import (
+    HeadRepresentation,
+    HintOrType,
+    Initializer,
+    RelationRepresentation,
+    Representation,
+    Sign,
+    TailRepresentation,
 )
+from ..utils import activation_resolver, ensure_tuple, unpack_singletons, upgrade_to_sequence
 
 __all__ = [
     "interaction_resolver",
@@ -90,25 +79,46 @@ logger = logging.getLogger(__name__)
 
 
 def parallel_slice_batches(
-    z: Union[FloatTensor, Tuple[FloatTensor, ...]],
-    slice_size: int,
+    *representations: Representation,
+    split_size: int,
     dim: int,
-) -> Iterable[Union[FloatTensor, Tuple[FloatTensor, ...]]]:
-    # input normalization -> Tuple[Tensor]
-    # shape: (num_representations,)
-    z_tup: Iterable[FloatTensor] = ensure_tuple(z)[0]
+) -> Iterable[Sequence[Representation]]:
+    """
+    Slice representations along the given dimension.
 
-    # split each representation along the given dimension
-    # shape: (num_representations,)
-    tuple_of_batches: Iterable[Sequence[FloatTensor]] = (zz.split(slice_size, dim=dim) for zz in z_tup)
+    :param representations:
+        the representations to slice
+    :param split_size:
+        the slice size
+    :param dim:
+        the dimension along which to slice
 
-    # create batches, shape: (num_slices,), each being a tuple of shape (num_representations,)
-    batch_of_tuples: Iterable[Tuple[FloatTensor]] = zip(*tuple_of_batches)
+    :yield:
+        batches of sliced representations
+    """
+    # normalize input
+    rs: Sequence[Sequence[torch.FloatTensor]] = ensure_tuple(*representations)
+    # get number of head/relation/tail representations
+    length = list(map(len, rs))
+    splits = numpy.cumsum([0] + length)
+    # flatten list
+    rsl: Sequence[torch.FloatTensor] = sum(map(list, rs), [])
+    # split tensors
+    parts = [r.split(split_size, dim=dim) for r in rsl]
+    # broadcasting
+    n_parts = max(map(len, parts))
+    parts = [r_parts if len(r_parts) == n_parts else r_parts * n_parts for r_parts in parts]
+    # yield batches
+    for batch in zip(*parts):
+        # complex typing
+        yield unpack_singletons(*(batch[start:stop] for start, stop in zip(splits, splits[1:])))  # type: ignore
 
-    # unpack_singletons
-    batch_of_unpacked_tuples = unpack_singletons(*batch_of_tuples)
 
-    yield from batch_of_unpacked_tuples
+def parallel_unsqueeze(x: Representation, dim: int) -> Representation:
+    """Unsqueeze all representations along the given dimension."""
+    xs: Sequence[torch.FloatTensor] = upgrade_to_sequence(x)
+    xs = [xx.unsqueeze(dim=dim) for xx in xs]
+    return xs[0] if len(xs) == 1 else xs
 
 
 class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailRepresentation], ABC):
@@ -143,14 +153,14 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
     ) -> torch.FloatTensor:
         """Compute broadcasted triple scores given broadcasted representations for head, relation and tails.
 
-        :param h: shape: (batch_size, num_heads, 1, 1, ``*``)
+        :param h: shape: (`*batch_dims`, `*dims`)
             The head representations.
-        :param r: shape: (batch_size, 1, num_relations, 1, ``*``)
+        :param r: shape: (`*batch_dims`, `*dims`)
             The relation representations.
-        :param t: shape: (batch_size, 1, 1, num_tails, ``*``)
+        :param t: shape: (`*batch_dims`, `*dims`)
             The tail representations.
 
-        :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        :return: shape: batch_dims
             The scores.
         """
 
@@ -160,147 +170,39 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         r: RelationRepresentation,
         t: TailRepresentation,
         slice_size: Optional[int] = None,
-        slice_dim: Optional[str] = None,
+        slice_dim: int = 1,
     ) -> torch.FloatTensor:
         """Compute broadcasted triple scores with optional slicing.
 
         .. note ::
             At most one of the slice sizes may be not None.
 
-        :param h: shape: (batch_size, num_heads, `1, 1, `*``)
+        # TODO: we could change that to slicing along multiple dimensions, if necessary
+
+        :param h: shape: (`*batch_dims`, `*dims`)
             The head representations.
-        :param r: shape: (batch_size, 1, num_relations, 1, ``*``)
+        :param r: shape: (`*batch_dims`, `*dims`)
             The relation representations.
-        :param t: shape: (batch_size, 1, 1, num_tails, ``*``)
+        :param t: shape: (`*batch_dims`, `*dims`)
             The tail representations.
         :param slice_size:
             The slice size.
         :param slice_dim:
-            The dimension along which to slice. From {"h", "r", "t"}
+            The dimension along which to slice. From {0, ..., len(batch_dims)}
 
-        :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        :return: shape: batch_dims
             The scores.
-        """
-        return self._forward_slicing_wrapper(h=h, r=r, t=t, slice_size=slice_size, slice_dim=slice_dim)
-
-    def _score(
-        self,
-        h: HeadRepresentation,
-        r: RelationRepresentation,
-        t: TailRepresentation,
-        slice_size: Optional[int] = None,
-        slice_dim: str = None,
-    ) -> torch.FloatTensor:
-        """Compute scores for the score_* methods outside of models.
-
-        TODO: merge this with the Model utilities?
-
-        :param h: shape: (b, h, *)
-        :param r: shape: (b, r, *)
-        :param t: shape: (b, t, *)
-        :param slice_size:
-            The slice size.
-        :param slice_dim:
-            The dimension along which to slice. From {"h", "r", "t"}
-        :return: shape: (b, h, r, t)
-        """
-        args = []
-        for key, x in zip("hrt", (h, r, t)):
-            value = []
-            for xx in upgrade_to_sequence(x):  # type: torch.FloatTensor
-                # bring to (b, n, *)
-                xx = xx.unsqueeze(dim=1 if key != slice_dim else 0)
-                # bring to (b, h, r, t, *)
-                xx = convert_to_canonical_shape(
-                    x=xx,
-                    dim=key,
-                    num=xx.shape[1],
-                    batch_size=xx.shape[0],
-                    suffix_shape=xx.shape[2:],
-                )
-                value.append(xx)
-            # unpack singleton
-            if len(value) == 1:
-                value = value[0]
-            args.append(value)
-        h, r, t = cast(Tuple[HeadRepresentation, RelationRepresentation, TailRepresentation], args)
-        return self._forward_slicing_wrapper(h=h, r=r, t=t, slice_dim=slice_dim, slice_size=slice_size)
-
-    def _forward_slicing_wrapper(
-        self,
-        h: Union[torch.FloatTensor, Tuple[torch.FloatTensor, ...]],
-        r: Union[torch.FloatTensor, Tuple[torch.FloatTensor, ...]],
-        t: Union[torch.FloatTensor, Tuple[torch.FloatTensor, ...]],
-        slice_size: Optional[int],
-        slice_dim: Optional[str],
-    ) -> torch.FloatTensor:
-        """Compute broadcasted triple scores with optional slicing for representations in canonical shape.
-
-        .. note ::
-            Depending on the interaction function, there may be more than one representation for h/r/t. In that case,
-            a tuple of at least two tensors is passed.
-
-        :param h: shape: (batch_size, num_heads, 1, 1, ``*``)
-            The head representations.
-        :param r: shape: (batch_size, 1, num_relations, 1, ``*``)
-            The relation representations.
-        :param t: shape: (batch_size, 1, 1, num_tails, ``*``)
-            The tail representations.
-        :param slice_size:
-            The slice size.
-        :param slice_dim:
-            The dimension along which to slice. From {"h", "r", "t"}
-
-        :return: shape: (batch_size, num_heads, num_relations, num_tails)
-            The scores.
-
-        :raises ValueError:
-            If slice_dim is invalid.
         """
         if slice_size is None:
-            scores = self(h=h, r=r, t=t)
-        elif slice_dim == "h":
-            dim = CANONICAL_DIMENSIONS[slice_dim]
-            scores = torch.cat(
-                [
-                    self(h=h_batch, r=r, t=t)
-                    for h_batch in parallel_slice_batches(
-                        z=h,
-                        slice_size=slice_size,
-                        dim=dim,
-                    )
-                ],
-                dim=dim,
-            )
-        elif slice_dim == "r":
-            dim = CANONICAL_DIMENSIONS[slice_dim]
-            scores = torch.cat(
-                [
-                    self(h=h, r=r_batch, t=t)
-                    for r_batch in parallel_slice_batches(
-                        z=r,
-                        slice_size=slice_size,
-                        dim=dim,
-                    )
-                ],
-                dim=dim,
-            )
-        elif slice_dim == "t":
-            dim = CANONICAL_DIMENSIONS[slice_dim]
-            scores = torch.cat(
-                [
-                    self(h=h, r=r, t=t_batch)
-                    for t_batch in parallel_slice_batches(
-                        z=t,
-                        slice_size=slice_size,
-                        dim=dim,
-                    )
-                ],
-                dim=dim,
-            )
-        else:
-            raise ValueError(f"Invalid slice_dim: {slice_dim}")
-        return scores
+            return self(h=h, r=r, t=t)
+
+        return torch.cat(
+            [
+                self(h=h_batch, r=r_batch, t=t_batch)
+                for h_batch, r_batch, t_batch in parallel_slice_batches(h, r, t, split_size=slice_size, dim=slice_dim)
+            ],
+            dim=slice_dim,
+        )
 
     def score_hrt(
         self,
@@ -320,7 +222,7 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         :return: shape: (batch_size, 1)
             The scores.
         """
-        return self._score(h=h, r=r, t=t)[:, 0, 0, 0, None]
+        return self.score(h=h, r=r, t=t).unsqueeze(dim=-1)
 
     def score_h(
         self,
@@ -343,7 +245,12 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         :return: shape: (batch_size, num_entities)
             The scores.
         """
-        return self._score(h=all_entities, r=r, t=t, slice_dim="h", slice_size=slice_size)[:, :, 0, 0]
+        return self.score(
+            h=parallel_unsqueeze(all_entities, dim=0),
+            r=parallel_unsqueeze(r, dim=1),
+            t=parallel_unsqueeze(t, dim=1),
+            slice_size=slice_size,
+        )
 
     def score_r(
         self,
@@ -366,7 +273,12 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         :return: shape: (batch_size, num_entities)
             The scores.
         """
-        return self._score(h=h, r=all_relations, t=t, slice_dim="r", slice_size=slice_size)[:, 0, :, 0]
+        return self.score(
+            h=parallel_unsqueeze(h, dim=1),
+            r=parallel_unsqueeze(all_relations, dim=0),
+            t=parallel_unsqueeze(t, dim=1),
+            slice_size=slice_size,
+        )
 
     def score_t(
         self,
@@ -389,7 +301,12 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
         :return: shape: (batch_size, num_entities)
             The scores.
         """
-        return self._score(h=h, r=r, t=all_entities, slice_dim="t", slice_size=slice_size)[:, 0, 0, :]
+        return self.score(
+            h=parallel_unsqueeze(h, dim=1),
+            r=parallel_unsqueeze(r, dim=1),
+            t=parallel_unsqueeze(all_entities, dim=0),
+            slice_size=slice_size,
+        )
 
     def reset_parameters(self):
         """Reset parameters the interaction function may have."""
@@ -443,14 +360,14 @@ class LiteralInteraction(
     ) -> torch.FloatTensor:
         """Compute broadcasted triple scores given broadcasted representations for head, relation and tails.
 
-        :param h: shape: (batch_size, num_heads, 1, 1, ``*``)
+        :param h: shape: (`*batch_dims`, `*dims`)
             The head representations.
-        :param r: shape: (batch_size, 1, num_relations, 1, ``*``)
+        :param r: shape: (`*batch_dims`, `*dims`)
             The relation representations.
-        :param t: shape: (batch_size, 1, 1, num_tails, ``*``)
+        :param t: shape: (`*batch_dims`, `*dims`)
             The tail representations.
 
-        :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        :return: shape: batch_dims
             The scores.
         """
         # alternate way of combining entity embeddings + literals
@@ -477,14 +394,14 @@ class FunctionalInteraction(Interaction, Generic[HeadRepresentation, RelationRep
     ) -> torch.FloatTensor:
         """Compute broadcasted triple scores given broadcasted representations for head, relation and tails.
 
-        :param h: shape: (batch_size, num_heads, 1, 1, ``*``)
+        :param h: shape: (`*batch_dims`, `*dims`)
             The head representations.
-        :param r: shape: (batch_size, 1, num_relations, 1, ``*``)
+        :param r: shape: (`*batch_dims`, `*dims`)
             The relation representations.
-        :param t: shape: (batch_size, 1, 1, num_tails, ``*``)
+        :param t: shape: (`*batch_dims`, `*dims`)
             The tail representations.
 
-        :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        :return: shape: batch_dims
             The scores.
         """
         return self.__class__.func(**self._prepare_for_functional(h=h, r=r, t=t))
@@ -947,7 +864,7 @@ class ProjEInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTens
         self.b_c = nn.Parameter(torch.empty(embedding_dim), requires_grad=True)
 
         # Global combination bias
-        self.b_p = nn.Parameter(torch.empty(1), requires_grad=True)
+        self.b_p = nn.Parameter(torch.empty(tuple()), requires_grad=True)
 
         if inner_non_linearity is None:
             inner_non_linearity = nn.Tanh()
@@ -1411,11 +1328,14 @@ class MonotonicAffineTransformationInteraction(
 
         # The parameters of the affine transformation: bias
         self.bias = nn.Parameter(torch.empty(size=tuple()), requires_grad=trainable_bias)
-        self.initial_bias = torch.as_tensor(data=[initial_bias], dtype=torch.get_default_dtype())
+        self.initial_bias = torch.as_tensor(data=[initial_bias], dtype=torch.get_default_dtype()).squeeze()
 
         # scale. We model this as log(scale) to ensure scale > 0, and thus monotonicity
         self.log_scale = nn.Parameter(torch.empty(size=tuple()), requires_grad=trainable_scale)
-        self.initial_log_scale = torch.as_tensor(data=[math.log(initial_scale)], dtype=torch.get_default_dtype())
+        self.initial_log_scale = torch.as_tensor(
+            data=[math.log(initial_scale)],
+            dtype=torch.get_default_dtype(),
+        ).squeeze()
 
     def reset_parameters(self):  # noqa: D102
         self.bias.data = self.initial_bias.to(device=self.bias.device)
@@ -1464,7 +1384,7 @@ class CrossEInteraction(FunctionalInteraction[FloatTensor, Tuple[FloatTensor, Fl
             combination_activation,
             pos_kwargs=combination_activation_kwargs,
         )
-        self.combination_bias = nn.Parameter(data=torch.zeros(1, 1, 1, 1, embedding_dim))
+        self.combination_bias = nn.Parameter(data=torch.zeros(embedding_dim))
         self.combination_dropout = nn.Dropout(combination_dropout) if combination_dropout else None
 
     def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:  # noqa: D102
