@@ -101,7 +101,7 @@ def _get_model_lines(*, link_fmt: Optional[str] = None):
                 interaction_cls = _MODEL_MAP[model_cls]
             else:
                 interaction_cls = interaction_resolver.lookup(model_resolver.normalize_cls(model_cls))
-        except ValueError:
+        except KeyError:
             click.echo(f"could not look up {model_resolver.normalize_cls(model_cls)}")
             interaction_reference = None
         else:
