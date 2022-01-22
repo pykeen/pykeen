@@ -93,17 +93,17 @@ class CP(ERModel):
 
     def _get_representations(
         self,
-        h_indices: Optional[torch.LongTensor],
-        r_indices: Optional[torch.LongTensor],
-        t_indices: Optional[torch.LongTensor],
+        h: Optional[torch.LongTensor],
+        r: Optional[torch.LongTensor],
+        t: Optional[torch.LongTensor],
     ) -> Tuple[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]:  # noqa: D102
         # Override to allow different head and tail entity representations
         h, r, t = [
-            [representation.get_in_more_canonical_shape(dim=dim, indices=indices) for representation in representations]
-            for dim, indices, representations in (
-                ("h", h_indices, self.entity_representations[0:1]),  # <== this is different
-                ("r", r_indices, self.relation_representations),
-                ("t", t_indices, self.entity_representations[1:2]),  # <== this is different
+            [representation(indices=indices) for representation in representations]
+            for indices, representations in (
+                (h, self.entity_representations[0:1]),  # <== this is different
+                (r, self.relation_representations),
+                (t, self.entity_representations[1:2]),  # <== this is different
             )
         ]
         # normalization
