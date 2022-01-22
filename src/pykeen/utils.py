@@ -212,6 +212,7 @@ class compose(Generic[X]):  # noqa:N801
         """Initialize the composition with a sequence of operations.
 
         :param operations: unary operations that will be applied in succession
+        :param name: The name of the composed function.
         """
         self.operations = operations
         self.name = name
