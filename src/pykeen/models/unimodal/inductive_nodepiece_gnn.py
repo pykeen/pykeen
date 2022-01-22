@@ -83,9 +83,9 @@ class InductiveNodePieceGNN(InductiveNodePiece):
 
     def _get_representations(
         self,
-        h_indices: Optional[torch.LongTensor],
-        r_indices: Optional[torch.LongTensor],
-        t_indices: Optional[torch.LongTensor],
+        h: Optional[torch.LongTensor],
+        r: Optional[torch.LongTensor],
+        t: Optional[torch.LongTensor],
         mode: Mode = None,
     ) -> Tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]:
         """Get representations for head, relation and tails, in canonical shape with a GNN encoder."""
@@ -105,15 +105,16 @@ class InductiveNodePieceGNN(InductiveNodePiece):
 
         # Use updated entity and relation states to extract requested IDs
         # TODO I got lost in all the Representation Modules and shape casting and wrote this ;(
-        h, r, t = [
-            x_e.index_select(dim=0, index=h_indices).unsqueeze(1) if h_indices is not None else x_e.unsqueeze(0),
-            x_r.index_select(dim=0, index=r_indices).unsqueeze(1) if r_indices is not None else x_r.unsqueeze(0),
-            x_e.index_select(dim=0, index=t_indices).unsqueeze(1) if t_indices is not None else x_e.unsqueeze(0),
+
+        hh, rr, tt = [
+            x_e.index_select(dim=0, index=h) if h is not None else x_e,
+            x_r.index_select(dim=0, index=r) if r is not None else x_r,
+            x_e.index_select(dim=0, index=t) if t is not None else x_e,
         ]
 
         # normalization
         return cast(
             Tuple[HeadRepresentation, RelationRepresentation, TailRepresentation],
-            tuple(x[0] if len(x) == 1 else x for x in (h, r, t)),
+            tuple(x[0] if len(x) == 1 else x for x in (hh, rr, tt)),
         )
 
