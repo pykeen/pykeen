@@ -1686,7 +1686,7 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
     def test_process_relation_scores_(self) -> None:
         """Test the evaluator's ``process_relation_scores_()`` function."""
         hrt_batch, scores, mask = self._get_input()
-        true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, 1]][:, None]
+        true_scores = scores[torch.arange(0, hrt_batch.shape[0], device=hrt_batch.device), hrt_batch[:, 1]][:, None]
         self.evaluator.process_relation_scores_(
             hrt_batch=hrt_batch,
             true_scores=true_scores,
