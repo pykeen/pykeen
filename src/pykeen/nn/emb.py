@@ -157,7 +157,7 @@ class RepresentationModule(nn.Module, ABC):
             If indices is 1-dimensional, b=indices.shape[0] and n=1.
             If indices is 2-dimensional, b, n = indices.shape
         """
-        x = self(indices=indices)
+        x = self.get(indices=indices)
         if indices is None:
             x = x.unsqueeze(dim=0)
         elif indices.ndimension() > 2:
