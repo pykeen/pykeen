@@ -134,7 +134,7 @@ class RepresentationModule(nn.Module, ABC):
         """
         if indices is None:
             return self(None)
-        uniq, inverse = indices.unique(return_inverse=True)
+        unique, inverse = indices.unique(return_inverse=True)
         return self(unique)[inverse]
 
     def reset_parameters(self) -> None:
