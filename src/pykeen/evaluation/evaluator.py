@@ -37,16 +37,9 @@ __all__ = [
     "filter_scores_",
     "evaluate",
     "prepare_filter_triples",
-    "SIDE_HEAD",
-    "SIDE_RELATION",
-    "SIDE_TAIL",
 ]
 
 logger = logging.getLogger(__name__)
-
-SIDE_HEAD = "head"
-SIDE_TAIL = "tail"
-SIDE_RELATION = "relation"
 
 
 @contextmanager

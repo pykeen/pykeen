@@ -9,8 +9,9 @@ import numpy as np
 import torch
 from dataclasses_json import dataclass_json
 
-from .evaluator import SIDE_HEAD, SIDE_RELATION, SIDE_TAIL, Evaluator, MetricResults
+from .evaluator import Evaluator, MetricResults
 from .rexmex_compat import classifier_annotator
+from ..constants import SIDE_HEAD, SIDE_RELATION, SIDE_TAIL, Side
 from ..typing import MappedTriples
 from ..utils import fix_dataclass_init_docs
 
@@ -79,7 +80,7 @@ class ClassificationEvaluator(Evaluator):
         keys: torch.LongTensor,
         scores: torch.FloatTensor,
         positive_mask: torch.FloatTensor,
-        side: str,
+        side: Side,
     ) -> None:
         # Transfer to cpu and convert to numpy
         scores = scores.detach().cpu().numpy()

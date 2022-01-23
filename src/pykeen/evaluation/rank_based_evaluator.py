@@ -17,7 +17,8 @@ import torch
 from dataclasses_json import dataclass_json
 from scipy import stats
 
-from .evaluator import SIDE_HEAD, SIDE_RELATION, SIDE_TAIL, Evaluator, MetricResults, prepare_filter_triples
+from .evaluator import Evaluator, MetricResults, prepare_filter_triples
+from ..constants import SIDE_HEAD, SIDE_RELATION, SIDE_TAIL, Side
 from ..triples.triples_factory import CoreTriplesFactory
 from ..typing import MappedTriples
 from ..utils import fix_dataclass_init_docs
@@ -507,7 +508,7 @@ class RankBasedEvaluator(Evaluator):
         self,
         true_scores: torch.FloatTensor,
         all_scores: torch.FloatTensor,
-        side: str,
+        side: Side,
         hrt_batch: MappedTriples,
     ) -> None:
         """Shared code for updating the stored ranks for head/tail scores.
@@ -539,7 +540,7 @@ class RankBasedEvaluator(Evaluator):
         scores: torch.FloatTensor,
         dense_positive_mask: Optional[torch.FloatTensor] = None,
     ) -> None:  # noqa: D102
-        self._update_ranks_(true_scores=true_scores, all_scores=scores, side=SIDE_RELATION)
+        self._update_ranks_(true_scores=true_scores, all_scores=scores, side=SIDE_RELATION, hrt_batch=hrt_batch)
 
     def process_head_scores_(
         self,
@@ -738,7 +739,7 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
         self,
         true_scores: torch.FloatTensor,
         all_scores: torch.FloatTensor,
-        side: str,
+        side: Side,
         hrt_batch: MappedTriples,
     ) -> None:  # noqa: D102
         # TODO: do not require to compute all scores beforehand
