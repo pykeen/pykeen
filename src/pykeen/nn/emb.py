@@ -108,6 +108,9 @@ class RepresentationModule(nn.Module, ABC):
     ) -> torch.FloatTensor:
         """Get representations for indices.
 
+        .. note ::
+            this method is implemented in subclasses. Prefer using `get` instead, which optimizes for duplicate indices.
+
         :param indices: shape: s
             The indices, or None. If None, this is interpreted as ``torch.arange(self.max_id)`` (although implemented
             more efficiently).
@@ -115,6 +118,24 @@ class RepresentationModule(nn.Module, ABC):
         :return: shape: (``*s``, ``*self.shape``)
             The representations.
         """
+
+    def get(
+        self,
+        indices: Optional[torch.LongTensor] = None,
+    ) -> torch.FloatTensor:
+        """Get representations for indices.
+
+        :param indices: shape: s
+            The indices, or None. If None, this is interpreted as ``torch.arange(self.max_id)`` (although implemented
+            more efficiently).
+
+        :return: shape: (``*s``, ``*self.shape``)
+            The representations.
+        """
+        if indices is None:
+            return self(None)
+        uniq, inverse = indices.unique(return_inverse=True)
+        return self(unique)[inverse]
 
     def reset_parameters(self) -> None:
         """Reset the module's parameters."""
