@@ -6,7 +6,7 @@ import importlib
 import itertools
 import os
 import unittest
-from typing import Any, MutableMapping, Optional
+from typing import Any, Iterable, MutableMapping, Optional, Set, Type, Union
 
 import numpy
 import torch
@@ -760,15 +760,15 @@ class TestTesting(unittest_templates.MetaTestCase[Model]):
                 )
 
 
-def _remove_non_models(elements):
+def _remove_non_models(elements: Iterable[Union[str, Type[Model]]]) -> Set[Type[Model]]:
     rv = set()
     for element in elements:
         try:
-            model_resolver.lookup(element)
-        except ValueError:  # invalid model name - aka not actually a model
+            model_cls = model_resolver.lookup(element)
+        except KeyError:  # invalid model name - aka not actually a model
             continue
         else:
-            rv.add(element)
+            rv.add(model_cls)
     return rv
 
 
