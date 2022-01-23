@@ -9,7 +9,7 @@ import random
 import re
 from collections import defaultdict
 from dataclasses import dataclass, field, fields
-from typing import DefaultDict, Dict, Iterable, List, NamedTuple, Optional, Sequence, Tuple, Union
+from typing import DefaultDict, Dict, Iterable, List, Literal, NamedTuple, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -33,8 +33,10 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-SIDE_BOTH = "both"
+SideAllType = Literal["both"]
+SIDE_BOTH: SideAllType = "both"
 SIDES = {SIDE_HEAD, SIDE_TAIL, SIDE_BOTH}
+SIDE_BOTH_VALUES = (SIDE_HEAD, SIDE_TAIL)
 
 RANK_OPTIMISTIC = "optimistic"
 RANK_PESSIMISTIC = "pessimistic"
@@ -501,7 +503,7 @@ class RankBasedEvaluator(Evaluator):
                 raise ValueError(
                     "If k is a float, it should represent a relative rank, i.e. a value between 0 and 1 (excl.)",
                 )
-        self.ranks: Dict[Tuple[str, str], List[float]] = defaultdict(list)
+        self.ranks: Dict[Tuple[Side, str], List[float]] = defaultdict(list)
         self.num_entities = None
 
     def _update_ranks_(
@@ -511,7 +513,7 @@ class RankBasedEvaluator(Evaluator):
         side: Side,
         hrt_batch: MappedTriples,
     ) -> None:
-        """Shared code for updating the stored ranks for head/tail scores.
+        """Shared code for updating the stored ranks for head/relation/tail scores.
 
         :param true_scores: shape: (batch_size,)
         :param all_scores: shape: (batch_size, num_entities)
@@ -551,9 +553,9 @@ class RankBasedEvaluator(Evaluator):
     ) -> None:  # noqa: D102
         self._update_ranks_(true_scores=true_scores, all_scores=scores, side=SIDE_HEAD, hrt_batch=hrt_batch)
 
-    def _get_ranks(self, side, rank_type) -> np.ndarray:
-        if side == SIDE_BOTH:
-            values: List[float] = sum((self.ranks.get((_side, rank_type), []) for _side in (SIDE_HEAD, SIDE_TAIL)), [])
+    def _get_ranks(self, side: Union[Side, SideAllType], rank_type: str) -> np.ndarray:
+        if side == SIDE_BOTH:  # TODO should this include SIDE_RELATION?
+            values: List[float] = sum((self.ranks.get((_side, rank_type), []) for _side in SIDE_BOTH_VALUES), [])
         else:
             values = self.ranks.get((side, rank_type), [])
         return np.asarray(values, dtype=np.float64)
