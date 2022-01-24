@@ -190,6 +190,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         gradient_clipping_max_norm: Optional[float] = None,
         gradient_clipping_norm_type: Optional[float] = None,
         gradient_clipping_max_abs_value: Optional[float] = None,
+        pin_memory: bool = True,
     ) -> Optional[List[float]]:
         """Train the KGE model.
 
@@ -261,6 +262,9 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         :param gradient_clipping_max_abs_value:
             The maximum absolute value in gradients, cf. :func:`torch.nn.utils.clip_grad_value_`. If None, no
             gradient clipping will be used.
+        :param pin_memory:
+            whether to use memory pinning in the data loader, cf.
+            https://pytorch.org/docs/stable/notes/cuda.html#cuda-memory-pinning
 
         :return:
             The losses per epoch.
@@ -354,6 +358,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                 gradient_clipping_max_abs_value=gradient_clipping_max_abs_value,
                 triples_factory=triples_factory,
                 training_instances=training_instances,
+                pin_memory=pin_memory,
             )
 
         # Ensure the release of memory
@@ -395,6 +400,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         gradient_clipping_max_norm: Optional[float] = None,
         gradient_clipping_norm_type: Optional[float] = None,
         gradient_clipping_max_abs_value: Optional[float] = None,
+        pin_memory: bool = True,
     ) -> Optional[List[float]]:
         """Train the KGE model, see docstring for :func:`TrainingLoop.train`."""
         if self.optimizer is None:
@@ -559,6 +565,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             batch_size=batch_size,
             drop_last=drop_last,
             shuffle=shuffle,
+            pin_memory=pin_memory,
         )
 
         # Save the time to track when the saved point was available
