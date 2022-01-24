@@ -140,8 +140,8 @@ class Ranks:
         """Return mapping from side to rank tensor."""
         return {
             RANK_OPTIMISTIC: self.optimistic,
-            RANK_REALISTIC: self.optimistic,
-            RANK_PESSIMISTIC: self.optimistic,
+            RANK_REALISTIC: self.realistic,
+            RANK_PESSIMISTIC: self.pessimistic,
         }
 
 
