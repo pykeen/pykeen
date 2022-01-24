@@ -387,7 +387,8 @@ class TestTransD(cases.DistanceModelTestCase):
 
         Entity and relation embeddings have to have at most unit L2 norm.
         """
-        for emb in (self.instance.entity_embeddings, self.instance.relation_embeddings):
+        self.instance: ERModel
+        for emb in (self.instance.entity_representations[0], self.instance.relation_representations[0]):
             assert all_in_bounds(emb(indices=None).norm(p=2, dim=-1), high=1.0, a_tol=EPSILON)
 
     def test_score_hrt_manual(self):
@@ -399,7 +400,6 @@ class TestTransD(cases.DistanceModelTestCase):
             embedding_dim=2,
         )
         entity_embeddings._embeddings.weight.data.copy_(weights)
-        self.instance.entity_embeddings = entity_embeddings
 
         projection_weights = torch.as_tensor(data=[[3.0, 3.0], [2.0, 2.0]], dtype=torch.float)
         entity_projection_embeddings = Embedding(
@@ -407,7 +407,7 @@ class TestTransD(cases.DistanceModelTestCase):
             embedding_dim=2,
         )
         entity_projection_embeddings._embeddings.weight.data.copy_(projection_weights)
-        self.instance.entity_projections = entity_projection_embeddings
+        self.instance.entity_representations = torch.nn.ModuleList([entity_embeddings, entity_projection_embeddings])
 
         # relation embeddings
         relation_weights = torch.as_tensor(data=[[4.0], [4.0]], dtype=torch.float)
@@ -416,7 +416,6 @@ class TestTransD(cases.DistanceModelTestCase):
             embedding_dim=1,
         )
         relation_embeddings._embeddings.weight.data.copy_(relation_weights)
-        self.instance.relation_embeddings = relation_embeddings
 
         relation_projection_weights = torch.as_tensor(data=[[5.0], [3.0]], dtype=torch.float)
         relation_projection_embeddings = Embedding(
@@ -424,7 +423,9 @@ class TestTransD(cases.DistanceModelTestCase):
             embedding_dim=1,
         )
         relation_projection_embeddings._embeddings.weight.data.copy_(relation_projection_weights)
-        self.instance.relation_projections = relation_projection_embeddings
+        self.instance.relation_representations = torch.nn.ModuleList(
+            [relation_embeddings, relation_projection_embeddings]
+        )
 
         # Compute Scores
         batch = torch.as_tensor(data=[[0, 0, 0], [0, 0, 1]], dtype=torch.long)
@@ -442,7 +443,6 @@ class TestTransD(cases.DistanceModelTestCase):
             embedding_dim=3,
         )
         relation_embeddings._embeddings.weight.data.copy_(relation_weights)
-        self.instance.relation_embeddings = relation_embeddings
 
         relation_projection_weights = torch.as_tensor(data=[[4.0, 4.0, 4.0], [4.0, 4.0, 4.0]], dtype=torch.float)
         relation_projection_embeddings = Embedding(
@@ -450,7 +450,9 @@ class TestTransD(cases.DistanceModelTestCase):
             embedding_dim=3,
         )
         relation_projection_embeddings._embeddings.weight.data.copy_(relation_projection_weights)
-        self.instance.relation_projections = relation_projection_embeddings
+        self.instance.relation_representations = torch.nn.ModuleList(
+            [relation_embeddings, relation_projection_embeddings]
+        )
 
         # Compute Scores
         batch = torch.as_tensor(data=[[0, 0, 0]], dtype=torch.long)
@@ -474,7 +476,6 @@ class TestTransD(cases.DistanceModelTestCase):
             embedding_dim=3,
         )
         entity_embeddings._embeddings.weight.data.copy_(weights)
-        self.instance.entity_embeddings = entity_embeddings
 
         projection_weights = torch.as_tensor(data=[[2.0, 2.0, 2.0], [2.0, 2.0, 2.0]], dtype=torch.float)
         entity_projection_embeddings = Embedding(
@@ -482,7 +483,7 @@ class TestTransD(cases.DistanceModelTestCase):
             embedding_dim=3,
         )
         entity_projection_embeddings._embeddings.weight.data.copy_(projection_weights)
-        self.instance.entity_projections = entity_projection_embeddings
+        self.instance.entity_representations = torch.nn.ModuleList([entity_embeddings, entity_projection_embeddings])
 
         # relation embeddings
         relation_weights = torch.as_tensor(data=[[3.0, 3.0], [3.0, 3.0]], dtype=torch.float)
@@ -491,7 +492,6 @@ class TestTransD(cases.DistanceModelTestCase):
             embedding_dim=2,
         )
         relation_embeddings._embeddings.weight.data.copy_(relation_weights)
-        self.instance.relation_embeddings = relation_embeddings
 
         relation_projection_weights = torch.as_tensor(data=[[4.0, 4.0], [4.0, 4.0]], dtype=torch.float)
         relation_projection_embeddings = Embedding(
@@ -499,7 +499,9 @@ class TestTransD(cases.DistanceModelTestCase):
             embedding_dim=2,
         )
         relation_projection_embeddings._embeddings.weight.data.copy_(relation_projection_weights)
-        self.instance.relation_projections = relation_projection_embeddings
+        self.instance.relation_representations = torch.nn.ModuleList(
+            [relation_embeddings, relation_projection_embeddings]
+        )
 
         # Compute Scores
         batch = torch.as_tensor(data=[[0, 0, 0], [0, 0, 0]], dtype=torch.long)

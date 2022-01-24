@@ -1314,7 +1314,7 @@ class BaseKG2ETest(ModelTestCase):
 
     cls = pykeen.models.KG2E
     c_min: float = 0.01
-    c_max: float =1.0
+    c_max: float = 1.0
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
@@ -1333,7 +1333,9 @@ class BaseKG2ETest(ModelTestCase):
         for embedding in (e_mean, r_mean):
             assert all_in_bounds(embedding(indices=None).norm(p=2, dim=-1), high=1.0, a_tol=EPSILON)
         for cov in (e_cov, r_cov):
-            assert all_in_bounds(cov(indices=None), low=self.instance_kwargs["c_min"], high=self.instance_kwargs["c_max"])
+            assert all_in_bounds(
+                cov(indices=None), low=self.instance_kwargs["c_min"], high=self.instance_kwargs["c_max"]
+            )
 
 
 class BaseRGCNTest(ModelTestCase):
