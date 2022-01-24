@@ -28,7 +28,6 @@ from pykeen.models import (
 from pykeen.models.multimodal.base import LiteralModel
 from pykeen.models.predict import get_all_prediction_df, get_novelty_mask, predict
 from pykeen.models.unimodal.node_piece import _ConcatMLP
-from pykeen.models.unimodal.trans_d import _project_entity
 from pykeen.nn import EmbeddingSpecification
 from pykeen.nn.emb import Embedding, NodePieceRepresentation
 from pykeen.utils import all_in_bounds, clamp_norm, extend_batch
@@ -511,27 +510,6 @@ class TestTransD(cases.DistanceModelTestCase):
         second_score = scores[1].item()
         self.assertAlmostEqual(first_score, -18, delta=0.01)
         self.assertAlmostEqual(second_score, -18, delta=0.01)
-
-    def test_project_entity(self):
-        """Test _project_entity."""
-        # random entity embeddings & projections
-        e = torch.rand(1, self.instance.num_entities, self.embedding_dim, generator=self.generator)
-        e = clamp_norm(e, maxnorm=1, p=2, dim=-1)
-        e_p = torch.rand(1, self.instance.num_entities, self.embedding_dim, generator=self.generator)
-
-        # random relation embeddings & projections
-        r = torch.rand(self.batch_size, 1, self.instance.relation_dim, generator=self.generator)
-        r = clamp_norm(r, maxnorm=1, p=2, dim=-1)
-        r_p = torch.rand(self.batch_size, 1, self.instance.relation_dim, generator=self.generator)
-
-        # project
-        e_bot = _project_entity(e=e, e_p=e_p, r=r, r_p=r_p)
-
-        # check shape:
-        assert e_bot.shape == (self.batch_size, self.instance.num_entities, self.instance.relation_dim)
-
-        # check normalization
-        assert (torch.norm(e_bot, dim=-1, p=2) <= 1.0 + 1.0e-06).all()
 
 
 class TestTransE(cases.DistanceModelTestCase):
