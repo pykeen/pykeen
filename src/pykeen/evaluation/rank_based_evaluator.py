@@ -137,7 +137,7 @@ class Ranks:
     #: shape: (batch_size,)
     number_of_options: torch.LongTensor
 
-    def to_side_dict(self) -> Mapping[RankType, torch.FloatTensor]:
+    def to_type_dict(self) -> Mapping[RankType, torch.FloatTensor]:
         """Return mapping from side to rank tensor."""
         return {
             RANK_OPTIMISTIC: self.optimistic,
@@ -540,7 +540,7 @@ class RankBasedEvaluator(Evaluator):
             all_scores=all_scores,
         )
         self.num_entities = all_scores.shape[1]
-        for k, v in batch_ranks.to_side_dict().items():
+        for k, v in batch_ranks.to_type_dict().items():
             self.ranks[side, k].extend(v.detach().cpu().tolist())
         self.number_of_options[side].extend(batch_ranks.number_of_options.detach().cpu().numpy())
 
