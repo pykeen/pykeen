@@ -98,8 +98,10 @@ class RepresentationModule(nn.Module, ABC):
     ) -> torch.FloatTensor:
         """Get representations for indices.
 
-        .. note ::
-            this method is implemented in subclasses. Prefer using `get` instead, which optimizes for duplicate indices.
+        .. note::
+
+            this method is implemented in subclasses. Prefer using `forward_unique` instead,
+            which optimizes for duplicate indices.
 
         :param indices: shape: s
             The indices, or None. If None, this is interpreted as ``torch.arange(self.max_id)`` (although implemented
