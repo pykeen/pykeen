@@ -559,6 +559,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             batch_size=batch_size,
             drop_last=drop_last,
             shuffle=shuffle,
+            pin_memory=True,
         )
 
         # Save the time to track when the saved point was available
