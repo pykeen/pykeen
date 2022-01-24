@@ -9,7 +9,7 @@ import random
 import re
 from collections import defaultdict
 from dataclasses import dataclass, field, fields
-from typing import DefaultDict, Dict, Iterable, List, Mapping, NamedTuple, Optional, Sequence, Tuple, Union
+from typing import Collection, DefaultDict, Dict, Iterable, List, Mapping, NamedTuple, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -34,18 +34,19 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-Side = Literal["head", "tail", "both"]
+Side = Literal["head", "tail"]
+ExtendedSide = Literal["head", "tail", "both"]
 SIDE_HEAD = "head"
 SIDE_TAIL = "tail"
 SIDE_BOTH = "both"
-REAL_SIDES = {SIDE_HEAD, SIDE_TAIL}
-SIDES = {SIDE_HEAD, SIDE_TAIL, SIDE_BOTH}
+REAL_SIDES: Collection[Side] = {SIDE_HEAD, SIDE_TAIL}
+SIDES: Collection[ExtendedSide] = {SIDE_HEAD, SIDE_TAIL, SIDE_BOTH}
 
 RankType = Literal["optimistic", "realistic", "pessimistic"]
 RANK_OPTIMISTIC = "optimistic"
 RANK_PESSIMISTIC = "pessimistic"
 RANK_REALISTIC = "realistic"
-RANK_TYPES = {RANK_OPTIMISTIC, RANK_PESSIMISTIC, RANK_REALISTIC}
+RANK_TYPES: Collection[RankType] = {RANK_OPTIMISTIC, RANK_PESSIMISTIC, RANK_REALISTIC}
 
 # TODO: use function resolver
 ARITHMETIC_MEAN_RANK = "arithmetic_mean_rank"  # also known as mean rank (MR)
@@ -258,7 +259,7 @@ def resolve_metric_name(name: str) -> MetricKey:
 class RankBasedMetricResults(MetricResults):
     """Results from computing metrics."""
 
-    arithmetic_mean_rank: Dict[Side, Dict[RankType, float]] = field(
+    arithmetic_mean_rank: Dict[ExtendedSide, Dict[RankType, float]] = field(
         metadata=dict(
             name="Mean Rank (MR)",
             increasing=False,
@@ -268,7 +269,7 @@ class RankBasedMetricResults(MetricResults):
         )
     )
 
-    geometric_mean_rank: Dict[Side, Dict[RankType, float]] = field(
+    geometric_mean_rank: Dict[ExtendedSide, Dict[RankType, float]] = field(
         metadata=dict(
             name="Geometric Mean Rank (GMR)",
             increasing=False,
@@ -278,7 +279,7 @@ class RankBasedMetricResults(MetricResults):
         )
     )
 
-    median_rank: Dict[Side, Dict[RankType, float]] = field(
+    median_rank: Dict[ExtendedSide, Dict[RankType, float]] = field(
         metadata=dict(
             name="Median Rank",
             increasing=False,
@@ -288,7 +289,7 @@ class RankBasedMetricResults(MetricResults):
         )
     )
 
-    harmonic_mean_rank: Dict[Side, Dict[RankType, float]] = field(
+    harmonic_mean_rank: Dict[ExtendedSide, Dict[RankType, float]] = field(
         metadata=dict(
             name="Harmonic Mean Rank (HMR)",
             increasing=False,
@@ -298,7 +299,7 @@ class RankBasedMetricResults(MetricResults):
         )
     )
 
-    inverse_arithmetic_mean_rank: Dict[Side, Dict[RankType, float]] = field(
+    inverse_arithmetic_mean_rank: Dict[ExtendedSide, Dict[RankType, float]] = field(
         metadata=dict(
             name="Inverse Arithmetic Mean Rank (IAMR)",
             increasing=True,
@@ -308,7 +309,7 @@ class RankBasedMetricResults(MetricResults):
         )
     )
 
-    inverse_geometric_mean_rank: Dict[Side, Dict[RankType, float]] = field(
+    inverse_geometric_mean_rank: Dict[ExtendedSide, Dict[RankType, float]] = field(
         metadata=dict(
             name="Inverse Geometric Mean Rank (IGMR)",
             increasing=True,
@@ -318,7 +319,7 @@ class RankBasedMetricResults(MetricResults):
         )
     )
 
-    inverse_harmonic_mean_rank: Dict[Side, Dict[RankType, float]] = field(
+    inverse_harmonic_mean_rank: Dict[ExtendedSide, Dict[RankType, float]] = field(
         metadata=dict(
             name="Mean Reciprocal Rank (MRR)",
             increasing=True,
@@ -328,7 +329,7 @@ class RankBasedMetricResults(MetricResults):
         )
     )
 
-    inverse_median_rank: Dict[Side, Dict[RankType, float]] = field(
+    inverse_median_rank: Dict[ExtendedSide, Dict[RankType, float]] = field(
         metadata=dict(
             name="Inverse Median Rank",
             increasing=True,
@@ -338,14 +339,14 @@ class RankBasedMetricResults(MetricResults):
         )
     )
 
-    rank_count: Dict[Side, Dict[RankType, int]] = field(
+    rank_count: Dict[ExtendedSide, Dict[RankType, int]] = field(
         metadata=dict(
             name="Rank Count",
             doc="The number of considered ranks, a non-negative number. Low numbers may indicate unreliable results.",
         )
     )
 
-    rank_std: Dict[Side, Dict[RankType, float]] = field(
+    rank_std: Dict[ExtendedSide, Dict[RankType, float]] = field(
         metadata=dict(
             name="Rank Standard Deviation",
             range="[0, inf)",
@@ -354,7 +355,7 @@ class RankBasedMetricResults(MetricResults):
         )
     )
 
-    rank_var: Dict[Side, Dict[RankType, float]] = field(
+    rank_var: Dict[ExtendedSide, Dict[RankType, float]] = field(
         metadata=dict(
             name="Rank Variance",
             range="[0, inf)",
@@ -363,7 +364,7 @@ class RankBasedMetricResults(MetricResults):
         )
     )
 
-    rank_mad: Dict[Side, Dict[RankType, float]] = field(
+    rank_mad: Dict[ExtendedSide, Dict[RankType, float]] = field(
         metadata=dict(
             name="Rank Median Absolute Deviation",
             range="[0, inf)",
@@ -371,7 +372,7 @@ class RankBasedMetricResults(MetricResults):
         )
     )
 
-    hits_at_k: Dict[Side, Dict[RankType, Dict[Union[int, float], float]]] = field(
+    hits_at_k: Dict[ExtendedSide, Dict[RankType, Dict[Union[int, float], float]]] = field(
         metadata=dict(
             name="Hits @ K",
             range="[0, 1]",
@@ -381,7 +382,7 @@ class RankBasedMetricResults(MetricResults):
         )
     )
 
-    adjusted_arithmetic_mean_rank: Dict[Side, Dict[RankType, float]] = field(
+    adjusted_arithmetic_mean_rank: Dict[ExtendedSide, Dict[RankType, float]] = field(
         metadata=dict(
             name="Adjusted Arithmetic Mean Rank (AAMR)",
             increasing=False,
@@ -391,7 +392,7 @@ class RankBasedMetricResults(MetricResults):
         )
     )
 
-    adjusted_arithmetic_mean_rank_index: Dict[Side, Dict[RankType, float]] = field(
+    adjusted_arithmetic_mean_rank_index: Dict[ExtendedSide, Dict[RankType, float]] = field(
         metadata=dict(
             name="Adjusted Arithmetic Mean Rank Index (AAMRI)",
             increasing=True,
@@ -456,7 +457,7 @@ class RankBasedMetricResults(MetricResults):
         """Output the metrics as a pandas dataframe."""
         return pd.DataFrame(list(self._iter_rows()), columns=["Side", "Type", "Metric", "Value"])
 
-    def _iter_rows(self) -> Iterable[Tuple[Side, RankType, str, Union[float, int]]]:
+    def _iter_rows(self) -> Iterable[Tuple[ExtendedSide, RankType, str, Union[float, int]]]:
         for side, rank_type in itt.product(SIDES, RANK_TYPES):
             for k, v in self.hits_at_k[side][rank_type].items():
                 yield side, rank_type, f"hits_at_{k}", v
@@ -564,8 +565,8 @@ class RankBasedEvaluator(Evaluator):
 
     @staticmethod
     def _get_for_side(
-        mapping: Mapping[Side, List[np.ndarray]],
-        side: Side,
+        mapping: Mapping[Union[Side, Tuple[Side, RankType]], List[np.ndarray]],
+        side: ExtendedSide,
         rank_type: Optional[RankType] = None,
     ) -> np.ndarray:
         values: List[np.ndarray]
@@ -586,12 +587,13 @@ class RankBasedEvaluator(Evaluator):
         if self.num_entities is None:
             raise ValueError
 
-        hits_at_k: DefaultDict[Side, Dict[RankType, Dict[Union[int, float], float]]] = defaultdict(dict)
-        asr: DefaultDict[str, DefaultDict[Side, Dict[RankType, float]]] = defaultdict(lambda: defaultdict(dict))
+        hits_at_k: DefaultDict[ExtendedSide, Dict[RankType, Dict[Union[int, float], float]]] = defaultdict(dict)
+        asr: DefaultDict[str, DefaultDict[ExtendedSide, Dict[RankType, float]]] = defaultdict(lambda: defaultdict(dict))
 
         for side, rank_type in itt.product(SIDES, RANK_TYPES):
             ranks = self._get_for_side(mapping=self.ranks, side=side, rank_type=rank_type)
             if len(ranks) < 1:
+                logger.warning(f"No ranks for side={side}, rank_type={rank_type}")
                 continue
             hits_at_k[side][rank_type] = {
                 k: np.mean(ranks <= (k if isinstance(k, int) else int(self.num_entities * k))).item() for k in self.ks
@@ -601,7 +603,7 @@ class RankBasedEvaluator(Evaluator):
 
             # Adjusted mean rank calculation
             if rank_type == RANK_REALISTIC:
-                emr = expected_mean_rank(num_candidates=self._get_for_side(self.number_of_options, side=side))
+                emr = expected_mean_rank(num_candidates=self._get_for_side(mapping=self.number_of_options, side=side))
                 mr = asr[ARITHMETIC_MEAN_RANK][side][rank_type]
                 asr[ADJUSTED_ARITHMETIC_MEAN_RANK][side][rank_type] = mr / emr
                 asr[ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX][side][rank_type] = 1.0 - (mr - 1) / (emr - 1)
@@ -611,7 +613,7 @@ class RankBasedEvaluator(Evaluator):
         self.number_of_options.clear()
 
         # for typing
-        rank_count: Dict[Side, Dict[RankType, int]] = dict(asr[RANK_COUNT])  # type: ignore
+        rank_count: Dict[ExtendedSide, Dict[RankType, int]] = dict(asr[RANK_COUNT])  # type: ignore
 
         return RankBasedMetricResults(
             arithmetic_mean_rank=dict(asr[ARITHMETIC_MEAN_RANK]),
@@ -638,7 +640,7 @@ def sample_negatives(
     additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
     num_samples: int = 50,
     max_id: Optional[int] = None,
-) -> Tuple[torch.Tensor, torch.Tensor]:
+) -> torch.LongTensor:
     """
     Sample true negatives for sampled evaluation.
 
@@ -670,10 +672,10 @@ def sample_negatives(
     all_ids = set(range(max_id))
     this_negatives = torch.empty(size=(num_triples, num_samples), dtype=torch.long)
     other = [c for c in columns if c != side]
+    group: pd.DataFrame
     for _, group in pd.merge(id_df, all_df, on=other, suffixes=["_eval", "_all"]).groupby(
         by=other,
     ):
-        group: pd.DataFrame
         pool = list(all_ids.difference(group[f"{side}_all"].unique().tolist()))
         if len(pool) < num_samples:
             logger.warning(
@@ -697,6 +699,9 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
     cf. https://arxiv.org/abs/2106.06935.
     """
 
+    #: the negative samples for each side
+    negative_samples: Mapping[Side, torch.LongTensor]
+
     def __init__(
         self,
         evaluation_factory: CoreTriplesFactory,
@@ -719,18 +724,22 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
         super().__init__(**kwargs)
         if negatives is None:
             negatives = {side: None for side in REAL_SIDES}
+        # make sure that negatives is mutable
+        negatives = dict(negatives)
         for side in negatives.keys():
             # default for inductive LP by [teru2020]
-            if negatives[side] is None:
-                num_negatives = num_negatives or 50
+            if negatives[side] is not None:
+                continue
             logger.info(
                 f"Sampling {num_negatives} negatives for each of the "
                 f"{evaluation_factory.num_triples} evaluation triples.",
             )
+            num_negatives = num_negatives or 50
             if num_negatives > evaluation_factory.num_entities:
                 raise ValueError("Cannot use more negative samples than there are entities.")
             negatives[side] = sample_negatives(
                 evaluation_triples=evaluation_factory.mapped_triples,
+                side=side,
                 additional_filter_triples=additional_filter_triples,
                 max_id=evaluation_factory.num_entities,
                 num_samples=num_negatives,
@@ -738,6 +747,7 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
 
         # verify input
         for side, side_negatives in negatives.items():
+            assert side_negatives is not None
             if side_negatives.shape[0] != evaluation_factory.num_triples:
                 raise ValueError(f"Negatives for side={side} are in wrong shape: {side_negatives.shape}")
         self.triple_to_index = {(h, r, t): i for i, (h, r, t) in enumerate(evaluation_factory.mapped_triples.tolist())}
