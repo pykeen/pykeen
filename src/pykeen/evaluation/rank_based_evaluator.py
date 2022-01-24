@@ -55,14 +55,13 @@ ExtendedSide = Union[Side, Literal["both"]]
 SIDE_HEAD, SIDE_TAIL = typing.get_args(Side)
 SIDE_BOTH: ExtendedSide = "both"
 
-REAL_SIDES: FrozenSet[Side] = frozenset(typing.get_args(Side))
-SIDES: FrozenSet[ExtendedSide] = cast(FrozenSet[ExtendedSide], REAL_SIDES).union({SIDE_BOTH})
+REAL_SIDES: Tuple[Side, ...] = typing.get_args(Side)
+SIDES: Tuple[ExtendedSide, ...] = cast(Tuple[ExtendedSide, ...], REAL_SIDES) + (SIDE_BOTH,)
 
 RankType = Literal["optimistic", "realistic", "pessimistic"]
-RANK_OPTIMISTIC: RankType = "optimistic"
-RANK_PESSIMISTIC: RankType = "pessimistic"
-RANK_REALISTIC: RankType = "realistic"
-RANK_TYPES: FrozenSet[RankType] = frozenset(typing.get_args(RankType))
+RANK_TYPES: Tuple[RankType, ...] = typing.get_args(RankType)
+RANK_OPTIMISTIC, RANK_REALISTIC, RANK_PESSIMISTIC = RANK_TYPES
+
 
 # TODO: use function resolver
 ARITHMETIC_MEAN_RANK = "arithmetic_mean_rank"  # also known as mean rank (MR)
@@ -560,8 +559,8 @@ class RankBasedEvaluator(Evaluator):
         )
         self.num_entities = all_scores.shape[1]
         for rank_type, ranks in batch_ranks.to_type_dict().items():
-            self.ranks[rank_type][side].extend(ranks.detach().cpu().tolist())
-        self.number_of_options[side].extend(batch_ranks.number_of_options.detach().cpu().numpy())
+            self.ranks[rank_type][side].append(ranks.detach().cpu().numpy())
+        self.number_of_options[side].append(batch_ranks.number_of_options.detach().cpu().numpy())
 
     def process_tail_scores_(
         self,
@@ -589,14 +588,9 @@ class RankBasedEvaluator(Evaluator):
         values: List[np.ndarray]
         if side in REAL_SIDES:
             values = mapping.get(side, [])  # type: ignore
-        else:
-            assert side == SIDE_BOTH
-            values = sum(
-                (RankBasedEvaluator._get_for_side(mapping=mapping, side=_side) for _side in REAL_SIDES),
-                [],
-            )
-
-        return np.concatenate(values).astype(dtype=np.float64)
+            return np.concatenate(values).astype(dtype=np.float64)
+        assert side == SIDE_BOTH
+        return np.concatenate([RankBasedEvaluator._get_for_side(mapping=mapping, side=_side) for _side in REAL_SIDES])
 
     def finalize(self) -> RankBasedMetricResults:  # noqa: D102
         if self.num_entities is None:

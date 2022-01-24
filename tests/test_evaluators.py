@@ -27,11 +27,11 @@ from pykeen.evaluation.evaluator import (
     prepare_filter_triples,
 )
 from pykeen.evaluation.rank_based_evaluator import (
-    RANK_EXPECTED_REALISTIC,
     RANK_OPTIMISTIC,
     RANK_PESSIMISTIC,
     RANK_REALISTIC,
     RANK_TYPES,
+    REAL_SIDES,
     SIDE_BOTH,
     SIDES,
     SampledRankBasedEvaluator,
@@ -192,25 +192,19 @@ class EvaluatorUtilsTests(unittest.TestCase):
         exp_best_rank = torch.as_tensor([3.0, 2.0, 1.0])
         exp_worst_rank = torch.as_tensor([4.0, 2.0, 1.0])
         exp_avg_rank = 0.5 * (exp_best_rank + exp_worst_rank)
-        exp_exp_rank = torch.as_tensor([(5 + 1) / 2, (5 + 1) / 2, (4 + 1) / 2])
         ranks = compute_rank_from_scores(true_score=true_score, all_scores=all_scores)
 
-        optimistic_rank = ranks.get(RANK_OPTIMISTIC)
+        optimistic_rank = ranks.optimistic
         assert optimistic_rank.shape == (batch_size,)
         assert (optimistic_rank == exp_best_rank).all()
 
-        pessimistic_rank = ranks.get(RANK_PESSIMISTIC)
+        pessimistic_rank = ranks.pessimistic
         assert pessimistic_rank.shape == (batch_size,)
         assert (pessimistic_rank == exp_worst_rank).all()
 
-        realistic_rank = ranks.get(RANK_REALISTIC)
+        realistic_rank = ranks.realistic
         assert realistic_rank.shape == (batch_size,)
         assert (realistic_rank == exp_avg_rank).all(), (realistic_rank, exp_avg_rank)
-
-        expected_realistic_rank = ranks.get(RANK_EXPECTED_REALISTIC)
-        assert expected_realistic_rank is not None
-        assert expected_realistic_rank.shape == (batch_size,)
-        assert (expected_realistic_rank == exp_exp_rank).all(), (expected_realistic_rank, exp_exp_rank)
 
     def test_create_sparse_positive_filter_(self):
         """Test method create_sparse_positive_filter_."""
@@ -513,12 +507,6 @@ def test_sample_negatives():
     num_negatives = 2
     evaluation_triples = dataset.validation.mapped_triples
     additional_filter_triples = dataset.training.mapped_triples
-    head_negatives, tail_negatives = sample_negatives(
-        evaluation_triples=evaluation_triples,
-        additional_filter_triples=additional_filter_triples,
-        max_id=dataset.num_entities,
-        num_samples=num_negatives,
-    )
     num_triples = evaluation_triples.shape[0]
     true = set(
         map(
@@ -529,7 +517,14 @@ def test_sample_negatives():
             ).tolist(),
         )
     )
-    for i, negatives in zip((0, 2), (head_negatives, tail_negatives)):
+    for side, i in zip(REAL_SIDES, (0, 2)):
+        negatives = sample_negatives(
+            evaluation_triples=evaluation_triples,
+            side=side,
+            additional_filter_triples=additional_filter_triples,
+            max_id=dataset.num_entities,
+            num_samples=num_negatives,
+        )
         assert torch.is_tensor(negatives)
         assert negatives.dtype == torch.long
         assert negatives.shape == (num_triples, num_negatives)
@@ -736,7 +731,7 @@ class RankBasedMetricResultsTests(unittest.TestCase):
         evaluator.num_entities = self.num_entities
         evaluator.ranks = {
             (side, rank_type): [random.random() for _ in range(self.num_triples * (2 if side == SIDE_BOTH else 1))]
-            for side, rank_type in itertools.product(SIDES, RANK_TYPES | {RANK_EXPECTED_REALISTIC})
+            for side, rank_type in itertools.product(SIDES, RANK_TYPES)
         }
         self.instance = evaluator.finalize()
 
