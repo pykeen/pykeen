@@ -130,7 +130,7 @@ class KG2E(ERModel):
                     embedding_dim=embedding_dim,
                     # Ensure positive definite covariances matrices and appropriate size by clamping
                     constrainer=torch.clamp,
-                    constrainer_kwargs=dict(min=self.c_min, max=self.c_max),
+                    constrainer_kwargs=dict(min=c_min, max=c_max),
                 ),
             ],
             **kwargs,
