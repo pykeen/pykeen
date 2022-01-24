@@ -7,13 +7,12 @@ import logging
 import math
 import random
 import re
+import typing
 from collections import defaultdict
 from dataclasses import dataclass, field, fields
 from typing import (
-    Collection,
     DefaultDict,
     Dict,
-    FrozenSet,
     Iterable,
     List,
     Mapping,
@@ -25,7 +24,6 @@ from typing import (
     Union,
     cast,
 )
-import typing
 
 import numpy as np
 import pandas as pd
@@ -33,7 +31,6 @@ import torch
 from dataclasses_json import dataclass_json
 from scipy import stats
 from typing_extensions import Literal
-
 
 from .evaluator import Evaluator, MetricResults, prepare_filter_triples
 from ..triples.triples_factory import CoreTriplesFactory

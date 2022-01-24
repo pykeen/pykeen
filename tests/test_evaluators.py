@@ -5,7 +5,6 @@
 import dataclasses
 import itertools
 import logging
-import random
 import unittest
 from operator import attrgetter
 from typing import Any, Collection, Dict, Iterable, List, MutableMapping, Optional, Tuple, Union
@@ -27,8 +26,6 @@ from pykeen.evaluation.evaluator import (
     prepare_filter_triples,
 )
 from pykeen.evaluation.rank_based_evaluator import (
-    RANK_OPTIMISTIC,
-    RANK_PESSIMISTIC,
     RANK_REALISTIC,
     RANK_TYPES,
     REAL_SIDES,
