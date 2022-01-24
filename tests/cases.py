@@ -50,7 +50,7 @@ from pykeen.models import RESCAL, EntityRelationEmbeddingModel, Model, TransE
 from pykeen.models.cli import build_cli_from_cls
 from pykeen.models.nbase import ERModel
 from pykeen.nn.emb import RepresentationModule
-from pykeen.nn.modules import FunctionalInteraction, Interaction, KG2EInteraction, LiteralInteraction
+from pykeen.nn.modules import FunctionalInteraction, Interaction, LiteralInteraction
 from pykeen.optimizers import optimizer_resolver
 from pykeen.pipeline import pipeline
 from pykeen.regularizers import LpRegularizer, Regularizer

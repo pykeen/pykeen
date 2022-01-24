@@ -30,7 +30,7 @@ from pykeen.models.predict import get_all_prediction_df, get_novelty_mask, predi
 from pykeen.models.unimodal.node_piece import _ConcatMLP
 from pykeen.nn import EmbeddingSpecification
 from pykeen.nn.emb import Embedding, NodePieceRepresentation
-from pykeen.utils import all_in_bounds, clamp_norm, extend_batch
+from pykeen.utils import all_in_bounds, extend_batch
 from tests import cases
 from tests.constants import EPSILON
 from tests.test_model_mode import SimpleInteractionModel
