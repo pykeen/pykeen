@@ -11,7 +11,7 @@ from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss, SoftplusLoss
 from ...nn.emb import EmbeddingSpecification
 from ...nn.modules import SimplEInteraction
-from ...regularizers import PowerSumRegularizer, Regularizer
+from ...regularizers import PowerSumRegularizer, Regularizer, regularizer_resolver
 from ...typing import Hint, Initializer
 
 __all__ = [
@@ -80,6 +80,7 @@ class SimplE(ERModel):
         regularizer_kwargs: OptionalKwargs = None,
         **kwargs,
     ) -> None:
+        regularizer = regularizer_resolver.make_safe(regularizer, pos_kwargs=regularizer_kwargs)
         super().__init__(
             interaction=SimplEInteraction,
             interaction_kwargs=dict(clamp_score=clamp_score),
@@ -89,14 +90,12 @@ class SimplE(ERModel):
                     embedding_dim=embedding_dim,
                     initializer=entity_initializer,
                     regularizer=regularizer,
-                    regularizer_kwargs=regularizer_kwargs,
                 ),
                 # tail entity
                 EmbeddingSpecification(
                     embedding_dim=embedding_dim,
                     initializer=entity_initializer,
                     regularizer=regularizer,
-                    regularizer_kwargs=regularizer_kwargs,
                 ),
             ],
             relation_representations=[
@@ -105,14 +104,12 @@ class SimplE(ERModel):
                     embedding_dim=embedding_dim,
                     initializer=relation_initializer,
                     regularizer=regularizer,
-                    regularizer_kwargs=regularizer_kwargs,
                 ),
                 # inverse relations
                 EmbeddingSpecification(
                     embedding_dim=embedding_dim,
                     initializer=relation_initializer,
                     regularizer=regularizer,
-                    regularizer_kwargs=regularizer_kwargs,
                 ),
             ],
             **kwargs,
