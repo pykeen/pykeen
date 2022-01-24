@@ -312,7 +312,7 @@ class Embedding(RepresentationModule):
             _embedding_dim = _embedding_dim * 2
             # note: this seems to work, as finfo returns the datatype of the underlying floating
             # point dtype, rather than the combined complex one
-            dtype = torch.finfo(dtype).dtype
+            dtype = getattr(torch, torch.finfo(dtype).dtype)
 
         super().__init__(
             max_id=num_embeddings,
