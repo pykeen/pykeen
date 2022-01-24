@@ -730,8 +730,14 @@ class RankBasedMetricResultsTests(unittest.TestCase):
         evaluator = RankBasedEvaluator()
         evaluator.num_entities = self.num_entities
         evaluator.ranks = {
-            (side, rank_type): [random.random() for _ in range(self.num_triples * (2 if side == SIDE_BOTH else 1))]
-            for side, rank_type in itertools.product(SIDES, RANK_TYPES)
+            rank_type: {
+                side: numpy.array_split(numpy.random.random(size=(self.num_triples,)), 3) for side in REAL_SIDES
+            }
+            for rank_type in RANK_TYPES
+        }
+        evaluator.number_of_options = {
+            side: numpy.array_split(numpy.full(shape=(self.num_triples,), fill_value=self.num_entities), 3)
+            for side in REAL_SIDES
         }
         self.instance = evaluator.finalize()
 
