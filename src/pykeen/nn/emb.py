@@ -285,6 +285,9 @@ class Embedding(RepresentationModule):
         if dtype.is_complex:
             shape = tuple(shape[:-1]) + (2 * shape[-1],)
             _embedding_dim = _embedding_dim * 2
+            # note: this seems to work, as finfo returns the datatype of the underlying floating
+            # point dtype, rather than the combined complex one
+            dtype = getattr(torch, torch.finfo(dtype).dtype)
 
         super().__init__(
             max_id=num_embeddings,
@@ -301,6 +304,7 @@ class Embedding(RepresentationModule):
         self._embeddings = torch.nn.Embedding(
             num_embeddings=num_embeddings,
             embedding_dim=_embedding_dim,
+            dtype=dtype,
         )
         self._embeddings.requires_grad_(trainable)
         self.dropout = None if dropout is None else nn.Dropout(dropout)
