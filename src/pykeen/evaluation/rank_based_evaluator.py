@@ -13,6 +13,7 @@ from typing import (
     Collection,
     DefaultDict,
     Dict,
+    FrozenSet,
     Iterable,
     List,
     Mapping,
@@ -22,6 +23,7 @@ from typing import (
     Sequence,
     Tuple,
     Union,
+    cast,
 )
 import typing
 
@@ -50,18 +52,17 @@ logger = logging.getLogger(__name__)
 
 Side = Literal["head", "tail"]
 ExtendedSide = Union[Side, Literal["both"]]
-SIDE_HEAD: Side = "head"
-SIDE_TAIL: Side = "tail"
+SIDE_HEAD, SIDE_TAIL = typing.get_args(Side)
 SIDE_BOTH: ExtendedSide = "both"
 
-REAL_SIDES: Collection[Side] = frozenset(typing.get_args(Side))
-SIDES: Collection[ExtendedSide] = frozenset(typing.get_args(ExtendedSide))
+REAL_SIDES: FrozenSet[Side] = frozenset(typing.get_args(Side))
+SIDES: FrozenSet[ExtendedSide] = cast(FrozenSet[ExtendedSide], REAL_SIDES).union({SIDE_BOTH})
 
 RankType = Literal["optimistic", "realistic", "pessimistic"]
 RANK_OPTIMISTIC: RankType = "optimistic"
 RANK_PESSIMISTIC: RankType = "pessimistic"
 RANK_REALISTIC: RankType = "realistic"
-RANK_TYPES: Collection[RankType] = frozenset(typing.get_args(RankType))
+RANK_TYPES: FrozenSet[RankType] = frozenset(typing.get_args(RankType))
 
 # TODO: use function resolver
 ARITHMETIC_MEAN_RANK = "arithmetic_mean_rank"  # also known as mean rank (MR)
