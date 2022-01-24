@@ -116,9 +116,24 @@ class MetricKey(NamedTuple):
 class Ranks:
     """Ranks for different ranking types."""
 
+    #: The optimistic rank is the rank when assuming all options with an equal score are placed
+    #: behind the current test triple.
+    #: shape: (batch_size,)
     optimistic: torch.FloatTensor
+
+    #: The realistic rank is the average of the optimistic and pessimistic rank, and hence the expected rank
+    #: over all permutations of the elements with the same score as the currently considered option.
+    #: shape: (batch_size,)
     realistic: torch.FloatTensor
+
+    #: The pessimistic rank is the rank when assuming all options with an equal score are placed
+    #: in front of current test triple.
+    #: shape: (batch_size,)
     pessimistic: torch.FloatTensor
+
+    #: The number of options is the number of items considered in the ranking. It may change for
+    #: filtered evaluation
+    #: shape: (batch_size,)
     number_of_options: torch.LongTensor
 
     def to_side_dict(self) -> Mapping[RankType, torch.FloatTensor]:
@@ -140,27 +155,9 @@ def compute_rank_from_scores(
         The score of the true triple.
     :param all_scores: torch.Tensor, shape: (batch_size, num_entities)
         The scores of all corrupted triples (including the true triple).
-    :return: a dictionary
-        {
-            'optimistic': optimistic_rank,
-            'pessimistic': pessimistic_rank,
-            'realistic': realistic_rank,
-            'expected_realistic': expected_realistic_rank,
-        }
 
-        where
-
-        optimistic_rank: shape: (batch_size,)
-            The optimistic rank is the rank when assuming all options with an equal score are placed behind the current
-            test triple.
-        pessimistic_rank:
-            The pessimistic rank is the rank when assuming all options with an equal score are placed in front of
-            current test triple.
-        realistic_rank:
-            The realistic rank is the average of the optimistic and pessimistic rank, and hence the expected rank
-            over all permutations of the elements with the same score as the currently considered option.
-        expected_realistic_rank: shape: (batch_size,)
-            The expected rank a random scoring would achieve, which is (#number_of_options + 1)/2
+    :return:
+        a data structure containing the (filtered) ranks.
     """
     # The optimistic rank is the rank when assuming all options with an equal score are placed behind the currently
     # considered. Hence, the rank is the number of options with better scores, plus one, as the rank is one-based.
