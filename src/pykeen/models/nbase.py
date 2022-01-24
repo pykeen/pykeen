@@ -461,7 +461,7 @@ class ERModel(
     ) -> Tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]:
         """Get representations for head, relation and tails."""
         hr, rr, tr = [
-            [representation(indices=indices) for representation in representations]
+            [representation.forward_unique(indices=indices) for representation in representations]
             for indices, representations in (
                 (h, self.entity_representations),
                 (r, self.relation_representations),
