@@ -109,7 +109,7 @@ class RepresentationModule(nn.Module, ABC):
             The representations.
         """
 
-    def get(
+    def forward_unique(
         self,
         indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:
@@ -147,7 +147,7 @@ class RepresentationModule(nn.Module, ABC):
             If indices is 1-dimensional, b=indices.shape[0] and n=1.
             If indices is 2-dimensional, b, n = indices.shape
         """
-        x = self.get(indices=indices)
+        x = self.forward_unique(indices=indices)
         if indices is None:
             x = x.unsqueeze(dim=0)
         elif indices.ndimension() > 2:
