@@ -150,7 +150,7 @@ def compute_rank_from_scores(
     true_score: torch.FloatTensor,
     all_scores: torch.FloatTensor,
 ) -> Ranks:
-    """Compute rank and adjusted rank given scores.
+    """Compute ranks given scores.
 
     :param true_score: torch.Tensor, shape: (batch_size, 1)
         The score of the true triple.
