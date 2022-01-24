@@ -10,6 +10,7 @@ import re
 from collections import defaultdict
 from dataclasses import dataclass, field, fields
 from typing import Collection, DefaultDict, Dict, Iterable, List, Mapping, NamedTuple, Optional, Sequence, Tuple, Union
+import typing
 
 import numpy as np
 import pandas as pd
@@ -35,18 +36,19 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 Side = Literal["head", "tail"]
-ExtendedSide = Literal["head", "tail", "both"]
-SIDE_HEAD = "head"
-SIDE_TAIL = "tail"
-SIDE_BOTH = "both"
-REAL_SIDES: Collection[Side] = {SIDE_HEAD, SIDE_TAIL}
-SIDES: Collection[ExtendedSide] = {SIDE_HEAD, SIDE_TAIL, SIDE_BOTH}
+ExtendedSide = Union[Side, Literal["both"]]
+SIDE_HEAD: Side = "head"
+SIDE_TAIL: Side = "tail"
+SIDE_BOTH: ExtendedSide = "both"
+
+REAL_SIDES: Collection[Side] = frozenset(typing.get_args(Side))
+SIDES: Collection[ExtendedSide] = frozenset(typing.get_args(ExtendedSide))
 
 RankType = Literal["optimistic", "realistic", "pessimistic"]
-RANK_OPTIMISTIC = "optimistic"
-RANK_PESSIMISTIC = "pessimistic"
-RANK_REALISTIC = "realistic"
-RANK_TYPES: Collection[RankType] = {RANK_OPTIMISTIC, RANK_PESSIMISTIC, RANK_REALISTIC}
+RANK_OPTIMISTIC: RankType = "optimistic"
+RANK_PESSIMISTIC: RankType = "pessimistic"
+RANK_REALISTIC: RankType = "realistic"
+RANK_TYPES: Collection[RankType] = frozenset(typing.get_args(RankType))
 
 # TODO: use function resolver
 ARITHMETIC_MEAN_RANK = "arithmetic_mean_rank"  # also known as mean rank (MR)
@@ -103,7 +105,7 @@ class MetricKey(NamedTuple):
     """A key for the kind of metric to resolve."""
 
     name: str
-    side: Side
+    side: ExtendedSide
     rank_type: RankType
     k: Optional[int]
 
@@ -206,6 +208,8 @@ def resolve_metric_name(name: str) -> MetricKey:
     match = METRIC_PATTERN.match(name)
     if not match:
         raise ValueError(f"Invalid metric name: {name}")
+    side: Union[str, ExtendedSide]
+    rank_type: Union[str, RankType]
     k: Union[None, str, int]
     name, side, rank_type, k = [match.group(key) for key in ("name", "side", "type", "k")]
 
@@ -240,6 +244,8 @@ def resolve_metric_name(name: str) -> MetricKey:
     side = side.lower()
     if side not in SIDES:
         raise ValueError(f"Invalid side: {side}. Allowed are {SIDES}.")
+    # for mypy
+    assert side in SIDES
 
     # normalize rank type
     rank_type = rank_type or RANK_REALISTIC
@@ -247,8 +253,10 @@ def resolve_metric_name(name: str) -> MetricKey:
     rank_type = RANK_TYPE_SYNONYMS.get(rank_type, rank_type)
     if rank_type not in RANK_TYPES:
         raise ValueError(f"Invalid rank type: {rank_type}. Allowed are {RANK_TYPES}.")
-    elif rank_type != RANK_REALISTIC and name in TYPES_REALISTIC_ONLY:
+    if rank_type != RANK_REALISTIC and name in TYPES_REALISTIC_ONLY:
         raise ValueError(f"Invalid rank type for {name}: {rank_type}. Allowed type: {RANK_REALISTIC}")
+    # for mypy
+    assert rank_type in RANK_TYPES
 
     return MetricKey(name, side, rank_type, k)
 
