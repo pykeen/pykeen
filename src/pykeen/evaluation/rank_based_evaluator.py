@@ -9,7 +9,20 @@ import random
 import re
 from collections import defaultdict
 from dataclasses import dataclass, field, fields
-from typing import Collection, DefaultDict, Dict, Iterable, List, Mapping, NamedTuple, Optional, Sequence, Tuple, Union
+from typing import (
+    Collection,
+    DefaultDict,
+    Dict,
+    Iterable,
+    List,
+    Mapping,
+    MutableMapping,
+    NamedTuple,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+)
 import typing
 
 import numpy as np
@@ -244,8 +257,6 @@ def resolve_metric_name(name: str) -> MetricKey:
     side = side.lower()
     if side not in SIDES:
         raise ValueError(f"Invalid side: {side}. Allowed are {SIDES}.")
-    # for mypy
-    assert side in SIDES
 
     # normalize rank type
     rank_type = rank_type or RANK_REALISTIC
@@ -255,10 +266,8 @@ def resolve_metric_name(name: str) -> MetricKey:
         raise ValueError(f"Invalid rank type: {rank_type}. Allowed are {RANK_TYPES}.")
     if rank_type != RANK_REALISTIC and name in TYPES_REALISTIC_ONLY:
         raise ValueError(f"Invalid rank type for {name}: {rank_type}. Allowed type: {RANK_REALISTIC}")
-    # for mypy
-    assert rank_type in RANK_TYPES
 
-    return MetricKey(name, side, rank_type, k)
+    return MetricKey(name, side, rank_type, k)  # type: ignore
 
 
 @fix_dataclass_init_docs
@@ -497,10 +506,10 @@ class RankBasedEvaluator(Evaluator):
     num_entities: Optional[int]
 
     #: the actual rank data
-    ranks: Dict[Tuple[Side, RankType], List[np.ndarray]]
+    ranks: MutableMapping[RankType, MutableMapping[Side, List[np.ndarray]]]
 
     #: the number of choices for each ranking task; relevant for expected metrics
-    number_of_options: Dict[Side, List[np.ndarray]]
+    number_of_options: MutableMapping[Side, List[np.ndarray]]
 
     def __init__(
         self,
@@ -528,7 +537,7 @@ class RankBasedEvaluator(Evaluator):
                 raise ValueError(
                     "If k is a float, it should represent a relative rank, i.e. a value between 0 and 1 (excl.)",
                 )
-        self.ranks = defaultdict(list)
+        self.ranks = {rank_type: {side: [] for side in REAL_SIDES} for rank_type in RANK_TYPES}
         self.number_of_options = defaultdict(list)
         self.num_entities = None
 
@@ -549,8 +558,8 @@ class RankBasedEvaluator(Evaluator):
             all_scores=all_scores,
         )
         self.num_entities = all_scores.shape[1]
-        for k, v in batch_ranks.to_type_dict().items():
-            self.ranks[side, k].extend(v.detach().cpu().tolist())
+        for rank_type, ranks in batch_ranks.to_type_dict().items():
+            self.ranks[rank_type][side].extend(ranks.detach().cpu().tolist())
         self.number_of_options[side].extend(batch_ranks.number_of_options.detach().cpu().numpy())
 
     def process_tail_scores_(
@@ -573,22 +582,19 @@ class RankBasedEvaluator(Evaluator):
 
     @staticmethod
     def _get_for_side(
-        mapping: Mapping[Union[Side, Tuple[Side, RankType]], List[np.ndarray]],
+        mapping: Mapping[Side, List[np.ndarray]],
         side: ExtendedSide,
-        rank_type: Optional[RankType] = None,
     ) -> np.ndarray:
         values: List[np.ndarray]
-        if side == SIDE_BOTH:
+        if side in REAL_SIDES:
+            values = mapping.get(side, [])  # type: ignore
+        else:
+            assert side == SIDE_BOTH
             values = sum(
-                (
-                    RankBasedEvaluator._get_for_side(mapping=mapping, side=_side, rank_type=rank_type)
-                    for _side in REAL_SIDES
-                ),
+                (RankBasedEvaluator._get_for_side(mapping=mapping, side=_side) for _side in REAL_SIDES),
                 [],
             )
-        else:
-            key = side if rank_type is None else (side, rank_type)
-            values = mapping.get(key, [])
+
         return np.concatenate(values).astype(dtype=np.float64)
 
     def finalize(self) -> RankBasedMetricResults:  # noqa: D102
@@ -599,7 +605,7 @@ class RankBasedEvaluator(Evaluator):
         asr: DefaultDict[str, DefaultDict[ExtendedSide, Dict[RankType, float]]] = defaultdict(lambda: defaultdict(dict))
 
         for side, rank_type in itt.product(SIDES, RANK_TYPES):
-            ranks = self._get_for_side(mapping=self.ranks, side=side, rank_type=rank_type)
+            ranks = self._get_for_side(mapping=self.ranks[rank_type], side=side)
             if len(ranks) < 1:
                 logger.warning(f"No ranks for side={side}, rank_type={rank_type}")
                 continue
