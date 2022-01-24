@@ -4,6 +4,8 @@
 
 from typing import Any, ClassVar, Mapping, Optional, Tuple, Type, Union
 
+from class_resolver import OptionalKwargs
+
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss, SoftplusLoss
@@ -74,6 +76,8 @@ class SimplE(ERModel):
         clamp_score: Optional[Union[float, Tuple[float, float]]] = None,
         entity_initializer: Hint[Initializer] = None,
         relation_initializer: Hint[Initializer] = None,
+        regularizer: Hint[Regularizer] = None,
+        regularizer_kwargs: OptionalKwargs = None,
         **kwargs,
     ) -> None:
         super().__init__(
@@ -84,12 +88,15 @@ class SimplE(ERModel):
                 EmbeddingSpecification(
                     embedding_dim=embedding_dim,
                     initializer=entity_initializer,
-                    # TODO: regularizer?
+                    regularizer=regularizer,
+                    regularizer_kwargs=regularizer_kwargs,
                 ),
                 # tail entity
                 EmbeddingSpecification(
                     embedding_dim=embedding_dim,
                     initializer=entity_initializer,
+                    regularizer=regularizer,
+                    regularizer_kwargs=regularizer_kwargs,
                 ),
             ],
             relation_representations=[
@@ -97,11 +104,15 @@ class SimplE(ERModel):
                 EmbeddingSpecification(
                     embedding_dim=embedding_dim,
                     initializer=relation_initializer,
+                    regularizer=regularizer,
+                    regularizer_kwargs=regularizer_kwargs,
                 ),
                 # inverse relations
                 EmbeddingSpecification(
                     embedding_dim=embedding_dim,
                     initializer=relation_initializer,
+                    regularizer=regularizer,
+                    regularizer_kwargs=regularizer_kwargs,
                 ),
             ],
             **kwargs,
