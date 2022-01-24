@@ -1369,19 +1369,6 @@ class RepresentationTestCase(GenericTestCase[RepresentationModule]):
         prefix_shape = (self.instance.max_id,) if indices is None else tuple(indices.shape)
         self._check_result(x=representations, prefix_shape=prefix_shape)
 
-    def _test_canonical_shape(self, indices: Optional[torch.LongTensor]):
-        """Test canonical shape."""
-        x = self.instance.get_in_canonical_shape(indices=indices)
-        if indices is None:
-            prefix_shape = (1, self.instance.max_id)
-        elif indices.ndimension() == 1:
-            prefix_shape = (indices.shape[0], 1)
-        elif indices.ndimension() == 2:
-            prefix_shape = tuple(indices.shape)
-        else:
-            raise AssertionError(indices.shape)
-        self._check_result(x=x, prefix_shape=prefix_shape)
-
     def _test_indices(self, indices: Optional[torch.LongTensor]):
         """Test forward and canonical shape for indices."""
         self._test_forward(indices=indices)
