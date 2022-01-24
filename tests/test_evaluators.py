@@ -516,7 +516,7 @@ def test_sample_negatives():
     head_negatives, tail_negatives = sample_negatives(
         evaluation_triples=evaluation_triples,
         additional_filter_triples=additional_filter_triples,
-        num_entities=dataset.num_entities,
+        max_id=dataset.num_entities,
         num_samples=num_negatives,
     )
     num_triples = evaluation_triples.shape[0]

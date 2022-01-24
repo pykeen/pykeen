@@ -637,41 +637,37 @@ def sample_negatives(
     side: Side,
     additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
     num_samples: int = 50,
-    num_entities: Optional[int] = None,
+    max_id: Optional[int] = None,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Sample true negatives for sampled evaluation.
 
     :param evaluation_triples: shape: (n, 3)
         the evaluation triples
+    :param side:
+        the side for which to generate negatives
     :param additional_filter_triples:
         additional true triples which are to be filtered
     :param num_samples: >0
         the number of samples
-    :param num_entities:
-        the number of entities
+    :param max_id:
+        the maximum Id for the given side
 
-    :return:
-        a tuple (id_df, head_negatives, tail_negatives) where
-
-        - id_df: head_id | relation_id | tail_id | index
-            a dataframe mapping evaluation triples to their index
-        - head_negatives: shape: (n, num_negatives)
-            the negatives for head prediction
-        - tail_negatives: shape: (n, num_negatives)
-            the negatives for tail prediction
+    :return: shape: (n, num_negatives)
+        the negatives for the selected side prediction
     """
     additional_filter_triples = prepare_filter_triples(
         mapped_triples=evaluation_triples,
         additional_filter_triples=additional_filter_triples,
     )
-    num_entities = num_entities or (additional_filter_triples[:, [0, 2]].max().item() + 1)
+    # TODO: update for relation
+    max_id = max_id or (additional_filter_triples[:, [0, 2]].max().item() + 1)
     columns = ["head", "relation", "tail"]
     num_triples = evaluation_triples.shape[0]
     df = pd.DataFrame(data=evaluation_triples.numpy(), columns=columns)
     all_df = pd.DataFrame(data=additional_filter_triples.numpy(), columns=columns)
     id_df = df.reset_index()
-    all_ids = set(range(num_entities))
+    all_ids = set(range(max_id))
     this_negatives = torch.empty(size=(num_triples, num_samples), dtype=torch.long)
     other = [c for c in columns if c != side]
     for _, group in pd.merge(id_df, all_df, on=other, suffixes=["_eval", "_all"]).groupby(
@@ -736,7 +732,7 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
             negatives[side] = sample_negatives(
                 evaluation_triples=evaluation_factory.mapped_triples,
                 additional_filter_triples=additional_filter_triples,
-                num_entities=evaluation_factory.num_entities,
+                max_id=evaluation_factory.num_entities,
                 num_samples=num_negatives,
             )
 
