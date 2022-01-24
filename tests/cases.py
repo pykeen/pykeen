@@ -1372,7 +1372,6 @@ class RepresentationTestCase(GenericTestCase[RepresentationModule]):
     def _test_indices(self, indices: Optional[torch.LongTensor]):
         """Test forward and canonical shape for indices."""
         self._test_forward(indices=indices)
-        self._test_canonical_shape(indices=indices)
 
     def test_no_indices(self):
         """Test without indices."""
