@@ -89,10 +89,7 @@ class KG2E(ERModel):
         :param relation_initializer: Relation initializer function. Defaults to :func:`torch.nn.init.uniform_`
         :param relation_constrainer: Relation constrainer function. Defaults to :func:`pykeen.utils.clamp_norm`
         :param relation_constrainer_kwargs: Keyword arguments to be used when calling the relation constrainer
-        :param kwargs:
-            Remaining keyword arguments to forward to :class:`pykeen.models.EntityRelationEmbeddingModel`
-
-        :raises ValueError: if an illegal ``dist_similarity`` is given
+        :param kwargs: Remaining keyword arguments to forward to :class:`pykeen.models.ERModel`
         """
         super().__init__(
             interaction=KG2EInteraction,
