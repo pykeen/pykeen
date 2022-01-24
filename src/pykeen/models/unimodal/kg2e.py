@@ -2,18 +2,16 @@
 
 """Implementation of KG2E."""
 
-import math
 from typing import Any, ClassVar, Mapping, Optional
 
 import torch
 import torch.autograd
 from torch.nn.init import uniform_
 
-from pykeen.nn.modules import KG2EInteraction
-
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.emb import EmbeddingSpecification
+from ...nn.modules import KG2EInteraction
 from ...typing import Constrainer, Hint, Initializer
 from ...utils import clamp_norm
 
