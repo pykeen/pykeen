@@ -138,7 +138,7 @@ class Ranks:
     number_of_options: torch.LongTensor
 
     def to_type_dict(self) -> Mapping[RankType, torch.FloatTensor]:
-        """Return mapping from side to rank tensor."""
+        """Return mapping from rank-type to rank value tensor."""
         return {
             RANK_OPTIMISTIC: self.optimistic,
             RANK_REALISTIC: self.realistic,
