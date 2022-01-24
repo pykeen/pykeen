@@ -135,31 +135,6 @@ class RepresentationModule(nn.Module, ABC):
     def post_parameter_update(self):
         """Apply constraints which should not be included in gradients."""
 
-    def get_in_canonical_shape(
-        self,
-        indices: Optional[torch.LongTensor] = None,
-    ) -> torch.FloatTensor:
-        """Get representations in canonical shape.
-
-        :param indices: None, shape: (b,) or (b, n)
-            The indices. If None, return all representations.
-
-        :return: shape: (b?, n?, d)
-            If indices is None, b=1, n=max_id.
-            If indices is 1-dimensional, b=indices.shape[0] and n=1.
-            If indices is 2-dimensional, b, n = indices.shape
-        """
-        x = self.forward_unique(indices=indices)
-        if indices is None:
-            x = x.unsqueeze(dim=0)
-        elif indices.ndimension() > 2:
-            raise ValueError(
-                f"Undefined canonical shape for more than 2-dimensional index tensors: {indices.shape}",
-            )
-        elif indices.ndimension() == 1:
-            x = x.unsqueeze(dim=1)
-        return x
-
     @property
     def embedding_dim(self) -> int:
         """Return the "embedding dimension". Kept for backward compatibility."""

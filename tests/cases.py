@@ -1313,6 +1313,14 @@ class BaseKG2ETest(ModelTestCase):
     """General tests for the KG2E model."""
 
     cls = pykeen.models.KG2E
+    c_min: float = 0.01
+    c_max: float = 1.0
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        kwargs["c_min"] = self.c_min
+        kwargs["c_max"] = self.c_max
+        return kwargs
 
     def _check_constraints(self):
         """Check model constraints.
@@ -1320,10 +1328,14 @@ class BaseKG2ETest(ModelTestCase):
         * Entity and relation embeddings have to have at most unit L2 norm.
         * Covariances have to have values between c_min and c_max
         """
-        for embedding in (self.instance.entity_embeddings, self.instance.relation_embeddings):
+        self.instance: ERModel
+        (e_mean, e_cov), (r_mean, r_cov) = self.instance.entity_representations, self.instance.relation_representations
+        for embedding in (e_mean, r_mean):
             assert all_in_bounds(embedding(indices=None).norm(p=2, dim=-1), high=1.0, a_tol=EPSILON)
-        for cov in (self.instance.entity_covariances, self.instance.relation_covariances):
-            assert all_in_bounds(cov(indices=None), low=self.instance.c_min, high=self.instance.c_max)
+        for cov in (e_cov, r_cov):
+            assert all_in_bounds(
+                cov(indices=None), low=self.instance_kwargs["c_min"], high=self.instance_kwargs["c_max"]
+            )
 
 
 class BaseRGCNTest(ModelTestCase):
@@ -1369,23 +1381,9 @@ class RepresentationTestCase(GenericTestCase[RepresentationModule]):
         prefix_shape = (self.instance.max_id,) if indices is None else tuple(indices.shape)
         self._check_result(x=representations, prefix_shape=prefix_shape)
 
-    def _test_canonical_shape(self, indices: Optional[torch.LongTensor]):
-        """Test canonical shape."""
-        x = self.instance.get_in_canonical_shape(indices=indices)
-        if indices is None:
-            prefix_shape = (1, self.instance.max_id)
-        elif indices.ndimension() == 1:
-            prefix_shape = (indices.shape[0], 1)
-        elif indices.ndimension() == 2:
-            prefix_shape = tuple(indices.shape)
-        else:
-            raise AssertionError(indices.shape)
-        self._check_result(x=x, prefix_shape=prefix_shape)
-
     def _test_indices(self, indices: Optional[torch.LongTensor]):
         """Test forward and canonical shape for indices."""
         self._test_forward(indices=indices)
-        self._test_canonical_shape(indices=indices)
 
     def test_no_indices(self):
         """Test without indices."""
