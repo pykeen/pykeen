@@ -114,22 +114,15 @@ class Model(nn.Module, ABC):
             self.loss = loss_resolver.make(loss, pos_kwargs=loss_kwargs)
 
         self.use_inverse_relations = use_inverse_relations
-        assert use_inverse_relations == triples_factory.create_inverse_triples
         self.num_entities = triples_factory.num_entities
         self.num_relations = triples_factory.num_relations
+        self.effective_num_relations = 2 * self.num_relations if use_inverse_relations else self.num_relations
 
         """
         When predict_with_sigmoid is set to True, the sigmoid function is applied to the logits during evaluation and
         also for predictions after training, but has no effect on the training.
         """
         self.predict_with_sigmoid = predict_with_sigmoid
-
-    @property
-    def num_real_relations(self) -> int:
-        """Return the real number of relations (without inverses)."""
-        if self.use_inverse_triples:
-            return self.num_relations // 2
-        return self.num_relations
 
     def __init_subclass__(cls, **kwargs):
         """Initialize the subclass.

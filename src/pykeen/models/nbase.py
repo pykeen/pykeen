@@ -11,16 +11,14 @@ from operator import itemgetter
 from typing import Any, ClassVar, Generic, Iterable, List, Mapping, Optional, Sequence, Tuple, Type, Union, cast
 
 import torch
-from class_resolver import HintOrType, OptionalKwargs
 from torch import nn
 
 from .base import Model
-from ..losses import Loss
 from ..nn.emb import EmbeddingSpecification, RepresentationModule
 from ..nn.modules import Interaction, interaction_resolver
 from ..regularizers import Regularizer
 from ..triples import CoreTriplesFactory
-from ..typing import DeviceHint, HeadRepresentation, RelationRepresentation, TailRepresentation
+from ..typing import HeadRepresentation, RelationRepresentation, TailRepresentation
 from ..utils import check_shapes
 
 __all__ = [
@@ -271,17 +269,18 @@ class ERModel(
             additional keyword-based arguments passed to Model.__init__
         """
         super().__init__(triples_factory=triples_factory, **kwargs)
-        self.interaction = interaction_resolver.make(interaction, pos_kwargs=interaction_kwargs)
+        interaction_instance: Interaction = interaction_resolver.make(interaction, pos_kwargs=interaction_kwargs)
+        self.interaction = interaction_instance
         self.entity_representations = _prepare_representation_module_list(
             representations=entity_representations,
-            num_embeddings=triples_factory.num_entities,
+            num_embeddings=self.num_entities,
             shapes=self.interaction.entity_shape,
             label="entity",
             skip_checks=self.interaction.tail_entity_shape is not None or skip_checks,
         )
         self.relation_representations = _prepare_representation_module_list(
             representations=relation_representations,
-            num_embeddings=triples_factory.num_relations,
+            num_embeddings=self.effective_num_relations,
             shapes=self.interaction.relation_shape,
             label="relation",
         )
@@ -350,6 +349,7 @@ class ERModel(
         """
         if not self.entity_representations or not self.relation_representations:
             raise NotImplementedError("repeat scores not implemented for general case.")
+        # TODO: inverse relations?
         h, r, t = self._get_representations(h=h_indices, r=r_indices, t=t_indices)
         return self.interaction.score(h=h, r=r, t=t, slice_size=slice_size, slice_dim=slice_dim)
 
