@@ -50,6 +50,9 @@ class FixedModel(Model):
     def collect_regularization_term(self):  # noqa: D102
         return 0.0
 
+    def _get_entity_len(self, mode: Mode) -> int:
+        return self.num_entities
+
     def _reset_parameters_(self):  # noqa: D102
         pass  # Not needed for mock model
 
