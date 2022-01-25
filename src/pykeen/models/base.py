@@ -3,6 +3,7 @@
 """Base module for all KGE models."""
 
 from __future__ import annotations
+from bdb import effective
 
 import functools
 import inspect
@@ -59,8 +60,13 @@ class Model(nn.Module, ABC):
     #: The instance of the loss
     loss: Loss
 
+    #: the number of entities
     num_entities: int
+
+    #: the number of relations
     num_relations: int
+
+    #: whether to use inverse relations
     use_inverse_relations: bool
 
     can_slice_h: ClassVar[bool]
@@ -69,6 +75,7 @@ class Model(nn.Module, ABC):
 
     def __init__(
         self,
+        # TODO: we only need the triples factory for num_{entities,relations} -> allow to pass only those
         triples_factory: CoreTriplesFactory,
         loss: HintOrType[Loss] = None,
         loss_kwargs: Optional[Mapping[str, Any]] = None,
@@ -116,13 +123,19 @@ class Model(nn.Module, ABC):
         self.use_inverse_relations = use_inverse_relations
         self.num_entities = triples_factory.num_entities
         self.num_relations = triples_factory.num_relations
-        self.effective_num_relations = 2 * self.num_relations if use_inverse_relations else self.num_relations
 
         """
         When predict_with_sigmoid is set to True, the sigmoid function is applied to the logits during evaluation and
         also for predictions after training, but has no effect on the training.
         """
         self.predict_with_sigmoid = predict_with_sigmoid
+
+    @property
+    def effective_num_relations(self) -> int:
+        """Return the effective number of relations, i.e., including inverse relations."""
+        if self.use_inverse_relations:
+            return 2 * self.num_relations
+        return self.num_relations
 
     def __init_subclass__(cls, **kwargs):
         """Initialize the subclass.
