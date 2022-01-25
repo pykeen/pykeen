@@ -92,6 +92,8 @@ from .hole import HolE
 from .kg2e import KG2E
 from .mure import MuRE
 from .node_piece import NodePiece
+from .inductive_nodepiece import InductiveNodePiece
+from .inductive_nodepiece_gnn import InductiveNodePieceGNN
 from .ntn import NTN
 from .pair_re import PairRE
 from .proj_e import ProjE
@@ -128,6 +130,8 @@ __all__ = [
     "MuRE",
     "NTN",
     "NodePiece",
+    "InductiveNodePiece",
+    "InductiveNodePieceGNN",
     "PairRE",
     "ProjE",
     "QuatE",
