@@ -570,8 +570,7 @@ class Model(nn.Module, ABC):
             For each h-t pair, the scores for all possible relations.
         """
         self.eval()  # Enforce evaluation mode
-        ht_batch = ht_batch.to(self.device)
-        scores = self.score_r_extended(ht_batch, slice_size=slice_size)
+        scores = self.score_r_extended(ht_batch.to(self.device), slice_size=slice_size)
         if self.predict_with_sigmoid:
             scores = torch.sigmoid(scores)
         return scores
