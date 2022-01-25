@@ -360,7 +360,6 @@ class ERModel(
     def score_hrt(
         self,
         hrt_batch: torch.LongTensor,
-        invert_relation: bool = False,
     ) -> torch.FloatTensor:
         """Forward pass.
 
@@ -380,7 +379,6 @@ class ERModel(
             h=hrt_batch[:, 0],
             r=hrt_batch[:, 1],
             t=hrt_batch[:, 2],
-            invert_relation=invert_relation,
         )
         return self.interaction.score_hrt(h=h, r=r, t=t)
 
@@ -388,7 +386,6 @@ class ERModel(
         self,
         hr_batch: torch.LongTensor,
         slice_size: Optional[int] = None,
-        invert_relation: bool = False,
     ) -> torch.FloatTensor:
         """Forward pass using right side (tail) prediction.
 
@@ -402,7 +399,7 @@ class ERModel(
         :return: shape: (batch_size, num_entities), dtype: float
             For each h-r pair, the scores for all possible tails.
         """
-        h, r, t = self._get_representations(h=hr_batch[:, 0], r=hr_batch[:, 1], t=None, invert_relation=invert_relation)
+        h, r, t = self._get_representations(h=hr_batch[:, 0], r=hr_batch[:, 1], t=None)
         return repeat_if_necessary(
             scores=self.interaction.score_t(h=h, r=r, all_entities=t, slice_size=slice_size),
             representations=self.entity_representations,
@@ -413,7 +410,6 @@ class ERModel(
         self,
         rt_batch: torch.LongTensor,
         slice_size: Optional[int] = None,
-        invert_relation: bool = False,
     ) -> torch.FloatTensor:
         """Forward pass using left side (head) prediction.
 
@@ -427,7 +423,7 @@ class ERModel(
         :return: shape: (batch_size, num_entities), dtype: float
             For each r-t pair, the scores for all possible heads.
         """
-        h, r, t = self._get_representations(h=None, r=rt_batch[:, 0], t=rt_batch[:, 1], invert_relation=invert_relation)
+        h, r, t = self._get_representations(h=None, r=rt_batch[:, 0], t=rt_batch[:, 1])
         return repeat_if_necessary(
             scores=self.interaction.score_h(all_entities=h, r=r, t=t, slice_size=slice_size),
             representations=self.entity_representations,
@@ -438,7 +434,6 @@ class ERModel(
         self,
         ht_batch: torch.LongTensor,
         slice_size: Optional[int] = None,
-        invert_relation: bool = False,
     ) -> torch.FloatTensor:
         """Forward pass using middle (relation) prediction.
 
@@ -452,7 +447,7 @@ class ERModel(
         :return: shape: (batch_size, num_relations), dtype: float
             For each h-t pair, the scores for all possible relations.
         """
-        h, r, t = self._get_representations(h=ht_batch[:, 0], r=None, t=ht_batch[:, 1], invert_relation=invert_relation)
+        h, r, t = self._get_representations(h=ht_batch[:, 0], r=None, t=ht_batch[:, 1])
         return repeat_if_necessary(
             scores=self.interaction.score_r(h=h, all_relations=r, t=t, slice_size=slice_size),
             representations=self.relation_representations,
@@ -467,13 +462,6 @@ class ERModel(
         invert_relation: bool,
     ) -> Tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]:
         """Get representations for head, relation and tails."""
-        if invert_relation and not self.use_inverse_relations:
-            raise ValueError("Can only invert relations if use_inverse_relations is set to True")
-        if self.use_inverse_relations:
-            # TODO: with the current default inversion, we have to materialize the relation IDs
-            if r is None:
-                r = torch.arange(self.num_relations, device=self.device)
-            r = relation_inverter.map(batch=r, index=0, invert=invert_relation)
         hr, rr, tr = [
             [representation.forward_unique(indices=indices) for representation in representations]
             for indices, representations in (
