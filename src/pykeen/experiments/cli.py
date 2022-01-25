@@ -2,7 +2,6 @@
 
 """Run landmark experiments."""
 
-import itertools
 import logging
 import os
 import pathlib
