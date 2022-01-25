@@ -13,9 +13,8 @@ from typing import Any, ClassVar, Generic, Iterable, List, Mapping, Optional, Se
 import torch
 from torch import nn
 
-from pykeen.triples.triples_factory import RelationInverter
 
-from .base import Model
+from .base import Model, relation_inverter
 from ..nn.emb import EmbeddingSpecification, RepresentationModule
 from ..nn.modules import Interaction, interaction_resolver
 from ..regularizers import Regularizer
@@ -466,8 +465,6 @@ class ERModel(
         if invert_relation:
             if not self.use_inverse_relations:
                 raise ValueError
-            # TODO
-            relation_inverter: RelationInverter = ...
             if r is None:
                 r = torch.arange(self.num_relations, device=self.device)
             r = relation_inverter.invert_(batch=r, index=0)

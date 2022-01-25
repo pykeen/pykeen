@@ -3,7 +3,6 @@
 """Base module for all KGE models."""
 
 from __future__ import annotations
-from bdb import effective
 
 import functools
 import inspect
@@ -12,7 +11,7 @@ import os
 import pickle
 import warnings
 from abc import ABC, abstractmethod
-from typing import Any, ClassVar, Iterable, Mapping, Optional, Sequence, Type, Union
+from typing import Any, ClassVar, Iterable, Mapping, Optional, Sequence, Type, TypeVar, Union
 
 import pandas as pd
 import torch
@@ -34,6 +33,55 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
+
+RelationID = TypeVar("RelationID", int, torch.LongTensor)
+
+
+class RelationInverter:
+    """An interface for inverse-relation ID mapping."""
+
+    # TODO: method is_inverse?
+
+    @abstractmethod
+    def get_inverse_id(self, relation_id: RelationID) -> RelationID:
+        """Get the inverse ID for a given relation."""
+        # TODO: inverse of inverse?
+        raise NotImplementedError
+
+    @abstractmethod
+    def _map(self, batch: torch.LongTensor, index: int = 1) -> torch.LongTensor:
+        raise NotImplementedError
+
+    @abstractmethod
+    def invert_(self, batch: torch.LongTensor, index: int = 1) -> torch.LongTensor:
+        """Invert relations in a batch (in-place)."""
+        raise NotImplementedError
+
+    def map(self, batch: torch.LongTensor, index: int = 1, invert: bool = False) -> torch.LongTensor:
+        """Map relations of batch, optionally also inverting them."""
+        batch = self._map(batch=batch, index=index)
+        return self.invert_(batch=batch, index=index) if invert else batch
+
+
+class DefaultRelationInverter(RelationInverter):
+    """Maps normal relations to even IDs, and the corresponding inverse to the next odd ID."""
+
+    def get_inverse_id(self, relation_id: RelationID) -> RelationID:  # noqa: D102
+        return relation_id + 1
+
+    def _map(self, batch: torch.LongTensor, index: int = 1) -> torch.LongTensor:  # noqa: D102
+        batch = batch.clone()
+        batch[:, index] *= 2
+        return batch
+
+    def invert_(self, batch: torch.LongTensor, index: int = 1) -> torch.LongTensor:  # noqa: D102
+        # The number of relations stored in the triples factory includes the number of inverse relations
+        # Id of inverse relation: relation + 1
+        batch[:, index] += 1
+        return batch
+
+
+relation_inverter = DefaultRelationInverter()
 
 
 class Model(nn.Module, ABC):
@@ -189,7 +237,7 @@ class Model(nn.Module, ABC):
             The indices of (head, relation, tail) triples.
         :param invert_relation:
             whether to invert the relation. If True, the model has to have enabled `use_inverse_relations`.
-        
+
         :return: shape: (batch_size, 1), dtype: float
             The score for each triple.
         """

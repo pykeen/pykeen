@@ -10,7 +10,7 @@ from .instances import (
     MultimodalSLCWAInstances,
     SLCWAInstances,
 )
-from .triples_factory import CoreTriplesFactory, RelationInverter, TriplesFactory, relation_inverter
+from .triples_factory import CoreTriplesFactory, TriplesFactory
 from .triples_numeric_literals_factory import TriplesNumericLiteralsFactory
 
 __all__ = [
@@ -21,8 +21,6 @@ __all__ = [
     "MultimodalLCWAInstances",
     "SLCWAInstances",
     "CoreTriplesFactory",
-    "RelationInverter",
-    "relation_inverter",
     "TriplesFactory",
     "TriplesNumericLiteralsFactory",
 ]
