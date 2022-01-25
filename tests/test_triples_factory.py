@@ -17,7 +17,7 @@ from pykeen.datasets import Hetionet, Nations, SingleTabbedDataset
 from pykeen.datasets.nations import NATIONS_TRAIN_PATH
 from pykeen.triples import CoreTriplesFactory, LCWAInstances, TriplesFactory, TriplesNumericLiteralsFactory
 from pykeen.triples.splitting import splitter_resolver
-from pykeen.triples.triples_factory import INVERSE_SUFFIX, _map_triples_elements_to_ids
+from pykeen.triples.triples_factory import _map_triples_elements_to_ids
 from pykeen.triples.utils import TRIPLES_DF_COLUMNS, load_triples
 from tests.constants import RESOURCES
 
@@ -67,38 +67,6 @@ class TestTriplesFactory(unittest.TestCase):
         """Instantiate test instance."""
         self.factory = Nations().training
 
-    def test_correct_inverse_creation(self):
-        """Test if the triples and the corresponding inverses are created."""
-        t = [
-            ["e1", "a.", "e5"],
-            ["e1", "a", "e2"],
-        ]
-        t = np.array(t, dtype=str)
-        factory = TriplesFactory.from_labeled_triples(triples=t, create_inverse_triples=True)
-        instances = factory.create_slcwa_instances()
-        assert len(instances) == 4
-
-    def test_automatic_incomplete_inverse_detection(self):
-        """Test detecting that the triples contain inverses, warns about them, and filters them out."""
-        # comment(mberr): from my pov this behaviour is faulty: the triples factory is expected to say it contains
-        # inverse relations, although the triples contained in it are not the same we would have when removing the
-        # first triple, and passing create_inverse_triples=True.
-        t = [
-            ["e3", f"a.{INVERSE_SUFFIX}", "e10"],
-            ["e1", "a", "e2"],
-            ["e1", "a.", "e5"],
-        ]
-        t = np.array(t, dtype=str)
-        for create_inverse_triples in (False, True):
-            with patch("pykeen.triples.triples_factory.logger.warning") as warning:
-                factory = TriplesFactory.from_labeled_triples(triples=t, create_inverse_triples=create_inverse_triples)
-                # check for warning
-                warning.assert_called()
-                # check for filtered triples
-                assert factory.num_triples == 2
-                # check for correct inverse triples flag
-                assert factory.create_inverse_triples == create_inverse_triples
-
     def test_id_to_label(self):
         """Test ID-to-label conversion."""
         for label_to_id, id_to_label in [
@@ -147,9 +115,6 @@ class TestTriplesFactory(unittest.TestCase):
         equal_factory_object = id(restricted_triples_factory) == id(original_triples_factory)
         assert no_restriction_to_apply == equal_factory_object
 
-        # check that inverse_triples is correctly carried over
-        assert original_triples_factory.create_inverse_triples == restricted_triples_factory.create_inverse_triples
-
         # verify that the label-to-ID mapping has not been changed
         assert original_triples_factory.entity_to_id == restricted_triples_factory.entity_to_id
         assert original_triples_factory.relation_to_id == restricted_triples_factory.relation_to_id
@@ -186,31 +151,28 @@ class TestTriplesFactory(unittest.TestCase):
             "burma",
             "china",
         }
-        for inverse_triples in (True, False):
-            original_triples_factory = Nations(
-                create_inverse_triples=inverse_triples,
-            ).training
-            # Test different combinations of restrictions
-            for (
-                (entity_restriction, invert_entity_selection),
-                (relation_restriction, invert_relation_selection),
-            ) in itt.product(
-                ((None, None), (entity_restriction, False), (entity_restriction, True)),
-                ((None, None), (relation_restriction, False), (relation_restriction, True)),
+        original_triples_factory = Nations().training
+        # Test different combinations of restrictions
+        for (
+            (entity_restriction, invert_entity_selection),
+            (relation_restriction, invert_relation_selection),
+        ) in itt.product(
+            ((None, None), (entity_restriction, False), (entity_restriction, True)),
+            ((None, None), (relation_restriction, False), (relation_restriction, True)),
+        ):
+            with self.subTest(
+                entity_restriction=entity_restriction,
+                invert_entity_selection=invert_entity_selection,
+                relation_restriction=relation_restriction,
+                invert_relation_selection=invert_relation_selection,
             ):
-                with self.subTest(
+                self._test_restriction(
+                    original_triples_factory=original_triples_factory,
                     entity_restriction=entity_restriction,
                     invert_entity_selection=invert_entity_selection,
                     relation_restriction=relation_restriction,
                     invert_relation_selection=invert_relation_selection,
-                ):
-                    self._test_restriction(
-                        original_triples_factory=original_triples_factory,
-                        entity_restriction=entity_restriction,
-                        invert_entity_selection=invert_entity_selection,
-                        relation_restriction=relation_restriction,
-                        invert_relation_selection=invert_relation_selection,
-                    )
+                )
 
     def test_create_lcwa_instances(self):
         """Test create_lcwa_instances."""
@@ -238,17 +200,6 @@ class TestTriplesFactory(unittest.TestCase):
             assert x.dtype == torch.long
             assert y.shape == (batch_size, factory.num_entities)
             assert y.dtype == torch.get_default_dtype()
-
-    def test_split_inverse_triples(self):
-        """Test whether inverse triples are only created in the training factory."""
-        # set create inverse triple to true
-        self.factory.create_inverse_triples = True
-        # split factory
-        train, *others = self.factory.split()
-        # check that in *training* inverse triple are to be created
-        assert train.create_inverse_triples
-        # check that in all other splits no inverse triples are to be created
-        assert not any(f.create_inverse_triples for f in others)
 
 
 class TestSplit(unittest.TestCase):
@@ -395,40 +346,12 @@ class TestLiterals(unittest.TestCase):
             == triples_factory.mapped_triples
         ).all()
 
-    def test_inverse_triples(self):
-        """Test that the right number of entities and triples exist after inverting them."""
-        triples_factory = TriplesFactory.from_labeled_triples(triples=triples, create_inverse_triples=True)
-        self.assertEqual(4, triples_factory.num_relations)
-        self.assertEqual(
-            set(range(triples_factory.num_entities)),
-            set(triples_factory.entity_to_id.values()),
-            msg="wrong number entities",
-        )
-        self.assertEqual(
-            set(range(triples_factory.real_num_relations)),
-            set(triples_factory.relation_to_id.values()),
-            msg="wrong number relations",
-        )
-
-        relations = set(triples[:, 1])
-        entities = set(triples[:, 0]).union(triples[:, 2])
-        self.assertEqual(len(entities), triples_factory.num_entities, msg="wrong number entities")
-        self.assertEqual(2, len(relations), msg="Wrong number of relations in set")
-        self.assertEqual(
-            2 * len(relations),
-            triples_factory.num_relations,
-            msg="Wrong number of relations in factory",
-        )
-
     def test_metadata(self):
         """Test metadata passing for triples factories."""
         t = Nations().training
         self.assertEqual(NATIONS_TRAIN_PATH, t.metadata["path"])
         self.assertEqual(
-            (
-                f"TriplesFactory(num_entities=14, num_relations=55, num_triples=1592,"
-                f' inverse_triples=False, path="{NATIONS_TRAIN_PATH}")'
-            ),
+            (f"TriplesFactory(num_entities=14, num_relations=55, num_triples=1592," f'path="{NATIONS_TRAIN_PATH}")'),
             repr(t),
         )
 
@@ -439,7 +362,7 @@ class TestLiterals(unittest.TestCase):
         self.assertEqual(
             (
                 f"TriplesFactory(num_entities=14, num_relations=55, num_triples=37,"
-                f' inverse_triples=False, entity_restriction={repr(entities_ids)}, path="{NATIONS_TRAIN_PATH}")'
+                f'entity_restriction={repr(entities_ids)}, path="{NATIONS_TRAIN_PATH}")'
             ),
             repr(x),
         )
@@ -451,7 +374,7 @@ class TestLiterals(unittest.TestCase):
         self.assertEqual(
             (
                 f"TriplesFactory(num_entities=14, num_relations=55, num_triples=29,"
-                f' inverse_triples=False, path="{NATIONS_TRAIN_PATH}", relation_restriction={repr(relations_ids)})'
+                f'path="{NATIONS_TRAIN_PATH}", relation_restriction={repr(relations_ids)})'
             ),
             repr(v),
         )
@@ -460,7 +383,7 @@ class TestLiterals(unittest.TestCase):
         self.assertIsInstance(w, TriplesFactory)
         self.assertNotIn("path", w.metadata)
         self.assertEqual(
-            "TriplesFactory(num_entities=14, num_relations=55, num_triples=5, inverse_triples=False)",
+            "TriplesFactory(num_entities=14, num_relations=55, num_triples=5)",
             repr(w),
         )
 
