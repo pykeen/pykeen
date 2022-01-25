@@ -49,14 +49,18 @@ logger = logging.getLogger(__name__)
 
 Side = Literal["head", "tail"]
 ExtendedSide = Union[Side, Literal["both"]]
-SIDE_HEAD, SIDE_TAIL = typing.get_args(Side)
+# SIDE_HEAD, SIDE_TAIL = typing.get_args(Side) # Python >= 3.8
+SIDE_HEAD: Side = "head"
+SIDE_TAIL: Side = "tail"
 SIDE_BOTH: ExtendedSide = "both"
 
-REAL_SIDES: Tuple[Side, ...] = typing.get_args(Side)
+# REAL_SIDES: Tuple[Side, ...] = typing.get_args(Side)  # Python >= 3.8
+REAL_SIDES: Tuple[Side, ...] = (SIDE_HEAD, SIDE_TAIL)
 SIDES: Tuple[ExtendedSide, ...] = cast(Tuple[ExtendedSide, ...], REAL_SIDES) + (SIDE_BOTH,)
 
 RankType = Literal["optimistic", "realistic", "pessimistic"]
-RANK_TYPES: Tuple[RankType, ...] = typing.get_args(RankType)
+# RANK_TYPES: Tuple[RankType, ...] = typing.get_args(RankType) # Python >= 3.8
+RANK_TYPES = Tuple[RankType, ...] = ("optimistic", "realistic", "pessimistic")
 RANK_OPTIMISTIC, RANK_REALISTIC, RANK_PESSIMISTIC = RANK_TYPES
 
 
