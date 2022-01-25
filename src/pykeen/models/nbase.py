@@ -281,7 +281,7 @@ class ERModel(
         )
         self.relation_representations = _prepare_representation_module_list(
             representations=relation_representations,
-            # note: this is the *effective* number of relations, since we also need 
+            # note: this is the *effective* number of relations, since we also need
             # representations for the inverse relations
             num_embeddings=self.effective_num_relations,
             shapes=self.interaction.relation_shape,
@@ -377,7 +377,10 @@ class ERModel(
         # Note: we do not delegate to the general method for performance reasons
         # Note: repetition is not necessary here
         h, r, t = self._get_representations(
-            h=hrt_batch[:, 0], r=hrt_batch[:, 1], t=hrt_batch[:, 2], invert_relation=invert_relation
+            h=hrt_batch[:, 0],
+            r=hrt_batch[:, 1],
+            t=hrt_batch[:, 2],
+            invert_relation=invert_relation,
         )
         return self.interaction.score_hrt(h=h, r=r, t=t)
 
