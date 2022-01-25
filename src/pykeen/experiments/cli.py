@@ -2,6 +2,7 @@
 
 """Run landmark experiments."""
 
+import itertools
 import logging
 import os
 import pathlib
@@ -12,6 +13,7 @@ from typing import Optional, Union
 from uuid import uuid4
 
 import click
+import tabulate
 from more_click import verbose_option
 
 from pykeen.utils import CONFIGURATION_FILE_FORMATS, load_configuration
@@ -63,7 +65,13 @@ def experiments():
     """Run landmark experiments."""
 
 
-@experiments.command()
+@experiments.command(
+    epilog="Available experiments:\n\n\b\n"
+    + tabulate.tabulate(
+        sorted(path.stem.split("_") for ext in CONFIGURATION_FILE_FORMATS for path in HERE.rglob(f"*{ext}")),
+        headers=("reference", "model", "dataset"),
+    ),
+)
 @click.argument("model")
 @click.argument("reference")
 @click.argument("dataset")
