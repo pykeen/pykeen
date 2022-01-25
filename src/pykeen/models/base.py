@@ -7,6 +7,7 @@ from __future__ import annotations
 import functools
 import inspect
 import logging
+from operator import invert
 import os
 import pickle
 import warnings
@@ -468,7 +469,7 @@ class Model(nn.Module, ABC):
             The score for each triple.
         """
         self.eval()  # Enforce evaluation mode
-        scores = self.score_hrt(self._prepare_batch(batch=hrt_batch, index_relation=1))
+        scores = self.score_hrt_extended(hrt_batch=hrt_batch)
         if self.predict_with_sigmoid:
             scores = torch.sigmoid(scores)
         return scores
@@ -499,11 +500,10 @@ class Model(nn.Module, ABC):
             For each r-t pair, the scores for all possible heads.
         """
         self.eval()  # Enforce evaluation mode
-        rt_batch = self._prepare_batch(batch=rt_batch, index_relation=0)
         if self.use_inverse_relations:
-            scores = self.score_h_inverse(rt_batch=rt_batch, slice_size=slice_size)
+            scores = self.score_t_extended(rt_batch=rt_batch, slice_size=slice_size, invert_relation=True)
         else:
-            scores = self.score_h(rt_batch, slice_size=slice_size)
+            scores = self.score_h_extended(rt_batch=rt_batch, slice_size=slice_size)
         if self.predict_with_sigmoid:
             scores = torch.sigmoid(scores)
         return scores
@@ -537,8 +537,7 @@ class Model(nn.Module, ABC):
             behavior regardless of the use of inverse triples.
         """
         self.eval()  # Enforce evaluation mode
-        hr_batch = self._prepare_batch(batch=hr_batch, index_relation=1)
-        scores = self.score_t(hr_batch, slice_size=slice_size)
+        scores = self.score_t_extended(hr_batch, slice_size=slice_size)
         if self.predict_with_sigmoid:
             scores = torch.sigmoid(scores)
         return scores
@@ -564,7 +563,7 @@ class Model(nn.Module, ABC):
         """
         self.eval()  # Enforce evaluation mode
         ht_batch = ht_batch.to(self.device)
-        scores = self.score_r(ht_batch, slice_size=slice_size)
+        scores = self.score_r_extended(ht_batch, slice_size=slice_size)
         if self.predict_with_sigmoid:
             scores = torch.sigmoid(scores)
         return scores
