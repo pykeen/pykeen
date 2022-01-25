@@ -998,6 +998,7 @@ def pipeline(  # noqa: C901
     _result_tracker.start_run(run_name=title)
 
     _device: torch.device = resolve_device(device)
+    logger.info(f"Using device: {device}")
 
     dataset_instance: Dataset = get_dataset(
         dataset=dataset,
