@@ -3,6 +3,7 @@
 """Base module for all KGE models."""
 
 from __future__ import annotations
+from collections import defaultdict
 
 import functools
 import inspect
@@ -133,18 +134,16 @@ class Model(nn.Module, ABC):
     @property
     def device(self) -> torch.device:
         """Return the model's device."""
-        devices = {
-            tensor.data.device
-            for tensor in itertools.chain(self.parameters(), self.buffers())
-        }
+        devices = {tensor.data.device for tensor in itertools.chain(self.parameters(), self.buffers())}
         if len(devices) == 0:
-            raise ValueError('Could not infer device, since there are neither parameters nor buffers.')
+            raise ValueError("Could not infer device, since there are neither parameters nor buffers.")
         elif len(devices) > 1:
-            device_info = dict(
-                parameters=dict(self.named_parameters()),
-                buffers=dict(self.named_buffers()),
-            )
-            raise ValueError(f'Ambiguous device! Found: {devices}\n\n{device_info}')
+            # prepare debug information
+            info = defaultdict(list)
+            for name, tensor in itertools.chain(self.named_parameters(), self.named_buffers()):
+                info[tensor.data.device].append(name)
+            info = {device: sorted(tensor_names) for device, tensor_names in info.items()}
+            raise ValueError(f"Ambiguous device! Found: {devices}\n\n{info}")
         else:
             return next(iter(devices))
 
