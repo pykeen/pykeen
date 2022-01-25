@@ -13,7 +13,7 @@ import os
 import pickle
 import warnings
 from abc import ABC, abstractmethod
-from typing import Any, ClassVar, Iterable, Mapping, Optional, Sequence, Type, Union
+from typing import Any, ClassVar, Collection, Iterable, Mapping, Optional, Sequence, Type, Union
 
 import pandas as pd
 import torch
@@ -134,7 +134,7 @@ class Model(nn.Module, ABC):
     @property
     def device(self) -> torch.device:
         """Return the model's device."""
-        devices = {tensor.data.device for tensor in itertools.chain(self.parameters(), self.buffers())}
+        devices = self.get_devices()
         if len(devices) == 0:
             raise ValueError("Could not infer device, since there are neither parameters nor buffers.")
         elif len(devices) > 1:
@@ -146,6 +146,10 @@ class Model(nn.Module, ABC):
             raise ValueError(f"Ambiguous device! Found: {devices}\n\n{info}")
         else:
             return next(iter(devices))
+
+    def get_devices(self) -> Collection[torch.device]:
+        """Return the device(s) from each components of the model."""
+        return {tensor.data.device for tensor in itertools.chain(self.parameters(), self.buffers())}
 
     def reset_parameters_(self):  # noqa: D401
         """Reset all parameters of the model and enforce model constraints."""
