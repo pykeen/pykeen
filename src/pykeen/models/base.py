@@ -501,7 +501,7 @@ class Model(nn.Module, ABC):
         """
         self.eval()  # Enforce evaluation mode
         if self.use_inverse_relations:
-            scores = self.score_t_extended(rt_batch=rt_batch, slice_size=slice_size, invert_relation=True)
+            scores = self.score_t_extended(hr_batch=rt_batch.flip(1), slice_size=slice_size, invert_relation=True)
         else:
             scores = self.score_h_extended(rt_batch=rt_batch, slice_size=slice_size)
         if self.predict_with_sigmoid:
@@ -666,15 +666,6 @@ class Model(nn.Module, ABC):
 
     """Inverse scoring"""
 
-    def _prepare_inverse_batch(self, batch: torch.LongTensor, index_relation: int) -> torch.LongTensor:
-        if not self.use_inverse_relations:
-            raise ValueError(
-                "Your model is not configured to predict with inverse relations."
-                " Set ``create_inverse_triples=True`` when creating the dataset/triples factory"
-                " or using the pipeline().",
-            )
-        return relation_inverter.invert_(batch=batch, index=index_relation).flip(1)
-
     def score_hrt_inverse(
         self,
         hrt_batch: torch.LongTensor,
@@ -685,18 +676,15 @@ class Model(nn.Module, ABC):
         The forward score is calculated from $f(h,r,t)$ and the inverse score is calculated from $f(t,r_{inv},h)$.
         This function enables users to inspect the scores obtained by using the corresponding inverse triples.
         """
-        t_r_inv_h = self._prepare_inverse_batch(batch=hrt_batch, index_relation=1)
-        return self.score_hrt(hrt_batch=t_r_inv_h)
+        return self.score_hrt_extended(hrt_batch=hrt_batch.flip(1), invert_relation=True)
 
     def score_t_inverse(self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None):
         """Score all tails for a batch of (h,r)-pairs using the head predictions for the inverses $(*,r_{inv},h)$."""
-        r_inv_h = self._prepare_inverse_batch(batch=hr_batch, index_relation=1)
-        return self.score_h(rt_batch=r_inv_h, slice_size=slice_size)
+        return self.score_h_extended(rt_batch=hr_batch.flip(1), slice_size=slice_size, invert_relation=True)
 
     def score_h_inverse(self, rt_batch: torch.LongTensor, slice_size: Optional[int] = None):
         """Score all heads for a batch of (r,t)-pairs using the tail predictions for the inverses $(t,r_{inv},*)$."""
-        t_r_inv = self._prepare_inverse_batch(batch=rt_batch, index_relation=0)
-        return self.score_t(hr_batch=t_r_inv, slice_size=slice_size)
+        return self.score_t_extended(hr_batch=rt_batch.flip(1), slice_size=slice_size, invert_relation=True)
 
 
 class _OldAbstractModel(Model, ABC, autoreset=False):
