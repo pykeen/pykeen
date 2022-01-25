@@ -148,16 +148,18 @@ class SimplE(EntityRelationEmbeddingModel):
     def score_hrt(self, hrt_batch: torch.LongTensor, mode: Optional[Mode] = None) -> torch.FloatTensor:  # noqa: D102
         return self._score(h_indices=hrt_batch[:, 0], r_indices=hrt_batch[:, 1], t_indices=hrt_batch[:, 2]).view(-1, 1)
 
-    def score_t(self,
-                hr_batch: torch.LongTensor,
-                slice_size: Optional[int] = None,
-                mode: Optional[Mode] = None,
-        ) -> torch.FloatTensor:  # noqa: D102
+    def score_t(
+        self,
+        hr_batch: torch.LongTensor,
+        slice_size: Optional[int] = None,
+        mode: Optional[Mode] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
         return self._score(h_indices=hr_batch[:, 0], r_indices=hr_batch[:, 1], t_indices=None)
 
-    def score_h(self,
-                rt_batch: torch.LongTensor,
-                slice_size: Optional[int] = None,
-                mode: Optional[Mode] = None,
-        ) -> torch.FloatTensor:  # noqa: D102
+    def score_h(
+        self,
+        rt_batch: torch.LongTensor,
+        slice_size: Optional[int] = None,
+        mode: Optional[Mode] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
         return self._score(h_indices=None, r_indices=rt_batch[:, 0], t_indices=rt_batch[:, 1])

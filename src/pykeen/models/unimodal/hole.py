@@ -141,11 +141,12 @@ class HolE(EntityRelationEmbeddingModel):
 
         return scores
 
-    def score_t(self,
-                hr_batch: torch.LongTensor,
-                slice_size: Optional[int] = None,
-                mode: Optional[Mode] = None,
-        ) -> torch.FloatTensor:  # noqa: D102
+    def score_t(
+        self,
+        hr_batch: torch.LongTensor,
+        slice_size: Optional[int] = None,
+        mode: Optional[Mode] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
         h = self.entity_embeddings(indices=hr_batch[:, 0]).unsqueeze(dim=1)
         r = self.relation_embeddings(indices=hr_batch[:, 1]).unsqueeze(dim=1)
         t = self.entity_embeddings(indices=None).unsqueeze(dim=0)
@@ -157,11 +158,12 @@ class HolE(EntityRelationEmbeddingModel):
 
         return scores
 
-    def score_h(self,
-                rt_batch: torch.LongTensor,
-                slice_size: Optional[int] = None,
-                mode: Optional[Mode] = None,
-        ) -> torch.FloatTensor:  # noqa: D102
+    def score_h(
+        self,
+        rt_batch: torch.LongTensor,
+        slice_size: Optional[int] = None,
+        mode: Optional[Mode] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
         h = self.entity_embeddings(indices=None).unsqueeze(dim=0)
         r = self.relation_embeddings(indices=rt_batch[:, 0]).unsqueeze(dim=1)
         t = self.entity_embeddings(indices=rt_batch[:, 1]).unsqueeze(dim=1)

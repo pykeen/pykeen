@@ -118,11 +118,12 @@ class ProjE(EntityRelationEmbeddingModel):
 
         return scores
 
-    def score_t(self,
-                hr_batch: torch.LongTensor,
-                slice_size: Optional[int] = None,
-                mode: Optional[Mode] = None,
-        ) -> torch.FloatTensor:  # noqa: D102
+    def score_t(
+        self,
+        hr_batch: torch.LongTensor,
+        slice_size: Optional[int] = None,
+        mode: Optional[Mode] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(indices=hr_batch[:, 0])
         r = self.relation_embeddings(indices=hr_batch[:, 1])
@@ -134,11 +135,12 @@ class ProjE(EntityRelationEmbeddingModel):
 
         return scores
 
-    def score_h(self,
-                rt_batch: torch.LongTensor,
-                slice_size: Optional[int] = None,
-                mode: Optional[Mode] = None,
-        ) -> torch.FloatTensor:  # noqa: D102
+    def score_h(
+        self,
+        rt_batch: torch.LongTensor,
+        slice_size: Optional[int] = None,
+        mode: Optional[Mode] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(indices=None)
         r = self.relation_embeddings(indices=rt_batch[:, 0])

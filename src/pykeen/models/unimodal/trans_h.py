@@ -146,11 +146,12 @@ class TransH(EntityRelationEmbeddingModel):
 
         return -linalg.vector_norm(ph + d_r - pt, ord=2, dim=-1, keepdim=True)
 
-    def score_t(self,
-                hr_batch: torch.LongTensor,
-                slice_size: Optional[int] = None,
-                mode: Optional[Mode] = None,
-        ) -> torch.FloatTensor:  # noqa: D102
+    def score_t(
+        self,
+        hr_batch: torch.LongTensor,
+        slice_size: Optional[int] = None,
+        mode: Optional[Mode] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(indices=hr_batch[:, 0])
         d_r = self.relation_embeddings(indices=hr_batch[:, 1])
@@ -166,11 +167,12 @@ class TransH(EntityRelationEmbeddingModel):
 
         return -linalg.vector_norm(ph[:, None, :] + d_r[:, None, :] - pt, ord=2, dim=-1)
 
-    def score_h(self,
-                rt_batch: torch.LongTensor,
-                slice_size: Optional[int] = None,
-                mode: Optional[Mode] = None,
-        ) -> torch.FloatTensor:  # noqa: D102
+    def score_h(
+        self,
+        rt_batch: torch.LongTensor,
+        slice_size: Optional[int] = None,
+        mode: Optional[Mode] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(indices=None)
         rel_id = rt_batch[:, 0]

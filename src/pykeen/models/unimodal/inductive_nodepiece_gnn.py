@@ -7,10 +7,10 @@ from typing import Optional, Tuple
 
 import torch
 
-from ..nbase import cast
-from ...typing import Mode, HeadRepresentation, RelationRepresentation, TailRepresentation
 from .inductive_nodepiece import InductiveNodePiece
+from ..nbase import cast
 from ...nn.emb import CompGCNLayer
+from ...typing import HeadRepresentation, Mode, RelationRepresentation, TailRepresentation
 
 __all__ = [
     "InductiveNodePieceGNN",
@@ -45,21 +45,26 @@ class InductiveNodePieceGNN(InductiveNodePiece):
         """
         super().__init__(**kwargs)
 
-        train_factory, inference_factory, validation_factory, test_factory = kwargs.get('triples_factory', None), \
-                                                                             kwargs.get('inference_factory', None), \
-                                                                             kwargs.get('validation_factory', None), \
-                                                                             kwargs.get('test_factory', None)
+        train_factory, inference_factory, validation_factory, test_factory = (
+            kwargs.get("triples_factory", None),
+            kwargs.get("inference_factory", None),
+            kwargs.get("validation_factory", None),
+            kwargs.get("test_factory", None),
+        )
 
         if gnn_encoder is None:
             # default composition is DistMult-style
-            self.gnn_encoder = torch.nn.ModuleList([
-                CompGCNLayer(
-                    input_dim=self.entity_representations[0].tokens.shape[0],
-                    output_dim=self.entity_representations[0].tokens.shape[0],
-                    activation=torch.nn.ReLU,
-                    dropout=0.1
-                ) for _ in range(2)
-            ])
+            self.gnn_encoder = torch.nn.ModuleList(
+                [
+                    CompGCNLayer(
+                        input_dim=self.entity_representations[0].tokens.shape[0],
+                        output_dim=self.entity_representations[0].tokens.shape[0],
+                        activation=torch.nn.ReLU,
+                        dropout=0.1,
+                    )
+                    for _ in range(2)
+                ]
+            )
         else:
             self.gnn_encoder = gnn_encoder
 
@@ -100,7 +105,7 @@ class InductiveNodePieceGNN(InductiveNodePiece):
                 x_e=x_e,
                 x_r=x_r,
                 edge_index=getattr(self, f"{mode}_edge_index"),
-                edge_type=getattr(self, f"{mode}_edge_type")
+                edge_type=getattr(self, f"{mode}_edge_type"),
             )
 
         # Use updated entity and relation states to extract requested IDs
@@ -117,4 +122,3 @@ class InductiveNodePieceGNN(InductiveNodePiece):
             Tuple[HeadRepresentation, RelationRepresentation, TailRepresentation],
             tuple(x[0] if len(x) == 1 else x for x in (hh, rr, tt)),
         )
-

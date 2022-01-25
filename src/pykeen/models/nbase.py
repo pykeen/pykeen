@@ -398,7 +398,9 @@ class ERModel(
         h, r, t = self._get_representations(h=hrt_batch[:, 0], r=hrt_batch[:, 1], t=hrt_batch[:, 2], mode=mode)
         return self.interaction.score_hrt(h=h, r=r, t=t)
 
-    def score_t(self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None, mode: Mode = None) -> torch.FloatTensor:
+    def score_t(
+        self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None, mode: Mode = None
+    ) -> torch.FloatTensor:
         """Forward pass using right side (tail) prediction.
 
         This method calculates the score for all possible tails for each (head, relation) pair.
@@ -420,7 +422,9 @@ class ERModel(
             num=self._get_entity_len(mode=mode),
         )
 
-    def score_h(self, rt_batch: torch.LongTensor, slice_size: Optional[int] = None, mode: Mode = None) -> torch.FloatTensor:
+    def score_h(
+        self, rt_batch: torch.LongTensor, slice_size: Optional[int] = None, mode: Mode = None
+    ) -> torch.FloatTensor:
         """Forward pass using left side (head) prediction.
 
         This method calculates the score for all possible heads for each (relation, tail) pair.
@@ -442,7 +446,9 @@ class ERModel(
             num=self._get_entity_len(mode=mode),
         )
 
-    def score_r(self, ht_batch: torch.LongTensor, slice_size: Optional[int] = None, mode: Mode = None) -> torch.FloatTensor:
+    def score_r(
+        self, ht_batch: torch.LongTensor, slice_size: Optional[int] = None, mode: Mode = None
+    ) -> torch.FloatTensor:
         """Forward pass using middle (relation) prediction.
 
         This method calculates the score for all possible relations for each (head, tail) pair.
