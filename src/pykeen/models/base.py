@@ -139,10 +139,10 @@ class Model(nn.Module, ABC):
             raise ValueError("Could not infer device, since there are neither parameters nor buffers.")
         elif len(devices) > 1:
             # prepare debug information
-            info = defaultdict(list)
+            _info = defaultdict(list)
             for name, tensor in itertools.chain(self.named_parameters(), self.named_buffers()):
-                info[tensor.data.device].append(name)
-            info = {device: sorted(tensor_names) for device, tensor_names in info.items()}
+                _info[tensor.data.device].append(name)
+            info = {device: sorted(tensor_names) for device, tensor_names in _info.items()}
             raise ValueError(f"Ambiguous device! Found: {devices}\n\n{info}")
         else:
             return next(iter(devices))
