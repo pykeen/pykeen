@@ -14,7 +14,7 @@ import pickle
 import warnings
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from typing import Any, ClassVar, Collection, Iterable, Mapping, Optional, Sequence, Type, Union
+from typing import Any, ClassVar, Collection, Iterable, Mapping, Optional, Sequence, Tuple, Type, Union
 
 import pandas as pd
 import torch
@@ -87,6 +87,28 @@ class DefaultRelationInverter(RelationInverter):
 relation_inverter = DefaultRelationInverter()
 
 
+def _resolve_num(
+    triples_factory: Optional[CoreTriplesFactory],
+    num_entities: Optional[int],
+    num_relations: Optional[int],
+) -> Tuple[int, int]:
+    if triples_factory is None:
+        if num_entities is None or num_relations is None:
+            raise ValueError("If no triples factory is provided, num_entities and num_relations must be provided.")
+    else:
+        num_entities = num_entities or triples_factory.num_entities
+        if num_entities != triples_factory.num_entities:
+            raise ValueError(
+                f"Inconsistent number of entities between {triples_factory} and num_entities={num_entities}",
+            )
+        num_relations = num_relations or triples_factory.num_relations
+        if num_relations != triples_factory.num_relations:
+            raise ValueError(
+                f"Inconsistent number of relations between {triples_factory} and num_relations={num_relations}",
+            )
+    return num_entities, num_relations
+
+
 class Model(nn.Module, ABC):
     """A base module for KGE models.
 
@@ -123,12 +145,14 @@ class Model(nn.Module, ABC):
 
     def __init__(
         self,
-        # TODO: we only need the triples factory for num_{entities,relations} -> allow to pass only those
-        triples_factory: CoreTriplesFactory,
+        *,
+        triples_factory: Optional[CoreTriplesFactory],
         loss: HintOrType[Loss] = None,
         loss_kwargs: Optional[Mapping[str, Any]] = None,
         predict_with_sigmoid: bool = False,
         random_seed: Optional[int] = None,
+        num_entities: Optional[int] = None,
+        num_relations: Optional[int] = None,
         use_inverse_relations: bool = False,
     ) -> None:
         """Initialize the module.
@@ -162,9 +186,12 @@ class Model(nn.Module, ABC):
         else:
             self.loss = loss_resolver.make(loss, pos_kwargs=loss_kwargs)
 
+        self.num_entities, self.num_relations = _resolve_num(
+            triples_factory=triples_factory,
+            num_entities=num_entities,
+            num_relations=num_relations,
+        )
         self.use_inverse_relations = use_inverse_relations
-        self.num_entities = triples_factory.num_entities
-        self.num_relations = triples_factory.num_relations
 
         """
         When predict_with_sigmoid is set to True, the sigmoid function is applied to the logits during evaluation and
