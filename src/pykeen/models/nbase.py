@@ -467,12 +467,13 @@ class ERModel(
         invert_relation: bool,
     ) -> Tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]:
         """Get representations for head, relation and tails."""
-        if invert_relation:
-            if not self.use_inverse_relations:
-                raise ValueError
+        if invert_relation and not self.use_inverse_relations:
+            raise ValueError("Can only invert relations if use_inverse_relations is set to True")
+        if self.use_inverse_relations:
+            # TODO: with the current default inversion, we have to materialize the relation IDs
             if r is None:
                 r = torch.arange(self.num_relations, device=self.device)
-            r = relation_inverter.invert_(batch=r, index=0)
+            r = relation_inverter.map(batch=r, index=0, invert=invert_relation)
         hr, rr, tr = [
             [representation.forward_unique(indices=indices) for representation in representations]
             for indices, representations in (
