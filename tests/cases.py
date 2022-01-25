@@ -844,9 +844,13 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
     #: Static extras to append to the CLI
     cli_extras: Sequence[str] = tuple()
 
+    #: the model's device
+    device: torch.device
+
     def pre_setup_hook(self) -> None:  # noqa: D102
         # for reproducible testing
         _, self.generator, _ = set_random_seed(42)
+        self.device = resolve_device()
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
@@ -859,7 +863,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
 
     def post_instantiation_hook(self) -> None:  # noqa: D102
         # move model to correct device
-        self.instance = self.instance.to(self.instance.device)
+        self.instance = self.instance.to(self.device)
 
     def test_get_grad_parameters(self):
         """Test the model's ``get_grad_params()`` method."""
