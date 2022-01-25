@@ -240,12 +240,13 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 | early  | [`pykeen.stoppers.EarlyStopper`](https://pykeen.readthedocs.io/en/latest/reference/stoppers.html#pykeen.stoppers.EarlyStopper) | A harness for early stopping. |
 | nop    | [`pykeen.stoppers.NopStopper`](https://pykeen.readthedocs.io/en/latest/reference/stoppers.html#pykeen.stoppers.NopStopper)     | A stopper that does nothing.  |
 
-### Evaluators (2)
+### Evaluators (3)
 
-| Name           | Reference                                                                                                                                 | Description                                      |
-|----------------|-------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------|
-| classification | [`pykeen.evaluation.ClassificationEvaluator`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.ClassificationEvaluator.html) | An evaluator that uses a classification metrics. |
-| rankbased      | [`pykeen.evaluation.RankBasedEvaluator`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.RankBasedEvaluator.html)           | A rank-based evaluator for KGE models.           |
+| Name             | Reference                                                                                                                                     | Description                                      |
+|------------------|-----------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------|
+| classification   | [`pykeen.evaluation.ClassificationEvaluator`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.ClassificationEvaluator.html)     | An evaluator that uses a classification metrics. |
+| rankbased        | [`pykeen.evaluation.RankBasedEvaluator`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.RankBasedEvaluator.html)               | A rank-based evaluator for KGE models.           |
+| sampledrankbased | [`pykeen.evaluation.SampledRankBasedEvaluator`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.SampledRankBasedEvaluator.html) |                                                  |
 
 ### Metrics (37)
 

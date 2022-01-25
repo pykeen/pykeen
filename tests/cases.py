@@ -28,6 +28,7 @@ from typing import (
 from unittest.case import SkipTest
 from unittest.mock import patch
 
+import numpy
 import pytest
 import torch
 import unittest_templates
@@ -47,6 +48,7 @@ from pykeen.evaluation import Evaluator, MetricResults
 from pykeen.losses import Loss, PairwiseLoss, PointwiseLoss, SetwiseLoss, UnsupportedLabelSmoothingError
 from pykeen.models import RESCAL, EntityRelationEmbeddingModel, Model, TransE
 from pykeen.models.cli import build_cli_from_cls
+from pykeen.models.nbase import ERModel
 from pykeen.nn.emb import RepresentationModule
 from pykeen.nn.modules import FunctionalInteraction, Interaction, LiteralInteraction
 from pykeen.optimizers import optimizer_resolver
@@ -56,6 +58,7 @@ from pykeen.trackers import ResultTracker
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
 from pykeen.triples import TriplesFactory, generation
 from pykeen.triples.splitting import Cleaner, Splitter
+from pykeen.triples.triples_factory import CoreTriplesFactory
 from pykeen.triples.utils import get_entities, is_triple_tensor_subset, triple_tensor_to_set
 from pykeen.typing import HeadRepresentation, Initializer, MappedTriples, RelationRepresentation, TailRepresentation
 from pykeen.utils import all_in_bounds, get_batchnorm_modules, resolve_device, set_random_seed, unpack_singletons
@@ -387,7 +390,9 @@ class InteractionTestCase(
         shape_kwargs.setdefault("d", self.dim)
         result = tuple(
             tuple(
-                torch.rand(*prefix_shape, *(shape_kwargs[dim] for dim in weight_shape), requires_grad=True)
+                torch.rand(
+                    size=tuple(prefix_shape) + tuple(shape_kwargs[dim] for dim in weight_shape), requires_grad=True
+                )
                 for weight_shape in weight_shapes
             )
             for prefix_shape, weight_shapes in zip(
@@ -510,66 +515,56 @@ class InteractionTestCase(
         self.assertTrue(torch.isfinite(scores_no_slice).all(), msg=f"Slice scores had nan\n\t{scores}")
         self.assertTrue(torch.allclose(scores, scores_no_slice), msg=f"Differences: {scores - scores_no_slice}")
 
-    def _get_test_shapes(
-        self,
-    ) -> Collection[Tuple[Tuple[int, int, int, int], Tuple[int, int, int, int], Tuple[int, int, int, int]]]:
+    def _get_test_shapes(self) -> Collection[Tuple[Tuple[int, ...], Tuple[int, ...], Tuple[int, ...]]]:
         """Return a set of test shapes for (h, r, t)."""
         return (
             (  # single score
-                (1, 1, 1, 1),
-                (1, 1, 1, 1),
-                (1, 1, 1, 1),
+                tuple(),
+                tuple(),
+                tuple(),
             ),
             (  # score_r with multi-t
-                (self.batch_size, 1, 1, 1),
-                (1, 1, self.num_relations, 1),
-                (self.batch_size, 1, 1, self.num_entities // 2 + 1),
+                (self.batch_size, 1, 1),
+                (1, self.num_relations, 1),
+                (self.batch_size, 1, self.num_entities // 2 + 1),
             ),
             (  # score_r with multi-t and broadcasted head
-                (1, 1, 1, 1),
-                (1, 1, self.num_relations, 1),
-                (self.batch_size, 1, 1, self.num_entities),
+                (1, 1, 1),
+                (1, self.num_relations, 1),
+                (self.batch_size, 1, self.num_entities),
             ),
             (  # full cwa
-                (1, self.num_entities, 1, 1),
-                (1, 1, self.num_relations, 1),
-                (1, 1, 1, self.num_entities),
+                (self.num_entities, 1, 1),
+                (1, self.num_relations, 1),
+                (1, 1, self.num_entities),
             ),
         )
 
     def _get_output_shape(
         self,
-        hs: Tuple[int, int, int, int],
-        rs: Tuple[int, int, int, int],
-        ts: Tuple[int, int, int, int],
-    ) -> Tuple[int, int, int, int]:
-        result = [max(ds) for ds in zip(hs, rs, ts)]
-        if len(self.instance.entity_shape) == 0:
-            result[1] = result[3] = 1
-        if len(self.instance.relation_shape) == 0:
-            result[2] = 1
-        return tuple(result)
+        hs: Tuple[int, ...],
+        rs: Tuple[int, ...],
+        ts: Tuple[int, ...],
+    ) -> Tuple[int, ...]:
+        components = []
+        if self.instance.entity_shape:
+            components.extend((hs, ts))
+        if self.instance.relation_shape:
+            components.append(rs)
+        return tuple(max(ds) for ds in zip(*components))
 
     def test_forward(self):
         """Test forward."""
         for hs, rs, ts in self._get_test_shapes():
-            try:
-                h, r, t = self._get_hrt(hs, rs, ts)
-                scores = self.instance(h=h, r=r, t=t)
-                expected_shape = self._get_output_shape(hs, rs, ts)
-                self._check_scores(scores=scores, exp_shape=expected_shape)
-            except ValueError as error:
-                # check whether the error originates from batch norm for single element batches
-                small_batch_size = any(s[0] == 1 for s in (hs, rs, ts))
-                has_batch_norm = any(
-                    isinstance(m, (torch.nn.BatchNorm1d, torch.nn.BatchNorm2d)) for m in self.instance.modules()
+            if get_batchnorm_modules(self.instance) and any(numpy.prod(s) == 1 for s in (hs, rs, ts)):
+                logger.warning(
+                    f"Skipping test for shapes {hs}, {rs}, {ts} because too small batch size for batch norm",
                 )
-                if small_batch_size and has_batch_norm:
-                    logger.warning(
-                        f"Skipping test for shapes {hs}, {rs}, {ts} because too small batch size for batch norm",
-                    )
-                    continue
-                raise error
+                continue
+            h, r, t = self._get_hrt(hs, rs, ts)
+            scores = self.instance(h=h, r=r, t=t)
+            expected_shape = self._get_output_shape(hs, rs, ts)
+            self._check_scores(scores=scores, exp_shape=expected_shape)
 
     def test_forward_consistency_with_functional(self):
         """Test forward's consistency with functional."""
@@ -592,7 +587,7 @@ class InteractionTestCase(
         for _ in range(10):
             # test multiple different initializations
             self.instance.reset_parameters()
-            h, r, t = self._get_hrt((1, 1, 1, 1), (1, 1, 1, 1), (1, 1, 1, 1))
+            h, r, t = self._get_hrt(tuple(), tuple(), tuple())
 
             if isinstance(self.instance, FunctionalInteraction):
                 kwargs = self.instance._prepare_for_functional(h=h, r=r, t=t)
@@ -1208,6 +1203,8 @@ Traceback
 
     def test_score_h_with_score_hrt_equality(self) -> None:
         """Test the equality of the model's  ``score_h()`` and ``score_hrt()`` function."""
+        if isinstance(self.instance, ERModel):
+            raise SkipTest("ERModel fulfils this by design.")
         batch = self.factory.mapped_triples[: self.batch_size, 1:].to(self.instance.device)
         self.instance.eval()
         # assert batch comprises (relation, tail) pairs
@@ -1230,6 +1227,8 @@ Traceback
 
     def test_score_r_with_score_hrt_equality(self) -> None:
         """Test the equality of the model's  ``score_r()`` and ``score_hrt()`` function."""
+        if isinstance(self.instance, ERModel):
+            raise SkipTest("ERModel fulfils this by design.")
         batch = self.factory.mapped_triples[: self.batch_size, [0, 2]].to(self.instance.device)
         self.instance.eval()
         # assert batch comprises (relation, tail) pairs
@@ -1252,6 +1251,8 @@ Traceback
 
     def test_score_t_with_score_hrt_equality(self) -> None:
         """Test the equality of the model's  ``score_t()`` and ``score_hrt()`` function."""
+        if isinstance(self.instance, ERModel):
+            raise SkipTest("ERModel fulfils this by design.")
         batch = self.factory.mapped_triples[: self.batch_size, :-1].to(self.instance.device)
         self.instance.eval()
         # assert batch comprises (relation, tail) pairs
@@ -1312,6 +1313,14 @@ class BaseKG2ETest(ModelTestCase):
     """General tests for the KG2E model."""
 
     cls = pykeen.models.KG2E
+    c_min: float = 0.01
+    c_max: float = 1.0
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        kwargs["c_min"] = self.c_min
+        kwargs["c_max"] = self.c_max
+        return kwargs
 
     def _check_constraints(self):
         """Check model constraints.
@@ -1319,10 +1328,14 @@ class BaseKG2ETest(ModelTestCase):
         * Entity and relation embeddings have to have at most unit L2 norm.
         * Covariances have to have values between c_min and c_max
         """
-        for embedding in (self.instance.entity_embeddings, self.instance.relation_embeddings):
+        self.instance: ERModel
+        (e_mean, e_cov), (r_mean, r_cov) = self.instance.entity_representations, self.instance.relation_representations
+        for embedding in (e_mean, r_mean):
             assert all_in_bounds(embedding(indices=None).norm(p=2, dim=-1), high=1.0, a_tol=EPSILON)
-        for cov in (self.instance.entity_covariances, self.instance.relation_covariances):
-            assert all_in_bounds(cov(indices=None), low=self.instance.c_min, high=self.instance.c_max)
+        for cov in (e_cov, r_cov):
+            assert all_in_bounds(
+                cov(indices=None), low=self.instance_kwargs["c_min"], high=self.instance_kwargs["c_max"]
+            )
 
 
 class BaseRGCNTest(ModelTestCase):
@@ -1364,44 +1377,13 @@ class RepresentationTestCase(GenericTestCase[RepresentationModule]):
 
     def _test_forward(self, indices: Optional[torch.LongTensor]):
         """Test forward method."""
-        representations = self.instance.forward(indices=indices)
+        representations = self.instance.forward_unique(indices=indices)
         prefix_shape = (self.instance.max_id,) if indices is None else tuple(indices.shape)
         self._check_result(x=representations, prefix_shape=prefix_shape)
-
-    def _test_canonical_shape(self, indices: Optional[torch.LongTensor]):
-        """Test canonical shape."""
-        x = self.instance.get_in_canonical_shape(indices=indices)
-        if indices is None:
-            prefix_shape = (1, self.instance.max_id)
-        elif indices.ndimension() == 1:
-            prefix_shape = (indices.shape[0], 1)
-        elif indices.ndimension() == 2:
-            prefix_shape = tuple(indices.shape)
-        else:
-            raise AssertionError(indices.shape)
-        self._check_result(x=x, prefix_shape=prefix_shape)
-
-    def _test_more_canonical_shape(self, indices: Optional[torch.LongTensor]):
-        """Test more canonical shape."""
-        for i, dim in enumerate(("h", "r", "t"), start=1):
-            x = self.instance.get_in_more_canonical_shape(dim=dim, indices=indices)
-            prefix_shape = [1, 1, 1, 1]
-            if indices is None:
-                prefix_shape[i] = self.instance.max_id
-            elif indices.ndimension() == 1:
-                prefix_shape[0] = indices.shape[0]
-            elif indices.ndimension() == 2:
-                prefix_shape[0] = indices.shape[0]
-                prefix_shape[i] = indices.shape[1]
-            else:
-                raise AssertionError(indices.shape)
-            self._check_result(x=x, prefix_shape=tuple(prefix_shape))
 
     def _test_indices(self, indices: Optional[torch.LongTensor]):
         """Test forward and canonical shape for indices."""
         self._test_forward(indices=indices)
-        self._test_canonical_shape(indices=indices)
-        self._test_more_canonical_shape(indices=indices)
 
     def test_no_indices(self):
         """Test without indices."""
@@ -1629,36 +1611,26 @@ class SplitterTestCase(GenericTestCase[Splitter]):
         assert triple_tensor_to_set(splitted[0]) == self.all_entities
 
 
-class EvaluatorTestCase(unittest.TestCase):
+class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
     """A test case for quickly defining common tests for evaluators models."""
 
-    # The triples factory and model
-    factory: TriplesFactory
+    # the model
     model: Model
 
-    #: The evaluator to be tested
-    evaluator_cls: ClassVar[Type[Evaluator]]
-    evaluator_kwargs: ClassVar[Optional[Mapping[str, Any]]] = None
-
     # Settings
-    batch_size: int
-    embedding_dim: int
+    batch_size: int = 8
+    embedding_dim: int = 7
 
-    #: The evaluator instantiation
-    evaluator: Evaluator
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        self.dataset = Nations()
+        return super()._pre_instantiation_hook(kwargs=kwargs)
 
-    def setUp(self) -> None:
-        """Set up the test case."""
-        # Settings
-        self.batch_size = 8
-        self.embedding_dim = 7
+    @property
+    def factory(self) -> CoreTriplesFactory:
+        """Return the evaluation factory."""
+        return self.dataset.validation
 
-        # Initialize evaluator
-        self.evaluator = self.evaluator_cls(**(self.evaluator_kwargs or {}))
-
-        # Use small test dataset
-        self.factory = Nations().training
-
+    def post_instantiation_hook(self) -> None:  # noqa: D102
         # Use small model (untrained)
         self.model = TransE(triples_factory=self.factory, embedding_dim=self.embedding_dim)
 
@@ -1676,7 +1648,7 @@ class EvaluatorTestCase(unittest.TestCase):
             scores = self.model.score_t(hr_batch=hrt_batch[:, :2])
 
         # Compute mask only if required
-        if self.evaluator.requires_positive_mask:
+        if self.instance.requires_positive_mask:
             # TODO: Re-use filtering code
             triples = self.factory.mapped_triples.to(self.model.device)
             if inverse:
@@ -1702,7 +1674,7 @@ class EvaluatorTestCase(unittest.TestCase):
         """Test the evaluator's ``process_tail_scores_()`` function."""
         hrt_batch, scores, mask = self._get_input()
         true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, 2]][:, None]
-        self.evaluator.process_tail_scores_(
+        self.instance.process_tail_scores_(
             hrt_batch=hrt_batch,
             true_scores=true_scores,
             scores=scores,
@@ -1713,7 +1685,7 @@ class EvaluatorTestCase(unittest.TestCase):
         """Test the evaluator's ``process_head_scores_()`` function."""
         hrt_batch, scores, mask = self._get_input(inverse=True)
         true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, 0]][:, None]
-        self.evaluator.process_head_scores_(
+        self.instance.process_head_scores_(
             hrt_batch=hrt_batch,
             true_scores=true_scores,
             scores=scores,
@@ -1725,20 +1697,20 @@ class EvaluatorTestCase(unittest.TestCase):
         # Process one batch
         hrt_batch, scores, mask = self._get_input()
         true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, 2]][:, None]
-        self.evaluator.process_tail_scores_(
+        self.instance.process_tail_scores_(
             hrt_batch=hrt_batch,
             true_scores=true_scores,
             scores=scores,
             dense_positive_mask=mask,
         )
-        self.evaluator.process_head_scores_(
+        self.instance.process_head_scores_(
             hrt_batch=hrt_batch,
             true_scores=true_scores,
             scores=scores,
             dense_positive_mask=mask,
         )
 
-        result = self.evaluator.finalize()
+        result = self.instance.finalize()
         assert isinstance(result, MetricResults)
 
         self._validate_result(
