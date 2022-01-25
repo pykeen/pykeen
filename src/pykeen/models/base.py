@@ -674,10 +674,7 @@ class Model(nn.Module, ABC):
 
     """Inverse scoring"""
 
-    def score_hrt_inverse(
-        self,
-        hrt_batch: torch.LongTensor,
-    ) -> torch.FloatTensor:
+    def score_hrt_inverse(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:
         r"""Score triples based on inverse triples, i.e., compute $f(h,r,t)$ based on $f(t,r_{inv},h)$.
 
         When training with inverse relations, the model produces two (different) scores for a triple $(h,r,t) \in K$.
