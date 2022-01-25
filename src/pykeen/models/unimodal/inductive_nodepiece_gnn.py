@@ -46,10 +46,10 @@ class InductiveNodePieceGNN(InductiveNodePiece):
         super().__init__(**kwargs)
 
         train_factory, inference_factory, validation_factory, test_factory = (
-            kwargs.get("triples_factory", None),
-            kwargs.get("inference_factory", None),
-            kwargs.get("validation_factory", None),
-            kwargs.get("test_factory", None),
+            kwargs.get("triples_factory"),
+            kwargs.get("inference_factory"),
+            kwargs.get("validation_factory"),
+            kwargs.get("test_factory"),
         )
 
         if gnn_encoder is None:
