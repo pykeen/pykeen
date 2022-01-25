@@ -155,7 +155,7 @@ class Model(nn.Module, ABC):
         """Reset all parameters of the model and enforce model constraints."""
         self._reset_parameters_()
         #  self.to(self.device)  # FIXME is this needed
-        torch.cuda.empty_cache()
+        torch.cuda.empty_cache()  # FIXME is this needed
         self.post_parameter_update()
         return self
 
