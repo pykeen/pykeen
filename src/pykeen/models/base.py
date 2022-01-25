@@ -154,8 +154,8 @@ class Model(nn.Module, ABC):
     def reset_parameters_(self):  # noqa: D401
         """Reset all parameters of the model and enforce model constraints."""
         self._reset_parameters_()
-        #  self.to(self.device)  # FIXME is this needed
-        torch.cuda.empty_cache()  # FIXME is this needed
+        # TODO: why do we need to empty the cache?
+        torch.cuda.empty_cache()
         self.post_parameter_update()
         return self
 
