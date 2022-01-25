@@ -48,6 +48,7 @@ __all__ = [
     "ermlpe_interaction",
     "hole_interaction",
     "kg2e_interaction",
+    "multilinear_tucker_interaction",
     "mure_interaction",
     "ntn_interaction",
     "pair_re_interaction",
@@ -1446,3 +1447,30 @@ def transformer_interaction(
     x = x.view(*hr_shape[1:-1], x.shape[-1])
 
     return (x * t).sum(dim=-1)
+
+
+def multilinear_tucker_interaction(
+    h: torch.FloatTensor,
+    r: torch.FloatTensor,
+    t: torch.FloatTensor,
+    core_tensor: torch.FloatTensor,
+) -> torch.FloatTensor:
+    r"""Evaluate the (original) multi-linear TuckEr interaction function.
+
+    .. math ::
+
+        score(h, r, t) = \sum W_{ijk} h_i r_j t_k
+
+    :param h: shape: (`*batch_dims`, d_e)
+        The head representations.
+    :param r: shape: (`*batch_dims`, d_r)
+        The relation representations.
+    :param t: shape: (`*batch_dims`, d_e)
+        The tail representations.
+    :param core_tensor: shape: (d_h, d_r, d_t)
+        The core tensor.
+
+    :return: shape: batch_dims
+        The scores.
+    """
+    return torch.einsum("ijk,...i,...j,...k->...", core_tensor, h, r, t)
