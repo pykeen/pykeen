@@ -12,7 +12,7 @@ from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import BCEAfterSigmoidLoss, Loss
 from ...nn.emb import EmbeddingSpecification
-from ...typing import Hint, Initializer
+from ...typing import Hint, Initializer, Mode
 
 __all__ = [
     "ERMLPE",
@@ -110,7 +110,7 @@ class ERMLPE(EntityRelationEmbeddingModel):
         ]:
             module.reset_parameters()
 
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_hrt(self, hrt_batch: torch.LongTensor, mode: Optional[Mode] = None) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(indices=hrt_batch[:, 0]).view(-1, self.embedding_dim)
         r = self.relation_embeddings(indices=hrt_batch[:, 1]).view(-1, self.embedding_dim)
@@ -133,7 +133,11 @@ class ERMLPE(EntityRelationEmbeddingModel):
 
         return x
 
-    def score_t(self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:  # noqa: D102
+    def score_t(self,
+                hr_batch: torch.LongTensor,
+                slice_size: Optional[int] = None,
+                mode: Optional[Mode] = None,
+        ) -> torch.FloatTensor:  # noqa: D102
         h = self.entity_embeddings(indices=hr_batch[:, 0]).view(-1, self.embedding_dim)
         r = self.relation_embeddings(indices=hr_batch[:, 1]).view(-1, self.embedding_dim)
         t = self.entity_embeddings(indices=None).transpose(1, 0)
@@ -153,7 +157,11 @@ class ERMLPE(EntityRelationEmbeddingModel):
 
         return x
 
-    def score_h(self, rt_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:  # noqa: D102
+    def score_h(self,
+                rt_batch: torch.LongTensor,
+                slice_size: Optional[int] = None,
+                mode: Optional[Mode] = None,
+        ) -> torch.FloatTensor:  # noqa: D102
         h = self.entity_embeddings(indices=None)
         r = self.relation_embeddings(indices=rt_batch[:, 0]).view(-1, self.embedding_dim)
         t = self.entity_embeddings(indices=rt_batch[:, 1]).view(-1, self.embedding_dim)

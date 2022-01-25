@@ -12,7 +12,7 @@ from torch.nn.init import uniform_
 from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.emb import Embedding, EmbeddingSpecification
-from ...typing import Constrainer, Hint, Initializer
+from ...typing import Constrainer, Hint, Initializer, Mode
 from ...utils import at_least_eps, clamp_norm
 
 __all__ = [
@@ -188,13 +188,21 @@ class KG2E(EntityRelationEmbeddingModel):
         sigma_e = sigma_h + sigma_t
         return self.similarity(mu_e=mu_e, mu_r=mu_r, sigma_e=sigma_e, sigma_r=sigma_r)
 
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_hrt(self, hrt_batch: torch.LongTensor, mode: Optional[Mode] = None) -> torch.FloatTensor:  # noqa: D102
         return self._score(h_indices=hrt_batch[:, 0], r_indices=hrt_batch[:, 1], t_indices=hrt_batch[:, 2]).view(-1, 1)
 
-    def score_t(self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:  # noqa: D102
+    def score_t(self,
+                hr_batch: torch.LongTensor,
+                slice_size: Optional[int] = None,
+                mode: Optional[Mode] = None,
+        ) -> torch.FloatTensor:  # noqa: D102
         return self._score(h_indices=hr_batch[:, 0], r_indices=hr_batch[:, 1])
 
-    def score_h(self, rt_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:  # noqa: D102
+    def score_h(self,
+                rt_batch: torch.LongTensor,
+                slice_size: Optional[int] = None,
+                mode: Optional[Mode] = None,
+        ) -> torch.FloatTensor:  # noqa: D102
         return self._score(r_indices=rt_batch[:, 0], t_indices=rt_batch[:, 1])
 
     @staticmethod

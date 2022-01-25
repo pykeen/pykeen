@@ -13,7 +13,7 @@ from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDD
 from ...losses import BCEAfterSigmoidLoss, Loss
 from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_normal_
-from ...typing import Hint, Initializer
+from ...typing import Hint, Initializer, Mode
 
 __all__ = [
     "TuckER",
@@ -182,7 +182,7 @@ class TuckER(EntityRelationEmbeddingModel):
 
         return scores
 
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_hrt(self, hrt_batch: torch.LongTensor, mode: Optional[Mode] = None) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(indices=hrt_batch[:, 0]).unsqueeze(1)
         r = self.relation_embeddings(indices=hrt_batch[:, 1])
@@ -193,7 +193,11 @@ class TuckER(EntityRelationEmbeddingModel):
 
         return scores
 
-    def score_t(self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:  # noqa: D102
+    def score_t(self,
+                hr_batch: torch.LongTensor,
+                slice_size: Optional[int] = None,
+                mode: Optional[Mode] = None,
+        ) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(indices=hr_batch[:, 0]).unsqueeze(1)
         r = self.relation_embeddings(indices=hr_batch[:, 1])
@@ -204,7 +208,11 @@ class TuckER(EntityRelationEmbeddingModel):
 
         return scores
 
-    def score_h(self, rt_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:  # noqa: D102
+    def score_h(self,
+                rt_batch: torch.LongTensor,
+                slice_size: Optional[int] = None,
+                mode: Optional[Mode] = None,
+        ) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(indices=None).unsqueeze(0)
         r = self.relation_embeddings(indices=rt_batch[:, 0])

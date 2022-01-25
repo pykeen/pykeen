@@ -12,7 +12,7 @@ from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_uniform_, xavier_uniform_norm_
-from ...typing import Constrainer, Hint, Initializer
+from ...typing import Constrainer, Hint, Initializer, Mode
 
 __all__ = [
     "TransE",
@@ -94,7 +94,7 @@ class TransE(EntityRelationEmbeddingModel):
         )
         self.scoring_fct_norm = scoring_fct_norm
 
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_hrt(self, hrt_batch: torch.LongTensor, mode: Optional[Mode] = None) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(indices=hrt_batch[:, 0])
         r = self.relation_embeddings(indices=hrt_batch[:, 1])
@@ -108,7 +108,11 @@ class TransE(EntityRelationEmbeddingModel):
         #  this will require some benchmarking.
         return -linalg.vector_norm(h + r - t, dim=-1, ord=self.scoring_fct_norm, keepdim=True)
 
-    def score_t(self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:  # noqa: D102
+    def score_t(self,
+                hr_batch: torch.LongTensor,
+                slice_size: Optional[int] = None,
+                mode: Optional[Mode] = None,
+        ) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(indices=hr_batch[:, 0])
         r = self.relation_embeddings(indices=hr_batch[:, 1])
@@ -117,7 +121,11 @@ class TransE(EntityRelationEmbeddingModel):
         # TODO: Use torch.cdist (see note above in score_hrt())
         return -linalg.vector_norm(h[:, None, :] + r[:, None, :] - t[None, :, :], dim=-1, ord=self.scoring_fct_norm)
 
-    def score_h(self, rt_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:  # noqa: D102
+    def score_h(self,
+                rt_batch: torch.LongTensor,
+                slice_size: Optional[int] = None,
+                mode: Optional[Mode] = None,
+        ) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(indices=None)
         r = self.relation_embeddings(indices=rt_batch[:, 0])
