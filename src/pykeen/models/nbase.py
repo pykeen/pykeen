@@ -281,6 +281,8 @@ class ERModel(
         )
         self.relation_representations = _prepare_representation_module_list(
             representations=relation_representations,
+            # note: this is the *effective* number of relations, since we also need 
+            # representations for the inverse relations
             num_embeddings=self.effective_num_relations,
             shapes=self.interaction.relation_shape,
             label="relation",
