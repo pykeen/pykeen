@@ -1482,6 +1482,7 @@ class CPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]
     relation_shape = ("kd",)
 
 
+@parse_docdata
 class MultiLinearTuckerInteraction(
     FunctionalInteraction[Tuple[FloatTensor, FloatTensor], FloatTensor, Tuple[FloatTensor, FloatTensor]]
 ):
@@ -1491,6 +1492,13 @@ class MultiLinearTuckerInteraction(
     .. note ::
         For small tensors, there are more efficient algorithms to compute the decomposition, e.g.,
         http://tensorly.org/stable/modules/generated/tensorly.decomposition.Tucker.html
+
+    ---
+    name: MultiLinearTucker
+    citation:
+        author: Tucker
+        year: 1966
+        link: https://dx.doi.org/10.1007/BF02289464
     """
 
     func = pkf.multilinear_tucker_interaction
