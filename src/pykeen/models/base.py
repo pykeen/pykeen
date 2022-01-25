@@ -160,10 +160,12 @@ class Model(nn.Module, ABC):
         """Reset all parameters of the model in-place."""
         raise NotImplementedError
 
-    @abstractmethod
+    # @abstractmethod
     def _get_entity_len(self, mode: Mode) -> int:
         """Get the number of entities depending on the mode parameters."""
-        raise NotImplementedError
+        # TODO
+        #raise NotImplementedError
+        return self.num_entities
 
     def post_parameter_update(self) -> None:
         """Has to be called after each parameter update."""
