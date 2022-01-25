@@ -30,11 +30,12 @@ import torch
 from dataclasses_json import dataclass_json
 from scipy import stats
 from typing_extensions import Literal
+from class_resolver import FunctionResolver
 
 from .evaluator import Evaluator, MetricResults, prepare_filter_triples
 from ..triples.triples_factory import CoreTriplesFactory
 from ..typing import MappedTriples
-from ..utils import fix_dataclass_init_docs
+from ..utils import compose, fix_dataclass_init_docs
 
 __all__ = [
     "compute_rank_from_scores",
@@ -78,26 +79,54 @@ RANK_VARIANCE = "rank_var"
 RANK_MAD = "rank_mad"
 RANK_COUNT = "rank_count"
 
-all_type_funcs = {
-    ARITHMETIC_MEAN_RANK: np.mean,  # This is MR
-    HARMONIC_MEAN_RANK: stats.hmean,
-    GEOMETRIC_MEAN_RANK: stats.gmean,
-    MEDIAN_RANK: np.median,
-    INVERSE_ARITHMETIC_MEAN_RANK: lambda x: np.reciprocal(np.mean(x)),
-    INVERSE_GEOMETRIC_MEAN_RANK: lambda x: np.reciprocal(stats.gmean(x)),
-    INVERSE_HARMONIC_MEAN_RANK: lambda x: np.reciprocal(stats.hmean(x)),  # This is MRR
-    INVERSE_MEDIAN_RANK: lambda x: np.reciprocal(np.median(x)),
-    # Extra stats stuff
-    RANK_STD: np.std,
-    RANK_VARIANCE: np.var,
-    RANK_MAD: stats.median_abs_deviation,
-    RANK_COUNT: lambda x: np.asarray(x.size),
-}
+# TODO: add suffix to function resolver?
+metric_resolver = FunctionResolver()
+metric_resolver.register(np.mean, synonyms={ARITHMETIC_MEAN_RANK, "mean_rank", "mr"})
+metric_resolver.register(stats.hmean, synonyms={HARMONIC_MEAN_RANK})
+metric_resolver.register(stats.gmean, synonyms={GEOMETRIC_MEAN_RANK})
+metric_resolver.register(np.median, synonyms={MEDIAN_RANK})
+metric_resolver.register(
+    compose(
+        np.mean,
+        np.reciprocal,
+        name=INVERSE_ARITHMETIC_MEAN_RANK,
+    ),
+    synonyms={INVERSE_ARITHMETIC_MEAN_RANK, "iamr"},
+)
+metric_resolver.register(
+    compose(
+        stats.gmean,
+        np.reciprocal,
+        name=INVERSE_GEOMETRIC_MEAN_RANK,
+    ),
+    synonyms={INVERSE_GEOMETRIC_MEAN_RANK, "igmr"},
+)
+metric_resolver.register(
+    compose(
+        stats.hmean,
+        np.reciprocal,
+        name=INVERSE_HARMONIC_MEAN_RANK,
+    ),
+    synonyms={INVERSE_HARMONIC_MEAN_RANK, "mean_reciprocal_rank", "mrr"},
+)
+metric_resolver.register(
+    compose(
+        np.median,
+        np.reciprocal,
+        name=INVERSE_MEDIAN_RANK,
+    ),
+    synonyms={INVERSE_MEDIAN_RANK},
+)
+# Extra stats stuff
+metric_resolver.register(np.std, synonyms={RANK_STD})
+metric_resolver.register(np.var, synonyms={RANK_VARIANCE})
+metric_resolver.register(stats.median_abs_deviation, synonyms={RANK_MAD})
+metric_resolver.register(lambda x: np.asarray(x.size), synonyms={RANK_COUNT})
 
+# TODO: adjusted metrics
 ADJUSTED_ARITHMETIC_MEAN_RANK = "adjusted_arithmetic_mean_rank"
 ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX = "adjusted_arithmetic_mean_rank_index"
 TYPES_REALISTIC_ONLY = {ADJUSTED_ARITHMETIC_MEAN_RANK, ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX}
-
 METRIC_SYNONYMS = {
     "adjusted_mean_rank": ADJUSTED_ARITHMETIC_MEAN_RANK,
     "adjusted_mean_rank_index": ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX,
@@ -105,12 +134,6 @@ METRIC_SYNONYMS = {
     "aamr": ADJUSTED_ARITHMETIC_MEAN_RANK,
     "amri": ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX,
     "aamri": ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX,
-    "igmr": INVERSE_GEOMETRIC_MEAN_RANK,
-    "iamr": INVERSE_ARITHMETIC_MEAN_RANK,
-    "mr": ARITHMETIC_MEAN_RANK,
-    "mean_rank": ARITHMETIC_MEAN_RANK,
-    "mrr": INVERSE_HARMONIC_MEAN_RANK,
-    "mean_reciprocal_rank": INVERSE_HARMONIC_MEAN_RANK,
 }
 
 
@@ -607,7 +630,7 @@ class RankBasedEvaluator(Evaluator):
             hits_at_k[side][rank_type] = {
                 k: np.mean(ranks <= (k if isinstance(k, int) else int(self.num_entities * k))).item() for k in self.ks
             }
-            for metric_name, metric_func in all_type_funcs.items():
+            for metric_name, metric_func in metric_resolver.lookup_dict.items():
                 asr[metric_name][side][rank_type] = metric_func(ranks).item()
 
             # Adjusted mean rank calculation
@@ -796,7 +819,7 @@ def numeric_expected_value(
     Depending on the metric, the estimate may not be very accurate and converage slowly, cf.
     https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.rv_discrete.expect.html
     """
-    metric_func = all_type_funcs[metric]
+    metric_func = metric_resolver.make(metric)
     num_candidates = np.asarray(num_candidates)
     generator = np.random.default_rng()
     expectation = 0
