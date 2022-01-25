@@ -2,6 +2,7 @@
 
 """Implementation of ranked based evaluator."""
 
+from abc import abstractmethod
 import itertools as itt
 import logging
 import math
@@ -10,6 +11,9 @@ import re
 from collections import defaultdict
 from dataclasses import dataclass, field, fields
 from typing import (
+    Callable,
+    ClassVar,
+    Collection,
     DefaultDict,
     Dict,
     Iterable,
@@ -19,6 +23,7 @@ from typing import (
     NamedTuple,
     Optional,
     Sequence,
+    SupportsFloat,
     Tuple,
     Union,
     cast,
@@ -47,6 +52,7 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
+# typing
 Side = Literal["head", "tail"]
 ExtendedSide = Union[Side, Literal["both"]]
 # SIDE_HEAD, SIDE_TAIL = typing.get_args(Side) # Python >= 3.8
@@ -62,6 +68,88 @@ RankType = Literal["optimistic", "realistic", "pessimistic"]
 # RANK_TYPES: Tuple[RankType, ...] = typing.get_args(RankType) # Python >= 3.8
 RANK_TYPES: Tuple[RankType, ...] = ("optimistic", "realistic", "pessimistic")
 RANK_OPTIMISTIC, RANK_REALISTIC, RANK_PESSIMISTIC = RANK_TYPES
+
+
+@dataclass
+class ValueRange:
+    """A value range description."""
+
+    #: the lower bound
+    lower: Optional[float] = None
+
+    #: whether the lower bound is inclusive
+    lower_inclusive: bool = False
+
+    #: the upper bound
+    upper: Optional[float] = None
+
+    #: whether the upper bound is inclusive
+    upper_inclusive: bool = False
+
+    def __contains__(self, x: SupportsFloat) -> bool:
+        if self.lower is not None:
+            if x < self.lower:
+                return False
+            if not self.lower_inclusive and x == self.lower:
+                return False
+        if self.upper is not None:
+            if x > self.upper:
+                return False
+            if not self.upper_inclusive and x == self.upper:
+                return False
+        return True
+
+
+class RankBasedMetric:
+    """A base class for rank-based metrics."""
+
+    # TODO: verify interpretation
+    #: whether it is increasing, i.e., larger values are better
+    increasing: ClassVar[bool] = False
+
+    #: the value range (as string)
+    value_range: ClassVar[Optional[ValueRange]] = None
+
+    #: the supported rank types. Most of the time equal to all rank types
+    supported_rank_types: ClassVar[Collection[RankType]] = RANK_TYPES
+
+    #: synonyms for this metric
+    synonyms: ClassVar[Collection[str]] = tuple()
+
+    #: whether the metric requires the number of candidates for each ranking task
+    needs_candidates: ClassVar[bool] = False
+
+    @abstractmethod
+    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:
+        """
+        Evaluate the metric.
+
+        :param ranks: shape: s
+            the individual ranks
+        :param num_candidates: shape: s
+            the number of candidates for each individual ranking task
+        """
+        raise NotImplementedError
+
+
+class ArithmeticMeanRank(RankBasedMetric):
+    """The (arithmetic) mean rank."""
+
+    value_range = ValueRange(lower=1, lower_inclusive=True, upper=math.inf)
+    synonyms = ("mean_rank", "mr")
+
+    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
+        return np.mean(ranks).item()
+
+
+class GeometricMeanRank(RankBasedMetric):
+    """The geometric mean rank."""
+
+    value_range = ValueRange(lower=1, lower_inclusive=True, upper=math.inf)
+    synonyms = ("gmr",)
+
+    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
+        return stats.gmean(ranks).item()
 
 
 # TODO: use function resolver
