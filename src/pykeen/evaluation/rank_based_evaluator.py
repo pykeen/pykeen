@@ -60,7 +60,7 @@ SIDES: Tuple[ExtendedSide, ...] = cast(Tuple[ExtendedSide, ...], REAL_SIDES) + (
 
 RankType = Literal["optimistic", "realistic", "pessimistic"]
 # RANK_TYPES: Tuple[RankType, ...] = typing.get_args(RankType) # Python >= 3.8
-RANK_TYPES = Tuple[RankType, ...] = ("optimistic", "realistic", "pessimistic")
+RANK_TYPES: Tuple[RankType, ...] = ("optimistic", "realistic", "pessimistic")
 RANK_OPTIMISTIC, RANK_REALISTIC, RANK_PESSIMISTIC = RANK_TYPES
 
 
