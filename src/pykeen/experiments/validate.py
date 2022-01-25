@@ -24,7 +24,6 @@ _SKIP_NAMES = {
     "loss",
     "entity_embeddings",
     "init",
-    "preferred_device",
     "random_seed",
     "regularizer",
     "relation_embeddings",

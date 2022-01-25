@@ -6,13 +6,15 @@ from __future__ import annotations
 
 import functools
 import inspect
+import itertools
 import logging
 from operator import invert
 import os
 import pickle
 import warnings
 from abc import ABC, abstractmethod
-from typing import Any, ClassVar, Iterable, Mapping, Optional, Sequence, Type, TypeVar, Union
+from collections import defaultdict
+from typing import Any, ClassVar, Collection, Iterable, Mapping, Optional, Sequence, Type, Union
 
 import pandas as pd
 import torch
@@ -24,8 +26,8 @@ from ..losses import Loss, MarginRankingLoss, loss_resolver
 from ..nn.emb import Embedding, EmbeddingSpecification, RepresentationModule
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import CoreTriplesFactory, relation_inverter
-from ..typing import DeviceHint, ScorePack
-from ..utils import NoRandomSeedNecessary, extend_batch, resolve_device, set_random_seed
+from ..typing import ScorePack
+from ..utils import NoRandomSeedNecessary, extend_batch, set_random_seed
 
 __all__ = [
     "Model",
@@ -97,9 +99,6 @@ class Model(nn.Module, ABC):
     #: The default strategy for optimizing the model's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]]
 
-    #: The device on which this model and its submodules are stored
-    device: torch.device
-
     _random_seed: Optional[int]
 
     #: The default loss function class
@@ -129,7 +128,6 @@ class Model(nn.Module, ABC):
         loss: HintOrType[Loss] = None,
         loss_kwargs: Optional[Mapping[str, Any]] = None,
         predict_with_sigmoid: bool = False,
-        preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         use_inverse_relations: bool = False,
     ) -> None:
@@ -143,17 +141,12 @@ class Model(nn.Module, ABC):
             Whether to apply sigmoid onto the scores when predicting scores. Applying sigmoid at prediction time may
             lead to exactly equal scores for certain triples with very high, or very low score. When not trained with
             applying sigmoid (or using BCEWithLogitsLoss), the scores are not calibrated to perform well with sigmoid.
-        :param preferred_device:
-            The preferred device for model training and inference.
         :param random_seed:
             A random seed to use for initialising the model's weights. **Should** be set when aiming at reproducibility.
         :param use_inverse_relations:
             whether to use the inverse relations modelling technique
         """
         super().__init__()
-
-        # Initialize the device
-        self.device = resolve_device(device=preferred_device)
 
         # Random seeds have to set before the embeddings are initialized
         if random_seed is None:
@@ -197,10 +190,31 @@ class Model(nn.Module, ABC):
         if not inspect.isabstract(cls):
             parse_docdata(cls)
 
+    @property
+    def device(self) -> torch.device:
+        """Return the model's device."""
+        devices = self.get_devices()
+        if len(devices) == 0:
+            raise ValueError("Could not infer device, since there are neither parameters nor buffers.")
+        elif len(devices) > 1:
+            # prepare debug information
+            _info = defaultdict(list)
+            for name, tensor in itertools.chain(self.named_parameters(), self.named_buffers()):
+                _info[tensor.data.device].append(name)
+            info = {device: sorted(tensor_names) for device, tensor_names in _info.items()}
+            raise ValueError(f"Ambiguous device! Found: {devices}\n\n{info}")
+        else:
+            return next(iter(devices))
+
+    def get_devices(self) -> Collection[torch.device]:
+        """Return the device(s) from each components of the model."""
+        return {tensor.data.device for tensor in itertools.chain(self.parameters(), self.buffers())}
+
     def reset_parameters_(self):  # noqa: D401
         """Reset all parameters of the model and enforce model constraints."""
         self._reset_parameters_()
-        self.to_device_()
+        # TODO: why do we need to empty the cache?
+        torch.cuda.empty_cache()
         self.post_parameter_update()
         return self
 
@@ -289,12 +303,6 @@ class Model(nn.Module, ABC):
         """Get the regularization term for the loss function."""
 
     """Concrete methods"""
-
-    def to_device_(self):
-        """Transfer model to device."""
-        self.to(self.device)
-        torch.cuda.empty_cache()
-        return self
 
     def get_grad_params(self) -> Iterable[nn.Parameter]:
         """Get the parameters that require gradients."""
@@ -850,7 +858,6 @@ class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
         relation_representations: EmbeddingSpecification,
         loss: Optional[Loss] = None,
         predict_with_sigmoid: bool = False,
-        preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
     ) -> None:
@@ -861,7 +868,6 @@ class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
         super().__init__(
             triples_factory=triples_factory,
             loss=loss,
-            preferred_device=preferred_device,
             random_seed=random_seed,
             regularizer=regularizer,
             predict_with_sigmoid=predict_with_sigmoid,
