@@ -246,8 +246,6 @@ class Model(nn.Module, ABC):
             The indices of (head, relation) pairs.
         :param slice_size: >0
             The divisor for the scoring function when using slicing.
-        :param invert_relation:
-            whether to invert the relation. If True, the model has to have enabled `use_inverse_relations`.
 
         :return: shape: (batch_size, num_entities), dtype: float
             For each h-r pair, the scores for all possible tails.
@@ -263,8 +261,6 @@ class Model(nn.Module, ABC):
             The indices of (head, tail) pairs.
         :param slice_size: >0
             The divisor for the scoring function when using slicing.
-        :param invert_relation:
-            whether to invert the relation. If True, the model has to have enabled `use_inverse_relations`.
 
         :return: shape: (batch_size, num_relations), dtype: float
             For each h-t pair, the scores for all possible relations.
@@ -282,8 +278,6 @@ class Model(nn.Module, ABC):
             The indices of (relation, tail) pairs.
         :param slice_size: >0
             The divisor for the scoring function when using slicing.
-        :param invert_relation:
-            whether to invert the relation. If True, the model has to have enabled `use_inverse_relations`.
 
         :return: shape: (batch_size, num_entities), dtype: float
             For each r-t pair, the scores for all possible heads.
@@ -374,6 +368,88 @@ class Model(nn.Module, ABC):
                 index_relation=1,
                 invert_relation=invert_relation,
             ),
+        )
+
+    def score_h_extended(
+        self,
+        rt_batch: torch.LongTensor,
+        slice_size: Optional[int] = None,
+        invert_relation: bool = False,
+    ) -> torch.FloatTensor:
+        """Forward pass using left side (head) prediction.
+
+        This method calculates the score for all possible heads for each (relation, tail) pair.
+
+        :param rt_batch: shape: (batch_size, 2), dtype: long
+            The indices of (relation, tail) pairs.
+        :param slice_size: >0
+            The divisor for the scoring function when using slicing.
+        :param invert_relation:
+            whether to invert the relation. If True, the model has to have enabled `use_inverse_relations`.
+
+        :return: shape: (batch_size, num_entities), dtype: float
+            For each r-t pair, the scores for all possible heads.
+        """
+        return self.score_h(
+            rt_batch=self._prepare_batch(
+                batch=rt_batch,
+                index_relation=0,
+                invert_relation=invert_relation,
+            ),
+            slice_size=slice_size,
+        )
+
+    def score_r_extended(
+        self,
+        ht_batch: torch.LongTensor,
+        slice_size: Optional[int] = None,
+        invert_relation: bool = False,
+    ) -> torch.FloatTensor:
+        """Forward pass using middle (relation) prediction.
+
+        This method calculates the score for all possible relations for each (head, tail) pair.
+
+        :param ht_batch: shape: (batch_size, 2), dtype: long
+            The indices of (head, tail) pairs.
+        :param slice_size: >0
+            The divisor for the scoring function when using slicing.
+        :param invert_relation:
+            whether to invert the relation. If True, the model has to have enabled `use_inverse_relations`.
+
+        :return: shape: (batch_size, num_relations), dtype: float
+            For each h-t pair, the scores for all possible relations.
+        """
+        if invert_relation:
+            raise NotImplementedError
+        return self.score_r(ht_batch=ht_batch, slice_size=slice_size)
+
+    def score_t_extended(
+        self,
+        hr_batch: torch.LongTensor,
+        slice_size: Optional[int] = None,
+        invert_relation: bool = False,
+    ) -> torch.FloatTensor:
+        """Forward pass using right side (tail) prediction.
+
+        This method calculates the score for all possible tails for each (head, relation) pair.
+
+        :param hr_batch: shape: (batch_size, 2), dtype: long
+            The indices of (head, relation) pairs.
+        :param slice_size: >0
+            The divisor for the scoring function when using slicing.
+        :param invert_relation:
+            whether to invert the relation. If True, the model has to have enabled `use_inverse_relations`.
+
+        :return: shape: (batch_size, num_entities), dtype: float
+            For each h-r pair, the scores for all possible tails.
+        """
+        return self.score_t(
+            hr_batch=self._prepare_batch(
+                batch=hr_batch,
+                index_relation=1,
+                invert_relation=invert_relation,
+            ),
+            slice_size=slice_size,
         )
 
     """Prediction methods"""
