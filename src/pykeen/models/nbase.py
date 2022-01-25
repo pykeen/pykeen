@@ -20,7 +20,7 @@ from ..nn.emb import EmbeddingSpecification, RepresentationModule
 from ..nn.modules import Interaction, interaction_resolver
 from ..regularizers import Regularizer
 from ..triples import CoreTriplesFactory
-from ..typing import DeviceHint, HeadRepresentation, RelationRepresentation, TailRepresentation
+from ..typing import HeadRepresentation, RelationRepresentation, TailRepresentation
 from ..utils import check_shapes
 
 __all__ = [

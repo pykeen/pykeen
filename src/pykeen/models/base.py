@@ -3,7 +3,6 @@
 """Base module for all KGE models."""
 
 from __future__ import annotations
-from collections import defaultdict
 
 import functools
 import inspect
@@ -13,6 +12,7 @@ import os
 import pickle
 import warnings
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from typing import Any, ClassVar, Collection, Iterable, Mapping, Optional, Sequence, Type, Union
 
 import pandas as pd
@@ -25,8 +25,8 @@ from ..losses import Loss, MarginRankingLoss, loss_resolver
 from ..nn.emb import Embedding, EmbeddingSpecification, RepresentationModule
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import CoreTriplesFactory, relation_inverter
-from ..typing import DeviceHint, ScorePack
-from ..utils import NoRandomSeedNecessary, extend_batch, resolve_device, set_random_seed
+from ..typing import ScorePack
+from ..utils import NoRandomSeedNecessary, extend_batch, set_random_seed
 
 __all__ = [
     "Model",
