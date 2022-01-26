@@ -454,6 +454,7 @@ class NodePieceRepresentation(RepresentationModule):
 
             The aggregation takes two arguments: the (batched) tensor of token representations, in shape
             ``(*, num_tokens, *dt)``, and the index along which to aggregate.
+        # TODO: update docstring
         :param num_tokens:
             the number of tokens for each entity.
         :param shape:
