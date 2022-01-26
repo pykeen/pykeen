@@ -15,7 +15,7 @@ from typing import Any, Callable, Mapping, Optional, Sequence, Tuple, Union
 import numpy as np
 import torch
 import torch.nn
-from class_resolver import FunctionResolver
+from class_resolver import FunctionResolver, Resolver
 from torch import nn
 from torch.nn import functional
 
@@ -927,6 +927,43 @@ def resolve_aggregation(
         return getattr(torch, aggregation)
 
     return aggregation
+
+
+class AnchorSelection:
+    """Anchor entity selection strategy."""
+
+    def select(self, k: int, edge_index: np.ndarray) -> np.ndarray:
+        """
+        Select anchor nodes.
+
+        .. note ::
+            the number of selected anchors may be smaller than $k$, if there
+            are less entities present in the edge index.
+
+        :param k:
+            the number of nodes to select.
+        :param edge_index: shape: (m, 2)
+            the edge_index, i.e., adjacency list.
+
+        :return: (k,)
+            the selected entity ids
+        """
+        raise NotImplementedError
+
+
+class DegreeAnchorSelection(AnchorSelection):
+    """Select entities according to their (undirected) degree."""
+
+    def select(self, k: int, edge_index: np.ndarray) -> np.ndarray:  # noqa: D102
+        unique, counts = np.unique(edge_index, return_counts=True)
+        top_ids = np.argpartition(counts, kth=-k)[-k:]
+        return np.take_along_axis(unique, top_ids)
+
+
+anchor_selection_resolver: Resolver[AnchorSelection] = Resolver.from_subclasses(
+    base=AnchorSelection,
+    default=DegreeAnchorSelection,
+)
 
 
 class NodePieceRepresentation(RepresentationModule):
