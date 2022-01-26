@@ -14,6 +14,7 @@ import numpy.random
 import numpy.testing
 import pandas
 import torch
+from pykeen.constants import PART_TO_COLUMN
 
 from pykeen.datasets import Nations
 from pykeen.evaluation import Evaluator, MetricResults, RankBasedEvaluator, RankBasedMetricResults
@@ -28,9 +29,13 @@ from pykeen.evaluation.evaluator import (
 from pykeen.evaluation.rank_based_evaluator import (
     RANK_REALISTIC,
     RANK_TYPES,
-    REAL_SIDES,
+    SIDES,
     SIDE_BOTH,
     EXTENDED_SIDES,
+    AdjustedArithmeticMeanRankIndex,
+    ArithmeticMeanRank,
+    HitsAtK,
+    InverseHarmonicMeanRank,
     SampledRankBasedEvaluator,
     compute_rank_from_scores,
     expected_hits_at_k,
@@ -484,15 +489,15 @@ class TestEvaluationFiltering(unittest.TestCase):
 def test_resolve_metric_name():
     """Test metric name resolution."""
     for name, expected in (
-        ("mrr", ("inverse_harmonic_mean_rank", "both", "realistic", None)),
-        ("mean_rank.both", ("arithmetic_mean_rank", "both", "realistic", None)),
-        ("mean_rank.avg", ("arithmetic_mean_rank", "both", "realistic", None)),
-        ("mean_rank.tail.worst", ("arithmetic_mean_rank", "tail", "pessimistic", None)),
-        ("amri.avg", ("adjusted_arithmetic_mean_rank_index", "both", "realistic", None)),
-        ("hits_at_k", ("hits_at_k", "both", "realistic", 10)),
-        ("hits_at_k.head.best.3", ("hits_at_k", "head", "optimistic", 3)),
-        ("hits_at_1", ("hits_at_k", "both", "realistic", 1)),
-        ("H@10", ("hits_at_k", "both", "realistic", 10)),
+        ("mrr", (InverseHarmonicMeanRank, "both", "realistic", None)),
+        ("mean_rank.both", (ArithmeticMeanRank, "both", "realistic", None)),
+        ("mean_rank.avg", (ArithmeticMeanRank, "both", "realistic", None)),
+        ("mean_rank.tail.worst", (ArithmeticMeanRank, "tail", "pessimistic", None)),
+        ("amri.avg", (AdjustedArithmeticMeanRankIndex, "both", "realistic", None)),
+        ("hits_at_k", (HitsAtK, "both", "realistic", None)),
+        ("hits_at_k.head.best.3", (HitsAtK, "head", "optimistic", 3)),
+        ("hits_at_1", (HitsAtK, "both", "realistic", 1)),
+        ("H@10", (HitsAtK, "both", "realistic", 10)),
     ):
         result = resolve_metric_name(name=name)
         assert result == expected, name
@@ -514,7 +519,8 @@ def test_sample_negatives():
             ).tolist(),
         )
     )
-    for side, i in zip(REAL_SIDES, (0, 2)):
+    for side in SIDES:
+        column = PART_TO_COLUMN[side]
         negatives = sample_negatives(
             evaluation_triples=evaluation_triples,
             side=side,
@@ -725,16 +731,13 @@ class RankBasedMetricResultsTests(unittest.TestCase):
     def setUp(self) -> None:
         """Prepare test instance."""
         evaluator = RankBasedEvaluator()
-        evaluator.num_entities = self.num_entities
         evaluator.ranks = {
-            rank_type: {
-                side: numpy.array_split(numpy.random.random(size=(self.num_triples,)), 3) for side in REAL_SIDES
-            }
+            rank_type: {side: numpy.array_split(numpy.random.random(size=(self.num_triples,)), 3) for side in SIDES}
             for rank_type in RANK_TYPES
         }
         evaluator.number_of_options = {
             side: numpy.array_split(numpy.full(shape=(self.num_triples,), fill_value=self.num_entities), 3)
-            for side in REAL_SIDES
+            for side in SIDES
         }
         self.instance = evaluator.finalize()
 

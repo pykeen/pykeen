@@ -22,6 +22,7 @@ from typing import (
     Sequence,
     SupportsFloat,
     Tuple,
+    Type,
     Union,
     cast,
 )
@@ -31,7 +32,7 @@ import pandas as pd
 import torch
 from scipy import stats
 from typing_extensions import Literal
-from class_resolver import Resolver
+from class_resolver import Resolver, normalize_string
 
 from .evaluator import Evaluator, MetricResults, prepare_filter_triples
 from ..triples.triples_factory import CoreTriplesFactory
@@ -249,7 +250,7 @@ class HitsAtK(RankBasedMetric):
     """The Hits@k."""
 
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=1, upper_inclusive=True)
-    synonyms = ("H@k", "Hits@k")
+    synonyms = ("h@k", "hits@k", "h@", "hits@", "hits_at_", "h_at_")
     increasing = True
 
     def __init__(self, k: int = 10) -> None:
@@ -290,51 +291,25 @@ class AdjustedArithmeticMeanRankIndex(RankBasedMetric):
         )
 
 
-metric_resolver = Resolver.from_subclasses(
+metric_resolver: Resolver[RankBasedMetric] = Resolver.from_subclasses(
     base=RankBasedMetric,
     default=InverseArithmeticMeanRank,  # mrr
 )
-
-# TODO: use function resolver
-# ARITHMETIC_MEAN_RANK = "arithmetic_mean_rank"  # also known as mean rank (MR)
-# GEOMETRIC_MEAN_RANK = "geometric_mean_rank"
-# HARMONIC_MEAN_RANK = "harmonic_mean_rank"
-# MEDIAN_RANK = "median_rank"
-INVERSE_ARITHMETIC_MEAN_RANK = "inverse_arithmetic_mean_rank"
-INVERSE_GEOMETRIC_MEAN_RANK = "inverse_geometric_mean_rank"
-INVERSE_HARMONIC_MEAN_RANK = "inverse_harmonic_mean_rank"  # also known as mean reciprocal rank (MRR)
-INVERSE_MEDIAN_RANK = "inverse_median_rank"
-
-RANK_STD = "rank_std"
-RANK_VARIANCE = "rank_var"
-RANK_MAD = "rank_mad"
-RANK_COUNT = "rank_count"
-
-
-# TODO: adjusted metrics
-ADJUSTED_ARITHMETIC_MEAN_RANK = "adjusted_arithmetic_mean_rank"
-ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX = "adjusted_arithmetic_mean_rank_index"
-TYPES_REALISTIC_ONLY = {ADJUSTED_ARITHMETIC_MEAN_RANK, ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX}
-METRIC_SYNONYMS = {
-    "adjusted_mean_rank": ADJUSTED_ARITHMETIC_MEAN_RANK,
-    "adjusted_mean_rank_index": ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX,
-    "amr": ADJUSTED_ARITHMETIC_MEAN_RANK,
-    "aamr": ADJUSTED_ARITHMETIC_MEAN_RANK,
-    "amri": ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX,
-    "aamri": ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX,
-}
+# also add synonyms
+for cls in metric_resolver.lookup_dict.values():
+    metric_resolver.register(cls=cls, synonyms=cls.synonyms, raise_on_conflict=False)
 
 
 class MetricKey(NamedTuple):
     """A key for the kind of metric to resolve."""
 
-    name: str
+    metric: Type[RankBasedMetric]
     side: ExtendedSide
     rank_type: RankType
     k: Optional[int]
 
     def __str__(self) -> str:  # noqa: D105
-        components = [self.name, self.side, self.rank_type]
+        components = [self.metric, self.side, self.rank_type]
         if self.k:
             components.append(str(self.k))
         return ".".join(components)
@@ -421,36 +396,34 @@ RANK_TYPE_SYNONYMS: Mapping[str, RankType] = {
 
 _SIDE_PATTERN = "|".join(EXTENDED_SIDES)
 _TYPE_PATTERN = "|".join(itt.chain(RANK_TYPES, RANK_TYPE_SYNONYMS.keys()))
+# HITS_PATTERN = re.compile(r"(hits_at_|hits@|h@)(?P<kf>\d+)")
+_METRIC_PATTERN = "|".join(itt.chain(metric_resolver.lookup_dict.keys(), metric_resolver.synonyms.keys()))
 METRIC_PATTERN = re.compile(
-    rf"(?P<name>[\w@]+)(\.(?P<side>{_SIDE_PATTERN}))?(\.(?P<type>{_TYPE_PATTERN}))?(\.(?P<k>\d+))?",
+    rf"^(?P<name>{_METRIC_PATTERN})(?P<kf>\d+)?(\.(?P<side>{_SIDE_PATTERN}))?(\.(?P<type>{_TYPE_PATTERN}))?(\.(?P<kb>\d+))?$",
 )
-HITS_PATTERN = re.compile(r"(hits_at_|hits@|h@)(?P<k>\d+)")
+# TODO: special hits@k
+
 
 
 def resolve_metric_name(name: str) -> MetricKey:
     """Functional metric name normalization."""
-    match = METRIC_PATTERN.match(name)
+    match = METRIC_PATTERN.match(normalize_string(name, suffix=None))
     if not match:
-        raise ValueError(f"Invalid metric name: {name}")
+       raise ValueError(f"Invalid metric name: {name}")
     side: Union[str, ExtendedSide]
     rank_type: Union[str, RankType]
-    k: Union[None, str, int]
-    name, side, rank_type, k = [match.group(key) for key in ("name", "side", "type", "k")]
+    kf: Union[None, str, int]
+    kb: Union[None, str, int]
+    name, side, rank_type, kf, kb = [match.group(key) for key in ("name", "side", "type", "kf", "kb")]
+    k = kf or kb
 
     # normalize metric name
     if not name:
         raise ValueError("A metric name must be provided.")
-    # handle spaces and case
-    name = name.lower().replace(" ", "_")
+    metric_cls = metric_resolver.lookup(name)
 
     # special case for hits_at_k
-    match = HITS_PATTERN.match(name)
-    if match:
-        name = "hits_at_k"
-        k = match.group("k")
-    if name == "hits_at_k":
-        if k is None:
-            k = 10
+    if metric_cls is HitsAtK and k is not None:
         # TODO: Fractional?
         try:
             k = int(k)
@@ -459,9 +432,6 @@ def resolve_metric_name(name: str) -> MetricKey:
         if k < 0:
             raise ValueError(f"For hits_at_k, you must provide a positive value of k, but found {k}.")
     assert k is None or isinstance(k, int)
-
-    # synonym normalization
-    name = METRIC_SYNONYMS.get(name, name)
 
     # normalize side
     side = side or SIDE_BOTH
@@ -475,10 +445,12 @@ def resolve_metric_name(name: str) -> MetricKey:
     rank_type = RANK_TYPE_SYNONYMS.get(rank_type, rank_type)
     if rank_type not in RANK_TYPES:
         raise ValueError(f"Invalid rank type: {rank_type}. Allowed are {RANK_TYPES}.")
-    if rank_type != RANK_REALISTIC and name in TYPES_REALISTIC_ONLY:
-        raise ValueError(f"Invalid rank type for {name}: {rank_type}. Allowed type: {RANK_REALISTIC}")
-
-    return MetricKey(name, side, rank_type, k)  # type: ignore
+    if rank_type not in metric_cls.supported_rank_types:
+        raise ValueError(
+            f"Invalid rank type for {metric_resolver.normalize_cls(metric_cls)}: {rank_type}. "
+            f"Allowed type: {metric_cls.supported_rank_types}",
+        )
+    return MetricKey(metric_cls, side, rank_type, k)  # type: ignore
 
 
 class RankBasedMetricResults(MetricResults):
