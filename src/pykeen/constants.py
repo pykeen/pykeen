@@ -3,9 +3,12 @@
 """Constants for PyKEEN."""
 
 from pathlib import Path
+from typing import Mapping, Tuple
 
 import pystow
 import torch
+
+from .typing import Target
 
 __all__ = [
     "PYKEEN_HOME",
@@ -44,3 +47,18 @@ DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE = dict(type=int, low=16, high=256, q=1
 USER_DEFINED_CODE = "<user defined>"
 
 AGGREGATIONS = {func.__name__: func for func in [torch.sum, torch.max, torch.mean, torch.logsumexp]}
+
+# constants for sides
+COLUMN_HEAD = 0
+COLUMN_RELATION = 1
+COLUMN_TAIL = 2
+LABEL_HEAD: Target = "head"
+LABEL_RELATION: Target = "relation"
+LABEL_TAIL: Target = "tail"
+# TODO: extend to relation, cf. https://github.com/pykeen/pykeen/pull/728
+SIDES: Tuple[Target, ...] = (LABEL_HEAD, LABEL_TAIL)
+PART_TO_COLUMN: Mapping[Target, int] = {
+    LABEL_HEAD: COLUMN_HEAD,
+    LABEL_RELATION: COLUMN_RELATION,
+    LABEL_TAIL: COLUMN_TAIL,
+}
