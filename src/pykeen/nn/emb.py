@@ -1156,6 +1156,9 @@ class NodePieceRepresentation(RepresentationModule):
     #: the entity-to-token mapping
     assignment: torch.LongTensor
 
+    #: the padding idx, if any
+    padding_idx: Optional[int]
+
     def __init__(
         self,
         *,
@@ -1202,7 +1205,9 @@ class NodePieceRepresentation(RepresentationModule):
         # fill padding
         padding = assignment < 0
         if padding.any():
-            assignment[padding] = assignment.max() + 1
+            assignment[padding] = self.padding_idx = assignment.max().item() + 1
+        else:
+            self.padding_idx = None
         total_num_tokens = assignment.max().item() + 1
 
         # create token representations
