@@ -1631,7 +1631,7 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
         """Generate a coherent rank & candidate pair."""
         generator = numpy.random.default_rng()
         self.num_candidates = generator.integers(low=1, high=self.max_num_candidates, size=(self.num_ranks,))
-        self.ranks = generator.integers(low=0, high=self.num_candidates)
+        self.ranks = generator.integers(low=1, high=self.num_candidates + 1)
 
     def _test_call(self, ranks: numpy.ndarray, num_candidates: Optional[numpy.ndarray]):
         """Verify call."""
@@ -1671,9 +1671,9 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
             ]
         ]
         if self.instance.increasing:
-            assert y >= x
+            self.assertLessEqual(x, y)
         else:
-            assert y <= x
+            self.assertLessEqual(y, x)
 
 
 class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
