@@ -534,6 +534,23 @@ class TransformerTests(cases.InteractionTestCase):
         return (x * t).sum()
 
 
+class MultiLinearTuckerInteractionTests(cases.InteractionTestCase):
+    """Tests for multi-linear TuckER."""
+
+    cls = pykeen.nn.modules.MultiLinearTuckerInteraction
+    shape_kwargs = dict(e=3, f=5)
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        kwargs = super()._pre_instantiation_hook(kwargs)
+        kwargs["head_dim"] = self.dim
+        kwargs["relation_dim"] = self.shape_kwargs["e"]
+        kwargs["tail_dim"] = self.shape_kwargs["f"]
+        return kwargs
+
+    def _exp_score(self, core_tensor, h, r, t) -> torch.FloatTensor:
+        return torch.einsum("ijk,i,j,k", core_tensor, h, r, t)
+
+
 class InteractionTestsTestCase(unittest_templates.MetaTestCase[pykeen.nn.modules.Interaction]):
     """Test for tests for all interaction functions."""
 

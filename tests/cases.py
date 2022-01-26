@@ -845,9 +845,13 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
     #: Static extras to append to the CLI
     cli_extras: Sequence[str] = tuple()
 
+    #: the model's device
+    device: torch.device
+
     def pre_setup_hook(self) -> None:  # noqa: D102
         # for reproducible testing
         _, self.generator, _ = set_random_seed(42)
+        self.device = resolve_device()
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
@@ -860,7 +864,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
 
     def post_instantiation_hook(self) -> None:  # noqa: D102
         # move model to correct device
-        self.instance = self.instance.to_device_()
+        self.instance = self.instance.to(self.device)
 
     def test_get_grad_parameters(self):
         """Test the model's ``get_grad_params()`` method."""
@@ -1035,12 +1039,12 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         original_model = self.cls(
             random_seed=42,
             **self.instance_kwargs,
-        ).to_device_()
+        )
 
         loaded_model = self.cls(
             random_seed=21,
             **self.instance_kwargs,
-        ).to_device_()
+        )
 
         def _equal_embeddings(a: RepresentationModule, b: RepresentationModule) -> bool:
             """Test whether two embeddings are equal."""
@@ -1509,8 +1513,7 @@ class InitializerTestCase(unittest.TestCase):
             embedding_dim=self.shape[1],
             entity_initializer=self.initializer,
             random_seed=0,
-            preferred_device="cpu",
-        )
+        ).to(resolve_device())
         model.reset_parameters_()
 
         with tempfile.TemporaryDirectory() as d:
