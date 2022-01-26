@@ -2,6 +2,7 @@
 
 """Test cases for PyKEEN."""
 
+from collections import Counter
 import logging
 import os
 import pathlib
@@ -1753,7 +1754,9 @@ class AnchorSelectionTestCase(GenericTestCase[pykeen.nn.node_piece.AnchorSelecti
     def test_call(self):
         """Test __call__."""
         anchors = self.instance(edge_index=self.edge_index)
+        # shape
         assert len(anchors) == self.num_anchors
+        # value range
         assert (0 <= anchors).all()
         assert (anchors < self.num_entities).all()
 
@@ -1777,7 +1780,9 @@ class AnchorSearcherTestCase(GenericTestCase[pykeen.nn.node_piece.AnchorSearcher
     def test_call(self):
         """Test __call__."""
         tokens = self.instance(edge_index=self.edge_index, anchors=self.anchors, k=self.k)
+        # shape
         assert tokens.shape == (self.num_entities, self.k)
+        # value range
         assert (tokens >= -1).all()
         assert (tokens < len(self.anchors)).all()
 
@@ -1800,4 +1805,10 @@ class TokenizerTestCase(GenericTestCase[pykeen.nn.node_piece.Tokenizer]):
             num_entities=self.factory.num_entities,
             num_relations=self.factory.num_relations,
         )
+        # shape
         assert tokens.shape == (self.factory.num_entities, self.num_tokens)
+        # value range
+        assert (tokens >= -1).all()
+        # no repetition, except padding idx
+        for row in tokens.tolist():
+            self.assertDictEqual({k: v for k, v in Counter(row).items() if k >= 0 and v > 1}, {}, msg="duplicate token")
