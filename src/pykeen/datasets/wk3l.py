@@ -18,6 +18,7 @@ from more_click import verbose_option
 from pystow.utils import download_from_google
 
 from .base import LazyDataset
+from ..constants import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL
 from ..triples import TriplesFactory
 from ..typing import TorchRandomHint
 
@@ -130,7 +131,7 @@ class MTransEDataset(LazyDataset, ABC):
                     triples_file,
                     delimiter="@@@",
                     header=None,
-                    names=["head", "relation", "tail"],
+                    names=[LABEL_HEAD, LABEL_RELATION, LABEL_TAIL],
                     engine="python",
                     encoding="utf8",
                 )

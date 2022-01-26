@@ -8,12 +8,11 @@ from typing import Collection, Optional
 import torch
 
 from .negative_sampler import NegativeSampler
+from ..constants import LABEL_HEAD_SHORT, PART_TO_COLUMN
 
 __all__ = [
     "BasicNegativeSampler",
 ]
-
-LOOKUP = {"h": 0, "r": 1, "t": 2}
 
 
 class BasicNegativeSampler(NegativeSampler):
@@ -50,9 +49,9 @@ class BasicNegativeSampler(NegativeSampler):
             Additional keyword based arguments passed to :class:`pykeen.sampling.NegativeSampler`.
         """
         super().__init__(**kwargs)
-        self.corruption_scheme = corruption_scheme or ("h", "t")
+        self.corruption_scheme = corruption_scheme or (LABEL_HEAD_SHORT, LABEL_TAIL_SHORT)
         # Set the indices
-        self._corruption_indices = [LOOKUP[side] for side in self.corruption_scheme]
+        self._corruption_indices = [PART_TO_COLUMN[side] for side in self.corruption_scheme]
 
     def corrupt_batch(self, positive_batch: torch.LongTensor) -> torch.LongTensor:  # noqa: D102
         if self.num_negs_per_pos > 1:

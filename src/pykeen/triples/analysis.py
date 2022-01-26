@@ -13,6 +13,7 @@ import pandas as pd
 from tqdm.auto import tqdm
 
 from . import TriplesFactory
+from ..constants import COLUMN_HEAD, COLUMN_RELATION, COLUMN_TAIL, LABEL_HEAD, LABEL_RELATION, LABEL_TAIL
 from ..typing import MappedTriples
 
 logger = logging.getLogger(__name__)
@@ -72,8 +73,6 @@ CARDINALITY_TYPE_COLUMN_NAME = "relation_type"
 PATTERN_TYPE_COLUMN_NAME = "pattern"
 CONFIDENCE_COLUMN_NAME = "confidence"
 SUPPORT_COLUMN_NAME = "support"
-POSITION_TAIL = "tail"
-POSITION_HEAD = "head"
 
 
 def _add_labels(
@@ -426,10 +425,10 @@ def iter_relation_cardinality_types(
 def _help_iter_relation_cardinality_types(
     mapped_triples: Collection[Tuple[int, int, int]],
 ) -> Iterable[Tuple[int, int, float, float]]:
-    df = pd.DataFrame(data=mapped_triples, columns=["h", "r", "t"])
-    for relation, group in df.groupby(by="r"):
-        n_unique_heads, head_injective_conf = _is_injective_mapping(df=group, source="h", target="t")
-        n_unique_tails, tail_injective_conf = _is_injective_mapping(df=group, source="t", target="h")
+    df = pd.DataFrame(data=mapped_triples, columns=[LABEL_HEAD, LABEL_RELATION, LABEL_TAIL])
+    for relation, group in df.groupby(by=LABEL_RELATION):
+        n_unique_heads, head_injective_conf = _is_injective_mapping(df=group, source=LABEL_HEAD, target=LABEL_TAIL)
+        n_unique_tails, tail_injective_conf = _is_injective_mapping(df=group, source=LABEL_TAIL, target=LABEL_HEAD)
         # TODO: what is the support?
         support = n_unique_heads + n_unique_tails
         yield relation, support, head_injective_conf, tail_injective_conf
@@ -493,8 +492,8 @@ def get_entity_counts(
     """
     data = []
     for label, col in (
-        (POSITION_HEAD, 0),
-        (POSITION_TAIL, 2),
+        (LABEL_HEAD, COLUMN_HEAD),
+        (LABEL_TAIL, COLUMN_TAIL),
     ):
         unique, counts = _get_counts(mapped_triples=mapped_triples, column=col)
         df = pd.DataFrame(
@@ -593,7 +592,7 @@ def relation_injectivity(
     it = _help_iter_relation_cardinality_types(mapped_triples)
     df = pd.DataFrame(
         data=it,
-        columns=[RELATION_ID_COLUMN_NAME, SUPPORT_COLUMN_NAME, POSITION_HEAD, POSITION_TAIL],
+        columns=[RELATION_ID_COLUMN_NAME, SUPPORT_COLUMN_NAME, LABEL_HEAD, LABEL_TAIL],
     )
     return add_relation_labels(df, add_labels=add_labels, label_to_id=label_to_id)
 
@@ -664,10 +663,10 @@ def entity_relation_co_occurrence(
     """
     data = []
 
-    for name, columns in dict(
-        head=[0, 1],
-        tail=[2, 1],
-    ).items():
+    for name, columns in {
+        LABEL_HEAD: (COLUMN_HEAD, COLUMN_RELATION),
+        LABEL_TAIL: (COLUMN_TAIL, COLUMN_RELATION),
+    }.items():
         unique, counts = mapped_triples[:, columns].unique(dim=0, return_counts=True)
         e, r = unique.t().numpy()
         df = pd.DataFrame(
@@ -696,15 +695,15 @@ def get_relation_functionality(
     :return:
         A dataframe with columns ( functionality | inverse_functionality )
     """
-    df = pd.DataFrame(data=mapped_triples, columns=["h", "r", "t"])
-    df = df.groupby(by="r").agg(
+    df = pd.DataFrame(data=mapped_triples, columns=[LABEL_HEAD, LABEL_RELATION, LABEL_TAIL])
+    df = df.groupby(by=LABEL_RELATION).agg(
         dict(
             h=["nunique", COUNT_COLUMN_NAME],
             t="nunique",
         )
     )
-    df[FUNCTIONALITY_COLUMN_NAME] = df[("h", "nunique")] / df[("h", COUNT_COLUMN_NAME)]
-    df[INVERSE_FUNCTIONALITY_COLUMN_NAME] = df[("t", "nunique")] / df[("h", COUNT_COLUMN_NAME)]
+    df[FUNCTIONALITY_COLUMN_NAME] = df[(LABEL_HEAD, "nunique")] / df[(LABEL_HEAD, COUNT_COLUMN_NAME)]
+    df[INVERSE_FUNCTIONALITY_COLUMN_NAME] = df[(LABEL_TAIL, "nunique")] / df[(LABEL_TAIL, COUNT_COLUMN_NAME)]
     df = df[[FUNCTIONALITY_COLUMN_NAME, INVERSE_FUNCTIONALITY_COLUMN_NAME]]
     df.columns = df.columns.droplevel(1)
     df.index.name = RELATION_ID_COLUMN_NAME

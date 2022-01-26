@@ -18,6 +18,7 @@ import torch
 from dataclasses_json import DataClassJsonMixin
 from tqdm.autonotebook import tqdm
 
+from ..constants import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL
 from ..models import Model
 from ..triples.triples_factory import restrict_triples
 from ..triples.utils import get_entities, get_relations
@@ -884,7 +885,7 @@ def get_candidate_set_size(
     )
 
     # evaluation triples as dataframe
-    columns = ["head", "relation", "tail"]
+    columns = [LABEL_HEAD, LABEL_RELATION, LABEL_TAIL]
     df_eval = pandas.DataFrame(
         data=mapped_triples.numpy(),
         columns=columns,
@@ -915,7 +916,8 @@ def get_candidate_set_size(
     )
 
     # compute candidate set sizes for different targets
-    for target in ["head", "tail"]:
+    # TODO: extend to relations?
+    for target in [LABEL_HEAD, LABEL_TAIL]:
         total = num_entities
         group_keys = [c for c in columns if c != target]
         df_count = df_filter.groupby(by=group_keys).agg({target: "count"})

@@ -3,7 +3,7 @@
 """Constants for PyKEEN."""
 
 from pathlib import Path
-from typing import Mapping, Tuple
+from typing import Mapping, Tuple, Union
 
 import pystow
 import torch
@@ -52,13 +52,19 @@ AGGREGATIONS = {func.__name__: func for func in [torch.sum, torch.max, torch.mea
 COLUMN_HEAD = 0
 COLUMN_RELATION = 1
 COLUMN_TAIL = 2
+LABEL_HEAD_SHORT: str = "h"
 LABEL_HEAD: Target = "head"
+LABEL_RELATION_SHORT: str = "r"
 LABEL_RELATION: Target = "relation"
+LABEL_TAIL_SHORT: str = "t"
 LABEL_TAIL: Target = "tail"
 # TODO: extend to relation, cf. https://github.com/pykeen/pykeen/pull/728
 SIDES: Tuple[Target, ...] = (LABEL_HEAD, LABEL_TAIL)
-PART_TO_COLUMN: Mapping[Target, int] = {
+PART_TO_COLUMN: Mapping[Union[Target, str], int] = {
     LABEL_HEAD: COLUMN_HEAD,
+    LABEL_HEAD_SHORT: COLUMN_HEAD,
     LABEL_RELATION: COLUMN_RELATION,
+    LABEL_RELATION_SHORT: COLUMN_RELATION,
     LABEL_TAIL: COLUMN_TAIL,
+    LABEL_TAIL_SHORT: COLUMN_TAIL,
 }
