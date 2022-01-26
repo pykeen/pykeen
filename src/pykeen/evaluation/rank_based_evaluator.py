@@ -249,7 +249,7 @@ class Count(RankBasedMetric):
     increasing = True
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        return ranks.size
+        return float(ranks.size)
 
 
 class HitsAtK(RankBasedMetric):
