@@ -138,14 +138,19 @@ class ArithmeticMeanRank(RankBasedMetric):
     value_range = ValueRange(lower=1, lower_inclusive=True, upper=math.inf)
     synonyms = ("mean_rank", "mr")
 
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
+    @staticmethod
+    def call(ranks: np.ndarray) -> float:
         return np.mean(ranks).item()
+
+    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
+        return ArithmeticMeanRank.call(ranks)
 
 
 class InverseArithmeticMeanRank(RankBasedMetric):
     """The inverse arithmetic mean rank."""
 
     value_range = ValueRange(lower=0, lower_inclusive=False, upper=1, upper_inclusive=True)
+    increasing = True
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
         return np.reciprocal(np.mean(ranks)).item()
@@ -165,6 +170,7 @@ class InverseGeometricMeanRank(RankBasedMetric):
     """The inverse geometric mean rank."""
 
     value_range = ValueRange(lower=0, lower_inclusive=False, upper=1, upper_inclusive=True)
+    increasing = True
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
         return np.reciprocal(stats.gmean(ranks)).item()
@@ -185,6 +191,7 @@ class InverseHarmonicMeanRank(RankBasedMetric):
 
     value_range = ValueRange(lower=0, lower_inclusive=False, upper=1, upper_inclusive=True)
     synonyms = ("mean_reciprocal_rank", "mrr")
+    increasing = True
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
         return np.reciprocal(stats.hmean(ranks)).item()
@@ -203,6 +210,7 @@ class InverseMedianRank(RankBasedMetric):
     """The inverse median rank."""
 
     value_range = ValueRange(lower=0, lower_inclusive=False, upper=1, upper_inclusive=True)
+    increasing = True
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
         return np.reciprocal(np.median(ranks)).item()
@@ -242,9 +250,55 @@ class RankCount(RankBasedMetric):
     """The ranks' count."""
 
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=math.inf)
+    increasing = True
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
         return ranks.size
+
+
+class HitsAtK(RankBasedMetric):
+    """The Hits@k."""
+
+    value_range = ValueRange(lower=0, lower_inclusive=True, upper=1, upper_inclusive=True)
+    synonyms = ("H@k", "Hits@k")
+    increasing = True
+
+    def __init__(self, k: int) -> None:
+        super().__init__()
+        self.k = k
+
+    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
+        return np.less_equal(ranks, self.k).mean().item()
+
+
+class AdjustedArithmeticMeanRank(RankBasedMetric):
+    """The adjusted arithmetic mean rank (AMR)."""
+
+    value_range = ValueRange(lower=0, lower_inclusive=True, upper=2, upper_inclusive=False)
+    synonyms = ("amr", "aamr")
+    supported_rank_types = (RANK_REALISTIC,)
+    needs_candidates = True
+
+    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
+        return (ArithmeticMeanRank.call(ranks) / expected_mean_rank(num_candidates=num_candidates)).item()
+
+
+class AdjustedArithmeticMeanRankIndex(RankBasedMetric):
+    """The adjusted arithmetic mean rank index (AMRI)."""
+
+    value_range = ValueRange(lower=-1, lower_inclusive=True, upper=1, upper_inclusive=True)
+    synonyms = ("amr", "aamr")
+    increasing = True
+    supported_rank_types = (RANK_REALISTIC,)
+    needs_candidates = True
+
+    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
+        return (
+            1.0
+            - (
+                (ArithmeticMeanRank.call(ranks) - 1.0) / (expected_mean_rank(num_candidates=num_candidates) - 1.0)
+            ).item()
+        )
 
 
 metric_resolver = Resolver.from_subclasses(
