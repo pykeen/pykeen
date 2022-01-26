@@ -851,6 +851,7 @@ def tokenize_anchors(
     edge_index: np.ndarray,
     anchors: np.ndarray,
     num_tokens: int,
+    max_iter: int = 10,
 ) -> torch.LongTensor:
     """
     Tokenize entities by representing them as a bag of anchor entities.
@@ -864,29 +865,59 @@ def tokenize_anchors(
     :param num_tokens:
         the number of anchor IDs to select for each entity
 
-    :return: shape: (num_entities, num_tokens), 0 <= res < num_anchors
+    :return: shape: (num_entities, num_tokens), -1 <= res < num_anchors
         the selected anchor IDs for each entity
     """
+    # TODO: use graph library, such as igraph, graph-tool, or networkit
     # infer shape
     num_entities = edge_index.max().item() + 1
-    # unweighted & undirected is done via csgraph afterwards
+    # create adjacency matrix
     adjacency = scipy.sparse.coo_matrix(
         (
-            np.ones_like(edge_index[0]),
+            np.ones_like(edge_index[0], dtype=bool),
             tuple(edge_index),
         ),
         shape=(num_entities, num_entities),
     )
-    # compute distances between anchors and all nodes, shape: (num_anchors, num_entities)
-    distances = scipy.sparse.csgraph.shortest_path(
-        csgraph=adjacency,
-        directed=False,
-        return_predecessors=False,
-        unweighted=True,
-        indices=anchors,
-    )
-    # select anchor IDs with smallest distance
-    return torch.as_tensor(np.argpartition(distances, kth=min(num_tokens, num_entities), axis=1), dtype=torch.long)
+    # symmetric + self-loops
+    adjacency = adjacency + adjacency.transpose() + scipy.sparse.eye(num_entities, dtype=bool, format="coo")
+    adjacency = adjacency.tocsr()
+    logger.info(f"Created adjacency matrix: {adjacency}")
+
+    # for each entity, determine anchor pool by BFS
+    num_anchors = len(anchors)
+    pool = np.zeros(shape=(num_entities, num_anchors), dtype=bool)
+    reachable = np.zeros(shape=(num_entities, num_anchors), dtype=bool)
+    reachable[anchors] = np.eye(num_anchors, dtype=bool)
+    final = np.zeros(shape=(num_entities,), dtype=bool)
+
+    for _i in range(max_iter):
+        # propagate one hop
+        reachable = adjacency.dot(reachable)
+        # copy pool if we have seen enough anchors and have not yet stopped
+        num_reachable = reachable.sum(axis=1)
+        enough = num_reachable >= num_tokens
+        mask = enough & ~final
+        pool[mask] = reachable[mask]
+        # stop once we have enough
+        final |= enough
+    del reachable, final
+
+    tokens = np.full(shape=(num_entities, num_tokens), fill_value=-1)
+    # select from pool
+    # use sparse random sampling due to memory footprint
+    entity_ids, anchor_ids = pool.nonzero()
+    unique_entity_ids, counts = np.unique(entity_ids, return_counts=True)
+    assert (counts >= num_tokens).all()
+    generator = np.random.default_rng()
+    intra_offset = np.floor(
+        generator.random(size=(counts.size, num_tokens), dtype=np.float32) * counts[:, None]
+    ).astype(int)
+    offset = np.cumsum(np.r_[0, counts])[:-1, None] + intra_offset
+    tokens[unique_entity_ids] = anchor_ids[offset]
+
+    # convert to torch
+    return torch.as_tensor(tokens, dtype=torch.long)
 
 
 def tokenize(
@@ -1073,23 +1104,22 @@ class NodePieceRepresentation(RepresentationModule):
         :param shape:
             the shape of an individual representation. Only necessary, if aggregation results in a change of dimensions.
         """
-        # create token representations
-        # normal relations + inverse relations + padding
-        total_num_tokens = 2 * triples_factory.real_num_relations + 1
-
         # resolve anchor node selection
         anchor_selection = anchor_selection_resolver.make_safe(anchor_selection, pos_kwargs=anchor_selection_kwargs)
 
         # TODO: mix
         if anchor_selection is None:
+            # normal relations + inverse relations + padding
+            total_num_tokens = 2 * triples_factory.real_num_relations + 1
             assignment = tokenize(triples_factory=triples_factory, num_tokens=num_tokens)
         else:
             # select anchor entities
             edge_index = triples_factory.mapped_triples[:, [0, 2]].numpy().T
             anchors = anchor_selection(edge_index=edge_index)
-            total_num_tokens += len(anchors)
+            total_num_tokens = len(anchors)
             assignment = tokenize_anchors(edge_index=edge_index, anchors=anchors, num_tokens=num_tokens)
 
+        # create token representations
         if isinstance(token_representation, EmbeddingSpecification):
             token_representation = token_representation.make(
                 num_embeddings=total_num_tokens,
