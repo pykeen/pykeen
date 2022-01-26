@@ -524,8 +524,9 @@ def replicate_pipeline_from_config(
 
 def _iterate_moved(pipeline_results: Iterable[PipelineResult]):
     for pipeline_result in pipeline_results:
-        pipeline_result.model.device = resolve_device("cpu")
-        pipeline_result.model.to_device_()
+        # note: torch.nn.Module.cpu() is in-place in contrast to torch.Tensor.cpu()
+        pipeline_result.model.cpu()
+        torch.cuda.empty_cache()
         yield pipeline_result
 
 
@@ -741,7 +742,6 @@ def _build_model_helper(
     if model_kwargs is None:
         model_kwargs = {}
     model_kwargs = dict(model_kwargs)
-    model_kwargs.update(preferred_device=_device)
     model_kwargs.setdefault("random_seed", _random_seed)
 
     if regularizer is not None:
@@ -999,6 +999,7 @@ def pipeline(  # noqa: C901
     _result_tracker.start_run(run_name=title)
 
     _device: torch.device = resolve_device(device)
+    logger.info(f"Using device: {device}")
 
     dataset_instance: Dataset = get_dataset(
         dataset=dataset,
@@ -1067,6 +1068,8 @@ def pipeline(  # noqa: C901
             _random_seed=_random_seed,
             training_triples_factory=training,
         )
+
+    model_instance = model_instance.to(_device)
 
     # Log model parameters
     _result_tracker.log_params(
