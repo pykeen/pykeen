@@ -259,7 +259,7 @@ class HitsAtK(RankBasedMetric):
     synonyms = ("H@k", "Hits@k")
     increasing = True
 
-    def __init__(self, k: int) -> None:
+    def __init__(self, k: int = 10) -> None:
         super().__init__()
         self.k = k
 
