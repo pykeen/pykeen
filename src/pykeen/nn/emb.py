@@ -985,7 +985,7 @@ class AnchorSelection:
         """
         self.num_anchors = num_anchors
 
-    def select(self, edge_index: np.ndarray) -> np.ndarray:
+    def __call__(self, edge_index: np.ndarray) -> np.ndarray:
         """
         Select anchor nodes.
 
@@ -1005,7 +1005,7 @@ class AnchorSelection:
 class DegreeAnchorSelection(AnchorSelection):
     """Select entities according to their (undirected) degree."""
 
-    def select(self, edge_index: np.ndarray) -> np.ndarray:  # noqa: D102
+    def __call__(self, edge_index: np.ndarray) -> np.ndarray:  # noqa: D102
         unique, counts = np.unique(edge_index, return_counts=True)
         top_ids = np.argpartition(counts, max(counts.size - self.num_anchors, 0))[-self.num_anchors :]
         return unique[top_ids]
@@ -1086,7 +1086,7 @@ class NodePieceRepresentation(RepresentationModule):
         else:
             # select anchor entities
             edge_index = triples_factory.mapped_triples[:, [0, 2]].numpy().T
-            anchors = anchor_selection.select(edge_index=edge_index)
+            anchors = anchor_selection(edge_index=edge_index)
             total_num_tokens += len(anchors)
             assignment = tokenize_anchors(edge_index=edge_index, anchors=anchors, num_tokens=num_tokens)
 

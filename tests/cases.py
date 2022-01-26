@@ -1749,9 +1749,9 @@ class AnchorSelectionTestCase(GenericTestCase[pykeen.nn.emb.AnchorSelection]):
         generator = numpy.random.default_rng(seed=42)
         self.edge_index = generator.integers(low=0, high=self.num_entities, size=(2, self.num_triples))
 
-    def test_select(self):
-        """Test selection."""
-        anchors = self.instance.select(edge_index=self.edge_index)
+    def test_call(self):
+        """Test __call__."""
+        anchors = self.instance(edge_index=self.edge_index)
         assert len(anchors) == self.num_anchors
         assert (0 <= anchors).all()
         assert (anchors < self.num_entities).all()
