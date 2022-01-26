@@ -1651,6 +1651,22 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
             raise SkipTest(f"{self.instance} requires candidates.")
         self._test_call(with_candidates=False)
 
+    def test_increasing(self):
+        """Test correct increasing annotation."""
+        x, y = [
+            self.instance(ranks=ranks, num_candidates=self.num_candidates)
+            for ranks in [
+                # original ranks
+                self.ranks,
+                # better ranks
+                numpy.clip(self.ranks - 1, a_min=1, a_max=None),
+            ]
+        ]
+        if self.instance.increasing:
+            assert y >= x
+        else:
+            assert y <= x
+
 
 class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
     """A test case for quickly defining common tests for evaluators models."""
