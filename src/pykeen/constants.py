@@ -3,9 +3,12 @@
 """Constants for PyKEEN."""
 
 from pathlib import Path
+from typing import Tuple
 
 import pystow
 import torch
+
+from .typing import Side
 
 __all__ = [
     "PYKEEN_HOME",
@@ -44,3 +47,9 @@ DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE = dict(type=int, low=16, high=256, q=1
 USER_DEFINED_CODE = "<user defined>"
 
 AGGREGATIONS = {func.__name__: func for func in [torch.sum, torch.max, torch.mean, torch.logsumexp]}
+
+# constants for sides
+# SIDE_HEAD, SIDE_TAIL = typing.get_args(Side) # Python >= 3.8
+SIDE_HEAD: Side = "head"
+SIDE_TAIL: Side = "tail"
+SIDES: Tuple[Side, ...] = (SIDE_HEAD, SIDE_TAIL)

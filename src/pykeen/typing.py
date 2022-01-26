@@ -36,6 +36,8 @@ __all__ = [
     # Dataclasses
     "GaussianDistribution",
     "ScorePack",
+    # Sides
+    "Side",
 ]
 
 X = TypeVar("X")
@@ -94,3 +96,6 @@ class ScorePack(NamedTuple):
 
 
 Sign = Literal[-1, 1]
+
+#: the prediction "side"
+Side = Literal["head", "tail"]

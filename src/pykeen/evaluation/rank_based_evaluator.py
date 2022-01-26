@@ -35,7 +35,8 @@ from class_resolver import Resolver
 
 from .evaluator import Evaluator, MetricResults, prepare_filter_triples
 from ..triples.triples_factory import CoreTriplesFactory
-from ..typing import MappedTriples
+from ..typing import MappedTriples, Side
+from ..constants import SIDE_HEAD, SIDE_TAIL, SIDES
 
 __all__ = [
     "compute_rank_from_scores",
@@ -49,16 +50,9 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 # typing
-Side = Literal["head", "tail"]
 ExtendedSide = Union[Side, Literal["both"]]
-# SIDE_HEAD, SIDE_TAIL = typing.get_args(Side) # Python >= 3.8
-SIDE_HEAD: Side = "head"
-SIDE_TAIL: Side = "tail"
 SIDE_BOTH: ExtendedSide = "both"
-
-# REAL_SIDES: Tuple[Side, ...] = typing.get_args(Side)  # Python >= 3.8
-REAL_SIDES: Tuple[Side, ...] = (SIDE_HEAD, SIDE_TAIL)
-SIDES: Tuple[ExtendedSide, ...] = cast(Tuple[ExtendedSide, ...], REAL_SIDES) + (SIDE_BOTH,)
+EXTENDED_SIDES: Tuple[ExtendedSide, ...] = cast(Tuple[ExtendedSide, ...], SIDES) + (SIDE_BOTH,)
 
 RankType = Literal["optimistic", "realistic", "pessimistic"]
 # RANK_TYPES: Tuple[RankType, ...] = typing.get_args(RankType) # Python >= 3.8
@@ -425,7 +419,7 @@ RANK_TYPE_SYNONYMS: Mapping[str, RankType] = {
     "average": RANK_REALISTIC,
 }
 
-_SIDE_PATTERN = "|".join(SIDES)
+_SIDE_PATTERN = "|".join(EXTENDED_SIDES)
 _TYPE_PATTERN = "|".join(itt.chain(RANK_TYPES, RANK_TYPE_SYNONYMS.keys()))
 METRIC_PATTERN = re.compile(
     rf"(?P<name>[\w@]+)(\.(?P<side>{_SIDE_PATTERN}))?(\.(?P<type>{_TYPE_PATTERN}))?(\.(?P<k>\d+))?",
@@ -472,8 +466,8 @@ def resolve_metric_name(name: str) -> MetricKey:
     # normalize side
     side = side or SIDE_BOTH
     side = side.lower()
-    if side not in SIDES:
-        raise ValueError(f"Invalid side: {side}. Allowed are {SIDES}.")
+    if side not in EXTENDED_SIDES:
+        raise ValueError(f"Invalid side: {side}. Allowed are {EXTENDED_SIDES}.")
 
     # normalize rank type
     rank_type = rank_type or RANK_REALISTIC
@@ -549,7 +543,7 @@ class RankBasedMetricResults(MetricResults):
         return pd.DataFrame(list(self._iter_rows()), columns=["Side", "Type", "Metric", "Value"])
 
     def _iter_rows(self) -> Iterable[Tuple[ExtendedSide, RankType, str, Union[float, int]]]:
-        for side, rank_type in itt.product(SIDES, RANK_TYPES):
+        for side, rank_type in itt.product(EXTENDED_SIDES, RANK_TYPES):
             for k, v in self.hits_at_k[side][rank_type].items():
                 yield side, rank_type, f"hits_at_{k}", v
             for f in fields(self):
@@ -658,7 +652,7 @@ class RankBasedEvaluator(Evaluator):
     def finalize(self) -> RankBasedMetricResults:  # noqa: D102
         result: MutableMapping[Tuple[str, ExtendedSide, RankType], float] = dict()
 
-        for side in SIDES:
+        for side in EXTENDED_SIDES:
             num_candidates = self._get_for_side(mapping=self.number_of_options, side=side)
             if len(num_candidates) < 1:
                 logger.warning(f"No num_candidates for side={side}")
