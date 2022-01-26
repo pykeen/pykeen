@@ -187,7 +187,8 @@ class CSGraphAnchorSearcher(AnchorSearcher):
         )
         # select anchor IDs with smallest distance
         return torch.as_tensor(
-            numpy.argpartition(distances, kth=min(k, num_entities), axis=0)[:k, :].T, dtype=torch.long
+            numpy.argpartition(distances, kth=min(k, num_entities), axis=0)[:k, :].T,
+            dtype=torch.long,
         )
 
 
