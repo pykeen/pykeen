@@ -1037,6 +1037,18 @@ class AnchorTokenizer(Tokenizer):
         searcher: HintOrType[AnchorSearcher] = None,
         searcher_kwargs: OptionalKwargs = None,
     ) -> None:
+        """
+        Initialize the tokenizer.
+
+        :param selection:
+            the anchor node selection strategy.
+        :param selection_kwargs:
+            additional keyword-based arguments passed to the selection strategy
+        :param searcher:
+            the component for searching the closest anchors for each entity
+        :param searcher_kwargs:
+            additional keyword-based arguments passed to the searcher
+        """
         self.anchor_selection = anchor_selection_resolver.make(selection, pos_kwargs=selection_kwargs)
         self.searcher = anchor_searcher_resolver.make(searcher, pos_kwargs=searcher_kwargs)
 
