@@ -9,13 +9,10 @@ import math
 import random
 import re
 from collections import defaultdict
-from dataclasses import dataclass, field, fields
+from dataclasses import dataclass, fields
 from typing import (
-    Callable,
     ClassVar,
     Collection,
-    DefaultDict,
-    Dict,
     Iterable,
     List,
     Mapping,
@@ -32,15 +29,13 @@ from typing import (
 import numpy as np
 import pandas as pd
 import torch
-from dataclasses_json import dataclass_json
 from scipy import stats
 from typing_extensions import Literal
-from class_resolver import FunctionResolver, Resolver, HintOrType
+from class_resolver import Resolver
 
 from .evaluator import Evaluator, MetricResults, prepare_filter_triples
 from ..triples.triples_factory import CoreTriplesFactory
 from ..typing import MappedTriples
-from ..utils import compose, fix_dataclass_init_docs
 
 __all__ = [
     "compute_rank_from_scores",
@@ -48,6 +43,7 @@ __all__ = [
     "RankBasedMetricResults",
     "MetricKey",
     "resolve_metric_name",
+    "metric_resolver",
 ]
 
 logger = logging.getLogger(__name__)
