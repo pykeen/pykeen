@@ -36,6 +36,7 @@ from click.testing import CliRunner, Result
 from torch import optim
 from torch.nn import functional
 from torch.optim import SGD, Adagrad
+from pykeen.evaluation.rank_based_evaluator import RankBasedMetric
 
 import pykeen.models
 import pykeen.nn.message_passing
@@ -1609,6 +1610,46 @@ class SplitterTestCase(GenericTestCase[Splitter]):
         )
         # check that all entities are covered in first part
         assert triple_tensor_to_set(splitted[0]) == self.all_entities
+
+
+class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric]):
+    """A test for rank-based metrics."""
+
+    #: the maximum number of candidates
+    max_num_candidates: int = 17
+
+    #: the number of ranks
+    num_ranks: int = 33
+
+    #: the number of candidates for each individual ranking task
+    num_candidates: numpy.ndarray
+
+    #: the ranks for each individual ranking task
+    ranks: numpy.ndarray
+
+    def post_instantiation_hook(self) -> None:
+        """Generate a coherent rank & candidate pair."""
+        generator = numpy.random.default_rng()
+        self.num_candidates = generator.integers(low=1, high=self.max_num_candidates, size=(self.num_ranks,))
+        self.ranks = generator.integers(low=0, high=self.num_candidates)
+
+    def _test_call(self, with_candidates: bool):
+        """Verify call."""
+        x = self.instance(ranks=self.ranks, num_candidates=self.num_candidates if with_candidates else None)
+        # data type
+        assert isinstance(x, float)
+        # value range
+        assert x in self.instance.value_range
+
+    def test_call(self):
+        """Test __call__."""
+        self._test_call(with_candidates=True)
+
+    def test_call_no_candidates(self):
+        """Test __call__ without candidates."""
+        if self.instance.needs_candidates:
+            raise SkipTest(f"{self.instance} requires candidates.")
+        self._test_call(with_candidates=False)
 
 
 class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
