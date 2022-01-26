@@ -27,7 +27,7 @@ from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolv
 from ..constants import AGGREGATIONS
 from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import CoreTriplesFactory, TriplesFactory
-from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer
+from ..typing import Constrainer, Hint, HintType, Initializer, MappedTriples, Normalizer
 from ..utils import Bias, activation_resolver, clamp_norm, complex_normalize
 
 __all__ = [
@@ -847,129 +847,217 @@ def _sample(rs: torch.LongTensor, k: int) -> torch.LongTensor:
     return rs[torch.randperm(rs.shape[0])[:k]]
 
 
-def tokenize_anchors(
-    edge_index: np.ndarray,
-    anchors: np.ndarray,
-    num_tokens: int,
-    max_iter: int = 10,
-) -> torch.LongTensor:
+class Tokenizer:
+    """A base class for tokenizers for NodePiece representations."""
+
+    @abstractmethod
+    def __call__(
+        self,
+        mapped_triples: MappedTriples,
+        num_tokens: int,
+    ) -> torch.LongTensor:
+        """
+        Tokenize the entities contained given the triples.
+
+        :param mapped_triples: shape: (n, 3)
+            the ID-based triples
+        :param num_tokens:
+            the number of tokens to select for each entity
+
+        :return: shape: (num_entities, num_tokens), -1 <= res < max_token_id
+            the selected relation IDs for each entity. -1 is used as a padding token.
+        """
+        raise NotImplementedError
+
+
+class RelationTokenizer(Tokenizer):
+    """Tokenize entities by representing them as a bag of relations."""
+
+    def __call__(
+        self,
+        mapped_triples: MappedTriples,
+        num_tokens: int,
+    ) -> torch.LongTensor:  # noqa: D102
+        # infer number of entities/relations
+        m = mapped_triples.max(dim=0).tolist()
+        num_entities = max(m[[0, 2]])
+        num_relations = m[1] + 1
+
+        # tokenize: represent entities by bag of relations
+        h, r, t = mapped_triples.t()
+
+        # collect candidates
+        e2r = defaultdict(set)
+        for e, r in (
+            torch.cat(
+                [
+                    torch.stack([h, r], dim=1),
+                    torch.stack([t, r + num_relations], dim=1),
+                ],
+                dim=0,
+            )
+            .unique(dim=0)
+            .tolist()
+        ):
+            e2r[e].add(r)
+
+        # randomly sample without replacement num_tokens relations for each entity
+        assignment = torch.full(
+            size=(num_entities, num_tokens),
+            dtype=torch.long,
+            fill_value=-1,
+        )
+        for e, rs in e2r.items():
+            rs = torch.as_tensor(data=list(rs), dtype=torch.long)
+            rs = _sample(rs=rs, k=num_tokens)
+            assignment[e, : len(rs)] = rs
+
+        return assignment
+
+
+class AnchorSearcher:
+    """A method for finding the closest anchors."""
+
+    @abstractmethod
+    def __call__(self, edge_index: np.ndarray, anchors: np.ndarray, k: int) -> np.ndarray:
+        """
+        Find the $k$ closest anchor nodes for each entity.
+
+        :param edge_index: shape: (2, m)
+            the edge index
+        :param anchors: shape: (a,)
+            the selected anchor entity Ids
+        :param k:
+            the number of closest anchors to return
+
+        :return: shape: (n, k), -1 <= res < a
+            the Ids of the closest anchors
+        """
+        raise NotImplementedError
+
+
+class CSGraphAnchorSearcher(AnchorSearcher):
+    """Find closest anchors using scipy.sparse.csgraph."""
+
+    def __call__(self, edge_index: np.ndarray, anchors: np.ndarray, k: int) -> np.ndarray:  # noqa: D102
+        num_entities = edge_index.max().item() + 1
+        adjacency = scipy.sparse.coo_matrix(
+            (
+                np.ones_like(edge_index[0]),
+                np.ones_like(edge_index[0], dtype=bool),
+                tuple(edge_index),
+            ),
+            shape=(num_entities, num_entities),
+        )
+        # compute distances between anchors and all nodes, shape: (num_anchors, num_entities)
+        distances = scipy.sparse.csgraph.shortest_path(
+            csgraph=adjacency,
+            directed=False,
+            return_predecessors=False,
+            unweighted=True,
+            indices=anchors,
+        )
+        # select anchor IDs with smallest distance
+        return torch.as_tensor(np.argpartition(distances, kth=min(k, num_entities), axis=1), dtype=torch.long)
+
+
+class ScipySparseAnchorSearcher(AnchorSearcher):
+    """Find closest anchors using scipy.sparse."""
+
+    def __init__(self, max_iter: int = 5) -> None:
+        self.max_iter = max_iter
+
+    def __call__(self, edge_index: np.ndarray, anchors: np.ndarray, k: int) -> np.ndarray:  # noqa: D102
+        # infer shape
+        num_entities = edge_index.max().item() + 1
+        # create adjacency matrix
+        adjacency = scipy.sparse.coo_matrix(
+            (
+                np.ones_like(edge_index[0], dtype=bool),
+                tuple(edge_index),
+            ),
+            shape=(num_entities, num_entities),
+        )
+        # symmetric + self-loops
+        adjacency = adjacency + adjacency.transpose() + scipy.sparse.eye(num_entities, dtype=bool, format="coo")
+        adjacency = adjacency.tocsr()
+        logger.info(f"Created adjacency matrix: {adjacency}")
+
+        # for each entity, determine anchor pool by BFS
+        num_anchors = len(anchors)
+        pool = np.zeros(shape=(num_entities, num_anchors), dtype=bool)
+        reachable = np.zeros(shape=(num_entities, num_anchors), dtype=bool)
+        reachable[anchors] = np.eye(num_anchors, dtype=bool)
+        final = np.zeros(shape=(num_entities,), dtype=bool)
+
+        for _i in range(self.max_iter):
+            # propagate one hop
+            reachable = adjacency.dot(reachable)
+            # copy pool if we have seen enough anchors and have not yet stopped
+            num_reachable = reachable.sum(axis=1)
+            enough = num_reachable >= k
+            mask = enough & ~final
+            pool[mask] = reachable[mask]
+            # stop once we have enough
+            final |= enough
+        del reachable, final
+
+        tokens = np.full(shape=(num_entities, k), fill_value=-1)
+        # select from pool
+        # use sparse random sampling due to memory footprint
+        entity_ids, anchor_ids = pool.nonzero()
+        unique_entity_ids, counts = np.unique(entity_ids, return_counts=True)
+        assert (counts >= k).all()
+        generator = np.random.default_rng()
+        intra_offset = np.floor(generator.random(size=(counts.size, k), dtype=np.float32) * counts[:, None]).astype(int)
+        offset = np.cumsum(np.r_[0, counts])[:-1, None] + intra_offset
+        tokens[unique_entity_ids] = anchor_ids[offset]
+
+        return tokens
+
+
+# TODO: use graph library, such as igraph, graph-tool, or networkit
+anchor_searcher_resolver: Resolver[AnchorSearcher] = Resolver.from_subclasses(
+    base=AnchorSearcher,
+    default=ScipySparseAnchorSearcher,
+)
+
+
+class AnchorTokenizer(Tokenizer):
     """
     Tokenize entities by representing them as a bag of anchor entities.
 
     The entities are chosen by shortest path distance.
-
-    :param edge_index: shape: (2, m)
-        the edge index
-    :param anchors: shape: (num_anchors,)
-        the IDs of anchors entities
-    :param num_tokens:
-        the number of anchor IDs to select for each entity
-
-    :return: shape: (num_entities, num_tokens), -1 <= res < num_anchors
-        the selected anchor IDs for each entity
     """
-    # TODO: use graph library, such as igraph, graph-tool, or networkit
-    # infer shape
-    num_entities = edge_index.max().item() + 1
-    # create adjacency matrix
-    adjacency = scipy.sparse.coo_matrix(
-        (
-            np.ones_like(edge_index[0], dtype=bool),
-            tuple(edge_index),
-        ),
-        shape=(num_entities, num_entities),
-    )
-    # symmetric + self-loops
-    adjacency = adjacency + adjacency.transpose() + scipy.sparse.eye(num_entities, dtype=bool, format="coo")
-    adjacency = adjacency.tocsr()
-    logger.info(f"Created adjacency matrix: {adjacency}")
 
-    # for each entity, determine anchor pool by BFS
-    num_anchors = len(anchors)
-    pool = np.zeros(shape=(num_entities, num_anchors), dtype=bool)
-    reachable = np.zeros(shape=(num_entities, num_anchors), dtype=bool)
-    reachable[anchors] = np.eye(num_anchors, dtype=bool)
-    final = np.zeros(shape=(num_entities,), dtype=bool)
+    def __init__(
+        self,
+        selection: HintOrType[AnchorSelection] = None,
+        selection_kwargs: OptionalKwargs = None,
+        searcher: HintOrType[AnchorSearcher] = None,
+        searcher_kwargs: OptionalKwargs = None,
+    ) -> None:
+        self.anchor_selection = anchor_selection_resolver.make(selection, pos_kwargs=selection_kwargs)
+        self.searcher = anchor_searcher_resolver.make(searcher, pos_kwargs=searcher_kwargs)
 
-    for _i in range(max_iter):
-        # propagate one hop
-        reachable = adjacency.dot(reachable)
-        # copy pool if we have seen enough anchors and have not yet stopped
-        num_reachable = reachable.sum(axis=1)
-        enough = num_reachable >= num_tokens
-        mask = enough & ~final
-        pool[mask] = reachable[mask]
-        # stop once we have enough
-        final |= enough
-    del reachable, final
-
-    tokens = np.full(shape=(num_entities, num_tokens), fill_value=-1)
-    # select from pool
-    # use sparse random sampling due to memory footprint
-    entity_ids, anchor_ids = pool.nonzero()
-    unique_entity_ids, counts = np.unique(entity_ids, return_counts=True)
-    assert (counts >= num_tokens).all()
-    generator = np.random.default_rng()
-    intra_offset = np.floor(
-        generator.random(size=(counts.size, num_tokens), dtype=np.float32) * counts[:, None]
-    ).astype(int)
-    offset = np.cumsum(np.r_[0, counts])[:-1, None] + intra_offset
-    tokens[unique_entity_ids] = anchor_ids[offset]
-
-    # convert to torch
-    return torch.as_tensor(tokens, dtype=torch.long)
+    def __call__(
+        self,
+        mapped_triples: MappedTriples,
+        num_tokens: int,
+    ) -> torch.LongTensor:  # noqa: D102
+        edge_index = mapped_triples[:, [0, 2]].numpy().T
+        # select anchors
+        anchors = self.anchor_selection(edge_index=edge_index)
+        # find closest anchors
+        tokens = self.searcher(edge_index=edge_index, anchors=anchors, k=num_tokens)
+        # convert to torch
+        return torch.as_tensor(tokens, dtype=torch.long)
 
 
-def tokenize(
-    triples_factory: CoreTriplesFactory,
-    num_tokens: int,
-) -> torch.LongTensor:
-    """
-    Tokenize entities by representing them as a bag of relations.
-
-    :param triples_factory:
-        the triples factory containing the ID-based triples.
-    :param num_tokens:
-        the number of relation IDs to select for each entity
-
-    :return: shape: (num_entities, num_tokens), -1 <= res < 2 * num_relations
-        the selected relation IDs for each entity. -1 is used as a padding token.
-    """
-    mapped_triples = triples_factory.mapped_triples
-    if triples_factory.create_inverse_triples:
-        # inverse triples are created afterwards implicitly
-        mapped_triples = mapped_triples[mapped_triples[:, 1] < triples_factory.real_num_relations]
-
-    # tokenize: represent entities by bag of relations
-    h, r, t = mapped_triples.t()
-
-    # collect candidates
-    e2r = defaultdict(set)
-    for e, r in (
-        torch.cat(
-            [
-                torch.stack([h, r], dim=1),
-                torch.stack([t, r + triples_factory.real_num_relations], dim=1),
-            ],
-            dim=0,
-        )
-        .unique(dim=0)
-        .tolist()
-    ):
-        e2r[e].add(r)
-
-    # randomly sample without replacement num_tokens relations for each entity
-    assignment = torch.full(
-        size=(triples_factory.num_entities, num_tokens),
-        dtype=torch.long,
-        fill_value=2 * triples_factory.real_num_relations,
-    )
-    for e, rs in e2r.items():
-        rs = torch.as_tensor(data=list(rs), dtype=torch.long)
-        rs = _sample(rs=rs, k=num_tokens)
-        assignment[e, : len(rs)] = rs
-
-    return assignment
+tokenizer_resolver: Resolver[Tokenizer] = Resolver.from_subclasses(
+    base=Tokenizer,
+    default=RelationTokenizer,
+)
 
 
 def resolve_aggregation(
@@ -1075,9 +1163,9 @@ class NodePieceRepresentation(RepresentationModule):
         token_representation: Union[EmbeddingSpecification, RepresentationModule],
         aggregation: Union[None, str, Callable[[torch.FloatTensor, int], torch.FloatTensor]] = None,
         num_tokens: int = 2,
+        tokenizer: HintOrType[Tokenizer] = None,
+        tokenizer_kwargs: OptionalKwargs = None,
         shape: Optional[Sequence[int]] = None,
-        anchor_selection: HintOrType[AnchorSelection] = None,
-        anchor_selection_kwargs: OptionalKwargs = None,
     ):
         """
         Initialize the representation.
@@ -1104,20 +1192,18 @@ class NodePieceRepresentation(RepresentationModule):
         :param shape:
             the shape of an individual representation. Only necessary, if aggregation results in a change of dimensions.
         """
-        # resolve anchor node selection
-        anchor_selection = anchor_selection_resolver.make_safe(anchor_selection, pos_kwargs=anchor_selection_kwargs)
+        mapped_triples = triples_factory.mapped_triples
+        if triples_factory.create_inverse_triples:
+            # inverse triples are created afterwards implicitly
+            mapped_triples = mapped_triples[mapped_triples[:, 1] < triples_factory.real_num_relations]
 
-        # TODO: mix
-        if anchor_selection is None:
-            # normal relations + inverse relations + padding
-            total_num_tokens = 2 * triples_factory.real_num_relations + 1
-            assignment = tokenize(triples_factory=triples_factory, num_tokens=num_tokens)
-        else:
-            # select anchor entities
-            edge_index = triples_factory.mapped_triples[:, [0, 2]].numpy().T
-            anchors = anchor_selection(edge_index=edge_index)
-            total_num_tokens = len(anchors)
-            assignment = tokenize_anchors(edge_index=edge_index, anchors=anchors, num_tokens=num_tokens)
+        tokenizer_inst = tokenizer_resolver.make(tokenizer, pos_kwargs=tokenizer_kwargs)
+        assignment = tokenizer_inst(mapped_triples=mapped_triples, num_tokens=num_tokens)
+        # fill padding
+        padding = assignment < 0
+        if padding.any():
+            assignment[padding] = assignment.max() + 1
+        total_num_tokens = assignment.max().item() + 1
 
         # create token representations
         if isinstance(token_representation, EmbeddingSpecification):
@@ -1139,10 +1225,7 @@ class NodePieceRepresentation(RepresentationModule):
         # assign module
         self.tokens = token_representation
         self.aggregation_index = -(1 + len(token_representation.shape))
-        self.register_buffer(
-            name="assignment",
-            tensor=assignment,
-        )
+        self.register_buffer(name="assignment", tensor=assignment)
 
     def forward(
         self,
