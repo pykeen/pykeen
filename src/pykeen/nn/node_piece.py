@@ -2,7 +2,7 @@
 import logging
 from abc import abstractmethod
 from collections import defaultdict
-from typing import Callable, Optional, Sequence, Union
+from typing import Callable, Optional, Sequence, Tuple, Union
 
 import numpy
 import numpy.linalg
@@ -38,7 +38,7 @@ class Tokenizer:
         num_tokens: int,
         num_entities: int,
         num_relations: int,
-    ) -> torch.LongTensor:
+    ) -> Tuple[int, torch.LongTensor]:
         """
         Tokenize the entities contained given the triples.
 
@@ -66,7 +66,7 @@ class RelationTokenizer(Tokenizer):
         num_tokens: int,
         num_entities: int,
         num_relations: int,
-    ) -> torch.LongTensor:  # noqa: D102
+    ) -> Tuple[int, torch.LongTensor]:  # noqa: D102
         # tokenize: represent entities by bag of relations
         h, r, t = mapped_triples.t()
 
@@ -96,7 +96,7 @@ class RelationTokenizer(Tokenizer):
             rs = _sample(rs=rs, k=num_tokens)
             assignment[e, : len(rs)] = rs
 
-        return assignment
+        return 2 * num_relations + 1, assignment
 
 
 def _edge_index_to_sparse_matrix(
@@ -356,7 +356,7 @@ class AnchorTokenizer(Tokenizer):
         # find closest anchors
         tokens = self.searcher(edge_index=edge_index, anchors=anchors, k=num_tokens)
         # convert to torch
-        return torch.as_tensor(tokens, dtype=torch.long)
+        return len(anchors) + 1, torch.as_tensor(tokens, dtype=torch.long)
 
 
 tokenizer_resolver: Resolver[Tokenizer] = Resolver.from_subclasses(
@@ -461,19 +461,18 @@ class NodePieceRepresentation(RepresentationModule):
             mapped_triples = mapped_triples[mapped_triples[:, 1] < triples_factory.real_num_relations]
 
         tokenizer_inst = tokenizer_resolver.make(tokenizer, pos_kwargs=tokenizer_kwargs)
-        assignment = tokenizer_inst(
+        total_num_tokens, assignment = tokenizer_inst(
             mapped_triples=mapped_triples,
             num_tokens=num_tokens,
             num_entities=triples_factory.num_entities,
             num_relations=triples_factory.real_num_relations,
         )
-        # fill padding
+        # fill padding (nn.Embedding cannot deal with negative indices)
         padding = assignment < 0
         if padding.any():
             assignment[padding] = self.padding_idx = assignment.max().item() + 1
         else:
             self.padding_idx = None
-        total_num_tokens = assignment.max().item() + 1
 
         # create token representations
         if isinstance(token_representation, EmbeddingSpecification):
