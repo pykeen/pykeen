@@ -35,7 +35,7 @@ import torch
 from dataclasses_json import dataclass_json
 from scipy import stats
 from typing_extensions import Literal
-from class_resolver import FunctionResolver, Resolver
+from class_resolver import FunctionResolver, Resolver, HintOrType
 
 from .evaluator import Evaluator, MetricResults, prepare_filter_triples
 from ..triples.triples_factory import CoreTriplesFactory
@@ -492,154 +492,12 @@ def resolve_metric_name(name: str) -> MetricKey:
     return MetricKey(name, side, rank_type, k)  # type: ignore
 
 
-@fix_dataclass_init_docs
-@dataclass_json
-@dataclass
 class RankBasedMetricResults(MetricResults):
     """Results from computing metrics."""
 
-    arithmetic_mean_rank: Dict[ExtendedSide, Dict[RankType, float]] = field(
-        metadata=dict(
-            name="Mean Rank (MR)",
-            increasing=False,
-            range="[1, inf)",
-            doc="The arithmetic mean over all ranks.",
-            link="https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#mean-rank",
-        )
-    )
-
-    geometric_mean_rank: Dict[ExtendedSide, Dict[RankType, float]] = field(
-        metadata=dict(
-            name="Geometric Mean Rank (GMR)",
-            increasing=False,
-            range="[1, inf)",
-            doc="The geometric mean over all ranks.",
-            link="https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html",
-        )
-    )
-
-    median_rank: Dict[ExtendedSide, Dict[RankType, float]] = field(
-        metadata=dict(
-            name="Median Rank",
-            increasing=False,
-            range="[1, inf)",
-            doc="The median over all ranks.",
-            link="https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html",
-        )
-    )
-
-    harmonic_mean_rank: Dict[ExtendedSide, Dict[RankType, float]] = field(
-        metadata=dict(
-            name="Harmonic Mean Rank (HMR)",
-            increasing=False,
-            range="[1, inf)",
-            doc="The harmonic mean over all ranks.",
-            link="https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html",
-        )
-    )
-
-    inverse_arithmetic_mean_rank: Dict[ExtendedSide, Dict[RankType, float]] = field(
-        metadata=dict(
-            name="Inverse Arithmetic Mean Rank (IAMR)",
-            increasing=True,
-            range="(0, 1]",
-            doc="The inverse of the arithmetic mean over all ranks.",
-            link="https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html",
-        )
-    )
-
-    inverse_geometric_mean_rank: Dict[ExtendedSide, Dict[RankType, float]] = field(
-        metadata=dict(
-            name="Inverse Geometric Mean Rank (IGMR)",
-            increasing=True,
-            range="(0, 1]",
-            doc="The inverse of the geometric mean over all ranks.",
-            link="https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html",
-        )
-    )
-
-    inverse_harmonic_mean_rank: Dict[ExtendedSide, Dict[RankType, float]] = field(
-        metadata=dict(
-            name="Mean Reciprocal Rank (MRR)",
-            increasing=True,
-            range="(0, 1]",
-            doc="The inverse of the harmonic mean over all ranks.",
-            link="https://en.wikipedia.org/wiki/Mean_reciprocal_rank",
-        )
-    )
-
-    inverse_median_rank: Dict[ExtendedSide, Dict[RankType, float]] = field(
-        metadata=dict(
-            name="Inverse Median Rank",
-            increasing=True,
-            range="(0, 1]",
-            doc="The inverse of the median over all ranks.",
-            link="https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html",
-        )
-    )
-
-    rank_count: Dict[ExtendedSide, Dict[RankType, int]] = field(
-        metadata=dict(
-            name="Rank Count",
-            doc="The number of considered ranks, a non-negative number. Low numbers may indicate unreliable results.",
-        )
-    )
-
-    rank_std: Dict[ExtendedSide, Dict[RankType, float]] = field(
-        metadata=dict(
-            name="Rank Standard Deviation",
-            range="[0, inf)",
-            increasing=False,
-            doc="The standard deviation over all ranks.",
-        )
-    )
-
-    rank_var: Dict[ExtendedSide, Dict[RankType, float]] = field(
-        metadata=dict(
-            name="Rank Variance",
-            range="[0, inf)",
-            increasing=False,
-            doc="The variance over all ranks.",
-        )
-    )
-
-    rank_mad: Dict[ExtendedSide, Dict[RankType, float]] = field(
-        metadata=dict(
-            name="Rank Median Absolute Deviation",
-            range="[0, inf)",
-            doc="The median absolute deviation over all ranks.",
-        )
-    )
-
-    hits_at_k: Dict[ExtendedSide, Dict[RankType, Dict[Union[int, float], float]]] = field(
-        metadata=dict(
-            name="Hits @ K",
-            range="[0, 1]",
-            increasing=True,
-            doc="The relative frequency of ranks not larger than a given k.",
-            link="https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#hits-k",
-        )
-    )
-
-    adjusted_arithmetic_mean_rank: Dict[ExtendedSide, Dict[RankType, float]] = field(
-        metadata=dict(
-            name="Adjusted Arithmetic Mean Rank (AAMR)",
-            increasing=False,
-            range="(0, 2)",
-            doc="The mean over all chance-adjusted ranks.",
-            link="https://arxiv.org/abs/2002.06914",
-        )
-    )
-
-    adjusted_arithmetic_mean_rank_index: Dict[ExtendedSide, Dict[RankType, float]] = field(
-        metadata=dict(
-            name="Adjusted Arithmetic Mean Rank Index (AAMRI)",
-            increasing=True,
-            range="[-1, 1]",
-            doc="The re-indexed adjusted mean rank (AAMR)",
-            link="https://arxiv.org/abs/2002.06914",
-        )
-    )
+    def __init__(self, results: Mapping[Tuple[str, ExtendedSide, RankType], float]):
+        """Initialize the results."""
+        self.results = results
 
     def get_metric(self, name: str) -> float:
         """Get the rank-based metric.
@@ -685,9 +543,8 @@ class RankBasedMetricResults(MetricResults):
         """
         metric, side, rank_type, k = resolve_metric_name(name)
         if not metric.startswith("hits"):
-            return getattr(self, metric)[side][rank_type]
-        assert k is not None
-        return self.hits_at_k[side][rank_type][k]
+            return self.results[metric, side, rank_type]
+        raise NotImplementedError
 
     def to_flat_dict(self):  # noqa: D102
         return {f"{side}.{rank_type}.{metric_name}": value for side, rank_type, metric_name, value in self._iter_rows()}
@@ -733,6 +590,9 @@ class RankBasedEvaluator(Evaluator):
     #: the number of choices for each ranking task; relevant for expected metrics
     number_of_options: MutableMapping[Side, List[np.ndarray]]
 
+    #: the rank-based metrics to compute
+    metrics: Mapping[str, RankBasedMetric]
+
     def __init__(
         self,
         ks: Optional[Iterable[Union[int, float]]] = None,
@@ -753,12 +613,16 @@ class RankBasedEvaluator(Evaluator):
             requires_positive_mask=False,
             **kwargs,
         )
-        self.ks = tuple(ks) if ks is not None else (1, 3, 5, 10)
-        for k in self.ks:
+        ks = tuple(ks) if ks is not None else (1, 3, 5, 10)
+        for k in ks:
             if isinstance(k, float) and not (0 < k < 1):
                 raise ValueError(
                     "If k is a float, it should represent a relative rank, i.e. a value between 0 and 1 (excl.)",
                 )
+        metrics = [
+            metric_resolver.make(query=query) for query in metric_resolver.lookup_dict.values() if query is not HitsAtK
+        ] + [metric_resolver.make(HitsAtK, k=k) for k in ks]
+        self.metrics = {metric_resolver.normalize_inst(metric): metric for metric in metrics}
         self.ranks = {rank_type: {side: [] for side in REAL_SIDES} for rank_type in RANK_TYPES}
         self.number_of_options = defaultdict(list)
         self.num_entities = None
@@ -818,51 +682,26 @@ class RankBasedEvaluator(Evaluator):
         if self.num_entities is None:
             raise ValueError
 
-        hits_at_k: DefaultDict[ExtendedSide, Dict[RankType, Dict[Union[int, float], float]]] = defaultdict(dict)
-        asr: DefaultDict[str, DefaultDict[ExtendedSide, Dict[RankType, float]]] = defaultdict(lambda: defaultdict(dict))
+        result: MutableMapping[Tuple[str, ExtendedSide, RankType]] = dict()
 
-        for side, rank_type in itt.product(SIDES, RANK_TYPES):
-            ranks = self._get_for_side(mapping=self.ranks[rank_type], side=side)
-            if len(ranks) < 1:
-                logger.warning(f"No ranks for side={side}, rank_type={rank_type}")
+        for side in SIDES:
+            num_candidates = self._get_for_side(mapping=self.number_of_options, side=side)
+            if len(num_candidates) < 1:
+                logger.warning(f"No num_candidates for side={side}")
                 continue
-            hits_at_k[side][rank_type] = {
-                k: np.mean(ranks <= (k if isinstance(k, int) else int(self.num_entities * k))).item() for k in self.ks
-            }
-            for metric_name, metric_func in metric_resolver.lookup_dict.items():
-                asr[metric_name][side][rank_type] = metric_func(ranks).item()
-
-            # Adjusted mean rank calculation
-            if rank_type == RANK_REALISTIC:
-                emr = expected_mean_rank(num_candidates=self._get_for_side(mapping=self.number_of_options, side=side))
-                mr = asr[ARITHMETIC_MEAN_RANK][side][rank_type]
-                asr[ADJUSTED_ARITHMETIC_MEAN_RANK][side][rank_type] = mr / emr
-                asr[ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX][side][rank_type] = 1.0 - (mr - 1) / (emr - 1)
-
+            for rank_type in RANK_TYPES:
+                ranks = self._get_for_side(mapping=self.ranks[rank_type], side=side)
+                if len(ranks) < 1:
+                    logger.warning(f"No ranks for side={side}, rank_type={rank_type}")
+                    continue
+                for metric_name, metric in self.metrics.items():
+                    if rank_type not in metric.supported_rank_types:
+                        continue
+                    result[(metric_name, side, rank_type)] = metric(ranks=ranks, num_candidates=num_candidates)
         # Clear buffers
         self.ranks.clear()
         self.number_of_options.clear()
-
-        # for typing
-        rank_count: Dict[ExtendedSide, Dict[RankType, int]] = dict(asr[RANK_COUNT])  # type: ignore
-
-        return RankBasedMetricResults(
-            arithmetic_mean_rank=dict(asr[ARITHMETIC_MEAN_RANK]),
-            geometric_mean_rank=dict(asr[GEOMETRIC_MEAN_RANK]),
-            harmonic_mean_rank=dict(asr[HARMONIC_MEAN_RANK]),
-            median_rank=dict(asr[MEDIAN_RANK]),
-            inverse_arithmetic_mean_rank=dict(asr[INVERSE_ARITHMETIC_MEAN_RANK]),
-            inverse_geometric_mean_rank=dict(asr[INVERSE_GEOMETRIC_MEAN_RANK]),
-            inverse_harmonic_mean_rank=dict(asr[INVERSE_HARMONIC_MEAN_RANK]),
-            inverse_median_rank=dict(asr[INVERSE_MEDIAN_RANK]),
-            rank_count=rank_count,
-            rank_std=dict(asr[RANK_STD]),
-            rank_mad=dict(asr[RANK_MAD]),
-            rank_var=dict(asr[RANK_VARIANCE]),
-            adjusted_arithmetic_mean_rank=dict(asr[ADJUSTED_ARITHMETIC_MEAN_RANK]),
-            adjusted_arithmetic_mean_rank_index=dict(asr[ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX]),
-            hits_at_k=dict(hits_at_k),
-        )
+        return RankBasedMetricResults(result)
 
 
 def sample_negatives(
