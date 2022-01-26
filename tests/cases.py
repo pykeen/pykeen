@@ -38,6 +38,7 @@ from torch.nn import functional
 from torch.optim import SGD, Adagrad
 
 import pykeen.models
+import pykeen.nn.emb
 import pykeen.nn.message_passing
 import pykeen.nn.weighting
 from pykeen.datasets import Nations
@@ -1727,3 +1728,30 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
         data: Dict[str, torch.Tensor],
     ):
         logger.warning(f"{self.__class__.__name__} did not overwrite _validate_result.")
+
+
+class AnchorSelectionTestCase(GenericTestCase[pykeen.nn.emb.AnchorSelection]):
+    """Tests for anchor selection."""
+
+    num_anchors: int = 7
+    num_entities: int = 33
+    num_triples: int = 101
+    edge_index: numpy.ndarray
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        """Prepare kwargs."""
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        kwargs["num_anchors"] = self.num_anchors
+        return kwargs
+
+    def post_instantiation_hook(self) -> None:
+        """Prepare edge index."""
+        generator = numpy.random.default_rng(seed=42)
+        self.edge_index = generator.integers(low=0, high=self.num_entities, size=(2, self.num_triples))
+
+    def test_select(self):
+        """Test selection."""
+        anchors = self.instance.select(edge_index=self.edge_index)
+        assert len(anchors) == self.num_anchors
+        assert (0 <= anchors).all()
+        assert (anchors < self.num_entities).all()

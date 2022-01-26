@@ -13,7 +13,13 @@ import unittest_templates
 import pykeen.nn.emb
 import pykeen.nn.message_passing
 from pykeen.datasets import get_dataset
-from pykeen.nn.emb import Embedding, EmbeddingSpecification, RepresentationModule, SubsetRepresentationModule
+from pykeen.nn.emb import (
+    AnchorSelection,
+    Embedding,
+    EmbeddingSpecification,
+    RepresentationModule,
+    SubsetRepresentationModule,
+)
 from pykeen.triples.generation import generate_triples_factory
 from tests import cases, mocks
 
@@ -276,3 +282,16 @@ class EmbeddingSpecificationTests(unittest.TestCase):
                 shape=(1, 1),
                 normalizer="garbage",
             ).make(num_embeddings=1)
+
+
+class DegreeAnchorSelectionTestCase(cases.AnchorSelectionTestCase):
+    """Tests for degree anchor selection."""
+
+    cls = pykeen.nn.emb.DegreeAnchorSelection
+
+
+class AnchorSelectionMetaTestCase(unittest_templates.MetaTestCase[AnchorSelection]):
+    """Test for tests for anchor selection strategies."""
+
+    base_cls = pykeen.nn.emb.AnchorSelection
+    base_test = cases.AnchorSelectionTestCase
