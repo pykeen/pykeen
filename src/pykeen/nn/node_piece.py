@@ -298,9 +298,10 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
         unique_entity_ids, counts = numpy.unique(entity_ids, return_counts=True)
         assert (counts >= k).all()
         generator = numpy.random.default_rng()
-        intra_offset = numpy.floor(
-            generator.random(size=(counts.size, k), dtype=numpy.float32) * counts[:, None]
-        ).astype(int)
+        # TODO: is this really doing random selection without replacement?
+        random_numbers = generator.random(size=(counts.size, k), dtype=numpy.float32)
+        random_numbers /= random_numbers.sum(axis=-1, keepdims=True)
+        intra_offset = numpy.floor(random_numbers * counts[:, None]).astype(int)
         offset = numpy.cumsum(numpy.r_[0, counts])[:-1, None] + intra_offset
         tokens[unique_entity_ids] = anchor_ids[offset]
 

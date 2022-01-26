@@ -1759,6 +1759,8 @@ class AnchorSelectionTestCase(GenericTestCase[pykeen.nn.node_piece.AnchorSelecti
         # value range
         assert (0 <= anchors).all()
         assert (anchors < self.num_entities).all()
+        # no duplicates
+        assert len(set(anchors.tolist())) == len(anchors)
 
 
 class AnchorSearcherTestCase(GenericTestCase[pykeen.nn.node_piece.AnchorSearcher]):
@@ -1785,6 +1787,9 @@ class AnchorSearcherTestCase(GenericTestCase[pykeen.nn.node_piece.AnchorSearcher
         # value range
         assert (tokens >= -1).all()
         assert (tokens < len(self.anchors)).all()
+        # no duplicates
+        for row in tokens.tolist():
+            self.assertDictEqual({k: v for k, v in Counter(row).items() if k >= 0 and v > 1}, {}, msg="duplicate token")
 
 
 class TokenizerTestCase(GenericTestCase[pykeen.nn.node_piece.Tokenizer]):
