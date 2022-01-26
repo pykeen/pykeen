@@ -566,23 +566,7 @@ class RankBasedMetricResults(MetricResults):
 
 
 class RankBasedEvaluator(Evaluator):
-    r"""A rank-based evaluator for KGE models.
-
-    Calculates the following metrics:
-
-    - Mean Rank (MR) with range $[1, \infty)$ where closer to 0 is better
-    - Adjusted Mean Rank (AMR; [berrendorf2020]_) with range $(0, 2)$ where closer to 0 is better
-    - Adjusted Mean Rank Index (AMRI; [berrendorf2020]_) with range $[-1, 1]$ where closer to 1 is better
-    - Mean Reciprocal Rank (MRR) with range $(0, 1]$ where closer to 1 is better
-    - Hits @ K with range $[0, 1]$ where closer to 1 is better.
-
-    .. [berrendorf2020] Berrendorf, *et al.* (2020) `Interpretable and Fair
-        Comparison of Link Prediction or Entity Alignment Methods with Adjusted Mean Rank
-        <https://arxiv.org/abs/2002.06914>`_.
-    """
-
-    ks: Sequence[Union[int, float]]
-    num_entities: Optional[int]
+    """A rank-based evaluator for KGE models."""
 
     #: the actual rank data
     ranks: MutableMapping[RankType, MutableMapping[Side, List[np.ndarray]]]
@@ -625,7 +609,6 @@ class RankBasedEvaluator(Evaluator):
         self.metrics = {metric_resolver.normalize_inst(metric): metric for metric in metrics}
         self.ranks = {rank_type: {side: [] for side in REAL_SIDES} for rank_type in RANK_TYPES}
         self.number_of_options = defaultdict(list)
-        self.num_entities = None
 
     def _update_ranks_(
         self,
@@ -643,7 +626,6 @@ class RankBasedEvaluator(Evaluator):
             true_score=true_scores,
             all_scores=all_scores,
         )
-        self.num_entities = all_scores.shape[1]
         for rank_type, ranks in batch_ranks.to_type_dict().items():
             self.ranks[rank_type][side].append(ranks.detach().cpu().numpy())
         self.number_of_options[side].append(batch_ranks.number_of_options.detach().cpu().numpy())
@@ -679,10 +661,7 @@ class RankBasedEvaluator(Evaluator):
         return np.concatenate([RankBasedEvaluator._get_for_side(mapping=mapping, side=_side) for _side in REAL_SIDES])
 
     def finalize(self) -> RankBasedMetricResults:  # noqa: D102
-        if self.num_entities is None:
-            raise ValueError
-
-        result: MutableMapping[Tuple[str, ExtendedSide, RankType]] = dict()
+        result: MutableMapping[Tuple[str, ExtendedSide, RankType], float] = dict()
 
         for side in SIDES:
             num_candidates = self._get_for_side(mapping=self.number_of_options, side=side)
