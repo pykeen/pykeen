@@ -8,15 +8,13 @@ import itertools
 import logging
 import warnings
 from abc import ABC, abstractmethod
-from collections import defaultdict
 from dataclasses import dataclass
-from typing import Any, Callable, Mapping, Optional, Sequence, Tuple, Union
+from typing import Any, Mapping, Optional, Sequence, Tuple, Union
 
 import numpy as np
-import scipy.sparse
 import torch
 import torch.nn
-from class_resolver import FunctionResolver, HintOrType, OptionalKwargs, Resolver
+from class_resolver import FunctionResolver
 from torch import nn
 from torch.nn import functional
 
@@ -24,10 +22,9 @@ from .compositions import CompositionModule, composition_resolver
 from .init import initializer_resolver, uniform_norm_p1_
 from .utils import TransformerEncoder
 from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolver
-from ..constants import AGGREGATIONS
 from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import CoreTriplesFactory, TriplesFactory
-from ..typing import Constrainer, Hint, HintType, Initializer, MappedTriples, Normalizer
+from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer
 from ..utils import Bias, activation_resolver, clamp_norm, complex_normalize
 
 __all__ = [

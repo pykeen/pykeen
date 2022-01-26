@@ -5,6 +5,7 @@ from collections import defaultdict
 from typing import Callable, Optional, Sequence, Union
 
 import numpy
+import numpy.linalg
 import scipy.sparse
 import scipy.sparse.csgraph
 import torch
@@ -98,6 +99,21 @@ class RelationTokenizer(Tokenizer):
         return assignment
 
 
+def _edge_index_to_sparse_matrix(
+    edge_index: numpy.ndarray,
+    num_entities: Optional[int] = None,
+) -> scipy.sparse.spmatrix:
+    if num_entities is None:
+        num_entities = edge_index.max().item() + 1
+    return scipy.sparse.coo_matrix(
+        (
+            numpy.ones_like(edge_index[0], dtype=bool),
+            tuple(edge_index),
+        ),
+        shape=(num_entities, num_entities),
+    )
+
+
 class AnchorSelection:
     """Anchor entity selection strategy."""
 
@@ -138,6 +154,54 @@ class DegreeAnchorSelection(AnchorSelection):
         return unique[top_ids]
 
 
+class PageRankSelection(AnchorSelection):
+    """Select entities according to their page rank."""
+
+    def __init__(
+        self,
+        num_anchors: int = 32,
+        max_iter: int = 1_000,
+        alpha: float = 0.05,
+        epsilon: float = 1.0e-04,
+    ) -> None:
+        """
+        Initialize the selection strategy.
+
+        :param num_anchors:
+            the number of anchors to select
+        :param max_iter:
+            the maximum number of power iterations
+        :param alpha:
+            the smoothing value / teleport probability
+        :param epsilon:
+            a constant to check for convergence
+        """
+        super().__init__(num_anchors=num_anchors)
+        self.max_iter = max_iter
+        self.beta = 1.0 - alpha
+        self.epsilon = epsilon
+
+    def __call__(self, edge_index: numpy.ndarray) -> numpy.ndarray:  # noqa: D102
+        # convert to sparse matrix
+        adj = _edge_index_to_sparse_matrix(edge_index=edge_index)
+        # symmetrize
+        adj = (adj + adj.transpose() + scipy.sparse.eye(m=adj.shape[0], format="coo")).tocsr()
+        # degree
+        degree_inv = numpy.reciprocal(numpy.asarray(adj.sum(axis=0)))[0]
+        n = degree_inv.shape[0]
+        # power iteration
+        x = numpy.full(shape=(n,), fill_value=1 / n)
+        x_old = x
+        for i in range(self.max_iter):
+            x = self.beta * adj.dot(degree_inv * x) + (1 - self.beta)
+            if numpy.linalg.norm(x - x_old, ord=float("+inf")) < self.epsilon:
+                logger.debug(f"Converged after {i} iterations up to {self.epsilon}.")
+                break
+            x_old = x
+        logger.warning(f"No covergence after {self.max_iter} iterations with threshold {self.epsilon}.")
+        return numpy.argpartition(x, max(x.size - self.num_anchors, 0))[-self.num_anchors :]
+
+
 anchor_selection_resolver: Resolver[AnchorSelection] = Resolver.from_subclasses(
     base=AnchorSelection,
     default=DegreeAnchorSelection,
@@ -169,14 +233,8 @@ class CSGraphAnchorSearcher(AnchorSearcher):
     """Find closest anchors using scipy.sparse.csgraph."""
 
     def __call__(self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int) -> numpy.ndarray:  # noqa: D102
-        num_entities = edge_index.max().item() + 1
-        adjacency = scipy.sparse.coo_matrix(
-            (
-                numpy.ones_like(edge_index[0], dtype=bool),
-                tuple(edge_index),
-            ),
-            shape=(num_entities, num_entities),
-        )
+        # convert to adjacency matrix
+        adjacency = _edge_index_to_sparse_matrix(edge_index=edge_index).tocsr()
         # compute distances between anchors and all nodes, shape: (num_anchors, num_entities)
         distances = scipy.sparse.csgraph.shortest_path(
             csgraph=adjacency,
@@ -187,7 +245,7 @@ class CSGraphAnchorSearcher(AnchorSearcher):
         )
         # select anchor IDs with smallest distance
         return torch.as_tensor(
-            numpy.argpartition(distances, kth=min(k, num_entities), axis=0)[:k, :].T,
+            numpy.argpartition(distances, kth=min(k, distances.shape[0]), axis=0)[:k, :].T,
             dtype=torch.long,
         )
 

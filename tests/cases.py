@@ -2,7 +2,6 @@
 
 """Test cases for PyKEEN."""
 
-from collections import Counter
 import logging
 import os
 import pathlib
@@ -11,6 +10,7 @@ import timeit
 import traceback
 import unittest
 from abc import ABC, abstractmethod
+from collections import Counter
 from typing import (
     Any,
     ClassVar,

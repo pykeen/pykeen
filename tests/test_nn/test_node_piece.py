@@ -11,6 +11,12 @@ class DegreeAnchorSelectionTestCase(cases.AnchorSelectionTestCase):
     cls = pykeen.nn.node_piece.DegreeAnchorSelection
 
 
+class PageRankAnchorSelectionTestCase(cases.AnchorSelectionTestCase):
+    """Tests for page rank anchor selection."""
+
+    cls = pykeen.nn.node_piece.PageRankSelection
+
+
 class AnchorSelectionMetaTestCase(unittest_templates.MetaTestCase[pykeen.nn.node_piece.AnchorSelection]):
     """Test for tests for anchor selection strategies."""
 
