@@ -160,7 +160,10 @@ class NodePieceAnchorTests(cases.RepresentationTestCase):
         token_representation=pykeen.nn.emb.EmbeddingSpecification(
             shape=(3,),
         ),
-        anchor_selection="degree",
+        tokenizer="anchor",
+        tokenizer_kwargs=dict(
+            selection="degree",
+        ),
     )
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
