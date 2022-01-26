@@ -99,7 +99,6 @@ class ValueRange:
 class RankBasedMetric:
     """A base class for rank-based metrics."""
 
-    # TODO: verify interpretation
     #: whether it is increasing, i.e., larger values are better
     increasing: ClassVar[bool] = False
 
