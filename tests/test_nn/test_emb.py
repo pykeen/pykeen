@@ -128,7 +128,7 @@ class TestSingleCompGCNRepresentationTests(cases.RepresentationTestCase):
 class NodePieceTests(cases.RepresentationTestCase):
     """Tests for node piece representation."""
 
-    cls = pykeen.nn.emb.NodePieceRepresentation
+    cls = pykeen.nn.node_piece.NodePieceRepresentation
     num_entities: ClassVar[int] = 8
     num_relations: ClassVar[int] = 7
     num_triples: ClassVar[int] = 31
@@ -152,7 +152,7 @@ class NodePieceTests(cases.RepresentationTestCase):
 class NodePieceAnchorTests(cases.RepresentationTestCase):
     """Tests for node piece representation with anchor nodes."""
 
-    cls = pykeen.nn.emb.NodePieceRepresentation
+    cls = pykeen.nn.node_piece.NodePieceRepresentation
     num_entities: ClassVar[int] = 8
     num_relations: ClassVar[int] = 7
     num_triples: ClassVar[int] = 31

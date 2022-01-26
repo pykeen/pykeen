@@ -28,8 +28,7 @@ from pykeen.models import (
 from pykeen.models.multimodal.base import LiteralModel
 from pykeen.models.predict import get_all_prediction_df, get_novelty_mask, predict
 from pykeen.models.unimodal.node_piece import _ConcatMLP
-from pykeen.nn import EmbeddingSpecification
-from pykeen.nn.emb import Embedding, NodePieceRepresentation
+from pykeen.nn import EmbeddingSpecification, NodePieceRepresentation, Embedding
 from pykeen.utils import all_in_bounds, extend_batch
 from tests import cases
 from tests.constants import EPSILON

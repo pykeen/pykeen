@@ -35,6 +35,8 @@ class Tokenizer:
         self,
         mapped_triples: MappedTriples,
         num_tokens: int,
+        num_entities: int,
+        num_relations: int,
     ) -> torch.LongTensor:
         """
         Tokenize the entities contained given the triples.
@@ -43,6 +45,10 @@ class Tokenizer:
             the ID-based triples
         :param num_tokens:
             the number of tokens to select for each entity
+        :param num_entities:
+            the number of entities
+        :param num_relations:
+            the number of relatiosn
 
         :return: shape: (num_entities, num_tokens), -1 <= res < max_token_id
             the selected relation IDs for each entity. -1 is used as a padding token.
@@ -57,12 +63,9 @@ class RelationTokenizer(Tokenizer):
         self,
         mapped_triples: MappedTriples,
         num_tokens: int,
+        num_entities: int,
+        num_relations: int,
     ) -> torch.LongTensor:  # noqa: D102
-        # infer number of entities/relations
-        m = mapped_triples.max(dim=0).tolist()
-        num_entities = max(m[[0, 2]])
-        num_relations = m[1] + 1
-
         # tokenize: represent entities by bag of relations
         h, r, t = mapped_triples.t()
 
@@ -169,7 +172,6 @@ class CSGraphAnchorSearcher(AnchorSearcher):
         num_entities = edge_index.max().item() + 1
         adjacency = scipy.sparse.coo_matrix(
             (
-                numpy.ones_like(edge_index[0]),
                 numpy.ones_like(edge_index[0], dtype=bool),
                 tuple(edge_index),
             ),
@@ -184,7 +186,9 @@ class CSGraphAnchorSearcher(AnchorSearcher):
             indices=anchors,
         )
         # select anchor IDs with smallest distance
-        return torch.as_tensor(numpy.argpartition(distances, kth=min(k, num_entities), axis=1), dtype=torch.long)
+        return torch.as_tensor(
+            numpy.argpartition(distances, kth=min(k, num_entities), axis=0)[:k, :].T, dtype=torch.long
+        )
 
 
 class ScipySparseAnchorSearcher(AnchorSearcher):
@@ -284,6 +288,8 @@ class AnchorTokenizer(Tokenizer):
         self,
         mapped_triples: MappedTriples,
         num_tokens: int,
+        num_entities: int,
+        num_relations: int,
     ) -> torch.LongTensor:  # noqa: D102
         edge_index = mapped_triples[:, [0, 2]].numpy().T
         # select anchors
@@ -396,7 +402,12 @@ class NodePieceRepresentation(RepresentationModule):
             mapped_triples = mapped_triples[mapped_triples[:, 1] < triples_factory.real_num_relations]
 
         tokenizer_inst = tokenizer_resolver.make(tokenizer, pos_kwargs=tokenizer_kwargs)
-        assignment = tokenizer_inst(mapped_triples=mapped_triples, num_tokens=num_tokens)
+        assignment = tokenizer_inst(
+            mapped_triples=mapped_triples,
+            num_tokens=num_tokens,
+            num_entities=triples_factory.num_entities,
+            num_relations=triples_factory.real_num_relations,
+        )
         # fill padding
         padding = assignment < 0
         if padding.any():
