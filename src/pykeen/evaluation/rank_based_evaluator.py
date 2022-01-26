@@ -216,7 +216,7 @@ class InverseMedianRank(RankBasedMetric):
         return np.reciprocal(np.median(ranks)).item()
 
 
-class RankStandardDeviation(RankBasedMetric):
+class StandardDeviation(RankBasedMetric):
     """The ranks' standard deviation."""
 
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=math.inf)
@@ -226,7 +226,7 @@ class RankStandardDeviation(RankBasedMetric):
         return np.std(ranks).item()
 
 
-class RankVariance(RankBasedMetric):
+class Variance(RankBasedMetric):
     """The ranks' variance."""
 
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=math.inf)
@@ -236,7 +236,7 @@ class RankVariance(RankBasedMetric):
         return np.var(ranks).item()
 
 
-class RankMedianAbsoluteDeviation(RankBasedMetric):
+class MedianAbsoluteDeviation(RankBasedMetric):
     """The ranks' median absolute deviation (MAD)."""
 
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=math.inf)
@@ -246,7 +246,7 @@ class RankMedianAbsoluteDeviation(RankBasedMetric):
         return stats.median_absolute_deviation(ranks).item()
 
 
-class RankCount(RankBasedMetric):
+class Count(RankBasedMetric):
     """The ranks' count."""
 
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=math.inf)
@@ -275,7 +275,7 @@ class AdjustedArithmeticMeanRank(RankBasedMetric):
     """The adjusted arithmetic mean rank (AMR)."""
 
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=2, upper_inclusive=False)
-    synonyms = ("amr", "aamr")
+    synonyms = ("adjusted_mean_rank", "amr", "aamr")
     supported_rank_types = (RANK_REALISTIC,)
     needs_candidates = True
 
@@ -287,7 +287,7 @@ class AdjustedArithmeticMeanRankIndex(RankBasedMetric):
     """The adjusted arithmetic mean rank index (AMRI)."""
 
     value_range = ValueRange(lower=-1, lower_inclusive=True, upper=1, upper_inclusive=True)
-    synonyms = ("amr", "aamr")
+    synonyms = ("adjusted_mean_rank_index", "amri", "aamri")
     increasing = True
     supported_rank_types = (RANK_REALISTIC,)
     needs_candidates = True
