@@ -31,6 +31,7 @@ from pykeen.evaluation.rank_based_evaluator import (
     REAL_SIDES,
     SIDE_BOTH,
     SIDES,
+    ArithmeticMeanRank,
     SampledRankBasedEvaluator,
     compute_rank_from_scores,
     expected_hits_at_k,
@@ -742,3 +743,9 @@ class RankBasedMetricResultsTests(unittest.TestCase):
         """Test to_df."""
         df = self.instance.to_df()
         assert isinstance(df, pandas.DataFrame)
+
+
+class ArithmeticMeanRankTests(cases.RankBasedMetricTestCase):
+    """Tests for arithmetic mean rank."""
+
+    cls = ArithmeticMeanRank
