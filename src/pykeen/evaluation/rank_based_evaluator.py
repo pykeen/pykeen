@@ -35,7 +35,7 @@ import torch
 from dataclasses_json import dataclass_json
 from scipy import stats
 from typing_extensions import Literal
-from class_resolver import FunctionResolver
+from class_resolver import FunctionResolver, Resolver
 
 from .evaluator import Evaluator, MetricResults, prepare_filter_triples
 from ..triples.triples_factory import CoreTriplesFactory
@@ -142,6 +142,15 @@ class ArithmeticMeanRank(RankBasedMetric):
         return np.mean(ranks).item()
 
 
+class InverseArithmeticMeanRank(RankBasedMetric):
+    """The inverse arithmetic mean rank."""
+
+    value_range = ValueRange(lower=0, lower_inclusive=False, upper=1, upper_inclusive=True)
+
+    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
+        return np.reciprocal(np.mean(ranks)).item()
+
+
 class GeometricMeanRank(RankBasedMetric):
     """The geometric mean rank."""
 
@@ -152,11 +161,102 @@ class GeometricMeanRank(RankBasedMetric):
         return stats.gmean(ranks).item()
 
 
+class InverseGeometricMeanRank(RankBasedMetric):
+    """The inverse geometric mean rank."""
+
+    value_range = ValueRange(lower=0, lower_inclusive=False, upper=1, upper_inclusive=True)
+
+    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
+        return np.reciprocal(stats.gmean(ranks)).item()
+
+
+class HarmonicMeanRank(RankBasedMetric):
+    """The harmonic mean rank."""
+
+    value_range = ValueRange(lower=1, lower_inclusive=True, upper=math.inf)
+    synonyms = ("hmr",)
+
+    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
+        return stats.hmean(ranks).item()
+
+
+class InverseHarmonicMeanRank(RankBasedMetric):
+    """The inverse harmonic mean rank."""
+
+    value_range = ValueRange(lower=0, lower_inclusive=False, upper=1, upper_inclusive=True)
+    synonyms = ("mean_reciprocal_rank", "mrr")
+
+    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
+        return np.reciprocal(stats.hmean(ranks)).item()
+
+
+class MedianRank(RankBasedMetric):
+    """The median rank."""
+
+    value_range = ValueRange(lower=1, lower_inclusive=True, upper=math.inf)
+
+    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
+        return np.median(ranks).item()
+
+
+class InverseMedianRank(RankBasedMetric):
+    """The inverse median rank."""
+
+    value_range = ValueRange(lower=0, lower_inclusive=False, upper=1, upper_inclusive=True)
+
+    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
+        return np.reciprocal(np.median(ranks)).item()
+
+
+class RankStandardDeviation(RankBasedMetric):
+    """The ranks' standard deviation."""
+
+    value_range = ValueRange(lower=0, lower_inclusive=True, upper=math.inf)
+    synonyms = ("rank_std", "std")
+
+    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
+        return np.std(ranks).item()
+
+
+class RankVariance(RankBasedMetric):
+    """The ranks' variance."""
+
+    value_range = ValueRange(lower=0, lower_inclusive=True, upper=math.inf)
+    synonyms = ("rank_var", "var")
+
+    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
+        return np.var(ranks).item()
+
+
+class RankMedianAbsoluteDeviation(RankBasedMetric):
+    """The ranks' median absolute deviation (MAD)."""
+
+    value_range = ValueRange(lower=0, lower_inclusive=True, upper=math.inf)
+    synonyms = ("rank_mad", "mad")
+
+    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
+        return stats.median_absolute_deviation(ranks).item()
+
+
+class RankCount(RankBasedMetric):
+    """The ranks' count."""
+
+    value_range = ValueRange(lower=0, lower_inclusive=True, upper=math.inf)
+
+    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
+        return ranks.size
+
+
+metric_resolver = Resolver.from_subclasses(
+    base=RankBasedMetric,
+    default=InverseArithmeticMeanRank,  # mrr
+)
+
 # TODO: use function resolver
-ARITHMETIC_MEAN_RANK = "arithmetic_mean_rank"  # also known as mean rank (MR)
-GEOMETRIC_MEAN_RANK = "geometric_mean_rank"
-HARMONIC_MEAN_RANK = "harmonic_mean_rank"
-MEDIAN_RANK = "median_rank"
+# ARITHMETIC_MEAN_RANK = "arithmetic_mean_rank"  # also known as mean rank (MR)
+# GEOMETRIC_MEAN_RANK = "geometric_mean_rank"
+# HARMONIC_MEAN_RANK = "harmonic_mean_rank"
+# MEDIAN_RANK = "median_rank"
 INVERSE_ARITHMETIC_MEAN_RANK = "inverse_arithmetic_mean_rank"
 INVERSE_GEOMETRIC_MEAN_RANK = "inverse_geometric_mean_rank"
 INVERSE_HARMONIC_MEAN_RANK = "inverse_harmonic_mean_rank"  # also known as mean reciprocal rank (MRR)
@@ -167,49 +267,6 @@ RANK_VARIANCE = "rank_var"
 RANK_MAD = "rank_mad"
 RANK_COUNT = "rank_count"
 
-# TODO: add suffix to function resolver?
-metric_resolver = FunctionResolver()
-metric_resolver.register(np.mean, synonyms={ARITHMETIC_MEAN_RANK, "mean_rank", "mr"})
-metric_resolver.register(stats.hmean, synonyms={HARMONIC_MEAN_RANK})
-metric_resolver.register(stats.gmean, synonyms={GEOMETRIC_MEAN_RANK})
-metric_resolver.register(np.median, synonyms={MEDIAN_RANK})
-metric_resolver.register(
-    compose(
-        np.mean,
-        np.reciprocal,
-        name=INVERSE_ARITHMETIC_MEAN_RANK,
-    ),
-    synonyms={INVERSE_ARITHMETIC_MEAN_RANK, "iamr"},
-)
-metric_resolver.register(
-    compose(
-        stats.gmean,
-        np.reciprocal,
-        name=INVERSE_GEOMETRIC_MEAN_RANK,
-    ),
-    synonyms={INVERSE_GEOMETRIC_MEAN_RANK, "igmr"},
-)
-metric_resolver.register(
-    compose(
-        stats.hmean,
-        np.reciprocal,
-        name=INVERSE_HARMONIC_MEAN_RANK,
-    ),
-    synonyms={INVERSE_HARMONIC_MEAN_RANK, "mean_reciprocal_rank", "mrr"},
-)
-metric_resolver.register(
-    compose(
-        np.median,
-        np.reciprocal,
-        name=INVERSE_MEDIAN_RANK,
-    ),
-    synonyms={INVERSE_MEDIAN_RANK},
-)
-# Extra stats stuff
-metric_resolver.register(np.std, synonyms={RANK_STD})
-metric_resolver.register(np.var, synonyms={RANK_VARIANCE})
-metric_resolver.register(stats.median_abs_deviation, synonyms={RANK_MAD})
-metric_resolver.register(lambda x: np.asarray(x.size), synonyms={RANK_COUNT})
 
 # TODO: adjusted metrics
 ADJUSTED_ARITHMETIC_MEAN_RANK = "adjusted_arithmetic_mean_rank"
