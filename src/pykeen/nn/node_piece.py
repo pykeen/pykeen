@@ -251,7 +251,7 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
 # TODO: use graph library, such as igraph, graph-tool, or networkit
 anchor_searcher_resolver: Resolver[AnchorSearcher] = Resolver.from_subclasses(
     base=AnchorSearcher,
-    default=ScipySparseAnchorSearcher,
+    default=CSGraphAnchorSearcher,
 )
 
 
