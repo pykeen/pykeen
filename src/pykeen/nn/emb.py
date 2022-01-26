@@ -840,6 +840,7 @@ class SingleCompGCNRepresentation(RepresentationModule):
             x = x[indices]
         return x
 
+
 class LabelBasedTransformerRepresentation(RepresentationModule):
     """
     Label-based representations using a transformer encoder.
