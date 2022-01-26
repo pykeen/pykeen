@@ -36,8 +36,6 @@ class EvaluationOnlyModel(Model, ABC):
             # These operations are deterministic and a random seed can be fixed
             # just to avoid warnings
             random_seed=0,
-            # These operations do not need to be performed on a GPU
-            preferred_device="cpu",
         )
 
     def _reset_parameters_(self):

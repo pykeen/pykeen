@@ -11,6 +11,7 @@ import numpy as np
 import torch
 import torch.nn
 import torch.nn.init
+from class_resolver import FunctionResolver
 from torch.nn import functional
 
 from .utils import TransformerEncoder
@@ -28,6 +29,7 @@ __all__ = [
     "init_phases",
     "PretrainedInitializer",
     "LabelBasedInitializer",
+    "initializer_resolver",
 ]
 
 logger = logging.getLogger(__name__)
@@ -82,22 +84,27 @@ def init_phases(x: torch.Tensor) -> torch.Tensor:
 xavier_uniform_norm_ = compose(
     torch.nn.init.xavier_uniform_,
     functional.normalize,
+    name="xavier_uniform_norm_",
 )
 xavier_normal_norm_ = compose(
     torch.nn.init.xavier_normal_,
     functional.normalize,
+    name="xavier_normal_norm_",
 )
 uniform_norm_ = compose(
     torch.nn.init.uniform_,
     functional.normalize,
+    name="uniform_norm_",
 )
 normal_norm_ = compose(
     torch.nn.init.normal_,
     functional.normalize,
+    name="normal_norm_",
 )
 uniform_norm_p1_ = compose(
     torch.nn.init.uniform_,
     functools.partial(functional.normalize, p=1),
+    name="uniform_norm_p1_",
 )
 
 
@@ -252,3 +259,23 @@ class LabelBasedInitializer(PretrainedInitializer):
             labels=labels,
             **kwargs,
         )
+
+
+initializer_resolver = FunctionResolver(
+    [
+        getattr(torch.nn.init, func)
+        for func in dir(torch.nn.init)
+        if not func.startswith("_") and func.endswith("_") and func not in {"xavier_normal_", "xavier_uniform_"}
+    ],
+    default=torch.nn.init.normal_,
+)
+for func in [
+    xavier_normal_,
+    xavier_uniform_,
+    init_phases,
+    xavier_normal_norm_,
+    xavier_uniform_norm_,
+    normal_norm_,
+    uniform_norm_,
+]:
+    initializer_resolver.register(func)

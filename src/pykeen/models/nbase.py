@@ -20,8 +20,9 @@ from ..nn.emb import EmbeddingSpecification, RepresentationModule
 from ..nn.modules import Interaction, interaction_resolver
 from ..regularizers import Regularizer
 from ..triples import CoreTriplesFactory
-from ..typing import DeviceHint, HeadRepresentation, Mode, RelationRepresentation, TailRepresentation
+from ..typing import HeadRepresentation, RelationRepresentation, TailRepresentation
 from ..utils import check_shapes
+from ..typing import Mode
 
 __all__ = [
     "_NewAbstractModel",
@@ -255,7 +256,6 @@ class ERModel(
         loss: HintOrType[Loss] = None,
         loss_kwargs: OptionalKwargs = None,
         predict_with_sigmoid: bool = False,
-        preferred_device: DeviceHint = None,
         random_seed: Optional[int] = None,
         skip_checks: bool = False,
     ) -> None:
@@ -278,8 +278,6 @@ class ERModel(
             Whether to apply sigmoid onto the scores when predicting scores. Applying sigmoid at prediction time may
             lead to exactly equal scores for certain triples with very high, or very low score. When not trained with
             applying sigmoid (or using BCEWithLogitsLoss), the scores are not calibrated to perform well with sigmoid.
-        :param preferred_device:
-            The preferred device for model training and inference.
         :param random_seed:
             A random seed to use for initialising the model's weights. **Should** be set when aiming at reproducibility.
         :param skip_checks:
@@ -289,7 +287,6 @@ class ERModel(
             triples_factory=triples_factory,
             loss=loss,
             loss_kwargs=loss_kwargs,
-            preferred_device=preferred_device,
             random_seed=random_seed,
             predict_with_sigmoid=predict_with_sigmoid,
         )
@@ -487,7 +484,7 @@ class ERModel(
         """Get representations for head, relation and tails."""
         entity_representations = self._entity_representation_from_mode(mode=mode)
         hr, rr, tr = [
-            [representation(indices=indices) for representation in representations]
+            [representation.forward_unique(indices=indices) for representation in representations]
             for indices, representations in (
                 (h, entity_representations),
                 (r, self.relation_representations),

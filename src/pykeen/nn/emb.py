@@ -4,32 +4,23 @@
 
 from __future__ import annotations
 
-import functools
 import itertools
 import logging
 import warnings
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Any, Callable, Mapping, Optional, Sequence, Tuple, TypeVar, Union, cast
+from typing import Any, Callable, Mapping, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import torch
 import torch.nn
+from class_resolver import FunctionResolver
 from torch import nn
 from torch.nn import functional
 
 from .compositions import CompositionModule, composition_resolver
-from .init import (
-    init_phases,
-    normal_norm_,
-    uniform_norm_,
-    uniform_norm_p1_,
-    xavier_normal_,
-    xavier_normal_norm_,
-    xavier_uniform_,
-    xavier_uniform_norm_,
-)
+from .init import initializer_resolver, uniform_norm_p1_
 from .utils import TransformerEncoder
 from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolver
 from ..constants import AGGREGATIONS
@@ -50,9 +41,8 @@ __all__ = [
     "LabelBasedTransformerRepresentation",
     "SubsetRepresentationModule",
     # Utils
-    "constrainers",
-    "initializers",
-    "normalizers",
+    "constrainer_resolver",
+    "normalizer_resolver",
 ]
 
 logger = logging.getLogger(__name__)
@@ -108,6 +98,11 @@ class RepresentationModule(nn.Module, ABC):
     ) -> torch.FloatTensor:
         """Get representations for indices.
 
+        .. note::
+
+            this method is implemented in subclasses. Prefer using `forward_unique` instead,
+            which optimizes for duplicate indices.
+
         :param indices: shape: s
             The indices, or None. If None, this is interpreted as ``torch.arange(self.max_id)`` (although implemented
             more efficiently).
@@ -116,36 +111,29 @@ class RepresentationModule(nn.Module, ABC):
             The representations.
         """
 
+    def forward_unique(
+        self,
+        indices: Optional[torch.LongTensor] = None,
+    ) -> torch.FloatTensor:
+        """Get representations for indices.
+
+        :param indices: shape: s
+            The indices, or None. If None, this is interpreted as ``torch.arange(self.max_id)`` (although implemented
+            more efficiently).
+
+        :return: shape: (``*s``, ``*self.shape``)
+            The representations.
+        """
+        if indices is None:
+            return self(None)
+        unique, inverse = indices.unique(return_inverse=True)
+        return self(unique)[inverse]
+
     def reset_parameters(self) -> None:
         """Reset the module's parameters."""
 
     def post_parameter_update(self):
         """Apply constraints which should not be included in gradients."""
-
-    def get_in_canonical_shape(
-        self,
-        indices: Optional[torch.LongTensor] = None,
-    ) -> torch.FloatTensor:
-        """Get representations in canonical shape.
-
-        :param indices: None, shape: (b,) or (b, n)
-            The indices. If None, return all representations.
-
-        :return: shape: (b?, n?, d)
-            If indices is None, b=1, n=max_id.
-            If indices is 1-dimensional, b=indices.shape[0] and n=1.
-            If indices is 2-dimensional, b, n = indices.shape
-        """
-        x = self(indices=indices)
-        if indices is None:
-            x = x.unsqueeze(dim=0)
-        elif indices.ndimension() > 2:
-            raise ValueError(
-                f"Undefined canonical shape for more than 2-dimensional index tensors: {indices.shape}",
-            )
-        elif indices.ndimension() == 1:
-            x = x.unsqueeze(dim=1)
-        return x
 
     @property
     def embedding_dim(self) -> int:
@@ -297,31 +285,26 @@ class Embedding(RepresentationModule):
         if dtype.is_complex:
             shape = tuple(shape[:-1]) + (2 * shape[-1],)
             _embedding_dim = _embedding_dim * 2
+            # note: this seems to work, as finfo returns the datatype of the underlying floating
+            # point dtype, rather than the combined complex one
+            dtype = getattr(torch, torch.finfo(dtype).dtype)
 
         super().__init__(
             max_id=num_embeddings,
             shape=shape,
         )
 
-        self.initializer = cast(
-            Initializer,
-            _handle(
-                initializer,
-                initializers,
-                initializer_kwargs,
-                default=nn.init.normal_,
-                label="initializer",
-            ),
-        )
-        self.normalizer = _handle(normalizer, normalizers, normalizer_kwargs, label="normalizer")
-        self.constrainer = _handle(constrainer, constrainers, constrainer_kwargs, label="constrainer")
-        if regularizer is not None:
-            regularizer = regularizer_resolver.make(regularizer, pos_kwargs=regularizer_kwargs)
-        self.regularizer = regularizer
+        # use make for initializer since there's a default, and make_safe
+        # for the others to pass through None values
+        self.initializer = initializer_resolver.make(initializer, initializer_kwargs)
+        self.normalizer = normalizer_resolver.make_safe(normalizer, normalizer_kwargs)
+        self.constrainer = constrainer_resolver.make_safe(constrainer, constrainer_kwargs)
+        self.regularizer = regularizer_resolver.make_safe(regularizer, regularizer_kwargs)
 
         self._embeddings = torch.nn.Embedding(
             num_embeddings=num_embeddings,
             embedding_dim=_embedding_dim,
+            dtype=dtype,
         )
         self._embeddings.requires_grad_(trainable)
         self.dropout = None if dropout is None else nn.Dropout(dropout)
@@ -533,52 +516,9 @@ def process_shape(
     return dim, shape
 
 
-#: Initializers
-initializers = {
-    "xavier_uniform": xavier_uniform_,
-    "xavier_uniform_norm": xavier_uniform_norm_,
-    "xavier_normal": xavier_normal_,
-    "xavier_normal_norm": xavier_normal_norm_,
-    "normal": torch.nn.init.normal_,
-    "normal_norm": normal_norm_,
-    "uniform": torch.nn.init.uniform_,
-    "uniform_norm": uniform_norm_,
-    "phases": init_phases,
-    "init_phases": init_phases,
-}
+constrainer_resolver = FunctionResolver([functional.normalize, complex_normalize, torch.clamp, clamp_norm])
 
-#: Constrainers
-constrainers = {
-    "normalize": functional.normalize,
-    "complex_normalize": complex_normalize,
-    "clamp": torch.clamp,
-    "clamp_norm": clamp_norm,
-}
-
-# TODO add normalization functions
-normalizers: Mapping[str, Normalizer] = {}
-
-X = TypeVar("X", bound=Callable)
-
-
-def _handle(
-    value: Hint[X],
-    lookup: Mapping[str, X],
-    kwargs,
-    default: Optional[X] = None,
-    label: Optional[str] = None,
-) -> Optional[X]:
-    if value is None:
-        return default
-    elif isinstance(value, str):
-        try:
-            value = lookup[value]
-        except KeyError:
-            raise KeyError(f"{value} is an invalid {label}. Try one of: {sorted(lookup)}")
-    if kwargs:
-        rv = functools.partial(value, **kwargs)  # type: ignore
-        return cast(X, rv)
-    return value
+normalizer_resolver = FunctionResolver([functional.normalize])
 
 
 class CompGCNLayer(nn.Module):
