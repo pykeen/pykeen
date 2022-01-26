@@ -13,9 +13,10 @@ from dataclasses import dataclass
 from typing import Any, Callable, Mapping, Optional, Sequence, Tuple, Union
 
 import numpy as np
+import scipy.sparse
 import torch
 import torch.nn
-from class_resolver import FunctionResolver, Resolver
+from class_resolver import FunctionResolver, HintOrType, OptionalKwargs, Resolver
 from torch import nn
 from torch.nn import functional
 
@@ -846,6 +847,48 @@ def _sample(rs: torch.LongTensor, k: int) -> torch.LongTensor:
     return rs[torch.randperm(rs.shape[0])[:k]]
 
 
+def tokenize_anchors(
+    edge_index: np.ndarray,
+    anchors: np.ndarray,
+    num_tokens: int,
+) -> torch.LongTensor:
+    """
+    Tokenize entities by representing them as a bag of anchor entities.
+
+    The entities are chosen by shortest path distance.
+
+    :param edge_index: shape: (2, m)
+        the edge index
+    :param anchors: shape: (num_anchors,)
+        the IDs of anchors entities
+    :param num_tokens:
+        the number of anchor IDs to select for each entity
+
+    :return: shape: (num_entities, num_tokens), 0 <= res < num_anchors
+        the selected anchor IDs for each entity
+    """
+    # infer shape
+    num_entities = edge_index.max().item() + 1
+    # unweighted & undirected is done via csgraph afterwards
+    adjacency = scipy.sparse.coo_matrix(
+        (
+            np.ones_like(edge_index[0]),
+            tuple(edge_index),
+        ),
+        shape=(num_entities, num_entities),
+    )
+    # compute distances between anchors and all nodes, shape: (num_anchors, num_entities)
+    distances = scipy.sparse.csgraph.shortest_path(
+        csgraph=adjacency,
+        directed=False,
+        return_predecessors=False,
+        unweighted=True,
+        indices=anchors,
+    )
+    # select anchor IDs with smallest distance
+    return torch.as_tensor(np.argpartition(distances, kth=min(num_tokens, num_entities), axis=1), dtype=torch.long)
+
+
 def tokenize(
     triples_factory: CoreTriplesFactory,
     num_tokens: int,
@@ -932,7 +975,17 @@ def resolve_aggregation(
 class AnchorSelection:
     """Anchor entity selection strategy."""
 
-    def select(self, k: int, edge_index: np.ndarray) -> np.ndarray:
+    def __init__(self, num_anchors: int = 32) -> None:
+        """
+        Initialize the strategy.
+
+        :param num_anchors:
+            the number of anchor nodes to select.
+            # TODO: allow relative
+        """
+        self.num_anchors = num_anchors
+
+    def select(self, edge_index: np.ndarray) -> np.ndarray:
         """
         Select anchor nodes.
 
@@ -940,8 +993,6 @@ class AnchorSelection:
             the number of selected anchors may be smaller than $k$, if there
             are less entities present in the edge index.
 
-        :param k:
-            the number of nodes to select.
         :param edge_index: shape: (m, 2)
             the edge_index, i.e., adjacency list.
 
@@ -954,10 +1005,10 @@ class AnchorSelection:
 class DegreeAnchorSelection(AnchorSelection):
     """Select entities according to their (undirected) degree."""
 
-    def select(self, k: int, edge_index: np.ndarray) -> np.ndarray:  # noqa: D102
+    def select(self, edge_index: np.ndarray) -> np.ndarray:  # noqa: D102
         unique, counts = np.unique(edge_index, return_counts=True)
-        top_ids = np.argpartition(counts, kth=-k)[-k:]
-        return np.take_along_axis(unique, top_ids)
+        top_ids = np.argpartition(counts, max(counts.size - self.num_anchors, 0))[-self.num_anchors :]
+        return unique[top_ids]
 
 
 anchor_selection_resolver: Resolver[AnchorSelection] = Resolver.from_subclasses(
@@ -994,6 +1045,8 @@ class NodePieceRepresentation(RepresentationModule):
         aggregation: Union[None, str, Callable[[torch.FloatTensor, int], torch.FloatTensor]] = None,
         num_tokens: int = 2,
         shape: Optional[Sequence[int]] = None,
+        anchor_selection: HintOrType[AnchorSelection] = None,
+        anchor_selection_kwargs: OptionalKwargs = None,
     ):
         """
         Initialize the representation.
@@ -1023,6 +1076,20 @@ class NodePieceRepresentation(RepresentationModule):
         # create token representations
         # normal relations + inverse relations + padding
         total_num_tokens = 2 * triples_factory.real_num_relations + 1
+
+        # resolve anchor node selection
+        anchor_selection = anchor_selection_resolver.make_safe(anchor_selection, pos_kwargs=anchor_selection_kwargs)
+
+        # TODO: mix
+        if anchor_selection is None:
+            assignment = tokenize(triples_factory=triples_factory, num_tokens=num_tokens)
+        else:
+            # select anchor entities
+            edge_index = triples_factory.mapped_triples[:, [0, 2]].numpy().T
+            anchors = anchor_selection.select(edge_index=edge_index)
+            total_num_tokens += len(anchors)
+            assignment = tokenize_anchors(edge_index=edge_index, anchors=anchors, num_tokens=num_tokens)
+
         if isinstance(token_representation, EmbeddingSpecification):
             token_representation = token_representation.make(
                 num_embeddings=total_num_tokens,
@@ -1044,7 +1111,7 @@ class NodePieceRepresentation(RepresentationModule):
         self.aggregation_index = -(1 + len(token_representation.shape))
         self.register_buffer(
             name="assignment",
-            tensor=tokenize(triples_factory=triples_factory, num_tokens=num_tokens),
+            tensor=assignment,
         )
 
     def forward(

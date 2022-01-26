@@ -149,6 +149,31 @@ class NodePieceTests(cases.RepresentationTestCase):
         return kwargs
 
 
+class NodePieceAnchorTests(cases.RepresentationTestCase):
+    """Tests for node piece representation with anchor nodes."""
+
+    cls = pykeen.nn.emb.NodePieceRepresentation
+    num_entities: ClassVar[int] = 8
+    num_relations: ClassVar[int] = 7
+    num_triples: ClassVar[int] = 31
+    kwargs = dict(
+        token_representation=pykeen.nn.emb.EmbeddingSpecification(
+            shape=(3,),
+        ),
+        anchor_selection="degree",
+    )
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        kwargs = super()._pre_instantiation_hook(kwargs)
+        kwargs["triples_factory"] = generate_triples_factory(
+            num_entities=self.num_entities,
+            num_relations=self.num_relations,
+            num_triples=self.num_triples,
+            create_inverse_triples=False,
+        )
+        return kwargs
+
+
 class SubsetRepresentationTests(cases.RepresentationTestCase):
     """Tests for subset representations."""
 
