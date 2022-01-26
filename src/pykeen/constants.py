@@ -49,7 +49,16 @@ USER_DEFINED_CODE = "<user defined>"
 AGGREGATIONS = {func.__name__: func for func in [torch.sum, torch.max, torch.mean, torch.logsumexp]}
 
 # constants for sides
-# SIDE_HEAD, SIDE_TAIL = typing.get_args(Side) # Python >= 3.8
-SIDE_HEAD: Side = "head"
-SIDE_TAIL: Side = "tail"
-SIDES: Tuple[Side, ...] = (SIDE_HEAD, SIDE_TAIL)
+COLUMN_HEAD = 0
+COLUMN_RELATION = 1
+COLUMN_TAIL = 2
+LABEL_HEAD: Side = "head"
+LABEL_RELATION: Side = "relation"
+LABEL_TAIL: Side = "tail"
+# TODO: extend to relation, cf. https://github.com/pykeen/pykeen/pull/728
+SIDES: Tuple[Side, ...] = (LABEL_HEAD, LABEL_TAIL)
+PART_TO_COLUMN = {
+    LABEL_HEAD: COLUMN_HEAD,
+    LABEL_RELATION: COLUMN_RELATION,
+    LABEL_TAIL: COLUMN_TAIL,
+}

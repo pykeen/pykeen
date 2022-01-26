@@ -36,7 +36,7 @@ from class_resolver import Resolver
 from .evaluator import Evaluator, MetricResults, prepare_filter_triples
 from ..triples.triples_factory import CoreTriplesFactory
 from ..typing import MappedTriples, Side
-from ..constants import SIDE_HEAD, SIDE_TAIL, SIDES
+from ..constants import LABEL_HEAD, LABEL_TAIL, SIDES
 
 __all__ = [
     "compute_rank_from_scores",
@@ -626,7 +626,7 @@ class RankBasedEvaluator(Evaluator):
         scores: torch.FloatTensor,
         dense_positive_mask: Optional[torch.FloatTensor] = None,
     ) -> None:  # noqa: D102
-        self._update_ranks_(true_scores=true_scores, all_scores=scores, side=SIDE_TAIL, hrt_batch=hrt_batch)
+        self._update_ranks_(true_scores=true_scores, all_scores=scores, side=LABEL_TAIL, hrt_batch=hrt_batch)
 
     def process_head_scores_(
         self,
@@ -635,7 +635,7 @@ class RankBasedEvaluator(Evaluator):
         scores: torch.FloatTensor,
         dense_positive_mask: Optional[torch.FloatTensor] = None,
     ) -> None:  # noqa: D102
-        self._update_ranks_(true_scores=true_scores, all_scores=scores, side=SIDE_HEAD, hrt_batch=hrt_batch)
+        self._update_ranks_(true_scores=true_scores, all_scores=scores, side=LABEL_HEAD, hrt_batch=hrt_batch)
 
     @staticmethod
     def _get_for_side(
