@@ -1633,9 +1633,9 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
         self.num_candidates = generator.integers(low=1, high=self.max_num_candidates, size=(self.num_ranks,))
         self.ranks = generator.integers(low=0, high=self.num_candidates)
 
-    def _test_call(self, with_candidates: bool):
+    def _test_call(self, ranks: numpy.ndarray, num_candidates: Optional[numpy.ndarray]):
         """Verify call."""
-        x = self.instance(ranks=self.ranks, num_candidates=self.num_candidates if with_candidates else None)
+        x = self.instance(ranks=ranks, num_candidates=num_candidates)
         # data type
         assert isinstance(x, float)
         # value range
@@ -1643,13 +1643,21 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
 
     def test_call(self):
         """Test __call__."""
-        self._test_call(with_candidates=True)
+        self._test_call(ranks=self.ranks, num_candidates=self.num_candidates)
+
+    def test_call_best(self):
+        """Test __call__ with optimal ranks."""
+        self._test_call(ranks=numpy.ones(shape=(self.num_ranks,)), num_candidates=self.num_candidates)
+
+    def test_call_worst(self):
+        """Test __call__ with worst ranks."""
+        self._test_call(ranks=self.num_candidates, num_candidates=self.num_candidates)
 
     def test_call_no_candidates(self):
         """Test __call__ without candidates."""
         if self.instance.needs_candidates:
             raise SkipTest(f"{self.instance} requires candidates.")
-        self._test_call(with_candidates=False)
+        self._test_call(ranks=self.ranks, num_candidates=None)
 
     def test_increasing(self):
         """Test correct increasing annotation."""
