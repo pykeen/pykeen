@@ -347,6 +347,8 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
             pool[mask] = reachable[mask]
             # stop once we have enough
             final |= enough
+            if final.all():
+                break
         return pool
 
     @staticmethod
