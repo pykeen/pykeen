@@ -162,7 +162,7 @@ class DegreeAnchorSelection(AnchorSelection):
         return unique[top_ids]
 
 
-class PageRankSelection(AnchorSelection):
+class PageRankAnchorSelection(AnchorSelection):
     """Select entities according to their page rank."""
 
     def __init__(
@@ -186,33 +186,39 @@ class PageRankSelection(AnchorSelection):
         """
         super().__init__(num_anchors=num_anchors)
         self.max_iter = max_iter
+        self.alpha = alpha
         self.beta = 1.0 - alpha
         self.epsilon = epsilon
 
     def extra_repr(self) -> Iterable[str]:
         yield from super().extra_repr()
         yield f"max_iter={self.max_iter}"
-        yield f"alpha={1 - self.beta}"
+        yield f"alpha={self.alpha}"
         yield f"epsilon={self.epsilon}"
 
     def __call__(self, edge_index: numpy.ndarray) -> numpy.ndarray:  # noqa: D102
         # convert to sparse matrix
         adj = _edge_index_to_sparse_matrix(edge_index=edge_index)
         # symmetrize
-        adj = (adj + adj.transpose() + scipy.sparse.eye(m=adj.shape[0], format="coo")).tocsr()
+        # TODO: should we add self-links
+        # adj = (adj + adj.transpose() + scipy.sparse.eye(m=adj.shape[0], format="coo")).tocsr()
+        adj = (adj + adj.transpose()).tocsr()
         # degree
         degree_inv = numpy.reciprocal(numpy.asarray(adj.sum(axis=0)))[0]
         n = degree_inv.shape[0]
         # power iteration
-        x = numpy.full(shape=(n,), fill_value=1 / n)
+        x = numpy.full(shape=(n,), fill_value=1.0 / n)
         x_old = x
+        no_convergence = True
         for i in range(self.max_iter):
-            x = self.beta * adj.dot(degree_inv * x) + (1 - self.beta)
+            x = self.beta * adj.dot(degree_inv * x) + self.alpha
             if numpy.linalg.norm(x - x_old, ord=float("+inf")) < self.epsilon:
                 logger.debug(f"Converged after {i} iterations up to {self.epsilon}.")
+                no_convergence = False
                 break
             x_old = x
-        logger.warning(f"No covergence after {self.max_iter} iterations with threshold {self.epsilon}.")
+        if no_convergence:
+            logger.warning(f"No covergence after {self.max_iter} iterations with epsilon={self.epsilon}.")
         return numpy.argpartition(x, max(x.size - self.num_anchors, 0))[-self.num_anchors :]
 
 
@@ -299,7 +305,6 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
         :return: shape: (n, n)
             a square sparse adjacency matrix
         """
-        logger.debug(f"Creating adjacency matrix from edge_index of shape {edge_index.shape}")
         # infer shape
         num_entities = edge_index.max().item() + 1
         # create adjacency matrix
@@ -315,8 +320,8 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
         adjacency = adjacency + adjacency.transpose() + scipy.sparse.eye(num_entities, dtype=bool, format="coo")
         adjacency = adjacency.tocsr()
         logger.debug(
-            f"Created sparse adjacency matrix of shape {adjacency.shape} with {adjacency.nnz} "
-            f"non-zero entries ({adjacency.nnz / numpy.prod(adjacency.shape):2.2%})",
+            f"Created sparse adjacency matrix of shape {adjacency.shape} where "
+            f"{format_relative_comparison(part=adjacency.nnz, total=numpy.prod(adjacency.shape))} are non-zero entries.",
         )
         return adjacency
 
