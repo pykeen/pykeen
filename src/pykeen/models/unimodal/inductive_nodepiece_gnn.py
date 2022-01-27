@@ -69,22 +69,22 @@ class InductiveNodePieceGNN(InductiveNodePiece):
             self.gnn_encoder = gnn_encoder
 
         # Saving edge indices for all the supplied splits
-        self.register_buffer(name="train_edge_index", tensor=train_factory.mapped_triples[:, [0, 2]].t())
-        self.register_buffer(name="train_edge_type", tensor=train_factory.mapped_triples[:, 1])
+        self.register_buffer(name="training_edge_index", tensor=train_factory.mapped_triples[:, [0, 2]].t())
+        self.register_buffer(name="training_edge_type", tensor=train_factory.mapped_triples[:, 1])
 
         if inference_factory is not None:
             inference_edge_index = inference_factory.mapped_triples[:, [0, 2]].t()
             inference_edge_type = inference_factory.mapped_triples[:, 1]
 
-            self.register_buffer(name="valid_edge_index", tensor=inference_edge_index)
-            self.register_buffer(name="valid_edge_type", tensor=inference_edge_type)
-            self.register_buffer(name="test_edge_index", tensor=inference_edge_index)
-            self.register_buffer(name="test_edge_type", tensor=inference_edge_type)
+            self.register_buffer(name="validation_edge_index", tensor=inference_edge_index)
+            self.register_buffer(name="validation_edge_type", tensor=inference_edge_type)
+            self.register_buffer(name="testing_edge_index", tensor=inference_edge_index)
+            self.register_buffer(name="testing_edge_type", tensor=inference_edge_type)
         else:
-            self.register_buffer(name="valid_edge_index", tensor=validation_factory.mapped_triples[:, [0, 2]].t())
-            self.register_buffer(name="valid_edge_type", tensor=validation_factory.mapped_triples[:, 1])
-            self.register_buffer(name="test_edge_index", tensor=test_factory.mapped_triples[:, [0, 2]].t())
-            self.register_buffer(name="test_edge_type", tensor=test_factory.mapped_triples[:, 1])
+            self.register_buffer(name="validation_edge_index", tensor=validation_factory.mapped_triples[:, [0, 2]].t())
+            self.register_buffer(name="validation_edge_type", tensor=validation_factory.mapped_triples[:, 1])
+            self.register_buffer(name="testing_edge_index", tensor=test_factory.mapped_triples[:, [0, 2]].t())
+            self.register_buffer(name="testing_edge_type", tensor=test_factory.mapped_triples[:, 1])
 
     def _get_representations(
         self,

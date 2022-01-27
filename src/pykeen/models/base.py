@@ -196,7 +196,7 @@ class Model(nn.Module, ABC):
         :param hrt_batch: shape: (batch_size, 3), dtype: long
             The indices of (head, relation, tail) triples.
         :param mode:
-            The pass mode. Is None for transductive and "train" / "valid" / "test" in inductive.
+            The pass mode. Is None for transductive and "training" / "validation" / "testing" in inductive.
 
         :raises NotImplementedError:
             If the method was not implemented for this class.
@@ -218,7 +218,7 @@ class Model(nn.Module, ABC):
         :param slice_size: >0
             The divisor for the scoring function when using slicing.
         :param mode:
-            The pass mode. Is None for transductive and "train" / "valid" / "test" in inductive.
+            The pass mode. Is None for transductive and "training" / "validation" / "testing" in inductive.
 
         :return: shape: (batch_size, num_entities), dtype: float
             For each h-r pair, the scores for all possible tails.
@@ -237,7 +237,7 @@ class Model(nn.Module, ABC):
         :param slice_size: >0
             The divisor for the scoring function when using slicing.
         :param mode:
-            The pass mode. Is None for transductive and "train" / "valid" / "test" in inductive.
+            The pass mode. Is None for transductive and "training" / "validation" / "testing" in inductive.
 
         :return: shape: (batch_size, num_real_relations), dtype: float
             For each h-t pair, the scores for all possible relations.
@@ -258,7 +258,7 @@ class Model(nn.Module, ABC):
         :param slice_size: >0
             The divisor for the scoring function when using slicing.
         :param mode:
-            The pass mode. Is None for transductive and "train" / "valid" / "test" in inductive.
+            The pass mode. Is None for transductive and "training" / "validation" / "testing" in inductive.
 
         :return: shape: (batch_size, num_entities), dtype: float
             For each r-t pair, the scores for all possible heads.
@@ -319,7 +319,7 @@ class Model(nn.Module, ABC):
         :param hrt_batch: shape: (number of triples, 3), dtype: long
             The indices of (head, relation, tail) triples.
         :param mode:
-            The pass mode. Is None for transductive and "train" / "valid" / "test" in inductive.
+            The pass mode. Is None for transductive and "training" / "validation" / "testing" in inductive.
 
         :return: shape: (number of triples, 1), dtype: float
             The score for each triple.
@@ -353,7 +353,7 @@ class Model(nn.Module, ABC):
         :param slice_size: >0
             The divisor for the scoring function when using slicing.
         :param mode:
-            The pass mode. Is None for transductive and "train" / "valid" / "test" in inductive.
+            The pass mode. Is None for transductive and "training" / "validation" / "testing" in inductive.
 
         :return: shape: (batch_size, num_entities), dtype: float
             For each r-t pair, the scores for all possible heads.
@@ -385,7 +385,7 @@ class Model(nn.Module, ABC):
         :param slice_size: >0
             The divisor for the scoring function when using slicing.
         :param mode:
-            The pass mode. Is None for transductive and "train" / "valid" / "test" in inductive.
+            The pass mode. Is None for transductive and "training" / "validation" / "testing" in inductive.
 
         :return: shape: (batch_size, num_entities), dtype: float
             For each h-r pair, the scores for all possible tails.
@@ -423,7 +423,7 @@ class Model(nn.Module, ABC):
         :param slice_size: >0
             The divisor for the scoring function when using slicing.
         :param mode:
-            The pass mode. Is None for transductive and "train" / "valid" / "test" in inductive.
+            The pass mode. Is None for transductive and "training" / "validation" / "testing" in inductive.
 
         :return: shape: (batch_size, num_real_relations), dtype: float
             For each h-t pair, the scores for all possible relations.

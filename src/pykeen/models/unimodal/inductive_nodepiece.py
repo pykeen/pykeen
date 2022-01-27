@@ -161,17 +161,17 @@ class InductiveNodePiece(ERModel):
             self.num_test_entities = test_factory.num_entities
 
     def _entity_representation_from_mode(self, mode: Mode = None):
-        if mode == "train":
+        if mode == "training":
             return self.entity_representations
         else:
             return self.inference_representation
 
     def _get_entity_len(self, mode: Mode = None) -> int:
-        if mode == "train":
+        if mode == "training":
             return self.num_train_entities
-        elif mode == "test":
+        elif mode == "testing":
             return self.num_test_entities
-        elif mode == "valid":
+        elif mode == "validation":
             return self.num_valid_entities
         else:
             raise ValueError

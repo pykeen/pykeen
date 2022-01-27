@@ -72,7 +72,7 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
 
         # Explicit mentioning of num_transductive_entities since in the evaluation there will be a different number
         # of total entities from another inductive inference factory
-        self.num_targets = self.model.num_relations if self.target == 1 else self.model._get_entity_len(mode="train")
+        self.num_targets = self.model.num_relations if self.target == 1 else self.model._get_entity_len(mode="training")
 
     def _create_instances(self, triples_factory: CoreTriplesFactory) -> Instances:  # noqa: D102
         return triples_factory.create_lcwa_instances(target=self.target)
@@ -96,7 +96,7 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
         batch_pairs = batch_pairs[start:stop].to(device=self.device)
         batch_labels_full = batch_labels_full[start:stop].to(device=self.device)
 
-        predictions = self.score_method(batch_pairs, slice_size=slice_size, mode="train")
+        predictions = self.score_method(batch_pairs, slice_size=slice_size, mode="training")
 
         return (
             self.loss.process_lcwa_scores(

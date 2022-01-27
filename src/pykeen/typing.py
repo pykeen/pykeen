@@ -95,4 +95,4 @@ class ScorePack(NamedTuple):
 
 
 Sign = Literal[-1, 1]
-Mode = Optional[Literal["train", "valid", "test"]]
+Mode = Optional[Literal["training", "validation", "testing"]]

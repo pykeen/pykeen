@@ -362,7 +362,7 @@ class ERModel(
         :param slice_dim:
           The dimension along which to slice
         :param mode:
-            The pass mode. Is None for transductive and "train" / "valid" / "test" in inductive.
+            The pass mode. Is None for transductive and "training" / "validation" / "testing" in inductive.
 
         :return:
             The scores
@@ -383,7 +383,7 @@ class ERModel(
         :param hrt_batch: shape: (batch_size, 3), dtype: long
             The indices of (head, relation, tail) triples.
         :param mode:
-            The pass mode. Is None for transductive and "train" / "valid" / "test" in inductive.
+            The pass mode. Is None for transductive and "training" / "validation" / "testing" in inductive.
 
         :return: shape: (batch_size, 1), dtype: float
             The score for each triple.
@@ -407,7 +407,7 @@ class ERModel(
         :param slice_size:
             The slice size.
         :param mode:
-            The pass mode. Is None for transductive and "train" / "valid" / "test" in inductive.
+            The pass mode. Is None for transductive and "training" / "validation" / "testing" in inductive.
 
         :return: shape: (batch_size, num_entities), dtype: float
             For each h-r pair, the scores for all possible tails.
@@ -431,7 +431,7 @@ class ERModel(
         :param slice_size:
             The slice size.
         :param mode:
-            The pass mode. Is None for transductive and "train" / "valid" / "test" in inductive.
+            The pass mode. Is None for transductive and "training" / "validation" / "testing" in inductive.
 
         :return: shape: (batch_size, num_entities), dtype: float
             For each r-t pair, the scores for all possible heads.
@@ -455,7 +455,7 @@ class ERModel(
         :param slice_size:
             The slice size.
         :param mode:
-            The pass mode. Is None for transductive and "train" / "valid" / "test" in inductive.
+            The pass mode. Is None for transductive and "training" / "validation" / "testing" in inductive.
 
         :return: shape: (batch_size, num_relations), dtype: float
             For each h-t pair, the scores for all possible relations.
