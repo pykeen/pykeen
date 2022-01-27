@@ -254,9 +254,27 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
     """Find closest anchors using scipy.sparse."""
 
     def __init__(self, max_iter: int = 5) -> None:
+        """
+        Initializer the searcher.
+
+        :param max_iter:
+            the maximum number of hops to consider
+        """
         self.max_iter = max_iter
 
-    def __call__(self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int) -> numpy.ndarray:  # noqa: D102
+    @staticmethod
+    def create_adjacency(
+        edge_index: numpy.ndarray,
+    ) -> scipy.sparse.spmatrix:
+        """
+        Create a sparse adjacency matrix from a given edge index.
+
+        :param edge_index: shape: (2, m)
+            the edge index
+
+        :return: shape: (n, n)
+            a square sparse adjacency matrix
+        """
         # infer shape
         num_entities = edge_index.max().item() + 1
         # create adjacency matrix
@@ -270,28 +288,75 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
         # symmetric + self-loops
         adjacency = adjacency + adjacency.transpose() + scipy.sparse.eye(num_entities, dtype=bool, format="coo")
         adjacency = adjacency.tocsr()
+        # TODO: set weights to one?
         logger.info(f"Created adjacency matrix: {adjacency}")
+        return adjacency
 
+    @staticmethod
+    def bfs(
+        anchors: numpy.ndarray,
+        adjacency: scipy.sparse.spmatrix,
+        max_iter: int,
+        k: int,
+    ) -> numpy.ndarray:
+        """
+        Determine the candidate pool using breadth-first search.
+
+        :param anchors: shape: (a,)
+            the anchor node IDs
+        :param adjacency: shape: (n, n)
+            the adjacency matrix
+        :param max_iter:
+            the maximum number of hops to consider
+        :param k:
+            the minimum number of anchor nodes to reach
+
+        :return: shape: (n, a)
+            a boolean array indicating whether anchor $j$ is in the set of $k$ closest anchors for node $i$
+        """
+        num_entities = adjacency.shape[0]
         # for each entity, determine anchor pool by BFS
         num_anchors = len(anchors)
-        pool = numpy.zeros(shape=(num_entities, num_anchors), dtype=bool)
+
+        # an array storing whether node i is reachable by anchor j
         reachable = numpy.zeros(shape=(num_entities, num_anchors), dtype=bool)
         reachable[anchors] = numpy.eye(num_anchors, dtype=bool)
+
+        # an array indicating whether a node is closed, i.e., has found at least $k$ anchors
         final = numpy.zeros(shape=(num_entities,), dtype=bool)
 
-        for _i in range(self.max_iter):
+        # the output
+        pool = numpy.zeros(shape=(num_entities, num_anchors), dtype=bool)
+
+        for i in range(max_iter):
             # propagate one hop
             reachable = adjacency.dot(reachable)
             # copy pool if we have seen enough anchors and have not yet stopped
             num_reachable = reachable.sum(axis=1)
             enough = num_reachable >= k
             mask = enough & ~final
+            logger.debug(f"Iteration {i}: {mask.sum()} additional closed nodes.")
             pool[mask] = reachable[mask]
             # stop once we have enough
             final |= enough
-        del reachable, final
+        return pool
 
-        tokens = numpy.full(shape=(num_entities, k), fill_value=-1)
+    def select(
+        pool: numpy.ndarray,
+        k: int,
+    ) -> numpy.ndarray:
+        """
+        Select $k$ anchors from the given pools.
+
+        :param pool: shape: (n, a)
+            the anchor candidates for each node (a binary array)
+        :param k:
+            the number of candidates to select
+
+        :return: shape: (n, k)
+            the selected anchors. May contain -1 if there is an insufficient number of  candidates
+        """
+        tokens = numpy.full(shape=(pool.shape[0], k), fill_value=-1)
         # select from pool
         # use sparse random sampling due to memory footprint
         entity_ids, anchor_ids = pool.nonzero()
@@ -304,8 +369,12 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
         intra_offset = numpy.floor(random_numbers * counts[:, None]).astype(int)
         offset = numpy.cumsum(numpy.r_[0, counts])[:-1, None] + intra_offset
         tokens[unique_entity_ids] = anchor_ids[offset]
-
         return tokens
+
+    def __call__(self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int) -> numpy.ndarray:  # noqa: D102
+        adjacency = self.create_adjacency(edge_index=edge_index)
+        pool = self.bfs(anchors=anchors, adjacency=adjacency, max_iter=self.max_iter, k=k)
+        return self.select(pool=pool, k=k)
 
 
 # TODO: use graph library, such as igraph, graph-tool, or networkit
