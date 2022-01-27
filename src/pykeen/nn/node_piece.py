@@ -2,7 +2,7 @@
 import logging
 from abc import abstractmethod
 from collections import defaultdict
-from typing import Callable, Iterable, Optional, Sequence, Tuple, Union
+from typing import Callable, Iterable, Optional, Sequence, SupportsFloat, Tuple, Type, Union
 
 import numpy
 import numpy.linalg
@@ -10,13 +10,14 @@ import scipy.sparse
 import scipy.sparse.csgraph
 import torch
 from class_resolver import HintOrType, OptionalKwargs, Resolver
+from pykeen.triples.splitting import get_absolute_split_sizes, normalize_ratios
 
 from pykeen.utils import format_relative_comparison
 
 from .emb import EmbeddingSpecification, RepresentationModule
 from ..constants import AGGREGATIONS
 from ..triples import CoreTriplesFactory
-from ..typing import MappedTriples
+from ..typing import MappedTriples, OneOrSequence
 
 __all__ = [
     "NodePieceRepresentation",
@@ -220,6 +221,42 @@ class PageRankAnchorSelection(AnchorSelection):
         if no_convergence:
             logger.warning(f"No covergence after {self.max_iter} iterations with epsilon={self.epsilon}.")
         return numpy.argpartition(x, max(x.size - self.num_anchors, 0))[-self.num_anchors :]
+
+
+class MixedAnchorSelection(AnchorSelection):
+    """A weighted mixture of different anchor selection strategies."""
+
+    def __init__(
+        self,
+        selections: Sequence[HintOrType[AnchorSelection]],
+        ratios: Union[None, float, Sequence[float]] = None,
+        selections_kwargs: OneOrSequence[OptionalKwargs] = None,
+        **kwargs,
+    ) -> None:
+        """
+        Initialize the selection strategy.
+
+        :param selections:
+            the individual selections
+        :param ratios:
+            the ratios, cf. normalize_ratios. None means uniform ratios
+        :param selection_kwargs:
+            additional keyword-based arguments for the individual selection strategies
+        """
+        super().__init__(**kwargs)
+        if selections_kwargs is None:
+            selections_kwargs = [None] * len(selections)
+        num_anchors = get_absolute_split_sizes(n_total=self.num_anchors, ratios=normalize_ratios(ratios=ratios))
+        self.selections = [
+            anchor_selection_resolver.make(selection, selection_kwargs, num_anchors=num)
+            for selection, selection_kwargs, num in zip(selections, kwargs, num_anchors)
+        ]
+        # if pre-instantiated
+        for selection, num in zip(self.selections, num_anchors):
+            selection.num_anchors = num
+
+    def __call__(self, edge_index: numpy.ndarray) -> numpy.ndarray:  # noqa: D102
+        return numpy.concatenate([selection(edge_index=edge_index) for selection in self.selections])
 
 
 anchor_selection_resolver: Resolver[AnchorSelection] = Resolver.from_subclasses(
