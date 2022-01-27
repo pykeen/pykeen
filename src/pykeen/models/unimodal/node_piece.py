@@ -6,7 +6,7 @@ import logging
 from typing import Any, Callable, ClassVar, Mapping, Optional, Sequence, Union
 
 import torch
-from class_resolver import Hint, HintOrType
+from class_resolver import Hint, HintOrType, OptionalKwargs
 from torch import nn
 
 from ..nbase import ERModel
