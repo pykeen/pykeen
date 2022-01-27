@@ -242,14 +242,22 @@ class MixtureAnchorSelection(AnchorSelection):
             the ratios, cf. normalize_ratios. None means uniform ratios
         :param selection_kwargs:
             additional keyword-based arguments for the individual selection strategies
+        :param kwargs:
+            additional keyword-based arguments passed to AnchorSelection.__init__,
+            in particular, the total number of anchors.
         """
         super().__init__(**kwargs)
+        n_selections = len(selections)
+        # input normalization
         if selections_kwargs is None:
-            selections_kwargs = [None] * len(selections)
+            selections_kwargs = [None] * n_selections
+        if ratios is None:
+            ratios = numpy.ones(shape=(n_selections,)) / n_selections
+        # determine absolute number of anchors for each strategy
         num_anchors = get_absolute_split_sizes(n_total=self.num_anchors, ratios=normalize_ratios(ratios=ratios))
         self.selections = [
             anchor_selection_resolver.make(selection, selection_kwargs, num_anchors=num)
-            for selection, selection_kwargs, num in zip(selections, kwargs, num_anchors)
+            for selection, selection_kwargs, num in zip(selections, selections_kwargs, num_anchors)
         ]
         # if pre-instantiated
         for selection, num in zip(self.selections, num_anchors):
