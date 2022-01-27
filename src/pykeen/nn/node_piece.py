@@ -10,8 +10,8 @@ import scipy.sparse
 import scipy.sparse.csgraph
 import torch
 from class_resolver import HintOrType, OptionalKwargs, Resolver
-from pykeen.triples.splitting import get_absolute_split_sizes, normalize_ratios
 
+from pykeen.triples.splitting import get_absolute_split_sizes, normalize_ratios
 from pykeen.utils import format_relative_comparison
 
 from .emb import EmbeddingSpecification, RepresentationModule
@@ -223,7 +223,7 @@ class PageRankAnchorSelection(AnchorSelection):
         return numpy.argpartition(x, max(x.size - self.num_anchors, 0))[-self.num_anchors :]
 
 
-class MixedAnchorSelection(AnchorSelection):
+class MixtureAnchorSelection(AnchorSelection):
     """A weighted mixture of different anchor selection strategies."""
 
     def __init__(

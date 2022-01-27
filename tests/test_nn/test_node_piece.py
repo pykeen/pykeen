@@ -17,6 +17,18 @@ class PageRankAnchorSelectionTestCase(cases.AnchorSelectionTestCase):
     cls = pykeen.nn.node_piece.PageRankAnchorSelection
 
 
+class MixtureAnchorSelectionTestCase(cases.AnchorSelectionTestCase):
+    """Tests for mixture anchor selection."""
+
+    cls = pykeen.nn.node_piece.MixtureAnchorSelection
+    kwargs = dict(
+        selections=[
+            pykeen.nn.node_piece.DegreeAnchorSelection,
+            pykeen.nn.node_piece.PageRankAnchorSelection,
+        ],
+    )
+
+
 class AnchorSelectionMetaTestCase(unittest_templates.MetaTestCase[pykeen.nn.node_piece.AnchorSelection]):
     """Test for tests for anchor selection strategies."""
 
