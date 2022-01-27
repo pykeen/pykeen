@@ -2,7 +2,7 @@
 import logging
 from abc import abstractmethod
 from collections import defaultdict
-from typing import Callable, Iterable, Optional, Sequence, SupportsFloat, Tuple, Type, Union
+from typing import Callable, Iterable, Optional, Sequence, Tuple, Union
 
 import numpy
 import numpy.linalg
@@ -11,13 +11,12 @@ import scipy.sparse.csgraph
 import torch
 from class_resolver import HintOrType, OptionalKwargs, Resolver
 
-from pykeen.triples.splitting import get_absolute_split_sizes, normalize_ratios
-from pykeen.utils import format_relative_comparison
-
 from .emb import EmbeddingSpecification, RepresentationModule
 from ..constants import AGGREGATIONS
 from ..triples import CoreTriplesFactory
+from ..triples.splitting import get_absolute_split_sizes, normalize_ratios
 from ..typing import MappedTriples, OneOrSequence
+from ..utils import format_relative_comparison
 
 __all__ = [
     "NodePieceRepresentation",
@@ -334,7 +333,7 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
 
     def __init__(self, max_iter: int = 5) -> None:
         """
-        Initializer the searcher.
+        Initialize the searcher.
 
         :param max_iter:
             the maximum number of hops to consider
@@ -374,7 +373,8 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
         adjacency = adjacency.tocsr()
         logger.debug(
             f"Created sparse adjacency matrix of shape {adjacency.shape} where "
-            f"{format_relative_comparison(part=adjacency.nnz, total=numpy.prod(adjacency.shape))} are non-zero entries.",
+            f"{format_relative_comparison(part=adjacency.nnz, total=numpy.prod(adjacency.shape))} "
+            f"are non-zero entries.",
         )
         return adjacency
 
