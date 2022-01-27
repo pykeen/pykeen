@@ -11,6 +11,8 @@ import scipy.sparse.csgraph
 import torch
 from class_resolver import HintOrType, OptionalKwargs, Resolver
 
+from pykeen.utils import format_relative_comparison
+
 from .emb import EmbeddingSpecification, RepresentationModule
 from ..constants import AGGREGATIONS
 from ..triples import CoreTriplesFactory
@@ -275,6 +277,7 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
         :return: shape: (n, n)
             a square sparse adjacency matrix
         """
+        logger.debug(f"Creating adjacency matrix from edge_index of shape {edge_index.shape}")
         # infer shape
         num_entities = edge_index.max().item() + 1
         # create adjacency matrix
@@ -284,12 +287,15 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
                 tuple(edge_index),
             ),
             shape=(num_entities, num_entities),
+            dtype=bool,
         )
         # symmetric + self-loops
         adjacency = adjacency + adjacency.transpose() + scipy.sparse.eye(num_entities, dtype=bool, format="coo")
         adjacency = adjacency.tocsr()
-        # TODO: set weights to one?
-        logger.info(f"Created adjacency matrix: {adjacency}")
+        logger.debug(
+            f"Created sparse adjacency matrix of shape {adjacency.shape} with {adjacency.nnz} "
+            f"non-zero entries ({adjacency.nnz / numpy.prod(adjacency.shape):2.2%})",
+        )
         return adjacency
 
     @staticmethod
@@ -335,12 +341,15 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
             num_reachable = reachable.sum(axis=1)
             enough = num_reachable >= k
             mask = enough & ~final
-            logger.debug(f"Iteration {i}: {mask.sum()} additional closed nodes.")
+            logger.debug(
+                f"Iteration {i}: {format_relative_comparison(enough.sum(), total=num_entities)} closed nodes.",
+            )
             pool[mask] = reachable[mask]
             # stop once we have enough
             final |= enough
         return pool
 
+    @staticmethod
     def select(
         pool: numpy.ndarray,
         k: int,
@@ -356,22 +365,13 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
         :return: shape: (n, k)
             the selected anchors. May contain -1 if there is an insufficient number of  candidates
         """
-        tokens = numpy.full(shape=(pool.shape[0], k), fill_value=-1)
-        # select from pool
-        # use sparse random sampling due to memory footprint
-        entity_ids, anchor_ids = pool.nonzero()
-        unique_entity_ids, counts = numpy.unique(entity_ids, return_counts=True)
-        assert (counts >= k).all()
+        tokens = numpy.full(shape=(pool.shape[0], k), fill_value=-1, dtype=int)
         generator = numpy.random.default_rng()
-        # TODO: is this really doing random selection without replacement?
-        # ~ [0, 1)
-        random_numbers = generator.random(size=(counts.size, k), dtype=numpy.float32)
-        random_numbers = numpy.cumsum(random_numbers, axis=-1)
-        random_numbers /= (random_numbers[:, -1, None] + 1.0e-8)
-        # now random_numbers[:, 0] >= 0, random_numbers[:, -1] = 1.0 - eps
-        intra_offset = numpy.floor(random_numbers * counts[:, None]).astype(int)
-        offset = numpy.cumsum(numpy.r_[0, counts])[:-1, None] + intra_offset
-        tokens[unique_entity_ids] = anchor_ids[offset]
+        # TODO: can we replace this loop with something vectorized?
+        for i, row in enumerate(pool):
+            (this_pool,) = row.nonzero()
+            chosen = generator.choice(a=this_pool, size=min(k, this_pool.size), replace=False, shuffle=False)
+            tokens[i, : len(chosen)] = chosen
         return tokens
 
     def __call__(self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int) -> numpy.ndarray:  # noqa: D102
@@ -425,9 +425,16 @@ class AnchorTokenizer(Tokenizer):
     ) -> torch.LongTensor:  # noqa: D102
         edge_index = mapped_triples[:, [0, 2]].numpy().T
         # select anchors
+        logger.info(f"Selecting anchors according to {self.anchor_selection}")
         anchors = self.anchor_selection(edge_index=edge_index)
         # find closest anchors
+        logger.info(f"Searching closest anchors with {self.searcher}")
         tokens = self.searcher(edge_index=edge_index, anchors=anchors, k=num_tokens)
+        num_empty = (tokens < 0).all(axis=1).sum()
+        if num_empty > 0:
+            logger.warning(
+                f"{format_relative_comparison(part=num_empty, total=num_entities)} " f"do not have any anchor.",
+            )
         # convert to torch
         return len(anchors) + 1, torch.as_tensor(tokens, dtype=torch.long)
 
