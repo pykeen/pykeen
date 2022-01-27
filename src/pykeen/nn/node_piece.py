@@ -2,7 +2,7 @@
 import logging
 from abc import abstractmethod
 from collections import defaultdict
-from typing import Callable, Optional, Sequence, Tuple, Union
+from typing import Callable, Iterable, Optional, Sequence, Tuple, Union
 
 import numpy
 import numpy.linalg
@@ -146,6 +146,12 @@ class AnchorSelection:
         """
         raise NotImplementedError
 
+    def extra_repr(self) -> Iterable[str]:
+        yield f"num_anchors={self.num_anchors}"
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}({','.join(self.extra_repr())})"
+
 
 class DegreeAnchorSelection(AnchorSelection):
     """Select entities according to their (undirected) degree."""
@@ -182,6 +188,12 @@ class PageRankSelection(AnchorSelection):
         self.max_iter = max_iter
         self.beta = 1.0 - alpha
         self.epsilon = epsilon
+
+    def extra_repr(self) -> Iterable[str]:
+        yield from super().extra_repr()
+        yield f"max_iter={self.max_iter}"
+        yield f"alpha={1 - self.beta}"
+        yield f"epsilon={self.epsilon}"
 
     def __call__(self, edge_index: numpy.ndarray) -> numpy.ndarray:  # noqa: D102
         # convert to sparse matrix
@@ -230,6 +242,12 @@ class AnchorSearcher:
         """
         raise NotImplementedError
 
+    def extra_repr(self) -> Iterable[str]:
+        return []
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}({','.join(self.extra_repr())})"
+
 
 class CSGraphAnchorSearcher(AnchorSearcher):
     """Find closest anchors using scipy.sparse.csgraph."""
@@ -263,6 +281,10 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
             the maximum number of hops to consider
         """
         self.max_iter = max_iter
+
+    def extra_repr(self) -> Iterable[str]:
+        yield from super().extra_repr()
+        yield f"max_iter={self.max_iter}"
 
     @staticmethod
     def create_adjacency(
@@ -334,9 +356,15 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
         # the output
         pool = numpy.zeros(shape=(num_entities, num_anchors), dtype=bool)
 
+        old_reachable = reachable
         for i in range(max_iter):
             # propagate one hop
             reachable = adjacency.dot(reachable)
+            # convergence check
+            if (reachable == old_reachable).all():
+                logger.warning(f"Search converged after iteration {i} without all nodes being reachable.")
+                break
+            old_reachable = reachable
             # copy pool if we have seen enough anchors and have not yet stopped
             num_reachable = reachable.sum(axis=1)
             enough = num_reachable >= k
