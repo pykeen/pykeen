@@ -148,10 +148,11 @@ class AnchorSelection:
         raise NotImplementedError
 
     def extra_repr(self) -> Iterable[str]:
+        """Extra components for __repr__."""
         yield f"num_anchors={self.num_anchors}"
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({','.join(self.extra_repr())})"
+        return f"{self.__class__.__name__}({', '.join(self.extra_repr())})"
 
 
 class DegreeAnchorSelection(AnchorSelection):
@@ -191,7 +192,7 @@ class PageRankAnchorSelection(AnchorSelection):
         self.beta = 1.0 - alpha
         self.epsilon = epsilon
 
-    def extra_repr(self) -> Iterable[str]:
+    def extra_repr(self) -> Iterable[str]:  # noqa: D102
         yield from super().extra_repr()
         yield f"max_iter={self.max_iter}"
         yield f"alpha={self.alpha}"
@@ -261,7 +262,13 @@ class MixtureAnchorSelection(AnchorSelection):
         ]
         # if pre-instantiated
         for selection, num in zip(self.selections, num_anchors):
-            selection.num_anchors = num
+            if selection.num_anchors != num:
+                logger.warning(f"{selection} had wrong number of anchors. Setting to {num}")
+                selection.num_anchors = num
+
+    def extra_repr(self) -> Iterable[str]:  # noqa: D102
+        yield from super().extra_repr()
+        yield f"selections={self.selections}"
 
     def __call__(self, edge_index: numpy.ndarray) -> numpy.ndarray:  # noqa: D102
         return numpy.concatenate([selection(edge_index=edge_index) for selection in self.selections])
@@ -294,10 +301,11 @@ class AnchorSearcher:
         raise NotImplementedError
 
     def extra_repr(self) -> Iterable[str]:
+        """Extra components for __repr__."""
         return []
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({','.join(self.extra_repr())})"
+        return f"{self.__class__.__name__}({', '.join(self.extra_repr())})"
 
 
 class CSGraphAnchorSearcher(AnchorSearcher):
@@ -333,7 +341,7 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
         """
         self.max_iter = max_iter
 
-    def extra_repr(self) -> Iterable[str]:
+    def extra_repr(self) -> Iterable[str]:  # noqa: D102
         yield from super().extra_repr()
         yield f"max_iter={self.max_iter}"
 
