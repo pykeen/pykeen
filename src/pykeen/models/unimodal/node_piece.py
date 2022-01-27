@@ -13,6 +13,7 @@ from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn import EmbeddingSpecification, NodePieceRepresentation, SubsetRepresentationModule
 from ...nn.modules import DistMultInteraction, Interaction
+from ...nn.node_piece import Tokenizer
 from ...triples.triples_factory import CoreTriplesFactory
 
 __all__ = [
@@ -87,6 +88,8 @@ class NodePiece(ERModel):
         *,
         triples_factory: CoreTriplesFactory,
         num_tokens: int = 2,
+        tokenizer: HintOrType[Tokenizer] = None,
+        tokenizer_kwargs: OptionalKwargs = None,
         embedding_dim: int = 64,
         embedding_specification: Optional[EmbeddingSpecification] = None,
         interaction: HintOrType[Interaction] = DistMultInteraction,
@@ -148,12 +151,15 @@ class NodePiece(ERModel):
             )
 
         # always create representations for normal and inverse relations and padding
+        # TODO: always? or only if we need relation tokenization?
         relation_representations = embedding_specification.make(
             num_embeddings=2 * triples_factory.real_num_relations + 1,
         )
         entity_representations = NodePieceRepresentation(
             triples_factory=triples_factory,
             token_representation=relation_representations,
+            tokenizer=tokenizer,
+            tokenizer_kwargs=tokenizer_kwargs,
             aggregation=aggregation,
             shape=shape,
             num_tokens=num_tokens,
