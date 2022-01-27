@@ -104,7 +104,11 @@ class NodePiece(ERModel):
             the triples factory. Must have create_inverse_triples set to True.
         :param num_tokens:
             the number of relations to use to represent each entity, cf.
-            :class:`pykeen.nn.emb.NodePieceRepresentation`.
+            :class:`pykeen.nn.node_piece.NodePieceRepresentation`.
+        :param tokenizer:
+            the tokenizer to use, cf. `pykeen.nn.node_piece.tokenizer_resolver`.
+        :param tokenizer_kwargs:
+            additional keyword-based parameters passed to the tokenizer upon construction.
         :param embedding_dim:
             the embedding dimension. Only used if embedding_specification is not given.
         :param embedding_specification:
