@@ -9,7 +9,7 @@ import random
 import re
 from collections import defaultdict
 from dataclasses import dataclass, field, fields
-from typing import DefaultDict, Dict, Iterable, List, NamedTuple, Optional, Sequence, Tuple, Union
+from typing import DefaultDict, Dict, Iterable, List, Mapping, NamedTuple, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -19,7 +19,7 @@ from scipy import stats
 
 from .evaluator import Evaluator, MetricResults, prepare_filter_triples
 from ..triples.triples_factory import CoreTriplesFactory
-from ..typing import MappedTriples
+from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, MappedTriples, Target
 from ..utils import fix_dataclass_init_docs
 
 __all__ = [
@@ -32,10 +32,8 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-SIDE_HEAD = "head"
-SIDE_TAIL = "tail"
 SIDE_BOTH = "both"
-SIDES = {SIDE_HEAD, SIDE_TAIL, SIDE_BOTH}
+SIDES = {LABEL_HEAD, LABEL_TAIL, SIDE_BOTH}
 
 RANK_OPTIMISTIC = "optimistic"
 RANK_PESSIMISTIC = "pessimistic"
@@ -509,7 +507,7 @@ class RankBasedEvaluator(Evaluator):
         self,
         true_scores: torch.FloatTensor,
         all_scores: torch.FloatTensor,
-        side: str,
+        side: Target,
         hrt_batch: MappedTriples,
     ) -> None:
         """Shared code for updating the stored ranks for head/tail scores.
@@ -532,7 +530,7 @@ class RankBasedEvaluator(Evaluator):
         scores: torch.FloatTensor,
         dense_positive_mask: Optional[torch.FloatTensor] = None,
     ) -> None:  # noqa: D102
-        self._update_ranks_(true_scores=true_scores, all_scores=scores, side=SIDE_TAIL, hrt_batch=hrt_batch)
+        self._update_ranks_(true_scores=true_scores, all_scores=scores, side=LABEL_TAIL, hrt_batch=hrt_batch)
 
     def process_head_scores_(
         self,
@@ -541,11 +539,13 @@ class RankBasedEvaluator(Evaluator):
         scores: torch.FloatTensor,
         dense_positive_mask: Optional[torch.FloatTensor] = None,
     ) -> None:  # noqa: D102
-        self._update_ranks_(true_scores=true_scores, all_scores=scores, side=SIDE_HEAD, hrt_batch=hrt_batch)
+        self._update_ranks_(true_scores=true_scores, all_scores=scores, side=LABEL_HEAD, hrt_batch=hrt_batch)
 
     def _get_ranks(self, side, rank_type) -> np.ndarray:
         if side == SIDE_BOTH:
-            values: List[float] = sum((self.ranks.get((_side, rank_type), []) for _side in (SIDE_HEAD, SIDE_TAIL)), [])
+            values: List[float] = sum(
+                (self.ranks.get((_side, rank_type), []) for _side in (LABEL_HEAD, LABEL_TAIL)), []
+            )
         else:
             values = self.ranks.get((side, rank_type), [])
         return np.asarray(values, dtype=np.float64)
@@ -610,7 +610,7 @@ def sample_negatives(
     additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
     num_samples: int = 50,
     num_entities: Optional[int] = None,
-) -> Tuple[torch.Tensor, torch.Tensor]:
+) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
     """
     Sample true negatives for sampled evaluation.
 
@@ -638,14 +638,14 @@ def sample_negatives(
         additional_filter_triples=additional_filter_triples,
     )
     num_entities = num_entities or (additional_filter_triples[:, [0, 2]].max().item() + 1)
-    columns = ["head", "relation", "tail"]
+    columns = [LABEL_HEAD, LABEL_RELATION, LABEL_TAIL]
     num_triples = evaluation_triples.shape[0]
     df = pd.DataFrame(data=evaluation_triples.numpy(), columns=columns)
     all_df = pd.DataFrame(data=additional_filter_triples.numpy(), columns=columns)
     id_df = df.reset_index()
     all_ids = set(range(num_entities))
     negatives = []
-    for side in ["head", "tail"]:
+    for side in [LABEL_HEAD, LABEL_TAIL]:
         this_negatives = torch.empty(size=(num_triples, num_samples), dtype=torch.long)
         other = [c for c in columns if c != side]
         for _, group in pd.merge(id_df, all_df, on=other, suffixes=["_eval", "_all"]).groupby(
@@ -721,9 +721,9 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
             if negatives.shape[0] != evaluation_factory.num_triples:
                 raise ValueError(f"Negatives are in wrong shape: {negatives.shape}")
         self.triple_to_index = {(h, r, t): i for i, (h, r, t) in enumerate(evaluation_factory.mapped_triples.tolist())}
-        self.negative_samples = {
-            SIDE_HEAD: head_negatives,
-            SIDE_TAIL: tail_negatives,
+        self.negative_samples: Mapping[Target, torch.FloatTensor] = {
+            LABEL_HEAD: head_negatives,
+            LABEL_TAIL: tail_negatives,
         }
         self.num_entities = evaluation_factory.num_entities
 
@@ -731,7 +731,7 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
         self,
         true_scores: torch.FloatTensor,
         all_scores: torch.FloatTensor,
-        side: str,
+        side: Target,
         hrt_batch: MappedTriples,
     ) -> None:  # noqa: D102
         # TODO: do not require to compute all scores beforehand
