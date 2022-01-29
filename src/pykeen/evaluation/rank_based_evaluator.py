@@ -9,7 +9,7 @@ import random
 import re
 from collections import defaultdict
 from dataclasses import dataclass, field, fields
-from typing import DefaultDict, Dict, Iterable, List, NamedTuple, Optional, Sequence, Tuple, Union
+from typing import DefaultDict, Dict, Iterable, List, Mapping, NamedTuple, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -19,7 +19,7 @@ from scipy import stats
 
 from .evaluator import Evaluator, MetricResults, prepare_filter_triples
 from ..triples.triples_factory import CoreTriplesFactory
-from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, MappedTriples
+from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, MappedTriples, Target
 from ..utils import fix_dataclass_init_docs
 
 __all__ = [
@@ -507,7 +507,7 @@ class RankBasedEvaluator(Evaluator):
         self,
         true_scores: torch.FloatTensor,
         all_scores: torch.FloatTensor,
-        side: str,
+        side: Target,
         hrt_batch: MappedTriples,
     ) -> None:
         """Shared code for updating the stored ranks for head/tail scores.
@@ -610,7 +610,7 @@ def sample_negatives(
     additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
     num_samples: int = 50,
     num_entities: Optional[int] = None,
-) -> Tuple[torch.Tensor, torch.Tensor]:
+) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
     """
     Sample true negatives for sampled evaluation.
 
@@ -721,7 +721,7 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
             if negatives.shape[0] != evaluation_factory.num_triples:
                 raise ValueError(f"Negatives are in wrong shape: {negatives.shape}")
         self.triple_to_index = {(h, r, t): i for i, (h, r, t) in enumerate(evaluation_factory.mapped_triples.tolist())}
-        self.negative_samples = {
+        self.negative_samples: Mapping[Target, torch.FloatTensor] = {
             LABEL_HEAD: head_negatives,
             LABEL_TAIL: tail_negatives,
         }
@@ -731,7 +731,7 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
         self,
         true_scores: torch.FloatTensor,
         all_scores: torch.FloatTensor,
-        side: str,
+        side: Target,
         hrt_batch: MappedTriples,
     ) -> None:  # noqa: D102
         # TODO: do not require to compute all scores beforehand
