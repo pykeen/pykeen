@@ -36,7 +36,7 @@ from class_resolver import Resolver, normalize_string
 
 from .evaluator import Evaluator, MetricResults, prepare_filter_triples
 from ..triples.triples_factory import CoreTriplesFactory
-from ..typing import MappedTriples, Side
+from ..typing import MappedTriples, Target
 from ..constants import LABEL_HEAD, LABEL_TAIL, SIDES
 
 __all__ = [
@@ -51,7 +51,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 # typing
-ExtendedSide = Union[Side, Literal["both"]]
+ExtendedSide = Union[Target, Literal["both"]]
 SIDE_BOTH: ExtendedSide = "both"
 EXTENDED_SIDES: Tuple[ExtendedSide, ...] = cast(Tuple[ExtendedSide, ...], SIDES) + (SIDE_BOTH,)
 
@@ -530,10 +530,10 @@ class RankBasedEvaluator(Evaluator):
     """A rank-based evaluator for KGE models."""
 
     #: the actual rank data
-    ranks: MutableMapping[RankType, MutableMapping[Side, List[np.ndarray]]]
+    ranks: MutableMapping[RankType, MutableMapping[Target, List[np.ndarray]]]
 
     #: the number of choices for each ranking task; relevant for expected metrics
-    number_of_options: MutableMapping[Side, List[np.ndarray]]
+    number_of_options: MutableMapping[Target, List[np.ndarray]]
 
     #: the rank-based metrics to compute
     metrics: Mapping[str, RankBasedMetric]
@@ -575,7 +575,7 @@ class RankBasedEvaluator(Evaluator):
         self,
         true_scores: torch.FloatTensor,
         all_scores: torch.FloatTensor,
-        side: Side,
+        side: Target,
         hrt_batch: MappedTriples,
     ) -> None:
         """Shared code for updating the stored ranks for head/tail scores.
@@ -611,7 +611,7 @@ class RankBasedEvaluator(Evaluator):
 
     @staticmethod
     def _get_for_side(
-        mapping: Mapping[Side, List[np.ndarray]],
+        mapping: Mapping[Target, List[np.ndarray]],
         side: ExtendedSide,
     ) -> np.ndarray:
         values: List[np.ndarray]
@@ -646,7 +646,7 @@ class RankBasedEvaluator(Evaluator):
 
 def sample_negatives(
     evaluation_triples: MappedTriples,
-    side: Side,
+    side: Target,
     additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
     num_samples: int = 50,
     max_id: Optional[int] = None,
@@ -710,7 +710,7 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
     """
 
     #: the negative samples for each side
-    negative_samples: Mapping[Side, torch.LongTensor]
+    negative_samples: Mapping[Target, torch.LongTensor]
 
     def __init__(
         self,
@@ -718,7 +718,7 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
         *,
         additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
         num_negatives: Optional[int] = None,
-        negatives: Optional[Mapping[Side, Optional[torch.LongTensor]]] = None,
+        negatives: Optional[Mapping[Target, Optional[torch.LongTensor]]] = None,
         **kwargs,
     ):
         """
@@ -768,7 +768,7 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
         self,
         true_scores: torch.FloatTensor,
         all_scores: torch.FloatTensor,
-        side: Side,
+        side: Target,
         hrt_batch: MappedTriples,
     ) -> None:  # noqa: D102
         # TODO: do not require to compute all scores beforehand
