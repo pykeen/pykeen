@@ -13,8 +13,7 @@ import pandas as pd
 from tqdm.auto import tqdm
 
 from . import TriplesFactory
-from ..constants import COLUMN_HEAD, COLUMN_RELATION, COLUMN_TAIL, LABEL_HEAD, LABEL_RELATION, LABEL_TAIL
-from ..typing import MappedTriples
+from ..typing import COLUMN_HEAD, COLUMN_RELATION, COLUMN_TAIL, LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, MappedTriples
 
 logger = logging.getLogger(__name__)
 

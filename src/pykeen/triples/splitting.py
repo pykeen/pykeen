@@ -12,9 +12,7 @@ import pandas
 import torch
 from class_resolver.api import HintOrType, Resolver
 
-from pykeen.constants import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL
-
-from ..typing import MappedTriples, TorchRandomHint
+from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, MappedTriples, Target, TorchRandomHint
 from ..utils import ensure_torch_random_state
 
 logger = logging.getLogger(__name__)

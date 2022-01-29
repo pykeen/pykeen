@@ -16,7 +16,6 @@ import numpy.testing
 import pandas
 import torch
 
-from pykeen.constants import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL
 from pykeen.datasets import Nations
 from pykeen.evaluation import Evaluator, MetricResults, RankBasedEvaluator, RankBasedMetricResults
 from pykeen.evaluation.classification_evaluator import ClassificationEvaluator, ClassificationMetricResults
@@ -43,7 +42,7 @@ from pykeen.evaluation.rank_based_evaluator import (
     sample_negatives,
 )
 from pykeen.models import FixedModel
-from pykeen.typing import MappedTriples
+from pykeen.typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, MappedTriples
 from tests import cases
 
 logger = logging.getLogger(__name__)

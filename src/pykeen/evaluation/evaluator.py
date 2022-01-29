@@ -18,11 +18,10 @@ import torch
 from dataclasses_json import DataClassJsonMixin
 from tqdm.autonotebook import tqdm
 
-from ..constants import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL
 from ..models import Model
 from ..triples.triples_factory import restrict_triples
 from ..triples.utils import get_entities, get_relations
-from ..typing import MappedTriples
+from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, MappedTriples
 from ..utils import (
     format_relative_comparison,
     is_cuda_oom_error,

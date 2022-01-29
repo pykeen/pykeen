@@ -18,9 +18,8 @@ from dataclasses_json import dataclass_json
 from scipy import stats
 
 from .evaluator import Evaluator, MetricResults, prepare_filter_triples
-from ..constants import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL
 from ..triples.triples_factory import CoreTriplesFactory
-from ..typing import MappedTriples
+from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, MappedTriples
 from ..utils import fix_dataclass_init_docs
 
 __all__ = [

@@ -97,6 +97,14 @@ class ScorePack(NamedTuple):
 
 Sign = Literal[-1, 1]
 
-
 #: the prediction target
 Target = Literal["head", "relation", "tail"]
+LABEL_HEAD: Target = "head"
+LABEL_RELATION: Target = "relation"
+LABEL_TAIL: Target = "tail"
+
+#: the prediction target index
+TargetIndex = Literal[0, 1, 2]
+COLUMN_HEAD: TargetIndex = 0
+COLUMN_RELATION: TargetIndex = 1
+COLUMN_TAIL: TargetIndex = 2

@@ -17,11 +17,12 @@ from more_click import log_level_option, verbose_option
 from tqdm import tqdm
 
 from . import dataset_resolver, get_dataset
-from ..constants import LABEL_HEAD, LABEL_TAIL, PYKEEN_DATASETS
+from ..constants import PYKEEN_DATASETS
 from ..datasets.base import Dataset
 from ..datasets.ogb import OGBWikiKG
 from ..evaluation.evaluator import get_candidate_set_size
 from ..evaluation.rank_based_evaluator import expected_hits_at_k, expected_mean_rank
+from ..typing import LABEL_HEAD, LABEL_TAIL
 
 
 @click.group()

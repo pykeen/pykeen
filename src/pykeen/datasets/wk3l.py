@@ -18,9 +18,8 @@ from more_click import verbose_option
 from pystow.utils import download_from_google
 
 from .base import LazyDataset
-from ..constants import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL
 from ..triples import TriplesFactory
-from ..typing import TorchRandomHint
+from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, TorchRandomHint
 
 __all__ = [
     "WK3l15k",
