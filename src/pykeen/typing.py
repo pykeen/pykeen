@@ -38,6 +38,13 @@ __all__ = [
     "ScorePack",
     # prediction targets
     "Target",
+    "LABEL_HEAD",
+    "LABEL_RELATION",
+    "LABEL_TAIL",
+    "TargetColumn",
+    "COLUMN_HEAD",
+    "COLUMN_RELATION",
+    "COLUMN_TAIL",
 ]
 
 X = TypeVar("X")
@@ -104,7 +111,7 @@ LABEL_RELATION: Target = "relation"
 LABEL_TAIL: Target = "tail"
 
 #: the prediction target index
-TargetIndex = Literal[0, 1, 2]
-COLUMN_HEAD: TargetIndex = 0
-COLUMN_RELATION: TargetIndex = 1
-COLUMN_TAIL: TargetIndex = 2
+TargetColumn = Literal[0, 1, 2]
+COLUMN_HEAD: TargetColumn = 0
+COLUMN_RELATION: TargetColumn = 1
+COLUMN_TAIL: TargetColumn = 2

@@ -13,6 +13,7 @@ import pandas as pd
 from tqdm.auto import tqdm
 
 from . import TriplesFactory
+from ..constants import TARGET_TO_INDEX
 from ..typing import COLUMN_HEAD, COLUMN_RELATION, COLUMN_TAIL, LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, MappedTriples
 
 logger = logging.getLogger(__name__)
@@ -490,10 +491,8 @@ def get_entity_counts(
         A dataframe with columns ( entity_id | type | count )
     """
     data = []
-    for label, col in (
-        (LABEL_HEAD, COLUMN_HEAD),
-        (LABEL_TAIL, COLUMN_TAIL),
-    ):
+    for label in (LABEL_HEAD, LABEL_TAIL):
+        col = TARGET_TO_INDEX[label]
         unique, counts = _get_counts(mapped_triples=mapped_triples, column=col)
         df = pd.DataFrame(
             {
