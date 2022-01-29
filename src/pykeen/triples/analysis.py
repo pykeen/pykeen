@@ -694,12 +694,7 @@ def get_relation_functionality(
         A dataframe with columns ( functionality | inverse_functionality )
     """
     df = pd.DataFrame(data=mapped_triples, columns=[LABEL_HEAD, LABEL_RELATION, LABEL_TAIL])
-    df = df.groupby(by=LABEL_RELATION).agg(
-        dict(
-            h=["nunique", COUNT_COLUMN_NAME],
-            t="nunique",
-        )
-    )
+    df = df.groupby(by=LABEL_RELATION).agg({LABEL_HEAD: ["nunique", COUNT_COLUMN_NAME], LABEL_TAIL: "nunique"})
     df[FUNCTIONALITY_COLUMN_NAME] = df[(LABEL_HEAD, "nunique")] / df[(LABEL_HEAD, COUNT_COLUMN_NAME)]
     df[INVERSE_FUNCTIONALITY_COLUMN_NAME] = df[(LABEL_TAIL, "nunique")] / df[(LABEL_TAIL, COUNT_COLUMN_NAME)]
     df = df[[FUNCTIONALITY_COLUMN_NAME, INVERSE_FUNCTIONALITY_COLUMN_NAME]]

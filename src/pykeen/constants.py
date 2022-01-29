@@ -3,7 +3,7 @@
 """Constants for PyKEEN."""
 
 from pathlib import Path
-from typing import Mapping, Tuple
+from typing import Mapping
 
 import pystow
 import torch
