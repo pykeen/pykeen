@@ -85,6 +85,54 @@ class MetricKey(NamedTuple):
             components.append(self.k)
         return ".".join(map(str, components))
 
+    @classmethod
+    def resolve_metric_name(cls, name: str) -> "MetricKey":
+        """Functional metric name normalization."""
+        match = METRIC_PATTERN.match(normalize_string(name, suffix=None))
+        if not match:
+            raise ValueError(f"Invalid metric name: {name}")
+        side: Union[str, ExtendedSide]
+        rank_type: Union[str, RankType]
+        kf: Union[None, str, int]
+        kb: Union[None, str, int]
+        name, side, rank_type, kf, kb = [match.group(key) for key in ("name", "side", "type", "kf", "kb")]
+        k = kf or kb
+
+        # normalize metric name
+        if not name:
+            raise ValueError("A metric name must be provided.")
+        metric_cls = metric_resolver.lookup(name)
+
+        # special case for hits_at_k
+        if metric_cls is HitsAtK and k is not None:
+            # TODO: Fractional?
+            try:
+                k = int(k)
+            except ValueError as error:
+                raise ValueError(f"Invalid k={k} for hits_at_k") from error
+            if k < 0:
+                raise ValueError(f"For hits_at_k, you must provide a positive value of k, but found {k}.")
+        assert k is None or isinstance(k, int)
+
+        # normalize side
+        side = side or SIDE_BOTH
+        side = side.lower()
+        if side not in EXTENDED_SIDES:
+            raise ValueError(f"Invalid side: {side}. Allowed are {EXTENDED_SIDES}.")
+
+        # normalize rank type
+        rank_type = rank_type or RANK_REALISTIC
+        rank_type = rank_type.lower()
+        rank_type = RANK_TYPE_SYNONYMS.get(rank_type, rank_type)
+        if rank_type not in RANK_TYPES:
+            raise ValueError(f"Invalid rank type: {rank_type}. Allowed are {RANK_TYPES}.")
+        if rank_type not in metric_cls.supported_rank_types:
+            raise ValueError(
+                f"Invalid rank type for {metric_resolver.normalize_cls(metric_cls)}: {rank_type}. "
+                f"Allowed type: {metric_cls.supported_rank_types}",
+            )
+        return MetricKey(metric_cls, side, rank_type, k)
+
 
 def compute_rank_from_scores(
     true_score: torch.FloatTensor,
@@ -139,50 +187,7 @@ METRIC_PATTERN = re.compile(
 
 def resolve_metric_name(name: str) -> MetricKey:
     """Functional metric name normalization."""
-    match = METRIC_PATTERN.match(normalize_string(name, suffix=None))
-    if not match:
-        raise ValueError(f"Invalid metric name: {name}")
-    side: Union[str, ExtendedSide]
-    rank_type: Union[str, RankType]
-    kf: Union[None, str, int]
-    kb: Union[None, str, int]
-    name, side, rank_type, kf, kb = [match.group(key) for key in ("name", "side", "type", "kf", "kb")]
-    k = kf or kb
-
-    # normalize metric name
-    if not name:
-        raise ValueError("A metric name must be provided.")
-    metric_cls = metric_resolver.lookup(name)
-
-    # special case for hits_at_k
-    if metric_cls is HitsAtK and k is not None:
-        # TODO: Fractional?
-        try:
-            k = int(k)
-        except ValueError as error:
-            raise ValueError(f"Invalid k={k} for hits_at_k") from error
-        if k < 0:
-            raise ValueError(f"For hits_at_k, you must provide a positive value of k, but found {k}.")
-    assert k is None or isinstance(k, int)
-
-    # normalize side
-    side = side or SIDE_BOTH
-    side = side.lower()
-    if side not in EXTENDED_SIDES:
-        raise ValueError(f"Invalid side: {side}. Allowed are {EXTENDED_SIDES}.")
-
-    # normalize rank type
-    rank_type = rank_type or RANK_REALISTIC
-    rank_type = rank_type.lower()
-    rank_type = RANK_TYPE_SYNONYMS.get(rank_type, rank_type)
-    if rank_type not in RANK_TYPES:
-        raise ValueError(f"Invalid rank type: {rank_type}. Allowed are {RANK_TYPES}.")
-    if rank_type not in metric_cls.supported_rank_types:
-        raise ValueError(
-            f"Invalid rank type for {metric_resolver.normalize_cls(metric_cls)}: {rank_type}. "
-            f"Allowed type: {metric_cls.supported_rank_types}",
-        )
-    return MetricKey(metric_cls, side, rank_type, k)  # type: ignore
+    return MetricKey.resolve_metric_name(name)
 
 
 class RankBasedMetricResults(MetricResults):
@@ -234,8 +239,8 @@ class RankBasedMetricResults(MetricResults):
 
         >>> metric_results.get('hits@5')
         """
-        metric, side, rank_type, k = resolve_metric_name(name)
-        if not metric.startswith("hits"):
+        metric, side, rank_type, k = MetricKey.resolve_metric_name(name)
+        if metric is not HitsAtK:
             return self.results[metric, side, rank_type]
         raise NotImplementedError
 
@@ -341,17 +346,17 @@ class RankBasedEvaluator(Evaluator):
     ) -> None:  # noqa: D102
         self._update_ranks_(true_scores=true_scores, all_scores=scores, side=LABEL_HEAD, hrt_batch=hrt_batch)
 
-    @staticmethod
+    @classmethod
     def _get_for_side(
+        cls,
         mapping: Mapping[Target, List[np.ndarray]],
         side: ExtendedSide,
     ) -> np.ndarray:
         values: List[np.ndarray]
-        if side in SIDES:
-            values = mapping.get(side, [])  # type: ignore
-            return np.concatenate(values).astype(dtype=np.float64)
-        assert side == SIDE_BOTH
-        return np.concatenate([RankBasedEvaluator._get_for_side(mapping=mapping, side=_side) for _side in SIDES])
+        if side == SIDE_BOTH:
+            return np.concatenate([cls._get_for_side(mapping=mapping, side=_side) for _side in SIDES])
+        else:
+            return np.concatenate(mapping.get(cast(Target, side), [])).astype(dtype=np.float64)
 
     def finalize(self) -> RankBasedMetricResults:  # noqa: D102
         result: MutableMapping[Tuple[str, ExtendedSide, RankType], float] = dict()
