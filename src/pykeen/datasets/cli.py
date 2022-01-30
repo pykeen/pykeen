@@ -21,7 +21,7 @@ from ..constants import PYKEEN_DATASETS
 from ..datasets.base import Dataset
 from ..datasets.ogb import OGBWikiKG
 from ..evaluation.evaluator import get_candidate_set_size
-from ..evaluation.rank_based_evaluator import expected_hits_at_k, expected_mean_rank
+from ..evaluation.expectation import expected_hits_at_k, expected_mean_rank
 from ..typing import LABEL_HEAD, LABEL_TAIL
 
 

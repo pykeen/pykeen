@@ -14,12 +14,12 @@ import numpy as np
 import pandas as pd
 import torch
 from dataclasses_json import dataclass_json
-from scipy import stats
 
 from .evaluator import Evaluator, MetricResults, prepare_filter_triples
 from .metrics import (
     ADJUSTED_ARITHMETIC_MEAN_RANK,
     ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX,
+    ALL_TYPE_FUNCS,
     ARITHMETIC_MEAN_RANK,
     GEOMETRIC_MEAN_RANK,
     HARMONIC_MEAN_RANK,
@@ -28,6 +28,10 @@ from .metrics import (
     INVERSE_HARMONIC_MEAN_RANK,
     INVERSE_MEDIAN_RANK,
     MEDIAN_RANK,
+    RANK_COUNT,
+    RANK_MAD,
+    RANK_STD,
+    RANK_VARIANCE,
     MetricKey,
 )
 from .ranks import Ranks
@@ -54,27 +58,6 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
-
-RANK_STD = "rank_std"
-RANK_VARIANCE = "rank_var"
-RANK_MAD = "rank_mad"
-RANK_COUNT = "rank_count"
-
-all_type_funcs = {
-    ARITHMETIC_MEAN_RANK: np.mean,  # This is MR
-    HARMONIC_MEAN_RANK: stats.hmean,
-    GEOMETRIC_MEAN_RANK: stats.gmean,
-    MEDIAN_RANK: np.median,
-    INVERSE_ARITHMETIC_MEAN_RANK: lambda x: np.reciprocal(np.mean(x)),
-    INVERSE_GEOMETRIC_MEAN_RANK: lambda x: np.reciprocal(stats.gmean(x)),
-    INVERSE_HARMONIC_MEAN_RANK: lambda x: np.reciprocal(stats.hmean(x)),  # This is MRR
-    INVERSE_MEDIAN_RANK: lambda x: np.reciprocal(np.median(x)),
-    # Extra stats stuff
-    RANK_STD: np.std,
-    RANK_VARIANCE: np.var,
-    RANK_MAD: stats.median_abs_deviation,
-    RANK_COUNT: lambda x: np.asarray(x.size),
-}
 
 
 @fix_dataclass_init_docs
@@ -405,7 +388,7 @@ class RankBasedEvaluator(Evaluator):
             hits_at_k[side][rank_type] = {
                 k: np.mean(ranks <= (k if isinstance(k, int) else int(self.num_entities * k))).item() for k in self.ks
             }
-            for metric_name, metric_func in all_type_funcs.items():
+            for metric_name, metric_func in ALL_TYPE_FUNCS.items():
                 asr[metric_name][side][rank_type] = metric_func(ranks).item()
 
             expected_rank_type = EXPECTED_RANKS.get(rank_type)
@@ -583,67 +566,3 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
         # write back correct num_entities
         # TODO: should we give num_entities in the constructor instead of inferring it every time ranks are processed?
         self.num_entities = all_scores.shape[1]
-
-
-def numeric_expected_value(
-    metric: str,
-    num_candidates: Union[Sequence[int], np.ndarray],
-    num_samples: int,
-) -> float:
-    """
-    Compute expected metric value by summation.
-
-    Depending on the metric, the estimate may not be very accurate and converage slowly, cf.
-    https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.rv_discrete.expect.html
-    """
-    metric_func = all_type_funcs[metric]
-    num_candidates = np.asarray(num_candidates)
-    generator = np.random.default_rng()
-    expectation = 0
-    for _ in range(num_samples):
-        ranks = generator.integers(low=0, high=num_candidates)
-        expectation += metric_func(ranks)
-    return expectation / num_samples
-
-
-# TODO: closed-forms for other metrics?
-
-
-def expected_mean_rank(
-    num_candidates: Union[Sequence[int], np.ndarray],
-) -> float:
-    r"""
-    Calculate the expected mean rank under random ordering.
-
-    .. math ::
-
-        E[MR] = \frac{1}{n} \sum \limits_{i=1}^{n} \frac{1 + CSS[i]}{2}
-              = \frac{1}{2}(1 + \frac{1}{n} \sum \limits_{i=1}^{n} CSS[i])
-
-    :param num_candidates:
-        the number of candidates for each individual rank computation
-
-    :return:
-        the expected mean rank
-    """
-    return 0.5 * (1 + np.mean(np.asanyarray(num_candidates)))
-
-
-def expected_hits_at_k(
-    num_candidates: Union[Sequence[int], np.ndarray],
-    k: int,
-) -> float:
-    r"""
-    Calculate the expected Hits@k under random ordering.
-
-    .. math ::
-
-        E[Hits@k] = \frac{1}{n} \sum \limits_{i=1}^{n} min(\frac{k}{CSS[i]}, 1.0)
-
-    :param num_candidates:
-        the number of candidates for each individual rank computation
-
-    :return:
-        the expected Hits@k value
-    """
-    return k * np.mean(np.reciprocal(np.asanyarray(num_candidates, dtype=float)).clip(min=None, max=1 / k))
