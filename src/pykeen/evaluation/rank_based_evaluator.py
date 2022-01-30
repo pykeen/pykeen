@@ -120,6 +120,7 @@ class MetricKey(NamedTuple):
         side = side.lower()
         if side not in EXTENDED_SIDES:
             raise ValueError(f"Invalid side: {side}. Allowed are {EXTENDED_SIDES}.")
+        side = cast(ExtendedSide, side)
 
         # normalize rank type
         rank_type = rank_type or RANK_REALISTIC
@@ -127,6 +128,7 @@ class MetricKey(NamedTuple):
         rank_type = RANK_TYPE_SYNONYMS.get(rank_type, rank_type)
         if rank_type not in RANK_TYPES:
             raise ValueError(f"Invalid rank type: {rank_type}. Allowed are {RANK_TYPES}.")
+        rank_type = cast(RankType, rank_type)
         if rank_type not in metric_cls.supported_rank_types:
             raise ValueError(
                 f"Invalid rank type for {metric_resolver.normalize_cls(metric_cls)}: {rank_type}. "
