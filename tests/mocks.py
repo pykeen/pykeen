@@ -8,9 +8,9 @@ import torch
 from torch import nn
 
 from pykeen.evaluation import Evaluator, MetricResults, RankBasedMetricResults
-from pykeen.evaluation.rank_based_evaluator import RANK_REALISTIC, RANK_TYPES, SIDES
+from pykeen.evaluation.rank_based_evaluator import SIDES
 from pykeen.nn.emb import RepresentationModule
-from pykeen.typing import MappedTriples
+from pykeen.typing import RANK_REALISTIC, RANK_TYPES, MappedTriples
 
 __all__ = [
     "CustomRepresentations",

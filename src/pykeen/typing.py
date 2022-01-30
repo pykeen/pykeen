@@ -2,7 +2,7 @@
 
 """Type hints for PyKEEN."""
 
-from typing import Callable, Mapping, NamedTuple, Sequence, TypeVar, Union, cast
+from typing import Callable, Mapping, NamedTuple, Sequence, Tuple, TypeVar, Union, cast
 
 import numpy as np
 import torch
@@ -115,3 +115,24 @@ TargetColumn = Literal[0, 1, 2]
 COLUMN_HEAD: TargetColumn = 0
 COLUMN_RELATION: TargetColumn = 1
 COLUMN_TAIL: TargetColumn = 2
+
+#: the rank types
+RankType = Literal["optimistic", "realistic", "pessimistic"]
+RANK_OPTIMISTIC: RankType = "optimistic"
+RANK_REALISTIC: RankType = "realistic"
+RANK_PESSIMISTIC: RankType = "pessimistic"
+# RANK_TYPES: Tuple[RankType, ...] = typing.get_args(RankType) # Python >= 3.8
+RANK_TYPES: Tuple[RankType, ...] = (RANK_OPTIMISTIC, RANK_REALISTIC, RANK_PESSIMISTIC)
+RANK_TYPE_SYNONYMS: Mapping[str, RankType] = {
+    "best": RANK_OPTIMISTIC,
+    "worst": RANK_PESSIMISTIC,
+    "avg": RANK_REALISTIC,
+    "average": RANK_REALISTIC,
+}
+
+RANK_EXPECTED_REALISTIC = "expected_realistic"
+EXPECTED_RANKS = {
+    RANK_REALISTIC: RANK_EXPECTED_REALISTIC,
+    RANK_OPTIMISTIC: None,  # TODO - research problem
+    RANK_PESSIMISTIC: None,  # TODO - research problem
+}
