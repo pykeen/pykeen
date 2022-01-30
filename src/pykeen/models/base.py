@@ -13,8 +13,7 @@ import pickle
 import warnings
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from operator import invert
-from typing import Any, ClassVar, Collection, Iterable, Mapping, Optional, Sequence, Tuple, Type, Union
+from typing import Any, ClassVar, Collection, Iterable, Mapping, Optional, Sequence, Tuple, Type, TypeVar, Union
 
 import pandas as pd
 import torch
@@ -25,7 +24,7 @@ from torch import nn
 from ..losses import Loss, MarginRankingLoss, loss_resolver
 from ..nn.emb import Embedding, EmbeddingSpecification, RepresentationModule
 from ..regularizers import NoRegularizer, Regularizer
-from ..triples import CoreTriplesFactory, relation_inverter
+from ..triples import CoreTriplesFactory
 from ..typing import ScorePack
 from ..utils import NoRandomSeedNecessary, extend_batch, set_random_seed
 
@@ -258,7 +257,6 @@ class Model(nn.Module, ABC):
     @abstractmethod
     def _reset_parameters_(self):  # noqa: D401
         """Reset all parameters of the model in-place."""
-        raise NotImplementedError
 
     def post_parameter_update(self) -> None:
         """Has to be called after each parameter update."""
@@ -879,22 +877,13 @@ class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
         triples_factory: CoreTriplesFactory,
         entity_representations: EmbeddingSpecification,
         relation_representations: EmbeddingSpecification,
-        loss: Optional[Loss] = None,
-        predict_with_sigmoid: bool = False,
-        random_seed: Optional[int] = None,
-        regularizer: Optional[Regularizer] = None,
+        **kwargs,
     ) -> None:
         """Initialize the entity embedding model.
 
         .. seealso:: Constructor of the base class :class:`pykeen.models.Model`
         """
-        super().__init__(
-            triples_factory=triples_factory,
-            loss=loss,
-            random_seed=random_seed,
-            regularizer=regularizer,
-            predict_with_sigmoid=predict_with_sigmoid,
-        )
+        super().__init__(triples_factory=triples_factory, **kwargs)
         self.entity_embeddings = entity_representations.make(
             num_embeddings=triples_factory.num_entities,
             device=self.device,

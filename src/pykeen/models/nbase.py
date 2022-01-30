@@ -13,7 +13,7 @@ from typing import Any, ClassVar, Generic, Iterable, List, Mapping, Optional, Se
 import torch
 from torch import nn
 
-from .base import Model, relation_inverter
+from .base import Model
 from ..nn.emb import EmbeddingSpecification, RepresentationModule
 from ..nn.modules import Interaction, interaction_resolver
 from ..regularizers import Regularizer
@@ -269,8 +269,7 @@ class ERModel(
             additional keyword-based arguments passed to Model.__init__
         """
         super().__init__(triples_factory=triples_factory, **kwargs)
-        interaction_instance: Interaction = interaction_resolver.make(interaction, pos_kwargs=interaction_kwargs)
-        self.interaction = interaction_instance
+        self.interaction: Interaction = interaction_resolver.make(interaction, pos_kwargs=interaction_kwargs)
         self.entity_representations = _prepare_representation_module_list(
             representations=entity_representations,
             num_embeddings=self.num_entities,

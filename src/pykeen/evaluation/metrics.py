@@ -4,7 +4,10 @@
 
 import itertools as itt
 import re
-from typing import NamedTuple, Optional, Union, cast
+from typing import Mapping, NamedTuple, Optional, Union, cast
+
+import numpy as np
+from scipy import stats
 
 from ..typing import RANK_REALISTIC, RANK_TYPE_SYNONYMS, RANK_TYPES, SIDE_BOTH, SIDES, ExtendedRankType, ExtendedTarget
 
@@ -22,6 +25,10 @@ INVERSE_HARMONIC_MEAN_RANK = "inverse_harmonic_mean_rank"  # also known as mean 
 INVERSE_MEDIAN_RANK = "inverse_median_rank"
 ADJUSTED_ARITHMETIC_MEAN_RANK = "adjusted_arithmetic_mean_rank"
 ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX = "adjusted_arithmetic_mean_rank_index"
+RANK_STD = "rank_std"
+RANK_VARIANCE = "rank_var"
+RANK_MAD = "rank_mad"
+RANK_COUNT = "rank_count"
 TYPES_REALISTIC_ONLY = {ADJUSTED_ARITHMETIC_MEAN_RANK, ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX}
 METRIC_SYNONYMS = {
     "adjusted_mean_rank": ADJUSTED_ARITHMETIC_MEAN_RANK,
@@ -120,3 +127,28 @@ class MetricKey(NamedTuple):
     def normalize(cls, s: str) -> str:
         """Normalize a metric key string."""
         return str(cls.lookup(s))
+
+
+ALL_TYPE_FUNCS = {
+    ARITHMETIC_MEAN_RANK: np.mean,  # This is MR
+    HARMONIC_MEAN_RANK: stats.hmean,
+    GEOMETRIC_MEAN_RANK: stats.gmean,
+    MEDIAN_RANK: np.median,
+    INVERSE_ARITHMETIC_MEAN_RANK: lambda x: np.reciprocal(np.mean(x)),
+    INVERSE_GEOMETRIC_MEAN_RANK: lambda x: np.reciprocal(stats.gmean(x)),
+    INVERSE_HARMONIC_MEAN_RANK: lambda x: np.reciprocal(stats.hmean(x)),  # This is MRR
+    INVERSE_MEDIAN_RANK: lambda x: np.reciprocal(np.median(x)),
+    # Extra stats stuff
+    RANK_STD: np.std,
+    RANK_VARIANCE: np.var,
+    RANK_MAD: stats.median_abs_deviation,
+    RANK_COUNT: lambda x: np.asarray(x.size),
+}
+
+
+def get_ranking_metrics(ranks: np.ndarray) -> Mapping[str, float]:
+    """Calculate all rank-based metrics."""
+    rv = {}
+    for metric_name, metric_func in ALL_TYPE_FUNCS.items():
+        rv[metric_name] = metric_func(ranks).item()
+    return rv
