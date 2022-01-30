@@ -7,21 +7,7 @@ import itertools
 import logging
 import pathlib
 import re
-from typing import (
-    Any,
-    Callable,
-    Collection,
-    Dict,
-    List,
-    Mapping,
-    Optional,
-    Sequence,
-    Set,
-    TextIO,
-    Type,
-    Union,
-    cast,
-)
+from typing import Any, Callable, Collection, Dict, List, Mapping, Optional, Sequence, Set, TextIO, Type, Union, cast
 
 import numpy as np
 import pandas as pd

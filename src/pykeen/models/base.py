@@ -8,12 +8,12 @@ import functools
 import inspect
 import itertools
 import logging
-from operator import invert
 import os
 import pickle
 import warnings
 from abc import ABC, abstractmethod
 from collections import defaultdict
+from operator import invert
 from typing import Any, ClassVar, Collection, Iterable, Mapping, Optional, Sequence, Tuple, Type, Union
 
 import pandas as pd
