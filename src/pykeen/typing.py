@@ -136,3 +136,6 @@ EXPECTED_RANKS = {
     RANK_OPTIMISTIC: None,  # TODO - research problem
     RANK_PESSIMISTIC: None,  # TODO - research problem
 }
+
+SIDE_BOTH = "both"
+SIDES = {LABEL_HEAD, LABEL_TAIL, SIDE_BOTH}

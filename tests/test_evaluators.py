@@ -26,13 +26,11 @@ from pykeen.evaluation.evaluator import (
     get_candidate_set_size,
     prepare_filter_triples,
 )
+from pykeen.evaluation.metrics import MetricKey
 from pykeen.evaluation.rank_based_evaluator import (
-    SIDE_BOTH,
-    SIDES,
     SampledRankBasedEvaluator,
     expected_hits_at_k,
     expected_mean_rank,
-    resolve_metric_name,
     sample_negatives,
 )
 from pykeen.evaluation.ranks import Ranks
@@ -44,6 +42,8 @@ from pykeen.typing import (
     RANK_EXPECTED_REALISTIC,
     RANK_REALISTIC,
     RANK_TYPES,
+    SIDE_BOTH,
+    SIDES,
     MappedTriples,
 )
 from tests import cases
@@ -495,7 +495,7 @@ class TestEvaluationFiltering(unittest.TestCase):
 
 def test_resolve_metric_name():
     """Test metric name resolution."""
-    for name, expected in (
+    for s, expected in (
         ("mrr", ("inverse_harmonic_mean_rank", "both", "realistic", None)),
         ("mean_rank.both", ("arithmetic_mean_rank", "both", "realistic", None)),
         ("mean_rank.avg", ("arithmetic_mean_rank", "both", "realistic", None)),
@@ -506,8 +506,8 @@ def test_resolve_metric_name():
         ("hits_at_1", ("hits_at_k", "both", "realistic", 1)),
         ("H@10", ("hits_at_k", "both", "realistic", 10)),
     ):
-        result = resolve_metric_name(name=name)
-        assert result == expected, name
+        result = MetricKey.lookup(s)
+        assert result == expected, s
 
 
 def test_sample_negatives():
