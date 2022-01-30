@@ -36,7 +36,6 @@ from click.testing import CliRunner, Result
 from torch import optim
 from torch.nn import functional
 from torch.optim import SGD, Adagrad
-from pykeen.evaluation.rank_based_evaluator import RankBasedMetric
 
 import pykeen.models
 import pykeen.nn.message_passing
@@ -46,6 +45,7 @@ from pykeen.datasets.base import LazyDataset
 from pykeen.datasets.kinships import KINSHIPS_TRAIN_PATH
 from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH
 from pykeen.evaluation import Evaluator, MetricResults
+from pykeen.evaluation.rank_based_evaluator import RankBasedMetric
 from pykeen.losses import Loss, PairwiseLoss, PointwiseLoss, SetwiseLoss, UnsupportedLabelSmoothingError
 from pykeen.models import RESCAL, EntityRelationEmbeddingModel, Model, TransE
 from pykeen.models.cli import build_cli_from_cls

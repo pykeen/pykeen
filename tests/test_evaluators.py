@@ -14,8 +14,8 @@ import numpy.random
 import numpy.testing
 import pandas
 import torch
-from pykeen.constants import PART_TO_COLUMN
 
+from pykeen.constants import TARGET_TO_INDEX
 from pykeen.datasets import Nations
 from pykeen.evaluation import Evaluator, MetricResults, RankBasedEvaluator, RankBasedMetricResults
 from pykeen.evaluation.classification_evaluator import ClassificationEvaluator, ClassificationMetricResults
@@ -27,11 +27,11 @@ from pykeen.evaluation.evaluator import (
     prepare_filter_triples,
 )
 from pykeen.evaluation.rank_based_evaluator import (
+    EXTENDED_SIDES,
     RANK_REALISTIC,
     RANK_TYPES,
-    SIDES,
     SIDE_BOTH,
-    EXTENDED_SIDES,
+    SIDES,
     AdjustedArithmeticMeanRankIndex,
     ArithmeticMeanRank,
     HitsAtK,
@@ -520,7 +520,7 @@ def test_sample_negatives():
         )
     )
     for side in SIDES:
-        column = PART_TO_COLUMN[side]
+        column = TARGET_TO_INDEX[side]
         negatives = sample_negatives(
             evaluation_triples=evaluation_triples,
             side=side,

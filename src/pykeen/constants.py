@@ -8,7 +8,7 @@ from typing import Tuple
 import pystow
 import torch
 
-from .typing import Target
+from .typing import COLUMN_HEAD, COLUMN_RELATION, COLUMN_TAIL, LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, Target
 
 __all__ = [
     "PYKEEN_HOME",
@@ -48,16 +48,9 @@ USER_DEFINED_CODE = "<user defined>"
 
 AGGREGATIONS = {func.__name__: func for func in [torch.sum, torch.max, torch.mean, torch.logsumexp]}
 
-# constants for sides
-COLUMN_HEAD = 0
-COLUMN_RELATION = 1
-COLUMN_TAIL = 2
-LABEL_HEAD: Target = "head"
-LABEL_RELATION: Target = "relation"
-LABEL_TAIL: Target = "tail"
 # TODO: extend to relation, cf. https://github.com/pykeen/pykeen/pull/728
 SIDES: Tuple[Target, ...] = (LABEL_HEAD, LABEL_TAIL)
-PART_TO_COLUMN = {
+TARGET_TO_INDEX = {
     LABEL_HEAD: COLUMN_HEAD,
     LABEL_RELATION: COLUMN_RELATION,
     LABEL_TAIL: COLUMN_TAIL,

@@ -2,12 +2,12 @@
 
 """Implementation of ranked based evaluator."""
 
-from abc import abstractmethod
 import itertools as itt
 import logging
 import math
 import random
 import re
+from abc import abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass, fields
 from typing import (
@@ -30,14 +30,14 @@ from typing import (
 import numpy as np
 import pandas as pd
 import torch
+from class_resolver import Resolver, normalize_string
 from scipy import stats
 from typing_extensions import Literal
-from class_resolver import Resolver, normalize_string
 
 from .evaluator import Evaluator, MetricResults, prepare_filter_triples
+from ..constants import SIDES
 from ..triples.triples_factory import CoreTriplesFactory
-from ..typing import MappedTriples, Target
-from ..constants import LABEL_HEAD, LABEL_TAIL, SIDES
+from ..typing import LABEL_HEAD, LABEL_TAIL, MappedTriples, Target
 
 __all__ = [
     "compute_rank_from_scores",
@@ -404,12 +404,11 @@ METRIC_PATTERN = re.compile(
 # TODO: special hits@k
 
 
-
 def resolve_metric_name(name: str) -> MetricKey:
     """Functional metric name normalization."""
     match = METRIC_PATTERN.match(normalize_string(name, suffix=None))
     if not match:
-       raise ValueError(f"Invalid metric name: {name}")
+        raise ValueError(f"Invalid metric name: {name}")
     side: Union[str, ExtendedSide]
     rank_type: Union[str, RankType]
     kf: Union[None, str, int]
