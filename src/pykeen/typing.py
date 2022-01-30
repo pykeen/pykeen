@@ -2,7 +2,7 @@
 
 """Type hints for PyKEEN."""
 
-from typing import Callable, Mapping, NamedTuple, Sequence, TypeVar, Union, cast
+from typing import Callable, Mapping, NamedTuple, Sequence, Tuple, TypeVar, Union, cast
 
 import numpy as np
 import torch
@@ -109,6 +109,7 @@ Target = Literal["head", "relation", "tail"]
 LABEL_HEAD: Target = "head"
 LABEL_RELATION: Target = "relation"
 LABEL_TAIL: Target = "tail"
+TARGETS = Tuple[Target, ...] = LABEL_HEAD, LABEL_RELATION, LABEL_TAIL
 
 #: the prediction target index
 TargetColumn = Literal[0, 1, 2]

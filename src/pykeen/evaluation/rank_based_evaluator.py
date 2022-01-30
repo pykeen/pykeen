@@ -9,8 +9,7 @@ import random
 import re
 from collections import defaultdict
 from dataclasses import dataclass, field, fields
-from typing import DefaultDict, Dict, Iterable, List, Literal, NamedTuple, Optional, Sequence, Tuple, Union
-from typing import DefaultDict, Dict, Iterable, List, Mapping, NamedTuple, Optional, Sequence, Tuple, Union
+from typing import DefaultDict, Dict, Iterable, List, Literal, Mapping, NamedTuple, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -20,7 +19,7 @@ from scipy import stats
 
 from .evaluator import Evaluator, MetricResults, prepare_filter_triples
 from ..triples.triples_factory import CoreTriplesFactory
-from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, MappedTriples, Target
+from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, TARGETS, MappedTriples, Target
 from ..utils import fix_dataclass_init_docs
 
 __all__ = [
@@ -554,8 +553,8 @@ class RankBasedEvaluator(Evaluator):
         self._update_ranks_(true_scores=true_scores, all_scores=scores, side=LABEL_HEAD, hrt_batch=hrt_batch)
 
     def _get_ranks(self, side: Union[Target, SideAllType], rank_type: str) -> np.ndarray:
-        if side == SIDE_BOTH:  # TODO should this include SIDE_RELATION?
-            values: List[float] = sum((self.ranks.get((_side, rank_type), []) for _side in SIDE_BOTH_VALUES), [])
+        if side == SIDE_BOTH:
+            values: List[float] = sum((self.ranks.get((_side, rank_type), []) for _side in TARGETS), [])
         else:
             values = self.ranks.get((side, rank_type), [])
         return np.asarray(values, dtype=np.float64)
