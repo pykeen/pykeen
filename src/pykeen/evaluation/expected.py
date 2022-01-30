@@ -4,13 +4,13 @@ from typing import Sequence, Union
 
 import numpy as np
 
+from .metrics import metric_resolver
+
 __all__ = [
     "expected_mean_rank",
     "expected_hits_at_k",
     "numeric_expected_value",
 ]
-
-from pykeen.evaluation.rank_based_evaluator import metric_resolver
 
 
 def expected_mean_rank(
@@ -54,6 +54,8 @@ def expected_hits_at_k(
 
 
 # TODO: closed-forms for other metrics?
+
+
 def numeric_expected_value(
     metric: str,
     num_candidates: Union[Sequence[int], np.ndarray],

@@ -6,10 +6,15 @@ from dataclasses import dataclass
 from typing import ClassVar, Collection, Optional
 
 import numpy as np
+from class_resolver import Resolver
 from scipy import stats
 
 from .expected import expected_mean_rank
 from ..typing import RANK_REALISTIC, RANK_TYPES, RankType
+
+__all__ = [
+    "metric_resolver",
+]
 
 
 @dataclass
@@ -239,3 +244,9 @@ class AdjustedArithmeticMeanRankIndex(RankBasedMetric):
         return 1.0 - (
             (ArithmeticMeanRank.call(ranks) - 1.0) / (expected_mean_rank(num_candidates=num_candidates) - 1.0)
         )
+
+
+metric_resolver: Resolver[RankBasedMetric] = Resolver.from_subclasses(
+    base=RankBasedMetric,
+    default=InverseArithmeticMeanRank,  # mrr
+)

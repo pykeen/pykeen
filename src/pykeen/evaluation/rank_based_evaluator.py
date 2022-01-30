@@ -14,11 +14,11 @@ from typing import Any, Iterable, List, Mapping, MutableMapping, NamedTuple, Opt
 import numpy as np
 import pandas as pd
 import torch
-from class_resolver import Resolver, normalize_string
+from class_resolver import normalize_string
 from typing_extensions import Literal
 
 from .evaluator import Evaluator, MetricResults, prepare_filter_triples
-from .metrics import HitsAtK, InverseArithmeticMeanRank, RankBasedMetric
+from .metrics import HitsAtK, RankBasedMetric, metric_resolver
 from ..constants import SIDES
 from ..triples.triples_factory import CoreTriplesFactory
 from ..typing import (
@@ -40,7 +40,6 @@ __all__ = [
     "RankBasedMetricResults",
     "MetricKey",
     "resolve_metric_name",
-    "metric_resolver",
 ]
 
 logger = logging.getLogger(__name__)
@@ -49,14 +48,6 @@ logger = logging.getLogger(__name__)
 ExtendedSide = Union[Target, Literal["both"]]
 SIDE_BOTH: ExtendedSide = "both"
 EXTENDED_SIDES: Tuple[ExtendedSide, ...] = cast(Tuple[ExtendedSide, ...], SIDES) + (SIDE_BOTH,)
-
-metric_resolver: Resolver[RankBasedMetric] = Resolver.from_subclasses(
-    base=RankBasedMetric,
-    default=InverseArithmeticMeanRank,  # mrr
-)
-# also add synonyms
-for cls in metric_resolver.lookup_dict.values():
-    metric_resolver.register(cls=cls, synonyms=cls.synonyms, raise_on_conflict=False)
 
 
 class MetricKey(NamedTuple):
@@ -168,7 +159,8 @@ _TYPE_PATTERN = "|".join(itt.chain(RANK_TYPES, RANK_TYPE_SYNONYMS.keys()))
 # HITS_PATTERN = re.compile(r"(hits_at_|hits@|h@)(?P<kf>\d+)")
 _METRIC_PATTERN = "|".join(itt.chain(metric_resolver.lookup_dict.keys(), metric_resolver.synonyms.keys()))
 METRIC_PATTERN = re.compile(
-    rf"^(?P<name>{_METRIC_PATTERN})(?P<kf>\d+)?(\.(?P<side>{_SIDE_PATTERN}))?(\.(?P<type>{_TYPE_PATTERN}))?(\.(?P<kb>\d+))?$",  # noqa: E501
+    rf"^(?P<name>{_METRIC_PATTERN})(?P<kf>\d+)?(\.(?P<side>{_SIDE_PATTERN}))?(\.(?P<type>{_TYPE_PATTERN}))?(\.(?P<kb>\d+))?$",
+    # noqa: E501
 )
 
 
