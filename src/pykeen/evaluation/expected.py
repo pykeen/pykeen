@@ -1,4 +1,5 @@
 """Expected metric values under random ordering."""
+
 from typing import Sequence, Union
 
 import numpy as np
@@ -6,7 +7,10 @@ import numpy as np
 __all__ = [
     "expected_mean_rank",
     "expected_hits_at_k",
+    "numeric_expected_value",
 ]
+
+from pykeen.evaluation.rank_based_evaluator import metric_resolver
 
 
 def expected_mean_rank(
@@ -50,3 +54,22 @@ def expected_hits_at_k(
 
 
 # TODO: closed-forms for other metrics?
+def numeric_expected_value(
+    metric: str,
+    num_candidates: Union[Sequence[int], np.ndarray],
+    num_samples: int,
+) -> float:
+    """
+    Compute expected metric value by summation.
+
+    Depending on the metric, the estimate may not be very accurate and converage slowly, cf.
+    https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.rv_discrete.expect.html
+    """
+    metric_func = metric_resolver.make(metric)
+    num_candidates = np.asarray(num_candidates)
+    generator = np.random.default_rng()
+    expectation = 0
+    for _ in range(num_samples):
+        ranks = generator.integers(low=0, high=num_candidates)
+        expectation += metric_func(ranks)
+    return expectation / num_samples

@@ -1,4 +1,5 @@
 """(Rank-Based) Metrics."""
+
 import math
 from abc import abstractmethod
 from dataclasses import dataclass
