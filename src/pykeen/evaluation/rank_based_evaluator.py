@@ -241,7 +241,7 @@ class RankBasedMetricResults(MetricResults):
         """
         metric, side, rank_type, k = MetricKey.resolve_metric_name(name)
         if metric is not HitsAtK:
-            return self.results[metric, side, rank_type]
+            return self.results[metric.__name__, side, rank_type]
         raise NotImplementedError
 
     def to_flat_dict(self):  # noqa: D102
