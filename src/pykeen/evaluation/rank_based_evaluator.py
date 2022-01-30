@@ -567,7 +567,7 @@ class RankBasedEvaluator(Evaluator):
             metric_resolver.make(query=query) for query in metric_resolver.lookup_dict.values() if query is not HitsAtK
         ] + [metric_resolver.make(HitsAtK, k=k) for k in ks]
         self.metrics = {metric_resolver.normalize_inst(metric): metric for metric in metrics}
-        self.ranks = {rank_type: {side: [] for side in REAL_SIDES} for rank_type in RANK_TYPES}
+        self.ranks = {rank_type: {side: [] for side in SIDES} for rank_type in RANK_TYPES}
         self.number_of_options = defaultdict(list)
 
     def _update_ranks_(
@@ -614,11 +614,11 @@ class RankBasedEvaluator(Evaluator):
         side: ExtendedSide,
     ) -> np.ndarray:
         values: List[np.ndarray]
-        if side in REAL_SIDES:
+        if side in SIDES:
             values = mapping.get(side, [])  # type: ignore
             return np.concatenate(values).astype(dtype=np.float64)
         assert side == SIDE_BOTH
-        return np.concatenate([RankBasedEvaluator._get_for_side(mapping=mapping, side=_side) for _side in REAL_SIDES])
+        return np.concatenate([RankBasedEvaluator._get_for_side(mapping=mapping, side=_side) for _side in SIDES])
 
     def finalize(self) -> RankBasedMetricResults:  # noqa: D102
         result: MutableMapping[Tuple[str, ExtendedSide, RankType], float] = dict()
@@ -732,7 +732,7 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
         """
         super().__init__(**kwargs)
         if negatives is None:
-            negatives = {side: None for side in REAL_SIDES}
+            negatives = {side: None for side in SIDES}
         # make sure that negatives is mutable
         negatives = dict(negatives)
         for side in negatives.keys():
