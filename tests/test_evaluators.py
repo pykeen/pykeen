@@ -26,23 +26,26 @@ from pykeen.evaluation.evaluator import (
     get_candidate_set_size,
     prepare_filter_triples,
 )
+from pykeen.evaluation.metrics import MetricKey
 from pykeen.evaluation.rank_based_evaluator import (
+    SampledRankBasedEvaluator,
+    expected_hits_at_k,
+    expected_mean_rank,
+    sample_negatives,
+)
+from pykeen.evaluation.ranks import Ranks
+from pykeen.models import FixedModel
+from pykeen.typing import (
+    LABEL_HEAD,
+    LABEL_RELATION,
+    LABEL_TAIL,
     RANK_EXPECTED_REALISTIC,
-    RANK_OPTIMISTIC,
-    RANK_PESSIMISTIC,
     RANK_REALISTIC,
     RANK_TYPES,
     SIDE_BOTH,
     SIDES,
-    SampledRankBasedEvaluator,
-    compute_rank_from_scores,
-    expected_hits_at_k,
-    expected_mean_rank,
-    resolve_metric_name,
-    sample_negatives,
+    MappedTriples,
 )
-from pykeen.models import FixedModel
-from pykeen.typing import MappedTriples
 from tests import cases
 
 logger = logging.getLogger(__name__)
@@ -193,21 +196,21 @@ class EvaluatorUtilsTests(unittest.TestCase):
         exp_worst_rank = torch.as_tensor([4.0, 2.0, 1.0])
         exp_avg_rank = 0.5 * (exp_best_rank + exp_worst_rank)
         exp_exp_rank = torch.as_tensor([(5 + 1) / 2, (5 + 1) / 2, (4 + 1) / 2])
-        ranks = compute_rank_from_scores(true_score=true_score, all_scores=all_scores)
+        ranks = Ranks.from_scores(true_score=true_score, all_scores=all_scores)
 
-        optimistic_rank = ranks.get(RANK_OPTIMISTIC)
+        optimistic_rank = ranks.optimistic
         assert optimistic_rank.shape == (batch_size,)
         assert (optimistic_rank == exp_best_rank).all()
 
-        pessimistic_rank = ranks.get(RANK_PESSIMISTIC)
+        pessimistic_rank = ranks.pessimistic
         assert pessimistic_rank.shape == (batch_size,)
         assert (pessimistic_rank == exp_worst_rank).all()
 
-        realistic_rank = ranks.get(RANK_REALISTIC)
+        realistic_rank = ranks.realistic
         assert realistic_rank.shape == (batch_size,)
         assert (realistic_rank == exp_avg_rank).all(), (realistic_rank, exp_avg_rank)
 
-        expected_realistic_rank = ranks.get(RANK_EXPECTED_REALISTIC)
+        expected_realistic_rank = ranks.expected_realistic
         assert expected_realistic_rank is not None
         assert expected_realistic_rank.shape == (batch_size,)
         assert (expected_realistic_rank == exp_exp_rank).all(), (expected_realistic_rank, exp_exp_rank)
@@ -492,19 +495,19 @@ class TestEvaluationFiltering(unittest.TestCase):
 
 def test_resolve_metric_name():
     """Test metric name resolution."""
-    for name, expected in (
+    for s, expected in (
         ("mrr", ("inverse_harmonic_mean_rank", "both", "realistic", None)),
         ("mean_rank.both", ("arithmetic_mean_rank", "both", "realistic", None)),
         ("mean_rank.avg", ("arithmetic_mean_rank", "both", "realistic", None)),
-        ("mean_rank.tail.worst", ("arithmetic_mean_rank", "tail", "pessimistic", None)),
+        ("mean_rank.tail.worst", ("arithmetic_mean_rank", LABEL_TAIL, "pessimistic", None)),
         ("amri.avg", ("adjusted_arithmetic_mean_rank_index", "both", "realistic", None)),
         ("hits_at_k", ("hits_at_k", "both", "realistic", 10)),
-        ("hits_at_k.head.best.3", ("hits_at_k", "head", "optimistic", 3)),
+        ("hits_at_k.head.best.3", ("hits_at_k", LABEL_HEAD, "optimistic", 3)),
         ("hits_at_1", ("hits_at_k", "both", "realistic", 1)),
         ("H@10", ("hits_at_k", "both", "realistic", 10)),
     ):
-        result = resolve_metric_name(name=name)
-        assert result == expected, name
+        result = MetricKey.lookup(s)
+        assert result == expected, s
 
 
 def test_sample_negatives():
@@ -513,12 +516,13 @@ def test_sample_negatives():
     num_negatives = 2
     evaluation_triples = dataset.validation.mapped_triples
     additional_filter_triples = dataset.training.mapped_triples
-    head_negatives, tail_negatives = sample_negatives(
+    negatives = sample_negatives(
         evaluation_triples=evaluation_triples,
         additional_filter_triples=additional_filter_triples,
         num_entities=dataset.num_entities,
         num_samples=num_negatives,
     )
+    head_negatives, tail_negatives = negatives[LABEL_HEAD], negatives[LABEL_TAIL]
     num_triples = evaluation_triples.shape[0]
     true = set(
         map(
@@ -571,17 +575,20 @@ class CandidateSetSizeTests(unittest.TestCase):
         # columns
         assert set(df.columns) == {
             "index",
-            "head",
-            "relation",
-            "tail",
-            "head_candidates",
-            "tail_candidates",
+            LABEL_HEAD,
+            LABEL_RELATION,
+            LABEL_TAIL,
+            f"{LABEL_HEAD}_candidates",
+            f"{LABEL_TAIL}_candidates",
         }
         # value range
         if not restrict_entities_to and not restrict_relations_to:
             numpy.testing.assert_array_equal(df["index"], numpy.arange(mapped_triples.shape[0]))
-            numpy.testing.assert_array_equal(df[["head", "relation", "tail"]].values, mapped_triples.numpy())
-        for candidate_column in ("head_candidates", "tail_candidates"):
+            numpy.testing.assert_array_equal(
+                df[[LABEL_HEAD, LABEL_RELATION, LABEL_TAIL]].values,
+                mapped_triples.numpy(),
+            )
+        for candidate_column in (f"{LABEL_HEAD}_candidates", f"{LABEL_TAIL}_candidates"):
             numpy.testing.assert_array_less(-1, df[candidate_column])
             numpy.testing.assert_array_less(df[candidate_column], self.dataset.num_entities)
 
@@ -736,7 +743,7 @@ class RankBasedMetricResultsTests(unittest.TestCase):
         evaluator.num_entities = self.num_entities
         evaluator.ranks = {
             (side, rank_type): [random.random() for _ in range(self.num_triples * (2 if side == SIDE_BOTH else 1))]
-            for side, rank_type in itertools.product(SIDES, RANK_TYPES | {RANK_EXPECTED_REALISTIC})
+            for side, rank_type in itertools.product(SIDES, {RANK_EXPECTED_REALISTIC}.union(RANK_TYPES))
         }
         self.instance = evaluator.finalize()
 
