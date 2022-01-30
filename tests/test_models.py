@@ -876,6 +876,8 @@ class InverseRelationPredictionTests(unittest_templates.GenericTestCase[pykeen.m
         ht_batch = self._combination_batch(relations=False)
         expected_scores = self.instance._generate_fake_scores(
             h=ht_batch[:, 0, None],
+            # TODO Depending on what should score_r actually return,
+            #  this should be num_real_relations instead.
             r=torch.arange(self.factory.num_relations, device=self.instance.device).unsqueeze(dim=0),
             t=ht_batch[:, 1, None],
         )

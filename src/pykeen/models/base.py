@@ -532,10 +532,15 @@ class Model(nn.Module, ABC):
     def score_r_inverse(self, ht_batch: torch.LongTensor, slice_size: Optional[int] = None):
         """Score all rels for a batch of (h,t)-pairs using the rel predictions for the inverses $(t,*_{inv},h)$."""
         # No mucking around with inverse triples remapping for this,
-        # it's much more straightforwards since the inverse triples
-        # are implicit here.
-        th_batch = ht_batch[:, [1, 0]]
-        return self.score_r(ht_batch=th_batch, slice_size=slice_size)
+        #  it's much more straightforwards since the inverse triples
+        #  are implicit here. Possible implementation #1:
+        #
+        # th_batch = ht_batch[:, [1, 0]]
+        # return self.score_r(ht_batch=th_batch, slice_size=slice_size)
+        #
+        # From @mberr: I think this does not make sense, without changing the relation ID: we should
+        #  compute scores for all inverse relations (but not the normal ones) here.
+        raise NotImplementedError
 
     def score_h_inverse(self, rt_batch: torch.LongTensor, slice_size: Optional[int] = None):
         """Score all heads for a batch of (r,t)-pairs using the tail predictions for the inverses $(t,r_{inv},*)$."""
