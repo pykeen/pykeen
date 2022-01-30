@@ -399,6 +399,9 @@ class Model(nn.Module, ABC):
         # Checking for self.inverse is not necessary since we have score_h_inverse.
         # Since we have inverse triples, where the order of entities is inverted,
         # and the relation replaced by an inverse relation.
+        # See also: https://github.com/pykeen/pykeen/pull/726 for discussion on
+        # prediction workflow with inverses and https://github.com/pykeen/pykeen/pull/752
+        # for updated philosophy on inverse triple generation within the model
         scores = self.score_r(ht_batch, slice_size=slice_size)
         if self.predict_with_sigmoid:
             scores = torch.sigmoid(scores)

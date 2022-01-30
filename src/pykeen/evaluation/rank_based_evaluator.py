@@ -40,7 +40,6 @@ from ..typing import (
     RANK_TYPES,
     SIDE_BOTH,
     SIDES,
-    TARGETS,
     ExtendedRankType,
     ExtendedTarget,
     MappedTriples,
