@@ -2,7 +2,7 @@
 
 """Type hints for PyKEEN."""
 
-from typing import Callable, Mapping, NamedTuple, Sequence, Tuple, TypeVar, Union, cast
+from typing import Callable, Collection, Mapping, NamedTuple, Optional, Sequence, Tuple, TypeVar, Union, cast
 
 import numpy as np
 import torch
@@ -130,12 +130,17 @@ RANK_TYPE_SYNONYMS: Mapping[str, RankType] = {
     "average": RANK_REALISTIC,
 }
 
-RANK_EXPECTED_REALISTIC = "expected_realistic"
-EXPECTED_RANKS = {
+RankTypeExpectedRealistic = Literal["expected_realistic"]
+RANK_EXPECTED_REALISTIC: RankTypeExpectedRealistic = "expected_realistic"
+ExtendedRankType = Union[RankType, RankTypeExpectedRealistic]
+
+EXPECTED_RANKS: Mapping[RankType, Optional[RankTypeExpectedRealistic]] = {
     RANK_REALISTIC: RANK_EXPECTED_REALISTIC,
     RANK_OPTIMISTIC: None,  # TODO - research problem
     RANK_PESSIMISTIC: None,  # TODO - research problem
 }
 
-SIDE_BOTH = "both"
-SIDES = {LABEL_HEAD, LABEL_TAIL, SIDE_BOTH}
+TargetBoth = Literal["both"]
+SIDE_BOTH: TargetBoth = "both"
+ExtendedTarget = Union[Target, TargetBoth]
+SIDES: Collection[ExtendedTarget] = {LABEL_HEAD, LABEL_TAIL, SIDE_BOTH}
