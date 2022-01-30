@@ -1,3 +1,4 @@
+"""(Rank-Based) Metrics."""
 import math
 from abc import abstractmethod
 from dataclasses import dataclass
@@ -27,6 +28,7 @@ class ValueRange:
     upper_inclusive: bool = False
 
     def __contains__(self, x: float) -> bool:
+        """Test whether a value is contained in the value range."""
         if self.lower is not None:
             if x < self.lower:
                 return False
@@ -79,6 +81,7 @@ class ArithmeticMeanRank(RankBasedMetric):
 
     @staticmethod
     def call(ranks: np.ndarray) -> float:
+        """Evaluate the arithmetic mean rank."""
         return np.mean(ranks).item()
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102

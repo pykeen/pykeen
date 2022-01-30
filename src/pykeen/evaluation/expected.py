@@ -1,3 +1,4 @@
+"""Expected metric values under random ordering."""
 from typing import Sequence, Union
 
 import numpy as np

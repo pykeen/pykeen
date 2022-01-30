@@ -44,7 +44,7 @@ from pykeen.evaluation.rank_based_evaluator import (
     sample_negatives,
 )
 from pykeen.models import FixedModel
-from pykeen.typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, MappedTriples, RANK_TYPES
+from pykeen.typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, RANK_TYPES, MappedTriples
 from tests import cases
 
 logger = logging.getLogger(__name__)
@@ -534,7 +534,7 @@ def test_sample_negatives():
         # check true negatives
         full_negatives = torch.empty(num_triples, num_negatives, 3)
         full_negatives[:, :, :] = evaluation_triples[:, None, :]
-        full_negatives[:, :, i] = negatives
+        full_negatives[:, :, column] = negatives
         full_negatives = full_negatives.view(-1, 3)
         negative_set = set(map(tuple, full_negatives.tolist()))
         assert negative_set.isdisjoint(true)

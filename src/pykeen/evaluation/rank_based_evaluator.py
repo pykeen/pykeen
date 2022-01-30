@@ -23,8 +23,6 @@ from typing import (
     Union,
     cast,
 )
-from dataclasses import dataclass, field, fields
-from typing import DefaultDict, Dict, Iterable, List, Mapping, NamedTuple, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -38,6 +36,7 @@ from ..constants import SIDES
 from ..triples.triples_factory import CoreTriplesFactory
 from ..typing import (
     LABEL_HEAD,
+    LABEL_RELATION,
     LABEL_TAIL,
     RANK_REALISTIC,
     RANK_TYPE_SYNONYMS,
@@ -47,8 +46,6 @@ from ..typing import (
     RankType,
     Target,
 )
-from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, MappedTriples, Target
-from ..utils import fix_dataclass_init_docs
 
 __all__ = [
     "compute_rank_from_scores",
@@ -182,7 +179,7 @@ _TYPE_PATTERN = "|".join(itt.chain(RANK_TYPES, RANK_TYPE_SYNONYMS.keys()))
 # HITS_PATTERN = re.compile(r"(hits_at_|hits@|h@)(?P<kf>\d+)")
 _METRIC_PATTERN = "|".join(itt.chain(metric_resolver.lookup_dict.keys(), metric_resolver.synonyms.keys()))
 METRIC_PATTERN = re.compile(
-    rf"^(?P<name>{_METRIC_PATTERN})(?P<kf>\d+)?(\.(?P<side>{_SIDE_PATTERN}))?(\.(?P<type>{_TYPE_PATTERN}))?(\.(?P<kb>\d+))?$",
+    rf"^(?P<name>{_METRIC_PATTERN})(?P<kf>\d+)?(\.(?P<side>{_SIDE_PATTERN}))?(\.(?P<type>{_TYPE_PATTERN}))?(\.(?P<kb>\d+))?$",  # noqa: E501
 )
 
 
