@@ -40,8 +40,10 @@ from ..typing import (
     RANK_TYPES,
     SIDE_BOTH,
     SIDES,
-ExtendedTarget, TargetBoth,
+    ExtendedRankType,
+    ExtendedTarget,
     MappedTriples,
+    RankType,
     Target,
 )
 from ..utils import fix_dataclass_init_docs
@@ -281,7 +283,7 @@ class RankBasedMetricResults(MetricResults):
         """Output the metrics as a pandas dataframe."""
         return pd.DataFrame(list(self._iter_rows()), columns=["Side", "Type", "Metric", "Value"])
 
-    def _iter_rows(self) -> Iterable[Tuple[str, str, str, Union[float, int]]]:
+    def _iter_rows(self) -> Iterable[Tuple[ExtendedTarget, RankType, str, Union[float, int]]]:
         for side, rank_type in itt.product(SIDES, RANK_TYPES):
             for k, v in self.hits_at_k[side][rank_type].items():
                 yield side, rank_type, f"hits_at_{k}", v
@@ -311,7 +313,7 @@ class RankBasedEvaluator(Evaluator):
 
     ks: Sequence[Union[int, float]]
     num_entities: Optional[int]
-    ranks: Dict[Tuple[Target, str], List[float]]
+    ranks: Dict[Tuple[Target, ExtendedRankType], List[float]]
 
     def __init__(
         self,
@@ -359,8 +361,8 @@ class RankBasedEvaluator(Evaluator):
             all_scores=all_scores,
         )
         self.num_entities = all_scores.shape[1]
-        for k, v in batch_ranks.items():
-            self.ranks[side, k].extend(v.detach().cpu().tolist())
+        for rank_type, v in batch_ranks.items():
+            self.ranks[side, rank_type].extend(v.detach().cpu().tolist())
 
     def process_tail_scores_(
         self,
@@ -380,7 +382,7 @@ class RankBasedEvaluator(Evaluator):
     ) -> None:  # noqa: D102
         self._update_ranks_(true_scores=true_scores, all_scores=scores, side=LABEL_HEAD, hrt_batch=hrt_batch)
 
-    def _get_ranks(self, side: ExtendedTarget, rank_type) -> np.ndarray:
+    def _get_ranks(self, side: ExtendedTarget, rank_type: ExtendedRankType) -> np.ndarray:
         if side == SIDE_BOTH:
             values: List[float] = sum(
                 (self.ranks.get((_side, rank_type), []) for _side in (LABEL_HEAD, LABEL_TAIL)), []
@@ -407,7 +409,7 @@ class RankBasedEvaluator(Evaluator):
                 asr[metric_name][side][rank_type] = metric_func(ranks).item()
 
             expected_rank_type = EXPECTED_RANKS.get(rank_type)
-            if expected_rank_type:
+            if expected_rank_type is not None:
                 expected_ranks = self._get_ranks(side=side, rank_type=expected_rank_type)
                 if 0 < len(expected_ranks):
                     # Adjusted mean rank calculation

@@ -6,7 +6,7 @@ import itertools as itt
 import re
 from typing import NamedTuple, Optional, Union, cast
 
-from ..typing import RANK_REALISTIC, RANK_TYPE_SYNONYMS, RANK_TYPES, SIDE_BOTH, SIDES, RankType, ExtendedTarget
+from ..typing import RANK_REALISTIC, RANK_TYPE_SYNONYMS, RANK_TYPES, SIDE_BOTH, SIDES, ExtendedRankType, ExtendedTarget
 
 __all__ = [
     "MetricKey",
@@ -54,7 +54,7 @@ class MetricKey(NamedTuple):
     #: Side of the metric, or "both"
     side: ExtendedTarget
     #: The rank type
-    rank_type: RankType
+    rank_type: ExtendedRankType
     #: The k if this represents a hits at k metric
     k: Optional[int]
 
@@ -114,7 +114,7 @@ class MetricKey(NamedTuple):
         elif rank_type != RANK_REALISTIC and name in TYPES_REALISTIC_ONLY:
             raise ValueError(f"Invalid rank type for {name}: {rank_type}. Allowed type: {RANK_REALISTIC}")
 
-        return cls(name, cast(ExtendedTarget, side), cast(RankType, rank_type), k)
+        return cls(name, cast(ExtendedTarget, side), cast(ExtendedRankType, rank_type), k)
 
     @classmethod
     def normalize(cls, s: str) -> str:
