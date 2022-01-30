@@ -68,6 +68,7 @@ class Model(nn.Module, ABC):
 
     def __init__(
         self,
+        *,
         triples_factory: CoreTriplesFactory,
         loss: HintOrType[Loss] = None,
         loss_kwargs: Optional[Mapping[str, Any]] = None,
@@ -548,33 +549,21 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
 
     def __init__(
         self,
+        *,
         triples_factory: CoreTriplesFactory,
-        loss: Optional[Loss] = None,
-        predict_with_sigmoid: bool = False,
-        random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
+        **kwargs,
     ) -> None:
         """Initialize the module.
 
         :param triples_factory:
             The triples factory facilitates access to the dataset.
-        :param loss:
-            The loss to use. If None is given, use the loss default specific to the model subclass.
-        :param predict_with_sigmoid:
-            Whether to apply sigmoid onto the scores when predicting scores. Applying sigmoid at prediction time may
-            lead to exactly equal scores for certain triples with very high, or very low score. When not trained with
-            applying sigmoid (or using BCEWithLogitsLoss), the scores are not calibrated to perform well with sigmoid.
-        :param random_seed:
-            A random seed to use for initialising the model's weights. **Should** be set when aiming at reproducibility.
         :param regularizer:
             A regularizer to use for training.
+        :param kwargs:
+            additional keyword-based arguments passed to Model.__init__
         """
-        super().__init__(
-            triples_factory=triples_factory,
-            loss=loss,
-            predict_with_sigmoid=predict_with_sigmoid,
-            random_seed=random_seed,
-        )
+        super().__init__(triples_factory=triples_factory, **kwargs)
         # Regularizer
         if regularizer is not None:
             self.regularizer = regularizer
@@ -705,22 +694,13 @@ class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
         triples_factory: CoreTriplesFactory,
         entity_representations: EmbeddingSpecification,
         relation_representations: EmbeddingSpecification,
-        loss: Optional[Loss] = None,
-        predict_with_sigmoid: bool = False,
-        random_seed: Optional[int] = None,
-        regularizer: Optional[Regularizer] = None,
+        **kwargs,
     ) -> None:
         """Initialize the entity embedding model.
 
         .. seealso:: Constructor of the base class :class:`pykeen.models.Model`
         """
-        super().__init__(
-            triples_factory=triples_factory,
-            loss=loss,
-            random_seed=random_seed,
-            regularizer=regularizer,
-            predict_with_sigmoid=predict_with_sigmoid,
-        )
+        super().__init__(triples_factory=triples_factory, **kwargs)
         self.entity_embeddings = entity_representations.make(
             num_embeddings=triples_factory.num_entities,
             device=self.device,
