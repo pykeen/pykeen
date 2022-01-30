@@ -18,13 +18,14 @@ from optuna.pruners import BasePruner
 from optuna.samplers import BaseSampler
 from optuna.storages import BaseStorage
 
+from pykeen.evaluation.metrics import AdjustedArithmeticMeanRankIndex, RankBasedMetric
+
 from .pruners import pruner_resolver
 from .samplers import sampler_resolver
 from ..constants import USER_DEFINED_CODE
 from ..datasets import get_dataset, has_dataset
 from ..datasets.base import Dataset
 from ..evaluation import Evaluator, evaluator_resolver
-from ..evaluation.rank_based_evaluator import ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX
 from ..losses import Loss, loss_resolver
 from ..lr_schedulers import LRScheduler, lr_scheduler_resolver, lr_schedulers_hpo_defaults
 from ..models import Model, model_resolver
@@ -74,7 +75,7 @@ class Objective:
     stopper: Type[Stopper]  # 7.
     evaluator: Type[Evaluator]  # 8.
     result_tracker: Union[ResultTracker, Type[ResultTracker]]  # 9.
-    metric: str
+    metric: Hint[RankBasedMetric]
 
     # 1. Dataset
     dataset_kwargs: Optional[Mapping[str, Any]] = None
@@ -527,7 +528,7 @@ def hpo_pipeline(
     evaluator: HintType[Evaluator] = None,
     evaluator_kwargs: Optional[Mapping[str, Any]] = None,
     evaluation_kwargs: Optional[Mapping[str, Any]] = None,
-    metric: Optional[str] = None,
+    metric: Hint[RankBasedMetric] = None,
     filter_validation_when_testing: bool = True,
     # 9. Tracking
     result_tracker: HintType[ResultTracker] = None,
@@ -744,7 +745,7 @@ def hpo_pipeline(
     study.set_user_attr("evaluator", evaluator_cls.get_normalized_name())
     logger.info(f"Using evaluator: {evaluator_cls}")
     if metric is None:
-        metric = ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX
+        metric = AdjustedArithmeticMeanRankIndex
     study.set_user_attr("metric", metric)
     logger.info(f"Attempting to {direction} {metric}")
     study.set_user_attr("filter_validation_when_testing", filter_validation_when_testing)

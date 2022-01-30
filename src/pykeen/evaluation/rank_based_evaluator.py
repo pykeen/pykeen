@@ -490,7 +490,7 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
                 evaluation_triples=evaluation_factory.mapped_triples,
                 side=side,
                 additional_filter_triples=additional_filter_triples,
-                max_id=evaluation_factory.num_entities,
+                num_entities=evaluation_factory.num_entities,
                 num_samples=num_negatives,
             )
 
