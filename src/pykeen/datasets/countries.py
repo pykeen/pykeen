@@ -32,17 +32,15 @@ class Countries(UnpackedRemoteDataset):
         triples: 1158
     """
 
-    def __init__(self, create_inverse_triples: bool = False, **kwargs):
+    def __init__(self, **kwargs):
         """Initialize the Countries small dataset.
 
-        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.UnpackedRemoteDataset`.
         """
         super().__init__(
             training_url=f"{BASE_URL}/train.txt",
             testing_url=f"{BASE_URL}/test.txt",
             validation_url=f"{BASE_URL}/valid.txt",
-            create_inverse_triples=create_inverse_triples,
             **kwargs,
         )
 

@@ -39,7 +39,7 @@ class DBpedia50(UnpackedRemoteDataset):
         triples: 34421
     """
 
-    def __init__(self, create_inverse_triples: bool = False, **kwargs):
+    def __init__(self, **kwargs):
         """Initialize the DBpedia50 small dataset from [shi2017b]_.
 
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
@@ -49,7 +49,6 @@ class DBpedia50(UnpackedRemoteDataset):
             training_url=TRAIN_URL,
             testing_url=TEST_URL,
             validation_url=VALID_URL,
-            create_inverse_triples=create_inverse_triples,
             load_triples_kwargs={
                 # as pointed out in https://github.com/pykeen/pykeen/issues/275#issuecomment-776412294,
                 # the columns are not ordered properly.

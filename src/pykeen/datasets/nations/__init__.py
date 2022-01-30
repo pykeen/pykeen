@@ -46,17 +46,15 @@ class Nations(PathDataset):
         github: ZhenfengLei/KGDatasets
     """
 
-    def __init__(self, create_inverse_triples: bool = False, **kwargs):
+    def __init__(self, **kwargs):
         """Initialize the Nations dataset.
 
-        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.PathDataset`.
         """
         super().__init__(
             training_path=NATIONS_TRAIN_PATH,
             testing_path=NATIONS_TEST_PATH,
             validation_path=NATIONS_VALIDATE_PATH,
-            create_inverse_triples=create_inverse_triples,
             **kwargs,
         )
 
@@ -66,10 +64,9 @@ class NationsLiteral(NumericPathDataset):
 
     training: TriplesNumericLiteralsFactory
 
-    def __init__(self, create_inverse_triples: bool = False, **kwargs):
+    def __init__(self, **kwargs):
         """Initialize the Nations dataset with literals.
 
-        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.PathDataset`.
         """
         super().__init__(
@@ -77,7 +74,6 @@ class NationsLiteral(NumericPathDataset):
             testing_path=NATIONS_TEST_PATH,
             validation_path=NATIONS_VALIDATE_PATH,
             literals_path=NATIONS_LITERALS_PATH,
-            create_inverse_triples=create_inverse_triples,
             **kwargs,
         )
 

@@ -37,20 +37,17 @@ class DRKG(TarFileSingleDataset):
 
     def __init__(
         self,
-        create_inverse_triples: bool = False,
         random_state: TorchRandomHint = 0,
         **kwargs,
     ):
         """Initialize the `DRKG <https://github.com/gnn4dr/DRKG>`_ dataset.
 
-        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param random_state: The random seed to use in splitting the dataset. Defaults to 0.
         :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.TarFileSingleDataset`.
         """
         super().__init__(
             url=URL,
             relative_path="drkg.tsv",
-            create_inverse_triples=create_inverse_triples,
             random_state=random_state,
             **kwargs,
         )

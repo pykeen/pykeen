@@ -41,17 +41,15 @@ class WD50KT(UnpackedRemoteDataset):
         triples: 232344
     """
 
-    def __init__(self, create_inverse_triples: bool = False, **kwargs):
+    def __init__(self, **kwargs):
         """Initialize the WD50K (triples) dataset from [galkin2020]_.
 
-        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.UnpackedRemoteDataset`.
         """
         super().__init__(
             training_url=TRIPLES_TRAIN_URL,
             testing_url=TRIPLES_TEST_URL,
             validation_url=TRIPLES_VALID_URL,
-            create_inverse_triples=create_inverse_triples,
             load_triples_kwargs={"delimiter": ","},
             **kwargs,
         )

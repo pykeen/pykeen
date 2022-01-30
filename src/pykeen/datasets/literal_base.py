@@ -23,7 +23,6 @@ class NumericPathDataset(LazyDataset):
         validation_path: Union[str, pathlib.Path, TextIO],
         literals_path: Union[str, pathlib.Path, TextIO],
         eager: bool = False,
-        create_inverse_triples: bool = False,
     ) -> None:
         """Initialize the dataset.
 
@@ -32,14 +31,11 @@ class NumericPathDataset(LazyDataset):
         :param validation_path: Path to the validation triples file or validation triples file.
         :param literals_path: Path to the literals triples file or literal triples file
         :param eager: Should the data be loaded eagerly? Defaults to false.
-        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         """
         self.training_path = training_path
         self.testing_path = testing_path
         self.validation_path = validation_path
         self.literals_path = literals_path
-
-        self.create_inverse_triples = create_inverse_triples
 
         if eager:
             self._load()
@@ -49,7 +45,6 @@ class NumericPathDataset(LazyDataset):
         self._training = TriplesNumericLiteralsFactory(
             path=self.training_path,
             path_to_numeric_triples=self.literals_path,
-            create_inverse_triples=self.create_inverse_triples,
         )
         self._testing = TriplesNumericLiteralsFactory(
             path=self.testing_path,

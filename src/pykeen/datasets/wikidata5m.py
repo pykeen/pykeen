@@ -48,10 +48,9 @@ class Wikidata5M(TarFileRemoteDataset):
         link: https://arxiv.org/abs/1911.06136
     """
 
-    def __init__(self, create_inverse_triples: bool = False, **kwargs):
+    def __init__(self, **kwargs):
         """Initialize the Wikidata5M dataset.
 
-        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.TarFileRemoteDataset`.
         """
         super().__init__(
@@ -59,7 +58,6 @@ class Wikidata5M(TarFileRemoteDataset):
             relative_training_path=pathlib.PurePath("wikidata5m_transductive_train.txt"),
             relative_testing_path=pathlib.PurePath("wikidata5m_transductive_test.txt"),
             relative_validation_path=pathlib.PurePath("wikidata5m_transductive_valid.txt"),
-            create_inverse_triples=create_inverse_triples,
             **kwargs,
         )
 

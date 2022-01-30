@@ -52,7 +52,6 @@ class MTransEDataset(LazyDataset, ABC):
         side: str = "en",
         cache_root: Optional[str] = None,
         eager: bool = False,
-        create_inverse_triples: bool = False,
         random_state: TorchRandomHint = None,
         split_ratios: Tuple[float, float, float] = (0.8, 0.1, 0.1),
         force: bool = False,
@@ -68,8 +67,6 @@ class MTransEDataset(LazyDataset, ABC):
             The cache root.
         :param eager:
             Whether to directly load the dataset, or defer it to the first access of a relevant attribute.
-        :param create_inverse_triples:
-            Whether to create inverse triples.
         :param random_state:
             The random state used for splitting.
         :param split_ratios:
@@ -102,9 +99,6 @@ class MTransEDataset(LazyDataset, ABC):
         # For splitting
         self.random_state = random_state
         self.ratios = split_ratios
-
-        # Whether to create inverse triples
-        self.create_inverse_triples = create_inverse_triples
 
         if eager:
             self._load()
@@ -141,7 +135,6 @@ class MTransEDataset(LazyDataset, ABC):
         # create triples factory
         tf = TriplesFactory.from_labeled_triples(
             triples=df.values,
-            create_inverse_triples=self.create_inverse_triples,
             metadata=dict(path=path),
         )
 

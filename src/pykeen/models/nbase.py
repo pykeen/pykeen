@@ -266,10 +266,10 @@ class ERModel(
         :param skip_checks:
             whether to skip entity representation checks.
         :param kwargs:
-            additional keyword-based arguments passed to Model.__init__
+            Keyword arguments to pass to the base model
         """
         super().__init__(triples_factory=triples_factory, **kwargs)
-        self.interaction: Interaction = interaction_resolver.make(interaction, pos_kwargs=interaction_kwargs)
+        self.interaction = interaction_resolver.make(interaction, pos_kwargs=interaction_kwargs)
         self.entity_representations = _prepare_representation_module_list(
             representations=entity_representations,
             num_embeddings=self.num_entities,

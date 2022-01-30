@@ -38,19 +38,16 @@ class ConceptNet(SingleTabbedDataset):
 
     def __init__(
         self,
-        create_inverse_triples: bool = False,
         random_state: TorchRandomHint = 0,
         **kwargs,
     ):
         """Initialize the `ConceptNet <https://github.com/commonsense/conceptnet5>`_ dataset from [speer2017]_.
 
-        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param random_state: The random seed to use in splitting the dataset. Defaults to 0.
         :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.SingleTabbedDataset`.
         """
         super().__init__(
             url=URL,
-            create_inverse_triples=create_inverse_triples,
             random_state=random_state,
             read_csv_kwargs=dict(
                 usecols=[2, 1, 3],

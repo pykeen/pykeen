@@ -33,10 +33,9 @@ class WN18(TarFileRemoteDataset):
         link: https://arxiv.org/abs/1301.3485
     """
 
-    def __init__(self, create_inverse_triples: bool = False, **kwargs):
+    def __init__(self, **kwargs):
         """Initialize the WordNet-18 dataset.
 
-        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.TarFileRemoteDataset`.
 
         .. warning:: This dataset contains testing leakage. Use :class:`WN18RR` instead.
@@ -46,7 +45,6 @@ class WN18(TarFileRemoteDataset):
             relative_training_path=pathlib.PurePath("wordnet-mlj12", "wordnet-mlj12-train.txt"),
             relative_testing_path=pathlib.PurePath("wordnet-mlj12", "wordnet-mlj12-test.txt"),
             relative_validation_path=pathlib.PurePath("wordnet-mlj12", "wordnet-mlj12-valid.txt"),
-            create_inverse_triples=create_inverse_triples,
             **kwargs,
         )
 
@@ -70,7 +68,7 @@ class WN18RR(TarFileRemoteDataset):
         link: https://www.aclweb.org/anthology/W15-4007/
     """
 
-    def __init__(self, create_inverse_triples: bool = False, **kwargs):
+    def __init__(self, **kwargs):
         """Initialize the WordNet-18 (RR) dataset.
 
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
@@ -81,7 +79,6 @@ class WN18RR(TarFileRemoteDataset):
             relative_training_path="train.txt",
             relative_testing_path="test.txt",
             relative_validation_path="valid.txt",
-            create_inverse_triples=create_inverse_triples,
             **kwargs,
         )
 

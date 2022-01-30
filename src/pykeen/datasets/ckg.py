@@ -44,18 +44,15 @@ class CKG(TabbedDataset):
 
     def __init__(
         self,
-        create_inverse_triples: bool = False,
         random_state: TorchRandomHint = 0,
         **kwargs,
     ):
         """Initialize the `CKG <https://github.com/MannLabs/CKG>`_ dataset from [santos2020]_.
 
-        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param random_state: The random seed to use in splitting the dataset. Defaults to 0.
         :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.TabbedDataset`.
         """
         super().__init__(
-            create_inverse_triples=create_inverse_triples,
             random_state=random_state,
             **kwargs,
         )
