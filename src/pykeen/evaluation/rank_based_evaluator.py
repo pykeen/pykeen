@@ -393,8 +393,10 @@ class RankBasedEvaluator(Evaluator):
         self._update_ranks_(true_scores=true_scores, all_scores=scores, side=LABEL_HEAD, hrt_batch=hrt_batch)
 
     def _get_ranks(self, side: ExtendedTarget, rank_type: ExtendedRankType) -> np.ndarray:
-        if side == SIDE_BOTH:
-            values: List[float] = sum((self.ranks.get((_side, rank_type), []) for _side in TARGETS), [])
+        if side == SIDE_BOTH:  # TODO should this include LABEL_RELATION?
+            values: List[float] = sum(
+                (self.ranks.get((_side, rank_type), []) for _side in (LABEL_HEAD, LABEL_TAIL)), []
+            )
         else:
             values = self.ranks.get((cast(Target, side), rank_type), [])
         return np.asarray(values, dtype=np.float64)
