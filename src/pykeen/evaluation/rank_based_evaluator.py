@@ -11,6 +11,7 @@ from abc import abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass, fields
 from typing import (
+    Any,
     ClassVar,
     Collection,
     Iterable,
@@ -77,7 +78,7 @@ class ValueRange:
     #: whether the upper bound is inclusive
     upper_inclusive: bool = False
 
-    def __contains__(self, x: SupportsFloat) -> bool:
+    def __contains__(self, x: float) -> bool:
         if self.lower is not None:
             if x < self.lower:
                 return False
@@ -270,7 +271,7 @@ class AdjustedArithmeticMeanRank(RankBasedMetric):
     needs_candidates = True
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        return (ArithmeticMeanRank.call(ranks) / expected_mean_rank(num_candidates=num_candidates)).item()
+        return ArithmeticMeanRank.call(ranks) / expected_mean_rank(num_candidates=num_candidates)
 
 
 class AdjustedArithmeticMeanRankIndex(RankBasedMetric):
@@ -283,11 +284,8 @@ class AdjustedArithmeticMeanRankIndex(RankBasedMetric):
     needs_candidates = True
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        return (
-            1.0
-            - (
-                (ArithmeticMeanRank.call(ranks) - 1.0) / (expected_mean_rank(num_candidates=num_candidates) - 1.0)
-            ).item()
+        return 1.0 - (
+            (ArithmeticMeanRank.call(ranks) - 1.0) / (expected_mean_rank(num_candidates=num_candidates) - 1.0)
         )
 
 
@@ -309,10 +307,10 @@ class MetricKey(NamedTuple):
     k: Optional[int]
 
     def __str__(self) -> str:  # noqa: D105
-        components = [self.metric, self.side, self.rank_type]
+        components: List[Any] = [self.metric, self.side, self.rank_type]
         if self.k:
-            components.append(str(self.k))
-        return ".".join(components)
+            components.append(self.k)
+        return ".".join(map(str, components))
 
 
 @dataclass
