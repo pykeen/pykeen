@@ -23,6 +23,7 @@ from ..datasets.ogb import OGBWikiKG
 from ..evaluation.evaluator import get_candidate_set_size
 from ..evaluation.rank_based_evaluator import expected_hits_at_k, expected_mean_rank
 from ..typing import LABEL_HEAD, LABEL_TAIL, Target
+from ..typing import LABEL_HEAD, LABEL_TAIL
 
 
 @click.group()
@@ -134,8 +135,8 @@ def _analyze(dataset, force, countplots, directory: Union[None, str, pathlib.Pat
     fig, ax = plt.subplots(1, 1)
     sns.scatterplot(
         data=dfs["relation_injectivity"],
-        x="head",
-        y="tail",
+        x=LABEL_HEAD,
+        y=LABEL_TAIL,
         size="support",
         hue="support",
         ax=ax,

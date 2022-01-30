@@ -10,6 +10,7 @@ import re
 from collections import defaultdict
 from dataclasses import dataclass, field, fields
 from typing import DefaultDict, Dict, Iterable, List, Literal, NamedTuple, Optional, Sequence, Tuple, Union
+from typing import DefaultDict, Dict, Iterable, List, Mapping, NamedTuple, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -619,7 +620,7 @@ def sample_negatives(
     additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
     num_samples: int = 50,
     num_entities: Optional[int] = None,
-) -> Tuple[torch.Tensor, torch.Tensor]:
+) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
     """
     Sample true negatives for sampled evaluation.
 
@@ -647,14 +648,14 @@ def sample_negatives(
         additional_filter_triples=additional_filter_triples,
     )
     num_entities = num_entities or (additional_filter_triples[:, [0, 2]].max().item() + 1)
-    columns = ["head", "relation", "tail"]
+    columns = [LABEL_HEAD, LABEL_RELATION, LABEL_TAIL]
     num_triples = evaluation_triples.shape[0]
     df = pd.DataFrame(data=evaluation_triples.numpy(), columns=columns)
     all_df = pd.DataFrame(data=additional_filter_triples.numpy(), columns=columns)
     id_df = df.reset_index()
     all_ids = set(range(num_entities))
     negatives = []
-    for side in ["head", "tail"]:
+    for side in [LABEL_HEAD, LABEL_TAIL]:
         this_negatives = torch.empty(size=(num_triples, num_samples), dtype=torch.long)
         other = [c for c in columns if c != side]
         for _, group in pd.merge(id_df, all_df, on=other, suffixes=["_eval", "_all"]).groupby(
@@ -730,7 +731,7 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
             if negatives.shape[0] != evaluation_factory.num_triples:
                 raise ValueError(f"Negatives are in wrong shape: {negatives.shape}")
         self.triple_to_index = {(h, r, t): i for i, (h, r, t) in enumerate(evaluation_factory.mapped_triples.tolist())}
-        self.negative_samples = {
+        self.negative_samples: Mapping[Target, torch.FloatTensor] = {
             LABEL_HEAD: head_negatives,
             LABEL_TAIL: tail_negatives,
         }

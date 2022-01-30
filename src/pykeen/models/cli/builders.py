@@ -30,7 +30,6 @@ _OPTIONAL_MAP = {Optional[int]: int, Optional[str]: str}
 _SKIP_ARGS = {
     "return",
     "triples_factory",
-    "preferred_device",
     "regularizer",
     # TODO rethink after RGCN update
     "interaction",
