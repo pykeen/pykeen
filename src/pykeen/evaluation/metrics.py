@@ -71,20 +71,20 @@ class MetricKey(NamedTuple):
         if not match:
             raise ValueError(f"Invalid metric name: {s}")
         k: Union[None, str, int]
-        s, side, rank_type, k = [match.group(key) for key in ("name", "side", "type", "k")]
+        name, side, rank_type, k = [match.group(key) for key in ("name", "side", "type", "k")]
 
         # normalize metric name
-        if not s:
+        if not name:
             raise ValueError("A metric name must be provided.")
         # handle spaces and case
-        s = s.lower().replace(" ", "_")
+        name = name.lower().replace(" ", "_")
 
         # special case for hits_at_k
-        match = HITS_PATTERN.match(s)
+        match = HITS_PATTERN.match(name)
         if match:
-            s = "hits_at_k"
+            name = "hits_at_k"
             k = match.group("k")
-        if s == "hits_at_k":
+        if name == "hits_at_k":
             if k is None:
                 k = 10
             # TODO: Fractional?
@@ -97,7 +97,7 @@ class MetricKey(NamedTuple):
         assert k is None or isinstance(k, int)
 
         # synonym normalization
-        s = METRIC_SYNONYMS.get(s, s)
+        name = METRIC_SYNONYMS.get(name, name)
 
         # normalize side
         side = side or SIDE_BOTH
@@ -111,10 +111,10 @@ class MetricKey(NamedTuple):
         rank_type = RANK_TYPE_SYNONYMS.get(rank_type, rank_type)
         if rank_type not in RANK_TYPES:
             raise ValueError(f"Invalid rank type: {rank_type}. Allowed are {RANK_TYPES}.")
-        elif rank_type != RANK_REALISTIC and s in TYPES_REALISTIC_ONLY:
-            raise ValueError(f"Invalid rank type for {s}: {rank_type}. Allowed type: {RANK_REALISTIC}")
+        elif rank_type != RANK_REALISTIC and name in TYPES_REALISTIC_ONLY:
+            raise ValueError(f"Invalid rank type for {name}: {rank_type}. Allowed type: {RANK_REALISTIC}")
 
-        return cls(s, side, cast(RankType, rank_type), k)
+        return cls(name, side, cast(RankType, rank_type), k)
 
     @classmethod
     def normalize(cls, s: str) -> str:
