@@ -18,12 +18,22 @@ from dataclasses_json import dataclass_json
 from scipy import stats
 
 from .evaluator import Evaluator, MetricResults, prepare_filter_triples
+from .ranks import Ranks
 from ..triples.triples_factory import CoreTriplesFactory
-from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, MappedTriples, Target
+from ..typing import (
+    EXPECTED_RANKS,
+    LABEL_HEAD,
+    LABEL_RELATION,
+    LABEL_TAIL,
+    RANK_REALISTIC,
+    RANK_TYPE_SYNONYMS,
+    RANK_TYPES,
+    MappedTriples,
+    Target,
+)
 from ..utils import fix_dataclass_init_docs
 
 __all__ = [
-    "compute_rank_from_scores",
     "RankBasedEvaluator",
     "RankBasedMetricResults",
     "MetricKey",
@@ -34,18 +44,6 @@ logger = logging.getLogger(__name__)
 
 SIDE_BOTH = "both"
 SIDES = {LABEL_HEAD, LABEL_TAIL, SIDE_BOTH}
-
-RANK_OPTIMISTIC = "optimistic"
-RANK_PESSIMISTIC = "pessimistic"
-RANK_REALISTIC = "realistic"
-RANK_TYPES = {RANK_OPTIMISTIC, RANK_PESSIMISTIC, RANK_REALISTIC}
-
-RANK_EXPECTED_REALISTIC = "expected_realistic"
-EXPECTED_RANKS = {
-    RANK_REALISTIC: RANK_EXPECTED_REALISTIC,
-    RANK_OPTIMISTIC: None,  # TODO - research problem
-    RANK_PESSIMISTIC: None,  # TODO - research problem
-}
 
 ARITHMETIC_MEAN_RANK = "arithmetic_mean_rank"  # also known as mean rank (MR)
 GEOMETRIC_MEAN_RANK = "geometric_mean_rank"
@@ -111,73 +109,6 @@ class MetricKey(NamedTuple):
             components.append(str(self.k))
         return ".".join(components)
 
-
-def compute_rank_from_scores(
-    true_score: torch.FloatTensor,
-    all_scores: torch.FloatTensor,
-) -> Dict[str, torch.FloatTensor]:
-    """Compute rank and adjusted rank given scores.
-
-    :param true_score: torch.Tensor, shape: (batch_size, 1)
-        The score of the true triple.
-    :param all_scores: torch.Tensor, shape: (batch_size, num_entities)
-        The scores of all corrupted triples (including the true triple).
-    :return: a dictionary
-        {
-            'optimistic': optimistic_rank,
-            'pessimistic': pessimistic_rank,
-            'realistic': realistic_rank,
-            'expected_realistic': expected_realistic_rank,
-        }
-
-        where
-
-        optimistic_rank: shape: (batch_size,)
-            The optimistic rank is the rank when assuming all options with an equal score are placed behind the current
-            test triple.
-        pessimistic_rank:
-            The pessimistic rank is the rank when assuming all options with an equal score are placed in front of
-            current test triple.
-        realistic_rank:
-            The realistic rank is the average of the optimistic and pessimistic rank, and hence the expected rank
-            over all permutations of the elements with the same score as the currently considered option.
-        expected_realistic_rank: shape: (batch_size,)
-            The expected rank a random scoring would achieve, which is (#number_of_options + 1)/2
-    """
-    # The optimistic rank is the rank when assuming all options with an equal score are placed behind the currently
-    # considered. Hence, the rank is the number of options with better scores, plus one, as the rank is one-based.
-    optimistic_rank = (all_scores > true_score).sum(dim=1) + 1
-
-    # The pessimistic rank is the rank when assuming all options with an equal score are placed in front of the
-    # currently considered. Hence, the rank is the number of options which have at least the same score minus one
-    # (as the currently considered option in included in all options). As the rank is one-based, we have to add 1,
-    # which nullifies the "minus 1" from before.
-    pessimistic_rank = (all_scores >= true_score).sum(dim=1)
-
-    # The realistic rank is the average of the optimistic and pessimistic rank, and hence the expected rank over
-    # all permutations of the elements with the same score as the currently considered option.
-    realistic_rank = (optimistic_rank + pessimistic_rank).float() * 0.5
-
-    # We set values which should be ignored to NaN, hence the number of options which should be considered is given by
-    number_of_options = torch.isfinite(all_scores).sum(dim=1).float()
-
-    # The expected rank of a random scoring
-    expected_realistic_rank = 0.5 * (number_of_options + 1)
-
-    return {
-        RANK_OPTIMISTIC: optimistic_rank,
-        RANK_PESSIMISTIC: pessimistic_rank,
-        RANK_REALISTIC: realistic_rank,
-        RANK_EXPECTED_REALISTIC: expected_realistic_rank,
-    }
-
-
-RANK_TYPE_SYNONYMS = {
-    "best": RANK_OPTIMISTIC,
-    "worst": RANK_PESSIMISTIC,
-    "avg": RANK_REALISTIC,
-    "average": RANK_REALISTIC,
-}
 
 _SIDE_PATTERN = "|".join(SIDES)
 _TYPE_PATTERN = "|".join(itt.chain(RANK_TYPES, RANK_TYPE_SYNONYMS.keys()))
@@ -473,6 +404,7 @@ class RankBasedEvaluator(Evaluator):
 
     ks: Sequence[Union[int, float]]
     num_entities: Optional[int]
+    ranks: Dict[Tuple[Target, str], List[float]]
 
     def __init__(
         self,
@@ -500,7 +432,7 @@ class RankBasedEvaluator(Evaluator):
                 raise ValueError(
                     "If k is a float, it should represent a relative rank, i.e. a value between 0 and 1 (excl.)",
                 )
-        self.ranks: Dict[Tuple[str, str], List[float]] = defaultdict(list)
+        self.ranks = defaultdict(list)
         self.num_entities = None
 
     def _update_ranks_(
@@ -515,7 +447,7 @@ class RankBasedEvaluator(Evaluator):
         :param true_scores: shape: (batch_size,)
         :param all_scores: shape: (batch_size, num_entities)
         """
-        batch_ranks = compute_rank_from_scores(
+        batch_ranks = Ranks.from_scores(
             true_score=true_scores,
             all_scores=all_scores,
         )
