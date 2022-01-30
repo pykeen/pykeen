@@ -117,6 +117,7 @@ COLUMN_HEAD: TargetColumn = 0
 COLUMN_RELATION: TargetColumn = 1
 COLUMN_TAIL: TargetColumn = 2
 
+#: the rank types
 RankType = Literal["optimistic", "realistic", "pessimistic"]
 RANK_TYPES: Tuple[RankType, ...] = ("optimistic", "realistic", "pessimistic")
 # RANK_TYPES: Tuple[RankType, ...] = typing.get_args(RankType) # Python >= 3.8

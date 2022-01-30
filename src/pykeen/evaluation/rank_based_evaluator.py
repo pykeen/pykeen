@@ -23,6 +23,8 @@ from typing import (
     Union,
     cast,
 )
+from dataclasses import dataclass, field, fields
+from typing import DefaultDict, Dict, Iterable, List, Mapping, NamedTuple, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -45,6 +47,8 @@ from ..typing import (
     RankType,
     Target,
 )
+from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, MappedTriples, Target
+from ..utils import fix_dataclass_init_docs
 
 __all__ = [
     "compute_rank_from_scores",
@@ -386,7 +390,7 @@ def sample_negatives(
     side: Target,
     additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
     num_samples: int = 50,
-    max_id: Optional[int] = None,
+    num_entities: Optional[int] = None,
 ) -> torch.LongTensor:
     """
     Sample true negatives for sampled evaluation.
@@ -399,7 +403,7 @@ def sample_negatives(
         additional true triples which are to be filtered
     :param num_samples: >0
         the number of samples
-    :param max_id:
+    :param num_entities:
         the maximum Id for the given side
 
     :return: shape: (n, num_negatives)
@@ -409,33 +413,34 @@ def sample_negatives(
         mapped_triples=evaluation_triples,
         additional_filter_triples=additional_filter_triples,
     )
-    # TODO: update for relation
-    max_id = max_id or (additional_filter_triples[:, [0, 2]].max().item() + 1)
-    columns = ["head", "relation", "tail"]
+    num_entities = num_entities or (additional_filter_triples[:, [0, 2]].max().item() + 1)
+    columns = [LABEL_HEAD, LABEL_RELATION, LABEL_TAIL]
     num_triples = evaluation_triples.shape[0]
     df = pd.DataFrame(data=evaluation_triples.numpy(), columns=columns)
     all_df = pd.DataFrame(data=additional_filter_triples.numpy(), columns=columns)
     id_df = df.reset_index()
-    all_ids = set(range(max_id))
-    this_negatives = torch.empty(size=(num_triples, num_samples), dtype=torch.long)
-    other = [c for c in columns if c != side]
-    group: pd.DataFrame
-    for _, group in pd.merge(id_df, all_df, on=other, suffixes=["_eval", "_all"]).groupby(
-        by=other,
-    ):
-        pool = list(all_ids.difference(group[f"{side}_all"].unique().tolist()))
-        if len(pool) < num_samples:
-            logger.warning(
-                f"There are less than num_samples={num_samples} candidates for side={side}, triples={group}.",
-            )
-            # repeat
-            pool = int(math.ceil(num_samples / len(pool))) * pool
-        for i in group["index"].unique():
-            this_negatives[i, :] = torch.as_tensor(
-                data=random.sample(population=pool, k=num_samples),
-                dtype=torch.long,
-            )
-    return this_negatives
+    all_ids = set(range(num_entities))
+    negatives = []
+    for side in [LABEL_HEAD, LABEL_TAIL]:
+        this_negatives = torch.empty(size=(num_triples, num_samples), dtype=torch.long)
+        other = [c for c in columns if c != side]
+        for _, group in pd.merge(id_df, all_df, on=other, suffixes=["_eval", "_all"]).groupby(
+            by=other,
+        ):
+            pool = list(all_ids.difference(group[f"{side}_all"].unique().tolist()))
+            if len(pool) < num_samples:
+                logger.warning(
+                    f"There are less than num_samples={num_samples} candidates for side={side}, triples={group}.",
+                )
+                # repeat
+                pool = int(math.ceil(num_samples / len(pool))) * pool
+            for i in group["index"].unique():
+                this_negatives[i, :] = torch.as_tensor(
+                    data=random.sample(population=pool, k=num_samples),
+                    dtype=torch.long,
+                )
+        negatives.append(this_negatives)
+    return negatives[0], negatives[1]
 
 
 class SampledRankBasedEvaluator(RankBasedEvaluator):

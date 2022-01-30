@@ -44,7 +44,7 @@ from pykeen.evaluation.rank_based_evaluator import (
     sample_negatives,
 )
 from pykeen.models import FixedModel
-from pykeen.typing import RANK_TYPES, MappedTriples
+from pykeen.typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, MappedTriples, RANK_TYPES
 from tests import cases
 
 logger = logging.getLogger(__name__)
@@ -492,10 +492,10 @@ def test_resolve_metric_name():
         ("mrr", (InverseHarmonicMeanRank, "both", "realistic", None)),
         ("mean_rank.both", (ArithmeticMeanRank, "both", "realistic", None)),
         ("mean_rank.avg", (ArithmeticMeanRank, "both", "realistic", None)),
-        ("mean_rank.tail.worst", (ArithmeticMeanRank, "tail", "pessimistic", None)),
+        ("mean_rank.tail.worst", (ArithmeticMeanRank, LABEL_TAIL, "pessimistic", None)),
         ("amri.avg", (AdjustedArithmeticMeanRankIndex, "both", "realistic", None)),
         ("hits_at_k", (HitsAtK, "both", "realistic", None)),
-        ("hits_at_k.head.best.3", (HitsAtK, "head", "optimistic", 3)),
+        ("hits_at_k.head.best.3", (HitsAtK, LABEL_HEAD, "optimistic", 3)),
         ("hits_at_1", (HitsAtK, "both", "realistic", 1)),
         ("H@10", (HitsAtK, "both", "realistic", 10)),
     ):
@@ -569,17 +569,20 @@ class CandidateSetSizeTests(unittest.TestCase):
         # columns
         assert set(df.columns) == {
             "index",
-            "head",
-            "relation",
-            "tail",
-            "head_candidates",
-            "tail_candidates",
+            LABEL_HEAD,
+            LABEL_RELATION,
+            LABEL_TAIL,
+            f"{LABEL_HEAD}_candidates",
+            f"{LABEL_TAIL}_candidates",
         }
         # value range
         if not restrict_entities_to and not restrict_relations_to:
             numpy.testing.assert_array_equal(df["index"], numpy.arange(mapped_triples.shape[0]))
-            numpy.testing.assert_array_equal(df[["head", "relation", "tail"]].values, mapped_triples.numpy())
-        for candidate_column in ("head_candidates", "tail_candidates"):
+            numpy.testing.assert_array_equal(
+                df[[LABEL_HEAD, LABEL_RELATION, LABEL_TAIL]].values,
+                mapped_triples.numpy(),
+            )
+        for candidate_column in (f"{LABEL_HEAD}_candidates", f"{LABEL_TAIL}_candidates"):
             numpy.testing.assert_array_less(-1, df[candidate_column])
             numpy.testing.assert_array_less(df[candidate_column], self.dataset.num_entities)
 

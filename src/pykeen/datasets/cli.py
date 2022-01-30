@@ -22,6 +22,7 @@ from ..datasets.base import Dataset
 from ..datasets.ogb import OGBWikiKG
 from ..evaluation.evaluator import get_candidate_set_size
 from ..evaluation.expected import expected_hits_at_k, expected_mean_rank
+from ..typing import LABEL_HEAD, LABEL_TAIL
 
 
 @click.group()
@@ -133,8 +134,8 @@ def _analyze(dataset, force, countplots, directory: Union[None, str, pathlib.Pat
     fig, ax = plt.subplots(1, 1)
     sns.scatterplot(
         data=dfs["relation_injectivity"],
-        x="head",
-        y="tail",
+        x=LABEL_HEAD,
+        y=LABEL_TAIL,
         size="support",
         hue="support",
         ax=ax,
@@ -265,9 +266,9 @@ def expected_metrics(dataset: str, max_triples: Optional[int], log_level: str):
             )
             this_metrics = dict()
             for label, sides in dict(
-                head=["head"],
-                tail=["tail"],
-                both=["head", "tail"],
+                head=[LABEL_HEAD],
+                tail=[LABEL_TAIL],
+                both=[LABEL_HEAD, LABEL_TAIL],
             ).items():
                 candidate_set_sizes = df[[f"{side}_candidates" for side in sides]]
                 this_metrics[label] = {
