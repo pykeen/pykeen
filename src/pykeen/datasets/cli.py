@@ -8,7 +8,7 @@ import logging
 import math
 import pathlib
 from textwrap import dedent
-from typing import Dict, Iterable, List, Optional, Sequence, Tuple, Type, Union
+from typing import Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Type, Union
 
 import click
 import docdata
@@ -22,7 +22,7 @@ from ..datasets.base import Dataset
 from ..datasets.ogb import OGBWikiKG
 from ..evaluation.evaluator import get_candidate_set_size
 from ..evaluation.rank_based_evaluator import expected_hits_at_k, expected_mean_rank
-from ..typing import LABEL_HEAD, LABEL_TAIL, Target
+from ..typing import LABEL_HEAD, LABEL_TAIL, SIDE_BOTH, ExtendedTarget, Target
 
 
 @click.group()
@@ -219,10 +219,10 @@ def verify(dataset: str):
     click.echo(df.to_markdown())
 
 
-DDDD: Dict[str, Sequence[Target]] = {
+DDDD: Mapping[ExtendedTarget, Sequence[Target]] = {
     LABEL_HEAD: [LABEL_HEAD],
     LABEL_TAIL: [LABEL_TAIL],
-    "both": [LABEL_HEAD, LABEL_TAIL],
+    SIDE_BOTH: [LABEL_HEAD, LABEL_TAIL],
 }
 
 
