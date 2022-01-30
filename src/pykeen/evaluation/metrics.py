@@ -182,7 +182,7 @@ class MedianAbsoluteDeviation(RankBasedMetric):
     synonyms = ("rank_mad", "mad")
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        return stats.median_absolute_deviation(ranks).item()
+        return stats.median_abs_deviation(ranks, scale="normal").item()
 
 
 class Count(RankBasedMetric):
