@@ -265,7 +265,9 @@ class RankBasedMetricResults(MetricResults):
 
         >>> metric_results.get('hits@5')
         """
-        metric_key = MetricKey.lookup(name)
+        return self._get_metric(MetricKey.lookup(name))
+
+    def _get_metric(self, metric_key: MetricKey) -> float:
         if not metric_key.name.startswith("hits"):
             return getattr(self, metric_key.name)[metric_key.side][metric_key.rank_type]
         assert metric_key.k is not None
