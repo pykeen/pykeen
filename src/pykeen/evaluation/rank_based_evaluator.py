@@ -19,7 +19,6 @@ from .evaluator import Evaluator, MetricResults, prepare_filter_triples
 from .metrics import (
     ADJUSTED_ARITHMETIC_MEAN_RANK,
     ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX,
-    ALL_TYPE_FUNCS,
     ARITHMETIC_MEAN_RANK,
     GEOMETRIC_MEAN_RANK,
     HARMONIC_MEAN_RANK,
@@ -33,6 +32,7 @@ from .metrics import (
     RANK_STD,
     RANK_VARIANCE,
     MetricKey,
+    get_ranking_metrics,
 )
 from .ranks import Ranks
 from ..triples.triples_factory import CoreTriplesFactory
@@ -388,8 +388,8 @@ class RankBasedEvaluator(Evaluator):
             hits_at_k[side][rank_type] = {
                 k: np.mean(ranks <= (k if isinstance(k, int) else int(self.num_entities * k))).item() for k in self.ks
             }
-            for metric_name, metric_func in ALL_TYPE_FUNCS.items():
-                asr[metric_name][side][rank_type] = metric_func(ranks).item()
+            for metric_name, metric_value in get_ranking_metrics(ranks).items():
+                asr[metric_name][side][rank_type] = metric_value
 
             expected_rank_type = EXPECTED_RANKS.get(rank_type)
             if expected_rank_type is not None:

@@ -4,7 +4,7 @@
 
 import itertools as itt
 import re
-from typing import NamedTuple, Optional, Union, cast
+from typing import Mapping, NamedTuple, Optional, Union, cast
 
 import numpy as np
 from scipy import stats
@@ -144,3 +144,11 @@ ALL_TYPE_FUNCS = {
     RANK_MAD: stats.median_abs_deviation,
     RANK_COUNT: lambda x: np.asarray(x.size),
 }
+
+
+def get_ranking_metrics(ranks: np.ndarray) -> Mapping[str, float]:
+    """Calculate all rank-based metrics."""
+    rv = {}
+    for metric_name, metric_func in ALL_TYPE_FUNCS.items():
+        rv[metric_name] = metric_func(ranks).item()
+    return rv
