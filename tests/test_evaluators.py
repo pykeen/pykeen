@@ -516,12 +516,13 @@ def test_sample_negatives():
     num_negatives = 2
     evaluation_triples = dataset.validation.mapped_triples
     additional_filter_triples = dataset.training.mapped_triples
-    head_negatives, tail_negatives = sample_negatives(
+    negatives = sample_negatives(
         evaluation_triples=evaluation_triples,
         additional_filter_triples=additional_filter_triples,
         num_entities=dataset.num_entities,
         num_samples=num_negatives,
     )
+    head_negatives, tail_negatives = negatives[LABEL_HEAD], negatives[LABEL_TAIL]
     num_triples = evaluation_triples.shape[0]
     true = set(
         map(

@@ -8,7 +8,7 @@ import math
 import random
 from collections import defaultdict
 from dataclasses import dataclass, field, fields
-from typing import DefaultDict, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Union
+from typing import DefaultDict, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Union, cast
 
 import numpy as np
 import pandas as pd
@@ -40,6 +40,7 @@ from ..typing import (
     RANK_TYPES,
     SIDE_BOTH,
     SIDES,
+ExtendedTarget, TargetBoth,
     MappedTriples,
     Target,
 )
@@ -379,13 +380,13 @@ class RankBasedEvaluator(Evaluator):
     ) -> None:  # noqa: D102
         self._update_ranks_(true_scores=true_scores, all_scores=scores, side=LABEL_HEAD, hrt_batch=hrt_batch)
 
-    def _get_ranks(self, side, rank_type) -> np.ndarray:
+    def _get_ranks(self, side: ExtendedTarget, rank_type) -> np.ndarray:
         if side == SIDE_BOTH:
             values: List[float] = sum(
                 (self.ranks.get((_side, rank_type), []) for _side in (LABEL_HEAD, LABEL_TAIL)), []
             )
         else:
-            values = self.ranks.get((side, rank_type), [])
+            values = self.ranks.get((cast(Target, side), rank_type), [])
         return np.asarray(values, dtype=np.float64)
 
     def finalize(self) -> RankBasedMetricResults:  # noqa: D102
@@ -448,7 +449,7 @@ def sample_negatives(
     additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
     num_samples: int = 50,
     num_entities: Optional[int] = None,
-) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
+) -> Mapping[Target, torch.FloatTensor]:
     """
     Sample true negatives for sampled evaluation.
 
@@ -462,14 +463,7 @@ def sample_negatives(
         the number of entities
 
     :return:
-        a tuple (id_df, head_negatives, tail_negatives) where
-
-        - id_df: head_id | relation_id | tail_id | index
-            a dataframe mapping evaluation triples to their index
-        - head_negatives: shape: (n, num_negatives)
-            the negatives for head prediction
-        - tail_negatives: shape: (n, num_negatives)
-            the negatives for tail prediction
+        A mapping of sides to negative samples
     """
     additional_filter_triples = prepare_filter_triples(
         mapped_triples=evaluation_triples,
@@ -482,9 +476,9 @@ def sample_negatives(
     all_df = pd.DataFrame(data=additional_filter_triples.numpy(), columns=columns)
     id_df = df.reset_index()
     all_ids = set(range(num_entities))
-    negatives = []
+    negatives = {}
     for side in [LABEL_HEAD, LABEL_TAIL]:
-        this_negatives = torch.empty(size=(num_triples, num_samples), dtype=torch.long)
+        this_negatives = cast(torch.FloatTensor, torch.empty(size=(num_triples, num_samples), dtype=torch.long))
         other = [c for c in columns if c != side]
         for _, group in pd.merge(id_df, all_df, on=other, suffixes=["_eval", "_all"]).groupby(
             by=other,
@@ -501,8 +495,8 @@ def sample_negatives(
                     data=random.sample(population=pool, k=num_samples),
                     dtype=torch.long,
                 )
-        negatives.append(this_negatives)
-    return negatives[0], negatives[1]
+        negatives[side] = this_negatives
+    return negatives
 
 
 class SampledRankBasedEvaluator(RankBasedEvaluator):
@@ -545,7 +539,7 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
             )
             if num_negatives > evaluation_factory.num_entities:
                 raise ValueError("Cannot use more negative samples than there are entities.")
-            head_negatives, tail_negatives = sample_negatives(
+            negatives = sample_negatives(
                 evaluation_triples=evaluation_factory.mapped_triples,
                 additional_filter_triples=additional_filter_triples,
                 num_entities=evaluation_factory.num_entities,
@@ -553,16 +547,18 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
             )
         elif head_negatives is None or tail_negatives is None:
             raise ValueError("Either both, head and tail negatives must be provided, or none.")
+        else:
+            negatives = {
+                LABEL_HEAD: head_negatives,
+                LABEL_TAIL: tail_negatives,
+            }
 
         # verify input
-        for negatives in (head_negatives, tail_negatives):
-            if negatives.shape[0] != evaluation_factory.num_triples:
-                raise ValueError(f"Negatives are in wrong shape: {negatives.shape}")
+        for side, side_negatives in negatives.items():
+            if side_negatives.shape[0] != evaluation_factory.num_triples:
+                raise ValueError(f"Negatives for {side} are in wrong shape: {side_negatives.shape}")
         self.triple_to_index = {(h, r, t): i for i, (h, r, t) in enumerate(evaluation_factory.mapped_triples.tolist())}
-        self.negative_samples: Mapping[Target, torch.FloatTensor] = {
-            LABEL_HEAD: head_negatives,
-            LABEL_TAIL: tail_negatives,
-        }
+        self.negative_samples = negatives
         self.num_entities = evaluation_factory.num_entities
 
     def _update_ranks_(

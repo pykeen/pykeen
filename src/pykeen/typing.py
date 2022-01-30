@@ -2,7 +2,7 @@
 
 """Type hints for PyKEEN."""
 
-from typing import Callable, Mapping, NamedTuple, Sequence, Tuple, TypeVar, Union, cast
+from typing import Callable, Collection, Mapping, NamedTuple, Sequence, Tuple, TypeVar, Union, cast
 
 import numpy as np
 import torch
@@ -137,5 +137,7 @@ EXPECTED_RANKS = {
     RANK_PESSIMISTIC: None,  # TODO - research problem
 }
 
-SIDE_BOTH = "both"
-SIDES = {LABEL_HEAD, LABEL_TAIL, SIDE_BOTH}
+TargetBoth = Literal["both"]
+SIDE_BOTH: TargetBoth = "both"
+ExtendedTarget = Union[Target, TargetBoth]
+SIDES: Collection[Union[Target, ExtendedTarget]] = {LABEL_HEAD, LABEL_TAIL, SIDE_BOTH}
