@@ -7,13 +7,10 @@ import logging
 import math
 import random
 import re
-from abc import abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass, fields
 from typing import (
     Any,
-    ClassVar,
-    Collection,
     Iterable,
     List,
     Mapping,
@@ -21,7 +18,6 @@ from typing import (
     NamedTuple,
     Optional,
     Sequence,
-    SupportsFloat,
     Tuple,
     Type,
     Union,
@@ -32,13 +28,23 @@ import numpy as np
 import pandas as pd
 import torch
 from class_resolver import Resolver, normalize_string
-from scipy import stats
 from typing_extensions import Literal
 
 from .evaluator import Evaluator, MetricResults, prepare_filter_triples
+from .metrics import HitsAtK, InverseArithmeticMeanRank, RankBasedMetric
 from ..constants import SIDES
 from ..triples.triples_factory import CoreTriplesFactory
-from ..typing import LABEL_HEAD, LABEL_TAIL, MappedTriples, Target
+from ..typing import (
+    LABEL_HEAD,
+    LABEL_TAIL,
+    RANK_OPTIMISTIC,
+    RANK_PESSIMISTIC,
+    RANK_REALISTIC,
+    RANK_TYPES,
+    MappedTriples,
+    RankType,
+    Target,
+)
 
 __all__ = [
     "compute_rank_from_scores",
@@ -55,239 +61,6 @@ logger = logging.getLogger(__name__)
 ExtendedSide = Union[Target, Literal["both"]]
 SIDE_BOTH: ExtendedSide = "both"
 EXTENDED_SIDES: Tuple[ExtendedSide, ...] = cast(Tuple[ExtendedSide, ...], SIDES) + (SIDE_BOTH,)
-
-RankType = Literal["optimistic", "realistic", "pessimistic"]
-# RANK_TYPES: Tuple[RankType, ...] = typing.get_args(RankType) # Python >= 3.8
-RANK_TYPES: Tuple[RankType, ...] = ("optimistic", "realistic", "pessimistic")
-RANK_OPTIMISTIC, RANK_REALISTIC, RANK_PESSIMISTIC = RANK_TYPES
-
-
-@dataclass
-class ValueRange:
-    """A value range description."""
-
-    #: the lower bound
-    lower: Optional[float] = None
-
-    #: whether the lower bound is inclusive
-    lower_inclusive: bool = False
-
-    #: the upper bound
-    upper: Optional[float] = None
-
-    #: whether the upper bound is inclusive
-    upper_inclusive: bool = False
-
-    def __contains__(self, x: float) -> bool:
-        if self.lower is not None:
-            if x < self.lower:
-                return False
-            if not self.lower_inclusive and x == self.lower:
-                return False
-        if self.upper is not None:
-            if x > self.upper:
-                return False
-            if not self.upper_inclusive and x == self.upper:
-                return False
-        return True
-
-
-class RankBasedMetric:
-    """A base class for rank-based metrics."""
-
-    #: whether it is increasing, i.e., larger values are better
-    increasing: ClassVar[bool] = False
-
-    #: the value range (as string)
-    value_range: ClassVar[Optional[ValueRange]] = None
-
-    #: the supported rank types. Most of the time equal to all rank types
-    supported_rank_types: ClassVar[Collection[RankType]] = RANK_TYPES
-
-    #: synonyms for this metric
-    synonyms: ClassVar[Collection[str]] = tuple()
-
-    #: whether the metric requires the number of candidates for each ranking task
-    needs_candidates: ClassVar[bool] = False
-
-    @abstractmethod
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:
-        """
-        Evaluate the metric.
-
-        :param ranks: shape: s
-            the individual ranks
-        :param num_candidates: shape: s
-            the number of candidates for each individual ranking task
-        """
-        raise NotImplementedError
-
-
-class ArithmeticMeanRank(RankBasedMetric):
-    """The (arithmetic) mean rank."""
-
-    value_range = ValueRange(lower=1, lower_inclusive=True, upper=math.inf)
-    synonyms = ("mean_rank", "mr")
-
-    @staticmethod
-    def call(ranks: np.ndarray) -> float:
-        return np.mean(ranks).item()
-
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        return ArithmeticMeanRank.call(ranks)
-
-
-class InverseArithmeticMeanRank(RankBasedMetric):
-    """The inverse arithmetic mean rank."""
-
-    value_range = ValueRange(lower=0, lower_inclusive=False, upper=1, upper_inclusive=True)
-    increasing = True
-
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        return np.reciprocal(np.mean(ranks)).item()
-
-
-class GeometricMeanRank(RankBasedMetric):
-    """The geometric mean rank."""
-
-    value_range = ValueRange(lower=1, lower_inclusive=True, upper=math.inf)
-    synonyms = ("gmr",)
-
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        return stats.gmean(ranks).item()
-
-
-class InverseGeometricMeanRank(RankBasedMetric):
-    """The inverse geometric mean rank."""
-
-    value_range = ValueRange(lower=0, lower_inclusive=False, upper=1, upper_inclusive=True)
-    increasing = True
-
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        return np.reciprocal(stats.gmean(ranks)).item()
-
-
-class HarmonicMeanRank(RankBasedMetric):
-    """The harmonic mean rank."""
-
-    value_range = ValueRange(lower=1, lower_inclusive=True, upper=math.inf)
-    synonyms = ("hmr",)
-
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        return stats.hmean(ranks).item()
-
-
-class InverseHarmonicMeanRank(RankBasedMetric):
-    """The inverse harmonic mean rank."""
-
-    value_range = ValueRange(lower=0, lower_inclusive=False, upper=1, upper_inclusive=True)
-    synonyms = ("mean_reciprocal_rank", "mrr")
-    increasing = True
-
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        return np.reciprocal(stats.hmean(ranks)).item()
-
-
-class MedianRank(RankBasedMetric):
-    """The median rank."""
-
-    value_range = ValueRange(lower=1, lower_inclusive=True, upper=math.inf)
-
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        return np.median(ranks).item()
-
-
-class InverseMedianRank(RankBasedMetric):
-    """The inverse median rank."""
-
-    value_range = ValueRange(lower=0, lower_inclusive=False, upper=1, upper_inclusive=True)
-    increasing = True
-
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        return np.reciprocal(np.median(ranks)).item()
-
-
-class StandardDeviation(RankBasedMetric):
-    """The ranks' standard deviation."""
-
-    value_range = ValueRange(lower=0, lower_inclusive=True, upper=math.inf)
-    synonyms = ("rank_std", "std")
-
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        return np.std(ranks).item()
-
-
-class Variance(RankBasedMetric):
-    """The ranks' variance."""
-
-    value_range = ValueRange(lower=0, lower_inclusive=True, upper=math.inf)
-    synonyms = ("rank_var", "var")
-
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        return np.var(ranks).item()
-
-
-class MedianAbsoluteDeviation(RankBasedMetric):
-    """The ranks' median absolute deviation (MAD)."""
-
-    value_range = ValueRange(lower=0, lower_inclusive=True, upper=math.inf)
-    synonyms = ("rank_mad", "mad")
-
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        return stats.median_absolute_deviation(ranks).item()
-
-
-class Count(RankBasedMetric):
-    """The ranks' count."""
-
-    value_range = ValueRange(lower=0, lower_inclusive=True, upper=math.inf)
-    increasing = True
-
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        return float(ranks.size)
-
-
-class HitsAtK(RankBasedMetric):
-    """The Hits@k."""
-
-    value_range = ValueRange(lower=0, lower_inclusive=True, upper=1, upper_inclusive=True)
-    synonyms = ("h@k", "hits@k", "h@", "hits@", "hits_at_", "h_at_")
-    increasing = True
-
-    def __init__(self, k: int = 10) -> None:
-        super().__init__()
-        self.k = k
-
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        return np.less_equal(ranks, self.k).mean().item()
-
-
-class AdjustedArithmeticMeanRank(RankBasedMetric):
-    """The adjusted arithmetic mean rank (AMR)."""
-
-    value_range = ValueRange(lower=0, lower_inclusive=True, upper=2, upper_inclusive=False)
-    synonyms = ("adjusted_mean_rank", "amr", "aamr")
-    supported_rank_types = (RANK_REALISTIC,)
-    needs_candidates = True
-
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        return ArithmeticMeanRank.call(ranks) / expected_mean_rank(num_candidates=num_candidates)
-
-
-class AdjustedArithmeticMeanRankIndex(RankBasedMetric):
-    """The adjusted arithmetic mean rank index (AMRI)."""
-
-    value_range = ValueRange(lower=-1, lower_inclusive=True, upper=1, upper_inclusive=True)
-    synonyms = ("adjusted_mean_rank_index", "amri", "aamri")
-    increasing = True
-    supported_rank_types = (RANK_REALISTIC,)
-    needs_candidates = True
-
-    def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        return 1.0 - (
-            (ArithmeticMeanRank.call(ranks) - 1.0) / (expected_mean_rank(num_candidates=num_candidates) - 1.0)
-        )
-
 
 metric_resolver: Resolver[RankBasedMetric] = Resolver.from_subclasses(
     base=RankBasedMetric,
@@ -399,6 +172,8 @@ _METRIC_PATTERN = "|".join(itt.chain(metric_resolver.lookup_dict.keys(), metric_
 METRIC_PATTERN = re.compile(
     rf"^(?P<name>{_METRIC_PATTERN})(?P<kf>\d+)?(\.(?P<side>{_SIDE_PATTERN}))?(\.(?P<type>{_TYPE_PATTERN}))?(\.(?P<kb>\d+))?$",
 )
+
+
 # TODO: special hits@k
 
 
@@ -802,46 +577,3 @@ def numeric_expected_value(
         ranks = generator.integers(low=0, high=num_candidates)
         expectation += metric_func(ranks)
     return expectation / num_samples
-
-
-# TODO: closed-forms for other metrics?
-
-
-def expected_mean_rank(
-    num_candidates: Union[Sequence[int], np.ndarray],
-) -> float:
-    r"""
-    Calculate the expected mean rank under random ordering.
-
-    .. math ::
-
-        E[MR] = \frac{1}{n} \sum \limits_{i=1}^{n} \frac{1 + CSS[i]}{2}
-              = \frac{1}{2}(1 + \frac{1}{n} \sum \limits_{i=1}^{n} CSS[i])
-
-    :param num_candidates:
-        the number of candidates for each individual rank computation
-
-    :return:
-        the expected mean rank
-    """
-    return 0.5 * (1 + np.mean(np.asanyarray(num_candidates)))
-
-
-def expected_hits_at_k(
-    num_candidates: Union[Sequence[int], np.ndarray],
-    k: int,
-) -> float:
-    r"""
-    Calculate the expected Hits@k under random ordering.
-
-    .. math ::
-
-        E[Hits@k] = \frac{1}{n} \sum \limits_{i=1}^{n} min(\frac{k}{CSS[i]}, 1.0)
-
-    :param num_candidates:
-        the number of candidates for each individual rank computation
-
-    :return:
-        the expected Hits@k value
-    """
-    return k * np.mean(np.reciprocal(np.asanyarray(num_candidates, dtype=float)).clip(min=None, max=1 / k))

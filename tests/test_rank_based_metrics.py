@@ -1,102 +1,103 @@
 """Tests for rank-based metrics."""
+
 import unittest_templates
 
-from pykeen.evaluation import rank_based_evaluator
+import pykeen.evaluation.metrics
 from tests import cases
 
 
 class AdjustedArithmeticMeanRankTests(cases.RankBasedMetricTestCase):
     """Tests for adjusted arithmetic mean rank."""
 
-    cls = rank_based_evaluator.AdjustedArithmeticMeanRank
+    cls = pykeen.evaluation.metrics.AdjustedArithmeticMeanRank
 
 
 class AdjustedArithmeticMeanRankIndexTests(cases.RankBasedMetricTestCase):
     """Tests for adjusted arithmetic mean rank index."""
 
-    cls = rank_based_evaluator.AdjustedArithmeticMeanRankIndex
+    cls = pykeen.evaluation.metrics.AdjustedArithmeticMeanRankIndex
 
 
 class ArithmeticMeanRankTests(cases.RankBasedMetricTestCase):
     """Tests for arithmetic mean rank."""
 
-    cls = rank_based_evaluator.ArithmeticMeanRank
+    cls = pykeen.evaluation.metrics.ArithmeticMeanRank
 
 
 class CountTests(cases.RankBasedMetricTestCase):
     """Tests for rank count."""
 
-    cls = rank_based_evaluator.Count
+    cls = pykeen.evaluation.metrics.Count
 
 
 class GeometricMeanRankTests(cases.RankBasedMetricTestCase):
     """Tests for geometric mean rank."""
 
-    cls = rank_based_evaluator.GeometricMeanRank
+    cls = pykeen.evaluation.metrics.GeometricMeanRank
 
 
 class HarmonicMeanRankTests(cases.RankBasedMetricTestCase):
     """Tests for harmonic mean rank."""
 
-    cls = rank_based_evaluator.HarmonicMeanRank
+    cls = pykeen.evaluation.metrics.HarmonicMeanRank
 
 
 class HitsAtKTests(cases.RankBasedMetricTestCase):
     """Tests for Hits at k."""
 
-    cls = rank_based_evaluator.HitsAtK
+    cls = pykeen.evaluation.metrics.HitsAtK
 
 
 class InverseArithmeticMeanRankTests(cases.RankBasedMetricTestCase):
     """Tests for inverse arithmetic mean rank."""
 
-    cls = rank_based_evaluator.InverseArithmeticMeanRank
+    cls = pykeen.evaluation.metrics.InverseArithmeticMeanRank
 
 
 class InverseMedianRankTests(cases.RankBasedMetricTestCase):
     """Tests for inverse median rank."""
 
-    cls = rank_based_evaluator.InverseMedianRank
+    cls = pykeen.evaluation.metrics.InverseMedianRank
 
 
 class InverseGeometricMeanRankTests(cases.RankBasedMetricTestCase):
     """Tests for inverse geometric mean rank."""
 
-    cls = rank_based_evaluator.InverseGeometricMeanRank
+    cls = pykeen.evaluation.metrics.InverseGeometricMeanRank
 
 
 class InverseHarmonicMeanRankTests(cases.RankBasedMetricTestCase):
     """Tests for inverse harmonic mean rank."""
 
-    cls = rank_based_evaluator.InverseHarmonicMeanRank
+    cls = pykeen.evaluation.metrics.InverseHarmonicMeanRank
 
 
 class MedianAbsoluteDeviationTests(cases.RankBasedMetricTestCase):
     """Tests for MAD."""
 
-    cls = rank_based_evaluator.MedianAbsoluteDeviation
+    cls = pykeen.evaluation.metrics.MedianAbsoluteDeviation
 
 
 class MedianRankTests(cases.RankBasedMetricTestCase):
     """Tests for median rank."""
 
-    cls = rank_based_evaluator.MedianRank
+    cls = pykeen.evaluation.metrics.MedianRank
 
 
 class StandardDeviationTests(cases.RankBasedMetricTestCase):
     """Tests for rank standard deviation."""
 
-    cls = rank_based_evaluator.StandardDeviation
+    cls = pykeen.evaluation.metrics.StandardDeviation
 
 
 class VarianceTests(cases.RankBasedMetricTestCase):
     """Tests for rank variance."""
 
-    cls = rank_based_evaluator.Variance
+    cls = pykeen.evaluation.metrics.Variance
 
 
-class RankBasedMetricsTest(unittest_templates.MetaTestCase[rank_based_evaluator.RankBasedMetric]):
+class RankBasedMetricsTest(unittest_templates.MetaTestCase[pykeen.evaluation.metrics.RankBasedMetric]):
     """Test for test coverage for rank-based metrics."""
 
-    base_cls = rank_based_evaluator.RankBasedMetric
+    base_cls = pykeen.evaluation.metrics.RankBasedMetric
     base_test = cases.RankBasedMetricTestCase

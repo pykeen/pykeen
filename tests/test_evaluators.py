@@ -26,25 +26,25 @@ from pykeen.evaluation.evaluator import (
     get_candidate_set_size,
     prepare_filter_triples,
 )
-from pykeen.evaluation.rank_based_evaluator import (
-    EXTENDED_SIDES,
-    RANK_REALISTIC,
-    RANK_TYPES,
-    SIDE_BOTH,
-    SIDES,
+from pykeen.evaluation.expected import expected_hits_at_k, expected_mean_rank
+from pykeen.evaluation.metrics import (
     AdjustedArithmeticMeanRankIndex,
     ArithmeticMeanRank,
     HitsAtK,
     InverseHarmonicMeanRank,
+)
+from pykeen.evaluation.rank_based_evaluator import (
+    EXTENDED_SIDES,
+    RANK_REALISTIC,
+    SIDE_BOTH,
+    SIDES,
     SampledRankBasedEvaluator,
     compute_rank_from_scores,
-    expected_hits_at_k,
-    expected_mean_rank,
     resolve_metric_name,
     sample_negatives,
 )
 from pykeen.models import FixedModel
-from pykeen.typing import MappedTriples
+from pykeen.typing import RANK_TYPES, MappedTriples
 from tests import cases
 
 logger = logging.getLogger(__name__)
