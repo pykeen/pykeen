@@ -173,7 +173,6 @@ class Model(nn.Module, ABC):
     @abstractmethod
     def _reset_parameters_(self):  # noqa: D401
         """Reset all parameters of the model in-place."""
-        raise NotImplementedError
 
     def post_parameter_update(self) -> None:
         """Has to be called after each parameter update."""
@@ -188,12 +187,9 @@ class Model(nn.Module, ABC):
 
         :param hrt_batch: shape: (batch_size, 3), dtype: long
             The indices of (head, relation, tail) triples.
-        :raises NotImplementedError:
-            If the method was not implemented for this class.
         :return: shape: (batch_size, 1), dtype: float
             The score for each triple.
         """
-        raise NotImplementedError
 
     @abstractmethod
     def score_t(self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:
