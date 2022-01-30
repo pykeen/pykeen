@@ -11,8 +11,7 @@ from dataclasses_json import dataclass_json
 
 from .evaluator import Evaluator, MetricResults
 from .rexmex_compat import classifier_annotator
-from ..constants import SIDE_HEAD, SIDE_RELATION, SIDE_TAIL, Side
-from ..typing import MappedTriples
+from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, MappedTriples, Target
 from ..utils import fix_dataclass_init_docs
 
 __all__ = [
@@ -80,7 +79,7 @@ class ClassificationEvaluator(Evaluator):
         keys: torch.LongTensor,
         scores: torch.FloatTensor,
         positive_mask: torch.FloatTensor,
-        side: Side,
+        side: Target,
     ) -> None:
         # Transfer to cpu and convert to numpy
         scores = scores.detach().cpu().numpy()
@@ -104,7 +103,7 @@ class ClassificationEvaluator(Evaluator):
         if dense_positive_mask is None:
             raise KeyError("Sklearn evaluators need the positive mask!")
 
-        self._process_scores(keys=hrt_batch[:, :2], scores=scores, positive_mask=dense_positive_mask, side=SIDE_TAIL)
+        self._process_scores(keys=hrt_batch[:, :2], scores=scores, positive_mask=dense_positive_mask, side=LABEL_TAIL)
 
     def process_relation_scores_(
         self,
@@ -117,7 +116,7 @@ class ClassificationEvaluator(Evaluator):
             raise KeyError("Sklearn evaluators need the positive mask!")
 
         self._process_scores(
-            keys=hrt_batch[:, [0, 2]], scores=scores, positive_mask=dense_positive_mask, side=SIDE_RELATION
+            keys=hrt_batch[:, [0, 2]], scores=scores, positive_mask=dense_positive_mask, side=LABEL_RELATION
         )
 
     def process_head_scores_(
@@ -130,7 +129,7 @@ class ClassificationEvaluator(Evaluator):
         if dense_positive_mask is None:
             raise KeyError("Sklearn evaluators need the positive mask!")
 
-        self._process_scores(keys=hrt_batch[:, 1:], scores=scores, positive_mask=dense_positive_mask, side=SIDE_HEAD)
+        self._process_scores(keys=hrt_batch[:, 1:], scores=scores, positive_mask=dense_positive_mask, side=LABEL_HEAD)
 
     def finalize(self) -> ClassificationMetricResults:  # noqa: D102
         # Important: The order of the values of a dictionary is not guaranteed. Hence, we need to retrieve scores and

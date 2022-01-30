@@ -94,3 +94,8 @@ class ScorePack(NamedTuple):
 
 
 Sign = Literal[-1, 1]
+
+Target = Literal["head", "relation", "tail"]
+LABEL_HEAD: Target = "head"
+LABEL_TAIL: Target = "tail"
+LABEL_RELATION: Target = "relation"

@@ -18,9 +18,8 @@ from dataclasses_json import dataclass_json
 from scipy import stats
 
 from .evaluator import Evaluator, MetricResults, prepare_filter_triples
-from ..constants import SIDE_HEAD, SIDE_RELATION, SIDE_TAIL, Side
 from ..triples.triples_factory import CoreTriplesFactory
-from ..typing import MappedTriples
+from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, MappedTriples, Target
 from ..utils import fix_dataclass_init_docs
 
 __all__ = [
@@ -35,8 +34,8 @@ logger = logging.getLogger(__name__)
 
 SideAllType = Literal["both"]
 SIDE_BOTH: SideAllType = "both"
-SIDES = {SIDE_HEAD, SIDE_TAIL, SIDE_BOTH}
-SIDE_BOTH_VALUES = (SIDE_HEAD, SIDE_TAIL)
+SIDES = {LABEL_HEAD, LABEL_TAIL, SIDE_BOTH}
+SIDE_BOTH_VALUES = (LABEL_HEAD, LABEL_TAIL)
 
 RANK_OPTIMISTIC = "optimistic"
 RANK_PESSIMISTIC = "pessimistic"
@@ -503,14 +502,14 @@ class RankBasedEvaluator(Evaluator):
                 raise ValueError(
                     "If k is a float, it should represent a relative rank, i.e. a value between 0 and 1 (excl.)",
                 )
-        self.ranks: Dict[Tuple[Side, str], List[float]] = defaultdict(list)
+        self.ranks: Dict[Tuple[Target, str], List[float]] = defaultdict(list)
         self.num_entities = None
 
     def _update_ranks_(
         self,
         true_scores: torch.FloatTensor,
         all_scores: torch.FloatTensor,
-        side: Side,
+        side: Target,
         hrt_batch: MappedTriples,
     ) -> None:
         """Shared code for updating the stored ranks for head/relation/tail scores.
@@ -533,7 +532,7 @@ class RankBasedEvaluator(Evaluator):
         scores: torch.FloatTensor,
         dense_positive_mask: Optional[torch.FloatTensor] = None,
     ) -> None:  # noqa: D102
-        self._update_ranks_(true_scores=true_scores, all_scores=scores, side=SIDE_TAIL, hrt_batch=hrt_batch)
+        self._update_ranks_(true_scores=true_scores, all_scores=scores, side=LABEL_TAIL, hrt_batch=hrt_batch)
 
     def process_relation_scores_(
         self,
@@ -542,7 +541,7 @@ class RankBasedEvaluator(Evaluator):
         scores: torch.FloatTensor,
         dense_positive_mask: Optional[torch.FloatTensor] = None,
     ) -> None:  # noqa: D102
-        self._update_ranks_(true_scores=true_scores, all_scores=scores, side=SIDE_RELATION, hrt_batch=hrt_batch)
+        self._update_ranks_(true_scores=true_scores, all_scores=scores, side=LABEL_RELATION, hrt_batch=hrt_batch)
 
     def process_head_scores_(
         self,
@@ -551,9 +550,9 @@ class RankBasedEvaluator(Evaluator):
         scores: torch.FloatTensor,
         dense_positive_mask: Optional[torch.FloatTensor] = None,
     ) -> None:  # noqa: D102
-        self._update_ranks_(true_scores=true_scores, all_scores=scores, side=SIDE_HEAD, hrt_batch=hrt_batch)
+        self._update_ranks_(true_scores=true_scores, all_scores=scores, side=LABEL_HEAD, hrt_batch=hrt_batch)
 
-    def _get_ranks(self, side: Union[Side, SideAllType], rank_type: str) -> np.ndarray:
+    def _get_ranks(self, side: Union[Target, SideAllType], rank_type: str) -> np.ndarray:
         if side == SIDE_BOTH:  # TODO should this include SIDE_RELATION?
             values: List[float] = sum((self.ranks.get((_side, rank_type), []) for _side in SIDE_BOTH_VALUES), [])
         else:
@@ -732,8 +731,8 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
                 raise ValueError(f"Negatives are in wrong shape: {negatives.shape}")
         self.triple_to_index = {(h, r, t): i for i, (h, r, t) in enumerate(evaluation_factory.mapped_triples.tolist())}
         self.negative_samples = {
-            SIDE_HEAD: head_negatives,
-            SIDE_TAIL: tail_negatives,
+            LABEL_HEAD: head_negatives,
+            LABEL_TAIL: tail_negatives,
         }
         self.num_entities = evaluation_factory.num_entities
 
@@ -741,7 +740,7 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
         self,
         true_scores: torch.FloatTensor,
         all_scores: torch.FloatTensor,
-        side: Side,
+        side: Target,
         hrt_batch: MappedTriples,
     ) -> None:  # noqa: D102
         # TODO: do not require to compute all scores beforehand

@@ -8,7 +8,7 @@ import logging
 import math
 import pathlib
 from textwrap import dedent
-from typing import Iterable, List, Optional, Tuple, Type, Union
+from typing import Dict, Iterable, List, Optional, Sequence, Tuple, Type, Union
 
 import click
 import docdata
@@ -22,6 +22,7 @@ from ..datasets.base import Dataset
 from ..datasets.ogb import OGBWikiKG
 from ..evaluation.evaluator import get_candidate_set_size
 from ..evaluation.rank_based_evaluator import expected_hits_at_k, expected_mean_rank
+from ..typing import LABEL_HEAD, LABEL_TAIL, Target
 
 
 @click.group()
@@ -218,6 +219,13 @@ def verify(dataset: str):
     click.echo(df.to_markdown())
 
 
+DDDD: Dict[str, Sequence[Target]] = {
+    LABEL_HEAD: [LABEL_HEAD],
+    LABEL_TAIL: [LABEL_TAIL],
+    "both": [LABEL_HEAD, LABEL_TAIL],
+}
+
+
 @main.command()
 @verbose_option
 @click.option("-d", "--dataset", help="Regex for filtering datasets by name")
@@ -264,11 +272,7 @@ def expected_metrics(dataset: str, max_triples: Optional[int], log_level: str):
                 10 ** i for i in range(2, int(math.ceil(math.log(dataset_instance.num_entities))))
             )
             this_metrics = dict()
-            for label, sides in dict(
-                head=["head"],
-                tail=["tail"],
-                both=["head", "tail"],
-            ).items():
+            for label, sides in DDDD.items():
                 candidate_set_sizes = df[[f"{side}_candidates" for side in sides]]
                 this_metrics[label] = {
                     "mean_rank": expected_mean_rank(candidate_set_sizes),

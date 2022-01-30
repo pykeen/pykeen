@@ -6,7 +6,6 @@ from pathlib import Path
 
 import pystow
 import torch
-from typing_extensions import Literal
 
 __all__ = [
     "PYKEEN_HOME",
@@ -45,8 +44,3 @@ DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE = dict(type=int, low=16, high=256, q=1
 USER_DEFINED_CODE = "<user defined>"
 
 AGGREGATIONS = {func.__name__: func for func in [torch.sum, torch.max, torch.mean, torch.logsumexp]}
-
-Side = Literal["head", "relation", "tail"]
-SIDE_HEAD: Side = "head"
-SIDE_TAIL: Side = "tail"
-SIDE_RELATION: Side = "relation"
