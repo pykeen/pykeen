@@ -844,9 +844,13 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
     #: Static extras to append to the CLI
     cli_extras: Sequence[str] = tuple()
 
+    #: the model's device
+    device: torch.device
+
     def pre_setup_hook(self) -> None:  # noqa: D102
         # for reproducible testing
         _, self.generator, _ = set_random_seed(42)
+        self.device = resolve_device()
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
@@ -859,7 +863,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
 
     def post_instantiation_hook(self) -> None:  # noqa: D102
         # move model to correct device
-        self.instance = self.instance.to_device_()
+        self.instance = self.instance.to(self.device)
 
     def test_get_grad_parameters(self):
         """Test the model's ``get_grad_params()`` method."""
@@ -1034,12 +1038,12 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         original_model = self.cls(
             random_seed=42,
             **self.instance_kwargs,
-        ).to_device_()
+        )
 
         loaded_model = self.cls(
             random_seed=21,
             **self.instance_kwargs,
-        ).to_device_()
+        )
 
         def _equal_embeddings(a: RepresentationModule, b: RepresentationModule) -> bool:
             """Test whether two embeddings are equal."""
@@ -1313,6 +1317,14 @@ class BaseKG2ETest(ModelTestCase):
     """General tests for the KG2E model."""
 
     cls = pykeen.models.KG2E
+    c_min: float = 0.01
+    c_max: float = 1.0
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        kwargs["c_min"] = self.c_min
+        kwargs["c_max"] = self.c_max
+        return kwargs
 
     def _check_constraints(self):
         """Check model constraints.
@@ -1320,10 +1332,14 @@ class BaseKG2ETest(ModelTestCase):
         * Entity and relation embeddings have to have at most unit L2 norm.
         * Covariances have to have values between c_min and c_max
         """
-        for embedding in (self.instance.entity_embeddings, self.instance.relation_embeddings):
+        self.instance: ERModel
+        (e_mean, e_cov), (r_mean, r_cov) = self.instance.entity_representations, self.instance.relation_representations
+        for embedding in (e_mean, r_mean):
             assert all_in_bounds(embedding(indices=None).norm(p=2, dim=-1), high=1.0, a_tol=EPSILON)
-        for cov in (self.instance.entity_covariances, self.instance.relation_covariances):
-            assert all_in_bounds(cov(indices=None), low=self.instance.c_min, high=self.instance.c_max)
+        for cov in (e_cov, r_cov):
+            assert all_in_bounds(
+                cov(indices=None), low=self.instance_kwargs["c_min"], high=self.instance_kwargs["c_max"]
+            )
 
 
 class BaseRGCNTest(ModelTestCase):
@@ -1369,23 +1385,9 @@ class RepresentationTestCase(GenericTestCase[RepresentationModule]):
         prefix_shape = (self.instance.max_id,) if indices is None else tuple(indices.shape)
         self._check_result(x=representations, prefix_shape=prefix_shape)
 
-    def _test_canonical_shape(self, indices: Optional[torch.LongTensor]):
-        """Test canonical shape."""
-        x = self.instance.get_in_canonical_shape(indices=indices)
-        if indices is None:
-            prefix_shape = (1, self.instance.max_id)
-        elif indices.ndimension() == 1:
-            prefix_shape = (indices.shape[0], 1)
-        elif indices.ndimension() == 2:
-            prefix_shape = tuple(indices.shape)
-        else:
-            raise AssertionError(indices.shape)
-        self._check_result(x=x, prefix_shape=prefix_shape)
-
     def _test_indices(self, indices: Optional[torch.LongTensor]):
         """Test forward and canonical shape for indices."""
         self._test_forward(indices=indices)
-        self._test_canonical_shape(indices=indices)
 
     def test_no_indices(self):
         """Test without indices."""
@@ -1510,8 +1512,7 @@ class InitializerTestCase(unittest.TestCase):
             embedding_dim=self.shape[1],
             entity_initializer=self.initializer,
             random_seed=0,
-            preferred_device="cpu",
-        )
+        ).to(resolve_device())
         model.reset_parameters_()
 
         with tempfile.TemporaryDirectory() as d:

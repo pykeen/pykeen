@@ -12,6 +12,7 @@ import pandas
 from pykeen.datasets import Dataset, Nations
 from pykeen.datasets import analysis as dataset_analysis
 from pykeen.triples import analysis as triple_analysis
+from pykeen.typing import LABEL_HEAD, LABEL_TAIL
 
 
 def _old_skyline(xs):
@@ -79,8 +80,8 @@ def _test_count_dataframe(
             df[triple_analysis.ENTITY_POSITION_COLUMN_NAME]
             .isin(
                 {
-                    triple_analysis.POSITION_HEAD,
-                    triple_analysis.POSITION_TAIL,
+                    LABEL_HEAD,
+                    LABEL_TAIL,
                 }
             )
             .all()
