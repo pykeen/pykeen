@@ -55,14 +55,13 @@ class BasicNegativeSampler(NegativeSampler):
         self._n_corruptions = len(self._corruption_indices)
 
     def corrupt_batch(self, positive_batch: torch.LongTensor) -> torch.LongTensor:  # noqa: D102
+        batch_shape = positive_batch.shape[:-1]
         # Copy positive batch for corruption.
         # Do not detach, as no gradients should flow into the indices.
         negative_batch = positive_batch.clone()
-        negative_batch = negative_batch.unsqueeze(dim=-2).repeat(
-            *(1 for _ in positive_batch.shape[:-1]), self.num_negs_per_pos, 1
-        )
+        negative_batch = negative_batch.unsqueeze(dim=-2).repeat(*(1 for _ in batch_shape), self.num_negs_per_pos, 1)
 
-        corruption_index = torch.randint(self._n_corruptions, size=negative_batch.shape[:-1])
+        corruption_index = torch.randint(self._n_corruptions, size=(*batch_shape, self.num_negs_per_pos))
         # split_idx = int(math.ceil(num_negs / len(self._corruption_indices)))
         for index in self._corruption_indices:
             # Relations have a different index maximum than entities
@@ -85,7 +84,7 @@ class BasicNegativeSampler(NegativeSampler):
 
             # write the negative indices
             negative_batch[
-                mask.unsqueeze(dim=-1) & (torch.arange(3) == index).view(*(1 for _ in negative_batch.shape[:-1]), 3)
+                mask.unsqueeze(dim=-1) & (torch.arange(3) == index).view(*(1 for _ in batch_shape), 1, 3)
             ] = negative_indices
 
         return negative_batch
