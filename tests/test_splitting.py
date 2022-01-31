@@ -12,7 +12,8 @@ from pykeen.triples.splitting import (
     get_absolute_split_sizes,
     normalize_ratios,
 )
-from pykeen.triples.utils import get_entities, get_relations, triple_tensor_to_set
+from pykeen.triples.utils import get_entities, get_relations
+from pykeen.utils import triple_tensor_to_set
 from tests.cases import CleanerTestCase, SplitterTestCase
 
 

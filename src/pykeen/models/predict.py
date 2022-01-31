@@ -15,9 +15,9 @@ from tqdm.auto import tqdm
 
 from .base import Model
 from ..triples import CoreTriplesFactory, TriplesFactory
-from ..triples.utils import tensor_to_df, triple_tensor_to_set
+from ..triples.utils import tensor_to_df
 from ..typing import LabeledTriples, MappedTriples, ScorePack
-from ..utils import is_cuda_oom_error
+from ..utils import is_cuda_oom_error, triple_tensor_to_set
 
 __all__ = [
     "predict",

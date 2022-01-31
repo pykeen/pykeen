@@ -3,7 +3,7 @@
 """Implementation of basic instance factory which creates just instances based on standard KG triples."""
 
 from abc import ABC
-from typing import Generic, Mapping, Optional, Tuple, TypeVar
+from typing import Callable, Generic, List, Mapping, Optional, Tuple, TypeVar
 
 import numpy as np
 import scipy.sparse
@@ -38,6 +38,10 @@ class Instances(data.Dataset[BatchType], Generic[BatchType], ABC):
     def __len__(self):  # noqa:D401
         """The number of instances."""
         raise NotImplementedError
+
+    def get_collator(self) -> Optional[Callable[[List[SampleType]], BatchType]]:
+        """Get a collator."""
+        return None
 
     @classmethod
     def from_triples(
@@ -102,8 +106,21 @@ class SLCWAInstances(Instances[SLCWASampleType]):
 
     def __getitem__(self, item: int) -> SLCWASampleType:  # noqa: D105
         positive = self.mapped_triples[item]
-        negative, mask = self.sampler.sample(positive_batch=positive)
+        negative, mask = self.sampler.sample(positive_batch=positive.unsqueeze(dim=0))
         return positive, negative, mask
+
+    def get_collator(self) -> Callable[[List[SLCWASampleType]], SLCWABatchType]:  # noqa: D102
+        def collate(samples: List[SLCWASampleType]) -> SLCWABatchType:
+            """Collate samples."""
+            positives, negatives, masks = zip(*samples)
+            if masks[0] is None:
+                assert all(m is None for m in masks)
+                masks = None
+            else:
+                masks = torch.stack(masks)
+            return torch.stack(positives), torch.stack(negatives), masks
+
+        return collate
 
     @classmethod
     def from_triples(

@@ -59,9 +59,17 @@ from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
 from pykeen.triples import TriplesFactory, generation
 from pykeen.triples.splitting import Cleaner, Splitter
 from pykeen.triples.triples_factory import CoreTriplesFactory
-from pykeen.triples.utils import get_entities, is_triple_tensor_subset, triple_tensor_to_set
+from pykeen.triples.utils import get_entities
 from pykeen.typing import HeadRepresentation, Initializer, MappedTriples, RelationRepresentation, TailRepresentation
-from pykeen.utils import all_in_bounds, get_batchnorm_modules, resolve_device, set_random_seed, unpack_singletons
+from pykeen.utils import (
+    all_in_bounds,
+    get_batchnorm_modules,
+    is_triple_tensor_subset,
+    resolve_device,
+    set_random_seed,
+    triple_tensor_to_set,
+    unpack_singletons,
+)
 from tests.constants import EPSILON
 from tests.mocks import CustomRepresentations
 from tests.utils import rand

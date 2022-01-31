@@ -566,6 +566,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             drop_last=drop_last,
             shuffle=shuffle,
             pin_memory=pin_memory,
+            collate_fn=training_instances.get_collator(),
         )
 
         # Save the time to track when the saved point was available

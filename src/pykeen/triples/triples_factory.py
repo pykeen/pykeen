@@ -467,7 +467,9 @@ class CoreTriplesFactory:
     ) -> Instances:
         """Create sLCWA instances for this factory's triples."""
         return self._create_instances(
-            SLCWAInstances, negative_sampler=negative_sampler, negative_sampler_kwargs=negative_sampler_kwargs
+            SLCWAInstances,
+            negative_sampler=negative_sampler,
+            negative_sampler_kwargs=negative_sampler_kwargs,
         )
 
     def create_lcwa_instances(self, use_tqdm: Optional[bool] = None, target: Optional[int] = None) -> Instances:
