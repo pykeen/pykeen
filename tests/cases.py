@@ -1413,15 +1413,19 @@ class EdgeWeightingTestCase(GenericTestCase[pykeen.nn.weighting.EdgeWeighting]):
     #: The number of triples
     num_triples: int = 101
 
+    #: the message dim
+    message_dim: int = 3
+
     def post_instantiation_hook(self):  # noqa: D102
         self.source, self.target = torch.randint(self.num_entities, size=(2, self.num_triples))
+        self.message = torch.rand(self.num_triples, self.message_dim, requires_grad=True)
+        # TODO: separation message vs. entity dim?
+        self.x_e = torch.rand(self.num_entities, self.message_dim)
 
-    def test_message_weighting(self):
-        """Perform common tests for message weighting."""
-        weights = self.instance(source=self.source, target=self.target)
-
+    def _test(self, weights: torch.FloatTensor, shape: Tuple[int, ...]):
+        """Perform common tests."""
         # check shape
-        assert weights.shape == self.source.shape
+        assert weights.shape == shape
 
         # check dtype
         assert weights.dtype == torch.float32
@@ -1431,6 +1435,19 @@ class EdgeWeightingTestCase(GenericTestCase[pykeen.nn.weighting.EdgeWeighting]):
 
         # check non-negativity
         assert (weights >= 0.0).all()
+
+    def test_message_weighting(self):
+        """Test message weighting with message."""
+        self._test(
+            weights=self.instance(source=self.source, target=self.target, message=self.message, x_e=self.x_e),
+            shape=self.message.shape,
+        )
+
+    def test_message_weighting_no_message(self):
+        """Test message weighting without message."""
+        if self.instance.needs_message:
+            raise SkipTest(f"{self.cls} needs messages for weighting them.")
+        self._test(weights=self.instance(source=self.source, target=self.target), shape=self.source.shape)
 
 
 class DecompositionTestCase(GenericTestCase[pykeen.nn.message_passing.Decomposition]):
