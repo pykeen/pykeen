@@ -155,7 +155,6 @@ class NodePiece(ERModel):
             )
 
         # always create representations for normal and inverse relations and padding
-        # TODO: always? or only if we need relation tokenization?
         relation_representations = embedding_specification.make(
             num_embeddings=2 * triples_factory.real_num_relations + 1,
         )
