@@ -24,10 +24,13 @@ __all__ = [
     "MultimodalLCWAInstances",
 ]
 
+# TODO: the same
 SampleType = TypeVar("SampleType")
 BatchType = TypeVar("BatchType")
-LCWASampleType = LCWABatchType = Tuple[MappedTriples, torch.FloatTensor]
-SLCWASampleType = SLCWABatchType = Tuple[MappedTriples, MappedTriples, Optional[torch.BoolTensor]]
+LCWASampleType = Tuple[MappedTriples, torch.FloatTensor]
+LCWABatchType = Tuple[MappedTriples, torch.FloatTensor]
+SLCWASampleType = Tuple[MappedTriples, MappedTriples, Optional[torch.BoolTensor]]
+SLCWABatchType = Tuple[MappedTriples, MappedTriples, Optional[torch.BoolTensor]]
 
 
 class Instances(data.Dataset[BatchType], Generic[BatchType], ABC):
