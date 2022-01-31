@@ -13,7 +13,7 @@ import pickle
 import warnings
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from typing import Any, ClassVar, Collection, Iterable, Mapping, Optional, Sequence, Tuple, Type, TypeVar, Union
+from typing import Any, ClassVar, Collection, Iterable, Mapping, Optional, Sequence, Tuple, Type, Union
 
 import pandas as pd
 import torch
@@ -21,8 +21,9 @@ from class_resolver import HintOrType
 from docdata import parse_docdata
 from torch import nn
 
+from .inverse import RelationInverter, relation_inverter_resolver
 from ..losses import Loss, MarginRankingLoss, loss_resolver
-from ..nn.emb import Embedding, EmbeddingSpecification, RepresentationModule
+from ..nn import Embedding, EmbeddingSpecification, RepresentationModule
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import CoreTriplesFactory
 from ..typing import ScorePack
@@ -35,55 +36,6 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
-
-RelationID = TypeVar("RelationID", int, torch.LongTensor)
-
-
-class RelationInverter:
-    """An interface for inverse-relation ID mapping."""
-
-    # TODO: method is_inverse?
-
-    @abstractmethod
-    def get_inverse_id(self, relation_id: RelationID) -> RelationID:
-        """Get the inverse ID for a given relation."""
-        # TODO: inverse of inverse?
-        raise NotImplementedError
-
-    @abstractmethod
-    def _map(self, batch: torch.LongTensor, index: int = 1) -> torch.LongTensor:
-        raise NotImplementedError
-
-    @abstractmethod
-    def invert_(self, batch: torch.LongTensor, index: int = 1) -> torch.LongTensor:
-        """Invert relations in a batch (in-place)."""
-        raise NotImplementedError
-
-    def map(self, batch: torch.LongTensor, index: int = 1, invert: bool = False) -> torch.LongTensor:
-        """Map relations of batch, optionally also inverting them."""
-        batch = self._map(batch=batch, index=index)
-        return self.invert_(batch=batch, index=index) if invert else batch
-
-
-class DefaultRelationInverter(RelationInverter):
-    """Maps normal relations to even IDs, and the corresponding inverse to the next odd ID."""
-
-    def get_inverse_id(self, relation_id: RelationID) -> RelationID:  # noqa: D102
-        return relation_id + 1
-
-    def _map(self, batch: torch.LongTensor, index: int = 1) -> torch.LongTensor:  # noqa: D102
-        batch = batch.clone()
-        batch[:, index] *= 2
-        return batch
-
-    def invert_(self, batch: torch.LongTensor, index: int = 1) -> torch.LongTensor:  # noqa: D102
-        # The number of relations stored in the triples factory includes the number of inverse relations
-        # Id of inverse relation: relation + 1
-        batch[:, index] += 1
-        return batch
-
-
-relation_inverter = DefaultRelationInverter()
 
 
 def _resolve_num(
@@ -137,6 +89,7 @@ class Model(nn.Module, ABC):
 
     #: whether to use inverse relations
     use_inverse_relations: bool
+    relation_inverter: RelationInverter
 
     can_slice_h: ClassVar[bool]
     can_slice_r: ClassVar[bool]
@@ -191,6 +144,7 @@ class Model(nn.Module, ABC):
             num_relations=num_relations,
         )
         self.use_inverse_relations = use_inverse_relations
+        self.relation_inverter = relation_inverter_resolver.make()
 
         """
         When predict_with_sigmoid is set to True, the sigmoid function is applied to the logits during evaluation and
@@ -377,7 +331,7 @@ class Model(nn.Module, ABC):
         batch = batch.to(self.device)
 
         # map relation
-        return relation_inverter.map(batch=batch, index=index_relation, invert=invert_relation)
+        return self.relation_inverter.map(batch=batch, index=index_relation, invert=invert_relation)
 
     def score_hrt_extended(
         self,
