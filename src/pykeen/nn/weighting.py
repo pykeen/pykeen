@@ -3,7 +3,7 @@
 """Various edge weighting implementations for R-GCN."""
 
 from abc import abstractmethod
-from typing import Optional, Union
+from typing import ClassVar, Optional, Union
 
 import torch
 from class_resolver import Resolver
@@ -59,6 +59,9 @@ def softmax(
 
 class EdgeWeighting(nn.Module):
     """Base class for edge weightings."""
+
+    #: whether the edge weighting needs access to the message
+    needs_message: ClassVar[bool] = False
 
     @abstractmethod
     def forward(
@@ -146,6 +149,8 @@ class SymmetricEdgeWeighting(EdgeWeighting):
 
 class AttentionEdgeWeighting(EdgeWeighting):
     """Message weighting by attention."""
+
+    needs_message = True
 
     def __init__(
         self,
