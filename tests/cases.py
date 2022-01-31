@@ -60,7 +60,17 @@ from pykeen.triples import TriplesFactory, generation
 from pykeen.triples.splitting import Cleaner, Splitter
 from pykeen.triples.triples_factory import CoreTriplesFactory
 from pykeen.triples.utils import get_entities, is_triple_tensor_subset, triple_tensor_to_set
-from pykeen.typing import HeadRepresentation, Initializer, MappedTriples, RelationRepresentation, TailRepresentation
+from pykeen.typing import (
+    LABEL_HEAD,
+    LABEL_RELATION,
+    LABEL_TAIL,
+    HeadRepresentation,
+    Initializer,
+    MappedTriples,
+    RelationRepresentation,
+    TailRepresentation,
+    Target,
+)
 from pykeen.utils import all_in_bounds, get_batchnorm_modules, resolve_device, set_random_seed, unpack_singletons
 from tests.constants import EPSILON
 from tests.mocks import CustomRepresentations
@@ -1639,14 +1649,16 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
 
     def _get_input(
         self,
-        inverse: bool = False,
+        target: Target,
     ) -> Tuple[torch.LongTensor, torch.FloatTensor, Optional[torch.BoolTensor]]:
         # Get batch
         hrt_batch = self.factory.mapped_triples[: self.batch_size].to(self.model.device)
 
         # Compute scores
-        if inverse:
+        if target == LABEL_HEAD:
             scores = self.model.score_h(rt_batch=hrt_batch[:, 1:])
+        elif target == LABEL_RELATION:
+            scores = self.model.score_r(ht_batch=hrt_batch[:, [0, 2]])
         else:
             scores = self.model.score_t(hr_batch=hrt_batch[:, :2])
 
@@ -1654,10 +1666,12 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
         if self.instance.requires_positive_mask:
             # TODO: Re-use filtering code
             triples = self.factory.mapped_triples.to(self.model.device)
-            if inverse:
+            if target == LABEL_HEAD:
                 sel_col, start_col = 0, 1
-            else:
+            elif target == LABEL_TAIL:
                 sel_col, start_col = 2, 0
+            else:
+                raise NotImplementedError(target)
             stop_col = start_col + 2
 
             # shape: (batch_size, num_triples)
@@ -1675,7 +1689,7 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
 
     def test_process_tail_scores_(self) -> None:
         """Test the evaluator's ``process_tail_scores_()`` function."""
-        hrt_batch, scores, mask = self._get_input()
+        hrt_batch, scores, mask = self._get_input(target=LABEL_TAIL)
         true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, 2]][:, None]
         self.instance.process_tail_scores_(
             hrt_batch=hrt_batch,
@@ -1686,7 +1700,7 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
 
     def test_process_relation_scores_(self) -> None:
         """Test the evaluator's ``process_relation_scores_()`` function."""
-        hrt_batch, scores, mask = self._get_input()
+        hrt_batch, scores, mask = self._get_input(target=LABEL_RELATION)
         true_scores = scores[torch.arange(0, hrt_batch.shape[0], device=hrt_batch.device), hrt_batch[:, 1]][:, None]
         self.evaluator.process_relation_scores_(
             hrt_batch=hrt_batch,
@@ -1697,7 +1711,7 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
 
     def test_process_head_scores_(self) -> None:
         """Test the evaluator's ``process_head_scores_()`` function."""
-        hrt_batch, scores, mask = self._get_input(inverse=True)
+        hrt_batch, scores, mask = self._get_input(target=LABEL_HEAD)
         true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, 0]][:, None]
         self.instance.process_head_scores_(
             hrt_batch=hrt_batch,
@@ -1709,7 +1723,7 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
     def test_finalize(self) -> None:
         """Test the finalize() function."""
         # Process one batch
-        hrt_batch, scores, mask = self._get_input()
+        hrt_batch, scores, mask = self._get_input(target=LABEL_TAIL)
         true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, 2]][:, None]
         self.instance.process_tail_scores_(
             hrt_batch=hrt_batch,
