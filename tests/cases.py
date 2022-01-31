@@ -1659,8 +1659,10 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
             scores = self.model.score_h(rt_batch=hrt_batch[:, 1:])
         elif target == LABEL_RELATION:
             scores = self.model.score_r(ht_batch=hrt_batch[:, [0, 2]])
-        else:
+        elif target == LABEL_TAIL:
             scores = self.model.score_t(hr_batch=hrt_batch[:, :2])
+        else:
+            raise ValueError(target)
 
         # Compute mask only if required
         if self.instance.requires_positive_mask:
@@ -1670,8 +1672,10 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
                 sel_col, start_col = 0, 1
             elif target == LABEL_TAIL:
                 sel_col, start_col = 2, 0
-            else:
+            elif target == LABEL_RELATION:
                 raise NotImplementedError(target)
+            else:
+                raise ValueError(target)
             stop_col = start_col + 2
 
             # shape: (batch_size, num_triples)
