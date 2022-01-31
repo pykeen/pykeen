@@ -21,7 +21,7 @@ from ..constants import PYKEEN_DATASETS
 from ..datasets.base import Dataset
 from ..datasets.ogb import OGBWikiKG
 from ..evaluation.evaluator import get_candidate_set_size
-from ..evaluation.rank_based_evaluator import expected_hits_at_k, expected_mean_rank
+from ..evaluation.expectation import expected_hits_at_k, expected_mean_rank
 from ..typing import EXTENDED_TARGET_MAPPINGS, LABEL_HEAD, LABEL_TAIL
 
 
@@ -262,7 +262,7 @@ def expected_metrics(dataset: str, max_triples: Optional[int], log_level: str):
 
             # expected metrics
             ks = (1, 3, 5, 10) + tuple(
-                10 ** i for i in range(2, int(math.ceil(math.log(dataset_instance.num_entities))))
+                10**i for i in range(2, int(math.ceil(math.log(dataset_instance.num_entities))))
             )
             this_metrics = dict()
             for label, sides in EXTENDED_TARGET_MAPPINGS.items():

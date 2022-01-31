@@ -26,13 +26,9 @@ from pykeen.evaluation.evaluator import (
     get_candidate_set_size,
     prepare_filter_triples,
 )
+from pykeen.evaluation.expectation import expected_hits_at_k, expected_mean_rank
 from pykeen.evaluation.metrics import MetricKey
-from pykeen.evaluation.rank_based_evaluator import (
-    SampledRankBasedEvaluator,
-    expected_hits_at_k,
-    expected_mean_rank,
-    sample_negatives,
-)
+from pykeen.evaluation.rank_based_evaluator import SampledRankBasedEvaluator, sample_negatives
 from pykeen.evaluation.ranks import Ranks
 from pykeen.models import FixedModel
 from pykeen.typing import (
