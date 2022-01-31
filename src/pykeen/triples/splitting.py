@@ -12,7 +12,7 @@ import pandas
 import torch
 from class_resolver.api import HintOrType, Resolver
 
-from ..typing import MappedTriples, TorchRandomHint
+from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, MappedTriples, Target, TorchRandomHint
 from ..utils import ensure_torch_random_state
 
 logger = logging.getLogger(__name__)
@@ -58,12 +58,12 @@ def _split_triples(
     return triples_groups
 
 
-def _get_cover_for_column(df: pandas.DataFrame, column: str, index_column: str = "index") -> Set[int]:
+def _get_cover_for_column(df: pandas.DataFrame, column: Target, index_column: str = "index") -> Set[int]:
     return set(df.groupby(by=column).agg({index_column: "min"})[index_column].values)
 
 
 def _get_covered_entities(df: pandas.DataFrame, chosen: Collection[int]) -> Set[int]:
-    return set(numpy.unique(df.loc[df["index"].isin(chosen), ["h", "t"]]))
+    return set(numpy.unique(df.loc[df["index"].isin(chosen), [LABEL_HEAD, LABEL_TAIL]]))
 
 
 def _get_cover_deterministic(triples: MappedTriples) -> torch.BoolTensor:
@@ -87,17 +87,17 @@ def _get_cover_deterministic(triples: MappedTriples) -> torch.BoolTensor:
     """
     df = pandas.DataFrame(
         data=triples.numpy(),
-        columns=["h", "r", "t"],
+        columns=[LABEL_HEAD, LABEL_RELATION, LABEL_TAIL],
     ).reset_index()
 
     # select one triple per relation
-    chosen = _get_cover_for_column(df=df, column="r")
+    chosen = _get_cover_for_column(df=df, column=LABEL_RELATION)
 
     # maintain set of covered entities
     covered = _get_covered_entities(df=df, chosen=chosen)
 
     # Select one triple for each head/tail entity, which is not yet covered.
-    for column in "ht":
+    for column in (LABEL_HEAD, LABEL_TAIL):
         covered = _get_covered_entities(df=df, chosen=chosen)
         chosen |= _get_cover_for_column(df=df[~df[column].isin(covered)], column=column)
 

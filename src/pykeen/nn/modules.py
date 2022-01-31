@@ -55,6 +55,7 @@ __all__ = [
     "ERMLPEInteraction",
     "HolEInteraction",
     "KG2EInteraction",
+    "MultiLinearTuckerInteraction",
     "MuREInteraction",
     "NTNInteraction",
     "PairREInteraction",
@@ -1479,6 +1480,76 @@ class CPInteraction(FunctionalInteraction[FloatTensor, FloatTensor, FloatTensor]
     func = pkf.cp_interaction
     entity_shape = ("kd",)
     relation_shape = ("kd",)
+
+
+@parse_docdata
+class MultiLinearTuckerInteraction(
+    FunctionalInteraction[Tuple[FloatTensor, FloatTensor], FloatTensor, Tuple[FloatTensor, FloatTensor]]
+):
+    """
+    An implementation of the original (multi-linear) TuckER interaction as described [tucker1966]_.
+
+    .. note ::
+        For small tensors, there are more efficient algorithms to compute the decomposition, e.g.,
+        http://tensorly.org/stable/modules/generated/tensorly.decomposition.Tucker.html
+
+    ---
+    name: MultiLinearTucker
+    citation:
+        author: Tucker
+        year: 1966
+        link: https://dx.doi.org/10.1007/BF02289464
+    """
+
+    func = pkf.multilinear_tucker_interaction
+    entity_shape = ("d", "f")
+    relation_shape = ("e",)
+
+    def __init__(
+        self,
+        head_dim: int = 64,
+        relation_dim: Optional[int] = None,
+        tail_dim: Optional[int] = None,
+    ):
+        """Initialize the Tucker interaction function.
+
+        :param head_dim:
+            The head entity embedding dimension.
+        :param relation_dim:
+            The relation embedding dimension. Defaults to `head_dim`.
+        :param tail_dim:
+            The tail entity embedding dimension. Defaults to `head_dim`.
+        """
+        super().__init__()
+
+        # input normalization
+        relation_dim = relation_dim or head_dim
+        tail_dim = tail_dim or head_dim
+
+        # Core tensor
+        self.core_tensor = nn.Parameter(
+            torch.empty(head_dim, relation_dim, tail_dim),
+            requires_grad=True,
+        )
+
+    def reset_parameters(self):  # noqa:D102
+        # initialize core tensor
+        nn.init.normal_(
+            self.core_tensor,
+            mean=0,
+            std=numpy.sqrt(numpy.prod(numpy.reciprocal(numpy.asarray(self.core_tensor.shape)))),
+        )
+
+    @staticmethod
+    def _prepare_hrt_for_functional(
+        h: Tuple[FloatTensor, FloatTensor],
+        r: FloatTensor,
+        t: Tuple[FloatTensor, FloatTensor],
+    ) -> MutableMapping[str, torch.FloatTensor]:
+        return dict(h=h[0], r=r, t=t[1])
+
+    def _prepare_state_for_functional(self) -> MutableMapping[str, Any]:
+        return dict(core_tensor=self.core_tensor)
 
 
 @parse_docdata

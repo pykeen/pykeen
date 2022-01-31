@@ -11,16 +11,14 @@ from operator import itemgetter
 from typing import Any, ClassVar, Generic, Iterable, List, Mapping, Optional, Sequence, Tuple, Type, Union, cast
 
 import torch
-from class_resolver import HintOrType, OptionalKwargs
 from torch import nn
 
 from .base import Model
-from ..losses import Loss
 from ..nn.emb import EmbeddingSpecification, RepresentationModule
 from ..nn.modules import Interaction, interaction_resolver
 from ..regularizers import Regularizer
 from ..triples import CoreTriplesFactory
-from ..typing import DeviceHint, HeadRepresentation, RelationRepresentation, TailRepresentation
+from ..typing import HeadRepresentation, RelationRepresentation, TailRepresentation
 from ..utils import check_shapes
 
 __all__ = [
@@ -252,12 +250,8 @@ class ERModel(
         interaction_kwargs: Optional[Mapping[str, Any]] = None,
         entity_representations: EmbeddingSpecificationHint = None,
         relation_representations: EmbeddingSpecificationHint = None,
-        loss: HintOrType[Loss] = None,
-        loss_kwargs: OptionalKwargs = None,
-        predict_with_sigmoid: bool = False,
-        preferred_device: DeviceHint = None,
-        random_seed: Optional[int] = None,
         skip_checks: bool = False,
+        **kwargs,
     ) -> None:
         """Initialize the module.
 
@@ -269,30 +263,12 @@ class ERModel(
             instantiated.
         :param entity_representations: The entity representation or sequence of representations
         :param relation_representations: The relation representation or sequence of representations
-        :param loss:
-            The loss to use. If None is given, use the loss default specific to the model subclass.
-        :param loss_kwargs:
-            Additional key-word based parameters given to the loss module's constructor, if not already
-            instantiated.
-        :param predict_with_sigmoid:
-            Whether to apply sigmoid onto the scores when predicting scores. Applying sigmoid at prediction time may
-            lead to exactly equal scores for certain triples with very high, or very low score. When not trained with
-            applying sigmoid (or using BCEWithLogitsLoss), the scores are not calibrated to perform well with sigmoid.
-        :param preferred_device:
-            The preferred device for model training and inference.
-        :param random_seed:
-            A random seed to use for initialising the model's weights. **Should** be set when aiming at reproducibility.
         :param skip_checks:
             whether to skip entity representation checks.
+        :param kwargs:
+            Keyword arguments to pass to the base model
         """
-        super().__init__(
-            triples_factory=triples_factory,
-            loss=loss,
-            loss_kwargs=loss_kwargs,
-            preferred_device=preferred_device,
-            random_seed=random_seed,
-            predict_with_sigmoid=predict_with_sigmoid,
-        )
+        super().__init__(triples_factory=triples_factory, **kwargs)
         self.interaction = interaction_resolver.make(interaction, pos_kwargs=interaction_kwargs)
         self.entity_representations = _prepare_representation_module_list(
             representations=entity_representations,
@@ -461,7 +437,7 @@ class ERModel(
     ) -> Tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]:
         """Get representations for head, relation and tails."""
         hr, rr, tr = [
-            [representation(indices=indices) for representation in representations]
+            [representation.forward_unique(indices=indices) for representation in representations]
             for indices, representations in (
                 (h, self.entity_representations),
                 (r, self.relation_representations),
