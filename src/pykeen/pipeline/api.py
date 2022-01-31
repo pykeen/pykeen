@@ -1090,11 +1090,8 @@ def pipeline(  # noqa: C901
 
     # Log regularizer parameters
     _result_tracker.log_params(
-        params=dict(
-            regularizer_kwargs=regularizer_kwargs
-        ),
+        params=dict(regularizer_kwargs=regularizer_kwargs),
     )
-       
 
     optimizer_kwargs = dict(optimizer_kwargs or {})
     optimizer_instance = optimizer_resolver.make(
