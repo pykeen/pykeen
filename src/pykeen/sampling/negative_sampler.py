@@ -55,8 +55,8 @@ class NegativeSampler(ABC):
         :param filterer_kwargs:
             Additional keyword-based arguments passed to the filterer upon construction.
         """
-        self.num_entities = num_entities
-        self.num_relations = num_relations
+        self.num_entities = num_entities or mapped_triples[:, [0, 2]].max().item() + 1
+        self.num_relations = num_relations or mapped_triples[:, 1].max().item() + 1
         self.num_negs_per_pos = num_negs_per_pos if num_negs_per_pos is not None else 1
         self.filterer = (
             filterer_resolver.make(
@@ -81,9 +81,9 @@ class NegativeSampler(ABC):
             The positive triples.
 
         :return:
-            A pair (negative_batch, filter_mask) where
+            A pair `(negative_batch, filter_mask)` where
 
-            1. negative_batch: shape: (batch_size, num_negatives, 3)
+            1. `negative_batch`: shape: (batch_size, num_negatives, 3)
                The negative batch. ``negative_batch[i, :, :]`` contains the negative examples generated from
                ``positive_batch[i, :]``.
             2. filter_mask: shape: (batch_size, num_negatives)

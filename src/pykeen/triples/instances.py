@@ -3,13 +3,16 @@
 """Implementation of basic instance factory which creates just instances based on standard KG triples."""
 
 from abc import ABC
+from turtle import pos
 from typing import Generic, Mapping, Optional, Tuple, TypeVar
 
 import numpy as np
 import scipy.sparse
 import torch
+from class_resolver import HintOrType, OptionalKwargs
 from torch.utils import data
 
+from ..sampling import NegativeSampler, negative_sampler_resolver
 from ..typing import MappedTriples
 
 __all__ = [
@@ -21,11 +24,10 @@ __all__ = [
     "MultimodalLCWAInstances",
 ]
 
+SampleType = TypeVar("SampleType")
 BatchType = TypeVar("BatchType")
-LCWASampleType = Tuple[MappedTriples, torch.FloatTensor]
-LCWABatchType = Tuple[MappedTriples, torch.FloatTensor]
-SLCWASampleType = TypeVar("SLCWASampleType", bound=MappedTriples)
-SLCWABatchType = Tuple[MappedTriples, MappedTriples, Optional[torch.BoolTensor]]
+LCWASampleType = LCWABatchType = Tuple[MappedTriples, torch.FloatTensor]
+SLCWASampleType = SLCWABatchType = Tuple[MappedTriples, MappedTriples, Optional[torch.BoolTensor]]
 
 
 class Instances(data.Dataset[BatchType], Generic[BatchType], ABC):
@@ -59,21 +61,47 @@ class Instances(data.Dataset[BatchType], Generic[BatchType], ABC):
         raise NotImplementedError
 
 
-class SLCWAInstances(Instances[MappedTriples]):
+class SLCWAInstances(Instances[SLCWASampleType]):
     """Triples and mappings to their indices for sLCWA."""
 
-    def __init__(self, *, mapped_triples: MappedTriples):
+    def __init__(
+        self,
+        *,
+        mapped_triples: MappedTriples,
+        num_entities: Optional[int] = None,
+        num_relations: Optional[int] = None,
+        negative_sampler: HintOrType[NegativeSampler] = None,
+        negative_sampler_kwargs: OptionalKwargs = None,
+    ):
         """Initialize the sLCWA instances.
 
-        :param mapped_triples: The mapped triples, shape: (num_triples, 3)
+        :param mapped_triples: shape: (num_triples, 3)
+            the ID-based triples
+        :param num_entities:
+            the number of entities
+        :param num_relations:
+            the number of relations
+        :param negative_sampler:
+            the negative sampler
+        :param negative_sampler_kwargs:
+            additional keyword-based arguments passed to the negative sampler
         """
         self.mapped_triples = mapped_triples
+        self.sampler = negative_sampler_resolver.make(
+            negative_sampler,
+            pos_kwargs=negative_sampler_kwargs,
+            mapped_triples=mapped_triples,
+            num_entities=num_entities,
+            num_relations=num_relations,
+        )
 
     def __len__(self) -> int:  # noqa: D105
         return self.mapped_triples.shape[0]
 
-    def __getitem__(self, item: int) -> MappedTriples:  # noqa: D105
-        return self.mapped_triples[item]
+    def __getitem__(self, item: int) -> SLCWASampleType:  # noqa: D105
+        positive = self.mapped_triples[item]
+        negative, mask = self.sampler.sample(positive_batch=positive)
+        return positive, negative, mask
 
     @classmethod
     def from_triples(
@@ -84,7 +112,7 @@ class SLCWAInstances(Instances[MappedTriples]):
         num_relations: int,
         **kwargs,
     ) -> Instances:  # noqa:D102
-        return cls(mapped_triples=mapped_triples)
+        return cls(mapped_triples=mapped_triples, num_entities=num_entities, num_relations=num_relations)
 
 
 class LCWAInstances(Instances[LCWABatchType]):
