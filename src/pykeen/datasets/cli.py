@@ -262,7 +262,7 @@ def expected_metrics(dataset: str, max_triples: Optional[int], log_level: str):
 
             # expected metrics
             ks = (1, 3, 5, 10) + tuple(
-                10**i for i in range(2, int(math.ceil(math.log(dataset_instance.num_entities))))
+                10 ** i for i in range(2, int(math.ceil(math.log(dataset_instance.num_entities))))
             )
             this_metrics = dict()
             for label, sides in dict(
