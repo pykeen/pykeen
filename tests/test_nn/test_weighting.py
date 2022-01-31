@@ -3,9 +3,11 @@
 """Tests for edge weightings."""
 
 import unittest
+
+import unittest_templates
+
 import pykeen.nn.weighting
 from tests import cases
-import unittest_templates
 
 try:
     import torch_scatter
