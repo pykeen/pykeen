@@ -565,7 +565,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             batch_size=batch_size,
             drop_last=drop_last,
             shuffle=shuffle,
-            collate_fn=self.get_collator(),
             pin_memory=pin_memory,
         )
 
@@ -804,10 +803,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
     def _create_instances(self, triples_factory: CoreTriplesFactory) -> Instances:
         """Create the training instances at the beginning of the training loop."""
         raise NotImplementedError
-
-    def get_collator(self) -> Optional[Callable[[List[SampleType]], BatchType]]:
-        """Get the batch collator."""
-        return None
 
     @abstractmethod
     def _process_batch(

@@ -3,13 +3,11 @@
 """Training KGE models based on the sLCWA."""
 
 import logging
-from typing import Any, Callable, List, Mapping, Optional
+from typing import Optional
 
 import torch
-from class_resolver import HintOrType
 
 from .training_loop import TrainingLoop
-from ..sampling import NegativeSampler, negative_sampler_resolver
 from ..triples import CoreTriplesFactory, Instances
 from ..triples.instances import SLCWABatchType, SLCWASampleType
 
@@ -26,37 +24,8 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
     [ruffinelli2020]_ call the sLCWA ``NegSamp`` in their work.
     """
 
-    negative_sampler: NegativeSampler
-
-    def __init__(
-        self,
-        *,
-        triples_factory: CoreTriplesFactory,
-        negative_sampler: HintOrType[NegativeSampler] = None,
-        negative_sampler_kwargs: Optional[Mapping[str, Any]] = None,
-        **kwargs,
-    ):
-        """Initialize the training loop.
-
-        :param triples_factory: The training triples factory. Also passed to TrainingLoop.__init__
-        :param negative_sampler: The class, instance, or name of the negative sampler
-        :param negative_sampler_kwargs: Keyword arguments to pass to the negative sampler class on instantiation
-            for every positive one
-        :param kwargs:
-            Additional keyword-based parameters passed to TrainingLoop.__init__
-        """
-        super().__init__(triples_factory=triples_factory, **kwargs)
-        self.negative_sampler = negative_sampler_resolver.make(
-            query=negative_sampler,
-            pos_kwargs=negative_sampler_kwargs,
-            triples_factory=triples_factory,
-        )
-
     def _create_instances(self, triples_factory: CoreTriplesFactory) -> Instances:  # noqa: D102
         return triples_factory.create_slcwa_instances()
-
-    def get_collator(self) -> Callable[[List[SLCWASampleType]], SLCWABatchType]:  # noqa: D102
-        return self.negative_sampler.collate
 
     @staticmethod
     def _get_batch_size(batch: SLCWABatchType) -> int:  # noqa: D102
@@ -84,6 +53,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
             positive_filter = positive_filter[start:stop]
             negative_batch = negative_batch[positive_filter]
         # Make it negative batch broadcastable (required for num_negs_per_pos > 1).
+        negative_score_shape = negative_batch.shape[:-1]
         negative_batch = negative_batch.view(-1, 3)
 
         # Ensure they reside on the device (should hold already for most simple negative samplers, e.g.
