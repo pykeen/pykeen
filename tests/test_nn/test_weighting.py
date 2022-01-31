@@ -11,7 +11,7 @@ from tests import cases
 
 try:
     import torch_scatter
-except:
+except ImportError:
     torch_scatter = None
 
 

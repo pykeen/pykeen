@@ -25,7 +25,9 @@ def softmax(
     num_nodes: Union[None, int, torch.Tensor] = None,
     dim: int = 0,
 ) -> torch.Tensor:
-    r"""Computes a sparsely evaluated softmax.
+    r"""
+    Compute a sparsely evaluated softmax.
+
     Given a value tensor :attr:`src`, this function first groups the values
     along the given dimension based on the indices specified in :attr:`index`,
     and then proceeds to compute the softmax individually for each group.
@@ -186,6 +188,9 @@ class AttentionEdgeWeighting(EdgeWeighting):
         message: Optional[torch.FloatTensor] = None,
         x_e: Optional[torch.FloatTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
+        if message is None or x_e is None:
+            raise ValueError(f"{self.__class__.__name__} requires message and x_e.")
+
         # view for heads
         message_ = message.view(message.shape[0], self.num_heads, -1)
         # compute attention coefficients, shape: (num_edges, num_heads)
