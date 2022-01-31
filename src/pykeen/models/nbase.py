@@ -268,7 +268,11 @@ class ERModel(
         :param kwargs:
             Keyword arguments to pass to the base model
         """
-        super().__init__(triples_factory=triples_factory, **kwargs)
+        super().__init__(
+            num_entities=triples_factory.num_entities,
+            num_relations=triples_factory.num_relations,
+            **kwargs,
+        )
         self.interaction = interaction_resolver.make(interaction, pos_kwargs=interaction_kwargs)
         self.entity_representations = _prepare_representation_module_list(
             representations=entity_representations,

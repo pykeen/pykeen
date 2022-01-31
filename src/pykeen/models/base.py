@@ -98,19 +98,21 @@ class Model(nn.Module, ABC):
     def __init__(
         self,
         *,
-        triples_factory: Optional[CoreTriplesFactory],
+        num_entities: int,
+        num_relations: int,
         loss: HintOrType[Loss] = None,
         loss_kwargs: Optional[Mapping[str, Any]] = None,
         predict_with_sigmoid: bool = False,
         random_seed: Optional[int] = None,
-        num_entities: Optional[int] = None,
-        num_relations: Optional[int] = None,
         use_inverse_relations: bool = False,
     ) -> None:
-        """Initialize the module.
+        """
+        Initialize the module.
 
-        :param triples_factory:
-            The triples factory facilitates access to the dataset.
+        :param num_entities:
+            the number of entities
+        :param num_relations:
+            the number of relations.
         :param loss:
             The loss to use. If None is given, use the loss default specific to the model subclass.
         :param predict_with_sigmoid:
@@ -138,11 +140,8 @@ class Model(nn.Module, ABC):
         else:
             self.loss = loss_resolver.make(loss, pos_kwargs=loss_kwargs)
 
-        self.num_entities, self.num_relations = _resolve_num(
-            triples_factory=triples_factory,
-            num_entities=num_entities,
-            num_relations=num_relations,
-        )
+        self.num_entities = num_entities
+        self.num_relations = num_relations
         self.use_inverse_relations = use_inverse_relations
         self.relation_inverter = relation_inverter_resolver.make(num_relations=num_relations)
 
@@ -700,7 +699,11 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
         :param kwargs:
             additional keyword-based arguments passed to Model.__init__
         """
-        super().__init__(triples_factory=triples_factory, **kwargs)
+        super().__init__(
+            num_entities=triples_factory.num_entities,
+            num_relations=triples_factory.num_relations,
+            **kwargs,
+        )
         # Regularizer
         if regularizer is not None:
             self.regularizer = regularizer
