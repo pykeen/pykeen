@@ -89,7 +89,7 @@ class PseudoTypedNegativeSampler(NegativeSampler):
         :param kwargs:
             Additional keyword based arguments passed to :class:`pykeen.sampling.NegativeSampler`.
         """
-        super().__init__(triples_factory=mapped_triples, **kwargs)
+        super().__init__(mapped_triples=mapped_triples, **kwargs)
         self.data, self.offsets = create_index(mapped_triples=mapped_triples, num_relations=self.num_relations)
 
     def corrupt_batch(self, positive_batch: torch.LongTensor):  # noqa: D102
