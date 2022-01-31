@@ -58,6 +58,7 @@ class BasicNegativeSampler(NegativeSampler):
         if self.num_negs_per_pos > 1:
             positive_batch = positive_batch.repeat_interleave(repeats=self.num_negs_per_pos, dim=0)
 
+        # TODO: this was cross-batch before
         # Bind number of negatives to sample
         num_negs = positive_batch.shape[0]
 

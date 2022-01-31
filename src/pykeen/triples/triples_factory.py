@@ -28,12 +28,14 @@ from typing import (
 import numpy as np
 import pandas as pd
 import torch
+from class_resolver import HintOrType, OptionalKwargs
 
 from .instances import Instances, LCWAInstances, SLCWAInstances
 from .splitting import split
-from .utils import TRIPLES_DF_COLUMNS, get_entities, get_relations, load_triples, tensor_to_df, triple_tensor_to_set
+from .utils import TRIPLES_DF_COLUMNS, get_entities, get_relations, load_triples, tensor_to_df
+from ..sampling import NegativeSampler
 from ..typing import EntityMapping, LabeledTriples, MappedTriples, RelationMapping, TorchRandomHint
-from ..utils import compact_mapping, format_relative_comparison, invert_mapping
+from ..utils import compact_mapping, format_relative_comparison, invert_mapping, triple_tensor_to_set
 
 __all__ = [
     "CoreTriplesFactory",
@@ -458,9 +460,15 @@ class CoreTriplesFactory:
             ]
         )
 
-    def create_slcwa_instances(self) -> Instances:
+    def create_slcwa_instances(
+        self,
+        negative_sampler: HintOrType[NegativeSampler] = None,
+        negative_sampler_kwargs: OptionalKwargs = None,
+    ) -> Instances:
         """Create sLCWA instances for this factory's triples."""
-        return self._create_instances(SLCWAInstances)
+        return self._create_instances(
+            SLCWAInstances, negative_sampler=negative_sampler, negative_sampler_kwargs=negative_sampler_kwargs
+        )
 
     def create_lcwa_instances(self, use_tqdm: Optional[bool] = None, target: Optional[int] = None) -> Instances:
         """Create LCWA instances for this factory's triples."""

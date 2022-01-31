@@ -2,6 +2,7 @@
 
 """Utilities for PyKEEN."""
 
+from collections import defaultdict
 import ftplib
 import functools
 import itertools as itt
@@ -25,6 +26,7 @@ from typing import (
     Mapping,
     Optional,
     Sequence,
+    Set,
     Tuple,
     Type,
     TypeVar,
@@ -50,6 +52,7 @@ __all__ = [
     "compose",
     "clamp_norm",
     "compact_mapping",
+    "create_relation_to_entity_set_mapping",
     "ensure_torch_random_state",
     "format_relative_comparison",
     "invert_mapping",
@@ -102,6 +105,8 @@ __all__ = [
     "product_normalize",
     "compute_box",
     "point_to_box_distance",
+    "triple_tensor_to_set",
+    "is_triple_tensor_subset",
 ]
 
 logger = logging.getLogger(__name__)
@@ -1246,6 +1251,36 @@ def boxe_kg_arity_position_score(
 
     # Finally, compute the norm
     return negative_norm(element_wise_distance, p=p, power_norm=power_norm)
+
+
+def triple_tensor_to_set(tensor: torch.LongTensor) -> Set[Tuple[int, ...]]:
+    """Convert a tensor of triples to a set of int-tuples."""
+    return set(map(tuple, tensor.tolist()))
+
+
+def is_triple_tensor_subset(a: torch.LongTensor, b: torch.LongTensor) -> bool:
+    """Check whether one tensor of triples is a subset of another one."""
+    return triple_tensor_to_set(a).issubset(triple_tensor_to_set(b))
+
+
+def create_relation_to_entity_set_mapping(
+    triples: Iterable[Tuple[int, int, int]],
+) -> Tuple[Mapping[int, Set[int]], Mapping[int, Set[int]]]:
+    """
+    Create mappings from relation IDs to the set of their head / tail entities.
+
+    :param triples:
+        The triples.
+
+    :return:
+        A pair of dictionaries, each mapping relation IDs to entity ID sets.
+    """
+    tails = defaultdict(set)
+    heads = defaultdict(set)
+    for h, r, t in triples:
+        heads[r].add(h)
+        tails[r].add(t)
+    return heads, tails
 
 
 if __name__ == "__main__":

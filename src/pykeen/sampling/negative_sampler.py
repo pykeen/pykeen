@@ -102,11 +102,11 @@ class NegativeSampler(ABC):
         """
         Generate negative samples from the positive batch without application of any filter.
 
-        :param positive_batch: shape: (batch_size, 3)
+        :param positive_batch: shape: `(*batch_dims, 3)`
             The positive triples.
 
-        :return: shape: (batch_size, num_negs_per_pos, 3)
-            The negative triples. ``result[i, :, :]`` contains the negative examples generated from
-            ``positive_batch[i, :]``.
+        :return: shape: `(*batch_dims, num_negs_per_pos, 3)`
+            The negative triples. ``result[*bi, :, :]`` contains the negative examples generated from
+            ``positive_batch[*bi, :]``.
         """
         raise NotImplementedError

@@ -131,7 +131,7 @@ import torch
 from class_resolver import Resolver
 from torch import nn
 
-from ..triples.utils import triple_tensor_to_set
+from ..utils import triple_tensor_to_set
 from ..typing import MappedTriples
 
 __all__ = [

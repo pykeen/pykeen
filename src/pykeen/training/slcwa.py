@@ -6,8 +6,10 @@ import logging
 from typing import Optional
 
 import torch
+from class_resolver import HintOrType, OptionalKwargs
 
 from .training_loop import TrainingLoop
+from ..sampling import NegativeSampler
 from ..triples import CoreTriplesFactory, Instances
 from ..triples.instances import SLCWABatchType, SLCWASampleType
 
@@ -24,8 +26,21 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
     [ruffinelli2020]_ call the sLCWA ``NegSamp`` in their work.
     """
 
+    def __init__(
+        self,
+        negative_sampler: HintOrType[NegativeSampler] = None,
+        negative_sampler_kwargs: OptionalKwargs = None,
+        **kwargs,
+    ) -> None:
+        super().__init__(**kwargs)
+        self.negative_sampler = negative_sampler
+        self.negative_sampler_kwargs = negative_sampler_kwargs
+
     def _create_instances(self, triples_factory: CoreTriplesFactory) -> Instances:  # noqa: D102
-        return triples_factory.create_slcwa_instances()
+        return triples_factory.create_slcwa_instances(
+            negative_sampler=self.negative_sampler,
+            negative_sampler_kwargs=self.negative_sampler_kwargs,
+        )
 
     @staticmethod
     def _get_batch_size(batch: SLCWABatchType) -> int:  # noqa: D102

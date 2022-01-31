@@ -2,9 +2,8 @@
 
 """Instance creation utilities."""
 
-from collections import defaultdict
 import pathlib
-from typing import Callable, Iterable, Mapping, Optional, Sequence, Set, TextIO, Tuple, Union
+from typing import Callable, Mapping, Optional, Sequence, Set, TextIO, Union
 
 import numpy as np
 import pandas
@@ -15,11 +14,8 @@ from ..typing import LabeledTriples
 
 __all__ = [
     "load_triples",
-    "create_relation_to_entity_set_mapping",
     "get_entities",
     "get_relations",
-    "triple_tensor_to_set",
-    "is_triple_tensor_subset",
     "tensor_to_df",
 ]
 
@@ -91,16 +87,6 @@ def load_triples(
     return df.to_numpy()
 
 
-def triple_tensor_to_set(tensor: torch.LongTensor) -> Set[Tuple[int, ...]]:
-    """Convert a tensor of triples to a set of int-tuples."""
-    return set(map(tuple, tensor.tolist()))
-
-
-def is_triple_tensor_subset(a: torch.LongTensor, b: torch.LongTensor) -> bool:
-    """Check whether one tensor of triples is a subset of another one."""
-    return triple_tensor_to_set(a).issubset(triple_tensor_to_set(b))
-
-
 def get_entities(triples: torch.LongTensor) -> Set[int]:
     """Get all entities from the triples."""
     return set(triples[:, [0, 2]].flatten().tolist())
@@ -155,23 +141,3 @@ def tensor_to_df(
     # Re-order columns
     columns = list(TRIPLES_DF_COLUMNS[::2]) + sorted(set(rv.columns).difference(TRIPLES_DF_COLUMNS))
     return rv.loc[:, columns]
-
-
-def create_relation_to_entity_set_mapping(
-    triples: Iterable[Tuple[int, int, int]],
-) -> Tuple[Mapping[int, Set[int]], Mapping[int, Set[int]]]:
-    """
-    Create mappings from relation IDs to the set of their head / tail entities.
-
-    :param triples:
-        The triples.
-
-    :return:
-        A pair of dictionaries, each mapping relation IDs to entity ID sets.
-    """
-    tails = defaultdict(set)
-    heads = defaultdict(set)
-    for h, r, t in triples:
-        heads[r].add(h)
-        tails[r].add(t)
-    return heads, tails
