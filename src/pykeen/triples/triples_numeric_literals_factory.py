@@ -101,9 +101,9 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
     def extra_repr(self) -> str:  # noqa: D102
         return super().extra_repr() + (f"num_literals={len(self.literals_to_id)}")
 
-    def create_slcwa_instances(self) -> MultimodalSLCWAInstances:
+    def create_slcwa_instances(self, **kwargs) -> MultimodalSLCWAInstances:
         """Create multi-modal sLCWA instances for this factory's triples."""
-        slcwa_instances = super().create_slcwa_instances()
+        slcwa_instances = super().create_slcwa_instances(**kwargs)
         return MultimodalSLCWAInstances(
             mapped_triples=slcwa_instances.mapped_triples,
             numeric_literals=self.numeric_literals,
