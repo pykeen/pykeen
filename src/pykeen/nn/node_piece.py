@@ -638,10 +638,7 @@ class NodePieceRepresentation(RepresentationModule):
         )
         # fill padding (nn.Embedding cannot deal with negative indices)
         padding = assignment < 0
-        if padding.any():
-            assignment[padding] = self.padding_idx = assignment.max().item() + 1
-        else:
-            self.padding_idx = None
+        assignment[padding] = self.padding_idx = assignment.max().item() + 1
 
         # create token representations
         if isinstance(token_representation, EmbeddingSpecification):
