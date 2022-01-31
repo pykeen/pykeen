@@ -16,6 +16,15 @@ RelationID = TypeVar("RelationID", int, torch.LongTensor)
 class RelationInverter:
     """An interface for inverse-relation ID mapping."""
 
+    def __init__(self, num_relations: int):
+        """
+        Initialize the relation inversion.
+
+        :param num_relations: >0
+            the number of real relations.
+        """
+        self.num_relations = num_relations
+
     # TODO: method is_inverse?
 
     @abstractmethod
