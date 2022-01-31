@@ -414,6 +414,7 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
         # the output
         pool = numpy.zeros(shape=(num_entities, num_anchors), dtype=bool)
 
+        # TODO: take all (q-1) hop neighbors before selecting from q-hop
         old_reachable = reachable
         for i in range(max_iter):
             # propagate one hop
