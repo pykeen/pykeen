@@ -237,7 +237,7 @@ class KG2E(EntityRelationEmbeddingModel):
         #: a = \mu^T\Sigma^{-1}\mu
         safe_sigma = at_least_eps(sigma)
         sigma_inv = torch.reciprocal(safe_sigma)
-        a = torch.sum(sigma_inv * mu ** 2, dim=-1)
+        a = torch.sum(sigma_inv * mu**2, dim=-1)
 
         #: b = \log \det \Sigma
         b = safe_sigma.log().sum(dim=-1)
@@ -287,7 +287,7 @@ class KG2E(EntityRelationEmbeddingModel):
 
         #: b = (\mu_r - \mu_e)^T\Sigma_r^{-1}(\mu_r - \mu_e)
         mu = mu_r - mu_e
-        b = torch.sum(sigma_r_inv * mu ** 2, dim=-1)
+        b = torch.sum(sigma_r_inv * mu**2, dim=-1)
 
         #: c = \log \frac{det(\Sigma_e)}{det(\Sigma_r)}
         # = sum log (sigma_e)_i - sum log (sigma_r)_i
