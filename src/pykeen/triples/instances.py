@@ -105,20 +105,24 @@ class SLCWAInstances(Instances[SLCWASampleType]):
         return self.mapped_triples.shape[0]
 
     def __getitem__(self, item: int) -> SLCWASampleType:  # noqa: D105
-        positive = self.mapped_triples[item]
-        negative, mask = self.sampler.sample(positive_batch=positive.unsqueeze(dim=0))
+        positive = self.mapped_triples[item].unsqueeze(dim=0)
+        negative, mask = self.sampler.sample(positive_batch=positive)
+        # shape: (1, 3), (1, k, 3), (1, k, 3)?
         return positive, negative, mask
 
     def get_collator(self) -> Callable[[List[SLCWASampleType]], SLCWABatchType]:  # noqa: D102
         def collate(samples: List[SLCWASampleType]) -> SLCWABatchType:
             """Collate samples."""
+            # each shape: (1, 3), (1, k, 3), (1, k, 3)?
             positives, negatives, masks = zip(*samples)
+            positives = torch.cat(positives, dim=0)
+            negatives = torch.cat(negatives, dim=0)
             if masks[0] is None:
                 assert all(m is None for m in masks)
                 masks = None
             else:
-                masks = torch.stack(masks)
-            return torch.stack(positives), torch.stack(negatives), masks
+                masks = torch.cat(masks, dim=0)
+            return positives, negatives, masks
 
         return collate
 

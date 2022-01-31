@@ -8,10 +8,12 @@ from typing import Any, Dict, Optional, TextIO, Tuple, Union
 
 import numpy as np
 import torch
+from class_resolver import HintOrType, OptionalKwargs
 
 from .instances import MultimodalLCWAInstances, MultimodalSLCWAInstances
 from .triples_factory import TriplesFactory
 from .utils import load_triples
+from ..sampling import NegativeSampler
 from ..typing import EntityMapping, LabeledTriples, MappedTriples
 
 __all__ = [
@@ -101,9 +103,15 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
     def extra_repr(self) -> str:  # noqa: D102
         return super().extra_repr() + (f"num_literals={len(self.literals_to_id)}")
 
-    def create_slcwa_instances(self, **kwargs) -> MultimodalSLCWAInstances:
+    def create_slcwa_instances(
+        self,
+        negative_sampler: HintOrType[NegativeSampler] = None,
+        negative_sampler_kwargs: OptionalKwargs = None,
+    ) -> MultimodalSLCWAInstances:
         """Create multi-modal sLCWA instances for this factory's triples."""
-        slcwa_instances = super().create_slcwa_instances(**kwargs)
+        slcwa_instances = super().create_slcwa_instances(
+            negative_sampler=negative_sampler, negative_sampler_kwargs=negative_sampler_kwargs
+        )
         return MultimodalSLCWAInstances(
             mapped_triples=slcwa_instances.mapped_triples,
             numeric_literals=self.numeric_literals,

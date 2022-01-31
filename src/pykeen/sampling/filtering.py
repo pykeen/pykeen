@@ -131,8 +131,8 @@ import torch
 from class_resolver import Resolver
 from torch import nn
 
-from ..utils import triple_tensor_to_set
 from ..typing import MappedTriples
+from ..utils import triple_tensor_to_set
 
 __all__ = [
     "filterer_resolver",

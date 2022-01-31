@@ -2,7 +2,6 @@
 
 """Utilities for PyKEEN."""
 
-from collections import defaultdict
 import ftplib
 import functools
 import itertools as itt
@@ -14,6 +13,7 @@ import os
 import pathlib
 import random
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from io import BytesIO
 from pathlib import Path
 from typing import (
