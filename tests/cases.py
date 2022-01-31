@@ -1670,10 +1670,10 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
             triples = self.factory.mapped_triples.to(self.model.device)
             if target == LABEL_HEAD:
                 sel_col, start_col = 0, 1
+            elif target == LABEL_RELATION:
+                sel_col, start_col = 1, 2
             elif target == LABEL_TAIL:
                 sel_col, start_col = 2, 0
-            elif target == LABEL_RELATION:
-                raise NotImplementedError(target)
             else:
                 raise ValueError(target)
             stop_col = start_col + 2
