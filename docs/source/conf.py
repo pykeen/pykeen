@@ -52,7 +52,7 @@ copyright = f'2019-{date.today().year}, PyKEEN Project Team'
 author = 'PyKEEN Project Team'
 
 # The full version, including alpha/beta/rc tags.
-release = '1.6.1-dev'
+release = '1.7.1-dev'
 
 # The short X.Y version.
 parsed_version = re.match(
@@ -258,6 +258,7 @@ intersphinx_mapping = {
     'numpy': ('https://numpy.org/doc/stable', None),
     'optuna': ('https://optuna.readthedocs.io/en/latest', None),
     'pybel': ('https://pybel.readthedocs.io/en/latest/', None),
+    'rexmex': ('https://rexmex.readthedocs.io/en/latest/', None),
     'bio2bel': ('https://bio2bel.readthedocs.io/en/latest/', None),
     'boto3': ('https://boto3.amazonaws.com/v1/documentation/api/latest/', None),
     'scipy': ('https://docs.scipy.org/doc/scipy/reference/', None),

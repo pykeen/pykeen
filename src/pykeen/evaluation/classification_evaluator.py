@@ -2,74 +2,65 @@
 
 """Implementation of wrapper around sklearn metrics."""
 
-from dataclasses import dataclass, field, fields
+from dataclasses import dataclass, field, fields, make_dataclass
 from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 import torch
 from dataclasses_json import dataclass_json
-from sklearn import metrics
 
 from .evaluator import Evaluator, MetricResults
+from .rexmex_compat import classifier_annotator
 from ..typing import MappedTriples
 from ..utils import fix_dataclass_init_docs
 
 __all__ = [
-    "SklearnEvaluator",
-    "SklearnMetricResults",
+    "ClassificationEvaluator",
+    "ClassificationMetricResults",
 ]
+
+_fields = [
+    (
+        metadata.func.__name__,
+        float,
+        field(
+            metadata=dict(
+                name=metadata.name,
+                doc=metadata.description or "",
+                link=metadata.link,
+                range=metadata.interval(),
+                increasing=metadata.higher_is_better,
+                f=metadata.func,
+            )
+        ),
+    )
+    for metadata in classifier_annotator.metrics.values()
+]
+
+ClassificationMetricResultsBase = make_dataclass(
+    "ClassificationMetricResultsBase",
+    _fields,
+    bases=(MetricResults,),
+)
 
 
 @fix_dataclass_init_docs
 @dataclass_json
 @dataclass
-class SklearnMetricResults(MetricResults):
+class ClassificationMetricResults(ClassificationMetricResultsBase):  # type: ignore
     """Results from computing metrics."""
-
-    #: The area under the ROC curve
-    roc_auc_score: float = field(
-        metadata=dict(
-            name="AUC-ROC",
-            doc="The area under the ROC curve, on [0, 1]. Higher is better.",
-            f=metrics.roc_auc_score,
-        )
-    )
-    #: The area under the precision-recall curve
-    average_precision_score: float = field(
-        metadata=dict(
-            name="Average Precision",
-            doc="The area under the precision-recall curve, on [0, 1]. Higher is better.",
-            f=metrics.average_precision_score,
-        )
-    )
-
-    #: The coverage error
-    # coverage_error: float = field(metadata=dict(
-    #     doc='The coverage error',
-    #     f=metrics.coverage_error,
-    # ))
-    #: The label ranking loss (APS)
-    # label_ranking_average_precision_score: float = field(metadata=dict(
-    #     doc='The label ranking loss (APS)',
-    #     f=metrics.label_ranking_average_precision_score,
-    # ))
-    # #: The label ranking loss
-    # label_ranking_loss: float = field(metadata=dict(
-    #     doc='The label ranking loss',
-    #     f=metrics.label_ranking_loss,
-    # ))
 
     @classmethod
     def from_scores(cls, y_true, y_score):
         """Return an instance of these metrics from a given set of true and scores."""
-        return SklearnMetricResults(**{f.name: f.metadata["f"](y_true, y_score) for f in fields(cls)})
+        return ClassificationMetricResults(**{f.name: f.metadata["f"](y_true, y_score) for f in fields(cls)})
 
     def get_metric(self, name: str) -> float:  # noqa: D102
         return getattr(self, name)
 
 
-class SklearnEvaluator(Evaluator):
-    """An evaluator that uses a Scikit-learn metric."""
+class ClassificationEvaluator(Evaluator):
+    """An evaluator that uses a classification metrics."""
 
     all_scores: Dict[Tuple[Any, ...], np.ndarray]
     all_positives: Dict[Tuple[Any, ...], np.ndarray]
@@ -126,7 +117,7 @@ class SklearnEvaluator(Evaluator):
 
         self._process_scores(keys=hrt_batch[:, 1:], scores=scores, positive_mask=dense_positive_mask, head_side=True)
 
-    def finalize(self) -> SklearnMetricResults:  # noqa: D102
+    def finalize(self) -> ClassificationMetricResults:  # noqa: D102
         # Important: The order of the values of an dictionary is not guaranteed. Hence, we need to retrieve scores and
         # masks using the exact same key order.
         all_keys = list(self.all_scores.keys())
@@ -139,4 +130,4 @@ class SklearnEvaluator(Evaluator):
         self.all_positives.clear()
         self.all_scores.clear()
 
-        return SklearnMetricResults.from_scores(y_true, y_score)
+        return ClassificationMetricResults.from_scores(y_true, y_score)

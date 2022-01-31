@@ -24,14 +24,15 @@ from click_default_group import DefaultGroup
 from tabulate import tabulate
 
 from .datasets import dataset_resolver
-from .evaluation import evaluator_resolver, get_metric_list, metric_resolver
+from .evaluation import evaluator_resolver, get_metric_list
 from .experiments.cli import experiments
 from .hpo.cli import optimize
 from .hpo.samplers import sampler_resolver
 from .losses import loss_resolver
 from .lr_schedulers import lr_scheduler_resolver
-from .models import model_resolver
+from .models import ComplExLiteral, DistMultLiteral, DistMultLiteralGated, model_resolver
 from .models.cli import build_cli_from_cls
+from .nn.modules import LiteralInteraction, interaction_resolver
 from .optimizers import optimizer_resolver
 from .regularizers import regularizer_resolver
 from .sampling import negative_sampler_resolver
@@ -69,47 +70,87 @@ def ls():
 @tablefmt_option
 def models(tablefmt: str):
     """List models."""
-    click.echo(_help_models(tablefmt))
+    click.echo(_help_models(tablefmt=tablefmt)[0])
 
 
-def _help_models(tablefmt: str, link_fmt: Optional[str] = None):
-    lines = list(_get_model_lines(tablefmt=tablefmt, link_fmt=link_fmt))
-    headers = ["Name", "Reference", "Citation"] if tablefmt in {"rst", "github"} else ["Name", "Citation"]
-    return tabulate(
-        lines,
-        headers=headers,
-        tablefmt=tablefmt,
+def _help_models(tablefmt: str = "github", *, link_fmt: Optional[str] = None):
+    lines = sorted(_get_model_lines(link_fmt=link_fmt))
+    headers = ["Name", "Model", "Interaction", "Citation"]
+    return (
+        tabulate(
+            lines,
+            headers=headers,
+            tablefmt=tablefmt,
+        ),
+        len(lines),
     )
 
 
-def _get_model_lines(tablefmt: str, link_fmt: Optional[str] = None):
-    for _, model in sorted(model_resolver.lookup_dict.items()):
-        reference = f"pykeen.models.{model.__name__}"
-        docdata = getattr(model, "__docdata__", None)
-        if docdata is not None:
-            if link_fmt:
-                reference = f"[`{reference}`]({link_fmt.format(reference)})"
+_MODEL_MAP = {
+    DistMultLiteralGated: LiteralInteraction,
+    DistMultLiteral: LiteralInteraction,
+    ComplExLiteral: LiteralInteraction,
+}
+
+
+def _get_model_lines(*, link_fmt: Optional[str] = None):
+    seen_interactions = set()
+    for _, model_cls in sorted(model_resolver.lookup_dict.items()):
+        try:
+            if model_cls in _MODEL_MAP:
+                interaction_cls = _MODEL_MAP[model_cls]
             else:
-                reference = f"`{reference}`"
-            name = docdata.get("name", model.__name__)
-            citation = docdata["citation"]
-            citation_str = f"[{citation['author']} *et al.*, {citation['year']}]({citation['link']})"
-            yield name, reference, citation_str
+                interaction_cls = interaction_resolver.lookup(model_resolver.normalize_cls(model_cls))
+        except KeyError:
+            click.echo(f"could not look up {model_resolver.normalize_cls(model_cls)}")
+            interaction_reference = None
         else:
-            line = str(model.__doc__.splitlines()[0])
-            l, r = line.find("["), line.find("]")
-            if tablefmt == "rst":
-                yield model.__name__, f":class:`{reference}`", line[l : r + 2]
-            elif tablefmt == "github":
-                author, year = line[1 + l : r - 4], line[r - 4 : r]
-                if link_fmt:
-                    reference = f"[`{reference}`]({link_fmt.format(reference)})"
-                else:
-                    reference = f"`{reference}`"
-                yield model.__name__, reference, f"{author.capitalize()} *et al.*, {year}"
+            seen_interactions.add(interaction_cls)
+            interaction_reference = f"pykeen.nn.{interaction_cls.__name__}"
+
+        model_reference = f"pykeen.models.{model_cls.__name__}"
+        docdata = getattr(model_cls, "__docdata__", None)
+        if docdata is None:
+            raise ValueError("All models must have docdata")
+        if link_fmt:
+            model_reference = _fmt_ref(model_reference, link_fmt)
+        else:
+            model_reference = f"`{model_reference}`"
+
+        if interaction_reference:
+            if link_fmt:
+                interaction_reference = _fmt_ref(interaction_reference, link_fmt)
             else:
-                author, year = line[1 + l : r - 4], line[r - 4 : r]
-                yield model.__name__, f"{author.capitalize()}, {year}"
+                interaction_reference = f"`{interaction_reference}`"
+        else:
+            interaction_reference = ""
+
+        name = docdata.get("name", model_cls.__name__)
+        yield name, model_reference, interaction_reference, _citation(docdata)
+
+    for interaction_cls in set(interaction_resolver) - seen_interactions:
+        docdata = getattr(interaction_cls, "__docdata__", None)
+        if docdata is None:
+            raise ValueError(f"All unmodeled interactions must have docdata: {interaction_cls}")
+        name = docdata.get("name")
+        if name is None:
+            raise ValueError(f"All unmodeled interactions must have a name: {interaction_cls}")
+        yield name, "", _fmt_ref(
+            f"pykeen.nn.{interaction_cls.__name__}", link_fmt, f"pykeen.nn.module.{interaction_cls.__name__}"
+        ), _citation(docdata)
+
+
+def _citation(dd):
+    citation = dd["citation"]
+    return f"[{citation['author']} *et al.*, {citation['year']}]({citation['link']})"
+
+
+def _fmt_ref(model_reference: str, link_fmt: Optional[str], alt_reference: Optional[str] = None) -> str:
+    if model_reference is None:
+        return ""
+    if link_fmt is None:
+        return f"`{model_reference}`"
+    return f"[`{model_reference}`]({link_fmt.format(alt_reference or model_reference)})"
 
 
 @ls.command()
@@ -310,15 +351,19 @@ def metrics(tablefmt: str):
     click.echo(_help_metrics(tablefmt))
 
 
-def _help_metrics(tablefmt, link_fmt=None):
+def _help_metrics(tablefmt):
     return tabulate(
-        sorted(_get_metrics_lines(tablefmt, link_fmt=link_fmt)),
+        sorted(_get_metrics_lines(tablefmt), key=lambda t: (t[4], t[0])),
         headers=(
-            ["Name", "Reference"]
-            if tablefmt == "rst"
-            else ["Name", "Description"]
+            [
+                "Name",
+                "Interval",
+                "Direction",
+                "Description",
+                "Type",
+            ]
             if tablefmt == "github"
-            else ["Metric", "Description", "Reference"]
+            else ["Metric", "Interval", "Direction", "Description", "Type", "Reference"]
         ),
         tablefmt=tablefmt,
     )
@@ -362,18 +407,28 @@ def _help_hpo_samplers(tablefmt: str, link_fmt: Optional[str] = None):
     )
 
 
-def _get_metrics_lines(tablefmt: str, link_fmt=None):
-    if tablefmt == "rst":
-        for name, value in metric_resolver.lookup_dict.items():
-            yield name, f":class:`pykeen.evaluation.{value.__name__}`"
-    else:
-        for field, name, value in get_metric_list():
-            if field.name in {"rank_std", "rank_var", "rank_mad"}:
-                continue
-            if tablefmt == "github":
-                yield field.metadata["name"], field.metadata["doc"]
-            else:
-                yield field.metadata["name"], field.metadata["doc"], name, f"pykeen.evaluation.{value.__name__}"
+METRIC_NAMES = {
+    "classification": "Classification",
+    "rankbased": "Ranking",
+}
+
+
+def _get_metrics_lines(tablefmt: str):
+    for field, name, value in get_metric_list():
+        if field.name in {"rank_std", "rank_var", "rank_mad", "rank_count"}:
+            continue
+        label = field.metadata["name"]
+        link = field.metadata["link"]
+        yv = [
+            f"[{label}]({link})",
+            field.metadata["range"],
+            "📈" if field.metadata["increasing"] else "📉",
+            field.metadata["doc"],
+            METRIC_NAMES[name],
+        ]
+        if tablefmt != "github":
+            yv.append(f"pykeen.evaluation.{value.__name__}")
+        yield tuple(yv)
 
 
 def _get_lines(d, tablefmt, submodule, link_fmt: Optional[str] = None):
@@ -488,14 +543,16 @@ def get_readme() -> str:
     )
     readme_template = environment.get_template("README.md")
     tablefmt = "github"
+    api_link_fmt = "https://pykeen.readthedocs.io/en/latest/api/{}.html"
+    models, n_models = _help_models(tablefmt, link_fmt=api_link_fmt)
     return readme_template.render(
-        models=_help_models(tablefmt, link_fmt="https://pykeen.readthedocs.io/en/latest/api/{}.html"),
-        n_models=len(model_resolver.lookup_dict),
-        regularizers=_help_regularizers(tablefmt, link_fmt="https://pykeen.readthedocs.io/en/latest/api/{}.html"),
+        models=models,
+        n_models=n_models,
+        regularizers=_help_regularizers(tablefmt, link_fmt=api_link_fmt),
         n_regularizers=len(regularizer_resolver.lookup_dict),
-        losses=_help_losses(tablefmt, link_fmt="https://pykeen.readthedocs.io/en/latest/api/{}.html"),
+        losses=_help_losses(tablefmt, link_fmt=api_link_fmt),
         n_losses=len(loss_resolver.lookup_dict),
-        datasets=_help_datasets(tablefmt, link_fmt="https://pykeen.readthedocs.io/en/latest/api/{}.html"),
+        datasets=_help_datasets(tablefmt, link_fmt=api_link_fmt),
         n_datasets=len(dataset_resolver.lookup_dict),
         training_loops=_help_training(
             tablefmt,
@@ -504,27 +561,20 @@ def get_readme() -> str:
         n_training_loops=len(training_loop_resolver.lookup_dict),
         negative_samplers=_help_negative_samplers(
             tablefmt,
-            link_fmt="https://pykeen.readthedocs.io/en/latest/api/{}.html",
+            link_fmt=api_link_fmt,
         ),
         n_negative_samplers=len(negative_sampler_resolver.lookup_dict),
-        optimizers=_help_optimizers(tablefmt, link_fmt="https://pytorch.org/docs/stable/optim.html#{}"),
-        n_optimizers=len(optimizer_resolver.lookup_dict),
         stoppers=_help_stoppers(
             tablefmt,
             link_fmt="https://pykeen.readthedocs.io/en/latest/reference/stoppers.html#{}",
         ),
         n_stoppers=len(stopper_resolver.lookup_dict),
-        evaluators=_help_evaluators(tablefmt, link_fmt="https://pykeen.readthedocs.io/en/latest/api/{}.html"),
+        evaluators=_help_evaluators(tablefmt, link_fmt=api_link_fmt),
         n_evaluators=len(evaluator_resolver.lookup_dict),
-        metrics=_help_metrics(tablefmt, link_fmt="https://pykeen.readthedocs.io/en/latest/api/{}.html"),
+        metrics=_help_metrics(tablefmt),
         n_metrics=len(get_metric_list()),
-        trackers=_help_trackers(tablefmt, link_fmt="https://pykeen.readthedocs.io/en/latest/api/{}.html"),
+        trackers=_help_trackers(tablefmt, link_fmt=api_link_fmt),
         n_trackers=len(tracker_resolver.lookup_dict),
-        hpo_samplers=_help_hpo_samplers(
-            tablefmt,
-            link_fmt="https://optuna.readthedocs.io/en/stable/reference/generated/{}.html",
-        ),
-        n_hpo_samplers=len(sampler_resolver.lookup_dict),
     )
 
 

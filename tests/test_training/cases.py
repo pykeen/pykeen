@@ -10,11 +10,11 @@ import unittest_templates
 from torch.optim import Adam, Optimizer
 
 from pykeen.datasets import Nations
-from pykeen.losses import CrossEntropyLoss, Loss
+from pykeen.losses import Loss
 from pykeen.models import ConvE, Model, TransE
 from pykeen.sampling.filtering import Filterer
 from pykeen.training import TrainingLoop
-from pykeen.training.training_loop import NonFiniteLossError, TrainingApproachLossMismatchError
+from pykeen.training.training_loop import NonFiniteLossError
 from pykeen.triples import TriplesFactory
 
 __all__ = [
@@ -181,16 +181,3 @@ class SLCWATrainingLoopTestCase(TrainingLoopTestCase):
         kwargs["negative_sampler"] = "basic"
         kwargs["negative_sampler_kwargs"] = {"filterer": self.filterer_cls}
         return kwargs
-
-    def test_blacklist_loss_on_slcwa(self):
-        """Test an allowed sLCWA loss."""
-        model = TransE(
-            triples_factory=self.triples_factory,
-            loss=CrossEntropyLoss(),
-        )
-        with self.assertRaises(TrainingApproachLossMismatchError):
-            self.cls(
-                model=model,
-                triples_factory=self.triples_factory,
-                automatic_memory_optimization=False,
-            )

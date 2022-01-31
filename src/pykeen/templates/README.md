@@ -128,10 +128,6 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 
 {{ regularizers }}
 
-### Optimizers ({{ n_optimizers }})
-
-{{ optimizers }}
-
 ### Training Loops ({{ n_training_loops }})
 
 {{ training_loops }}
@@ -155,16 +151,6 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 ### Trackers ({{ n_trackers }})
 
 {{ trackers }}
-
-## Hyper-parameter Optimization
-
-### Samplers ({{ n_hpo_samplers }})
-
-{{ hpo_samplers }}
-
-Any sampler class extending the [optuna.samplers.BaseSampler](https://optuna.readthedocs.io/en/stable/reference/generated/optuna.samplers.BaseSampler.html#optuna.samplers.BaseSampler),
-such as their sampler implementing the [CMA-ES](https://optuna.readthedocs.io/en/stable/reference/generated/optuna.samplers.CmaEsSampler.html#optuna.samplers.CmaEsSampler)
-algorithm, can also be used.
 
 ## Experimentation
 
@@ -192,14 +178,16 @@ $ pykeen experiments ablation ~/path/to/config.json
 ### Large-scale Reproducibility and Benchmarking Study
 
 We used PyKEEN to perform a large-scale reproducibility and benchmarking study which are described in
-[our article](https://arxiv.org/abs/2006.13365):
+[our article](https://doi.org/10.1109/TPAMI.2021.3124805):
 
 ```bibtex
 @article{ali2020benchmarking,
-  title={Bringing Light Into the Dark: A Large-scale Evaluation of Knowledge Graph Embedding Models Under a Unified Framework},
   author={Ali, Mehdi and Berrendorf, Max and Hoyt, Charles Tapley and Vermue, Laurent and Galkin, Mikhail and Sharifzadeh, Sahand and Fischer, Asja and Tresp, Volker and Lehmann, Jens},
-  journal={arXiv preprint arXiv:2006.13365},
-  year={2020}
+  journal={IEEE Transactions on Pattern Analysis and Machine Intelligence},
+  title={Bringing Light Into the Dark: A Large-scale Evaluation of Knowledge Graph Embedding Models under a Unified Framework},
+  year={2021},
+  pages={1-1},
+  doi={10.1109/TPAMI.2021.3124805}}
 }
 ```
 
@@ -238,9 +226,10 @@ The development of PyKEEN has been funded by the following grants:
 
 | Funding Body                                             | Program                                                                                                                       | Grant           |
 |----------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------|-----------------|
+| DARPA                                                    | [Young Faculty Award (PI: Benjamin Gyori)](https://indralab.github.io/#projects)                                              | W911NF2010255   |
 | DARPA                                                    | [Automating Scientific Knowledge Extraction (ASKE)](https://www.darpa.mil/program/automating-scientific-knowledge-extraction) | HR00111990009   |
 | German Federal Ministry of Education and Research (BMBF) | [Maschinelles Lernen mit Wissensgraphen (MLWin)](https://mlwin.de)                                                            | 01IS18050D      |
-| German Federal Ministry of Education and Research (BMBF) | [Munich Center for Machine Learning (MCML)](https://mcml.ai)                                                            | 01IS18036A      |
+| German Federal Ministry of Education and Research (BMBF) | [Munich Center for Machine Learning (MCML)](https://mcml.ai)                                                                  | 01IS18036A      |
 | Innovation Fund Denmark (Innovationsfonden)              | [Danish Center for Big Data Analytics driven Innovation (DABAI)](https://dabai.dk)                                            | Grand Solutions |
 
 ### Logo

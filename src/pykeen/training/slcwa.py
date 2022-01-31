@@ -9,7 +9,6 @@ import torch
 from class_resolver import HintOrType
 
 from .training_loop import TrainingLoop
-from ..losses import CrossEntropyLoss
 from ..sampling import NegativeSampler, negative_sampler_resolver
 from ..triples import CoreTriplesFactory, Instances
 from ..triples.instances import SLCWABatchType, SLCWASampleType
@@ -28,7 +27,6 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
     """
 
     negative_sampler: NegativeSampler
-    loss_blacklist = [CrossEntropyLoss]
 
     def __init__(
         self,

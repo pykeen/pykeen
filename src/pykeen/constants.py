@@ -3,8 +3,21 @@
 """Constants for PyKEEN."""
 
 from pathlib import Path
+from typing import Mapping
 
 import pystow
+import torch
+
+from .typing import (
+    COLUMN_HEAD,
+    COLUMN_RELATION,
+    COLUMN_TAIL,
+    LABEL_HEAD,
+    LABEL_RELATION,
+    LABEL_TAIL,
+    Target,
+    TargetColumn,
+)
 
 __all__ = [
     "PYKEEN_HOME",
@@ -13,6 +26,7 @@ __all__ = [
     "PYKEEN_EXPERIMENTS",
     "PYKEEN_CHECKPOINTS",
     "PYKEEN_LOGS",
+    "AGGREGATIONS",
 ]
 
 #: A manager around the PyKEEN data folder. It defaults to ``~/.data/pykeen``.
@@ -40,3 +54,13 @@ DEFAULT_DROPOUT_HPO_RANGE = dict(type=float, low=0.0, high=0.5, q=0.1)
 DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE = dict(type=int, low=16, high=256, q=16)
 
 USER_DEFINED_CODE = "<user defined>"
+
+AGGREGATIONS = {func.__name__: func for func in [torch.sum, torch.max, torch.mean, torch.logsumexp]}
+
+# TODO: extend to relation, cf. https://github.com/pykeen/pykeen/pull/728
+# SIDES: Tuple[Target, ...] = (LABEL_HEAD, LABEL_TAIL)
+TARGET_TO_INDEX: Mapping[Target, TargetColumn] = {
+    LABEL_HEAD: COLUMN_HEAD,
+    LABEL_RELATION: COLUMN_RELATION,
+    LABEL_TAIL: COLUMN_TAIL,
+}

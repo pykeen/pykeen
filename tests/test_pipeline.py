@@ -2,6 +2,7 @@
 
 """Test the PyKEEN pipeline function."""
 
+import pathlib
 import tempfile
 import unittest
 
@@ -11,7 +12,7 @@ import torch
 
 import pykeen.regularizers
 from pykeen.datasets import EagerDataset, Nations
-from pykeen.models import ERModel, Model
+from pykeen.models import ERModel, FixedModel, Model
 from pykeen.models.predict import (
     get_all_prediction_df,
     get_head_prediction_df,
@@ -22,11 +23,11 @@ from pykeen.models.predict import (
 from pykeen.models.resolve import DimensionError, make_model, make_model_cls
 from pykeen.nn.modules import TransEInteraction
 from pykeen.pipeline import PipelineResult, pipeline
+from pykeen.pipeline.api import replicate_pipeline_from_config
 from pykeen.regularizers import NoRegularizer
 from pykeen.training import SLCWATrainingLoop
 from pykeen.triples.generation import generate_triples_factory
 from pykeen.utils import resolve_device
-from tests.mocks import MockModel
 
 
 class TestPipeline(unittest.TestCase):
@@ -156,7 +157,7 @@ class TestPipeline(unittest.TestCase):
             ["head_id", "head_label", "relation_id", "relation_label", "tail_id", "tail_label", "score"],
             list(all_df.columns),
         )
-        possible = self.dataset.training.num_relations * self.model.num_entities ** 2
+        possible = self.dataset.training.num_relations * self.model.num_entities**2
         self.assertEqual(possible, len(all_df.index))
 
     def test_predict_all_remove_known(self):
@@ -172,7 +173,7 @@ class TestPipeline(unittest.TestCase):
             ["head_id", "head_label", "relation_id", "relation_label", "tail_id", "tail_label", "score"],
             list(all_df.columns),
         )
-        possible = self.dataset.training.num_relations * self.model.num_entities ** 2
+        possible = self.dataset.training.num_relations * self.model.num_entities**2
         known = self.dataset.training.num_triples + self.testing_mapped_triples.shape[0]
         self.assertNotEqual(possible, known, msg="testing and training triples cover all possible triples")
         self.assertEqual(possible - known, len(all_df.index))
@@ -199,7 +200,7 @@ class TestPipeline(unittest.TestCase):
             ],
             list(all_df.columns),
         )
-        possible = self.dataset.training.num_relations * self.model.num_entities ** 2
+        possible = self.dataset.training.num_relations * self.model.num_entities**2
         self.assertEqual(possible, len(all_df.index))
         self.assertEqual(self.dataset.training.num_triples, all_df["in_training"].sum())
         self.assertEqual(self.testing_mapped_triples.shape[0], all_df["in_testing"].sum())
@@ -343,6 +344,35 @@ class TestPipelineTriples(unittest.TestCase):
         self.assertTrue(losses)
 
 
+class TestPipelineReplicate(unittest.TestCase):
+    """Test the replication with pipeline."""
+
+    def setUp(self) -> None:  # noqa: D102
+        self.tmp_dir = tempfile.TemporaryDirectory()
+        self.tmp_dir_path = pathlib.Path(self.tmp_dir.name)
+
+    def tearDown(self) -> None:  # noqa: D102
+        self.tmp_dir.cleanup()
+
+    def test_replicate_pipeline_from_config(self):
+        """Test replication from config."""
+        replicate_pipeline_from_config(
+            config=dict(
+                metadata=dict(),
+                pipeline=dict(
+                    dataset="nations",
+                    model="transe",
+                ),
+                results={
+                    "hits_at_k": {"best": {"10": 0.538}},
+                    "mean_rank": {"best": 163},
+                },
+            ),
+            directory=self.tmp_dir_path,
+            replicates=1,
+        )
+
+
 class TestPipelineCheckpoints(unittest.TestCase):
     """Test the pipeline with checkpoints."""
 
@@ -446,7 +476,7 @@ class TestPipelineEvaluationFiltering(unittest.TestCase):
         cls.device = resolve_device("cuda")
         cls.dataset = Nations()
 
-        cls.model = MockModel(triples_factory=cls.dataset.training)
+        cls.model = FixedModel(triples_factory=cls.dataset.training)
 
         # The MockModel gives the highest score to the highest entity id
         max_score = cls.dataset.num_entities - 1
