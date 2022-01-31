@@ -219,6 +219,7 @@ from ..utils import (
     fix_dataclass_init_docs,
     get_json_bytes_io,
     get_model_io,
+    load_configuration,
     random_non_negative_int,
     resolve_device,
     set_random_seed,
@@ -480,7 +481,7 @@ def replicate_pipeline_from_path(
 ) -> None:
     """Run the same pipeline several times from a configuration file by path.
 
-    :param path: The path to the JSON configuration for the experiment.
+    :param path: The path to the JSON/YAML configuration for the experiment.
     :param directory: The output directory
     :param replicates: The number of replicates to run.
     :param move_to_cpu: Should the model be moved back to the CPU? Only relevant if training on GPU.
@@ -575,16 +576,16 @@ def pipeline_from_path(
     path: Union[str, pathlib.Path],
     **kwargs,
 ) -> PipelineResult:
-    """Run the pipeline with configuration in a JSON file at the given path.
+    """Run the pipeline with configuration in a JSON/YAML file at the given path.
 
-    :param path: The path to an experiment JSON file. The loaded JSON is passed to :func:`pipeline_from_config`.
+    :param path:
+        The path to an experiment configuration file. The loaded configuration is passed to
+        :func:`pipeline_from_config`.
     :param kwargs: Additional kwargs to forward to :func:`pipeline`.
     :return: The results of running the pipeline on the given configuration.
     """
-    with open(path) as file:
-        config = json.load(file)
     return pipeline_from_config(
-        config=config,
+        config=load_configuration(path),
         **kwargs,
     )
 

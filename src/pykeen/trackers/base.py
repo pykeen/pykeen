@@ -92,7 +92,7 @@ class ConsoleResultTracker(ResultTracker):
         if writer == "tqdm":
             self.write = tqdm.write
         elif writer == "builtin":
-            self.write = print
+            self.write = print  # noqa:T002
         elif writer == "logging":
             self.write = logging.getLogger("pykeen").info
 

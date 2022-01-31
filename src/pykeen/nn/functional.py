@@ -22,8 +22,10 @@ from .sim import KG2E_SIMILARITIES
 from ..moves import irfft, rfft
 from ..typing import GaussianDistribution
 from ..utils import (
+    boxe_kg_arity_position_score,
     broadcast_cat,
     clamp_norm,
+    compute_box,
     estimate_cost_of_sequence,
     extended_einsum,
     is_cudnn_error,
@@ -36,6 +38,7 @@ from ..utils import (
 )
 
 __all__ = [
+    "boxe_interaction",
     "complex_interaction",
     "conve_interaction",
     "convkb_interaction",
@@ -1186,3 +1189,82 @@ def cross_e_interaction(
         x = dropout(x)
     # similarity
     return (x * t).sum(dim=-1)
+
+
+def boxe_interaction(
+    # head
+    h_pos: torch.FloatTensor,
+    h_bump: torch.FloatTensor,
+    # relation box: head
+    rh_base: torch.FloatTensor,
+    rh_delta: torch.FloatTensor,
+    rh_size: torch.FloatTensor,
+    # relation box: tail
+    rt_base: torch.FloatTensor,
+    rt_delta: torch.FloatTensor,
+    rt_size: torch.FloatTensor,
+    # tail
+    t_pos: torch.FloatTensor,
+    t_bump: torch.FloatTensor,
+    # power norm
+    tanh_map: bool = True,
+    p: int = 2,
+    power_norm: bool = False,
+) -> torch.FloatTensor:
+    """
+    Evalute the BoxE interaction function from [abboud2020]_.
+
+    Entities are described via position and bump. Relations are described as a pair of boxes, where each box is
+    parametrized as triple (base, delta, size), where # TODO
+
+    .. note ::
+        this interaction relies on Abboud's point-to-box distance
+        :func:`pykeen.utils.point_to_box_distance`.
+
+    :param h_pos: shape: (batch_size, num_heads, 1, 1, d)
+        the head entity position
+    :param h_bump: shape: (batch_size, num_heads, 1, 1, d)
+        the head entity bump
+
+    :param rh_base: shape: (batch_size, 1, num_relations, 1, d)
+        the relation-specific head box base position
+    :param rh_delta: shape: (batch_size, 1, num_relations, 1, d)
+        # the relation-specific head box base shape (normalized to have a volume of 1):
+    :param rh_size: shape: (batch_size, 1, num_relations, 1, 1)
+        the relation-specific head box size (a scalar)
+    :param rt_base: shape: (batch_size, 1, num_relations, 1, d)
+        the relation-specific tail box base position
+    :param rt_delta: shape: (batch_size, 1, num_relations, 1, d)
+        # the relation-specific tail box base shape (normalized to have a volume of 1):
+    :param rt_size: shape: (batch_size, 1, num_relations, 1, d)
+        the relation-specific tail box size
+
+    :param t_pos: shape: (batch_size, 1, 1, num_tails, d)
+        the tail entity position
+    :param t_bump: shape: (batch_size, 1, 1, num_tails, d)
+        the tail entity bump
+
+    :param tanh_map:
+        whether to apply the tanh mapping
+    :param p:
+        the order of the norm to apply
+    :param power_norm:
+        whether to use the p-th power of the p-norm instead
+
+    :return: shape: (batch_size, num_heads, num_relations, num_tails)
+        The scores.
+    """
+    return sum(
+        boxe_kg_arity_position_score(
+            entity_pos=entity_pos,
+            other_entity_bump=other_entity_pos,
+            relation_box=compute_box(base=base, delta=delta, size=size),
+            tanh_map=tanh_map,
+            p=p,
+            power_norm=power_norm,
+        )
+        for entity_pos, other_entity_pos, base, delta, size in (
+            (h_pos, t_bump, rh_base, rh_delta, rh_size),
+            (t_pos, h_bump, rt_base, rt_delta, rt_size),
+        )
+    )
