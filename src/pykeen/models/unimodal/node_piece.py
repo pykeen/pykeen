@@ -11,7 +11,7 @@ from torch import nn
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...nn import EmbeddingSpecification, NodePieceRepresentation, SubsetRepresentationModule
+from ...nn import EmbeddingSpecification, NodePieceRepresentation, RepresentationModule, SubsetRepresentationModule
 from ...nn.modules import DistMultInteraction, Interaction
 from ...nn.node_piece import RelationTokenizer, Tokenizer, tokenizer_resolver
 from ...triples.triples_factory import CoreTriplesFactory
@@ -163,6 +163,7 @@ class NodePiece(ERModel):
         tokenizer = tokenizer_resolver.lookup(tokenizer)
         tokenizer_cls = tokenizer.__class__ if isinstance(tokenizer, Tokenizer) else tokenizer
         # use relation representations for relation tokenizer
+        token_representation: Union[EmbeddingSpecification, RepresentationModule]
         if tokenizer_cls is RelationTokenizer:
             token_representation = relation_representations
         else:

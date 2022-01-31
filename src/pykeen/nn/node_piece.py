@@ -618,9 +618,12 @@ class NodePieceRepresentation(RepresentationModule):
 
             The aggregation takes two arguments: the (batched) tensor of token representations, in shape
             ``(*, num_tokens, *dt)``, and the index along which to aggregate.
-        # TODO: update docstring
         :param num_tokens:
             the number of tokens for each entity.
+        :param tokenizer:
+            the tokenizer to use, cf. `pykeen.nn.node_piece.tokenizer_resolver`.
+        :param tokenizer_kwargs:
+            additional keyword-based parameters passed to the tokenizer upon construction.
         :param shape:
             the shape of an individual representation. Only necessary, if aggregation results in a change of dimensions.
         """
