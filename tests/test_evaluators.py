@@ -127,6 +127,9 @@ class SampledRankBasedEvaluatorTests(RankBasedEvaluatorTests):
         kwargs["additional_filter_triples"] = self.dataset.training.mapped_triples
         return kwargs
 
+    def test_process_relation_scores_(self) -> None:  # noqa: D102
+        raise unittest.SkipTest
+
 
 class ClassificationEvaluatorTest(cases.EvaluatorTestCase):
     """Unittest for the ClassificationEvaluator."""
