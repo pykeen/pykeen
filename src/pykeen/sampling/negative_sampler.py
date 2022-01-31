@@ -9,8 +9,8 @@ import torch
 from class_resolver import HintOrType, normalize_string
 
 from .filtering import Filterer, filterer_resolver
-from ..triples import CoreTriplesFactory
 from ..triples.instances import SLCWABatchType, SLCWASampleType
+from ..typing import MappedTriples
 
 __all__ = [
     "NegativeSampler",
@@ -34,7 +34,10 @@ class NegativeSampler(ABC):
 
     def __init__(
         self,
-        triples_factory: CoreTriplesFactory,
+        *,
+        mapped_triples: MappedTriples,
+        num_entities: Optional[int] = None,
+        num_relations: Optional[int] = None,
         num_negs_per_pos: Optional[int] = None,
         filtered: bool = False,
         filterer: HintOrType[Filterer] = None,
@@ -52,14 +55,14 @@ class NegativeSampler(ABC):
         :param filterer_kwargs:
             Additional keyword-based arguments passed to the filterer upon construction.
         """
-        self.num_entities = triples_factory.num_entities
-        self.num_relations = triples_factory.num_relations
+        self.num_entities = num_entities
+        self.num_relations = num_relations
         self.num_negs_per_pos = num_negs_per_pos if num_negs_per_pos is not None else 1
         self.filterer = (
             filterer_resolver.make(
                 filterer,
                 pos_kwargs=filterer_kwargs,
-                mapped_triples=triples_factory.mapped_triples,
+                mapped_triples=mapped_triples,
             )
             if filterer is not None or filtered
             else None

@@ -5,7 +5,7 @@
 import torch
 
 from .negative_sampler import NegativeSampler
-from ..triples import CoreTriplesFactory
+from ..typing import MappedTriples
 
 __all__ = [
     "BernoulliNegativeSampler",
@@ -37,7 +37,7 @@ class BernoulliNegativeSampler(NegativeSampler):
     def __init__(
         self,
         *,
-        triples_factory: CoreTriplesFactory,
+        mapped_triples: MappedTriples,
         **kwargs,
     ) -> None:
         """Initialize the bernoulli negative sampler with the given entities.
@@ -47,18 +47,17 @@ class BernoulliNegativeSampler(NegativeSampler):
         :param kwargs:
             Additional keyword based arguments passed to :class:`pykeen.sampling.NegativeSampler`.
         """
-        super().__init__(triples_factory=triples_factory, **kwargs)
+        super().__init__(mapped_triples=mapped_triples, **kwargs)
         # Preprocessing: Compute corruption probabilities
-        triples = triples_factory.mapped_triples
-        head_rel_uniq, tail_count = torch.unique(triples[:, :2], return_counts=True, dim=0)
-        rel_tail_uniq, head_count = torch.unique(triples[:, 1:], return_counts=True, dim=0)
+        head_rel_uniq, tail_count = torch.unique(mapped_triples[:, :2], return_counts=True, dim=0)
+        rel_tail_uniq, head_count = torch.unique(mapped_triples[:, 1:], return_counts=True, dim=0)
 
         self.corrupt_head_probability = torch.empty(
-            triples_factory.num_relations,
-            device=triples_factory.mapped_triples.device,
+            self.num_relations,
+            device=mapped_triples.device,
         )
 
-        for r in range(triples_factory.num_relations):
+        for r in range(self.num_relations):
             # compute tph, i.e. the average number of tail entities per head
             mask = head_rel_uniq[:, 1] == r
             tph = tail_count[mask].float().mean()

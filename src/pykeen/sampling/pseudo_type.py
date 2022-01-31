@@ -9,8 +9,8 @@ from typing import Tuple
 import torch
 
 from .negative_sampler import NegativeSampler
-from ..triples import CoreTriplesFactory
 from ..triples.analysis import create_relation_to_entity_set_mapping
+from ..typing import MappedTriples
 
 __all__ = [
     "PseudoTypedNegativeSampler",
@@ -20,7 +20,8 @@ logger = logging.getLogger(__name__)
 
 
 def create_index(
-    triples_factory: CoreTriplesFactory,
+    mapped_triples: MappedTriples,
+    num_relations: int,
 ) -> Tuple[torch.LongTensor, torch.LongTensor]:
     """
     Create an index for efficient vectorized pseudo-type negative sampling.
@@ -40,7 +41,7 @@ def create_index(
     :return:
         A pair (data, offsets) containing the compressed triples.
     """
-    heads, tails = create_relation_to_entity_set_mapping(triples=triples_factory.mapped_triples.tolist())
+    heads, tails = create_relation_to_entity_set_mapping(triples=mapped_triples.tolist())
     relations = set(heads.keys()).union(tails.keys())
 
     # TODO: move this warning to PseudoTypeNegativeSampler's constructor?
@@ -50,9 +51,9 @@ def create_index(
 
     # create index structure
     data = []
-    offsets = torch.empty(2 * triples_factory.num_relations + 1, dtype=torch.long)
+    offsets = torch.empty(2 * num_relations + 1, dtype=torch.long)
     offsets[0] = 0
-    for i, (r, m) in enumerate(itertools.product(range(triples_factory.num_relations), (heads, tails)), start=1):
+    for i, (r, m) in enumerate(itertools.product(range(num_relations), (heads, tails)), start=1):
         data.extend(sorted(m[r]))
         offsets[i] = len(data)
     data = torch.as_tensor(data=data, dtype=torch.long)
@@ -77,7 +78,7 @@ class PseudoTypedNegativeSampler(NegativeSampler):
     def __init__(
         self,
         *,
-        triples_factory: CoreTriplesFactory,
+        mapped_triples: MappedTriples,
         **kwargs,
     ):
         """
@@ -88,8 +89,8 @@ class PseudoTypedNegativeSampler(NegativeSampler):
         :param kwargs:
             Additional keyword based arguments passed to :class:`pykeen.sampling.NegativeSampler`.
         """
-        super().__init__(triples_factory=triples_factory, **kwargs)
-        self.data, self.offsets = create_index(triples_factory)
+        super().__init__(triples_factory=mapped_triples, **kwargs)
+        self.data, self.offsets = create_index(mapped_triples=mapped_triples, num_relations=self.num_relations)
 
     def corrupt_batch(self, positive_batch: torch.LongTensor):  # noqa: D102
         batch_size = positive_batch.shape[0]
