@@ -3,17 +3,11 @@
 """Various edge weighting implementations for R-GCN."""
 
 from abc import abstractmethod
-from typing import Union, Optional
+from typing import Optional, Union
 
 import torch
 from class_resolver import Resolver
 from torch import nn
-
-try:
-    from torch_scatter import scatter_add, scatter_max, scatter_softmax
-except ImportError:
-    print("torch-scatter is not installed, attention aggregation won't work. "
-          "Install it here: https://github.com/rusty1s/pytorch_scatter")
 
 __all__ = [
     "EdgeWeighting",
@@ -23,6 +17,7 @@ __all__ = [
     "AttentionEdgeWeighting",
     "edge_weight_resolver",
 ]
+
 
 def softmax(
     src: torch.Tensor,
@@ -47,7 +42,13 @@ def softmax(
     :return:
         The softmax-ed tensor.
     """
-
+    try:
+        from torch_scatter import scatter_add, scatter_max
+    except ImportError as error:
+        raise ImportError(
+            "torch-scatter is not installed, attention aggregation won't work. "
+            "Install it here: https://github.com/rusty1s/pytorch_scatter",
+        ) from error
     num_nodes = num_nodes or index.max() + 1
     out = src.transpose(dim, 0)
     out = out - scatter_max(out, index, dim=0, dim_size=num_nodes)[0][index]
@@ -55,23 +56,17 @@ def softmax(
     out = out / scatter_add(out, index, dim=0, dim_size=num_nodes)[index].clamp_min(1.0e-16)
     return out.transpose(0, dim)
 
+
 class EdgeWeighting(nn.Module):
     """Base class for edge weightings."""
 
-    def __init__(
-            self,
-            **kwargs
-    ):
-        super().__init__()
-        pass
-
     @abstractmethod
     def forward(
-            self,
-            source: torch.LongTensor,
-            target: torch.LongTensor,
-            message: Optional[torch.FloatTensor] = None,
-            x_e: Optional[torch.FloatTensor] = None,
+        self,
+        source: torch.LongTensor,
+        target: torch.LongTensor,
+        message: Optional[torch.FloatTensor] = None,
+        x_e: Optional[torch.FloatTensor] = None,
     ) -> torch.FloatTensor:
         """Compute edge weights.
 
@@ -101,11 +96,11 @@ class InverseInDegreeEdgeWeighting(EdgeWeighting):
     """Normalize messages by inverse in-degree."""
 
     def forward(
-            self,
-            source: torch.LongTensor,
-            target: torch.LongTensor,
-            message: Optional[torch.FloatTensor] = None,
-            x_e: Optional[torch.FloatTensor] = None
+        self,
+        source: torch.LongTensor,
+        target: torch.LongTensor,
+        message: Optional[torch.FloatTensor] = None,
+        x_e: Optional[torch.FloatTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         weight = _inverse_frequency_weighting(idx=target)
         if message is not None:
@@ -114,16 +109,15 @@ class InverseInDegreeEdgeWeighting(EdgeWeighting):
             return weight
 
 
-
 class InverseOutDegreeEdgeWeighting(EdgeWeighting):
     """Normalize messages by inverse out-degree."""
 
     def forward(
-            self,
-            source: torch.LongTensor,
-            target: torch.LongTensor,
-            message: Optional[torch.FloatTensor] = None,
-            x_e: Optional[torch.FloatTensor] = None
+        self,
+        source: torch.LongTensor,
+        target: torch.LongTensor,
+        message: Optional[torch.FloatTensor] = None,
+        x_e: Optional[torch.FloatTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         weight = _inverse_frequency_weighting(idx=source)
         if message is not None:
@@ -136,11 +130,11 @@ class SymmetricEdgeWeighting(EdgeWeighting):
     """Normalize messages by product of inverse sqrt of in-degree and out-degree."""
 
     def forward(
-            self,
-            source: torch.LongTensor,
-            target: torch.LongTensor,
-            message: Optional[torch.FloatTensor] = None,
-            x_e: Optional[torch.FloatTensor] = None
+        self,
+        source: torch.LongTensor,
+        target: torch.LongTensor,
+        message: Optional[torch.FloatTensor] = None,
+        x_e: Optional[torch.FloatTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         weight = (_inverse_frequency_weighting(idx=source) * _inverse_frequency_weighting(idx=target)).sqrt()
         if message is not None:
@@ -155,22 +149,30 @@ class AttentionEdgeWeighting(EdgeWeighting):
 
     def __init__(
         self,
-        output_dim: int,
-        num_heads: int,
-        attn_drop: float = 0.1
+        message_dim: int,
+        num_heads: int = 8,
+        dropout: float = 0.1,
     ):
+        """
+        Initialize the module.
 
+        :param output_dim: >0
+            the message dimension. has to be divisible by num_heads
+            # TODO: we could change to multiplicative instead of divisive to make this easier to use
+        :param num_heads: >0
+            the number of attention heads
+        :param dropout:
+            the attention dropout
+        """
+        # super.init *before* assigning any parameters / modules
         super().__init__()
-
-        if output_dim % num_heads != 0:
-            raise ValueError(f"output_dim={output_dim} must be divisible by num_heads={num_heads}!")
+        if message_dim % num_heads != 0:
+            raise ValueError(f"output_dim={message_dim} must be divisible by num_heads={num_heads}!")
         self.num_heads = num_heads
-        self.weight = nn.Parameter(data=torch.empty(num_heads, 2 * output_dim // num_heads))
+        self.weight = nn.Parameter(data=nn.init.xavier_uniform_(torch.empty(num_heads, 2 * message_dim // num_heads)))
         self.activation = nn.LeakyReLU(negative_slope=0.1)
-        self.attn_dim = output_dim // num_heads
-        self.dropout = torch.nn.Dropout(attn_drop)
-
-        torch.nn.init.xavier_uniform_(self.weight)
+        self.attention_dim = message_dim // num_heads
+        self.dropout = nn.Dropout(dropout)
 
     def forward(
         self,
@@ -179,21 +181,26 @@ class AttentionEdgeWeighting(EdgeWeighting):
         message: Optional[torch.FloatTensor] = None,
         x_e: Optional[torch.FloatTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
-
+        # view for heads
         message_ = message.view(message.shape[0], self.num_heads, -1)
-        # Compute attention coefficients, shape: (num_edges, num_heads)
-        alpha = self.activation(torch.einsum(
-            "ihd,hd->ih",
-            torch.cat([
-                message_,
-                x_e[target].view(target.shape[0], self.num_heads, -1),
-            ], dim=-1),
-            self.weight,
-        ))
+        # compute attention coefficients, shape: (num_edges, num_heads)
+        alpha = self.activation(
+            torch.einsum(
+                "ihd,hd->ih",
+                torch.cat(
+                    [
+                        message_,
+                        x_e[target].view(target.shape[0], self.num_heads, -1),
+                    ],
+                    dim=-1,
+                ),
+                self.weight,
+            )
+        )
         # TODO we can use scatter_softmax from torch_scatter directly, kept this if we can rewrite it w/o scatter
         alpha = softmax(alpha, index=target, num_nodes=x_e.shape[0], dim=0)
         alpha = self.dropout(alpha)
-        return (message_ * alpha.view(-1, self.num_heads, 1)).view(-1, self.num_heads * self.attn_dim)
+        return (message_ * alpha.view(-1, self.num_heads, 1)).view(-1, self.num_heads * self.attention_dim)
 
 
 edge_weight_resolver = Resolver.from_subclasses(base=EdgeWeighting, default=SymmetricEdgeWeighting)
