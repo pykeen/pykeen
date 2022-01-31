@@ -9,7 +9,7 @@ from typing import Tuple
 import torch
 
 from .negative_sampler import NegativeSampler
-from ..triples.analysis import create_relation_to_entity_set_mapping
+from ..triples.utils import create_relation_to_entity_set_mapping
 from ..typing import MappedTriples
 
 __all__ = [

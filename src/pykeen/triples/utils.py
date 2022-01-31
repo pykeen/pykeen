@@ -2,8 +2,9 @@
 
 """Instance creation utilities."""
 
+from collections import defaultdict
 import pathlib
-from typing import Callable, Mapping, Optional, Sequence, Set, TextIO, Tuple, Union
+from typing import Callable, Iterable, Mapping, Optional, Sequence, Set, TextIO, Tuple, Union
 
 import numpy as np
 import pandas
@@ -14,6 +15,7 @@ from ..typing import LabeledTriples
 
 __all__ = [
     "load_triples",
+    "create_relation_to_entity_set_mapping",
     "get_entities",
     "get_relations",
     "triple_tensor_to_set",
@@ -153,3 +155,23 @@ def tensor_to_df(
     # Re-order columns
     columns = list(TRIPLES_DF_COLUMNS[::2]) + sorted(set(rv.columns).difference(TRIPLES_DF_COLUMNS))
     return rv.loc[:, columns]
+
+
+def create_relation_to_entity_set_mapping(
+    triples: Iterable[Tuple[int, int, int]],
+) -> Tuple[Mapping[int, Set[int]], Mapping[int, Set[int]]]:
+    """
+    Create mappings from relation IDs to the set of their head / tail entities.
+
+    :param triples:
+        The triples.
+
+    :return:
+        A pair of dictionaries, each mapping relation IDs to entity ID sets.
+    """
+    tails = defaultdict(set)
+    heads = defaultdict(set)
+    for h, r, t in triples:
+        heads[r].add(h)
+        tails[r].add(t)
+    return heads, tails

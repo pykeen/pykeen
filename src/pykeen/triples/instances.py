@@ -3,7 +3,6 @@
 """Implementation of basic instance factory which creates just instances based on standard KG triples."""
 
 from abc import ABC
-from turtle import pos
 from typing import Generic, Mapping, Optional, Tuple, TypeVar
 
 import numpy as np
