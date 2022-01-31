@@ -13,7 +13,7 @@ from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn import EmbeddingSpecification, NodePieceRepresentation, SubsetRepresentationModule
 from ...nn.modules import DistMultInteraction, Interaction
-from ...nn.node_piece import Tokenizer
+from ...nn.node_piece import RelationTokenizer, Tokenizer, tokenizer_resolver
 from ...triples.triples_factory import CoreTriplesFactory
 
 __all__ = [
@@ -159,9 +159,18 @@ class NodePiece(ERModel):
         relation_representations = embedding_specification.make(
             num_embeddings=2 * triples_factory.real_num_relations + 1,
         )
+        # pre-resolve tokenizer to select token representations
+        tokenizer = tokenizer_resolver.lookup(tokenizer)
+        tokenizer_cls = tokenizer.__class__ if isinstance(tokenizer, Tokenizer) else tokenizer
+        # use relation representations for relation tokenizer
+        if tokenizer_cls is RelationTokenizer:
+            token_representation = relation_representations
+        else:
+            # otherwise create new representations
+            token_representation = embedding_specification
         entity_representations = NodePieceRepresentation(
             triples_factory=triples_factory,
-            token_representation=relation_representations,
+            token_representation=token_representation,
             tokenizer=tokenizer,
             tokenizer_kwargs=tokenizer_kwargs,
             aggregation=aggregation,
