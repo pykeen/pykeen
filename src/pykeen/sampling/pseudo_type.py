@@ -35,8 +35,10 @@ def create_index(
     ``data[offsets[2*r]:offsets[2*r+1]]`` are the IDs of head entities for relation ``r``, and
     ``data[offsets[2*r+1]:offsets[2*r+2]]`` the ID of tail entities.
 
-    :param triples_factory:
-        The triples factory.
+    :param mapped_triples:
+        the mapped triples
+    :param num_relations:
+        the number of relations
 
     :return:
         A pair (data, offsets) containing the compressed triples.
@@ -84,8 +86,8 @@ class PseudoTypedNegativeSampler(NegativeSampler):
         """
         Instantiate the pseudo-typed negative sampler.
 
-        :param triples_factory:
-            The factory holding the positive training triples
+        :param mapped_triples:
+            the positive training triples
         :param kwargs:
             Additional keyword based arguments passed to :class:`pykeen.sampling.NegativeSampler`.
         """

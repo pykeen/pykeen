@@ -42,8 +42,8 @@ class BernoulliNegativeSampler(NegativeSampler):
     ) -> None:
         """Initialize the bernoulli negative sampler with the given entities.
 
-        :param triples_factory:
-            The factory holding the positive training triples
+        :param mapped_triples:
+            the positive training triples
         :param kwargs:
             Additional keyword based arguments passed to :class:`pykeen.sampling.NegativeSampler`.
         """

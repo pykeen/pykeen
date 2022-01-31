@@ -44,8 +44,14 @@ class NegativeSampler(ABC):
     ) -> None:
         """Initialize the negative sampler with the given entities.
 
-        :param triples_factory: The factory holding the positive training triples
-        :param num_negs_per_pos: Number of negative samples to make per positive triple. Defaults to 1.
+        :param mapped_triples:
+            the positive training triples
+        :param num_entities:
+            the number of entities. If None, will be inferred from the triples.
+        :param num_relations:
+            the number of relations. If None, will be inferred from the triples.
+        :param num_negs_per_pos:
+            number of negative samples to make per positive triple. Defaults to 1.
         :param filtered: Whether proposed corrupted triples that are in the training data should be filtered.
             Defaults to False. See explanation in :func:`filter_negative_triples` for why this is
             a reasonable default.
