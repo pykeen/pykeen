@@ -37,7 +37,7 @@ from .modules import (
     UMInteraction,
     interaction_resolver,
 )
-from .node_piece import NodePieceRepresentation
+from .node_piece import NodePieceRepresentation, tokenizer_resolver
 
 __all__ = [
     "Embedding",
@@ -47,6 +47,7 @@ __all__ = [
     "SubsetRepresentationModule",
     "init",
     "interaction_resolver",
+    "tokenizer_resolver",
     # Adapter classes
     "MonotonicAffineTransformationInteraction",
     # Concrete Classes
