@@ -55,7 +55,9 @@ class PseudoTypedNegativeSamplerTest(cases.NegativeSamplerGenericTestCase):
 
     def test_index_structure(self):
         """Test the index structure."""
-        data, offsets = create_index(triples_factory=self.triples_factory)
+        data, offsets = create_index(
+            mapped_triples=self.triples_factory.mapped_triples, num_relations=self.triples_factory.num_relations
+        )
         triples = self.triples_factory.mapped_triples
         for r in range(self.triples_factory.num_relations):
             triples_with_r = triples[triples[:, 1] == r]

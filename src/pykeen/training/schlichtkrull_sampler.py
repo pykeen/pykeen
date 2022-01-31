@@ -4,11 +4,13 @@
 
 import logging
 from abc import ABC
-from typing import Iterable, List, Optional, Tuple
+from typing import Callable, Iterable, List, Optional, Tuple
 
 import torch
+from class_resolver import HintOrType, OptionalKwargs
 
-from ..triples.instances import BatchType, Instances, SLCWABatchType, SLCWAInstances
+from ..sampling import NegativeSampler
+from ..triples.instances import BatchType, Instances, SampleType, SLCWABatchType, SLCWAInstances, SLCWASampleType
 from ..typing import MappedTriples
 
 
@@ -131,7 +133,7 @@ class GraphSampler:
             node_weights[other_vertex] -= 1
 
 
-class SubGraphInstances(Instances[BatchType], ABC):
+class SubGraphInstances(Instances[SampleType, BatchType], ABC):
     """A dataset of subgraph samples."""
 
     def __init__(
@@ -158,7 +160,7 @@ class SubGraphInstances(Instances[BatchType], ABC):
         )
 
 
-class SLCWASubGraphInstances(SLCWAInstances, SubGraphInstances[SLCWABatchType]):
+class SLCWASubGraphInstances(SLCWAInstances, SubGraphInstances[SLCWASampleType, SLCWABatchType]):
     """SLCWA subgraph instances."""
 
     def __init__(
@@ -166,6 +168,10 @@ class SLCWASubGraphInstances(SLCWAInstances, SubGraphInstances[SLCWABatchType]):
         *,
         mapped_triples: MappedTriples,
         sub_graph_size: int,
+        num_entities: Optional[int] = None,
+        num_relations: Optional[int] = None,
+        negative_sampler: HintOrType[NegativeSampler] = None,
+        negative_sampler_kwargs: OptionalKwargs = None,
     ):
         """
         Initialize the subgraph dataset for SLCWA instances.
@@ -175,12 +181,32 @@ class SLCWASubGraphInstances(SLCWAInstances, SubGraphInstances[SLCWABatchType]):
         :param sub_graph_size:
             the size (=number of triples) of the individual subgraph samples
         """
-        SLCWAInstances.__init__(self, mapped_triples=mapped_triples)
+        SLCWAInstances.__init__(
+            self,
+            mapped_triples=mapped_triples,
+            num_entities=num_entities,
+            num_relations=num_relations,
+            negative_sampler=negative_sampler,
+            negative_sampler_kwargs=negative_sampler_kwargs,
+        )
         SubGraphInstances.__init__(self, mapped_triples=mapped_triples, sub_graph_size=sub_graph_size)
 
     def __len__(self) -> int:  # noqa: D105
         # is already batched!
         return super().__len__() // self.graph_sampler.subgraph_size
 
-    def __getitem__(self, item: int) -> MappedTriples:  # noqa: D105
-        return torch.stack([SLCWAInstances.__getitem__(self, idx) for idx in self.graph_sampler.sample_batch()], dim=0)
+    def __getitem__(self, item: int) -> SLCWABatchType:  # noqa: D105
+        positive, negative, mask = list(
+            zip(*(SLCWAInstances.__getitem__(self, idx) for idx in self.graph_sampler.sample_batch()))
+        )
+        positive = torch.cat(positive, dim=0)
+        negative = torch.cat(negative, dim=0)
+        if mask[0] is None:
+            assert all(m is None for m in mask)
+            mask = None
+        else:
+            mask = torch.cat(mask, dim=0)
+        return positive, negative, mask
+
+    def get_collator(self) -> Optional[Callable[[List[SLCWASampleType]], SLCWABatchType]]:  # noqa: D102
+        return None

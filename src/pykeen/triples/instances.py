@@ -32,7 +32,7 @@ SLCWASampleType = Tuple[MappedTriples, MappedTriples, Optional[torch.BoolTensor]
 SLCWABatchType = Tuple[MappedTriples, MappedTriples, Optional[torch.BoolTensor]]
 
 
-class Instances(data.Dataset[BatchType], Generic[BatchType], ABC):
+class Instances(data.Dataset[BatchType], Generic[SampleType, BatchType], ABC):
     """Triples and mappings to their indices."""
 
     def __len__(self):  # noqa:D401
@@ -67,7 +67,7 @@ class Instances(data.Dataset[BatchType], Generic[BatchType], ABC):
         raise NotImplementedError
 
 
-class SLCWAInstances(Instances[SLCWASampleType]):
+class SLCWAInstances(Instances[SLCWASampleType, SLCWABatchType]):
     """Triples and mappings to their indices for sLCWA."""
 
     def __init__(
@@ -106,11 +106,12 @@ class SLCWAInstances(Instances[SLCWASampleType]):
 
     def __getitem__(self, item: int) -> SLCWASampleType:  # noqa: D105
         positive = self.mapped_triples[item].unsqueeze(dim=0)
+        # TODO: some negative samplers require batches
         negative, mask = self.sampler.sample(positive_batch=positive)
         # shape: (1, 3), (1, k, 3), (1, k, 3)?
         return positive, negative, mask
 
-    def get_collator(self) -> Callable[[List[SLCWASampleType]], SLCWABatchType]:  # noqa: D102
+    def get_collator(self) -> Optional[Callable[[List[SLCWASampleType]], SLCWABatchType]]:  # noqa: D102
         def collate(samples: List[SLCWASampleType]) -> SLCWABatchType:
             """Collate samples."""
             # each shape: (1, 3), (1, k, 3), (1, k, 3)?
@@ -138,7 +139,7 @@ class SLCWAInstances(Instances[SLCWASampleType]):
         return cls(mapped_triples=mapped_triples, num_entities=num_entities, num_relations=num_relations)
 
 
-class LCWAInstances(Instances[LCWABatchType]):
+class LCWAInstances(Instances[LCWASampleType, LCWABatchType]):
     """Triples and mappings to their indices for LCWA."""
 
     def __init__(self, *, pairs: np.ndarray, compressed: scipy.sparse.csr_matrix):
