@@ -375,7 +375,10 @@ class RankBasedEvaluator(Evaluator):
         self._update_ranks_(true_scores=true_scores, all_scores=scores, side=LABEL_HEAD, hrt_batch=hrt_batch)
 
     def _get_ranks(self, side: ExtendedTarget, rank_type: ExtendedRankType) -> np.ndarray:
-        if side == SIDE_BOTH:  # TODO should this include LABEL_RELATION?
+        if side == SIDE_BOTH:
+            # Even though it's been enabled to rank relations, this
+            # remains not having the relation label because it's not
+            # the standard evaluation technique
             values: List[float] = sum(
                 (self.ranks.get((_side, rank_type), []) for _side in (LABEL_HEAD, LABEL_TAIL)), []
             )
