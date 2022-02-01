@@ -1,6 +1,6 @@
 # See https://setuptools.readthedocs.io/en/latest/build_meta.html
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools", "wheel", "torch"]
 build-backend = "setuptools.build_meta:__legacy__"
 
 [tool.black]
