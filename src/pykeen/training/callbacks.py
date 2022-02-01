@@ -53,9 +53,12 @@ to implement a gradient clipping callback:
 
 from typing import Any, Collection, List, Optional, Union
 
+from class_resolver import HintOrType, OptionalKwargs
 from torch.nn.utils import clip_grad_norm_, clip_grad_value_
 
-from ..trackers import ResultTracker
+from ..evaluation import evaluate, evaluator_resolver, Evaluator
+from ..trackers import ResultTracker, tracker_resolver
+from ..typing import MappedTriples
 
 __all__ = [
     "TrainingCallbackHint",
@@ -75,7 +78,7 @@ class TrainingCallback:
         self._training_loop = None
 
     @property
-    def training_loop(self):  # noqa:D401
+    def training_loop(self) -> "pykeen.training.TrainingLoop":  # noqa:D401
         """The training loop."""
         if self._training_loop is None:
             raise ValueError("Callback was never initialized")
@@ -178,6 +181,63 @@ class GradientAbsClippingCallback(TrainingCallback):
 
     def pre_step(self, **kwargs: Any) -> None:  # noqa: D102
         clip_grad_value_(self.model.get_grad_params(), clip_value=self.clip_value)
+
+
+class EvaluationCallback(TrainingCallback):
+    """A callback for regular evaluation."""
+
+    def __init__(
+        self,
+        *,
+        frequency: int,
+        evaluation_triples: MappedTriples,
+        tracker: HintOrType[ResultTracker] = None,
+        tracker_kwargs: OptionalKwargs = None,
+        evaluator: HintOrType[Evaluator] = None,
+        evaluator_kwargs: OptionalKwargs = None,
+        prefix: Optional[str] = None,
+        **kwargs,
+    ):
+        """
+        Initialize the callback.
+
+        :param frequency:
+            the evaluation frequency in epochs
+        :param evaluation_triples:
+            the triples on which to evaluate
+        :param tracker:
+            the result tracker to which results are logged, cf. `tracker_resolver`
+        :param tracker_kwargs:
+            additional keyword-based parameters for the result tracker
+        :param evaluator:
+            the evaluator to use for evaluation, cf. `evaluator_resolver`
+        :param evaluator_kwargs:
+            additional keyword-based parameters for the evaluator
+        :param prefix:
+            the prefix to use for logging the metrics
+        :param kwargs:
+            additional keyword-based parameters passed to `evaluate`
+        """
+        super().__init__()
+        self.frequency = frequency
+        self.evaluation_triples = evaluation_triples
+        self.tracker = tracker_resolver.make(tracker, tracker_kwargs)
+        self.evaluator = evaluator_resolver.make(evaluator, evaluator_kwargs)
+        self.prefix = prefix
+        self.kwargs = kwargs
+
+    def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
+        if epoch % self.frequency:
+            return
+        # TODO: AMO
+        results = evaluate(
+            model=self.training_loop.model,
+            mapped_triples=self.evaluation_triples,
+            evaluators=self.evaluator,
+            device=self.training_loop.device,
+            **self.kwargs,
+        )
+        self.tracker.log_metrics(metrics=results.to_flat_dict(), step=epoch, prefix=self.prefix)
 
 
 #: A hint for constructing a :class:`MultiTrainingCallback`
