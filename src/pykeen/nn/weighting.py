@@ -70,8 +70,6 @@ class EdgeWeighting(nn.Module):
 
     def __init__(self, **kwargs):
         # stub init to enable arbitrary arguments in subclasses
-        if kwargs:
-            raise TypeError(f"keyword arguments should not be passed to {self.__class__}.__init__()")
         super().__init__()
 
     @abstractmethod
