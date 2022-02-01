@@ -56,7 +56,7 @@ from typing import Any, Collection, List, Optional, Union
 from class_resolver import HintOrType, OptionalKwargs
 from torch.nn.utils import clip_grad_norm_, clip_grad_value_
 
-from ..evaluation import evaluate, evaluator_resolver, Evaluator
+from ..evaluation import Evaluator, MetricResults, evaluate, evaluator_resolver
 from ..trackers import ResultTracker, tracker_resolver
 from ..typing import MappedTriples
 
@@ -78,7 +78,7 @@ class TrainingCallback:
         self._training_loop = None
 
     @property
-    def training_loop(self) -> "pykeen.training.TrainingLoop":  # noqa:D401
+    def training_loop(self):  # noqa:D401
         """The training loop."""
         if self._training_loop is None:
             raise ValueError("Callback was never initialized")
@@ -184,7 +184,32 @@ class GradientAbsClippingCallback(TrainingCallback):
 
 
 class EvaluationCallback(TrainingCallback):
-    """A callback for regular evaluation."""
+    """
+    A callback for regular evaluation.
+
+    Example: evaluate training performance
+
+    .. code-block: python
+
+        from pykeen.datasets import get_dataset
+        from pykeen.pipeline import pipeline
+        from pykeen.training.callbacks import EvaluationCallback
+
+        dataset = get_dataset(dataset="nations")
+        result = pipeline(
+            dataset=dataset,
+            model="mure",
+            training_kwargs=dict(
+                num_epochs=100,
+                callbacks=EvaluationCallback(
+                    frequency=10,
+                    evaluation_triples=dataset.training.mapped_triples,
+                    tracker="console",
+                    prefix="training",
+                ),
+            ),
+        )
+    """
 
     def __init__(
         self,
@@ -237,6 +262,7 @@ class EvaluationCallback(TrainingCallback):
             device=self.training_loop.device,
             **self.kwargs,
         )
+        assert isinstance(results, MetricResults)
         self.tracker.log_metrics(metrics=results.to_flat_dict(), step=epoch, prefix=self.prefix)
 
 
