@@ -35,7 +35,7 @@ __all__ = [
     "resolve_result_trackers",
 ]
 
-tracker_resolver = Resolver.from_subclasses(
+tracker_resolver: Resolver[ResultTracker] = Resolver.from_subclasses(
     base=ResultTracker,
     default=ResultTracker,
     skip={FileResultTracker, MultiResultTracker},
