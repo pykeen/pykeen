@@ -46,8 +46,8 @@ class AttentionWeightingTests(cases.EdgeWeightingTestCase):
     )
 
 
-class WeightingTestsTest(unittest_templates.MetaTestCase[pykeen.nn.weighting.EdgeWeighting]):
-    """Tests for symmetric weighting."""
+class WeightingMetaTestCase(unittest_templates.MetaTestCase[pykeen.nn.weighting.EdgeWeighting]):
+    """Tests for weighting test coverage."""
 
     base_cls = pykeen.nn.weighting.EdgeWeighting
     base_test = cases.EdgeWeightingTestCase
