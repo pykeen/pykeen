@@ -623,6 +623,7 @@ class NodePieceRepresentation(RepresentationModule):
             the number of tokens for each entity.
         :param tokenizer:
             the tokenizer to use, cf. `pykeen.nn.node_piece.tokenizer_resolver`.
+            TODO: support for using both Anchor and Relation tokenizers
         :param tokenizer_kwargs:
             additional keyword-based parameters passed to the tokenizer upon construction.
         :param shape:
