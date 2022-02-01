@@ -2,13 +2,17 @@
 
 """Various edge weighting implementations for R-GCN."""
 
-import logging
 from abc import abstractmethod
 from typing import ClassVar, Optional, Union
 
 import torch
 from class_resolver import Resolver
 from torch import nn
+
+try:
+    import torch_scatter
+except ImportError:
+    torch_scatter = None
 
 __all__ = [
     "EdgeWeighting",
@@ -18,8 +22,6 @@ __all__ = [
     "AttentionEdgeWeighting",
     "edge_weight_resolver",
 ]
-
-logger = logging.getLogger(__name__)
 
 
 def softmax(
@@ -47,18 +49,16 @@ def softmax(
     :return:
         The softmax-ed tensor.
     """
-    try:
-        from torch_scatter import scatter_add, scatter_max
-    except ImportError as error:
+    if torch_scatter is None:
         raise ImportError(
             "torch-scatter is not installed, attention aggregation won't work. "
             "Install it here: https://github.com/rusty1s/pytorch_scatter",
-        ) from error
+        )
     num_nodes = num_nodes or index.max() + 1
     out = src.transpose(dim, 0)
-    out = out - scatter_max(out, index, dim=0, dim_size=num_nodes)[0][index]
+    out = out - torch_scatter.scatter_max(out, index, dim=0, dim_size=num_nodes)[0][index]
     out = out.exp()
-    out = out / scatter_add(out, index, dim=0, dim_size=num_nodes)[index].clamp_min(1.0e-16)
+    out = out / torch_scatter.scatter_add(out, index, dim=0, dim_size=num_nodes)[index].clamp_min(1.0e-16)
     return out.transpose(0, dim)
 
 
@@ -68,10 +68,11 @@ class EdgeWeighting(nn.Module):
     #: whether the edge weighting needs access to the message
     needs_message: ClassVar[bool] = False
 
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, **kwargs):
+        # stub init to enable arbitrary arguments in subclasses
+        if kwargs:
+            raise TypeError(f"keyword arguments should not be passed to {self.__class__}.__init__()")
         super().__init__()
-        # ignore additional kwargs
-        logger.debug(f"Ignoring excess kwargs: {kwargs}")
 
     @abstractmethod
     def forward(
@@ -171,17 +172,16 @@ class AttentionEdgeWeighting(EdgeWeighting):
         """
         Initialize the module.
 
-        :param output_dim: >0
+        :param message_dim: >0
             the message dimension. has to be divisible by num_heads
-            # TODO: we could change to multiplicative instead of divisive to make this easier to use
+            .. todo:: change to multiplicative instead of divisive to make this easier to use
         :param num_heads: >0
             the number of attention heads
         :param dropout:
             the attention dropout
         """
-        # super.init *before* assigning any parameters / modules
         super().__init__()
-        if message_dim % num_heads != 0:
+        if 0 != message_dim % num_heads:
             raise ValueError(f"output_dim={message_dim} must be divisible by num_heads={num_heads}!")
         self.num_heads = num_heads
         self.weight = nn.Parameter(data=nn.init.xavier_uniform_(torch.empty(num_heads, 2 * message_dim // num_heads)))
