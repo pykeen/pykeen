@@ -64,6 +64,7 @@ __all__ = [
     "TrainingCallbackHint",
     "TrainingCallback",
     "TrackerCallback",
+    "EvaluationCallback",
     "MultiTrainingCallback",
     "GradientNormClippingCallback",
     "GradientAbsClippingCallback",
