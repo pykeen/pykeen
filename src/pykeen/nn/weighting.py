@@ -2,6 +2,7 @@
 
 """Various edge weighting implementations for R-GCN."""
 
+import logging
 from abc import abstractmethod
 from typing import ClassVar, Optional, Union
 
@@ -17,6 +18,8 @@ __all__ = [
     "AttentionEdgeWeighting",
     "edge_weight_resolver",
 ]
+
+logger = logging.getLogger(__name__)
 
 
 def softmax(
@@ -64,6 +67,11 @@ class EdgeWeighting(nn.Module):
 
     #: whether the edge weighting needs access to the message
     needs_message: ClassVar[bool] = False
+
+    def __init__(self, **kwargs) -> None:
+        super().__init__()
+        # ignore additional kwargs
+        logger.debug(f"Ignoring excess kwargs: {kwargs}")
 
     @abstractmethod
     def forward(
