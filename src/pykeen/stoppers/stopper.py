@@ -40,8 +40,10 @@ class Stopper(ABC):
 
     def _write_from_summary_dict(
         self,
+        *,
         frequency: int,
         patience: int,
+        remaining_patience: int,
         relative_delta: float,
         metric: str,
         larger_is_better: bool,

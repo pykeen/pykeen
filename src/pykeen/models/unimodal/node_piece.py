@@ -6,13 +6,14 @@ import logging
 from typing import Any, Callable, ClassVar, Mapping, Optional, Sequence, Union
 
 import torch
-from class_resolver import Hint, HintOrType
+from class_resolver import Hint, HintOrType, OptionalKwargs
 from torch import nn
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...nn.emb import EmbeddingSpecification, NodePieceRepresentation, SubsetRepresentationModule
+from ...nn import EmbeddingSpecification, NodePieceRepresentation, RepresentationModule, SubsetRepresentationModule
 from ...nn.modules import DistMultInteraction, Interaction
+from ...nn.node_piece import RelationTokenizer, Tokenizer, tokenizer_resolver
 from ...triples.triples_factory import CoreTriplesFactory
 
 __all__ = [
@@ -87,6 +88,8 @@ class NodePiece(ERModel):
         *,
         triples_factory: CoreTriplesFactory,
         num_tokens: int = 2,
+        tokenizer: HintOrType[Tokenizer] = None,
+        tokenizer_kwargs: OptionalKwargs = None,
         embedding_dim: int = 64,
         embedding_specification: Optional[EmbeddingSpecification] = None,
         interaction: HintOrType[Interaction] = DistMultInteraction,
@@ -101,7 +104,11 @@ class NodePiece(ERModel):
             the triples factory. Must have create_inverse_triples set to True.
         :param num_tokens:
             the number of relations to use to represent each entity, cf.
-            :class:`pykeen.nn.emb.NodePieceRepresentation`.
+            :class:`pykeen.nn.node_piece.NodePieceRepresentation`.
+        :param tokenizer:
+            the tokenizer to use, cf. `pykeen.nn.node_piece.tokenizer_resolver`.
+        :param tokenizer_kwargs:
+            additional keyword-based parameters passed to the tokenizer upon construction.
         :param embedding_dim:
             the embedding dimension. Only used if embedding_specification is not given.
         :param embedding_specification:
@@ -151,9 +158,21 @@ class NodePiece(ERModel):
         relation_representations = embedding_specification.make(
             num_embeddings=2 * triples_factory.real_num_relations + 1,
         )
+        # pre-resolve tokenizer to select token representations
+        tokenizer = tokenizer_resolver.lookup(tokenizer)
+        tokenizer_cls = tokenizer.__class__ if isinstance(tokenizer, Tokenizer) else tokenizer
+        # use relation representations for relation tokenizer
+        token_representation: Union[EmbeddingSpecification, RepresentationModule]
+        if tokenizer_cls is RelationTokenizer:
+            token_representation = relation_representations
+        else:
+            # otherwise create new representations
+            token_representation = embedding_specification
         entity_representations = NodePieceRepresentation(
             triples_factory=triples_factory,
-            token_representation=relation_representations,
+            token_representation=token_representation,
+            tokenizer=tokenizer,
+            tokenizer_kwargs=tokenizer_kwargs,
             aggregation=aggregation,
             shape=shape,
             num_tokens=num_tokens,

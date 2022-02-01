@@ -89,3 +89,6 @@ References
 
 .. [zhang2020] Zhang, Y., *et al.* (2020). `AutoSF: Searching Scoring Functions for Knowledge Graph Embedding
     <https://doi.org/10.1109/ICDE48307.2020.00044>`_. *ICDE 2020*, 433–444.
+
+.. [tucker1966] Tucker, Ledyard R. (1966). `Some mathematical notes on three-mode factor analysis
+    <https://dx.doi.org/10.1007/BF02289464>`_. *Psychometrika volume 31*, 279–311.

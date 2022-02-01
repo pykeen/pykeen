@@ -22,6 +22,8 @@ from .unimodal import (
     NTN,
     RESCAL,
     RGCN,
+    SE,
+    UM,
     AutoSF,
     BoxE,
     CompGCN,
@@ -39,7 +41,6 @@ from .unimodal import (
     QuatE,
     RotatE,
     SimplE,
-    StructuredEmbedding,
     TorusE,
     TransD,
     TransE,
@@ -48,7 +49,6 @@ from .unimodal import (
     TransR,
     TripleRE,
     TuckER,
-    UnstructuredModel,
 )
 
 __all__ = [
@@ -89,7 +89,7 @@ __all__ = [
     "RGCN",
     "RotatE",
     "SimplE",
-    "StructuredEmbedding",
+    "SE",
     "TorusE",
     "TransD",
     "TransE",
@@ -98,7 +98,7 @@ __all__ = [
     "TransR",
     "TripleRE",
     "TuckER",
-    "UnstructuredModel",
+    "UM",
     # Evaluation-only models
     "MarginalDistributionBaseline",
     # Utils
