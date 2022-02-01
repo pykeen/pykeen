@@ -51,12 +51,14 @@ to implement a gradient clipping callback:
             clip_grad_value_(self.model.parameters(), clip_value=self.clip_value)
 """
 
+import pathlib
 from typing import Any, Collection, List, Optional, Union
 
 from torch.nn.utils import clip_grad_norm_, clip_grad_value_
 
 from ..stoppers import Stopper
 from ..trackers import ResultTracker
+from ..triples import CoreTriplesFactory
 
 __all__ = [
     "TrainingCallbackHint",
@@ -185,14 +187,33 @@ class GradientAbsClippingCallback(TrainingCallback):
 class StopperCallback(TrainingCallback):
     """An adapter for the :class:`pykeen.stopper.Stopper`."""
 
-    def __init__(self, stopper: Stopper, *, triples_factory, last_best_epoch, best_epoch_model_file_path):
+    def __init__(
+        self,
+        stopper: Stopper,
+        *,
+        triples_factory: CoreTriplesFactory,
+        last_best_epoch: Optional[int] = None,
+        best_epoch_model_file_path: Optional[pathlib.Path],
+    ):
+        """
+        Initialize the callback.
+
+        :param stopper:
+            the stopper
+        :param triples_factory:
+            the triples factory used for saving the state
+        :param last_best_epoch:
+            the last best epoch
+        :param best_epoch_model_file_path:
+            the path under which to store the best model checkpoint
+        """
         super().__init__()
         self.stopper = stopper
         self.triples_factory = triples_factory
         self.last_best_epoch = last_best_epoch
         self.best_epoch_model_file_path = best_epoch_model_file_path
 
-    def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:
+    def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
         if self.stopper.should_evaluate(epoch):
             if self.stopper.should_stop(epoch):
                 self.training_loop._should_stop = True
