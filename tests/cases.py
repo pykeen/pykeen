@@ -10,6 +10,7 @@ import timeit
 import traceback
 import unittest
 from abc import ABC, abstractmethod
+from collections import Counter
 from typing import (
     Any,
     ClassVar,
@@ -38,7 +39,9 @@ from torch.nn import functional
 from torch.optim import SGD, Adagrad
 
 import pykeen.models
+import pykeen.nn.emb
 import pykeen.nn.message_passing
+import pykeen.nn.node_piece
 import pykeen.nn.weighting
 from pykeen.datasets import Nations
 from pykeen.datasets.base import LazyDataset
@@ -1727,3 +1730,92 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
         data: Dict[str, torch.Tensor],
     ):
         logger.warning(f"{self.__class__.__name__} did not overwrite _validate_result.")
+
+
+class AnchorSelectionTestCase(GenericTestCase[pykeen.nn.node_piece.AnchorSelection]):
+    """Tests for anchor selection."""
+
+    num_anchors: int = 7
+    num_entities: int = 33
+    num_triples: int = 101
+    edge_index: numpy.ndarray
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        """Prepare kwargs."""
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        kwargs["num_anchors"] = self.num_anchors
+        return kwargs
+
+    def post_instantiation_hook(self) -> None:
+        """Prepare edge index."""
+        generator = numpy.random.default_rng(seed=42)
+        self.edge_index = generator.integers(low=0, high=self.num_entities, size=(2, self.num_triples))
+
+    def test_call(self):
+        """Test __call__."""
+        anchors = self.instance(edge_index=self.edge_index)
+        # shape
+        assert len(anchors) == self.num_anchors
+        # value range
+        assert (0 <= anchors).all()
+        assert (anchors < self.num_entities).all()
+        # no duplicates
+        assert len(set(anchors.tolist())) == len(anchors)
+
+
+class AnchorSearcherTestCase(GenericTestCase[pykeen.nn.node_piece.AnchorSearcher]):
+    """Tests for anchor search."""
+
+    num_entities = 33
+    k: int = 2
+    edge_index: numpy.ndarray
+    anchors: numpy.ndarray
+
+    def post_instantiation_hook(self) -> None:
+        """Prepare circular edge index."""
+        self.edge_index = numpy.stack(
+            [numpy.arange(self.num_entities), (numpy.arange(self.num_entities) + 1) % self.num_entities],
+            axis=0,
+        )
+        self.anchors = numpy.arange(0, self.num_entities, 10)
+
+    def test_call(self):
+        """Test __call__."""
+        tokens = self.instance(edge_index=self.edge_index, anchors=self.anchors, k=self.k)
+        # shape
+        assert tokens.shape == (self.num_entities, self.k)
+        # value range
+        assert (tokens >= -1).all()
+        assert (tokens < len(self.anchors)).all()
+        # no duplicates
+        for row in tokens.tolist():
+            self.assertDictEqual({k: v for k, v in Counter(row).items() if k >= 0 and v > 1}, {}, msg="duplicate token")
+
+
+class TokenizerTestCase(GenericTestCase[pykeen.nn.node_piece.Tokenizer]):
+    """Tests for tokenization."""
+
+    num_tokens: int = 2
+    factory: CoreTriplesFactory
+
+    def post_instantiation_hook(self) -> None:
+        """Prepare triples."""
+        self.factory = Nations().training
+
+    def test_call(self):
+        """Test __call__."""
+        total_num_tokens, tokens = self.instance(
+            mapped_triples=self.factory.mapped_triples,
+            num_tokens=self.num_tokens,
+            num_entities=self.factory.num_entities,
+            num_relations=self.factory.num_relations,
+        )
+        assert isinstance(total_num_tokens, int)
+        assert total_num_tokens > 0
+        # shape
+        assert tokens.shape == (self.factory.num_entities, self.num_tokens)
+        # value range
+        assert (tokens >= -1).all()
+        # no repetition, except padding idx
+        for row in tokens.tolist():
+            self.assertDictEqual({k: v for k, v in Counter(row).items() if k >= 0 and v > 1}, {}, msg="duplicate token")

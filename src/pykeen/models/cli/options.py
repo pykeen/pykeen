@@ -8,6 +8,7 @@ from .. import model_resolver
 from ...constants import AGGREGATIONS
 from ...evaluation import evaluator_resolver
 from ...losses import loss_resolver
+from ...nn import tokenizer_resolver
 from ...optimizers import optimizer_resolver
 from ...stoppers import stopper_resolver
 from ...training import training_loop_resolver
@@ -93,6 +94,7 @@ CLI_OPTIONS = {
         "--aggregation",
         type=click.Choice(["mlp", *AGGREGATIONS]),
     ),
+    "tokenizer": tokenizer_resolver.get_option("--tokenizer"),
 }
 
 device_option = click.option(
