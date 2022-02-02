@@ -654,6 +654,7 @@ def evaluate(
 
     start = timeit.default_timer()
 
+    # TODO: Filtering code may only be correct for scoring entities
     # verify that the triples have been filtered
     if pre_filtered_triples and do_time_consuming_checks:
         if restrict_entities_to is not None:
