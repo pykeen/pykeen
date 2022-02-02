@@ -21,7 +21,7 @@ from tqdm.autonotebook import tqdm
 from ..models import Model
 from ..triples.triples_factory import restrict_triples
 from ..triples.utils import get_entities, get_relations
-from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, MappedTriples
+from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, MappedTriples, Target
 from ..utils import (
     format_relative_comparison,
     is_cuda_oom_error,
@@ -105,6 +105,24 @@ class Evaluator(ABC):
         return normalize_string(cls.__name__, suffix=Evaluator.__name__)
 
     @abstractmethod
+    def process_scores_(
+        self,
+        hrt_batch: MappedTriples,
+        target: Target,
+        true_scores: torch.FloatTensor,
+        scores: torch.FloatTensor,
+        dense_positive_mask: Optional[torch.FloatTensor] = None,
+    ) -> None:
+        """Process a batch of triples with their computed head/relation/tail scores for all entities/relations.
+
+        :param hrt_batch: shape: (batch_size, 3)
+        :param true_scores: shape: (batch_size)
+        :param scores: shape: (batch_size, num_entities/num_relations)
+        :param dense_positive_mask: shape: (batch_size, num_entities/num_relations)
+            An optional binary (0/1) tensor indicating other true entities/relations.
+        """
+        raise NotImplementedError
+
     def process_tail_scores_(
         self,
         hrt_batch: MappedTriples,
@@ -120,9 +138,14 @@ class Evaluator(ABC):
         :param dense_positive_mask: shape: (batch_size, num_entities)
             An optional binary (0/1) tensor indicating other true entities.
         """
-        raise NotImplementedError
+        self.process_scores_(
+            hrt_batch=hrt_batch,
+            target=LABEL_TAIL,
+            true_scores=true_scores,
+            scores=scores,
+            dense_positive_mask=dense_positive_mask,
+        )
 
-    @abstractmethod
     def process_head_scores_(
         self,
         hrt_batch: MappedTriples,
@@ -138,9 +161,14 @@ class Evaluator(ABC):
         :param dense_positive_mask: shape: (batch_size, num_entities)
             An optional binary (0/1) tensor indicating other true entities.
         """
-        raise NotImplementedError
+        self.process_scores_(
+            hrt_batch=hrt_batch,
+            target=LABEL_HEAD,
+            true_scores=true_scores,
+            scores=scores,
+            dense_positive_mask=dense_positive_mask,
+        )
 
-    @abstractmethod
     def process_relation_scores_(
         self,
         hrt_batch: MappedTriples,
@@ -156,7 +184,13 @@ class Evaluator(ABC):
         :param dense_positive_mask: shape: (batch_size, num_relations)
             An optional binary (0/1) tensor indicating other true relations.
         """
-        raise NotImplementedError
+        self.process_scores_(
+            hrt_batch=hrt_batch,
+            target=LABEL_RELATION,
+            true_scores=true_scores,
+            scores=scores,
+            dense_positive_mask=dense_positive_mask,
+        )
 
     @abstractmethod
     def finalize(self) -> MetricResults:
