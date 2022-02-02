@@ -406,13 +406,13 @@ class Model(nn.Module, ABC):
     ) -> torch.FloatTensor:
         """Predict scores for the given target."""
         if target == LABEL_TAIL:
-            return model.predict_t(hrt_batch[:, 0:2], slice_size=slice_size)
+            return self.predict_t(hrt_batch[:, 0:2], slice_size=slice_size)
 
         if target == LABEL_RELATION:
-            return model.predict_r(hrt_batch[:, [0, 2]], slice_size=slice_size)
+            return self.predict_r(hrt_batch[:, [0, 2]], slice_size=slice_size)
 
         if target == LABEL_HEAD:
-            return model.predict_h(hrt_batch[:, 1:3], slice_size=slice_size)
+            return self.predict_h(hrt_batch[:, 1:3], slice_size=slice_size)
 
         raise ValueError(f"Unknown target={target}")
 
