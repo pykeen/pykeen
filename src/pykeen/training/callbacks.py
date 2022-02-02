@@ -284,7 +284,19 @@ class MultiTrainingCallback(TrainingCallback):
         callbacks: TrainingCallbackHint = None,
         callback_kwargs: TrainingCallbackKwargsHint = None,
     ) -> None:
-        """Initialize the callback."""
+        """
+        Initialize the callback.
+
+        .. note ::
+            the constructor allows "broadcasting" of callbacks, i.e., proving a single callback,
+            but a list of callback kwargs. In this case, for each element of this list the given
+            callback is instantiated.
+
+        :param callbacks:
+            the callbacks
+        :param callback_kwargs:
+            additional keyword-based parameters for instantiating the callbacks
+        """
         super().__init__()
         if callbacks is None:
             assert callback_kwargs is None
