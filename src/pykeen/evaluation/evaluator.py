@@ -718,7 +718,6 @@ def _evaluate_batch(
     """
     batch_scores_of_corrupted = model.predict(
         hrt_batch=batch,
-        model=model,
         target=target,
         slice_size=slice_size,
     )
