@@ -336,7 +336,7 @@ class RankBasedEvaluator(Evaluator):
         dense_positive_mask: Optional[torch.FloatTensor] = None,
     ) -> None:  # noqa: D102
         if true_scores is None:
-            raise KeyError(f"{self.__class__.__name__} needs the true scores!")
+            raise ValueError(f"{self.__class__.__name__} needs the true scores!")
 
         batch_ranks = Ranks.from_scores(
             true_score=true_scores.unsqueeze(dim=-1),  # TODO: can we get rid of this?
@@ -537,6 +537,9 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
         true_scores: Optional[torch.FloatTensor] = None,
         dense_positive_mask: Optional[torch.FloatTensor] = None,
     ) -> None:  # noqa: D102
+        if true_scores is None:
+            raise ValueError(f"{self.__class__.__name__} needs the true scores!")
+
         num_entities = scores.shape[1]
         # TODO: do not require to compute all scores beforehand
         triple_indices = [self.triple_to_index[h, r, t] for h, r, t in hrt_batch.cpu().tolist()]
