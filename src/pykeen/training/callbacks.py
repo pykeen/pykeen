@@ -59,7 +59,6 @@ from torch.nn.utils import clip_grad_norm_, clip_grad_value_
 from ..evaluation import Evaluator, evaluator_resolver
 from ..trackers import ResultTracker, tracker_resolver
 from ..typing import MappedTriples, OneOrSequence
-from ..utils import sequence_broadcast, upgrade_to_sequence
 
 __all__ = [
     "TrainingCallbackHint",
@@ -298,18 +297,7 @@ class MultiTrainingCallback(TrainingCallback):
             additional keyword-based parameters for instantiating the callbacks
         """
         super().__init__()
-        if callbacks is None:
-            assert callback_kwargs is None
-            callbacks = []
-            callback_kwargs = []
-        else:
-            callbacks = upgrade_to_sequence(callbacks)
-            callback_kwargs = upgrade_to_sequence(callback_kwargs)
-        # callback broadcasting
-        callbacks = sequence_broadcast(reference=callback_kwargs, seq=callbacks)
-        self.callbacks = [
-            callback_resolver.make(callback, kwargs) for callback, kwargs in zip(callbacks, callback_kwargs)
-        ]
+        self.callbacks = callback_resolver.make_many(callbacks, callback_kwargs)
 
     def register_training_loop(self, loop) -> None:  # noqa: D102
         super().register_training_loop(training_loop=loop)

@@ -1249,16 +1249,6 @@ def boxe_kg_arity_position_score(
     return negative_norm(element_wise_distance, p=p, power_norm=power_norm)
 
 
-def sequence_broadcast(reference: Sequence, seq: Sequence[X]) -> Sequence[X]:
-    """Repeat a sequence to the length of the other."""
-    if len(reference) > 1:
-        if len(seq) == 1:
-            seq = list(seq) * len(reference)
-        else:
-            raise ValueError(seq)
-    return seq
-
-
 if __name__ == "__main__":
     import doctest
 
