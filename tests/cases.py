@@ -1683,7 +1683,7 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
                 hrt_batch=hrt_batch,
                 all_pos_triples=self.factory.mapped_triples.to(self.device),
                 filter_col=TARGET_TO_INDEX[target],
-            )
+            )[0]
             mask = create_dense_positive_mask_(
                 zero_tensor=torch.zeros_like(scores),
                 filter_batch=filter_batch,
@@ -1691,7 +1691,7 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
         else:
             mask = None
         if self.instance.filtered:
-            true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, TARGET_TO_INDEX[target], None]]
+            true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, TARGET_TO_INDEX[target]], None]
         else:
             true_scores = None
 
@@ -1720,10 +1720,10 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
         """Test processing head scores"""
         self._test_process_scores(target=LABEL_HEAD)
 
-    def test_finalize(self) -> None:
-        """Test the finalize() function."""
+    def test_finalize_entities(self) -> None:
+        """Test the finalize() function for head/tail prediction."""
         # Process one batch
-        for target in (LABEL_HEAD, LABEL_RELATION, LABEL_TAIL):
+        for target in (LABEL_HEAD, LABEL_TAIL):
             hrt_batch, scores, mask, true_scores = self._get_input(target=target)
             self.instance.process_scores_(
                 hrt_batch=hrt_batch,
