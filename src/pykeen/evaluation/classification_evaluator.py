@@ -9,6 +9,8 @@ import numpy as np
 import torch
 from dataclasses_json import dataclass_json
 
+from pykeen.constants import TARGET_TO_INDEX
+
 from .evaluator import Evaluator, MetricResults
 from .rexmex_compat import classifier_annotator
 from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, MappedTriples, Target
@@ -93,43 +95,24 @@ class ClassificationEvaluator(Evaluator):
             self.all_scores[key] = scores[i]
             self.all_positives[key] = positive_mask[i]
 
-    def process_tail_scores_(
+    def process_scores_(
         self,
         hrt_batch: MappedTriples,
+        target: Target,
+        # TODO: this evaluator would no require extracting those scores
         true_scores: torch.FloatTensor,
         scores: torch.FloatTensor,
         dense_positive_mask: Optional[torch.FloatTensor] = None,
-    ) -> None:  # noqa: D102
+    ) -> None:
         if dense_positive_mask is None:
             raise KeyError("Sklearn evaluators need the positive mask!")
-
-        self._process_scores(keys=hrt_batch[:, :2], scores=scores, positive_mask=dense_positive_mask, side=LABEL_TAIL)
-
-    def process_relation_scores_(
-        self,
-        hrt_batch: MappedTriples,
-        true_scores: torch.FloatTensor,
-        scores: torch.FloatTensor,
-        dense_positive_mask: Optional[torch.FloatTensor] = None,
-    ) -> None:  # noqa: D102
-        if dense_positive_mask is None:
-            raise KeyError("Sklearn evaluators need the positive mask!")
-
+        remaining = [i for i in range(3) if i != TARGET_TO_INDEX[target]]
         self._process_scores(
-            keys=hrt_batch[:, [0, 2]], scores=scores, positive_mask=dense_positive_mask, side=LABEL_RELATION
+            keys=hrt_batch[:, remaining],
+            scores=scores,
+            positive_mask=dense_positive_mask,
+            side=target,
         )
-
-    def process_head_scores_(
-        self,
-        hrt_batch: MappedTriples,
-        true_scores: torch.FloatTensor,
-        scores: torch.FloatTensor,
-        dense_positive_mask: Optional[torch.FloatTensor] = None,
-    ) -> None:  # noqa: D102
-        if dense_positive_mask is None:
-            raise KeyError("Sklearn evaluators need the positive mask!")
-
-        self._process_scores(keys=hrt_batch[:, 1:], scores=scores, positive_mask=dense_positive_mask, side=LABEL_HEAD)
 
     def finalize(self) -> ClassificationMetricResults:  # noqa: D102
         # Important: The order of the values of a dictionary is not guaranteed. Hence, we need to retrieve scores and
