@@ -28,8 +28,7 @@ from pykeen.models import (
 from pykeen.models.multimodal.base import LiteralModel
 from pykeen.models.predict import get_all_prediction_df, get_novelty_mask, predict
 from pykeen.models.unimodal.node_piece import _ConcatMLP
-from pykeen.nn import EmbeddingSpecification
-from pykeen.nn.emb import Embedding, NodePieceRepresentation
+from pykeen.nn import Embedding, EmbeddingSpecification, NodePieceRepresentation
 from pykeen.utils import all_in_bounds, extend_batch
 from tests import cases
 from tests.constants import EPSILON
@@ -263,6 +262,19 @@ class TestNodePieceMLP(cases.BaseNodePieceTest):
             tensor = params[key]
             self.assertIsInstance(tensor, torch.Tensor)
             self.assertTrue(tensor.requires_grad)
+
+
+class TestNodePieceAnchors(cases.BaseNodePieceTest):
+    """Test the NodePiece model with anchors."""
+
+    kwargs = dict(
+        tokenizer="anchor",
+    )
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        kwargs["tokenizer_kwargs"] = dict(selection_kwargs=dict(num_anchors=self.factory.num_entities // 3))
+        return kwargs
 
 
 class TestNTN(cases.ModelTestCase):
