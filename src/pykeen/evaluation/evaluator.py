@@ -21,7 +21,7 @@ from tqdm.autonotebook import tqdm
 from ..models import Model
 from ..triples.triples_factory import restrict_triples
 from ..triples.utils import get_entities, get_relations
-from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, MappedTriples
+from ..typing import COLUMN_HEAD, COLUMN_TAIL, LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, MappedTriples, TargetColumn
 from ..utils import (
     format_relative_comparison,
     is_cuda_oom_error,
@@ -667,7 +667,7 @@ def evaluate(
         for batch in batches:
             batch_size = batch.shape[0]
             relation_filter = None
-            for column in (0, 2):
+            for column in (COLUMN_HEAD, COLUMN_TAIL):
                 relation_filter = _evaluate_batch(
                     batch=batch,
                     model=model,
@@ -703,7 +703,7 @@ def evaluate(
 def _evaluate_batch(
     batch: MappedTriples,
     model: Model,
-    column: int,
+    column: TargetColumn,
     evaluator: Evaluator,
     slice_size: Optional[int],
     all_pos_triples: Optional[MappedTriples],
@@ -733,14 +733,13 @@ def _evaluate_batch(
     :return:
         The relation filter, which can be re-used for the same batch.
     """
-    if column not in {0, 2}:
-        raise ValueError(f"column must be either 0 or 2, but is column={column}")
-
     # Predict scores once
-    if column == 2:  # tail scores
+    if column == COLUMN_TAIL:  # tail scores
         batch_scores_of_corrupted = model.predict_t(batch[:, 0:2], slice_size=slice_size)
-    else:
+    elif column == COLUMN_HEAD:
         batch_scores_of_corrupted = model.predict_h(batch[:, 1:3], slice_size=slice_size)
+    else:
+        raise ValueError(f"column must be either 0 or 2, but is column={column}")
 
     # Select scores of true
     batch_scores_of_true = batch_scores_of_corrupted[
@@ -789,7 +788,14 @@ def _evaluate_batch(
         if positive_mask is not None:
             positive_mask = positive_mask[:, restrict_entities_to]
 
-    if column == 2:  # tail scores
+    if column == COLUMN_TAIL:  # tail scores
+        evaluator.process_head_scores_(
+            hrt_batch=batch,
+            true_scores=batch_scores_of_true,
+            scores=batch_scores_of_corrupted,
+            dense_positive_mask=positive_mask,
+        )
+    elif column == COLUMN_HEAD:
         evaluator.process_head_scores_(
             hrt_batch=batch,
             true_scores=batch_scores_of_true,
@@ -797,12 +803,7 @@ def _evaluate_batch(
             dense_positive_mask=positive_mask,
         )
     else:
-        evaluator.process_head_scores_(
-            hrt_batch=batch,
-            true_scores=batch_scores_of_true,
-            scores=batch_scores_of_corrupted,
-            dense_positive_mask=positive_mask,
-        )
+        raise AssertionError
 
     return relation_filter
 
