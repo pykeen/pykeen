@@ -18,8 +18,7 @@ import torch
 from dataclasses_json import DataClassJsonMixin
 from tqdm.autonotebook import tqdm
 
-from pykeen.constants import TARGET_TO_INDEX
-
+from ..constants import TARGET_TO_INDEX
 from ..models import Model
 from ..triples.triples_factory import restrict_triples
 from ..triples.utils import get_entities, get_relations

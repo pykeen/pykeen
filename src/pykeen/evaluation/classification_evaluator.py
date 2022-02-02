@@ -3,16 +3,15 @@
 """Implementation of wrapper around sklearn metrics."""
 
 from dataclasses import dataclass, field, fields, make_dataclass
-from typing import Any, Dict, MutableMapping, Optional, Tuple
+from typing import MutableMapping, Optional, Tuple
 
 import numpy as np
 import torch
 from dataclasses_json import dataclass_json
 
-from pykeen.constants import TARGET_TO_INDEX
-
 from .evaluator import Evaluator, MetricResults
 from .rexmex_compat import classifier_annotator
+from ..constants import TARGET_TO_INDEX
 from ..typing import MappedTriples, Target
 from ..utils import fix_dataclass_init_docs
 
