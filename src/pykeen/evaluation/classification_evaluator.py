@@ -3,7 +3,7 @@
 """Implementation of wrapper around sklearn metrics."""
 
 from dataclasses import dataclass, field, fields, make_dataclass
-from typing import MutableMapping, Optional, Tuple
+from typing import MutableMapping, Optional, Tuple, cast
 
 import numpy as np
 import torch
@@ -95,7 +95,10 @@ class ClassificationEvaluator(Evaluator):
         # Ensure that each key gets counted only once
         for i in range(keys.shape[0]):
             # include head_side flag into key to differentiate between (h, r) and (r, t)
-            key = (target,) + tuple(map(int, keys[i]))
+            key_suffix = tuple(map(int, keys[i]))
+            assert len(key_suffix) == 2
+            key_suffix = cast(Tuple[int, int], key_suffix)
+            key = (target,) + key_suffix
             self.all_scores[key] = scores[i]
             self.all_positives[key] = dense_positive_mask[i]
 
