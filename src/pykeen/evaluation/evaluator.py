@@ -118,8 +118,8 @@ class Evaluator(ABC):
         self,
         hrt_batch: MappedTriples,
         target: Target,
-        true_scores: torch.FloatTensor,
         scores: torch.FloatTensor,
+        true_scores: Optional[torch.FloatTensor] = None,
         dense_positive_mask: Optional[torch.FloatTensor] = None,
     ) -> None:
         """Process a batch of triples with their computed scores for all entities.
@@ -127,8 +127,8 @@ class Evaluator(ABC):
         :param hrt_batch: shape: (batch_size, 3)
         :param target:
             the prediction target
-        :param true_scores: shape: (batch_size)
         :param scores: shape: (batch_size, num_entities)
+        :param true_scores: shape: (batch_size)
         :param dense_positive_mask: shape: (batch_size, num_entities)
             An optional binary (0/1) tensor indicating other true entities.
         """

@@ -353,10 +353,13 @@ class RankBasedEvaluator(Evaluator):
         self,
         hrt_batch: MappedTriples,
         target: Target,
-        true_scores: torch.FloatTensor,
         scores: torch.FloatTensor,
+        true_scores: Optional[torch.FloatTensor] = None,
         dense_positive_mask: Optional[torch.FloatTensor] = None,
     ) -> None:  # noqa: D102
+        if true_scores is None:
+            raise KeyError(f"{self.__class__.__name__} needs the true scores!")
+
         batch_ranks = Ranks.from_scores(
             true_score=true_scores,
             all_scores=scores,
