@@ -41,6 +41,7 @@ from pykeen.typing import (
     SIDE_BOTH,
     SIDES,
     MappedTriples,
+    Target,
 )
 from tests import cases
 
@@ -368,32 +369,18 @@ class DummyEvaluator(Evaluator):
         super().__init__(filtered=filtered, automatic_memory_optimization=automatic_memory_optimization)
         self.counter = counter
 
-    def process_tail_scores_(
+    def process_scores_(
         self,
         hrt_batch: MappedTriples,
+        target: Target,
         true_scores: torch.FloatTensor,
         scores: torch.FloatTensor,
         dense_positive_mask: Optional[torch.FloatTensor] = None,
     ) -> None:  # noqa: D102
-        self.counter += 1
-
-    def process_relation_scores_(
-        self,
-        hrt_batch: MappedTriples,
-        true_scores: torch.FloatTensor,
-        scores: torch.FloatTensor,
-        dense_positive_mask: Optional[torch.FloatTensor] = None,
-    ) -> None:  # noqa: D102
-        pass
-
-    def process_head_scores_(
-        self,
-        hrt_batch: MappedTriples,
-        true_scores: torch.FloatTensor,
-        scores: torch.FloatTensor,
-        dense_positive_mask: Optional[torch.FloatTensor] = None,
-    ) -> None:  # noqa: D102
-        self.counter -= 1
+        if target == LABEL_TAIL:
+            self.counter += 1
+        elif target == LABEL_HEAD:
+            self.counter -= 1
 
     def finalize(self) -> MetricResults:  # noqa: D102
         return RankBasedMetricResults(

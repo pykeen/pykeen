@@ -1715,8 +1715,9 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
         """Test the evaluator's ``process_tail_scores_()`` function."""
         hrt_batch, scores, mask = self._get_input(target=LABEL_TAIL)
         true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, 2]][:, None]
-        self.instance.process_tail_scores_(
+        self.instance.process_scores_(
             hrt_batch=hrt_batch,
+            target=LABEL_TAIL,
             true_scores=true_scores,
             scores=scores,
             dense_positive_mask=mask,
@@ -1737,8 +1738,9 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
         """Test the evaluator's ``process_head_scores_()`` function."""
         hrt_batch, scores, mask = self._get_input(target=LABEL_HEAD)
         true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, 0]][:, None]
-        self.instance.process_head_scores_(
+        self.instance.process_scores_(
             hrt_batch=hrt_batch,
+            target=LABEL_HEAD,
             true_scores=true_scores,
             scores=scores,
             dense_positive_mask=mask,
@@ -1749,18 +1751,14 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
         # Process one batch
         hrt_batch, scores, mask = self._get_input(target=LABEL_TAIL)
         true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, 2]][:, None]
-        self.instance.process_tail_scores_(
-            hrt_batch=hrt_batch,
-            true_scores=true_scores,
-            scores=scores,
-            dense_positive_mask=mask,
-        )
-        self.instance.process_head_scores_(
-            hrt_batch=hrt_batch,
-            true_scores=true_scores,
-            scores=scores,
-            dense_positive_mask=mask,
-        )
+        for target in (LABEL_HEAD, LABEL_TAIL):
+            self.instance.process_scores_(
+                hrt_batch=hrt_batch,
+                target=target,
+                true_scores=true_scores,
+                scores=scores,
+                dense_positive_mask=mask,
+            )
 
         result = self.instance.finalize()
         assert isinstance(result, MetricResults)

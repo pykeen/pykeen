@@ -9,7 +9,6 @@ import random
 from collections import defaultdict
 from dataclasses import dataclass, field, fields
 from typing import DefaultDict, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Union, cast
-import warnings
 
 import numpy as np
 import pandas as pd
@@ -329,43 +328,22 @@ class RankBasedEvaluator(Evaluator):
         self.num_entities = None
         self.num_relations = None
 
-    def _update_ranks_(
-        self,
-        true_scores: torch.FloatTensor,
-        all_scores: torch.FloatTensor,
-        side: Target,
-        hrt_batch: MappedTriples,
-    ) -> None:
-        """Shared code for updating the stored ranks for head/relation/tail scores.
-
-        :param true_scores: shape: (batch_size,)
-        :param all_scores: shape: (batch_size, num_entities)
-        """
-        warnings.warn("directly use process_scores_ instead", DeprecationWarning)
-        self.process_scores_(
-            hrt_batch=hrt_batch,
-            target=side,
-            true_scores=true_scores,
-            all_scores=all_scores,
-            dense_positive_mask=None,
-        )
-
     def process_scores_(
         self,
         hrt_batch: MappedTriples,
         target: Target,
-        true_scores: torch.FloatTensor,
         scores: torch.FloatTensor,
+        true_scores: Optional[torch.FloatTensor] = None,
         dense_positive_mask: Optional[torch.FloatTensor] = None,
-    ) -> None:
+    ) -> None:  # noqa: D102
+        if true_scores is None:
+            raise ValueError(f"{self.__class__.__name__} needs the true scores!")
+
         batch_ranks = Ranks.from_scores(
             true_score=true_scores,
             all_scores=scores,
         )
-        if target == LABEL_RELATION:
-            self.num_relations = scores.shape[1]
-        else:
-            self.num_entities = scores.shape[1]
+        self.num_entities = scores.shape[1]
         for rank_type, v in batch_ranks.items():
             self.ranks[target, rank_type].extend(v.detach().cpu().tolist())
 
@@ -499,6 +477,8 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
     cf. https://arxiv.org/abs/2106.06935.
     """
 
+    negatives: Mapping[Target, torch.LongTensor]
+
     def __init__(
         self,
         evaluation_factory: CoreTriplesFactory,
@@ -553,32 +533,35 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
         self.negative_samples = negatives
         self.num_entities = evaluation_factory.num_entities
 
-    def _update_ranks_(
+    def process_scores_(
         self,
-        true_scores: torch.FloatTensor,
-        all_scores: torch.FloatTensor,
-        side: Target,
         hrt_batch: MappedTriples,
+        target: Target,
+        scores: torch.FloatTensor,
+        true_scores: Optional[torch.FloatTensor] = None,
+        dense_positive_mask: Optional[torch.FloatTensor] = None,
     ) -> None:  # noqa: D102
+        if true_scores is None:
+            raise ValueError(f"{self.__class__.__name__} needs the true scores!")
+
+        num_entities = scores.shape[1]
         # TODO: do not require to compute all scores beforehand
         triple_indices = [self.triple_to_index[h, r, t] for h, r, t in hrt_batch.cpu().tolist()]
-        negative_entity_ids = self.negative_samples[side][triple_indices]
-        negative_scores = all_scores[
+        negative_entity_ids = self.negative_samples[target][triple_indices]
+        negative_scores = scores[
             torch.arange(hrt_batch.shape[0], device=hrt_batch.device).unsqueeze(dim=-1),
             negative_entity_ids,
         ]
         # super.evaluation assumes that the true scores are part of all_scores
         scores = torch.cat([true_scores, negative_scores], dim=-1)
-        super()._update_ranks_(true_scores=true_scores, all_scores=scores, side=side, hrt_batch=hrt_batch)
+        super().process_scores_(
+            hrt_batch=hrt_batch,
+            target=target,
+            scores=scores,
+            true_scores=true_scores,
+            dense_positive_mask=dense_positive_mask,
+        )
         # write back correct num_entities
+        # TODO: num relations
         # TODO: should we give num_entities in the constructor instead of inferring it every time ranks are processed?
-        self.num_entities = all_scores.shape[1]
-
-    def process_relation_scores_(
-        self,
-        hrt_batch: MappedTriples,
-        true_scores: torch.FloatTensor,
-        scores: torch.FloatTensor,
-        dense_positive_mask: Optional[torch.FloatTensor] = None,
-    ) -> None:  # noqa: D102
-        raise NotImplementedError
+        self.num_entities = num_entities

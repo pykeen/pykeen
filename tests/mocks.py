@@ -9,7 +9,7 @@ from torch import nn
 
 from pykeen.evaluation import Evaluator, MetricResults, RankBasedMetricResults
 from pykeen.nn.emb import RepresentationModule
-from pykeen.typing import RANK_REALISTIC, RANK_TYPES, SIDES, MappedTriples
+from pykeen.typing import RANK_REALISTIC, RANK_TYPES, SIDES, MappedTriples, Target
 
 __all__ = [
     "CustomRepresentations",
@@ -36,27 +36,10 @@ class MockEvaluator(Evaluator):
         self.losses = tuple(losses)
         self.losses_iter = iter(self.losses)
 
-    def process_tail_scores_(
+    def process_scores_(
         self,
         hrt_batch: MappedTriples,
-        true_scores: torch.FloatTensor,
-        scores: torch.FloatTensor,
-        dense_positive_mask: Optional[torch.FloatTensor] = None,
-    ) -> None:  # noqa: D102
-        pass
-
-    def process_relation_scores_(
-        self,
-        hrt_batch: MappedTriples,
-        true_scores: torch.FloatTensor,
-        scores: torch.FloatTensor,
-        dense_positive_mask: Optional[torch.FloatTensor] = None,
-    ) -> None:  # noqa: D102
-        pass
-
-    def process_head_scores_(
-        self,
-        hrt_batch: MappedTriples,
+        target: Target,
         true_scores: torch.FloatTensor,
         scores: torch.FloatTensor,
         dense_positive_mask: Optional[torch.FloatTensor] = None,
