@@ -3,7 +3,7 @@
 """PyKEEN internal "nn" module."""
 
 from . import init
-from .emb import Embedding, EmbeddingSpecification, RepresentationModule
+from .emb import Embedding, EmbeddingSpecification, RepresentationModule, SubsetRepresentationModule
 from .modules import (
     AutoSFInteraction,
     BoxEInteraction,
@@ -37,13 +37,17 @@ from .modules import (
     UMInteraction,
     interaction_resolver,
 )
+from .node_piece import NodePieceRepresentation, tokenizer_resolver
 
 __all__ = [
     "Embedding",
     "EmbeddingSpecification",
+    "NodePieceRepresentation",
     "RepresentationModule",
+    "SubsetRepresentationModule",
     "init",
     "interaction_resolver",
+    "tokenizer_resolver",
     # Adapter classes
     "MonotonicAffineTransformationInteraction",
     # Concrete Classes
