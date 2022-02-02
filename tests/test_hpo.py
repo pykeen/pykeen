@@ -4,11 +4,13 @@
 
 import tempfile
 import unittest
-from unittest.mock import MagicMock
+from typing import Type
+from unittest.mock import MagicMock, patch
 
 import optuna
 import pytest
 from optuna.trial import TrialState
+from torch.optim import Adam
 
 from pykeen.datasets.nations import (
     NATIONS_TEST_PATH,
@@ -17,9 +19,15 @@ from pykeen.datasets.nations import (
     Nations,
     NationsLiteral,
 )
+from pykeen.evaluation import RankBasedEvaluator
 from pykeen.hpo import hpo_pipeline
-from pykeen.hpo.hpo import ExtraKeysError, suggest_kwargs
+from pykeen.hpo.hpo import ExtraKeysError, Objective, suggest_kwargs
+from pykeen.losses import MarginRankingLoss
+from pykeen.models import FixedModel
+from pykeen.stoppers.stopper import NopStopper
 from pykeen.trackers import ResultTracker, tracker_resolver
+from pykeen.trackers.base import PythonResultTracker
+from pykeen.training import LCWATrainingLoop
 from pykeen.triples import TriplesFactory
 
 
@@ -35,6 +43,38 @@ class TestInvalidConfigurations(unittest.TestCase):
                 stopper="early",
                 training_kwargs_ranges=dict(epochs=...),
             )
+
+
+class TestHPOObjective(unittest.TestCase):
+    """Test HPO objective."""
+
+    def _test_re_raise(self, MockTrial, exception: Type[Exception]):  # noqa: N803
+        """Test whether the given exception is raised when evaluating with the mocked trial."""
+        objective = Objective(
+            dataset=Nations,
+            model=FixedModel,
+            loss=MarginRankingLoss,
+            optimizer=Adam,
+            training_loop=LCWATrainingLoop,
+            stopper=NopStopper,
+            evaluator=RankBasedEvaluator,
+            result_tracker=PythonResultTracker,
+            metric="...",
+        )
+        with self.assertRaises(expected_exception=exception):
+            objective(trial=MockTrial())
+
+    @patch("pykeen.pipeline.pipeline", side_effect=MemoryError)
+    @patch("optuna.Trial")
+    def test_re_raise_memory_error(self, _mock_pipeline, MockTrial):  # noqa: N803
+        """Check that memory errors are re-raised (to be catched by study.optimize)."""
+        self._test_re_raise(MockTrial=MockTrial, exception=MemoryError)
+
+    @patch("pykeen.pipeline.pipeline", side_effect=RuntimeError)
+    @patch("optuna.Trial")
+    def test_re_raise_runtime_error(self, _mock_pipeline, MockTrial):  # noqa: N803
+        """Check that runtime errors are re-raised (to be catched by study.optimize)."""
+        self._test_re_raise(MockTrial=MockTrial, exception=RuntimeError)
 
 
 @pytest.mark.slow

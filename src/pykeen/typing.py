@@ -2,7 +2,7 @@
 
 """Type hints for PyKEEN."""
 
-from typing import Callable, Mapping, NamedTuple, Sequence, TypeVar, Union, cast
+from typing import Callable, Collection, Mapping, NamedTuple, Optional, Sequence, Tuple, TypeVar, Union, cast
 
 import numpy as np
 import torch
@@ -36,6 +36,15 @@ __all__ = [
     # Dataclasses
     "GaussianDistribution",
     "ScorePack",
+    # prediction targets
+    "Target",
+    "LABEL_HEAD",
+    "LABEL_RELATION",
+    "LABEL_TAIL",
+    "TargetColumn",
+    "COLUMN_HEAD",
+    "COLUMN_RELATION",
+    "COLUMN_TAIL",
 ]
 
 X = TypeVar("X")
@@ -67,6 +76,7 @@ DeviceHint = Hint[torch.device]
 #: A hint for a :class:`torch.Generator`
 TorchRandomHint = Union[None, int, torch.Generator]
 
+Representation = TypeVar("Representation", bound=OneOrSequence[torch.FloatTensor])
 #: A type variable for head representations used in :class:`pykeen.models.Model`,
 #: :class:`pykeen.nn.modules.Interaction`, etc.
 HeadRepresentation = TypeVar("HeadRepresentation", bound=OneOrSequence[torch.FloatTensor])
@@ -93,3 +103,44 @@ class ScorePack(NamedTuple):
 
 
 Sign = Literal[-1, 1]
+
+#: the prediction target
+Target = Literal["head", "relation", "tail"]
+LABEL_HEAD: Target = "head"
+LABEL_RELATION: Target = "relation"
+LABEL_TAIL: Target = "tail"
+
+#: the prediction target index
+TargetColumn = Literal[0, 1, 2]
+COLUMN_HEAD: TargetColumn = 0
+COLUMN_RELATION: TargetColumn = 1
+COLUMN_TAIL: TargetColumn = 2
+
+#: the rank types
+RankType = Literal["optimistic", "realistic", "pessimistic"]
+RANK_OPTIMISTIC: RankType = "optimistic"
+RANK_REALISTIC: RankType = "realistic"
+RANK_PESSIMISTIC: RankType = "pessimistic"
+# RANK_TYPES: Tuple[RankType, ...] = typing.get_args(RankType) # Python >= 3.8
+RANK_TYPES: Tuple[RankType, ...] = (RANK_OPTIMISTIC, RANK_REALISTIC, RANK_PESSIMISTIC)
+RANK_TYPE_SYNONYMS: Mapping[str, RankType] = {
+    "best": RANK_OPTIMISTIC,
+    "worst": RANK_PESSIMISTIC,
+    "avg": RANK_REALISTIC,
+    "average": RANK_REALISTIC,
+}
+
+RankTypeExpectedRealistic = Literal["expected_realistic"]
+RANK_EXPECTED_REALISTIC: RankTypeExpectedRealistic = "expected_realistic"
+ExtendedRankType = Union[RankType, RankTypeExpectedRealistic]
+
+EXPECTED_RANKS: Mapping[RankType, Optional[RankTypeExpectedRealistic]] = {
+    RANK_REALISTIC: RANK_EXPECTED_REALISTIC,
+    RANK_OPTIMISTIC: None,  # TODO - research problem
+    RANK_PESSIMISTIC: None,  # TODO - research problem
+}
+
+TargetBoth = Literal["both"]
+SIDE_BOTH: TargetBoth = "both"
+ExtendedTarget = Union[Target, TargetBoth]
+SIDES: Collection[ExtendedTarget] = {LABEL_HEAD, LABEL_TAIL, SIDE_BOTH}
