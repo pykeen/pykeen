@@ -8,6 +8,8 @@ from typing import Optional
 import numpy
 import torch
 
+from ...typing import Mode
+
 from .utils import get_csr_matrix, marginal_score
 from ..base import Model
 from ...triples import CoreTriplesFactory
@@ -46,11 +48,11 @@ class EvaluationOnlyModel(Model, ABC):
         """Non-parametric models do not implement :meth:`Model.collect_regularization_term`."""
         raise RuntimeError
 
-    def score_hrt(self, hrt_batch: torch.LongTensor):  # noqa:D102
+    def score_hrt(self, hrt_batch: torch.LongTensor, mode: Mode = None):  # noqa:D102
         """Non-parametric models do not implement :meth:`Model.score_hrt`."""
         raise RuntimeError
 
-    def score_r(self, ht_batch: torch.LongTensor, slice_size: Optional[int] = None):  # noqa:D102
+    def score_r(self, ht_batch: torch.LongTensor, slice_size: Optional[int] = None, mode: Mode = None):  # noqa:D102
         """Non-parametric models do not implement :meth:`Model.score_r`."""
         raise RuntimeError
 
@@ -123,7 +125,14 @@ class MarginalDistributionBaseline(EvaluationOnlyModel):
         else:
             self.head_per_tail = self.tail_per_head = None
 
-    def score_t(self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:  # noqa:D102
+    def score_t(
+        self,
+        hr_batch: torch.LongTensor,
+        slice_size: Optional[int] = None,
+        mode: Mode = None,
+    ) -> torch.FloatTensor:  # noqa:D102
+        if mode is not None:
+            raise ValueError(f"mode={mode} is not supported")
         return marginal_score(
             entity_relation_batch=hr_batch,
             per_entity=self.tail_per_head,
@@ -131,7 +140,14 @@ class MarginalDistributionBaseline(EvaluationOnlyModel):
             num_entities=self.num_entities,
         )
 
-    def score_h(self, rt_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:  # noqa:D102
+    def score_h(
+        self,
+        rt_batch: torch.LongTensor,
+        slice_size: Optional[int] = None,
+        mode: Mode = None,
+    ) -> torch.FloatTensor:  # noqa:D102
+        if mode is not None:
+            raise ValueError(f"mode={mode} is not supported")
         return marginal_score(
             entity_relation_batch=rt_batch.flip(1),
             per_entity=self.head_per_tail,
