@@ -179,7 +179,7 @@ class Model(nn.Module, ABC):
     def _get_entity_len(self, mode: Mode) -> int:
         """Get the number of entities depending on the mode parameters."""
         # TODO
-        #raise NotImplementedError
+        # raise NotImplementedError
         return self.num_entities
 
     def post_parameter_update(self) -> None:
@@ -439,17 +439,17 @@ class Model(nn.Module, ABC):
         self,
         hrt_batch: MappedTriples,
         target: Target,
-        slice_size: Optional[int] = None,
+        **kwargs,
     ) -> torch.FloatTensor:
         """Predict scores for the given target."""
         if target == LABEL_TAIL:
-            return self.predict_t(hrt_batch[:, 0:2], slice_size=slice_size)
+            return self.predict_t(hrt_batch[:, 0:2], **kwargs)
 
         if target == LABEL_RELATION:
-            return self.predict_r(hrt_batch[:, [0, 2]], slice_size=slice_size)
+            return self.predict_r(hrt_batch[:, [0, 2]], **kwargs)
 
         if target == LABEL_HEAD:
-            return self.predict_h(hrt_batch[:, 1:3], slice_size=slice_size)
+            return self.predict_h(hrt_batch[:, 1:3], **kwargs)
 
         raise ValueError(f"Unknown target={target}")
 
