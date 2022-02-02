@@ -21,7 +21,16 @@ from tqdm.autonotebook import tqdm
 from ..models import Model
 from ..triples.triples_factory import restrict_triples
 from ..triples.utils import get_entities, get_relations
-from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, MappedTriples, Target
+from ..typing import (
+    COLUMN_HEAD,
+    COLUMN_RELATION,
+    COLUMN_TAIL,
+    LABEL_HEAD,
+    LABEL_RELATION,
+    LABEL_TAIL,
+    MappedTriples,
+    Target,
+)
 from ..utils import (
     format_relative_comparison,
     is_cuda_oom_error,
@@ -865,11 +874,11 @@ def _evaluate_batch(
 
     # Evaluate metrics on these *unfiltered* scores
     for unfiltered_evaluator in unfiltered_evaluators:
-        if column == 2:  # tail scores
+        if column == COLUMN_TAIL:  # tail scores
             process = unfiltered_evaluator.process_tail_scores_
-        elif column == 1:  # relation scores
+        elif column == COLUMN_RELATION:  # relation scores
             process = unfiltered_evaluator.process_relation_scores_
-        elif column == 0:  # head scores
+        elif column == COLUMN_HEAD:  # head scores
             process = unfiltered_evaluator.process_head_scores_
         else:
             raise ValueError
@@ -899,11 +908,11 @@ def _evaluate_batch(
 
         # Evaluate metrics on these *filtered* scores
         for filtered_evaluator in filtered_evaluators:
-            if column == 2:  # tail scores
+            if column == COLUMN_TAIL:  # tail scores
                 process = filtered_evaluator.process_tail_scores_
-            elif column == 1:  # relation scores
+            elif column == COLUMN_RELATION:  # relation scores
                 process = filtered_evaluator.process_relation_scores_
-            elif column == 0:  # head scores
+            elif column == COLUMN_HEAD:  # head scores
                 process = filtered_evaluator.process_head_scores_
             else:
                 raise ValueError
