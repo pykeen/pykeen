@@ -148,7 +148,7 @@ class Evaluator(ABC):
         scores: torch.FloatTensor,
         dense_positive_mask: Optional[torch.FloatTensor] = None,
     ) -> None:
-        """Process a batch of triples with their computed relation scores for all entities.
+        """Process a batch of triples with their computed relation scores for all relations.
 
         :param hrt_batch: shape: (batch_size, 3)
         :param true_scores: shape: (batch_size)
