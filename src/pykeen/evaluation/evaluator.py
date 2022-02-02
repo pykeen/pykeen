@@ -742,17 +742,17 @@ def evaluate(
 def _predict_scores(
     hrt_batch: MappedTriples,
     model: Model,
-    column: TargetColumn,
+    target: Target,
     slice_size: Optional[int] = None,
 ) -> torch.FloatTensor:
-    """Wrapper for predicting scores."""
-    if column == COLUMN_TAIL:
+    """Predict scores for the given target."""
+    if target == LABEL_TAIL:
         return model.predict_t(hrt_batch[:, 0:2], slice_size=slice_size)
 
-    if column == COLUMN_HEAD:
+    if target == LABEL_HEAD:
         return model.predict_h(hrt_batch[:, 1:3], slice_size=slice_size)
 
-    raise ValueError(f"column must be either 0 or 2, but is column={column}")
+    raise ValueError(f"Unknown target={target}")
 
 
 def _evaluate_batch(
@@ -788,15 +788,15 @@ def _evaluate_batch(
     :return:
         The relation filter, which can be re-used for the same batch.
     """
-    column = TARGET_TO_INDEX[target]
     batch_scores_of_corrupted = _predict_scores(
         hrt_batch=batch,
         model=model,
-        column=column,
+        target=target,
         slice_size=slice_size,
     )
 
     if evaluator.filtered:
+        column = TARGET_TO_INDEX[target]
         if all_pos_triples is None:
             raise ValueError(
                 "If filtering_necessary of positive_masks_required is True, all_pos_triples has to be "
