@@ -69,31 +69,6 @@ class MetricResults(DataClassJsonMixin):
         return self.to_dict()
 
 
-class EvaluationLoop:
-    """A base class for evaluation loops."""
-
-    # TODO: move evaluate(...)
-    # TODO: move AMO
-    # TODO: allow multiple evaluation datasets (e.g. validation and train)
-
-
-EvaluationBatchType = TypeVar("EvaluationBatchType")
-
-
-class BaseEvaluator(Generic[EvaluationBatchType], ABC):
-    """A base class for evaluators."""
-
-    @abstractmethod
-    def process_batch(self, model: Model, batch: EvaluationBatchType) -> None:
-        """Process a single evaluation batch and update internal aggregators."""
-        raise NotImplementedError
-
-    @abstractmethod
-    def finalize(self) -> MetricResults:
-        """Finalize the metric result."""
-        raise NotImplementedError
-
-
 class Evaluator(ABC):
     """An abstract evaluator for KGE models.
 
