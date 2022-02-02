@@ -18,6 +18,8 @@ import torch
 from dataclasses_json import DataClassJsonMixin
 from tqdm.autonotebook import tqdm
 
+from pykeen.constants import TARGET_TO_INDEX
+
 from ..models import Model
 from ..triples.triples_factory import restrict_triples
 from ..triples.utils import get_entities, get_relations
@@ -705,11 +707,11 @@ def evaluate(
         for batch in batches:
             batch_size = batch.shape[0]
             relation_filter = None
-            for column in (COLUMN_HEAD, COLUMN_TAIL):
+            for target in (LABEL_HEAD, LABEL_TAIL):
                 relation_filter = _evaluate_batch(
                     batch=batch,
                     model=model,
-                    column=column,
+                    target=target,
                     evaluator=evaluator,
                     slice_size=slice_size,
                     all_pos_triples=all_pos_triples,
@@ -757,7 +759,7 @@ def _predict_scores(
 def _evaluate_batch(
     batch: MappedTriples,
     model: Model,
-    column: TargetColumn,
+    target: Target,
     evaluator: Evaluator,
     slice_size: Optional[int],
     all_pos_triples: Optional[MappedTriples],
@@ -765,14 +767,14 @@ def _evaluate_batch(
     restrict_entities_to: Optional[torch.LongTensor],
 ) -> torch.BoolTensor:
     """
-    Evaluate batch for all head predictions(column=0), or all tail predictions (column=2).
+    Evaluate ranking for batch.
 
     :param batch: shape: (batch_size, 3)
         The batch of currently evaluated triples.
     :param model:
         The model to evaluate.
-    :param column:
-        The column which to evaluate. Either 0 for head prediction, or 2 for tail prediction.
+    :param target:
+        The prediction target.
     :param evaluator:
         The evaluator
     :param slice_size:
@@ -787,18 +789,13 @@ def _evaluate_batch(
     :return:
         The relation filter, which can be re-used for the same batch.
     """
+    column = TARGET_TO_INDEX[target]
     batch_scores_of_corrupted = _predict_scores(
         hrt_batch=batch,
         model=model,
         column=column,
         slice_size=slice_size,
     )
-
-    # Select scores of true
-    batch_scores_of_true = batch_scores_of_corrupted[
-        torch.arange(0, batch.shape[0]),
-        batch[:, column],
-    ]
 
     if evaluator.filtered:
         if all_pos_triples is None:
@@ -815,16 +812,14 @@ def _evaluate_batch(
             filter_col=column,
         )
 
-        batch_scores_of_corrupted = filter_scores_(
-            scores=batch_scores_of_corrupted,
-            filter_batch=positive_filter,
-        )
-
+        # Select scores of true
+        batch_scores_of_true = batch_scores_of_corrupted[torch.arange(0, batch.shape[0]), batch[:, column]]
+        # overwrite filtered scores
+        batch_scores_of_corrupted = filter_scores_(scores=batch_scores_of_corrupted, filter_batch=positive_filter)
         # The scores for the true triples have to be rewritten to the scores tensor
-        batch_scores_of_corrupted[
-            torch.arange(0, batch.shape[0]),
-            batch[:, column],
-        ] = batch_scores_of_true
+        batch_scores_of_corrupted[torch.arange(0, batch.shape[0]), batch[:, column]] = batch_scores_of_true
+    else:
+        batch_scores_of_true = None
 
     # Create a positive mask with the size of the scores from the positive filter
     if evaluator.requires_positive_mask:
@@ -841,22 +836,14 @@ def _evaluate_batch(
         if positive_mask is not None:
             positive_mask = positive_mask[:, restrict_entities_to]
 
-    if column == COLUMN_TAIL:  # tail scores
-        evaluator.process_tail_scores_(
-            hrt_batch=batch,
-            true_scores=batch_scores_of_true,
-            scores=batch_scores_of_corrupted,
-            dense_positive_mask=positive_mask,
-        )
-    elif column == COLUMN_HEAD:
-        evaluator.process_head_scores_(
-            hrt_batch=batch,
-            true_scores=batch_scores_of_true,
-            scores=batch_scores_of_corrupted,
-            dense_positive_mask=positive_mask,
-        )
-    else:
-        raise AssertionError
+    # process scores
+    evaluator.process_scores_(
+        hrt_batch=batch,
+        target=target,
+        true_scores=batch_scores_of_true,
+        scores=batch_scores_of_corrupted,
+        dense_positive_mask=positive_mask,
+    )
 
     return relation_filter
 
