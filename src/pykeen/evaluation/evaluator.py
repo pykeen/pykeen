@@ -154,7 +154,7 @@ class Evaluator(ABC):
         :param true_scores: shape: (batch_size)
         :param scores: shape: (batch_size, num_relations)
         :param dense_positive_mask: shape: (batch_size, num_relations)
-            An optional binary (0/1) tensor indicating other true entities.
+            An optional binary (0/1) tensor indicating other true relations.
         """
         raise NotImplementedError
 
