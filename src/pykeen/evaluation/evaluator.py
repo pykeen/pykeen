@@ -700,6 +700,22 @@ def evaluate(
     return result
 
 
+def _predict_scores(
+    hrt_batch: MappedTriples,
+    model: Model,
+    column: TargetColumn,
+    slice_size: Optional[int] = None,
+) -> torch.FloatTensor:
+    """Wrapper for predicting scores."""
+    if column == COLUMN_TAIL:
+        return model.predict_t(hrt_batch[:, 0:2], slice_size=slice_size)
+
+    if column == COLUMN_HEAD:
+        return model.predict_h(hrt_batch[:, 1:3], slice_size=slice_size)
+
+    raise ValueError(f"column must be either 0 or 2, but is column={column}")
+
+
 def _evaluate_batch(
     batch: MappedTriples,
     model: Model,
@@ -733,13 +749,12 @@ def _evaluate_batch(
     :return:
         The relation filter, which can be re-used for the same batch.
     """
-    # Predict scores once
-    if column == COLUMN_TAIL:  # tail scores
-        batch_scores_of_corrupted = model.predict_t(batch[:, 0:2], slice_size=slice_size)
-    elif column == COLUMN_HEAD:
-        batch_scores_of_corrupted = model.predict_h(batch[:, 1:3], slice_size=slice_size)
-    else:
-        raise ValueError(f"column must be either 0 or 2, but is column={column}")
+    batch_scores_of_corrupted = _predict_scores(
+        hrt_batch=batch,
+        model=model,
+        column=column,
+        slice_size=slice_size,
+    )
 
     # Select scores of true
     batch_scores_of_true = batch_scores_of_corrupted[
