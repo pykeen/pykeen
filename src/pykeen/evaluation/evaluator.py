@@ -558,8 +558,6 @@ def evaluate(
         The divisor for the scoring function when using slicing.
     :param device:
         The device on which the evaluation shall be run. If None is given, use the model's device.
-    :param squeeze:
-        Return a single instance of :class:`MetricResults` if only one evaluator was given.
     :param use_tqdm:
         Should a progress bar be displayed?
     :param tqdm_kwargs:
