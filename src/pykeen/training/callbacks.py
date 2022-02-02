@@ -191,7 +191,7 @@ class EvaluationTrainingCallback(TrainingCallback):
 
     Example: evaluate training performance
 
-    .. code-block: python
+    .. code-block:: python
 
         from pykeen.datasets import get_dataset
         from pykeen.pipeline import pipeline
