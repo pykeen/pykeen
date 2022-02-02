@@ -199,7 +199,6 @@ tenth epoch
 
     from pykeen.datasets import get_dataset
     from pykeen.pipeline import pipeline
-    from pykeen.training.callbacks import EvaluationCallback
 
     dataset = get_dataset(dataset="nations")
     result = pipeline(
@@ -207,8 +206,8 @@ tenth epoch
         model="mure",
         training_kwargs=dict(
             num_epochs=100,
-            callbacks=EvaluationCallback(
-                frequency=10,
+            callbacks="evaluation",
+            callback_kwargs=dict(
                 evaluation_triples=dataset.training.mapped_triples,
                 tracker="console",
                 prefix="training",
