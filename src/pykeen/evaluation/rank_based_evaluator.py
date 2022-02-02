@@ -537,6 +537,7 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
         true_scores: Optional[torch.FloatTensor] = None,
         dense_positive_mask: Optional[torch.FloatTensor] = None,
     ) -> None:  # noqa: D102
+        num_entities = scores.shape[1]
         # TODO: do not require to compute all scores beforehand
         triple_indices = [self.triple_to_index[h, r, t] for h, r, t in hrt_batch.cpu().tolist()]
         negative_entity_ids = self.negative_samples[target][triple_indices]
@@ -545,7 +546,7 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
             negative_entity_ids,
         ]
         # super.evaluation assumes that the true scores are part of all_scores
-        scores = torch.cat([true_scores, negative_scores], dim=-1)
+        scores = torch.cat([true_scores.unsqueeze(dim=-1), negative_scores], dim=-1)
         super().process_scores_(
             hrt_batch=hrt_batch,
             target=target,
@@ -555,4 +556,4 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
         )
         # write back correct num_entities
         # TODO: should we give num_entities in the constructor instead of inferring it every time ranks are processed?
-        self.num_entities = scores.shape[1]
+        self.num_entities = num_entities
