@@ -63,7 +63,15 @@ from pykeen.triples import TriplesFactory, generation
 from pykeen.triples.splitting import Cleaner, Splitter
 from pykeen.triples.triples_factory import CoreTriplesFactory
 from pykeen.triples.utils import get_entities, is_triple_tensor_subset, triple_tensor_to_set
-from pykeen.typing import HeadRepresentation, Initializer, MappedTriples, RelationRepresentation, TailRepresentation
+from pykeen.typing import (
+    LABEL_HEAD,
+    LABEL_TAIL,
+    HeadRepresentation,
+    Initializer,
+    MappedTriples,
+    RelationRepresentation,
+    TailRepresentation,
+)
 from pykeen.utils import all_in_bounds, get_batchnorm_modules, resolve_device, set_random_seed, unpack_singletons
 from tests.constants import EPSILON
 from tests.mocks import CustomRepresentations
@@ -1697,8 +1705,9 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
         """Test the evaluator's ``process_tail_scores_()`` function."""
         hrt_batch, scores, mask = self._get_input()
         true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, 2]][:, None]
-        self.instance.process_tail_scores_(
+        self.instance.process_scores_(
             hrt_batch=hrt_batch,
+            target=LABEL_TAIL,
             true_scores=true_scores,
             scores=scores,
             dense_positive_mask=mask,
@@ -1708,8 +1717,9 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
         """Test the evaluator's ``process_head_scores_()`` function."""
         hrt_batch, scores, mask = self._get_input(inverse=True)
         true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, 0]][:, None]
-        self.instance.process_head_scores_(
+        self.instance.process_scores_(
             hrt_batch=hrt_batch,
+            target=LABEL_HEAD,
             true_scores=true_scores,
             scores=scores,
             dense_positive_mask=mask,
@@ -1720,14 +1730,16 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
         # Process one batch
         hrt_batch, scores, mask = self._get_input()
         true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, 2]][:, None]
-        self.instance.process_tail_scores_(
+        self.instance.process_scores_(
             hrt_batch=hrt_batch,
+            target=LABEL_TAIL,
             true_scores=true_scores,
             scores=scores,
             dense_positive_mask=mask,
         )
-        self.instance.process_head_scores_(
+        self.instance.process_scores_(
             hrt_batch=hrt_batch,
+            target=LABEL_HEAD,
             true_scores=true_scores,
             scores=scores,
             dense_positive_mask=mask,

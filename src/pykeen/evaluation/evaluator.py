@@ -127,54 +127,6 @@ class Evaluator(ABC):
         """
         raise NotImplementedError
 
-    def process_tail_scores_(
-        self,
-        hrt_batch: MappedTriples,
-        true_scores: torch.FloatTensor,
-        scores: torch.FloatTensor,
-        dense_positive_mask: Optional[torch.FloatTensor] = None,
-    ) -> None:
-        """Process a batch of triples with their computed tail scores for all entities.
-
-        :param hrt_batch: shape: (batch_size, 3)
-        :param true_scores: shape: (batch_size)
-        :param scores: shape: (batch_size, num_entities)
-        :param dense_positive_mask: shape: (batch_size, num_entities)
-            An optional binary (0/1) tensor indicating other true entities.
-        """
-        warnings.warn("directly use process_scores_", DeprecationWarning)
-        self.process_scores_(
-            hrt_batch=hrt_batch,
-            target=LABEL_TAIL,
-            true_scores=true_scores,
-            scores=scores,
-            dense_positive_mask=dense_positive_mask,
-        )
-
-    def process_head_scores_(
-        self,
-        hrt_batch: MappedTriples,
-        true_scores: torch.FloatTensor,
-        scores: torch.FloatTensor,
-        dense_positive_mask: Optional[torch.FloatTensor] = None,
-    ) -> None:
-        """Process a batch of triples with their computed head scores for all entities.
-
-        :param hrt_batch: shape: (batch_size, 3)
-        :param true_scores: shape: (batch_size)
-        :param scores: shape: (batch_size, num_entities)
-        :param dense_positive_mask: shape: (batch_size, num_entities)
-            An optional binary (0/1) tensor indicating other true entities.
-        """
-        warnings.warn("directly use process_scores_", DeprecationWarning)
-        self.process_scores_(
-            hrt_batch=hrt_batch,
-            target=LABEL_HEAD,
-            true_scores=true_scores,
-            scores=scores,
-            dense_positive_mask=dense_positive_mask,
-        )
-
     @abstractmethod
     def finalize(self) -> MetricResults:
         """Compute the final results, and clear buffers."""
