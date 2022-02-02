@@ -122,14 +122,14 @@ class Evaluator(ABC):
         scores: torch.FloatTensor,
         dense_positive_mask: Optional[torch.FloatTensor] = None,
     ) -> None:
-        """Process a batch of triples with their computed head/relation/tail scores for all entities/relations.
+        """Process a batch of triples with their computed scores.
 
         :param hrt_batch: shape: (batch_size, 3)
         :param target:
             the prediction target
-        :param scores: shape: (batch_size, num_entities)
+        :param scores: shape: (batch_size, num_choices)
         :param true_scores: shape: (batch_size, 1)
-        :param dense_positive_mask: shape: (batch_size, num_entities)
+        :param dense_positive_mask: shape: (batch_size, num_choices)
             An optional binary (0/1) tensor indicating other true entities.
         """
         raise NotImplementedError
