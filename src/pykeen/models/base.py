@@ -25,7 +25,7 @@ from ..losses import Loss, MarginRankingLoss, loss_resolver
 from ..nn.emb import Embedding, EmbeddingSpecification, RepresentationModule
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import CoreTriplesFactory, relation_inverter
-from ..typing import ScorePack
+from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, MappedTriples, ScorePack, Target
 from ..utils import NoRandomSeedNecessary, extend_batch, set_random_seed
 
 __all__ = [
@@ -397,6 +397,24 @@ class Model(nn.Module, ABC):
         if self.predict_with_sigmoid:
             scores = torch.sigmoid(scores)
         return scores
+
+    def predict(
+        self,
+        hrt_batch: MappedTriples,
+        target: Target,
+        slice_size: Optional[int] = None,
+    ) -> torch.FloatTensor:
+        """Predict scores for the given target."""
+        if target == LABEL_TAIL:
+            return self.predict_t(hrt_batch[:, 0:2], slice_size=slice_size)
+
+        if target == LABEL_RELATION:
+            return self.predict_r(hrt_batch[:, [0, 2]], slice_size=slice_size)
+
+        if target == LABEL_HEAD:
+            return self.predict_h(hrt_batch[:, 1:3], slice_size=slice_size)
+
+        raise ValueError(f"Unknown target={target}")
 
     def get_all_prediction_df(
         self,
