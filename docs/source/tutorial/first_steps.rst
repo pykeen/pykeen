@@ -215,4 +215,4 @@ tenth epoch
         ),
     )
 
-For further information about different result trackers take a look at reference/trackers.
+For further information about different result trackers, take a look at :ref:`trackers`.

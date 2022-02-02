@@ -1,3 +1,5 @@
+.. _trackers:
+
 Tracking Results during Training
 ================================
 .. toctree::
