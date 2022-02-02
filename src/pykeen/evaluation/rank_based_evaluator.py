@@ -6,7 +6,6 @@ import itertools as itt
 import logging
 import math
 import random
-import warnings
 from collections import defaultdict
 from dataclasses import dataclass, field, fields
 from typing import DefaultDict, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Union, cast
