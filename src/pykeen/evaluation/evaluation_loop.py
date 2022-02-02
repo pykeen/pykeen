@@ -2,82 +2,41 @@
 
 """Evaluation loops for KGE models."""
 
-from abc import abstractmethod
-import math
-from typing import Generic, Optional, Tuple, TypeVar
 import itertools
+from abc import abstractmethod
+from typing import Collection, Generic, Optional, Tuple, TypeVar
 
-from class_resolver import OptionalKwargs
 import torch
+from class_resolver import OptionalKwargs
 from torch.utils.data import Dataset
 from torch.utils.data.dataloader import DataLoader
 from tqdm.auto import tqdm
 
-from pykeen.typing import MappedTriples
-
-
+from .evaluator import Evaluator, MetricResults, filter_scores_
 from ..models import Model
 from ..triples import CoreTriplesFactory
+from ..typing import LABEL_HEAD, LABEL_TAIL, MappedTriples, Target
 
 BatchType = TypeVar("BatchType")
-ResultType = TypeVar("ResultType")
 
 
-def _get_next_power_of_two(x: int) -> int:
-    return 2 ** int(math.ceil(math.log2(x)))
-
-
-class EvaluationResultAggregator(Generic[BatchType, ResultType]):
-    @abstractmethod
-    def process_batch(self, model: Model, batch: BatchType) -> None:
-        raise NotImplementedError
-
-    @abstractmethod
-    def finalize(self) -> ResultType:
-        raise NotImplementedError
-
-
-class EvaluationLoop(Generic[BatchType, ResultType]):
+class EvaluationLoop(Generic[BatchType]):
     """An evaluation loop."""
 
     def __init__(
         self,
         model: Model,
-        automatic_memory_optimization: bool = True,
-    ) -> None:
-        """Initialize the evaluation loop.
-
-        :param model: The model to evaluate
-        :param triples_factory: The evaluation triples factory
-        :param automatic_memory_optimization: bool
-            Whether to automatically optimize the (sub-)batch size during evaluation with regards
-            to the hardware at hand.
-        """
-        self.model = model
-        self.dataset = self._create_dataset()
-        self.automatic_memory_optimization = automatic_memory_optimization
-
-    @abstractmethod
-    def _create_dataset(self) -> Dataset[BatchType]:
-        raise NotImplementedError
-
-    @abstractmethod
-    def _create_aggregator(self) -> EvaluationResultAggregator[BatchType, ResultType]:
-        raise NotImplementedError
-
-    def _create_data_loader(
-        self,
         dataset: Dataset[BatchType],
-        batch_size: int,
-        **kwargs,
-    ) -> DataLoader[BatchType]:
-        return DataLoader(
-            dataset=dataset,
-            batch_size=batch_size,
-            shuffle=False,
-            pin_memory=True,
-            **kwargs,
-        )
+        evaluator: Evaluator,
+    ) -> None:
+        """Initialize the evaluation loop."""
+        self.model = model
+        self.evaluator = evaluator
+        self.dataset = dataset
+
+    @abstractmethod
+    def process_batch(self, batch: BatchType) -> None:
+        raise NotImplementedError
 
     @torch.inference_mode()
     def evaluate(
@@ -89,15 +48,7 @@ class EvaluationLoop(Generic[BatchType, ResultType]):
         tqdm_kwargs: OptionalKwargs = None,
         # data loader
         **kwargs,
-    ):
-        if batch_size is None:
-            if not self.automatic_memory_optimization:
-                raise ValueError
-            if self.model.device.type == "cpu":
-                batch_size = 32
-            else:
-                batch_size = _get_next_power_of_two(len(self.dataset))
-        # TODO: AMO
+    ) -> MetricResults:
         return self._evaluate(batch_size=batch_size, use_tqdm=use_tqdm, tqdm_kwargs=tqdm_kwargs, **kwargs)
 
     def _evaluate(
@@ -107,13 +58,9 @@ class EvaluationLoop(Generic[BatchType, ResultType]):
         tqdm_kwargs: OptionalKwargs,
         only_size_probing: bool,
         **kwargs,
-    ):
+    ) -> MetricResults:
         self.model.eval()
-        loader = self._create_data_loader(
-            dataset=self.dataset,
-            batch_size=batch_size,
-            **kwargs,
-        )
+        loader = DataLoader(dataset=self.dataset, batch_size=batch_size, shuffle=False, pin_memory=True, **kwargs)
         total = len(loader)
         if only_size_probing:
             loader = itertools.islice(loader, 1)
@@ -127,10 +74,9 @@ class EvaluationLoop(Generic[BatchType, ResultType]):
                 unit_scale=True,
                 **tqdm_kwargs,
             )
-        aggregator = self._create_aggregator()
         for batch in loader:
-            aggregator.process_batch(model=self.model, batch=batch)
-        return aggregator.finalize()
+            self.process_batch(batch=batch)
+        return self.evaluator.finalize()
 
 
 class LinkPredictionEvaluationDataset(Dataset):
@@ -142,42 +88,33 @@ class LinkPredictionEvaluationDataset(Dataset):
     def __len__(self) -> int:
         return self.num_triples
 
-    def __getitem__(self, index: int) -> torch.LongTensor:
-        # TODO: filtering
+    def __getitem__(self, index: int) -> MappedTriples:
         return self.mapped_triples[index, :]
 
 
-class LinkPredictionAggregator(EvaluationResultAggregator[MappedTriples, ResultType]):
-    def __init__(self) -> None:
-        super().__init__()
-        self.ranks = ...  # cf. RankBasedEvaluator
-
-    def process_batch(self, model: Model, batch: MappedTriples) -> None:
-        hr_batch = batch[:, :2]
-        scores = model.predict_t(hr_batch=hr_batch)
-        ranks = ...
-
-        rt_batch = batch[:, 1:]
-        scores = model.predict_h(rt_batch=rt_batch)
-        ranks = ...
-
-    def finalize(self) -> ResultType:
-        ...
-
-
-class LinkPredictionEvaluationLoop(EvaluationLoop):
+class LinkPredictionEvaluationLoop(EvaluationLoop[Tuple[MappedTriples]]):
     """Link prediction evaluation loop."""
 
     def __init__(
         self,
         triples_factory: CoreTriplesFactory,
+        targets: Collection[Target] = (LABEL_HEAD, LABEL_TAIL),
         **kwargs,
     ) -> None:
-        self.triples_factory = triples_factory
-        super().__init__(**kwargs)
+        super().__init__(
+            dataset=LinkPredictionEvaluationDataset(factory=triples_factory, targets=targets),
+            **kwargs,
+        )
+        self.targets = targets
 
-    def _create_dataset(self) -> Dataset[MappedTriples]:
-        return LinkPredictionEvaluationDataset(factory=self.triples_factory)
-
-    def _create_aggregator(self) -> LinkPredictionAggregator:
-        return LinkPredictionAggregator()
+    def process_batch(self, batch: Tuple[MappedTriples]) -> None:
+        (hrt_batch,) = batch
+        for target in self.targets:
+            scores = self.model.predict(target=target)
+            self.evaluator.process_scores_(
+                hrt_batch=hrt_batch,
+                target=target,
+                scores=scores,
+                true_scores=...,
+                dense_positive_mask=...,
+            )
