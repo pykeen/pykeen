@@ -307,7 +307,7 @@ class MultiTrainingCallback(TrainingCallback):
             callback_kwargs = upgrade_to_sequence(callback_kwargs)
         # callback broadcasting
         if len(callback_kwargs) > 1 and len(callbacks) == 1:
-            callbacks = callbacks * len(callback_kwargs)
+            callbacks = list(callbacks) * len(callback_kwargs)
         self.callbacks = [
             callback_resolver.make(callback, kwargs) for callback, kwargs in zip(callbacks, callback_kwargs)
         ]
