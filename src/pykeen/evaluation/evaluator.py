@@ -512,6 +512,7 @@ def prepare_filter_triples(
 
 
 # TODO: consider switching to torch.DataLoader where the preparation of masks/filter batches also takes place
+# TODO: different batch / slice sizes for entity / relation pred
 def evaluate(
     model: Model,
     mapped_triples: MappedTriples,
