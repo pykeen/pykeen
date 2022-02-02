@@ -195,7 +195,7 @@ One particular use case is regular evaluation (outside of an early stopper).
 The following example shows how to evaluate on the training triples on every
 tenth epoch
 
-.. code-block :: python
+.. code-block:: python
 
     from pykeen.datasets import get_dataset
     from pykeen.pipeline import pipeline
