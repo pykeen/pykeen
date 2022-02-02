@@ -5,7 +5,6 @@
 import gc
 import logging
 import timeit
-import warnings
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from dataclasses import dataclass

@@ -399,6 +399,7 @@ class Model(nn.Module, ABC):
         return scores
 
     def predict(
+        self,
         hrt_batch: MappedTriples,
         model: Model,
         target: Target,
