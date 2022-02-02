@@ -216,8 +216,8 @@ class EvaluationTrainingCallback(TrainingCallback):
     def __init__(
         self,
         *,
-        frequency: int,
         evaluation_triples: MappedTriples,
+        frequency: int = 1,
         tracker: HintOrType[ResultTracker] = None,
         tracker_kwargs: OptionalKwargs = None,
         evaluator: HintOrType[Evaluator] = None,
@@ -228,10 +228,10 @@ class EvaluationTrainingCallback(TrainingCallback):
         """
         Initialize the callback.
 
-        :param frequency:
-            the evaluation frequency in epochs
         :param evaluation_triples:
             the triples on which to evaluate
+        :param frequency:
+            the evaluation frequency in epochs
         :param tracker:
             the result tracker to which results are logged, cf. `tracker_resolver`
         :param tracker_kwargs:
