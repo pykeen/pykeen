@@ -401,7 +401,6 @@ class Model(nn.Module, ABC):
     def predict(
         self,
         hrt_batch: MappedTriples,
-        model: Model,
         target: Target,
         slice_size: Optional[int] = None,
     ) -> torch.FloatTensor:
