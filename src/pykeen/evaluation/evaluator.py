@@ -715,11 +715,7 @@ def _evaluate_batch(
     :return:
         The relation filter, which can be re-used for the same batch.
     """
-    batch_scores_of_corrupted = model.predict(
-        hrt_batch=batch,
-        target=target,
-        slice_size=slice_size,
-    )
+    scores = model.predict(hrt_batch=batch, target=target, slice_size=slice_size)
 
     if evaluator.filtered:
         column = TARGET_TO_INDEX[target]
@@ -738,13 +734,13 @@ def _evaluate_batch(
         )
 
         # Select scores of true
-        batch_scores_of_true = batch_scores_of_corrupted[torch.arange(0, batch.shape[0]), batch[:, column]]
+        true_scores = scores[torch.arange(0, batch.shape[0]), batch[:, column]]
         # overwrite filtered scores
-        batch_scores_of_corrupted = filter_scores_(scores=batch_scores_of_corrupted, filter_batch=positive_filter)
+        scores = filter_scores_(scores=scores, filter_batch=positive_filter)
         # The scores for the true triples have to be rewritten to the scores tensor
-        batch_scores_of_corrupted[torch.arange(0, batch.shape[0]), batch[:, column]] = batch_scores_of_true
+        scores[torch.arange(0, batch.shape[0]), batch[:, column]] = true_scores
     else:
-        batch_scores_of_true = None
+        true_scores = None
 
     # Create a positive mask with the size of the scores from the positive filter
     if evaluator.requires_positive_mask:
@@ -754,16 +750,13 @@ def _evaluate_batch(
             relation_filter=relation_filter,
             filter_col=column,
         )
-        positive_mask = create_dense_positive_mask_(
-            zero_tensor=torch.zeros_like(batch_scores_of_corrupted),
-            filter_batch=positive_filter,
-        )
+        positive_mask = create_dense_positive_mask_(zero_tensor=torch.zeros_like(scores), filter_batch=positive_filter)
     else:
         positive_mask = None
 
     # Restrict to entities of interest
     if restrict_entities_to is not None:
-        batch_scores_of_corrupted = batch_scores_of_corrupted[:, restrict_entities_to]
+        scores = scores[:, restrict_entities_to]
         if positive_mask is not None:
             positive_mask = positive_mask[:, restrict_entities_to]
 
@@ -771,8 +764,8 @@ def _evaluate_batch(
     evaluator.process_scores_(
         hrt_batch=batch,
         target=target,
-        true_scores=batch_scores_of_true,
-        scores=batch_scores_of_corrupted,
+        true_scores=true_scores,
+        scores=scores,
         dense_positive_mask=positive_mask,
     )
 
