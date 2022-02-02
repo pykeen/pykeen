@@ -503,6 +503,7 @@ def prepare_filter_triples(
     return torch.cat([*additional_filter_triples, mapped_triples], dim=0).unique(dim=0)
 
 
+# TODO: consider switching to torch.DataLoader where the preparation of masks/filter batches also takes place
 def evaluate(
     model: Model,
     mapped_triples: MappedTriples,
