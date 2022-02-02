@@ -18,6 +18,8 @@ import torch
 from dataclasses_json import DataClassJsonMixin
 from tqdm.autonotebook import tqdm
 
+from pykeen.constants import TARGET_TO_INDEX
+
 from ..models import Model
 from ..triples.triples_factory import restrict_triples
 from ..triples.utils import get_entities, get_relations
@@ -30,6 +32,7 @@ from ..typing import (
     LABEL_TAIL,
     MappedTriples,
     Target,
+    TargetColumn,
 )
 from ..utils import (
     format_relative_comparison,
@@ -744,11 +747,11 @@ def evaluate(
         for batch in batches:
             batch_size = batch.shape[0]
             relation_filter = None
-            for column in (0, 2):
+            for target in (LABEL_HEAD, LABEL_TAIL):
                 relation_filter = _evaluate_batch(
                     batch=batch,  # TODO fix typing
                     model=model,
-                    column=column,
+                    target=target,
                     filtered_evaluators=filtered_evaluators,
                     unfiltered_evaluators=unfiltered_evaluators,
                     slice_size=slice_size,
@@ -786,7 +789,7 @@ def evaluate(
 def _evaluate_batch(
     batch: MappedTriples,
     model: Model,
-    column: int,
+    target: Target,
     filtered_evaluators: Collection[Evaluator],
     unfiltered_evaluators: Collection[Evaluator],
     slice_size: Optional[int],
@@ -797,14 +800,14 @@ def _evaluate_batch(
     filtering_necessary: bool,
 ) -> torch.BoolTensor:
     """
-    Evaluate batch for all head predictions(column=0), or all tail predictions (column=2).
+    Evaluate batch.
 
     :param batch: shape: (batch_size, 3)
         The batch of currently evaluated triples.
     :param model:
         The model to evaluate.
-    :param column:
-        The column which to evaluate. Either 0 for head prediction, or 2 for tail prediction.
+    :param target:
+        The target for which to evaluate.
     :param filtered_evaluators:
         The evaluators which work on filtered scores.
     :param unfiltered_evaluators:
@@ -825,19 +828,23 @@ def _evaluate_batch(
     :return:
         The relation filter, which can be re-used for the same batch.
     """
-    if column not in {0, 2}:
-        raise ValueError(f"column must be either 0 or 2, but is column={column}")
+    target_column = TARGET_TO_INDEX[target]
+    if target_column < 0 or target_column > batch.shape[1]:
+        raise ValueError(f"target_column={target_column} but there are only {batch.shape[1]}")
 
     # Predict scores once
-    if column == 2:  # tail scores
+    if target_column == COLUMN_TAIL:  # tail scores
         batch_scores_of_corrupted = model.predict_t(batch[:, 0:2], slice_size=slice_size)
-    else:
+    elif target_column == COLUMN_HEAD:
         batch_scores_of_corrupted = model.predict_h(batch[:, 1:3], slice_size=slice_size)
+    else:
+        raise ValueError(target_column)
 
+    # TODO: not always necessary, e.g., for classification
     # Select scores of true
     batch_scores_of_true = batch_scores_of_corrupted[
         torch.arange(0, batch.shape[0]),
-        batch[:, column],
+        batch[:, target_column],
     ]
 
     # Create positive filter for all corrupted
@@ -854,7 +861,7 @@ def _evaluate_batch(
             hrt_batch=batch,
             all_pos_triples=all_pos_triples,
             relation_filter=relation_filter,
-            filter_col=column,
+            filter_col=target_column,
         )
 
     # Create a positive mask with the size of the scores from the positive filter
@@ -867,6 +874,7 @@ def _evaluate_batch(
         positive_mask = None
 
     # Restrict to entities of interest
+    # TODO: update for relation scoring
     if restrict_entities_to is not None:
         batch_scores_of_corrupted_ = batch_scores_of_corrupted[:, restrict_entities_to]
         positive_mask = positive_mask[:, restrict_entities_to]
@@ -875,16 +883,9 @@ def _evaluate_batch(
 
     # Evaluate metrics on these *unfiltered* scores
     for unfiltered_evaluator in unfiltered_evaluators:
-        if column == COLUMN_TAIL:  # tail scores
-            process = unfiltered_evaluator.process_tail_scores_
-        elif column == COLUMN_RELATION:  # relation scores
-            process = unfiltered_evaluator.process_relation_scores_
-        elif column == COLUMN_HEAD:  # head scores
-            process = unfiltered_evaluator.process_head_scores_
-        else:
-            raise ValueError
-        process(
+        unfiltered_evaluator.process_scores_(
             hrt_batch=batch,
+            target=target,
             true_scores=batch_scores_of_true[:, None],
             scores=batch_scores_of_corrupted_,
             dense_positive_mask=positive_mask,
@@ -900,7 +901,7 @@ def _evaluate_batch(
         # The scores for the true triples have to be rewritten to the scores tensor
         batch_filtered_scores_of_corrupted[
             torch.arange(0, batch.shape[0]),
-            batch[:, column],
+            batch[:, target_column],
         ] = batch_scores_of_true
 
         # Restrict to entities of interest
@@ -909,16 +910,9 @@ def _evaluate_batch(
 
         # Evaluate metrics on these *filtered* scores
         for filtered_evaluator in filtered_evaluators:
-            if column == COLUMN_TAIL:  # tail scores
-                process = filtered_evaluator.process_tail_scores_
-            elif column == COLUMN_RELATION:  # relation scores
-                process = filtered_evaluator.process_relation_scores_
-            elif column == COLUMN_HEAD:  # head scores
-                process = filtered_evaluator.process_head_scores_
-            else:
-                raise ValueError
-            process(
+            filtered_evaluator.process_scores_(
                 hrt_batch=batch,
+                target=target,
                 true_scores=batch_scores_of_true[:, None],
                 scores=batch_filtered_scores_of_corrupted,
             )
