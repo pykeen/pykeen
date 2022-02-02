@@ -23,6 +23,8 @@ from ..models import Model
 from ..triples.triples_factory import restrict_triples
 from ..triples.utils import get_entities, get_relations
 from ..typing import (
+    COLUMN_HEAD,
+    COLUMN_TAIL,
     LABEL_HEAD,
     LABEL_RELATION,
     LABEL_TAIL,
@@ -123,10 +125,12 @@ class Evaluator(ABC):
         """Process a batch of triples with their computed head/relation/tail scores for all entities/relations.
 
         :param hrt_batch: shape: (batch_size, 3)
-        :param true_scores: shape: (batch_size)
-        :param scores: shape: (batch_size, num_entities/num_relations)
-        :param dense_positive_mask: shape: (batch_size, num_entities/num_relations)
-            An optional binary (0/1) tensor indicating other true entities/relations.
+        :param target:
+            the prediction target
+        :param scores: shape: (batch_size, num_entities)
+        :param true_scores: shape: (batch_size, 1)
+        :param dense_positive_mask: shape: (batch_size, num_entities)
+            An optional binary (0/1) tensor indicating other true entities.
         """
         raise NotImplementedError
 
@@ -407,7 +411,7 @@ def create_sparse_positive_filter_(
             The indices of positives in format [(batch_index, entity_id)].
         - the relation filter for re-usage.
     """
-    if filter_col not in {0, 2}:
+    if filter_col not in {COLUMN_HEAD, COLUMN_TAIL}:
         raise NotImplementedError(
             "This code has only been written for updating head (filter_col=0) or "
             f"tail (filter_col=2) mask, but filter_col={filter_col} was given.",
@@ -577,8 +581,6 @@ def evaluate(
     :param targets:
         the prediction targets
     """
-    if LABEL_RELATION in targets:
-        raise NotImplementedError("cf. https://github.com/pykeen/pykeen/pull/728")
     start = timeit.default_timer()
 
     # TODO: Filtering code may only be correct for scoring entities
@@ -603,6 +605,7 @@ def evaluate(
 
     # Filter triples if necessary
     if not pre_filtered_triples and (restrict_entities_to is not None or restrict_relations_to is not None):
+        # TODO: Filtering code may only be correct for scoring entities
         old_num_triples = mapped_triples.shape[0]
         mapped_triples = restrict_triples(
             mapped_triples=mapped_triples,
