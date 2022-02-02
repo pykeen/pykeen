@@ -24,7 +24,7 @@ from ..constants import USER_DEFINED_CODE
 from ..datasets import get_dataset, has_dataset
 from ..datasets.base import Dataset
 from ..evaluation import Evaluator, evaluator_resolver
-from ..evaluation.rank_based_evaluator import ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX
+from ..evaluation.metrics import ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX
 from ..losses import Loss, loss_resolver
 from ..lr_schedulers import LRScheduler, lr_scheduler_resolver, lr_schedulers_hpo_defaults
 from ..models import Model, model_resolver
@@ -910,7 +910,7 @@ def suggest_discrete_power_int(trial: Trial, name: str, low: int, high: int, bas
     """Suggest an integer in the given range [2^low, 2^high]."""
     if high <= low:
         raise Exception(f"Upper bound {high} is not greater than lower bound {low}.")
-    choices = [base ** i for i in range(low, high + 1)]
+    choices = [base**i for i in range(low, high + 1)]
     return cast(int, trial.suggest_categorical(name=name, choices=choices))
 
 

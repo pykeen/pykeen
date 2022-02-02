@@ -25,7 +25,7 @@ from ..losses import Loss, MarginRankingLoss, loss_resolver
 from ..nn.emb import Embedding, EmbeddingSpecification, RepresentationModule
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import CoreTriplesFactory, relation_inverter
-from ..typing import ScorePack
+from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, MappedTriples, ScorePack, Target
 from ..utils import NoRandomSeedNecessary, extend_batch, set_random_seed
 from ..typing import Mode
 
@@ -69,6 +69,7 @@ class Model(nn.Module, ABC):
 
     def __init__(
         self,
+        *,
         triples_factory: CoreTriplesFactory,
         loss: HintOrType[Loss] = None,
         loss_kwargs: Optional[Mapping[str, Any]] = None,
@@ -173,7 +174,6 @@ class Model(nn.Module, ABC):
     @abstractmethod
     def _reset_parameters_(self):  # noqa: D401
         """Reset all parameters of the model in-place."""
-        raise NotImplementedError
 
     # @abstractmethod
     def _get_entity_len(self, mode: Mode) -> int:
@@ -200,10 +200,10 @@ class Model(nn.Module, ABC):
 
         :raises NotImplementedError:
             If the method was not implemented for this class.
+
         :return: shape: (batch_size, 1), dtype: float
             The score for each triple.
         """
-        raise NotImplementedError
 
     @abstractmethod
     def score_t(
@@ -435,6 +435,24 @@ class Model(nn.Module, ABC):
             scores = torch.sigmoid(scores)
         return scores
 
+    def predict(
+        self,
+        hrt_batch: MappedTriples,
+        target: Target,
+        slice_size: Optional[int] = None,
+    ) -> torch.FloatTensor:
+        """Predict scores for the given target."""
+        if target == LABEL_TAIL:
+            return self.predict_t(hrt_batch[:, 0:2], slice_size=slice_size)
+
+        if target == LABEL_RELATION:
+            return self.predict_r(hrt_batch[:, [0, 2]], slice_size=slice_size)
+
+        if target == LABEL_HEAD:
+            return self.predict_h(hrt_batch[:, 1:3], slice_size=slice_size)
+
+        raise ValueError(f"Unknown target={target}")
+
     def get_all_prediction_df(
         self,
         *,
@@ -593,33 +611,21 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
 
     def __init__(
         self,
+        *,
         triples_factory: CoreTriplesFactory,
-        loss: Optional[Loss] = None,
-        predict_with_sigmoid: bool = False,
-        random_seed: Optional[int] = None,
         regularizer: Optional[Regularizer] = None,
+        **kwargs,
     ) -> None:
         """Initialize the module.
 
         :param triples_factory:
             The triples factory facilitates access to the dataset.
-        :param loss:
-            The loss to use. If None is given, use the loss default specific to the model subclass.
-        :param predict_with_sigmoid:
-            Whether to apply sigmoid onto the scores when predicting scores. Applying sigmoid at prediction time may
-            lead to exactly equal scores for certain triples with very high, or very low score. When not trained with
-            applying sigmoid (or using BCEWithLogitsLoss), the scores are not calibrated to perform well with sigmoid.
-        :param random_seed:
-            A random seed to use for initialising the model's weights. **Should** be set when aiming at reproducibility.
         :param regularizer:
             A regularizer to use for training.
+        :param kwargs:
+            additional keyword-based arguments passed to Model.__init__
         """
-        super().__init__(
-            triples_factory=triples_factory,
-            loss=loss,
-            predict_with_sigmoid=predict_with_sigmoid,
-            random_seed=random_seed,
-        )
+        super().__init__(triples_factory=triples_factory, **kwargs)
         # Regularizer
         if regularizer is not None:
             self.regularizer = regularizer
@@ -759,22 +765,13 @@ class EntityRelationEmbeddingModel(_OldAbstractModel, ABC, autoreset=False):
         triples_factory: CoreTriplesFactory,
         entity_representations: EmbeddingSpecification,
         relation_representations: EmbeddingSpecification,
-        loss: Optional[Loss] = None,
-        predict_with_sigmoid: bool = False,
-        random_seed: Optional[int] = None,
-        regularizer: Optional[Regularizer] = None,
+        **kwargs,
     ) -> None:
         """Initialize the entity embedding model.
 
         .. seealso:: Constructor of the base class :class:`pykeen.models.Model`
         """
-        super().__init__(
-            triples_factory=triples_factory,
-            loss=loss,
-            random_seed=random_seed,
-            regularizer=regularizer,
-            predict_with_sigmoid=predict_with_sigmoid,
-        )
+        super().__init__(triples_factory=triples_factory, **kwargs)
         self.entity_embeddings = entity_representations.make(
             num_embeddings=triples_factory.num_entities,
             device=self.device,

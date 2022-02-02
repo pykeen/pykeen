@@ -77,7 +77,7 @@ jobs:
       - name: Check documentation build with Sphinx
         run: |
           sudo apt-get install graphviz
-          tox -e docs
+          tox -e docs-test
   tests:
     if: github.event.pull_request.head.repo.full_name != 'pykeen/pykeen' && github.event.sender.login == 'PyKEEN-bot'
     name: Tests

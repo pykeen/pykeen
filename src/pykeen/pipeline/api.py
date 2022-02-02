@@ -203,7 +203,7 @@ from ..constants import PYKEEN_CHECKPOINTS, USER_DEFINED_CODE
 from ..datasets import get_dataset
 from ..datasets.base import Dataset
 from ..evaluation import Evaluator, MetricResults, evaluator_resolver
-from ..evaluation.rank_based_evaluator import resolve_metric_name
+from ..evaluation.metrics import MetricKey
 from ..losses import Loss, loss_resolver
 from ..lr_schedulers import LRScheduler, lr_scheduler_resolver
 from ..models import Model, make_model_cls, model_resolver
@@ -545,7 +545,7 @@ class _ResultAccumulator:
         """Add an "original" result, i.e., one stored in the reproducibility configuration."""
         # normalize keys
         # TODO: this can only normalize rank-based metrics!
-        result = {str(resolve_metric_name(k)): v for k, v in flatten_dictionary(result).items()}
+        result = {MetricKey.normalize(k): v for k, v in flatten_dictionary(result).items()}
         self.keys = sorted(result.keys())
         self.data.append([True] + [result[k] for k in self.keys])
 
@@ -1077,6 +1077,20 @@ def pipeline(  # noqa: C901
             model=model_instance.__class__.__name__,
             model_kwargs=model_kwargs,
         ),
+    )
+
+    # Log loss parameters
+    _result_tracker.log_params(
+        params=dict(
+            # the loss was already logged as part of the model kwargs
+            # loss=loss_resolver.normalize_inst(model_instance.loss),
+            loss_kwargs=loss_kwargs
+        ),
+    )
+
+    # Log regularizer parameters
+    _result_tracker.log_params(
+        params=dict(regularizer_kwargs=regularizer_kwargs),
     )
 
     optimizer_kwargs = dict(optimizer_kwargs or {})
