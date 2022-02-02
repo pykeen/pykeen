@@ -22,10 +22,10 @@ from torch.utils.data import DataLoader
 from tqdm.autonotebook import tqdm, trange
 
 from .callbacks import (
-    GradientAbsClippingCallback,
-    GradientNormClippingCallback,
+    GradientAbsClippingTrainingCallback,
+    GradientNormClippingTrainingCallback,
     MultiTrainingCallback,
-    TrackerCallback,
+    TrackerTrainingCallback,
     TrainingCallbackHint,
     TrainingCallbackKwargsHint,
 )
@@ -433,16 +433,16 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         callback = MultiTrainingCallback(callbacks=callbacks, callback_kwargs=callback_kwargs)
         # Register a callback for the result tracker, if given
         if result_tracker is not None:
-            callback.register_callback(TrackerCallback(result_tracker))
+            callback.register_callback(TrackerTrainingCallback(result_tracker))
         if gradient_clipping_max_norm is not None:
             callback.register_callback(
-                GradientNormClippingCallback(
+                GradientNormClippingTrainingCallback(
                     max_norm=gradient_clipping_max_norm,
                     norm_type=gradient_clipping_norm_type,
                 )
             )
         if gradient_clipping_max_abs_value is not None:
-            callback.register_callback(GradientAbsClippingCallback(clip_value=gradient_clipping_max_abs_value))
+            callback.register_callback(GradientAbsClippingTrainingCallback(clip_value=gradient_clipping_max_abs_value))
 
         callback.register_training_loop(self)
 

@@ -64,11 +64,11 @@ from ..utils import upgrade_to_sequence
 __all__ = [
     "TrainingCallbackHint",
     "TrainingCallback",
-    "TrackerCallback",
-    "EvaluationCallback",
+    "TrackerTrainingCallback",
+    "EvaluationTrainingCallback",
     "MultiTrainingCallback",
-    "GradientNormClippingCallback",
-    "GradientAbsClippingCallback",
+    "GradientNormClippingTrainingCallback",
+    "GradientAbsClippingTrainingCallback",
 ]
 
 
@@ -121,7 +121,7 @@ class TrainingCallback:
         """Call after training."""
 
 
-class TrackerCallback(TrainingCallback):
+class TrackerTrainingCallback(TrainingCallback):
     """
     An adapter for the :class:`pykeen.trackers.ResultTracker`.
 
@@ -142,7 +142,7 @@ class TrackerCallback(TrainingCallback):
         self.result_tracker.log_metrics({"loss": epoch_loss}, step=epoch)
 
 
-class GradientNormClippingCallback(TrainingCallback):
+class GradientNormClippingTrainingCallback(TrainingCallback):
     """A callback for gradient clipping before stepping the optimizer with :func:`torch.nn.utils.clip_grad_norm_`."""
 
     def __init__(self, max_norm: float, norm_type: Optional[float] = None):
@@ -167,7 +167,7 @@ class GradientNormClippingCallback(TrainingCallback):
         )
 
 
-class GradientAbsClippingCallback(TrainingCallback):
+class GradientAbsClippingTrainingCallback(TrainingCallback):
     """A callback for gradient clipping before stepping the optimizer with :func:`torch.nn.utils.clip_grad_value_`."""
 
     def __init__(self, clip_value: float):
@@ -185,7 +185,7 @@ class GradientAbsClippingCallback(TrainingCallback):
         clip_grad_value_(self.model.get_grad_params(), clip_value=self.clip_value)
 
 
-class EvaluationCallback(TrainingCallback):
+class EvaluationTrainingCallback(TrainingCallback):
     """
     A callback for regular evaluation.
 
@@ -195,7 +195,7 @@ class EvaluationCallback(TrainingCallback):
 
         from pykeen.datasets import get_dataset
         from pykeen.pipeline import pipeline
-        from pykeen.training.callbacks import EvaluationCallback
+        from pykeen.training.callbacks import EvaluationTrainingCallback
 
         dataset = get_dataset(dataset="nations")
         result = pipeline(
@@ -203,7 +203,7 @@ class EvaluationCallback(TrainingCallback):
             model="mure",
             training_kwargs=dict(
                 num_epochs=100,
-                callbacks=EvaluationCallback(
+                callbacks=EvaluationTrainingCallback(
                     frequency=10,
                     evaluation_triples=dataset.training.mapped_triples,
                     tracker="console",
