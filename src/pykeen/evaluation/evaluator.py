@@ -740,11 +740,13 @@ def _evaluate_batch(
         )
 
         # Select scores of true
-        true_scores = scores[torch.arange(0, batch.shape[0]), batch[:, column]].unsqueeze(dim=-1)
+        true_scores = scores[torch.arange(0, batch.shape[0]), batch[:, column]]
         # overwrite filtered scores
         scores = filter_scores_(scores=scores, filter_batch=positive_filter)
         # The scores for the true triples have to be rewritten to the scores tensor
         scores[torch.arange(0, batch.shape[0]), batch[:, column]] = true_scores
+        # the rank-based evaluators needs the true scores with trailing 1-dim
+        true_scores = true_scores.unsqueeze(dim=-1)
     else:
         true_scores = None
 
