@@ -35,6 +35,7 @@ from .modules import (
     TripleREInteraction,
     TuckerInteraction,
     UMInteraction,
+    Interaction,
     interaction_resolver,
 )
 from .node_piece import NodePieceRepresentation, tokenizer_resolver
@@ -46,6 +47,7 @@ __all__ = [
     "RepresentationModule",
     "SubsetRepresentationModule",
     "init",
+    "Interaction",
     "interaction_resolver",
     "tokenizer_resolver",
     # Adapter classes

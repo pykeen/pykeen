@@ -11,8 +11,13 @@ from class_resolver import Hint, HintOrType
 from .node_piece import _ConcatMLP
 from ..nbase import ERModel, _prepare_representation_module_list
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...nn.emb import EmbeddingSpecification, NodePieceRepresentation, SubsetRepresentationModule
-from ...nn.modules import DistMultInteraction, Interaction
+from ...nn import (
+    DistMultInteraction,
+    EmbeddingSpecification,
+    Interaction,
+    NodePieceRepresentation,
+    SubsetRepresentationModule,
+)
 from ...triples.triples_factory import CoreTriplesFactory
 from ...typing import Mode
 
