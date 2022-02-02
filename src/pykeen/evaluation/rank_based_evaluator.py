@@ -9,6 +9,7 @@ import random
 from collections import defaultdict
 from dataclasses import dataclass, field, fields
 from typing import DefaultDict, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Union, cast
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -339,31 +340,30 @@ class RankBasedEvaluator(Evaluator):
         :param true_scores: shape: (batch_size,)
         :param all_scores: shape: (batch_size, num_entities)
         """
+        warnings.warn("directly use process_scores_ instead", DeprecationWarning)
+        self.process_scores_(
+            hrt_batch=hrt_batch,
+            target=side,
+            true_scores=true_scores,
+            scores=all_scores,
+            dense_positive_mask=None,
+        )
+
+    def process_scores_(
+        self,
+        hrt_batch: MappedTriples,
+        target: Target,
+        true_scores: torch.FloatTensor,
+        scores: torch.FloatTensor,
+        dense_positive_mask: Optional[torch.FloatTensor] = None,
+    ) -> None:  # noqa: D102
         batch_ranks = Ranks.from_scores(
             true_score=true_scores,
-            all_scores=all_scores,
+            all_scores=scores,
         )
-        self.num_entities = all_scores.shape[1]
+        self.num_entities = scores.shape[1]
         for rank_type, v in batch_ranks.items():
-            self.ranks[side, rank_type].extend(v.detach().cpu().tolist())
-
-    def process_tail_scores_(
-        self,
-        hrt_batch: MappedTriples,
-        true_scores: torch.FloatTensor,
-        scores: torch.FloatTensor,
-        dense_positive_mask: Optional[torch.FloatTensor] = None,
-    ) -> None:  # noqa: D102
-        self._update_ranks_(true_scores=true_scores, all_scores=scores, side=LABEL_TAIL, hrt_batch=hrt_batch)
-
-    def process_head_scores_(
-        self,
-        hrt_batch: MappedTriples,
-        true_scores: torch.FloatTensor,
-        scores: torch.FloatTensor,
-        dense_positive_mask: Optional[torch.FloatTensor] = None,
-    ) -> None:  # noqa: D102
-        self._update_ranks_(true_scores=true_scores, all_scores=scores, side=LABEL_HEAD, hrt_batch=hrt_batch)
+            self.ranks[target, rank_type].extend(v.detach().cpu().tolist())
 
     def _get_ranks(self, side: ExtendedTarget, rank_type: ExtendedRankType) -> np.ndarray:
         if side == SIDE_BOTH:
