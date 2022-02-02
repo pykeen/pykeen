@@ -255,16 +255,13 @@ class EvaluationCallback(TrainingCallback):
     def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
         if epoch % self.frequency:
             return
-        # TODO: AMO
-        results = evaluate(
+        result = self.evaluator.evaluate(
             model=self.training_loop.model,
             mapped_triples=self.evaluation_triples,
-            evaluators=self.evaluator,
             device=self.training_loop.device,
             **self.kwargs,
         )
-        assert isinstance(results, MetricResults)
-        self.tracker.log_metrics(metrics=results.to_flat_dict(), step=epoch, prefix=self.prefix)
+        self.tracker.log_metrics(metrics=result.to_flat_dict(), step=epoch, prefix=self.prefix)
 
 
 #: A hint for constructing a :class:`MultiTrainingCallback`
