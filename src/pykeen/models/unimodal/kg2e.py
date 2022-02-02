@@ -130,4 +130,3 @@ class KG2E(ERModel):
             ],
             **kwargs,
         )
-

@@ -4,17 +4,17 @@
 
 import unittest
 from dataclasses import dataclass
+from typing import Optional
 
 import torch
 from torch import nn
-from typing import Optional
 
 from pykeen.datasets import Nations
 from pykeen.models import EntityRelationEmbeddingModel, Model, TransE
 from pykeen.nn.emb import EmbeddingSpecification
 from pykeen.triples import TriplesFactory
-from pykeen.utils import resolve_device
 from pykeen.typing import Mode
+from pykeen.utils import resolve_device
 
 
 class TestBaseModel(unittest.TestCase):

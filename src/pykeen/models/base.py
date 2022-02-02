@@ -25,9 +25,8 @@ from ..losses import Loss, MarginRankingLoss, loss_resolver
 from ..nn.emb import Embedding, EmbeddingSpecification, RepresentationModule
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import CoreTriplesFactory, relation_inverter
-from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, MappedTriples, ScorePack, Target
+from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, MappedTriples, Mode, ScorePack, Target
 from ..utils import NoRandomSeedNecessary, extend_batch, set_random_seed
-from ..typing import Mode
 
 __all__ = [
     "Model",

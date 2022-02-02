@@ -18,9 +18,8 @@ from ..nn.emb import EmbeddingSpecification, RepresentationModule
 from ..nn.modules import Interaction, interaction_resolver
 from ..regularizers import Regularizer
 from ..triples import CoreTriplesFactory
-from ..typing import HeadRepresentation, RelationRepresentation, TailRepresentation
+from ..typing import HeadRepresentation, Mode, RelationRepresentation, TailRepresentation
 from ..utils import check_shapes
-from ..typing import Mode
 
 __all__ = [
     "_NewAbstractModel",
