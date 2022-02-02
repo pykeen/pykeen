@@ -5,6 +5,7 @@
 import gc
 import logging
 import timeit
+import warnings
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -22,13 +23,7 @@ from ..constants import TARGET_TO_INDEX
 from ..models import Model
 from ..triples.triples_factory import restrict_triples
 from ..triples.utils import get_entities, get_relations
-from ..typing import (
-    LABEL_HEAD,
-    LABEL_RELATION,
-    LABEL_TAIL,
-    MappedTriples,
-    Target,
-)
+from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, MappedTriples, Target
 from ..utils import (
     format_relative_comparison,
     is_cuda_oom_error,
@@ -147,6 +142,7 @@ class Evaluator(ABC):
         :param dense_positive_mask: shape: (batch_size, num_entities)
             An optional binary (0/1) tensor indicating other true entities.
         """
+        warnings.warn("directly use process_scores_", DeprecationWarning)
         self.process_scores_(
             hrt_batch=hrt_batch,
             target=LABEL_TAIL,
@@ -170,6 +166,7 @@ class Evaluator(ABC):
         :param dense_positive_mask: shape: (batch_size, num_entities)
             An optional binary (0/1) tensor indicating other true entities.
         """
+        warnings.warn("directly use process_scores_", DeprecationWarning)
         self.process_scores_(
             hrt_batch=hrt_batch,
             target=LABEL_HEAD,
