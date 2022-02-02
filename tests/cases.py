@@ -1729,21 +1729,15 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
         """Test the finalize() function."""
         # Process one batch
         hrt_batch, scores, mask = self._get_input()
-        true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, 2]][:, None]
-        self.instance.process_scores_(
-            hrt_batch=hrt_batch,
-            target=LABEL_TAIL,
-            true_scores=true_scores,
-            scores=scores,
-            dense_positive_mask=mask,
-        )
-        self.instance.process_scores_(
-            hrt_batch=hrt_batch,
-            target=LABEL_HEAD,
-            true_scores=true_scores,
-            scores=scores,
-            dense_positive_mask=mask,
-        )
+        true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, 2]]
+        for target in (LABEL_HEAD, LABEL_TAIL):
+            self.instance.process_scores_(
+                hrt_batch=hrt_batch,
+                target=target,
+                true_scores=true_scores,
+                scores=scores,
+                dense_positive_mask=mask,
+            )
 
         result = self.instance.finalize()
         assert isinstance(result, MetricResults)
