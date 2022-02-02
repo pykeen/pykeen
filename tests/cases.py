@@ -37,6 +37,8 @@ from click.testing import CliRunner, Result
 from torch import optim
 from torch.nn import functional
 from torch.optim import SGD, Adagrad
+from pykeen.constants import TARGET_TO_INDEX
+from pykeen.evaluation.evaluator import create_dense_positive_mask_, create_sparse_positive_filter_, filter_scores_
 
 import pykeen.models
 import pykeen.nn.emb
@@ -1647,9 +1649,6 @@ class SplitterTestCase(GenericTestCase[Splitter]):
 class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
     """A test case for quickly defining common tests for evaluators models."""
 
-    # the model
-    model: Model
-
     # Settings
     batch_size: int = 8
     embedding_dim: int = 7
@@ -1665,93 +1664,67 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
 
     def post_instantiation_hook(self) -> None:  # noqa: D102
         # Use small model (untrained)
-        self.model = TransE(triples_factory=self.factory, embedding_dim=self.embedding_dim)
+        self.device = resolve_device()
 
     def _get_input(
         self,
         target: Target,
-    ) -> Tuple[torch.LongTensor, torch.FloatTensor, Optional[torch.BoolTensor]]:
+    ) -> Tuple[torch.LongTensor, torch.FloatTensor, Optional[torch.BoolTensor], Optional[torch.FloatTensor]]:
         # Get batch
-        hrt_batch = self.factory.mapped_triples[: self.batch_size].to(self.model.device)
+        hrt_batch = self.factory.mapped_triples[: self.batch_size].to(self.device)
 
         # Compute scores
-        if target == LABEL_HEAD:
-            scores = self.model.score_h(rt_batch=hrt_batch[:, 1:])
-        elif target == LABEL_RELATION:
-            scores = self.model.score_r(ht_batch=hrt_batch[:, [0, 2]])
-        elif target == LABEL_TAIL:
-            scores = self.model.score_t(hr_batch=hrt_batch[:, :2])
-        else:
-            raise ValueError(target)
+        num = self.dataset.num_relations if target == LABEL_RELATION else self.dataset.num_entities
+        scores = torch.rand(self.batch_size, num, device=self.device)
 
         # Compute mask only if required
         if self.instance.requires_positive_mask:
-            # TODO: Re-use filtering code
-            triples = self.factory.mapped_triples.to(self.model.device)
-            if target == LABEL_HEAD:
-                sel_col, start_col = 0, 1
-            elif target == LABEL_RELATION:
-                sel_col, start_col = 1, 2
-            elif target == LABEL_TAIL:
-                sel_col, start_col = 2, 0
-            else:
-                raise ValueError(target)
-            stop_col = start_col + 2
-
-            # shape: (batch_size, num_triples)
-            triple_mask = (triples[None, :, start_col:stop_col] == hrt_batch[:, None, start_col:stop_col]).all(dim=-1)
-            batch_indices, triple_indices = triple_mask.nonzero(as_tuple=True)
-            entity_indices = triples[triple_indices, sel_col]
-
-            # shape: (batch_size, num_entities)
-            mask = torch.zeros_like(scores, dtype=torch.bool)
-            mask[batch_indices, entity_indices] = True
+            filter_batch = create_sparse_positive_filter_(
+                hrt_batch=hrt_batch,
+                all_pos_triples=self.factory.mapped_triples.to(self.device),
+                filter_col=TARGET_TO_INDEX[target],
+            )
+            mask = create_dense_positive_mask_(
+                zero_tensor=torch.zeros_like(scores),
+                filter_batch=filter_batch,
+            )
         else:
             mask = None
+        if self.instance.filtered:
+            true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, TARGET_TO_INDEX[target], None]]
+        else:
+            true_scores = None
 
-        return hrt_batch, scores, mask
+        return hrt_batch, scores, mask, true_scores
+
+    def _test_process_scores(self, target: Target) -> None:
+        """Test the evaluator's ``process_scores_()`` function."""
+        hrt_batch, scores, mask, true_scores = self._get_input(target=target)
+        self.instance.process_scores_(
+            hrt_batch=hrt_batch,
+            target=target,
+            true_scores=true_scores,
+            scores=scores,
+            dense_positive_mask=mask,
+        )
 
     def test_process_tail_scores_(self) -> None:
-        """Test the evaluator's ``process_tail_scores_()`` function."""
-        hrt_batch, scores, mask = self._get_input(target=LABEL_TAIL)
-        true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, 2]][:, None]
-        self.instance.process_scores_(
-            hrt_batch=hrt_batch,
-            target=LABEL_TAIL,
-            true_scores=true_scores,
-            scores=scores,
-            dense_positive_mask=mask,
-        )
+        """Test processing tail scores."""
+        self._test_process_scores(target=LABEL_TAIL)
 
     def test_process_relation_scores_(self) -> None:
-        """Test the evaluator's ``process_relation_scores_()`` function."""
-        hrt_batch, scores, mask = self._get_input(target=LABEL_RELATION)
-        true_scores = scores[torch.arange(0, hrt_batch.shape[0], device=hrt_batch.device), hrt_batch[:, 1]][:, None]
-        self.instance.process_relation_scores_(
-            hrt_batch=hrt_batch,
-            true_scores=true_scores,
-            scores=scores,
-            dense_positive_mask=mask,
-        )
+        """Test processing relation scores"""
+        self._test_process_scores(target=LABEL_RELATION)
 
     def test_process_head_scores_(self) -> None:
-        """Test the evaluator's ``process_head_scores_()`` function."""
-        hrt_batch, scores, mask = self._get_input(target=LABEL_HEAD)
-        true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, 0]][:, None]
-        self.instance.process_scores_(
-            hrt_batch=hrt_batch,
-            target=LABEL_HEAD,
-            true_scores=true_scores,
-            scores=scores,
-            dense_positive_mask=mask,
-        )
+        """Test processing head scores"""
+        self._test_process_scores(target=LABEL_HEAD)
 
     def test_finalize(self) -> None:
         """Test the finalize() function."""
         # Process one batch
-        hrt_batch, scores, mask = self._get_input(target=LABEL_TAIL)
-        true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, 2]][:, None]
-        for target in (LABEL_HEAD, LABEL_TAIL):
+        for target in (LABEL_HEAD, LABEL_RELATION, LABEL_TAIL):
+            hrt_batch, scores, mask, true_scores = self._get_input(target=target)
             self.instance.process_scores_(
                 hrt_batch=hrt_batch,
                 target=target,
@@ -1759,7 +1732,6 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
                 scores=scores,
                 dense_positive_mask=mask,
             )
-
         result = self.instance.finalize()
         assert isinstance(result, MetricResults)
 
