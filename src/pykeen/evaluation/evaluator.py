@@ -804,7 +804,7 @@ def _evaluate_batch(
             positive_mask = positive_mask[:, restrict_entities_to]
 
     if column == COLUMN_TAIL:  # tail scores
-        evaluator.process_head_scores_(
+        evaluator.process_tail_scores_(
             hrt_batch=batch,
             true_scores=batch_scores_of_true,
             scores=batch_scores_of_corrupted,
