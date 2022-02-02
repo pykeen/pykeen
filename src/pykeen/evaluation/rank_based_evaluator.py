@@ -339,7 +339,7 @@ class RankBasedEvaluator(Evaluator):
             raise KeyError(f"{self.__class__.__name__} needs the true scores!")
 
         batch_ranks = Ranks.from_scores(
-            true_score=true_scores,
+            true_score=true_scores.unsqueeze(dim=-1),  # TODO: can we get rid of this?
             all_scores=scores,
         )
         self.num_entities = scores.shape[1]
