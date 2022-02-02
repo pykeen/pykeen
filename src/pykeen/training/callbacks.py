@@ -59,7 +59,7 @@ from torch.nn.utils import clip_grad_norm_, clip_grad_value_
 from ..evaluation import Evaluator, evaluator_resolver
 from ..trackers import ResultTracker, tracker_resolver
 from ..typing import MappedTriples, OneOrSequence
-from ..utils import upgrade_to_sequence
+from ..utils import sequence_broadcast, upgrade_to_sequence
 
 __all__ = [
     "TrainingCallbackHint",
@@ -306,8 +306,7 @@ class MultiTrainingCallback(TrainingCallback):
             callbacks = upgrade_to_sequence(callbacks)
             callback_kwargs = upgrade_to_sequence(callback_kwargs)
         # callback broadcasting
-        if len(callback_kwargs) > 1 and len(callbacks) == 1:
-            callbacks = list(callbacks) * len(callback_kwargs)
+        callbacks = sequence_broadcast(reference=callback_kwargs, seq=callbacks)
         self.callbacks = [
             callback_resolver.make(callback, kwargs) for callback, kwargs in zip(callbacks, callback_kwargs)
         ]
