@@ -130,7 +130,7 @@ class Evaluator(ABC):
         :param scores: shape: (batch_size, num_choices)
         :param true_scores: shape: (batch_size, 1)
         :param dense_positive_mask: shape: (batch_size, num_choices)
-            An optional binary (0/1) tensor indicating other true entities.
+            An optional binary (0/1) tensor indicating other true choices.
         """
         raise NotImplementedError
 
