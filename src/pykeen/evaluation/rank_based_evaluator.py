@@ -339,7 +339,7 @@ class RankBasedEvaluator(Evaluator):
             raise ValueError(f"{self.__class__.__name__} needs the true scores!")
 
         batch_ranks = Ranks.from_scores(
-            true_score=true_scores.unsqueeze(dim=-1),  # TODO: can we get rid of this?
+            true_score=true_scores,
             all_scores=scores,
         )
         self.num_entities = scores.shape[1]
@@ -549,7 +549,7 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
             negative_entity_ids,
         ]
         # super.evaluation assumes that the true scores are part of all_scores
-        scores = torch.cat([true_scores.unsqueeze(dim=-1), negative_scores], dim=-1)
+        scores = torch.cat([true_scores, negative_scores], dim=-1)
         super().process_scores_(
             hrt_batch=hrt_batch,
             target=target,

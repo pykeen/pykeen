@@ -120,7 +120,7 @@ class Evaluator(ABC):
         :param target:
             the prediction target
         :param scores: shape: (batch_size, num_entities)
-        :param true_scores: shape: (batch_size)
+        :param true_scores: shape: (batch_size, 1)
         :param dense_positive_mask: shape: (batch_size, num_entities)
             An optional binary (0/1) tensor indicating other true entities.
         """
@@ -740,7 +740,7 @@ def _evaluate_batch(
         )
 
         # Select scores of true
-        true_scores = scores[torch.arange(0, batch.shape[0]), batch[:, column]]
+        true_scores = scores[torch.arange(0, batch.shape[0]), batch[:, column]].unsqueeze(dim=-1)
         # overwrite filtered scores
         scores = filter_scores_(scores=scores, filter_batch=positive_filter)
         # The scores for the true triples have to be rewritten to the scores tensor
