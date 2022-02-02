@@ -748,6 +748,12 @@ def _evaluate_batch(
 
     # Create a positive mask with the size of the scores from the positive filter
     if evaluator.requires_positive_mask:
+        positive_filter, relation_filter = create_sparse_positive_filter_(
+            hrt_batch=batch,
+            all_pos_triples=all_pos_triples,
+            relation_filter=relation_filter,
+            filter_col=column,
+        )
         positive_mask = create_dense_positive_mask_(
             zero_tensor=torch.zeros_like(batch_scores_of_corrupted),
             filter_batch=positive_filter,
