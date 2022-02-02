@@ -519,6 +519,7 @@ def evaluate(
     do_time_consuming_checks: bool = True,
     additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
     pre_filtered_triples: bool = True,
+    targets: Collection[Target] = (LABEL_HEAD, LABEL_TAIL),
 ) -> Union[MetricResults, List[MetricResults]]:
     """Evaluate metrics for model on mapped triples.
 
@@ -569,7 +570,11 @@ def evaluate(
         accelerates this method, and is recommended when evaluating multiple times on the same set of triples.
     :param additional_filtered_triples:
         Additional true triples to filter out during filtered evaluation.
+    :param targets:
+        the prediction targets
     """
+    if LABEL_RELATION in targets:
+        raise NotImplementedError("cf. https://github.com/pykeen/pykeen/pull/728")
     start = timeit.default_timer()
 
     # verify that the triples have been filtered
@@ -650,7 +655,7 @@ def evaluate(
         for batch in batches:
             batch_size = batch.shape[0]
             relation_filter = None
-            for target in (LABEL_HEAD, LABEL_TAIL):
+            for target in targets:
                 relation_filter = _evaluate_batch(
                     batch=batch,
                     model=model,
