@@ -51,14 +51,15 @@ to implement a gradient clipping callback:
             clip_grad_value_(self.model.parameters(), clip_value=self.clip_value)
 """
 
-from typing import Any, Collection, List, Optional, Union
+from typing import Any, List, Optional
 
-from class_resolver import HintOrType, OptionalKwargs
+from class_resolver import HintOrType, OptionalKwargs, Resolver
 from torch.nn.utils import clip_grad_norm_, clip_grad_value_
 
-from ..evaluation import Evaluator, MetricResults, evaluate, evaluator_resolver
+from ..evaluation import Evaluator, evaluator_resolver
 from ..trackers import ResultTracker, tracker_resolver
-from ..typing import MappedTriples
+from ..typing import MappedTriples, OneOrSequence
+from ..utils import upgrade_to_sequence
 
 __all__ = [
     "TrainingCallbackHint",
@@ -264,8 +265,13 @@ class EvaluationCallback(TrainingCallback):
         self.tracker.log_metrics(metrics=result.to_flat_dict(), step=epoch, prefix=self.prefix)
 
 
+callback_resolver: Resolver[TrainingCallback] = Resolver.from_subclasses(
+    base=TrainingCallback,
+)
+
 #: A hint for constructing a :class:`MultiTrainingCallback`
-TrainingCallbackHint = Union[None, TrainingCallback, Collection[TrainingCallback]]
+TrainingCallbackHint = OneOrSequence[HintOrType[TrainingCallback]]
+TrainingCallbackKwargsHint = OneOrSequence[OptionalKwargs]
 
 
 class MultiTrainingCallback(TrainingCallback):
@@ -274,15 +280,23 @@ class MultiTrainingCallback(TrainingCallback):
     #: A collection of callbacks
     callbacks: List[TrainingCallback]
 
-    def __init__(self, callbacks: TrainingCallbackHint = None) -> None:
+    def __init__(
+        self,
+        callbacks: TrainingCallbackHint = None,
+        callback_kwargs: TrainingCallbackKwargsHint = None,
+    ) -> None:
         """Initialize the callback."""
         super().__init__()
         if callbacks is None:
-            self.callbacks = []
-        elif isinstance(callbacks, TrainingCallback):
-            self.callbacks = [callbacks]
+            assert callback_kwargs is None
+            callbacks = []
+            callback_kwargs = []
         else:
-            self.callbacks = list(callbacks)
+            callbacks = upgrade_to_sequence(callbacks)
+            callback_kwargs = upgrade_to_sequence(callback_kwargs)
+        self.callbacks = [
+            callback_resolver.make(callback, kwargs) for callback, kwargs in zip(callbacks, callback_kwargs)
+        ]
 
     def register_training_loop(self, loop) -> None:  # noqa: D102
         super().register_training_loop(training_loop=loop)
