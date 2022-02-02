@@ -297,7 +297,7 @@ class MultiTrainingCallback(TrainingCallback):
             additional keyword-based parameters for instantiating the callbacks
         """
         super().__init__()
-        self.callbacks = callback_resolver.make_many(callbacks, callback_kwargs)
+        self.callbacks = callback_resolver.make_many(callbacks, callback_kwargs) if callbacks else []
 
     def register_training_loop(self, loop) -> None:  # noqa: D102
         super().register_training_loop(training_loop=loop)
