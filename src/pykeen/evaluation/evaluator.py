@@ -23,14 +23,11 @@ from ..models import Model
 from ..triples.triples_factory import restrict_triples
 from ..triples.utils import get_entities, get_relations
 from ..typing import (
-    COLUMN_HEAD,
-    COLUMN_TAIL,
     LABEL_HEAD,
     LABEL_RELATION,
     LABEL_TAIL,
     MappedTriples,
     Target,
-    TargetColumn,
 )
 from ..utils import (
     format_relative_comparison,
@@ -737,22 +734,6 @@ def evaluate(
     return result
 
 
-def _predict_scores(
-    hrt_batch: MappedTriples,
-    model: Model,
-    target: Target,
-    slice_size: Optional[int] = None,
-) -> torch.FloatTensor:
-    """Predict scores for the given target."""
-    if target == LABEL_TAIL:
-        return model.predict_t(hrt_batch[:, 0:2], slice_size=slice_size)
-
-    if target == LABEL_HEAD:
-        return model.predict_h(hrt_batch[:, 1:3], slice_size=slice_size)
-
-    raise ValueError(f"Unknown target={target}")
-
-
 def _evaluate_batch(
     batch: MappedTriples,
     model: Model,
@@ -786,7 +767,7 @@ def _evaluate_batch(
     :return:
         The relation filter, which can be re-used for the same batch.
     """
-    batch_scores_of_corrupted = _predict_scores(
+    batch_scores_of_corrupted = model.predict(
         hrt_batch=batch,
         model=model,
         target=target,
