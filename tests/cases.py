@@ -39,10 +39,12 @@ from torch.nn import functional
 from torch.optim import SGD, Adagrad
 
 import pykeen.models
+from pykeen.models.mocks import FixedModel
 import pykeen.nn.emb
 import pykeen.nn.message_passing
 import pykeen.nn.node_piece
 import pykeen.nn.weighting
+import pykeen.evaluation.evaluation_loop
 from pykeen.datasets import Nations
 from pykeen.datasets.base import LazyDataset
 from pykeen.datasets.kinships import KINSHIPS_TRAIN_PATH
@@ -1842,3 +1844,21 @@ class TokenizerTestCase(GenericTestCase[pykeen.nn.node_piece.Tokenizer]):
         # no repetition, except padding idx
         for row in tokens.tolist():
             self.assertDictEqual({k: v for k, v in Counter(row).items() if k >= 0 and v > 1}, {}, msg="duplicate token")
+
+
+class EvaluationLoopTestCase(GenericTestCase[pykeen.evaluation.evaluation_loop.EvaluationLoop]):
+    """Tests for evaluation loops."""
+
+    batch_size: int = 2
+    factory: CoreTriplesFactory
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        self.factory = Nations().training
+        kwargs["model"] = FixedModel(triples_factory=self.factory)
+        return kwargs
+
+    def test_process_batch(self):
+        """Test processing a single batch."""
+        batch = next(iter(self.instance.get_loader(batch_size=self.batch_size)))
+        self.instance.process_batch(batch=batch)
