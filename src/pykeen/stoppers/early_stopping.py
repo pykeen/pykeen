@@ -199,7 +199,7 @@ class EarlyStopper(Stopper):
         """Count the number of results stored in the early stopper."""
         return len(self.results)
 
-    def should_stop(self, epoch: int, *, mode: Optional[Mode]) -> bool:
+    def should_stop(self, epoch: int, *, mode: Optional[Mode] = None) -> bool:
         """Evaluate on a metric and compare to past evaluations to decide if training should stop."""
         # Evaluate
         metric_results = self.evaluator.evaluate(

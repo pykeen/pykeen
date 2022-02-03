@@ -144,7 +144,7 @@ class Evaluator(ABC):
         do_time_consuming_checks: bool = True,
         additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
         *,
-        mode: Optional[Mode],
+        mode: Optional[Mode] = None,
     ) -> MetricResults:
         """Run :func:`pykeen.evaluation.evaluate` with this evaluator."""
         if batch_size is None and self.automatic_memory_optimization:
