@@ -2,7 +2,7 @@
 
 """Implementation of RESCAL."""
 
-from typing import Any, ClassVar, Mapping, Optional, Type
+from typing import Any, ClassVar, Mapping, Type
 
 import torch
 from torch.nn.init import uniform_

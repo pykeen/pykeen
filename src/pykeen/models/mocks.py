@@ -5,7 +5,7 @@
 These are useful for baselines.
 """
 
-from typing import Any, ClassVar, Mapping, Optional
+from typing import Any, ClassVar, Mapping
 
 import torch
 

@@ -2,7 +2,7 @@
 
 """Implementation of DistMult."""
 
-from typing import Any, ClassVar, Mapping, Optional, Type
+from typing import Any, ClassVar, Mapping, Type
 
 import torch
 from torch.nn import functional
@@ -12,7 +12,7 @@ from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_normal_norm_, xavier_uniform_
 from ...regularizers import LpRegularizer, Regularizer
-from ...typing import Constrainer, Hint, Initializer, Mode
+from ...typing import Constrainer, Hint, Initializer
 
 __all__ = [
     "DistMult",

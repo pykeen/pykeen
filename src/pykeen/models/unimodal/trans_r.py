@@ -3,7 +3,7 @@
 """Implementation of TransR."""
 
 from functools import partial
-from typing import Any, ClassVar, Mapping, Optional
+from typing import Any, ClassVar, Mapping
 
 import torch
 import torch.autograd
