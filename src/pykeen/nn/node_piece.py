@@ -10,13 +10,14 @@ import scipy.sparse
 import scipy.sparse.csgraph
 import torch
 from class_resolver import HintOrType, OptionalKwargs, Resolver
+from torch import nn
 
 from .emb import EmbeddingSpecification, RepresentationModule
 from ..constants import AGGREGATIONS
 from ..triples import CoreTriplesFactory
 from ..triples.splitting import get_absolute_split_sizes, normalize_ratios
 from ..typing import MappedTriples, OneOrSequence
-from ..utils import format_relative_comparison
+from ..utils import format_relative_comparison, upgrade_to_sequence
 
 __all__ = [
     "NodePieceRepresentation",
@@ -592,13 +593,11 @@ class NodePieceRepresentation(RepresentationModule):
         self,
         *,
         triples_factory: CoreTriplesFactory,
-        # TODO: allow multiple token representations (relations + anchors)
-        token_representation: Union[EmbeddingSpecification, RepresentationModule],
+        token_representations: OneOrSequence[Union[EmbeddingSpecification, RepresentationModule]],
+        tokenizers: HintOrType[Tokenizer] = None,
+        tokenizers_kwargs: OptionalKwargs = None,
+        num_tokens: OneOrSequence[int] = 2,
         aggregation: Union[None, str, Callable[[torch.FloatTensor, int], torch.FloatTensor]] = None,
-        num_tokens: int = 2,
-        # TODO: allow multiple tokenizers (relations + anchors)
-        tokenizer: HintOrType[Tokenizer] = None,
-        tokenizer_kwargs: OptionalKwargs = None,
         shape: Optional[Sequence[int]] = None,
     ):
         """
@@ -606,9 +605,15 @@ class NodePieceRepresentation(RepresentationModule):
 
         :param triples_factory:
             the triples factory
-        :param token_representation:
+        :param token_representations:
             the token representation specification, or pre-instantiated representation module. For the latter, the
             number of representations must be $2 * num_relations + 1$.
+        :param tokenizers:
+            the tokenizer to use, cf. `pykeen.nn.node_piece.tokenizer_resolver`.
+        :param tokenizer_kwargs:
+            additional keyword-based parameters passed to the tokenizer upon construction.
+        :param num_tokens:
+            the number of tokens for each entity.
         :param aggregation:
             aggregation of multiple token representations to a single entity representation. By default,
             this uses :func:`torch.mean`. If a string is provided, the module assumes that this refers to a top-level
@@ -621,13 +626,6 @@ class NodePieceRepresentation(RepresentationModule):
 
             The aggregation takes two arguments: the (batched) tensor of token representations, in shape
             ``(*, num_tokens, *dt)``, and the index along which to aggregate.
-        :param num_tokens:
-            the number of tokens for each entity.
-        :param tokenizer:
-            the tokenizer to use, cf. `pykeen.nn.node_piece.tokenizer_resolver`.
-            .. todo:: support for using both Anchor and Relation tokenizers at the same time
-        :param tokenizer_kwargs:
-            additional keyword-based parameters passed to the tokenizer upon construction.
         :param shape:
             the shape of an individual representation. Only necessary, if aggregation results in a change of dimensions.
         """
@@ -636,50 +634,71 @@ class NodePieceRepresentation(RepresentationModule):
             # inverse triples are created afterwards implicitly
             mapped_triples = mapped_triples[mapped_triples[:, 1] < triples_factory.real_num_relations]
 
-        tokenizer_inst = tokenizer_resolver.make(tokenizer, pos_kwargs=tokenizer_kwargs)
-        total_num_tokens, assignment = tokenizer_inst(
-            mapped_triples=mapped_triples,
-            num_tokens=num_tokens,
-            num_entities=triples_factory.num_entities,
-            num_relations=triples_factory.real_num_relations,
-        )
-        # fill padding (nn.Embedding cannot deal with negative indices)
-        padding = assignment < 0
-        assignment[padding] = self.padding_idx = assignment.max().item() + 1
+        token_representations = upgrade_to_sequence(token_representations)
+        num_tokens = upgrade_to_sequence(num_tokens)
+        token_representations_: Sequence[RepresentationModule] = []
+        assignments: Sequence[torch.LongTensor] = []
+        for tokenizer_inst, token_representation, num_tokens_ in zip(
+            tokenizer_resolver.make_many(queries=tokenizers, kwargs=tokenizers_kwargs),
+            token_representations,
+            num_tokens,
+        ):
+            total_num_tokens, assignment = tokenizer_inst(
+                mapped_triples=mapped_triples,
+                num_tokens=num_tokens_,
+                num_entities=triples_factory.num_entities,
+                num_relations=triples_factory.real_num_relations,
+            )
+            # fill padding (nn.Embedding cannot deal with negative indices)
+            padding = assignment < 0
+            assignment[padding] = self.padding_idx = assignment.max().item() + 1
+            assignments.append(assignment)
 
-        # create token representations
-        if isinstance(token_representation, EmbeddingSpecification):
-            token_representation = token_representation.make(
-                num_embeddings=total_num_tokens,
-            )
-        if token_representation.max_id != total_num_tokens:
-            raise ValueError(
-                f"If a pre-instantiated representation is provided, it has to have 2 * num_relations + 1= "
-                f"{total_num_tokens} representations, but has {token_representation.max_id}",
-            )
+            # create token representations
+            if isinstance(token_representation, EmbeddingSpecification):
+                token_representation = token_representation.make(
+                    num_embeddings=total_num_tokens,
+                )
+            if token_representation.max_id != total_num_tokens:
+                raise ValueError(
+                    f"If a pre-instantiated representation is provided, it has to have 2 * num_relations + 1= "
+                    f"{total_num_tokens} representations, but has {token_representation.max_id}",
+                )
+            if shape is None:
+                shape = token_representation.shape
+            elif token_representation.shape != tuple(shape):
+                raise ValueError  # TODO
+            
+            token_representations_.append(token_representation)
+        assert shape is not None
 
         # super init; has to happen *before* any parameter or buffer is assigned
-        super().__init__(max_id=triples_factory.num_entities, shape=shape or token_representation.shape)
+        super().__init__(max_id=triples_factory.num_entities, shape=shape)
 
         # Assign default aggregation
         self.aggregation = resolve_aggregation(aggregation=aggregation)
 
         # assign module
-        self.tokens = token_representation
+        self.tokens = nn.ModuleList(token_representations_)
         self.aggregation_index = -(1 + len(token_representation.shape))
-        self.register_buffer(name="assignment", tensor=assignment)
+        for i, assignment in enumerate(assignments):
+            self.register_buffer(name=f"assignment_{i}", tensor=assignment)
 
     def forward(
         self,
         indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
-        # get token IDs, shape: (*, k)
-        token_ids = self.assignment
-        if indices is not None:
-            token_ids = token_ids[indices]
+        xs = []
+        for i, tokens in enumerate(self.tokens):
+            # get token IDs, shape: (*, k)
+            token_ids = getattr(self, f"assignment_{i}")
+            if indices is not None:
+                token_ids = token_ids[indices]
 
-        # lookup token representations, shape: (*, k, d)
-        x = self.tokens(token_ids)
+            # lookup token representations, shape: (*, k, d)
+            xs.append(tokens(token_ids))
+
+        x = torch.cat(xs, dim=self.aggregation_index)
 
         # aggregate
         x = self.aggregation(x, self.aggregation_index)
