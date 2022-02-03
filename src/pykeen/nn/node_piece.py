@@ -592,9 +592,11 @@ class NodePieceRepresentation(RepresentationModule):
         self,
         *,
         triples_factory: CoreTriplesFactory,
+        # TODO: allow multiple token representations (relations + anchors)
         token_representation: Union[EmbeddingSpecification, RepresentationModule],
         aggregation: Union[None, str, Callable[[torch.FloatTensor, int], torch.FloatTensor]] = None,
         num_tokens: int = 2,
+        # TODO: allow multiple tokenizers (relations + anchors)
         tokenizer: HintOrType[Tokenizer] = None,
         tokenizer_kwargs: OptionalKwargs = None,
         shape: Optional[Sequence[int]] = None,
