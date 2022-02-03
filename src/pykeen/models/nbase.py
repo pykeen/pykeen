@@ -356,7 +356,7 @@ class ERModel(
         h, r, t = self._get_representations(h=h_indices, r=r_indices, t=t_indices, mode=mode)
         return self.interaction.score(h=h, r=r, t=t, slice_size=slice_size, slice_dim=slice_dim)
 
-    def score_hrt(self, hrt_batch: torch.LongTensor, *, mode: Optional[Mode]) -> torch.FloatTensor:
+    def score_hrt(self, hrt_batch: torch.LongTensor, *, mode: Optional[Mode] = None) -> torch.FloatTensor:
         """Forward pass.
 
         This method takes head, relation and tail of each triple and calculates the corresponding score.
@@ -403,7 +403,7 @@ class ERModel(
         )
 
     def score_h(
-        self, rt_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[Mode]
+        self, rt_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[Mode] = None
     ) -> torch.FloatTensor:
         """Forward pass using left side (head) prediction.
 
@@ -428,7 +428,7 @@ class ERModel(
         )
 
     def score_r(
-        self, ht_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[Mode]
+        self, ht_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[Mode] = None
     ) -> torch.FloatTensor:
         """Forward pass using middle (relation) prediction.
 

@@ -180,7 +180,7 @@ class Model(nn.Module, ABC):
     """Abstract methods - Scoring"""
 
     @abstractmethod
-    def score_hrt(self, hrt_batch: torch.LongTensor, *, mode: Optional[Mode]) -> torch.FloatTensor:
+    def score_hrt(self, hrt_batch: torch.LongTensor, *, mode: Optional[Mode] = None) -> torch.FloatTensor:
         """Forward pass.
 
         This method takes head, relation and tail of each triple and calculates the corresponding score.
@@ -216,7 +216,7 @@ class Model(nn.Module, ABC):
 
     @abstractmethod
     def score_r(
-        self, ht_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[Mode]
+        self, ht_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[Mode] = None
     ) -> torch.FloatTensor:
         """Forward pass using middle (relation) prediction.
 
@@ -238,7 +238,7 @@ class Model(nn.Module, ABC):
 
     @abstractmethod
     def score_h(
-        self, rt_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[Mode]
+        self, rt_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[Mode] = None
     ) -> torch.FloatTensor:
         """Forward pass using left side (head) prediction.
 
