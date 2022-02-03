@@ -16,6 +16,7 @@ from ...nn.modules import DistMultInteraction, Interaction
 from ...nn.node_piece import RelationTokenizer, Tokenizer, tokenizer_resolver
 from ...triples.triples_factory import CoreTriplesFactory
 from ...typing import OneOrSequence
+from ...utils import upgrade_to_sequence
 
 __all__ = [
     "NodePiece",
@@ -162,6 +163,8 @@ class NodePiece(ERModel):
 
         # prepare arguments for the NodePiece Representation
         representations = []
+        # if only one tokenizer was given - convert it to a list of tokenizers
+        tokenizers = upgrade_to_sequence(tokenizers)
         for tkn in tokenizers:
             # pre-resolve tokenizer to select token representations
             tokenizer = tokenizer_resolver.lookup(tkn)
