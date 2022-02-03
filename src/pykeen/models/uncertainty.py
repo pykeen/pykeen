@@ -244,6 +244,9 @@ def predict_h_uncertain(
         The divisor for the scoring function when using slicing.
     :param num_samples: >1
         the number of samples to draw
+    :param mode:
+        The pass mode, which is None in the transductive setting and one of "training",
+        "validation", or "testing" in the inductive setting.
 
     :return: shape: (batch_size, num_entities)
         For each r-t pair, the scores for all possible heads.
@@ -287,6 +290,9 @@ def predict_r_uncertain(
         The divisor for the scoring function when using slicing.
     :param num_samples: >1
         the number of samples to draw
+    :param mode:
+        The pass mode, which is None in the transductive setting and one of "training",
+        "validation", or "testing" in the inductive setting.
 
     :return: shape: (batch_size, num_relations)
         For each h-t pair, the scores for all possible relations.
@@ -338,6 +344,9 @@ def predict_t_uncertain(
         The divisor for the scoring function when using slicing.
     :param num_samples: >1
         the number of samples to draw
+    :param mode:
+        The pass mode, which is None in the transductive setting and one of "training",
+        "validation", or "testing" in the inductive setting.
 
     :return: shape: (batch_size, num_entities)
         For each h-r pair, the scores for all possible tails.
