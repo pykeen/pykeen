@@ -171,7 +171,7 @@ def predict_hrt_uncertain(
     hrt_batch: torch.LongTensor,
     num_samples: int = 5,
     *,
-    mode: Optional[Mode],
+    mode: Optional[Mode] = None,
 ) -> UncertainPrediction:
     """
     Calculate the scores with uncertainty quantification via Monte-Carlo dropout.
@@ -222,6 +222,8 @@ def predict_h_uncertain(
     rt_batch: torch.LongTensor,
     num_samples: int = 5,
     slice_size: Optional[int] = None,
+    *,
+    mode: Optional[Mode] = None,
 ) -> UncertainPrediction:
     """Forward pass using left side (head) prediction for obtaining scores of all possible heads.
 
@@ -260,6 +262,7 @@ def predict_h_uncertain(
         score_method=model.score_h_inverse if model.use_inverse_triples else model.score_h,
         num_samples=num_samples,
         slice_size=slice_size,
+        mode=mode,
     )
 
 
@@ -268,6 +271,8 @@ def predict_r_uncertain(
     ht_batch: torch.LongTensor,
     num_samples: int = 5,
     slice_size: Optional[int] = None,
+    *,
+    mode: Optional[Mode] = None,
 ) -> UncertainPrediction:
     """Forward pass using middle (relation) prediction for obtaining scores of all possible relations.
 
@@ -299,6 +304,7 @@ def predict_r_uncertain(
         score_method=model.score_r,
         num_samples=num_samples,
         slice_size=slice_size,
+        mode=mode,
     )
 
 
@@ -307,6 +313,8 @@ def predict_t_uncertain(
     hr_batch: torch.LongTensor,
     num_samples: int = 5,
     slice_size: Optional[int] = None,
+    *,
+    mode: Optional[Mode] = None,
 ) -> UncertainPrediction:
     """Forward pass using right side (tail) prediction for obtaining scores of all possible tails.
 
@@ -347,4 +355,5 @@ def predict_t_uncertain(
         score_method=model.score_t,
         num_samples=num_samples,
         slice_size=slice_size,
+        mode=mode,
     )
