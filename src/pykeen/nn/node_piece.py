@@ -581,10 +581,7 @@ class NodePieceRepresentation(RepresentationModule):
     """
 
     #: the token representations
-    tokens: RepresentationModule
-
-    #: the entity-to-token mapping
-    assignment: torch.LongTensor
+    tokens: Sequence[RepresentationModule]
 
     #: the padding idx, if any
     padding_idx: Optional[int]
@@ -594,8 +591,8 @@ class NodePieceRepresentation(RepresentationModule):
         *,
         triples_factory: CoreTriplesFactory,
         token_representations: OneOrSequence[Union[EmbeddingSpecification, RepresentationModule]],
-        tokenizers: HintOrType[Tokenizer] = None,
-        tokenizers_kwargs: OptionalKwargs = None,
+        tokenizers: OneOrSequence[HintOrType[Tokenizer]] = None,
+        tokenizers_kwargs: OneOrSequence[OptionalKwargs] = None,
         num_tokens: OneOrSequence[int] = 2,
         aggregation: Union[None, str, Callable[[torch.FloatTensor, int], torch.FloatTensor]] = None,
         shape: Optional[Sequence[int]] = None,
@@ -651,6 +648,7 @@ class NodePieceRepresentation(RepresentationModule):
             )
             # fill padding (nn.Embedding cannot deal with negative indices)
             padding = assignment < 0
+            # TODO: different padding idx -> move to tokenizer?
             assignment[padding] = self.padding_idx = assignment.max().item() + 1
             assignments.append(assignment)
 
