@@ -341,6 +341,9 @@ class ERModel(
             The slice size.
         :param slice_dim:
             The dimension along which to slice
+        :param mode:
+            The pass mode, which is None in the transductive setting and one of "training",
+            "validation", or "testing" in the inductive setting.
 
         :return:
             The scores
@@ -360,6 +363,9 @@ class ERModel(
 
         :param hrt_batch: shape: (batch_size, 3), dtype: long
             The indices of (head, relation, tail) triples.
+        :param mode:
+            The pass mode, which is None in the transductive setting and one of "training",
+            "validation", or "testing" in the inductive setting.
 
         :return: shape: (batch_size, 1), dtype: float
             The score for each triple.
@@ -382,6 +388,9 @@ class ERModel(
             The indices of (head, relation) pairs.
         :param slice_size:
             The slice size.
+        :param mode:
+            The pass mode, which is None in the transductive setting and one of "training",
+            "validation", or "testing" in the inductive setting.
 
         :return: shape: (batch_size, num_entities), dtype: float
             For each h-r pair, the scores for all possible tails.
@@ -404,6 +413,9 @@ class ERModel(
             The indices of (relation, tail) pairs.
         :param slice_size:
             The slice size.
+        :param mode:
+            The pass mode, which is None in the transductive setting and one of "training",
+            "validation", or "testing" in the inductive setting.
 
         :return: shape: (batch_size, num_entities), dtype: float
             For each r-t pair, the scores for all possible heads.
@@ -426,6 +438,9 @@ class ERModel(
             The indices of (head, tail) pairs.
         :param slice_size:
             The slice size.
+        :param mode:
+            The pass mode, which is None in the transductive setting and one of "training",
+            "validation", or "testing" in the inductive setting.
 
         :return: shape: (batch_size, num_relations), dtype: float
             For each h-t pair, the scores for all possible relations.

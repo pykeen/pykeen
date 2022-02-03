@@ -127,6 +127,9 @@ def predict_uncertain_helper(
         increase memory requirements and runtime.
     :param slice_size: >0
         The divisor for the scoring function when using slicing.
+    :param mode:
+        The pass mode, which is None in the transductive setting and one of "training",
+        "validation", or "testing" in the inductive setting.
 
     :return:
         A tuple (score_mean, score_std) of the mean and std of the scores sampled
@@ -179,6 +182,9 @@ def predict_hrt_uncertain(
         The indices of (head, relation, tail) triples.
     :param num_samples: >1
         the number of samples to draw
+    :param mode:
+        The pass mode, which is None in the transductive setting and one of "training",
+        "validation", or "testing" in the inductive setting.
 
     :return: shape: (number of triples, 1)
         The score for each triple, and an uncertainty score, where larger scores

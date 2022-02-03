@@ -56,6 +56,9 @@ def get_head_prediction_df(
         may pose as a distraction. If this is set to True, then non-novel triples will be removed and the column
         denoting novelty will be excluded, since all remaining triples will be novel. Defaults to false.
     :param testing: The mapped_triples from the testing triples factory (TriplesFactory.mapped_triples)
+    :param mode:
+        The pass mode, which is None in the transductive setting and one of "training",
+        "validation", or "testing" in the inductive setting.
     :return: shape: (k, 3)
         A dataframe with columns based on the settings or a tensor. Contains either the k highest scoring triples,
         or all possible triples if k is None.
@@ -121,6 +124,9 @@ def get_tail_prediction_df(
         may pose as a distraction. If this is set to True, then non-novel triples will be removed and the column
         denoting novelty will be excluded, since all remaining triples will be novel. Defaults to false.
     :param testing: The mapped_triples from the testing triples factory (TriplesFactory.mapped_triples)
+    :param mode:
+        The pass mode, which is None in the transductive setting and one of "training",
+        "validation", or "testing" in the inductive setting.
     :return: shape: (k, 3)
         A dataframe with columns based on the settings or a tensor. Contains either the k highest scoring triples,
         or all possible triples if k is None.
@@ -186,6 +192,9 @@ def get_relation_prediction_df(
         may pose as a distraction. If this is set to True, then non-novel triples will be removed and the column
         denoting novelty will be excluded, since all remaining triples will be novel. Defaults to false.
     :param testing: The mapped_triples from the testing triples factory (TriplesFactory.mapped_triples)
+    :param mode:
+        The pass mode, which is None in the transductive setting and one of "training",
+        "validation", or "testing" in the inductive setting.
     :return: shape: (k, 3)
         A dataframe with columns based on the settings or a tensor. Contains either the k highest scoring triples,
         or all possible triples if k is None.
@@ -256,6 +265,9 @@ def get_all_prediction_df(
         may pose as a distraction. If this is set to True, then non-novel triples will be removed and the column
         denoting novelty will be excluded, since all remaining triples will be novel. Defaults to false.
     :param testing: The mapped_triples from the testing triples factory (TriplesFactory.mapped_triples)
+    :param mode:
+        The pass mode, which is None in the transductive setting and one of "training",
+        "validation", or "testing" in the inductive setting.
     :return: shape: (k, 3)
         A dataframe with columns based on the settings or a tensor. Contains either the k highest scoring triples,
         or all possible triples if k is None.
@@ -297,6 +309,9 @@ def predict(model: Model, *, k: Optional[int] = None, batch_size: int = 1, mode:
     :param model: A PyKEEN model
     :param k: The number of triples to return. Set to ``None`` to keep all.
     :param batch_size: The batch size to use for calculating scores
+    :param mode:
+        The pass mode, which is None in the transductive setting and one of "training",
+        "validation", or "testing" in the inductive setting.
     :return: A score pack of parallel triples and scores
     """
     logger.warning(
@@ -450,6 +465,9 @@ def _consume_scores(model: Model, *consumers: _ScoreConsumer, batch_size: int = 
         the consumers of score batches
     :param batch_size:
         the batch size to use  # TODO: automatic batch size maximization
+    :param mode:
+        The pass mode, which is None in the transductive setting and one of "training",
+        "validation", or "testing" in the inductive setting.
     """
     # TODO: in the future, we may want to expose this method
     # set model to evaluation mode
@@ -486,6 +504,9 @@ def _predict_all(model: Model, *, batch_size: int = 1, mode: Optional[Mode]) -> 
 
     :param model: A PyKEEN model
     :param batch_size: The batch size to use for calculating scores
+    :param mode:
+        The pass mode, which is None in the transductive setting and one of "training",
+        "validation", or "testing" in the inductive setting.
     :return: A score pack of parallel triples and scores
     """
     consumer = _AllConsumer(num_entities=model.num_entities, num_relations=model.num_relations)
@@ -500,6 +521,9 @@ def _predict_k(model: Model, *, k: int, batch_size: int = 1, mode: Optional[Mode
     :param model: A PyKEEN model
     :param k: The number of triples to return
     :param batch_size: The batch size to use for calculating scores
+    :param mode:
+        The pass mode, which is None in the transductive setting and one of "training",
+        "validation", or "testing" in the inductive setting.
     :return: A score pack of parallel triples and scores
     """
     consumer = _TopKScoreConsumer(k=k, device=model.device)
