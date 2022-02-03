@@ -1842,3 +1842,22 @@ class TokenizerTestCase(GenericTestCase[pykeen.nn.node_piece.Tokenizer]):
         # no repetition, except padding idx
         for row in tokens.tolist():
             self.assertDictEqual({k: v for k, v in Counter(row).items() if k >= 0 and v > 1}, {}, msg="duplicate token")
+
+
+class NodePieceTestCase(RepresentationTestCase):
+    """General test case for node piece representations."""
+
+    cls = pykeen.nn.node_piece.NodePieceRepresentation
+    num_entities: ClassVar[int] = 8
+    num_relations: ClassVar[int] = 7
+    num_triples: ClassVar[int] = 31
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        kwargs["triples_factory"] = generation.generate_triples_factory(
+            num_entities=self.num_entities,
+            num_relations=self.num_relations,
+            num_triples=self.num_triples,
+            create_inverse_triples=False,
+        )
+        return kwargs
