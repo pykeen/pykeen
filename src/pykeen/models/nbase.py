@@ -378,7 +378,7 @@ class ERModel(
         return self.interaction.score_hrt(h=h, r=r, t=t)
 
     def score_t(
-        self, hr_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[Mode]
+        self, hr_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[Mode] = None
     ) -> torch.FloatTensor:
         """Forward pass using right side (tail) prediction.
 

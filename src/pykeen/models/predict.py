@@ -303,7 +303,7 @@ def get_all_prediction_df(
     )
 
 
-def predict(model: Model, *, k: Optional[int] = None, batch_size: int = 1, mode: Optional[Mode]) -> ScorePack:
+def predict(model: Model, *, k: Optional[int] = None, batch_size: int = 1, mode: Optional[Mode] = None) -> ScorePack:
     """Calculate and store scores for either all triples, or the top k triples.
 
     :param model: A PyKEEN model

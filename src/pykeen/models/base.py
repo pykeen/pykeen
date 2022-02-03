@@ -196,7 +196,7 @@ class Model(nn.Module, ABC):
 
     @abstractmethod
     def score_t(
-        self, hr_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[Mode]
+        self, hr_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[Mode] = None
     ) -> torch.FloatTensor:
         """Forward pass using right side (tail) prediction.
 
@@ -301,7 +301,7 @@ class Model(nn.Module, ABC):
         # when trained on inverse relations, the internal relation ID is twice the original relation ID
         return relation_inverter.map(batch=batch, index=index_relation, invert=False)
 
-    def predict_hrt(self, hrt_batch: torch.LongTensor, *, mode: Optional[Mode]) -> torch.FloatTensor:
+    def predict_hrt(self, hrt_batch: torch.LongTensor, *, mode: Optional[Mode] = None) -> torch.FloatTensor:
         """Calculate the scores for triples.
 
         This method takes head, relation and tail of each triple and calculates the corresponding score.
@@ -321,7 +321,7 @@ class Model(nn.Module, ABC):
         return scores
 
     def predict_h(
-        self, rt_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[Mode]
+        self, rt_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[Mode] = None
     ) -> torch.FloatTensor:
         """Forward pass using left side (head) prediction for obtaining scores of all possible heads.
 
@@ -358,7 +358,7 @@ class Model(nn.Module, ABC):
         hr_batch: torch.LongTensor,
         *,
         slice_size: Optional[int] = None,
-        mode: Optional[Mode],
+        mode: Optional[Mode] = None,
     ) -> torch.FloatTensor:
         """Forward pass using right side (tail) prediction for obtaining scores of all possible tails.
 
@@ -633,7 +633,7 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
             self.regularizer.update(*tensors)
 
     def score_t(
-        self, hr_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[Mode]
+        self, hr_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[Mode] = None
     ) -> torch.FloatTensor:
         """Forward pass using right side (tail) prediction.
 
@@ -643,6 +643,9 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
             The indices of (head, relation) pairs.
         :param slice_size: >0
             The divisor for the scoring function when using slicing.
+        :param mode:
+            The pass mode, which is None in the transductive setting and one of "training",
+            "validation", or "testing" in the inductive setting.
 
         :return: shape: (batch_size, num_entities), dtype: float
             For each h-r pair, the scores for all possible tails.
@@ -660,7 +663,7 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
         return scores
 
     def score_h(
-        self, rt_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[Mode]
+        self, rt_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[Mode] = None
     ) -> torch.FloatTensor:
         """Forward pass using left side (head) prediction.
 
@@ -670,6 +673,9 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
             The indices of (relation, tail) pairs.
         :param slice_size: >0
             The divisor for the scoring function when using slicing.
+        :param mode:
+            The pass mode, which is None in the transductive setting and one of "training",
+            "validation", or "testing" in the inductive setting.
 
         :return: shape: (batch_size, num_entities), dtype: float
             For each r-t pair, the scores for all possible heads.
@@ -687,7 +693,7 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
         return scores
 
     def score_r(
-        self, ht_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[Mode]
+        self, ht_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[Mode] = None
     ) -> torch.FloatTensor:
         """Forward pass using middle (relation) prediction.
 
@@ -697,6 +703,9 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
             The indices of (head, tail) pairs.
         :param slice_size: >0
             The divisor for the scoring function when using slicing.
+        :param mode:
+            The pass mode, which is None in the transductive setting and one of "training",
+            "validation", or "testing" in the inductive setting.
 
         :return: shape: (batch_size, num_relations), dtype: float
             For each h-t pair, the scores for all possible relations.
