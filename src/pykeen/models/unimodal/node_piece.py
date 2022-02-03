@@ -15,6 +15,7 @@ from ...nn import EmbeddingSpecification, NodePieceRepresentation, Representatio
 from ...nn.modules import DistMultInteraction, Interaction
 from ...nn.node_piece import RelationTokenizer, Tokenizer, tokenizer_resolver
 from ...triples.triples_factory import CoreTriplesFactory
+from ...typing import OneOrSequence
 
 __all__ = [
     "NodePiece",
@@ -87,11 +88,11 @@ class NodePiece(ERModel):
         self,
         *,
         triples_factory: CoreTriplesFactory,
-        num_tokens: int = 2,
-        tokenizer: HintOrType[Tokenizer] = None,
-        tokenizer_kwargs: OptionalKwargs = None,
+        num_tokens: OneOrSequence[int] = 2,
+        tokenizers: OneOrSequence[HintOrType[Tokenizer]] = None,
+        tokenizers_kwargs: OneOrSequence[OptionalKwargs] = None,
         embedding_dim: int = 64,
-        embedding_specification: Optional[EmbeddingSpecification] = None,
+        embedding_specification: OneOrSequence[Union[EmbeddingSpecification, RepresentationModule]] = None,
         interaction: HintOrType[Interaction] = DistMultInteraction,
         aggregation: Hint[Callable[[torch.Tensor, int], torch.Tensor]] = None,
         shape: Optional[Sequence[int]] = None,
@@ -150,7 +151,7 @@ class NodePiece(ERModel):
         # Create an MLP for string aggregation
         if aggregation == "mlp":
             aggregation = _ConcatMLP(
-                num_tokens=num_tokens,
+                num_tokens=num_tokens if isinstance(num_tokens, int) else sum(num_tokens),
                 embedding_dim=embedding_dim,
             )
 
@@ -158,21 +159,27 @@ class NodePiece(ERModel):
         relation_representations = embedding_specification.make(
             num_embeddings=2 * triples_factory.real_num_relations + 1,
         )
-        # pre-resolve tokenizer to select token representations
-        tokenizer = tokenizer_resolver.lookup(tokenizer)
-        tokenizer_cls = tokenizer.__class__ if isinstance(tokenizer, Tokenizer) else tokenizer
-        # use relation representations for relation tokenizer
-        token_representation: Union[EmbeddingSpecification, RepresentationModule]
-        if tokenizer_cls is RelationTokenizer:
-            token_representation = relation_representations
-        else:
-            # otherwise create new representations
-            token_representation = embedding_specification
+
+        # prepare arguments for the NodePiece Representation
+        representations = []
+        for tkn in tokenizers:
+            # pre-resolve tokenizer to select token representations
+            tokenizer = tokenizer_resolver.lookup(tkn)
+            tokenizer_cls = tokenizer.__class__ if isinstance(tokenizer, Tokenizer) else tokenizer
+            # use relation representations for relation tokenizer
+            token_representation: Union[EmbeddingSpecification, RepresentationModule]
+            if tokenizer_cls is RelationTokenizer:
+                token_representation = relation_representations
+            else:
+                # otherwise create new representations
+                token_representation = embedding_specification
+            representations.append(token_representation)
+
         entity_representations = NodePieceRepresentation(
             triples_factory=triples_factory,
-            token_representation=token_representation,
-            tokenizer=tokenizer,
-            tokenizer_kwargs=tokenizer_kwargs,
+            token_representations=representations,
+            tokenizers=tokenizers,
+            tokenizers_kwargs=tokenizers_kwargs,
             aggregation=aggregation,
             shape=shape,
             num_tokens=num_tokens,
