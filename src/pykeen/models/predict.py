@@ -40,7 +40,7 @@ def get_head_prediction_df(
     add_novelties: bool = True,
     remove_known: bool = False,
     testing: Optional[torch.LongTensor] = None,
-    mode: Optional[Mode],
+    mode: Optional[Mode] = None,
 ) -> pd.DataFrame:
     """Predict heads for the given relation and tail (given by label).
 
@@ -108,7 +108,7 @@ def get_tail_prediction_df(
     add_novelties: bool = True,
     remove_known: bool = False,
     testing: Optional[torch.LongTensor] = None,
-    mode: Optional[Mode],
+    mode: Optional[Mode] = None,
 ) -> pd.DataFrame:
     """Predict tails for the given head and relation (given by label).
 
@@ -176,7 +176,7 @@ def get_relation_prediction_df(
     add_novelties: bool = True,
     remove_known: bool = False,
     testing: Optional[torch.LongTensor] = None,
-    mode: Optional[Mode],
+    mode: Optional[Mode] = None,
 ) -> pd.DataFrame:
     """Predict relations for the given head and tail (given by label).
 
@@ -245,7 +245,7 @@ def get_all_prediction_df(
     add_novelties: bool = True,
     remove_known: bool = False,
     testing: Optional[torch.LongTensor] = None,
-    mode: Optional[Mode],
+    mode: Optional[Mode] = None,
 ) -> Union[ScorePack, pd.DataFrame]:
     """Compute scores for all triples, optionally returning only the k highest scoring.
 
@@ -660,7 +660,9 @@ def _predict_triples(
     """Predict scores for triples while dealing with reducing batch size for CUDA OOM."""
     # base case: infer maximum batch size
     if batch_size is None:
-        return _predict_triples(model=model, mapped_triples=mapped_triples, batch_size=mapped_triples.shape[0])
+        return _predict_triples(
+            model=model, mapped_triples=mapped_triples, batch_size=mapped_triples.shape[0], mode=mode
+        )
 
     # base case: single batch
     if batch_size >= mapped_triples.shape[0]:
@@ -693,6 +695,7 @@ def predict_triples_df(
     triples: Union[None, MappedTriples, LabeledTriples, Union[Tuple[str, str, str], Sequence[Tuple[str, str, str]]]],
     triples_factory: Optional[CoreTriplesFactory] = None,
     batch_size: Optional[int] = None,
+    mode: Optional[Mode] = None,
 ) -> pd.DataFrame:
     """
     Predict on labeled or mapped triples.
@@ -713,6 +716,9 @@ def predict_triples_df(
         to result.
     :param batch_size:
         The batch size to use. Use None for automatic memory optimization.
+    :param mode:
+        The pass mode, which is None in the transductive setting and one of "training",
+        "validation", or "testing" in the inductive setting.
 
     :return: columns: head_id | relation_id | tail_id | score | *
         A dataframe with one row per triple.
@@ -752,7 +758,7 @@ def predict_triples_df(
 
     assert torch.is_tensor(triples) and triples.dtype == torch.long
 
-    scores = _predict_triples(model=model, mapped_triples=triples, batch_size=batch_size).squeeze(dim=1)
+    scores = _predict_triples(model=model, mapped_triples=triples, batch_size=batch_size, mode=mode).squeeze(dim=1)
 
     if triples_factory is None:
         return tensor_to_df(tensor=triples, score=scores)
