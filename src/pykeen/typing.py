@@ -45,6 +45,11 @@ __all__ = [
     "COLUMN_HEAD",
     "COLUMN_RELATION",
     "COLUMN_TAIL",
+    # modes
+    "Mode",
+    "TRAINING",
+    "TESTING",
+    "VALIDATION",
 ]
 
 X = TypeVar("X")
@@ -103,6 +108,12 @@ class ScorePack(NamedTuple):
 
 
 Sign = Literal[-1, 1]
+
+#: the prediction and training mode
+Mode = Literal["training", "validation", "testing"]
+TRAINING: Mode = "training"
+VALIDATION: Mode = "validation"
+TESTING: Mode = "testing"
 
 #: the prediction target
 Target = Literal["head", "relation", "tail"]
