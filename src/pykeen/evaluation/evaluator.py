@@ -22,7 +22,7 @@ from ..constants import TARGET_TO_INDEX
 from ..models import Model
 from ..triples.triples_factory import restrict_triples
 from ..triples.utils import get_entities, get_relations
-from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, MappedTriples, Target
+from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, MappedTriples, Mode, Target
 from ..utils import (
     format_relative_comparison,
     is_cuda_oom_error,
@@ -143,6 +143,8 @@ class Evaluator(ABC):
         restrict_entities_to: Optional[torch.LongTensor] = None,
         do_time_consuming_checks: bool = True,
         additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
+        *,
+        mode: Optional[Mode],
     ) -> MetricResults:
         """Run :func:`pykeen.evaluation.evaluate` with this evaluator."""
         if batch_size is None and self.automatic_memory_optimization:
@@ -162,6 +164,7 @@ class Evaluator(ABC):
                     use_tqdm=False,
                     restrict_entities_to=restrict_entities_to,
                     do_time_consuming_checks=do_time_consuming_checks,
+                    mode=mode,
                 )
                 # The batch_size and slice_size should be accessible to outside objects for re-use, e.g. early stoppers.
                 self.batch_size = batch_size
@@ -182,6 +185,7 @@ class Evaluator(ABC):
             tqdm_kwargs=tqdm_kwargs,
             restrict_entities_to=restrict_entities_to,
             do_time_consuming_checks=do_time_consuming_checks,
+            mode=mode,
         )
         # Since squeeze is true, we can expect that evaluate returns a MetricResult, but we need to tell MyPy that
         return cast(MetricResults, rv)
@@ -196,6 +200,8 @@ class Evaluator(ABC):
         restrict_entities_to: Optional[torch.LongTensor] = None,
         do_time_consuming_checks: bool = True,
         additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
+        *,
+        mode: Optional[Mode],
     ) -> Tuple[int, Optional[int]]:
         """Find the maximum possible batch_size and slice_size for evaluation with the current setting.
 
@@ -239,6 +245,7 @@ class Evaluator(ABC):
             use_tqdm=use_tqdm,
             restrict_entities_to=restrict_entities_to,
             do_time_consuming_checks=do_time_consuming_checks,
+            mode=mode,
         )
 
         if evaluated_once:  # slice_size = None
@@ -257,6 +264,7 @@ class Evaluator(ABC):
             use_tqdm=use_tqdm,
             restrict_entities_to=restrict_entities_to,
             do_time_consuming_checks=False,
+            mode=mode,
         )
         if not evaluated_once:
             raise MemoryError("The current model can't be trained on this hardware with these parameters.")
@@ -274,6 +282,8 @@ class Evaluator(ABC):
         restrict_entities_to: Optional[torch.LongTensor] = None,
         do_time_consuming_checks: bool = True,
         additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
+        *,
+        mode: Optional[Mode],
     ) -> Tuple[int, bool]:
         values_dict = {}
         maximum_triples = mapped_triples.shape[0]
@@ -314,6 +324,7 @@ class Evaluator(ABC):
                     do_time_consuming_checks=do_time_consuming_checks,
                     batch_size=values_dict.get("batch_size"),
                     slice_size=values_dict.get("slice_size"),
+                    mode=mode,
                 )
                 evaluated_once = True
             except RuntimeError as runtime_error:
@@ -520,6 +531,8 @@ def evaluate(
     additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
     pre_filtered_triples: bool = True,
     targets: Collection[Target] = (LABEL_HEAD, LABEL_TAIL),
+    *,
+    mode: Optional[Mode],
 ) -> Union[MetricResults, List[MetricResults]]:
     """Evaluate metrics for model on mapped triples.
 
@@ -665,6 +678,7 @@ def evaluate(
                     all_pos_triples=all_pos_triples,
                     relation_filter=relation_filter,
                     restrict_entities_to=restrict_entities_to,
+                    mode=mode,
                 )
 
             # If we only probe sizes we do not need more than one batch
@@ -697,6 +711,8 @@ def _evaluate_batch(
     all_pos_triples: Optional[MappedTriples],
     relation_filter: Optional[torch.BoolTensor],
     restrict_entities_to: Optional[torch.LongTensor],
+    *,
+    mode: Optional[Mode],
 ) -> torch.BoolTensor:
     """
     Evaluate ranking for batch.
@@ -721,7 +737,7 @@ def _evaluate_batch(
     :return:
         The relation filter, which can be re-used for the same batch.
     """
-    scores = model.predict(hrt_batch=batch, target=target, slice_size=slice_size)
+    scores = model.predict(hrt_batch=batch, target=target, slice_size=slice_size, mode=mode)
 
     if evaluator.filtered:
         column = TARGET_TO_INDEX[target]

@@ -18,7 +18,7 @@ from ..nn.emb import EmbeddingSpecification, RepresentationModule
 from ..nn.modules import Interaction, interaction_resolver
 from ..regularizers import Regularizer
 from ..triples import CoreTriplesFactory
-from ..typing import HeadRepresentation, RelationRepresentation, TailRepresentation
+from ..typing import HeadRepresentation, Mode, RelationRepresentation, TailRepresentation
 from ..utils import check_shapes
 
 __all__ = [
@@ -323,6 +323,8 @@ class ERModel(
         t_indices: torch.LongTensor,
         slice_size: Optional[int] = None,
         slice_dim: int = 0,
+        *,
+        mode: Optional[Mode],
     ) -> torch.FloatTensor:
         """Forward pass.
 
@@ -348,10 +350,10 @@ class ERModel(
         """
         if not self.entity_representations or not self.relation_representations:
             raise NotImplementedError("repeat scores not implemented for general case.")
-        h, r, t = self._get_representations(h=h_indices, r=r_indices, t=t_indices)
+        h, r, t = self._get_representations(h=h_indices, r=r_indices, t=t_indices, mode=mode)
         return self.interaction.score(h=h, r=r, t=t, slice_size=slice_size, slice_dim=slice_dim)
 
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:
+    def score_hrt(self, hrt_batch: torch.LongTensor, *, mode: Optional[Mode]) -> torch.FloatTensor:
         """Forward pass.
 
         This method takes head, relation and tail of each triple and calculates the corresponding score.
@@ -366,10 +368,12 @@ class ERModel(
         # dimension, and slicing along this dimension is already considered by sub-batching.
         # Note: we do not delegate to the general method for performance reasons
         # Note: repetition is not necessary here
-        h, r, t = self._get_representations(h=hrt_batch[:, 0], r=hrt_batch[:, 1], t=hrt_batch[:, 2])
+        h, r, t = self._get_representations(h=hrt_batch[:, 0], r=hrt_batch[:, 1], t=hrt_batch[:, 2], mode=mode)
         return self.interaction.score_hrt(h=h, r=r, t=t)
 
-    def score_t(self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:
+    def score_t(
+        self, hr_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[Mode]
+    ) -> torch.FloatTensor:
         """Forward pass using right side (tail) prediction.
 
         This method calculates the score for all possible tails for each (head, relation) pair.
@@ -382,14 +386,16 @@ class ERModel(
         :return: shape: (batch_size, num_entities), dtype: float
             For each h-r pair, the scores for all possible tails.
         """
-        h, r, t = self._get_representations(h=hr_batch[:, 0], r=hr_batch[:, 1], t=None)
+        h, r, t = self._get_representations(h=hr_batch[:, 0], r=hr_batch[:, 1], t=None, mode=mode)
         return repeat_if_necessary(
             scores=self.interaction.score_t(h=h, r=r, all_entities=t, slice_size=slice_size),
             representations=self.entity_representations,
             num=self.num_entities,
         )
 
-    def score_h(self, rt_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:
+    def score_h(
+        self, rt_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[Mode]
+    ) -> torch.FloatTensor:
         """Forward pass using left side (head) prediction.
 
         This method calculates the score for all possible heads for each (relation, tail) pair.
@@ -402,14 +408,16 @@ class ERModel(
         :return: shape: (batch_size, num_entities), dtype: float
             For each r-t pair, the scores for all possible heads.
         """
-        h, r, t = self._get_representations(h=None, r=rt_batch[:, 0], t=rt_batch[:, 1])
+        h, r, t = self._get_representations(h=None, r=rt_batch[:, 0], t=rt_batch[:, 1], mode=mode)
         return repeat_if_necessary(
             scores=self.interaction.score_h(all_entities=h, r=r, t=t, slice_size=slice_size),
             representations=self.entity_representations,
             num=self.num_entities,
         )
 
-    def score_r(self, ht_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:
+    def score_r(
+        self, ht_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[Mode]
+    ) -> torch.FloatTensor:
         """Forward pass using middle (relation) prediction.
 
         This method calculates the score for all possible relations for each (head, tail) pair.
@@ -422,7 +430,7 @@ class ERModel(
         :return: shape: (batch_size, num_relations), dtype: float
             For each h-t pair, the scores for all possible relations.
         """
-        h, r, t = self._get_representations(h=ht_batch[:, 0], r=None, t=ht_batch[:, 1])
+        h, r, t = self._get_representations(h=ht_batch[:, 0], r=None, t=ht_batch[:, 1], mode=mode)
         return repeat_if_necessary(
             scores=self.interaction.score_r(h=h, all_relations=r, t=t, slice_size=slice_size),
             representations=self.relation_representations,
@@ -434,6 +442,8 @@ class ERModel(
         h: Optional[torch.LongTensor],
         r: Optional[torch.LongTensor],
         t: Optional[torch.LongTensor],
+        *,
+        mode: Optional[Mode],
     ) -> Tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]:
         """Get representations for head, relation and tails."""
         hr, rr, tr = [

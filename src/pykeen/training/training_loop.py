@@ -37,6 +37,7 @@ from ..trackers import ResultTracker
 from ..training.schlichtkrull_sampler import SLCWASubGraphInstances
 from ..triples import CoreTriplesFactory, Instances, TriplesFactory
 from ..triples.instances import SLCWAInstances
+from ..typing import TRAINING
 from ..utils import (
     format_relative_comparison,
     get_batchnorm_modules,
@@ -681,7 +682,8 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
 
                 should_stop = False
                 if stopper is not None and stopper.should_evaluate(epoch):
-                    if stopper.should_stop(epoch):
+                    # TODO check that this should be a constant mode and not passed to function
+                    if stopper.should_stop(epoch, mode=TRAINING):
                         should_stop = True
                     # Since the model is also used within the stopper, its graph and cache have to be cleared
                     self._free_graph_and_cache()

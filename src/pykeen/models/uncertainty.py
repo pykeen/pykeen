@@ -64,6 +64,7 @@ from typing import Callable, NamedTuple, Optional
 import torch
 
 from .base import Model
+from ..typing import Mode
 from ..utils import get_dropout_modules
 
 __all__ = [
@@ -108,6 +109,8 @@ def predict_uncertain_helper(
     score_method: Callable[..., torch.FloatTensor],
     num_samples: int,
     slice_size: Optional[int] = None,
+    *,
+    mode: Optional[Mode],
 ) -> UncertainPrediction:
     """
     Predict with uncertainty estimates via Monte-Carlo dropout.
@@ -150,13 +153,9 @@ def predict_uncertain_helper(
     for module in dropout_modules:
         module.train()
 
-    kwargs = dict()
-    if slice_size is not None:
-        kwargs["slice_size"] = slice_size
-
     # draw samples
     batch = batch.to(model.device)
-    scores = torch.stack([score_method(batch, **kwargs) for _ in range(num_samples)], dim=0)
+    scores = torch.stack([score_method(batch, mode=mode, slice_size=slice_size) for _ in range(num_samples)], dim=0)
     if model.predict_with_sigmoid:
         scores = torch.sigmoid(scores)
 
@@ -168,6 +167,8 @@ def predict_hrt_uncertain(
     model: Model,
     hrt_batch: torch.LongTensor,
     num_samples: int = 5,
+    *,
+    mode: Optional[Mode],
 ) -> UncertainPrediction:
     """
     Calculate the scores with uncertainty quantification via Monte-Carlo dropout.
@@ -206,6 +207,7 @@ def predict_hrt_uncertain(
         batch=hrt_batch,
         score_method=model.score_hrt,
         num_samples=num_samples,
+        mode=mode,
     )
 
 

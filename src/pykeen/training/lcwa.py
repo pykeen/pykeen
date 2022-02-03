@@ -11,6 +11,7 @@ import torch
 from .training_loop import TrainingLoop
 from ..triples import CoreTriplesFactory, Instances
 from ..triples.instances import LCWABatchType, LCWASampleType
+from ..typing import TRAINING
 
 __all__ = [
     "LCWATrainingLoop",
@@ -94,7 +95,7 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
         batch_pairs = batch_pairs[start:stop].to(device=self.device)
         batch_labels_full = batch_labels_full[start:stop].to(device=self.device)
 
-        predictions = self.score_method(batch_pairs, slice_size=slice_size)
+        predictions = self.score_method(batch_pairs, slice_size=slice_size, mode=TRAINING)
 
         return (
             self.loss.process_lcwa_scores(

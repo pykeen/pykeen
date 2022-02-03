@@ -8,7 +8,7 @@ This experiment investigates the differences between
 
 import itertools as itt
 import logging
-from typing import Type
+from typing import Optional, Type
 
 import click
 import matplotlib.pyplot as plt
@@ -20,6 +20,7 @@ from pykeen.constants import PYKEEN_EXPERIMENTS
 from pykeen.datasets import Dataset, get_dataset
 from pykeen.models import Model, model_resolver
 from pykeen.pipeline import pipeline
+from pykeen.typing import Mode
 
 INVERSE_STABILITY = PYKEEN_EXPERIMENTS / "inverse_stability"
 INVERSE_STABILITY.mkdir(parents=True, exist_ok=True)
@@ -30,7 +31,8 @@ pykeen.evaluation.evaluator.logger.setLevel(logging.CRITICAL)
 @click.command()
 @click.option("--force", is_flag=True)
 @click.option("--clip", type=int, default=10)
-def main(force: bool, clip: int):
+@click.option("--mode")
+def main(force: bool, clip: int, mode):
     """Run the inverse stability experiments."""
     results_path = INVERSE_STABILITY / "results.tsv"
     if results_path.exists() and not force:
@@ -49,13 +51,15 @@ def main(force: bool, clip: int):
         training_loops = ["lcwa", "slcwa"]
         for dataset, model, training_loop in itt.product(datasets, models, training_loops):
             click.secho(f"{dataset} {model} {training_loop}", fg="cyan")
-            df = run_inverse_stability_workflow(dataset=dataset, model=model, training_loop=training_loop)
+            df = run_inverse_stability_workflow(dataset=dataset, model=model, training_loop=training_loop, mode=mode)
             outer_dfs.append(df)
         outer_df = pd.concat(outer_dfs)
         outer_df.to_csv(INVERSE_STABILITY / "results.tsv", sep="\t", index=False)
 
 
-def run_inverse_stability_workflow(dataset: str, model: str, training_loop: str, random_seed=0, device="cpu"):
+def run_inverse_stability_workflow(
+    dataset: str, model: str, training_loop: str, random_seed=0, device="cpu", *, mode: Optional[Mode]
+):
     """Run an inverse stability experiment."""
     dataset_instance: Dataset = get_dataset(
         dataset=dataset,
@@ -86,11 +90,11 @@ def run_inverse_stability_workflow(dataset: str, model: str, training_loop: str,
     test_tf = dataset_instance.testing
     model = pipeline_result.model
     # Score with original triples
-    scores_forward = model.score_hrt(test_tf.mapped_triples)
+    scores_forward = model.score_hrt(test_tf.mapped_triples, mode=mode)
     scores_forward_np = scores_forward.detach().numpy()[:, 0]
 
     # Score with inverse triples
-    scores_inverse = model.score_hrt_inverse(test_tf.mapped_triples)
+    scores_inverse = model.score_hrt_inverse(test_tf.mapped_triples, mode=mode)
     scores_inverse_np = scores_inverse.detach().numpy()[:, 0]
 
     scores_path = dataset_dir / f"{model_name}_{training_loop}_scores.tsv"
