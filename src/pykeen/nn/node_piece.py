@@ -695,9 +695,6 @@ class NodePieceRepresentation(RepresentationModule):
     #: the token representations
     tokenizations: Sequence[TokenizationRepresentationModule]
 
-    #: the padding idx, if any
-    padding_idx: Optional[int]
-
     def __init__(
         self,
         *,
