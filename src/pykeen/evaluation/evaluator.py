@@ -18,10 +18,11 @@ import torch
 from dataclasses_json import DataClassJsonMixin
 from tqdm.autonotebook import tqdm
 
+from ..constants import TARGET_TO_INDEX
 from ..models import Model
 from ..triples.triples_factory import restrict_triples
 from ..triples.utils import get_entities, get_relations
-from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, MappedTriples
+from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, MappedTriples, Target
 from ..utils import (
     format_relative_comparison,
     is_cuda_oom_error,
@@ -105,36 +106,21 @@ class Evaluator(ABC):
         return normalize_string(cls.__name__, suffix=Evaluator.__name__)
 
     @abstractmethod
-    def process_tail_scores_(
+    def process_scores_(
         self,
         hrt_batch: MappedTriples,
-        true_scores: torch.FloatTensor,
+        target: Target,
         scores: torch.FloatTensor,
+        true_scores: Optional[torch.FloatTensor] = None,
         dense_positive_mask: Optional[torch.FloatTensor] = None,
     ) -> None:
-        """Process a batch of triples with their computed tail scores for all entities.
+        """Process a batch of triples with their computed scores for all entities.
 
         :param hrt_batch: shape: (batch_size, 3)
-        :param true_scores: shape: (batch_size)
+        :param target:
+            the prediction target
         :param scores: shape: (batch_size, num_entities)
-        :param dense_positive_mask: shape: (batch_size, num_entities)
-            An optional binary (0/1) tensor indicating other true entities.
-        """
-        raise NotImplementedError
-
-    @abstractmethod
-    def process_head_scores_(
-        self,
-        hrt_batch: MappedTriples,
-        true_scores: torch.FloatTensor,
-        scores: torch.FloatTensor,
-        dense_positive_mask: Optional[torch.FloatTensor] = None,
-    ) -> None:
-        """Process a batch of triples with their computed head scores for all entities.
-
-        :param hrt_batch: shape: (batch_size, 3)
-        :param true_scores: shape: (batch_size)
-        :param scores: shape: (batch_size, num_entities)
+        :param true_scores: shape: (batch_size, 1)
         :param dense_positive_mask: shape: (batch_size, num_entities)
             An optional binary (0/1) tensor indicating other true entities.
         """
@@ -188,11 +174,10 @@ class Evaluator(ABC):
             model=model,
             additional_filter_triples=additional_filter_triples,
             mapped_triples=mapped_triples,
-            evaluators=self,
+            evaluator=self,
             batch_size=batch_size,
             slice_size=slice_size,
             device=device,
-            squeeze=True,
             use_tqdm=use_tqdm,
             tqdm_kwargs=tqdm_kwargs,
             restrict_entities_to=restrict_entities_to,
@@ -321,10 +306,9 @@ class Evaluator(ABC):
                     model=model,
                     additional_filter_triples=additional_filter_triples,
                     mapped_triples=mapped_triples,
-                    evaluators=self,
+                    evaluator=self,
                     only_size_probing=True,
                     device=device,
-                    squeeze=True,
                     use_tqdm=use_tqdm,
                     restrict_entities_to=restrict_entities_to,
                     do_time_consuming_checks=do_time_consuming_checks,
@@ -519,15 +503,15 @@ def prepare_filter_triples(
     return torch.cat([*additional_filter_triples, mapped_triples], dim=0).unique(dim=0)
 
 
+# TODO: consider switching to torch.DataLoader where the preparation of masks/filter batches also takes place
 def evaluate(
     model: Model,
     mapped_triples: MappedTriples,
-    evaluators: Union[Evaluator, Collection[Evaluator]],
+    evaluator: Evaluator,
     only_size_probing: bool = False,
     batch_size: Optional[int] = None,
     slice_size: Optional[int] = None,
     device: Optional[torch.device] = None,
-    squeeze: bool = True,
     use_tqdm: bool = True,
     tqdm_kwargs: Optional[Mapping[str, str]] = None,
     restrict_entities_to: Optional[Collection[int]] = None,
@@ -535,6 +519,7 @@ def evaluate(
     do_time_consuming_checks: bool = True,
     additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
     pre_filtered_triples: bool = True,
+    targets: Collection[Target] = (LABEL_HEAD, LABEL_TAIL),
 ) -> Union[MetricResults, List[MetricResults]]:
     """Evaluate metrics for model on mapped triples.
 
@@ -549,8 +534,8 @@ def evaluate(
     :param mapped_triples:
         The triples on which to evaluate. The mapped triples should never contain inverse triples - these are created by
         the model class on the fly.
-    :param evaluators:
-        An evaluator or a list of evaluators working on batches of triples and corresponding scores.
+    :param evaluator:
+        The evaluator.
     :param only_size_probing:
         The evaluation is only performed for two batches to test the memory footprint, especially on GPUs.
     :param batch_size: >0
@@ -559,8 +544,6 @@ def evaluate(
         The divisor for the scoring function when using slicing.
     :param device:
         The device on which the evaluation shall be run. If None is given, use the model's device.
-    :param squeeze:
-        Return a single instance of :class:`MetricResults` if only one evaluator was given.
     :param use_tqdm:
         Should a progress bar be displayed?
     :param tqdm_kwargs:
@@ -587,10 +570,11 @@ def evaluate(
         accelerates this method, and is recommended when evaluating multiple times on the same set of triples.
     :param additional_filtered_triples:
         Additional true triples to filter out during filtered evaluation.
+    :param targets:
+        the prediction targets
     """
-    if isinstance(evaluators, Evaluator):  # upgrade a single evaluator to a list
-        evaluators = [evaluators]
-
+    if LABEL_RELATION in targets:
+        raise NotImplementedError("cf. https://github.com/pykeen/pykeen/pull/728")
     start = timeit.default_timer()
 
     # verify that the triples have been filtered
@@ -630,19 +614,8 @@ def evaluate(
     # Ensure evaluation mode
     model.eval()
 
-    # Split evaluators into those which need unfiltered results, and those which require filtered ones
-    filtered_evaluators = list(filter(lambda e: e.filtered, evaluators))
-    unfiltered_evaluators = list(filter(lambda e: not e.filtered, evaluators))
-
-    # Check whether we need to be prepared for filtering
-    filtering_necessary = len(filtered_evaluators) > 0
-
-    # Check whether an evaluator needs access to the masks
-    # This can only be an unfiltered evaluator.
-    positive_masks_required = any(e.requires_positive_mask for e in unfiltered_evaluators)
-
     # Prepare for result filtering
-    if filtering_necessary or positive_masks_required:
+    if evaluator.filtered or evaluator.requires_positive_mask:
         all_pos_triples = prepare_filter_triples(
             mapped_triples=mapped_triples,
             additional_filter_triples=additional_filter_triples,
@@ -682,19 +655,16 @@ def evaluate(
         for batch in batches:
             batch_size = batch.shape[0]
             relation_filter = None
-            for column in (0, 2):
+            for target in targets:
                 relation_filter = _evaluate_batch(
-                    batch=batch,  # TODO fix typing
+                    batch=batch,
                     model=model,
-                    column=column,
-                    filtered_evaluators=filtered_evaluators,
-                    unfiltered_evaluators=unfiltered_evaluators,
+                    target=target,
+                    evaluator=evaluator,
                     slice_size=slice_size,
                     all_pos_triples=all_pos_triples,
                     relation_filter=relation_filter,
                     restrict_entities_to=restrict_entities_to,
-                    positive_masks_required=positive_masks_required,
-                    filtering_necessary=filtering_necessary,
                 )
 
             # If we only probe sizes we do not need more than one batch
@@ -707,7 +677,7 @@ def evaluate(
                 progress_bar.update(batch_size)
 
         # Finalize
-        results = [evaluator.finalize() for evaluator in evaluators]
+        result = evaluator.finalize()
 
     stop = timeit.default_timer()
     if only_size_probing:
@@ -715,38 +685,30 @@ def evaluate(
     else:
         logger.info("Evaluation took %.2fs seconds", stop - start)
 
-    if squeeze and len(results) == 1:
-        return results[0]
-
-    return results
+    return result
 
 
 def _evaluate_batch(
     batch: MappedTriples,
     model: Model,
-    column: int,
-    filtered_evaluators: Collection[Evaluator],
-    unfiltered_evaluators: Collection[Evaluator],
+    target: Target,
+    evaluator: Evaluator,
     slice_size: Optional[int],
     all_pos_triples: Optional[MappedTriples],
     relation_filter: Optional[torch.BoolTensor],
     restrict_entities_to: Optional[torch.LongTensor],
-    positive_masks_required: bool,
-    filtering_necessary: bool,
 ) -> torch.BoolTensor:
     """
-    Evaluate batch for all head predictions(column=0), or all tail predictions (column=2).
+    Evaluate ranking for batch.
 
     :param batch: shape: (batch_size, 3)
         The batch of currently evaluated triples.
     :param model:
         The model to evaluate.
-    :param column:
-        The column which to evaluate. Either 0 for head prediction, or 2 for tail prediction.
-    :param filtered_evaluators:
-        The evaluators which work on filtered scores.
-    :param unfiltered_evaluators:
-        The evaluators which work on unfiltered scores.
+    :param target:
+        The prediction target.
+    :param evaluator:
+        The evaluator
     :param slice_size:
         An optional slice size for computing the scores.
     :param all_pos_triples:
@@ -755,32 +717,14 @@ def _evaluate_batch(
         The relation filter. Can be re-used.
     :param restrict_entities_to:
         Restriction to evaluate only for these entities.
-    :param positive_masks_required:
-        Whether dense positive masks are required (by any unfiltered evaluator).
-    :param filtering_necessary:
-        Whether filtering is necessary.
 
     :return:
         The relation filter, which can be re-used for the same batch.
     """
-    if column not in {0, 2}:
-        raise ValueError(f"column must be either 0 or 2, but is column={column}")
+    scores = model.predict(hrt_batch=batch, target=target, slice_size=slice_size)
 
-    # Predict scores once
-    if column == 2:  # tail scores
-        batch_scores_of_corrupted = model.predict_t(batch[:, 0:2], slice_size=slice_size)
-    else:
-        batch_scores_of_corrupted = model.predict_h(batch[:, 1:3], slice_size=slice_size)
-
-    # Select scores of true
-    batch_scores_of_true = batch_scores_of_corrupted[
-        torch.arange(0, batch.shape[0]),
-        batch[:, column],
-    ]
-
-    # Create positive filter for all corrupted
-    if filtering_necessary or positive_masks_required:
-        # Needs all positive triples
+    if evaluator.filtered:
+        column = TARGET_TO_INDEX[target]
         if all_pos_triples is None:
             raise ValueError(
                 "If filtering_necessary of positive_masks_required is True, all_pos_triples has to be "
@@ -795,63 +739,43 @@ def _evaluate_batch(
             filter_col=column,
         )
 
+        # Select scores of true
+        true_scores = scores[torch.arange(0, batch.shape[0]), batch[:, column]]
+        # overwrite filtered scores
+        scores = filter_scores_(scores=scores, filter_batch=positive_filter)
+        # The scores for the true triples have to be rewritten to the scores tensor
+        scores[torch.arange(0, batch.shape[0]), batch[:, column]] = true_scores
+        # the rank-based evaluators needs the true scores with trailing 1-dim
+        true_scores = true_scores.unsqueeze(dim=-1)
+    else:
+        true_scores = None
+
     # Create a positive mask with the size of the scores from the positive filter
-    if positive_masks_required:
-        positive_mask = create_dense_positive_mask_(
-            zero_tensor=torch.zeros_like(batch_scores_of_corrupted),
-            filter_batch=positive_filter,
+    if evaluator.requires_positive_mask:
+        positive_filter, relation_filter = create_sparse_positive_filter_(
+            hrt_batch=batch,
+            all_pos_triples=all_pos_triples,
+            relation_filter=relation_filter,
+            filter_col=column,
         )
+        positive_mask = create_dense_positive_mask_(zero_tensor=torch.zeros_like(scores), filter_batch=positive_filter)
     else:
         positive_mask = None
 
     # Restrict to entities of interest
     if restrict_entities_to is not None:
-        batch_scores_of_corrupted_ = batch_scores_of_corrupted[:, restrict_entities_to]
-        positive_mask = positive_mask[:, restrict_entities_to]
-    else:
-        batch_scores_of_corrupted_ = batch_scores_of_corrupted
+        scores = scores[:, restrict_entities_to]
+        if positive_mask is not None:
+            positive_mask = positive_mask[:, restrict_entities_to]
 
-    # Evaluate metrics on these *unfiltered* scores
-    for unfiltered_evaluator in unfiltered_evaluators:
-        if column == 2:  # tail scores
-            process = unfiltered_evaluator.process_tail_scores_
-        else:
-            process = unfiltered_evaluator.process_head_scores_
-        process(
-            hrt_batch=batch,
-            true_scores=batch_scores_of_true[:, None],
-            scores=batch_scores_of_corrupted_,
-            dense_positive_mask=positive_mask,
-        )
-
-    # Filter
-    if filtering_necessary:
-        batch_filtered_scores_of_corrupted = filter_scores_(
-            scores=batch_scores_of_corrupted,
-            filter_batch=positive_filter,
-        )
-
-        # The scores for the true triples have to be rewritten to the scores tensor
-        batch_filtered_scores_of_corrupted[
-            torch.arange(0, batch.shape[0]),
-            batch[:, column],
-        ] = batch_scores_of_true
-
-        # Restrict to entities of interest
-        if restrict_entities_to is not None:
-            batch_filtered_scores_of_corrupted = batch_filtered_scores_of_corrupted[:, restrict_entities_to]
-
-        # Evaluate metrics on these *filtered* scores
-        for filtered_evaluator in filtered_evaluators:
-            if column == 2:  # tail scores
-                process = filtered_evaluator.process_tail_scores_
-            else:
-                process = filtered_evaluator.process_head_scores_
-            process(
-                hrt_batch=batch,
-                true_scores=batch_scores_of_true[:, None],
-                scores=batch_filtered_scores_of_corrupted,
-            )
+    # process scores
+    evaluator.process_scores_(
+        hrt_batch=batch,
+        target=target,
+        true_scores=true_scores,
+        scores=scores,
+        dense_positive_mask=positive_mask,
+    )
 
     return relation_filter
 

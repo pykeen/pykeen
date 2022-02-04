@@ -63,7 +63,15 @@ from pykeen.triples import TriplesFactory, generation
 from pykeen.triples.splitting import Cleaner, Splitter
 from pykeen.triples.triples_factory import CoreTriplesFactory
 from pykeen.triples.utils import get_entities
-from pykeen.typing import HeadRepresentation, Initializer, MappedTriples, RelationRepresentation, TailRepresentation
+from pykeen.typing import (
+    LABEL_HEAD,
+    LABEL_TAIL,
+    HeadRepresentation,
+    Initializer,
+    MappedTriples,
+    RelationRepresentation,
+    TailRepresentation,
+)
 from pykeen.utils import (
     all_in_bounds,
     get_batchnorm_modules,
@@ -1373,6 +1381,11 @@ class BaseNodePieceTest(ModelTestCase):
     cls = pykeen.models.NodePiece
     create_inverse_triples = True
 
+    def _help_test_cli(self, args):  # noqa: D102
+        if self.instance_kwargs.get("tokenizers_kwargs"):
+            raise SkipTest("No support for tokenizers_kwargs via CLI.")
+        return super()._help_test_cli(args)
+
 
 class RepresentationTestCase(GenericTestCase[RepresentationModule]):
     """Common tests for representation modules."""
@@ -1705,8 +1718,9 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
         """Test the evaluator's ``process_tail_scores_()`` function."""
         hrt_batch, scores, mask = self._get_input()
         true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, 2]][:, None]
-        self.instance.process_tail_scores_(
+        self.instance.process_scores_(
             hrt_batch=hrt_batch,
+            target=LABEL_TAIL,
             true_scores=true_scores,
             scores=scores,
             dense_positive_mask=mask,
@@ -1716,8 +1730,9 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
         """Test the evaluator's ``process_head_scores_()`` function."""
         hrt_batch, scores, mask = self._get_input(inverse=True)
         true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, 0]][:, None]
-        self.instance.process_head_scores_(
+        self.instance.process_scores_(
             hrt_batch=hrt_batch,
+            target=LABEL_HEAD,
             true_scores=true_scores,
             scores=scores,
             dense_positive_mask=mask,
@@ -1728,18 +1743,14 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
         # Process one batch
         hrt_batch, scores, mask = self._get_input()
         true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, 2]][:, None]
-        self.instance.process_tail_scores_(
-            hrt_batch=hrt_batch,
-            true_scores=true_scores,
-            scores=scores,
-            dense_positive_mask=mask,
-        )
-        self.instance.process_head_scores_(
-            hrt_batch=hrt_batch,
-            true_scores=true_scores,
-            scores=scores,
-            dense_positive_mask=mask,
-        )
+        for target in (LABEL_HEAD, LABEL_TAIL):
+            self.instance.process_scores_(
+                hrt_batch=hrt_batch,
+                target=target,
+                true_scores=true_scores,
+                scores=scores,
+                dense_positive_mask=mask,
+            )
 
         result = self.instance.finalize()
         assert isinstance(result, MetricResults)
@@ -1829,14 +1840,14 @@ class TokenizerTestCase(GenericTestCase[pykeen.nn.node_piece.Tokenizer]):
 
     def test_call(self):
         """Test __call__."""
-        total_num_tokens, tokens = self.instance(
+        vocabulary_size, tokens = self.instance(
             mapped_triples=self.factory.mapped_triples,
             num_tokens=self.num_tokens,
             num_entities=self.factory.num_entities,
             num_relations=self.factory.num_relations,
         )
-        assert isinstance(total_num_tokens, int)
-        assert total_num_tokens > 0
+        assert isinstance(vocabulary_size, int)
+        assert vocabulary_size > 0
         # shape
         assert tokens.shape == (self.factory.num_entities, self.num_tokens)
         # value range
@@ -1844,3 +1855,22 @@ class TokenizerTestCase(GenericTestCase[pykeen.nn.node_piece.Tokenizer]):
         # no repetition, except padding idx
         for row in tokens.tolist():
             self.assertDictEqual({k: v for k, v in Counter(row).items() if k >= 0 and v > 1}, {}, msg="duplicate token")
+
+
+class NodePieceTestCase(RepresentationTestCase):
+    """General test case for node piece representations."""
+
+    cls = pykeen.nn.node_piece.NodePieceRepresentation
+    num_entities: ClassVar[int] = 8
+    num_relations: ClassVar[int] = 7
+    num_triples: ClassVar[int] = 31
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        kwargs["triples_factory"] = generation.generate_triples_factory(
+            num_entities=self.num_entities,
+            num_relations=self.num_relations,
+            num_triples=self.num_triples,
+            create_inverse_triples=False,
+        )
+        return kwargs

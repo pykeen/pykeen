@@ -90,11 +90,24 @@ CLI_OPTIONS = {
         "--combination-dropout",
         type=float,
     ),
+    # NodePiece
     "aggregation": click.option(
         "--aggregation",
         type=click.Choice(["mlp", *AGGREGATIONS]),
     ),
-    "tokenizer": tokenizer_resolver.get_option("--tokenizer"),
+    "tokenizers": tokenizer_resolver.get_option(
+        "--tokenizers",
+        multiple=True,
+        as_string=True,
+    ),
+    "num_tokens": click.option(
+        "--num-tokens",
+        type=int,
+        default=[2],
+        multiple=True,
+        show_default=True,
+        help="The number of tokens",
+    ),
 }
 
 device_option = click.option(
