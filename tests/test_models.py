@@ -268,13 +268,46 @@ class TestNodePieceAnchors(cases.BaseNodePieceTest):
     """Test the NodePiece model with anchors."""
 
     kwargs = dict(
-        tokenizer="anchor",
+        tokenizers="anchor",
     )
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
-        kwargs["tokenizer_kwargs"] = dict(selection_kwargs=dict(num_anchors=self.factory.num_entities // 3))
+        kwargs["tokenizers_kwargs"] = dict(selection_kwargs=dict(num_anchors=self.factory.num_entities // 3))
         return kwargs
+
+
+class TestNodePieceJoint(cases.BaseNodePieceTest):
+    """Test the NodePiece model with joint anchor and relation tokenization."""
+
+    num_anchors = 5
+    num_tokens = [3, 2]
+    kwargs = dict(
+        tokenizers=["anchor", "relation"],
+        tokenizers_kwargs=[
+            dict(
+                selection="degree",
+                searcher="scipy-sparse",
+            ),
+            dict(),
+        ],
+    )
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        kwargs["num_tokens"] = self.num_tokens
+        kwargs["tokenizers_kwargs"][0]["selection_kwargs"] = dict(num_anchors=self.num_anchors)
+        return kwargs
+
+    def test_vocabulary_size(self):
+        """Test the expected vocabulary size of the individual tokenizations."""
+        assert isinstance(self.instance.entity_representations[0], NodePieceRepresentation)
+        node_piece = self.instance.entity_representations[0]
+        assert isinstance(node_piece.tokenizations, torch.nn.ModuleList)
+        assert len(node_piece.tokenizations) == 2
+        anchor, relation = node_piece.tokenizations
+        assert anchor.vocabulary.max_id == self.num_anchors + 1
+        assert relation.vocabulary.max_id == 2 * self.factory.real_num_relations + 1
 
 
 class TestNTN(cases.ModelTestCase):
