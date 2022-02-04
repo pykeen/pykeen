@@ -665,6 +665,15 @@ class TokenizationRepresentationModule(RepresentationModule):
             token_representation = token_representation.make(num_embeddings=total_num_tokens)
         return TokenizationRepresentationModule(assignment=assignment, token_representation=token_representation)
 
+    def extra_repr(self) -> str:  # noqa: D102
+        return "\n".join(
+            (
+                f"max_id={self.assignment.shape[0]},",
+                f"num_tokens={self.assignment.shape[1]},",
+                f"total_num_tokens={self.padding_idx},",
+            )
+        )
+
     def forward(
         self,
         indices: Optional[torch.LongTensor] = None,
@@ -712,8 +721,7 @@ class NodePieceRepresentation(RepresentationModule):
         :param triples_factory:
             the triples factory
         :param token_representations:
-            the token representation specification, or pre-instantiated representation module. For the latter, the
-            number of representations must be $2 * num_relations + 1$.
+            the token representation specification, or pre-instantiated representation module.
         :param tokenizers:
             the tokenizer to use, cf. `pykeen.nn.node_piece.tokenizer_resolver`.
         :param tokenizer_kwargs:
@@ -773,6 +781,10 @@ class NodePieceRepresentation(RepresentationModule):
         # Assign default aggregation
         self.aggregation = resolve_aggregation(aggregation=aggregation)
         self.aggregation_index = -(1 + len(shape))
+
+    def extra_repr(self) -> str:  # noqa: D102
+        aggregation_str = self.aggregation.__name__ + "(...)" if callable(self.aggregation) else self.aggregation
+        return f"aggregation={aggregation_str}, "
 
     def forward(
         self,
