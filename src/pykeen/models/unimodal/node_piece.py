@@ -93,7 +93,7 @@ class NodePiece(ERModel):
         tokenizers: OneOrSequence[HintOrType[Tokenizer]] = None,
         tokenizers_kwargs: OneOrSequence[OptionalKwargs] = None,
         embedding_dim: int = 64,
-        embedding_specification: OneOrSequence[Union[EmbeddingSpecification, RepresentationModule]] = None,
+        embedding_specification: EmbeddingSpecification = None,
         interaction: HintOrType[Interaction] = DistMultInteraction,
         aggregation: Hint[Callable[[torch.Tensor, int], torch.Tensor]] = None,
         shape: Optional[Sequence[int]] = None,
@@ -145,10 +145,8 @@ class NodePiece(ERModel):
                 "The provided triples factory does not create inverse triples. However, for the node piece "
                 "representations inverse relation representations are required.",
             )
-        # TODO: embedding_specification can be a sequence
-        embedding_specification = embedding_specification or EmbeddingSpecification(
-            shape=(embedding_dim,),
-        )
+        # normalize embedding specification
+        embedding_specification = embedding_specification or EmbeddingSpecification(shape=(embedding_dim,))
 
         # Create an MLP for string aggregation
         if aggregation == "mlp":
