@@ -591,6 +591,8 @@ class TokenizationRepresentationModule(RepresentationModule):
             the token assignment.
         :param token_representation: shape: `(num_total_tokens, *shape)`
             the token representations
+        :param token_representation_kwargs:
+            additional keyword-based parameters
         """
         # needs to be lazily imported to avoid cyclic imports
         from . import representation_resolver
