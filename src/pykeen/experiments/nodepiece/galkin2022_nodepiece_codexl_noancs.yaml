@@ -1,0 +1,33 @@
+metadata:
+  title: Learn CoDEx-Large Dataset with NodePiece + RotatE (no anchor tokenization) as described by Galkin et al., 2022
+pipeline:
+  dataset: CoDExLarge
+  evaluator_kwargs:
+    filtered: true
+  loss: BCELoss
+  model: NodePiece
+  model_kwargs:
+    entity_initializer: xavier_uniform_
+    relation_initializer: init_phases
+    relation_constrainer: complex_normalize
+    embedding_dim: 200   # for both anchors and relations
+    interaction: RotatEInteraction
+    aggregation: mlp
+    tokenizers: RelationTokenizer
+    num_tokens: 6  # 6 relations
+    tokenizers_kwargs: [{},{}]  # no params for RelationTokenizer
+
+  optimizer: Adam
+  optimizer_kwargs:
+    lr: 0.0005
+  training_kwargs:
+    batch_size: 256
+    num_epochs: 121
+    label_smoothing: 0.3
+  training_loop: LCWA
+results:
+  hits_at_k:
+    best:
+      '10': 0.121
+  mean_reciprocal_rank:
+    best: 0.063

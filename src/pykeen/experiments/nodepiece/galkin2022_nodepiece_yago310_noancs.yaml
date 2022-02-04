@@ -1,0 +1,37 @@
+metadata:
+  title: Learn YAGO3-10 Dataset with NodePiece + RotatE (no anchor tokenization) as described by Galkin et al., 2022
+pipeline:
+  dataset: yago310
+  evaluator_kwargs:
+    filtered: true
+  loss: NSSALoss
+  loss_kwargs:
+    margin: 50.0
+  model: NodePiece
+  model_kwargs:
+    entity_initializer: xavier_uniform_
+    relation_initializer: init_phases
+    relation_constrainer: complex_normalize
+    embedding_dim: 200   # for both anchors and relations
+    interaction: RotatEInteraction
+    aggregation: mlp
+    tokenizers: RelationTokenizer
+    num_tokens: 5  # 5 relations
+    tokenizers_kwargs: [{},{}]  # no params for RelationTokenizer
+
+  optimizer: Adam
+  optimizer_kwargs:
+    lr: 0.00025
+  training_kwargs:
+    batch_size: 512
+    num_epochs: 601
+  training_loop: SLCWA
+  negative_sampler: basic
+  negative_sampler_kwargs:
+    num_negs_per_pos: 10
+results:
+  hits_at_k:
+    best:
+      '10': 0.041
+  mean_reciprocal_rank:
+    best: 0.025
