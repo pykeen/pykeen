@@ -39,7 +39,7 @@ from .modules import (
     UMInteraction,
     interaction_resolver,
 )
-from .node_piece import NodePieceRepresentation, tokenizer_resolver, TokenizationRepresentationModule
+from .node_piece import NodePieceRepresentation, TokenizationRepresentationModule, tokenizer_resolver
 
 __all__ = [
     "Embedding",
