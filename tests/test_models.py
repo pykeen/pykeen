@@ -138,7 +138,7 @@ class TestDistMult(cases.ModelTestCase):
         actual_k, n_cols = top_triples.shape
         assert n_cols == 3
         if k is None:
-            assert actual_k == self.factory.num_entities**2 * self.factory.num_relations
+            assert actual_k == self.factory.num_entities ** 2 * self.factory.num_relations
         else:
             assert actual_k == min(k, self.factory.num_triples)
         assert top_scores.shape == (actual_k,)
@@ -275,6 +275,39 @@ class TestNodePieceAnchors(cases.BaseNodePieceTest):
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         kwargs["tokenizer_kwargs"] = dict(selection_kwargs=dict(num_anchors=self.factory.num_entities // 3))
         return kwargs
+
+
+class TestNodePieceJoint(cases.BaseNodePieceTest):
+    """Test the NodePiece model with joint anchor and relation tokenization."""
+
+    num_anchors = 5
+    num_tokens = [3, 2]
+    kwargs = dict(
+        tokenizers=["anchor", "relation"],
+        tokenizers_kwargs=[
+            dict(
+                selection="degree",
+                searcher="scipy-sparse",
+            ),
+            dict(),
+        ],
+    )
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        kwargs["num_tokens"] = self.num_tokens
+        kwargs["tokenizers_kwargs"][0]["selection_kwargs"] = dict(num_anchors=self.num_anchors)
+        return kwargs
+
+    def test_num_tokens(self):
+        """Test the number of tokens of the individual tokenizations."""
+        assert isinstance(self.instance.entity_representations[0], NodePieceRepresentation)
+        node_piece = self.instance.entity_representations[0]
+        assert isinstance(node_piece.tokenizations, torch.nn.ModuleList)
+        assert len(node_piece.tokenizations) == 2
+        anchor, relation = node_piece.tokenizations
+        assert anchor.tokens.max_id == self.num_anchors + 1
+        assert relation.tokens.max_id == self.factory.real_num_relations + 1
 
 
 class TestNTN(cases.ModelTestCase):
