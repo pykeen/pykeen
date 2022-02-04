@@ -176,6 +176,15 @@ class TokenizationTests(cases.RepresentationTestCase):
     """Tests for tokenization representation."""
 
     cls = pykeen.nn.node_piece.TokenizationRepresentationModule
+    max_id: int = 13
+    total_num_tokens: int = 5
+    chosen_num_tokens: int = 3
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        kwargs["assignment"] = torch.randint(self.total_num_tokens, size=(self.max_id, self.chosen_num_tokens))
+        kwargs["token_representation_kwargs"] = dict(shape=(self.total_num_tokens,))
+        return kwargs
 
 
 class SubsetRepresentationTests(cases.RepresentationTestCase):
