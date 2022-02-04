@@ -9,6 +9,7 @@ import numpy.linalg
 import scipy.sparse
 import scipy.sparse.csgraph
 import torch
+import torch.nn
 from class_resolver import HintOrType, OptionalKwargs, Resolver
 
 from .emb import EmbeddingSpecification, RepresentationModule
@@ -16,7 +17,7 @@ from ..constants import AGGREGATIONS
 from ..triples import CoreTriplesFactory
 from ..triples.splitting import get_absolute_split_sizes, normalize_ratios
 from ..typing import MappedTriples, OneOrSequence
-from ..utils import format_relative_comparison
+from ..utils import format_relative_comparison, upgrade_to_sequence
 
 __all__ = [
     "NodePieceRepresentation",
@@ -53,7 +54,7 @@ class Tokenizer:
         :param num_relations:
             the number of relatiosn
 
-        :return: shape: (num_entities, num_tokens), -1 <= res < max_token_id
+        :return: shape: (num_entities, num_tokens), -1 <= res < vocabulary_size
             the selected relation IDs for each entity. -1 is used as a padding token.
         """
         raise NotImplementedError
@@ -565,6 +566,127 @@ def resolve_aggregation(
     return aggregation
 
 
+class TokenizationRepresentationModule(RepresentationModule):
+    """A module holding the result of tokenization."""
+
+    #: the token ID of the padding token
+    vocabulary_size: int
+
+    #: the token representations
+    vocabulary: RepresentationModule
+
+    #: the assigned tokens for each entity
+    assignment: torch.LongTensor
+
+    def __init__(
+        self,
+        assignment: torch.LongTensor,
+        token_representation: HintOrType[RepresentationModule] = None,
+        token_representation_kwargs: OptionalKwargs = None,
+    ) -> None:
+        """
+        Initialize the tokenization.
+
+        :param assignment: shape: `(n, num_chosen_tokens)`
+            the token assignment.
+        :param token_representation: shape: `(num_total_tokens, *shape)`
+            the token representations
+        :param token_representation_kwargs:
+            additional keyword-based parameters
+        """
+        # needs to be lazily imported to avoid cyclic imports
+        from . import representation_resolver
+
+        # fill padding (nn.Embedding cannot deal with negative indices)
+        padding = assignment < 0
+        assignment[padding] = self.vocabulary_size = assignment.max().item() + 1
+        max_id, num_chosen_tokens = assignment.shape
+
+        # resolve token representation
+        token_representation = representation_resolver.make(
+            token_representation,
+            token_representation_kwargs,
+            # TODO: Embedding uses a different name
+            num_embeddings=self.vocabulary_size,
+        )
+        super().__init__(max_id=max_id, shape=(num_chosen_tokens,) + token_representation.shape)
+
+        # input validation
+        if token_representation.max_id < self.vocabulary_size:
+            raise ValueError(
+                f"The token representations only contain {token_representation.max_id} representations,"
+                f"but there are {self.vocabulary_size} tokens in use.",
+            )
+        elif token_representation.max_id > self.vocabulary_size:
+            logger.warning(
+                f"Token representations do contain more representations ({token_representation.max_id}) "
+                f"than tokens are used ({self.vocabulary_size}).",
+            )
+        # register as buffer
+        self.register_buffer(name="assignment", tensor=assignment)
+        # assign sub-module
+        self.vocabulary = token_representation
+
+    @classmethod
+    def from_tokenizer(
+        cls,
+        tokenizer: Tokenizer,
+        num_tokens: int,
+        token_representation: Union[EmbeddingSpecification, RepresentationModule],
+        mapped_triples: MappedTriples,
+        num_entities: int,
+        num_relations: int,
+    ) -> "TokenizationRepresentationModule":
+        """
+        Create a tokenization from applying a tokenizer.
+
+        :param tokenizer:
+            the tokenizer instance.
+        :param num_tokens:
+            the number of tokens to select for each entity.
+        :param token_representation:
+            the pre-instantiated token representations, or an EmbeddingSpecification to create them
+        :param mapped_triples:
+            the ID-based triples
+        :param num_entities:
+            the number of entities
+        :param num_relations:
+            the number of relations
+        """
+        # apply tokenizer
+        vocabulary_size, assignment = tokenizer(
+            mapped_triples=mapped_triples,
+            num_tokens=num_tokens,
+            num_entities=num_entities,
+            num_relations=num_relations,
+        )
+        # create token representations if necessary
+        if isinstance(token_representation, EmbeddingSpecification):
+            token_representation = token_representation.make(num_embeddings=vocabulary_size)
+        return TokenizationRepresentationModule(assignment=assignment, token_representation=token_representation)
+
+    def extra_repr(self) -> str:  # noqa: D102
+        return "\n".join(
+            (
+                f"max_id={self.assignment.shape[0]},",
+                f"num_tokens={self.assignment.shape[1]},",
+                f"vocabulary_size={self.vocabulary_size},",
+            )
+        )
+
+    def forward(
+        self,
+        indices: Optional[torch.LongTensor] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        # get token IDs, shape: (*, num_chosen_tokens)
+        token_ids = self.assignment
+        if indices is not None:
+            token_ids = token_ids[indices]
+
+        # lookup token representations, shape: (*, num_chosen_tokens, *shape)
+        return self.vocabulary(token_ids)
+
+
 class NodePieceRepresentation(RepresentationModule):
     r"""
     Basic implementation of node piece decomposition [galkin2021]_.
@@ -580,23 +702,17 @@ class NodePieceRepresentation(RepresentationModule):
     """
 
     #: the token representations
-    tokens: RepresentationModule
-
-    #: the entity-to-token mapping
-    assignment: torch.LongTensor
-
-    #: the padding idx, if any
-    padding_idx: Optional[int]
+    tokenizations: Sequence[TokenizationRepresentationModule]
 
     def __init__(
         self,
         *,
         triples_factory: CoreTriplesFactory,
-        token_representation: Union[EmbeddingSpecification, RepresentationModule],
+        token_representations: OneOrSequence[Union[EmbeddingSpecification, RepresentationModule]],
+        tokenizers: OneOrSequence[HintOrType[Tokenizer]] = None,
+        tokenizers_kwargs: OneOrSequence[OptionalKwargs] = None,
+        num_tokens: OneOrSequence[int] = 2,
         aggregation: Union[None, str, Callable[[torch.FloatTensor, int], torch.FloatTensor]] = None,
-        num_tokens: int = 2,
-        tokenizer: HintOrType[Tokenizer] = None,
-        tokenizer_kwargs: OptionalKwargs = None,
         shape: Optional[Sequence[int]] = None,
     ):
         """
@@ -604,9 +720,14 @@ class NodePieceRepresentation(RepresentationModule):
 
         :param triples_factory:
             the triples factory
-        :param token_representation:
-            the token representation specification, or pre-instantiated representation module. For the latter, the
-            number of representations must be $2 * num_relations + 1$.
+        :param token_representations:
+            the token representation specification, or pre-instantiated representation module.
+        :param tokenizers:
+            the tokenizer to use, cf. `pykeen.nn.node_piece.tokenizer_resolver`.
+        :param tokenizer_kwargs:
+            additional keyword-based parameters passed to the tokenizer upon construction.
+        :param num_tokens:
+            the number of tokens for each entity.
         :param aggregation:
             aggregation of multiple token representations to a single entity representation. By default,
             this uses :func:`torch.mean`. If a string is provided, the module assumes that this refers to a top-level
@@ -619,67 +740,60 @@ class NodePieceRepresentation(RepresentationModule):
 
             The aggregation takes two arguments: the (batched) tensor of token representations, in shape
             ``(*, num_tokens, *dt)``, and the index along which to aggregate.
-        :param num_tokens:
-            the number of tokens for each entity.
-        :param tokenizer:
-            the tokenizer to use, cf. `pykeen.nn.node_piece.tokenizer_resolver`.
-            .. todo:: support for using both Anchor and Relation tokenizers at the same time
-        :param tokenizer_kwargs:
-            additional keyword-based parameters passed to the tokenizer upon construction.
         :param shape:
             the shape of an individual representation. Only necessary, if aggregation results in a change of dimensions.
         """
+        # normalize triples
         mapped_triples = triples_factory.mapped_triples
         if triples_factory.create_inverse_triples:
             # inverse triples are created afterwards implicitly
             mapped_triples = mapped_triples[mapped_triples[:, 1] < triples_factory.real_num_relations]
 
-        tokenizer_inst = tokenizer_resolver.make(tokenizer, pos_kwargs=tokenizer_kwargs)
-        total_num_tokens, assignment = tokenizer_inst(
-            mapped_triples=mapped_triples,
-            num_tokens=num_tokens,
-            num_entities=triples_factory.num_entities,
-            num_relations=triples_factory.real_num_relations,
-        )
-        # fill padding (nn.Embedding cannot deal with negative indices)
-        padding = assignment < 0
-        assignment[padding] = self.padding_idx = assignment.max().item() + 1
+        # tokenize
+        tokenizations = [
+            TokenizationRepresentationModule.from_tokenizer(
+                tokenizer=tokenizer_inst,
+                num_tokens=num_tokens_,
+                token_representation=token_representation,
+                mapped_triples=mapped_triples,
+                num_entities=triples_factory.num_entities,
+                num_relations=triples_factory.real_num_relations,
+            )
+            for tokenizer_inst, token_representation, num_tokens_ in zip(
+                tokenizer_resolver.make_many(queries=tokenizers, kwargs=tokenizers_kwargs),
+                upgrade_to_sequence(token_representations),
+                upgrade_to_sequence(num_tokens),
+            )
+        ]
 
-        # create token representations
-        if isinstance(token_representation, EmbeddingSpecification):
-            token_representation = token_representation.make(
-                num_embeddings=total_num_tokens,
-            )
-        if token_representation.max_id != total_num_tokens:
-            raise ValueError(
-                f"If a pre-instantiated representation is provided, it has to have 2 * num_relations + 1= "
-                f"{total_num_tokens} representations, but has {token_representation.max_id}",
-            )
+        # determine shape
+        shapes = {t.vocabulary.shape for t in tokenizations}
+        if len(shapes) != 1:
+            raise ValueError(f"Inconsistent token shapes: {shapes}")
+        shape = list(shapes)[0]
 
         # super init; has to happen *before* any parameter or buffer is assigned
-        super().__init__(max_id=triples_factory.num_entities, shape=shape or token_representation.shape)
+        super().__init__(max_id=triples_factory.num_entities, shape=shape)
+
+        # assign module
+        self.tokenizations = torch.nn.ModuleList(tokenizations)
 
         # Assign default aggregation
         self.aggregation = resolve_aggregation(aggregation=aggregation)
+        self.aggregation_index = -(1 + len(shape))
 
-        # assign module
-        self.tokens = token_representation
-        self.aggregation_index = -(1 + len(token_representation.shape))
-        self.register_buffer(name="assignment", tensor=assignment)
+    def extra_repr(self) -> str:  # noqa: D102
+        aggregation_str = self.aggregation.__name__ if hasattr(self.aggregation, "__name__") else str(self.aggregation)
+        return f"aggregation={aggregation_str}, "
 
     def forward(
         self,
         indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
-        # get token IDs, shape: (*, k)
-        token_ids = self.assignment
-        if indices is not None:
-            token_ids = token_ids[indices]
-
-        # lookup token representations, shape: (*, k, d)
-        x = self.tokens(token_ids)
-
-        # aggregate
-        x = self.aggregation(x, self.aggregation_index)
-
-        return x
+        return self.aggregation(
+            torch.cat(
+                [tokenization(indices=indices) for tokenization in self.tokenizations],
+                dim=self.aggregation_index,
+            ),
+            self.aggregation_index,
+        )
