@@ -9,8 +9,8 @@ import numpy.linalg
 import scipy.sparse
 import scipy.sparse.csgraph
 import torch
+import torch.nn
 from class_resolver import HintOrType, OptionalKwargs, Resolver
-from torch import nn
 
 from .emb import EmbeddingSpecification, RepresentationModule
 from ..constants import AGGREGATIONS
@@ -756,7 +756,7 @@ class NodePieceRepresentation(RepresentationModule):
         super().__init__(max_id=triples_factory.num_entities, shape=shape)
 
         # assign module
-        self.tokenizations = tokenizations
+        self.tokenizations = torch.nn.ModuleList(tokenizations)
 
         # Assign default aggregation
         self.aggregation = resolve_aggregation(aggregation=aggregation)
