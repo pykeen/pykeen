@@ -94,7 +94,7 @@ CLI_OPTIONS = {
         "--aggregation",
         type=click.Choice(["mlp", *AGGREGATIONS]),
     ),
-    "tokenizer": tokenizer_resolver.get_option("--tokenizer"),
+    "tokenizers": tokenizer_resolver.get_option("--tokenizers"),
 }
 
 device_option = click.option(
