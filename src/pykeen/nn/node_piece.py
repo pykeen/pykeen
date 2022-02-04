@@ -581,7 +581,8 @@ class TokenizationRepresentationModule(RepresentationModule):
     def __init__(
         self,
         assignment: torch.LongTensor,
-        token_representation: RepresentationModule,
+        token_representation: HintOrType[RepresentationModule] = None,
+        token_representation_kwargs: OptionalKwargs = None,
     ) -> None:
         """
         Initialize the tokenization.
@@ -591,12 +592,23 @@ class TokenizationRepresentationModule(RepresentationModule):
         :param token_representation: shape: `(num_total_tokens, *shape)`
             the token representations
         """
-        token_representation = representation_resolver()
-        max_id, num_chosen_tokens = assignment.shape
-        super().__init__(max_id=max_id, shape=(num_chosen_tokens,) + token_representation.shape)
+        # needs to be lazily imported to avoid cyclic imports
+        from . import representation_resolver
+
         # fill padding (nn.Embedding cannot deal with negative indices)
         padding = assignment < 0
-        assignment[padding] = self.padding_idx = assignment.max().item() + 1
+        assignment[padding] = self.padding_idx = total_num_tokens = assignment.max().item() + 1
+        max_id, num_chosen_tokens = assignment.shape
+
+        # resolve token representation
+        token_representation = representation_resolver.make(
+            token_representation,
+            token_representation_kwargs,
+            # TODO: Embedding uses a different name
+            num_embeddings=total_num_tokens,
+        )
+        super().__init__(max_id=max_id, shape=(num_chosen_tokens,) + token_representation.shape)
+
         # input validation
         if token_representation.max_id < self.padding_idx:
             raise ValueError(
