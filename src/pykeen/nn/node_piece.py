@@ -747,10 +747,10 @@ class NodePieceRepresentation(RepresentationModule):
         ]
 
         # determine shape
-        shape = {t.tokens.shape for t in tokenizations}
-        if len(shape) != 1:
-            raise ValueError(f"Inconsistent token shapes: {shape}")
-        shape = list(shape)[0]
+        shapes = {t.tokens.shape for t in tokenizations}
+        if len(shapes) != 1:
+            raise ValueError(f"Inconsistent token shapes: {shapes}")
+        shape = list(shapes)[0]
 
         # super init; has to happen *before* any parameter or buffer is assigned
         super().__init__(max_id=triples_factory.num_entities, shape=shape)
@@ -768,7 +768,7 @@ class NodePieceRepresentation(RepresentationModule):
     ) -> torch.FloatTensor:  # noqa: D102
         return self.aggregation(
             torch.cat(
-                [self.tokenizations(indices=indices)],
+                [tokenization(indices=indices) for tokenization in self.tokenizations],
                 dim=self.aggregation_index,
             ),
             self.aggregation_index,
