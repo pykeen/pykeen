@@ -107,9 +107,9 @@ class NodePiece(ERModel):
         :param num_tokens:
             the number of relations to use to represent each entity, cf.
             :class:`pykeen.nn.node_piece.NodePieceRepresentation`.
-        :param tokenizer:
+        :param tokenizers:
             the tokenizer to use, cf. `pykeen.nn.node_piece.tokenizer_resolver`.
-        :param tokenizer_kwargs:
+        :param tokenizers_kwargs:
             additional keyword-based parameters passed to the tokenizer upon construction.
         :param embedding_dim:
             the embedding dimension. Only used if embedding_specification is not given.
