@@ -5,7 +5,7 @@
 These are useful for baselines.
 """
 
-from typing import Any, ClassVar, Mapping
+from typing import Any, ClassVar, Mapping, Optional
 
 import torch
 
@@ -64,23 +64,23 @@ class FixedModel(Model):
     def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
         return self._generate_fake_scores(*hrt_batch.t()).unsqueeze(dim=-1)
 
-    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_t(self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:  # noqa: D102
         return self._generate_fake_scores(
             h=hr_batch[:, 0:1],
             r=hr_batch[:, 1:2],
-            t=torch.arange(self.num_entities).unsqueeze(dim=0),
+            t=torch.arange(self.num_entities, device=hr_batch.device).unsqueeze(dim=0),
         )
 
-    def score_r(self, ht_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_r(self, ht_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:  # noqa: D102
         return self._generate_fake_scores(
             h=ht_batch[:, 0:1],
-            r=torch.arange(self.num_relations).unsqueeze(dim=0),
+            r=torch.arange(self.num_relations, device=ht_batch.device).unsqueeze(dim=0),
             t=ht_batch[:, 1:2],
         )
 
-    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_h(self, rt_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:  # noqa: D102
         return self._generate_fake_scores(
-            h=torch.arange(self.num_entities).unsqueeze(dim=0),
+            h=torch.arange(self.num_entities, device=rt_batch.device).unsqueeze(dim=0),
             r=rt_batch[:, 0:1],
             t=rt_batch[:, 1:2],
         )

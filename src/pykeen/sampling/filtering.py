@@ -131,6 +131,7 @@ import torch
 from class_resolver import Resolver
 from torch import nn
 
+from ..triples.utils import triple_tensor_to_set
 from ..typing import MappedTriples
 
 __all__ = [
@@ -200,7 +201,7 @@ class PythonSetFilterer(Filterer):
         """
         super().__init__()
         # store set of triples
-        self.triples = set(map(tuple, mapped_triples.tolist()))
+        self.triples = triple_tensor_to_set(mapped_triples)
 
     def contains(self, batch: MappedTriples) -> torch.BoolTensor:  # noqa: D102
         return torch.as_tensor(
@@ -245,7 +246,7 @@ class BloomFilterer(Filterer):
         self.register_buffer(
             name="mersenne",
             tensor=torch.as_tensor(
-                data=[2 ** x - 1 for x in [17, 19, 31]],
+                data=[2**x - 1 for x in [17, 19, 31]],
                 dtype=torch.long,
             ).unsqueeze(dim=0),
         )

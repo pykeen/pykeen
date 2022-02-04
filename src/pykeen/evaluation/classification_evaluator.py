@@ -3,7 +3,7 @@
 """Implementation of wrapper around sklearn metrics."""
 
 from dataclasses import dataclass, field, fields, make_dataclass
-from typing import Any, Dict, Optional, Tuple
+from typing import MutableMapping, Optional, Tuple, cast
 
 import numpy as np
 import torch
@@ -11,12 +11,13 @@ from dataclasses_json import dataclass_json
 
 from .evaluator import Evaluator, MetricResults
 from .rexmex_compat import classifier_annotator
-from ..typing import MappedTriples
+from ..constants import TARGET_TO_INDEX
+from ..typing import MappedTriples, Target
 from ..utils import fix_dataclass_init_docs
 
 __all__ = [
-    "SklearnEvaluator",
-    "SklearnMetricResults",
+    "ClassificationEvaluator",
+    "ClassificationMetricResults",
 ]
 
 _fields = [
@@ -37,8 +38,8 @@ _fields = [
     for metadata in classifier_annotator.metrics.values()
 ]
 
-SklearnMetricResultsBase = make_dataclass(
-    "SklearnMetricResultsBase",
+ClassificationMetricResultsBase = make_dataclass(
+    "ClassificationMetricResultsBase",
     _fields,
     bases=(MetricResults,),
 )
@@ -47,23 +48,23 @@ SklearnMetricResultsBase = make_dataclass(
 @fix_dataclass_init_docs
 @dataclass_json
 @dataclass
-class SklearnMetricResults(SklearnMetricResultsBase):  # type: ignore
+class ClassificationMetricResults(ClassificationMetricResultsBase):  # type: ignore
     """Results from computing metrics."""
 
     @classmethod
     def from_scores(cls, y_true, y_score):
         """Return an instance of these metrics from a given set of true and scores."""
-        return SklearnMetricResults(**{f.name: f.metadata["f"](y_true, y_score) for f in fields(cls)})
+        return ClassificationMetricResults(**{f.name: f.metadata["f"](y_true, y_score) for f in fields(cls)})
 
     def get_metric(self, name: str) -> float:  # noqa: D102
         return getattr(self, name)
 
 
-class SklearnEvaluator(Evaluator):
-    """An evaluator that uses a Scikit-learn metric."""
+class ClassificationEvaluator(Evaluator):
+    """An evaluator that uses a classification metrics."""
 
-    all_scores: Dict[Tuple[Any, ...], np.ndarray]
-    all_positives: Dict[Tuple[Any, ...], np.ndarray]
+    all_scores: MutableMapping[Tuple[Target, int, int], np.ndarray]
+    all_positives: MutableMapping[Tuple[Target, int, int], np.ndarray]
 
     def __init__(self, **kwargs):
         super().__init__(
@@ -74,50 +75,34 @@ class SklearnEvaluator(Evaluator):
         self.all_scores = {}
         self.all_positives = {}
 
-    def _process_scores(
+    def process_scores_(
         self,
-        keys: torch.LongTensor,
+        hrt_batch: MappedTriples,
+        target: Target,
         scores: torch.FloatTensor,
-        positive_mask: torch.FloatTensor,
-        head_side: bool,
-    ) -> None:
+        true_scores: Optional[torch.FloatTensor] = None,
+        dense_positive_mask: Optional[torch.FloatTensor] = None,
+    ) -> None:  # noqa: D102
+        if dense_positive_mask is None:
+            raise KeyError("Sklearn evaluators need the positive mask!")
+
         # Transfer to cpu and convert to numpy
         scores = scores.detach().cpu().numpy()
-        positive_mask = positive_mask.detach().cpu().numpy()
-        keys = keys.detach().cpu().numpy()
+        dense_positive_mask = dense_positive_mask.detach().cpu().numpy()
+        remaining = [i for i in range(hrt_batch.shape[1]) if i != TARGET_TO_INDEX[target]]
+        keys = hrt_batch[:, remaining].detach().cpu().numpy()
 
         # Ensure that each key gets counted only once
         for i in range(keys.shape[0]):
             # include head_side flag into key to differentiate between (h, r) and (r, t)
-            key = (head_side,) + tuple(map(int, keys[i]))
+            key_suffix = tuple(map(int, keys[i]))
+            assert len(key_suffix) == 2
+            key_suffix = cast(Tuple[int, int], key_suffix)
+            key = (target,) + key_suffix
             self.all_scores[key] = scores[i]
-            self.all_positives[key] = positive_mask[i]
+            self.all_positives[key] = dense_positive_mask[i]
 
-    def process_tail_scores_(
-        self,
-        hrt_batch: MappedTriples,
-        true_scores: torch.FloatTensor,
-        scores: torch.FloatTensor,
-        dense_positive_mask: Optional[torch.FloatTensor] = None,
-    ) -> None:  # noqa: D102
-        if dense_positive_mask is None:
-            raise KeyError("Sklearn evaluators need the positive mask!")
-
-        self._process_scores(keys=hrt_batch[:, :2], scores=scores, positive_mask=dense_positive_mask, head_side=False)
-
-    def process_head_scores_(
-        self,
-        hrt_batch: MappedTriples,
-        true_scores: torch.FloatTensor,
-        scores: torch.FloatTensor,
-        dense_positive_mask: Optional[torch.FloatTensor] = None,
-    ) -> None:  # noqa: D102
-        if dense_positive_mask is None:
-            raise KeyError("Sklearn evaluators need the positive mask!")
-
-        self._process_scores(keys=hrt_batch[:, 1:], scores=scores, positive_mask=dense_positive_mask, head_side=True)
-
-    def finalize(self) -> SklearnMetricResults:  # noqa: D102
+    def finalize(self) -> ClassificationMetricResults:  # noqa: D102
         # Important: The order of the values of an dictionary is not guaranteed. Hence, we need to retrieve scores and
         # masks using the exact same key order.
         all_keys = list(self.all_scores.keys())
@@ -130,4 +115,4 @@ class SklearnEvaluator(Evaluator):
         self.all_positives.clear()
         self.all_scores.clear()
 
-        return SklearnMetricResults.from_scores(y_true, y_score)
+        return ClassificationMetricResults.from_scores(y_true, y_score)

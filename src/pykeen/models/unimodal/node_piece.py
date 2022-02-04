@@ -6,14 +6,17 @@ import logging
 from typing import Any, Callable, ClassVar, Mapping, Optional, Sequence, Union
 
 import torch
-from class_resolver import Hint, HintOrType
+from class_resolver import Hint, HintOrType, OptionalKwargs
 from torch import nn
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...nn.emb import EmbeddingSpecification, NodePieceRepresentation, SubsetRepresentationModule
+from ...nn import EmbeddingSpecification, NodePieceRepresentation, SubsetRepresentationModule
 from ...nn.modules import DistMultInteraction, Interaction
+from ...nn.node_piece import RelationTokenizer, Tokenizer, tokenizer_resolver
 from ...triples.triples_factory import CoreTriplesFactory
+from ...typing import OneOrSequence
+from ...utils import upgrade_to_sequence
 
 __all__ = [
     "NodePiece",
@@ -86,9 +89,11 @@ class NodePiece(ERModel):
         self,
         *,
         triples_factory: CoreTriplesFactory,
-        num_tokens: int = 2,
+        num_tokens: OneOrSequence[int] = 2,
+        tokenizers: OneOrSequence[HintOrType[Tokenizer]] = None,
+        tokenizers_kwargs: OneOrSequence[OptionalKwargs] = None,
         embedding_dim: int = 64,
-        embedding_specification: Optional[EmbeddingSpecification] = None,
+        embedding_specification: EmbeddingSpecification = None,
         interaction: HintOrType[Interaction] = DistMultInteraction,
         aggregation: Hint[Callable[[torch.Tensor, int], torch.Tensor]] = None,
         shape: Optional[Sequence[int]] = None,
@@ -101,7 +106,11 @@ class NodePiece(ERModel):
             the triples factory. Must have create_inverse_triples set to True.
         :param num_tokens:
             the number of relations to use to represent each entity, cf.
-            :class:`pykeen.nn.emb.NodePieceRepresentation`.
+            :class:`pykeen.nn.node_piece.NodePieceRepresentation`.
+        :param tokenizers:
+            the tokenizer to use, cf. `pykeen.nn.node_piece.tokenizer_resolver`.
+        :param tokenizers_kwargs:
+            additional keyword-based parameters passed to the tokenizer upon construction.
         :param embedding_dim:
             the embedding dimension. Only used if embedding_specification is not given.
         :param embedding_specification:
@@ -136,14 +145,13 @@ class NodePiece(ERModel):
                 "The provided triples factory does not create inverse triples. However, for the node piece "
                 "representations inverse relation representations are required.",
             )
-        embedding_specification = embedding_specification or EmbeddingSpecification(
-            shape=(embedding_dim,),
-        )
+        # normalize embedding specification
+        embedding_specification = embedding_specification or EmbeddingSpecification(shape=(embedding_dim,))
 
         # Create an MLP for string aggregation
         if aggregation == "mlp":
             aggregation = _ConcatMLP(
-                num_tokens=num_tokens,
+                num_tokens=num_tokens if isinstance(num_tokens, int) else sum(num_tokens),
                 embedding_dim=embedding_dim,
             )
 
@@ -151,17 +159,26 @@ class NodePiece(ERModel):
         relation_representations = embedding_specification.make(
             num_embeddings=2 * triples_factory.real_num_relations + 1,
         )
-        entity_representations = NodePieceRepresentation(
-            triples_factory=triples_factory,
-            token_representation=relation_representations,
-            aggregation=aggregation,
-            shape=shape,
-            num_tokens=num_tokens,
-        )
+
         super().__init__(
             triples_factory=triples_factory,
             interaction=interaction,
-            entity_representations=entity_representations,
+            entity_representations=NodePieceRepresentation(
+                triples_factory=triples_factory,
+                token_representations=[
+                    (
+                        relation_representations
+                        if tokenizer_resolver.lookup(tokenizer) is RelationTokenizer
+                        else embedding_specification
+                    )
+                    for tokenizer in upgrade_to_sequence(tokenizers)
+                ],
+                tokenizers=tokenizers,
+                tokenizers_kwargs=tokenizers_kwargs,
+                aggregation=aggregation,
+                shape=shape,
+                num_tokens=num_tokens,
+            ),
             relation_representations=SubsetRepresentationModule(  # hide padding relation
                 relation_representations,
                 max_id=triples_factory.num_relations,

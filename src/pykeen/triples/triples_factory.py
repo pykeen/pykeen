@@ -31,7 +31,7 @@ import torch
 
 from .instances import Instances, LCWAInstances, SLCWAInstances
 from .splitting import split
-from .utils import TRIPLES_DF_COLUMNS, get_entities, get_relations, load_triples, tensor_to_df
+from .utils import TRIPLES_DF_COLUMNS, get_entities, get_relations, load_triples, tensor_to_df, triple_tensor_to_set
 from ..typing import EntityMapping, LabeledTriples, MappedTriples, RelationMapping, TorchRandomHint
 from ..utils import compact_mapping, format_relative_comparison, invert_mapping
 
@@ -243,6 +243,56 @@ class Labeling:
         ids = np.asanyarray(ids)
         # label
         return self._vectorized_labeler(ids, (unknown_label,))
+
+
+def restrict_triples(
+    mapped_triples: MappedTriples,
+    entities: Optional[Collection[int]] = None,
+    relations: Optional[Collection[int]] = None,
+    invert_entity_selection: bool = False,
+    invert_relation_selection: bool = False,
+) -> MappedTriples:
+    """Select a subset of triples based on the given entity and relation ID selection.
+
+    :param mapped_triples:
+        The ID-based triples.
+    :param entities:
+        The entity IDs of interest. If None, defaults to all entities.
+    :param relations:
+        The relation IDs of interest. If None, defaults to all relations.
+    :param invert_entity_selection:
+        Whether to invert the entity selection, i.e. select those triples without the provided entities.
+    :param invert_relation_selection:
+        Whether to invert the relation selection, i.e. select those triples without the provided relations.
+    :return:
+        A tensor of triples containing the entities and relations of interest.
+    """
+    keep_mask = None
+
+    # Filter for entities
+    if entities is not None:
+        keep_mask = _get_triple_mask(
+            ids=entities,
+            triples=mapped_triples,
+            columns=(0, 2),  # head and entity need to fulfil the requirement
+            invert=invert_entity_selection,
+        )
+
+    # Filter for relations
+    if relations is not None:
+        relation_mask = _get_triple_mask(
+            ids=relations,
+            triples=mapped_triples,
+            columns=1,
+            invert=invert_relation_selection,
+        )
+        keep_mask = relation_mask if keep_mask is None else keep_mask & relation_mask
+
+    # No filter
+    if keep_mask is None:
+        return mapped_triples
+
+    return mapped_triples[keep_mask]
 
 
 @dataclasses.dataclass
@@ -543,19 +593,19 @@ class CoreTriplesFactory:
             )
         ]
 
-    def get_mask_for_entities(
-        self,
-        entities: Collection[int],
-        invert: bool = False,
-    ) -> torch.BoolTensor:
-        """Get a boolean mask for triples with the given entities."""
-        return _get_triple_mask(
-            ids=entities,
-            triples=self.mapped_triples,
-            columns=(0, 2),  # head and entity need to fulfil the requirement
-            invert=invert,
-            max_id=self.num_entities,
-        )
+    def entities_to_ids(self, entities: Union[Collection[int], Collection[str]]) -> Collection[int]:
+        """Normalize entities to IDs."""
+        for e in entities:
+            if not isinstance(e, int):
+                raise ValueError(f"{self.__class__.__name__} cannot convert entity IDs from {type(e)} to int.")
+        return cast(Collection[int], entities)
+
+    def relations_to_ids(self, relations: Union[Collection[int], Collection[str]]) -> Collection[int]:
+        """Normalize relations to IDs."""
+        for e in relations:
+            if not isinstance(e, int):
+                raise ValueError(f"{self.__class__.__name__} cannot convert relation IDs from {type(e)} to int.")
+        return cast(Collection[int], relations)
 
     def get_mask_for_relations(
         self,
@@ -610,38 +660,36 @@ class CoreTriplesFactory:
             A new triples factory, which has only a subset of the triples containing the entities and relations of
             interest. The label-to-ID mapping is *not* modified.
         """
-        keep_mask: Optional[torch.BoolTensor] = None
-
+        # prepare metadata
         extra_metadata = {}
-        # Filter for entities
         if entities is not None:
-            if any(isinstance(e, str) for e in entities):
-                raise ValueError(f"{self.__class__} does not support label-based restriction.")
-            entities = cast(Collection[int], entities)
             extra_metadata["entity_restriction"] = entities
-            keep_mask = self.get_mask_for_entities(entities=entities, invert=invert_entity_selection)
-            remaining_entities = self.num_entities - len(entities) if invert_entity_selection else len(entities)
+            entities = self.entities_to_ids(entities=entities)
+            remaining_entities = (self.num_entities - len(entities)) if invert_entity_selection else len(entities)
             logger.info(f"keeping {format_relative_comparison(remaining_entities, self.num_entities)} entities.")
-
-        # Filter for relations
         if relations is not None:
-            if any(isinstance(r, str) for r in relations):
-                raise ValueError(f"{self.__class__} does not support label-based restriction.")
-            relations = cast(Collection[int], relations)
             extra_metadata["relation_restriction"] = relations
-            relation_mask = self.get_mask_for_relations(relations=relations, invert=invert_relation_selection)
-            remaining_relations = self.num_relations - len(relations) if invert_entity_selection else len(relations)
+            relations = self.relations_to_ids(relations=relations)
+            remaining_relations = (self.num_relations - len(relations)) if invert_relation_selection else len(relations)
             logger.info(f"keeping {format_relative_comparison(remaining_relations, self.num_relations)} relations.")
-            keep_mask = relation_mask if keep_mask is None else keep_mask & relation_mask
 
-        # No filtering happened
-        if keep_mask is None:
+        # Delegate to function
+        mapped_triples = restrict_triples(
+            mapped_triples=self.mapped_triples,
+            entities=entities,
+            relations=relations,
+            invert_entity_selection=invert_entity_selection,
+            invert_relation_selection=invert_relation_selection,
+        )
+
+        # restrict triples can only remove triples; thus, if the new size equals the old one, nothing has changed
+        if mapped_triples.shape[0] == self.num_triples:
             return self
 
-        num_triples = keep_mask.sum().item()
-        logger.info(f"keeping {format_relative_comparison(num_triples, self.num_triples)} triples.")
+        logger.info(f"keeping {format_relative_comparison(mapped_triples.shape[0], self.num_triples)} triples.")
+
         return self.clone_and_exchange_triples(
-            mapped_triples=self.mapped_triples[keep_mask],
+            mapped_triples=mapped_triples,
             extra_metadata=extra_metadata,
         )
 
@@ -966,23 +1014,10 @@ class TriplesFactory(CoreTriplesFactory):
             axis=1,
         )
 
-    def entities_to_ids(self, entities: Union[Collection[int], Collection[str]]) -> Collection[int]:
-        """Normalize entities to IDs."""
+    def entities_to_ids(self, entities: Union[Collection[int], Collection[str]]) -> Collection[int]:  # noqa: D102
         return _ensure_ids(labels_or_ids=entities, label_to_id=self.entity_labeling.label_to_id)
 
-    def get_mask_for_entities(
-        self,
-        entities: Union[Collection[int], Collection[str]],
-        invert: bool = False,
-    ) -> torch.BoolTensor:
-        """Get a boolean mask for triples with the given entities."""
-        return super().get_mask_for_entities(entities=self.entities_to_ids(entities=entities))
-
-    def relations_to_ids(
-        self,
-        relations: Union[Collection[int], Collection[str]],
-    ) -> Collection[int]:
-        """Normalize relations to IDs."""
+    def relations_to_ids(self, relations: Union[Collection[int], Collection[str]]) -> Collection[int]:  # noqa: D102
         return _ensure_ids(labels_or_ids=relations, label_to_id=self.relation_labeling.label_to_id)
 
     def get_mask_for_relations(
@@ -1129,8 +1164,8 @@ def splits_steps(a: Sequence[CoreTriplesFactory], b: Sequence[CoreTriplesFactory
     if len(a) != len(b):
         raise ValueError("Must have same number of triples factories")
 
-    train_1 = _smt(a[0].mapped_triples)
-    train_2 = _smt(b[0].mapped_triples)
+    train_1 = triple_tensor_to_set(a[0].mapped_triples)
+    train_2 = triple_tensor_to_set(b[0].mapped_triples)
 
     # FIXME currently the implementation does not consider the non-training (i.e., second-last entries)
     #  for the number of steps. Consider more interesting way to discuss splits w/ valid
@@ -1146,10 +1181,6 @@ def splits_similarity(a: Sequence[CoreTriplesFactory], b: Sequence[CoreTriplesFa
     steps = splits_steps(a, b)
     n = sum(tf.num_triples for tf in a)
     return 1 - steps / n
-
-
-def _smt(x):
-    return set(tuple(xx.detach().numpy().tolist()) for xx in x)
 
 
 def normalize_path(path: Union[str, pathlib.Path, TextIO]) -> pathlib.Path:

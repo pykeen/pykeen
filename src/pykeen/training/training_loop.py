@@ -13,7 +13,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from hashlib import md5
 from tempfile import NamedTemporaryFile
-from typing import IO, Any, ClassVar, Generic, List, Mapping, Optional, Tuple, Type, TypeVar, Union
+from typing import IO, Any, Generic, List, Mapping, Optional, Tuple, TypeVar, Union
 
 import numpy as np
 import torch
@@ -22,14 +22,14 @@ from torch.utils.data import DataLoader
 from tqdm.autonotebook import tqdm, trange
 
 from .callbacks import (
-    GradientAbsClippingCallback,
-    GradientNormClippingCallback,
+    GradientAbsClippingTrainingCallback,
+    GradientNormClippingTrainingCallback,
     MultiTrainingCallback,
-    TrackerCallback,
+    TrackerTrainingCallback,
     TrainingCallbackHint,
+    TrainingCallbackKwargsHint,
 )
 from ..constants import PYKEEN_CHECKPOINTS, PYKEEN_DEFAULT_CHECKPOINT
-from ..losses import Loss
 from ..lr_schedulers import LRScheduler
 from ..models import RGCN, Model
 from ..stoppers import Stopper
@@ -48,7 +48,6 @@ from ..utils import (
 __all__ = [
     "TrainingLoop",
     "NonFiniteLossError",
-    "TrainingApproachLossMismatchError",
     "SubBatchingNotSupportedError",
 ]
 
@@ -60,10 +59,6 @@ BatchType = TypeVar("BatchType")
 
 class NonFiniteLossError(RuntimeError):
     """An exception raised for non-finite loss values."""
-
-
-class TrainingApproachLossMismatchError(TypeError):
-    """An exception when an illegal loss function is used with a given training approach."""
 
 
 class CheckpointMismatchError(RuntimeError):
@@ -110,7 +105,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
     optimizer: Optimizer
 
     losses_per_epochs: List[float]
-    loss_blacklist: ClassVar[Optional[List[Type[Loss]]]] = None
 
     hpo_default = dict(
         num_epochs=dict(type=int, low=100, high=1000, q=100),
@@ -142,12 +136,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         self.automatic_memory_optimization = automatic_memory_optimization
 
         logger.debug("we don't really need the triples factory: %s", triples_factory)
-
-        if self.loss_blacklist and isinstance(self.model.loss, tuple(self.loss_blacklist)):
-            raise TrainingApproachLossMismatchError(
-                f"Can not use loss {self.model.loss.__class__.__name__}"
-                f" with training approach {self.__class__.__name__}",
-            )
 
         # The internal epoch state tracks the last finished epoch of the training loop to allow for
         # seamless loading and saving of training checkpoints
@@ -200,9 +188,11 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         checkpoint_on_failure: bool = False,
         drop_last: Optional[bool] = None,
         callbacks: TrainingCallbackHint = None,
+        callback_kwargs: TrainingCallbackKwargsHint = None,
         gradient_clipping_max_norm: Optional[float] = None,
         gradient_clipping_norm_type: Optional[float] = None,
         gradient_clipping_max_abs_value: Optional[float] = None,
+        pin_memory: bool = True,
     ) -> Optional[List[float]]:
         """Train the KGE model.
 
@@ -267,6 +257,8 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         :param callbacks:
             An optional :class:`pykeen.training.TrainingCallback` or collection of callback instances that define
             one of several functionalities. Their interface was inspired by Keras.
+        :param callback_kwargs:
+            additional keyword-based parameter to instantiate the training callback.
         :param gradient_clipping_max_norm:
             The maximum gradient norm for use with gradient clipping. If None, no gradient norm clipping is used.
         :param gradient_clipping_norm_type:
@@ -274,6 +266,9 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         :param gradient_clipping_max_abs_value:
             The maximum absolute value in gradients, cf. :func:`torch.nn.utils.clip_grad_value_`. If None, no
             gradient clipping will be used.
+        :param pin_memory:
+            whether to use memory pinning in the data loader, cf.
+            https://pytorch.org/docs/stable/notes/cuda.html#cuda-memory-pinning
 
         :return:
             The losses per epoch.
@@ -362,11 +357,13 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                 last_best_epoch=last_best_epoch,
                 drop_last=drop_last,
                 callbacks=callbacks,
+                callback_kwargs=callback_kwargs,
                 gradient_clipping_max_norm=gradient_clipping_max_norm,
                 gradient_clipping_norm_type=gradient_clipping_norm_type,
                 gradient_clipping_max_abs_value=gradient_clipping_max_abs_value,
                 triples_factory=triples_factory,
                 training_instances=training_instances,
+                pin_memory=pin_memory,
             )
 
         # Ensure the release of memory
@@ -405,9 +402,11 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         last_best_epoch: Optional[int] = None,
         drop_last: Optional[bool] = None,
         callbacks: TrainingCallbackHint = None,
+        callback_kwargs: TrainingCallbackKwargsHint = None,
         gradient_clipping_max_norm: Optional[float] = None,
         gradient_clipping_norm_type: Optional[float] = None,
         gradient_clipping_max_abs_value: Optional[float] = None,
+        pin_memory: bool = True,
     ) -> Optional[List[float]]:
         """Train the KGE model, see docstring for :func:`TrainingLoop.train`."""
         if self.optimizer is None:
@@ -431,19 +430,19 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             )
 
         # Prepare all of the callbacks
-        callback = MultiTrainingCallback(callbacks)
+        callback = MultiTrainingCallback(callbacks=callbacks, callback_kwargs=callback_kwargs)
         # Register a callback for the result tracker, if given
         if result_tracker is not None:
-            callback.register_callback(TrackerCallback(result_tracker))
+            callback.register_callback(TrackerTrainingCallback(result_tracker))
         if gradient_clipping_max_norm is not None:
             callback.register_callback(
-                GradientNormClippingCallback(
+                GradientNormClippingTrainingCallback(
                     max_norm=gradient_clipping_max_norm,
                     norm_type=gradient_clipping_norm_type,
                 )
             )
         if gradient_clipping_max_abs_value is not None:
-            callback.register_callback(GradientAbsClippingCallback(clip_value=gradient_clipping_max_abs_value))
+            callback.register_callback(GradientAbsClippingTrainingCallback(clip_value=gradient_clipping_max_abs_value))
 
         callback.register_training_loop(self)
 
@@ -572,6 +571,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             batch_size=batch_size,
             drop_last=drop_last,
             shuffle=shuffle,
+            pin_memory=pin_memory,
         )
 
         # Save the time to track when the saved point was available
