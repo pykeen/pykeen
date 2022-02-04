@@ -84,6 +84,7 @@ class Evaluator(ABC):
         batch_size: Optional[int] = None,
         slice_size: Optional[int] = None,
         automatic_memory_optimization: bool = True,
+        mode: Optional[Mode] = None,
     ):
         """Initialize the evaluator.
 
@@ -99,6 +100,7 @@ class Evaluator(ABC):
         self.batch_size = batch_size
         self.slice_size = slice_size
         self.automatic_memory_optimization = automatic_memory_optimization
+        self.mode = mode
 
     @classmethod
     def get_normalized_name(cls) -> str:
@@ -143,8 +145,6 @@ class Evaluator(ABC):
         restrict_entities_to: Optional[torch.LongTensor] = None,
         do_time_consuming_checks: bool = True,
         additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
-        *,
-        mode: Optional[Mode] = None,
     ) -> MetricResults:
         """Run :func:`pykeen.evaluation.evaluate` with this evaluator."""
         if batch_size is None and self.automatic_memory_optimization:
@@ -164,7 +164,6 @@ class Evaluator(ABC):
                     use_tqdm=False,
                     restrict_entities_to=restrict_entities_to,
                     do_time_consuming_checks=do_time_consuming_checks,
-                    mode=mode,
                 )
                 # The batch_size and slice_size should be accessible to outside objects for re-use, e.g. early stoppers.
                 self.batch_size = batch_size
@@ -185,7 +184,7 @@ class Evaluator(ABC):
             tqdm_kwargs=tqdm_kwargs,
             restrict_entities_to=restrict_entities_to,
             do_time_consuming_checks=do_time_consuming_checks,
-            mode=mode,
+            mode=self.mode,
         )
         # Since squeeze is true, we can expect that evaluate returns a MetricResult, but we need to tell MyPy that
         return cast(MetricResults, rv)
@@ -200,8 +199,6 @@ class Evaluator(ABC):
         restrict_entities_to: Optional[torch.LongTensor] = None,
         do_time_consuming_checks: bool = True,
         additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
-        *,
-        mode: Optional[Mode],
     ) -> Tuple[int, Optional[int]]:
         """Find the maximum possible batch_size and slice_size for evaluation with the current setting.
 
@@ -245,7 +242,6 @@ class Evaluator(ABC):
             use_tqdm=use_tqdm,
             restrict_entities_to=restrict_entities_to,
             do_time_consuming_checks=do_time_consuming_checks,
-            mode=mode,
         )
 
         if evaluated_once:  # slice_size = None
@@ -264,7 +260,6 @@ class Evaluator(ABC):
             use_tqdm=use_tqdm,
             restrict_entities_to=restrict_entities_to,
             do_time_consuming_checks=False,
-            mode=mode,
         )
         if not evaluated_once:
             raise MemoryError("The current model can't be trained on this hardware with these parameters.")
@@ -282,8 +277,6 @@ class Evaluator(ABC):
         restrict_entities_to: Optional[torch.LongTensor] = None,
         do_time_consuming_checks: bool = True,
         additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
-        *,
-        mode: Optional[Mode],
     ) -> Tuple[int, bool]:
         values_dict = {}
         maximum_triples = mapped_triples.shape[0]
@@ -324,7 +317,7 @@ class Evaluator(ABC):
                     do_time_consuming_checks=do_time_consuming_checks,
                     batch_size=values_dict.get("batch_size"),
                     slice_size=values_dict.get("slice_size"),
-                    mode=mode,
+                    mode=self.mode,
                 )
                 evaluated_once = True
             except RuntimeError as runtime_error:
