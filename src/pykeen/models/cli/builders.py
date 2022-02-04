@@ -30,7 +30,6 @@ _OPTIONAL_MAP = {Optional[int]: int, Optional[str]: str}
 _SKIP_ARGS = {
     "return",
     "triples_factory",
-    "preferred_device",
     "regularizer",
     # TODO rethink after RGCN update
     "interaction",
@@ -81,7 +80,7 @@ def build_cli_from_cls(model: Type[Model]) -> click.Command:  # noqa: D202
                     logger.debug("Unhandled hint: %s", annotation)
                     continue
                 if parameter.default is None:
-                    logger.warning(
+                    logger.debug(
                         f"Missing handler in {model.__name__} for {name}: "
                         f"type={annotation} default={parameter.default}",
                     )

@@ -19,7 +19,7 @@ from pystow.utils import download_from_google
 
 from .base import LazyDataset
 from ..triples import TriplesFactory
-from ..typing import TorchRandomHint
+from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, TorchRandomHint
 
 __all__ = [
     "WK3l15k",
@@ -130,7 +130,7 @@ class MTransEDataset(LazyDataset, ABC):
                     triples_file,
                     delimiter="@@@",
                     header=None,
-                    names=["head", "relation", "tail"],
+                    names=[LABEL_HEAD, LABEL_RELATION, LABEL_TAIL],
                     engine="python",
                     encoding="utf8",
                 )

@@ -8,15 +8,15 @@ from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_normal_
-from ...nn.modules import UnstructuredModelInteraction
+from ...nn.modules import UMInteraction
 from ...typing import Hint, Initializer
 
 __all__ = [
-    "UnstructuredModel",
+    "UM",
 ]
 
 
-class UnstructuredModel(ERModel):
+class UM(ERModel):
     r"""An implementation of the Unstructured Model (UM) published by [bordes2014]_.
 
     UM computes the distance between head and tail entities then applies the $l_p$ norm.
@@ -63,7 +63,7 @@ class UnstructuredModel(ERModel):
         :param kwargs: Remaining keyword arguments passed through to :class:`pykeen.models.ERModel`.
         """
         super().__init__(
-            interaction=UnstructuredModelInteraction,
+            interaction=UMInteraction,
             interaction_kwargs=dict(p=scoring_fct_norm),
             entity_representations=EmbeddingSpecification(
                 embedding_dim=embedding_dim,

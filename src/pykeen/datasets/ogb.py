@@ -68,6 +68,8 @@ class OGBLoader(LazyDataset):
         pass
 
     def _make_tf(self, x, entity_to_id=None, relation_to_id=None):
+        # note: we do not use the built-in constants here, since those refer to OGB nomenclature
+        #       (which happens to coincide with ours)
         triples = np.stack([x["head"], x["relation"], x["tail"]], axis=1)
 
         # FIXME these are already identifiers

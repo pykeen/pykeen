@@ -10,6 +10,7 @@ from class_resolver import Resolver, get_subclasses
 
 from .base import EntityRelationEmbeddingModel, Model, _OldAbstractModel
 from .baseline import EvaluationOnlyModel, MarginalDistributionBaseline
+from .mocks import FixedModel
 from .multimodal import ComplExLiteral, DistMultLiteral, DistMultLiteralGated, LiteralModel
 from .nbase import ERModel, _NewAbstractModel
 from .resolve import make_model, make_model_cls
@@ -21,6 +22,9 @@ from .unimodal import (
     NTN,
     RESCAL,
     RGCN,
+    SE,
+    UM,
+    AutoSF,
     BoxE,
     CompGCN,
     ComplEx,
@@ -37,7 +41,6 @@ from .unimodal import (
     QuatE,
     RotatE,
     SimplE,
-    StructuredEmbedding,
     TorusE,
     TransD,
     TransE,
@@ -45,7 +48,6 @@ from .unimodal import (
     TransH,
     TransR,
     TuckER,
-    UnstructuredModel,
 )
 
 __all__ = [
@@ -58,6 +60,7 @@ __all__ = [
     "LiteralModel",
     "EvaluationOnlyModel",
     # Concrete Models
+    "AutoSF",
     "BoxE",
     "CompGCN",
     "ComplEx",
@@ -74,6 +77,7 @@ __all__ = [
     "ERMLPE",
     "HolE",
     "KG2E",
+    "FixedModel",
     "MuRE",
     "NodePiece",
     "NTN",
@@ -84,7 +88,7 @@ __all__ = [
     "RGCN",
     "RotatE",
     "SimplE",
-    "StructuredEmbedding",
+    "SE",
     "TorusE",
     "TransD",
     "TransE",
@@ -92,7 +96,7 @@ __all__ = [
     "TransH",
     "TransR",
     "TuckER",
-    "UnstructuredModel",
+    "UM",
     # Evaluation-only models
     "MarginalDistributionBaseline",
     # Utils

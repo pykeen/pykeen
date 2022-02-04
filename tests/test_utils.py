@@ -46,11 +46,11 @@ class TestCompose(unittest.TestCase):
         def _g(x):
             return 2 * x
 
-        fog = compose(_f, _g)
+        fog = compose(_f, _g, name="fog")
         for i in range(5):
             with self.subTest(i=i):
                 self.assertEqual(_g(_f(i)), fog(i))
-                self.assertEqual(_g(_f(i ** 2)), fog(i ** 2))
+                self.assertEqual(_g(_f(i**2)), fog(i**2))
 
 
 class FlattenDictionaryTest(unittest.TestCase):

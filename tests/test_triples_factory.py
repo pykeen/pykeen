@@ -7,27 +7,18 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Collection, Optional
 from unittest.mock import patch
 
 import numpy as np
-import pytest
 import torch
 
 from pykeen.datasets import Hetionet, Nations, SingleTabbedDataset
 from pykeen.datasets.nations import NATIONS_TRAIN_PATH
 from pykeen.triples import CoreTriplesFactory, LCWAInstances, TriplesFactory, TriplesNumericLiteralsFactory
-from pykeen.triples.generation import generate_triples
-from pykeen.triples.splitting import (
-    SPLIT_METHODS,
-    _get_cover_deterministic,
-    _tf_cleanup_all,
-    _tf_cleanup_deterministic,
-    _tf_cleanup_randomized,
-    get_absolute_split_sizes,
-    normalize_ratios,
-)
+from pykeen.triples.splitting import splitter_resolver
 from pykeen.triples.triples_factory import INVERSE_SUFFIX, _map_triples_elements_to_ids
-from pykeen.triples.utils import TRIPLES_DF_COLUMNS, get_entities, get_relations, load_triples
+from pykeen.triples.utils import TRIPLES_DF_COLUMNS, load_triples
 from tests.constants import RESOURCES
 
 triples = np.array(
@@ -134,13 +125,63 @@ class TestTriplesFactory(unittest.TestCase):
         # check column order
         assert tuple(df.columns) == TRIPLES_DF_COLUMNS + ("scores",)
 
+    def _test_restriction(
+        self,
+        original_triples_factory: TriplesFactory,
+        entity_restriction: Optional[Collection[str]],
+        invert_entity_selection: bool,
+        relation_restriction: Optional[Collection[str]],
+        invert_relation_selection: bool,
+    ):
+        """Run the actual test for new_with_restriction."""
+        # apply restriction
+        restricted_triples_factory = original_triples_factory.new_with_restriction(
+            entities=entity_restriction,
+            relations=relation_restriction,
+            invert_entity_selection=invert_entity_selection,
+            invert_relation_selection=invert_relation_selection,
+        )
+
+        # check that the triples factory is returned as is, if and only if no restriction is to apply
+        no_restriction_to_apply = entity_restriction is None and relation_restriction is None
+        equal_factory_object = id(restricted_triples_factory) == id(original_triples_factory)
+        assert no_restriction_to_apply == equal_factory_object
+
+        # check that inverse_triples is correctly carried over
+        assert original_triples_factory.create_inverse_triples == restricted_triples_factory.create_inverse_triples
+
+        # verify that the label-to-ID mapping has not been changed
+        assert original_triples_factory.entity_to_id == restricted_triples_factory.entity_to_id
+        assert original_triples_factory.relation_to_id == restricted_triples_factory.relation_to_id
+
+        # verify that triples have been filtered
+        if entity_restriction is not None:
+            present_entities = set(restricted_triples_factory.triples[:, 0]).union(
+                restricted_triples_factory.triples[:, 2]
+            )
+            expected_entities = (
+                set(original_triples_factory.entity_id_to_label.values()).difference(entity_restriction)
+                if invert_entity_selection
+                else entity_restriction
+            )
+            assert expected_entities.issuperset(present_entities)
+
+        if relation_restriction is not None:
+            present_relations = set(restricted_triples_factory.triples[:, 1])
+            expected_relations = (
+                set(original_triples_factory.relation_id_to_label.values())
+                if invert_relation_selection
+                else set(relation_restriction)
+            )
+            assert expected_relations.issuperset(present_relations)
+
     def test_new_with_restriction(self):
         """Test new_with_restriction()."""
-        example_relation_restriction = {
+        relation_restriction = {
             "economicaid",
             "dependent",
         }
-        example_entity_restriction = {
+        entity_restriction = {
             "brazil",
             "burma",
             "china",
@@ -149,39 +190,27 @@ class TestTriplesFactory(unittest.TestCase):
             original_triples_factory = Nations(
                 create_inverse_triples=inverse_triples,
             ).training
-            for entity_restriction in (None, example_entity_restriction):
-                for relation_restriction in (None, example_relation_restriction):
-                    # apply restriction
-                    restricted_triples_factory = original_triples_factory.new_with_restriction(
-                        entities=entity_restriction,
-                        relations=relation_restriction,
+            # Test different combinations of restrictions
+            for (
+                (entity_restriction, invert_entity_selection),
+                (relation_restriction, invert_relation_selection),
+            ) in itt.product(
+                ((None, None), (entity_restriction, False), (entity_restriction, True)),
+                ((None, None), (relation_restriction, False), (relation_restriction, True)),
+            ):
+                with self.subTest(
+                    entity_restriction=entity_restriction,
+                    invert_entity_selection=invert_entity_selection,
+                    relation_restriction=relation_restriction,
+                    invert_relation_selection=invert_relation_selection,
+                ):
+                    self._test_restriction(
+                        original_triples_factory=original_triples_factory,
+                        entity_restriction=entity_restriction,
+                        invert_entity_selection=invert_entity_selection,
+                        relation_restriction=relation_restriction,
+                        invert_relation_selection=invert_relation_selection,
                     )
-                    # check that the triples factory is returned as is, if and only if no restriction is to apply
-                    no_restriction_to_apply = entity_restriction is None and relation_restriction is None
-                    equal_factory_object = id(restricted_triples_factory) == id(original_triples_factory)
-                    assert no_restriction_to_apply == equal_factory_object
-
-                    # check that inverse_triples is correctly carried over
-                    assert (
-                        original_triples_factory.create_inverse_triples
-                        == restricted_triples_factory.create_inverse_triples
-                    )
-
-                    # verify that the label-to-ID mapping has not been changed
-                    assert original_triples_factory.entity_to_id == restricted_triples_factory.entity_to_id
-                    assert original_triples_factory.relation_to_id == restricted_triples_factory.relation_to_id
-
-                    # verify that triples have been filtered
-                    if entity_restriction is not None:
-                        present_entities = set(restricted_triples_factory.triples[:, 0]).union(
-                            restricted_triples_factory.triples[:, 2]
-                        )
-                        assert set(entity_restriction).issuperset(present_entities)
-
-                    if relation_restriction is not None:
-                        present_relations = set(restricted_triples_factory.triples[:, 1])
-                        exp_relations = set(relation_restriction)
-                        assert exp_relations.issuperset(present_relations)
 
     def test_create_lcwa_instances(self):
         """Test create_lcwa_instances."""
@@ -269,7 +298,7 @@ class TestSplit(unittest.TestCase):
         for (
             method,
             (n, ratios),
-        ) in itt.product(SPLIT_METHODS, cases):
+        ) in itt.product(splitter_resolver.options, cases):
             with self.subTest(method=method, ratios=ratios):
                 factories_1 = self.triples_factory.split(ratios, method=method, random_state=0)
                 self.assertEqual(n, len(factories_1))
@@ -310,121 +339,6 @@ class TestSplit(unittest.TestCase):
             triples_1 = factory_1.mapped_triples.detach().cpu().numpy()
             triples_2 = factory_2.mapped_triples.detach().cpu().numpy()
             self.assertTrue((triples_1 == triples_2).all(), msg=msg)
-
-    def test_cleanup_deterministic(self):
-        """Test that triples in a test set can get moved properly to the training set."""
-        training = torch.as_tensor(
-            data=[
-                [1, 1000, 2],
-                [1, 1000, 3],
-                [1, 1001, 3],
-            ],
-            dtype=torch.long,
-        )
-        testing = torch.as_tensor(
-            data=[
-                [2, 1001, 3],
-                [1, 1002, 4],
-            ],
-            dtype=torch.long,
-        )
-        expected_training = torch.as_tensor(
-            data=[
-                [1, 1000, 2],
-                [1, 1000, 3],
-                [1, 1001, 3],
-                [1, 1002, 4],
-            ],
-            dtype=torch.long,
-        )
-        expected_testing = torch.as_tensor(
-            data=[
-                [2, 1001, 3],
-            ],
-            dtype=torch.long,
-        )
-
-        new_training, new_testing = _tf_cleanup_deterministic(training, testing)
-        assert (expected_training == new_training).all()
-        assert (expected_testing == new_testing).all()
-
-        new_testing, new_testing = _tf_cleanup_all([training, testing])
-        assert (expected_training == new_training).all()
-        assert (expected_testing == new_testing).all()
-
-    def test_cleanup_randomized(self):
-        """Test that triples in a test set can get moved properly to the training set."""
-        training = torch.as_tensor(
-            data=[
-                [1, 1000, 2],
-                [1, 1000, 3],
-            ],
-            dtype=torch.long,
-        )
-        testing = torch.as_tensor(
-            data=[
-                [2, 1000, 3],
-                [1, 1000, 4],
-                [2, 1000, 4],
-                [1, 1001, 3],
-            ],
-            dtype=torch.long,
-        )
-        expected_training_1 = {
-            (1, 1000, 2),
-            (1, 1000, 3),
-            (1, 1000, 4),
-            (1, 1001, 3),
-        }
-        expected_testing_1 = {
-            (2, 1000, 3),
-            (2, 1000, 4),
-        }
-
-        expected_training_2 = {
-            (1, 1000, 2),
-            (1, 1000, 3),
-            (2, 1000, 4),
-            (1, 1001, 3),
-        }
-        expected_testing_2 = {
-            (2, 1000, 3),
-            (1, 1000, 4),
-        }
-
-        new_training, new_testing = [
-            set(tuple(row) for row in arr.tolist()) for arr in _tf_cleanup_randomized(training, testing)
-        ]
-
-        if expected_training_1 == new_training:
-            self.assertEqual(expected_testing_1, new_testing)
-        elif expected_training_2 == new_training:
-            self.assertEqual(expected_testing_2, new_testing)
-        else:
-            self.fail("training was not correct")
-
-    def test_get_cover_deterministic(self):
-        """Test _get_cover_deterministic."""
-        generated_triples = generate_triples()
-        cover = _get_cover_deterministic(triples=generated_triples)
-
-        # check type
-        assert torch.is_tensor(cover)
-        assert cover.dtype == torch.bool
-        # check format
-        assert cover.shape == (generated_triples.shape[0],)
-
-        # check coverage
-        self.assertEqual(
-            get_entities(generated_triples),
-            get_entities(generated_triples[cover]),
-            msg="entity coverage is not full",
-        )
-        self.assertEqual(
-            get_relations(generated_triples),
-            get_relations(generated_triples[cover]),
-            msg="relation coverage is not full",
-        )
 
 
 class TestLiterals(unittest.TestCase):
@@ -640,62 +554,3 @@ class TestUtils(unittest.TestCase):
             tf1.mapped_triples.detach().cpu().numpy().tolist(),
             tf2.mapped_triples.detach().cpu().numpy().tolist(),
         )
-
-
-def test_get_absolute_split_sizes():
-    """Test get_absolute_split_sizes."""
-    for num_splits, n_total in zip(
-        (2, 3, 4),
-        (100, 200, 10412),
-    ):
-        # generate random ratios
-        ratios = np.random.uniform(size=(num_splits,))
-        ratios = ratios / ratios.sum()
-        sizes = get_absolute_split_sizes(n_total=n_total, ratios=ratios)
-        # check size
-        assert len(sizes) == len(ratios)
-
-        # check value range
-        assert all(0 <= size <= n_total for size in sizes)
-
-        # check total split
-        assert sum(sizes) == n_total
-
-        # check consistency with ratios
-        rel_size = np.asarray(sizes) / n_total
-        # the number of decimal digits equivalent to 1 / n_total
-        decimal = np.floor(np.log10(n_total))
-        np.testing.assert_almost_equal(rel_size, ratios, decimal=decimal)
-
-
-def test_normalize_ratios():
-    """Test normalize_ratios."""
-    for ratios, exp_output in (
-        (0.5, (0.5, 0.5)),
-        ((0.3, 0.2, 0.4), (0.3, 0.2, 0.4, 0.1)),
-        ((0.3, 0.3, 0.4), (0.3, 0.3, 0.4)),
-    ):
-        output = normalize_ratios(ratios=ratios)
-        # check type
-        assert isinstance(output, tuple)
-        assert all(isinstance(ratio, float) for ratio in output)
-        # check values
-        assert len(output) >= 2
-        assert all(0 <= ratio <= 1 for ratio in output)
-        output_np = np.asarray(output)
-        np.testing.assert_almost_equal(output_np.sum(), np.ones(1))
-        # compare against expected
-        np.testing.assert_almost_equal(output_np, np.asarray(exp_output))
-
-
-def test_normalize_invalid_ratio():
-    """Test invalid ratios."""
-    cases = [
-        1.1,
-        [1.1],
-        [0.8, 0.3],
-        [0.8, 0.1, 0.2],
-    ]
-    for ratios in cases:
-        with pytest.raises(ValueError):
-            _ = normalize_ratios(ratios=ratios)
