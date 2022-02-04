@@ -306,8 +306,8 @@ class TestNodePieceJoint(cases.BaseNodePieceTest):
         assert isinstance(node_piece.tokenizations, torch.nn.ModuleList)
         assert len(node_piece.tokenizations) == 2
         anchor, relation = node_piece.tokenizations
-        assert anchor.tokens.max_id == self.num_anchors + 1
-        assert relation.tokens.max_id == 2 * self.factory.real_num_relations + 1
+        assert anchor.vocabulary.max_id == self.num_anchors + 1
+        assert relation.vocabulary.max_id == 2 * self.factory.real_num_relations + 1
 
 
 class TestNTN(cases.ModelTestCase):
