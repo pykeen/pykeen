@@ -18,7 +18,7 @@ from ..nn.emb import EmbeddingSpecification, RepresentationModule
 from ..nn.modules import Interaction, interaction_resolver
 from ..regularizers import Regularizer
 from ..triples import CoreTriplesFactory
-from ..typing import HeadRepresentation, Mode, RelationRepresentation, TailRepresentation
+from ..typing import HeadRepresentation, InductiveMode, RelationRepresentation, TailRepresentation
 from ..utils import check_shapes
 
 __all__ = [
@@ -324,7 +324,7 @@ class ERModel(
         slice_size: Optional[int] = None,
         slice_dim: int = 0,
         *,
-        mode: Optional[Mode],
+        mode: Optional[InductiveMode],
     ) -> torch.FloatTensor:
         """Forward pass.
 
@@ -356,7 +356,7 @@ class ERModel(
         h, r, t = self._get_representations(h=h_indices, r=r_indices, t=t_indices, mode=mode)
         return self.interaction.score(h=h, r=r, t=t, slice_size=slice_size, slice_dim=slice_dim)
 
-    def score_hrt(self, hrt_batch: torch.LongTensor, *, mode: Optional[Mode] = None) -> torch.FloatTensor:
+    def score_hrt(self, hrt_batch: torch.LongTensor, *, mode: Optional[InductiveMode] = None) -> torch.FloatTensor:
         """Forward pass.
 
         This method takes head, relation and tail of each triple and calculates the corresponding score.
@@ -378,7 +378,7 @@ class ERModel(
         return self.interaction.score_hrt(h=h, r=r, t=t)
 
     def score_t(
-        self, hr_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[Mode] = None
+        self, hr_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
     ) -> torch.FloatTensor:
         """Forward pass using right side (tail) prediction.
 
@@ -403,7 +403,7 @@ class ERModel(
         )
 
     def score_h(
-        self, rt_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[Mode] = None
+        self, rt_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
     ) -> torch.FloatTensor:
         """Forward pass using left side (head) prediction.
 
@@ -428,7 +428,7 @@ class ERModel(
         )
 
     def score_r(
-        self, ht_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[Mode] = None
+        self, ht_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
     ) -> torch.FloatTensor:
         """Forward pass using middle (relation) prediction.
 
@@ -458,7 +458,7 @@ class ERModel(
         r: Optional[torch.LongTensor],
         t: Optional[torch.LongTensor],
         *,
-        mode: Optional[Mode],
+        mode: Optional[InductiveMode],
     ) -> Tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]:
         """Get representations for head, relation and tails."""
         hr, rr, tr = [

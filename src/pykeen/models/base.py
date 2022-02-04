@@ -25,7 +25,7 @@ from ..losses import Loss, MarginRankingLoss, loss_resolver
 from ..nn.emb import Embedding, EmbeddingSpecification, RepresentationModule
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import CoreTriplesFactory, relation_inverter
-from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, MappedTriples, Mode, ScorePack, Target
+from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, InductiveMode, MappedTriples, ScorePack, Target
 from ..utils import NoRandomSeedNecessary, extend_batch, set_random_seed
 
 __all__ = [
@@ -180,7 +180,7 @@ class Model(nn.Module, ABC):
     """Abstract methods - Scoring"""
 
     @abstractmethod
-    def score_hrt(self, hrt_batch: torch.LongTensor, *, mode: Optional[Mode] = None) -> torch.FloatTensor:
+    def score_hrt(self, hrt_batch: torch.LongTensor, *, mode: Optional[InductiveMode] = None) -> torch.FloatTensor:
         """Forward pass.
 
         This method takes head, relation and tail of each triple and calculates the corresponding score.
@@ -196,7 +196,7 @@ class Model(nn.Module, ABC):
 
     @abstractmethod
     def score_t(
-        self, hr_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[Mode] = None
+        self, hr_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
     ) -> torch.FloatTensor:
         """Forward pass using right side (tail) prediction.
 
@@ -216,7 +216,7 @@ class Model(nn.Module, ABC):
 
     @abstractmethod
     def score_r(
-        self, ht_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[Mode] = None
+        self, ht_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
     ) -> torch.FloatTensor:
         """Forward pass using middle (relation) prediction.
 
@@ -238,7 +238,7 @@ class Model(nn.Module, ABC):
 
     @abstractmethod
     def score_h(
-        self, rt_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[Mode] = None
+        self, rt_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
     ) -> torch.FloatTensor:
         """Forward pass using left side (head) prediction.
 
@@ -301,7 +301,7 @@ class Model(nn.Module, ABC):
         # when trained on inverse relations, the internal relation ID is twice the original relation ID
         return relation_inverter.map(batch=batch, index=index_relation, invert=False)
 
-    def predict_hrt(self, hrt_batch: torch.LongTensor, *, mode: Optional[Mode] = None) -> torch.FloatTensor:
+    def predict_hrt(self, hrt_batch: torch.LongTensor, *, mode: Optional[InductiveMode] = None) -> torch.FloatTensor:
         """Calculate the scores for triples.
 
         This method takes head, relation and tail of each triple and calculates the corresponding score.
@@ -321,7 +321,7 @@ class Model(nn.Module, ABC):
         return scores
 
     def predict_h(
-        self, rt_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[Mode] = None
+        self, rt_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
     ) -> torch.FloatTensor:
         """Forward pass using left side (head) prediction for obtaining scores of all possible heads.
 
@@ -358,7 +358,7 @@ class Model(nn.Module, ABC):
         hr_batch: torch.LongTensor,
         *,
         slice_size: Optional[int] = None,
-        mode: Optional[Mode] = None,
+        mode: Optional[InductiveMode] = None,
     ) -> torch.FloatTensor:
         """Forward pass using right side (tail) prediction for obtaining scores of all possible tails.
 
@@ -395,7 +395,7 @@ class Model(nn.Module, ABC):
         ht_batch: torch.LongTensor,
         *,
         slice_size: Optional[int] = None,
-        mode: Optional[Mode],
+        mode: Optional[InductiveMode],
     ) -> torch.FloatTensor:
         """Forward pass using middle (relation) prediction for obtaining scores of all possible relations.
 
@@ -424,7 +424,7 @@ class Model(nn.Module, ABC):
         target: Target,
         *,
         slice_size: Optional[int] = None,
-        mode: Optional[Mode],
+        mode: Optional[InductiveMode],
     ) -> torch.FloatTensor:
         """Predict scores for the given target."""
         if target == LABEL_TAIL:
@@ -549,7 +549,7 @@ class Model(nn.Module, ABC):
         self,
         hrt_batch: torch.LongTensor,
         *,
-        mode: Optional[Mode],
+        mode: Optional[InductiveMode],
     ) -> torch.FloatTensor:
         r"""Score triples based on inverse triples, i.e., compute $f(h,r,t)$ based on $f(t,r_{inv},h)$.
 
@@ -560,12 +560,16 @@ class Model(nn.Module, ABC):
         t_r_inv_h = self._prepare_inverse_batch(batch=hrt_batch, index_relation=1)
         return self.score_hrt(hrt_batch=t_r_inv_h, mode=mode)
 
-    def score_t_inverse(self, hr_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[Mode]):
+    def score_t_inverse(
+        self, hr_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode]
+    ):
         """Score all tails for a batch of (h,r)-pairs using the head predictions for the inverses $(*,r_{inv},h)$."""
         r_inv_h = self._prepare_inverse_batch(batch=hr_batch, index_relation=1)
         return self.score_h(rt_batch=r_inv_h, slice_size=slice_size, mode=mode)
 
-    def score_h_inverse(self, rt_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[Mode]):
+    def score_h_inverse(
+        self, rt_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode]
+    ):
         """Score all heads for a batch of (r,t)-pairs using the tail predictions for the inverses $(t,r_{inv},*)$."""
         t_r_inv = self._prepare_inverse_batch(batch=rt_batch, index_relation=0)
         return self.score_t(hr_batch=t_r_inv, slice_size=slice_size, mode=mode)
@@ -633,7 +637,7 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
             self.regularizer.update(*tensors)
 
     def score_t(
-        self, hr_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[Mode] = None
+        self, hr_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
     ) -> torch.FloatTensor:
         """Forward pass using right side (tail) prediction.
 
@@ -663,7 +667,7 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
         return scores
 
     def score_h(
-        self, rt_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[Mode] = None
+        self, rt_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
     ) -> torch.FloatTensor:
         """Forward pass using left side (head) prediction.
 
@@ -693,7 +697,7 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
         return scores
 
     def score_r(
-        self, ht_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[Mode] = None
+        self, ht_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
     ) -> torch.FloatTensor:
         """Forward pass using middle (relation) prediction.
 

@@ -16,7 +16,7 @@ from tqdm.auto import tqdm
 from .base import Model
 from ..triples import CoreTriplesFactory, TriplesFactory
 from ..triples.utils import tensor_to_df, triple_tensor_to_set
-from ..typing import LabeledTriples, MappedTriples, Mode, ScorePack
+from ..typing import InductiveMode, LabeledTriples, MappedTriples, ScorePack
 from ..utils import is_cuda_oom_error
 
 __all__ = [
@@ -40,7 +40,7 @@ def get_head_prediction_df(
     add_novelties: bool = True,
     remove_known: bool = False,
     testing: Optional[torch.LongTensor] = None,
-    mode: Optional[Mode] = None,
+    mode: Optional[InductiveMode] = None,
 ) -> pd.DataFrame:
     """Predict heads for the given relation and tail (given by label).
 
@@ -108,7 +108,7 @@ def get_tail_prediction_df(
     add_novelties: bool = True,
     remove_known: bool = False,
     testing: Optional[torch.LongTensor] = None,
-    mode: Optional[Mode] = None,
+    mode: Optional[InductiveMode] = None,
 ) -> pd.DataFrame:
     """Predict tails for the given head and relation (given by label).
 
@@ -176,7 +176,7 @@ def get_relation_prediction_df(
     add_novelties: bool = True,
     remove_known: bool = False,
     testing: Optional[torch.LongTensor] = None,
-    mode: Optional[Mode] = None,
+    mode: Optional[InductiveMode] = None,
 ) -> pd.DataFrame:
     """Predict relations for the given head and tail (given by label).
 
@@ -245,7 +245,7 @@ def get_all_prediction_df(
     add_novelties: bool = True,
     remove_known: bool = False,
     testing: Optional[torch.LongTensor] = None,
-    mode: Optional[Mode] = None,
+    mode: Optional[InductiveMode] = None,
 ) -> Union[ScorePack, pd.DataFrame]:
     """Compute scores for all triples, optionally returning only the k highest scoring.
 
@@ -303,7 +303,9 @@ def get_all_prediction_df(
     )
 
 
-def predict(model: Model, *, k: Optional[int] = None, batch_size: int = 1, mode: Optional[Mode] = None) -> ScorePack:
+def predict(
+    model: Model, *, k: Optional[int] = None, batch_size: int = 1, mode: Optional[InductiveMode] = None
+) -> ScorePack:
     """Calculate and store scores for either all triples, or the top k triples.
 
     :param model: A PyKEEN model
@@ -455,7 +457,9 @@ class _AllConsumer(_ScoreConsumer):
 
 
 @torch.inference_mode()
-def _consume_scores(model: Model, *consumers: _ScoreConsumer, batch_size: int = 1, mode: Optional[Mode]) -> None:
+def _consume_scores(
+    model: Model, *consumers: _ScoreConsumer, batch_size: int = 1, mode: Optional[InductiveMode]
+) -> None:
     """
     Batch-wise calculation of all triple scores and consumption.
 
@@ -499,7 +503,7 @@ def _consume_scores(model: Model, *consumers: _ScoreConsumer, batch_size: int = 
 
 
 @torch.inference_mode()
-def _predict_all(model: Model, *, batch_size: int = 1, mode: Optional[Mode]) -> ScorePack:
+def _predict_all(model: Model, *, batch_size: int = 1, mode: Optional[InductiveMode]) -> ScorePack:
     """Compute and store scores for all triples.
 
     :param model: A PyKEEN model
@@ -515,7 +519,7 @@ def _predict_all(model: Model, *, batch_size: int = 1, mode: Optional[Mode]) -> 
 
 
 @torch.inference_mode()
-def _predict_k(model: Model, *, k: int, batch_size: int = 1, mode: Optional[Mode]) -> ScorePack:
+def _predict_k(model: Model, *, k: int, batch_size: int = 1, mode: Optional[InductiveMode]) -> ScorePack:
     """Compute and store scores for the top k-scoring triples.
 
     :param model: A PyKEEN model
@@ -655,7 +659,7 @@ def _predict_triples(
     mapped_triples: MappedTriples,
     batch_size: Optional[int] = None,
     *,
-    mode: Optional[Mode],
+    mode: Optional[InductiveMode],
 ) -> torch.FloatTensor:
     """Predict scores for triples while dealing with reducing batch size for CUDA OOM."""
     # base case: infer maximum batch size
@@ -695,7 +699,7 @@ def predict_triples_df(
     triples: Union[None, MappedTriples, LabeledTriples, Union[Tuple[str, str, str], Sequence[Tuple[str, str, str]]]],
     triples_factory: Optional[CoreTriplesFactory] = None,
     batch_size: Optional[int] = None,
-    mode: Optional[Mode] = None,
+    mode: Optional[InductiveMode] = None,
 ) -> pd.DataFrame:
     """
     Predict on labeled or mapped triples.

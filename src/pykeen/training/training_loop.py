@@ -37,7 +37,7 @@ from ..trackers import ResultTracker
 from ..training.schlichtkrull_sampler import SLCWASubGraphInstances
 from ..triples import CoreTriplesFactory, Instances, TriplesFactory
 from ..triples.instances import SLCWAInstances
-from ..typing import TRAINING, Mode
+from ..typing import InductiveMode
 from ..utils import (
     format_relative_comparison,
     get_batchnorm_modules,
@@ -119,7 +119,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         optimizer: Optional[Optimizer] = None,
         lr_scheduler: Optional[LRScheduler] = None,
         automatic_memory_optimization: bool = True,
-        mode: Optional[Mode] = None,
+        mode: Optional[InductiveMode] = None,
     ) -> None:
         """Initialize the training loop.
 

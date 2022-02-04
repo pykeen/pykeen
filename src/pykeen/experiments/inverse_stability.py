@@ -20,7 +20,7 @@ from pykeen.constants import PYKEEN_EXPERIMENTS
 from pykeen.datasets import Dataset, get_dataset
 from pykeen.models import Model, model_resolver
 from pykeen.pipeline import pipeline
-from pykeen.typing import Mode
+from pykeen.typing import InductiveMode
 
 INVERSE_STABILITY = PYKEEN_EXPERIMENTS / "inverse_stability"
 INVERSE_STABILITY.mkdir(parents=True, exist_ok=True)
@@ -58,7 +58,7 @@ def main(force: bool, clip: int, mode):
 
 
 def run_inverse_stability_workflow(
-    dataset: str, model: str, training_loop: str, random_seed=0, device="cpu", *, mode: Optional[Mode]
+    dataset: str, model: str, training_loop: str, random_seed=0, device="cpu", *, mode: Optional[InductiveMode]
 ):
     """Run an inverse stability experiment."""
     dataset_instance: Dataset = get_dataset(
