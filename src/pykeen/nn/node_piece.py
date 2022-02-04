@@ -783,7 +783,7 @@ class NodePieceRepresentation(RepresentationModule):
         self.aggregation_index = -(1 + len(shape))
 
     def extra_repr(self) -> str:  # noqa: D102
-        aggregation_str = self.aggregation.__name__ + "(...)" if callable(self.aggregation) else self.aggregation
+        aggregation_str = self.aggregation.__name__ if hasattr(self.aggregation, "__name__") else str(self.aggregation)
         return f"aggregation={aggregation_str}, "
 
     def forward(
