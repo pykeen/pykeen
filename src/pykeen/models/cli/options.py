@@ -95,7 +95,11 @@ CLI_OPTIONS = {
         "--aggregation",
         type=click.Choice(["mlp", *AGGREGATIONS]),
     ),
-    "tokenizers": tokenizer_resolver.get_option("--tokenizers", multiple=True),
+    "tokenizers": tokenizer_resolver.get_option(
+        "--tokenizers",
+        multiple=True,
+        as_string=True,
+    ),
     "num_tokens": click.option(
         "--num-tokens",
         type=int,
