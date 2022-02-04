@@ -273,7 +273,7 @@ class TestNodePieceAnchors(cases.BaseNodePieceTest):
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
-        kwargs["tokenizer_kwargs"] = dict(selection_kwargs=dict(num_anchors=self.factory.num_entities // 3))
+        kwargs["tokenizers_kwargs"] = dict(selection_kwargs=dict(num_anchors=self.factory.num_entities // 3))
         return kwargs
 
 
