@@ -177,13 +177,13 @@ class TokenizationTests(cases.RepresentationTestCase):
 
     cls = pykeen.nn.node_piece.TokenizationRepresentationModule
     max_id: int = 13
-    total_num_tokens: int = 5
-    chosen_num_tokens: int = 3
+    vocabulary_size: int = 5
+    num_tokens: int = 3
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
-        kwargs["assignment"] = torch.randint(self.total_num_tokens, size=(self.max_id, self.chosen_num_tokens))
-        kwargs["token_representation_kwargs"] = dict(shape=(self.total_num_tokens,))
+        kwargs["assignment"] = torch.randint(self.vocabulary_size, size=(self.max_id, self.num_tokens))
+        kwargs["token_representation_kwargs"] = dict(shape=(self.vocabulary_size,))
         return kwargs
 
 

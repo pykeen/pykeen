@@ -299,8 +299,8 @@ class TestNodePieceJoint(cases.BaseNodePieceTest):
         kwargs["tokenizers_kwargs"][0]["selection_kwargs"] = dict(num_anchors=self.num_anchors)
         return kwargs
 
-    def test_num_tokens(self):
-        """Test the number of tokens of the individual tokenizations."""
+    def test_vocabulary_size(self):
+        """Test the expected vocabulary size of the individual tokenizations."""
         assert isinstance(self.instance.entity_representations[0], NodePieceRepresentation)
         node_piece = self.instance.entity_representations[0]
         assert isinstance(node_piece.tokenizations, torch.nn.ModuleList)

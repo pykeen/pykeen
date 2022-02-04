@@ -1832,14 +1832,14 @@ class TokenizerTestCase(GenericTestCase[pykeen.nn.node_piece.Tokenizer]):
 
     def test_call(self):
         """Test __call__."""
-        total_num_tokens, tokens = self.instance(
+        vocabulary_size, tokens = self.instance(
             mapped_triples=self.factory.mapped_triples,
             num_tokens=self.num_tokens,
             num_entities=self.factory.num_entities,
             num_relations=self.factory.num_relations,
         )
-        assert isinstance(total_num_tokens, int)
-        assert total_num_tokens > 0
+        assert isinstance(vocabulary_size, int)
+        assert vocabulary_size > 0
         # shape
         assert tokens.shape == (self.factory.num_entities, self.num_tokens)
         # value range

@@ -54,7 +54,7 @@ class Tokenizer:
         :param num_relations:
             the number of relatiosn
 
-        :return: shape: (num_entities, num_tokens), -1 <= res < max_token_id
+        :return: shape: (num_entities, num_tokens), -1 <= res < vocabulary_size
             the selected relation IDs for each entity. -1 is used as a padding token.
         """
         raise NotImplementedError
@@ -570,10 +570,10 @@ class TokenizationRepresentationModule(RepresentationModule):
     """A module holding the result of tokenization."""
 
     #: the token ID of the padding token
-    padding_idx: int
+    vocabulary_size: int
 
     #: the token representations
-    tokens: RepresentationModule
+    vocabulary: RepresentationModule
 
     #: the assigned tokens for each entity
     assignment: torch.LongTensor
@@ -599,7 +599,7 @@ class TokenizationRepresentationModule(RepresentationModule):
 
         # fill padding (nn.Embedding cannot deal with negative indices)
         padding = assignment < 0
-        assignment[padding] = self.padding_idx = total_num_tokens = assignment.max().item() + 1
+        assignment[padding] = self.vocabulary_size = vocabulary_size = assignment.max().item() + 1
         max_id, num_chosen_tokens = assignment.shape
 
         # resolve token representation
@@ -607,25 +607,25 @@ class TokenizationRepresentationModule(RepresentationModule):
             token_representation,
             token_representation_kwargs,
             # TODO: Embedding uses a different name
-            num_embeddings=total_num_tokens,
+            num_embeddings=vocabulary_size,
         )
         super().__init__(max_id=max_id, shape=(num_chosen_tokens,) + token_representation.shape)
 
         # input validation
-        if token_representation.max_id < self.padding_idx:
+        if token_representation.max_id < self.vocabulary_size:
             raise ValueError(
                 f"The token representations only contain {token_representation.max_id} representations,"
-                f"but there are {self.padding_idx} tokens in use.",
+                f"but there are {self.vocabulary_size} tokens in use.",
             )
-        elif token_representation.max_id > self.padding_idx:
+        elif token_representation.max_id > self.vocabulary_size:
             logger.warning(
                 f"Token representations do contain more representations ({token_representation.max_id}) "
-                f"than tokens are used ({self.padding_idx}).",
+                f"than tokens are used ({self.vocabulary_size}).",
             )
         # register as buffer
         self.register_buffer(name="assignment", tensor=assignment)
         # assign sub-module
-        self.tokens = token_representation
+        self.vocabulary = token_representation
 
     @classmethod
     def from_tokenizer(
@@ -654,7 +654,7 @@ class TokenizationRepresentationModule(RepresentationModule):
             the number of relations
         """
         # apply tokenizer
-        total_num_tokens, assignment = tokenizer(
+        vocabulary_size, assignment = tokenizer(
             mapped_triples=mapped_triples,
             num_tokens=num_tokens,
             num_entities=num_entities,
@@ -662,7 +662,7 @@ class TokenizationRepresentationModule(RepresentationModule):
         )
         # create token representations if necessary
         if isinstance(token_representation, EmbeddingSpecification):
-            token_representation = token_representation.make(num_embeddings=total_num_tokens)
+            token_representation = token_representation.make(num_embeddings=vocabulary_size)
         return TokenizationRepresentationModule(assignment=assignment, token_representation=token_representation)
 
     def extra_repr(self) -> str:  # noqa: D102
@@ -670,7 +670,7 @@ class TokenizationRepresentationModule(RepresentationModule):
             (
                 f"max_id={self.assignment.shape[0]},",
                 f"num_tokens={self.assignment.shape[1]},",
-                f"total_num_tokens={self.padding_idx},",
+                f"vocabulary_size={self.vocabulary_size},",
             )
         )
 
@@ -684,7 +684,7 @@ class TokenizationRepresentationModule(RepresentationModule):
             token_ids = token_ids[indices]
 
         # lookup token representations, shape: (*, num_chosen_tokens, *shape)
-        return self.tokens(token_ids)
+        return self.vocabulary(token_ids)
 
 
 class NodePieceRepresentation(RepresentationModule):
@@ -767,7 +767,7 @@ class NodePieceRepresentation(RepresentationModule):
         ]
 
         # determine shape
-        shapes = {t.tokens.shape for t in tokenizations}
+        shapes = {t.vocabulary.shape for t in tokenizations}
         if len(shapes) != 1:
             raise ValueError(f"Inconsistent token shapes: {shapes}")
         shape = list(shapes)[0]
