@@ -145,6 +145,7 @@ class NodePiece(ERModel):
                 "The provided triples factory does not create inverse triples. However, for the node piece "
                 "representations inverse relation representations are required.",
             )
+        # TODO: embedding_specification can be a sequence
         embedding_specification = embedding_specification or EmbeddingSpecification(
             shape=(embedding_dim,),
         )
@@ -165,9 +166,9 @@ class NodePiece(ERModel):
         representations = []
         # if only one tokenizer was given - convert it to a list of tokenizers
         tokenizers = upgrade_to_sequence(tokenizers)
-        for tkn in tokenizers:
+        for tokenizer in tokenizers:
             # pre-resolve tokenizer to select token representations
-            tokenizer = tokenizer_resolver.lookup(tkn)
+            tokenizer = tokenizer_resolver.lookup(tokenizer)
             tokenizer_cls = tokenizer.__class__ if isinstance(tokenizer, Tokenizer) else tokenizer
             # use relation representations for relation tokenizer
             token_representation: Union[EmbeddingSpecification, RepresentationModule]
