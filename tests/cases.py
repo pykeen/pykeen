@@ -1373,6 +1373,11 @@ class BaseNodePieceTest(ModelTestCase):
     cls = pykeen.models.NodePiece
     create_inverse_triples = True
 
+    def _help_test_cli(self, args):  # noqa: D102
+        if self.kwargs.get("tokenizers_kwargs"):
+            raise SkipTest("No support for tokenizers_kwargs via CLI.")
+        return super()._help_test_cli(args)
+
 
 class RepresentationTestCase(GenericTestCase[RepresentationModule]):
     """Common tests for representation modules."""
