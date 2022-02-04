@@ -599,7 +599,7 @@ class TokenizationRepresentationModule(RepresentationModule):
 
         # fill padding (nn.Embedding cannot deal with negative indices)
         padding = assignment < 0
-        assignment[padding] = self.vocabulary_size = vocabulary_size = assignment.max().item() + 1
+        assignment[padding] = self.vocabulary_size = assignment.max().item() + 1
         max_id, num_chosen_tokens = assignment.shape
 
         # resolve token representation
@@ -607,7 +607,7 @@ class TokenizationRepresentationModule(RepresentationModule):
             token_representation,
             token_representation_kwargs,
             # TODO: Embedding uses a different name
-            num_embeddings=vocabulary_size,
+            num_embeddings=self.vocabulary_size,
         )
         super().__init__(max_id=max_id, shape=(num_chosen_tokens,) + token_representation.shape)
 
@@ -663,7 +663,7 @@ class TokenizationRepresentationModule(RepresentationModule):
         # create token representations if necessary
         if isinstance(token_representation, EmbeddingSpecification):
             token_representation = token_representation.make(num_embeddings=vocabulary_size)
-        return cls(assignment=assignment, token_representation=token_representation)
+        return TokenizationRepresentationModule(assignment=assignment, token_representation=token_representation)
 
     def extra_repr(self) -> str:  # noqa: D102
         return "\n".join(
