@@ -63,7 +63,15 @@ from pykeen.triples import TriplesFactory, generation
 from pykeen.triples.splitting import Cleaner, Splitter
 from pykeen.triples.triples_factory import CoreTriplesFactory
 from pykeen.triples.utils import get_entities, is_triple_tensor_subset, triple_tensor_to_set
-from pykeen.typing import HeadRepresentation, Initializer, MappedTriples, RelationRepresentation, TailRepresentation
+from pykeen.typing import (
+    LABEL_HEAD,
+    LABEL_TAIL,
+    HeadRepresentation,
+    Initializer,
+    MappedTriples,
+    RelationRepresentation,
+    TailRepresentation,
+)
 from pykeen.utils import all_in_bounds, get_batchnorm_modules, resolve_device, set_random_seed, unpack_singletons
 from tests.constants import EPSILON
 from tests.mocks import CustomRepresentations
@@ -1418,15 +1426,19 @@ class EdgeWeightingTestCase(GenericTestCase[pykeen.nn.weighting.EdgeWeighting]):
     #: The number of triples
     num_triples: int = 101
 
+    #: the message dim
+    message_dim: int = 3
+
     def post_instantiation_hook(self):  # noqa: D102
         self.source, self.target = torch.randint(self.num_entities, size=(2, self.num_triples))
+        self.message = torch.rand(self.num_triples, self.message_dim, requires_grad=True)
+        # TODO: separation message vs. entity dim?
+        self.x_e = torch.rand(self.num_entities, self.message_dim)
 
-    def test_message_weighting(self):
-        """Perform common tests for message weighting."""
-        weights = self.instance(source=self.source, target=self.target)
-
+    def _test(self, weights: torch.FloatTensor, shape: Tuple[int, ...]):
+        """Perform common tests."""
         # check shape
-        assert weights.shape == self.source.shape
+        assert weights.shape == shape
 
         # check dtype
         assert weights.dtype == torch.float32
@@ -1436,6 +1448,19 @@ class EdgeWeightingTestCase(GenericTestCase[pykeen.nn.weighting.EdgeWeighting]):
 
         # check non-negativity
         assert (weights >= 0.0).all()
+
+    def test_message_weighting(self):
+        """Test message weighting with message."""
+        self._test(
+            weights=self.instance(source=self.source, target=self.target, message=self.message, x_e=self.x_e),
+            shape=self.message.shape,
+        )
+
+    def test_message_weighting_no_message(self):
+        """Test message weighting without message."""
+        if self.instance.needs_message:
+            raise SkipTest(f"{self.cls} needs messages for weighting them.")
+        self._test(weights=self.instance(source=self.source, target=self.target), shape=self.source.shape)
 
 
 class DecompositionTestCase(GenericTestCase[pykeen.nn.message_passing.Decomposition]):
@@ -1680,8 +1705,9 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
         """Test the evaluator's ``process_tail_scores_()`` function."""
         hrt_batch, scores, mask = self._get_input()
         true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, 2]][:, None]
-        self.instance.process_tail_scores_(
+        self.instance.process_scores_(
             hrt_batch=hrt_batch,
+            target=LABEL_TAIL,
             true_scores=true_scores,
             scores=scores,
             dense_positive_mask=mask,
@@ -1691,8 +1717,9 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
         """Test the evaluator's ``process_head_scores_()`` function."""
         hrt_batch, scores, mask = self._get_input(inverse=True)
         true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, 0]][:, None]
-        self.instance.process_head_scores_(
+        self.instance.process_scores_(
             hrt_batch=hrt_batch,
+            target=LABEL_HEAD,
             true_scores=true_scores,
             scores=scores,
             dense_positive_mask=mask,
@@ -1703,18 +1730,14 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
         # Process one batch
         hrt_batch, scores, mask = self._get_input()
         true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, 2]][:, None]
-        self.instance.process_tail_scores_(
-            hrt_batch=hrt_batch,
-            true_scores=true_scores,
-            scores=scores,
-            dense_positive_mask=mask,
-        )
-        self.instance.process_head_scores_(
-            hrt_batch=hrt_batch,
-            true_scores=true_scores,
-            scores=scores,
-            dense_positive_mask=mask,
-        )
+        for target in (LABEL_HEAD, LABEL_TAIL):
+            self.instance.process_scores_(
+                hrt_batch=hrt_batch,
+                target=target,
+                true_scores=true_scores,
+                scores=scores,
+                dense_positive_mask=mask,
+            )
 
         result = self.instance.finalize()
         assert isinstance(result, MetricResults)
