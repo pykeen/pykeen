@@ -663,7 +663,7 @@ class TokenizationRepresentationModule(RepresentationModule):
         # create token representations if necessary
         if isinstance(token_representation, EmbeddingSpecification):
             token_representation = token_representation.make(num_embeddings=vocabulary_size)
-        return TokenizationRepresentationModule(assignment=assignment, token_representation=token_representation)
+        return cls(assignment=assignment, token_representation=token_representation)
 
     def extra_repr(self) -> str:  # noqa: D102
         return "\n".join(
