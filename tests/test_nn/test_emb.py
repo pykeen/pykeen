@@ -172,6 +172,12 @@ class NodePieceMixedTests(cases.NodePieceTestCase):
     )
 
 
+class TokenizationTests(cases.RepresentationTestCase):
+    """Tests for tokenization representation."""
+
+    cls = pykeen.nn.node_piece.TokenizationRepresentationModule
+
+
 class SubsetRepresentationTests(cases.RepresentationTestCase):
     """Tests for subset representations."""
 
@@ -202,7 +208,7 @@ class LabelBasedTransformerRepresentationTests(cases.RepresentationTestCase):
         return kwargs
 
 
-class RepresentationModuleTestsTestCase(unittest_templates.MetaTestCase[pykeen.nn.emb.RepresentationModule]):
+class RepresentationModuleMetaTestCase(unittest_templates.MetaTestCase[pykeen.nn.emb.RepresentationModule]):
     """Test that there are tests for all representation modules."""
 
     base_cls = pykeen.nn.emb.RepresentationModule
