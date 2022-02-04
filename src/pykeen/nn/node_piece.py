@@ -566,7 +566,7 @@ def resolve_aggregation(
     return aggregation
 
 
-class Tokenization(RepresentationModule):
+class TokenizationRepresentationModule(RepresentationModule):
     """A module holding the result of tokenization."""
 
     #: the token ID of the padding token
@@ -591,6 +591,7 @@ class Tokenization(RepresentationModule):
         :param token_representation: shape: `(num_total_tokens, *shape)`
             the token representations
         """
+        token_representation = representation_resolver()
         max_id, num_chosen_tokens = assignment.shape
         super().__init__(max_id=max_id, shape=(num_chosen_tokens,) + token_representation.shape)
         # fill padding (nn.Embedding cannot deal with negative indices)
@@ -621,7 +622,7 @@ class Tokenization(RepresentationModule):
         mapped_triples: MappedTriples,
         num_entities: int,
         num_relations: int,
-    ) -> "Tokenization":
+    ) -> "TokenizationRepresentationModule":
         """
         Create a tokenization from applying a tokenizer.
 
@@ -648,7 +649,7 @@ class Tokenization(RepresentationModule):
         # create token representations if necessary
         if isinstance(token_representation, EmbeddingSpecification):
             token_representation = token_representation.make(num_embeddings=total_num_tokens)
-        return Tokenization(assignment=assignment, token_representation=token_representation)
+        return TokenizationRepresentationModule(assignment=assignment, token_representation=token_representation)
 
     def forward(
         self,
@@ -678,7 +679,7 @@ class NodePieceRepresentation(RepresentationModule):
     """
 
     #: the token representations
-    tokenizations: Sequence[Tokenization]
+    tokenizations: Sequence[TokenizationRepresentationModule]
 
     #: the padding idx, if any
     padding_idx: Optional[int]
@@ -731,7 +732,7 @@ class NodePieceRepresentation(RepresentationModule):
 
         # tokenize
         tokenizations = [
-            Tokenization.from_tokenizer(
+            TokenizationRepresentationModule.from_tokenizer(
                 tokenizer=tokenizer_inst,
                 num_tokens=num_tokens_,
                 token_representation=token_representation,
