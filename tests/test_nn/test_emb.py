@@ -125,55 +125,65 @@ class TestSingleCompGCNRepresentationTests(cases.RepresentationTestCase):
         return kwargs
 
 
-class NodePieceTests(cases.RepresentationTestCase):
+class NodePieceRelationTests(cases.NodePieceTestCase):
     """Tests for node piece representation."""
 
-    cls = pykeen.nn.node_piece.NodePieceRepresentation
-    num_entities: ClassVar[int] = 8
-    num_relations: ClassVar[int] = 7
-    num_triples: ClassVar[int] = 31
     kwargs = dict(
-        token_representation=pykeen.nn.emb.EmbeddingSpecification(
+        token_representations=pykeen.nn.emb.EmbeddingSpecification(
             shape=(3,),
         )
     )
 
-    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
-        kwargs = super()._pre_instantiation_hook(kwargs)
-        kwargs["triples_factory"] = generate_triples_factory(
-            num_entities=self.num_entities,
-            num_relations=self.num_relations,
-            num_triples=self.num_triples,
-            create_inverse_triples=False,
-        )
-        return kwargs
 
-
-class NodePieceAnchorTests(cases.RepresentationTestCase):
+class NodePieceAnchorTests(cases.NodePieceTestCase):
     """Tests for node piece representation with anchor nodes."""
 
-    cls = pykeen.nn.node_piece.NodePieceRepresentation
-    num_entities: ClassVar[int] = 8
-    num_relations: ClassVar[int] = 7
-    num_triples: ClassVar[int] = 31
     kwargs = dict(
-        token_representation=pykeen.nn.emb.EmbeddingSpecification(
+        token_representations=pykeen.nn.emb.EmbeddingSpecification(
             shape=(3,),
         ),
-        tokenizer="anchor",
-        tokenizer_kwargs=dict(
+        tokenizers="anchor",
+        tokenizers_kwargs=dict(
             selection="degree",
         ),
     )
 
+
+class NodePieceMixedTests(cases.NodePieceTestCase):
+    """Tests for node piece representation with mixed tokenizers."""
+
+    kwargs = dict(
+        token_representations=(
+            pykeen.nn.emb.EmbeddingSpecification(
+                shape=(3,),
+            ),
+            pykeen.nn.emb.EmbeddingSpecification(
+                shape=(3,),
+            ),
+        ),
+        tokenizers=("relation", "anchor"),
+        num_tokens=(2, 3),
+        tokenizers_kwargs=(
+            dict(),
+            dict(
+                selection="degree",
+            ),
+        ),
+    )
+
+
+class TokenizationTests(cases.RepresentationTestCase):
+    """Tests for tokenization representation."""
+
+    cls = pykeen.nn.node_piece.TokenizationRepresentationModule
+    max_id: int = 13
+    vocabulary_size: int = 5
+    num_tokens: int = 3
+
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
-        kwargs = super()._pre_instantiation_hook(kwargs)
-        kwargs["triples_factory"] = generate_triples_factory(
-            num_entities=self.num_entities,
-            num_relations=self.num_relations,
-            num_triples=self.num_triples,
-            create_inverse_triples=False,
-        )
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        kwargs["assignment"] = torch.randint(self.vocabulary_size, size=(self.max_id, self.num_tokens))
+        kwargs["token_representation_kwargs"] = dict(shape=(self.vocabulary_size,))
         return kwargs
 
 
@@ -207,7 +217,7 @@ class LabelBasedTransformerRepresentationTests(cases.RepresentationTestCase):
         return kwargs
 
 
-class RepresentationModuleTestsTestCase(unittest_templates.MetaTestCase[pykeen.nn.emb.RepresentationModule]):
+class RepresentationModuleMetaTestCase(unittest_templates.MetaTestCase[pykeen.nn.emb.RepresentationModule]):
     """Test that there are tests for all representation modules."""
 
     base_cls = pykeen.nn.emb.RepresentationModule
