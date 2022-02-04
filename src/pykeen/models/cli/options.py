@@ -102,7 +102,7 @@ CLI_OPTIONS = {
         default=2,
         show_default=True,
         help="The number of tokens",
-    )
+    ),
 }
 
 device_option = click.option(
