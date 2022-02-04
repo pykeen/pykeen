@@ -268,7 +268,7 @@ class TestNodePieceAnchors(cases.BaseNodePieceTest):
     """Test the NodePiece model with anchors."""
 
     kwargs = dict(
-        tokenizer="anchor",
+        tokenizers="anchor",
     )
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
