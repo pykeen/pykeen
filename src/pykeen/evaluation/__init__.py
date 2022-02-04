@@ -24,7 +24,7 @@ __all__ = [
     "get_metric_list",
 ]
 
-evaluator_resolver = Resolver.from_subclasses(
+evaluator_resolver: Resolver[Evaluator] = Resolver.from_subclasses(
     base=Evaluator,  # type: ignore
     default=RankBasedEvaluator,
 )
