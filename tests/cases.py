@@ -1866,3 +1866,33 @@ class NodePieceTestCase(RepresentationTestCase):
             create_inverse_triples=False,
         )
         return kwargs
+
+
+class EvaluationOnlyModelTestCase(unittest_templates.GenericTestCase[pykeen.models.EvaluationOnlyModel]):
+    """Test case for evaluation only models."""
+
+    #: The batch size
+    batch_size: int = 3
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        dataset = Nations()
+        self.factory = kwargs["triples_factory"] = dataset.training
+        return kwargs
+
+    def _verify(self, scores: torch.FloatTensor):
+        """Verify scores."""
+
+    def test_score_t(self):
+        """Test score_t."""
+        hr_batch = self.factory.mapped_triples[torch.randint(self.factory.num_triples, size=(self.batch_size,))][:, :2]
+        scores = self.instance.score_t(hr_batch=hr_batch)
+        assert scores.shape == (self.batch_size, self.factory.num_entities)
+        self._verify(scores)
+
+    def test_score_h(self):
+        """Test score_h."""
+        rt_batch = self.factory.mapped_triples[torch.randint(self.factory.num_triples, size=(self.batch_size,))][:, 1:]
+        scores = self.instance.score_h(rt_batch=rt_batch)
+        assert scores.shape == (self.batch_size, self.factory.num_entities)
+        self._verify(scores)
