@@ -11,6 +11,7 @@ from sklearn.preprocessing import normalize as sklearn_normalize
 
 from ...triples import CoreTriplesFactory
 from ...triples.leakage import jaccard_similarity_scipy
+from ...typing import COLUMN_HEAD, COLUMN_TAIL, TargetColumn
 
 __all__ = [
     "get_csr_matrix",
@@ -89,6 +90,35 @@ def sparsify(
     return sparse
 
 
+def entity_pair_matrix(
+    triples_factory: CoreTriplesFactory,
+    order: Tuple[TargetColumn, TargetColumn] = (COLUMN_HEAD, COLUMN_TAIL),
+) -> scipy.sparse.spmatrix:
+    """
+    Create a sparse matrix of entity-pairs for each relation.
+
+    :param triples:
+        the triples factory
+    :param order:
+        the order of entities
+
+    :return: shape: `(num_relations, num_entities ** 2)`
+        a sparse matrix, where each row contains the one-hot encoded set of entity pairs
+    """
+    mapped_triples = numpy.asarray(triples_factory.mapped_triples)
+    first, second = order
+    return scipy.sparse.coo_matrix(
+        (
+            numpy.ones((mapped_triples.shape[0],), dtype=int),
+            (
+                mapped_triples[:, 1],
+                triples_factory.num_entities * mapped_triples[:, first] + mapped_triples[:, second],
+            ),
+        ),
+        shape=(triples_factory.num_relations, triples_factory.num_entities**2),
+    ).tocsr()
+
+
 def get_relation_similarity(
     triples_factory: CoreTriplesFactory,
     to_inverse: bool = False,
@@ -96,29 +126,6 @@ def get_relation_similarity(
 ) -> scipy.sparse.csr_matrix:
     """Get the relation similarity."""
     assert triples_factory.num_entities * triples_factory.num_relations < numpy.iinfo(int_type=int).max
-    mapped_triples = numpy.asarray(triples_factory.mapped_triples)
-    r = scipy.sparse.coo_matrix(
-        (
-            numpy.ones((mapped_triples.shape[0],), dtype=int),
-            (
-                mapped_triples[:, 1],
-                triples_factory.num_entities * mapped_triples[:, 0] + mapped_triples[:, 2],
-            ),
-        ),
-        shape=(triples_factory.num_relations, triples_factory.num_entities**2),
-    )
-    if to_inverse:
-        r2 = scipy.sparse.coo_matrix(
-            (
-                numpy.ones((mapped_triples.shape[0],), dtype=int),
-                (
-                    mapped_triples[:, 1],
-                    triples_factory.num_entities * mapped_triples[:, 2] + mapped_triples[:, 0],
-                ),
-            ),
-            shape=(triples_factory.num_relations, triples_factory.num_entities**2),
-        )
-    else:
-        r2 = r
-
+    r = entity_pair_matrix(triples_factory=triples_factory, order=(COLUMN_HEAD, COLUMN_TAIL))
+    r2 = entity_pair_matrix(triples_factory=triples_factory, order=(COLUMN_TAIL, COLUMN_HEAD)) if to_inverse else r
     return sparsify(jaccard_similarity_scipy(a=r, b=r2), threshold=threshold)
