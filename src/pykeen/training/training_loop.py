@@ -22,12 +22,13 @@ from torch.utils.data import DataLoader
 from tqdm.autonotebook import tqdm, trange
 
 from .callbacks import (
-    GradientAbsClippingCallback,
-    GradientNormClippingCallback,
+    GradientAbsClippingTrainingCallback,
+    GradientNormClippingTrainingCallback,
     MultiTrainingCallback,
     StopperCallback,
-    TrackerCallback,
+    TrackerTrainingCallback,
     TrainingCallbackHint,
+    TrainingCallbackKwargsHint,
 )
 from ..constants import PYKEEN_CHECKPOINTS, PYKEEN_DEFAULT_CHECKPOINT
 from ..lr_schedulers import LRScheduler
@@ -189,6 +190,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         checkpoint_on_failure: bool = False,
         drop_last: Optional[bool] = None,
         callbacks: TrainingCallbackHint = None,
+        callback_kwargs: TrainingCallbackKwargsHint = None,
         gradient_clipping_max_norm: Optional[float] = None,
         gradient_clipping_norm_type: Optional[float] = None,
         gradient_clipping_max_abs_value: Optional[float] = None,
@@ -257,6 +259,8 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         :param callbacks:
             An optional :class:`pykeen.training.TrainingCallback` or collection of callback instances that define
             one of several functionalities. Their interface was inspired by Keras.
+        :param callback_kwargs:
+            additional keyword-based parameter to instantiate the training callback.
         :param gradient_clipping_max_norm:
             The maximum gradient norm for use with gradient clipping. If None, no gradient norm clipping is used.
         :param gradient_clipping_norm_type:
@@ -357,6 +361,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                 last_best_epoch=last_best_epoch,
                 drop_last=drop_last,
                 callbacks=callbacks,
+                callback_kwargs=callback_kwargs,
                 gradient_clipping_max_norm=gradient_clipping_max_norm,
                 gradient_clipping_norm_type=gradient_clipping_norm_type,
                 gradient_clipping_max_abs_value=gradient_clipping_max_abs_value,
@@ -401,6 +406,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         last_best_epoch: Optional[int] = None,
         drop_last: Optional[bool] = None,
         callbacks: TrainingCallbackHint = None,
+        callback_kwargs: TrainingCallbackKwargsHint = None,
         gradient_clipping_max_norm: Optional[float] = None,
         gradient_clipping_norm_type: Optional[float] = None,
         gradient_clipping_max_abs_value: Optional[float] = None,
@@ -428,10 +434,10 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             )
 
         # Prepare all of the callbacks
-        callback = MultiTrainingCallback(callbacks)
+        callback = MultiTrainingCallback(callbacks=callbacks, callback_kwargs=callback_kwargs)
         # Register a callback for the result tracker, if given
         if result_tracker is not None:
-            callback.register_callback(TrackerCallback(result_tracker))
+            callback.register_callback(TrackerTrainingCallback(result_tracker))
         # Register a callback for the early stopper, if given
         if stopper is not None:
             callback.register_callback(
@@ -444,13 +450,13 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             )
         if gradient_clipping_max_norm is not None:
             callback.register_callback(
-                GradientNormClippingCallback(
+                GradientNormClippingTrainingCallback(
                     max_norm=gradient_clipping_max_norm,
                     norm_type=gradient_clipping_norm_type,
                 )
             )
         if gradient_clipping_max_abs_value is not None:
-            callback.register_callback(GradientAbsClippingCallback(clip_value=gradient_clipping_max_abs_value))
+            callback.register_callback(GradientAbsClippingTrainingCallback(clip_value=gradient_clipping_max_abs_value))
 
         callback.register_training_loop(self)
 
