@@ -104,4 +104,4 @@ class TestTrainingEarlyStopping(unittest.TestCase):
             batch_size=self.batch_size,
             stopper=self.stopper,
         )
-        self.assertEqual(training_loop._epoch, len(self.stopper.results) - self.patience)
+        self.assertEqual(training_loop._epoch, self.stop_constant + 1)

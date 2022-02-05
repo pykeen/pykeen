@@ -37,6 +37,22 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
+class DeviceResolutionError(ValueError):
+    """An error in the resolution of a model's device."""
+
+
+class AmbiguousDeviceError(DeviceResolutionError):
+    """An error raised if there is ambiguity in device resolution."""
+
+    def __init__(self, module: nn.Module) -> None:
+        """Initialize the error."""
+        _info = defaultdict(list)
+        for name, tensor in itertools.chain(module.named_parameters(), module.named_buffers()):
+            _info[tensor.data.device].append(name)
+        info = {device: sorted(tensor_names) for device, tensor_names in _info.items()}
+        super().__init__(f"Ambiguous device! Found: {list(info.keys())}\n\n{info}")
+
+
 class Model(nn.Module, ABC):
     """A base module for KGE models.
 
@@ -135,22 +151,26 @@ class Model(nn.Module, ABC):
     @property
     def device(self) -> torch.device:
         """Return the model's device."""
-        devices = self.get_devices()
-        if len(devices) == 0:
-            raise ValueError("Could not infer device, since there are neither parameters nor buffers.")
-        elif len(devices) > 1:
-            # prepare debug information
-            _info = defaultdict(list)
-            for name, tensor in itertools.chain(self.named_parameters(), self.named_buffers()):
-                _info[tensor.data.device].append(name)
-            info = {device: sorted(tensor_names) for device, tensor_names in _info.items()}
-            raise ValueError(f"Ambiguous device! Found: {devices}\n\n{info}")
-        else:
-            return next(iter(devices))
+        return self.get_preferred_device(allow_ambiguity=False)
 
     def get_devices(self) -> Collection[torch.device]:
         """Return the device(s) from each components of the model."""
         return {tensor.data.device for tensor in itertools.chain(self.parameters(), self.buffers())}
+
+    def get_preferred_device(self, allow_ambiguity: bool = True) -> torch.device:
+        """Return the preferred device."""
+        devices = self.get_devices()
+        if len(devices) == 0:
+            raise DeviceResolutionError("Could not infer device, since there are neither parameters nor buffers.")
+        if len(devices) == 1:
+            return next(iter(devices))
+        if not allow_ambiguity:
+            raise AmbiguousDeviceError(self)
+        # try to resolve ambiguous device; there has to be at least one cuda device
+        cuda_devices = {d for d in devices if d.type == "cuda"}
+        if len(cuda_devices) == 1:
+            return next(iter(cuda_devices))
+        raise AmbiguousDeviceError(self)
 
     def reset_parameters_(self):  # noqa: D401
         """Reset all parameters of the model and enforce model constraints."""

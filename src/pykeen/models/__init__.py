@@ -9,7 +9,7 @@ score value is model-dependent, and usually it cannot be directly interpreted as
 from class_resolver import Resolver, get_subclasses
 
 from .base import EntityRelationEmbeddingModel, Model, _OldAbstractModel
-from .baseline import EvaluationOnlyModel, MarginalDistributionBaseline
+from .baseline import EvaluationOnlyModel, MarginalDistributionBaseline, SoftInverseTripleBaseline
 from .mocks import FixedModel
 from .multimodal import ComplExLiteral, DistMultLiteral, DistMultLiteralGated, LiteralModel
 from .nbase import ERModel, _NewAbstractModel
@@ -98,6 +98,7 @@ __all__ = [
     "TuckER",
     "UM",
     # Evaluation-only models
+    "SoftInverseTripleBaseline",
     "MarginalDistributionBaseline",
     # Utils
     "model_resolver",
