@@ -6,12 +6,12 @@ from abc import ABC
 from typing import Optional
 
 import numpy
-import scipy.sparse
 import torch
 
-from .utils import get_csr_matrix, get_relation_similarity, marginal_score
+from .utils import entity_pair_matrix, get_csr_matrix, get_relation_similarity, marginal_score
 from ..base import Model
 from ...triples import CoreTriplesFactory
+from ...typing import COLUMN_HEAD, COLUMN_TAIL
 
 __all__ = [
     "EvaluationOnlyModel",
@@ -163,22 +163,8 @@ class SoftInverseTripleBaseline(EvaluationOnlyModel):
         # compute relation similarity matrix
         self.sim = get_relation_similarity(triples_factory, to_inverse=False, threshold=threshold)
         self.sim_inv = get_relation_similarity(triples_factory, to_inverse=True, threshold=threshold)
-
-        mapped_triples = numpy.asarray(triples_factory.mapped_triples)
-        self.rel_to_head = scipy.sparse.coo_matrix(
-            (
-                numpy.ones(shape=(triples_factory.num_triples,), dtype=numpy.float32),
-                (mapped_triples[:, 1], mapped_triples[:, 0]),
-            ),
-            shape=(triples_factory.num_relations, triples_factory.num_entities),
-        ).tocsr()
-        self.rel_to_tail = scipy.sparse.coo_matrix(
-            (
-                numpy.ones(shape=(triples_factory.num_triples,), dtype=numpy.float32),
-                (mapped_triples[:, 1], mapped_triples[:, 2]),
-            ),
-            shape=(triples_factory.num_relations, triples_factory.num_entities),
-        ).tocsr()
+        self.rel_to_head = entity_pair_matrix(triples_factory=triples_factory, entity_columns=(COLUMN_HEAD,))
+        self.rel_to_tail = entity_pair_matrix(triples_factory=triples_factory, entity_columns=(COLUMN_TAIL,))
 
     def score_t(self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:  # noqa:D102
         r = hr_batch[:, 1]
