@@ -338,6 +338,8 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         if getattr(stopper, "stopped", False):
             result: Optional[List[float]] = self.losses_per_epochs
         else:
+            # send model to device before going into the internal training loop
+            self.model = self.model.to(self.model.get_preferred_device())
             result = self._train(
                 num_epochs=num_epochs,
                 batch_size=batch_size,
@@ -516,6 +518,8 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         if not continue_training:
             # Reset the weights
             self.model.reset_parameters_()
+            # afterwards, some parameters may be on the wrong device
+            self.model.to(self.model.get_preferred_device())
 
             # Create new optimizer
             optimizer_kwargs = _get_optimizer_kwargs(self.optimizer)
@@ -532,7 +536,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             raise ValueError("Cannot continue_training without being trained once.")
 
         # Ensure the model is on the correct device
-        self.model = self.model.to(self.device)
+        self.model.to(self.model.get_preferred_device())
 
         # Create Sampler
         if sampler == "schlichtkrull":
