@@ -522,8 +522,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             raise ValueError("Cannot continue_training without being trained once.")
 
         # Ensure the model is on the correct device
-        # TODO: do this before the optimizer is created?
-        self.model = self.model.to(self.device)
+        self.model.to(self.model.get_preferred_device())
 
         # Create Sampler
         if sampler == "schlichtkrull":
