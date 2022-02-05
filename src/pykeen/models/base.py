@@ -413,6 +413,12 @@ class Model(nn.Module, ABC):
         """
         self.eval()  # Enforce evaluation mode
         ht_batch = ht_batch.to(self.device)
+        # Checking for self.inverse is not necessary since we have score_h_inverse.
+        # Since we have inverse triples, where the order of entities is inverted,
+        # and the relation replaced by an inverse relation.
+        # See also: https://github.com/pykeen/pykeen/pull/726 for discussion on
+        # prediction workflow with inverses and https://github.com/pykeen/pykeen/pull/752
+        # for updated philosophy on inverse triple generation within the model
         scores = self.score_r(ht_batch, slice_size=slice_size)
         if self.predict_with_sigmoid:
             scores = torch.sigmoid(scores)
@@ -560,6 +566,19 @@ class Model(nn.Module, ABC):
         """Score all tails for a batch of (h,r)-pairs using the head predictions for the inverses $(*,r_{inv},h)$."""
         r_inv_h = self._prepare_inverse_batch(batch=hr_batch, index_relation=1)
         return self.score_h(rt_batch=r_inv_h, slice_size=slice_size)
+
+    def score_r_inverse(self, ht_batch: torch.LongTensor, slice_size: Optional[int] = None):
+        """Score all rels for a batch of (h,t)-pairs using the rel predictions for the inverses $(t,*_{inv},h)$."""
+        # No mucking around with inverse triples remapping for this,
+        #  it's much more straightforwards since the inverse triples
+        #  are implicit here. Possible implementation #1:
+        #
+        # th_batch = ht_batch[:, [1, 0]]
+        # return self.score_r(ht_batch=th_batch, slice_size=slice_size)
+        #
+        # From @mberr: I think this does not make sense, without changing the relation ID: we should
+        #  compute scores for all inverse relations (but not the normal ones) here.
+        raise NotImplementedError
 
     def score_h_inverse(self, rt_batch: torch.LongTensor, slice_size: Optional[int] = None):
         """Score all heads for a batch of (r,t)-pairs using the tail predictions for the inverses $(t,r_{inv},*)$."""

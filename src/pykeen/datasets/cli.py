@@ -22,7 +22,7 @@ from ..datasets.base import Dataset
 from ..datasets.ogb import OGBWikiKG
 from ..evaluation.evaluator import get_candidate_set_size
 from ..evaluation.expectation import expected_hits_at_k, expected_mean_rank
-from ..typing import LABEL_HEAD, LABEL_TAIL
+from ..typing import EXTENDED_TARGET_MAPPINGS, LABEL_HEAD, LABEL_TAIL
 
 
 @click.group()
@@ -265,11 +265,7 @@ def expected_metrics(dataset: str, max_triples: Optional[int], log_level: str):
                 10**i for i in range(2, int(math.ceil(math.log(dataset_instance.num_entities))))
             )
             this_metrics = dict()
-            for label, sides in dict(
-                head=[LABEL_HEAD],
-                tail=[LABEL_TAIL],
-                both=[LABEL_HEAD, LABEL_TAIL],
-            ).items():
+            for label, sides in EXTENDED_TARGET_MAPPINGS.items():
                 candidate_set_sizes = df[[f"{side}_candidates" for side in sides]]
                 this_metrics[label] = {
                     "mean_rank": expected_mean_rank(candidate_set_sizes),

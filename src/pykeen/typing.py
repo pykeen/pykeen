@@ -144,3 +144,9 @@ TargetBoth = Literal["both"]
 SIDE_BOTH: TargetBoth = "both"
 ExtendedTarget = Union[Target, TargetBoth]
 SIDES: Collection[ExtendedTarget] = {LABEL_HEAD, LABEL_TAIL, SIDE_BOTH}
+
+EXTENDED_TARGET_MAPPINGS: Mapping[ExtendedTarget, Sequence[Target]] = {
+    LABEL_HEAD: [LABEL_HEAD],
+    LABEL_TAIL: [LABEL_TAIL],
+    SIDE_BOTH: [LABEL_HEAD, LABEL_TAIL],
+}

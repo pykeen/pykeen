@@ -103,7 +103,7 @@ class ClassificationEvaluator(Evaluator):
             self.all_positives[key] = dense_positive_mask[i]
 
     def finalize(self) -> ClassificationMetricResults:  # noqa: D102
-        # Important: The order of the values of an dictionary is not guaranteed. Hence, we need to retrieve scores and
+        # Important: The order of the values of a dictionary is not guaranteed. Hence, we need to retrieve scores and
         # masks using the exact same key order.
         all_keys = list(self.all_scores.keys())
         # TODO how to define a cutoff on y_scores to make binary?

@@ -22,7 +22,15 @@ from ..constants import TARGET_TO_INDEX
 from ..models import Model
 from ..triples.triples_factory import restrict_triples
 from ..triples.utils import get_entities, get_relations
-from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, MappedTriples, Target
+from ..typing import (
+    COLUMN_HEAD,
+    COLUMN_TAIL,
+    LABEL_HEAD,
+    LABEL_RELATION,
+    LABEL_TAIL,
+    MappedTriples,
+    Target,
+)
 from ..utils import (
     format_relative_comparison,
     is_cuda_oom_error,
@@ -110,19 +118,19 @@ class Evaluator(ABC):
         self,
         hrt_batch: MappedTriples,
         target: Target,
+        true_scores: torch.FloatTensor,
         scores: torch.FloatTensor,
-        true_scores: Optional[torch.FloatTensor] = None,
         dense_positive_mask: Optional[torch.FloatTensor] = None,
     ) -> None:
-        """Process a batch of triples with their computed scores for all entities.
+        """Process a batch of triples with their computed scores.
 
         :param hrt_batch: shape: (batch_size, 3)
         :param target:
             the prediction target
-        :param scores: shape: (batch_size, num_entities)
+        :param scores: shape: (batch_size, num_choices)
         :param true_scores: shape: (batch_size, 1)
-        :param dense_positive_mask: shape: (batch_size, num_entities)
-            An optional binary (0/1) tensor indicating other true entities.
+        :param dense_positive_mask: shape: (batch_size, num_choices)
+            An optional binary (0/1) tensor indicating other true choices.
         """
         raise NotImplementedError
 
@@ -403,7 +411,7 @@ def create_sparse_positive_filter_(
             The indices of positives in format [(batch_index, entity_id)].
         - the relation filter for re-usage.
     """
-    if filter_col not in {0, 2}:
+    if filter_col not in {COLUMN_HEAD, COLUMN_TAIL}:
         raise NotImplementedError(
             "This code has only been written for updating head (filter_col=0) or "
             f"tail (filter_col=2) mask, but filter_col={filter_col} was given.",
@@ -504,6 +512,7 @@ def prepare_filter_triples(
 
 
 # TODO: consider switching to torch.DataLoader where the preparation of masks/filter batches also takes place
+# TODO: different batch / slice sizes for entity / relation pred
 def evaluate(
     model: Model,
     mapped_triples: MappedTriples,
@@ -573,10 +582,9 @@ def evaluate(
     :param targets:
         the prediction targets
     """
-    if LABEL_RELATION in targets:
-        raise NotImplementedError("cf. https://github.com/pykeen/pykeen/pull/728")
     start = timeit.default_timer()
 
+    # TODO: Filtering code may only be correct for scoring entities
     # verify that the triples have been filtered
     if pre_filtered_triples and do_time_consuming_checks:
         if restrict_entities_to is not None:
@@ -598,6 +606,7 @@ def evaluate(
 
     # Filter triples if necessary
     if not pre_filtered_triples and (restrict_entities_to is not None or restrict_relations_to is not None):
+        # TODO: Filtering code may only be correct for scoring entities
         old_num_triples = mapped_triples.shape[0]
         mapped_triples = restrict_triples(
             mapped_triples=mapped_triples,
@@ -763,6 +772,7 @@ def _evaluate_batch(
         positive_mask = None
 
     # Restrict to entities of interest
+    # TODO: update for relation scoring
     if restrict_entities_to is not None:
         scores = scores[:, restrict_entities_to]
         if positive_mask is not None:

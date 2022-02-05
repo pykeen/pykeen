@@ -326,6 +326,7 @@ class RankBasedEvaluator(Evaluator):
                 )
         self.ranks = defaultdict(list)
         self.num_entities = None
+        self.num_relations = None
 
     def process_scores_(
         self,
@@ -348,6 +349,9 @@ class RankBasedEvaluator(Evaluator):
 
     def _get_ranks(self, side: ExtendedTarget, rank_type: ExtendedRankType) -> np.ndarray:
         if side == SIDE_BOTH:
+            # Even though it's been enabled to rank relations, this
+            # remains not having the relation label because it's not
+            # the standard evaluation technique
             values: List[float] = sum(
                 (self.ranks.get((_side, rank_type), []) for _side in (LABEL_HEAD, LABEL_TAIL)), []
             )
@@ -558,5 +562,6 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
             dense_positive_mask=dense_positive_mask,
         )
         # write back correct num_entities
+        # TODO: num relations
         # TODO: should we give num_entities in the constructor instead of inferring it every time ranks are processed?
         self.num_entities = num_entities
