@@ -10,8 +10,8 @@ import torch
 from sklearn.preprocessing import normalize as sklearn_normalize
 
 from ...triples import CoreTriplesFactory
-from ...triples.leakage import jaccard_similarity_scipy
-from ...typing import COLUMN_HEAD, COLUMN_TAIL, TargetColumn
+from ...triples.leakage import jaccard_similarity_scipy, triples_factory_to_sparse_matrices
+from ...typing import TargetColumn
 
 __all__ = [
     "get_csr_matrix",
@@ -126,11 +126,22 @@ def entity_pair_matrix(
 
 def get_relation_similarity(
     triples_factory: CoreTriplesFactory,
-    to_inverse: bool = False,
     threshold: Optional[float] = None,
-) -> scipy.sparse.csr_matrix:
-    """Get the relation similarity."""
-    assert triples_factory.num_entities * triples_factory.num_relations < numpy.iinfo(int_type=int).max
-    r = entity_pair_matrix(triples_factory=triples_factory, entity_columns=(COLUMN_HEAD, COLUMN_TAIL))
-    r2 = entity_pair_matrix(triples_factory=triples_factory, entity_columns=(COLUMN_TAIL, COLUMN_HEAD)) if to_inverse else r
-    return sparsify(jaccard_similarity_scipy(a=r, b=r2), threshold=threshold)
+) -> Tuple[scipy.sparse.csr_matrix, scipy.sparse.csr_matrix]:
+    """
+    Compute Jaccard similarity of relations' (and their inverse's) entity-pair sets.
+
+    :param triples_factory:
+        the triples factory
+    :param threshold:
+        an absolute sparsification threshold.
+    
+    :return: shape: (num_relations, num_relations)
+        a pair of similarity matrices.
+    """
+    r, r_inv = triples_factory_to_sparse_matrices(triples_factory=triples_factory)
+    sim, sim_inv = [
+        sparsify(jaccard_similarity_scipy(r, r2), threshold=threshold)
+        for r2 in (r, r_inv)
+    ]
+    return sim, sim_inv

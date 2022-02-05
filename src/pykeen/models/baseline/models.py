@@ -161,8 +161,7 @@ class SoftInverseTripleBaseline(EvaluationOnlyModel):
     ):
         super().__init__(triples_factory=triples_factory)
         # compute relation similarity matrix
-        self.sim = get_relation_similarity(triples_factory, to_inverse=False, threshold=threshold)
-        self.sim_inv = get_relation_similarity(triples_factory, to_inverse=True, threshold=threshold)
+        self.sim, self.sim_inv = get_relation_similarity(triples_factory, threshold=threshold)
         self.rel_to_head = entity_pair_matrix(triples_factory=triples_factory, entity_columns=(COLUMN_HEAD,))
         self.rel_to_tail = entity_pair_matrix(triples_factory=triples_factory, entity_columns=(COLUMN_TAIL,))
 
