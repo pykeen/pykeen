@@ -11,7 +11,6 @@ from sklearn.preprocessing import normalize as sklearn_normalize
 
 from ...triples import CoreTriplesFactory
 from ...triples.leakage import jaccard_similarity_scipy, triples_factory_to_sparse_matrices
-from ...typing import TargetColumn
 
 __all__ = [
     "get_csr_matrix",
@@ -89,39 +88,6 @@ def sparsify(
     sparse.eliminate_zeros()
     return sparse
 
-
-def entity_pair_matrix(
-    triples_factory: CoreTriplesFactory,
-    entity_columns: Tuple[TargetColumn, ...],
-) -> scipy.sparse.spmatrix:
-    """
-    Create a sparse matrix of entity-pairs for each relation.
-
-    :param triples:
-        the triples factory
-    :param entity_columns:
-        the entity columns. Either one, for a relation-entity matrix, or two for relation-entity-pair matrix.
-
-    :return: shape: `(num_relations, num_columns)`
-        a sparse matrix, where each row contains the one-hot encoded set of
-        entities (num_columns=num_entities) / entity pairs (num_columns=num_entities ** 2)
-    """
-    # comment: we cannot use leakage.mapped_triples_to_sparse_matrices, since we need to
-    #          retain the full column count, num_entities ** 2, for mapping back to entities
-    mapped_triples = numpy.asarray(triples_factory.mapped_triples)
-    row_id = mapped_triples[:, 1]
-    column_id = 0
-    num_columns = 1
-    for column in entity_columns:
-        column_id = triples_factory.num_entities * column_id + mapped_triples[:, column]
-        num_columns *= triples_factory.num_entities
-    return scipy.sparse.coo_matrix(
-        (
-            numpy.ones((mapped_triples.shape[0],), dtype=int),
-            (row_id, column_id),
-        ),
-        shape=(triples_factory.num_relations, num_columns),
-    ).tocsr()
 
 
 def get_relation_similarity(

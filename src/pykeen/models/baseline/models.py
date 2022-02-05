@@ -162,8 +162,16 @@ class SoftInverseTripleBaseline(EvaluationOnlyModel):
         super().__init__(triples_factory=triples_factory)
         # compute relation similarity matrix
         self.sim, self.sim_inv = get_relation_similarity(triples_factory, threshold=threshold)
-        self.rel_to_head = entity_pair_matrix(triples_factory=triples_factory, entity_columns=(COLUMN_HEAD,))
-        self.rel_to_tail = entity_pair_matrix(triples_factory=triples_factory, entity_columns=(COLUMN_TAIL,))
+        # mapping from relations to head/tail entities
+        h, r, t = numpy.asarray(triples_factory.mapped_triples).T
+        self.rel_to_head, self.rel_to_tail = [
+            get_csr_matrix(
+                row_indices=r,
+                col_indices=col_indices,
+                shape=(triples_factory.num_relations, triples_factory.num_entities),
+            )
+            for col_indices in (h, t)
+        ]
 
     def score_t(self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:  # noqa:D102
         r = hr_batch[:, 1]
