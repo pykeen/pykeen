@@ -66,7 +66,7 @@ from ..typing import MappedTriples, OneOrSequence
 __all__ = [
     "TrainingCallbackHint",
     "TrainingCallback",
-    "StopperCallback",
+    "StopperTrainingCallback",
     "TrackerTrainingCallback",
     "EvaluationTrainingCallback",
     "MultiTrainingCallback",
@@ -267,7 +267,7 @@ class EvaluationTrainingCallback(TrainingCallback):
         self.tracker.log_metrics(metrics=result.to_flat_dict(), step=epoch, prefix=self.prefix)
 
 
-class StopperCallback(TrainingCallback):
+class StopperTrainingCallback(TrainingCallback):
     """An adapter for the :class:`pykeen.stopper.Stopper`."""
 
     def __init__(
