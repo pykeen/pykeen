@@ -25,7 +25,7 @@ from .callbacks import (
     GradientAbsClippingTrainingCallback,
     GradientNormClippingTrainingCallback,
     MultiTrainingCallback,
-    StopperCallback,
+    StopperTrainingCallback,
     TrackerTrainingCallback,
     TrainingCallbackHint,
     TrainingCallbackKwargsHint,
@@ -441,7 +441,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         # Register a callback for the early stopper, if given
         if stopper is not None:
             callback.register_callback(
-                StopperCallback(
+                StopperTrainingCallback(
                     stopper,
                     triples_factory=triples_factory,
                     last_best_epoch=last_best_epoch,
