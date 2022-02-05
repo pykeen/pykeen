@@ -37,7 +37,11 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class AmbiguousDeviceError(ValueError):
+class DeviceResolutionError(ValueError):
+    """An error in the resolution of a model's device."""
+
+
+class AmbiguousDeviceError(DeviceResolutionError):
     """An error raised if there is ambiguity in device resolution."""
 
     def __init__(self, module: nn.Module) -> None:
@@ -149,7 +153,7 @@ class Model(nn.Module, ABC):
         """Return the model's device."""
         devices = self.get_devices()
         if len(devices) == 0:
-            raise ValueError("Could not infer device, since there are neither parameters nor buffers.")
+            raise DeviceResolutionError("Could not infer device, since there are neither parameters nor buffers.")
         elif len(devices) > 1:
             raise AmbiguousDeviceError(self)
         else:
@@ -163,7 +167,7 @@ class Model(nn.Module, ABC):
         """Return the preferred device."""
         devices = self.get_devices()
         if len(devices) == 0:
-            raise ValueError("Could not infer device, since there are neither parameters nor buffers.")
+            raise DeviceResolutionError("Could not infer device, since there are neither parameters nor buffers.")
         if len(devices) == 1:
             return next(iter(devices))
         # try to resolve ambiguous device; there has to be at least one cuda device
