@@ -46,7 +46,7 @@ class AmbiguousDeviceError(ValueError):
         for name, tensor in itertools.chain(module.named_parameters(), module.named_buffers()):
             _info[tensor.data.device].append(name)
         info = {device: sorted(tensor_names) for device, tensor_names in _info.items()}
-        super().__init__(f"Ambiguous device! Found: {sorted(info.keys())}\n\n{info}")
+        super().__init__(f"Ambiguous device! Found: {list(info.keys())}\n\n{info}")
 
 
 class Model(nn.Module, ABC):
@@ -168,7 +168,7 @@ class Model(nn.Module, ABC):
             return next(iter(devices))
         # try to resolve ambiguous device; there has to be at least one cuda device
         cuda_devices = {d for d in devices if d.type == "cuda"}
-        if len(devices) == 1:
+        if len(cuda_devices) == 1:
             return next(iter(cuda_devices))
         raise AmbiguousDeviceError(self)
 
