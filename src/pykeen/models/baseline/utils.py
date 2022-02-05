@@ -10,6 +10,7 @@ import torch
 from sklearn.preprocessing import normalize as sklearn_normalize
 
 from ...triples import CoreTriplesFactory
+from ...triples.leakage import jaccard_similarity_scipy
 
 __all__ = [
     "get_csr_matrix",
@@ -71,7 +72,6 @@ def get_relation_similarity(
     threshold: Optional[float] = None,
 ) -> scipy.sparse.csr_matrix:
     """Get the relation similarity."""
-    # TODO: overlap with inverse triple detection
     assert triples_factory.num_entities * triples_factory.num_relations < numpy.iinfo(int_type=int).max
     mapped_triples = numpy.asarray(triples_factory.mapped_triples)
     r = scipy.sparse.coo_matrix(
@@ -82,11 +82,10 @@ def get_relation_similarity(
                 triples_factory.num_entities * mapped_triples[:, 0] + mapped_triples[:, 2],
             ),
         ),
-        shape=(triples_factory.num_relations, triples_factory.num_entities ** 2),
+        shape=(triples_factory.num_relations, triples_factory.num_entities**2),
     )
-    cardinality = numpy.asarray(r.sum(axis=1)).squeeze(axis=-1)
     if not to_inverse:
-        return _help_get_relation_similarity(r, r, cardinality=cardinality, threshold=threshold)
+        return _help_get_relation_similarity(r, r, threshold=threshold)
 
     r2 = scipy.sparse.coo_matrix(
         (
@@ -96,20 +95,17 @@ def get_relation_similarity(
                 triples_factory.num_entities * mapped_triples[:, 2] + mapped_triples[:, 0],
             ),
         ),
-        shape=(triples_factory.num_relations, triples_factory.num_entities ** 2),
+        shape=(triples_factory.num_relations, triples_factory.num_entities**2),
     )
-    return _help_get_relation_similarity(r, r2, cardinality=cardinality, threshold=threshold)
+    return _help_get_relation_similarity(r, r2, threshold=threshold)
 
 
 def _help_get_relation_similarity(
-    r,
-    r2,
-    cardinality,
+    r: scipy.sparse.spmatrix,
+    r2: scipy.sparse.spmatrix,
     threshold: Optional[float] = None,
 ) -> scipy.sparse.csr_matrix:
-    intersection = numpy.asarray((r @ r2.T).todense())
-    union = cardinality[:, None] + cardinality[None, :] - intersection
-    sim = intersection.astype(numpy.float32) / union.astype(numpy.float32)
+    sim = jaccard_similarity_scipy(a=r, b=r2)
     if threshold is not None:
         sim[sim < threshold] = 0.0
     sim = scipy.sparse.csr_matrix(sim)
