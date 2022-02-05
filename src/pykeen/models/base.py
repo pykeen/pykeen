@@ -151,25 +151,21 @@ class Model(nn.Module, ABC):
     @property
     def device(self) -> torch.device:
         """Return the model's device."""
-        devices = self.get_devices()
-        if len(devices) == 0:
-            raise DeviceResolutionError("Could not infer device, since there are neither parameters nor buffers.")
-        elif len(devices) > 1:
-            raise AmbiguousDeviceError(self)
-        else:
-            return next(iter(devices))
+        return self.get_preferred_device(allow_ambiguity=False)
 
     def get_devices(self) -> Collection[torch.device]:
         """Return the device(s) from each components of the model."""
         return {tensor.data.device for tensor in itertools.chain(self.parameters(), self.buffers())}
 
-    def get_preferred_device(self) -> torch.device:
+    def get_preferred_device(self, allow_ambiguity: bool = True) -> torch.device:
         """Return the preferred device."""
         devices = self.get_devices()
         if len(devices) == 0:
             raise DeviceResolutionError("Could not infer device, since there are neither parameters nor buffers.")
         if len(devices) == 1:
             return next(iter(devices))
+        if not allow_ambiguity:
+            raise AmbiguousDeviceError(self)
         # try to resolve ambiguous device; there has to be at least one cuda device
         cuda_devices = {d for d in devices if d.type == "cuda"}
         if len(cuda_devices) == 1:
