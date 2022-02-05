@@ -89,7 +89,6 @@ def sparsify(
     return sparse
 
 
-
 def get_relation_similarity(
     triples_factory: CoreTriplesFactory,
     threshold: Optional[float] = None,
@@ -101,13 +100,10 @@ def get_relation_similarity(
         the triples factory
     :param threshold:
         an absolute sparsification threshold.
-    
+
     :return: shape: (num_relations, num_relations)
         a pair of similarity matrices.
     """
     r, r_inv = triples_factory_to_sparse_matrices(triples_factory=triples_factory)
-    sim, sim_inv = [
-        sparsify(jaccard_similarity_scipy(r, r2), threshold=threshold)
-        for r2 in (r, r_inv)
-    ]
+    sim, sim_inv = [sparsify(jaccard_similarity_scipy(r, r2), threshold=threshold) for r2 in (r, r_inv)]
     return sim, sim_inv
