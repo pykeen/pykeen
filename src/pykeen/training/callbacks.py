@@ -9,6 +9,12 @@ loop and all of its attributes, including the model. The interaction points are 
 
 Examples
 --------
+The following are vignettes showing how PyKEEN's training loop can be arbitrarily extended
+using callbacks. If you find that none of the hooks in the :class:`TrainingCallback`
+help do what you want, feel free to open an issue.
+
+Reporting Batch Loss
+~~~~~~~~~~~~~~~~~~~~
 It was suggested in `Issue #333 <https://github.com/pykeen/pykeen/issues/333>`_ that it might
 be useful to log all batch losses. This could be accomplished with the following:
 
@@ -19,17 +25,49 @@ be useful to log all batch losses. This could be accomplished with the following
     class BatchLossReportCallback(TrainingCallback):
         def on_batch(self, epoch: int, batch, batch_loss: float):
             print(epoch, batch_loss)
+
+Implementing Gradient Clipping
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+`Gradient
+clipping <https://neptune.ai/blog/understanding-gradient-clipping-and-how-it-can-fix-exploding-gradients-problem>`_
+is one technique used to avoid the exploding gradient problem. Despite it being a very simple, it has several
+`theoretical implications <https://openreview.net/forum?id=BJgnXpVYwS>`_.
+
+In order to reproduce the reference experiments on R-GCN performed by [schlichtkrull2018]_,
+gradient clipping must be used before each step of the optimizer. The following example shows how
+to implement a gradient clipping callback:
+
+.. code-block:: python
+
+    from pykeen.training import TrainingCallback
+    from pykeen.nn.utils import clip_grad_value_
+
+    class GradientClippingCallback(TrainingCallback):
+        def __init__(self, clip_value: float = 1.0):
+            super().__init__()
+            self.clip_value = clip_value
+
+        def pre_step(self, **kwargs: Any):
+            clip_grad_value_(self.model.parameters(), clip_value=self.clip_value)
 """
 
-from typing import Any, Collection, List, Union
+from typing import Any, List, Optional
 
-from ..trackers import ResultTracker
+from class_resolver import HintOrType, OptionalKwargs, Resolver
+from torch.nn.utils import clip_grad_norm_, clip_grad_value_
+
+from ..evaluation import Evaluator, evaluator_resolver
+from ..trackers import ResultTracker, tracker_resolver
+from ..typing import MappedTriples, OneOrSequence
 
 __all__ = [
     "TrainingCallbackHint",
     "TrainingCallback",
-    "TrackerCallback",
+    "TrackerTrainingCallback",
+    "EvaluationTrainingCallback",
     "MultiTrainingCallback",
+    "GradientNormClippingTrainingCallback",
+    "GradientAbsClippingTrainingCallback",
 ]
 
 
@@ -69,6 +107,9 @@ class TrainingCallback:
     def on_batch(self, epoch: int, batch, batch_loss: float, **kwargs: Any) -> None:
         """Call for training batches."""
 
+    def pre_step(self, **kwargs: Any) -> None:
+        """Call before the optimizer's step."""
+
     def post_batch(self, epoch: int, batch, **kwargs: Any) -> None:
         """Call for training batches."""
 
@@ -79,20 +120,156 @@ class TrainingCallback:
         """Call after training."""
 
 
-class TrackerCallback(TrainingCallback):
-    """An adapter for the :class:`pykeen.trackers.ResultTracker`."""
+class TrackerTrainingCallback(TrainingCallback):
+    """
+    An adapter for the :class:`pykeen.trackers.ResultTracker`.
+
+    It logs the loss after each epoch to the given result tracker,
+    """
 
     def __init__(self, result_tracker: ResultTracker):
+        """
+        Initialize the callback.
+
+        :param result_tracker:
+            The result tracker to which the loss is logged.
+        """
         super().__init__()
         self.result_tracker = result_tracker
 
-    def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:
-        """Log the epoch and loss."""
+    def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
         self.result_tracker.log_metrics({"loss": epoch_loss}, step=epoch)
 
 
+class GradientNormClippingTrainingCallback(TrainingCallback):
+    """A callback for gradient clipping before stepping the optimizer with :func:`torch.nn.utils.clip_grad_norm_`."""
+
+    def __init__(self, max_norm: float, norm_type: Optional[float] = None):
+        """
+        Initialize the callback.
+
+        :param max_norm:
+            The maximum gradient norm for use with gradient clipping.
+        :param norm_type:
+            The gradient norm type to use for maximum gradient norm, cf. :func:`torch.nn.utils.clip_grad_norm_`
+        """
+        super().__init__()
+        self.max_norm = max_norm
+        self.norm_type = norm_type or 2.0
+
+    def pre_step(self, **kwargs: Any) -> None:  # noqa: D102
+        clip_grad_norm_(
+            parameters=self.model.get_grad_params(),
+            max_norm=self.max_norm,
+            norm_type=self.norm_type,
+            error_if_nonfinite=True,  # this will become default in future releases of pytorch
+        )
+
+
+class GradientAbsClippingTrainingCallback(TrainingCallback):
+    """A callback for gradient clipping before stepping the optimizer with :func:`torch.nn.utils.clip_grad_value_`."""
+
+    def __init__(self, clip_value: float):
+        """
+        Initialize the callback.
+
+        :param clip_value:
+            The maximum absolute value in gradients, cf. :func:`torch.nn.utils.clip_grad_value_`. If None, no
+            gradient clipping will be used.
+        """
+        super().__init__()
+        self.clip_value = clip_value
+
+    def pre_step(self, **kwargs: Any) -> None:  # noqa: D102
+        clip_grad_value_(self.model.get_grad_params(), clip_value=self.clip_value)
+
+
+class EvaluationTrainingCallback(TrainingCallback):
+    """
+    A callback for regular evaluation.
+
+    Example: evaluate training performance
+
+    .. code-block:: python
+
+        from pykeen.datasets import get_dataset
+        from pykeen.pipeline import pipeline
+
+        dataset = get_dataset(dataset="nations")
+        result = pipeline(
+            dataset=dataset,
+            model="mure",
+            training_kwargs=dict(
+                num_epochs=100,
+                callbacks="evaluation",
+                callback_kwargs=dict(
+                    evaluation_triples=dataset.training.mapped_triples,
+                    tracker="console",
+                    prefix="training",
+                ),
+            ),
+        )
+    """
+
+    def __init__(
+        self,
+        *,
+        evaluation_triples: MappedTriples,
+        frequency: int = 1,
+        tracker: HintOrType[ResultTracker] = None,
+        tracker_kwargs: OptionalKwargs = None,
+        evaluator: HintOrType[Evaluator] = None,
+        evaluator_kwargs: OptionalKwargs = None,
+        prefix: Optional[str] = None,
+        **kwargs,
+    ):
+        """
+        Initialize the callback.
+
+        :param evaluation_triples:
+            the triples on which to evaluate
+        :param frequency:
+            the evaluation frequency in epochs
+        :param tracker:
+            the result tracker to which results are logged, cf. `tracker_resolver`
+        :param tracker_kwargs:
+            additional keyword-based parameters for the result tracker
+        :param evaluator:
+            the evaluator to use for evaluation, cf. `evaluator_resolver`
+        :param evaluator_kwargs:
+            additional keyword-based parameters for the evaluator
+        :param prefix:
+            the prefix to use for logging the metrics
+        :param kwargs:
+            additional keyword-based parameters passed to `evaluate`
+        """
+        super().__init__()
+        self.frequency = frequency
+        self.evaluation_triples = evaluation_triples
+        self.tracker = tracker_resolver.make(tracker, tracker_kwargs)
+        self.evaluator = evaluator_resolver.make(evaluator, evaluator_kwargs)
+        self.prefix = prefix
+        self.kwargs = kwargs
+
+    def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
+        if epoch % self.frequency:
+            return
+        result = self.evaluator.evaluate(
+            model=self.training_loop.model,
+            mapped_triples=self.evaluation_triples,
+            device=self.training_loop.device,
+            **self.kwargs,
+        )
+        self.tracker.log_metrics(metrics=result.to_flat_dict(), step=epoch, prefix=self.prefix)
+
+
+callback_resolver: Resolver[TrainingCallback] = Resolver.from_subclasses(
+    base=TrainingCallback,
+)
+
 #: A hint for constructing a :class:`MultiTrainingCallback`
-TrainingCallbackHint = Union[None, TrainingCallback, Collection[TrainingCallback]]
+TrainingCallbackHint = OneOrSequence[HintOrType[TrainingCallback]]
+TrainingCallbackKwargsHint = OneOrSequence[OptionalKwargs]
 
 
 class MultiTrainingCallback(TrainingCallback):
@@ -101,18 +278,28 @@ class MultiTrainingCallback(TrainingCallback):
     #: A collection of callbacks
     callbacks: List[TrainingCallback]
 
-    def __init__(self, callbacks: TrainingCallbackHint = None) -> None:
-        """Initialize the callback."""
-        super().__init__()
-        if callbacks is None:
-            self.callbacks = []
-        elif isinstance(callbacks, TrainingCallback):
-            self.callbacks = [callbacks]
-        else:
-            self.callbacks = list(callbacks)
+    def __init__(
+        self,
+        callbacks: TrainingCallbackHint = None,
+        callback_kwargs: TrainingCallbackKwargsHint = None,
+    ) -> None:
+        """
+        Initialize the callback.
 
-    def register_training_loop(self, loop) -> None:
-        """Register the training loop."""
+        .. note ::
+            the constructor allows "broadcasting" of callbacks, i.e., proving a single callback,
+            but a list of callback kwargs. In this case, for each element of this list the given
+            callback is instantiated.
+
+        :param callbacks:
+            the callbacks
+        :param callback_kwargs:
+            additional keyword-based parameters for instantiating the callbacks
+        """
+        super().__init__()
+        self.callbacks = callback_resolver.make_many(callbacks, callback_kwargs) if callbacks else []
+
+    def register_training_loop(self, loop) -> None:  # noqa: D102
         super().register_training_loop(training_loop=loop)
         for callback in self.callbacks:
             callback.register_training_loop(training_loop=loop)
@@ -123,22 +310,22 @@ class MultiTrainingCallback(TrainingCallback):
         if self._training_loop is not None:
             callback.register_training_loop(self._training_loop)
 
-    def on_batch(self, epoch: int, batch, batch_loss: float, **kwargs: Any) -> None:
-        """Call for each batch."""
+    def on_batch(self, epoch: int, batch, batch_loss: float, **kwargs: Any) -> None:  # noqa: D102
         for callback in self.callbacks:
-            callback.on_batch(epoch=epoch, batch=batch, batch_loss=batch_loss)
+            callback.on_batch(epoch=epoch, batch=batch, batch_loss=batch_loss, **kwargs)
 
-    def post_batch(self, epoch: int, batch, **kwargs: Any) -> None:
-        """Call after each batch."""
+    def post_batch(self, epoch: int, batch, **kwargs: Any) -> None:  # noqa: D102
         for callback in self.callbacks:
-            callback.post_batch(epoch=epoch, batch=batch)
+            callback.post_batch(epoch=epoch, batch=batch, **kwargs)
 
-    def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:
-        """Call after epoch."""
+    def pre_step(self, **kwargs: Any) -> None:  # noqa: D102
         for callback in self.callbacks:
-            callback.post_epoch(epoch=epoch, epoch_loss=epoch_loss)
+            callback.pre_step(**kwargs)
 
-    def post_train(self, losses: List[float], **kwargs: Any) -> None:
-        """Call after training."""
+    def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
         for callback in self.callbacks:
-            callback.post_train(losses=losses)
+            callback.post_epoch(epoch=epoch, epoch_loss=epoch_loss, **kwargs)
+
+    def post_train(self, losses: List[float], **kwargs: Any) -> None:  # noqa: D102
+        for callback in self.callbacks:
+            callback.post_train(losses=losses, **kwargs)

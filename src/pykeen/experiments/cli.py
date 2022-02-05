@@ -12,7 +12,10 @@ from typing import Optional, Union
 from uuid import uuid4
 
 import click
+import tabulate
 from more_click import verbose_option
+
+from pykeen.utils import CONFIGURATION_FILE_FORMATS, load_configuration
 
 __all__ = [
     "experiments",
@@ -48,6 +51,12 @@ discard_replicates_option = click.option(
     is_flag=True,
     help="Discard trained models after training.",
 )
+extra_config_option = click.option(
+    "--extra-config",
+    type=pathlib.Path,
+    default=None,
+    help="Path to a file with additional configuration, e.g., to add a result tracker.",
+)
 
 
 @click.group()
@@ -55,7 +64,13 @@ def experiments():
     """Run landmark experiments."""
 
 
-@experiments.command()
+@experiments.command(
+    epilog="Available experiments:\n\n\b\n"
+    + tabulate.tabulate(
+        sorted(path.stem.split("_") for ext in CONFIGURATION_FILE_FORMATS for path in HERE.rglob(f"*{ext}")),
+        headers=("reference", "model", "dataset"),
+    ),
+)
 @click.argument("model")
 @click.argument("reference")
 @click.argument("dataset")
@@ -64,6 +79,7 @@ def experiments():
 @discard_replicates_option
 @directory_option
 @verbose_option
+@extra_config_option
 def reproduce(
     model: str,
     reference: str,
@@ -72,13 +88,20 @@ def reproduce(
     directory: str,
     move_to_cpu: bool,
     discard_replicates: bool,
+    extra_config: Optional[pathlib.Path],
 ):
     """Reproduce a pre-defined experiment included in PyKEEN.
 
     Example: $ pykeen experiments reproduce tucker balazevic2019 fb15k
     """
     file_name = f"{reference}_{model}_{dataset}"
-    path = HERE.joinpath(model, file_name).with_suffix(".json")
+    path = HERE.joinpath(model, file_name)
+    paths = {full_path for full_path in map(path.with_suffix, CONFIGURATION_FILE_FORMATS) if full_path.is_file()}
+    if len(paths) == 0:
+        raise FileNotFoundError("Could not find a configuration file.")
+    elif len(paths) > 1:
+        raise ValueError(f"Found multiple configuration files: {paths}")
+    path = next(iter(paths))
     _help_reproduce(
         directory=directory,
         path=path,
@@ -86,6 +109,7 @@ def reproduce(
         move_to_cpu=move_to_cpu,
         save_replicates=not discard_replicates,
         file_name=file_name,
+        extra_config=extra_config,
     )
 
 
@@ -95,12 +119,14 @@ def reproduce(
 @move_to_cpu_option
 @discard_replicates_option
 @directory_option
+@extra_config_option
 def run(
     path: str,
     replicates: int,
     directory: str,
     move_to_cpu: bool,
     discard_replicates: bool,
+    extra_config: Optional[pathlib.Path],
 ):
     """Run a single reproduction experiment."""
     _help_reproduce(
@@ -109,6 +135,7 @@ def run(
         directory=directory,
         move_to_cpu=move_to_cpu,
         save_replicates=not discard_replicates,
+        extra_config=extra_config,
     )
 
 
@@ -120,16 +147,16 @@ def _help_reproduce(
     move_to_cpu: bool = False,
     save_replicates: bool = True,
     file_name: Optional[str] = None,
+    extra_config: Optional[pathlib.Path] = None,
 ) -> None:
     """Help run the configuration at a given path.
 
     :param directory: Output directory
-    :param path: Path to configuration JSON file
+    :param path: Path to configuration JSON/YAML file
     :param replicates: How many times the experiment should be run
     :param move_to_cpu: Should the model be moved back to the CPU? Only relevant if training on GPU.
     :param save_replicates: Should the artifacts of the replicates be saved?
-    :param file_name: Name of JSON file (optional)
-    :return: None
+    :param file_name: Name of JSON/YAML file (optional)
     """
     from pykeen.pipeline import replicate_pipeline_from_path
 
@@ -153,6 +180,8 @@ def _help_reproduce(
     output_directory = directory.joinpath(experiment_id)
     output_directory.mkdir(exist_ok=True, parents=True)
 
+    extra_kwargs = {} if extra_config is None else load_configuration(path=extra_config)
+
     replicate_pipeline_from_path(
         path=path,
         directory=output_directory,
@@ -160,8 +189,9 @@ def _help_reproduce(
         use_testing_data=True,
         move_to_cpu=move_to_cpu,
         save_replicates=save_replicates,
+        **extra_kwargs,
     )
-    shutil.copyfile(path, os.path.join(output_directory, "configuration_copied.json"))
+    shutil.copyfile(path, output_directory.joinpath("configuration_copied").with_suffix(path.suffix))
 
 
 @experiments.command()

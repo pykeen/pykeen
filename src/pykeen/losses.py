@@ -644,6 +644,10 @@ class PairwiseLogisticLoss(SoftMarginRankingLoss):
     name: Pairwise logistic
     """
 
+    # Ensures that for this class incompatible hyper-parameter "margin" of superclass is not used
+    # within the ablation pipeline.
+    hpo_default: ClassVar[Mapping[str, Any]] = dict()
+
     def __init__(self, reduction: str = "mean"):
         super().__init__(margin=0.0, reduction=reduction)
 
@@ -970,6 +974,10 @@ class SoftplusLoss(SoftPointwiseHingeLoss):
     name: Softplus
     """
 
+    # Ensures that for this class incompatible hyper-parameter "margin" of superclass is not used
+    # within the ablation pipeline.
+    hpo_default: ClassVar[Mapping[str, Any]] = dict()
+
     def __init__(self, reduction: str = "mean") -> None:
         super().__init__(margin=0.0, reduction=reduction)
 
@@ -995,6 +1003,46 @@ class BCEAfterSigmoidLoss(PointwiseLoss):
         return functional.binary_cross_entropy(logits.sigmoid(), labels, **kwargs)
 
 
+def prepare_negative_scores_for_softmax(
+    batch_filter: Optional[torch.LongTensor],
+    negative_scores: torch.FloatTensor,
+    no_inf_rows: bool,
+) -> torch.FloatTensor:
+    """
+    Prepare negative scores for softmax.
+
+    To compute a softmax over negative scores, we may need to invert the filtering procedure
+    to get a dense regularly shaped tensor of shape `(batch_size, num_negatives)`.
+
+    :param negative_scores: shape: (batch_size, num_negatives) | (num_batch_negatives,)
+        the negative scores, which may have been filtered
+    :param batch_filter: shape: (batch_size, num_negatives)
+        the binary mask of corresponding to the non-filtered negative scores. If None, no
+        filtering did take place, and nothing has to be done.
+    :param no_inf_rows:
+        whether to avoid `-inf` rows (if a complete row has been filtered)
+
+    :return: shape: (batch_size, num_negatives)
+        a dense view of the negative scores, where previously filtered scores have been
+        re-filled as -inf.
+    """
+    if batch_filter is None:
+        return negative_scores
+
+    # negative_scores have already been filtered in the sampler!
+    # (dense) softmax requires unfiltered scores / masking
+    negative_scores_ = torch.zeros_like(batch_filter, dtype=negative_scores.dtype)
+    negative_scores_[batch_filter] = negative_scores
+    # we need to fill the scores with -inf for all filtered negative examples
+    # EXCEPT if all negative samples are filtered (since softmax over only -inf yields nan)
+    fill_mask = ~batch_filter
+    if no_inf_rows:
+        fill_mask = fill_mask & ~(fill_mask.all(dim=1, keepdim=True))
+    negative_scores_[fill_mask] = float("-inf")
+    # use filled negatives scores
+    return negative_scores_
+
+
 @parse_docdata
 class CrossEntropyLoss(SetwiseLoss):
     """A module for the cross entropy loss that evaluates the cross entropy after softmax output.
@@ -1007,18 +1055,51 @@ class CrossEntropyLoss(SetwiseLoss):
     name: Cross entropy
     """
 
-    def forward(
+    def process_slcwa_scores(
         self,
-        logits: torch.FloatTensor,
-        labels: torch.FloatTensor,
+        positive_scores: torch.FloatTensor,
+        negative_scores: torch.FloatTensor,
+        label_smoothing: Optional[float] = None,
+        batch_filter: Optional[torch.BoolTensor] = None,
+        num_entities: Optional[int] = None,
     ) -> torch.FloatTensor:  # noqa: D102
-        # cross entropy expects a proper probability distribution -> normalize labels
-        p_true = functional.normalize(labels, p=1, dim=-1)
-        # Use numerically stable variant to compute log(softmax)
-        log_p_pred = logits.log_softmax(dim=-1)
-        # compute cross entropy: ce(b) = sum_i p_true(b, i) * log p_pred(b, i)
-        sample_wise_cross_entropy = -(p_true * log_p_pred).sum(dim=-1)
-        return self._reduction_method(sample_wise_cross_entropy)
+        # we need dense negative scores => unfilter if necessary
+        negative_scores = prepare_negative_scores_for_softmax(
+            batch_filter=batch_filter,
+            negative_scores=negative_scores,
+            # we may have inf rows, since there will be one additional finite positive score per row
+            no_inf_rows=False,
+        )
+        # combine scores: shape: (batch_size, num_negatives + 1)
+        scores = torch.cat(
+            [
+                positive_scores,
+                negative_scores,
+            ],
+            dim=-1,
+        )
+        # use sparse version of cross entropy
+        true_indices = positive_scores.new_zeros(size=(positive_scores.shape[0],), dtype=torch.long)
+        return functional.cross_entropy(
+            input=scores,
+            target=true_indices,
+            label_smoothing=label_smoothing or 0.0,
+            reduction=self.reduction,
+        )
+
+    def process_lcwa_scores(
+        self,
+        predictions: torch.FloatTensor,
+        labels: torch.FloatTensor,
+        label_smoothing: Optional[float] = None,
+        num_entities: Optional[int] = None,
+    ) -> torch.FloatTensor:  # noqa: D102
+        return functional.cross_entropy(
+            input=predictions,
+            target=labels,
+            label_smoothing=label_smoothing or 0.0,
+            reduction=self.reduction,
+        )
 
 
 @parse_docdata
@@ -1096,20 +1177,15 @@ class NSSALoss(SetwiseLoss):
         if label_smoothing:
             raise UnsupportedLabelSmoothingError(self)
 
-        if batch_filter is not None:
-            # negative_scores have already been filtered in the sampler!
-            # (dense) softmax requires unfiltered scores / masking
-            negative_scores_ = torch.zeros_like(batch_filter, dtype=positive_scores.dtype)
-            negative_scores_[batch_filter] = negative_scores
-            # we need to fill the scores with -inf for all filtered negative examples
-            # EXCEPT if all negative samples are filtered (since softmax over only -inf yields nan)
-            fill_mask = ~batch_filter
-            fill_mask = fill_mask & ~(fill_mask.all(dim=1, keepdim=True))
-            negative_scores_[fill_mask] = float("-inf")
-            # use filled negatives scores
-            negative_scores = negative_scores_
+        negative_scores = prepare_negative_scores_for_softmax(
+            batch_filter=batch_filter,
+            negative_scores=negative_scores,
+            # we do not allow full -inf rows, since we compute the softmax over this tensor
+            no_inf_rows=True,
+        )
 
         # compute weights (without gradient tracking)
+        assert negative_scores.ndimension() == 2
         weights = negative_scores.detach().mul(self.inverse_softmax_temperature).softmax(dim=-1)
 
         return self(

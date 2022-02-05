@@ -184,6 +184,7 @@ the :class:`pykeen.datasets.Nations`
 """
 
 import ftplib
+import hashlib
 import json
 import logging
 import os
@@ -191,9 +192,10 @@ import pathlib
 import pickle
 import time
 from dataclasses import dataclass, field
-from typing import Any, Collection, Dict, Iterable, List, Mapping, MutableMapping, Optional, Type, Union, cast
+from typing import Any, Collection, Dict, Iterable, List, Mapping, MutableMapping, Optional, Tuple, Type, Union, cast
 
 import pandas as pd
+import scipy.stats
 import torch
 from torch.optim.optimizer import Optimizer
 
@@ -201,6 +203,7 @@ from ..constants import PYKEEN_CHECKPOINTS, USER_DEFINED_CODE
 from ..datasets import get_dataset
 from ..datasets.base import Dataset
 from ..evaluation import Evaluator, MetricResults, evaluator_resolver
+from ..evaluation.metrics import MetricKey
 from ..losses import Loss, loss_resolver
 from ..lr_schedulers import LRScheduler, lr_scheduler_resolver
 from ..models import Model, make_model_cls, model_resolver
@@ -209,16 +212,18 @@ from ..optimizers import optimizer_resolver
 from ..regularizers import Regularizer, regularizer_resolver
 from ..sampling import NegativeSampler, negative_sampler_resolver
 from ..stoppers import EarlyStopper, Stopper, stopper_resolver
-from ..trackers import ResultTracker, tracker_resolver
+from ..trackers import ResultTracker, resolve_result_trackers
 from ..training import SLCWATrainingLoop, TrainingLoop, training_loop_resolver
 from ..triples import CoreTriplesFactory
-from ..typing import Hint, HintType, MappedTriples
+from ..typing import Hint, HintType, MappedTriples, OneOrSequence
 from ..utils import (
     Result,
     ensure_ftp_directory,
     fix_dataclass_init_docs,
+    flatten_dictionary,
     get_json_bytes_io,
     get_model_io,
+    load_configuration,
     random_non_negative_int,
     resolve_device,
     set_random_seed,
@@ -235,6 +240,11 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
+
+
+def triple_hash(*triples: MappedTriples) -> Mapping[str, str]:
+    """Slow triple hash using sha512 and conversion to Python."""
+    return dict(sha512=hashlib.sha512(str(sorted(sum((t.tolist() for t in triples), []))).encode("utf8")).hexdigest())
 
 
 @fix_dataclass_init_docs
@@ -268,6 +278,9 @@ class PipelineResult(Result):
 
     #: An early stopper
     stopper: Optional[Stopper] = None
+
+    #: The configuration
+    configuration: Mapping[str, Any] = field(default_factory=dict)
 
     #: Any additional metadata as a dictionary
     metadata: MutableMapping[str, Any] = field(default_factory=dict)
@@ -472,28 +485,14 @@ class PipelineResult(Result):
 
 def replicate_pipeline_from_path(
     path: Union[str, pathlib.Path],
-    directory: Union[str, pathlib.Path],
-    replicates: int,
-    move_to_cpu: bool = False,
-    save_replicates: bool = True,
     **kwargs,
 ) -> None:
     """Run the same pipeline several times from a configuration file by path.
 
-    :param path: The path to the JSON configuration for the experiment.
-    :param directory: The output directory
-    :param replicates: The number of replicates to run.
-    :param move_to_cpu: Should the model be moved back to the CPU? Only relevant if training on GPU.
-    :param save_replicates: Should the artifacts of the replicates be saved?
-    :param kwargs: Keyword arguments to be passed through to :func:`pipeline_from_path`.
+    :param path: The path to the JSON/YAML configuration for the experiment.
+    :param kwargs: Keyword arguments to be passed through to :func:`replicate_pipeline_from_config`.
     """
-    pipeline_results = (pipeline_from_path(path, **kwargs) for _ in range(replicates))
-    save_pipeline_results_to_directory(
-        directory=directory,
-        pipeline_results=pipeline_results,
-        move_to_cpu=move_to_cpu,
-        save_replicates=save_replicates,
-    )
+    replicate_pipeline_from_config(config=load_configuration(path), **kwargs)
 
 
 def replicate_pipeline_from_config(
@@ -515,6 +514,7 @@ def replicate_pipeline_from_config(
     """
     pipeline_results = (pipeline_from_config(config, **kwargs) for _ in range(replicates))
     save_pipeline_results_to_directory(
+        config=config,
         directory=directory,
         pipeline_results=pipeline_results,
         move_to_cpu=move_to_cpu,
@@ -524,13 +524,98 @@ def replicate_pipeline_from_config(
 
 def _iterate_moved(pipeline_results: Iterable[PipelineResult]):
     for pipeline_result in pipeline_results:
-        pipeline_result.model.device = resolve_device("cpu")
-        pipeline_result.model.to_device_()
+        # note: torch.nn.Module.cpu() is in-place in contrast to torch.Tensor.cpu()
+        pipeline_result.model.cpu()
+        torch.cuda.empty_cache()
         yield pipeline_result
+
+
+class _ResultAccumulator:
+    """Private class to simplify result collection code."""
+
+    data: List[List[Any]]
+    keys: List[str]
+
+    def __init__(self) -> None:
+        """Initialize the accumulator."""
+        self.data = []
+        self.keys = []
+
+    def add_original_result(self, result: Mapping[str, Any]) -> None:
+        """Add an "original" result, i.e., one stored in the reproducibility configuration."""
+        # normalize keys
+        # TODO: this can only normalize rank-based metrics!
+        result = {MetricKey.normalize(k): v for k, v in flatten_dictionary(result).items()}
+        self.keys = sorted(result.keys())
+        self.data.append([True] + [result[k] for k in self.keys])
+
+    def parse_from_result(self, result: PipelineResult) -> None:
+        """
+        Parse a replicated result from a pipeline result.
+
+        .. note ::
+            Make sure to call add_original_result at least once before to initialize the metrics to collect.
+
+        :param result:
+            the pipeline result
+        """
+        row: List[Any] = [result.get_metric(key=key) for key in self.keys]
+        self.data.append([False] + row)
+
+    def is_non_empty(self) -> bool:
+        """Return whether there are keys."""
+        return len(self.keys) > 0
+
+    def get_df(self) -> pd.DataFrame:
+        """
+        Create dataframe of results.
+
+        Example:
+            | original | hits_at_10 |
+            | -------- | ---------- |
+            | True     | 0.85       |
+            | False    | 0.87       |
+            | False    | 0.83       |
+
+        The example uses abbreviated metric names, while the actual dataframe uses the long canonical version.
+
+        :return: original | metric1 | metric2 ...
+            a dataframe with the results of the original model and each replicate
+        """
+        return pd.DataFrame(data=self.data, columns=["original"] + self.keys)
+
+
+def compare_results(df: pd.DataFrame, significance_level: float = 0.01) -> pd.DataFrame:
+    """Compare original and replicated results."""
+    metrics = sorted(set(df.columns).difference(["original"]))
+    mean_result = df.groupby(by="original").agg("mean")
+    difference = mean_result.loc[False, metrics] - mean_result.loc[True, metrics]
+    original_mask = df["original"]
+    if original_mask.sum() == 1:
+        # only one original value => assume this to be the mean
+        test = scipy.stats.ttest_1samp
+        original = df.loc[original_mask].iloc[0]
+        kwargs = {}
+    else:
+        # multiple values => assume they correspond to individual trials
+        test = scipy.stats.ttest_ind
+        original = df.loc[original_mask]
+        kwargs = dict(
+            equal_var=False,
+        )
+    p_values = [test(df.loc[~original_mask, metric], original[metric], **kwargs).pvalue for metric in metrics]
+    return pd.DataFrame(
+        data=dict(
+            difference=difference,
+            p=p_values,
+            significant=[p < significance_level for p in p_values],
+        )
+    )
 
 
 def save_pipeline_results_to_directory(
     *,
+    config: Mapping[str, Any],
     directory: Union[str, pathlib.Path],
     pipeline_results: Iterable[PipelineResult],
     move_to_cpu: bool = False,
@@ -540,6 +625,7 @@ def save_pipeline_results_to_directory(
 ) -> None:
     """Save the result set to the directory.
 
+    :param config: The configuration.
     :param directory: The directory in which the replicates will be saved
     :param pipeline_results: An iterable over results from training and evaluation
     :param move_to_cpu: Should the model be moved back to the CPU? Only relevant if training on GPU.
@@ -556,6 +642,10 @@ def save_pipeline_results_to_directory(
     if move_to_cpu:
         pipeline_results = _iterate_moved(pipeline_results)
 
+    # metrics accumulates rows for a dataframe for comparison against the original reported results (if any)
+    result_comparator = _ResultAccumulator()
+    # TODO: we could have multiple results, if we get access to the raw results (e.g. in the pykeen benchmarking paper)
+    result_comparator.add_original_result(result=config.get("results", {}))
     for i, pipeline_result in enumerate(pipeline_results):
         replicate_directory = replicates_directory.joinpath(f"replicate-{i:0{width}}")
         replicate_directory.mkdir(exist_ok=True, parents=True)
@@ -566,25 +656,36 @@ def save_pipeline_results_to_directory(
         )
         for epoch, loss in enumerate(pipeline_result.losses):
             losses_rows.append((i, epoch, loss))
+        result_comparator.parse_from_result(result=pipeline_result)
 
     losses_df = pd.DataFrame(losses_rows, columns=["Replicate", "Epoch", "Loss"])
     losses_df.to_csv(directory.joinpath("all_replicates_losses.tsv"), sep="\t", index=False)
+
+    if result_comparator.is_non_empty():
+        metric_df = result_comparator.get_df()
+        metric_df.to_csv(directory.joinpath("all_replicates_metrics.tsv"), sep="\t", index=False)
+        logger.debug(f"metric results: {metric_df}")
+
+        compare_df = compare_results(metric_df)
+        compare_df.to_csv(directory.joinpath("comparison.tsv"), sep="\t", index=False)
+        # summarize
+        logger.info(compare_df.to_string())
 
 
 def pipeline_from_path(
     path: Union[str, pathlib.Path],
     **kwargs,
 ) -> PipelineResult:
-    """Run the pipeline with configuration in a JSON file at the given path.
+    """Run the pipeline with configuration in a JSON/YAML file at the given path.
 
-    :param path: The path to an experiment JSON file. The loaded JSON is passed to :func:`pipeline_from_config`.
+    :param path:
+        The path to an experiment configuration file. The loaded configuration is passed to
+        :func:`pipeline_from_config`.
     :param kwargs: Additional kwargs to forward to :func:`pipeline`.
     :return: The results of running the pipeline on the given configuration.
     """
-    with open(path) as file:
-        config = json.load(file)
     return pipeline_from_config(
-        config=config,
+        config=load_configuration(path),
         **kwargs,
     )
 
@@ -613,6 +714,18 @@ def pipeline_from_config(
     )
 
 
+def _get_model_defaults(model: Model) -> Mapping[str, Any]:
+    """Get the model's default parameters."""
+    return {
+        name: param.default
+        for name, param in model_resolver.signature(model).parameters.items()
+        # skip special parameters
+        if name != "self"
+        and param.kind not in {param.VAR_POSITIONAL, param.VAR_KEYWORD}
+        and param.default != param.empty
+    }
+
+
 def _build_model_helper(
     *,
     model,
@@ -624,33 +737,44 @@ def _build_model_helper(
     regularizer,
     regularizer_kwargs,
     training_triples_factory,
-) -> Model:
+) -> Tuple[Model, Mapping[str, Any]]:
+    """Collate model-specific parameters and initialize the model from it."""
     if model_kwargs is None:
         model_kwargs = {}
     model_kwargs = dict(model_kwargs)
-    model_kwargs.update(preferred_device=_device)
     model_kwargs.setdefault("random_seed", _random_seed)
 
     if regularizer is not None:
         # FIXME this should never happen.
         if "regularizer" in model_kwargs:
-            logger.warning("Can not specify regularizer in kwargs and model_kwargs. removing from model_kwargs")
-            del model_kwargs["regularizer"]
+            _regularizer = model_kwargs.pop("regularizer")
+            logger.warning(
+                f"Cannot specify regularizer in kwargs ({regularizer}) and model_kwargs ({_regularizer})."
+                "removing from model_kwargs",
+            )
         model_kwargs["regularizer"] = regularizer_resolver.make(regularizer, regularizer_kwargs)
 
     if "loss" in model_kwargs:
+        _loss = model_kwargs.pop("loss")
         if loss is None:
-            loss = model_kwargs.pop("loss")
+            loss = _loss
         else:
-            logger.warning("duplicate loss in kwargs and model_kwargs. removing from model_kwargs")
-            del model_kwargs["loss"]
-    loss_instance = loss_resolver.make(loss, loss_kwargs)
+            logger.warning(
+                f"Cannot specify loss in kwargs ({loss}) and model_kwargs ({_loss}). removing from model_kwargs.",
+            )
+    model_kwargs["loss"] = loss_resolver.make(loss, loss_kwargs)
 
-    return model_resolver.make(
-        model,
-        triples_factory=training_triples_factory,
-        loss=loss_instance,
-        **model_kwargs,
+    if not isinstance(model, Model):
+        for param_name, param_default in _get_model_defaults(model).items():
+            model_kwargs.setdefault(param_name, param_default)
+
+    return (
+        model_resolver.make(
+            model,
+            triples_factory=training_triples_factory,
+            **model_kwargs,
+        ),
+        model_kwargs,
     )
 
 
@@ -698,8 +822,8 @@ def pipeline(  # noqa: C901
     evaluator_kwargs: Optional[Mapping[str, Any]] = None,
     evaluation_kwargs: Optional[Mapping[str, Any]] = None,
     # 9. Tracking
-    result_tracker: HintType[ResultTracker] = None,
-    result_tracker_kwargs: Optional[Mapping[str, Any]] = None,
+    result_tracker: Optional[OneOrSequence[HintType[ResultTracker]]] = None,
+    result_tracker_kwargs: Optional[OneOrSequence[Optional[Mapping[str, Any]]]] = None,
     # Misc
     metadata: Optional[Dict[str, Any]] = None,
     device: Hint[torch.device] = None,
@@ -797,10 +921,12 @@ def pipeline(  # noqa: C901
     :param evaluation_kwargs:
         Keyword arguments to pass to the evaluator's evaluate function on call
 
-    :param result_tracker:
-        The ResultsTracker class or name
-    :param result_tracker_kwargs:
-        The keyword arguments passed to the results tracker on instantiation
+    :param result_tracker: Either none (will result in a Python result tracker),
+        a single tracker (as either a class, instance, or string for class name), or a list
+        of trackers (as either a class, instance, or string for class name
+    :param result_tracker_kwargs: Either none (will use all defaults), a single dictionary
+        (will be used for all trackers), or a list of dictionaries with the same length
+        as the result trackers
 
     :param metadata:
         A JSON dictionary to store with the experiment
@@ -863,7 +989,7 @@ def pipeline(  # noqa: C901
         _random_seed = random_seed  # random seed given successfully
     set_random_seed(_random_seed)
 
-    _result_tracker = tracker_resolver.make(result_tracker, result_tracker_kwargs)
+    _result_tracker = resolve_result_trackers(result_tracker, result_tracker_kwargs)
 
     if not metadata:
         metadata = {}
@@ -873,6 +999,7 @@ def pipeline(  # noqa: C901
     _result_tracker.start_run(run_name=title)
 
     _device: torch.device = resolve_device(device)
+    logger.info(f"Using device: {device}")
 
     dataset_instance: Dataset = get_dataset(
         dataset=dataset,
@@ -882,7 +1009,12 @@ def pipeline(  # noqa: C901
         validation=validation,
     )
     if dataset is not None:
-        _result_tracker.log_params(dict(dataset=dataset_instance.get_normalized_name()))
+        _result_tracker.log_params(
+            dict(
+                dataset=dataset_instance.get_normalized_name(),
+                dataset_kwargs=dataset_kwargs,
+            )
+        )
     else:  # means that dataset was defined by triples factories
         _result_tracker.log_params(
             dict(
@@ -925,7 +1057,7 @@ def pipeline(  # noqa: C901
         # TODO should training be reset?
         # TODO should kwargs for loss and regularizer be checked and raised for?
     else:
-        model_instance = _build_model_helper(
+        model_instance, model_kwargs = _build_model_helper(
             model=model,
             model_kwargs=model_kwargs,
             loss=loss,
@@ -937,20 +1069,43 @@ def pipeline(  # noqa: C901
             training_triples_factory=training,
         )
 
+    model_instance = model_instance.to(_device)
+
     # Log model parameters
     _result_tracker.log_params(
-        params=dict(cls=model_instance.__class__.__name__, kwargs=model_kwargs),
-        prefix="model",
+        params=dict(
+            model=model_instance.__class__.__name__,
+            model_kwargs=model_kwargs,
+        ),
     )
 
+    # Log loss parameters
+    _result_tracker.log_params(
+        params=dict(
+            # the loss was already logged as part of the model kwargs
+            # loss=loss_resolver.normalize_inst(model_instance.loss),
+            loss_kwargs=loss_kwargs
+        ),
+    )
+
+    # Log regularizer parameters
+    _result_tracker.log_params(
+        params=dict(regularizer_kwargs=regularizer_kwargs),
+    )
+
+    optimizer_kwargs = dict(optimizer_kwargs or {})
     optimizer_instance = optimizer_resolver.make(
         optimizer,
         optimizer_kwargs,
         params=model_instance.get_grad_params(),
     )
+    for key, value in optimizer_instance.defaults.items():
+        optimizer_kwargs.setdefault(key, value)
     _result_tracker.log_params(
-        params=dict(cls=optimizer_instance.__class__.__name__, kwargs=optimizer_kwargs),
-        prefix="optimizer",
+        params=dict(
+            optimizer=optimizer_instance.__class__.__name__,
+            optimizer_kwargs=optimizer_kwargs,
+        ),
     )
 
     lr_scheduler_instance: Optional[LRScheduler]
@@ -963,8 +1118,10 @@ def pipeline(  # noqa: C901
             optimizer=optimizer_instance,
         )
         _result_tracker.log_params(
-            params=dict(cls=lr_scheduler_instance.__class__.__name__, kwargs=lr_scheduler_kwargs),
-            prefix="lr_scheduler",
+            params=dict(
+                lr_scheduler=lr_scheduler_instance.__class__.__name__,
+                lr_scheduler_kwargs=lr_scheduler_kwargs,
+            ),
         )
 
     training_loop_cls = training_loop_resolver.lookup(training_loop)
@@ -973,38 +1130,45 @@ def pipeline(  # noqa: C901
 
     if negative_sampler is None:
         negative_sampler_cls = None
-        training_loop_instance = training_loop_cls(
-            model=model_instance,
-            triples_factory=training,
-            optimizer=optimizer_instance,
-            lr_scheduler=lr_scheduler_instance,
-            **training_loop_kwargs,
-        )
     elif not issubclass(training_loop_cls, SLCWATrainingLoop):
         raise ValueError("Can not specify negative sampler with LCWA")
     else:
         negative_sampler_cls = negative_sampler_resolver.lookup(negative_sampler)
-        _result_tracker.log_params(
-            params=dict(cls=negative_sampler_cls.__name__, kwargs=negative_sampler_kwargs),
-            prefix="negative_sampler",
-        )
-        training_loop_instance = SLCWATrainingLoop(
-            model=model_instance,
-            triples_factory=training,
-            optimizer=optimizer_instance,
+        training_loop_kwargs = dict(training_loop_kwargs)
+        training_loop_kwargs.update(
             negative_sampler=negative_sampler_cls,
             negative_sampler_kwargs=negative_sampler_kwargs,
-            **training_loop_kwargs,
         )
+        _result_tracker.log_params(
+            params=dict(
+                negative_sampler=negative_sampler_cls.__name__,
+                negative_sampler_kwargs=negative_sampler_kwargs,
+            ),
+        )
+    training_loop_instance = training_loop_cls(
+        model=model_instance,
+        triples_factory=training,
+        optimizer=optimizer_instance,
+        lr_scheduler=lr_scheduler_instance,
+        **training_loop_kwargs,
+    )
     _result_tracker.log_params(
-        params=dict(cls=training_loop_instance.__class__.__name__),
-        prefix="training_loop",
+        params=dict(
+            training_loop=training_loop_instance.__class__.__name__,
+            training_loop_kwargs=training_loop_kwargs,
+        ),
     )
 
     if evaluator_kwargs is None:
         evaluator_kwargs = {}
     evaluator_kwargs = dict(evaluator_kwargs)
     evaluator_instance: Evaluator = evaluator_resolver.make(evaluator, evaluator_kwargs)
+    _result_tracker.log_params(
+        params=dict(
+            evaluator=evaluator_instance.__class__.__name__,
+            evaluator_kwargs=evaluator_kwargs,
+        ),
+    )
 
     if evaluation_kwargs is None:
         evaluation_kwargs = {}
@@ -1040,35 +1204,13 @@ def pipeline(  # noqa: C901
         training_kwargs["use_tqdm"] = use_tqdm
     training_kwargs.setdefault("num_epochs", 5)
     training_kwargs.setdefault("batch_size", 256)
-    _result_tracker.log_params(params=training_kwargs, prefix="training")
+    _result_tracker.log_params(params=training_kwargs)
 
     # Add logging for debugging
+    configuration = _result_tracker.get_configuration()
     logging.debug("Run Pipeline based on following config:")
-    if dataset is not None:
-        logging.debug(f"dataset: {dataset}")
-        logging.debug(f"dataset_kwargs: {dataset_kwargs}")
-    else:
-        logging.debug("training: %s", training)
-        logging.debug("testing: %s", testing)
-        if validation:
-            logging.debug("validation: %s", validation)
-    logging.debug(f"model: {model_instance}")
-    logging.debug(f"model_kwargs: {model_kwargs}")
-    logging.debug(f"loss: {model_instance.loss}")
-    logging.debug(f"loss_kwargs: {loss_kwargs}")
-    logging.debug(f"regularizer: {regularizer}")
-    logging.debug(f"regularizer_kwargs: {regularizer_kwargs}")
-    logging.debug(f"optimizer: {optimizer}")
-    logging.debug(f"optimizer_kwargs: {optimizer_kwargs}")
-    logging.debug(f"training_loop: {training_loop_instance}")
-    if negative_sampler_cls is not None:
-        logging.debug(f"negative_sampler: {negative_sampler_cls}")
-        logging.debug(f"_negative_sampler_kwargs: {negative_sampler_kwargs}")
-    logging.debug(f"_training_kwargs: {training_kwargs}")
-    logging.debug(f"stopper: {stopper_instance}")
-    logging.debug(f"stopper_kwargs: {stopper_kwargs}")
-    logging.debug(f"evaluator: {evaluator}")
-    logging.debug(f"evaluator_kwargs: {evaluator_kwargs}")
+    for key, value in configuration.items():
+        logging.debug(f"{key}: {value}")
 
     # Train like Cristiano Ronaldo
     training_start_time = time.time()
@@ -1081,6 +1223,8 @@ def pipeline(  # noqa: C901
     )
     assert losses is not None  # losses is only none if it's doing search mode
     training_end_time = time.time() - training_start_time
+    step = training_kwargs.get("num_epochs")
+    _result_tracker.log_metrics(metrics=dict(total_training=training_end_time), step=step, prefix="times")
 
     if use_testing_data:
         mapped_triples = testing.mapped_triples
@@ -1090,13 +1234,17 @@ def pipeline(  # noqa: C901
         mapped_triples = validation.mapped_triples
 
     # Build up a list of triples if we want to be in the filtered setting
+    additional_filter_triples_names = dict()
     if evaluator_instance.filtered:
         additional_filter_triples: List[MappedTriples] = [
             training.mapped_triples,
         ]
+        additional_filter_triples_names["training"] = triple_hash(training.mapped_triples)
 
         # If the user gave custom "additional_filter_triples"
         popped_additional_filter_triples = evaluation_kwargs.pop("additional_filter_triples", [])
+        if popped_additional_filter_triples:
+            additional_filter_triples_names["custom"] = triple_hash(*popped_additional_filter_triples)
         if isinstance(popped_additional_filter_triples, (list, tuple)):
             additional_filter_triples.extend(popped_additional_filter_triples)
         elif torch.is_tensor(popped_additional_filter_triples):  # a single MappedTriple
@@ -1122,6 +1270,7 @@ def pipeline(  # noqa: C901
                     " described by (Bordes et al., 2013).",
                 )
             additional_filter_triples.append(validation.mapped_triples)
+            additional_filter_triples_names["validation"] = triple_hash(validation.mapped_triples)
 
         # TODO consider implications of duplicates
         evaluation_kwargs["additional_filter_triples"] = additional_filter_triples
@@ -1134,8 +1283,14 @@ def pipeline(  # noqa: C901
     if use_tqdm is not None:
         evaluation_kwargs["use_tqdm"] = use_tqdm
     # Add logging about evaluator for debugging
-    logging.debug("Evaluation will be run with following parameters:")
-    logging.debug(f"evaluation_kwargs: {evaluation_kwargs}")
+    _result_tracker.log_params(
+        params=dict(
+            evaluation_kwargs={
+                k: (additional_filter_triples_names if k == "additional_filter_triples" else v)
+                for k, v in evaluation_kwargs.items()
+            }
+        )
+    )
     evaluate_start_time = time.time()
     metric_results: MetricResults = _safe_evaluate(
         model=model_instance,
@@ -1145,9 +1300,10 @@ def pipeline(  # noqa: C901
         evaluation_fallback=evaluation_fallback,
     )
     evaluate_end_time = time.time() - evaluate_start_time
+    _result_tracker.log_metrics(metrics=dict(final_evaluation=evaluate_end_time), step=step, prefix="times")
     _result_tracker.log_metrics(
         metrics=metric_results.to_dict(),
-        step=training_kwargs.get("num_epochs"),
+        step=step,
     )
     _result_tracker.end_run()
 
@@ -1158,6 +1314,7 @@ def pipeline(  # noqa: C901
         training_loop=training_loop_instance,
         losses=losses,
         stopper=stopper_instance,
+        configuration=configuration,
         metric_results=metric_results,
         metadata=metadata,
         train_seconds=training_end_time,

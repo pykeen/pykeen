@@ -5,8 +5,10 @@
 import click
 
 from .. import model_resolver
+from ...constants import AGGREGATIONS
 from ...evaluation import evaluator_resolver
 from ...losses import loss_resolver
+from ...nn import tokenizer_resolver
 from ...optimizers import optimizer_resolver
 from ...stoppers import stopper_resolver
 from ...training import training_loop_resolver
@@ -87,6 +89,24 @@ CLI_OPTIONS = {
     "combination_dropout": click.option(
         "--combination-dropout",
         type=float,
+    ),
+    # NodePiece
+    "aggregation": click.option(
+        "--aggregation",
+        type=click.Choice(["mlp", *AGGREGATIONS]),
+    ),
+    "tokenizers": tokenizer_resolver.get_option(
+        "--tokenizers",
+        multiple=True,
+        as_string=True,
+    ),
+    "num_tokens": click.option(
+        "--num-tokens",
+        type=int,
+        default=[2],
+        multiple=True,
+        show_default=True,
+        help="The number of tokens",
     ),
 }
 

@@ -3,7 +3,7 @@
 """Implementation of TransR."""
 
 from functools import partial
-from typing import Any, ClassVar, Mapping
+from typing import Any, ClassVar, Mapping, Optional
 
 import torch
 import torch.autograd
@@ -166,7 +166,7 @@ class TransR(EntityRelationEmbeddingModel):
 
         return self.interaction_function(h=h, r=r, t=t, m_r=m_r).view(-1, 1)
 
-    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_t(self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(indices=hr_batch[:, 0]).unsqueeze(dim=1)
         r = self.relation_embeddings(indices=hr_batch[:, 1]).unsqueeze(dim=1)
@@ -175,7 +175,7 @@ class TransR(EntityRelationEmbeddingModel):
 
         return self.interaction_function(h=h, r=r, t=t, m_r=m_r)
 
-    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_h(self, rt_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(indices=None).unsqueeze(dim=0)
         r = self.relation_embeddings(indices=rt_batch[:, 0]).unsqueeze(dim=1)

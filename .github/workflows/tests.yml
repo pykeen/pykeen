@@ -65,7 +65,7 @@ jobs:
       - name: Check documentation build with Sphinx
         run: |
           sudo apt-get install graphviz
-          tox -e docs
+          tox -e docs-test
   tests:
     if: "contains(github.event.head_commit.message, 'Trigger CI')"
     name: Tests

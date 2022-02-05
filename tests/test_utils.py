@@ -31,7 +31,6 @@ from pykeen.utils import (
     split_complex,
     tensor_product,
     tensor_sum,
-    torch_is_in_1d,
 )
 
 
@@ -47,11 +46,11 @@ class TestCompose(unittest.TestCase):
         def _g(x):
             return 2 * x
 
-        fog = compose(_f, _g)
+        fog = compose(_f, _g, name="fog")
         for i in range(5):
             with self.subTest(i=i):
                 self.assertEqual(_g(_f(i)), fog(i))
-                self.assertEqual(_g(_f(i ** 2)), fog(i ** 2))
+                self.assertEqual(_g(_f(i**2)), fog(i**2))
 
 
 class FlattenDictionaryTest(unittest.TestCase):
@@ -139,18 +138,6 @@ class TestGetUntilFirstBlank(unittest.TestCase):
         self.assertEqual("Broken line.", r)
 
 
-def _get_torch_is_in_1d_result_naive(
-    query_tensor: torch.LongTensor,
-    test_tensor: torch.LongTensor,
-    invert: bool = False,
-) -> torch.BoolTensor:
-    """Compute the result of torch_is_in_1d naively."""
-    mask = (test_tensor.view(-1, *(1 for _ in query_tensor.shape)) == query_tensor.unsqueeze(dim=0)).any(dim=0)
-    if invert:
-        mask = ~mask
-    return mask
-
-
 def _generate_shapes(
     n_dim: int = 5,
     n_terms: int = 4,
@@ -206,29 +193,6 @@ class TestUtils(unittest.TestCase):
                     norm = x.norm(p=p, dim=dim)
                     mask = torch.stack([(norm < max_norm)] * x.shape[dim], dim=dim)
                     assert (x_c[mask] == x[mask]).all()
-
-    def test_torch_is_in_1d(self):
-        """Test torch_is_in_1d."""
-        max_id = 33
-        num_tests = 5
-        test_tensor = torch.randint(max_id, size=(num_tests,))
-        query_sizes = [(7,), (2, 3)]
-        for query_size in query_sizes:
-            # generate random query tensor
-            query_tensor = torch.randint(max_id, size=query_size)
-            for invert, provide_max_id, as_collection in itertools.product((False, True), repeat=3):
-                result = torch_is_in_1d(
-                    query_tensor=query_tensor,
-                    test_tensor=test_tensor.tolist() if as_collection else test_tensor,
-                    max_id=max_id if provide_max_id else None,
-                    invert=invert,
-                )
-                expected_result = _get_torch_is_in_1d_result_naive(
-                    query_tensor=query_tensor,
-                    test_tensor=test_tensor,
-                    invert=invert,
-                )
-                assert (result == expected_result).all()
 
     def test_complex_utils(self):
         """Test complex tensor utilities."""
