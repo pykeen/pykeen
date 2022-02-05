@@ -19,7 +19,7 @@ class MarginalDistributionBaselineTests(cases.EvaluationOnlyModelTestCase):
         assert torch.allclose(scores.sum(dim=1), torch.ones(self.batch_size))
 
 
-class OnlyRelationMarginalDistributionBaselineTests(pykeen.models.MarginalDistributionBaselineTests):
+class OnlyRelationMarginalDistributionBaselineTests(MarginalDistributionBaselineTests):
     """Tests for MarginalDistributionBaseline using only the relation margin."""
 
     kwargs = dict(
@@ -28,7 +28,7 @@ class OnlyRelationMarginalDistributionBaselineTests(pykeen.models.MarginalDistri
     )
 
 
-class OnlyEntityMarginalDistributionBaselineTests(pykeen.models.MarginalDistributionBaselineTests):
+class OnlyEntityMarginalDistributionBaselineTests(MarginalDistributionBaselineTests):
     """Tests for MarginalDistributionBaseline using only the entity margin."""
 
     kwargs = dict(
@@ -37,7 +37,7 @@ class OnlyEntityMarginalDistributionBaselineTests(pykeen.models.MarginalDistribu
     )
 
 
-class TrivialMarginalDistributionBaselineTests(pykeen.models.MarginalDistributionBaselineTests):
+class TrivialMarginalDistributionBaselineTests(MarginalDistributionBaselineTests):
     """Tests for MarginalDistributionBaseline not actually using a marginal distribution."""
 
     kwargs = dict(
