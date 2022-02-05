@@ -66,6 +66,29 @@ def marginal_score(
     return torch.from_numpy(scores.todense())
 
 
+def sparsify(
+    matrix: numpy.ndarray,
+    threshold: Optional[float] = None,
+) -> scipy.sparse.spmatrix:
+    """
+    Sparsify a matrix.
+
+    :param matrix: shape: (m, n)
+        the (dense) matrix
+    :param threshold:
+        the absolute threshold for sparsification
+
+    :return: shape: (m, n)
+        a sparsified matrix
+    """
+    if threshold is not None:
+        matrix = numpy.copy(matrix)
+        matrix[matrix < threshold] = 0.0
+    sparse = scipy.sparse.csr_matrix(matrix)
+    sparse.eliminate_zeros()
+    return sparse
+
+
 def get_relation_similarity(
     triples_factory: CoreTriplesFactory,
     to_inverse: bool = False,
@@ -84,30 +107,18 @@ def get_relation_similarity(
         ),
         shape=(triples_factory.num_relations, triples_factory.num_entities**2),
     )
-    if not to_inverse:
-        return _help_get_relation_similarity(r, r, threshold=threshold)
-
-    r2 = scipy.sparse.coo_matrix(
-        (
-            numpy.ones((mapped_triples.shape[0],), dtype=int),
+    if to_inverse:
+        r2 = scipy.sparse.coo_matrix(
             (
-                mapped_triples[:, 1],
-                triples_factory.num_entities * mapped_triples[:, 2] + mapped_triples[:, 0],
+                numpy.ones((mapped_triples.shape[0],), dtype=int),
+                (
+                    mapped_triples[:, 1],
+                    triples_factory.num_entities * mapped_triples[:, 2] + mapped_triples[:, 0],
+                ),
             ),
-        ),
-        shape=(triples_factory.num_relations, triples_factory.num_entities**2),
-    )
-    return _help_get_relation_similarity(r, r2, threshold=threshold)
+            shape=(triples_factory.num_relations, triples_factory.num_entities**2),
+        )
+    else:
+        r2 = r
 
-
-def _help_get_relation_similarity(
-    r: scipy.sparse.spmatrix,
-    r2: scipy.sparse.spmatrix,
-    threshold: Optional[float] = None,
-) -> scipy.sparse.csr_matrix:
-    sim = jaccard_similarity_scipy(a=r, b=r2)
-    if threshold is not None:
-        sim[sim < threshold] = 0.0
-    sim = scipy.sparse.csr_matrix(sim)
-    sim.eliminate_zeros()
-    return sim
+    return sparsify(jaccard_similarity_scipy(a=r, b=r2), threshold=threshold)
