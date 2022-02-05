@@ -180,13 +180,13 @@ class SoftInverseTripleBaseline(EvaluationOnlyModel):
             shape=(triples_factory.num_relations, triples_factory.num_entities),
         ).tocsr()
 
-    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa:D102
+    def score_t(self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:  # noqa:D102
         r = hr_batch[:, 1]
         scores = self.sim[r, :] @ self.rel_to_tail + self.sim_inv[r, :] @ self.rel_to_head
         scores = numpy.asarray(scores.todense())
         return torch.from_numpy(scores)
 
-    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa:D102
+    def score_h(self, rt_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:  # noqa:D102
         r = rt_batch[:, 0]
         scores = self.sim[r, :] @ self.rel_to_head + self.sim_inv[r, :] @ self.rel_to_tail
         scores = numpy.asarray(scores.todense())

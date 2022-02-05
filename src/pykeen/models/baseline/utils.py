@@ -105,8 +105,8 @@ def entity_pair_matrix(
     :return: shape: `(num_relations, num_entities ** 2)`
         a sparse matrix, where each row contains the one-hot encoded set of entity pairs
     """
-    # comment: we cannot use leakage.mapped_triples_to_sparse_matrices, since we need to 
-    #          retain the full column count, num_entities ** 2, for mapping back to entities 
+    # comment: we cannot use leakage.mapped_triples_to_sparse_matrices, since we need to
+    #          retain the full column count, num_entities ** 2, for mapping back to entities
     mapped_triples = numpy.asarray(triples_factory.mapped_triples)
     first, second = order
     return scipy.sparse.coo_matrix(
