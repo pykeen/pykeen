@@ -51,14 +51,15 @@ to implement a gradient clipping callback:
             clip_grad_value_(self.model.parameters(), clip_value=self.clip_value)
 """
 
+import pathlib
 from typing import Any, List, Optional
 
 from class_resolver import HintOrType, OptionalKwargs, Resolver
 from torch.nn.utils import clip_grad_norm_, clip_grad_value_
 
-from ..stoppers import Stopper
 from ..evaluation import Evaluator, evaluator_resolver
-from ..trackers import ResultTracker
+from ..stoppers import Stopper
+from ..trackers import ResultTracker, tracker_resolver
 from ..triples import CoreTriplesFactory
 from ..typing import MappedTriples, OneOrSequence
 
@@ -265,6 +266,7 @@ class EvaluationTrainingCallback(TrainingCallback):
         )
         self.tracker.log_metrics(metrics=result.to_flat_dict(), step=epoch, prefix=self.prefix)
 
+
 class StopperCallback(TrainingCallback):
     """An adapter for the :class:`pykeen.stopper.Stopper`."""
 
@@ -276,7 +278,7 @@ class StopperCallback(TrainingCallback):
         last_best_epoch: Optional[int] = None,
         best_epoch_model_file_path: Optional[pathlib.Path],
     ):
-        """"
+        """
         Initialize the callback.
 
         :param stopper:
