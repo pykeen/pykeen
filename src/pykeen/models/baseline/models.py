@@ -8,10 +8,9 @@ from typing import Optional
 import numpy
 import torch
 
-from .utils import entity_pair_matrix, get_csr_matrix, get_relation_similarity, marginal_score
+from .utils import get_csr_matrix, get_relation_similarity, marginal_score
 from ..base import Model
 from ...triples import CoreTriplesFactory
-from ...typing import COLUMN_HEAD, COLUMN_TAIL
 
 __all__ = [
     "EvaluationOnlyModel",
