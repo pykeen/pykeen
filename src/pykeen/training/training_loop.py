@@ -744,11 +744,12 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                     )  # type: ignore
                     last_checkpoint = time.time()
 
-            if self._should_stop and last_best_epoch is not None and best_epoch_model_file_path is not None:
-                self._load_state(path=best_epoch_model_file_path)
-                # Delete temporary best epoch model
-                if pathlib.Path.is_file(best_epoch_model_file_path):
-                    os.remove(best_epoch_model_file_path)
+            if self._should_stop:
+                if last_best_epoch is not None and best_epoch_model_file_path is not None:
+                    self._load_state(path=best_epoch_model_file_path)
+                    # Delete temporary best epoch model
+                    if pathlib.Path.is_file(best_epoch_model_file_path):
+                        os.remove(best_epoch_model_file_path)
                 return self.losses_per_epochs
 
         callback.post_train(losses=self.losses_per_epochs)
