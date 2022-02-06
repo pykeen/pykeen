@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Optional
 
 import click
+from class_resolver.contrib.optuna import sampler_resolver
 from click_default_group import DefaultGroup
 from tabulate import tabulate
 
@@ -27,7 +28,6 @@ from .datasets import dataset_resolver
 from .evaluation import evaluator_resolver, get_metric_list
 from .experiments.cli import experiments
 from .hpo.cli import optimize
-from .hpo.samplers import sampler_resolver
 from .losses import loss_resolver
 from .lr_schedulers import lr_scheduler_resolver
 from .models import ComplExLiteral, DistMultLiteral, DistMultLiteralGated, model_resolver

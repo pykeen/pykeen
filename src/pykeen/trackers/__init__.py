@@ -4,7 +4,7 @@
 
 from typing import Any, Mapping, Optional, Sequence
 
-from class_resolver import HintType, Resolver
+from class_resolver import ClassResolver, HintType
 
 from .base import ConsoleResultTracker, MultiResultTracker, PythonResultTracker, ResultTracker, TrackerHint
 from .file import CSVResultTracker, FileResultTracker, JSONResultTracker
@@ -35,7 +35,7 @@ __all__ = [
     "resolve_result_trackers",
 ]
 
-tracker_resolver: Resolver[ResultTracker] = Resolver.from_subclasses(
+tracker_resolver: ClassResolver[ResultTracker] = ClassResolver.from_subclasses(
     base=ResultTracker,
     default=ResultTracker,
     skip={FileResultTracker, MultiResultTracker},

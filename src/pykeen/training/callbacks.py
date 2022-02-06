@@ -54,7 +54,7 @@ to implement a gradient clipping callback:
 import pathlib
 from typing import Any, List, Optional
 
-from class_resolver import HintOrType, OptionalKwargs, Resolver
+from class_resolver import ClassResolver, HintOrType, OptionalKwargs
 from torch.nn.utils import clip_grad_norm_, clip_grad_value_
 
 from ..evaluation import Evaluator, evaluator_resolver
@@ -308,7 +308,7 @@ class StopperTrainingCallback(TrainingCallback):
             self.last_best_epoch = epoch
 
 
-callback_resolver: Resolver[TrainingCallback] = Resolver.from_subclasses(
+callback_resolver: ClassResolver[TrainingCallback] = ClassResolver.from_subclasses(
     base=TrainingCallback,
 )
 
