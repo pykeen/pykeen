@@ -457,17 +457,19 @@ class Model(nn.Module, ABC):
         self,
         hrt_batch: MappedTriples,
         target: Target,
-        **kwargs,
+        *,
+        slice_size: Optional[int] = None,
+        mode: Optional[InductiveMode],
     ) -> torch.FloatTensor:
         """Predict scores for the given target."""
         if target == LABEL_TAIL:
-            return self.predict_t(hrt_batch[:, 0:2], **kwargs)
+            return self.predict_t(hrt_batch[:, 0:2], slice_size=slice_size, mode=mode)
 
         if target == LABEL_RELATION:
-            return self.predict_r(hrt_batch[:, [0, 2]], **kwargs)
+            return self.predict_r(hrt_batch[:, [0, 2]], slice_size=slice_size, mode=mode)
 
         if target == LABEL_HEAD:
-            return self.predict_h(hrt_batch[:, 1:3], **kwargs)
+            return self.predict_h(hrt_batch[:, 1:3], slice_size=slice_size, mode=mode)
 
         raise ValueError(f"Unknown target={target}")
 
