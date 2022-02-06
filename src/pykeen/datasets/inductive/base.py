@@ -75,7 +75,10 @@ class InductiveDataset:
         print(self.summary_str(title=title, show_examples=show_examples), file=file)  # noqa:T001
 
     def __str__(self) -> str:  # noqa: D105
-        return f"{self.__class__.__name__}(Training num_entities={self.transductive_training.num_entities}, num_relations={self.transductive_training.num_relations})"
+        return (
+            f"{self.__class__.__name__}(Training num_entities={self.transductive_training.num_entities},"
+            f" num_relations={self.transductive_training.num_relations})"
+        )
 
 
 class LazyInductiveDataset(InductiveDataset):
@@ -83,7 +86,8 @@ class LazyInductiveDataset(InductiveDataset):
 
     #: The actual instance of the training factory, which is exposed to the user through `transductive_training`
     _transductive_training: Optional[TriplesFactory] = None
-    #: The actual instance of the inductive inference factory, which is exposed to the user through `inductive_inference`
+    #: The actual instance of the inductive inference factory,
+    #: which is exposed to the user through `inductive_inference`
     _inductive_inference: Optional[TriplesFactory] = None
     #: The actual instance of the testing factory, which is exposed to the user through `inductive_testing`
     _inductive_testing: Optional[TriplesFactory] = None
@@ -102,7 +106,7 @@ class LazyInductiveDataset(InductiveDataset):
 
     @property
     def inductive_inference(self) -> TriplesFactory:  # type:ignore # noqa: D401
-        """The inductive inference triples factory. MIGHT or MIGHT NOT share indices with the transductive train"""
+        """The inductive inference triples factory. MIGHT or MIGHT NOT share indices with the transductive train."""
         if not self._loaded:
             self._load()
         assert self._inductive_inference is not None
@@ -168,7 +172,9 @@ class LazyInductiveDataset(InductiveDataset):
 
 
 class DisjointInductivePathDataset(LazyInductiveDataset):
-    """Contains a lazy reference to a training, inductive inference, inductive testing, and inductive validation dataset.
+    """A disjoint inductive dataset specified by paths.
+
+    Contains a lazy reference to a training, inductive inference, inductive testing, and inductive validation dataset.
     In this dataset, inductive inference is disjoint with the transductive train
     """
 

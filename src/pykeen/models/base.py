@@ -194,12 +194,9 @@ class Model(nn.Module, ABC):
     def _reset_parameters_(self):  # noqa: D401
         """Reset all parameters of the model in-place."""
 
-    # @abstractmethod
-    def _get_entity_len(self, mode: InductiveMode) -> int:
+    @abstractmethod
+    def _get_entity_len(self, *, mode: Optional[InductiveMode]) -> int:
         """Get the number of entities depending on the mode parameters."""
-        # TODO
-        # raise NotImplementedError
-        return self.num_entities
 
     def post_parameter_update(self) -> None:
         """Has to be called after each parameter update."""
