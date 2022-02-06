@@ -8,11 +8,10 @@ from typing import Optional
 import numpy
 import torch
 
-from ...typing import Mode
-
 from .utils import get_csr_matrix, marginal_score
 from ..base import Model
 from ...triples import CoreTriplesFactory
+from ...typing import InductiveMode
 
 __all__ = [
     "EvaluationOnlyModel",
@@ -48,11 +47,13 @@ class EvaluationOnlyModel(Model, ABC):
         """Non-parametric models do not implement :meth:`Model.collect_regularization_term`."""
         raise RuntimeError
 
-    def score_hrt(self, hrt_batch: torch.LongTensor, mode: Mode = None):  # noqa:D102
+    def score_hrt(self, hrt_batch: torch.LongTensor, mode: InductiveMode = None):  # noqa:D102
         """Non-parametric models do not implement :meth:`Model.score_hrt`."""
         raise RuntimeError
 
-    def score_r(self, ht_batch: torch.LongTensor, slice_size: Optional[int] = None, mode: Mode = None):  # noqa:D102
+    def score_r(
+        self, ht_batch: torch.LongTensor, slice_size: Optional[int] = None, mode: InductiveMode = None
+    ):  # noqa:D102
         """Non-parametric models do not implement :meth:`Model.score_r`."""
         raise RuntimeError
 
@@ -129,7 +130,7 @@ class MarginalDistributionBaseline(EvaluationOnlyModel):
         self,
         hr_batch: torch.LongTensor,
         slice_size: Optional[int] = None,
-        mode: Mode = None,
+        mode: InductiveMode = None,
     ) -> torch.FloatTensor:  # noqa:D102
         if mode is not None:
             raise ValueError(f"mode={mode} is not supported")
@@ -144,7 +145,7 @@ class MarginalDistributionBaseline(EvaluationOnlyModel):
         self,
         rt_batch: torch.LongTensor,
         slice_size: Optional[int] = None,
-        mode: Mode = None,
+        mode: InductiveMode = None,
     ) -> torch.FloatTensor:  # noqa:D102
         if mode is not None:
             raise ValueError(f"mode={mode} is not supported")

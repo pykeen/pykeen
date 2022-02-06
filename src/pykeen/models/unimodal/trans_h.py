@@ -13,7 +13,7 @@ from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.emb import Embedding, EmbeddingSpecification
 from ...regularizers import Regularizer, TransHRegularizer
-from ...typing import Hint, Initializer, Mode
+from ...typing import Hint, InductiveMode, Initializer
 
 __all__ = [
     "TransH",
@@ -130,7 +130,9 @@ class TransH(EntityRelationEmbeddingModel):
             self.relation_embeddings(indices=None),
         )
 
-    def score_hrt(self, hrt_batch: torch.LongTensor, mode: Optional[Mode] = None) -> torch.FloatTensor:  # noqa: D102
+    def score_hrt(
+        self, hrt_batch: torch.LongTensor, mode: Optional[InductiveMode] = None
+    ) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(indices=hrt_batch[:, 0])
         d_r = self.relation_embeddings(indices=hrt_batch[:, 1])
@@ -150,7 +152,7 @@ class TransH(EntityRelationEmbeddingModel):
         self,
         hr_batch: torch.LongTensor,
         slice_size: Optional[int] = None,
-        mode: Optional[Mode] = None,
+        mode: Optional[InductiveMode] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(indices=hr_batch[:, 0])
@@ -171,7 +173,7 @@ class TransH(EntityRelationEmbeddingModel):
         self,
         rt_batch: torch.LongTensor,
         slice_size: Optional[int] = None,
-        mode: Optional[Mode] = None,
+        mode: Optional[InductiveMode] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(indices=None)

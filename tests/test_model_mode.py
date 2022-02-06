@@ -13,7 +13,7 @@ from pykeen.datasets import Nations
 from pykeen.models import EntityRelationEmbeddingModel, Model, TransE
 from pykeen.nn.emb import EmbeddingSpecification
 from pykeen.triples import TriplesFactory
-from pykeen.typing import Mode
+from pykeen.typing import InductiveMode
 from pykeen.utils import resolve_device
 
 
@@ -173,7 +173,9 @@ class SimpleInteractionModel(EntityRelationEmbeddingModel):
         self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
         self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
 
-    def score_hrt(self, hrt_batch: torch.LongTensor, mode: Optional[Mode] = None) -> torch.FloatTensor:  # noqa: D102
+    def score_hrt(
+        self, hrt_batch: torch.LongTensor, mode: Optional[InductiveMode] = None
+    ) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(hrt_batch[:, 0])
         r = self.relation_embeddings(hrt_batch[:, 1])

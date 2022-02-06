@@ -11,7 +11,7 @@ import torch
 
 from .base import Model
 from ..triples import CoreTriplesFactory
-from ..typing import Mode
+from ..typing import InductiveMode
 
 __all__ = [
     "FixedModel",
@@ -50,7 +50,7 @@ class FixedModel(Model):
     def collect_regularization_term(self):  # noqa: D102
         return 0.0
 
-    def _get_entity_len(self, mode: Mode) -> int:
+    def _get_entity_len(self, mode: InductiveMode) -> int:
         return self.num_entities
 
     def _reset_parameters_(self):  # noqa: D102
@@ -68,7 +68,7 @@ class FixedModel(Model):
     def score_hrt(
         self,
         hrt_batch: torch.LongTensor,
-        mode: Optional[Mode] = None,
+        mode: Optional[InductiveMode] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         return self._generate_fake_scores(*hrt_batch.t()).unsqueeze(dim=-1)
 
@@ -76,7 +76,7 @@ class FixedModel(Model):
         self,
         hr_batch: torch.LongTensor,
         slice_size: Optional[int] = None,
-        mode: Optional[Mode] = None,
+        mode: Optional[InductiveMode] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         return self._generate_fake_scores(
             h=hr_batch[:, 0:1],
@@ -88,7 +88,7 @@ class FixedModel(Model):
         self,
         ht_batch: torch.LongTensor,
         slice_size: Optional[int] = None,
-        mode: Optional[Mode] = None,
+        mode: Optional[InductiveMode] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         return self._generate_fake_scores(
             h=ht_batch[:, 0:1],
@@ -100,7 +100,7 @@ class FixedModel(Model):
         self,
         rt_batch: torch.LongTensor,
         slice_size: Optional[int] = None,
-        mode: Optional[Mode] = None,
+        mode: Optional[InductiveMode] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         return self._generate_fake_scores(
             h=torch.arange(self.num_entities, device=rt_batch.device).unsqueeze(dim=0),

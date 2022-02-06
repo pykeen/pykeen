@@ -11,7 +11,7 @@ from torch import linalg
 from ..base import EntityRelationEmbeddingModel
 from ...nn.emb import EmbeddingSpecification
 from ...nn.init import init_phases, xavier_uniform_
-from ...typing import Constrainer, Hint, Initializer, Mode
+from ...typing import Constrainer, Hint, InductiveMode, Initializer
 from ...utils import complex_normalize
 
 __all__ = [
@@ -122,7 +122,9 @@ class RotatE(EntityRelationEmbeddingModel):
 
         return scores
 
-    def score_hrt(self, hrt_batch: torch.LongTensor, mode: Optional[Mode] = None) -> torch.FloatTensor:  # noqa: D102
+    def score_hrt(
+        self, hrt_batch: torch.LongTensor, mode: Optional[InductiveMode] = None
+    ) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(indices=hrt_batch[:, 0]).view(-1, self.real_embedding_dim, 2)
         r = self.relation_embeddings(indices=hrt_batch[:, 1]).view(-1, self.real_embedding_dim, 2)
@@ -140,7 +142,7 @@ class RotatE(EntityRelationEmbeddingModel):
         self,
         hr_batch: torch.LongTensor,
         slice_size: Optional[int] = None,
-        mode: Optional[Mode] = None,
+        mode: Optional[InductiveMode] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(indices=hr_batch[:, 0]).view(-1, 1, self.real_embedding_dim, 2)
@@ -161,7 +163,7 @@ class RotatE(EntityRelationEmbeddingModel):
         self,
         rt_batch: torch.LongTensor,
         slice_size: Optional[int] = None,
-        mode: Optional[Mode] = None,
+        mode: Optional[InductiveMode] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         r = self.relation_embeddings(indices=rt_batch[:, 0]).view(-1, 1, self.real_embedding_dim, 2)

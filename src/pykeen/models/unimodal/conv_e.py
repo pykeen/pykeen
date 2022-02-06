@@ -17,7 +17,7 @@ from ...nn.emb import Embedding, EmbeddingSpecification
 from ...nn.init import xavier_normal_
 from ...nn.modules import _calculate_missing_shape_information
 from ...triples import CoreTriplesFactory
-from ...typing import Hint, Initializer, Mode
+from ...typing import Hint, InductiveMode, Initializer
 from ...utils import is_cudnn_error
 
 __all__ = [
@@ -284,7 +284,9 @@ class ConvE(EntityRelationEmbeddingModel):
 
         return x
 
-    def score_hrt(self, hrt_batch: torch.LongTensor, mode: Optional[Mode] = None) -> torch.FloatTensor:  # noqa: D102
+    def score_hrt(
+        self, hrt_batch: torch.LongTensor, mode: Optional[InductiveMode] = None
+    ) -> torch.FloatTensor:  # noqa: D102
         h = self.entity_embeddings(indices=hrt_batch[:, 0]).view(
             -1,
             self.input_channels,
@@ -321,7 +323,7 @@ class ConvE(EntityRelationEmbeddingModel):
         self,
         hr_batch: torch.LongTensor,
         slice_size: Optional[int] = None,
-        mode: Optional[Mode] = None,
+        mode: Optional[InductiveMode] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         h = self.entity_embeddings(indices=hr_batch[:, 0]).view(
             -1,
@@ -352,7 +354,7 @@ class ConvE(EntityRelationEmbeddingModel):
         self,
         rt_batch: torch.LongTensor,
         slice_size: Optional[int] = None,
-        mode: Optional[Mode] = None,
+        mode: Optional[InductiveMode] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         rt_batch_size = rt_batch.shape[0]
         h = self.entity_embeddings(indices=None)

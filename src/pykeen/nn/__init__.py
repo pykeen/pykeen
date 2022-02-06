@@ -18,6 +18,7 @@ from .modules import (
     ERMLPEInteraction,
     ERMLPInteraction,
     HolEInteraction,
+    Interaction,
     KG2EInteraction,
     MonotonicAffineTransformationInteraction,
     MuREInteraction,
@@ -37,7 +38,6 @@ from .modules import (
     TripleREInteraction,
     TuckerInteraction,
     UMInteraction,
-    Interaction,
     interaction_resolver,
 )
 from .node_piece import NodePieceRepresentation, TokenizationRepresentationModule, tokenizer_resolver

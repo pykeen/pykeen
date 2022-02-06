@@ -10,7 +10,7 @@ import torch
 from .inductive_nodepiece import InductiveNodePiece
 from ..nbase import cast
 from ...nn.emb import CompGCNLayer
-from ...typing import HeadRepresentation, Mode, RelationRepresentation, TailRepresentation
+from ...typing import HeadRepresentation, InductiveMode, RelationRepresentation, TailRepresentation
 
 __all__ = [
     "InductiveNodePieceGNN",
@@ -91,7 +91,7 @@ class InductiveNodePieceGNN(InductiveNodePiece):
         h: Optional[torch.LongTensor],
         r: Optional[torch.LongTensor],
         t: Optional[torch.LongTensor],
-        mode: Mode = None,
+        mode: InductiveMode = None,
     ) -> Tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]:
         """Get representations for head, relation and tails, in canonical shape with a GNN encoder."""
         entity_representations = self._entity_representation_from_mode(mode=mode)

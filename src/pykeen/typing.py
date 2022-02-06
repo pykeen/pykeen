@@ -36,7 +36,7 @@ __all__ = [
     # Dataclasses
     "GaussianDistribution",
     "ScorePack",
-    "Mode",
+    "InductiveMode",
     # prediction targets
     "Target",
     "LABEL_HEAD",
@@ -104,7 +104,7 @@ class ScorePack(NamedTuple):
 
 
 Sign = Literal[-1, 1]
-Mode = Optional[Literal["training", "validation", "testing"]]
+InductiveMode = Literal["training", "validation", "testing"]
 
 #: the prediction target
 Target = Literal["head", "relation", "tail"]

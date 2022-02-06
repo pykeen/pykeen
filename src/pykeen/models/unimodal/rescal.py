@@ -11,7 +11,7 @@ from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.emb import EmbeddingSpecification
 from ...regularizers import LpRegularizer, Regularizer
-from ...typing import Hint, Initializer, Mode
+from ...typing import Hint, InductiveMode, Initializer
 
 __all__ = [
     "RESCAL",
@@ -88,7 +88,9 @@ class RESCAL(EntityRelationEmbeddingModel):
             **kwargs,
         )
 
-    def score_hrt(self, hrt_batch: torch.LongTensor, mode: Optional[Mode] = None) -> torch.FloatTensor:  # noqa: D102
+    def score_hrt(
+        self, hrt_batch: torch.LongTensor, mode: Optional[InductiveMode] = None
+    ) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         # shape: (b, d)
         h = self.entity_embeddings(indices=hrt_batch[:, 0]).unsqueeze(dim=1)
@@ -109,7 +111,7 @@ class RESCAL(EntityRelationEmbeddingModel):
         self,
         hr_batch: torch.LongTensor,
         slice_size: Optional[int] = None,
-        mode: Optional[Mode] = None,
+        mode: Optional[InductiveMode] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         h = self.entity_embeddings(indices=hr_batch[:, 0]).unsqueeze(dim=1)
         r = self.relation_embeddings(indices=hr_batch[:, 1])
@@ -127,7 +129,7 @@ class RESCAL(EntityRelationEmbeddingModel):
         self,
         rt_batch: torch.LongTensor,
         slice_size: Optional[int] = None,
-        mode: Optional[Mode] = None,
+        mode: Optional[InductiveMode] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         """Forward pass using left side (head) prediction."""
         # Get embeddings

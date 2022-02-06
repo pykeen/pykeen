@@ -22,7 +22,7 @@ from ..constants import TARGET_TO_INDEX
 from ..models import Model
 from ..triples.triples_factory import restrict_triples
 from ..triples.utils import get_entities, get_relations
-from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, MappedTriples, Mode, Target
+from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, InductiveMode, MappedTriples, Target
 from ..utils import (
     format_relative_comparison,
     is_cuda_oom_error,
@@ -84,7 +84,7 @@ class Evaluator(ABC):
         batch_size: Optional[int] = None,
         slice_size: Optional[int] = None,
         automatic_memory_optimization: bool = True,
-        mode: Mode = None,
+        mode: InductiveMode = None,
     ):
         """Initialize the evaluator.
 
@@ -523,7 +523,7 @@ def evaluate(
     do_time_consuming_checks: bool = True,
     additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
     pre_filtered_triples: bool = True,
-    mode: Mode = None,
+    mode: InductiveMode = None,
     targets: Collection[Target] = (LABEL_HEAD, LABEL_TAIL),
 ) -> Union[MetricResults, List[MetricResults]]:
     """Evaluate metrics for model on mapped triples.
@@ -703,7 +703,7 @@ def _evaluate_batch(
     all_pos_triples: Optional[MappedTriples],
     relation_filter: Optional[torch.BoolTensor],
     restrict_entities_to: Optional[torch.LongTensor],
-    mode: Mode = None,
+    mode: InductiveMode = None,
 ) -> torch.BoolTensor:
     """
     Evaluate ranking for batch.

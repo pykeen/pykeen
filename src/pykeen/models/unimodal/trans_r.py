@@ -14,7 +14,7 @@ from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.emb import Embedding, EmbeddingSpecification
 from ...nn.init import xavier_uniform_, xavier_uniform_norm_
-from ...typing import Constrainer, Hint, Initializer, Mode
+from ...typing import Constrainer, Hint, InductiveMode, Initializer
 from ...utils import clamp_norm
 
 __all__ = [
@@ -157,7 +157,9 @@ class TransR(EntityRelationEmbeddingModel):
         # evaluate score function, shape: (b, e)
         return -linalg.vector_norm(h_bot + r - t_bot, dim=-1) ** 2
 
-    def score_hrt(self, hrt_batch: torch.LongTensor, mode: Optional[Mode] = None) -> torch.FloatTensor:  # noqa: D102
+    def score_hrt(
+        self, hrt_batch: torch.LongTensor, mode: Optional[InductiveMode] = None
+    ) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(indices=hrt_batch[:, 0]).unsqueeze(dim=1)
         r = self.relation_embeddings(indices=hrt_batch[:, 1]).unsqueeze(dim=1)
@@ -170,7 +172,7 @@ class TransR(EntityRelationEmbeddingModel):
         self,
         hr_batch: torch.LongTensor,
         slice_size: Optional[int] = None,
-        mode: Optional[Mode] = None,
+        mode: Optional[InductiveMode] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(indices=hr_batch[:, 0]).unsqueeze(dim=1)
@@ -184,7 +186,7 @@ class TransR(EntityRelationEmbeddingModel):
         self,
         rt_batch: torch.LongTensor,
         slice_size: Optional[int] = None,
-        mode: Optional[Mode] = None,
+        mode: Optional[InductiveMode] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(indices=None).unsqueeze(dim=0)
