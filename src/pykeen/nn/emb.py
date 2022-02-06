@@ -15,6 +15,7 @@ import numpy as np
 import torch
 import torch.nn
 from class_resolver import FunctionResolver
+from class_resolver.contrib.torch import activation_resolver
 from torch import nn
 from torch.nn import functional
 
@@ -25,7 +26,7 @@ from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolv
 from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import CoreTriplesFactory, TriplesFactory
 from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer
-from ..utils import Bias, activation_resolver, clamp_norm, complex_normalize
+from ..utils import Bias, clamp_norm, complex_normalize
 
 __all__ = [
     "RepresentationModule",

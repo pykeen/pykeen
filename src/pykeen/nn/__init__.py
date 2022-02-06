@@ -2,7 +2,7 @@
 
 """PyKEEN internal "nn" module."""
 
-from class_resolver import Resolver
+from class_resolver import ClassResolver
 
 from . import init
 from .emb import Embedding, EmbeddingSpecification, RepresentationModule, SubsetRepresentationModule
@@ -87,7 +87,7 @@ __all__ = [
 ]
 
 
-representation_resolver: Resolver[RepresentationModule] = Resolver.from_subclasses(
+representation_resolver: ClassResolver[RepresentationModule] = ClassResolver.from_subclasses(
     base=RepresentationModule,
     default=Embedding,
 )

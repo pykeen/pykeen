@@ -37,7 +37,7 @@ import torch
 import torch.nn
 import torch.nn.modules.batchnorm
 import yaml
-from class_resolver import Resolver, normalize_string
+from class_resolver import normalize_string
 from torch import nn
 from torch.nn import functional
 
@@ -95,7 +95,6 @@ __all__ = [
     "convert_to_canonical_shape",
     "get_expected_norm",
     "Bias",
-    "activation_resolver",
     "complex_normalize",
     "lp_norm",
     "powersum_norm",
@@ -978,20 +977,6 @@ def get_expected_norm(
         return math.pow(exp_abs_norm_p * d, 1 / p)
     else:
         raise TypeError(f"norm not implemented for {type(p)}: {p}")
-
-
-activation_resolver = Resolver(
-    classes=(
-        nn.LeakyReLU,
-        nn.PReLU,
-        nn.ReLU,
-        nn.Softplus,
-        nn.Sigmoid,
-        nn.Tanh,
-    ),
-    base=nn.Module,  # type: ignore
-    default=nn.ReLU,
-)
 
 
 class Bias(nn.Module):
