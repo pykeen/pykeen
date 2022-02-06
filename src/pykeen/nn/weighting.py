@@ -6,7 +6,7 @@ from abc import abstractmethod
 from typing import ClassVar, Optional, Union
 
 import torch
-from class_resolver import Resolver
+from class_resolver import ClassResolver
 from torch import nn
 
 try:
@@ -219,4 +219,4 @@ class AttentionEdgeWeighting(EdgeWeighting):
         return (message_ * alpha.view(-1, self.num_heads, 1)).view(-1, self.num_heads * self.attention_dim)
 
 
-edge_weight_resolver = Resolver.from_subclasses(base=EdgeWeighting, default=SymmetricEdgeWeighting)
+edge_weight_resolver = ClassResolver.from_subclasses(base=EdgeWeighting, default=SymmetricEdgeWeighting)

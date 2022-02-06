@@ -12,7 +12,7 @@ import pathlib
 from textwrap import dedent
 from typing import Any, Mapping, Optional, Type, Union
 
-from class_resolver import Resolver
+from class_resolver import ClassResolver
 
 from .base import (  # noqa:F401
     Dataset,
@@ -85,7 +85,7 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-dataset_resolver = Resolver.from_entrypoint(group="pykeen.datasets", base=Dataset)
+dataset_resolver = ClassResolver.from_entrypoint(group="pykeen.datasets", base=Dataset)
 if not dataset_resolver.lookup_dict:
     raise RuntimeError(
         dedent(

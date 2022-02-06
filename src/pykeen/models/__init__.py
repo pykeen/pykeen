@@ -6,7 +6,7 @@ entities and relations. In general, a larger score indicates a higher plausibili
 score value is model-dependent, and usually it cannot be directly interpreted as a probability.
 """  # noqa: D205, D400
 
-from class_resolver import Resolver, get_subclasses
+from class_resolver import ClassResolver, get_subclasses
 
 from .base import EntityRelationEmbeddingModel, Model, _OldAbstractModel
 from .baseline import EvaluationOnlyModel, MarginalDistributionBaseline, SoftInverseTripleBaseline
@@ -106,7 +106,7 @@ __all__ = [
     "make_model_cls",
 ]
 
-model_resolver = Resolver.from_subclasses(
+model_resolver = ClassResolver.from_subclasses(
     base=Model,
     skip={
         # Abstract Models
