@@ -88,9 +88,7 @@ class RESCAL(EntityRelationEmbeddingModel):
             **kwargs,
         )
 
-    def score_hrt(
-        self, hrt_batch: torch.LongTensor, mode: Optional[InductiveMode] = None
-    ) -> torch.FloatTensor:  # noqa: D102
+    def score_hrt(self, hrt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         # shape: (b, d)
         h = self.entity_embeddings(indices=hrt_batch[:, 0]).unsqueeze(dim=1)
@@ -107,12 +105,7 @@ class RESCAL(EntityRelationEmbeddingModel):
 
         return scores[:, :, 0]
 
-    def score_t(
-        self,
-        hr_batch: torch.LongTensor,
-        slice_size: Optional[int] = None,
-        mode: Optional[InductiveMode] = None,
-    ) -> torch.FloatTensor:  # noqa: D102
+    def score_t(self, hr_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         h = self.entity_embeddings(indices=hr_batch[:, 0]).unsqueeze(dim=1)
         r = self.relation_embeddings(indices=hr_batch[:, 1])
         t = self.entity_embeddings(indices=None).unsqueeze(dim=0).transpose(-1, -2)
@@ -125,12 +118,7 @@ class RESCAL(EntityRelationEmbeddingModel):
 
         return scores[:, 0, :]
 
-    def score_h(
-        self,
-        rt_batch: torch.LongTensor,
-        slice_size: Optional[int] = None,
-        mode: Optional[InductiveMode] = None,
-    ) -> torch.FloatTensor:  # noqa: D102
+    def score_h(self, rt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         """Forward pass using left side (head) prediction."""
         # Get embeddings
         h = self.entity_embeddings(indices=None).unsqueeze(dim=0)

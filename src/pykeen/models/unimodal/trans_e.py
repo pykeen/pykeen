@@ -94,9 +94,7 @@ class TransE(EntityRelationEmbeddingModel):
         )
         self.scoring_fct_norm = scoring_fct_norm
 
-    def score_hrt(
-        self, hrt_batch: torch.LongTensor, mode: Optional[InductiveMode] = None
-    ) -> torch.FloatTensor:  # noqa: D102
+    def score_hrt(self, hrt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(indices=hrt_batch[:, 0])
         r = self.relation_embeddings(indices=hrt_batch[:, 1])
@@ -110,12 +108,7 @@ class TransE(EntityRelationEmbeddingModel):
         #  this will require some benchmarking.
         return -linalg.vector_norm(h + r - t, dim=-1, ord=self.scoring_fct_norm, keepdim=True)
 
-    def score_t(
-        self,
-        hr_batch: torch.LongTensor,
-        slice_size: Optional[int] = None,
-        mode: Optional[InductiveMode] = None,
-    ) -> torch.FloatTensor:  # noqa: D102
+    def score_t(self, hr_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(indices=hr_batch[:, 0])
         r = self.relation_embeddings(indices=hr_batch[:, 1])
@@ -124,12 +117,7 @@ class TransE(EntityRelationEmbeddingModel):
         # TODO: Use torch.cdist (see note above in score_hrt())
         return -linalg.vector_norm(h[:, None, :] + r[:, None, :] - t[None, :, :], dim=-1, ord=self.scoring_fct_norm)
 
-    def score_h(
-        self,
-        rt_batch: torch.LongTensor,
-        slice_size: Optional[int] = None,
-        mode: Optional[InductiveMode] = None,
-    ) -> torch.FloatTensor:  # noqa: D102
+    def score_h(self, rt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(indices=None)
         r = self.relation_embeddings(indices=rt_batch[:, 0])
