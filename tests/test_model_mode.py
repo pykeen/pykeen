@@ -4,7 +4,6 @@
 
 import unittest
 from dataclasses import dataclass
-from typing import Optional
 
 import torch
 from torch import nn
@@ -13,7 +12,6 @@ from pykeen.datasets import Nations
 from pykeen.models import EntityRelationEmbeddingModel, Model, TransE
 from pykeen.nn.emb import EmbeddingSpecification
 from pykeen.triples import TriplesFactory
-from pykeen.typing import InductiveMode
 from pykeen.utils import resolve_device
 
 

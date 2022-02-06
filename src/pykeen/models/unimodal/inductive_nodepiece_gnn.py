@@ -6,6 +6,7 @@ import logging
 from typing import Optional, Tuple
 
 import torch
+from torch import nn
 
 from .inductive_nodepiece import InductiveNodePiece
 from ..nbase import cast
@@ -21,7 +22,9 @@ logger = logging.getLogger(__name__)
 
 class InductiveNodePieceGNN(InductiveNodePiece):
     """Inductive NodePiece with a GNN encoder on top.
+
     Overall, it's a 3-step procedure:
+
     1. Featurizing nodes via NodePiece
     2. Message passing over the active graph using NodePiece features
     3. Scoring function for a given batch of triples
@@ -32,7 +35,7 @@ class InductiveNodePieceGNN(InductiveNodePiece):
     def __init__(
         self,
         *,
-        gnn_encoder: torch.nn.ModuleList = None,
+        gnn_encoder: Optional[nn.ModuleList] = None,
         **kwargs,
     ) -> None:
         """

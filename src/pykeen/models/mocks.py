@@ -5,7 +5,7 @@
 These are useful for baselines.
 """
 
-from typing import Any, ClassVar, Mapping
+from typing import Any, ClassVar, Mapping, Optional
 
 import torch
 
@@ -50,7 +50,9 @@ class FixedModel(Model):
     def collect_regularization_term(self):  # noqa: D102
         return 0.0
 
-    def _get_entity_len(self, mode: InductiveMode) -> int:
+    def _get_entity_len(self, mode: Optional[InductiveMode]) -> int:
+        if mode is not None:
+            raise NotImplementedError
         return self.num_entities
 
     def _reset_parameters_(self):  # noqa: D102
