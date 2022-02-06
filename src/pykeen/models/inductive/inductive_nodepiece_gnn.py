@@ -41,7 +41,7 @@ class InductiveNodePieceGNN(InductiveNodePiece):
         """
         Initialize the model.
 
-        :param gnn_encoder: ModuleList
+        :param gnn_encoder:
             ModuleList of message passing layers.
             If not specified, defaults to 2-layer CompGCN with model's embedding dimension and interaction function
 

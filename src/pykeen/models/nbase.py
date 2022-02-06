@@ -452,12 +452,12 @@ class ERModel(
             num=self.num_relations,
         )
 
-    def _entity_representation_from_mode(self, mode: Optional[InductiveMode] = None):
+    def _entity_representation_from_mode(self, *, mode: Optional[InductiveMode]):
         if mode is not None:
             raise NotImplementedError
         return self.entity_representations
 
-    def _get_entity_len(self, mode: Optional[InductiveMode]) -> int:  # noqa:D105
+    def _get_entity_len(self, *, mode: Optional[InductiveMode]) -> int:  # noqa:D105
         if mode is not None:
             raise NotImplementedError
         return self.num_entities
