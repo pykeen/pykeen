@@ -659,7 +659,9 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
         if autoreset:
             _add_post_reset_parameters(cls)
 
-    def _get_entity_len(self, mode: InductiveMode = None) -> int:  # noqa:D105
+    def _get_entity_len(self, mode: Optional[InductiveMode] = None) -> int:  # noqa:D105
+        if mode is not None:
+            raise ValueError
         return self.num_entities
 
     def post_parameter_update(self) -> None:
