@@ -12,7 +12,7 @@ from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.emb import EmbeddingSpecification
 from ...nn.init import xavier_normal_norm_, xavier_uniform_
 from ...regularizers import LpRegularizer, Regularizer
-from ...typing import Constrainer, Hint, InductiveMode, Initializer
+from ...typing import Constrainer, Hint, Initializer
 
 __all__ = [
     "DistMult",

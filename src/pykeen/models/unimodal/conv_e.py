@@ -17,7 +17,7 @@ from ...nn.emb import Embedding, EmbeddingSpecification
 from ...nn.init import xavier_normal_
 from ...nn.modules import _calculate_missing_shape_information
 from ...triples import CoreTriplesFactory
-from ...typing import Hint, InductiveMode, Initializer
+from ...typing import Hint, Initializer
 from ...utils import is_cudnn_error
 
 __all__ = [

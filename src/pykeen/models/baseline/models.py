@@ -11,7 +11,6 @@ import torch
 from .utils import get_csr_matrix, get_relation_similarity, marginal_score
 from ..base import Model
 from ...triples import CoreTriplesFactory
-from ...typing import InductiveMode
 
 __all__ = [
     "EvaluationOnlyModel",

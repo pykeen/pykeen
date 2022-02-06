@@ -13,7 +13,7 @@ from ..base import EntityRelationEmbeddingModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.emb import Embedding, EmbeddingSpecification
 from ...regularizers import Regularizer, TransHRegularizer
-from ...typing import Hint, InductiveMode, Initializer
+from ...typing import Hint, Initializer
 
 __all__ = [
     "TransH",
