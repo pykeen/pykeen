@@ -298,6 +298,7 @@ class StopperTrainingCallback(TrainingCallback):
 
     def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
         if self.stopper.should_evaluate(epoch):
+            # TODO how to pass inductive mode
             if self.stopper.should_stop(epoch):
                 self.training_loop._should_stop = True
             # Since the model is also used within the stopper, its graph and cache have to be cleared

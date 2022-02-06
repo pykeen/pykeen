@@ -38,6 +38,7 @@ from ..trackers import ResultTracker
 from ..training.schlichtkrull_sampler import SLCWASubGraphInstances
 from ..triples import CoreTriplesFactory, Instances, TriplesFactory
 from ..triples.instances import SLCWAInstances
+from ..typing import InductiveMode
 from ..utils import (
     format_relative_comparison,
     get_batchnorm_modules,
@@ -119,6 +120,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         optimizer: Optional[Optimizer] = None,
         lr_scheduler: Optional[LRScheduler] = None,
         automatic_memory_optimization: bool = True,
+        mode: Optional[InductiveMode] = None,
     ) -> None:
         """Initialize the training loop.
 
@@ -136,6 +138,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         self.losses_per_epochs = []
         self._should_stop = False
         self.automatic_memory_optimization = automatic_memory_optimization
+        self.mode = mode
 
         logger.debug("we don't really need the triples factory: %s", triples_factory)
 
@@ -441,6 +444,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         if result_tracker is not None:
             callback.register_callback(TrackerTrainingCallback(result_tracker))
         # Register a callback for the early stopper, if given
+        # TODO should mode be passed here?
         if stopper is not None:
             callback.register_callback(
                 StopperTrainingCallback(
