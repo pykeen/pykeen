@@ -89,8 +89,6 @@ from .distmult import DistMult
 from .ermlp import ERMLP
 from .ermlpe import ERMLPE
 from .hole import HolE
-from .inductive_nodepiece import InductiveNodePiece
-from .inductive_nodepiece_gnn import InductiveNodePieceGNN
 from .kg2e import KG2E
 from .mure import MuRE
 from .node_piece import NodePiece
@@ -130,8 +128,6 @@ __all__ = [
     "MuRE",
     "NTN",
     "NodePiece",
-    "InductiveNodePiece",
-    "InductiveNodePieceGNN",
     "PairRE",
     "ProjE",
     "QuatE",
