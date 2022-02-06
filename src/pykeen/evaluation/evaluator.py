@@ -84,7 +84,7 @@ class Evaluator(ABC):
         batch_size: Optional[int] = None,
         slice_size: Optional[int] = None,
         automatic_memory_optimization: bool = True,
-        mode: InductiveMode = None,
+        mode: Optional[InductiveMode] = None,
     ):
         """Initialize the evaluator.
 
@@ -523,8 +523,9 @@ def evaluate(
     do_time_consuming_checks: bool = True,
     additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
     pre_filtered_triples: bool = True,
-    mode: InductiveMode = None,
     targets: Collection[Target] = (LABEL_HEAD, LABEL_TAIL),
+    *,
+    mode: Optional[InductiveMode],
 ) -> Union[MetricResults, List[MetricResults]]:
     """Evaluate metrics for model on mapped triples.
 
@@ -703,7 +704,8 @@ def _evaluate_batch(
     all_pos_triples: Optional[MappedTriples],
     relation_filter: Optional[torch.BoolTensor],
     restrict_entities_to: Optional[torch.LongTensor],
-    mode: InductiveMode = None,
+    *,
+    mode: Optional[InductiveMode],
 ) -> torch.BoolTensor:
     """
     Evaluate ranking for batch.

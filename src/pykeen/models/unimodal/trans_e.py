@@ -2,7 +2,7 @@
 
 """TransE."""
 
-from typing import Any, ClassVar, Mapping, Optional
+from typing import Any, ClassVar, Mapping
 
 import torch.autograd
 from torch import linalg

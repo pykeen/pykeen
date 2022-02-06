@@ -5,7 +5,7 @@
 These are useful for baselines.
 """
 
-from typing import Any, ClassVar, Mapping, Optional
+from typing import Any, ClassVar, Mapping
 
 import torch
 
@@ -65,43 +65,24 @@ class FixedModel(Model):
         """Generate fake scores."""
         return (h * (self.num_entities * self.num_relations) + r * self.num_entities + t).float().requires_grad_(True)
 
-    def score_hrt(
-        self,
-        hrt_batch: torch.LongTensor,
-        mode: Optional[InductiveMode] = None,
-    ) -> torch.FloatTensor:  # noqa: D102
+    def score_hrt(self, hrt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         return self._generate_fake_scores(*hrt_batch.t()).unsqueeze(dim=-1)
 
-    def score_t(
-        self,
-        hr_batch: torch.LongTensor,
-        slice_size: Optional[int] = None,
-        mode: Optional[InductiveMode] = None,
-    ) -> torch.FloatTensor:  # noqa: D102
+    def score_t(self, hr_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         return self._generate_fake_scores(
             h=hr_batch[:, 0:1],
             r=hr_batch[:, 1:2],
             t=torch.arange(self.num_entities, device=hr_batch.device).unsqueeze(dim=0),
         )
 
-    def score_r(
-        self,
-        ht_batch: torch.LongTensor,
-        slice_size: Optional[int] = None,
-        mode: Optional[InductiveMode] = None,
-    ) -> torch.FloatTensor:  # noqa: D102
+    def score_r(self, ht_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         return self._generate_fake_scores(
             h=ht_batch[:, 0:1],
             r=torch.arange(self.num_relations, device=ht_batch.device).unsqueeze(dim=0),
             t=ht_batch[:, 1:2],
         )
 
-    def score_h(
-        self,
-        rt_batch: torch.LongTensor,
-        slice_size: Optional[int] = None,
-        mode: Optional[InductiveMode] = None,
-    ) -> torch.FloatTensor:  # noqa: D102
+    def score_h(self, rt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         return self._generate_fake_scores(
             h=torch.arange(self.num_entities, device=rt_batch.device).unsqueeze(dim=0),
             r=rt_batch[:, 0:1],

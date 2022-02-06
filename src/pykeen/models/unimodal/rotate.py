@@ -2,7 +2,7 @@
 
 """Implementation of the RotatE model."""
 
-from typing import Any, ClassVar, Mapping, Optional
+from typing import Any, ClassVar, Mapping
 
 import torch
 import torch.autograd

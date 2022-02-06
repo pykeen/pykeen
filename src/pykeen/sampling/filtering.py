@@ -128,7 +128,7 @@ from abc import abstractmethod
 from typing import Iterable
 
 import torch
-from class_resolver import Resolver
+from class_resolver import ClassResolver
 from torch import nn
 
 from ..triples.utils import triple_tensor_to_set
@@ -350,7 +350,7 @@ class BloomFilterer(Filterer):
         return result
 
 
-filterer_resolver = Resolver.from_subclasses(
+filterer_resolver = ClassResolver.from_subclasses(
     base=Filterer,
     default=BloomFilterer,
 )

@@ -323,7 +323,8 @@ class ERModel(
         t_indices: torch.LongTensor,
         slice_size: Optional[int] = None,
         slice_dim: int = 0,
-        mode: InductiveMode = None,
+        *,
+        mode: Optional[InductiveMode],
     ) -> torch.FloatTensor:
         """Forward pass.
 
@@ -339,9 +340,10 @@ class ERModel(
         :param slice_size:
             The slice size.
         :param slice_dim:
-          The dimension along which to slice
+            The dimension along which to slice
         :param mode:
-            The pass mode. Is None for transductive and "training" / "validation" / "testing" in inductive.
+            The pass mode, which is None in the transductive setting and one of "training",
+            "validation", or "testing" in the inductive setting.
 
         :return:
             The scores
@@ -354,7 +356,7 @@ class ERModel(
         h, r, t = self._get_representations(h=h_indices, r=r_indices, t=t_indices, mode=mode)
         return self.interaction.score(h=h, r=r, t=t, slice_size=slice_size, slice_dim=slice_dim)
 
-    def score_hrt(self, hrt_batch: torch.LongTensor, mode: InductiveMode = None) -> torch.FloatTensor:
+    def score_hrt(self, hrt_batch: torch.LongTensor, *, mode: Optional[InductiveMode] = None) -> torch.FloatTensor:
         """Forward pass.
 
         This method takes head, relation and tail of each triple and calculates the corresponding score.
@@ -362,7 +364,8 @@ class ERModel(
         :param hrt_batch: shape: (batch_size, 3), dtype: long
             The indices of (head, relation, tail) triples.
         :param mode:
-            The pass mode. Is None for transductive and "training" / "validation" / "testing" in inductive.
+            The pass mode, which is None in the transductive setting and one of "training",
+            "validation", or "testing" in the inductive setting.
 
         :return: shape: (batch_size, 1), dtype: float
             The score for each triple.
@@ -375,7 +378,7 @@ class ERModel(
         return self.interaction.score_hrt(h=h, r=r, t=t)
 
     def score_t(
-        self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None, mode: InductiveMode = None
+        self, hr_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
     ) -> torch.FloatTensor:
         """Forward pass using right side (tail) prediction.
 
@@ -386,7 +389,8 @@ class ERModel(
         :param slice_size:
             The slice size.
         :param mode:
-            The pass mode. Is None for transductive and "training" / "validation" / "testing" in inductive.
+            The pass mode, which is None in the transductive setting and one of "training",
+            "validation", or "testing" in the inductive setting.
 
         :return: shape: (batch_size, num_entities), dtype: float
             For each h-r pair, the scores for all possible tails.
@@ -399,7 +403,7 @@ class ERModel(
         )
 
     def score_h(
-        self, rt_batch: torch.LongTensor, slice_size: Optional[int] = None, mode: InductiveMode = None
+        self, rt_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
     ) -> torch.FloatTensor:
         """Forward pass using left side (head) prediction.
 
@@ -410,7 +414,8 @@ class ERModel(
         :param slice_size:
             The slice size.
         :param mode:
-            The pass mode. Is None for transductive and "training" / "validation" / "testing" in inductive.
+            The pass mode, which is None in the transductive setting and one of "training",
+            "validation", or "testing" in the inductive setting.
 
         :return: shape: (batch_size, num_entities), dtype: float
             For each r-t pair, the scores for all possible heads.
@@ -423,7 +428,7 @@ class ERModel(
         )
 
     def score_r(
-        self, ht_batch: torch.LongTensor, slice_size: Optional[int] = None, mode: InductiveMode = None
+        self, ht_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
     ) -> torch.FloatTensor:
         """Forward pass using middle (relation) prediction.
 
@@ -434,7 +439,8 @@ class ERModel(
         :param slice_size:
             The slice size.
         :param mode:
-            The pass mode. Is None for transductive and "training" / "validation" / "testing" in inductive.
+            The pass mode, which is None in the transductive setting and one of "training",
+            "validation", or "testing" in the inductive setting.
 
         :return: shape: (batch_size, num_relations), dtype: float
             For each h-t pair, the scores for all possible relations.
@@ -458,7 +464,8 @@ class ERModel(
         h: Optional[torch.LongTensor],
         r: Optional[torch.LongTensor],
         t: Optional[torch.LongTensor],
-        mode: InductiveMode = None,
+        *,
+        mode: Optional[InductiveMode],
     ) -> Tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]:
         """Get representations for head, relation and tails."""
         entity_representations = self._entity_representation_from_mode(mode=mode)

@@ -96,7 +96,8 @@ class CP(ERModel):
         h: Optional[torch.LongTensor],
         r: Optional[torch.LongTensor],
         t: Optional[torch.LongTensor],
-        mode: Optional[InductiveMode] = None,
+        *,
+        mode: Optional[InductiveMode],
     ) -> Tuple[torch.FloatTensor, torch.FloatTensor, torch.FloatTensor]:  # noqa: D102
         # Override to allow different head and tail entity representations
         h, r, t = [

@@ -91,9 +91,8 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
         negative_batch = negative_batch.to(self.device)
 
         # Compute negative and positive scores
-        # Explicitly set mode=training for inductive LP models, has no effect on transductive ones
-        positive_scores = self.model.score_hrt(positive_batch, mode="training")
-        negative_scores = self.model.score_hrt(negative_batch, mode="training").view(*negative_score_shape)
+        positive_scores = self.model.score_hrt(positive_batch, mode=self.mode)
+        negative_scores = self.model.score_hrt(negative_batch, mode=self.mode).view(*negative_score_shape)
 
         return (
             self.loss.process_slcwa_scores(

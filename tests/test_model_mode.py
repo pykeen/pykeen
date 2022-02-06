@@ -173,9 +173,7 @@ class SimpleInteractionModel(EntityRelationEmbeddingModel):
         self.entity_embeddings = nn.Embedding(self.num_entities, self.embedding_dim)
         self.relation_embeddings = nn.Embedding(self.num_relations, self.embedding_dim)
 
-    def score_hrt(
-        self, hrt_batch: torch.LongTensor, mode: Optional[InductiveMode] = None
-    ) -> torch.FloatTensor:  # noqa: D102
+    def score_hrt(self, hrt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(hrt_batch[:, 0])
         r = self.relation_embeddings(hrt_batch[:, 1])

@@ -96,7 +96,7 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
         batch_pairs = batch_pairs[start:stop].to(device=self.device)
         batch_labels_full = batch_labels_full[start:stop].to(device=self.device)
 
-        predictions = self.score_method(batch_pairs, slice_size=slice_size, mode="training")
+        predictions = self.score_method(batch_pairs, slice_size=slice_size, mode=self.mode)
 
         return (
             self.loss.process_lcwa_scores(

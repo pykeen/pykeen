@@ -37,6 +37,22 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
+class DeviceResolutionError(ValueError):
+    """An error in the resolution of a model's device."""
+
+
+class AmbiguousDeviceError(DeviceResolutionError):
+    """An error raised if there is ambiguity in device resolution."""
+
+    def __init__(self, module: nn.Module) -> None:
+        """Initialize the error."""
+        _info = defaultdict(list)
+        for name, tensor in itertools.chain(module.named_parameters(), module.named_buffers()):
+            _info[tensor.data.device].append(name)
+        info = {device: sorted(tensor_names) for device, tensor_names in _info.items()}
+        super().__init__(f"Ambiguous device! Found: {list(info.keys())}\n\n{info}")
+
+
 class Model(nn.Module, ABC):
     """A base module for KGE models.
 
@@ -135,22 +151,26 @@ class Model(nn.Module, ABC):
     @property
     def device(self) -> torch.device:
         """Return the model's device."""
-        devices = self.get_devices()
-        if len(devices) == 0:
-            raise ValueError("Could not infer device, since there are neither parameters nor buffers.")
-        elif len(devices) > 1:
-            # prepare debug information
-            _info = defaultdict(list)
-            for name, tensor in itertools.chain(self.named_parameters(), self.named_buffers()):
-                _info[tensor.data.device].append(name)
-            info = {device: sorted(tensor_names) for device, tensor_names in _info.items()}
-            raise ValueError(f"Ambiguous device! Found: {devices}\n\n{info}")
-        else:
-            return next(iter(devices))
+        return self.get_preferred_device(allow_ambiguity=False)
 
     def get_devices(self) -> Collection[torch.device]:
         """Return the device(s) from each components of the model."""
         return {tensor.data.device for tensor in itertools.chain(self.parameters(), self.buffers())}
+
+    def get_preferred_device(self, allow_ambiguity: bool = True) -> torch.device:
+        """Return the preferred device."""
+        devices = self.get_devices()
+        if len(devices) == 0:
+            raise DeviceResolutionError("Could not infer device, since there are neither parameters nor buffers.")
+        if len(devices) == 1:
+            return next(iter(devices))
+        if not allow_ambiguity:
+            raise AmbiguousDeviceError(self)
+        # try to resolve ambiguous device; there has to be at least one cuda device
+        cuda_devices = {d for d in devices if d.type == "cuda"}
+        if len(cuda_devices) == 1:
+            return next(iter(cuda_devices))
+        raise AmbiguousDeviceError(self)
 
     def reset_parameters_(self):  # noqa: D401
         """Reset all parameters of the model and enforce model constraints."""
@@ -187,7 +207,7 @@ class Model(nn.Module, ABC):
     """Abstract methods - Scoring"""
 
     @abstractmethod
-    def score_hrt(self, hrt_batch: torch.LongTensor, mode: InductiveMode = None) -> torch.FloatTensor:
+    def score_hrt(self, hrt_batch: torch.LongTensor, *, mode: Optional[InductiveMode] = None) -> torch.FloatTensor:
         """Forward pass.
 
         This method takes head, relation and tail of each triple and calculates the corresponding score.
@@ -195,18 +215,15 @@ class Model(nn.Module, ABC):
         :param hrt_batch: shape: (batch_size, 3), dtype: long
             The indices of (head, relation, tail) triples.
         :param mode:
-            The pass mode. Is None for transductive and "training" / "validation" / "testing" in inductive.
-
-        :raises NotImplementedError:
-            If the method was not implemented for this class.
-
+            The pass mode, which is None in the transductive setting and one of "training",
+            "validation", or "testing" in the inductive setting.
         :return: shape: (batch_size, 1), dtype: float
             The score for each triple.
         """
 
     @abstractmethod
     def score_t(
-        self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None, mode: InductiveMode = None
+        self, hr_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
     ) -> torch.FloatTensor:
         """Forward pass using right side (tail) prediction.
 
@@ -217,7 +234,8 @@ class Model(nn.Module, ABC):
         :param slice_size: >0
             The divisor for the scoring function when using slicing.
         :param mode:
-            The pass mode. Is None for transductive and "training" / "validation" / "testing" in inductive.
+            The pass mode, which is None in the transductive setting and one of "training",
+            "validation", or "testing" in the inductive setting.
 
         :return: shape: (batch_size, num_entities), dtype: float
             For each h-r pair, the scores for all possible tails.
@@ -225,7 +243,7 @@ class Model(nn.Module, ABC):
 
     @abstractmethod
     def score_r(
-        self, ht_batch: torch.LongTensor, slice_size: Optional[int] = None, mode: InductiveMode = None
+        self, ht_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
     ) -> torch.FloatTensor:
         """Forward pass using middle (relation) prediction.
 
@@ -236,7 +254,8 @@ class Model(nn.Module, ABC):
         :param slice_size: >0
             The divisor for the scoring function when using slicing.
         :param mode:
-            The pass mode. Is None for transductive and "training" / "validation" / "testing" in inductive.
+            The pass mode, which is None in the transductive setting and one of "training",
+            "validation", or "testing" in the inductive setting.
 
         :return: shape: (batch_size, num_real_relations), dtype: float
             For each h-t pair, the scores for all possible relations.
@@ -246,7 +265,7 @@ class Model(nn.Module, ABC):
 
     @abstractmethod
     def score_h(
-        self, rt_batch: torch.LongTensor, slice_size: Optional[int] = None, mode: InductiveMode = None
+        self, rt_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
     ) -> torch.FloatTensor:
         """Forward pass using left side (head) prediction.
 
@@ -257,7 +276,8 @@ class Model(nn.Module, ABC):
         :param slice_size: >0
             The divisor for the scoring function when using slicing.
         :param mode:
-            The pass mode. Is None for transductive and "training" / "validation" / "testing" in inductive.
+            The pass mode, which is None in the transductive setting and one of "training",
+            "validation", or "testing" in the inductive setting.
 
         :return: shape: (batch_size, num_entities), dtype: float
             For each r-t pair, the scores for all possible heads.
@@ -308,7 +328,7 @@ class Model(nn.Module, ABC):
         # when trained on inverse relations, the internal relation ID is twice the original relation ID
         return relation_inverter.map(batch=batch, index=index_relation, invert=False)
 
-    def predict_hrt(self, hrt_batch: torch.LongTensor, mode: InductiveMode = None) -> torch.FloatTensor:
+    def predict_hrt(self, hrt_batch: torch.LongTensor, *, mode: Optional[InductiveMode] = None) -> torch.FloatTensor:
         """Calculate the scores for triples.
 
         This method takes head, relation and tail of each triple and calculates the corresponding score.
@@ -330,10 +350,7 @@ class Model(nn.Module, ABC):
         return scores
 
     def predict_h(
-        self,
-        rt_batch: torch.LongTensor,
-        slice_size: Optional[int] = None,
-        mode: InductiveMode = None,
+        self, rt_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
     ) -> torch.FloatTensor:
         """Forward pass using left side (head) prediction for obtaining scores of all possible heads.
 
@@ -370,8 +387,9 @@ class Model(nn.Module, ABC):
     def predict_t(
         self,
         hr_batch: torch.LongTensor,
+        *,
         slice_size: Optional[int] = None,
-        mode: InductiveMode = None,
+        mode: Optional[InductiveMode] = None,
     ) -> torch.FloatTensor:
         """Forward pass using right side (tail) prediction for obtaining scores of all possible tails.
 
@@ -408,8 +426,9 @@ class Model(nn.Module, ABC):
     def predict_r(
         self,
         ht_batch: torch.LongTensor,
+        *,
         slice_size: Optional[int] = None,
-        mode: InductiveMode = None,
+        mode: Optional[InductiveMode],
     ) -> torch.FloatTensor:
         """Forward pass using middle (relation) prediction for obtaining scores of all possible relations.
 
@@ -562,7 +581,8 @@ class Model(nn.Module, ABC):
     def score_hrt_inverse(
         self,
         hrt_batch: torch.LongTensor,
-        mode: InductiveMode = None,
+        *,
+        mode: Optional[InductiveMode],
     ) -> torch.FloatTensor:
         r"""Score triples based on inverse triples, i.e., compute $f(h,r,t)$ based on $f(t,r_{inv},h)$.
 
@@ -574,20 +594,14 @@ class Model(nn.Module, ABC):
         return self.score_hrt(hrt_batch=t_r_inv_h, mode=mode)
 
     def score_t_inverse(
-        self,
-        hr_batch: torch.LongTensor,
-        slice_size: Optional[int] = None,
-        mode: InductiveMode = None,
+        self, hr_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode]
     ):
         """Score all tails for a batch of (h,r)-pairs using the head predictions for the inverses $(*,r_{inv},h)$."""
         r_inv_h = self._prepare_inverse_batch(batch=hr_batch, index_relation=1)
         return self.score_h(rt_batch=r_inv_h, slice_size=slice_size, mode=mode)
 
     def score_h_inverse(
-        self,
-        rt_batch: torch.LongTensor,
-        slice_size: Optional[int] = None,
-        mode: InductiveMode = None,
+        self, rt_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode]
     ):
         """Score all heads for a batch of (r,t)-pairs using the tail predictions for the inverses $(t,r_{inv},*)$."""
         t_r_inv = self._prepare_inverse_batch(batch=rt_batch, index_relation=0)
@@ -659,7 +673,7 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
             self.regularizer.update(*tensors)
 
     def score_t(
-        self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None, mode: InductiveMode = None
+        self, hr_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
     ) -> torch.FloatTensor:
         """Forward pass using right side (tail) prediction.
 
@@ -669,6 +683,9 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
             The indices of (head, relation) pairs.
         :param slice_size: >0
             The divisor for the scoring function when using slicing.
+        :param mode:
+            The pass mode, which is None in the transductive setting and one of "training",
+            "validation", or "testing" in the inductive setting.
 
         :return: shape: (batch_size, num_entities), dtype: float
             For each h-r pair, the scores for all possible tails.
@@ -686,7 +703,7 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
         return scores
 
     def score_h(
-        self, rt_batch: torch.LongTensor, slice_size: Optional[int] = None, mode: InductiveMode = None
+        self, rt_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
     ) -> torch.FloatTensor:
         """Forward pass using left side (head) prediction.
 
@@ -696,6 +713,9 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
             The indices of (relation, tail) pairs.
         :param slice_size: >0
             The divisor for the scoring function when using slicing.
+        :param mode:
+            The pass mode, which is None in the transductive setting and one of "training",
+            "validation", or "testing" in the inductive setting.
 
         :return: shape: (batch_size, num_entities), dtype: float
             For each r-t pair, the scores for all possible heads.
@@ -713,7 +733,7 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
         return scores
 
     def score_r(
-        self, ht_batch: torch.LongTensor, slice_size: Optional[int] = None, mode: InductiveMode = None
+        self, ht_batch: torch.LongTensor, *, slice_size: Optional[int] = None, mode: Optional[InductiveMode] = None
     ) -> torch.FloatTensor:
         """Forward pass using middle (relation) prediction.
 
@@ -723,6 +743,9 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
             The indices of (head, tail) pairs.
         :param slice_size: >0
             The divisor for the scoring function when using slicing.
+        :param mode:
+            The pass mode, which is None in the transductive setting and one of "training",
+            "validation", or "testing" in the inductive setting.
 
         :return: shape: (batch_size, num_relations), dtype: float
             For each h-t pair, the scores for all possible relations.

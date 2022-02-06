@@ -2,7 +2,7 @@
 
 """An implementation of TransH."""
 
-from typing import Any, ClassVar, Mapping, Optional, Type
+from typing import Any, ClassVar, Mapping, Type
 
 import torch
 from torch import linalg
