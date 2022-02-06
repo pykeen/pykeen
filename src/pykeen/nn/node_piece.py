@@ -600,7 +600,13 @@ class TokenizationRepresentationModule(RepresentationModule):
 
         # fill padding (nn.Embedding cannot deal with negative indices)
         padding = assignment < 0
-        assignment[padding] = self.vocabulary_size = assignment.max().item() + 1
+        # sometimes, assignment.max() does not cover all relations (eg, inductive inference graphs
+        # contain a subset of training relations) - for that, the padding index is the last index of the Representation
+        self.vocabulary_size = token_representation.max_id \
+            if isinstance(token_representation, RepresentationModule) \
+            else assignment.max().item() + 1
+
+        assignment[padding] = self.vocabulary_size - 1  # = assignment.max().item() + 1
         max_id, num_chosen_tokens = assignment.shape
 
         # resolve token representation
