@@ -34,9 +34,8 @@ Most importantly, the set of relations **must** be seen at training time.
 That is, relations seen at inference time must be a subset of training ones
 because we will learn representations of those relations to transfer to unseen graphs.
 
-
 Organizing the Dataset
----------------
+----------------------
 The basic class to build inductive datasets is :class:`pykeen.datasets.inductive.InductiveDataset`.
 It is supposed to contain more than 3 triple factories, i.e., in the *fully-inductive* setup it is expected to have
 at least 4 triple factories (`transductive_training`, `inductive_inference`, `inductive_validation`, `inductive_test`).
@@ -54,8 +53,7 @@ It is ensured that the relations sets of all inference graphs are subsets of the
 
 
 Featurizing Unseen Entities
--------------
-
+---------------------------
 Training entity embeddings on the training graph is meaningless as those embeddings cannot be
 used at inference time.
 Instead, we need some universal featurizing mechanism which would build representations of both seen
@@ -83,22 +81,21 @@ initialization of the relation representation module.
 
 Label-based Transformer Representation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 If entity descriptions are available, the universal featurizing mechanism can
 be a language model accessible via :class:`pykeen.nn.emb.LabelBasedTransformerRepresentation`.
 At both training and inference time, fixed-size entity vectors are obtained after passing
-their textual descriptions through a pre-trained LM.
+their textual descriptions through a pre-trained language model.
+
 This is work in progress and not yet available.
-TODO link to the Tutorial/Representations page
+.. todo:: link to the Tutorial/Representations page
 
 
 Training & Evaluation
 ---------------------
 Generally, training and evaluation of inductive models uses similar interfaces:
 sLCWA and LCWA training loops, and RankBasedEvaluator.
-The important addition of inductive interfaces is the `mode` argument. When set to `mode="train"`,
-an inductive model has to invoke representations of the training graph, when set to `mode=valid`
-or `mode=test`, the model has to invoke representations of inference graphs.
+The important addition of inductive interfaces is the `mode` argument. When set to `mode="training"`,
+an inductive model has to invoke representations of the training graph, when set to `mode=validation`
+or `mode=testing`, the model has to invoke representations of inference graphs.
 In the case of fully-inductive (disjoint) datasets from [teru2020]_ the inference graph at
 validation and test is the same.
-
