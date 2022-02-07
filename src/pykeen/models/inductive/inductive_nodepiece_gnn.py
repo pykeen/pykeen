@@ -44,7 +44,6 @@ class InductiveNodePieceGNN(InductiveNodePiece):
         :param gnn_encoder:
             ModuleList of message passing layers.
             If not specified, defaults to 2-layer CompGCN with model's embedding dimension and interaction function
-
         """
         super().__init__(**kwargs)
 
@@ -90,7 +89,7 @@ class InductiveNodePieceGNN(InductiveNodePiece):
             self.register_buffer(name="testing_edge_type", tensor=test_factory.mapped_triples[:, 1])
 
     def reset_parameters_(self):
-        """This parameter reset explicitly resets the GNN encoder in addition to other params"""
+        """Reset the GNN encoder explicitly in addition to other params."""
         super().reset_parameters_()
         if getattr(self, "gnn_encoder", None) is not None:
             for layer in self.gnn_encoder:
