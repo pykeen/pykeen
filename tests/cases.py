@@ -1411,8 +1411,8 @@ class InductiveModelTestCase(ModelTestCase):
         training_loop_kwargs["mode"] = self.mode
         InductiveModelTestCase.training_loop_kwargs = training_loop_kwargs
         # dataset = InductiveFB15k237(create_inverse_triples=self.create_inverse_triples)
-        kwargs["triples_factory"] = dataset.transductive_training
-        kwargs["inference_factory"] = self.factory = dataset.inductive_inference
+        kwargs["triples_factory"] = self.factory = dataset.transductive_training
+        kwargs["inference_factory"] = dataset.inductive_inference
         return kwargs
 
     def _help_test_cli(self, args):  # noqa: D102
