@@ -7,7 +7,12 @@ from .inductive.base import EagerInductiveDataset, InductiveDataset
 from ..triples.generation import generate_triples_factory
 
 
-def create_inductive(
+__all__ = [
+    "create_inductive_dataset",
+]
+
+
+def create_inductive_dataset(
     num_relations: int,
     num_entities_transductive: int,
     num_triples_training: int,
