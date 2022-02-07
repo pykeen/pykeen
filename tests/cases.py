@@ -44,9 +44,10 @@ import pykeen.nn.message_passing
 import pykeen.nn.node_piece
 import pykeen.nn.weighting
 from pykeen.datasets import Nations
-from pykeen.datasets.inductive.ilp_teru import InductiveFB15k237
 from pykeen.datasets.base import LazyDataset
+from pykeen.datasets.inductive.ilp_teru import InductiveFB15k237
 from pykeen.datasets.kinships import KINSHIPS_TRAIN_PATH
+from pykeen.datasets.mocks import create_inductive_dataset
 from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH
 from pykeen.evaluation import Evaluator, MetricResults
 from pykeen.losses import Loss, PairwiseLoss, PointwiseLoss, SetwiseLoss, UnsupportedLabelSmoothingError
@@ -1384,14 +1385,28 @@ class BaseNodePieceTest(ModelTestCase):
         return super()._help_test_cli(args)
 
 
-class BaseInductiveTest(ModelTestCase):
+class InductiveModelTestCase(ModelTestCase):
     """Tests for inductive models."""
 
     mode = "training"
+    num_relations: ClassVar[int] = 7
+    num_entities_transductive: ClassVar[int] = 13
+    num_entities_inductive: ClassVar[int] = 5
+    num_triples_training: ClassVar[int] = 33
+    num_triples_inference: ClassVar[int] = 31
+    num_triples_testing: ClassVar[int] = 37
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
-        # TODO: use a smaller dataset for testing
-        dataset = InductiveFB15k237(create_inverse_triples=self.create_inverse_triples)
+        dataset = create_inductive_dataset(
+            num_relations=self.num_relations,
+            num_entities_transductive=self.num_entities_transductive,
+            num_entities_inductive=self.num_entities_inductive,
+            num_triples_training=self.num_triples_training,
+            num_triples_inference=self.num_triples_inference,
+            num_triples_testing=self.num_triples_testing,
+            create_inverse_triples=self.create_inverse_triples,
+        )
+        # dataset = InductiveFB15k237(create_inverse_triples=self.create_inverse_triples)
         kwargs["triples_factory"] = dataset.transductive_training
         kwargs["inference_factory"] = self.factory = dataset.inductive_inference
         return kwargs

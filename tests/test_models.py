@@ -310,14 +310,14 @@ class TestNodePieceJoint(cases.BaseNodePieceTest):
         assert relation.vocabulary.max_id == 2 * self.factory.real_num_relations + 1
 
 
-class TestInductiveNodePiece(cases.BaseInductiveTest):
+class TestInductiveNodePiece(cases.InductiveModelTestCase):
     """Test the InductiveNodePiece model."""
 
     cls = pykeen.models.InductiveNodePiece
     create_inverse_triples = True
 
 
-class TestInductiveNodePieceGNN(cases.BaseInductiveTest):
+class TestInductiveNodePieceGNN(cases.InductiveModelTestCase):
     """Test the InductiveNodePieceGNN model."""
 
     cls = pykeen.models.InductiveNodePieceGNN
