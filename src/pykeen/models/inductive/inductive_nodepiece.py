@@ -211,6 +211,7 @@ class InductiveNodePiece(ERModel):
             self.num_test_entities = test_factory.num_entities
 
     def _entity_representation_from_mode(self, *, mode: Optional[InductiveMode]):
+        assert mode is not None, "Inductive mode must be explicitly set for inductive models"
         if mode == TRAINING:
             return self.entity_representations
         else:
