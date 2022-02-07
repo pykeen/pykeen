@@ -60,8 +60,8 @@ class InductiveNodePieceGNN(InductiveNodePiece):
             self.gnn_encoder = torch.nn.ModuleList(
                 [
                     CompGCNLayer(
-                        input_dim=self.entity_representations[0].tokens.shape[0],
-                        output_dim=self.entity_representations[0].tokens.shape[0],
+                        input_dim=self.entity_representations[0].shape[0],
+                        output_dim=self.entity_representations[0].shape[0],
                         activation=torch.nn.ReLU,
                         dropout=0.1,
                     )
@@ -88,6 +88,13 @@ class InductiveNodePieceGNN(InductiveNodePiece):
             self.register_buffer(name="validation_edge_type", tensor=validation_factory.mapped_triples[:, 1])
             self.register_buffer(name="testing_edge_index", tensor=test_factory.mapped_triples[:, [0, 2]].t())
             self.register_buffer(name="testing_edge_type", tensor=test_factory.mapped_triples[:, 1])
+
+    def reset_parameters_(self):
+        super().reset_parameters_()
+        if getattr(self, 'gnn_encoder', None) is not None:
+            for layer in self.gnn_encoder:
+                if hasattr(layer, 'reset_parameters'):
+                    layer.reset_parameters()
 
     def _get_representations(
         self,
