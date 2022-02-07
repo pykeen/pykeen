@@ -1209,7 +1209,7 @@ Traceback
         # do one optimization step
         opt = optim.SGD(params=self.instance.parameters(), lr=1.0)
         batch = self.factory.mapped_triples[: self.batch_size, :].to(self.instance.device)
-        scores = self.instance.score_hrt(hrt_batch=batch)
+        scores = self.instance.score_hrt(hrt_batch=batch, mode=self.mode)
         fake_loss = scores.mean()
         fake_loss.backward()
         opt.step()
