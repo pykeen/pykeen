@@ -159,6 +159,8 @@ class LazyInductiveDataset(InductiveDataset):
             PyKEEN home directory defined in :data:`pykeen.constants.PYKEEN_HOME`.
             The subfolder is named based on the class inheriting from
             :class:`pykeen.datasets.base.Dataset`.
+        :param version: accepts a string "v1" to "v4" to select among Teru et al inductive dataset
+        :param sep_train_inference: a flag to store training and inference splits in different folders
         :returns: A path object for the calculated cache root directory
         """
         if cache_root is None:
