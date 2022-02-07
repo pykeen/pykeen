@@ -1407,8 +1407,9 @@ class InductiveModelTestCase(ModelTestCase):
             num_triples_testing=self.num_triples_testing,
             create_inverse_triples=self.create_inverse_triples,
         )
-        self.training_loop_kwargs = self.training_loop_kwargs or dict()
-        self.training_loop_kwargs["mode"] = self.mode
+        training_loop_kwargs = dict(self.training_loop_kwargs or dict())
+        training_loop_kwargs["mode"] = self.mode
+        InductiveModelTestCase.training_loop_kwargs = training_loop_kwargs
         # dataset = InductiveFB15k237(create_inverse_triples=self.create_inverse_triples)
         kwargs["triples_factory"] = dataset.transductive_training
         kwargs["inference_factory"] = self.factory = dataset.inductive_inference
