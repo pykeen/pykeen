@@ -39,7 +39,7 @@ pipeline:
   negative_sampler: basic
   negative_sampler_kwargs:
     num_negs_per_pos: 20
-results:
+results:  # https://openreview.net/pdf?id=xMJWUKJnFSw Table 2 row 4
   hits_at_k:
     best:
       '10': 0.510  # line in paper: no anchor distances

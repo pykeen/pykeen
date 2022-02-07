@@ -4,7 +4,7 @@ pipeline:
   dataset: fb15k237
   evaluator_kwargs:
     filtered: true
-  loss: BCELoss
+  loss: BCEWithLogitsLoss
   model: NodePiece
   model_kwargs:
     entity_initializer: xavier_uniform_
@@ -35,7 +35,7 @@ pipeline:
     num_epochs: 401
     label_smoothing: 0.4
   training_loop: LCWA
-results:
+results:  # https://openreview.net/pdf?id=xMJWUKJnFSw Table 2 row 3
   hits_at_k:
     best:
       '10': 0.425

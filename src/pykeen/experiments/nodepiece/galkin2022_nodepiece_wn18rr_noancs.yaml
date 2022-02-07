@@ -2,6 +2,8 @@ metadata:
   title: Learn WN18RR Dataset with NodePiece + RotatE (no anchor tokenization) as described by Galkin et al., 2022
 pipeline:
   dataset: wn18rr
+  dataset_kwargs:
+    create_inverse_triples: True
   evaluator_kwargs:
     filtered: true
   loss: NSSALoss
@@ -17,7 +19,6 @@ pipeline:
     aggregation: mlp
     tokenizers: RelationTokenizer
     num_tokens: 4 # 4 relations
-    tokenizers_kwargs: [{}, {}]  # no params for RelationTokenizer
   optimizer: Adam
   optimizer_kwargs:
     lr: 0.0005
@@ -28,7 +29,7 @@ pipeline:
   negative_sampler: basic
   negative_sampler_kwargs:
     num_negs_per_pos: 20
-results:
+results:  # https://openreview.net/pdf?id=xMJWUKJnFSw Table 2 row 5
   hits_at_k:
     best:
       '10': 0.041

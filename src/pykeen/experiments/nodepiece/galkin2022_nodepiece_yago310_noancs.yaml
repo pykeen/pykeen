@@ -29,7 +29,7 @@ pipeline:
   negative_sampler: basic
   negative_sampler_kwargs:
     num_negs_per_pos: 10
-results:
+results:  # https://openreview.net/pdf?id=xMJWUKJnFSw Table 3 row 5
   hits_at_k:
     best:
       '10': 0.041
