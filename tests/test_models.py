@@ -138,7 +138,7 @@ class TestDistMult(cases.ModelTestCase):
         actual_k, n_cols = top_triples.shape
         assert n_cols == 3
         if k is None:
-            assert actual_k == self.factory.num_entities**2 * self.factory.num_relations
+            assert actual_k == self.factory.num_entities ** 2 * self.factory.num_relations
         else:
             assert actual_k == min(k, self.factory.num_triples)
         assert top_scores.shape == (actual_k,)
@@ -310,15 +310,18 @@ class TestNodePieceJoint(cases.BaseNodePieceTest):
         assert relation.vocabulary.max_id == 2 * self.factory.real_num_relations + 1
 
 
-class TestInductiveNodePiece(cases.BaseInductiveNodePieceTest):
-    """Test the NodePiece model with joint anchor and relation tokenization."""
+class TestInductiveNodePiece(cases.BaseInductiveTest):
+    """Test the InductiveNodePiece model."""
 
-    num_tokens = 5
+    cls = pykeen.models.InductiveNodePiece
+    create_inverse_triples = True
 
-class TestInductiveNodePieceGNN(cases.BaseInductiveNodePieceGNNTest):
-    """Test the NodePiece model with joint anchor and relation tokenization."""
 
-    num_tokens = 5
+class TestInductiveNodePieceGNN(cases.BaseInductiveTest):
+    """Test the InductiveNodePieceGNN model."""
+
+    cls = pykeen.models.InductiveNodePieceGNN
+    create_inverse_triples = True
 
 
 class TestNTN(cases.ModelTestCase):

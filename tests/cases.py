@@ -1384,41 +1384,17 @@ class BaseNodePieceTest(ModelTestCase):
         return super()._help_test_cli(args)
 
 
-class BaseInductiveNodePieceTest(ModelTestCase):
-    """Test the InductiveNodePiece model."""
+class BaseInductiveTest(ModelTestCase):
+    """Tests for inductive models."""
 
-    cls = pykeen.models.InductiveNodePiece
     mode = "training"
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
-        dataset = InductiveFB15k237(create_inverse_triples=True)
-        kwargs['triples_factory'] = dataset.transductive_training
-        kwargs['inference_factory'] = self.factory = dataset.inductive_inference
+        # TODO: use a smaller dataset for testing
+        dataset = InductiveFB15k237(create_inverse_triples=self.create_inverse_triples)
+        kwargs["triples_factory"] = dataset.transductive_training
+        kwargs["inference_factory"] = self.factory = dataset.inductive_inference
         return kwargs
-
-    def _help_test_cli(self, args):  # noqa: D102
-        if self.instance_kwargs.get("tokenizers_kwargs"):
-            raise SkipTest("No support for tokenizers_kwargs via CLI.")
-        return super()._help_test_cli(args)
-
-
-class BaseInductiveNodePieceGNNTest(ModelTestCase):
-    """Test the InductiveNodePieceGNN model."""
-
-    cls = pykeen.models.InductiveNodePieceGNN
-    create_inverse_triples = True
-    mode = "training"
-
-    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
-        dataset = InductiveFB15k237(create_inverse_triples=True)
-        kwargs['triples_factory'] = dataset.transductive_training
-        kwargs['inference_factory'] = dataset.inductive_inference
-        return kwargs
-
-    def _help_test_cli(self, args):  # noqa: D102
-        if self.instance_kwargs.get("tokenizers_kwargs"):
-            raise SkipTest("No support for tokenizers_kwargs via CLI.")
-        return super()._help_test_cli(args)
 
 
 class RepresentationTestCase(GenericTestCase[RepresentationModule]):
