@@ -68,6 +68,7 @@ from pykeen.typing import (
     LABEL_HEAD,
     LABEL_TAIL,
     HeadRepresentation,
+    InductiveMode,
     Initializer,
     MappedTriples,
     RelationRepresentation,
@@ -859,6 +860,9 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
     #: the model's device
     device: torch.device
 
+    #: the inductive mode
+    mode: ClassVar[Optional[InductiveMode]] = None
+
     def pre_setup_hook(self) -> None:  # noqa: D102
         # for reproducible testing
         _, self.generator, _ = set_random_seed(42)
@@ -925,7 +929,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         """Test the model's ``score_hrt()`` function."""
         batch = self.factory.mapped_triples[: self.batch_size, :].to(self.instance.device)
         try:
-            scores = self.instance.score_hrt(batch)
+            scores = self.instance.score_hrt(batch, mode=self.mode)
         except RuntimeError as e:
             if str(e) == "fft: ATen not compiled with MKL support":
                 self.skipTest(str(e))
@@ -942,7 +946,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         assert (batch[:, 0] < self.factory.num_entities).all()
         assert (batch[:, 1] < self.factory.num_relations).all()
         try:
-            scores = self.instance.score_t(batch)
+            scores = self.instance.score_t(batch, mode=self.mode)
         except NotImplementedError:
             self.fail(msg="score_t not yet implemented")
         except RuntimeError as e:
@@ -960,7 +964,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         assert batch.shape == (self.batch_size, 2)
         assert (batch < self.factory.num_entities).all()
         try:
-            scores = self.instance.score_r(batch)
+            scores = self.instance.score_r(batch, mode=self.mode)
         except NotImplementedError:
             self.fail(msg="score_r not yet implemented")
         except RuntimeError as e:
@@ -983,7 +987,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         assert (batch[:, 0] < self.factory.num_relations).all()
         assert (batch[:, 1] < self.factory.num_entities).all()
         try:
-            scores = self.instance.score_h(batch)
+            scores = self.instance.score_h(batch, mode=self.mode)
         except NotImplementedError:
             self.fail(msg="score_h not yet implemented")
         except RuntimeError as e:
@@ -1384,6 +1388,7 @@ class BaseInductiveNodePieceTest(ModelTestCase):
     """Test the InductiveNodePiece model."""
 
     cls = pykeen.models.InductiveNodePiece
+    mode = "training"
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         dataset = InductiveFB15k237(create_inverse_triples=True)
@@ -1402,6 +1407,7 @@ class BaseInductiveNodePieceGNNTest(ModelTestCase):
 
     cls = pykeen.models.InductiveNodePieceGNN
     create_inverse_triples = True
+    mode = "training"
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         dataset = InductiveFB15k237(create_inverse_triples=True)
