@@ -432,7 +432,7 @@ class _AllConsumer(_ScoreConsumer):
         :param num_relations:
             the number of relations
         """
-        assert num_entities**2 * num_relations < (2**63 - 1)
+        assert num_entities ** 2 * num_relations < (2 ** 63 - 1)
         # initialize buffer on cpu
         self.scores = torch.empty(num_relations, num_entities, num_entities, device="cpu")
         # Explicitly create triples

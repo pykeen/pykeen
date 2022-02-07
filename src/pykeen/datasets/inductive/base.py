@@ -3,10 +3,10 @@
 """Utility classes for constructing inductive datasets."""
 
 from __future__ import annotations
-from dataclasses import dataclass
 
 import logging
 import pathlib
+from dataclasses import dataclass
 from typing import Any, Mapping, Optional, Union
 
 from pystow.utils import download, name_from_url

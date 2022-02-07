@@ -10,6 +10,7 @@ from class_resolver import Hint, HintOrType
 from torch import nn
 
 from ..nbase import ERModel, _prepare_representation_module_list
+
 # from ..unimodal.node_piece import _ConcatMLP  # commented due to circular imports errors
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn import (
@@ -27,6 +28,7 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
+
 
 class _ConcatMLP(nn.Sequential):
     """A 2-layer MLP with ReLU activation and dropout applied to the concatenation of token representations.
@@ -164,7 +166,7 @@ class InductiveNodePiece(ERModel):
         )
         entity_representations = NodePieceRepresentation(
             triples_factory=triples_factory,
-            tokenizers='RelationTokenizer',
+            tokenizers="RelationTokenizer",
             token_representations=relation_representations,
             aggregation=aggregation,
             shape=shape,
@@ -173,7 +175,7 @@ class InductiveNodePiece(ERModel):
 
         inference_representation = NodePieceRepresentation(
             triples_factory=inference_factory,
-            tokenizers='RelationTokenizer',
+            tokenizers="RelationTokenizer",
             token_representations=relation_representations,
             aggregation=aggregation,
             shape=shape,

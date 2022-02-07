@@ -6,7 +6,6 @@ from typing import Optional
 from .inductive.base import EagerInductiveDataset, InductiveDataset
 from ..triples.generation import generate_triples_factory
 
-
 __all__ = [
     "create_inductive_dataset",
 ]
