@@ -1388,7 +1388,7 @@ class BaseInductiveNodePieceTest(ModelTestCase):
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         dataset = InductiveFB15k237(create_inverse_triples=True)
         kwargs['triples_factory'] = dataset.transductive_training
-        kwargs['inference_factory'] = dataset.inductive_inference
+        kwargs['inference_factory'] = self.factory = dataset.inductive_inference
         return kwargs
 
     def _help_test_cli(self, args):  # noqa: D102
