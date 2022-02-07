@@ -1396,6 +1396,18 @@ class BaseInductiveTest(ModelTestCase):
         kwargs["inference_factory"] = self.factory = dataset.inductive_inference
         return kwargs
 
+    def test_train_lcwa(self) -> None:  # noqa: D102
+        raise SkipTest(f"Inductive models are not compatible with {LCWATrainingLoop}")
+
+    def test_train_slcwa(self) -> None:  # noqa: D102
+        raise SkipTest(f"Inductive models are not compatible with {SLCWATrainingLoop}")
+
+    def _help_test_cli(self, args):  # noqa: D102
+        raise SkipTest("Inductive models are not compatible the CLI.")
+
+    def test_pipeline_nations_early_stopper(self):  # noqa: D102
+        raise SkipTest("Inductive models are not compatible the pipeline.")
+
 
 class RepresentationTestCase(GenericTestCase[RepresentationModule]):
     """Common tests for representation modules."""
