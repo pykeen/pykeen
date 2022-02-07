@@ -2,7 +2,7 @@
 
 """Implementation of DistMult."""
 
-from typing import Any, ClassVar, Mapping, Optional, Type
+from typing import Any, ClassVar, Mapping, Type
 
 import torch
 from torch.nn import functional
@@ -128,7 +128,7 @@ class DistMult(EntityRelationEmbeddingModel):
         # *: Elementwise multiplication
         return torch.sum(h * r * t, dim=-1)
 
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_hrt(self, hrt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(hrt_batch[:, 0])
         r = self.relation_embeddings(hrt_batch[:, 1])
@@ -142,7 +142,7 @@ class DistMult(EntityRelationEmbeddingModel):
 
         return scores
 
-    def score_t(self, hr_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:  # noqa: D102
+    def score_t(self, hr_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(indices=hr_batch[:, 0]).view(-1, 1, self.embedding_dim)
         r = self.relation_embeddings(indices=hr_batch[:, 1]).view(-1, 1, self.embedding_dim)
@@ -156,7 +156,7 @@ class DistMult(EntityRelationEmbeddingModel):
 
         return scores
 
-    def score_h(self, rt_batch: torch.LongTensor, slice_size: Optional[int] = None) -> torch.FloatTensor:  # noqa: D102
+    def score_h(self, rt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         # Get embeddings
         h = self.entity_embeddings(indices=None).view(1, -1, self.embedding_dim)
         r = self.relation_embeddings(indices=rt_batch[:, 0]).view(-1, 1, self.embedding_dim)

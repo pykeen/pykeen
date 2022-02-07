@@ -5,7 +5,7 @@
 import dataclasses
 from typing import Set, Type
 
-from class_resolver import Resolver
+from class_resolver import ClassResolver
 
 from .classification_evaluator import ClassificationEvaluator, ClassificationMetricResults
 from .evaluator import Evaluator, MetricResults, evaluate
@@ -24,8 +24,8 @@ __all__ = [
     "get_metric_list",
 ]
 
-evaluator_resolver: Resolver[Evaluator] = Resolver.from_subclasses(
-    base=Evaluator,  # type: ignore
+evaluator_resolver: ClassResolver[Evaluator] = ClassResolver.from_subclasses(
+    base=Evaluator,
     default=RankBasedEvaluator,
 )
 
@@ -34,7 +34,7 @@ _METRICS: Set[Type[MetricResults]] = {
     RankBasedMetricResults,
     ClassificationMetricResults,
 }
-metric_resolver = Resolver(
+metric_resolver = ClassResolver(
     _METRICS,
     suffix=_METRICS_SUFFIX,
     base=MetricResults,

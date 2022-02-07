@@ -22,7 +22,7 @@ from ..constants import TARGET_TO_INDEX
 from ..models import Model
 from ..triples.triples_factory import restrict_triples
 from ..triples.utils import get_entities, get_relations
-from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, MappedTriples, Target
+from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, InductiveMode, MappedTriples, Target
 from ..utils import (
     format_relative_comparison,
     is_cuda_oom_error,
@@ -84,6 +84,7 @@ class Evaluator(ABC):
         batch_size: Optional[int] = None,
         slice_size: Optional[int] = None,
         automatic_memory_optimization: bool = True,
+        mode: Optional[InductiveMode] = None,
     ):
         """Initialize the evaluator.
 
@@ -99,6 +100,7 @@ class Evaluator(ABC):
         self.batch_size = batch_size
         self.slice_size = slice_size
         self.automatic_memory_optimization = automatic_memory_optimization
+        self.mode = mode
 
     @classmethod
     def get_normalized_name(cls) -> str:
@@ -182,6 +184,7 @@ class Evaluator(ABC):
             tqdm_kwargs=tqdm_kwargs,
             restrict_entities_to=restrict_entities_to,
             do_time_consuming_checks=do_time_consuming_checks,
+            mode=self.mode,
         )
         # Since squeeze is true, we can expect that evaluate returns a MetricResult, but we need to tell MyPy that
         return cast(MetricResults, rv)
@@ -314,6 +317,7 @@ class Evaluator(ABC):
                     do_time_consuming_checks=do_time_consuming_checks,
                     batch_size=values_dict.get("batch_size"),
                     slice_size=values_dict.get("slice_size"),
+                    mode=self.mode,
                 )
                 evaluated_once = True
             except RuntimeError as runtime_error:
@@ -520,6 +524,8 @@ def evaluate(
     additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
     pre_filtered_triples: bool = True,
     targets: Collection[Target] = (LABEL_HEAD, LABEL_TAIL),
+    *,
+    mode: Optional[InductiveMode],
 ) -> Union[MetricResults, List[MetricResults]]:
     """Evaluate metrics for model on mapped triples.
 
@@ -665,6 +671,7 @@ def evaluate(
                     all_pos_triples=all_pos_triples,
                     relation_filter=relation_filter,
                     restrict_entities_to=restrict_entities_to,
+                    mode=mode,
                 )
 
             # If we only probe sizes we do not need more than one batch
@@ -697,6 +704,8 @@ def _evaluate_batch(
     all_pos_triples: Optional[MappedTriples],
     relation_filter: Optional[torch.BoolTensor],
     restrict_entities_to: Optional[torch.LongTensor],
+    *,
+    mode: Optional[InductiveMode],
 ) -> torch.BoolTensor:
     """
     Evaluate ranking for batch.
@@ -721,7 +730,7 @@ def _evaluate_batch(
     :return:
         The relation filter, which can be re-used for the same batch.
     """
-    scores = model.predict(hrt_batch=batch, target=target, slice_size=slice_size)
+    scores = model.predict(hrt_batch=batch, target=target, slice_size=slice_size, mode=mode)
 
     if evaluator.filtered:
         column = TARGET_TO_INDEX[target]

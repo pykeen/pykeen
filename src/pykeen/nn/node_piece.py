@@ -1,4 +1,5 @@
 """Node Piece representations."""
+
 import logging
 from abc import abstractmethod
 from collections import defaultdict
@@ -10,7 +11,7 @@ import scipy.sparse
 import scipy.sparse.csgraph
 import torch
 import torch.nn
-from class_resolver import HintOrType, OptionalKwargs, Resolver
+from class_resolver import ClassResolver, HintOrType, OptionalKwargs
 
 from .emb import EmbeddingSpecification, RepresentationModule
 from ..constants import AGGREGATIONS
@@ -274,7 +275,7 @@ class MixtureAnchorSelection(AnchorSelection):
         return numpy.concatenate([selection(edge_index=edge_index) for selection in self.selections])
 
 
-anchor_selection_resolver: Resolver[AnchorSelection] = Resolver.from_subclasses(
+anchor_selection_resolver: ClassResolver[AnchorSelection] = ClassResolver.from_subclasses(
     base=AnchorSelection,
     default=DegreeAnchorSelection,
 )
@@ -471,7 +472,7 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
 
 
 # TODO: use graph library, such as igraph, graph-tool, or networkit
-anchor_searcher_resolver: Resolver[AnchorSearcher] = Resolver.from_subclasses(
+anchor_searcher_resolver: ClassResolver[AnchorSearcher] = ClassResolver.from_subclasses(
     base=AnchorSearcher,
     default=CSGraphAnchorSearcher,
 )
@@ -529,7 +530,7 @@ class AnchorTokenizer(Tokenizer):
         return len(anchors) + 1, torch.as_tensor(tokens, dtype=torch.long)
 
 
-tokenizer_resolver: Resolver[Tokenizer] = Resolver.from_subclasses(
+tokenizer_resolver: ClassResolver[Tokenizer] = ClassResolver.from_subclasses(
     base=Tokenizer,
     default=RelationTokenizer,
 )

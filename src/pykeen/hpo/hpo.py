@@ -13,13 +13,12 @@ from dataclasses import dataclass
 from typing import Any, Callable, Collection, Dict, Iterable, Mapping, Optional, Type, Union, cast
 
 import torch
+from class_resolver.contrib.optuna import pruner_resolver, sampler_resolver
 from optuna import Study, Trial, TrialPruned, create_study
 from optuna.pruners import BasePruner
 from optuna.samplers import BaseSampler
 from optuna.storages import BaseStorage
 
-from .pruners import pruner_resolver
-from .samplers import sampler_resolver
 from ..constants import USER_DEFINED_CODE
 from ..datasets import get_dataset, has_dataset
 from ..datasets.base import Dataset
