@@ -310,6 +310,17 @@ class TestNodePieceJoint(cases.BaseNodePieceTest):
         assert relation.vocabulary.max_id == 2 * self.factory.real_num_relations + 1
 
 
+class TestInductiveNodePiece(cases.BaseInductiveNodePieceTest):
+    """Test the NodePiece model with joint anchor and relation tokenization."""
+
+    num_tokens = 5
+
+class TestInductiveNodePieceGNN(cases.BaseInductiveNodePieceGNNTest):
+    """Test the NodePiece model with joint anchor and relation tokenization."""
+
+    num_tokens = 5
+
+
 class TestNTN(cases.ModelTestCase):
     """Test the NTN model."""
 

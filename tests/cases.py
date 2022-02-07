@@ -44,6 +44,7 @@ import pykeen.nn.message_passing
 import pykeen.nn.node_piece
 import pykeen.nn.weighting
 from pykeen.datasets import Nations
+from pykeen.datasets.inductive.ilp_teru import InductiveFB15k237
 from pykeen.datasets.base import LazyDataset
 from pykeen.datasets.kinships import KINSHIPS_TRAIN_PATH
 from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH
@@ -1372,6 +1373,41 @@ class BaseNodePieceTest(ModelTestCase):
 
     cls = pykeen.models.NodePiece
     create_inverse_triples = True
+
+    def _help_test_cli(self, args):  # noqa: D102
+        if self.instance_kwargs.get("tokenizers_kwargs"):
+            raise SkipTest("No support for tokenizers_kwargs via CLI.")
+        return super()._help_test_cli(args)
+
+
+class BaseInductiveNodePieceTest(ModelTestCase):
+    """Test the InductiveNodePiece model."""
+
+    cls = pykeen.models.InductiveNodePiece
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        dataset = InductiveFB15k237(create_inverse_triples=True)
+        kwargs['triples_factory'] = dataset.transductive_training
+        kwargs['inference_factory'] = dataset.inductive_inference
+        return kwargs
+
+    def _help_test_cli(self, args):  # noqa: D102
+        if self.instance_kwargs.get("tokenizers_kwargs"):
+            raise SkipTest("No support for tokenizers_kwargs via CLI.")
+        return super()._help_test_cli(args)
+
+
+class BaseInductiveNodePieceGNNTest(ModelTestCase):
+    """Test the InductiveNodePieceGNN model."""
+
+    cls = pykeen.models.InductiveNodePieceGNN
+    create_inverse_triples = True
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        dataset = InductiveFB15k237(create_inverse_triples=True)
+        kwargs['triples_factory'] = dataset.transductive_training
+        kwargs['inference_factory'] = dataset.inductive_inference
+        return kwargs
 
     def _help_test_cli(self, args):  # noqa: D102
         if self.instance_kwargs.get("tokenizers_kwargs"):
