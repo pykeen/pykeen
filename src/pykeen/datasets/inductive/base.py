@@ -3,6 +3,7 @@
 """Utility classes for constructing inductive datasets."""
 
 from __future__ import annotations
+from dataclasses import dataclass
 
 import logging
 import pathlib
@@ -35,9 +36,9 @@ class InductiveDataset:
     #: A factory wrapping the testing triples, that share indices with the INDUCTIVE INFERENCE triples
     inductive_testing: CoreTriplesFactory
     #: A factory wrapping the validation triples, that share indices with the INDUCTIVE INFERENCE triples
-    inductive_validation: Optional[CoreTriplesFactory]
+    inductive_validation: Optional[CoreTriplesFactory] = None
     #: All datasets should take care of inverse triple creation
-    create_inverse_triples: bool
+    create_inverse_triples: bool = True
 
     def _summary_rows(self):
         return [
@@ -79,6 +80,17 @@ class InductiveDataset:
             f"{self.__class__.__name__}(Training num_entities={self.transductive_training.num_entities},"
             f" num_relations={self.transductive_training.num_relations})"
         )
+
+
+@dataclass
+class EagerInductiveDataset(InductiveDataset):
+    """An eager inductive datasets."""
+
+    transductive_training: CoreTriplesFactory
+    inductive_inference: CoreTriplesFactory
+    inductive_testing: CoreTriplesFactory
+    inductive_validation: Optional[CoreTriplesFactory] = None
+    create_inverse_triples: bool = True
 
 
 class LazyInductiveDataset(InductiveDataset):
