@@ -321,7 +321,9 @@ class TestInductiveNodePieceGNN(cases.InductiveModelTestCase):
     """Test the InductiveNodePieceGNN model."""
 
     cls = pykeen.models.InductiveNodePieceGNN
+    num_constant_init = 6
     create_inverse_triples = True
+    train_batch_size = 8
 
 
 class TestNTN(cases.ModelTestCase):
