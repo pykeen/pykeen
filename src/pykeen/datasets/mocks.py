@@ -15,6 +15,7 @@ def create_inductive(
     create_inverse_triples: bool = False,
     num_triples_inference: Optional[int] = None,
     num_triples_testing: Optional[int] = None,
+    random_state: int = 42,
     # num_triples_validation: Optional[int],
 ) -> InductiveDataset:
     """
@@ -34,6 +35,8 @@ def create_inductive(
         the number of (inductive) testing triples. defaults to `num_triples_training`
     :param create_inverse_triples:
         whether to create inverse triples
+    :param random_state:
+        the random state to use.
 
     :return:
         an inductive dataset with random triples
@@ -44,18 +47,21 @@ def create_inductive(
             num_relations=num_relations,
             num_triples=num_triples_training,
             create_inverse_triples=create_inverse_triples,
+            random_state=random_state,
         ),
         inductive_inference=generate_triples_factory(
             num_entities=num_entities_inductive,
             num_relations=num_relations,
             num_triples=num_triples_inference,
             create_inverse_triples=create_inverse_triples,
+            random_state=random_state + 1,  # different random states for different triples
         ),
         inductive_testing=generate_triples_factory(
             num_entities=num_entities_inductive,
             num_relations=num_relations,
             num_triples=num_triples_testing,
             create_inverse_triples=create_inverse_triples,
+            random_state=random_state + 2,  # different random states for different triples
         ),
         create_inverse_triples=create_inverse_triples,
     )
