@@ -2,6 +2,8 @@ metadata:
   title: Learn WN18RR Dataset with NodePiece + RotatE as described by Galkin et al., 2022
 pipeline:
   dataset: wn18rr
+  dataset_kwargs:
+    create_inverse_triples: True
   evaluator_kwargs:
     filtered: true
   loss: NSSALoss
