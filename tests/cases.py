@@ -68,6 +68,7 @@ from pykeen.triples.utils import get_entities, is_triple_tensor_subset, triple_t
 from pykeen.typing import (
     LABEL_HEAD,
     LABEL_TAIL,
+    TRAINING,
     HeadRepresentation,
     InductiveMode,
     Initializer,
@@ -1388,7 +1389,7 @@ class BaseNodePieceTest(ModelTestCase):
 class InductiveModelTestCase(ModelTestCase):
     """Tests for inductive models."""
 
-    mode = "training"
+    mode = TRAINING
     num_relations: ClassVar[int] = 7
     num_entities_transductive: ClassVar[int] = 13
     num_entities_inductive: ClassVar[int] = 5
@@ -1406,16 +1407,12 @@ class InductiveModelTestCase(ModelTestCase):
             num_triples_testing=self.num_triples_testing,
             create_inverse_triples=self.create_inverse_triples,
         )
+        self.training_loop_kwargs = self.training_loop_kwargs or dict()
+        self.training_loop_kwargs["mode"] = self.mode
         # dataset = InductiveFB15k237(create_inverse_triples=self.create_inverse_triples)
         kwargs["triples_factory"] = dataset.transductive_training
         kwargs["inference_factory"] = self.factory = dataset.inductive_inference
         return kwargs
-
-    def test_train_lcwa(self) -> None:  # noqa: D102
-        raise SkipTest(f"Inductive models are not compatible with {LCWATrainingLoop}")
-
-    def test_train_slcwa(self) -> None:  # noqa: D102
-        raise SkipTest(f"Inductive models are not compatible with {SLCWATrainingLoop}")
 
     def _help_test_cli(self, args):  # noqa: D102
         raise SkipTest("Inductive models are not compatible the CLI.")
