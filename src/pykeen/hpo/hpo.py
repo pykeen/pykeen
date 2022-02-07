@@ -20,7 +20,7 @@ from optuna.samplers import BaseSampler
 from optuna.storages import BaseStorage
 
 from ..constants import USER_DEFINED_CODE
-from ..datasets import has_dataset, dataset_resolver
+from ..datasets import dataset_resolver, has_dataset
 from ..datasets.base import Dataset
 from ..evaluation import Evaluator, evaluator_resolver
 from ..evaluation.metrics import ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX
