@@ -219,7 +219,7 @@ class InductiveNodePiece(ERModel):
         else:
             return self.inference_representation
 
-    def _get_entity_len(self, *, mode: Optional[InductiveMode]) -> int:
+    def _get_entity_len(self, *, mode: Optional[InductiveMode]) -> Optional[int]:
         if mode == TRAINING:
             return self.num_train_entities
         elif mode == TESTING:

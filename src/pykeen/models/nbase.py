@@ -181,7 +181,7 @@ def _prepare_representation_module_list(
 def repeat_if_necessary(
     scores: torch.FloatTensor,
     representations: Sequence[RepresentationModule],
-    num: int,
+    num: Optional[int],
 ) -> torch.FloatTensor:
     """
     Repeat score tensor if necessary.
@@ -457,7 +457,7 @@ class ERModel(
             raise NotImplementedError
         return self.entity_representations
 
-    def _get_entity_len(self, *, mode: Optional[InductiveMode]) -> int:  # noqa:D105
+    def _get_entity_len(self, *, mode: Optional[InductiveMode]) -> Optional[int]:  # noqa:D105
         if mode is not None:
             raise NotImplementedError
         return self.num_entities

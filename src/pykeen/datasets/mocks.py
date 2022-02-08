@@ -15,11 +15,11 @@ def create_inductive_dataset(
     num_relations: int,
     num_entities_transductive: int,
     num_triples_training: int,
-    num_entities_inductive: Optional[int] = None,
-    create_inverse_triples: bool = False,
-    num_triples_inference: Optional[int] = None,
-    num_triples_testing: Optional[int] = None,
+    num_entities_inductive: int,
+    num_triples_inference: int,
+    num_triples_testing: int,
     random_state: int = 42,
+    create_inverse_triples: bool = False,
     # num_triples_validation: Optional[int],
 ) -> InductiveDataset:
     """
