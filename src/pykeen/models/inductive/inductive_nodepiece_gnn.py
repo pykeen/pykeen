@@ -84,8 +84,9 @@ class InductiveNodePieceGNN(InductiveNodePiece):
             self.register_buffer(name="testing_edge_index", tensor=inference_edge_index)
             self.register_buffer(name="testing_edge_type", tensor=inference_edge_type)
         else:
-            assert validation_factory is not None \
-                   and test_factory is not None, "Validation and test factories must be triple factories"
+            assert (
+                validation_factory is not None and test_factory is not None
+            ), "Validation and test factories must be triple factories"
             self.register_buffer(name="validation_edge_index", tensor=validation_factory.mapped_triples[:, [0, 2]].t())
             self.register_buffer(name="validation_edge_type", tensor=validation_factory.mapped_triples[:, 1])
             self.register_buffer(name="testing_edge_index", tensor=test_factory.mapped_triples[:, [0, 2]].t())
