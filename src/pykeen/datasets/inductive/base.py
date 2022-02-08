@@ -159,7 +159,7 @@ class LazyInductiveDataset(InductiveDataset):
             PyKEEN home directory defined in :data:`pykeen.constants.PYKEEN_HOME`.
             The subfolder is named based on the class inheriting from
             :class:`pykeen.datasets.base.Dataset`.
-        :param version: accepts a string "v1" to "v4" to select among Teru et al inductive dataset
+        :param version: accepts a string "v1" to "v4" to select among Teru et al inductive datasets
         :param sep_train_inference: a flag to store training and inference splits in different folders
         :returns: A path object for the calculated cache root directory
         """
@@ -300,6 +300,7 @@ class UnpackedRemoteDisjointInductiveDataset(DisjointInductivePathDataset):
         :param load_triples_kwargs: Arguments to pass through to :func:`TriplesFactory.from_path`
             and ultimately through to :func:`pykeen.triples.utils.load_triples`.
         :param download_kwargs: Keyword arguments to pass to :func:`pystow.utils.download`
+        :param version: accepts a string "v1" to "v4" to select among Teru et al inductive datasets
         """
         self.cache_root = self._help_cache(cache_root, version, sep_train_inference=True)
 
