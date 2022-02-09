@@ -228,7 +228,7 @@ class PageRankAnchorSelection(AnchorSelection):
         # adj = (adj + adj.transpose() + scipy.sparse.eye(m=adj.shape[0], format="coo")).tocsr()
         adj = (adj + adj.transpose()).tocsr()
         # degree
-        degree_inv = numpy.reciprocal(numpy.asarray(adj.sum(axis=0), dtype=numpy.float))[0]
+        degree_inv = numpy.reciprocal(numpy.asarray(adj.sum(axis=0), dtype=float))[0]
         n = degree_inv.shape[0]
         # power iteration
         x = numpy.full(shape=(n,), fill_value=1.0 / n)
