@@ -6,6 +6,7 @@ from collections import defaultdict
 from typing import Callable, Iterable, Optional, Sequence, Tuple, Union
 
 import numpy
+import numpy as np
 import numpy.linalg
 import scipy.sparse
 import scipy.sparse.csgraph
@@ -157,17 +158,32 @@ class AnchorSelection:
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({', '.join(self.extra_repr())})"
-    
+
+    def filter_unique(self, anchors: numpy.ndarray, known_anchors: numpy.ndarray, order: str = "asc"):
+        """
+        Given an array of anchors, filter out already known anchors
+        and obtain self.num_anchors unique ones
+
+        :param anchors
+            a sorted sequence of anchor IDs
+        :param known_anchors
+            a sequence of already known anchors
+        :param order
+            order of the sorted anchors array, "asc" or "desc"
+        """
+        unique_anchors = anchors[~numpy.isin(anchors, known_anchors)]  # isin() preserves the sorted order
+        unique_anchors = unique_anchors[-self.num_anchors:] if order == "asc" else unique_anchors[:self.num_anchors]
+        return np.concatenate([known_anchors, unique_anchors])
+
 
 class DegreeAnchorSelection(AnchorSelection):
     """Select entities according to their (undirected) degree."""
 
     def __call__(self, edge_index: numpy.ndarray, known_anchors: numpy.ndarray) -> numpy.ndarray:  # noqa: D102
         unique, counts = numpy.unique(edge_index, return_counts=True)
-        top_ids = numpy.argpartition(counts, max(counts.size - self.num_anchors, 0))
+        top_ids = numpy.argsort(counts)
         nodes = unique[top_ids]
-        unique_anchors = nodes[~numpy.isin(nodes, known_anchors)][-self.num_anchors:]  # isin() preserves the order
-        unique_anchors = numpy.concatenate([known_anchors, unique_anchors])  # preserves the original order
+        unique_anchors = self.filter_unique(anchors=nodes, known_anchors=known_anchors)
         return unique_anchors
 
 
@@ -213,7 +229,7 @@ class PageRankAnchorSelection(AnchorSelection):
         # adj = (adj + adj.transpose() + scipy.sparse.eye(m=adj.shape[0], format="coo")).tocsr()
         adj = (adj + adj.transpose()).tocsr()
         # degree
-        degree_inv = numpy.reciprocal(numpy.asarray(adj.sum(axis=0)))[0]
+        degree_inv = numpy.reciprocal(numpy.asarray(adj.sum(axis=0), dtype=numpy.float))[0]
         n = degree_inv.shape[0]
         # power iteration
         x = numpy.full(shape=(n,), fill_value=1.0 / n)
@@ -229,9 +245,8 @@ class PageRankAnchorSelection(AnchorSelection):
         if no_convergence:
             logger.warning(f"No covergence after {self.max_iter} iterations with epsilon={self.epsilon}.")
 
-        nodes = numpy.argpartition(x, max(x.size - self.num_anchors, 0))
-        unique_anchors = nodes[~numpy.isin(nodes, known_anchors)][-self.num_anchors:]
-        unique_anchors = numpy.concatenate([known_anchors, unique_anchors])
+        nodes = numpy.argsort(x)
+        unique_anchors = self.filter_unique(anchors=nodes, known_anchors=known_anchors)
         return unique_anchors
 
 
