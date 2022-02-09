@@ -263,7 +263,9 @@ class MixtureAnchorSelection(AnchorSelection):
         Initialize the selection strategy.
 
         :param selections:
-            the individual selections
+            the individual selections.
+            For the sake of selecting unique anchors, selections will be executed in the given order
+            eg, ['degree', 'pagerank'] will be executed differently from ['pagerank', 'degree']
         :param ratios:
             the ratios, cf. normalize_ratios. None means uniform ratios
         :param selection_kwargs:
