@@ -6,7 +6,6 @@ from collections import defaultdict
 from typing import Callable, Iterable, Optional, Sequence, Tuple, Union
 
 import numpy
-import numpy as np
 import numpy.linalg
 import scipy.sparse
 import scipy.sparse.csgraph
@@ -173,7 +172,7 @@ class AnchorSelection:
         """
         unique_anchors = anchors[~numpy.isin(anchors, known_anchors)]  # isin() preserves the sorted order
         unique_anchors = unique_anchors[-self.num_anchors:] if order == "asc" else unique_anchors[:self.num_anchors]
-        return np.concatenate([known_anchors, unique_anchors])
+        return numpy.concatenate([known_anchors, unique_anchors])
 
 
 class DegreeAnchorSelection(AnchorSelection):
