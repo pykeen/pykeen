@@ -7,9 +7,10 @@ from typing import Any, Mapping, Optional
 
 import torch
 from class_resolver import HintOrType
+from class_resolver.contrib.torch import activation_resolver
 from torch import nn
 
-from ..utils import activation_resolver, combine_complex, split_complex
+from ..utils import combine_complex, split_complex
 
 __all__ = [
     "Combination",

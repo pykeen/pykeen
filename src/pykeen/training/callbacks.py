@@ -51,18 +51,22 @@ to implement a gradient clipping callback:
             clip_grad_value_(self.model.parameters(), clip_value=self.clip_value)
 """
 
+import pathlib
 from typing import Any, List, Optional
 
-from class_resolver import HintOrType, OptionalKwargs, Resolver
+from class_resolver import ClassResolver, HintOrType, OptionalKwargs
 from torch.nn.utils import clip_grad_norm_, clip_grad_value_
 
 from ..evaluation import Evaluator, evaluator_resolver
+from ..stoppers import Stopper
 from ..trackers import ResultTracker, tracker_resolver
+from ..triples import CoreTriplesFactory
 from ..typing import MappedTriples, OneOrSequence
 
 __all__ = [
     "TrainingCallbackHint",
     "TrainingCallback",
+    "StopperTrainingCallback",
     "TrackerTrainingCallback",
     "EvaluationTrainingCallback",
     "MultiTrainingCallback",
@@ -263,7 +267,49 @@ class EvaluationTrainingCallback(TrainingCallback):
         self.tracker.log_metrics(metrics=result.to_flat_dict(), step=epoch, prefix=self.prefix)
 
 
-callback_resolver: Resolver[TrainingCallback] = Resolver.from_subclasses(
+class StopperTrainingCallback(TrainingCallback):
+    """An adapter for the :class:`pykeen.stopper.Stopper`."""
+
+    def __init__(
+        self,
+        stopper: Stopper,
+        *,
+        triples_factory: CoreTriplesFactory,
+        last_best_epoch: Optional[int] = None,
+        best_epoch_model_file_path: Optional[pathlib.Path],
+    ):
+        """
+        Initialize the callback.
+
+        :param stopper:
+            the stopper
+        :param triples_factory:
+            the triples factory used for saving the state
+        :param last_best_epoch:
+            the last best epoch
+        :param best_epoch_model_file_path:
+            the path under which to store the best model checkpoint
+        """
+        super().__init__()
+        self.stopper = stopper
+        self.triples_factory = triples_factory
+        self.last_best_epoch = last_best_epoch
+        self.best_epoch_model_file_path = best_epoch_model_file_path
+
+    def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
+        if self.stopper.should_evaluate(epoch):
+            # TODO how to pass inductive mode
+            if self.stopper.should_stop(epoch):
+                self.training_loop._should_stop = True
+            # Since the model is also used within the stopper, its graph and cache have to be cleared
+            self.model._free_graph_and_cache()
+            # When the stopper obtained a new best epoch, this model has to be saved for reconstruction
+        if self.stopper.best_epoch != self.last_best_epoch and self.best_epoch_model_file_path is not None:
+            self.training_loop._save_state(path=self.best_epoch_model_file_path, triples_factory=self.triples_factory)
+            self.last_best_epoch = epoch
+
+
+callback_resolver: ClassResolver[TrainingCallback] = ClassResolver.from_subclasses(
     base=TrainingCallback,
 )
 
