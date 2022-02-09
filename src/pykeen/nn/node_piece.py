@@ -132,7 +132,7 @@ class AnchorSelection:
         self.num_anchors = num_anchors
 
     @abstractmethod
-    def __call__(self, edge_index: numpy.ndarray) -> numpy.ndarray:
+    def __call__(self, edge_index: numpy.ndarray, known_anchors: numpy.ndarray) -> numpy.ndarray:
         """
         Select anchor nodes.
 
@@ -142,6 +142,9 @@ class AnchorSelection:
 
         :param edge_index: shape: (m, 2)
             the edge_index, i.e., adjacency list.
+
+        :param known_anchors: numpy.ndarray
+            an array of already known anchors for getting only unique anchors
 
         :return: (k,)
             the selected entity ids
@@ -154,15 +157,18 @@ class AnchorSelection:
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({', '.join(self.extra_repr())})"
-
+    
 
 class DegreeAnchorSelection(AnchorSelection):
     """Select entities according to their (undirected) degree."""
 
-    def __call__(self, edge_index: numpy.ndarray) -> numpy.ndarray:  # noqa: D102
+    def __call__(self, edge_index: numpy.ndarray, known_anchors: numpy.ndarray) -> numpy.ndarray:  # noqa: D102
         unique, counts = numpy.unique(edge_index, return_counts=True)
-        top_ids = numpy.argpartition(counts, max(counts.size - self.num_anchors, 0))[-self.num_anchors :]
-        return unique[top_ids]
+        top_ids = numpy.argpartition(counts, max(counts.size - self.num_anchors, 0))
+        nodes = unique[top_ids]
+        unique_anchors = nodes[~numpy.isin(nodes, known_anchors)][-self.num_anchors:]  # isin() preserves the order
+        unique_anchors = numpy.concatenate([known_anchors, unique_anchors])  # preserves the original order
+        return unique_anchors
 
 
 class PageRankAnchorSelection(AnchorSelection):
@@ -199,7 +205,7 @@ class PageRankAnchorSelection(AnchorSelection):
         yield f"alpha={self.alpha}"
         yield f"epsilon={self.epsilon}"
 
-    def __call__(self, edge_index: numpy.ndarray) -> numpy.ndarray:  # noqa: D102
+    def __call__(self, edge_index: numpy.ndarray, known_anchors: numpy.ndarray) -> numpy.ndarray:  # noqa: D102
         # convert to sparse matrix
         adj = _edge_index_to_sparse_matrix(edge_index=edge_index)
         # symmetrize
@@ -222,7 +228,11 @@ class PageRankAnchorSelection(AnchorSelection):
             x_old = x
         if no_convergence:
             logger.warning(f"No covergence after {self.max_iter} iterations with epsilon={self.epsilon}.")
-        return numpy.argpartition(x, max(x.size - self.num_anchors, 0))[-self.num_anchors :]
+
+        nodes = numpy.argpartition(x, max(x.size - self.num_anchors, 0))
+        unique_anchors = nodes[~numpy.isin(nodes, known_anchors)][-self.num_anchors:]
+        unique_anchors = numpy.concatenate([known_anchors, unique_anchors])
+        return unique_anchors
 
 
 class MixtureAnchorSelection(AnchorSelection):
@@ -272,7 +282,11 @@ class MixtureAnchorSelection(AnchorSelection):
         yield f"selections={self.selections}"
 
     def __call__(self, edge_index: numpy.ndarray) -> numpy.ndarray:  # noqa: D102
-        return numpy.concatenate([selection(edge_index=edge_index) for selection in self.selections])
+        anchors = numpy.array([], dtype=numpy.int64)
+        for selection in self.selections:
+            anchors = selection(edge_index=edge_index, known_anchors=anchors)
+        return anchors
+        #return numpy.concatenate([selection(edge_index=edge_index) for selection in self.selections])
 
 
 anchor_selection_resolver: ClassResolver[AnchorSelection] = ClassResolver.from_subclasses(
@@ -518,6 +532,8 @@ class AnchorTokenizer(Tokenizer):
         # select anchors
         logger.info(f"Selecting anchors according to {self.anchor_selection}")
         anchors = self.anchor_selection(edge_index=edge_index)
+        if len(numpy.unique(anchors)) < len(anchors):
+            logger.warning(f"Only {len(numpy.unique(anchors))} out of {len(anchors)} anchors are unique")
         # find closest anchors
         logger.info(f"Searching closest anchors with {self.searcher}")
         tokens = self.searcher(edge_index=edge_index, anchors=anchors, k=num_tokens)
