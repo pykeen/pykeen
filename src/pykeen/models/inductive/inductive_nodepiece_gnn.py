@@ -3,7 +3,7 @@
 """A wrapper which combines an interaction function with NodePiece entity representations."""
 
 import logging
-from typing import Optional, Tuple, cast
+from typing import Iterable, Optional, Tuple, cast
 
 import torch
 from torch import nn
@@ -34,15 +34,16 @@ class InductiveNodePieceGNN(InductiveNodePiece):
     def __init__(
         self,
         *,
-        gnn_encoder: Optional[nn.ModuleList] = None,
+        gnn_encoder: Optional[Iterable[nn.Module]] = None,
         **kwargs,
     ) -> None:
         """
         Initialize the model.
 
         :param gnn_encoder:
-            ModuleList of message passing layers.
-            If not specified, defaults to 2-layer CompGCN with model's embedding dimension and interaction function
+            an interable of message passing layers. Defaults to 2-layer CompGCN with Hadamard composition.
+        :param kwargs:
+            additional keyword-based parameters passed to `InductiveNodePiece.__init__`.
         """
         super().__init__(**kwargs)
 
@@ -55,19 +56,17 @@ class InductiveNodePieceGNN(InductiveNodePiece):
 
         if gnn_encoder is None:
             # default composition is DistMult-style
-            self.gnn_encoder = torch.nn.ModuleList(
-                [
-                    CompGCNLayer(
-                        input_dim=self.entity_representations[0].shape[0],
-                        output_dim=self.entity_representations[0].shape[0],
-                        activation=torch.nn.ReLU,
-                        dropout=0.1,
-                    )
-                    for _ in range(2)
-                ]
-            )
-        else:
-            self.gnn_encoder = gnn_encoder
+            dim = self.entity_representations[0].shape[0]
+            gnn_encoder = [
+                CompGCNLayer(
+                    input_dim=dim,
+                    output_dim=dim,
+                    activation=torch.nn.ReLU,
+                    dropout=0.1,
+                )
+                for _ in range(2)
+            ]
+        self.gnn_encoder = nn.ModuleList(gnn_encoder)
 
         # Saving edge indices for all the supplied splits
         assert train_factory is not None, "train_factory must be a valid triples factory"
