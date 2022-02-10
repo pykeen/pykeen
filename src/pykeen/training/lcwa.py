@@ -70,7 +70,9 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
         else:
             raise ValueError(f"Invalid target column: {self.target}. Must be from {{0, 1, 2}}.")
 
-        self.num_targets = self.model.num_relations if self.target == 1 else self.model.num_entities
+        # Explicit mentioning of num_transductive_entities since in the evaluation there will be a different number
+        # of total entities from another inductive inference factory
+        self.num_targets = self.model.num_relations if self.target == 1 else self.model._get_entity_len(mode=self.mode)
 
     def _create_instances(self, triples_factory: CoreTriplesFactory) -> Instances:  # noqa: D102
         return triples_factory.create_lcwa_instances(target=self.target)

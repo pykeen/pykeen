@@ -6,30 +6,35 @@ import logging
 from typing import Any, Callable, ClassVar, Mapping, Optional, Sequence
 
 import torch
-from class_resolver import Hint, HintOrType, OptionalKwargs
+from class_resolver import Hint, HintOrType
 
-from ..nbase import ERModel
+from ..nbase import ERModel, _prepare_representation_module_list
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...nn import EmbeddingSpecification, NodePieceRepresentation, SubsetRepresentationModule
-from ...nn.modules import DistMultInteraction, Interaction
-from ...nn.node_piece import RelationTokenizer, Tokenizer, tokenizer_resolver
+from ...nn import (
+    DistMultInteraction,
+    EmbeddingSpecification,
+    Interaction,
+    NodePieceRepresentation,
+    SubsetRepresentationModule,
+)
 from ...nn.perceptron import ConcatMLP
 from ...triples.triples_factory import CoreTriplesFactory
-from ...typing import OneOrSequence
-from ...utils import upgrade_to_sequence
+from ...typing import TESTING, TRAINING, VALIDATION, InductiveMode
 
 __all__ = [
-    "NodePiece",
+    "InductiveNodePiece",
 ]
 
 logger = logging.getLogger(__name__)
 
 
-class NodePiece(ERModel):
+class InductiveNodePiece(ERModel):
     """A wrapper which combines an interaction function with NodePiece entity representations from [galkin2021]_.
 
     This model uses the :class:`pykeen.nn.emb.NodePieceRepresentation` instead of a typical
     :class:`pykeen.nn.emb.Embedding` to more efficiently store representations.
+
+    INDUCTIVE VERSION
     ---
     citation:
         author: Galkin
@@ -46,14 +51,15 @@ class NodePiece(ERModel):
         self,
         *,
         triples_factory: CoreTriplesFactory,
-        num_tokens: OneOrSequence[int] = 2,
-        tokenizers: OneOrSequence[HintOrType[Tokenizer]] = None,
-        tokenizers_kwargs: OneOrSequence[OptionalKwargs] = None,
+        inference_factory: CoreTriplesFactory,
+        num_tokens: int = 2,
         embedding_dim: int = 64,
-        embedding_specification: EmbeddingSpecification = None,
+        embedding_specification: Optional[EmbeddingSpecification] = None,
         interaction: HintOrType[Interaction] = DistMultInteraction,
         aggregation: Hint[Callable[[torch.Tensor, int], torch.Tensor]] = None,
         shape: Optional[Sequence[int]] = None,
+        validation_factory: Optional[CoreTriplesFactory] = None,
+        test_factory: Optional[CoreTriplesFactory] = None,
         **kwargs,
     ) -> None:
         """
@@ -63,11 +69,7 @@ class NodePiece(ERModel):
             the triples factory. Must have create_inverse_triples set to True.
         :param num_tokens:
             the number of relations to use to represent each entity, cf.
-            :class:`pykeen.nn.node_piece.NodePieceRepresentation`.
-        :param tokenizers:
-            the tokenizer to use, cf. `pykeen.nn.node_piece.tokenizer_resolver`.
-        :param tokenizers_kwargs:
-            additional keyword-based parameters passed to the tokenizer upon construction.
+            :class:`pykeen.nn.emb.NodePieceRepresentation`.
         :param embedding_dim:
             the embedding dimension. Only used if embedding_specification is not given.
         :param embedding_specification:
@@ -102,13 +104,14 @@ class NodePiece(ERModel):
                 "The provided triples factory does not create inverse triples. However, for the node piece "
                 "representations inverse relation representations are required.",
             )
-        # normalize embedding specification
-        embedding_specification = embedding_specification or EmbeddingSpecification(shape=(embedding_dim,))
+        embedding_specification = embedding_specification or EmbeddingSpecification(
+            shape=(embedding_dim,),
+        )
 
         # Create an MLP for string aggregation
         if aggregation == "mlp":
             aggregation = ConcatMLP(
-                num_tokens=num_tokens if isinstance(num_tokens, int) else sum(num_tokens),
+                num_tokens=num_tokens,
                 embedding_dim=embedding_dim,
             )
 
@@ -116,29 +119,67 @@ class NodePiece(ERModel):
         relation_representations = embedding_specification.make(
             num_embeddings=2 * triples_factory.real_num_relations + 1,
         )
+        entity_representations = NodePieceRepresentation(
+            triples_factory=triples_factory,
+            tokenizers="RelationTokenizer",
+            token_representations=relation_representations,
+            aggregation=aggregation,
+            shape=shape,
+            num_tokens=num_tokens,
+        )
+
+        inference_representation = NodePieceRepresentation(
+            triples_factory=inference_factory,
+            tokenizers="RelationTokenizer",
+            token_representations=relation_representations,
+            aggregation=aggregation,
+            shape=shape,
+            num_tokens=num_tokens,
+        )
 
         super().__init__(
             triples_factory=triples_factory,
             interaction=interaction,
-            entity_representations=NodePieceRepresentation(
-                triples_factory=triples_factory,
-                token_representations=[
-                    (
-                        relation_representations
-                        if tokenizer_resolver.lookup(tokenizer) is RelationTokenizer
-                        else embedding_specification
-                    )
-                    for tokenizer in upgrade_to_sequence(tokenizers)
-                ],
-                tokenizers=tokenizers,
-                tokenizers_kwargs=tokenizers_kwargs,
-                aggregation=aggregation,
-                shape=shape,
-                num_tokens=num_tokens,
-            ),
+            entity_representations=entity_representations,
             relation_representations=SubsetRepresentationModule(  # hide padding relation
                 relation_representations,
                 max_id=triples_factory.num_relations,
             ),
             **kwargs,
         )
+
+        self.inference_representation = _prepare_representation_module_list(
+            representations=inference_representation,
+            num_embeddings=inference_factory.num_entities,
+            shapes=self.interaction.entity_shape,
+            label="entity",
+            skip_checks=self.interaction.tail_entity_shape is not None or kwargs["skip_checks"]
+            if "skip_checks" in kwargs
+            else False,
+        )
+
+        self.num_train_entities = triples_factory.num_entities
+        self.num_inference_entities, self.num_valid_entities, self.num_test_entities = None, None, None
+        if inference_factory is not None:
+            self.num_inference_entities = inference_factory.num_entities
+            self.num_valid_entities = self.num_test_entities = self.num_inference_entities
+        else:
+            self.num_valid_entities = validation_factory.num_entities
+            self.num_test_entities = test_factory.num_entities
+
+    def _entity_representation_from_mode(self, *, mode: Optional[InductiveMode]):
+        assert mode is not None, "Inductive mode must be explicitly set for inductive models"
+        if mode == TRAINING:
+            return self.entity_representations
+        else:
+            return self.inference_representation
+
+    def _get_entity_len(self, *, mode: Optional[InductiveMode]) -> Optional[int]:
+        if mode == TRAINING:
+            return self.num_train_entities
+        elif mode == TESTING:
+            return self.num_test_entities
+        elif mode == VALIDATION:
+            return self.num_valid_entities
+        else:
+            raise ValueError

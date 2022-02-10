@@ -92,3 +92,9 @@ References
 
 .. [tucker1966] Tucker, Ledyard R. (1966). `Some mathematical notes on three-mode factor analysis
     <https://dx.doi.org/10.1007/BF02289464>`_. *Psychometrika volume 31*, 279–311.
+
+.. [ali2021] Ali, M., *et al* (2021). `Improving Inductive Link Prediction Using Hyper-relational
+    Facts <https://arxiv.org/pdf/2107.04894>`_. *ISWC 2021*
+
+.. [teru2020] Teru, K., *et al* (2020). `Inductive Relation Prediction by Subgraph Reasoning
+   <https://arxiv.org/abs/1911.06962>`_. *ICML 2020*
