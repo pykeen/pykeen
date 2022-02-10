@@ -22,6 +22,20 @@ from ..typing import MappedTriples, OneOrSequence
 from ..utils import format_relative_comparison, upgrade_to_sequence
 
 __all__ = [
+    "AnchorSelection",
+    "DegreeAnchorSelection",
+    "MixtureAnchorSelection",
+    "PageRankAnchorSelection",
+    "RandomAnchorSelection",
+    "anchor_selection_resolver",
+    "AnchorSearcher",
+    "ScipySparseAnchorSearcher",
+    "CSGraphAnchorSearcher",
+    "anchor_searcher_resolver",
+    "Tokenizer",
+    "RelationTokenizer",
+    "AnchorTokenizer",
+    "tokenizer_resolver",
     "NodePieceRepresentation",
 ]
 
@@ -333,7 +347,7 @@ class PageRankAnchorSelection(SingleSelection):
         )[::-1]
 
 
-class RandomSelection(SingleSelection):
+class RandomAnchorSelection(SingleSelection):
     """Random node selection."""
 
     def __init__(
