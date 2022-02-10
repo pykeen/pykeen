@@ -7,6 +7,7 @@ from typing import Callable, Iterable, Optional, Sequence, Tuple, Union
 
 import numpy
 import numpy.linalg
+import numpy.random
 import scipy.sparse
 import scipy.sparse.csgraph
 import torch
@@ -315,6 +316,29 @@ class PageRankAnchorSelection(SingleSelection):
                 epsilon=self.epsilon,
             ),
         )[::-1]
+
+
+class RandomSelection(SingleSelection):
+    """Random node selection."""
+
+    def __init__(
+        self,
+        num_anchors: int = 32,
+        random_seed: Optional[int] = None,
+    ) -> None:
+        """
+        Initialize the selection stragegy.
+
+        :param num_anchors:
+            the number of anchors to select
+        :param random_seed:
+            the random seed to use.
+        """
+        super().__init__(num_anchors=num_anchors)
+        self.generator: numpy.random.Generator = numpy.random.default_rng(random_seed)
+
+    def rank(self, edge_index: numpy.ndarray) -> numpy.ndarray:  # noqa: D102
+        return self.generator.permutation(edge_index.max())
 
 
 class MixtureAnchorSelection(AnchorSelection):
