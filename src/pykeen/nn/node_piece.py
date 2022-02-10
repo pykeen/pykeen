@@ -288,16 +288,14 @@ def page_rank(
     # power iteration
     x = numpy.full(shape=(n,), fill_value=1.0 / n)
     x_old = x
-    no_convergence = True
     beta = 1.0 - alpha
     for i in range(max_iter):
         x = beta * adj.dot(degree_inv * x) + alpha
         if numpy.linalg.norm(x - x_old, ord=float("+inf")) < epsilon:
             logger.debug(f"Converged after {i} iterations up to {epsilon}.")
-            no_convergence = False
             break
         x_old = x
-    if no_convergence:
+    else:  # for/else, cf. https://book.pythontips.com/en/latest/for_-_else.html
         logger.warning(f"No covergence after {max_iter} iterations with epsilon={epsilon}.")
     return x
 
