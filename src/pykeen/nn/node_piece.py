@@ -171,7 +171,7 @@ class AnchorSelection:
             order of the sorted anchors array, "asc" or "desc"
         """
         unique_anchors = anchors[~numpy.isin(anchors, known_anchors)]  # isin() preserves the sorted order
-        unique_anchors = unique_anchors[-self.num_anchors:] if order == "asc" else unique_anchors[:self.num_anchors]
+        unique_anchors = unique_anchors[-self.num_anchors :] if order == "asc" else unique_anchors[: self.num_anchors]
         return numpy.concatenate([known_anchors, unique_anchors])
 
 
@@ -302,7 +302,7 @@ class MixtureAnchorSelection(AnchorSelection):
         for selection in self.selections:
             anchors = selection(edge_index=edge_index, known_anchors=anchors)
         return anchors
-        #return numpy.concatenate([selection(edge_index=edge_index) for selection in self.selections])
+        # return numpy.concatenate([selection(edge_index=edge_index) for selection in self.selections])
 
 
 anchor_selection_resolver: ClassResolver[AnchorSelection] = ClassResolver.from_subclasses(
