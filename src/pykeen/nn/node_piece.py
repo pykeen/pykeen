@@ -158,35 +158,121 @@ class AnchorSelection:
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({', '.join(self.extra_repr())})"
 
-    def filter_unique(self, anchors: numpy.ndarray, known_anchors: numpy.ndarray, order: str = "asc"):
+    def filter_unique(self, anchor_ranking: numpy.ndarray, known_anchors: numpy.ndarray) -> numpy.ndarray:
         """
-        Given an array of anchors, filter out already known anchors
-        and obtain self.num_anchors unique ones
+        Filter out already known anchors, and select from remaining ones afterwards.
 
-        :param anchors
-            a sorted sequence of anchor IDs
-        :param known_anchors
-            a sequence of already known anchors
-        :param order
-            order of the sorted anchors array, "asc" or "desc"
+        .. note ::
+            the output size may be smaller, if there are not enough candidates remaining.
+
+        :param anchor_ranking: shape: (n,)
+            the anchor node IDs sorted by preference, where the first one is the most preferrable.
+        :param known_anchors: shape: (m,)
+            a collection of already known anchors
+
+        :return: shape: (m + num_anchors,)
+            the extended anchors, i.e., the known ones and `num_anchors` novel ones.
         """
-        unique_anchors = anchors[~numpy.isin(anchors, known_anchors)]  # isin() preserves the sorted order
-        unique_anchors = unique_anchors[-self.num_anchors :] if order == "asc" else unique_anchors[: self.num_anchors]
+        # isin() preserves the sorted order
+        unique_anchors = anchor_ranking[~numpy.isin(anchor_ranking, known_anchors)]
+        unique_anchors = unique_anchors[: self.num_anchors]
         return numpy.concatenate([known_anchors, unique_anchors])
 
 
-class DegreeAnchorSelection(AnchorSelection):
+class SingleSelection(AnchorSelection):
+    """Single-step selection."""
+
+    def __call__(self, edge_index: numpy.ndarray, known_anchors: numpy.ndarray) -> numpy.ndarray:
+        """
+        Select anchor nodes.
+
+        .. note ::
+            the number of selected anchors may be smaller than $k$, if there
+            are less entities present in the edge index.
+
+        :param edge_index: shape: (m, 2)
+            the edge_index, i.e., adjacency list.
+
+        :param known_anchors: numpy.ndarray
+            an array of already known anchors for getting only unique anchors
+
+        :return: (k,)
+            the selected entity ids
+        """
+        return self.filter_unique(anchor_ranking=self.rank(edge_index=edge_index), known_anchors=known_anchors)
+
+    @abstractmethod
+    def rank(self, edge_index: numpy.ndarray) -> numpy.ndarray:
+        """
+        Rank nodes.
+
+        :param edge_index: shape: (m, 2)
+            the edge_index, i.e., adjacency list.
+
+        :return: (n,)
+            the node IDs sorted decreasingly by anchor selection preference.
+        """
+        raise NotImplementedError
+
+
+class DegreeAnchorSelection(SingleSelection):
     """Select entities according to their (undirected) degree."""
 
-    def __call__(self, edge_index: numpy.ndarray, known_anchors: numpy.ndarray) -> numpy.ndarray:  # noqa: D102
+    def rank(self, edge_index: numpy.ndarray) -> numpy.ndarray:  # noqa: D102
         unique, counts = numpy.unique(edge_index, return_counts=True)
-        top_ids = numpy.argsort(counts)
-        nodes = unique[top_ids]
-        unique_anchors = self.filter_unique(anchors=nodes, known_anchors=known_anchors)
-        return unique_anchors
+        # sort by decreasing degree
+        ids = numpy.argsort(counts)[::-1]
+        return unique[ids]
 
 
-class PageRankAnchorSelection(AnchorSelection):
+def page_rank(
+    edge_index: numpy.ndarray,
+    max_iter: int = 1_000,
+    alpha: float = 0.05,
+    epsilon: float = 1.0e-04,
+) -> numpy.ndarray:
+    """
+    Compute page-rank vector by power iteration.
+
+    :param edge_index: shape: (2, m)
+        the edge index of the graph, i.e, the edge list.
+    :param max_iter: $>0$
+        the maximum number of iterations
+    :param alpha: $0 < x < 1$
+        the smoothing value / teleport probability
+    :param epsilon: $>0$
+        a (small) constant to check for convergence
+
+    :return: shape: (n,)
+        the page-rank vector, i.e., a score between 0 and 1 for each node.
+    """
+    # convert to sparse matrix
+    adj = _edge_index_to_sparse_matrix(edge_index=edge_index)
+    # symmetrize
+    # TODO: should we add self-links
+    # adj = (adj + adj.transpose() + scipy.sparse.eye(m=adj.shape[0], format="coo")).tocsr()
+    adj = (adj + adj.transpose()).tocsr()
+    # degree for adjacency normalization
+    degree_inv = numpy.reciprocal(numpy.asarray(adj.sum(axis=0), dtype=float))[0]
+    n = degree_inv.shape[0]
+    # power iteration
+    x = numpy.full(shape=(n,), fill_value=1.0 / n)
+    x_old = x
+    no_convergence = True
+    beta = 1.0 - alpha
+    for i in range(max_iter):
+        x = beta * adj.dot(degree_inv * x) + alpha
+        if numpy.linalg.norm(x - x_old, ord=float("+inf")) < epsilon:
+            logger.debug(f"Converged after {i} iterations up to {epsilon}.")
+            no_convergence = False
+            break
+        x_old = x
+    if no_convergence:
+        logger.warning(f"No covergence after {max_iter} iterations with epsilon={epsilon}.")
+    return x
+
+
+class PageRankAnchorSelection(SingleSelection):
     """Select entities according to their page rank."""
 
     def __init__(
@@ -211,7 +297,6 @@ class PageRankAnchorSelection(AnchorSelection):
         super().__init__(num_anchors=num_anchors)
         self.max_iter = max_iter
         self.alpha = alpha
-        self.beta = 1.0 - alpha
         self.epsilon = epsilon
 
     def extra_repr(self) -> Iterable[str]:  # noqa: D102
@@ -220,33 +305,16 @@ class PageRankAnchorSelection(AnchorSelection):
         yield f"alpha={self.alpha}"
         yield f"epsilon={self.epsilon}"
 
-    def __call__(self, edge_index: numpy.ndarray, known_anchors: numpy.ndarray) -> numpy.ndarray:  # noqa: D102
-        # convert to sparse matrix
-        adj = _edge_index_to_sparse_matrix(edge_index=edge_index)
-        # symmetrize
-        # TODO: should we add self-links
-        # adj = (adj + adj.transpose() + scipy.sparse.eye(m=adj.shape[0], format="coo")).tocsr()
-        adj = (adj + adj.transpose()).tocsr()
-        # degree
-        degree_inv = numpy.reciprocal(numpy.asarray(adj.sum(axis=0), dtype=float))[0]
-        n = degree_inv.shape[0]
-        # power iteration
-        x = numpy.full(shape=(n,), fill_value=1.0 / n)
-        x_old = x
-        no_convergence = True
-        for i in range(self.max_iter):
-            x = self.beta * adj.dot(degree_inv * x) + self.alpha
-            if numpy.linalg.norm(x - x_old, ord=float("+inf")) < self.epsilon:
-                logger.debug(f"Converged after {i} iterations up to {self.epsilon}.")
-                no_convergence = False
-                break
-            x_old = x
-        if no_convergence:
-            logger.warning(f"No covergence after {self.max_iter} iterations with epsilon={self.epsilon}.")
-
-        nodes = numpy.argsort(x)
-        unique_anchors = self.filter_unique(anchors=nodes, known_anchors=known_anchors)
-        return unique_anchors
+    def rank(self, edge_index: numpy.ndarray) -> numpy.ndarray:  # noqa: D102
+        # sort by decreasing page rank
+        return numpy.argsort(
+            page_rank(
+                edge_index=edge_index,
+                max_iter=self.max_iter,
+                alpha=self.alpha,
+                epsilon=self.epsilon,
+            ),
+        )[::-1]
 
 
 class MixtureAnchorSelection(AnchorSelection):
@@ -298,11 +366,10 @@ class MixtureAnchorSelection(AnchorSelection):
         yield f"selections={self.selections}"
 
     def __call__(self, edge_index: numpy.ndarray) -> numpy.ndarray:  # noqa: D102
-        anchors = numpy.array([], dtype=numpy.int64)
+        anchors = numpy.empty(shape=(0,), dtype=int)
         for selection in self.selections:
             anchors = selection(edge_index=edge_index, known_anchors=anchors)
         return anchors
-        # return numpy.concatenate([selection(edge_index=edge_index) for selection in self.selections])
 
 
 anchor_selection_resolver: ClassResolver[AnchorSelection] = ClassResolver.from_subclasses(
