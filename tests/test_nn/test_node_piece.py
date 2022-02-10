@@ -20,6 +20,12 @@ class PageRankAnchorSelectionTestCase(cases.AnchorSelectionTestCase):
     cls = pykeen.nn.node_piece.PageRankAnchorSelection
 
 
+class RandomAnchorSelectionTestCase(cases.AnchorSelectionTestCase):
+    """Tests for random anchor selection."""
+
+    cls = pykeen.nn.node_piece.RandomAnchorSelection
+
+
 class MixtureAnchorSelectionTestCase(cases.AnchorSelectionTestCase):
     """Tests for mixture anchor selection."""
 
@@ -37,6 +43,7 @@ class AnchorSelectionMetaTestCase(unittest_templates.MetaTestCase[pykeen.nn.node
 
     base_cls = pykeen.nn.node_piece.AnchorSelection
     base_test = cases.AnchorSelectionTestCase
+    skip_cls = {pykeen.nn.node_piece.SingleSelection}
 
 
 class CSGraphAnchorSearcherTests(cases.AnchorSearcherTestCase):
