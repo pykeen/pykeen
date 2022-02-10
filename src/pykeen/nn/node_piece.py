@@ -432,6 +432,7 @@ class MixtureAnchorSelection(AnchorSelection):
 anchor_selection_resolver: ClassResolver[AnchorSelection] = ClassResolver.from_subclasses(
     base=AnchorSelection,
     default=DegreeAnchorSelection,
+    skip={SingleSelection},
 )
 
 
