@@ -181,7 +181,7 @@ def _prepare_representation_module_list(
 def repeat_if_necessary(
     scores: torch.FloatTensor,
     representations: Sequence[RepresentationModule],
-    num: int,
+    num: Optional[int],
 ) -> torch.FloatTensor:
     """
     Repeat score tensor if necessary.
@@ -399,7 +399,7 @@ class ERModel(
         return repeat_if_necessary(
             scores=self.interaction.score_t(h=h, r=r, all_entities=t, slice_size=slice_size),
             representations=self.entity_representations,
-            num=self.num_entities,
+            num=self._get_entity_len(mode=mode),
         )
 
     def score_h(
@@ -424,7 +424,7 @@ class ERModel(
         return repeat_if_necessary(
             scores=self.interaction.score_h(all_entities=h, r=r, t=t, slice_size=slice_size),
             representations=self.entity_representations,
-            num=self.num_entities,
+            num=self._get_entity_len(mode=mode),
         )
 
     def score_r(
@@ -452,6 +452,16 @@ class ERModel(
             num=self.num_relations,
         )
 
+    def _entity_representation_from_mode(self, *, mode: Optional[InductiveMode]):
+        if mode is not None:
+            raise NotImplementedError
+        return self.entity_representations
+
+    def _get_entity_len(self, *, mode: Optional[InductiveMode]) -> Optional[int]:  # noqa:D105
+        if mode is not None:
+            raise NotImplementedError
+        return self.num_entities
+
     def _get_representations(
         self,
         h: Optional[torch.LongTensor],
@@ -461,12 +471,13 @@ class ERModel(
         mode: Optional[InductiveMode],
     ) -> Tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]:
         """Get representations for head, relation and tails."""
+        entity_representations = self._entity_representation_from_mode(mode=mode)
         hr, rr, tr = [
             [representation.forward_unique(indices=indices) for representation in representations]
             for indices, representations in (
-                (h, self.entity_representations),
+                (h, entity_representations),
                 (r, self.relation_representations),
-                (t, self.entity_representations),
+                (t, entity_representations),
             )
         ]
         # normalization

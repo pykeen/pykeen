@@ -388,9 +388,6 @@ class RankBasedEvaluator(Evaluator):
         # Clear buffers
         self.ranks.clear()
 
-        # for typing
-        rank_count: Dict[str, Dict[str, int]] = dict(asr[RANK_COUNT])  # type: ignore
-
         return RankBasedMetricResults(
             arithmetic_mean_rank=dict(asr[ARITHMETIC_MEAN_RANK]),
             geometric_mean_rank=dict(asr[GEOMETRIC_MEAN_RANK]),
@@ -400,7 +397,7 @@ class RankBasedEvaluator(Evaluator):
             inverse_geometric_mean_rank=dict(asr[INVERSE_GEOMETRIC_MEAN_RANK]),
             inverse_harmonic_mean_rank=dict(asr[INVERSE_HARMONIC_MEAN_RANK]),
             inverse_median_rank=dict(asr[INVERSE_MEDIAN_RANK]),
-            rank_count=rank_count,
+            rank_count=dict(asr[RANK_COUNT]),  # type: ignore
             rank_std=dict(asr[RANK_STD]),
             rank_mad=dict(asr[RANK_MAD]),
             rank_var=dict(asr[RANK_VARIANCE]),
