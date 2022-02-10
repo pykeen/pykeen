@@ -3,13 +3,12 @@
 """A wrapper which combines an interaction function with NodePiece entity representations."""
 
 import logging
-from typing import Optional, Tuple
+from typing import Optional, Tuple, cast
 
 import torch
 from torch import nn
 
 from .inductive_nodepiece import InductiveNodePiece
-from ..nbase import cast
 from ...nn.emb import CompGCNLayer
 from ...typing import HeadRepresentation, InductiveMode, RelationRepresentation, TailRepresentation
 
