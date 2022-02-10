@@ -133,7 +133,11 @@ class AnchorSelection:
         self.num_anchors = num_anchors
 
     @abstractmethod
-    def __call__(self, edge_index: numpy.ndarray, known_anchors: numpy.ndarray) -> numpy.ndarray:
+    def __call__(
+        self,
+        edge_index: numpy.ndarray,
+        known_anchors: Optional[numpy.ndarray] = None,
+    ) -> numpy.ndarray:
         """
         Select anchor nodes.
 
@@ -159,7 +163,11 @@ class AnchorSelection:
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({', '.join(self.extra_repr())})"
 
-    def filter_unique(self, anchor_ranking: numpy.ndarray, known_anchors: numpy.ndarray) -> numpy.ndarray:
+    def filter_unique(
+        self,
+        anchor_ranking: numpy.ndarray,
+        known_anchors: Optional[numpy.ndarray],
+    ) -> numpy.ndarray:
         """
         Filter out already known anchors, and select from remaining ones afterwards.
 
@@ -174,6 +182,9 @@ class AnchorSelection:
         :return: shape: (m + num_anchors,)
             the extended anchors, i.e., the known ones and `num_anchors` novel ones.
         """
+        if known_anchors is None:
+            return anchor_ranking[: self.num_anchors]
+
         # isin() preserves the sorted order
         unique_anchors = anchor_ranking[~numpy.isin(anchor_ranking, known_anchors)]
         unique_anchors = unique_anchors[: self.num_anchors]
@@ -183,7 +194,11 @@ class AnchorSelection:
 class SingleSelection(AnchorSelection):
     """Single-step selection."""
 
-    def __call__(self, edge_index: numpy.ndarray, known_anchors: numpy.ndarray) -> numpy.ndarray:
+    def __call__(
+        self,
+        edge_index: numpy.ndarray,
+        known_anchors: Optional[numpy.ndarray] = None,
+    ) -> numpy.ndarray:
         """
         Select anchor nodes.
 
@@ -389,8 +404,12 @@ class MixtureAnchorSelection(AnchorSelection):
         yield from super().extra_repr()
         yield f"selections={self.selections}"
 
-    def __call__(self, edge_index: numpy.ndarray) -> numpy.ndarray:  # noqa: D102
-        anchors = numpy.empty(shape=(0,), dtype=int)
+    def __call__(
+        self,
+        edge_index: numpy.ndarray,
+        known_anchors: Optional[numpy.ndarray] = None,
+    ) -> numpy.ndarray:  # noqa: D102
+        anchors = known_anchors or None
         for selection in self.selections:
             anchors = selection(edge_index=edge_index, known_anchors=anchors)
         return anchors
