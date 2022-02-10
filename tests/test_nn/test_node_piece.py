@@ -110,3 +110,19 @@ class TokenizerMetaTestCase(unittest_templates.MetaTestCase[pykeen.nn.node_piece
 
     base_cls = pykeen.nn.node_piece.Tokenizer
     base_test = cases.TokenizerTestCase
+
+
+def test_page_rank():
+    """Test for page-rank code."""
+    n = 10
+    edge_index = numpy.stack(
+        [
+            numpy.arange(n),
+            (numpy.arange(n) + 1) % n,
+        ],
+    )
+    result = pykeen.nn.node_piece.page_rank(
+        edge_index=edge_index,
+        epsilon=1.0e-08,
+    )
+    numpy.testing.assert_allclose(result.sum(), 1.0)
