@@ -3,51 +3,20 @@
 """A wrapper which combines an interaction function with NodePiece entity representations."""
 
 import logging
-from typing import Iterable, Mapping, Optional, Tuple, cast
+from typing import Iterable, Optional, Tuple, cast
 
 import torch
 from torch import nn
 
 from .inductive_nodepiece import InductiveNodePiece
 from ...nn.emb import CompGCNLayer
-from ...triples import CoreTriplesFactory
-from ...typing import (
-    TESTING,
-    TRAINING,
-    VALIDATION,
-    HeadRepresentation,
-    InductiveMode,
-    MappedTriples,
-    RelationRepresentation,
-    TailRepresentation,
-)
+from ...typing import HeadRepresentation, InductiveMode, RelationRepresentation, TailRepresentation
 
 __all__ = [
     "InductiveNodePieceGNN",
 ]
 
 logger = logging.getLogger(__name__)
-
-
-class BufferedGraph(nn.Module):
-    """A pair of edge index and edge type buffers."""
-
-    edge_index: torch.LongTensor
-    edge_type: torch.LongTensor
-
-    def __init__(self, edge_index: torch.LongTensor, edge_type: torch.LongTensor) -> None:
-        """Create instance."""
-        super().__init__()
-        self.register_buffer(name="edge_index", tensor=edge_index)
-        self.register_buffer(name="edge_type", tensor=edge_type)
-
-    @classmethod
-    def from_triples(cls, mapped_triples: MappedTriples) -> "BufferedGraph":
-        """Create from mapped triples."""
-        return cls(
-            edge_index=mapped_triples[:, [0, 2]].t(),
-            edge_type=mapped_triples[:, 1],
-        )
 
 
 class InductiveNodePieceGNN(InductiveNodePiece):
@@ -62,34 +31,27 @@ class InductiveNodePieceGNN(InductiveNodePiece):
     As of now, message passing is expected to be over the full graph
     """
 
-    graphs: Mapping[InductiveMode, BufferedGraph]
-
     def __init__(
         self,
         *,
-        triples_factory: CoreTriplesFactory,
-        inference_factory: CoreTriplesFactory,
-        validation_factory: Optional[CoreTriplesFactory] = None,
-        test_factory: Optional[CoreTriplesFactory] = None,
         gnn_encoder: Optional[Iterable[nn.Module]] = None,
         **kwargs,
     ) -> None:
         """
         Initialize the model.
 
-        :param triples_factory:
-            the triples factory. Must have create_inverse_triples set to True.
         :param gnn_encoder:
             an interable of message passing layers. Defaults to 2-layer CompGCN with Hadamard composition.
         :param kwargs:
             additional keyword-based parameters passed to `InductiveNodePiece.__init__`.
         """
-        super().__init__(
-            triples_factory=triples_factory,
-            inference_factory=inference_factory,
-            validation_factory=validation_factory,
-            test_factory=test_factory,
-            **kwargs,
+        super().__init__(**kwargs)
+
+        train_factory, inference_factory, validation_factory, test_factory = (
+            kwargs.get("triples_factory"),
+            kwargs.get("inference_factory"),
+            kwargs.get("validation_factory"),
+            kwargs.get("test_factory"),
         )
 
         if gnn_encoder is None:
@@ -107,18 +69,26 @@ class InductiveNodePieceGNN(InductiveNodePiece):
         self.gnn_encoder = nn.ModuleList(gnn_encoder)
 
         # Saving edge indices for all the supplied splits
-        self.graphs = nn.ModuleDict(
-            {
-                mode: BufferedGraph.from_triples(mapped_triples=factory.mapped_triples)
-                for mode, factory in (
-                    (None, triples_factory),
-                    (TRAINING, inference_factory),
-                    (VALIDATION, inference_factory),
-                    (TESTING, inference_factory),
-                )
-                if factory is not None
-            }
-        )
+        assert train_factory is not None, "train_factory must be a valid triples factory"
+        self.register_buffer(name="training_edge_index", tensor=train_factory.mapped_triples[:, [0, 2]].t())
+        self.register_buffer(name="training_edge_type", tensor=train_factory.mapped_triples[:, 1])
+
+        if inference_factory is not None:
+            inference_edge_index = inference_factory.mapped_triples[:, [0, 2]].t()
+            inference_edge_type = inference_factory.mapped_triples[:, 1]
+
+            self.register_buffer(name="validation_edge_index", tensor=inference_edge_index)
+            self.register_buffer(name="validation_edge_type", tensor=inference_edge_type)
+            self.register_buffer(name="testing_edge_index", tensor=inference_edge_index)
+            self.register_buffer(name="testing_edge_type", tensor=inference_edge_type)
+        else:
+            assert (
+                validation_factory is not None and test_factory is not None
+            ), "Validation and test factories must be triple factories"
+            self.register_buffer(name="validation_edge_index", tensor=validation_factory.mapped_triples[:, [0, 2]].t())
+            self.register_buffer(name="validation_edge_type", tensor=validation_factory.mapped_triples[:, 1])
+            self.register_buffer(name="testing_edge_index", tensor=test_factory.mapped_triples[:, [0, 2]].t())
+            self.register_buffer(name="testing_edge_type", tensor=test_factory.mapped_triples[:, 1])
 
     def reset_parameters_(self):
         """Reset the GNN encoder explicitly in addition to other params."""
@@ -142,13 +112,12 @@ class InductiveNodePieceGNN(InductiveNodePiece):
         x_e, x_r = entity_representations[0](), self.relation_representations[0]()
 
         # Perform message passing and get updated states
-        graph = self.graphs[mode]
         for layer in self.gnn_encoder:
             x_e, x_r = layer(
                 x_e=x_e,
                 x_r=x_r,
-                edge_index=graph.edge_index,
-                edge_type=graph.edge_type,
+                edge_index=getattr(self, f"{mode}_edge_index"),
+                edge_type=getattr(self, f"{mode}_edge_type"),
             )
 
         # Use updated entity and relation states to extract requested IDs
