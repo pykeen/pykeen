@@ -80,7 +80,6 @@ class ConvE(EntityRelationEmbeddingModel):
     ...     input_dropout       = 0.2,
     ...     feature_map_dropout = 0.2,
     ...     output_dropout      = 0.3,
-    ...     preferred_device    = 'gpu',
     ... )
     >>> # Step 3: Configure the loop
     >>> from torch.optim import Adam
@@ -285,7 +284,7 @@ class ConvE(EntityRelationEmbeddingModel):
 
         return x
 
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_hrt(self, hrt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         h = self.entity_embeddings(indices=hrt_batch[:, 0]).view(
             -1,
             self.input_channels,
@@ -318,7 +317,7 @@ class ConvE(EntityRelationEmbeddingModel):
 
         return x
 
-    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_t(self, hr_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         h = self.entity_embeddings(indices=hr_batch[:, 0]).view(
             -1,
             self.input_channels,
@@ -344,7 +343,7 @@ class ConvE(EntityRelationEmbeddingModel):
 
         return x
 
-    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_h(self, rt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         rt_batch_size = rt_batch.shape[0]
         h = self.entity_embeddings(indices=None)
         r = self.relation_embeddings(indices=rt_batch[:, 0]).view(

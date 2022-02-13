@@ -4,55 +4,43 @@
 
 from __future__ import annotations
 
-import functools
 import itertools
 import logging
 import warnings
 from abc import ABC, abstractmethod
-from collections import defaultdict
 from dataclasses import dataclass
-from typing import Any, Callable, Mapping, Optional, Sequence, Tuple, TypeVar, Union, cast
+from typing import Any, Mapping, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import torch
 import torch.nn
+from class_resolver import FunctionResolver
+from class_resolver.contrib.torch import activation_resolver
 from torch import nn
 from torch.nn import functional
 
 from .compositions import CompositionModule, composition_resolver
-from .init import (
-    init_phases,
-    normal_norm_,
-    uniform_norm_,
-    uniform_norm_p1_,
-    xavier_normal_,
-    xavier_normal_norm_,
-    xavier_uniform_,
-    xavier_uniform_norm_,
-)
+from .init import initializer_resolver, uniform_norm_p1_
 from .utils import TransformerEncoder
 from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolver
-from ..constants import AGGREGATIONS
 from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import CoreTriplesFactory, TriplesFactory
 from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer
-from ..utils import Bias, activation_resolver, clamp_norm, complex_normalize, convert_to_canonical_shape
+from ..utils import Bias, clamp_norm, complex_normalize
 
 __all__ = [
     "RepresentationModule",
     "Embedding",
     "LowRankEmbeddingRepresentation",
     "EmbeddingSpecification",
-    "NodePieceRepresentation",
     "CompGCNLayer",
     "CombinedCompGCNRepresentations",
     "SingleCompGCNRepresentation",
     "LabelBasedTransformerRepresentation",
     "SubsetRepresentationModule",
     # Utils
-    "constrainers",
-    "initializers",
-    "normalizers",
+    "constrainer_resolver",
+    "normalizer_resolver",
 ]
 
 logger = logging.getLogger(__name__)
@@ -108,6 +96,11 @@ class RepresentationModule(nn.Module, ABC):
     ) -> torch.FloatTensor:
         """Get representations for indices.
 
+        .. note::
+
+            this method is implemented in subclasses. Prefer using `forward_unique` instead,
+            which optimizes for duplicate indices.
+
         :param indices: shape: s
             The indices, or None. If None, this is interpreted as ``torch.arange(self.max_id)`` (although implemented
             more efficiently).
@@ -116,89 +109,29 @@ class RepresentationModule(nn.Module, ABC):
             The representations.
         """
 
+    def forward_unique(
+        self,
+        indices: Optional[torch.LongTensor] = None,
+    ) -> torch.FloatTensor:
+        """Get representations for indices.
+
+        :param indices: shape: s
+            The indices, or None. If None, this is interpreted as ``torch.arange(self.max_id)`` (although implemented
+            more efficiently).
+
+        :return: shape: (``*s``, ``*self.shape``)
+            The representations.
+        """
+        if indices is None:
+            return self(None)
+        unique, inverse = indices.unique(return_inverse=True)
+        return self(unique)[inverse]
+
     def reset_parameters(self) -> None:
         """Reset the module's parameters."""
 
     def post_parameter_update(self):
         """Apply constraints which should not be included in gradients."""
-
-    def get_in_canonical_shape(
-        self,
-        indices: Optional[torch.LongTensor] = None,
-    ) -> torch.FloatTensor:
-        """Get representations in canonical shape.
-
-        :param indices: None, shape: (b,) or (b, n)
-            The indices. If None, return all representations.
-
-        :return: shape: (b?, n?, d)
-            If indices is None, b=1, n=max_id.
-            If indices is 1-dimensional, b=indices.shape[0] and n=1.
-            If indices is 2-dimensional, b, n = indices.shape
-        """
-        x = self(indices=indices)
-        if indices is None:
-            x = x.unsqueeze(dim=0)
-        elif indices.ndimension() > 2:
-            raise ValueError(
-                f"Undefined canonical shape for more than 2-dimensional index tensors: {indices.shape}",
-            )
-        elif indices.ndimension() == 1:
-            x = x.unsqueeze(dim=1)
-        return x
-
-    def get_in_more_canonical_shape(
-        self,
-        dim: Union[int, str],
-        indices: Optional[torch.LongTensor] = None,
-    ) -> torch.FloatTensor:
-        """Get representations in canonical shape.
-
-        The canonical shape is given as
-
-        (batch_size, d_1, d_2, d_3, ``*``)
-
-        fulfilling the following properties:
-
-        Let i = dim. If indices is None, the return shape is (1, d_1, d_2, d_3) with d_i = num_representations,
-        d_i = 1 else. If indices is not None, then batch_size = indices.shape[0], and d_i = 1 if
-        indices.ndimension() = 1 else d_i = indices.shape[1]
-
-        The canonical shape is given by (batch_size, 1, ``*``) if indices is not None, where batch_size=len(indices),
-        or (1, num, ``*``) if indices is None with num equal to the total number of embeddings.
-
-        Examples:
-        >>> emb = EmbeddingSpecification(shape=(20,)).make(num_embeddings=10)
-        >>> # Get head representations for given batch indices
-        >>> emb.get_in_more_canonical_shape(dim="h", indices=torch.arange(5)).shape
-        (5, 1, 1, 1, 20)
-        >>> # Get head representations for given 2D batch indices, as e.g. used by fast slcwa scoring
-        >>> emb.get_in_more_canonical_shape(dim="h", indices=torch.arange(6).view(2, 3)).shape
-        (2, 3, 1, 1, 20)
-        >>> # Get head representations for 1:n scoring
-        >>> emb.get_in_more_canonical_shape(dim="h", indices=None).shape
-        (1, 10, 1, 1, 20)
-
-        :param dim:
-            The dimension along which to expand for ``indices=None``, or ``indices.ndimension() == 2``.
-        :param indices:
-            The indices. Either None, in which care all embeddings are returned, or a 1 or 2 dimensional index tensor.
-
-        :return: shape: (batch_size, d1, d2, d3, ``*self.shape``)
-        """
-        r_shape: Tuple[int, ...]
-        if indices is None:
-            x = self(indices=indices)
-            r_shape = (1, self.max_id)
-        else:
-            flat_indices = indices.view(-1)
-            x = self(indices=flat_indices)
-            if indices.ndimension() > 1:
-                x = x.view(*indices.shape, -1)
-            r_shape = tuple(indices.shape)
-            if len(r_shape) < 2:
-                r_shape = r_shape + (1,)
-        return convert_to_canonical_shape(x=x, dim=dim, num=r_shape[1], batch_size=r_shape[0], suffix_shape=self.shape)
 
     @property
     def embedding_dim(self) -> int:
@@ -350,31 +283,26 @@ class Embedding(RepresentationModule):
         if dtype.is_complex:
             shape = tuple(shape[:-1]) + (2 * shape[-1],)
             _embedding_dim = _embedding_dim * 2
+            # note: this seems to work, as finfo returns the datatype of the underlying floating
+            # point dtype, rather than the combined complex one
+            dtype = getattr(torch, torch.finfo(dtype).dtype)
 
         super().__init__(
             max_id=num_embeddings,
             shape=shape,
         )
 
-        self.initializer = cast(
-            Initializer,
-            _handle(
-                initializer,
-                initializers,
-                initializer_kwargs,
-                default=nn.init.normal_,
-                label="initializer",
-            ),
-        )
-        self.normalizer = _handle(normalizer, normalizers, normalizer_kwargs, label="normalizer")
-        self.constrainer = _handle(constrainer, constrainers, constrainer_kwargs, label="constrainer")
-        if regularizer is not None:
-            regularizer = regularizer_resolver.make(regularizer, pos_kwargs=regularizer_kwargs)
-        self.regularizer = regularizer
+        # use make for initializer since there's a default, and make_safe
+        # for the others to pass through None values
+        self.initializer = initializer_resolver.make(initializer, initializer_kwargs)
+        self.normalizer = normalizer_resolver.make_safe(normalizer, normalizer_kwargs)
+        self.constrainer = constrainer_resolver.make_safe(constrainer, constrainer_kwargs)
+        self.regularizer = regularizer_resolver.make_safe(regularizer, regularizer_kwargs)
 
         self._embeddings = torch.nn.Embedding(
             num_embeddings=num_embeddings,
             embedding_dim=_embedding_dim,
+            dtype=dtype,
         )
         self._embeddings.requires_grad_(trainable)
         self.dropout = None if dropout is None else nn.Dropout(dropout)
@@ -586,52 +514,9 @@ def process_shape(
     return dim, shape
 
 
-#: Initializers
-initializers = {
-    "xavier_uniform": xavier_uniform_,
-    "xavier_uniform_norm": xavier_uniform_norm_,
-    "xavier_normal": xavier_normal_,
-    "xavier_normal_norm": xavier_normal_norm_,
-    "normal": torch.nn.init.normal_,
-    "normal_norm": normal_norm_,
-    "uniform": torch.nn.init.uniform_,
-    "uniform_norm": uniform_norm_,
-    "phases": init_phases,
-    "init_phases": init_phases,
-}
+constrainer_resolver = FunctionResolver([functional.normalize, complex_normalize, torch.clamp, clamp_norm])
 
-#: Constrainers
-constrainers = {
-    "normalize": functional.normalize,
-    "complex_normalize": complex_normalize,
-    "clamp": torch.clamp,
-    "clamp_norm": clamp_norm,
-}
-
-# TODO add normalization functions
-normalizers: Mapping[str, Normalizer] = {}
-
-X = TypeVar("X", bound=Callable)
-
-
-def _handle(
-    value: Hint[X],
-    lookup: Mapping[str, X],
-    kwargs,
-    default: Optional[X] = None,
-    label: Optional[str] = None,
-) -> Optional[X]:
-    if value is None:
-        return default
-    elif isinstance(value, str):
-        try:
-            value = lookup[value]
-        except KeyError:
-            raise KeyError(f"{value} is an invalid {label}. Try one of: {sorted(lookup)}")
-    if kwargs:
-        rv = functools.partial(value, **kwargs)  # type: ignore
-        return cast(X, rv)
-    return value
+normalizer_resolver = FunctionResolver([functional.normalize])
 
 
 class CompGCNLayer(nn.Module):
@@ -645,6 +530,8 @@ class CompGCNLayer(nn.Module):
         use_bias: bool = True,
         use_relation_bias: bool = False,
         composition: Hint[CompositionModule] = None,
+        attention_heads: int = 4,
+        attention_dropout: float = 0.1,
         activation: Hint[nn.Module] = nn.Identity,
         activation_kwargs: Optional[Mapping[str, Any]] = None,
         edge_weighting: HintType[EdgeWeighting] = SymmetricEdgeWeighting,
@@ -664,6 +551,10 @@ class CompGCNLayer(nn.Module):
             Whether to use a bias for the relation transformation.
         :param composition:
             The composition function.
+        :param attention_heads:
+            Number of attention heads when using the attention weighting
+        :param attention_dropout:
+            Dropout for the attention message weighting
         :param activation:
             The activation to use.
         :param activation_kwargs:
@@ -678,7 +569,9 @@ class CompGCNLayer(nn.Module):
         self.composition = composition_resolver.make(composition)
 
         # edge weighting
-        self.edge_weighting: EdgeWeighting = edge_weight_resolver.make(edge_weighting)
+        self.edge_weighting: EdgeWeighting = edge_weight_resolver.make(
+            edge_weighting, output_dim=output_dim, attn_drop=attention_dropout, num_heads=attention_heads
+        )
 
         # message passing weights
         self.w_loop = nn.Parameter(data=torch.empty(input_dim, output_dim))
@@ -747,7 +640,7 @@ class CompGCNLayer(nn.Module):
         m = m @ weight
 
         # normalization
-        m = m * self.edge_weighting(source=source, target=target).unsqueeze(dim=-1)
+        m = self.edge_weighting(source=source, target=target, message=m, x_e=x_e)
 
         # aggregate by sum
         x_e = x_e.new_zeros(x_e.shape[0], m.shape[1]).index_add(dim=0, index=target, source=m)
@@ -951,193 +844,6 @@ class SingleCompGCNRepresentation(RepresentationModule):
         x = self.combined()[self.position]
         if indices is not None:
             x = x[indices]
-        return x
-
-
-def _sample(rs: torch.LongTensor, k: int) -> torch.LongTensor:
-    """Sample without replacement."""
-    return rs[torch.randperm(rs.shape[0])[:k]]
-
-
-def tokenize(
-    triples_factory: CoreTriplesFactory,
-    num_tokens: int,
-) -> torch.LongTensor:
-    """
-    Tokenize entities by representing them as a bag of relations.
-
-    :param triples_factory:
-        the triples factory containing the ID-based triples.
-    :param num_tokens:
-        the number of relation IDs to select for each entity
-
-    :return: shape: (num_entities, num_tokens), -1 <= res < 2 * num_relations
-        the selected relation IDs for each entity. -1 is used as a padding token.
-    """
-    mapped_triples = triples_factory.mapped_triples
-    if triples_factory.create_inverse_triples:
-        # inverse triples are created afterwards implicitly
-        mapped_triples = mapped_triples[mapped_triples[:, 1] < triples_factory.real_num_relations]
-
-    # tokenize: represent entities by bag of relations
-    h, r, t = mapped_triples.t()
-
-    # collect candidates
-    e2r = defaultdict(set)
-    for e, r in (
-        torch.cat(
-            [
-                torch.stack([h, r], dim=1),
-                torch.stack([t, r + triples_factory.real_num_relations], dim=1),
-            ],
-            dim=0,
-        )
-        .unique(dim=0)
-        .tolist()
-    ):
-        e2r[e].add(r)
-
-    # randomly sample without replacement num_tokens relations for each entity
-    assignment = torch.full(
-        size=(triples_factory.num_entities, num_tokens),
-        dtype=torch.long,
-        fill_value=2 * triples_factory.real_num_relations,
-    )
-    for e, rs in e2r.items():
-        rs = torch.as_tensor(data=list(rs), dtype=torch.long)
-        rs = _sample(rs=rs, k=num_tokens)
-        assignment[e, : len(rs)] = rs
-
-    return assignment
-
-
-def resolve_aggregation(
-    aggregation: Union[None, str, Callable[[torch.FloatTensor, int], torch.FloatTensor]],
-) -> Callable[[torch.FloatTensor, int], torch.FloatTensor]:
-    """
-    Resolve the aggregation function.
-
-    .. warning ::
-        This function does *not* check whether torch.<aggregation> is a method which is a valid aggregation.
-
-    :param aggregation:
-        the aggregation choice. Can be either
-        1. None, in which case the torch.mean is returned
-        2. a string, in which case torch.<aggregation> is returned
-        3. a callable, which is returned without change
-
-    :return:
-        the chosen aggregation function.
-    """
-    if aggregation is None:
-        return torch.mean
-
-    if isinstance(aggregation, str):
-        if aggregation not in AGGREGATIONS:
-            logger.warning(
-                f"aggregation={aggregation} is not one of the predefined ones ({sorted(AGGREGATIONS.keys())}).",
-            )
-        return getattr(torch, aggregation)
-
-    return aggregation
-
-
-class NodePieceRepresentation(RepresentationModule):
-    r"""
-    Basic implementation of node piece decomposition [galkin2021]_.
-
-    .. math ::
-        x_e = agg(\{T[t] \mid t \in tokens(e) \})
-
-    where $T$ are token representations, $tokens$ selects a fixed number of $k$ tokens for each entity, and $agg$ is
-    an aggregation function, which aggregates the individual token representations to a single entity representation.
-
-    .. note ::
-        This implementation currently only supports representation of entities by bag-of-relations.
-    """
-
-    #: the token representations
-    tokens: RepresentationModule
-
-    #: the entity-to-token mapping
-    assignment: torch.LongTensor
-
-    def __init__(
-        self,
-        *,
-        triples_factory: CoreTriplesFactory,
-        token_representation: Union[EmbeddingSpecification, RepresentationModule],
-        aggregation: Union[None, str, Callable[[torch.FloatTensor, int], torch.FloatTensor]] = None,
-        num_tokens: int = 2,
-        shape: Optional[Sequence[int]] = None,
-    ):
-        """
-        Initialize the representation.
-
-        :param triples_factory:
-            the triples factory
-        :param token_representation:
-            the token representation specification, or pre-instantiated representation module. For the latter, the
-            number of representations must be $2 * num_relations + 1$.
-        :param aggregation:
-            aggregation of multiple token representations to a single entity representation. By default,
-            this uses :func:`torch.mean`. If a string is provided, the module assumes that this refers to a top-level
-            torch function, e.g. "mean" for :func:`torch.mean`, or "sum" for func:`torch.sum`. An aggregation can
-            also have trainable parameters, .e.g., ``MLP(mean(MLP(tokens)))`` (cf. DeepSets from [zaheer2017]_). In
-            this case, the module has to be created outside of this component.
-
-            We could also have aggregations which result in differently shapes output, e.g. a concatenation of all
-            token embeddings resulting in shape ``(num_tokens * d,)``. In this case, `shape` must be provided.
-
-            The aggregation takes two arguments: the (batched) tensor of token representations, in shape
-            ``(*, num_tokens, *dt)``, and the index along which to aggregate.
-        :param num_tokens:
-            the number of tokens for each entity.
-        :param shape:
-            the shape of an individual representation. Only necessary, if aggregation results in a change of dimensions.
-        """
-        # create token representations
-        # normal relations + inverse relations + padding
-        total_num_tokens = 2 * triples_factory.real_num_relations + 1
-        if isinstance(token_representation, EmbeddingSpecification):
-            token_representation = token_representation.make(
-                num_embeddings=total_num_tokens,
-            )
-        if token_representation.max_id != total_num_tokens:
-            raise ValueError(
-                f"If a pre-instantiated representation is provided, it has to have 2 * num_relations + 1= "
-                f"{total_num_tokens} representations, but has {token_representation.max_id}",
-            )
-
-        # super init; has to happen *before* any parameter or buffer is assigned
-        super().__init__(max_id=triples_factory.num_entities, shape=shape or token_representation.shape)
-
-        # Assign default aggregation
-        self.aggregation = resolve_aggregation(aggregation=aggregation)
-
-        # assign module
-        self.tokens = token_representation
-        self.aggregation_index = -(1 + len(token_representation.shape))
-        self.register_buffer(
-            name="assignment",
-            tensor=tokenize(triples_factory=triples_factory, num_tokens=num_tokens),
-        )
-
-    def forward(
-        self,
-        indices: Optional[torch.LongTensor] = None,
-    ) -> torch.FloatTensor:  # noqa: D102
-        # get token IDs, shape: (*, k)
-        token_ids = self.assignment
-        if indices is not None:
-            token_ids = token_ids[indices]
-
-        # lookup token representations, shape: (*, k, d)
-        x = self.tokens(token_ids)
-
-        # aggregate
-        x = self.aggregation(x, self.aggregation_index)
-
         return x
 
 

@@ -12,11 +12,13 @@ from ..evaluation import Evaluator
 from ..models import Model
 from ..trackers import ResultTracker
 from ..triples import CoreTriplesFactory
+from ..typing import InductiveMode
 from ..utils import fix_dataclass_init_docs
 
 __all__ = [
     "is_improvement",
     "EarlyStopper",
+    "EarlyStoppingLogic",
     "StopperCallback",
 ]
 
@@ -53,6 +55,72 @@ def is_improvement(
     return current_value < (1.0 - relative_delta) * best_value
 
 
+@dataclasses.dataclass
+class EarlyStoppingLogic:
+    """The early stopping logic."""
+
+    #: the number of reported results with no improvement after which training will be stopped
+    patience: int = 2
+
+    # the minimum relative improvement necessary to consider it an improved result
+    relative_delta: float = 0.0
+
+    # whether a larger value is better, or a smaller.
+    larger_is_better: bool = True
+
+    #: The epoch at which the best result occurred
+    best_epoch: Optional[int] = None
+
+    #: The best result so far
+    best_metric: float = dataclasses.field(init=False)
+
+    #: The remaining patience
+    remaining_patience: int = dataclasses.field(init=False)
+
+    def __post_init__(self):
+        """Infer remaining default values."""
+        self.remaining_patience = self.patience
+        self.best_metric = float("-inf") if self.larger_is_better else float("+inf")
+
+    def is_improvement(self, metric: float) -> bool:
+        """Return if the given metric would cause an improvement."""
+        return is_improvement(
+            best_value=self.best_metric,
+            current_value=metric,
+            larger_is_better=self.larger_is_better,
+            relative_delta=self.relative_delta,
+        )
+
+    def report_result(self, metric: float, epoch: int) -> bool:
+        """
+        Report a result at the given epoch.
+
+        :param metric:
+            The result metric.
+        :param epoch:
+            The epoch.
+
+        :return:
+            If the result did not improve more than delta for patience evaluations
+
+        :raises ValueError:
+            if more than one metric is reported for a single epoch
+        """
+        if self.best_epoch is not None and epoch <= self.best_epoch:
+            raise ValueError("Cannot report more than one metric for one epoch")
+
+        # check for improvement
+        if self.is_improvement(metric):
+            self.best_epoch = epoch
+            self.best_metric = metric
+            self.remaining_patience = self.patience
+        else:
+            self.remaining_patience -= 1
+
+        # stop if the result did not improve more than delta for patience evaluations
+        return self.remaining_patience <= 0
+
+
 @fix_dataclass_init_docs
 @dataclass
 class EarlyStopper(Stopper):
@@ -79,12 +147,6 @@ class EarlyStopper(Stopper):
     metric: str = "hits_at_k"
     #: The minimum relative improvement necessary to consider it an improved result
     relative_delta: float = 0.01
-    #: The best result so far
-    best_metric: Optional[float] = None
-    #: The epoch at which the best result occurred
-    best_epoch: Optional[int] = None
-    #: The remaining patience
-    remaining_patience: int = dataclasses.field(init=False)
     #: The metric results from all evaluations
     results: List[float] = dataclasses.field(default_factory=list, repr=False)
     #: Whether a larger value is better, or a smaller
@@ -100,13 +162,33 @@ class EarlyStopper(Stopper):
     #: Did the stopper ever decide to stop?
     stopped: bool = False
 
+    _stopper: EarlyStoppingLogic = dataclasses.field(init=False, repr=False)
+
     def __post_init__(self):
         """Run after initialization and check the metric is valid."""
         # TODO: Fix this
         # if all(f.name != self.metric for f in dataclasses.fields(self.evaluator.__class__)):
         #     raise ValueError(f'Invalid metric name: {self.metric}')
+        self._stopper = EarlyStoppingLogic(
+            patience=self.patience,
+            relative_delta=self.relative_delta,
+            larger_is_better=self.larger_is_better,
+        )
 
-        self.remaining_patience = self.patience
+    @property
+    def remaining_patience(self) -> int:
+        """Return the remaining patience."""
+        return self._stopper.remaining_patience
+
+    @property
+    def best_metric(self) -> float:
+        """Return the best result so far."""
+        return self._stopper.best_metric
+
+    @property
+    def best_epoch(self) -> Optional[int]:
+        """Return the epoch at which the best result occurred."""
+        return self._stopper.best_epoch
 
     def should_evaluate(self, epoch: int) -> bool:
         """Decide if evaluation should be done based on the current epoch and the internal frequency."""
@@ -117,7 +199,7 @@ class EarlyStopper(Stopper):
         """Count the number of results stored in the early stopper."""
         return len(self.results)
 
-    def should_stop(self, epoch: int) -> bool:
+    def should_stop(self, epoch: int, *, mode: Optional[InductiveMode] = None) -> bool:
         """Evaluate on a metric and compare to past evaluations to decide if training should stop."""
         # Evaluate
         metric_results = self.evaluator.evaluate(
@@ -148,28 +230,14 @@ class EarlyStopper(Stopper):
         for result_callback in self.result_callbacks:
             result_callback(self, result, epoch)
 
-        # check for improvement
-        if self.best_metric is None or is_improvement(
-            best_value=self.best_metric,
-            current_value=result,
-            larger_is_better=self.larger_is_better,
-            relative_delta=self.relative_delta,
-        ):
-            self.best_epoch = epoch
-            self.best_metric = result
-            self.remaining_patience = self.patience
-        else:
-            self.remaining_patience -= 1
-
-        # Stop if the result did not improve more than delta for patience evaluations
-        if self.remaining_patience <= 0:
+        self.stopped = self._stopper.report_result(metric=result, epoch=epoch)
+        if self.stopped:
             logger.info(
-                f"Stopping early after {self.number_results} evaluations at epoch {epoch}. The best result "
-                f"{self.metric}={self.best_metric} occurred at epoch {self.best_epoch}.",
+                f"Stopping early at epoch {epoch}. The best result {self.best_metric} occurred at "
+                f"epoch {self.best_epoch}.",
             )
             for stopped_callback in self.stopped_callbacks:
                 stopped_callback(self, result, epoch)
-            self.stopped = True
             return True
 
         for continue_callback in self.continue_callbacks:
@@ -181,6 +249,7 @@ class EarlyStopper(Stopper):
         return dict(
             frequency=self.frequency,
             patience=self.patience,
+            remaining_patience=self.remaining_patience,
             relative_delta=self.relative_delta,
             metric=self.metric,
             larger_is_better=self.larger_is_better,
@@ -192,8 +261,10 @@ class EarlyStopper(Stopper):
 
     def _write_from_summary_dict(
         self,
+        *,
         frequency: int,
         patience: int,
+        remaining_patience: int,
         relative_delta: float,
         metric: str,
         larger_is_better: bool,
@@ -210,5 +281,12 @@ class EarlyStopper(Stopper):
         self.larger_is_better = larger_is_better
         self.results = results
         self.stopped = stopped
-        self.best_epoch = best_epoch
-        self.best_metric = best_metric
+        # TODO need a test that this all re-instantiates properly
+        self._stopper = EarlyStoppingLogic(
+            patience=patience,
+            relative_delta=relative_delta,
+            larger_is_better=larger_is_better,
+        )
+        self._stopper.best_epoch = best_epoch
+        self._stopper.best_metric = best_metric
+        self._stopper.remaining_patience = remaining_patience

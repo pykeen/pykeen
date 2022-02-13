@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Optional
 
 import click
+from class_resolver.contrib.optuna import sampler_resolver
 from click_default_group import DefaultGroup
 from tabulate import tabulate
 
@@ -27,7 +28,6 @@ from .datasets import dataset_resolver
 from .evaluation import evaluator_resolver, get_metric_list
 from .experiments.cli import experiments
 from .hpo.cli import optimize
-from .hpo.samplers import sampler_resolver
 from .losses import loss_resolver
 from .lr_schedulers import lr_scheduler_resolver
 from .models import ComplExLiteral, DistMultLiteral, DistMultLiteralGated, model_resolver
@@ -101,7 +101,7 @@ def _get_model_lines(*, link_fmt: Optional[str] = None):
                 interaction_cls = _MODEL_MAP[model_cls]
             else:
                 interaction_cls = interaction_resolver.lookup(model_resolver.normalize_cls(model_cls))
-        except ValueError:
+        except KeyError:
             click.echo(f"could not look up {model_resolver.normalize_cls(model_cls)}")
             interaction_reference = None
         else:

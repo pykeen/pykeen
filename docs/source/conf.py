@@ -261,7 +261,7 @@ intersphinx_mapping = {
     'rexmex': ('https://rexmex.readthedocs.io/en/latest/', None),
     'bio2bel': ('https://bio2bel.readthedocs.io/en/latest/', None),
     'boto3': ('https://boto3.amazonaws.com/v1/documentation/api/latest/', None),
-    'scipy': ('https://docs.scipy.org/doc/scipy/reference/', None),
+    # 'scipy': ('https://docs.scipy.org/doc/scipy/reference', None),
 }
 
 autoclass_content = 'both'

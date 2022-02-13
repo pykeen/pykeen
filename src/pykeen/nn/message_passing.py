@@ -7,8 +7,8 @@ from abc import ABC, abstractmethod
 from typing import Any, Mapping, Optional, Tuple, Union
 
 import torch
-from class_resolver import Resolver
-from class_resolver.api import Hint
+from class_resolver import ClassResolver, Hint
+from class_resolver.contrib.torch import activation_resolver
 from torch import nn
 
 from .emb import EmbeddingSpecification, LowRankEmbeddingRepresentation, RepresentationModule
@@ -16,7 +16,6 @@ from .init import uniform_norm_p1_
 from .weighting import EdgeWeighting, edge_weight_resolver
 from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import CoreTriplesFactory
-from ..utils import activation_resolver
 
 __all__ = [
     "RGCNRepresentations",
@@ -557,7 +556,7 @@ class RGCNLayer(nn.Module):
         return y
 
 
-decomposition_resolver = Resolver.from_subclasses(base=Decomposition, default=BasesDecomposition)
+decomposition_resolver = ClassResolver.from_subclasses(base=Decomposition, default=BasesDecomposition)
 
 
 class RGCNRepresentations(RepresentationModule):

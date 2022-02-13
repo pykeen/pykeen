@@ -4,24 +4,20 @@
 
 import unittest
 from typing import List
+from unittest.mock import Mock
 
 import numpy
 import pytest
 import torch
+import unittest_templates
 from torch.optim import Adam
 
 from pykeen.datasets import Nations
 from pykeen.evaluation import RankBasedEvaluator
 from pykeen.models import FixedModel, Model, TransE
-from pykeen.stoppers.early_stopping import EarlyStopper, is_improvement
-from pykeen.trackers import MLFlowResultTracker
+from pykeen.stoppers.early_stopping import EarlyStopper, EarlyStoppingLogic, is_improvement
 from pykeen.training import SLCWATrainingLoop
 from tests.mocks import MockEvaluator
-
-try:
-    import mlflow
-except ImportError:
-    mlflow = None
 
 
 class TestRandom(unittest.TestCase):
@@ -78,13 +74,13 @@ class LogCallWrapper:
         return id(func) in self.called
 
 
-class TestEarlyStopping(unittest.TestCase):
+class TestEarlyStopper(unittest.TestCase):
     """Tests for early stopping."""
 
     #: The window size used by the early stopper
     patience: int = 2
     #: The mock losses the mock evaluator will return
-    mock_losses: List[float] = [10.0, 9.0, 8.0, 8.0, 8.0, 8.0]
+    mock_losses: List[float] = [10.0, 9.0, 8.0, 9.0, 8.0, 8.0]
     #: The (zeroed) index  - 1 at which stopping will occur
     stop_constant: int = 4
     #: The minimum improvement
@@ -123,38 +119,80 @@ class TestEarlyStopping(unittest.TestCase):
             if not should_stop:
                 # check storing of results
                 assert self.stopper.results == self.mock_losses[: epoch + 1]
-
-                # check ring buffer
-                if epoch >= self.patience:
-                    assert self.stopper.best_metric == self.best_results[epoch]
+                assert self.stopper.best_metric == self.best_results[epoch]
 
     def test_should_stop(self):
         """Test that the stopper knows when to stop."""
         for epoch in range(self.stop_constant):
             self.assertFalse(self.stopper.should_stop(epoch=epoch))
-        self.assertTrue(self.stopper.should_stop(epoch=epoch))
+        self.assertTrue(self.stopper.should_stop(epoch=self.stop_constant))
 
-    @unittest.skipUnless(mlflow is not None, reason="MLFlow not installed")
-    def test_result_logging_with_mlflow(self):
-        """Test whether the MLFLow result logger works."""
-        self.stopper.result_tracker = MLFlowResultTracker()
-        wrapper = LogCallWrapper()
-        real_log_metrics = self.stopper.result_tracker.mlflow.log_metrics
-        self.stopper.result_tracker.mlflow.log_metrics = wrapper.wrap(real_log_metrics)
+    def test_result_logging(self):
+        """Test whether result logger is called properly."""
+        self.stopper.result_tracker = mock_tracker = Mock()
         self.stopper.should_stop(epoch=0)
-        assert wrapper.was_called(real_log_metrics)
+        log_metrics = mock_tracker.log_metrics
+        self.assertIsInstance(log_metrics, Mock)
+        log_metrics.assert_called_once()
+        _, call_args = log_metrics.call_args_list[0]
+        self.assertIn("step", call_args)
+        self.assertEqual(0, call_args["step"])
+        self.assertIn("prefix", call_args)
+        self.assertEqual("validation", call_args["prefix"])
+
+    def test_serialization(self):
+        """Test for serialization."""
+        summary = self.stopper.get_summary_dict()
+        new_stopper = EarlyStopper(
+            # not needed for test
+            model=...,
+            evaluator=...,
+            training_triples_factory=...,
+            evaluation_triples_factory=...,
+        )
+        new_stopper._write_from_summary_dict(**summary)
+        for key in summary.keys():
+            assert getattr(self.stopper, key) == getattr(new_stopper, key)
 
 
-class TestDeltaEarlyStopping(TestEarlyStopping):
+class TestEarlyStoppingLogic(unittest_templates.GenericTestCase[EarlyStoppingLogic]):
+    """Tests for early stopping logic."""
+
+    cls = EarlyStoppingLogic
+    kwargs = dict(
+        patience=2,
+        relative_delta=0.1,
+        larger_is_better=False,
+    )
+
+    def test_report_result(self):
+        """Test report_result API."""
+        metric = 1.0e-03
+        epoch = 3
+        stop = self.instance.report_result(metric=metric, epoch=epoch)
+        assert isinstance(stop, bool)
+
+        # assert that reporting another metric for this epoch raises an error
+        with self.assertRaises(ValueError):
+            self.instance.report_result(metric=..., epoch=epoch)
+
+    def test_early_stopping(self):
+        """Test early stopping."""
+        for epoch, value in enumerate([10.0, 9.0, 8.0, 7.99, 7.98, 7.97]):
+            stop = self.instance.report_result(metric=value, epoch=epoch)
+            self.assertEqual(stop, epoch >= 4)
+
+
+class TestEarlyStopperDelta(TestEarlyStopper):
     """Test early stopping with a tiny delta."""
 
     mock_losses: List[float] = [10.0, 9.0, 8.0, 7.99, 7.98, 7.97]
     stop_constant: int = 4
     delta: float = 0.1
-    best_results: List[float] = [10.0, 9.0, 8.0, 8.0, 8.0]
+    best_results: List[float] = [10.0, 10.0, 8.0, 8.0, 8.0]
 
 
-class TestEarlyStoppingRealWorld(unittest.TestCase):
+class TestEarlyStopperRealWorld(unittest.TestCase):
     """Test early stopping on a real-world use case of training TransE with Adam."""
 
     #: The window size used by the early stopper
@@ -207,9 +245,6 @@ class TestEarlyStoppingRealWorld(unittest.TestCase):
             stopper=stopper,
             use_tqdm=False,
         )
-        self.assertEqual(stopper.number_results, (len(losses) + self.patience * stopper.frequency) // stopper.frequency)
-        self.assertEqual(
-            self.stop_epoch,
-            (len(losses) + 2 * stopper.frequency),
-            msg="Did not stop early like it should have",
-        )
+        self.assertEqual(stopper.number_results, len(losses) // stopper.frequency)
+        self.assertEqual(stopper.best_epoch, self.stop_epoch - self.patience * stopper.frequency)
+        self.assertEqual(self.stop_epoch, len(losses), msg="Did not stop early like it should have")

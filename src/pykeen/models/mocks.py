@@ -5,12 +5,13 @@
 These are useful for baselines.
 """
 
-from typing import Any, ClassVar, Mapping
+from typing import Any, ClassVar, Mapping, Optional
 
 import torch
 
 from .base import Model
 from ..triples import CoreTriplesFactory
+from ..typing import InductiveMode
 
 __all__ = [
     "FixedModel",
@@ -49,6 +50,11 @@ class FixedModel(Model):
     def collect_regularization_term(self):  # noqa: D102
         return 0.0
 
+    def _get_entity_len(self, mode: Optional[InductiveMode]) -> int:
+        if mode is not None:
+            raise NotImplementedError
+        return self.num_entities
+
     def _reset_parameters_(self):  # noqa: D102
         pass  # Not needed for mock model
 
@@ -61,26 +67,26 @@ class FixedModel(Model):
         """Generate fake scores."""
         return (h * (self.num_entities * self.num_relations) + r * self.num_entities + t).float().requires_grad_(True)
 
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_hrt(self, hrt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         return self._generate_fake_scores(*hrt_batch.t()).unsqueeze(dim=-1)
 
-    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_t(self, hr_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         return self._generate_fake_scores(
             h=hr_batch[:, 0:1],
             r=hr_batch[:, 1:2],
-            t=torch.arange(self.num_entities).unsqueeze(dim=0),
+            t=torch.arange(self.num_entities, device=hr_batch.device).unsqueeze(dim=0),
         )
 
-    def score_r(self, ht_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_r(self, ht_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         return self._generate_fake_scores(
             h=ht_batch[:, 0:1],
-            r=torch.arange(self.num_relations).unsqueeze(dim=0),
+            r=torch.arange(self.num_relations, device=ht_batch.device).unsqueeze(dim=0),
             t=ht_batch[:, 1:2],
         )
 
-    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
+    def score_h(self, rt_batch: torch.LongTensor, **kwargs) -> torch.FloatTensor:  # noqa: D102
         return self._generate_fake_scores(
-            h=torch.arange(self.num_entities).unsqueeze(dim=0),
+            h=torch.arange(self.num_entities, device=rt_batch.device).unsqueeze(dim=0),
             r=rt_batch[:, 0:1],
             t=rt_batch[:, 1:2],
         )
