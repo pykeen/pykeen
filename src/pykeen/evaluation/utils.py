@@ -5,11 +5,11 @@
 from typing import Callable, MutableMapping, NamedTuple, Optional, Union
 
 import numpy as np
-from rexmex.utils import binarize as binarize_func
 
 __all__ = [
     "MetricAnnotation",
     "MetricAnnotator",
+    "construct_indicator",
 ]
 
 
@@ -21,6 +21,7 @@ class MetricAnnotation(NamedTuple):
     name: str
     lower: float
     upper: float
+    binarize: bool
     higher_is_better: bool
     description: str
     link: str
@@ -82,7 +83,8 @@ class MetricAnnotator:
     ):
         """Annotate a function."""
         self.metrics[func] = MetricAnnotation(
-            func=binarize_func(func) if binarize else func,
+            func=func,
+            binarize=binarize,
             type=self.type,
             name=name or func.__name__.replace("_", " ").title(),
             lower=lower,
@@ -93,3 +95,25 @@ class MetricAnnotator:
             description=description,
             link=link,
         )
+
+
+def construct_indicator(*, y_score: np.ndarray, y_true: np.ndarray) -> np.ndarray:
+    """Construct binary indicators from a list of scores.
+
+    :param y_score:
+        A 1-D array of the score values
+    :param y_true:
+        A 1-D array of binary values
+    :return:
+        A 1-D array of indicator values
+    .. seealso:: https://github.com/xptree/NetMF/blob/77286b826c4af149055237cef65e2a500e15631a/predict.py#L25-L33
+    """
+    y_score_m = y_score.reshape(1, -1)
+    y_true_m = y_true.reshape(1, -1)
+    num_label = np.sum(y_true_m, axis=1, dtype=int)
+    y_sort = np.fliplr(np.argsort(y_score_m, axis=1))
+    y_pred = np.zeros_like(y_true_m, dtype=int)
+    for i in range(y_true_m.shape[0]):
+        for j in range(num_label[i]):
+            y_pred[i, y_sort[i, j]] = 1
+    return y_pred.reshape(-1)

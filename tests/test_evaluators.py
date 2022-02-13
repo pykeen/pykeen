@@ -29,6 +29,7 @@ from pykeen.evaluation.evaluator import (
     prepare_filter_triples,
 )
 from pykeen.evaluation.expectation import expected_hits_at_k, expected_mean_rank
+from pykeen.evaluation.utils import construct_indicator
 from pykeen.evaluation.metrics import MetricKey
 from pykeen.evaluation.rank_based_evaluator import SampledRankBasedEvaluator, sample_negatives
 from pykeen.evaluation.ranks import Ranks
@@ -161,10 +162,12 @@ class ClassificationEvaluatorTest(cases.EvaluatorTestCase):
         mask = numpy.concatenate(mask_filtered, axis=0)
         scores = numpy.concatenate(scores_filtered, axis=0)
 
+        y_true, y_score = numpy.array(mask.flat), numpy.array(scores.flat)
+        y_indicator = construct_indicator(y_score=y_score, y_true=y_true)
         for metric, metadata in CLASSIFICATION_FIELDS.items():
             with self.subTest(metric=metric):
                 f = metadata["f"]
-                exp_score = f(numpy.array(mask.flat), numpy.array(scores.flat))
+                exp_score = f(y_true=y_true, y_score=y_indicator if metadata["binarize"] else y_score)
                 self.assertIn(metric, result.data)
                 act_score = result.get_metric(metric)
                 if numpy.isnan(exp_score):
