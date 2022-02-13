@@ -40,7 +40,7 @@ DUPLICATE_CLASSIFIERS = {
     rmc.recall_score: rmc.true_positive_rate,
 }
 
-classifier_annotator = MetricAnnotator("classification")
+classifier_annotator = MetricAnnotator()
 classifier_annotator.higher(
     rmc.true_negative_rate,
     description="TN / (TN + FP)",

@@ -2,14 +2,14 @@
 
 """Implementation of wrapper around sklearn metrics."""
 
-from typing import MutableMapping, Optional, Tuple, cast
+from typing import Mapping, MutableMapping, Optional, Tuple, cast
 
 import numpy as np
 import torch
-from rexmex.utils import binarize
 
 from .evaluator import Evaluator, MetricResults
 from .rexmex_compat import classifier_annotator
+from .utils import MetricAnnotation
 from ..constants import TARGET_TO_INDEX
 from ..typing import MappedTriples, Target
 
@@ -18,18 +18,10 @@ __all__ = [
     "ClassificationMetricResults",
 ]
 
-CLASSIFICATION_FIELDS = {
-    metadata.func.__name__: dict(
-        type=float,
-        name=metadata.name,
-        doc=metadata.description or "",
-        link=metadata.link,
-        range=metadata.interval(),
-        increasing=metadata.increasing,
-        f=binarize(metadata.func) if metadata.binarize else metadata.func,
-        binarize=metadata.binarize,
-    )
+CLASSIFICATION_FIELDS: Mapping[str, MetricAnnotation] = {
+    metadata.func.__name__: metadata
     for metadata in classifier_annotator.metrics.values()
+    if metadata.func is not None  # this is always true
 }
 
 
@@ -42,7 +34,7 @@ class ClassificationMetricResults(MetricResults):
     def from_scores(cls, y_true, y_score):
         """Return an instance of these metrics from a given set of true and scores."""
         return ClassificationMetricResults(
-            {key: metadata["f"](y_true, y_score) for key, metadata in CLASSIFICATION_FIELDS.items()}
+            {key: metric.score(y_true, y_score) for key, metric in CLASSIFICATION_FIELDS.items()}
         )
 
     def get_metric(self, name: str) -> float:  # noqa: D102

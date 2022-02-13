@@ -414,20 +414,20 @@ METRIC_NAMES = {
 
 
 def _get_metrics_lines(tablefmt: str):
-    for key, metadata, name, value in get_metric_list():
+    for key, metric, name, metric_results_cls in get_metric_list():
         if key in {"rank_std", "rank_var", "rank_mad", "rank_count"}:
             continue
-        label = metadata["name"]
-        link = metadata["link"]
+        label = metric.name
+        link = metric.link
         yv = [
             f"[{label}]({link})",
-            metadata["range"],
-            "📈" if metadata["increasing"] else "📉",
-            metadata["doc"],
+            metric.value_range.notate(),
+            "📈" if metric.increasing else "📉",
+            metric.description,
             METRIC_NAMES[name],
         ]
         if tablefmt != "github":
-            yv.append(f"pykeen.evaluation.{value.__name__}")
+            yv.append(f"pykeen.evaluation.{metric_results_cls.__name__}")
         yield tuple(yv)
 
 

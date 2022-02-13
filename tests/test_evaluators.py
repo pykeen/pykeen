@@ -32,7 +32,6 @@ from pykeen.evaluation.expectation import expected_hits_at_k, expected_mean_rank
 from pykeen.evaluation.metrics import MetricKey
 from pykeen.evaluation.rank_based_evaluator import SampledRankBasedEvaluator, sample_negatives
 from pykeen.evaluation.ranks import Ranks
-from pykeen.evaluation.utils import construct_indicator
 from pykeen.models import FixedModel
 from pykeen.typing import (
     LABEL_HEAD,
@@ -165,8 +164,7 @@ class ClassificationEvaluatorTest(cases.EvaluatorTestCase):
         y_true, y_score = numpy.array(mask.flat), numpy.array(scores.flat)
         for metric, metadata in CLASSIFICATION_FIELDS.items():
             with self.subTest(metric=metric):
-                f = metadata["f"]
-                exp_score = f(y_true=y_true, y_score=y_score)
+                exp_score = metadata.score(y_true=y_true, y_score=y_score)
                 self.assertIn(metric, result.data)
                 act_score = result.get_metric(metric)
                 if numpy.isnan(exp_score):
