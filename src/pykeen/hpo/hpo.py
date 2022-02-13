@@ -911,7 +911,7 @@ def suggest_discrete_power_int(trial: Trial, name: str, low: int, high: int, bas
     """Suggest an integer in the given range [2^low, 2^high]."""
     if high <= low:
         raise Exception(f"Upper bound {high} is not greater than lower bound {low}.")
-    choices = [base ** i for i in range(low, high + 1)]
+    choices = [base**i for i in range(low, high + 1)]
     return cast(int, trial.suggest_categorical(name=name, choices=choices))
 
 
