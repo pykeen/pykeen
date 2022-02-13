@@ -96,11 +96,9 @@ class ClassificationEvaluator(Evaluator):
             self.all_positives[key] = dense_positive_mask[i]
 
     def finalize(self) -> ClassificationMetricResults:  # noqa: D102
-        # Important: The order of the values of an dictionary is not guaranteed. Hence, we need to retrieve scores and
-        # masks using the exact same key order.
+        # Because the order of the values of an dictionary is not guaranteed,
+        # we need to retrieve scores and masks using the exact same key order.
         all_keys = list(self.all_scores.keys())
-        # TODO how to define a cutoff on y_scores to make binary?
-        # see: https://github.com/xptree/NetMF/blob/77286b826c4af149055237cef65e2a500e15631a/predict.py#L25-L33
         y_score = np.concatenate([self.all_scores[k] for k in all_keys], axis=0).flatten()
         y_true = np.concatenate([self.all_positives[k] for k in all_keys], axis=0).flatten()
 
