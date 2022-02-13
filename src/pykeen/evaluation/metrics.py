@@ -9,7 +9,7 @@ import numpy as np
 from class_resolver import Resolver
 from scipy import stats
 
-from .expected import expected_mean_rank
+from .expectation import expected_mean_rank
 from ..typing import RANK_REALISTIC, RANK_TYPES, RankType
 
 __all__ = [

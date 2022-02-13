@@ -26,7 +26,7 @@ from pykeen.evaluation.evaluator import (
     get_candidate_set_size,
     prepare_filter_triples,
 )
-from pykeen.evaluation.expected import expected_hits_at_k, expected_mean_rank
+from pykeen.evaluation.expectation import expected_hits_at_k, expected_mean_rank
 from pykeen.evaluation.metrics import (
     AdjustedArithmeticMeanRankIndex,
     ArithmeticMeanRank,
