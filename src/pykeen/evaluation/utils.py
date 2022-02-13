@@ -106,11 +106,12 @@ def construct_indicator(*, y_score: np.ndarray, y_true: np.ndarray) -> np.ndarra
         A 1-D array of binary values
     :return:
         A 1-D array of indicator values
+
     .. seealso:: https://github.com/xptree/NetMF/blob/77286b826c4af149055237cef65e2a500e15631a/predict.py#L25-L33
     """
     number_pos = np.sum(y_true, dtype=int)
-    y_sort = np.fliplr(np.argsort(y_score).reshape(1, -1)).reshape(-1)
+    y_sort_idx = np.argsort(y_score)
+    y_sort = np.fliplr(y_sort_idx.reshape(1, -1)).reshape(-1)
     y_pred = np.zeros_like(y_true, dtype=int)
-    for j in range(number_pos):
-        y_pred[y_sort[j]] = 1
+    y_pred[y_sort[np.arange(number_pos)]] = 1
     return y_pred
