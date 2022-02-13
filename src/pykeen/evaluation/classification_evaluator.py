@@ -2,13 +2,14 @@
 
 """Implementation of wrapper around sklearn metrics."""
 
-from typing import MutableMapping, Optional, Tuple, cast
+from typing import Mapping, MutableMapping, Optional, Tuple, cast
 
 import numpy as np
 import torch
 
 from .evaluator import Evaluator, MetricResults
 from .rexmex_compat import classifier_annotator
+from .utils import MetricAnnotation
 from ..constants import TARGET_TO_INDEX
 from ..typing import MappedTriples, Target
 
@@ -17,30 +18,23 @@ __all__ = [
     "ClassificationMetricResults",
 ]
 
-CLASSIFICATION_FIELDS = {
-    metadata.func.__name__: dict(
-        type=float,
-        name=metadata.name,
-        doc=metadata.description or "",
-        link=metadata.link,
-        range=metadata.interval(),
-        increasing=metadata.higher_is_better,
-        f=metadata.func,
-    )
-    for metadata in classifier_annotator.metrics.values()
+CLASSIFICATION_METRICS: Mapping[str, MetricAnnotation] = {
+    metric.func.__name__: metric
+    for metric in classifier_annotator.metrics.values()
+    if metric.func is not None  # this is always true
 }
 
 
 class ClassificationMetricResults(MetricResults):
     """Results from computing metrics."""
 
-    metadata = CLASSIFICATION_FIELDS
+    metrics = CLASSIFICATION_METRICS
 
     @classmethod
     def from_scores(cls, y_true, y_score):
         """Return an instance of these metrics from a given set of true and scores."""
         return ClassificationMetricResults(
-            {key: metadata["f"](y_true, y_score) for key, metadata in CLASSIFICATION_FIELDS.items()}
+            {key: metric.score(y_true, y_score) for key, metric in CLASSIFICATION_METRICS.items()}
         )
 
     def get_metric(self, name: str) -> float:  # noqa: D102
@@ -90,11 +84,9 @@ class ClassificationEvaluator(Evaluator):
             self.all_positives[key] = dense_positive_mask[i]
 
     def finalize(self) -> ClassificationMetricResults:  # noqa: D102
-        # Important: The order of the values of an dictionary is not guaranteed. Hence, we need to retrieve scores and
-        # masks using the exact same key order.
+        # Because the order of the values of an dictionary is not guaranteed,
+        # we need to retrieve scores and masks using the exact same key order.
         all_keys = list(self.all_scores.keys())
-        # TODO how to define a cutoff on y_scores to make binary?
-        # see: https://github.com/xptree/NetMF/blob/77286b826c4af149055237cef65e2a500e15631a/predict.py#L25-L33
         y_score = np.concatenate([self.all_scores[k] for k in all_keys], axis=0).flatten()
         y_true = np.concatenate([self.all_positives[k] for k in all_keys], axis=0).flatten()
 
