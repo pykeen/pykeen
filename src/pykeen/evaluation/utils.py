@@ -2,6 +2,7 @@
 
 """Utilities for evaluation."""
 
+from dataclasses import dataclass
 from typing import Callable, MutableMapping, NamedTuple, Optional, Union
 
 import numpy as np
@@ -13,22 +14,37 @@ __all__ = [
 ]
 
 
-class MetricAnnotation(NamedTuple):
-    """Metadata about a classifier function."""
+@dataclass
+class ValueRange:
+    """A value range description."""
 
-    func: Callable[[np.array, np.array], float]
-    type: str
-    name: str
-    lower: float
-    upper: float
-    binarize: bool
-    higher_is_better: bool
-    description: str
-    link: str
-    lower_inclusive: bool = True
-    upper_inclusive: bool = True
+    #: the lower bound
+    lower: Optional[float] = None
 
-    def interval(self) -> str:
+    #: whether the lower bound is inclusive
+    lower_inclusive: bool = False
+
+    #: the upper bound
+    upper: Optional[float] = None
+
+    #: whether the upper bound is inclusive
+    upper_inclusive: bool = False
+
+    def __contains__(self, x: float) -> bool:
+        """Test whether a value is contained in the value range."""
+        if self.lower is not None:
+            if x < self.lower:
+                return False
+            if not self.lower_inclusive and x == self.lower:
+                return False
+        if self.upper is not None:
+            if x > self.upper:
+                return False
+            if not self.upper_inclusive and x == self.upper:
+                return False
+        return True
+
+    def notate(self) -> str:
         """Get the math notation for the range of this metric."""
         left = "[" if self.lower_inclusive else "("
         right = "]" if self.upper_inclusive else ")"
@@ -47,6 +63,23 @@ class MetricAnnotation(NamedTuple):
         return f"{left}{lower}, {upper}{right}"
 
 
+class MetricAnnotation(NamedTuple):
+    """Metadata about a classifier function."""
+
+    func: Callable[[np.array, np.array], float]
+    type: str
+    name: str
+    value_range: ValueRange
+    binarize: bool
+    increasing: bool
+    description: str
+    link: str
+
+    def interval(self) -> str:
+        """Get the math notation for the range of this metric."""
+        return self.value_range.notate()
+
+
 class MetricAnnotator:
     """A class for annotating metric functions."""
 
@@ -59,19 +92,17 @@ class MetricAnnotator:
 
     def higher(self, func, **kwargs):
         """Annotate a function where higher values are better."""
-        kwargs["higher_is_better"] = True
-        return self.add(func, **kwargs)
+        return self.add(func, increasing=True, **kwargs)
 
     def lower(self, func, **kwargs):
         """Annotate a function where lower values are better."""
-        kwargs["higher_is_better"] = False
-        return self.add(func, **kwargs)
+        return self.add(func, increasing=False, **kwargs)
 
     def add(
         self,
         func,
         *,
-        higher_is_better: bool,
+        increasing: bool,
         description: str,
         link: str,
         name: Optional[str] = None,
@@ -87,11 +118,13 @@ class MetricAnnotator:
             binarize=binarize,
             type=self.type,
             name=name or func.__name__.replace("_", " ").title(),
-            lower=lower,
-            lower_inclusive=lower_inclusive,
-            upper=upper,
-            upper_inclusive=upper_inclusive,
-            higher_is_better=higher_is_better,
+            value_range=ValueRange(
+                lower=lower,
+                lower_inclusive=lower_inclusive,
+                upper=upper,
+                upper_inclusive=upper_inclusive,
+            ),
+            increasing=increasing,
             description=description,
             link=link,
         )

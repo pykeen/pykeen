@@ -25,7 +25,7 @@ CLASSIFICATION_FIELDS = {
         doc=metadata.description or "",
         link=metadata.link,
         range=metadata.interval(),
-        increasing=metadata.higher_is_better,
+        increasing=metadata.increasing,
         f=metadata.func,
         binarize=metadata.binarize,
     )
