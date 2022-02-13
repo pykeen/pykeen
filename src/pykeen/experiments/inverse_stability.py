@@ -67,7 +67,8 @@ def run_inverse_stability_workflow(
             create_inverse_triples=True,
         ),
     )
-    dataset_name = dataset_instance.get_normalized_name()
+    # FIXME
+    dataset_name = dataset_resolver.normalize(dataset)
     model_cls: Type[Model] = model_resolver.lookup(model)
     model_name = model_cls.__name__.lower()
 
