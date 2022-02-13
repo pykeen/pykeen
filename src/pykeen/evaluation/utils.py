@@ -46,11 +46,17 @@ class ValueRange:
 
     def notate(self) -> str:
         """Get the math notation for the range of this metric."""
-        left = "(" if self.lower is None or not self.lower_inclusive else "("
+        left = "(" if self.lower is None or not self.lower_inclusive else "["
         right = ")" if self.upper is None or not self.upper_inclusive else "]"
-        lower_str = "∞" if self.lower is None else str(self.lower)
-        upper_str = "∞" if self.upper is None else str(self.upper)
-        return f"{left}{lower_str}, {upper_str}{right}"
+        return f"{left}{self._coerce(self.lower)}, {self._coerce(self.upper)}{right}"
+
+    @staticmethod
+    def _coerce(n: Optional[float]) -> str:
+        if n is None:
+            return "inf"  # ∞
+        if n.is_integer():
+            return str(int(n))
+        return str(n)
 
 
 class MetricAnnotation(NamedTuple):
