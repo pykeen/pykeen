@@ -194,6 +194,10 @@ class Model(nn.Module, ABC):
     def _reset_parameters_(self):  # noqa: D401
         """Reset all parameters of the model in-place."""
 
+    @abstractmethod
+    def _get_entity_len(self, *, mode: Optional[InductiveMode]) -> Optional[int]:
+        """Get the number of entities depending on the mode parameters."""
+
     def post_parameter_update(self) -> None:
         """Has to be called after each parameter update."""
 
@@ -330,6 +334,8 @@ class Model(nn.Module, ABC):
 
         :param hrt_batch: shape: (number of triples, 3), dtype: long
             The indices of (head, relation, tail) triples.
+        :param mode:
+            The pass mode. Is None for transductive and "training" / "validation" / "testing" in inductive.
 
         :return: shape: (number of triples, 1), dtype: float
             The score for each triple.
@@ -359,6 +365,8 @@ class Model(nn.Module, ABC):
             The indices of (relation, tail) pairs.
         :param slice_size: >0
             The divisor for the scoring function when using slicing.
+        :param mode:
+            The pass mode. Is None for transductive and "training" / "validation" / "testing" in inductive.
 
         :return: shape: (batch_size, num_entities), dtype: float
             For each r-t pair, the scores for all possible heads.
@@ -390,6 +398,8 @@ class Model(nn.Module, ABC):
             The indices of (head, relation) pairs.
         :param slice_size: >0
             The divisor for the scoring function when using slicing.
+        :param mode:
+            The pass mode. Is None for transductive and "training" / "validation" / "testing" in inductive.
 
         :return: shape: (batch_size, num_entities), dtype: float
             For each h-r pair, the scores for all possible tails.
@@ -427,6 +437,8 @@ class Model(nn.Module, ABC):
             The indices of (head, tail) pairs.
         :param slice_size: >0
             The divisor for the scoring function when using slicing.
+        :param mode:
+            The pass mode. Is None for transductive and "training" / "validation" / "testing" in inductive.
 
         :return: shape: (batch_size, num_real_relations), dtype: float
             For each h-t pair, the scores for all possible relations.
@@ -643,6 +655,11 @@ class _OldAbstractModel(Model, ABC, autoreset=False):
         super().__init_subclass__(**kwargs)
         if autoreset:
             _add_post_reset_parameters(cls)
+
+    def _get_entity_len(self, mode: Optional[InductiveMode] = None) -> int:  # noqa:D105
+        if mode is not None:
+            raise ValueError
+        return self.num_entities
 
     def post_parameter_update(self) -> None:
         """Has to be called after each parameter update."""

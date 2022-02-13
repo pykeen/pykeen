@@ -11,6 +11,7 @@ import torch
 from .utils import get_csr_matrix, get_relation_similarity, marginal_score
 from ..base import Model
 from ...triples import CoreTriplesFactory
+from ...typing import InductiveMode
 
 __all__ = [
     "EvaluationOnlyModel",
@@ -38,6 +39,9 @@ class EvaluationOnlyModel(Model, ABC):
             # just to avoid warnings
             random_seed=0,
         )
+
+    def _get_entity_len(self, *, mode: Optional[InductiveMode]) -> int:
+        return self.num_entities
 
     def _reset_parameters_(self):
         """Non-parametric models do not implement :meth:`Model._reset_parameters_`."""
