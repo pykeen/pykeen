@@ -7,13 +7,11 @@ import logging
 import math
 import random
 from collections import defaultdict
-from dataclasses import dataclass, field, fields
 from typing import DefaultDict, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Union, cast
 
 import numpy as np
 import pandas as pd
 import torch
-from dataclasses_json import dataclass_json
 
 from .evaluator import Evaluator, MetricResults, prepare_filter_triples
 from .metrics import (
@@ -50,7 +48,6 @@ from ..typing import (
     RankType,
     Target,
 )
-from ..utils import fix_dataclass_init_docs
 
 __all__ = [
     "RankBasedEvaluator",
@@ -59,155 +56,117 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
+RANKING_FIELDS = dict(
+    arithmetic_mean_rank=dict(
+        name="Mean Rank (MR)",
+        increasing=False,
+        range="[1, inf)",
+        doc="The arithmetic mean over all ranks.",
+        link="https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#mean-rank",
+    ),
+    geometric_mean_rank=dict(
+        name="Geometric Mean Rank (GMR)",
+        increasing=False,
+        range="[1, inf)",
+        doc="The geometric mean over all ranks.",
+        link="https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html",
+    ),
+    median_rank=dict(
+        name="Median Rank",
+        increasing=False,
+        range="[1, inf)",
+        doc="The median over all ranks.",
+        link="https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html",
+    ),
+    harmonic_mean_rank=dict(
+        name="Harmonic Mean Rank (HMR)",
+        increasing=False,
+        range="[1, inf)",
+        doc="The harmonic mean over all ranks.",
+        link="https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html",
+    ),
+    inverse_arithmetic_mean_rank=dict(
+        name="Inverse Arithmetic Mean Rank (IAMR)",
+        increasing=True,
+        range="(0, 1]",
+        doc="The inverse of the arithmetic mean over all ranks.",
+        link="https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html",
+    ),
+    inverse_geometric_mean_rank=dict(
+        name="Inverse Geometric Mean Rank (IGMR)",
+        increasing=True,
+        range="(0, 1]",
+        doc="The inverse of the geometric mean over all ranks.",
+        link="https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html",
+    ),
+    inverse_harmonic_mean_rank=dict(
+        name="Mean Reciprocal Rank (MRR)",
+        increasing=True,
+        range="(0, 1]",
+        doc="The inverse of the harmonic mean over all ranks.",
+        link="https://en.wikipedia.org/wiki/Mean_reciprocal_rank",
+    ),
+    inverse_median_rank=dict(
+        name="Inverse Median Rank",
+        increasing=True,
+        range="(0, 1]",
+        doc="The inverse of the median over all ranks.",
+        link="https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html",
+    ),
+    rank_count=dict(
+        name="Rank Count",
+        doc="The number of considered ranks, a non-negative number. Low numbers may indicate unreliable results.",
+    ),
+    rank_std=dict(
+        name="Rank Standard Deviation",
+        range="[0, inf)",
+        increasing=False,
+        doc="The standard deviation over all ranks.",
+    ),
+    rank_var=dict(
+        name="Rank Variance",
+        range="[0, inf)",
+        increasing=False,
+        doc="The variance over all ranks.",
+    ),
+    rank_mad=dict(
+        name="Rank Median Absolute Deviation",
+        range="[0, inf)",
+        doc="The median absolute deviation over all ranks.",
+    ),
+    hits_at_k=dict(
+        name="Hits @ K",
+        range="[0, 1]",
+        increasing=True,
+        doc="The relative frequency of ranks not larger than a given k.",
+        link="https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#hits-k",
+    ),
+    adjusted_arithmetic_mean_rank=dict(
+        name="Adjusted Arithmetic Mean Rank (AAMR)",
+        increasing=False,
+        range="(0, 2)",
+        doc="The mean over all chance-adjusted ranks.",
+        link="https://arxiv.org/abs/2002.06914",
+    ),
+    adjusted_arithmetic_mean_rank_index=dict(
+        name="Adjusted Arithmetic Mean Rank Index (AAMRI)",
+        increasing=True,
+        range="[-1, 1]",
+        doc="The re-indexed adjusted mean rank (AAMR)",
+        link="https://arxiv.org/abs/2002.06914",
+    ),
+)
 
-@fix_dataclass_init_docs
-@dataclass_json
-@dataclass
+
 class RankBasedMetricResults(MetricResults):
     """Results from computing metrics."""
 
-    arithmetic_mean_rank: Dict[str, Dict[str, float]] = field(
-        metadata=dict(
-            name="Mean Rank (MR)",
-            increasing=False,
-            range="[1, inf)",
-            doc="The arithmetic mean over all ranks.",
-            link="https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#mean-rank",
-        )
-    )
+    metadata = RANKING_FIELDS
 
-    geometric_mean_rank: Dict[str, Dict[str, float]] = field(
-        metadata=dict(
-            name="Geometric Mean Rank (GMR)",
-            increasing=False,
-            range="[1, inf)",
-            doc="The geometric mean over all ranks.",
-            link="https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html",
-        )
-    )
-
-    median_rank: Dict[str, Dict[str, float]] = field(
-        metadata=dict(
-            name="Median Rank",
-            increasing=False,
-            range="[1, inf)",
-            doc="The median over all ranks.",
-            link="https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html",
-        )
-    )
-
-    harmonic_mean_rank: Dict[str, Dict[str, float]] = field(
-        metadata=dict(
-            name="Harmonic Mean Rank (HMR)",
-            increasing=False,
-            range="[1, inf)",
-            doc="The harmonic mean over all ranks.",
-            link="https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html",
-        )
-    )
-
-    inverse_arithmetic_mean_rank: Dict[str, Dict[str, float]] = field(
-        metadata=dict(
-            name="Inverse Arithmetic Mean Rank (IAMR)",
-            increasing=True,
-            range="(0, 1]",
-            doc="The inverse of the arithmetic mean over all ranks.",
-            link="https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html",
-        )
-    )
-
-    inverse_geometric_mean_rank: Dict[str, Dict[str, float]] = field(
-        metadata=dict(
-            name="Inverse Geometric Mean Rank (IGMR)",
-            increasing=True,
-            range="(0, 1]",
-            doc="The inverse of the geometric mean over all ranks.",
-            link="https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html",
-        )
-    )
-
-    inverse_harmonic_mean_rank: Dict[str, Dict[str, float]] = field(
-        metadata=dict(
-            name="Mean Reciprocal Rank (MRR)",
-            increasing=True,
-            range="(0, 1]",
-            doc="The inverse of the harmonic mean over all ranks.",
-            link="https://en.wikipedia.org/wiki/Mean_reciprocal_rank",
-        )
-    )
-
-    inverse_median_rank: Dict[str, Dict[str, float]] = field(
-        metadata=dict(
-            name="Inverse Median Rank",
-            increasing=True,
-            range="(0, 1]",
-            doc="The inverse of the median over all ranks.",
-            link="https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html",
-        )
-    )
-
-    rank_count: Dict[str, Dict[str, int]] = field(
-        metadata=dict(
-            name="Rank Count",
-            doc="The number of considered ranks, a non-negative number. Low numbers may indicate unreliable results.",
-        )
-    )
-
-    rank_std: Dict[str, Dict[str, float]] = field(
-        metadata=dict(
-            name="Rank Standard Deviation",
-            range="[0, inf)",
-            increasing=False,
-            doc="The standard deviation over all ranks.",
-        )
-    )
-
-    rank_var: Dict[str, Dict[str, float]] = field(
-        metadata=dict(
-            name="Rank Variance",
-            range="[0, inf)",
-            increasing=False,
-            doc="The variance over all ranks.",
-        )
-    )
-
-    rank_mad: Dict[str, Dict[str, float]] = field(
-        metadata=dict(
-            name="Rank Median Absolute Deviation",
-            range="[0, inf)",
-            doc="The median absolute deviation over all ranks.",
-        )
-    )
-
-    hits_at_k: Dict[str, Dict[str, Dict[Union[int, float], float]]] = field(
-        metadata=dict(
-            name="Hits @ K",
-            range="[0, 1]",
-            increasing=True,
-            doc="The relative frequency of ranks not larger than a given k.",
-            link="https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#hits-k",
-        )
-    )
-
-    adjusted_arithmetic_mean_rank: Dict[str, Dict[str, float]] = field(
-        metadata=dict(
-            name="Adjusted Arithmetic Mean Rank (AAMR)",
-            increasing=False,
-            range="(0, 2)",
-            doc="The mean over all chance-adjusted ranks.",
-            link="https://arxiv.org/abs/2002.06914",
-        )
-    )
-
-    adjusted_arithmetic_mean_rank_index: Dict[str, Dict[str, float]] = field(
-        metadata=dict(
-            name="Adjusted Arithmetic Mean Rank Index (AAMRI)",
-            increasing=True,
-            range="[-1, 1]",
-            doc="The re-indexed adjusted mean rank (AAMR)",
-            link="https://arxiv.org/abs/2002.06914",
-        )
-    )
+    @classmethod
+    def from_dict(cls, **kwargs):
+        """Create an instance from kwargs."""
+        return cls(kwargs)
 
     def get_metric(self, name: str) -> float:
         """Get the rank-based metric.
@@ -255,9 +214,9 @@ class RankBasedMetricResults(MetricResults):
 
     def _get_metric(self, metric_key: MetricKey) -> float:
         if not metric_key.name.startswith("hits"):
-            return getattr(self, metric_key.name)[metric_key.side][metric_key.rank_type]
+            return self.data[metric_key.name][metric_key.side][metric_key.rank_type]
         assert metric_key.k is not None
-        return self.hits_at_k[metric_key.side][metric_key.rank_type][metric_key.k]
+        return self.data["hits_at_k"][metric_key.side][metric_key.rank_type][metric_key.k]
 
     def to_flat_dict(self):  # noqa: D102
         return {f"{side}.{rank_type}.{metric_name}": value for side, rank_type, metric_name, value in self._iter_rows()}
@@ -268,14 +227,13 @@ class RankBasedMetricResults(MetricResults):
 
     def _iter_rows(self) -> Iterable[Tuple[ExtendedTarget, RankType, str, Union[float, int]]]:
         for side, rank_type in itt.product(SIDES, RANK_TYPES):
-            for k, v in self.hits_at_k[side][rank_type].items():
+            for k, v in self.data["hits_at_k"][side][rank_type].items():
                 yield side, rank_type, f"hits_at_{k}", v
-            for f in fields(self):
-                if f.name == "hits_at_k":
+            for name, side_data in self.data.items():
+                if name == "hits_at_k":
                     continue
-                side_data = getattr(self, f.name)[side]
                 if rank_type in side_data:
-                    yield side, rank_type, f.name, side_data[rank_type]
+                    yield side, rank_type, name, side_data[rank_type]
 
 
 class RankBasedEvaluator(Evaluator):
@@ -388,7 +346,7 @@ class RankBasedEvaluator(Evaluator):
         # Clear buffers
         self.ranks.clear()
 
-        return RankBasedMetricResults(
+        return RankBasedMetricResults.from_dict(
             arithmetic_mean_rank=dict(asr[ARITHMETIC_MEAN_RANK]),
             geometric_mean_rank=dict(asr[GEOMETRIC_MEAN_RANK]),
             harmonic_mean_rank=dict(asr[HARMONIC_MEAN_RANK]),
