@@ -163,6 +163,11 @@ class RankBasedMetricResults(MetricResults):
 
     metadata = RANKING_FIELDS
 
+    @classmethod
+    def from_dict(cls, **kwargs):
+        """Create an instance from kwargs."""
+        return cls(**kwargs)
+
     def get_metric(self, name: str) -> float:
         """Get the rank-based metric.
 

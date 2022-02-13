@@ -40,7 +40,7 @@ class ClassificationMetricResults(MetricResults):
     def from_scores(cls, y_true, y_score):
         """Return an instance of these metrics from a given set of true and scores."""
         return ClassificationMetricResults(
-            {metadata["name"]: metadata["f"](y_true, y_score) for metadata in CLASSIFICATION_FIELDS.values()}
+            {key: metadata["f"](y_true, y_score) for key, metadata in CLASSIFICATION_FIELDS.items()}
         )
 
     def get_metric(self, name: str) -> float:  # noqa: D102

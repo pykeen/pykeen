@@ -60,7 +60,9 @@ class MetricResults:
         self.results = results
 
     def __getattr__(self, item):  # noqa:D105
-        return self.results[item]
+        if item in self.results:
+            return self.results[item]
+        return getattr(self, item)
 
     def get_metric(self, name: str) -> float:
         """Get the given metric from the results.

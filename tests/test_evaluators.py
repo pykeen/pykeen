@@ -382,24 +382,22 @@ class DummyEvaluator(Evaluator):
             self.counter -= 1
 
     def finalize(self) -> MetricResults:  # noqa: D102
-        return RankBasedMetricResults(
-            dict(
-                arithmetic_mean_rank=self.counter,
-                geometric_mean_rank=None,
-                harmonic_mean_rank=None,
-                median_rank=None,
-                inverse_arithmetic_mean_rank=None,
-                inverse_geometric_mean_rank=None,
-                inverse_harmonic_mean_rank=None,
-                inverse_median_rank=None,
-                rank_std=None,
-                rank_var=None,
-                rank_mad=None,
-                rank_count=None,
-                adjusted_arithmetic_mean_rank=None,
-                adjusted_arithmetic_mean_rank_index=None,
-                hits_at_k=dict(),
-            )
+        return RankBasedMetricResults.from_dict(
+            arithmetic_mean_rank=self.counter,
+            geometric_mean_rank=None,
+            harmonic_mean_rank=None,
+            median_rank=None,
+            inverse_arithmetic_mean_rank=None,
+            inverse_geometric_mean_rank=None,
+            inverse_harmonic_mean_rank=None,
+            inverse_median_rank=None,
+            rank_std=None,
+            rank_var=None,
+            rank_mad=None,
+            rank_count=None,
+            adjusted_arithmetic_mean_rank=None,
+            adjusted_arithmetic_mean_rank_index=None,
+            hits_at_k=dict(),
         )
 
     def __repr__(self):  # noqa: D105
