@@ -60,9 +60,10 @@ class MetricResults:
         self.data = data
 
     def __getattr__(self, item):  # noqa:D105
-        if item in self.data:
-            return self.data[item]
-        return getattr(self, item)
+        # TODO remove this, it makes code much harder to reason about
+        if item not in self.data:
+            raise AttributeError
+        return self.data[item]
 
     def get_metric(self, name: str) -> float:
         """Get the given metric from the results.
@@ -72,9 +73,13 @@ class MetricResults:
         """
         raise NotImplementedError
 
+    def to_dict(self):
+        """Get the results as a dictionary."""
+        return self.data
+
     def to_flat_dict(self) -> Mapping[str, Any]:
         """Get the results as a flattened dictionary."""
-        return self.data
+        return self.to_dict()
 
 
 class Evaluator(ABC):

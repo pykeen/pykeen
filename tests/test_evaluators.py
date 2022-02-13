@@ -165,6 +165,7 @@ class ClassificationEvaluatorTest(cases.EvaluatorTestCase):
             with self.subTest(metric=metric):
                 f = metadata["f"]
                 exp_score = f(numpy.array(mask.flat), numpy.array(scores.flat))
+                self.assertIn(metric, result.data)
                 act_score = result.get_metric(metric)
                 if numpy.isnan(exp_score):
                     self.assertTrue(numpy.isnan(act_score))

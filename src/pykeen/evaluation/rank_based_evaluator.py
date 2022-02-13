@@ -166,7 +166,7 @@ class RankBasedMetricResults(MetricResults):
     @classmethod
     def from_dict(cls, **kwargs):
         """Create an instance from kwargs."""
-        return cls(**kwargs)
+        return cls(kwargs)
 
     def get_metric(self, name: str) -> float:
         """Get the rank-based metric.
@@ -346,24 +346,22 @@ class RankBasedEvaluator(Evaluator):
         # Clear buffers
         self.ranks.clear()
 
-        return RankBasedMetricResults(
-            dict(
-                arithmetic_mean_rank=dict(asr[ARITHMETIC_MEAN_RANK]),
-                geometric_mean_rank=dict(asr[GEOMETRIC_MEAN_RANK]),
-                harmonic_mean_rank=dict(asr[HARMONIC_MEAN_RANK]),
-                median_rank=dict(asr[MEDIAN_RANK]),
-                inverse_arithmetic_mean_rank=dict(asr[INVERSE_ARITHMETIC_MEAN_RANK]),
-                inverse_geometric_mean_rank=dict(asr[INVERSE_GEOMETRIC_MEAN_RANK]),
-                inverse_harmonic_mean_rank=dict(asr[INVERSE_HARMONIC_MEAN_RANK]),
-                inverse_median_rank=dict(asr[INVERSE_MEDIAN_RANK]),
-                rank_count=dict(asr[RANK_COUNT]),  # type: ignore
-                rank_std=dict(asr[RANK_STD]),
-                rank_mad=dict(asr[RANK_MAD]),
-                rank_var=dict(asr[RANK_VARIANCE]),
-                adjusted_arithmetic_mean_rank=dict(asr[ADJUSTED_ARITHMETIC_MEAN_RANK]),
-                adjusted_arithmetic_mean_rank_index=dict(asr[ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX]),
-                hits_at_k=dict(hits_at_k),
-            )
+        return RankBasedMetricResults.from_dict(
+            arithmetic_mean_rank=dict(asr[ARITHMETIC_MEAN_RANK]),
+            geometric_mean_rank=dict(asr[GEOMETRIC_MEAN_RANK]),
+            harmonic_mean_rank=dict(asr[HARMONIC_MEAN_RANK]),
+            median_rank=dict(asr[MEDIAN_RANK]),
+            inverse_arithmetic_mean_rank=dict(asr[INVERSE_ARITHMETIC_MEAN_RANK]),
+            inverse_geometric_mean_rank=dict(asr[INVERSE_GEOMETRIC_MEAN_RANK]),
+            inverse_harmonic_mean_rank=dict(asr[INVERSE_HARMONIC_MEAN_RANK]),
+            inverse_median_rank=dict(asr[INVERSE_MEDIAN_RANK]),
+            rank_count=dict(asr[RANK_COUNT]),  # type: ignore
+            rank_std=dict(asr[RANK_STD]),
+            rank_mad=dict(asr[RANK_MAD]),
+            rank_var=dict(asr[RANK_VARIANCE]),
+            adjusted_arithmetic_mean_rank=dict(asr[ADJUSTED_ARITHMETIC_MEAN_RANK]),
+            adjusted_arithmetic_mean_rank_index=dict(asr[ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX]),
+            hits_at_k=dict(hits_at_k),
         )
 
 
