@@ -55,13 +55,13 @@ class MetricResults:
 
     metadata: ClassVar[Mapping[str, Any]]
 
-    def __init__(self, results):
+    def __init__(self, data):
         """Initialize the result wrapper."""
-        self.results = results
+        self.data = data
 
     def __getattr__(self, item):  # noqa:D105
-        if item in self.results:
-            return self.results[item]
+        if item in self.data:
+            return self.data[item]
         return getattr(self, item)
 
     def get_metric(self, name: str) -> float:
@@ -74,7 +74,7 @@ class MetricResults:
 
     def to_flat_dict(self) -> Mapping[str, Any]:
         """Get the results as a flattened dictionary."""
-        return self.results()
+        return self.data
 
 
 class Evaluator(ABC):

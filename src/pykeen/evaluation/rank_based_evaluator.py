@@ -214,9 +214,9 @@ class RankBasedMetricResults(MetricResults):
 
     def _get_metric(self, metric_key: MetricKey) -> float:
         if not metric_key.name.startswith("hits"):
-            return self.results[metric_key.name][metric_key.side][metric_key.rank_type]
+            return self.data[metric_key.name][metric_key.side][metric_key.rank_type]
         assert metric_key.k is not None
-        return self.results["hits_at_k"][metric_key.side][metric_key.rank_type][metric_key.k]
+        return self.data["hits_at_k"][metric_key.side][metric_key.rank_type][metric_key.k]
 
     def to_flat_dict(self):  # noqa: D102
         return {f"{side}.{rank_type}.{metric_name}": value for side, rank_type, metric_name, value in self._iter_rows()}
@@ -227,9 +227,9 @@ class RankBasedMetricResults(MetricResults):
 
     def _iter_rows(self) -> Iterable[Tuple[ExtendedTarget, RankType, str, Union[float, int]]]:
         for side, rank_type in itt.product(SIDES, RANK_TYPES):
-            for k, v in self.results["hits_at_k"][side][rank_type].items():
+            for k, v in self.data["hits_at_k"][side][rank_type].items():
                 yield side, rank_type, f"hits_at_{k}", v
-            for name, side_data in self.results.items():
+            for name, side_data in self.data.items():
                 if name == "hits_at_k":
                     continue
                 if rank_type in side_data:

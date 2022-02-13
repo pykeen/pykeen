@@ -44,7 +44,7 @@ class ClassificationMetricResults(MetricResults):
         )
 
     def get_metric(self, name: str) -> float:  # noqa: D102
-        return self.results[name]
+        return self.data[name]
 
 
 class ClassificationEvaluator(Evaluator):
