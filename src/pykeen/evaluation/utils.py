@@ -3,14 +3,13 @@
 """Utilities for evaluation."""
 
 from dataclasses import dataclass
-from typing import Callable, MutableMapping, Optional
+from typing import Callable, Optional
 
 import numpy as np
 import rexmex.utils
 
 __all__ = [
     "MetricAnnotation",
-    "MetricAnnotator",
     "ValueRange",
 ]
 
@@ -87,50 +86,3 @@ class MetricAnnotation:
         if self.func is None:
             raise ValueError
         return self.func(y_true, y_score)
-
-
-class MetricAnnotator:
-    """A class for annotating metric functions."""
-
-    metrics: MutableMapping[str, MetricAnnotation]
-
-    def __init__(self):
-        self.metrics = {}
-
-    def higher(self, func, **kwargs):
-        """Annotate a function where higher values are better."""
-        return self.add(func, increasing=True, **kwargs)
-
-    def lower(self, func, **kwargs):
-        """Annotate a function where lower values are better."""
-        return self.add(func, increasing=False, **kwargs)
-
-    def add(
-        self,
-        func,
-        *,
-        increasing: bool,
-        description: str,
-        link: str,
-        name: Optional[str] = None,
-        lower: Optional[float] = 0.0,
-        lower_inclusive: bool = True,
-        upper: Optional[float] = 1.0,
-        upper_inclusive: bool = True,
-        binarize: bool = False,
-    ):
-        """Annotate a function."""
-        self.metrics[func] = MetricAnnotation(
-            func=func,
-            binarize=binarize,
-            name=name or func.__name__.replace("_", " ").title(),
-            value_range=ValueRange(
-                lower=lower,
-                lower_inclusive=lower_inclusive,
-                upper=upper,
-                upper_inclusive=upper_inclusive,
-            ),
-            increasing=increasing,
-            description=description,
-            link=link,
-        )
