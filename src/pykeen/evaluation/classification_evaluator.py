@@ -9,7 +9,6 @@ import torch
 
 from .evaluator import Evaluator, MetricResults
 from .rexmex_compat import classifier_annotator
-from .utils import construct_indicator
 from .utils import MetricAnnotation
 from ..constants import TARGET_TO_INDEX
 from ..typing import MappedTriples, Target
@@ -18,7 +17,6 @@ __all__ = [
     "ClassificationEvaluator",
     "ClassificationMetricResults",
 ]
-
 
 CLASSIFICATION_METRICS: Mapping[str, MetricAnnotation] = {
     metric.func.__name__: metric
@@ -35,7 +33,6 @@ class ClassificationMetricResults(MetricResults):
     @classmethod
     def from_scores(cls, y_true, y_score):
         """Return an instance of these metrics from a given set of true and scores."""
-        y_indicator = construct_indicator(y_score=y_score, y_true=y_true)
         return ClassificationMetricResults(
             {key: metric.score(y_true, y_score) for key, metric in CLASSIFICATION_METRICS.items()}
         )

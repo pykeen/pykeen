@@ -3,13 +3,9 @@
 """Utilities for evaluation."""
 
 from dataclasses import dataclass
-from typing import Callable, MutableMapping, NamedTuple, Optional
-
-import numpy as np
 from typing import Callable, MutableMapping, Optional
 
 import numpy as np
-import rexmex.utils
 
 __all__ = [
     "MetricAnnotation",
@@ -79,18 +75,11 @@ class MetricAnnotation:
     binarize: Optional[bool] = None
     func: Optional[Callable[[np.array, np.array], float]] = None
 
-    def __post_init__(self):
-        """Prepare the function by binarizing it if annotated."""
-        if self.binarize:
-            if self.func is None:
-                raise ValueError
-            self.func = rexmex.utils.binarize(self.func)
-
     def score(self, y_true, y_score) -> float:
         """Run the scoring function."""
         if self.func is None:
             raise ValueError
-        return self.func(y_true, y_score)
+        return self.func(y_true, construct_indicator(y_score=y_score, y_true=y_true) if self.binarize else y_score)
 
 
 class MetricAnnotator:
