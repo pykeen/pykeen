@@ -82,14 +82,14 @@ classifier_annotator.lower(
 classifier_annotator.higher(
     rmc.positive_likelihood_ratio,
     lower=0.0,
-    upper=float("inf"),
+    upper=None,
     description="TPR / FPR",
     link="https://en.wikipedia.org/wiki/Positive_likelihood_ratio",
 )
 classifier_annotator.lower(
     rmc.negative_likelihood_ratio,
     lower=0.0,
-    upper=float("inf"),
+    upper=None,
     description="FNR / TNR",
     link="https://en.wikipedia.org/wiki/Negative_likelihood_ratio",
 )
@@ -117,7 +117,7 @@ classifier_annotator.higher(
 classifier_annotator.higher(
     rmc.diagnostic_odds_ratio,
     lower=0.0,
-    upper=float("inf"),
+    upper=None,
     description="LR+/LR-",
     link="https://en.wikipedia.org/wiki/Diagnostic_odds_ratio",
 )

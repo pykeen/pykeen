@@ -3,7 +3,7 @@
 """Utilities for evaluation."""
 
 from dataclasses import dataclass
-from typing import Callable, MutableMapping, NamedTuple, Optional, Union
+from typing import Callable, MutableMapping, NamedTuple, Optional
 
 import numpy as np
 
@@ -46,21 +46,11 @@ class ValueRange:
 
     def notate(self) -> str:
         """Get the math notation for the range of this metric."""
-        left = "[" if self.lower_inclusive else "("
-        right = "]" if self.upper_inclusive else ")"
-        lower: Union[int, float]
-        upper: Union[int, float]
-        try:
-            lower = int(self.lower)
-        except OverflowError:
-            lower = self.lower
-            left = "("
-        try:
-            upper = int(self.upper)
-        except OverflowError:
-            upper = self.upper
-            right = ")"
-        return f"{left}{lower}, {upper}{right}"
+        left = "(" if self.lower is None or not self.lower_inclusive else "("
+        right = ")" if self.upper is None or not self.upper_inclusive else "]"
+        lower_str = "∞" if self.lower is None else str(self.lower)
+        upper_str = "∞" if self.upper is None else str(self.upper)
+        return f"{left}{lower_str}, {upper_str}{right}"
 
 
 class MetricAnnotation(NamedTuple):
@@ -106,9 +96,9 @@ class MetricAnnotator:
         description: str,
         link: str,
         name: Optional[str] = None,
-        lower: float = 0.0,
+        lower: Optional[float] = 0.0,
         lower_inclusive: bool = True,
-        upper: float = 1.0,
+        upper: Optional[float] = 1.0,
         upper_inclusive: bool = True,
         binarize: bool = False,
     ):
