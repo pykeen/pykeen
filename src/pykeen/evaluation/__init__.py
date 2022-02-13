@@ -44,7 +44,7 @@ metric_resolver = ClassResolver(
 def get_metric_list():
     """Get info about all metrics across all evaluators."""
     return [
-        (field, name, value)
-        for name, value in metric_resolver.lookup_dict.items()
-        for field in dataclasses.fields(value)
+        (key, metadata, resolver_name, resolver_cls)
+        for resolver_name, resolver_cls in metric_resolver.lookup_dict.items()
+        for key, metadata in resolver_cls.metadata.items()
     ]

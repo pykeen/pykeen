@@ -2,62 +2,49 @@
 
 """Implementation of wrapper around sklearn metrics."""
 
-from dataclasses import dataclass, field, fields, make_dataclass
 from typing import MutableMapping, Optional, Tuple, cast
 
 import numpy as np
 import torch
-from dataclasses_json import dataclass_json
 
 from .evaluator import Evaluator, MetricResults
 from .rexmex_compat import classifier_annotator
 from ..constants import TARGET_TO_INDEX
 from ..typing import MappedTriples, Target
-from ..utils import fix_dataclass_init_docs
 
 __all__ = [
     "ClassificationEvaluator",
     "ClassificationMetricResults",
 ]
 
-_fields = [
-    (
-        metadata.func.__name__,
-        float,
-        field(
-            metadata=dict(
-                name=metadata.name,
-                doc=metadata.description or "",
-                link=metadata.link,
-                range=metadata.interval(),
-                increasing=metadata.higher_is_better,
-                f=metadata.func,
-            )
-        ),
+CLASSIFICATION_FIELDS = {
+    metadata.func.__name__: dict(
+        type=float,
+        name=metadata.name,
+        doc=metadata.description or "",
+        link=metadata.link,
+        range=metadata.interval(),
+        increasing=metadata.higher_is_better,
+        f=metadata.func,
     )
     for metadata in classifier_annotator.metrics.values()
-]
-
-ClassificationMetricResultsBase = make_dataclass(
-    "ClassificationMetricResultsBase",
-    _fields,
-    bases=(MetricResults,),
-)
+}
 
 
-@fix_dataclass_init_docs
-@dataclass_json
-@dataclass
-class ClassificationMetricResults(ClassificationMetricResultsBase):  # type: ignore
+class ClassificationMetricResults(MetricResults):
     """Results from computing metrics."""
+
+    metadata = CLASSIFICATION_FIELDS
 
     @classmethod
     def from_scores(cls, y_true, y_score):
         """Return an instance of these metrics from a given set of true and scores."""
-        return ClassificationMetricResults(**{f.name: f.metadata["f"](y_true, y_score) for f in fields(cls)})
+        return ClassificationMetricResults(
+            {metadata["name"]: metadata["f"](y_true, y_score) for metadata in CLASSIFICATION_FIELDS.values()}
+        )
 
     def get_metric(self, name: str) -> float:  # noqa: D102
-        return getattr(self, name)
+        return self.results[name]
 
 
 class ClassificationEvaluator(Evaluator):

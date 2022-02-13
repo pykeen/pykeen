@@ -7,15 +7,13 @@ import logging
 import timeit
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
-from dataclasses import dataclass
 from math import ceil
 from textwrap import dedent
-from typing import Any, Collection, Iterable, List, Mapping, Optional, Tuple, Union, cast
+from typing import Any, ClassVar, Collection, Iterable, List, Mapping, Optional, Tuple, Union, cast
 
 import numpy as np
 import pandas
 import torch
-from dataclasses_json import DataClassJsonMixin
 from tqdm.autonotebook import tqdm
 
 from ..constants import TARGET_TO_INDEX
@@ -52,9 +50,17 @@ def optional_context_manager(condition, context_manager):
         yield
 
 
-@dataclass
-class MetricResults(DataClassJsonMixin):
+class MetricResults:
     """Results from computing metrics."""
+
+    metadata: ClassVar[Mapping[str, Any]]
+
+    def __init__(self, results):
+        """Initialize the result wrapper."""
+        self.results = results
+
+    def __getattr__(self, item):  # noqa:D105
+        return self.results[item]
 
     def get_metric(self, name: str) -> float:
         """Get the given metric from the results.
@@ -66,7 +72,7 @@ class MetricResults(DataClassJsonMixin):
 
     def to_flat_dict(self) -> Mapping[str, Any]:
         """Get the results as a flattened dictionary."""
-        return self.to_dict()
+        return self.results()
 
 
 class Evaluator(ABC):

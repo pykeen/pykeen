@@ -414,16 +414,16 @@ METRIC_NAMES = {
 
 
 def _get_metrics_lines(tablefmt: str):
-    for field, name, value in get_metric_list():
-        if field.name in {"rank_std", "rank_var", "rank_mad", "rank_count"}:
+    for key, metadata, name, value in get_metric_list():
+        if key in {"rank_std", "rank_var", "rank_mad", "rank_count"}:
             continue
-        label = field.metadata["name"]
-        link = field.metadata["link"]
+        label = metadata["name"]
+        link = metadata["link"]
         yv = [
             f"[{label}]({link})",
-            field.metadata["range"],
-            "📈" if field.metadata["increasing"] else "📉",
-            field.metadata["doc"],
+            metadata["range"],
+            "📈" if metadata["increasing"] else "📉",
+            metadata["doc"],
             METRIC_NAMES[name],
         ]
         if tablefmt != "github":

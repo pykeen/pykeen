@@ -2,12 +2,10 @@
 
 """Test the evaluators."""
 
-import dataclasses
 import itertools
 import logging
 import random
 import unittest
-from operator import attrgetter
 from typing import Any, Collection, Dict, Iterable, List, MutableMapping, Optional, Tuple, Union
 
 import numpy
@@ -18,7 +16,11 @@ import torch
 
 from pykeen.datasets import Nations
 from pykeen.evaluation import Evaluator, MetricResults, RankBasedEvaluator, RankBasedMetricResults
-from pykeen.evaluation.classification_evaluator import ClassificationEvaluator, ClassificationMetricResults
+from pykeen.evaluation.classification_evaluator import (
+    CLASSIFICATION_FIELDS,
+    ClassificationEvaluator,
+    ClassificationMetricResults,
+)
 from pykeen.evaluation.evaluator import (
     create_dense_positive_mask_,
     create_sparse_positive_filter_,
@@ -159,15 +161,15 @@ class ClassificationEvaluatorTest(cases.EvaluatorTestCase):
         mask = numpy.concatenate(mask_filtered, axis=0)
         scores = numpy.concatenate(scores_filtered, axis=0)
 
-        for field in sorted(dataclasses.fields(ClassificationMetricResults), key=attrgetter("name")):
-            with self.subTest(metric=field.name):
-                f = field.metadata["f"]
+        for metric, metadata in CLASSIFICATION_FIELDS.items():
+            with self.subTest(metric=metric):
+                f = metadata["f"]
                 exp_score = f(numpy.array(mask.flat), numpy.array(scores.flat))
-                act_score = result.get_metric(field.name)
+                act_score = result.get_metric(metric)
                 if numpy.isnan(exp_score):
                     self.assertTrue(numpy.isnan(act_score))
                 else:
-                    self.assertAlmostEqual(act_score, exp_score, msg=f"failed for {field.name}", delta=7)
+                    self.assertAlmostEqual(act_score, exp_score, msg=f"failed for {metric}", delta=7)
 
 
 class EvaluatorUtilsTests(unittest.TestCase):
@@ -381,21 +383,23 @@ class DummyEvaluator(Evaluator):
 
     def finalize(self) -> MetricResults:  # noqa: D102
         return RankBasedMetricResults(
-            arithmetic_mean_rank=self.counter,
-            geometric_mean_rank=None,
-            harmonic_mean_rank=None,
-            median_rank=None,
-            inverse_arithmetic_mean_rank=None,
-            inverse_geometric_mean_rank=None,
-            inverse_harmonic_mean_rank=None,
-            inverse_median_rank=None,
-            rank_std=None,
-            rank_var=None,
-            rank_mad=None,
-            rank_count=None,
-            adjusted_arithmetic_mean_rank=None,
-            adjusted_arithmetic_mean_rank_index=None,
-            hits_at_k=dict(),
+            dict(
+                arithmetic_mean_rank=self.counter,
+                geometric_mean_rank=None,
+                harmonic_mean_rank=None,
+                median_rank=None,
+                inverse_arithmetic_mean_rank=None,
+                inverse_geometric_mean_rank=None,
+                inverse_harmonic_mean_rank=None,
+                inverse_median_rank=None,
+                rank_std=None,
+                rank_var=None,
+                rank_mad=None,
+                rank_count=None,
+                adjusted_arithmetic_mean_rank=None,
+                adjusted_arithmetic_mean_rank_index=None,
+                hits_at_k=dict(),
+            )
         )
 
     def __repr__(self):  # noqa: D105
