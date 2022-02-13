@@ -23,5 +23,12 @@ class TestDatasetCaching(unittest.TestCase):
             directory.rmdir()
 
         self.assertFalse(directory.is_dir())
+        for name in ("training", "testing", "validation"):
+            path = directory.joinpath(name).with_suffix(".pt")
+            self.assertFalse(path.is_file())
+
         _ = _cached_get_dataset("nations", {})
         self.assertTrue(directory.is_dir())
+        for name in ("training", "testing", "validation"):
+            path = directory.joinpath(name).with_suffix(".pt")
+            self.assertTrue(path.is_file())
