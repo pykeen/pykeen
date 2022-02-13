@@ -8,9 +8,8 @@ import torch
 from torch import nn
 
 from pykeen.evaluation import Evaluator, MetricResults, RankBasedMetricResults
-from pykeen.evaluation.rank_based_evaluator import EXTENDED_SIDES
 from pykeen.nn.emb import RepresentationModule
-from pykeen.typing import RANK_REALISTIC, RANK_TYPES, MappedTriples
+from pykeen.typing import RANK_REALISTIC, RANK_TYPES, SIDES, MappedTriples
 
 __all__ = [
     "CustomRepresentations",
@@ -57,8 +56,8 @@ class MockEvaluator(Evaluator):
 
     def finalize(self) -> MetricResults:  # noqa: D102
         hits = next(self.losses_iter)
-        dummy_1 = {side: {rank_type: 10.0 for rank_type in RANK_TYPES} for side in EXTENDED_SIDES}
-        dummy_2 = {side: {rank_type: 1.0 for rank_type in RANK_TYPES} for side in EXTENDED_SIDES}
+        dummy_1 = {side: {rank_type: 10.0 for rank_type in RANK_TYPES} for side in SIDES}
+        dummy_2 = {side: {rank_type: 1.0 for rank_type in RANK_TYPES} for side in SIDES}
         return RankBasedMetricResults(
             arithmetic_mean_rank=dummy_1,
             geometric_mean_rank=dummy_1,
@@ -73,9 +72,9 @@ class MockEvaluator(Evaluator):
                 side: {
                     RANK_REALISTIC: 0.0,
                 }
-                for side in EXTENDED_SIDES
+                for side in SIDES
             },
-            rank_count={side: {rank_type: 1 for rank_type in RANK_TYPES} for side in EXTENDED_SIDES},
+            rank_count={side: {rank_type: 1 for rank_type in RANK_TYPES} for side in SIDES},
             rank_std=dummy_1,
             rank_var=dummy_1,
             rank_mad=dummy_1,
@@ -86,7 +85,7 @@ class MockEvaluator(Evaluator):
                     }
                     for rank_type in RANK_TYPES
                 }
-                for side in EXTENDED_SIDES
+                for side in SIDES
             },
         )
 

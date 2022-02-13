@@ -34,17 +34,14 @@ from pykeen.evaluation.metrics import (
     InverseHarmonicMeanRank,
 )
 from pykeen.evaluation.rank_based_evaluator import (
-    EXTENDED_SIDES,
     RANK_REALISTIC,
-    SIDE_BOTH,
-    SIDES,
     SampledRankBasedEvaluator,
     compute_rank_from_scores,
     resolve_metric_name,
     sample_negatives,
 )
 from pykeen.models import FixedModel
-from pykeen.typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, RANK_TYPES, MappedTriples
+from pykeen.typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, RANK_TYPES, SIDE_BOTH, SIDES, MappedTriples
 from tests import cases
 
 logger = logging.getLogger(__name__)
@@ -67,7 +64,7 @@ class RankBasedEvaluatorTests(cases.EvaluatorTestCase):
         # Check value ranges
         # check mean rank (MR)
         for side, all_type_mr in result.arithmetic_mean_rank.items():
-            assert side in EXTENDED_SIDES
+            assert side in SIDES
             for rank_type, mr in all_type_mr.items():
                 assert rank_type in RANK_TYPES
                 assert isinstance(mr, float)
@@ -75,7 +72,7 @@ class RankBasedEvaluatorTests(cases.EvaluatorTestCase):
 
         # check mean reciprocal rank (MRR)
         for side, all_type_mrr in result.inverse_harmonic_mean_rank.items():
-            assert side in EXTENDED_SIDES
+            assert side in SIDES
             for rank_type, mrr in all_type_mrr.items():
                 assert rank_type in RANK_TYPES
                 assert isinstance(mrr, float)
@@ -83,7 +80,7 @@ class RankBasedEvaluatorTests(cases.EvaluatorTestCase):
 
         # check hits at k (H@k)
         for side, all_type_hits_at_k in result.hits_at_k.items():
-            assert side in EXTENDED_SIDES
+            assert side in SIDES
             for rank_type, hits_at_k in all_type_hits_at_k.items():
                 assert rank_type in RANK_TYPES
                 for k, h in hits_at_k.items():
@@ -94,14 +91,14 @@ class RankBasedEvaluatorTests(cases.EvaluatorTestCase):
 
         # check adjusted mean rank (AMR)
         for side, adjusted_mean_rank in result.adjusted_arithmetic_mean_rank.items():
-            assert side in EXTENDED_SIDES
+            assert side in SIDES
             assert RANK_REALISTIC in adjusted_mean_rank
             assert isinstance(adjusted_mean_rank[RANK_REALISTIC], float)
             assert 0 < adjusted_mean_rank[RANK_REALISTIC] < 2
 
         # check adjusted mean rank index (AMRI)
         for side, adjusted_mean_rank_index in result.adjusted_arithmetic_mean_rank_index.items():
-            assert side in EXTENDED_SIDES
+            assert side in SIDES
             assert RANK_REALISTIC in adjusted_mean_rank_index
             assert isinstance(adjusted_mean_rank_index[RANK_REALISTIC], float)
             assert -1 <= adjusted_mean_rank_index[RANK_REALISTIC] <= 1

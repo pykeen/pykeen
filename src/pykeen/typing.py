@@ -2,8 +2,7 @@
 
 """Type hints for PyKEEN."""
 
-from dataclasses import dataclass
-from typing import Callable, Mapping, NamedTuple, Sequence, Tuple, TypeVar, Union, cast
+from typing import Callable, Collection, Mapping, NamedTuple, Sequence, Tuple, TypeVar, Union, cast
 
 import numpy as np
 import torch
@@ -129,35 +128,7 @@ RANK_TYPE_SYNONYMS: Mapping[str, RankType] = {
     "average": RANK_REALISTIC,
 }
 
-
-@dataclass
-class Ranks:
-    """Ranks for different ranking types."""
-
-    #: The optimistic rank is the rank when assuming all options with an equal score are placed
-    #: behind the current test triple.
-    #: shape: (batch_size,)
-    optimistic: torch.FloatTensor
-
-    #: The realistic rank is the average of the optimistic and pessimistic rank, and hence the expected rank
-    #: over all permutations of the elements with the same score as the currently considered option.
-    #: shape: (batch_size,)
-    realistic: torch.FloatTensor
-
-    #: The pessimistic rank is the rank when assuming all options with an equal score are placed
-    #: in front of current test triple.
-    #: shape: (batch_size,)
-    pessimistic: torch.FloatTensor
-
-    #: The number of options is the number of items considered in the ranking. It may change for
-    #: filtered evaluation
-    #: shape: (batch_size,)
-    number_of_options: torch.LongTensor
-
-    def to_type_dict(self) -> Mapping[RankType, torch.FloatTensor]:
-        """Return mapping from rank-type to rank value tensor."""
-        return {
-            RANK_OPTIMISTIC: self.optimistic,
-            RANK_REALISTIC: self.realistic,
-            RANK_PESSIMISTIC: self.pessimistic,
-        }
+TargetBoth = Literal["both"]
+SIDE_BOTH: TargetBoth = "both"
+ExtendedTarget = Union[Target, TargetBoth]
+SIDES: Collection[ExtendedTarget] = {LABEL_HEAD, LABEL_TAIL, SIDE_BOTH}

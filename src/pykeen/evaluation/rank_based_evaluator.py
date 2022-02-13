@@ -15,11 +15,10 @@ import numpy as np
 import pandas as pd
 import torch
 from class_resolver import normalize_string
-from typing_extensions import Literal
 
 from .evaluator import Evaluator, MetricResults, prepare_filter_triples
 from .metrics import HitsAtK, RankBasedMetric, metric_resolver
-from ..constants import SIDES
+from .ranks import Ranks
 from ..triples.triples_factory import CoreTriplesFactory
 from ..typing import (
     LABEL_HEAD,
@@ -28,8 +27,10 @@ from ..typing import (
     RANK_REALISTIC,
     RANK_TYPE_SYNONYMS,
     RANK_TYPES,
+    SIDE_BOTH,
+    SIDES,
+    ExtendedTarget,
     MappedTriples,
-    Ranks,
     RankType,
     Target,
 )
@@ -44,17 +45,12 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-# typing
-ExtendedSide = Union[Target, Literal["both"]]
-SIDE_BOTH: ExtendedSide = "both"
-EXTENDED_SIDES: Tuple[ExtendedSide, ...] = cast(Tuple[ExtendedSide, ...], SIDES) + (SIDE_BOTH,)
-
 
 class MetricKey(NamedTuple):
     """A key for the kind of metric to resolve."""
 
     metric: Type[RankBasedMetric]
-    side: ExtendedSide
+    side: ExtendedTarget
     rank_type: RankType
     k: Optional[int]
 
@@ -70,7 +66,7 @@ class MetricKey(NamedTuple):
         match = METRIC_PATTERN.match(normalize_string(name, suffix=None))
         if not match:
             raise ValueError(f"Invalid metric name: {name}")
-        side: Union[str, ExtendedSide]
+        side: Union[str, ExtendedTarget]
         rank_type: Union[str, RankType]
         kf: Union[None, str, int]
         kb: Union[None, str, int]
@@ -96,9 +92,9 @@ class MetricKey(NamedTuple):
         # normalize side
         side = side or SIDE_BOTH
         side = side.lower()
-        if side not in EXTENDED_SIDES:
-            raise ValueError(f"Invalid side: {side}. Allowed are {EXTENDED_SIDES}.")
-        side = cast(ExtendedSide, side)
+        if side not in SIDES:
+            raise ValueError(f"Invalid side: {side}. Allowed are {SIDES}.")
+        side = cast(ExtendedTarget, side)
 
         # normalize rank type
         rank_type = rank_type or RANK_REALISTIC
@@ -154,7 +150,7 @@ def compute_rank_from_scores(
     )
 
 
-_SIDE_PATTERN = "|".join(EXTENDED_SIDES)
+_SIDE_PATTERN = "|".join(SIDES)
 _TYPE_PATTERN = "|".join(itt.chain(RANK_TYPES, RANK_TYPE_SYNONYMS.keys()))
 # HITS_PATTERN = re.compile(r"(hits_at_|hits@|h@)(?P<kf>\d+)")
 _METRIC_PATTERN = "|".join(itt.chain(metric_resolver.lookup_dict.keys(), metric_resolver.synonyms.keys()))
@@ -175,7 +171,7 @@ def resolve_metric_name(name: str) -> MetricKey:
 class RankBasedMetricResults(MetricResults):
     """Results from computing metrics."""
 
-    def __init__(self, results: Mapping[Tuple[str, ExtendedSide, RankType], float]):
+    def __init__(self, results: Mapping[Tuple[str, ExtendedTarget, RankType], float]):
         """Initialize the results."""
         self.results = results
 
@@ -233,8 +229,8 @@ class RankBasedMetricResults(MetricResults):
         """Output the metrics as a pandas dataframe."""
         return pd.DataFrame(list(self._iter_rows()), columns=["Side", "Type", "Metric", "Value"])
 
-    def _iter_rows(self) -> Iterable[Tuple[ExtendedSide, RankType, str, Union[float, int]]]:
-        for side, rank_type in itt.product(EXTENDED_SIDES, RANK_TYPES):
+    def _iter_rows(self) -> Iterable[Tuple[ExtendedTarget, RankType, str, Union[float, int]]]:
+        for side, rank_type in itt.product(SIDES, RANK_TYPES):
             for k, v in self.hits_at_k[side][rank_type].items():
                 yield side, rank_type, f"hits_at_{k}", v
             for f in fields(self):
@@ -332,7 +328,7 @@ class RankBasedEvaluator(Evaluator):
     def _get_for_side(
         cls,
         mapping: Mapping[Target, List[np.ndarray]],
-        side: ExtendedSide,
+        side: ExtendedTarget,
     ) -> np.ndarray:
         values: List[np.ndarray]
         if side == SIDE_BOTH:
@@ -341,9 +337,9 @@ class RankBasedEvaluator(Evaluator):
             return np.concatenate(mapping.get(cast(Target, side), [])).astype(dtype=np.float64)
 
     def finalize(self) -> RankBasedMetricResults:  # noqa: D102
-        result: MutableMapping[Tuple[str, ExtendedSide, RankType], float] = dict()
+        result: MutableMapping[Tuple[str, ExtendedTarget, RankType], float] = dict()
 
-        for side in EXTENDED_SIDES:
+        for side in SIDES:
             num_candidates = self._get_for_side(mapping=self.number_of_options, side=side)
             if len(num_candidates) < 1:
                 logger.warning(f"No num_candidates for side={side}")
