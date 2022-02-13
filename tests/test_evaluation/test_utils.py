@@ -22,7 +22,7 @@ def get_true(pos: int = 5, neg: int = 5) -> np.ndarray:
 
 
 class TestIndicators(unittest.TestCase):
-    """Test indicators"""
+    """Test indicators."""
 
     def test_indicator(self):
         """Test constructing an indicator."""
