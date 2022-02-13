@@ -8,8 +8,8 @@ import numpy as np
 import torch
 
 from .evaluator import Evaluator, MetricResults
-from .utils import construct_indicator
 from .rexmex_compat import classifier_annotator
+from .utils import construct_indicator
 from ..constants import TARGET_TO_INDEX
 from ..typing import MappedTriples, Target
 

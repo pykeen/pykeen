@@ -100,18 +100,24 @@ class MetricAnnotator:
 def construct_indicator(*, y_score: np.ndarray, y_true: np.ndarray) -> np.ndarray:
     """Construct binary indicators from a list of scores.
 
+    If there are $n$ positively labeled entries in ``y_true``, this function
+    assigns the top $n$ highest scores in ``y_score`` as positive and remainder
+    as negative.
+
     :param y_score:
         A 1-D array of the score values
     :param y_true:
-        A 1-D array of binary values
+        A 1-D array of binary values (1 and 0)
     :return:
         A 1-D array of indicator values
 
-    .. seealso:: https://github.com/xptree/NetMF/blob/77286b826c4af149055237cef65e2a500e15631a/predict.py#L25-L33
+    .. seealso::
+
+        This implementation was inspired by
+        https://github.com/xptree/NetMF/blob/77286b826c4af149055237cef65e2a500e15631a/predict.py#L25-L33
     """
     number_pos = np.sum(y_true, dtype=int)
-    y_sort_idx = np.argsort(y_score)
-    y_sort = np.fliplr(y_sort_idx.reshape(1, -1)).reshape(-1)
+    y_sort = np.flip(np.argsort(y_score))
     y_pred = np.zeros_like(y_true, dtype=int)
     y_pred[y_sort[np.arange(number_pos)]] = 1
     return y_pred
