@@ -17,7 +17,7 @@ import inspect
 import os
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import Mapping, Optional, Type
 
 import click
 from class_resolver.contrib.optuna import sampler_resolver
@@ -25,7 +25,13 @@ from click_default_group import DefaultGroup
 from tabulate import tabulate
 
 from .datasets import dataset_resolver
-from .evaluation import evaluator_resolver, get_metric_list
+from .evaluation import (
+    ClassificationMetricResults,
+    MetricResults,
+    RankBasedMetricResults,
+    evaluator_resolver,
+    get_metric_list,
+)
 from .experiments.cli import experiments
 from .hpo.cli import optimize
 from .losses import loss_resolver
@@ -407,27 +413,27 @@ def _help_hpo_samplers(tablefmt: str, link_fmt: Optional[str] = None):
     )
 
 
-METRIC_NAMES = {
-    "classification": "Classification",
-    "rankbased": "Ranking",
+METRIC_NAMES: Mapping[Type[MetricResults], str] = {
+    ClassificationMetricResults: "Classification",
+    RankBasedMetricResults: "Ranking",
 }
 
 
 def _get_metrics_lines(tablefmt: str):
-    for field, name, value in get_metric_list():
-        if field.name in {"rank_std", "rank_var", "rank_mad", "rank_count"}:
+    for key, metric, metric_results_cls in get_metric_list():
+        if key in {"rank_std", "rank_var", "rank_mad", "rank_count"}:
             continue
-        label = field.metadata["name"]
-        link = field.metadata["link"]
+        label = metric.name
+        link = metric.link
         yv = [
             f"[{label}]({link})",
-            field.metadata["range"],
-            "📈" if field.metadata["increasing"] else "📉",
-            field.metadata["doc"],
-            METRIC_NAMES[name],
+            metric.value_range.notate(),
+            "📈" if metric.increasing else "📉",
+            metric.description,
+            METRIC_NAMES[metric_results_cls],
         ]
         if tablefmt != "github":
-            yv.append(f"pykeen.evaluation.{value.__name__}")
+            yv.append(f"pykeen.evaluation.{metric_results_cls.__name__}")
         yield tuple(yv)
 
 

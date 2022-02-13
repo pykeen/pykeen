@@ -2,18 +2,16 @@
 
 """Implementation of wrapper around sklearn metrics."""
 
-from dataclasses import dataclass, field, fields, make_dataclass
-from typing import MutableMapping, Optional, Tuple, Union, cast
+from typing import Mapping, MutableMapping, Optional, Tuple, cast
 
 import numpy as np
 import rexmex.metrics.classification as rmc
 import torch
-from dataclasses_json import dataclass_json
 
 from .evaluator import Evaluator, MetricResults
+from .utils import MetricAnnotation, ValueRange
 from ..constants import TARGET_TO_INDEX
 from ..typing import MappedTriples, Target
-from ..utils import fix_dataclass_init_docs
 
 __all__ = [
     "ClassificationEvaluator",
@@ -21,78 +19,45 @@ __all__ = [
     "construct_indicator",
 ]
 
-
-def interval(func) -> str:
-    """Get the math notation for the range of this metric."""
-    left = "[" if func.lower_inclusive else "("
-    right = "]" if func.upper_inclusive else ")"
-    lower: Union[int, float]
-    upper: Union[int, float]
-    try:
-        lower = int(func.lower)
-    except OverflowError:
-        lower = func.lower
-        left = "("
-    try:
-        upper = int(func.upper)
-    except OverflowError:
-        upper = func.upper
-        right = ")"
-    return f"{left}{lower}, {upper}{right}"
-
-
 #: Functions with the right signature in the :mod:`rexmex.metrics.classification` that are not themselves metrics
 EXCLUDE_CLASSIFIERS = {
     rmc.pr_auc_score,
 }
 
-_fields = [
-    (
-        key,
-        float,
-        field(
-            metadata=dict(
-                name=func.name,
-                doc=func.description or "",
-                link=func.link,
-                range=interval(func),
-                increasing=func.higher_is_better,
-                f=func,
-            )
+CLASSIFICATION_METRICS: Mapping[str, MetricAnnotation] = {
+    key: MetricAnnotation(
+        name=func.name,
+        description=func.description or "",
+        link=func.link,
+        value_range=ValueRange(
+            upper=func.upper,
+            lower=func.lower,
+            upper_inclusive=func.upper_inclusive,
+            lower_inclusive=func.lower_inclusive,
         ),
+        increasing=func.higher_is_better,
+        func=func,
+        binarize=func.binarize,
     )
     for key, func in rmc.classifications.funcs.items()
     if func not in EXCLUDE_CLASSIFIERS and func.duplicate_of is None
-]
-
-ClassificationMetricResultsBase = make_dataclass(
-    "ClassificationMetricResultsBase",
-    _fields,
-    bases=(MetricResults,),
-)
+}
 
 
-@fix_dataclass_init_docs
-@dataclass_json
-@dataclass
-class ClassificationMetricResults(ClassificationMetricResultsBase):  # type: ignore
+class ClassificationMetricResults(MetricResults):
     """Results from computing metrics."""
+
+    metrics = CLASSIFICATION_METRICS
 
     @classmethod
     def from_scores(cls, y_true, y_score):
         """Return an instance of these metrics from a given set of true and scores."""
-        y_indicator = construct_indicator(y_score=y_score, y_true=y_true)
-        kwargs = {}
-        for field_ in fields(cls):
-            func = field_.metadata["f"]
-            if func.binarize:
-                kwargs[field_.name] = func(y_true, y_indicator)
-            else:
-                kwargs[field_.name] = func(y_true, y_score)
-        return ClassificationMetricResults(**kwargs)
+        return ClassificationMetricResults(
+            {key: metric.score(y_true, y_score) for key, metric in CLASSIFICATION_METRICS.items()}
+        )
 
     def get_metric(self, name: str) -> float:  # noqa: D102
-        return getattr(self, name)
+        return self.data[name]
 
 
 class ClassificationEvaluator(Evaluator):
@@ -138,11 +103,9 @@ class ClassificationEvaluator(Evaluator):
             self.all_positives[key] = dense_positive_mask[i]
 
     def finalize(self) -> ClassificationMetricResults:  # noqa: D102
-        # Important: The order of the values of an dictionary is not guaranteed. Hence, we need to retrieve scores and
-        # masks using the exact same key order.
+        # Because the order of the values of an dictionary is not guaranteed,
+        # we need to retrieve scores and masks using the exact same key order.
         all_keys = list(self.all_scores.keys())
-        # TODO how to define a cutoff on y_scores to make binary?
-        # see: https://github.com/xptree/NetMF/blob/77286b826c4af149055237cef65e2a500e15631a/predict.py#L25-L33
         y_score = np.concatenate([self.all_scores[k] for k in all_keys], axis=0).flatten()
         y_true = np.concatenate([self.all_positives[k] for k in all_keys], axis=0).flatten()
 
