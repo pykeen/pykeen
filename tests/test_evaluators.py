@@ -17,7 +17,7 @@ import torch
 from pykeen.datasets import Nations
 from pykeen.evaluation import Evaluator, MetricResults, RankBasedEvaluator, RankBasedMetricResults
 from pykeen.evaluation.classification_evaluator import (
-    CLASSIFICATION_FIELDS,
+    CLASSIFICATION_METRICS,
     ClassificationEvaluator,
     ClassificationMetricResults,
 )
@@ -164,16 +164,15 @@ class ClassificationEvaluatorTest(cases.EvaluatorTestCase):
 
         y_true, y_score = numpy.array(mask.flat), numpy.array(scores.flat)
         y_indicator = construct_indicator(y_score=y_score, y_true=y_true)
-        for metric, metadata in CLASSIFICATION_FIELDS.items():
-            with self.subTest(metric=metric):
-                f = metadata["f"]
-                exp_score = f(y_true=y_true, y_score=y_indicator if metadata["binarize"] else y_score)
-                self.assertIn(metric, result.data)
-                act_score = result.get_metric(metric)
+        for name, metric in CLASSIFICATION_METRICS.items():
+            with self.subTest(metric=name):
+                exp_score = metric.score(y_true=y_true, y_score=y_indicator if metadata["binarize"] else y_score)
+                self.assertIn(name, result.data)
+                act_score = result.get_metric(name)
                 if numpy.isnan(exp_score):
                     self.assertTrue(numpy.isnan(act_score))
                 else:
-                    self.assertAlmostEqual(act_score, exp_score, msg=f"failed for {metric}", delta=7)
+                    self.assertAlmostEqual(act_score, exp_score, msg=f"failed for {name}", delta=7)
 
 
 class EvaluatorUtilsTests(unittest.TestCase):
