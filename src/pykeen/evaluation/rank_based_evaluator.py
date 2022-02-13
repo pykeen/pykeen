@@ -57,7 +57,7 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-RANKING_FIELDS: Mapping[str, MetricAnnotation] = dict(
+RANKING_METRICS: Mapping[str, MetricAnnotation] = dict(
     arithmetic_mean_rank=MetricAnnotation(
         name="Mean Rank (MR)",
         increasing=False,
@@ -190,7 +190,7 @@ RANKING_FIELDS: Mapping[str, MetricAnnotation] = dict(
 class RankBasedMetricResults(MetricResults):
     """Results from computing metrics."""
 
-    metadata = RANKING_FIELDS
+    metrics = RANKING_METRICS
 
     @classmethod
     def from_dict(cls, **kwargs):

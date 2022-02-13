@@ -54,7 +54,7 @@ def optional_context_manager(condition, context_manager):
 class MetricResults:
     """Results from computing metrics."""
 
-    metadata: ClassVar[Mapping[str, MetricAnnotation]]
+    metrics: ClassVar[Mapping[str, MetricAnnotation]]
 
     def __init__(self, data):
         """Initialize the result wrapper."""
