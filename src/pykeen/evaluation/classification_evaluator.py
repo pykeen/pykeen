@@ -6,10 +6,10 @@ from typing import MutableMapping, Optional, Tuple, cast
 
 import numpy as np
 import torch
+from rexmex.utils import binarize
 
 from .evaluator import Evaluator, MetricResults
 from .rexmex_compat import classifier_annotator
-from .utils import construct_indicator
 from ..constants import TARGET_TO_INDEX
 from ..typing import MappedTriples, Target
 
@@ -26,7 +26,7 @@ CLASSIFICATION_FIELDS = {
         link=metadata.link,
         range=metadata.interval(),
         increasing=metadata.increasing,
-        f=metadata.func,
+        f=binarize(metadata.func) if metadata.binarize else metadata.func,
         binarize=metadata.binarize,
     )
     for metadata in classifier_annotator.metrics.values()
@@ -41,12 +41,8 @@ class ClassificationMetricResults(MetricResults):
     @classmethod
     def from_scores(cls, y_true, y_score):
         """Return an instance of these metrics from a given set of true and scores."""
-        y_indicator = construct_indicator(y_score=y_score, y_true=y_true)
         return ClassificationMetricResults(
-            {
-                key: metadata["f"](y_true, y_indicator if metadata["binarize"] else y_score)
-                for key, metadata in CLASSIFICATION_FIELDS.items()
-            }
+            {key: metadata["f"](y_true, y_score) for key, metadata in CLASSIFICATION_FIELDS.items()}
         )
 
     def get_metric(self, name: str) -> float:  # noqa: D102
