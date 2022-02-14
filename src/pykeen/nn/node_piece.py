@@ -290,7 +290,7 @@ def page_rank(
     x_old = x
     beta = 1.0 - alpha
     for i in range(max_iter):
-        x = beta * adj.dot(degree_inv * x) + alpha
+        x = beta * adj.dot(degree_inv * x) + alpha / n
         if numpy.linalg.norm(x - x_old, ord=float("+inf")) < epsilon:
             logger.debug(f"Converged after {i} iterations up to {epsilon}.")
             break
