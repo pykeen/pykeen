@@ -125,4 +125,4 @@ def test_page_rank():
         edge_index=edge_index,
         epsilon=1.0e-08,
     )
-    numpy.testing.assert_allclose(result.sum(), 1.0)
+    numpy.testing.assert_allclose(result.sum(), 10.0, rtol=1e-6)
