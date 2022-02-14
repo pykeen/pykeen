@@ -103,6 +103,7 @@ Let's create a basic `InductiveNodePiece` using one of the `InductiveFB15k237` d
     )
 
 Creating a message-passing version of NodePiece is pretty much the same:
+
 .. code-block:: python
 
     from pykeen.datasets.inductive.ilp_teru import InductiveFB15k237
