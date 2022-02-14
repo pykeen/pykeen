@@ -99,7 +99,7 @@ Let's create a basic `InductiveNodePiece` using one of the `InductiveFB15k237` d
         num_tokens=12,  # length of a node hash - how many unique relations per node will be used
         aggregation="mlp",  # aggregation function, defaults to an MLP, can be any PyTorch function
         loss=NSSALoss(margin=15),  # dummy loss
-        random_seed=42
+        random_seed=42,
     )
 
 Creating a message-passing version of NodePiece is pretty much the same:
@@ -119,7 +119,7 @@ Creating a message-passing version of NodePiece is pretty much the same:
         aggregation="mlp",  # aggregation function, defaults to an MLP, can be any PyTorch function
         loss=NSSALoss(margin=15),  # dummy loss
         random_seed=42,
-        gnn_encoder=None  # defaults to a 2-layer CompGCN with DistMult composition function
+        gnn_encoder=None,  # defaults to a 2-layer CompGCN with DistMult composition function
     )
 
 Note this version has the ``gnn_encoder`` argument - keeping it ``None`` would invoke a default 2-layer CompGCN.
@@ -175,19 +175,19 @@ Let's create a training loop and validation / test evaluators:
         triples_factory=dataset.transductive_training,  # training triples
         model=model,
         optimizer=optimizer,
-        mode="training"   # necessary to specify for the inductive mode - training has its own set of nodes
+        mode="training",   # necessary to specify for the inductive mode - training has its own set of nodes
     )
 
     valid_evaluator = SampledRankBasedEvaluator(
         mode="validation",   # necessary to specify for the inductive mode - this will use inference nodes
         evaluation_factory=dataset.inductive_validation,  # validation triples to predict
-        additional_filter_triples=dataset.inductive_inference.mapped_triples   # filter out true inference triples
+        additional_filter_triples=dataset.inductive_inference.mapped_triples,   # filter out true inference triples
     )
 
     test_evaluator = SampledRankBasedEvaluator(
         mode="testing",   # necessary to specify for the inductive mode - this will use inference nodes
         evaluation_factory=dataset.inductive_testing,  # test triples to predict
-        additional_filter_triples=dataset.inductive_inference.mapped_triples   # filter out true inference triples
+        additional_filter_triples=dataset.inductive_inference.mapped_triples,   # filter out true inference triples
     )
 
 
@@ -216,7 +216,7 @@ in the sLCWA mode with 32 negative samples per positive, with NSSALoss, and Samp
         aggregation="mlp",  # aggregation function, defaults to an MLP, can be any PyTorch function
         loss=NSSALoss(margin=15),  # dummy loss
         random_seed=42,
-        gnn_encoder=None  # defaults to a 2-layer CompGCN with DistMult composition function
+        gnn_encoder=None,  # defaults to a 2-layer CompGCN with DistMult composition function
     )
 
     optimizer = Adam(params=model.parameters(), lr=0.0005)
@@ -226,20 +226,20 @@ in the sLCWA mode with 32 negative samples per positive, with NSSALoss, and Samp
         model=model,
         optimizer=optimizer,
         negative_sampler_kwargs=dict(num_negs_per_pos=32)
-        mode="training"   # necessary to specify for the inductive mode - training has its own set of nodes
+        mode="training",   # necessary to specify for the inductive mode - training has its own set of nodes
     )
 
     # Validation and Test evaluators use a restricted protocol ranking against 50 random negatives
     valid_evaluator = SampledRankBasedEvaluator(
         mode="validation",   # necessary to specify for the inductive mode - this will use inference nodes
         evaluation_factory=dataset.inductive_validation,  # validation triples to predict
-        additional_filter_triples=dataset.inductive_inference.mapped_triples   # filter out true inference triples
+        additional_filter_triples=dataset.inductive_inference.mapped_triples,   # filter out true inference triples
     )
 
     test_evaluator = SampledRankBasedEvaluator(
         mode="testing",   # necessary to specify for the inductive mode - this will use inference nodes
         evaluation_factory=dataset.inductive_testing,  # test triples to predict
-        additional_filter_triples=dataset.inductive_inference.mapped_triples   # filter out true inference triples
+        additional_filter_triples=dataset.inductive_inference.mapped_triples,   # filter out true inference triples
     )
 
     early_stopper = EarlyStopper(
