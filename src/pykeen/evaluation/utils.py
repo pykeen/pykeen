@@ -136,6 +136,14 @@ def construct_indicator(*, y_score: np.ndarray, y_true: np.ndarray) -> np.ndarra
     assigns the top $n$ highest scores in ``y_score`` as positive and remainder
     as negative.
 
+    .. note ::
+        Since the method uses the number of true labels to determine a threshold, the
+        results will typically be overly optimistic estimates of the generalization performance.
+
+    .. todo ::
+        Add a method which estimates a threshold based on a validation set, and applies this
+        threshold for binarization on the test set.
+
     :param y_score:
         A 1-D array of the score values
     :param y_true:
