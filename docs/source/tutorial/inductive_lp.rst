@@ -236,6 +236,11 @@ in the sLCWA mode with 32 negative samples per positive, with NSSALoss, and Samp
         additional_filter_triples=dataset.inductive_inference.mapped_triples,   # filter out true inference triples
     )
 
+    # According to the original code
+    # https://github.com/kkteru/grail/blob/2a3dffa719518e7e6250e355a2fb37cd932de91e/test_ranking.py#L526-L529
+    # test filtering uses only the inductive_inference split and does not include inductive_validation triples
+    # If you use the full RankBasedEvaluator, both inductive_inference and inductive_validation triples
+    # must be added to the additional_filter_triples
     test_evaluator = SampledRankBasedEvaluator(
         mode="testing",   # necessary to specify for the inductive mode - this will use inference nodes
         evaluation_factory=dataset.inductive_testing,  # test triples to predict
