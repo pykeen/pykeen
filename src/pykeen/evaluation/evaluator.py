@@ -7,17 +7,16 @@ import logging
 import timeit
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
-from dataclasses import dataclass
 from math import ceil
 from textwrap import dedent
-from typing import Any, Collection, Iterable, List, Mapping, Optional, Tuple, Union, cast
+from typing import Any, ClassVar, Collection, Iterable, List, Mapping, Optional, Tuple, Union, cast
 
 import numpy as np
 import pandas
 import torch
-from dataclasses_json import DataClassJsonMixin
 from tqdm.autonotebook import tqdm
 
+from .utils import MetricAnnotation
 from ..constants import TARGET_TO_INDEX
 from ..models import Model
 from ..triples.triples_factory import restrict_triples
@@ -52,9 +51,20 @@ def optional_context_manager(condition, context_manager):
         yield
 
 
-@dataclass
-class MetricResults(DataClassJsonMixin):
+class MetricResults:
     """Results from computing metrics."""
+
+    metrics: ClassVar[Mapping[str, MetricAnnotation]]
+
+    def __init__(self, data):
+        """Initialize the result wrapper."""
+        self.data = data
+
+    def __getattr__(self, item):  # noqa:D105
+        # TODO remove this, it makes code much harder to reason about
+        if item not in self.data:
+            raise AttributeError
+        return self.data[item]
 
     def get_metric(self, name: str) -> float:
         """Get the given metric from the results.
@@ -63,6 +73,10 @@ class MetricResults(DataClassJsonMixin):
         :returns: The value for the metric
         """
         raise NotImplementedError
+
+    def to_dict(self):
+        """Get the results as a dictionary."""
+        return self.data
 
     def to_flat_dict(self) -> Mapping[str, Any]:
         """Get the results as a flattened dictionary."""
