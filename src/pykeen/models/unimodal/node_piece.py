@@ -15,8 +15,9 @@ from ...nn.modules import DistMultInteraction, Interaction
 from ...nn.node_piece import RelationTokenizer, Tokenizer, tokenizer_resolver
 from ...nn.perceptron import ConcatMLP
 from ...triples.triples_factory import CoreTriplesFactory
-from ...typing import OneOrSequence
+from ...typing import OneOrSequence, Initializer, Normalizer, Constrainer
 from ...utils import upgrade_to_sequence
+from ...regularizers import Regularizer
 
 __all__ = [
     "NodePiece",
@@ -54,6 +55,14 @@ class NodePiece(ERModel):
         interaction: HintOrType[Interaction] = DistMultInteraction,
         aggregation: Hint[Callable[[torch.Tensor, int], torch.Tensor]] = None,
         shape: Optional[Sequence[int]] = None,
+        entity_initializer: Hint[Initializer] = None,
+        entity_normalizer: Hint[Normalizer] = None,
+        entity_constrainer: Hint[Constrainer] = None,
+        entity_regularizer: Hint[Regularizer] = None,
+        relation_initializer: Hint[Initializer] = None,
+        relation_normalizer: Hint[Normalizer] = None,
+        relation_constrainer: Hint[Constrainer] = None,
+        relation_regularizer: Hint[Regularizer] = None,
         **kwargs,
     ) -> None:
         """
@@ -103,7 +112,20 @@ class NodePiece(ERModel):
                 "representations inverse relation representations are required.",
             )
         # normalize embedding specification
-        embedding_specification = embedding_specification or EmbeddingSpecification(shape=(embedding_dim,))
+        anchor_specification = embedding_specification or EmbeddingSpecification(
+            shape=(embedding_dim,),
+            initializer=entity_initializer,
+            normalizer=entity_normalizer,
+            constrainer=entity_constrainer,
+            regularizer=entity_regularizer,
+        )
+        relation_specification = EmbeddingSpecification(
+            shape=(embedding_dim,),
+            initializer=relation_initializer,
+            normalizer=relation_normalizer,
+            constrainer=relation_constrainer,
+            regularizer=relation_regularizer,
+        )
 
         # Create an MLP for string aggregation
         if aggregation == "mlp":
@@ -113,7 +135,7 @@ class NodePiece(ERModel):
             )
 
         # always create representations for normal and inverse relations and padding
-        relation_representations = embedding_specification.make(
+        relation_representations = relation_specification.make(
             num_embeddings=2 * triples_factory.real_num_relations + 1,
         )
 
@@ -126,7 +148,7 @@ class NodePiece(ERModel):
                     (
                         relation_representations
                         if tokenizer_resolver.lookup(tokenizer) is RelationTokenizer
-                        else embedding_specification
+                        else anchor_specification
                     )
                     for tokenizer in upgrade_to_sequence(tokenizers)
                 ],
