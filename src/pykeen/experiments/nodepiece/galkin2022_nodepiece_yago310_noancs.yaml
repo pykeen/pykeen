@@ -11,6 +11,7 @@ pipeline:
     margin: 50.0
   model: NodePiece
   model_kwargs:
+    random_seed: 42
     entity_initializer: xavier_uniform_
     relation_initializer: init_phases
     relation_constrainer: complex_normalize
