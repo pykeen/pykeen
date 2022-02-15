@@ -752,7 +752,7 @@ class CoreTriplesFactory:
         pd.DataFrame(
             data=self.mapped_triples.numpy(),
             columns=[COLUMN_HEAD, COLUMN_RELATION, COLUMN_TAIL],
-        ).to_csv(path.joinpath("numeric_triples.tsv.gz"), sep="\t")
+        ).to_csv(path.joinpath("numeric_triples.tsv.gz"), sep="\t", index=False)
 
         # store metadata
         torch.save(self._get_binary_state(), path.joinpath("state.pth"))
