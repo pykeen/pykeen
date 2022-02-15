@@ -34,7 +34,7 @@ class OpenEA(LazyDataset):
     """The OpenEA dataset family.
 
     ---
-    name: OpenEA family
+    name: OpenEA Family
     citation:
         author: Sun
         year: 2020
