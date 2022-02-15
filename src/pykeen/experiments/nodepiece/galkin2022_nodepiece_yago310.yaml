@@ -1,6 +1,7 @@
 metadata:
   title: Learn YAGO3-10 Dataset with NodePiece + RotatE as described by Galkin et al., 2022
 pipeline:
+  random_seed: 42
   dataset: yago310
   dataset_kwargs:
     create_inverse_triples: True
@@ -9,9 +10,10 @@ pipeline:
   loss: NSSALoss
   loss_kwargs:
     margin: 50.0
+    adversarial_temperature: 1.0
+    reduction: 'mean'
   model: NodePiece
   model_kwargs:
-    random_seed: 42
     entity_initializer: xavier_uniform_
     relation_initializer: init_phases
     relation_constrainer: complex_normalize
