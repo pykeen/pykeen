@@ -14,10 +14,10 @@ from ...nn import EmbeddingSpecification, NodePieceRepresentation, SubsetReprese
 from ...nn.modules import DistMultInteraction, Interaction
 from ...nn.node_piece import RelationTokenizer, Tokenizer, tokenizer_resolver
 from ...nn.perceptron import ConcatMLP
-from ...triples.triples_factory import CoreTriplesFactory
-from ...typing import OneOrSequence, Initializer, Normalizer, Constrainer
-from ...utils import upgrade_to_sequence
 from ...regularizers import Regularizer
+from ...triples.triples_factory import CoreTriplesFactory
+from ...typing import Constrainer, Initializer, Normalizer, OneOrSequence
+from ...utils import upgrade_to_sequence
 
 __all__ = [
     "NodePiece",
