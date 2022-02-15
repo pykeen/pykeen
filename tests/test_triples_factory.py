@@ -532,15 +532,16 @@ class TestUtils(unittest.TestCase):
         self.assertIsInstance(tf, tf_cls)
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory)
-            self.assertFalse(any(p.is_file() for p in path.iterdir()))
+            # serialize
             tf.to_path_binary(path)
-            self.assertTrue(any(p.is_file() for p in path.iterdir()))
-
+            # de-serialize
             tf2 = tf_cls.from_path_binary(path)
+            # check for equality
             self.assert_tf_equal(tf, tf2)
 
     def assert_tf_equal(self, tf1, tf2) -> None:
         """Check two triples factories have all of the same stuff."""
+        # TODO: this could be (Core)TriplesFactory.__equal__
         self.assertEqual(type(tf1), type(tf2))
         self.assertEqual(tf1.entity_ids, tf2.entity_ids)
         self.assertEqual(tf1.relation_ids, tf2.relation_ids)
