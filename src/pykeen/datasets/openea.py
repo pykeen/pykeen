@@ -10,7 +10,7 @@ import pathlib
 from typing import Optional, Tuple, cast
 
 import click
-import pandas as pd
+from docdata import parse_docdata
 from more_click import verbose_option
 from pystow.utils import download, read_zipfile_csv
 
@@ -29,6 +29,7 @@ GRAPH_SIZES = ("15K", "100K")
 GRAPH_VERSIONS = ("V1", "V2")
 
 
+@parse_docdata
 class OpenEA(LazyDataset):
     """The OpenEA dataset family.
 
