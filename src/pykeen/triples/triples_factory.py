@@ -730,7 +730,7 @@ class CoreTriplesFactory:
         data = dict(torch.load(path.joinpath("state.pth")))
         # load numeric triples
         data["mapped_triples"] = torch.as_tensor(
-            pd.read_csv(path.joinpath("numeric_triples.tsv.gz"), sep="\t").values,
+            pd.read_csv(path.joinpath("numeric_triples.tsv.gz"), sep="\t", dtype=int).values,
             dtype=torch.long,
         )
         return data
