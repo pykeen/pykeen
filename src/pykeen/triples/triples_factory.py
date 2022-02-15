@@ -778,6 +778,9 @@ class CoreTriplesFactory:
 class TriplesFactory(CoreTriplesFactory):
     """Create instances given the path to triples."""
 
+    file_name_entity_to_id: ClassVar[str] = "entity_to_id"
+    file_name_relation_to_id: ClassVar[str] = "relation_to_id"
+
     def __init__(
         self,
         mapped_triples: MappedTriples,
@@ -956,10 +959,10 @@ class TriplesFactory(CoreTriplesFactory):
     def to_path_binary(self, path: Union[str, pathlib.Path, TextIO]) -> pathlib.Path:  # noqa: D102
         path = super().to_path_binary(path=path)
         # store entity/relation to ID
-        for name, data in dict(
-            entity_to_id=self.entity_to_id,
-            relation_to_id=self.relation_to_id,
-        ).items():
+        for name, data in (
+            (self.file_name_entity_to_id, self.entity_to_id,),
+            (self.file_name_relation_to_id, self.relation_to_id,),
+        ):
             pd.DataFrame(data=data.items(), columns=["label", "id"],).sort_values(by="id").set_index("id").to_csv(
                 path.joinpath(f"{name}.tsv.gz"),
                 sep="\t",
@@ -970,7 +973,7 @@ class TriplesFactory(CoreTriplesFactory):
     def _from_path_binary(cls, path: pathlib.Path) -> MutableMapping[str, Any]:
         data = super()._from_path_binary(path)
         # load entity/relation to ID
-        for name in ["entity_to_id", "relation_to_id"]:
+        for name in [cls.file_name_entity_to_id, cls.file_name_relation_to_id]:
             df = pd.read_csv(
                 path.joinpath(f"{name}.tsv.gz"),
                 sep="\t",
