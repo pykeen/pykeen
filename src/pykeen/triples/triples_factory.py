@@ -34,9 +34,9 @@ from .instances import Instances, LCWAInstances, SLCWAInstances
 from .splitting import split
 from .utils import TRIPLES_DF_COLUMNS, get_entities, get_relations, load_triples, tensor_to_df, triple_tensor_to_set
 from ..typing import (
-    COLUMN_HEAD,
-    COLUMN_RELATION,
-    COLUMN_TAIL,
+    LABEL_HEAD,
+    LABEL_RELATION,
+    LABEL_TAIL,
     EntityMapping,
     LabeledTriples,
     MappedTriples,
@@ -751,7 +751,7 @@ class CoreTriplesFactory:
         # store numeric triples
         pd.DataFrame(
             data=self.mapped_triples.numpy(),
-            columns=[COLUMN_HEAD, COLUMN_RELATION, COLUMN_TAIL],
+            columns=[LABEL_HEAD, LABEL_RELATION, LABEL_TAIL],
         ).to_csv(path.joinpath("numeric_triples.tsv.gz"), sep="\t", index=False)
 
         # store metadata
