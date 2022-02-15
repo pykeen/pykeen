@@ -132,18 +132,14 @@ class OpenEA(LazyDataset):
             logger.info(f"Downloading file from Dropbox (Link: {self.__class__.DROPBOX_LINK})")
             download(url=self.__class__.DROPBOX_LINK, path=path, hexdigests={"sha512": self.SHA512})
 
-        read_csv_kwargs = {
-            "header": None,
-            "names": [LABEL_HEAD, LABEL_RELATION, LABEL_TAIL],
-            "sep": "\t",
-            "encoding": "utf8",
-            "dtype": str,
-        }
-
         df = read_zipfile_csv(
             path=path,
             inner_path=str(self._relative_path_relations),
-            **read_csv_kwargs,
+            header=None,
+            names=[LABEL_HEAD, LABEL_RELATION, LABEL_TAIL],
+            sep="\t",
+            encoding="utf8",
+            dtype=str,
         )
 
         # create triples factory
