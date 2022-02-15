@@ -7,7 +7,6 @@ Get a summary with ``python -m pykeen.datasets.openea``
 
 import logging
 import pathlib
-from abc import ABC
 from typing import Optional, Tuple, cast
 
 import click
@@ -30,7 +29,7 @@ GRAPH_SIZES = ("15K", "100K")
 GRAPH_VERSIONS = ("V1", "V2")
 
 
-class OpenEA(LazyDataset, ABC):
+class OpenEA(LazyDataset):
     """The OpenEA dataset family.
 
     ---
@@ -40,6 +39,10 @@ class OpenEA(LazyDataset, ABC):
         year: 2020
         link: http://www.vldb.org/pvldb/vol13/p2326-sun.pdf
     single: true
+    statistics:
+        entities: 43237
+        relations: 589
+        triples: 90399
     """
 
     #: The link to the zip file
@@ -134,7 +137,6 @@ class OpenEA(LazyDataset, ABC):
             "header": None,
             "names": [LABEL_HEAD, LABEL_RELATION, LABEL_TAIL],
             "sep": "\t",
-            "engine": "python",
             "encoding": "utf8",
         }
 
