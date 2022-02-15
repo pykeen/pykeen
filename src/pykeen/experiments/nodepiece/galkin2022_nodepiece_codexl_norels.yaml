@@ -18,16 +18,12 @@ pipeline:
     tokenizers: AnchorTokenizer
     num_tokens: 20  # 20 anchors
     tokenizers_kwargs:
-      [{
-         selection: MixtureAnchorSelection
-         searcher: CSGraphAnchorSearcher
-         selection_kwargs:
-           selections: ['Degree', 'PageRank', 'Random']
-           ratios: [0.4, 0.4, 0.2]
-           num_anchors: 7000
-      },
-       {}  # no params for RelationTokenizer
-      ]
+      - selection: MixtureAnchorSelection
+        searcher: CSGraphAnchorSearcher
+        selection_kwargs:
+          selections: ['Degree', 'PageRank', 'Random']
+          ratios: [0.4, 0.4, 0.2]
+          num_anchors: 7000
 
   optimizer: Adam
   optimizer_kwargs:

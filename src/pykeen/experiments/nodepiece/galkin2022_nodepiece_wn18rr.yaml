@@ -20,16 +20,13 @@ pipeline:
     tokenizers: ['AnchorTokenizer', 'RelationTokenizer']
     num_tokens: [50, 4]  # 50 anchors, 4 relations
     tokenizers_kwargs:
-      [{
-         selection: MixtureAnchorSelection
-         searcher: CSGraphAnchorSearcher
-         selection_kwargs:
-           selections: ['Degree', 'PageRank', 'Random']
-           ratios: [0.4, 0.4, 0.2]
-           num_anchors: 500
-      },
-       {}  # no params for RelationTokenizer
-      ]
+      - selection: MixtureAnchorSelection
+        searcher: CSGraphAnchorSearcher
+        selection_kwargs:
+          selections: ['Degree', 'PageRank', 'Random']
+          ratios: [0.4, 0.4, 0.2]
+          num_anchors: 500
+      - {}  # need that empty entry for the class_resolver.make_many()
 
   optimizer: Adam
   optimizer_kwargs:

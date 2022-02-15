@@ -19,7 +19,6 @@ pipeline:
     aggregation: mlp
     tokenizers: RelationTokenizer
     num_tokens: 5  # 5 relations
-    tokenizers_kwargs: [{},{}]  # no params for RelationTokenizer
 
   optimizer: Adam
   optimizer_kwargs:
