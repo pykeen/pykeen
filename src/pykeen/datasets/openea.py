@@ -8,7 +8,7 @@ Get a summary with ``python -m pykeen.datasets.openea``
 import logging
 import pathlib
 from abc import ABC
-from typing import ClassVar, Mapping, Optional, Tuple, cast
+from typing import Optional, Tuple, cast
 
 import click
 import pandas as pd
@@ -16,7 +16,6 @@ from more_click import verbose_option
 from pystow.utils import download, read_zipfile_csv
 
 from .base import LazyDataset
-from ..constants import PYKEEN_MODULE
 from ..triples import TriplesFactory
 from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, TorchRandomHint
 
@@ -32,7 +31,16 @@ GRAPH_VERSIONS = ("V1", "V2")
 
 
 class OpenEA(LazyDataset, ABC):
-    """Base class for WK3l datasets (WK3l-15k, WK3l-120k, CN3l)."""
+    """The OpenEA dataset family.
+
+    ---
+    name: OpenEA family
+    citation:
+        author: Sun
+        year: 2020
+        link: http://www.vldb.org/pvldb/vol13/p2326-sun.pdf
+    single: true
+    """
 
     #: The link to the zip file
     DROPBOX_LINK: str = "https://www.dropbox.com/s/xfehqm4pcd9yw0v/OpenEA_dataset_v2.0.zip?dl=1"
