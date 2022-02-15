@@ -11,6 +11,7 @@ from abc import abstractmethod
 from typing import (
     Any,
     Callable,
+    ClassVar,
     Collection,
     Dict,
     List,
@@ -308,6 +309,9 @@ def restrict_triples(
 @dataclasses.dataclass
 class CoreTriplesFactory:
     """Create instances from ID-based triples."""
+
+    triples_file_name: ClassVar[str] = "numeric_triples.tsv.gz"
+    base_file_name: ClassVar[str] = "base.pth"
 
     def __init__(
         self,
@@ -727,10 +731,10 @@ class CoreTriplesFactory:
         path: pathlib.Path,
     ) -> MutableMapping[str, Any]:
         # load base
-        data = dict(torch.load(path.joinpath("state.pth")))
+        data = dict(torch.load(path.joinpath(cls.base_file_name)))
         # load numeric triples
         data["mapped_triples"] = torch.as_tensor(
-            pd.read_csv(path.joinpath("numeric_triples.tsv.gz"), sep="\t", dtype=int).values,
+            pd.read_csv(path.joinpath(cls.triples_file_name), sep="\t", dtype=int).values,
             dtype=torch.long,
         )
         return data
@@ -752,10 +756,10 @@ class CoreTriplesFactory:
         pd.DataFrame(
             data=self.mapped_triples.numpy(),
             columns=[LABEL_HEAD, LABEL_RELATION, LABEL_TAIL],
-        ).to_csv(path.joinpath("numeric_triples.tsv.gz"), sep="\t", index=False)
+        ).to_csv(path.joinpath(self.triples_file_name), sep="\t", index=False)
 
         # store metadata
-        torch.save(self._get_binary_state(), path.joinpath("state.pth"))
+        torch.save(self._get_binary_state(), path.joinpath(self.base_file_name))
         logger.info(f"Stored {self} to {path.as_uri()}")
 
         return path
