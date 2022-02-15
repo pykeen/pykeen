@@ -2,12 +2,10 @@
 
 """Test the evaluators."""
 
-import dataclasses
 import itertools
 import logging
 import random
 import unittest
-from operator import attrgetter
 from typing import Any, Collection, Dict, Iterable, List, MutableMapping, Optional, Tuple, Union
 
 import numpy
@@ -18,7 +16,11 @@ import torch
 
 from pykeen.datasets import Nations
 from pykeen.evaluation import Evaluator, MetricResults, RankBasedEvaluator, RankBasedMetricResults
-from pykeen.evaluation.classification_evaluator import ClassificationEvaluator, ClassificationMetricResults
+from pykeen.evaluation.classification_evaluator import (
+    CLASSIFICATION_METRICS,
+    ClassificationEvaluator,
+    ClassificationMetricResults,
+)
 from pykeen.evaluation.evaluator import (
     create_dense_positive_mask_,
     create_sparse_positive_filter_,
@@ -159,15 +161,16 @@ class ClassificationEvaluatorTest(cases.EvaluatorTestCase):
         mask = numpy.concatenate(mask_filtered, axis=0)
         scores = numpy.concatenate(scores_filtered, axis=0)
 
-        for field in sorted(dataclasses.fields(ClassificationMetricResults), key=attrgetter("name")):
-            with self.subTest(metric=field.name):
-                f = field.metadata["f"]
-                exp_score = f(numpy.array(mask.flat), numpy.array(scores.flat))
-                act_score = result.get_metric(field.name)
+        y_true, y_score = numpy.array(mask.flat), numpy.array(scores.flat)
+        for name, metric in CLASSIFICATION_METRICS.items():
+            with self.subTest(metric=name):
+                exp_score = metric.score(y_true=y_true, y_score=y_score)
+                self.assertIn(name, result.data)
+                act_score = result.get_metric(name)
                 if numpy.isnan(exp_score):
                     self.assertTrue(numpy.isnan(act_score))
                 else:
-                    self.assertAlmostEqual(act_score, exp_score, msg=f"failed for {field.name}", delta=7)
+                    self.assertAlmostEqual(act_score, exp_score, msg=f"failed for {name}", delta=7)
 
 
 class EvaluatorUtilsTests(unittest.TestCase):
@@ -380,7 +383,7 @@ class DummyEvaluator(Evaluator):
             self.counter -= 1
 
     def finalize(self) -> MetricResults:  # noqa: D102
-        return RankBasedMetricResults(
+        return RankBasedMetricResults.from_dict(
             arithmetic_mean_rank=self.counter,
             geometric_mean_rank=None,
             harmonic_mean_rank=None,
