@@ -40,9 +40,9 @@ class OpenEA(LazyDataset):
         link: http://www.vldb.org/pvldb/vol13/p2326-sun.pdf
     single: true
     statistics:
-        entities: 43237
-        relations: 589
-        triples: 90399
+        entities: 15000
+        relations: 248
+        triples: 38265
     """
 
     #: The link to the zip file
@@ -108,7 +108,6 @@ class OpenEA(LazyDataset):
         )
         # left side has files ending with 1, right side with 2
         one_or_two = "1" if side == available_sides[0] else "2"
-        self._relative_path_attributes = pathlib.PurePosixPath(relative_path_base, f"attr_triples_{one_or_two}")
         self._relative_path_relations = pathlib.PurePosixPath(relative_path_base, f"rel_triples_{one_or_two}")
 
         # For downloading
@@ -138,21 +137,14 @@ class OpenEA(LazyDataset):
             "names": [LABEL_HEAD, LABEL_RELATION, LABEL_TAIL],
             "sep": "\t",
             "encoding": "utf8",
+            "dtype": str,
         }
 
-        attr_triples = read_zipfile_csv(
-            path=path,
-            inner_path=str(self._relative_path_attributes),
-            **read_csv_kwargs,
-        )
-        rel_triples = read_zipfile_csv(
+        df = read_zipfile_csv(
             path=path,
             inner_path=str(self._relative_path_relations),
             **read_csv_kwargs,
         )
-
-        df = pd.concat([attr_triples, rel_triples])
-        df = df.astype(dtype=str)
 
         # create triples factory
         tf = TriplesFactory.from_labeled_triples(
