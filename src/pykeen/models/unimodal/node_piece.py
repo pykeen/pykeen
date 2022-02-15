@@ -100,6 +100,22 @@ class NodePiece(ERModel):
         :param shape:
             the shape of an individual representation. Only necessary, if aggregation results in a change of dimensions.
             this will only be necessary if the aggregation is an *ad hoc* function.
+        :param entity_initializer:
+            a hint for initializing anchor embeddings
+        :param entity_normalizer:
+            a hint for normalizing anchor embeddings
+        :param entity_constrainer:
+            a hint for constraining anchor embeddings
+        :param entity_regularizer:
+            a hint for regularizing anchor embeddings
+        :param relation_initializer:
+            a hint for initializing relation embeddings
+        :param relation_normalizer:
+            a hint for normalizing relation embeddings
+        :param relation_constrainer:
+            a hint for constraining relation embeddings
+        :param relation_regularizer:
+            a hint for regularizing relation embeddings
         :param kwargs:
             additional keyword-based arguments passed to :meth:`ERModel.__init__`
 
