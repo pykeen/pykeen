@@ -531,10 +531,10 @@ class TestUtils(unittest.TestCase):
         """Check the triples factory can be written and reloaded properly."""
         self.assertIsInstance(tf, tf_cls)
         with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / "training.pt"
-            self.assertFalse(path.is_file())
+            path = Path(directory)
+            self.assertFalse(any(p.is_file() for p in path.iterdir()))
             tf.to_path_binary(path)
-            self.assertTrue(path.is_file())
+            self.assertTrue(any(p.is_file() for p in path.iterdir()))
 
             tf2 = tf_cls.from_path_binary(path)
             self.assert_tf_equal(tf, tf2)
