@@ -30,6 +30,7 @@ from unittest.case import SkipTest
 from unittest.mock import patch
 
 import numpy
+import numpy.random
 import pytest
 import torch
 import unittest_templates
@@ -1941,6 +1942,30 @@ class EvaluationOnlyModelTestCase(unittest_templates.GenericTestCase[pykeen.mode
         self._verify(scores)
 
 
+def generate_ranks(
+    num_ranks: int,
+    max_num_candidates: int,
+    seed: Optional[int] = None,
+) -> Tuple[numpy.ndarray, numpy.ndarray]:
+    """
+    Generate random number of candidates, and coherent ranks.
+
+    :param num_ranks:
+        the number of ranks to generate
+    :param max_num_candidates:
+        the maximum number of candidates (e.g., the number of entities)
+    :param seed:
+        the random seed.
+
+    :return: shape: (num_ranks,)
+        a pair of integer arrays, ranks and num_candidates for each individual ranking task
+    """
+    generator = numpy.random.default_rng(seed=seed)
+    num_candidates = generator.integers(low=1, high=max_num_candidates, size=(num_ranks,))
+    ranks = generator.integers(low=1, high=num_candidates + 1)
+    return ranks, num_candidates
+
+
 class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric]):
     """A test for rank-based metrics."""
 
@@ -1958,9 +1983,11 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
 
     def post_instantiation_hook(self) -> None:
         """Generate a coherent rank & candidate pair."""
-        generator = numpy.random.default_rng()
-        self.num_candidates = generator.integers(low=1, high=self.max_num_candidates, size=(self.num_ranks,))
-        self.ranks = generator.integers(low=1, high=self.num_candidates + 1)
+        self.num_ranks, self.num_candidates = generate_ranks(
+            num_ranks=self.num_ranks,
+            max_num_candidates=self.max_num_candidates,
+            seed=42,
+        )
 
     def _test_call(self, ranks: numpy.ndarray, num_candidates: Optional[numpy.ndarray]):
         """Verify call."""
