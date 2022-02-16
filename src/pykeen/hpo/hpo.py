@@ -20,7 +20,7 @@ from optuna.samplers import BaseSampler
 from optuna.storages import BaseStorage
 
 from ..constants import USER_DEFINED_CODE
-from ..datasets import get_dataset, has_dataset
+from ..datasets import dataset_resolver, has_dataset
 from ..datasets.base import Dataset
 from ..evaluation import Evaluator, evaluator_resolver
 from ..evaluation.metrics import ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX
@@ -926,7 +926,7 @@ def _set_study_dataset(
             raise ValueError("Cannot specify dataset and training, testing and validation")
         elif isinstance(dataset, (str, pathlib.Path)):
             if isinstance(dataset, str) and has_dataset(dataset):
-                study.set_user_attr("dataset", get_dataset(dataset=dataset).get_normalized_name())
+                study.set_user_attr("dataset", dataset_resolver.normalize(dataset))
             else:
                 # otherwise, dataset refers to a file that should be automatically split
                 study.set_user_attr("dataset", str(dataset))

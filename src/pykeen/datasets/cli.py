@@ -113,7 +113,8 @@ def _analyze(dataset, force, countplots, directory: Union[None, str, pathlib.Pat
         directory.mkdir(exist_ok=True, parents=True)
 
     dataset_instance = get_dataset(dataset=dataset)
-    d = directory.joinpath(dataset_instance.__class__.__name__.lower(), "analysis")
+    dataset_name = dataset_instance.get_normalized_name()
+    d = directory.joinpath(dataset_name, "analysis")
     d.mkdir(parents=True, exist_ok=True)
 
     dfs = {}
