@@ -531,16 +531,17 @@ class TestUtils(unittest.TestCase):
         """Check the triples factory can be written and reloaded properly."""
         self.assertIsInstance(tf, tf_cls)
         with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / "training.pt"
-            self.assertFalse(path.is_file())
+            path = Path(directory)
+            # serialize
             tf.to_path_binary(path)
-            self.assertTrue(path.is_file())
-
+            # de-serialize
             tf2 = tf_cls.from_path_binary(path)
+            # check for equality
             self.assert_tf_equal(tf, tf2)
 
     def assert_tf_equal(self, tf1, tf2) -> None:
         """Check two triples factories have all of the same stuff."""
+        # TODO: this could be (Core)TriplesFactory.__equal__
         self.assertEqual(type(tf1), type(tf2))
         self.assertEqual(tf1.entity_ids, tf2.entity_ids)
         self.assertEqual(tf1.relation_ids, tf2.relation_ids)
