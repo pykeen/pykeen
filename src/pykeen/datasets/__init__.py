@@ -42,6 +42,7 @@ from .kinships import Kinships
 from .nations import Nations
 from .ogb import OGBBioKG, OGBWikiKG
 from .openbiolink import OpenBioLink, OpenBioLinkLQ
+from .openea import OpenEA
 from .umls import UMLS
 from .wd50k import WD50KT
 from .wikidata5m import Wikidata5M
@@ -77,6 +78,7 @@ __all__ = [
     "CSKG",
     "DBpedia50",
     "DB100K",
+    "OpenEA",
     "Countries",
     "WD50KT",
     "Wikidata5M",
