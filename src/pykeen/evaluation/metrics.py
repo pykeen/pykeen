@@ -6,7 +6,6 @@ import itertools as itt
 import math
 import re
 from abc import abstractmethod
-from dataclasses import dataclass
 from typing import ClassVar, Collection, Mapping, NamedTuple, Optional, Union, cast
 
 import numpy as np
