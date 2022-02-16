@@ -161,14 +161,14 @@ class Dataset:
         """Print a summary of the dataset."""
         print(self.summary_str(title=title, show_examples=show_examples), file=file)  # noqa:T001
 
-    def extra_repr(self) -> Iterable[str]:
+    def _extra_repr(self) -> Iterable[str]:
         """Yield extra entries for the instance's string representation."""
         yield f"num_entities={self.num_entities}"
         yield f"num_relations={self.num_relations}"
         yield f"create_inverse_triples={self.create_inverse_triples}"
 
     def __str__(self) -> str:  # noqa: D105
-        return f"{self.__class__.__name__}({', '.join(self.extra_repr())})"
+        return f"{self.__class__.__name__}({', '.join(self._extra_repr())})"
 
     @classmethod
     def from_path(cls, path: Union[str, pathlib.Path], ratios: Optional[List[float]] = None) -> "Dataset":
@@ -299,8 +299,8 @@ class EagerDataset(Dataset):
         )
         self.metadata = metadata
 
-    def extra_repr(self) -> Iterable[str]:  # noqa: D102
-        yield from super().extra_repr()
+    def _extra_repr(self) -> Iterable[str]:  # noqa: D102
+        yield from super()._extra_repr()
         yield f"metadata={self.metadata}"
 
 
