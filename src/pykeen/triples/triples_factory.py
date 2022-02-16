@@ -960,8 +960,14 @@ class TriplesFactory(CoreTriplesFactory):
         path = super().to_path_binary(path=path)
         # store entity/relation to ID
         for name, data in (
-            (self.file_name_entity_to_id, self.entity_to_id,),
-            (self.file_name_relation_to_id, self.relation_to_id,),
+            (
+                self.file_name_entity_to_id,
+                self.entity_to_id,
+            ),
+            (
+                self.file_name_relation_to_id,
+                self.relation_to_id,
+            ),
         ):
             pd.DataFrame(data=data.items(), columns=["label", "id"],).sort_values(by="id").set_index("id").to_csv(
                 path.joinpath(f"{name}.tsv.gz"),
