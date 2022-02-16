@@ -132,6 +132,7 @@ def reproduce(
 @directory_option
 @extra_config_option
 @keep_seed_option
+@verbose_option
 def run(
     path: str,
     replicates: int,
