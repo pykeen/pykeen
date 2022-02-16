@@ -172,10 +172,14 @@ def get_ranking_metrics(ranks: np.ndarray) -> Mapping[str, float]:
 class Metric:
     """A base class for metrics."""
 
+    #: a description of the metric
     description: ClassVar[str]
+
+    #: a link to further information
     link: ClassVar[str]
 
-    binarize: Optional[bool] = None
+    #: whether the metric needs binarized scores
+    binarize: ClassVar[Optional[bool]] = None
 
     #: whether it is increasing, i.e., larger values are better
     increasing: ClassVar[bool] = False
@@ -189,6 +193,9 @@ class Metric:
 
 class RankBasedMetric(Metric):
     """A base class for rank-based metrics."""
+
+    # rank based metrics do not need binarized scores
+    binarize: ClassVar[bool] = False
 
     #: the supported rank types. Most of the time equal to all rank types
     supported_rank_types: ClassVar[Collection[RankType]] = RANK_TYPES
@@ -212,6 +219,8 @@ class RankBasedMetric(Metric):
 class ArithmeticMeanRank(RankBasedMetric):
     """The (arithmetic) mean rank."""
 
+    description = "The arithmetic mean over all ranks."
+    link = "https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#mean-rank"
     value_range = ValueRange(lower=1, lower_inclusive=True, upper=math.inf)
     synonyms = ("mean_rank", "mr")
 
