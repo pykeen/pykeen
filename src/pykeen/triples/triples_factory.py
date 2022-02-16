@@ -11,10 +11,12 @@ from abc import abstractmethod
 from typing import (
     Any,
     Callable,
+    ClassVar,
     Collection,
     Dict,
     List,
     Mapping,
+    MutableMapping,
     Optional,
     Sequence,
     Set,
@@ -32,7 +34,16 @@ import torch
 from .instances import Instances, LCWAInstances, SLCWAInstances
 from .splitting import split
 from .utils import TRIPLES_DF_COLUMNS, get_entities, get_relations, load_triples, tensor_to_df, triple_tensor_to_set
-from ..typing import EntityMapping, LabeledTriples, MappedTriples, RelationMapping, TorchRandomHint
+from ..typing import (
+    LABEL_HEAD,
+    LABEL_RELATION,
+    LABEL_TAIL,
+    EntityMapping,
+    LabeledTriples,
+    MappedTriples,
+    RelationMapping,
+    TorchRandomHint,
+)
 from ..utils import compact_mapping, format_relative_comparison, invert_mapping
 
 __all__ = [
@@ -298,6 +309,9 @@ def restrict_triples(
 @dataclasses.dataclass
 class CoreTriplesFactory:
     """Create instances from ID-based triples."""
+
+    triples_file_name: ClassVar[str] = "numeric_triples.tsv.gz"
+    base_file_name: ClassVar[str] = "base.pth"
 
     def __init__(
         self,
@@ -709,13 +723,26 @@ class CoreTriplesFactory:
         """
         path = normalize_path(path)
         logger.info(f"Loading from {path.as_uri()}")
-        data = torch.load(path)
-        return cls(**data)
+        return cls(**cls._from_path_binary(path=path))
+
+    @classmethod
+    def _from_path_binary(
+        cls,
+        path: pathlib.Path,
+    ) -> MutableMapping[str, Any]:
+        # load base
+        data = dict(torch.load(path.joinpath(cls.base_file_name)))
+        # load numeric triples
+        data["mapped_triples"] = torch.as_tensor(
+            pd.read_csv(path.joinpath(cls.triples_file_name), sep="\t", dtype=int).values,
+            dtype=torch.long,
+        )
+        return data
 
     def to_path_binary(
         self,
         path: Union[str, pathlib.Path, TextIO],
-    ) -> None:
+    ) -> pathlib.Path:
         """
         Save triples factory to path in (PyTorch's .pt) binary format.
 
@@ -723,12 +750,22 @@ class CoreTriplesFactory:
             The path to store the triples factory to.
         """
         path = normalize_path(path)
-        torch.save(self._get_binary_state(), path)
+        path.mkdir(exist_ok=True, parents=True)
+
+        # store numeric triples
+        pd.DataFrame(
+            data=self.mapped_triples.numpy(),
+            columns=[LABEL_HEAD, LABEL_RELATION, LABEL_TAIL],
+        ).to_csv(path.joinpath(self.triples_file_name), sep="\t", index=False)
+
+        # store metadata
+        torch.save(self._get_binary_state(), path.joinpath(self.base_file_name))
         logger.info(f"Stored {self} to {path.as_uri()}")
+
+        return path
 
     def _get_binary_state(self):
         return dict(
-            mapped_triples=self.mapped_triples,
             num_entities=self.num_entities,
             num_relations=self.num_relations,
             entity_ids=self.entity_ids,
@@ -740,6 +777,9 @@ class CoreTriplesFactory:
 
 class TriplesFactory(CoreTriplesFactory):
     """Create instances given the path to triples."""
+
+    file_name_entity_to_id: ClassVar[str] = "entity_to_id"
+    file_name_relation_to_id: ClassVar[str] = "relation_to_id"
 
     def __init__(
         self,
@@ -916,11 +956,39 @@ class TriplesFactory(CoreTriplesFactory):
             metadata=self.metadata,
         )
 
-    def _get_binary_state(self):
+    def to_path_binary(self, path: Union[str, pathlib.Path, TextIO]) -> pathlib.Path:  # noqa: D102
+        path = super().to_path_binary(path=path)
+        # store entity/relation to ID
+        for name, data in (
+            (
+                self.file_name_entity_to_id,
+                self.entity_to_id,
+            ),
+            (
+                self.file_name_relation_to_id,
+                self.relation_to_id,
+            ),
+        ):
+            pd.DataFrame(data=data.items(), columns=["label", "id"],).sort_values(by="id").set_index("id").to_csv(
+                path.joinpath(f"{name}.tsv.gz"),
+                sep="\t",
+            )
+        return path
+
+    @classmethod
+    def _from_path_binary(cls, path: pathlib.Path) -> MutableMapping[str, Any]:
+        data = super()._from_path_binary(path)
+        # load entity/relation to ID
+        for name in [cls.file_name_entity_to_id, cls.file_name_relation_to_id]:
+            df = pd.read_csv(
+                path.joinpath(f"{name}.tsv.gz"),
+                sep="\t",
+            )
+            data[name] = dict(zip(df["label"], df["id"]))
+        return data
+
+    def _get_binary_state(self):  # noqa: D102
         return dict(
-            mapped_triples=self.mapped_triples,
-            entity_to_id=self.entity_to_id,
-            relation_to_id=self.relation_to_id,
             create_inverse_triples=self.create_inverse_triples,
             metadata=self.metadata,
         )
