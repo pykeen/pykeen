@@ -1,7 +1,6 @@
 metadata:
   title: Learn WN18RR Dataset with NodePiece + RotatE (no anchor tokenization) as described by Galkin et al., 2022
 pipeline:
-  random_seed: 42
   dataset: wn18rr
   dataset_kwargs:
     create_inverse_triples: True
