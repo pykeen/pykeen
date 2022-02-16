@@ -241,7 +241,7 @@ class Dataset:
                 *self._tup(),
                 random_state=random_state,
                 **kwargs,
-            )
+            ),
         )
 
     def deteriorate(self, n: Union[int, float], random_state: TorchRandomHint = None) -> Dataset:
@@ -279,6 +279,7 @@ class EagerDataset(Dataset):
         training: CoreTriplesFactory,
         testing: CoreTriplesFactory,
         validation: Optional[CoreTriplesFactory] = None,
+        *,
         metadata: Optional[Mapping[str, Any]] = None,
     ) -> None:
         """Initialize the eager dataset.
@@ -286,6 +287,7 @@ class EagerDataset(Dataset):
         :param training: A pre-defined triples factory with training triples
         :param testing: A pre-defined triples factory with testing triples
         :param validation: A pre-defined triples factory with validation triples
+        :param metadata: additional metadata to store inside the dataset
         """
         self.training = training
         self.testing = testing
