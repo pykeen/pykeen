@@ -6,10 +6,12 @@ entities and relations. In general, a larger score indicates a higher plausibili
 score value is model-dependent, and usually it cannot be directly interpreted as a probability.
 """  # noqa: D205, D400
 
-from class_resolver import Resolver, get_subclasses
+from class_resolver import ClassResolver, get_subclasses
 
 from .base import EntityRelationEmbeddingModel, Model, _OldAbstractModel
-from .baseline import EvaluationOnlyModel, MarginalDistributionBaseline
+from .baseline import EvaluationOnlyModel, MarginalDistributionBaseline, SoftInverseTripleBaseline
+from .inductive import InductiveNodePiece, InductiveNodePieceGNN
+from .mocks import FixedModel
 from .multimodal import ComplExLiteral, DistMultLiteral, DistMultLiteralGated, LiteralModel
 from .nbase import ERModel, _NewAbstractModel
 from .resolve import make_model, make_model_cls
@@ -21,6 +23,9 @@ from .unimodal import (
     NTN,
     RESCAL,
     RGCN,
+    SE,
+    UM,
+    AutoSF,
     BoxE,
     CompGCN,
     ComplEx,
@@ -37,7 +42,6 @@ from .unimodal import (
     QuatE,
     RotatE,
     SimplE,
-    StructuredEmbedding,
     TorusE,
     TransD,
     TransE,
@@ -45,7 +49,6 @@ from .unimodal import (
     TransH,
     TransR,
     TuckER,
-    UnstructuredModel,
 )
 
 __all__ = [
@@ -58,6 +61,7 @@ __all__ = [
     "LiteralModel",
     "EvaluationOnlyModel",
     # Concrete Models
+    "AutoSF",
     "BoxE",
     "CompGCN",
     "ComplEx",
@@ -74,6 +78,7 @@ __all__ = [
     "ERMLPE",
     "HolE",
     "KG2E",
+    "FixedModel",
     "MuRE",
     "NodePiece",
     "NTN",
@@ -84,7 +89,7 @@ __all__ = [
     "RGCN",
     "RotatE",
     "SimplE",
-    "StructuredEmbedding",
+    "SE",
     "TorusE",
     "TransD",
     "TransE",
@@ -92,8 +97,12 @@ __all__ = [
     "TransH",
     "TransR",
     "TuckER",
-    "UnstructuredModel",
+    "UM",
+    # Inductive Models
+    "InductiveNodePiece",
+    "InductiveNodePieceGNN",
     # Evaluation-only models
+    "SoftInverseTripleBaseline",
     "MarginalDistributionBaseline",
     # Utils
     "model_resolver",
@@ -101,7 +110,7 @@ __all__ = [
     "make_model_cls",
 ]
 
-model_resolver = Resolver.from_subclasses(
+model_resolver = ClassResolver.from_subclasses(
     base=Model,
     skip={
         # Abstract Models

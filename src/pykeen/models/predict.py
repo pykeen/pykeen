@@ -4,17 +4,19 @@
 
 import itertools as itt
 import logging
+from abc import abstractmethod
 from typing import Optional, Sequence, Tuple, Union
 
 import numpy
 import numpy as np
 import pandas as pd
 import torch
+from tqdm.auto import tqdm
 
 from .base import Model
 from ..triples import CoreTriplesFactory, TriplesFactory
-from ..triples.utils import tensor_to_df
-from ..typing import LabeledTriples, MappedTriples, ScorePack
+from ..triples.utils import tensor_to_df, triple_tensor_to_set
+from ..typing import InductiveMode, LabeledTriples, MappedTriples, ScorePack
 from ..utils import is_cuda_oom_error
 
 __all__ = [
@@ -38,6 +40,7 @@ def get_head_prediction_df(
     add_novelties: bool = True,
     remove_known: bool = False,
     testing: Optional[torch.LongTensor] = None,
+    mode: Optional[InductiveMode] = None,
 ) -> pd.DataFrame:
     """Predict heads for the given relation and tail (given by label).
 
@@ -53,6 +56,9 @@ def get_head_prediction_df(
         may pose as a distraction. If this is set to True, then non-novel triples will be removed and the column
         denoting novelty will be excluded, since all remaining triples will be novel. Defaults to false.
     :param testing: The mapped_triples from the testing triples factory (TriplesFactory.mapped_triples)
+    :param mode:
+        The pass mode, which is None in the transductive setting and one of "training",
+        "validation", or "testing" in the inductive setting.
     :return: shape: (k, 3)
         A dataframe with columns based on the settings or a tensor. Contains either the k highest scoring triples,
         or all possible triples if k is None.
@@ -71,7 +77,7 @@ def get_head_prediction_df(
     tail_id = triples_factory.entity_to_id[tail_label]
     relation_id = triples_factory.relation_to_id[relation_label]
     rt_batch = torch.as_tensor([[relation_id, tail_id]], dtype=torch.long, device=model.device)
-    scores = model.predict_h(rt_batch)
+    scores = model.predict_h(rt_batch, mode=mode)
     scores = scores[0, :].tolist()
     rv = pd.DataFrame(
         [
@@ -102,6 +108,7 @@ def get_tail_prediction_df(
     add_novelties: bool = True,
     remove_known: bool = False,
     testing: Optional[torch.LongTensor] = None,
+    mode: Optional[InductiveMode] = None,
 ) -> pd.DataFrame:
     """Predict tails for the given head and relation (given by label).
 
@@ -117,6 +124,9 @@ def get_tail_prediction_df(
         may pose as a distraction. If this is set to True, then non-novel triples will be removed and the column
         denoting novelty will be excluded, since all remaining triples will be novel. Defaults to false.
     :param testing: The mapped_triples from the testing triples factory (TriplesFactory.mapped_triples)
+    :param mode:
+        The pass mode, which is None in the transductive setting and one of "training",
+        "validation", or "testing" in the inductive setting.
     :return: shape: (k, 3)
         A dataframe with columns based on the settings or a tensor. Contains either the k highest scoring triples,
         or all possible triples if k is None.
@@ -135,7 +145,7 @@ def get_tail_prediction_df(
     head_id = triples_factory.entity_to_id[head_label]
     relation_id = triples_factory.relation_to_id[relation_label]
     batch = torch.as_tensor([[head_id, relation_id]], dtype=torch.long, device=model.device)
-    scores = model.predict_t(batch)
+    scores = model.predict_t(batch, mode=mode)
     scores = scores[0, :].tolist()
     rv = pd.DataFrame(
         [
@@ -166,6 +176,7 @@ def get_relation_prediction_df(
     add_novelties: bool = True,
     remove_known: bool = False,
     testing: Optional[torch.LongTensor] = None,
+    mode: Optional[InductiveMode] = None,
 ) -> pd.DataFrame:
     """Predict relations for the given head and tail (given by label).
 
@@ -181,6 +192,9 @@ def get_relation_prediction_df(
         may pose as a distraction. If this is set to True, then non-novel triples will be removed and the column
         denoting novelty will be excluded, since all remaining triples will be novel. Defaults to false.
     :param testing: The mapped_triples from the testing triples factory (TriplesFactory.mapped_triples)
+    :param mode:
+        The pass mode, which is None in the transductive setting and one of "training",
+        "validation", or "testing" in the inductive setting.
     :return: shape: (k, 3)
         A dataframe with columns based on the settings or a tensor. Contains either the k highest scoring triples,
         or all possible triples if k is None.
@@ -199,7 +213,7 @@ def get_relation_prediction_df(
     head_id = triples_factory.entity_to_id[head_label]
     tail_id = triples_factory.entity_to_id[tail_label]
     batch = torch.as_tensor([[head_id, tail_id]], dtype=torch.long, device=model.device)
-    scores = model.predict_r(batch)
+    scores = model.predict_r(batch, mode=mode)
     scores = scores[0, :].tolist()
     rv = pd.DataFrame(
         [
@@ -231,6 +245,7 @@ def get_all_prediction_df(
     add_novelties: bool = True,
     remove_known: bool = False,
     testing: Optional[torch.LongTensor] = None,
+    mode: Optional[InductiveMode] = None,
 ) -> Union[ScorePack, pd.DataFrame]:
     """Compute scores for all triples, optionally returning only the k highest scoring.
 
@@ -250,13 +265,16 @@ def get_all_prediction_df(
         may pose as a distraction. If this is set to True, then non-novel triples will be removed and the column
         denoting novelty will be excluded, since all remaining triples will be novel. Defaults to false.
     :param testing: The mapped_triples from the testing triples factory (TriplesFactory.mapped_triples)
+    :param mode:
+        The pass mode, which is None in the transductive setting and one of "training",
+        "validation", or "testing" in the inductive setting.
     :return: shape: (k, 3)
         A dataframe with columns based on the settings or a tensor. Contains either the k highest scoring triples,
         or all possible triples if k is None.
 
     Example usage:
 
-    .. code-block:: python
+    .. code-block::
 
         from pykeen.pipeline import pipeline
         from pykeen.models.predict import get_all_prediction_df
@@ -271,7 +289,7 @@ def get_all_prediction_df(
         # Get scores for top 15 triples
         top_df = get_all_prediction_df(model, k=15, triples_factory=result.training)
     """
-    score_pack = predict(model=model, k=k, batch_size=batch_size)
+    score_pack = predict(model=model, k=k, batch_size=batch_size, mode=mode)
     if return_tensors:
         return score_pack
 
@@ -285,131 +303,236 @@ def get_all_prediction_df(
     )
 
 
-def predict(model: Model, *, k: Optional[int] = None, batch_size: int = 1) -> ScorePack:
+def predict(
+    model: Model, *, k: Optional[int] = None, batch_size: int = 1, mode: Optional[InductiveMode] = None
+) -> ScorePack:
     """Calculate and store scores for either all triples, or the top k triples.
 
     :param model: A PyKEEN model
     :param k: The number of triples to return. Set to ``None`` to keep all.
     :param batch_size: The batch size to use for calculating scores
+    :param mode:
+        The pass mode, which is None in the transductive setting and one of "training",
+        "validation", or "testing" in the inductive setting.
     :return: A score pack of parallel triples and scores
     """
     logger.warning(
-        f"_predict is an expensive operation, involving {model.num_entities ** 2 * model.num_relations} "
+        f"_predict is an expensive operation, involving {model.num_entities ** 2 * model.num_real_relations} "
         f"score evaluations.",
     )
 
     if k is not None:
-        return _predict_k(model=model, k=k, batch_size=batch_size)
+        return _predict_k(model=model, k=k, batch_size=batch_size, mode=mode)
 
     logger.warning(
         "Not providing k to score_all_triples entails huge memory requirements for reasonably-sized "
         "knowledge graphs.",
     )
-    return _predict_all(model=model, batch_size=batch_size)
+    return _predict_all(model=model, batch_size=batch_size, mode=mode)
 
 
-@torch.inference_mode()
-def _predict_all(model: Model, *, batch_size: int = 1) -> ScorePack:
-    """Compute and store scores for all triples.
+class _ScoreConsumer:
+    """A consumer of scores for visitor pattern."""
 
-    :param model: A PyKEEN model
-    :param batch_size: The batch size to use for calculating scores
-    :return: A score pack of parallel triples and scores
-    """
-    model.eval()  # set model to evaluation mode
+    result: torch.LongTensor
+    scores: torch.FloatTensor
+    flatten: bool
 
-    # initialize buffer on cpu
-    scores = torch.empty(model.num_relations, model.num_entities, model.num_entities, dtype=torch.float32)
-    assert model.num_entities ** 2 * model.num_relations < (2 ** 63 - 1)
+    @abstractmethod
+    def __call__(
+        self,
+        head_id_range: Tuple[int, int],
+        relation_id: int,
+        hr_batch: torch.LongTensor,
+        scores: torch.FloatTensor,
+    ) -> None:
+        """Consume scores for the given hr_batch."""
+        raise NotImplementedError
 
-    for r, e in itt.product(
-        range(model.num_relations),
-        range(0, model.num_entities, batch_size),
-    ):
-        # calculate batch scores
-        hs = torch.arange(e, min(e + batch_size, model.num_entities), device=model.device)
-        hr_batch = torch.stack(
-            [
-                hs,
-                hs.new_empty(1).fill_(value=r).repeat(hs.shape[0]),
-            ],
-            dim=-1,
-        )
-        scores[r, e : e + batch_size, :] = model.predict_t(hr_batch=hr_batch).to(scores.device)
-
-    # Explicitly create triples
-    result = torch.stack(
-        [
-            torch.arange(model.num_relations).view(-1, 1, 1).repeat(1, model.num_entities, model.num_entities),
-            torch.arange(model.num_entities).view(1, -1, 1).repeat(model.num_relations, 1, model.num_entities),
-            torch.arange(model.num_entities).view(1, 1, -1).repeat(model.num_relations, model.num_entities, 1),
-        ],
-        dim=-1,
-    ).view(-1, 3)[:, [1, 0, 2]]
-
-    return _build_pack(result=result, scores=scores, flatten=True)
+    def finalize(self) -> ScorePack:
+        """Finalize the result to build a score pack."""
+        return _build_pack(result=self.result, scores=self.scores, flatten=self.flatten)
 
 
-@torch.inference_mode()
-def _predict_k(model: Model, *, k: int, batch_size: int = 1) -> ScorePack:
-    """Compute and store scores for the top k-scoring triples.
+class _TopKScoreConsumer(_ScoreConsumer):
+    """Collect top-k triples & scores."""
 
-    :param model: A PyKEEN model
-    :param k: The number of triples to return
-    :param batch_size: The batch size to use for calculating scores
-    :return: A score pack of parallel triples and scores
-    """
-    model.eval()  # set model to evaluation mode
+    flatten = False
 
-    # initialize buffer on device
-    result = torch.ones(0, 3, dtype=torch.long, device=model.device)
-    scores = torch.empty(0, dtype=torch.float32, device=model.device)
+    def __init__(self, k: int, device: torch.device) -> None:
+        """
+        Initialize the consumer.
 
-    for r, e in itt.product(
-        range(model.num_relations),
-        range(0, model.num_entities, batch_size),
-    ):
-        # calculate batch scores
-        hs = torch.arange(e, min(e + batch_size, model.num_entities), device=model.device)
-        real_batch_size = hs.shape[0]
-        hr_batch = torch.stack(
-            [
-                hs,
-                hs.new_empty(1).fill_(value=r).repeat(real_batch_size),
-            ],
-            dim=-1,
-        )
-        top_scores = model.predict_t(hr_batch=hr_batch).view(-1)
+        :param k:
+            the number of top-scored triples to collect
+        :param device:
+            the model's device
+        """
+        self.k = k
+        # initialize buffer on device
+        self.result = torch.empty(0, 3, dtype=torch.long, device=device)
+        self.scores = torch.empty(0, device=device)
+
+    def __call__(
+        self,
+        head_id_range: Tuple[int, int],
+        relation_id: int,
+        hr_batch: torch.LongTensor,
+        scores: torch.FloatTensor,
+    ) -> None:  # noqa: D102
+        batch_size, num_entities = scores.shape
+
+        # reshape, shape: (batch_size * num_entities,)
+        top_scores = scores.view(-1)
 
         # get top scores within batch
-        if top_scores.numel() >= k:
-            top_scores, top_indices = top_scores.topk(k=min(k, batch_size), largest=True, sorted=False)
-            top_heads, top_tails = top_indices // model.num_entities, top_indices % model.num_entities
-        else:
-            top_heads = hs.view(-1, 1).repeat(1, model.num_entities).view(-1)
-            top_tails = (
-                torch.arange(model.num_entities, device=hs.device).view(1, -1).repeat(real_batch_size, 1).view(-1)
+        if top_scores.numel() >= self.k:
+            top_scores, top_indices = top_scores.topk(
+                k=min(self.k, top_scores.numel()),
+                largest=True,
+                sorted=False,
             )
+            h_start = head_id_range[0]
+            top_heads = h_start + torch.div(top_indices, num_entities, rounding_mode="trunc")
+            top_tails = top_indices % num_entities
+        else:
+            top_heads = hr_batch[:, 0].view(-1, 1).repeat(1, num_entities).view(-1)
+            top_tails = torch.arange(num_entities, device=hr_batch.device).view(1, -1).repeat(batch_size, 1).view(-1)
 
         top_triples = torch.stack(
             [
                 top_heads,
-                top_heads.new_empty(top_heads.shape).fill_(value=r),
+                top_heads.new_full(size=top_heads.shape, fill_value=relation_id, dtype=top_heads.dtype),
                 top_tails,
             ],
             dim=-1,
         )
 
         # append to global top scores
-        scores = torch.cat([scores, top_scores])
-        result = torch.cat([result, top_triples])
+        self.scores = torch.cat([self.scores, top_scores])
+        self.result = torch.cat([self.result, top_triples])
 
         # reduce size if necessary
-        if result.shape[0] > k:
-            scores, indices = scores.topk(k=k, largest=True, sorted=False)
-            result = result[indices]
+        if self.result.shape[0] > self.k:
+            self.scores, indices = self.scores.topk(k=self.k, largest=True, sorted=False)
+            self.result = self.result[indices]
 
-    return _build_pack(result=result, scores=scores)
+
+class _AllConsumer(_ScoreConsumer):
+    """Collect scores for all triples."""
+
+    flatten = True
+
+    def __init__(self, num_entities: int, num_relations: int) -> None:
+        """
+        Initialize the consumer.
+
+        :param num_entities:
+            the number of entities
+        :param num_relations:
+            the number of relations
+        """
+        assert num_entities**2 * num_relations < (2**63 - 1)
+        # initialize buffer on cpu
+        self.scores = torch.empty(num_relations, num_entities, num_entities, device="cpu")
+        # Explicitly create triples
+        self.result = torch.stack(
+            [
+                torch.arange(num_relations).view(-1, 1, 1).repeat(1, num_entities, num_entities),
+                torch.arange(num_entities).view(1, -1, 1).repeat(num_relations, 1, num_entities),
+                torch.arange(num_entities).view(1, 1, -1).repeat(num_relations, num_entities, 1),
+            ],
+            dim=-1,
+        ).view(-1, 3)[:, [1, 0, 2]]
+
+    def __call__(
+        self,
+        head_id_range: Tuple[int, int],
+        relation_id: int,
+        hr_batch: torch.LongTensor,
+        scores: torch.FloatTensor,
+    ) -> None:  # noqa: D102
+        h_start, h_stop = head_id_range
+        self.scores[relation_id, h_start:h_stop, :] = scores.to(self.scores.device)
+
+
+@torch.inference_mode()
+def _consume_scores(
+    model: Model, *consumers: _ScoreConsumer, batch_size: int = 1, mode: Optional[InductiveMode]
+) -> None:
+    """
+    Batch-wise calculation of all triple scores and consumption.
+
+    :param model:
+        the model, will be set to evaluation mode
+    :param consumers:
+        the consumers of score batches
+    :param batch_size:
+        the batch size to use  # TODO: automatic batch size maximization
+    :param mode:
+        The pass mode, which is None in the transductive setting and one of "training",
+        "validation", or "testing" in the inductive setting.
+    """
+    # TODO: in the future, we may want to expose this method
+    # set model to evaluation mode
+    model.eval()
+
+    for r, h_start in tqdm(
+        itt.product(
+            range(model.num_real_relations),
+            range(0, model.num_entities, batch_size),
+        ),
+        desc="scoring",
+        unit="batch",
+        unit_scale=True,
+        total=model.num_relations * model.num_entities // batch_size,
+    ):
+        # calculate batch scores
+        h_stop = min(h_start + batch_size, model.num_entities)
+        hs = torch.arange(h_start, h_stop, device=model.device)
+        hr_batch = torch.stack(
+            [
+                hs,
+                hs.new_full(size=(hs.shape[0],), fill_value=r),
+            ],
+            dim=-1,
+        )
+        scores = model.predict_t(hr_batch=hr_batch, mode=mode)
+        for consumer in consumers:
+            consumer(head_id_range=(h_start, h_stop), relation_id=r, hr_batch=hr_batch, scores=scores)
+
+
+@torch.inference_mode()
+def _predict_all(model: Model, *, batch_size: int = 1, mode: Optional[InductiveMode]) -> ScorePack:
+    """Compute and store scores for all triples.
+
+    :param model: A PyKEEN model
+    :param batch_size: The batch size to use for calculating scores
+    :param mode:
+        The pass mode, which is None in the transductive setting and one of "training",
+        "validation", or "testing" in the inductive setting.
+    :return: A score pack of parallel triples and scores
+    """
+    consumer = _AllConsumer(num_entities=model.num_entities, num_relations=model.num_relations)
+    _consume_scores(model, consumer, batch_size=batch_size, mode=mode)
+    return consumer.finalize()
+
+
+@torch.inference_mode()
+def _predict_k(model: Model, *, k: int, batch_size: int = 1, mode: Optional[InductiveMode]) -> ScorePack:
+    """Compute and store scores for the top k-scoring triples.
+
+    :param model: A PyKEEN model
+    :param k: The number of triples to return
+    :param batch_size: The batch size to use for calculating scores
+    :param mode:
+        The pass mode, which is None in the transductive setting and one of "training",
+        "validation", or "testing" in the inductive setting.
+    :return: A score pack of parallel triples and scores
+    """
+    consumer = _TopKScoreConsumer(k=k, device=model.device)
+    _consume_scores(model, consumer, batch_size=batch_size, mode=mode)
+    return consumer.finalize()
 
 
 def _build_pack(result: torch.LongTensor, scores: torch.FloatTensor, flatten: bool = False) -> ScorePack:
@@ -509,7 +632,7 @@ def get_novelty_all_mask(
     query: np.ndarray,
 ) -> np.ndarray:
     """Get novelty mask."""
-    known = {tuple(triple) for triple in mapped_triples.tolist()}
+    known = triple_tensor_to_set(mapped_triples)
     return np.asarray(
         [tuple(triple) not in known for triple in query],
         dtype=bool,
@@ -535,15 +658,19 @@ def _predict_triples(
     model: Model,
     mapped_triples: MappedTriples,
     batch_size: Optional[int] = None,
+    *,
+    mode: Optional[InductiveMode],
 ) -> torch.FloatTensor:
     """Predict scores for triples while dealing with reducing batch size for CUDA OOM."""
     # base case: infer maximum batch size
     if batch_size is None:
-        return _predict_triples(model=model, mapped_triples=mapped_triples, batch_size=mapped_triples.shape[0])
+        return _predict_triples(
+            model=model, mapped_triples=mapped_triples, batch_size=mapped_triples.shape[0], mode=mode
+        )
 
     # base case: single batch
     if batch_size >= mapped_triples.shape[0]:
-        return model.predict_hrt(hrt_batch=mapped_triples)
+        return model.predict_hrt(hrt_batch=mapped_triples, mode=mode)
 
     if batch_size <= 0:
         # TODO: this could happen because of AMO
@@ -552,7 +679,7 @@ def _predict_triples(
     try:
         return torch.cat(
             [
-                model.predict_hrt(hrt_batch=hrt_batch)
+                model.predict_hrt(hrt_batch=hrt_batch, mode=mode)
                 for hrt_batch in mapped_triples.split(split_size=batch_size, dim=0)
             ],
             dim=0,
@@ -572,19 +699,10 @@ def predict_triples_df(
     triples: Union[None, MappedTriples, LabeledTriples, Union[Tuple[str, str, str], Sequence[Tuple[str, str, str]]]],
     triples_factory: Optional[CoreTriplesFactory] = None,
     batch_size: Optional[int] = None,
+    mode: Optional[InductiveMode] = None,
 ) -> pd.DataFrame:
     """
     Predict on labeled or mapped triples.
-
-    Example:
-    >>> from pykeen.pipeline import pipeline
-    >>> result = pipeline(dataset="nations", model="TransE")
-    >>> from pykeen.models.predict import predict_triples_df
-    >>> df = predict_triples_df(
-    ...     model=result.model,
-    ...     triples=("uk", "conferences", "brazil"),
-    ...     triples_factory=result.training,
-    ... )
 
     :param model:
         The model.
@@ -602,12 +720,26 @@ def predict_triples_df(
         to result.
     :param batch_size:
         The batch size to use. Use None for automatic memory optimization.
+    :param mode:
+        The pass mode, which is None in the transductive setting and one of "training",
+        "validation", or "testing" in the inductive setting.
 
     :return: columns: head_id | relation_id | tail_id | score | *
         A dataframe with one row per triple.
 
     :raises ValueError:
         If label-based triples have been provided, but the triples factory does not provide a mapping.
+
+    The TransE model can be trained and used to predict a given triple.
+
+    >>> from pykeen.pipeline import pipeline
+    >>> result = pipeline(dataset="nations", model="TransE")
+    >>> from pykeen.models.predict import predict_triples_df
+    >>> df = predict_triples_df(
+    ...     model=result.model,
+    ...     triples=("uk", "conferences", "brazil"),
+    ...     triples_factory=result.training,
+    ... )
     """
     if triples is None:
         if triples_factory is None:
@@ -630,7 +762,7 @@ def predict_triples_df(
 
     assert torch.is_tensor(triples) and triples.dtype == torch.long
 
-    scores = _predict_triples(model=model, mapped_triples=triples, batch_size=batch_size).squeeze(dim=1)
+    scores = _predict_triples(model=model, mapped_triples=triples, batch_size=batch_size, mode=mode).squeeze(dim=1)
 
     if triples_factory is None:
         return tensor_to_df(tensor=triples, score=scores)

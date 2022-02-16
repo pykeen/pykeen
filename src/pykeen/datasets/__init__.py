@@ -12,7 +12,7 @@ import pathlib
 from textwrap import dedent
 from typing import Any, Mapping, Optional, Type, Union
 
-from class_resolver import Resolver
+from class_resolver import ClassResolver
 
 from .base import (  # noqa:F401
     Dataset,
@@ -40,6 +40,7 @@ from .kinships import Kinships
 from .nations import Nations
 from .ogb import OGBBioKG, OGBWikiKG
 from .openbiolink import OpenBioLink, OpenBioLinkLQ
+from .openea import OpenEA
 from .umls import UMLS
 from .wd50k import WD50KT
 from .wikidata5m import Wikidata5M
@@ -74,6 +75,7 @@ __all__ = [
     "CSKG",
     "DBpedia50",
     "DB100K",
+    "OpenEA",
     "Countries",
     "WD50KT",
     "Wikidata5M",
@@ -85,7 +87,7 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-dataset_resolver = Resolver.from_entrypoint(group="pykeen.datasets", base=Dataset)
+dataset_resolver = ClassResolver.from_entrypoint(group="pykeen.datasets", base=Dataset)
 if not dataset_resolver.lookup_dict:
     raise RuntimeError(
         dedent(

@@ -4,341 +4,198 @@
 
 import itertools as itt
 import logging
-import re
+import math
+import random
 from collections import defaultdict
-from dataclasses import dataclass, field, fields
-from typing import DefaultDict, Dict, Iterable, List, NamedTuple, Optional, Sequence, Tuple, Union
+from typing import DefaultDict, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Union, cast
 
 import numpy as np
 import pandas as pd
 import torch
-from dataclasses_json import dataclass_json
-from scipy import stats
 
-from .evaluator import Evaluator, MetricResults
-from ..typing import MappedTriples
-from ..utils import fix_dataclass_init_docs
+from .evaluator import Evaluator, MetricResults, prepare_filter_triples
+from .metrics import (
+    ADJUSTED_ARITHMETIC_MEAN_RANK,
+    ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX,
+    ARITHMETIC_MEAN_RANK,
+    GEOMETRIC_MEAN_RANK,
+    HARMONIC_MEAN_RANK,
+    INVERSE_ARITHMETIC_MEAN_RANK,
+    INVERSE_GEOMETRIC_MEAN_RANK,
+    INVERSE_HARMONIC_MEAN_RANK,
+    INVERSE_MEDIAN_RANK,
+    MEDIAN_RANK,
+    RANK_COUNT,
+    RANK_MAD,
+    RANK_STD,
+    RANK_VARIANCE,
+    MetricKey,
+    get_ranking_metrics,
+)
+from .ranks import Ranks
+from .utils import MetricAnnotation, ValueRange
+from ..triples.triples_factory import CoreTriplesFactory
+from ..typing import (
+    EXPECTED_RANKS,
+    LABEL_HEAD,
+    LABEL_RELATION,
+    LABEL_TAIL,
+    RANK_TYPES,
+    SIDE_BOTH,
+    SIDES,
+    ExtendedRankType,
+    ExtendedTarget,
+    MappedTriples,
+    RankType,
+    Target,
+)
 
 __all__ = [
-    "compute_rank_from_scores",
     "RankBasedEvaluator",
     "RankBasedMetricResults",
-    "MetricKey",
-    "resolve_metric_name",
 ]
 
 logger = logging.getLogger(__name__)
 
-SIDE_HEAD = "head"
-SIDE_TAIL = "tail"
-SIDE_BOTH = "both"
-SIDES = {SIDE_HEAD, SIDE_TAIL, SIDE_BOTH}
-
-RANK_OPTIMISTIC = "optimistic"
-RANK_PESSIMISTIC = "pessimistic"
-RANK_REALISTIC = "realistic"
-RANK_TYPES = {RANK_OPTIMISTIC, RANK_PESSIMISTIC, RANK_REALISTIC}
-
-RANK_EXPECTED_REALISTIC = "expected_realistic"
-EXPECTED_RANKS = {
-    RANK_REALISTIC: RANK_EXPECTED_REALISTIC,
-    RANK_OPTIMISTIC: None,  # TODO - research problem
-    RANK_PESSIMISTIC: None,  # TODO - research problem
-}
-
-ARITHMETIC_MEAN_RANK = "arithmetic_mean_rank"  # also known as mean rank (MR)
-GEOMETRIC_MEAN_RANK = "geometric_mean_rank"
-HARMONIC_MEAN_RANK = "harmonic_mean_rank"
-MEDIAN_RANK = "median_rank"
-INVERSE_ARITHMETIC_MEAN_RANK = "inverse_arithmetic_mean_rank"
-INVERSE_GEOMETRIC_MEAN_RANK = "inverse_geometric_mean_rank"
-INVERSE_HARMONIC_MEAN_RANK = "inverse_harmonic_mean_rank"  # also known as mean reciprocal rank (MRR)
-INVERSE_MEDIAN_RANK = "inverse_median_rank"
-
-RANK_STD = "rank_std"
-RANK_VARIANCE = "rank_var"
-RANK_MAD = "rank_mad"
-
-all_type_funcs = {
-    ARITHMETIC_MEAN_RANK: np.mean,  # This is MR
-    HARMONIC_MEAN_RANK: stats.hmean,
-    GEOMETRIC_MEAN_RANK: stats.gmean,
-    MEDIAN_RANK: np.median,
-    INVERSE_ARITHMETIC_MEAN_RANK: lambda x: np.reciprocal(np.mean(x)),
-    INVERSE_GEOMETRIC_MEAN_RANK: lambda x: np.reciprocal(stats.gmean(x)),
-    INVERSE_HARMONIC_MEAN_RANK: lambda x: np.reciprocal(stats.hmean(x)),  # This is MRR
-    INVERSE_MEDIAN_RANK: lambda x: np.reciprocal(np.median(x)),
-    # Extra stats stuff
-    RANK_STD: np.std,
-    RANK_VARIANCE: np.var,
-    RANK_MAD: stats.median_abs_deviation,
-}
-
-ADJUSTED_ARITHMETIC_MEAN_RANK = "adjusted_arithmetic_mean_rank"
-ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX = "adjusted_arithmetic_mean_rank_index"
-TYPES_REALISTIC_ONLY = {ADJUSTED_ARITHMETIC_MEAN_RANK, ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX}
-
-METRIC_SYNONYMS = {
-    "adjusted_mean_rank": ADJUSTED_ARITHMETIC_MEAN_RANK,
-    "adjusted_mean_rank_index": ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX,
-    "amr": ADJUSTED_ARITHMETIC_MEAN_RANK,
-    "aamr": ADJUSTED_ARITHMETIC_MEAN_RANK,
-    "amri": ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX,
-    "aamri": ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX,
-    "igmr": INVERSE_GEOMETRIC_MEAN_RANK,
-    "iamr": INVERSE_ARITHMETIC_MEAN_RANK,
-    "mr": ARITHMETIC_MEAN_RANK,
-    "mean_rank": ARITHMETIC_MEAN_RANK,
-    "mrr": INVERSE_HARMONIC_MEAN_RANK,
-    "mean_reciprocal_rank": INVERSE_HARMONIC_MEAN_RANK,
-}
-
-
-class MetricKey(NamedTuple):
-    """A key for the kind of metric to resolve."""
-
-    name: str
-    side: str
-    rank_type: str
-    k: Optional[int]
-
-    def __str__(self) -> str:  # noqa: D105
-        components = [self.name, self.side, self.rank_type]
-        if self.k:
-            components.append(str(self.k))
-        return ".".join(components)
-
-
-def compute_rank_from_scores(
-    true_score: torch.FloatTensor,
-    all_scores: torch.FloatTensor,
-) -> Dict[str, torch.FloatTensor]:
-    """Compute rank and adjusted rank given scores.
-
-    :param true_score: torch.Tensor, shape: (batch_size, 1)
-        The score of the true triple.
-    :param all_scores: torch.Tensor, shape: (batch_size, num_entities)
-        The scores of all corrupted triples (including the true triple).
-    :return: a dictionary
-        {
-            'optimistic': optimistic_rank,
-            'pessimistic': pessimistic_rank,
-            'realistic': realistic_rank,
-            'expected_realistic': expected_realistic_rank,
-        }
-
-        where
-
-        optimistic_rank: shape: (batch_size,)
-            The optimistic rank is the rank when assuming all options with an equal score are placed behind the current
-            test triple.
-        pessimistic_rank:
-            The pessimistic rank is the rank when assuming all options with an equal score are placed in front of
-            current test triple.
-        realistic_rank:
-            The realistic rank is the average of the optimistic and pessimistic rank, and hence the expected rank
-            over all permutations of the elements with the same score as the currently considered option.
-        expected_realistic_rank: shape: (batch_size,)
-            The expected rank a random scoring would achieve, which is (#number_of_options + 1)/2
-    """
-    # The optimistic rank is the rank when assuming all options with an equal score are placed behind the currently
-    # considered. Hence, the rank is the number of options with better scores, plus one, as the rank is one-based.
-    optimistic_rank = (all_scores > true_score).sum(dim=1) + 1
-
-    # The pessimistic rank is the rank when assuming all options with an equal score are placed in front of the
-    # currently considered. Hence, the rank is the number of options which have at least the same score minus one
-    # (as the currently considered option in included in all options). As the rank is one-based, we have to add 1,
-    # which nullifies the "minus 1" from before.
-    pessimistic_rank = (all_scores >= true_score).sum(dim=1)
-
-    # The realistic rank is the average of the optimistic and pessimistic rank, and hence the expected rank over
-    # all permutations of the elements with the same score as the currently considered option.
-    realistic_rank = (optimistic_rank + pessimistic_rank).float() * 0.5
-
-    # We set values which should be ignored to NaN, hence the number of options which should be considered is given by
-    number_of_options = torch.isfinite(all_scores).sum(dim=1).float()
-
-    # The expected rank of a random scoring
-    expected_realistic_rank = 0.5 * (number_of_options + 1)
-
-    return {
-        RANK_OPTIMISTIC: optimistic_rank,
-        RANK_PESSIMISTIC: pessimistic_rank,
-        RANK_REALISTIC: realistic_rank,
-        RANK_EXPECTED_REALISTIC: expected_realistic_rank,
-    }
-
-
-RANK_TYPE_SYNONYMS = {
-    "best": RANK_OPTIMISTIC,
-    "worst": RANK_PESSIMISTIC,
-    "avg": RANK_REALISTIC,
-    "average": RANK_REALISTIC,
-}
-
-_SIDE_PATTERN = "|".join(SIDES)
-_TYPE_PATTERN = "|".join(itt.chain(RANK_TYPES, RANK_TYPE_SYNONYMS.keys()))
-METRIC_PATTERN = re.compile(
-    rf"(?P<name>[\w@]+)(\.(?P<side>{_SIDE_PATTERN}))?(\.(?P<type>{_TYPE_PATTERN}))?(\.(?P<k>\d+))?",
+RANKING_METRICS: Mapping[str, MetricAnnotation] = dict(
+    arithmetic_mean_rank=MetricAnnotation(
+        name="Mean Rank (MR)",
+        increasing=False,
+        value_range=ValueRange(lower=1.0, upper=None, lower_inclusive=True),
+        description="The arithmetic mean over all ranks.",
+        link="https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#mean-rank",
+    ),
+    geometric_mean_rank=MetricAnnotation(
+        name="Geometric Mean Rank (GMR)",
+        increasing=False,
+        value_range=ValueRange(lower=1.0, upper=None, lower_inclusive=True),
+        description="The geometric mean over all ranks.",
+        link="https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html",
+    ),
+    median_rank=MetricAnnotation(
+        name="Median Rank",
+        increasing=False,
+        value_range=ValueRange(lower=1.0, upper=None, lower_inclusive=True),
+        description="The median over all ranks.",
+        link="https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html",
+    ),
+    harmonic_mean_rank=MetricAnnotation(
+        name="Harmonic Mean Rank (HMR)",
+        increasing=False,
+        value_range=ValueRange(lower=1.0, upper=None, lower_inclusive=True),
+        description="The harmonic mean over all ranks.",
+        link="https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html",
+    ),
+    inverse_arithmetic_mean_rank=MetricAnnotation(
+        name="Inverse Arithmetic Mean Rank (IAMR)",
+        increasing=True,
+        value_range=ValueRange(
+            lower=0.0,
+            upper=1.0,
+            lower_inclusive=False,
+            upper_inclusive=True,
+        ),
+        description="The inverse of the arithmetic mean over all ranks.",
+        link="https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html",
+    ),
+    inverse_geometric_mean_rank=MetricAnnotation(
+        name="Inverse Geometric Mean Rank (IGMR)",
+        increasing=True,
+        value_range=ValueRange(
+            lower=0.0,
+            upper=1.0,
+            lower_inclusive=False,
+            upper_inclusive=True,
+        ),
+        description="The inverse of the geometric mean over all ranks.",
+        link="https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html",
+    ),
+    inverse_harmonic_mean_rank=MetricAnnotation(
+        name="Mean Reciprocal Rank (MRR)",
+        increasing=True,
+        value_range=ValueRange(
+            lower=0.0,
+            upper=1.0,
+            lower_inclusive=False,
+            upper_inclusive=True,
+        ),
+        description="The inverse of the harmonic mean over all ranks.",
+        link="https://en.wikipedia.org/wiki/Mean_reciprocal_rank",
+    ),
+    inverse_median_rank=MetricAnnotation(
+        name="Inverse Median Rank",
+        increasing=True,
+        value_range=ValueRange(
+            lower=0.0,
+            upper=1.0,
+            lower_inclusive=False,
+            upper_inclusive=True,
+        ),
+        description="The inverse of the median over all ranks.",
+        link="https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html",
+    ),
+    rank_count=MetricAnnotation(
+        name="Rank Count",
+        increasing=True,  # TODO check
+        description="The number of considered ranks, a non-negative number. "
+        "Low numbers may indicate unreliable results.",
+        value_range=ValueRange(lower=1.0, upper=None, lower_inclusive=True),
+        link="https://pykeen.readthedocs.io/en/stable/reference/evaluation.html",
+    ),
+    rank_std=MetricAnnotation(
+        name="Rank Standard Deviation",
+        value_range=ValueRange(lower=0.0, upper=None, lower_inclusive=True),
+        increasing=False,
+        description="The standard deviation over all ranks.",
+        link="https://pykeen.readthedocs.io/en/stable/reference/evaluation.html",
+    ),
+    rank_var=MetricAnnotation(
+        name="Rank Variance",
+        value_range=ValueRange(lower=0.0, upper=None, lower_inclusive=True),
+        increasing=False,
+        description="The variance over all ranks.",
+        link="https://pykeen.readthedocs.io/en/stable/reference/evaluation.html",
+    ),
+    rank_mad=MetricAnnotation(
+        name="Rank Median Absolute Deviation",
+        increasing=False,
+        value_range=ValueRange(lower=0.0, upper=None, lower_inclusive=True),
+        description="The median absolute deviation over all ranks.",
+        link="https://pykeen.readthedocs.io/en/stable/reference/evaluation.html",
+    ),
+    hits_at_k=MetricAnnotation(
+        name="Hits @ K",
+        value_range=ValueRange(lower=0.0, upper=1.0, lower_inclusive=True, upper_inclusive=True),
+        increasing=True,
+        description="The relative frequency of ranks not larger than a given k.",
+        link="https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#hits-k",
+    ),
+    adjusted_arithmetic_mean_rank=MetricAnnotation(
+        name="Adjusted Arithmetic Mean Rank (AAMR)",
+        increasing=False,
+        value_range=ValueRange(lower=0.0, upper=2.0, lower_inclusive=False, upper_inclusive=False),
+        description="The mean over all chance-adjusted ranks.",
+        link="https://arxiv.org/abs/2002.06914",
+    ),
+    adjusted_arithmetic_mean_rank_index=MetricAnnotation(
+        name="Adjusted Arithmetic Mean Rank Index (AAMRI)",
+        increasing=True,
+        value_range=ValueRange(lower=-1, upper=1.0, lower_inclusive=True, upper_inclusive=True),
+        description="The re-indexed adjusted mean rank (AAMR)",
+        link="https://arxiv.org/abs/2002.06914",
+    ),
 )
-HITS_PATTERN = re.compile(r"(hits_at_|hits@|h@)(?P<k>\d+)")
 
 
-def resolve_metric_name(name: str) -> MetricKey:
-    """Functional metric name normalization."""
-    match = METRIC_PATTERN.match(name)
-    if not match:
-        raise ValueError(f"Invalid metric name: {name}")
-    k: Union[None, str, int]
-    name, side, rank_type, k = [match.group(key) for key in ("name", "side", "type", "k")]
-
-    # normalize metric name
-    if not name:
-        raise ValueError("A metric name must be provided.")
-    # handle spaces and case
-    name = name.lower().replace(" ", "_")
-
-    # special case for hits_at_k
-    match = HITS_PATTERN.match(name)
-    if match:
-        name = "hits_at_k"
-        k = match.group("k")
-    if name == "hits_at_k":
-        if k is None:
-            k = 10
-        # TODO: Fractional?
-        try:
-            k = int(k)
-        except ValueError as error:
-            raise ValueError(f"Invalid k={k} for hits_at_k") from error
-        if k < 0:
-            raise ValueError(f"For hits_at_k, you must provide a positive value of k, but found {k}.")
-    assert k is None or isinstance(k, int)
-
-    # synonym normalization
-    name = METRIC_SYNONYMS.get(name, name)
-
-    # normalize side
-    side = side or SIDE_BOTH
-    side = side.lower()
-    if side not in SIDES:
-        raise ValueError(f"Invalid side: {side}. Allowed are {SIDES}.")
-
-    # normalize rank type
-    rank_type = rank_type or RANK_REALISTIC
-    rank_type = rank_type.lower()
-    rank_type = RANK_TYPE_SYNONYMS.get(rank_type, rank_type)
-    if rank_type not in RANK_TYPES:
-        raise ValueError(f"Invalid rank type: {rank_type}. Allowed are {RANK_TYPES}.")
-    elif rank_type != RANK_REALISTIC and name in TYPES_REALISTIC_ONLY:
-        raise ValueError(f"Invalid rank type for {name}: {rank_type}. Allowed type: {RANK_REALISTIC}")
-
-    return MetricKey(name, side, rank_type, k)
-
-
-@fix_dataclass_init_docs
-@dataclass_json
-@dataclass
 class RankBasedMetricResults(MetricResults):
     """Results from computing metrics."""
 
-    arithmetic_mean_rank: Dict[str, Dict[str, float]] = field(
-        metadata=dict(
-            name="Mean Rank (MR)",
-            doc="The arithmetic mean over all ranks on, [1, inf). Lower is better.",
-        )
-    )
+    metrics = RANKING_METRICS
 
-    geometric_mean_rank: Dict[str, Dict[str, float]] = field(
-        metadata=dict(
-            name="Geometric Mean Rank (GMR)",
-            doc="The geometric mean over all ranks, on [1, inf). Lower is better.",
-        )
-    )
-
-    median_rank: Dict[str, Dict[str, float]] = field(
-        metadata=dict(
-            name="Median Rank",
-            doc="The median over all ranks, on [1, inf). Lower is better.",
-        )
-    )
-
-    harmonic_mean_rank: Dict[str, Dict[str, float]] = field(
-        metadata=dict(
-            name="Harmonic Mean Rank (HMR)",
-            doc="The harmonic mean over all ranks, on [1, inf). Lower is better.",
-        )
-    )
-
-    inverse_arithmetic_mean_rank: Dict[str, Dict[str, float]] = field(
-        metadata=dict(
-            name="Inverse Arithmetic Mean Rank (IAMR)",
-            doc="The inverse of the arithmetic mean over all ranks, on (0, 1]. Higher is better.",
-        )
-    )
-
-    inverse_geometric_mean_rank: Dict[str, Dict[str, float]] = field(
-        metadata=dict(
-            name="Inverse Geometric Mean Rank (IGMR)",
-            doc="The inverse of the geometric mean over all ranks, on (0, 1]. Higher is better.",
-        )
-    )
-
-    inverse_harmonic_mean_rank: Dict[str, Dict[str, float]] = field(
-        metadata=dict(
-            name="Mean Reciprocal Rank (MRR)",
-            doc="The inverse of the harmonic mean over all ranks, on (0, 1]. Higher is better.",
-        )
-    )
-
-    inverse_median_rank: Dict[str, Dict[str, float]] = field(
-        metadata=dict(
-            name="Inverse Median Rank",
-            doc="The inverse of the median over all ranks, on (0, 1]. Higher is better.",
-        )
-    )
-
-    rank_std: Dict[str, Dict[str, float]] = field(
-        metadata=dict(
-            name="Rank Standard Deviation",
-            doc="The standard deviation over all ranks on, [0, inf). Lower is better.",
-        )
-    )
-
-    rank_var: Dict[str, Dict[str, float]] = field(
-        metadata=dict(
-            name="Rank Variance",
-            doc="The variance over all ranks on, [0, inf). Lower is better.",
-        )
-    )
-
-    rank_mad: Dict[str, Dict[str, float]] = field(
-        metadata=dict(
-            name="Rank Median Absolute Deviation",
-            doc="The median absolute deviation over all ranks on, [0, inf). Lower is better.",
-        )
-    )
-
-    hits_at_k: Dict[str, Dict[str, Dict[Union[int, float], float]]] = field(
-        metadata=dict(
-            name="Hits @ K",
-            doc="The relative frequency of ranks not larger than a given k, on [0, 1]. Higher is better",
-        )
-    )
-
-    adjusted_arithmetic_mean_rank: Dict[str, Dict[str, float]] = field(
-        metadata=dict(
-            name="Adjusted Arithmetic Mean Rank (AAMR)",
-            doc="The mean over all chance-adjusted ranks, on (0, 2). Lower is better.",
-        )
-    )
-
-    adjusted_arithmetic_mean_rank_index: Dict[str, Dict[str, float]] = field(
-        metadata=dict(
-            name="Adjusted Arithmetic Mean Rank Index (AAMRI)",
-            doc="The re-indexed adjusted mean rank (AAMR), on [-1, 1]. Higher is better.",
-        )
-    )
+    @classmethod
+    def from_dict(cls, **kwargs):
+        """Create an instance from kwargs."""
+        return cls(kwargs)
 
     def get_metric(self, name: str) -> float:
         """Get the rank-based metric.
@@ -382,11 +239,13 @@ class RankBasedMetricResults(MetricResults):
 
         >>> metric_results.get('hits@5')
         """
-        metric, side, rank_type, k = resolve_metric_name(name)
-        if not metric.startswith("hits"):
-            return getattr(self, metric)[side][rank_type]
-        assert k is not None
-        return self.hits_at_k[side][rank_type][k]
+        return self._get_metric(MetricKey.lookup(name))
+
+    def _get_metric(self, metric_key: MetricKey) -> float:
+        if not metric_key.name.startswith("hits"):
+            return self.data[metric_key.name][metric_key.side][metric_key.rank_type]
+        assert metric_key.k is not None
+        return self.data["hits_at_k"][metric_key.side][metric_key.rank_type][metric_key.k]
 
     def to_flat_dict(self):  # noqa: D102
         return {f"{side}.{rank_type}.{metric_name}": value for side, rank_type, metric_name, value in self._iter_rows()}
@@ -395,16 +254,15 @@ class RankBasedMetricResults(MetricResults):
         """Output the metrics as a pandas dataframe."""
         return pd.DataFrame(list(self._iter_rows()), columns=["Side", "Type", "Metric", "Value"])
 
-    def _iter_rows(self) -> Iterable[Tuple[str, str, str, float]]:
+    def _iter_rows(self) -> Iterable[Tuple[ExtendedTarget, RankType, str, Union[float, int]]]:
         for side, rank_type in itt.product(SIDES, RANK_TYPES):
-            for k, v in self.hits_at_k[side][rank_type].items():
+            for k, v in self.data["hits_at_k"][side][rank_type].items():
                 yield side, rank_type, f"hits_at_{k}", v
-            for f in fields(self):
-                if f.name == "hits_at_k":
+            for name, side_data in self.data.items():
+                if name == "hits_at_k":
                     continue
-                side_data = getattr(self, f.name)[side]
                 if rank_type in side_data:
-                    yield side, rank_type, f.name, side_data[rank_type]
+                    yield side, rank_type, name, side_data[rank_type]
 
 
 class RankBasedEvaluator(Evaluator):
@@ -424,6 +282,8 @@ class RankBasedEvaluator(Evaluator):
     """
 
     ks: Sequence[Union[int, float]]
+    num_entities: Optional[int]
+    ranks: Dict[Tuple[Target, ExtendedRankType], List[float]]
 
     def __init__(
         self,
@@ -451,51 +311,35 @@ class RankBasedEvaluator(Evaluator):
                 raise ValueError(
                     "If k is a float, it should represent a relative rank, i.e. a value between 0 and 1 (excl.)",
                 )
-        self.ranks: Dict[Tuple[str, str], List[float]] = defaultdict(list)
+        self.ranks = defaultdict(list)
         self.num_entities = None
 
-    def _update_ranks_(
+    def process_scores_(
         self,
-        true_scores: torch.FloatTensor,
-        all_scores: torch.FloatTensor,
-        side: str,
-    ) -> None:
-        """Shared code for updating the stored ranks for head/tail scores.
+        hrt_batch: MappedTriples,
+        target: Target,
+        scores: torch.FloatTensor,
+        true_scores: Optional[torch.FloatTensor] = None,
+        dense_positive_mask: Optional[torch.FloatTensor] = None,
+    ) -> None:  # noqa: D102
+        if true_scores is None:
+            raise ValueError(f"{self.__class__.__name__} needs the true scores!")
 
-        :param true_scores: shape: (batch_size,)
-        :param all_scores: shape: (batch_size, num_entities)
-        """
-        batch_ranks = compute_rank_from_scores(
+        batch_ranks = Ranks.from_scores(
             true_score=true_scores,
-            all_scores=all_scores,
+            all_scores=scores,
         )
-        self.num_entities = all_scores.shape[1]
-        for k, v in batch_ranks.items():
-            self.ranks[side, k].extend(v.detach().cpu().tolist())
+        self.num_entities = scores.shape[1]
+        for rank_type, v in batch_ranks.items():
+            self.ranks[target, rank_type].extend(v.detach().cpu().tolist())
 
-    def process_tail_scores_(
-        self,
-        hrt_batch: MappedTriples,
-        true_scores: torch.FloatTensor,
-        scores: torch.FloatTensor,
-        dense_positive_mask: Optional[torch.FloatTensor] = None,
-    ) -> None:  # noqa: D102
-        self._update_ranks_(true_scores=true_scores, all_scores=scores, side=SIDE_TAIL)
-
-    def process_head_scores_(
-        self,
-        hrt_batch: MappedTriples,
-        true_scores: torch.FloatTensor,
-        scores: torch.FloatTensor,
-        dense_positive_mask: Optional[torch.FloatTensor] = None,
-    ) -> None:  # noqa: D102
-        self._update_ranks_(true_scores=true_scores, all_scores=scores, side=SIDE_HEAD)
-
-    def _get_ranks(self, side, rank_type) -> np.ndarray:
+    def _get_ranks(self, side: ExtendedTarget, rank_type: ExtendedRankType) -> np.ndarray:
         if side == SIDE_BOTH:
-            values: List[float] = sum((self.ranks.get((_side, rank_type), []) for _side in (SIDE_HEAD, SIDE_TAIL)), [])
+            values: List[float] = sum(
+                (self.ranks.get((_side, rank_type), []) for _side in (LABEL_HEAD, LABEL_TAIL)), []
+            )
         else:
-            values = self.ranks.get((side, rank_type), [])
+            values = self.ranks.get((cast(Target, side), rank_type), [])
         return np.asarray(values, dtype=np.float64)
 
     def finalize(self) -> RankBasedMetricResults:  # noqa: D102
@@ -512,11 +356,11 @@ class RankBasedEvaluator(Evaluator):
             hits_at_k[side][rank_type] = {
                 k: np.mean(ranks <= (k if isinstance(k, int) else int(self.num_entities * k))).item() for k in self.ks
             }
-            for metric_name, metric_func in all_type_funcs.items():
-                asr[metric_name][side][rank_type] = metric_func(ranks).item()
+            for metric_name, metric_value in get_ranking_metrics(ranks).items():
+                asr[metric_name][side][rank_type] = metric_value
 
             expected_rank_type = EXPECTED_RANKS.get(rank_type)
-            if expected_rank_type:
+            if expected_rank_type is not None:
                 expected_ranks = self._get_ranks(side=side, rank_type=expected_rank_type)
                 if 0 < len(expected_ranks):
                     # Adjusted mean rank calculation
@@ -531,7 +375,7 @@ class RankBasedEvaluator(Evaluator):
         # Clear buffers
         self.ranks.clear()
 
-        return RankBasedMetricResults(
+        return RankBasedMetricResults.from_dict(
             arithmetic_mean_rank=dict(asr[ARITHMETIC_MEAN_RANK]),
             geometric_mean_rank=dict(asr[GEOMETRIC_MEAN_RANK]),
             harmonic_mean_rank=dict(asr[HARMONIC_MEAN_RANK]),
@@ -540,6 +384,7 @@ class RankBasedEvaluator(Evaluator):
             inverse_geometric_mean_rank=dict(asr[INVERSE_GEOMETRIC_MEAN_RANK]),
             inverse_harmonic_mean_rank=dict(asr[INVERSE_HARMONIC_MEAN_RANK]),
             inverse_median_rank=dict(asr[INVERSE_MEDIAN_RANK]),
+            rank_count=dict(asr[RANK_COUNT]),  # type: ignore
             rank_std=dict(asr[RANK_STD]),
             rank_mad=dict(asr[RANK_MAD]),
             rank_var=dict(asr[RANK_VARIANCE]),
@@ -547,3 +392,155 @@ class RankBasedEvaluator(Evaluator):
             adjusted_arithmetic_mean_rank_index=dict(asr[ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX]),
             hits_at_k=dict(hits_at_k),
         )
+
+
+def sample_negatives(
+    evaluation_triples: MappedTriples,
+    additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
+    num_samples: int = 50,
+    num_entities: Optional[int] = None,
+) -> Mapping[Target, torch.FloatTensor]:
+    """
+    Sample true negatives for sampled evaluation.
+
+    :param evaluation_triples: shape: (n, 3)
+        the evaluation triples
+    :param additional_filter_triples:
+        additional true triples which are to be filtered
+    :param num_samples: >0
+        the number of samples
+    :param num_entities:
+        the number of entities
+
+    :return:
+        A mapping of sides to negative samples
+    """
+    additional_filter_triples = prepare_filter_triples(
+        mapped_triples=evaluation_triples,
+        additional_filter_triples=additional_filter_triples,
+    )
+    num_entities = num_entities or (additional_filter_triples[:, [0, 2]].max().item() + 1)
+    columns = [LABEL_HEAD, LABEL_RELATION, LABEL_TAIL]
+    num_triples = evaluation_triples.shape[0]
+    df = pd.DataFrame(data=evaluation_triples.numpy(), columns=columns)
+    all_df = pd.DataFrame(data=additional_filter_triples.numpy(), columns=columns)
+    id_df = df.reset_index()
+    all_ids = set(range(num_entities))
+    negatives = {}
+    for side in [LABEL_HEAD, LABEL_TAIL]:
+        this_negatives = cast(torch.FloatTensor, torch.empty(size=(num_triples, num_samples), dtype=torch.long))
+        other = [c for c in columns if c != side]
+        for _, group in pd.merge(id_df, all_df, on=other, suffixes=["_eval", "_all"]).groupby(
+            by=other,
+        ):
+            pool = list(all_ids.difference(group[f"{side}_all"].unique().tolist()))
+            if len(pool) < num_samples:
+                logger.warning(
+                    f"There are less than num_samples={num_samples} candidates for side={side}, triples={group}.",
+                )
+                # repeat
+                pool = int(math.ceil(num_samples / len(pool))) * pool
+            for i in group["index"].unique():
+                this_negatives[i, :] = torch.as_tensor(
+                    data=random.sample(population=pool, k=num_samples),
+                    dtype=torch.long,
+                )
+        negatives[side] = this_negatives
+    return negatives
+
+
+class SampledRankBasedEvaluator(RankBasedEvaluator):
+    """
+    A rank-based evaluator using sampled negatives instead of all negatives, cf. [teru2020]_.
+
+    Notice that this evaluator yields optimistic estimations of the metrics evaluated on all entities,
+    cf. https://arxiv.org/abs/2106.06935.
+    """
+
+    negatives: Mapping[Target, torch.LongTensor]
+
+    def __init__(
+        self,
+        evaluation_factory: CoreTriplesFactory,
+        *,
+        additional_filter_triples: Union[None, MappedTriples, List[MappedTriples]] = None,
+        num_negatives: Optional[int] = None,
+        head_negatives: Optional[torch.LongTensor] = None,
+        tail_negatives: Optional[torch.LongTensor] = None,
+        **kwargs,
+    ):
+        """
+        Initialize the evaluator.
+
+        :param evaluation_factory:
+            the factory with evaluation triples
+        :param head_negatives: shape: (num_triples, num_negatives)
+            the entity IDs of negative samples for head prediction for each evaluation triple
+        :param tail_negatives: shape: (num_triples, num_negatives)
+            the entity IDs of negative samples for tail prediction for each evaluation triple
+        :param kwargs:
+            additional keyword-based arguments passed to RankBasedEvaluator.__init__
+        """
+        super().__init__(**kwargs)
+        if head_negatives is None and tail_negatives is None:
+            # default for inductive LP by [teru2020]
+            num_negatives = num_negatives or 50
+            logger.info(
+                f"Sampling {num_negatives} negatives for each of the "
+                f"{evaluation_factory.num_triples} evaluation triples.",
+            )
+            if num_negatives > evaluation_factory.num_entities:
+                raise ValueError("Cannot use more negative samples than there are entities.")
+            negatives = sample_negatives(
+                evaluation_triples=evaluation_factory.mapped_triples,
+                additional_filter_triples=additional_filter_triples,
+                num_entities=evaluation_factory.num_entities,
+                num_samples=num_negatives,
+            )
+        elif head_negatives is None or tail_negatives is None:
+            raise ValueError("Either both, head and tail negatives must be provided, or none.")
+        else:
+            negatives = {
+                LABEL_HEAD: head_negatives,
+                LABEL_TAIL: tail_negatives,
+            }
+
+        # verify input
+        for side, side_negatives in negatives.items():
+            if side_negatives.shape[0] != evaluation_factory.num_triples:
+                raise ValueError(f"Negatives for {side} are in wrong shape: {side_negatives.shape}")
+        self.triple_to_index = {(h, r, t): i for i, (h, r, t) in enumerate(evaluation_factory.mapped_triples.tolist())}
+        self.negative_samples = negatives
+        self.num_entities = evaluation_factory.num_entities
+
+    def process_scores_(
+        self,
+        hrt_batch: MappedTriples,
+        target: Target,
+        scores: torch.FloatTensor,
+        true_scores: Optional[torch.FloatTensor] = None,
+        dense_positive_mask: Optional[torch.FloatTensor] = None,
+    ) -> None:  # noqa: D102
+        if true_scores is None:
+            raise ValueError(f"{self.__class__.__name__} needs the true scores!")
+
+        num_entities = scores.shape[1]
+        # TODO: do not require to compute all scores beforehand
+        triple_indices = [self.triple_to_index[h, r, t] for h, r, t in hrt_batch.cpu().tolist()]
+        negative_entity_ids = self.negative_samples[target][triple_indices]
+        negative_scores = scores[
+            torch.arange(hrt_batch.shape[0], device=hrt_batch.device).unsqueeze(dim=-1),
+            negative_entity_ids,
+        ]
+        # super.evaluation assumes that the true scores are part of all_scores
+        scores = torch.cat([true_scores, negative_scores], dim=-1)
+        super().process_scores_(
+            hrt_batch=hrt_batch,
+            target=target,
+            scores=scores,
+            true_scores=true_scores,
+            dense_positive_mask=dense_positive_mask,
+        )
+        # write back correct num_entities
+        # TODO: should we give num_entities in the constructor instead of inferring it every time ranks are processed?
+        self.num_entities = num_entities

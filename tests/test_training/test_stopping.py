@@ -9,12 +9,12 @@ import torch
 from torch import optim
 
 from pykeen.datasets import Nations
-from pykeen.models import Model
+from pykeen.models import FixedModel, Model
 from pykeen.stoppers.early_stopping import EarlyStopper
 from pykeen.training import SLCWATrainingLoop
 from pykeen.triples import TriplesFactory
 from pykeen.typing import MappedTriples
-from tests.mocks import MockEvaluator, MockModel
+from tests.mocks import MockEvaluator
 
 
 class DummyTrainingLoop(SLCWATrainingLoop):
@@ -78,7 +78,7 @@ class TestTrainingEarlyStopping(unittest.TestCase):
         # Set automatic_memory_optimization to false for tests
         self.mock_evaluator = MockEvaluator(self.mock_losses, automatic_memory_optimization=False)
         self.triples_factory = Nations()
-        self.model = MockModel(triples_factory=self.triples_factory.training)
+        self.model = FixedModel(triples_factory=self.triples_factory.training)
         self.stopper = EarlyStopper(
             model=self.model,
             evaluator=self.mock_evaluator,
@@ -104,4 +104,4 @@ class TestTrainingEarlyStopping(unittest.TestCase):
             batch_size=self.batch_size,
             stopper=self.stopper,
         )
-        self.assertEqual(training_loop._epoch, len(self.stopper.results) - self.patience)
+        self.assertEqual(training_loop._epoch, self.stop_constant + 1)

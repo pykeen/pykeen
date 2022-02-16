@@ -17,6 +17,8 @@ PyKEEN
    tutorial/making_predictions
    tutorial/running_ablation
    tutorial/performance
+   tutorial/representations
+   tutorial/inductive_lp
 
 .. toctree::
    :caption: Bring Your Own
@@ -55,6 +57,7 @@ PyKEEN
    reference/ablation
    reference/lookup
    reference/predict
+   reference/uncertainty
    reference/sealant
    reference/constants
    reference/nn/index

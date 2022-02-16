@@ -4,7 +4,7 @@
 
 from typing import Any, Mapping, Type
 
-from class_resolver import Resolver
+from class_resolver.contrib.torch import lr_scheduler_resolver
 from torch.optim.lr_scheduler import (
     CosineAnnealingLR,
     CosineAnnealingWarmRestarts,
@@ -53,7 +53,7 @@ lr_schedulers_hpo_defaults: Mapping[Type[_LRScheduler], Mapping[str, Any]] = {
         gamma=dict(type=float, low=0.8, high=1.0, step=0.025),
     ),
     LambdaLR: dict(
-        lr_lambda=dict(type="categorical", choices=[lambda epoch: epoch // 30, lambda epoch: 0.95 ** epoch]),
+        lr_lambda=dict(type="categorical", choices=[lambda epoch: epoch // 30, lambda epoch: 0.95**epoch]),
     ),
     MultiplicativeLR: dict(
         lr_lambda=dict(type="categorical", choices=[lambda epoch: 0.85, lambda epoch: 0.9, lambda epoch: 0.95]),
@@ -70,10 +70,3 @@ lr_schedulers_hpo_defaults: Mapping[Type[_LRScheduler], Mapping[str, Any]] = {
         step_size=dict(type=int, low=1, high=50, step=5),
     ),
 }
-
-#: A resolver for learning rate schedulers
-lr_scheduler_resolver = Resolver(
-    base=LRScheduler,
-    default=ExponentialLR,
-    classes=set(lr_schedulers_hpo_defaults),
-)

@@ -13,7 +13,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from hashlib import md5
 from tempfile import NamedTemporaryFile
-from typing import IO, Any, ClassVar, Generic, List, Mapping, Optional, Tuple, Type, TypeVar, Union
+from typing import IO, Any, Generic, List, Mapping, Optional, Tuple, TypeVar, Union
 
 import numpy as np
 import torch
@@ -22,14 +22,15 @@ from torch.utils.data import DataLoader
 from tqdm.autonotebook import tqdm, trange
 
 from .callbacks import (
-    GradientAbsClippingCallback,
-    GradientNormClippingCallback,
+    GradientAbsClippingTrainingCallback,
+    GradientNormClippingTrainingCallback,
     MultiTrainingCallback,
-    TrackerCallback,
+    StopperTrainingCallback,
+    TrackerTrainingCallback,
     TrainingCallbackHint,
+    TrainingCallbackKwargsHint,
 )
 from ..constants import PYKEEN_CHECKPOINTS, PYKEEN_DEFAULT_CHECKPOINT
-from ..losses import Loss
 from ..lr_schedulers import LRScheduler
 from ..models import RGCN, Model
 from ..stoppers import Stopper
@@ -37,6 +38,7 @@ from ..trackers import ResultTracker
 from ..training.schlichtkrull_sampler import SLCWASubGraphInstances
 from ..triples import CoreTriplesFactory, Instances, TriplesFactory
 from ..triples.instances import SLCWAInstances
+from ..typing import InductiveMode
 from ..utils import (
     format_relative_comparison,
     get_batchnorm_modules,
@@ -48,7 +50,6 @@ from ..utils import (
 __all__ = [
     "TrainingLoop",
     "NonFiniteLossError",
-    "TrainingApproachLossMismatchError",
     "SubBatchingNotSupportedError",
 ]
 
@@ -60,10 +61,6 @@ BatchType = TypeVar("BatchType")
 
 class NonFiniteLossError(RuntimeError):
     """An exception raised for non-finite loss values."""
-
-
-class TrainingApproachLossMismatchError(TypeError):
-    """An exception when an illegal loss function is used with a given training approach."""
 
 
 class CheckpointMismatchError(RuntimeError):
@@ -110,7 +107,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
     optimizer: Optimizer
 
     losses_per_epochs: List[float]
-    loss_blacklist: ClassVar[Optional[List[Type[Loss]]]] = None
 
     hpo_default = dict(
         num_epochs=dict(type=int, low=100, high=1000, q=100),
@@ -124,6 +120,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         optimizer: Optional[Optimizer] = None,
         lr_scheduler: Optional[LRScheduler] = None,
         automatic_memory_optimization: bool = True,
+        mode: Optional[InductiveMode] = None,
     ) -> None:
         """Initialize the training loop.
 
@@ -139,15 +136,11 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         self.optimizer = optimizer
         self.lr_scheduler = lr_scheduler
         self.losses_per_epochs = []
+        self._should_stop = False
         self.automatic_memory_optimization = automatic_memory_optimization
+        self.mode = mode
 
         logger.debug("we don't really need the triples factory: %s", triples_factory)
-
-        if self.loss_blacklist and isinstance(self.model.loss, tuple(self.loss_blacklist)):
-            raise TrainingApproachLossMismatchError(
-                f"Can not use loss {self.model.loss.__class__.__name__}"
-                f" with training approach {self.__class__.__name__}",
-            )
 
         # The internal epoch state tracks the last finished epoch of the training loop to allow for
         # seamless loading and saving of training checkpoints
@@ -200,9 +193,11 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         checkpoint_on_failure: bool = False,
         drop_last: Optional[bool] = None,
         callbacks: TrainingCallbackHint = None,
+        callback_kwargs: TrainingCallbackKwargsHint = None,
         gradient_clipping_max_norm: Optional[float] = None,
         gradient_clipping_norm_type: Optional[float] = None,
         gradient_clipping_max_abs_value: Optional[float] = None,
+        pin_memory: bool = True,
     ) -> Optional[List[float]]:
         """Train the KGE model.
 
@@ -267,6 +262,8 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         :param callbacks:
             An optional :class:`pykeen.training.TrainingCallback` or collection of callback instances that define
             one of several functionalities. Their interface was inspired by Keras.
+        :param callback_kwargs:
+            additional keyword-based parameter to instantiate the training callback.
         :param gradient_clipping_max_norm:
             The maximum gradient norm for use with gradient clipping. If None, no gradient norm clipping is used.
         :param gradient_clipping_norm_type:
@@ -274,10 +271,15 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         :param gradient_clipping_max_abs_value:
             The maximum absolute value in gradients, cf. :func:`torch.nn.utils.clip_grad_value_`. If None, no
             gradient clipping will be used.
+        :param pin_memory:
+            whether to use memory pinning in the data loader, cf.
+            https://pytorch.org/docs/stable/notes/cuda.html#cuda-memory-pinning
 
         :return:
             The losses per epoch.
         """
+        self._should_stop = False
+
         # Create training instances. Use the _create_instances function to allow subclasses
         # to modify this behavior
         training_instances = self._create_instances(triples_factory)
@@ -339,6 +341,8 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         if getattr(stopper, "stopped", False):
             result: Optional[List[float]] = self.losses_per_epochs
         else:
+            # send model to device before going into the internal training loop
+            self.model = self.model.to(self.model.get_preferred_device())
             result = self._train(
                 num_epochs=num_epochs,
                 batch_size=batch_size,
@@ -362,11 +366,13 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                 last_best_epoch=last_best_epoch,
                 drop_last=drop_last,
                 callbacks=callbacks,
+                callback_kwargs=callback_kwargs,
                 gradient_clipping_max_norm=gradient_clipping_max_norm,
                 gradient_clipping_norm_type=gradient_clipping_norm_type,
                 gradient_clipping_max_abs_value=gradient_clipping_max_abs_value,
                 triples_factory=triples_factory,
                 training_instances=training_instances,
+                pin_memory=pin_memory,
             )
 
         # Ensure the release of memory
@@ -405,9 +411,11 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         last_best_epoch: Optional[int] = None,
         drop_last: Optional[bool] = None,
         callbacks: TrainingCallbackHint = None,
+        callback_kwargs: TrainingCallbackKwargsHint = None,
         gradient_clipping_max_norm: Optional[float] = None,
         gradient_clipping_norm_type: Optional[float] = None,
         gradient_clipping_max_abs_value: Optional[float] = None,
+        pin_memory: bool = True,
     ) -> Optional[List[float]]:
         """Train the KGE model, see docstring for :func:`TrainingLoop.train`."""
         if self.optimizer is None:
@@ -431,19 +439,30 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             )
 
         # Prepare all of the callbacks
-        callback = MultiTrainingCallback(callbacks)
+        callback = MultiTrainingCallback(callbacks=callbacks, callback_kwargs=callback_kwargs)
         # Register a callback for the result tracker, if given
         if result_tracker is not None:
-            callback.register_callback(TrackerCallback(result_tracker))
+            callback.register_callback(TrackerTrainingCallback(result_tracker))
+        # Register a callback for the early stopper, if given
+        # TODO should mode be passed here?
+        if stopper is not None:
+            callback.register_callback(
+                StopperTrainingCallback(
+                    stopper,
+                    triples_factory=triples_factory,
+                    last_best_epoch=last_best_epoch,
+                    best_epoch_model_file_path=best_epoch_model_file_path,
+                )
+            )
         if gradient_clipping_max_norm is not None:
             callback.register_callback(
-                GradientNormClippingCallback(
+                GradientNormClippingTrainingCallback(
                     max_norm=gradient_clipping_max_norm,
                     norm_type=gradient_clipping_norm_type,
                 )
             )
         if gradient_clipping_max_abs_value is not None:
-            callback.register_callback(GradientAbsClippingCallback(clip_value=gradient_clipping_max_abs_value))
+            callback.register_callback(GradientAbsClippingTrainingCallback(clip_value=gradient_clipping_max_abs_value))
 
         callback.register_training_loop(self)
 
@@ -503,6 +522,8 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         if not continue_training:
             # Reset the weights
             self.model.reset_parameters_()
+            # afterwards, some parameters may be on the wrong device
+            self.model.to(self.model.get_preferred_device())
 
             # Create new optimizer
             optimizer_kwargs = _get_optimizer_kwargs(self.optimizer)
@@ -519,7 +540,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             raise ValueError("Cannot continue_training without being trained once.")
 
         # Ensure the model is on the correct device
-        self.model = self.model.to(self.device)
+        self.model.to(self.model.get_preferred_device())
 
         # Create Sampler
         if sampler == "schlichtkrull":
@@ -572,6 +593,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             batch_size=batch_size,
             drop_last=drop_last,
             shuffle=shuffle,
+            pin_memory=pin_memory,
         )
 
         # Save the time to track when the saved point was available
@@ -679,20 +701,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                 # Save the last successful finished epoch
                 self._epoch = epoch
 
-                should_stop = False
-                if stopper is not None and stopper.should_evaluate(epoch):
-                    if stopper.should_stop(epoch):
-                        should_stop = True
-                    # Since the model is also used within the stopper, its graph and cache have to be cleared
-                    self._free_graph_and_cache()
-                # When the stopper obtained a new best epoch, this model has to be saved for reconstruction
-                if (
-                    stopper is not None
-                    and stopper.best_epoch != last_best_epoch
-                    and best_epoch_model_file_path is not None
-                ):
-                    self._save_state(path=best_epoch_model_file_path, triples_factory=triples_factory)
-                    last_best_epoch = epoch
             # When the training loop failed, a fallback checkpoint is created to resume training.
             except (MemoryError, RuntimeError) as e:
                 # During automatic memory optimization only the error message is of interest
@@ -730,7 +738,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                 # MyPy overrides are because you should
                 if (
                     minutes_since_last_checkpoint >= checkpoint_frequency  # type: ignore
-                    or should_stop
+                    or self._should_stop
                     or epoch == num_epochs
                 ):
                     # When there wasn't a best epoch the checkpoint path should be None
@@ -744,11 +752,12 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                     )  # type: ignore
                     last_checkpoint = time.time()
 
-            if should_stop and last_best_epoch is not None and best_epoch_model_file_path is not None:
-                self._load_state(path=best_epoch_model_file_path)
-                # Delete temporary best epoch model
-                if pathlib.Path.is_file(best_epoch_model_file_path):
-                    os.remove(best_epoch_model_file_path)
+            if self._should_stop:
+                if last_best_epoch is not None and best_epoch_model_file_path is not None:
+                    self._load_state(path=best_epoch_model_file_path)
+                    # Delete temporary best epoch model
+                    if pathlib.Path.is_file(best_epoch_model_file_path):
+                        os.remove(best_epoch_model_file_path)
                 return self.losses_per_epochs
 
         callback.post_train(losses=self.losses_per_epochs)

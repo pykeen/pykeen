@@ -54,6 +54,24 @@ it additionally contains configuration for the initializers, constrainers, and r
 for each of the embeddings as well as class-level defaults for hyper-parameters and hyper-parameter
 optimization. Modifying these is covered in other tutorials.
 
+
+Instead of creating a new class, you can also directly use the :class:`pykeen.models.ERModel`, e.g.
+
+.. code-block:: python
+
+    from pykeen.models import ERModel
+    from pykeen.nn import EmbeddingSpecification
+    from pykeen.losses import BCEWithLogitsLoss
+
+    model = ERModel(
+        triples_factory=...,
+        loss=BCEWithLogitsLoss(),
+        interaction="transformer",
+        entity_representations=EmbeddingSpecification(embedding_dim=64),
+        relation_representations=EmbeddingSpecification(embedding_dim=64),
+    )
+
+
 .. todo::
 
     tutorial on rolling your own more complicated model, like :class:`pykeen.nn.modules.NTNInteraction` or

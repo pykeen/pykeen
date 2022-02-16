@@ -2,14 +2,14 @@
 
 """Evaluation."""
 
-import dataclasses
-from typing import Set, Type
+from typing import List, Tuple, Type
 
-from class_resolver import Resolver
+from class_resolver import ClassResolver
 
+from .classification_evaluator import ClassificationEvaluator, ClassificationMetricResults
 from .evaluator import Evaluator, MetricResults, evaluate
 from .rank_based_evaluator import RankBasedEvaluator, RankBasedMetricResults
-from .sklearn import SklearnEvaluator, SklearnMetricResults
+from .utils import MetricAnnotation, ValueRange
 
 __all__ = [
     "evaluate",
@@ -17,41 +17,27 @@ __all__ = [
     "MetricResults",
     "RankBasedEvaluator",
     "RankBasedMetricResults",
-    "SklearnEvaluator",
-    "SklearnMetricResults",
+    "ClassificationEvaluator",
+    "ClassificationMetricResults",
     "evaluator_resolver",
     "metric_resolver",
     "get_metric_list",
+    "MetricAnnotation",
+    "ValueRange",
 ]
 
-_EVALUATOR_SUFFIX = "Evaluator"
-_EVALUATORS: Set[Type[Evaluator]] = {
-    RankBasedEvaluator,
-    SklearnEvaluator,
-}
-evaluator_resolver = Resolver(
-    _EVALUATORS,
-    base=Evaluator,  # type: ignore
-    suffix=_EVALUATOR_SUFFIX,
+evaluator_resolver: ClassResolver[Evaluator] = ClassResolver.from_subclasses(
+    base=Evaluator,
     default=RankBasedEvaluator,
 )
 
-_METRICS_SUFFIX = "MetricResults"
-_METRICS: Set[Type[MetricResults]] = {
-    RankBasedMetricResults,
-    SklearnMetricResults,
-}
-metric_resolver = Resolver(
-    _METRICS,
-    suffix=_METRICS_SUFFIX,
-    base=MetricResults,
-)
+metric_resolver: ClassResolver[MetricResults] = ClassResolver.from_subclasses(MetricResults)
 
 
-def get_metric_list():
+def get_metric_list() -> List[Tuple[str, MetricAnnotation, Type[MetricResults]]]:
     """Get info about all metrics across all evaluators."""
     return [
-        (field, name, value)
-        for name, value in metric_resolver.lookup_dict.items()
-        for field in dataclasses.fields(value)
+        (key, metadata, resolver_cls)
+        for resolver_cls in metric_resolver.lookup_dict.values()
+        for key, metadata in resolver_cls.metrics.items()
     ]

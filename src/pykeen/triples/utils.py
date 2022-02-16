@@ -3,7 +3,7 @@
 """Instance creation utilities."""
 
 import pathlib
-from typing import Callable, Mapping, Optional, Sequence, Set, TextIO, Union
+from typing import Callable, Mapping, Optional, Sequence, Set, TextIO, Tuple, Union
 
 import numpy as np
 import pandas
@@ -16,6 +16,8 @@ __all__ = [
     "load_triples",
     "get_entities",
     "get_relations",
+    "triple_tensor_to_set",
+    "is_triple_tensor_subset",
     "tensor_to_df",
 ]
 
@@ -71,19 +73,30 @@ def load_triples(
 
     if encoding is None:
         encoding = "utf-8"
-
-    rv = np.loadtxt(
-        fname=path,
-        dtype=str,
-        comments="@Comment@ Head Relation Tail",
-        delimiter=delimiter,
-        encoding=encoding,
-    )
     if column_remapping is not None:
         if len(column_remapping) != 3:
             raise ValueError("remapping must have length of three")
-        rv = rv[:, column_remapping]
-    return rv
+    df = pandas.read_csv(
+        path,
+        sep=delimiter,
+        encoding=encoding,
+        dtype=str,
+        header=None,
+        usecols=column_remapping,
+    )
+    if column_remapping is not None:
+        df = df[[df.columns[c] for c in column_remapping]]
+    return df.to_numpy()
+
+
+def triple_tensor_to_set(tensor: torch.LongTensor) -> Set[Tuple[int, ...]]:
+    """Convert a tensor of triples to a set of int-tuples."""
+    return set(map(tuple, tensor.tolist()))
+
+
+def is_triple_tensor_subset(a: torch.LongTensor, b: torch.LongTensor) -> bool:
+    """Check whether one tensor of triples is a subset of another one."""
+    return triple_tensor_to_set(a).issubset(triple_tensor_to_set(b))
 
 
 def get_entities(triples: torch.LongTensor) -> Set[int]:

@@ -186,3 +186,34 @@ executed with one of the previous examples.
     ...     ],
     ... )
     >>> # print(results)
+
+
+Training Callbacks
+------------------
+PyKEEN allows interaction with the training loop through callbacks.
+One particular use case is regular evaluation (outside of an early stopper).
+The following example shows how to evaluate on the training triples on every
+tenth epoch
+
+.. code-block:: python
+
+    from pykeen.datasets import get_dataset
+    from pykeen.pipeline import pipeline
+
+    dataset = get_dataset(dataset="nations")
+    result = pipeline(
+        dataset=dataset,
+        model="mure",
+        training_kwargs=dict(
+            num_epochs=100,
+            callbacks="evaluation",
+            callback_kwargs=dict(
+                evaluation_triples=dataset.training.mapped_triples,
+                tracker="console",
+                prefix="training",
+            ),
+        ),
+    )
+
+For further information about different result trackers, take a look at the section
+on :ref:`trackers`.

@@ -109,9 +109,7 @@ if tail corruption is used with probability $1 - p_r$.
     )
 """  # noqa
 
-from typing import Set, Type
-
-from class_resolver import Resolver, get_subclasses
+from class_resolver import ClassResolver
 
 from .basic_negative_sampler import BasicNegativeSampler
 from .bernoulli_negative_sampler import BernoulliNegativeSampler
@@ -127,11 +125,7 @@ __all__ = [
     "negative_sampler_resolver",
 ]
 
-_NEGATIVE_SAMPLER_SUFFIX = "NegativeSampler"
-_NEGATIVE_SAMPLERS: Set[Type[NegativeSampler]] = set(get_subclasses(NegativeSampler))  # type: ignore
-negative_sampler_resolver = Resolver(
-    _NEGATIVE_SAMPLERS,
-    base=NegativeSampler,  # type: ignore
+negative_sampler_resolver = ClassResolver.from_subclasses(
+    NegativeSampler,
     default=BasicNegativeSampler,
-    suffix=_NEGATIVE_SAMPLER_SUFFIX,
 )

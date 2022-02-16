@@ -4,13 +4,14 @@
 
 from typing import Any, ClassVar, Mapping, Optional, Tuple, Type, Union
 
-import torch.autograd
+from class_resolver import OptionalKwargs
 
-from ..base import EntityRelationEmbeddingModel
+from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss, SoftplusLoss
-from ...nn.emb import Embedding, EmbeddingSpecification
-from ...regularizers import PowerSumRegularizer, Regularizer
+from ...nn.emb import EmbeddingSpecification
+from ...nn.modules import SimplEInteraction
+from ...regularizers import PowerSumRegularizer, Regularizer, regularizer_resolver
 from ...typing import Hint, Initializer
 
 __all__ = [
@@ -18,7 +19,7 @@ __all__ = [
 ]
 
 
-class SimplE(EntityRelationEmbeddingModel):
+class SimplE(ERModel):
     r"""An implementation of SimplE [kazemi2018]_.
 
     SimplE is an extension of canonical polyadic (CP), an early tensor factorization approach in which each entity
@@ -75,81 +76,41 @@ class SimplE(EntityRelationEmbeddingModel):
         clamp_score: Optional[Union[float, Tuple[float, float]]] = None,
         entity_initializer: Hint[Initializer] = None,
         relation_initializer: Hint[Initializer] = None,
+        regularizer: Hint[Regularizer] = None,
+        regularizer_kwargs: OptionalKwargs = None,
         **kwargs,
     ) -> None:
+        regularizer = regularizer_resolver.make_safe(regularizer, pos_kwargs=regularizer_kwargs)
         super().__init__(
-            entity_representations=EmbeddingSpecification(
-                embedding_dim=embedding_dim,
-                initializer=entity_initializer,
-            ),
-            relation_representations=EmbeddingSpecification(
-                embedding_dim=embedding_dim,
-                initializer=relation_initializer,
-            ),
+            interaction=SimplEInteraction,
+            interaction_kwargs=dict(clamp_score=clamp_score),
+            entity_representations=[
+                # (head) entity
+                EmbeddingSpecification(
+                    embedding_dim=embedding_dim,
+                    initializer=entity_initializer,
+                    regularizer=regularizer,
+                ),
+                # tail entity
+                EmbeddingSpecification(
+                    embedding_dim=embedding_dim,
+                    initializer=entity_initializer,
+                    regularizer=regularizer,
+                ),
+            ],
+            relation_representations=[
+                # relations
+                EmbeddingSpecification(
+                    embedding_dim=embedding_dim,
+                    initializer=relation_initializer,
+                    regularizer=regularizer,
+                ),
+                # inverse relations
+                EmbeddingSpecification(
+                    embedding_dim=embedding_dim,
+                    initializer=relation_initializer,
+                    regularizer=regularizer,
+                ),
+            ],
             **kwargs,
         )
-
-        # extra embeddings
-        self.tail_entity_embeddings = Embedding.init_with_device(
-            num_embeddings=self.num_entities,
-            embedding_dim=embedding_dim,
-            device=self.device,
-        )
-        self.inverse_relation_embeddings = Embedding.init_with_device(
-            num_embeddings=self.num_relations,
-            embedding_dim=embedding_dim,
-            device=self.device,
-        )
-
-        if isinstance(clamp_score, float):
-            clamp_score = (-clamp_score, clamp_score)
-        self.clamp = clamp_score
-
-    def _reset_parameters_(self):  # noqa: D102
-        super()._reset_parameters_()
-        for emb in [
-            self.tail_entity_embeddings,
-            self.inverse_relation_embeddings,
-        ]:
-            emb.reset_parameters()
-
-    def _score(
-        self,
-        h_indices: Optional[torch.LongTensor],
-        r_indices: Optional[torch.LongTensor],
-        t_indices: Optional[torch.LongTensor],
-    ) -> torch.FloatTensor:  # noqa: D102
-        # forward model
-        h = self.entity_embeddings.get_in_canonical_shape(indices=h_indices)
-        r = self.relation_embeddings.get_in_canonical_shape(indices=r_indices)
-        t = self.tail_entity_embeddings.get_in_canonical_shape(indices=t_indices)
-        scores = (h * r * t).sum(dim=-1)
-
-        # Regularization
-        self.regularize_if_necessary(h, r, t)
-
-        # backward model
-        h = self.entity_embeddings.get_in_canonical_shape(indices=t_indices)
-        r = self.inverse_relation_embeddings.get_in_canonical_shape(indices=r_indices)
-        t = self.tail_entity_embeddings.get_in_canonical_shape(indices=h_indices)
-        scores = 0.5 * (scores + (h * r * t).sum(dim=-1))
-
-        # Regularization
-        self.regularize_if_necessary(h, r, t)
-
-        # Note: In the code in their repository, the score is clamped to [-20, 20].
-        #       That is not mentioned in the paper, so it is omitted here.
-        if self.clamp is not None:
-            min_, max_ = self.clamp
-            scores = scores.clamp(min=min_, max=max_)
-
-        return scores
-
-    def score_hrt(self, hrt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._score(h_indices=hrt_batch[:, 0], r_indices=hrt_batch[:, 1], t_indices=hrt_batch[:, 2]).view(-1, 1)
-
-    def score_t(self, hr_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._score(h_indices=hr_batch[:, 0], r_indices=hr_batch[:, 1], t_indices=None)
-
-    def score_h(self, rt_batch: torch.LongTensor) -> torch.FloatTensor:  # noqa: D102
-        return self._score(h_indices=None, r_indices=rt_batch[:, 0], t_indices=rt_batch[:, 1])
