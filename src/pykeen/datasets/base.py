@@ -229,10 +229,9 @@ class Dataset:
 
         main()
 
-    @classmethod
-    def get_normalized_name(cls) -> str:
+    def get_normalized_name(self) -> str:
         """Get the normalized name of the dataset."""
-        return normalize_string(cls.__name__)
+        return normalize_string((self.metadata or {}).get("name") or self.__class__.__name__)
 
     def remix(self, random_state: TorchRandomHint = None, **kwargs) -> Dataset:
         """Remix a dataset using :func:`pykeen.triples.remix.remix`."""
