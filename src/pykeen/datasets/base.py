@@ -297,7 +297,7 @@ class EagerDataset(Dataset):
         )
         self.metadata = metadata
 
-    def extra_repr(self) -> Iterable[str]:
+    def extra_repr(self) -> Iterable[str]:  # noqa: D102
         yield from super().extra_repr()
         yield f"metadata={self.metadata}"
 
