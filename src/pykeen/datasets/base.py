@@ -78,7 +78,7 @@ class Dataset:
     #: All datasets should take care of inverse triple creation
     create_inverse_triples: bool
 
-    def __eq__(self, __o: object) -> bool:  # noqa: D102
+    def __eq__(self, __o: object) -> bool:  # noqa: D105
         return (
             isinstance(__o, Dataset)
             and (self.training == __o.training)
