@@ -714,7 +714,7 @@ def pipeline_from_config(
         logger.info(f"Running: {title}")
     if discard_seed and "random_seed" in pipeline_kwargs:
         random_seed = pipeline_kwargs.pop("random_seed")
-        logger.info(f"Ignoring random_seed={random_seed}. Pass discard_seed=False to disable.")
+        logger.info(f"Ignoring random_seed={random_seed}. You need to explicitly disable this, if unintended.")
 
     return pipeline(
         metadata=metadata,
