@@ -162,6 +162,7 @@ class Dataset:
         print(self.summary_str(title=title, show_examples=show_examples), file=file)  # noqa:T001
 
     def extra_repr(self) -> Iterable[str]:
+        """Yield extra entries for the instance's string representation."""
         yield f"num_entities={self.num_entities}"
         yield f"num_relations={self.num_relations}"
         yield f"create_inverse_triples={self.create_inverse_triples}"
