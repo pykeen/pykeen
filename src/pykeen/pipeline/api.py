@@ -1011,7 +1011,6 @@ def pipeline(  # noqa: C901
     if dataset is not None:
         _result_tracker.log_params(
             dict(
-                # FIXME
                 dataset=dataset_instance.get_normalized_name(),
                 dataset_kwargs=dataset_kwargs,
             )
