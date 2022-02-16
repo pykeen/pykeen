@@ -25,7 +25,7 @@ class TestDatasetCaching(unittest.TestCase):
     def test_caching(self):
         """Test dataset caching."""
         digest = _digest_kwargs(dict())
-        directory = PYKEEN_DATASETS.joinpath(Nations.get_normalized_name(), "cache", digest)
+        directory = PYKEEN_DATASETS.joinpath(Nations().get_normalized_name(), "cache", digest)
         # clear
         if directory.exists():
             shutil.rmtree(directory)
