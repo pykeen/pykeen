@@ -169,8 +169,13 @@ def get_ranking_metrics(ranks: np.ndarray) -> Mapping[str, float]:
     return rv
 
 
-class RankBasedMetric:
-    """A base class for rank-based metrics."""
+class Metric:
+    """A base class for metrics."""
+
+    description: ClassVar[str]
+    link: ClassVar[str]
+
+    binarize: Optional[bool] = None
 
     #: whether it is increasing, i.e., larger values are better
     increasing: ClassVar[bool] = False
@@ -178,11 +183,15 @@ class RankBasedMetric:
     #: the value range (as string)
     value_range: ClassVar[Optional[ValueRange]] = None
 
-    #: the supported rank types. Most of the time equal to all rank types
-    supported_rank_types: ClassVar[Collection[RankType]] = RANK_TYPES
-
     #: synonyms for this metric
     synonyms: ClassVar[Collection[str]] = tuple()
+
+
+class RankBasedMetric(Metric):
+    """A base class for rank-based metrics."""
+
+    #: the supported rank types. Most of the time equal to all rank types
+    supported_rank_types: ClassVar[Collection[RankType]] = RANK_TYPES
 
     #: whether the metric requires the number of candidates for each ranking task
     needs_candidates: ClassVar[bool] = False
