@@ -17,7 +17,7 @@ import seaborn as sns
 
 import pykeen.evaluation.evaluator
 from pykeen.constants import PYKEEN_EXPERIMENTS
-from pykeen.datasets import Dataset, dataset_resolver, get_dataset
+from pykeen.datasets import Dataset, get_dataset
 from pykeen.models import Model, model_resolver
 from pykeen.pipeline import pipeline
 from pykeen.typing import InductiveMode
