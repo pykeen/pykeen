@@ -10,12 +10,13 @@ import tarfile
 import zipfile
 from abc import abstractmethod
 from io import BytesIO
-from typing import Any, ClassVar, Dict, List, Mapping, Optional, Sequence, Tuple, Type, Union, cast
+from typing import Any, ClassVar, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Type, Union, cast
 
 import click
 import docdata
 import pandas as pd
 import requests
+import torch
 from more_click import verbose_option
 from pystow.utils import download, name_from_url
 from tabulate import tabulate
@@ -77,6 +78,10 @@ class Dataset:
     validation: Optional[CoreTriplesFactory]
     #: All datasets should take care of inverse triple creation
     create_inverse_triples: bool
+    #: the dataset's name
+    metadata: Optional[Mapping[str, Any]] = None
+
+    metadata_file_name: ClassVar[str] = "metadata.pth"
 
     def __eq__(self, __o: object) -> bool:  # noqa: D105
         return (
@@ -156,8 +161,13 @@ class Dataset:
         """Print a summary of the dataset."""
         print(self.summary_str(title=title, show_examples=show_examples), file=file)  # noqa:T001
 
+    def extra_repr(self) -> Iterable[str]:
+        yield f"num_entities={self.num_entities}"
+        yield f"num_relations={self.num_relations}"
+        yield f"create_inverse_triples={self.create_inverse_triples}"
+
     def __str__(self) -> str:  # noqa: D105
-        return f"{self.__class__.__name__}(num_entities={self.num_entities}, num_relations={self.num_relations})"
+        return f"{self.__class__.__name__}({', '.join(self.extra_repr())})"
 
     @classmethod
     def from_path(cls, path: Union[str, pathlib.Path], ratios: Optional[List[float]] = None) -> "Dataset":
@@ -181,8 +191,9 @@ class Dataset:
                 tfs[key] = TriplesFactory.from_path_binary(path=tf_path)
             else:
                 logger.warning(f"{tf_path.as_uri()} does not exist.")
-
-        return EagerDataset(**tfs)
+        metadata_path = path.joinpath(cls.metadata_file_name)
+        metadata = torch.load(metadata_path) if metadata_path.is_file() else None
+        return EagerDataset(**tfs, metadata=metadata)
 
     def to_directory_binary(self, path: Union[str, pathlib.Path]) -> None:
         """Store a dataset to a path in binary format."""
@@ -191,6 +202,9 @@ class Dataset:
             tf_path = path.joinpath(key)
             factory.to_path_binary(tf_path)
             logger.info(f"Stored {key} factory to {tf_path.as_uri()}")
+        metadata = dict(self.metadata or {})
+        metadata.setdefault("name", self.get_normalized_name())
+        torch.save(metadata, path.joinpath(self.metadata_file_name))
 
     @staticmethod
     def from_tf(tf: TriplesFactory, ratios: Optional[List[float]] = None) -> "Dataset":
@@ -264,6 +278,7 @@ class EagerDataset(Dataset):
         training: CoreTriplesFactory,
         testing: CoreTriplesFactory,
         validation: Optional[CoreTriplesFactory] = None,
+        metadata: Optional[Mapping[str, Any]] = None,
     ) -> None:
         """Initialize the eager dataset.
 
@@ -279,6 +294,11 @@ class EagerDataset(Dataset):
             and testing.create_inverse_triples
             and (self.validation is None or self.validation.create_inverse_triples)
         )
+        self.metadata = metadata
+
+    def extra_repr(self) -> Iterable[str]:
+        yield from super().extra_repr()
+        yield f"metadata={self.metadata}"
 
 
 class LazyDataset(Dataset):
