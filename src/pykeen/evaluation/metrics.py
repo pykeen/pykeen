@@ -217,10 +217,13 @@ class RankBasedMetric(Metric):
 
 
 class ArithmeticMeanRank(RankBasedMetric):
-    """The (arithmetic) mean rank."""
+    """
+    The arithmetic mean over all ranks.
 
-    description = "The arithmetic mean over all ranks."
-    link = "https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#mean-rank"
+    ---
+    link: https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#mean-rank
+    """
+
     value_range = ValueRange(lower=1, lower_inclusive=True, upper=math.inf)
     synonyms = ("mean_rank", "mr")
 

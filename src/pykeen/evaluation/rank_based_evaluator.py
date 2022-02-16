@@ -58,13 +58,13 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 RANKING_METRICS: Mapping[str, MetricAnnotation] = dict(
-    arithmetic_mean_rank=MetricAnnotation(
-        name="Mean Rank (MR)",
-        increasing=False,
-        value_range=ValueRange(lower=1.0, upper=None, lower_inclusive=True),
-        description="The arithmetic mean over all ranks.",
-        link="https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#mean-rank",
-    ),
+    # arithmetic_mean_rank=MetricAnnotation(
+    #     name="Mean Rank (MR)",
+    #     increasing=False,
+    #     value_range=ValueRange(lower=1.0, upper=None, lower_inclusive=True),
+    #     description="The arithmetic mean over all ranks.",
+    #     link="https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#mean-rank",
+    # ),
     geometric_mean_rank=MetricAnnotation(
         name="Geometric Mean Rank (GMR)",
         increasing=False,
