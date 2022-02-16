@@ -15,7 +15,7 @@ from typing import Any, Callable, Generic, Iterable, Mapping, MutableMapping, Op
 import more_itertools
 import numpy
 import torch
-from class_resolver import ClassResolver
+from class_resolver import ClassResolver, OptionalKwargs
 from class_resolver.contrib.torch import activation_resolver
 from docdata import parse_docdata
 from torch import FloatTensor, nn
@@ -1299,7 +1299,8 @@ class MonotonicAffineTransformationInteraction(
 
     def __init__(
         self,
-        base: Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation],
+        base: HintOrType[Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]],
+        base_kwargs: OptionalKwargs = None,
         initial_bias: float = 0.0,
         trainable_bias: bool = True,
         initial_scale: float = 1.0,
@@ -1310,6 +1311,8 @@ class MonotonicAffineTransformationInteraction(
 
         :param base:
             The base interaction.
+        :param base_kwargs:
+            additional keyword-based arguments, if the base interaction is to be instantiated
         :param initial_bias:
             The initial value for the bias.
         :param trainable_bias:
@@ -1322,11 +1325,11 @@ class MonotonicAffineTransformationInteraction(
         super().__init__()
 
         # the base interaction
-        self.base = base
+        self.base = interaction_resolver.make(base, base_kwargs)
         # forward entity/relation shapes
-        self.entity_shape = base.entity_shape
-        self.relation_shape = base.relation_shape
-        self.tail_entity_shape = base.tail_entity_shape
+        self.entity_shape = self.base.entity_shape
+        self.relation_shape = self.base.relation_shape
+        self.tail_entity_shape = self.base.tail_entity_shape
 
         # The parameters of the affine transformation: bias
         self.bias = nn.Parameter(torch.empty(size=tuple()), requires_grad=trainable_bias)
