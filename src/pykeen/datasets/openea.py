@@ -50,7 +50,7 @@ class OpenEA(LazyDataset):
     DROPBOX_LINK: str = "https://www.dropbox.com/s/xfehqm4pcd9yw0v/OpenEA_dataset_v2.0.zip?dl=1"
 
     #: The hex digest for the zip file
-    SHA512: str = "c1589f185f86e05c497de147b4d6c243c66775cb4b50c6b41ecc71b36cfafb4c9f86fbee94e1e78a7ee056dd69df1ce3fc210ae07dc64955ad2bfda7450545ef"
+    SHA512: str = "c1589f185f86e05c497de147b4d6c243c66775cb4b50c6b41ecc71b36cfafb4c9f86fbee94e1e78a7ee056dd69df1ce3fc210ae07dc64955ad2bfda7450545ef"  # noqa: E501
 
     def __init__(
         self,
