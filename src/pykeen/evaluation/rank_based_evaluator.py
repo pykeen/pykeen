@@ -58,27 +58,6 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 RANKING_METRICS: Mapping[str, MetricAnnotation] = dict(
-    # arithmetic_mean_rank=MetricAnnotation(
-    #     name="Mean Rank (MR)",
-    #     increasing=False,
-    #     value_range=ValueRange(lower=1.0, upper=None, lower_inclusive=True),
-    #     description="The arithmetic mean over all ranks.",
-    #     link="https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#mean-rank",
-    # ),
-    geometric_mean_rank=MetricAnnotation(
-        name="Geometric Mean Rank (GMR)",
-        increasing=False,
-        value_range=ValueRange(lower=1.0, upper=None, lower_inclusive=True),
-        description="The geometric mean over all ranks.",
-        link="https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html",
-    ),
-    median_rank=MetricAnnotation(
-        name="Median Rank",
-        increasing=False,
-        value_range=ValueRange(lower=1.0, upper=None, lower_inclusive=True),
-        description="The median over all ranks.",
-        link="https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html",
-    ),
     harmonic_mean_rank=MetricAnnotation(
         name="Harmonic Mean Rank (HMR)",
         increasing=False,

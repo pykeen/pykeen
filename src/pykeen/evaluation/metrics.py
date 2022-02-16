@@ -218,6 +218,8 @@ class RankBasedMetric(Metric):
 
 class ArithmeticMeanRank(RankBasedMetric):
     """
+    The (arithmetic) mean rank.
+
     The arithmetic mean over all ranks.
 
     ---
@@ -247,7 +249,14 @@ class InverseArithmeticMeanRank(RankBasedMetric):
 
 
 class GeometricMeanRank(RankBasedMetric):
-    """The geometric mean rank."""
+    """
+    The geometric mean rank.
+
+    The geometric mean over all ranks.
+
+    ---
+    link: https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html
+    """
 
     value_range = ValueRange(lower=1, lower_inclusive=True, upper=math.inf)
     synonyms = ("gmr",)
@@ -288,7 +297,13 @@ class InverseHarmonicMeanRank(RankBasedMetric):
 
 
 class MedianRank(RankBasedMetric):
-    """The median rank."""
+    """
+    The median rank.
+
+    The median over all ranks.
+
+    link: https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html
+    """
 
     value_range = ValueRange(lower=1, lower_inclusive=True, upper=math.inf)
 
