@@ -2,12 +2,11 @@
 
 """Test caching."""
 
+import pathlib
 import shutil
 import tempfile
-import pathlib
-from timeit import default_timer
 import unittest
-
+from timeit import default_timer
 
 from pykeen.constants import PYKEEN_DATASETS
 from pykeen.datasets import Nations, _cached_get_dataset, _digest_kwargs
