@@ -167,8 +167,8 @@ class Dataset:
         tfs = dict()
         # TODO: Make a constant for the names
         for key in ("training", "testing", "validation"):
-            tf_path = path.joinpath(key).with_suffix(suffix=".pt")
-            if tf_path.is_file():
+            tf_path = path.joinpath(key)
+            if tf_path.is_dir():
                 tfs[key] = TriplesFactory.from_path_binary(path=tf_path)
             else:
                 logger.warning(f"{tf_path.as_uri()} does not exist.")
@@ -178,10 +178,9 @@ class Dataset:
     def to_directory_binary(self, path: Union[str, pathlib.Path]) -> None:
         """Store a dataset to a path in binary format."""
         path = pathlib.Path(path)
-        path.mkdir(exist_ok=True, parents=True)
-        for key, value in self.factory_dict.items():
-            tf_path = path.joinpath(key).with_suffix(suffix=".pt")
-            value.to_path_binary(tf_path)
+        for key, factory in self.factory_dict.items():
+            tf_path = path.joinpath(key)
+            factory.to_path_binary(tf_path)
             logger.info(f"Stored {key} factory to {tf_path.as_uri()}")
 
     @staticmethod
