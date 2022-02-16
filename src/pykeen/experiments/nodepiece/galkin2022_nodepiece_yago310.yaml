@@ -1,6 +1,7 @@
 metadata:
   title: Learn YAGO3-10 Dataset with NodePiece + RotatE as described by Galkin et al., 2022
 pipeline:
+  random_seed: 42
   dataset: yago310
   dataset_kwargs:
     create_inverse_triples: True

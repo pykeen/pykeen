@@ -1,6 +1,7 @@
 metadata:
   title: Learn CoDEx-Large Dataset with NodePiece + RotatE (no anchor tokenization) as described by Galkin et al., 2022
 pipeline:
+  random_seed: 42
   dataset: codexlarge
   dataset_kwargs:
     create_inverse_triples: True
