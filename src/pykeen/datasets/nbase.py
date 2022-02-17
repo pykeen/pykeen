@@ -9,11 +9,11 @@ import pathlib
 from abc import abstractmethod
 from typing import Any, Mapping, MutableMapping, Optional, Tuple, Union
 
+import pystow
 import torch
 from class_resolver import OptionalKwargs, normalize_string
-from docdata import parse_docdata
 
-from .nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH, NATIONS_VALIDATE_PATH
+from .nations import NATIONS_TRAIN_PATH
 from ..constants import PYKEEN_DATASETS
 from ..triples import CoreTriplesFactory, TriplesFactory
 
@@ -100,10 +100,15 @@ class DatasetLoader:
             self.metadata.get("name") or self.__class__.__name__, suffix=DatasetLoader.__class__.__name__
         )
 
+    @property
+    def cache_root(self) -> pystow.Module:
+        """The data loader's cache root."""
+        return pystow.Module(PYKEEN_DATASETS).submodule(self.name)
+
     def load(self, force: bool = False) -> Dataset:
         """Load the dataset."""
         # get canonical cache path
-        path = PYKEEN_DATASETS.joinpath(self.name, "cache", _digest_kwargs(self.__dict__))
+        path = self.cache_root.join("cache", _digest_kwargs(self.__dict__), ensure_exists=False)
 
         # try to use cached dataset
         if path.is_dir() and not force:
@@ -112,6 +117,8 @@ class DatasetLoader:
 
         # load dataset without cache
         dataset_instance = self._load()
+        # normalize name
+        dataset_instance.metadata["name"] = normalize_string(dataset_instance.metadata["name"])
 
         # store cache
         logger.info(f"Caching preprocessed dataset to {path.as_uri()}")
@@ -125,48 +132,110 @@ class DatasetLoader:
 
 
 @dataclasses.dataclass
-class PathDatasetLoader(DatasetLoader):
+class PreSplitDatasetLoader(DatasetLoader):
     """A loader of pre-split datasets."""
 
-    training_path: pathlib.Path = pathlib.Path("./training")
-    testing_path: pathlib.Path = pathlib.Path("./testing")
-    validation_path: Optional[pathlib.Path] = None
-    load_triples_kwargs: OptionalKwargs = None
+    training: pathlib.PurePath = None
+    testing: pathlib.PurePath = None
+    validation: Optional[pathlib.PurePath] = None
 
     def _load(self) -> Dataset:  # noqa: D102
-        training = TriplesFactory.from_path(
-            path=self.training_path,
-            create_inverse_triples=self.create_inverse_triples,
-            load_triples_kwargs=self.load_triples_kwargs,
-        )
+        training = self._load_tf(relative_path=self.training)
         return Dataset(
             training=training,
-            testing=TriplesFactory.from_path(
-                path=self.testing_path,
-                entity_to_id=training.entity_to_id,  # share entity index with training
-                relation_to_id=training.relation_to_id,  # share relation index with training
-                # do not explicitly create inverse triples for testing; this is handled by the evaluation code
-                create_inverse_triples=False,
-                load_triples_kwargs=self.load_triples_kwargs,
+            testing=self._load_tf(
+                relative_path=self.testing,
+                # share entity & relation index with training
+                entity_to_id=training.entity_to_id,
+                relation_to_id=training.relation_to_id,
             ),
-            validation=TriplesFactory.from_path(
-                path=self.validation_path,
-                entity_to_id=training.entity_to_id,  # share entity index with training
-                relation_to_id=training.relation_to_id,  # share relation index with training
-                # do not explicitly create inverse triples for testing; this is handled by the evaluation code
-                create_inverse_triples=False,
-                load_triples_kwargs=self.load_triples_kwargs,
+            validation=self._load_tf(
+                relative_path=self.validation,
+                # share entity & relation index with training
+                entity_to_id=training.entity_to_id,
+                relation_to_id=training.relation_to_id,
             )
-            if self.validation_path
+            if self.validation
             else None,
             metadata=self.metadata,
         )
 
+    @abstractmethod
+    def _load_tf(
+        self,
+        relative_path: pathlib.PurePath,
+        entity_to_id: Optional[Mapping[str, int]] = None,
+        relation_to_id: Optional[Mapping[str, int]] = None,
+    ) -> TriplesFactory:
+        raise NotImplementedError
+
+
+@dataclasses.dataclass
+class PathDatasetLoader(PreSplitDatasetLoader):
+    """A loader of pre-split datasets."""
+
+    root: pathlib.Path = None
+    load_triples_kwargs: OptionalKwargs = None
+
+    def _load_tf(
+        self,
+        relative_path: pathlib.PurePath,
+        entity_to_id: Optional[Mapping[str, int]] = None,
+        relation_to_id: Optional[Mapping[str, int]] = None,
+    ) -> TriplesFactory:
+        assert self.root is not None
+        return TriplesFactory.from_path(
+            path=self.root.joinpath(relative_path),
+            entity_to_id=entity_to_id,
+            relation_to_id=relation_to_id,
+            # do not explicitly create inverse triples for testing; this is handled by the evaluation code
+            create_inverse_triples=self.create_inverse_triples and entity_to_id is None and relation_to_id is None,
+            load_triples_kwargs=self.load_triples_kwargs,
+        )
+
+
+@dataclasses.dataclass
+class PackedZipRemoteDatasetLoader(PreSplitDatasetLoader):
+    """Load a remote dataset contained inside a zipfile."""
+
+    head_column: int = 0
+    relation_column: int = 1
+    tail_column: int = 2
+    sep = "\t"
+    header = None
+
+    url: str = None
+    file_name: Optional[str] = None
+
+    def _load_tf(
+        self,
+        relative_path: pathlib.PurePath,
+        entity_to_id: Optional[Mapping[str, int]] = None,
+        relation_to_id: Optional[Mapping[str, int]] = None,
+    ) -> TriplesFactory:
+        return TriplesFactory.from_labeled_triples(
+            triples=self.cache_root.ensure_zip_df(
+                url=self.url,
+                inner_path=relative_path.as_posix(),
+                name=self.file_name,
+                read_csv_kwargs=dict(
+                    usecols=[self.head_column, self.relation_column, self.tail_column],
+                    header=self.header,
+                    sep=self.sep,
+                ),
+            ).values,
+            create_inverse_triples=self.create_inverse_triples,
+            metadata={"path": relative_path},
+            entity_to_id=entity_to_id,
+            relation_to_id=relation_to_id,
+        )
+
 
 nations_loader = PathDatasetLoader(
-    training_path=NATIONS_TRAIN_PATH,
-    testing_path=NATIONS_TEST_PATH,
-    validation_path=NATIONS_VALIDATE_PATH,
+    root=NATIONS_TRAIN_PATH.parent,
+    training=pathlib.PurePath("train.txt"),
+    testing=pathlib.PurePath("test.txt"),
+    validation=pathlib.PurePath("valid.txt"),
     metadata=dict(
         name="Nations",
         statistics=dict(
@@ -183,4 +252,26 @@ nations_loader = PathDatasetLoader(
             github="ZhenfengLei/KGDatasets",
         ),
     ),
+)
+fb15k237_loader = PackedZipRemoteDatasetLoader(
+    metadata=dict(
+        name="FB15k-237",
+        statistics=dict(
+            entities=14505,
+            relations=237,
+            training=272115,
+            testing=20438,
+            validation=17526,
+            triples=310079,
+        ),
+        citation=dict(
+            author="Toutanova",
+            year=2015,
+            link="https://www.aclweb.org/anthology/W15-4007/",
+        ),
+    ),
+    training=pathlib.PurePath("Release", "train.txt"),
+    testing=pathlib.PurePath("Release", "test.txt"),
+    validation=pathlib.PurePath("Release", "valid.txt"),
+    url="https://download.microsoft.com/download/8/7/0/8700516A-AB3D-4850-B4BB-805C515AECE1/FB15K-237.2.zip",
 )
