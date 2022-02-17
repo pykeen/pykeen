@@ -392,7 +392,7 @@ class PipelineResult(Result):
         if save_replicates:
             self.save_model(directory.joinpath("trained_model.pkl"))
         if save_training:
-            self.training.to_path_binary(directory.joinpath("training_factory.pkl"))
+            self.training.to_path_binary(directory.joinpath("training_triples"))
         logger.info(f"Saved to directory: {directory.as_uri()}")
 
     def save_to_ftp(self, directory: str, ftp: ftplib.FTP) -> None:
