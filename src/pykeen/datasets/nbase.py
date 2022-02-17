@@ -7,7 +7,8 @@ import hashlib
 import logging
 import pathlib
 from abc import abstractmethod
-from typing import Any, Mapping, Optional
+from typing import Any, ClassVar, Mapping, Optional, Union, Tuple
+import torch
 
 from class_resolver import OptionalKwargs, normalize_string
 
@@ -15,6 +16,9 @@ from ..constants import PYKEEN_DATASETS
 from ..triples import CoreTriplesFactory, TriplesFactory
 
 logger = logging.getLogger(__name__)
+
+
+KEYS = ("training", "testing", "validation")
 
 
 @dataclasses.dataclass
@@ -26,12 +30,51 @@ class Dataset:
     validation: Optional[CoreTriplesFactory] = None
     metadata: OptionalKwargs = None
 
-    @classmethod
-    def from_directory_binary(cls, directory: pathlib.Path) -> "Dataset":
-        raise NotImplementedError
+    @staticmethod
+    def meta_path(root: pathlib.Path) -> pathlib.Path:
+        return root.joinpath("metadata.pth")
 
-    def to_directory_binary(self, directory: pathlib.Path) -> None:
-        raise NotImplementedError
+    @property
+    def factory_tuple(self) -> Tuple[CoreTriplesFactory, ...]:
+        """Return a tuple of the three factories."""
+        res = (self.training, self.testing)
+        if self.validation:
+            res = res + (self.validation,)
+        return res
+
+    @property
+    def factory_dict(self) -> Mapping[str, CoreTriplesFactory]:
+        """Return a dictionary of the three factories."""
+        return dict(zip(KEYS, self.factory_tuple))
+
+    @classmethod
+    def from_directory_binary(cls, path: Union[str, pathlib.Path]) -> "Dataset":
+        """Load a dataset from a directory."""
+        path = pathlib.Path(path)
+
+        if not path.is_dir():
+            raise NotADirectoryError(path)
+
+        tfs = dict()
+        for key in KEYS:
+            tf_path = path.joinpath(key)
+            if tf_path.is_dir():
+                tfs[key] = TriplesFactory.from_path_binary(path=tf_path)
+            else:
+                logger.warning(f"{tf_path.as_uri()} does not exist.")
+        metadata_path = cls.meta_path(root=path)
+        metadata = torch.load(metadata_path) if metadata_path.is_file() else None
+        return Dataset(**tfs, metadata=metadata)
+
+    def to_directory_binary(self, path: Union[str, pathlib.Path]) -> None:
+        """Store a dataset to a path in binary format."""
+        path = pathlib.Path(path)
+        for key, factory in self.factory_dict.items():
+            tf_path = path.joinpath(key)
+            factory.to_path_binary(tf_path)
+            logger.info(f"Stored {key} factory to {tf_path.as_uri()}")
+        metadata = dict(self.metadata or {})
+        torch.save(metadata, self.meta_path(root=path))
 
 
 def _digest_kwargs(dataset_kwargs: Mapping[str, Any]) -> str:
