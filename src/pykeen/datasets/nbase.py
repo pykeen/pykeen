@@ -7,11 +7,13 @@ import hashlib
 import logging
 import pathlib
 from abc import abstractmethod
-from typing import Any, ClassVar, Mapping, MutableMapping, Optional, Tuple, Union
+from typing import Any, Mapping, MutableMapping, Optional, Tuple, Union
 
 import torch
 from class_resolver import OptionalKwargs, normalize_string
+from docdata import parse_docdata
 
+from .nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH, NATIONS_VALIDATE_PATH
 from ..constants import PYKEEN_DATASETS
 from ..triples import CoreTriplesFactory, TriplesFactory
 
@@ -28,7 +30,7 @@ class Dataset:
     training: CoreTriplesFactory
     testing: CoreTriplesFactory
     validation: Optional[CoreTriplesFactory] = None
-    metadata: MutableMapping[str, Any] = dataclasses.Field(default_factory=dict)
+    metadata: MutableMapping[str, Any] = dataclasses.field(default_factory=dict)
 
     @staticmethod
     def meta_path(root: pathlib.Path) -> pathlib.Path:
@@ -91,7 +93,7 @@ class DatasetLoader:
     create_inverse_triples: bool = False
 
     def _digest(self) -> str:
-        dataset_kwargs = ...
+        dataset_kwargs = self.__dataclass_fields__
         return _digest_kwargs(dataset_kwargs)
 
     @property
@@ -160,3 +162,27 @@ class PathDatasetLoader(DatasetLoader):
             if self.validation_path
             else None,
         )
+
+
+@parse_docdata
+class NationsDatasetLoader(PathDatasetLoader):
+    """A loader for the Nations dataset.
+
+    ---
+    name: Nations
+    statistics:
+        entities: 14
+        relations: 55
+        training: 1592
+        testing: 201
+        validation: 199
+        triples: 1992
+    citation:
+        author: Zhenfeng Lei
+        year: 2017
+        github: ZhenfengLei/KGDatasets
+    """
+
+    training_path = NATIONS_TRAIN_PATH
+    testing_path = NATIONS_TEST_PATH
+    validation_path = NATIONS_VALIDATE_PATH
