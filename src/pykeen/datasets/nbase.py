@@ -16,6 +16,7 @@ from class_resolver import OptionalKwargs, normalize_string
 from .nations import NATIONS_TRAIN_PATH
 from ..constants import PYKEEN_DATASETS
 from ..triples import CoreTriplesFactory, TriplesFactory
+from ..utils import timer
 
 logger = logging.getLogger(__name__)
 
@@ -105,6 +106,7 @@ class DatasetLoader:
         """The data loader's cache root."""
         return pystow.Module(PYKEEN_DATASETS).submodule(self.name)
 
+    @timer(callback=logger.info)
     def load(self, force: bool = False) -> Dataset:
         """Load the dataset."""
         # get canonical cache path
