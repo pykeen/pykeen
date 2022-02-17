@@ -507,6 +507,7 @@ def replicate_pipeline_from_config(
     move_to_cpu: bool = False,
     save_replicates: bool = True,
     save_training: bool = False,
+    keep_seed: bool = False,
     **kwargs,
 ) -> None:
     """Run the same pipeline several times from a configuration dictionary.
@@ -517,8 +518,12 @@ def replicate_pipeline_from_config(
     :param move_to_cpu: Should the models be moved back to the CPU? Only relevant if training on GPU.
     :param save_replicates: Should the artifacts of the replicates be saved?
     :param kwargs: Keyword arguments to be passed through to :func:`pipeline_from_config`.
+    :param save_training: whether to save the training factory.
+    :param keep_seed: whether to keep the random seed in a configuration
     """
-    pipeline_results = (pipeline_from_config(config, **kwargs) for _ in range(replicates))
+    # note: we do not directly forward discard_seed here, since we want to highlight the different default behaviour:
+    #    when replicating (i.e., running multiple replicates), fixing a random seed would render the replicates useless
+    pipeline_results = (pipeline_from_config(config, discard_seed=not keep_seed, **kwargs) for _ in range(replicates))
     save_pipeline_results_to_directory(
         config=config,
         directory=directory,
@@ -702,6 +707,7 @@ def pipeline_from_path(
 
 def pipeline_from_config(
     config: Mapping[str, Any],
+    discard_seed: bool = False,
     **kwargs,
 ) -> PipelineResult:
     """Run the pipeline with a configuration dictionary.
@@ -709,6 +715,8 @@ def pipeline_from_config(
     :param config: The experiment configuration dictionary. Should have a 'metadata' and 'pipeline'
         key. The metadata entry is passed to the metadata argument of :func:`pipeline`. The 'pipeline'
         entry is passed via splat to :func:`pipeline`.
+    :param discard_seed:
+        whether to discard the random seed for the pipeline, if present.
     :param kwargs: Additional kwargs to forward to :func:`pipeline`.
     :return: The results of running the pipeline on the given configuration.
     """
@@ -716,6 +724,9 @@ def pipeline_from_config(
     title = metadata.get("title")
     if title is not None:
         logger.info(f"Running: {title}")
+    if discard_seed and "random_seed" in pipeline_kwargs:
+        random_seed = pipeline_kwargs.pop("random_seed")
+        logger.info(f"Ignoring random_seed={random_seed}. You need to explicitly disable this, if unintended.")
 
     return pipeline(
         metadata=metadata,

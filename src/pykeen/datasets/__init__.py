@@ -7,6 +7,8 @@ New datasets (inheriting from :class:`pykeen.datasets.base.Dataset`) can be regi
 They are loaded automatically with :func:`pkg_resources.iter_entry_points`.
 """
 
+import base64
+import hashlib
 import logging
 import pathlib
 from textwrap import dedent
@@ -47,6 +49,7 @@ from .wikidata5m import Wikidata5M
 from .wk3l import WK3l15k
 from .wordnet import WN18, WN18RR
 from .yago import YAGO310
+from ..constants import PYKEEN_DATASETS
 from ..triples import CoreTriplesFactory
 
 __all__ = [
@@ -150,7 +153,7 @@ def get_dataset(
 
     if isinstance(dataset, str):
         if has_dataset(dataset):
-            return dataset_resolver.make(dataset, dataset_kwargs)
+            return _cached_get_dataset(dataset, dataset_kwargs)
         else:
             # Assume it's a file path
             return Dataset.from_path(dataset)
@@ -189,6 +192,45 @@ def get_dataset(
         - Testing: {type(testing)}: {testing}
         """,
     )
+
+
+def _digest_kwargs(dataset_kwargs: Mapping[str, Any]) -> str:
+    digester = hashlib.sha256()
+    for key in sorted(dataset_kwargs.keys()):
+        digester.update(key.encode(encoding="utf8"))
+        digester.update(str(dataset_kwargs[key]).encode(encoding="utf8"))
+    return base64.urlsafe_b64encode(digester.digest()).decode("utf8")[:32]
+
+
+def _cached_get_dataset(
+    dataset: str,
+    dataset_kwargs: Optional[Mapping[str, Any]],
+    force: bool = False,
+) -> Dataset:
+    """Get dataset by name, potentially using file-based cache."""
+    # hash kwargs
+    dataset_kwargs = dataset_kwargs or {}
+    digest = _digest_kwargs(dataset_kwargs)
+
+    # normalize dataset name
+    dataset = dataset_resolver.normalize(dataset)
+
+    # get canonic path
+    path = PYKEEN_DATASETS.joinpath(dataset, "cache", digest)
+
+    # try to use cached dataset
+    if path.is_dir() and not force:
+        logger.info(f"Loading cached preprocessed dataset from {path.as_uri()}")
+        return Dataset.from_directory_binary(path)
+
+    # load dataset without cache
+    dataset_instance = dataset_resolver.make(dataset, dataset_kwargs)
+
+    # store cache
+    logger.info(f"Caching preprocessed dataset to {path.as_uri()}")
+    dataset_instance.to_directory_binary(path=path)
+
+    return dataset_instance
 
 
 def has_dataset(key: str) -> bool:
