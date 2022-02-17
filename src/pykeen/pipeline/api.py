@@ -512,6 +512,7 @@ def replicate_pipeline_from_config(
     :param move_to_cpu: Should the models be moved back to the CPU? Only relevant if training on GPU.
     :param save_replicates: Should the artifacts of the replicates be saved?
     :param kwargs: Keyword arguments to be passed through to :func:`pipeline_from_config`.
+    :param keep_seed: whether to keep the random seed in a configuration
     """
     # note: we do not directly forward discard_seed here, since we want to highlight the different default behaviour:
     #    when replicating (i.e., running multiple replicates), fixing a random seed would render the replicates useless
