@@ -91,6 +91,7 @@ class DatasetLoader:
     """A loader for datasets."""
 
     create_inverse_triples: bool = False
+    metadata: MutableMapping[str, Any] = dataclasses.field(default_factory=dict)
 
     def _digest(self) -> str:
         dataset_kwargs = self.__dataclass_fields__
@@ -99,7 +100,7 @@ class DatasetLoader:
     @property
     def name(self) -> str:
         """The canonical dataset name."""
-        return normalize_string(self.__class__.__name__, suffix=DatasetLoader.__class__.__name__)
+        return normalize_string(self.metadata.get("name") or self.__class__.__name__, suffix=DatasetLoader.__class__.__name__)
 
     def load(self, force: bool = False) -> Dataset:
         """Load the dataset."""
@@ -113,7 +114,6 @@ class DatasetLoader:
 
         # load dataset without cache
         dataset_instance = self._load()
-        dataset_instance.metadata["name"] = self.name
 
         # store cache
         logger.info(f"Caching preprocessed dataset to {path.as_uri()}")
@@ -130,8 +130,8 @@ class DatasetLoader:
 class PathDatasetLoader(DatasetLoader):
     """A loader of pre-split datasets."""
 
-    training_path: pathlib.Path = dataclasses.field(init=False)
-    testing_path: pathlib.Path = dataclasses.field(init=False)
+    training_path: pathlib.Path = pathlib.Path("./training")
+    testing_path: pathlib.Path = pathlib.Path("./testing")
     validation_path: Optional[pathlib.Path] = None
     load_triples_kwargs: OptionalKwargs = None
 
@@ -161,28 +161,28 @@ class PathDatasetLoader(DatasetLoader):
             )
             if self.validation_path
             else None,
+            metadata=self.metadata,
         )
 
 
-@parse_docdata
-class NationsDatasetLoader(PathDatasetLoader):
-    """A loader for the Nations dataset.
-
-    ---
-    name: Nations
-    statistics:
-        entities: 14
-        relations: 55
-        training: 1592
-        testing: 201
-        validation: 199
-        triples: 1992
-    citation:
-        author: Zhenfeng Lei
-        year: 2017
-        github: ZhenfengLei/KGDatasets
-    """
-
-    training_path = NATIONS_TRAIN_PATH
-    testing_path = NATIONS_TEST_PATH
-    validation_path = NATIONS_VALIDATE_PATH
+nations_loader = PathDatasetLoader(
+    training_path=NATIONS_TRAIN_PATH,
+    testing_path=NATIONS_TEST_PATH,
+    validation_path=NATIONS_VALIDATE_PATH,
+    metadata=dict(
+        name="Nations",
+        statistics=dict(
+            entities=14,
+            relations=55,
+            training=1592,
+            testing=201,
+            validation=199,
+            triples=1992,
+        ),
+        citation=dict(
+            author="Zhenfeng Lei",
+            year=2017,
+            github="ZhenfengLei/KGDatasets",
+        ),
+    ),
+)
