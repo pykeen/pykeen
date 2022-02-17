@@ -93,19 +93,17 @@ class DatasetLoader:
     create_inverse_triples: bool = False
     metadata: MutableMapping[str, Any] = dataclasses.field(default_factory=dict)
 
-    def _digest(self) -> str:
-        dataset_kwargs = self.__dataclass_fields__
-        return _digest_kwargs(dataset_kwargs)
-
     @property
     def name(self) -> str:
         """The canonical dataset name."""
-        return normalize_string(self.metadata.get("name") or self.__class__.__name__, suffix=DatasetLoader.__class__.__name__)
+        return normalize_string(
+            self.metadata.get("name") or self.__class__.__name__, suffix=DatasetLoader.__class__.__name__
+        )
 
     def load(self, force: bool = False) -> Dataset:
         """Load the dataset."""
         # get canonical cache path
-        path = PYKEEN_DATASETS.joinpath(self.name, "cache", self._digest())
+        path = PYKEEN_DATASETS.joinpath(self.name, "cache", _digest_kwargs(self.__dict__))
 
         # try to use cached dataset
         if path.is_dir() and not force:
