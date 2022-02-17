@@ -7,7 +7,7 @@ import hashlib
 import logging
 import pathlib
 from abc import abstractmethod
-from typing import Any, ClassVar, Mapping, Optional, Union, Tuple
+from typing import Any, ClassVar, Mapping, MutableMapping, Optional, Union, Tuple
 import torch
 
 from class_resolver import OptionalKwargs, normalize_string
@@ -28,7 +28,7 @@ class Dataset:
     training: CoreTriplesFactory
     testing: CoreTriplesFactory
     validation: Optional[CoreTriplesFactory] = None
-    metadata: OptionalKwargs = None
+    metadata: MutableMapping[str, Any] = dataclasses.Field(default_factory=dict)
 
     @staticmethod
     def meta_path(root: pathlib.Path) -> pathlib.Path:
@@ -63,7 +63,7 @@ class Dataset:
             else:
                 logger.warning(f"{tf_path.as_uri()} does not exist.")
         metadata_path = cls.meta_path(root=path)
-        metadata = torch.load(metadata_path) if metadata_path.is_file() else None
+        metadata = torch.load(metadata_path)
         return Dataset(**tfs, metadata=metadata)
 
     def to_directory_binary(self, path: Union[str, pathlib.Path]) -> None:
@@ -73,8 +73,7 @@ class Dataset:
             tf_path = path.joinpath(key)
             factory.to_path_binary(tf_path)
             logger.info(f"Stored {key} factory to {tf_path.as_uri()}")
-        metadata = dict(self.metadata or {})
-        torch.save(metadata, self.meta_path(root=path))
+        torch.save(self.metadata, self.meta_path(root=path))
 
 
 def _digest_kwargs(dataset_kwargs: Mapping[str, Any]) -> str:
@@ -98,7 +97,7 @@ class DatasetLoader:
     @property
     def name(self) -> str:
         """The canonical dataset name."""
-        return normalize_string(self.__class__.__name__, suffix=DatasetLoader.__class__)
+        return normalize_string(self.__class__.__name__, suffix=DatasetLoader.__class__.__name__)
 
     def load(self, force: bool = False) -> Dataset:
         """Load the dataset."""
@@ -112,6 +111,7 @@ class DatasetLoader:
 
         # load dataset without cache
         dataset_instance = self._load()
+        dataset_instance.metadata["name"] = self.name
 
         # store cache
         logger.info(f"Caching preprocessed dataset to {path.as_uri()}")
