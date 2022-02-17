@@ -7,9 +7,9 @@ import hashlib
 import logging
 import pathlib
 from abc import abstractmethod
-from typing import Any, ClassVar, Mapping, MutableMapping, Optional, Union, Tuple
-import torch
+from typing import Any, ClassVar, Mapping, MutableMapping, Optional, Tuple, Union
 
+import torch
 from class_resolver import OptionalKwargs, normalize_string
 
 from ..constants import PYKEEN_DATASETS
@@ -128,9 +128,8 @@ class DatasetLoader:
 class PathDatasetLoader(DatasetLoader):
     """A loader of pre-split datasets."""
 
-    # TODO: non-default after default
-    training_path: pathlib.Path
-    testing_path: pathlib.Path
+    training_path: pathlib.Path = dataclasses.field(init=False)
+    testing_path: pathlib.Path = dataclasses.field(init=False)
     validation_path: Optional[pathlib.Path] = None
     load_triples_kwargs: OptionalKwargs = None
 
