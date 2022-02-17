@@ -2,11 +2,12 @@
 
 
 import dataclasses
+from abc import abstractmethod
 from typing import Optional
 
 from class_resolver import OptionalKwargs
 
-from pykeen.triples.triples_factory import CoreTriplesFactory
+from ..triples import CoreTriplesFactory
 
 
 @dataclasses.dataclass
@@ -17,3 +18,15 @@ class Dataset:
     testing: CoreTriplesFactory
     validation: Optional[CoreTriplesFactory] = None
     metadata: OptionalKwargs = None
+
+
+@dataclasses.dataclass
+class DatasetLoader:
+    """A loader for datasets."""
+
+    create_inverse_triples: bool = False
+
+    @abstractmethod
+    def load(self) -> Dataset:
+        """Load the dataset."""
+        raise NotImplementedError
