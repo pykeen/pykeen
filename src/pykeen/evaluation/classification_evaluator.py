@@ -36,8 +36,8 @@ class ClassificationMetricResults(MetricResults):
         data = dict()
         for key, metric in CLASSIFICATION_METRICS.items():
             value = metric.score(y_true, y_score)
-            if not isinstance(value, (int, float)):  # numpy.float
-                assert hasattr(value, "item") and callable(value.item)
+            if isinstance(value, np.number):
+                # TODO: fix this upstream / make metric.score comply to signature
                 value = value.item()
             data[key] = value
         return ClassificationMetricResults(data=data)
