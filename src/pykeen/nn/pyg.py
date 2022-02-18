@@ -6,7 +6,7 @@ Message Passing layers via PyTorch Geometric.
 from typing import Literal, Optional, Sequence, Union
 
 import torch
-from class_resolver import HintOrType
+from class_resolver import HintOrType, OptionalKwargs
 from class_resolver.contrib.torch import activation_resolver
 from torch import nn
 
@@ -19,13 +19,13 @@ except ImportError:
     conv = None
 
 __all__ = [
-    "RGCNRepresentation",
+    "RGCNRepresentations",
 ]
 
-PyGAggregationType = Literal["mean", "max", "sum"]
+PyGAggregationType = Literal["mean", "max", "add"]
 
 
-class RGCNRepresentation(RepresentationModule):
+class RGCNRepresentations(RepresentationModule):
     """
 
     cf. https://github.com/pyg-team/pytorch_geometric/blob/master/examples/rgcn_link_pred.py
@@ -44,6 +44,7 @@ class RGCNRepresentation(RepresentationModule):
         bias: bool = True,
         aggregation: PyGAggregationType = "mean",
         activation: HintOrType[nn.Module] = None,
+        activation_kwargs: OptionalKwargs = None,
     ):
         if conv is None:
             raise ImportError
@@ -62,7 +63,7 @@ class RGCNRepresentation(RepresentationModule):
 
         # has to be assigned *after* super.__init__ has been called
         self.entity_embeddings = entity_embeddings
-        self.activation = activation_resolver.make(activation)
+        self.activation = activation_resolver.make(activation, activation_kwargs)
 
         # create message passing layers
         layers = []

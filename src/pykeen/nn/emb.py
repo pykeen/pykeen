@@ -526,6 +526,7 @@ normalizer_resolver = FunctionResolver([functional.normalize])
 
 class CompGCNLayer(nn.Module):
     """A single layer of the CompGCN model."""
+
     # TODO: PyG
 
     def __init__(
@@ -706,6 +707,7 @@ class CompGCNLayer(nn.Module):
 
 class CombinedCompGCNRepresentations(nn.Module):
     """A sequence of CompGCN layers."""
+
     # TODO: PyG
 
     # Buffered enriched entity and relation representations
@@ -817,6 +819,7 @@ class CombinedCompGCNRepresentations(nn.Module):
 
 class SingleCompGCNRepresentation(RepresentationModule):
     """A wrapper around the combined representation module."""
+
     # TODO: PyG
 
     def __init__(
