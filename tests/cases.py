@@ -21,6 +21,7 @@ from typing import (
     MutableMapping,
     Optional,
     Sequence,
+    SupportsFloat,
     Tuple,
     Type,
     TypeVar,
@@ -1950,7 +1951,8 @@ class MetricResultTestCase(unittest_templates.GenericTestCase[MetricResults]):
         self.assertIsInstance(flat_dict, dict)
         for key, value in flat_dict.items():
             self.assertIsInstance(key, str)
-            self.assertIsInstance(value, (float, int))
+            # TODO: does this suffice, or do we really need float as datatype?
+            self.assertIsInstance(value, SupportsFloat, msg=key)
         self._verify_flat_dict(flat_dict)
 
     def _verify_flat_dict(self, flat_dict: Mapping[str, Any]):
