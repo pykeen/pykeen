@@ -2,6 +2,8 @@
 
 """Various edge weighting implementations for R-GCN."""
 
+# TODO: PyG
+
 from abc import abstractmethod
 from typing import ClassVar, Optional, Union
 
