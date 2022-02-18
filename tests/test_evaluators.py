@@ -13,6 +13,7 @@ import numpy.random
 import numpy.testing
 import pandas
 import torch
+import unittest_templates
 
 from pykeen.datasets import Nations
 from pykeen.evaluation import Evaluator, MetricResults, RankBasedEvaluator, RankBasedMetricResults
@@ -746,3 +747,22 @@ class RankBasedMetricResultsTests(unittest.TestCase):
         """Test to_df."""
         df = self.instance.to_df()
         assert isinstance(df, pandas.DataFrame)
+
+
+class RankBasedMetricResultTests(cases.MetricResultTestCase):
+    """Tests for rank-based metric results."""
+
+    cls = RankBasedMetricResults
+
+
+class ClassificationMetricResultsTests(cases.MetricResultTestCase):
+    """Tests for classification metric results."""
+
+    cls = ClassificationMetricResults
+
+
+class MetricResultMetaTestCase(unittest_templates.MetaTestCase):
+    """Test for tests for metric results."""
+
+    base_cls = MetricResults
+    base_test = cases.MetricResultTestCase

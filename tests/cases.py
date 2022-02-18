@@ -1938,3 +1938,19 @@ class EvaluationOnlyModelTestCase(unittest_templates.GenericTestCase[pykeen.mode
         scores = self.instance.score_h(rt_batch=rt_batch)
         assert scores.shape == (self.batch_size, self.factory.num_entities)
         self._verify(scores)
+
+
+class MetricResultTestCase(unittest_templates.GenericTestCase[MetricResults]):
+    """Test for metric results."""
+
+    def test_flat_dict(self):
+        """Test to_flat_dict."""
+        flat_dict = self.instance.to_flat_dict()
+        # check flatness
+        assert isinstance(flat_dict, dict)
+        assert all(isinstance(key, str) for key in flat_dict.keys())
+        assert all(isinstance(value, (float, int)) for value in flat_dict.values())
+        self._verify_flat_dict(flat_dict)
+
+    def _verify_flat_dict(self, flat_dict: Mapping[str, Any]):
+        pass
