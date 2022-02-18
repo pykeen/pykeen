@@ -56,6 +56,8 @@ def resolve_result_trackers(
         as the result trackers
     :returns: A multi-result trackers that offloads to all contained result trackers
     """
+    if result_tracker is None:
+        result_tracker = []
     trackers = tracker_resolver.make_many(queries=result_tracker, kwargs=result_tracker_kwargs)
     # always add a Python result tracker for storing the configuration
     trackers.append(PythonResultTracker(store_metrics=False))
