@@ -2,23 +2,26 @@
 
 """Test the evaluators."""
 
-import dataclasses
 import itertools
 import logging
 import random
 import unittest
-from operator import attrgetter
-from typing import Any, Collection, Dict, Iterable, List, MutableMapping, Optional, Tuple, Union
+from typing import Any, Collection, Dict, Iterable, List, Mapping, MutableMapping, Optional, Tuple, Union
 
 import numpy
 import numpy.random
 import numpy.testing
 import pandas
 import torch
+import unittest_templates
 
 from pykeen.datasets import Nations
 from pykeen.evaluation import Evaluator, MetricResults, RankBasedEvaluator, RankBasedMetricResults
-from pykeen.evaluation.classification_evaluator import ClassificationEvaluator, ClassificationMetricResults
+from pykeen.evaluation.classification_evaluator import (
+    CLASSIFICATION_METRICS,
+    ClassificationEvaluator,
+    ClassificationMetricResults,
+)
 from pykeen.evaluation.evaluator import (
     create_dense_positive_mask_,
     create_sparse_positive_filter_,
@@ -28,7 +31,7 @@ from pykeen.evaluation.evaluator import (
 )
 from pykeen.evaluation.expectation import expected_hits_at_k, expected_mean_rank
 from pykeen.evaluation.metrics import MetricKey
-from pykeen.evaluation.rank_based_evaluator import SampledRankBasedEvaluator, sample_negatives
+from pykeen.evaluation.rank_based_evaluator import RANKING_METRICS, SampledRankBasedEvaluator, sample_negatives
 from pykeen.evaluation.ranks import Ranks
 from pykeen.models import FixedModel
 from pykeen.typing import (
@@ -159,15 +162,16 @@ class ClassificationEvaluatorTest(cases.EvaluatorTestCase):
         mask = numpy.concatenate(mask_filtered, axis=0)
         scores = numpy.concatenate(scores_filtered, axis=0)
 
-        for field in sorted(dataclasses.fields(ClassificationMetricResults), key=attrgetter("name")):
-            with self.subTest(metric=field.name):
-                f = field.metadata["f"]
-                exp_score = f(numpy.array(mask.flat), numpy.array(scores.flat))
-                act_score = result.get_metric(field.name)
+        y_true, y_score = numpy.array(mask.flat), numpy.array(scores.flat)
+        for name, metric in CLASSIFICATION_METRICS.items():
+            with self.subTest(metric=name):
+                exp_score = metric.score(y_true=y_true, y_score=y_score)
+                self.assertIn(name, result.data)
+                act_score = result.get_metric(name)
                 if numpy.isnan(exp_score):
                     self.assertTrue(numpy.isnan(act_score))
                 else:
-                    self.assertAlmostEqual(act_score, exp_score, msg=f"failed for {field.name}", delta=7)
+                    self.assertAlmostEqual(act_score, exp_score, msg=f"failed for {name}", delta=7)
 
 
 class EvaluatorUtilsTests(unittest.TestCase):
@@ -380,7 +384,7 @@ class DummyEvaluator(Evaluator):
             self.counter -= 1
 
     def finalize(self) -> MetricResults:  # noqa: D102
-        return RankBasedMetricResults(
+        return RankBasedMetricResults.from_dict(
             arithmetic_mean_rank=self.counter,
             geometric_mean_rank=None,
             harmonic_mean_rank=None,
@@ -723,23 +727,61 @@ def test_prepare_filter_triples():
         assert filter_triples.unique(dim=0).shape == filter_triples.shape
 
 
-class RankBasedMetricResultsTests(unittest.TestCase):
+class RankBasedMetricResultTests(cases.MetricResultTestCase):
     """Tests for rank-based metric results."""
 
+    cls = RankBasedMetricResults
     num_entities: int = 7
     num_triples: int = 13
 
-    def setUp(self) -> None:
-        """Prepare test instance."""
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        kwargs = super()._pre_instantiation_hook(kwargs)
+        # Populate with real results.
         evaluator = RankBasedEvaluator()
         evaluator.num_entities = self.num_entities
         evaluator.ranks = {
             (side, rank_type): [random.random() for _ in range(self.num_triples * (2 if side == SIDE_BOTH else 1))]
             for side, rank_type in itertools.product(SIDES, {RANK_EXPECTED_REALISTIC}.union(RANK_TYPES))
         }
-        self.instance = evaluator.finalize()
+        kwargs["data"] = evaluator.finalize().data
+        return kwargs
+
+    def _verify_flat_dict(self, flat_dict: Mapping[str, Any]):  # noqa: D102
+        for metric_name in RANKING_METRICS.keys():
+            # special treatment for hits@k
+            if metric_name == "hits_at_k":
+                metric_name = "hits_at_10"
+            self.assertTrue(any(metric_name in key for key in flat_dict.keys()), metric_name)
 
     def test_to_df(self):
         """Test to_df."""
         df = self.instance.to_df()
         assert isinstance(df, pandas.DataFrame)
+
+
+class ClassificationMetricResultsTests(cases.MetricResultTestCase):
+    """Tests for classification metric results."""
+
+    cls = ClassificationMetricResults
+    num_entities: int = 7
+    num_triples: int = 13
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        kwargs = super()._pre_instantiation_hook(kwargs)
+        # Populate with real results.
+        evaluator = ClassificationEvaluator()
+        evaluator.process_scores_(
+            hrt_batch=torch.randint(self.num_entities, size=(self.num_triples, 3)),
+            target=LABEL_TAIL,
+            scores=torch.rand(self.num_triples, self.num_entities),
+            dense_positive_mask=torch.rand(self.num_triples, self.num_entities) < 0.5,
+        )
+        kwargs["data"] = evaluator.finalize().data
+        return kwargs
+
+
+class MetricResultMetaTestCase(unittest_templates.MetaTestCase):
+    """Test for tests for metric results."""
+
+    base_cls = MetricResults
+    base_test = cases.MetricResultTestCase

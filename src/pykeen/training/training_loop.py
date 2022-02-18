@@ -25,6 +25,7 @@ from .callbacks import (
     GradientAbsClippingTrainingCallback,
     GradientNormClippingTrainingCallback,
     MultiTrainingCallback,
+    StopperTrainingCallback,
     TrackerTrainingCallback,
     TrainingCallbackHint,
     TrainingCallbackKwargsHint,
@@ -37,6 +38,7 @@ from ..trackers import ResultTracker
 from ..training.schlichtkrull_sampler import SLCWASubGraphInstances
 from ..triples import CoreTriplesFactory, Instances, TriplesFactory
 from ..triples.instances import SLCWAInstances
+from ..typing import InductiveMode
 from ..utils import (
     format_relative_comparison,
     get_batchnorm_modules,
@@ -118,6 +120,8 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         optimizer: Optional[Optimizer] = None,
         lr_scheduler: Optional[LRScheduler] = None,
         automatic_memory_optimization: bool = True,
+        mode: Optional[InductiveMode] = None,
+        result_tracker: Optional[ResultTracker] = None,
     ) -> None:
         """Initialize the training loop.
 
@@ -128,12 +132,17 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         :param automatic_memory_optimization: bool
             Whether to automatically optimize the sub-batch size during
             training and batch size during evaluation with regards to the hardware at hand.
+        :param result_tracker:
+            The result tracker.
         """
         self.model = model
         self.optimizer = optimizer
         self.lr_scheduler = lr_scheduler
         self.losses_per_epochs = []
+        self._should_stop = False
         self.automatic_memory_optimization = automatic_memory_optimization
+        self.mode = mode
+        self.result_tracker = result_tracker
 
         logger.debug("we don't really need the triples factory: %s", triples_factory)
 
@@ -178,7 +187,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         use_tqdm_batch: bool = True,
         tqdm_kwargs: Optional[Mapping[str, Any]] = None,
         stopper: Optional[Stopper] = None,
-        result_tracker: Optional[ResultTracker] = None,
         sub_batch_size: Optional[int] = None,
         num_workers: Optional[int] = None,
         clear_optimizer: bool = False,
@@ -226,8 +234,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         :param stopper:
             An instance of :class:`pykeen.stopper.EarlyStopper` with settings for checking
             if training should stop early
-        :param result_tracker:
-            The result tracker.
         :param sub_batch_size:
             If provided split each batch into sub-batches to avoid memory issues for large models / small GPUs.
         :param num_workers:
@@ -273,6 +279,8 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         :return:
             The losses per epoch.
         """
+        self._should_stop = False
+
         # Create training instances. Use the _create_instances function to allow subclasses
         # to modify this behavior
         training_instances = self._create_instances(triples_factory)
@@ -334,6 +342,8 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         if getattr(stopper, "stopped", False):
             result: Optional[List[float]] = self.losses_per_epochs
         else:
+            # send model to device before going into the internal training loop
+            self.model = self.model.to(self.model.get_preferred_device())
             result = self._train(
                 num_epochs=num_epochs,
                 batch_size=batch_size,
@@ -346,7 +356,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                 use_tqdm_batch=use_tqdm_batch,
                 tqdm_kwargs=tqdm_kwargs,
                 stopper=stopper,
-                result_tracker=result_tracker,
                 sub_batch_size=sub_batch_size,
                 num_workers=num_workers,
                 save_checkpoints=save_checkpoints,
@@ -391,7 +400,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         use_tqdm_batch: bool = True,
         tqdm_kwargs: Optional[Mapping[str, Any]] = None,
         stopper: Optional[Stopper] = None,
-        result_tracker: Optional[ResultTracker] = None,
         sub_batch_size: Optional[int] = None,
         num_workers: Optional[int] = None,
         save_checkpoints: bool = False,
@@ -432,8 +440,19 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         # Prepare all of the callbacks
         callback = MultiTrainingCallback(callbacks=callbacks, callback_kwargs=callback_kwargs)
         # Register a callback for the result tracker, if given
-        if result_tracker is not None:
-            callback.register_callback(TrackerTrainingCallback(result_tracker))
+        if self.result_tracker is not None:
+            callback.register_callback(TrackerTrainingCallback())
+        # Register a callback for the early stopper, if given
+        # TODO should mode be passed here?
+        if stopper is not None:
+            callback.register_callback(
+                StopperTrainingCallback(
+                    stopper,
+                    triples_factory=triples_factory,
+                    last_best_epoch=last_best_epoch,
+                    best_epoch_model_file_path=best_epoch_model_file_path,
+                )
+            )
         if gradient_clipping_max_norm is not None:
             callback.register_callback(
                 GradientNormClippingTrainingCallback(
@@ -502,6 +521,8 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         if not continue_training:
             # Reset the weights
             self.model.reset_parameters_()
+            # afterwards, some parameters may be on the wrong device
+            self.model.to(self.model.get_preferred_device())
 
             # Create new optimizer
             optimizer_kwargs = _get_optimizer_kwargs(self.optimizer)
@@ -518,7 +539,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             raise ValueError("Cannot continue_training without being trained once.")
 
         # Ensure the model is on the correct device
-        self.model = self.model.to(self.device)
+        self.model.to(self.model.get_preferred_device())
 
         # Create Sampler
         if sampler == "schlichtkrull":
@@ -679,20 +700,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                 # Save the last successful finished epoch
                 self._epoch = epoch
 
-                should_stop = False
-                if stopper is not None and stopper.should_evaluate(epoch):
-                    if stopper.should_stop(epoch):
-                        should_stop = True
-                    # Since the model is also used within the stopper, its graph and cache have to be cleared
-                    self._free_graph_and_cache()
-                # When the stopper obtained a new best epoch, this model has to be saved for reconstruction
-                if (
-                    stopper is not None
-                    and stopper.best_epoch != last_best_epoch
-                    and best_epoch_model_file_path is not None
-                ):
-                    self._save_state(path=best_epoch_model_file_path, triples_factory=triples_factory)
-                    last_best_epoch = epoch
             # When the training loop failed, a fallback checkpoint is created to resume training.
             except (MemoryError, RuntimeError) as e:
                 # During automatic memory optimization only the error message is of interest
@@ -730,7 +737,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                 # MyPy overrides are because you should
                 if (
                     minutes_since_last_checkpoint >= checkpoint_frequency  # type: ignore
-                    or should_stop
+                    or self._should_stop
                     or epoch == num_epochs
                 ):
                     # When there wasn't a best epoch the checkpoint path should be None
@@ -744,11 +751,12 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                     )  # type: ignore
                     last_checkpoint = time.time()
 
-            if should_stop and last_best_epoch is not None and best_epoch_model_file_path is not None:
-                self._load_state(path=best_epoch_model_file_path)
-                # Delete temporary best epoch model
-                if pathlib.Path.is_file(best_epoch_model_file_path):
-                    os.remove(best_epoch_model_file_path)
+            if self._should_stop:
+                if last_best_epoch is not None and best_epoch_model_file_path is not None:
+                    self._load_state(path=best_epoch_model_file_path)
+                    # Delete temporary best epoch model
+                    if pathlib.Path.is_file(best_epoch_model_file_path):
+                        os.remove(best_epoch_model_file_path)
                 return self.losses_per_epochs
 
         callback.post_train(losses=self.losses_per_epochs)

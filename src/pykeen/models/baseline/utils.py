@@ -9,9 +9,13 @@ import scipy.sparse
 import torch
 from sklearn.preprocessing import normalize as sklearn_normalize
 
+from ...triples import CoreTriplesFactory
+from ...triples.leakage import jaccard_similarity_scipy, triples_factory_to_sparse_matrices
+
 __all__ = [
     "get_csr_matrix",
     "marginal_score",
+    "get_relation_similarity",
 ]
 
 
@@ -60,3 +64,46 @@ def marginal_score(
     # note: we need to work with dense arrays only to comply with returning torch tensors. Otherwise, we could
     # stay sparse here, with a potential of a huge memory benefit on large datasets!
     return torch.from_numpy(scores.todense())
+
+
+def sparsify(
+    matrix: numpy.ndarray,
+    threshold: Optional[float] = None,
+) -> scipy.sparse.spmatrix:
+    """
+    Sparsify a matrix.
+
+    :param matrix: shape: (m, n)
+        the (dense) matrix
+    :param threshold:
+        the absolute threshold for sparsification
+
+    :return: shape: (m, n)
+        a sparsified matrix
+    """
+    if threshold is not None:
+        matrix = numpy.copy(matrix)
+        matrix[matrix < threshold] = 0.0
+    sparse = scipy.sparse.csr_matrix(matrix)
+    sparse.eliminate_zeros()
+    return sparse
+
+
+def get_relation_similarity(
+    triples_factory: CoreTriplesFactory,
+    threshold: Optional[float] = None,
+) -> Tuple[scipy.sparse.csr_matrix, scipy.sparse.csr_matrix]:
+    """
+    Compute Jaccard similarity of relations' (and their inverse's) entity-pair sets.
+
+    :param triples_factory:
+        the triples factory
+    :param threshold:
+        an absolute sparsification threshold.
+
+    :return: shape: (num_relations, num_relations)
+        a pair of similarity matrices.
+    """
+    r, r_inv = triples_factory_to_sparse_matrices(triples_factory=triples_factory)
+    sim, sim_inv = [sparsify(jaccard_similarity_scipy(r, r2), threshold=threshold) for r2 in (r, r_inv)]
+    return sim, sim_inv

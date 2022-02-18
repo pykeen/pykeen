@@ -48,6 +48,7 @@ import pykeen.evaluation.evaluation_loop
 from pykeen.datasets import Nations
 from pykeen.datasets.base import LazyDataset
 from pykeen.datasets.kinships import KINSHIPS_TRAIN_PATH
+from pykeen.datasets.mocks import create_inductive_dataset
 from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH
 from pykeen.evaluation import Evaluator, MetricResults
 from pykeen.losses import Loss, PairwiseLoss, PointwiseLoss, SetwiseLoss, UnsupportedLabelSmoothingError
@@ -68,7 +69,9 @@ from pykeen.triples.utils import get_entities, is_triple_tensor_subset, triple_t
 from pykeen.typing import (
     LABEL_HEAD,
     LABEL_TAIL,
+    TRAINING,
     HeadRepresentation,
+    InductiveMode,
     Initializer,
     MappedTriples,
     RelationRepresentation,
@@ -860,6 +863,9 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
     #: the model's device
     device: torch.device
 
+    #: the inductive mode
+    mode: ClassVar[Optional[InductiveMode]] = None
+
     def pre_setup_hook(self) -> None:  # noqa: D102
         # for reproducible testing
         _, self.generator, _ = set_random_seed(42)
@@ -926,7 +932,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         """Test the model's ``score_hrt()`` function."""
         batch = self.factory.mapped_triples[: self.batch_size, :].to(self.instance.device)
         try:
-            scores = self.instance.score_hrt(batch)
+            scores = self.instance.score_hrt(batch, mode=self.mode)
         except RuntimeError as e:
             if str(e) == "fft: ATen not compiled with MKL support":
                 self.skipTest(str(e))
@@ -943,7 +949,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         assert (batch[:, 0] < self.factory.num_entities).all()
         assert (batch[:, 1] < self.factory.num_relations).all()
         try:
-            scores = self.instance.score_t(batch)
+            scores = self.instance.score_t(batch, mode=self.mode)
         except NotImplementedError:
             self.fail(msg="score_t not yet implemented")
         except RuntimeError as e:
@@ -961,7 +967,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         assert batch.shape == (self.batch_size, 2)
         assert (batch < self.factory.num_entities).all()
         try:
-            scores = self.instance.score_r(batch)
+            scores = self.instance.score_r(batch, mode=self.mode)
         except NotImplementedError:
             self.fail(msg="score_r not yet implemented")
         except RuntimeError as e:
@@ -984,7 +990,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         assert (batch[:, 0] < self.factory.num_relations).all()
         assert (batch[:, 1] < self.factory.num_entities).all()
         try:
-            scores = self.instance.score_h(batch)
+            scores = self.instance.score_h(batch, mode=self.mode)
         except NotImplementedError:
             self.fail(msg="score_h not yet implemented")
         except RuntimeError as e:
@@ -1204,7 +1210,7 @@ Traceback
         # do one optimization step
         opt = optim.SGD(params=self.instance.parameters(), lr=1.0)
         batch = self.factory.mapped_triples[: self.batch_size, :].to(self.instance.device)
-        scores = self.instance.score_hrt(hrt_batch=batch)
+        scores = self.instance.score_hrt(hrt_batch=batch, mode=self.mode)
         fake_loss = scores.mean()
         fake_loss.backward()
         opt.step()
@@ -1379,6 +1385,42 @@ class BaseNodePieceTest(ModelTestCase):
         if self.instance_kwargs.get("tokenizers_kwargs"):
             raise SkipTest("No support for tokenizers_kwargs via CLI.")
         return super()._help_test_cli(args)
+
+
+class InductiveModelTestCase(ModelTestCase):
+    """Tests for inductive models."""
+
+    mode = TRAINING
+    num_relations: ClassVar[int] = 7
+    num_entities_transductive: ClassVar[int] = 13
+    num_entities_inductive: ClassVar[int] = 5
+    num_triples_training: ClassVar[int] = 33
+    num_triples_inference: ClassVar[int] = 31
+    num_triples_testing: ClassVar[int] = 37
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        dataset = create_inductive_dataset(
+            num_relations=self.num_relations,
+            num_entities_transductive=self.num_entities_transductive,
+            num_entities_inductive=self.num_entities_inductive,
+            num_triples_training=self.num_triples_training,
+            num_triples_inference=self.num_triples_inference,
+            num_triples_testing=self.num_triples_testing,
+            create_inverse_triples=self.create_inverse_triples,
+        )
+        training_loop_kwargs = dict(self.training_loop_kwargs or dict())
+        training_loop_kwargs["mode"] = self.mode
+        InductiveModelTestCase.training_loop_kwargs = training_loop_kwargs
+        # dataset = InductiveFB15k237(create_inverse_triples=self.create_inverse_triples)
+        kwargs["triples_factory"] = self.factory = dataset.transductive_training
+        kwargs["inference_factory"] = dataset.inductive_inference
+        return kwargs
+
+    def _help_test_cli(self, args):  # noqa: D102
+        raise SkipTest("Inductive models are not compatible the CLI.")
+
+    def test_pipeline_nations_early_stopper(self):  # noqa: D102
+        raise SkipTest("Inductive models are not compatible the pipeline.")
 
 
 class RepresentationTestCase(GenericTestCase[RepresentationModule]):
@@ -1886,3 +1928,51 @@ class EvaluationLoopTestCase(GenericTestCase[pykeen.evaluation.evaluation_loop.E
         """Test processing a single batch."""
         batch = next(iter(self.instance.get_loader(batch_size=self.batch_size)))
         self.instance.process_batch(batch=batch)
+
+
+class EvaluationOnlyModelTestCase(unittest_templates.GenericTestCase[pykeen.models.EvaluationOnlyModel]):
+    """Test case for evaluation only models."""
+
+    #: The batch size
+    batch_size: int = 3
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        dataset = Nations()
+        self.factory = kwargs["triples_factory"] = dataset.training
+        return kwargs
+
+    def _verify(self, scores: torch.FloatTensor):
+        """Verify scores."""
+
+    def test_score_t(self):
+        """Test score_t."""
+        hr_batch = self.factory.mapped_triples[torch.randint(self.factory.num_triples, size=(self.batch_size,))][:, :2]
+        scores = self.instance.score_t(hr_batch=hr_batch)
+        assert scores.shape == (self.batch_size, self.factory.num_entities)
+        self._verify(scores)
+
+    def test_score_h(self):
+        """Test score_h."""
+        rt_batch = self.factory.mapped_triples[torch.randint(self.factory.num_triples, size=(self.batch_size,))][:, 1:]
+        scores = self.instance.score_h(rt_batch=rt_batch)
+        assert scores.shape == (self.batch_size, self.factory.num_entities)
+        self._verify(scores)
+
+
+class MetricResultTestCase(unittest_templates.GenericTestCase[MetricResults]):
+    """Test for metric results."""
+
+    def test_flat_dict(self):
+        """Test to_flat_dict."""
+        flat_dict = self.instance.to_flat_dict()
+        # check flatness
+        self.assertIsInstance(flat_dict, dict)
+        for key, value in flat_dict.items():
+            self.assertIsInstance(key, str)
+            # TODO: does this suffice, or do we really need float as datatype?
+            self.assertIsInstance(value, (float, int), msg=key)
+        self._verify_flat_dict(flat_dict)
+
+    def _verify_flat_dict(self, flat_dict: Mapping[str, Any]):
+        pass
