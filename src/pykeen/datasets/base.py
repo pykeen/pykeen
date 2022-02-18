@@ -10,12 +10,13 @@ import tarfile
 import zipfile
 from abc import abstractmethod
 from io import BytesIO
-from typing import Any, ClassVar, Dict, List, Mapping, Optional, Sequence, Tuple, Type, Union, cast
+from typing import Any, ClassVar, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Type, Union, cast
 
 import click
 import docdata
 import pandas as pd
 import requests
+import torch
 from more_click import verbose_option
 from pystow.utils import download, name_from_url
 from tabulate import tabulate
@@ -75,6 +76,20 @@ class Dataset:
     testing: CoreTriplesFactory
     #: A factory wrapping the validation triples, that share indices with the training triples
     validation: Optional[CoreTriplesFactory]
+  
+    #: the dataset's name
+    metadata: Optional[Mapping[str, Any]] = None
+
+    metadata_file_name: ClassVar[str] = "metadata.pth"
+
+    def __eq__(self, __o: object) -> bool:  # noqa: D105
+        return (
+            isinstance(__o, Dataset)
+            and (self.training == __o.training)
+            and (self.testing == __o.testing)
+            and ((self.validation is None and __o.validation is None) or (self.validation == __o.validation))
+            and (self.create_inverse_triples == __o.create_inverse_triples)
+        )
 
     @property
     def factory_dict(self) -> Mapping[str, CoreTriplesFactory]:
@@ -145,14 +160,51 @@ class Dataset:
         """Print a summary of the dataset."""
         print(self.summary_str(title=title, show_examples=show_examples), file=file)  # noqa:T001
 
+    def _extra_repr(self) -> Iterable[str]:
+        """Yield extra entries for the instance's string representation."""
+        yield f"num_entities={self.num_entities}"
+        yield f"num_relations={self.num_relations}"
+        yield f"create_inverse_triples={self.create_inverse_triples}"
+
     def __str__(self) -> str:  # noqa: D105
-        return f"{self.__class__.__name__}(num_entities={self.num_entities}, num_relations={self.num_relations})"
+        return f"{self.__class__.__name__}({', '.join(self._extra_repr())})"
 
     @classmethod
     def from_path(cls, path: Union[str, pathlib.Path], ratios: Optional[List[float]] = None) -> "Dataset":
         """Create a dataset from a single triples factory by splitting it in 3."""
         tf = TriplesFactory.from_path(path=path)
         return cls.from_tf(tf=tf, ratios=ratios)
+
+    @classmethod
+    def from_directory_binary(cls, path: Union[str, pathlib.Path]) -> "Dataset":
+        """Load a dataset from a directory."""
+        path = pathlib.Path(path)
+
+        if not path.is_dir():
+            raise NotADirectoryError(path)
+
+        tfs = dict()
+        # TODO: Make a constant for the names
+        for key in ("training", "testing", "validation"):
+            tf_path = path.joinpath(key)
+            if tf_path.is_dir():
+                tfs[key] = TriplesFactory.from_path_binary(path=tf_path)
+            else:
+                logger.warning(f"{tf_path.as_uri()} does not exist.")
+        metadata_path = path.joinpath(cls.metadata_file_name)
+        metadata = torch.load(metadata_path) if metadata_path.is_file() else None
+        return EagerDataset(**tfs, metadata=metadata)
+
+    def to_directory_binary(self, path: Union[str, pathlib.Path]) -> None:
+        """Store a dataset to a path in binary format."""
+        path = pathlib.Path(path)
+        for key, factory in self.factory_dict.items():
+            tf_path = path.joinpath(key)
+            factory.to_path_binary(tf_path)
+            logger.info(f"Stored {key} factory to {tf_path.as_uri()}")
+        metadata = dict(self.metadata or {})
+        metadata.setdefault("name", self.get_normalized_name())
+        torch.save(metadata, path.joinpath(self.metadata_file_name))
 
     @staticmethod
     def from_tf(tf: TriplesFactory, ratios: Optional[List[float]] = None) -> "Dataset":
@@ -176,10 +228,9 @@ class Dataset:
 
         main()
 
-    @classmethod
-    def get_normalized_name(cls) -> str:
+    def get_normalized_name(self) -> str:
         """Get the normalized name of the dataset."""
-        return normalize_string(cls.__name__)
+        return normalize_string((self.metadata or {}).get("name") or self.__class__.__name__)
 
     def remix(self, random_state: TorchRandomHint = None, **kwargs) -> Dataset:
         """Remix a dataset using :func:`pykeen.triples.remix.remix`."""
@@ -188,7 +239,7 @@ class Dataset:
                 *self._tup(),
                 random_state=random_state,
                 **kwargs,
-            )
+            ),
         )
 
     def deteriorate(self, n: Union[int, float], random_state: TorchRandomHint = None) -> Dataset:
@@ -226,16 +277,24 @@ class EagerDataset(Dataset):
         training: CoreTriplesFactory,
         testing: CoreTriplesFactory,
         validation: Optional[CoreTriplesFactory] = None,
+        *,
+        metadata: Optional[Mapping[str, Any]] = None,
     ) -> None:
         """Initialize the eager dataset.
 
         :param training: A pre-defined triples factory with training triples
         :param testing: A pre-defined triples factory with testing triples
         :param validation: A pre-defined triples factory with validation triples
+        :param metadata: additional metadata to store inside the dataset
         """
         self.training = training
         self.testing = testing
         self.validation = validation
+        self.metadata = metadata
+
+    def _extra_repr(self) -> Iterable[str]:  # noqa: D102
+        yield from super()._extra_repr()
+        yield f"metadata={self.metadata}"
 
 
 class LazyDataset(Dataset):

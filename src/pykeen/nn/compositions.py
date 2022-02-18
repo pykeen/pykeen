@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from typing import Callable, ClassVar
 
 import torch
-from class_resolver import Resolver
+from class_resolver import ClassResolver
 from torch import nn
 
 from .functional import circular_correlation
@@ -65,7 +65,7 @@ class CircularCorrelationCompositionModule(FunctionalCompositionModule):
     func = circular_correlation
 
 
-composition_resolver = Resolver.from_subclasses(
+composition_resolver = ClassResolver.from_subclasses(
     CompositionModule,
     default=MultiplicationCompositionModule,
     skip={

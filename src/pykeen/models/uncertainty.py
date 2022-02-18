@@ -64,6 +64,7 @@ from typing import Callable, NamedTuple, Optional
 import torch
 
 from .base import Model
+from ..typing import InductiveMode
 from ..utils import get_dropout_modules
 
 __all__ = [
@@ -108,6 +109,8 @@ def predict_uncertain_helper(
     score_method: Callable[..., torch.FloatTensor],
     num_samples: int,
     slice_size: Optional[int] = None,
+    *,
+    mode: Optional[InductiveMode],
 ) -> UncertainPrediction:
     """
     Predict with uncertainty estimates via Monte-Carlo dropout.
@@ -124,6 +127,9 @@ def predict_uncertain_helper(
         increase memory requirements and runtime.
     :param slice_size: >0
         The divisor for the scoring function when using slicing.
+    :param mode:
+        The pass mode, which is None in the transductive setting and one of "training",
+        "validation", or "testing" in the inductive setting.
 
     :return:
         A tuple (score_mean, score_std) of the mean and std of the scores sampled
@@ -150,13 +156,9 @@ def predict_uncertain_helper(
     for module in dropout_modules:
         module.train()
 
-    kwargs = dict()
-    if slice_size is not None:
-        kwargs["slice_size"] = slice_size
-
     # draw samples
     batch = batch.to(model.device)
-    scores = torch.stack([score_method(batch, **kwargs) for _ in range(num_samples)], dim=0)
+    scores = torch.stack([score_method(batch, mode=mode, slice_size=slice_size) for _ in range(num_samples)], dim=0)
     if model.predict_with_sigmoid:
         scores = torch.sigmoid(scores)
 
@@ -168,6 +170,8 @@ def predict_hrt_uncertain(
     model: Model,
     hrt_batch: torch.LongTensor,
     num_samples: int = 5,
+    *,
+    mode: Optional[InductiveMode] = None,
 ) -> UncertainPrediction:
     """
     Calculate the scores with uncertainty quantification via Monte-Carlo dropout.
@@ -178,6 +182,9 @@ def predict_hrt_uncertain(
         The indices of (head, relation, tail) triples.
     :param num_samples: >1
         the number of samples to draw
+    :param mode:
+        The pass mode, which is None in the transductive setting and one of "training",
+        "validation", or "testing" in the inductive setting.
 
     :return: shape: (number of triples, 1)
         The score for each triple, and an uncertainty score, where larger scores
@@ -206,6 +213,7 @@ def predict_hrt_uncertain(
         batch=hrt_batch,
         score_method=model.score_hrt,
         num_samples=num_samples,
+        mode=mode,
     )
 
 
@@ -214,6 +222,8 @@ def predict_h_uncertain(
     rt_batch: torch.LongTensor,
     num_samples: int = 5,
     slice_size: Optional[int] = None,
+    *,
+    mode: Optional[InductiveMode] = None,
 ) -> UncertainPrediction:
     """Forward pass using left side (head) prediction for obtaining scores of all possible heads.
 
@@ -234,6 +244,9 @@ def predict_h_uncertain(
         The divisor for the scoring function when using slicing.
     :param num_samples: >1
         the number of samples to draw
+    :param mode:
+        The pass mode, which is None in the transductive setting and one of "training",
+        "validation", or "testing" in the inductive setting.
 
     :return: shape: (batch_size, num_entities)
         For each r-t pair, the scores for all possible heads.
@@ -252,6 +265,7 @@ def predict_h_uncertain(
         score_method=model.score_h_inverse if model.use_inverse_relations else model.score_h,
         num_samples=num_samples,
         slice_size=slice_size,
+        mode=mode,
     )
 
 
@@ -260,6 +274,8 @@ def predict_r_uncertain(
     ht_batch: torch.LongTensor,
     num_samples: int = 5,
     slice_size: Optional[int] = None,
+    *,
+    mode: Optional[InductiveMode] = None,
 ) -> UncertainPrediction:
     """Forward pass using middle (relation) prediction for obtaining scores of all possible relations.
 
@@ -274,6 +290,9 @@ def predict_r_uncertain(
         The divisor for the scoring function when using slicing.
     :param num_samples: >1
         the number of samples to draw
+    :param mode:
+        The pass mode, which is None in the transductive setting and one of "training",
+        "validation", or "testing" in the inductive setting.
 
     :return: shape: (batch_size, num_relations)
         For each h-t pair, the scores for all possible relations.
@@ -291,6 +310,7 @@ def predict_r_uncertain(
         score_method=model.score_r,
         num_samples=num_samples,
         slice_size=slice_size,
+        mode=mode,
     )
 
 
@@ -299,6 +319,8 @@ def predict_t_uncertain(
     hr_batch: torch.LongTensor,
     num_samples: int = 5,
     slice_size: Optional[int] = None,
+    *,
+    mode: Optional[InductiveMode] = None,
 ) -> UncertainPrediction:
     """Forward pass using right side (tail) prediction for obtaining scores of all possible tails.
 
@@ -322,6 +344,9 @@ def predict_t_uncertain(
         The divisor for the scoring function when using slicing.
     :param num_samples: >1
         the number of samples to draw
+    :param mode:
+        The pass mode, which is None in the transductive setting and one of "training",
+        "validation", or "testing" in the inductive setting.
 
     :return: shape: (batch_size, num_entities)
         For each h-r pair, the scores for all possible tails.
@@ -339,4 +364,5 @@ def predict_t_uncertain(
         score_method=model.score_t,
         num_samples=num_samples,
         slice_size=slice_size,
+        mode=mode,
     )

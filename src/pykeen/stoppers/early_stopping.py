@@ -12,6 +12,7 @@ from ..evaluation import Evaluator
 from ..models import Model
 from ..trackers import ResultTracker
 from ..triples import CoreTriplesFactory
+from ..typing import InductiveMode
 from ..utils import fix_dataclass_init_docs
 
 __all__ = [
@@ -198,7 +199,7 @@ class EarlyStopper(Stopper):
         """Count the number of results stored in the early stopper."""
         return len(self.results)
 
-    def should_stop(self, epoch: int) -> bool:
+    def should_stop(self, epoch: int, *, mode: Optional[InductiveMode] = None) -> bool:
         """Evaluate on a metric and compare to past evaluations to decide if training should stop."""
         # Evaluate
         metric_results = self.evaluator.evaluate(
