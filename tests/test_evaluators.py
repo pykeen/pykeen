@@ -748,7 +748,10 @@ class RankBasedMetricResultTests(cases.MetricResultTestCase):
 
     def _verify_flat_dict(self, flat_dict: Mapping[str, Any]):  # noqa: D102
         for metric_name in RANKING_METRICS.keys():
-            assert any(metric_name in key for key in flat_dict.keys())
+            # special treatment for hits@k
+            if metric_name == "hits_at_k":
+                metric_name = "hits_at_10"
+            self.assertTrue(any(metric_name in key for key in flat_dict.keys()), metric_name)
 
     def test_to_df(self):
         """Test to_df."""
