@@ -258,7 +258,7 @@ class EvaluationTrainingCallback(TrainingCallback):
             device=self.training_loop.device,
             **self.kwargs,
         )
-        self.tracker.log_metrics(metrics=result.to_flat_dict(), step=epoch, prefix=self.prefix)
+        self.result_tracker.log_metrics(metrics=result.to_flat_dict(), step=epoch, prefix=self.prefix)
 
 
 class StopperTrainingCallback(TrainingCallback):
