@@ -33,9 +33,14 @@ class ClassificationMetricResults(MetricResults):
     @classmethod
     def from_scores(cls, y_true, y_score):
         """Return an instance of these metrics from a given set of true and scores."""
-        return ClassificationMetricResults(
-            {key: metric.score(y_true, y_score) for key, metric in CLASSIFICATION_METRICS.items()}
-        )
+        data = dict()
+        for key, metric in CLASSIFICATION_METRICS.items():
+            value = metric.score(y_true, y_score)
+            if not isinstance(value, (int, float)):  # numpy.float
+                assert hasattr(value, "item") and callable(value.item)
+                value = value.item()
+            data[key] = value
+        return ClassificationMetricResults(data=data)
 
     def get_metric(self, name: str) -> float:  # noqa: D102
         return self.data[name]
