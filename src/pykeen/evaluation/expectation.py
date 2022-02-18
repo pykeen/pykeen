@@ -6,8 +6,6 @@ from typing import Sequence, Union
 
 import numpy as np
 
-from .metrics import ALL_TYPE_FUNCS
-
 __all__ = [
     "numeric_expected_value",
     "expected_mean_rank",
@@ -26,6 +24,8 @@ def numeric_expected_value(
     Depending on the metric, the estimate may not be very accurate and converage slowly, cf.
     https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.rv_discrete.expect.html
     """
+    from .metrics import ALL_TYPE_FUNCS
+
     metric_func = ALL_TYPE_FUNCS[metric]
     num_candidates = np.asarray(num_candidates)
     generator = np.random.default_rng()
@@ -76,6 +76,5 @@ def expected_hits_at_k(
         the expected Hits@k value
     """
     return k * np.mean(np.reciprocal(np.asanyarray(num_candidates, dtype=float)).clip(min=None, max=1 / k))
-
 
 # TODO: closed-forms for other metrics?
