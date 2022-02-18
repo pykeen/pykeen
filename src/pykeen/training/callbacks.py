@@ -253,7 +253,7 @@ class EvaluationTrainingCallback(TrainingCallback):
         if epoch % self.frequency:
             return
         result = self.evaluator.evaluate(
-            model=self.training_loop.model,
+            model=self.model,
             mapped_triples=self.evaluation_triples,
             device=self.training_loop.device,
             **self.kwargs,
