@@ -763,6 +763,21 @@ class ClassificationMetricResultsTests(cases.MetricResultTestCase):
     """Tests for classification metric results."""
 
     cls = ClassificationMetricResults
+    num_entities: int = 7
+    num_triples: int = 13
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        kwargs = super()._pre_instantiation_hook(kwargs)
+        # Populate with real results.
+        evaluator = ClassificationEvaluator()
+        evaluator.process_scores_(
+            hrt_batch=torch.randint(self.num_entities, size=(self.num_triples, 3)),
+            target=LABEL_TAIL,
+            scores=torch.rand(self.num_triples, self.num_entities),
+            dense_positive_mask=torch.rand(self.num_triples, self.num_entities) < 0.5,
+        )
+        kwargs["data"] = evaluator.finalize().data
+        return kwargs
 
 
 class MetricResultMetaTestCase(unittest_templates.MetaTestCase):
