@@ -21,7 +21,6 @@ from typing import (
     MutableMapping,
     Optional,
     Sequence,
-    SupportsFloat,
     Tuple,
     Type,
     TypeVar,
