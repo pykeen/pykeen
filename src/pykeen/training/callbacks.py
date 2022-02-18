@@ -202,12 +202,14 @@ class EvaluationTrainingCallback(TrainingCallback):
         result = pipeline(
             dataset=dataset,
             model="mure",
+            training_loop_kwargs=dict(
+                result_tracker="console",
+            ),
             training_kwargs=dict(
                 num_epochs=100,
                 callbacks="evaluation",
                 callback_kwargs=dict(
                     evaluation_triples=dataset.training.mapped_triples,
-                    tracker="console",
                     prefix="training",
                 ),
             ),
@@ -219,8 +221,6 @@ class EvaluationTrainingCallback(TrainingCallback):
         *,
         evaluation_triples: MappedTriples,
         frequency: int = 1,
-        tracker: HintOrType[ResultTracker] = None,
-        tracker_kwargs: OptionalKwargs = None,
         evaluator: HintOrType[Evaluator] = None,
         evaluator_kwargs: OptionalKwargs = None,
         prefix: Optional[str] = None,
@@ -233,10 +233,6 @@ class EvaluationTrainingCallback(TrainingCallback):
             the triples on which to evaluate
         :param frequency:
             the evaluation frequency in epochs
-        :param tracker:
-            the result tracker to which results are logged, cf. `tracker_resolver`
-        :param tracker_kwargs:
-            additional keyword-based parameters for the result tracker
         :param evaluator:
             the evaluator to use for evaluation, cf. `evaluator_resolver`
         :param evaluator_kwargs:
@@ -249,7 +245,6 @@ class EvaluationTrainingCallback(TrainingCallback):
         super().__init__()
         self.frequency = frequency
         self.evaluation_triples = evaluation_triples
-        self.tracker = tracker_resolver.make(tracker, tracker_kwargs)
         self.evaluator = evaluator_resolver.make(evaluator, evaluator_kwargs)
         self.prefix = prefix
         self.kwargs = kwargs
