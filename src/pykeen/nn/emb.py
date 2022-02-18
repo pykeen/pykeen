@@ -470,11 +470,16 @@ class EmbeddingSpecification:
     dtype: Optional[torch.dtype] = None
     dropout: Optional[float] = None
 
+    def __post_init__(self):
+        if self.shape is None:
+            if self.embedding_dim is None:
+                raise ValueError("Missing both, shape and embedding_dim")
+            self.shape = (self.embedding_dim,)
+
     def make(self, *, num_embeddings: int, device: Optional[torch.device] = None) -> Embedding:
         """Create an embedding with this specification."""
         rv = Embedding(
             num_embeddings=num_embeddings,
-            embedding_dim=self.embedding_dim,
             shape=self.shape,
             initializer=self.initializer,
             initializer_kwargs=self.initializer_kwargs,
