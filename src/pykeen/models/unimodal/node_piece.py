@@ -14,8 +14,9 @@ from ...nn import EmbeddingSpecification, NodePieceRepresentation, SubsetReprese
 from ...nn.modules import DistMultInteraction, Interaction
 from ...nn.node_piece import RelationTokenizer, Tokenizer, tokenizer_resolver
 from ...nn.perceptron import ConcatMLP
+from ...regularizers import Regularizer
 from ...triples.triples_factory import CoreTriplesFactory
-from ...typing import OneOrSequence
+from ...typing import Constrainer, Initializer, Normalizer, OneOrSequence
 from ...utils import upgrade_to_sequence
 
 __all__ = [
@@ -54,6 +55,14 @@ class NodePiece(ERModel):
         interaction: HintOrType[Interaction] = DistMultInteraction,
         aggregation: Hint[Callable[[torch.Tensor, int], torch.Tensor]] = None,
         shape: Optional[Sequence[int]] = None,
+        entity_initializer: Hint[Initializer] = None,
+        entity_normalizer: Hint[Normalizer] = None,
+        entity_constrainer: Hint[Constrainer] = None,
+        entity_regularizer: Hint[Regularizer] = None,
+        relation_initializer: Hint[Initializer] = None,
+        relation_normalizer: Hint[Normalizer] = None,
+        relation_constrainer: Hint[Constrainer] = None,
+        relation_regularizer: Hint[Regularizer] = None,
         **kwargs,
     ) -> None:
         """
@@ -91,6 +100,22 @@ class NodePiece(ERModel):
         :param shape:
             the shape of an individual representation. Only necessary, if aggregation results in a change of dimensions.
             this will only be necessary if the aggregation is an *ad hoc* function.
+        :param entity_initializer:
+            a hint for initializing anchor embeddings
+        :param entity_normalizer:
+            a hint for normalizing anchor embeddings
+        :param entity_constrainer:
+            a hint for constraining anchor embeddings
+        :param entity_regularizer:
+            a hint for regularizing anchor embeddings
+        :param relation_initializer:
+            a hint for initializing relation embeddings
+        :param relation_normalizer:
+            a hint for normalizing relation embeddings
+        :param relation_constrainer:
+            a hint for constraining relation embeddings
+        :param relation_regularizer:
+            a hint for regularizing relation embeddings
         :param kwargs:
             additional keyword-based arguments passed to :meth:`ERModel.__init__`
 
@@ -103,7 +128,20 @@ class NodePiece(ERModel):
                 "representations inverse relation representations are required.",
             )
         # normalize embedding specification
-        embedding_specification = embedding_specification or EmbeddingSpecification(shape=(embedding_dim,))
+        anchor_specification = embedding_specification or EmbeddingSpecification(
+            shape=(embedding_dim,),
+            initializer=entity_initializer,
+            normalizer=entity_normalizer,
+            constrainer=entity_constrainer,
+            regularizer=entity_regularizer,
+        )
+        relation_specification = EmbeddingSpecification(
+            shape=(embedding_dim,),
+            initializer=relation_initializer,
+            normalizer=relation_normalizer,
+            constrainer=relation_constrainer,
+            regularizer=relation_regularizer,
+        )
 
         # Create an MLP for string aggregation
         if aggregation == "mlp":
@@ -113,7 +151,7 @@ class NodePiece(ERModel):
             )
 
         # always create representations for normal and inverse relations and padding
-        relation_representations = embedding_specification.make(
+        relation_representations = relation_specification.make(
             num_embeddings=2 * triples_factory.real_num_relations + 1,
         )
 
@@ -126,7 +164,7 @@ class NodePiece(ERModel):
                     (
                         relation_representations
                         if tokenizer_resolver.lookup(tokenizer) is RelationTokenizer
-                        else embedding_specification
+                        else anchor_specification
                     )
                     for tokenizer in upgrade_to_sequence(tokenizers)
                 ],

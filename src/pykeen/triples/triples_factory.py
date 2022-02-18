@@ -394,6 +394,17 @@ class CoreTriplesFactory:
             metadata=metadata,
         )
 
+    def __eq__(self, __o: object) -> bool:  # noqa: D105
+        if not isinstance(__o, CoreTriplesFactory):
+            return False
+        return (
+            (self.num_entities == __o.num_entities)
+            and (self.num_relations == __o.num_relations)
+            and (self.num_triples == __o.num_triples)
+            and (self.create_inverse_triples == __o.create_inverse_triples)
+            and bool((self.mapped_triples == __o.mapped_triples).all().item())
+        )
+
     @property
     def num_entities(self) -> int:  # noqa: D401
         """The number of unique entities."""
@@ -942,6 +953,14 @@ class TriplesFactory(CoreTriplesFactory):
                 "path": path,
                 **(metadata or {}),
             },
+        )
+
+    def __eq__(self, __o: object) -> bool:  # noqa: D105
+        return (
+            isinstance(__o, TriplesFactory)
+            and super().__eq__(__o)
+            and (self.entity_to_id == __o.entity_to_id)
+            and (self.relation_to_id == __o.relation_to_id)
         )
 
     def to_core_triples_factory(self) -> CoreTriplesFactory:

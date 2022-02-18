@@ -2030,3 +2030,21 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
             self.assertLessEqual(x, y)
         else:
             self.assertLessEqual(y, x)
+
+            
+class MetricResultTestCase(unittest_templates.GenericTestCase[MetricResults]):
+    """Test for metric results."""
+
+    def test_flat_dict(self):
+        """Test to_flat_dict."""
+        flat_dict = self.instance.to_flat_dict()
+        # check flatness
+        self.assertIsInstance(flat_dict, dict)
+        for key, value in flat_dict.items():
+            self.assertIsInstance(key, str)
+            # TODO: does this suffice, or do we really need float as datatype?
+            self.assertIsInstance(value, (float, int), msg=key)
+        self._verify_flat_dict(flat_dict)
+
+    def _verify_flat_dict(self, flat_dict: Mapping[str, Any]):
+        pass
