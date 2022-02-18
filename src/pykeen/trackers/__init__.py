@@ -2,7 +2,7 @@
 
 """Result trackers in PyKEEN."""
 
-from typing import Any, Mapping, Optional, Sequence
+from typing import Any, Mapping, Optional
 
 from class_resolver import ClassResolver, HintType
 
@@ -13,7 +13,6 @@ from .neptune import NeptuneResultTracker
 from .tensorboard import TensorBoardResultTracker
 from .wandb import WANDBResultTracker
 from ..typing import OneOrSequence
-from ..utils import upgrade_to_sequence
 
 __all__ = [
     # Base classes
