@@ -108,8 +108,9 @@ class TrainingCallback:
         return self.training_loop.optimizer
 
     @property
-    def result_tracker(self) -> Optional[ResultTracker]:  # noqa: D401
+    def result_tracker(self) -> ResultTracker:  # noqa: D401
         """The result tracker, accessed via the training loop."""
+        assert self.training_loop.result_tracker is not None
         return self.training_loop.result_tracker
 
     def register_training_loop(self, training_loop) -> None:
