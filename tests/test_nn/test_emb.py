@@ -13,6 +13,7 @@ import unittest_templates
 import pykeen.nn.emb
 import pykeen.nn.message_passing
 import pykeen.nn.node_piece
+import pykeen.nn.pyg
 from pykeen.datasets import get_dataset
 from pykeen.triples.generation import generate_triples_factory
 from tests import cases, mocks
@@ -21,6 +22,10 @@ try:
     import transformers
 except ImportError:
     transformers = None
+try:
+    import torch_geometric
+except ImportError:
+    torch_geometric = None
 
 
 class EmbeddingTests(cases.RepresentationTestCase):
@@ -184,6 +189,29 @@ class TokenizationTests(cases.RepresentationTestCase):
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         kwargs["assignment"] = torch.randint(self.vocabulary_size, size=(self.max_id, self.num_tokens))
         kwargs["token_representation_kwargs"] = dict(shape=(self.vocabulary_size,))
+        return kwargs
+
+
+@unittest.skipIf(torch_geometric is None, "Need to install `torch_geometric`")
+class NewRGCNRepresentationTests(cases.RepresentationTestCase):
+    """Tests for RGCN."""
+
+    cls = pykeen.nn.pyg.RGCNRepresentations
+    num_entities: ClassVar[int] = 8
+    num_relations: ClassVar[int] = 7
+    num_triples: ClassVar[int] = 31
+    num_bases: ClassVar[int] = 2
+    kwargs = dict(
+        embedding_specification=pykeen.nn.emb.EmbeddingSpecification(embedding_dim=num_entities),
+    )
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        kwargs["triples_factory"] = generate_triples_factory(
+            num_entities=self.num_entities,
+            num_relations=self.num_relations,
+            num_triples=self.num_triples,
+        )
         return kwargs
 
 
