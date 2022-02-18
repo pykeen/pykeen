@@ -13,6 +13,7 @@ from pykeen.datasets import Nations
 from pykeen.losses import Loss
 from pykeen.models import ConvE, Model, TransE
 from pykeen.sampling.filtering import Filterer
+from pykeen.trackers.base import PythonResultTracker
 from pykeen.training import TrainingLoop
 from pykeen.training.training_loop import NonFiniteLossError
 from pykeen.triples import TriplesFactory
@@ -168,6 +169,17 @@ class TrainingLoopTestCase(unittest_templates.GenericTestCase[TrainingLoop]):
             )
 
         self.assertEqual(losses, losses_2)
+
+    def test_result_tracker(self):
+        """Test whether losses are tracked by the result tracker."""
+        self.instance.result_tracker = PythonResultTracker()
+        self.instance.train(
+            triples_factory=self.triples_factory,
+            num_epochs=self.num_epochs,
+            batch_size=self.batch_size,
+        )
+        # check non-empty metrics
+        assert self.instance.result_tracker.metrics
 
 
 class SLCWATrainingLoopTestCase(TrainingLoopTestCase):
