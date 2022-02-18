@@ -107,6 +107,11 @@ class TrainingCallback:
         """The optimizer, accessed via the training loop."""
         return self.training_loop.optimizer
 
+    @property
+    def result_tracker(self) -> Optional[ResultTracker]:  # noqa: D401
+        """The result tracker, accessed via the training loop."""
+        return self.training_loop.result_tracker
+
     def register_training_loop(self, training_loop) -> None:
         """Register the training loop."""
         self._training_loop = training_loop
@@ -133,16 +138,6 @@ class TrackerTrainingCallback(TrainingCallback):
 
     It logs the loss after each epoch to the given result tracker,
     """
-
-    def __init__(self, result_tracker: ResultTracker):
-        """
-        Initialize the callback.
-
-        :param result_tracker:
-            The result tracker to which the loss is logged.
-        """
-        super().__init__()
-        self.result_tracker = result_tracker
 
     def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
         self.result_tracker.log_metrics({"loss": epoch_loss}, step=epoch)

@@ -441,7 +441,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         callback = MultiTrainingCallback(callbacks=callbacks, callback_kwargs=callback_kwargs)
         # Register a callback for the result tracker, if given
         if self.result_tracker is not None:
-            callback.register_callback(TrackerTrainingCallback(self.result_tracker))
+            callback.register_callback(TrackerTrainingCallback())
         # Register a callback for the early stopper, if given
         # TODO should mode be passed here?
         if stopper is not None:
