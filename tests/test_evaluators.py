@@ -6,7 +6,7 @@ import itertools
 import logging
 import random
 import unittest
-from typing import Any, Collection, Dict, Iterable, List, MutableMapping, Optional, Tuple, Union
+from typing import Any, Collection, Dict, Iterable, List, Mapping, MutableMapping, Optional, Tuple, Union
 
 import numpy
 import numpy.random
@@ -31,7 +31,7 @@ from pykeen.evaluation.evaluator import (
 )
 from pykeen.evaluation.expectation import expected_hits_at_k, expected_mean_rank
 from pykeen.evaluation.metrics import MetricKey
-from pykeen.evaluation.rank_based_evaluator import SampledRankBasedEvaluator, sample_negatives
+from pykeen.evaluation.rank_based_evaluator import RANKING_METRICS, SampledRankBasedEvaluator, sample_negatives
 from pykeen.evaluation.ranks import Ranks
 from pykeen.models import FixedModel
 from pykeen.typing import (
@@ -727,32 +727,33 @@ def test_prepare_filter_triples():
         assert filter_triples.unique(dim=0).shape == filter_triples.shape
 
 
-class RankBasedMetricResultsTests(unittest.TestCase):
+class RankBasedMetricResultTests(cases.MetricResultTestCase):
     """Tests for rank-based metric results."""
 
+    cls = RankBasedMetricResults
     num_entities: int = 7
     num_triples: int = 13
 
-    def setUp(self) -> None:
-        """Prepare test instance."""
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        kwargs = super()._pre_instantiation_hook(kwargs)
+        # Populate with real results.
         evaluator = RankBasedEvaluator()
         evaluator.num_entities = self.num_entities
         evaluator.ranks = {
             (side, rank_type): [random.random() for _ in range(self.num_triples * (2 if side == SIDE_BOTH else 1))]
             for side, rank_type in itertools.product(SIDES, {RANK_EXPECTED_REALISTIC}.union(RANK_TYPES))
         }
-        self.instance = evaluator.finalize()
+        kwargs["data"] = evaluator.finalize().data
+        return kwargs
+
+    def _verify_flat_dict(self, flat_dict: Mapping[str, Any]):  # noqa: D102
+        for metric_name in RANKING_METRICS.keys():
+            assert any(metric_name in key for key in flat_dict.keys())
 
     def test_to_df(self):
         """Test to_df."""
         df = self.instance.to_df()
         assert isinstance(df, pandas.DataFrame)
-
-
-class RankBasedMetricResultTests(cases.MetricResultTestCase):
-    """Tests for rank-based metric results."""
-
-    cls = RankBasedMetricResults
 
 
 class ClassificationMetricResultsTests(cases.MetricResultTestCase):
