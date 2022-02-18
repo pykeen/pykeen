@@ -427,6 +427,16 @@ class CoreTriplesFactory:
         """The number of triples."""
         return self.mapped_triples.shape[0]
 
+    @property
+    def edge_index(self) -> torch.LongTensor:
+        """Return the edge index, as required by PyTorch Geometric."""
+        return self.mapped_triples[:, [0, 2]].t()
+
+    @property
+    def edge_type(self) -> torch.LongTensor:
+        """Return the edge type, as required by PyTorch Geometric."""
+        return self.mapped_triples[:, 1]
+
     def extra_repr(self) -> str:
         """Extra representation string."""
         d = [
