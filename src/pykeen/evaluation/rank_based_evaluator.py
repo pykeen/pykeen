@@ -255,14 +255,15 @@ class RankBasedMetricResults(MetricResults):
         return pd.DataFrame(list(self._iter_rows()), columns=["Side", "Type", "Metric", "Value"])
 
     def _iter_rows(self) -> Iterable[Tuple[ExtendedTarget, RankType, str, Union[float, int]]]:
-        for side, rank_type in itt.product(SIDES, RANK_TYPES):
-            for k, v in self.data["hits_at_k"][side][rank_type].items():
-                yield side, rank_type, f"hits_at_{k}", v
-            for name, side_data in self.data.items():
-                if name == "hits_at_k":
-                    continue
-                if rank_type in side_data:
-                    yield side, rank_type, name, side_data[rank_type]
+        for metric, metric_data in self.data.items():
+            for side, side_data in metric_data.items():
+                for rank_type, rank_data in side_data.items():
+                    # special treatment for hits_at_k
+                    if metric == "hits_at_k":
+                        for k, v in rank_data.items():
+                            yield side, rank_type, f"hits_at_{k}", v
+                    else:
+                        yield side, rank_type, metric, rank_data
 
 
 class RankBasedEvaluator(Evaluator):
