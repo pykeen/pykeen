@@ -1983,7 +1983,7 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
 
     def post_instantiation_hook(self) -> None:
         """Generate a coherent rank & candidate pair."""
-        self.num_ranks, self.num_candidates = generate_ranks(
+        self.ranks, self.num_candidates = generate_ranks(
             num_ranks=self.num_ranks,
             max_num_candidates=self.max_num_candidates,
             seed=42,
