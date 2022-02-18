@@ -1947,9 +1947,10 @@ class MetricResultTestCase(unittest_templates.GenericTestCase[MetricResults]):
         """Test to_flat_dict."""
         flat_dict = self.instance.to_flat_dict()
         # check flatness
-        assert isinstance(flat_dict, dict)
-        assert all(isinstance(key, str) for key in flat_dict.keys())
-        assert all(isinstance(value, (float, int)) for value in flat_dict.values())
+        self.assertIsInstance(flat_dict, dict)
+        for key, value in flat_dict.items():
+            self.assertIsInstance(key, str)
+            self.assertIsInstance(value, (float, int))
         self._verify_flat_dict(flat_dict)
 
     def _verify_flat_dict(self, flat_dict: Mapping[str, Any]):
