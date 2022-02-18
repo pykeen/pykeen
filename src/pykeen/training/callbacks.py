@@ -55,9 +55,12 @@ import pathlib
 from typing import Any, List, Optional
 
 from class_resolver import ClassResolver, HintOrType, OptionalKwargs
+from torch import optim
 from torch.nn.utils import clip_grad_norm_, clip_grad_value_
 
 from ..evaluation import Evaluator, evaluator_resolver
+from ..losses import Loss
+from ..models import Model
 from ..stoppers import Stopper
 from ..trackers import ResultTracker, tracker_resolver
 from ..triples import CoreTriplesFactory
@@ -90,17 +93,17 @@ class TrainingCallback:
         return self._training_loop
 
     @property
-    def model(self):  # noqa:D401
+    def model(self) -> Model:  # noqa:D401
         """The model, accessed via the training loop."""
         return self.training_loop.model
 
     @property
-    def loss(self):  # noqa: D401
+    def loss(self) -> Loss:  # noqa: D401
         """The loss, accessed via the training loop."""
         return self.training_loop.loss
 
     @property
-    def optimizer(self):  # noqa:D401
+    def optimizer(self) -> optim.Optimizer:  # noqa:D401
         """The optimizer, accessed via the training loop."""
         return self.training_loop.optimizer
 
