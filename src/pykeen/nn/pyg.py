@@ -18,10 +18,14 @@ try:
 except ImportError:
     conv = None
 
+__all__ = [
+    "RGCNRepresentation",
+]
+
 PyGAggregationType = Literal["mean", "max", "sum"]
 
 
-class RGCNRepresentations(RepresentationModule):
+class RGCNRepresentation(RepresentationModule):
     """
 
     cf. https://github.com/pyg-team/pytorch_geometric/blob/master/examples/rgcn_link_pred.py
@@ -30,7 +34,7 @@ class RGCNRepresentations(RepresentationModule):
     def __init__(
         self,
         triples_factory: CoreTriplesFactory,
-        embedding_specification: EmbeddingSpecification,
+        embedding_specification: Optional[EmbeddingSpecification] = None,
         num_layers: int = 2,
         dims: Union[None, int, Sequence[int]] = None,
         num_bases: Optional[int] = None,
@@ -43,15 +47,18 @@ class RGCNRepresentations(RepresentationModule):
     ):
         if conv is None:
             raise ImportError
+        if embedding_specification is None:
+            embedding_specification = EmbeddingSpecification(embedding_dim=32)
+        assert isinstance(embedding_specification.shape, tuple) and len(embedding_specification.shape) == 1
         entity_embeddings = embedding_specification.make(num_embeddings=triples_factory.num_entities)
         if dims is None:
             dims = embedding_specification.shape[-1]
         if isinstance(dims, int):
-            dims = [dims] * len(num_layers)
+            dims = [dims] * num_layers
         elif len(dims) != num_layers:
             raise ValueError(num_layers, dims)
 
-        super().__init__(max_id=entity_embeddings.max_id, shape=dims[-1])
+        super().__init__(max_id=entity_embeddings.max_id, shape=(dims[-1],))
 
         # has to be assigned *after* super.__init__ has been called
         self.entity_embeddings = entity_embeddings
@@ -78,6 +85,9 @@ class RGCNRepresentations(RepresentationModule):
         # register buffers
         self.register_buffer(name="edge_index", tensor=triples_factory.edge_index)
         self.register_buffer(name="edge_type", tensor=triples_factory.edge_type)
+
+        # buffering
+        self.enriched_embeddings = None
 
     def _real_forward(self) -> torch.FloatTensor:
         if self.enriched_embeddings is not None:
