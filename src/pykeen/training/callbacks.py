@@ -55,11 +55,14 @@ import pathlib
 from typing import Any, List, Optional
 
 from class_resolver import ClassResolver, HintOrType, OptionalKwargs
+from torch import optim
 from torch.nn.utils import clip_grad_norm_, clip_grad_value_
 
 from ..evaluation import Evaluator, evaluator_resolver
+from ..losses import Loss
+from ..models import Model
 from ..stoppers import Stopper
-from ..trackers import ResultTracker, tracker_resolver
+from ..trackers import ResultTracker
 from ..triples import CoreTriplesFactory
 from ..typing import MappedTriples, OneOrSequence
 
@@ -90,19 +93,25 @@ class TrainingCallback:
         return self._training_loop
 
     @property
-    def model(self):  # noqa:D401
+    def model(self) -> Model:  # noqa:D401
         """The model, accessed via the training loop."""
         return self.training_loop.model
 
     @property
-    def loss(self):  # noqa: D401
+    def loss(self) -> Loss:  # noqa: D401
         """The loss, accessed via the training loop."""
         return self.training_loop.loss
 
     @property
-    def optimizer(self):  # noqa:D401
+    def optimizer(self) -> optim.Optimizer:  # noqa:D401
         """The optimizer, accessed via the training loop."""
         return self.training_loop.optimizer
+
+    @property
+    def result_tracker(self) -> ResultTracker:  # noqa: D401
+        """The result tracker, accessed via the training loop."""
+        assert self.training_loop.result_tracker is not None
+        return self.training_loop.result_tracker
 
     def register_training_loop(self, training_loop) -> None:
         """Register the training loop."""
@@ -130,16 +139,6 @@ class TrackerTrainingCallback(TrainingCallback):
 
     It logs the loss after each epoch to the given result tracker,
     """
-
-    def __init__(self, result_tracker: ResultTracker):
-        """
-        Initialize the callback.
-
-        :param result_tracker:
-            The result tracker to which the loss is logged.
-        """
-        super().__init__()
-        self.result_tracker = result_tracker
 
     def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
         self.result_tracker.log_metrics({"loss": epoch_loss}, step=epoch)
@@ -203,12 +202,14 @@ class EvaluationTrainingCallback(TrainingCallback):
         result = pipeline(
             dataset=dataset,
             model="mure",
+            training_loop_kwargs=dict(
+                result_tracker="console",
+            ),
             training_kwargs=dict(
                 num_epochs=100,
                 callbacks="evaluation",
                 callback_kwargs=dict(
                     evaluation_triples=dataset.training.mapped_triples,
-                    tracker="console",
                     prefix="training",
                 ),
             ),
@@ -220,8 +221,6 @@ class EvaluationTrainingCallback(TrainingCallback):
         *,
         evaluation_triples: MappedTriples,
         frequency: int = 1,
-        tracker: HintOrType[ResultTracker] = None,
-        tracker_kwargs: OptionalKwargs = None,
         evaluator: HintOrType[Evaluator] = None,
         evaluator_kwargs: OptionalKwargs = None,
         prefix: Optional[str] = None,
@@ -234,10 +233,6 @@ class EvaluationTrainingCallback(TrainingCallback):
             the triples on which to evaluate
         :param frequency:
             the evaluation frequency in epochs
-        :param tracker:
-            the result tracker to which results are logged, cf. `tracker_resolver`
-        :param tracker_kwargs:
-            additional keyword-based parameters for the result tracker
         :param evaluator:
             the evaluator to use for evaluation, cf. `evaluator_resolver`
         :param evaluator_kwargs:
@@ -250,7 +245,6 @@ class EvaluationTrainingCallback(TrainingCallback):
         super().__init__()
         self.frequency = frequency
         self.evaluation_triples = evaluation_triples
-        self.tracker = tracker_resolver.make(tracker, tracker_kwargs)
         self.evaluator = evaluator_resolver.make(evaluator, evaluator_kwargs)
         self.prefix = prefix
         self.kwargs = kwargs
@@ -259,12 +253,12 @@ class EvaluationTrainingCallback(TrainingCallback):
         if epoch % self.frequency:
             return
         result = self.evaluator.evaluate(
-            model=self.training_loop.model,
+            model=self.model,
             mapped_triples=self.evaluation_triples,
             device=self.training_loop.device,
             **self.kwargs,
         )
-        self.tracker.log_metrics(metrics=result.to_flat_dict(), step=epoch, prefix=self.prefix)
+        self.result_tracker.log_metrics(metrics=result.to_flat_dict(), step=epoch, prefix=self.prefix)
 
 
 class StopperTrainingCallback(TrainingCallback):
