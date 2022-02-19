@@ -105,7 +105,7 @@ The full documentation can be found at https://pykeen.readthedocs.io.
 Below are the models, datasets, training modes, evaluators, and metrics implemented
 in ``pykeen``.
 
-### Datasets (30)
+### Datasets (31)
 
 The following datasets are built in to PyKEEN. The citation for each dataset corresponds to either the paper
 describing the dataset, the first paper published using the dataset with knowledge graph embedding models,
@@ -138,6 +138,7 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 | OpenBioLink                        | [`pykeen.datasets.OpenBioLink`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.OpenBioLink.html)     | [Breit *et al*., 2020](https://doi.org/10.1093/bioinformatics/btaa274)                                                  |     180992 |          28 |   4563407 |
 | OpenBioLink                        | [`pykeen.datasets.OpenBioLinkLQ`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.OpenBioLinkLQ.html) | [Breit *et al*., 2020](https://doi.org/10.1093/bioinformatics/btaa274)                                                  |     480876 |          32 |  27320889 |
 | OpenEA Family                      | [`pykeen.datasets.OpenEA`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.OpenEA.html)               | [Sun *et al*., 2020](http://www.vldb.org/pvldb/vol13/p2326-sun.pdf)                                                     |      15000 |         248 |     38265 |
+| PharmKG8k                          | [`pykeen.datasets.PharmKG8k`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.PharmKG8k.html)         | [Zhang *et al*., 2020](hhttps://doi.org/10.1093/bib/bbaa344)                                                                         |      7247 |         28 |   485787 |
 | Unified Medical Language System    | [`pykeen.datasets.UMLS`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.UMLS.html)                   | [`ZhenfengLei/KGDatasets`](https://github.com/ZhenfengLei/KGDatasets)                                                   |        135 |          46 |      6529 |
 | WD50K (triples)                    | [`pykeen.datasets.WD50KT`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.WD50KT.html)               | [Galkin *et al*., 2020](https://www.aclweb.org/anthology/2020.emnlp-main.596/)                                          |      40107 |         473 |    232344 |
 | Wikidata5M                         | [`pykeen.datasets.Wikidata5M`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.Wikidata5M.html)       | [Wang *et al*., 2019](https://arxiv.org/abs/1911.06136)                                                                 |    4594149 |         822 |  20624239 |
