@@ -43,6 +43,7 @@ from .nations import Nations
 from .ogb import OGBBioKG, OGBWikiKG
 from .openbiolink import OpenBioLink, OpenBioLinkLQ
 from .openea import OpenEA
+from .pharmkg8k import PharmKG8k
 from .umls import UMLS
 from .wd50k import WD50KT
 from .wikidata5m import Wikidata5M
@@ -82,6 +83,7 @@ __all__ = [
     "Countries",
     "WD50KT",
     "Wikidata5M",
+    "PharmKG8k",
     # Utilities
     "dataset_resolver",
     "get_dataset",
