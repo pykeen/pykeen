@@ -35,6 +35,7 @@ import pytest
 import torch
 import unittest_templates
 from click.testing import CliRunner, Result
+from docdata import get_docdata
 from torch import optim
 from torch.nn import functional
 from torch.optim import SGD, Adagrad
@@ -1989,6 +1990,13 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
             seed=42,
         )
 
+    def test_docdata(self):
+        """Test the docdata contents of the metric."""
+        self.assertTrue(hasattr(self.instance, "increasing"))
+        self.assertIsNotNone(get_docdata(self.instance), msg="No docdata available")
+        self.assertIsNotNone(self.instance.description)
+        self.assertIsNotNone(self.instance.link)
+
     def _test_call(self, ranks: numpy.ndarray, num_candidates: Optional[numpy.ndarray]):
         """Verify call."""
         x = self.instance(ranks=ranks, num_candidates=num_candidates)
@@ -2031,7 +2039,7 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
         else:
             self.assertLessEqual(y, x)
 
-            
+
 class MetricResultTestCase(unittest_templates.GenericTestCase[MetricResults]):
     """Test for metric results."""
 

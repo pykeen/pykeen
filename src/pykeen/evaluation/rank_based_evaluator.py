@@ -57,6 +57,7 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
+#  TODO replace with class resolver
 RANKING_METRICS: Mapping[str, MetricAnnotation] = dict(
     harmonic_mean_rank=MetricAnnotation(
         name="Harmonic Mean Rank (HMR)",
@@ -64,62 +65,6 @@ RANKING_METRICS: Mapping[str, MetricAnnotation] = dict(
         value_range=ValueRange(lower=1.0, upper=None, lower_inclusive=True),
         description="The harmonic mean over all ranks.",
         link="https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html",
-    ),
-    inverse_arithmetic_mean_rank=MetricAnnotation(
-        name="Inverse Arithmetic Mean Rank (IAMR)",
-        increasing=True,
-        value_range=ValueRange(
-            lower=0.0,
-            upper=1.0,
-            lower_inclusive=False,
-            upper_inclusive=True,
-        ),
-        description="The inverse of the arithmetic mean over all ranks.",
-        link="https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html",
-    ),
-    inverse_geometric_mean_rank=MetricAnnotation(
-        name="Inverse Geometric Mean Rank (IGMR)",
-        increasing=True,
-        value_range=ValueRange(
-            lower=0.0,
-            upper=1.0,
-            lower_inclusive=False,
-            upper_inclusive=True,
-        ),
-        description="The inverse of the geometric mean over all ranks.",
-        link="https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html",
-    ),
-    inverse_harmonic_mean_rank=MetricAnnotation(
-        name="Mean Reciprocal Rank (MRR)",
-        increasing=True,
-        value_range=ValueRange(
-            lower=0.0,
-            upper=1.0,
-            lower_inclusive=False,
-            upper_inclusive=True,
-        ),
-        description="The inverse of the harmonic mean over all ranks.",
-        link="https://en.wikipedia.org/wiki/Mean_reciprocal_rank",
-    ),
-    inverse_median_rank=MetricAnnotation(
-        name="Inverse Median Rank",
-        increasing=True,
-        value_range=ValueRange(
-            lower=0.0,
-            upper=1.0,
-            lower_inclusive=False,
-            upper_inclusive=True,
-        ),
-        description="The inverse of the median over all ranks.",
-        link="https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html",
-    ),
-    rank_count=MetricAnnotation(
-        name="Rank Count",
-        increasing=True,  # TODO check
-        description="The number of considered ranks, a non-negative number. "
-        "Low numbers may indicate unreliable results.",
-        value_range=ValueRange(lower=1.0, upper=None, lower_inclusive=True),
-        link="https://pykeen.readthedocs.io/en/stable/reference/evaluation.html",
     ),
     rank_std=MetricAnnotation(
         name="Rank Standard Deviation",
@@ -141,20 +86,6 @@ RANKING_METRICS: Mapping[str, MetricAnnotation] = dict(
         value_range=ValueRange(lower=0.0, upper=None, lower_inclusive=True),
         description="The median absolute deviation over all ranks.",
         link="https://pykeen.readthedocs.io/en/stable/reference/evaluation.html",
-    ),
-    hits_at_k=MetricAnnotation(
-        name="Hits @ K",
-        value_range=ValueRange(lower=0.0, upper=1.0, lower_inclusive=True, upper_inclusive=True),
-        increasing=True,
-        description="The relative frequency of ranks not larger than a given k.",
-        link="https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#hits-k",
-    ),
-    adjusted_arithmetic_mean_rank=MetricAnnotation(
-        name="Adjusted Arithmetic Mean Rank (AAMR)",
-        increasing=False,
-        value_range=ValueRange(lower=0.0, upper=2.0, lower_inclusive=False, upper_inclusive=False),
-        description="The mean over all chance-adjusted ranks.",
-        link="https://arxiv.org/abs/2002.06914",
     ),
     adjusted_arithmetic_mean_rank_index=MetricAnnotation(
         name="Adjusted Arithmetic Mean Rank Index (AAMRI)",

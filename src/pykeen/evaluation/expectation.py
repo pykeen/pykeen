@@ -77,4 +77,5 @@ def expected_hits_at_k(
     """
     return k * np.mean(np.reciprocal(np.asanyarray(num_candidates, dtype=float)).clip(min=None, max=1 / k))
 
+
 # TODO: closed-forms for other metrics?
