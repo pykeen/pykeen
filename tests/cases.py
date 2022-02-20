@@ -1996,6 +1996,7 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
         self.assertIsNotNone(get_docdata(self.instance), msg="No docdata available")
         self.assertIsNotNone(self.instance.description)
         self.assertIsNotNone(self.instance.link)
+        self.assertIsNotNone(self.instance.key)
 
     def _test_call(self, ranks: numpy.ndarray, num_candidates: Optional[numpy.ndarray]):
         """Verify call."""

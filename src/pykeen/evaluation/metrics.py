@@ -236,6 +236,7 @@ class ArithmeticMeanRank(RankBasedMetric):
     link: https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#mean-rank
     """
 
+    key = ARITHMETIC_MEAN_RANK
     value_range = ValueRange(lower=1, lower_inclusive=True, upper=math.inf)
     increasing = False
     synonyms = ("mean_rank", "mr")
@@ -257,6 +258,7 @@ class InverseArithmeticMeanRank(RankBasedMetric):
     link: https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html
     """
 
+    key = INVERSE_ARITHMETIC_MEAN_RANK
     value_range = ValueRange(lower=0, lower_inclusive=False, upper=1, upper_inclusive=True)
     increasing = True
 
@@ -272,6 +274,7 @@ class GeometricMeanRank(RankBasedMetric):
     link: https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html
     """
 
+    key = GEOMETRIC_MEAN_RANK
     value_range = ValueRange(lower=1, lower_inclusive=True, upper=math.inf)
     increasing = False
     synonyms = ("gmr",)
@@ -288,6 +291,7 @@ class InverseGeometricMeanRank(RankBasedMetric):
     link: https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html
     """
 
+    key = INVERSE_GEOMETRIC_MEAN_RANK
     value_range = ValueRange(lower=0, lower_inclusive=False, upper=1, upper_inclusive=True)
     increasing = True
 
@@ -303,7 +307,9 @@ class HarmonicMeanRank(RankBasedMetric):
     link: https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html
     """
 
+    key = HARMONIC_MEAN_RANK
     value_range = ValueRange(lower=1, lower_inclusive=True, upper=math.inf)
+    increasing = False
     synonyms = ("hmr",)
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
@@ -318,6 +324,7 @@ class InverseHarmonicMeanRank(RankBasedMetric):
     link: https://en.wikipedia.org/wiki/Mean_reciprocal_rank
     """
 
+    key = INVERSE_HARMONIC_MEAN_RANK
     value_range = ValueRange(lower=0, lower_inclusive=False, upper=1, upper_inclusive=True)
     synonyms = ("mean_reciprocal_rank", "mrr")
     increasing = True
@@ -331,10 +338,13 @@ class MedianRank(RankBasedMetric):
     """
     The median rank.
 
+    ---
     link: https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html
     """
 
+    key = MEDIAN_RANK
     value_range = ValueRange(lower=1, lower_inclusive=True, upper=math.inf)
+    increasing = False
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
         return np.median(ranks).item()
@@ -348,6 +358,7 @@ class InverseMedianRank(RankBasedMetric):
     link: https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html
     """
 
+    key = INVERSE_MEDIAN_RANK
     value_range = ValueRange(lower=0, lower_inclusive=False, upper=1, upper_inclusive=True)
     increasing = True
 
@@ -360,10 +371,12 @@ class StandardDeviation(RankBasedMetric):
     """The ranks' standard deviation.
 
     ---
-    link:
+    link: https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html
     """
 
+    key = RANK_STD
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=math.inf)
+    increasing = False
     synonyms = ("rank_std", "std")
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
@@ -375,10 +388,12 @@ class Variance(RankBasedMetric):
     """The ranks' variance.
 
     ---
-    link:
+    link: https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html
     """
 
+    key = RANK_VARIANCE
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=math.inf)
+    increasing = False
     synonyms = ("rank_var", "var")
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
@@ -389,12 +404,13 @@ class Variance(RankBasedMetric):
 class MedianAbsoluteDeviation(RankBasedMetric):
     """The ranks' median absolute deviation (MAD).
 
-
     ---
-    link:
+    link: https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html
     """
 
+    key = RANK_MAD
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=math.inf)
+    increasing = False
     synonyms = ("rank_mad", "mad")
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
@@ -410,6 +426,7 @@ class Count(RankBasedMetric):
     link: https://pykeen.readthedocs.io/en/stable/reference/evaluation.html
     """
 
+    key = RANK_COUNT
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=math.inf)
     increasing = False
 
@@ -426,6 +443,7 @@ class HitsAtK(RankBasedMetric):
     link: https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#hits-k
     """
 
+    key = "hits_at_k"
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=1, upper_inclusive=True)
     synonyms = ("h@k", "hits@k", "h@", "hits@", "hits_at_", "h_at_")
     increasing = True
@@ -447,6 +465,7 @@ class AdjustedArithmeticMeanRank(RankBasedMetric):
     link: https://arxiv.org/abs/2002.06914
     """
 
+    key = ADJUSTED_ARITHMETIC_MEAN_RANK
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=2, upper_inclusive=False)
     synonyms = ("adjusted_mean_rank", "amr", "aamr")
     supported_rank_types = (RANK_REALISTIC,)
@@ -462,9 +481,10 @@ class AdjustedArithmeticMeanRankIndex(RankBasedMetric):
     """The adjusted arithmetic mean rank index (AMRI).
 
     ---
-    link:
+    link: https://arxiv.org/abs/2002.06914
     """
 
+    key = ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX
     value_range = ValueRange(lower=-1, lower_inclusive=True, upper=1, upper_inclusive=True)
     synonyms = ("adjusted_mean_rank_index", "amri", "aamri")
     increasing = True
