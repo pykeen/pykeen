@@ -214,11 +214,7 @@ class RankBasedEvaluator(Evaluator):
                 for metric in self.metrics:
                     if rank_type not in metric.supported_rank_types:
                         continue
-                    key = metric.key, side, rank_type
-                    # special treatment for H@k
-                    if isinstance(metric, HitsAtK):
-                        key = key + (metric.k,)
-                    result[key] = metric(ranks=ranks, num_candidates=num_candidates)
+                    result[metric, side, rank_type] = metric(ranks=ranks, num_candidates=num_candidates)
 
         # Clear buffers
         self.ranks.clear()
