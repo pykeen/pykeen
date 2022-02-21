@@ -78,7 +78,14 @@ from pykeen.typing import (
     RelationRepresentation,
     TailRepresentation,
 )
-from pykeen.utils import all_in_bounds, get_batchnorm_modules, resolve_device, set_random_seed, unpack_singletons
+from pykeen.utils import (
+    all_in_bounds,
+    get_batchnorm_modules,
+    getattr_or_docdata,
+    resolve_device,
+    set_random_seed,
+    unpack_singletons,
+)
 from tests.constants import EPSILON
 from tests.mocks import CustomRepresentations
 from tests.utils import rand
@@ -1997,10 +2004,10 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
             "", self.cls.__doc__.splitlines()[0].strip(), msg="First line of docstring should not be blank"
         )
         self.assertIsNotNone(get_docdata(self.instance), msg="No docdata available")
-        self.assertIsNotNone(self.instance.description)
-        self.assertIsNotNone(self.instance.link)
+        self.assertIsNotNone(getattr_or_docdata(self.cls, "link"))
+        self.assertIsNotNone(getattr_or_docdata(self.cls, "name"))
+        self.assertIsNotNone(getattr_or_docdata(self.cls, "description"))
         self.assertIsNotNone(self.instance.key)
-        self.assertIsNotNone(self.instance.name)
 
     def _test_call(self, ranks: numpy.ndarray, num_candidates: Optional[numpy.ndarray]):
         """Verify call."""

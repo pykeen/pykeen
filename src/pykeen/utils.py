@@ -38,6 +38,7 @@ import torch.nn
 import torch.nn.modules.batchnorm
 import yaml
 from class_resolver import normalize_string
+from docdata import get_docdata
 from torch import nn
 from torch.nn import functional
 
@@ -1231,6 +1232,19 @@ def boxe_kg_arity_position_score(
 
     # Finally, compute the norm
     return negative_norm(element_wise_distance, p=p, power_norm=power_norm)
+
+
+def getattr_or_docdata(cls, key: str) -> str:
+    """Get the attr or data inside docdata."""
+    if hasattr(cls, key):
+        return getattr(cls, key)
+    getter_key = f"get_{key}"
+    if hasattr(cls, getter_key):
+        return getattr(cls, getter_key)()
+    docdata = get_docdata(cls)
+    if key in docdata:
+        return docdata[key]
+    raise KeyError
 
 
 if __name__ == "__main__":
