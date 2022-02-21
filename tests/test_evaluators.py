@@ -29,13 +29,7 @@ from pykeen.evaluation.evaluator import (
     get_candidate_set_size,
     prepare_filter_triples,
 )
-from pykeen.evaluation.metrics import (
-    ArithmeticMeanRank,
-    HitsAtK,
-    MetricKey,
-    RankBasedMetric,
-    rank_based_metric_resolver,
-)
+from pykeen.evaluation.metrics import ArithmeticMeanRank, HitsAtK, MetricKey, RankBasedMetric
 from pykeen.evaluation.rank_based_evaluator import RANKING_METRICS, SampledRankBasedEvaluator, sample_negatives
 from pykeen.evaluation.ranks import Ranks
 from pykeen.models import FixedModel
@@ -44,7 +38,6 @@ from pykeen.typing import (
     LABEL_RELATION,
     LABEL_TAIL,
     RANK_EXPECTED_REALISTIC,
-    RANK_REALISTIC,
     RANK_TYPES,
     SIDE_BOTH,
     SIDES,

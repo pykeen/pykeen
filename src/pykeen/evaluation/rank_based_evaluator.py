@@ -14,7 +14,7 @@ import torch
 from class_resolver import HintOrType, OptionalKwargs
 
 from .evaluator import Evaluator, MetricResults, prepare_filter_triples
-from .metrics import HitsAtK, MetricKey, RankBasedMetric, rank_based_metric_resolver
+from .metrics import MetricKey, RankBasedMetric, rank_based_metric_resolver
 from .ranks import Ranks
 from ..triples.triples_factory import CoreTriplesFactory
 from ..typing import (
@@ -190,7 +190,7 @@ class RankBasedEvaluator(Evaluator):
                     for individual_side in (LABEL_HEAD, LABEL_TAIL)
                 ]
             )
-        key = cast(Target, side)
+        key: Union[Target, Tuple[Target, RankType]] = cast(Target, side)
         if rank_type is not None:
             key = (side, rank_type)
         return np.asarray(self.ranks.get(key, np.empty(shape=(0,), dtype=np.float64)))
