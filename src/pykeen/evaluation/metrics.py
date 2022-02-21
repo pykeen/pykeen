@@ -211,6 +211,41 @@ class RankBasedMetric(Metric):
         """
         raise NotImplementedError
 
+    def numeric_expected_value(
+        self,
+        num_candidates: np.ndarray,
+        num_samples: int,
+    ) -> float:
+        """
+        Compute expected metric value by summation.
+
+        Depending on the metric, the estimate may not be very accurate and converage slowly, cf.
+        https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.rv_discrete.expect.html
+        """
+        num_candidates = np.asarray(num_candidates)
+        generator = np.random.default_rng()
+        expectation = 0.0
+        for _ in range(num_samples):
+            ranks = generator.integers(low=0, high=num_candidates)
+            expectation += self(ranks)
+        return expectation / num_samples
+
+    def expected_value(
+        self,
+        num_candidates: np.ndarray,
+        num_samples: Optional[int] = None,
+    ) -> float:
+        """
+        Compute expected metric value.
+
+        Prefers analytical solution, if available, but falls back to numeric estimation via summation.
+        Depending on the metric, the numeric estimate may not be very accurate and converage slowly, cf.
+        https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.rv_discrete.expect.html
+        """
+        if num_samples is None:
+            raise ValueError("Numeric estimation requires to specify a number of samples.")
+        return self.numeric_expected_value(num_candidates=num_candidates, num_samples=num_samples)
+
 
 @parse_docdata
 class ArithmeticMeanRank(RankBasedMetric):
@@ -234,6 +269,27 @@ class ArithmeticMeanRank(RankBasedMetric):
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
         return ArithmeticMeanRank.call(ranks)
+
+    def expected_value(
+        self,
+        num_candidates: np.ndarray,
+        num_samples: Optional[int] = None,
+    ) -> float:
+        r"""
+        Calculate the expected mean rank under random ordering.
+
+        .. math ::
+
+            E[MR] = \frac{1}{n} \sum \limits_{i=1}^{n} \frac{1 + CSS[i]}{2}
+                = \frac{1}{2}(1 + \frac{1}{n} \sum \limits_{i=1}^{n} CSS[i])
+
+        :param num_candidates:
+            the number of candidates for each individual rank computation
+
+        :return:
+            the expected mean rank
+        """
+        return 0.5 * (1 + np.mean(np.asanyarray(num_candidates)))
 
 
 @parse_docdata
@@ -459,9 +515,29 @@ class HitsAtK(RankBasedMetric):
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
         return np.less_equal(ranks, self.k).mean().item()
 
+    def expected_value(self, num_candidates: np.ndarray, num_samples: Optional[int] = None) -> float:
+        r"""
+        Calculate the expected Hits@k under random ordering.
+
+        .. math ::
+
+            E[Hits@k] = \frac{1}{n} \sum \limits_{i=1}^{n} min(\frac{k}{CSS[i]}, 1.0)
+
+        :param num_candidates:
+            the number of candidates for each individual rank computation
+        :param k:
+            the k to analyze
+
+        :return:
+            the expected Hits@k value
+        """
+        return self.k * np.mean(
+            np.reciprocal(np.asanyarray(num_candidates, dtype=float)).clip(min=None, max=1 / self.k)
+        )
+
 
 @parse_docdata
-class AdjustedArithmeticMeanRank(RankBasedMetric):
+class AdjustedArithmeticMeanRank(ArithmeticMeanRank):
     """The adjusted arithmetic mean rank (AMR).
 
     The mean over all ranks divided by its expected value.
@@ -479,11 +555,11 @@ class AdjustedArithmeticMeanRank(RankBasedMetric):
     increasing = False
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        return ArithmeticMeanRank.call(ranks) / expected_mean_rank(num_candidates=num_candidates)
+        return super().__call__(ranks=ranks) / self.expected_value(num_candidates=num_candidates)
 
 
 @parse_docdata
-class AdjustedArithmeticMeanRankIndex(RankBasedMetric):
+class AdjustedArithmeticMeanRankIndex(ArithmeticMeanRank):
     """The adjusted arithmetic mean rank index (AMRI).
 
     ---
@@ -500,9 +576,7 @@ class AdjustedArithmeticMeanRankIndex(RankBasedMetric):
     needs_candidates = True
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        return 1.0 - (
-            (ArithmeticMeanRank.call(ranks) - 1.0) / (expected_mean_rank(num_candidates=num_candidates) - 1.0)
-        )
+        return 1.0 - (super().__call__(ranks=ranks) - 1.0) / (self.expected_value(num_candidates=num_candidates) - 1.0)
 
 
 metric_resolver: Resolver[RankBasedMetric] = Resolver.from_subclasses(
