@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""The `PharmKG-8k <https://github.com/biomed-AI/PharmKG/>`_ dataset.
+"""The `PharmKG8k <https://github.com/biomed-AI/PharmKG/>`_ dataset.
 
 Get a summary with ``python -m pykeen.datasets.pharmkg8k``.
 """
