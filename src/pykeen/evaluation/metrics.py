@@ -421,8 +421,9 @@ class HitsAtK(RankBasedMetric):
         :return:
             the expected Hits@k value
         """
-        return self.k * np.mean(
-            np.reciprocal(np.asanyarray(num_candidates, dtype=float)).clip(min=None, max=1 / self.k)
+        return (
+            self.k
+            * np.mean(np.reciprocal(np.asanyarray(num_candidates, dtype=float)).clip(min=None, max=1 / self.k)).item()
         )
 
 
@@ -498,8 +499,11 @@ class MetricKey(NamedTuple):
         return ".".join(map(str, (self.side, self.rank_type, self.metric.key)))
 
     @classmethod
-    def lookup(cls, s: str) -> "MetricKey":
+    def lookup(cls, s: Optional[str]) -> "MetricKey":
         """Functional metric name normalization."""
+        if s is None:
+            return cls(metric=InverseHarmonicMeanRank(), side=SIDE_BOTH, rank_type=RANK_REALISTIC)
+
         match = METRIC_PATTERN.match(s)
         if not match:
             raise ValueError(f"Invalid metric name: {s}")
@@ -543,6 +547,6 @@ class MetricKey(NamedTuple):
         return cls(metric, cast(ExtendedTarget, side), cast(ExtendedRankType, rank_type))
 
     @classmethod
-    def normalize(cls, s: str) -> str:
+    def normalize(cls, s: Optional[str]) -> str:
         """Normalize a metric key string."""
         return str(cls.lookup(s))

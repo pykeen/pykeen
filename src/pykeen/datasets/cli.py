@@ -8,7 +8,7 @@ import logging
 import math
 import pathlib
 from textwrap import dedent
-from typing import Iterable, List, Optional, Tuple, Type, Union
+from typing import Iterable, List, Mapping, MutableMapping, Optional, Tuple, Type, Union
 
 import click
 import docdata
@@ -265,7 +265,7 @@ def expected_metrics(dataset: str, max_triples: Optional[int], log_level: str):
             ks = (1, 3, 5, 10) + tuple(
                 10**i for i in range(2, int(math.ceil(math.log(dataset_instance.num_entities))))
             )
-            this_metrics = dict()
+            this_metrics: MutableMapping[str, Mapping[str, float]] = dict()
             for label, sides in dict(
                 head=[LABEL_HEAD],
                 tail=[LABEL_TAIL],
@@ -273,7 +273,7 @@ def expected_metrics(dataset: str, max_triples: Optional[int], log_level: str):
             ).items():
                 num_candidates = df[[f"{side}_candidates" for side in sides]]
                 this_metrics[label] = {
-                    ArithmeticMeanRank.key: ArithmeticMeanRank().expected_value(
+                    ArithmeticMeanRank().key: ArithmeticMeanRank().expected_value(
                         num_candidates=num_candidates,
                     ),
                     **{

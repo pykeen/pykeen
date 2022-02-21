@@ -99,7 +99,7 @@ class RankBasedMetricResults(MetricResults):
 
     def _get_metric(self, metric_key: MetricKey) -> float:
         for (metric, target, rank_type), value in self.data.items():
-            if ".".join((target, rank_type, metric.compose_key())) == str(metric_key):
+            if str(MetricKey(metric=metric, side=target, rank_type=rank_type)) == str(metric_key):
                 return value
         raise KeyError(metric_key)
 
@@ -112,14 +112,14 @@ class RankBasedMetricResults(MetricResults):
 
     def _iter_rows(self) -> Iterable[Tuple[ExtendedTarget, RankType, str, Union[float, int]]]:
         for (metric, side, rank_type), value in self.data.items():
-            yield side, rank_type, metric.compose_key(), value
+            yield side, rank_type, metric.key, value
 
 
 class RankBasedEvaluator(Evaluator):
     """A rank-based evaluator for KGE models."""
 
     num_entities: Optional[int]
-    ranks: Mapping[Tuple[Target, ExtendedRankType], List[np.ndarray]]
+    ranks: Mapping[Tuple[Target, RankType], List[np.ndarray]]
     num_candidates: Mapping[Target, List[np.ndarray]]
 
     def __init__(
@@ -179,9 +179,9 @@ class RankBasedEvaluator(Evaluator):
 
     def _get(
         self,
-        mapping: Mapping[Union[Target, Tuple[Target, RankType]], List[np.ndarray]],
+        mapping: Mapping[Union[Target, Tuple[Target, RankType]], Sequence[np.ndarray]],
         side: ExtendedTarget,
-        rank_type: Optional[ExtendedRankType] = None,
+        rank_type: Optional[RankType] = None,
     ) -> np.ndarray:
         if side == SIDE_BOTH:
             return np.concatenate(
@@ -190,10 +190,8 @@ class RankBasedEvaluator(Evaluator):
                     for individual_side in (LABEL_HEAD, LABEL_TAIL)
                 ]
             )
-        key: Union[Target, Tuple[Target, RankType]] = cast(Target, side)
-        if rank_type is not None:
-            key = (side, rank_type)
-        return np.asarray(self.ranks.get(key, np.empty(shape=(0,), dtype=np.float64)))
+        key: Union[Target, Tuple[Target, RankType]] = side if rank_type is None else (side, rank_type)
+        return np.asarray(mapping.get(key, np.empty(shape=(0,), dtype=np.float64)))
 
     def finalize(self) -> RankBasedMetricResults:  # noqa: D102
         if self.num_entities is None:

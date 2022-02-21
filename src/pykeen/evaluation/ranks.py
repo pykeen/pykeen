@@ -7,7 +7,12 @@ from typing import Iterable, Mapping, Tuple
 
 import torch
 
-from ..typing import RANK_EXPECTED_REALISTIC, RANK_OPTIMISTIC, RANK_PESSIMISTIC, RANK_REALISTIC, ExtendedRankType
+from ..typing import (
+    RANK_OPTIMISTIC,
+    RANK_PESSIMISTIC,
+    RANK_REALISTIC,
+    RankType,
+)
 
 __all__ = [
     "Ranks",
@@ -38,22 +43,16 @@ class Ranks:
     #: shape: (batch_size,)
     number_of_options: torch.LongTensor
 
-    @property
-    def expected_realistic(self):
-        """Get the expected rank of a random scoring."""
-        return 0.5 * (self.number_of_options + 1)
-
-    def items(self) -> Iterable[Tuple[ExtendedRankType, torch.FloatTensor]]:
+    def items(self) -> Iterable[Tuple[RankType, torch.FloatTensor]]:
         """Iterate over pairs of rank types and their associated tensors."""
         yield from self.to_type_dict().items()
 
-    def to_type_dict(self) -> Mapping[ExtendedRankType, torch.FloatTensor]:
+    def to_type_dict(self) -> Mapping[RankType, torch.FloatTensor]:
         """Return mapping from rank-type to rank value tensor."""
         return {
             RANK_OPTIMISTIC: self.optimistic,
             RANK_REALISTIC: self.realistic,
             RANK_PESSIMISTIC: self.pessimistic,
-            RANK_EXPECTED_REALISTIC: self.expected_realistic,
         }
 
     @classmethod
