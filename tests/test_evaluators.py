@@ -6,7 +6,7 @@ import itertools
 import logging
 import random
 import unittest
-from typing import Any, Collection, Dict, Iterable, List, Mapping, MutableMapping, Optional, Tuple, Type, Union
+from typing import Any, Collection, Dict, Iterable, List, Mapping, MutableMapping, Optional, Tuple, Union
 
 import numpy
 import numpy.random
