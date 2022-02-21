@@ -464,9 +464,9 @@ class HitsAtK(RankBasedMetric):
 class AdjustedArithmeticMeanRank(RankBasedMetric):
     """The adjusted arithmetic mean rank (AMR).
 
-    The mean over all chance-adjusted ranks.
+    The mean over all ranks divided by its expected value.
     ---
-    description: The mean over all chance-adjusted ranks.
+    description: The mean over all ranks divided by its expected value.
     link: https://arxiv.org/abs/2002.06914
     """
 
