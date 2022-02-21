@@ -1993,6 +1993,9 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
     def test_docdata(self):
         """Test the docdata contents of the metric."""
         self.assertTrue(hasattr(self.instance, "increasing"))
+        self.assertNotEqual(
+            "", self.cls.__doc__.splitlines()[0].strip(), msg="First line of docstring should not be blank"
+        )
         self.assertIsNotNone(get_docdata(self.instance), msg="No docdata available")
         self.assertIsNotNone(self.instance.description)
         self.assertIsNotNone(self.instance.link)

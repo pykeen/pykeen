@@ -194,15 +194,22 @@ class Metric:
     #: synonyms for this metric
     synonyms: ClassVar[Collection[str]] = tuple()
 
-    @property
-    def description(self) -> str:
+    @classmethod
+    def get_description(cls) -> str:
         """Get the description."""
-        return get_docdata(self).get("description", self.__doc__.splitlines()[0])
+        docdata = get_docdata(cls)
+        if docdata is not None and "description" in docdata:
+            return docdata["description"]
+        assert cls.__doc__ is not None
+        return cls.__doc__.splitlines()[0]
 
-    @property
-    def link(self) -> str:
+    @classmethod
+    def get_link(cls) -> str:
         """Get the link from the docdata."""
-        return get_docdata(self)["link"]
+        docdata = get_docdata(cls)
+        if docdata is None:
+            raise TypeError
+        return docdata["link"]
 
 
 class RankBasedMetric(Metric):
@@ -232,11 +239,11 @@ class RankBasedMetric(Metric):
 
 @parse_docdata
 class ArithmeticMeanRank(RankBasedMetric):
-    """
-    The (arithmetic) mean rank.
+    """The (arithmetic) mean rank.
 
     ---
     link: https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#mean-rank
+    description: The arithmetic mean over all ranks.
     """
 
     key = ARITHMETIC_MEAN_RANK
@@ -260,6 +267,7 @@ class InverseArithmeticMeanRank(RankBasedMetric):
 
     ---
     link: https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html
+    description: The inverse of the arithmetic mean over all ranks.
     """
 
     key = INVERSE_ARITHMETIC_MEAN_RANK
@@ -277,6 +285,7 @@ class GeometricMeanRank(RankBasedMetric):
 
     ---
     link: https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html
+    description: The geometric mean over all ranks.
     """
 
     key = GEOMETRIC_MEAN_RANK
@@ -295,6 +304,7 @@ class InverseGeometricMeanRank(RankBasedMetric):
 
     ---
     link: https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html
+    description: The inverse of the geometric mean over all ranks.
     """
 
     key = INVERSE_GEOMETRIC_MEAN_RANK
@@ -312,6 +322,7 @@ class HarmonicMeanRank(RankBasedMetric):
 
     ---
     link: https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html
+    description: The harmonic mean over all ranks.
     """
 
     key = HARMONIC_MEAN_RANK
@@ -330,6 +341,7 @@ class InverseHarmonicMeanRank(RankBasedMetric):
 
     ---
     link: https://en.wikipedia.org/wiki/Mean_reciprocal_rank
+    description: The inverse of the harmonic mean over all ranks.
     """
 
     key = INVERSE_HARMONIC_MEAN_RANK
@@ -344,11 +356,11 @@ class InverseHarmonicMeanRank(RankBasedMetric):
 
 @parse_docdata
 class MedianRank(RankBasedMetric):
-    """
-    The median rank.
+    """The median rank.
 
     ---
     link: https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html
+    description: The median over all ranks.
     """
 
     key = MEDIAN_RANK
@@ -366,6 +378,7 @@ class InverseMedianRank(RankBasedMetric):
 
     ---
     link: https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html
+    description: The inverse of the median over all ranks.
     """
 
     key = INVERSE_MEDIAN_RANK
@@ -386,6 +399,7 @@ class StandardDeviation(RankBasedMetric):
     """
 
     key = RANK_STD
+    name = "Standard Deviation (std)"
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=math.inf)
     increasing = False
     synonyms = ("rank_std", "std")
@@ -403,6 +417,7 @@ class Variance(RankBasedMetric):
     """
 
     key = RANK_VARIANCE
+    name = "Variance"
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=math.inf)
     increasing = False
     synonyms = ("rank_var", "var")
@@ -420,6 +435,7 @@ class MedianAbsoluteDeviation(RankBasedMetric):
     """
 
     key = RANK_MAD
+    name = "Median Absolute Deviation (MAD)"
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=math.inf)
     increasing = False
     synonyms = ("rank_mad", "mad")
@@ -438,6 +454,7 @@ class Count(RankBasedMetric):
     """
 
     key = RANK_COUNT
+    name = "Count"
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=math.inf)
     increasing = False
 
@@ -449,8 +466,8 @@ class Count(RankBasedMetric):
 class HitsAtK(RankBasedMetric):
     """The Hits @ k.
 
-    The relative frequency of ranks not larger than a given k.
     ---
+    description: The relative frequency of ranks not larger than a given k.
     link: https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#hits-k
     """
 
@@ -474,6 +491,7 @@ class AdjustedArithmeticMeanRank(RankBasedMetric):
 
     The mean over all chance-adjusted ranks.
     ---
+    description: The mean over all chance-adjusted ranks.
     link: https://arxiv.org/abs/2002.06914
     """
 
@@ -495,6 +513,7 @@ class AdjustedArithmeticMeanRankIndex(RankBasedMetric):
 
     ---
     link: https://arxiv.org/abs/2002.06914
+    description: The re-indexed adjusted mean rank (AAMR)
     """
 
     key = ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX

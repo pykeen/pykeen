@@ -22,6 +22,7 @@ from typing import Mapping, Optional, Type
 import click
 from class_resolver.contrib.optuna import sampler_resolver
 from click_default_group import DefaultGroup
+from docdata import get_docdata
 from tabulate import tabulate
 
 from .datasets import dataset_resolver
@@ -423,18 +424,30 @@ def _get_metrics_lines(tablefmt: str):
     for key, metric, metric_results_cls in get_metric_list():
         if key in {"rank_std", "rank_var", "rank_mad", "rank_count"}:
             continue
-        label = metric.name
-        link = metric.link
+        label = _attr_or_docdata(metric, "name")
+        link = _attr_or_docdata(metric, "link")
         yv = [
             f"[{label}]({link})",
             metric.value_range.notate(),
             "📈" if metric.increasing else "📉",
-            metric.description,
+            _attr_or_docdata(metric, "description"),
             METRIC_NAMES[metric_results_cls],
         ]
         if tablefmt != "github":
             yv.append(f"pykeen.evaluation.{metric_results_cls.__name__}")
         yield tuple(yv)
+
+
+def _attr_or_docdata(cls, key: str) -> str:
+    if hasattr(cls, key):
+        return getattr(cls, key)
+    getter_key = f"get_{key}"
+    if hasattr(cls, getter_key):
+        return getattr(cls, getter_key)()
+    docdata = get_docdata(cls)
+    if key in docdata:
+        return docdata[key]
+    raise KeyError
 
 
 def _get_lines(d, tablefmt, submodule, link_fmt: Optional[str] = None):
