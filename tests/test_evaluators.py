@@ -6,7 +6,7 @@ import itertools
 import logging
 import random
 import unittest
-from typing import Any, Collection, Dict, Iterable, List, Mapping, MutableMapping, Optional, Tuple, Union
+from typing import Any, Collection, Dict, Iterable, List, Mapping, MutableMapping, Optional, Tuple, Type, Union
 
 import numpy
 import numpy.random
@@ -29,7 +29,14 @@ from pykeen.evaluation.evaluator import (
     get_candidate_set_size,
     prepare_filter_triples,
 )
-from pykeen.evaluation.metrics import ArithmeticMeanRank, HitsAtK, MetricKey, RankBasedMetric
+from pykeen.evaluation.metrics import (
+    AdjustedArithmeticMeanRankIndex,
+    ArithmeticMeanRank,
+    HitsAtK,
+    InverseHarmonicMeanRank,
+    MetricKey,
+    RankBasedMetric,
+)
 from pykeen.evaluation.rank_based_evaluator import RANKING_METRICS, SampledRankBasedEvaluator, sample_negatives
 from pykeen.evaluation.ranks import Ranks
 from pykeen.models import FixedModel
@@ -38,6 +45,9 @@ from pykeen.typing import (
     LABEL_RELATION,
     LABEL_TAIL,
     RANK_EXPECTED_REALISTIC,
+    RANK_OPTIMISTIC,
+    RANK_PESSIMISTIC,
+    RANK_REALISTIC,
     RANK_TYPES,
     SIDE_BOTH,
     SIDES,
@@ -446,18 +456,46 @@ class TestEvaluationFiltering(unittest.TestCase):
 
 def test_resolve_metric_name():
     """Test metric name resolution."""
-    for s, expected in (
-        ("mrr", ("inverse_harmonic_mean_rank", "both", "realistic", None)),
-        ("mean_rank.both", ("arithmetic_mean_rank", "both", "realistic", None)),
-        ("mean_rank.avg", ("arithmetic_mean_rank", "both", "realistic", None)),
-        ("mean_rank.tail.worst", ("arithmetic_mean_rank", LABEL_TAIL, "pessimistic", None)),
-        ("amri.avg", ("adjusted_arithmetic_mean_rank_index", "both", "realistic", None)),
-        ("hits_at_k", ("hits_at_k", "both", "realistic", 10)),
-        ("hits_at_k.head.best.3", ("hits_at_k", LABEL_HEAD, "optimistic", 3)),
-        ("hits_at_1", ("hits_at_k", "both", "realistic", 1)),
-        ("H@10", ("hits_at_k", "both", "realistic", 10)),
+    for s, (cls, side, rank_type, *args) in (
+        (
+            "mrr",
+            (InverseHarmonicMeanRank, SIDE_BOTH, RANK_REALISTIC),
+        ),
+        (
+            "both.mean_rank",
+            (ArithmeticMeanRank, SIDE_BOTH, RANK_REALISTIC),
+        ),
+        (
+            "avg.mean_rank",
+            (ArithmeticMeanRank, SIDE_BOTH, RANK_REALISTIC),
+        ),
+        (
+            "tail.worst.mean_rank",
+            (ArithmeticMeanRank, LABEL_TAIL, RANK_PESSIMISTIC),
+        ),
+        (
+            "avg.amri",
+            (AdjustedArithmeticMeanRankIndex, SIDE_BOTH, RANK_REALISTIC),
+        ),
+        (
+            "hits_at_k",
+            (HitsAtK, SIDE_BOTH, RANK_REALISTIC, 10),
+        ),
+        (
+            "head.best.hits_at_k.3",
+            (HitsAtK, LABEL_HEAD, RANK_OPTIMISTIC, 3),
+        ),
+        (
+            "hits_at_1",
+            (HitsAtK, SIDE_BOTH, RANK_REALISTIC, 1),
+        ),
+        (
+            "H@10",
+            (HitsAtK, SIDE_BOTH, RANK_REALISTIC, 10),
+        ),
     ):
-        result = MetricKey.lookup(s)
+        expected = str(MetricKey(metric=cls(*args), side=side, rank_type=rank_type))
+        result = MetricKey.normalize(s)
         assert result == expected, s
 
 

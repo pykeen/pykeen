@@ -477,22 +477,25 @@ rank_based_metric_resolver: Resolver[RankBasedMetric] = Resolver.from_subclasses
 _SIDE_PATTERN = "|".join(SIDES)
 _TYPE_PATTERN = "|".join(itt.chain(RANK_TYPES, RANK_TYPE_SYNONYMS.keys()))
 METRIC_PATTERN = re.compile(
-    rf"(\.(?P<side>{_SIDE_PATTERN}))?(\.(?P<type>{_TYPE_PATTERN}))?(?P<name>[\w@]+)(\.(?P<k>\d+))?",
+    rf"^((?P<side>{_SIDE_PATTERN})\.)?((?P<type>{_TYPE_PATTERN})\.)?(?P<name>[\w@]+)(\.(?P<k>\d+))?$",
 )
+_HITS_PATTERN = re.compile(r"(?P<name>h@|hits@|hits_at_)(?P<k>\d+)")
 
 
 class MetricKey(NamedTuple):
     """A key for the kind of metric to resolve."""
 
-    #: The metric
+    #: The metric key
     metric: RankBasedMetric
+
     #: Side of the metric, or "both"
     side: ExtendedTarget
+
     #: The rank type
     rank_type: ExtendedRankType
 
     def __str__(self) -> str:  # noqa: D105
-        return ".".join(map(str, (self.side, self.rank_type, self.metric)))
+        return ".".join(map(str, (self.side, self.rank_type, self.metric.key)))
 
     @classmethod
     def lookup(cls, s: str) -> "MetricKey":
@@ -502,19 +505,23 @@ class MetricKey(NamedTuple):
             raise ValueError(f"Invalid metric name: {s}")
         k: Union[None, str, int]
         name, side, rank_type, k = [match.group(key) for key in ("name", "side", "type", "k")]
+        name = name.lower()
+        match = _HITS_PATTERN.match(name)
+        if match:
+            name, k = match.groups()
 
         # normalize metric name
         if not name:
             raise ValueError("A metric name must be provided.")
-        cls = rank_based_metric_resolver.lookup(name)
+        metric_cls = rank_based_metric_resolver.lookup(name)
 
         kwargs = {}
-        if issubclass(cls, HitsAtK):
+        if issubclass(metric_cls, HitsAtK):
             k = int(k or 10)
             assert k > 0
             kwargs["k"] = k
 
-        metric = rank_based_metric_resolver.make(cls, kwargs)
+        metric = rank_based_metric_resolver.make(metric_cls, kwargs)
 
         # normalize side
         side = side or SIDE_BOTH
@@ -533,7 +540,7 @@ class MetricKey(NamedTuple):
                 f"Invalid rank type for {metric}: {rank_type}. Allowed type: {metric.supported_rank_types}"
             )
 
-        return cls(metric, cast(ExtendedTarget, side), cast(ExtendedRankType, rank_type), k)
+        return cls(metric, cast(ExtendedTarget, side), cast(ExtendedRankType, rank_type))
 
     @classmethod
     def normalize(cls, s: str) -> str:
