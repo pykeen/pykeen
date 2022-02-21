@@ -172,7 +172,7 @@ class SubsetRepresentationModule(RepresentationModule):
         indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         if indices is None:
-            indices = torch.arange(self.max_id)
+            indices = torch.arange(self.max_id, device=self.device)
         return self.base.forward(indices=indices)
 
 
@@ -380,7 +380,7 @@ class Embedding(RepresentationModule):
             x = self._embeddings.weight
         else:
             prefix_shape = indices.shape
-            x = self._embeddings(indices.to(self._embeddings.weight.device))
+            x = self._embeddings(indices.to(self.device))
         x = x.view(*prefix_shape, *self.shape)
         # verify that contiguity is preserved
         assert x.is_contiguous()
@@ -448,7 +448,7 @@ class LowRankEmbeddingRepresentation(RepresentationModule):
         # get base weights, shape: (*batch_dims, num_bases)
         weight = self.weight
         if indices is not None:
-            weight = weight[indices.to(self.weight.device)]
+            weight = weight[indices.to(self.device)]
         # weighted linear combination of bases, shape: (*batch_dims, *shape)
         return torch.tensordot(weight, bases, dims=([-1], [0]))
 
@@ -848,7 +848,7 @@ class SingleCompGCNRepresentation(RepresentationModule):
     ) -> torch.FloatTensor:  # noqa: D102
         x = self.combined()[self.position]
         if indices is not None:
-            x = x[indices.to(x.device)]
+            x = x[indices.to(self.device)]
         return x
 
 
@@ -931,10 +931,6 @@ class LabelBasedTransformerRepresentation(RepresentationModule):
             labels=[id_to_label[i] for i in range(len(id_to_label))],
             **kwargs,
         )
-
-    @property
-    def device(self) -> torch.device:
-        return self.encoder.model.device
 
     def forward(
         self,
