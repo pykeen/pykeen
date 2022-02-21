@@ -21,7 +21,7 @@ from ..constants import PYKEEN_DATASETS
 from ..datasets.base import Dataset
 from ..datasets.ogb import OGBWikiKG
 from ..evaluation.evaluator import get_candidate_set_size
-from ..evaluation.expectation import expected_hits_at_k, expected_mean_rank
+from ..evaluation.metrics import ArithmeticMeanRank, HitsAtK
 from ..typing import LABEL_HEAD, LABEL_TAIL
 
 
@@ -271,10 +271,17 @@ def expected_metrics(dataset: str, max_triples: Optional[int], log_level: str):
                 tail=[LABEL_TAIL],
                 both=[LABEL_HEAD, LABEL_TAIL],
             ).items():
-                candidate_set_sizes = df[[f"{side}_candidates" for side in sides]]
+                num_candidates = df[[f"{side}_candidates" for side in sides]]
                 this_metrics[label] = {
-                    "mean_rank": expected_mean_rank(candidate_set_sizes),
-                    **{f"hits_at_{k}": expected_hits_at_k(candidate_set_sizes, k=k) for k in ks},
+                    ArithmeticMeanRank.key: ArithmeticMeanRank().expected_value(
+                        num_candidates=num_candidates,
+                    ),
+                    **{
+                        f"hits_at_{k}": HitsAtK(k).expected_value(
+                            num_candidates=num_candidates,
+                        )
+                        for k in ks
+                    },
                 }
             expected_metrics[key] = this_metrics
         with d.joinpath("expected_metrics.json").open("w") as file:
