@@ -211,7 +211,7 @@ class BasesDecomposition(Decomposition):
         :return:
             A 2-D matrix.
         """
-        return self.relation_representations(indices=relation_id).squeeze(dim=0)
+        return self.relation_representations(indices=torch.as_tensor(relation_id)).squeeze(dim=0)
 
     def _forward_memory_intense(
         self,
