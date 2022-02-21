@@ -26,7 +26,7 @@ from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolv
 from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import CoreTriplesFactory, TriplesFactory
 from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer
-from ..utils import Bias, clamp_norm, complex_normalize
+from ..utils import Bias, clamp_norm, complex_normalize, get_preferred_device
 
 __all__ = [
     "RepresentationModule",
@@ -139,6 +139,11 @@ class RepresentationModule(nn.Module, ABC):
         # TODO: Remove this property and update code to use shape instead
         warnings.warn("The embedding_dim property is deprecated. Use .shape instead.", DeprecationWarning)
         return int(np.prod(self.shape))
+
+    @property
+    def device(self) -> torch.device:
+        """Return the device."""
+        return get_preferred_device(module=self, allow_ambiguity=True)
 
 
 class SubsetRepresentationModule(RepresentationModule):
