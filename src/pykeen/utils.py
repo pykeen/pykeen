@@ -2,6 +2,7 @@
 
 """Utilities for PyKEEN."""
 
+from collections import defaultdict
 import ftplib
 import functools
 import itertools as itt
@@ -18,6 +19,7 @@ from pathlib import Path
 from typing import (
     Any,
     Callable,
+    Collection,
     Dict,
     Generic,
     Iterable,
@@ -101,6 +103,8 @@ __all__ = [
     "product_normalize",
     "compute_box",
     "point_to_box_distance",
+    "get_devices",
+    "get_preferred_devices",
 ]
 
 logger = logging.getLogger(__name__)
@@ -131,6 +135,43 @@ def resolve_device(device: DeviceHint = None) -> torch.device:
         device = torch.device("cpu")
         logger.warning("No cuda devices were available. The model runs on CPU")
     return device
+
+
+class DeviceResolutionError(ValueError):
+    """An error in the resolution of a model's device."""
+
+
+class AmbiguousDeviceError(DeviceResolutionError):
+    """An error raised if there is ambiguity in device resolution."""
+
+    def __init__(self, module: nn.Module) -> None:
+        """Initialize the error."""
+        _info = defaultdict(list)
+        for name, tensor in itt.chain(module.named_parameters(), module.named_buffers()):
+            _info[tensor.data.device].append(name)
+        info = {device: sorted(tensor_names) for device, tensor_names in _info.items()}
+        super().__init__(f"Ambiguous device! Found: {list(info.keys())}\n\n{info}")
+
+
+def get_devices(module: nn.Module) -> Collection[torch.device]:
+    """Return the device(s) from each components of the model."""
+    return {tensor.data.device for tensor in itt.chain(module.parameters(), module.buffers())}
+
+
+def get_preferred_device(module: nn.Module, allow_ambiguity: bool = True) -> torch.device:
+    """Return the preferred device."""
+    devices = get_devices(module=module)
+    if len(devices) == 0:
+        raise DeviceResolutionError("Could not infer device, since there are neither parameters nor buffers.")
+    if len(devices) == 1:
+        return next(iter(devices))
+    if not allow_ambiguity:
+        raise AmbiguousDeviceError(module=module)
+    # try to resolve ambiguous device; there has to be at least one cuda device
+    cuda_devices = {d for d in devices if d.type == "cuda"}
+    if len(cuda_devices) == 1:
+        return next(iter(cuda_devices))
+    raise AmbiguousDeviceError(module=module)
 
 
 X = TypeVar("X")
