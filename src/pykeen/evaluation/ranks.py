@@ -7,12 +7,7 @@ from typing import Iterable, Mapping, Tuple
 
 import torch
 
-from ..typing import (
-    RANK_OPTIMISTIC,
-    RANK_PESSIMISTIC,
-    RANK_REALISTIC,
-    RankType,
-)
+from ..typing import RANK_OPTIMISTIC, RANK_PESSIMISTIC, RANK_REALISTIC, RankType
 
 __all__ = [
     "Ranks",

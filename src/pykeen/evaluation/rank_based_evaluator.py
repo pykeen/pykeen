@@ -6,7 +6,7 @@ import logging
 import math
 import random
 from collections import defaultdict
-from typing import Iterable, List, Mapping, Optional, Sequence, Tuple, Union, cast
+from typing import Any, Iterable, List, Mapping, MutableMapping, Optional, Sequence, Tuple, Union, cast
 
 import numpy as np
 import pandas as pd
@@ -119,8 +119,8 @@ class RankBasedEvaluator(Evaluator):
     """A rank-based evaluator for KGE models."""
 
     num_entities: Optional[int]
-    ranks: Mapping[Tuple[Target, RankType], List[np.ndarray]]
-    num_candidates: Mapping[Target, List[np.ndarray]]
+    ranks: MutableMapping[Tuple[Target, RankType], List[np.ndarray]]
+    num_candidates: MutableMapping[Target, List[np.ndarray]]
 
     def __init__(
         self,
@@ -179,7 +179,7 @@ class RankBasedEvaluator(Evaluator):
 
     def _get(
         self,
-        mapping: Mapping[Union[Target, Tuple[Target, RankType]], Sequence[np.ndarray]],
+        mapping: Mapping[Any, Sequence[np.ndarray]],
         side: ExtendedTarget,
         rank_type: Optional[RankType] = None,
     ) -> np.ndarray:
@@ -190,7 +190,7 @@ class RankBasedEvaluator(Evaluator):
                     for individual_side in (LABEL_HEAD, LABEL_TAIL)
                 ]
             )
-        key: Union[Target, Tuple[Target, RankType]] = side if rank_type is None else (side, rank_type)
+        key = side if rank_type is None else (side, rank_type)
         return np.asarray(mapping.get(key, np.empty(shape=(0,), dtype=np.float64)))
 
     def finalize(self) -> RankBasedMetricResults:  # noqa: D102
@@ -211,6 +211,7 @@ class RankBasedEvaluator(Evaluator):
 
         # Clear buffers
         self.ranks.clear()
+        self.num_candidates.clear()
 
         return RankBasedMetricResults(data=result)
 

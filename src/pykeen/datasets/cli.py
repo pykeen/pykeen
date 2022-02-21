@@ -273,7 +273,9 @@ def expected_metrics(dataset: str, max_triples: Optional[int], log_level: str):
             ).items():
                 num_candidates = df[[f"{side}_candidates" for side in sides]]
                 this_metrics[label] = {
-                    ArithmeticMeanRank().key: ArithmeticMeanRank().expected_value(
+                    ArithmeticMeanRank()
+                    .key: ArithmeticMeanRank()
+                    .expected_value(
                         num_candidates=num_candidates,
                     ),
                     **{
