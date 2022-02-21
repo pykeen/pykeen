@@ -64,7 +64,7 @@ METRIC_SYNONYMS = {
 _SIDE_PATTERN = "|".join(SIDES)
 _TYPE_PATTERN = "|".join(itt.chain(RANK_TYPES, RANK_TYPE_SYNONYMS.keys()))
 METRIC_PATTERN = re.compile(
-    rf"(?P<name>[\w@]+)(\.(?P<side>{_SIDE_PATTERN}))?(\.(?P<type>{_TYPE_PATTERN}))?(\.(?P<k>\d+))?",
+    rf"(\.(?P<side>{_SIDE_PATTERN}))?(\.(?P<type>{_TYPE_PATTERN}))?(?P<name>[\w@]+)(\.(?P<k>\d+))?",
 )
 HITS_PATTERN = re.compile(r"(hits_at_|hits@|h@)(?P<k>\d+)")
 
@@ -82,10 +82,10 @@ class MetricKey(NamedTuple):
     k: Optional[int]
 
     def __str__(self) -> str:  # noqa: D105
-        components = [self.name, self.side, self.rank_type]
+        name = self.name
         if self.k:
-            components.append(str(self.k))
-        return ".".join(components)
+            name = name[:-1] + str(self.k)
+        return ".".join((self.side, self.rank_type, name))
 
     @classmethod
     def lookup(cls, s: str) -> "MetricKey":

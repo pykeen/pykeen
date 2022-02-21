@@ -99,7 +99,7 @@ class RankBasedMetricResults(MetricResults):
 
     def _get_metric(self, metric_key: MetricKey) -> float:
         for (metric, target, rank_type), value in self.data.items():
-            if metric.compose_extended_key(extended_target=target, rank_type=rank_type) == str(metric_key):
+            if ".".join((target, rank_type, metric.compose_key())) == str(metric_key):
                 return value
         raise KeyError(metric_key)
 
