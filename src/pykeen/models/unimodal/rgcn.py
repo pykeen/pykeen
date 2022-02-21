@@ -10,7 +10,8 @@ from torch import nn
 
 from ..nbase import EmbeddingSpecificationHint, ERModel
 from ...nn.emb import EmbeddingSpecification
-from ...nn.message_passing import Decomposition, RGCNRepresentations
+from ...nn.message_passing import Decomposition# , RGCNRepresentations
+from ...nn.pyg import RGCNRepresentations
 from ...nn.modules import Interaction, interaction_resolver
 from ...nn.weighting import EdgeWeighting
 from ...regularizers import Regularizer
@@ -113,17 +114,18 @@ class RGCN(
                 initializer_kwargs=base_entity_initializer_kwargs,
             ),
             num_layers=num_layers,
-            use_bias=use_bias,
+            bias=use_bias,
             activation=activation,
             activation_kwargs=activation_kwargs,
-            edge_dropout=edge_dropout,
-            self_loop_dropout=self_loop_dropout,
-            edge_weighting=edge_weighting,
-            decomposition=decomposition,
-            decomposition_kwargs=decomposition_kwargs,
+            #edge_dropout=edge_dropout,
+            #self_loop_dropout=self_loop_dropout,
+            #edge_weighting=edge_weighting,
+            #decomposition=decomposition,
+            # decomposition_kwargs=decomposition_kwargs,
+            **decomposition_kwargs,
             # cf. https://github.com/MichSchli/RelationPrediction/blob/c77b094fe5c17685ed138dae9ae49b304e0d8d89/code/decoders/bilinear_diag.py#L64-L67  # noqa: E501
-            regularizer=regularizer,
-            regularizer_kwargs=regularizer_kwargs,
+            #regularizer=regularizer,
+            #regularizer_kwargs=regularizer_kwargs,
         )
 
         # Resolve interaction function

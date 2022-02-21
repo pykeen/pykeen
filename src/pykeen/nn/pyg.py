@@ -89,6 +89,10 @@ class RGCNRepresentations(RepresentationModule):
 
         # buffering
         self.enriched_embeddings = None
+    
+    def post_parameter_update(self):
+        self.enriched_embeddings = None
+        return super().post_parameter_update()
 
     def _real_forward(self) -> torch.FloatTensor:
         if self.enriched_embeddings is not None:

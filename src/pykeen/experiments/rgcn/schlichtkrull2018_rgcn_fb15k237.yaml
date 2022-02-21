@@ -30,10 +30,11 @@ pipeline:
   optimizer_kwargs:
     lr: 0.01
   training_kwargs:
-    batch_size: 30000
+    # batch_size: 30000
+    batch_size: 1000000
     gradient_clipping_max_norm: 1.0
     num_epochs: 500
-    sampler: schlichtkrull
+    # sampler: schlichtkrull
   training_loop: SLCWA
 results:
   hits_at_k:
