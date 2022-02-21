@@ -13,7 +13,6 @@ from class_resolver import Resolver
 from docdata import get_docdata, parse_docdata
 from scipy import stats
 
-from .expectation import expected_mean_rank
 from .utils import ValueRange
 from ..typing import (
     RANK_REALISTIC,
