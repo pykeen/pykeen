@@ -56,7 +56,7 @@ class MetricResults:
 
     metrics: ClassVar[Mapping[str, MetricAnnotation]]
 
-    def __init__(self, data):
+    def __init__(self, data: Mapping):
         """Initialize the result wrapper."""
         self.data = data
 
