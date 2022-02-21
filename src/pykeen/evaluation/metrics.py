@@ -145,31 +145,6 @@ class MetricKey(NamedTuple):
         return str(cls.lookup(s))
 
 
-ALL_TYPE_FUNCS = {
-    ARITHMETIC_MEAN_RANK: np.mean,  # This is MR
-    HARMONIC_MEAN_RANK: stats.hmean,
-    GEOMETRIC_MEAN_RANK: stats.gmean,
-    MEDIAN_RANK: np.median,
-    INVERSE_ARITHMETIC_MEAN_RANK: lambda x: np.reciprocal(np.mean(x)),
-    INVERSE_GEOMETRIC_MEAN_RANK: lambda x: np.reciprocal(stats.gmean(x)),
-    INVERSE_HARMONIC_MEAN_RANK: lambda x: np.reciprocal(stats.hmean(x)),  # This is MRR
-    INVERSE_MEDIAN_RANK: lambda x: np.reciprocal(np.median(x)),
-    # Extra stats stuff
-    RANK_STD: np.std,
-    RANK_VARIANCE: np.var,
-    RANK_MAD: stats.median_abs_deviation,
-    RANK_COUNT: lambda x: np.asarray(x.size),
-}
-
-
-def get_ranking_metrics(ranks: np.ndarray) -> Mapping[str, float]:
-    """Calculate all rank-based metrics."""
-    rv = {}
-    for metric_name, metric_func in ALL_TYPE_FUNCS.items():
-        rv[metric_name] = metric_func(ranks).item()
-    return rv
-
-
 class Metric:
     """A base class for metrics."""
 
@@ -534,3 +509,27 @@ metric_resolver: Resolver[RankBasedMetric] = Resolver.from_subclasses(
     base=RankBasedMetric,
     default=InverseHarmonicMeanRank,  # mrr
 )
+
+ALL_TYPE_FUNCS: Mapping[str, RankBasedMetric] = {
+    ARITHMETIC_MEAN_RANK: ArithmeticMeanRank(),
+    HARMONIC_MEAN_RANK: HarmonicMeanRank(),
+    GEOMETRIC_MEAN_RANK: GeometricMeanRank(),
+    MEDIAN_RANK: MedianRank(),
+    INVERSE_ARITHMETIC_MEAN_RANK: InverseArithmeticMeanRank(),
+    INVERSE_GEOMETRIC_MEAN_RANK: InverseGeometricMeanRank(),
+    INVERSE_HARMONIC_MEAN_RANK: InverseHarmonicMeanRank(),  # This is MRR
+    INVERSE_MEDIAN_RANK: InverseMedianRank(),
+    # Extra stats stuff
+    RANK_STD: StandardDeviation(),
+    RANK_VARIANCE: Variance(),
+    RANK_MAD: MedianAbsoluteDeviation(),
+    RANK_COUNT: Count(),
+}
+
+
+def get_ranking_metrics(ranks: np.ndarray) -> Mapping[str, float]:
+    """Calculate all rank-based metrics."""
+    rv = {}
+    for metric_name, metric_func in ALL_TYPE_FUNCS.items():
+        rv[metric_name] = metric_func(ranks)
+    return rv
