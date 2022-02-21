@@ -31,6 +31,7 @@ from .metrics import (
     RANK_VARIANCE,
     MetricKey,
     get_ranking_metrics,
+    metric_resolver,
 )
 from .ranks import Ranks
 from .utils import MetricAnnotation, ValueRange
@@ -57,44 +58,7 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-#  TODO replace with class resolver
-RANKING_METRICS: Mapping[str, MetricAnnotation] = dict(
-    harmonic_mean_rank=MetricAnnotation(
-        name="Harmonic Mean Rank (HMR)",
-        increasing=False,
-        value_range=ValueRange(lower=1.0, upper=None, lower_inclusive=True),
-        description="The harmonic mean over all ranks.",
-        link="https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html",
-    ),
-    rank_std=MetricAnnotation(
-        name="Rank Standard Deviation",
-        value_range=ValueRange(lower=0.0, upper=None, lower_inclusive=True),
-        increasing=False,
-        description="The standard deviation over all ranks.",
-        link="https://pykeen.readthedocs.io/en/stable/reference/evaluation.html",
-    ),
-    rank_var=MetricAnnotation(
-        name="Rank Variance",
-        value_range=ValueRange(lower=0.0, upper=None, lower_inclusive=True),
-        increasing=False,
-        description="The variance over all ranks.",
-        link="https://pykeen.readthedocs.io/en/stable/reference/evaluation.html",
-    ),
-    rank_mad=MetricAnnotation(
-        name="Rank Median Absolute Deviation",
-        increasing=False,
-        value_range=ValueRange(lower=0.0, upper=None, lower_inclusive=True),
-        description="The median absolute deviation over all ranks.",
-        link="https://pykeen.readthedocs.io/en/stable/reference/evaluation.html",
-    ),
-    adjusted_arithmetic_mean_rank_index=MetricAnnotation(
-        name="Adjusted Arithmetic Mean Rank Index (AAMRI)",
-        increasing=True,
-        value_range=ValueRange(lower=-1, upper=1.0, lower_inclusive=True, upper_inclusive=True),
-        description="The re-indexed adjusted mean rank (AAMR)",
-        link="https://arxiv.org/abs/2002.06914",
-    ),
-)
+RANKING_METRICS = {cls.key: cls for cls in metric_resolver}
 
 
 class RankBasedMetricResults(MetricResults):
