@@ -538,7 +538,7 @@ class HitsAtK(RankBasedMetric):
     def compose_extended_key(self, extended_target: ExtendedTarget, rank_type: RankType) -> Iterable[str]:
         yield from super().compose_extended_key(extended_target, rank_type)
         yield str(self.k)
-    
+
     def compose_key(self) -> str:
         """Compose the metric key."""
         return self.key[:-1] + str(self.k)
