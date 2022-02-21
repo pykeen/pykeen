@@ -29,7 +29,13 @@ from pykeen.evaluation.evaluator import (
     get_candidate_set_size,
     prepare_filter_triples,
 )
-from pykeen.evaluation.metrics import ArithmeticMeanRank, HitsAtK, MetricKey
+from pykeen.evaluation.metrics import (
+    ArithmeticMeanRank,
+    HitsAtK,
+    MetricKey,
+    RankBasedMetric,
+    rank_based_metric_resolver,
+)
 from pykeen.evaluation.rank_based_evaluator import RANKING_METRICS, SampledRankBasedEvaluator, sample_negatives
 from pykeen.evaluation.ranks import Ranks
 from pykeen.models import FixedModel
@@ -62,60 +68,17 @@ class RankBasedEvaluatorTests(cases.EvaluatorTestCase):
     ):
         # Check for correct class
         assert isinstance(result, RankBasedMetricResults)
+        # check correct num_entities
+        assert self.instance.num_entities == self.dataset.num_entities
         result: RankBasedMetricResults
 
-        # Check value ranges
-        # check mean rank (MR)
-        for side, all_type_mr in result.arithmetic_mean_rank.items():
-            assert side in SIDES
-            for rank_type, mr in all_type_mr.items():
-                assert rank_type in RANK_TYPES
-                assert isinstance(mr, float)
-                assert 1 <= mr <= self.factory.num_entities
-
-        # check mean reciprocal rank (MRR)
-        for side, all_type_mrr in result.inverse_harmonic_mean_rank.items():
-            assert side in SIDES
-            for rank_type, mrr in all_type_mrr.items():
-                assert rank_type in RANK_TYPES
-                assert isinstance(mrr, float)
-                assert 0 < mrr <= 1
-
-        # check hits at k (H@k)
-        for side, all_type_hits_at_k in result.hits_at_k.items():
-            assert side in SIDES
-            for rank_type, hits_at_k in all_type_hits_at_k.items():
-                assert rank_type in RANK_TYPES
-                for k, h in hits_at_k.items():
-                    assert isinstance(k, int)
-                    assert 0 < k < self.factory.num_entities
-                    assert isinstance(h, float)
-                    assert 0 <= h <= 1
-
-        # check adjusted mean rank (AMR)
-        for side, adjusted_mean_rank in result.adjusted_arithmetic_mean_rank.items():
-            assert side in SIDES
-            assert RANK_REALISTIC in adjusted_mean_rank
-            assert isinstance(adjusted_mean_rank[RANK_REALISTIC], float)
-            assert 0 < adjusted_mean_rank[RANK_REALISTIC] < 2
-
-        # check adjusted mean rank index (AMRI)
-        for side, adjusted_mean_rank_index in result.adjusted_arithmetic_mean_rank_index.items():
-            assert side in SIDES
-            assert RANK_REALISTIC in adjusted_mean_rank_index
-            assert isinstance(adjusted_mean_rank_index[RANK_REALISTIC], float)
-            assert -1 <= adjusted_mean_rank_index[RANK_REALISTIC] <= 1
-
-        # the test only considered a single batch
-        for side, all_type_rank_counts in result.rank_count.items():
-            expected_size = 2 * self.batch_size if side == SIDE_BOTH else self.batch_size
-            # all rank types have the same count
-            assert set(all_type_rank_counts.values()) == {expected_size}
-
-        # TODO: Validate with data?
-        # check correct num_entities
-        assert isinstance(self.instance, RankBasedEvaluator)
-        assert self.instance.num_entities == self.dataset.num_entities
+        for (metric, side, rank_type), value in result.data.items():
+            self.assertIn(side, SIDES)
+            self.assertIn(rank_type, RANK_TYPES)
+            self.assertIsInstance(metric, RankBasedMetric)
+            self.assertIsInstance(value, float)
+            assert metric.value_range is not None
+            assert value in metric.value_range
 
 
 class SampledRankBasedEvaluatorTests(RankBasedEvaluatorTests):
