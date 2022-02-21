@@ -11,7 +11,7 @@ import os
 import pickle
 import warnings
 from abc import ABC, abstractmethod
-from typing import Any, ClassVar, Collection, Iterable, Mapping, Optional, Sequence, Type, Union
+from typing import Any, ClassVar, Iterable, Mapping, Optional, Sequence, Type, Union
 
 import pandas as pd
 import torch
@@ -24,7 +24,7 @@ from ..nn.emb import Embedding, EmbeddingSpecification, RepresentationModule
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import CoreTriplesFactory, relation_inverter
 from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, InductiveMode, MappedTriples, ScorePack, Target
-from ..utils import NoRandomSeedNecessary, extend_batch, get_devices, get_preferred_device, set_random_seed
+from ..utils import NoRandomSeedNecessary, extend_batch, get_preferred_device, set_random_seed
 
 __all__ = [
     "Model",
