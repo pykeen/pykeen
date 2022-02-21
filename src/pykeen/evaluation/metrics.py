@@ -30,36 +30,6 @@ __all__ = [
     "rank_based_metric_resolver",
 ]
 
-# TODO: get rid of constants
-ARITHMETIC_MEAN_RANK = "arithmetic_mean_rank"  # also known as mean rank (MR)
-GEOMETRIC_MEAN_RANK = "geometric_mean_rank"
-HARMONIC_MEAN_RANK = "harmonic_mean_rank"
-MEDIAN_RANK = "median_rank"
-INVERSE_ARITHMETIC_MEAN_RANK = "inverse_arithmetic_mean_rank"
-INVERSE_GEOMETRIC_MEAN_RANK = "inverse_geometric_mean_rank"
-INVERSE_HARMONIC_MEAN_RANK = "inverse_harmonic_mean_rank"  # also known as mean reciprocal rank (MRR)
-INVERSE_MEDIAN_RANK = "inverse_median_rank"
-ADJUSTED_ARITHMETIC_MEAN_RANK = "adjusted_arithmetic_mean_rank"
-ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX = "adjusted_arithmetic_mean_rank_index"
-RANK_STD = "rank_std"
-RANK_VARIANCE = "rank_var"
-RANK_MAD = "rank_mad"
-RANK_COUNT = "rank_count"
-TYPES_REALISTIC_ONLY = {ADJUSTED_ARITHMETIC_MEAN_RANK, ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX}
-METRIC_SYNONYMS = {
-    "adjusted_mean_rank": ADJUSTED_ARITHMETIC_MEAN_RANK,
-    "adjusted_mean_rank_index": ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX,
-    "amr": ADJUSTED_ARITHMETIC_MEAN_RANK,
-    "aamr": ADJUSTED_ARITHMETIC_MEAN_RANK,
-    "amri": ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX,
-    "aamri": ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX,
-    "igmr": INVERSE_GEOMETRIC_MEAN_RANK,
-    "iamr": INVERSE_ARITHMETIC_MEAN_RANK,
-    "mr": ARITHMETIC_MEAN_RANK,
-    "mean_rank": ARITHMETIC_MEAN_RANK,
-    "mrr": INVERSE_HARMONIC_MEAN_RANK,
-    "mean_reciprocal_rank": INVERSE_HARMONIC_MEAN_RANK,
-}
 
 _SIDE_PATTERN = "|".join(SIDES)
 _TYPE_PATTERN = "|".join(itt.chain(RANK_TYPES, RANK_TYPE_SYNONYMS.keys()))
@@ -157,9 +127,6 @@ def camel_to_snake(name: str) -> str:
 class Metric:
     """A base class for metrics."""
 
-    #: The key for use in metric result dictionaries
-    key: ClassVar[str]
-
     #: The name of the metric
     name: ClassVar[str]
 
@@ -195,15 +162,16 @@ class Metric:
             raise TypeError
         return docdata["link"]
 
+    @property
+    def key(self) -> str:
+        """Return the key for use in metric result dictionaries."""
+        return camel_to_snake(self.__class__.__name__)
+
     def _extra_repr(self) -> Iterable[str]:
         return []
 
     def __str__(self) -> str:
         return f"{self.__class__.__name__}({', '.join(self._extra_repr())})"
-
-    def compose_key(self) -> str:
-        """Compose the metric key."""
-        return self.key
 
 
 class RankBasedMetric(Metric):
@@ -265,12 +233,6 @@ class RankBasedMetric(Metric):
             raise ValueError("Numeric estimation requires to specify a number of samples.")
         return self.numeric_expected_value(num_candidates=num_candidates, num_samples=num_samples)
 
-    def compose_extended_key(self, extended_target: ExtendedTarget, rank_type: RankType) -> Iterable[str]:
-        """Compose the metric key."""
-        yield self.compose_key()
-        yield extended_target
-        yield rank_type
-
 
 @parse_docdata
 class ArithmeticMeanRank(RankBasedMetric):
@@ -281,7 +243,6 @@ class ArithmeticMeanRank(RankBasedMetric):
     description: The arithmetic mean over all ranks.
     """
 
-    key = ARITHMETIC_MEAN_RANK
     name = "Mean Rank (MR)"
     value_range = ValueRange(lower=1, lower_inclusive=True, upper=math.inf)
     increasing = False
@@ -309,7 +270,7 @@ class ArithmeticMeanRank(RankBasedMetric):
         :return:
             the expected mean rank
         """
-        return 0.5 * (1 + np.mean(np.asanyarray(num_candidates)))
+        return 0.5 * (1 + np.mean(np.asanyarray(num_candidates)).item())
 
 
 @parse_docdata
@@ -321,10 +282,10 @@ class InverseArithmeticMeanRank(RankBasedMetric):
     description: The inverse of the arithmetic mean over all ranks.
     """
 
-    key = INVERSE_ARITHMETIC_MEAN_RANK
     name = "Inverse Arithmetic Mean Rank (IAMR)"
     value_range = ValueRange(lower=0, lower_inclusive=False, upper=1, upper_inclusive=True)
     increasing = True
+    synonyms = ("iamr",)
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
         return np.reciprocal(np.mean(ranks)).item()
@@ -339,7 +300,6 @@ class GeometricMeanRank(RankBasedMetric):
     description: The geometric mean over all ranks.
     """
 
-    key = GEOMETRIC_MEAN_RANK
     name = "Geometric Mean Rank (GMR)"
     value_range = ValueRange(lower=1, lower_inclusive=True, upper=math.inf)
     increasing = False
@@ -358,10 +318,10 @@ class InverseGeometricMeanRank(RankBasedMetric):
     description: The inverse of the geometric mean over all ranks.
     """
 
-    key = INVERSE_GEOMETRIC_MEAN_RANK
     name = "Inverse Geometric Mean Rank (IGMR)"
     value_range = ValueRange(lower=0, lower_inclusive=False, upper=1, upper_inclusive=True)
     increasing = True
+    synonyms = ("igmr",)
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
         return np.reciprocal(stats.gmean(ranks)).item()
@@ -376,7 +336,6 @@ class HarmonicMeanRank(RankBasedMetric):
     description: The harmonic mean over all ranks.
     """
 
-    key = HARMONIC_MEAN_RANK
     name = "Harmonic Mean Rank (HMR)"
     value_range = ValueRange(lower=1, lower_inclusive=True, upper=math.inf)
     increasing = False
@@ -395,7 +354,6 @@ class InverseHarmonicMeanRank(RankBasedMetric):
     description: The inverse of the harmonic mean over all ranks.
     """
 
-    key = INVERSE_HARMONIC_MEAN_RANK
     name = "Mean Reciprocal Rank (MRR)"
     value_range = ValueRange(lower=0, lower_inclusive=False, upper=1, upper_inclusive=True)
     synonyms = ("mean_reciprocal_rank", "mrr")
@@ -414,7 +372,6 @@ class MedianRank(RankBasedMetric):
     description: The median over all ranks.
     """
 
-    key = MEDIAN_RANK
     name = "Median Rank"
     value_range = ValueRange(lower=1, lower_inclusive=True, upper=math.inf)
     increasing = False
@@ -432,7 +389,6 @@ class InverseMedianRank(RankBasedMetric):
     description: The inverse of the median over all ranks.
     """
 
-    key = INVERSE_MEDIAN_RANK
     name = "Inverse Median Rank"
     value_range = ValueRange(lower=0, lower_inclusive=False, upper=1, upper_inclusive=True)
     increasing = True
@@ -449,7 +405,6 @@ class StandardDeviation(RankBasedMetric):
     link: https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html
     """
 
-    key = RANK_STD
     name = "Standard Deviation (std)"
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=math.inf)
     increasing = False
@@ -467,7 +422,6 @@ class Variance(RankBasedMetric):
     link: https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html
     """
 
-    key = RANK_VARIANCE
     name = "Variance"
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=math.inf)
     increasing = False
@@ -485,7 +439,6 @@ class MedianAbsoluteDeviation(RankBasedMetric):
     link: https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html
     """
 
-    key = RANK_MAD
     name = "Median Absolute Deviation (MAD)"
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=math.inf)
     increasing = False
@@ -504,10 +457,10 @@ class Count(RankBasedMetric):
     link: https://pykeen.readthedocs.io/en/stable/reference/evaluation.html
     """
 
-    key = RANK_COUNT
     name = "Count"
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=math.inf)
     increasing = False
+    synonyms = ("rank_count",)
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
         return float(ranks.size)
@@ -522,7 +475,6 @@ class HitsAtK(RankBasedMetric):
     link: https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#hits-k
     """
 
-    key = "hits_at_k"
     name = "Hits @ K"
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=1, upper_inclusive=True)
     synonyms = ("h@k", "hits@k", "h@", "hits@", "hits_at_", "h_at_")
@@ -574,7 +526,6 @@ class AdjustedArithmeticMeanRank(ArithmeticMeanRank):
     link: https://arxiv.org/abs/2002.06914
     """
 
-    key = ADJUSTED_ARITHMETIC_MEAN_RANK
     name = "Adjusted Arithmetic Mean Rank (AAMR)"
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=2, upper_inclusive=False)
     synonyms = ("adjusted_mean_rank", "amr", "aamr")
@@ -595,7 +546,6 @@ class AdjustedArithmeticMeanRankIndex(ArithmeticMeanRank):
     description: The re-indexed adjusted mean rank (AAMR)
     """
 
-    key = ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX
     name = "Adjusted Arithmetic Mean Rank Index (AAMRI)"
     value_range = ValueRange(lower=-1, lower_inclusive=True, upper=1, upper_inclusive=True)
     synonyms = ("adjusted_mean_rank_index", "amri", "aamri")
@@ -611,27 +561,3 @@ rank_based_metric_resolver: Resolver[RankBasedMetric] = Resolver.from_subclasses
     base=RankBasedMetric,
     default=InverseHarmonicMeanRank,  # mrr
 )
-
-ALL_TYPE_FUNCS: Mapping[str, RankBasedMetric] = {
-    ARITHMETIC_MEAN_RANK: ArithmeticMeanRank(),
-    HARMONIC_MEAN_RANK: HarmonicMeanRank(),
-    GEOMETRIC_MEAN_RANK: GeometricMeanRank(),
-    MEDIAN_RANK: MedianRank(),
-    INVERSE_ARITHMETIC_MEAN_RANK: InverseArithmeticMeanRank(),
-    INVERSE_GEOMETRIC_MEAN_RANK: InverseGeometricMeanRank(),
-    INVERSE_HARMONIC_MEAN_RANK: InverseHarmonicMeanRank(),  # This is MRR
-    INVERSE_MEDIAN_RANK: InverseMedianRank(),
-    # Extra stats stuff
-    RANK_STD: StandardDeviation(),
-    RANK_VARIANCE: Variance(),
-    RANK_MAD: MedianAbsoluteDeviation(),
-    RANK_COUNT: Count(),
-}
-
-
-def get_ranking_metrics(ranks: np.ndarray) -> Mapping[str, float]:
-    """Calculate all rank-based metrics."""
-    rv = {}
-    for metric_name, metric_func in ALL_TYPE_FUNCS.items():
-        rv[metric_name] = metric_func(ranks)
-    return rv
