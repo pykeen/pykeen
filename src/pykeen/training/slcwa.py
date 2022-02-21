@@ -51,7 +51,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatchType]):
             query=negative_sampler,
             pos_kwargs=negative_sampler_kwargs,
             triples_factory=triples_factory,
-        )
+        ).to(self.device)
 
     def _create_instances(self, triples_factory: CoreTriplesFactory) -> Instances:  # noqa: D102
         return triples_factory.create_slcwa_instances()
