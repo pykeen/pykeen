@@ -259,7 +259,7 @@ class ArithmeticMeanRank(RankBasedMetric):
     name = "Mean Rank (MR)"
     value_range = ValueRange(lower=1, lower_inclusive=True, upper=math.inf)
     increasing = False
-    synonyms = ("mean_rank", "mr")
+    synonyms: ClassVar[Collection[str]] = ("mean_rank", "mr")
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
         return np.mean(ranks).item()
