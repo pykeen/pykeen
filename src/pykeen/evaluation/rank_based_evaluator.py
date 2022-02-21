@@ -155,7 +155,7 @@ class RankBasedEvaluator(Evaluator):
             metrics = [key for key in rank_based_metric_resolver.options if key != "hits_at_k"]
             metrics_kwargs = [None] * len(metrics)
             metrics += ["hits_at_k"] * 4
-            metrics_kwargs += [1, 3, 5, 10]
+            metrics_kwargs += [dict(k=k) for k in (1, 3, 5, 10)]
 
         self.metrics = rank_based_metric_resolver.make_many(metrics, metrics_kwargs)
         self.ranks = defaultdict(list)
