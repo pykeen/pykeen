@@ -122,8 +122,10 @@ class RankBasedMetric(Metric):
         """
         Compute expected metric value by summation.
 
-        Depending on the metric, the estimate may not be very accurate and converge slowly, cf.
-        https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.rv_discrete.expect.html
+        .. warning ::
+
+            Depending on the metric, the estimate may not be very accurate and converge slowly, cf.
+            https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.rv_discrete.expect.html
         """
         num_candidates = np.asarray(num_candidates)
         generator = np.random.default_rng()
@@ -141,9 +143,8 @@ class RankBasedMetric(Metric):
         """
         Compute expected metric value.
 
-        Prefers analytical solution, if available, but falls back to numeric estimation via summation.
-        Depending on the metric, the numeric estimate may not be very accurate and converge slowly, cf.
-        https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.rv_discrete.expect.html
+        Prefers analytical solution, if available, but falls back to numeric estimation via summation,
+        cf. `numeric_expected_value`.
         """
         if num_samples is None:
             raise ValueError("Numeric estimation requires to specify a number of samples.")
