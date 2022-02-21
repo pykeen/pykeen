@@ -2,41 +2,22 @@
 
 """Implementation of ranked based evaluator."""
 
-import itertools as itt
 import logging
 import math
 import random
 from collections import defaultdict
-from typing import DefaultDict, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Union, cast
+from typing import Iterable, List, Mapping, Optional, Sequence, Tuple, Union, cast
 
 import numpy as np
 import pandas as pd
 import torch
+from class_resolver import HintOrType, OptionalKwargs
 
 from .evaluator import Evaluator, MetricResults, prepare_filter_triples
-from .metrics import (
-    ADJUSTED_ARITHMETIC_MEAN_RANK,
-    ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX,
-    ARITHMETIC_MEAN_RANK,
-    GEOMETRIC_MEAN_RANK,
-    HARMONIC_MEAN_RANK,
-    INVERSE_ARITHMETIC_MEAN_RANK,
-    INVERSE_GEOMETRIC_MEAN_RANK,
-    INVERSE_HARMONIC_MEAN_RANK,
-    INVERSE_MEDIAN_RANK,
-    MEDIAN_RANK,
-    RANK_COUNT,
-    RANK_MAD,
-    RANK_STD,
-    RANK_VARIANCE,
-    MetricKey,
-    get_ranking_metrics,
-    metric_resolver,
-)
+from .metrics import HitsAtK, MetricKey, RankBasedMetric, rank_based_metric_resolver
 from .ranks import Ranks
 from ..triples.triples_factory import CoreTriplesFactory
 from ..typing import (
-    EXPECTED_RANKS,
     LABEL_HEAD,
     LABEL_RELATION,
     LABEL_TAIL,
@@ -57,7 +38,7 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-RANKING_METRICS = {cls.key: cls for cls in metric_resolver}
+RANKING_METRICS = {cls.key: cls for cls in rank_based_metric_resolver}
 
 
 class RankBasedMetricResults(MetricResults):
@@ -140,38 +121,28 @@ class RankBasedMetricResults(MetricResults):
 
 
 class RankBasedEvaluator(Evaluator):
-    r"""A rank-based evaluator for KGE models.
+    """A rank-based evaluator for KGE models."""
 
-    Calculates the following metrics:
-
-    - Mean Rank (MR) with range $[1, \infty)$ where closer to 0 is better
-    - Adjusted Mean Rank (AMR; [berrendorf2020]_) with range $(0, 2)$ where closer to 0 is better
-    - Adjusted Mean Rank Index (AMRI; [berrendorf2020]_) with range $[-1, 1]$ where closer to 1 is better
-    - Mean Reciprocal Rank (MRR) with range $(0, 1]$ where closer to 1 is better
-    - Hits @ K with range $[0, 1]$ where closer to 1 is better.
-
-    .. [berrendorf2020] Berrendorf, *et al.* (2020) `Interpretable and Fair
-        Comparison of Link Prediction or Entity Alignment Methods with Adjusted Mean Rank
-        <https://arxiv.org/abs/2002.06914>`_.
-    """
-
-    ks: Sequence[Union[int, float]]
     num_entities: Optional[int]
-    ranks: Dict[Tuple[Target, ExtendedRankType], List[float]]
+    ranks: Mapping[Tuple[Target, ExtendedRankType], List[np.ndarray]]
+    num_candidates: Mapping[Target, List[np.ndarray]]
 
     def __init__(
         self,
-        ks: Optional[Iterable[Union[int, float]]] = None,
         filtered: bool = True,
+        metrics: Optional[Sequence[HintOrType[RankBasedMetric]]] = None,
+        metrics_kwargs: OptionalKwargs = None,
         **kwargs,
     ):
         """Initialize rank-based evaluator.
 
-        :param ks:
-            The values for which to calculate hits@k. Defaults to {1,3,5,10}.
         :param filtered:
             Whether to use the filtered evaluation protocol. If enabled, ranking another true triple higher than the
             currently considered one will not decrease the score.
+        :param metrics:
+            the rank-based metrics to compute
+        :param metrics_kwargs:
+            additional keyword parameter
         :param kwargs: Additional keyword arguments that are passed to the base class.
         """
         super().__init__(
@@ -179,13 +150,16 @@ class RankBasedEvaluator(Evaluator):
             requires_positive_mask=False,
             **kwargs,
         )
-        self.ks = tuple(ks) if ks is not None else (1, 3, 5, 10)
-        for k in self.ks:
-            if isinstance(k, float) and not (0 < k < 1):
-                raise ValueError(
-                    "If k is a float, it should represent a relative rank, i.e. a value between 0 and 1 (excl.)",
-                )
+        if metrics is None:
+            assert metrics_kwargs is None
+            metrics = [key for key in rank_based_metric_resolver.options if key != "hits_at_k"]
+            metrics_kwargs = [None] * len(metrics)
+            metrics += ["hits_at_k"] * 4
+            metrics_kwargs += [1, 3, 5, 10]
+
+        self.metrics = rank_based_metric_resolver.make_many(metrics, metrics_kwargs)
         self.ranks = defaultdict(list)
+        self.num_candidates = defaultdict(list)
         self.num_entities = None
 
     def process_scores_(
@@ -205,67 +179,51 @@ class RankBasedEvaluator(Evaluator):
         )
         self.num_entities = scores.shape[1]
         for rank_type, v in batch_ranks.items():
-            self.ranks[target, rank_type].extend(v.detach().cpu().tolist())
+            self.ranks[target, rank_type].extend(v.detach().cpu().numpy())
+        self.num_candidates[target].extend(batch_ranks.number_of_options.detach().cpu().numpy())
 
-    def _get_ranks(self, side: ExtendedTarget, rank_type: ExtendedRankType) -> np.ndarray:
+    def _get(
+        self,
+        mapping: Mapping[Union[Target, Tuple[Target, RankType]], List[np.ndarray]],
+        side: ExtendedTarget,
+        rank_type: Optional[ExtendedRankType] = None,
+    ) -> np.ndarray:
         if side == SIDE_BOTH:
-            values: List[float] = sum(
-                (self.ranks.get((_side, rank_type), []) for _side in (LABEL_HEAD, LABEL_TAIL)), []
+            return np.concatenate(
+                [
+                    self._get(mapping=mapping, side=individual_side, rank_type=rank_type)
+                    for individual_side in (LABEL_HEAD, LABEL_TAIL)
+                ]
             )
-        else:
-            values = self.ranks.get((cast(Target, side), rank_type), [])
-        return np.asarray(values, dtype=np.float64)
+        key = cast(Target, side)
+        if rank_type is not None:
+            key = (side, rank_type)
+        return np.asarray(self.ranks.get(key, np.empty(shape=(0,), dtype=np.float64)))
 
     def finalize(self) -> RankBasedMetricResults:  # noqa: D102
         if self.num_entities is None:
             raise ValueError
 
-        hits_at_k: DefaultDict[str, Dict[str, Dict[Union[int, float], float]]] = defaultdict(dict)
-        asr: DefaultDict[str, DefaultDict[str, Dict[str, float]]] = defaultdict(lambda: defaultdict(dict))
-
-        for side, rank_type in itt.product(SIDES, RANK_TYPES):
-            ranks = self._get_ranks(side=side, rank_type=rank_type)
-            if len(ranks) < 1:
-                continue
-            hits_at_k[side][rank_type] = {
-                k: np.mean(ranks <= (k if isinstance(k, int) else int(self.num_entities * k))).item() for k in self.ks
-            }
-            for metric_name, metric_value in get_ranking_metrics(ranks).items():
-                asr[metric_name][side][rank_type] = metric_value
-
-            expected_rank_type = EXPECTED_RANKS.get(rank_type)
-            if expected_rank_type is not None:
-                expected_ranks = self._get_ranks(side=side, rank_type=expected_rank_type)
-                if 0 < len(expected_ranks):
-                    # Adjusted mean rank calculation
-                    expected_mean_rank = float(np.mean(expected_ranks))
-                    asr[ADJUSTED_ARITHMETIC_MEAN_RANK][side][rank_type] = (
-                        asr[ARITHMETIC_MEAN_RANK][side][rank_type] / expected_mean_rank
-                    )
-                    asr[ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX][side][rank_type] = 1.0 - (
-                        asr[ARITHMETIC_MEAN_RANK][side][rank_type] - 1
-                    ) / (expected_mean_rank - 1)
+        result = {}
+        for side in SIDES:
+            num_candidates = self._get(mapping=self.num_candidates, side=side)
+            for rank_type in RANK_TYPES:
+                ranks = self._get(mapping=self.ranks, side=side, rank_type=rank_type)
+                if len(ranks) < 1:
+                    continue
+                for metric in self.metrics:
+                    if rank_type not in metric.supported_rank_types:
+                        continue
+                    key = metric.key, side, rank_type
+                    # special treatment for H@k
+                    if isinstance(metric, HitsAtK):
+                        key = key + (metric.k,)
+                    result[key] = metric(ranks=ranks, num_candidates=num_candidates)
 
         # Clear buffers
         self.ranks.clear()
 
-        return RankBasedMetricResults.from_dict(
-            arithmetic_mean_rank=dict(asr[ARITHMETIC_MEAN_RANK]),
-            geometric_mean_rank=dict(asr[GEOMETRIC_MEAN_RANK]),
-            harmonic_mean_rank=dict(asr[HARMONIC_MEAN_RANK]),
-            median_rank=dict(asr[MEDIAN_RANK]),
-            inverse_arithmetic_mean_rank=dict(asr[INVERSE_ARITHMETIC_MEAN_RANK]),
-            inverse_geometric_mean_rank=dict(asr[INVERSE_GEOMETRIC_MEAN_RANK]),
-            inverse_harmonic_mean_rank=dict(asr[INVERSE_HARMONIC_MEAN_RANK]),
-            inverse_median_rank=dict(asr[INVERSE_MEDIAN_RANK]),
-            rank_count=dict(asr[RANK_COUNT]),  # type: ignore
-            rank_std=dict(asr[RANK_STD]),
-            rank_mad=dict(asr[RANK_MAD]),
-            rank_var=dict(asr[RANK_VARIANCE]),
-            adjusted_arithmetic_mean_rank=dict(asr[ADJUSTED_ARITHMETIC_MEAN_RANK]),
-            adjusted_arithmetic_mean_rank_index=dict(asr[ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX]),
-            hits_at_k=dict(hits_at_k),
-        )
+        return RankBasedMetricResults(data=result)
 
 
 def sample_negatives(
