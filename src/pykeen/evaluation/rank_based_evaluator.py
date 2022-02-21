@@ -24,7 +24,6 @@ from ..typing import (
     RANK_TYPES,
     SIDE_BOTH,
     SIDES,
-    ExtendedRankType,
     ExtendedTarget,
     MappedTriples,
     RankType,
