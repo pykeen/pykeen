@@ -29,8 +29,7 @@ from pykeen.evaluation.evaluator import (
     get_candidate_set_size,
     prepare_filter_triples,
 )
-from pykeen.evaluation.expectation import expected_hits_at_k, expected_mean_rank
-from pykeen.evaluation.metrics import MetricKey
+from pykeen.evaluation.metrics import ArithmeticMeanRank, HitsAtK, MetricKey
 from pykeen.evaluation.rank_based_evaluator import RANKING_METRICS, SampledRankBasedEvaluator, sample_negatives
 from pykeen.evaluation.ranks import Ranks
 from pykeen.models import FixedModel
@@ -681,9 +680,10 @@ class ExpectedMetricsTests(unittest.TestCase):
 
     def test_expected_mean_rank(self):
         """Test expected_mean_rank."""
+        metric = ArithmeticMeanRank()
         # test different shapes
         for num_candidates, total in self._iter_num_candidates():
-            emr = expected_mean_rank(num_candidates=num_candidates)
+            emr = metric.expected_value(num_candidates=num_candidates)
             # value range
             assert emr >= 0
             assert emr <= total
@@ -694,7 +694,8 @@ class ExpectedMetricsTests(unittest.TestCase):
             (1, 3, 100),
             self._iter_num_candidates(),
         ):
-            ehk = expected_hits_at_k(num_candidates=num_candidates, k=k)
+            metric = HitsAtK(k=k)
+            ehk = metric.expected_value(num_candidates=num_candidates)
             # value range
             assert ehk >= 0
             assert ehk <= 1.0
@@ -703,7 +704,8 @@ class ExpectedMetricsTests(unittest.TestCase):
 
     def test_expected_hits_at_k_manual(self):
         """Test expected Hits@k, where some candidate set sizes are smaller than k, but not all."""
-        self.assertAlmostEqual(expected_hits_at_k([5, 20], k=10), (1 + 0.5) / 2)
+        metric = HitsAtK(k=10)
+        self.assertAlmostEqual(metric.expected_value(num_candidates=[5, 20]), (1 + 0.5) / 2)
 
 
 def test_prepare_filter_triples():
