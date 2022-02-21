@@ -262,13 +262,8 @@ class ArithmeticMeanRank(RankBasedMetric):
     increasing = False
     synonyms = ("mean_rank", "mr")
 
-    @staticmethod
-    def call(ranks: np.ndarray) -> float:
-        """Evaluate the arithmetic mean rank."""
-        return np.mean(ranks).item()
-
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
-        return ArithmeticMeanRank.call(ranks)
+        return np.mean(ranks).item()
 
     def expected_value(
         self,
