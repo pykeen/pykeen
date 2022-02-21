@@ -27,7 +27,7 @@ from ..typing import (
 
 __all__ = [
     "MetricKey",
-    "metric_resolver",
+    "rank_based_metric_resolver",
 ]
 
 ARITHMETIC_MEAN_RANK = "arithmetic_mean_rank"  # also known as mean rank (MR)
@@ -573,7 +573,7 @@ class AdjustedArithmeticMeanRankIndex(ArithmeticMeanRank):
         return 1.0 - (super().__call__(ranks=ranks) - 1.0) / (self.expected_value(num_candidates=num_candidates) - 1.0)
 
 
-metric_resolver: Resolver[RankBasedMetric] = Resolver.from_subclasses(
+rank_based_metric_resolver: Resolver[RankBasedMetric] = Resolver.from_subclasses(
     base=RankBasedMetric,
     default=InverseHarmonicMeanRank,  # mrr
 )
