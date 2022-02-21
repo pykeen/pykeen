@@ -375,7 +375,7 @@ class Embedding(RepresentationModule):
             x = self._embeddings.weight
         else:
             prefix_shape = indices.shape
-            x = self._embeddings(indices)
+            x = self._embeddings(indices.to(self._embeddings.weight.device))
         x = x.view(*prefix_shape, *self.shape)
         # verify that contiguity is preserved
         assert x.is_contiguous()
@@ -443,7 +443,7 @@ class LowRankEmbeddingRepresentation(RepresentationModule):
         # get base weights, shape: (*batch_dims, num_bases)
         weight = self.weight
         if indices is not None:
-            weight = weight[indices]
+            weight = weight[indices.to(self.weight.device)]
         # weighted linear combination of bases, shape: (*batch_dims, *shape)
         return torch.tensordot(weight, bases, dims=([-1], [0]))
 
@@ -843,7 +843,7 @@ class SingleCompGCNRepresentation(RepresentationModule):
     ) -> torch.FloatTensor:  # noqa: D102
         x = self.combined()[self.position]
         if indices is not None:
-            x = x[indices]
+            x = x[indices.to(x.device)]
         return x
 
 
@@ -927,13 +927,17 @@ class LabelBasedTransformerRepresentation(RepresentationModule):
             **kwargs,
         )
 
+    @property
+    def device(self) -> torch.device:
+        return self.encoder.model.device
+
     def forward(
         self,
         indices: Optional[torch.LongTensor] = None,
     ) -> torch.FloatTensor:  # noqa: D102
         if indices is None:
-            indices = torch.arange(self.max_id)
-        uniq, inverse = indices.unique(return_inverse=True)
+            indices = torch.arange(self.max_id, device=self.device)
+        uniq, inverse = indices.to(device=self.device).unique(return_inverse=True)
         x = self.encoder(
             labels=[self.labels[i] for i in uniq.tolist()],
         )
