@@ -6,7 +6,7 @@ import itertools as itt
 import math
 import re
 from abc import abstractmethod
-from typing import ClassVar, Collection, Mapping, NamedTuple, Optional, Union, cast
+from typing import ClassVar, Collection, Iterable, Mapping, NamedTuple, Optional, Union, cast
 
 import numpy as np
 from class_resolver import Resolver
@@ -30,6 +30,7 @@ __all__ = [
     "rank_based_metric_resolver",
 ]
 
+# TODO: get rid of constants
 ARITHMETIC_MEAN_RANK = "arithmetic_mean_rank"  # also known as mean rank (MR)
 GEOMETRIC_MEAN_RANK = "geometric_mean_rank"
 HARMONIC_MEAN_RANK = "harmonic_mean_rank"
@@ -144,6 +145,15 @@ class MetricKey(NamedTuple):
         return str(cls.lookup(s))
 
 
+camel_to_snake_pattern = re.compile(r"(?<!^)(?=[A-Z])")
+
+
+def camel_to_snake(name: str) -> str:
+    """Convert camel-case to snake case."""
+    # cf. https://stackoverflow.com/a/1176023
+    return camel_to_snake_pattern.sub("_", name).lower()
+
+
 class Metric:
     """A base class for metrics."""
 
@@ -184,6 +194,16 @@ class Metric:
         if docdata is None:
             raise TypeError
         return docdata["link"]
+
+    def _extra_repr(self) -> Iterable[str]:
+        return []
+
+    def __str__(self) -> str:
+        return f"{self.__class__.__name__}({', '.join(self._extra_repr())})"
+
+    def compose_key(self) -> str:
+        """Compose the metric key."""
+        return self.key
 
 
 class RankBasedMetric(Metric):
@@ -244,6 +264,12 @@ class RankBasedMetric(Metric):
         if num_samples is None:
             raise ValueError("Numeric estimation requires to specify a number of samples.")
         return self.numeric_expected_value(num_candidates=num_candidates, num_samples=num_samples)
+
+    def compose_extended_key(self, extended_target: ExtendedTarget, rank_type: RankType) -> Iterable[str]:
+        """Compose the metric key."""
+        yield self.compose_key()
+        yield extended_target
+        yield rank_type
 
 
 @parse_docdata
@@ -505,6 +531,17 @@ class HitsAtK(RankBasedMetric):
     def __init__(self, k: int = 10) -> None:
         super().__init__()
         self.k = k
+
+    def _extra_repr(self) -> Iterable[str]:
+        yield f"k={self.k}"
+
+    def compose_extended_key(self, extended_target: ExtendedTarget, rank_type: RankType) -> Iterable[str]:
+        yield from super().compose_extended_key(extended_target, rank_type)
+        yield str(self.k)
+    
+    def compose_key(self) -> str:
+        """Compose the metric key."""
+        return self.key[:-1] + str(self.k)
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
         return np.less_equal(ranks, self.k).mean().item()

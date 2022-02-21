@@ -44,6 +44,8 @@ RANKING_METRICS = {cls.key: cls for cls in rank_based_metric_resolver}
 class RankBasedMetricResults(MetricResults):
     """Results from computing metrics."""
 
+    data: Mapping[Tuple[RankBasedMetric, ExtendedTarget, RankType], float]
+
     metrics = RANKING_METRICS
 
     @classmethod
@@ -96,10 +98,10 @@ class RankBasedMetricResults(MetricResults):
         return self._get_metric(MetricKey.lookup(name))
 
     def _get_metric(self, metric_key: MetricKey) -> float:
-        if not metric_key.name.startswith("hits"):
-            return self.data[metric_key.name][metric_key.side][metric_key.rank_type]
-        assert metric_key.k is not None
-        return self.data["hits_at_k"][metric_key.side][metric_key.rank_type][metric_key.k]
+        for (metric, target, rank_type), value in self.data.items():
+            if "".join(metric.key, target, rank_type) == str(metric_key):
+                return value
+        raise KeyError(metric_key)
 
     def to_flat_dict(self):  # noqa: D102
         return {f"{side}.{rank_type}.{metric_name}": value for side, rank_type, metric_name, value in self._iter_rows()}
@@ -109,15 +111,8 @@ class RankBasedMetricResults(MetricResults):
         return pd.DataFrame(list(self._iter_rows()), columns=["Side", "Type", "Metric", "Value"])
 
     def _iter_rows(self) -> Iterable[Tuple[ExtendedTarget, RankType, str, Union[float, int]]]:
-        for metric, metric_data in self.data.items():
-            for side, side_data in metric_data.items():
-                for rank_type, rank_data in side_data.items():
-                    # special treatment for hits_at_k
-                    if metric == "hits_at_k":
-                        for k, v in rank_data.items():
-                            yield side, rank_type, f"hits_at_{k}", v
-                    else:
-                        yield side, rank_type, metric, rank_data
+        for (metric, side, rank_type), value in self.data.items():
+            yield side, rank_type, metric.compose_key(), value
 
 
 class RankBasedEvaluator(Evaluator):
