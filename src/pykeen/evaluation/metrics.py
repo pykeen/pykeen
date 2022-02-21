@@ -31,90 +31,6 @@ __all__ = [
 ]
 
 
-_SIDE_PATTERN = "|".join(SIDES)
-_TYPE_PATTERN = "|".join(itt.chain(RANK_TYPES, RANK_TYPE_SYNONYMS.keys()))
-METRIC_PATTERN = re.compile(
-    rf"(\.(?P<side>{_SIDE_PATTERN}))?(\.(?P<type>{_TYPE_PATTERN}))?(?P<name>[\w@]+)(\.(?P<k>\d+))?",
-)
-HITS_PATTERN = re.compile(r"(hits_at_|hits@|h@)(?P<k>\d+)")
-
-
-class MetricKey(NamedTuple):
-    """A key for the kind of metric to resolve."""
-
-    #: Name of the metric
-    name: str
-    #: Side of the metric, or "both"
-    side: ExtendedTarget
-    #: The rank type
-    rank_type: ExtendedRankType
-    #: The k if this represents a hits at k metric
-    k: Optional[int]
-
-    def __str__(self) -> str:  # noqa: D105
-        name = self.name
-        if self.k:
-            name = name[:-1] + str(self.k)
-        return ".".join((self.side, self.rank_type, name))
-
-    @classmethod
-    def lookup(cls, s: str) -> "MetricKey":
-        """Functional metric name normalization."""
-        match = METRIC_PATTERN.match(s)
-        if not match:
-            raise ValueError(f"Invalid metric name: {s}")
-        k: Union[None, str, int]
-        name, side, rank_type, k = [match.group(key) for key in ("name", "side", "type", "k")]
-
-        # normalize metric name
-        if not name:
-            raise ValueError("A metric name must be provided.")
-        # handle spaces and case
-        name = name.lower().replace(" ", "_")
-
-        # special case for hits_at_k
-        match = HITS_PATTERN.match(name)
-        if match:
-            name = "hits_at_k"
-            k = match.group("k")
-        if name == "hits_at_k":
-            if k is None:
-                k = 10
-            # TODO: Fractional?
-            try:
-                k = int(k)
-            except ValueError as error:
-                raise ValueError(f"Invalid k={k} for hits_at_k") from error
-            if k < 0:
-                raise ValueError(f"For hits_at_k, you must provide a positive value of k, but found {k}.")
-        assert k is None or isinstance(k, int)
-
-        # synonym normalization
-        name = METRIC_SYNONYMS.get(name, name)
-
-        # normalize side
-        side = side or SIDE_BOTH
-        side = side.lower()
-        if side not in SIDES:
-            raise ValueError(f"Invalid side: {side}. Allowed are {SIDES}.")
-
-        # normalize rank type
-        rank_type = rank_type or RANK_REALISTIC
-        rank_type = rank_type.lower()
-        rank_type = RANK_TYPE_SYNONYMS.get(rank_type, rank_type)
-        if rank_type not in RANK_TYPES:
-            raise ValueError(f"Invalid rank type: {rank_type}. Allowed are {RANK_TYPES}.")
-        elif rank_type != RANK_REALISTIC and name in TYPES_REALISTIC_ONLY:
-            raise ValueError(f"Invalid rank type for {name}: {rank_type}. Allowed type: {RANK_REALISTIC}")
-
-        return cls(name, cast(ExtendedTarget, side), cast(ExtendedRankType, rank_type), k)
-
-    @classmethod
-    def normalize(cls, s: str) -> str:
-        """Normalize a metric key string."""
-        return str(cls.lookup(s))
-
-
 camel_to_snake_pattern = re.compile(r"(?<!^)(?=[A-Z])")
 
 
@@ -172,6 +88,11 @@ class Metric:
 
     def __str__(self) -> str:
         return f"{self.__class__.__name__}({', '.join(self._extra_repr())})"
+
+    @property
+    def pattern(self) -> str:
+        """Return the pattern."""
+        return "|".join((self.key, *self.synonyms))
 
 
 class RankBasedMetric(Metric):
@@ -495,6 +416,10 @@ class HitsAtK(RankBasedMetric):
         """Compose the metric key."""
         return self.key[:-1] + str(self.k)
 
+    @property
+    def pattern(self) -> str:  # noqa: D102
+        return super().pattern + r"(\.(?P<k>\d+))?"
+
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
         return np.less_equal(ranks, self.k).mean().item()
 
@@ -561,3 +486,72 @@ rank_based_metric_resolver: Resolver[RankBasedMetric] = Resolver.from_subclasses
     base=RankBasedMetric,
     default=InverseHarmonicMeanRank,  # mrr
 )
+
+
+# parsing metrics
+# metric pattern = side?.type?.metric.k?
+_SIDE_PATTERN = "|".join(SIDES)
+_TYPE_PATTERN = "|".join(itt.chain(RANK_TYPES, RANK_TYPE_SYNONYMS.keys()))
+METRIC_PATTERN = re.compile(
+    rf"(\.(?P<side>{_SIDE_PATTERN}))?(\.(?P<type>{_TYPE_PATTERN}))?(?P<name>[\w@]+)(\.(?P<k>\d+))?",
+)
+
+
+class MetricKey(NamedTuple):
+    """A key for the kind of metric to resolve."""
+
+    #: The metric
+    metric: RankBasedMetric
+    #: Side of the metric, or "both"
+    side: ExtendedTarget
+    #: The rank type
+    rank_type: ExtendedRankType
+
+    def __str__(self) -> str:  # noqa: D105
+        return ".".join(map(str, (self.side, self.rank_type, self.metric)))
+
+    @classmethod
+    def lookup(cls, s: str) -> "MetricKey":
+        """Functional metric name normalization."""
+        match = METRIC_PATTERN.match(s)
+        if not match:
+            raise ValueError(f"Invalid metric name: {s}")
+        k: Union[None, str, int]
+        name, side, rank_type, k = [match.group(key) for key in ("name", "side", "type", "k")]
+
+        # normalize metric name
+        if not name:
+            raise ValueError("A metric name must be provided.")
+        cls = rank_based_metric_resolver.lookup(name)
+
+        kwargs = {}
+        if issubclass(cls, HitsAtK):
+            k = int(k or 10)
+            assert k > 0
+            kwargs["k"] = k
+
+        metric = rank_based_metric_resolver.make(cls, kwargs)
+
+        # normalize side
+        side = side or SIDE_BOTH
+        side = side.lower()
+        if side not in SIDES:
+            raise ValueError(f"Invalid side: {side}. Allowed are {SIDES}.")
+
+        # normalize rank type
+        rank_type = rank_type or RANK_REALISTIC
+        rank_type = rank_type.lower()
+        rank_type = RANK_TYPE_SYNONYMS.get(rank_type, rank_type)
+        if rank_type not in RANK_TYPES:
+            raise ValueError(f"Invalid rank type: {rank_type}. Allowed are {RANK_TYPES}.")
+        elif rank_type not in metric.supported_rank_types:
+            raise ValueError(
+                f"Invalid rank type for {metric}: {rank_type}. Allowed type: {metric.supported_rank_types}"
+            )
+
+        return cls(metric, cast(ExtendedTarget, side), cast(ExtendedRankType, rank_type), k)
+
+    @classmethod
+    def normalize(cls, s: str) -> str:
+        """Normalize a metric key string."""
+        return str(cls.lookup(s))
