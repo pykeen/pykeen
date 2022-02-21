@@ -89,11 +89,6 @@ class Metric:
     def __str__(self) -> str:
         return f"{self.__class__.__name__}({', '.join(self._extra_repr())})"
 
-    @property
-    def pattern(self) -> str:
-        """Return the pattern."""
-        return "|".join((self.key, *self.synonyms))
-
 
 class RankBasedMetric(Metric):
     """A base class for rank-based metrics."""
@@ -407,18 +402,6 @@ class HitsAtK(RankBasedMetric):
 
     def _extra_repr(self) -> Iterable[str]:
         yield f"k={self.k}"
-
-    def compose_extended_key(self, extended_target: ExtendedTarget, rank_type: RankType) -> Iterable[str]:
-        yield from super().compose_extended_key(extended_target, rank_type)
-        yield str(self.k)
-
-    def compose_key(self) -> str:
-        """Compose the metric key."""
-        return self.key[:-1] + str(self.k)
-
-    @property
-    def pattern(self) -> str:  # noqa: D102
-        return super().pattern + r"(\.(?P<k>\d+))?"
 
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
         return np.less_equal(ranks, self.k).mean().item()
