@@ -176,6 +176,9 @@ class Metric:
     #: The key for use in metric result dictionaries
     key: ClassVar[str]
 
+    #: The name of the metric
+    name: ClassVar[str]
+
     #: a link to further information
     link: ClassVar[str]
 
@@ -237,6 +240,7 @@ class ArithmeticMeanRank(RankBasedMetric):
     """
 
     key = ARITHMETIC_MEAN_RANK
+    name = "Mean Rank (MR)"
     value_range = ValueRange(lower=1, lower_inclusive=True, upper=math.inf)
     increasing = False
     synonyms = ("mean_rank", "mr")
@@ -259,6 +263,7 @@ class InverseArithmeticMeanRank(RankBasedMetric):
     """
 
     key = INVERSE_ARITHMETIC_MEAN_RANK
+    name = "Inverse Arithmetic Mean Rank (IAMR)"
     value_range = ValueRange(lower=0, lower_inclusive=False, upper=1, upper_inclusive=True)
     increasing = True
 
@@ -275,6 +280,7 @@ class GeometricMeanRank(RankBasedMetric):
     """
 
     key = GEOMETRIC_MEAN_RANK
+    name = "Geometric Mean Rank (GMR)"
     value_range = ValueRange(lower=1, lower_inclusive=True, upper=math.inf)
     increasing = False
     synonyms = ("gmr",)
@@ -292,6 +298,7 @@ class InverseGeometricMeanRank(RankBasedMetric):
     """
 
     key = INVERSE_GEOMETRIC_MEAN_RANK
+    name = "Inverse Geometric Mean Rank (IGMR)"
     value_range = ValueRange(lower=0, lower_inclusive=False, upper=1, upper_inclusive=True)
     increasing = True
 
@@ -308,6 +315,7 @@ class HarmonicMeanRank(RankBasedMetric):
     """
 
     key = HARMONIC_MEAN_RANK
+    name = "Harmonic Mean Rank (HMR)"
     value_range = ValueRange(lower=1, lower_inclusive=True, upper=math.inf)
     increasing = False
     synonyms = ("hmr",)
@@ -325,6 +333,7 @@ class InverseHarmonicMeanRank(RankBasedMetric):
     """
 
     key = INVERSE_HARMONIC_MEAN_RANK
+    name = "Mean Reciprocal Rank (MRR)"
     value_range = ValueRange(lower=0, lower_inclusive=False, upper=1, upper_inclusive=True)
     synonyms = ("mean_reciprocal_rank", "mrr")
     increasing = True
@@ -343,6 +352,7 @@ class MedianRank(RankBasedMetric):
     """
 
     key = MEDIAN_RANK
+    name = "Median Rank"
     value_range = ValueRange(lower=1, lower_inclusive=True, upper=math.inf)
     increasing = False
 
@@ -359,6 +369,7 @@ class InverseMedianRank(RankBasedMetric):
     """
 
     key = INVERSE_MEDIAN_RANK
+    name = "Inverse Median Rank"
     value_range = ValueRange(lower=0, lower_inclusive=False, upper=1, upper_inclusive=True)
     increasing = True
 
@@ -444,6 +455,7 @@ class HitsAtK(RankBasedMetric):
     """
 
     key = "hits_at_k"
+    name = "Hits @ K"
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=1, upper_inclusive=True)
     synonyms = ("h@k", "hits@k", "h@", "hits@", "hits_at_", "h_at_")
     increasing = True
@@ -466,6 +478,7 @@ class AdjustedArithmeticMeanRank(RankBasedMetric):
     """
 
     key = ADJUSTED_ARITHMETIC_MEAN_RANK
+    name = "Adjusted Arithmetic Mean Rank (AAMR)"
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=2, upper_inclusive=False)
     synonyms = ("adjusted_mean_rank", "amr", "aamr")
     supported_rank_types = (RANK_REALISTIC,)
@@ -485,6 +498,7 @@ class AdjustedArithmeticMeanRankIndex(RankBasedMetric):
     """
 
     key = ADJUSTED_ARITHMETIC_MEAN_RANK_INDEX
+    name = "Adjusted Arithmetic Mean Rank Index (AAMRI)"
     value_range = ValueRange(lower=-1, lower_inclusive=True, upper=1, upper_inclusive=True)
     synonyms = ("adjusted_mean_rank_index", "amri", "aamri")
     increasing = True
