@@ -29,7 +29,7 @@ def numeric_expected_value(
     metric_func = ALL_TYPE_FUNCS[metric]
     num_candidates = np.asarray(num_candidates)
     generator = np.random.default_rng()
-    expectation = 0
+    expectation = 0.0
     for _ in range(num_samples):
         ranks = generator.integers(low=0, high=num_candidates)
         expectation += metric_func(ranks)

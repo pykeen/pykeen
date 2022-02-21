@@ -34,7 +34,6 @@ from .metrics import (
     metric_resolver,
 )
 from .ranks import Ranks
-from .utils import MetricAnnotation, ValueRange
 from ..triples.triples_factory import CoreTriplesFactory
 from ..typing import (
     EXPECTED_RANKS,
