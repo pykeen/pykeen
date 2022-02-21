@@ -6,8 +6,8 @@ from abc import abstractmethod
 from typing import Any, ClassVar, Mapping, Optional, Tuple
 
 import torch
-from torch import nn
 from class_resolver import HintOrType, normalize_string
+from torch import nn
 
 from .filtering import Filterer, filterer_resolver
 from ..triples import CoreTriplesFactory
