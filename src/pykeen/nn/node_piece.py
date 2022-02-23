@@ -872,7 +872,8 @@ class NodePieceRepresentationModule(RepresentationModule):
         self,
         *,
         triples_factory: CoreTriplesFactory,
-        token_representations: OneOrSequence[Union[EmbeddingSpecification, RepresentationModule]],
+        token_representations: OneOrSequence[HintOrType[RepresentationModule]],
+        token_representation_kwargs: OneOrSequence[OptionalKwargs] = None,
         tokenizers: OneOrSequence[HintOrType[Tokenizer]] = None,
         tokenizers_kwargs: OneOrSequence[OptionalKwargs] = None,
         num_tokens: OneOrSequence[int] = 2,
@@ -913,6 +914,14 @@ class NodePieceRepresentationModule(RepresentationModule):
             # inverse triples are created afterwards implicitly
             mapped_triples = mapped_triples[mapped_triples[:, 1] < triples_factory.real_num_relations]
 
+        # has to be imported here to avoid cyclic imports
+        from . import representation_resolver
+
+        token_representations = representation_resolver.make_many(
+            token_representations,
+            kwargs=token_representation_kwargs,
+        )
+
         # tokenize
         tokenizations = [
             TokenizationRepresentationModule.from_tokenizer(
@@ -925,7 +934,7 @@ class NodePieceRepresentationModule(RepresentationModule):
             )
             for tokenizer_inst, token_representation, num_tokens_ in zip(
                 tokenizer_resolver.make_many(queries=tokenizers, kwargs=tokenizers_kwargs),
-                upgrade_to_sequence(token_representations),
+                token_representations,
                 upgrade_to_sequence(num_tokens),
             )
         ]
