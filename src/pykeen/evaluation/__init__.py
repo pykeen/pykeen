@@ -39,5 +39,6 @@ def get_metric_list() -> List[Tuple[str, MetricAnnotation, Type[MetricResults]]]
     return [
         (key, metadata, resolver_cls)
         for resolver_cls in metric_resolver.lookup_dict.values()
+        # TODO: for rank-based evaluator, `metrics` does not contain meaningful information anymore
         for key, metadata in resolver_cls.metrics.items()
     ]
