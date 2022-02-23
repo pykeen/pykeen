@@ -64,7 +64,7 @@ def _iter_ranks(
 class RankBasedMetricResults(MetricResults):
     """Results from computing metrics."""
 
-    data: Mapping[Tuple[RankBasedMetric, ExtendedTarget, RankType], float]
+    data: Mapping[Tuple[str, ExtendedTarget, RankType], float]
 
     metrics = RANKING_METRICS
 
@@ -82,7 +82,7 @@ class RankBasedMetricResults(MetricResults):
         """Create rank-based metric results from the given rank/candidate sets."""
         return cls(
             data={
-                (metric, target, rank_type): metric(ranks=ranks, num_candidates=num_candidates)
+                (metric.key, target, rank_type): metric(ranks=ranks, num_candidates=num_candidates)
                 for metric, (target, rank_type, ranks, num_candidates) in itertools.product(
                     metrics, rank_and_candidates
                 )
@@ -99,7 +99,7 @@ class RankBasedMetricResults(MetricResults):
             if math.isinf(high):
                 high = 1000.0
             for target, rank_type in itertools.product(SIDES, RANK_TYPES):
-                data[metric, target, rank_type] = random.uniform(low, high)
+                data[metric.key, target, rank_type] = random.uniform(low, high)
         return cls(data=data)
 
     def get_metric(self, name: str) -> float:
@@ -147,8 +147,8 @@ class RankBasedMetricResults(MetricResults):
         return self._get_metric(MetricKey.lookup(name))
 
     def _get_metric(self, metric_key: MetricKey) -> float:
-        for (metric, target, rank_type), value in self.data.items():
-            if str(MetricKey(metric=metric, side=target, rank_type=rank_type)) == str(metric_key):
+        for (metric_key_, target, rank_type), value in self.data.items():
+            if MetricKey(metric=metric_key_, side=target, rank_type=rank_type) == metric_key:
                 return value
         raise KeyError(metric_key)
 
@@ -168,8 +168,8 @@ class RankBasedMetricResults(MetricResults):
         return pd.DataFrame(list(self._iter_rows()), columns=["Side", "Type", "Metric", "Value"])
 
     def _iter_rows(self) -> Iterable[Tuple[ExtendedTarget, RankType, str, Union[float, int]]]:
-        for (metric, side, rank_type), value in self.data.items():
-            yield side, rank_type, metric.key, value
+        for (metric_key, side, rank_type), value in self.data.items():
+            yield side, rank_type, metric_key, value
 
 
 class RankBasedEvaluator(Evaluator):

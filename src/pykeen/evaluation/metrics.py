@@ -407,6 +407,10 @@ class HitsAtK(RankBasedMetric):
     def __call__(self, ranks: np.ndarray, num_candidates: Optional[np.ndarray] = None) -> float:  # noqa: D102
         return np.less_equal(ranks, self.k).mean().item()
 
+    @property
+    def key(self) -> str:  # noqa: D102
+        return super().key[:-1] + str(self.k)
+
     def expected_value(self, num_candidates: np.ndarray, num_samples: Optional[int] = None) -> float:
         r"""
         Calculate the expected Hits@k under random ordering.
@@ -487,7 +491,7 @@ class MetricKey(NamedTuple):
     """A key for the kind of metric to resolve."""
 
     #: The metric key
-    metric: RankBasedMetric
+    metric: str
 
     #: Side of the metric, or "both"
     side: ExtendedTarget
@@ -496,13 +500,13 @@ class MetricKey(NamedTuple):
     rank_type: ExtendedRankType
 
     def __str__(self) -> str:  # noqa: D105
-        return ".".join(map(str, (self.side, self.rank_type, self.metric.key)))
+        return ".".join(map(str, (self.side, self.rank_type, self.metric)))
 
     @classmethod
     def lookup(cls, s: Optional[str]) -> "MetricKey":
         """Functional metric name normalization."""
         if s is None:
-            return cls(metric=InverseHarmonicMeanRank(), side=SIDE_BOTH, rank_type=RANK_REALISTIC)
+            return cls(metric=InverseHarmonicMeanRank().key, side=SIDE_BOTH, rank_type=RANK_REALISTIC)
 
         match = METRIC_PATTERN.match(s)
         if not match:
@@ -544,7 +548,7 @@ class MetricKey(NamedTuple):
                 f"Invalid rank type for {metric}: {rank_type}. Allowed type: {metric.supported_rank_types}"
             )
 
-        return cls(metric, cast(ExtendedTarget, side), cast(ExtendedRankType, rank_type))
+        return cls(metric.key, cast(ExtendedTarget, side), cast(ExtendedRankType, rank_type))
 
     @classmethod
     def normalize(cls, s: Optional[str]) -> str:

@@ -9,7 +9,7 @@ from torch import nn
 
 from pykeen.evaluation import Evaluator, MetricResults, RankBasedMetricResults
 from pykeen.nn.emb import RepresentationModule
-from pykeen.typing import RANK_REALISTIC, RANK_TYPES, SIDES, MappedTriples, Target
+from pykeen.typing import RANK_REALISTIC, RANK_TYPES, SIDES, ExtendedTarget, MappedTriples, RankType, Target
 
 __all__ = [
     "CustomRepresentations",
@@ -31,10 +31,19 @@ class CustomRepresentations(RepresentationModule):
 class MockEvaluator(Evaluator):
     """A mock evaluator for testing early stopping."""
 
-    def __init__(self, losses: Iterable[float], automatic_memory_optimization: bool = True) -> None:
+    def __init__(
+        self,
+        key: Optional[Tuple[str, ExtendedTarget, RankType]] = None,
+        values: Optional[Iterable[float]] = None,
+        automatic_memory_optimization: bool = True,
+    ) -> None:
         super().__init__(automatic_memory_optimization=automatic_memory_optimization)
-        self.losses = tuple(losses)
-        self.losses_iter = iter(self.losses)
+        self.key = key
+        if values is None:
+            self.values = self.values_iter = None
+        else:
+            self.values = tuple(values)
+            self.values_iter = iter(self.values)
 
     def process_scores_(
         self,
@@ -47,8 +56,13 @@ class MockEvaluator(Evaluator):
         pass
 
     def finalize(self) -> MetricResults:  # noqa: D102
-        # TODO: losses?
-        return RankBasedMetricResults.create_random()
+        result = RankBasedMetricResults.create_random()
+        if self.key:
+            assert self.values_iter is not None
+            if self.key not in result.data:
+                raise KeyError(self.key)
+            result.data[self.key] = next(self.values_iter)
+        return result
 
     def __repr__(self):  # noqa: D105
-        return f"{self.__class__.__name__}(losses={self.losses})"
+        return f"{self.__class__.__name__}(values={self.values})"
