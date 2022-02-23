@@ -41,7 +41,7 @@
 <p align="center">
   <a href="#installation">Installation</a> •
   <a href="#quickstart">Quickstart</a> •
-  <a href="#datasets-30">Datasets</a> •
+  <a href="#datasets-31">Datasets</a> •
   <a href="#models-42">Models</a> •
   <a href="#supporters">Support</a> •
   <a href="#citation">Citation</a>
@@ -138,7 +138,7 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 | OpenBioLink                        | [`pykeen.datasets.OpenBioLink`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.OpenBioLink.html)     | [Breit *et al*., 2020](https://doi.org/10.1093/bioinformatics/btaa274)                                                  |     180992 |          28 |   4563407 |
 | OpenBioLink                        | [`pykeen.datasets.OpenBioLinkLQ`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.OpenBioLinkLQ.html) | [Breit *et al*., 2020](https://doi.org/10.1093/bioinformatics/btaa274)                                                  |     480876 |          32 |  27320889 |
 | OpenEA Family                      | [`pykeen.datasets.OpenEA`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.OpenEA.html)               | [Sun *et al*., 2020](http://www.vldb.org/pvldb/vol13/p2326-sun.pdf)                                                     |      15000 |         248 |     38265 |
-| PharmKG8k                          | [`pykeen.datasets.PharmKG8k`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.PharmKG8k.html)         | [Zhang *et al*., 2020](hhttps://doi.org/10.1093/bib/bbaa344)                                                                         |      7247 |         28 |   485787 |
+| PharmKG8k                          | [`pykeen.datasets.PharmKG8k`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.PharmKG8k.html)         | [Zheng *et al*., 2020](https://doi.org/10.1093/bib/bbaa344)                                                             |       7247 |          28 |    485787 |
 | Unified Medical Language System    | [`pykeen.datasets.UMLS`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.UMLS.html)                   | [`ZhenfengLei/KGDatasets`](https://github.com/ZhenfengLei/KGDatasets)                                                   |        135 |          46 |      6529 |
 | WD50K (triples)                    | [`pykeen.datasets.WD50KT`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.WD50KT.html)               | [Galkin *et al*., 2020](https://www.aclweb.org/anthology/2020.emnlp-main.596/)                                          |      40107 |         473 |    232344 |
 | Wikidata5M                         | [`pykeen.datasets.Wikidata5M`](https://pykeen.readthedocs.io/en/latest/api/pykeen.datasets.Wikidata5M.html)       | [Wang *et al*., 2019](https://arxiv.org/abs/1911.06136)                                                                 |    4594149 |         822 |  20624239 |
@@ -253,7 +253,7 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 | rankbased        | [`pykeen.evaluation.RankBasedEvaluator`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.RankBasedEvaluator.html)               | A rank-based evaluator for KGE models.           |
 | sampledrankbased | [`pykeen.evaluation.SampledRankBasedEvaluator`](https://pykeen.readthedocs.io/en/latest/api/pykeen.evaluation.SampledRankBasedEvaluator.html) |                                                  |
 
-### Metrics (37)
+### Metrics (23)
 
 | Name                                                                                                                   | Interval   | Direction   | Description                                                 | Type           |
 |------------------------------------------------------------------------------------------------------------------------|------------|-------------|-------------------------------------------------------------|----------------|
@@ -279,17 +279,7 @@ have a suggestion for another dataset to include in PyKEEN, please let us know
 | [Threat Score](https://rexmex.readthedocs.io/en/latest/modules/root.html#rexmex.metrics.classification.threat_score)   | [0, 1]     | 📈          | TP / (TP + FN + FP)                                         | Classification |
 | [True Negative Rate](https://en.wikipedia.org/wiki/Specificity_(tests))                                                | [0, 1]     | 📈          | TN / (TN + FP)                                              | Classification |
 | [True Positive Rate](https://en.wikipedia.org/wiki/Sensitivity_(test))                                                 | [0, 1]     | 📈          | TP / (TP + FN)                                              | Classification |
-| [Adjusted Arithmetic Mean Rank (AAMR)](https://arxiv.org/abs/2002.06914)                                               | [0, 2)     | 📉          | The mean over all ranks divided by its expected value.      | Ranking        |
-| [Adjusted Arithmetic Mean Rank Index (AAMRI)](https://arxiv.org/abs/2002.06914)                                        | [-1, 1]    | 📈          | The re-indexed adjusted mean rank (AAMR)                    | Ranking        |
-| [Geometric Mean Rank (GMR)](https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html)                                 | [1, inf)   | 📉          | The geometric mean over all ranks.                          | Ranking        |
-| [Harmonic Mean Rank (HMR)](https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html)                                  | [1, inf)   | 📉          | The harmonic mean over all ranks.                           | Ranking        |
-| [Hits @ K](https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#hits-k)                      | [0, 1]     | 📈          | The relative frequency of ranks not larger than a given k.  | Ranking        |
-| [Inverse Arithmetic Mean Rank (IAMR)](https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html)                       | (0, 1]     | 📈          | The inverse of the arithmetic mean over all ranks.          | Ranking        |
-| [Inverse Geometric Mean Rank (IGMR)](https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html)                        | (0, 1]     | 📈          | The inverse of the geometric mean over all ranks.           | Ranking        |
-| [Inverse Median Rank](https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html)                                       | (0, 1]     | 📈          | The inverse of the median over all ranks.                   | Ranking        |
 | [Mean Rank (MR)](https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#mean-rank)             | [1, inf)   | 📉          | The arithmetic mean over all ranks.                         | Ranking        |
-| [Mean Reciprocal Rank (MRR)](https://en.wikipedia.org/wiki/Mean_reciprocal_rank)                                       | (0, 1]     | 📈          | The inverse of the harmonic mean over all ranks.            | Ranking        |
-| [Median Rank](https://cthoyt.com/2021/04/19/pythagorean-mean-ranks.html)                                               | [1, inf)   | 📉          | The median over all ranks.                                  | Ranking        |
 
 ### Trackers (8)
 
