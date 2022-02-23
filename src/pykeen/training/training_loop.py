@@ -121,6 +121,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         lr_scheduler: Optional[LRScheduler] = None,
         automatic_memory_optimization: bool = True,
         mode: Optional[InductiveMode] = None,
+        result_tracker: Optional[ResultTracker] = None,
     ) -> None:
         """Initialize the training loop.
 
@@ -131,6 +132,8 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         :param automatic_memory_optimization: bool
             Whether to automatically optimize the sub-batch size during
             training and batch size during evaluation with regards to the hardware at hand.
+        :param result_tracker:
+            The result tracker.
         """
         self.model = model
         self.optimizer = optimizer
@@ -139,6 +142,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         self._should_stop = False
         self.automatic_memory_optimization = automatic_memory_optimization
         self.mode = mode
+        self.result_tracker = result_tracker
 
         logger.debug("we don't really need the triples factory: %s", triples_factory)
 
@@ -183,7 +187,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         use_tqdm_batch: bool = True,
         tqdm_kwargs: Optional[Mapping[str, Any]] = None,
         stopper: Optional[Stopper] = None,
-        result_tracker: Optional[ResultTracker] = None,
         sub_batch_size: Optional[int] = None,
         num_workers: Optional[int] = None,
         clear_optimizer: bool = False,
@@ -231,8 +234,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         :param stopper:
             An instance of :class:`pykeen.stopper.EarlyStopper` with settings for checking
             if training should stop early
-        :param result_tracker:
-            The result tracker.
         :param sub_batch_size:
             If provided split each batch into sub-batches to avoid memory issues for large models / small GPUs.
         :param num_workers:
@@ -355,7 +356,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                 use_tqdm_batch=use_tqdm_batch,
                 tqdm_kwargs=tqdm_kwargs,
                 stopper=stopper,
-                result_tracker=result_tracker,
                 sub_batch_size=sub_batch_size,
                 num_workers=num_workers,
                 save_checkpoints=save_checkpoints,
@@ -400,7 +400,6 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         use_tqdm_batch: bool = True,
         tqdm_kwargs: Optional[Mapping[str, Any]] = None,
         stopper: Optional[Stopper] = None,
-        result_tracker: Optional[ResultTracker] = None,
         sub_batch_size: Optional[int] = None,
         num_workers: Optional[int] = None,
         save_checkpoints: bool = False,
@@ -441,8 +440,8 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         # Prepare all of the callbacks
         callback = MultiTrainingCallback(callbacks=callbacks, callback_kwargs=callback_kwargs)
         # Register a callback for the result tracker, if given
-        if result_tracker is not None:
-            callback.register_callback(TrackerTrainingCallback(result_tracker))
+        if self.result_tracker is not None:
+            callback.register_callback(TrackerTrainingCallback())
         # Register a callback for the early stopper, if given
         # TODO should mode be passed here?
         if stopper is not None:

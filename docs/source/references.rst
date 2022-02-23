@@ -98,3 +98,6 @@ References
 
 .. [teru2020] Teru, K., *et al* (2020). `Inductive Relation Prediction by Subgraph Reasoning
    <https://arxiv.org/abs/1911.06962>`_. *ICML 2020*
+
+.. [zheng2020] Zheng, S., *et al* (2020). `PharmKG: a dedicated knowledge graph benchmark for bomedical data mining
+   <https://doi.org/10.1093/bib/bbaa344>`_. *Briefings in Bioinformatics 2020*

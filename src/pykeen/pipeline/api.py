@@ -1171,6 +1171,7 @@ def pipeline(  # noqa: C901
         triples_factory=training,
         optimizer=optimizer_instance,
         lr_scheduler=lr_scheduler_instance,
+        result_tracker=_result_tracker,
         **training_loop_kwargs,
     )
     _result_tracker.log_params(
@@ -1238,7 +1239,6 @@ def pipeline(  # noqa: C901
     losses = training_loop_instance.train(
         triples_factory=training,
         stopper=stopper_instance,
-        result_tracker=_result_tracker,
         clear_optimizer=clear_optimizer,
         **training_kwargs,
     )
