@@ -467,6 +467,7 @@ class LowRankRepresentationModule(RepresentationModule):
         return torch.tensordot(weight, bases, dims=([-1], [0]))
 
 
+# TODO: deprecate in favour of using class_resolver hints
 @dataclass
 class EmbeddingSpecification:
     """An embedding specification."""
