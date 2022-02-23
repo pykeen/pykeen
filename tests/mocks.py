@@ -9,7 +9,7 @@ from torch import nn
 
 from pykeen.evaluation import Evaluator, MetricResults, RankBasedMetricResults
 from pykeen.nn.emb import RepresentationModule
-from pykeen.typing import RANK_REALISTIC, RANK_TYPES, SIDES, ExtendedTarget, MappedTriples, RankType, Target
+from pykeen.typing import ExtendedTarget, MappedTriples, RankType, Target
 
 __all__ = [
     "CustomRepresentations",

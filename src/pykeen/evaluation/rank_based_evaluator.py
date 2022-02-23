@@ -7,7 +7,7 @@ import logging
 import math
 import random
 from collections import defaultdict
-from typing import Any, Iterable, List, Mapping, MutableMapping, Optional, Sequence, Tuple, TypeVar, Union, cast
+from typing import Iterable, List, Mapping, MutableMapping, Optional, Sequence, Tuple, Union, cast
 
 import numpy as np
 import pandas as pd
@@ -152,7 +152,7 @@ class RankBasedMetricResults(MetricResults):
                 return value
         raise KeyError(metric_key)
 
-    def to_dict(self) -> Mapping[ExtendedTarget, Mapping[RankType, Mapping[str, float]]]:
+    def to_dict(self) -> Mapping[ExtendedTarget, Mapping[RankType, Mapping[str, float]]]:  # noqa: D102
         result: MutableMapping[ExtendedTarget, MutableMapping[RankType, MutableMapping[str, float]]] = {}
         for side, rank_type, metric_name, metric_value in self._iter_rows():
             result.setdefault(side, {})
