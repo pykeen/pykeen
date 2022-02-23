@@ -310,10 +310,7 @@ class Embedding(RepresentationModule):
             # point dtype, rather than the combined complex one
             dtype = getattr(torch, torch.finfo(dtype).dtype)
 
-        super().__init__(
-            max_id=num_embeddings,
-            shape=shape,
-        )
+        super().__init__(max_id=max_id, shape=shape)
 
         # use make for initializer since there's a default, and make_safe
         # for the others to pass through None values
@@ -322,11 +319,7 @@ class Embedding(RepresentationModule):
         self.constrainer = constrainer_resolver.make_safe(constrainer, constrainer_kwargs)
         self.regularizer = regularizer_resolver.make_safe(regularizer, regularizer_kwargs)
 
-        self._embeddings = torch.nn.Embedding(
-            num_embeddings=num_embeddings,
-            embedding_dim=_embedding_dim,
-            dtype=dtype,
-        )
+        self._embeddings = torch.nn.Embedding(num_embeddings=max_id, embedding_dim=_embedding_dim, dtype=dtype)
         self._embeddings.requires_grad_(trainable)
         self.dropout = None if dropout is None else nn.Dropout(dropout)
 
