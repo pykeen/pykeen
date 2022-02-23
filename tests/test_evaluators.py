@@ -161,7 +161,7 @@ class EvaluatorUtilsTests(unittest.TestCase):
         exp_best_rank = torch.as_tensor([3.0, 2.0, 1.0])
         exp_worst_rank = torch.as_tensor([4.0, 2.0, 1.0])
         exp_avg_rank = 0.5 * (exp_best_rank + exp_worst_rank)
-        exp_exp_rank = torch.as_tensor([(5 + 1) / 2, (5 + 1) / 2, (4 + 1) / 2])
+        exp_number_of_options = torch.as_tensor([5, 5, 4])
         ranks = Ranks.from_scores(true_score=true_score, all_scores=all_scores)
 
         optimistic_rank = ranks.optimistic
@@ -176,10 +176,10 @@ class EvaluatorUtilsTests(unittest.TestCase):
         assert realistic_rank.shape == (batch_size,)
         assert (realistic_rank == exp_avg_rank).all(), (realistic_rank, exp_avg_rank)
 
-        expected_realistic_rank = ranks.expected_realistic
-        assert expected_realistic_rank is not None
-        assert expected_realistic_rank.shape == (batch_size,)
-        assert (expected_realistic_rank == exp_exp_rank).all(), (expected_realistic_rank, exp_exp_rank)
+        number_of_options = ranks.number_of_options
+        assert number_of_options is not None
+        assert number_of_options.shape == (batch_size,)
+        assert (number_of_options == exp_number_of_options).all(), (number_of_options, exp_number_of_options)
 
     def test_create_sparse_positive_filter_(self):
         """Test method create_sparse_positive_filter_."""
