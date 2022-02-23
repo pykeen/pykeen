@@ -2,11 +2,12 @@
 
 """Implementation of ranked based evaluator."""
 
+import itertools
 import logging
 import math
 import random
 from collections import defaultdict
-from typing import Any, Iterable, List, Mapping, MutableMapping, Optional, Sequence, Tuple, Union, cast
+from typing import Any, Iterable, List, Mapping, MutableMapping, Optional, Sequence, Tuple, TypeVar, Union, cast
 
 import numpy as np
 import pandas as pd
@@ -40,6 +41,26 @@ logger = logging.getLogger(__name__)
 RANKING_METRICS = {cls.key: cls for cls in rank_based_metric_resolver}
 
 
+def _iter_ranks(
+    ranks: Mapping[Tuple[Target, RankType], Sequence[np.ndarray]],
+    num_candidates: Mapping[Target, Sequence[np.ndarray]],
+) -> Iterable[Tuple[ExtendedTarget, RankType, np.ndarray, np.ndarray]]:
+    sides = sorted(num_candidates.keys())
+    # flatten dictionaries
+    ranks_flat, num_candidates_flat = [
+        {key: np.concatenate(value) for key, value in nested.items()} for nested in (ranks, num_candidates)
+    ]
+    for rank_type in RANK_TYPES:
+        # individual side
+        for side in sides:
+            yield side, rank_type, ranks_flat[side, rank_type], num_candidates_flat[side]
+
+        # combined
+        c_ranks = np.concatenate([ranks_flat[side, rank_type] for side in sides])
+        c_num_candidates = np.concatenate([num_candidates_flat[side] for side in sides])
+        yield SIDE_BOTH, rank_type, c_ranks, c_num_candidates
+
+
 class RankBasedMetricResults(MetricResults):
     """Results from computing metrics."""
 
@@ -51,6 +72,22 @@ class RankBasedMetricResults(MetricResults):
     def from_dict(cls, **kwargs):
         """Create an instance from kwargs."""
         return cls(kwargs)
+
+    @classmethod
+    def from_ranks(
+        cls,
+        metrics: Iterable[RankBasedMetric],
+        rank_and_candidates: Iterable[Tuple[ExtendedTarget, RankType, np.ndarray, np.ndarray]],
+    ) -> "RankBasedMetricResults":
+        """Create rank-based metric results from the given rank/candidate sets."""
+        return cls(
+            data={
+                (metric, target, rank_type): metric(ranks=ranks, num_candidates=num_candidates)
+                for metric, (target, rank_type, ranks, num_candidates) in itertools.product(
+                    metrics, rank_and_candidates
+                )
+            }
+        )
 
     def get_metric(self, name: str) -> float:
         """Get the rank-based metric.
@@ -101,6 +138,14 @@ class RankBasedMetricResults(MetricResults):
             if str(MetricKey(metric=metric, side=target, rank_type=rank_type)) == str(metric_key):
                 return value
         raise KeyError(metric_key)
+
+    def to_dict(self) -> Mapping[ExtendedTarget, Mapping[RankType, Mapping[str, float]]]:
+        result: MutableMapping[ExtendedTarget, MutableMapping[RankType, MutableMapping[str, float]]] = {}
+        for side, rank_type, metric_name, metric_value in self._iter_rows():
+            result.setdefault(side, {})
+            result[side].setdefault(rank_type, {})
+            result[side][rank_type][metric_name] = metric_value
+        return result
 
     def to_flat_dict(self):  # noqa: D102
         return {f"{side}.{rank_type}.{metric_name}": value for side, rank_type, metric_name, value in self._iter_rows()}
@@ -173,46 +218,21 @@ class RankBasedEvaluator(Evaluator):
         )
         self.num_entities = scores.shape[1]
         for rank_type, v in batch_ranks.items():
-            self.ranks[target, rank_type].extend(v.detach().cpu().numpy())
-        self.num_candidates[target].extend(batch_ranks.number_of_options.detach().cpu().numpy())
-
-    def _get(
-        self,
-        mapping: Mapping[Any, Sequence[np.ndarray]],
-        side: ExtendedTarget,
-        rank_type: Optional[RankType] = None,
-    ) -> np.ndarray:
-        if side == SIDE_BOTH:
-            return np.concatenate(
-                [
-                    self._get(mapping=mapping, side=individual_side, rank_type=rank_type)
-                    for individual_side in (LABEL_HEAD, LABEL_TAIL)
-                ]
-            )
-        key = side if rank_type is None else (side, rank_type)
-        return np.asarray(mapping.get(key, np.empty(shape=(0,), dtype=np.float64)))
+            self.ranks[target, rank_type].append(v.detach().cpu().numpy())
+        self.num_candidates[target].append(batch_ranks.number_of_options.detach().cpu().numpy())
 
     def finalize(self) -> RankBasedMetricResults:  # noqa: D102
         if self.num_entities is None:
             raise ValueError
-
-        result = {}
-        for side in SIDES:
-            num_candidates = self._get(mapping=self.num_candidates, side=side)
-            for rank_type in RANK_TYPES:
-                ranks = self._get(mapping=self.ranks, side=side, rank_type=rank_type)
-                if len(ranks) < 1:
-                    continue
-                for metric in self.metrics:
-                    if rank_type not in metric.supported_rank_types:
-                        continue
-                    result[metric, side, rank_type] = metric(ranks=ranks, num_candidates=num_candidates)
-
+        result = RankBasedMetricResults.from_ranks(
+            metrics=self.metrics,
+            rank_and_candidates=_iter_ranks(ranks=self.ranks, num_candidates=self.num_candidates),
+        )
         # Clear buffers
         self.ranks.clear()
         self.num_candidates.clear()
 
-        return RankBasedMetricResults(data=result)
+        return result
 
 
 def sample_negatives(
