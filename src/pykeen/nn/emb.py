@@ -162,6 +162,8 @@ class SubsetRepresentationModule(RepresentationModule):
             the maximum number of relations.
         :param base:
             the base representations. have to have a sufficient number of representations, i.e., at least max_id.
+        :param base_kwargs:
+            additional keyword arguments for the base representation
         """
         # has to be imported here to avoid cyclic import
         from . import representation_resolver
