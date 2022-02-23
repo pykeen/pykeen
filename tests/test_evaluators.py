@@ -437,7 +437,7 @@ class TestEvaluationFiltering(unittest.TestCase):
             batch_size=1,
             use_tqdm=False,
         )
-        assert eval_results.arithmetic_mean_rank["both"]["realistic"] == 2, "The rank should equal 2"
+        assert eval_results.get_metric(name="mr") == 2, "The mean rank should equal 2"
 
     def test_evaluation_filtering_with_validation_triples(self):
         """Test if the evaluator's triple filtering works as expected when including additional filter triples."""
@@ -451,7 +451,7 @@ class TestEvaluationFiltering(unittest.TestCase):
             batch_size=1,
             use_tqdm=False,
         )
-        assert eval_results.arithmetic_mean_rank["both"]["realistic"] == 1, "The rank should equal 1"
+        assert eval_results.get_metric(name="mr") == 1, "The rank should equal 1"
 
 
 def test_resolve_metric_name():
