@@ -47,39 +47,8 @@ class MockEvaluator(Evaluator):
         pass
 
     def finalize(self) -> MetricResults:  # noqa: D102
-        hits = next(self.losses_iter)
-        dummy_1 = {side: {rank_type: 10.0 for rank_type in RANK_TYPES} for side in SIDES}
-        dummy_2 = {side: {rank_type: 1.0 for rank_type in RANK_TYPES} for side in SIDES}
-        return RankBasedMetricResults.from_dict(
-            arithmetic_mean_rank=dummy_1,
-            geometric_mean_rank=dummy_1,
-            harmonic_mean_rank=dummy_1,
-            median_rank=dummy_1,
-            inverse_arithmetic_mean_rank=dummy_2,
-            inverse_harmonic_mean_rank=dummy_2,
-            inverse_geometric_mean_rank=dummy_2,
-            inverse_median_rank=dummy_2,
-            adjusted_arithmetic_mean_rank=dummy_2,
-            adjusted_arithmetic_mean_rank_index={
-                side: {
-                    RANK_REALISTIC: 0.0,
-                }
-                for side in SIDES
-            },
-            rank_count={side: {rank_type: 1 for rank_type in RANK_TYPES} for side in SIDES},
-            rank_std=dummy_1,
-            rank_var=dummy_1,
-            rank_mad=dummy_1,
-            hits_at_k={
-                side: {
-                    rank_type: {
-                        10: hits,
-                    }
-                    for rank_type in RANK_TYPES
-                }
-                for side in SIDES
-            },
-        )
+        # TODO: losses?
+        return RankBasedMetricResults.create_random()
 
     def __repr__(self):  # noqa: D105
         return f"{self.__class__.__name__}(losses={self.losses})"

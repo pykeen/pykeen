@@ -89,6 +89,19 @@ class RankBasedMetricResults(MetricResults):
             }
         )
 
+    @classmethod
+    def create_random(cls) -> "RankBasedMetricResults":
+        """Create random results useful for testing."""
+        data = {}
+        for metric_cls in rank_based_metric_resolver.lookup_dict.values():
+            metric = metric_cls()
+            low, high = metric_cls.value_range.lower, metric_cls.value_range.upper
+            if math.isinf(high):
+                high = 1000.0
+            for target, rank_type in itertools.product(SIDES, RANK_TYPES):
+                data[metric, target, rank_type] = random.uniform(low, high)
+        return cls(data=data)
+
     def get_metric(self, name: str) -> float:
         """Get the rank-based metric.
 
