@@ -1894,7 +1894,7 @@ class TokenizerTestCase(GenericTestCase[pykeen.nn.node_piece.Tokenizer]):
 class NodePieceTestCase(RepresentationTestCase):
     """General test case for node piece representations."""
 
-    cls = pykeen.nn.node_piece.NodePieceRepresentation
+    cls = pykeen.nn.node_piece.NodePieceRepresentationModule
     num_entities: ClassVar[int] = 8
     num_relations: ClassVar[int] = 7
     num_triples: ClassVar[int] = 31
@@ -1904,7 +1904,7 @@ class NodePieceTestCase(RepresentationTestCase):
         kwargs["triples_factory"] = generation.generate_triples_factory(
             num_entities=self.num_entities,
             num_relations=self.num_relations,
-            num_triples=self.nuNodePieceRepresentationModule
+            num_triples=self.num_triples,
             create_inverse_triples=False,
         )
         return kwargs
