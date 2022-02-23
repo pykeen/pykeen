@@ -56,7 +56,7 @@ class EmbeddingTests(cases.RepresentationTestCase):
 class LowRankEmbeddingRepresentationTests(cases.RepresentationTestCase):
     """Tests for low-rank embedding representations."""
 
-    cls = pykeen.nn.emb.LowRankEmbeddingRepresentation
+    cls = pykeen.nn.emb.LowRankRepresentationModule
     kwargs = dict(
         max_id=10,
         shape=(3, 7),

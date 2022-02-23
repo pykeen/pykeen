@@ -11,7 +11,7 @@ from class_resolver import ClassResolver, Hint
 from class_resolver.contrib.torch import activation_resolver
 from torch import nn
 
-from .emb import EmbeddingSpecification, LowRankEmbeddingRepresentation, RepresentationModule
+from .emb import EmbeddingSpecification, LowRankRepresentationModule, RepresentationModule
 from .init import uniform_norm_p1_
 from .weighting import EdgeWeighting, edge_weight_resolver
 from ..regularizers import Regularizer, regularizer_resolver
@@ -191,7 +191,7 @@ class BasesDecomposition(Decomposition):
         if num_bases > num_relations:
             raise ValueError("The number of bases should not exceed the number of relations.")
 
-        self.relation_representations = LowRankEmbeddingRepresentation(
+        self.relation_representations = LowRankRepresentationModule(
             max_id=num_relations,
             shape=(self.input_dim, self.output_dim),
             weight_initializer=uniform_norm_p1_,

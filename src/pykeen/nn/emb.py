@@ -31,7 +31,7 @@ from ..utils import Bias, clamp_norm, complex_normalize, get_preferred_device
 __all__ = [
     "RepresentationModule",
     "Embedding",
-    "LowRankEmbeddingRepresentation",
+    "LowRankRepresentationModule",
     "EmbeddingSpecification",
     "CompGCNLayer",
     "CombinedCompGCNRepresentations",
@@ -408,7 +408,7 @@ class Embedding(RepresentationModule):
         return x
 
 
-class LowRankEmbeddingRepresentation(RepresentationModule):
+class LowRankRepresentationModule(RepresentationModule):
     r"""
     Low-rank embedding factorization.
 
