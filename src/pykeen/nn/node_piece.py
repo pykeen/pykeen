@@ -36,7 +36,7 @@ __all__ = [
     "RelationTokenizer",
     "AnchorTokenizer",
     "tokenizer_resolver",
-    "NodePieceRepresentation",
+    "NodePieceRepresentationModule",
 ]
 
 logger = logging.getLogger(__name__)
@@ -851,7 +851,7 @@ class TokenizationRepresentationModule(RepresentationModule):
         return self.vocabulary(token_ids)
 
 
-class NodePieceRepresentation(RepresentationModule):
+class NodePieceRepresentationModule(RepresentationModule):
     r"""
     Basic implementation of node piece decomposition [galkin2021]_.
 

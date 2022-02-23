@@ -40,13 +40,15 @@ from .modules import (
     UMInteraction,
     interaction_resolver,
 )
-from .node_piece import NodePieceRepresentation, TokenizationRepresentationModule, tokenizer_resolver
+from .message_passing import RGCNRepresentationModule
+from .node_piece import NodePieceRepresentationModule, TokenizationRepresentationModule, tokenizer_resolver
 
 __all__ = [
     "Embedding",
     "EmbeddingSpecification",
-    "NodePieceRepresentation",
+    "NodePieceRepresentationModule",
     "RepresentationModule",
+    "RGCNRepresentationModule",
     "SubsetRepresentationModule",
     "TokenizationRepresentationModule",
     "init",

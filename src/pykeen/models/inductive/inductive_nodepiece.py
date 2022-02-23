@@ -14,7 +14,7 @@ from ...nn import (
     DistMultInteraction,
     EmbeddingSpecification,
     Interaction,
-    NodePieceRepresentation,
+    NodePieceRepresentationModule,
     SubsetRepresentationModule,
 )
 from ...nn.perceptron import ConcatMLP
@@ -119,7 +119,7 @@ class InductiveNodePiece(ERModel):
         relation_representations = embedding_specification.make(
             num_embeddings=2 * triples_factory.real_num_relations + 1,
         )
-        entity_representations = NodePieceRepresentation(
+        entity_representations = NodePieceRepresentationModule(
             triples_factory=triples_factory,
             tokenizers="RelationTokenizer",
             token_representations=relation_representations,
@@ -128,7 +128,7 @@ class InductiveNodePiece(ERModel):
             num_tokens=num_tokens,
         )
 
-        inference_representation = NodePieceRepresentation(
+        inference_representation = NodePieceRepresentationModule(
             triples_factory=inference_factory,
             tokenizers="RelationTokenizer",
             token_representations=relation_representations,

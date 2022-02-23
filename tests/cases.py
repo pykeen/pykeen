@@ -1904,7 +1904,7 @@ class NodePieceTestCase(RepresentationTestCase):
         kwargs["triples_factory"] = generation.generate_triples_factory(
             num_entities=self.num_entities,
             num_relations=self.num_relations,
-            num_triples=self.num_triples,
+            num_triples=self.nuNodePieceRepresentationModule
             create_inverse_triples=False,
         )
         return kwargs

@@ -10,7 +10,7 @@ from class_resolver import Hint, HintOrType, OptionalKwargs
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...nn import EmbeddingSpecification, NodePieceRepresentation, SubsetRepresentationModule
+from ...nn import EmbeddingSpecification, NodePieceRepresentationModule, SubsetRepresentationModule
 from ...nn.modules import DistMultInteraction, Interaction
 from ...nn.node_piece import RelationTokenizer, Tokenizer, tokenizer_resolver
 from ...nn.perceptron import ConcatMLP
@@ -158,7 +158,7 @@ class NodePiece(ERModel):
         super().__init__(
             triples_factory=triples_factory,
             interaction=interaction,
-            entity_representations=NodePieceRepresentation(
+            entity_representations=NodePieceRepresentationModule(
                 triples_factory=triples_factory,
                 token_representations=[
                     (
