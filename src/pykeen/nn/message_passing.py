@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Mapping, Optional, Tuple, Union
 
 import torch
-from class_resolver import ClassResolver, Hint
+from class_resolver import ClassResolver, Hint, HintOrType, OptionalKwargs
 from class_resolver.contrib.torch import activation_resolver
 from torch import nn
 
@@ -588,7 +588,8 @@ class RGCNRepresentationModule(RepresentationModule):
     def __init__(
         self,
         triples_factory: CoreTriplesFactory,
-        embedding_specification: EmbeddingSpecification,
+        entity_representations: HintOrType[RepresentationModule] = None,
+        entity_representation_kwargs: OptionalKwargs = None,
         num_layers: int = 2,
         use_bias: bool = True,
         activation: Hint[nn.Module] = None,
@@ -630,8 +631,15 @@ class RGCNRepresentationModule(RepresentationModule):
         :param regularizer_kwargs:
             Additional keyword arguments passed to the regularizer
         """
-        base_embeddings = embedding_specification.make(num_embeddings=triples_factory.num_entities)
-        super().__init__(max_id=triples_factory.num_entities, shape=base_embeddings.shape)
+        # has to be imported now to avoid cyclic imports
+        from . import representation_resolver
+
+        base_embeddings = representation_resolver.make(
+            entity_representations,
+            max_id=triples_factory.num_entities,
+            pos_kwargs=entity_representation_kwargs,
+        )
+        super().__init__(max_id=base_embeddings.max_id, shape=base_embeddings.shape)
         self.entity_embeddings = base_embeddings
 
         if triples_factory.create_inverse_triples:
