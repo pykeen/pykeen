@@ -36,7 +36,7 @@ __all__ = [
     "CompGCNLayer",
     "CombinedCompGCNRepresentations",
     "SingleCompGCNRepresentation",
-    "LabelBasedTransformerRepresentation",
+    "LabelBasedTransformerRepresentationModule",
     "SubsetRepresentationModule",
     # Utils
     "constrainer_resolver",
@@ -897,7 +897,7 @@ class SingleCompGCNRepresentation(RepresentationModule):
         return x
 
 
-class LabelBasedTransformerRepresentation(RepresentationModule):
+class LabelBasedTransformerRepresentationModule(RepresentationModule):
     """
     Label-based representations using a transformer encoder.
 
@@ -957,7 +957,7 @@ class LabelBasedTransformerRepresentation(RepresentationModule):
         triples_factory: TriplesFactory,
         for_entities: bool = True,
         **kwargs,
-    ) -> "LabelBasedTransformerRepresentation":
+    ) -> "LabelBasedTransformerRepresentationModule":
         """
         Prepare a label-based transformer representations with labels from a triples factory.
 

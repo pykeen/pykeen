@@ -209,7 +209,7 @@ class SubsetRepresentationTests(cases.RepresentationTestCase):
 class LabelBasedTransformerRepresentationTests(cases.RepresentationTestCase):
     """Test the label based Transformer representations."""
 
-    cls = pykeen.nn.emb.LabelBasedTransformerRepresentation
+    cls = pykeen.nn.emb.LabelBasedTransformerRepresentationModule
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
