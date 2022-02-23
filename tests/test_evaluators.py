@@ -4,7 +4,6 @@
 
 import itertools
 import logging
-import random
 import unittest
 from typing import Any, Collection, Dict, Iterable, List, Mapping, MutableMapping, Optional, Tuple, Union
 
@@ -38,14 +37,13 @@ from pykeen.evaluation.metrics import (
     RankBasedMetric,
     rank_based_metric_resolver,
 )
-from pykeen.evaluation.rank_based_evaluator import RANKING_METRICS, SampledRankBasedEvaluator, sample_negatives
+from pykeen.evaluation.rank_based_evaluator import SampledRankBasedEvaluator, sample_negatives
 from pykeen.evaluation.ranks import Ranks
 from pykeen.models import FixedModel
 from pykeen.typing import (
     LABEL_HEAD,
     LABEL_RELATION,
     LABEL_TAIL,
-    RANK_EXPECTED_REALISTIC,
     RANK_OPTIMISTIC,
     RANK_PESSIMISTIC,
     RANK_REALISTIC,
