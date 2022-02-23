@@ -18,7 +18,7 @@ from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import CoreTriplesFactory
 
 __all__ = [
-    "RGCNRepresentations",
+    "RGCNRepresentationModule",
     "Decomposition",
     "BasesDecomposition",
     "BlockDecomposition",
@@ -559,7 +559,7 @@ class RGCNLayer(nn.Module):
 decomposition_resolver = ClassResolver.from_subclasses(base=Decomposition, default=BasesDecomposition)
 
 
-class RGCNRepresentations(RepresentationModule):
+class RGCNRepresentationModule(RepresentationModule):
     r"""Entity representations enriched by R-GCN.
 
     The GCN employed by the entity encoder is adapted to include typed edges.
