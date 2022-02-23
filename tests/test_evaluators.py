@@ -36,6 +36,7 @@ from pykeen.evaluation.metrics import (
     InverseHarmonicMeanRank,
     MetricKey,
     RankBasedMetric,
+    rank_based_metric_resolver,
 )
 from pykeen.evaluation.rank_based_evaluator import RANKING_METRICS, SampledRankBasedEvaluator, sample_negatives
 from pykeen.evaluation.ranks import Ranks
@@ -732,21 +733,25 @@ class RankBasedMetricResultTests(cases.MetricResultTestCase):
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs)
+        generator = numpy.random.default_rng()
         # Populate with real results.
         evaluator = RankBasedEvaluator()
         evaluator.num_entities = self.num_entities
+        evaluator.num_candidates = {
+            side: [numpy.full(shape=(self.num_triples,), fill_value=self.num_entities)]
+            for side in (LABEL_HEAD, LABEL_TAIL)
+        }
         evaluator.ranks = {
-            (side, rank_type): [random.random() for _ in range(self.num_triples * (2 if side == SIDE_BOTH else 1))]
-            for side, rank_type in itertools.product(SIDES, {RANK_EXPECTED_REALISTIC}.union(RANK_TYPES))
+            (side, rank_type): [generator.random(size=(self.num_triples,))]
+            for side, rank_type in itertools.product((LABEL_HEAD, LABEL_TAIL), RANK_TYPES)
         }
         kwargs["data"] = evaluator.finalize().data
         return kwargs
 
     def _verify_flat_dict(self, flat_dict: Mapping[str, Any]):  # noqa: D102
-        for metric_name in RANKING_METRICS.keys():
-            # special treatment for hits@k
-            if metric_name == "hits_at_k":
-                metric_name = "hits_at_10"
+        for metric_cls in rank_based_metric_resolver:
+            metric = metric_cls()
+            metric_name = metric.key
             self.assertTrue(any(metric_name in key for key in flat_dict.keys()), metric_name)
 
     def test_to_df(self):
