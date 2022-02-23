@@ -11,7 +11,7 @@ from class_resolver import ClassResolver, Hint, HintOrType, OptionalKwargs
 from class_resolver.contrib.torch import activation_resolver
 from torch import nn
 
-from .emb import EmbeddingSpecification, LowRankRepresentationModule, RepresentationModule
+from .emb import LowRankRepresentationModule, RepresentationModule
 from .init import uniform_norm_p1_
 from .weighting import EdgeWeighting, edge_weight_resolver
 from ..regularizers import Regularizer, regularizer_resolver
