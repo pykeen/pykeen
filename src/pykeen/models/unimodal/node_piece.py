@@ -175,8 +175,8 @@ class NodePiece(ERModel):
                 num_tokens=num_tokens,
             ),
             relation_representations=SubsetRepresentationModule(  # hide padding relation
-                relation_representations,
                 max_id=triples_factory.num_relations,
+                base=relation_representations,
             ),
             **kwargs,
         )

@@ -10,7 +10,7 @@ from torch import nn
 
 from ..nbase import EmbeddingSpecificationHint, ERModel
 from ...nn.emb import EmbeddingSpecification
-from ...nn.message_passing import Decomposition, RGCNRepresentations
+from ...nn.message_passing import Decomposition, RGCNRepresentationModule
 from ...nn.modules import Interaction, interaction_resolver
 from ...nn.weighting import EdgeWeighting
 from ...regularizers import Regularizer
@@ -105,9 +105,9 @@ class RGCN(
         **kwargs,
     ):
         # create enriched entity representations
-        entity_representations = RGCNRepresentations(
+        entity_representations = RGCNRepresentationModule(
             triples_factory=triples_factory,
-            embedding_specification=EmbeddingSpecification(
+            entity_representation_kwargs=dict(
                 embedding_dim=embedding_dim,
                 initializer=base_entity_initializer,
                 initializer_kwargs=base_entity_initializer_kwargs,

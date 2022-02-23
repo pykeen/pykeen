@@ -142,8 +142,8 @@ class InductiveNodePiece(ERModel):
             interaction=interaction,
             entity_representations=entity_representations,
             relation_representations=SubsetRepresentationModule(  # hide padding relation
-                relation_representations,
                 max_id=triples_factory.num_relations,
+                base=relation_representations,
             ),
             **kwargs,
         )
