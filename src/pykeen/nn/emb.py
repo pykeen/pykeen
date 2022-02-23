@@ -444,7 +444,7 @@ class LowRankEmbeddingRepresentation(RepresentationModule):
             representations.
         """
         super().__init__(max_id=max_id, shape=shape)
-        self.bases = Embedding(num_embeddings=num_bases, shape=shape, **kwargs)
+        self.bases = Embedding(max_id=num_bases, shape=shape, **kwargs)
         self.weight_initializer = weight_initializer
         self.weight = nn.Parameter(torch.empty(max_id, num_bases))
         self.reset_parameters()
@@ -489,9 +489,16 @@ class EmbeddingSpecification:
     dtype: Optional[torch.dtype] = None
     dropout: Optional[float] = None
 
-    def make(self, *, num_embeddings: int, device: Optional[torch.device] = None) -> Embedding:
+    def make(
+        self,
+        *,
+        max_id: Optional[int] = None,
+        num_embeddings: Optional[int] = None,
+        device: Optional[torch.device] = None,
+    ) -> Embedding:
         """Create an embedding with this specification."""
         rv = Embedding(
+            max_id=max_id,
             num_embeddings=num_embeddings,
             embedding_dim=self.embedding_dim,
             shape=self.shape,
@@ -727,7 +734,10 @@ class CombinedCompGCNRepresentations(nn.Module):
         self,
         *,
         triples_factory: CoreTriplesFactory,
-        embedding_specification: EmbeddingSpecification,
+        entity_representations: HintOrType[RepresentationModule] = None,
+        entity_representation_kwargs: OptionalKwargs = None,
+        relation_representations: HintOrType[RepresentationModule] = None,
+        relation_representation_kwargs: OptionalKwargs = None,
         num_layers: Optional[int] = 1,
         dims: Union[None, int, Sequence[int]] = None,
         layer_kwargs: Optional[Mapping[str, Any]] = None,
@@ -737,8 +747,10 @@ class CombinedCompGCNRepresentations(nn.Module):
 
         :param triples_factory:
             The triples factory containing the training triples.
-        :param embedding_specification:
-            An embedding specification for the base entity and relation representations.
+        :param entity_representations:
+            the base entity representations
+        :param entity_representation_kwargs:
+            additional keyword parameters for the base entity representations
         :param num_layers:
             The number of message passing layers to use. If None, will be inferred by len(dims), i.e., requires dims to
             be a sequence / list.
@@ -751,12 +763,31 @@ class CombinedCompGCNRepresentations(nn.Module):
         super().__init__()
         # TODO: Check
         assert triples_factory.create_inverse_triples
-        self.entity_representations = embedding_specification.make(
-            num_embeddings=triples_factory.num_entities,
+        # has to be imported here to avoid cyclic imports
+        from . import representation_resolver
+
+        self.entity_representations = representation_resolver.make(
+            entity_representations,
+            # kwargs
+            max_id=triples_factory.num_entities,
+            **(entity_representation_kwargs or {}),
         )
-        self.relation_representations = embedding_specification.make(
-            num_embeddings=2 * triples_factory.real_num_relations,
+        if self.entity_representations.max_id != triples_factory.num_entities:
+            raise ValueError(
+                f"Entity representations should provide {triples_factory.num_entities} representations, "
+                f"but have {self.entity_representations.max_id}",
+            )
+        self.relation_representations = representation_resolver.make(
+            relation_representations,
+            # kwargs
+            max_id=2 * triples_factory.real_num_relations,
+            **(relation_representation_kwargs or {}),
         )
+        if self.relation_representations.max_id != 2 * triples_factory.real_num_relations:
+            raise ValueError(
+                f"Relation representations should provide {2 * triples_factory.real_num_relations} representations, "
+                f"but have {self.relation_representations.max_id}",
+            )
         input_dim = self.entity_representations.embedding_dim
         assert self.relation_representations.embedding_dim == input_dim
 
