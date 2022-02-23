@@ -223,7 +223,8 @@ class Embedding(RepresentationModule):
 
     def __init__(
         self,
-        num_embeddings: int,
+        max_id: Optional[int] = None,
+        num_embeddings: Optional[int] = None,
         embedding_dim: Optional[int] = None,
         shape: Union[None, int, Sequence[int]] = None,
         initializer: Hint[Initializer] = None,
@@ -241,6 +242,8 @@ class Embedding(RepresentationModule):
         """Instantiate an embedding with extended functionality.
 
         :param num_embeddings: >0
+            The number of embeddings.
+        :param max_id: >0
             The number of embeddings.
         :param embedding_dim: >0
             The embedding dimensionality.
@@ -284,6 +287,14 @@ class Embedding(RepresentationModule):
         :param dropout:
             A dropout value for the embeddings.
         """
+        if max_id is None:
+            if num_embeddings is None:
+                raise ValueError("Must provide max_id")
+            warnings.warn("prefer using 'max_id' over 'num_embeddings'", DeprecationWarning)
+            max_id = num_embeddings
+        elif num_embeddings is not None and num_embeddings != max_id:
+            raise ValueError("Cannot provide both, 'max_id' over 'num_embeddings'")
+
         # normalize embedding_dim vs. shape
         _embedding_dim, shape = process_shape(embedding_dim, shape)
 
@@ -322,9 +333,10 @@ class Embedding(RepresentationModule):
     @classmethod
     def init_with_device(
         cls,
-        num_embeddings: int,
         embedding_dim: int,
         device: torch.device,
+        max_id: Optional[int] = None,
+        num_embeddings: Optional[int] = None,
         initializer: Optional[Initializer] = None,
         initializer_kwargs: Optional[Mapping[str, Any]] = None,
         normalizer: Optional[Normalizer] = None,
@@ -345,7 +357,9 @@ class Embedding(RepresentationModule):
         :return:
             The embedding.
         """
+        # TODO: remove?
         return cls(
+            max_id=max_id,
             num_embeddings=num_embeddings,
             embedding_dim=embedding_dim,
             initializer=initializer,
