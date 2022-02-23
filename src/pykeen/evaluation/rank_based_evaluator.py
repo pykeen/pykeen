@@ -7,7 +7,7 @@ import logging
 import math
 import random
 from collections import defaultdict
-from typing import Iterable, List, Mapping, MutableMapping, Optional, Sequence, Tuple, Union, cast
+from typing import Iterable, List, Mapping, MutableMapping, Optional, Sequence, Tuple, TypeVar, Union, cast
 
 import numpy as np
 import pandas as pd
@@ -41,15 +41,21 @@ logger = logging.getLogger(__name__)
 RANKING_METRICS = {cls.key: cls for cls in rank_based_metric_resolver}
 
 
+K = TypeVar("K")
+
+
+def _flatten(nested: Mapping[K, Sequence[np.ndarray]]) -> Mapping[K, np.ndarray]:
+    return {key: np.concatenate(value) for key, value in nested.items()}
+
+
 def _iter_ranks(
     ranks: Mapping[Tuple[Target, RankType], Sequence[np.ndarray]],
     num_candidates: Mapping[Target, Sequence[np.ndarray]],
 ) -> Iterable[Tuple[ExtendedTarget, RankType, np.ndarray, np.ndarray]]:
     sides = sorted(num_candidates.keys())
     # flatten dictionaries
-    ranks_flat, num_candidates_flat = [
-        {key: np.concatenate(value) for key, value in nested.items()} for nested in (ranks, num_candidates)
-    ]
+    ranks_flat = _flatten(ranks)
+    num_candidates_flat = _flatten(num_candidates)
     for rank_type in RANK_TYPES:
         # individual side
         for side in sides:
