@@ -14,7 +14,7 @@ from typing import Any, Mapping, Optional, Sequence, Tuple, Union
 import numpy as np
 import torch
 import torch.nn
-from class_resolver import FunctionResolver
+from class_resolver import FunctionResolver, HintOrType, OptionalKwargs
 from class_resolver.contrib.torch import activation_resolver
 from torch import nn
 from torch.nn import functional
@@ -151,17 +151,22 @@ class SubsetRepresentationModule(RepresentationModule):
 
     def __init__(
         self,
-        base: RepresentationModule,
         max_id: int,
+        base: HintOrType[RepresentationModule],
+        base_kwargs: OptionalKwargs = None,
     ):
         """
         Initialize the representations.
 
-        :param base:
-            the base representations. have to have a sufficient number of representations, i.e., at least max_id.
         :param max_id:
             the maximum number of relations.
+        :param base:
+            the base representations. have to have a sufficient number of representations, i.e., at least max_id.
         """
+        # has to be imported here to avoid cyclic import
+        from . import representation_resolver
+
+        base = representation_resolver.make(base, pos_kwargs=base_kwargs)
         if max_id > base.max_id:
             raise ValueError(f"Base representations comprise only {base.max_id} representations.")
         super().__init__(max_id, base.shape)
