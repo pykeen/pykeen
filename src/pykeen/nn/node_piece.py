@@ -872,7 +872,7 @@ class NodePieceRepresentationModule(RepresentationModule):
         self,
         *,
         triples_factory: CoreTriplesFactory,
-        token_representations: OneOrSequence[HintOrType[RepresentationModule]],
+        token_representations: OneOrSequence[HintOrType[RepresentationModule]] = None,
         token_representation_kwargs: OneOrSequence[OptionalKwargs] = None,
         tokenizers: OneOrSequence[HintOrType[Tokenizer]] = None,
         tokenizers_kwargs: OneOrSequence[OptionalKwargs] = None,
