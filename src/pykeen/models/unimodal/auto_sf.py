@@ -7,7 +7,6 @@ from typing import Any, ClassVar, Mapping, Optional, Sequence, Tuple
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.modules import AutoSFInteraction
-from ...nn.representation import EmbeddingSpecification
 from ...typing import Sign
 
 __all__ = [
@@ -71,16 +70,16 @@ class AutoSF(ERModel):
         super().__init__(
             interaction=AutoSFInteraction,
             interaction_kwargs=dict(coefficients=coefficients),
-            entity_representations=[
-                EmbeddingSpecification(
-                    embedding_dim=embedding_dim,
+            entity_representation_kwargs=[
+                dict(
+                    shape=(embedding_dim,),
                     **embedding_kwargs,
                 )
                 for _ in range(num_components)
             ],
-            relation_representations=[
-                EmbeddingSpecification(
-                    embedding_dim=embedding_dim,
+            relation_representation_kwargs=[
+                dict(
+                    shape=(embedding_dim,),
                     **embedding_kwargs,
                 )
                 for _ in range(num_components)
