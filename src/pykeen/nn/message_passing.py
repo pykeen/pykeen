@@ -11,8 +11,8 @@ from class_resolver import ClassResolver, Hint, HintOrType, OptionalKwargs
 from class_resolver.contrib.torch import activation_resolver
 from torch import nn
 
-from .representation import LowRankRepresentation, Representation
 from .init import uniform_norm_p1_
+from .representation import LowRankRepresentation, Representation
 from .weighting import EdgeWeighting, edge_weight_resolver
 from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import CoreTriplesFactory

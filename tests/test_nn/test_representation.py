@@ -10,9 +10,9 @@ import numpy
 import torch
 import unittest_templates
 
-import pykeen.nn.representation
 import pykeen.nn.message_passing
 import pykeen.nn.node_piece
+import pykeen.nn.representation
 from pykeen.datasets import get_dataset
 from pykeen.triples.generation import generate_triples_factory
 from tests import cases, mocks

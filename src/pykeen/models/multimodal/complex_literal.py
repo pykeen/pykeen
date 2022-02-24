@@ -11,8 +11,8 @@ from .base import LiteralModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import BCEWithLogitsLoss, Loss
 from ...nn.combinations import ComplExLiteralCombination
-from ...nn.representation import EmbeddingSpecification
 from ...nn.modules import ComplExInteraction, LiteralInteraction
+from ...nn.representation import EmbeddingSpecification
 from ...triples import TriplesNumericLiteralsFactory
 
 __all__ = [

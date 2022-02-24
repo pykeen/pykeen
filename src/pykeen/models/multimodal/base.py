@@ -5,9 +5,9 @@
 from typing import Sequence, Union
 
 from ..nbase import EmbeddingSpecificationHint, ERModel
-from ...nn.representation import Embedding, EmbeddingSpecification, Representation
 from ...nn.init import PretrainedInitializer
 from ...nn.modules import LiteralInteraction
+from ...nn.representation import Embedding, EmbeddingSpecification, Representation
 from ...triples import TriplesNumericLiteralsFactory
 from ...typing import HeadRepresentation, RelationRepresentation, TailRepresentation
 

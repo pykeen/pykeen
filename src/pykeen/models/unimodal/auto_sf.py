@@ -6,8 +6,8 @@ from typing import Any, ClassVar, Mapping, Optional, Sequence, Tuple
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...nn.representation import EmbeddingSpecification
 from ...nn.modules import AutoSFInteraction
+from ...nn.representation import EmbeddingSpecification
 from ...typing import Sign
 
 __all__ = [
