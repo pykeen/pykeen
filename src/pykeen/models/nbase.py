@@ -181,7 +181,7 @@ def _prepare_representation_module_list(
                 f"representations was chosen wrong.",
             )
 
-    rs = nn.ModuleList(rs)
+    rs = cast(Sequence[Representation], nn.ModuleList(rs))
     if skip_checks:
         return rs
 
