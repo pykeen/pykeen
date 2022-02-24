@@ -205,7 +205,7 @@ class Embedding(Representation):
 
     >>> from pykeen.datasets import Nations
     >>> dataset = Nations()
-    >>> from pykeen.nn.emb import EmbeddingSpecification
+    >>> from pykeen.nn.representation import EmbeddingSpecification
     >>> spec = EmbeddingSpecification(embedding_dim=3, dropout=0.1)
     >>> from pykeen.models import ERModel
     >>> model = ERModel(
@@ -913,7 +913,7 @@ class LabelBasedTransformerRepresentation(Representation):
     .. code-block:: python
 
         from pykeen.datasets import get_dataset
-        from pykeen.nn.emb import EmbeddingSpecification, LabelBasedTransformerRepresentation
+        from pykeen.nn.representation import EmbeddingSpecification, LabelBasedTransformerRepresentation
         from pykeen.models import ERModel
 
         dataset = get_dataset(dataset="nations")
