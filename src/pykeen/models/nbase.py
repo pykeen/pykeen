@@ -271,7 +271,9 @@ class ERModel(
         ],
         interaction_kwargs: Optional[Mapping[str, Any]] = None,
         entity_representations: EmbeddingSpecificationHint = None,
+        entity_representation_kwargs: OptionalKwargs = None,
         relation_representations: EmbeddingSpecificationHint = None,
+        relation_representation_kwargs: OptionalKwargs = None,
         skip_checks: bool = False,
         **kwargs,
     ) -> None:
@@ -294,6 +296,7 @@ class ERModel(
         self.interaction = interaction_resolver.make(interaction, pos_kwargs=interaction_kwargs)
         self.entity_representations = _prepare_representation_module_list(
             representations=entity_representations,
+            representation_kwargs=entity_representation_kwargs,
             max_id=triples_factory.num_entities,
             shapes=self.interaction.entity_shape,
             label="entity",
@@ -301,6 +304,7 @@ class ERModel(
         )
         self.relation_representations = _prepare_representation_module_list(
             representations=relation_representations,
+            representation_kwargs=relation_representation_kwargs,
             max_id=triples_factory.num_relations,
             shapes=self.interaction.relation_shape,
             label="relation",
