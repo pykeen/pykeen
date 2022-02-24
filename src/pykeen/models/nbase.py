@@ -163,6 +163,12 @@ def _prepare_representation_module_list(
         a label to use for error messages (typically, "entities" or "relations").
     :param skip_checks:
         whether to skip shape verification.
+
+    :return:
+        a module list of instantiated representation modules.
+
+    :raises ValueError:
+        if the maximum ID or shapes do not match
     """
     # TODO: remove once EmbeddingSpecification is deprecated
     representations = list(upgrade_to_sequence(representations))
@@ -296,7 +302,11 @@ class ERModel(
             Additional key-word based parameters given to the interaction module's constructor, if not already
             instantiated.
         :param entity_representations: The entity representation or sequence of representations
+        :param entity_representation_kwargs:
+            additional keyword-based parameters for instantiation of entity representations
         :param relation_representations: The relation representation or sequence of representations
+        :param relation_representation_kwargs:
+            additional keyword-based parameters for instantiation of relation representations
         :param skip_checks:
             whether to skip entity representation checks.
         :param kwargs:
