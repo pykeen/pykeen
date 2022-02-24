@@ -16,10 +16,12 @@ from ...nn import (
     Interaction,
     NodePieceRepresentation,
     SubsetRepresentation,
+    representation_resolver,
 )
+from ...nn.node_piece import RelationTokenizer
 from ...nn.perceptron import ConcatMLP
 from ...triples.triples_factory import CoreTriplesFactory
-from ...typing import TESTING, TRAINING, VALIDATION, InductiveMode
+from ...typing import InductiveMode, TESTING, TRAINING, VALIDATION
 
 __all__ = [
     "InductiveNodePiece",
@@ -104,9 +106,6 @@ class InductiveNodePiece(ERModel):
                 "The provided triples factory does not create inverse triples. However, for the node piece "
                 "representations inverse relation representations are required.",
             )
-        embedding_specification = embedding_specification or EmbeddingSpecification(
-            shape=(embedding_dim,),
-        )
 
         # Create an MLP for string aggregation
         if aggregation == "mlp":
@@ -116,40 +115,42 @@ class InductiveNodePiece(ERModel):
             )
 
         # always create representations for normal and inverse relations and padding
-        relation_representations = embedding_specification.make(
-            num_embeddings=2 * triples_factory.real_num_relations + 1,
-        )
-        entity_representations = NodePieceRepresentation(
-            triples_factory=triples_factory,
-            tokenizers="RelationTokenizer",
-            token_representations=relation_representations,
-            aggregation=aggregation,
-            shape=shape,
-            num_tokens=num_tokens,
-        )
-
-        inference_representation = NodePieceRepresentation(
-            triples_factory=inference_factory,
-            tokenizers="RelationTokenizer",
-            token_representations=relation_representations,
-            aggregation=aggregation,
-            shape=shape,
-            num_tokens=num_tokens,
+        max_id = 2 * triples_factory.real_num_relations + 1
+        relation_representations = representation_resolver.make(
+            # TODO: get rid of embedding specification
+            query=embedding_specification.make(max_id=max_id) if embedding_specification else None,
+            max_id=max_id,
+            shape=(embedding_dim,),
         )
 
         super().__init__(
             triples_factory=triples_factory,
             interaction=interaction,
-            entity_representations=entity_representations,
+            entity_representations=NodePieceRepresentation,
+            entity_representation_kwargs=dict(
+                triples_factory=triples_factory,
+                tokenizers=RelationTokenizer,
+                token_representations=relation_representations,
+                aggregation=aggregation,
+                shape=shape,
+                num_tokens=num_tokens,
+            ),
             relation_representations=SubsetRepresentation(  # hide padding relation
                 max_id=triples_factory.num_relations,
                 base=relation_representations,
             ),
             **kwargs,
         )
-
         self.inference_representation = _prepare_representation_module_list(
-            representations=inference_representation,
+            representations=NodePieceRepresentation,
+            representation_kwargs=dict(
+                triples_factory=inference_factory,
+                tokenizers=RelationTokenizer,
+                token_representations=relation_representations,
+                aggregation=aggregation,
+                shape=shape,
+                num_tokens=num_tokens,
+            ),
             max_id=inference_factory.num_entities,
             shapes=self.interaction.entity_shape,
             label="entity",
