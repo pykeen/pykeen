@@ -139,7 +139,7 @@ def _prepare_representation_module_list(
     max_id: int,
     shapes: Sequence[str],
     label: str,
-    representations: Optional[OneOrSequence[OptionalKwargs]] = None,
+    representations: OneOrSequence[HintOrType[Representation]] = None,
     representation_kwargs: Optional[OneOrSequence[OptionalKwargs]] = None,
     skip_checks: bool = False,
 ) -> Sequence[Representation]:
