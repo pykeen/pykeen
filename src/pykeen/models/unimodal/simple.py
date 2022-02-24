@@ -97,7 +97,7 @@ class SimplE(ERModel):
                     regularizer=regularizer,
                 ),
             ],
-            relation_representations=[
+            relation_representation_kwargs=[
                 # relations
                 dict(
                     shape=(embedding_dim,),
