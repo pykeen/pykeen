@@ -9,7 +9,6 @@ from torch.nn.init import uniform_
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...nn import EmbeddingSpecification
 from ...nn.modules import ConvKBInteraction
 from ...regularizers import LpRegularizer, Regularizer
 from ...typing import Hint, Initializer
