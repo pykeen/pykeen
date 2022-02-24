@@ -27,7 +27,7 @@ from pykeen.models import (
 )
 from pykeen.models.multimodal.base import LiteralModel
 from pykeen.models.predict import get_all_prediction_df, get_novelty_mask, predict
-from pykeen.nn import Embedding, EmbeddingSpecification, NodePieceRepresentationModule
+from pykeen.nn import Embedding, EmbeddingSpecification, NodePieceRepresentation
 from pykeen.nn.perceptron import ConcatMLP
 from pykeen.utils import all_in_bounds, extend_batch
 from tests import cases
@@ -138,7 +138,7 @@ class TestDistMult(cases.ModelTestCase):
         actual_k, n_cols = top_triples.shape
         assert n_cols == 3
         if k is None:
-            assert actual_k == self.factory.num_entities**2 * self.factory.num_relations
+            assert actual_k == self.factory.num_entities ** 2 * self.factory.num_relations
         else:
             assert actual_k == min(k, self.factory.num_triples)
         assert top_scores.shape == (actual_k,)
@@ -246,7 +246,7 @@ class TestNodePieceMLP(cases.BaseNodePieceTest):
     def test_aggregation(self):
         """Test that the MLP gets registered properly and is trainable."""
         self.assertIsInstance(self.instance, pykeen.models.NodePiece)
-        self.assertIsInstance(self.instance.entity_representations[0], NodePieceRepresentationModule)
+        self.assertIsInstance(self.instance.entity_representations[0], NodePieceRepresentation)
         self.assertIsInstance(self.instance.entity_representations[0].aggregation, ConcatMLP)
 
         # Test that the weight in the MLP is trainable (i.e. requires grad)
@@ -301,7 +301,7 @@ class TestNodePieceJoint(cases.BaseNodePieceTest):
 
     def test_vocabulary_size(self):
         """Test the expected vocabulary size of the individual tokenizations."""
-        assert isinstance(self.instance.entity_representations[0], NodePieceRepresentationModule)
+        assert isinstance(self.instance.entity_representations[0], NodePieceRepresentation)
         node_piece = self.instance.entity_representations[0]
         assert isinstance(node_piece.tokenizations, torch.nn.ModuleList)
         assert len(node_piece.tokenizations) == 2
