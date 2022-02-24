@@ -290,13 +290,8 @@ class Embedding(Representation):
         :param dropout:
             A dropout value for the embeddings.
         """
-        if max_id is None:
-            if num_embeddings is None:
-                raise ValueError("Must provide max_id")
-            warnings.warn("prefer using 'max_id' over 'num_embeddings'", DeprecationWarning)
-            max_id = num_embeddings
-        elif num_embeddings is not None and num_embeddings != max_id:
-            raise ValueError("Cannot provide both, 'max_id' over 'num_embeddings'")
+        # normalize num_embeddings vs. max_id
+        max_id = process_max_id(max_id, num_embeddings)
 
         # normalize embedding_dim vs. shape
         _embedding_dim, shape = process_shape(embedding_dim, shape)
@@ -542,6 +537,18 @@ def process_shape(
     else:
         raise TypeError(f"Invalid type for shape: ({type(shape)}) {shape}")
     return dim, shape
+
+
+def process_max_id(max_id: Optional[int], num_embeddings: Optional[int]) -> int:
+    """Normalize max_id."""
+    if max_id is None:
+        if num_embeddings is None:
+            raise ValueError("Must provide max_id")
+        warnings.warn("prefer using 'max_id' over 'num_embeddings'", DeprecationWarning)
+        max_id = num_embeddings
+    elif num_embeddings is not None and num_embeddings != max_id:
+        raise ValueError("Cannot provide both, 'max_id' over 'num_embeddings'")
+    return max_id
 
 
 constrainer_resolver = FunctionResolver([functional.normalize, complex_normalize, torch.clamp, clamp_norm])
