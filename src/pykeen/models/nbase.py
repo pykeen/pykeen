@@ -197,6 +197,7 @@ def _prepare_representation_module_list(
         ),
         raise_on_errors=True,
     )
+    return rs
 
 
 def repeat_if_necessary(
