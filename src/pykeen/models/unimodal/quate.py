@@ -136,7 +136,7 @@ class QuatE(ERModel):
                 regularizer=entity_regularizer,
                 regularizer_kwargs=entity_regularizer_kwargs or self.regularizer_default_kwargs,
             ),
-            relation_representations=dict(
+            relation_representation_kwargs=dict(
                 shape=(4 * embedding_dim,),
                 initializer=relation_initializer,
                 constrainer=relation_constrainer,
