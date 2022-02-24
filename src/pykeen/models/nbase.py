@@ -11,7 +11,7 @@ from operator import itemgetter
 from typing import Any, ClassVar, Generic, Iterable, List, Mapping, Optional, Sequence, Tuple, Type, Union, cast
 
 import torch
-from class_resolver import OptionalKwargs
+from class_resolver import HintOrType, OptionalKwargs
 from torch import nn
 
 from .base import Model
@@ -166,6 +166,7 @@ def _prepare_representation_module_list(
     # TODO: use extended make_many from https://github.com/cthoyt/class-resolver/pull/34
     representation_kwargs = dict(representation_kwargs or {})
     representation_kwargs["max_id"] = max_id
+    # TODO: we could infer some shapes from the given interaction shape information
     rs = representation_resolver.make_many(representations, kwargs=representation_kwargs)
 
     # check max-id
@@ -269,10 +270,10 @@ class ERModel(
             Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation],
             Type[Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]],
         ],
-        interaction_kwargs: Optional[Mapping[str, Any]] = None,
-        entity_representations: EmbeddingSpecificationHint = None,
+        interaction_kwargs: OptionalKwargs = None,
+        entity_representations: HintOrType[Representation] = None,
         entity_representation_kwargs: OptionalKwargs = None,
-        relation_representations: EmbeddingSpecificationHint = None,
+        relation_representations: HintOrType[Representation] = None,
         relation_representation_kwargs: OptionalKwargs = None,
         skip_checks: bool = False,
         **kwargs,
