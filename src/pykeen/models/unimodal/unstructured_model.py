@@ -69,5 +69,6 @@ class UM(ERModel):
                 embedding_dim=embedding_dim,
                 initializer=entity_initializer,
             ),
+            relation_representations=[],
             **kwargs,
         )
