@@ -10,7 +10,7 @@ import numpy
 import torch
 import unittest_templates
 
-import pykeen.nn.emb
+import pykeen.nn.representation
 import pykeen.nn.message_passing
 import pykeen.nn.node_piece
 from pykeen.datasets import get_dataset

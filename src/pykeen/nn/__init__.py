@@ -5,7 +5,7 @@
 from class_resolver import ClassResolver
 
 from . import init
-from .emb import Embedding, EmbeddingSpecification, Representation, SubsetRepresentation
+from .representation import Embedding, EmbeddingSpecification, Representation, SubsetRepresentation
 from .message_passing import RGCNRepresentation
 from .modules import (
     AutoSFInteraction,

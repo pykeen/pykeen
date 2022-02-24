@@ -9,7 +9,7 @@ import torch
 from torch import nn
 
 from .inductive_nodepiece import InductiveNodePiece
-from ...nn.emb import CompGCNLayer
+from ...nn.representation import CompGCNLayer
 from ...typing import HeadRepresentation, InductiveMode, RelationRepresentation, TailRepresentation
 
 __all__ = [

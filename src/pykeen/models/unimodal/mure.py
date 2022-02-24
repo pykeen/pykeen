@@ -8,7 +8,7 @@ from torch.nn.init import normal_, uniform_, zeros_
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
-from ...nn.emb import EmbeddingSpecification
+from ...nn.representation import EmbeddingSpecification
 from ...nn.modules import MuREInteraction
 from ...typing import Hint, Initializer
 

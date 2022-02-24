@@ -8,7 +8,7 @@ import torch
 from torch import nn
 
 from pykeen.evaluation import Evaluator, MetricResults, RankBasedMetricResults
-from pykeen.nn.emb import RepresentationModule
+from pykeen.nn.representation import RepresentationModule
 from pykeen.typing import RANK_REALISTIC, RANK_TYPES, SIDES, MappedTriples, Target
 
 __all__ = [

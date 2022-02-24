@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Embedding modules."""
+"""Representation modules."""
 
 from __future__ import annotations
 

@@ -9,7 +9,7 @@ from class_resolver import Hint, HintOrType
 from torch import nn
 
 from ..nbase import EmbeddingSpecificationHint, ERModel
-from ...nn.emb import EmbeddingSpecification
+from ...nn.representation import EmbeddingSpecification
 from ...nn.message_passing import Decomposition, RGCNRepresentation
 from ...nn.modules import Interaction, interaction_resolver
 from ...nn.weighting import EdgeWeighting
