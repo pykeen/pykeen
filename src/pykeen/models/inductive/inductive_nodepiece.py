@@ -150,7 +150,7 @@ class InductiveNodePiece(ERModel):
 
         self.inference_representation = _prepare_representation_module_list(
             representations=inference_representation,
-            num_embeddings=inference_factory.num_entities,
+            max_id=inference_factory.num_entities,
             shapes=self.interaction.entity_shape,
             label="entity",
             skip_checks=self.interaction.tail_entity_shape is not None or kwargs["skip_checks"]
