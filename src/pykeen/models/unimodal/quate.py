@@ -130,15 +130,15 @@ class QuatE(ERModel):
         """
         super().__init__(
             interaction=QuatEInteraction,
-            entity_representations=EmbeddingSpecification(
-                embedding_dim=4 * embedding_dim,
+            entity_representation_kwargs=dict(
+                shape=(4 * embedding_dim,),
                 initializer=entity_initializer,
                 dtype=torch.float,
                 regularizer=entity_regularizer,
                 regularizer_kwargs=entity_regularizer_kwargs or self.regularizer_default_kwargs,
             ),
-            relation_representations=EmbeddingSpecification(
-                embedding_dim=4 * embedding_dim,
+            relation_representations=dict(
+                shape=(4 * embedding_dim,),
                 initializer=relation_initializer,
                 constrainer=relation_constrainer,
                 dtype=torch.float,

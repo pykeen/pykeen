@@ -8,10 +8,10 @@ import torch
 from class_resolver import Hint, HintOrType
 from torch import nn
 
-from ..nbase import EmbeddingSpecificationHint, ERModel
+from ..nbase import ERModel
 from ...nn.message_passing import Decomposition, RGCNRepresentation
-from ...nn.modules import Interaction, interaction_resolver
-from ...nn.representation import EmbeddingSpecification
+from ...nn.modules import Interaction
+from ...nn.representation import Representation
 from ...nn.weighting import EdgeWeighting
 from ...regularizers import Regularizer
 from ...triples import CoreTriplesFactory
@@ -89,7 +89,7 @@ class RGCN(
         base_entity_initializer_kwargs: Optional[Mapping[str, Any]] = None,
         relation_initializer: Hint[Initializer] = nn.init.xavier_uniform_,
         relation_initializer_kwargs: Optional[Mapping[str, Any]] = None,
-        relation_representations: EmbeddingSpecificationHint = None,
+        relation_representations: HintOrType[Representation] = None,
         interaction: HintOrType[Interaction[torch.FloatTensor, RelationRepresentation, torch.FloatTensor]] = "DistMult",
         interaction_kwargs: Optional[Mapping[str, Any]] = None,
         use_bias: bool = True,
@@ -104,45 +104,39 @@ class RGCN(
         regularizer_kwargs: Optional[Mapping[str, Any]] = None,
         **kwargs,
     ):
-        # create enriched entity representations
-        entity_representations = RGCNRepresentation(
-            triples_factory=triples_factory,
+        super().__init__(
+            entity_representations=RGCNRepresentation,
             entity_representation_kwargs=dict(
-                embedding_dim=embedding_dim,
-                initializer=base_entity_initializer,
-                initializer_kwargs=base_entity_initializer_kwargs,
+                triples_factory=triples_factory,
+                entity_representation_kwargs=dict(
+                    shape=(embedding_dim,),
+                    initializer=base_entity_initializer,
+                    initializer_kwargs=base_entity_initializer_kwargs,
+                ),
+                num_layers=num_layers,
+                use_bias=use_bias,
+                activation=activation,
+                activation_kwargs=activation_kwargs,
+                edge_dropout=edge_dropout,
+                self_loop_dropout=self_loop_dropout,
+                edge_weighting=edge_weighting,
+                decomposition=decomposition,
+                decomposition_kwargs=decomposition_kwargs,
+                # cf. https://github.com/MichSchli/RelationPrediction/blob/c77b094fe5c17685ed138dae9ae49b304e0d8d89/code/decoders/bilinear_diag.py#L64-L67  # noqa: E501
+                regularizer=regularizer,
+                regularizer_kwargs=regularizer_kwargs,
             ),
-            num_layers=num_layers,
-            use_bias=use_bias,
-            activation=activation,
-            activation_kwargs=activation_kwargs,
-            edge_dropout=edge_dropout,
-            self_loop_dropout=self_loop_dropout,
-            edge_weighting=edge_weighting,
-            decomposition=decomposition,
-            decomposition_kwargs=decomposition_kwargs,
-            # cf. https://github.com/MichSchli/RelationPrediction/blob/c77b094fe5c17685ed138dae9ae49b304e0d8d89/code/decoders/bilinear_diag.py#L64-L67  # noqa: E501
-            regularizer=regularizer,
-            regularizer_kwargs=regularizer_kwargs,
-        )
-
-        # Resolve interaction function
-        interaction = interaction_resolver.make(query=interaction, pos_kwargs=interaction_kwargs)
-
-        # set default relation representation
-        if relation_representations is None:
-            relation_representations = EmbeddingSpecification(
-                shape=entity_representations.shape,
+            relation_representations=relation_representations,
+            relation_representation_kwargs=dict(
+                shape=(embedding_dim,),
                 initializer=relation_initializer,
                 initializer_kwargs=relation_initializer_kwargs,
                 # cf. https://github.com/MichSchli/RelationPrediction/blob/c77b094fe5c17685ed138dae9ae49b304e0d8d89/code/decoders/bilinear_diag.py#L64-L67  # noqa: E501
                 regularizer=regularizer,
                 regularizer_kwargs=regularizer_kwargs,
-            )
-        super().__init__(
-            entity_representations=entity_representations,
-            relation_representations=relation_representations,
+            ),
             triples_factory=triples_factory,
             interaction=interaction,
+            interaction_kwargs=interaction_kwargs,
             **kwargs,
         )
