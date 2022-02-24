@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import logging
+import warnings
 from abc import ABC
 from collections import defaultdict
 from operator import itemgetter
@@ -167,6 +168,12 @@ def _prepare_representation_module_list(
     representation_kwargs = upgrade_to_sequence(representation_kwargs)
     representation_kwargs = [dict(kw or {}, max_id=max_id) for kw in representation_kwargs]
     # TODO: we could infer some shapes from the given interaction shape information
+    # TODO: remove once EmbeddingSpecification is deprecated
+    representations = list(upgrade_to_sequence(representations))
+    for i in range(len(representations)):
+        if isinstance(representations[i], EmbeddingSpecification):
+            warnings.warn("Do not use EmbeddingSpecification", DeprecationWarning)
+            representations[i] = representations[i].make(max_id=max_id)
     rs = representation_resolver.make_many(representations, kwargs=representation_kwargs)
 
     # check max-id
