@@ -20,8 +20,8 @@ from ..nn.modules import Interaction, interaction_resolver
 from ..nn.representation import EmbeddingSpecification, Representation
 from ..regularizers import Regularizer
 from ..triples import CoreTriplesFactory
-from ..typing import HeadRepresentation, InductiveMode, RelationRepresentation, TailRepresentation
-from ..utils import check_shapes
+from ..typing import HeadRepresentation, InductiveMode, OneOrSequence, RelationRepresentation, TailRepresentation
+from ..utils import check_shapes, upgrade_to_sequence
 
 __all__ = [
     "_NewAbstractModel",
@@ -136,11 +136,11 @@ class _NewAbstractModel(Model, ABC):
 
 
 def _prepare_representation_module_list(
-    representations: EmbeddingSpecificationHint,
     max_id: int,
     shapes: Sequence[str],
     label: str,
-    representation_kwargs: OptionalKwargs = None,
+    representations: Optional[OneOrSequence[OptionalKwargs]] = None,
+    representation_kwargs: Optional[OneOrSequence[OptionalKwargs]] = None,
     skip_checks: bool = False,
 ) -> Sequence[Representation]:
     """
@@ -164,8 +164,8 @@ def _prepare_representation_module_list(
         whether to skip shape verification.
     """
     # TODO: use extended make_many from https://github.com/cthoyt/class-resolver/pull/34
-    representation_kwargs = dict(representation_kwargs or {})
-    representation_kwargs["max_id"] = max_id
+    representation_kwargs = upgrade_to_sequence(representation_kwargs)
+    representation_kwargs = [dict(kw or {}, max_id=max_id) for kw in representation_kwargs]
     # TODO: we could infer some shapes from the given interaction shape information
     rs = representation_resolver.make_many(representations, kwargs=representation_kwargs)
 
@@ -272,9 +272,9 @@ class ERModel(
         ],
         interaction_kwargs: OptionalKwargs = None,
         entity_representations: HintOrType[Representation] = None,
-        entity_representation_kwargs: OptionalKwargs = None,
+        entity_representation_kwargs: Optional[OneOrSequence[OptionalKwargs]] = None,
         relation_representations: HintOrType[Representation] = None,
-        relation_representation_kwargs: OptionalKwargs = None,
+        relation_representation_kwargs: Optional[OneOrSequence[OptionalKwargs]] = None,
         skip_checks: bool = False,
         **kwargs,
     ) -> None:
