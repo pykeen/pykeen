@@ -14,8 +14,8 @@ from ...nn import (
     DistMultInteraction,
     EmbeddingSpecification,
     Interaction,
-    NodePieceRepresentationModule,
-    SubsetRepresentationModule,
+    NodePieceRepresentation,
+    SubsetRepresentation,
 )
 from ...nn.perceptron import ConcatMLP
 from ...triples.triples_factory import CoreTriplesFactory
@@ -119,7 +119,7 @@ class InductiveNodePiece(ERModel):
         relation_representations = embedding_specification.make(
             num_embeddings=2 * triples_factory.real_num_relations + 1,
         )
-        entity_representations = NodePieceRepresentationModule(
+        entity_representations = NodePieceRepresentation(
             triples_factory=triples_factory,
             tokenizers="RelationTokenizer",
             token_representations=relation_representations,
@@ -128,7 +128,7 @@ class InductiveNodePiece(ERModel):
             num_tokens=num_tokens,
         )
 
-        inference_representation = NodePieceRepresentationModule(
+        inference_representation = NodePieceRepresentation(
             triples_factory=inference_factory,
             tokenizers="RelationTokenizer",
             token_representations=relation_representations,
@@ -141,7 +141,7 @@ class InductiveNodePiece(ERModel):
             triples_factory=triples_factory,
             interaction=interaction,
             entity_representations=entity_representations,
-            relation_representations=SubsetRepresentationModule(  # hide padding relation
+            relation_representations=SubsetRepresentation(  # hide padding relation
                 max_id=triples_factory.num_relations,
                 base=relation_representations,
             ),

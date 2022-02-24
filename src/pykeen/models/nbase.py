@@ -14,7 +14,7 @@ import torch
 from torch import nn
 
 from .base import Model
-from ..nn.emb import EmbeddingSpecification, RepresentationModule
+from ..nn.emb import EmbeddingSpecification, Representation
 from ..nn.modules import Interaction, interaction_resolver
 from ..regularizers import Regularizer
 from ..triples import CoreTriplesFactory
@@ -31,8 +31,8 @@ logger = logging.getLogger(__name__)
 EmbeddingSpecificationHint = Union[
     None,
     EmbeddingSpecification,
-    RepresentationModule,
-    Sequence[Union[EmbeddingSpecification, RepresentationModule]],
+    Representation,
+    Sequence[Union[EmbeddingSpecification, Representation]],
 ]
 
 
@@ -139,7 +139,7 @@ def _prepare_representation_module_list(
     shapes: Sequence[str],
     label: str,
     skip_checks: bool = False,
-) -> Sequence[RepresentationModule]:
+) -> Sequence[Representation]:
     """Normalize list of representations and wrap into nn.ModuleList."""
     # Important: use ModuleList to ensure that Pytorch correctly handles their devices and parameters
     if representations is None:
@@ -153,7 +153,7 @@ def _prepare_representation_module_list(
         )
     modules = []
     for r in representations:
-        if not isinstance(r, RepresentationModule):
+        if not isinstance(r, Representation):
             assert isinstance(r, EmbeddingSpecification)
             r = r.make(num_embeddings=num_embeddings)
         if r.max_id < num_embeddings:
@@ -180,7 +180,7 @@ def _prepare_representation_module_list(
 
 def repeat_if_necessary(
     scores: torch.FloatTensor,
-    representations: Sequence[RepresentationModule],
+    representations: Sequence[Representation],
     num: Optional[int],
 ) -> torch.FloatTensor:
     """
@@ -227,10 +227,10 @@ class ERModel(
     """
 
     #: The entity representations
-    entity_representations: Sequence[RepresentationModule]
+    entity_representations: Sequence[Representation]
 
     #: The relation representations
-    relation_representations: Sequence[RepresentationModule]
+    relation_representations: Sequence[Representation]
 
     #: The weight regularizers
     weight_regularizers: List[Regularizer]

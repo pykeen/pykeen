@@ -11,14 +11,14 @@ from class_resolver import ClassResolver, Hint, HintOrType, OptionalKwargs
 from class_resolver.contrib.torch import activation_resolver
 from torch import nn
 
-from .emb import LowRankRepresentationModule, RepresentationModule
+from .emb import LowRankRepresentation, Representation
 from .init import uniform_norm_p1_
 from .weighting import EdgeWeighting, edge_weight_resolver
 from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import CoreTriplesFactory
 
 __all__ = [
-    "RGCNRepresentationModule",
+    "RGCNRepresentation",
     "Decomposition",
     "BasesDecomposition",
     "BlockDecomposition",
@@ -191,7 +191,7 @@ class BasesDecomposition(Decomposition):
         if num_bases > num_relations:
             raise ValueError("The number of bases should not exceed the number of relations.")
 
-        self.relation_representations = LowRankRepresentationModule(
+        self.relation_representations = LowRankRepresentation(
             max_id=num_relations,
             shape=(self.input_dim, self.output_dim),
             weight_initializer=uniform_norm_p1_,
@@ -559,7 +559,7 @@ class RGCNLayer(nn.Module):
 decomposition_resolver = ClassResolver.from_subclasses(base=Decomposition, default=BasesDecomposition)
 
 
-class RGCNRepresentationModule(RepresentationModule):
+class RGCNRepresentation(Representation):
     r"""Entity representations enriched by R-GCN.
 
     The GCN employed by the entity encoder is adapted to include typed edges.
@@ -588,7 +588,7 @@ class RGCNRepresentationModule(RepresentationModule):
     def __init__(
         self,
         triples_factory: CoreTriplesFactory,
-        entity_representations: HintOrType[RepresentationModule] = None,
+        entity_representations: HintOrType[Representation] = None,
         entity_representation_kwargs: OptionalKwargs = None,
         num_layers: int = 2,
         use_bias: bool = True,

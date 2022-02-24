@@ -56,7 +56,7 @@ class EmbeddingTests(cases.RepresentationTestCase):
 class LowRankEmbeddingRepresentationTests(cases.RepresentationTestCase):
     """Tests for low-rank embedding representations."""
 
-    cls = pykeen.nn.emb.LowRankRepresentationModule
+    cls = pykeen.nn.emb.LowRankRepresentation
     kwargs = dict(
         max_id=10,
         shape=(3, 7),
@@ -82,7 +82,7 @@ class TensorEmbeddingTests(cases.RepresentationTestCase):
 class RGCNRepresentationTests(cases.RepresentationTestCase):
     """Test RGCN representations."""
 
-    cls = pykeen.nn.message_passing.RGCNRepresentationModule
+    cls = pykeen.nn.message_passing.RGCNRepresentation
     num_entities: ClassVar[int] = 8
     num_relations: ClassVar[int] = 7
     num_triples: ClassVar[int] = 31
@@ -175,7 +175,7 @@ class NodePieceMixedTests(cases.NodePieceTestCase):
 class TokenizationTests(cases.RepresentationTestCase):
     """Tests for tokenization representation."""
 
-    cls = pykeen.nn.node_piece.TokenizationRepresentationModule
+    cls = pykeen.nn.node_piece.TokenizationRepresentation
     max_id: int = 13
     vocabulary_size: int = 5
     num_tokens: int = 3
@@ -190,7 +190,7 @@ class TokenizationTests(cases.RepresentationTestCase):
 class SubsetRepresentationTests(cases.RepresentationTestCase):
     """Tests for subset representations."""
 
-    cls = pykeen.nn.emb.SubsetRepresentationModule
+    cls = pykeen.nn.emb.SubsetRepresentation
     kwargs = dict(
         max_id=7,
     )
@@ -209,7 +209,7 @@ class SubsetRepresentationTests(cases.RepresentationTestCase):
 class LabelBasedTransformerRepresentationTests(cases.RepresentationTestCase):
     """Test the label based Transformer representations."""
 
-    cls = pykeen.nn.emb.LabelBasedTransformerRepresentationModule
+    cls = pykeen.nn.emb.LabelBasedTransformerRepresentation
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
@@ -217,10 +217,10 @@ class LabelBasedTransformerRepresentationTests(cases.RepresentationTestCase):
         return kwargs
 
 
-class RepresentationModuleMetaTestCase(unittest_templates.MetaTestCase[pykeen.nn.emb.RepresentationModule]):
+class RepresentationModuleMetaTestCase(unittest_templates.MetaTestCase[pykeen.nn.emb.Representation]):
     """Test that there are tests for all representation modules."""
 
-    base_cls = pykeen.nn.emb.RepresentationModule
+    base_cls = pykeen.nn.emb.Representation
     base_test = cases.RepresentationTestCase
     skip_cls = {mocks.CustomRepresentations}
 

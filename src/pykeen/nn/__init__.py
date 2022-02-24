@@ -5,8 +5,8 @@
 from class_resolver import ClassResolver
 
 from . import init
-from .emb import Embedding, EmbeddingSpecification, RepresentationModule, SubsetRepresentationModule
-from .message_passing import RGCNRepresentationModule
+from .emb import Embedding, EmbeddingSpecification, Representation, SubsetRepresentation
+from .message_passing import RGCNRepresentation
 from .modules import (
     AutoSFInteraction,
     BoxEInteraction,
@@ -41,16 +41,16 @@ from .modules import (
     UMInteraction,
     interaction_resolver,
 )
-from .node_piece import NodePieceRepresentationModule, TokenizationRepresentationModule, tokenizer_resolver
+from .node_piece import NodePieceRepresentation, TokenizationRepresentation, tokenizer_resolver
 
 __all__ = [
     "Embedding",
     "EmbeddingSpecification",
-    "NodePieceRepresentationModule",
-    "RepresentationModule",
-    "RGCNRepresentationModule",
-    "SubsetRepresentationModule",
-    "TokenizationRepresentationModule",
+    "NodePieceRepresentation",
+    "Representation",
+    "RGCNRepresentation",
+    "SubsetRepresentation",
+    "TokenizationRepresentation",
     "init",
     "Interaction",
     "interaction_resolver",
@@ -91,7 +91,7 @@ __all__ = [
 ]
 
 
-representation_resolver: ClassResolver[RepresentationModule] = ClassResolver.from_subclasses(
-    base=RepresentationModule,
+representation_resolver: ClassResolver[Representation] = ClassResolver.from_subclasses(
+    base=Representation,
     default=Embedding,
 )

@@ -1894,7 +1894,7 @@ class TokenizerTestCase(GenericTestCase[pykeen.nn.node_piece.Tokenizer]):
 class NodePieceTestCase(RepresentationTestCase):
     """General test case for node piece representations."""
 
-    cls = pykeen.nn.node_piece.NodePieceRepresentationModule
+    cls = pykeen.nn.node_piece.NodePieceRepresentation
     num_entities: ClassVar[int] = 8
     num_relations: ClassVar[int] = 7
     num_triples: ClassVar[int] = 31

@@ -29,15 +29,15 @@ from ..typing import Constrainer, Hint, HintType, Initializer, Normalizer
 from ..utils import Bias, clamp_norm, complex_normalize, get_preferred_device
 
 __all__ = [
-    "RepresentationModule",
+    "Representation",
     "Embedding",
-    "LowRankRepresentationModule",
+    "LowRankRepresentation",
     "EmbeddingSpecification",
     "CompGCNLayer",
     "CombinedCompGCNRepresentations",
     "SingleCompGCNRepresentation",
-    "LabelBasedTransformerRepresentationModule",
-    "SubsetRepresentationModule",
+    "LabelBasedTransformerRepresentation",
+    "SubsetRepresentation",
     # Utils
     "constrainer_resolver",
     "normalizer_resolver",
@@ -46,7 +46,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class RepresentationModule(nn.Module, ABC):
+class Representation(nn.Module, ABC):
     """
     A base class for obtaining representations for entities/relations.
 
@@ -146,13 +146,13 @@ class RepresentationModule(nn.Module, ABC):
         return get_preferred_device(module=self, allow_ambiguity=True)
 
 
-class SubsetRepresentationModule(RepresentationModule):
+class SubsetRepresentation(Representation):
     """A representation module, which only exposes a subset of representations of its base."""
 
     def __init__(
         self,
         max_id: int,
-        base: HintOrType[RepresentationModule],
+        base: HintOrType[Representation],
         base_kwargs: OptionalKwargs = None,
     ):
         """
@@ -183,7 +183,7 @@ class SubsetRepresentationModule(RepresentationModule):
         return self.base.forward(indices=indices)
 
 
-class Embedding(RepresentationModule):
+class Embedding(Representation):
     """Trainable embeddings.
 
     This class provides the same interface as :class:`torch.nn.Embedding` and
@@ -408,7 +408,7 @@ class Embedding(RepresentationModule):
         return x
 
 
-class LowRankRepresentationModule(RepresentationModule):
+class LowRankRepresentation(Representation):
     r"""
     Low-rank embedding factorization.
 
@@ -735,9 +735,9 @@ class CombinedCompGCNRepresentations(nn.Module):
         self,
         *,
         triples_factory: CoreTriplesFactory,
-        entity_representations: HintOrType[RepresentationModule] = None,
+        entity_representations: HintOrType[Representation] = None,
         entity_representation_kwargs: OptionalKwargs = None,
-        relation_representations: HintOrType[RepresentationModule] = None,
+        relation_representations: HintOrType[Representation] = None,
         relation_representation_kwargs: OptionalKwargs = None,
         num_layers: Optional[int] = 1,
         dims: Union[None, int, Sequence[int]] = None,
@@ -859,7 +859,7 @@ class CombinedCompGCNRepresentations(nn.Module):
         )
 
 
-class SingleCompGCNRepresentation(RepresentationModule):
+class SingleCompGCNRepresentation(Representation):
     """A wrapper around the combined representation module."""
 
     def __init__(
@@ -898,7 +898,7 @@ class SingleCompGCNRepresentation(RepresentationModule):
         return x
 
 
-class LabelBasedTransformerRepresentationModule(RepresentationModule):
+class LabelBasedTransformerRepresentation(Representation):
     """
     Label-based representations using a transformer encoder.
 
@@ -958,7 +958,7 @@ class LabelBasedTransformerRepresentationModule(RepresentationModule):
         triples_factory: TriplesFactory,
         for_entities: bool = True,
         **kwargs,
-    ) -> "LabelBasedTransformerRepresentationModule":
+    ) -> "LabelBasedTransformerRepresentation":
         """
         Prepare a label-based transformer representations with labels from a triples factory.
 
