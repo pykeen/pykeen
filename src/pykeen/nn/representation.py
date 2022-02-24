@@ -735,6 +735,28 @@ class CompGCNLayer(nn.Module):
         return x_e, x_r
 
 
+def _build_representation(
+    max_id: int,
+    representation: HintOrType[Representation],
+    representation_kwargs: OptionalKwargs,
+) -> Representation:
+    """Build representations and check maximum ID."""
+    # has to be imported here to avoid cyclic imports
+    from . import representation_resolver
+
+    representation = representation_resolver.make(
+        representation,
+        pos_kwargs=representation_kwargs,
+        # kwargs
+        max_id=max_id,
+    )
+    if representation.max_id != max_id:
+        raise ValueError(
+            f"Representations should provide {max_id} representations, " f"but have {representation.max_id}",
+        )
+    return representation
+
+
 class CombinedCompGCNRepresentations(nn.Module):
     """A sequence of CompGCN layers."""
 
@@ -774,31 +796,16 @@ class CombinedCompGCNRepresentations(nn.Module):
         super().__init__()
         # TODO: Check
         assert triples_factory.create_inverse_triples
-        # has to be imported here to avoid cyclic imports
-        from . import representation_resolver
-
-        self.entity_representations = representation_resolver.make(
-            entity_representations,
-            # kwargs
+        self.entity_representations = _build_representation(
             max_id=triples_factory.num_entities,
-            **(entity_representation_kwargs or {}),
+            representation=entity_representations,
+            representation_kwargs=entity_representation_kwargs,
         )
-        if self.entity_representations.max_id != triples_factory.num_entities:
-            raise ValueError(
-                f"Entity representations should provide {triples_factory.num_entities} representations, "
-                f"but have {self.entity_representations.max_id}",
-            )
-        self.relation_representations = representation_resolver.make(
-            relation_representations,
-            # kwargs
+        self.relation_representations = _build_representation(
             max_id=2 * triples_factory.real_num_relations,
-            **(relation_representation_kwargs or {}),
+            representation=relation_representations,
+            representation_kwargs=relation_representation_kwargs,
         )
-        if self.relation_representations.max_id != 2 * triples_factory.real_num_relations:
-            raise ValueError(
-                f"Relation representations should provide {2 * triples_factory.real_num_relations} representations, "
-                f"but have {self.relation_representations.max_id}",
-            )
         input_dim = self.entity_representations.embedding_dim
         assert self.relation_representations.embedding_dim == input_dim
 
