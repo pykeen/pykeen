@@ -60,9 +60,13 @@ class TestCompGCN(cases.ModelTestCase):
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
+        dim = kwargs.pop("embedding_dim")
         kwargs["encoder_kwargs"] = dict(
-            embedding_specification=EmbeddingSpecification(
-                embedding_dim=(kwargs.pop("embedding_dim")),
+            entity_representation_kwargs=dict(
+                shape=(dim,),
+            ),
+            relation_representation_kwargs=dict(
+                shape=(dim,),
             ),
         )
         return kwargs
