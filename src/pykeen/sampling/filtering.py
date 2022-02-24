@@ -246,7 +246,7 @@ class BloomFilterer(Filterer):
         self.register_buffer(
             name="mersenne",
             tensor=torch.as_tensor(
-                data=[2 ** x - 1 for x in [17, 19, 31]],
+                data=[2**x - 1 for x in [17, 19, 31]],
                 dtype=torch.long,
             ).unsqueeze(dim=0),
         )
