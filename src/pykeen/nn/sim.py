@@ -61,7 +61,7 @@ def expected_likelihood(
     safe_sigma = at_least_eps(var)
     sim = batched_dot(
         a=safe_sigma.reciprocal(),
-        b=(mean**2),
+        b=(mean ** 2),
     )
 
     #: b = \log \det \Sigma

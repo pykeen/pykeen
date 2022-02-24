@@ -53,7 +53,7 @@ lr_schedulers_hpo_defaults: Mapping[Type[_LRScheduler], Mapping[str, Any]] = {
         gamma=dict(type=float, low=0.8, high=1.0, step=0.025),
     ),
     LambdaLR: dict(
-        lr_lambda=dict(type="categorical", choices=[lambda epoch: epoch // 30, lambda epoch: 0.95**epoch]),
+        lr_lambda=dict(type="categorical", choices=[lambda epoch: epoch // 30, lambda epoch: 0.95 ** epoch]),
     ),
     MultiplicativeLR: dict(
         lr_lambda=dict(type="categorical", choices=[lambda epoch: 0.85, lambda epoch: 0.9, lambda epoch: 0.95]),
