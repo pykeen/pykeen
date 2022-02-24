@@ -170,7 +170,10 @@ class SubsetRepresentation(Representation):
 
         base = representation_resolver.make(base, pos_kwargs=base_kwargs)
         if max_id > base.max_id:
-            raise ValueError(f"Base representations comprise only {base.max_id} representations.")
+            raise ValueError(
+                f"Base representations comprise only {base.max_id} representations, "
+                f"but at least {max_id} are required.",
+            )
         super().__init__(max_id, base.shape)
         self.base = base
 
