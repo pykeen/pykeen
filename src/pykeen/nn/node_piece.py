@@ -879,6 +879,7 @@ class NodePieceRepresentation(Representation):
         num_tokens: OneOrSequence[int] = 2,
         aggregation: Union[None, str, Callable[[torch.FloatTensor, int], torch.FloatTensor]] = None,
         shape: Optional[Sequence[int]] = None,
+        max_id: Optional[int] = None,
     ):
         """
         Initialize the representation.
@@ -908,6 +909,8 @@ class NodePieceRepresentation(Representation):
         :param shape:
             the shape of an individual representation. Only necessary, if aggregation results in a change of dimensions.
         """
+        if max_id:
+            assert max_id == triples_factory.num_entities
         # normalize triples
         mapped_triples = triples_factory.mapped_triples
         if triples_factory.create_inverse_triples:
