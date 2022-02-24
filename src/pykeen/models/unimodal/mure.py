@@ -9,7 +9,6 @@ from torch.nn.init import normal_, uniform_, zeros_
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.modules import MuREInteraction
-from ...nn.representation import EmbeddingSpecification
 from ...typing import Hint, Initializer
 
 __all__ = [
@@ -70,9 +69,9 @@ class MuRE(ERModel):
         super().__init__(
             interaction=MuREInteraction,
             interaction_kwargs=dict(p=p, power_norm=power_norm),
-            entity_representations=[
-                EmbeddingSpecification(
-                    embedding_dim=embedding_dim,
+            entity_representation_kwargs=[
+                dict(
+                    shape=(embedding_dim,),
                     initializer=entity_initializer,
                     initializer_kwargs=entity_initializer_kwargs
                     or dict(
@@ -80,20 +79,20 @@ class MuRE(ERModel):
                     ),
                 ),
                 # entity bias for head
-                EmbeddingSpecification(
+                dict(
                     shape=tuple(),  # scalar
                     initializer=entity_bias_initializer,
                 ),
                 # entity bias for tail
-                EmbeddingSpecification(
+                dict(
                     shape=tuple(),  # scalar
                     initializer=entity_bias_initializer,
                 ),
             ],
-            relation_representations=[
+            relation_representation_kwargs=[
                 # relation offset
-                EmbeddingSpecification(
-                    embedding_dim=embedding_dim,
+                dict(
+                    shape=(embedding_dim,),
                     initializer=relation_initializer,
                     initializer_kwargs=relation_initializer_kwargs
                     or dict(
@@ -101,7 +100,7 @@ class MuRE(ERModel):
                     ),
                 ),
                 # diagonal relation transformation matrix
-                EmbeddingSpecification(
+                dict(
                     shape=(embedding_dim,),
                     initializer=relation_matrix_initializer,
                     initializer_kwargs=relation_matrix_initializer_kwargs
