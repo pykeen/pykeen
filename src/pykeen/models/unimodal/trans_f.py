@@ -7,7 +7,6 @@ from typing import Any, ClassVar, Mapping, Optional
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.modules import TransFInteraction
-from ...nn.representation import EmbeddingSpecification
 from ...typing import Hint, Initializer, Normalizer
 
 __all__ = [
@@ -54,15 +53,15 @@ class TransF(ERModel):
         """
         super().__init__(
             interaction=TransFInteraction,
-            entity_representations=EmbeddingSpecification(
-                embedding_dim=embedding_dim,
+            entity_representation_kwargs=dict(
+                shape=(embedding_dim,),
                 initializer=entity_initializer,
                 initializer_kwargs=entity_initializer_kwargs,
                 normalizer=entity_normalizer,
                 normalizer_kwargs=entity_normalizer_kwargs,
             ),
-            relation_representations=EmbeddingSpecification(
-                embedding_dim=embedding_dim,
+            relation_representation_kwargs=dict(
+                shape=(embedding_dim,),
                 initializer=relation_initializer,
                 initializer_kwargs=relation_initializer_kwargs,
             ),
