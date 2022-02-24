@@ -150,6 +150,7 @@ class NodePiece(ERModel):
                 embedding_dim=embedding_dim,
             )
 
+        # TODO: use representation_resolver
         # always create representations for normal and inverse relations and padding
         relation_representations = relation_specification.make(
             num_embeddings=2 * triples_factory.real_num_relations + 1,
@@ -158,7 +159,8 @@ class NodePiece(ERModel):
         super().__init__(
             triples_factory=triples_factory,
             interaction=interaction,
-            entity_representations=NodePieceRepresentation(
+            entity_representations=NodePieceRepresentation,
+            entity_representation_kwargs=dict(
                 triples_factory=triples_factory,
                 token_representations=[
                     (
@@ -174,7 +176,8 @@ class NodePiece(ERModel):
                 shape=shape,
                 num_tokens=num_tokens,
             ),
-            relation_representations=SubsetRepresentation(  # hide padding relation
+            relation_representations=SubsetRepresentation,
+            relation_representation_kwargs=dict(  # hide padding relation
                 max_id=triples_factory.num_relations,
                 base=relation_representations,
             ),
