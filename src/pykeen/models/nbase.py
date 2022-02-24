@@ -137,10 +137,10 @@ class _NewAbstractModel(Model, ABC):
 
 def _prepare_representation_module_list(
     representations: EmbeddingSpecificationHint,
-    representation_kwargs: OptionalKwargs,
     max_id: int,
     shapes: Sequence[str],
     label: str,
+    representation_kwargs: OptionalKwargs = None,
     skip_checks: bool = False,
 ) -> Sequence[Representation]:
     """
