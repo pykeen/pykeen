@@ -10,7 +10,6 @@ from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.init import xavier_normal_, xavier_uniform_, xavier_uniform_norm_
 from ...nn.modules import TransDInteraction
-from ...nn.representation import EmbeddingSpecification
 from ...typing import Constrainer, Hint, Initializer
 from ...utils import clamp_norm
 
@@ -77,27 +76,27 @@ class TransD(ERModel):
         super().__init__(
             interaction=TransDInteraction,
             interaction_kwargs=interaction_kwargs,
-            entity_representations=[
-                EmbeddingSpecification(
-                    embedding_dim=embedding_dim,
+            entity_representation_kwargs=[
+                dict(
+                    shape=(embedding_dim,),
                     initializer=entity_initializer,
                     constrainer=entity_constrainer,
                     constrainer_kwargs=dict(maxnorm=1.0, p=2, dim=-1),
                 ),
-                EmbeddingSpecification(
-                    embedding_dim=embedding_dim,
+                dict(
+                    shape=(embedding_dim,),
                     initializer=xavier_normal_,
                 ),
             ],
-            relation_representations=[
-                EmbeddingSpecification(
-                    embedding_dim=relation_dim,
+            relation_representation_kwargs=[
+                dict(
+                    shape=(relation_dim,),
                     initializer=relation_initializer,
                     constrainer=relation_constrainer,
                     constrainer_kwargs=dict(maxnorm=1.0, p=2, dim=-1),
                 ),
-                EmbeddingSpecification(
-                    embedding_dim=relation_dim,
+                dict(
+                    shape=(relation_dim,),
                     initializer=xavier_normal_,
                 ),
             ],
