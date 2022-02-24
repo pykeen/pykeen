@@ -8,7 +8,6 @@ from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.init import xavier_normal_
 from ...nn.modules import UMInteraction
-from ...nn.representation import EmbeddingSpecification
 from ...typing import Hint, Initializer
 
 __all__ = [
@@ -65,8 +64,8 @@ class UM(ERModel):
         super().__init__(
             interaction=UMInteraction,
             interaction_kwargs=dict(p=scoring_fct_norm),
-            entity_representations=EmbeddingSpecification(
-                embedding_dim=embedding_dim,
+            entity_representation_kwargs=dict(
+                shape=(embedding_dim,),
                 initializer=entity_initializer,
             ),
             relation_representations=[],
