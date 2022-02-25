@@ -264,6 +264,11 @@ class Model(nn.Module, ABC):
         """Calculate the number of bytes used for all parameters of the model."""
         return sum(param.numel() * param.element_size() for param in self.parameters(recurse=True))
 
+    @property
+    def num_parameters(self) -> int:
+        """Calculate the number of parameters of the model."""
+        return sum(param.numel() for param in self.parameters(recurse=True))
+
     def save_state(self, path: Union[str, os.PathLike]) -> None:
         """Save the state of the model.
 
