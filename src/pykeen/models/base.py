@@ -23,7 +23,7 @@ from ..losses import Loss, MarginRankingLoss, loss_resolver
 from ..nn.emb import Embedding, EmbeddingSpecification, RepresentationModule
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import CoreTriplesFactory, relation_inverter
-from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, InductiveMode, MappedTriples, ScorePack, Target
+from ..typing import InductiveMode, LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, MappedTriples, ScorePack, Target
 from ..utils import NoRandomSeedNecessary, extend_batch, get_preferred_device, set_random_seed
 
 __all__ = [
@@ -263,6 +263,11 @@ class Model(nn.Module, ABC):
     def num_parameter_bytes(self) -> int:
         """Calculate the number of bytes used for all parameters of the model."""
         return sum(param.numel() * param.element_size() for param in self.parameters(recurse=True))
+
+    @property
+    def num_parameters(self) -> int:
+        """Calculate the number of parameters of the model."""
+        return sum(param.numel() for param in self.parameters(recurse=True))
 
     def save_state(self, path: Union[str, os.PathLike]) -> None:
         """Save the state of the model.
