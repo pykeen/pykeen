@@ -4,7 +4,7 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Mapping, Optional, Tuple, Union
+from typing import Any, Mapping, Optional, Sequence, Tuple, Union
 
 import torch
 from class_resolver import ClassResolver, Hint, HintOrType, OptionalKwargs
@@ -608,8 +608,15 @@ class RGCNRepresentation(Representation):
 
         :param triples_factory:
             The triples factory holding the training triples used for message passing.
-        :param embedding_specification:
-            The base embedding specification.
+        :param max_id:
+            The maximum number of IDs. could either be None (the default), or match the triples factory's number of
+            entities.
+        :param shape:
+            the shape information. If None, will propagate the shape information of the base entity representations.
+        :param entity_representations:
+            the base entity representations (or a hint for them)
+        :param entity_representation_kwargs:
+            additional keyword-based parameters for the base entity representations
         :param num_layers:
             The number of layers.
         :param use_bias:
@@ -633,6 +640,9 @@ class RGCNRepresentation(Representation):
         :param regularizer_kwargs:
             Additional keyword arguments passed to the regularizer
         """
+        if max_id:
+            assert max_id == triples_factory.num_entities
+
         # has to be imported now to avoid cyclic imports
         from . import representation_resolver
 
@@ -641,8 +651,6 @@ class RGCNRepresentation(Representation):
             max_id=triples_factory.num_entities,
             pos_kwargs=entity_representation_kwargs,
         )
-        if max_id:
-            assert max_id == triples_factory.num_entities
         super().__init__(max_id=base_embeddings.max_id, shape=shape or base_embeddings.shape)
         self.entity_embeddings = base_embeddings
 
