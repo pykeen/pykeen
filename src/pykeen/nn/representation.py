@@ -254,7 +254,7 @@ class Embedding(Representation):
             An optional initializer, which takes an uninitialized (num_embeddings, embedding_dim) tensor as input,
             and returns an initialized tensor of same shape and dtype (which may be the same, i.e. the
             initialization may be in-place). Can be passed as a function, or as string corresponding to a key in
-            :data:`pykeen.nn.emb.initializers` such as:
+            :data:`pykeen.nn.representation.initializers` such as:
 
             - ``"xavier_uniform"``
             - ``"xavier_uniform_norm"``
@@ -275,7 +275,7 @@ class Embedding(Representation):
             A function which is applied to the weights after each parameter update, without tracking gradients.
             It may be used to enforce model constraints outside of gradient-based training. The function does not need
             to be in-place, but the weight tensor is modified in-place. Can be passed as a function, or as a string
-            corresponding to a key in :data:`pykeen.nn.emb.constrainers` such as:
+            corresponding to a key in :data:`pykeen.nn.representation.constrainers` such as:
 
             - ``'normalize'``
             - ``'complex_normalize'``
@@ -438,8 +438,8 @@ class LowRankRepresentation(Representation):
         :param weight_initializer:
             the initializer for basis weights
         :param kwargs:
-            additional keyword based arguments passed to :class:`pykeen.nn.emb.Embedding`, which is used for the base
-            representations.
+            additional keyword based arguments passed to :class:`pykeen.nn.representation.Embedding`, which is used for
+            the base representations.
         """
         super().__init__(max_id=max_id, shape=shape)
         self.bases = Embedding(max_id=num_bases, shape=shape, **kwargs)

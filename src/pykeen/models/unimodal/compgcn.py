@@ -54,7 +54,8 @@ class CompGCN(ERModel[torch.FloatTensor, RelationRepresentation, torch.FloatTens
             The embedding dimension to be used if ``embedding_specification`` is not given explicitly in
             ``encoder_kwargs``.
         :param encoder_kwargs:
-            Additional keyword arguments for the encoder, cf. :class:`pykeen.nn.emb.CombinedCompGCNRepresentations`.
+            Additional keyword arguments for the encoder,
+            cf. :class:`pykeen.nn.representation.CombinedCompGCNRepresentations`.
         :param interaction:
             The interaction function to use as decoder.
         :param interaction_kwargs:
