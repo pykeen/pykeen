@@ -588,6 +588,8 @@ class RGCNRepresentation(Representation):
     def __init__(
         self,
         triples_factory: CoreTriplesFactory,
+        max_id: Optional[int] = None,
+        shape: Optional[Sequence[int]] = None,
         entity_representations: HintOrType[Representation] = None,
         entity_representation_kwargs: OptionalKwargs = None,
         num_layers: int = 2,
@@ -639,7 +641,9 @@ class RGCNRepresentation(Representation):
             max_id=triples_factory.num_entities,
             pos_kwargs=entity_representation_kwargs,
         )
-        super().__init__(max_id=base_embeddings.max_id, shape=base_embeddings.shape)
+        if max_id:
+            assert max_id == triples_factory.num_entities
+        super().__init__(max_id=base_embeddings.max_id, shape=shape or base_embeddings.shape)
         self.entity_embeddings = base_embeddings
 
         if triples_factory.create_inverse_triples:
