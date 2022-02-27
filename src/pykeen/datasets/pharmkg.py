@@ -12,10 +12,7 @@ from more_click import verbose_option
 from .base import UnpackedRemoteDataset, SingleTabbedDataset
 from ..typing import TorchRandomHint
 
-__all__ = [
-    "PharmKG8k",
-    "PharmKGFull"
-]
+__all__ = ["PharmKG8k", "PharmKGFull"]
 
 BASE_URL = "https://raw.githubusercontent.com/biomed-AI/PharmKG/master/data/PharmKG-8k/"
 VALID_URL = f"{BASE_URL}/valid.tsv"
@@ -23,6 +20,7 @@ TEST_URL = f"{BASE_URL}/test.tsv"
 TRAIN_URL = f"{BASE_URL}/train.tsv"
 
 FULL_URL = "https://zenodo.org/record/4077338/files/raw_PharmKG-180k.zip"
+
 
 @parse_docdata
 class PharmKG8k(UnpackedRemoteDataset):
@@ -94,13 +92,13 @@ class PharmKGFull(SingleTabbedDataset):
         :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.UnpackedRemoteDataset`.
         """
         super().__init__(
-             url=FULL_URL,
+            url=FULL_URL,
             create_inverse_triples=create_inverse_triples,
             random_state=random_state,
             read_csv_kwargs=dict(
                 usecols=["Entity1_name", "relationship_type", "Entity2_name"],
                 sep=",",
-            )
+            ),
         )
 
 
