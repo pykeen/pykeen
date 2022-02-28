@@ -6,14 +6,12 @@ from __future__ import annotations
 
 import functools
 import inspect
-import itertools
 import logging
 import os
 import pickle
 import warnings
 from abc import ABC, abstractmethod
-from collections import defaultdict
-from typing import Any, ClassVar, Collection, Iterable, Mapping, Optional, Sequence, Type, Union
+from typing import Any, ClassVar, Iterable, Mapping, Optional, Sequence, Type, Union
 
 import pandas as pd
 import torch
@@ -26,7 +24,7 @@ from ..nn.emb import Embedding, EmbeddingSpecification, RepresentationModule
 from ..regularizers import NoRegularizer, Regularizer
 from ..triples import CoreTriplesFactory, relation_inverter
 from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, InductiveMode, MappedTriples, ScorePack, Target
-from ..utils import NoRandomSeedNecessary, extend_batch, set_random_seed
+from ..utils import NoRandomSeedNecessary, extend_batch, get_preferred_device, set_random_seed
 
 __all__ = [
     "Model",
@@ -35,22 +33,6 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
-
-
-class DeviceResolutionError(ValueError):
-    """An error in the resolution of a model's device."""
-
-
-class AmbiguousDeviceError(DeviceResolutionError):
-    """An error raised if there is ambiguity in device resolution."""
-
-    def __init__(self, module: nn.Module) -> None:
-        """Initialize the error."""
-        _info = defaultdict(list)
-        for name, tensor in itertools.chain(module.named_parameters(), module.named_buffers()):
-            _info[tensor.data.device].append(name)
-        info = {device: sorted(tensor_names) for device, tensor_names in _info.items()}
-        super().__init__(f"Ambiguous device! Found: {list(info.keys())}\n\n{info}")
 
 
 class Model(nn.Module, ABC):
@@ -153,24 +135,10 @@ class Model(nn.Module, ABC):
         """Return the model's device."""
         return self.get_preferred_device(allow_ambiguity=False)
 
-    def get_devices(self) -> Collection[torch.device]:
-        """Return the device(s) from each components of the model."""
-        return {tensor.data.device for tensor in itertools.chain(self.parameters(), self.buffers())}
-
     def get_preferred_device(self, allow_ambiguity: bool = True) -> torch.device:
         """Return the preferred device."""
-        devices = self.get_devices()
-        if len(devices) == 0:
-            raise DeviceResolutionError("Could not infer device, since there are neither parameters nor buffers.")
-        if len(devices) == 1:
-            return next(iter(devices))
-        if not allow_ambiguity:
-            raise AmbiguousDeviceError(self)
-        # try to resolve ambiguous device; there has to be at least one cuda device
-        cuda_devices = {d for d in devices if d.type == "cuda"}
-        if len(cuda_devices) == 1:
-            return next(iter(cuda_devices))
-        raise AmbiguousDeviceError(self)
+        warnings.warn("directly use get_preferred_device(model)", DeprecationWarning)
+        return get_preferred_device(self, allow_ambiguity=allow_ambiguity)
 
     def reset_parameters_(self):  # noqa: D401
         """Reset all parameters of the model and enforce model constraints."""
@@ -295,6 +263,11 @@ class Model(nn.Module, ABC):
     def num_parameter_bytes(self) -> int:
         """Calculate the number of bytes used for all parameters of the model."""
         return sum(param.numel() * param.element_size() for param in self.parameters(recurse=True))
+
+    @property
+    def num_parameters(self) -> int:
+        """Calculate the number of parameters of the model."""
+        return sum(param.numel() for param in self.parameters(recurse=True))
 
     def save_state(self, path: Union[str, os.PathLike]) -> None:
         """Save the state of the model.
