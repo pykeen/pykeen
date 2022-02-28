@@ -18,7 +18,7 @@ from ..triples import TriplesFactory
 __all__ = [
     "OGBLoader",
     "OGBBioKG",
-    "OGBWikiKG",
+    "OGBWikiKG2",
 ]
 
 
@@ -127,31 +127,6 @@ def _array(df, entity_type_label, entity_label):
 
 
 @parse_docdata
-class OGBWikiKG(OGBLoader):
-    """The OGB WikiKG dataset.
-
-    .. seealso:: https://ogb.stanford.edu/docs/linkprop/#ogbl-wikikg
-
-    ---
-    name: OGB WikiKG
-    citation:
-        author: Hu
-        year: 2020
-        link: https://arxiv.org/abs/2005.00687
-        github: snap-stanford/ogb
-    statistics:
-        entities: 2500604
-        relations: 535
-        training: 16109182
-        testing: 598543
-        validation: 429456
-        triples: 17137181
-    """
-
-    name = "ogbl-wikikg"
-
-
-@parse_docdata
 class OGBWikiKG2(OGBLoader):
     """The OGB WikiKG2 dataset.
 
@@ -167,6 +142,10 @@ class OGBWikiKG2(OGBLoader):
     statistics:
         entities: 2500604
         relations: 535
+        training: 16109182
+        testing: 598543
+        validation: 429456
+        triples: 17137181
     """
 
     name = "ogbl-wikikg2"
@@ -175,10 +154,7 @@ class OGBWikiKG2(OGBLoader):
 @click.command()
 @verbose_option
 def _main():
-    for _cls in [
-        # OGBBioKG,
-        OGBWikiKG2,
-    ]:
+    for _cls in [OGBBioKG, OGBWikiKG2]:
         _cls().summarize()
 
 
