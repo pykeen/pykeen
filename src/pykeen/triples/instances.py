@@ -111,21 +111,22 @@ class SLCWAInstances(Instances[SLCWASampleType, SLCWABatchType]):
         # shape: (1, 3), (1, k, 3), (1, k, 3)?
         return positive, negative, mask
 
-    def get_collator(self) -> Optional[Callable[[List[SLCWASampleType]], SLCWABatchType]]:  # noqa: D102
-        def collate(samples: List[SLCWASampleType]) -> SLCWABatchType:
-            """Collate samples."""
-            # each shape: (1, 3), (1, k, 3), (1, k, 3)?
-            positives, negatives, masks = zip(*samples)
-            positives = torch.cat(positives, dim=0)
-            negatives = torch.cat(negatives, dim=0)
-            if masks[0] is None:
-                assert all(m is None for m in masks)
-                masks = None
-            else:
-                masks = torch.cat(masks, dim=0)
-            return positives, negatives, masks
+    @staticmethod
+    def collate(samples: List[SLCWASampleType]) -> SLCWABatchType:
+        """Collate samples."""
+        # each shape: (1, 3), (1, k, 3), (1, k, 3)?
+        positives, negatives, masks = zip(*samples)
+        positives = torch.cat(positives, dim=0)
+        negatives = torch.cat(negatives, dim=0)
+        if masks[0] is None:
+            assert all(m is None for m in masks)
+            masks = None
+        else:
+            masks = torch.cat(masks, dim=0)
+        return positives, negatives, masks
 
-        return collate
+    def get_collator(self) -> Optional[Callable[[List[SLCWASampleType]], SLCWABatchType]]:  # noqa: D102
+        return self.collate
 
     @classmethod
     def from_triples(
